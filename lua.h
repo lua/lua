@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.235 2009/04/08 18:04:33 roberto Exp roberto $
+** $Id: lua.h,v 1.236 2009/04/17 14:28:06 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -45,7 +45,8 @@
 #define LUA_ERRRUN	2
 #define LUA_ERRSYNTAX	3
 #define LUA_ERRMEM	4
-#define LUA_ERRERR	5
+#define LUA_ERRGCMM	5
+#define LUA_ERRERR	6
 
 
 typedef struct lua_State lua_State;

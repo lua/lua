@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.62 2009/04/26 21:55:35 roberto Exp roberto $
+** $Id: ldo.c,v 2.63 2009/04/28 19:04:36 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -60,6 +60,7 @@ void luaD_seterrorobj (lua_State *L, int errcode, StkId oldtop) {
       break;
     }
     case LUA_ERRSYNTAX:
+    case LUA_ERRGCMM:
     case LUA_ERRRUN: {
       setobjs2s(L, oldtop, L->top - 1);  /* error message on current top */
       break;

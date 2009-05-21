@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.51 2009/04/28 19:04:36 roberto Exp roberto $
+** $Id: lgc.c,v 2.52 2009/04/29 17:09:41 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -617,11 +617,12 @@ static void dothecall (lua_State *L, void *ud) {
 }
 
 
-static void GCTM (lua_State *L) {
+static void GCTM (lua_State *L, int propagateerrors) {
   global_State *g = G(L);
   Udata *udata = udata2finalize(g);
   const TValue *tm = gfasttm(g, udata->uv.metatable, TM_GC);
   if (tm != NULL && ttisfunction(tm)) {
+    int status;
     lu_byte oldah = L->allowhook;
     lu_mem oldt = g->GCthreshold;
     L->allowhook = 0;  /* stop debug hooks during GC tag method */
@@ -629,7 +630,15 @@ static void GCTM (lua_State *L) {
     setobj2s(L, L->top, tm);
     setuvalue(L, L->top+1, udata);
     L->top += 2;
-    luaD_pcall(L, dothecall, NULL, savestack(L, L->top - 2), 0);
+    status = luaD_pcall(L, dothecall, NULL, savestack(L, L->top - 2), 0);
+    if (status != LUA_OK && propagateerrors) {  /* error while running __gc? */
+      if (status == LUA_ERRRUN) {  /* is there an error msg.? */
+        luaO_pushfstring(L, "error in __gc tag method (%s)",
+                                        lua_tostring(L, -1));
+        status = LUA_ERRGCMM;  /* error in __gc metamethod */
+      }
+      luaD_throw(L, status);  /* re-send error */
+    }
     L->allowhook = oldah;  /* restore hooks */
     g->GCthreshold = oldt;  /* restore threshold */
   }
@@ -637,10 +646,10 @@ static void GCTM (lua_State *L) {
 
 
 /*
-** Call all GC tag methods
+** Call all GC tag methods (without raising errors)
 */
 void luaC_callAllGCTM (lua_State *L) {
-  while (G(L)->tobefnz) GCTM(L);
+  while (G(L)->tobefnz) GCTM(L, 0);
 }
 
 
@@ -783,7 +792,7 @@ static l_mem singlestep (lua_State *L) {
     }
     case GCSfinalize: {
       if (g->tobefnz) {
-        GCTM(L);
+        GCTM(L, 1);
         if (g->estimate > GCFINALIZECOST)
           g->estimate -= GCFINALIZECOST;
         return GCFINALIZECOST;
