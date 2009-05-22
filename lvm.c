@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.86 2009/04/17 22:00:01 roberto Exp roberto $
+** $Id: lvm.c,v 2.87 2009/04/30 17:42:21 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -364,7 +364,7 @@ void luaV_finishOp (lua_State *L) {
     case OP_ADD: case OP_SUB: case OP_MUL: case OP_DIV:
     case OP_MOD: case OP_POW: case OP_UNM: case OP_LEN:
     case OP_GETGLOBAL: case OP_GETTABLE: case OP_SELF: {
-      setobjs2s(L, L->base + GETARG_A(inst), --L->top);
+      setobjs2s(L, ci->base + GETARG_A(inst), --L->top);
       break;
     }
     case OP_LE: case OP_LT: case OP_EQ: {
@@ -373,7 +373,7 @@ void luaV_finishOp (lua_State *L) {
       /* metamethod should not be called when operand is K */
       lua_assert(!ISK(GETARG_B(inst)));
       if (GET_OPCODE(inst) == OP_LE &&  /* "<=" using "<" instead? */
-          ttisnil(luaT_gettmbyobj(L, L->base + GETARG_B(inst), TM_LE)))
+          ttisnil(luaT_gettmbyobj(L, ci->base + GETARG_B(inst), TM_LE)))
         res = !res;  /* invert result */
       lua_assert(GET_OPCODE(*ci->u.l.savedpc) == OP_JMP);
       if (res != GETARG_A(inst))  /* condition failed? */
@@ -382,7 +382,7 @@ void luaV_finishOp (lua_State *L) {
     }
     case OP_CONCAT: {
       StkId top = L->top - 1;  /* top when __concat was called */
-      int last = cast_int(top - L->base) - 2;  /* last element and ... */
+      int last = cast_int(top - ci->base) - 2;  /* last element and ... */
       int b = GETARG_B(inst);      /* ... first element to concatenate */
       int total = last - b + 1;  /* number of elements to concatenate */
       setobj2s(L, top - 2, top);  /* put TM result in proper position */
@@ -390,7 +390,7 @@ void luaV_finishOp (lua_State *L) {
       if (total > 1)  /* are there elements to concat? */
         luaV_concat(L, total, last);  /* concat them (may yield again) */
       /* move final result to final position */
-      setobj2s(L, L->base + GETARG_A(inst), L->base + b);
+      setobj2s(L, ci->base + GETARG_A(inst), ci->base + b);
       break;
     }
     case OP_TFORCALL: {
@@ -670,7 +670,7 @@ void luaV_execute (lua_State *L) {
           for (aux = 0; nfunc+aux < L->top; aux++)  /* move frame down */
             setobjs2s(L, ofunc + aux, nfunc + aux);
           oci->top = L->top = ofunc + aux;  /* correct top */
-          lua_assert(L->top == L->base + clvalue(ofunc)->l.p->maxstacksize);
+          lua_assert(L->top == oci->base + clvalue(ofunc)->l.p->maxstacksize);
           oci->u.l.savedpc = nci->u.l.savedpc;
           oci->u.l.tailcalls++;  /* one more call lost */
           ci = L->ci = oci;  /* remove new frame */
