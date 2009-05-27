@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.87 2009/04/30 17:42:21 roberto Exp roberto $
+** $Id: lvm.c,v 2.88 2009/05/22 15:19:54 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -264,24 +264,22 @@ int luaV_equalval_ (lua_State *L, const TValue *t1, const TValue *t2) {
 }
 
 
-void luaV_concat (lua_State *L, int total, int last) {
+void luaV_concat (lua_State *L, int total) {
+  lua_assert(total >= 2);
   do {
-    StkId top = L->base + last + 1;
+    StkId top = L->top;
     int n = 2;  /* number of elements handled in this pass (at least 2) */
     if (!(ttisstring(top-2) || ttisnumber(top-2)) || !tostring(L, top-1)) {
-      L->top = top;  /* set top to current position (in case of yield) */
       if (!call_binTM(L, top-2, top-1, top-2, TM_CONCAT))
         luaG_concaterror(L, top-2, top-1);
-      L->top = L->ci->top;  /* restore top */
     }
-    else if (tsvalue(top-1)->len == 0) {  /* second operand is empty? */
-      (void)tostring(L, top - 2);  /* result is first operand */ ;
-    }
+    else if (tsvalue(top-1)->len == 0)  /* second operand is empty? */
+      (void)tostring(L, top - 2);  /* result is first operand */
     else if (ttisstring(top-2) && tsvalue(top-2)->len == 0) {
-        setsvalue2s(L, top-2, rawtsvalue(top-1));  /* result is second op. */
+      setsvalue2s(L, top-2, rawtsvalue(top-1));  /* result is second op. */
     }
     else {
-      /* at least two (non-empty) string values; get as many as possible */
+      /* at least two non-empty string values; get as many as possible */
       size_t tl = tsvalue(top-1)->len;
       char *buffer;
       int i;
@@ -300,8 +298,8 @@ void luaV_concat (lua_State *L, int total, int last) {
       }
       setsvalue2s(L, top-n, luaS_newlstr(L, buffer, tl));
     }
-    total -= n-1;  /* got `n' strings to create 1 new */
-    last -= n-1;
+    total -= n-1;  /* got 'n' strings to create 1 new */
+    L->top -= n-1;  /* poped 'n' strings and pushed one */
   } while (total > 1);  /* repeat until only 1 result left */
 }
 
@@ -381,16 +379,17 @@ void luaV_finishOp (lua_State *L) {
       break;
     }
     case OP_CONCAT: {
-      StkId top = L->top - 1;  /* top when __concat was called */
-      int last = cast_int(top - ci->base) - 2;  /* last element and ... */
-      int b = GETARG_B(inst);      /* ... first element to concatenate */
-      int total = last - b + 1;  /* number of elements to concatenate */
+      StkId top = L->top - 1;  /* top when 'call_binTM' was called */
+      int b = GETARG_B(inst);      /* first element to concatenate */
+      int total = top - 1 - (ci->base + b);  /* elements yet to concatenate */
       setobj2s(L, top - 2, top);  /* put TM result in proper position */
-      L->top = ci->top;  /* correct top */
-      if (total > 1)  /* are there elements to concat? */
-        luaV_concat(L, total, last);  /* concat them (may yield again) */
+      if (total > 1) {  /* are there elements to concat? */
+        L->top = top - 1;  /* top is one after last element (at top-2) */
+        luaV_concat(L, total);  /* concat them (may yield again) */
+      }
       /* move final result to final position */
-      setobj2s(L, ci->base + GETARG_A(inst), ci->base + b);
+      setobj2s(L, ci->base + GETARG_A(inst), L->top - 1);
+      L->top = ci->top;  /* restore top */
       break;
     }
     case OP_TFORCALL: {
@@ -586,7 +585,9 @@ void luaV_execute (lua_State *L) {
       case OP_CONCAT: {
         int b = GETARG_B(i);
         int c = GETARG_C(i);
-        Protect(luaV_concat(L, c-b+1, c); luaC_checkGC(L));
+        L->top = base + c + 1;  /* mark the end of concat operands */
+        Protect(luaV_concat(L, c-b+1); luaC_checkGC(L));
+        L->top = ci->top;  /* restore top */
         setobjs2s(L, RA(i), base+b);
         continue;
       }
