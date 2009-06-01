@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.88 2009/05/22 15:19:54 roberto Exp $
+** $Id: lvm.c,v 2.89 2009/05/27 17:11:27 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -357,12 +357,13 @@ static void Arith (lua_State *L, StkId ra, const TValue *rb,
 */
 void luaV_finishOp (lua_State *L) {
   CallInfo *ci = L->ci;
+  StkId base = ci->u.l.base;
   Instruction inst = *(ci->u.l.savedpc - 1);  /* interrupted instruction */
   switch (GET_OPCODE(inst)) {  /* finish its execution */
     case OP_ADD: case OP_SUB: case OP_MUL: case OP_DIV:
     case OP_MOD: case OP_POW: case OP_UNM: case OP_LEN:
     case OP_GETGLOBAL: case OP_GETTABLE: case OP_SELF: {
-      setobjs2s(L, ci->base + GETARG_A(inst), --L->top);
+      setobjs2s(L, base + GETARG_A(inst), --L->top);
       break;
     }
     case OP_LE: case OP_LT: case OP_EQ: {
@@ -371,7 +372,7 @@ void luaV_finishOp (lua_State *L) {
       /* metamethod should not be called when operand is K */
       lua_assert(!ISK(GETARG_B(inst)));
       if (GET_OPCODE(inst) == OP_LE &&  /* "<=" using "<" instead? */
-          ttisnil(luaT_gettmbyobj(L, ci->base + GETARG_B(inst), TM_LE)))
+          ttisnil(luaT_gettmbyobj(L, base + GETARG_B(inst), TM_LE)))
         res = !res;  /* invert result */
       lua_assert(GET_OPCODE(*ci->u.l.savedpc) == OP_JMP);
       if (res != GETARG_A(inst))  /* condition failed? */
@@ -381,14 +382,14 @@ void luaV_finishOp (lua_State *L) {
     case OP_CONCAT: {
       StkId top = L->top - 1;  /* top when 'call_binTM' was called */
       int b = GETARG_B(inst);      /* first element to concatenate */
-      int total = top - 1 - (ci->base + b);  /* elements yet to concatenate */
+      int total = top - 1 - (base + b);  /* elements yet to concatenate */
       setobj2s(L, top - 2, top);  /* put TM result in proper position */
       if (total > 1) {  /* are there elements to concat? */
         L->top = top - 1;  /* top is one after last element (at top-2) */
         luaV_concat(L, total);  /* concat them (may yield again) */
       }
       /* move final result to final position */
-      setobj2s(L, ci->base + GETARG_A(inst), L->top - 1);
+      setobj2s(L, ci->u.l.base + GETARG_A(inst), L->top - 1);
       L->top = ci->top;  /* restore top */
       break;
     }
@@ -428,7 +429,7 @@ void luaV_finishOp (lua_State *L) {
 #define dojump(i)	{ ci->u.l.savedpc += (i); luai_threadyield(L);}
 
 
-#define Protect(x)	{ {x;}; base = ci->base; }
+#define Protect(x)	{ {x;}; base = ci->u.l.base; }
 
 
 #define arith_op(op,tm) { \
@@ -448,7 +449,7 @@ void luaV_execute (lua_State *L) {
   CallInfo *ci = L->ci;
   LClosure *cl = &clvalue(ci->func)->l;
   TValue *k = cl->p->k;
-  StkId base = ci->base;
+  StkId base = ci->u.l.base;
   lua_assert(isLua(ci));
   /* main loop of interpreter */
   for (;;) {
@@ -461,11 +462,11 @@ void luaV_execute (lua_State *L) {
         ci->u.l.savedpc--;  /* undo increment */
         luaD_throw(L, LUA_YIELD);
       }
-      base = ci->base;
+      base = ci->u.l.base;
     }
     /* warning!! several calls may realloc the stack and invalidate `ra' */
     ra = RA(i);
-    lua_assert(base == ci->base && base == L->base);
+    lua_assert(base == ci->u.l.base);
     lua_assert(base <= L->top && L->top <= L->stack + L->stacksize);
     switch (GET_OPCODE(i)) {
       case OP_MOVE: {
@@ -642,7 +643,7 @@ void luaV_execute (lua_State *L) {
         if (b != 0) L->top = ra+b;  /* else previous instruction set top */
         if (luaD_precall(L, ra, nresults)) {  /* C function? */
           if (nresults >= 0) L->top = ci->top;  /* adjust results */
-          base = ci->base;
+          base = ci->u.l.base;
           continue;
         }
         else {  /* Lua function */
@@ -656,7 +657,7 @@ void luaV_execute (lua_State *L) {
         if (b != 0) L->top = ra+b;  /* else previous instruction set top */
         lua_assert(GETARG_C(i) - 1 == LUA_MULTRET);
         if (luaD_precall(L, ra, LUA_MULTRET)) {  /* C function? */
-          base = ci->base;
+          base = ci->u.l.base;
           continue;
         }
         else {
@@ -666,12 +667,12 @@ void luaV_execute (lua_State *L) {
           StkId nfunc = nci->func;  /* called function index */
           StkId ofunc = oci->func;
           int aux;
-          if (cl->p->sizep > 0) luaF_close(L, oci->base);
-          L->base = oci->base = ofunc + (nci->base - nfunc);
+          if (cl->p->sizep > 0) luaF_close(L, oci->u.l.base);
+          oci->u.l.base = ofunc + (nci->u.l.base - nfunc);
           for (aux = 0; nfunc+aux < L->top; aux++)  /* move frame down */
             setobjs2s(L, ofunc + aux, nfunc + aux);
           oci->top = L->top = ofunc + aux;  /* correct top */
-          lua_assert(L->top == oci->base + clvalue(ofunc)->l.p->maxstacksize);
+          lua_assert(L->top == oci->u.l.base + clvalue(ofunc)->l.p->maxstacksize);
           oci->u.l.savedpc = nci->u.l.savedpc;
           oci->u.l.tailcalls++;  /* one more call lost */
           ci = L->ci = oci;  /* remove new frame */
@@ -789,7 +790,7 @@ void luaV_execute (lua_State *L) {
       case OP_VARARG: {
         int b = GETARG_B(i) - 1;
         int j;
-        int n = cast_int(ci->base - ci->func) - cl->p->numparams - 1;
+        int n = cast_int(base - ci->func) - cl->p->numparams - 1;
         if (b == LUA_MULTRET) {
           Protect(luaD_checkstack(L, n));
           ra = RA(i);  /* previous call may change the stack */
@@ -798,7 +799,7 @@ void luaV_execute (lua_State *L) {
         }
         for (j = 0; j < b; j++) {
           if (j < n) {
-            setobjs2s(L, ra + j, ci->base - n + j);
+            setobjs2s(L, ra + j, base - n + j);
           }
           else {
             setnilvalue(ra + j);
@@ -815,7 +816,7 @@ void luaV_execute (lua_State *L) {
     lua_assert(ci == L->ci);
     cl = &clvalue(ci->func)->l;
     k = cl->p->k;
-    base = ci->base;
+    base = ci->u.l.base;
   }
 }
 

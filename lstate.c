@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.53 2009/04/17 22:00:01 roberto Exp roberto $
+** $Id: lstate.c,v 2.54 2009/04/28 19:04:36 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -86,7 +86,6 @@ static void stack_init (lua_State *L1, lua_State *L) {
   /* initialize first ci */
   L1->ci->func = L1->top;
   setnilvalue(L1->top++);  /* 'function' entry for this 'ci' */
-  L1->base = L1->ci->base = L1->top;
   L1->ci->top = L1->top + LUA_MINSTACK;
   L1->ci->callstatus = 0;
 }

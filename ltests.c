@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.61 2009/04/17 14:28:06 roberto Exp roberto $
+** $Id: ltests.c,v 2.62 2009/04/17 22:00:01 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -43,7 +43,7 @@ void *l_Trick = 0;
 int islocked = 0;
 
 
-#define obj_at(L,k)	(L->ci->base+(k) - 1)
+#define obj_at(L,k)	(L->ci->func + (k))
 
 
 static void setnameval (lua_State *L, const char *name, int val) {
@@ -514,7 +514,7 @@ static int mem_query (lua_State *L) {
 
 
 static int settrick (lua_State *L) {
-  l_Trick = (L->base)->value.gc;
+  l_Trick = obj_at(L, 1)->value.gc;
   return 0;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.42 2009/04/17 14:28:06 roberto Exp roberto $
+** $Id: lstate.h,v 2.43 2009/04/17 22:00:01 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -77,7 +77,6 @@ typedef struct stringtable {
 ** informations about a call
 */
 typedef struct CallInfo {
-  StkId base;  /* base for this function */
   StkId func;  /* function index in the stack */
   StkId	top;  /* top for this function */
   struct CallInfo *previous, *next;  /* dynamic call link */
@@ -85,6 +84,7 @@ typedef struct CallInfo {
   lu_byte callstatus;
   union {
     struct {  /* only for Lua functions */
+      StkId base;  /* base for this function */
       const Instruction *savedpc;
       int tailcalls;  /* number of tail calls lost under this entry */
     } l;
@@ -161,7 +161,6 @@ struct lua_State {
   CommonHeader;
   lu_byte status;
   StkId top;  /* first free slot in the stack */
-  StkId base;  /* base of current function */
   global_State *l_G;
   CallInfo *ci;  /* call info for current function */
   int nci;  /* number of total CallInfo structures linked */

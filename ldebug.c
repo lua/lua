@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.49 2009/04/30 17:42:21 roberto Exp roberto $
+** $Id: ldebug.c,v 2.50 2009/05/04 18:26:21 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -103,32 +103,34 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
 }
 
 
-static Proto *getluaproto (CallInfo *ci) {
-  return (isLua(ci) ? ci_func(ci)->l.p : NULL);
-}
-
-
-static const char *findlocal (lua_State *L, CallInfo *ci, int n) {
-  const char *name;
-  Proto *fp = getluaproto(ci);
-  if (fp && (name = luaF_getlocalname(fp, n, currentpc(ci))) != NULL)
-    return name;  /* is a local variable in a Lua function */
-  else {
-    StkId limit = (ci == L->ci) ? L->top : ci->next->func;
-    if (limit - ci->base >= n && n > 0)  /* is 'n' inside 'ci' stack? */
-      return "(*temporary)";
-    else
-      return NULL;
+static const char *findlocal (lua_State *L, CallInfo *ci, int n,
+                              StkId *pos) {
+  const char *name = NULL;
+  StkId base;
+  if (isLua(ci)) {
+    base = ci->u.l.base;
+    name = luaF_getlocalname(ci_func(ci)->l.p, n, currentpc(ci));
   }
+  else
+    base = ci->func + 1;
+  if (name == NULL) {  /* no 'standard' name? */
+    StkId limit = (ci == L->ci) ? L->top : ci->next->func;
+    if (limit - base >= n && n > 0)  /* is 'n' inside 'ci' stack? */
+      name = "(*temporary)";  /* generic name for any valid slot */
+    else return NULL;  /* no name */
+  }
+  *pos = base + (n - 1);
+  return name;
 }
 
 
 LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
   CallInfo *ci = ar->i_ci;
-  const char *name = findlocal(L, ci, n);
+  StkId pos;
+  const char *name = findlocal(L, ci, n, &pos);
   lua_lock(L);
   if (name) {
-    setobj2s(L, L->top, ci->base + (n - 1));
+    setobj2s(L, L->top, pos);
     api_incr_top(L);
   }
   lua_unlock(L);
@@ -138,10 +140,11 @@ LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
 
 LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
   CallInfo *ci = ar->i_ci;
-  const char *name = findlocal(L, ci, n);
+  StkId pos;
+  const char *name = findlocal(L, ci, n, &pos);
   lua_lock(L);
   if (name)
-      setobjs2s(L, ci->base + (n - 1), L->top - 1);
+      setobjs2s(L, pos, L->top - 1);
   L->top--;  /* pop value */
   lua_unlock(L);
   return name;
@@ -282,8 +285,7 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
   Proto *p;
   int lastpc, pc;
   const char *what = NULL;
-  if (!isLua(ci))  /* is not a Lua function? */
-    return NULL;  /* cannot find name for it */
+  lua_assert(isLua(ci));
   p = ci_func(ci)->l.p;
   lastpc = currentpc(ci);
   *name = luaF_getlocalname(p, reg + 1, lastpc);
@@ -418,17 +420,18 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
 /* only ANSI way to check whether a pointer points to an array */
 static int isinstack (CallInfo *ci, const TValue *o) {
   StkId p;
-  for (p = ci->base; p < ci->top; p++)
+  for (p = ci->u.l.base; p < ci->top; p++)
     if (o == p) return 1;
   return 0;
 }
 
 
 void luaG_typeerror (lua_State *L, const TValue *o, const char *op) {
+  CallInfo *ci = L->ci;
   const char *name = NULL;
   const char *t = luaT_typenames[ttype(o)];
-  const char *kind = (isinstack(L->ci, o)) ?
-                         getobjname(L, L->ci, cast_int(o - L->base), &name) :
+  const char *kind = (isLua(ci) && isinstack(ci, o)) ?
+                         getobjname(L, ci, cast_int(o - ci->u.l.base), &name) :
                          NULL;
   if (kind)
     luaG_runerror(L, "attempt to %s %s " LUA_QS " (a %s value)",
@@ -469,7 +472,7 @@ static void addinfo (lua_State *L, const char *msg) {
   if (isLua(ci)) {  /* is Lua code? */
     char buff[LUA_IDSIZE];  /* add file:line information */
     int line = currentline(ci);
-    luaO_chunkid(buff, getstr(getluaproto(ci)->source), LUA_IDSIZE);
+    luaO_chunkid(buff, getstr(ci_func(ci)->l.p->source), LUA_IDSIZE);
     luaO_pushfstring(L, "%s:%d: %s", buff, line, msg);
   }
 }

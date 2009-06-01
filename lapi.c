@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.76 2009/04/17 22:00:01 roberto Exp $
+** $Id: lapi.c,v 2.76 2009/04/17 22:00:01 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -35,20 +35,21 @@ const char lua_ident[] =
 
 
 
-#define api_checknelems(L, n)	api_check(L, (n) <= (L->top - L->base))
+#define api_checknelems(L,n)  api_check(L, (n) < (L->top - L->ci->func))
 
 #define api_checkvalidindex(L, i)	api_check(L, (i) != luaO_nilobject)
 
 
 static TValue *index2adr (lua_State *L, int idx) {
+  CallInfo *ci = L->ci;
   if (idx > 0) {
-    TValue *o = L->base + (idx - 1);
-    api_check(L, idx <= L->ci->top - L->base);
+    TValue *o = ci->func + idx;
+    api_check(L, idx <= ci->top - (ci->func + 1));
     if (o >= L->top) return cast(TValue *, luaO_nilobject);
     else return o;
   }
   else if (idx > LUA_REGISTRYINDEX) {
-    api_check(L, idx != 0 && -idx <= L->top - L->base);
+    api_check(L, idx != 0 && -idx <= L->top - (ci->func + 1));
     return L->top + idx;
   }
   else switch (idx) {  /* pseudo-indices */
@@ -83,13 +84,15 @@ static Table *getcurrenv (lua_State *L) {
 
 LUA_API int lua_checkstack (lua_State *L, int size) {
   int res = 1;
+  CallInfo *ci = L->ci;
   lua_lock(L);
-  if (size > LUAI_MAXCSTACK || (L->top - L->base + size) > LUAI_MAXCSTACK)
+  if (size > LUAI_MAXCSTACK ||
+      (L->top - (ci->func + 1) + size) > LUAI_MAXCSTACK)
     res = 0;  /* stack overflow */
   else if (size > 0) {
     luaD_checkstack(L, size);
-    if (L->ci->top < L->top + size)
-      L->ci->top = L->top + size;
+    if (ci->top < L->top + size)
+      ci->top = L->top + size;
   }
   lua_unlock(L);
   return res;
@@ -138,20 +141,21 @@ LUA_API void lua_checkversion_ (lua_State *L, int version) {
 
 
 LUA_API int lua_gettop (lua_State *L) {
-  return cast_int(L->top - L->base);
+  return cast_int(L->top - (L->ci->func + 1));
 }
 
 
 LUA_API void lua_settop (lua_State *L, int idx) {
+  StkId func = L->ci->func;
   lua_lock(L);
   if (idx >= 0) {
-    api_check(L, idx <= L->stack_last - L->base);
-    while (L->top < L->base + idx)
+    api_check(L, idx <= L->stack_last - (func + 1));
+    while (L->top < (func + 1) + idx)
       setnilvalue(L->top++);
-    L->top = L->base + idx;
+    L->top = (func + 1) + idx;
   }
   else {
-    api_check(L, -(idx+1) <= (L->top - L->base));
+    api_check(L, -(idx+1) <= (L->top - (func + 1)));
     L->top += idx+1;  /* `subtract' index (index is negative) */
   }
   lua_unlock(L);
