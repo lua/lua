@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.61 2008/08/06 13:38:32 roberto Exp roberto $
+** $Id: loadlib.c,v 1.62 2009/03/26 22:25:05 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -669,7 +669,7 @@ LUALIB_API int luaopen_package (lua_State *L) {
   setpath(L, "cpath", LUA_CPATH, LUA_CPATH_DEFAULT); /* set field `cpath' */
   /* store config information */
   lua_pushliteral(L, LUA_DIRSEP "\n" LUA_PATHSEP "\n" LUA_PATH_MARK "\n"
-                     LUA_EXECDIR "\n" LUA_IGMARK);
+                     LUA_EXECDIR "\n" LUA_IGMARK "\n");
   lua_setfield(L, -2, "config");
   /* set field `loaded' */
   luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 2);
