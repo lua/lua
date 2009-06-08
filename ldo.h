@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 2.11 2009/03/10 17:14:37 roberto Exp roberto $
+** $Id: ldo.h,v 2.12 2009/04/17 14:28:06 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -15,8 +15,7 @@
 
 #define luaD_checkstack(L,n)	\
   if ((char *)L->stack_last - (char *)L->top <= (n)*(int)sizeof(TValue)) \
-    luaD_growstack(L, n); \
-  else condhardstacktests(luaD_reallocstack(L, L->stacksize - EXTRA_STACK - 1));
+    luaD_growstack(L, n); else condmovestack(L);
 
 
 #define incr_top(L) {L->top++; luaD_checkstack(L,0);}

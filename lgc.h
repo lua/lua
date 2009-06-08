@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.19 2008/06/26 19:42:45 roberto Exp roberto $
+** $Id: lgc.h,v 2.20 2009/04/28 19:04:36 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -78,10 +78,8 @@
 #define luaC_white(g)	cast(lu_byte, (g)->currentwhite & WHITEBITS)
 
 
-#define luaC_checkGC(L) { \
-  condhardstacktests(luaD_reallocstack(L, L->stacksize - EXTRA_STACK - 1)); \
-  if (G(L)->totalbytes >= G(L)->GCthreshold) \
-	luaC_step(L); }
+#define luaC_checkGC(L) \
+  {condmovestack(L); if (G(L)->totalbytes >= G(L)->GCthreshold) luaC_step(L);}
 
 
 #define luaC_barrier(L,p,v) { if (valiswhite(v) && isblack(obj2gco(p)))  \

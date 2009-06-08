@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.52 2009/04/29 17:09:41 roberto Exp roberto $
+** $Id: lgc.c,v 2.53 2009/05/21 20:06:11 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -551,7 +551,7 @@ static void sweepthread (lua_State *L, lua_State *L1, int alive) {
     if ((L1->stacksize - EXTRA_STACK) > goodsize)
       luaD_reallocstack(L1, goodsize);
     else 
-      condhardstacktests(luaD_reallocstack(L, L1->stacksize - EXTRA_STACK - 1));
+      condmovestack(L1);
   }
 }
 
