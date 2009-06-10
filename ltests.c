@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.62 2009/04/17 22:00:01 roberto Exp roberto $
+** $Id: ltests.c,v 2.63 2009/06/01 19:09:26 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -402,7 +402,7 @@ static char *buildop (Proto *p, int pc, char *buff) {
   Instruction i = p->code[pc];
   OpCode o = GET_OPCODE(i);
   const char *name = luaP_opnames[o];
-  int line = getline(p, pc);
+  int line = getfuncline(p, pc);
   sprintf(buff, "(%4d) %4d - ", line, pc);
   switch (getOpMode(o)) {
     case iABC:

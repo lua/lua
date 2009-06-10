@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.89 2009/05/27 17:11:27 roberto Exp roberto $
+** $Id: lvm.c,v 2.90 2009/06/01 19:09:26 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -67,10 +67,10 @@ static void traceexec (lua_State *L) {
   if (mask & LUA_MASKLINE) {
     Proto *p = ci_func(ci)->l.p;
     int npc = pcRel(ci->u.l.savedpc, p);
-    int newline = getline(p, npc);
+    int newline = getfuncline(p, npc);
     if (npc == 0 ||  /* call linehook when enter a new function, */
         ci->u.l.savedpc <= L->oldpc ||  /* when jump back (loop), or when */
-        newline != getline(p, pcRel(L->oldpc, p)))  /* enter a new line */
+        newline != getfuncline(p, pcRel(L->oldpc, p)))  /* enter a new line */
       luaD_callhook(L, LUA_HOOKLINE, newline);
   }
   L->oldpc = ci->u.l.savedpc;

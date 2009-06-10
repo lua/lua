@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.50 2009/05/04 18:26:21 roberto Exp roberto $
+** $Id: ldebug.c,v 2.51 2009/06/01 19:09:26 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -44,7 +44,7 @@ static int currentline (CallInfo *ci) {
   if (pc < 0)
     return -1;  /* only active lua functions have current-line information */
   else
-    return getline(ci_func(ci)->l.p, pc);
+    return getfuncline(ci_func(ci)->l.p, pc);
 }
 
 
