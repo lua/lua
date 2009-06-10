@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.35 2008/04/02 16:16:06 roberto Exp roberto $
+** $Id: lcode.c,v 2.36 2008/04/07 18:41:47 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -349,11 +349,11 @@ static void discharge2reg (FuncState *fs, expdesc *e, int reg) {
       break;
     }
     case VK: {
-      luaK_codeABx(fs, OP_LOADK, reg, e->u.s.info);
+      luaK_codek(fs, reg, e->u.s.info);
       break;
     }
     case VKNUM: {
-      luaK_codeABx(fs, OP_LOADK, reg, luaK_numberK(fs, e->u.nval));
+      luaK_codek(fs, reg, luaK_numberK(fs, e->u.nval));
       break;
     }
     case VRELOCABLE: {
@@ -813,6 +813,7 @@ int luaK_codeABC (FuncState *fs, OpCode o, int a, int b, int c) {
   lua_assert(getOpMode(o) == iABC);
   lua_assert(getBMode(o) != OpArgN || b == 0);
   lua_assert(getCMode(o) != OpArgN || c == 0);
+  lua_assert(a <= MAXARG_A && b <= MAXARG_B && c <= MAXARG_C);
   return luaK_code(fs, CREATE_ABC(o, a, b, c));
 }
 
@@ -820,13 +821,20 @@ int luaK_codeABC (FuncState *fs, OpCode o, int a, int b, int c) {
 int luaK_codeABx (FuncState *fs, OpCode o, int a, unsigned int bc) {
   lua_assert(getOpMode(o) == iABx || getOpMode(o) == iAsBx);
   lua_assert(getCMode(o) == OpArgN);
+  lua_assert(a <= MAXARG_A && bc <= MAXARG_Bx);
   return luaK_code(fs, CREATE_ABx(o, a, bc));
 }
 
 
 static int luaK_codeAx (FuncState *fs, OpCode o, int a) {
   lua_assert(getOpMode(o) == iAx);
+  lua_assert(a <= MAXARG_Ax);
   return luaK_code(fs, CREATE_Ax(o, a));
+}
+
+
+void luaK_codek (FuncState *fs, int reg, int k) {
+    luaK_codeABx(fs, OP_LOADK, reg, k);
 }
 
 
