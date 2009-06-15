@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.98 2008/08/06 13:32:45 roberto Exp roberto $
-+** $Id: bugs,v 1.98 2008/08/06 13:32:45 roberto Exp roberto $
+-** $Id: bugs,v 1.99 2009/04/27 20:11:11 roberto Exp roberto $
++** $Id: bugs,v 1.99 2009/04/27 20:11:11 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2102,6 +2102,53 @@ print(((1 or false) and true) or false)   --> 1
 -- should be 'true'
 ]],
 patch = [[
+--- lcode.c	2007/12/28 15:32:23	2.25.1.3
++++ lcode.c	2009/06/15 14:07:34
+@@ -544,15 +544,18 @@
+       pc = NO_JUMP;  /* always true; do nothing */
+       break;
+     }
+-    case VFALSE: {
+-      pc = luaK_jump(fs);  /* always jump */
+-      break;
+-    }
+     case VJMP: {
+       invertjump(fs, e);
+       pc = e->u.s.info;
+       break;
+     }
++    case VFALSE: {
++      if (!hasjumps(e)) {
++        pc = luaK_jump(fs);  /* always jump */
++        break;
++      }
++      /* else go through */
++    }
+     default: {
+       pc = jumponcond(fs, e, 0);
+       break;
+@@ -572,14 +575,17 @@
+       pc = NO_JUMP;  /* always false; do nothing */
+       break;
+     }
+-    case VTRUE: {
+-      pc = luaK_jump(fs);  /* always jump */
+-      break;
+-    }
+     case VJMP: {
+       pc = e->u.s.info;
+       break;
+     }
++    case VTRUE: {
++      if (!hasjumps(e)) {
++        pc = luaK_jump(fs);  /* always jump */
++        break;
++      }
++      /* else go through */
++    }
+     default: {
+       pc = jumponcond(fs, e, 1);
+       break;
 ]],
 }
 
