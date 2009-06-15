@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.236 2009/04/17 14:28:06 roberto Exp roberto $
+** $Id: lua.h,v 1.237 2009/05/21 20:06:11 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -112,6 +112,8 @@ typedef LUA_INTEGER lua_Integer;
 LUA_API lua_State *(lua_newstate) (lua_Alloc f, void *ud);
 LUA_API void       (lua_close) (lua_State *L);
 LUA_API lua_State *(lua_newthread) (lua_State *L);
+
+LUA_API lua_State *(lua_mainthread) (lua_State *L);
 
 LUA_API lua_CFunction (lua_atpanic) (lua_State *L, lua_CFunction panicf);
 
