@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.90 2009/06/01 19:09:26 roberto Exp roberto $
+** $Id: lvm.c,v 2.91 2009/06/10 16:57:53 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -222,7 +222,7 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
 }
 
 
-static int lessequal (lua_State *L, const TValue *l, const TValue *r) {
+int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
   int res;
   if (ttype(l) != ttype(r))
     return luaG_ordererror(L, l, r);
@@ -616,7 +616,7 @@ void luaV_execute (lua_State *L) {
       }
       case OP_LE: {
         Protect(
-          if (lessequal(L, RKB(i), RKC(i)) == GETARG_A(i))
+          if (luaV_lessequal(L, RKB(i), RKC(i)) == GETARG_A(i))
             dojump(GETARG_sBx(*ci->u.l.savedpc));
         )
         ci->u.l.savedpc++;
