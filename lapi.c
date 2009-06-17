@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.78 2009/06/01 19:09:26 roberto Exp roberto $
+** $Id: lapi.c,v 2.79 2009/06/15 19:51:31 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -275,30 +275,32 @@ LUA_API int lua_rawequal (lua_State *L, int index1, int index2) {
 }
 
 
-LUA_API int lua_equal (lua_State *L, int index1, int index2) {
+LUA_API void  lua_arith (lua_State *L, int op) {
+  lua_lock(L);
+  api_checknelems(L, 2);
+  luaV_arith(L, L->top - 2, L->top - 2, L->top - 1, op - LUA_OPADD + TM_ADD);
+  L->top--;
+  lua_unlock(L);
+}
+
+
+LUA_API int lua_compare (lua_State *L, int index1, int index2, int op) {
   StkId o1, o2;
   int i;
   lua_lock(L);  /* may call tag method */
   o1 = index2adr(L, index1);
   o2 = index2adr(L, index2);
-  i = (o1 == luaO_nilobject || o2 == luaO_nilobject) ? 0 : equalobj(L, o1, o2);
+  if (o1 == luaO_nilobject || o2 == luaO_nilobject)
+    i = 0;
+  else switch (op) {
+    case LUA_OPEQ: i = equalobj(L, o1, o2); break;
+    case LUA_OPLT: i = luaV_lessthan(L, o1, o2); break;
+    case LUA_OPLE: i = luaV_lessequal(L, o1, o2); break;
+    default: api_check(L, 0); i = 0;
+  }
   lua_unlock(L);
   return i;
 }
-
-
-LUA_API int lua_lessthan (lua_State *L, int index1, int index2) {
-  StkId o1, o2;
-  int i;
-  lua_lock(L);  /* may call tag method */
-  o1 = index2adr(L, index1);
-  o2 = index2adr(L, index2);
-  i = (o1 == luaO_nilobject || o2 == luaO_nilobject) ? 0
-       : luaV_lessthan(L, o1, o2);
-  lua_unlock(L);
-  return i;
-}
-
 
 
 LUA_API lua_Number lua_tonumber (lua_State *L, int idx) {

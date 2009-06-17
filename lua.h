@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.237 2009/05/21 20:06:11 roberto Exp roberto $
+** $Id: lua.h,v 1.238 2009/06/15 19:51:31 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -147,10 +147,6 @@ LUA_API int             (lua_isuserdata) (lua_State *L, int idx);
 LUA_API int             (lua_type) (lua_State *L, int idx);
 LUA_API const char     *(lua_typename) (lua_State *L, int tp);
 
-LUA_API int            (lua_equal) (lua_State *L, int idx1, int idx2);
-LUA_API int            (lua_rawequal) (lua_State *L, int idx1, int idx2);
-LUA_API int            (lua_lessthan) (lua_State *L, int idx1, int idx2);
-
 LUA_API lua_Number      (lua_tonumber) (lua_State *L, int idx);
 LUA_API lua_Integer     (lua_tointeger) (lua_State *L, int idx);
 LUA_API int             (lua_toboolean) (lua_State *L, int idx);
@@ -160,6 +156,28 @@ LUA_API lua_CFunction   (lua_tocfunction) (lua_State *L, int idx);
 LUA_API void	       *(lua_touserdata) (lua_State *L, int idx);
 LUA_API lua_State      *(lua_tothread) (lua_State *L, int idx);
 LUA_API const void     *(lua_topointer) (lua_State *L, int idx);
+
+
+/*
+** Comparison and arithmetic functions
+*/
+
+#define LUA_OPADD	0	/* ORDER TM */
+#define LUA_OPSUB	1
+#define LUA_OPMUL	2
+#define LUA_OPDIV	3
+#define LUA_OPMOD	4
+#define LUA_OPPOW	5
+#define LUA_OPUNM	6
+
+LUA_API void  (lua_arith) (lua_State *L, int op);
+
+#define LUA_OPEQ	0
+#define LUA_OPLT	1
+#define LUA_OPLE	2
+
+LUA_API int   (lua_rawequal) (lua_State *L, int idx1, int idx2);
+LUA_API int   (lua_compare) (lua_State *L, int idx1, int idx2, int op);
 
 
 /*
@@ -309,6 +327,9 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 
 #define lua_Chunkreader		lua_Reader
 #define lua_Chunkwriter		lua_Writer
+
+#define lua_equal(L,idx1,idx2)		lua_compare(L,(idx1),(idx2),LUA_OPEQ)
+#define lua_lessthan(L,idx1,idx2)	lua_compare(L,(idx1),(idx2),LUA_OPLT)
 
 #endif
 

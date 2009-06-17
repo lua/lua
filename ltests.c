@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.64 2009/06/10 16:57:53 roberto Exp roberto $
+** $Id: ltests.c,v 2.65 2009/06/15 19:51:31 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -971,13 +971,17 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("concat") {
       lua_concat(L1, getnum);
     }
-    else if EQ("lessthan") {
-      int a = getindex;
-      lua_pushboolean(L1, lua_lessthan(L1, a, getindex));
+    else if EQ("arith") {
+      static char ops[] = "+-*/%^_";
+      int op;
+      skip(&pc);
+      op = strchr(ops, *pc++) - ops;
+      lua_arith(L, op);
     }
-    else if EQ("equal") {
+    else if EQ("compare") {
       int a = getindex;
-      lua_pushboolean(L1, lua_equal(L1, a, getindex));
+      int b = getindex;
+      lua_pushboolean(L1, lua_compare(L1, a, b, getnum));
     }
     else if EQ("call") {
       int narg = getnum;
