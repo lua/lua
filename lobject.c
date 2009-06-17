@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.29 2009/02/19 17:18:25 roberto Exp $
+** $Id: lobject.c,v 2.30 2009/05/27 17:11:27 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -84,6 +84,20 @@ int luaO_rawequalObj (const TValue *t1, const TValue *t2) {
     default:
       lua_assert(iscollectable(t1));
       return gcvalue(t1) == gcvalue(t2);
+  }
+}
+
+
+lua_Number luaO_arith (int op, lua_Number v1, lua_Number v2) {
+  switch (op) {
+    case LUA_OPADD: return luai_numadd(NULL, v1, v2);
+    case LUA_OPSUB: return luai_numsub(NULL, v1, v2);
+    case LUA_OPMUL: return luai_nummul(NULL, v1, v2);
+    case LUA_OPDIV: return luai_numdiv(NULL, v1, v2);
+    case LUA_OPMOD: return luai_nummod(NULL, v1, v2);
+    case LUA_OPPOW: return luai_numpow(NULL, v1, v2);
+    case LUA_OPUNM: return luai_numunm(N, v1);
+    default: lua_assert(0); return 0;
   }
 }
 
