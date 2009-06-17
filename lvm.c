@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.91 2009/06/10 16:57:53 roberto Exp roberto $
+** $Id: lvm.c,v 2.92 2009/06/17 16:17:14 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -329,23 +329,14 @@ static void objlen (lua_State *L, StkId ra, const TValue *rb) {
 }
 
 
-static void Arith (lua_State *L, StkId ra, const TValue *rb,
-                   const TValue *rc, TMS op) {
+void luaV_arith (lua_State *L, StkId ra, const TValue *rb,
+                 const TValue *rc, TMS op) {
   TValue tempb, tempc;
   const TValue *b, *c;
   if ((b = luaV_tonumber(rb, &tempb)) != NULL &&
       (c = luaV_tonumber(rc, &tempc)) != NULL) {
-    lua_Number nb = nvalue(b), nc = nvalue(c);
-    switch (op) {
-      case TM_ADD: setnvalue(ra, luai_numadd(L, nb, nc)); break;
-      case TM_SUB: setnvalue(ra, luai_numsub(L, nb, nc)); break;
-      case TM_MUL: setnvalue(ra, luai_nummul(L, nb, nc)); break;
-      case TM_DIV: setnvalue(ra, luai_numdiv(L, nb, nc)); break;
-      case TM_MOD: setnvalue(ra, luai_nummod(L, nb, nc)); break;
-      case TM_POW: setnvalue(ra, luai_numpow(L, nb, nc)); break;
-      case TM_UNM: setnvalue(ra, luai_numunm(L, nb)); break;
-      default: lua_assert(0); break;
-    }
+    lua_Number res = luaO_arith(op - TM_ADD + LUA_OPADD, nvalue(b), nvalue(c));
+    setnvalue(ra, res);
   }
   else if (!call_binTM(L, rb, rc, ra, op))
     luaG_aritherror(L, rb, rc);
@@ -440,7 +431,7 @@ void luaV_finishOp (lua_State *L) {
           setnvalue(ra, op(L, nb, nc)); \
         } \
         else \
-          Protect(Arith(L, ra, rb, rc, tm)); \
+          Protect(luaV_arith(L, ra, rb, rc, tm)); \
       }
 
 
@@ -570,7 +561,7 @@ void luaV_execute (lua_State *L) {
           setnvalue(ra, luai_numunm(L, nb));
         }
         else {
-          Protect(Arith(L, ra, rb, rb, TM_UNM));
+          Protect(luaV_arith(L, ra, rb, rb, TM_UNM));
         }
         continue;
       }
