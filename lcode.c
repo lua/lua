@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.37 2009/06/10 16:52:03 roberto Exp roberto $
+** $Id: lcode.c,v 2.38 2009/06/15 13:52:08 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -638,23 +638,11 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
 
 
 static int constfolding (OpCode op, expdesc *e1, expdesc *e2) {
-  lua_Number v1, v2, r;
+  lua_Number r;
   if (!isnumeral(e1) || !isnumeral(e2)) return 0;
-  v1 = e1->u.nval;
-  v2 = e2->u.nval;
-  switch (op) {
-    case OP_ADD: r = luai_numadd(NULL, v1, v2); break;
-    case OP_SUB: r = luai_numsub(NULL, v1, v2); break;
-    case OP_MUL: r = luai_nummul(NULL, v1, v2); break;
-    case OP_DIV:
-      if (v2 == 0) return 0;  /* do not attempt to divide by 0 */
-      r = luai_numdiv(NULL, v1, v2); break;
-    case OP_MOD:
-      if (v2 == 0) return 0;  /* do not attempt to divide by 0 */
-      r = luai_nummod(NULL, v1, v2); break;
-    case OP_POW: r = luai_numpow(NULL, v1, v2); break;
-    default: lua_assert(0); r = 0; break;
-  }
+  if ((op == OP_DIV || op == OP_MOD) && e2->u.nval == 0)
+    return 0;  /* do not attempt to divide by 0 */
+  r = luaO_arith(op - OP_ADD + LUA_OPADD, e1->u.nval, e2->u.nval);
   if (luai_numisnan(NULL, r)) return 0;  /* do not attempt to produce NaN */
   e1->u.nval = r;
   return 1;
