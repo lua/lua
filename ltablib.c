@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.45 2009/03/10 17:14:37 roberto Exp roberto $
+** $Id: ltablib.c,v 1.46 2009/03/23 14:26:12 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -188,7 +188,7 @@ static int sort_comp (lua_State *L, int a, int b) {
     return res;
   }
   else  /* a < b? */
-    return lua_lessthan(L, a, b);
+    return lua_compare(L, a, b, LUA_OPLT);
 }
 
 static void auxsort (lua_State *L, int l, int u) {
