@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.38 2009/06/15 13:52:08 roberto Exp roberto $
+** $Id: lcode.c,v 2.39 2009/06/17 17:49:09 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -766,18 +766,19 @@ void luaK_posfix (FuncState *fs, BinOpr op, expdesc *e1, expdesc *e2) {
       }
       break;
     }
-    case OPR_ADD: codearith(fs, OP_ADD, e1, e2); break;
-    case OPR_SUB: codearith(fs, OP_SUB, e1, e2); break;
-    case OPR_MUL: codearith(fs, OP_MUL, e1, e2); break;
-    case OPR_DIV: codearith(fs, OP_DIV, e1, e2); break;
-    case OPR_MOD: codearith(fs, OP_MOD, e1, e2); break;
-    case OPR_POW: codearith(fs, OP_POW, e1, e2); break;
-    case OPR_EQ: codecomp(fs, OP_EQ, 1, e1, e2); break;
-    case OPR_NE: codecomp(fs, OP_EQ, 0, e1, e2); break;
-    case OPR_LT: codecomp(fs, OP_LT, 1, e1, e2); break;
-    case OPR_LE: codecomp(fs, OP_LE, 1, e1, e2); break;
-    case OPR_GT: codecomp(fs, OP_LT, 0, e1, e2); break;
-    case OPR_GE: codecomp(fs, OP_LE, 0, e1, e2); break;
+    case OPR_ADD: case OPR_SUB: case OPR_MUL: case OPR_DIV:
+    case OPR_MOD: case OPR_POW: {
+      codearith(fs, op - OPR_ADD + OP_ADD, e1, e2);
+      break;
+    }
+    case OPR_EQ: case OPR_LT: case OPR_LE: {
+      codecomp(fs, op - OPR_EQ + OP_EQ, 1, e1, e2);
+      break;
+    }
+    case OPR_NE: case OPR_GT: case OPR_GE: {
+      codecomp(fs, op - OPR_NE + OP_EQ, 0, e1, e2);
+      break;
+    }
     default: lua_assert(0);
   }
 }
