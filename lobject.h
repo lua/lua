@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.25 2009/03/26 12:56:38 roberto Exp roberto $
+** $Id: lobject.h,v 2.26 2009/06/17 17:48:34 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -118,6 +118,9 @@ typedef struct lua_TValue {
 
 #define setnvalue(obj,x) \
   { TValue *i_o=(obj); i_o->value.n=(x); i_o->tt=LUA_TNUMBER; }
+
+#define changenvalue(obj,x) \
+  ( lua_assert((obj)->tt==LUA_TNUMBER), (obj)->value.n=(x) )
 
 #define setpvalue(obj,x) \
   { TValue *i_o=(obj); i_o->value.p=(x); i_o->tt=LUA_TLIGHTUSERDATA; }
