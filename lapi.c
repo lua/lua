@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.81 2009/06/17 18:38:54 roberto Exp roberto $
+** $Id: lapi.c,v 2.82 2009/06/18 16:36:40 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -129,13 +129,11 @@ LUA_API lua_CFunction lua_atpanic (lua_State *L, lua_CFunction panicf) {
 }
 
 
-LUA_API void lua_checkversion_ (lua_State *L, int version) {
-  lua_lock(L);
-  if (version != LUA_VERSION_NUM)
-    luaG_runerror(L, "app./library not compiled with header " LUA_VERSION);
-  if (G(L)->nilobjp != luaO_nilobject)
-    luaG_runerror(L, "application using multiple Lua VMs");
-  lua_unlock(L);
+static const lua_Number l_version = LUA_VERSION_NUM;
+
+LUA_API const lua_Number *lua_version (lua_State *L) {
+  if (L == NULL) return &l_version;
+  else return G(L)->version;
 }
 
 

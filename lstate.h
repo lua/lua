@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.43 2009/04/17 22:00:01 roberto Exp roberto $
+** $Id: lstate.h,v 2.44 2009/06/01 19:09:26 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -148,9 +148,9 @@ typedef struct global_State {
   TValue l_registry;
   struct lua_State *mainthread;
   UpVal uvhead;  /* head of double-linked list of all open upvalues */
+  const lua_Number *version;  /* pointer to version number */
   struct Table *mt[NUM_TAGS];  /* metatables for basic types */
   TString *tmname[TM_N];  /* array with tag-method names */
-  const TValue *nilobjp;  /* pointer to nil object (to check consistency) */
 } global_State;
 
 

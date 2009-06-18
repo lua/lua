@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.238 2009/06/15 19:51:31 roberto Exp roberto $
+** $Id: lua.h,v 1.239 2009/06/17 17:49:44 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -118,8 +118,7 @@ LUA_API lua_State *(lua_mainthread) (lua_State *L);
 LUA_API lua_CFunction (lua_atpanic) (lua_State *L, lua_CFunction panicf);
 
 
-LUA_API void lua_checkversion_ (lua_State *L, int version);
-#define lua_checkversion(L)	(lua_checkversion_(L, LUA_VERSION_NUM))
+LUA_API const lua_Number *lua_version (lua_State *L);
 
 
 /*
