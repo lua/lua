@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.185 2009/03/31 17:25:08 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.186 2009/04/02 19:54:06 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -649,7 +649,7 @@ static int libsize (const luaL_Reg *l) {
 
 LUALIB_API void luaL_register (lua_State *L, const char *libname,
                                const luaL_Reg *l) {
-  lua_checkversion(L);
+  luaL_checkversion(L);
   if (libname) {
     /* check whether lib already exists */
     luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 1);
@@ -740,3 +740,12 @@ LUALIB_API lua_State *luaL_newstate (void) {
   return L;
 }
 
+
+LUALIB_API void luaL_checkversion_ (lua_State *L, lua_Number ver) {
+  const lua_Number *v = lua_version(L);
+  if (v != lua_version(NULL))
+    luaL_error(L, "application using two incompatible Lua VMs");
+  else if (*v != ver)
+    luaL_error(L, "application and Lua core using different Lua versions"
+                  "(%d x %d)", (int)*v, (int)ver);
+}
