@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.186 2009/04/02 19:54:06 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.187 2009/06/18 18:59:58 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -744,8 +744,9 @@ LUALIB_API lua_State *luaL_newstate (void) {
 LUALIB_API void luaL_checkversion_ (lua_State *L, lua_Number ver) {
   const lua_Number *v = lua_version(L);
   if (v != lua_version(NULL))
-    luaL_error(L, "application using two incompatible Lua VMs");
+    luaL_error(L, "multiple Lua VMs detected");
   else if (*v != ver)
-    luaL_error(L, "application and Lua core using different Lua versions"
-                  "(%d x %d)", (int)*v, (int)ver);
+    luaL_error(L, "version mismatch: app. needs %d, Lua core provides %f",
+                  ver, *v);
 }
+
