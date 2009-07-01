@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.99 2009/04/27 20:11:11 roberto Exp roberto $
-+** $Id: bugs,v 1.99 2009/04/27 20:11:11 roberto Exp roberto $
+-** $Id: bugs,v 1.100 2009/06/15 14:12:59 roberto Exp roberto $
++** $Id: bugs,v 1.100 2009/06/15 14:12:59 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2060,7 +2060,7 @@ patch = [[
 
 Bug{
 what = [[internal macro 'svalue' is wrong]],
-report = [["Martijn van Buul, on 2008/08/04]],
+report = [[Martijn van Buul, on 2008/08/04]],
 since = [[5.1]],
 example = [[
 /* in luaconf.h */
@@ -2083,7 +2083,7 @@ patch = [[
 
 Bug{
 what = [[malicious zero-length string in binary code may segfault Lua]],
-report = [["Peter Cawley, on 2008/09/01]],
+report = [[Peter Cawley, on 2008/09/01]],
 since = [[5.1]],
 example = [[
 loadstring(('').dump(function()X''end):gsub('\2%z%z%zX','\0\0\0'))()
@@ -2095,7 +2095,7 @@ patch = [[
 
 Bug{
 what = [[wrong code generation for some particular boolean expressions]],
-report = [["Brian Kelley, on 2009/04/15]],
+report = [[Brian Kelley, on 2009/04/15]],
 since = [[5.0]],
 example = [[
 print(((1 or false) and true) or false)   --> 1
@@ -2149,6 +2149,47 @@ patch = [[
      default: {
        pc = jumponcond(fs, e, 1);
        break;
+]],
+}
+
+Bug{
+what = [['luaV_settable' may invalidate a reference to a table and try
+to reuse it]],
+report = [[Mark Feldman, on 2009/06/27]],
+since = [[5.0]],
+example = [[
+grandparent = {}
+grandparent.__newindex = function(s,_,_) print(s) end
+
+parent = {}
+parent.__newindex = parent
+setmetatable(parent, grandparent)
+
+child = setmetatable({}, parent)
+child.foo = 10      --> (crash on some machines)
+]],
+patch = [[
+--- lvm.c	2007/12/28 15:32:23	2.63.1.3
++++ lvm.c	2009/07/01 20:36:59
+@@ -133,6 +133,7 @@
+ 
+ void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
+   int loop;
++  TValue temp;
+   for (loop = 0; loop < MAXTAGLOOP; loop++) {
+     const TValue *tm;
+     if (ttistable(t)) {  /* `t' is a table? */
+@@ -152,7 +153,9 @@
+       callTM(L, tm, t, key, val);
+       return;
+     }
+-    t = tm;  /* else repeat with `tm' */ 
++    /* else repeat with `tm' */
++    setobj(L, &temp, tm);  /* avoid pointing inside table (may rehash) */
++    t = &temp;
+   }
+   luaG_runerror(L, "loop in settable");
+ }
 ]],
 }
 
