@@ -1,5 +1,5 @@
 /*
-** $Id: lualib.h,v 1.36 2005/12/27 17:12:00 roberto Exp roberto $
+** $Id: lualib.h,v 1.37 2006/09/11 14:07:24 roberto Exp roberto $
 ** Lua standard libraries
 ** See Copyright Notice in lua.h
 */
@@ -29,6 +29,9 @@ LUALIB_API int (luaopen_os) (lua_State *L);
 
 #define LUA_STRLIBNAME	"string"
 LUALIB_API int (luaopen_string) (lua_State *L);
+
+#define LUA_BITLIBNAME	"bit"
+LUALIB_API int (luaopen_bit) (lua_State *L);
 
 #define LUA_MATHLIBNAME	"math"
 LUALIB_API int (luaopen_math) (lua_State *L);

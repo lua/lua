@@ -59,7 +59,7 @@ CORE_O=	lapi.o lcode.o lctype.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o \
 	ltm.o lundump.o lvm.o lzio.o ltests.o
 AUX_O=	lauxlib.o
 LIB_O=	lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o lstrlib.o \
-	loadlib.o linit.o
+	lbitlib.o loadlib.o linit.o
 
 LUA_T=	lua
 LUA_O=	lua.o
@@ -112,6 +112,7 @@ lapi.o: lapi.c lua.h luaconf.h lapi.h llimits.h lstate.h lobject.h ltm.h \
   lvm.h makefile
 lauxlib.o: lauxlib.c lua.h luaconf.h lauxlib.h makefile
 lbaselib.o: lbaselib.c lua.h luaconf.h lauxlib.h lualib.h makefile
+lbitlib.o: lbitlib.c lua.h luaconf.h lauxlib.h lualib.h makefile
 lcode.o: lcode.c lua.h luaconf.h lcode.h llex.h lobject.h llimits.h \
   lzio.h lmem.h lopcodes.h lparser.h ldebug.h lstate.h ltm.h ldo.h lgc.h \
   ltable.h makefile

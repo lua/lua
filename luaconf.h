@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.104 2009/03/26 12:57:01 roberto Exp roberto $
+** $Id: luaconf.h,v 1.105 2009/06/18 18:19:36 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -139,14 +139,6 @@
 #define LUA_PATH_MARK	"?"
 #define LUA_EXECDIR	"!"
 #define LUA_IGMARK	"-"
-
-
-/*
-@@ LUA_INTEGER is the integral type used by lua_pushinteger/lua_tointeger.
-** CHANGE that if ptrdiff_t is not adequate on your machine. (On most
-** machines, ptrdiff_t gives a good choice between int or long.)
-*/
-#define LUA_INTEGER	ptrdiff_t
 
 
 /*
@@ -403,24 +395,22 @@
 
 
 /*
-@@ LUAI_UINT32 is an unsigned integer with at least 32 bits.
-@@ LUAI_INT32 is an signed integer with at least 32 bits.
+@@ LUA_INT32 is an signed integer with exactly 32 bits.
 @@ LUAI_UMEM is an unsigned integer big enough to count the total
 @* memory used by Lua.
 @@ LUAI_MEM is a signed integer big enough to count the total memory
 @* used by Lua.
 ** CHANGE here if for some weird reason the default definitions are not
-** good enough for your machine. (The definitions in the 'else'
-** part always works, but may waste space on machines with 64-bit
-** longs.) Probably you do not need to change this.
+** good enough for your machine.  Probably you do not need to change
+** this.
 */
 #if LUAI_BITSINT >= 32
-#define LUAI_UINT32	unsigned int
+#define LUA_INT32	int
 #define LUAI_UMEM	size_t
 #define LUAI_MEM	ptrdiff_t
 #else
 /* 16-bit ints */
-#define LUAI_UINT32	unsigned long
+#define LUA_INT32	long
 #define LUAI_UMEM	unsigned long
 #define LUAI_MEM	long
 #endif
@@ -553,8 +543,20 @@
 
 
 /*
+@@ LUA_INTEGER is the integral type used by lua_pushinteger/lua_tointeger.
+** CHANGE that if ptrdiff_t is not adequate on your machine. (On most
+** machines, ptrdiff_t gives a good choice between int or long.)
+*/
+#define LUA_INTEGER	ptrdiff_t
+
+
+/*
 @@ lua_number2int is a macro to convert lua_Number to int.
-@@ lua_number2integer is a macro to convert lua_Number to lua_Integer.
+@@ lua_number2integer is a macro to convert lua_Number to lUA_INTEGER.
+@@ lua_number2uint is a macro to convert a lua_Number to an unsigned
+@* LUA_INT32.
+@@ lua_uint2number is a macro to convert an unsigned LUA_INT32
+@* to a lua_Number.
 ** CHANGE them if you know a faster way to convert a lua_Number to
 ** int (with any rounding method and without throwing errors) in your
 ** system. In Pentium machines, a naive typecast from double to int
@@ -571,24 +573,32 @@
 #define lua_number2int(i,d)   __asm fld d   __asm fistp i
 #define lua_number2integer(i,n)		lua_number2int(i, n)
 
+#else
 /* the next trick should work on any Pentium, but sometimes clashes
    with a DirectX idiosyncrasy */
-#else
 
 union luai_Cast { double l_d; long l_l; };
 #define lua_number2int(i,d) \
   { volatile union luai_Cast u; u.l_d = (d) + 6755399441055744.0; (i) = u.l_l; }
 #define lua_number2integer(i,n)		lua_number2int(i, n)
+#define lua_number2uint(i,n)		lua_number2int(i, n)
 
 #endif
 
 
-/* this option always works, but may be slow */
 #else
+/* this option always works, but may be slow */
 #define lua_number2int(i,d)	((i)=(int)(d))
-#define lua_number2integer(i,d)	((i)=(lua_Integer)(d))
+#define lua_number2integer(i,d)	((i)=(LUA_INTEGER)(d))
+#define lua_number2uint(i,d)	((i)=(unsigned LUA_INT32)(d))
 
 #endif
+
+
+/* on several machines, coercion from unsigned to double is too slow,
+   so avoid that if possible */
+#define lua_uint2number(u)  \
+	((LUA_INT32)(u) < 0 ? (lua_Number)(u) : (lua_Number)(LUA_INT32)(u))
 
 /* }================================================================== */
 
