@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.70 2006/09/11 14:07:24 roberto Exp roberto $
+** $Id: llimits.h,v 1.71 2009/06/08 19:35:59 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -15,7 +15,7 @@
 #include "lua.h"
 
 
-typedef LUAI_UINT32 lu_int32;
+typedef unsigned LUA_INT32 lu_int32;
 
 typedef LUAI_UMEM lu_mem;
 
