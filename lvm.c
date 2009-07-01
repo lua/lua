@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.92 2009/06/17 16:17:14 roberto Exp roberto $
+** $Id: lvm.c,v 2.93 2009/06/17 17:50:09 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -115,7 +115,7 @@ void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val) {
       callTM(L, tm, t, key, val, 1);
       return;
     }
-    t = tm;  /* else repeat with `tm' */
+    t = tm;  /* else repeat with 'tm' */
   }
   luaG_runerror(L, "loop in gettable");
 }
@@ -123,6 +123,7 @@ void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val) {
 
 void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
   int loop;
+  TValue temp;
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
     const TValue *tm;
     if (ttistable(t)) {  /* `t' is a table? */
@@ -142,7 +143,9 @@ void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
       callTM(L, tm, t, key, val, 0);
       return;
     }
-    t = tm;  /* else repeat with `tm' */
+    /* else repeat with 'tm' */
+    setobj(L, &temp, tm);  /* avoid pointing inside table (may rehash) */
+    t = &temp;
   }
   luaG_runerror(L, "loop in settable");
 }
