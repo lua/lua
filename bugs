@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.100 2009/06/15 14:12:59 roberto Exp roberto $
-+** $Id: bugs,v 1.100 2009/06/15 14:12:59 roberto Exp roberto $
+-** $Id: bugs,v 1.101 2009/07/01 21:10:33 roberto Exp roberto $
++** $Id: bugs,v 1.101 2009/07/01 21:10:33 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2193,3 +2193,23 @@ patch = [[
 ]],
 }
 
+But{
+what = [[smart use of varargs may create functions that return too
+many arguments and overflow the stack of C functions]],
+report = [[Patrick Donnelly, on 2008/12/10]],
+since = [[]],
+example = [[
+local function lunpack(i, ...)
+  if i == 0 then return ...
+  else
+    return lunpack(i-1, 1, ...)
+  end
+end
+
+Now, if C calls lunpack(n) with a huge n, it may end with
+too many values in its stack and confuse its stack indices.
+]],
+patch = [[
+]],
+}
+}
