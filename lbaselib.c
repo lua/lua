@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.214 2009/03/23 14:26:12 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.215 2009/04/08 18:04:33 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -512,8 +512,10 @@ static const luaL_Reg base_funcs[] = {
 
 static int auxresume (lua_State *L, lua_State *co, int narg) {
   int status;
-  if (!lua_checkstack(co, narg))
-    return luaL_error(L, "too many arguments to resume");
+  if (!lua_checkstack(co, narg)) {
+    lua_pushliteral(L, "too many arguments to resume");
+    return -1;  /* error flag */
+  }
   if (lua_status(co) == LUA_OK && lua_gettop(co) == 0) {
     lua_pushliteral(L, "cannot resume dead coroutine");
     return -1;  /* error flag */
@@ -522,8 +524,10 @@ static int auxresume (lua_State *L, lua_State *co, int narg) {
   status = lua_resume(co, narg);
   if (status == LUA_OK || status == LUA_YIELD) {
     int nres = lua_gettop(co);
-    if (!lua_checkstack(L, nres + 1))
-      return luaL_error(L, "too many results to resume");
+    if (!lua_checkstack(L, nres + 1)) {
+      lua_pushliteral(L, "too many results to resume");
+      return -1;  /* error flag */
+    }
     lua_xmove(co, L, nres);  /* move yielded values */
     return nres;
   }
