@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.26 2009/06/17 17:48:34 roberto Exp roberto $
+** $Id: lobject.h,v 2.27 2009/06/18 16:36:40 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -312,6 +312,7 @@ typedef union Closure {
 #define iscfunction(o)	(ttype(o) == LUA_TFUNCTION && clvalue(o)->c.isC)
 #define isLfunction(o)	(ttype(o) == LUA_TFUNCTION && !clvalue(o)->c.isC)
 
+#define getproto(o)	(clvalue(o)->l.p)
 
 /*
 ** Tables

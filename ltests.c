@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.66 2009/06/17 17:53:14 roberto Exp roberto $
+** $Id: ltests.c,v 2.67 2009/07/15 17:26:14 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -440,7 +440,7 @@ static int listcode (lua_State *L) {
   Proto *p;
   luaL_argcheck(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
                  1, "Lua function expected");
-  p = clvalue(obj_at(L, 1))->l.p;
+  p = getproto(obj_at(L, 1));
   lua_newtable(L);
   setnameval(L, "maxstack", p->maxstacksize);
   setnameval(L, "numparams", p->numparams);
@@ -459,7 +459,7 @@ static int listk (lua_State *L) {
   int i;
   luaL_argcheck(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
                  1, "Lua function expected");
-  p = clvalue(obj_at(L, 1))->l.p;
+  p = getproto(obj_at(L, 1));
   lua_createtable(L, p->sizek, 0);
   for (i=0; i<p->sizek; i++) {
     pushobject(L, p->k+i);
@@ -476,7 +476,7 @@ static int listlocals (lua_State *L) {
   const char *name;
   luaL_argcheck(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
                  1, "Lua function expected");
-  p = clvalue(obj_at(L, 1))->l.p;
+  p = getproto(obj_at(L, 1));
   while ((name = luaF_getlocalname(p, ++i, pc)) != NULL)
     lua_pushstring(L, name);
   return i-1;
