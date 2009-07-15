@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.64 2009/05/21 20:06:11 roberto Exp roberto $
+** $Id: ldo.c,v 2.65 2009/06/01 19:09:26 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -70,12 +70,6 @@ void luaD_seterrorobj (lua_State *L, int errcode, StkId oldtop) {
 }
 
 
-static void restore_stack_limit (lua_State *L) {
-  if (L->nci >= LUAI_MAXCALLS)  /* stack overflow? */
-    luaE_freeCI(L);  /* erase all extras CIs */
-}
-
-
 void luaD_throw (lua_State *L, int errcode) {
   if (L->errorJmp) {  /* thread has an error handler? */
     L->errorJmp->status = errcode;  /* set status */
@@ -130,25 +124,63 @@ static void correctstack (lua_State *L, TValue *oldstack) {
 }
 
 
+/* some space for error handling */
+#define ERRORSTACKSIZE	(LUAI_MAXSTACK + 200)
+
+
 void luaD_reallocstack (lua_State *L, int newsize) {
   TValue *oldstack = L->stack;
   int lim = L->stacksize;
-  int realsize = newsize + 1 + EXTRA_STACK;
-  lua_assert(L->stack_last - L->stack == L->stacksize - EXTRA_STACK - 1);
-  luaM_reallocvector(L, L->stack, L->stacksize, realsize, TValue);
-  for (; lim < realsize; lim++)
+  lua_assert(newsize <= LUAI_MAXSTACK || newsize == ERRORSTACKSIZE);
+  lua_assert(L->stack_last - L->stack == L->stacksize - EXTRA_STACK);
+  luaM_reallocvector(L, L->stack, L->stacksize, newsize, TValue);
+  for (; lim < newsize; lim++)
     setnilvalue(L->stack + lim); /* erase new segment */
-  L->stacksize = realsize;
-  L->stack_last = L->stack+newsize;
+  L->stacksize = newsize;
+  L->stack_last = L->stack + newsize - EXTRA_STACK;
   correctstack(L, oldstack);
 }
 
 
 void luaD_growstack (lua_State *L, int n) {
-  if (n <= L->stacksize)  /* double size is enough? */
-    luaD_reallocstack(L, 2*L->stacksize);
+  int size = L->stacksize;
+  if (size > LUAI_MAXSTACK)  /* error after extra size? */
+    luaD_throw(L, LUA_ERRERR);
+  else {
+    int needed = L->top - L->stack + n + EXTRA_STACK;
+    int newsize = 2 * size;
+    if (newsize > LUAI_MAXSTACK) newsize = LUAI_MAXSTACK;
+    if (newsize < needed) newsize = needed;
+    if (newsize > LUAI_MAXSTACK) {  /* stack overflow? */
+      luaD_reallocstack(L, ERRORSTACKSIZE);
+      luaG_runerror(L, "stack overflow");
+    }
+    else
+      luaD_reallocstack(L, newsize);
+  }
+}
+
+
+static int stackinuse (lua_State *L) {
+  CallInfo *ci;
+  StkId lim = L->top;
+  for (ci = L->ci; ci != NULL; ci = ci->previous) {
+    lua_assert(ci->top <= L->stack_last);
+    if (lim < ci->top) lim = ci->top;
+  }
+  return cast_int(lim - L->stack) + 1;  /* part of stack in use */
+}
+
+
+void luaD_shrinkstack (lua_State *L) {
+  int inuse = stackinuse(L);
+  int goodsize = inuse + (inuse / 8) + 2*EXTRA_STACK;
+  if (goodsize > LUAI_MAXSTACK) goodsize = LUAI_MAXSTACK;
+  if (inuse > LUAI_MAXSTACK ||  /* handling stack overflow? */
+      goodsize >= L->stacksize)  /* would grow instead of shrink? */
+    condmovestack(L);  /* don't change stack (change only for debugging) */
   else
-    luaD_reallocstack(L, L->stacksize + n);
+    luaD_reallocstack(L, goodsize);  /* shrink it */
 }
 
 
@@ -427,7 +459,7 @@ static int recover (lua_State *L, int status) {
   L->ci = ci;
   L->allowhook = ci->u.c.old_allowhook;
   L->nny = 0;  /* should be zero to be yieldable */
-  restore_stack_limit(L);
+  luaD_shrinkstack(L);
   L->errfunc = ci->u.c.old_errfunc;
   ci->callstatus |= CIST_STAT;  /* call has error status */
   ci->u.c.status = status;  /* (here it is) */
@@ -499,7 +531,7 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
     L->ci = old_ci;
     L->allowhook = old_allowhooks;
     L->nny = old_nny;
-    restore_stack_limit(L);
+    luaD_shrinkstack(L);
   }
   L->errfunc = old_errfunc;
   return status;

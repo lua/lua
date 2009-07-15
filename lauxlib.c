@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.187 2009/06/18 18:59:58 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.188 2009/06/19 14:21:57 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -106,9 +106,16 @@ static void pushfuncname (lua_State *L, lua_Debug *ar) {
 
 static int countlevels (lua_State *L) {
   lua_Debug ar;
-  int level = 1;
-  while (lua_getstack(L, level, &ar)) level++;
-  return level;
+  int li = 1, le = 1;
+  /* find an upper bound */
+  while (lua_getstack(L, le, &ar)) { li = le; le *= 2; }
+  /* do a binary search */
+  while (li < le) {
+    int m = (li + le)/2;
+    if (lua_getstack(L, m, &ar)) li = m + 1;
+    else le = m;
+  }
+  return le - 1;
 }
 
 
@@ -263,9 +270,13 @@ LUALIB_API int luaL_checkoption (lua_State *L, int narg, const char *def,
 }
 
 
-LUALIB_API void luaL_checkstack (lua_State *L, int space, const char *mes) {
-  if (!lua_checkstack(L, space))
-    luaL_error(L, "stack overflow (%s)", mes);
+LUALIB_API void luaL_checkstack (lua_State *L, int space, const char *msg) {
+  if (!lua_checkstack(L, space)) {
+    if (msg)
+      luaL_error(L, "stack overflow (%s)", msg);
+    else
+      luaL_error(L, "stack overflow");
+  }
 }
 
 

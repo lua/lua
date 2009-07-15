@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.105 2009/06/18 18:19:36 roberto Exp roberto $
+** $Id: luaconf.h,v 1.106 2009/07/01 16:16:40 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -417,31 +417,19 @@
 
 
 /*
-@@ LUAI_MAXCALLS limits the number of nested calls.
-** CHANGE it if you need really deep recursive calls. This limit is
-** arbitrary; its only purpose is to stop infinite recursion before
-** exhausting memory.
-*/
-#define LUAI_MAXCALLS	20000
-
-
-/*
-@@ LUAI_MAXCSTACK limits the number of Lua stack slots that a C function
-@* can use.
+@@ LUAI_MAXSTACK limits the size of the Lua stack.
 ** CHANGE it if you need a different limit. This limit is arbitrary;
-** its only purpose is to stop C functions to consume unlimited stack
-** space.
+** its only purpose is to stop Lua to consume unlimited stack
+** space (and to reserve some numbers for pseudo-indices).
 */
-/* life is simpler if stack size fits in an int (16 is an estimate
-   for the size of a Lua value) */
-#if SHRT_MAX < (INT_MAX / 16)
-#define LUAI_MCS_AUX	SHRT_MAX
+#if LUAI_BITSINT >= 32
+#define LUAI_MAXSTACK		1000000
 #else
-#define LUAI_MCS_AUX	(INT_MAX / 16)
+#define LUAI_MAXSTACK		15000
 #endif
 
-/* reserve some space for pseudo-indices */
-#define LUAI_MAXCSTACK  (LUAI_MCS_AUX - 1000)
+/* reserve some space for error handling */
+#define LUAI_FIRSTPSEUDOIDX  (-LUAI_MAXSTACK - 1000)
 
 
 

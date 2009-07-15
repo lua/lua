@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.65 2009/06/15 19:51:31 roberto Exp roberto $
+** $Id: ltests.c,v 2.66 2009/06/17 17:53:14 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -570,7 +570,6 @@ static int stacklevel (lua_State *L) {
   unsigned long a = 0;
   lua_pushinteger(L, (L->top - L->stack));
   lua_pushinteger(L, (L->stack_last - L->stack));
-  lua_pushinteger(L, L->nci);
   lua_pushinteger(L, (unsigned long)&a);
   return 5;
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.83 2009/06/18 18:59:18 roberto Exp roberto $
+** $Id: lapi.c,v 2.84 2009/06/19 14:21:23 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -86,14 +86,15 @@ LUA_API int lua_checkstack (lua_State *L, int size) {
   int res = 1;
   CallInfo *ci = L->ci;
   lua_lock(L);
-  if (size > LUAI_MAXCSTACK ||
-      (L->top - (ci->func + 1) + size) > LUAI_MAXCSTACK)
-    res = 0;  /* stack overflow */
-  else if (size > 0) {
-    luaD_checkstack(L, size);
-    if (ci->top < L->top + size)
-      ci->top = L->top + size;
+  if (L->stack_last - L->top <= size) {  /* need to grow stack? */
+    int inuse = L->top - L->stack + EXTRA_STACK;
+    if (inuse > LUAI_MAXSTACK - size)  /* can grow without overflow? */
+      res = 0;  /* no */
+    else
+      luaD_growstack(L, size);
   }
+  if (res && ci->top < L->top + size)
+    ci->top = L->top + size;  /* adjust frame top */
   lua_unlock(L);
   return res;
 }

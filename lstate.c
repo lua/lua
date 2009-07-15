@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.55 2009/06/01 19:09:26 roberto Exp roberto $
+** $Id: lstate.c,v 2.56 2009/06/18 18:59:18 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -52,12 +52,6 @@ CallInfo *luaE_extendCI (lua_State *L) {
   L->ci->next = ci;
   ci->previous = L->ci;
   ci->next = NULL;
-  if (++L->nci >= LUAI_MAXCALLS) {
-    if (L->nci == LUAI_MAXCALLS)  /* overflow? */
-      luaG_runerror(L, "stack overflow");
-    if (L->nci >= LUAI_MAXCALLS + LUAI_EXTRACALLS)  /* again? */
-      luaD_throw(L, LUA_ERRERR);  /* error while handling overflow */
-  }
   return ci;
 }
 
@@ -69,7 +63,6 @@ void luaE_freeCI (lua_State *L) {
   while ((ci = next) != NULL) {
     next = ci->next;
     luaM_free(L, ci);
-    L->nci--;
   }
 }
 
@@ -77,12 +70,12 @@ void luaE_freeCI (lua_State *L) {
 static void stack_init (lua_State *L1, lua_State *L) {
   int i;
   /* initialize stack array */
-  L1->stack = luaM_newvector(L, BASIC_STACK_SIZE + EXTRA_STACK, TValue);
-  L1->stacksize = BASIC_STACK_SIZE + EXTRA_STACK;
-  for (i = 0; i < BASIC_STACK_SIZE + EXTRA_STACK; i++)
+  L1->stack = luaM_newvector(L, BASIC_STACK_SIZE, TValue);
+  L1->stacksize = BASIC_STACK_SIZE;
+  for (i = 0; i < BASIC_STACK_SIZE; i++)
     setnilvalue(L1->stack + i);  /* erase new stack */
   L1->top = L1->stack;
-  L1->stack_last = L1->stack+(L1->stacksize - EXTRA_STACK)-1;
+  L1->stack_last = L1->stack + L1->stacksize - EXTRA_STACK;
   /* initialize first ci */
   L1->ci->func = L1->top;
   setnilvalue(L1->top++);  /* 'function' entry for this 'ci' */
@@ -94,7 +87,6 @@ static void stack_init (lua_State *L1, lua_State *L) {
 static void freestack (lua_State *L) {
   L->ci = &L->base_ci;  /* reset 'ci' list */
   luaE_freeCI(L);
-  lua_assert(L->nci == 0);
   luaM_freearray(L, L->stack, L->stacksize);
 }
 
@@ -131,7 +123,6 @@ static void preinit_state (lua_State *L, global_State *g) {
   L->status = LUA_OK;
   L->base_ci.next = L->base_ci.previous = NULL;
   L->ci = &L->base_ci;
-  L->nci = 0;
   L->errfunc = 0;
   setnilvalue(gt(L));
 }

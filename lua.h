@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.239 2009/06/17 17:49:44 roberto Exp roberto $
+** $Id: lua.h,v 1.240 2009/06/18 18:59:18 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -33,7 +33,7 @@
 /*
 ** pseudo-indices
 */
-#define LUA_REGISTRYINDEX	(-(LUAI_MCS_AUX) - 1)
+#define LUA_REGISTRYINDEX	LUAI_FIRSTPSEUDOIDX
 #define LUA_ENVIRONINDEX	(LUA_REGISTRYINDEX - 1)
 #define LUA_GLOBALSINDEX	(LUA_ENVIRONINDEX - 1)
 #define lua_upvalueindex(i)	(LUA_GLOBALSINDEX-(i))
