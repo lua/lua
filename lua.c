@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.172 2009/02/19 17:15:35 roberto Exp roberto $
+** $Id: lua.c,v 1.173 2009/06/18 18:59:58 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -218,6 +218,7 @@ static void dotty (lua_State *L) {
     if (status == LUA_OK) status = docall(L, 0, 0);
     report(L, status);
     if (status == LUA_OK && lua_gettop(L) > 0) {  /* any result to print? */
+      luaL_checkstack(L, LUA_MINSTACK, "too many results to print");
       lua_getglobal(L, "print");
       lua_insert(L, 1);
       if (lua_pcall(L, lua_gettop(L)-1, 0, 0) != LUA_OK)

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.215 2009/04/08 18:04:33 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.216 2009/07/08 16:06:07 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -419,6 +419,7 @@ static int luaB_pcall (lua_State *L) {
   int status;
   luaL_checkany(L, 1);
   status = lua_pcallk(L, lua_gettop(L) - 1, LUA_MULTRET, 0, 0, pcallcont);
+  luaL_checkstack(L, 1, NULL);
   lua_pushboolean(L, (status == LUA_OK));
   lua_insert(L, 1);
   return lua_gettop(L);  /* return status + all results */
@@ -434,6 +435,7 @@ static int luaB_xpcall (lua_State *L) {
   lua_replace(L, 1);
   lua_replace(L, 2);
   status = lua_pcallk(L, n - 2, LUA_MULTRET, 1, 1, pcallcont);
+  luaL_checkstack(L, 1, NULL);
   lua_pushboolean(L, (status == LUA_OK));
   lua_replace(L, 1);
   return lua_gettop(L);  /* return status + all results */
