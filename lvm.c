@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.93 2009/06/17 17:50:09 roberto Exp roberto $
+** $Id: lvm.c,v 2.94 2009/07/01 20:31:25 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -461,7 +461,7 @@ void luaV_execute (lua_State *L) {
     /* warning!! several calls may realloc the stack and invalidate `ra' */
     ra = RA(i);
     lua_assert(base == ci->u.l.base);
-    lua_assert(base <= L->top && L->top <= L->stack + L->stacksize);
+    lua_assert(base <= L->top && L->top < L->stack + L->stacksize);
     switch (GET_OPCODE(i)) {
       case OP_MOVE: {
         setobjs2s(L, ra, RB(i));
@@ -658,18 +658,22 @@ void luaV_execute (lua_State *L) {
           /* tail call: put called frame (n) in place of caller one (o) */
           CallInfo *nci = L->ci;  /* called frame */
           CallInfo *oci = nci->previous;  /* caller frame */
-          StkId nfunc = nci->func;  /* called function index */
-          StkId ofunc = oci->func;
+          StkId nfunc = nci->func;  /* called function */
+          StkId ofunc = oci->func;  /* caller function */
+          /* last stack slot filled by 'precall' */
+          StkId lim = nci->u.l.base + getproto(nfunc)->numparams;
           int aux;
+          /* close all upvalues from previous call */
           if (cl->p->sizep > 0) luaF_close(L, oci->u.l.base);
-          oci->u.l.base = ofunc + (nci->u.l.base - nfunc);
-          for (aux = 0; nfunc+aux < L->top; aux++)  /* move frame down */
+          /* move new frame into old one */
+          for (aux = 0; nfunc + aux < lim; aux++)
             setobjs2s(L, ofunc + aux, nfunc + aux);
-          oci->top = L->top = ofunc + aux;  /* correct top */
-          lua_assert(L->top == oci->u.l.base + clvalue(ofunc)->l.p->maxstacksize);
+          oci->u.l.base = ofunc + (nci->u.l.base - nfunc);  /* correct base */
+          oci->top = L->top = ofunc + (L->top - nfunc);  /* correct top */
           oci->u.l.savedpc = nci->u.l.savedpc;
           oci->u.l.tailcalls++;  /* one more call lost */
           ci = L->ci = oci;  /* remove new frame */
+          lua_assert(L->top == oci->u.l.base + getproto(ofunc)->maxstacksize);
           break;  /* restart luaV_execute over new Lua function */
         }
       }
