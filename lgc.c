@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.53 2009/05/21 20:06:11 roberto Exp roberto $
+** $Id: lgc.c,v 2.54 2009/06/08 19:35:59 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -387,7 +387,8 @@ static void traversestack (global_State *g, lua_State *L) {
   for (o = L->stack; o < L->top; o++)
     markvalue(g, o);
   if (g->gcstate == GCSatomic) {  /* final traversal? */
-    for (; o <= L->stack_last; o++)  /* clear not-marked stack slice */
+    StkId lim = L->stack + L->stacksize;  /* real end of stack */
+    for (; o < lim; o++)  /* clear not-marked stack slice */
       setnilvalue(o);
   }
 }
@@ -423,8 +424,7 @@ static l_mem propagatemark (global_State *g) {
       g->grayagain = o;
       black2gray(o);
       traversestack(g, th);
-      return sizeof(lua_State) + sizeof(TValue) * th->stacksize +
-                                 sizeof(CallInfo) * th->nci;
+      return sizeof(lua_State) + sizeof(TValue) * th->stacksize;
     }
     case LUA_TPROTO: {
       Proto *p = gco2p(o);
@@ -525,17 +525,6 @@ static void freeobj (lua_State *L, GCObject *o) {
 }
 
 
-static int stackinuse (lua_State *L) {
-  CallInfo *ci;
-  StkId lim = L->top;
-  for (ci = L->ci; ci != NULL; ci = ci->previous) {
-    lua_assert(ci->top <= L->stack_last);
-    if (lim < ci->top) lim = ci->top;
-  }
-  return cast_int(lim - L->stack) + 1;  /* part of stack in use */
-}
-
-
 #define sweepwholelist(L,p)	sweeplist(L,p,MAX_LUMEM)
 static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count);
 
@@ -543,16 +532,10 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count);
 static void sweepthread (lua_State *L, lua_State *L1, int alive) {
   if (L1->stack == NULL) return;  /* stack not completely built yet */
   sweepwholelist(L, &L1->openupval);  /* sweep open upvalues */
-  if (L1->nci < LUAI_MAXCALLS)  /* not handling stack overflow? */
-    luaE_freeCI(L1);  /* free extra CallInfo slots */
+  luaE_freeCI(L1);  /* free extra CallInfo slots */
   /* should not change the stack during an emergency gc cycle */
-  if (alive && G(L)->gckind != KGC_EMERGENCY) {
-    int goodsize = 5 * stackinuse(L1) / 4 + LUA_MINSTACK;
-    if ((L1->stacksize - EXTRA_STACK) > goodsize)
-      luaD_reallocstack(L1, goodsize);
-    else 
-      condmovestack(L1);
-  }
+  if (alive && G(L)->gckind != KGC_EMERGENCY)
+    luaD_shrinkstack(L1);
 }
 
 
@@ -590,7 +573,7 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
 static void checkSizes (lua_State *L) {
   global_State *g = G(L);
   if (g->strt.nuse < cast(lu_int32, g->strt.size)) {
-    /* size could be the smaller power of 2 larger than 'nuse' */
+    /* string-table size could be the smaller power of 2 larger than 'nuse' */
     int size = 1 << luaO_ceillog2(g->strt.nuse);
     if (size < g->strt.size)  /* current table too large? */
       luaS_resize(L, size);  /* shrink it */
@@ -728,7 +711,7 @@ static void atomic (lua_State *L) {
   /* remark occasional upvalues of (maybe) dead threads */
   g->gcstate = GCSatomic;
   remarkupvals(g);
-  /* traverse objects cautch by write barrier and by 'remarkupvals' */
+  /* traverse objects caught by write barrier and by 'remarkupvals' */
   propagateall(g);
   /* remark weak tables */
   g->gray = g->weak;
