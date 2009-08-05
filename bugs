@@ -1002,7 +1002,7 @@ lgc.c:
 }
 
 
-But{
+Bug{
 
 what = [[debug hooks may get wrong when mixed with coroutines]],
 
@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.102 2009/07/02 19:57:34 roberto Exp roberto $
-+** $Id: bugs,v 1.102 2009/07/02 19:57:34 roberto Exp roberto $
+-** $Id: bugs,v 1.103 2009/08/04 18:51:19 roberto Exp roberto $
++** $Id: bugs,v 1.103 2009/08/04 18:51:19 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2193,7 +2193,7 @@ patch = [[
 ]],
 }
 
-But{
+Bug{
 what = [[smart use of varargs may create functions that return too
 many arguments and overflow the stack of C functions]],
 report = [[Patrick Donnelly, on 2008/12/10]],
@@ -2213,7 +2213,7 @@ patch = [[
 ]],
 }
 
-But{
+Bug{
 what = [['debug.getfenv' does not check whether it has an argument]],
 report = [[Patrick Donnelly, 2009/07/30]],
 since = [[5.1]],
