@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.39 2009/03/30 18:38:24 roberto Exp roberto $
+** $Id: ltable.c,v 2.40 2009/04/17 14:40:13 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -308,7 +308,7 @@ void luaH_resize (lua_State *L, Table *t, int nasize, int nhsize) {
     /* re-insert elements from vanishing slice */
     for (i=nasize; i<oldasize; i++) {
       if (!ttisnil(&t->array[i]))
-        setobjt2t(L, luaH_setnum(L, t, i+1), &t->array[i]);
+        setobjt2t(L, luaH_setint(L, t, i+1), &t->array[i]);
     }
     /* shrink array */
     luaM_reallocvector(L, t->array, oldasize, nasize, TValue);
@@ -429,7 +429,7 @@ static TValue *newkey (lua_State *L, Table *t, const TValue *key) {
 /*
 ** search function for integers
 */
-const TValue *luaH_getnum (Table *t, int key) {
+const TValue *luaH_getint (Table *t, int key) {
   /* (1 <= key && key <= t->sizearray) */
   if (cast(unsigned int, key-1) < cast(unsigned int, t->sizearray))
     return &t->array[key-1];
@@ -472,7 +472,7 @@ const TValue *luaH_get (Table *t, const TValue *key) {
       lua_Number n = nvalue(key);
       lua_number2int(k, n);
       if (luai_numeq(cast_num(k), nvalue(key))) /* index is int? */
-        return luaH_getnum(t, k);  /* use specialized version */
+        return luaH_getint(t, k);  /* use specialized version */
       /* else go through */
     }
     default: {
@@ -502,8 +502,8 @@ TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
 }
 
 
-TValue *luaH_setnum (lua_State *L, Table *t, int key) {
-  const TValue *p = luaH_getnum(t, key);
+TValue *luaH_setint (lua_State *L, Table *t, int key) {
+  const TValue *p = luaH_getint(t, key);
   if (p != luaO_nilobject)
     return cast(TValue *, p);
   else {
@@ -530,20 +530,20 @@ static int unbound_search (Table *t, unsigned int j) {
   unsigned int i = j;  /* i is zero or a present index */
   j++;
   /* find `i' and `j' such that i is present and j is not */
-  while (!ttisnil(luaH_getnum(t, j))) {
+  while (!ttisnil(luaH_getint(t, j))) {
     i = j;
     j *= 2;
     if (j > cast(unsigned int, MAX_INT)) {  /* overflow? */
       /* table was built with bad purposes: resort to linear search */
       i = 1;
-      while (!ttisnil(luaH_getnum(t, i))) i++;
+      while (!ttisnil(luaH_getint(t, i))) i++;
       return i - 1;
     }
   }
   /* now do a binary search between them */
   while (j - i > 1) {
     unsigned int m = (i+j)/2;
-    if (ttisnil(luaH_getnum(t, m))) j = m;
+    if (ttisnil(luaH_getint(t, m))) j = m;
     else i = m;
   }
   return i;
