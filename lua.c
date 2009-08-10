@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.173 2009/06/18 18:59:58 roberto Exp roberto $
+** $Id: lua.c,v 1.174 2009/07/15 17:35:20 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -72,6 +72,18 @@ static int report (lua_State *L, int status) {
     lua_gc(L, LUA_GCCOLLECT, 0);
   }
   return status;
+}
+
+
+/* the next function is called unprotected, so it must avoid errors */
+static void finalreport (lua_State *L, int status) {
+  if (status != LUA_OK) {
+    const char *msg = (lua_type(L, -1) == LUA_TSTRING) ? lua_tostring(L, -1)
+                                                       : NULL;
+    if (msg == NULL) msg = "(error object is not a string)";
+    l_message(progname, msg);
+    lua_pop(L, 1);
+  }
 }
 
 
@@ -383,7 +395,7 @@ int main (int argc, char **argv) {
   s.argc = argc;
   s.argv = argv;
   status = lua_cpcall(L, &pmain, &s);
-  report(L, status);
+  finalreport(L, status);
   lua_close(L);
   return (s.ok && status == LUA_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
