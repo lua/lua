@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.63 2009/06/10 16:52:03 roberto Exp roberto $
+** $Id: lparser.c,v 2.64 2009/06/18 16:35:05 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -55,6 +55,8 @@ static void expr (LexState *ls, expdesc *v);
 
 
 static void anchor_token (LexState *ls) {
+  /* last token from outer function must be EOS */
+  lua_assert(ls->fs != NULL || ls->t.token == TK_EOS);
   if (ls->t.token == TK_NAME || ls->t.token == TK_STRING) {
     TString *ts = ls->t.seminfo.ts;
     luaX_newstring(ls, getstr(ts), ts->tsv.len);
@@ -380,7 +382,7 @@ static void close_func (LexState *ls) {
   ls->fs = fs->prev;
   L->top -= 2;  /* remove table and prototype from the stack */
   /* last token read was anchored in defunct function; must reanchor it */
-  if (fs) anchor_token(ls);
+  anchor_token(ls);
 }
 
 
