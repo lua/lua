@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.39 2009/06/17 17:49:09 roberto Exp roberto $
+** $Id: lcode.c,v 2.40 2009/06/18 16:35:05 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -21,6 +21,7 @@
 #include "lobject.h"
 #include "lopcodes.h"
 #include "lparser.h"
+#include "lstring.h"
 #include "ltable.h"
 
 
@@ -224,22 +225,24 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
   lua_State *L = fs->L;
   TValue *idx = luaH_set(L, fs->h, key);
   Proto *f = fs->f;
-  int k;
+  int k, oldsize;
   if (ttisnumber(idx)) {
     lua_Number n = nvalue(idx);
     lua_number2int(k, n);
-    lua_assert(luaO_rawequalObj(&f->k[k], v));
+    if (luaO_rawequalObj(&f->k[k], v))
+      return k;
+    /* else may be a collision (e.g., between 0.0 and "\0\0\0\0\0\0\0\0");
+       go through and create a new entry for this value */
   }
-  else {  /* constant not found; create a new entry */
-    int oldsize = f->sizek;
-    k = fs->nk;
-    setnvalue(idx, cast_num(k));
-    luaM_growvector(L, f->k, k, f->sizek, TValue, MAXARG_Bx, "constants");
-    while (oldsize < f->sizek) setnilvalue(&f->k[oldsize++]);
-    setobj(L, &f->k[k], v);
-    fs->nk++;
-    luaC_barrier(L, f, v);
-  }
+  /* constant not found; create a new entry */
+  oldsize = f->sizek;
+  k = fs->nk;
+  setnvalue(idx, cast_num(k));
+  luaM_growvector(L, f->k, k, f->sizek, TValue, MAXARG_Bx, "constants");
+  while (oldsize < f->sizek) setnilvalue(&f->k[oldsize++]);
+  setobj(L, &f->k[k], v);
+  fs->nk++;
+  luaC_barrier(L, f, v);
   return k;
 }
 
@@ -252,9 +255,20 @@ int luaK_stringK (FuncState *fs, TString *s) {
 
 
 int luaK_numberK (FuncState *fs, lua_Number r) {
+  int n;
+  lua_State *L = fs->L;
   TValue o;
   setnvalue(&o, r);
-  return addk(fs, &o, &o);
+  if (r == 0 || luai_numisnan(NULL, r)) {  /* handle -0 and NaN */
+    /* use raw representation as key to avoid numeric problems */
+    setsvalue(L, L->top, luaS_newlstr(L, (char *)&r, sizeof(r)));
+     incr_top(L);
+     n = addk(fs, L->top - 1, &o);
+     L->top--;
+  }
+  else
+    n = addk(fs, &o, &o);  /* regular case */
+  return n;
 }
 
 
@@ -643,7 +657,6 @@ static int constfolding (OpCode op, expdesc *e1, expdesc *e2) {
   if ((op == OP_DIV || op == OP_MOD) && e2->u.nval == 0)
     return 0;  /* do not attempt to divide by 0 */
   r = luaO_arith(op - OP_ADD + LUA_OPADD, e1->u.nval, e2->u.nval);
-  if (luai_numisnan(NULL, r)) return 0;  /* do not attempt to produce NaN */
   e1->u.nval = r;
   return 1;
 }
@@ -690,7 +703,7 @@ void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e) {
   e2.t = e2.f = NO_JUMP; e2.k = VKNUM; e2.u.nval = 0;
   switch (op) {
     case OPR_MINUS: {
-      if (isnumeral(e) && e->u.nval != 0)  /* minus non-zero constant? */
+      if (isnumeral(e))  /* minus constant? */
         e->u.nval = luai_numunm(NULL, e->u.nval);  /* fold it */
       else {
         luaK_exp2anyreg(fs, e);
