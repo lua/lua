@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.23 2008/01/18 15:37:10 roberto Exp roberto $
+** $Id: loslib.c,v 1.24 2008/06/13 16:59:00 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -121,6 +121,30 @@ static int getfield (lua_State *L, const char *key, int d) {
 }
 
 
+static const char *checkoption (lua_State *L, const char *conv, char *buff) {
+  static const char *const options[] = { LUA_STRFTIMEOPTIONS };
+  unsigned int i;
+  for (i = 0; i < sizeof(options)/sizeof(options[0]); i += 2) {
+    if (*conv != '\0' && strchr(options[i], *conv) != NULL) {
+      buff[1] = *conv;
+      if (*options[i + 1] == '\0') {  /* one-char conversion specifier? */
+        buff[2] = '\0';  /* end buffer */
+        return conv + 1;
+      }
+      else if (*(conv + 1) != '\0' &&
+               strchr(options[i + 1], *(conv + 1)) != NULL) {
+        buff[2] = *(conv + 1);  /* valid two-char conversion specifier */
+        buff[3] = '\0';  /* end buffer */
+        return conv + 2;
+      }
+    }
+  }
+  luaL_argerror(L, 1,
+    lua_pushfstring(L, "invalid conversion specifier '%%%s'", conv));
+  return conv;  /* to avoid warnings */
+}
+
+    
 static int os_date (lua_State *L) {
   const char *s = luaL_optstring(L, 1, "%c");
   time_t t = luaL_opt(L, (time_t)luaL_checknumber, 2, time(NULL));
@@ -146,27 +170,17 @@ static int os_date (lua_State *L) {
     setboolfield(L, "isdst", stm->tm_isdst);
   }
   else {
-    char cc[3];
+    char cc[4];
     luaL_Buffer b;
     cc[0] = '%';
     luaL_buffinit(L, &b);
-    for (; *s; s++) {
+    while (*s) {
       if (*s != '%')  /* no conversion specifier? */
-        luaL_addchar(&b, *s);
+        luaL_addchar(&b, *s++);
       else {
         size_t reslen;
-        int i = 1;
         char buff[200];  /* should be big enough for any conversion result */
-        if (*(++s) != '\0' && strchr(LUA_STRFTIMEPREFIX, *s))
-          cc[i++] = *(s++);
-        if (*s != '\0' && strchr(LUA_STRFTIMEOPTIONS, *s))
-          cc[i++] = *s;
-        else {
-          const char *msg = lua_pushfstring(L,
-                              "invalid conversion specifier '%%%c'", *s);
-          return luaL_argerror(L, 1, msg);
-        }
-        cc[i] = '\0';
+        s = checkoption(L, s + 1, cc);
         reslen = strftime(buff, sizeof(buff), cc, stm);
         luaL_addlstring(&b, buff, reslen);
       }
