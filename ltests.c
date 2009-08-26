@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.67 2009/07/15 17:26:14 roberto Exp roberto $
+** $Id: ltests.c,v 2.68 2009/07/15 18:37:19 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -863,6 +863,7 @@ static int getindex_aux (lua_State *L, const char **pc) {
 
 
 static int testC (lua_State *L);
+static int Cfunck (lua_State *L);
 
 static int runC (lua_State *L, lua_State *L1, const char *pc) {
   char buff[30];
@@ -970,6 +971,9 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("concat") {
       lua_concat(L1, getnum);
     }
+    else if EQ("print") {
+      printf("%s\n", lua_tostring(L1, getnum));
+    }
     else if EQ("arith") {
       static char ops[] = "+-*/%^_";
       int op;
@@ -992,6 +996,12 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       int nres = getnum;
       lua_pcall(L1, narg, nres, 0);
     }
+    else if EQ("pcallk") {
+      int narg = getnum;
+      int nres = getnum;
+      int i = getnum;
+      lua_pcallk(L1, narg, nres, 0, i, Cfunck);
+    }
     else if EQ("loadstring") {
       size_t sl;
       const char *s = luaL_checklstring(L1, getnum, &sl);
@@ -1013,6 +1023,12 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("getn") {
       int i = getindex;
       lua_pushinteger(L1, lua_objlen(L1, i));
+    }
+    else if EQ("getctx") {
+      int i = 0;
+      int s = lua_getctx(L1, &i);
+      lua_pushinteger(L1, s);
+      lua_pushinteger(L1, i);
     }
     else if EQ("checkstack") {
       if (!lua_checkstack(L1, getnum))
@@ -1067,6 +1083,13 @@ static int testC (lua_State *L) {
 
 static int Cfunc (lua_State *L) {
   return runC(L, L, lua_tostring(L, lua_upvalueindex(1)));
+}
+
+
+static int Cfunck (lua_State *L) {
+  int i = 0;
+  lua_getctx(L, &i);
+  return runC(L, L, lua_tostring(L, i));
 }
 
 
