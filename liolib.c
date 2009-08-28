@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.79 2008/02/12 17:05:36 roberto Exp roberto $
+** $Id: liolib.c,v 2.80 2009/02/20 13:50:27 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -165,7 +165,16 @@ static int io_tostring (lua_State *L) {
 static int io_open (lua_State *L) {
   const char *filename = luaL_checkstring(L, 1);
   const char *mode = luaL_optstring(L, 2, "r");
-  FILE **pf = newfile(L);
+  FILE **pf;
+  int i = 0;
+  /* check whether 'mode' matches '[rwa]%+?b?' */
+  if (!(mode[i] != '\0' && strchr("rwa", mode[i++]) != NULL &&
+       (mode[i] != '+' || ++i) &&    /* skip if char is '+' */
+       (mode[i] != 'b' || ++i) &&    /* skip if char is 'b' */
+       (mode[i] == '\0')))
+    luaL_error(L, "invalid mode " LUA_QL("%s")
+                  " (should match " LUA_QL("[rwa]%%+?b?") ")", mode);
+  pf = newfile(L);
   *pf = fopen(filename, mode);
   return (*pf == NULL) ? pushresult(L, 0, filename) : 1;
 }
