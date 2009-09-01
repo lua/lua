@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.80 2009/02/20 13:50:27 roberto Exp roberto $
+** $Id: liolib.c,v 2.81 2009/08/28 13:51:57 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -422,7 +422,7 @@ static int io_readline (lua_State *L) {
 
 
 static int g_write (lua_State *L, FILE *f, int arg) {
-  int nargs = lua_gettop(L) - 1;
+  int nargs = lua_gettop(L) - arg;
   int status = 1;
   for (; nargs--; arg++) {
     if (lua_type(L, arg) == LUA_TNUMBER) {
@@ -436,7 +436,8 @@ static int g_write (lua_State *L, FILE *f, int arg) {
       status = status && (fwrite(s, sizeof(char), l, f) == l);
     }
   }
-  return pushresult(L, status, NULL);
+  if (status) return 1;  /* file handle already on stack top */
+  else return pushresult(L, status, NULL);
 }
 
 
@@ -446,7 +447,9 @@ static int io_write (lua_State *L) {
 
 
 static int f_write (lua_State *L) {
-  return g_write(L, tofile(L), 2);
+  FILE * f = tofile(L); 
+  lua_pushvalue(L, 1);  /* push file at the stack top (to be returned) */
+  return g_write(L, f, 2);
 }
 
 
