@@ -1,8 +1,16 @@
 /*
-** $Id: linit.c,v 1.18 2009/05/01 13:46:35 roberto Exp roberto $
-** Initialization of libraries for lua.c
+** $Id: linit.c,v 1.19 2009/07/01 16:16:40 roberto Exp roberto $
+** Initialization of libraries for lua.c and other clients        
 ** See Copyright Notice in lua.h
 */
+
+
+/*                                                           
+** If you embed Lua in your program and need to open the standard
+** libraries, call luaL_openlibs in your program. If you need a
+** different set of libraries, copy this file to your project and edit
+** it to suit your needs.
+*/                                                              
 
 
 #define linit_c
@@ -15,7 +23,8 @@
 
 
 /*
-** these libs are loaded by lua.c and are readily available to any program
+** these libs are loaded by lua.c and are readily available to any Lua
+** program
 */
 static const luaL_Reg loadedlibs[] = {
   {"_G", luaopen_base},
@@ -40,17 +49,16 @@ static const luaL_Reg preloadedlibs[] = {
 
 
 LUALIB_API void luaL_openlibs (lua_State *L) {
+  const luaL_Reg *lib;
   /* call open functions from 'loadedlibs' */
-  const luaL_Reg *lib = loadedlibs;
-  for (; lib->func; lib++) {
+  for (lib = loadedlibs; lib->func; lib++) {
     lua_pushcfunction(L, lib->func);
     lua_pushstring(L, lib->name);
     lua_call(L, 1, 0);
   }
   /* add open functions from 'preloadedlibs' into 'package.preload' table */
-  lib = preloadedlibs;
   luaL_findtable(L, LUA_GLOBALSINDEX, "package.preload", 0);
-  for (; lib->func; lib++) {
+  for (lib = preloadedlibs; lib->func; lib++) {
     lua_pushcfunction(L, lib->func);
     lua_setfield(L, -2, lib->name);
   }
