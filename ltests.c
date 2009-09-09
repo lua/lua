@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.68 2009/07/15 18:37:19 roberto Exp roberto $
+** $Id: ltests.c,v 2.69 2009/08/26 17:41:26 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -813,7 +813,13 @@ static int int2fb_aux (lua_State *L) {
 static const char *const delimits = " \t\n,;";
 
 static void skip (const char **pc) {
-  while (**pc != '\0' && strchr(delimits, **pc)) (*pc)++;
+  for (;;) {
+    if (**pc != '\0' && strchr(delimits, **pc)) (*pc)++;
+    else if (**pc == '#') {
+      while (**pc != '\n' && **pc != '\0') (*pc)++;
+    }
+    else break;
+  }
 }
 
 static int getnum_aux (lua_State *L, const char **pc) {
@@ -950,6 +956,9 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("pushcclosure") {
       lua_pushcclosure(L1, testC, getnum);
     }
+    else if EQ("pushupvalueindex") {
+      lua_pushinteger(L1, lua_upvalueindex(getnum));
+    }
     else if EQ("remove") {
       lua_remove(L1, getnum);
     }
@@ -972,7 +981,20 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       lua_concat(L1, getnum);
     }
     else if EQ("print") {
-      printf("%s\n", lua_tostring(L1, getnum));
+      int n = getnum;
+      if (n != 0) {
+        printf("%s\n", luaL_tolstring(L1, n, NULL));
+        lua_pop(L1, 1);
+      }
+      else {
+        int i;
+        n = lua_gettop(L1);
+        for (i = 1; i <= n; i++) {
+          printf("%s  ", luaL_tolstring(L1, i, NULL));
+          lua_pop(L1, 1);
+        }
+        printf("\n");
+      }
     }
     else if EQ("arith") {
       static char ops[] = "+-*/%^_";
@@ -1001,6 +1023,15 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       int nres = getnum;
       int i = getnum;
       lua_pcallk(L1, narg, nres, 0, i, Cfunck);
+    }
+    else if EQ("callk") {
+      int narg = getnum;
+      int nres = getnum;
+      int i = getnum;
+      lua_callk(L1, narg, nres, i, Cfunck);
+    }
+    else if EQ("yield") {
+      return lua_yield(L1, getnum);
     }
     else if EQ("loadstring") {
       size_t sl;
@@ -1095,8 +1126,7 @@ static int Cfunck (lua_State *L) {
 
 static int makeCfunc (lua_State *L) {
   luaL_checkstring(L, 1);
-  lua_settop(L, 1);
-  lua_pushcclosure(L, Cfunc, 1);
+  lua_pushcclosure(L, Cfunc, lua_gettop(L));
   return 1;
 }
 
