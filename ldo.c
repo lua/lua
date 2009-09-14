@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.65 2009/06/01 19:09:26 roberto Exp roberto $
+** $Id: ldo.c,v 2.66 2009/07/15 17:26:14 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -418,6 +418,16 @@ static void resume (lua_State *L, void *ud) {
     if (isLua(ci))  /* yielded inside a hook? */
       luaV_execute(L);
     else {  /* 'common' yield */
+      if (ci->u.c.k != NULL) {  /* does it have a continuation? */
+        int n;
+        ci->u.c.status = LUA_YIELD;  /* 'default' status */
+        ci->callstatus |= CIST_YIELDED;
+        ci->func = restorestack(L, ci->u.c.oldtop);
+        lua_unlock(L);
+        n = (*ci->u.c.k)(L);  /* call continuation */
+        lua_lock(L);
+        firstArg = L->top - n;
+      }
       G(L)->nCcalls--;  /* finish 'luaD_call' */
       luaD_poscall(L, firstArg);  /* finish 'luaD_precall' */
     }
@@ -499,17 +509,25 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
   return status;
 }
 
-LUA_API int lua_yield (lua_State *L, int nresults) {
+LUA_API int lua_yieldk (lua_State *L, int nresults, int ctx, lua_CFunction k) {
+  CallInfo *ci = L->ci;
   luai_userstateyield(L, nresults);
   lua_lock(L);
   if (L->nny > 0)
     luaG_runerror(L, "attempt to yield across metamethod/C-call boundary");
   L->status = LUA_YIELD;
-  if (!isLua(L->ci)) {  /* not inside a hook? */
-    L->ci->func = L->top - nresults - 1;  /* protect stack slots below ??? */
+  if (isLua(ci)) {  /* inside a hook? */
+    api_check(L, k == NULL, "hooks cannot continue after yielding");
+  }
+  else {
+    if ((ci->u.c.k = k) != NULL) {  /* is there a continuation? */
+      ci->u.c.ctx = ctx;  /* save context */
+      ci->u.c.oldtop = savestack(L, ci->func);  /* save current 'func' */
+    }
+    ci->func = L->top - nresults - 1;  /* protect stack slots below */
     luaD_throw(L, LUA_YIELD);
   }
-  lua_assert(L->ci->callstatus & CIST_HOOKED);  /* must be inside a hook */
+  lua_assert(ci->callstatus & CIST_HOOKED);  /* must be inside a hook */
   lua_unlock(L);
   return 0;  /* otherwise, return to 'luaD_callhook' */
 }

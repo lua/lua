@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.69 2009/08/26 17:41:26 roberto Exp roberto $
+** $Id: ltests.c,v 2.70 2009/09/09 20:44:10 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -836,6 +836,8 @@ static int getnum_aux (lua_State *L, const char **pc) {
     sig = -1;
     (*pc)++;
   }
+  if (!lisdigit(cast(unsigned char, **pc)))
+    luaL_error(L, "number expected (%s)", *pc);
   while (lisdigit(cast(unsigned char, **pc))) res = res*10 + (*(*pc)++) - '0';
   return sig*res;
 }
@@ -1033,6 +1035,11 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("yield") {
       return lua_yield(L1, getnum);
     }
+    else if EQ("yieldk") {
+      int nres = getnum;
+      int i = getnum;
+      return lua_yieldk(L1, nres, i, Cfunck);
+    }
     else if EQ("loadstring") {
       size_t sl;
       const char *s = luaL_checklstring(L1, getnum, &sl);
@@ -1056,9 +1063,12 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       lua_pushinteger(L1, lua_objlen(L1, i));
     }
     else if EQ("getctx") {
+      static const char *const codes[] = {"OK", "YIELD", "ERRRUN",
+         "ERRSYNTAX", "ERRMEM", "ERRGCMM", "ERRERR"};
+
       int i = 0;
       int s = lua_getctx(L1, &i);
-      lua_pushinteger(L1, s);
+      lua_pushstring(L1, codes[s]);
       lua_pushinteger(L1, i);
     }
     else if EQ("checkstack") {

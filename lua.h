@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.240 2009/06/18 18:59:18 roberto Exp roberto $
+** $Id: lua.h,v 1.241 2009/07/15 17:26:14 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -243,7 +243,9 @@ LUA_API int (lua_dump) (lua_State *L, lua_Writer writer, void *data);
 /*
 ** coroutine functions
 */
-LUA_API int  (lua_yield) (lua_State *L, int nresults);
+LUA_API int  (lua_yieldk) (lua_State *L, int nresults, int ctx,
+                           lua_CFunction k);
+#define lua_yield(L,n)		lua_yieldk(L, (n), 0, NULL)
 LUA_API int  (lua_resume) (lua_State *L, int narg);
 LUA_API int  (lua_status) (lua_State *L);
 
