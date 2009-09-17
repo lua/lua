@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.88 2009/08/07 16:17:41 roberto Exp roberto $
+** $Id: lapi.c,v 2.89 2009/08/31 14:26:28 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -99,11 +99,6 @@ LUA_API int lua_checkstack (lua_State *L, int size) {
     ci->top = L->top + size;  /* adjust frame top */
   lua_unlock(L);
   return res;
-}
-
-
-LUA_API lua_State *lua_mainthread (lua_State *L) {
-  return G(L)->mainthread;
 }
 
 

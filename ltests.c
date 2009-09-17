@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.70 2009/09/09 20:44:10 roberto Exp roberto $
+** $Id: ltests.c,v 2.71 2009/09/14 14:30:39 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -697,8 +697,6 @@ static int doonnewstack (lua_State *L) {
   size_t l;
   const char *s = luaL_checklstring(L, 1, &l);
   int status = luaL_loadbuffer(L1, s, l, s);
-  lua_State *ML = lua_mainthread(L1);
-  lua_assert(L1 != L && ML != L1 && lua_mainthread(L) == ML);
   if (status == LUA_OK)
     status = lua_pcall(L1, 0, 0, 0);
   lua_pushinteger(L, status);
@@ -972,6 +970,10 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     }
     else if EQ("gettable") {
       lua_gettable(L1, getindex);
+    }
+    else if EQ("rawgeti") {
+      int t = getindex;
+      lua_rawgeti(L1, t, getnum);
     }
     else if EQ("settable") {
       lua_settable(L1, getindex);

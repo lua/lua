@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.56 2009/06/18 18:59:18 roberto Exp roberto $
+** $Id: lstate.c,v 2.57 2009/07/15 17:26:14 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -91,6 +91,16 @@ static void freestack (lua_State *L) {
 }
 
 
+static void init_registry (lua_State *L) {
+  Table *registry = luaH_new(L);
+  TValue mt;
+  sethvalue(L, registry(L), registry);
+  luaH_resize(L, registry, LUA_RIDX_LAST, 0);
+  setthvalue(L, &mt, L);
+  setobj2t(L, luaH_setint(L, registry, LUA_RIDX_MAINTHREAD), &mt);
+}
+
+
 /*
 ** open parts that may cause memory-allocation errors
 */
@@ -99,7 +109,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   UNUSED(ud);
   stack_init(L, L);  /* init stack */
   sethvalue(L, gt(L), luaH_new(L));  /* table of globals */
-  sethvalue(L, registry(L), luaH_new(L));  /* registry */
+  init_registry(L);
   luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
   luaT_init(L);
   luaX_init(L);

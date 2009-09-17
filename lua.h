@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.241 2009/07/15 17:26:14 roberto Exp roberto $
+** $Id: lua.h,v 1.242 2009/09/14 14:30:39 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -89,6 +89,12 @@ typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 #define LUA_MINSTACK	20
 
 
+/* predefined values in the registry */
+#define LUA_RIDX_MAINTHREAD	1
+#define LUA_RIDX_LAST		LUA_RIDX_MAINTHREAD
+
+
+
 /*
 ** generic extra include file
 */
@@ -112,8 +118,6 @@ typedef LUA_INTEGER lua_Integer;
 LUA_API lua_State *(lua_newstate) (lua_Alloc f, void *ud);
 LUA_API void       (lua_close) (lua_State *L);
 LUA_API lua_State *(lua_newthread) (lua_State *L);
-
-LUA_API lua_State *(lua_mainthread) (lua_State *L);
 
 LUA_API lua_CFunction (lua_atpanic) (lua_State *L, lua_CFunction panicf);
 
