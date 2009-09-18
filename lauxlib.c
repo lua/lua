@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.189 2009/07/15 17:26:14 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.190 2009/07/15 17:47:34 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -443,9 +443,7 @@ LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
 */
 
 /* number of prereserved references (for internal use) */
-#define RESERVED_REFS   1	/* only FREELIST_REF is reserved */
-
-#define FREELIST_REF	1	/* free list of references */
+#define FREELIST_REF	(LUA_RIDX_LAST + 1)	/* free list of references */
 
 
 LUALIB_API int luaL_ref (lua_State *L, int t) {
@@ -463,10 +461,12 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
     lua_rawseti(L, t, FREELIST_REF);  /* (t[FREELIST_REF] = t[ref]) */
   }
   else {  /* no free elements */
-    ref = (int)lua_objlen(L, t);
-    if (ref < RESERVED_REFS)
-      ref = RESERVED_REFS;  /* skip reserved references */
-    ref++;  /* create new reference */
+    ref = (int)lua_objlen(L, t) + 1;  /* get a new reference */
+    if (ref == FREELIST_REF) {  /* FREELIST_REF not initialized? */
+      lua_pushinteger(L, 0);
+      lua_rawseti(L, t, FREELIST_REF);
+      ref = FREELIST_REF + 1;
+    }
   }
   lua_rawseti(L, t, ref);
   return ref;
