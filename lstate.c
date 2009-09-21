@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.57 2009/07/15 17:26:14 roberto Exp roberto $
+** $Id: lstate.c,v 2.58 2009/09/17 18:04:21 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -91,18 +91,41 @@ static void freestack (lua_State *L) {
 }
 
 
-static void init_registry (lua_State *L) {
-  Table *registry = luaH_new(L);
-  TValue mt;
-  sethvalue(L, registry(L), registry);
-  luaH_resize(L, registry, LUA_RIDX_LAST, 0);
-  setthvalue(L, &mt, L);
-  setobj2t(L, luaH_setint(L, registry, LUA_RIDX_MAINTHREAD), &mt);
+/*
+** Calls the function in variable pointed to by userdata in first argument
+** (Userdata cannot point directly to the function because pointer to
+** function is not compatible with void*.)
+*/
+static int cpcall (lua_State *L) {
+  lua_CFunction f = *(lua_CFunction *)lua_touserdata(L, 1);
+  lua_remove(L, 1);
+  return f(L);
 }
 
 
 /*
-** open parts that may cause memory-allocation errors
+** Create registry table and its predefined values
+*/
+static void init_registry (lua_State *L) {
+  Closure *cp;
+  TValue mt;
+  /* create registry */
+  Table *registry = luaH_new(L);
+  sethvalue(L, registry(L), registry);
+  luaH_resize(L, registry, LUA_RIDX_LAST, 0);
+  /* registry[LUA_RIDX_MAINTHREAD] = L */
+  setthvalue(L, &mt, L);
+  setobj2t(L, luaH_setint(L, registry, LUA_RIDX_MAINTHREAD), &mt);
+  /* registry[LUA_RIDX_CPCALL] = cpcall */
+  cp = luaF_newCclosure(L, 0, hvalue(gt(L)));
+  cp->c.f = cpcall;
+  setclvalue(L, &mt, cp);
+  setobj2t(L, luaH_setint(L, registry, LUA_RIDX_CPCALL), &mt);
+}
+
+
+/*
+** open parts of a state that may cause memory-allocation errors
 */
 static void f_luaopen (lua_State *L, void *ud) {
   global_State *g = G(L);
@@ -118,6 +141,10 @@ static void f_luaopen (lua_State *L, void *ud) {
 }
 
 
+/*
+** preinitialize a state with consistent values without allocating
+** any memory (to avoid errors)
+*/
 static void preinit_state (lua_State *L, global_State *g) {
   G(L) = g;
   L->stack = NULL;

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.242 2009/09/14 14:30:39 roberto Exp roberto $
+** $Id: lua.h,v 1.243 2009/09/17 18:04:21 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -91,7 +91,8 @@ typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 
 /* predefined values in the registry */
 #define LUA_RIDX_MAINTHREAD	1
-#define LUA_RIDX_LAST		LUA_RIDX_MAINTHREAD
+#define LUA_RIDX_CPCALL		2
+#define LUA_RIDX_LAST		LUA_RIDX_CPCALL
 
 
 

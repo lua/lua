@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.89 2009/08/31 14:26:28 roberto Exp roberto $
+** $Id: lapi.c,v 2.90 2009/09/17 18:04:21 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -854,40 +854,6 @@ LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
 }
 
 
-/*
-** Execute a protected C call.
-*/
-struct CCallS {  /* data to `f_Ccall' */
-  lua_CFunction func;
-  void *ud;
-};
-
-
-static void f_Ccall (lua_State *L, void *ud) {
-  struct CCallS *c = cast(struct CCallS *, ud);
-  Closure *cl;
-  cl = luaF_newCclosure(L, 0, getcurrenv(L));
-  cl->c.f = c->func;
-  setclvalue(L, L->top, cl);  /* push function */
-  api_incr_top(L);
-  setpvalue(L->top, c->ud);  /* push only argument */
-  api_incr_top(L);
-  luaD_call(L, L->top - 2, 0, 0);
-}
-
-
-LUA_API int lua_cpcall (lua_State *L, lua_CFunction func, void *ud) {
-  struct CCallS c;
-  int status;
-  lua_lock(L);
-  c.func = func;
-  c.ud = ud;
-  status = luaD_pcall(L, f_Ccall, &c, savestack(L, L->top), 0);
-  lua_unlock(L);
-  return status;
-}
-
-
 LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
                       const char *chunkname) {
   ZIO z;
@@ -1111,5 +1077,13 @@ LUA_API const char *lua_setupvalue (lua_State *L, int funcindex, int n) {
   }
   lua_unlock(L);
   return name;
+}
+
+
+LUA_API int lua_cpcall (lua_State *L, lua_CFunction func, void *ud) {
+  lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_CPCALL);
+  lua_pushlightuserdata(L, &func);
+  lua_pushlightuserdata(L, ud);
+  return lua_pcall(L, 2, 0, 0);
 }
 
