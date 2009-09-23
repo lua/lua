@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.95 2009/07/15 18:38:16 roberto Exp roberto $
+** $Id: lvm.c,v 2.96 2009/08/07 16:17:41 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -353,7 +353,12 @@ void luaV_finishOp (lua_State *L) {
   CallInfo *ci = L->ci;
   StkId base = ci->u.l.base;
   Instruction inst = *(ci->u.l.savedpc - 1);  /* interrupted instruction */
-  switch (GET_OPCODE(inst)) {  /* finish its execution */
+  OpCode op = GET_OPCODE(inst);
+  if (op == OP_EXTRAARG) {  /* extra argument? */
+    inst = *(ci->u.l.savedpc - 2);  /* get its 'main' instruction */
+    op = GET_OPCODE(inst);
+  }
+  switch (op) {  /* finish its execution */
     case OP_ADD: case OP_SUB: case OP_MUL: case OP_DIV:
     case OP_MOD: case OP_POW: case OP_UNM: case OP_LEN:
     case OP_GETGLOBAL: case OP_GETTABLE: case OP_SELF: {
@@ -365,7 +370,7 @@ void luaV_finishOp (lua_State *L) {
       L->top--;
       /* metamethod should not be called when operand is K */
       lua_assert(!ISK(GETARG_B(inst)));
-      if (GET_OPCODE(inst) == OP_LE &&  /* "<=" using "<" instead? */
+      if (op == OP_LE &&  /* "<=" using "<" instead? */
           ttisnil(luaT_gettmbyobj(L, base + GETARG_B(inst), TM_LE)))
         res = !res;  /* invert result */
       lua_assert(GET_OPCODE(*ci->u.l.savedpc) == OP_JMP);
@@ -417,7 +422,8 @@ void luaV_finishOp (lua_State *L) {
 	ISK(GETARG_B(i)) ? k+INDEXK(GETARG_B(i)) : base+GETARG_B(i))
 #define RKC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgK, \
 	ISK(GETARG_C(i)) ? k+INDEXK(GETARG_C(i)) : base+GETARG_C(i))
-#define KBx(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgK, k+GETARG_Bx(i))
+#define KBx(i)  \
+  (k + (GETARG_Bx(i) != 0 ? GETARG_Bx(i) - 1 : GETARG_Ax(*ci->u.l.savedpc++)))
 
 
 #define dojump(i)	{ ci->u.l.savedpc += (i); luai_threadyield(L);}
@@ -468,7 +474,8 @@ void luaV_execute (lua_State *L) {
         continue;
       }
       case OP_LOADK: {
-        setobj2s(L, ra, KBx(i));
+        TValue *rb = KBx(i);
+        setobj2s(L, ra, rb);
         continue;
       }
       case OP_LOADBOOL: {
@@ -502,9 +509,10 @@ void luaV_execute (lua_State *L) {
       }
       case OP_SETGLOBAL: {
         TValue g;
+        TValue *rb = KBx(i);
         sethvalue(L, &g, cl->env);
-        lua_assert(ttisstring(KBx(i)));
-        Protect(luaV_settable(L, &g, KBx(i), ra));
+        lua_assert(ttisstring(rb));
+        Protect(luaV_settable(L, &g, rb, ra));
         continue;
       }
       case OP_SETUPVAL: {

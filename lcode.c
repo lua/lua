@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.40 2009/06/18 16:35:05 roberto Exp roberto $
+** $Id: lcode.c,v 2.41 2009/08/10 15:31:44 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -191,6 +191,55 @@ void luaK_concat (FuncState *fs, int *l1, int l2) {
 }
 
 
+static int luaK_code (FuncState *fs, Instruction i) {
+  Proto *f = fs->f;
+  dischargejpc(fs);  /* `pc' will change */
+  /* put new instruction in code array */
+  luaM_growvector(fs->L, f->code, fs->pc, f->sizecode, Instruction,
+                  MAX_INT, "opcodes");
+  f->code[fs->pc] = i;
+  /* save corresponding line information */
+  luaM_growvector(fs->L, f->lineinfo, fs->pc, f->sizelineinfo, int,
+                  MAX_INT, "opcodes");
+  f->lineinfo[fs->pc] = fs->ls->lastline;
+  return fs->pc++;
+}
+
+
+int luaK_codeABC (FuncState *fs, OpCode o, int a, int b, int c) {
+  lua_assert(getOpMode(o) == iABC);
+  lua_assert(getBMode(o) != OpArgN || b == 0);
+  lua_assert(getCMode(o) != OpArgN || c == 0);
+  lua_assert(a <= MAXARG_A && b <= MAXARG_B && c <= MAXARG_C);
+  return luaK_code(fs, CREATE_ABC(o, a, b, c));
+}
+
+
+int luaK_codeABx (FuncState *fs, OpCode o, int a, unsigned int bc) {
+  lua_assert(getOpMode(o) == iABx || getOpMode(o) == iAsBx);
+  lua_assert(getCMode(o) == OpArgN);
+  lua_assert(a <= MAXARG_A && bc <= MAXARG_Bx);
+  return luaK_code(fs, CREATE_ABx(o, a, bc));
+}
+
+
+static int codeextraarg (FuncState *fs, int a) {
+  lua_assert(a <= MAXARG_Ax);
+  return luaK_code(fs, CREATE_Ax(OP_EXTRAARG, a));
+}
+
+
+int luaK_codeABxX (FuncState *fs, OpCode o, int reg, int k) {
+  if (k < MAXARG_Bx)
+    return luaK_codeABx(fs, o, reg, k + 1);
+  else {
+    int p = luaK_codeABx(fs, o, reg, 0);
+    codeextraarg(fs, k);
+    return p;
+  }
+}
+
+
 void luaK_checkstack (FuncState *fs, int n) {
   int newstack = fs->freereg + n;
   if (newstack > fs->f->maxstacksize) {
@@ -238,7 +287,7 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
   oldsize = f->sizek;
   k = fs->nk;
   setnvalue(idx, cast_num(k));
-  luaM_growvector(L, f->k, k, f->sizek, TValue, MAXARG_Bx, "constants");
+  luaM_growvector(L, f->k, k, f->sizek, TValue, MAXARG_Ax, "constants");
   while (oldsize < f->sizek) setnilvalue(&f->k[oldsize++]);
   setobj(L, &f->k[k], v);
   fs->nk++;
@@ -324,7 +373,7 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
       break;
     }
     case VGLOBAL: {
-      e->u.s.info = luaK_codeABx(fs, OP_GETGLOBAL, 0, e->u.s.info);
+      e->u.s.info = luaK_codeABxX(fs, OP_GETGLOBAL, 0, e->u.s.info);
       e->k = VRELOCABLE;
       break;
     }
@@ -496,7 +545,7 @@ void luaK_storevar (FuncState *fs, expdesc *var, expdesc *ex) {
     }
     case VGLOBAL: {
       int e = luaK_exp2anyreg(fs, ex);
-      luaK_codeABx(fs, OP_SETGLOBAL, e, var->u.s.info);
+      luaK_codeABxX(fs, OP_SETGLOBAL, e, var->u.s.info);
       break;
     }
     case VINDEXED: {
@@ -802,50 +851,6 @@ void luaK_fixline (FuncState *fs, int line) {
 }
 
 
-static int luaK_code (FuncState *fs, Instruction i) {
-  Proto *f = fs->f;
-  dischargejpc(fs);  /* `pc' will change */
-  /* put new instruction in code array */
-  luaM_growvector(fs->L, f->code, fs->pc, f->sizecode, Instruction,
-                  MAX_INT, "opcodes");
-  f->code[fs->pc] = i;
-  /* save corresponding line information */
-  luaM_growvector(fs->L, f->lineinfo, fs->pc, f->sizelineinfo, int,
-                  MAX_INT, "opcodes");
-  f->lineinfo[fs->pc] = fs->ls->lastline;
-  return fs->pc++;
-}
-
-
-int luaK_codeABC (FuncState *fs, OpCode o, int a, int b, int c) {
-  lua_assert(getOpMode(o) == iABC);
-  lua_assert(getBMode(o) != OpArgN || b == 0);
-  lua_assert(getCMode(o) != OpArgN || c == 0);
-  lua_assert(a <= MAXARG_A && b <= MAXARG_B && c <= MAXARG_C);
-  return luaK_code(fs, CREATE_ABC(o, a, b, c));
-}
-
-
-int luaK_codeABx (FuncState *fs, OpCode o, int a, unsigned int bc) {
-  lua_assert(getOpMode(o) == iABx || getOpMode(o) == iAsBx);
-  lua_assert(getCMode(o) == OpArgN);
-  lua_assert(a <= MAXARG_A && bc <= MAXARG_Bx);
-  return luaK_code(fs, CREATE_ABx(o, a, bc));
-}
-
-
-static int luaK_codeAx (FuncState *fs, OpCode o, int a) {
-  lua_assert(getOpMode(o) == iAx);
-  lua_assert(a <= MAXARG_Ax);
-  return luaK_code(fs, CREATE_Ax(o, a));
-}
-
-
-void luaK_codek (FuncState *fs, int reg, int k) {
-    luaK_codeABx(fs, OP_LOADK, reg, k);
-}
-
-
 void luaK_setlist (FuncState *fs, int base, int nelems, int tostore) {
   int c =  (nelems - 1)/LFIELDS_PER_FLUSH + 1;
   int b = (tostore == LUA_MULTRET) ? 0 : tostore;
@@ -854,7 +859,7 @@ void luaK_setlist (FuncState *fs, int base, int nelems, int tostore) {
     luaK_codeABC(fs, OP_SETLIST, base, b, c);
   else if (c <= MAXARG_Ax) {
     luaK_codeABC(fs, OP_SETLIST, base, b, 0);
-    luaK_codeAx(fs, OP_EXTRAARG, c);
+    codeextraarg(fs, c);
   }
   else
     luaX_syntaxerror(fs->ls, "constructor too long");

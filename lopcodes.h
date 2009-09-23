@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.128 2008/10/30 15:39:30 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.129 2009/03/09 15:27:56 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -166,15 +166,15 @@ typedef enum {
 name		args	description
 ------------------------------------------------------------------------*/
 OP_MOVE,/*	A B	R(A) := R(B)					*/
-OP_LOADK,/*	A Bx	R(A) := Kst(Bx)					*/
+OP_LOADK,/*	A Bx	R(A) := Kst(Bx - 1)				*/
 OP_LOADBOOL,/*	A B C	R(A) := (Bool)B; if (C) pc++			*/
 OP_LOADNIL,/*	A B	R(A) := ... := R(B) := nil			*/
 OP_GETUPVAL,/*	A B	R(A) := UpValue[B]				*/
 
-OP_GETGLOBAL,/*	A Bx	R(A) := Gbl[Kst(Bx)]				*/
+OP_GETGLOBAL,/*	A Bx	R(A) := Gbl[Kst(Bx - 1)]			*/
 OP_GETTABLE,/*	A B C	R(A) := R(B)[RK(C)]				*/
 
-OP_SETGLOBAL,/*	A Bx	Gbl[Kst(Bx)] := R(A)				*/
+OP_SETGLOBAL,/*	A Bx	Gbl[Kst(Bx - 1)] := R(A)			*/
 OP_SETUPVAL,/*	A B	UpValue[B] := R(A)				*/
 OP_SETTABLE,/*	A B C	R(A)[RK(B)] := RK(C)				*/
 
@@ -221,7 +221,7 @@ OP_VARARG,/*	A B	R(A), R(A+1), ..., R(A+B-1) = vararg		*/
 
 OP_TFORLOOP,/*	A sBx	if R(A+1) ~= nil then { R(A)=R(A+1); pc += sBx }*/
 
-OP_EXTRAARG/*	Ax	extra argument for previous opcode		*/
+OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
 } OpCode;
 
 
@@ -241,7 +241,10 @@ OP_EXTRAARG/*	Ax	extra argument for previous opcode		*/
   (*) In OP_RETURN, if (B == 0) then return up to `top'.
 
   (*) In OP_SETLIST, if (B == 0) then B = `top'; if (C == 0) then next
-  `instruction' is EXTRAARG(real C).
+  'instruction' is EXTRAARG(real C).
+
+  (*) In OP_LOADK, OP_GETGLOBAL, and OP_SETGLOBAL, if (Bx == 0) then next
+  'instruction' is EXTRAARG(real Bx).
 
   (*) For comparisons, A specifies what condition the test should accept
   (true or false).

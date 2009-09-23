@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.52 2009/06/10 16:57:53 roberto Exp roberto $
+** $Id: ldebug.c,v 2.53 2009/08/07 16:17:41 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -299,7 +299,9 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
     switch (op) {
       case OP_GETGLOBAL: {
         if (reg == a) {
-          int g = GETARG_Bx(i);  /* global index */
+          int g = GETARG_Bx(i);
+          if (g != 0) g--;
+          else g = GETARG_Ax(p->code[++pc]);
           lua_assert(ttisstring(&p->k[g]));
           *name = svalue(&p->k[g]);
           what = "global";
