@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.64 2009/06/18 16:35:05 roberto Exp roberto $
+** $Id: lparser.c,v 2.65 2009/08/10 20:41:04 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -139,7 +139,7 @@ static void codestring (LexState *ls, expdesc *e, TString *s) {
 }
 
 
-static void checkname(LexState *ls, expdesc *e) {
+static void checkname (LexState *ls, expdesc *e) {
   codestring(ls, e, str_checkname(ls));
 }
 
