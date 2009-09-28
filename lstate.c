@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.58 2009/09/17 18:04:21 roberto Exp roberto $
+** $Id: lstate.c,v 2.59 2009/09/21 12:09:52 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -137,6 +137,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   luaT_init(L);
   luaX_init(L);
   luaS_fix(luaS_newliteral(L, MEMERRMSG));
+  g->estimate = g->totalbytes;
   g->GCthreshold = 4*g->totalbytes;
 }
 
@@ -245,7 +246,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->grayagain = NULL;
   g->weak = g->ephemeron = g->allweak = NULL;
   g->tobefnz = NULL;
-  g->totalbytes = sizeof(LG);
+  g->estimate = g->totalbytes = sizeof(LG);
   g->gcpause = LUAI_GCPAUSE;
   g->gcstepmul = LUAI_GCMUL;
   g->gcdept = 0;
