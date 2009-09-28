@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 2.9 2006/09/11 14:07:24 roberto Exp roberto $
+** $Id: ldump.c,v 2.10 2008/07/03 14:25:05 roberto Exp roberto $
 ** save precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -108,6 +108,17 @@ static void DumpConstants(const Proto* f, DumpState* D)
  for (i=0; i<n; i++) DumpFunction(f->p[i],f->source,D);
 }
 
+static void DumpUpvalues(const Proto* f, DumpState* D)
+{
+ int i,n=f->sizeupvalues;
+ DumpInt(n,D);
+ for (i=0; i<n; i++)
+ {
+  DumpChar(f->upvalues[i].instack, D);
+  DumpChar(f->upvalues[i].idx, D);
+ }
+}
+
 static void DumpDebug(const Proto* f, DumpState* D)
 {
  int i,n;
@@ -123,7 +134,7 @@ static void DumpDebug(const Proto* f, DumpState* D)
  }
  n= (D->strip) ? 0 : f->sizeupvalues;
  DumpInt(n,D);
- for (i=0; i<n; i++) DumpString(f->upvalues[i],D);
+ for (i=0; i<n; i++) DumpString(f->upvalues[i].name,D);
 }
 
 static void DumpFunction(const Proto* f, const TString* p, DumpState* D)
@@ -131,12 +142,12 @@ static void DumpFunction(const Proto* f, const TString* p, DumpState* D)
  DumpString((f->source==p || D->strip) ? NULL : f->source,D);
  DumpInt(f->linedefined,D);
  DumpInt(f->lastlinedefined,D);
- DumpChar(f->nups,D);
  DumpChar(f->numparams,D);
  DumpChar(f->is_vararg,D);
  DumpChar(f->maxstacksize,D);
  DumpCode(f,D);
  DumpConstants(f,D);
+ DumpUpvalues(f,D);
  DumpDebug(f,D);
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.96 2009/08/07 16:17:41 roberto Exp roberto $
+** $Id: lvm.c,v 2.97 2009/09/23 20:33:05 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -773,22 +773,18 @@ void luaV_execute (lua_State *L) {
         continue;
       }
       case OP_CLOSURE: {
-        Proto *p;
-        Closure *ncl;
-        int nup, j;
-        p = cl->p->p[GETARG_Bx(i)];
-        nup = p->nups;
-        ncl = luaF_newLclosure(L, nup, cl->env);
+        Proto *p = cl->p->p[GETARG_Bx(i)];  /* prototype for new closure */
+        int nup = p->sizeupvalues;
+        Closure *ncl = luaF_newLclosure(L, nup, cl->env);
+        Upvaldesc *uv = p->upvalues;
+        int j;
         ncl->l.p = p;
-        setclvalue(L, ra, ncl);
-        for (j=0; j<nup; j++) {
-          Instruction u = *ci->u.l.savedpc++;
-          if (GET_OPCODE(u) == OP_GETUPVAL)
-            ncl->l.upvals[j] = cl->upvals[GETARG_B(u)];
-          else {
-            lua_assert(GET_OPCODE(u) == OP_MOVE);
-            ncl->l.upvals[j] = luaF_findupval(L, base + GETARG_B(u));
-          }
+        setclvalue(L, ra, ncl);  /* anchor new closure in stack */
+        for (j = 0; j < nup; j++) {  /* fill in upvalues */
+          if (uv[j].instack)  /* upvalue refers to local variable? */
+            ncl->l.upvals[j] = luaF_findupval(L, base + uv[j].idx);
+          else  /* get upvalue from enclosing function */
+            ncl->l.upvals[j] = cl->upvals[uv[j].idx];
         }
         Protect(luaC_checkGC(L));
         continue;

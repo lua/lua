@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.90 2009/09/17 18:04:21 roberto Exp roberto $
+** $Id: lapi.c,v 2.91 2009/09/21 12:09:52 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1043,7 +1043,7 @@ static const char *aux_upvalue (StkId fi, int n, TValue **val) {
     Proto *p = f->l.p;
     if (!(1 <= n && n <= p->sizeupvalues)) return NULL;
     *val = f->l.upvals[n-1]->v;
-    return getstr(p->upvalues[n-1]);
+    return getstr(p->upvalues[n-1].name);
   }
 }
 

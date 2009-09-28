@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.129 2009/03/09 15:27:56 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.130 2009/09/23 20:33:05 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -250,10 +250,6 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
   (true or false).
 
   (*) All `skips' (pc++) assume that next instruction is a jump.
-
-  (*) The OP_CLOSURE instruction is followed by a sequence of
-  instructions coding the upvalues: OP_MOVE A B if upvalue is local B,
-  or OP_GETUPVAL A B if upvalue is enclosing upvalue B.
 
 ===========================================================================*/
 

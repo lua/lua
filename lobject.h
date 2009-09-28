@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.27 2009/06/18 16:36:40 roberto Exp roberto $
+** $Id: lobject.h,v 2.28 2009/07/15 18:37:19 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -227,6 +227,15 @@ typedef union Udata {
 
 
 
+/*
+** Upvalues from a function prototype
+*/
+typedef struct Upvaldesc {
+  TString *name;  /* upvalue name (for debug information) */
+  lu_byte instack;
+  lu_byte idx;  /* index of upvalue (in stack or in outer function's list) */
+} Upvaldesc;
+
 
 /*
 ** Function Prototypes
@@ -238,9 +247,9 @@ typedef struct Proto {
   struct Proto **p;  /* functions defined inside the function */
   int *lineinfo;  /* map from opcodes to source lines */
   struct LocVar *locvars;  /* information about local variables */
-  TString **upvalues;  /* upvalue names */
+  Upvaldesc *upvalues;  /* upvalue information */
   TString  *source;
-  int sizeupvalues;
+  int sizeupvalues;  /* size of 'upvalues' */
   int sizek;  /* size of `k' */
   int sizecode;
   int sizelineinfo;
@@ -249,7 +258,6 @@ typedef struct Proto {
   int linedefined;
   int lastlinedefined;
   GCObject *gclist;
-  lu_byte nups;  /* number of upvalues */
   lu_byte numparams;
   lu_byte is_vararg;
   lu_byte maxstacksize;

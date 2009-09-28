@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.71 2009/09/14 14:30:39 roberto Exp roberto $
+** $Id: ltests.c,v 2.72 2009/09/17 18:04:21 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -248,8 +248,8 @@ static void checkproto (global_State *g, Proto *f) {
       checkobjref(g, fgc, rawtsvalue(f->k+i));
   }
   for (i=0; i<f->sizeupvalues; i++) {
-    if (f->upvalues[i])
-      checkobjref(g, fgc, f->upvalues[i]);
+    if (f->upvalues[i].name)
+      checkobjref(g, fgc, f->upvalues[i].name);
   }
   for (i=0; i<f->sizep; i++) {
     if (f->p[i])
@@ -273,7 +273,7 @@ static void checkclosure (global_State *g, Closure *cl) {
   }
   else {
     int i;
-    lua_assert(cl->l.nupvalues == cl->l.p->nups);
+    lua_assert(cl->l.nupvalues == cl->l.p->sizeupvalues);
     checkobjref(g, clgc, cl->l.p);
     for (i=0; i<cl->l.nupvalues; i++) {
       if (cl->l.upvals[i]) {
@@ -493,7 +493,6 @@ static int get_limits (lua_State *L) {
   setnameval(L, "LFPF", LFIELDS_PER_FLUSH);
   setnameval(L, "MAXVARS", LUAI_MAXVARS);
   setnameval(L, "MAXSTACK", MAXSTACK);
-  setnameval(L, "MAXUPVALUES", LUAI_MAXUPVALUES);
   setnameval(L, "NUM_OPCODES", NUM_OPCODES);
   return 1;
 }

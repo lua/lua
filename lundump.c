@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.9 2008/04/07 18:44:23 roberto Exp roberto $
+** $Id: lundump.c,v 2.10 2009/04/30 17:42:21 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -133,6 +133,20 @@ static void LoadConstants(LoadState* S, Proto* f)
  for (i=0; i<n; i++) f->p[i]=LoadFunction(S,f->source);
 }
 
+static void LoadUpvalues(LoadState* S, Proto* f)
+{
+ int i,n;
+ n=LoadInt(S);
+ f->upvalues=luaM_newvector(S->L,n,Upvaldesc);
+ f->sizeupvalues=n;
+ for (i=0; i<n; i++) f->upvalues[i].name=NULL;
+ for (i=0; i<n; i++)
+ {
+  f->upvalues[i].instack=LoadChar(S);
+  f->upvalues[i].idx=LoadChar(S);
+ }
+}
+
 static void LoadDebug(LoadState* S, Proto* f)
 {
  int i,n;
@@ -151,10 +165,7 @@ static void LoadDebug(LoadState* S, Proto* f)
   f->locvars[i].endpc=LoadInt(S);
  }
  n=LoadInt(S);
- f->upvalues=luaM_newvector(S->L,n,TString*);
- f->sizeupvalues=n;
- for (i=0; i<n; i++) f->upvalues[i]=NULL;
- for (i=0; i<n; i++) f->upvalues[i]=LoadString(S);
+ for (i=0; i<n; i++) f->upvalues[i].name=LoadString(S);
 }
 
 static Proto* LoadFunction(LoadState* S, TString* p)
@@ -166,12 +177,12 @@ static Proto* LoadFunction(LoadState* S, TString* p)
  f->source=LoadString(S); if (f->source==NULL) f->source=p;
  f->linedefined=LoadInt(S);
  f->lastlinedefined=LoadInt(S);
- f->nups=LoadByte(S);
  f->numparams=LoadByte(S);
  f->is_vararg=LoadByte(S);
  f->maxstacksize=LoadByte(S);
  LoadCode(S,f);
  LoadConstants(S,f);
+ LoadUpvalues(S,f);
  LoadDebug(S,f);
  S->L->top--;
  G(S->L)->nCcalls--;

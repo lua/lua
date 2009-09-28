@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.108 2009/07/15 17:57:30 roberto Exp roberto $
+** $Id: luaconf.h,v 1.109 2009/08/25 19:58:08 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -459,13 +459,6 @@
 @* (must be smaller than 250).
 */
 #define LUAI_MAXVARS		200
-
-
-/*
-@@ LUAI_MAXUPVALUES is the maximum number of upvalues per function
-@* (must be smaller than 250).
-*/
-#define LUAI_MAXUPVALUES	60
 
 
 /*

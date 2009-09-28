@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.54 2009/09/23 20:33:05 roberto Exp roberto $
+** $Id: ldebug.c,v 2.55 2009/09/28 12:37:17 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -328,7 +328,8 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
       case OP_GETUPVAL: {
         if (reg == a) {
           int u = GETARG_B(i);  /* upvalue index */
-          *name = p->upvalues ? getstr(p->upvalues[u]) : "?";
+          TString *tn = p->upvalues[u].name;
+          *name = tn ? getstr(tn) : "?";
           what = "upvalue";
         }
         break;
@@ -362,12 +363,6 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
         /* jump is forward and do not skip `lastpc'? */
         if (pc < dest && dest <= lastpc)
           pc += b;  /* do the jump */
-        break;
-      }
-      case OP_CLOSURE: {
-        int nup = p->p[GETARG_Bx(i)]->nups;
-        pc += nup;  /* do not 'execute' pseudo-instructions */
-        lua_assert(pc <= lastpc);
         break;
       }
       default:

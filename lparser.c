@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.65 2009/08/10 20:41:04 roberto Exp roberto $
+** $Id: lparser.c,v 2.66 2009/09/23 20:14:00 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -188,23 +188,24 @@ static int indexupvalue (FuncState *fs, TString *name, expdesc *v) {
   int i;
   Proto *f = fs->f;
   int oldsize = f->sizeupvalues;
-  for (i=0; i<f->nups; i++) {
-    if (fs->upvalues[i].k == v->k && fs->upvalues[i].info == v->u.s.info) {
-      lua_assert(f->upvalues[i] == name);
+  int instk = (v->k == VLOCAL);
+  lua_assert(instk || v->k == VUPVAL);
+  for (i=0; i<fs->nups; i++) {
+    if (f->upvalues[i].instack == instk && f->upvalues[i].idx == v->u.s.info) {
+      lua_assert(f->upvalues[i].name == name);
       return i;
     }
   }
   /* new one */
-  luaY_checklimit(fs, f->nups + 1, LUAI_MAXUPVALUES, "upvalues");
-  luaM_growvector(fs->L, f->upvalues, f->nups, f->sizeupvalues,
-                  TString *, MAX_INT, "upvalues");
-  while (oldsize < f->sizeupvalues) f->upvalues[oldsize++] = NULL;
-  f->upvalues[f->nups] = name;
+  luaY_checklimit(fs, fs->nups + 1, UCHAR_MAX, "upvalues");
+  luaM_growvector(fs->L, f->upvalues, fs->nups, f->sizeupvalues,
+                  Upvaldesc, UCHAR_MAX, "upvalues");
+  while (oldsize < f->sizeupvalues) f->upvalues[oldsize++].name = NULL;
+  f->upvalues[fs->nups].name = name;
   luaC_objbarrier(fs->L, f, name);
-  lua_assert(v->k == VLOCAL || v->k == VUPVAL);
-  fs->upvalues[f->nups].k = cast_byte(v->k);
-  fs->upvalues[f->nups].info = cast_byte(v->u.s.info);
-  return f->nups++;
+  f->upvalues[fs->nups].instack = cast_byte(instk);
+  f->upvalues[fs->nups].idx = cast_byte(v->u.s.info);
+  return fs->nups++;
 }
 
 
@@ -316,17 +317,12 @@ static void pushclosure (LexState *ls, FuncState *func, expdesc *v) {
   FuncState *fs = ls->fs->prev;
   Proto *f = fs->f;
   int oldsize = f->sizep;
-  int i;
   luaM_growvector(ls->L, f->p, fs->np, f->sizep, Proto *,
                   MAXARG_Bx, "functions");
   while (oldsize < f->sizep) f->p[oldsize++] = NULL;
   f->p[fs->np++] = func->f;
   luaC_objbarrier(ls->L, f, func->f);
   init_exp(v, VRELOCABLE, luaK_codeABx(fs, OP_CLOSURE, 0, fs->np-1));
-  for (i=0; i<func->f->nups; i++) {
-    OpCode o = (func->upvalues[i].k == VLOCAL) ? OP_MOVE : OP_GETUPVAL;
-    luaK_codeABC(fs, o, 0, func->upvalues[i].info, 0);
-  }
 }
 
 
@@ -343,6 +339,7 @@ static void open_func (LexState *ls, FuncState *fs) {
   fs->freereg = 0;
   fs->nk = 0;
   fs->np = 0;
+  fs->nups = 0;
   fs->nlocvars = 0;
   fs->nactvar = 0;
   fs->bl = NULL;
@@ -376,8 +373,8 @@ static void close_func (LexState *ls) {
   f->sizep = fs->np;
   luaM_reallocvector(L, f->locvars, f->sizelocvars, fs->nlocvars, LocVar);
   f->sizelocvars = fs->nlocvars;
-  luaM_reallocvector(L, f->upvalues, f->sizeupvalues, f->nups, TString *);
-  f->sizeupvalues = f->nups;
+  luaM_reallocvector(L, f->upvalues, f->sizeupvalues, fs->nups, Upvaldesc);
+  f->sizeupvalues = fs->nups;
   lua_assert(fs->bl == NULL);
   ls->fs = fs->prev;
   L->top -= 2;  /* remove table and prototype from the stack */
@@ -402,7 +399,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, const char *name) {
   close_func(&lexstate);
   L->top--;
   lua_assert(funcstate.prev == NULL);
-  lua_assert(funcstate.f->nups == 0);
+  lua_assert(funcstate.nups == 0);
   lua_assert(lexstate.fs == NULL);
   return funcstate.f;
 }
