@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.190 2009/07/15 17:47:34 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.191 2009/09/18 18:58:45 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -672,7 +672,8 @@ LUALIB_API void luaL_register (lua_State *L, const char *libname,
     }
     lua_remove(L, -2);  /* remove _LOADED table */
   }
-  for (; l->name; l++) {
+  if (l == NULL) return;  /* nothing to register? */
+  for (; l->name; l++) {  /* else fill the table with given functions */
     lua_pushcfunction(L, l->func);
     lua_setfield(L, -2, l->name);
   }
