@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.53 2009/08/07 16:17:41 roberto Exp roberto $
+** $Id: ldebug.c,v 2.54 2009/09/23 20:33:05 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -386,6 +386,8 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
     return NULL;  /* calling function is not Lua (or is unknown) */
   ci = ci->previous;  /* calling function */
   i = ci_func(ci)->l.p->code[currentpc(ci)];
+  if (GET_OPCODE(i) == OP_EXTRAARG)  /* extra argument? */
+    i = ci_func(ci)->l.p->code[currentpc(ci) - 1];  /* get 'real' instruction */
   switch (GET_OPCODE(i)) {
     case OP_CALL:
     case OP_TAILCALL:
