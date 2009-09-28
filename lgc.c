@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.54 2009/06/08 19:35:59 roberto Exp roberto $
+** $Id: lgc.c,v 2.55 2009/07/16 16:26:09 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -735,12 +735,16 @@ static void atomic (lua_State *L) {
   g->currentwhite = cast_byte(otherwhite(g));
   g->sweepstrgc = 0;
   g->gcstate = GCSsweepstring;
+  lua_assert(g->totalbytes > udsize);
   g->estimate = g->totalbytes - udsize;  /* first estimate */
 }
 
 
-#define correctestimate(g,s)  {lu_mem old = g->totalbytes; s; \
-          lua_assert(old >= g->totalbytes); g->estimate -= old - g->totalbytes;}
+#define correctestimate(g,s)  { \
+	lu_mem old = g->totalbytes; s; \
+	lua_assert(old >= g->totalbytes); \
+	if (g->estimate >= old - g->totalbytes) \
+	  g->estimate -= (old - g->totalbytes);}
 
 
 static l_mem singlestep (lua_State *L) {
@@ -813,7 +817,8 @@ void luaC_step (lua_State *L) {
     }
   }
   else {
-    lua_assert(g->totalbytes >= g->estimate);
+    if (g->estimate > g->totalbytes)
+      g->estimate = g->totalbytes;
     setthreshold(g);
   }
 }
