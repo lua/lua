@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.72 2009/09/17 18:04:21 roberto Exp roberto $
+** $Id: ltests.c,v 2.73 2009/09/28 16:32:50 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -916,6 +916,10 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("tocfunction") {
       lua_pushcfunction(L1, lua_tocfunction(L1, getindex));
     }
+    else if EQ("func2udata") {
+      lua_CFunction func = lua_tocfunction(L1, getindex);
+      lua_pushlightuserdata(L1, &func);
+    }
     else if EQ("return") {
       return getnum;
     }
@@ -969,6 +973,10 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     }
     else if EQ("gettable") {
       lua_gettable(L1, getindex);
+    }
+    else if EQ("getfield") {
+      int t = getindex;
+      lua_getfield(L1, t, getname);
     }
     else if EQ("rawgeti") {
       int t = getindex;
