@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.66 2009/09/23 20:14:00 roberto Exp roberto $
+** $Id: lparser.c,v 2.67 2009/09/28 16:32:50 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -227,10 +227,8 @@ static void markupval (FuncState *fs, int level) {
 
 
 static int singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
-  if (fs == NULL) {  /* no more levels? */
-    init_exp(var, VGLOBAL, NO_REG);  /* default is global variable */
-    return VGLOBAL;
-  }
+  if (fs == NULL)  /* no more levels? */
+    return VGLOBAL;  /* default is global variable */
   else {
     int v = searchvar(fs, n);  /* look up at current level */
     if (v >= 0) {
@@ -253,8 +251,16 @@ static int singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
 static void singlevar (LexState *ls, expdesc *var) {
   TString *varname = str_checkname(ls);
   FuncState *fs = ls->fs;
-  if (singlevaraux(fs, varname, var, 1) == VGLOBAL)
-    var->u.s.info = luaK_stringK(fs, varname);  /* info points to global name */
+  if (singlevaraux(fs, varname, var, 1) == VGLOBAL) {
+    if (fs->envreg == NO_REG)  /* regular global? */
+      init_exp(var, VGLOBAL, luaK_stringK(fs, varname));
+    else {  /* "globals" are in current lexical environment */
+      expdesc key;
+      init_exp(var, VLOCAL, fs->envreg);  /* current environment */
+      codestring(ls, &key, varname);  /* key is variable name */
+      luaK_indexed(fs, var, &key);  /* env[varname] */
+    }
+  }
 }
 
 
@@ -313,15 +319,17 @@ static void leaveblock (FuncState *fs) {
 }
 
 
-static void pushclosure (LexState *ls, FuncState *func, expdesc *v) {
+static void pushclosure (LexState *ls, Proto *clp, expdesc *v) {
   FuncState *fs = ls->fs->prev;
-  Proto *f = fs->f;
+  Proto *f = fs->f;  /* prototype of function creating new closure */
   int oldsize = f->sizep;
   luaM_growvector(ls->L, f->p, fs->np, f->sizep, Proto *,
                   MAXARG_Bx, "functions");
   while (oldsize < f->sizep) f->p[oldsize++] = NULL;
-  f->p[fs->np++] = func->f;
-  luaC_objbarrier(ls->L, f, func->f);
+  f->p[fs->np++] = clp;
+  /* initial environment for new function is current lexical environment */
+  clp->envreg = fs->envreg;
+  luaC_objbarrier(ls->L, f, clp);
   init_exp(v, VRELOCABLE, luaK_codeABx(fs, OP_CLOSURE, 0, fs->np-1));
 }
 
@@ -342,6 +350,7 @@ static void open_func (LexState *ls, FuncState *fs) {
   fs->nups = 0;
   fs->nlocvars = 0;
   fs->nactvar = 0;
+  fs->envreg = NO_REG;
   fs->bl = NULL;
   fs->h = luaH_new(L);
   /* anchor table of constants (to avoid being collected) */
@@ -589,7 +598,7 @@ static void body (LexState *ls, expdesc *e, int needself, int line) {
   chunk(ls);
   new_fs.f->lastlinedefined = ls->linenumber;
   check_match(ls, TK_END, TK_FUNCTION, line);
-  pushclosure(ls, &new_fs, e);
+  pushclosure(ls, new_fs.f, e);
   close_func(ls);
 }
 
@@ -1035,11 +1044,12 @@ static void repeatstat (LexState *ls, int line) {
 
 static int exp1 (LexState *ls) {
   expdesc e;
-  int k;
+  int reg;
   expr(ls, &e);
-  k = e.k;
   luaK_exp2nextreg(ls->fs, &e);
-  return k;
+  lua_assert(e.k == VNONRELOC);
+  reg = e.u.s.info;
+  return reg;
 }
 
 
@@ -1226,6 +1236,24 @@ static void funcstat (LexState *ls, int line) {
 }
 
 
+static void instat (LexState *ls, int line) {
+  /* instat -> IN exp DO block END */
+  FuncState *fs = ls->fs;
+  int oldenv = fs->envreg;  /* save current environment */
+  BlockCnt bl;
+  luaX_next(ls);  /* skip IN */
+  enterblock(fs, &bl, 0);  /* scope for environment variable */
+  new_localvarliteral(ls, "(environment)", 0);
+  fs->envreg = exp1(ls);  /* new environment */
+  adjustlocalvars(ls, 1);
+  checknext(ls, TK_DO);
+  block(ls);
+  leaveblock(fs);
+  check_match(ls, TK_END, TK_IN, line);
+  fs->envreg = oldenv;  /* restore outer environment */
+}
+
+
 static void exprstat (LexState *ls) {
   /* stat -> func | assignment */
   FuncState *fs = ls->fs;
@@ -1288,6 +1316,10 @@ static int statement (LexState *ls) {
       luaX_next(ls);  /* skip DO */
       block(ls);
       check_match(ls, TK_END, TK_DO, line);
+      return 0;
+    }
+    case TK_IN: {
+      instat(ls, line);
       return 0;
     }
     case TK_FOR: {  /* stat -> forstat */

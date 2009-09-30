@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.97 2009/09/23 20:33:05 roberto Exp roberto $
+** $Id: lvm.c,v 2.98 2009/09/28 16:32:50 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -780,6 +780,14 @@ void luaV_execute (lua_State *L) {
         int j;
         ncl->l.p = p;
         setclvalue(L, ra, ncl);  /* anchor new closure in stack */
+        if (p->envreg != NO_REG) {  /* lexical environment? */
+          StkId env = base + p->envreg;
+          if (!ttistable(env))
+            luaG_runerror(L, "environment is not a table: "
+                             "cannot create closure");
+          else
+            ncl->l.env = hvalue(env);
+        }
         for (j = 0; j < nup; j++) {  /* fill in upvalues */
           if (uv[j].instack)  /* upvalue refers to local variable? */
             ncl->l.upvals[j] = luaF_findupval(L, base + uv[j].idx);
