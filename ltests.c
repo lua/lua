@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.73 2009/09/28 16:32:50 roberto Exp roberto $
+** $Id: ltests.c,v 2.74 2009/09/30 20:49:25 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -970,6 +970,10 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     }
     else if EQ("replace") {
       lua_replace(L1, getindex);
+    }
+    else if EQ("copy") {
+      int f = getindex;
+      lua_copy(L1, f, getindex);
     }
     else if EQ("gettable") {
       lua_gettable(L1, getindex);

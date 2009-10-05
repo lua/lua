@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.217 2009/07/15 17:35:20 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.218 2009/08/04 18:20:18 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -432,8 +432,7 @@ static int luaB_xpcall (lua_State *L) {
   int n = lua_gettop(L);
   luaL_argcheck(L, n >= 2, 2, "value expected");
   lua_pushvalue(L, 1);  /* exchange function... */
-  lua_pushvalue(L, 2);  /* ...and error handler */
-  lua_replace(L, 1);
+  lua_copy(L, 2, 1);  /* ...and error handler */
   lua_replace(L, 2);
   status = lua_pcallk(L, n - 2, LUA_MULTRET, 1, 1, pcallcont);
   luaL_checkstack(L, 1, NULL);

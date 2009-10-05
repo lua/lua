@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.60 2009/09/28 13:50:19 roberto Exp roberto $
+** $Id: lstate.c,v 2.61 2009/09/30 20:49:47 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -100,8 +100,7 @@ static int cpcall (lua_State *L) {
   lua_CFunction f = *(lua_CFunction *)lua_touserdata(L, 1);
   lua_remove(L, 1);  /* remove f from stack */
   /* restore original environment for 'cpcall' */
-  lua_pushvalue(L, LUA_GLOBALSINDEX);
-  lua_replace(L, LUA_ENVIRONINDEX);  
+  lua_copy(L, LUA_GLOBALSINDEX, LUA_ENVIRONINDEX);
   return f(L);
 }
 

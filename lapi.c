@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.91 2009/09/21 12:09:52 roberto Exp roberto $
+** $Id: lapi.c,v 2.92 2009/09/28 16:32:50 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -185,28 +185,42 @@ LUA_API void lua_insert (lua_State *L, int idx) {
 }
 
 
+static void moveto (lua_State *L, TValue *fr, int idx) {
+  TValue *to = index2addr(L, idx);
+  api_checkvalidindex(L, to);
+  if (idx == LUA_ENVIRONINDEX) {
+    Closure *func = curr_func(L);
+    api_check(L, ttistable(fr), "table expected");
+    func->c.env = hvalue(fr);
+    luaC_barrier(L, func, fr);
+  }
+  else {
+    setobj(L, to, fr);
+    if (idx < LUA_GLOBALSINDEX)  /* function upvalue? */
+      luaC_barrier(L, curr_func(L), fr);
+  }
+  /* LUA_GLOBALSINDEX does not need gc barrier (threads are never black) */
+}
+
+
 LUA_API void lua_replace (lua_State *L, int idx) {
-  StkId o;
   lua_lock(L);
   /* explicit test for incompatible code */
   if (idx == LUA_ENVIRONINDEX && L->ci->previous == NULL)
     luaG_runerror(L, "no calling environment");
   api_checknelems(L, 1);
-  o = index2addr(L, idx);
-  api_checkvalidindex(L, o);
-  if (idx == LUA_ENVIRONINDEX) {
-    Closure *func = curr_func(L);
-    api_check(L, ttistable(L->top - 1), "table expected");
-    func->c.env = hvalue(L->top - 1);
-    luaC_barrier(L, func, L->top - 1);
-  }
-  else {
-    setobj(L, o, L->top - 1);
-    if (idx < LUA_GLOBALSINDEX)  /* function upvalue? */
-      luaC_barrier(L, curr_func(L), L->top - 1);
-  }
-  /* LUA_GLOBALSINDEX does not need gc barrier (threads are never black) */
+  moveto(L, L->top - 1, idx);
   L->top--;
+  lua_unlock(L);
+}
+
+
+LUA_API void lua_copy (lua_State *L, int fromidx, int toidx) {
+  TValue *fr;
+  lua_lock(L);
+  fr = index2addr(L, fromidx);
+  api_checkvalidindex(L, fr);
+  moveto(L, fr, toidx);
   lua_unlock(L);
 }
 

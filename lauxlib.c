@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.191 2009/09/18 18:58:45 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.192 2009/09/28 12:36:40 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -75,8 +75,8 @@ static int pushglobalfuncname (lua_State *L, lua_Debug *ar) {
   lua_getinfo(L, "f", ar);  /* push function */
   lua_pushvalue(L, LUA_GLOBALSINDEX);  /* push global table */
   if (findfield(L, top + 1, 2)) {
-    lua_replace(L, top + 1);  /* move name to proper place */
-    lua_pop(L, 1);  /* remove other pushed value */
+    lua_copy(L, -1, top + 1);  /* move name to proper place */
+    lua_pop(L, 2);  /* remove pushed values */
     return 1;
   }
   else {
