@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.67 2009/09/14 14:30:39 roberto Exp roberto $
+** $Id: ldo.c,v 2.68 2009/09/28 16:32:50 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -563,6 +563,7 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
 struct SParser {  /* data to `f_parser' */
   ZIO *z;
   Mbuffer buff;  /* buffer to be used by the scanner */
+  Varlist varl;  /* list of local variables (to be used by the parser) */
   const char *name;
 };
 
@@ -573,8 +574,9 @@ static void f_parser (lua_State *L, void *ud) {
   struct SParser *p = cast(struct SParser *, ud);
   int c = luaZ_lookahead(p->z);
   luaC_checkGC(L);
-  tf = (c == LUA_SIGNATURE[0]) ? luaU_undump(L, p->z, &p->buff, p->name)
-                               : luaY_parser(L, p->z, &p->buff, p->name);
+  tf = (c == LUA_SIGNATURE[0])
+           ? luaU_undump(L, p->z, &p->buff, p->name)
+           : luaY_parser(L, p->z, &p->buff, &p->varl, p->name);
   setptvalue2s(L, L->top, tf);
   incr_top(L);
   cl = luaF_newLclosure(L, tf->sizeupvalues, hvalue(gt(L)));
@@ -589,9 +591,11 @@ int luaD_protectedparser (lua_State *L, ZIO *z, const char *name) {
   struct SParser p;
   int status;
   p.z = z; p.name = name;
+  p.varl.actvar = NULL; p.varl.nactvar = p.varl.actvarsize = 0;
   luaZ_initbuffer(L, &p.buff);
   status = luaD_pcall(L, f_parser, &p, savestack(L, L->top), L->errfunc);
   luaZ_freebuffer(L, &p.buff);
+  luaM_freearray(L, p.varl.actvar, p.varl.actvarsize);
   return status;
 }
 

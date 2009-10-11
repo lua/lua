@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.109 2009/08/25 19:58:08 roberto Exp roberto $
+** $Id: luaconf.h,v 1.110 2009/09/28 16:32:50 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -452,13 +452,6 @@
 @* syntactical nested non-terminals in a program.
 */
 #define LUAI_MAXCCALLS		200
-
-
-/*
-@@ LUAI_MAXVARS is the maximum number of local variables per function
-@* (must be smaller than 250).
-*/
-#define LUAI_MAXVARS		200
 
 
 /*

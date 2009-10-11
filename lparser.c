@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.67 2009/09/28 16:32:50 roberto Exp roberto $
+** $Id: lparser.c,v 2.68 2009/09/30 15:38:37 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -27,9 +27,14 @@
 
 
 
+/* maximum number of local variables per function (must be smaller
+   than 250, due to the bytecode format) */
+#define MAXVARS		200
+
+
 #define hasmultret(k)		((k) == VCALL || (k) == VVARARG)
 
-#define getlocvar(fs, i)	((fs)->f->locvars[(fs)->actvar[i].idx])
+
 
 #define luaY_checklimit(fs,v,l,m)	if ((v)>(l)) errorlimit(fs,l,m)
 
@@ -157,15 +162,26 @@ static int registerlocalvar (LexState *ls, TString *varname) {
 }
 
 
-#define new_localvarliteral(ls,v,n) \
-  new_localvar(ls, luaX_newstring(ls, "" v, (sizeof(v)/sizeof(char))-1), n)
+#define new_localvarliteral(ls,v) \
+  new_localvar(ls, luaX_newstring(ls, "" v, (sizeof(v)/sizeof(char))-1))
 
 
-static void new_localvar (LexState *ls, TString *name, int n) {
+static void new_localvar (LexState *ls, TString *name) {
   FuncState *fs = ls->fs;
+  Varlist *vl = ls->varl;
   int reg = registerlocalvar(ls, name);
-  luaY_checklimit(fs, fs->nactvar+n+1, LUAI_MAXVARS, "local variables");
-  fs->actvar[fs->nactvar+n].idx = cast(unsigned short, reg);
+  luaY_checklimit(fs, vl->nactvar + 1 - fs->firstlocal,
+                  MAXVARS, "local variables");
+  luaM_growvector(ls->L, vl->actvar, vl->nactvar + 1,
+                  vl->actvarsize, vardesc, MAX_INT, "local variables");
+  vl->actvar[vl->nactvar++].idx = cast(unsigned short, reg);
+}
+
+
+static LocVar *getlocvar (FuncState *fs, int i) {
+  int idx = fs->ls->varl->actvar[fs->firstlocal + i].idx;
+  lua_assert(idx < fs->nlocvars);
+  return &fs->f->locvars[idx];
 }
 
 
@@ -173,14 +189,15 @@ static void adjustlocalvars (LexState *ls, int nvars) {
   FuncState *fs = ls->fs;
   fs->nactvar = cast_byte(fs->nactvar + nvars);
   for (; nvars; nvars--) {
-    getlocvar(fs, fs->nactvar - nvars).startpc = fs->pc;
+    getlocvar(fs, fs->nactvar - nvars)->startpc = fs->pc;
   }
 }
 
 
 static void removevars (FuncState *fs, int tolevel) {
+  fs->ls->varl->nactvar -= (fs->nactvar - tolevel);
   while (fs->nactvar > tolevel)
-    getlocvar(fs, --fs->nactvar).endpc = fs->pc;
+    getlocvar(fs, --fs->nactvar)->endpc = fs->pc;
 }
 
 
@@ -212,7 +229,7 @@ static int indexupvalue (FuncState *fs, TString *name, expdesc *v) {
 static int searchvar (FuncState *fs, TString *n) {
   int i;
   for (i=fs->nactvar-1; i >= 0; i--) {
-    if (n == getlocvar(fs, i).varname)
+    if (n == getlocvar(fs, i)->varname)
       return i;
   }
   return -1;  /* not found */
@@ -350,6 +367,7 @@ static void open_func (LexState *ls, FuncState *fs) {
   fs->nups = 0;
   fs->nlocvars = 0;
   fs->nactvar = 0;
+  fs->firstlocal = ls->varl->nactvar;
   fs->envreg = NO_REG;
   fs->bl = NULL;
   fs->h = luaH_new(L);
@@ -392,13 +410,15 @@ static void close_func (LexState *ls) {
 }
 
 
-Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, const char *name) {
+Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, Varlist *varl,
+                    const char *name) {
   struct LexState lexstate;
   struct FuncState funcstate;
   TString *tname = luaS_new(L, name);
   setsvalue2s(L, L->top, tname);  /* protect name */
   incr_top(L);
   lexstate.buff = buff;
+  lexstate.varl = varl;
   luaX_setinput(L, &lexstate, z, tname);
   open_func(&lexstate, &funcstate);
   funcstate.f->is_vararg = 1;  /* main func. is always vararg */
@@ -565,7 +585,8 @@ static void parlist (LexState *ls) {
     do {
       switch (ls->t.token) {
         case TK_NAME: {  /* param -> NAME */
-          new_localvar(ls, str_checkname(ls), nparams++);
+          new_localvar(ls, str_checkname(ls));
+          nparams++;
           break;
         }
         case TK_DOTS: {  /* param -> `...' */
@@ -590,7 +611,7 @@ static void body (LexState *ls, expdesc *e, int needself, int line) {
   new_fs.f->linedefined = line;
   checknext(ls, '(');
   if (needself) {
-    new_localvarliteral(ls, "self", 0);
+    new_localvarliteral(ls, "self");
     adjustlocalvars(ls, 1);
   }
   parlist(ls);
@@ -1083,10 +1104,10 @@ static void fornum (LexState *ls, TString *varname, int line) {
   /* fornum -> NAME = exp1,exp1[,exp1] forbody */
   FuncState *fs = ls->fs;
   int base = fs->freereg;
-  new_localvarliteral(ls, "(for index)", 0);
-  new_localvarliteral(ls, "(for limit)", 1);
-  new_localvarliteral(ls, "(for step)", 2);
-  new_localvar(ls, varname, 3);
+  new_localvarliteral(ls, "(for index)");
+  new_localvarliteral(ls, "(for limit)");
+  new_localvarliteral(ls, "(for step)");
+  new_localvar(ls, varname);
   checknext(ls, '=');
   exp1(ls);  /* initial value */
   checknext(ls, ',');
@@ -1105,17 +1126,19 @@ static void forlist (LexState *ls, TString *indexname) {
   /* forlist -> NAME {,NAME} IN explist1 forbody */
   FuncState *fs = ls->fs;
   expdesc e;
-  int nvars = 0;
+  int nvars = 4;  /* gen, state, control, plus at least one declared var */
   int line;
   int base = fs->freereg;
   /* create control variables */
-  new_localvarliteral(ls, "(for generator)", nvars++);
-  new_localvarliteral(ls, "(for state)", nvars++);
-  new_localvarliteral(ls, "(for control)", nvars++);
+  new_localvarliteral(ls, "(for generator)");
+  new_localvarliteral(ls, "(for state)");
+  new_localvarliteral(ls, "(for control)");
   /* create declared variables */
-  new_localvar(ls, indexname, nvars++);
-  while (testnext(ls, ','))
-    new_localvar(ls, str_checkname(ls), nvars++);
+  new_localvar(ls, indexname);
+  while (testnext(ls, ',')) {
+    new_localvar(ls, str_checkname(ls));
+    nvars++;
+  }
   checknext(ls, TK_IN);
   line = ls->linenumber;
   adjust_assign(ls, 3, explist1(ls, &e), &e);
@@ -1180,14 +1203,14 @@ static void ifstat (LexState *ls, int line) {
 static void localfunc (LexState *ls) {
   expdesc v, b;
   FuncState *fs = ls->fs;
-  new_localvar(ls, str_checkname(ls), 0);
+  new_localvar(ls, str_checkname(ls));
   init_exp(&v, VLOCAL, fs->freereg);
   luaK_reserveregs(fs, 1);
   adjustlocalvars(ls, 1);
   body(ls, &b, 0, ls->linenumber);
   luaK_storevar(fs, &v, &b);
   /* debug information will only see the variable after this point! */
-  getlocvar(fs, fs->nactvar - 1).startpc = fs->pc;
+  getlocvar(fs, fs->nactvar - 1)->startpc = fs->pc;
 }
 
 
@@ -1197,7 +1220,8 @@ static void localstat (LexState *ls) {
   int nexps;
   expdesc e;
   do {
-    new_localvar(ls, str_checkname(ls), nvars++);
+    new_localvar(ls, str_checkname(ls));
+    nvars++;
   } while (testnext(ls, ','));
   if (testnext(ls, '='))
     nexps = explist1(ls, &e);
@@ -1243,7 +1267,7 @@ static void instat (LexState *ls, int line) {
   BlockCnt bl;
   luaX_next(ls);  /* skip IN */
   enterblock(fs, &bl, 0);  /* scope for environment variable */
-  new_localvarliteral(ls, "(environment)", 0);
+  new_localvarliteral(ls, "(environment)");
   fs->envreg = exp1(ls);  /* new environment */
   adjustlocalvars(ls, 1);
   checknext(ls, TK_DO);

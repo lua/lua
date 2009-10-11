@@ -1,6 +1,6 @@
 /*
-** $Id: lua.h,v 1.244 2009/09/21 12:09:52 roberto Exp roberto $
-** Lua - An Extensible Extension Language
+** $Id: lua.h,v 1.245 2009/10/05 16:44:33 roberto Exp roberto $
+** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
 */

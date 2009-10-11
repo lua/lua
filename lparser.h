@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.59 2009/09/28 16:32:50 roberto Exp roberto $
+** $Id: lparser.h,v 1.60 2009/09/30 15:38:37 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -51,6 +51,14 @@ typedef struct vardesc {
 } vardesc;
 
 
+/* list of all active local variables */
+typedef struct Varlist {
+  vardesc *actvar;
+  int nactvar;
+  int actvarsize;
+} Varlist;
+
+
 struct BlockCnt;  /* defined in lparser.c */
 
 
@@ -68,16 +76,16 @@ typedef struct FuncState {
   int freereg;  /* first free register */
   int nk;  /* number of elements in `k' */
   int np;  /* number of elements in `p' */
+  int firstlocal;  /* index of first local var of this function */
   short nlocvars;  /* number of elements in `locvars' */
   lu_byte nactvar;  /* number of active local variables */
   lu_byte nups;  /* number of upvalues */
   lu_byte envreg;  /* register holding current lexical environment */
-  vardesc actvar[LUAI_MAXVARS];  /* stack of active variables */
 } FuncState;
 
 
 LUAI_FUNC Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
-                                            const char *name);
+                              Varlist *varl, const char *name);
 
 
 #endif

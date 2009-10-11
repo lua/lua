@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.74 2009/09/30 20:49:25 roberto Exp roberto $
+** $Id: ltests.c,v 2.75 2009/10/05 16:44:33 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -491,7 +491,6 @@ static int get_limits (lua_State *L) {
   lua_createtable(L, 0, 5);
   setnameval(L, "BITS_INT", LUAI_BITSINT);
   setnameval(L, "LFPF", LFIELDS_PER_FLUSH);
-  setnameval(L, "MAXVARS", LUAI_MAXVARS);
   setnameval(L, "MAXSTACK", MAXSTACK);
   setnameval(L, "NUM_OPCODES", NUM_OPCODES);
   return 1;
