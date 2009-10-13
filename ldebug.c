@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.55 2009/09/28 12:37:17 roberto Exp roberto $
+** $Id: ldebug.c,v 2.56 2009/09/28 16:32:50 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -93,9 +93,12 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
     status = 1;
     ar->i_ci = ci;
   }
-  else if (level < 0) {  /* level is of a lost tail call? */
-    status = 1;
-    ar->i_ci = NULL;
+  else if (level < 0) {
+    if (ci == L->ci) status = 0;  /* level was negative? */
+    else {  /* level is of a lost tail call */
+      status = 1;
+      ar->i_ci = NULL;
+    }
   }
   else status = 0;  /* no such level */
   lua_unlock(L);
@@ -107,6 +110,7 @@ static const char *findlocal (lua_State *L, CallInfo *ci, int n,
                               StkId *pos) {
   const char *name = NULL;
   StkId base;
+  if (ci == NULL) return NULL;  /* tail call? */
   if (isLua(ci)) {
     base = ci->u.l.base;
     name = luaF_getlocalname(ci_func(ci)->l.p, n, currentpc(ci));
@@ -125,9 +129,8 @@ static const char *findlocal (lua_State *L, CallInfo *ci, int n,
 
 
 LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
-  CallInfo *ci = ar->i_ci;
   StkId pos;
-  const char *name = findlocal(L, ci, n, &pos);
+  const char *name = findlocal(L, ar->i_ci, n, &pos);
   lua_lock(L);
   if (name) {
     setobj2s(L, L->top, pos);
@@ -139,9 +142,8 @@ LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
 
 
 LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
-  CallInfo *ci = ar->i_ci;
   StkId pos;
-  const char *name = findlocal(L, ci, n, &pos);
+  const char *name = findlocal(L, ar->i_ci, n, &pos);
   lua_lock(L);
   if (name)
       setobjs2s(L, pos, L->top - 1);
