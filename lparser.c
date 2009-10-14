@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.69 2009/10/11 20:02:19 roberto Exp roberto $
+** $Id: lparser.c,v 2.70 2009/10/13 19:35:42 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -440,8 +440,8 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, Varlist *varl,
 /*============================================================*/
 
 
-static void field (LexState *ls, expdesc *v) {
-  /* field -> ['.' | ':'] NAME */
+static void fieldsel (LexState *ls, expdesc *v) {
+  /* fieldsel -> ['.' | ':'] NAME */
   FuncState *fs = ls->fs;
   expdesc key;
   luaK_exp2anyreg(fs, v);
@@ -524,6 +524,7 @@ static void lastlistfield (FuncState *fs, struct ConsControl *cc) {
 
 
 static void listfield (LexState *ls, struct ConsControl *cc) {
+  /* listfield -> exp */
   expr(ls, &cc->v);
   luaY_checklimit(ls->fs, cc->na, MAX_INT, "items in a constructor");
   cc->na++;
@@ -531,8 +532,31 @@ static void listfield (LexState *ls, struct ConsControl *cc) {
 }
 
 
+static void field (LexState *ls, struct ConsControl *cc) {
+  /* field -> listfield | recfield */
+  switch(ls->t.token) {
+    case TK_NAME: {  /* may be 'listfield' or 'recfield' */
+      if (luaX_lookahead(ls) != '=')  /* expression? */
+        listfield(ls, cc);
+      else
+        recfield(ls, cc);
+      break;
+    }
+    case '[': {
+      recfield(ls, cc);
+      break;
+    }
+    default: {
+      listfield(ls, cc);
+      break;
+    }
+  }
+}
+
+
 static void constructor (LexState *ls, expdesc *t) {
-  /* constructor -> ?? */
+  /* constructor -> '{' [ field { sep field } [sep] ] '}' 
+     sep -> ',' | ';' */
   FuncState *fs = ls->fs;
   int line = ls->linenumber;
   int pc = luaK_codeABC(fs, OP_NEWTABLE, 0, 0, 0);
@@ -547,23 +571,7 @@ static void constructor (LexState *ls, expdesc *t) {
     lua_assert(cc.v.k == VVOID || cc.tostore > 0);
     if (ls->t.token == '}') break;
     closelistfield(fs, &cc);
-    switch(ls->t.token) {
-      case TK_NAME: {  /* may be listfields or recfields */
-        if (luaX_lookahead(ls) != '=')  /* expression? */
-          listfield(ls, &cc);
-        else
-          recfield(ls, &cc);
-        break;
-      }
-      case '[': {  /* constructor_item -> recfield */
-        recfield(ls, &cc);
-        break;
-      }
-      default: {  /* constructor_part -> listfield */
-        listfield(ls, &cc);
-        break;
-      }
-    }
+    field(ls, &cc);
   } while (testnext(ls, ',') || testnext(ls, ';'));
   check_match(ls, '}', '{', line);
   lastlistfield(fs, &cc);
@@ -725,8 +733,8 @@ static void primaryexp (LexState *ls, expdesc *v) {
   prefixexp(ls, v);
   for (;;) {
     switch (ls->t.token) {
-      case '.': {  /* field */
-        field(ls, v);
+      case '.': {  /* fieldsel */
+        fieldsel(ls, v);
         break;
       }
       case '[': {  /* `[' exp1 `]' */
@@ -1233,14 +1241,14 @@ static void localstat (LexState *ls) {
 
 
 static int funcname (LexState *ls, expdesc *v) {
-  /* funcname -> NAME {field} [`:' NAME] */
+  /* funcname -> NAME {fieldsel} [`:' NAME] */
   int needself = 0;
   singlevar(ls, v);
   while (ls->t.token == '.')
-    field(ls, v);
+    fieldsel(ls, v);
   if (ls->t.token == ':') {
     needself = 1;
-    field(ls, v);
+    fieldsel(ls, v);
   }
   return needself;
 }
