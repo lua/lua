@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.218 2009/08/04 18:20:18 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.219 2009/10/05 16:44:33 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -255,7 +255,7 @@ static int ipairsaux (lua_State *L) {
   i++;  /* next value */
   lua_pushinteger(L, i);
   lua_rawgeti(L, 1, i);
-  return (lua_isnil(L, -1)) ? 0 : 2;
+  return (lua_isnil(L, -1) && i > (int)lua_objlen(L, 1)) ? 0 : 2;
 }
 
 
