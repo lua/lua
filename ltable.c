@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.40 2009/04/17 14:40:13 roberto Exp roberto $
+** $Id: ltable.c,v 2.41 2009/08/07 17:53:28 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -18,7 +18,6 @@
 ** Hence even when the load factor reaches 100%, performance remains good.
 */
 
-#include <math.h>
 #include <string.h>
 
 #define ltable_c
@@ -82,13 +81,13 @@ static const Node dummynode_ = {
 ** hash for lua_Numbers
 */
 static Node *hashnum (const Table *t, lua_Number n) {
-  unsigned int a[numints];
   int i;
-  if (luai_numeq(n, 0))  /* avoid problems with -0 */
-    return gnode(t, 0);
-  memcpy(a, &n, sizeof(a));
-  for (i = 1; i < numints; i++) a[0] += a[i];
-  return hashmod(t, a[0]);
+  luai_hashnum(i, n);
+  if (i < 0) {
+     i = -i;  /* must be a positive value */
+     if (i < 0) i = 0;  /* handle INT_MIN */
+  }
+  return hashmod(t, i);
 }
 
 

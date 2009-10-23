@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.110 2009/09/28 16:32:50 roberto Exp roberto $
+** $Id: luaconf.h,v 1.111 2009/10/11 20:02:19 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -500,20 +500,27 @@
 /*
 @@ The luai_num* macros define the primitive operations over numbers.
 */
-#if defined(LUA_CORE)
+
+/* the following operations need the math library */
+#if defined(lobject_c) || defined(lvm_c)
 #include <math.h>
+#define luai_nummod(L,a,b)	((a) - floor((a)/(b))*(b))
+#define luai_numpow(L,a,b)	(pow(a,b))
+#endif
+
+/* these are quite standard operations */
+#if defined(LUA_CORE)
 #define luai_numadd(L,a,b)	((a)+(b))
 #define luai_numsub(L,a,b)	((a)-(b))
 #define luai_nummul(L,a,b)	((a)*(b))
 #define luai_numdiv(L,a,b)	((a)/(b))
-#define luai_nummod(L,a,b)	((a) - floor((a)/(b))*(b))
-#define luai_numpow(L,a,b)	(pow(a,b))
 #define luai_numunm(L,a)	(-(a))
 #define luai_numeq(a,b)		((a)==(b))
 #define luai_numlt(L,a,b)	((a)<(b))
 #define luai_numle(L,a,b)	((a)<=(b))
 #define luai_numisnan(L,a)	(!luai_numeq((a), (a)))
 #endif
+
 
 
 /*
@@ -573,6 +580,25 @@ union luai_Cast { double l_d; long l_l; };
    so avoid that if possible */
 #define lua_uint2number(u)  \
 	((LUA_INT32)(u) < 0 ? (lua_Number)(u) : (lua_Number)(LUA_INT32)(u))
+
+
+/*
+@@ luai_hashnum is a macro do hash a lua_Number value into an integer.
+@* The hash must be deterministic and give reasonable values for
+@* both small and large values (outside the range of integers). 
+@* It is used only in ltable.c.
+*/
+
+#if defined(ltable_c)
+
+#include <float.h>
+#include <math.h>
+
+#define luai_hashnum(i,d) { int e;  \
+  d = frexp(d, &e) * (lua_Number)(INT_MAX - DBL_MAX_EXP);  \
+  lua_number2int(i, d); i += e; }
+
+#endif
 
 /* }================================================================== */
 
