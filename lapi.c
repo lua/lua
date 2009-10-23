@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.92 2009/09/28 16:32:50 roberto Exp roberto $
+** $Id: lapi.c,v 2.93 2009/10/05 16:44:33 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -55,13 +55,13 @@ static TValue *index2addr (lua_State *L, int idx) {
     return L->top + idx;
   }
   else switch (idx) {  /* pseudo-indices */
-    case LUA_REGISTRYINDEX: return registry(L);
+    case LUA_REGISTRYINDEX: return &G(L)->l_registry;
     case LUA_ENVIRONINDEX: {
       Closure *func = curr_func(L);
       sethvalue(L, &L->env, func->c.env);
       return &L->env;
     }
-    case LUA_GLOBALSINDEX: return gt(L);
+    case LUA_GLOBALSINDEX: return &G(L)->l_gt;
     default: {
       Closure *func = curr_func(L);
       idx = LUA_GLOBALSINDEX - idx;
@@ -76,7 +76,7 @@ static TValue *index2addr (lua_State *L, int idx) {
 
 static Table *getcurrenv (lua_State *L) {
   if (L->ci->previous == NULL)  /* no enclosing function? */
-    return hvalue(gt(L));  /* use global table as environment */
+    return hvalue(&G(L)->l_gt);  /* use global table as environment */
   else {
     Closure *func = curr_func(L);
     return func->c.env;
@@ -633,9 +633,6 @@ LUA_API void lua_getfenv (lua_State *L, int idx) {
     case LUA_TUSERDATA:
       sethvalue(L, L->top, uvalue(o)->env);
       break;
-    case LUA_TTHREAD:
-      setobj2s(L, L->top,  gt(thvalue(o)));
-      break;
     default:
       setnilvalue(L->top);
       break;
@@ -754,9 +751,6 @@ LUA_API int lua_setfenv (lua_State *L, int idx) {
       break;
     case LUA_TUSERDATA:
       uvalue(o)->env = hvalue(L->top - 1);
-      break;
-    case LUA_TTHREAD:
-      sethvalue(L, gt(thvalue(o)), hvalue(L->top - 1));
       break;
     default:
       res = 0;

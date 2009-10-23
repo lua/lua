@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.75 2009/10/05 16:44:33 roberto Exp roberto $
+** $Id: ltests.c,v 2.76 2009/10/11 20:02:19 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -305,7 +305,6 @@ static void checkstack (global_State *g, lua_State *L1) {
     lua_assert(uv->v != &uv->u.value);  /* must be open */
     lua_assert(!isblack(uvo));  /* open upvalues cannot be black */
   }
-  checkliveness(g, gt(L1));
   for (ci = L1->ci; ci != NULL; ci = ci->previous) {
     lua_assert(ci->top <= L1->stack_last);
     lua_assert(lua_checkpc(ci));
@@ -366,6 +365,8 @@ int lua_checkmemory (lua_State *L) {
   global_State *g = G(L);
   GCObject *o;
   UpVal *uv;
+  checkliveness(g, &g->l_registry);
+  checkliveness(g, &g->l_gt);
   checkstack(g, g->mainthread);
   for (o = g->rootgc; o != obj2gco(g->mainthread); o = gch(o)->next) {
     lua_assert(!testbits(o->gch.marked, bit2mask(SEPARATED, SFIXEDBIT)));

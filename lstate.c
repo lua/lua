@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.61 2009/09/30 20:49:47 roberto Exp roberto $
+** $Id: lstate.c,v 2.62 2009/10/05 16:44:33 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -108,18 +108,18 @@ static int cpcall (lua_State *L) {
 /*
 ** Create registry table and its predefined values
 */
-static void init_registry (lua_State *L) {
+static void init_registry (lua_State *L, global_State *g) {
   Closure *cp;
   TValue mt;
   /* create registry */
   Table *registry = luaH_new(L);
-  sethvalue(L, registry(L), registry);
+  sethvalue(L, &g->l_registry, registry);
   luaH_resize(L, registry, LUA_RIDX_LAST, 0);
   /* registry[LUA_RIDX_MAINTHREAD] = L */
   setthvalue(L, &mt, L);
   setobj2t(L, luaH_setint(L, registry, LUA_RIDX_MAINTHREAD), &mt);
   /* registry[LUA_RIDX_CPCALL] = cpcall */
-  cp = luaF_newCclosure(L, 0, hvalue(gt(L)));
+  cp = luaF_newCclosure(L, 0, hvalue(&g->l_gt));
   cp->c.f = cpcall;
   setclvalue(L, &mt, cp);
   setobj2t(L, luaH_setint(L, registry, LUA_RIDX_CPCALL), &mt);
@@ -127,14 +127,14 @@ static void init_registry (lua_State *L) {
 
 
 /*
-** open parts of a state that may cause memory-allocation errors
+** open parts of the state that may cause memory-allocation errors
 */
 static void f_luaopen (lua_State *L, void *ud) {
   global_State *g = G(L);
   UNUSED(ud);
   stack_init(L, L);  /* init stack */
-  sethvalue(L, gt(L), luaH_new(L));  /* table of globals */
-  init_registry(L);
+  sethvalue(L, &g->l_gt, luaH_new(L));  /* table of globals */
+  init_registry(L, g);
   luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
   luaT_init(L);
   luaX_init(L);
@@ -164,7 +164,6 @@ static void preinit_state (lua_State *L, global_State *g) {
   L->base_ci.next = L->base_ci.previous = NULL;
   L->ci = &L->base_ci;
   L->errfunc = 0;
-  setnilvalue(gt(L));
 }
 
 
@@ -190,7 +189,6 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   api_incr_top(L);
   preinit_state(L1, G(L));
   stack_init(L1, L);  /* init stack */
-  setobj2n(L, gt(L1), gt(L));  /* share table of globals */
   L1->hookmask = L->hookmask;
   L1->basehookcount = L->basehookcount;
   L1->hook = L->hook;
@@ -236,7 +234,8 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->strt.size = 0;
   g->strt.nuse = 0;
   g->strt.hash = NULL;
-  setnilvalue(registry(L));
+  setnilvalue(&g->l_registry);
+  setnilvalue(&g->l_gt);
   luaZ_initbuffer(L, &g->buff);
   g->panic = NULL;
   g->version = lua_version(NULL);

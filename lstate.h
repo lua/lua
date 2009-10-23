@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.45 2009/06/18 18:59:18 roberto Exp roberto $
+** $Id: lstate.h,v 2.46 2009/07/15 17:26:14 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -43,12 +43,6 @@
 
 struct lua_longjmp;  /* defined in ldo.c */
 
-
-/* table of globals */
-#define gt(L)	(&L->l_gt)
-
-/* registry */
-#define registry(L)	(&G(L)->l_registry)
 
 
 /* extra stack space to handle TM calls and some other extras */
@@ -146,6 +140,7 @@ typedef struct global_State {
   int gcstepmul;  /* GC `granularity' */
   lua_CFunction panic;  /* to be called in unprotected errors */
   TValue l_registry;
+  TValue l_gt;  /* table of globals */
   struct lua_State *mainthread;
   UpVal uvhead;  /* head of double-linked list of all open upvalues */
   const lua_Number *version;  /* pointer to version number */
@@ -173,7 +168,6 @@ struct lua_State {
   int basehookcount;
   int hookcount;
   lua_Hook hook;
-  TValue l_gt;  /* table of globals */
   TValue env;  /* temporary place for environments */
   GCObject *openupval;  /* list of open upvalues in this stack */
   GCObject *gclist;

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.56 2009/09/28 13:50:34 roberto Exp roberto $
+** $Id: lgc.c,v 2.57 2009/09/28 16:32:50 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -221,9 +221,9 @@ static void markroot (lua_State *L) {
   g->grayagain = NULL;
   g->weak = g->ephemeron = g->allweak = NULL;
   markobject(g, g->mainthread);
-  /* make global table be traversed before main stack */
-  markvalue(g, gt(g->mainthread));
-  markvalue(g, registry(L));
+  /* make global table and registry to be traversed before main stack */
+  markvalue(g, &g->l_gt);
+  markvalue(g, &g->l_registry);
   markmt(g);
   markbeingfnz(g);  /* mark any finalizing object left from previous cycle */
   g->gcstate = GCSpropagate;
@@ -383,7 +383,6 @@ static void traversestack (global_State *g, lua_State *L) {
   StkId o;
   if (L->stack == NULL)
     return;  /* stack not completely built yet */
-  markvalue(g, gt(L));  /* mark global table */
   for (o = L->stack; o < L->top; o++)
     markvalue(g, o);
   if (g->gcstate == GCSatomic) {  /* final traversal? */

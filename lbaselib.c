@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.219 2009/10/05 16:44:33 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.220 2009/10/23 12:50:25 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -125,7 +125,7 @@ static void getfunc (lua_State *L, int opt) {
 static int luaB_getfenv (lua_State *L) {
   getfunc(L, 1);
   if (lua_iscfunction(L, -1))  /* is a C function? */
-    lua_pushvalue(L, LUA_GLOBALSINDEX);  /* return the thread's global env. */
+    lua_pushvalue(L, LUA_GLOBALSINDEX);  /* return the global env. */
   else
     lua_getfenv(L, -1);
   return 1;
@@ -136,14 +136,7 @@ static int luaB_setfenv (lua_State *L) {
   luaL_checktype(L, 2, LUA_TTABLE);
   getfunc(L, 0);
   lua_pushvalue(L, 2);
-  if (lua_isnumber(L, 1) && lua_tonumber(L, 1) == 0) {
-    /* change environment of current thread */
-    lua_pushthread(L);
-    lua_insert(L, -2);
-    lua_setfenv(L, -2);
-    return 0;
-  }
-  else if (lua_iscfunction(L, -2) || lua_setfenv(L, -2) == 0)
+  if (lua_iscfunction(L, -2) || lua_setfenv(L, -2) == 0)
     return luaL_error(L,
              LUA_QL("setfenv") " cannot change environment of given object");
   return 1;
