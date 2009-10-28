@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.98 2009/09/28 16:32:50 roberto Exp roberto $
+** $Id: lvm.c,v 2.99 2009/09/30 15:38:37 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -801,10 +801,10 @@ void luaV_execute (lua_State *L) {
         int b = GETARG_B(i) - 1;
         int j;
         int n = cast_int(base - ci->func) - cl->p->numparams - 1;
-        if (b == LUA_MULTRET) {
+        if (b < 0) {  /* B == 0? */
+          b = n;  /* get all var. arguments */
           Protect(luaD_checkstack(L, n));
           ra = RA(i);  /* previous call may change the stack */
-          b = n;
           L->top = ra + n;
         }
         for (j = 0; j < b; j++) {
