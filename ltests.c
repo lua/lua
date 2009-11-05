@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.76 2009/10/11 20:02:19 roberto Exp roberto $
+** $Id: ltests.c,v 2.77 2009/10/23 19:12:19 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -203,7 +203,7 @@ static int testobjref (global_State *g, GCObject *f, GCObject *t) {
 #define checkobjref(g,f,t) lua_assert(testobjref(g,f,obj2gco(t)))
 
 #define checkvalref(g,f,t) lua_assert(!iscollectable(t) || \
-	((ttype(t) == gch((t)->value.gc)->tt) && testobjref(g,f,gcvalue(t))))
+	((ttype(t) == gch(gcvalue(t))->tt) && testobjref(g,f,gcvalue(t))))
 
 
 
@@ -513,7 +513,7 @@ static int mem_query (lua_State *L) {
 
 
 static int settrick (lua_State *L) {
-  l_Trick = obj_at(L, 1)->value.gc;
+  l_Trick = gcvalue(obj_at(L, 1));
   return 0;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.57 2009/09/28 16:32:50 roberto Exp roberto $
+** $Id: lgc.c,v 2.58 2009/10/23 19:12:19 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -96,7 +96,7 @@ void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v) {
   global_State *g = G(L);
   lua_assert(isblack(o) && iswhite(v) && !isdead(g, v) && !isdead(g, o));
   lua_assert(g->gcstate != GCSfinalize && g->gcstate != GCSpause);
-  lua_assert(ttype(gch(o)) != LUA_TTABLE);
+  lua_assert(gch(o)->tt != LUA_TTABLE);
   /* must keep invariant? */
   if (g->gcstate == GCSpropagate)
     reallymarkobject(g, v);  /* restore invariant */
@@ -544,7 +544,7 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
   int deadmask = otherwhite(g);
   while ((curr = *p) != NULL && count-- > 0) {
     int alive = (gch(curr)->marked ^ WHITEBITS) & deadmask;
-    if (ttisthread(gch(curr)))
+    if (gch(curr)->tt == LUA_TTHREAD)
       sweepthread(L, gco2th(curr), alive);
     if (alive) {
       lua_assert(!isdead(g, curr) || testbit(gch(curr)->marked, FIXEDBIT));
@@ -645,7 +645,7 @@ size_t luaC_separateudata (lua_State *L, int all) {
   /* find last 'next' field in 'tobefnz' list (to insert elements in its end) */
   while (*lastnext != NULL) lastnext = &gch(*lastnext)->next;
   while ((curr = *p) != NULL) {  /* traverse all finalizable objects */
-    lua_assert(ttisuserdata(gch(curr)) && !isfinalized(gco2u(curr)));
+    lua_assert(gch(curr)->tt == LUA_TUSERDATA && !isfinalized(gco2u(curr)));
     lua_assert(testbit(gch(curr)->marked, SEPARATED));
     if (!(all || iswhite(curr)))  /* not being collected? */
       p = &gch(curr)->next;  /* don't bother with it */
