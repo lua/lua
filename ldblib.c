@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.111 2009/08/04 18:27:57 roberto Exp roberto $
+** $Id: ldblib.c,v 1.112 2009/09/09 20:32:19 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -199,6 +199,37 @@ static int db_setupvalue (lua_State *L) {
 }
 
 
+static int db_upvaladdr (lua_State *L) {
+  void *addr;
+  int n = luaL_checkint(L, 2);
+  luaL_checktype(L, 1, LUA_TFUNCTION);
+  addr = lua_upvaladdr(L, 1, n);
+  if (addr == NULL) lua_pushnil(L);
+  else lua_pushlightuserdata(L, addr);
+  return 1;
+}
+
+
+static int checkupval (lua_State *L, int argf, int argnup) {
+  lua_Debug ar;
+  int nup = luaL_checkint(L, argnup);
+  luaL_checktype(L, argf, LUA_TFUNCTION);
+  luaL_argcheck(L, !lua_iscfunction(L, argf), argf,
+                   "cannot join upvalues of a C function");
+  lua_pushvalue(L, argf);
+  lua_getinfo(L, ">u", &ar);
+  luaL_argcheck(L, 1 <= nup && nup <= ar.nups, argnup, "invalid upvalue index");
+  return nup;
+}
+
+
+static int db_joinupval (lua_State *L) {
+  int n1 = checkupval(L, 1, 2);
+  int n2 = checkupval(L, 3, 4);
+  lua_upvaljoin(L, 1, n1, 3, n2);
+  return 0;
+}
+
 
 static const char KEY_HOOK = 'h';
 
@@ -338,6 +369,8 @@ static const luaL_Reg dblib[] = {
   {"getregistry", db_getregistry},
   {"getmetatable", db_getmetatable},
   {"getupvalue", db_getupvalue},
+  {"joinupval", db_joinupval},
+  {"upvaladdr", db_upvaladdr},
   {"setfenv", db_setfenv},
   {"sethook", db_sethook},
   {"setlocal", db_setlocal},

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.245 2009/10/05 16:44:33 roberto Exp roberto $
+** $Id: lua.h,v 1.246 2009/10/11 20:02:19 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -379,6 +379,10 @@ LUA_API const char *(lua_getlocal) (lua_State *L, const lua_Debug *ar, int n);
 LUA_API const char *(lua_setlocal) (lua_State *L, const lua_Debug *ar, int n);
 LUA_API const char *(lua_getupvalue) (lua_State *L, int funcindex, int n);
 LUA_API const char *(lua_setupvalue) (lua_State *L, int funcindex, int n);
+
+LUA_API void *(lua_upvaladdr) (lua_State *L, int fidx, int n);
+LUA_API int (lua_upvaljoin) (lua_State *L, int fidx1, int n1,
+                                           int fidx2, int n2);
 
 LUA_API int (lua_sethook) (lua_State *L, lua_Hook func, int mask, int count);
 LUA_API lua_Hook (lua_gethook) (lua_State *L);

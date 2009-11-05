@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.93 2009/10/05 16:44:33 roberto Exp roberto $
+** $Id: lapi.c,v 2.94 2009/10/23 19:12:19 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1085,6 +1085,50 @@ LUA_API const char *lua_setupvalue (lua_State *L, int funcindex, int n) {
   }
   lua_unlock(L);
   return name;
+}
+
+
+static UpVal **getupvalref (lua_State *L, int fidx, int n, Closure **pf) {
+  Closure *f;
+  Proto *p;
+  StkId fi = index2addr(L, fidx);
+  if (!ttisfunction(fi)) return NULL;  /* not a function? */
+  f = clvalue(fi);
+  if (f->c.isC) return NULL;  /* not a Lua function? */
+  p = f->l.p;
+  if (!(1 <= n && n <= p->sizeupvalues)) return NULL;
+  else {
+    if (pf) *pf = f;
+    return &f->l.upvals[n - 1];  /* get its upvalue pointer */
+  }
+}
+
+
+LUA_API void *(lua_upvaladdr) (lua_State *L, int fidx, int n) {
+  Closure *f;
+  StkId fi = index2addr(L, fidx);
+  if (!ttisfunction(fi)) return NULL;
+  f = clvalue(fi);
+  if (f->c.isC) {
+    if (!(1 <= n && n <= f->c.nupvalues)) return NULL;
+    else return &f->c.upvalue[n - 1];
+  }
+  else {
+    UpVal **uv = getupvalref(L, fidx, n, NULL);
+    return (uv == NULL) ? NULL : *uv;
+  }
+}
+
+
+LUA_API int (lua_upvaljoin) (lua_State *L, int fidx1, int n1,
+                                           int fidx2, int n2) {
+  Closure *f1;
+  UpVal **up1 = getupvalref(L, fidx1, n1, &f1);
+  UpVal **up2 = getupvalref(L, fidx2, n2, NULL);
+  if (up1 == NULL || up2 == NULL) return 0;
+  *up1 = *up2;
+  luaC_objbarrier(L, f1, *up2);
+  return 1;
 }
 
 
