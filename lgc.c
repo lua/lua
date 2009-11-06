@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.58 2009/10/23 19:12:19 roberto Exp roberto $
+** $Id: lgc.c,v 2.59 2009/11/05 17:43:54 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -42,6 +42,8 @@
 
 #define isfinalized(u)		testbit((u)->marked, FINALIZEDBIT)
 
+#define checkdeadkey(n)	lua_assert(!ttisdeadkey(gkey(n)) || ttisnil(gval(n)))
+
 
 #define markvalue(g,o) { checkconsistency(o); \
   if (valiswhite(o)) reallymarkobject(g,gcvalue(o)); }
@@ -71,7 +73,7 @@ static void linktable (Table *h, GCObject **p) {
 static void removeentry (Node *n) {
   lua_assert(ttisnil(gval(n)));
   if (iscollectable(gkey(n)))
-    setttype(gkey(n), LUA_TDEADKEY);  /* dead key; remove it */
+    setdeadvalue(gkey(n));  /* dead key; remove it */
 }
 
 
@@ -252,7 +254,7 @@ static void traverseweakvalue (global_State *g, Table *h) {
   int i = sizenode(h);
   while (i--) {
     Node *n = gnode(h, i);
-    lua_assert(ttype(gkey(n)) != LUA_TDEADKEY || ttisnil(gval(n)));
+    checkdeadkey(n);
     if (ttisnil(gval(n)))
       removeentry(n);  /* remove empty entries */
     else {
@@ -277,7 +279,7 @@ static int traverseephemeron (global_State *g, Table *h) {
   i = sizenode(h);
   while (i--) {
     Node *n = gnode(h, i);
-    lua_assert(ttype(gkey(n)) != LUA_TDEADKEY || ttisnil(gval(n)));
+    checkdeadkey(n);
     if (ttisnil(gval(n)))  /* entry is empty? */
       removeentry(n);  /* remove it */
     else if (valiswhite(gval(n))) {
@@ -306,7 +308,7 @@ static void traversestrongtable (global_State *g, Table *h) {
   i = sizenode(h);
   while (i--) {
     Node *n = gnode(h, i);
-    lua_assert(ttype(gkey(n)) != LUA_TDEADKEY || ttisnil(gval(n)));
+    checkdeadkey(n);
     if (ttisnil(gval(n)))
       removeentry(n);  /* remove empty entries */
     else {
