@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.h,v 2.11 2006/07/11 15:53:29 roberto Exp roberto $
+** $Id: ltable.h,v 2.12 2009/08/07 16:17:41 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -11,7 +11,7 @@
 
 
 #define gnode(t,i)	(&(t)->node[i])
-#define gkey(n)		(&(n)->i_key.nk)
+#define gkey(n)		(&(n)->i_key.tvk)
 #define gval(n)		(&(n)->i_val)
 #define gnext(n)	((n)->i_key.nk.next)
 
