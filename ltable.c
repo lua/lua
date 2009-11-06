@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.42 2009/10/23 12:31:12 roberto Exp roberto $
+** $Id: ltable.c,v 2.43 2009/11/05 17:43:54 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -72,8 +72,8 @@
 #define dummynode		(&dummynode_)
 
 static const Node dummynode_ = {
-  {{NULL}, LUA_TNIL},  /* value */
-  {{{NULL}, LUA_TNIL, NULL}}  /* key */
+  {NILCONSTANT},  /* value */
+  {{NILCONSTANT, NULL}}  /* key */
 };
 
 
@@ -418,7 +418,7 @@ static TValue *newkey (lua_State *L, Table *t, const TValue *key) {
       mp = n;
     }
   }
-  setnodekey(mp, key);
+  setobj2t(L, gkey(mp), key);
   luaC_barriert(L, t, key);
   lua_assert(ttisnil(gval(mp)));
   return gval(mp);
