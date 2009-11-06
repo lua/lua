@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.30 2009/09/30 15:38:37 roberto Exp roberto $
+** $Id: lobject.h,v 2.31 2009/11/05 17:43:54 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -75,6 +75,10 @@ typedef struct lua_TValue {
 } TValue;
 
 
+/* macro defining a nil value to be used in definitions */
+#define NILCONSTANT    {NULL}, LUA_TNIL
+
+
 /* Macros to test type */
 #define ttisnil(o)	(ttype(o) == LUA_TNIL)
 #define ttisnumber(o)	(ttype(o) == LUA_TNUMBER)
@@ -85,6 +89,7 @@ typedef struct lua_TValue {
 #define ttisuserdata(o)	(ttype(o) == LUA_TUSERDATA)
 #define ttisthread(o)	(ttype(o) == LUA_TTHREAD)
 #define ttislightuserdata(o)	(ttype(o) == LUA_TLIGHTUSERDATA)
+#define ttisdeadkey(o)	(ttype(o) == LUA_TDEADKEY)
 
 /* Macros to access values */
 #define ttype(o)	((o)->tt_)
@@ -105,12 +110,14 @@ typedef struct lua_TValue {
 /*
 ** for internal debug only
 */
-#define checkconsistency(obj) \
-  lua_assert(!iscollectable(obj) || (ttype(obj) == (obj)->value_.gc->gch.tt))
+#define iscollectable(o)	(ttype(o) >= LUA_TSTRING)
+
+#define righttt(obj)		(ttype(obj) == gcvalue(obj)->gch.tt)
+
+#define checkconsistency(obj)	lua_assert(!iscollectable(obj) || righttt(obj))
 
 #define checkliveness(g,obj) \
-  lua_assert(!iscollectable(obj) || \
-  ((ttype(obj) == (obj)->value_.gc->gch.tt) && !isdead(g, (obj)->value_.gc)))
+  lua_assert(!iscollectable(obj) || (righttt(obj) && !isdead(g,gcvalue(obj))))
 
 
 /* Macros to set values */
@@ -158,13 +165,12 @@ typedef struct lua_TValue {
     i_o->value_.gc=cast(GCObject *, (x)); i_o->tt_=LUA_TPROTO; \
     checkliveness(G(L),i_o); }
 
+#define setdeadvalue(obj)	((obj)->tt_=LUA_TDEADKEY)
 
 
 
-#define setobj(L,obj1,obj2) \
-  { const TValue *o2=(obj2); TValue *o1=(obj1); \
-    o1->value_ = o2->value_; o1->tt_=o2->tt_; \
-    checkliveness(G(L),o1); }
+
+#define setobj(L,obj1,obj2)	{ *(obj1) = *(obj2); }
 
 
 /*
@@ -185,11 +191,6 @@ typedef struct lua_TValue {
 /* to new object */
 #define setobj2n	setobj
 #define setsvalue2n	setsvalue
-
-#define setttype(obj, tt_) (ttype(obj) = (tt_))
-
-
-#define iscollectable(o)	(ttype(o) >= LUA_TSTRING)
 
 
 
@@ -318,8 +319,8 @@ typedef union Closure {
 } Closure;
 
 
-#define iscfunction(o)	(ttype(o) == LUA_TFUNCTION && clvalue(o)->c.isC)
-#define isLfunction(o)	(ttype(o) == LUA_TFUNCTION && !clvalue(o)->c.isC)
+#define iscfunction(o)	(ttisfunction(o) && clvalue(o)->c.isC)
+#define isLfunction(o)	(ttisfunction(o) && !clvalue(o)->c.isC)
 
 #define getproto(o)	(clvalue(o)->l.p)
 
@@ -340,9 +341,6 @@ typedef struct Node {
   TValue i_val;
   TKey i_key;
 } Node;
-
-#define setnodekey(nd,obj) { Node *n = (nd); const TValue *o = (obj); \
-                  n->i_key.nk.value_ = o->value_; n->i_key.nk.tt_ = o->tt_; }
 
 
 typedef struct Table {
