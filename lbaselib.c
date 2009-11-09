@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.220 2009/10/23 12:50:25 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.221 2009/10/23 19:12:19 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -177,20 +177,21 @@ static int luaB_gcinfo (lua_State *L) {
 
 static int luaB_collectgarbage (lua_State *L) {
   static const char *const opts[] = {"stop", "restart", "collect",
-    "count", "step", "setpause", "setstepmul", NULL};
+    "count", "step", "setpause", "setstepmul", "isrunning", NULL};
   static const int optsnum[] = {LUA_GCSTOP, LUA_GCRESTART, LUA_GCCOLLECT,
-    LUA_GCCOUNT, LUA_GCSTEP, LUA_GCSETPAUSE, LUA_GCSETSTEPMUL};
-  int o = luaL_checkoption(L, 1, "collect", opts);
+    LUA_GCCOUNT, LUA_GCSTEP, LUA_GCSETPAUSE, LUA_GCSETSTEPMUL,
+    LUA_GCISRUNNING};
+  int o = optsnum[luaL_checkoption(L, 1, "collect", opts)];
   int ex = luaL_optint(L, 2, 0);
-  int res = lua_gc(L, optsnum[o], ex);
-  switch (optsnum[o]) {
+  int res = lua_gc(L, o, ex);
+  switch (o) {
     case LUA_GCCOUNT: {
       int b = lua_gc(L, LUA_GCCOUNTB, 0);
       lua_pushnumber(L, res + ((lua_Number)b/1024));
       lua_pushinteger(L, b);
       return 2;
     }
-    case LUA_GCSTEP: {
+    case LUA_GCSTEP: case LUA_GCISRUNNING: {
       lua_pushboolean(L, res);
       return 1;
     }
