@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.98 2009/11/09 18:29:21 roberto Exp roberto $
+** $Id: lapi.c,v 2.99 2009/11/09 18:55:17 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1108,7 +1108,7 @@ static UpVal **getupvalref (lua_State *L, int fidx, int n, Closure **pf) {
 }
 
 
-LUA_API void *(lua_upvaladdr) (lua_State *L, int fidx, int n) {
+LUA_API void *(lua_upvalueid) (lua_State *L, int fidx, int n) {
   Closure *f;
   StkId fi = index2addr(L, fidx);
   api_check(L, ttisfunction(fi), "function expected");
@@ -1121,7 +1121,7 @@ LUA_API void *(lua_upvaladdr) (lua_State *L, int fidx, int n) {
 }
 
 
-LUA_API void (lua_upvaljoin) (lua_State *L, int fidx1, int n1,
+LUA_API void (lua_upvaluejoin) (lua_State *L, int fidx1, int n1,
                                             int fidx2, int n2) {
   Closure *f1;
   UpVal **up1 = getupvalref(L, fidx1, n1, &f1);

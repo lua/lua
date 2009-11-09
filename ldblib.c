@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.113 2009/11/05 16:48:31 roberto Exp roberto $
+** $Id: ldblib.c,v 1.114 2009/11/05 17:26:00 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -210,19 +210,19 @@ static int checkupval (lua_State *L, int argf, int argnup) {
 }
 
 
-static int db_upvaladdr (lua_State *L) {
+static int db_upvalueid (lua_State *L) {
   int n = checkupval(L, 1, 2);
-  lua_pushlightuserdata(L, lua_upvaladdr(L, 1, n));
+  lua_pushlightuserdata(L, lua_upvalueid(L, 1, n));
   return 1;
 }
 
 
-static int db_joinupval (lua_State *L) {
+static int db_joinupvalue (lua_State *L) {
   int n1 = checkupval(L, 1, 2);
   int n2 = checkupval(L, 3, 4);
   luaL_argcheck(L, !lua_iscfunction(L, 1), 1, "Lua function expected");
   luaL_argcheck(L, !lua_iscfunction(L, 3), 3, "Lua function expected");
-  lua_upvaljoin(L, 1, n1, 3, n2);
+  lua_upvaluejoin(L, 1, n1, 3, n2);
   return 0;
 }
 
@@ -365,8 +365,8 @@ static const luaL_Reg dblib[] = {
   {"getregistry", db_getregistry},
   {"getmetatable", db_getmetatable},
   {"getupvalue", db_getupvalue},
-  {"joinupval", db_joinupval},
-  {"upvaladdr", db_upvaladdr},
+  {"joinupvalue", db_joinupvalue},
+  {"upvalueid", db_upvalueid},
   {"setfenv", db_setfenv},
   {"sethook", db_sethook},
   {"setlocal", db_setlocal},
