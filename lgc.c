@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.59 2009/11/05 17:43:54 roberto Exp roberto $
+** $Id: lgc.c,v 2.60 2009/11/06 17:06:19 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -709,6 +709,9 @@ void luaC_freeall (lua_State *L) {
 static void atomic (lua_State *L) {
   global_State *g = G(L);
   size_t udsize;  /* total size of userdata to be finalized */
+  /* global table and registry may be changed by API */
+  markvalue(g, &g->l_gt);
+  markvalue(g, &g->l_registry);
   /* remark occasional upvalues of (maybe) dead threads */
   g->gcstate = GCSatomic;
   remarkupvals(g);

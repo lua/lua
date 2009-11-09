@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.96 2009/11/05 17:26:00 roberto Exp roberto $
+** $Id: lapi.c,v 2.97 2009/11/06 17:03:37 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -199,7 +199,8 @@ static void moveto (lua_State *L, TValue *fr, int idx) {
     if (idx < LUA_GLOBALSINDEX)  /* function upvalue? */
       luaC_barrier(L, curr_func(L), fr);
   }
-  /* LUA_GLOBALSINDEX does not need gc barrier (threads are never black) */
+  /* LUA_GLOBALSINDEX and LUA_REGISTRYINDEX do not need gc barrier
+     (collector revisits them before finishing collection) */
 }
 
 
