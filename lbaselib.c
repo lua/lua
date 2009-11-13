@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.221 2009/10/23 19:12:19 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.222 2009/11/09 18:55:17 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -276,12 +276,10 @@ static int luaB_loadfile (lua_State *L) {
 
 
 /*
-** Reader for generic `load' function: `lua_load' uses the
-** stack for internal stuff, so the reader cannot change the
-** stack top. Instead, it keeps its resulting string in a
-** reserved slot inside the stack.
+** {======================================================
+** Generic Read function
+** =======================================================
 */
-
 
 static const char *checkrights (lua_State *L, const char *mode, const char *s) {
   if (strchr(mode, 'b') == NULL && *s == LUA_SIGNATURE[0])
@@ -292,24 +290,42 @@ static const char *checkrights (lua_State *L, const char *mode, const char *s) {
 }
 
 
+/*
+** reserves a slot, above all arguments, to hold a copy of the returned
+** string to avoid it being collected while parsed
+*/
+#define RESERVEDSLOT	4
+
+
+/*
+** Reader for generic `load' function: `lua_load' uses the
+** stack for internal stuff, so the reader cannot change the
+** stack top. Instead, it keeps its resulting string in a
+** reserved slot inside the stack.
+*/
+typedef struct {  /* reader state */
+  int f;  /* position of reader function on stack */
+  const char *mode;  /* allowed modes (binary/text) */
+} Readstat;
+
 static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
   const char *s;
-  const char **mode = (const char **)ud;
+  Readstat *stat = (Readstat *)ud;
   luaL_checkstack(L, 2, "too many nested functions");
-  lua_pushvalue(L, 1);  /* get function */
+  lua_pushvalue(L, stat->f);  /* get function */
   lua_call(L, 0, 1);  /* call it */
   if (lua_isnil(L, -1)) {
     *size = 0;
     return NULL;
   }
   else if ((s = lua_tostring(L, -1)) != NULL) {
-    if (*mode != NULL) {  /* first time? */
-      s = checkrights(L, *mode, s);  /* check whether chunk format is allowed */
-      *mode = NULL;  /* to avoid further checks */
+    if (stat->mode != NULL) {  /* first time? */
+      s = checkrights(L, stat->mode, s);  /* check mode */
+      stat->mode = NULL;  /* to avoid further checks */
       if (s) luaL_error(L, s);
     }
-    lua_replace(L, 3);  /* save string in a reserved stack slot */
-    return lua_tolstring(L, 3, size);
+    lua_replace(L, RESERVEDSLOT);  /* save string in reserved slot */
+    return lua_tolstring(L, RESERVEDSLOT, size);
   }
   else {
     luaL_error(L, "reader function must return a string");
@@ -318,22 +334,41 @@ static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
 }
 
 
-static int luaB_load (lua_State *L) {
+static int luaB_load_aux (lua_State *L, int farg) {
   int status;
-  const char *s = lua_tostring(L, 1);
-  const char *mode = luaL_optstring(L, 3, "bt");
+  Readstat stat;
+  const char *s = lua_tostring(L, farg);
+  stat.mode = luaL_optstring(L, farg + 2, "bt");
   if (s != NULL) {  /* loading a string? */
-    const char *chunkname = luaL_optstring(L, 2, s);
-    status = (checkrights(L, mode, s) != NULL)
-           || luaL_loadbuffer(L, s, lua_objlen(L, 1), chunkname);
+    const char *chunkname = luaL_optstring(L, farg + 1, s);
+    status = (checkrights(L, stat.mode, s) != NULL)
+           || luaL_loadbuffer(L, s, lua_objlen(L, farg), chunkname);
   }
   else {  /* loading from a reader function */
-    const char *chunkname = luaL_optstring(L, 2, "=(load)");
-    luaL_checktype(L, 1, LUA_TFUNCTION);
-    lua_settop(L, 3);  /* function, eventual name, plus one reserved slot */
-    status = lua_load(L, generic_reader, &mode, chunkname);
+    const char *chunkname = luaL_optstring(L, farg + 1, "=(load)");
+    luaL_checktype(L, farg, LUA_TFUNCTION);
+    stat.f = farg;
+    lua_settop(L, RESERVEDSLOT);  /* create reserved slot */
+    status = lua_load(L, generic_reader, &stat, chunkname);
   }
   return load_aux(L, status);
+}
+
+
+static int luaB_load (lua_State *L) {
+  return luaB_load_aux(L, 1);
+}
+
+
+static int luaB_loadin (lua_State *L) {
+  int n;
+  luaL_checktype(L, 1, LUA_TTABLE);
+  n = luaB_load_aux(L, 2);
+  if (n == 1) {  /* success? */
+    lua_pushvalue(L, 1);  /* environment for loaded function */
+    lua_setfenv(L, -2);
+  }
+  return n;
 }
 
 
@@ -341,7 +376,9 @@ static int luaB_loadstring (lua_State *L) {
   lua_settop(L, 2);
   lua_pushliteral(L, "tb");
   return luaB_load(L);  /* dostring(s, n) == load(s, n, "tb") */
+
 }
+/* }====================================================== */
 
 
 static int dofilecont (lua_State *L) {
@@ -481,6 +518,7 @@ static const luaL_Reg base_funcs[] = {
   {"getmetatable", luaB_getmetatable},
   {"loadfile", luaB_loadfile},
   {"load", luaB_load},
+  {"loadin", luaB_loadin},
   {"loadstring", luaB_loadstring},
   {"next", luaB_next},
   {"pcall", luaB_pcall},
