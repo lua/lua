@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.222 2009/11/09 18:55:17 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.223 2009/11/13 17:01:40 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -107,6 +107,9 @@ static int luaB_setmetatable (lua_State *L) {
 }
 
 
+
+#if defined(LUA_COMPAT_FENV)
+
 static void getfunc (lua_State *L, int opt) {
   if (lua_isfunction(L, 1)) lua_pushvalue(L, 1);
   else {
@@ -121,7 +124,6 @@ static void getfunc (lua_State *L, int opt) {
   }
 }
 
-
 static int luaB_getfenv (lua_State *L) {
   getfunc(L, 1);
   if (lua_iscfunction(L, -1))  /* is a C function? */
@@ -130,7 +132,6 @@ static int luaB_getfenv (lua_State *L) {
     lua_getfenv(L, -1);
   return 1;
 }
-
 
 static int luaB_setfenv (lua_State *L) {
   luaL_checktype(L, 2, LUA_TTABLE);
@@ -141,6 +142,16 @@ static int luaB_setfenv (lua_State *L) {
              LUA_QL("setfenv") " cannot change environment of given object");
   return 1;
 }
+
+#else
+
+static int luaB_getfenv (lua_State *L) {
+  return luaL_error(L, "getfenv/setfenv deprecated");
+}
+
+#define luaB_setfenv	luaB_getfenv
+
+#endif
 
 
 static int luaB_rawequal (lua_State *L) {

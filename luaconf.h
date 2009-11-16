@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.111 2009/10/11 20:02:19 roberto Exp roberto $
+** $Id: luaconf.h,v 1.112 2009/10/23 12:31:12 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -327,6 +327,14 @@
 ** Compatibility with previous versions
 ** ===================================================================
 */
+
+/*
+@@ LUA_COMPAT_FENV controls de presence of functions 'setfenv/getfenv'.
+** CHANGE it (undefine it) if as soon as you rewrite your code to
+** avoid using those functions. (You can replace them with lexical
+** environments, 'loadin', or the debug library.)
+*/
+/* #define LUA_COMPAT_FENV */
 
 /*
 @@ LUA_COMPAT_LOG10 defines the function 'log10' in the math library.
