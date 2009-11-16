@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.65 2009/09/07 14:24:12 roberto Exp roberto $
+** $Id: loadlib.c,v 1.66 2009/10/05 16:44:33 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -587,7 +587,7 @@ static int ll_module (lua_State *L) {
   lua_pushvalue(L, -1);
   setfenv(L);
   dooptions(L, loaded - 1);
-  return 0;
+  return 1;
 }
 
 
