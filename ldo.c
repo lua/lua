@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.69 2009/10/11 20:02:19 roberto Exp roberto $
+** $Id: ldo.c,v 2.70 2009/10/23 19:12:19 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -573,7 +573,6 @@ static void f_parser (lua_State *L, void *ud) {
   Closure *cl;
   struct SParser *p = cast(struct SParser *, ud);
   int c = luaZ_lookahead(p->z);
-  luaC_checkGC(L);
   tf = (c == LUA_SIGNATURE[0])
            ? luaU_undump(L, p->z, &p->buff, p->name)
            : luaY_parser(L, p->z, &p->buff, &p->varl, p->name);

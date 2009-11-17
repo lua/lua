@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.70 2009/10/13 19:35:42 roberto Exp roberto $
+** $Id: lparser.c,v 2.71 2009/10/14 16:43:11 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -370,16 +370,16 @@ static void open_func (LexState *ls, FuncState *fs) {
   fs->firstlocal = ls->varl->nactvar;
   fs->envreg = NO_REG;
   fs->bl = NULL;
-  fs->h = luaH_new(L);
-  /* anchor table of constants (to avoid being collected) */
-  sethvalue2s(L, L->top, fs->h);
-  incr_top(L);
   f = luaF_newproto(L);
   fs->f = f;
   f->source = ls->source;
   f->maxstacksize = 2;  /* registers 0/1 are always valid */
   /* anchor prototype (to avoid being collected) */
   setptvalue2s(L, L->top, f);
+  incr_top(L);
+  fs->h = luaH_new(L);
+  /* anchor table of constants (to avoid being collected) */
+  sethvalue2s(L, L->top, fs->h);
   incr_top(L);
 }
 
@@ -404,9 +404,11 @@ static void close_func (LexState *ls) {
   f->sizeupvalues = fs->nups;
   lua_assert(fs->bl == NULL);
   ls->fs = fs->prev;
-  L->top -= 2;  /* remove table and prototype from the stack */
   /* last token read was anchored in defunct function; must reanchor it */
   anchor_token(ls);
+  L->top--;  /* pop table of constants */
+  luaC_checkGC(L);
+  L->top--;  /* pop prototype (after possible collection) */
 }
 
 
@@ -415,18 +417,18 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, Varlist *varl,
   struct LexState lexstate;
   struct FuncState funcstate;
   TString *tname = luaS_new(L, name);
-  setsvalue2s(L, L->top, tname);  /* protect name */
+  setsvalue2s(L, L->top, tname);  /* push name to protect it */
   incr_top(L);
   lexstate.buff = buff;
   lexstate.varl = varl;
   luaX_setinput(L, &lexstate, z, tname);
   open_func(&lexstate, &funcstate);
-  funcstate.f->is_vararg = 1;  /* main func. is always vararg */
+  funcstate.f->is_vararg = 1;  /* main function is always vararg */
   luaX_next(&lexstate);  /* read first token */
   chunk(&lexstate);
   check(&lexstate, TK_EOS);
   close_func(&lexstate);
-  L->top--;
+  L->top--;  /* pop name */
   lua_assert(funcstate.prev == NULL);
   lua_assert(funcstate.nups == 0);
   lua_assert(lexstate.fs == NULL);
