@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.20 2009/04/28 19:04:36 roberto Exp roberto $
+** $Id: lgc.h,v 2.21 2009/06/08 19:35:59 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -79,7 +79,7 @@
 
 
 #define luaC_checkGC(L) \
-  {condmovestack(L); if (G(L)->totalbytes >= G(L)->GCthreshold) luaC_step(L);}
+  {condchangemem(L); if (G(L)->totalbytes >= G(L)->GCthreshold) luaC_step(L);}
 
 
 #define luaC_barrier(L,p,v) { if (valiswhite(v) && isblack(obj2gco(p)))  \
