@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.70 2009/10/23 19:12:19 roberto Exp roberto $
+** $Id: ldo.c,v 2.71 2009/11/17 16:33:38 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -589,12 +589,14 @@ static void f_parser (lua_State *L, void *ud) {
 int luaD_protectedparser (lua_State *L, ZIO *z, const char *name) {
   struct SParser p;
   int status;
+  L->nny++;  /* cannot yield during parsing */
   p.z = z; p.name = name;
   p.varl.actvar = NULL; p.varl.nactvar = p.varl.actvarsize = 0;
   luaZ_initbuffer(L, &p.buff);
   status = luaD_pcall(L, f_parser, &p, savestack(L, L->top), L->errfunc);
   luaZ_freebuffer(L, &p.buff);
   luaM_freearray(L, p.varl.actvar, p.varl.actvarsize);
+  L->nny--;
   return status;
 }
 
