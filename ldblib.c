@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.114 2009/11/05 17:26:00 roberto Exp roberto $
+** $Id: ldblib.c,v 1.115 2009/11/09 19:10:48 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -217,7 +217,7 @@ static int db_upvalueid (lua_State *L) {
 }
 
 
-static int db_joinupvalue (lua_State *L) {
+static int db_upvaluejoin (lua_State *L) {
   int n1 = checkupval(L, 1, 2);
   int n2 = checkupval(L, 3, 4);
   luaL_argcheck(L, !lua_iscfunction(L, 1), 1, "Lua function expected");
@@ -365,7 +365,7 @@ static const luaL_Reg dblib[] = {
   {"getregistry", db_getregistry},
   {"getmetatable", db_getmetatable},
   {"getupvalue", db_getupvalue},
-  {"joinupvalue", db_joinupvalue},
+  {"upvaluejoin", db_upvaluejoin},
   {"upvalueid", db_upvalueid},
   {"setfenv", db_setfenv},
   {"sethook", db_sethook},
