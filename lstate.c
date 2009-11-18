@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.62 2009/10/05 16:44:33 roberto Exp roberto $
+** $Id: lstate.c,v 2.63 2009/10/23 19:12:19 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -139,7 +139,6 @@ static void f_luaopen (lua_State *L, void *ud) {
   luaT_init(L);
   luaX_init(L);
   luaS_fix(luaS_newliteral(L, MEMERRMSG));
-  g->estimate = g->totalbytes;
   g->GCthreshold = 4*g->totalbytes;
 }
 
@@ -170,7 +169,7 @@ static void preinit_state (lua_State *L, global_State *g) {
 static void close_state (lua_State *L) {
   global_State *g = G(L);
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
-  luaC_freeall(L);  /* collect all objects */
+  luaC_freeallobjects(L);  /* collect all objects */
   luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size);
   luaZ_freebuffer(L, &g->buff);
   freestack(L);
@@ -241,16 +240,10 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->version = lua_version(NULL);
   g->gcstate = GCSpause;
   g->rootgc = obj2gco(L);
-  g->sweepstrgc = 0;
-  g->sweepgc = &g->rootgc;
-  g->gray = NULL;
-  g->grayagain = NULL;
-  g->weak = g->ephemeron = g->allweak = NULL;
   g->tobefnz = NULL;
-  g->estimate = g->totalbytes = sizeof(LG);
+  g->totalbytes = sizeof(LG);
   g->gcpause = LUAI_GCPAUSE;
   g->gcstepmul = LUAI_GCMUL;
-  g->gcdept = 0;
   for (i=0; i<NUM_TAGS; i++) g->mt[i] = NULL;
   if (luaD_rawrunprotected(L, f_luaopen, NULL) != LUA_OK) {
     /* memory allocation error: free partial state */
@@ -269,7 +262,6 @@ LUA_API void lua_close (lua_State *L) {
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
   luaC_separateudata(L, 1);  /* separate all udata with GC metamethods */
   lua_assert(L->next == NULL);
-  luaC_callAllGCTM(L);  /* call GC metamethods for all udata */
   luai_userstateclose(L);
   close_state(L);
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.21 2009/06/08 19:35:59 roberto Exp roberto $
+** $Id: lgc.h,v 2.22 2009/11/17 11:56:03 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -95,9 +95,8 @@
 #define luaC_objbarriert(L,t,o)  \
    { if (iswhite(obj2gco(o)) && isblack(obj2gco(t))) luaC_barrierback(L,t); }
 
-LUAI_FUNC size_t luaC_separateudata (lua_State *L, int all);
-LUAI_FUNC void luaC_callAllGCTM (lua_State *L);
-LUAI_FUNC void luaC_freeall (lua_State *L);
+LUAI_FUNC void luaC_separateudata (lua_State *L, int all);
+LUAI_FUNC void luaC_freeallobjects (lua_State *L);
 LUAI_FUNC void luaC_step (lua_State *L);
 LUAI_FUNC void luaC_fullgc (lua_State *L, int isemergency);
 LUAI_FUNC void luaC_link (lua_State *L, GCObject *o, lu_byte tt);
