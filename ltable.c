@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.43 2009/11/05 17:43:54 roberto Exp roberto $
+** $Id: ltable.c,v 2.44 2009/11/06 17:07:12 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -70,6 +70,8 @@
 
 
 #define dummynode		(&dummynode_)
+
+#define isdummy(n)		((n) == dummynode)
 
 static const Node dummynode_ = {
   {NILCONSTANT},  /* value */
@@ -318,13 +320,13 @@ void luaH_resize (lua_State *L, Table *t, int nasize, int nhsize) {
     if (!ttisnil(gval(old)))
       setobjt2t(L, luaH_set(L, t, key2tval(old)), gval(old));
   }
-  if (nold != dummynode)
+  if (!isdummy(nold))
     luaM_freearray(L, nold, twoto(oldhsize));  /* free old array */
 }
 
 
 void luaH_resizearray (lua_State *L, Table *t, int nasize) {
-  int nsize = (t->node == dummynode) ? 0 : sizenode(t);
+  int nsize = isdummy(t->node) ? 0 : sizenode(t);
   luaH_resize(L, t, nasize, nsize);
 }
 
@@ -367,7 +369,7 @@ Table *luaH_new (lua_State *L) {
 
 
 void luaH_free (lua_State *L, Table *t) {
-  if (t->node != dummynode)
+  if (!isdummy(t->node))
     luaM_freearray(L, t->node, sizenode(t));
   luaM_freearray(L, t->array, t->sizearray);
   luaM_free(L, t);
@@ -394,14 +396,14 @@ static Node *getfreepos (Table *t) {
 */
 static TValue *newkey (lua_State *L, Table *t, const TValue *key) {
   Node *mp = mainposition(t, key);
-  if (!ttisnil(gval(mp)) || mp == dummynode) {
+  if (!ttisnil(gval(mp)) || isdummy(mp)) {  /* main position is taken? */
     Node *othern;
     Node *n = getfreepos(t);  /* get a free place */
     if (n == NULL) {  /* cannot find a free place? */
       rehash(L, t, key);  /* grow table */
       return luaH_set(L, t, key);  /* re-insert key into grown table */
     }
-    lua_assert(n != dummynode);
+    lua_assert(!isdummy(n));
     othern = mainposition(t, key2tval(mp));
     if (othern != mp) {  /* is colliding node out of its main position? */
       /* yes; move colliding node into free position */
@@ -566,7 +568,7 @@ int luaH_getn (Table *t) {
     return i;
   }
   /* else must find a boundary in hash part */
-  else if (t->node == dummynode)  /* hash part is empty? */
+  else if (isdummy(t->node))  /* hash part is empty? */
     return j;  /* that is easy... */
   else return unbound_search(t, j);
 }
@@ -579,6 +581,6 @@ Node *luaH_mainposition (const Table *t, const TValue *key) {
   return mainposition(t, key);
 }
 
-int luaH_isdummy (Node *n) { return n == dummynode; }
+int luaH_isdummy (Node *n) { return isdummy(n); }
 
 #endif
