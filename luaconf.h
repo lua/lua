@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.112 2009/10/23 12:31:12 roberto Exp roberto $
+** $Id: luaconf.h,v 1.113 2009/11/16 15:51:03 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -182,7 +182,7 @@
 */
 #if defined(luaall_c)
 #define LUAI_FUNC	static
-#define LUAI_DATA	/* empty */
+#define LUAI_DATA	extern
 
 #elif defined(__GNUC__) && ((__GNUC__*100 + __GNUC_MINOR__) >= 302) && \
       defined(__ELF__)
@@ -510,7 +510,7 @@
 */
 
 /* the following operations need the math library */
-#if defined(lobject_c) || defined(lvm_c)
+#if defined(lobject_c) || defined(lvm_c) || defined(luaall_c)
 #include <math.h>
 #define luai_nummod(L,a,b)	((a) - floor((a)/(b))*(b))
 #define luai_numpow(L,a,b)	(pow(a,b))
@@ -597,7 +597,7 @@ union luai_Cast { double l_d; long l_l; };
 @* It is used only in ltable.c.
 */
 
-#if defined(ltable_c)
+#if defined(ltable_c) || defined(luaall_c)
 
 #include <float.h>
 #include <math.h>
