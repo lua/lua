@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.24 2008/08/05 19:24:46 roberto Exp roberto $
+** $Id: ltests.h,v 2.25 2009/04/17 22:00:01 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -32,13 +32,13 @@ typedef struct Memcontrol {
   unsigned long memlimit;
 } Memcontrol;
 
-LUAI_DATA Memcontrol l_memcontrol;
+Memcontrol l_memcontrol;
 
 
 /*
 ** generic variable for debug tricks
 */
-LUAI_DATA void *l_Trick;
+void *l_Trick;
 
 
 void *debug_realloc (void *ud, void *block, size_t osize, size_t nsize);

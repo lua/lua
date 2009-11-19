@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.39 2008/04/02 16:16:06 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.40 2008/10/30 15:39:30 roberto Exp roberto $
 ** See Copyright Notice in lua.h
 */
 
@@ -13,7 +13,7 @@
 
 /* ORDER OP */
 
-const char *const luaP_opnames[NUM_OPCODES+1] = {
+LUAI_DDEF const char *const luaP_opnames[NUM_OPCODES+1] = {
   "MOVE",
   "LOADK",
   "LOADBOOL",
@@ -60,7 +60,7 @@ const char *const luaP_opnames[NUM_OPCODES+1] = {
 
 #define opmode(t,a,b,c,m) (((t)<<7) | ((a)<<6) | ((b)<<4) | ((c)<<2) | (m))
 
-const lu_byte luaP_opmodes[NUM_OPCODES] = {
+LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
 /*       T  A    B       C     mode		   opcode	*/
   opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_MOVE */
  ,opmode(0, 1, OpArgK, OpArgN, iABx)		/* OP_LOADK */

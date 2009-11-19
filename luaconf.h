@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.113 2009/11/16 15:51:03 roberto Exp roberto $
+** $Id: luaconf.h,v 1.114 2009/11/19 16:26:52 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -170,8 +170,9 @@
 /*
 @@ LUAI_FUNC is a mark for all extern functions that are not to be
 @* exported to outside modules.
-@@ LUAI_DATA is a mark for all extern (const) variables that are not to
-@* be exported to outside modules.
+@@ LUAI_DDEF and LUAI_DDEC are marks for all extern (const) variables
+@* that are not to be exported to outside modules (LUAI_DDEF for
+@* definitions and LUAI_DDEC for declarations).
 ** CHANGE them if you need to mark them in some special way. Elf/gcc
 ** (versions 3.2 and later) mark them as "hidden" to optimize access
 ** when Lua is compiled as a shared library. Not all elf targets support
@@ -182,16 +183,19 @@
 */
 #if defined(luaall_c)
 #define LUAI_FUNC	static
-#define LUAI_DATA	extern
+#define LUAI_DDEC	static
+#define LUAI_DDEF	static
 
 #elif defined(__GNUC__) && ((__GNUC__*100 + __GNUC_MINOR__) >= 302) && \
       defined(__ELF__)
 #define LUAI_FUNC	__attribute__((visibility("hidden"))) extern
-#define LUAI_DATA	LUAI_FUNC
+#define LUAI_DDEC	LUAI_FUNC
+#define LUAI_DDEF	/* empty */
 
 #else
 #define LUAI_FUNC	extern
-#define LUAI_DATA	extern
+#define LUAI_DDEC	extern
+#define LUAI_DDEF	/* empty */
 #endif
 
 
