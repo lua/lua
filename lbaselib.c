@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.223 2009/11/13 17:01:40 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.224 2009/11/16 15:51:03 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -449,11 +449,11 @@ static int pcallcont (lua_State *L) {
   int errfunc;  /* call has an error function in bottom of the stack */
   int status = lua_getctx(L, &errfunc);
   lua_assert(status != LUA_OK);
-  lua_pushboolean(L, (status == LUA_YIELD));
+  lua_pushboolean(L, (status == LUA_YIELD));  /* first result (status) */
   if (errfunc)  /* came from xpcall? */
-    lua_replace(L, 1);  /* put result in place of error function */
+    lua_replace(L, 1);  /* put first result in place of error function */
   else  /* came from pcall */
-    lua_insert(L, 1);  /* open space for result */
+    lua_insert(L, 1);  /* open space for first result */
   return lua_gettop(L);
 }
 
