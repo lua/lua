@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.103 2009/08/04 18:51:19 roberto Exp roberto $
-+** $Id: bugs,v 1.103 2009/08/04 18:51:19 roberto Exp roberto $
+-** $Id: bugs,v 1.104 2009/08/05 13:09:38 roberto Exp roberto $
++** $Id: bugs,v 1.104 2009/08/05 13:09:38 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2230,5 +2230,30 @@ patch = [[
    return 1;
  }
 ]],
+}
+
+Bug{
+what = [[GC may get stuck during a parser and avoids proper resizing of
+the string table,
+making its lists grow too much and degrading performance]],
+report = [[Sean Conner, 2009/11/10]],
+since = [[5.1]],
+example = [[See http://lua-users.org/lists/lua-l/2009-11/msg00463.html]],
+patch = [[
+--- llex.c	2007/12/27 13:02:25	2.20.1.1
++++ llex.c	2009/11/23 14:49:40
+@@ -118,8 +118,10 @@
+   lua_State *L = ls->L;
+   TString *ts = luaS_newlstr(L, str, l);
+   TValue *o = luaH_setstr(L, ls->fs->h, ts);  /* entry for `str' */
+-  if (ttisnil(o))
++  if (ttisnil(o)) {
+     setbvalue(o, 1);  /* make sure `str' will not be collected */
++    luaC_checkGC(L);
++  }
+   return ts;
+ }
+ 
+]]
 }
 
