@@ -1,5 +1,5 @@
 /*
-** $Id: lualib.h,v 1.37 2006/09/11 14:07:24 roberto Exp roberto $
+** $Id: lualib.h,v 1.38 2009/07/01 16:16:40 roberto Exp roberto $
 ** Lua standard libraries
 ** See Copyright Notice in lua.h
 */
@@ -16,31 +16,31 @@
 
 
 #define LUA_COLIBNAME	"coroutine"
-LUALIB_API int (luaopen_base) (lua_State *L);
+LUAMOD_API int (luaopen_base) (lua_State *L);
 
 #define LUA_TABLIBNAME	"table"
-LUALIB_API int (luaopen_table) (lua_State *L);
+LUAMOD_API int (luaopen_table) (lua_State *L);
 
 #define LUA_IOLIBNAME	"io"
-LUALIB_API int (luaopen_io) (lua_State *L);
+LUAMOD_API int (luaopen_io) (lua_State *L);
 
 #define LUA_OSLIBNAME	"os"
-LUALIB_API int (luaopen_os) (lua_State *L);
+LUAMOD_API int (luaopen_os) (lua_State *L);
 
 #define LUA_STRLIBNAME	"string"
-LUALIB_API int (luaopen_string) (lua_State *L);
+LUAMOD_API int (luaopen_string) (lua_State *L);
 
 #define LUA_BITLIBNAME	"bit"
-LUALIB_API int (luaopen_bit) (lua_State *L);
+LUAMOD_API int (luaopen_bit) (lua_State *L);
 
 #define LUA_MATHLIBNAME	"math"
-LUALIB_API int (luaopen_math) (lua_State *L);
+LUAMOD_API int (luaopen_math) (lua_State *L);
 
 #define LUA_DBLIBNAME	"debug"
-LUALIB_API int (luaopen_debug) (lua_State *L);
+LUAMOD_API int (luaopen_debug) (lua_State *L);
 
 #define LUA_LOADLIBNAME	"package"
-LUALIB_API int (luaopen_package) (lua_State *L);
+LUAMOD_API int (luaopen_package) (lua_State *L);
 
 
 /* open all previous libraries */

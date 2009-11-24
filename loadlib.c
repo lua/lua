@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.66 2009/10/05 16:44:33 roberto Exp roberto $
+** $Id: loadlib.c,v 1.67 2009/11/16 15:51:19 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -647,7 +647,7 @@ static const lua_CFunction loaders[] =
   {loader_preload, loader_Lua, loader_C, loader_Croot, NULL};
 
 
-LUALIB_API int luaopen_package (lua_State *L) {
+LUAMOD_API int luaopen_package (lua_State *L) {
   int i;
   /* create new type _LOADLIB */
   luaL_newmetatable(L, "_LOADLIB");

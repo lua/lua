@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.114 2009/11/19 16:26:52 roberto Exp roberto $
+** $Id: luaconf.h,v 1.115 2009/11/19 19:06:52 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -143,7 +143,8 @@
 
 /*
 @@ LUA_API is a mark for all core API functions.
-@@ LUALIB_API is a mark for all standard library functions.
+@@ LUALIB_API is a mark for all auxiliary library functions.
+@@ LUAMOD_API is a mark for all standard library opening functions.
 ** CHANGE them if you need to define those functions in some special way.
 ** For instance, if you want to create one Windows DLL with the core and
 ** the libraries, you may want to use the following definition (define
@@ -165,6 +166,7 @@
 
 /* more often than not the libs go together with the core */
 #define LUALIB_API	LUA_API
+#define LUAMOD_API	LUALIB_API
 
 
 /*

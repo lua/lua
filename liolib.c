@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.81 2009/08/28 13:51:57 roberto Exp roberto $
+** $Id: liolib.c,v 2.82 2009/09/01 19:10:48 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -548,7 +548,7 @@ static void newfenv (lua_State *L, lua_CFunction cls) {
 }
 
 
-LUALIB_API int luaopen_io (lua_State *L) {
+LUAMOD_API int luaopen_io (lua_State *L) {
   createmeta(L);
   /* create (private) environment (with fields IO_INPUT, IO_OUTPUT, __close) */
   newfenv(L, io_fclose);

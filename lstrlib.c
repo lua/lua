@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.142 2009/02/03 19:39:19 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.143 2009/06/18 16:51:03 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -858,7 +858,7 @@ static void createmetatable (lua_State *L) {
 /*
 ** Open string library
 */
-LUALIB_API int luaopen_string (lua_State *L) {
+LUAMOD_API int luaopen_string (lua_State *L) {
   luaL_register(L, LUA_STRLIBNAME, strlib);
 #if defined(LUA_COMPAT_GFIND)
   lua_getfield(L, -1, "gmatch");

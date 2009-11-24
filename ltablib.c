@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.46 2009/03/23 14:26:12 roberto Exp roberto $
+** $Id: ltablib.c,v 1.47 2009/06/17 17:53:50 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -281,7 +281,7 @@ static const luaL_Reg tab_funcs[] = {
 };
 
 
-LUALIB_API int luaopen_table (lua_State *L) {
+LUAMOD_API int luaopen_table (lua_State *L) {
   luaL_register(L, LUA_TABLIBNAME, tab_funcs);
   return 1;
 }
