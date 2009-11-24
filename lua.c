@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.174 2009/07/15 17:35:20 roberto Exp roberto $
+** $Id: lua.c,v 1.175 2009/08/10 16:23:19 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -265,7 +265,7 @@ static int handle_script (lua_State *L, char **argv, int n) {
 
 
 /* check that argument has no extra characters at the end */
-#define notail(x)	{if ((x)[2] != '\0') return -1;}
+#define noextrachars(x)		{if ((x)[2] != '\0') return -1;}
 
 
 static int collectargs (char **argv, int *pi, int *pv, int *pe) {
@@ -275,15 +275,15 @@ static int collectargs (char **argv, int *pi, int *pv, int *pe) {
         return i;
     switch (argv[i][1]) {  /* option */
       case '-':
-        notail(argv[i]);
+        noextrachars(argv[i]);
         return (argv[i+1] != NULL ? i+1 : 0);
       case '\0':
         return i;
       case 'i':
-        notail(argv[i]);
+        noextrachars(argv[i]);
         *pi = 1;  /* go through */
       case 'v':
-        notail(argv[i]);
+        noextrachars(argv[i]);
         *pv = 1;
         break;
       case 'e':
