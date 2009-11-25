@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.249 2009/11/09 18:55:17 roberto Exp roberto $
+** $Id: lua.h,v 1.250 2009/11/09 19:10:48 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -356,7 +356,7 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 #define LUA_HOOKRET	1
 #define LUA_HOOKLINE	2
 #define LUA_HOOKCOUNT	3
-#define LUA_HOOKTAILRET 4
+#define LUA_HOOKTAILCALL 4
 
 
 /*
@@ -401,6 +401,7 @@ struct lua_Debug {
   int nups;		/* (u) number of upvalues */
   int linedefined;	/* (S) */
   int lastlinedefined;	/* (S) */
+  char istailcall;	/* (t) */
   char short_src[LUA_IDSIZE]; /* (S) */
   /* private part */
   struct CallInfo *i_ci;  /* active function */

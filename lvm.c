@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.99 2009/09/30 15:38:37 roberto Exp roberto $
+** $Id: lvm.c,v 2.100 2009/10/28 12:20:07 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -62,7 +62,7 @@ static void traceexec (lua_State *L) {
   lu_byte mask = L->hookmask;
   if ((mask & LUA_MASKCOUNT) && L->hookcount == 0) {
     resethookcount(L);
-    luaD_callhook(L, LUA_HOOKCOUNT, -1);
+    luaD_hook(L, LUA_HOOKCOUNT, -1);
   }
   if (mask & LUA_MASKLINE) {
     Proto *p = ci_func(ci)->l.p;
@@ -71,7 +71,7 @@ static void traceexec (lua_State *L) {
     if (npc == 0 ||  /* call linehook when enter a new function, */
         ci->u.l.savedpc <= L->oldpc ||  /* when jump back (loop), or when */
         newline != getfuncline(p, pcRel(L->oldpc, p)))  /* enter a new line */
-      luaD_callhook(L, LUA_HOOKLINE, newline);
+      luaD_hook(L, LUA_HOOKLINE, newline);
   }
   L->oldpc = ci->u.l.savedpc;
 }
@@ -679,7 +679,7 @@ void luaV_execute (lua_State *L) {
           oci->u.l.base = ofunc + (nci->u.l.base - nfunc);  /* correct base */
           oci->top = L->top = ofunc + (L->top - nfunc);  /* correct top */
           oci->u.l.savedpc = nci->u.l.savedpc;
-          oci->u.l.tailcalls++;  /* one more call lost */
+          oci->callstatus |= CIST_TAIL;  /* function was tail called */
           ci = L->ci = oci;  /* remove new frame */
           lua_assert(L->top == oci->u.l.base + getproto(ofunc)->maxstacksize);
           break;  /* restart luaV_execute over new Lua function */

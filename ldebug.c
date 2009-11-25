@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.56 2009/09/28 16:32:50 roberto Exp roberto $
+** $Id: ldebug.c,v 2.57 2009/10/13 19:07:40 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -83,22 +83,13 @@ LUA_API int lua_gethookcount (lua_State *L) {
 LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
   int status;
   CallInfo *ci;
+  if (level < 0) return 0;  /* invalid (negative) level */
   lua_lock(L);
-  for (ci = L->ci; level > 0 && ci != &L->base_ci; ci = ci->previous) {
+  for (ci = L->ci; level > 0 && ci != &L->base_ci; ci = ci->previous)
     level--;
-    if (isLua(ci))  /* Lua function? */
-      level -= ci->u.l.tailcalls;  /* skip lost tail calls */
-  }
   if (level == 0 && ci != &L->base_ci) {  /* level found? */
     status = 1;
     ar->i_ci = ci;
-  }
-  else if (level < 0) {
-    if (ci == L->ci) status = 0;  /* level was negative? */
-    else {  /* level is of a lost tail call */
-      status = 1;
-      ar->i_ci = NULL;
-    }
   }
   else status = 0;  /* no such level */
   lua_unlock(L);
@@ -110,7 +101,6 @@ static const char *findlocal (lua_State *L, CallInfo *ci, int n,
                               StkId *pos) {
   const char *name = NULL;
   StkId base;
-  if (ci == NULL) return NULL;  /* tail call? */
   if (isLua(ci)) {
     base = ci->u.l.base;
     name = luaF_getlocalname(ci_func(ci)->l.p, n, currentpc(ci));
@@ -170,17 +160,6 @@ static void funcinfo (lua_Debug *ar, Closure *cl) {
 }
 
 
-static void info_tailcall (lua_Debug *ar) {
-  ar->name = NULL;
-  ar->namewhat = "";
-  ar->what = "tail";
-  ar->lastlinedefined = ar->linedefined = ar->currentline = -1;
-  ar->source = "=(tail call)";
-  luaO_chunkid(ar->short_src, ar->source, LUA_IDSIZE);
-  ar->nups = 0;
-}
-
-
 static void collectvalidlines (lua_State *L, Closure *f) {
   if (f == NULL || f->c.isC) {
     setnilvalue(L->top);
@@ -201,10 +180,6 @@ static void collectvalidlines (lua_State *L, Closure *f) {
 static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
                     Closure *f, CallInfo *ci) {
   int status = 1;
-  if (f == NULL) {
-    info_tailcall(ar);
-    return status;
-  }
   for (; *what; what++) {
     switch (*what) {
       case 'S': {
@@ -217,6 +192,10 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
       }
       case 'u': {
         ar->nups = f->c.nupvalues;
+        break;
+      }
+      case 't': {
+        ar->istailcall = (ci) ? ci->callstatus & CIST_TAIL : 0;
         break;
       }
       case 'n': {
@@ -249,15 +228,14 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
     f = clvalue(func);
     L->top--;  /* pop function */
   }
-  else if (ar->i_ci != NULL) {  /* no tail call? */
+  else {
     ci = ar->i_ci;
     lua_assert(ttisfunction(ci->func));
     f = clvalue(ci->func);
   }
   status = auxgetinfo(L, what, ar, f, ci);
   if (strchr(what, 'f')) {
-    if (f == NULL) setnilvalue(L->top);
-    else setclvalue(L, L->top, f);
+    setclvalue(L, L->top, f);
     incr_top(L);
   }
   if (strchr(what, 'L'))
@@ -379,7 +357,7 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
 static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
   TMS tm = 0;
   Instruction i;
-  if ((isLua(ci) && ci->u.l.tailcalls > 0) || !isLua(ci->previous))
+  if ((ci->callstatus & CIST_TAIL) || !isLua(ci->previous))
     return NULL;  /* calling function is not Lua (or is unknown) */
   ci = ci->previous;  /* calling function */
   i = ci_func(ci)->l.p->code[currentpc(ci)];

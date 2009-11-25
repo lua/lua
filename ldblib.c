@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.116 2009/11/18 15:50:18 roberto Exp roberto $
+** $Id: ldblib.c,v 1.117 2009/11/24 12:05:44 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -100,7 +100,7 @@ static int db_getinfo (lua_State *L) {
   lua_Debug ar;
   int arg;
   lua_State *L1 = getthread(L, &arg);
-  const char *options = luaL_optstring(L, arg+2, "flnSu");
+  const char *options = luaL_optstring(L, arg+2, "flnStu");
   if (lua_isnumber(L, arg+1)) {
     if (!lua_getstack(L1, (int)lua_tointeger(L, arg+1), &ar)) {
       lua_pushnil(L);  /* level out of range */
@@ -132,6 +132,10 @@ static int db_getinfo (lua_State *L) {
   if (strchr(options, 'n')) {
     settabss(L, "name", ar.name);
     settabss(L, "namewhat", ar.namewhat);
+  }
+  if (strchr(options, 't')) {
+    lua_pushboolean(L, ar.istailcall);
+    lua_setfield(L, -2, "istailcall");
   }
   if (strchr(options, 'L'))
     treatstackoption(L, L1, "activelines");
@@ -232,7 +236,7 @@ static const char KEY_HOOK = 'h';
 
 static void hookf (lua_State *L, lua_Debug *ar) {
   static const char *const hooknames[] =
-    {"call", "return", "line", "count", "tail return"};
+    {"call", "return", "line", "count", "tail call"};
   lua_pushlightuserdata(L, (void *)&KEY_HOOK);
   lua_rawget(L, LUA_REGISTRYINDEX);
   lua_pushlightuserdata(L, L);

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.225 2009/11/19 16:26:29 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.226 2009/11/24 12:05:44 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -119,8 +119,6 @@ static void getfunc (lua_State *L, int opt) {
     if (lua_getstack(L, level, &ar) == 0)
       luaL_argerror(L, 1, "invalid level");
     lua_getinfo(L, "f", &ar);
-    if (lua_isnil(L, -1))
-      luaL_error(L, "no function environment for tail call at level %d", level);
   }
 }
 

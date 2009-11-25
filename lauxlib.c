@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.192 2009/09/28 12:36:40 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.193 2009/10/05 16:44:33 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -97,7 +97,7 @@ static void pushfuncname (lua_State *L, lua_Debug *ar) {
       lua_remove(L, -2);  /* remove name */
     }
     else
-      lua_pushliteral(L, "?");  /* C function or tail call */
+      lua_pushliteral(L, "?");
   }
   else
     lua_pushfstring(L, "function <%s:%d>", ar->short_src, ar->linedefined);
@@ -133,12 +133,14 @@ LUALIB_API void luaL_traceback (lua_State *L, lua_State *L1,
       level = numlevels - LEVELS2;  /* and skip to last ones */
     }
     else {
-      lua_getinfo(L1, "Sln", &ar);
+      lua_getinfo(L1, "Slnt", &ar);
       lua_pushfstring(L, "\n\t%s:", ar.short_src);
       if (ar.currentline > 0)
         lua_pushfstring(L, "%d:", ar.currentline);
       lua_pushliteral(L, " in ");
       pushfuncname(L, &ar);
+      if (ar.istailcall)
+        lua_pushliteral(L, "\n\t(...tail calls...)");
       lua_concat(L, lua_gettop(L) - top);
     }
   }

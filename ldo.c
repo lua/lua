@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.71 2009/11/17 16:33:38 roberto Exp roberto $
+** $Id: ldo.c,v 2.72 2009/11/17 16:46:44 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -184,7 +184,7 @@ void luaD_shrinkstack (lua_State *L) {
 }
 
 
-void luaD_callhook (lua_State *L, int event, int line) {
+void luaD_hook (lua_State *L, int event, int line) {
   lua_Hook hook = L->hook;
   if (hook && L->allowhook) {
     CallInfo *ci = L->ci;
@@ -193,10 +193,7 @@ void luaD_callhook (lua_State *L, int event, int line) {
     lua_Debug ar;
     ar.event = event;
     ar.currentline = line;
-    if (event == LUA_HOOKTAILRET)
-      ar.i_ci = NULL;  /* tail call; no debug information about it */
-    else
-      ar.i_ci = ci;
+    ar.i_ci = ci;
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
     ci->top = L->top + LUA_MINSTACK;
     lua_assert(ci->top <= L->stack_last);
@@ -211,6 +208,19 @@ void luaD_callhook (lua_State *L, int event, int line) {
     L->top = restorestack(L, top);
     ci->callstatus &= ~CIST_HOOKED;
   }
+}
+
+
+static void callhook (lua_State *L, CallInfo *ci) {
+  int hook = LUA_HOOKCALL;
+  ci->u.l.savedpc++;  /* hooks assume 'pc' is already incremented */
+  if (isLua(ci->previous) &&
+      GET_OPCODE(*(ci->previous->u.l.savedpc - 1)) == OP_TAILCALL) {
+    ci->callstatus |= CIST_TAIL;
+    hook = LUA_HOOKTAILCALL;
+  }
+  luaD_hook(L, hook, -1);
+  ci->u.l.savedpc--;  /* correct 'pc' */
 }
 
 
@@ -281,14 +291,10 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     ci->top = base + p->maxstacksize;
     lua_assert(ci->top <= L->stack_last);
     ci->u.l.savedpc = p->code;  /* starting point */
-    ci->u.l.tailcalls = 0;
     ci->callstatus = CIST_LUA;
     L->top = ci->top;
-    if (L->hookmask & LUA_MASKCALL) {
-      ci->u.l.savedpc++;  /* hooks assume 'pc' is already incremented */
-      luaD_callhook(L, LUA_HOOKCALL, -1);
-      ci->u.l.savedpc--;  /* correct 'pc' */
-    }
+    if (L->hookmask & LUA_MASKCALL)
+      callhook(L, ci);
     return 0;
   }
   else {  /* if is a C function, call it */
@@ -301,7 +307,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     lua_assert(ci->top <= L->stack_last);
     ci->callstatus = 0;
     if (L->hookmask & LUA_MASKCALL)
-      luaD_callhook(L, LUA_HOOKCALL, -1);
+      luaD_hook(L, LUA_HOOKCALL, -1);
     lua_unlock(L);
     n = (*curr_func(L)->c.f)(L);  /* do the actual call */
     lua_lock(L);
@@ -311,25 +317,17 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
 }
 
 
-static StkId callrethooks (lua_State *L, StkId firstResult) {
-  ptrdiff_t fr = savestack(L, firstResult);  /* next call may change stack */
-  luaD_callhook(L, LUA_HOOKRET, -1);
-  if (isLua(L->ci)) {  /* Lua function? */
-    while ((L->hookmask & LUA_MASKRET) && L->ci->u.l.tailcalls--)
-      luaD_callhook(L, LUA_HOOKTAILRET, -1);  /* ret. hooks for tail calls */
-  }
-  return restorestack(L, fr);
-}
-
-
 int luaD_poscall (lua_State *L, StkId firstResult) {
   StkId res;
   int wanted, i;
   CallInfo *ci = L->ci;
   if (L->hookmask & (LUA_MASKRET | LUA_MASKLINE)) {
-    if (L->hookmask & LUA_MASKRET)
-      firstResult = callrethooks(L, firstResult);
-    L->oldpc = ci->previous->u.l.savedpc;  /* 'oldpc' for returning function */
+    if (L->hookmask & LUA_MASKRET) {
+      ptrdiff_t fr = savestack(L, firstResult);  /* hook may change stack */
+      luaD_hook(L, LUA_HOOKRET, -1);
+      firstResult = restorestack(L, fr);
+    }
+    L->oldpc = ci->previous->u.l.savedpc;  /* 'oldpc' for caller function */
   }
   res = ci->func;  /* res == final position of 1st result */
   L->ci = ci = ci->previous;  /* back to caller */
@@ -529,7 +527,7 @@ LUA_API int lua_yieldk (lua_State *L, int nresults, int ctx, lua_CFunction k) {
   }
   lua_assert(ci->callstatus & CIST_HOOKED);  /* must be inside a hook */
   lua_unlock(L);
-  return 0;  /* otherwise, return to 'luaD_callhook' */
+  return 0;  /* return to 'luaD_hook' */
 }
 
 
