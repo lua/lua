@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.57 2009/10/13 19:07:40 roberto Exp roberto $
+** $Id: ldebug.c,v 2.58 2009/11/25 15:27:51 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -34,17 +34,13 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name);
 
 
 static int currentpc (CallInfo *ci) {
-  if (!isLua(ci)) return -1;  /* function is not a Lua function? */
+  lua_assert(isLua(ci));
   return pcRel(ci->u.l.savedpc, ci_func(ci)->l.p);
 }
 
 
 static int currentline (CallInfo *ci) {
-  int pc = currentpc(ci);
-  if (pc < 0)
-    return -1;  /* only active lua functions have current-line information */
-  else
-    return getfuncline(ci_func(ci)->l.p, pc);
+  return getfuncline(ci_func(ci)->l.p, currentpc(ci));
 }
 
 
@@ -187,7 +183,7 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
         break;
       }
       case 'l': {
-        ar->currentline = (ci) ? currentline(ci) : -1;
+        ar->currentline = (ci && isLua(ci)) ? currentline(ci) : -1;
         break;
       }
       case 'u': {
