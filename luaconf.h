@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.117 2009/11/26 11:39:20 roberto Exp roberto $
+** $Id: luaconf.h,v 1.118 2009/11/26 16:49:28 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -336,9 +336,8 @@
 
 /*
 @@ LUA_COMPAT_FENV controls the presence of functions 'setfenv/getfenv'.
-** CHANGE it (undefine it) if as soon as you rewrite your code to
-** avoid using those functions. (You can replace them with lexical
-** environments, 'loadin', or the debug library.)
+** CHANGE it (define it) if you need these functions.  (You can replace
+** them with lexical environments, 'loadin', or the debug library.)
 */
 /* #define LUA_COMPAT_FENV */
 
@@ -348,6 +347,12 @@
 ** as 'log(x, 10)'
 */
 #define LUA_COMPAT_LOG10
+
+/*
+@@ LUA_COMPAT_MAXN defines the function 'maxn' in the table library.
+** CHANGE it (define it) if you need that function.
+*/
+/* #define LUA_COMPAT_MAXN */
 
 /*
 @@ LUA_COMPAT_API includes some macros and functions that supply some

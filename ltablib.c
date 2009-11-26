@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.47 2009/06/17 17:53:50 roberto Exp roberto $
+** $Id: ltablib.c,v 1.48 2009/11/24 12:05:44 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -63,6 +63,7 @@ static int foreach (lua_State *L) {
 }
 
 
+#if defined(LUA_COMPAT_MAXN)
 static int maxn (lua_State *L) {
   lua_Number max = 0;
   luaL_checktype(L, 1, LUA_TTABLE);
@@ -77,7 +78,11 @@ static int maxn (lua_State *L) {
   lua_pushnumber(L, max);
   return 1;
 }
-
+#else
+static int maxn (lua_State *L) {
+  return luaL_error(L, "function 'maxn' is deprecated");
+}
+#endif
 
 static int getn (lua_State *L) {
   lua_pushinteger(L, aux_getn(L, 1));
