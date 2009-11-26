@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.115 2009/11/19 19:06:52 roberto Exp roberto $
+** $Id: luaconf.h,v 1.116 2009/11/24 12:05:44 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -53,7 +53,7 @@
 
 
 /*
-@@ LUA_USE_POSIX includes all functionallity listed as X/Open System
+@@ LUA_USE_POSIX includes all functionality listed as X/Open System
 @* Interfaces Extension (XSI).
 ** CHANGE it (define it) if your system is XSI compatible.
 */
@@ -129,7 +129,7 @@
 @* template.
 @@ LUA_EXECDIR in a Windows path is replaced by the executable's
 @* directory.
-@@ LUA_IGMARK is a mark to ignore all before it when bulding the
+@@ LUA_IGMARK is a mark to ignore all before it when building the
 @* luaopen_ function name.
 ** CHANGE them if for some reason your system cannot use those
 ** characters. (E.g., if one of those characters is a common character
@@ -335,7 +335,7 @@
 */
 
 /*
-@@ LUA_COMPAT_FENV controls de presence of functions 'setfenv/getfenv'.
+@@ LUA_COMPAT_FENV controls the presence of functions 'setfenv/getfenv'.
 ** CHANGE it (undefine it) if as soon as you rewrite your code to
 ** avoid using those functions. (You can replace them with lexical
 ** environments, 'loadin', or the debug library.)

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.61 2009/11/09 18:29:21 roberto Exp roberto $
+** $Id: lgc.c,v 2.62 2009/11/18 13:13:47 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -704,7 +704,7 @@ static void atomic (lua_State *L) {
   /* traverse objects caught by write barrier and by 'remarkupvals' */
   propagateall(g);
   /* at this point, all strongly accessible objects are marked.
-     Start marking weakily accessible objects. */
+     Start marking weakly accessible objects. */
   traverselistofgrays(g, &g->weak);  /* remark weak tables */
   traverselistofgrays(g, &g->ephemeron);  /* remark ephemeron tables */
   traverselistofgrays(g, &g->grayagain);  /* remark gray again */

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.22 2009/11/17 11:56:03 roberto Exp roberto $
+** $Id: lgc.h,v 2.23 2009/11/18 13:13:47 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -26,7 +26,7 @@
 
 
 /*
-** some userful bit tricks
+** some useful bit tricks
 */
 #define resetbits(x,m)		((x) &= cast(lu_byte, ~(m)))
 #define setbits(x,m)		((x) |= (m))

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.32 2009/11/06 17:07:12 roberto Exp roberto $
+** $Id: lobject.c,v 2.33 2009/11/19 19:06:52 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -221,7 +221,7 @@ void luaO_chunkid (char *out, const char *source, size_t bufflen) {
   else {  /* string; format as [string "source"] */
     const char *nl = strchr(source, '\n');  /* find first new line (if any) */
     addstr(out, PRE, LL(PRE));  /* add prefix */
-    bufflen -= LL(PRE RETS POS);  /* save space for prefix+sufix */
+    bufflen -= LL(PRE RETS POS);  /* save space for prefix+suffix */
     if (l < bufflen && nl == NULL) {  /* small one-line source? */
       addstr(out, source, l);  /* keep it */
     }

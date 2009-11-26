@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.71 2009/10/14 16:43:11 roberto Exp roberto $
+** $Id: lparser.c,v 2.72 2009/11/17 16:33:38 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -404,7 +404,7 @@ static void close_func (LexState *ls) {
   f->sizeupvalues = fs->nups;
   lua_assert(fs->bl == NULL);
   ls->fs = fs->prev;
-  /* last token read was anchored in defunct function; must reanchor it */
+  /* last token read was anchored in defunct function; must re-anchor it */
   anchor_token(ls);
   L->top--;  /* pop table of constants */
   luaC_checkGC(L);

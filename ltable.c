@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.44 2009/11/06 17:07:12 roberto Exp roberto $
+** $Id: ltable.c,v 2.45 2009/11/19 17:54:07 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -133,7 +133,7 @@ static int arrayindex (const TValue *key) {
 /*
 ** returns the index of a `key' for table traversals. First goes all
 ** elements in the array part, then elements in the hash part. The
-** beginning of a traversal is signalled by -1.
+** beginning of a traversal is signaled by -1.
 */
 static int findindex (lua_State *L, Table *t, StkId key) {
   int i;

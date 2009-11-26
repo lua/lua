@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.250 2009/11/09 19:10:48 roberto Exp roberto $
+** $Id: lua.h,v 1.251 2009/11/25 15:27:51 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -370,7 +370,7 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 typedef struct lua_Debug lua_Debug;  /* activation record */
 
 
-/* Functions to be called by the debuger in specific events */
+/* Functions to be called by the debugger in specific events */
 typedef void (*lua_Hook) (lua_State *L, lua_Debug *ar);
 
 

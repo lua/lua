@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.226 2009/11/24 12:05:44 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.227 2009/11/25 15:27:51 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -655,7 +655,7 @@ static int luaB_costatus (lua_State *L) {
           lua_pushliteral(L, "suspended");  /* initial state */
         break;
       }
-      default:  /* some error occured */
+      default:  /* some error occurred */
         lua_pushliteral(L, "dead");
         break;
     }

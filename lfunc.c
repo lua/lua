@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.15 2009/09/28 16:32:50 roberto Exp roberto $
+** $Id: lfunc.c,v 2.16 2009/09/30 15:38:37 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -60,7 +60,7 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
     lua_assert(p->v != &p->u.value);
     if (p->v == level) {  /* found a corresponding upvalue? */
       if (isdead(g, obj2gco(p)))  /* is it dead? */
-        changewhite(obj2gco(p));  /* ressurect it */
+        changewhite(obj2gco(p));  /* ressurrect it */
       return p;
     }
     pp = &p->next;

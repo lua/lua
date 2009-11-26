@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.48 2009/11/18 13:13:47 roberto Exp roberto $
+** $Id: lstate.h,v 2.49 2009/11/25 15:27:51 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -131,7 +131,7 @@ typedef struct global_State {
   GCObject *ephemeron;  /* list of ephemeron tables (weak keys) */
   GCObject *allweak;  /* list of all-weak tables */
   GCObject *tobefnz;  /* list of userdata to be GC */
-  Mbuffer buff;  /* temporary buffer for string concatentation */
+  Mbuffer buff;  /* temporary buffer for string concatenation */
   lu_mem GCthreshold;  /* when totalbytes > GCthreshold, run GC step */
   lu_mem totalbytes;  /* number of bytes currently allocated */
   int gcpause;  /* size of pause between successive GCs */
