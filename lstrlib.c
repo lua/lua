@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.143 2009/06/18 16:51:03 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.144 2009/11/24 12:05:44 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -774,7 +774,7 @@ static int str_format (lua_State *L) {
       strfrmt = scanformat(L, strfrmt, form);
       switch (*strfrmt++) {
         case 'c': {
-          sprintf(buff, form, (int)luaL_checknumber(L, arg));
+          sprintf(buff, form, luaL_checkint(L, arg));
           break;
         }
         case 'd':  case 'i':
@@ -860,10 +860,6 @@ static void createmetatable (lua_State *L) {
 */
 LUAMOD_API int luaopen_string (lua_State *L) {
   luaL_register(L, LUA_STRLIBNAME, strlib);
-#if defined(LUA_COMPAT_GFIND)
-  lua_getfield(L, -1, "gmatch");
-  lua_setfield(L, -2, "gfind");
-#endif
   createmetatable(L);
   return 1;
 }

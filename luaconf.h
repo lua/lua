@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.116 2009/11/24 12:05:44 roberto Exp roberto $
+** $Id: luaconf.h,v 1.117 2009/11/26 11:39:20 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -355,14 +355,6 @@
 ** CHANGE it (undefine it) if you do not need these compatibility facilities.
 */
 #define LUA_COMPAT_API
-
-
-/*
-@@ LUA_COMPAT_GFIND controls compatibility with old 'string.gfind' name.
-** CHANGE it to undefined as soon as you rename 'string.gfind' to
-** 'string.gmatch'.
-*/
-#define LUA_COMPAT_GFIND
 
 /*
 @@ LUA_COMPAT_DEBUGLIB controls compatibility with preloading
