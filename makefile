@@ -17,6 +17,13 @@ CWARNS= -pedantic -Wextra \
 	-Wstrict-prototypes \
 	-Wundef \
 	-Wwrite-strings \
+	-Wc++-compat \
+	-Wold-style-definition \
+	-Wredundant-decls \
+	-Wdisabled-optimization \
+	# -Wlogical-op \
+	# -Wformat=2 \
+	# -Wstrict-overflow=5 \
 	#  -Wcast-qual \
 
 
