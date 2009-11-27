@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.78 2009/11/05 17:43:54 roberto Exp roberto $
+** $Id: ltests.c,v 2.79 2009/11/06 17:08:43 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -875,6 +875,7 @@ static int Cfunck (lua_State *L);
 
 static int runC (lua_State *L, lua_State *L1, const char *pc) {
   char buff[30];
+  if (pc == NULL) return luaL_error(L, "attempt to runC null code");
   for (;;) {
     const char *inst = getname;
     if EQ("") return 0;
@@ -1039,13 +1040,13 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("pcallk") {
       int narg = getnum;
       int nres = getnum;
-      int i = getnum;
+      int i = getindex;
       lua_pcallk(L1, narg, nres, 0, i, Cfunck);
     }
     else if EQ("callk") {
       int narg = getnum;
       int nres = getnum;
-      int i = getnum;
+      int i = getindex;
       lua_callk(L1, narg, nres, i, Cfunck);
     }
     else if EQ("yield") {
@@ -1053,7 +1054,7 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     }
     else if EQ("yieldk") {
       int nres = getnum;
-      int i = getnum;
+      int i = getindex;
       return lua_yieldk(L1, nres, i, Cfunck);
     }
     else if EQ("loadstring") {
