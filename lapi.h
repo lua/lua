@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.h,v 2.5 2009/04/03 15:58:03 roberto Exp roberto $
+** $Id: lapi.h,v 2.6 2009/08/31 14:26:28 roberto Exp roberto $
 ** Auxiliary functions from Lua API
 ** See Copyright Notice in lua.h
 */
@@ -16,6 +16,9 @@
 
 #define adjustresults(L,nres) \
     { if ((nres) == LUA_MULTRET && L->ci->top < L->top) L->ci->top = L->top; }
+
+#define api_checknelems(L,n)	api_check(L, (n) < (L->top - L->ci->func), \
+				  "not enough elements in the stack")
 
 
 #endif

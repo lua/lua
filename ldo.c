@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.72 2009/11/17 16:46:44 roberto Exp roberto $
+** $Id: ldo.c,v 2.73 2009/11/25 15:27:51 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -311,6 +311,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     lua_unlock(L);
     n = (*curr_func(L)->c.f)(L);  /* do the actual call */
     lua_lock(L);
+    api_checknelems(L, n);
     luaD_poscall(L, L->top - n);
     return 1;
   }
@@ -382,6 +383,7 @@ static void finishCcall (lua_State *L) {
   lua_unlock(L);
   n = (*ci->u.c.k)(L);
   lua_lock(L);
+  api_checknelems(L, n);
   /* finish 'luaD_precall' */
   luaD_poscall(L, L->top - n);
 }
@@ -424,6 +426,7 @@ static void resume (lua_State *L, void *ud) {
         lua_unlock(L);
         n = (*ci->u.c.k)(L);  /* call continuation */
         lua_lock(L);
+        api_checknelems(L, n);
         firstArg = L->top - n;
       }
       G(L)->nCcalls--;  /* finish 'luaD_call' */
@@ -511,6 +514,7 @@ LUA_API int lua_yieldk (lua_State *L, int nresults, int ctx, lua_CFunction k) {
   CallInfo *ci = L->ci;
   luai_userstateyield(L, nresults);
   lua_lock(L);
+  api_checknelems(L, nresults);
   if (L->nny > 0)
     luaG_runerror(L, "attempt to yield across metamethod/C-call boundary");
   L->status = LUA_YIELD;

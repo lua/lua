@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.99 2009/11/09 18:55:17 roberto Exp roberto $
+** $Id: lapi.c,v 2.100 2009/11/09 19:10:48 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -34,9 +34,6 @@ const char lua_ident[] =
   "$LuaAuthors: " LUA_AUTHORS " $";
 
 
-
-#define api_checknelems(L,n)	api_check(L, (n) < (L->top - L->ci->func), \
-				  "not enough elements in the stack")
 
 #define api_checkvalidindex(L, i)	api_check(L, (i) != luaO_nilobject, \
 					  "invalid index")
