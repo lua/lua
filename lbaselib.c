@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.227 2009/11/25 15:27:51 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.228 2009/11/26 11:39:20 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -616,8 +616,7 @@ static int luaB_auxwrap (lua_State *L) {
 
 static int luaB_cocreate (lua_State *L) {
   lua_State *NL = lua_newthread(L);
-  luaL_argcheck(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1), 1,
-    "Lua function expected");
+  luaL_checktype(L, 1, LUA_TFUNCTION);
   lua_pushvalue(L, 1);  /* move function to top */
   lua_xmove(L, NL, 1);  /* move function from L to NL */
   return 1;
