@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.79 2009/11/06 17:08:43 roberto Exp roberto $
+** $Id: ltests.c,v 2.80 2009/11/27 15:39:31 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -810,6 +810,9 @@ static int int2fb_aux (lua_State *L) {
 ** =======================================================
 */
 
+
+static void sethookaux (lua_State *L, int mask, int count, const char *code);
+
 static const char *const delimits = " \t\n,;";
 
 static void skip (const char **pc) {
@@ -842,11 +845,21 @@ static int getnum_aux (lua_State *L, const char **pc) {
   return sig*res;
 }
 
-static const char *getname_aux (char *buff, const char **pc) {
+static const char *getname_aux (lua_State *L, char *buff, const char **pc) {
   int i = 0;
   skip(pc);
-  while (**pc != '\0' && !strchr(delimits, **pc))
-    buff[i++] = *(*pc)++;
+  if (**pc == '"' || **pc == '\'') {  /* quoted string? */
+    int quote = *(*pc)++;
+    while (**pc != quote) {
+      if (**pc == '\0') luaL_error(L, "unfinished string in C script");
+      buff[i++] = *(*pc)++;
+    }
+    (*pc)++;
+  }
+  else {
+    while (**pc != '\0' && !strchr(delimits, **pc))
+      buff[i++] = *(*pc)++;
+  }
   buff[i] = '\0';
   return buff;
 }
@@ -866,7 +879,7 @@ static int getindex_aux (lua_State *L, const char **pc) {
 #define EQ(s1)	(strcmp(s1, inst) == 0)
 
 #define getnum	(getnum_aux(L, &pc))
-#define getname	(getname_aux(buff, &pc))
+#define getname	(getname_aux(L, buff, &pc))
 #define getindex (getindex_aux(L, &pc))
 
 
@@ -874,8 +887,8 @@ static int testC (lua_State *L);
 static int Cfunck (lua_State *L);
 
 static int runC (lua_State *L, lua_State *L1, const char *pc) {
-  char buff[30];
-  if (pc == NULL) return luaL_error(L, "attempt to runC null code");
+  char buff[300];
+  if (pc == NULL) return luaL_error(L, "attempt to runC null script");
   for (;;) {
     const char *inst = getname;
     if EQ("") return 0;
@@ -1079,6 +1092,11 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       int i = getindex;
       lua_pushinteger(L1, lua_objlen(L1, i));
     }
+    else if EQ("append") {
+      int t = getindex;
+      int i = lua_objlen(L1, t);
+      lua_rawseti(L1, t, i + 1);
+    }
     else if EQ("getctx") {
       static const char *const codes[] = {"OK", "YIELD", "ERRRUN",
          "ERRSYNTAX", "ERRMEM", "ERRGCMM", "ERRERR"};
@@ -1104,6 +1122,11 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       luaL_gsub(L1, lua_tostring(L1, a),
                     lua_tostring(L, b),
                     lua_tostring(L, c));
+    }
+    else if EQ("sethook") {
+      int mask = getnum;
+      int count = getnum;
+      sethookaux(L1, mask, count, getname);
     }
     else if EQ("throw") {
 #if defined(__cplusplus)
@@ -1163,25 +1186,62 @@ static int makeCfunc (lua_State *L) {
 
 /*
 ** {======================================================
-** tests for yield inside hooks
+** tests for C hooks
 ** =======================================================
 */
 
-static void yieldf (lua_State *L, lua_Debug *ar) {
-  UNUSED(ar);
-  lua_yield(L, 0);
+/*
+** C hook that runs the C script stored in registry.C_HOOK[L]
+*/
+static void Chook (lua_State *L, lua_Debug *ar) {
+  const char *scpt;
+  const char *const events [] = {"call", "ret", "line", "count", "tailcall"};
+  lua_getfield(L, LUA_REGISTRYINDEX, "C_HOOK");
+  lua_pushlightuserdata(L, L);
+  lua_gettable(L, -2);  /* get C_HOOK[L] (script saved by sethookaux) */
+  scpt = lua_tostring(L, -1);  /* not very religious (string will be popped) */
+  lua_pop(L, 2);  /* remove C_HOOK and script */
+  lua_pushstring(L, events[ar->event]);  /* may be used by script */
+  lua_pushinteger(L, ar->currentline);  /* may be used by script */
+  runC(L, L, scpt);  /* run script from C_HOOK[L] */
 }
 
-static int setyhook (lua_State *L) {
+
+/*
+** sets registry.C_HOOK[L] = scpt and sets Chook as a hook
+*/
+static void sethookaux (lua_State *L, int mask, int count, const char *scpt) {
+  if (*scpt == '\0') {  /* no script? */
+    lua_sethook(L, NULL, 0, 0);  /* turn off hooks */
+    return;
+  }
+  lua_getfield(L, LUA_REGISTRYINDEX, "C_HOOK");  /* get C_HOOK table */
+  if (!lua_istable(L, -1)) {  /* no hook table? */
+    lua_pop(L, 1);  /* remove previous value */
+    lua_newtable(L);  /* create new C_HOOK table */
+    lua_pushvalue(L, -1);
+    lua_setfield(L, LUA_REGISTRYINDEX, "C_HOOK");  /* register it */
+  }
+  lua_pushlightuserdata(L, L);
+  lua_pushstring(L, scpt);
+  lua_settable(L, -3);  /* C_HOOK[L] = script */
+  lua_sethook(L, Chook, mask, count);
+}
+
+
+static int sethook (lua_State *L) {
   if (lua_isnoneornil(L, 1))
     lua_sethook(L, NULL, 0, 0);  /* turn off hooks */
   else {
-    const char *smask = luaL_checkstring(L, 1);
-    int count = luaL_optint(L, 2, 0);
+    const char *scpt = luaL_checkstring(L, 1);
+    const char *smask = luaL_checkstring(L, 2);
+    int count = luaL_optint(L, 3, 0);
     int mask = 0;
+    if (strchr(smask, 'c')) mask |= LUA_MASKCALL;
+    if (strchr(smask, 'r')) mask |= LUA_MASKRET;
     if (strchr(smask, 'l')) mask |= LUA_MASKLINE;
     if (count > 0) mask |= LUA_MASKCOUNT;
-    lua_sethook(L, yieldf, mask, count);
+    sethookaux(L, mask, count, scpt);
   }
   return 0;
 }
@@ -1232,7 +1292,7 @@ static const struct luaL_Reg tests_funcs[] = {
   {"ref", tref},
   {"resume", coresume},
   {"s2d", s2d},
-  {"setyhook", setyhook},
+  {"sethook", sethook},
   {"stacklevel", stacklevel},
   {"testC", testC},
   {"makeCfunc", makeCfunc},
