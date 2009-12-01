@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.58 2009/11/25 15:27:51 roberto Exp roberto $
+** $Id: ldebug.c,v 2.59 2009/11/26 15:34:15 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -52,7 +52,8 @@ LUA_API int lua_sethook (lua_State *L, lua_Hook func, int mask, int count) {
     mask = 0;
     func = NULL;
   }
-  L->oldpc = NULL;
+  if (isLua(L->ci))
+    L->oldpc = L->ci->u.l.savedpc;
   L->hook = func;
   L->basehookcount = count;
   resethookcount(L);
@@ -107,7 +108,10 @@ static const char *findlocal (lua_State *L, CallInfo *ci, int n,
     StkId limit = (ci == L->ci) ? L->top : ci->next->func;
     if (limit - base >= n && n > 0)  /* is 'n' inside 'ci' stack? */
       name = "(*temporary)";  /* generic name for any valid slot */
-    else return NULL;  /* no name */
+    else {
+      *pos = base;  /* to avoid warnings */
+      return NULL;  /* no name */
+    }
   }
   *pos = base + (n - 1);
   return name;
