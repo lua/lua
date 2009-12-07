@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.48 2009/11/24 12:05:44 roberto Exp roberto $
+** $Id: ltablib.c,v 1.49 2009/11/26 17:35:13 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -167,12 +167,35 @@ static int tconcat (lua_State *L) {
 }
 
 
+/*
+** {======================================================
+** Pack
+** =======================================================
+*/
+
+static int pack (lua_State *L) {
+  int top = lua_gettop(L);
+  lua_createtable(L, top, 1);  /* create result table */
+  /* use function environment as a temporary place to keep new table */
+  lua_replace(L, LUA_ENVIRONINDEX);
+  lua_pushinteger(L, top);  /* number of elements */
+  lua_setfield(L, LUA_ENVIRONINDEX, "n");  /* t.n = number of elements */
+  for (; top >= 1; top--)  /* assign elements */
+    lua_rawseti(L, LUA_ENVIRONINDEX, top);
+  lua_pushvalue(L, LUA_ENVIRONINDEX);  /* return new table */
+  return 1;
+}
+
+/* }====================================================== */
+
+
 
 /*
 ** {======================================================
 ** Quicksort
 ** (based on `Algorithms in MODULA-3', Robert Sedgewick;
 **  Addison-Wesley, 1993.)
+** =======================================================
 */
 
 
@@ -279,6 +302,7 @@ static const luaL_Reg tab_funcs[] = {
   {"getn", getn},
   {"maxn", maxn},
   {"insert", tinsert},
+  {"pack", pack},
   {"remove", tremove},
   {"setn", setn},
   {"sort", sort},
