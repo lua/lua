@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.101 2009/11/27 15:37:59 roberto Exp roberto $
+** $Id: lapi.c,v 2.102 2009/12/07 15:49:47 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -81,16 +81,28 @@ static Table *getcurrenv (lua_State *L) {
 }
 
 
+/*
+** to be caled by 'lua_checkstack' in protected mode, to grow stack
+** capturing memory errors
+*/
+static void growstack (lua_State *L, void *ud) {
+  int size = *(int *)ud;
+  luaD_growstack(L, size);
+}
+
+
 LUA_API int lua_checkstack (lua_State *L, int size) {
-  int res = 1;
+  int res;
   CallInfo *ci = L->ci;
   lua_lock(L);
-  if (L->stack_last - L->top <= size) {  /* need to grow stack? */
+  if (L->stack_last - L->top > size)  /* stack large enough? */
+    res = 1;  /* yes; check is OK */
+  else {  /* no; need to grow stack */
     int inuse = L->top - L->stack + EXTRA_STACK;
     if (inuse > LUAI_MAXSTACK - size)  /* can grow without overflow? */
       res = 0;  /* no */
-    else
-      luaD_growstack(L, size);
+    else  /* try to grow stack */
+      res = (luaD_rawrunprotected(L, &growstack, &size) == LUA_OK);
   }
   if (res && ci->top < L->top + size)
     ci->top = L->top + size;  /* adjust frame top */
