@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.118 2009/11/26 16:49:28 roberto Exp roberto $
+** $Id: luaconf.h,v 1.119 2009/11/26 17:34:49 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -459,8 +459,9 @@
 
 
 /*
-@@ LUAI_MAXCCALLS is the maximum depth for nested C calls (short) and
-@* syntactical nested non-terminals in a program.
+@@ LUAI_MAXCCALLS is the maximum depth for nested C calls and
+@* syntactical nested non-terminals in a program. (Value must
+@* fit in an unsigned short int.)
 */
 #define LUAI_MAXCCALLS		200
 
