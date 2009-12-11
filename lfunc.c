@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.16 2009/09/30 15:38:37 roberto Exp roberto $
+** $Id: lfunc.c,v 2.17 2009/11/26 11:39:20 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -56,7 +56,7 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
   GCObject **pp = &L->openupval;
   UpVal *p;
   UpVal *uv;
-  while (*pp != NULL && (p = ngcotouv(*pp))->v >= level) {
+  while (*pp != NULL && (p = gco2uv(*pp))->v >= level) {
     lua_assert(p->v != &p->u.value);
     if (p->v == level) {  /* found a corresponding upvalue? */
       if (isdead(g, obj2gco(p)))  /* is it dead? */
@@ -97,7 +97,7 @@ void luaF_freeupval (lua_State *L, UpVal *uv) {
 void luaF_close (lua_State *L, StkId level) {
   UpVal *uv;
   global_State *g = G(L);
-  while (L->openupval != NULL && (uv = ngcotouv(L->openupval))->v >= level) {
+  while (L->openupval != NULL && (uv = gco2uv(L->openupval))->v >= level) {
     GCObject *o = obj2gco(uv);
     lua_assert(!isblack(o) && uv->v != &uv->u.value);
     L->openupval = uv->next;  /* remove from `open' list */
