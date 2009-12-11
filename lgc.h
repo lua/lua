@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.24 2009/11/26 11:39:20 roberto Exp roberto $
+** $Id: lgc.h,v 2.25 2009/12/11 19:14:59 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -14,12 +14,12 @@
 /*
 ** Possible states of the Garbage Collector
 */
-#define GCSpause	1
-#define GCSpropagate	2
-#define GCSatomic	4
-#define GCSsweepstring	8
-#define GCSsweep	16
-#define GCSfinalize	32
+#define GCSpause	0
+#define GCSpropagate	1
+#define GCSatomic	2
+#define GCSsweepstring	3
+#define GCSsweep	4
+#define GCSfinalize	5
 
 
 
@@ -96,7 +96,7 @@
 LUAI_FUNC void luaC_separateudata (lua_State *L, int all);
 LUAI_FUNC void luaC_freeallobjects (lua_State *L);
 LUAI_FUNC void luaC_step (lua_State *L);
-LUAI_FUNC void luaC_runtilstate (lua_State *L, int validstates);
+LUAI_FUNC void luaC_runtilstate (lua_State *L, int statesmask);
 LUAI_FUNC void luaC_fullgc (lua_State *L, int isemergency);
 LUAI_FUNC void luaC_link (lua_State *L, GCObject *o, lu_byte tt);
 LUAI_FUNC void luaC_linkupval (lua_State *L, UpVal *uv);
