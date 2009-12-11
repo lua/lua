@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.175 2009/08/10 16:23:19 roberto Exp roberto $
+** $Id: lua.c,v 1.176 2009/11/24 18:05:12 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -151,7 +151,7 @@ static int dostring (lua_State *L, const char *s, const char *name) {
 
 
 static int dolibrary (lua_State *L, const char *name) {
-  lua_getglobal(L, "require");
+  lua_getfield(L, LUA_GLOBALSINDEX, "require");
   lua_pushstring(L, name);
   return report(L, docall(L, 1, 1));
 }
@@ -231,7 +231,7 @@ static void dotty (lua_State *L) {
     report(L, status);
     if (status == LUA_OK && lua_gettop(L) > 0) {  /* any result to print? */
       luaL_checkstack(L, LUA_MINSTACK, "too many results to print");
-      lua_getglobal(L, "print");
+      lua_getfield(L, LUA_GLOBALSINDEX, "print");
       lua_insert(L, 1);
       if (lua_pcall(L, lua_gettop(L)-1, 0, 0) != LUA_OK)
         l_message(progname, lua_pushfstring(L,
@@ -250,7 +250,7 @@ static int handle_script (lua_State *L, char **argv, int n) {
   int status;
   const char *fname;
   int narg = getargs(L, argv, n);  /* collect arguments */
-  lua_setglobal(L, "arg");
+  lua_setfield(L, LUA_GLOBALSINDEX, "arg");
   fname = argv[n];
   if (strcmp(fname, "-") == 0 && strcmp(argv[n-1], "--") != 0)
     fname = NULL;  /* stdin */

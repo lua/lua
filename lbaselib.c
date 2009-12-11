@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.229 2009/11/27 15:38:51 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.230 2009/12/10 18:17:37 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,7 @@
 static int luaB_print (lua_State *L) {
   int n = lua_gettop(L);  /* number of arguments */
   int i;
-  lua_getglobal(L, "tostring");
+  lua_getfield(L, LUA_GLOBALSINDEX, "tostring");
   for (i=1; i<=n; i++) {
     const char *s;
     size_t l;
@@ -695,11 +695,11 @@ static void auxopen (lua_State *L, const char *name,
 static void base_open (lua_State *L) {
   /* set global _G */
   lua_pushvalue(L, LUA_GLOBALSINDEX);
-  lua_setglobal(L, "_G");
+  lua_setfield(L, LUA_GLOBALSINDEX, "_G");
   /* open lib into global table */
   luaL_register(L, "_G", base_funcs);
   lua_pushliteral(L, LUA_VERSION);
-  lua_setglobal(L, "_VERSION");  /* set global _VERSION */
+  lua_setfield(L, LUA_GLOBALSINDEX, "_VERSION");  /* set global _VERSION */
   /* `ipairs' and `pairs' need auxiliary functions as upvalues */
   auxopen(L, "ipairs", luaB_ipairs, ipairsaux);
   auxopen(L, "pairs", luaB_pairs, luaB_next);
@@ -710,7 +710,7 @@ static void base_open (lua_State *L) {
   lua_pushliteral(L, "kv");
   lua_setfield(L, -2, "__mode");  /* metatable(w).__mode = "kv" */
   lua_pushcclosure(L, luaB_newproxy, 1);
-  lua_setglobal(L, "newproxy");  /* set global `newproxy' */
+  lua_setfield(L, LUA_GLOBALSINDEX, "newproxy");  /* set global `newproxy' */
 }
 
 
