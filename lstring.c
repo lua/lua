@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.12 2009/04/17 14:40:13 roberto Exp roberto $
+** $Id: lstring.c,v 2.13 2009/04/29 17:09:41 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -22,8 +22,8 @@
 void luaS_resize (lua_State *L, int newsize) {
   int i;
   stringtable *tb = &G(L)->strt;
-  if (G(L)->gcstate == GCSsweepstring)
-    return;  /* cannot resize during GC traverse */
+  /* cannot resize while GC is traversing strings */
+  luaC_runtilstate(L, ~GCSsweepstring);
   if (newsize > tb->size) {
     luaM_reallocvector(L, tb->hash, tb->size, newsize, GCObject *);
     for (i = tb->size; i < newsize; i++) tb->hash[i] = NULL;

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.81 2009/12/01 16:49:48 roberto Exp roberto $
+** $Id: ltests.c,v 2.82 2009/12/10 18:21:28 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -166,6 +166,9 @@ void *debug_realloc (void *ud, void *block, size_t oldsize, size_t size) {
 ** Functions to check memory consistency
 ** =======================================================
 */
+
+#define issweep(g)  (GCSsweepstring <= (g)->gcstate && (g)->gcstate <= GCSsweep)
+
 
 static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
   if (isdead(g,t)) return 0;

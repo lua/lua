@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.62 2009/11/18 13:13:47 roberto Exp roberto $
+** $Id: lgc.c,v 2.63 2009/11/26 11:39:20 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -785,6 +785,21 @@ void luaC_step (lua_State *L) {
 }
 
 
+/*
+** advances the garbage collector until it reaches a "valid" state
+** (defined by the caller)
+*/
+void luaC_runtilstate (lua_State *L, int validstates) {
+  global_State *g = G(L);
+  while (!(g->gcstate & validstates))
+    singlestep(L);
+}
+
+
+/*
+** performs a full GC cycle; if "isememrgency", does not call
+** finalizers (which could change stack positions)
+*/
 void luaC_fullgc (lua_State *L, int isemergency) {
   global_State *g = G(L);
   lua_assert(g->gckind == KGC_NORMAL);
@@ -796,16 +811,13 @@ void luaC_fullgc (lua_State *L, int isemergency) {
     g->gcstate = GCSsweepstring;
   }
   /* finish any pending sweep phase */
-  while (issweep(g)) singlestep(L);
+  luaC_runtilstate(L, ~(GCSsweepstring | GCSsweep));
   markroot(L);  /* start a new collection */
   /* run collector up to finalizers */
-  while (g->gcstate != GCSfinalize)
-    singlestep(L);
+  luaC_runtilstate(L, GCSfinalize);
   g->gckind = KGC_NORMAL;
-  if (!isemergency) {  /* do not run finalizers during emergency GC */
-    while (g->gcstate != GCSpause)
-      singlestep(L);
-  }
+  if (!isemergency)   /* do not run finalizers during emergency GC */
+   luaC_runtilstate(L, ~GCSfinalize);
   g->GCthreshold = (g->totalbytes/100) * g->gcpause;
 }
 
