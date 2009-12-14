@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.63 2009/10/23 19:12:19 roberto Exp roberto $
+** $Id: lstate.c,v 2.64 2009/11/18 13:13:47 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -25,18 +25,28 @@
 #include "ltm.h"
 
 
-#define state_size(x)	(sizeof(x) + LUAI_EXTRASPACE)
-#define fromstate(l)	(cast(lu_byte *, (l)) - LUAI_EXTRASPACE)
-#define tostate(l)   (cast(lua_State *, cast(lu_byte *, l) + LUAI_EXTRASPACE))
+/*
+** thread state + extra space
+*/
+typedef struct LX {
+#if defined(LUAI_EXTRASPACE)
+  char buff[LUAI_EXTRASPACE];
+#endif
+  lua_State l;
+} LX;
 
 
 /*
 ** Main thread combines a thread state and the global state
 */
 typedef struct LG {
-  lua_State l;
+  LX l;
   global_State g;
 } LG;
+
+
+
+#define fromstate(L)	(cast(LX *, cast(lu_byte *, (L)) - offsetof(LX, l)))
 
 
 
@@ -174,7 +184,7 @@ static void close_state (lua_State *L) {
   luaZ_freebuffer(L, &g->buff);
   freestack(L);
   lua_assert(g->totalbytes == sizeof(LG));
-  (*g->frealloc)(g->ud, fromstate(L), state_size(LG), 0);
+  (*g->frealloc)(g->ud, fromstate(L), sizeof(LG), 0);
 }
 
 
@@ -182,7 +192,7 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   lua_State *L1;
   lua_lock(L);
   luaC_checkGC(L);
-  L1 = tostate(luaM_malloc(L, state_size(lua_State)));
+  L1 = &luaM_new(L, LX)->l;
   luaC_link(L, obj2gco(L1), LUA_TTHREAD);
   setthvalue(L, L->top, L1);
   api_incr_top(L);
@@ -200,11 +210,12 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
 
 
 void luaE_freethread (lua_State *L, lua_State *L1) {
+  LX *l = fromstate(L1);
   luaF_close(L1, L1->stack);  /* close all upvalues for this thread */
   lua_assert(L1->openupval == NULL);
   luai_userstatefree(L1);
   freestack(L1);
-  luaM_freemem(L, fromstate(L1), state_size(lua_State));
+  luaM_free(L, l);
 }
 
 
@@ -212,10 +223,10 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   int i;
   lua_State *L;
   global_State *g;
-  void *l = (*f)(ud, NULL, 0, state_size(LG));
+  LG *l = cast(LG *, (*f)(ud, NULL, 0, sizeof(LG)));
   if (l == NULL) return NULL;
-  L = tostate(l);
-  g = &((LG *)L)->g;
+  L = &l->l.l;
+  g = &l->g;
   L->next = NULL;
   L->tt = LUA_TTHREAD;
   g->currentwhite = bit2mask(WHITE0BIT, FIXEDBIT);

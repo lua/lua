@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.25 2009/04/17 22:00:01 roberto Exp roberto $
+** $Id: ltests.h,v 2.26 2009/11/19 19:06:52 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -58,7 +58,6 @@ int lua_checkmemory (lua_State *L);
 #undef luai_userstatethread
 #undef lua_lock
 #undef lua_unlock
-#undef LUAI_EXTRASPACE
 
 struct L_EXTRA { int lock; int *plock; };
 #define LUAI_EXTRASPACE		sizeof(struct L_EXTRA)

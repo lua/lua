@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.119 2009/11/26 17:34:49 roberto Exp roberto $
+** $Id: luaconf.h,v 1.120 2009/12/10 19:00:33 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -753,12 +753,12 @@ union luai_Cast { double l_d; long l_l; };
 
 
 /*
-@@ LUAI_EXTRASPACE allows you to add user-specific data in a lua_State
-@* (the data goes just *before* the lua_State pointer).
-** CHANGE (define) this if you really need that. This value must be
-** a multiple of the maximum alignment required for your machine.
+@@ LUAI_EXTRASPACE allows you to add user-specific data in a lua_State.
+@* (This data goes just *before* the lua_State pointer.)
+** CHANGE (define) this if you really need that. If defined, this value
+** cannot be zero.
 */
-#define LUAI_EXTRASPACE		0
+/* #define LUAI_EXTRASPACE		?? */
 
 
 /*
