@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.230 2009/12/10 18:17:37 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.231 2009/12/11 13:40:44 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -346,12 +346,13 @@ static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
 static int luaB_load_aux (lua_State *L, int farg) {
   int status;
   Readstat stat;
-  const char *s = lua_tostring(L, farg);
+  size_t l;
+  const char *s = lua_tolstring(L, farg, &l);
   stat.mode = luaL_optstring(L, farg + 2, "bt");
   if (s != NULL) {  /* loading a string? */
     const char *chunkname = luaL_optstring(L, farg + 1, s);
     status = (checkrights(L, stat.mode, s) != NULL)
-           || luaL_loadbuffer(L, s, lua_objlen(L, farg), chunkname);
+           || luaL_loadbuffer(L, s, l, chunkname);
   }
   else {  /* loading from a reader function */
     const char *chunkname = luaL_optstring(L, farg + 1, "=(load)");
