@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.102 2009/12/07 15:49:47 roberto Exp roberto $
+** $Id: lapi.c,v 2.103 2009/12/08 16:15:43 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -39,6 +39,16 @@ const char lua_ident[] =
 					  "invalid index")
 
 
+static Table *getcurrenv (lua_State *L) {
+  if (L->ci->previous == NULL)  /* no enclosing function? */
+    return hvalue(&G(L)->l_gt);  /* use global table as environment */
+  else {
+    Closure *func = curr_func(L);
+    return func->c.env;
+  }
+}
+
+
 static TValue *index2addr (lua_State *L, int idx) {
   CallInfo *ci = L->ci;
   if (idx > 0) {
@@ -54,8 +64,7 @@ static TValue *index2addr (lua_State *L, int idx) {
   else switch (idx) {  /* pseudo-indices */
     case LUA_REGISTRYINDEX: return &G(L)->l_registry;
     case LUA_ENVIRONINDEX: {
-      Closure *func = curr_func(L);
-      sethvalue(L, &L->env, func->c.env);
+      sethvalue(L, &L->env, getcurrenv(L));
       return &L->env;
     }
     case LUA_GLOBALSINDEX: return &G(L)->l_gt;
@@ -67,16 +76,6 @@ static TValue *index2addr (lua_State *L, int idx) {
                 ? &func->c.upvalue[idx-1]
                 : cast(TValue *, luaO_nilobject);
     }
-  }
-}
-
-
-static Table *getcurrenv (lua_State *L) {
-  if (L->ci->previous == NULL)  /* no enclosing function? */
-    return hvalue(&G(L)->l_gt);  /* use global table as environment */
-  else {
-    Closure *func = curr_func(L);
-    return func->c.env;
   }
 }
 
