@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.26 2009/11/19 19:06:52 roberto Exp roberto $
+** $Id: ltests.h,v 2.27 2009/12/14 15:27:30 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -30,9 +30,10 @@ typedef struct Memcontrol {
   unsigned long total;
   unsigned long maxmem;
   unsigned long memlimit;
+  unsigned long objcount[5];
 } Memcontrol;
 
-Memcontrol l_memcontrol;
+extern Memcontrol l_memcontrol;
 
 
 /*

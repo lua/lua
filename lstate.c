@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.64 2009/11/18 13:13:47 roberto Exp roberto $
+** $Id: lstate.c,v 2.65 2009/12/14 15:27:30 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -192,8 +192,7 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   lua_State *L1;
   lua_lock(L);
   luaC_checkGC(L);
-  L1 = &luaM_new(L, LX)->l;
-  luaC_link(L, obj2gco(L1), LUA_TTHREAD);
+  L1 = &luaC_newobj(L, LUA_TTHREAD, sizeof(LX), NULL, offsetof(LX, l))->th;
   setthvalue(L, L->top, L1);
   api_incr_top(L);
   preinit_state(L1, G(L));
