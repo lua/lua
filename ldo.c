@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.76 2009/12/10 18:20:07 roberto Exp roberto $
+** $Id: ldo.c,v 2.77 2009/12/17 12:26:09 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -81,7 +81,7 @@ struct lua_longjmp {
 };
 
 
-void luaD_seterrorobj (lua_State *L, int errcode, StkId oldtop) {
+static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
   switch (errcode) {
     case LUA_ERRMEM: {
       setsvalue2s(L, oldtop, luaS_newliteral(L, MEMERRMSG));
@@ -454,7 +454,7 @@ static int recover (lua_State *L, int status) {
   /* "finish" luaD_pcall */
   oldtop = restorestack(L, ci->u.c.oldtop);
   luaF_close(L, oldtop);
-  luaD_seterrorobj(L, status, oldtop);
+  seterrorobj(L, status, oldtop);
   L->ci = ci;
   L->allowhook = ci->u.c.old_allowhook;
   L->nny = 0;  /* should be zero to be yieldable */
@@ -535,7 +535,7 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
         status = luaD_rawrunprotected(L, unroll, NULL);  /* run continuation */
       else {  /* unrecoverable error */
         L->status = cast_byte(status);  /* mark thread as `dead' */
-        luaD_seterrorobj(L, status, L->top);
+        seterrorobj(L, status, L->top);
         L->ci->top = L->top;
         break;
       }
@@ -586,7 +586,7 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
   if (status != LUA_OK) {  /* an error occurred? */
     StkId oldtop = restorestack(L, old_top);
     luaF_close(L, oldtop);  /* close possible pending closures */
-    luaD_seterrorobj(L, status, oldtop);
+    seterrorobj(L, status, oldtop);
     L->ci = old_ci;
     L->allowhook = old_allowhooks;
     L->nny = old_nny;
