@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.83 2009/12/11 19:14:59 roberto Exp roberto $
+** $Id: ltests.c,v 2.84 2009/12/16 16:42:58 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -946,7 +946,13 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       lua_assert((s == NULL && s1 == NULL) || (strcmp)(s, s1) == 0);
     }
     else if EQ("objsize") {
-      lua_pushinteger(L1, lua_objlen(L1, getindex));
+      lua_pushinteger(L1, lua_rawlen(L1, getindex));
+    }
+    else if EQ("len") {
+      lua_len(L1, getindex);
+    }
+    else if EQ("Llen") {
+      lua_pushinteger(L1, luaL_len(L1, getindex));
     }
     else if EQ("tocfunction") {
       lua_pushcfunction(L1, lua_tocfunction(L1, getindex));
@@ -1135,13 +1141,13 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("type") {
       lua_pushstring(L1, luaL_typename(L1, getnum));
     }
-    else if EQ("getn") {
+/*    else if EQ("getn") {
       int i = getindex;
       lua_pushinteger(L1, lua_objlen(L1, i));
-    }
+    } */
     else if EQ("append") {
       int t = getindex;
-      int i = lua_objlen(L1, t);
+      int i = lua_rawlen(L1, t);
       lua_rawseti(L1, t, i + 1);
     }
     else if EQ("getctx") {

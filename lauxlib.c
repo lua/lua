@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.193 2009/10/05 16:44:33 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.194 2009/11/25 15:27:51 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -370,9 +370,9 @@ static void adjuststack (luaL_Buffer *B) {
   if (B->lvl > 1) {
     lua_State *L = B->L;
     int toget = 1;  /* number of levels to concat */
-    size_t toplen = lua_objlen(L, -1);
+    size_t toplen = lua_rawlen(L, -1);
     do {
-      size_t l = lua_objlen(L, -(toget+1));
+      size_t l = lua_rawlen(L, -(toget+1));
       if (B->lvl - toget + 1 >= LIMIT || toplen > l) {
         toplen += l;
         toget++;
@@ -463,7 +463,7 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
     lua_rawseti(L, t, FREELIST_REF);  /* (t[FREELIST_REF] = t[ref]) */
   }
   else {  /* no free elements */
-    ref = (int)lua_objlen(L, t) + 1;  /* get a new reference */
+    ref = (int)lua_rawlen(L, t) + 1;  /* get a new reference */
     if (ref == FREELIST_REF) {  /* FREELIST_REF not initialized? */
       lua_pushinteger(L, 0);
       lua_rawseti(L, t, FREELIST_REF);
@@ -624,6 +624,17 @@ LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
   lua_pushvalue(L, obj);
   lua_call(L, 1, 1);
   return 1;
+}
+
+
+LUALIB_API int luaL_len (lua_State *L, int idx) {
+  int l;
+  lua_len(L, idx);
+  l = lua_tointeger(L, -1);
+  if (l == 0 && !lua_isnumber(L, -1))
+    luaL_error(L, "object length is not a number");
+  lua_pop(L, 1);  /* remove object */
+  return l;
 }
 
 

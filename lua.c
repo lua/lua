@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.178 2009/12/17 12:26:09 roberto Exp roberto $
+** $Id: lua.c,v 1.179 2009/12/17 13:07:41 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -65,7 +65,7 @@
 #include <readline/history.h>
 #define lua_readline(L,b,p)     ((void)L, ((b)=readline(p)) != NULL)
 #define lua_saveline(L,idx) \
-        if (lua_objlen(L,idx) > 0)  /* non-empty line? */ \
+        if (lua_rawlen(L,idx) > 0)  /* non-empty line? */ \
           add_history(lua_tostring(L, idx));  /* add it to history */
 #define lua_freeline(L,b)       ((void)L, free(b))
 
@@ -271,7 +271,9 @@ static int loadline (lua_State *L) {
   if (!pushline(L, 1))
     return -1;  /* no input */
   for (;;) {  /* repeat until gets a complete line */
-    status = luaL_loadbuffer(L, lua_tostring(L, 1), lua_objlen(L, 1), "=stdin");
+    size_t l;
+    const char *line = lua_tolstring(L, 1, &l);
+    status = luaL_loadbuffer(L, line, l, "=stdin");
     if (!incomplete(L, status)) break;  /* cannot try to add lines? */
     if (!pushline(L, 0))  /* no more input? */
       return -1;

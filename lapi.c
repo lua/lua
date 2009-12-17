@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.103 2009/12/08 16:15:43 roberto Exp roberto $
+** $Id: lapi.c,v 2.104 2009/12/15 11:25:36 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -374,20 +374,13 @@ LUA_API const char *lua_tolstring (lua_State *L, int idx, size_t *len) {
 }
 
 
-LUA_API size_t lua_objlen (lua_State *L, int idx) {
+LUA_API size_t lua_rawlen (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
-  if (ttisuserdata(o)) return uvalue(o)->len;
-  else {
-    size_t res;
-    TValue temp;
-    lua_lock(L);
-    res = luaV_len(L, o, &temp);
-    if (res == cast(size_t, -1)) {
-      const TValue *t = &temp;
-      res = tonumber(t, &temp) ? nvalue(t) : 0;
-    }
-    lua_unlock(L);
-    return res;
+  switch (ttype(o)) {
+    case LUA_TSTRING: return tsvalue(o)->len;
+    case LUA_TUSERDATA: return uvalue(o)->len;
+    case LUA_TTABLE: return luaH_getn(hvalue(o));
+    default: return 0;
   }
 }
 
@@ -1023,6 +1016,16 @@ LUA_API void lua_concat (lua_State *L, int n) {
     api_incr_top(L);
   }
   /* else n == 1; nothing to do */
+  lua_unlock(L);
+}
+
+
+LUA_API void lua_len (lua_State *L, int idx) {
+  StkId t;
+  lua_lock(L);
+  t = index2addr(L, idx);
+  luaV_objlen(L, L->top, t);
+  api_incr_top(L);
   lua_unlock(L);
 }
 

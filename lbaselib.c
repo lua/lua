@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.231 2009/12/11 13:40:44 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.232 2009/12/15 11:25:16 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -258,7 +258,7 @@ static int ipairsaux (lua_State *L) {
   i++;  /* next value */
   lua_pushinteger(L, i);
   lua_rawgeti(L, 1, i);
-  return (lua_isnil(L, -1) && i > (int)lua_objlen(L, 1)) ? 0 : 2;
+  return (lua_isnil(L, -1) && i > luaL_len(L, 1)) ? 0 : 2;
 }
 
 
@@ -416,7 +416,7 @@ static int luaB_unpack (lua_State *L) {
   int i, e, n;
   luaL_checktype(L, 1, LUA_TTABLE);
   i = luaL_optint(L, 2, 1);
-  e = luaL_opt(L, luaL_checkint, 3, (int)lua_objlen(L, 1));
+  e = luaL_opt(L, luaL_checkint, 3, (int)lua_rawlen(L, 1));
   if (i > e) return 0;  /* empty range */
   n = e - i + 1;  /* number of elements */
   if (n <= 0 || !lua_checkstack(L, n))  /* n <= 0 means arith. overflow */

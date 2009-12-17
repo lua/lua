@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.49 2009/11/26 17:35:13 roberto Exp roberto $
+** $Id: ltablib.c,v 1.50 2009/12/07 15:50:27 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -16,7 +16,7 @@
 #include "lualib.h"
 
 
-#define aux_getn(L,n)	(luaL_checktype(L, n, LUA_TTABLE), lua_objlen(L, n))
+#define aux_getn(L,n)	(luaL_checktype(L, n, LUA_TTABLE), lua_rawlen(L, n))
 
 
 static int foreachi (lua_State *L) {
@@ -154,7 +154,7 @@ static int tconcat (lua_State *L) {
   const char *sep = luaL_optlstring(L, 2, "", &lsep);
   luaL_checktype(L, 1, LUA_TTABLE);
   i = luaL_optint(L, 3, 1);
-  last = luaL_opt(L, luaL_checkint, 4, (int)lua_objlen(L, 1));
+  last = luaL_opt(L, luaL_checkint, 4, (int)lua_rawlen(L, 1));
   luaL_buffinit(L, &b);
   for (; i < last; i++) {
     addfield(L, &b, i);
