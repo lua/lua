@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.75 2009/11/17 11:56:03 roberto Exp roberto $
+** $Id: llimits.h,v 1.76 2009/12/17 12:26:09 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -131,6 +131,38 @@ typedef lu_int32 Instruction;
 #if !defined(luai_threadyield)
 #define luai_threadyield(L)     {lua_unlock(L); lua_lock(L);}
 #endif
+
+
+/*
+** these macros allow user-specific actions on threads when you defined
+** LUAI_EXTRASPACE and need to do something extra when a thread is
+** created/deleted/resumed/yielded.
+*/
+#if !defined(luai_userstateopen)
+#define luai_userstateopen(L)           ((void)L)
+#endif
+
+#if !defined(luai_userstateclose)
+#define luai_userstateclose(L)          ((void)L)
+#endif
+
+#if !defined(luai_userstatethread)
+#define luai_userstatethread(L,L1)      ((void)L)
+#endif
+
+#if !defined(luai_userstatefree)
+#define luai_userstatefree(L)           ((void)L)
+#endif
+
+#if !defined(luai_userstateresume)
+#define luai_userstateresume(L,n)       ((void)L)
+#endif
+
+#if !defined(luai_userstateyield)
+#define luai_userstateyield(L,n)        ((void)L)
+#endif
+
+
 
 
 /*

@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.121 2009/12/14 15:27:30 roberto Exp roberto $
+** $Id: luaconf.h,v 1.122 2009/12/17 12:26:09 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -523,39 +523,6 @@ union luai_Cast { double l_d; long l_l; };
 #define LUA_DL_DLL
 #endif
 
-
-/*
-@@ luai_userstate* allow user-specific actions on threads.
-** CHANGE them if you defined LUAI_EXTRASPACE and need to do something
-** extra when a thread is created/deleted/resumed/yielded.
-*/
-#define luai_userstateopen(L)		((void)L)
-#define luai_userstateclose(L)		((void)L)
-#define luai_userstatethread(L,L1)	((void)L)
-#define luai_userstatefree(L)		((void)L)
-#define luai_userstateresume(L,n)	((void)L)
-#define luai_userstateyield(L,n)	((void)L)
-
-
-/*
-@@ LUA_INTFRMLEN is the length modifier for integer conversions
-@* in 'string.format'.
-@@ LUA_INTFRM_T is the integer type corresponding to the previous length
-@* modifier.
-** CHANGE them if your system supports long long or does not support long.
-*/
-
-#if defined(LUA_USELONGLONG)
-
-#define LUA_INTFRMLEN		"ll"
-#define LUA_INTFRM_T		long long
-
-#else
-
-#define LUA_INTFRMLEN		"l"
-#define LUA_INTFRM_T		long
-
-#endif
 
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.145 2009/11/26 16:49:28 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.146 2009/12/17 12:26:09 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -696,6 +696,24 @@ static int str_gsub (lua_State *L) {
 }
 
 /* }====================================================== */
+
+
+/*
+** length modifier for integer conversions ** in 'string.format' and
+** integer type corresponding to the previous length
+*/
+
+#if defined(LUA_USELONGLONG)
+
+#define LUA_INTFRMLEN           "ll"
+#define LUA_INTFRM_T            long long
+
+#else
+
+#define LUA_INTFRMLEN           "l"
+#define LUA_INTFRM_T            long
+
+#endif
 
 
 /* maximum size of each formatted item (> len(format('%99.99f', -1e308))) */
