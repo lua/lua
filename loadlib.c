@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.68 2009/11/24 12:05:44 roberto Exp roberto $
+** $Id: loadlib.c,v 1.69 2009/12/17 12:26:09 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -23,35 +23,35 @@
 
 
 /*
-** LUA_PATH and LUA_CPATH are the names of the environment variables that
-** Lua check to set its paths.
+** LUA_PATH_VAR and LUA_CPATH_VAR are the names of the environment
+** variables that Lua check to set its paths.
 */
-#if !defined(LUA_PATH)
-#define LUA_PATH	"LUA_PATH"
+#if !defined(LUA_PATH_VAR)
+#define LUA_PATH_VAR	"LUA_PATH"
 #endif
 
-#if !defined(LUA_CPATH)
-#define LUA_CPATH	"LUA_CPATH"
+#if !defined(LUA_CPATH_VAR)
+#define LUA_CPATH_VAR	"LUA_CPATH"
 #endif
 
 
 /*
-** LUA_PATHSEP is the character that separates templates in a path.
+** LUA_PATH_SEP is the character that separates templates in a path.
 ** LUA_PATH_MARK is the string that marks the substitution points in a
 ** template.
-** LUA_EXECDIR in a Windows path is replaced by the executable's
+** LUA_EXEC_DIR in a Windows path is replaced by the executable's
 ** directory.
 ** LUA_IGMARK is a mark to ignore all before it when building the
 ** luaopen_ function name.
 */
-#if !defined (LUA_PATHSEP)
-#define LUA_PATHSEP		";"
+#if !defined (LUA_PATH_SEP)
+#define LUA_PATH_SEP		";"
 #endif
 #if !defined (LUA_PATH_MARK)
 #define LUA_PATH_MARK		"?"
 #endif
-#if !defined (LUA_EXECDIR)
-#define LUA_EXECDIR		"!"
+#if !defined (LUA_EXEC_DIR)
+#define LUA_EXEC_DIR		"!"
 #endif
 #if !defined (LUA_IGMARK)
 #define LUA_IGMARK		"-"
@@ -138,7 +138,7 @@ static void setprogdir (lua_State *L) {
     luaL_error(L, "unable to get ModuleFileName");
   else {
     *lb = '\0';
-    luaL_gsub(L, lua_tostring(L, -1), LUA_EXECDIR, buff);
+    luaL_gsub(L, lua_tostring(L, -1), LUA_EXEC_DIR, buff);
     lua_remove(L, -2);  /* remove original string */
   }
 }
@@ -381,9 +381,9 @@ static int readable (const char *filename) {
 
 static const char *pushnexttemplate (lua_State *L, const char *path) {
   const char *l;
-  while (*path == *LUA_PATHSEP) path++;  /* skip separators */
+  while (*path == *LUA_PATH_SEP) path++;  /* skip separators */
   if (*path == '\0') return NULL;  /* no more templates */
-  l = strchr(path, *LUA_PATHSEP);  /* find next separator */
+  l = strchr(path, *LUA_PATH_SEP);  /* find next separator */
   if (l == NULL) l = path + strlen(path);
   lua_pushlstring(L, path, l - path);  /* template */
   return l;
@@ -655,8 +655,8 @@ static void setpath (lua_State *L, const char *fieldname, const char *envname,
     lua_pushstring(L, def);  /* use default */
   else {
     /* replace ";;" by ";AUXMARK;" and then AUXMARK by default path */
-    path = luaL_gsub(L, path, LUA_PATHSEP LUA_PATHSEP,
-                              LUA_PATHSEP AUXMARK LUA_PATHSEP);
+    path = luaL_gsub(L, path, LUA_PATH_SEP LUA_PATH_SEP,
+                              LUA_PATH_SEP AUXMARK LUA_PATH_SEP);
     luaL_gsub(L, path, AUXMARK, def);
     lua_remove(L, -2);
   }
@@ -701,11 +701,11 @@ LUAMOD_API int luaopen_package (lua_State *L) {
     lua_rawseti(L, -2, i+1);
   }
   lua_setfield(L, -2, "loaders");  /* put it in field `loaders' */
-  setpath(L, "path", LUA_PATH, LUA_PATH_DEFAULT);  /* set field `path' */
-  setpath(L, "cpath", LUA_CPATH, LUA_CPATH_DEFAULT); /* set field `cpath' */
+  setpath(L, "path", LUA_PATH_VAR, LUA_PATH_DEFAULT);  /* set field `path' */
+  setpath(L, "cpath", LUA_CPATH_VAR, LUA_CPATH_DEFAULT); /* set field `cpath' */
   /* store config information */
-  lua_pushliteral(L, LUA_DIRSEP "\n" LUA_PATHSEP "\n" LUA_PATH_MARK "\n"
-                     LUA_EXECDIR "\n" LUA_IGMARK "\n");
+  lua_pushliteral(L, LUA_DIRSEP "\n" LUA_PATH_SEP "\n" LUA_PATH_MARK "\n"
+                     LUA_EXEC_DIR "\n" LUA_IGMARK "\n");
   lua_setfield(L, -2, "config");
   /* set field `loaded' */
   luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 2);
