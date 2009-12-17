@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.26 2009/11/23 18:20:38 roberto Exp roberto $
+** $Id: loslib.c,v 1.27 2009/11/24 12:05:44 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,28 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
+
+
+/*
+** By default, Lua uses tmpnam except when POSIX is available, where it
+** uses mkstemp.
+*/
+#if defined(LUA_USE_MKSTEMP)
+#include <unistd.h>
+#define LUA_TMPNAMBUFSIZE       32
+#define lua_tmpnam(b,e) { \
+        strcpy(b, "/tmp/lua_XXXXXX"); \
+        e = mkstemp(b); \
+        if (e != -1) close(e); \
+        e = (e == -1); }
+
+#elif !defined(lua_tmpnam)
+
+#define LUA_TMPNAMBUFSIZE       L_tmpnam
+#define lua_tmpnam(b,e)         { e = (tmpnam(b) == NULL); }
+
+#endif
+
 
 
 static int os_pushresult (lua_State *L, int i, const char *filename) {

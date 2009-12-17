@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.27 2009/12/14 15:27:30 roberto Exp roberto $
+** $Id: ltests.h,v 2.28 2009/12/16 16:42:58 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -44,10 +44,6 @@ void *l_Trick;
 
 void *debug_realloc (void *ud, void *block, size_t osize, size_t nsize);
 
-#ifdef lua_c
-#define luaL_newstate()	lua_newstate(debug_realloc, &l_memcontrol)
-#endif
-
 
 typedef struct CallInfo *pCallInfo;
 
@@ -72,7 +68,9 @@ struct L_EXTRA { int lock; int *plock; };
 
 int luaB_opentests (lua_State *L);
 
-#ifdef lua_c
+
+#if defined(lua_c)
+#define luaL_newstate()		lua_newstate(debug_realloc, &l_memcontrol)
 #define luaL_openlibs(L)	{ (luaL_openlibs)(L); luaB_opentests(L); }
 #endif
 

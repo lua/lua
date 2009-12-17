@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.144 2009/11/24 12:05:44 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.145 2009/11/26 16:49:28 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,15 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
+
+
+/*
+** maximum number of captures that a pattern can do during
+** pattern-matching. This limit is arbitrary.
+*/
+#if !defined(LUA_MAXCAPTURES)
+#define LUA_MAXCAPTURES		32
+#endif
 
 
 /* macro to `unsign' a character */

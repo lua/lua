@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.120 2009/12/10 19:00:33 roberto Exp roberto $
+** $Id: luaconf.h,v 1.121 2009/12/14 15:27:30 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -65,17 +65,6 @@
 #endif
 
 
-/*
-@@ LUA_PATH and LUA_CPATH are the names of the environment variables that
-@* Lua check to set its paths.
-@@ LUA_INIT is the name of the environment variable that Lua
-@* checks for initialization code.
-** CHANGE them if you want different names.
-*/
-#define LUA_PATH        "LUA_PATH"
-#define LUA_CPATH       "LUA_CPATH"
-#define LUA_INIT	"LUA_INIT"
-
 
 /*
 @@ LUA_PATH_DEFAULT is the default path that Lua uses to look for
@@ -121,24 +110,6 @@
 #else
 #define LUA_DIRSEP	"/"
 #endif
-
-
-/*
-@@ LUA_PATHSEP is the character that separates templates in a path.
-@@ LUA_PATH_MARK is the string that marks the substitution points in a
-@* template.
-@@ LUA_EXECDIR in a Windows path is replaced by the executable's
-@* directory.
-@@ LUA_IGMARK is a mark to ignore all before it when building the
-@* luaopen_ function name.
-** CHANGE them if for some reason your system cannot use those
-** characters. (E.g., if one of those characters is a common character
-** in file/directory names.) Probably you do not need to change them.
-*/
-#define LUA_PATHSEP	";"
-#define LUA_PATH_MARK	"?"
-#define LUA_EXECDIR	"!"
-#define LUA_IGMARK	"-"
 
 
 /*
@@ -225,106 +196,6 @@
 #define luai_writestring(s,l)	fwrite((s), sizeof(char), (l), stdout)
 
 
-/*
-** {==================================================================
-** Stand-alone configuration
-** ===================================================================
-*/
-
-#if defined(lua_c) || defined(luaall_c)
-
-/*
-@@ lua_stdin_is_tty detects whether the standard input is a 'tty' (that
-@* is, whether we're running lua interactively).
-** CHANGE it if you have a better definition for non-POSIX/non-Windows
-** systems.
-*/
-#if defined(LUA_USE_ISATTY)
-#include <unistd.h>
-#define lua_stdin_is_tty()	isatty(0)
-#elif defined(LUA_WIN)
-#include <io.h>
-#include <stdio.h>
-#define lua_stdin_is_tty()	_isatty(_fileno(stdin))
-#else
-#define lua_stdin_is_tty()	1  /* assume stdin is a tty */
-#endif
-
-
-/*
-@@ LUA_PROMPT is the default prompt used by stand-alone Lua.
-@@ LUA_PROMPT2 is the default continuation prompt used by stand-alone Lua.
-** CHANGE them if you want different prompts. (You can also change the
-** prompts dynamically, assigning to globals _PROMPT/_PROMPT2.)
-*/
-#define LUA_PROMPT		"> "
-#define LUA_PROMPT2		">> "
-
-
-/*
-@@ LUA_PROGNAME is the default name for the stand-alone Lua program.
-** CHANGE it if your stand-alone interpreter has a different name and
-** your system is not able to detect that name automatically.
-*/
-#define LUA_PROGNAME		"lua"
-
-
-/*
-@@ LUA_MAXINPUT is the maximum length for an input line in the
-@* stand-alone interpreter.
-** CHANGE it if you need longer lines.
-*/
-#define LUA_MAXINPUT	512
-
-
-/*
-@@ lua_readline defines how to show a prompt and then read a line from
-@* the standard input.
-@@ lua_saveline defines how to "save" a read line in a "history".
-@@ lua_freeline defines how to free a line read by lua_readline.
-** CHANGE them if you want to improve/adapt this functionality.
-*/
-#if defined(LUA_USE_READLINE)
-#include <stdio.h>
-#include <readline/readline.h>
-#include <readline/history.h>
-#define lua_readline(L,b,p)	((void)L, ((b)=readline(p)) != NULL)
-#define lua_saveline(L,idx) \
-	if (lua_objlen(L,idx) > 0)  /* non-empty line? */ \
-	  add_history(lua_tostring(L, idx));  /* add it to history */
-#define lua_freeline(L,b)	((void)L, free(b))
-#else
-#define lua_readline(L,b,p)	\
-	((void)L, fputs(p, stdout), fflush(stdout),  /* show prompt */ \
-	fgets(b, LUA_MAXINPUT, stdin) != NULL)  /* get line */
-#define lua_saveline(L,idx)	{ (void)L; (void)idx; }
-#define lua_freeline(L,b)	{ (void)L; (void)b; }
-#endif
-
-#endif
-
-/* }================================================================== */
-
-
-/*
-@@ LUAI_GCPAUSE defines the default pause between garbage-collector cycles
-@* as a percentage.
-** CHANGE it if you want the GC to run faster or slower (higher values
-** mean larger pauses which mean slower collection.) You can also change
-** this value dynamically.
-*/
-#define LUAI_GCPAUSE	162  /* 162% (wait memory to double before next GC) */
-
-
-/*
-@@ LUAI_GCMUL defines the default speed of garbage collection relative to
-@* memory allocation as a percentage.
-** CHANGE it if you want to change the granularity of the garbage
-** collection. (Higher values mean coarser collections. 0 represents
-** infinity, where each step performs a full collection.) You can also
-** change this value dynamically.
-*/
-#define LUAI_GCMUL	200 /* GC runs 'twice the speed' of memory allocation */
 
 
 
@@ -371,22 +242,6 @@
 
 /* }================================================================== */
 
-
-
-
-/*
-@@ luai_apicheck is the assert macro used by the Lua-C API.
-** CHANGE luai_apicheck if you want Lua to perform some checks in the
-** parameters it gets from API calls. This may slow down the interpreter
-** a bit, but may be quite useful when debugging C code that interfaces
-** with Lua. A useful redefinition is to use assert.h.
-*/
-#if defined(LUA_USE_APICHECK)
-#include <assert.h>
-#define luai_apicheck(L,o)	{ (void)L; assert(o); }
-#else
-#define luai_apicheck(L,o)	{ (void)L; }
-#endif
 
 
 /*
@@ -456,14 +311,6 @@
 ** overflow for some forms of deep constructs.
 ** ===================================================================
 */
-
-
-/*
-@@ LUAI_MAXCCALLS is the maximum depth for nested C calls and
-@* syntactical nested non-terminals in a program. (Value must
-@* fit in an unsigned short int.)
-*/
-#define LUAI_MAXCCALLS		200
 
 
 /*
@@ -616,81 +463,6 @@ union luai_Cast { double l_d; long l_l; };
 
 
 /*
-@@ LUAI_USER_ALIGNMENT_T is a type that requires maximum alignment.
-** CHANGE it if your system requires alignments larger than double. (For
-** instance, if your system supports long doubles and they must be
-** aligned in 16-byte boundaries, then you should add long double in the
-** union.) Probably you do not need to change this.
-*/
-#define LUAI_USER_ALIGNMENT_T	union { double u; void *s; long l; }
-
-
-/*
-@@ LUAI_THROW/LUAI_TRY define how Lua does exception handling.
-** CHANGE them if you prefer to use longjmp/setjmp even with C++
-** or if want/don't to use _longjmp/_setjmp instead of regular
-** longjmp/setjmp. By default, Lua handles errors with exceptions when
-** compiling as C++ code, with _longjmp/_setjmp when asked to use them,
-** and with longjmp/setjmp otherwise.
-*/
-#if defined(__cplusplus)
-/* C++ exceptions */
-#define LUAI_THROW(L,c)	throw(c)
-#define LUAI_TRY(L,c,a)	try { a } catch(...) \
-	{ if ((c)->status == 0) (c)->status = -1; }
-#define luai_jmpbuf	int  /* dummy variable */
-
-#elif defined(LUA_USE_ULONGJMP)
-/* in Unix, try _longjmp/_setjmp (more efficient) */
-#define LUAI_THROW(L,c)	_longjmp((c)->b, 1)
-#define LUAI_TRY(L,c,a)	if (_setjmp((c)->b) == 0) { a }
-#define luai_jmpbuf	jmp_buf
-
-#else
-/* default handling with long jumps */
-#define LUAI_THROW(L,c)	longjmp((c)->b, 1)
-#define LUAI_TRY(L,c,a)	if (setjmp((c)->b) == 0) { a }
-#define luai_jmpbuf	jmp_buf
-
-#endif
-
-
-/*
-@@ LUA_MAXCAPTURES is the maximum number of captures that a pattern
-@* can do during pattern-matching.
-** CHANGE it if you need more captures. This limit is arbitrary.
-*/
-#define LUA_MAXCAPTURES		32
-
-
-/*
-@@ lua_tmpnam is the function that the OS library uses to create a
-@* temporary name.
-@@ LUA_TMPNAMBUFSIZE is the maximum size of a name created by lua_tmpnam.
-** CHANGE them if you have an alternative to tmpnam (which is considered
-** insecure) or if you want the original tmpnam anyway.  By default, Lua
-** uses tmpnam except when POSIX is available, where it uses mkstemp.
-*/
-#if defined(loslib_c) || defined(luaall_c)
-
-#if defined(LUA_USE_MKSTEMP)
-#include <unistd.h>
-#define LUA_TMPNAMBUFSIZE	32
-#define lua_tmpnam(b,e)	{ \
-	strcpy(b, "/tmp/lua_XXXXXX"); \
-	e = mkstemp(b); \
-	if (e != -1) close(e); \
-	e = (e == -1); }
-
-#else
-#define LUA_TMPNAMBUFSIZE	L_tmpnam
-#define lua_tmpnam(b,e)		{ e = (tmpnam(b) == NULL); }
-#endif
-
-#endif
-
-
-/*
 @@ LUA_STRFTIMEOPTIONS is the list of valid conversion specifiers
 @* for the 'strftime' function;
 ** CHANGE it if you want to use non-ansi options specific to your system.
@@ -750,15 +522,6 @@ union luai_Cast { double l_d; long l_l; };
 #if defined(LUA_WIN)
 #define LUA_DL_DLL
 #endif
-
-
-/*
-@@ LUAI_EXTRASPACE allows you to add user-specific data in a lua_State.
-@* (This data goes just *before* the lua_State pointer.)
-** CHANGE (define) this if you really need that. If defined, this value
-** cannot be zero.
-*/
-/* #define LUAI_EXTRASPACE		?? */
 
 
 /*

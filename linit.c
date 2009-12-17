@@ -1,5 +1,5 @@
 /*
-** $Id: linit.c,v 1.20 2009/09/05 12:39:29 roberto Exp roberto $
+** $Id: linit.c,v 1.21 2009/12/11 13:40:44 roberto Exp roberto $
 ** Initialization of libraries for lua.c and other clients        
 ** See Copyright Notice in lua.h
 */
@@ -63,7 +63,7 @@ LUALIB_API void luaL_openlibs (lua_State *L) {
     lua_setfield(L, -2, lib->name);
   }
   lua_pop(L, 1);  /* remove package.preload table */
-#ifdef LUA_COMPAT_DEBUGLIB
+#if defined(LUA_COMPAT_DEBUGLIB)
   lua_getfield(L, LUA_GLOBALSINDEX, "require");
   lua_pushliteral(L, LUA_DBLIBNAME);
   lua_call(L, 1, 0);  /* call 'require"debug"' */

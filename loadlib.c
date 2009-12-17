@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.67 2009/11/16 15:51:19 roberto Exp roberto $
+** $Id: loadlib.c,v 1.68 2009/11/24 12:05:44 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -20,6 +20,43 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
+
+
+/*
+** LUA_PATH and LUA_CPATH are the names of the environment variables that
+** Lua check to set its paths.
+*/
+#if !defined(LUA_PATH)
+#define LUA_PATH	"LUA_PATH"
+#endif
+
+#if !defined(LUA_CPATH)
+#define LUA_CPATH	"LUA_CPATH"
+#endif
+
+
+/*
+** LUA_PATHSEP is the character that separates templates in a path.
+** LUA_PATH_MARK is the string that marks the substitution points in a
+** template.
+** LUA_EXECDIR in a Windows path is replaced by the executable's
+** directory.
+** LUA_IGMARK is a mark to ignore all before it when building the
+** luaopen_ function name.
+*/
+#if !defined (LUA_PATHSEP)
+#define LUA_PATHSEP		";"
+#endif
+#if !defined (LUA_PATH_MARK)
+#define LUA_PATH_MARK		"?"
+#endif
+#if !defined (LUA_EXECDIR)
+#define LUA_EXECDIR		"!"
+#endif
+#if !defined (LUA_IGMARK)
+#define LUA_IGMARK		"-"
+#endif
+
 
 
 /* prefix for open functions in C libraries */
