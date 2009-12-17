@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.64 2009/12/11 19:14:59 roberto Exp roberto $
+** $Id: lgc.c,v 2.65 2009/12/11 21:31:14 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -116,12 +116,20 @@ void luaC_barrierback (lua_State *L, Table *t) {
 }
 
 
-void luaC_link (lua_State *L, GCObject *o, lu_byte tt) {
+/*
+** create a new collectable object and link it to '*list'
+*/
+GCObject *luaC_newobj (lua_State *L, int tt, size_t sz, GCObject **list,
+                       int offset) {
   global_State *g = G(L);
+  GCObject *o = obj2gco(cast(char *, luaM_newobject(L, tt, sz)) + offset);
+  if (list == NULL)
+    list = &g->rootgc;  /* standard list for collectable objects */
   gch(o)->marked = luaC_white(g);
   gch(o)->tt = tt;
-  gch(o)->next = g->rootgc;
-  g->rootgc = o;
+  gch(o)->next = *list;
+  *list = o;
+  return o;
 }
 
 

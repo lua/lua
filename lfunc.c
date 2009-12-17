@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.17 2009/11/26 11:39:20 roberto Exp roberto $
+** $Id: lfunc.c,v 2.18 2009/12/11 13:39:34 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -21,30 +21,27 @@
 
 
 
-Closure *luaF_newCclosure (lua_State *L, int nelems, Table *e) {
-  Closure *c = cast(Closure *, luaM_malloc(L, sizeCclosure(nelems)));
-  luaC_link(L, obj2gco(c), LUA_TFUNCTION);
+Closure *luaF_newCclosure (lua_State *L, int n, Table *e) {
+  Closure *c = &luaC_newobj(L, LUA_TFUNCTION, sizeCclosure(n), NULL, 0)->cl;
   c->c.isC = 1;
   c->c.env = e;
-  c->c.nupvalues = cast_byte(nelems);
+  c->c.nupvalues = cast_byte(n);
   return c;
 }
 
 
-Closure *luaF_newLclosure (lua_State *L, int nelems, Table *e) {
-  Closure *c = cast(Closure *, luaM_malloc(L, sizeLclosure(nelems)));
-  luaC_link(L, obj2gco(c), LUA_TFUNCTION);
+Closure *luaF_newLclosure (lua_State *L, int n, Table *e) {
+  Closure *c = &luaC_newobj(L, LUA_TFUNCTION, sizeLclosure(n), NULL, 0)->cl;
   c->l.isC = 0;
   c->l.env = e;
-  c->l.nupvalues = cast_byte(nelems);
-  while (nelems--) c->l.upvals[nelems] = NULL;
+  c->l.nupvalues = cast_byte(n);
+  while (n--) c->l.upvals[n] = NULL;
   return c;
 }
 
 
 UpVal *luaF_newupval (lua_State *L) {
-  UpVal *uv = luaM_new(L, UpVal);
-  luaC_link(L, obj2gco(uv), LUA_TUPVAL);
+  UpVal *uv = &luaC_newobj(L, LUA_TUPVAL, sizeof(UpVal), NULL, 0)->uv;
   uv->v = &uv->u.value;
   setnilvalue(uv->v);
   return uv;
@@ -65,12 +62,9 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
     }
     pp = &p->next;
   }
-  uv = luaM_new(L, UpVal);  /* not found: create a new one */
-  uv->tt = LUA_TUPVAL;
-  uv->marked = luaC_white(g);
+  /* not found: create a new one */
+  uv = &luaC_newobj(L, LUA_TUPVAL, sizeof(UpVal), pp, 0)->uv;
   uv->v = level;  /* current value lives in the stack */
-  uv->next = *pp;  /* chain it in the proper position */
-  *pp = obj2gco(uv);
   uv->u.l.prev = &g->uvhead;  /* double link it in `uvhead' list */
   uv->u.l.next = g->uvhead.u.l.next;
   uv->u.l.next->u.l.prev = uv;
@@ -114,8 +108,7 @@ void luaF_close (lua_State *L, StkId level) {
 
 
 Proto *luaF_newproto (lua_State *L) {
-  Proto *f = luaM_new(L, Proto);
-  luaC_link(L, obj2gco(f), LUA_TPROTO);
+  Proto *f = &luaC_newobj(L, LUA_TPROTO, sizeof(Proto), NULL, 0)->p;
   f->k = NULL;
   f->sizek = 0;
   f->p = NULL;

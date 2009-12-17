@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.25 2009/12/11 19:14:59 roberto Exp roberto $
+** $Id: lgc.h,v 2.26 2009/12/11 21:31:14 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -98,7 +98,8 @@ LUAI_FUNC void luaC_freeallobjects (lua_State *L);
 LUAI_FUNC void luaC_step (lua_State *L);
 LUAI_FUNC void luaC_runtilstate (lua_State *L, int statesmask);
 LUAI_FUNC void luaC_fullgc (lua_State *L, int isemergency);
-LUAI_FUNC void luaC_link (lua_State *L, GCObject *o, lu_byte tt);
+LUAI_FUNC GCObject *luaC_newobj (lua_State *L, int tt, size_t sz,
+                                 GCObject **list, int offset);
 LUAI_FUNC void luaC_linkupval (lua_State *L, UpVal *uv);
 LUAI_FUNC void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v);
 LUAI_FUNC void luaC_barrierback (lua_State *L, Table *t);

@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.14 2009/12/11 19:14:59 roberto Exp roberto $
+** $Id: lstring.c,v 2.15 2009/12/11 21:31:14 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -51,23 +51,22 @@ void luaS_resize (lua_State *L, int newsize) {
 
 static TString *newlstr (lua_State *L, const char *str, size_t l,
                                        unsigned int h) {
+  size_t totalsize;  /* total size of TString object */
+  GCObject **list;  /* (pointer to) list where it will be inserted */
   TString *ts;
   stringtable *tb = &G(L)->strt;
   if (l+1 > (MAX_SIZET - sizeof(TString))/sizeof(char))
     luaM_toobig(L);
   if (tb->nuse >= cast(lu_int32, tb->size) && tb->size <= MAX_INT/2)
     luaS_resize(L, tb->size*2);  /* too crowded */
-  ts = cast(TString *, luaM_malloc(L, (l+1)*sizeof(char)+sizeof(TString)));
+  totalsize = sizeof(TString) + ((l + 1) * sizeof(char));
+  list = &tb->hash[lmod(h, tb->size)];
+  ts = &luaC_newobj(L, LUA_TSTRING, totalsize, list, 0)->ts;
   ts->tsv.len = l;
   ts->tsv.hash = h;
-  ts->tsv.marked = luaC_white(G(L));
-  ts->tsv.tt = LUA_TSTRING;
   ts->tsv.reserved = 0;
   memcpy(ts+1, str, l*sizeof(char));
   ((char *)(ts+1))[l] = '\0';  /* ending 0 */
-  h = lmod(h, tb->size);
-  ts->tsv.next = tb->hash[h];  /* chain new entry */
-  tb->hash[h] = obj2gco(ts);
   tb->nuse++;
   return ts;
 }
@@ -99,8 +98,7 @@ Udata *luaS_newudata (lua_State *L, size_t s, Table *e) {
   Udata *u;
   if (s > MAX_SIZET - sizeof(Udata))
     luaM_toobig(L);
-  u = cast(Udata *, luaM_malloc(L, s + sizeof(Udata)));
-  luaC_link(L, obj2gco(u), LUA_TUSERDATA);
+  u = &luaC_newobj(L, LUA_TUSERDATA, sizeof(Udata) + s, NULL, 0)->u;
   u->uv.len = s;
   u->uv.metatable = NULL;
   u->uv.env = e;

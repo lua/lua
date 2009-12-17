@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.33 2007/02/09 13:04:52 roberto Exp roberto $
+** $Id: lmem.h,v 1.34 2009/04/17 14:40:13 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -25,10 +25,12 @@
 #define luaM_free(L, b)		luaM_realloc_(L, (b), sizeof(*(b)), 0)
 #define luaM_freearray(L, b, n)   luaM_reallocv(L, (b), n, 0, sizeof((b)[0]))
 
-#define luaM_malloc(L,t)	luaM_realloc_(L, NULL, 0, (t))
+#define luaM_malloc(L,s)	luaM_realloc_(L, NULL, 0, (s))
 #define luaM_new(L,t)		cast(t *, luaM_malloc(L, sizeof(t)))
 #define luaM_newvector(L,n,t) \
 		cast(t *, luaM_reallocv(L, NULL, 0, n, sizeof(t)))
+
+#define luaM_newobject(L,tag,s)	luaM_realloc_(L, NULL, tag, (s))
 
 #define luaM_growvector(L,v,nelems,size,t,limit,e) \
           if ((nelems)+1 > (size)) \

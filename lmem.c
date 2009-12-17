@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.72 2006/09/14 12:59:06 roberto Exp roberto $
+** $Id: lmem.c,v 1.73 2006/09/14 18:42:28 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -26,12 +26,11 @@
 ** void * frealloc (void *ud, void *ptr, size_t osize, size_t nsize);
 ** (`osize' is the old size, `nsize' is the new size)
 **
-** Lua ensures that (ptr == NULL) iff (osize == 0).
-**
-** * frealloc(ud, NULL, 0, x) creates a new block of size `x'
+** * frealloc(ud, NULL, x, s) creates a new block of size `s' (no
+** matter 'x').
 **
 ** * frealloc(ud, p, x, 0) frees the block `p'
-** (in this specific case, frealloc must return NULL).
+** (in this specific case, frealloc must return NULL);
 ** particularly, frealloc(ud, NULL, 0, 0) does nothing
 ** (which is equivalent to free(NULL) in ANSI C)
 **
@@ -77,14 +76,15 @@ void *luaM_toobig (lua_State *L) {
 void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
   void *newblock;
   global_State *g = G(L);
-  lua_assert((osize == 0) == (block == NULL));
+  size_t realosize = (block) ? osize : 0;
+  lua_assert((realosize == 0) == (block == NULL));
 #if defined(HARDMEMTESTS)
-  if (nsize > osize && g->GCthreshold != MAX_LUMEM)
+  if (nsize > realosize && g->GCthreshold != MAX_LUMEM)
     luaC_fullgc(L, 1);  /* force a GC whenever possible */
 #endif
   newblock = (*g->frealloc)(g->ud, block, osize, nsize);
   if (newblock == NULL && nsize > 0) {
-    lua_assert(nsize > osize);  /* cannot fail when shrinking a block */
+    lua_assert(nsize > realosize);  /* cannot fail when shrinking a block */
     if (g->GCthreshold != MAX_LUMEM) {
       luaC_fullgc(L, 1);  /* try to free some memory... */
       newblock = (*g->frealloc)(g->ud, block, osize, nsize);  /* try again */
@@ -93,7 +93,7 @@ void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
       luaD_throw(L, LUA_ERRMEM);
   }
   lua_assert((nsize == 0) == (newblock == NULL));
-  g->totalbytes = (g->totalbytes - osize) + nsize;
+  g->totalbytes = (g->totalbytes - realosize) + nsize;
   return newblock;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.82 2009/12/10 18:21:28 roberto Exp roberto $
+** $Id: ltests.c,v 2.83 2009/12/11 19:14:59 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -92,8 +92,7 @@ static int tpanic (lua_State *L) {
 #define fillmem(mem,size)	/* empty */
 #endif
 
-
-Memcontrol l_memcontrol = {0L, 0L, 0L, 0L};
+Memcontrol l_memcontrol = {0L, 0L, 0L, 0L, {0L, 0L, 0L, 0L, 0L}};
 
 
 static void *checkblock (void *block, size_t size) {
@@ -119,6 +118,11 @@ static void freeblock (Memcontrol *mc, void *block, size_t size) {
 
 void *debug_realloc (void *ud, void *block, size_t oldsize, size_t size) {
   Memcontrol *mc = cast(Memcontrol *, ud);
+  if (block == NULL) {
+    if (LUA_TSTRING <= oldsize && oldsize <= LUA_TTHREAD)
+      mc->objcount[oldsize - LUA_TSTRING]++;
+    oldsize = 0;
+  }
   lua_assert((oldsize == 0) ? block == NULL :
                               block && checkblocksize(block, oldsize));
   if (mc->memlimit == 0) {  /* first time? */
@@ -506,10 +510,12 @@ static int get_limits (lua_State *L) {
 
 static int mem_query (lua_State *L) {
   if (lua_isnone(L, 1)) {
+    int i;
     lua_pushinteger(L, l_memcontrol.total);
     lua_pushinteger(L, l_memcontrol.numblocks);
     lua_pushinteger(L, l_memcontrol.maxmem);
-    return 3;
+    for (i = 0; i < 5; i++) lua_pushinteger(L, l_memcontrol.objcount[i]);
+    return 3 + 5;
   }
   else {
     l_memcontrol.memlimit = luaL_checkint(L, 1);
