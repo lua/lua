@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.27 2009/11/24 12:05:44 roberto Exp roberto $
+** $Id: loslib.c,v 1.28 2009/12/17 12:26:09 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,23 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
+
+
+/*
+** list of valid conversion specifiers @* for the 'strftime' function
+*/
+#if !defined(LUA_STRFTIMEOPTIONS)
+
+#if !defined(LUA_USE_POSIX)
+#define LUA_STRFTIMEOPTIONS     { "aAbBcdHIjmMpSUwWxXyYz%", "" }
+#else
+#define LUA_STRFTIMEOPTIONS     { "aAbBcCdDeFgGhHIjmMnprRStTuUVwWxXyYzZ%", "", \
+                                "E", "cCxXyY",  \
+                                "O", "deHImMSuUVwWy" }
+#endif
+
+#endif
+
 
 
 /*
@@ -144,7 +161,7 @@ static int getfield (lua_State *L, const char *key, int d) {
 
 
 static const char *checkoption (lua_State *L, const char *conv, char *buff) {
-  static const char *const options[] = { LUA_STRFTIMEOPTIONS };
+  static const char *const options[] = LUA_STRFTIMEOPTIONS;
   unsigned int i;
   for (i = 0; i < sizeof(options)/sizeof(options[0]); i += 2) {
     if (*conv != '\0' && strchr(options[i], *conv) != NULL) {

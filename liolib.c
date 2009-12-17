@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.82 2009/09/01 19:10:48 roberto Exp roberto $
+** $Id: liolib.c,v 2.83 2009/11/24 12:05:44 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -17,6 +17,33 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
+
+
+/*
+** lua_popen spawns a new process connected to the current one through
+** the file streams.
+*/
+#if !defined(lua_popen)
+
+#if defined(LUA_USE_POPEN)
+
+#define lua_popen(L,c,m)        ((void)L, fflush(NULL), popen(c,m))
+#define lua_pclose(L,file)      ((void)L, pclose(file))
+
+#elif defined(LUA_WIN)
+
+#define lua_popen(L,c,m)        ((void)L, _popen(c,m))
+#define lua_pclose(L,file)      ((void)L, _pclose(file))
+
+#else
+
+#define lua_popen(L,c,m)        ((void)((void)c, m),  \
+                luaL_error(L, LUA_QL("popen") " not supported"), (FILE*)0)
+#define lua_pclose(L,file)              ((void)((void)L, file), -1)
+
+#endif
+
+#endif
 
 
 

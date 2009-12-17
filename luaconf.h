@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.122 2009/12/17 12:26:09 roberto Exp roberto $
+** $Id: luaconf.h,v 1.123 2009/12/17 12:50:20 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -460,46 +460,6 @@ union luai_Cast { double l_d; long l_l; };
 #endif
 
 /* }================================================================== */
-
-
-/*
-@@ LUA_STRFTIMEOPTIONS is the list of valid conversion specifiers
-@* for the 'strftime' function;
-** CHANGE it if you want to use non-ansi options specific to your system.
-*/
-#if !defined(LUA_USE_POSIX)
-#define LUA_STRFTIMEOPTIONS	"aAbBcdHIjmMpSUwWxXyYz%", ""
-
-#else
-#define LUA_STRFTIMEOPTIONS	"aAbBcCdDeFgGhHIjmMnprRStTuUVwWxXyYzZ%", "", \
-				"E", "cCxXyY",  \
-				"O", "deHImMSuUVwWy"
-#endif
-
-
-
-/*
-@@ lua_popen spawns a new process connected to the current one through
-@* the file streams.
-** CHANGE it if you have a way to implement it in your system.
-*/
-#if defined(LUA_USE_POPEN)
-
-#define lua_popen(L,c,m)	((void)L, fflush(NULL), popen(c,m))
-#define lua_pclose(L,file)	((void)L, pclose(file))
-
-#elif defined(LUA_WIN)
-
-#define lua_popen(L,c,m)	((void)L, _popen(c,m))
-#define lua_pclose(L,file)	((void)L, _pclose(file))
-
-#else
-
-#define lua_popen(L,c,m)	((void)((void)c, m),  \
-		luaL_error(L, LUA_QL("popen") " not supported"), (FILE*)0)
-#define lua_pclose(L,file)		((void)((void)L, file), -1)
-
-#endif
 
 /*
 @@ LUA_DL_* define which dynamic-library system Lua should use.
