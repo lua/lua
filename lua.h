@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.253 2009/12/11 13:40:44 roberto Exp roberto $
+** $Id: lua.h,v 1.254 2009/12/17 16:20:01 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -95,6 +95,14 @@ typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 #define LUA_RIDX_LAST		LUA_RIDX_CPCALL
 
 
+/* type of numbers in Lua */
+typedef LUA_NUMBER lua_Number;
+
+
+/* type for integer functions */
+typedef LUA_INTEGER lua_Integer;
+
+
 
 /*
 ** generic extra include file
@@ -102,14 +110,6 @@ typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 #if defined(LUA_USER_H)
 #include LUA_USER_H
 #endif
-
-
-/* type of numbers in Lua */
-typedef LUA_NUMBER lua_Number;
-
-
-/* type for integer functions */
-typedef LUA_INTEGER lua_Integer;
 
 
 
@@ -123,7 +123,7 @@ LUA_API lua_State *(lua_newthread) (lua_State *L);
 LUA_API lua_CFunction (lua_atpanic) (lua_State *L, lua_CFunction panicf);
 
 
-LUA_API const lua_Number *lua_version (lua_State *L);
+LUA_API const lua_Number *(lua_version) (lua_State *L);
 
 
 /*
