@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.50 2009/12/07 15:50:27 roberto Exp roberto $
+** $Id: ltablib.c,v 1.51 2009/12/17 16:20:01 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -87,11 +87,6 @@ static int maxn (lua_State *L) {
 static int getn (lua_State *L) {
   lua_pushinteger(L, aux_getn(L, 1));
   return 1;
-}
-
-
-static int setn (lua_State *L) {
-  return luaL_error(L, LUA_QL("setn") " is obsolete");
 }
 
 
@@ -304,7 +299,6 @@ static const luaL_Reg tab_funcs[] = {
   {"insert", tinsert},
   {"pack", pack},
   {"remove", tremove},
-  {"setn", setn},
   {"sort", sort},
   {NULL, NULL}
 };
