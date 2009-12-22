@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.123 2009/12/17 12:50:20 roberto Exp roberto $
+** $Id: luaconf.h,v 1.124 2009/12/17 13:08:51 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -204,6 +204,14 @@
 ** Compatibility with previous versions
 ** ===================================================================
 */
+
+/*
+@@ LUA_COMPAT_CPCALL controls the presence of function 'lua_cpcall'.
+** CHANGE it (define it) if you need this function.  (You can replace
+** it with the preregistered function cpcall.)
+*/
+/* #define LUA_COMPAT_CPCALL */
+/* LUA_API int (lua_cpcall) (lua_State *L, lua_CFunction func, void *ud); */
 
 /*
 @@ LUA_COMPAT_FENV controls the presence of functions 'setfenv/getfenv'.

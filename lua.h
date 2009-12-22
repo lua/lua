@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.255 2009/12/18 15:32:36 roberto Exp roberto $
+** $Id: lua.h,v 1.256 2009/12/22 15:32:50 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -239,7 +239,6 @@ LUA_API int   (lua_pcallk) (lua_State *L, int nargs, int nresults, int errfunc,
                             int ctx, lua_CFunction k);
 #define lua_pcall(L,n,r,f)	lua_pcallk(L, (n), (r), (f), 0, NULL)
 
-LUA_API int   (lua_cpcall) (lua_State *L, lua_CFunction func, void *ud);
 LUA_API int   (lua_load) (lua_State *L, lua_Reader reader, void *dt,
                                         const char *chunkname);
 
@@ -299,7 +298,7 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 #define lua_newtable(L)		lua_createtable(L, 0, 0)
 
 #define lua_register(L,n,f) \
-	(lua_pushcfunction(L, (f)), lua_setfield(L, LUA_GLOBALSINDEX, (n)))
+	(lua_pushcfunction(L, (f)), lua_setfield(L, LUA_ENVIRONINDEX, (n)))
 
 #define lua_pushcfunction(L,f)	lua_pushcclosure(L, (f), 0)
 
