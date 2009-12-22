@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.254 2009/12/17 16:20:01 roberto Exp roberto $
+** $Id: lua.h,v 1.255 2009/12/18 15:32:36 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -35,8 +35,7 @@
 */
 #define LUA_REGISTRYINDEX	LUAI_FIRSTPSEUDOIDX
 #define LUA_ENVIRONINDEX	(LUA_REGISTRYINDEX - 1)
-#define LUA_GLOBALSINDEX	(LUA_ENVIRONINDEX - 1)
-#define lua_upvalueindex(i)	(LUA_GLOBALSINDEX-(i))
+#define lua_upvalueindex(i)	(LUA_ENVIRONINDEX - (i))
 
 
 /* thread status */
@@ -92,7 +91,8 @@ typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 /* predefined values in the registry */
 #define LUA_RIDX_MAINTHREAD	1
 #define LUA_RIDX_CPCALL		2
-#define LUA_RIDX_LAST		LUA_RIDX_CPCALL
+#define LUA_RIDX_GLOBALS	3
+#define LUA_RIDX_LAST		LUA_RIDX_GLOBALS
 
 
 /* type of numbers in Lua */
@@ -315,8 +315,8 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 #define lua_pushliteral(L, s)	\
 	lua_pushlstring(L, "" s, (sizeof(s)/sizeof(char))-1)
 
-#define lua_setglobal(L,s)	lua_setfield(L, LUA_GLOBALSINDEX, (s))
-#define lua_getglobal(L,s)	lua_getfield(L, LUA_GLOBALSINDEX, (s))
+#define lua_pushglobaltable(L)  \
+	lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_GLOBALS)
 
 #define lua_tostring(L,i)	lua_tolstring(L, (i), NULL)
 
@@ -342,6 +342,9 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 
 #define lua_equal(L,idx1,idx2)		lua_compare(L,(idx1),(idx2),LUA_OPEQ)
 #define lua_lessthan(L,idx1,idx2)	lua_compare(L,(idx1),(idx2),LUA_OPLT)
+
+#define lua_setglobal(L,s)	lua_setfield(L, LUA_ENVIRONINDEX, (s))
+#define lua_getglobal(L,s)	lua_getfield(L, LUA_ENVIRONINDEX, (s))
 
 #endif
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.104 2009/12/15 11:25:36 roberto Exp roberto $
+** $Id: lapi.c,v 2.105 2009/12/17 16:20:01 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -41,7 +41,7 @@ const char lua_ident[] =
 
 static Table *getcurrenv (lua_State *L) {
   if (L->ci->previous == NULL)  /* no enclosing function? */
-    return hvalue(&G(L)->l_gt);  /* use global table as environment */
+    return G(L)->l_gt;  /* use global table as environment */
   else {
     Closure *func = curr_func(L);
     return func->c.env;
@@ -67,10 +67,9 @@ static TValue *index2addr (lua_State *L, int idx) {
       sethvalue(L, &L->env, getcurrenv(L));
       return &L->env;
     }
-    case LUA_GLOBALSINDEX: return &G(L)->l_gt;
     default: {
       Closure *func = curr_func(L);
-      idx = LUA_GLOBALSINDEX - idx;
+      idx = LUA_ENVIRONINDEX - idx;
       api_check(L, idx <= UCHAR_MAX + 1, "upvalue index too large");
       return (idx <= func->c.nupvalues)
                 ? &func->c.upvalue[idx-1]
@@ -204,11 +203,11 @@ static void moveto (lua_State *L, TValue *fr, int idx) {
   }
   else {
     setobj(L, to, fr);
-    if (idx < LUA_GLOBALSINDEX)  /* function upvalue? */
+    if (idx < LUA_ENVIRONINDEX)  /* function upvalue? */
       luaC_barrier(L, curr_func(L), fr);
   }
-  /* LUA_GLOBALSINDEX and LUA_REGISTRYINDEX do not need gc barrier
-     (collector revisits them before finishing collection) */
+  /* LUA_REGISTRYINDEX does not need gc barrier
+     (collector revisits it before finishing collection) */
 }
 
 

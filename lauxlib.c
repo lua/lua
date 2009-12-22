@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.194 2009/11/25 15:27:51 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.195 2009/12/17 16:20:01 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -73,7 +73,7 @@ static int findfield (lua_State *L, int objidx, int level) {
 static int pushglobalfuncname (lua_State *L, lua_Debug *ar) {
   int top = lua_gettop(L);
   lua_getinfo(L, "f", ar);  /* push function */
-  lua_pushvalue(L, LUA_GLOBALSINDEX);  /* push global table */
+  lua_pushglobaltable(L);
   if (findfield(L, top + 1, 2)) {
     lua_copy(L, -1, top + 1);  /* move name to proper place */
     lua_pop(L, 2);  /* remove pushed values */
@@ -678,7 +678,8 @@ LUALIB_API void luaL_register (lua_State *L, const char *libname,
     if (!lua_istable(L, -1)) {  /* not found? */
       lua_pop(L, 1);  /* remove previous result */
       /* try global variable (and create one if it does not exist) */
-      if (luaL_findtable(L, LUA_GLOBALSINDEX, libname, libsize(l)) != NULL)
+      lua_pushglobaltable(L);
+      if (luaL_findtable(L, 0, libname, libsize(l)) != NULL)
         luaL_error(L, "name conflict for module " LUA_QS, libname);
       lua_pushvalue(L, -1);
       lua_setfield(L, -3, libname);  /* _LOADED[libname] = new table */
@@ -713,7 +714,7 @@ LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
 LUALIB_API const char *luaL_findtable (lua_State *L, int idx,
                                        const char *fname, int szhint) {
   const char *e;
-  lua_pushvalue(L, idx);
+  if (idx) lua_pushvalue(L, idx);
   do {
     e = strchr(fname, '.');
     if (e == NULL) e = fname + strlen(fname);

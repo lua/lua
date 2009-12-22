@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.69 2009/12/17 12:26:09 roberto Exp roberto $
+** $Id: loadlib.c,v 1.70 2009/12/17 13:06:47 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -608,7 +608,8 @@ static int ll_module (lua_State *L) {
   if (!lua_istable(L, -1)) {  /* not found? */
     lua_pop(L, 1);  /* remove previous result */
     /* try global variable (and create one if it does not exist) */
-    if (luaL_findtable(L, LUA_GLOBALSINDEX, modname, 1) != NULL)
+    lua_pushglobaltable(L);
+    if (luaL_findtable(L, 0, modname, 1) != NULL)
       return luaL_error(L, "name conflict for module " LUA_QS, modname);
     lua_pushvalue(L, -1);
     lua_setfield(L, loaded, modname);  /* _LOADED[modname] = new table */
@@ -635,7 +636,7 @@ static int ll_seeall (lua_State *L) {
     lua_pushvalue(L, -1);
     lua_setmetatable(L, 1);
   }
-  lua_pushvalue(L, LUA_GLOBALSINDEX);
+  lua_pushglobaltable(L);
   lua_setfield(L, -2, "__index");  /* mt.__index = _G */
   return 0;
 }
@@ -713,7 +714,7 @@ LUAMOD_API int luaopen_package (lua_State *L) {
   /* set field `preload' */
   lua_newtable(L);
   lua_setfield(L, -2, "preload");
-  lua_pushvalue(L, LUA_GLOBALSINDEX);
+  lua_pushglobaltable(L);
   luaL_register(L, NULL, ll_funcs);  /* open lib into global table */
   lua_pop(L, 1);
   return 1;  /* return 'package' table */

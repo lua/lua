@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.66 2009/12/16 16:42:58 roberto Exp roberto $
+** $Id: lstate.c,v 2.67 2009/12/17 12:26:09 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -119,7 +119,8 @@ static int cpcall (lua_State *L) {
   lua_CFunction f = *(lua_CFunction *)lua_touserdata(L, 1);
   lua_remove(L, 1);  /* remove f from stack */
   /* restore original environment for 'cpcall' */
-  lua_copy(L, LUA_GLOBALSINDEX, LUA_ENVIRONINDEX);
+  lua_pushglobaltable(L);
+  lua_replace(L, LUA_ENVIRONINDEX);
   return f(L);
 }
 
@@ -138,10 +139,13 @@ static void init_registry (lua_State *L, global_State *g) {
   setthvalue(L, &mt, L);
   setobj2t(L, luaH_setint(L, registry, LUA_RIDX_MAINTHREAD), &mt);
   /* registry[LUA_RIDX_CPCALL] = cpcall */
-  cp = luaF_newCclosure(L, 0, hvalue(&g->l_gt));
+  cp = luaF_newCclosure(L, 0, g->l_gt);
   cp->c.f = cpcall;
   setclvalue(L, &mt, cp);
   setobj2t(L, luaH_setint(L, registry, LUA_RIDX_CPCALL), &mt);
+  /* registry[LUA_RIDX_GLOBALS] = l_gt */
+  sethvalue(L, &mt, g->l_gt);
+  setobj2t(L, luaH_setint(L, registry, LUA_RIDX_GLOBALS), &mt);
 }
 
 
@@ -152,7 +156,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   global_State *g = G(L);
   UNUSED(ud);
   stack_init(L, L);  /* init stack */
-  sethvalue(L, &g->l_gt, luaH_new(L));  /* table of globals */
+  g->l_gt = luaH_new(L);  /* table of globals */
   init_registry(L, g);
   luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
   luaT_init(L);
@@ -253,7 +257,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->strt.nuse = 0;
   g->strt.hash = NULL;
   setnilvalue(&g->l_registry);
-  setnilvalue(&g->l_gt);
+  g->l_gt = NULL;
   luaZ_initbuffer(L, &g->buff);
   g->panic = NULL;
   g->version = lua_version(NULL);

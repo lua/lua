@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.84 2009/12/16 16:42:58 roberto Exp roberto $
+** $Id: ltests.c,v 2.85 2009/12/17 16:20:01 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -376,7 +376,7 @@ int lua_checkmemory (lua_State *L) {
   GCObject *o;
   UpVal *uv;
   checkliveness(g, &g->l_registry);
-  checkliveness(g, &g->l_gt);
+  lua_assert(!isdead(g, obj2gco(g->l_gt)));
   checkstack(g, g->mainthread);
   for (o = g->rootgc; o != obj2gco(g->mainthread); o = gch(o)->next) {
     lua_assert(!testbits(o->gch.marked, bit2mask(SEPARATED, SFIXEDBIT)));
@@ -767,7 +767,7 @@ static int loadlib (lua_State *L) {
     {NULL, NULL}
   };
   lua_State *L1 = getstate(L);
-  lua_pushvalue(L1, LUA_GLOBALSINDEX);
+  lua_pushglobaltable(L1);
   luaL_register(L1, NULL, libs);
   return 0;
 }
@@ -878,7 +878,7 @@ static int getindex_aux (lua_State *L, lua_State *L1, const char **pc) {
   skip(pc);
   switch (*(*pc)++) {
     case 'R': return LUA_REGISTRYINDEX;
-    case 'G': return LUA_GLOBALSINDEX;
+    case 'G': return luaL_error(L, "deprecated index 'G'");
     case 'E': return LUA_ENVIRONINDEX;
     case 'U': return lua_upvalueindex(getnum_aux(L, L1, pc));
     default: (*pc)--; return getnum_aux(L, L1, pc);

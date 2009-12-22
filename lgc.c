@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.65 2009/12/11 21:31:14 roberto Exp roberto $
+** $Id: lgc.c,v 2.66 2009/12/16 16:42:58 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -230,7 +230,7 @@ static void markroot (lua_State *L) {
   g->weak = g->ephemeron = g->allweak = NULL;
   markobject(g, g->mainthread);
   /* make global table and registry to be traversed before main stack */
-  markvalue(g, &g->l_gt);
+  markobject(g, g->l_gt);
   markvalue(g, &g->l_registry);
   markmt(g);
   markbeingfnz(g);  /* mark any finalizing object left from previous cycle */
@@ -703,8 +703,7 @@ static void atomic (lua_State *L) {
   g->gcstate = GCSatomic;
   lua_assert(!iswhite(obj2gco(g->mainthread)));
   markobject(g, L);  /* mark running thread */
-  /* global table, registry, and global metatables may be changed by API */
-  markvalue(g, &g->l_gt);
+  /* registry and global metatables may be changed by API */
   markvalue(g, &g->l_registry);
   markmt(g);  /* mark basic metatables */
   /* remark occasional upvalues of (maybe) dead threads */

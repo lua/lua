@@ -1,5 +1,5 @@
 /*
-** $Id: linit.c,v 1.21 2009/12/11 13:40:44 roberto Exp roberto $
+** $Id: linit.c,v 1.22 2009/12/17 12:26:09 roberto Exp roberto $
 ** Initialization of libraries for lua.c and other clients        
 ** See Copyright Notice in lua.h
 */
@@ -57,16 +57,19 @@ LUALIB_API void luaL_openlibs (lua_State *L) {
     lua_call(L, 1, 0);
   }
   /* add open functions from 'preloadedlibs' into 'package.preload' table */
-  luaL_findtable(L, LUA_GLOBALSINDEX, "package.preload", 0);
+  lua_pushglobaltable(L);
+  luaL_findtable(L, 0, "package.preload", 0);
   for (lib = preloadedlibs; lib->func; lib++) {
     lua_pushcfunction(L, lib->func);
     lua_setfield(L, -2, lib->name);
   }
   lua_pop(L, 1);  /* remove package.preload table */
 #if defined(LUA_COMPAT_DEBUGLIB)
-  lua_getfield(L, LUA_GLOBALSINDEX, "require");
+  lua_pushglobaltable(L);
+  lua_getfield(L, -1, "require");
   lua_pushliteral(L, LUA_DBLIBNAME);
   lua_call(L, 1, 0);  /* call 'require"debug"' */
+  lua_pop(L, 1);  /* remove global table */
 #endif
 }
 
