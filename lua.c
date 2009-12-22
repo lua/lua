@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.180 2009/12/17 16:20:01 roberto Exp roberto $
+** $Id: lua.c,v 1.181 2009/12/22 15:32:50 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -405,63 +405,60 @@ static int handle_luainit (lua_State *L) {
 }
 
 
-struct Smain {
-  int argc;
-  char **argv;
-  int ok;
-};
-
-
 static int pmain (lua_State *L) {
-  struct Smain *s = (struct Smain *)lua_touserdata(L, 1);
-  char **argv = s->argv;
+  int argc = lua_tointeger(L, 1);
+  char **argv = (char **)lua_touserdata(L, 2);
   int script;
   int has_i = 0, has_v = 0, has_e = 0;
   if (argv[0] && argv[0][0]) progname = argv[0];
-  lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
-  luaL_openlibs(L);  /* open libraries */
-  lua_gc(L, LUA_GCRESTART, 0);
-  luaL_checkversion(L);
-  s->ok = (handle_luainit(L) == LUA_OK);
-  if (!s->ok) return 0;
   script = collectargs(argv, &has_i, &has_v, &has_e);
   if (script < 0) {  /* invalid args? */
     print_usage();
-    s->ok = 0;
     return 0;
   }
   if (has_v) print_version();
-  s->ok = runargs(L, argv, (script > 0) ? script : s->argc);
-  if (!s->ok) return 0;
-  if (script)
-    s->ok = (handle_script(L, argv, script) == LUA_OK);
-  if (!s->ok) return 0;
-  if (has_i)
+  /* open standard libraries */
+  luaL_checkversion(L);
+  lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
+  luaL_openlibs(L);  /* open libraries */
+  lua_gc(L, LUA_GCRESTART, 0);
+  /* run LUA_INIT */
+  if (handle_luainit(L) != LUA_OK) return 0;
+  /* execute arguments -e and -l */
+  if (!runargs(L, argv, (script > 0) ? script : argc)) return 0;
+  /* execute main script (if there is one) */
+  if (script && handle_script(L, argv, script) != LUA_OK) return 0;
+  if (has_i)  /* -i option? */
     dotty(L);
-  else if (script == 0 && !has_e && !has_v) {
+  else if (script == 0 && !has_e && !has_v) {  /* no arguments? */
     if (lua_stdin_is_tty()) {
       print_version();
       dotty(L);
     }
     else dofile(L, NULL);  /* executes stdin as a file */
   }
-  return 0;
+  lua_pushboolean(L, 1);  /* signal no errors */
+  return 1;
 }
 
 
 int main (int argc, char **argv) {
-  int status;
-  struct Smain s;
+  static lua_CFunction ppmain = &pmain;
+  int status, result;
   lua_State *L = luaL_newstate();  /* create state */
   if (L == NULL) {
     l_message(argv[0], "cannot create state: not enough memory");
     return EXIT_FAILURE;
   }
-  s.argc = argc;
-  s.argv = argv;
-  status = lua_cpcall(L, &pmain, &s);
+  /* call 'pmain' in protected mode */
+  lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_CPCALL);  /* calling function */
+  lua_pushlightuserdata(L, &ppmain);
+  lua_pushinteger(L, argc); 
+  lua_pushlightuserdata(L, argv);
+  status = lua_pcall(L, 3, 1, 0);
+  result = lua_toboolean(L, -1);  /* get result */
   finalreport(L, status);
   lua_close(L);
-  return (s.ok && status == LUA_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
+  return (result && status == LUA_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
