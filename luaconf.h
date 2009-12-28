@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.124 2009/12/17 13:08:51 roberto Exp roberto $
+** $Id: luaconf.h,v 1.125 2009/12/22 16:47:00 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -204,6 +204,13 @@
 ** Compatibility with previous versions
 ** ===================================================================
 */
+
+/*
+@@ LUA_COMPAT_UNPACK controls the presence of global 'unpack'.
+** CHANGE it (define it) if you have not replaced its uses with
+** 'table.unpack'.
+*/
+/* #define LUA_COMPAT_UNPACK */
 
 /*
 @@ LUA_COMPAT_CPCALL controls the presence of function 'lua_cpcall'.

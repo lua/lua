@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.51 2009/12/17 16:20:01 roberto Exp roberto $
+** $Id: ltablib.c,v 1.52 2009/12/18 16:53:12 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -164,7 +164,7 @@ static int tconcat (lua_State *L) {
 
 /*
 ** {======================================================
-** Pack
+** Pack/unpack
 ** =======================================================
 */
 
@@ -179,6 +179,22 @@ static int pack (lua_State *L) {
     lua_rawseti(L, LUA_ENVIRONINDEX, top);
   lua_pushvalue(L, LUA_ENVIRONINDEX);  /* return new table */
   return 1;
+}
+
+
+static int unpack (lua_State *L) {
+  int i, e, n;
+  luaL_checktype(L, 1, LUA_TTABLE);
+  i = luaL_optint(L, 2, 1);
+  e = luaL_opt(L, luaL_checkint, 3, (int)lua_rawlen(L, 1));
+  if (i > e) return 0;  /* empty range */
+  n = e - i + 1;  /* number of elements */
+  if (n <= 0 || !lua_checkstack(L, n))  /* n <= 0 means arith. overflow */
+    return luaL_error(L, "too many results to unpack");
+  lua_rawgeti(L, 1, i);  /* push arg[i] (avoiding overflow problems) */
+  while (i++ < e)  /* push arg[i + 1...e] */
+    lua_rawgeti(L, 1, i);
+  return n;
 }
 
 /* }====================================================== */
@@ -298,6 +314,7 @@ static const luaL_Reg tab_funcs[] = {
   {"maxn", maxn},
   {"insert", tinsert},
   {"pack", pack},
+  {"unpack", unpack},
   {"remove", tremove},
   {"sort", sort},
   {NULL, NULL}
@@ -306,6 +323,11 @@ static const luaL_Reg tab_funcs[] = {
 
 LUAMOD_API int luaopen_table (lua_State *L) {
   luaL_register(L, LUA_TABLIBNAME, tab_funcs);
+#if defined(LUA_COMPAT_UNPACK)
+  /* _G.unpack = table.unpack */
+  lua_getfield(L, -1, "unpack");
+  lua_setfield(L, LUA_ENVIRONINDEX, "unpack");
+#endif
   return 1;
 }
 

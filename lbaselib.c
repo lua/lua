@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.233 2009/12/17 16:20:01 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.234 2009/12/22 15:32:50 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -412,22 +412,6 @@ static int luaB_assert (lua_State *L) {
 }
 
 
-static int luaB_unpack (lua_State *L) {
-  int i, e, n;
-  luaL_checktype(L, 1, LUA_TTABLE);
-  i = luaL_optint(L, 2, 1);
-  e = luaL_opt(L, luaL_checkint, 3, (int)lua_rawlen(L, 1));
-  if (i > e) return 0;  /* empty range */
-  n = e - i + 1;  /* number of elements */
-  if (n <= 0 || !lua_checkstack(L, n))  /* n <= 0 means arith. overflow */
-    return luaL_error(L, "too many results to unpack");
-  lua_rawgeti(L, 1, i);  /* push arg[i] (avoiding overflow problems) */
-  while (i++ < e)  /* push arg[i + 1...e] */
-    lua_rawgeti(L, 1, i);
-  return n;
-}
-
-
 static int luaB_select (lua_State *L) {
   int n = lua_gettop(L);
   if (lua_type(L, 1) == LUA_TSTRING && *lua_tostring(L, 1) == '#') {
@@ -542,7 +526,6 @@ static const luaL_Reg base_funcs[] = {
   {"tonumber", luaB_tonumber},
   {"tostring", luaB_tostring},
   {"type", luaB_type},
-  {"unpack", luaB_unpack},
   {"xpcall", luaB_xpcall},
   {NULL, NULL}
 };
