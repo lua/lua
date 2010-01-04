@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.70 2009/12/17 13:06:47 roberto Exp roberto $
+** $Id: loadlib.c,v 1.71 2009/12/22 15:32:50 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -79,6 +79,9 @@
 #define setprogdir(L)		((void)0)
 
 
+/*
+** system-dependent functions
+*/
 static void ll_unloadlib (void *lib);
 static void *ll_load (lua_State *L, const char *path, int seeglb);
 static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym);
@@ -304,7 +307,7 @@ static void **ll_register (lua_State *L, const char *path) {
   if (!lua_isnil(L, -1))  /* is there an entry? */
     plib = (void **)lua_touserdata(L, -1);
   else {  /* no entry yet; create one */
-    lua_pop(L, 1);
+    lua_pop(L, 1);  /* remove result from gettable */
     plib = (void **)lua_newuserdata(L, sizeof(const void *));
     *plib = NULL;
     luaL_getmetatable(L, "_LOADLIB");
@@ -332,18 +335,17 @@ static int gctm (lua_State *L) {
 static int ll_loadfunc (lua_State *L, const char *path, const char *sym) {
   void **reg = ll_register(L, path);
   if (*reg == NULL) *reg = ll_load(L, path, *sym == '*');
-  if (*reg == NULL)
-    return ERRLIB;  /* unable to load library */
-  else if (*sym == '*') {  /* loading only library (no function)? */
+  if (*reg == NULL) return ERRLIB;  /* unable to load library */
+  if (*sym == '*') {  /* loading only library (no function)? */
     lua_pushboolean(L, 1);  /* return 'true' */
-    return 0;
+    return 0;  /* no errors */
   }
   else {
     lua_CFunction f = ll_sym(L, *reg, sym);
     if (f == NULL)
       return ERRFUNC;  /* unable to find function */
-    lua_pushcfunction(L, f);
-    return 0;  /* return function */
+    lua_pushcfunction(L, f);  /* else return function */
+    return 0;  /* no errors */
   }
 }
 
@@ -447,31 +449,28 @@ static int loader_Lua (lua_State *L) {
 }
 
 
-static const char *mkfuncname (lua_State *L, const char *modname) {
+static int loadfunc(lua_State *L, const char *filename, const char *modname) {
   const char *funcname;
   const char *mark = strchr(modname, *LUA_IGMARK);
   if (mark) modname = mark + 1;
   funcname = luaL_gsub(L, modname, ".", LUA_OFSEP);
   funcname = lua_pushfstring(L, POF"%s", funcname);
   lua_remove(L, -2);  /* remove 'gsub' result */
-  return funcname;
+  return ll_loadfunc(L, filename, funcname);
 }
 
 
 static int loader_C (lua_State *L) {
-  const char *funcname;
   const char *name = luaL_checkstring(L, 1);
   const char *filename = findfile(L, name, "cpath");
   if (filename == NULL) return 1;  /* library not found in this path */
-  funcname = mkfuncname(L, name);
-  if (ll_loadfunc(L, filename, funcname) != 0)
+  if (loadfunc(L, filename, name) != 0)
     loaderror(L, filename);
   return 1;  /* library loaded successfully */
 }
 
 
 static int loader_Croot (lua_State *L) {
-  const char *funcname;
   const char *filename;
   const char *name = luaL_checkstring(L, 1);
   const char *p = strchr(name, '.');
@@ -480,8 +479,7 @@ static int loader_Croot (lua_State *L) {
   lua_pushlstring(L, name, p - name);
   filename = findfile(L, lua_tostring(L, -1), "cpath");
   if (filename == NULL) return 1;  /* root not found */
-  funcname = mkfuncname(L, name);
-  if ((stat = ll_loadfunc(L, filename, funcname)) != 0) {
+  if ((stat = loadfunc(L, filename, name)) != 0) {
     if (stat != ERRFUNC) loaderror(L, filename);  /* real error */
     lua_pushfstring(L, "\n\tno module " LUA_QS " in file " LUA_QS,
                        name, filename);
