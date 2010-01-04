@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.106 2009/12/22 15:32:50 roberto Exp roberto $
+** $Id: lapi.c,v 2.107 2009/12/22 16:47:00 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -835,6 +835,8 @@ LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
   int status;
   ptrdiff_t func;
   lua_lock(L);
+  api_check(L, k == NULL || !isLua(L->ci),
+    "cannot use continuations inside hooks");
   api_checknelems(L, nargs+1);
   checkresults(L, nargs, nresults);
   if (errfunc == 0)
