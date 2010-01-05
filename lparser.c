@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.72 2009/11/17 16:33:38 roberto Exp roberto $
+** $Id: lparser.c,v 2.73 2009/11/26 11:39:20 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -34,9 +34,6 @@
 
 #define hasmultret(k)		((k) == VCALL || (k) == VVARARG)
 
-
-
-#define luaY_checklimit(fs,v,l,m)	if ((v)>(l)) errorlimit(fs,l,m)
 
 
 /*
@@ -83,6 +80,11 @@ static void errorlimit (FuncState *fs, int limit, const char *what) {
   msg = luaO_pushfstring(fs->L, "too many %s (limit is %d) in %s",
                                 what, limit, where);
   luaX_syntaxerror(fs->ls, msg);
+}
+
+
+static void checklimit (FuncState *fs, int v, int l, const char *what) {
+  if (v > l) errorlimit(fs, l, what);
 }
 
 
@@ -170,7 +172,7 @@ static void new_localvar (LexState *ls, TString *name) {
   FuncState *fs = ls->fs;
   Varlist *vl = ls->varl;
   int reg = registerlocalvar(ls, name);
-  luaY_checklimit(fs, vl->nactvar + 1 - fs->firstlocal,
+  checklimit(fs, vl->nactvar + 1 - fs->firstlocal,
                   MAXVARS, "local variables");
   luaM_growvector(ls->L, vl->actvar, vl->nactvar + 1,
                   vl->actvarsize, vardesc, MAX_INT, "local variables");
@@ -214,7 +216,7 @@ static int indexupvalue (FuncState *fs, TString *name, expdesc *v) {
     }
   }
   /* new one */
-  luaY_checklimit(fs, fs->nups + 1, UCHAR_MAX, "upvalues");
+  checklimit(fs, fs->nups + 1, UCHAR_MAX, "upvalues");
   luaM_growvector(fs->L, f->upvalues, fs->nups, f->sizeupvalues,
                   Upvaldesc, UCHAR_MAX, "upvalues");
   while (oldsize < f->sizeupvalues) f->upvalues[oldsize++].name = NULL;
@@ -304,7 +306,7 @@ static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
 static void enterlevel (LexState *ls) {
   global_State *g = G(ls->L);
   ++g->nCcalls;
-  luaY_checklimit(ls->fs, g->nCcalls, LUAI_MAXCCALLS, "syntax levels");
+  checklimit(ls->fs, g->nCcalls, LUAI_MAXCCALLS, "syntax levels");
 }
 
 
@@ -485,7 +487,7 @@ static void recfield (LexState *ls, struct ConsControl *cc) {
   expdesc key, val;
   int rkkey;
   if (ls->t.token == TK_NAME) {
-    luaY_checklimit(fs, cc->nh, MAX_INT, "items in a constructor");
+    checklimit(fs, cc->nh, MAX_INT, "items in a constructor");
     checkname(ls, &key);
   }
   else  /* ls->t.token == '[' */
@@ -528,7 +530,7 @@ static void lastlistfield (FuncState *fs, struct ConsControl *cc) {
 static void listfield (LexState *ls, struct ConsControl *cc) {
   /* listfield -> exp */
   expr(ls, &cc->v);
-  luaY_checklimit(ls->fs, cc->na, MAX_INT, "items in a constructor");
+  checklimit(ls->fs, cc->na, MAX_INT, "items in a constructor");
   cc->na++;
   cc->tostore++;
 }
@@ -978,7 +980,7 @@ static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
     primaryexp(ls, &nv.v);
     if (nv.v.k == VLOCAL)
       check_conflict(ls, lh, &nv.v);
-    luaY_checklimit(ls->fs, nvars, LUAI_MAXCCALLS - G(ls->L)->nCcalls,
+    checklimit(ls->fs, nvars, LUAI_MAXCCALLS - G(ls->L)->nCcalls,
                     "variable names");
     assignment(ls, &nv, nvars+1);
   }
