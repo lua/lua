@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.125 2009/12/22 16:47:00 roberto Exp roberto $
+** $Id: luaconf.h,v 1.126 2009/12/28 16:30:31 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -35,6 +35,7 @@
 
 #if defined(LUA_WIN)
 #include <windows.h>
+#define LUA_DL_DLL
 #endif
 
 
@@ -47,7 +48,8 @@
 
 #if defined(LUA_USE_MACOSX)
 #define LUA_USE_POSIX
-#define LUA_DL_DYLD		/* does not need extra library */
+#define LUA_USE_DLOPEN
+#define LUA_USE_READLINE	/* needs some extra libraries */
 #endif
 
 
@@ -206,54 +208,67 @@
 */
 
 /*
-@@ LUA_COMPAT_UNPACK controls the presence of global 'unpack'.
-** CHANGE it (define it) if you have not replaced its uses with
-** 'table.unpack'.
+@@ LUA_COMPAT_ALL controls all compatibility options.
+** You can define it to get all options, or change specific options
+** to fit your specific needs.
 */
-/* #define LUA_COMPAT_UNPACK */
+#if defined(LUA_COMPAT_ALL)
+
+/*
+@@ LUA_COMPAT_UNPACK controls the presence of global 'unpack'.
+** You can replace it with 'table.unpack'.
+*/
+#define LUA_COMPAT_UNPACK
 
 /*
 @@ LUA_COMPAT_CPCALL controls the presence of function 'lua_cpcall'.
-** CHANGE it (define it) if you need this function.  (You can replace
-** it with the preregistered function cpcall.)
+** You can replace it with the preregistered function 'cpcall'.
 */
-/* #define LUA_COMPAT_CPCALL */
-/* LUA_API int (lua_cpcall) (lua_State *L, lua_CFunction func, void *ud); */
+#define LUA_COMPAT_CPCALL
+LUA_API int (lua_cpcall) (lua_State *L, lua_CFunction func, void *ud);
 
 /*
 @@ LUA_COMPAT_FENV controls the presence of functions 'setfenv/getfenv'.
-** CHANGE it (define it) if you need these functions.  (You can replace
-** them with lexical environments, 'loadin', or the debug library.)
+** You can replace them with lexical environments, 'loadin', or the
+** debug library.
 */
-/* #define LUA_COMPAT_FENV */
+#define LUA_COMPAT_FENV
 
 /*
 @@ LUA_COMPAT_LOG10 defines the function 'log10' in the math library.
-** CHANGE it (undefine it) if as soon as you rewrite all calls 'log10(x)'
-** as 'log(x, 10)'
+** You can rewrite 'log10(x)' as 'log(x, 10)'.
 */
 #define LUA_COMPAT_LOG10
 
 /*
 @@ LUA_COMPAT_MAXN defines the function 'maxn' in the table library.
-** CHANGE it (define it) if you need that function.
 */
-/* #define LUA_COMPAT_MAXN */
-
-/*
-@@ LUA_COMPAT_API includes some macros and functions that supply some
-@* compatibility with previous versions.
-** CHANGE it (undefine it) if you do not need these compatibility facilities.
-*/
-#define LUA_COMPAT_API
+#define LUA_COMPAT_MAXN
 
 /*
 @@ LUA_COMPAT_DEBUGLIB controls compatibility with preloading
-@* the debug library.
-** CHANGE it to undefined as soon as you add 'require"debug"' everywhere
-** you need the debug library.
+** the debug library.
+** You should add 'require"debug"' everywhere you need the debug
+** library.
 */
 #define LUA_COMPAT_DEBUGLIB
+
+/*
+@@ The following macros supply trivial compatibility for some
+** changes in the API. The macros themselves document how to
+** change your code to avoid using them.
+*/
+#define lua_strlen(L,i)		lua_rawlen(L, (i))
+
+#define lua_objlen(L,i)		lua_rawlen(L, (i))
+
+#define lua_equal(L,idx1,idx2)	lua_compare(L,(idx1),(idx2),LUA_OPEQ)
+#define lua_lessthan(L,idx1,idx2)	lua_compare(L,(idx1),(idx2),LUA_OPLT)
+
+/* compatibility with previous wrong spelling */
+#define luaL_typerror		luaL_typeerror
+
+#endif
 
 /* }================================================================== */
 
@@ -282,7 +297,7 @@
 @@ LUAI_MEM is a signed integer big enough to count the total memory
 @* used by Lua.
 ** CHANGE here if for some weird reason the default definitions are not
-** good enough for your machine.  Probably you do not need to change
+** good enough for your machine. Probably you do not need to change
 ** this.
 */
 #if LUAI_BITSINT >= 32
@@ -310,7 +325,7 @@
 #endif
 
 /* reserve some space for error handling */
-#define LUAI_FIRSTPSEUDOIDX  (-LUAI_MAXSTACK - 1000)
+#define LUAI_FIRSTPSEUDOIDX	(-LUAI_MAXSTACK - 1000)
 
 
 
@@ -420,7 +435,7 @@
 
 /* On a Pentium, resort to a trick */
 #if defined(LUA_NUMBER_DOUBLE) && !defined(LUA_ANSI) && !defined(__SSE2__) && \
-    (defined(__i386) || defined (_M_IX86) || defined(__i386__))
+	(defined(__i386) || defined (_M_IX86) || defined(__i386__))
 
 /* On a Microsoft compiler, use assembler */
 #if defined(_MSC_VER)
@@ -475,28 +490,6 @@ union luai_Cast { double l_d; long l_l; };
 #endif
 
 /* }================================================================== */
-
-/*
-@@ LUA_DL_* define which dynamic-library system Lua should use.
-** CHANGE here if Lua has problems choosing the appropriate
-** dynamic-library system for your platform (either Windows' DLL, Mac's
-** dyld, or Unix's dlopen). If your system is some kind of Unix, there
-** is a good chance that it has dlopen, so LUA_DL_DLOPEN will work for
-** it.  To use dlopen you also need to adapt the src/Makefile (probably
-** adding -ldl to the linker options), so Lua does not select it
-** automatically.  (When you change the makefile to add -ldl, you must
-** also add -DLUA_USE_DLOPEN.)
-** If you do not want any kind of dynamic library, undefine all these
-** options.
-** By default, _WIN32 gets LUA_DL_DLL and MAC OS X gets LUA_DL_DYLD.
-*/
-#if defined(LUA_USE_DLOPEN)
-#define LUA_DL_DLOPEN
-#endif
-
-#if defined(LUA_WIN)
-#define LUA_DL_DLL
-#endif
 
 
 
