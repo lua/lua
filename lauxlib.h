@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.96 2009/06/18 18:59:58 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.97 2009/12/17 16:20:01 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -132,9 +132,6 @@ typedef struct luaL_Buffer {
   ((void)((B)->p < ((B)->buffer+LUAL_BUFFERSIZE) || luaL_prepbuffer(B)), \
    (*(B)->p++ = (char)(c)))
 
-/* compatibility only */
-#define luaL_putchar(B,c)	luaL_addchar(B,c)
-
 #define luaL_addsize(B,n)	((B)->p += (n))
 
 LUALIB_API void (luaL_buffinit) (lua_State *L, luaL_Buffer *B);
@@ -164,9 +161,6 @@ LUALIB_API void (luaL_pushresult) (luaL_Buffer *B);
 
 #define luaL_reg	luaL_Reg
 
-
-/* compatibility with previous wrong spelling */
-#define luaL_typerror		luaL_typeerror
 
 #endif
 
