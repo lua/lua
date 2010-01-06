@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.258 2010/01/05 18:33:26 roberto Exp roberto $
+** $Id: lua.h,v 1.259 2010/01/06 14:42:35 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -297,6 +297,9 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 
 #define lua_newtable(L)		lua_createtable(L, 0, 0)
 
+#define lua_setglobal(L,s)	lua_setfield(L, LUA_ENVIRONINDEX, (s))
+#define lua_getglobal(L,s)	lua_getfield(L, LUA_ENVIRONINDEX, (s))
+
 #define lua_register(L,n,f) \
 	(lua_pushcfunction(L, (f)), lua_setfield(L, LUA_ENVIRONINDEX, (n)))
 
@@ -319,33 +322,6 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 
 #define lua_tostring(L,i)	lua_tolstring(L, (i), NULL)
 
-
-
-/*
-** compatibility macros and functions
-*/
-#if defined(LUA_COMPAT_API)
-
-#define lua_strlen(L,i)		lua_rawlen(L, (i))
-
-#define lua_objlen(L,i)		lua_rawlen(L, (i))
-
-#define lua_open()		luaL_newstate()
-
-#define lua_getregistry(L)	lua_pushvalue(L, LUA_REGISTRYINDEX)
-
-#define lua_getgccount(L)	lua_gc(L, LUA_GCCOUNT, 0)
-
-#define lua_Chunkreader		lua_Reader
-#define lua_Chunkwriter		lua_Writer
-
-#define lua_equal(L,idx1,idx2)		lua_compare(L,(idx1),(idx2),LUA_OPEQ)
-#define lua_lessthan(L,idx1,idx2)	lua_compare(L,(idx1),(idx2),LUA_OPLT)
-
-#define lua_setglobal(L,s)	lua_setfield(L, LUA_ENVIRONINDEX, (s))
-#define lua_getglobal(L,s)	lua_getfield(L, LUA_ENVIRONINDEX, (s))
-
-#endif
 
 
 /*
