@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.59 2009/11/26 15:34:15 roberto Exp roberto $
+** $Id: ldebug.c,v 2.60 2009/12/01 16:31:04 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -192,6 +192,14 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
       }
       case 'u': {
         ar->nups = f->c.nupvalues;
+        if (f->c.isC) {
+          ar->isvararg = 1;
+          ar->nparams = 0;
+        }
+        else {
+          ar->isvararg = f->l.p->is_vararg;
+          ar->nparams = f->l.p->numparams;
+        }
         break;
       }
       case 't': {

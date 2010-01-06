@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.257 2009/12/22 16:47:00 roberto Exp roberto $
+** $Id: lua.h,v 1.258 2010/01/05 18:33:26 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -407,6 +407,8 @@ struct lua_Debug {
   int linedefined;	/* (S) */
   int lastlinedefined;	/* (S) */
   unsigned char nups;	/* (u) number of upvalues */
+  unsigned char nparams;/* (u) number of parameters */
+  char isvararg;        /* (u) */
   char istailcall;	/* (t) */
   char short_src[LUA_IDSIZE]; /* (S) */
   /* private part */

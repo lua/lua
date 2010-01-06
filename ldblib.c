@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.117 2009/11/24 12:05:44 roberto Exp roberto $
+** $Id: ldblib.c,v 1.118 2009/11/25 15:27:51 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -73,6 +73,12 @@ static void settabsi (lua_State *L, const char *i, int v) {
 }
 
 
+static void settabsb (lua_State *L, const char *i, int v) {
+  lua_pushboolean(L, v);
+  lua_setfield(L, -2, i);
+}
+
+
 static lua_State *getthread (lua_State *L, int *arg) {
   if (lua_isthread(L, 1)) {
     *arg = 1;
@@ -127,16 +133,17 @@ static int db_getinfo (lua_State *L) {
   }
   if (strchr(options, 'l'))
     settabsi(L, "currentline", ar.currentline);
-  if (strchr(options, 'u'))
+  if (strchr(options, 'u')) {
     settabsi(L, "nups", ar.nups);
+    settabsi(L, "nparams", ar.nparams);
+    settabsb(L, "isvararg", ar.isvararg);
+  }
   if (strchr(options, 'n')) {
     settabss(L, "name", ar.name);
     settabss(L, "namewhat", ar.namewhat);
   }
-  if (strchr(options, 't')) {
-    lua_pushboolean(L, ar.istailcall);
-    lua_setfield(L, -2, "istailcall");
-  }
+  if (strchr(options, 't'))
+    settabsb(L, "istailcall", ar.istailcall);
   if (strchr(options, 'L'))
     treatstackoption(L, L1, "activelines");
   if (strchr(options, 'f'))
