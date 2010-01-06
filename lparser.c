@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.73 2009/11/26 11:39:20 roberto Exp roberto $
+** $Id: lparser.c,v 2.74 2010/01/05 18:46:58 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -164,10 +164,6 @@ static int registerlocalvar (LexState *ls, TString *varname) {
 }
 
 
-#define new_localvarliteral(ls,v) \
-  new_localvar(ls, luaX_newstring(ls, "" v, (sizeof(v)/sizeof(char))-1))
-
-
 static void new_localvar (LexState *ls, TString *name) {
   FuncState *fs = ls->fs;
   Varlist *vl = ls->varl;
@@ -178,6 +174,14 @@ static void new_localvar (LexState *ls, TString *name) {
                   vl->actvarsize, vardesc, MAX_INT, "local variables");
   vl->actvar[vl->nactvar++].idx = cast(unsigned short, reg);
 }
+
+
+static void new_localvarliteral_ (LexState *ls, const char *name, size_t sz) {
+  new_localvar(ls, luaX_newstring(ls, name, sz));
+}
+
+#define new_localvarliteral(ls,v) \
+	new_localvarliteral_(ls, "" v, (sizeof(v)/sizeof(char))-1)
 
 
 static LocVar *getlocvar (FuncState *fs, int i) {
