@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.h,v 1.37.1.1 2007/12/27 13:02:25 roberto Exp $
+** $Id: lundump.h,v 1.37 2005/11/16 11:55:07 roberto Exp $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */

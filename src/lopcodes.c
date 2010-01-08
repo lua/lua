@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.37.1.1 2007/12/27 13:02:25 roberto Exp $
+** $Id: lopcodes.c,v 1.41 2009/11/19 19:06:52 roberto Exp $
 ** See Copyright Notice in lua.h
 */
 
@@ -13,7 +13,7 @@
 
 /* ORDER OP */
 
-const char *const luaP_opnames[NUM_OPCODES+1] = {
+LUAI_DDEF const char *const luaP_opnames[NUM_OPCODES+1] = {
   "MOVE",
   "LOADK",
   "LOADBOOL",
@@ -47,20 +47,22 @@ const char *const luaP_opnames[NUM_OPCODES+1] = {
   "RETURN",
   "FORLOOP",
   "FORPREP",
-  "TFORLOOP",
+  "TFORCALL",
   "SETLIST",
   "CLOSE",
   "CLOSURE",
   "VARARG",
+  "TFORLOOP",
+  "EXTRAARG",
   NULL
 };
 
 
 #define opmode(t,a,b,c,m) (((t)<<7) | ((a)<<6) | ((b)<<4) | ((c)<<2) | (m))
 
-const lu_byte luaP_opmodes[NUM_OPCODES] = {
+LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
 /*       T  A    B       C     mode		   opcode	*/
-  opmode(0, 1, OpArgR, OpArgN, iABC) 		/* OP_MOVE */
+  opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_MOVE */
  ,opmode(0, 1, OpArgK, OpArgN, iABx)		/* OP_LOADK */
  ,opmode(0, 1, OpArgU, OpArgU, iABC)		/* OP_LOADBOOL */
  ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_LOADNIL */
@@ -93,10 +95,12 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 0, OpArgU, OpArgN, iABC)		/* OP_RETURN */
  ,opmode(0, 1, OpArgR, OpArgN, iAsBx)		/* OP_FORLOOP */
  ,opmode(0, 1, OpArgR, OpArgN, iAsBx)		/* OP_FORPREP */
- ,opmode(1, 0, OpArgN, OpArgU, iABC)		/* OP_TFORLOOP */
+ ,opmode(0, 0, OpArgN, OpArgU, iABC)		/* OP_TFORCALL */
  ,opmode(0, 0, OpArgU, OpArgU, iABC)		/* OP_SETLIST */
  ,opmode(0, 0, OpArgN, OpArgN, iABC)		/* OP_CLOSE */
  ,opmode(0, 1, OpArgU, OpArgN, iABx)		/* OP_CLOSURE */
  ,opmode(0, 1, OpArgU, OpArgN, iABC)		/* OP_VARARG */
+ ,opmode(0, 1, OpArgR, OpArgN, iAsBx)		/* OP_TFORLOOP */
+ ,opmode(0, 0, OpArgU, OpArgU, iAx)		/* OP_EXTRAARG */
 };
 

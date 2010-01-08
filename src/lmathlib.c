@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.67.1.1 2007/12/27 13:02:25 roberto Exp $
+** $Id: lmathlib.c,v 1.74 2009/11/24 12:05:44 roberto Exp $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -112,11 +112,24 @@ static int math_pow (lua_State *L) {
 }
 
 static int math_log (lua_State *L) {
-  lua_pushnumber(L, log(luaL_checknumber(L, 1)));
+  lua_Number x = luaL_checknumber(L, 1);
+  lua_Number res;
+  if (lua_isnoneornil(L, 2))
+    res = log(x);
+  else {
+    lua_Number base = luaL_checknumber(L, 2);
+    if (base == 10.0) res = log10(x);
+    else res = log(x)/log(base);
+  }
+  lua_pushnumber(L, res);
   return 1;
 }
 
 static int math_log10 (lua_State *L) {
+#if !defined(LUA_COMPAT_LOG10)
+  luaL_error(L, "function " LUA_QL("log10")
+                " is deprecated; use log(x, 10) instead");
+#endif
   lua_pushnumber(L, log10(luaL_checknumber(L, 1)));
   return 1;
 }
@@ -188,16 +201,16 @@ static int math_random (lua_State *L) {
       break;
     }
     case 1: {  /* only upper limit */
-      int u = luaL_checkint(L, 1);
-      luaL_argcheck(L, 1<=u, 1, "interval is empty");
-      lua_pushnumber(L, floor(r*u)+1);  /* int between 1 and `u' */
+      lua_Number u = luaL_checknumber(L, 1);
+      luaL_argcheck(L, 1.0 <= u, 1, "interval is empty");
+      lua_pushnumber(L, floor(r*u) + 1.0);  /* int between 1 and `u' */
       break;
     }
     case 2: {  /* lower and upper limits */
-      int l = luaL_checkint(L, 1);
-      int u = luaL_checkint(L, 2);
-      luaL_argcheck(L, l<=u, 2, "interval is empty");
-      lua_pushnumber(L, floor(r*(u-l+1))+l);  /* int between `l' and `u' */
+      lua_Number l = luaL_checknumber(L, 1);
+      lua_Number u = luaL_checknumber(L, 2);
+      luaL_argcheck(L, l <= u, 2, "interval is empty");
+      lua_pushnumber(L, floor(r*(u-l+1)) + l);  /* int between `l' and `u' */
       break;
     }
     default: return luaL_error(L, "wrong number of arguments");
@@ -208,6 +221,7 @@ static int math_random (lua_State *L) {
 
 static int math_randomseed (lua_State *L) {
   srand(luaL_checkint(L, 1));
+  (void)rand(); /* discard first value to avoid undesirable correlations */
   return 0;
 }
 
@@ -248,16 +262,12 @@ static const luaL_Reg mathlib[] = {
 /*
 ** Open math library
 */
-LUALIB_API int luaopen_math (lua_State *L) {
+LUAMOD_API int luaopen_math (lua_State *L) {
   luaL_register(L, LUA_MATHLIBNAME, mathlib);
   lua_pushnumber(L, PI);
   lua_setfield(L, -2, "pi");
   lua_pushnumber(L, HUGE_VAL);
   lua_setfield(L, -2, "huge");
-#if defined(LUA_COMPAT_MOD)
-  lua_getfield(L, -1, "fmod");
-  lua_setfield(L, -2, "mod");
-#endif
   return 1;
 }
 

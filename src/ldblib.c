@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.104.1.3 2008/01/21 13:11:21 roberto Exp $
+** $Id: ldblib.c,v 1.119 2010/01/06 14:42:35 roberto Exp $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -45,6 +45,7 @@ static int db_setmetatable (lua_State *L) {
 
 
 static int db_getfenv (lua_State *L) {
+  luaL_checkany(L, 1);
   lua_getfenv(L, 1);
   return 1;
 }
@@ -68,6 +69,12 @@ static void settabss (lua_State *L, const char *i, const char *v) {
 
 static void settabsi (lua_State *L, const char *i, int v) {
   lua_pushinteger(L, v);
+  lua_setfield(L, -2, i);
+}
+
+
+static void settabsb (lua_State *L, const char *i, int v) {
+  lua_pushboolean(L, v);
   lua_setfield(L, -2, i);
 }
 
@@ -99,7 +106,7 @@ static int db_getinfo (lua_State *L) {
   lua_Debug ar;
   int arg;
   lua_State *L1 = getthread(L, &arg);
-  const char *options = luaL_optstring(L, arg+2, "flnSu");
+  const char *options = luaL_optstring(L, arg+2, "flnStu");
   if (lua_isnumber(L, arg+1)) {
     if (!lua_getstack(L1, (int)lua_tointeger(L, arg+1), &ar)) {
       lua_pushnil(L);  /* level out of range */
@@ -126,19 +133,24 @@ static int db_getinfo (lua_State *L) {
   }
   if (strchr(options, 'l'))
     settabsi(L, "currentline", ar.currentline);
-  if (strchr(options, 'u'))
+  if (strchr(options, 'u')) {
     settabsi(L, "nups", ar.nups);
+    settabsi(L, "nparams", ar.nparams);
+    settabsb(L, "isvararg", ar.isvararg);
+  }
   if (strchr(options, 'n')) {
     settabss(L, "name", ar.name);
     settabss(L, "namewhat", ar.namewhat);
   }
+  if (strchr(options, 't'))
+    settabsb(L, "istailcall", ar.istailcall);
   if (strchr(options, 'L'))
     treatstackoption(L, L1, "activelines");
   if (strchr(options, 'f'))
     treatstackoption(L, L1, "func");
   return 1;  /* return table */
 }
-    
+
 
 static int db_getlocal (lua_State *L) {
   int arg;
@@ -179,7 +191,6 @@ static int auxupvalue (lua_State *L, int get) {
   const char *name;
   int n = luaL_checkint(L, 2);
   luaL_checktype(L, 1, LUA_TFUNCTION);
-  if (lua_iscfunction(L, 1)) return 0;  /* cannot touch C upvalues from Lua */
   name = get ? lua_getupvalue(L, 1, n) : lua_setupvalue(L, 1, n);
   if (name == NULL) return 0;
   lua_pushstring(L, name);
@@ -199,13 +210,40 @@ static int db_setupvalue (lua_State *L) {
 }
 
 
+static int checkupval (lua_State *L, int argf, int argnup) {
+  lua_Debug ar;
+  int nup = luaL_checkint(L, argnup);
+  luaL_checktype(L, argf, LUA_TFUNCTION);
+  lua_pushvalue(L, argf);
+  lua_getinfo(L, ">u", &ar);
+  luaL_argcheck(L, 1 <= nup && nup <= ar.nups, argnup, "invalid upvalue index");
+  return nup;
+}
+
+
+static int db_upvalueid (lua_State *L) {
+  int n = checkupval(L, 1, 2);
+  lua_pushlightuserdata(L, lua_upvalueid(L, 1, n));
+  return 1;
+}
+
+
+static int db_upvaluejoin (lua_State *L) {
+  int n1 = checkupval(L, 1, 2);
+  int n2 = checkupval(L, 3, 4);
+  luaL_argcheck(L, !lua_iscfunction(L, 1), 1, "Lua function expected");
+  luaL_argcheck(L, !lua_iscfunction(L, 3), 3, "Lua function expected");
+  lua_upvaluejoin(L, 1, n1, 3, n2);
+  return 0;
+}
+
 
 static const char KEY_HOOK = 'h';
 
 
 static void hookf (lua_State *L, lua_Debug *ar) {
   static const char *const hooknames[] =
-    {"call", "return", "line", "count", "tail return"};
+    {"call", "return", "line", "count", "tail call"};
   lua_pushlightuserdata(L, (void *)&KEY_HOOK);
   lua_rawget(L, LUA_REGISTRYINDEX);
   lua_pushlightuserdata(L, L);
@@ -315,58 +353,16 @@ static int db_debug (lua_State *L) {
 }
 
 
-#define LEVELS1	12	/* size of the first part of the stack */
-#define LEVELS2	10	/* size of the second part of the stack */
-
-static int db_errorfb (lua_State *L) {
-  int level;
-  int firstpart = 1;  /* still before eventual `...' */
+static int db_traceback (lua_State *L) {
   int arg;
   lua_State *L1 = getthread(L, &arg);
-  lua_Debug ar;
-  if (lua_isnumber(L, arg+2)) {
-    level = (int)lua_tointeger(L, arg+2);
-    lua_pop(L, 1);
+  const char *msg = lua_tostring(L, arg + 1);
+  if (msg == NULL && !lua_isnoneornil(L, arg + 1))  /* non-string 'msg'? */
+    lua_pushvalue(L, arg + 1);  /* return it untouched */
+  else {
+    int level = luaL_optint(L, arg + 2, (L == L1) ? 1 : 0);
+    luaL_traceback(L, L1, msg, level);
   }
-  else
-    level = (L == L1) ? 1 : 0;  /* level 0 may be this own function */
-  if (lua_gettop(L) == arg)
-    lua_pushliteral(L, "");
-  else if (!lua_isstring(L, arg+1)) return 1;  /* message is not a string */
-  else lua_pushliteral(L, "\n");
-  lua_pushliteral(L, "stack traceback:");
-  while (lua_getstack(L1, level++, &ar)) {
-    if (level > LEVELS1 && firstpart) {
-      /* no more than `LEVELS2' more levels? */
-      if (!lua_getstack(L1, level+LEVELS2, &ar))
-        level--;  /* keep going */
-      else {
-        lua_pushliteral(L, "\n\t...");  /* too many levels */
-        while (lua_getstack(L1, level+LEVELS2, &ar))  /* find last levels */
-          level++;
-      }
-      firstpart = 0;
-      continue;
-    }
-    lua_pushliteral(L, "\n\t");
-    lua_getinfo(L1, "Snl", &ar);
-    lua_pushfstring(L, "%s:", ar.short_src);
-    if (ar.currentline > 0)
-      lua_pushfstring(L, "%d:", ar.currentline);
-    if (*ar.namewhat != '\0')  /* is there a name? */
-        lua_pushfstring(L, " in function " LUA_QS, ar.name);
-    else {
-      if (*ar.what == 'm')  /* main? */
-        lua_pushfstring(L, " in main chunk");
-      else if (*ar.what == 'C' || *ar.what == 't')
-        lua_pushliteral(L, " ?");  /* C function or tail call */
-      else
-        lua_pushfstring(L, " in function <%s:%d>",
-                           ar.short_src, ar.linedefined);
-    }
-    lua_concat(L, lua_gettop(L) - arg);
-  }
-  lua_concat(L, lua_gettop(L) - arg);
   return 1;
 }
 
@@ -380,17 +376,19 @@ static const luaL_Reg dblib[] = {
   {"getregistry", db_getregistry},
   {"getmetatable", db_getmetatable},
   {"getupvalue", db_getupvalue},
+  {"upvaluejoin", db_upvaluejoin},
+  {"upvalueid", db_upvalueid},
   {"setfenv", db_setfenv},
   {"sethook", db_sethook},
   {"setlocal", db_setlocal},
   {"setmetatable", db_setmetatable},
   {"setupvalue", db_setupvalue},
-  {"traceback", db_errorfb},
+  {"traceback", db_traceback},
   {NULL, NULL}
 };
 
 
-LUALIB_API int luaopen_debug (lua_State *L) {
+LUAMOD_API int luaopen_debug (lua_State *L) {
   luaL_register(L, LUA_DBLIBNAME, dblib);
   return 1;
 }

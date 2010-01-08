@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.69.1.1 2007/12/27 13:02:25 roberto Exp $
+** $Id: llimits.h,v 1.77 2009/12/17 12:50:20 roberto Exp $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -15,7 +15,7 @@
 #include "lua.h"
 
 
-typedef LUAI_UINT32 lu_int32;
+typedef unsigned LUA_INT32 lu_int32;
 
 typedef LUAI_UMEM lu_mem;
 
@@ -44,6 +44,10 @@ typedef unsigned char lu_byte;
 
 
 /* type to ensure maximum alignment */
+#if !defined(LUAI_USER_ALIGNMENT_T)
+#define LUAI_USER_ALIGNMENT_T	union { double u; void *s; long l; }
+#endif
+
 typedef LUAI_USER_ALIGNMENT_T L_Umaxalign;
 
 
@@ -52,32 +56,45 @@ typedef LUAI_UACNUMBER l_uacNumber;
 
 
 /* internal assertions for in-house debugging */
-#ifdef lua_assert
-
+#if defined(lua_assert)
 #define check_exp(c,e)		(lua_assert(c), (e))
-#define api_check(l,e)		lua_assert(e)
-
 #else
-
 #define lua_assert(c)		((void)0)
 #define check_exp(c,e)		(e)
-#define api_check		luai_apicheck
-
 #endif
 
+/*
+** assertion for checking API calls
+*/
+#if defined(LUA_USE_APICHECK)
+#include <assert.h>
+#define luai_apicheck(L,e)	{ (void)L; assert(e); }
+#elif !defined(luai_apicheck)
+#define luai_apicheck(L,e)	lua_assert(e)
+#endif
 
-#ifndef UNUSED
+#define api_check(l,e,msg)	luai_apicheck(l,(e) && msg)
+
+
+#if !defined(UNUSED)
 #define UNUSED(x)	((void)(x))	/* to avoid warnings */
 #endif
 
 
-#ifndef cast
 #define cast(t, exp)	((t)(exp))
-#endif
 
 #define cast_byte(i)	cast(lu_byte, (i))
 #define cast_num(i)	cast(lua_Number, (i))
 #define cast_int(i)	cast(int, (i))
+
+
+/*
+** maximum depth for nested C calls and syntactical nested non-terminals
+** in a program. (Value must fit in an unsigned short int.)
+*/
+#if !defined(LUAI_MAXCCALLS)
+#define LUAI_MAXCCALLS		200
+#endif
 
 
 
@@ -95,34 +112,73 @@ typedef lu_int32 Instruction;
 
 
 /* minimum size for the string table (must be power of 2) */
-#ifndef MINSTRTABSIZE
+#if !defined(MINSTRTABSIZE)
 #define MINSTRTABSIZE	32
 #endif
 
 
 /* minimum size for string buffer */
-#ifndef LUA_MINBUFFER
+#if !defined(LUA_MINBUFFER)
 #define LUA_MINBUFFER	32
 #endif
 
 
-#ifndef lua_lock
-#define lua_lock(L)     ((void) 0) 
+#if !defined(lua_lock)
+#define lua_lock(L)     ((void) 0)
 #define lua_unlock(L)   ((void) 0)
 #endif
 
-#ifndef luai_threadyield
+#if !defined(luai_threadyield)
 #define luai_threadyield(L)     {lua_unlock(L); lua_lock(L);}
 #endif
 
 
 /*
+** these macros allow user-specific actions on threads when you defined
+** LUAI_EXTRASPACE and need to do something extra when a thread is
+** created/deleted/resumed/yielded.
+*/
+#if !defined(luai_userstateopen)
+#define luai_userstateopen(L)           ((void)L)
+#endif
+
+#if !defined(luai_userstateclose)
+#define luai_userstateclose(L)          ((void)L)
+#endif
+
+#if !defined(luai_userstatethread)
+#define luai_userstatethread(L,L1)      ((void)L)
+#endif
+
+#if !defined(luai_userstatefree)
+#define luai_userstatefree(L)           ((void)L)
+#endif
+
+#if !defined(luai_userstateresume)
+#define luai_userstateresume(L,n)       ((void)L)
+#endif
+
+#if !defined(luai_userstateyield)
+#define luai_userstateyield(L,n)        ((void)L)
+#endif
+
+
+
+
+/*
 ** macro to control inclusion of some hard tests on stack reallocation
-*/ 
-#ifndef HARDSTACKTESTS
-#define condhardstacktests(x)	((void)0)
+*/
+#if !defined(HARDSTACKTESTS)
+#define condmovestack(L)	((void)0)
 #else
-#define condhardstacktests(x)	x
+/* realloc stack keeping its size */
+#define condmovestack(L)	luaD_reallocstack((L), (L)->stacksize)
+#endif
+
+#if !defined(HARDMEMTESTS)
+#define condchangemem(L)	condmovestack(L)
+#else
+#define condchangemem(L)	luaC_fullgc(L, 0)
 #endif
 
 #endif

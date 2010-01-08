@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.58.1.1 2007/12/27 13:02:25 roberto Exp $
+** $Id: llex.h,v 1.62 2009/10/11 20:02:19 roberto Exp $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -28,16 +28,12 @@ enum RESERVED {
   TK_IF, TK_IN, TK_LOCAL, TK_NIL, TK_NOT, TK_OR, TK_REPEAT,
   TK_RETURN, TK_THEN, TK_TRUE, TK_UNTIL, TK_WHILE,
   /* other terminal symbols */
-  TK_CONCAT, TK_DOTS, TK_EQ, TK_GE, TK_LE, TK_NE, TK_NUMBER,
-  TK_NAME, TK_STRING, TK_EOS
+  TK_CONCAT, TK_DOTS, TK_EQ, TK_GE, TK_LE, TK_NE, TK_EOS,
+  TK_NUMBER, TK_NAME, TK_STRING
 };
 
 /* number of reserved words */
 #define NUM_RESERVED	(cast(int, TK_WHILE-FIRST_RESERVED+1))
-
-
-/* array with token `names' */
-LUAI_DATA const char *const luaX_tokens [];
 
 
 typedef union {
@@ -62,6 +58,7 @@ typedef struct LexState {
   struct lua_State *L;
   ZIO *z;  /* input stream */
   Mbuffer *buff;  /* buffer for tokens */
+  struct Varlist *varl;  /* list of all active local variables */
   TString *source;  /* current source name */
   char decpoint;  /* locale decimal point */
 } LexState;
@@ -72,8 +69,7 @@ LUAI_FUNC void luaX_setinput (lua_State *L, LexState *ls, ZIO *z,
                               TString *source);
 LUAI_FUNC TString *luaX_newstring (LexState *ls, const char *str, size_t l);
 LUAI_FUNC void luaX_next (LexState *ls);
-LUAI_FUNC void luaX_lookahead (LexState *ls);
-LUAI_FUNC void luaX_lexerror (LexState *ls, const char *msg, int token);
+LUAI_FUNC int luaX_lookahead (LexState *ls);
 LUAI_FUNC void luaX_syntaxerror (LexState *ls, const char *s);
 LUAI_FUNC const char *luaX_token2str (LexState *ls, int token);
 

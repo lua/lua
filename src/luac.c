@@ -1,5 +1,5 @@
 /*
-** $Id: luac.c,v 1.54 2006/06/02 17:37:11 lhf Exp $
+** $Id: luac.c,v 1.57 2008/03/26 13:40:18 lhf Exp $
 ** Lua compiler (saves bytecodes to files; also list bytecodes)
 ** See Copyright Notice in lua.h
 */
@@ -24,7 +24,7 @@
 #include "lundump.h"
 
 #define PROGNAME	"luac"		/* default program name */
-#define	OUTPUT		PROGNAME ".out"	/* default output file */
+#define OUTPUT		PROGNAME ".out"	/* default output file */
 
 static int listing=0;			/* list bytecodes? */
 static int dumping=1;			/* dump bytecodes? */
@@ -52,20 +52,20 @@ static void usage(const char* message)
  else
   fprintf(stderr,"%s: %s\n",progname,message);
  fprintf(stderr,
- "usage: %s [options] [filenames].\n"
+ "usage: %s [options] [filenames]\n"
  "Available options are:\n"
- "  -        process stdin\n"
  "  -l       list\n"
  "  -o name  output to file " LUA_QL("name") " (default is \"%s\")\n"
  "  -p       parse only\n"
  "  -s       strip debug information\n"
  "  -v       show version information\n"
- "  --       stop handling options\n",
- progname,Output);
+ "  --       stop handling options\n"
+ "  -        process stdin and stop handling options\n"
+ ,progname,Output);
  exit(EXIT_FAILURE);
 }
 
-#define	IS(s)	(strcmp(argv[i],s)==0)
+#define IS(s)	(strcmp(argv[i],s)==0)
 
 static int doargs(int argc, char* argv[])
 {
@@ -108,7 +108,7 @@ static int doargs(int argc, char* argv[])
  }
  if (version)
  {
-  printf("%s  %s\n",LUA_RELEASE,LUA_COPYRIGHT);
+  printf("%s\n",LUA_COPYRIGHT);
   if (version==argc-1) exit(EXIT_SUCCESS);
  }
  return i;
@@ -183,6 +183,13 @@ static int pmain(lua_State* L)
  return 0;
 }
 
+LUA_API int lua_cpcall (lua_State *L, lua_CFunction func, void *ud) {
+  lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_CPCALL);
+  lua_pushlightuserdata(L, &func);
+  lua_pushlightuserdata(L, ud);
+  return lua_pcall(L, 2, 0, 0);
+}
+
 int main(int argc, char* argv[])
 {
  lua_State* L;
@@ -190,7 +197,7 @@ int main(int argc, char* argv[])
  int i=doargs(argc,argv);
  argc-=i; argv+=i;
  if (argc<=0) usage("no input files given");
- L=lua_open();
+ L=luaL_newstate();
  if (L==NULL) fatal("not enough memory for state");
  s.argc=argc;
  s.argv=argv;

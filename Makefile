@@ -1,6 +1,5 @@
-# makefile for installing Lua
-# see INSTALL for installation instructions
-# see src/Makefile and src/luaconf.h for further customization
+# Makefile for installing Lua
+# See doc/readme.html for installation and customization instructions.
 
 # == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
 
@@ -15,40 +14,41 @@ INSTALL_INC= $(INSTALL_TOP)/include
 INSTALL_LIB= $(INSTALL_TOP)/lib
 INSTALL_MAN= $(INSTALL_TOP)/man/man1
 #
-# You probably want to make INSTALL_LMOD and INSTALL_CMOD consistent with
-# LUA_ROOT, LUA_LDIR, and LUA_CDIR in luaconf.h (and also with etc/lua.pc).
+# You may want to make INSTALL_LMOD and INSTALL_CMOD consistent with
+# LUA_ROOT, LUA_LDIR, and LUA_CDIR in luaconf.h.
 INSTALL_LMOD= $(INSTALL_TOP)/share/lua/$V
 INSTALL_CMOD= $(INSTALL_TOP)/lib/lua/$V
 
-# How to install. If your install program does not support "-p", then you
-# may have to run ranlib on the installed liblua.a (do "make ranlib").
+# How to install.
+# If your install program does not support "-p", then you may have to run
+# ranlib on the installed liblua.a.
 INSTALL= install -p
 INSTALL_EXEC= $(INSTALL) -m 0755
 INSTALL_DATA= $(INSTALL) -m 0644
 #
-# If you don't have install you can use cp instead.
+# If you don't have "install" you can use "cp" instead.
 # INSTALL= cp -p
 # INSTALL_EXEC= $(INSTALL)
 # INSTALL_DATA= $(INSTALL)
 
 # Utilities.
 MKDIR= mkdir -p
-RANLIB= ranlib
+RM= rm -f
 
-# == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
+# == END OF USER SETTINGS -- NO NEED TO CHANGE ANYTHING BELOW THIS LINE =======
 
 # Convenience platforms targets.
 PLATS= aix ansi bsd freebsd generic linux macosx mingw posix solaris
 
 # What to install.
 TO_BIN= lua luac
-TO_INC= lua.h luaconf.h lualib.h lauxlib.h ../etc/lua.hpp
+TO_INC= lua.h luaconf.h lualib.h lauxlib.h lua.hpp
 TO_LIB= liblua.a
 TO_MAN= lua.1 luac.1
 
 # Lua version and release.
-V= 5.1
-R= 5.1.4
+V= 5.2
+R= $V.0
 
 all:	$(PLAT)
 
@@ -65,20 +65,23 @@ install: dummy
 	cd src && $(INSTALL_DATA) $(TO_LIB) $(INSTALL_LIB)
 	cd doc && $(INSTALL_DATA) $(TO_MAN) $(INSTALL_MAN)
 
-ranlib:
-	cd src && cd $(INSTALL_LIB) && $(RANLIB) $(TO_LIB)
+uninstall:
+	cd src && cd $(INSTALL_BIN) && $(RM) $(TO_BIN)
+	cd src && cd $(INSTALL_INC) && $(RM) $(TO_INC)
+	cd src && cd $(INSTALL_LIB) && $(RM) $(TO_LIB)
+	cd doc && cd $(INSTALL_MAN) && $(RM) $(TO_MAN)
 
 local:
-	$(MAKE) install INSTALL_TOP=..
+	$(MAKE) install INSTALL_TOP=../install
 
 none:
 	@echo "Please do"
 	@echo "   make PLATFORM"
 	@echo "where PLATFORM is one of these:"
 	@echo "   $(PLATS)"
-	@echo "See INSTALL for complete instructions."
+	@echo "See doc/readme.html for complete instructions."
 
-# make may get confused with test/ and INSTALL in a case-insensitive OS
+# make may get confused with test/ and install/ in a case-insensitive OS
 dummy:
 
 # echo config parameters
@@ -106,8 +109,8 @@ echo:
 
 # echo private config parameters
 pecho:
-	@echo "V = $(V)"
-	@echo "R = $(R)"
+	@echo "V = $V"
+	@echo "R = $R"
 	@echo "TO_BIN = $(TO_BIN)"
 	@echo "TO_INC = $(TO_INC)"
 	@echo "TO_LIB = $(TO_LIB)"

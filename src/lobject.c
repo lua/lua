@@ -1,10 +1,9 @@
 /*
-** $Id: lobject.c,v 2.22.1.1 2007/12/27 13:02:25 roberto Exp $
+** $Id: lobject.c,v 2.34 2009/11/26 11:39:20 roberto Exp $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
 
-#include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +14,8 @@
 
 #include "lua.h"
 
+#include "lctype.h"
+#include "ldebug.h"
 #include "ldo.h"
 #include "lmem.h"
 #include "lobject.h"
@@ -24,7 +25,7 @@
 
 
 
-const TValue luaO_nilobject_ = {{NULL}, LUA_TNIL};
+LUAI_DDEF const TValue luaO_nilobject_ = {NILCONSTANT};
 
 
 /*
@@ -32,26 +33,26 @@ const TValue luaO_nilobject_ = {{NULL}, LUA_TNIL};
 ** (eeeeexxx), where the real value is (1xxx) * 2^(eeeee - 1) if
 ** eeeee != 0 and (xxx) otherwise.
 */
-int luaO_int2fb (unsigned int x) {
-  int e = 0;  /* expoent */
-  while (x >= 16) {
+int luaO_int2fb (lu_int32 x) {
+  int e = 0;  /* exponent */
+  if (x < 8) return x;
+  while (x >= 0x10) {
     x = (x+1) >> 1;
     e++;
   }
-  if (x < 8) return x;
-  else return ((e+1) << 3) | (cast_int(x) - 8);
+  return ((e+1) << 3) | (cast_int(x) - 8);
 }
 
 
 /* converts back */
 int luaO_fb2int (int x) {
-  int e = (x >> 3) & 31;
+  int e = (x >> 3) & 0x1f;
   if (e == 0) return x;
-  else return ((x & 7)+8) << (e - 1);
+  else return ((x & 7) + 8) << (e - 1);
 }
 
 
-int luaO_log2 (unsigned int x) {
+int luaO_ceillog2 (unsigned int x) {
   static const lu_byte log_2[256] = {
     0,1,2,2,3,3,3,3,4,4,4,4,4,4,4,4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
     6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
@@ -62,10 +63,10 @@ int luaO_log2 (unsigned int x) {
     8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
     8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8
   };
-  int l = -1;
+  int l = 0;
+  x--;
   while (x >= 256) { l += 8; x >>= 8; }
   return l + log_2[x];
-
 }
 
 
@@ -87,6 +88,20 @@ int luaO_rawequalObj (const TValue *t1, const TValue *t2) {
 }
 
 
+lua_Number luaO_arith (int op, lua_Number v1, lua_Number v2) {
+  switch (op) {
+    case LUA_OPADD: return luai_numadd(NULL, v1, v2);
+    case LUA_OPSUB: return luai_numsub(NULL, v1, v2);
+    case LUA_OPMUL: return luai_nummul(NULL, v1, v2);
+    case LUA_OPDIV: return luai_numdiv(NULL, v1, v2);
+    case LUA_OPMOD: return luai_nummod(NULL, v1, v2);
+    case LUA_OPPOW: return luai_numpow(NULL, v1, v2);
+    case LUA_OPUNM: return luai_numunm(N, v1);
+    default: lua_assert(0); return 0;
+  }
+}
+
+
 int luaO_str2d (const char *s, lua_Number *result) {
   char *endptr;
   *result = lua_str2number(s, &endptr);
@@ -94,7 +109,7 @@ int luaO_str2d (const char *s, lua_Number *result) {
   if (*endptr == 'x' || *endptr == 'X')  /* maybe an hexadecimal constant? */
     *result = cast_num(strtoul(s, &endptr, 16));
   if (*endptr == '\0') return 1;  /* most common case */
-  while (isspace(cast(unsigned char, *endptr))) endptr++;
+  while (lisspace(cast(unsigned char, *endptr))) endptr++;
   if (*endptr != '\0') return 0;  /* invalid trailing characters? */
   return 1;
 }
@@ -151,11 +166,9 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
         break;
       }
       default: {
-        char buff[3];
-        buff[0] = '%';
-        buff[1] = *(e+1);
-        buff[2] = '\0';
-        pushstr(L, buff);
+        luaG_runerror(L,
+            "invalid option " LUA_QL("%%%c") " to " LUA_QL("lua_pushfstring"),
+            *(e + 1));
         break;
       }
     }
@@ -163,8 +176,7 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
     fmt = e+2;
   }
   pushstr(L, fmt);
-  luaV_concat(L, n+1, cast_int(L->top - L->base) - 1);
-  L->top -= n;
+  luaV_concat(L, n+1);
   return svalue(L->top - 1);
 }
 
@@ -179,36 +191,46 @@ const char *luaO_pushfstring (lua_State *L, const char *fmt, ...) {
 }
 
 
+
+#define LL(x)	(sizeof(x) - 1)
+#define RETS	"..."
+#define PRE	"[string \""
+#define POS	"\"]"
+
+#define addstr(a,b,l)	( memcpy(a,b,l), a += (l) )
+
 void luaO_chunkid (char *out, const char *source, size_t bufflen) {
-  if (*source == '=') {
-    strncpy(out, source+1, bufflen);  /* remove first char */
-    out[bufflen-1] = '\0';  /* ensures null termination */
+  size_t l = strlen(source);
+  if (*source == '=') {  /* 'literal' source */
+    if (l <= bufflen)  /* small enough? */
+      memcpy(out, source + 1, l);
+    else {  /* truncate it */
+      addstr(out, source + 1, bufflen - 1);
+      *out = '\0';
+    }
   }
-  else {  /* out = "source", or "...source" */
-    if (*source == '@') {
-      size_t l;
-      source++;  /* skip the `@' */
-      bufflen -= sizeof(" '...' ");
-      l = strlen(source);
-      strcpy(out, "");
-      if (l > bufflen) {
-        source += (l-bufflen);  /* get last part of file name */
-        strcat(out, "...");
-      }
-      strcat(out, source);
+  else if (*source == '@') {  /* file name */
+    if (l <= bufflen)  /* small enough? */
+      memcpy(out, source + 1, l);
+    else {  /* add '...' before rest of name */
+      addstr(out, RETS, LL(RETS));
+      bufflen -= LL(RETS);
+      memcpy(out, source + 1 + l - bufflen, bufflen);
     }
-    else {  /* out = [string "string"] */
-      size_t len = strcspn(source, "\n\r");  /* stop at first newline */
-      bufflen -= sizeof(" [string \"...\"] ");
-      if (len > bufflen) len = bufflen;
-      strcpy(out, "[string \"");
-      if (source[len] != '\0') {  /* must truncate? */
-        strncat(out, source, len);
-        strcat(out, "...");
-      }
-      else
-        strcat(out, source);
-      strcat(out, "\"]");
+  }
+  else {  /* string; format as [string "source"] */
+    const char *nl = strchr(source, '\n');  /* find first new line (if any) */
+    addstr(out, PRE, LL(PRE));  /* add prefix */
+    bufflen -= LL(PRE RETS POS);  /* save space for prefix+suffix */
+    if (l < bufflen && nl == NULL) {  /* small one-line source? */
+      addstr(out, source, l);  /* keep it */
     }
+    else {
+      if (nl != NULL) l = nl - source;  /* stop at first newline */
+      if (l > bufflen) l = bufflen;
+      addstr(out, source, l);
+      addstr(out, RETS, LL(RETS));
+    }
+    memcpy(out, POS, LL(POS) + 1);
   }
 }
