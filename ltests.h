@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.28 2009/12/16 16:42:58 roberto Exp roberto $
+** $Id: ltests.h,v 2.29 2009/12/17 12:26:09 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -39,7 +39,7 @@ extern Memcontrol l_memcontrol;
 /*
 ** generic variable for debug tricks
 */
-void *l_Trick;
+extern void *l_Trick;
 
 
 void *debug_realloc (void *ud, void *block, size_t osize, size_t nsize);
