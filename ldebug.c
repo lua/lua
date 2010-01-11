@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.60 2009/12/01 16:31:04 roberto Exp roberto $
+** $Id: ldebug.c,v 2.61 2010/01/06 14:42:35 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -363,7 +363,7 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
 
 
 static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
-  TMS tm = 0;
+  TMS tm;
   Instruction i;
   if ((ci->callstatus & CIST_TAIL) || !isLua(ci->previous))
     return NULL;  /* calling function is not Lua (or is unknown) */
