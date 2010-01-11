@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.76 2010/01/11 17:11:24 roberto Exp roberto $
+** $Id: loadlib.c,v 1.77 2010/01/11 17:34:59 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -397,6 +397,7 @@ static const char *pushnexttemplate (lua_State *L, const char *path) {
 
 static const char *searchpath (lua_State *L, const char *name,
                                              const char *path) {
+  name = luaL_gsub(L, name, ".", LUA_DIRSEP);
   lua_pushliteral(L, "");  /* error accumulator */
   while ((path = pushnexttemplate(L, path)) != NULL) {
     const char *filename = luaL_gsub(L, lua_tostring(L, -1),
@@ -426,7 +427,6 @@ static int ll_searchpath (lua_State *L) {
 static const char *findfile (lua_State *L, const char *name,
                                            const char *pname) {
   const char *path;
-  name = luaL_gsub(L, name, ".", LUA_DIRSEP);
   lua_getfield(L, LUA_ENVIRONINDEX, pname);
   path = lua_tostring(L, -1);
   if (path == NULL)
