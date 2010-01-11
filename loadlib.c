@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.72 2010/01/04 16:36:39 roberto Exp roberto $
+** $Id: loadlib.c,v 1.73 2010/01/06 14:35:17 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -449,13 +449,20 @@ static int loader_Lua (lua_State *L) {
 }
 
 
-static int loadfunc(lua_State *L, const char *filename, const char *modname) {
+static int loadfunc (lua_State *L, const char *filename, const char *modname) {
   const char *funcname;
-  const char *mark = strchr(modname, *LUA_IGMARK);
-  if (mark) modname = mark + 1;
-  funcname = luaL_gsub(L, modname, ".", LUA_OFSEP);
-  funcname = lua_pushfstring(L, POF"%s", funcname);
-  lua_remove(L, -2);  /* remove 'gsub' result */
+  const char *mark;
+  modname = luaL_gsub(L, modname, ".", LUA_OFSEP);
+  mark = strchr(modname, *LUA_IGMARK);
+  if (mark) {
+    int stat;
+    funcname = lua_pushlstring(L, modname, mark - modname);
+    funcname = lua_pushfstring(L, POF"%s", funcname);
+    stat = ll_loadfunc(L, filename, funcname);
+    if (stat != ERRFUNC) return stat;
+    modname = mark + 1;  /* else go ahead and try old-style name */
+  }
+  funcname = lua_pushfstring(L, POF"%s", modname);
   return ll_loadfunc(L, filename, funcname);
 }
 
