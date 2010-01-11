@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.126 2009/12/28 16:30:31 roberto Exp roberto $
+** $Id: luaconf.h,v 1.127 2010/01/06 15:15:04 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -440,8 +440,9 @@ LUA_API int (lua_cpcall) (lua_State *L, lua_CFunction func, void *ud);
 /* On a Microsoft compiler, use assembler */
 #if defined(_MSC_VER)
 
-#define lua_number2int(i,d)   __asm fld d   __asm fistp i
+#define lua_number2int(i,d)   {__asm fld d   __asm fistp i}
 #define lua_number2integer(i,n)		lua_number2int(i, n)
+#define lua_number2uint(i,n)		lua_number2int(i, n)
 
 #else
 /* the next trick should work on any Pentium, but sometimes clashes
