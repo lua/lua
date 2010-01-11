@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.128 2010/01/11 16:35:20 roberto Exp roberto $
+** $Id: luaconf.h,v 1.129 2010/01/11 17:11:24 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -91,8 +91,8 @@
 
 #else
 #define LUA_ROOT	"/usr/local/"
-#define LUA_LDIR	LUA_ROOT "share/lua/5.1/"
-#define LUA_CDIR	LUA_ROOT "lib/lua/5.1/"
+#define LUA_LDIR	LUA_ROOT "share/lua/5.2/"
+#define LUA_CDIR	LUA_ROOT "lib/lua/5.2/"
 #define LUA_PATH_DEFAULT  \
 		LUA_LDIR"?.lua;"  LUA_LDIR"?/init.lua;" \
 		LUA_CDIR"?.lua;"  LUA_CDIR"?/init.lua;" "./?.lua"
