@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.73 2010/01/06 14:35:17 roberto Exp roberto $
+** $Id: loadlib.c,v 1.74 2010/01/11 16:10:47 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -344,7 +344,9 @@ static int ll_loadfunc (lua_State *L, const char *path, const char *sym) {
     lua_CFunction f = ll_sym(L, *reg, sym);
     if (f == NULL)
       return ERRFUNC;  /* unable to find function */
-    lua_pushcfunction(L, f);  /* else return function */
+    lua_pushcfunction(L, f);  /* else create new function... */
+    lua_pushglobaltable(L);   /* ... and set the standard global table... */
+    lua_setfenv(L, -2);       /* ... as its environment */
     return 0;  /* no errors */
   }
 }
