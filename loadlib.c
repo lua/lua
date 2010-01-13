@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.77 2010/01/11 17:34:59 roberto Exp roberto $
+** $Id: loadlib.c,v 1.78 2010/01/11 17:55:25 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -113,7 +113,7 @@ static void *ll_load (lua_State *L, const char *path, int seeglb) {
 
 
 static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
-  lua_CFunction f = (lua_CFunction)(unsigned long)dlsym(lib, sym);
+  lua_CFunction f = (lua_CFunction)dlsym(lib, sym);
   if (f == NULL) lua_pushstring(L, dlerror());
   return f;
 }
