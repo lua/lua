@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.85 2009/12/17 16:20:01 roberto Exp roberto $
+** $Id: ltests.c,v 2.86 2009/12/22 15:32:50 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -190,7 +190,7 @@ static void printobj (global_State *g, GCObject *o) {
   GCObject *p;
   for (p = g->rootgc; p != o && p != NULL; p = gch(p)->next) i++;
   if (p == NULL) i = -1;
-  printf("%d:%s(%p)-%c(%02X)", i, luaT_typenames[gch(o)->tt], (void *)o,
+  printf("%d:%s(%p)-%c(%02X)", i, typename(gch(o)->tt), (void *)o,
            isdead(g,o)?'d':isblack(o)?'b':iswhite(o)?'w':'g', gch(o)->marked);
 }
 
@@ -329,10 +329,7 @@ static void checkstack (global_State *g, lua_State *L1) {
 
 static void checkobject (global_State *g, GCObject *o) {
   if (isdead(g, o))
-/*    lua_assert(issweep(g));*/
-{ if (!issweep(g))
-printf(">>> %d  %s  %02x\n", g->gcstate, luaT_typenames[gch(o)->tt], gch(o)->marked);
-}
+    lua_assert(issweep(g));
   else {
     if (g->gcstate == GCSfinalize)
       lua_assert(iswhite(o));
@@ -1141,10 +1138,6 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("type") {
       lua_pushstring(L1, luaL_typename(L1, getnum));
     }
-/*    else if EQ("getn") {
-      int i = getindex;
-      lua_pushinteger(L1, lua_objlen(L1, i));
-    } */
     else if EQ("append") {
       int t = getindex;
       int i = lua_rawlen(L1, t);

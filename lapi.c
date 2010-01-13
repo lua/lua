@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.109 2010/01/08 15:16:56 roberto Exp roberto $
+** $Id: lapi.c,v 2.110 2010/01/11 17:38:30 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -255,7 +255,7 @@ LUA_API int lua_type (lua_State *L, int idx) {
 
 LUA_API const char *lua_typename (lua_State *L, int t) {
   UNUSED(L);
-  return (t == LUA_TNONE) ? "no value" : luaT_typenames[t];
+  return typename(t);
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.9 2007/09/10 17:59:32 roberto Exp roberto $
+** $Id: ltm.c,v 2.10 2009/11/19 19:06:52 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -19,10 +19,12 @@
 #include "ltm.h"
 
 
+static const char udatatypename[] = "userdata";
 
-LUAI_DDEF const char *const luaT_typenames[] = {
-  "nil", "boolean", "userdata", "number",
-  "string", "table", "function", "userdata", "thread",
+LUAI_DDEF const char *const luaT_typenames_[] = {
+  "no value",
+  "nil", "boolean", udatatypename, "number",
+  "string", "table", "function", udatatypename, "thread",
   "proto", "upval"
 };
 
