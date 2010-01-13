@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.78 2010/01/11 17:55:25 roberto Exp roberto $
+** $Id: loadlib.c,v 1.79 2010/01/13 16:09:05 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -133,6 +133,14 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 
 #undef setprogdir
 
+/*
+** optional flags for LoadLibraryEx
+*/
+#if !defined(LUA_LLE_FLAGS)
+#define LUA_LLE_FLAGS	0
+#endif
+
+
 static void setprogdir (lua_State *L) {
   char buff[MAX_PATH + 1];
   char *lb;
@@ -159,12 +167,12 @@ static void pusherror (lua_State *L) {
 }
 
 static void ll_unloadlib (void *lib) {
-  FreeLibrary((HINSTANCE)lib);
+  FreeLibrary((HMODULE)lib);
 }
 
 
 static void *ll_load (lua_State *L, const char *path, int seeglb) {
-  HINSTANCE lib = LoadLibrary(path);
+  HMODULE lib = LoadLibraryEx(path, NULL, LUA_LLE_FLAGS);
   (void)(seeglb);  /* symbols are 'global' by default? */
   if (lib == NULL) pusherror(L);
   return lib;
@@ -172,7 +180,7 @@ static void *ll_load (lua_State *L, const char *path, int seeglb) {
 
 
 static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
-  lua_CFunction f = (lua_CFunction)GetProcAddress((HINSTANCE)lib, sym);
+  lua_CFunction f = (lua_CFunction)GetProcAddress((HMODULE)lib, sym);
   if (f == NULL) pusherror(L);
   return f;
 }
