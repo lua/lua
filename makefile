@@ -4,34 +4,37 @@
 
 # == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
 
-CWARNS= -pedantic -Wextra \
+CWARNSC=-pedantic -Wextra \
 	-Waggregate-return \
 	-Wcast-align \
-        -Wdeclaration-after-statement \
         -Wdisabled-optimization \
-        -Wmissing-prototypes \
-        -Wnested-externs \
 	-Wpointer-arith \
 	-Wshadow \
         -Wsign-compare \
-	-Wstrict-prototypes \
 	-Wundef \
 	-Wwrite-strings \
-	-Wc++-compat \
-	-Wold-style-definition \
 	-Wredundant-decls \
 	-Wdisabled-optimization \
--malign-double
+        # the next warnings generate to much noise, so they are disabled
 	# -Wlogical-op \
 	# -Wformat=2 \
 	# -Wstrict-overflow=5 \
 	#  -Wcast-qual \
 
+# The next warnings are not valid for C++
+CWARNS= $(CWARNSC) \
+        -Wdeclaration-after-statement \
+        -Wmissing-prototypes \
+        -Wnested-externs \
+	-Wstrict-prototypes \
+	-Wc++-compat \
+	-Wold-style-definition \
+
 
 # -DEXTERNMEMCHECK -DHARDSTACKTESTS -DHARDMEMTESTS
 # -g -DLUA_USER_H='"ltests.h"'
 # -fomit-frame-pointer #-pg -malign-double
-# TESTS= -g -DLUA_USER_H='"ltests.h"'
+TESTS= -g -DLUA_USER_H='"ltests.h"'
 
 LOCAL = $(TESTS) $(CWARNS)
 
