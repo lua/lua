@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.98 2010/01/06 15:14:15 roberto Exp $
+** $Id: lauxlib.h,v 1.99 2010/01/11 16:00:45 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -29,8 +29,6 @@ typedef struct luaL_Reg {
 LUALIB_API void (luaL_checkversion_) (lua_State *L, lua_Number ver);
 #define luaL_checkversion(L)	luaL_checkversion_(L, LUA_VERSION_NUM)
 
-LUALIB_API void (luaI_openlib) (lua_State *L, const char *libname,
-                                const luaL_Reg *l, int nup);
 LUALIB_API void (luaL_register) (lua_State *L, const char *libname,
                                 const luaL_Reg *l);
 LUALIB_API int (luaL_getmetafield) (lua_State *L, int obj, const char *e);

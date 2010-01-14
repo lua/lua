@@ -21,6 +21,13 @@ blockquote, .display {
 	padding-right: 15px;
 	background: transparent url(external.png) no-repeat center right;
 }
+
+tt, kbd {
+	font-size: 120% ;
+	xcolor: black ;
+	xpadding: 4px ;
+	xbackground-color: #E0E0E0 ;
+}
 </STYLE>
 </HEAD>
 
@@ -80,7 +87,6 @@ distributed in this package.
 <P>
 
 <H2><A NAME="install">Installing Lua</A></H2>
-<DIV CLASS="review">how much detail?</DIV><P>
 
 Lua is distributed in source form.
 You need to build it before using it.
@@ -100,7 +106,7 @@ See below for
 
 <H3>Building Lua</H3>
 
-In most Unix-like platforms, simply do "make" with a suitable target.
+In most Unix-like platforms, simply do "<KBD>make</KBD>" with a suitable target.
 Here are the details.
 <P>
 
@@ -111,13 +117,13 @@ the top-level directory, which is named lua-5.2.
 The Makefile there controls both the build process and the installation process.
 <P>
 <LI>
-  Do "make" and see if your platform is listed.
+  Do "<KBD>make</KBD>" and see if your platform is listed.
   The platforms currently supported are:
 <BLOCKQUOTE>
     aix ansi bsd freebsd generic linux macosx mingw posix solaris
 </BLOCKQUOTE>
 <P>
-  If your platform is listed, just do "make xxx", where xxx
+  If your platform is listed, just do "<KBD>make xxx</KBD>", where xxx
   is your platform name.
 <P>
   If your platform is not listed, try the closest one or posix, generic,
@@ -131,7 +137,7 @@ luac (the compiler),
 and liblua.a (the library).
 <P>
 <LI>
-  If you want to check that Lua has been built correctly, do "make test"
+  If you want to check that Lua has been built correctly, do "<KBD>make test</KBD>"
   after building Lua. This will run the interpreter on a "hello world"
   Lua program from the test directory.
   You may want to try other example programs in that directory.
@@ -140,19 +146,19 @@ and liblua.a (the library).
 
 <H3>Installing Lua</H3>
   Once you have built Lua, you may want to install it in an official
-  place in your system. In this case, do "make install". The official
+  place in your system. In this case, do "<KBD>make install</KBD>". The official
   place and the way to install files are defined in Makefile. You'll
   probably need the right permissions to install files.
 <P>
 
-  If you want to build and install Lua in one step, do <SPAN CLASS="display">"make xxx install"</SPAN>,
+  If you want to build and install Lua in one step, do "<KBD>make xxx install</KBD>",
   where xxx is your platform name.
 <P>
 
-  If you want to install Lua locally, then do "make local". This will
-  create directories bin, include, lib, man, and install Lua there as
-  follows:
-  <SPAN CLASS="review">review!</SPAN>
+  If you want to install Lua locally, then do "<KBD>make local</KBD>".
+  This will create a directory <TT>install</TT> with subdirectories
+  <TT>bin</TT>, <TT>include</TT>, <TT>lib</TT>, <TT>man</TT>,
+  and install Lua there as follows:
 <P>
 
 <DL CLASS="display">
@@ -185,15 +191,15 @@ and liblua.a (the library).
 <P>
 
   If you want to install Lua locally, but in some other directory, do
-  "make install INSTALL_TOP=xxx", where xxx is your chosen directory.
+  "<KBD>make install INSTALL_TOP=xxx</KBD>", where xxx is your chosen directory.
 <P>
 
 <H3><A NAME="customization">Customization</A></H3>
   Three kinds of things can be customized by editing a file:
 <UL>
-    <LI> Where and how to install Lua &ndash; edit Makefile.
-    <LI> How to build Lua &ndash; edit src/Makefile.
-    <LI> Lua features &ndash; edit src/luaconf.h.
+    <LI> Where and how to install Lua &mdash; edit Makefile.
+    <LI> How to build Lua &mdash; edit src/Makefile.
+    <LI> Lua features &mdash; edit src/luaconf.h.
 </UL>
 <P>
 
@@ -205,6 +211,7 @@ and liblua.a (the library).
   to edit src/luaconf.h before building and installing Lua.
   The edited file will be the one installed, and
   it will be used by any Lua clients that you build, to ensure consistency.
+  (Further customization is possible by editing the Lua sources.)
 <P>
 
   We strongly recommend that you enable dynamic loading. This is done
@@ -223,11 +230,11 @@ and liblua.a (the library).
 <DT>
 library:
 <DD>
-		lapi.c lcode.c lctype.c ldebug.c ldo.c ldump.c lfunc.c lgc.c llex.c
-		lmem.c lobject.c lopcodes.c lparser.c lstate.c lstring.c
-		ltable.c ltm.c lundump.c lvm.c lzio.c
-		lauxlib.c lbaselib.c ldblib.c liolib.c lmathlib.c loslib.c
-		ltablib.c lstrlib.c loadlib.c linit.c
+lapi.c lcode.c lctype.c ldebug.c ldo.c ldump.c lfunc.c lgc.c llex.c
+lmem.c lobject.c lopcodes.c lparser.c lstate.c lstring.c ltable.c
+ltm.c lundump.c lvm.c lzio.c
+lauxlib.c lbaselib.c lbitlib.c ldblib.c liolib.c lmathlib.c loslib.c
+ltablib.c lstrlib.c loadlib.c linit.c
 <DT>
 interpreter:
 <DD>
@@ -238,12 +245,12 @@ compiler:
   library, luac.c print.c
 </DL>
 
-  If you use Visual Studio .NET, you can use etc/luavs.bat in its
+  If you use Visual Studio .NET, you can use <TT>etc/luavs.bat</TT> in its
   "Command Prompt".
 <P>
 
   If all you want is to build the Lua interpreter, you may put all .c files
-  in a single project, except for luac.c and print.c. Or just use etc/all.c.
+  in a single project, except for luac.c and print.c. Or just use <TT>etc/one.c</TT>.
 <P>
 
   To use Lua as a library in your own programs you'll need to know how to
@@ -254,7 +261,7 @@ compiler:
   into each dynamic library. For Unix, we recommend that the Lua library
   be linked statically into the host program and its symbols exported for
   dynamic linking; src/Makefile does this for the Lua interpreter.
-  For Windows, we recommend that the Lua library be DLL.
+  For Windows, we recommend that the Lua library be a DLL.
 <P>
 
   As mentioned above, you may edit src/luaconf.h to customize
@@ -262,10 +269,9 @@ compiler:
 <P>
 
 <H2><A NAME="changes">Changes since Lua 5.1</A></H2>
-<DIV CLASS="review">incomplete!</DIV><P>
 
 Here are the main changes in Lua since its last release.
-The 
+The
 <A HREF="contents.html">reference manual</A>
 lists the
 <A HREF="manual.html#7">incompatibilities</A> that had to be introduced.
@@ -274,15 +280,32 @@ lists the
 <H3>Language</H3>
 <UL>
 <LI> new lexical environments.
+<LI> no more fenv for threads.
+<LI> ephemeron tables.
+<LI> yieldable pcall/metamethods.
+<LI> tables honor the <CODE>__len</CODE> metamethod.
+<LI> max constants per function raised to 2^26.
 <LI> hex escapes in strings.
-<LI> tables and strings honor the <CODE>__len</CODE> metamethod.
+<LI> no more verification of opcode consistency.
+
 </UL>
 
 <H3>Libraries</H3>
 <UL>
-<LI> new function <CODE>package.searchpath</CODE>.
+<LI> new library for bitwise operations.
 <LI> new metamethods <CODE>__pairs</CODE> and <CODE>__ipairs</CODE>.
 <LI> arguments for function called through <CODE>xpcall</CODE>.
+<LI> optional argument to load (to control binary x text).
+<LI> <CODE>loadlib</CODE> may load libraries with global names (RTLD_GLOBAL).
+<LI> new function <CODE>package.searchpath</CODE>.
+<LI> optional base in <CODE>math.log</CODE>.
+<LI> <CODE>file:write</CODE> returns file.
+<LI> closing a pipe returns exit status.
+<LI> <CODE>os.exit</CODE> may close state.
+<LI> new option 'isrunning' for <CODE>collectgarbage</CODE> and <CODE>lua_gc</CODE>.
+<LI> frontier patterns.
+<LI> <CODE>ipairs</CODE> now goes until #t.
+
 </UL>
 
 <H3>Implementation</H3>
@@ -291,9 +314,12 @@ lists the
 	(core forces a full collection when allocation fails).
 <LI> ephemeron tables
 	(tables with weak keys only visit value when key is accessible)
-<LI> handling of non-string error messages.
+<LI> handling of non-string error messages in the standalone interpreter.
 <LI> udata with finalizers are kept in a separated list for the GC.
-<SPAN CLASS="review">relevant?</SPAN>
+<LI> CallInfo stack now is a linked list.
+<LI> internal (immutable) version of ctypes.
+<LI> parser uses much less C-stack space (no more auto arrays).
+<LI> new hash for floats.
 </UL>
 
 
@@ -317,7 +343,7 @@ For details and rationale, see
 <P>
 
 <BLOCKQUOTE>
-Copyright &copy; 1994-2010 Lua.org, PUC-Rio.
+Copyright &copy; 1994&ndash;2010 Lua.org, PUC-Rio.
 <P>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -346,8 +372,11 @@ THE SOFTWARE.
 <HR>
 <SMALL>
 Last update:
-Fri Jan  8 16:41:16 BRST 2010
+Wed Jan 13 15:35:05 BRST 2010
 </SMALL>
+<!--
+Last change: revised for Lua 5.2.0 (work2)
+-->
 
 </BODY>
 </HTML>

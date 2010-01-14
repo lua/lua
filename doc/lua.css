@@ -39,3 +39,8 @@ hr {
 	background-color: #a0a0a0 ;
 }
 
+:target {
+	background-color: #F8F8F8 ;
+	padding: 8px ;
+	border: solid #a0a0a0 2px ;
+}

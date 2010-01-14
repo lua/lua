@@ -1,10 +1,10 @@
 This directory contains some useful files and code.
 Unlike the code in ../src, everything here is in the public domain.
 
-If any of the makes fail, you're probably not using the same libraries
-used to build Lua. Set MYLIBS in Makefile or in the command line accordingly.
+If any of the makes fail, you're probably not using the same libraries used
+to build Lua. Set MYLIBS in Makefile or in the command line accordingly.
 
-all.c
+one.c
 	Full Lua interpreter in a single file.
 	Do "make one" for a demo.
 

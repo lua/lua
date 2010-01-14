@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.61 2010/01/06 14:42:35 roberto Exp $
+** $Id: ldebug.c,v 2.63 2010/01/13 16:18:25 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -363,7 +363,7 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
 
 
 static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
-  TMS tm = 0;
+  TMS tm;
   Instruction i;
   if ((ci->callstatus & CIST_TAIL) || !isLua(ci->previous))
     return NULL;  /* calling function is not Lua (or is unknown) */
@@ -416,7 +416,7 @@ static int isinstack (CallInfo *ci, const TValue *o) {
 void luaG_typeerror (lua_State *L, const TValue *o, const char *op) {
   CallInfo *ci = L->ci;
   const char *name = NULL;
-  const char *t = luaT_typenames[ttype(o)];
+  const char *t = typename(ttype(o));
   const char *kind = (isLua(ci) && isinstack(ci, o)) ?
                          getobjname(L, ci, cast_int(o - ci->u.l.base), &name) :
                          NULL;
@@ -444,9 +444,9 @@ void luaG_aritherror (lua_State *L, const TValue *p1, const TValue *p2) {
 
 
 int luaG_ordererror (lua_State *L, const TValue *p1, const TValue *p2) {
-  const char *t1 = luaT_typenames[ttype(p1)];
-  const char *t2 = luaT_typenames[ttype(p2)];
-  if (t1[2] == t2[2])
+  const char *t1 = typename(ttype(p1));
+  const char *t2 = typename(ttype(p2));
+  if (t1 == t2)
     luaG_runerror(L, "attempt to compare two %s values", t1);
   else
     luaG_runerror(L, "attempt to compare %s with %s", t1, t2);

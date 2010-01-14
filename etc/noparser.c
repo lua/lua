@@ -34,7 +34,7 @@ LUAI_FUNC Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, Varlist *varl
   UNUSED(z);
   UNUSED(buff);
   UNUSED(name);
-  lua_pushliteral(L,"parser not loaded");
+  lua_pushliteral(L,"parser not available");
   lua_error(L);
   return NULL;
 }
@@ -49,7 +49,7 @@ LUAI_FUNC int luaU_dump (lua_State* L, const Proto* f, lua_Writer w, void* data,
   UNUSED(w);
   UNUSED(data);
   UNUSED(strip);
-  lua_pushliteral(L,"dumper not loaded");
+  lua_pushliteral(L,"dumper not available");
   lua_error(L);
   return 0;
 }
@@ -63,7 +63,7 @@ LUAI_FUNC Proto *luaU_undump (lua_State *L, ZIO *z, Mbuffer *buff, const char *n
   UNUSED(z);
   UNUSED(buff);
   UNUSED(name);
-  lua_pushliteral(L,"cannot load binary chunks");
+  lua_pushliteral(L,"binary loader not available");
   lua_error(L);
   return NULL;
 }

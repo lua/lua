@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.127 2010/01/06 15:15:04 roberto Exp $
+** $Id: luaconf.h,v 1.130 2010/01/11 17:15:30 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -34,7 +34,6 @@
 #endif
 
 #if defined(LUA_WIN)
-#include <windows.h>
 #define LUA_DL_DLL
 #endif
 
@@ -92,8 +91,8 @@
 
 #else
 #define LUA_ROOT	"/usr/local/"
-#define LUA_LDIR	LUA_ROOT "share/lua/5.1/"
-#define LUA_CDIR	LUA_ROOT "lib/lua/5.1/"
+#define LUA_LDIR	LUA_ROOT "share/lua/5.2/"
+#define LUA_CDIR	LUA_ROOT "lib/lua/5.2/"
 #define LUA_PATH_DEFAULT  \
 		LUA_LDIR"?.lua;"  LUA_LDIR"?/init.lua;" \
 		LUA_CDIR"?.lua;"  LUA_CDIR"?/init.lua;" "./?.lua"
@@ -440,8 +439,9 @@ LUA_API int (lua_cpcall) (lua_State *L, lua_CFunction func, void *ud);
 /* On a Microsoft compiler, use assembler */
 #if defined(_MSC_VER)
 
-#define lua_number2int(i,d)   __asm fld d   __asm fistp i
+#define lua_number2int(i,d)   {__asm fld d   __asm fistp i}
 #define lua_number2integer(i,n)		lua_number2int(i, n)
+#define lua_number2uint(i,n)		lua_number2int(i, n)
 
 #else
 /* the next trick should work on any Pentium, but sometimes clashes

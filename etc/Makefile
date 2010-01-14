@@ -9,7 +9,7 @@ TST= $(TOP)/test
 
 CC= gcc
 CFLAGS= -O2 -Wall -I$(INC) $(MYCFLAGS)
-MYCFLAGS= 
+MYCFLAGS=
 MYLDFLAGS= -Wl,-E
 MYLIBS= -lm
 #MYLIBS= -lm -Wl,-E -ldl -lreadline -lhistory -lncurses
@@ -21,6 +21,8 @@ default:
 min:	min.c
 	$(CC) $(CFLAGS) $@.c -L$(LIB) -llua $(MYLIBS)
 	echo 'print"Hello there!"' | ./a.out
+	./a.out $(TST)/hello.lua
+	echo 'print("Hello world, from",_VERSION,"!")' | ./a.out
 
 noparser: noparser.o
 	$(CC) noparser.o $(SRC)/lua.o -L$(LIB) -llua $(MYLIBS)
@@ -29,7 +31,7 @@ noparser: noparser.o
 	-./a.out -e'a=1'
 
 one:
-	$(CC) $(CFLAGS) all.c $(MYLIBS)
+	$(CC) $(CFLAGS) one.c $(MYLIBS)
 	./a.out $(TST)/hello.lua
 
 strict:

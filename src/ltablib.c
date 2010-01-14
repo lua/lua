@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.53 2009/12/28 16:30:31 roberto Exp $
+** $Id: ltablib.c,v 1.54 2010/01/13 19:59:10 roberto Exp $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -178,6 +178,8 @@ static int pack (lua_State *L) {
   for (; top >= 1; top--)  /* assign elements */
     lua_rawseti(L, LUA_ENVIRONINDEX, top);
   lua_pushvalue(L, LUA_ENVIRONINDEX);  /* return new table */
+  /* remove new table from environment to allow its later collection */
+  lua_copy(L, LUA_REGISTRYINDEX, LUA_ENVIRONINDEX);
   return 1;
 }
 

@@ -1,5 +1,5 @@
 /*
-* all.c -- Lua core, libraries, and interpreter in a single file
+* one.c -- Lua core, libraries, and interpreter in a single file
 */
 
 /* default is to build the full interpreter */

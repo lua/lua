@@ -1,31 +1,39 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 
 <head>
 <title>Lua 5.2 Reference Manual</title>
-<link rel="stylesheet" href="lua.css">
+<link rel="stylesheet" type="text/css" href="lua.css">
+<link rel="stylesheet" type="text/css" href="manual.css">
+<META HTTP-EQUIV="content-type" CONTENT="text/html; charset=iso-8859-1">
 </head>
 
-<body bgcolor="#FFFFFF">
+<body>
 
 <hr>
 <h1>
-<a href="http://www.lua.org/home.html"><img src="logo.gif" alt="[Lua logo]" border="0"></a>
+<a href="http://www.lua.org/"><img src="logo.gif" alt="" border="0"></a>
 Lua 5.2 Reference Manual
 </h1>
 
 by Roberto Ierusalimschy, Luiz Henrique de Figueiredo, Waldemar Celes
 <p>
 <small>
-<a href="http://www.lua.org/copyright.html">Copyright</a>
-&copy; 2010 Lua.org, PUC-Rio.  All rights reserved.
+Copyright &copy; 2010 Lua.org, PUC-Rio.
+Freely available under the terms of the
+<a href="http://www.lua.org/license.html#5">Lua license</a>.
 </small>
 <hr>
+<p>
+
+<a href="contents.html#contents">contents</A>
+&middot;
+<a href="contents.html#index">index</A>
 
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.53 2010/01/08 18:18:46 roberto Exp roberto $ -->
+<!-- $Id: manual.of,v 1.54 2010/01/13 16:50:58 roberto Exp roberto $ -->
 
 
 
@@ -166,10 +174,12 @@ and can contain the following C-like escape sequences:
 and '<code>\'</code>' (apostrophe [single quote]).
 Moreover, a backslash followed by a real newline
 results in a newline in the string.
-A character in a string can also be specified by its numerical value
-using the escape sequence <code>\<em>ddd</em></code>,
+A character in a string can also be specified by its numerical value.
+This can be done with the escape sequence <code>\x<em>XX</em></code>,
+where <em>XX</em> is a sequence of exactly two hexadecimal digits,
+and with the escape sequence <code>\<em>ddd</em></code>,
 where <em>ddd</em> is a sequence of up to three decimal digits.
-(Note that if a numerical escape is to be followed by a digit,
+(Note that if a decimal escape is to be followed by a digit,
 it must be expressed using exactly three digits.)
 Strings in Lua can contain any 8-bit value, including embedded zeros,
 which can be specified as '<code>\0</code>'.
@@ -2053,7 +2063,8 @@ the speed of memory allocation.
 
 <p>
 If you set the step multiplier to a very large number
-(such as <em>2^30</em>),
+(larger than 10% of the maximum number of
+bytes that the program may use),
 the collector behaves like a stop-the-world collector.
 If you then set the pause to 200,
 the collector behaves as in old Lua versions,
@@ -5104,6 +5115,15 @@ will return identical ids for those upvalue indices.
 
 
 
+<hr><h3><a name="lua_upvaluejoin"><code>lua_upvaluejoin</code></a></h3>
+<pre>void lua_upvaluejoin (lua_State *L, int fidx1, int n1,
+                                              int fidx2, int n2);</pre><p>
+TO BE DONE!!
+
+
+
+
+
 
 
 <h1>4 - <a name="4">The Auxiliary Library</a></h1>
@@ -6000,10 +6020,33 @@ it returns <code>NULL</code> instead of throwing an error.
 
 
 
+<hr><h3><a name="luaL_tolstring"><code>luaL_tolstring</code></a></h3><p>
+<span class="apii">[-0, +1, <em>e</em>]</span>
+<pre>const char *luaL_tolstring (lua_State *L, int idx, size_t *len);</pre>
+
+<p>
+Converts any Lua value at the given acceptable index to a C&nbsp;string
+in a reasonable format.
+The resulting string is pushed onto the stack and also
+returned by the function.
+If <code>len</code> is not <code>NULL</code>,
+the function also sets <code>*len</code> with the string length.
+
+
+<p>
+If the value has a metatable with a <code>"__tostring"</code> field,
+then <code>luaL_tolstring</code> calls the corresponding metamethod
+with the value as argument,
+and uses the result of the call as its result.
+
+
+
+
+
 <hr><h3><a name="luaL_traceback"><code>luaL_traceback</code></a></h3><p>
 <span class="apii">[-0, +1, <em>m</em>]</span>
-<pre>luaL_traceback (lua_State *L, lua_State *L1,
-                          const char *msg, int level);</pre>
+<pre>void luaL_traceback (lua_State *L, lua_State *L1,
+                               const char *msg, int level);</pre>
 
 <p>
 Creates and pushes a traceback of the stack <code>L1</code>.
@@ -7111,22 +7154,23 @@ A path is string containing a sequence of
 <em>templates</em> separated by semicolons.
 For each template,
 the function changes each interrogation
-mark in the template by <code>name</code>,
+mark in the template by a copy of <code>name</code>
+wherein all dots were replaced by the system's directory separator,
 and then tries to open the resulting file name.
 For instance, if the path is the string
 
 <pre>
      "./?.lua;./?.lc;/usr/local/?/init.lua"
 </pre><p>
-the search for name <code>foo</code>
+the search for the name <code>foo.a</code>
 will try to open the files
-<code>./foo.lua</code>, <code>./foo.lc</code>, and
-<code>/usr/local/foo/init.lua</code>, in that order.
+<code>./foo/a.lua</code>, <code>./foo/a.lc</code>, and
+<code>/usr/local/foo/a/init.lua</code>, in that order.
 
 
 <p>
 Returns the resulting name of the first file that it can
-open in read mode (after closing it),
+open in read mode (after closing the file),
 or <b>nil</b> plus an error message if none succeeds.
 (This error message lists all file names it tried to open.)
 
@@ -7950,7 +7994,7 @@ Returns <em>m2<sup>e</sup></em> (<code>e</code> should be an integer).
 
 <p>
 Returns the logarithm of <code>x</code> in the given base.
-The default for <code>base</code> is $e$
+The default for <code>base</code> is <em>e</em>
 (so that the function returns the natural logarithm of <code>x</code>).
 
 
@@ -9140,6 +9184,36 @@ to start the traceback
 
 
 
+<p>
+<hr><h3><a name="pdf-debug.upvalueid"><code>debug.upvalueid (function, n)</code></a></h3>
+
+
+<p>
+Returns an unique identifier (as a light userdata)
+for the upvalue numbered <code>n</code>
+from the given function.
+
+
+<p>
+These unique identifiers allow a program to check whether different
+closures share upvalues.
+Lua closures that share an upvalue
+(that is, that access a same external local variable)
+will return identical ids for those upvalue indices.
+
+
+
+
+<p>
+<hr><h3><a name="pdf-debug.upvaluejoin"><code>debug.upvaluejoin ()</code></a></h3>
+
+
+<p>
+TO BE DONE!!
+
+
+
+
 
 
 
@@ -9319,7 +9393,7 @@ Weak tables with weak keys now perform like <em>ephemeron tables</em>.
 
 <li>
 Threads do not have individual environments.
-All threads share a sinle fixed environment.
+All threads share a single fixed environment.
 </li>
 
 </ul>
@@ -9367,7 +9441,7 @@ and therefore must be called as <a href="#pdf-table.unpack"><code>table.unpack</
 <ul>
 
 <li>
-Pseudoindex <code>LUA_GLOBALSINDEX</code> was deprecated.
+Pseudoindex <code>LUA_GLOBALSINDEX</code> was removed.
 You may use the pseudoindex <a href="#pdf-LUA_ENVIRONINDEX"><code>LUA_ENVIRONINDEX</code></a> instead,
 if the C&nbsp;function does not change its standard environment.
 Otherwise, you should get the global environment from the registry
@@ -9483,6 +9557,16 @@ Here is the complete syntax of Lua in extended BNF.
 
 
 
+
+
+<HR>
+<SMALL>
+Last update:
+Wed Jan 13 15:29:29 BRST 2010
+</SMALL>
+<!--
+Last change: revised for Lua 5.2.0 (work2)
+-->
 
 </body></html>
 

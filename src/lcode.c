@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.42 2009/09/23 20:33:05 roberto Exp $
+** $Id: lcode.c,v 2.43 2010/01/11 17:38:30 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -830,15 +830,15 @@ void luaK_posfix (FuncState *fs, BinOpr op, expdesc *e1, expdesc *e2) {
     }
     case OPR_ADD: case OPR_SUB: case OPR_MUL: case OPR_DIV:
     case OPR_MOD: case OPR_POW: {
-      codearith(fs, op - OPR_ADD + OP_ADD, e1, e2);
+      codearith(fs, cast(OpCode, op - OPR_ADD + OP_ADD), e1, e2);
       break;
     }
     case OPR_EQ: case OPR_LT: case OPR_LE: {
-      codecomp(fs, op - OPR_EQ + OP_EQ, 1, e1, e2);
+      codecomp(fs, cast(OpCode, op - OPR_EQ + OP_EQ), 1, e1, e2);
       break;
     }
     case OPR_NE: case OPR_GT: case OPR_GE: {
-      codecomp(fs, op - OPR_NE + OP_EQ, 0, e1, e2);
+      codecomp(fs, cast(OpCode, op - OPR_NE + OP_EQ), 0, e1, e2);
       break;
     }
     default: lua_assert(0);

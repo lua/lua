@@ -6,6 +6,7 @@
 -- anywhere or assigned to inside a function.
 --
 
+require"debug"
 local getinfo, error, rawset, rawget = debug.getinfo, error, rawset, rawget
 
 local mt = getmetatable(_G)

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.109 2010/01/08 15:16:56 roberto Exp $
+** $Id: lapi.c,v 2.111 2010/01/13 16:18:25 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -255,7 +255,7 @@ LUA_API int lua_type (lua_State *L, int idx) {
 
 LUA_API const char *lua_typename (lua_State *L, int t) {
   UNUSED(L);
-  return (t == LUA_TNONE) ? "no value" : luaT_typenames[t];
+  return typename(t);
 }
 
 
@@ -300,7 +300,8 @@ LUA_API void  lua_arith (lua_State *L, int op) {
                  luaO_arith(op, nvalue(L->top - 2), nvalue(L->top - 1)));
   }
   else
-    luaV_arith(L, L->top - 2, L->top - 2, L->top - 1, op - LUA_OPADD + TM_ADD);
+    luaV_arith(L, L->top - 2, L->top - 2, L->top - 1,
+               cast(TMS, op - LUA_OPADD + TM_ADD));
   L->top--;
   lua_unlock(L);
 }

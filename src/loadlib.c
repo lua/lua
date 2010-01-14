@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.73 2010/01/06 14:35:17 roberto Exp $
+** $Id: loadlib.c,v 1.80 2010/01/13 16:30:27 roberto Exp $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -129,8 +129,17 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 ** =======================================================================
 */
 
+#include <windows.h>
 
 #undef setprogdir
+
+/*
+** optional flags for LoadLibraryEx
+*/
+#if !defined(LUA_LLE_FLAGS)
+#define LUA_LLE_FLAGS	0
+#endif
+
 
 static void setprogdir (lua_State *L) {
   char buff[MAX_PATH + 1];
@@ -158,12 +167,12 @@ static void pusherror (lua_State *L) {
 }
 
 static void ll_unloadlib (void *lib) {
-  FreeLibrary((HINSTANCE)lib);
+  FreeLibrary((HMODULE)lib);
 }
 
 
 static void *ll_load (lua_State *L, const char *path, int seeglb) {
-  HINSTANCE lib = LoadLibrary(path);
+  HMODULE lib = LoadLibraryEx(path, NULL, LUA_LLE_FLAGS);
   (void)(seeglb);  /* symbols are 'global' by default? */
   if (lib == NULL) pusherror(L);
   return lib;
@@ -171,7 +180,7 @@ static void *ll_load (lua_State *L, const char *path, int seeglb) {
 
 
 static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
-  lua_CFunction f = (lua_CFunction)GetProcAddress((HINSTANCE)lib, sym);
+  lua_CFunction f = (lua_CFunction)GetProcAddress((HMODULE)lib, sym);
   if (f == NULL) pusherror(L);
   return f;
 }
@@ -344,7 +353,9 @@ static int ll_loadfunc (lua_State *L, const char *path, const char *sym) {
     lua_CFunction f = ll_sym(L, *reg, sym);
     if (f == NULL)
       return ERRFUNC;  /* unable to find function */
-    lua_pushcfunction(L, f);  /* else return function */
+    lua_pushcfunction(L, f);  /* else create new function... */
+    lua_pushglobaltable(L);   /* ... and set the standard global table... */
+    lua_setfenv(L, -2);       /* ... as its environment */
     return 0;  /* no errors */
   }
 }
@@ -394,6 +405,7 @@ static const char *pushnexttemplate (lua_State *L, const char *path) {
 
 static const char *searchpath (lua_State *L, const char *name,
                                              const char *path) {
+  name = luaL_gsub(L, name, ".", LUA_DIRSEP);
   lua_pushliteral(L, "");  /* error accumulator */
   while ((path = pushnexttemplate(L, path)) != NULL) {
     const char *filename = luaL_gsub(L, lua_tostring(L, -1),
@@ -423,7 +435,6 @@ static int ll_searchpath (lua_State *L) {
 static const char *findfile (lua_State *L, const char *name,
                                            const char *pname) {
   const char *path;
-  name = luaL_gsub(L, name, ".", LUA_DIRSEP);
   lua_getfield(L, LUA_ENVIRONINDEX, pname);
   path = lua_tostring(L, -1);
   if (path == NULL)
@@ -449,13 +460,20 @@ static int loader_Lua (lua_State *L) {
 }
 
 
-static int loadfunc(lua_State *L, const char *filename, const char *modname) {
+static int loadfunc (lua_State *L, const char *filename, const char *modname) {
   const char *funcname;
-  const char *mark = strchr(modname, *LUA_IGMARK);
-  if (mark) modname = mark + 1;
-  funcname = luaL_gsub(L, modname, ".", LUA_OFSEP);
-  funcname = lua_pushfstring(L, POF"%s", funcname);
-  lua_remove(L, -2);  /* remove 'gsub' result */
+  const char *mark;
+  modname = luaL_gsub(L, modname, ".", LUA_OFSEP);
+  mark = strchr(modname, *LUA_IGMARK);
+  if (mark) {
+    int stat;
+    funcname = lua_pushlstring(L, modname, mark - modname);
+    funcname = lua_pushfstring(L, POF"%s", funcname);
+    stat = ll_loadfunc(L, filename, funcname);
+    if (stat != ERRFUNC) return stat;
+    modname = mark + 1;  /* else go ahead and try old-style name */
+  }
+  funcname = lua_pushfstring(L, POF"%s", modname);
   return ll_loadfunc(L, filename, funcname);
 }
 

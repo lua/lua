@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.79 2009/12/22 15:32:50 roberto Exp $
+** $Id: ldo.c,v 2.80 2010/01/13 16:17:32 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -554,8 +554,12 @@ LUA_API int lua_yieldk (lua_State *L, int nresults, int ctx, lua_CFunction k) {
   luai_userstateyield(L, nresults);
   lua_lock(L);
   api_checknelems(L, nresults);
-  if (L->nny > 0)
-    luaG_runerror(L, "attempt to yield across metamethod/C-call boundary");
+  if (L->nny > 0) {
+    if (L != G(L)->mainthread)
+      luaG_runerror(L, "attempt to yield across metamethod/C-call boundary");
+    else
+      luaG_runerror(L, "attempt to yield from outside a coroutine");
+  }
   L->status = LUA_YIELD;
   if (isLua(ci)) {  /* inside a hook? */
     api_check(L, k == NULL, "hooks cannot continue after yielding");
