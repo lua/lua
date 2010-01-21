@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.181 2009/12/22 15:32:50 roberto Exp roberto $
+** $Id: lua.c,v 1.182 2009/12/22 16:47:12 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -102,18 +102,19 @@ static void laction (int i) {
 }
 
 
-static void print_usage (void) {
+static void print_usage (char badoption) {
   fprintf(stderr,
+  "%s: unrecognized option '-%c'\n"
   "usage: %s [options] [script [args]]\n"
   "Available options are:\n"
   "  -e stat  execute string " LUA_QL("stat") "\n"
-  "  -l name  require library " LUA_QL("name") "\n"
   "  -i       enter interactive mode after executing " LUA_QL("script") "\n"
+  "  -l name  require library " LUA_QL("name") "\n"
   "  -v       show version information\n"
   "  --       stop handling options\n"
-  "  -        execute stdin and stop handling options\n"
+  "  -        stop handling options and execute stdin\n"
   ,
-  progname);
+  progname, badoption, progname);
   fflush(stderr);
 }
 
@@ -359,7 +360,8 @@ static int collectargs (char **argv, int *pi, int *pv, int *pe) {
           if (argv[i] == NULL) return -1;
         }
         break;
-      default: return -1;  /* invalid option */
+      default:  /* invalid option; return the offendind character as a... */
+        return -(unsigned char)argv[i][1];  /* ...negative value */
     }
   }
   return 0;
@@ -412,8 +414,8 @@ static int pmain (lua_State *L) {
   int has_i = 0, has_v = 0, has_e = 0;
   if (argv[0] && argv[0][0]) progname = argv[0];
   script = collectargs(argv, &has_i, &has_v, &has_e);
-  if (script < 0) {  /* invalid args? */
-    print_usage();
+  if (script < 0) {  /* invalid arg? */
+    print_usage(-script);  /* '-script' is the offending argument */
     return 0;
   }
   if (has_v) print_version();
