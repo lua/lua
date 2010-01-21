@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.129 2010/01/11 17:11:24 roberto Exp roberto $
+** $Id: luaconf.h,v 1.130 2010/01/11 17:15:30 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -421,7 +421,7 @@ LUA_API int (lua_cpcall) (lua_State *L, lua_CFunction func, void *ud);
 
 /*
 @@ lua_number2int is a macro to convert lua_Number to int.
-@@ lua_number2integer is a macro to convert lua_Number to lUA_INTEGER.
+@@ lua_number2integer is a macro to convert lua_Number to LUA_INTEGER.
 @@ lua_number2uint is a macro to convert a lua_Number to an unsigned
 @* LUA_INT32.
 @@ lua_uint2number is a macro to convert an unsigned LUA_INT32
