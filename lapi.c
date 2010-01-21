@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.110 2010/01/11 17:38:30 roberto Exp roberto $
+** $Id: lapi.c,v 2.111 2010/01/13 16:18:25 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1150,12 +1150,3 @@ LUA_API void lua_upvaluejoin (lua_State *L, int fidx1, int n1,
   luaC_objbarrier(L, f1, *up2);
 }
 
-
-#if defined(LUA_COMPAT_CPCALL)
-LUA_API int lua_cpcall (lua_State *L, lua_CFunction func, void *ud) {
-  lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_CPCALL);
-  lua_pushlightuserdata(L, &func);
-  lua_pushlightuserdata(L, ud);
-  return lua_pcall(L, 2, 0, 0);
-}
-#endif

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.182 2009/12/22 16:47:12 roberto Exp roberto $
+** $Id: lua.c,v 1.183 2010/01/21 16:31:06 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -445,7 +445,6 @@ static int pmain (lua_State *L) {
 
 
 int main (int argc, char **argv) {
-  static lua_CFunction ppmain = &pmain;
   int status, result;
   lua_State *L = luaL_newstate();  /* create state */
   if (L == NULL) {
@@ -453,11 +452,9 @@ int main (int argc, char **argv) {
     return EXIT_FAILURE;
   }
   /* call 'pmain' in protected mode */
-  lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_CPCALL);  /* calling function */
-  lua_pushlightuserdata(L, &ppmain);
-  lua_pushinteger(L, argc); 
-  lua_pushlightuserdata(L, argv);
-  status = lua_pcall(L, 3, 1, 0);
+  lua_pushinteger(L, argc);  /* 1st argument */
+  lua_pushlightuserdata(L, argv); /* 2nd argument */
+  status = luaL_cpcall(L, &pmain, 2, 1);
   result = lua_toboolean(L, -1);  /* get result */
   finalreport(L, status);
   lua_close(L);

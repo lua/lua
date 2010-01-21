@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.130 2010/01/11 17:15:30 roberto Exp roberto $
+** $Id: luaconf.h,v 1.131 2010/01/21 16:31:24 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -220,11 +220,11 @@
 #define LUA_COMPAT_UNPACK
 
 /*
-@@ LUA_COMPAT_CPCALL controls the presence of function 'lua_cpcall'.
+@@ LUA_COMPAT_CPCALL controls the presence of macro 'lua_cpcall'.
 ** You can replace it with the preregistered function 'cpcall'.
 */
-#define LUA_COMPAT_CPCALL
-LUA_API int (lua_cpcall) (lua_State *L, lua_CFunction func, void *ud);
+#define lua_cpcall(L,f,u)  \
+	(lua_pushlightuserdata(L,(u)), luaL_cpcall(L,(f),1,0))
 
 /*
 @@ LUA_COMPAT_FENV controls the presence of functions 'setfenv/getfenv'.
@@ -232,6 +232,7 @@ LUA_API int (lua_cpcall) (lua_State *L, lua_CFunction func, void *ud);
 ** debug library.
 */
 #define LUA_COMPAT_FENV
+
 
 /*
 @@ LUA_COMPAT_LOG10 defines the function 'log10' in the math library.
