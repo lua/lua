@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.79 2009/12/22 15:32:50 roberto Exp roberto $
+** $Id: ldo.c,v 2.80 2010/01/13 16:17:32 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -452,7 +452,7 @@ static int recover (lua_State *L, int status) {
   CallInfo *ci = findpcall(L);
   if (ci == NULL) return 0;  /* no recovery point */
   /* "finish" luaD_pcall */
-  oldtop = restorestack(L, ci->u.c.oldtop);
+  oldtop = restorestack(L, ci->u.c.extra);
   luaF_close(L, oldtop);
   seterrorobj(L, status, oldtop);
   L->ci = ci;
@@ -501,11 +501,11 @@ static void resume (lua_State *L, void *ud) {
     if (isLua(ci))  /* yielded inside a hook? */
       luaV_execute(L);  /* just continue running Lua code */
     else {  /* 'common' yield */
+      ci->func = restorestack(L, ci->u.c.extra);
       if (ci->u.c.k != NULL) {  /* does it have a continuation? */
         int n;
         ci->u.c.status = LUA_YIELD;  /* 'default' status */
         ci->callstatus |= CIST_YIELDED;
-        ci->func = restorestack(L, ci->u.c.oldtop);
         lua_unlock(L);
         n = (*ci->u.c.k)(L);  /* call continuation */
         lua_lock(L);
@@ -565,11 +565,10 @@ LUA_API int lua_yieldk (lua_State *L, int nresults, int ctx, lua_CFunction k) {
     api_check(L, k == NULL, "hooks cannot continue after yielding");
   }
   else {
-    if ((ci->u.c.k = k) != NULL) {  /* is there a continuation? */
+    if ((ci->u.c.k = k) != NULL)  /* is there a continuation? */
       ci->u.c.ctx = ctx;  /* save context */
-      ci->u.c.oldtop = savestack(L, ci->func);  /* save current 'func' */
-    }
-    ci->func = L->top - nresults - 1;  /* protect stack slots below */
+    ci->u.c.extra = savestack(L, ci->func);  /* save current 'func' */
+    ci->func = L->top - nresults - 1;  /* protect stack below results */
     luaD_throw(L, LUA_YIELD);
   }
   lua_assert(ci->callstatus & CIST_HOOKED);  /* must be inside a hook */
