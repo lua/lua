@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.196 2009/12/22 15:32:50 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.197 2010/01/21 16:49:21 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -495,7 +495,6 @@ LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
 */
 
 typedef struct LoadF {
-  int extraline;
   FILE *f;
   char buff[LUAL_BUFFERSIZE];
 } LoadF;
@@ -504,11 +503,6 @@ typedef struct LoadF {
 static const char *getF (lua_State *L, void *ud, size_t *size) {
   LoadF *lf = (LoadF *)ud;
   (void)L;
-  if (lf->extraline) {
-    lf->extraline = 0;
-    *size = 1;
-    return "\n";
-  }
   /* 'fread' can return > 0 *and* set the EOF flag. If next call to
      'getF' calls 'fread', terminal may still wait for user input.
      The next check avoids this problem. */
@@ -532,7 +526,6 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   int status, readstatus;
   int c;
   int fnameindex = lua_gettop(L) + 1;  /* index of filename on the stack */
-  lf.extraline = 0;
   if (filename == NULL) {
     lua_pushliteral(L, "=stdin");
     lf.f = stdin;
@@ -544,16 +537,11 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   }
   c = getc(lf.f);
   if (c == '#') {  /* Unix exec. file? */
-    lf.extraline = 1;
     while ((c = getc(lf.f)) != EOF && c != '\n') ;  /* skip first line */
-    if (c == '\n') c = getc(lf.f);
   }
-  if (c == LUA_SIGNATURE[0] && filename) {  /* binary file? */
+  else if (c == LUA_SIGNATURE[0] && filename) {  /* binary file? */
     lf.f = freopen(filename, "rb", lf.f);  /* reopen in binary mode */
     if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
-    /* skip eventual `#!...' */
-    while ((c = getc(lf.f)) != EOF && c != LUA_SIGNATURE[0]) ;
-    lf.extraline = 0;
   }
   ungetc(c, lf.f);
   status = lua_load(L, getF, &lf, lua_tostring(L, -1));
