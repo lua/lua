@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.198 2010/02/11 15:52:50 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.199 2010/02/18 19:18:41 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -495,6 +495,7 @@ LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
 */
 
 typedef struct LoadF {
+  int first;
   FILE *f;
   char buff[LUAL_BUFFERSIZE];
 } LoadF;
@@ -503,11 +504,18 @@ typedef struct LoadF {
 static const char *getF (lua_State *L, void *ud, size_t *size) {
   LoadF *lf = (LoadF *)ud;
   (void)L;
-  /* 'fread' can return > 0 *and* set the EOF flag. If next call to
-     'getF' calls 'fread', terminal may still wait for user input.
-     The next check avoids this problem. */
-  if (feof(lf->f)) return NULL;
-  *size = fread(lf->buff, 1, sizeof(lf->buff), lf->f);
+  if (lf->first != EOF) {
+    *size = 1;
+    lf->buff[0] = (char)lf->first;
+    lf->first = EOF;
+  }
+  else {
+    /* 'fread' can return > 0 *and* set the EOF flag. If next call to
+       'getF' called 'fread', it might still wait for user input.
+       The next check avoids this problem. */
+    if (feof(lf->f)) return NULL;
+    *size = fread(lf->buff, 1, sizeof(lf->buff), lf->f);
+  }
   return (*size > 0) ? lf->buff : NULL;
 }
 
@@ -543,7 +551,7 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
     lf.f = freopen(filename, "rb", lf.f);  /* reopen in binary mode */
     if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
   }
-  ungetc(c, lf.f);
+  lf.first = c;  /* 'c' is the first character of the stream */
   status = lua_load(L, getF, &lf, lua_tostring(L, -1));
   readstatus = ferror(lf.f);
   if (filename) fclose(lf.f);  /* close file (even in case of errors) */
