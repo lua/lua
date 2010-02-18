@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.185 2010/02/09 11:58:57 roberto Exp roberto $
+** $Id: lua.c,v 1.186 2010/02/11 17:12:27 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -103,11 +103,14 @@ static void laction (int i) {
 
 
 static void print_usage (const char *badoption) {
-  if (badoption[1] == 'e' || badoption[1] == 'l')
-    fprintf(stderr, "%s: '%s' needs argument\n", progname, badoption);
-  else
-    fprintf(stderr, "%s: unrecognized option '%s'\n", progname, badoption);
-  fprintf(stderr,
+  if (badoption[1] == 'e' || badoption[1] == 'l') {
+    luai_writestringerror("%s: ", progname);
+    luai_writestringerror("'%s' needs argument\n", badoption);
+  } else {
+    luai_writestringerror("%s: ", progname);
+    luai_writestringerror("unrecognized option '%s'\n", badoption);
+  }
+  luai_writestringerror(
   "usage: %s [options] [script [args]]\n"
   "Available options are:\n"
   "  -e stat  execute string " LUA_QL("stat") "\n"
@@ -122,8 +125,8 @@ static void print_usage (const char *badoption) {
 
 
 static void l_message (const char *pname, const char *msg) {
-  if (pname) fprintf(stderr, "%s: ", pname);
-  fprintf(stderr, "%s\n", msg);
+  if (pname) luai_writestringerror("%s: ", pname);
+  luai_writestringerror("%s\n", msg);
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.118 2009/11/25 15:27:51 roberto Exp roberto $
+** $Id: ldblib.c,v 1.119 2010/01/06 14:42:35 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -339,15 +339,13 @@ static int db_gethook (lua_State *L) {
 static int db_debug (lua_State *L) {
   for (;;) {
     char buffer[250];
-    fputs("lua_debug> ", stderr);
+    luai_writestringerror("%s", "lua_debug> ");
     if (fgets(buffer, sizeof(buffer), stdin) == 0 ||
         strcmp(buffer, "cont\n") == 0)
       return 0;
     if (luaL_loadbuffer(L, buffer, strlen(buffer), "=(debug command)") ||
-        lua_pcall(L, 0, 0, 0)) {
-      fputs(lua_tostring(L, -1), stderr);
-      fputs("\n", stderr);
-    }
+        lua_pcall(L, 0, 0, 0))
+      luai_writestringerror("%s\n", lua_tostring(L, -1));
     lua_settop(L, 0);  /* remove eventual returns */
   }
 }
