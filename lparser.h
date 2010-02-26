@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.60 2009/09/30 15:38:37 roberto Exp roberto $
+** $Id: lparser.h,v 1.61 2009/10/11 20:02:19 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -23,10 +23,11 @@ typedef enum {
   VFALSE,
   VK,		/* info = index of constant in `k' */
   VKNUM,	/* nval = numerical value */
-  VLOCAL,	/* info = local register; aux = read only */
-  VUPVAL,       /* info = index of upvalue in 'upvalues'; aux = read only */
-  VGLOBAL,	/* info = index of table; aux = index of global name in `k' */
-  VINDEXED,	/* info = table register; aux = index register (or `k') */
+  VLOCAL,	/* info = local register */
+  VUPVAL,       /* info = index of upvalue in 'upvalues' */
+  VGLOBAL,	/* info =  index of global name in 'k' */
+  VINDEXED,	/* info = table R/K; aux = index R/K */
+  VINDEXEDUP,	/* info = table upvalue; aux = R/K */
   VJMP,		/* info = instruction pc */
   VRELOCABLE,	/* info = instruction pc */
   VNONRELOC,	/* info = result register */

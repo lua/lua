@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.74 2010/01/05 18:46:58 roberto Exp roberto $
+** $Id: lparser.c,v 2.75 2010/01/06 11:48:02 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -452,7 +452,7 @@ static void fieldsel (LexState *ls, expdesc *v) {
   /* fieldsel -> ['.' | ':'] NAME */
   FuncState *fs = ls->fs;
   expdesc key;
-  luaK_exp2anyreg(fs, v);
+  luaK_exp2anyregup(fs, v);
   luaX_next(ls);  /* skip the dot or colon */
   checkname(ls, &key);
   luaK_indexed(fs, v, &key);
@@ -747,7 +747,7 @@ static void primaryexp (LexState *ls, expdesc *v) {
       }
       case '[': {  /* `[' exp1 `]' */
         expdesc key;
-        luaK_exp2anyreg(fs, v);
+        luaK_exp2anyregup(fs, v);
         yindex(ls, &key);
         luaK_indexed(fs, v, &key);
         break;
@@ -951,24 +951,27 @@ struct LHS_assign {
 ** local value in a safe place and use this safe copy in the previous
 ** assignment.
 */
-static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
+static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v,
+                            expkind ix, OpCode op) {
   FuncState *fs = ls->fs;
   int extra = fs->freereg;  /* eventual position to save local variable */
   int conflict = 0;
   for (; lh; lh = lh->prev) {
-    if (lh->v.k == VINDEXED) {
+    if (lh->v.k == ix) {
       if (lh->v.u.s.info == v->u.s.info) {  /* conflict? */
         conflict = 1;
+        lh->v.k = VINDEXED;
         lh->v.u.s.info = extra;  /* previous assignment will use safe copy */
       }
-      if (lh->v.u.s.aux == v->u.s.info) {  /* conflict? */
+      if (v->k == VLOCAL && lh->v.u.s.aux == v->u.s.info) {  /* conflict? */
         conflict = 1;
+        lua_assert(lh->v.k == VINDEXED);
         lh->v.u.s.aux = extra;  /* previous assignment will use safe copy */
       }
     }
   }
   if (conflict) {
-    luaK_codeABC(fs, OP_MOVE, fs->freereg, v->u.s.info, 0);  /* make copy */
+    luaK_codeABC(fs, op, fs->freereg, v->u.s.info, 0);  /* make copy */
     luaK_reserveregs(fs, 1);
   }
 }
@@ -976,14 +979,16 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
 
 static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
   expdesc e;
-  check_condition(ls, VLOCAL <= lh->v.k && lh->v.k <= VINDEXED,
+  check_condition(ls, VLOCAL <= lh->v.k && lh->v.k <= VINDEXEDUP,
                       "syntax error");
   if (testnext(ls, ',')) {  /* assignment -> `,' primaryexp assignment */
     struct LHS_assign nv;
     nv.prev = lh;
     primaryexp(ls, &nv.v);
     if (nv.v.k == VLOCAL)
-      check_conflict(ls, lh, &nv.v);
+      check_conflict(ls, lh, &nv.v, VINDEXED, OP_MOVE);
+    else if (nv.v.k == VUPVAL)
+      check_conflict(ls, lh, &nv.v, VINDEXEDUP, OP_GETUPVAL);
     checklimit(ls->fs, nvars, LUAI_MAXCCALLS - G(ls->L)->nCcalls,
                     "variable names");
     assignment(ls, &nv, nvars+1);

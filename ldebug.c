@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.62 2010/01/11 17:37:59 roberto Exp roberto $
+** $Id: ldebug.c,v 2.63 2010/01/13 16:18:25 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -270,12 +270,10 @@ static const char *kname (Proto *p, int c) {
 
 static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
                                const char **name) {
-  Proto *p;
-  int lastpc, pc;
+  Proto *p = ci_func(ci)->l.p;
   const char *what = NULL;
-  lua_assert(isLua(ci));
-  p = ci_func(ci)->l.p;
-  lastpc = currentpc(ci);
+  int lastpc = currentpc(ci);
+  int pc;
   *name = luaF_getlocalname(p, reg + 1, lastpc);
   if (*name)  /* is a local? */
     return "local";
@@ -305,6 +303,7 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
         }
         break;
       }
+      case OP_GETTABUP:
       case OP_GETTABLE: {
         if (reg == a) {
           int k = GETARG_C(i);  /* key index */
@@ -378,6 +377,7 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
       return getobjname(L, ci, GETARG_A(i), name);
     case OP_GETGLOBAL:
     case OP_SELF:
+    case OP_GETTABUP:
     case OP_GETTABLE: tm = TM_INDEX; break;
     case OP_SETGLOBAL:
     case OP_SETTABLE: tm = TM_NEWINDEX; break;
@@ -413,13 +413,30 @@ static int isinstack (CallInfo *ci, const TValue *o) {
 }
 
 
+static const char *getupvalname (CallInfo *ci, const TValue *o,
+                               const char **name) {
+  LClosure *c = &ci_func(ci)->l;
+  int i;
+  for (i = 0; i < c->nupvalues; i++) {
+    if (c->upvals[i]->v == o) {
+      *name = getstr(c->p->upvalues[i].name);
+      return "upvalue";
+    }
+  }
+  return NULL;
+}
+
+
 void luaG_typeerror (lua_State *L, const TValue *o, const char *op) {
   CallInfo *ci = L->ci;
   const char *name = NULL;
   const char *t = typename(ttype(o));
-  const char *kind = (isLua(ci) && isinstack(ci, o)) ?
-                         getobjname(L, ci, cast_int(o - ci->u.l.base), &name) :
-                         NULL;
+  const char *kind = NULL;
+  if (isLua(ci)) {
+    kind = getupvalname(ci, o, &name);  /* check whether 'o' is an upvalue */
+    if (!kind && isinstack(ci, o))  /* no? try a register */ 
+      kind = getobjname(L, ci, cast_int(o - ci->u.l.base), &name);
+  }
   if (kind)
     luaG_runerror(L, "attempt to %s %s " LUA_QS " (a %s value)",
                 op, kind, name, t);

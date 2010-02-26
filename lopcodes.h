@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.132 2009/10/28 12:20:07 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.133 2009/11/19 19:06:52 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -172,9 +172,11 @@ OP_LOADNIL,/*	A B	R(A) := ... := R(B) := nil			*/
 OP_GETUPVAL,/*	A B	R(A) := UpValue[B]				*/
 
 OP_GETGLOBAL,/*	A Bx	R(A) := Gbl[Kst(Bx - 1)]			*/
+OP_GETTABUP,/*	A B C	R(A) := UpValue[B][RK(C)]			*/
 OP_GETTABLE,/*	A B C	R(A) := R(B)[RK(C)]				*/
 
 OP_SETGLOBAL,/*	A Bx	Gbl[Kst(Bx - 1)] := R(A)			*/
+OP_SETTABUP,/*	A B C	UpValue[A][RK(B)] := RK(C)			*/
 OP_SETUPVAL,/*	A B	UpValue[B] := R(A)				*/
 OP_SETTABLE,/*	A B C	R(A)[RK(B)] := RK(C)				*/
 
