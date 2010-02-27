@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.186 2010/02/11 17:12:27 roberto Exp roberto $
+** $Id: lua.c,v 1.187 2010/02/18 19:18:41 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -374,7 +374,6 @@ static int collectargs (char **argv, int *pi, int *pv, int *pe) {
 static int runargs (lua_State *L, char **argv, int n) {
   int i;
   for (i = 1; i < n; i++) {
-    if (argv[i] == NULL) continue;
     lua_assert(argv[i][0] == '-');
     switch (argv[i][1]) {  /* option */
       case 'e': {
