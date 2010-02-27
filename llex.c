@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.33 2009/05/18 17:28:04 roberto Exp roberto $
+** $Id: llex.c,v 2.34 2009/11/17 16:33:38 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -313,11 +313,11 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
     switch (ls->current) {
       case EOZ:
         lexerror(ls, "unfinished string", TK_EOS);
-        continue;  /* to avoid warnings */
+        break;  /* to avoid warnings */
       case '\n':
       case '\r':
         lexerror(ls, "unfinished string", TK_STRING);
-        continue;  /* to avoid warnings */
+        break;  /* to avoid warnings */
       case '\\': {  /* escape sequences */
         int c;  /* final character to be saved */
         next(ls);  /* do not save the `\' */
@@ -343,7 +343,7 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
         }
         next(ls);
         save(ls, c);
-        continue;
+        break;
       }
       default:
         save_and_next(ls);
@@ -362,7 +362,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
       case '\n':
       case '\r': {
         inclinenumber(ls);
-        continue;
+        break;
       }
       case '-': {
         next(ls);
@@ -375,13 +375,13 @@ static int llex (LexState *ls, SemInfo *seminfo) {
           if (sep >= 0) {
             read_long_string(ls, NULL, sep);  /* long comment */
             luaZ_resetbuffer(ls->buff);
-            continue;
+            break;
           }
         }
         /* else short comment */
         while (!currIsNewline(ls) && ls->current != EOZ)
           next(ls);
-        continue;
+        break;
       }
       case '[': {
         int sep = skip_sep(ls);
@@ -437,7 +437,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         if (lisspace(ls->current)) {
           lua_assert(!currIsNewline(ls));
           next(ls);
-          continue;
+          break;
         }
         else if (lisdigit(ls->current)) {
           read_numeral(ls, seminfo);
