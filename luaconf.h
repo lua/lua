@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.132 2010/01/21 16:49:21 roberto Exp roberto $
+** $Id: luaconf.h,v 1.133 2010/02/18 19:18:41 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -200,7 +200,8 @@
 @@ luai_writestringerror defines how to print error messages.
 ** (A format string with one argument is enough for Lua...)
 */
-#define luai_writestringerror(s,p)	fprintf(stderr, (s), (p))
+#define luai_writestringerror(s,p) \
+	(fprintf(stderr, (s), (p)), fflush(stderr))
 
 
 
