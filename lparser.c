@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.75 2010/01/06 11:48:02 roberto Exp roberto $
+** $Id: lparser.c,v 2.76 2010/02/26 20:40:29 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -207,26 +207,26 @@ static void removevars (FuncState *fs, int tolevel) {
 }
 
 
-static int indexupvalue (FuncState *fs, TString *name, expdesc *v) {
+static int searchupvalue (FuncState *fs, TString *name) {
   int i;
+  Upvaldesc *up = fs->f->upvalues;
+  for (i = 0; i < fs->nups; i++) {
+    if (up[i].name == name) return i;
+  }
+  return -1;  /* not found */
+}
+
+
+static int newupvalue (FuncState *fs, TString *name, expdesc *v) {
   Proto *f = fs->f;
   int oldsize = f->sizeupvalues;
-  int instk = (v->k == VLOCAL);
-  lua_assert(instk || v->k == VUPVAL);
-  for (i=0; i<fs->nups; i++) {
-    if (f->upvalues[i].instack == instk && f->upvalues[i].idx == v->u.s.info) {
-      lua_assert(f->upvalues[i].name == name);
-      return i;
-    }
-  }
-  /* new one */
   checklimit(fs, fs->nups + 1, UCHAR_MAX, "upvalues");
   luaM_growvector(fs->L, f->upvalues, fs->nups, f->sizeupvalues,
                   Upvaldesc, UCHAR_MAX, "upvalues");
   while (oldsize < f->sizeupvalues) f->upvalues[oldsize++].name = NULL;
   f->upvalues[fs->nups].name = name;
   luaC_objbarrier(fs->L, f, name);
-  f->upvalues[fs->nups].instack = cast_byte(instk);
+  f->upvalues[fs->nups].instack = (v->k == VLOCAL);
   f->upvalues[fs->nups].idx = cast_byte(v->u.s.info);
   return fs->nups++;
 }
@@ -242,6 +242,10 @@ static int searchvar (FuncState *fs, TString *n) {
 }
 
 
+/*
+  Mark block where variable at given level was defined
+  (to emit OP_CLOSE later).
+*/
 static void markupval (FuncState *fs, int level) {
   BlockCnt *bl = fs->bl;
   while (bl && bl->nactvar > level) bl = bl->previous;
@@ -249,22 +253,30 @@ static void markupval (FuncState *fs, int level) {
 }
 
 
+/*
+  Find variable with given name 'n'. If it is an upvalue, add this
+  upvalue into all intermediate functions.
+*/
 static int singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
   if (fs == NULL)  /* no more levels? */
     return VGLOBAL;  /* default is global variable */
   else {
-    int v = searchvar(fs, n);  /* look up at current level */
-    if (v >= 0) {
-      init_exp(var, VLOCAL, v);
+    int v = searchvar(fs, n);  /* look up locals at current level */
+    if (v >= 0) {  /* found? */
+      init_exp(var, VLOCAL, v);  /* variable is local */
       if (!base)
         markupval(fs, v);  /* local will be used as an upval */
       return VLOCAL;
     }
-    else {  /* not found at current level; try upper one */
-      if (singlevaraux(fs->prev, n, var, 0) == VGLOBAL)
-        return VGLOBAL;
-      var->u.s.info = indexupvalue(fs, n, var);  /* else was LOCAL or UPVAL */
-      var->k = VUPVAL;  /* upvalue in this level */
+    else {  /* not found as local at current level; try upvalues */
+      int idx = searchupvalue(fs, n);  /* try existing upvalues */
+      if (idx < 0) {  /* not found? */
+        if (singlevaraux(fs->prev, n, var, 0) == VGLOBAL) /* try upper levels */
+          return VGLOBAL;  /* not found; is a global */
+        /* else was LOCAL or UPVAL */
+        idx  = newupvalue(fs, n, var);  /* will be a new upvalue */
+      }
+      init_exp(var, VUPVAL, idx);
       return VUPVAL;
     }
   }
