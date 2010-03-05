@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.63 2010/01/13 16:18:25 roberto Exp roberto $
+** $Id: ldebug.c,v 2.64 2010/02/26 20:40:29 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -373,8 +373,11 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
   switch (GET_OPCODE(i)) {
     case OP_CALL:
     case OP_TAILCALL:
-    case OP_TFORLOOP:
       return getobjname(L, ci, GETARG_A(i), name);
+    case OP_TFORCALL: {
+      *name = "for iterator";
+       return "for iterator";
+    }
     case OP_GETGLOBAL:
     case OP_SELF:
     case OP_GETTABUP:
