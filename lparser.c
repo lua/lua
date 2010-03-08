@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.76 2010/02/26 20:40:29 roberto Exp roberto $
+** $Id: lparser.c,v 2.77 2010/03/04 18:12:57 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -224,10 +224,10 @@ static int newupvalue (FuncState *fs, TString *name, expdesc *v) {
   luaM_growvector(fs->L, f->upvalues, fs->nups, f->sizeupvalues,
                   Upvaldesc, UCHAR_MAX, "upvalues");
   while (oldsize < f->sizeupvalues) f->upvalues[oldsize++].name = NULL;
-  f->upvalues[fs->nups].name = name;
-  luaC_objbarrier(fs->L, f, name);
   f->upvalues[fs->nups].instack = (v->k == VLOCAL);
   f->upvalues[fs->nups].idx = cast_byte(v->u.s.info);
+  f->upvalues[fs->nups].name = name;
+  luaC_objbarrier(fs->L, f, name);
   return fs->nups++;
 }
 
@@ -430,26 +430,39 @@ static void close_func (LexState *ls) {
 }
 
 
+/*
+** opens the main function, which is a regular vararg function with an
+** upvalue named '_ENV'
+*/
+static void open_mainfunc (lua_State *L, LexState *ls, FuncState *fs) {
+  expdesc v;
+  open_func(ls, fs);
+  fs->f->is_vararg = 1;  /* main function is always vararg */
+  ls->envn = luaS_new(L, "_ENV");  /* create '_ENV' string */
+  setsvalue2s(L, L->top++, ls->envn);  /* anchor it */
+  init_exp(&v, VLOCAL, 0);
+  newupvalue(fs, ls->envn, &v);  /* create '_ENV' upvalue */
+  L->top--;  /* now string is anchored as an upvalue name */
+}
+
+
 Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, Varlist *varl,
                     const char *name) {
-  struct LexState lexstate;
-  struct FuncState funcstate;
+  LexState lexstate;
+  FuncState funcstate;
   TString *tname = luaS_new(L, name);
   setsvalue2s(L, L->top, tname);  /* push name to protect it */
   incr_top(L);
   lexstate.buff = buff;
   lexstate.varl = varl;
   luaX_setinput(L, &lexstate, z, tname);
-  open_func(&lexstate, &funcstate);
-  funcstate.f->is_vararg = 1;  /* main function is always vararg */
+  open_mainfunc(L, &lexstate, &funcstate);
   luaX_next(&lexstate);  /* read first token */
-  chunk(&lexstate);
+  chunk(&lexstate);  /* read main chunk */
   check(&lexstate, TK_EOS);
   close_func(&lexstate);
   L->top--;  /* pop name */
-  lua_assert(funcstate.prev == NULL);
-  lua_assert(funcstate.nups == 0);
-  lua_assert(lexstate.fs == NULL);
+  lua_assert(!funcstate.prev && funcstate.nups == 1 && !lexstate.fs);
   return funcstate.f;
 }
 

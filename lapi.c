@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.112 2010/01/21 16:49:21 roberto Exp roberto $
+** $Id: lapi.c,v 2.113 2010/02/09 11:55:37 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -882,6 +882,12 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
   if (!chunkname) chunkname = "?";
   luaZ_init(L, &z, reader, data);
   status = luaD_protectedparser(L, &z, chunkname);
+  if (status == LUA_OK) {
+    Closure *f = clvalue(L->top - 1);
+    lua_assert(!f->c.isC);
+    if (f->l.nupvalues == 1)
+        sethvalue(L, f->l.upvals[0]->v, G(L)->l_gt);
+  }
   lua_unlock(L);
   return status;
 }
