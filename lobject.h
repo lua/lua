@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.33 2009/11/19 19:06:52 roberto Exp roberto $
+** $Id: lobject.h,v 2.34 2010/01/08 20:00:20 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -264,7 +264,6 @@ typedef struct Proto {
   lu_byte numparams;
   lu_byte is_vararg;
   lu_byte maxstacksize;
-  lu_byte envreg;  /* register in outer function with initial environment */
 } Proto;
 
 

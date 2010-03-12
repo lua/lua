@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.64 2010/02/26 20:40:29 roberto Exp roberto $
+** $Id: ldebug.c,v 2.65 2010/03/05 14:01:29 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -260,11 +260,14 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
 */
 
 
-static const char *kname (Proto *p, int c) {
-  if (ISK(c) && ttisstring(&p->k[INDEXK(c)]))
-    return svalue(&p->k[INDEXK(c)]);
+static void kname (Proto *p, int c, int reg, const char *what,
+                   const char **name) {
+  if (c == reg && *what == 'c')
+    return;  /* index is a constant; name already correct */
+  else if (ISK(c) && ttisstring(&p->k[INDEXK(c)]))
+    *name = svalue(&p->k[INDEXK(c)]);
   else
-    return "?";
+    *name = "?";
 }
 
 
@@ -283,17 +286,6 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
     OpCode op = GET_OPCODE(i);
     int a = GETARG_A(i);
     switch (op) {
-      case OP_GETGLOBAL: {
-        if (reg == a) {
-          int g = GETARG_Bx(i);
-          if (g != 0) g--;
-          else g = GETARG_Ax(p->code[++pc]);
-          lua_assert(ttisstring(&p->k[g]));
-          *name = svalue(&p->k[g]);
-          what = "global";
-        }
-        break;
-      }
       case OP_MOVE: {
         if (reg == a) {
           int b = GETARG_B(i);  /* move from 'b' to 'a' */
@@ -307,8 +299,12 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
       case OP_GETTABLE: {
         if (reg == a) {
           int k = GETARG_C(i);  /* key index */
-          *name = kname(p, k);
-          what = "field";
+          int t = GETARG_B(i);
+          const char *tabname = (op == OP_GETTABLE)
+                                ? luaF_getlocalname(p, t + 1, pc)
+                                : getstr(p->upvalues[t].name);
+          kname(p, k, a, what, name);
+          what = (tabname && strcmp(tabname, "_ENV") == 0) ? "global" : "field";
         }
         break;
       }
@@ -321,6 +317,17 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
         }
         break;
       }
+      case OP_LOADK: {
+        if (reg == a) {
+          int b = GETARG_Bx(i);
+          b = (b > 0) ? b - 1 : GETARG_Ax(p->code[pc + 1]);
+          if (ttisstring(&p->k[b])) {
+            what = "constant";
+            *name = svalue(&p->k[b]);
+          }
+        }
+        break;
+      }
       case OP_LOADNIL: {
         int b = GETARG_B(i);  /* move from 'b' to 'a' */
         if (a <= reg && reg <= b)  /* set registers from 'a' to 'b' */
@@ -330,7 +337,7 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
       case OP_SELF: {
         if (reg == a) {
           int k = GETARG_C(i);  /* key index */
-          *name = kname(p, k);
+          kname(p, k, a, what, name);
           what = "method";
         }
         break;
@@ -378,11 +385,10 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
       *name = "for iterator";
        return "for iterator";
     }
-    case OP_GETGLOBAL:
     case OP_SELF:
     case OP_GETTABUP:
     case OP_GETTABLE: tm = TM_INDEX; break;
-    case OP_SETGLOBAL:
+    case OP_SETTABUP:
     case OP_SETTABLE: tm = TM_NEWINDEX; break;
     case OP_EQ: tm = TM_EQ; break;
     case OP_ADD: tm = TM_ADD; break;

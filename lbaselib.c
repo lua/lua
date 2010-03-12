@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.234 2009/12/22 15:32:50 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.235 2009/12/28 16:30:31 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -376,7 +376,7 @@ static int luaB_loadin (lua_State *L) {
   n = luaB_load_aux(L, 2);
   if (n == 1) {  /* success? */
     lua_pushvalue(L, 1);  /* environment for loaded function */
-    lua_setfenv(L, -2);
+    lua_setupvalue(L, -2, 1);
   }
   return n;
 }

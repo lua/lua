@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 2.11 2009/09/28 16:32:50 roberto Exp roberto $
+** $Id: ldump.c,v 2.12 2009/09/30 15:38:37 roberto Exp roberto $
 ** save precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -145,7 +145,6 @@ static void DumpFunction(const Proto* f, const TString* p, DumpState* D)
  DumpChar(f->numparams,D);
  DumpChar(f->is_vararg,D);
  DumpChar(f->maxstacksize,D);
- DumpChar(f->envreg,D);
  DumpCode(f,D);
  DumpConstants(f,D);
  DumpUpvalues(f,D);

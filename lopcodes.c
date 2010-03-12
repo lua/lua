@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.41 2009/11/19 19:06:52 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.42 2010/02/26 20:40:29 roberto Exp roberto $
 ** See Copyright Notice in lua.h
 */
 
@@ -19,10 +19,8 @@ LUAI_DDEF const char *const luaP_opnames[NUM_OPCODES+1] = {
   "LOADBOOL",
   "LOADNIL",
   "GETUPVAL",
-  "GETGLOBAL",
   "GETTABUP",
   "GETTABLE",
-  "SETGLOBAL",
   "SETTABUP",
   "SETUPVAL",
   "SETTABLE",
@@ -69,10 +67,8 @@ LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 1, OpArgU, OpArgU, iABC)		/* OP_LOADBOOL */
  ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_LOADNIL */
  ,opmode(0, 1, OpArgU, OpArgN, iABC)		/* OP_GETUPVAL */
- ,opmode(0, 1, OpArgK, OpArgN, iABx)		/* OP_GETGLOBAL */
  ,opmode(0, 1, OpArgU, OpArgK, iABC)		/* OP_GETTABUP */
  ,opmode(0, 1, OpArgR, OpArgK, iABC)		/* OP_GETTABLE */
- ,opmode(0, 0, OpArgK, OpArgN, iABx)		/* OP_SETGLOBAL */
  ,opmode(0, 0, OpArgK, OpArgK, iABC)		/* OP_SETTABUP */
  ,opmode(0, 0, OpArgU, OpArgN, iABC)		/* OP_SETUPVAL */
  ,opmode(0, 0, OpArgK, OpArgK, iABC)		/* OP_SETTABLE */

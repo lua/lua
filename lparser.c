@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.77 2010/03/04 18:12:57 roberto Exp roberto $
+** $Id: lparser.c,v 2.78 2010/03/08 16:55:52 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -259,7 +259,7 @@ static void markupval (FuncState *fs, int level) {
 */
 static int singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
   if (fs == NULL)  /* no more levels? */
-    return VGLOBAL;  /* default is global variable */
+    return VVOID;  /* default is global */
   else {
     int v = searchvar(fs, n);  /* look up locals at current level */
     if (v >= 0) {  /* found? */
@@ -271,8 +271,8 @@ static int singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
     else {  /* not found as local at current level; try upvalues */
       int idx = searchupvalue(fs, n);  /* try existing upvalues */
       if (idx < 0) {  /* not found? */
-        if (singlevaraux(fs->prev, n, var, 0) == VGLOBAL) /* try upper levels */
-          return VGLOBAL;  /* not found; is a global */
+        if (singlevaraux(fs->prev, n, var, 0) == VVOID) /* try upper levels */
+          return VVOID;  /* not found; is a global */
         /* else was LOCAL or UPVAL */
         idx  = newupvalue(fs, n, var);  /* will be a new upvalue */
       }
@@ -286,15 +286,12 @@ static int singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
 static void singlevar (LexState *ls, expdesc *var) {
   TString *varname = str_checkname(ls);
   FuncState *fs = ls->fs;
-  if (singlevaraux(fs, varname, var, 1) == VGLOBAL) {
-    if (fs->envreg == NO_REG)  /* regular global? */
-      init_exp(var, VGLOBAL, luaK_stringK(fs, varname));
-    else {  /* "globals" are in current lexical environment */
-      expdesc key;
-      init_exp(var, VLOCAL, fs->envreg);  /* current environment */
-      codestring(ls, &key, varname);  /* key is variable name */
-      luaK_indexed(fs, var, &key);  /* env[varname] */
-    }
+  if (singlevaraux(fs, varname, var, 1) == VVOID) {  /* global name? */
+    expdesc key;
+    singlevaraux(fs, ls->envn, var, 1);  /* get _ENV variable */
+    lua_assert(var->k == VLOCAL || var->k == VUPVAL);
+    codestring(ls, &key, varname);  /* key is variable name */
+    luaK_indexed(fs, var, &key);  /* env[varname] */
   }
 }
 
@@ -363,7 +360,6 @@ static void pushclosure (LexState *ls, Proto *clp, expdesc *v) {
   while (oldsize < f->sizep) f->p[oldsize++] = NULL;
   f->p[fs->np++] = clp;
   /* initial environment for new function is current lexical environment */
-  clp->envreg = fs->envreg;
   luaC_objbarrier(ls->L, f, clp);
   init_exp(v, VRELOCABLE, luaK_codeABx(fs, OP_CLOSURE, 0, fs->np-1));
 }
@@ -386,7 +382,6 @@ static void open_func (LexState *ls, FuncState *fs) {
   fs->nlocvars = 0;
   fs->nactvar = 0;
   fs->firstlocal = ls->varl->nactvar;
-  fs->envreg = NO_REG;
   fs->bl = NULL;
   f = luaF_newproto(L);
   fs->f = f;
@@ -1304,24 +1299,6 @@ static void funcstat (LexState *ls, int line) {
 }
 
 
-static void instat (LexState *ls, int line) {
-  /* instat -> IN exp DO block END */
-  FuncState *fs = ls->fs;
-  int oldenv = fs->envreg;  /* save current environment */
-  BlockCnt bl;
-  luaX_next(ls);  /* skip IN */
-  enterblock(fs, &bl, 0);  /* scope for environment variable */
-  new_localvarliteral(ls, "(environment)");
-  fs->envreg = exp1(ls);  /* new environment */
-  adjustlocalvars(ls, 1);
-  checknext(ls, TK_DO);
-  block(ls);
-  leaveblock(fs);
-  check_match(ls, TK_END, TK_IN, line);
-  fs->envreg = oldenv;  /* restore outer environment */
-}
-
-
 static void exprstat (LexState *ls) {
   /* stat -> func | assignment */
   FuncState *fs = ls->fs;
@@ -1384,10 +1361,6 @@ static int statement (LexState *ls) {
       luaX_next(ls);  /* skip DO */
       block(ls);
       check_match(ls, TK_END, TK_DO, line);
-      return 0;
-    }
-    case TK_IN: {
-      instat(ls, line);
       return 0;
     }
     case TK_FOR: {  /* stat -> forstat */

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.43 2010/01/11 17:38:30 roberto Exp roberto $
+** $Id: lcode.c,v 2.44 2010/02/26 20:40:29 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -372,11 +372,6 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
       e->k = VRELOCABLE;
       break;
     }
-    case VGLOBAL: {
-      e->u.s.info = luaK_codeABxX(fs, OP_GETGLOBAL, 0, e->u.s.info);
-      e->k = VRELOCABLE;
-      break;
-    }
     case VINDEXED: {
       freereg(fs, e->u.s.aux);
       freereg(fs, e->u.s.info);
@@ -555,11 +550,6 @@ void luaK_storevar (FuncState *fs, expdesc *var, expdesc *ex) {
       luaK_codeABC(fs, OP_SETUPVAL, e, var->u.s.info, 0);
       break;
     }
-    case VGLOBAL: {
-      int e = luaK_exp2anyreg(fs, ex);
-      luaK_codeABxX(fs, OP_SETGLOBAL, e, var->u.s.info);
-      break;
-    }
     case VINDEXED: {
       int e = luaK_exp2RK(fs, ex);
       luaK_codeABC(fs, OP_SETTABLE, var->u.s.info, var->u.s.aux, e);
@@ -584,9 +574,9 @@ void luaK_self (FuncState *fs, expdesc *e, expdesc *key) {
   luaK_exp2anyreg(fs, e);
   freeexp(fs, e);
   func = fs->freereg;
-  luaK_reserveregs(fs, 2);
   luaK_codeABC(fs, OP_SELF, func, e->u.s.info, luaK_exp2RK(fs, key));
   freeexp(fs, key);
+  luaK_reserveregs(fs, 2);
   e->u.s.info = func;
   e->k = VNONRELOC;
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.11 2009/09/28 16:32:50 roberto Exp roberto $
+** $Id: lundump.c,v 2.12 2009/09/30 15:38:37 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -180,7 +180,6 @@ static Proto* LoadFunction(LoadState* S, TString* p)
  f->numparams=LoadByte(S);
  f->is_vararg=LoadByte(S);
  f->maxstacksize=LoadByte(S);
- f->envreg=LoadByte(S);
  LoadCode(S,f);
  LoadConstants(S,f);
  LoadUpvalues(S,f);

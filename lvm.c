@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.104 2010/02/26 20:40:29 roberto Exp roberto $
+** $Id: lvm.c,v 2.105 2010/02/27 21:16:24 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -355,14 +355,10 @@ void luaV_finishOp (lua_State *L) {
   StkId base = ci->u.l.base;
   Instruction inst = *(ci->u.l.savedpc - 1);  /* interrupted instruction */
   OpCode op = GET_OPCODE(inst);
-  if (op == OP_EXTRAARG) {  /* extra argument? */
-    inst = *(ci->u.l.savedpc - 2);  /* get its 'main' instruction */
-    op = GET_OPCODE(inst);
-  }
   switch (op) {  /* finish its execution */
     case OP_ADD: case OP_SUB: case OP_MUL: case OP_DIV:
     case OP_MOD: case OP_POW: case OP_UNM: case OP_LEN:
-    case OP_GETGLOBAL: case OP_GETTABUP: case OP_GETTABLE: case OP_SELF: {
+    case OP_GETTABUP: case OP_GETTABLE: case OP_SELF: {
       setobjs2s(L, base + GETARG_A(inst), --L->top);
       break;
     }
@@ -403,7 +399,7 @@ void luaV_finishOp (lua_State *L) {
         L->top = ci->top;  /* adjust results */
       break;
     }
-    case OP_TAILCALL: case OP_SETGLOBAL: case OP_SETTABUP:  case OP_SETTABLE:
+    case OP_TAILCALL: case OP_SETTABUP:  case OP_SETTABLE:
       break;
     default: lua_assert(0);
   }
@@ -501,14 +497,6 @@ void luaV_execute (lua_State *L) {
         setobj2s(L, ra, cl->upvals[b]->v);
         break;
       }
-      case OP_GETGLOBAL: {
-        TValue g;
-        TValue *rb = KBx(i);
-        sethvalue(L, &g, cl->env);
-        lua_assert(ttisstring(rb));
-        Protect(luaV_gettable(L, &g, rb, ra));
-        break;
-      }
       case OP_GETTABUP: {
         int b = GETARG_B(i);
         Protect(luaV_gettable(L, cl->upvals[b]->v, RKC(i), ra));
@@ -516,14 +504,6 @@ void luaV_execute (lua_State *L) {
       }
       case OP_GETTABLE: {
         Protect(luaV_gettable(L, RB(i), RKC(i), ra));
-        break;
-      }
-      case OP_SETGLOBAL: {
-        TValue g;
-        TValue *rb = KBx(i);
-        sethvalue(L, &g, cl->env);
-        lua_assert(ttisstring(rb));
-        Protect(luaV_settable(L, &g, rb, ra));
         break;
       }
       case OP_SETTABUP: {
@@ -796,14 +776,6 @@ void luaV_execute (lua_State *L) {
         int j;
         ncl->l.p = p;
         setclvalue(L, ra, ncl);  /* anchor new closure in stack */
-        if (p->envreg != NO_REG) {  /* lexical environment? */
-          StkId env = base + p->envreg;
-          if (!ttistable(env))
-            luaG_runerror(L, "environment is not a table: "
-                             "cannot create closure");
-          else
-            ncl->l.env = hvalue(env);
-        }
         for (j = 0; j < nup; j++) {  /* fill in upvalues */
           if (uv[j].instack)  /* upvalue refers to local variable? */
             ncl->l.upvals[j] = luaF_findupval(L, base + uv[j].idx);

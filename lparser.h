@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.61 2009/10/11 20:02:19 roberto Exp roberto $
+** $Id: lparser.h,v 1.62 2010/02/26 20:40:29 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -25,7 +25,6 @@ typedef enum {
   VKNUM,	/* nval = numerical value */
   VLOCAL,	/* info = local register */
   VUPVAL,       /* info = index of upvalue in 'upvalues' */
-  VGLOBAL,	/* info =  index of global name in 'k' */
   VINDEXED,	/* info = table R/K; aux = index R/K */
   VINDEXEDUP,	/* info = table upvalue; aux = R/K */
   VJMP,		/* info = instruction pc */
@@ -81,7 +80,6 @@ typedef struct FuncState {
   short nlocvars;  /* number of elements in `locvars' */
   lu_byte nactvar;  /* number of active local variables */
   lu_byte nups;  /* number of upvalues */
-  lu_byte envreg;  /* register holding current lexical environment */
 } FuncState;
 
 

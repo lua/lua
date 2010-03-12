@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.18 2009/12/11 13:39:34 roberto Exp roberto $
+** $Id: lfunc.c,v 2.19 2009/12/16 16:42:58 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -127,7 +127,6 @@ Proto *luaF_newproto (lua_State *L) {
   f->linedefined = 0;
   f->lastlinedefined = 0;
   f->source = NULL;
-  f->envreg = NO_REG;
   return f;
 }
 
