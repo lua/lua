@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.78 2010/03/08 16:55:52 roberto Exp roberto $
+** $Id: lparser.c,v 2.79 2010/03/12 19:14:06 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -288,7 +288,7 @@ static void singlevar (LexState *ls, expdesc *var) {
   FuncState *fs = ls->fs;
   if (singlevaraux(fs, varname, var, 1) == VVOID) {  /* global name? */
     expdesc key;
-    singlevaraux(fs, ls->envn, var, 1);  /* get _ENV variable */
+    singlevaraux(fs, G(ls->L)->envn, var, 1);  /* get _ENV variable */
     lua_assert(var->k == VLOCAL || var->k == VUPVAL);
     codestring(ls, &key, varname);  /* key is variable name */
     luaK_indexed(fs, var, &key);  /* env[varname] */
@@ -433,11 +433,8 @@ static void open_mainfunc (lua_State *L, LexState *ls, FuncState *fs) {
   expdesc v;
   open_func(ls, fs);
   fs->f->is_vararg = 1;  /* main function is always vararg */
-  ls->envn = luaS_new(L, "_ENV");  /* create '_ENV' string */
-  setsvalue2s(L, L->top++, ls->envn);  /* anchor it */
   init_exp(&v, VLOCAL, 0);
-  newupvalue(fs, ls->envn, &v);  /* create '_ENV' upvalue */
-  L->top--;  /* now string is anchored as an upvalue name */
+  newupvalue(fs, G(L)->envn, &v);  /* create '_ENV' upvalue */
 }
 
 

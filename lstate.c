@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.67 2009/12/17 12:26:09 roberto Exp roberto $
+** $Id: lstate.c,v 2.68 2009/12/22 15:32:50 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -161,6 +161,8 @@ static void f_luaopen (lua_State *L, void *ud) {
   luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
   luaT_init(L);
   luaX_init(L);
+  g->envn = luaS_new(L, "_ENV");
+  luaS_fix(g->envn);  /* never collect this name */
   luaS_fix(luaS_newliteral(L, MEMERRMSG));
   g->GCthreshold = 4*g->totalbytes;
 }

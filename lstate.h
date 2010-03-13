@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.52 2009/12/22 15:32:50 roberto Exp roberto $
+** $Id: lstate.h,v 2.53 2010/02/09 11:55:37 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -144,6 +144,7 @@ typedef struct global_State {
   const lua_Number *version;  /* pointer to version number */
   struct Table *mt[NUM_TAGS];  /* metatables for basic types */
   TString *tmname[TM_N];  /* array with tag-method names */
+  TString *envn;  /* environment variable name */
 } global_State;
 
 
