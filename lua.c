@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.187 2010/02/18 19:18:41 roberto Exp roberto $
+** $Id: lua.c,v 1.188 2010/02/27 21:15:36 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -219,7 +219,7 @@ static int dostring (lua_State *L, const char *s, const char *name) {
 
 
 static int dolibrary (lua_State *L, const char *name) {
-  lua_getfield(L, LUA_ENVIRONINDEX, "require");
+  lua_getglobal(L, "require");
   lua_pushstring(L, name);
   return report(L, docall(L, 1, 1));
 }
@@ -227,7 +227,7 @@ static int dolibrary (lua_State *L, const char *name) {
 
 static const char *get_prompt (lua_State *L, int firstline) {
   const char *p;
-  lua_getfield(L, LUA_ENVIRONINDEX, firstline ? "_PROMPT" : "_PROMPT2");
+  lua_getglobal(L, firstline ? "_PROMPT" : "_PROMPT2");
   p = lua_tostring(L, -1);
   if (p == NULL) p = (firstline ? LUA_PROMPT : LUA_PROMPT2);
   lua_pop(L, 1);  /* remove global */
@@ -301,7 +301,7 @@ static void dotty (lua_State *L) {
     report(L, status);
     if (status == LUA_OK && lua_gettop(L) > 0) {  /* any result to print? */
       luaL_checkstack(L, LUA_MINSTACK, "too many results to print");
-      lua_getfield(L, LUA_ENVIRONINDEX, "print");
+      lua_getglobal(L, "print");
       lua_insert(L, 1);
       if (lua_pcall(L, lua_gettop(L)-1, 0, 0) != LUA_OK)
         l_message(progname, lua_pushfstring(L,
@@ -319,7 +319,7 @@ static int handle_script (lua_State *L, char **argv, int n) {
   int status;
   const char *fname;
   int narg = getargs(L, argv, n);  /* collect arguments */
-  lua_setfield(L, LUA_ENVIRONINDEX, "arg");
+  lua_setglobal(L, "arg");
   fname = argv[n];
   if (strcmp(fname, "-") == 0 && strcmp(argv[n-1], "--") != 0)
     fname = NULL;  /* stdin */

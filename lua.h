@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.260 2010/01/06 15:08:00 roberto Exp roberto $
+** $Id: lua.h,v 1.261 2010/01/11 17:15:11 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -297,8 +297,12 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 
 #define lua_newtable(L)		lua_createtable(L, 0, 0)
 
-#define lua_setglobal(L,s)	lua_setfield(L, LUA_ENVIRONINDEX, (s))
-#define lua_getglobal(L,s)	lua_getfield(L, LUA_ENVIRONINDEX, (s))
+#define lua_setglobal(L,s)  \
+	(lua_pushglobaltable(L), lua_pushvalue(L, -2), \
+	 lua_setfield(L, -2, (s)), lua_pop(L, 2))
+
+#define lua_getglobal(L,s) \
+	(lua_pushglobaltable(L), lua_getfield(L, -1, (s)), lua_remove(L, -2))
 
 #define lua_register(L,n,f) \
 	(lua_pushcfunction(L, (f)), lua_setfield(L, LUA_ENVIRONINDEX, (n)))
