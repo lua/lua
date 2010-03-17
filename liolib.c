@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.85 2009/12/17 16:20:01 roberto Exp roberto $
+** $Id: liolib.c,v 2.86 2010/03/03 18:48:57 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -103,17 +103,24 @@ static FILE *tofile (lua_State *L) {
 }
 
 
-
 /*
 ** When creating file handles, always creates a `closed' file handle
 ** before opening the actual file; so, if there is a memory error, the
 ** file is not left opened.
 */
-static FILE **newfile (lua_State *L) {
+static FILE **newprefile (lua_State *L) {
   FILE **pf = (FILE **)lua_newuserdata(L, sizeof(FILE *));
   *pf = NULL;  /* file handle is currently `closed' */
   luaL_getmetatable(L, LUA_FILEHANDLE);
   lua_setmetatable(L, -2);
+  return pf;
+}
+
+
+static FILE **newfile (lua_State *L) {
+  FILE **pf = newprefile(L);
+  lua_pushvalue(L, lua_upvalueindex(1));  /* set upvalue... */
+  lua_setfenv(L, -2);  /* ... as environment for new file */
   return pf;
 }
 
@@ -164,7 +171,7 @@ static int aux_close (lua_State *L) {
 
 static int io_close (lua_State *L) {
   if (lua_isnone(L, 1))
-    lua_rawgeti(L, LUA_ENVIRONINDEX, IO_OUTPUT);
+    lua_rawgeti(L, lua_upvalueindex(1), IO_OUTPUT);
   tofile(L);  /* make sure argument is a file */
   return aux_close(L);
 }
@@ -229,7 +236,7 @@ static int io_tmpfile (lua_State *L) {
 
 static FILE *getiofile (lua_State *L, int findex) {
   FILE *f;
-  lua_rawgeti(L, LUA_ENVIRONINDEX, findex);
+  lua_rawgeti(L, lua_upvalueindex(1), findex);
   f = *(FILE **)lua_touserdata(L, -1);
   if (f == NULL)
     luaL_error(L, "standard %s file is closed", fnames[findex - 1]);
@@ -250,10 +257,10 @@ static int g_iofile (lua_State *L, int f, const char *mode) {
       tofile(L);  /* check that it's a valid file handle */
       lua_pushvalue(L, 1);
     }
-    lua_rawseti(L, LUA_ENVIRONINDEX, f);
+    lua_rawseti(L, lua_upvalueindex(1), f);
   }
   /* return current value */
-  lua_rawgeti(L, LUA_ENVIRONINDEX, f);
+  lua_rawgeti(L, lua_upvalueindex(1), f);
   return 1;
 }
 
@@ -295,7 +302,7 @@ static int io_lines (lua_State *L) {
   int toclose;
   if (lua_isnone(L, 1)) lua_pushnil(L);  /* at least one argument */
   if (lua_isnil(L, 1)) {  /* no file name? */
-    lua_rawgeti(L, LUA_ENVIRONINDEX, IO_INPUT);  /* get default input */
+    lua_rawgeti(L, lua_upvalueindex(1), IO_INPUT);  /* get default input */
     lua_replace(L, 1);   /* put it at index 1 */
     tofile(L);  /* check that it's a valid file handle */
     toclose = 0;  /* do not close it after iteration */
@@ -576,23 +583,27 @@ static void createmeta (lua_State *L) {
   luaL_newmetatable(L, LUA_FILEHANDLE);  /* create metatable for file handles */
   lua_pushvalue(L, -1);  /* push metatable */
   lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
-  luaL_register(L, NULL, flib);  /* file methods */
+  luaL_register(L, NULL, flib);  /* add file methods to new metatable */
+  lua_pop(L, 1);  /* pop new metatable */
 }
 
 
 static void createstdfile (lua_State *L, FILE *f, int k, const char *fname) {
-  *newfile(L) = f;
+  *newprefile(L) = f;
   if (k > 0) {
-    lua_pushvalue(L, -1);
-    lua_rawseti(L, LUA_ENVIRONINDEX, k);
+    lua_pushvalue(L, -1);  /* copy new file */
+    lua_rawseti(L, 1, k);  /* add it to common upvalue */
   }
-  lua_pushvalue(L, -2);  /* copy environment */
-  lua_setfenv(L, -2);  /* set it */
-  lua_setfield(L, -3, fname);
+  lua_pushvalue(L, 3);  /* get environment for default files */
+  lua_setfenv(L, -2);  /* set it as environment for file */
+  lua_setfield(L, 2, fname);  /* add file to module */
 }
 
 
-static void newfenv (lua_State *L, lua_CFunction cls) {
+/*
+** pushes a new table with {__close = cls}
+*/
+static void newenv (lua_State *L, lua_CFunction cls) {
   lua_createtable(L, 0, 1);
   lua_pushcfunction(L, cls);
   lua_setfield(L, -2, "__close");
@@ -600,21 +611,21 @@ static void newfenv (lua_State *L, lua_CFunction cls) {
 
 
 LUAMOD_API int luaopen_io (lua_State *L) {
+  lua_settop(L, 0);
   createmeta(L);
   /* create (private) environment (with fields IO_INPUT, IO_OUTPUT, __close) */
-  newfenv(L, io_fclose);
-  lua_replace(L, LUA_ENVIRONINDEX);
-  /* open library */
-  luaL_register(L, LUA_IOLIBNAME, iolib);
+  newenv(L, io_fclose);  /* upvalue for all io functions at index 1 */
+  lua_pushvalue(L, -1);  /* copy to be consumed by 'openlib' */
+  luaL_openlib(L, LUA_IOLIBNAME, iolib, 1);  /* new module at index 2 */
   /* create (and set) default files */
-  newfenv(L, io_noclose);  /* close function for default files */
+  newenv(L, io_noclose);  /* environment for default files at index 3 */
   createstdfile(L, stdin, IO_INPUT, "stdin");
   createstdfile(L, stdout, IO_OUTPUT, "stdout");
   createstdfile(L, stderr, 0, "stderr");
   lua_pop(L, 1);  /* pop environment for default files */
-  lua_getfield(L, -1, "popen");
-  newfenv(L, io_pclose);  /* create environment for 'popen' */
-  lua_setfenv(L, -2);  /* set fenv for 'popen' */
+  lua_getfield(L, 2, "popen");
+  newenv(L, io_pclose);  /* create environment for 'popen' streams */
+  lua_setupvalue(L, -2, 1);  /* set it as upvalue for 'popen' */
   lua_pop(L, 1);  /* pop 'popen' */
   return 1;
 }

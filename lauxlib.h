@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.99 2010/01/11 16:00:45 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.100 2010/01/21 16:49:21 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -29,8 +29,8 @@ typedef struct luaL_Reg {
 LUALIB_API void (luaL_checkversion_) (lua_State *L, lua_Number ver);
 #define luaL_checkversion(L)	luaL_checkversion_(L, LUA_VERSION_NUM)
 
-LUALIB_API void (luaL_register) (lua_State *L, const char *libname,
-                                const luaL_Reg *l);
+LUALIB_API void (luaL_openlib) (lua_State *L, const char *libname,
+                                const luaL_Reg *l, int nup);
 LUALIB_API int (luaL_getmetafield) (lua_State *L, int obj, const char *e);
 LUALIB_API int (luaL_callmeta) (lua_State *L, int obj, const char *e);
 LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len);
@@ -71,7 +71,7 @@ LUALIB_API int (luaL_loadstring) (lua_State *L, const char *s);
 
 LUALIB_API lua_State *(luaL_newstate) (void);
 
-LUALIB_API int luaL_len (lua_State *L, int idx);
+LUALIB_API int (luaL_len) (lua_State *L, int idx);
 
 LUALIB_API const char *(luaL_gsub) (lua_State *L, const char *s, const char *p,
                                                   const char *r);
@@ -79,11 +79,11 @@ LUALIB_API const char *(luaL_gsub) (lua_State *L, const char *s, const char *p,
 LUALIB_API const char *(luaL_findtable) (lua_State *L, int idx,
                                          const char *fname, int szhint);
 
-LUALIB_API void luaL_traceback (lua_State *L, lua_State *L1,
-                                const char *msg, int level);
+LUALIB_API void (luaL_traceback) (lua_State *L, lua_State *L1,
+                                  const char *msg, int level);
 
-LUALIB_API int luaL_cpcall (lua_State *L, lua_CFunction f, int nargs,
-                            int nresults);
+LUALIB_API int (luaL_cpcall) (lua_State *L, lua_CFunction f, int nargs,
+                              int nresults);
 
 
 /*
@@ -112,6 +112,9 @@ LUALIB_API int luaL_cpcall (lua_State *L, lua_CFunction f, int nargs,
 #define luaL_getmetatable(L,n)	(lua_getfield(L, LUA_REGISTRYINDEX, (n)))
 
 #define luaL_opt(L,f,n,d)	(lua_isnoneornil(L,(n)) ? (d) : f(L,(n)))
+
+#define luaL_register(L,n,l)	(luaL_openlib(L,(n),(l),0))
+
 
 /*
 ** {======================================================

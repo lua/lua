@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.201 2010/02/18 19:37:57 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.202 2010/03/12 18:59:32 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -670,13 +670,13 @@ LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len) {
 
 static int libsize (const luaL_Reg *l) {
   int size = 0;
-  for (; l->name; l++) size++;
+  for (; l && l->name; l++) size++;
   return size;
 }
 
 
-LUALIB_API void luaL_register (lua_State *L, const char *libname,
-                               const luaL_Reg *l) {
+LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
+                               const luaL_Reg *l, int nup) {
   luaL_checkversion(L);
   if (libname) {
     /* check whether lib already exists */
@@ -692,12 +692,17 @@ LUALIB_API void luaL_register (lua_State *L, const char *libname,
       lua_setfield(L, -3, libname);  /* _LOADED[libname] = new table */
     }
     lua_remove(L, -2);  /* remove _LOADED table */
+    lua_insert(L, -(nup + 1));  /* move library table to below upvalues */
   }
-  if (l == NULL) return;  /* nothing to register? */
-  for (; l->name; l++) {  /* else fill the table with given functions */
-    lua_pushcfunction(L, l->func);
-    lua_setfield(L, -2, l->name);
+  luaL_checkstack(L, nup, "too many upvalues");
+  for (; l && l->name; l++) {  /* else fill the table with given functions */
+    int i;
+    for (i = 0; i < nup; i++)  /* copy upvalues to the top */
+      lua_pushvalue(L, -nup);
+    lua_pushcclosure(L, l->func, nup);
+    lua_setfield(L, -(nup + 2), l->name);
   }
+  lua_pop(L, nup);  /* remove upvalues */
 }
 
 
