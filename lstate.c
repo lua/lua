@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.68 2009/12/22 15:32:50 roberto Exp roberto $
+** $Id: lstate.c,v 2.69 2010/03/13 15:55:42 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -115,10 +115,10 @@ static void freestack (lua_State *L) {
 ** (Userdata cannot point directly to the function because pointer to
 ** function is not compatible with void*.)
 */
-static int cpcall (lua_State *L) {
+static int ccall (lua_State *L) {
   lua_CFunction f = *(lua_CFunction *)lua_touserdata(L, 1);
   lua_remove(L, 1);  /* remove f from stack */
-  /* restore original environment for 'cpcall' */
+  /* restore original environment for 'ccall' */
   lua_pushglobaltable(L);
   lua_replace(L, LUA_ENVIRONINDEX);
   return f(L);
@@ -138,11 +138,11 @@ static void init_registry (lua_State *L, global_State *g) {
   /* registry[LUA_RIDX_MAINTHREAD] = L */
   setthvalue(L, &mt, L);
   setobj2t(L, luaH_setint(L, registry, LUA_RIDX_MAINTHREAD), &mt);
-  /* registry[LUA_RIDX_CPCALL] = cpcall */
+  /* registry[LUA_RIDX_CCALL] = ccall */
   cp = luaF_newCclosure(L, 0, g->l_gt);
-  cp->c.f = cpcall;
+  cp->c.f = ccall;
   setclvalue(L, &mt, cp);
-  setobj2t(L, luaH_setint(L, registry, LUA_RIDX_CPCALL), &mt);
+  setobj2t(L, luaH_setint(L, registry, LUA_RIDX_CCALL), &mt);
   /* registry[LUA_RIDX_GLOBALS] = l_gt */
   sethvalue(L, &mt, g->l_gt);
   setobj2t(L, luaH_setint(L, registry, LUA_RIDX_GLOBALS), &mt);
