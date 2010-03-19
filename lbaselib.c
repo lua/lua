@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.236 2010/03/12 19:14:06 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.237 2010/03/13 03:57:46 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -252,6 +252,8 @@ static int luaB_pairs (lua_State *L) {
 }
 
 
+#if defined(LUA_COMPAT_IPAIRS)
+
 static int ipairsaux (lua_State *L) {
   int i = luaL_checkint(L, 2);
   luaL_checktype(L, 1, LUA_TTABLE);
@@ -265,6 +267,16 @@ static int ipairsaux (lua_State *L) {
 static int luaB_ipairs (lua_State *L) {
   return pairsmeta(L, "__ipairs", 1);
 }
+
+#else
+
+#define ipairsaux	luaB_ipairs
+
+static int luaB_ipairs (lua_State *L) {
+  return luaL_error(L, "'ipairs' deprecated");
+}
+
+#endif
 
 
 static int load_aux (lua_State *L, int status) {
