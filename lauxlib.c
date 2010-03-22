@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.203 2010/03/17 21:37:37 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.204 2010/03/19 21:04:17 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -397,8 +397,7 @@ LUALIB_API void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l) {
     size_t space = bufffree(B);
     if (space == 0) {
       luaL_prepbuffer(B);
-      lua_assert(bufffree(B) == LUAL_BUFFERSIZE);
-      space = LUAL_BUFFERSIZE;
+      space = LUAL_BUFFERSIZE;  /* bufffree(B) == LUAL_BUFFERSIZE */
     }
     if (space > l) space = l;
     memcpy(B->p, s, space);
