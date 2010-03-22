@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.69 2010/03/13 15:55:42 roberto Exp roberto $
+** $Id: lstate.c,v 2.70 2010/03/19 21:04:17 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -26,7 +26,7 @@
 
 
 #if !defined(LUAI_GCPAUSE)
-#define LUAI_GCPAUSE	162  /* 162% (wait memory to double before next GC) */
+#define LUAI_GCPAUSE	162  /* 162% */
 #endif
 
 #if !defined(LUAI_GCMUL)
