@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.113 2010/02/09 11:55:37 roberto Exp roberto $
+** $Id: lapi.c,v 2.114 2010/03/08 16:55:52 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -928,6 +928,7 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       break;
     }
     case LUA_GCRESTART: {
+      g->gckind = KGC_NORMAL;
       g->GCthreshold = g->totalbytes;
       break;
     }
@@ -971,6 +972,11 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
     }
     case LUA_GCISRUNNING: {
       res = (g->GCthreshold != MAX_LUMEM);
+      break;
+    }
+    case LUA_GCGEN: {  /* change collector to generational mode */
+      luaC_runtilstate(L, bitmask(GCSpropagate));
+      g->gckind = KGC_GEN;
       break;
     }
     default: res = -1;  /* invalid option */

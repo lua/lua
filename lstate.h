@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.53 2010/02/09 11:55:37 roberto Exp roberto $
+** $Id: lstate.h,v 2.54 2010/03/13 15:55:42 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -58,6 +58,7 @@ struct lua_longjmp;  /* defined in ldo.c */
 #define KGC_NORMAL	0
 #define KGC_FORCED	1	/* gc was forced by the program */
 #define KGC_EMERGENCY	2	/* gc was forced by an allocation failure */
+#define KGC_GEN		3	/* generational collection */
 
 
 typedef struct stringtable {
@@ -142,9 +143,9 @@ typedef struct global_State {
   struct lua_State *mainthread;
   UpVal uvhead;  /* head of double-linked list of all open upvalues */
   const lua_Number *version;  /* pointer to version number */
-  struct Table *mt[NUM_TAGS];  /* metatables for basic types */
-  TString *tmname[TM_N];  /* array with tag-method names */
   TString *envn;  /* environment variable name */
+  TString *tmname[TM_N];  /* array with tag-method names */
+  struct Table *mt[NUM_TAGS];  /* metatables for basic types */
 } global_State;
 
 

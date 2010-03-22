@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.66 2009/12/16 16:42:58 roberto Exp roberto $
+** $Id: lgc.c,v 2.67 2009/12/22 15:32:50 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -29,7 +29,7 @@
 #define GCFINALIZECOST	100
 
 
-#define maskcolors	cast_byte(~(bitmask(BLACKBIT)|WHITEBITS))
+#define maskcolors	(~(bitmask(BLACKBIT)|WHITEBITS))
 
 #define makewhite(g,x)	\
  (gch(x)->marked = cast_byte((gch(x)->marked & maskcolors) | luaC_white(g)))
@@ -95,10 +95,10 @@ static int iscleared (const TValue *o, int iskey) {
 void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v) {
   global_State *g = G(L);
   lua_assert(isblack(o) && iswhite(v) && !isdead(g, v) && !isdead(g, o));
-  lua_assert(g->gcstate != GCSfinalize && g->gcstate != GCSpause);
+  lua_assert(g->gckind == KGC_GEN ||
+             (g->gcstate != GCSfinalize && g->gcstate != GCSpause));
   lua_assert(gch(o)->tt != LUA_TTABLE);
-  /* must keep invariant? */
-  if (g->gcstate == GCSpropagate)
+  if (g->gcstate == GCSpropagate)  /* must keep invariant? */
     reallymarkobject(g, v);  /* restore invariant */
   else  /* don't mind */
     makewhite(g, o);  /* mark as white just to avoid other barriers */
@@ -109,7 +109,8 @@ void luaC_barrierback (lua_State *L, Table *t) {
   global_State *g = G(L);
   GCObject *o = obj2gco(t);
   lua_assert(isblack(o) && !isdead(g, o));
-  lua_assert(g->gcstate != GCSfinalize && g->gcstate != GCSpause);
+  lua_assert(g->gckind == KGC_GEN ||
+             (g->gcstate != GCSfinalize && g->gcstate != GCSpause));
   black2gray(o);  /* make table gray (again) */
   t->gclist = g->grayagain;
   g->grayagain = o;
@@ -234,7 +235,6 @@ static void markroot (lua_State *L) {
   markvalue(g, &g->l_registry);
   markmt(g);
   markbeingfnz(g);  /* mark any finalizing object left from previous cycle */
-  g->gcstate = GCSpropagate;
 }
 
 
@@ -401,8 +401,9 @@ static void traversestack (global_State *g, lua_State *L) {
 
 
 /*
-** traverse one gray object, turning it to black.
-** Returns `quantity' traversed.
+** traverse one gray object, turning it to black (except for threads,
+** which are always gray).
+** Returns 'quantity' traversed.
 */
 static l_mem propagatemark (global_State *g) {
   GCObject *o = g->gray;
@@ -547,13 +548,16 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
   GCObject *curr;
   global_State *g = G(L);
   int deadmask = otherwhite(g);
+  int gckind = g->gckind;
   while ((curr = *p) != NULL && count-- > 0) {
     int alive = (gch(curr)->marked ^ WHITEBITS) & deadmask;
     if (gch(curr)->tt == LUA_TTHREAD)
       sweepthread(L, gco2th(curr), alive);
     if (alive) {
       lua_assert(!isdead(g, curr) || testbit(gch(curr)->marked, FIXEDBIT));
-      makewhite(g, curr);  /* make it white (for next cycle) */
+      /* in generational mode all live objects are kept black, which
+         means they grow to old generation */
+      if (gckind != KGC_GEN) makewhite(g, curr);
       p = &gch(curr)->next;
     }
     else {  /* must erase `curr' */
@@ -700,7 +704,6 @@ void luaC_freeallobjects (lua_State *L) {
 
 static void atomic (lua_State *L) {
   global_State *g = G(L);
-  g->gcstate = GCSatomic;
   lua_assert(!iswhite(obj2gco(g->mainthread)));
   markobject(g, L);  /* mark running thread */
   /* registry and global metatables may be changed by API */
@@ -725,8 +728,7 @@ static void atomic (lua_State *L) {
   cleartable(g->ephemeron);
   cleartable(g->allweak);
   g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */
-  g->sweepstrgc = 0;  /* go to sweep phase */
-  g->gcstate = GCSsweepstring;
+  g->sweepstrgc = 0;  /* prepare sweep phase */
 }
 
 
@@ -736,13 +738,16 @@ static l_mem singlestep (lua_State *L) {
   switch (g->gcstate) {
     case GCSpause: {
       markroot(L);  /* start a new collection */
+      g->gcstate = GCSpropagate;
       return 0;
     }
     case GCSpropagate: {
       if (g->gray)
         return propagatemark(g);
       else {  /* no more `gray' objects */
-        atomic(L);  /* finish mark phase */
+        g->gcstate = GCSatomic;  /* finish mark phase */
+        atomic(L);
+        g->gcstate = GCSsweepstring;
         return 0;
       }
     }
@@ -776,7 +781,33 @@ static l_mem singlestep (lua_State *L) {
 }
 
 
-void luaC_step (lua_State *L) {
+/*
+** advances the garbage collector until it reaches a state allowed
+** by 'statemask'
+*/
+void luaC_runtilstate (lua_State *L, int statesmask) {
+  global_State *g = G(L);
+  while (!testbit(statesmask, g->gcstate))
+    singlestep(L);
+}
+
+
+static void generationalcollection (lua_State *L) {
+static int c = 0;
+static int prev = 0;
+  global_State *g = G(L);
+int a = g->totalbytes;
+  lua_assert(g->gcstate == GCSpropagate);
+  luaC_runtilstate(L, bitmask(GCSpause));
+  g->gcstate = GCSpropagate;  /* do not run 'markroot' */
+  g->GCthreshold = (g->totalbytes/100) * g->gcpause;
+/*printf("count: %d  old: %d  new: %d  dif: %d\n", c++, a, g->totalbytes,
+g->totalbytes - prev);*/
+prev = g->totalbytes;
+}
+
+
+static void step (lua_State *L) {
   global_State *g = G(L);
   l_mem lim = (GCSTEPSIZE/100) * g->gcstepmul;  /* how much to work */
   lu_mem debt = g->totalbytes - g->GCthreshold;
@@ -792,14 +823,9 @@ void luaC_step (lua_State *L) {
 }
 
 
-/*
-** advances the garbage collector until it reaches a state allowed
-** by 'statemask'
-*/
-void luaC_runtilstate (lua_State *L, int statesmask) {
-  global_State *g = G(L);
-  while (!testbit(statesmask, g->gcstate))
-    singlestep(L);
+void luaC_step (lua_State *L) {
+  if (G(L)->gckind == KGC_GEN) generationalcollection(L);
+  else step(L);
 }
 
 
@@ -809,7 +835,8 @@ void luaC_runtilstate (lua_State *L, int statesmask) {
 */
 void luaC_fullgc (lua_State *L, int isemergency) {
   global_State *g = G(L);
-  lua_assert(g->gckind == KGC_NORMAL);
+  int origkind = g->gckind;
+  lua_assert(origkind == KGC_NORMAL || origkind == KGC_GEN);
   g->gckind = isemergency ? KGC_EMERGENCY : KGC_FORCED;
   if (g->gcstate == GCSpropagate) {  /* marking phase? */
     /* must sweep all objects to turn them back to white
@@ -819,12 +846,12 @@ void luaC_fullgc (lua_State *L, int isemergency) {
   }
   /* finish any pending sweep phase */
   luaC_runtilstate(L, ~bit2mask(GCSsweepstring, GCSsweep));
-  markroot(L);  /* start a new collection */
+  g->gcstate = GCSpause;  /* start a new collection */
   /* run collector up to finalizers */
   luaC_runtilstate(L, bitmask(GCSfinalize));
-  g->gckind = KGC_NORMAL;
+  g->gckind = origkind;
   if (!isemergency)   /* do not run finalizers during emergency GC */
-   luaC_runtilstate(L, ~bitmask(GCSfinalize));
+    luaC_runtilstate(L, bitmask(GCSpause));
   g->GCthreshold = (g->totalbytes/100) * g->gcpause;
 }
 
