@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.67 2009/12/22 15:32:50 roberto Exp roberto $
+** $Id: lgc.c,v 2.68 2010/03/22 18:28:03 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -27,6 +27,8 @@
 #define GCSWEEPMAX	40
 #define GCSWEEPCOST	10
 #define GCFINALIZECOST	100
+#define GCROOTCOST	10
+#define GCATOMICCOST	1000
 
 
 #define maskcolors	(~(bitmask(BLACKBIT)|WHITEBITS))
@@ -580,6 +582,8 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
 
 static void checkSizes (lua_State *L) {
   global_State *g = G(L);
+  if (g->gckind == KGC_EMERGENCY)
+    return;  /* do not move buffers during emergency collection */
   if (g->strt.nuse < cast(lu_int32, g->strt.size)) {
     /* string-table size could be the smaller power of 2 larger than 'nuse' */
     int size = 1 << luaO_ceillog2(g->strt.nuse);
@@ -739,7 +743,7 @@ static l_mem singlestep (lua_State *L) {
     case GCSpause: {
       markroot(L);  /* start a new collection */
       g->gcstate = GCSpropagate;
-      return 0;
+      return GCROOTCOST;
     }
     case GCSpropagate: {
       if (g->gray)
@@ -748,22 +752,30 @@ static l_mem singlestep (lua_State *L) {
         g->gcstate = GCSatomic;  /* finish mark phase */
         atomic(L);
         g->gcstate = GCSsweepstring;
-        return 0;
+        return GCATOMICCOST;
       }
     }
     case GCSsweepstring: {
-      sweepwholelist(L, &g->strt.hash[g->sweepstrgc++]);
-      if (g->sweepstrgc >= g->strt.size) {  /* nothing more to sweep? */
+      if (g->sweepstrgc < g->strt.size) {
+        sweepwholelist(L, &g->strt.hash[g->sweepstrgc++]);
+        return GCSWEEPCOST;
+      }
+      else {  /* nothing more to sweep */
         g->sweepgc = &g->rootgc;
         g->gcstate = GCSsweep;  /* sweep all other objects */
+        return 0;
       }
-      return GCSWEEPCOST;
     }
     case GCSsweep: {
-      g->sweepgc = sweeplist(L, g->sweepgc, GCSWEEPMAX);
-      if (*g->sweepgc == NULL)  /* nothing more to sweep? */
+      if (*g->sweepgc) {
+        g->sweepgc = sweeplist(L, g->sweepgc, GCSWEEPMAX);
+        return GCSWEEPMAX*GCSWEEPCOST;
+      }
+      else {  /* nothing more to sweep */
+        checkSizes(L);
         g->gcstate = GCSfinalize;  /* end sweep phase */
-      return GCSWEEPMAX*GCSWEEPCOST;
+        return 0;
+      }
     }
     case GCSfinalize: {
       if (g->tobefnz) {
@@ -771,7 +783,6 @@ static l_mem singlestep (lua_State *L) {
         return GCFINALIZECOST;
       }
       else {
-        checkSizes(L);
         g->gcstate = GCSpause;  /* end collection */
         return 0;
       }
@@ -840,18 +851,23 @@ void luaC_fullgc (lua_State *L, int isemergency) {
   g->gckind = isemergency ? KGC_EMERGENCY : KGC_FORCED;
   if (g->gcstate == GCSpropagate) {  /* marking phase? */
     /* must sweep all objects to turn them back to white
-       (as white does not change, nothing will be collected) */
+       (as white has not changed, nothing will be collected) */
     g->sweepstrgc = 0;
     g->gcstate = GCSsweepstring;
   }
   /* finish any pending sweep phase */
   luaC_runtilstate(L, ~bit2mask(GCSsweepstring, GCSsweep));
+  lua_assert(g->gcstate == GCSpause || g->gcstate == GCSfinalize);
   g->gcstate = GCSpause;  /* start a new collection */
   /* run collector up to finalizers */
   luaC_runtilstate(L, bitmask(GCSfinalize));
   g->gckind = origkind;
   if (!isemergency)   /* do not run finalizers during emergency GC */
     luaC_runtilstate(L, bitmask(GCSpause));
+  if (origkind == KGC_GEN) {  /* generational mode? */
+    g->gckind = GCSpause;  /* collector must be always in... */
+    luaC_runtilstate(L, bitmask(GCSpropagate));  /* ...propagate phase */
+  }
   g->GCthreshold = (g->totalbytes/100) * g->gcpause;
 }
 
