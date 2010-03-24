@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.69 2010/03/23 20:16:06 roberto Exp roberto $
+** $Id: lgc.c,v 2.70 2010/03/24 13:07:01 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -31,12 +31,13 @@
 #define GCATOMICCOST	1000
 
 
-#define maskcolors	(~(bitmask(BLACKBIT)|WHITEBITS))
-
-#define makewhitew(w,x)	\
- (gch(x)->marked = cast_byte((gch(x)->marked & maskcolors) | (w)))
-
-#define makewhite(g,x)	makewhitew(luaC_white(g), x)
+/*
+** 'makewhite' erases all color bits plus the old bit and then
+** sets only the current white bit
+*/
+#define maskcolors	(~(bit2mask(BLACKBIT, OLDBIT) | WHITEBITS))
+#define makewhite(w,x)	\
+ (gch(x)->marked = cast_byte((gch(x)->marked & maskcolors) | luaC_white(g)))
 
 #define white2gray(x)	resetbits(gch(x)->marked, WHITEBITS)
 #define black2gray(x)	resetbit(gch(x)->marked, BLACKBIT)
@@ -548,27 +549,46 @@ static void sweepthread (lua_State *L, lua_State *L1, int alive) {
 }
 
 
+/*
+** sweep a list of GCObjects, erasing dead objects, where a dead (not
+** alive) object is one marked with the "old" (non current) white and
+** not fixed.
+** In non-generational mode, change all non-dead objects back to white,
+** preparing for next collection cycle.
+** In generational mode, keep black objects black, and also mark them
+** as old; stop when hitting an old object, as all objects after that
+** one will be old too.
+** When object is a thread, sweep its list of open upvalues too.
+*/
 static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
-  GCObject *curr;
   global_State *g = G(L);
   int gckind = g->gckind;
   int deadmask = otherwhite(g);
   int white = luaC_white(g);
+  GCObject *curr;
   while ((curr = *p) != NULL && count-- > 0) {
-    int alive = (gch(curr)->marked ^ WHITEBITS) & deadmask;
+    int marked = gch(curr)->marked;
+    int alive = (marked ^ WHITEBITS) & deadmask;
     if (gch(curr)->tt == LUA_TTHREAD)
       sweepthread(L, gco2th(curr), alive);
-    if (alive) {
-      lua_assert(!isdead(g, curr) || testbit(gch(curr)->marked, FIXEDBIT));
-      /* in generational mode all live objects are kept black, which
-         means they grow to old generation */
-      if (gckind != KGC_GEN) makewhitew(white, curr);
-      p = &gch(curr)->next;
-    }
-    else {  /* must erase `curr' */
+    if (!alive) {
       lua_assert(isdead(g, curr) || deadmask == bitmask(SFIXEDBIT));
       *p = gch(curr)->next;  /* remove 'curr' from list */
-      freeobj(L, curr);
+      freeobj(L, curr);  /* erase 'curr' */
+    }
+    else {
+      lua_assert(!isdead(g, curr) || testbit(gch(curr)->marked, FIXEDBIT));
+      if (gckind == KGC_GEN) {  /* generational mode? */
+        if (testbit(gch(curr)->marked, OLDBIT)) {  /* old generation? */
+          static GCObject *nullp = NULL;
+          return &nullp;  /* stop sweeping this list */
+        }
+        else  /* mark as old */
+          gch(curr)->marked = cast_byte(marked | bitmask(OLDBIT));
+      }
+      else  /* not generational; makewhite */
+        gch(curr)->marked = cast_byte((marked & maskcolors) | white);
+      p = &gch(curr)->next;
     }
   }
   return p;

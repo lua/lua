@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.27 2009/12/16 16:42:58 roberto Exp roberto $
+** $Id: lgc.h,v 2.28 2010/03/24 13:07:01 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -49,6 +49,7 @@
 ** bit 4 - for userdata: it's in 'udgc' list or in 'tobefnz'
 ** bit 5 - object is fixed (should not be collected)
 ** bit 6 - object is "super" fixed (only the main thread)
+** bit 7 - object is old (only in generational mode)
 */
 #define WHITE0BIT	0
 #define WHITE1BIT	1
@@ -57,6 +58,7 @@
 #define SEPARATED	4
 #define FIXEDBIT	5
 #define SFIXEDBIT	6
+#define OLDBIT		7
 
 #define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)
 
