@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.70 2010/03/19 21:04:17 roberto Exp roberto $
+** $Id: lstate.c,v 2.71 2010/03/22 17:45:55 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -264,7 +264,8 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->panic = NULL;
   g->version = lua_version(NULL);
   g->gcstate = GCSpause;
-  g->rootgc = obj2gco(L);
+  g->allgc = obj2gco(L);
+  g->udgc = NULL;
   g->tobefnz = NULL;
   g->totalbytes = sizeof(LG);
   g->gcpause = LUAI_GCPAUSE;

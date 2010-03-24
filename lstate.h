@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.54 2010/03/13 15:55:42 roberto Exp roberto $
+** $Id: lstate.h,v 2.55 2010/03/22 18:28:03 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -19,7 +19,7 @@
 ** Some notes about garbage-collected objects:  All objects in Lua must
 ** be kept somehow accessible until being freed.
 **
-** Lua keeps most objects linked in list g->rootgc. The link uses field
+** Lua keeps most objects linked in list g->allgc. The link uses field
 ** 'next' of the CommonHeader.
 **
 ** Strings are kept in several lists headed by the array g->strt.hash.
@@ -32,9 +32,7 @@
 ** when traversing the respective threads, but the thread may already be
 ** dead, while the upvalue is still accessible through closures.)
 **
-** Userdata with finalizers are kept in the list g->rootgc, but after
-** the mainthread, which should be otherwise the last element in the
-** list, as it was the first one inserted there.
+** Userdata with finalizers are kept in the list g->udgc.
 **
 ** The list g->tobefnz links all userdata being finalized.
 
@@ -124,7 +122,8 @@ typedef struct global_State {
   lu_byte gcstate;  /* state of garbage collector */
   lu_byte gckind;  /* kind of GC running */
   int sweepstrgc;  /* position of sweep in `strt' */
-  GCObject *rootgc;  /* list of all collectable objects */
+  GCObject *allgc;  /* list of all collectable objects */
+  GCObject *udgc;  /* list of collectable userdata with finalizers */
   GCObject **sweepgc;  /* current position of sweep */
   GCObject *gray;  /* list of gray objects */
   GCObject *grayagain;  /* list of objects to be traversed atomically */

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.86 2009/12/22 15:32:50 roberto Exp roberto $
+** $Id: ltests.c,v 2.87 2010/01/13 16:18:25 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -188,7 +188,7 @@ static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
 static void printobj (global_State *g, GCObject *o) {
   int i = 0;
   GCObject *p;
-  for (p = g->rootgc; p != o && p != NULL; p = gch(p)->next) i++;
+  for (p = g->allgc; p != o && p != NULL; p = gch(p)->next) i++;
   if (p == NULL) i = -1;
   printf("%d:%s(%p)-%c(%02X)", i, typename(gch(o)->tt), (void *)o,
            isdead(g,o)?'d':isblack(o)?'b':iswhite(o)?'w':'g', gch(o)->marked);
@@ -375,12 +375,12 @@ int lua_checkmemory (lua_State *L) {
   checkliveness(g, &g->l_registry);
   lua_assert(!isdead(g, obj2gco(g->l_gt)));
   checkstack(g, g->mainthread);
-  for (o = g->rootgc; o != obj2gco(g->mainthread); o = gch(o)->next) {
+  for (o = g->allgc; o != obj2gco(g->mainthread); o = gch(o)->next) {
     lua_assert(!testbits(o->gch.marked, bit2mask(SEPARATED, SFIXEDBIT)));
     checkobject(g, o);
   }
   lua_assert(testbit(o->gch.marked, SFIXEDBIT));
-  for (o = gch(o)->next; o != NULL; o = gch(o)->next) {
+  for (o = g->udgc; o != NULL; o = gch(o)->next) {
     lua_assert(gch(o)->tt == LUA_TUSERDATA &&
                !isdead(g, o) &&
                testbit(o->gch.marked, SEPARATED));

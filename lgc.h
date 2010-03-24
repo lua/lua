@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.26 2009/12/11 21:31:14 roberto Exp roberto $
+** $Id: lgc.h,v 2.27 2009/12/16 16:42:58 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -18,8 +18,9 @@
 #define GCSpropagate	1
 #define GCSatomic	2
 #define GCSsweepstring	3
-#define GCSsweep	4
-#define GCSfinalize	5
+#define GCSsweepudata	4
+#define GCSsweep	5
+#define GCSfinalize	6
 
 
 
@@ -45,12 +46,10 @@
 ** bit 1 - object is white (type 1)
 ** bit 2 - object is black
 ** bit 3 - for userdata: has been finalized
-** bit 4 - for userdata: it's in 2nd part of rootgc list or in tobefnz
+** bit 4 - for userdata: it's in 'udgc' list or in 'tobefnz'
 ** bit 5 - object is fixed (should not be collected)
 ** bit 6 - object is "super" fixed (only the main thread)
 */
-
-
 #define WHITE0BIT	0
 #define WHITE1BIT	1
 #define BLACKBIT	2
@@ -58,6 +57,7 @@
 #define SEPARATED	4
 #define FIXEDBIT	5
 #define SFIXEDBIT	6
+
 #define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)
 
 
