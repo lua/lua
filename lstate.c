@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.72 2010/03/24 13:07:01 roberto Exp roberto $
+** $Id: lstate.c,v 2.73 2010/03/25 13:06:36 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -254,6 +254,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->uvhead.u.l.prev = &g->uvhead;
   g->uvhead.u.l.next = &g->uvhead;
   g->GCthreshold = MAX_LUMEM;  /* no GC while building state */
+  g->lastmajormem = 0;
   g->strt.size = 0;
   g->strt.nuse = 0;
   g->strt.hash = NULL;

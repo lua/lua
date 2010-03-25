@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.114 2010/03/08 16:55:52 roberto Exp roberto $
+** $Id: lapi.c,v 2.115 2010/03/22 18:28:03 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -928,7 +928,6 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       break;
     }
     case LUA_GCRESTART: {
-      g->gckind = KGC_NORMAL;
       g->GCthreshold = g->totalbytes;
       break;
     }
@@ -947,13 +946,19 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
     }
     case LUA_GCSTEP: {
       lu_mem oldts = g->GCthreshold;
-      lu_mem a = (cast(lu_mem, data) << 10);
-      g->GCthreshold = (a <= g->totalbytes) ? g->totalbytes - a : 0;
-      while (g->GCthreshold <= g->totalbytes) {
-        luaC_step(L);
-        if (g->gcstate == GCSpause) {  /* end of cycle? */
-          res = 1;  /* signal it */
-          break;
+      if (g->gckind == KGC_GEN) {  /* generational mode? */
+        res = (g->lastmajormem == 0);  /* 1 if will do major collection */
+        luaC_step(L);  /* do a single step */
+      }
+      else {
+        lu_mem a = (cast(lu_mem, data) << 10);
+        g->GCthreshold = (a <= g->totalbytes) ? g->totalbytes - a : 0;
+        while (g->GCthreshold <= g->totalbytes) {
+          luaC_step(L);
+          if (g->gcstate == GCSpause) {  /* end of cycle? */
+            res = 1;  /* signal it */
+            break;
+          }
         }
       }
       if (oldts == MAX_LUMEM)  /* collector was stopped? */
@@ -976,6 +981,7 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
     }
     case LUA_GCGEN: {  /* change collector to generational mode */
       luaC_runtilstate(L, bitmask(GCSpropagate));
+      g->lastmajormem = g->totalbytes;
       g->gckind = KGC_GEN;
       break;
     }

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.55 2010/03/22 18:28:03 roberto Exp roberto $
+** $Id: lstate.h,v 2.56 2010/03/24 13:07:01 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -114,9 +114,14 @@ typedef struct CallInfo {
 ** `global state', shared by all threads of this state
 */
 typedef struct global_State {
-  stringtable strt;  /* hash table for strings */
   lua_Alloc frealloc;  /* function to reallocate memory */
   void *ud;         /* auxiliary data to `frealloc' */
+  lu_mem totalbytes;  /* number of bytes currently allocated */
+  lu_mem GCthreshold;  /* when totalbytes > GCthreshold, run GC step */
+  lu_mem lastmajormem;  /* memory in use after last major collection */
+  stringtable strt;  /* hash table for strings */
+  TValue l_registry;
+  struct Table *l_gt;  /* table of globals */
   unsigned short nCcalls;  /* number of nested C calls */
   lu_byte currentwhite;
   lu_byte gcstate;  /* state of garbage collector */
@@ -131,16 +136,12 @@ typedef struct global_State {
   GCObject *ephemeron;  /* list of ephemeron tables (weak keys) */
   GCObject *allweak;  /* list of all-weak tables */
   GCObject *tobefnz;  /* list of userdata to be GC */
+  UpVal uvhead;  /* head of double-linked list of all open upvalues */
   Mbuffer buff;  /* temporary buffer for string concatenation */
-  lu_mem GCthreshold;  /* when totalbytes > GCthreshold, run GC step */
-  lu_mem totalbytes;  /* number of bytes currently allocated */
   int gcpause;  /* size of pause between successive GCs */
   int gcstepmul;  /* GC `granularity' */
   lua_CFunction panic;  /* to be called in unprotected errors */
-  TValue l_registry;
-  struct Table *l_gt;  /* table of globals */
   struct lua_State *mainthread;
-  UpVal uvhead;  /* head of double-linked list of all open upvalues */
   const lua_Number *version;  /* pointer to version number */
   TString *envn;  /* environment variable name */
   TString *tmname[TM_N];  /* array with tag-method names */
