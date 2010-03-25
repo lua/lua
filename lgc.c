@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.70 2010/03/24 13:07:01 roberto Exp roberto $
+** $Id: lgc.c,v 2.71 2010/03/24 15:51:10 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -572,7 +572,7 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
     if (gch(curr)->tt == LUA_TTHREAD)
       sweepthread(L, gco2th(curr), alive);
     if (!alive) {
-      lua_assert(isdead(g, curr) || deadmask == bitmask(SFIXEDBIT));
+      lua_assert(isdead(g, curr) || deadmask == 0);
       *p = gch(curr)->next;  /* remove 'curr' from list */
       freeobj(L, curr);  /* erase 'curr' */
     }
@@ -718,11 +718,11 @@ void luaC_freeallobjects (lua_State *L) {
   int i;
   while (g->tobefnz) GCTM(L, 0);  /* Call all pending finalizers */
   /* following "white" makes all objects look dead */
-  g->currentwhite = WHITEBITS | bitmask(SFIXEDBIT);
+  g->currentwhite = WHITEBITS;
   sweepwholelist(L, &g->udgc);
+  lua_assert(g->udgc == NULL);
   sweepwholelist(L, &g->allgc);
-  lua_assert(g->allgc == obj2gco(g->mainthread) &&
-             g->mainthread->next == NULL);
+  lua_assert(g->allgc == NULL);
   for (i = 0; i < g->strt.size; i++)  /* free all string lists */
     sweepwholelist(L, &g->strt.hash[i]);
   lua_assert(g->strt.nuse == 0);
@@ -781,14 +781,15 @@ static l_mem singlestep (lua_State *L) {
     case GCSsweepstring: {
       if (g->sweepstrgc < g->strt.size) {
         sweepwholelist(L, &g->strt.hash[g->sweepstrgc++]);
-        return GCSWEEPCOST;
       }
-      else {  /* nothing more to sweep */
-        g->sweepgc = &g->udgc;  /* sweep all userdata */
+      else {  /* no more strings to sweep */
+        /* sweep main thread */
+        sweeplist(L, cast(GCObject **, &g->mainthread), 1);
+        g->sweepgc = &g->udgc;  /* prepare to sweep userdata */
         g->gcstate = GCSsweepudata;
         checkSizes(L);
-        return 0;
       }
+      return GCSWEEPCOST;
     }
     case GCSsweepudata:
     case GCSsweep: {

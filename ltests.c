@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.87 2010/01/13 16:18:25 roberto Exp roberto $
+** $Id: ltests.c,v 2.88 2010/03/24 13:07:01 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -375,11 +375,10 @@ int lua_checkmemory (lua_State *L) {
   checkliveness(g, &g->l_registry);
   lua_assert(!isdead(g, obj2gco(g->l_gt)));
   checkstack(g, g->mainthread);
-  for (o = g->allgc; o != obj2gco(g->mainthread); o = gch(o)->next) {
-    lua_assert(!testbits(o->gch.marked, bit2mask(SEPARATED, SFIXEDBIT)));
+  for (o = g->allgc; o != NULL; o = gch(o)->next) {
+    lua_assert(!testbits(o->gch.marked, bitmask(SEPARATED)));
     checkobject(g, o);
   }
-  lua_assert(testbit(o->gch.marked, SFIXEDBIT));
   for (o = g->udgc; o != NULL; o = gch(o)->next) {
     lua_assert(gch(o)->tt == LUA_TUSERDATA &&
                !isdead(g, o) &&

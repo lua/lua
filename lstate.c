@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.71 2010/03/22 17:45:55 roberto Exp roberto $
+** $Id: lstate.c,v 2.72 2010/03/24 13:07:01 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -247,7 +247,6 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   L->marked = luaC_white(g);
   g->gckind = KGC_NORMAL;
   g->nCcalls = 0;
-  set2bits(L->marked, FIXEDBIT, SFIXEDBIT);
   preinit_state(L, g);
   g->frealloc = f;
   g->ud = ud;
@@ -264,7 +263,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->panic = NULL;
   g->version = lua_version(NULL);
   g->gcstate = GCSpause;
-  g->allgc = obj2gco(L);
+  g->allgc = NULL;
   g->udgc = NULL;
   g->tobefnz = NULL;
   g->totalbytes = sizeof(LG);
