@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.88 2010/03/24 13:07:01 roberto Exp roberto $
+** $Id: ltests.c,v 2.89 2010/03/25 13:06:36 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -275,7 +275,6 @@ static void checkproto (global_State *g, Proto *f) {
 
 static void checkclosure (global_State *g, Closure *cl) {
   GCObject *clgc = obj2gco(cl);
-  checkobjref(g, clgc, cl->l.env);
   if (cl->c.isC) {
     int i;
     for (i=0; i<cl->c.nupvalues; i++)
@@ -875,7 +874,6 @@ static int getindex_aux (lua_State *L, lua_State *L1, const char **pc) {
   switch (*(*pc)++) {
     case 'R': return LUA_REGISTRYINDEX;
     case 'G': return luaL_error(L, "deprecated index 'G'");
-    case 'E': return LUA_ENVIRONINDEX;
     case 'U': return lua_upvalueindex(getnum_aux(L, L1, pc));
     default: (*pc)--; return getnum_aux(L, L1, pc);
   }
@@ -1021,6 +1019,9 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("gettable") {
       lua_gettable(L1, getindex);
     }
+    else if EQ("getglobal") {
+      lua_getglobal(L1, getstring);
+    }
     else if EQ("getfield") {
       int t = getindex;
       lua_getfield(L1, t, getstring);
@@ -1035,6 +1036,9 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     }
     else if EQ("settable") {
       lua_settable(L1, getindex);
+    }
+    else if EQ("setglobal") {
+      lua_setglobal(L1, getstring);
     }
     else if EQ("next") {
       lua_next(L1, -2);

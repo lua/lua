@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.72 2010/03/25 13:06:36 roberto Exp roberto $
+** $Id: lgc.c,v 2.73 2010/03/25 19:37:23 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -375,7 +375,6 @@ static void traverseproto (global_State *g, Proto *f) {
 
 
 static void traverseclosure (global_State *g, Closure *cl) {
-  markobject(g, cl->c.env);
   if (cl->c.isC) {
     int i;
     for (i=0; i<cl->c.nupvalues; i++)  /* mark its upvalues */
@@ -605,8 +604,6 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
 
 static void checkSizes (lua_State *L) {
   global_State *g = G(L);
-  if (g->gckind == KGC_EMERGENCY)
-    return;  /* do not move buffers during emergency collection */
   if (g->strt.nuse < cast(lu_int32, g->strt.size)) {
     /* string-table size could be the smaller power of 2 larger than 'nuse' */
     int size = 1 << luaO_ceillog2(g->strt.nuse);
@@ -787,7 +784,6 @@ static l_mem singlestep (lua_State *L) {
         sweeplist(L, cast(GCObject **, &g->mainthread), 1);
         g->sweepgc = &g->udgc;  /* prepare to sweep userdata */
         g->gcstate = GCSsweepudata;
-        checkSizes(L);
       }
       return GCSWEEPCOST;
     }
@@ -809,6 +805,7 @@ static l_mem singlestep (lua_State *L) {
         return GCFINALIZECOST;
       }
       else {
+        checkSizes(L);
         g->gcstate = GCSpause;  /* end collection */
         return 0;
       }

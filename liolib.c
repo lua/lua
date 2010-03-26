@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.86 2010/03/03 18:48:57 roberto Exp roberto $
+** $Id: liolib.c,v 2.87 2010/03/17 21:37:37 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -120,7 +120,7 @@ static FILE **newprefile (lua_State *L) {
 static FILE **newfile (lua_State *L) {
   FILE **pf = newprefile(L);
   lua_pushvalue(L, lua_upvalueindex(1));  /* set upvalue... */
-  lua_setfenv(L, -2);  /* ... as environment for new file */
+  lua_setenv(L, -2);  /* ... as environment for new file */
   return pf;
 }
 
@@ -163,7 +163,7 @@ static int io_fclose (lua_State *L) {
 
 
 static int aux_close (lua_State *L) {
-  lua_getfenv(L, 1);
+  lua_getenv(L, 1);
   lua_getfield(L, -1, "__close");
   return (lua_tocfunction(L, -1))(L);
 }
@@ -595,7 +595,7 @@ static void createstdfile (lua_State *L, FILE *f, int k, const char *fname) {
     lua_rawseti(L, 1, k);  /* add it to common upvalue */
   }
   lua_pushvalue(L, 3);  /* get environment for default files */
-  lua_setfenv(L, -2);  /* set it as environment for file */
+  lua_setenv(L, -2);  /* set it as environment for file */
   lua_setfield(L, 2, fname);  /* add file to module */
 }
 

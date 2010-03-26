@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.34 2010/01/08 20:00:20 roberto Exp roberto $
+** $Id: lobject.h,v 2.35 2010/03/12 19:14:06 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -297,8 +297,7 @@ typedef struct UpVal {
 */
 
 #define ClosureHeader \
-	CommonHeader; lu_byte isC; lu_byte nupvalues; GCObject *gclist; \
-	struct Table *env
+	CommonHeader; lu_byte isC; lu_byte nupvalues; GCObject *gclist
 
 typedef struct CClosure {
   ClosureHeader;

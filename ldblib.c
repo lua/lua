@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.119 2010/01/06 14:42:35 roberto Exp roberto $
+** $Id: ldblib.c,v 1.120 2010/02/18 19:18:41 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -44,19 +44,19 @@ static int db_setmetatable (lua_State *L) {
 }
 
 
-static int db_getfenv (lua_State *L) {
-  luaL_checkany(L, 1);
-  lua_getfenv(L, 1);
+static int db_getenv (lua_State *L) {
+  luaL_checktype(L, 1, LUA_TUSERDATA);
+  lua_getenv(L, 1);
   return 1;
 }
 
 
-static int db_setfenv (lua_State *L) {
-  luaL_checktype(L, 2, LUA_TTABLE);
+static int db_setenv (lua_State *L) {
+  luaL_checktype(L, 1, LUA_TUSERDATA);
+  if (!lua_isnoneornil(L, 2))
+    luaL_checktype(L, 2, LUA_TTABLE);
   lua_settop(L, 2);
-  if (lua_setfenv(L, 1) == 0)
-    luaL_error(L, LUA_QL("setfenv")
-                  " cannot change environment of given object");
+  lua_setenv(L, 1);
   return 1;
 }
 
@@ -367,7 +367,7 @@ static int db_traceback (lua_State *L) {
 
 static const luaL_Reg dblib[] = {
   {"debug", db_debug},
-  {"getfenv", db_getfenv},
+  {"getenv", db_getenv},
   {"gethook", db_gethook},
   {"getinfo", db_getinfo},
   {"getlocal", db_getlocal},
@@ -376,7 +376,7 @@ static const luaL_Reg dblib[] = {
   {"getupvalue", db_getupvalue},
   {"upvaluejoin", db_upvaluejoin},
   {"upvalueid", db_upvalueid},
-  {"setfenv", db_setfenv},
+  {"setenv", db_setenv},
   {"sethook", db_sethook},
   {"setlocal", db_setlocal},
   {"setmetatable", db_setmetatable},

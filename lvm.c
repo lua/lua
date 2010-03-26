@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.105 2010/02/27 21:16:24 roberto Exp roberto $
+** $Id: lvm.c,v 2.106 2010/03/12 19:14:06 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -771,7 +771,7 @@ void luaV_execute (lua_State *L) {
       case OP_CLOSURE: {
         Proto *p = cl->p->p[GETARG_Bx(i)];  /* prototype for new closure */
         int nup = p->sizeupvalues;
-        Closure *ncl = luaF_newLclosure(L, nup, cl->env);
+        Closure *ncl = luaF_newLclosure(L, nup);
         Upvaldesc *uv = p->upvalues;
         int j;
         ncl->l.p = p;

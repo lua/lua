@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.133 2010/02/18 19:18:41 roberto Exp roberto $
+** $Id: luaconf.h,v 1.134 2010/03/03 18:53:02 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -232,13 +232,6 @@
 */
 #define lua_cpcall(L,f,u)  \
 	(lua_pushlightuserdata(L,(u)), luaL_cpcall(L,(f),1,0))
-
-/*
-@@ LUA_COMPAT_FENV controls the presence of functions 'setfenv/getfenv'.
-** You can replace them with lexical environments, 'loadin', or the
-** debug library.
-*/
-#define LUA_COMPAT_FENV
 
 
 /*

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.263 2010/03/19 21:04:17 roberto Exp roberto $
+** $Id: lua.h,v 1.264 2010/03/22 18:28:03 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -34,8 +34,7 @@
 ** pseudo-indices
 */
 #define LUA_REGISTRYINDEX	LUAI_FIRSTPSEUDOIDX
-#define LUA_ENVIRONINDEX	(LUA_REGISTRYINDEX - 1)
-#define lua_upvalueindex(i)	(LUA_ENVIRONINDEX - (i))
+#define lua_upvalueindex(i)	(LUA_REGISTRYINDEX - (i))
 
 
 /* thread status */
@@ -212,7 +211,7 @@ LUA_API void  (lua_rawgeti) (lua_State *L, int idx, int n);
 LUA_API void  (lua_createtable) (lua_State *L, int narr, int nrec);
 LUA_API void *(lua_newuserdata) (lua_State *L, size_t sz);
 LUA_API int   (lua_getmetatable) (lua_State *L, int objindex);
-LUA_API void  (lua_getfenv) (lua_State *L, int idx);
+LUA_API void  (lua_getenv) (lua_State *L, int idx);
 
 
 /*
@@ -223,7 +222,7 @@ LUA_API void  (lua_setfield) (lua_State *L, int idx, const char *k);
 LUA_API void  (lua_rawset) (lua_State *L, int idx);
 LUA_API void  (lua_rawseti) (lua_State *L, int idx, int n);
 LUA_API int   (lua_setmetatable) (lua_State *L, int objindex);
-LUA_API int   (lua_setfenv) (lua_State *L, int idx);
+LUA_API void  (lua_setenv) (lua_State *L, int idx);
 
 
 /*

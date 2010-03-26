@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.115 2010/03/22 18:28:03 roberto Exp roberto $
+** $Id: lapi.c,v 2.116 2010/03/25 19:37:23 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -39,16 +39,6 @@ const char lua_ident[] =
 					  "invalid index")
 
 
-static Table *getcurrenv (lua_State *L) {
-  if (L->ci->previous == NULL)  /* no enclosing function? */
-    return G(L)->l_gt;  /* use global table as environment */
-  else {
-    Closure *func = curr_func(L);
-    return func->c.env;
-  }
-}
-
-
 static TValue *index2addr (lua_State *L, int idx) {
   CallInfo *ci = L->ci;
   if (idx > 0) {
@@ -61,20 +51,15 @@ static TValue *index2addr (lua_State *L, int idx) {
     api_check(L, idx != 0 && -idx <= L->top - (ci->func + 1), "invalid index");
     return L->top + idx;
   }
-  else switch (idx) {  /* pseudo-indices */
-    case LUA_REGISTRYINDEX: return &G(L)->l_registry;
-    case LUA_ENVIRONINDEX: {
-      sethvalue(L, &L->env, getcurrenv(L));
-      return &L->env;
-    }
-    default: {
-      Closure *func = curr_func(L);
-      idx = LUA_ENVIRONINDEX - idx;
-      api_check(L, idx <= UCHAR_MAX + 1, "upvalue index too large");
-      return (idx <= func->c.nupvalues)
-                ? &func->c.upvalue[idx-1]
-                : cast(TValue *, luaO_nilobject);
-    }
+  else if (idx == LUA_REGISTRYINDEX)
+    return &G(L)->l_registry;
+  else {  /* upvalues */
+    Closure *func = curr_func(L);
+    idx = LUA_REGISTRYINDEX - idx;
+    api_check(L, idx <= UCHAR_MAX + 1, "upvalue index too large");
+    return (idx <= func->c.nupvalues)
+              ? &func->c.upvalue[idx-1]
+              : cast(TValue *, luaO_nilobject);
   }
 }
 
@@ -195,17 +180,9 @@ LUA_API void lua_insert (lua_State *L, int idx) {
 static void moveto (lua_State *L, TValue *fr, int idx) {
   TValue *to = index2addr(L, idx);
   api_checkvalidindex(L, to);
-  if (idx == LUA_ENVIRONINDEX) {
-    Closure *func = curr_func(L);
-    api_check(L, ttistable(fr), "table expected");
-    func->c.env = hvalue(fr);
-    luaC_barrier(L, func, fr);
-  }
-  else {
-    setobj(L, to, fr);
-    if (idx < LUA_ENVIRONINDEX)  /* function upvalue? */
-      luaC_barrier(L, curr_func(L), fr);
-  }
+  setobj(L, to, fr);
+  if (idx < LUA_REGISTRYINDEX)  /* function upvalue? */
+    luaC_barrier(L, curr_func(L), fr);
   /* LUA_REGISTRYINDEX does not need gc barrier
      (collector revisits it before finishing collection) */
 }
@@ -213,9 +190,6 @@ static void moveto (lua_State *L, TValue *fr, int idx) {
 
 LUA_API void lua_replace (lua_State *L, int idx) {
   lua_lock(L);
-  /* explicit test for incompatible code */
-  if (idx == LUA_ENVIRONINDEX && L->ci->previous == NULL)
-    luaG_runerror(L, "no calling environment");
   api_checknelems(L, 1);
   moveto(L, L->top - 1, idx);
   L->top--;
@@ -503,7 +477,7 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   api_checknelems(L, n);
   api_check(L, n <= UCHAR_MAX, "upvalue index too large");
   luaC_checkGC(L);
-  cl = luaF_newCclosure(L, n, getcurrenv(L));
+  cl = luaF_newCclosure(L, n);
   cl->c.f = fn;
   L->top -= n;
   while (n--)
@@ -631,22 +605,16 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
 }
 
 
-LUA_API void lua_getfenv (lua_State *L, int idx) {
+LUA_API void lua_getenv (lua_State *L, int idx) {
   StkId o;
   lua_lock(L);
   o = index2addr(L, idx);
   api_checkvalidindex(L, o);
-  switch (ttype(o)) {
-    case LUA_TFUNCTION:
-      sethvalue(L, L->top, clvalue(o)->c.env);
-      break;
-    case LUA_TUSERDATA:
-      sethvalue(L, L->top, uvalue(o)->env);
-      break;
-    default:
-      setnilvalue(L->top);
-      break;
-  }
+  api_check(L, ttisuserdata(o), "userdata expected");
+  if (uvalue(o)->env) {
+    sethvalue(L, L->top, uvalue(o)->env);
+  } else
+    setnilvalue(L->top);
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -747,29 +715,22 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
 }
 
 
-LUA_API int lua_setfenv (lua_State *L, int idx) {
+LUA_API void lua_setenv (lua_State *L, int idx) {
   StkId o;
-  int res = 1;
   lua_lock(L);
   api_checknelems(L, 1);
   o = index2addr(L, idx);
   api_checkvalidindex(L, o);
-  api_check(L, ttistable(L->top - 1), "table expected");
-  switch (ttype(o)) {
-    case LUA_TFUNCTION:
-      clvalue(o)->c.env = hvalue(L->top - 1);
-      break;
-    case LUA_TUSERDATA:
-      uvalue(o)->env = hvalue(L->top - 1);
-      break;
-    default:
-      res = 0;
-      break;
+  api_check(L, ttisuserdata(o), "userdata expected");
+  if (ttisnil(L->top - 1))
+    uvalue(o)->env = NULL;
+  else {
+    api_check(L, ttistable(L->top - 1), "table expected");
+    uvalue(o)->env = hvalue(L->top - 1);
+    luaC_objbarrier(L, gcvalue(o), hvalue(L->top - 1));
   }
-  if (res) luaC_objbarrier(L, gcvalue(o), hvalue(L->top - 1));
   L->top--;
   lua_unlock(L);
-  return res;
 }
 
 
@@ -1072,7 +1033,7 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
   Udata *u;
   lua_lock(L);
   luaC_checkGC(L);
-  u = luaS_newudata(L, size, getcurrenv(L));
+  u = luaS_newudata(L, size, NULL);
   setuvalue(L, L->top, u);
   api_incr_top(L);
   lua_unlock(L);

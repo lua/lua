@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.238 2010/03/19 15:52:48 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.239 2010/03/22 18:28:03 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -107,49 +107,11 @@ static int luaB_setmetatable (lua_State *L) {
 }
 
 
-
-#if defined(LUA_COMPAT_FENV)
-
-static void getfunc (lua_State *L, int opt) {
-  if (lua_isfunction(L, 1)) lua_pushvalue(L, 1);
-  else {
-    lua_Debug ar;
-    int level = opt ? luaL_optint(L, 1, 1) : luaL_checkint(L, 1);
-    luaL_argcheck(L, level >= 0, 1, "level must be non-negative");
-    if (lua_getstack(L, level, &ar) == 0)
-      luaL_argerror(L, 1, "invalid level");
-    lua_getinfo(L, "f", &ar);
-  }
-}
-
-static int luaB_getfenv (lua_State *L) {
-  getfunc(L, 1);
-  if (lua_iscfunction(L, -1))  /* is a C function? */
-    lua_pushglobaltable(L);  /* return the global env. */
-  else
-    lua_getfenv(L, -1);
-  return 1;
-}
-
-static int luaB_setfenv (lua_State *L) {
-  luaL_checktype(L, 2, LUA_TTABLE);
-  getfunc(L, 0);
-  lua_pushvalue(L, 2);
-  if (lua_iscfunction(L, -2) || lua_setfenv(L, -2) == 0)
-    return luaL_error(L,
-             LUA_QL("setfenv") " cannot change environment of given object");
-  return 1;
-}
-
-#else
-
 static int luaB_getfenv (lua_State *L) {
   return luaL_error(L, "getfenv/setfenv deprecated");
 }
 
 #define luaB_setfenv	luaB_getfenv
-
-#endif
 
 
 static int luaB_rawequal (lua_State *L) {

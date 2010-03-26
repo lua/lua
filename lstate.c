@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.73 2010/03/25 13:06:36 roberto Exp roberto $
+** $Id: lstate.c,v 2.74 2010/03/25 19:37:23 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -118,9 +118,6 @@ static void freestack (lua_State *L) {
 static int ccall (lua_State *L) {
   lua_CFunction f = *(lua_CFunction *)lua_touserdata(L, 1);
   lua_remove(L, 1);  /* remove f from stack */
-  /* restore original environment for 'ccall' */
-  lua_pushglobaltable(L);
-  lua_replace(L, LUA_ENVIRONINDEX);
   return f(L);
 }
 
@@ -139,7 +136,7 @@ static void init_registry (lua_State *L, global_State *g) {
   setthvalue(L, &mt, L);
   setobj2t(L, luaH_setint(L, registry, LUA_RIDX_MAINTHREAD), &mt);
   /* registry[LUA_RIDX_CCALL] = ccall */
-  cp = luaF_newCclosure(L, 0, g->l_gt);
+  cp = luaF_newCclosure(L, 0);
   cp->c.f = ccall;
   setclvalue(L, &mt, cp);
   setobj2t(L, luaH_setint(L, registry, LUA_RIDX_CCALL), &mt);
