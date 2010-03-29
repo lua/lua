@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.57 2010/03/25 19:37:23 roberto Exp roberto $
+** $Id: lstate.h,v 2.58 2010/03/26 20:58:11 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -121,7 +121,6 @@ typedef struct global_State {
   lu_mem lastmajormem;  /* memory in use after last major collection */
   stringtable strt;  /* hash table for strings */
   TValue l_registry;
-  struct Table *l_gt;  /* table of globals */
   unsigned short nCcalls;  /* number of nested C calls */
   lu_byte currentwhite;
   lu_byte gcstate;  /* state of garbage collector */

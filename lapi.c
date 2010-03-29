@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.116 2010/03/25 19:37:23 roberto Exp roberto $
+** $Id: lapi.c,v 2.117 2010/03/26 20:58:11 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -843,11 +843,17 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
   if (!chunkname) chunkname = "?";
   luaZ_init(L, &z, reader, data);
   status = luaD_protectedparser(L, &z, chunkname);
-  if (status == LUA_OK) {
-    Closure *f = clvalue(L->top - 1);
+  if (status == LUA_OK) {  /* no errors? */
+    Closure *f = clvalue(L->top - 1);  /* get newly created function */
     lua_assert(!f->c.isC);
-    if (f->l.nupvalues == 1)
-        sethvalue(L, f->l.upvals[0]->v, G(L)->l_gt);
+    if (f->l.nupvalues == 1) {  /* does it have one upvalue? */
+      /* get global table from registry */
+      Table *reg = hvalue(&G(L)->l_registry);
+      const TValue *gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
+      /* set global table as 1st upvalue of 'f' (may be _ENV) */
+      setobj(L, f->l.upvals[0]->v, gt);
+      luaC_barrier(L, f, gt);
+    }
   }
   lua_unlock(L);
   return status;

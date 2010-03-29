@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.73 2010/03/25 19:37:23 roberto Exp roberto $
+** $Id: lgc.c,v 2.74 2010/03/26 20:58:11 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -235,8 +235,6 @@ static void markroot (lua_State *L) {
   g->grayagain = NULL;
   g->weak = g->ephemeron = g->allweak = NULL;
   markobject(g, g->mainthread);
-  /* make global table and registry to be traversed before main stack */
-  markobject(g, g->l_gt);
   markvalue(g, &g->l_registry);
   markmt(g);
   markbeingfnz(g);  /* mark any finalizing object left from previous cycle */

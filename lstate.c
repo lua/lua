@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.74 2010/03/25 19:37:23 roberto Exp roberto $
+** $Id: lstate.c,v 2.75 2010/03/26 20:58:11 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -140,8 +140,8 @@ static void init_registry (lua_State *L, global_State *g) {
   cp->c.f = ccall;
   setclvalue(L, &mt, cp);
   setobj2t(L, luaH_setint(L, registry, LUA_RIDX_CCALL), &mt);
-  /* registry[LUA_RIDX_GLOBALS] = l_gt */
-  sethvalue(L, &mt, g->l_gt);
+  /* registry[LUA_RIDX_GLOBALS] = table of globals */
+  sethvalue(L, &mt, luaH_new(L));
   setobj2t(L, luaH_setint(L, registry, LUA_RIDX_GLOBALS), &mt);
 }
 
@@ -153,7 +153,6 @@ static void f_luaopen (lua_State *L, void *ud) {
   global_State *g = G(L);
   UNUSED(ud);
   stack_init(L, L);  /* init stack */
-  g->l_gt = luaH_new(L);  /* table of globals */
   init_registry(L, g);
   luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
   luaT_init(L);
@@ -256,7 +255,6 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->strt.nuse = 0;
   g->strt.hash = NULL;
   setnilvalue(&g->l_registry);
-  g->l_gt = NULL;
   luaZ_initbuffer(L, &g->buff);
   g->panic = NULL;
   g->version = lua_version(NULL);
