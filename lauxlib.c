@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.204 2010/03/19 21:04:17 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.205 2010/03/22 17:28:31 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -789,9 +789,9 @@ LUALIB_API int luaL_cpcall (lua_State *L, lua_CFunction f, int nargs,
                             int nresults) {
   nargs++;  /* to include function itself */
   lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_CCALL);
-  lua_insert(L, -nargs);
+  lua_insert(L, -nargs);  /* 'ccall' is real function to be called */
   lua_pushlightuserdata(L, &f);
-  lua_insert(L, -nargs);
+  lua_insert(L, -nargs);  /* 'f' address is its first argument */
   return lua_pcall(L, nargs, nresults, 0);
 }
 
