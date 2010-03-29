@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.106 2010/03/12 19:14:06 roberto Exp roberto $
+** $Id: lvm.c,v 2.107 2010/03/26 20:58:11 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -74,6 +74,10 @@ static void traceexec (lua_State *L) {
       luaD_hook(L, LUA_HOOKLINE, newline);
   }
   L->oldpc = ci->u.l.savedpc;
+  if (L->status == LUA_YIELD) {  /* did hook yield? */
+    ci->u.l.savedpc--;  /* undo increment (resume will increment it again) */
+    luaD_throw(L, LUA_YIELD);
+  }
 }
 
 
@@ -460,10 +464,6 @@ void luaV_execute (lua_State *L) {
     if ((L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT)) &&
         (--L->hookcount == 0 || L->hookmask & LUA_MASKLINE)) {
       traceexec(L);
-      if (L->status == LUA_YIELD) {  /* did hook yield? */
-        ci->u.l.savedpc--;  /* undo increment */
-        luaD_throw(L, LUA_YIELD);
-      }
       base = ci->u.l.base;
     }
     /* warning!! several calls may realloc the stack and invalidate `ra' */
