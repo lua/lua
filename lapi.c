@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.117 2010/03/26 20:58:11 roberto Exp roberto $
+** $Id: lapi.c,v 2.118 2010/03/29 17:43:14 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -950,6 +950,10 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       luaC_runtilstate(L, bitmask(GCSpropagate));
       g->lastmajormem = g->totalbytes;
       g->gckind = KGC_GEN;
+      break;
+    }
+    case LUA_GCINC: {  /* change collector to incremental mode */
+      g->gckind = KGC_NORMAL;
       break;
     }
     default: res = -1;  /* invalid option */
