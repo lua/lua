@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.34 2009/11/26 11:39:20 roberto Exp roberto $
+** $Id: lobject.c,v 2.35 2010/02/05 19:09:09 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -116,16 +116,15 @@ int luaO_str2d (const char *s, lua_Number *result) {
 
 
 
-static void pushstr (lua_State *L, const char *str) {
-  setsvalue2s(L, L->top, luaS_new(L, str));
+static void pushstr (lua_State *L, const char *str, size_t l) {
+  setsvalue2s(L, L->top, luaS_newlstr(L, str, l));
   incr_top(L);
 }
 
 
 /* this function handles only `%d', `%c', %f, %p, and `%s' formats */
 const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
-  int n = 1;
-  pushstr(L, "");
+  int n = 0;
   for (;;) {
     const char *e = strchr(fmt, '%');
     if (e == NULL) break;
@@ -135,14 +134,13 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
       case 's': {
         const char *s = va_arg(argp, char *);
         if (s == NULL) s = "(null)";
-        pushstr(L, s);
+        pushstr(L, s, strlen(s));
         break;
       }
       case 'c': {
-        char buff[2];
-        buff[0] = cast(char, va_arg(argp, int));
-        buff[1] = '\0';
-        pushstr(L, buff);
+        char buff;
+        buff = cast(char, va_arg(argp, int));
+        pushstr(L, &buff, 1);
         break;
       }
       case 'd': {
@@ -157,12 +155,12 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
       }
       case 'p': {
         char buff[4*sizeof(void *) + 8]; /* should be enough space for a `%p' */
-        sprintf(buff, "%p", va_arg(argp, void *));
-        pushstr(L, buff);
+        int l = sprintf(buff, "%p", va_arg(argp, void *));
+        pushstr(L, buff, l);
         break;
       }
       case '%': {
-        pushstr(L, "%");
+        pushstr(L, "%", 1);
         break;
       }
       default: {
@@ -175,8 +173,8 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
     n += 2;
     fmt = e+2;
   }
-  pushstr(L, fmt);
-  luaV_concat(L, n+1);
+  pushstr(L, fmt, strlen(fmt));
+  if (n > 0) luaV_concat(L, n + 1);
   return svalue(L->top - 1);
 }
 
