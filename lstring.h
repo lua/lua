@@ -1,13 +1,11 @@
 /*
-** $Id: lstring.h,v 1.43 2005/04/25 19:24:10 roberto Exp roberto $
+** $Id: lstring.h,v 1.44 2010/03/13 15:55:01 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
 
 #ifndef lstring_h
 #define lstring_h
-
-#include <string.h>
 
 #include "lgc.h"
 #include "lobject.h"
@@ -18,7 +16,6 @@
 
 #define sizeudata(u)	(sizeof(union Udata)+(u)->len)
 
-#define luaS_new(L, s)	(luaS_newlstr(L, s, strlen(s)))
 #define luaS_newliteral(L, s)	(luaS_newlstr(L, "" s, \
                                  (sizeof(s)/sizeof(char))-1))
 
@@ -27,6 +24,7 @@
 LUAI_FUNC void luaS_resize (lua_State *L, int newsize);
 LUAI_FUNC Udata *luaS_newudata (lua_State *L, size_t s, Table *e);
 LUAI_FUNC TString *luaS_newlstr (lua_State *L, const char *str, size_t l);
+LUAI_FUNC TString *luaS_new (lua_State *L, const char *str);
 
 
 #endif

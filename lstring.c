@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.15 2009/12/11 21:31:14 roberto Exp roberto $
+** $Id: lstring.c,v 2.16 2009/12/16 16:42:58 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -91,6 +91,11 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
     }
   }
   return newlstr(L, str, l, h);  /* not found; create a new string */
+}
+
+
+TString *luaS_new (lua_State *L, const char *str) {
+  return luaS_newlstr(L, str, strlen(str));
 }
 
 
