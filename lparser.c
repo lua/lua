@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.79 2010/03/12 19:14:06 roberto Exp roberto $
+** $Id: lparser.c,v 2.80 2010/03/13 15:55:42 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -211,7 +211,7 @@ static int searchupvalue (FuncState *fs, TString *name) {
   int i;
   Upvaldesc *up = fs->f->upvalues;
   for (i = 0; i < fs->nups; i++) {
-    if (up[i].name == name) return i;
+    if (eqstr(up[i].name, name)) return i;
   }
   return -1;  /* not found */
 }
@@ -235,7 +235,7 @@ static int newupvalue (FuncState *fs, TString *name, expdesc *v) {
 static int searchvar (FuncState *fs, TString *n) {
   int i;
   for (i=fs->nactvar-1; i >= 0; i--) {
-    if (n == getlocvar(fs, i)->varname)
+    if (eqstr(n, getlocvar(fs, i)->varname))
       return i;
   }
   return -1;  /* not found */

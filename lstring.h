@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.44 2010/03/13 15:55:01 roberto Exp roberto $
+** $Id: lstring.h,v 1.45 2010/04/03 20:24:18 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -20,6 +20,13 @@
                                  (sizeof(s)/sizeof(char))-1))
 
 #define luaS_fix(s)	l_setbit((s)->tsv.marked, FIXEDBIT)
+
+
+/*
+** as all string are internalized, string equality becomes
+** pointer equality
+*/
+#define eqstr(a,b)	((a) == (b))
 
 LUAI_FUNC void luaS_resize (lua_State *L, int newsize);
 LUAI_FUNC Udata *luaS_newudata (lua_State *L, size_t s, Table *e);

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.66 2010/03/12 19:14:06 roberto Exp roberto $
+** $Id: ldebug.c,v 2.67 2010/03/13 15:55:42 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -300,11 +300,11 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
         if (reg == a) {
           int k = GETARG_C(i);  /* key index */
           int t = GETARG_B(i);
-          const char *tabname = (op == OP_GETTABLE)
-                                ? luaF_getlocalname(p, t + 1, pc)
-                                : getstr(p->upvalues[t].name);
+          const char *vn = (op == OP_GETTABLE)  /* name of indexed variable */ 
+                           ? luaF_getlocalname(p, t + 1, pc)
+                           : getstr(p->upvalues[t].name);
           kname(p, k, a, what, name);
-          what = (tabname == getstr(G(L)->envn)) ? "global" : "field";
+          what = (vn && strcmp(vn, "_ENV") == 0) ? "global" : "field";
         }
         break;
       }
@@ -427,7 +427,7 @@ static const char *getupvalname (CallInfo *ci, const TValue *o,
   LClosure *c = &ci_func(ci)->l;
   int i;
   for (i = 0; i < c->nupvalues; i++) {
-    if (c->upvals[i]->v == o) {
+    if (eqstr(c->upvals[i]->v, o)) {
       *name = getstr(c->p->upvalues[i].name);
       return "upvalue";
     }

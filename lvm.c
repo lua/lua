@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.108 2010/03/29 20:45:49 roberto Exp roberto $
+** $Id: lvm.c,v 2.109 2010/04/02 15:39:07 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -254,6 +254,7 @@ int luaV_equalval_ (lua_State *L, const TValue *t1, const TValue *t2) {
     case LUA_TNUMBER: return luai_numeq(nvalue(t1), nvalue(t2));
     case LUA_TBOOLEAN: return bvalue(t1) == bvalue(t2);  /* true must be 1 !! */
     case LUA_TLIGHTUSERDATA: return pvalue(t1) == pvalue(t2);
+    case LUA_TSTRING: return eqstr(rawtsvalue(t1), rawtsvalue(t2));
     case LUA_TUSERDATA: {
       if (uvalue(t1) == uvalue(t2)) return 1;
       tm = get_compTM(L, uvalue(t1)->metatable, uvalue(t2)->metatable, TM_EQ);
