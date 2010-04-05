@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.118 2010/03/29 17:43:14 roberto Exp roberto $
+** $Id: lapi.c,v 2.119 2010/04/02 15:19:19 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -442,8 +442,16 @@ LUA_API const char *lua_pushstring (lua_State *L, const char *s) {
     lua_pushnil(L);
     return NULL;
   }
-  else
-    return lua_pushlstring(L, s, strlen(s));
+  else {
+    TString *ts;
+    lua_lock(L);
+    luaC_checkGC(L);
+    ts = luaS_new(L, s);
+    setsvalue2s(L, L->top, ts);
+    api_incr_top(L);
+    lua_unlock(L);
+    return getstr(ts);
+  }
 }
 
 
