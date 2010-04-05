@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.34 2009/11/17 16:33:38 roberto Exp roberto $
+** $Id: llex.c,v 2.35 2010/02/27 21:16:24 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -152,6 +152,8 @@ void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source) {
   ls->linenumber = 1;
   ls->lastline = 1;
   ls->source = source;
+  ls->envn = luaS_new(L, "_ENV");
+  luaS_fix(ls->envn);  /* never collect this name */
   luaZ_resizebuffer(ls->L, ls->buff, LUA_MINBUFFER);  /* initialize buffer */
   next(ls);  /* read first char */
 }

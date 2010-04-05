@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.80 2010/03/13 15:55:42 roberto Exp roberto $
+** $Id: lparser.c,v 2.81 2010/04/05 16:26:37 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -288,7 +288,7 @@ static void singlevar (LexState *ls, expdesc *var) {
   FuncState *fs = ls->fs;
   if (singlevaraux(fs, varname, var, 1) == VVOID) {  /* global name? */
     expdesc key;
-    singlevaraux(fs, G(ls->L)->envn, var, 1);  /* get _ENV variable */
+    singlevaraux(fs, ls->envn, var, 1);  /* get _ENV variable */
     lua_assert(var->k == VLOCAL || var->k == VUPVAL);
     codestring(ls, &key, varname);  /* key is variable name */
     luaK_indexed(fs, var, &key);  /* env[varname] */
@@ -429,12 +429,12 @@ static void close_func (LexState *ls) {
 ** opens the main function, which is a regular vararg function with an
 ** upvalue named '_ENV'
 */
-static void open_mainfunc (lua_State *L, LexState *ls, FuncState *fs) {
+static void open_mainfunc (LexState *ls, FuncState *fs) {
   expdesc v;
   open_func(ls, fs);
   fs->f->is_vararg = 1;  /* main function is always vararg */
   init_exp(&v, VLOCAL, 0);
-  newupvalue(fs, G(L)->envn, &v);  /* create '_ENV' upvalue */
+  newupvalue(fs, ls->envn, &v);  /* create '_ENV' upvalue */
 }
 
 
@@ -448,7 +448,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, Varlist *varl,
   lexstate.buff = buff;
   lexstate.varl = varl;
   luaX_setinput(L, &lexstate, z, tname);
-  open_mainfunc(L, &lexstate, &funcstate);
+  open_mainfunc(&lexstate, &funcstate);
   luaX_next(&lexstate);  /* read first token */
   chunk(&lexstate);  /* read main chunk */
   check(&lexstate, TK_EOS);
