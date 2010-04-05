@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.75 2010/03/29 17:43:14 roberto Exp roberto $
+** $Id: lgc.c,v 2.76 2010/04/02 14:37:41 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -778,23 +778,32 @@ static l_mem singlestep (lua_State *L) {
         sweepwholelist(L, &g->strt.hash[g->sweepstrgc++]);
       }
       else {  /* no more strings to sweep */
-        /* sweep main thread */
-        sweeplist(L, cast(GCObject **, &g->mainthread), 1);
         g->sweepgc = &g->udgc;  /* prepare to sweep userdata */
         g->gcstate = GCSsweepudata;
       }
       return GCSWEEPCOST;
     }
-    case GCSsweepudata:
-    case GCSsweep: {
+    case GCSsweepudata: {
       if (*g->sweepgc) {
         g->sweepgc = sweeplist(L, g->sweepgc, GCSWEEPMAX);
         return GCSWEEPMAX*GCSWEEPCOST;
       }
       else {  /* go to next phase */
-        g->sweepgc = &g->allgc;  /* useless (but harmless) in GCSsweep case */
-        g->gcstate = (g->gcstate == GCSsweep) ? GCSfinalize : GCSsweep;
+        g->sweepgc = &g->allgc;
+        g->gcstate = GCSsweep;
         return 0;
+      }
+    }
+    case GCSsweep: {
+      if (*g->sweepgc) {
+        g->sweepgc = sweeplist(L, g->sweepgc, GCSWEEPMAX);
+        return GCSWEEPMAX*GCSWEEPCOST;
+      }
+      else {
+        /* sweep main thread */
+        sweeplist(L, cast(GCObject **, &g->mainthread), 1);
+        g->gcstate = GCSfinalize;  /* go to next phase */
+        return GCSWEEPCOST;
       }
     }
     case GCSfinalize: {
