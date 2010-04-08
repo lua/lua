@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.76 2010/03/29 17:43:14 roberto Exp roberto $
+** $Id: lstate.c,v 2.77 2010/04/05 16:35:37 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -32,6 +32,9 @@
 #if !defined(LUAI_GCMUL)
 #define LUAI_GCMUL	200 /* GC runs 'twice the speed' of memory allocation */
 #endif
+
+
+#define MEMERRMSG       "not enough memory"
 
 
 /*
@@ -157,7 +160,9 @@ static void f_luaopen (lua_State *L, void *ud) {
   luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
   luaT_init(L);
   luaX_init(L);
-  luaS_fix(luaS_newliteral(L, MEMERRMSG));
+  /* pre-create memory-error message */
+  g->memerrmsg = luaS_newliteral(L, MEMERRMSG);
+  luaS_fix(g->memerrmsg);  /* it should never be collected */
   g->GCthreshold = 4*g->totalbytes;
 }
 
