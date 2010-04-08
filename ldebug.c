@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.67 2010/03/13 15:55:42 roberto Exp roberto $
+** $Id: ldebug.c,v 2.68 2010/04/05 16:26:37 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -427,7 +427,7 @@ static const char *getupvalname (CallInfo *ci, const TValue *o,
   LClosure *c = &ci_func(ci)->l;
   int i;
   for (i = 0; i < c->nupvalues; i++) {
-    if (eqstr(c->upvals[i]->v, o)) {
+    if (c->upvals[i]->v == o) {
       *name = getstr(c->p->upvalues[i].name);
       return "upvalue";
     }
