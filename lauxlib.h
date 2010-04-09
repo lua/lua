@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.100 2010/01/21 16:49:21 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.101 2010/03/17 21:37:37 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -122,28 +122,31 @@ LUALIB_API int (luaL_cpcall) (lua_State *L, lua_CFunction f, int nargs,
 ** =======================================================
 */
 
-
-
 typedef struct luaL_Buffer {
-  char *p;			/* current position in buffer */
-  int lvl;  /* number of strings in the stack (level) */
+  char *b;  /* buffer address */
+  size_t size;  /* buffer size */
+  size_t n;  /* number of characters in buffer */
   lua_State *L;
-  char buffer[LUAL_BUFFERSIZE];
+  char initb[LUAL_BUFFERSIZE];  /* initial buffer */
 } luaL_Buffer;
 
-#define luaL_addchar(B,c) \
-  ((void)((B)->p < ((B)->buffer+LUAL_BUFFERSIZE) || luaL_prepbuffer(B)), \
-   (*(B)->p++ = (char)(c)))
 
-#define luaL_addsize(B,n)	((B)->p += (n))
+#define luaL_addchar(B,c) \
+  ((void)((B)->n < (B)->size || luaL_prepbuffsize((B), 1)), \
+   ((B)->b[(B)->n++] = (c)))
+
+#define luaL_addsize(B,s)	((B)->n += (s))
 
 LUALIB_API void (luaL_buffinit) (lua_State *L, luaL_Buffer *B);
-LUALIB_API char *(luaL_prepbuffer) (luaL_Buffer *B);
+LUALIB_API char *(luaL_prepbuffsize) (luaL_Buffer *B, size_t sz);
 LUALIB_API void (luaL_addlstring) (luaL_Buffer *B, const char *s, size_t l);
 LUALIB_API void (luaL_addstring) (luaL_Buffer *B, const char *s);
 LUALIB_API void (luaL_addvalue) (luaL_Buffer *B);
 LUALIB_API void (luaL_pushresult) (luaL_Buffer *B);
+LUALIB_API void luaL_pushresultsize (luaL_Buffer *B, size_t sz);
+LUALIB_API char *(luaL_buffinitsize) (lua_State *L, luaL_Buffer *B, size_t sz);
 
+#define luaL_prepbuffer(B)	luaL_prepbuffsize(B, LUAL_BUFFERSIZE)
 
 /* }====================================================== */
 

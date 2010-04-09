@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.147 2009/12/17 12:50:20 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.148 2010/01/04 16:37:19 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -65,12 +65,13 @@ static int str_sub (lua_State *L) {
 
 
 static int str_reverse (lua_State *L) {
-  size_t l;
+  size_t l, i;
   luaL_Buffer b;
   const char *s = luaL_checklstring(L, 1, &l);
-  luaL_buffinit(L, &b);
-  while (l--) luaL_addchar(&b, s[l]);
-  luaL_pushresult(&b);
+  char *p = luaL_buffinitsize(L, &b, l);
+  for (i = 0; i < l; i++)
+    p[i] = s[l - i - 1];
+  luaL_pushresultsize(&b, l);
   return 1;
 }
 
@@ -80,10 +81,10 @@ static int str_lower (lua_State *L) {
   size_t i;
   luaL_Buffer b;
   const char *s = luaL_checklstring(L, 1, &l);
-  luaL_buffinit(L, &b);
+  char *p = luaL_buffinitsize(L, &b, l);
   for (i=0; i<l; i++)
-    luaL_addchar(&b, tolower(uchar(s[i])));
-  luaL_pushresult(&b);
+    p[i] = tolower(uchar(s[i]));
+  luaL_pushresultsize(&b, l);
   return 1;
 }
 
@@ -93,10 +94,10 @@ static int str_upper (lua_State *L) {
   size_t i;
   luaL_Buffer b;
   const char *s = luaL_checklstring(L, 1, &l);
-  luaL_buffinit(L, &b);
+  char *p = luaL_buffinitsize(L, &b, l);
   for (i=0; i<l; i++)
-    luaL_addchar(&b, toupper(uchar(s[i])));
-  luaL_pushresult(&b);
+    p[i] = toupper(uchar(s[i]));
+  luaL_pushresultsize(&b, l);
   return 1;
 }
 
@@ -136,13 +137,13 @@ static int str_char (lua_State *L) {
   int n = lua_gettop(L);  /* number of arguments */
   int i;
   luaL_Buffer b;
-  luaL_buffinit(L, &b);
+  char *p = luaL_buffinitsize(L, &b, n);
   for (i=1; i<=n; i++) {
     int c = luaL_checkint(L, i);
     luaL_argcheck(L, uchar(c) == c, i, "invalid value");
-    luaL_addchar(&b, uchar(c));
+    p[i - 1] = uchar(c);
   }
-  luaL_pushresult(&b);
+  luaL_pushresultsize(&b, n);
   return 1;
 }
 
@@ -773,6 +774,9 @@ static const char *scanformat (lua_State *L, const char *strfrmt, char *form) {
 }
 
 
+/*
+** add length modifier into integer formats
+*/
 static void addintlen (char *form) {
   size_t l = strlen(form);
   char spec = form[l - 1];
@@ -796,12 +800,13 @@ static int str_format (lua_State *L) {
       luaL_addchar(&b, *strfrmt++);  /* %% */
     else { /* format item */
       char form[MAX_FORMAT];  /* to store the format (`%...') */
-      char buff[MAX_ITEM];  /* to store the formatted item */
+      char *buff = luaL_prepbuffsize(&b, MAX_ITEM);  /* to put formatted item */
+      int nb = 0;  /* number of bytes in added item */
       arg++;
       strfrmt = scanformat(L, strfrmt, form);
       switch (*strfrmt++) {
         case 'c': {
-          sprintf(buff, form, luaL_checkint(L, arg));
+          nb = sprintf(buff, form, luaL_checkint(L, arg));
           break;
         }
         case 'd':  case 'i':
@@ -810,17 +815,17 @@ static int str_format (lua_State *L) {
           LUA_INTFRM_T r = (n < 0) ? (LUA_INTFRM_T)n :
                                      (LUA_INTFRM_T)(unsigned LUA_INTFRM_T)n;
           addintlen(form);
-          sprintf(buff, form, r);
+          nb = sprintf(buff, form, r);
           break;
         }
         case 'e':  case 'E': case 'f':
         case 'g': case 'G': {
-          sprintf(buff, form, (double)luaL_checknumber(L, arg));
+          nb = sprintf(buff, form, (double)luaL_checknumber(L, arg));
           break;
         }
         case 'q': {
           addquoted(L, &b, arg);
-          continue;  /* skip the 'addsize' at the end */
+          break;
         }
         case 's': {
           size_t l;
@@ -830,10 +835,10 @@ static int str_format (lua_State *L) {
                keep original string */
             lua_pushvalue(L, arg);
             luaL_addvalue(&b);
-            continue;  /* skip the `addsize' at the end */
+            break;
           }
           else {
-            sprintf(buff, form, s);
+            nb = sprintf(buff, form, s);
             break;
           }
         }
@@ -842,7 +847,7 @@ static int str_format (lua_State *L) {
                                LUA_QL("format"), *(strfrmt - 1));
         }
       }
-      luaL_addlstring(&b, buff, strlen(buff));
+      luaL_addsize(&b, nb);
     }
   }
   luaL_pushresult(&b);

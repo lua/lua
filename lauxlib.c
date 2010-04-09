@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.205 2010/03/22 17:28:31 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.206 2010/03/29 17:44:31 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -347,64 +347,40 @@ LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int narg,
 ** =======================================================
 */
 
+/*
+** check whether buffer is using a userdata on the stack as a temporary
+** buffer
+*/
+#define buffonstack(B)	((B)->b != (B)->initb)
 
-#define bufflen(B)	((B)->p - (B)->buffer)
-#define bufffree(B)	((size_t)(LUAL_BUFFERSIZE - bufflen(B)))
 
-#define LIMIT	(LUA_MINSTACK/2)
-
-
-static int emptybuffer (luaL_Buffer *B) {
-  size_t l = bufflen(B);
-  if (l == 0) return 0;  /* put nothing on stack */
-  else {
-    lua_pushlstring(B->L, B->buffer, l);
-    B->p = B->buffer;
-    B->lvl++;
-    return 1;
+/*
+** returns a pointer to a free area with at least 'sz' bytes
+*/
+LUALIB_API char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz) {
+  lua_State *L = B->L;
+  if (B->size - B->n < sz) {  /* not enough space? */
+    char *newbuff;
+    size_t newsize = B->size * 2;  /* double buffer size */
+    if (newsize - B->n < sz)  /* not bit enough? */
+      newsize = B->n + sz;
+    if (newsize < B->n || newsize - B->n < sz)
+      luaL_error(L, "string too large");
+    newbuff = (char *)lua_newuserdata(L, newsize);  /* create larger buffer */
+    memcpy(newbuff, B->b, B->n);  /* move content to new buffer */
+    if (buffonstack(B))
+      lua_remove(L, -2);  /* remove old buffer */
+    B->b = newbuff;
+    B->size = newsize;
   }
-}
-
-
-static void adjuststack (luaL_Buffer *B) {
-  if (B->lvl > 1) {
-    lua_State *L = B->L;
-    int toget = 1;  /* number of levels to concat */
-    size_t toplen = lua_rawlen(L, -1);
-    do {
-      size_t l = lua_rawlen(L, -(toget+1));
-      if (B->lvl - toget + 1 >= LIMIT || toplen > l) {
-        toplen += l;
-        toget++;
-      }
-      else break;
-    } while (toget < B->lvl);
-    lua_concat(L, toget);
-    B->lvl = B->lvl - toget + 1;
-  }
-}
-
-
-LUALIB_API char *luaL_prepbuffer (luaL_Buffer *B) {
-  if (emptybuffer(B))
-    adjuststack(B);
-  return B->buffer;
+  return &B->b[B->n];
 }
 
 
 LUALIB_API void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l) {
-  while (l) {
-    size_t space = bufffree(B);
-    if (space == 0) {
-      luaL_prepbuffer(B);
-      space = LUAL_BUFFERSIZE;  /* bufffree(B) == LUAL_BUFFERSIZE */
-    }
-    if (space > l) space = l;
-    memcpy(B->p, s, space);
-    B->p += space;
-    s += space;
-    l -= space;
-  }
+  char *b = luaL_prepbuffsize(B, l);
+  memcpy(b, s, l);
+  luaL_addsize(B, l);
 }
 
 
@@ -414,35 +390,41 @@ LUALIB_API void luaL_addstring (luaL_Buffer *B, const char *s) {
 
 
 LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
-  emptybuffer(B);
-  lua_concat(B->L, B->lvl);
-  B->lvl = 1;
+  lua_State *L = B->L;
+  lua_pushlstring(L, B->b, B->n);
+  if (buffonstack(B))
+    lua_remove(L, -2);  /* remove old buffer */
+}
+
+
+LUALIB_API void luaL_pushresultsize (luaL_Buffer *B, size_t sz) {
+  luaL_addsize(B, sz);
+  luaL_pushresult(B);
 }
 
 
 LUALIB_API void luaL_addvalue (luaL_Buffer *B) {
   lua_State *L = B->L;
-  size_t vl;
-  const char *s = lua_tolstring(L, -1, &vl);
-  if (vl <= bufffree(B)) {  /* fit into buffer? */
-    memcpy(B->p, s, vl);  /* put it there */
-    B->p += vl;
-    lua_pop(L, 1);  /* remove from stack */
-  }
-  else {
-    if (emptybuffer(B))
-      lua_insert(L, -2);  /* put buffer before new value */
-    B->lvl++;  /* add new value into B stack */
-    adjuststack(B);
-  }
+  size_t l;
+  const char *s = lua_tolstring(L, -1, &l);
+  if (buffonstack(B))
+    lua_insert(L, -2);  /* put value below buffer */
+  luaL_addlstring(B, s, l);
+  lua_remove(L, (buffonstack(B)) ? -2 : -1);  /* remove value */
 }
 
 
 LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
-  luaL_checkstack(L, LIMIT + LUA_MINSTACK, "no space for new buffer");
   B->L = L;
-  B->p = B->buffer;
-  B->lvl = 0;
+  B->b = B->initb;
+  B->n = 0;
+  B->size = LUAL_BUFFERSIZE;
+}
+
+
+LUALIB_API char *luaL_buffinitsize (lua_State *L, luaL_Buffer *B, size_t sz) {
+  luaL_buffinit(L, B);
+  return luaL_prepbuffsize(B, sz);
 }
 
 /* }====================================================== */
