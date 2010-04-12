@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.149 2010/04/09 16:14:46 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.150 2010/04/12 12:00:50 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -709,11 +709,18 @@ static int str_gsub (lua_State *L) {
 /* }====================================================== */
 
 
+
 /*
-** length modifier for integer conversions ** in 'string.format' and
-** integer type corresponding to the previous length
+** {======================================================
+** STRING FORMAT
+** =======================================================
 */
 
+/*
+** LUA_INTFRMLEN is the length modifier for integer conversions in
+** 'string.format'; LUA_INTFRM_T is the integer type corresponding to
+** the previous length
+*/
 #if defined(LUA_USELONGLONG)
 
 #define LUA_INTFRMLEN           "ll"
@@ -797,6 +804,7 @@ static void addintlen (char *form) {
 
 
 static int str_format (lua_State *L) {
+  int top = lua_gettop(L);
   int arg = 1;
   size_t sfl;
   const char *strfrmt = luaL_checklstring(L, arg, &sfl);
@@ -812,7 +820,8 @@ static int str_format (lua_State *L) {
       char form[MAX_FORMAT];  /* to store the format (`%...') */
       char *buff = luaL_prepbuffsize(&b, MAX_ITEM);  /* to put formatted item */
       int nb = 0;  /* number of bytes in added item */
-      arg++;
+      if (++arg > top)
+        luaL_argerror(L, arg, "no value");
       strfrmt = scanformat(L, strfrmt, form);
       switch (*strfrmt++) {
         case 'c': {
@@ -863,6 +872,8 @@ static int str_format (lua_State *L) {
   luaL_pushresult(&b);
   return 1;
 }
+
+/* }====================================================== */
 
 
 static const luaL_Reg strlib[] = {
