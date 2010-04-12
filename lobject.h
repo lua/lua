@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.35 2010/03/12 19:14:06 roberto Exp roberto $
+** $Id: lobject.h,v 2.36 2010/03/26 20:58:11 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -16,18 +16,12 @@
 #include "lua.h"
 
 
-/* tags for values visible from Lua */
-#define LAST_TAG	LUA_TTHREAD
-
-#define NUM_TAGS	(LAST_TAG+1)
-
-
 /*
 ** Extra tags for non-values
 */
-#define LUA_TPROTO	(LAST_TAG+1)
-#define LUA_TUPVAL	(LAST_TAG+2)
-#define LUA_TDEADKEY	(LAST_TAG+3)
+#define LUA_TPROTO	LUA_NUMTAGS
+#define LUA_TUPVAL	(LUA_NUMTAGS+1)
+#define LUA_TDEADKEY	(LUA_NUMTAGS+2)
 
 
 /*

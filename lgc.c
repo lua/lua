@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.76 2010/04/02 14:37:41 roberto Exp roberto $
+** $Id: lgc.c,v 2.77 2010/04/05 14:15:35 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -213,7 +213,7 @@ static void reallymarkobject (global_State *g, GCObject *o) {
 
 static void markmt (global_State *g) {
   int i;
-  for (i=0; i<NUM_TAGS; i++)
+  for (i=0; i < LUA_NUMTAGS; i++)
     markobject(g, g->mt[i]);
 }
 

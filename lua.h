@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.265 2010/03/26 20:58:11 roberto Exp roberto $
+** $Id: lua.h,v 1.266 2010/04/02 15:19:19 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -80,6 +80,8 @@ typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 #define LUA_TFUNCTION		6
 #define LUA_TUSERDATA		7
 #define LUA_TTHREAD		8
+
+#define LUA_NUMTAGS		9
 
 
 
