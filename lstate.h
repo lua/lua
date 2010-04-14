@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.61 2010/04/08 17:16:46 roberto Exp roberto $
+** $Id: lstate.h,v 2.62 2010/04/12 16:07:06 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -105,7 +105,6 @@ typedef struct CallInfo {
 #define CIST_TAIL	(1<<6)	/* call was tail called */
 
 
-#define curr_func(L)	(clvalue(L->ci->func))
 #define ci_func(ci)	(clvalue((ci)->func))
 #define isLua(ci)	((ci)->callstatus & CIST_LUA)
 

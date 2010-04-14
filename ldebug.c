@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.68 2010/04/05 16:26:37 roberto Exp roberto $
+** $Id: ldebug.c,v 2.69 2010/04/08 17:06:33 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -144,7 +144,7 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
 
 
 static void funcinfo (lua_Debug *ar, Closure *cl) {
-  if (cl->c.isC) {
+  if (cl == NULL || cl->c.isC) {
     ar->source = "=[C]";
     ar->linedefined = -1;
     ar->lastlinedefined = -1;
@@ -191,8 +191,8 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
         break;
       }
       case 'u': {
-        ar->nups = f->c.nupvalues;
-        if (f->c.isC) {
+        ar->nups = (f == NULL) ? 0 : f->c.nupvalues;
+        if (f == NULL || f->c.isC) {
           ar->isvararg = 1;
           ar->nparams = 0;
         }
@@ -226,28 +226,30 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
 
 LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
   int status;
-  Closure *f = NULL;
-  CallInfo *ci = NULL;
+  Closure *cl;
+  CallInfo *ci;
+  StkId func;
   lua_lock(L);
   if (*what == '>') {
-    StkId func = L->top - 1;
+    ci = NULL;
+    func = L->top - 1;
     luai_apicheck(L, ttisfunction(func));
     what++;  /* skip the '>' */
-    f = clvalue(func);
     L->top--;  /* pop function */
   }
   else {
     ci = ar->i_ci;
+    func = ci->func;
     lua_assert(ttisfunction(ci->func));
-    f = clvalue(ci->func);
   }
-  status = auxgetinfo(L, what, ar, f, ci);
+  cl = ttisclosure(func) ? clvalue(func) : NULL;
+  status = auxgetinfo(L, what, ar, cl, ci);
   if (strchr(what, 'f')) {
-    setclvalue(L, L->top, f);
+    setobjs2s(L, L->top, func);
     incr_top(L);
   }
   if (strchr(what, 'L'))
-    collectvalidlines(L, f);
+    collectvalidlines(L, cl);
   lua_unlock(L);
   return status;
 }
@@ -439,7 +441,7 @@ static const char *getupvalname (CallInfo *ci, const TValue *o,
 void luaG_typeerror (lua_State *L, const TValue *o, const char *op) {
   CallInfo *ci = L->ci;
   const char *name = NULL;
-  const char *t = typename(ttype(o));
+  const char *t = objtypename(o);
   const char *kind = NULL;
   if (isLua(ci)) {
     kind = getupvalname(ci, o, &name);  /* check whether 'o' is an upvalue */
@@ -470,8 +472,8 @@ void luaG_aritherror (lua_State *L, const TValue *p1, const TValue *p2) {
 
 
 int luaG_ordererror (lua_State *L, const TValue *p1, const TValue *p2) {
-  const char *t1 = typename(ttype(p1));
-  const char *t2 = typename(ttype(p2));
+  const char *t1 = objtypename(p1);
+  const char *t2 = objtypename(p2);
   if (t1 == t2)
     luaG_runerror(L, "attempt to compare two %s values", t1);
   else

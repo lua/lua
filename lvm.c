@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.109 2010/04/02 15:39:07 roberto Exp roberto $
+** $Id: lvm.c,v 2.110 2010/04/05 16:26:37 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -218,7 +218,7 @@ static int l_strcmp (const TString *ls, const TString *rs) {
 
 int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
   int res;
-  if (ttype(l) != ttype(r))
+  if (ttypenv(l) != ttypenv(r))
     return luaG_ordererror(L, l, r);
   else if (ttisnumber(l))
     return luai_numlt(L, nvalue(l), nvalue(r));
@@ -232,7 +232,7 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
 
 int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
   int res;
-  if (ttype(l) != ttype(r))
+  if (ttypenv(l) != ttypenv(r))
     return luaG_ordererror(L, l, r);
   else if (ttisnumber(l))
     return luai_numle(L, nvalue(l), nvalue(r));
@@ -254,6 +254,7 @@ int luaV_equalval_ (lua_State *L, const TValue *t1, const TValue *t2) {
     case LUA_TNUMBER: return luai_numeq(nvalue(t1), nvalue(t2));
     case LUA_TBOOLEAN: return bvalue(t1) == bvalue(t2);  /* true must be 1 !! */
     case LUA_TLIGHTUSERDATA: return pvalue(t1) == pvalue(t2);
+    case LUA_TCFP: return fvalue(t1) == fvalue(t2);
     case LUA_TSTRING: return eqstr(rawtsvalue(t1), rawtsvalue(t2));
     case LUA_TUSERDATA: {
       if (uvalue(t1) == uvalue(t2)) return 1;

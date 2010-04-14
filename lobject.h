@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.36 2010/03/26 20:58:11 roberto Exp roberto $
+** $Id: lobject.h,v 2.37 2010/04/12 16:07:06 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -23,6 +23,12 @@
 #define LUA_TUPVAL	(LUA_NUMTAGS+1)
 #define LUA_TDEADKEY	(LUA_NUMTAGS+2)
 
+
+/*
+** Variant tag for C-function pointers (negative to be considered
+** non collectable by 'iscollectable')
+*/
+#define LUA_TCFP	(~0x0F | LUA_TFUNCTION)
 
 /*
 ** Union of all collectable objects
@@ -54,6 +60,7 @@ typedef union {
   void *p;
   lua_Number n;
   int b;
+  lua_CFunction f;
 } Value;
 
 
@@ -73,12 +80,26 @@ typedef struct lua_TValue {
 #define NILCONSTANT    {NULL}, LUA_TNIL
 
 
+/*
+** type tag of a TValue
+*/
+#define ttype(o)	((o)->tt_)
+
+
+/*
+** type tag of a TValue with no variants
+*/
+#define ttypenv(o)	(ttype(o) & 0x0F)
+
+
 /* Macros to test type */
 #define ttisnil(o)	(ttype(o) == LUA_TNIL)
 #define ttisnumber(o)	(ttype(o) == LUA_TNUMBER)
 #define ttisstring(o)	(ttype(o) == LUA_TSTRING)
 #define ttistable(o)	(ttype(o) == LUA_TTABLE)
-#define ttisfunction(o)	(ttype(o) == LUA_TFUNCTION)
+#define ttisfunction(o)	(ttypenv(o) == LUA_TFUNCTION)
+#define ttisclosure(o)	(ttype(o) == LUA_TFUNCTION)
+#define ttiscfp(o)	(ttype(o) == LUA_TCFP)
 #define ttisboolean(o)	(ttype(o) == LUA_TBOOLEAN)
 #define ttisuserdata(o)	(ttype(o) == LUA_TUSERDATA)
 #define ttisthread(o)	(ttype(o) == LUA_TTHREAD)
@@ -86,7 +107,6 @@ typedef struct lua_TValue {
 #define ttisdeadkey(o)	(ttype(o) == LUA_TDEADKEY)
 
 /* Macros to access values */
-#define ttype(o)	((o)->tt_)
 #define gcvalue(o)	check_exp(iscollectable(o), (o)->value_.gc)
 #define pvalue(o)	check_exp(ttislightuserdata(o), (o)->value_.p)
 #define nvalue(o)	check_exp(ttisnumber(o), (o)->value_.n)
@@ -94,16 +114,15 @@ typedef struct lua_TValue {
 #define tsvalue(o)	(&rawtsvalue(o)->tsv)
 #define rawuvalue(o)	check_exp(ttisuserdata(o), &(o)->value_.gc->u)
 #define uvalue(o)	(&rawuvalue(o)->uv)
-#define clvalue(o)	check_exp(ttisfunction(o), &(o)->value_.gc->cl)
+#define clvalue(o)	check_exp(ttisclosure(o), &(o)->value_.gc->cl)
+#define fvalue(o)	check_exp(ttiscfp(o), (o)->value_.f)
 #define hvalue(o)	check_exp(ttistable(o), &(o)->value_.gc->h)
 #define bvalue(o)	check_exp(ttisboolean(o), (o)->value_.b)
 #define thvalue(o)	check_exp(ttisthread(o), &(o)->value_.gc->th)
 
 #define l_isfalse(o)	(ttisnil(o) || (ttisboolean(o) && bvalue(o) == 0))
 
-/*
-** for internal debug only
-*/
+
 #define iscollectable(o)	(ttype(o) >= LUA_TSTRING)
 
 #define righttt(obj)		(ttype(obj) == gcvalue(obj)->gch.tt)
@@ -119,6 +138,9 @@ typedef struct lua_TValue {
 
 #define setnvalue(obj,x) \
   { TValue *i_o=(obj); i_o->value_.n=(x); i_o->tt_=LUA_TNUMBER; }
+
+#define setfvalue(obj,x) \
+  { TValue *i_o=(obj); i_o->value_.f=(x); i_o->tt_=LUA_TCFP; }
 
 #define changenvalue(obj,x) \
   ( lua_assert((obj)->tt_==LUA_TNUMBER), (obj)->value_.n=(x) )
@@ -313,8 +335,7 @@ typedef union Closure {
 } Closure;
 
 
-#define iscfunction(o)	(ttisfunction(o) && clvalue(o)->c.isC)
-#define isLfunction(o)	(ttisfunction(o) && !clvalue(o)->c.isC)
+#define isLfunction(o)	(ttisclosure(o) && !clvalue(o)->c.isC)
 
 #define getproto(o)	(clvalue(o)->l.p)
 

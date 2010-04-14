@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.92 2010/04/12 12:42:07 roberto Exp roberto $
+** $Id: ltests.c,v 2.93 2010/04/12 16:07:39 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -191,7 +191,7 @@ static void printobj (global_State *g, GCObject *o) {
   GCObject *p;
   for (p = g->allgc; p != o && p != NULL; p = gch(p)->next) i++;
   if (p == NULL) i = -1;
-  printf("%d:%s(%p)-%c(%02X)", i, typename(gch(o)->tt), (void *)o,
+  printf("%d:%s(%p)-%c(%02X)", i, ttypename(gch(o)->tt), (void *)o,
            isdead(g,o)?'d':isblack(o)?'b':iswhite(o)?'w':'g', gch(o)->marked);
 }
 
@@ -519,7 +519,7 @@ static int mem_query (lua_State *L) {
     const char *t = luaL_checkstring(L, 1);
     int i;
     for (i = LUA_NUMTAGS - 1; i >= 0; i--) {
-      if (strcmp(t, typename(i)) == 0) {
+      if (strcmp(t, ttypename(i)) == 0) {
         lua_pushinteger(L, l_memcontrol.objcount[i]);
         return 1;
       }
@@ -943,6 +943,9 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     }
     else if EQ("tonumber") {
       lua_pushnumber(L1, lua_tonumber(L1, getindex));
+    }
+    else if EQ("topointer") {
+      lua_pushlightuserdata(L1, cast(void *, lua_topointer(L1, getindex)));
     }
     else if EQ("tostring") {
       const char *s = lua_tostring(L1, getindex);

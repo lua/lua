@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.119 2010/04/02 15:19:19 roberto Exp roberto $
+** $Id: lapi.c,v 2.120 2010/04/05 14:21:38 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -54,12 +54,16 @@ static TValue *index2addr (lua_State *L, int idx) {
   else if (idx == LUA_REGISTRYINDEX)
     return &G(L)->l_registry;
   else {  /* upvalues */
-    Closure *func = curr_func(L);
     idx = LUA_REGISTRYINDEX - idx;
     api_check(L, idx <= UCHAR_MAX + 1, "upvalue index too large");
-    return (idx <= func->c.nupvalues)
-              ? &func->c.upvalue[idx-1]
-              : cast(TValue *, luaO_nilobject);
+    if (ttiscfp(ci->func))  /* C-function pointer? */
+      return cast(TValue *, luaO_nilobject);  /* it has no upvalues */
+    else {
+      Closure *func = clvalue(ci->func);
+      return (idx <= func->c.nupvalues)
+                ? &func->c.upvalue[idx-1]
+                : cast(TValue *, luaO_nilobject);
+    }
   }
 }
 
@@ -181,8 +185,10 @@ static void moveto (lua_State *L, TValue *fr, int idx) {
   TValue *to = index2addr(L, idx);
   api_checkvalidindex(L, to);
   setobj(L, to, fr);
-  if (idx < LUA_REGISTRYINDEX)  /* function upvalue? */
-    luaC_barrier(L, curr_func(L), fr);
+  if (idx < LUA_REGISTRYINDEX) {  /* function upvalue? */
+    lua_assert(ttisclosure(L->ci->func));
+    luaC_barrier(L, clvalue(L->ci->func), fr);
+  }
   /* LUA_REGISTRYINDEX does not need gc barrier
      (collector revisits it before finishing collection) */
 }
@@ -223,19 +229,19 @@ LUA_API void lua_pushvalue (lua_State *L, int idx) {
 
 LUA_API int lua_type (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
-  return (o == luaO_nilobject) ? LUA_TNONE : ttype(o);
+  return (o == luaO_nilobject) ? LUA_TNONE : ttypenv(o);
 }
 
 
 LUA_API const char *lua_typename (lua_State *L, int t) {
   UNUSED(L);
-  return typename(t);
+  return ttypename(t);
 }
 
 
 LUA_API int lua_iscfunction (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
-  return iscfunction(o);
+  return (ttiscfp(o) || (ttisclosure(o) && clvalue(o)->c.isC));
 }
 
 
@@ -361,7 +367,10 @@ LUA_API size_t lua_rawlen (lua_State *L, int idx) {
 
 LUA_API lua_CFunction lua_tocfunction (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
-  return (!iscfunction(o)) ? NULL : clvalue(o)->c.f;
+  if (ttiscfp(o)) return fvalue(o);
+  else if (ttisclosure(o) && clvalue(o)->c.isC)
+    return clvalue(o)->c.f;
+  else return NULL;  /* not a C function */
 }
 
 
@@ -386,6 +395,7 @@ LUA_API const void *lua_topointer (lua_State *L, int idx) {
   switch (ttype(o)) {
     case LUA_TTABLE: return hvalue(o);
     case LUA_TFUNCTION: return clvalue(o);
+    case LUA_TCFP: return cast(void *, cast(size_t, fvalue(o)));
     case LUA_TTHREAD: return thvalue(o);
     case LUA_TUSERDATA:
     case LUA_TLIGHTUSERDATA:
@@ -480,18 +490,22 @@ LUA_API const char *lua_pushfstring (lua_State *L, const char *fmt, ...) {
 
 
 LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
-  Closure *cl;
   lua_lock(L);
-  api_checknelems(L, n);
-  api_check(L, n <= UCHAR_MAX, "upvalue index too large");
-  luaC_checkGC(L);
-  cl = luaF_newCclosure(L, n);
-  cl->c.f = fn;
-  L->top -= n;
-  while (n--)
-    setobj2n(L, &cl->c.upvalue[n], L->top+n);
-  setclvalue(L, L->top, cl);
-  lua_assert(iswhite(obj2gco(cl)));
+  if (n == 0) {
+    setfvalue(L->top, fn);
+  }
+  else {
+    Closure *cl;
+    api_checknelems(L, n);
+    api_check(L, n <= UCHAR_MAX, "upvalue index too large");
+    luaC_checkGC(L);
+    cl = luaF_newCclosure(L, n);
+    cl->c.f = fn;
+    L->top -= n;
+    while (n--)
+      setobj2n(L, &cl->c.upvalue[n], L->top + n);
+    setclvalue(L, L->top, cl);
+  }
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -598,7 +612,7 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
       mt = uvalue(obj)->metatable;
       break;
     default:
-      mt = G(L)->mt[ttype(obj)];
+      mt = G(L)->mt[ttypenv(obj)];
       break;
   }
   if (mt == NULL)
@@ -713,7 +727,7 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
       break;
     }
     default: {
-      G(L)->mt[ttype(obj)] = mt;
+      G(L)->mt[ttypenv(obj)] = mt;
       break;
     }
   }
@@ -1063,7 +1077,7 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
 
 static const char *aux_upvalue (StkId fi, int n, TValue **val) {
   Closure *f;
-  if (!ttisfunction(fi)) return NULL;
+  if (!ttisclosure(fi)) return NULL;
   f = clvalue(fi);
   if (f->c.isC) {
     if (!(1 <= n && n <= f->c.nupvalues)) return NULL;
@@ -1115,7 +1129,7 @@ static UpVal **getupvalref (lua_State *L, int fidx, int n, Closure **pf) {
   Closure *f;
   Proto *p;
   StkId fi = index2addr(L, fidx);
-  api_check(L, ttisfunction(fi), "function expected");
+  api_check(L, ttisclosure(fi), "Lua function expected");
   f = clvalue(fi);
   api_check(L, !f->c.isC, "Lua function expected");
   p = f->l.p;
@@ -1128,7 +1142,7 @@ static UpVal **getupvalref (lua_State *L, int fidx, int n, Closure **pf) {
 LUA_API void *lua_upvalueid (lua_State *L, int fidx, int n) {
   Closure *f;
   StkId fi = index2addr(L, fidx);
-  api_check(L, ttisfunction(fi), "function expected");
+  api_check(L, ttisclosure(fi), "function expected");
   f = clvalue(fi);
   if (f->c.isC) {
     api_check(L, 1 <= n && n <= f->c.nupvalues, "invalid upvalue index");
