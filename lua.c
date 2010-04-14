@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.188 2010/02/27 21:15:36 roberto Exp roberto $
+** $Id: lua.c,v 1.189 2010/03/13 03:57:46 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -454,9 +454,10 @@ int main (int argc, char **argv) {
     return EXIT_FAILURE;
   }
   /* call 'pmain' in protected mode */
+  lua_pushcfunction(L, &pmain);
   lua_pushinteger(L, argc);  /* 1st argument */
   lua_pushlightuserdata(L, argv); /* 2nd argument */
-  status = luaL_cpcall(L, &pmain, 2, 1);
+  status = lua_pcall(L, 2, 1, 0);
   result = lua_toboolean(L, -1);  /* get result */
   finalreport(L, status);
   lua_close(L);

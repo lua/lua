@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.266 2010/04/02 15:19:19 roberto Exp roberto $
+** $Id: lua.h,v 1.267 2010/04/12 16:04:10 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -91,8 +91,7 @@ typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 
 /* predefined values in the registry */
 #define LUA_RIDX_MAINTHREAD	1
-#define LUA_RIDX_CCALL		2
-#define LUA_RIDX_GLOBALS	3
+#define LUA_RIDX_GLOBALS	2
 #define LUA_RIDX_LAST		LUA_RIDX_GLOBALS
 
 

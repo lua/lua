@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.206 2010/03/29 17:44:31 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.207 2010/04/09 16:14:46 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -764,16 +764,5 @@ LUALIB_API void luaL_checkversion_ (lua_State *L, lua_Number ver) {
   else if (*v != ver)
     luaL_error(L, "version mismatch: app. needs %d, Lua core provides %f",
                   ver, *v);
-}
-
-
-LUALIB_API int luaL_cpcall (lua_State *L, lua_CFunction f, int nargs,
-                            int nresults) {
-  nargs++;  /* to include function itself */
-  lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_CCALL);
-  lua_insert(L, -nargs);  /* 'ccall' is real function to be called */
-  lua_pushlightuserdata(L, &f);
-  lua_insert(L, -nargs);  /* 'f' address is its first argument */
-  return lua_pcall(L, nargs, nresults, 0);
 }
 
