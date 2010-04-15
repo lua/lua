@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.37 2010/04/05 16:26:37 roberto Exp roberto $
+** $Id: lobject.c,v 2.38 2010/04/13 20:48:12 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -112,10 +112,8 @@ int luaO_str2d (const char *s, lua_Number *result) {
   if (endptr == s) return 0;  /* conversion failed */
   if (*endptr == 'x' || *endptr == 'X')  /* maybe an hexadecimal constant? */
     *result = cast_num(strtoul(s, &endptr, 16));
-  if (*endptr == '\0') return 1;  /* most common case */
   while (lisspace(cast(unsigned char, *endptr))) endptr++;
-  if (*endptr != '\0') return 0;  /* invalid trailing characters? */
-  return 1;
+  return (*endptr == '\0');  /* OK if no trailing characters */
 }
 
 
