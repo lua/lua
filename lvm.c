@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.110 2010/04/05 16:26:37 roberto Exp roberto $
+** $Id: lvm.c,v 2.111 2010/04/13 20:48:12 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -808,8 +808,7 @@ void luaV_execute (lua_State *L) {
         break;
       }
       case OP_EXTRAARG: {
-        luaG_runerror(L, "bad opcode");
-        return;
+        lua_assert(0);
       }
     }
   }
