@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.93 2010/04/12 16:07:39 roberto Exp roberto $
+** $Id: ltests.c,v 2.94 2010/04/13 20:48:12 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -535,12 +535,6 @@ static int settrick (lua_State *L) {
 }
 
 
-/*static int set_gcstate (lua_State *L) {
-  static const char *const state[] = {"propagate", "sweep", "finalize"};
-  return 0;
-}*/
-
-
 static int get_gccolor (lua_State *L) {
   TValue *o;
   luaL_checkany(L, 1);
@@ -554,15 +548,23 @@ static int get_gccolor (lua_State *L) {
 }
 
 
-static int gcstate (lua_State *L) {
-  switch(G(L)->gcstate) {
-    case GCSpropagate: lua_pushstring(L, "propagate"); break;
-    case GCSsweepstring: lua_pushstring(L, "sweep strings"); break;
-    case GCSsweep: lua_pushstring(L, "sweep"); break;
-    case GCSfinalize: lua_pushstring(L, "finalize"); break;
-    default: lua_assert(0);
+static int gc_state (lua_State *L) {
+  static const char *statenames[] = {"", "pause", "propagate", "atomic",
+    "sweepstring", "sweepudata", "sweep", "finalize"};
+  static const int states[] = {0, GCSpause, GCSpropagate, GCSatomic,
+    GCSsweepstring, GCSsweepudata, GCSsweep, GCSfinalize};
+  int option = luaL_checkoption(L, 1, "", statenames);
+  if (option == 0) {
+    lua_pushstring(L, statenames[G(L)->gcstate]);
+    return 1;
   }
-  return 1;
+  else {
+    lua_lock(L);
+    luaC_runtilstate(L, bitmask(states[option]));
+    lua_assert(G(L)->gcstate == states[option]);
+    lua_unlock(L);
+    return 0;
+  }
 }
 
 
@@ -945,7 +947,7 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       lua_pushnumber(L1, lua_tonumber(L1, getindex));
     }
     else if EQ("topointer") {
-      lua_pushlightuserdata(L1, cast(void *, lua_topointer(L1, getindex)));
+      lua_pushnumber(L1, cast(size_t, lua_topointer(L1, getindex)));
     }
     else if EQ("tostring") {
       const char *s = lua_tostring(L1, getindex);
@@ -964,9 +966,9 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("tocfunction") {
       lua_pushcfunction(L1, lua_tocfunction(L1, getindex));
     }
-    else if EQ("func2udata") {
+    else if EQ("func2num") {
       lua_CFunction func = lua_tocfunction(L1, getindex);
-      lua_pushlightuserdata(L1, &func);
+      lua_pushnumber(L1, cast(size_t, func));
     }
     else if EQ("return") {
       int n = getnum;
@@ -1166,8 +1168,7 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       lua_pushinteger(L1, i);
     }
     else if EQ("checkstack") {
-      if (!lua_checkstack(L1, getnum))
-        luaL_error(L, "C stack overflow");
+      luaL_checkstack(L1, getnum, NULL);
     }
     else if EQ("newmetatable") {
       lua_pushboolean(L1, luaL_newmetatable(L1, getstring));
@@ -1333,7 +1334,7 @@ static const struct luaL_Reg tests_funcs[] = {
   {"doonnewstack", doonnewstack},
   {"doremote", doremote},
   {"gccolor", get_gccolor},
-  {"gcstate", gcstate},
+  {"gcstate", gc_state},
   {"getref", getref},
   {"hash", hash_query},
   {"int2fb", int2fb_aux},
