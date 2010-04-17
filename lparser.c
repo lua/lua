@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.81 2010/04/05 16:26:37 roberto Exp roberto $
+** $Id: lparser.c,v 2.82 2010/04/05 16:35:37 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -670,15 +670,12 @@ static int explist1 (LexState *ls, expdesc *v) {
 }
 
 
-static void funcargs (LexState *ls, expdesc *f) {
+static void funcargs (LexState *ls, expdesc *f, int line) {
   FuncState *fs = ls->fs;
   expdesc args;
   int base, nparams;
-  int line = ls->linenumber;
   switch (ls->t.token) {
     case '(': {  /* funcargs -> `(' [ explist1 ] `)' */
-      if (line != ls->lastline)
-        luaX_syntaxerror(ls,"ambiguous syntax (function call x new statement)");
       luaX_next(ls);
       if (ls->t.token == ')')  /* arg list is empty? */
         args.k = VVOID;
@@ -755,6 +752,7 @@ static void primaryexp (LexState *ls, expdesc *v) {
   /* primaryexp ->
         prefixexp { `.' NAME | `[' exp `]' | `:' NAME funcargs | funcargs } */
   FuncState *fs = ls->fs;
+  int line = ls->linenumber;
   prefixexp(ls, v);
   for (;;) {
     switch (ls->t.token) {
@@ -774,12 +772,12 @@ static void primaryexp (LexState *ls, expdesc *v) {
         luaX_next(ls);
         checkname(ls, &key);
         luaK_self(fs, v, &key);
-        funcargs(ls, v);
+        funcargs(ls, v, line);
         break;
       }
       case '(': case TK_STRING: case '{': {  /* funcargs */
         luaK_exp2nextreg(fs, v);
-        funcargs(ls, v);
+        funcargs(ls, v, line);
         break;
       }
       default: return;
@@ -894,9 +892,10 @@ static BinOpr subexpr (LexState *ls, expdesc *v, unsigned int limit) {
   enterlevel(ls);
   uop = getunopr(ls->t.token);
   if (uop != OPR_NOUNOPR) {
+    int line = ls->linenumber;
     luaX_next(ls);
     subexpr(ls, v, UNARY_PRIORITY);
-    luaK_prefix(ls->fs, uop, v);
+    luaK_prefix(ls->fs, uop, v, line);
   }
   else simpleexp(ls, v);
   /* expand while operators have priorities higher than `limit' */
@@ -904,11 +903,12 @@ static BinOpr subexpr (LexState *ls, expdesc *v, unsigned int limit) {
   while (op != OPR_NOBINOPR && priority[op].left > limit) {
     expdesc v2;
     BinOpr nextop;
+    int line = ls->linenumber;
     luaX_next(ls);
     luaK_infix(ls->fs, op, v);
     /* read sub-expression with higher priority */
     nextop = subexpr(ls, &v2, priority[op].right);
-    luaK_posfix(ls->fs, op, v, &v2);
+    luaK_posfix(ls->fs, op, v, &v2, line);
     op = nextop;
   }
   leavelevel(ls);
@@ -1346,6 +1346,9 @@ static void retstat (LexState *ls) {
 static int statement (LexState *ls) {
   int line = ls->linenumber;  /* may be needed for error messages */
   switch (ls->t.token) {
+    case ';': {  /* stat -> <empty statement> */
+      return 0;
+    }
     case TK_IF: {  /* stat -> ifstat */
       ifstat(ls, line);
       return 0;

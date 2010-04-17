@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.44 2010/02/26 20:40:29 roberto Exp roberto $
+** $Id: lcode.c,v 2.45 2010/03/12 19:14:06 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -719,7 +719,8 @@ static int constfolding (OpCode op, expdesc *e1, expdesc *e2) {
 }
 
 
-static void codearith (FuncState *fs, OpCode op, expdesc *e1, expdesc *e2) {
+static void codearith (FuncState *fs, OpCode op,
+                       expdesc *e1, expdesc *e2, int line) {
   if (constfolding(op, e1, e2))
     return;
   else {
@@ -735,6 +736,7 @@ static void codearith (FuncState *fs, OpCode op, expdesc *e1, expdesc *e2) {
     }
     e1->u.s.info = luaK_codeABC(fs, op, 0, o1, o2);
     e1->k = VRELOCABLE;
+    luaK_fixline(fs, line);
   }
 }
 
@@ -755,7 +757,7 @@ static void codecomp (FuncState *fs, OpCode op, int cond, expdesc *e1,
 }
 
 
-void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e) {
+void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
   expdesc e2;
   e2.t = e2.f = NO_JUMP; e2.k = VKNUM; e2.u.nval = 0;
   switch (op) {
@@ -764,14 +766,14 @@ void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e) {
         e->u.nval = luai_numunm(NULL, e->u.nval);  /* fold it */
       else {
         luaK_exp2anyreg(fs, e);
-        codearith(fs, OP_UNM, e, &e2);
+        codearith(fs, OP_UNM, e, &e2, line);
       }
       break;
     }
     case OPR_NOT: codenot(fs, e); break;
     case OPR_LEN: {
       luaK_exp2anyreg(fs, e);  /* cannot operate on constants */
-      codearith(fs, OP_LEN, e, &e2);
+      codearith(fs, OP_LEN, e, &e2, line);
       break;
     }
     default: lua_assert(0);
@@ -806,7 +808,8 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
 }
 
 
-void luaK_posfix (FuncState *fs, BinOpr op, expdesc *e1, expdesc *e2) {
+void luaK_posfix (FuncState *fs, BinOpr op,
+                  expdesc *e1, expdesc *e2, int line) {
   switch (op) {
     case OPR_AND: {
       lua_assert(e1->t == NO_JUMP);  /* list must be closed */
@@ -832,13 +835,13 @@ void luaK_posfix (FuncState *fs, BinOpr op, expdesc *e1, expdesc *e2) {
       }
       else {
         luaK_exp2nextreg(fs, e2);  /* operand must be on the 'stack' */
-        codearith(fs, OP_CONCAT, e1, e2);
+        codearith(fs, OP_CONCAT, e1, e2, line);
       }
       break;
     }
     case OPR_ADD: case OPR_SUB: case OPR_MUL: case OPR_DIV:
     case OPR_MOD: case OPR_POW: {
-      codearith(fs, cast(OpCode, op - OPR_ADD + OP_ADD), e1, e2);
+      codearith(fs, cast(OpCode, op - OPR_ADD + OP_ADD), e1, e2, line);
       break;
     }
     case OPR_EQ: case OPR_LT: case OPR_LE: {
