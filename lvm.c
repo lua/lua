@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.111 2010/04/13 20:48:12 roberto Exp roberto $
+** $Id: lvm.c,v 2.112 2010/04/15 19:43:43 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -167,7 +167,7 @@ static int call_binTM (lua_State *L, const TValue *p1, const TValue *p2,
 }
 
 
-static const TValue *get_compTM (lua_State *L, Table *mt1, Table *mt2,
+static const TValue *get_equalTM (lua_State *L, Table *mt1, Table *mt2,
                                   TMS event) {
   const TValue *tm1 = fasttm(L, mt1, event);
   const TValue *tm2;
@@ -183,14 +183,10 @@ static const TValue *get_compTM (lua_State *L, Table *mt1, Table *mt2,
 
 static int call_orderTM (lua_State *L, const TValue *p1, const TValue *p2,
                          TMS event) {
-  const TValue *tm1 = luaT_gettmbyobj(L, p1, event);
-  const TValue *tm2;
-  if (ttisnil(tm1)) return -1;  /* no metamethod? */
-  tm2 = luaT_gettmbyobj(L, p2, event);
-  if (!luaO_rawequalObj(tm1, tm2))  /* different metamethods? */
-    return -1;
-  callTM(L, tm1, p1, p2, L->top, 1);
-  return !l_isfalse(L->top);
+  if (!call_binTM(L, p1, p2, L->top, event))
+    return -1;  /* no metamethod */
+  else
+    return !l_isfalse(L->top);
 }
 
 
@@ -218,11 +214,9 @@ static int l_strcmp (const TString *ls, const TString *rs) {
 
 int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
   int res;
-  if (ttypenv(l) != ttypenv(r))
-    return luaG_ordererror(L, l, r);
-  else if (ttisnumber(l))
+  if (ttisnumber(l) && ttisnumber(r))
     return luai_numlt(L, nvalue(l), nvalue(r));
-  else if (ttisstring(l))
+  else if (ttisstring(l) && ttisstring(r))
     return l_strcmp(rawtsvalue(l), rawtsvalue(r)) < 0;
   else if ((res = call_orderTM(L, l, r, TM_LT)) != -1)
     return res;
@@ -232,11 +226,9 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
 
 int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
   int res;
-  if (ttypenv(l) != ttypenv(r))
-    return luaG_ordererror(L, l, r);
-  else if (ttisnumber(l))
+  if (ttisnumber(l) && ttisnumber(r))
     return luai_numle(L, nvalue(l), nvalue(r));
-  else if (ttisstring(l))
+  else if (ttisstring(l) && ttisstring(r))
     return l_strcmp(rawtsvalue(l), rawtsvalue(r)) <= 0;
   else if ((res = call_orderTM(L, l, r, TM_LE)) != -1)  /* first try `le' */
     return res;
@@ -258,12 +250,12 @@ int luaV_equalval_ (lua_State *L, const TValue *t1, const TValue *t2) {
     case LUA_TSTRING: return eqstr(rawtsvalue(t1), rawtsvalue(t2));
     case LUA_TUSERDATA: {
       if (uvalue(t1) == uvalue(t2)) return 1;
-      tm = get_compTM(L, uvalue(t1)->metatable, uvalue(t2)->metatable, TM_EQ);
+      tm = get_equalTM(L, uvalue(t1)->metatable, uvalue(t2)->metatable, TM_EQ);
       break;  /* will try TM */
     }
     case LUA_TTABLE: {
       if (hvalue(t1) == hvalue(t2)) return 1;
-      tm = get_compTM(L, hvalue(t1)->metatable, hvalue(t2)->metatable, TM_EQ);
+      tm = get_equalTM(L, hvalue(t1)->metatable, hvalue(t2)->metatable, TM_EQ);
       break;  /* will try TM */
     }
     default: return gcvalue(t1) == gcvalue(t2);
