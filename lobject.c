@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.38 2010/04/13 20:48:12 roberto Exp roberto $
+** $Id: lobject.c,v 2.39 2010/04/15 19:44:43 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -83,7 +83,7 @@ int luaO_rawequalObj (const TValue *t1, const TValue *t2) {
       return pvalue(t1) == pvalue(t2);
     case LUA_TSTRING:
       return rawtsvalue(t1) == rawtsvalue(t2);
-    case LUA_TCFP:
+    case LUA_TLCF:
       return fvalue(t1) == fvalue(t2);
     default:
       lua_assert(iscollectable(t1));

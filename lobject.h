@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.37 2010/04/12 16:07:06 roberto Exp roberto $
+** $Id: lobject.h,v 2.38 2010/04/14 15:13:48 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -25,10 +25,10 @@
 
 
 /*
-** Variant tag for C-function pointers (negative to be considered
+** Variant tag for light C functions (negative to be considered
 ** non collectable by 'iscollectable')
 */
-#define LUA_TCFP	(~0x0F | LUA_TFUNCTION)
+#define LUA_TLCF	(~0x0F | LUA_TFUNCTION)
 
 /*
 ** Union of all collectable objects
@@ -99,7 +99,7 @@ typedef struct lua_TValue {
 #define ttistable(o)	(ttype(o) == LUA_TTABLE)
 #define ttisfunction(o)	(ttypenv(o) == LUA_TFUNCTION)
 #define ttisclosure(o)	(ttype(o) == LUA_TFUNCTION)
-#define ttiscfp(o)	(ttype(o) == LUA_TCFP)
+#define ttislcf(o)	(ttype(o) == LUA_TLCF)
 #define ttisboolean(o)	(ttype(o) == LUA_TBOOLEAN)
 #define ttisuserdata(o)	(ttype(o) == LUA_TUSERDATA)
 #define ttisthread(o)	(ttype(o) == LUA_TTHREAD)
@@ -115,7 +115,7 @@ typedef struct lua_TValue {
 #define rawuvalue(o)	check_exp(ttisuserdata(o), &(o)->value_.gc->u)
 #define uvalue(o)	(&rawuvalue(o)->uv)
 #define clvalue(o)	check_exp(ttisclosure(o), &(o)->value_.gc->cl)
-#define fvalue(o)	check_exp(ttiscfp(o), (o)->value_.f)
+#define fvalue(o)	check_exp(ttislcf(o), (o)->value_.f)
 #define hvalue(o)	check_exp(ttistable(o), &(o)->value_.gc->h)
 #define bvalue(o)	check_exp(ttisboolean(o), (o)->value_.b)
 #define thvalue(o)	check_exp(ttisthread(o), &(o)->value_.gc->th)
@@ -140,7 +140,7 @@ typedef struct lua_TValue {
   { TValue *i_o=(obj); i_o->value_.n=(x); i_o->tt_=LUA_TNUMBER; }
 
 #define setfvalue(obj,x) \
-  { TValue *i_o=(obj); i_o->value_.f=(x); i_o->tt_=LUA_TCFP; }
+  { TValue *i_o=(obj); i_o->value_.f=(x); i_o->tt_=LUA_TLCF; }
 
 #define changenvalue(obj,x) \
   ( lua_assert((obj)->tt_==LUA_TNUMBER), (obj)->value_.n=(x) )

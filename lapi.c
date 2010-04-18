@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.120 2010/04/05 14:21:38 roberto Exp roberto $
+** $Id: lapi.c,v 2.121 2010/04/13 20:48:12 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -56,7 +56,7 @@ static TValue *index2addr (lua_State *L, int idx) {
   else {  /* upvalues */
     idx = LUA_REGISTRYINDEX - idx;
     api_check(L, idx <= UCHAR_MAX + 1, "upvalue index too large");
-    if (ttiscfp(ci->func))  /* C-function pointer? */
+    if (ttislcf(ci->func))  /* light C function? */
       return cast(TValue *, luaO_nilobject);  /* it has no upvalues */
     else {
       Closure *func = clvalue(ci->func);
@@ -241,7 +241,7 @@ LUA_API const char *lua_typename (lua_State *L, int t) {
 
 LUA_API int lua_iscfunction (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
-  return (ttiscfp(o) || (ttisclosure(o) && clvalue(o)->c.isC));
+  return (ttislcf(o) || (ttisclosure(o) && clvalue(o)->c.isC));
 }
 
 
@@ -367,7 +367,7 @@ LUA_API size_t lua_rawlen (lua_State *L, int idx) {
 
 LUA_API lua_CFunction lua_tocfunction (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
-  if (ttiscfp(o)) return fvalue(o);
+  if (ttislcf(o)) return fvalue(o);
   else if (ttisclosure(o) && clvalue(o)->c.isC)
     return clvalue(o)->c.f;
   else return NULL;  /* not a C function */
@@ -395,7 +395,7 @@ LUA_API const void *lua_topointer (lua_State *L, int idx) {
   switch (ttype(o)) {
     case LUA_TTABLE: return hvalue(o);
     case LUA_TFUNCTION: return clvalue(o);
-    case LUA_TCFP: return cast(void *, cast(size_t, fvalue(o)));
+    case LUA_TLCF: return cast(void *, cast(size_t, fvalue(o)));
     case LUA_TTHREAD: return thvalue(o);
     case LUA_TUSERDATA:
     case LUA_TLIGHTUSERDATA:
