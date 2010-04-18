@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.83 2010/04/08 17:16:46 roberto Exp roberto $
+** $Id: ldo.c,v 2.84 2010/04/13 20:48:12 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -48,7 +48,7 @@
 */
 #if !defined(LUAI_THROW)
 
-#if defined(__cplusplus)
+#if defined(__cplusplus) && !defined(LUA_USE_LONGJMP)
 /* C++ exceptions */
 #define LUAI_THROW(L,c)		throw(c)
 #define LUAI_TRY(L,c,a) \
