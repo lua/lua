@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.76 2009/12/17 12:26:09 roberto Exp roberto $
+** $Id: llimits.h,v 1.77 2009/12/17 12:50:20 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -139,19 +139,19 @@ typedef lu_int32 Instruction;
 ** created/deleted/resumed/yielded.
 */
 #if !defined(luai_userstateopen)
-#define luai_userstateopen(L)           ((void)L)
+#define luai_userstateopen(L)		((void)L)
 #endif
 
 #if !defined(luai_userstateclose)
-#define luai_userstateclose(L)          ((void)L)
+#define luai_userstateclose(L)		((void)L)
 #endif
 
 #if !defined(luai_userstatethread)
-#define luai_userstatethread(L,L1)      ((void)L)
+#define luai_userstatethread(L,L1)	((void)L)
 #endif
 
 #if !defined(luai_userstatefree)
-#define luai_userstatefree(L)           ((void)L)
+#define luai_userstatefree(L,L1)	((void)L)
 #endif
 
 #if !defined(luai_userstateresume)

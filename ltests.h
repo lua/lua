@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.30 2010/01/11 17:33:09 roberto Exp roberto $
+** $Id: ltests.h,v 2.31 2010/04/12 16:07:29 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -62,6 +62,8 @@ struct L_EXTRA { int lock; int *plock; };
 #define luai_userstateopen(l)  \
 	(getlock(l)->lock = 0, getlock(l)->plock = &(getlock(l)->lock))
 #define luai_userstatethread(l,l1)  (getlock(l1)->plock = getlock(l)->plock)
+#define luai_userstatefree(l,l1) \
+  lua_assert(getlock(l)->plock == getlock(l1)->plock)
 #define lua_lock(l)     lua_assert((*getlock(l)->plock)++ == 0)
 #define lua_unlock(l)   lua_assert(--(*getlock(l)->plock) == 0)
 

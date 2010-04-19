@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.80 2010/04/14 15:14:21 roberto Exp roberto $
+** $Id: lstate.c,v 2.81 2010/04/19 16:34:46 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -192,14 +192,13 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   setthvalue(L, L->top, L1);
   api_incr_top(L);
   preinit_state(L1, G(L));
-  stack_init(L1, L);  /* init stack */
   L1->hookmask = L->hookmask;
   L1->basehookcount = L->basehookcount;
   L1->hook = L->hook;
   resethookcount(L1);
-  lua_assert(iswhite(obj2gco(L1)));
-  lua_unlock(L);
   luai_userstatethread(L, L1);
+  stack_init(L1, L);  /* init stack */
+  lua_unlock(L);
   return L1;
 }
 
@@ -208,7 +207,7 @@ void luaE_freethread (lua_State *L, lua_State *L1) {
   LX *l = fromstate(L1);
   luaF_close(L1, L1->stack);  /* close all upvalues for this thread */
   lua_assert(L1->openupval == NULL);
-  luai_userstatefree(L1);
+  luai_userstatefree(L, L1);
   freestack(L1);
   luaM_free(L, l);
 }
