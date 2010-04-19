@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.240 2010/03/26 20:58:11 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.241 2010/04/02 15:19:19 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -182,10 +182,11 @@ static int luaB_type (lua_State *L) {
 }
 
 
-static int pairsmeta (lua_State *L, const char *method, int iszero) {
+static int pairsmeta (lua_State *L, const char *method, int iszero,
+                      lua_CFunction iter) {
   if (!luaL_getmetafield(L, 1, method)) {  /* no metamethod? */
     luaL_checktype(L, 1, LUA_TTABLE);  /* argument must be a table */
-    lua_pushvalue(L, lua_upvalueindex(1));  /* will return generator, */
+    lua_pushcfunction(L, iter);  /* will return generator, */
     lua_pushvalue(L, 1);  /* state, */
     if (iszero) lua_pushinteger(L, 0);  /* and initial value */
     else lua_pushnil(L);
@@ -211,7 +212,7 @@ static int luaB_next (lua_State *L) {
 
 
 static int luaB_pairs (lua_State *L) {
-  return pairsmeta(L, "__pairs", 0);
+  return pairsmeta(L, "__pairs", 0, luaB_next);
 }
 
 
@@ -228,12 +229,10 @@ static int ipairsaux (lua_State *L) {
 
 
 static int luaB_ipairs (lua_State *L) {
-  return pairsmeta(L, "__ipairs", 1);
+  return pairsmeta(L, "__ipairs", 1, ipairsaux);
 }
 
 #else
-
-#define ipairsaux	luaB_ipairs
 
 static int luaB_ipairs (lua_State *L) {
   return luaL_error(L, "'ipairs' deprecated");
@@ -485,11 +484,13 @@ static const luaL_Reg base_funcs[] = {
   {"gcinfo", luaB_gcinfo},
   {"getfenv", luaB_getfenv},
   {"getmetatable", luaB_getmetatable},
+  {"ipairs", luaB_ipairs},
   {"loadfile", luaB_loadfile},
   {"load", luaB_load},
   {"loadin", luaB_loadin},
   {"loadstring", luaB_loadstring},
   {"next", luaB_next},
+  {"pairs", luaB_pairs},
   {"pcall", luaB_pcall},
   {"print", luaB_print},
   {"rawequal", luaB_rawequal},
@@ -643,14 +644,6 @@ static const luaL_Reg co_funcs[] = {
 /* }====================================================== */
 
 
-static void auxopen (lua_State *L, const char *name,
-                     lua_CFunction f, lua_CFunction u) {
-  lua_pushcfunction(L, u);
-  lua_pushcclosure(L, f, 1);
-  lua_setfield(L, -2, name);
-}
-
-
 static void base_open (lua_State *L) {
   /* set global _G */
   lua_pushglobaltable(L);
@@ -660,9 +653,6 @@ static void base_open (lua_State *L) {
   luaL_register(L, "_G", base_funcs);
   lua_pushliteral(L, LUA_VERSION);
   lua_setfield(L, -2, "_VERSION");  /* set global _VERSION */
-  /* `ipairs' and `pairs' need auxiliary functions as upvalues */
-  auxopen(L, "ipairs", luaB_ipairs, ipairsaux);
-  auxopen(L, "pairs", luaB_pairs, luaB_next);
   /* `newproxy' needs a weaktable as upvalue */
   lua_createtable(L, 0, 1);  /* new table `w' */
   lua_pushvalue(L, -1);  /* `w' will be its own metatable */
