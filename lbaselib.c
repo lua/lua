@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.241 2010/04/02 15:19:19 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.242 2010/04/19 16:36:06 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -136,12 +136,6 @@ static int luaB_rawset (lua_State *L) {
   luaL_checkany(L, 3);
   lua_settop(L, 3);
   lua_rawset(L, 1);
-  return 1;
-}
-
-
-static int luaB_gcinfo (lua_State *L) {
-  lua_pushinteger(L, lua_gc(L, LUA_GCCOUNT, 0));
   return 1;
 }
 
@@ -481,7 +475,6 @@ static const luaL_Reg base_funcs[] = {
   {"collectgarbage", luaB_collectgarbage},
   {"dofile", luaB_dofile},
   {"error", luaB_error},
-  {"gcinfo", luaB_gcinfo},
   {"getfenv", luaB_getfenv},
   {"getmetatable", luaB_getmetatable},
   {"ipairs", luaB_ipairs},
