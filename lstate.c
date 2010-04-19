@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.79 2010/04/12 16:07:06 roberto Exp roberto $
+** $Id: lstate.c,v 2.80 2010/04/14 15:14:21 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -218,7 +218,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   int i;
   lua_State *L;
   global_State *g;
-  LG *l = cast(LG *, (*f)(ud, NULL, 0, sizeof(LG)));
+  LG *l = cast(LG *, (*f)(ud, NULL, LUA_TTHREAD, sizeof(LG)));
   if (l == NULL) return NULL;
   L = &l->l.l;
   g = &l->g;
