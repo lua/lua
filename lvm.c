@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.113 2010/04/18 13:15:11 roberto Exp roberto $
+** $Id: lvm.c,v 2.114 2010/04/18 13:22:48 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -421,10 +421,12 @@ void luaV_finishOp (lua_State *L) {
   (k + (GETARG_Bx(i) != 0 ? GETARG_Bx(i) - 1 : GETARG_Ax(*ci->u.l.savedpc++)))
 
 
-#define dojump(i)	{ ci->u.l.savedpc += (i); luai_threadyield(L);}
+#define dojump(i)	(ci->u.l.savedpc += (i))
 
 
 #define Protect(x)	{ {x;}; base = ci->u.l.base; }
+
+#define checkGC(L)	Protect(luaC_checkGC(L); luai_threadyield(L);)
 
 
 #define arith_op(op,tm) { \
@@ -522,7 +524,7 @@ void luaV_execute (lua_State *L) {
         sethvalue(L, ra, t);
         if (b != 0 || c != 0)
           luaH_resize(L, t, luaO_fb2int(b), luaO_fb2int(c));
-        Protect(luaC_checkGC(L));
+        checkGC(L);
         break;
       }
       case OP_SELF: {
@@ -579,7 +581,7 @@ void luaV_execute (lua_State *L) {
         int b = GETARG_B(i);
         int c = GETARG_C(i);
         L->top = base + c + 1;  /* mark the end of concat operands */
-        Protect(luaV_concat(L, c-b+1); luaC_checkGC(L));
+        Protect(luaV_concat(L, c-b+1); checkGC(L);)
         L->top = ci->top;  /* restore top */
         setobjs2s(L, RA(i), base+b);
         break;
@@ -776,7 +778,7 @@ void luaV_execute (lua_State *L) {
           else  /* get upvalue from enclosing function */
             ncl->l.upvals[j] = cl->upvals[uv[j].idx];
         }
-        Protect(luaC_checkGC(L));
+        checkGC(L);
         break;
       }
       case OP_VARARG: {
