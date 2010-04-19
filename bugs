@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.104 2009/08/05 13:09:38 roberto Exp roberto $
-+** $Id: bugs,v 1.104 2009/08/05 13:09:38 roberto Exp roberto $
+-** $Id: bugs,v 1.105 2009/11/23 14:59:30 roberto Exp roberto $
++** $Id: bugs,v 1.105 2009/11/23 14:59:30 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2254,6 +2254,18 @@ patch = [[
    return ts;
  }
  
+]]
+}
+
+Bug{
+what = [['string.format' may get buffer as an argument when there are
+missing arguments and format string is too long]],
+report = [[Roberto I., 2010/04/12]],
+since = [[5.0]],
+example = [[
+x = string.rep("x", 10000) .. "%d"
+print(string.format(x))    -- gives wrong error message
+patch = [[
 ]]
 }
 
