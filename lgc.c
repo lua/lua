@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.77 2010/04/05 14:15:35 roberto Exp roberto $
+** $Id: lgc.c,v 2.78 2010/04/12 16:07:06 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -222,8 +222,7 @@ static void markbeingfnz (global_State *g) {
   GCObject *o;
   for (o = g->tobefnz; o != NULL; o = gch(o)->next) {
     lua_assert(testbit(gch(o)->marked, SEPARATED));
-    makewhite(g, o);
-    reallymarkobject(g, o);
+    markobject(g, o);
   }
 }
 
@@ -619,7 +618,6 @@ static Udata *udata2finalize (global_State *g) {
   g->allgc = o;
   lua_assert(isfinalized(gch(o)));
   resetbit(gch(o)->marked, SEPARATED);  /* mark it as such */
-  makewhite(g, o);
   return rawgco2u(o);
 }
 
@@ -634,15 +632,15 @@ static void GCTM (lua_State *L, int propagateerrors) {
   global_State *g = G(L);
   Udata *udata = udata2finalize(g);
   const TValue *tm = gfasttm(g, udata->uv.metatable, TM_GC);
-  if (tm != NULL && ttisfunction(tm)) {
+  if (tm != NULL && ttisfunction(tm)) {  /* is there a finalizer? */
     int status;
     lu_byte oldah = L->allowhook;
     lu_mem oldt = g->GCthreshold;
     L->allowhook = 0;  /* stop debug hooks during GC tag method */
-    g->GCthreshold = 2*g->totalbytes;  /* avoid GC steps */
-    setobj2s(L, L->top, tm);
-    setuvalue(L, L->top+1, udata);
-    L->top += 2;
+    g->GCthreshold = 2 * g->totalbytes;  /* avoid GC steps */
+    setobj2s(L, L->top, tm);  /* push finalizer... */
+    setuvalue(L, L->top+1, udata);  /* ... and its argument */
+    L->top += 2;  /* and (next line) call the finalizer */
     status = luaD_pcall(L, dothecall, NULL, savestack(L, L->top - 2), 0);
     L->allowhook = oldah;  /* restore hooks */
     g->GCthreshold = oldt;  /* restore threshold */
@@ -776,22 +774,24 @@ static l_mem singlestep (lua_State *L) {
     case GCSsweepstring: {
       if (g->sweepstrgc < g->strt.size) {
         sweepwholelist(L, &g->strt.hash[g->sweepstrgc++]);
+        return GCSWEEPCOST;
       }
       else {  /* no more strings to sweep */
         g->sweepgc = &g->udgc;  /* prepare to sweep userdata */
         g->gcstate = GCSsweepudata;
+        return 0;
       }
-      return GCSWEEPCOST;
     }
     case GCSsweepudata: {
       if (*g->sweepgc) {
         g->sweepgc = sweeplist(L, g->sweepgc, GCSWEEPMAX);
         return GCSWEEPMAX*GCSWEEPCOST;
       }
-      else {  /* go to next phase */
-        g->sweepgc = &g->allgc;
+      else {
+        sweepwholelist(L, &g->tobefnz);  /* sweep 'to-be-finalized' list */
+        g->sweepgc = &g->allgc;  /* go to next phase */
         g->gcstate = GCSsweep;
-        return 0;
+        return GCSWEEPCOST;
       }
     }
     case GCSsweep: {
