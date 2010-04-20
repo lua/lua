@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.122 2010/04/18 13:22:48 roberto Exp roberto $
+** $Id: lapi.c,v 2.123 2010/04/19 16:33:19 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -874,7 +874,7 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
       const TValue *gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
       /* set global table as 1st upvalue of 'f' (may be _ENV) */
       setobj(L, f->l.upvals[0]->v, gt);
-      luaC_barrier(L, f, gt);
+      luaC_barrier(L, f->l.upvals[0], gt);
     }
   }
   lua_unlock(L);
@@ -1073,19 +1073,22 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
 
 
 
-static const char *aux_upvalue (StkId fi, int n, TValue **val) {
+static const char *aux_upvalue (StkId fi, int n, TValue **val,
+                                GCObject **owner) {
   Closure *f;
   if (!ttisclosure(fi)) return NULL;
   f = clvalue(fi);
   if (f->c.isC) {
     if (!(1 <= n && n <= f->c.nupvalues)) return NULL;
     *val = &f->c.upvalue[n-1];
+    if (owner) *owner = obj2gco(f);
     return "";
   }
   else {
     Proto *p = f->l.p;
     if (!(1 <= n && n <= p->sizeupvalues)) return NULL;
     *val = f->l.upvals[n-1]->v;
+    if (owner) *owner = obj2gco(f->l.upvals[n - 1]);
     return getstr(p->upvalues[n-1].name);
   }
 }
@@ -1095,7 +1098,7 @@ LUA_API const char *lua_getupvalue (lua_State *L, int funcindex, int n) {
   const char *name;
   TValue *val;
   lua_lock(L);
-  name = aux_upvalue(index2addr(L, funcindex), n, &val);
+  name = aux_upvalue(index2addr(L, funcindex), n, &val, NULL);
   if (name) {
     setobj2s(L, L->top, val);
     api_incr_top(L);
@@ -1108,15 +1111,16 @@ LUA_API const char *lua_getupvalue (lua_State *L, int funcindex, int n) {
 LUA_API const char *lua_setupvalue (lua_State *L, int funcindex, int n) {
   const char *name;
   TValue *val;
+  GCObject *owner;
   StkId fi;
   lua_lock(L);
   fi = index2addr(L, funcindex);
   api_checknelems(L, 1);
-  name = aux_upvalue(fi, n, &val);
+  name = aux_upvalue(fi, n, &val, &owner);
   if (name) {
     L->top--;
     setobj(L, val, L->top);
-    luaC_barrier(L, clvalue(fi), L->top);
+    luaC_barrier(L, owner, L->top);
   }
   lua_unlock(L);
   return name;
