@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.78 2010/04/12 16:07:06 roberto Exp roberto $
+** $Id: lgc.c,v 2.79 2010/04/20 20:15:30 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -31,18 +31,22 @@
 #define GCATOMICCOST	1000
 
 
+#define issweepphase(g)  \
+	(GCSsweepstring <= (g)->gcstate && (g)->gcstate <= GCSsweep)
+
+
 /*
 ** 'makewhite' erases all color bits plus the old bit and then
 ** sets only the current white bit
 */
 #define maskcolors	(~(bit2mask(BLACKBIT, OLDBIT) | WHITEBITS))
-#define makewhite(w,x)	\
+#define makewhite(g,x)	\
  (gch(x)->marked = cast_byte((gch(x)->marked & maskcolors) | luaC_white(g)))
 
 #define white2gray(x)	resetbits(gch(x)->marked, WHITEBITS)
 #define black2gray(x)	resetbit(gch(x)->marked, BLACKBIT)
 
-#define stringmark(s)	resetbits((s)->tsv.marked, WHITEBITS)
+#define stringmark(s)	((void)((s) && resetbits((s)->tsv.marked, WHITEBITS)))
 
 
 #define isfinalized(u)		testbit((u)->marked, FINALIZEDBIT)
@@ -57,6 +61,16 @@
 		reallymarkobject(g, obj2gco(t)); }
 
 
+/*
+** macro to tell when main invariant (white objects cannot point to black
+** ones) must be kept. During a non-generational collection, the sweep
+** phase may brak the invariant, as objects turned white may point to
+** still-black objects. The invariant is restored when sweep ends and
+** all objects are white again. During a generational collection, the
+** invariant must be kept all times.
+*/
+#define keepinvariant(g)  (g->gckind == KGC_GEN || g->gcstate == GCSpropagate)
+
 static void reallymarkobject (global_State *g, GCObject *o);
 
 
@@ -66,12 +80,16 @@ static void reallymarkobject (global_State *g, GCObject *o);
 ** =======================================================
 */
 
-static void linktable (Table *h, GCObject **p) {
-  h->gclist = *p;
-  *p = obj2gco(h);
-}
+
+/*
+** link table 'h' into list pointed by 'p'
+*/
+#define linktable(h,p)	((h)->gclist = *(p), *(p) = obj2gco(h))
 
 
+/*
+** mark a table entry as dead (therefore removing it from the table)
+*/
 static void removeentry (Node *n) {
   lua_assert(ttisnil(gval(n)));
   if (iscollectable(gkey(n)))
@@ -80,8 +98,8 @@ static void removeentry (Node *n) {
 
 
 /*
-** The next function tells whether a key or value can be cleared from
-** a weak table. Non-collectable objects are never removed from weak
+** tells whether a key or value can be cleared from a weak
+** table. Non-collectable objects are never removed from weak
 ** tables. Strings behave as `values', so are never removed too. for
 ** other objects: if really collected, cannot keep them; for objects
 ** being finalized, keep them in keys, but not in values
@@ -97,25 +115,33 @@ static int iscleared (const TValue *o, int iskey) {
 }
 
 
+/*
+** barrier that moves collector forward, that is, mark the white object
+** being pointed by a black object.
+*/
 void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v) {
   global_State *g = G(L);
   lua_assert(isblack(o) && iswhite(v) && !isdead(g, v) && !isdead(g, o));
   lua_assert(g->gckind == KGC_GEN ||
              (g->gcstate != GCSfinalize && g->gcstate != GCSpause));
   lua_assert(gch(o)->tt != LUA_TTABLE);
-  if (g->gcstate == GCSpropagate)  /* must keep invariant? */
+  if (keepinvariant(g))  /* must keep invariant? */
     reallymarkobject(g, v);  /* restore invariant */
-  else  /* don't mind */
-    makewhite(g, o);  /* mark as white just to avoid other barriers */
+  else {  /* sweep phase */
+    lua_assert(issweepphase(g));
+    makewhite(g, o);  /* mark main obj. as white to avoid other barriers */
+  }
 }
 
 
+/*
+** barrier that moves collector backward, that is, mark the black object
+** pointing to a white object as gray again.
+*/
 void luaC_barrierback (lua_State *L, Table *t) {
   global_State *g = G(L);
   GCObject *o = obj2gco(t);
   lua_assert(isblack(o) && !isdead(g, o));
-  lua_assert(g->gckind == KGC_GEN ||
-             (g->gcstate != GCSfinalize && g->gcstate != GCSpause));
   black2gray(o);  /* make table gray (again) */
   t->gclist = g->grayagain;
   g->grayagain = o;
@@ -123,7 +149,9 @@ void luaC_barrierback (lua_State *L, Table *t) {
 
 
 /*
-** create a new collectable object and link it to '*list'
+** create a new collectable object (with given type and size) and link
+** it to '*list'. 'offset' tells how many bytes to allocate before the
+** object itself (used only by states).
 */
 GCObject *luaC_newobj (lua_State *L, int tt, size_t sz, GCObject **list,
                        int offset) {
@@ -139,20 +167,19 @@ GCObject *luaC_newobj (lua_State *L, int tt, size_t sz, GCObject **list,
 }
 
 
+/*
+** link an upvalue back to the main root list. (It was previously in the
+** list of open upvalues of some thread.)
+*/
 void luaC_linkupval (lua_State *L, UpVal *uv) {
   global_State *g = G(L);
   GCObject *o = obj2gco(uv);
   gch(o)->next = g->allgc;  /* link upvalue into `allgc' list */
   g->allgc = o;
-  if (isgray(o)) {
-    if (g->gcstate == GCSpropagate) {
-      gray2black(o);  /* closed upvalues need barrier */
-      luaC_barrier(L, uv, uv->v);
-    }
-    else {  /* sweep phase: sweep it (turning it into white) */
-      makewhite(g, o);
-      lua_assert(g->gcstate != GCSfinalize && g->gcstate != GCSpause);
-    }
+  lua_assert(!isblack(o));  /* open upvalues are never black */
+  if (isgray(o)) {  /* is it marked? */
+    gray2black(o);  /* could not be black; now it can */
+    luaC_barrier(L, uv, uv->v);
   }
 }
 
@@ -166,25 +193,33 @@ void luaC_linkupval (lua_State *L, UpVal *uv) {
 ** =======================================================
 */
 
+
+/*
+** mark an object. Userdata and closed upvalues are visited and turned
+** black here. Strings remain gray (it is the same as making them
+** black). Other objects are marked gray and added to appropriate list
+** to be visited (and turned black) later. (Open upvalues are already
+** linked in 'headuv' list.)
+*/
 static void reallymarkobject (global_State *g, GCObject *o) {
   lua_assert(iswhite(o) && !isdead(g, o));
   white2gray(o);
   switch (gch(o)->tt) {
     case LUA_TSTRING: {
-      return;
+      return;  /* for strings, gray is as good as black */
     }
     case LUA_TUSERDATA: {
       Table *mt = gco2u(o)->metatable;
-      gray2black(o);  /* udata are never gray */
       markobject(g, mt);
       markobject(g, gco2u(o)->env);
+      gray2black(o);  /* all pointers marked */
       return;
     }
     case LUA_TUPVAL: {
       UpVal *uv = gco2uv(o);
       markvalue(g, uv->v);
-      if (uv->v == &uv->u.value)  /* closed? */
-        gray2black(o);  /* open upvalues are never black */
+      if (uv->v == &uv->u.value)  /* closed? (open upvalues remain gray) */
+        gray2black(o);  /* make it black */
       return;
     }
     case LUA_TFUNCTION: {
@@ -211,6 +246,9 @@ static void reallymarkobject (global_State *g, GCObject *o) {
 }
 
 
+/*
+** mark tag methods for basic types
+*/
 static void markmt (global_State *g) {
   int i;
   for (i=0; i < LUA_NUMTAGS; i++)
@@ -218,6 +256,9 @@ static void markmt (global_State *g) {
 }
 
 
+/*
+** mark all objects in list of being-finalized
+*/
 static void markbeingfnz (global_State *g) {
   GCObject *o;
   for (o = g->tobefnz; o != NULL; o = gch(o)->next) {
@@ -227,7 +268,23 @@ static void markbeingfnz (global_State *g) {
 }
 
 
-/* mark root set */
+/*
+** mark all values stored in marked open upvalues. (See comment in
+** 'lstate.h'.)
+*/
+static void remarkupvals (global_State *g) {
+  UpVal *uv;
+  for (uv = g->uvhead.u.l.next; uv != &g->uvhead; uv = uv->u.l.next) {
+    lua_assert(uv->u.l.next->u.l.prev == uv && uv->u.l.prev->u.l.next == uv);
+    if (isgray(obj2gco(uv)))
+      markvalue(g, uv->v);
+  }
+}
+
+
+/*
+** mark root set
+*/
 static void markroot (lua_State *L) {
   global_State *g = G(L);
   g->gray = NULL;
@@ -237,16 +294,6 @@ static void markroot (lua_State *L) {
   markvalue(g, &g->l_registry);
   markmt(g);
   markbeingfnz(g);  /* mark any finalizing object left from previous cycle */
-}
-
-
-static void remarkupvals (global_State *g) {
-  UpVal *uv;
-  for (uv = g->uvhead.u.l.next; uv != &g->uvhead; uv = uv->u.l.next) {
-    lua_assert(uv->u.l.next->u.l.prev == uv && uv->u.l.prev->u.l.next == uv);
-    if (isgray(obj2gco(uv)))
-      markvalue(g, uv->v);
-  }
 }
 
 /* }====================================================== */
@@ -259,49 +306,48 @@ static void remarkupvals (global_State *g) {
 */
 
 static void traverseweakvalue (global_State *g, Table *h) {
-  int i = sizenode(h);
-  while (i--) {
-    Node *n = gnode(h, i);
+  Node *n, *limit = gnode(h, sizenode(h));
+  for (n = gnode(h, 0); n < limit; n++) {
     checkdeadkey(n);
-    if (ttisnil(gval(n)))
-      removeentry(n);  /* remove empty entries */
+    if (ttisnil(gval(n)))  /* entry is empty? */
+      removeentry(n);  /* remove it */
     else {
       lua_assert(!ttisnil(gkey(n)));
-      markvalue(g, gkey(n));
+      markvalue(g, gkey(n));  /* mark key */
     }
   }
-  linktable(h, &g->weak);
+  linktable(h, &g->weak);  /* go to appropriate list */
 }
 
 
 static int traverseephemeron (global_State *g, Table *h) {
-  int marked = 0;
-  int hasclears = 0;
-  int i = h->sizearray;
-  while (i--) {  /* mark array part (numeric keys are 'strong') */
+  int marked = 0;  /* true if an object is marked in this traversal */
+  int hasclears = 0;  /* true if table has unmarked pairs */
+  Node *n, *limit = gnode(h, sizenode(h));
+  int i;
+  /* traverse array part (numeric keys are 'strong') */
+  for (i = 0; i < h->sizearray; i++) {
     if (valiswhite(&h->array[i])) {
       marked = 1;
       reallymarkobject(g, gcvalue(&h->array[i]));
     }
   }
-  i = sizenode(h);
-  while (i--) {
-    Node *n = gnode(h, i);
+  /* traverse hash part */
+  for (n = gnode(h, 0); n < limit; n++) {
     checkdeadkey(n);
     if (ttisnil(gval(n)))  /* entry is empty? */
       removeentry(n);  /* remove it */
-    else if (valiswhite(gval(n))) {
-      /* value is not marked yet */
+    else if (valiswhite(gval(n))) {  /* value not marked yet? */
       if (iscleared(key2tval(n), 1))  /* key is not marked (yet)? */
         hasclears = 1;  /* may have to propagate mark from key to value */
-      else {  /* mark value only if key is marked */
-        marked = 1;  /* some mark changed status */
+      else {  /* key is marked, so mark value */
+        marked = 1;  /* value was not marked */
         reallymarkobject(g, gcvalue(gval(n)));
       }
     }
   }
-  if (hasclears)
-    linktable(h, &g->ephemeron);
+  if (hasclears)  /* does table have unmarked pairs? */
+    linktable(h, &g->ephemeron);  /* will have to propagate again */
   else  /* nothing to propagate */
     linktable(h, &g->weak);  /* avoid convergence phase  */
   return marked;
@@ -309,20 +355,18 @@ static int traverseephemeron (global_State *g, Table *h) {
 
 
 static void traversestrongtable (global_State *g, Table *h) {
+  Node *n, *limit = gnode(h, sizenode(h));
   int i;
-  i = h->sizearray;
-  while (i--)
+  for (i = 0; i < h->sizearray; i++)  /* traverse array part */
     markvalue(g, &h->array[i]);
-  i = sizenode(h);
-  while (i--) {
-    Node *n = gnode(h, i);
+  for (n = gnode(h, 0); n < limit; n++) {  /* traverse hash part */
     checkdeadkey(n);
-    if (ttisnil(gval(n)))
-      removeentry(n);  /* remove empty entries */
+    if (ttisnil(gval(n)))  /* entry is empty? */
+      removeentry(n);  /* remove it */
     else {
       lua_assert(!ttisnil(gkey(n)));
-      markvalue(g, gkey(n));
-      markvalue(g, gval(n));
+      markvalue(g, gkey(n));  /* mark key */
+      markvalue(g, gval(n));  /* mark value */
     }
   }
 }
@@ -349,40 +393,34 @@ static void traversetable (global_State *g, Table *h) {
 }
 
 
-/*
-** All marks are conditional because a GC may happen while the
-** prototype is still being created
-*/
 static void traverseproto (global_State *g, Proto *f) {
   int i;
-  if (f->source) stringmark(f->source);
-  for (i=0; i<f->sizek; i++)  /* mark literals */
+  stringmark(f->source);
+  for (i = 0; i < f->sizek; i++)  /* mark literals */
     markvalue(g, &f->k[i]);
-  for (i=0; i<f->sizeupvalues; i++) {  /* mark upvalue names */
-    if (f->upvalues[i].name)
-      stringmark(f->upvalues[i].name);
-  }
-  for (i=0; i<f->sizep; i++)  /* mark nested protos */
+  for (i = 0; i < f->sizeupvalues; i++)  /* mark upvalue names */
+    stringmark(f->upvalues[i].name);
+  for (i = 0; i < f->sizep; i++)  /* mark nested protos */
     markobject(g, f->p[i]);
-  for (i=0; i<f->sizelocvars; i++) {  /* mark local-variable names */
-    if (f->locvars[i].varname)
-      stringmark(f->locvars[i].varname);
-  }
+  for (i = 0; i < f->sizelocvars; i++)  /* mark local-variable names */
+    stringmark(f->locvars[i].varname);
 }
 
 
-static void traverseclosure (global_State *g, Closure *cl) {
+static l_mem traverseclosure (global_State *g, Closure *cl) {
   if (cl->c.isC) {
     int i;
     for (i=0; i<cl->c.nupvalues; i++)  /* mark its upvalues */
       markvalue(g, &cl->c.upvalue[i]);
+    return sizeCclosure(cl->c.nupvalues);
   }
   else {
     int i;
     lua_assert(cl->l.nupvalues == cl->l.p->sizeupvalues);
-    markobject(g, cl->l.p);
+    markobject(g, cl->l.p);  /* mark its prototype */
     for (i=0; i<cl->l.nupvalues; i++)  /* mark its upvalues */
       markobject(g, cl->l.upvals[i]);
+    return sizeLclosure(cl->l.nupvalues);
   }
 }
 
@@ -421,9 +459,7 @@ static l_mem propagatemark (global_State *g) {
     case LUA_TFUNCTION: {
       Closure *cl = gco2cl(o);
       g->gray = cl->c.gclist;
-      traverseclosure(g, cl);
-      return (cl->c.isC) ? sizeCclosure(cl->c.nupvalues) :
-                           sizeLclosure(cl->l.nupvalues);
+      return traverseclosure(g, cl);
     }
     case LUA_TTHREAD: {
       lua_State *th = gco2th(o);
@@ -467,14 +503,14 @@ static void convergeephemerons (global_State *g) {
   int changed;
   do {
     GCObject *w;
-    GCObject *next = g->ephemeron;
-    g->ephemeron = NULL;
+    GCObject *next = g->ephemeron;  /* get ephemeron list */
+    g->ephemeron = NULL;  /* tables will return to this list when traversed */
     changed = 0;
     while ((w = next) != NULL) {
       next = gco2t(w)->gclist;
-      if (traverseephemeron(g, gco2t(w))) {
-        changed = 1;
-        propagateall(g);
+      if (traverseephemeron(g, gco2t(w))) {  /* traverse marked some value? */
+        propagateall(g);  /* propagate changes */
+        changed = 1;  /* will have to revisit all ephemeron tables */
       }
     }
   } while (changed);
@@ -489,26 +525,26 @@ static void convergeephemerons (global_State *g) {
 ** =======================================================
 */
 
-/* clear collected entries from weaktables */
+/*
+** clear collected entries from all weaktables in list 'l'
+*/
 static void cleartable (GCObject *l) {
-  while (l) {
+  for (; l != NULL; l = gco2t(l)->gclist) {
     Table *h = gco2t(l);
-    int i = h->sizearray;
-    while (i--) {
+    Node *n, *limit = gnode(h, sizenode(h));
+    int i;
+    for (i = 0; i < h->sizearray; i++) {
       TValue *o = &h->array[i];
       if (iscleared(o, 0))  /* value was collected? */
         setnilvalue(o);  /* remove value */
     }
-    i = sizenode(h);
-    while (i--) {
-      Node *n = gnode(h, i);
+    for (n = gnode(h, 0); n < limit; n++) {
       if (!ttisnil(gval(n)) &&  /* non-empty entry? */
           (iscleared(key2tval(n), 1) || iscleared(gval(n), 0))) {
         setnilvalue(gval(n));  /* remove value ... */
-        removeentry(n);  /* remove entry from table */
+        removeentry(n);  /* and remove entry from table */
       }
     }
-    l = h->gclist;
   }
 }
 
@@ -535,6 +571,10 @@ static void freeobj (lua_State *L, GCObject *o) {
 static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count);
 
 
+/*
+** sweep the (open) upvalues of a thread and resize its stack and
+** list of call-info structures.
+*/
 static void sweepthread (lua_State *L, lua_State *L1, int alive) {
   if (L1->stack == NULL) return;  /* stack not completely built yet */
   sweepwholelist(L, &L1->openupval);  /* sweep open upvalues */
@@ -601,13 +641,11 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
 
 static void checkSizes (lua_State *L) {
   global_State *g = G(L);
-  if (g->strt.nuse < cast(lu_int32, g->strt.size)) {
-    /* string-table size could be the smaller power of 2 larger than 'nuse' */
-    int size = 1 << luaO_ceillog2(g->strt.nuse);
-    if (size < g->strt.size)  /* current table too large? */
-      luaS_resize(L, size);  /* shrink it */
+  int hs = g->strt.size / 2;  /* half the size of the string table */
+  if (g->strt.nuse < cast(lu_int32, hs)) {  /* using less than half its size? */
+      luaS_resize(L, hs);  /* halve its size */
   }
-  luaZ_freebuffer(L, &g->buff);
+  luaZ_freebuffer(L, &g->buff);  /* free concatenation buffer */
 }
 
 
@@ -656,14 +694,18 @@ static void GCTM (lua_State *L, int propagateerrors) {
 }
 
 
-/* move 'dead' udata that need finalization to list 'tobefnz' */
+/*
+** move all unreachable udata that need finalization from list 'udgc' to
+** list 'tobefnz'
+*/
 void luaC_separateudata (lua_State *L, int all) {
   global_State *g = G(L);
   GCObject **p = &g->udgc;
   GCObject *curr;
   GCObject **lastnext = &g->tobefnz;
   /* find last 'next' field in 'tobefnz' list (to insert elements in its end) */
-  while (*lastnext != NULL) lastnext = &gch(*lastnext)->next;
+  while (*lastnext != NULL)
+    lastnext = &gch(*lastnext)->next;
   while ((curr = *p) != NULL) {  /* traverse all finalizable objects */
     lua_assert(gch(curr)->tt == LUA_TUSERDATA && !isfinalized(gco2u(curr)));
     lua_assert(testbit(gch(curr)->marked, SEPARATED));
@@ -672,8 +714,7 @@ void luaC_separateudata (lua_State *L, int all) {
     else {
       l_setbit(gch(curr)->marked, FINALIZEDBIT); /* won't be finalized again */
       *p = gch(curr)->next;  /* remove 'curr' from 'udgc' list */
-      /* link 'curr' at the end of 'tobefnz' list */
-      gch(curr)->next = *lastnext;
+      gch(curr)->next = *lastnext;  /* link at the end of 'tobefnz' list */
       *lastnext = curr;
       lastnext = &gch(curr)->next;
     }
@@ -681,17 +722,21 @@ void luaC_separateudata (lua_State *L, int all) {
 }
 
 
+/*
+** if userdata 'u' has a finalizer, remove it from 'allgc' list (must
+** search the list to find it) and link it in 'udgc' list.
+*/
 void luaC_checkfinalizer (lua_State *L, Udata *u) {
   global_State *g = G(L);
   if (testbit(u->uv.marked, SEPARATED) || /* userdata is already separated... */
       isfinalized(&u->uv) ||                        /* ... or is finalized... */
-      gfasttm(g, u->uv.metatable, TM_GC) == NULL)  /* or has no finalization? */
+      gfasttm(g, u->uv.metatable, TM_GC) == NULL)  /* or has no finalizer? */
     return;  /* nothing to be done */
   else {  /* move 'u' to 'udgc' list */
     GCObject **p;
     for (p = &g->allgc; *p != obj2gco(u); p = &gch(*p)->next) ;
     *p = u->uv.next;  /* remove 'u' from root list */
-    u->uv.next = g->udgc;  /* re-link it in list */
+    u->uv.next = g->udgc;  /* link it in list 'udgc' */
     g->udgc = obj2gco(u);
     l_setbit(u->uv.marked, SEPARATED);  /* mark it as such */
   }
@@ -733,12 +778,11 @@ static void atomic (lua_State *L) {
   remarkupvals(g);
   /* traverse objects caught by write barrier and by 'remarkupvals' */
   propagateall(g);
-  /* at this point, all strongly accessible objects are marked.
-     Start marking weakly accessible objects. */
   traverselistofgrays(g, &g->weak);  /* remark weak tables */
   traverselistofgrays(g, &g->ephemeron);  /* remark ephemeron tables */
   traverselistofgrays(g, &g->grayagain);  /* remark gray again */
   convergeephemerons(g);
+  /* at this point, all strongly accessible objects are marked. */
   luaC_separateudata(L, 0);  /* separate userdata to be finalized */
   markbeingfnz(g);  /* mark userdata that will be finalized */
   propagateall(g);  /* remark, to propagate `preserveness' */
@@ -748,7 +792,6 @@ static void atomic (lua_State *L) {
   cleartable(g->ephemeron);
   cleartable(g->allweak);
   g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */
-  g->sweepstrgc = 0;  /* prepare sweep phase */
 }
 
 
@@ -767,6 +810,7 @@ static l_mem singlestep (lua_State *L) {
       else {  /* no more `gray' objects */
         g->gcstate = GCSatomic;  /* finish mark phase */
         atomic(L);
+        g->sweepstrgc = 0;  /* prepare to sweep strings */
         g->gcstate = GCSsweepstring;
         return GCATOMICCOST;
       }
