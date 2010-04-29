@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.95 2010/04/16 17:42:49 roberto Exp roberto $
+** $Id: ltests.c,v 2.96 2010/04/19 16:38:25 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -179,17 +179,12 @@ void *debug_realloc (void *ud, void *b, size_t oldsize, size_t size) {
 ** =======================================================
 */
 
-#define issweep(g)  (GCSsweepstring <= (g)->gcstate && (g)->gcstate <= GCSsweep)
-
 
 static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
   if (isdead(g,t)) return 0;
-  if (g->gcstate == GCSpropagate)
+  if (g->gckind == KGC_GEN || !issweepphase(g))
     return !isblack(f) || !iswhite(t);
-  else if (g->gcstate == GCSfinalize)
-    return iswhite(f);
-  else
-    return 1;
+  else return 1;
 }
 
 
@@ -227,23 +222,13 @@ static void checkvalref (global_State *g, GCObject *f, const TValue *t) {
 
 static void checktable (global_State *g, Table *h) {
   int i;
-  int weakkey = 0;
-  int weakvalue = 0;
-  const TValue *mode;
+  Node *n, *limit = gnode(h, sizenode(h));
   GCObject *hgc = obj2gco(h);
   if (h->metatable)
     checkobjref(g, hgc, h->metatable);
-  mode = gfasttm(g, h->metatable, TM_MODE);
-  if (mode && ttisstring(mode)) {  /* is there a weak mode? */
-    weakkey = (strchr(svalue(mode), 'k') != NULL);
-    weakvalue = (strchr(svalue(mode), 'v') != NULL);
-  }
-  i = h->sizearray;
-  while (i--)
+  for (i = 0; i < h->sizearray; i++)
     checkvalref(g, hgc, &h->array[i]);
-  i = sizenode(h);
-  while (i--) {
-    Node *n = gnode(h, i);
+  for (n = gnode(h, 0); n < limit; n++) {
     if (!ttisnil(gval(n))) {
       lua_assert(!ttisnil(gkey(n)));
       checkvalref(g, hgc, gkey(n));
@@ -336,9 +321,9 @@ static void checkstack (global_State *g, lua_State *L1) {
 
 static void checkobject (global_State *g, GCObject *o) {
   if (isdead(g, o))
-    lua_assert(issweep(g));
+    lua_assert(issweepphase(g));
   else {
-    if (g->gcstate == GCSfinalize)
+    if (g->gcstate == GCSpause)
       lua_assert(iswhite(o));
     switch (gch(o)->tt) {
       case LUA_TUPVAL: {
@@ -376,15 +361,51 @@ static void checkobject (global_State *g, GCObject *o) {
 }
 
 
+#define GRAYBIT		7
+
+static void checkgraylist (GCObject *l) {
+  while (l) {
+    lua_assert(isgray(l));
+    lua_assert(!testbit(l->gch.marked, GRAYBIT));
+    //if (testbit(l->gch.marked, GRAYBIT))
+    // printf("%s (%02x) %p\n", ttypename(l->gch.tt), l->gch.marked, l);
+    l->gch.marked = l_setbit(l->gch.marked, GRAYBIT);
+    switch (gch(l)->tt) {
+      case LUA_TTABLE: l = gco2t(l)->gclist; break;
+      case LUA_TFUNCTION: l = gco2cl(l)->c.gclist; break;
+      case LUA_TTHREAD: l = gco2th(l)->gclist; break;
+      case LUA_TPROTO: l = gco2p(l)->gclist; break;
+      default: lua_assert(0);  /* other objects cannot be gray */
+    }
+  }
+}
+
+
+static void markgrays (global_State *g) {
+  checkgraylist(g->gray);
+  checkgraylist(g->grayagain);
+  checkgraylist(g->weak);
+  checkgraylist(g->ephemeron);
+  checkgraylist(g->allweak);
+}
+
+
 int lua_checkmemory (lua_State *L) {
   global_State *g = G(L);
   GCObject *o;
   UpVal *uv;
   checkliveness(g, &g->l_registry);
   checkstack(g, g->mainthread);
+  g->mainthread->marked = resetbit(g->mainthread->marked, GRAYBIT);
+  markgrays(g);
   for (o = g->allgc; o != NULL; o = gch(o)->next) {
-    lua_assert(!testbits(o->gch.marked, bitmask(SEPARATED)));
     checkobject(g, o);
+    if (isgray(o)) {
+      lua_assert(issweepphase(g) || testbit(o->gch.marked, GRAYBIT));
+      o->gch.marked = resetbit(o->gch.marked, GRAYBIT);
+    }
+    lua_assert(!testbit(o->gch.marked, SEPARATED));
+    lua_assert(!testbit(o->gch.marked, GRAYBIT));
   }
   for (o = g->udgc; o != NULL; o = gch(o)->next) {
     lua_assert(gch(o)->tt == LUA_TUSERDATA &&
