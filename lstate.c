@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.81 2010/04/19 16:34:46 roberto Exp roberto $
+** $Id: lstate.c,v 2.82 2010/04/19 17:40:13 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -90,7 +90,7 @@ void luaE_freeCI (lua_State *L) {
 
 
 static void stack_init (lua_State *L1, lua_State *L) {
-  int i;
+  int i; CallInfo *ci;
   /* initialize stack array */
   L1->stack = luaM_newvector(L, BASIC_STACK_SIZE, TValue);
   L1->stacksize = BASIC_STACK_SIZE;
@@ -99,17 +99,22 @@ static void stack_init (lua_State *L1, lua_State *L) {
   L1->top = L1->stack;
   L1->stack_last = L1->stack + L1->stacksize - EXTRA_STACK;
   /* initialize first ci */
-  L1->ci->func = L1->top;
+  ci = &L1->base_ci;
+  ci->next = ci->previous = NULL;
+  ci->callstatus = 0;
+  ci->func = L1->top;
   setnilvalue(L1->top++);  /* 'function' entry for this 'ci' */
-  L1->ci->top = L1->top + LUA_MINSTACK;
-  L1->ci->callstatus = 0;
+  ci->top = L1->top + LUA_MINSTACK;
+  L1->ci = ci;
 }
 
 
 static void freestack (lua_State *L) {
-  L->ci = &L->base_ci;  /* reset 'ci' list */
-  luaE_freeCI(L);
-  luaM_freearray(L, L->stack, L->stacksize);
+  if (L->ci != NULL) {  /* is there a 'ci' list? */
+    L->ci = &L->base_ci;  /* free the entire list */
+    luaE_freeCI(L);
+  }
+  luaM_freearray(L, L->stack, L->stacksize);  /* free stack array */
 }
 
 
@@ -145,7 +150,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   /* pre-create memory-error message */
   g->memerrmsg = luaS_newliteral(L, MEMERRMSG);
   luaS_fix(g->memerrmsg);  /* it should never be collected */
-  g->GCthreshold = 4*g->totalbytes;
+  g->GCdebt = 0;
 }
 
 
@@ -156,6 +161,7 @@ static void f_luaopen (lua_State *L, void *ud) {
 static void preinit_state (lua_State *L, global_State *g) {
   G(L) = g;
   L->stack = NULL;
+  L->ci = NULL;
   L->stacksize = 0;
   L->errorJmp = NULL;
   L->hook = NULL;
@@ -166,8 +172,6 @@ static void preinit_state (lua_State *L, global_State *g) {
   L->openupval = NULL;
   L->nny = 1;
   L->status = LUA_OK;
-  L->base_ci.next = L->base_ci.previous = NULL;
-  L->ci = &L->base_ci;
   L->errfunc = 0;
 }
 
@@ -233,7 +237,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->mainthread = L;
   g->uvhead.u.l.prev = &g->uvhead;
   g->uvhead.u.l.next = &g->uvhead;
-  g->GCthreshold = MAX_LUMEM;  /* no GC while building state */
+  stopgc(g);  /* no GC while building state */
   g->lastmajormem = 0;
   g->strt.size = 0;
   g->strt.nuse = 0;
@@ -246,6 +250,9 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->allgc = NULL;
   g->udgc = NULL;
   g->tobefnz = NULL;
+  g->gray = NULL;
+  g->grayagain = NULL;
+  g->weak = g->ephemeron = g->allweak = NULL;
   g->totalbytes = sizeof(LG);
   g->gcpause = LUAI_GCPAUSE;
   g->gcstepmul = LUAI_GCMUL;
