@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.21 2010/03/26 20:58:11 roberto Exp roberto $
+** $Id: lfunc.c,v 2.22 2010/04/29 17:34:35 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -101,11 +101,7 @@ void luaF_close (lua_State *L, StkId level) {
       uv->v = &uv->u.value;  /* now current value lives here */
       gch(o)->next = g->allgc;  /* link upvalue into 'allgc' list */
       g->allgc = o;
-      lua_assert(!isblack(o));  /* open upvalues are never black */
-      if (isgray(o)) {  /* is it marked? */
-        gray2black(o);  /* could not be black; now it can */
-        luaC_barrier(L, uv, uv->v);
-      }
+      luaC_checkupvalcolor(g, uv);
     }
   }
 }

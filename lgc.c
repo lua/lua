@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.80 2010/04/26 17:58:00 roberto Exp roberto $
+** $Id: lgc.c,v 2.81 2010/04/29 17:32:40 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -142,6 +142,26 @@ void luaC_barrierback (lua_State *L, Table *t) {
   else {  /* sweep phase */
     lua_assert(issweepphase(g));
     makewhite(g, o);  /* mark main obj. as white to avoid other barriers */
+  }
+}
+
+
+/*
+** check color (and invariants) for an upvalue that was closed,
+** i.e., moved into the 'allgc' list
+*/
+void luaC_checkupvalcolor (global_State *g, UpVal *uv) {
+  GCObject *o = obj2gco(uv);
+  lua_assert(!isblack(o));  /* open upvalues are never black */
+  if (isgray(o)) {
+    if (keepinvariant(g)) {
+      gray2black(o);  /* it is being visited now */
+      markvalue(g, uv->v);
+    }
+    else {
+      lua_assert(issweepphase(g));
+      makewhite(g, o);
+    }
   }
 }
 
