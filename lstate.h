@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.62 2010/04/12 16:07:06 roberto Exp roberto $
+** $Id: lstate.h,v 2.63 2010/04/13 20:48:12 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -116,7 +116,7 @@ typedef struct global_State {
   lua_Alloc frealloc;  /* function to reallocate memory */
   void *ud;         /* auxiliary data to `frealloc' */
   lu_mem totalbytes;  /* number of bytes currently allocated */
-  lu_mem GCthreshold;  /* when totalbytes > GCthreshold, run GC step */
+  l_mem GCdebt;  /* when positive, run a GC step */
   lu_mem lastmajormem;  /* memory in use after last major collection */
   stringtable strt;  /* hash table for strings */
   TValue l_registry;
