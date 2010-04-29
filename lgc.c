@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.79 2010/04/20 20:15:30 roberto Exp roberto $
+** $Id: lgc.c,v 2.80 2010/04/26 17:58:00 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -23,16 +23,19 @@
 #include "ltm.h"
 
 
-#define GCSTEPSIZE	1024u
+#define GCSTEPSIZE	1024
 #define GCSWEEPMAX	40
-#define GCSWEEPCOST	10
-#define GCFINALIZECOST	100
+#define GCSWEEPCOST	1
+#define GCFINALIZECOST	50
 #define GCROOTCOST	10
 #define GCATOMICCOST	1000
 
 
-#define issweepphase(g)  \
-	(GCSsweepstring <= (g)->gcstate && (g)->gcstate <= GCSsweep)
+/*
+** standard negative debt for GC; a reasonable "time" to wait before
+** starting a new cycle
+*/
+#define stddebt(g)	(-cast(l_mem, g->totalbytes/100) * g->gcpause)
 
 
 /*
@@ -59,17 +62,6 @@
 
 #define markobject(g,t) { if ((t) && iswhite(obj2gco(t))) \
 		reallymarkobject(g, obj2gco(t)); }
-
-
-/*
-** macro to tell when main invariant (white objects cannot point to black
-** ones) must be kept. During a non-generational collection, the sweep
-** phase may brak the invariant, as objects turned white may point to
-** still-black objects. The invariant is restored when sweep ends and
-** all objects are white again. During a generational collection, the
-** invariant must be kept all times.
-*/
-#define keepinvariant(g)  (g->gckind == KGC_GEN || g->gcstate == GCSpropagate)
 
 static void reallymarkobject (global_State *g, GCObject *o);
 
@@ -142,9 +134,15 @@ void luaC_barrierback (lua_State *L, Table *t) {
   global_State *g = G(L);
   GCObject *o = obj2gco(t);
   lua_assert(isblack(o) && !isdead(g, o));
-  black2gray(o);  /* make table gray (again) */
-  t->gclist = g->grayagain;
-  g->grayagain = o;
+  if (keepinvariant(g)) {
+    black2gray(o);  /* make table gray (again) */
+    t->gclist = g->grayagain;
+    g->grayagain = o;
+  }
+  else {  /* sweep phase */
+    lua_assert(issweepphase(g));
+    makewhite(g, o);  /* mark main obj. as white to avoid other barriers */
+  }
 }
 
 
@@ -164,23 +162,6 @@ GCObject *luaC_newobj (lua_State *L, int tt, size_t sz, GCObject **list,
   gch(o)->next = *list;
   *list = o;
   return o;
-}
-
-
-/*
-** link an upvalue back to the main root list. (It was previously in the
-** list of open upvalues of some thread.)
-*/
-void luaC_linkupval (lua_State *L, UpVal *uv) {
-  global_State *g = G(L);
-  GCObject *o = obj2gco(uv);
-  gch(o)->next = g->allgc;  /* link upvalue into `allgc' list */
-  g->allgc = o;
-  lua_assert(!isblack(o));  /* open upvalues are never black */
-  if (isgray(o)) {  /* is it marked? */
-    gray2black(o);  /* could not be black; now it can */
-    luaC_barrier(L, uv, uv->v);
-  }
 }
 
 /* }====================================================== */
@@ -287,9 +268,9 @@ static void remarkupvals (global_State *g) {
 */
 static void markroot (lua_State *L) {
   global_State *g = G(L);
-  g->gray = NULL;
-  g->grayagain = NULL;
-  g->weak = g->ephemeron = g->allweak = NULL;
+  lua_assert(g->gckind == KGC_GEN ||
+    (g->gray == NULL && g->grayagain == NULL && g->weak == NULL &&
+     g->allweak == NULL && g->ephemeron == NULL));
   markobject(g, g->mainthread);
   markvalue(g, &g->l_registry);
   markmt(g);
@@ -372,7 +353,7 @@ static void traversestrongtable (global_State *g, Table *h) {
 }
 
 
-static void traversetable (global_State *g, Table *h) {
+static int traversetable (global_State *g, Table *h) {
   const TValue *mode = gfasttm(g, h->metatable, TM_MODE);
   markobject(g, h->metatable);
   if (mode && ttisstring(mode)) {  /* is there a weak mode? */
@@ -380,20 +361,26 @@ static void traversetable (global_State *g, Table *h) {
     int weakvalue = (strchr(svalue(mode), 'v') != NULL);
     if (weakkey || weakvalue) {  /* is really weak? */
       black2gray(obj2gco(h));  /* keep table gray */
-      if (!weakkey)  /* strong keys? */
+      if (!weakkey) {  /* strong keys? */
         traverseweakvalue(g, h);
-      else if (!weakvalue)  /* strong values? */
+        return 1 + sizenode(h);
+      }
+      else if (!weakvalue) {  /* strong values? */
         traverseephemeron(g, h);
-      else
+        return 1 + h->sizearray + sizenode(h);
+      }
+      else {
         linktable(h, &g->allweak);  /* nothing to traverse now */
-      return;
+        return 1;
+      }
     }  /* else go through */
   }
   traversestrongtable(g, h);
+  return 1 + h->sizearray + (2 * sizenode(h));
 }
 
 
-static void traverseproto (global_State *g, Proto *f) {
+static int traverseproto (global_State *g, Proto *f) {
   int i;
   stringmark(f->source);
   for (i = 0; i < f->sizek; i++)  /* mark literals */
@@ -404,6 +391,7 @@ static void traverseproto (global_State *g, Proto *f) {
     markobject(g, f->p[i]);
   for (i = 0; i < f->sizelocvars; i++)  /* mark local-variable names */
     stringmark(f->locvars[i].varname);
+  return 1 + f->sizek + f->sizeupvalues + f->sizep + f->sizelocvars;
 }
 
 
@@ -425,26 +413,27 @@ static l_mem traverseclosure (global_State *g, Closure *cl) {
 }
 
 
-static void traversestack (global_State *g, lua_State *L) {
-  StkId o;
+static int traversestack (global_State *g, lua_State *L) {
+  StkId o = L->stack;
   if (L->stack == NULL)
-    return;  /* stack not completely built yet */
-  for (o = L->stack; o < L->top; o++)
+    return 1;  /* stack not completely built yet */
+  for (; o < L->top; o++)
     markvalue(g, o);
   if (g->gcstate == GCSatomic) {  /* final traversal? */
     StkId lim = L->stack + L->stacksize;  /* real end of stack */
     for (; o < lim; o++)  /* clear not-marked stack slice */
       setnilvalue(o);
   }
+  return 1 + cast_int(o - L->stack);
 }
 
 
 /*
 ** traverse one gray object, turning it to black (except for threads,
 ** which are always gray).
-** Returns 'quantity' traversed.
+** Returns number of values traversed.
 */
-static l_mem propagatemark (global_State *g) {
+static int propagatemark (global_State *g) {
   GCObject *o = g->gray;
   lua_assert(isgray(o));
   gray2black(o);
@@ -452,9 +441,7 @@ static l_mem propagatemark (global_State *g) {
     case LUA_TTABLE: {
       Table *h = gco2t(o);
       g->gray = h->gclist;
-      traversetable(g, h);
-      return sizeof(Table) + sizeof(TValue) * h->sizearray +
-                             sizeof(Node) * sizenode(h);
+      return traversetable(g, h);
     }
     case LUA_TFUNCTION: {
       Closure *cl = gco2cl(o);
@@ -467,19 +454,12 @@ static l_mem propagatemark (global_State *g) {
       th->gclist = g->grayagain;
       g->grayagain = o;
       black2gray(o);
-      traversestack(g, th);
-      return sizeof(lua_State) + sizeof(TValue) * th->stacksize;
+      return traversestack(g, th);
     }
     case LUA_TPROTO: {
       Proto *p = gco2p(o);
       g->gray = p->gclist;
-      traverseproto(g, p);
-      return sizeof(Proto) + sizeof(Instruction) * p->sizecode +
-                             sizeof(Proto *) * p->sizep +
-                             sizeof(TValue) * p->sizek +
-                             sizeof(int) * p->sizelineinfo +
-                             sizeof(LocVar) * p->sizelocvars +
-                             sizeof(TString *) * p->sizeupvalues;
+      return traverseproto(g, p);
     }
     default: lua_assert(0); return 0;
   }
@@ -673,15 +653,15 @@ static void GCTM (lua_State *L, int propagateerrors) {
   if (tm != NULL && ttisfunction(tm)) {  /* is there a finalizer? */
     int status;
     lu_byte oldah = L->allowhook;
-    lu_mem oldt = g->GCthreshold;
+    lu_mem oldd = g->GCdebt;
     L->allowhook = 0;  /* stop debug hooks during GC tag method */
-    g->GCthreshold = 2 * g->totalbytes;  /* avoid GC steps */
+    g->GCdebt = -2 * g->totalbytes;  /* avoid GC steps */
     setobj2s(L, L->top, tm);  /* push finalizer... */
     setuvalue(L, L->top+1, udata);  /* ... and its argument */
     L->top += 2;  /* and (next line) call the finalizer */
     status = luaD_pcall(L, dothecall, NULL, savestack(L, L->top - 2), 0);
     L->allowhook = oldah;  /* restore hooks */
-    g->GCthreshold = oldt;  /* restore threshold */
+    g->GCdebt = oldd;  /* restore threshold */
     if (status != LUA_OK && propagateerrors) {  /* error while running __gc? */
       if (status == LUA_ERRRUN) {  /* is there an error msg.? */
         luaO_pushfstring(L, "error in __gc tag method (%s)",
@@ -791,7 +771,13 @@ static void atomic (lua_State *L) {
   cleartable(g->weak);
   cleartable(g->ephemeron);
   cleartable(g->allweak);
+  lua_checkmemory(L);
   g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */
+  if (g->gckind != KGC_GEN) {
+    g->gray = NULL;  /* all gray objects will become white */
+    g->grayagain = NULL;
+    g->weak = g->ephemeron = g->allweak = NULL;
+  }
 }
 
 
@@ -890,23 +876,18 @@ static void generationalcollection (lua_State *L) {
     if (g->totalbytes > g->lastmajormem/100 * g->gcpause)
       g->lastmajormem = 0;  /* signal for a major collection */
   }
-  g->GCthreshold = (g->totalbytes/100) * g->gcpause;
+  g->GCdebt = stddebt(g);
 }
 
 
 static void step (lua_State *L) {
   global_State *g = G(L);
-  l_mem lim = (GCSTEPSIZE/100) * g->gcstepmul;  /* how much to work */
-  lu_mem debt = g->totalbytes - g->GCthreshold;
+  l_mem lim = g->gcstepmul;  /* how much to work */
   lua_assert(g->gckind == KGC_NORMAL);
   do {  /* always perform at least one single step */
     lim -= singlestep(L);
   } while (lim > 0 && g->gcstate != GCSpause);
-  g->GCthreshold =  (g->gcstate != GCSpause)
-                       ? g->totalbytes + GCSTEPSIZE
-                       : (g->totalbytes/100) * g->gcpause;
-  /* compensate if GC is "behind schedule" (has some debt to pay) */
-  if (g->GCthreshold > debt) g->GCthreshold -= debt;
+  g->GCdebt += (g->gcstate != GCSpause) ? -GCSTEPSIZE : stddebt(g);
 }
 
 
@@ -930,6 +911,9 @@ void luaC_fullgc (lua_State *L, int isemergency) {
        (as white has not changed, nothing will be collected) */
     g->sweepstrgc = 0;
     g->gcstate = GCSsweepstring;
+    g->gray = NULL;
+    g->grayagain = NULL;
+    g->weak = g->ephemeron = g->allweak = NULL;
   }
   /* finish any pending sweep phase */
   luaC_runtilstate(L, bit2mask(GCSpause, GCSfinalize));
@@ -943,7 +927,7 @@ void luaC_fullgc (lua_State *L, int isemergency) {
     g->gcstate = GCSpause;  /* collector must be always in... */
     luaC_runtilstate(L, bitmask(GCSpropagate));  /* ...propagate phase */
   }
-  g->GCthreshold = (g->totalbytes/100) * g->gcpause;
+  g->GCdebt = stddebt(g);
 }
 
 /* }====================================================== */

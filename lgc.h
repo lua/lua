@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.29 2010/03/24 15:51:10 roberto Exp roberto $
+** $Id: lgc.h,v 2.30 2010/03/25 13:06:36 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -22,6 +22,24 @@
 #define GCSsweep	5
 #define GCSfinalize	6
 
+
+#define issweepphase(g)  \
+	(GCSsweepstring <= (g)->gcstate && (g)->gcstate <= GCSsweep)
+
+
+/*
+** macro to tell when main invariant (white objects cannot point to black
+** ones) must be kept. During a non-generational collection, the sweep
+** phase may brak the invariant, as objects turned white may point to
+** still-black objects. The invariant is restored when sweep ends and
+** all objects are white again. During a generational collection, the
+** invariant must be kept all times.
+*/
+#define keepinvariant(g)  (g->gckind == KGC_GEN || g->gcstate == GCSpropagate)
+
+
+#define gcstopped(g)	((g)->GCdebt == MIN_LMEM)
+#define stopgc(g)	((g)->GCdebt = MIN_LMEM)
 
 
 /*
@@ -76,8 +94,7 @@
 #define luaC_white(g)	cast(lu_byte, (g)->currentwhite & WHITEBITS)
 
 
-#define luaC_checkGC(L) \
-  {condchangemem(L); if (G(L)->totalbytes >= G(L)->GCthreshold) luaC_step(L);}
+#define luaC_checkGC(L) {condchangemem(L); if (G(L)->GCdebt > 0) luaC_step(L);}
 
 
 #define luaC_barrier(L,p,v) { if (valiswhite(v) && isblack(obj2gco(p)))  \
@@ -100,7 +117,6 @@ LUAI_FUNC void luaC_runtilstate (lua_State *L, int statesmask);
 LUAI_FUNC void luaC_fullgc (lua_State *L, int isemergency);
 LUAI_FUNC GCObject *luaC_newobj (lua_State *L, int tt, size_t sz,
                                  GCObject **list, int offset);
-LUAI_FUNC void luaC_linkupval (lua_State *L, UpVal *uv);
 LUAI_FUNC void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v);
 LUAI_FUNC void luaC_barrierback (lua_State *L, Table *t);
 LUAI_FUNC void luaC_checkfinalizer (lua_State *L, Udata *u);
