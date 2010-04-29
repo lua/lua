@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.96 2010/04/19 16:38:25 roberto Exp roberto $
+** $Id: ltests.c,v 2.97 2010/04/29 17:33:51 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -367,8 +367,6 @@ static void checkgraylist (GCObject *l) {
   while (l) {
     lua_assert(isgray(l));
     lua_assert(!testbit(l->gch.marked, GRAYBIT));
-    //if (testbit(l->gch.marked, GRAYBIT))
-    // printf("%s (%02x) %p\n", ttypename(l->gch.tt), l->gch.marked, l);
     l->gch.marked = l_setbit(l->gch.marked, GRAYBIT);
     switch (gch(l)->tt) {
       case LUA_TTABLE: l = gco2t(l)->gclist; break;
