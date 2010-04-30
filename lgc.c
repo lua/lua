@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.81 2010/04/29 17:32:40 roberto Exp roberto $
+** $Id: lgc.c,v 2.82 2010/04/29 21:43:36 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -21,6 +21,7 @@
 #include "lstring.h"
 #include "ltable.h"
 #include "ltm.h"
+
 
 
 #define GCSTEPSIZE	1024
@@ -288,9 +289,8 @@ static void remarkupvals (global_State *g) {
 */
 static void markroot (lua_State *L) {
   global_State *g = G(L);
-  lua_assert(g->gckind == KGC_GEN ||
-    (g->gray == NULL && g->grayagain == NULL && g->weak == NULL &&
-     g->allweak == NULL && g->ephemeron == NULL));
+  g->gray = g->grayagain = NULL;
+  g->weak = g->allweak = g->ephemeron = NULL;
   markobject(g, g->mainthread);
   markvalue(g, &g->l_registry);
   markmt(g);
@@ -793,11 +793,6 @@ static void atomic (lua_State *L) {
   cleartable(g->allweak);
   lua_checkmemory(L);
   g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */
-  if (g->gckind != KGC_GEN) {
-    g->gray = NULL;  /* all gray objects will become white */
-    g->grayagain = NULL;
-    g->weak = g->ephemeron = g->allweak = NULL;
-  }
 }
 
 
@@ -907,7 +902,10 @@ static void step (lua_State *L) {
   do {  /* always perform at least one single step */
     lim -= singlestep(L);
   } while (lim > 0 && g->gcstate != GCSpause);
-  g->GCdebt += (g->gcstate != GCSpause) ? -GCSTEPSIZE : stddebt(g);
+  if (g->gcstate != GCSpause)
+    g->GCdebt -= GCSTEPSIZE;
+  else
+    g->GCdebt = stddebt(g);
 }
 
 
@@ -931,9 +929,6 @@ void luaC_fullgc (lua_State *L, int isemergency) {
        (as white has not changed, nothing will be collected) */
     g->sweepstrgc = 0;
     g->gcstate = GCSsweepstring;
-    g->gray = NULL;
-    g->grayagain = NULL;
-    g->weak = g->ephemeron = g->allweak = NULL;
   }
   /* finish any pending sweep phase */
   luaC_runtilstate(L, bit2mask(GCSpause, GCSfinalize));

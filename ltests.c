@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.97 2010/04/29 17:33:51 roberto Exp roberto $
+** $Id: ltests.c,v 2.98 2010/04/29 21:42:33 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -380,6 +380,7 @@ static void checkgraylist (GCObject *l) {
 
 
 static void markgrays (global_State *g) {
+  if (!keepinvariant(g)) return;
   checkgraylist(g->gray);
   checkgraylist(g->grayagain);
   checkgraylist(g->weak);
@@ -399,7 +400,7 @@ int lua_checkmemory (lua_State *L) {
   for (o = g->allgc; o != NULL; o = gch(o)->next) {
     checkobject(g, o);
     if (isgray(o)) {
-      lua_assert(issweepphase(g) || testbit(o->gch.marked, GRAYBIT));
+      lua_assert(!keepinvariant(g) || testbit(o->gch.marked, GRAYBIT));
       o->gch.marked = resetbit(o->gch.marked, GRAYBIT);
     }
     lua_assert(!testbit(o->gch.marked, SEPARATED));
