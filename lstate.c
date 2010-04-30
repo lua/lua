@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.82 2010/04/19 17:40:13 roberto Exp roberto $
+** $Id: lstate.c,v 2.83 2010/04/29 17:35:10 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -26,7 +26,7 @@
 
 
 #if !defined(LUAI_GCPAUSE)
-#define LUAI_GCPAUSE	162  /* 162% */
+#define LUAI_GCPAUSE	200  /* 200% */
 #endif
 
 #if !defined(LUAI_GCMUL)
@@ -110,10 +110,10 @@ static void stack_init (lua_State *L1, lua_State *L) {
 
 
 static void freestack (lua_State *L) {
-  if (L->ci != NULL) {  /* is there a 'ci' list? */
-    L->ci = &L->base_ci;  /* free the entire list */
-    luaE_freeCI(L);
-  }
+  if (L->stack == NULL)
+    return;  /* stack not completely built yet */
+  L->ci = &L->base_ci;  /* free the entire 'ci' list */
+  luaE_freeCI(L);
   luaM_freearray(L, L->stack, L->stacksize);  /* free stack array */
 }
 
