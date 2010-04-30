@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.31 2010/04/29 17:32:40 roberto Exp roberto $
+** $Id: lgc.h,v 2.32 2010/04/29 21:43:36 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -10,6 +10,19 @@
 
 #include "lobject.h"
 #include "lstate.h"
+
+/*
+** Collectable objects may have one of three colors: white, which
+** means the object is not marked; gray, which means the
+** object is marked, but its references may be not marked; and
+** black, which means that the object and all its references are marked.
+** The main invariant of the garbage collector, while marking objects,
+** is that a black object can never point to a white one. Moreover,
+** any gray object must be in a "gray list" (gray, grayagain, weak,
+** allweak, ephemeron) so that it can be visited again before finishing
+** the collection cycle. These lists have no meaning when the invariant
+** is not being enforced (e.g., sweep phase).
+*/
 
 
 /*
