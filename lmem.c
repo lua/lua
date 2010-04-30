@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.75 2010/04/02 14:37:41 roberto Exp roberto $
+** $Id: lmem.c,v 1.76 2010/04/29 17:33:17 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -95,7 +95,7 @@ void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
   }
   lua_assert((nsize == 0) == (newblock == NULL));
   g->totalbytes = (g->totalbytes - realosize) + nsize;
-  if (!gcstopped(g))  /* new object? */
+  if (!gcstopped(g))
     g->GCdebt += nsize;  /* give some credit to garbage collector */
 #if defined(TRACEMEM)
   { /* auxiliar patch to monitor garbage collection.
