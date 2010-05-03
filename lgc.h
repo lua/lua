@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.32 2010/04/29 21:43:36 roberto Exp roberto $
+** $Id: lgc.h,v 2.33 2010/04/30 18:36:45 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -28,13 +28,13 @@
 /*
 ** Possible states of the Garbage Collector
 */
-#define GCSpause	0
-#define GCSpropagate	1
-#define GCSatomic	2
-#define GCSsweepstring	3
-#define GCSsweepudata	4
-#define GCSsweep	5
-#define GCSfinalize	6
+#define GCSpropagate	0
+#define GCSatomic	1
+#define GCSsweepstring	2
+#define GCSsweepudata	3
+#define GCSsweep	4
+#define GCSfinalize	5
+#define GCSpause	6
 
 
 #define issweepphase(g)  \
@@ -49,7 +49,7 @@
 ** all objects are white again. During a generational collection, the
 ** invariant must be kept all times.
 */
-#define keepinvariant(g)  (g->gckind == KGC_GEN || g->gcstate == GCSpropagate)
+#define keepinvariant(g)  (g->gckind == KGC_GEN || g->gcstate <= GCSatomic)
 
 
 #define gcstopped(g)	((g)->GCdebt == MIN_LMEM)
