@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.82 2010/04/29 21:43:36 roberto Exp roberto $
+** $Id: lgc.c,v 2.83 2010/04/30 18:37:14 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -265,7 +265,8 @@ static void markbeingfnz (global_State *g) {
   GCObject *o;
   for (o = g->tobefnz; o != NULL; o = gch(o)->next) {
     lua_assert(testbit(gch(o)->marked, SEPARATED));
-    markobject(g, o);
+    makewhite(g, o);
+    reallymarkobject(g, o);
   }
 }
 
@@ -651,12 +652,15 @@ static void checkSizes (lua_State *L) {
 
 static Udata *udata2finalize (global_State *g) {
   GCObject *o = g->tobefnz;  /* get first element */
-  g->tobefnz = gch(o)->next;  /* remove it from 'tobefnz' list */
-  gch(o)->next = g->allgc;  /* return it to 'allgc' list */
+  Udata *u = rawgco2u(o);
+  lua_assert(isfinalized(&u->uv));
+  g->tobefnz = u->uv.next;  /* remove it from 'tobefnz' list */
+  u->uv.next = g->allgc;  /* return it to 'allgc' list */
   g->allgc = o;
-  lua_assert(isfinalized(gch(o)));
-  resetbit(gch(o)->marked, SEPARATED);  /* mark it as such */
-  return rawgco2u(o);
+  resetbit(u->uv.marked, SEPARATED);  /* mark that it is not in 'tobefnz' */
+  if (!keepinvariant(g))  /* not keeping invariant? */
+    makewhite(g, o);  /* "sweep" object */
+  return u;
 }
 
 
@@ -833,7 +837,6 @@ static l_mem singlestep (lua_State *L) {
         return GCSWEEPMAX*GCSWEEPCOST;
       }
       else {
-        sweepwholelist(L, &g->tobefnz);  /* sweep 'to-be-finalized' list */
         g->sweepgc = &g->allgc;  /* go to next phase */
         g->gcstate = GCSsweep;
         return GCSWEEPCOST;
