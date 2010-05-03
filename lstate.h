@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.63 2010/04/13 20:48:12 roberto Exp roberto $
+** $Id: lstate.h,v 2.64 2010/04/29 17:31:31 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -54,9 +54,8 @@ struct lua_longjmp;  /* defined in ldo.c */
 
 /* kinds of Garbage Collection */
 #define KGC_NORMAL	0
-#define KGC_FORCED	1	/* gc was forced by the program */
-#define KGC_EMERGENCY	2	/* gc was forced by an allocation failure */
-#define KGC_GEN		3	/* generational collection */
+#define KGC_EMERGENCY	1	/* gc was forced by an allocation failure */
+#define KGC_GEN		2	/* generational collection */
 
 
 typedef struct stringtable {

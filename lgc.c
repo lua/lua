@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.84 2010/05/03 11:55:40 roberto Exp roberto $
+** $Id: lgc.c,v 2.85 2010/05/03 17:33:39 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -899,7 +899,6 @@ static void generationalcollection (lua_State *L) {
 static void step (lua_State *L) {
   global_State *g = G(L);
   l_mem lim = g->gcstepmul;  /* how much to work */
-  lua_assert(g->gckind == KGC_NORMAL);
   do {  /* always perform at least one single step */
     lim -= singlestep(L);
   } while (lim > 0 && g->gcstate != GCSpause);
@@ -926,10 +925,10 @@ void luaC_step (lua_State *L) {
 void luaC_fullgc (lua_State *L, int isemergency) {
   global_State *g = G(L);
   int origkind = g->gckind;
-  lua_assert(origkind == KGC_NORMAL || origkind == KGC_GEN);
+  lua_assert(origkind != KGC_EMERGENCY);
   if (!isemergency)   /* do not run finalizers during emergency GC */
     callallpendingfinalizers(L, 1);
-  g->gckind = isemergency ? KGC_EMERGENCY : KGC_FORCED;
+  g->gckind = isemergency ? KGC_EMERGENCY : KGC_NORMAL;
   if (g->gcstate == GCSpropagate) {  /* marking phase? */
     /* must sweep all objects to turn them back to white
        (as white has not changed, nothing will be collected) */
@@ -945,7 +944,7 @@ void luaC_fullgc (lua_State *L, int isemergency) {
   if (!isemergency)   /* do not run finalizers during emergency GC */
     callallpendingfinalizers(L, 1);
   if (origkind == KGC_GEN) {  /* generational mode? */
-    /* collector must be always in propagate phase */
+    /* generational mode must always start in propagate phase */
     luaC_runtilstate(L, bitmask(GCSpropagate));
   }
   g->GCdebt = stddebt(g);
