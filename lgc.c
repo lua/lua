@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.83 2010/04/30 18:37:14 roberto Exp roberto $
+** $Id: lgc.c,v 2.84 2010/05/03 11:55:40 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -27,7 +27,7 @@
 #define GCSTEPSIZE	1024
 #define GCSWEEPMAX	40
 #define GCSWEEPCOST	1
-#define GCFINALIZECOST	50
+#define GCFINALIZENUM	4
 #define GCROOTCOST	10
 #define GCATOMICCOST	1000
 
@@ -115,8 +115,7 @@ static int iscleared (const TValue *o, int iskey) {
 void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v) {
   global_State *g = G(L);
   lua_assert(isblack(o) && iswhite(v) && !isdead(g, v) && !isdead(g, o));
-  lua_assert(g->gckind == KGC_GEN ||
-             (g->gcstate != GCSfinalize && g->gcstate != GCSpause));
+  lua_assert(g->gckind == KGC_GEN || g->gcstate != GCSpause);
   lua_assert(gch(o)->tt != LUA_TTABLE);
   if (keepinvariant(g))  /* must keep invariant? */
     reallymarkobject(g, v);  /* restore invariant */
@@ -643,6 +642,7 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
 static void checkSizes (lua_State *L) {
   global_State *g = G(L);
   int hs = g->strt.size / 2;  /* half the size of the string table */
+  if (g->gcstate == KGC_EMERGENCY) return;
   if (g->strt.nuse < cast(lu_int32, hs)) {  /* using less than half its size? */
       luaS_resize(L, hs);  /* halve its size */
   }
@@ -755,10 +755,18 @@ void luaC_checkfinalizer (lua_State *L, Udata *u) {
 ** =======================================================
 */
 
+/*
+** call all pending finalizers */
+static void callallpendingfinalizers (lua_State *L, int propagateerrors) {
+  global_State *g = G(L);
+  while (g->tobefnz) GCTM(L, propagateerrors);
+}
+
+
 void luaC_freeallobjects (lua_State *L) {
   global_State *g = G(L);
   int i;
-  while (g->tobefnz) GCTM(L, 0);  /* Call all pending finalizers */
+  callallpendingfinalizers(L, 0);
   /* following "white" makes all objects look dead */
   g->currentwhite = WHITEBITS;
   sweepwholelist(L, &g->udgc);
@@ -795,7 +803,7 @@ static void atomic (lua_State *L) {
   cleartable(g->weak);
   cleartable(g->ephemeron);
   cleartable(g->allweak);
-  lua_checkmemory(L);
+  /*lua_checkmemory(L);*/
   g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */
 }
 
@@ -850,19 +858,9 @@ static l_mem singlestep (lua_State *L) {
       else {
         /* sweep main thread */
         sweeplist(L, cast(GCObject **, &g->mainthread), 1);
-        g->gcstate = GCSfinalize;  /* go to next phase */
-        return GCSWEEPCOST;
-      }
-    }
-    case GCSfinalize: {
-      if (g->tobefnz) {
-        GCTM(L, 1);
-        return GCFINALIZECOST;
-      }
-      else {
         checkSizes(L);
-        g->gcstate = GCSpause;  /* end collection */
-        return 0;
+        g->gcstate = GCSpause;  /* finish collection */
+        return GCSWEEPCOST;
       }
     }
     default: lua_assert(0); return 0;
@@ -913,8 +911,11 @@ static void step (lua_State *L) {
 
 
 void luaC_step (lua_State *L) {
+  int i;
   if (G(L)->gckind == KGC_GEN) generationalcollection(L);
   else step(L);
+  for (i = 0; i < GCFINALIZENUM && G(L)->tobefnz; i++)
+    GCTM(L, 1);  /* Call a few pending finalizers */
 }
 
 
@@ -926,6 +927,8 @@ void luaC_fullgc (lua_State *L, int isemergency) {
   global_State *g = G(L);
   int origkind = g->gckind;
   lua_assert(origkind == KGC_NORMAL || origkind == KGC_GEN);
+  if (!isemergency)   /* do not run finalizers during emergency GC */
+    callallpendingfinalizers(L, 1);
   g->gckind = isemergency ? KGC_EMERGENCY : KGC_FORCED;
   if (g->gcstate == GCSpropagate) {  /* marking phase? */
     /* must sweep all objects to turn them back to white
@@ -934,16 +937,16 @@ void luaC_fullgc (lua_State *L, int isemergency) {
     g->gcstate = GCSsweepstring;
   }
   /* finish any pending sweep phase */
-  luaC_runtilstate(L, bit2mask(GCSpause, GCSfinalize));
-  g->gcstate = GCSpause;  /* start a new collection */
-  /* run collector up to finalizers */
-  luaC_runtilstate(L, bitmask(GCSfinalize));
+  luaC_runtilstate(L, bitmask(GCSpause));
+  /* run entire collector */
+  luaC_runtilstate(L, ~bitmask(GCSpause));
+  luaC_runtilstate(L, bitmask(GCSpause));
   g->gckind = origkind;
   if (!isemergency)   /* do not run finalizers during emergency GC */
-    luaC_runtilstate(L, bitmask(GCSpause));
+    callallpendingfinalizers(L, 1);
   if (origkind == KGC_GEN) {  /* generational mode? */
-    g->gcstate = GCSpause;  /* collector must be always in... */
-    luaC_runtilstate(L, bitmask(GCSpropagate));  /* ...propagate phase */
+    /* collector must be always in propagate phase */
+    luaC_runtilstate(L, bitmask(GCSpropagate));
   }
   g->GCdebt = stddebt(g);
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.99 2010/04/30 18:37:14 roberto Exp roberto $
+** $Id: ltests.c,v 2.100 2010/05/03 11:55:40 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -580,9 +580,9 @@ static int get_gccolor (lua_State *L) {
 
 static int gc_state (lua_State *L) {
   static const char *statenames[] = {"", "pause", "propagate", "atomic",
-    "sweepstring", "sweepudata", "sweep", "finalize"};
+    "sweepstring", "sweepudata", "sweep"};
   static const int states[] = {0, GCSpause, GCSpropagate, GCSatomic,
-    GCSsweepstring, GCSsweepudata, GCSsweep, GCSfinalize};
+    GCSsweepstring, GCSsweepudata, GCSsweep};
   int option = luaL_checkoption(L, 1, "", statenames);
   if (option == 0) {
     lua_pushstring(L, statenames[G(L)->gcstate]);
