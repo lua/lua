@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.76 2010/04/29 17:33:17 roberto Exp roberto $
+** $Id: lmem.c,v 1.77 2010/04/30 18:17:24 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -103,18 +103,14 @@ void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
     ** plot TRACEMEM using 1:2 with lines, TRACEMEM using 1:3 with lines
     */
     static unsigned long total = 0;  /* our "time" */
-    static lu_mem last = 0;  /* last totalmem that generated an output */
     static FILE *f = NULL;  /* output file */
-    if (nsize <= osize) total += 1;  /* "time" always grow */
-    else total += (nsize - osize);
-    if ((int)g->totalbytes - (int)last > 1000 ||
-        (int)g->totalbytes - (int)last < -1000) {
-      last = g->totalbytes;
+    total++;  /* "time" always grow */
+    if ((total % 200) == 0) {
       if (f == NULL) f = fopen(TRACEMEM, "w");
-      fprintf(f, "%lu %u %u %d\n", total,
+      fprintf(f, "%lu %u %d %d\n", total,
               g->totalbytes,
-              g->GCthreshold < MAX_LUMEM ? g->GCthreshold : 0,
-              g->gcstate);
+              gcstopped(g) ? 0 : g->GCdebt,
+              g->gcstate * 1000);
     }
   }
 #endif
