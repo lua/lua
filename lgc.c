@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.85 2010/05/03 17:33:39 roberto Exp roberto $
+** $Id: lgc.c,v 2.86 2010/05/03 17:39:48 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -613,9 +613,9 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
       freeobj(L, curr);  /* erase 'curr' */
     }
     else {
-      lua_assert(!isdead(g, curr) || testbit(gch(curr)->marked, FIXEDBIT));
+      lua_assert(!isdead(g, curr) || testbit(marked, FIXEDBIT));
       if (gckind == KGC_GEN) {  /* generational mode? */
-        if (testbit(gch(curr)->marked, OLDBIT)) {  /* old generation? */
+        if (testbit(marked, OLDBIT)) {  /* old generation? */
           static GCObject *nullp = NULL;
           return &nullp;  /* stop sweeping this list */
         }
@@ -941,13 +941,13 @@ void luaC_fullgc (lua_State *L, int isemergency) {
   luaC_runtilstate(L, ~bitmask(GCSpause));
   luaC_runtilstate(L, bitmask(GCSpause));
   g->gckind = origkind;
-  if (!isemergency)   /* do not run finalizers during emergency GC */
-    callallpendingfinalizers(L, 1);
   if (origkind == KGC_GEN) {  /* generational mode? */
     /* generational mode must always start in propagate phase */
     luaC_runtilstate(L, bitmask(GCSpropagate));
   }
   g->GCdebt = stddebt(g);
+  if (!isemergency)   /* do not run finalizers during emergency GC */
+    callallpendingfinalizers(L, 1);
 }
 
 /* }====================================================== */
