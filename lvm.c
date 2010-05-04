@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.114 2010/04/18 13:22:48 roberto Exp roberto $
+** $Id: lvm.c,v 2.115 2010/04/19 17:58:46 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -106,7 +106,7 @@ void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val) {
     if (ttistable(t)) {  /* `t' is a table? */
       Table *h = hvalue(t);
       const TValue *res = luaH_get(h, key); /* do a primitive get */
-      if (!ttisnil(res) ||  /* result is no nil? */
+      if (!ttisnil(res) ||  /* result is not nil? */
           (tm = fasttm(L, h->metatable, TM_INDEX)) == NULL) { /* or no TM? */
         setobj2s(L, val, res);
         return;
@@ -133,7 +133,7 @@ void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
     if (ttistable(t)) {  /* `t' is a table? */
       Table *h = hvalue(t);
       TValue *oldval = luaH_set(L, h, key); /* do a primitive set */
-      if (!ttisnil(oldval) ||  /* result is no nil? */
+      if (!ttisnil(oldval) ||  /* result is not nil? */
           (tm = fasttm(L, h->metatable, TM_NEWINDEX)) == NULL) { /* or no TM? */
         setobj2t(L, oldval, val);
         luaC_barriert(L, h, val);
