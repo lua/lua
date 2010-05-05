@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.124 2010/04/20 20:14:50 roberto Exp roberto $
+** $Id: lapi.c,v 2.125 2010/04/29 17:31:31 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -69,7 +69,7 @@ static TValue *index2addr (lua_State *L, int idx) {
 
 
 /*
-** to be caled by 'lua_checkstack' in protected mode, to grow stack
+** to be called by 'lua_checkstack' in protected mode, to grow stack
 ** capturing memory errors
 */
 static void growstack (lua_State *L, void *ud) {
@@ -966,14 +966,9 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       res = !gcstopped(g);
       break;
     }
-    case LUA_GCGEN: {  /* change collector to generational mode */
-      luaC_runtilstate(L, bitmask(GCSpropagate));
-      g->lastmajormem = g->totalbytes;
-      g->gckind = KGC_GEN;
-      break;
-    }
+    case LUA_GCGEN:  /* change collector to generational mode */
     case LUA_GCINC: {  /* change collector to incremental mode */
-      g->gckind = KGC_NORMAL;
+      luaC_changemode(L, what);
       break;
     }
     default: res = -1;  /* invalid option */

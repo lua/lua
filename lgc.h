@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.34 2010/05/03 11:24:30 roberto Exp roberto $
+** $Id: lgc.h,v 2.35 2010/05/03 17:33:39 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -134,5 +134,6 @@ LUAI_FUNC void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v);
 LUAI_FUNC void luaC_barrierback (lua_State *L, Table *t);
 LUAI_FUNC void luaC_checkfinalizer (lua_State *L, Udata *u);
 LUAI_FUNC void luaC_checkupvalcolor (global_State *g, UpVal *uv);
+LUAI_FUNC void luaC_changemode (lua_State *L, int mode);
 
 #endif
