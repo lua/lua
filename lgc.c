@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.87 2010/05/04 18:09:06 roberto Exp roberto $
+** $Id: lgc.c,v 2.88 2010/05/05 13:39:58 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -170,6 +170,7 @@ void luaC_checkupvalcolor (global_State *g, UpVal *uv) {
   lua_assert(!isblack(o));  /* open upvalues are never black */
   if (isgray(o)) {
     if (keepinvariant(g)) {
+      resetbit(o->gch.marked, OLDBIT);
       gray2black(o);  /* it is being visited now */
       markvalue(g, uv->v);
     }
@@ -300,7 +301,8 @@ static void remarkupvals (global_State *g) {
 
 
 /*
-** mark root set
+** mark root set and reset all gray lists, to start a new
+** incremental (or full) collection
 */
 static void markroot (lua_State *L) {
   global_State *g = G(L);
@@ -655,12 +657,12 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
 
 static void checkSizes (lua_State *L) {
   global_State *g = G(L);
-  int hs = g->strt.size / 2;  /* half the size of the string table */
-  if (g->gcstate == KGC_EMERGENCY) return;
-  if (g->strt.nuse < cast(lu_int32, hs)) {  /* using less than half its size? */
+  if (g->gckind != KGC_EMERGENCY) {  /* do not change sizes in emergency */
+    int hs = g->strt.size / 2;  /* half the size of the string table */
+    if (g->strt.nuse < cast(lu_int32, hs))  /* using less than that half? */
       luaS_resize(L, hs);  /* halve its size */
+    luaZ_freebuffer(L, &g->buff);  /* free concatenation buffer */
   }
-  luaZ_freebuffer(L, &g->buff);  /* free concatenation buffer */
 }
 
 
@@ -668,6 +670,7 @@ static Udata *udata2finalize (global_State *g) {
   GCObject *o = g->tobefnz;  /* get first element */
   Udata *u = rawgco2u(o);
   lua_assert(isfinalized(&u->uv));
+  lua_assert(!testbit(u->uv.marked, OLDBIT));
   g->tobefnz = u->uv.next;  /* remove it from 'tobefnz' list */
   u->uv.next = g->allgc;  /* return it to 'allgc' list */
   g->allgc = o;
@@ -769,6 +772,33 @@ void luaC_checkfinalizer (lua_State *L, Udata *u) {
 ** =======================================================
 */
 
+
+#define sweepphases  \
+	(bitmask(GCSsweepstring) | bitmask(GCSsweepudata) | bitmask(GCSsweep))
+
+/*
+** change GC mode
+*/
+void luaC_changemode (lua_State *L, int mode) {
+  global_State *g = G(L);
+  if (mode == g->gckind) return;  /* nothing to change */
+  if (mode == KGC_GEN) {  /* change to generational mode */
+    /* make sure gray lists are consistent */
+    luaC_runtilstate(L, bitmask(GCSpropagate));
+    g->lastmajormem = g->totalbytes;
+    g->gckind = KGC_GEN;
+  }
+  else {  /* change to incremental mode */
+    /* sweep all objects to turn them back to white
+       (as white has not changed, nothing extra will be collected) */
+    g->sweepstrgc = 0;
+    g->gcstate = GCSsweepstring;
+    g->gckind = KGC_NORMAL;
+    luaC_runtilstate(L, ~sweepphases);
+  }
+}
+
+
 /*
 ** call all pending finalizers */
 static void callallpendingfinalizers (lua_State *L, int propagateerrors) {
@@ -817,7 +847,8 @@ static void atomic (lua_State *L) {
   cleartable(g->weak);
   cleartable(g->ephemeron);
   cleartable(g->allweak);
-  lua_checkmemory(L);
+  g->sweepstrgc = 0;  /* prepare to sweep strings */
+  g->gcstate = GCSsweepstring;
   g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */
 }
 
@@ -837,8 +868,6 @@ static l_mem singlestep (lua_State *L) {
       else {  /* no more `gray' objects */
         g->gcstate = GCSatomic;  /* finish mark phase */
         atomic(L);
-        g->sweepstrgc = 0;  /* prepare to sweep strings */
-        g->gcstate = GCSsweepstring;
         return GCATOMICCOST;
       }
     }
@@ -933,7 +962,7 @@ void luaC_step (lua_State *L) {
 
 
 /*
-** performs a full GC cycle; if "isememrgency", does not call
+** performs a full GC cycle; if "isemergency", does not call
 ** finalizers (which could change stack positions)
 */
 void luaC_fullgc (lua_State *L, int isemergency) {
@@ -942,14 +971,14 @@ void luaC_fullgc (lua_State *L, int isemergency) {
   lua_assert(origkind != KGC_EMERGENCY);
   if (!isemergency)   /* do not run finalizers during emergency GC */
     callallpendingfinalizers(L, 1);
-  g->gckind = isemergency ? KGC_EMERGENCY : KGC_NORMAL;
-  if (g->gcstate == GCSpropagate) {  /* marking phase? */
+  if (keepinvariant(g)) {  /* marking phase? */
     /* must sweep all objects to turn them back to white
        (as white has not changed, nothing will be collected) */
     g->sweepstrgc = 0;
     g->gcstate = GCSsweepstring;
   }
-  /* finish any pending sweep phase */
+  g->gckind = isemergency ? KGC_EMERGENCY : KGC_NORMAL;
+  /* finish any pending sweep phase to start a new cycle */
   luaC_runtilstate(L, bitmask(GCSpause));
   /* run entire collector */
   luaC_runtilstate(L, ~bitmask(GCSpause));
