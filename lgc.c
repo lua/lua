@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.86 2010/05/03 17:39:48 roberto Exp roberto $
+** $Id: lgc.c,v 2.87 2010/05/04 18:09:06 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -24,12 +24,27 @@
 
 
 
+/* how much to allocate before next GC step */
 #define GCSTEPSIZE	1024
+
+/* maximum numer of elements to sweep in each single step */
 #define GCSWEEPMAX	40
+
+/* cost of sweeping one element */
 #define GCSWEEPCOST	1
+
+/* maximum number of finalizers to call in each GC step */
 #define GCFINALIZENUM	4
+
+/* cost of marking the root set */
 #define GCROOTCOST	10
+
+/* cost of atomic step */
 #define GCATOMICCOST	1000
+
+/* basic cost to traverse one object (to be added to the links the
+   object may have) */
+#define TRAVCOST	5
 
 
 /*
@@ -317,7 +332,7 @@ static void traverseweakvalue (global_State *g, Table *h) {
       markvalue(g, gkey(n));  /* mark key */
     }
   }
-  linktable(h, &g->weak);  /* go to appropriate list */
+  linktable(h, &g->weak);  /* link into appropriate list */
 }
 
 
@@ -383,20 +398,20 @@ static int traversetable (global_State *g, Table *h) {
       black2gray(obj2gco(h));  /* keep table gray */
       if (!weakkey) {  /* strong keys? */
         traverseweakvalue(g, h);
-        return 1 + sizenode(h);
+        return TRAVCOST + sizenode(h);
       }
       else if (!weakvalue) {  /* strong values? */
         traverseephemeron(g, h);
-        return 1 + h->sizearray + sizenode(h);
+        return TRAVCOST + h->sizearray + sizenode(h);
       }
       else {
         linktable(h, &g->allweak);  /* nothing to traverse now */
-        return 1;
+        return TRAVCOST;
       }
     }  /* else go through */
   }
   traversestrongtable(g, h);
-  return 1 + h->sizearray + (2 * sizenode(h));
+  return TRAVCOST + h->sizearray + (2 * sizenode(h));
 }
 
 
@@ -411,7 +426,7 @@ static int traverseproto (global_State *g, Proto *f) {
     markobject(g, f->p[i]);
   for (i = 0; i < f->sizelocvars; i++)  /* mark local-variable names */
     stringmark(f->locvars[i].varname);
-  return 1 + f->sizek + f->sizeupvalues + f->sizep + f->sizelocvars;
+  return TRAVCOST + f->sizek + f->sizeupvalues + f->sizep + f->sizelocvars;
 }
 
 
@@ -420,7 +435,6 @@ static l_mem traverseclosure (global_State *g, Closure *cl) {
     int i;
     for (i=0; i<cl->c.nupvalues; i++)  /* mark its upvalues */
       markvalue(g, &cl->c.upvalue[i]);
-    return sizeCclosure(cl->c.nupvalues);
   }
   else {
     int i;
@@ -428,14 +442,14 @@ static l_mem traverseclosure (global_State *g, Closure *cl) {
     markobject(g, cl->l.p);  /* mark its prototype */
     for (i=0; i<cl->l.nupvalues; i++)  /* mark its upvalues */
       markobject(g, cl->l.upvals[i]);
-    return sizeLclosure(cl->l.nupvalues);
   }
+  return TRAVCOST + cl->c.nupvalues;
 }
 
 
 static int traversestack (global_State *g, lua_State *L) {
   StkId o = L->stack;
-  if (L->stack == NULL)
+  if (o == NULL)
     return 1;  /* stack not completely built yet */
   for (; o < L->top; o++)
     markvalue(g, o);
@@ -444,7 +458,7 @@ static int traversestack (global_State *g, lua_State *L) {
     for (; o < lim; o++)  /* clear not-marked stack slice */
       setnilvalue(o);
   }
-  return 1 + cast_int(o - L->stack);
+  return TRAVCOST + cast_int(o - L->stack);
 }
 
 
@@ -803,7 +817,7 @@ static void atomic (lua_State *L) {
   cleartable(g->weak);
   cleartable(g->ephemeron);
   cleartable(g->allweak);
-  /*lua_checkmemory(L);*/
+  lua_checkmemory(L);
   g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */
 }
 
