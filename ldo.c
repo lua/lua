@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.85 2010/04/18 12:41:35 roberto Exp roberto $
+** $Id: ldo.c,v 2.86 2010/04/18 13:22:48 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -476,7 +476,7 @@ static int recover (lua_State *L, int status) {
 /*
 ** signal an error in the call to 'resume', not in the execution of the
 ** coroutine itself. (Such errors should not be handled by any coroutine
-** error hanlder and should not kill the coroutine.)
+** error handler and should not kill the coroutine.)
 */
 static void resume_error (lua_State *L, const char *msg, StkId firstArg) {
   L->top = firstArg;  /* remove args from the stack */
