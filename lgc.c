@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.88 2010/05/05 13:39:58 roberto Exp roberto $
+** $Id: lgc.c,v 2.89 2010/05/05 18:58:36 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -279,7 +279,6 @@ static void markmt (global_State *g) {
 static void markbeingfnz (global_State *g) {
   GCObject *o;
   for (o = g->tobefnz; o != NULL; o = gch(o)->next) {
-    lua_assert(testbit(gch(o)->marked, SEPARATED));
     makewhite(g, o);
     reallymarkobject(g, o);
   }
@@ -293,7 +292,6 @@ static void markbeingfnz (global_State *g) {
 static void remarkupvals (global_State *g) {
   UpVal *uv;
   for (uv = g->uvhead.u.l.next; uv != &g->uvhead; uv = uv->u.l.next) {
-    lua_assert(uv->u.l.next->u.l.prev == uv && uv->u.l.prev->u.l.next == uv);
     if (isgray(obj2gco(uv)))
       markvalue(g, uv->v);
   }
@@ -591,56 +589,59 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count);
 ** sweep the (open) upvalues of a thread and resize its stack and
 ** list of call-info structures.
 */
-static void sweepthread (lua_State *L, lua_State *L1, int alive) {
+static void sweepthread (lua_State *L, lua_State *L1) {
   if (L1->stack == NULL) return;  /* stack not completely built yet */
   sweepwholelist(L, &L1->openupval);  /* sweep open upvalues */
   luaE_freeCI(L1);  /* free extra CallInfo slots */
   /* should not change the stack during an emergency gc cycle */
-  if (alive && G(L)->gckind != KGC_EMERGENCY)
+  if (G(L)->gckind != KGC_EMERGENCY)
     luaD_shrinkstack(L1);
 }
 
 
 /*
-** sweep a list of GCObjects, erasing dead objects, where a dead (not
-** alive) object is one marked with the "old" (non current) white and
-** not fixed.
+** sweep at most 'count' elements from a list of GCObjects erasing dead
+** objects, where a dead (not alive) object is one marked with the "old"
+** (non current) white and not fixed.
 ** In non-generational mode, change all non-dead objects back to white,
 ** preparing for next collection cycle.
-** In generational mode, keep black objects black, and also mark them
-** as old; stop when hitting an old object, as all objects after that
+** In generational mode, keep black objects black, and also mark them as
+** old; stop when hitting an old object, as all objects after that
 ** one will be old too.
 ** When object is a thread, sweep its list of open upvalues too.
 */
 static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
   global_State *g = G(L);
-  int gckind = g->gckind;
   int deadmask = otherwhite(g);
-  int white = luaC_white(g);
-  GCObject *curr;
-  while ((curr = *p) != NULL && count-- > 0) {
+  int toclear, toset;  /* bits to clear and to set in all live objects */
+  if (g->gckind == KGC_GEN) {  /* generational mode? */
+    toclear = ~0;  /* clear nothing */
+    toset = OLDBIT;  /* set the old bit of all surviving objects */
+  }
+  else {  /* normal mode */
+    toclear = maskcolors;  /* clear all color bits */
+    toset = luaC_white(g);  /* make object white */
+  }
+  while (*p != NULL && count-- > 0) {
+    GCObject *curr = *p;
     int marked = gch(curr)->marked;
-    int alive = (marked ^ WHITEBITS) & deadmask;
-    if (gch(curr)->tt == LUA_TTHREAD)
-      sweepthread(L, gco2th(curr), alive);
-    if (!alive) {
+    if (!((marked ^ WHITEBITS) & deadmask)) {  /* is 'curr' dead? */
       lua_assert(isdead(g, curr) || deadmask == 0);
       *p = gch(curr)->next;  /* remove 'curr' from list */
       freeobj(L, curr);  /* erase 'curr' */
     }
     else {
       lua_assert(!isdead(g, curr) || testbit(marked, FIXEDBIT));
-      if (gckind == KGC_GEN) {  /* generational mode? */
-        if (testbit(marked, OLDBIT)) {  /* old generation? */
-          static GCObject *nullp = NULL;
-          return &nullp;  /* stop sweeping this list */
-        }
-        else  /* mark as old */
-          gch(curr)->marked = cast_byte(marked | bitmask(OLDBIT));
+      if (gch(curr)->tt == LUA_TTHREAD)
+        sweepthread(L, gco2th(curr));  /* sweep thread's upvalues */
+      if (testbit(marked, OLDBIT)) {  /* old generation? */
+        static GCObject *nullp = NULL;
+        lua_assert(g->gckind == KGC_GEN); /* can happen only in gen. mode */
+        return &nullp;  /* stop sweeping this list */
       }
-      else  /* not generational; makewhite */
-        gch(curr)->marked = cast_byte((marked & maskcolors) | white);
-      p = &gch(curr)->next;
+      /* update marks */
+      gch(curr)->marked = cast_byte((marked & toclear) | toset);
+      p = &gch(curr)->next;  /* go to next element */
     }
   }
   return p;
