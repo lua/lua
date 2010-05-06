@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.35 2010/05/03 17:33:39 roberto Exp roberto $
+** $Id: lgc.h,v 2.36 2010/05/05 18:53:41 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -71,23 +71,14 @@
 
 
 
-/*
-** Layout for bit use in `marked' field:
-** bit 0 - object is white (type 0)
-** bit 1 - object is white (type 1)
-** bit 2 - object is black
-** bit 3 - for userdata: has been finalized
-** bit 4 - for userdata: it's in 'udgc' list or in 'tobefnz'
-** bit 5 - object is fixed (should not be collected)
-** bit 6 - object is old (only in generational mode)
-*/
-#define WHITE0BIT	0
-#define WHITE1BIT	1
-#define BLACKBIT	2
-#define FINALIZEDBIT	3
-#define SEPARATED	4
-#define FIXEDBIT	5
-#define OLDBIT		6
+/* Layout for bit use in `marked' field: */
+#define WHITE0BIT	0  /* object is white (type 0) */
+#define WHITE1BIT	1  /* object is white (type 1) */
+#define BLACKBIT	2  /* object is black */
+#define FINALIZEDBIT	3  /* for userdata: has been finalized */
+#define SEPARATED	4  /*  "    ": it's in 'udgc' list or in 'tobefnz' */
+#define FIXEDBIT	5  /* object is fixed (should not be collected) */
+#define OLDBIT		6  /* object is old (only in generational mode) */
 
 #define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)
 
