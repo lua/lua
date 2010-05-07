@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.37 2010/05/06 18:17:22 roberto Exp roberto $
+** $Id: lgc.h,v 2.38 2010/05/07 18:08:05 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -86,7 +86,8 @@
 
 #define iswhite(x)      testbits((x)->gch.marked, WHITEBITS)
 #define isblack(x)      testbit((x)->gch.marked, BLACKBIT)
-#define isgray(x)	(!isblack(x) && !iswhite(x))
+#define isgray(x)  /* neither white nor black */  \
+	(!testbits((x)->gch.marked, WHITEBITS | bitmask(BLACKBIT)))
 
 #define isold(x)	testbit((x)->gch.marked, OLDBIT)
 
