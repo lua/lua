@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.101 2010/05/03 17:33:39 roberto Exp roberto $
+** $Id: ltests.c,v 2.102 2010/05/06 18:16:57 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -182,7 +182,7 @@ void *debug_realloc (void *ud, void *b, size_t oldsize, size_t size) {
 
 static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
   if (isdead(g,t)) return 0;
-  if (g->gckind == KGC_GEN || !issweepphase(g))
+  if (isgenerational(g) || !issweepphase(g))
     return !isblack(f) || !iswhite(t);
   else return 1;
 }
@@ -323,7 +323,7 @@ static void checkobject (global_State *g, GCObject *o) {
   if (isdead(g, o))
     lua_assert(issweepphase(g));
   else {
-    if (g->gcstate == GCSpause)
+    if (g->gcstate == GCSpause && !isgenerational(g))
       lua_assert(iswhite(o));
     switch (gch(o)->tt) {
       case LUA_TUPVAL: {
@@ -396,8 +396,8 @@ static void markgrays (global_State *g) {
 static void checkold (global_State *g, GCObject *o) {
   int isold = 0;
   for (; o != NULL; o = gch(o)->next) {
-    if (testbit(o->gch.marked, OLDBIT)) {  /* old generation? */
-      lua_assert(g->gckind == KGC_GEN);
+    if (isold(o)) {  /* old generation? */
+      lua_assert(isgenerational(g));
       if (!issweepphase(g))
         isold = 1;
     }
@@ -418,6 +418,10 @@ int lua_checkmemory (lua_State *L) {
   checkliveness(g, &g->l_registry);
   checkstack(g, g->mainthread);
   g->mainthread->marked = resetbit(g->mainthread->marked, TESTGRAYBIT);
+  if (keepinvariant(g)) {
+    lua_assert(!iswhite(obj2gco(g->mainthread)));
+    lua_assert(!iswhite(gcvalue(&g->l_registry)));
+  }
   /* check 'allgc' list */
   markgrays(g);
   checkold(g, g->allgc);
@@ -426,7 +430,7 @@ int lua_checkmemory (lua_State *L) {
     lua_assert(!testbit(o->gch.marked, SEPARATED));
   }
   /* check 'udgc' list */
-  checkold(g, g->tobefnz);
+  checkold(g, g->udgc);
   for (o = g->udgc; o != NULL; o = gch(o)->next) {
     lua_assert(gch(o)->tt == LUA_TUSERDATA &&
                !isdead(g, o) &&
@@ -438,7 +442,7 @@ int lua_checkmemory (lua_State *L) {
   for (o = g->tobefnz; o != NULL; o = gch(o)->next) {
     lua_assert(gch(o)->tt == LUA_TUSERDATA);
     lua_assert(isblack(o));
-    lua_assert(!testbit(o->gch.marked, OLDBIT));
+    lua_assert(!isold(o));
     lua_assert(testbit(o->gch.marked, SEPARATED));
   }
   /* check 'uvhead' list */
@@ -602,31 +606,39 @@ static int get_gccolor (lua_State *L) {
   if (!iscollectable(o))
     lua_pushstring(L, "no collectable");
   else {
+    int n = 1;
     lua_pushstring(L, iswhite(gcvalue(o)) ? "white" :
                       isblack(gcvalue(o)) ? "black" : "grey");
-    if (testbit(gcvalue(o)->gch.marked, OLDBIT)) {
-      lua_pushliteral(L, "/old");
-      lua_concat(L, 2);
+    if (testbit(gcvalue(o)->gch.marked, FINALIZEDBIT)) {
+      lua_pushliteral(L, "/finalized"); n++;
     }
+    if (testbit(gcvalue(o)->gch.marked, SEPARATED)) {
+      lua_pushliteral(L, "/separated"); n++;
+    }
+    if (testbit(gcvalue(o)->gch.marked, FIXEDBIT)) {
+      lua_pushliteral(L, "/fixed"); n++;
+    }
+    if (isold(gcvalue(o))) {
+      lua_pushliteral(L, "/old"); n++;
+    }
+    lua_concat(L, n);
   }
   return 1;
 }
 
 
 static int gc_state (lua_State *L) {
-  static const char *statenames[] = {"", "pause", "propagate", "atomic",
-    "sweepstring", "sweepudata", "sweep"};
-  static const int states[] = {0, GCSpause, GCSpropagate, GCSatomic,
-    GCSsweepstring, GCSsweepudata, GCSsweep};
+  static const char *statenames[] = {"propagate", "atomic",
+    "sweepstring", "sweepudata", "sweep", "pause", ""};
   int option = luaL_checkoption(L, 1, "", statenames);
-  if (option == 0) {
+  if (option == GCSpause + 1) {
     lua_pushstring(L, statenames[G(L)->gcstate]);
     return 1;
   }
   else {
     lua_lock(L);
-    luaC_runtilstate(L, bitmask(states[option]));
-    lua_assert(G(L)->gcstate == states[option]);
+    luaC_runtilstate(L, bitmask(option));
+    lua_assert(G(L)->gcstate == option);
     lua_unlock(L);
     return 0;
   }
