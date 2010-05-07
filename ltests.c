@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.102 2010/05/06 18:16:57 roberto Exp roberto $
+** $Id: ltests.c,v 2.103 2010/05/07 18:09:23 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -415,13 +415,13 @@ int lua_checkmemory (lua_State *L) {
   global_State *g = G(L);
   GCObject *o;
   UpVal *uv;
-  checkliveness(g, &g->l_registry);
-  checkstack(g, g->mainthread);
-  g->mainthread->marked = resetbit(g->mainthread->marked, TESTGRAYBIT);
   if (keepinvariant(g)) {
     lua_assert(!iswhite(obj2gco(g->mainthread)));
     lua_assert(!iswhite(gcvalue(&g->l_registry)));
   }
+  lua_assert(!isdead(g, gcvalue(&g->l_registry)));
+  checkstack(g, g->mainthread);
+  g->mainthread->marked = resetbit(g->mainthread->marked, TESTGRAYBIT);
   /* check 'allgc' list */
   markgrays(g);
   checkold(g, g->allgc);
