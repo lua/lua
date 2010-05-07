@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.125 2010/04/29 17:31:31 roberto Exp roberto $
+** $Id: lapi.c,v 2.126 2010/05/05 18:53:41 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -966,9 +966,12 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       res = !gcstopped(g);
       break;
     }
-    case LUA_GCGEN:  /* change collector to generational mode */
+    case LUA_GCGEN: {  /* change collector to generational mode */
+      luaC_changemode(L, KGC_GEN);
+      break;
+    }
     case LUA_GCINC: {  /* change collector to incremental mode */
-      luaC_changemode(L, what);
+      luaC_changemode(L, KGC_NORMAL);
       break;
     }
     default: res = -1;  /* invalid option */
