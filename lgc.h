@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.36 2010/05/05 18:53:41 roberto Exp roberto $
+** $Id: lgc.h,v 2.37 2010/05/06 18:17:22 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -39,6 +39,7 @@
 #define issweepphase(g)  \
 	(GCSsweepstring <= (g)->gcstate && (g)->gcstate <= GCSsweep)
 
+#define isgenerational(g)	((g)->gckind == KGC_GEN)
 
 /*
 ** macro to tell when main invariant (white objects cannot point to black
@@ -48,7 +49,7 @@
 ** all objects are white again. During a generational collection, the
 ** invariant must be kept all times.
 */
-#define keepinvariant(g)  (g->gckind == KGC_GEN || g->gcstate <= GCSatomic)
+#define keepinvariant(g)  (isgenerational(g) || g->gcstate <= GCSatomic)
 
 
 #define gcstopped(g)	((g)->GCdebt == MIN_LMEM)
@@ -87,8 +88,11 @@
 #define isblack(x)      testbit((x)->gch.marked, BLACKBIT)
 #define isgray(x)	(!isblack(x) && !iswhite(x))
 
+#define isold(x)	testbit((x)->gch.marked, OLDBIT)
+
 #define otherwhite(g)	(g->currentwhite ^ WHITEBITS)
-#define isdead(g,v)	((v)->gch.marked & otherwhite(g) & WHITEBITS)
+#define isdeadm(ow,m)	(!(((m) ^ WHITEBITS) & (ow)))
+#define isdead(g,v)	isdeadm(otherwhite(g), (v)->gch.marked)
 
 #define changewhite(x)	((x)->gch.marked ^= WHITEBITS)
 #define gray2black(x)	l_setbit((x)->gch.marked, BLACKBIT)
