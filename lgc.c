@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.90 2010/05/06 18:18:07 roberto Exp roberto $
+** $Id: lgc.c,v 2.91 2010/05/07 18:19:36 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -859,9 +859,9 @@ static l_mem singlestep (lua_State *L) {
     case GCSpause: {
       if (!isgenerational(g))
         markroot(L);  /* start a new collection */
-      else  /* root still marked */
-        lua_assert(!iswhite(obj2gco(g->mainthread))
-                && !iswhite(gcvalue(&g->l_registry)));
+      /* in any case, root must be marked */
+      lua_assert(!iswhite(obj2gco(g->mainthread))
+              && !iswhite(gcvalue(&g->l_registry)));
       g->gcstate = GCSpropagate;
       return GCROOTCOST;
     }
