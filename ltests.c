@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.103 2010/05/07 18:09:23 roberto Exp roberto $
+** $Id: ltests.c,v 2.104 2010/05/07 18:23:17 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -442,7 +442,6 @@ int lua_checkmemory (lua_State *L) {
   for (o = g->tobefnz; o != NULL; o = gch(o)->next) {
     lua_assert(gch(o)->tt == LUA_TUSERDATA);
     lua_assert(isblack(o));
-    lua_assert(!isold(o));
     lua_assert(testbit(o->gch.marked, SEPARATED));
   }
   /* check 'uvhead' list */
