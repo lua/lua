@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.207 2010/04/09 16:14:46 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.208 2010/04/14 15:14:21 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -436,8 +436,8 @@ LUALIB_API char *luaL_buffinitsize (lua_State *L, luaL_Buffer *B, size_t sz) {
 ** =======================================================
 */
 
-/* number of prereserved references (for internal use) */
-#define FREELIST_REF	(LUA_RIDX_LAST + 1)	/* free list of references */
+/* index of free-list header */
+#define freelist	"lua-freelist"
 
 
 LUALIB_API int luaL_ref (lua_State *L, int t) {
@@ -447,21 +447,15 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
     lua_pop(L, 1);  /* remove from stack */
     return LUA_REFNIL;  /* `nil' has a unique fixed reference */
   }
-  lua_rawgeti(L, t, FREELIST_REF);  /* get first free element */
+  lua_getfield(L, t, freelist);  /* get first free element */
   ref = (int)lua_tointeger(L, -1);  /* ref = t[FREELIST_REF] */
   lua_pop(L, 1);  /* remove it from stack */
   if (ref != 0) {  /* any free element? */
     lua_rawgeti(L, t, ref);  /* remove it from list */
-    lua_rawseti(L, t, FREELIST_REF);  /* (t[FREELIST_REF] = t[ref]) */
+    lua_setfield(L, t, freelist);  /* (t[freelist] = t[ref]) */
   }
-  else {  /* no free elements */
+  else  /* no free elements */
     ref = (int)lua_rawlen(L, t) + 1;  /* get a new reference */
-    if (ref == FREELIST_REF) {  /* FREELIST_REF not initialized? */
-      lua_pushinteger(L, 0);
-      lua_rawseti(L, t, FREELIST_REF);
-      ref = FREELIST_REF + 1;
-    }
-  }
   lua_rawseti(L, t, ref);
   return ref;
 }
@@ -470,10 +464,10 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
 LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
   if (ref >= 0) {
     t = abs_index(L, t);
-    lua_rawgeti(L, t, FREELIST_REF);
-    lua_rawseti(L, t, ref);  /* t[ref] = t[FREELIST_REF] */
+    lua_getfield(L, t, freelist);
+    lua_rawseti(L, t, ref);  /* t[ref] = t[freelist] */
     lua_pushinteger(L, ref);
-    lua_rawseti(L, t, FREELIST_REF);  /* t[FREELIST_REF] = ref */
+    lua_setfield(L, t, freelist);  /* t[freelist] = ref */
   }
 }
 
