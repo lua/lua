@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.39 2010/05/07 18:43:51 roberto Exp roberto $
+** $Id: lgc.h,v 2.40 2010/05/10 16:46:49 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -91,6 +91,9 @@
 	(!testbits((x)->gch.marked, WHITEBITS | bitmask(BLACKBIT)))
 
 #define isold(x)	testbit((x)->gch.marked, OLDBIT)
+
+/* MOVE OLD rule: whenever an object is moved to the beginning of
+   a GC list, its old bit must be cleared */
 #define resetoldbit(o)	resetbit((o)->gch.marked, OLDBIT)
 
 #define otherwhite(g)	(g->currentwhite ^ WHITEBITS)

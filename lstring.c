@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.16 2009/12/16 16:42:58 roberto Exp roberto $
+** $Id: lstring.c,v 2.17 2010/04/03 20:24:18 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -37,6 +37,7 @@ void luaS_resize (lua_State *L, int newsize) {
       unsigned int h = lmod(gco2ts(p)->hash, newsize);  /* new position */
       gch(p)->next = tb->hash[h];  /* chain it */
       tb->hash[h] = p;
+      resetoldbit(p);  /* see MOVE OLD rule */
       p = next;
     }
   }
