@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.134 2010/03/03 18:53:02 roberto Exp roberto $
+** $Id: luaconf.h,v 1.135 2010/03/26 20:58:11 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -440,17 +440,18 @@
 /* On a Microsoft compiler, use assembler */
 #if defined(_MSC_VER)
 
-#define lua_number2int(i,d)   {__asm fld d   __asm fistp i}
+#define lua_number2int(i,n)  __asm {__asm fld n   __asm fistp i}
 #define lua_number2integer(i,n)		lua_number2int(i, n)
-#define lua_number2uint(i,n)		lua_number2int(i, n)
+#define lua_number2uint(i,n)  \
+  {__int64 l; __asm {__asm fld n   __asm fistp l} i = (unsigned int)l;}
 
 #else
 /* the next trick should work on any Pentium, but sometimes clashes
    with a DirectX idiosyncrasy */
 
 union luai_Cast { double l_d; long l_l; };
-#define lua_number2int(i,d) \
-  { volatile union luai_Cast u; u.l_d = (d) + 6755399441055744.0; (i) = u.l_l; }
+#define lua_number2int(i,n) \
+  { volatile union luai_Cast u; u.l_d = (n) + 6755399441055744.0; (i) = u.l_l; }
 #define lua_number2integer(i,n)		lua_number2int(i, n)
 #define lua_number2uint(i,n)		lua_number2int(i, n)
 
@@ -459,9 +460,9 @@ union luai_Cast { double l_d; long l_l; };
 
 #else
 /* this option always works, but may be slow */
-#define lua_number2int(i,d)	((i)=(int)(d))
-#define lua_number2integer(i,d)	((i)=(LUA_INTEGER)(d))
-#define lua_number2uint(i,d)	((i)=(unsigned LUA_INT32)(d))
+#define lua_number2int(i,n)	((i)=(int)(n))
+#define lua_number2integer(i,n)	((i)=(LUA_INTEGER)(n))
+#define lua_number2uint(i,n)	((i)=(unsigned LUA_INT32)(n))
 
 #endif
 
@@ -484,9 +485,9 @@ union luai_Cast { double l_d; long l_l; };
 #include <float.h>
 #include <math.h>
 
-#define luai_hashnum(i,d) { int e;  \
-  d = frexp(d, &e) * (lua_Number)(INT_MAX - DBL_MAX_EXP);  \
-  lua_number2int(i, d); i += e; }
+#define luai_hashnum(i,n) { int e;  \
+  n = frexp(n, &e) * (lua_Number)(INT_MAX - DBL_MAX_EXP);  \
+  lua_number2int(i, n); i += e; }
 
 #endif
 
