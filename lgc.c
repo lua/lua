@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.91 2010/05/07 18:19:36 roberto Exp roberto $
+** $Id: lgc.c,v 2.92 2010/05/07 18:43:24 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -164,7 +164,7 @@ void luaC_checkupvalcolor (global_State *g, UpVal *uv) {
   lua_assert(!isblack(o));  /* open upvalues are never black */
   if (isgray(o)) {
     if (keepinvariant(g)) {
-      resetbit(o->gch.marked, OLDBIT);
+      resetoldbit(o);
       gray2black(o);  /* it is being visited now */
       markvalue(g, uv->v);
     }
@@ -729,7 +729,7 @@ void luaC_separateudata (lua_State *L, int all) {
       p = &gch(curr)->next;  /* don't bother with it */
     else {
       l_setbit(gch(curr)->marked, FINALIZEDBIT); /* won't be finalized again */
-      resetbit(gch(curr)->marked, OLDBIT); /* may be old when 'all' */
+      resetoldbit(curr); /* may be old when 'all' is true */
       *p = gch(curr)->next;  /* remove 'curr' from 'udgc' list */
       gch(curr)->next = *lastnext;  /* link at the end of 'tobefnz' list */
       *lastnext = curr;
@@ -745,8 +745,8 @@ void luaC_separateudata (lua_State *L, int all) {
 */
 void luaC_checkfinalizer (lua_State *L, Udata *u) {
   global_State *g = G(L);
-  if (testbit(u->uv.marked, SEPARATED) || /* userdata is already separated... */
-      isfinalized(&u->uv) ||                        /* ... or is finalized... */
+  if (testbit(u->uv.marked, SEPARATED) || /* udata is already separated... */
+      isfinalized(&u->uv) ||                     /* ... or is finalized... */
       gfasttm(g, u->uv.metatable, TM_GC) == NULL)  /* or has no finalizer? */
     return;  /* nothing to be done */
   else {  /* move 'u' to 'udgc' list */
@@ -756,7 +756,7 @@ void luaC_checkfinalizer (lua_State *L, Udata *u) {
     u->uv.next = g->udgc;  /* link it in list 'udgc' */
     g->udgc = obj2gco(u);
     l_setbit(u->uv.marked, SEPARATED);  /* mark it as such */
-    resetbit(u->uv.marked, OLDBIT);
+    resetoldbit(obj2gco(u));
   }
 }
 

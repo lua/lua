@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.38 2010/05/07 18:08:05 roberto Exp roberto $
+** $Id: lgc.h,v 2.39 2010/05/07 18:43:51 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -80,6 +80,7 @@
 #define SEPARATED	4  /*  "    ": it's in 'udgc' list or in 'tobefnz' */
 #define FIXEDBIT	5  /* object is fixed (should not be collected) */
 #define OLDBIT		6  /* object is old (only in generational mode) */
+/* bit 7 is currently used by tests (luaL_checkmemory) */
 
 #define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)
 
@@ -90,6 +91,7 @@
 	(!testbits((x)->gch.marked, WHITEBITS | bitmask(BLACKBIT)))
 
 #define isold(x)	testbit((x)->gch.marked, OLDBIT)
+#define resetoldbit(o)	resetbit((o)->gch.marked, OLDBIT)
 
 #define otherwhite(g)	(g->currentwhite ^ WHITEBITS)
 #define isdeadm(ow,m)	(!(((m) ^ WHITEBITS) & (ow)))
