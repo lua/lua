@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.93 2010/05/10 16:46:49 roberto Exp roberto $
+** $Id: lgc.c,v 2.94 2010/05/10 18:23:45 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -902,7 +902,8 @@ static l_mem singlestep (lua_State *L) {
       }
       else {
         /* sweep main thread */
-        sweeplist(L, cast(GCObject **, &g->mainthread), 1);
+        GCObject *mt = obj2gco(g->mainthread);
+        sweeplist(L, &mt, 1);
         checkSizes(L);
         g->gcstate = GCSpause;  /* finish collection */
         return GCSWEEPCOST;
