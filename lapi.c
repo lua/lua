@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.126 2010/05/05 18:53:41 roberto Exp roberto $
+** $Id: lapi.c,v 2.127 2010/05/07 18:10:01 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -61,8 +61,8 @@ static TValue *index2addr (lua_State *L, int idx) {
     else {
       Closure *func = clvalue(ci->func);
       return (idx <= func->c.nupvalues)
-                ? &func->c.upvalue[idx-1]
-                : cast(TValue *, luaO_nilobject);
+             ? &func->c.upvalue[idx-1]
+             : cast(TValue *, luaO_nilobject);
     }
   }
 }
@@ -134,6 +134,16 @@ LUA_API const lua_Number *lua_version (lua_State *L) {
 /*
 ** basic stack manipulation
 */
+
+
+/*
+** convert an acceptable stack index into an absolute index
+*/
+LUA_API int lua_absindex (lua_State *L, int idx) {
+  return (idx > 0 || idx <= LUA_REGISTRYINDEX)
+         ? idx
+         : lua_gettop(L) + idx + 1;
+}
 
 
 LUA_API int lua_gettop (lua_State *L) {

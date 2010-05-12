@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.208 2010/04/14 15:14:21 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.209 2010/05/10 15:25:02 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -22,11 +22,6 @@
 #include "lua.h"
 
 #include "lauxlib.h"
-
-
-/* convert a stack index to positive */
-#define abs_index(L, i)		((i) > 0 || (i) <= LUA_REGISTRYINDEX ? (i) : \
-					lua_gettop(L) + (i) + 1)
 
 
 /*
@@ -442,7 +437,7 @@ LUALIB_API char *luaL_buffinitsize (lua_State *L, luaL_Buffer *B, size_t sz) {
 
 LUALIB_API int luaL_ref (lua_State *L, int t) {
   int ref;
-  t = abs_index(L, t);
+  t = lua_absindex(L, t);
   if (lua_isnil(L, -1)) {
     lua_pop(L, 1);  /* remove from stack */
     return LUA_REFNIL;  /* `nil' has a unique fixed reference */
@@ -463,7 +458,7 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
 
 LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
   if (ref >= 0) {
-    t = abs_index(L, t);
+    t = lua_absindex(L, t);
     lua_getfield(L, t, freelist);
     lua_rawseti(L, t, ref);  /* t[ref] = t[freelist] */
     lua_pushinteger(L, ref);
@@ -600,7 +595,7 @@ LUALIB_API int luaL_getmetafield (lua_State *L, int obj, const char *event) {
 
 
 LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
-  obj = abs_index(L, obj);
+  obj = lua_absindex(L, obj);
   if (!luaL_getmetafield(L, obj, event))  /* no metafield? */
     return 0;
   lua_pushvalue(L, obj);
