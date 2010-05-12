@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.116 2010/05/04 17:25:19 roberto Exp roberto $
+** $Id: lvm.c,v 2.117 2010/05/05 18:49:56 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -459,8 +459,7 @@ void luaV_execute (lua_State *L) {
     StkId ra;
     if ((L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT)) &&
         (--L->hookcount == 0 || L->hookmask & LUA_MASKLINE)) {
-      traceexec(L);
-      base = ci->u.l.base;
+      Protect(traceexec(L));
     }
     /* warning!! several calls may realloc the stack and invalidate `ra' */
     ra = RA(i);
@@ -638,22 +637,20 @@ void luaV_execute (lua_State *L) {
         if (luaD_precall(L, ra, nresults)) {  /* C function? */
           if (nresults >= 0) L->top = ci->top;  /* adjust results */
           base = ci->u.l.base;
-          break;
         }
         else {  /* Lua function */
           ci = L->ci;
           ci->callstatus |= CIST_REENTRY;
           goto newframe;  /* restart luaV_execute over new Lua function */
         }
+        break;
       }
       case OP_TAILCALL: {
         int b = GETARG_B(i);
         if (b != 0) L->top = ra+b;  /* else previous instruction set top */
         lua_assert(GETARG_C(i) - 1 == LUA_MULTRET);
-        if (luaD_precall(L, ra, LUA_MULTRET)) {  /* C function? */
+        if (luaD_precall(L, ra, LUA_MULTRET))  /* C function? */
           base = ci->u.l.base;
-          break;
-        }
         else {
           /* tail call: put called frame (n) in place of caller one (o) */
           CallInfo *nci = L->ci;  /* called frame */
@@ -676,6 +673,7 @@ void luaV_execute (lua_State *L) {
           lua_assert(L->top == oci->u.l.base + getproto(ofunc)->maxstacksize);
           goto newframe;  /* restart luaV_execute over new Lua function */
         }
+        break;
       }
       case OP_RETURN: {
         int b = GETARG_B(i);
@@ -729,9 +727,10 @@ void luaV_execute (lua_State *L) {
         i = *(ci->u.l.savedpc++);  /* go to next instruction */
         ra = RA(i);
         lua_assert(GET_OPCODE(i) == OP_TFORLOOP);
-        /* go through */
+        goto l_tforloop;
       }
       case OP_TFORLOOP: {
+        l_tforloop:
         if (!ttisnil(ra + 1)) {  /* continue loop? */
           setobjs2s(L, ra, ra + 1);  /* save control variable */
           dojump(GETARG_sBx(i));  /* jump back */
