@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.135 2010/03/26 20:58:11 roberto Exp roberto $
+** $Id: luaconf.h,v 1.136 2010/05/10 16:38:58 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -89,7 +89,7 @@
 #define LUA_CPATH_DEFAULT \
 		LUA_CDIR"?.dll;" LUA_CDIR"loadall.dll;" ".\\?.dll"
 
-#else
+#else  /* _WIN32 */
 #define LUA_ROOT	"/usr/local/"
 #define LUA_LDIR	LUA_ROOT "share/lua/5.2/"
 #define LUA_CDIR	LUA_ROOT "lib/lua/5.2/"
@@ -98,7 +98,7 @@
 		LUA_CDIR"?.lua;"  LUA_CDIR"?/init.lua;" "./?.lua"
 #define LUA_CPATH_DEFAULT \
 		LUA_CDIR"?.so;" LUA_CDIR"loadall.so;" "./?.so"
-#endif
+#endif  /* _WIN32 */
 
 
 /*
@@ -130,11 +130,12 @@
 #define LUA_API __declspec(dllimport)
 #endif
 
-#else
+#else  /* LUA_BUILD_AS_DLL */
 
 #define LUA_API		extern
 
-#endif
+#endif  /* LUA_BUILD_AS_DLL */
+
 
 /* more often than not the libs go together with the core */
 #define LUALIB_API	LUA_API
@@ -166,11 +167,11 @@
 #define LUAI_DDEC	LUAI_FUNC
 #define LUAI_DDEF	/* empty */
 
-#else
+#else  /* luaall_c */
 #define LUAI_FUNC	extern
 #define LUAI_DDEC	extern
 #define LUAI_DDEF	/* empty */
-#endif
+#endif  /* luaall_c */
 
 
 
@@ -268,7 +269,7 @@
 /* compatibility with previous wrong spelling */
 #define luaL_typerror		luaL_typeerror
 
-#endif
+#endif  /* LUA_COMPAT_ALL */
 
 /* }================================================================== */
 
@@ -445,7 +446,7 @@
 #define lua_number2uint(i,n)  \
   {__int64 l; __asm {__asm fld n   __asm fistp l} i = (unsigned int)l;}
 
-#else
+#else  /* _MSC_VER */
 /* the next trick should work on any Pentium, but sometimes clashes
    with a DirectX idiosyncrasy */
 
@@ -455,16 +456,16 @@ union luai_Cast { double l_d; long l_l; };
 #define lua_number2integer(i,n)		lua_number2int(i, n)
 #define lua_number2uint(i,n)		lua_number2int(i, n)
 
-#endif
+#endif  /* _MSC_VER */
 
 
-#else
+#else  /* LUA_NUMBER_DOUBLE ... (Pentium) */
 /* this option always works, but may be slow */
 #define lua_number2int(i,n)	((i)=(int)(n))
 #define lua_number2integer(i,n)	((i)=(LUA_INTEGER)(n))
 #define lua_number2uint(i,n)	((i)=(unsigned LUA_INT32)(n))
 
-#endif
+#endif  /* LUA_NUMBER_DOUBLE ... (Pentium) */
 
 
 /* on several machines, coercion from unsigned to double is too slow,
@@ -489,7 +490,7 @@ union luai_Cast { double l_d; long l_l; };
   n = frexp(n, &e) * (lua_Number)(INT_MAX - DBL_MAX_EXP);  \
   lua_number2int(i, n); i += e; }
 
-#endif
+#endif  /* ltable_c */
 
 /* }================================================================== */
 
