@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.118 2010/05/12 20:31:33 roberto Exp roberto $
+** $Id: lvm.c,v 2.119 2010/05/12 20:40:35 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -439,6 +439,7 @@ void luaV_finishOp (lua_State *L) {
         else { Protect(luaV_arith(L, ra, rb, rc, tm)); } }
 
 
+#define vmdispatch(o)	switch(o)
 #define vmcase(l,b)	case l: {b}  break;
 
 void luaV_execute (lua_State *L) {
@@ -464,7 +465,7 @@ void luaV_execute (lua_State *L) {
     ra = RA(i);
     lua_assert(base == ci->u.l.base);
     lua_assert(base <= L->top && L->top < L->stack + L->stacksize);
-    switch (GET_OPCODE(i)) {
+    vmdispatch (GET_OPCODE(i)) {
       vmcase(OP_MOVE,
         setobjs2s(L, ra, RB(i));
       )
