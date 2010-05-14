@@ -15,6 +15,7 @@ CWARNSC=-pedantic -Wextra \
 	-Wwrite-strings \
 	-Wredundant-decls \
 	-Wdisabled-optimization \
+	-Wstrict-aliasing \
         # the next warnings generate to much noise, so they are disabled
 	# -Wlogical-op \
 	# -Wformat=2 \
@@ -31,16 +32,18 @@ CWARNS= $(CWARNSC) \
 	-Wold-style-definition \
 
 
-# -DEXTERNMEMCHECK -DHARDSTACKTESTS -DHARDMEMTESTS
+# -DEXTERNMEMCHECK -DHARDSTACKTESTS -DHARDMEMTESTS  -DTRACEMEM='"tempmem"'
 # -g -DLUA_USER_H='"ltests.h"'
 # -fomit-frame-pointer #-pg -malign-double
-TESTS= -g -DLUA_USER_H='"ltests.h"'
+TESTS= -DLUA_USER_H='"ltests.h"'  # -g -O0
 
 LOCAL = $(TESTS) $(CWARNS)
 
-MYCFLAGS= $(LOCAL)
-MYLDFLAGS=
-MYLIBS=
+
+# enable Linux goodies
+MYCFLAGS= $(LOCAL) -DLUA_USE_LINUX -g
+MYLDFLAGS= -Wl,-E -g
+MYLIBS= -ldl -lreadline -lhistory -lncurses
 
 
 CC= gcc
@@ -50,12 +53,6 @@ CFLAGS= -Wall -O2 $(MYCFLAGS)
 AR= ar rcu
 RANLIB= ranlib
 RM= rm -f
-
-
-# enable Linux goodies
-MYCFLAGS= $(LOCAL) -DLUA_USE_LINUX
-MYLDFLAGS= -Wl,-E
-MYLIBS= -ldl -lreadline -lhistory -lncurses
 
 
 
@@ -165,7 +162,7 @@ lstring.o: lstring.c lua.h luaconf.h lmem.h llimits.h lobject.h lstate.h \
  ltm.h lzio.h lstring.h lgc.h
 lstrlib.o: lstrlib.c lua.h luaconf.h lauxlib.h lualib.h
 ltable.o: ltable.c lua.h luaconf.h ldebug.h lstate.h lobject.h llimits.h \
- ltm.h lzio.h lmem.h ldo.h lgc.h ltable.h
+ ltm.h lzio.h lmem.h ldo.h lgc.h lstring.h ltable.h
 ltablib.o: ltablib.c lua.h luaconf.h lauxlib.h lualib.h
 ltests.o: ltests.c lua.h luaconf.h lapi.h llimits.h lstate.h lobject.h \
  ltm.h lzio.h lmem.h lauxlib.h lcode.h llex.h lopcodes.h lparser.h \
