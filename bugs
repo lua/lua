@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.106 2010/04/19 16:39:25 roberto Exp roberto $
-+** $Id: bugs,v 1.106 2010/04/19 16:39:25 roberto Exp roberto $
+-** $Id: bugs,v 1.107 2010/04/19 18:04:58 roberto Exp roberto $
++** $Id: bugs,v 1.107 2010/04/19 18:04:58 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2265,7 +2265,29 @@ since = [[5.0]],
 example = [[
 x = string.rep("x", 10000) .. "%d"
 print(string.format(x))    -- gives wrong error message
-patch = nil
+]],
+patch = [[
+--- lstrlib.c	2008/07/11 17:27:21	1.132.1.4
++++ lstrlib.c	2010/05/14 15:12:53
+@@ -754,6 +754,7 @@
+ 
+ 
+ static int str_format (lua_State *L) {
++  int top = lua_gettop(L);
+   int arg = 1;
+   size_t sfl;
+   const char *strfrmt = luaL_checklstring(L, arg, &sfl);
+@@ -768,7 +769,8 @@
+     else { /* format item */
+       char form[MAX_FORMAT];  /* to store the format (`%...') */
+       char buff[MAX_ITEM];  /* to store the formatted item */
+-      arg++;
++      if (++arg > top)
++        luaL_argerror(L, arg, "no value");
+       strfrmt = scanformat(L, strfrmt, form);
+       switch (*strfrmt++) {
+         case 'c': {
+]]
 }
 
 Bug{
@@ -2273,9 +2295,24 @@ what = [['io.read(op, "*n")' may return garbage if second read fails]],
 report = [[Roberto I., 2010/04/12]],
 since = [[5.0]],
 example = [[
-print(io.read("*n", "*n")   --<< enter "10   hi"
+print(io.read("*n", "*n"))   --<< enter "10   hi"
 --> file (0x884420)	nil
 ]],
-patch = nil
+patch = [[
+--- liolib.c	2008/01/18 17:47:43	2.73.1.3
++++ liolib.c	2010/05/14 15:29:29
+@@ -276,7 +276,10 @@
+     lua_pushnumber(L, d);
+     return 1;
+   }
+-  else return 0;  /* read fails */
++  else {
++    lua_pushnil(L);  /* "result" to be removed */
++    return 0;  /* read fails */
++  }
+ }
+ 
+ 
+]]
 }
 
