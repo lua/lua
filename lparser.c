@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.83 2010/04/17 12:46:32 roberto Exp roberto $
+** $Id: lparser.c,v 2.84 2010/05/13 12:03:26 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1316,7 +1316,6 @@ static void retstat (LexState *ls) {
   FuncState *fs = ls->fs;
   expdesc e;
   int first, nret;  /* registers with returned values */
-  luaX_next(ls);  /* skip RETURN */
   if (block_follow(ls->t.token) || ls->t.token == ';')
     first = nret = 0;  /* return no values */
   else {
@@ -1372,8 +1371,8 @@ static int statement (LexState *ls) {
       repeatstat(ls, line);
       return 0;
     }
-    case TK_FUNCTION: {
-      funcstat(ls, line);  /* stat -> funcstat */
+    case TK_FUNCTION: {  /* stat -> funcstat */
+      funcstat(ls, line);
       return 0;
     }
     case TK_LOCAL: {  /* stat -> localstat */
@@ -1385,6 +1384,7 @@ static int statement (LexState *ls) {
       return 0;
     }
     case TK_RETURN: {  /* stat -> retstat */
+      luaX_next(ls);  /* skip RETURN */
       retstat(ls);
       return 1;  /* must be last statement */
     }
@@ -1393,9 +1393,9 @@ static int statement (LexState *ls) {
       breakstat(ls);
       return 1;  /* must be last statement */
     }
-    default: {
+    default: {  /* stat -> func | assignment */
       exprstat(ls);
-      return 0;  /* to avoid warnings */
+      return 0;
     }
   }
 }
