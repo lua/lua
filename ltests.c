@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.105 2010/05/10 18:24:36 roberto Exp roberto $
+** $Id: ltests.c,v 2.106 2010/05/11 20:48:36 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -992,6 +992,9 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
   for (;;) {
     const char *inst = getstring;
     if EQ("") return 0;
+    else if EQ("absindex") {
+      lua_pushnumber(L1, lua_absindex(L1, getindex));
+    }
     else if EQ("isnumber") {
       lua_pushboolean(L1, lua_isnumber(L1, getindex));
     }
