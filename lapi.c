@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.127 2010/05/07 18:10:01 roberto Exp roberto $
+** $Id: lapi.c,v 2.128 2010/05/12 14:09:20 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -142,7 +142,7 @@ LUA_API const lua_Number *lua_version (lua_State *L) {
 LUA_API int lua_absindex (lua_State *L, int idx) {
   return (idx > 0 || idx <= LUA_REGISTRYINDEX)
          ? idx
-         : lua_gettop(L) + idx + 1;
+         : cast_int(L->top - L->ci->func + idx);
 }
 
 
