@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.84 2010/05/13 12:03:26 roberto Exp roberto $
+** $Id: lparser.c,v 2.85 2010/05/14 15:03:43 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1346,7 +1346,8 @@ static void retstat (LexState *ls) {
 static int statement (LexState *ls) {
   int line = ls->linenumber;  /* may be needed for error messages */
   switch (ls->t.token) {
-    case ';': {  /* stat -> <empty statement> */
+    case ';': {  /* stat -> ';' (empty statement) */
+      luaX_next(ls);  /* skip ';' */
       return 0;
     }
     case TK_IF: {  /* stat -> ifstat */
@@ -1407,7 +1408,8 @@ static void chunk (LexState *ls) {
   enterlevel(ls);
   while (!islast && !block_follow(ls->t.token)) {
     islast = statement(ls);
-    testnext(ls, ';');
+    if (islast)
+      testnext(ls, ';');
     lua_assert(ls->fs->f->maxstacksize >= ls->fs->freereg &&
                ls->fs->freereg >= ls->fs->nactvar);
     ls->fs->freereg = ls->fs->nactvar;  /* free registers */
