@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.106 2010/05/11 20:48:36 roberto Exp roberto $
+** $Id: ltests.c,v 2.107 2010/05/14 13:15:54 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -605,19 +605,20 @@ static int get_gccolor (lua_State *L) {
   if (!iscollectable(o))
     lua_pushstring(L, "no collectable");
   else {
+    int marked = gcvalue(o)->gch.marked;
     int n = 1;
     lua_pushstring(L, iswhite(gcvalue(o)) ? "white" :
                       isblack(gcvalue(o)) ? "black" : "grey");
-    if (testbit(gcvalue(o)->gch.marked, FINALIZEDBIT)) {
+    if (testbit(marked, FINALIZEDBIT)) {
       lua_pushliteral(L, "/finalized"); n++;
     }
-    if (testbit(gcvalue(o)->gch.marked, SEPARATED)) {
+    if (testbit(marked, SEPARATED)) {
       lua_pushliteral(L, "/separated"); n++;
     }
-    if (testbit(gcvalue(o)->gch.marked, FIXEDBIT)) {
+    if (testbit(marked, FIXEDBIT)) {
       lua_pushliteral(L, "/fixed"); n++;
     }
-    if (isold(gcvalue(o))) {
+    if (testbit(marked, OLDBIT)) {
       lua_pushliteral(L, "/old"); n++;
     }
     lua_concat(L, n);
