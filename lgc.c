@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.94 2010/05/10 18:23:45 roberto Exp roberto $
+** $Id: lgc.c,v 2.95 2010/05/11 20:49:26 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -692,7 +692,7 @@ static void GCTM (lua_State *L, int propagateerrors) {
     lu_byte oldah = L->allowhook;
     lu_mem oldd = g->GCdebt;
     L->allowhook = 0;  /* stop debug hooks during GC tag method */
-    g->GCdebt = -2 * g->totalbytes;  /* avoid GC steps */
+    stopgc(g);  /* avoid GC steps */
     setobj2s(L, L->top, tm);  /* push finalizer... */
     setuvalue(L, L->top+1, udata);  /* ... and its argument */
     L->top += 2;  /* and (next line) call the finalizer */
