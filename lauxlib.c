@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.211 2010/05/17 18:30:27 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.212 2010/05/18 17:21:24 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -476,26 +476,26 @@ LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
 */
 
 typedef struct LoadF {
-  int first;
-  FILE *f;
-  char buff[LUAL_BUFFERSIZE];
+  int first;  /* pre-read character */
+  FILE *f;  /* file being read */
+  char buff[LUAL_BUFFERSIZE];  /* area for reading file */
 } LoadF;
 
 
 static const char *getF (lua_State *L, void *ud, size_t *size) {
   LoadF *lf = (LoadF *)ud;
   (void)L;
-  if (lf->first != EOF) {
+  if (lf->first != EOF) {  /* first character not read yet? */
+    lf->buff[0] = (char)lf->first;  /* return it */
     *size = 1;
-    lf->buff[0] = (char)lf->first;
-    lf->first = EOF;
+    lf->first = EOF;  /* now it has been read */
   }
-  else {
+  else {  /* read a block from file */
     /* 'fread' can return > 0 *and* set the EOF flag. If next call to
        'getF' called 'fread', it might still wait for user input.
        The next check avoids this problem. */
     if (feof(lf->f)) return NULL;
-    *size = fread(lf->buff, 1, sizeof(lf->buff), lf->f);
+    *size = fread(lf->buff, 1, sizeof(lf->buff), lf->f);  /* read block */
   }
   return lf->buff;
 }
