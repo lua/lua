@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.210 2010/05/12 14:09:20 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.211 2010/05/17 18:30:27 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -531,6 +531,7 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   else if (c == LUA_SIGNATURE[0] && filename) {  /* binary file? */
     lf.f = freopen(filename, "rb", lf.f);  /* reopen in binary mode */
     if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
+    c = getc(lf.f);  /* re-read first character */
   }
   lf.first = c;  /* 'c' is the first character of the stream */
   status = lua_load(L, getF, &lf, lua_tostring(L, -1));
