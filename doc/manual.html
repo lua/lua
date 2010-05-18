@@ -16,6 +16,11 @@
 Lua 5.2 Reference Manual
 </h1>
 
+<IMG SRC="alert.png" ALIGN="absbottom">
+<EM>This is a work version of Lua 5.2.
+Everything may change in the final version.</EM>
+<P>
+
 by Roberto Ierusalimschy, Luiz Henrique de Figueiredo, Waldemar Celes
 <p>
 <small>
@@ -33,7 +38,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.54 2010/01/13 16:50:58 roberto Exp roberto $ -->
+<!-- $Id: manual.of,v 1.56 2010/05/17 18:28:03 roberto Exp $ -->
 
 
 
@@ -84,179 +89,14 @@ see Roberto's book, <em>Programming in Lua (Second Edition)</em>.
 
 
 
-<h1>2 - <a name="2">The Language</a></h1>
+<h1>2 - <a name="2">Basic Concepts</a></h1>
 
 <p>
-This section describes the lexis, the syntax, and the semantics of Lua.
-In other words,
-this section describes
-which tokens are valid,
-how they can be combined,
-and what their combinations mean.
-
-
-<p>
-The language constructs will be explained using the usual extended BNF notation,
-in which
-{<em>a</em>}&nbsp;means&nbsp;0 or more <em>a</em>'s, and
-[<em>a</em>]&nbsp;means an optional <em>a</em>.
-Non-terminals are shown like non-terminal,
-keywords are shown like <b>kword</b>,
-and other terminal symbols are shown like `<b>=</b>&acute;.
-The complete syntax of Lua can be found in <a href="#8">&sect;8</a>
-at the end of this manual.
+This section describes some basic concepts of the language.
 
 
 
-<h2>2.1 - <a name="2.1">Lexical Conventions</a></h2>
-
-<p>
-Lua is a free-form language.
-It ignores spaces (including new lines) and comments
-between lexical elements (tokens),
-except as delimiters between names and keywords.
-
-
-<p>
-<em>Names</em>
-(also called <em>identifiers</em>)
-in Lua can be any string of letters,
-digits, and underscores,
-not beginning with a digit.
-This coincides with the definition of names in most languages.
-Identifiers are used to name variables and table fields.
-
-
-<p>
-The following <em>keywords</em> are reserved
-and cannot be used as names:
-
-
-<pre>
-     and       break     do        else      elseif
-     end       false     for       function  if
-     in        local     nil       not       or
-     repeat    return    then      true      until     while
-</pre>
-
-<p>
-Lua is a case-sensitive language:
-<code>and</code> is a reserved word, but <code>And</code> and <code>AND</code>
-are two different, valid names.
-As a convention, names starting with an underscore followed by
-uppercase letters (such as <a href="#pdf-_VERSION"><code>_VERSION</code></a>)
-are reserved for internal global variables used by Lua.
-
-
-<p>
-The following strings denote other tokens:
-
-<pre>
-     +     -     *     /     %     ^     #
-     ==    ~=    &lt;=    &gt;=    &lt;     &gt;     =
-     (     )     {     }     [     ]
-     ;     :     ,     .     ..    ...
-</pre>
-
-<p>
-<em>Literal strings</em>
-can be delimited by matching single or double quotes,
-and can contain the following C-like escape sequences:
-'<code>\a</code>' (bell),
-'<code>\b</code>' (backspace),
-'<code>\f</code>' (form feed),
-'<code>\n</code>' (newline),
-'<code>\r</code>' (carriage return),
-'<code>\t</code>' (horizontal tab),
-'<code>\v</code>' (vertical tab),
-'<code>\\</code>' (backslash),
-'<code>\"</code>' (quotation mark [double quote]),
-and '<code>\'</code>' (apostrophe [single quote]).
-Moreover, a backslash followed by a real newline
-results in a newline in the string.
-A character in a string can also be specified by its numerical value.
-This can be done with the escape sequence <code>\x<em>XX</em></code>,
-where <em>XX</em> is a sequence of exactly two hexadecimal digits,
-and with the escape sequence <code>\<em>ddd</em></code>,
-where <em>ddd</em> is a sequence of up to three decimal digits.
-(Note that if a decimal escape is to be followed by a digit,
-it must be expressed using exactly three digits.)
-Strings in Lua can contain any 8-bit value, including embedded zeros,
-which can be specified as '<code>\0</code>'.
-
-
-<p>
-Literal strings can also be defined using a long format
-enclosed by <em>long brackets</em>.
-We define an <em>opening long bracket of level <em>n</em></em> as an opening
-square bracket followed by <em>n</em> equal signs followed by another
-opening square bracket.
-So, an opening long bracket of level&nbsp;0 is written as <code>[[</code>,
-an opening long bracket of level&nbsp;1 is written as <code>[=[</code>,
-and so on.
-A <em>closing long bracket</em> is defined similarly;
-for instance, a closing long bracket of level&nbsp;4 is written as <code>]====]</code>.
-A long string starts with an opening long bracket of any level and
-ends at the first closing long bracket of the same level.
-It can contain any text except a closing bracket of the proper level.
-Literals in this bracketed form can run for several lines,
-do not interpret any escape sequences,
-and ignore long brackets of any other level.
-Any kind of end-of-line sequence
-(carriage return, newline, carriage return followed by newline,
-or newline followed by carriage return)
-is converted to a simple newline.
-You should not use long strings for non-text data;
-Use instead a regular quoted literal with explicit escape sequences
-for control characters.
-
-
-<p>
-For convenience,
-when the opening long bracket is immediately followed by a newline,
-the newline is not included in the string.
-As an example, in a system using ASCII
-(in which '<code>a</code>' is coded as&nbsp;97,
-newline is coded as&nbsp;10, and '<code>1</code>' is coded as&nbsp;49),
-the five literal strings below denote the same string:
-
-<pre>
-     a = 'alo\n123"'
-     a = "alo\n123\""
-     a = '\97lo\10\04923"'
-     a = [[alo
-     123"]]
-     a = [==[
-     alo
-     123"]==]
-</pre>
-
-<p>
-A <em>numerical constant</em> can be written with an optional decimal part
-and an optional decimal exponent.
-Lua also accepts integer hexadecimal constants,
-by prefixing them with <code>0x</code>.
-Examples of valid numerical constants are
-
-<pre>
-     3   3.0   3.1416   314.16e-2   0.31416E1   0xff   0x56
-</pre>
-
-<p>
-A <em>comment</em> starts with a double hyphen (<code>--</code>)
-anywhere outside a string.
-If the text immediately after <code>--</code> is not an opening long bracket,
-the comment is a <em>short comment</em>,
-which runs until the end of the line.
-Otherwise, it is a <em>long comment</em>,
-which runs until the corresponding closing long bracket.
-Long comments are frequently used to disable code temporarily.
-
-
-
-
-
-<h2>2.2 - <a name="2.2">Values and Types</a></h2>
+<h2>2.1 - <a name="2.1">Values and Types</a></h2>
 
 <p>
 Lua is a <em>dynamically typed language</em>.
@@ -291,14 +131,14 @@ see file <code>luaconf.h</code>.)
 <em>String</em> represents arrays of characters.
 
 Lua is 8-bit clean:
-strings can contain any 8-bit character,
-including embedded zeros ('<code>\0</code>') (see <a href="#2.1">&sect;2.1</a>).
+strings can contain any 8-bit value,
+including embedded zeros ('<code>\0</code>').
 
 
 <p>
 Lua can call (and manipulate) functions written in Lua and
 functions written in C
-(see <a href="#2.5.8">&sect;2.5.8</a>).
+(see <a href="#3.4.9">&sect;3.4.9</a>).
 
 
 <p>
@@ -309,7 +149,7 @@ and has no pre-defined operations in Lua,
 except assignment and identity test.
 However, by using <em>metatables</em>,
 the programmer can define operations for userdata values
-(see <a href="#2.8">&sect;2.8</a>).
+(see <a href="#2.4">&sect;2.4</a>).
 Userdata values cannot be created or modified in Lua,
 only through the C&nbsp;API.
 This guarantees the integrity of data owned by the host program.
@@ -317,7 +157,7 @@ This guarantees the integrity of data owned by the host program.
 
 <p>
 The type <em>thread</em> represents independent threads of execution
-and it is used to implement coroutines (see <a href="#2.11">&sect;2.11</a>).
+and it is used to implement coroutines (see <a href="#2.6">&sect;2.6</a>).
 Do not confuse Lua threads with operating-system threads.
 Lua supports coroutines on all systems,
 even those that do not support threads.
@@ -336,7 +176,7 @@ To represent records, Lua uses the field name as an index.
 The language supports this representation by
 providing <code>a.name</code> as syntactic sugar for <code>a["name"]</code>.
 There are several convenient ways to create tables in Lua
-(see <a href="#2.5.7">&sect;2.5.7</a>).
+(see <a href="#3.4.8">&sect;3.4.8</a>).
 
 
 <p>
@@ -345,7 +185,7 @@ the value of a table field can be of any type (except <b>nil</b>).
 In particular,
 because functions are first-class values,
 table fields can contain functions.
-Thus tables can also carry <em>methods</em> (see <a href="#2.5.9">&sect;2.5.9</a>).
+Thus tables can also carry <em>methods</em> (see <a href="#3.4.10">&sect;3.4.10</a>).
 
 
 <p>
@@ -363,1180 +203,54 @@ of a given value.
 
 
 
-<h3>2.2.1 - <a name="2.2.1">Coercion</a></h3>
 
-<p>
-Lua provides automatic conversion between
-string and number values at run time.
-Any arithmetic operation applied to a string tries to convert
-this string to a number, following the usual conversion rules.
-Conversely, whenever a number is used where a string is expected,
-the number is converted to a string, in a reasonable format.
-For complete control over how numbers are converted to strings,
-use the <code>format</code> function from the string library
-(see <a href="#pdf-string.format"><code>string.format</code></a>).
-
-
-
-
-
-
-
-<h2>2.3 - <a name="2.3">Variables</a></h2>
-
-<p>
-Variables are places that store values.
-
-There are three kinds of variables in Lua:
-global variables, local variables, and table fields.
-
-
-<p>
-A single name can denote a global variable or a local variable
-(or a function's formal parameter,
-which is a particular kind of local variable):
-
-<pre>
-	var ::= Name
-</pre><p>
-Name denotes identifiers, as defined in <a href="#2.1">&sect;2.1</a>.
-
-
-<p>
-Any variable is assumed to be global unless explicitly declared
-as a local (see <a href="#2.4.7">&sect;2.4.7</a>).
-Local variables are <em>lexically scoped</em>:
-local variables can be freely accessed by functions
-defined inside their scope (see <a href="#2.6">&sect;2.6</a>).
-
-
-<p>
-Before the first assignment to a variable, its value is <b>nil</b>.
-
-
-<p>
-Square brackets are used to index a table:
-
-<pre>
-	var ::= prefixexp `<b>[</b>&acute; exp `<b>]</b>&acute;
-</pre><p>
-The meaning of accesses to global variables 
-and table fields can be changed via metatables.
-An access to an indexed variable <code>t[i]</code> is equivalent to
-a call <code>gettable_event(t,i)</code>.
-(See <a href="#2.8">&sect;2.8</a> for a complete description of the
-<code>gettable_event</code> function.
-This function is not defined or callable in Lua.
-We use it here only for explanatory purposes.)
-
-
-<p>
-The syntax <code>var.Name</code> is just syntactic sugar for
-<code>var["Name"]</code>:
-
-<pre>
-	var ::= prefixexp `<b>.</b>&acute; Name
-</pre>
-
-<p>
-All global variables live as fields in ordinary Lua tables,
-called <em>environment tables</em> or simply
-<em>environments</em> (see <a href="#2.9">&sect;2.9</a>).
-An access to a global variable <code>x</code>
-is equivalent to <code>_env.x</code>,
-which in turn is equivalent to
-
-<pre>
-     gettable_event(_env, "x")
-</pre><p>
-where <code>_env</code> is the current environment (see <a href="#2.9">&sect;2.9</a>).
-(See <a href="#2.8">&sect;2.8</a> for a complete description of the
-<code>gettable_event</code> function.
-This function is not defined or callable in Lua.
-Similarly, the <code>_env</code> variable is not defined in Lua.
-We use them here only for explanatory purposes.)
-
-
-
-
-
-<h2>2.4 - <a name="2.4">Statements</a></h2>
-
-<p>
-Lua supports an almost conventional set of statements,
-similar to those in Pascal or C.
-This set includes
-assignments, control structures, function calls,
-and variable declarations.
-
-
-
-<h3>2.4.1 - <a name="2.4.1">Chunks</a></h3>
-
-<p>
-The unit of execution of Lua is called a <em>chunk</em>.
-A chunk is simply a sequence of statements,
-which are executed sequentially.
-Each statement can be optionally followed by a semicolon:
-
-<pre>
-	chunk ::= {stat [`<b>;</b>&acute;]}
-</pre><p>
-There are no empty statements and thus '<code>;;</code>' is not legal.
-
-
-<p>
-Lua handles a chunk as the body of an anonymous function 
-with a variable number of arguments
-(see <a href="#2.5.9">&sect;2.5.9</a>).
-As such, chunks can define local variables,
-receive arguments, and return values.
-
-
-<p>
-A chunk can be stored in a file or in a string inside the host program.
-To execute a chunk,
-Lua first pre-compiles the chunk into instructions for a virtual machine,
-and then it executes the compiled code
-with an interpreter for the virtual machine.
-
-
-<p>
-Chunks can also be pre-compiled into binary form;
-see program <code>luac</code> for details.
-Programs in source and compiled forms are interchangeable;
-Lua automatically detects the file type and acts accordingly.
-
-
-
-
-
-
-<h3>2.4.2 - <a name="2.4.2">Blocks</a></h3><p>
-A block is a list of statements;
-syntactically, a block is the same as a chunk:
-
-<pre>
-	block ::= chunk
-</pre>
-
-<p>
-A block can be explicitly delimited to produce a single statement:
-
-<pre>
-	stat ::= <b>do</b> block <b>end</b>
-</pre><p>
-Explicit blocks are useful
-to control the scope of variable declarations.
-Explicit blocks are also sometimes used to
-add a <b>return</b> or <b>break</b> statement in the middle
-of another block (see <a href="#2.4.4">&sect;2.4.4</a>).
-
-
-
-
-
-<h3>2.4.3 - <a name="2.4.3">Assignment</a></h3>
-
-<p>
-Lua allows multiple assignments.
-Therefore, the syntax for assignment
-defines a list of variables on the left side
-and a list of expressions on the right side.
-The elements in both lists are separated by commas:
-
-<pre>
-	stat ::= varlist `<b>=</b>&acute; explist
-	varlist ::= var {`<b>,</b>&acute; var}
-	explist ::= exp {`<b>,</b>&acute; exp}
-</pre><p>
-Expressions are discussed in <a href="#2.5">&sect;2.5</a>.
-
-
-<p>
-Before the assignment,
-the list of values is <em>adjusted</em> to the length of
-the list of variables.
-If there are more values than needed,
-the excess values are thrown away.
-If there are fewer values than needed,
-the list is extended with as many  <b>nil</b>'s as needed.
-If the list of expressions ends with a function call,
-then all values returned by that call enter the list of values,
-before the adjustment
-(except when the call is enclosed in parentheses; see <a href="#2.5">&sect;2.5</a>).
-
-
-<p>
-The assignment statement first evaluates all its expressions
-and only then are the assignments performed.
-Thus the code
-
-<pre>
-     i = 3
-     i, a[i] = i+1, 20
-</pre><p>
-sets <code>a[3]</code> to 20, without affecting <code>a[4]</code>
-because the <code>i</code> in <code>a[i]</code> is evaluated (to 3)
-before it is assigned&nbsp;4.
-Similarly, the line
-
-<pre>
-     x, y = y, x
-</pre><p>
-exchanges the values of <code>x</code> and <code>y</code>,
-and
-
-<pre>
-     x, y, z = y, z, x
-</pre><p>
-cyclically permutes the values of <code>x</code>, <code>y</code>, and <code>z</code>.
-
-
-<p>
-The meaning of assignments to global variables
-and table fields can be changed via metatables.
-An assignment to an indexed variable <code>t[i] = val</code> is equivalent to
-<code>settable_event(t,i,val)</code>.
-(See <a href="#2.8">&sect;2.8</a> for a complete description of the
-<code>settable_event</code> function.
-This function is not defined or callable in Lua.
-We use it here only for explanatory purposes.)
-
-
-<p>
-An assignment to a global variable <code>x = val</code>
-is equivalent to the assignment
-<code>_env.x = val</code>,
-which in turn is equivalent to
-
-<pre>
-     settable_event(_env, "x", val)
-</pre><p>
-where <code>_env</code> is the environment of the running function.
-(The <code>_env</code> variable is not defined in Lua.
-We use it here only for explanatory purposes.)
-
-
-
-
-
-<h3>2.4.4 - <a name="2.4.4">Control Structures</a></h3><p>
-The control structures
-<b>if</b>, <b>while</b>, and <b>repeat</b> have the usual meaning and
-familiar syntax:
-
-
-
-
-<pre>
-	stat ::= <b>while</b> exp <b>do</b> block <b>end</b>
-	stat ::= <b>repeat</b> block <b>until</b> exp
-	stat ::= <b>if</b> exp <b>then</b> block {<b>elseif</b> exp <b>then</b> block} [<b>else</b> block] <b>end</b>
-</pre><p>
-Lua also has a <b>for</b> statement, in two flavors (see <a href="#2.4.5">&sect;2.4.5</a>).
-
-
-<p>
-The condition expression of a
-control structure can return any value.
-Both <b>false</b> and <b>nil</b> are considered false.
-All values different from <b>nil</b> and <b>false</b> are considered true
-(in particular, the number 0 and the empty string are also true).
-
-
-<p>
-In the <b>repeat</b>&ndash;<b>until</b> loop,
-the inner block does not end at the <b>until</b> keyword,
-but only after the condition.
-So, the condition can refer to local variables
-declared inside the loop block.
-
-
-<p>
-The <b>return</b> statement is used to return values
-from a function or a chunk (which is just a function).
-
-Functions and chunks can return more than one value,
-and so the syntax for the <b>return</b> statement is
-
-<pre>
-	stat ::= <b>return</b> [explist]
-</pre>
-
-<p>
-The <b>break</b> statement is used to terminate the execution of a
-<b>while</b>, <b>repeat</b>, or <b>for</b> loop,
-skipping to the next statement after the loop:
-
-
-<pre>
-	stat ::= <b>break</b>
-</pre><p>
-A <b>break</b> ends the innermost enclosing loop.
-
-
-<p>
-The <b>return</b> and <b>break</b>
-statements can only be written as the <em>last</em> statement of a block.
-If it is really necessary to <b>return</b> or <b>break</b> in the
-middle of a block,
-then an explicit inner block can be used,
-as in the idioms
-<code>do return end</code> and <code>do break end</code>,
-because now <b>return</b> and <b>break</b> are the last statements in
-their (inner) blocks.
-
-
-
-
-
-<h3>2.4.5 - <a name="2.4.5">For Statement</a></h3>
-
-<p>
-
-The <b>for</b> statement has two forms:
-one numeric and one generic.
-
-
-<p>
-The numeric <b>for</b> loop repeats a block of code while a
-control variable runs through an arithmetic progression.
-It has the following syntax:
-
-<pre>
-	stat ::= <b>for</b> Name `<b>=</b>&acute; exp `<b>,</b>&acute; exp [`<b>,</b>&acute; exp] <b>do</b> block <b>end</b>
-</pre><p>
-The <em>block</em> is repeated for <em>name</em> starting at the value of
-the first <em>exp</em>, until it passes the second <em>exp</em> by steps of the
-third <em>exp</em>.
-More precisely, a <b>for</b> statement like
-
-<pre>
-     for v = <em>e1</em>, <em>e2</em>, <em>e3</em> do <em>block</em> end
-</pre><p>
-is equivalent to the code:
-
-<pre>
-     do
-       local <em>var</em>, <em>limit</em>, <em>step</em> = tonumber(<em>e1</em>), tonumber(<em>e2</em>), tonumber(<em>e3</em>)
-       if not (<em>var</em> and <em>limit</em> and <em>step</em>) then error() end
-       while (<em>step</em> &gt; 0 and <em>var</em> &lt;= <em>limit</em>) or (<em>step</em> &lt;= 0 and <em>var</em> &gt;= <em>limit</em>) do
-         local v = <em>var</em>
-         <em>block</em>
-         <em>var</em> = <em>var</em> + <em>step</em>
-       end
-     end
-</pre><p>
-Note the following:
-
-<ul>
-
-<li>
-All three control expressions are evaluated only once,
-before the loop starts.
-They must all result in numbers.
-</li>
-
-<li>
-<code><em>var</em></code>, <code><em>limit</em></code>, and <code><em>step</em></code> are invisible variables.
-The names shown here are for explanatory purposes only.
-</li>
-
-<li>
-If the third expression (the step) is absent,
-then a step of&nbsp;1 is used.
-</li>
-
-<li>
-You can use <b>break</b> to exit a <b>for</b> loop.
-</li>
-
-<li>
-The loop variable <code>v</code> is local to the loop;
-you cannot use its value after the <b>for</b> ends or is broken.
-If you need this value,
-assign it to another variable before breaking or exiting the loop.
-</li>
-
-</ul>
-
-<p>
-The generic <b>for</b> statement works over functions,
-called <em>iterators</em>.
-On each iteration, the iterator function is called to produce a new value,
-stopping when this new value is <b>nil</b>.
-The generic <b>for</b> loop has the following syntax:
-
-<pre>
-	stat ::= <b>for</b> namelist <b>in</b> explist <b>do</b> block <b>end</b>
-	namelist ::= Name {`<b>,</b>&acute; Name}
-</pre><p>
-A <b>for</b> statement like
-
-<pre>
-     for <em>var_1</em>, &middot;&middot;&middot;, <em>var_n</em> in <em>explist</em> do <em>block</em> end
-</pre><p>
-is equivalent to the code:
-
-<pre>
-     do
-       local <em>f</em>, <em>s</em>, <em>var</em> = <em>explist</em>
-       while true do
-         local <em>var_1</em>, &middot;&middot;&middot;, <em>var_n</em> = <em>f</em>(<em>s</em>, <em>var</em>)
-         <em>var</em> = <em>var_1</em>
-         if <em>var</em> == nil then break end
-         <em>block</em>
-       end
-     end
-</pre><p>
-Note the following:
-
-<ul>
-
-<li>
-<code><em>explist</em></code> is evaluated only once.
-Its results are an <em>iterator</em> function,
-a <em>state</em>,
-and an initial value for the first <em>iterator variable</em>.
-</li>
-
-<li>
-<code><em>f</em></code>, <code><em>s</em></code>, and <code><em>var</em></code> are invisible variables.
-The names are here for explanatory purposes only.
-</li>
-
-<li>
-You can use <b>break</b> to exit a <b>for</b> loop.
-</li>
-
-<li>
-The loop variables <code><em>var_i</em></code> are local to the loop;
-you cannot use their values after the <b>for</b> ends.
-If you need these values,
-then assign them to other variables before breaking or exiting the loop.
-</li>
-
-</ul>
-
-
-
-
-<h3>2.4.6 - <a name="2.4.6">Function Calls as Statements</a></h3><p>
-To allow possible side-effects,
-function calls can be executed as statements:
-
-<pre>
-	stat ::= functioncall
-</pre><p>
-In this case, all returned values are thrown away.
-Function calls are explained in <a href="#2.5.8">&sect;2.5.8</a>.
-
-
-
-
-
-<h3>2.4.7 - <a name="2.4.7">Local Declarations</a></h3><p>
-Local variables can be declared anywhere inside a block.
-The declaration can include an initial assignment:
-
-<pre>
-	stat ::= <b>local</b> namelist [`<b>=</b>&acute; explist]
-</pre><p>
-If present, an initial assignment has the same semantics
-of a multiple assignment (see <a href="#2.4.3">&sect;2.4.3</a>).
-Otherwise, all variables are initialized with <b>nil</b>.
-
-
-<p>
-A chunk is also a block (see <a href="#2.4.1">&sect;2.4.1</a>),
-and so local variables can be declared in a chunk outside any explicit block.
-The scope of such local variables extends until the end of the chunk.
-
-
-<p>
-The visibility rules for local variables are explained in <a href="#2.6">&sect;2.6</a>.
-
-
-
-
-
-<h3>2.4.8 - <a name="2.4.8">Lexical Environments</a></h3>
-
-<p>
-A lexical environment defines a new current environment (see <a href="#2.9">&sect;2.9</a>)
-for the code inside its block:
-
-<pre>
-	stat ::= <b>in</b> exp <b>do</b> block <b>end</b>
-</pre><p>
-That is, a lexical environment changes the
-table used to resolve all accesses
-to global (free) variables inside a block.
-
-
-<p>
-Inside a lexical environment,
-the result of <code><em>exp</em></code> becomes the current environment.
-Expression <code><em>exp</em></code> is evaluated only once in the beginning of
-the statement and it is stored in a hidden local variable named
-<a name="pdf-(environment)"><code>(environment)</code></a>.
-Then, any global variable
-(that is, a variable not declared as a local)
-<code>var</code> inside <code><em>block</em></code> is accessed as
-<code>(environment).<em>var</em></code>.
-Moreover, functions defined inside the block also use the
-current environment as their environments (see <a href="#2.9">&sect;2.9</a>).
-
-
-<p>
-A lexical environment does not shadow local declarations.
-That is, any local variable that is visible just before
-a lexical environment is still visible inside the environment.
-
-
-
-
-
-
-
-<h2>2.5 - <a name="2.5">Expressions</a></h2>
-
-<p>
-The basic expressions in Lua are the following:
-
-<pre>
-	exp ::= prefixexp
-	exp ::= <b>nil</b> | <b>false</b> | <b>true</b>
-	exp ::= Number
-	exp ::= String
-	exp ::= function
-	exp ::= tableconstructor
-	exp ::= `<b>...</b>&acute;
-	exp ::= exp binop exp
-	exp ::= unop exp
-	prefixexp ::= var | functioncall | `<b>(</b>&acute; exp `<b>)</b>&acute;
-</pre>
-
-<p>
-Numbers and literal strings are explained in <a href="#2.1">&sect;2.1</a>;
-variables are explained in <a href="#2.3">&sect;2.3</a>;
-function definitions are explained in <a href="#2.5.9">&sect;2.5.9</a>;
-function calls are explained in <a href="#2.5.8">&sect;2.5.8</a>;
-table constructors are explained in <a href="#2.5.7">&sect;2.5.7</a>.
-Vararg expressions,
-denoted by three dots ('<code>...</code>'), can only be used when
-directly inside a vararg function;
-they are explained in <a href="#2.5.9">&sect;2.5.9</a>.
-
-
-<p>
-Binary operators comprise arithmetic operators (see <a href="#2.5.1">&sect;2.5.1</a>),
-relational operators (see <a href="#2.5.2">&sect;2.5.2</a>), logical operators (see <a href="#2.5.3">&sect;2.5.3</a>),
-and the concatenation operator (see <a href="#2.5.4">&sect;2.5.4</a>).
-Unary operators comprise the unary minus (see <a href="#2.5.1">&sect;2.5.1</a>),
-the unary <b>not</b> (see <a href="#2.5.3">&sect;2.5.3</a>),
-and the unary <em>length operator</em> (see <a href="#2.5.5">&sect;2.5.5</a>).
-
-
-<p>
-Both function calls and vararg expressions can result in multiple values.
-If an expression is used as a statement
-(only possible for function calls (see <a href="#2.4.6">&sect;2.4.6</a>)),
-then its return list is adjusted to zero elements,
-thus discarding all returned values.
-If an expression is used as the last (or the only) element
-of a list of expressions,
-then no adjustment is made
-(unless the call is enclosed in parentheses).
-In all other contexts,
-Lua adjusts the result list to one element,
-discarding all values except the first one.
-
-
-<p>
-Here are some examples:
-
-<pre>
-     f()                -- adjusted to 0 results
-     g(f(), x)          -- f() is adjusted to 1 result
-     g(x, f())          -- g gets x plus all results from f()
-     a,b,c = f(), x     -- f() is adjusted to 1 result (c gets nil)
-     a,b = ...          -- a gets the first vararg parameter, b gets
-                        -- the second (both a and b can get nil if there
-                        -- is no corresponding vararg parameter)
-     
-     a,b,c = x, f()     -- f() is adjusted to 2 results
-     a,b,c = f()        -- f() is adjusted to 3 results
-     return f()         -- returns all results from f()
-     return ...         -- returns all received vararg parameters
-     return x,y,f()     -- returns x, y, and all results from f()
-     {f()}              -- creates a list with all results from f()
-     {...}              -- creates a list with all vararg parameters
-     {f(), nil}         -- f() is adjusted to 1 result
-</pre>
-
-<p>
-Any expression enclosed in parentheses always results in only one value.
-Thus,
-<code>(f(x,y,z))</code> is always a single value,
-even if <code>f</code> returns several values.
-(The value of <code>(f(x,y,z))</code> is the first value returned by <code>f</code>
-or <b>nil</b> if <code>f</code> does not return any values.)
-
-
-
-<h3>2.5.1 - <a name="2.5.1">Arithmetic Operators</a></h3><p>
-Lua supports the usual arithmetic operators:
-the binary <code>+</code> (addition),
-<code>-</code> (subtraction), <code>*</code> (multiplication),
-<code>/</code> (division), <code>%</code> (modulo), and <code>^</code> (exponentiation);
-and unary <code>-</code> (negation).
-If the operands are numbers, or strings that can be converted to
-numbers (see <a href="#2.2.1">&sect;2.2.1</a>),
-then all operations have the usual meaning.
-Exponentiation works for any exponent.
-For instance, <code>x^(-0.5)</code> computes the inverse of the square root of <code>x</code>.
-Modulo is defined as
-
-<pre>
-     a % b == a - math.floor(a/b)*b
-</pre><p>
-That is, it is the remainder of a division that rounds
-the quotient towards minus infinity.
-
-
-
-
-
-<h3>2.5.2 - <a name="2.5.2">Relational Operators</a></h3><p>
-The relational operators in Lua are
-
-<pre>
-     ==    ~=    &lt;     &gt;     &lt;=    &gt;=
-</pre><p>
-These operators always result in <b>false</b> or <b>true</b>.
-
-
-<p>
-Equality (<code>==</code>) first compares the type of its operands.
-If the types are different, then the result is <b>false</b>.
-Otherwise, the values of the operands are compared.
-Numbers and strings are compared in the usual way.
-Objects (tables, userdata, threads, and functions)
-are compared by <em>reference</em>:
-two objects are considered equal only if they are the <em>same</em> object.
-Every time you create a new object
-(a table, userdata, thread, or function),
-this new object is different from any previously existing object.
-
-
-<p>
-You can change the way that Lua compares tables and userdata 
-by using the "eq" metamethod (see <a href="#2.8">&sect;2.8</a>).
-
-
-<p>
-The conversion rules of <a href="#2.2.1">&sect;2.2.1</a>
-<em>do not</em> apply to equality comparisons.
-Thus, <code>"0"==0</code> evaluates to <b>false</b>,
-and <code>t[0]</code> and <code>t["0"]</code> denote different
-entries in a table.
-
-
-<p>
-The operator <code>~=</code> is exactly the negation of equality (<code>==</code>).
-
-
-<p>
-The order operators work as follows.
-If both arguments are numbers, then they are compared as such.
-Otherwise, if both arguments are strings,
-then their values are compared according to the current locale.
-Otherwise, Lua tries to call the "lt" or the "le"
-metamethod (see <a href="#2.8">&sect;2.8</a>).
-A comparison <code>a &gt; b</code> is translated to <code>b &lt; a</code>
-and <code>a &gt;= b</code> is translated to <code>b &lt;= a</code>.
-
-
-
-
-
-<h3>2.5.3 - <a name="2.5.3">Logical Operators</a></h3><p>
-The logical operators in Lua are
-<b>and</b>, <b>or</b>, and <b>not</b>.
-Like the control structures (see <a href="#2.4.4">&sect;2.4.4</a>),
-all logical operators consider both <b>false</b> and <b>nil</b> as false
-and anything else as true.
-
-
-<p>
-The negation operator <b>not</b> always returns <b>false</b> or <b>true</b>.
-The conjunction operator <b>and</b> returns its first argument
-if this value is <b>false</b> or <b>nil</b>;
-otherwise, <b>and</b> returns its second argument.
-The disjunction operator <b>or</b> returns its first argument
-if this value is different from <b>nil</b> and <b>false</b>;
-otherwise, <b>or</b> returns its second argument.
-Both <b>and</b> and <b>or</b> use short-cut evaluation;
-that is,
-the second operand is evaluated only if necessary.
-Here are some examples:
-
-<pre>
-     10 or 20            --&gt; 10
-     10 or error()       --&gt; 10
-     nil or "a"          --&gt; "a"
-     nil and 10          --&gt; nil
-     false and error()   --&gt; false
-     false and nil       --&gt; false
-     false or nil        --&gt; nil
-     10 and 20           --&gt; 20
-</pre><p>
-(In this manual,
-<code>--&gt;</code> indicates the result of the preceding expression.)
-
-
-
-
-
-<h3>2.5.4 - <a name="2.5.4">Concatenation</a></h3><p>
-The string concatenation operator in Lua is
-denoted by two dots ('<code>..</code>').
-If both operands are strings or numbers, then they are converted to
-strings according to the rules mentioned in <a href="#2.2.1">&sect;2.2.1</a>.
-Otherwise, the "concat" metamethod is called (see <a href="#2.8">&sect;2.8</a>).
-
-
-
-
-
-<h3>2.5.5 - <a name="2.5.5">The Length Operator</a></h3>
-
-<p>
-The length operator is denoted by the unary prefix operator <code>#</code>.
-The length of a string is its number of bytes
-(that is, the usual meaning of string length when each
-character is one byte).
-
-
-<p>
-The length of a table <code>t</code> is defined to be any
-integer index <code>n</code>
-such that <code>t[n]</code> is not <b>nil</b> and <code>t[n+1]</code> is <b>nil</b>;
-moreover, if <code>t[1]</code> is <b>nil</b>, <code>n</code> can be zero.
-For a regular array, where all non-nil values
-have keys from 1 to a given <code>n</code>,
-its length is exactly that <code>n</code>,
-the index of its last value.
-If the array has "holes"
-(that is, <b>nil</b> values between other non-nil values),
-then <code>#t</code> can be any of the indices that
-directly precedes a <b>nil</b> value
-(that is, it may consider any such <b>nil</b> value as the end of
-the array). 
-
-
-<p>
-A program can modify the behavior of the length operator for
-any value but strings through metamethods (see <a href="#2.8">&sect;2.8</a>).
-
 
+<h2>2.2 - <a name="2.2">Environments and the Global Environment</a></h2>
 
-
-
-<h3>2.5.6 - <a name="2.5.6">Precedence</a></h3><p>
-Operator precedence in Lua follows the table below,
-from lower to higher priority:
-
-<pre>
-     or
-     and
-     &lt;     &gt;     &lt;=    &gt;=    ~=    ==
-     ..
-     +     -
-     *     /     %
-     not   #     - (unary)
-     ^
-</pre><p>
-As usual,
-you can use parentheses to change the precedences of an expression.
-The concatenation ('<code>..</code>') and exponentiation ('<code>^</code>')
-operators are right associative.
-All other binary operators are left associative.
-
-
-
-
-
-<h3>2.5.7 - <a name="2.5.7">Table Constructors</a></h3><p>
-Table constructors are expressions that create tables.
-Every time a constructor is evaluated, a new table is created.
-A constructor can be used to create an empty table
-or to create a table and initialize some of its fields.
-The general syntax for constructors is
-
-<pre>
-	tableconstructor ::= `<b>{</b>&acute; [fieldlist] `<b>}</b>&acute;
-	fieldlist ::= field {fieldsep field} [fieldsep]
-	field ::= `<b>[</b>&acute; exp `<b>]</b>&acute; `<b>=</b>&acute; exp | Name `<b>=</b>&acute; exp | exp
-	fieldsep ::= `<b>,</b>&acute; | `<b>;</b>&acute;
-</pre>
-
-<p>
-Each field of the form <code>[exp1] = exp2</code> adds to the new table an entry
-with key <code>exp1</code> and value <code>exp2</code>.
-A field of the form <code>name = exp</code> is equivalent to
-<code>["name"] = exp</code>.
-Finally, fields of the form <code>exp</code> are equivalent to
-<code>[i] = exp</code>, where <code>i</code> are consecutive numerical integers,
-starting with 1.
-Fields in the other formats do not affect this counting.
-For example,
-
-<pre>
-     a = { [f(1)] = g; "x", "y"; x = 1, f(x), [30] = 23; 45 }
-</pre><p>
-is equivalent to
-
-<pre>
-     do
-       local t = {}
-       t[f(1)] = g
-       t[1] = "x"         -- 1st exp
-       t[2] = "y"         -- 2nd exp
-       t.x = 1            -- t["x"] = 1
-       t[3] = f(x)        -- 3rd exp
-       t[30] = 23
-       t[4] = 45          -- 4th exp
-       a = t
-     end
-</pre>
-
-<p>
-If the last field in the list has the form <code>exp</code>
-and the expression is a function call or a vararg expression,
-then all values returned by this expression enter the list consecutively
-(see <a href="#2.5.8">&sect;2.5.8</a>).
-To avoid this,
-enclose the function call or the vararg expression
-in parentheses (see <a href="#2.5">&sect;2.5</a>).
-
-
-<p>
-The field list can have an optional trailing separator,
-as a convenience for machine-generated code.
-
-
-
-
-
-<h3>2.5.8 - <a name="2.5.8">Function Calls</a></h3><p>
-A function call in Lua has the following syntax:
-
-<pre>
-	functioncall ::= prefixexp args
-</pre><p>
-In a function call,
-first prefixexp and args are evaluated.
-If the value of prefixexp has type <em>function</em>,
-then this function is called
-with the given arguments.
-Otherwise, the prefixexp "call" metamethod is called,
-having as first parameter the value of prefixexp,
-followed by the original call arguments
-(see <a href="#2.8">&sect;2.8</a>).
-
-
-<p>
-The form
-
-<pre>
-	functioncall ::= prefixexp `<b>:</b>&acute; Name args
-</pre><p>
-can be used to call "methods".
-A call <code>v:name(<em>args</em>)</code>
-is syntactic sugar for <code>v.name(v,<em>args</em>)</code>,
-except that <code>v</code> is evaluated only once.
-
-
-<p>
-Arguments have the following syntax:
-
-<pre>
-	args ::= `<b>(</b>&acute; [explist] `<b>)</b>&acute;
-	args ::= tableconstructor
-	args ::= String
-</pre><p>
-All argument expressions are evaluated before the call.
-A call of the form <code>f{<em>fields</em>}</code> is
-syntactic sugar for <code>f({<em>fields</em>})</code>;
-that is, the argument list is a single new table.
-A call of the form <code>f'<em>string</em>'</code>
-(or <code>f"<em>string</em>"</code> or <code>f[[<em>string</em>]]</code>)
-is syntactic sugar for <code>f('<em>string</em>')</code>;
-that is, the argument list is a single literal string.
-
-
-<p>
-As an exception to the free-form character of Lua,
-you cannot put a line break before the '<code>(</code>' in a function call.
-This restriction avoids some ambiguities in the language.
-If you write
-
-<pre>
-     a = f
-     (g).x(a)
-</pre><p>
-Lua would see that as a single statement, <code>a = f(g).x(a)</code>.
-In this case, if you want two statements,
-you must add a semi-colon between them.
-If you actually want to call <code>f</code>,
-you must remove the line break before <code>(g)</code>.
-
-
-<p>
-A call of the form <code>return</code> <em>functioncall</em> is called
-a <em>tail call</em>.
-Lua implements <em>proper tail calls</em>
-(or <em>proper tail recursion</em>):
-in a tail call,
-the called function reuses the stack entry of the calling function.
-Therefore, there is no limit on the number of nested tail calls that
-a program can execute.
-However, a tail call erases any debug information about the
-calling function.
-Note that a tail call only happens with a particular syntax,
-where the <b>return</b> has one single function call as argument;
-this syntax makes the calling function return exactly
-the returns of the called function.
-So, none of the following examples are tail calls:
-
-<pre>
-     return (f(x))        -- results adjusted to 1
-     return 2 * f(x)
-     return x, f(x)       -- additional results
-     f(x); return         -- results discarded
-     return x or f(x)     -- results adjusted to 1
-</pre>
-
-
-
-
-<h3>2.5.9 - <a name="2.5.9">Function Definitions</a></h3>
-
-<p>
-The syntax for function definition is
-
-<pre>
-	function ::= <b>function</b> funcbody
-	funcbody ::= `<b>(</b>&acute; [parlist] `<b>)</b>&acute; block <b>end</b>
-</pre>
-
-<p>
-The following syntactic sugar simplifies function definitions:
-
-<pre>
-	stat ::= <b>function</b> funcname funcbody
-	stat ::= <b>local</b> <b>function</b> Name funcbody
-	funcname ::= Name {`<b>.</b>&acute; Name} [`<b>:</b>&acute; Name]
-</pre><p>
-The statement
-
-<pre>
-     function f () <em>body</em> end
-</pre><p>
-translates to
-
-<pre>
-     f = function () <em>body</em> end
-</pre><p>
-The statement
-
-<pre>
-     function t.a.b.c.f () <em>body</em> end
-</pre><p>
-translates to
-
-<pre>
-     t.a.b.c.f = function () <em>body</em> end
-</pre><p>
-The statement
-
-<pre>
-     local function f () <em>body</em> end
-</pre><p>
-translates to
-
-<pre>
-     local f; f = function () <em>body</em> end
-</pre><p>
-<em>not</em> to
-
-<pre>
-     local f = function () <em>body</em> end
-</pre><p>
-(This only makes a difference when the body of the function
-contains references to <code>f</code>.)
-
-
-<p>
-A function definition is an executable expression,
-whose value has type <em>function</em>.
-When Lua pre-compiles a chunk,
-all its function bodies are pre-compiled too.
-Then, whenever Lua executes the function definition,
-the function is <em>instantiated</em> (or <em>closed</em>).
-This function instance (or <em>closure</em>)
-is the final value of the expression.
-Different instances of the same function
-can refer to different  external local variables
-and can have different environment tables.
-
-
-<p>
-Parameters act as local variables that are
-initialized with the argument values:
-
-<pre>
-	parlist ::= namelist [`<b>,</b>&acute; `<b>...</b>&acute;] | `<b>...</b>&acute;
-</pre><p>
-When a function is called,
-the list of arguments is adjusted to
-the length of the list of parameters,
-unless the function is a variadic or <em>vararg function</em>,
-which is
-indicated by three dots ('<code>...</code>') at the end of its parameter list.
-A vararg function does not adjust its argument list;
-instead, it collects all extra arguments and supplies them
-to the function through a <em>vararg expression</em>,
-which is also written as three dots.
-The value of this expression is a list of all actual extra arguments,
-similar to a function with multiple results.
-If a vararg expression is used inside another expression
-or in the middle of a list of expressions,
-then its return list is adjusted to one element.
-If the expression is used as the last element of a list of expressions,
-then no adjustment is made
-(unless that last expression is enclosed in parentheses).
-
-
-<p>
-As an example, consider the following definitions:
-
-<pre>
-     function f(a, b) end
-     function g(a, b, ...) end
-     function r() return 1,2,3 end
-</pre><p>
-Then, we have the following mapping from arguments to parameters and
-to the vararg expression:
-
-<pre>
-     CALL            PARAMETERS
-     
-     f(3)             a=3, b=nil
-     f(3, 4)          a=3, b=4
-     f(3, 4, 5)       a=3, b=4
-     f(r(), 10)       a=1, b=10
-     f(r())           a=1, b=2
-     
-     g(3)             a=3, b=nil, ... --&gt;  (nothing)
-     g(3, 4)          a=3, b=4,   ... --&gt;  (nothing)
-     g(3, 4, 5, 8)    a=3, b=4,   ... --&gt;  5  8
-     g(5, r())        a=5, b=1,   ... --&gt;  2  3
-</pre>
-
-<p>
-Results are returned using the <b>return</b> statement (see <a href="#2.4.4">&sect;2.4.4</a>).
-If control reaches the end of a function
-without encountering a <b>return</b> statement,
-then the function returns with no results.
-
-
-<p>
-The <em>colon</em> syntax
-is used for defining <em>methods</em>,
-that is, functions that have an implicit extra parameter <code>self</code>.
-Thus, the statement
-
-<pre>
-     function t.a.b.c:f (<em>params</em>) <em>body</em> end
-</pre><p>
-is syntactic sugar for
-
-<pre>
-     t.a.b.c.f = function (self, <em>params</em>) <em>body</em> end
-</pre>
-
-
-
-
-
-
-<h2>2.6 - <a name="2.6">Visibility Rules</a></h2>
-
 <p>
+As discussed in <a href="#3.2">&sect;3.2</a> and <a href="#3.3.3">&sect;3.3.3</a>,
+any reference to a global name <code>var</code> is syntactically translated 
+to <code>_ENV.var</code>.
+Moreover, any chunk is compiled in the scope of an external
+variable called <code>_ENV</code> (see <a href="#3.3.1">&sect;3.3.1</a>).
+Any table used as the value of <code>_ENV</code> is usually called
+an <em>environment</em>.
 
-Lua is a lexically scoped language.
-The scope of variables begins at the first statement <em>after</em>
-their declaration and lasts until the end of the innermost block that
-includes the declaration.
-Consider the following example:
 
-<pre>
-     x = 10                -- global variable
-     do                    -- new block
-       local x = x         -- new 'x', with value 10
-       print(x)            --&gt; 10
-       x = x+1
-       do                  -- another block
-         local x = x+1     -- another 'x'
-         print(x)          --&gt; 12
-       end
-       print(x)            --&gt; 11
-     end
-     print(x)              --&gt; 10  (the global one)
-</pre>
-
 <p>
-Notice that, in a declaration like <code>local x = x</code>,
-the new <code>x</code> being declared is not in scope yet,
-and so the second <code>x</code> refers to the outside variable.
+Lua keeps a distinguished environment called the <em>global environment</em>.
+This value is kept at a special index in the C registry (see <a href="#4.5">&sect;4.5</a>).
+In Lua, the variable <a href="#pdf-_G"><code>_G</code></a> is initialized with this same value.
 
 
 <p>
-Because of the lexical scoping rules,
-local variables can be freely accessed by functions
-defined inside their scope.
-A local variable used by an inner function is called
-an <em>upvalue</em>, or <em>external local variable</em>,
-inside the inner function.
+When Lua compiles a chunk,
+it initializes the value of its <code>_ENV</code> variable 
+with the global environment (see <a href="#pdf-load"><code>load</code></a>).
+Therefore, by default,
+global variables in Lua code refer to entries in the global environment.
+Moreover, all standard libraries are loaded in the global environment,
+and several functions there operate on that environment.
+You can use <a href="#pdf-loadin"><code>loadin</code></a> to load a chunk with a different environment.
+(In C, you have to load the chunk and then change the value
+of its first upvalue.)
 
 
 <p>
-Notice that each execution of a <b>local</b> statement
-defines new local variables.
-Consider the following example:
-
-<pre>
-     a = {}
-     local x = 20
-     for i=1,10 do
-       local y = 0
-       a[i] = function () y=y+1; return x+y end
-     end
-</pre><p>
-The loop creates ten closures
-(that is, ten instances of the anonymous function).
-Each of these closures uses a different <code>y</code> variable,
-while all of them share the same <code>x</code>.
+If you change the global environment in the registry
+(through C code or the debug library),
+all chunks loaded after the change will get the new environment.
+Previously loaded chunks are not affected, however,
+as each has its own copy of the environment in its <code>_ENV</code> variable.
+Moreover, the variable <a href="#pdf-_G"><code>_G</code></a>
+(which is stored in the original global environment)
+is never updated by Lua.
 
 
 
 
 
-<h2>2.7 - <a name="2.7">Error Handling</a></h2>
+<h2>2.3 - <a name="2.3">Error Handling</a></h2>
 
 <p>
 Because Lua is an embedded extension language,
@@ -1558,7 +272,7 @@ you can use the <a href="#pdf-pcall"><code>pcall</code></a> function.
 
 
 
-<h2>2.8 - <a name="2.8">Metatables</a></h2>
+<h2>2.4 - <a name="2.4">Metatables</a></h2>
 
 <p>
 Every value in Lua can have a <em>metatable</em>.
@@ -1601,7 +315,7 @@ Values of all other types share one single metatable per type;
 that is, there is one single metatable for all numbers,
 one for all strings, etc.
 By default, a value has no metatable,
-but the string library sets a metatable for the string type (see <a href="#5.4">&sect;5.4</a>).
+but the string library sets a metatable for the string type (see <a href="#6.4">&sect;6.4</a>).
 
 
 <p>
@@ -1634,7 +348,7 @@ the real behavior is hard coded in the interpreter
 and it is much more efficient than this simulation.
 All functions used in these descriptions
 (<a href="#pdf-rawget"><code>rawget</code></a>, <a href="#pdf-tonumber"><code>tonumber</code></a>, etc.)
-are described in <a href="#5.1">&sect;5.1</a>.
+are described in <a href="#6.1">&sect;6.1</a>.
 In particular, to retrieve the metamethod of a given object,
 we use the expression
 
@@ -1650,6 +364,15 @@ This should be read as
 That is, the access to a metamethod does not invoke other metamethods,
 and the access to objects with no metatables does not fail
 (it simply results in <b>nil</b>).
+
+
+<p>
+For the unary <code>-</code> and <code>#</code> operators,
+the metamethod is called repeating the first argument as a second argument.
+This extra argument is only to simplify Lua's internals;
+it may be removed in future versions and therefore it is not present
+in the following code.
+(For most uses this extra argument is irrelevant.)
 
 
 
@@ -1778,33 +501,33 @@ the <code>#</code> operation.
 <pre>
      function len_event (op)
        if type(op) == "string" then
-         return strlen(op)         -- primitive string length
+         return strlen(op)      -- primitive string length
        else
          local h = metatable(op).__len
          if h then
-           return (h(op))     -- call handler with the operand
+           return (h(op))       -- call handler with the operand
          elseif type(op) == "table" then
-           return #op                -- primitive table length
+           return #op              -- primitive table length
          else  -- no handler available: error
            error(&middot;&middot;&middot;)
          end
        end
      end
 </pre><p>
-See <a href="#2.5.5">&sect;2.5.5</a> for a description of the length of a table.
+See <a href="#3.4.6">&sect;3.4.6</a> for a description of the length of a table.
 </li>
 
 <li><b>"eq":</b>
 the <code>==</code> operation.
 
-The function <code>getcomphandler</code> defines how Lua chooses a metamethod
-for comparison operators.
-A metamethod only is selected when both objects
+The function <code>getequalhandler</code> defines how Lua chooses a metamethod
+for equality.
+A metamethod is selected only when both values
 being compared have the same type
 and the same metamethod for the selected operation.
 
 <pre>
-     function getcomphandler (op1, op2, event)
+     function getequalhandler (op1, op2, event)
        if type(op1) ~= type(op2) then return nil end
        local mm1 = metatable(op1)[event]
        local mm2 = metatable(op2)[event]
@@ -1816,13 +539,13 @@ The "eq" event is defined as follows:
 <pre>
      function eq_event (op1, op2)
        if type(op1) ~= type(op2) then  -- different types?
-         return false   -- different objects
+         return false   -- different values
        end
        if op1 == op2 then   -- primitive equal?
-         return true   -- objects are equal
+         return true   -- values are equal
        end
        -- try metamethod
-       local h = getcomphandler(op1, op2, "__eq")
+       local h = getequalhandler(op1, op2, "__eq")
        if h then
          return (h(op1, op2))
        else
@@ -1830,7 +553,6 @@ The "eq" event is defined as follows:
        end
      end
 </pre><p>
-<code>a ~= b</code> is equivalent to <code>not (a == b)</code>.
 </li>
 
 <li><b>"lt":</b>
@@ -1844,7 +566,7 @@ the <code>&lt;</code> operation.
        elseif type(op1) == "string" and type(op2) == "string" then
          return op1 &lt; op2   -- lexicographic comparison
        else
-         local h = getcomphandler(op1, op2, "__lt")
+         local h = getbinhandler(op1, op2, "__lt")
          if h then
            return (h(op1, op2))
          else
@@ -1853,7 +575,6 @@ the <code>&lt;</code> operation.
        end
      end
 </pre><p>
-<code>a &gt; b</code> is equivalent to <code>b &lt; a</code>.
 </li>
 
 <li><b>"le":</b>
@@ -1867,11 +588,11 @@ the <code>&lt;=</code> operation.
        elseif type(op1) == "string" and type(op2) == "string" then
          return op1 &lt;= op2   -- lexicographic comparison
        else
-         local h = getcomphandler(op1, op2, "__le")
+         local h = getbinhandler(op1, op2, "__le")
          if h then
            return (h(op1, op2))
          else
-           h = getcomphandler(op1, op2, "__lt")
+           h = getbinhandler(op1, op2, "__lt")
            if h then
              return not h(op2, op1)
            else
@@ -1881,7 +602,6 @@ the <code>&lt;=</code> operation.
        end
      end
 </pre><p>
-<code>a &gt;= b</code> is equivalent to <code>b &lt;= a</code>.
 Note that, in the absence of a "le" metamethod,
 Lua tries the "lt", assuming that <code>a &lt;= b</code> is
 equivalent to <code>not (b &lt; a)</code>.
@@ -1964,58 +684,7 @@ called when Lua calls a value.
 
 
 
-<h2>2.9 - <a name="2.9">Environments</a></h2>
-
-<p>
-Each function and userdata in Lua
-has a table associated with it,
-called its <em>environment</em>.
-Like metatables, environments are regular tables and
-multiple objects can share the same environment.
->From Lua,
-you can manipulate the environment of an object
-only through the debug library (see <a href="#5.10">&sect;5.10</a>).
-
-
-<p>
-Userdata and C&nbsp;functions are created sharing the environment
-of the creating C&nbsp;function.
-Non-nested Lua functions
-(created by <a href="#pdf-loadfile"><code>loadfile</code></a>, <a href="#pdf-loadstring"><code>loadstring</code></a> or <a href="#pdf-load"><code>load</code></a>)
-are created sharing the global environment.
-Nested Lua functions are created sharing the current environment
-of where it is defined.
-
-
-<p>
-Environments associated with userdata have no meaning for Lua.
-It is only a convenience feature for programmers to associate a table to
-a userdata.
-
-
-<p>
-The environment associated with a C&nbsp;function can be directly
-accessed by C&nbsp;code (see <a href="#3.3">&sect;3.3</a>).
-It is used as the default environment for other C&nbsp;functions
-and userdata created by the function.
-
-
-<p>
-The environment associated with a Lua function is used as the
-current environment of all code in the function outside
-a lexical environment (see <a href="#2.4.8">&sect;2.4.8</a>).
-A lexical environment changes the 
-current environment inside its scope.
-In any case,
-the <em>current environment</em> is the table 
-Lua uses to resolve global variables and to initialize
-the environment of nested functions.
-
-
-
-
-
-<h2>2.10 - <a name="2.10">Garbage Collection</a></h2>
+<h2>2.5 - <a name="2.5">Garbage Collection</a></h2>
 
 <p>
 Lua performs automatic memory management.
@@ -2023,8 +692,7 @@ This means that
 you have to worry neither about allocating memory for new objects
 nor about freeing it when the objects are no longer needed.
 Lua manages memory automatically by running
-a <em>garbage collector</em> from time to time
-to collect all <em>dead objects</em>
+a <em>garbage collector</em> to collect all <em>dead objects</em>
 (that is, objects that are no longer accessible from Lua).
 All memory used by Lua is subject to automatic management:
 tables, userdata, functions, threads, strings, etc.
@@ -2080,11 +748,11 @@ the collector directly (e.g., stop and restart it).
 
 
 
-<h3>2.10.1 - <a name="2.10.1">Garbage-Collection Metamethods</a></h3>
+<h3>2.5.1 - <a name="2.5.1">Garbage-Collection Metamethods</a></h3>
 
 <p>
 Using the C&nbsp;API,
-you can set garbage-collector metamethods for userdata (see <a href="#2.8">&sect;2.8</a>).
+you can set garbage-collector metamethods for userdata (see <a href="#2.4">&sect;2.4</a>).
 These metamethods are also called <em>finalizers</em>.
 Finalizers allow you to coordinate Lua's garbage collection
 with external resource management
@@ -2122,7 +790,7 @@ The userdata itself is freed only in the next garbage-collection cycle.
 
 
 
-<h3>2.10.2 - <a name="2.10.2">Weak Tables</a></h3>
+<h3>2.5.2 - <a name="2.5.2">Weak Tables</a></h3>
 
 <p>
 A <em>weak table</em> is a table whose elements are
@@ -2150,18 +818,6 @@ the values in the table are weak.
 
 
 <p>
-Userdata with finalizers has a special behavior in weak tables.
-When a userdata is a value in a weak table,
-it is removed from the table the first time it is collected,
-before running its finalizer.
-When it is a key, however,
-it is removed from the table only when it is really freed,
-after running its finalizer.
-This behavior allows the finalizer to access values
-associated with the userdata through weak tables.
-
-
-<p>
 A table with weak keys and strong values
 is also called an <em>ephemeron table</em>.
 In an ephemeron table,
@@ -2178,12 +834,34 @@ Otherwise, the weak behavior of the tables controlled by this
 metatable is undefined.
 
 
+<p>
+Only objects that have an explicit construction
+can be removed from weak tables.
+Values, such as numbers and booleans,
+are not subject to garbage collection,
+and therefore are not removed from weak tables
+(unless its associated value is collected).
+Lua treats strings and light C functions as non-object values.
+
+
+<p>
+Userdata with finalizers has a special behavior in weak tables.
+When a userdata is a value in a weak table,
+it is removed from the table the first time it is collected,
+before running its finalizer.
+When it is a key, however,
+it is removed from the table only when it is really freed,
+after running its finalizer.
+This behavior allows the finalizer to access values
+associated with the userdata through weak tables.
 
 
 
 
 
-<h2>2.11 - <a name="2.11">Coroutines</a></h2>
+
+
+<h2>2.6 - <a name="2.6">Coroutines</a></h2>
 
 <p>
 Lua supports coroutines,
@@ -2296,7 +974,1291 @@ When you run it, it produces the following output:
 
 
 
-<h1>3 - <a name="3">The Application Program Interface</a></h1>
+<h1>3 - <a name="3">The Language</a></h1>
+
+<p>
+This section describes the lexis, the syntax, and the semantics of Lua.
+In other words,
+this section describes
+which tokens are valid,
+how they can be combined,
+and what their combinations mean.
+
+
+<p>
+The language constructs will be explained using the usual extended BNF notation,
+in which
+{<em>a</em>}&nbsp;means&nbsp;0 or more <em>a</em>'s, and
+[<em>a</em>]&nbsp;means an optional <em>a</em>.
+Non-terminals are shown like non-terminal,
+keywords are shown like <b>kword</b>,
+and other terminal symbols are shown like &lsquo<b>=</b>&rsquo;.
+The complete syntax of Lua can be found in <a href="#9">&sect;9</a>
+at the end of this manual.
+
+
+
+<h2>3.1 - <a name="3.1">Lexical Conventions</a></h2>
+
+<p>
+Lua is a free-form language.
+It ignores spaces (including new lines) and comments
+between lexical elements (tokens),
+except as delimiters between names and keywords.
+
+
+<p>
+<em>Names</em>
+(also called <em>identifiers</em>)
+in Lua can be any string of letters,
+digits, and underscores,
+not beginning with a digit.
+This coincides with the definition of names in most languages.
+Identifiers are used to name variables and table fields.
+
+
+<p>
+The following <em>keywords</em> are reserved
+and cannot be used as names:
+
+
+<pre>
+     and       break     do        else      elseif
+     end       false     for       function  if
+     in        local     nil       not       or
+     repeat    return    then      true      until     while
+</pre>
+
+<p>
+Lua is a case-sensitive language:
+<code>and</code> is a reserved word, but <code>And</code> and <code>AND</code>
+are two different, valid names.
+As a convention, names starting with an underscore followed by
+uppercase letters (such as <a href="#pdf-_VERSION"><code>_VERSION</code></a>)
+are reserved for variables used by Lua.
+
+
+<p>
+The following strings denote other tokens:
+
+<pre>
+     +     -     *     /     %     ^     #
+     ==    ~=    &lt;=    &gt;=    &lt;     &gt;     =
+     (     )     {     }     [     ]
+     ;     :     ,     .     ..    ...
+</pre>
+
+<p>
+<em>Literal strings</em>
+can be delimited by matching single or double quotes,
+and can contain the following C-like escape sequences:
+'<code>\a</code>' (bell),
+'<code>\b</code>' (backspace),
+'<code>\f</code>' (form feed),
+'<code>\n</code>' (newline),
+'<code>\r</code>' (carriage return),
+'<code>\t</code>' (horizontal tab),
+'<code>\v</code>' (vertical tab),
+'<code>\\</code>' (backslash),
+'<code>\"</code>' (quotation mark [double quote]),
+and '<code>\'</code>' (apostrophe [single quote]).
+A backslash followed by a real newline
+results in a newline in the string.
+The escape sequence '<code>\*</code>' skips the following span
+of white-space characters,
+including line breaks;
+it is particularly useful to break and ident a string 
+into multiple lines without adding the newlines and spaces
+into the string contents.
+
+
+<p>
+A character in a literal string can also be specified by its numerical value.
+This can be done with the escape sequence <code>\x<em>XX</em></code>,
+where <em>XX</em> is a sequence of exactly two hexadecimal digits,
+or with the escape sequence <code>\<em>ddd</em></code>,
+where <em>ddd</em> is a sequence of up to three decimal digits.
+(Note that if a decimal escape is to be followed by a digit,
+it must be expressed using exactly three digits.)
+Strings in Lua can contain any 8-bit value, including embedded zeros,
+which can be specified as '<code>\0</code>'.
+
+
+<p>
+Literal strings can also be defined using a long format
+enclosed by <em>long brackets</em>.
+We define an <em>opening long bracket of level <em>n</em></em> as an opening
+square bracket followed by <em>n</em> equal signs followed by another
+opening square bracket.
+So, an opening long bracket of level&nbsp;0 is written as <code>[[</code>,
+an opening long bracket of level&nbsp;1 is written as <code>[=[</code>,
+and so on.
+A <em>closing long bracket</em> is defined similarly;
+for instance, a closing long bracket of level&nbsp;4 is written as <code>]====]</code>.
+A long string starts with an opening long bracket of any level and
+ends at the first closing long bracket of the same level.
+It can contain any text except a closing bracket of the proper level.
+Literals in this bracketed form can run for several lines,
+do not interpret any escape sequences,
+and ignore long brackets of any other level.
+Any kind of end-of-line sequence
+(carriage return, newline, carriage return followed by newline,
+or newline followed by carriage return)
+is converted to a simple newline.
+You should not use long strings for non-text data;
+Use instead a regular quoted literal with explicit escape sequences
+for control characters.
+
+
+<p>
+For convenience,
+when the opening long bracket is immediately followed by a newline,
+the newline is not included in the string.
+As an example, in a system using ASCII
+(in which '<code>a</code>' is coded as&nbsp;97,
+newline is coded as&nbsp;10, and '<code>1</code>' is coded as&nbsp;49),
+the five literal strings below denote the same string:
+
+<pre>
+     a = 'alo\n123"'
+     a = "alo\n123\""
+     a = '\97lo\10\04923"'
+     a = [[alo
+     123"]]
+     a = [==[
+     alo
+     123"]==]
+</pre>
+
+<p>
+A <em>numerical constant</em> can be written with an optional decimal part
+and an optional decimal exponent.
+Lua also accepts integer hexadecimal constants,
+by prefixing them with <code>0x</code>.
+Examples of valid numerical constants are
+
+<pre>
+     3   3.0   3.1416   314.16e-2   0.31416E1   0xff   0x56
+</pre>
+
+<p>
+A <em>comment</em> starts with a double hyphen (<code>--</code>)
+anywhere outside a string.
+If the text immediately after <code>--</code> is not an opening long bracket,
+the comment is a <em>short comment</em>,
+which runs until the end of the line.
+Otherwise, it is a <em>long comment</em>,
+which runs until the corresponding closing long bracket.
+Long comments are frequently used to disable code temporarily.
+
+
+
+
+
+<h2>3.2 - <a name="3.2">Variables</a></h2>
+
+<p>
+Variables are places that store values.
+
+There are three kinds of variables in Lua:
+global variables, local variables, and table fields.
+
+
+<p>
+A single name can denote a global variable or a local variable
+(or a function's formal parameter,
+which is a particular kind of local variable):
+
+<pre>
+	var ::= Name
+</pre><p>
+Name denotes identifiers, as defined in <a href="#3.1">&sect;3.1</a>.
+
+
+<p>
+Any variable name is assumed to be global unless explicitly declared
+as a local (see <a href="#3.3.7">&sect;3.3.7</a>).
+Local variables are <em>lexically scoped</em>:
+local variables can be freely accessed by functions
+defined inside their scope (see <a href="#3.5">&sect;3.5</a>).
+
+
+<p>
+Before the first assignment to a variable, its value is <b>nil</b>.
+
+
+<p>
+Square brackets are used to index a table:
+
+<pre>
+	var ::= prefixexp &lsquo<b>[</b>&rsquo; exp &lsquo<b>]</b>&rsquo;
+</pre><p>
+The meaning of accesses to table fields can be changed via metatables.
+An access to an indexed variable <code>t[i]</code> is equivalent to
+a call <code>gettable_event(t,i)</code>.
+(See <a href="#2.4">&sect;2.4</a> for a complete description of the
+<code>gettable_event</code> function.
+This function is not defined or callable in Lua.
+We use it here only for explanatory purposes.)
+
+
+<p>
+The syntax <code>var.Name</code> is just syntactic sugar for
+<code>var["Name"]</code>:
+
+<pre>
+	var ::= prefixexp &lsquo<b>.</b>&rsquo; Name
+</pre>
+
+<p>
+An access to a global variable <code>x</code>
+is equivalent to <code>_ENV.x</code>.
+Due to the way that chunks are compiled,
+<code>_ENV</code> is never a global name (see <a href="#2.2">&sect;2.2</a>).
+
+
+
+
+
+<h2>3.3 - <a name="3.3">Statements</a></h2>
+
+<p>
+Lua supports an almost conventional set of statements,
+similar to those in Pascal or C.
+This set includes
+assignments, control structures, function calls,
+and variable declarations.
+
+
+
+<h3>3.3.1 - <a name="3.3.1">Chunks</a></h3>
+
+<p>
+The unit of execution of Lua is called a <em>chunk</em>.
+A chunk is simply a sequence of statements,
+which are executed sequentially.
+
+<pre>
+	chunk ::= {stat }
+</pre><p>
+Lua has <em>empty statements</em>
+that allow you to separate statements with semicolons,
+start a chunk with a semicolon
+or write two semicolons in sequence:
+
+<pre>
+	stat ::= &lsquo<b>;</b>&rsquo;
+</pre>
+
+<p>
+Lua handles a chunk as the body of an anonymous function 
+with a variable number of arguments
+(see <a href="#3.4.10">&sect;3.4.10</a>).
+As such, chunks can define local variables,
+receive arguments, and return values.
+Moreover, such anonymous function is compiled as in the
+scope of an external local variable called <code>_ENV</code> (see <a href="#2.2">&sect;2.2</a>).
+
+
+<p>
+A chunk can be stored in a file or in a string inside the host program.
+To execute a chunk,
+Lua first pre-compiles the chunk into instructions for a virtual machine,
+and then it executes the compiled code
+with an interpreter for the virtual machine.
+
+
+<p>
+Chunks can also be pre-compiled into binary form;
+see program <code>luac</code> for details.
+Programs in source and compiled forms are interchangeable;
+Lua automatically detects the file type and acts accordingly.
+
+
+
+
+
+
+<h3>3.3.2 - <a name="3.3.2">Blocks</a></h3><p>
+A block is a list of statements;
+syntactically, a block is the same as a chunk:
+
+<pre>
+	block ::= chunk
+</pre>
+
+<p>
+A block can be explicitly delimited to produce a single statement:
+
+<pre>
+	stat ::= <b>do</b> block <b>end</b>
+</pre><p>
+Explicit blocks are useful
+to control the scope of variable declarations.
+Explicit blocks are also sometimes used to
+add a <b>return</b> or <b>break</b> statement in the middle
+of another block (see <a href="#3.3.4">&sect;3.3.4</a>).
+
+
+
+
+
+<h3>3.3.3 - <a name="3.3.3">Assignment</a></h3>
+
+<p>
+Lua allows multiple assignments.
+Therefore, the syntax for assignment
+defines a list of variables on the left side
+and a list of expressions on the right side.
+The elements in both lists are separated by commas:
+
+<pre>
+	stat ::= varlist &lsquo<b>=</b>&rsquo; explist
+	varlist ::= var {&lsquo<b>,</b>&rsquo; var}
+	explist ::= exp {&lsquo<b>,</b>&rsquo; exp}
+</pre><p>
+Expressions are discussed in <a href="#3.4">&sect;3.4</a>.
+
+
+<p>
+Before the assignment,
+the list of values is <em>adjusted</em> to the length of
+the list of variables.
+If there are more values than needed,
+the excess values are thrown away.
+If there are fewer values than needed,
+the list is extended with as many  <b>nil</b>'s as needed.
+If the list of expressions ends with a function call,
+then all values returned by that call enter the list of values,
+before the adjustment
+(except when the call is enclosed in parentheses; see <a href="#3.4">&sect;3.4</a>).
+
+
+<p>
+The assignment statement first evaluates all its expressions
+and only then are the assignments performed.
+Thus the code
+
+<pre>
+     i = 3
+     i, a[i] = i+1, 20
+</pre><p>
+sets <code>a[3]</code> to 20, without affecting <code>a[4]</code>
+because the <code>i</code> in <code>a[i]</code> is evaluated (to 3)
+before it is assigned&nbsp;4.
+Similarly, the line
+
+<pre>
+     x, y = y, x
+</pre><p>
+exchanges the values of <code>x</code> and <code>y</code>,
+and
+
+<pre>
+     x, y, z = y, z, x
+</pre><p>
+cyclically permutes the values of <code>x</code>, <code>y</code>, and <code>z</code>.
+
+
+<p>
+The meaning of assignments to global variables
+and table fields can be changed via metatables.
+An assignment to an indexed variable <code>t[i] = val</code> is equivalent to
+<code>settable_event(t,i,val)</code>.
+(See <a href="#2.4">&sect;2.4</a> for a complete description of the
+<code>settable_event</code> function.
+This function is not defined or callable in Lua.
+We use it here only for explanatory purposes.)
+
+
+<p>
+An assignment to a global variable <code>x = val</code>
+is equivalent to the assignment
+<code>_ENV.x = val</code> (see <a href="#2.2">&sect;2.2</a>).
+
+
+
+
+
+<h3>3.3.4 - <a name="3.3.4">Control Structures</a></h3><p>
+The control structures
+<b>if</b>, <b>while</b>, and <b>repeat</b> have the usual meaning and
+familiar syntax:
+
+
+
+
+<pre>
+	stat ::= <b>while</b> exp <b>do</b> block <b>end</b>
+	stat ::= <b>repeat</b> block <b>until</b> exp
+	stat ::= <b>if</b> exp <b>then</b> block {<b>elseif</b> exp <b>then</b> block} [<b>else</b> block] <b>end</b>
+</pre><p>
+Lua also has a <b>for</b> statement, in two flavors (see <a href="#3.3.5">&sect;3.3.5</a>).
+
+
+<p>
+The condition expression of a
+control structure can return any value.
+Both <b>false</b> and <b>nil</b> are considered false.
+All values different from <b>nil</b> and <b>false</b> are considered true
+(in particular, the number 0 and the empty string are also true).
+
+
+<p>
+In the <b>repeat</b>&ndash;<b>until</b> loop,
+the inner block does not end at the <b>until</b> keyword,
+but only after the condition.
+So, the condition can refer to local variables
+declared inside the loop block.
+
+
+<p>
+The <b>return</b> statement is used to return values
+from a function or a chunk (which is just a function).
+
+Functions and chunks can return more than one value,
+and so the syntax for the <b>return</b> statement is
+
+<pre>
+	stat ::= <b>return</b> [explist] [&lsquo<b>;</b>&rsquo;]
+</pre>
+
+<p>
+The <b>break</b> statement is used to terminate the execution of a
+<b>while</b>, <b>repeat</b>, or <b>for</b> loop,
+skipping to the next statement after the loop:
+
+
+<pre>
+	stat ::= <b>break</b> [&lsquo<b>;</b>&rsquo;]
+</pre><p>
+A <b>break</b> ends the innermost enclosing loop.
+
+
+<p>
+The <b>return</b> and <b>break</b>
+statements can only be written as the <em>last</em> statement of a block.
+If it is really necessary to <b>return</b> or <b>break</b> in the
+middle of a block,
+then an explicit inner block can be used,
+as in the idioms
+<code>do return end</code> and <code>do break end</code>,
+because now <b>return</b> and <b>break</b> are the last statements in
+their (inner) blocks.
+
+
+
+
+
+<h3>3.3.5 - <a name="3.3.5">For Statement</a></h3>
+
+<p>
+
+The <b>for</b> statement has two forms:
+one numeric and one generic.
+
+
+<p>
+The numeric <b>for</b> loop repeats a block of code while a
+control variable runs through an arithmetic progression.
+It has the following syntax:
+
+<pre>
+	stat ::= <b>for</b> Name &lsquo<b>=</b>&rsquo; exp &lsquo<b>,</b>&rsquo; exp [&lsquo<b>,</b>&rsquo; exp] <b>do</b> block <b>end</b>
+</pre><p>
+The <em>block</em> is repeated for <em>name</em> starting at the value of
+the first <em>exp</em>, until it passes the second <em>exp</em> by steps of the
+third <em>exp</em>.
+More precisely, a <b>for</b> statement like
+
+<pre>
+     for v = <em>e1</em>, <em>e2</em>, <em>e3</em> do <em>block</em> end
+</pre><p>
+is equivalent to the code:
+
+<pre>
+     do
+       local <em>var</em>, <em>limit</em>, <em>step</em> = tonumber(<em>e1</em>), tonumber(<em>e2</em>), tonumber(<em>e3</em>)
+       if not (<em>var</em> and <em>limit</em> and <em>step</em>) then error() end
+       while (<em>step</em> &gt; 0 and <em>var</em> &lt;= <em>limit</em>) or (<em>step</em> &lt;= 0 and <em>var</em> &gt;= <em>limit</em>) do
+         local v = <em>var</em>
+         <em>block</em>
+         <em>var</em> = <em>var</em> + <em>step</em>
+       end
+     end
+</pre><p>
+Note the following:
+
+<ul>
+
+<li>
+All three control expressions are evaluated only once,
+before the loop starts.
+They must all result in numbers.
+</li>
+
+<li>
+<code><em>var</em></code>, <code><em>limit</em></code>, and <code><em>step</em></code> are invisible variables.
+The names shown here are for explanatory purposes only.
+</li>
+
+<li>
+If the third expression (the step) is absent,
+then a step of&nbsp;1 is used.
+</li>
+
+<li>
+You can use <b>break</b> to exit a <b>for</b> loop.
+</li>
+
+<li>
+The loop variable <code>v</code> is local to the loop;
+you cannot use its value after the <b>for</b> ends or is broken.
+If you need this value,
+assign it to another variable before breaking or exiting the loop.
+</li>
+
+</ul>
+
+<p>
+The generic <b>for</b> statement works over functions,
+called <em>iterators</em>.
+On each iteration, the iterator function is called to produce a new value,
+stopping when this new value is <b>nil</b>.
+The generic <b>for</b> loop has the following syntax:
+
+<pre>
+	stat ::= <b>for</b> namelist <b>in</b> explist <b>do</b> block <b>end</b>
+	namelist ::= Name {&lsquo<b>,</b>&rsquo; Name}
+</pre><p>
+A <b>for</b> statement like
+
+<pre>
+     for <em>var_1</em>, &middot;&middot;&middot;, <em>var_n</em> in <em>explist</em> do <em>block</em> end
+</pre><p>
+is equivalent to the code:
+
+<pre>
+     do
+       local <em>f</em>, <em>s</em>, <em>var</em> = <em>explist</em>
+       while true do
+         local <em>var_1</em>, &middot;&middot;&middot;, <em>var_n</em> = <em>f</em>(<em>s</em>, <em>var</em>)
+         <em>var</em> = <em>var_1</em>
+         if <em>var</em> == nil then break end
+         <em>block</em>
+       end
+     end
+</pre><p>
+Note the following:
+
+<ul>
+
+<li>
+<code><em>explist</em></code> is evaluated only once.
+Its results are an <em>iterator</em> function,
+a <em>state</em>,
+and an initial value for the first <em>iterator variable</em>.
+</li>
+
+<li>
+<code><em>f</em></code>, <code><em>s</em></code>, and <code><em>var</em></code> are invisible variables.
+The names are here for explanatory purposes only.
+</li>
+
+<li>
+You can use <b>break</b> to exit a <b>for</b> loop.
+</li>
+
+<li>
+The loop variables <code><em>var_i</em></code> are local to the loop;
+you cannot use their values after the <b>for</b> ends.
+If you need these values,
+then assign them to other variables before breaking or exiting the loop.
+</li>
+
+</ul>
+
+
+
+
+<h3>3.3.6 - <a name="3.3.6">Function Calls as Statements</a></h3><p>
+To allow possible side-effects,
+function calls can be executed as statements:
+
+<pre>
+	stat ::= functioncall
+</pre><p>
+In this case, all returned values are thrown away.
+Function calls are explained in <a href="#3.4.9">&sect;3.4.9</a>.
+
+
+
+
+
+<h3>3.3.7 - <a name="3.3.7">Local Declarations</a></h3><p>
+Local variables can be declared anywhere inside a block.
+The declaration can include an initial assignment:
+
+<pre>
+	stat ::= <b>local</b> namelist [&lsquo<b>=</b>&rsquo; explist]
+</pre><p>
+If present, an initial assignment has the same semantics
+of a multiple assignment (see <a href="#3.3.3">&sect;3.3.3</a>).
+Otherwise, all variables are initialized with <b>nil</b>.
+
+
+<p>
+A chunk is also a block (see <a href="#3.3.1">&sect;3.3.1</a>),
+and so local variables can be declared in a chunk outside any explicit block.
+The scope of such local variables extends until the end of the chunk.
+
+
+<p>
+The visibility rules for local variables are explained in <a href="#3.5">&sect;3.5</a>.
+
+
+
+
+
+
+
+<h2>3.4 - <a name="3.4">Expressions</a></h2>
+
+<p>
+The basic expressions in Lua are the following:
+
+<pre>
+	exp ::= prefixexp
+	exp ::= <b>nil</b> | <b>false</b> | <b>true</b>
+	exp ::= Number
+	exp ::= String
+	exp ::= function
+	exp ::= tableconstructor
+	exp ::= &lsquo<b>...</b>&rsquo;
+	exp ::= exp binop exp
+	exp ::= unop exp
+	prefixexp ::= var | functioncall | &lsquo<b>(</b>&rsquo; exp &lsquo<b>)</b>&rsquo;
+</pre>
+
+<p>
+Numbers and literal strings are explained in <a href="#3.1">&sect;3.1</a>;
+variables are explained in <a href="#3.2">&sect;3.2</a>;
+function definitions are explained in <a href="#3.4.10">&sect;3.4.10</a>;
+function calls are explained in <a href="#3.4.9">&sect;3.4.9</a>;
+table constructors are explained in <a href="#3.4.8">&sect;3.4.8</a>.
+Vararg expressions,
+denoted by three dots ('<code>...</code>'), can only be used when
+directly inside a vararg function;
+they are explained in <a href="#3.4.10">&sect;3.4.10</a>.
+
+
+<p>
+Binary operators comprise arithmetic operators (see <a href="#3.4.1">&sect;3.4.1</a>),
+relational operators (see <a href="#3.4.3">&sect;3.4.3</a>), logical operators (see <a href="#3.4.4">&sect;3.4.4</a>),
+and the concatenation operator (see <a href="#3.4.5">&sect;3.4.5</a>).
+Unary operators comprise the unary minus (see <a href="#3.4.1">&sect;3.4.1</a>),
+the unary <b>not</b> (see <a href="#3.4.4">&sect;3.4.4</a>),
+and the unary <em>length operator</em> (see <a href="#3.4.6">&sect;3.4.6</a>).
+
+
+<p>
+Both function calls and vararg expressions can result in multiple values.
+If an expression is used as a statement
+(only possible for function calls (see <a href="#3.3.6">&sect;3.3.6</a>)),
+then its return list is adjusted to zero elements,
+thus discarding all returned values.
+If an expression is used as the last (or the only) element
+of a list of expressions,
+then no adjustment is made
+(unless the call is enclosed in parentheses).
+In all other contexts,
+Lua adjusts the result list to one element,
+discarding all values except the first one.
+
+
+<p>
+Here are some examples:
+
+<pre>
+     f()                -- adjusted to 0 results
+     g(f(), x)          -- f() is adjusted to 1 result
+     g(x, f())          -- g gets x plus all results from f()
+     a,b,c = f(), x     -- f() is adjusted to 1 result (c gets nil)
+     a,b = ...          -- a gets the first vararg parameter, b gets
+                        -- the second (both a and b can get nil if there
+                        -- is no corresponding vararg parameter)
+     
+     a,b,c = x, f()     -- f() is adjusted to 2 results
+     a,b,c = f()        -- f() is adjusted to 3 results
+     return f()         -- returns all results from f()
+     return ...         -- returns all received vararg parameters
+     return x,y,f()     -- returns x, y, and all results from f()
+     {f()}              -- creates a list with all results from f()
+     {...}              -- creates a list with all vararg parameters
+     {f(), nil}         -- f() is adjusted to 1 result
+</pre>
+
+<p>
+Any expression enclosed in parentheses always results in only one value.
+Thus,
+<code>(f(x,y,z))</code> is always a single value,
+even if <code>f</code> returns several values.
+(The value of <code>(f(x,y,z))</code> is the first value returned by <code>f</code>
+or <b>nil</b> if <code>f</code> does not return any values.)
+
+
+
+<h3>3.4.1 - <a name="3.4.1">Arithmetic Operators</a></h3><p>
+Lua supports the usual arithmetic operators:
+the binary <code>+</code> (addition),
+<code>-</code> (subtraction), <code>*</code> (multiplication),
+<code>/</code> (division), <code>%</code> (modulo), and <code>^</code> (exponentiation);
+and unary <code>-</code> (negation).
+If the operands are numbers, or strings that can be converted to
+numbers (see <a href="#3.4.2">&sect;3.4.2</a>),
+then all operations have the usual meaning.
+Exponentiation works for any exponent.
+For instance, <code>x^(-0.5)</code> computes the inverse of the square root of <code>x</code>.
+Modulo is defined as
+
+<pre>
+     a % b == a - math.floor(a/b)*b
+</pre><p>
+That is, it is the remainder of a division that rounds
+the quotient towards minus infinity.
+
+
+
+
+
+<h3>3.4.2 - <a name="3.4.2">Coercion</a></h3>
+
+<p>
+Lua provides automatic conversion between
+string and number values at run time.
+Any arithmetic operation applied to a string tries to convert
+this string to a number, following the usual conversion rules.
+Conversely, whenever a number is used where a string is expected,
+the number is converted to a string, in a reasonable format.
+For complete control over how numbers are converted to strings,
+use the <code>format</code> function from the string library
+(see <a href="#pdf-string.format"><code>string.format</code></a>).
+
+
+
+
+
+<h3>3.4.3 - <a name="3.4.3">Relational Operators</a></h3><p>
+The relational operators in Lua are
+
+<pre>
+     ==    ~=    &lt;     &gt;     &lt;=    &gt;=
+</pre><p>
+These operators always result in <b>false</b> or <b>true</b>.
+
+
+<p>
+Equality (<code>==</code>) first compares the type of its operands.
+If the types are different, then the result is <b>false</b>.
+Otherwise, the values of the operands are compared.
+Numbers and strings are compared in the usual way.
+Objects (tables, userdata, threads, and functions)
+are compared by <em>reference</em>:
+two objects are considered equal only if they are the <em>same</em> object.
+Every time you create a new object
+(a table, userdata, thread, or function),
+this new object is different from any previously existing object.
+
+
+<p>
+You can change the way that Lua compares tables and userdata 
+by using the "eq" metamethod (see <a href="#2.4">&sect;2.4</a>).
+
+
+<p>
+The conversion rules of <a href="#3.4.2">&sect;3.4.2</a>
+<em>do not</em> apply to equality comparisons.
+Thus, <code>"0"==0</code> evaluates to <b>false</b>,
+and <code>t[0]</code> and <code>t["0"]</code> denote different
+entries in a table.
+
+
+<p>
+The operator <code>~=</code> is exactly the negation of equality (<code>==</code>).
+
+
+<p>
+The order operators work as follows.
+If both arguments are numbers, then they are compared as such.
+Otherwise, if both arguments are strings,
+then their values are compared according to the current locale.
+Otherwise, Lua tries to call the "lt" or the "le"
+metamethod (see <a href="#2.4">&sect;2.4</a>).
+A comparison <code>a &gt; b</code> is translated to <code>b &lt; a</code>
+and <code>a &gt;= b</code> is translated to <code>b &lt;= a</code>.
+
+
+
+
+
+<h3>3.4.4 - <a name="3.4.4">Logical Operators</a></h3><p>
+The logical operators in Lua are
+<b>and</b>, <b>or</b>, and <b>not</b>.
+Like the control structures (see <a href="#3.3.4">&sect;3.3.4</a>),
+all logical operators consider both <b>false</b> and <b>nil</b> as false
+and anything else as true.
+
+
+<p>
+The negation operator <b>not</b> always returns <b>false</b> or <b>true</b>.
+The conjunction operator <b>and</b> returns its first argument
+if this value is <b>false</b> or <b>nil</b>;
+otherwise, <b>and</b> returns its second argument.
+The disjunction operator <b>or</b> returns its first argument
+if this value is different from <b>nil</b> and <b>false</b>;
+otherwise, <b>or</b> returns its second argument.
+Both <b>and</b> and <b>or</b> use short-cut evaluation;
+that is,
+the second operand is evaluated only if necessary.
+Here are some examples:
+
+<pre>
+     10 or 20            --&gt; 10
+     10 or error()       --&gt; 10
+     nil or "a"          --&gt; "a"
+     nil and 10          --&gt; nil
+     false and error()   --&gt; false
+     false and nil       --&gt; false
+     false or nil        --&gt; nil
+     10 and 20           --&gt; 20
+</pre><p>
+(In this manual,
+<code>--&gt;</code> indicates the result of the preceding expression.)
+
+
+
+
+
+<h3>3.4.5 - <a name="3.4.5">Concatenation</a></h3><p>
+The string concatenation operator in Lua is
+denoted by two dots ('<code>..</code>').
+If both operands are strings or numbers, then they are converted to
+strings according to the rules mentioned in <a href="#3.4.2">&sect;3.4.2</a>.
+Otherwise, the "concat" metamethod is called (see <a href="#2.4">&sect;2.4</a>).
+
+
+
+
+
+<h3>3.4.6 - <a name="3.4.6">The Length Operator</a></h3>
+
+<p>
+The length operator is denoted by the unary prefix operator <code>#</code>.
+The length of a string is its number of bytes
+(that is, the usual meaning of string length when each
+character is one byte).
+
+
+<p>
+The length of a table <code>t</code> is defined to be any
+integer index <code>n</code>
+such that <code>t[n]</code> is not <b>nil</b> and <code>t[n+1]</code> is <b>nil</b>;
+moreover, if <code>t[1]</code> is <b>nil</b>, <code>n</code> can be zero.
+For a regular array, where all non-nil values
+have keys from 1 to a given <code>n</code>,
+its length is exactly that <code>n</code>,
+the index of its last value.
+If the array has "holes"
+(that is, <b>nil</b> values between other non-nil values),
+then <code>#t</code> can be any of the indices that
+directly precedes a <b>nil</b> value
+(that is, it may consider any such <b>nil</b> value as the end of
+the array). 
+
+
+<p>
+A program can modify the behavior of the length operator for
+any value but strings through metamethods (see <a href="#2.4">&sect;2.4</a>).
+
+
+
+
+
+<h3>3.4.7 - <a name="3.4.7">Precedence</a></h3><p>
+Operator precedence in Lua follows the table below,
+from lower to higher priority:
+
+<pre>
+     or
+     and
+     &lt;     &gt;     &lt;=    &gt;=    ~=    ==
+     ..
+     +     -
+     *     /     %
+     not   #     - (unary)
+     ^
+</pre><p>
+As usual,
+you can use parentheses to change the precedences of an expression.
+The concatenation ('<code>..</code>') and exponentiation ('<code>^</code>')
+operators are right associative.
+All other binary operators are left associative.
+
+
+
+
+
+<h3>3.4.8 - <a name="3.4.8">Table Constructors</a></h3><p>
+Table constructors are expressions that create tables.
+Every time a constructor is evaluated, a new table is created.
+A constructor can be used to create an empty table
+or to create a table and initialize some of its fields.
+The general syntax for constructors is
+
+<pre>
+	tableconstructor ::= &lsquo<b>{</b>&rsquo; [fieldlist] &lsquo<b>}</b>&rsquo;
+	fieldlist ::= field {fieldsep field} [fieldsep]
+	field ::= &lsquo<b>[</b>&rsquo; exp &lsquo<b>]</b>&rsquo; &lsquo<b>=</b>&rsquo; exp | Name &lsquo<b>=</b>&rsquo; exp | exp
+	fieldsep ::= &lsquo<b>,</b>&rsquo; | &lsquo<b>;</b>&rsquo;
+</pre>
+
+<p>
+Each field of the form <code>[exp1] = exp2</code> adds to the new table an entry
+with key <code>exp1</code> and value <code>exp2</code>.
+A field of the form <code>name = exp</code> is equivalent to
+<code>["name"] = exp</code>.
+Finally, fields of the form <code>exp</code> are equivalent to
+<code>[i] = exp</code>, where <code>i</code> are consecutive numerical integers,
+starting with 1.
+Fields in the other formats do not affect this counting.
+For example,
+
+<pre>
+     a = { [f(1)] = g; "x", "y"; x = 1, f(x), [30] = 23; 45 }
+</pre><p>
+is equivalent to
+
+<pre>
+     do
+       local t = {}
+       t[f(1)] = g
+       t[1] = "x"         -- 1st exp
+       t[2] = "y"         -- 2nd exp
+       t.x = 1            -- t["x"] = 1
+       t[3] = f(x)        -- 3rd exp
+       t[30] = 23
+       t[4] = 45          -- 4th exp
+       a = t
+     end
+</pre>
+
+<p>
+If the last field in the list has the form <code>exp</code>
+and the expression is a function call or a vararg expression,
+then all values returned by this expression enter the list consecutively
+(see <a href="#3.4.9">&sect;3.4.9</a>).
+To avoid this,
+enclose the function call or the vararg expression
+in parentheses (see <a href="#3.4">&sect;3.4</a>).
+
+
+<p>
+The field list can have an optional trailing separator,
+as a convenience for machine-generated code.
+
+
+
+
+
+<h3>3.4.9 - <a name="3.4.9">Function Calls</a></h3><p>
+A function call in Lua has the following syntax:
+
+<pre>
+	functioncall ::= prefixexp args
+</pre><p>
+In a function call,
+first prefixexp and args are evaluated.
+If the value of prefixexp has type <em>function</em>,
+then this function is called
+with the given arguments.
+Otherwise, the prefixexp "call" metamethod is called,
+having as first parameter the value of prefixexp,
+followed by the original call arguments
+(see <a href="#2.4">&sect;2.4</a>).
+
+
+<p>
+The form
+
+<pre>
+	functioncall ::= prefixexp &lsquo<b>:</b>&rsquo; Name args
+</pre><p>
+can be used to call "methods".
+A call <code>v:name(<em>args</em>)</code>
+is syntactic sugar for <code>v.name(v,<em>args</em>)</code>,
+except that <code>v</code> is evaluated only once.
+
+
+<p>
+Arguments have the following syntax:
+
+<pre>
+	args ::= &lsquo<b>(</b>&rsquo; [explist] &lsquo<b>)</b>&rsquo;
+	args ::= tableconstructor
+	args ::= String
+</pre><p>
+All argument expressions are evaluated before the call.
+A call of the form <code>f{<em>fields</em>}</code> is
+syntactic sugar for <code>f({<em>fields</em>})</code>;
+that is, the argument list is a single new table.
+A call of the form <code>f'<em>string</em>'</code>
+(or <code>f"<em>string</em>"</code> or <code>f[[<em>string</em>]]</code>)
+is syntactic sugar for <code>f('<em>string</em>')</code>;
+that is, the argument list is a single literal string.
+
+
+<p>
+A call of the form <code>return</code> <em>functioncall</em> is called
+a <em>tail call</em>.
+Lua implements <em>proper tail calls</em>
+(or <em>proper tail recursion</em>):
+in a tail call,
+the called function reuses the stack entry of the calling function.
+Therefore, there is no limit on the number of nested tail calls that
+a program can execute.
+However, a tail call erases any debug information about the
+calling function.
+Note that a tail call only happens with a particular syntax,
+where the <b>return</b> has one single function call as argument;
+this syntax makes the calling function return exactly
+the returns of the called function.
+So, none of the following examples are tail calls:
+
+<pre>
+     return (f(x))        -- results adjusted to 1
+     return 2 * f(x)
+     return x, f(x)       -- additional results
+     f(x); return         -- results discarded
+     return x or f(x)     -- results adjusted to 1
+</pre>
+
+
+
+
+<h3>3.4.10 - <a name="3.4.10">Function Definitions</a></h3>
+
+<p>
+The syntax for function definition is
+
+<pre>
+	function ::= <b>function</b> funcbody
+	funcbody ::= &lsquo<b>(</b>&rsquo; [parlist] &lsquo<b>)</b>&rsquo; block <b>end</b>
+</pre>
+
+<p>
+The following syntactic sugar simplifies function definitions:
+
+<pre>
+	stat ::= <b>function</b> funcname funcbody
+	stat ::= <b>local</b> <b>function</b> Name funcbody
+	funcname ::= Name {&lsquo<b>.</b>&rsquo; Name} [&lsquo<b>:</b>&rsquo; Name]
+</pre><p>
+The statement
+
+<pre>
+     function f () <em>body</em> end
+</pre><p>
+translates to
+
+<pre>
+     f = function () <em>body</em> end
+</pre><p>
+The statement
+
+<pre>
+     function t.a.b.c.f () <em>body</em> end
+</pre><p>
+translates to
+
+<pre>
+     t.a.b.c.f = function () <em>body</em> end
+</pre><p>
+The statement
+
+<pre>
+     local function f () <em>body</em> end
+</pre><p>
+translates to
+
+<pre>
+     local f; f = function () <em>body</em> end
+</pre><p>
+<em>not</em> to
+
+<pre>
+     local f = function () <em>body</em> end
+</pre><p>
+(This only makes a difference when the body of the function
+contains references to <code>f</code>.)
+
+
+<p>
+A function definition is an executable expression,
+whose value has type <em>function</em>.
+When Lua pre-compiles a chunk,
+all its function bodies are pre-compiled too.
+Then, whenever Lua executes the function definition,
+the function is <em>instantiated</em> (or <em>closed</em>).
+This function instance (or <em>closure</em>)
+is the final value of the expression.
+Different instances of the same function
+can refer to different  external local variables
+and can have different environment tables.
+
+
+<p>
+Parameters act as local variables that are
+initialized with the argument values:
+
+<pre>
+	parlist ::= namelist [&lsquo<b>,</b>&rsquo; &lsquo<b>...</b>&rsquo;] | &lsquo<b>...</b>&rsquo;
+</pre><p>
+When a function is called,
+the list of arguments is adjusted to
+the length of the list of parameters,
+unless the function is a variadic or <em>vararg function</em>,
+which is
+indicated by three dots ('<code>...</code>') at the end of its parameter list.
+A vararg function does not adjust its argument list;
+instead, it collects all extra arguments and supplies them
+to the function through a <em>vararg expression</em>,
+which is also written as three dots.
+The value of this expression is a list of all actual extra arguments,
+similar to a function with multiple results.
+If a vararg expression is used inside another expression
+or in the middle of a list of expressions,
+then its return list is adjusted to one element.
+If the expression is used as the last element of a list of expressions,
+then no adjustment is made
+(unless that last expression is enclosed in parentheses).
+
+
+<p>
+As an example, consider the following definitions:
+
+<pre>
+     function f(a, b) end
+     function g(a, b, ...) end
+     function r() return 1,2,3 end
+</pre><p>
+Then, we have the following mapping from arguments to parameters and
+to the vararg expression:
+
+<pre>
+     CALL            PARAMETERS
+     
+     f(3)             a=3, b=nil
+     f(3, 4)          a=3, b=4
+     f(3, 4, 5)       a=3, b=4
+     f(r(), 10)       a=1, b=10
+     f(r())           a=1, b=2
+     
+     g(3)             a=3, b=nil, ... --&gt;  (nothing)
+     g(3, 4)          a=3, b=4,   ... --&gt;  (nothing)
+     g(3, 4, 5, 8)    a=3, b=4,   ... --&gt;  5  8
+     g(5, r())        a=5, b=1,   ... --&gt;  2  3
+</pre>
+
+<p>
+Results are returned using the <b>return</b> statement (see <a href="#3.3.4">&sect;3.3.4</a>).
+If control reaches the end of a function
+without encountering a <b>return</b> statement,
+then the function returns with no results.
+
+
+<p>
+The <em>colon</em> syntax
+is used for defining <em>methods</em>,
+that is, functions that have an implicit extra parameter <code>self</code>.
+Thus, the statement
+
+<pre>
+     function t.a.b.c:f (<em>params</em>) <em>body</em> end
+</pre><p>
+is syntactic sugar for
+
+<pre>
+     t.a.b.c.f = function (self, <em>params</em>) <em>body</em> end
+</pre>
+
+
+
+
+
+
+<h2>3.5 - <a name="3.5">Visibility Rules</a></h2>
+
+<p>
+
+Lua is a lexically scoped language.
+The scope of variables begins at the first statement <em>after</em>
+their declaration and lasts until the end of the innermost block that
+includes the declaration.
+Consider the following example:
+
+<pre>
+     x = 10                -- global variable
+     do                    -- new block
+       local x = x         -- new 'x', with value 10
+       print(x)            --&gt; 10
+       x = x+1
+       do                  -- another block
+         local x = x+1     -- another 'x'
+         print(x)          --&gt; 12
+       end
+       print(x)            --&gt; 11
+     end
+     print(x)              --&gt; 10  (the global one)
+</pre>
+
+<p>
+Notice that, in a declaration like <code>local x = x</code>,
+the new <code>x</code> being declared is not in scope yet,
+and so the second <code>x</code> refers to the outside variable.
+
+
+<p>
+Because of the lexical scoping rules,
+local variables can be freely accessed by functions
+defined inside their scope.
+A local variable used by an inner function is called
+an <em>upvalue</em>, or <em>external local variable</em>,
+inside the inner function.
+
+
+<p>
+Notice that each execution of a <b>local</b> statement
+defines new local variables.
+Consider the following example:
+
+<pre>
+     a = {}
+     local x = 20
+     for i=1,10 do
+       local y = 0
+       a[i] = function () y=y+1; return x+y end
+     end
+</pre><p>
+The loop creates ten closures
+(that is, ten instances of the anonymous function).
+Each of these closures uses a different <code>y</code> variable,
+while all of them share the same <code>x</code>.
+
+
+
+
+
+<h1>4 - <a name="4">The Application Program Interface</a></h1>
 
 <p>
 
@@ -2324,7 +2286,7 @@ in file <code>luaconf.h</code>.
 
 
 
-<h2>3.1 - <a name="3.1">The Stack</a></h2>
+<h2>4.1 - <a name="4.1">The Stack</a></h2>
 
 <p>
 Lua uses a <em>virtual stack</em> to pass values to and from C.
@@ -2366,7 +2328,7 @@ if it lies between&nbsp;1 and the stack top
 
 
 
-<h2>3.2 - <a name="3.2">Stack Size</a></h2>
+<h2>4.2 - <a name="4.2">Stack Size</a></h2>
 
 <p>
 When you interact with Lua API,
@@ -2412,37 +2374,22 @@ Note that 0 is never an acceptable index.
 
 
 
-<h2>3.3 - <a name="3.3">Pseudo-Indices</a></h2>
+<h2>4.3 - <a name="4.3">Pseudo-Indices</a></h2>
 
 <p>
 Unless otherwise noted,
 any function that accepts valid indices also accepts <em>pseudo-indices</em>,
 which represent some Lua values that are accessible to C&nbsp;code
 but which are not in the stack.
-Pseudo-indices are used to access the thread environment,
-the function environment,
-the registry,
-and the upvalues of a C&nbsp;function (see <a href="#3.4">&sect;3.4</a>).
-
-
-<p>
-The environment of the running C&nbsp;function is always
-at pseudo-index <a name="pdf-LUA_ENVIRONINDEX"><code>LUA_ENVIRONINDEX</code></a>.
-
-
-<p>
-To access and change the value of global variables,
-you can use regular table operations over an environment table.
-For instance, to access the value of a global variable, do
-
-<pre>
-     lua_getfield(L, LUA_ENVIRONINDEX, varname);
-</pre>
+Pseudo-indices are used to access
+the registry
+and the upvalues of a C&nbsp;function (see <a href="#4.4">&sect;4.4</a>).
 
 
 
 
-<h2>3.4 - <a name="3.4">C Closures</a></h2>
+
+<h2>4.4 - <a name="4.4">C Closures</a></h2>
 
 <p>
 When a C&nbsp;function is created,
@@ -2469,7 +2416,7 @@ produces an acceptable (but invalid) index.
 
 
 
-<h2>3.5 - <a name="3.5">Registry</a></h2>
+<h2>4.5 - <a name="4.5">Registry</a></h2>
 
 <p>
 Lua provides a <em>registry</em>,
@@ -2503,29 +2450,6 @@ The following constants are defined:
 the main thread of the state.
 (The main thread is the one created together with the state.)
 </li>
-<li><b>LUA_RIDX_CPCALL:</b> At this index the registry has
-the <a name="pdf-cpcall"><code>cpcall</code></a> function.
-This function allows you to call any
-<a href="#lua_CFunction"><code>lua_CFunction</code></a> without creating a closure for it,
-therefore preventing an unprotected memory allocation error.
-
-
-<p>
-The address of the function to be called must be stored in a variable,
-whose address is passed as the first argument to <code>cpcall</code>,
-as a light userdata.
-Note that the light userdata in the first argument should not
-point to the function to be called,
-but to a variable containing the pointer to the function.
-ANSI&nbsp;C does not allow the direct assignment of a function address to
-the <code>void*</code> in a light userdata.
-
-
-<p>
-Other arguments to <code>cpcall</code> are passed to the called function.
-The <code>cpcall</code> function itself should be called with <a href="#lua_pcall"><code>lua_pcall</code></a>,
-like any C function.
-</li>
 
 <li><b>LUA_RIDX_GLOBALS:</b> At this index the registry has
 the global environment.
@@ -2536,7 +2460,7 @@ This is the C&nbsp;equivalent to the <a href="#pdf-_G"><code>_G</code></a> globa
 
 
 
-<h2>3.6 - <a name="3.6">Error Handling in C</a></h2>
+<h2>4.6 - <a name="4.6">Error Handling in C</a></h2>
 
 <p>
 Internally, Lua uses the C <code>longjmp</code> facility to handle errors.
@@ -2575,7 +2499,7 @@ Inside a C&nbsp;function you can throw an error by calling <a href="#lua_error">
 
 
 
-<h2>3.7 - <a name="3.7">Handling Yields in C</a></h2>
+<h2>4.7 - <a name="4.7">Handling Yields in C</a></h2>
 
 <p>
 Internally, Lua uses the C <code>longjmp</code> facility to yield a coroutine.
@@ -2600,10 +2524,10 @@ To explain continuations,
 let us set some terminology.
 We have a C function called from Lua which we will call
 the <em>original function</em>.
-This original function may call one of those three functions in the C API,
+This original function then calls one of those three functions in the C API,
 which we will call the <em>callee function</em>,
-that may yield the current thread.
-(This will happen when the callee function is <a href="#lua_yieldk"><code>lua_yieldk</code></a>,
+that then yields the current thread.
+(This can happen when the callee function is <a href="#lua_yieldk"><code>lua_yieldk</code></a>,
 or when the callee function is either <a href="#lua_callk"><code>lua_callk</code></a> or <a href="#lua_pcallk"><code>lua_pcallk</code></a>
 and the function called by them yields.)
 
@@ -2643,7 +2567,7 @@ and its continuation is the result of a call to <a href="#lua_getctx"><code>lua_
 
 
 
-<h2>3.8 - <a name="3.8">Functions and Types</a></h2>
+<h2>4.8 - <a name="4.8">Functions and Types</a></h2>
 
 <p>
 Here we list all functions and types from the C&nbsp;API in
@@ -2672,6 +2596,18 @@ tells whether the function may throw errors:
 only due to not enough memory;
 '<code>e</code>' means the function may throw other kinds of errors;
 '<code>v</code>' means the function may throw an error on purpose.
+
+
+
+<hr><h3><a name="lua_absindex"><code>lua_absindex</code></a></h3><p>
+<span class="apii">[-0, +0, <em>-</em>]</span>
+<pre>void lua_absindex (lua_State *L, int idx);</pre>
+
+<p>
+Converts the acceptable index <code>idx</code> into an absolute index
+(that is, one that does not depend on the stack top).
+
+
 
 
 
@@ -2768,12 +2704,12 @@ but it seems a safe assumption.)
 <pre>lua_CFunction lua_atpanic (lua_State *L, lua_CFunction panicf);</pre>
 
 <p>
-Sets a new panic function and returns the old one (see <a href="#3.6">&sect;3.6</a>).
+Sets a new panic function and returns the old one (see <a href="#4.6">&sect;4.6</a>).
 
 
 <p>
 The panic function should not try to run anything on the failed Lua state.
-However, it can still use the debug API (see <a href="#3.9">&sect;3.9</a>)
+However, it can still use the debug API (see <a href="#4.9">&sect;4.9</a>)
 to gather information about the state.
 In particular, the error message is at the top of the stack.
 
@@ -2824,14 +2760,14 @@ equivalent to this Lua code:
 Here it is in&nbsp;C:
 
 <pre>
-     lua_getfield(L, LUA_ENVIRONINDEX, "f"); /* function to be called */
+     lua_getglobal(L, "f");                  /* function to be called */
      lua_pushstring(L, "how");                        /* 1st argument */
-     lua_getfield(L, LUA_ENVIRONINDEX, "t");   /* table to be indexed */
+     lua_getglobal(L, "t");                    /* table to be indexed */
      lua_getfield(L, -1, "x");        /* push result of t.x (2nd arg) */
      lua_remove(L, -2);                  /* remove 't' from the stack */
      lua_pushinteger(L, 14);                          /* 3rd argument */
      lua_call(L, 3, 1);     /* call 'f' with 3 arguments and 1 result */
-     lua_setfield(L, LUA_ENVIRONINDEX, "a");        /* set global 'a' */
+     lua_setglobal(L, "a");                         /* set global 'a' */
 </pre><p>
 Note that the code above is "balanced":
 at its end, the stack is back to its original configuration.
@@ -2848,7 +2784,7 @@ This is considered good programming practice.
 
 <p>
 This function behaves exactly like <a href="#lua_call"><code>lua_call</code></a>,
-but allows the called function to yield (see <a href="#3.7">&sect;3.7</a>).
+but allows the called function to yield (see <a href="#4.7">&sect;4.7</a>).
 
 
 
@@ -2980,7 +2916,7 @@ If <code>n</code>&nbsp;is&nbsp;1, the result is the single value on the stack
 (that is, the function does nothing);
 if <code>n</code> is 0, the result is the empty string.
 Concatenation is performed following the usual semantics of Lua
-(see <a href="#2.5.4">&sect;2.5.4</a>).
+(see <a href="#3.4.5">&sect;3.4.5</a>).
 
 
 
@@ -3108,13 +3044,13 @@ garbage-collection cycle.
 
 <li><b><code>LUA_GCSETPAUSE</code>:</b>
 sets <code>data</code> as the new value
-for the <em>pause</em> of the collector (see <a href="#2.10">&sect;2.10</a>).
+for the <em>pause</em> of the collector (see <a href="#2.5">&sect;2.5</a>).
 The function returns the previous value of the pause.
 </li>
 
 <li><b><code>LUA_GCSETSTEPMUL</code>:</b>
 sets <code>data</code> as the new value for the <em>step multiplier</em> of
-the collector (see <a href="#2.10">&sect;2.10</a>).
+the collector (see <a href="#2.5">&sect;2.5</a>).
 The function returns the previous value of the step multiplier.
 </li>
 
@@ -3146,7 +3082,7 @@ opaque pointer passed to <a href="#lua_newstate"><code>lua_newstate</code></a>.
 <pre>int lua_getctx  (lua_State *L, int *ctx);</pre>
 
 <p>
-This function is called by a continuation function (see <a href="#3.7">&sect;3.7</a>)
+This function is called by a continuation function (see <a href="#4.7">&sect;4.7</a>)
 to retrieve the status of the thread and a context information.
 
 
@@ -3197,7 +3133,7 @@ the value at the given index.
 Pushes onto the stack the value <code>t[k]</code>,
 where <code>t</code> is the value at the given valid index.
 As in Lua, this function may trigger a metamethod
-for the "index" event (see <a href="#2.8">&sect;2.8</a>).
+for the "index" event (see <a href="#2.4">&sect;2.4</a>).
 
 
 
@@ -3209,11 +3145,8 @@ for the "index" event (see <a href="#2.8">&sect;2.8</a>).
 
 <p>
 Pushes onto the stack the value of the global <code>name</code>.
-It is defined as a macro:
+It is defined as a macro.
 
-<pre>
-     #define lua_getglobal(L,s)  lua_getfield(L, LUA_ENVIRONINDEX, s)
-</pre>
 
 
 
@@ -3247,7 +3180,7 @@ and <code>k</code> is the value at the top of the stack.
 This function pops the key from the stack
 (putting the resulting value in its place).
 As in Lua, this function may trigger a metamethod
-for the "index" event (see <a href="#2.8">&sect;2.8</a>).
+for the "index" event (see <a href="#2.4">&sect;2.4</a>).
 
 
 
@@ -3452,7 +3385,7 @@ Returns 1 if the value at the given acceptable index is a userdata
 
 <p>
 Returns the "length" of the value at the given acceptable index;
-it is equivalent to the '<code>#</code>' operator in Lua (see <a href="#2.5.5">&sect;2.5.5</a>).
+it is equivalent to the '<code>#</code>' operator in Lua (see <a href="#3.4.6">&sect;3.4.6</a>).
 The result is pushed on the stack.
 
 
@@ -3510,7 +3443,15 @@ The <code>data</code> argument is an opaque value passed to the reader function.
 
 <p>
 The <code>source</code> argument gives a name to the chunk,
-which is used for error messages and in debug information (see <a href="#3.9">&sect;3.9</a>).
+which is used for error messages and in debug information (see <a href="#4.9">&sect;4.9</a>).
+
+
+<p>
+If the resulting function has upvalues,
+the first upvalue is set to the value of the global environment
+stored at index <code>LUA_RIDX_GLOBALS</code> in the registry (see <a href="#4.5">&sect;4.5</a>).
+(When loading main chunks,
+this upvalue will be the <code>_ENV</code> variable (see <a href="#2.2">&sect;2.2</a>).)
 
 
 
@@ -3729,7 +3670,7 @@ It is generated by the garbage collector.)
 
 <p>
 This function behaves exactly like <a href="#lua_pcall"><code>lua_pcall</code></a>,
-but allows the called function to yield (see <a href="#3.7">&sect;3.7</a>).
+but allows the called function to yield (see <a href="#4.7">&sect;4.7</a>).
 
 
 
@@ -3768,7 +3709,7 @@ Pushes a new C&nbsp;closure onto the stack.
 <p>
 When a C&nbsp;function is created,
 it is possible to associate some values with it,
-thus creating a C&nbsp;closure (see <a href="#3.4">&sect;3.4</a>);
+thus creating a C&nbsp;closure (see <a href="#4.4">&sect;4.4</a>);
 these values are then accessible to the function whenever it is called.
 To associate values with a C&nbsp;function,
 first these values should be pushed onto the stack
@@ -3784,11 +3725,18 @@ associated with the function.
 The maximum value for <code>n</code> is 255.
 
 
+<p>
+When <code>n</code> is zero,
+this function creates a <em>light C function</em>,
+which is just a pointer to the C&nbsp;function.
+In that case, it cannot throw a memory error.
+
+
 
 
 
 <hr><h3><a name="lua_pushcfunction"><code>lua_pushcfunction</code></a></h3><p>
-<span class="apii">[-0, +1, <em>m</em>]</span>
+<span class="apii">[-0, +1, <em>-</em>]</span>
 <pre>void lua_pushcfunction (lua_State *L, lua_CFunction f);</pre>
 
 <p>
@@ -3946,12 +3894,16 @@ onto the stack.
 Lua makes (or reuses) an internal copy of the given string,
 so the memory at <code>s</code> can be freed or reused immediately after
 the function returns.
-The string cannot contain embedded zeros;
+The string should not contain embedded zeros;
 it is assumed to end at the first zero.
 
 
 <p>
 Returns a pointer to the internal copy of the string.
+
+
+<p>
+If <code>s</code> is <code>NULL</code>, pushes <b>nil</b> and returns <code>NULL</code>.
 
 
 
@@ -4232,7 +4184,7 @@ and <code>v</code> is the value at the top of the stack.
 <p>
 This function pops the value from the stack.
 As in Lua, this function may trigger a metamethod
-for the "newindex" event (see <a href="#2.8">&sect;2.8</a>).
+for the "newindex" event (see <a href="#2.4">&sect;2.4</a>).
 
 
 
@@ -4245,11 +4197,8 @@ for the "newindex" event (see <a href="#2.8">&sect;2.8</a>).
 <p>
 Pops a value from the stack and
 sets it as the new value of global <code>name</code>.
-It is defined as a macro:
+It is defined as a macro.
 
-<pre>
-     #define lua_setglobal(L,s)   lua_setfield(L, LUA_ENVIRONINDEX, s)
-</pre>
 
 
 
@@ -4281,7 +4230,7 @@ and <code>k</code> is the value just below the top.
 <p>
 This function pops both the key and the value from the stack.
 As in Lua, this function may trigger a metamethod
-for the "newindex" event (see <a href="#2.8">&sect;2.8</a>).
+for the "newindex" event (see <a href="#2.4">&sect;2.4</a>).
 
 
 
@@ -4379,7 +4328,7 @@ otherwise, returns <code>NULL</code>.
 Converts the Lua value at the given acceptable index
 to the signed integral type <a href="#lua_Integer"><code>lua_Integer</code></a>.
 The Lua value must be a number or a string convertible to a number
-(see <a href="#2.2.1">&sect;2.2.1</a>);
+(see <a href="#3.4.2">&sect;3.4.2</a>);
 otherwise, <a href="#lua_tointeger"><code>lua_tointeger</code></a> returns&nbsp;0.
 
 
@@ -4430,7 +4379,7 @@ will be valid after the corresponding value is removed from the stack.
 Converts the Lua value at the given acceptable index
 to the C&nbsp;type <a href="#lua_Number"><code>lua_Number</code></a> (see <a href="#lua_Number"><code>lua_Number</code></a>).
 The Lua value must be a number or a string convertible to a number
-(see <a href="#2.2.1">&sect;2.2.1</a>);
+(see <a href="#3.4.2">&sect;3.4.2</a>);
 otherwise, <a href="#lua_tonumber"><code>lua_tonumber</code></a> returns&nbsp;0.
 
 
@@ -4596,7 +4545,7 @@ and pushes them onto the stack <code>to</code>.
 
 <p>
 This function is equivalent to <a href="#lua_yieldk"><code>lua_yieldk</code></a>,
-but it has no continuation (see <a href="#3.7">&sect;3.7</a>).
+but it has no continuation (see <a href="#4.7">&sect;4.7</a>).
 Therefore, when the thread resumes,
 it returns to the function that called
 the function calling <code>lua_yield</code>.
@@ -4631,7 +4580,7 @@ that are passed as results to <a href="#lua_resume"><code>lua_resume</code></a>.
 <p>
 When the coroutine is resumed again,
 Lua calls the given continuation function <code>k</code> to continue
-the execution of the C function that yielded (see <a href="#3.7">&sect;3.7</a>).
+the execution of the C function that yielded (see <a href="#4.7">&sect;4.7</a>).
 This continuation function receives the same stack
 from the previous function,
 with the results removed and
@@ -4646,7 +4595,7 @@ by calling <a href="#lua_getctx"><code>lua_getctx</code></a>.
 
 
 
-<h2>3.9 - <a name="3.9">The Debug Interface</a></h2>
+<h2>4.9 - <a name="4.9">The Debug Interface</a></h2>
 
 <p>
 Lua has no built-in debugging facilities.
@@ -4830,7 +4779,7 @@ you can write the following code:
 
 <pre>
      lua_Debug ar;
-     lua_getfield(L, LUA_ENVIRONINDEX, "f");  /* get global 'f' */
+     lua_getglobal(L, "f");  /* get global 'f' */
      lua_getinfo(L, "&gt;S", &amp;ar);
      printf("%d\n", ar.linedefined);
 </pre>
@@ -5126,7 +5075,7 @@ TO BE DONE!!
 
 
 
-<h1>4 - <a name="4">The Auxiliary Library</a></h1>
+<h1>5 - <a name="5">The Auxiliary Library</a></h1>
 
 <p>
 
@@ -5151,6 +5100,14 @@ and so they provide nothing that cannot be done with that API.
 
 
 <p>
+Several functions in the auxiliary library use internally some
+extra stack slots.
+When a function in the auxiliary library uses less than five slots,
+it does not check the stack size;
+it simply assumes that there are enough slots.
+
+
+<p>
 Several functions in the auxiliary library are used to
 check C&nbsp;function arguments.
 Because the error message is formatted for arguments
@@ -5164,7 +5121,7 @@ always throw an error if the check is not satisfied.
 
 
 
-<h2>4.1 - <a name="4.1">Functions and Types</a></h2>
+<h2>5.1 - <a name="5.1">Functions and Types</a></h2>
 
 <p>
 Here we list all functions and types from the auxiliary library
@@ -5192,7 +5149,7 @@ Adds the character <code>c</code> to the buffer <code>B</code>
 Adds the string pointed to by <code>s</code> with length <code>l</code> to
 the buffer <code>B</code>
 (see <a href="#luaL_Buffer"><code>luaL_Buffer</code></a>).
-The string may contain embedded zeros.
+The string can contain embedded zeros.
 
 
 
@@ -5219,7 +5176,7 @@ buffer area (see <a href="#luaL_prepbuffer"><code>luaL_prepbuffer</code></a>).
 Adds the zero-terminated string pointed to by <code>s</code>
 to the buffer <code>B</code>
 (see <a href="#luaL_Buffer"><code>luaL_Buffer</code></a>).
-The string may not contain embedded zeros.
+The string should not contain embedded zeros.
 
 
 
@@ -5661,9 +5618,9 @@ Pushes the resulting string on the stack and returns it.
 <p>
 Returns the "length" of the value at the given acceptable index
 as a number;
-it is equivalent to the '<code>#</code>' operator in Lua (see <a href="#2.5.5">&sect;2.5.5</a>).
+it is equivalent to the '<code>#</code>' operator in Lua (see <a href="#3.4.6">&sect;3.4.6</a>).
 Raises an error if the result of the operation is not a number.
-(This only may happen through metamethods.)
+(This only can happen through metamethods.)
 
 
 
@@ -5769,7 +5726,7 @@ with <code>tname</code> in the registry.
 Creates a new Lua state.
 It calls <a href="#lua_newstate"><code>lua_newstate</code></a> with an
 allocator based on the standard&nbsp;C <code>realloc</code> function
-and then sets a panic function (see <a href="#3.6">&sect;3.6</a>) that prints
+and then sets a panic function (see <a href="#4.6">&sect;4.6</a>) that prints
 an error message to the standard error output in case of fatal
 errors.
 
@@ -5782,8 +5739,54 @@ or <code>NULL</code> if there is a memory allocation error.
 
 
 
+<hr><h3><a name="luaL_openlib"><code>luaL_openlib</code></a></h3><p>
+<span class="apii">[-(nup + (0|1)), +1, <em>e</em>]</span>
+<pre>void luaL_openlib (lua_State *L,
+                             const char *libname,
+                             const luaL_Reg *l,
+                             int nup);</pre>
+
+<p>
+Opens a library.
+
+
+<p>
+When called with <code>libname</code> equal to <code>NULL</code>,
+it simply registers all functions in the array <code>l</code>
+(see <a href="#luaL_Reg"><code>luaL_Reg</code></a>) into the table on the top of the stack.
+The pointer <code>l</code> may be <code>NULL</code>,
+representing an empty list.
+
+
+<p>
+When called with a non-null <code>libname</code>,
+<code>luaL_openlib</code> creates a new table <code>t</code>,
+sets it as the value of the global variable <code>libname</code>,
+sets it as the value of <code>package.loaded[libname]</code>,
+and registers on it all functions in the list <code>l</code>.
+If there is a table in <code>package.loaded[libname]</code> or
+in global variable <code>libname</code>,
+reuses this table instead of creating a new one.
+
+
+<p>
+In any case the function leaves the table
+on the top of the stack.
+
+
+<p>
+When <code>nup</code> is not zero,
+all functions are created sharing <code>nup</code> upvalues,
+which must be previously pushed on the stack
+(on top of the library table, if present).
+These values are popped from the stack after the registration.
+
+
+
+
+
 <hr><h3><a name="luaL_openlibs"><code>luaL_openlibs</code></a></h3><p>
-<span class="apii">[-0, +0, <em>m</em>]</span>
+<span class="apii">[-0, +0, <em>e</em>]</span>
 <pre>void luaL_openlibs (lua_State *L);</pre>
 
 <p>
@@ -5960,7 +5963,7 @@ from any reference returned by <a href="#luaL_ref"><code>luaL_ref</code></a>.
 
 <p>
 Type for arrays of functions to be registered by
-<a href="#luaL_register"><code>luaL_register</code></a>.
+<a href="#luaL_openlib"><code>luaL_openlib</code></a>.
 <code>name</code> is the function name and <code>func</code> is a pointer to
 the function.
 Any array of <a href="#luaL_Reg"><code>luaL_Reg</code></a> must end with an sentinel entry
@@ -5977,31 +5980,8 @@ in which both <code>name</code> and <code>func</code> are <code>NULL</code>.
                     const luaL_Reg *l);</pre>
 
 <p>
-Opens a library.
-
-
-<p>
-When called with <code>libname</code> equal to <code>NULL</code>,
-it simply registers all functions in the array <code>l</code>
-(see <a href="#luaL_Reg"><code>luaL_Reg</code></a>) into the table on the top of the stack.
-The pointer <code>l</code> may be <code>NULL</code>,
-representing an empty list.
-
-
-<p>
-When called with a non-null <code>libname</code>,
-<code>luaL_register</code> creates a new table <code>t</code>,
-sets it as the value of the global variable <code>libname</code>,
-sets it as the value of <code>package.loaded[libname]</code>,
-and registers on it all functions in the list <code>l</code>.
-If there is a table in <code>package.loaded[libname]</code> or in
-variable <code>libname</code>,
-reuses this table instead of creating a new one.
-
-
-<p>
-In any case the function leaves the table
-on the top of the stack.
+This macro is equivalent to calling <a href="#luaL_openlib"><code>luaL_openlib</code></a>
+with no upvalues.
 
 
 
@@ -6134,7 +6114,7 @@ This function is used to build a prefix for error messages.
 
 
 
-<h1>5 - <a name="5">Standard Libraries</a></h1>
+<h1>6 - <a name="6">Standard Libraries</a></h1>
 
 <p>
 The standard Lua libraries provide useful functions
@@ -6200,7 +6180,7 @@ e.g., by using <a href="#lua_call"><code>lua_call</code></a>.
 
 
 
-<h2>5.1 - <a name="5.1">Basic Functions</a></h2>
+<h2>6.1 - <a name="6.1">Basic Functions</a></h2>
 
 <p>
 The basic library provides some core functions to Lua.
@@ -6266,13 +6246,13 @@ Returns <b>true</b> if the step finished a collection cycle.
 
 <li><b>"setpause":</b>
 sets <code>arg</code> as the new value for the <em>pause</em> of
-the collector (see <a href="#2.10">&sect;2.10</a>).
+the collector (see <a href="#2.5">&sect;2.5</a>).
 Returns the previous value for <em>pause</em>.
 </li>
 
 <li><b>"setstepmul":</b>
 sets <code>arg</code> as the new value for the <em>step multiplier</em> of
-the collector (see <a href="#2.10">&sect;2.10</a>).
+the collector (see <a href="#2.5">&sect;2.5</a>).
 Returns the previous value for <em>step</em>.
 </li>
 
@@ -6321,7 +6301,7 @@ to the message.
 <p>
 <hr><h3><a name="pdf-_G"><code>_G</code></a></h3>
 A global variable (not a function) that
-holds the global environment (so that <code>_G._G = _G</code>).
+holds the global environment (see <a href="#2.2">&sect;2.2</a>).
 Lua itself does not use this variable;
 changing its value does not affect any environment,
 nor vice-versa.
@@ -6339,31 +6319,6 @@ Otherwise,
 if the object's metatable has a <code>"__metatable"</code> field,
 returns the associated value.
 Otherwise, returns the metatable of the given object.
-
-
-
-
-<p>
-<hr><h3><a name="pdf-ipairs"><code>ipairs (t)</code></a></h3>
-
-
-<p>
-If <code>t</code> has a metamethod <code>__ipairs</code>,
-calls it with <code>t</code> as argument and returns the first three
-results from the call.
-
-
-<p>
-Otherwise,
-returns three values: an iterator function, the table <code>t</code>, and 0,
-so that the construction
-
-<pre>
-     for i,v in ipairs(t) do <em>body</em> end
-</pre><p>
-will iterate over the pairs (<code>1,t[1]</code>), (<code>2,t[2]</code>), &middot;&middot;&middot;,
-up to the length of the table,
-as defined by the length operator (see <a href="#2.5.5">&sect;2.5.5</a>).
 
 
 
@@ -6392,12 +6347,15 @@ If <code>ld</code> is a string, the chunk is this string.
 If there are no errors, 
 returns the compiled chunk as a function;
 otherwise, returns <b>nil</b> plus the error message.
-The environment of the returned function is the global environment.
+If the resulting function has upvalues,
+the first upvalue is set to the value of the global environment
+(When loading main chunks,
+this upvalue will be the <code>_ENV</code> variable (see <a href="#2.2">&sect;2.2</a>).)
 
 
 <p>
 <code>source</code> is used as the source of the chunk for error messages
-and debug information (see <a href="#3.9">&sect;3.9</a>).
+and debug information (see <a href="#4.9">&sect;4.9</a>).
 When absent,
 it defaults to "<code>=(load)</code>".
 
@@ -6418,8 +6376,9 @@ The default is "<code>bt</code>".
 
 <p>
 This function is similar to <a href="#pdf-load"><code>load</code></a>,
-but sets <code>env</code> as the environment
+but sets <code>env</code> as the value of the first upvalue
 of the created function in case of success.
+(Usually this first upvalue will be <code>_ENV</code> (see <a href="#2.2">&sect;2.2</a>).)
 The parameters after <code>env</code> are similar to those of <a href="#pdf-load"><code>load</code></a>, too.
 
 
@@ -6486,7 +6445,7 @@ you can use <code>next(t)</code> to check whether a table is empty.
 The order in which the indices are enumerated is not specified,
 <em>even for numeric indices</em>.
 (To traverse a table in numeric order,
-use a numerical <b>for</b> or the <a href="#pdf-ipairs"><code>ipairs</code></a> function.)
+use a numerical <b>for</b>.)
 
 
 <p>
@@ -6641,7 +6600,7 @@ In bases above&nbsp;10, the letter '<code>A</code>' (in either upper or lower ca
 represents&nbsp;10, '<code>B</code>' represents&nbsp;11, and so forth,
 with '<code>Z</code>' representing 35.
 In base 10 (the default), the number can have a decimal part,
-as well as an optional exponent part (see <a href="#2.1">&sect;2.1</a>).
+as well as an optional exponent part (see <a href="#3.1">&sect;3.1</a>).
 In other bases, only unsigned integers are accepted.
 
 
@@ -6703,12 +6662,12 @@ except that it sets a new error handler <code>err</code>.
 
 
 
-<h2>5.2 - <a name="5.2">Coroutine Manipulation</a></h2>
+<h2>6.2 - <a name="6.2">Coroutine Manipulation</a></h2>
 
 <p>
 The operations related to coroutines comprise a sub-library of
 the basic library and come inside the table <a name="pdf-coroutine"><code>coroutine</code></a>.
-See <a href="#2.11">&sect;2.11</a> for a general description of coroutines.
+See <a href="#2.6">&sect;2.6</a> for a general description of coroutines.
 
 
 <p>
@@ -6813,7 +6772,7 @@ Any arguments to <code>yield</code> are passed as extra results to <code>resume<
 
 
 
-<h2>5.3 - <a name="5.3">Modules</a></h2>
+<h2>6.3 - <a name="6.3">Modules</a></h2>
 
 <p>
 The package library provides basic
@@ -7194,7 +7153,7 @@ To be used as an option to function <a href="#pdf-module"><code>module</code></a
 
 
 
-<h2>5.4 - <a name="5.4">String Manipulation</a></h2>
+<h2>6.4 - <a name="6.4">String Manipulation</a></h2>
 
 <p>
 This library provides generic functions for string manipulation,
@@ -7377,6 +7336,7 @@ replaced by a replacement string specified by <code>repl</code>,
 which can be a string, a table, or a function.
 <code>gsub</code> also returns, as its second value,
 the total number of matches that occurred.
+The name <code>gsub</code> comes from <em>Global SUBstitution</em>.
 
 
 <p>
@@ -7517,7 +7477,7 @@ The definition of what a lowercase letter is depends on the current locale.
 
 
 
-<h3>5.4.1 - <a name="5.4.1">Patterns</a></h3>
+<h3>6.4.1 - <a name="6.4.1">Patterns</a></h3>
 
 
 <h4>Character Class:</h4><p>
@@ -7551,8 +7511,6 @@ represents the character <em>x</em> itself.
 <li><b><code>%w</code>:</b> represents all alphanumeric characters.</li>
 
 <li><b><code>%x</code>:</b> represents all hexadecimal digits.</li>
-
-<li><b><code>%z</code>:</b> represents the character with representation 0.</li>
 
 <li><b><code>%<em>x</em></code>:</b> (where <em>x</em> is any non-alphanumeric character)
 represents the character <em>x</em>.
@@ -7702,8 +7660,6 @@ For instance, if we apply the pattern <code>"()aa()"</code> on the
 string <code>"flaaap"</code>, there will be two captures: 3&nbsp;and&nbsp;5.
 
 
-<p>
-A pattern cannot contain embedded zeros.  Use <code>%z</code> instead.
 
 
 
@@ -7713,9 +7669,7 @@ A pattern cannot contain embedded zeros.  Use <code>%z</code> instead.
 
 
 
-
-
-<h2>5.5 - <a name="5.5">Table Manipulation</a></h2><p>
+<h2>6.5 - <a name="6.5">Table Manipulation</a></h2><p>
 This library provides generic functions for table manipulation.
 It provides all its functions inside the table <a name="pdf-table"><code>table</code></a>.
 
@@ -7747,7 +7701,7 @@ If <code>i</code> is greater than <code>j</code>, returns the empty string.
 Inserts element <code>value</code> at position <code>pos</code> in <code>table</code>,
 shifting up other elements to open space, if necessary.
 The default value for <code>pos</code> is <code>n+1</code>,
-where <code>n</code> is the length of the table (see <a href="#2.5.5">&sect;2.5.5</a>),
+where <code>n</code> is the length of the table (see <a href="#3.4.6">&sect;3.4.6</a>),
 so that a call <code>table.insert(t,x)</code> inserts <code>x</code> at the end
 of table <code>t</code>.
 
@@ -7788,9 +7742,9 @@ Sorts table elements in a given order, <em>in-place</em>,
 from <code>table[1]</code> to <code>table[n]</code>,
 where <code>n</code> is the length of the table.
 If <code>comp</code> is given,
-then it must be a function that receives two table elements,
-and returns true
-when the first is less than the second
+then it must be a function that receives two table elements
+and returns true when the first element must come
+before the second in the final order
 (so that <code>not comp(a[i+1],a[i])</code> will be true after the sort).
 If <code>comp</code> is not given,
 then the standard Lua operator <code>&lt;</code> is used instead.
@@ -7815,7 +7769,7 @@ This function is equivalent to
 except that the above code can be written only for a fixed number
 of elements.
 By default, <code>i</code> is&nbsp;1 and <code>j</code> is the length of the list,
-as defined by the length operator (see <a href="#2.5.5">&sect;2.5.5</a>).
+as defined by the length operator (see <a href="#3.4.6">&sect;3.4.6</a>).
 
 
 
@@ -7823,7 +7777,7 @@ as defined by the length operator (see <a href="#2.5.5">&sect;2.5.5</a>).
 
 
 
-<h2>5.6 - <a name="5.6">Mathematical Functions</a></h2>
+<h2>6.6 - <a name="6.6">Mathematical Functions</a></h2>
 
 <p>
 This library is an interface to the standard C&nbsp;math library.
@@ -8036,7 +7990,7 @@ the integral part of <code>x</code> and the fractional part of <code>x</code>.
 
 
 <p>
-The value of <em>pi</em>.
+The value of <em>&pi;</em>.
 
 
 
@@ -8152,7 +8106,7 @@ Returns the hyperbolic tangent of <code>x</code>.
 
 
 
-<h2>5.7 - <a name="5.7">Bitwise operations</a></h2>
+<h2>6.7 - <a name="6.7">Bitwise operations</a></h2>
 
 <p>
 This library provides bitwise operations.
@@ -8202,67 +8156,6 @@ Returns the bitwise or of its operands.
 
 
 <p>
-<hr><h3><a name="pdf-bit.brotate"><code>bit.brotate (x, disp)</code></a></h3>
-
-
-<p>
-Returns the number <code>x</code> rotated <code>disp</code> bits to the left.
-The number <code>disp</code> may be any representable integer.
-
-
-<p>
-For any valid displacement,
-the following identity holds:
-
-<pre>
-     assert(bit.rotate(x, disp) == bit.rotate(x, disp % 32))
-</pre><p>
-This allows you to consider that 
-negative displacements rotate to the right.
-
-
-
-
-<p>
-<hr><h3><a name="pdf-bit.bshift"><code>bit.bshift (x, disp)</code></a></h3>
-
-
-<p>
-Returns the number <code>x</code> shifted <code>disp</code> bits to the left.
-The number <code>disp</code> may be any representable integer.
-Negative displacements shift to the right.
-In any direction, vacant bits are filled with zeros.
-In particular,
-displacements with absolute values higher than
-the total number of bits in the representation of <code>x</code>
-result in zero (all bits are shifted out).
-
-
-<p>
-For positive displacements,
-the following equality holds:
-
-<pre>
-     assert(bit.bshift(b, disp) == (b * 2^disp) % 2^32)
-</pre>
-
-<p>
-For negative displacements,
-the following equality holds:
-
-<pre>
-     assert(bit.bshift(b, disp) == math.floor(b * 2^disp))
-</pre>
-
-<p>
-This shift operation is what is called logical shift.
-For an arithmetic shift,
-you should use the arithmetic operators.
-
-
-
-
-<p>
 <hr><h3><a name="pdf-bit.btest"><code>bit.btest (&middot;&middot;&middot;)</code></a></h3>
 
 
@@ -8283,10 +8176,110 @@ Returns the bitwise exclusive or of its operands.
 
 
 
+<p>
+<hr><h3><a name="pdf-bit.lshift"><code>bit.lshift (x, disp)</code></a></h3>
+
+
+<p>
+Returns the number <code>x</code> shifted <code>disp</code> bits to the left.
+The number <code>disp</code> may be any representable integer.
+Negative displacements shift to the right.
+In any direction, vacant bits are filled with zeros.
+In particular,
+displacements with absolute values higher than
+the total number of bits in the representation of <code>x</code>
+result in zero (all bits are shifted out).
+
+
+<p>
+For positive displacements,
+the following equality holds:
+
+<pre>
+     assert(bit.lshift(b, disp) == (b * 2^disp) % 2^32)
+</pre>
 
 
 
-<h2>5.8 - <a name="5.8">Input and Output Facilities</a></h2>
+<p>
+<hr><h3><a name="pdf-bit.rol"><code>bit.rol (x, disp)</code></a></h3>
+
+
+<p>
+Returns the number <code>x</code> rotated <code>disp</code> bits to the left.
+The number <code>disp</code> may be any representable integer.
+
+
+<p>
+For any valid displacement,
+the following identity holds:
+
+<pre>
+     assert(bit.rol(x, disp) == bit.rol(x, disp % 32))
+</pre><p>
+In particular,
+negative displacements rotate to the right.
+
+
+
+
+<p>
+<hr><h3><a name="pdf-bit.ror"><code>bit.ror (x, disp)</code></a></h3>
+
+
+<p>
+Returns the number <code>x</code> rotated <code>disp</code> bits to the right.
+The number <code>disp</code> may be any representable integer.
+
+
+<p>
+For any valid displacement,
+the following identity holds:
+
+<pre>
+     assert(bit.ror(x, disp) == bit.ror(x, disp % 32))
+</pre><p>
+In particular,
+negative displacements rotate to the left.
+
+
+
+
+<p>
+<hr><h3><a name="pdf-bit.rshift"><code>bit.rshift (x, disp)</code></a></h3>
+
+
+<p>
+Returns the number <code>x</code> shifted <code>disp</code> bits to the right.
+The number <code>disp</code> may be any representable integer.
+Negative displacements shift to the left.
+In any direction, vacant bits are filled with zeros.
+In particular,
+displacements with absolute values higher than
+the total number of bits in the representation of <code>x</code>
+result in zero (all bits are shifted out).
+
+
+<p>
+For positive displacements,
+the following equality holds:
+
+<pre>
+     assert(bit.rshift(b, disp) == math.floor(b * 2^-disp))
+</pre>
+
+<p>
+This shift operation is what is called logical shift.
+For an arithmetic shift,
+you should use the arithmetic operators.
+
+
+
+
+
+
+
+<h2>6.8 - <a name="6.8">Input and Output Facilities</a></h2>
 
 <p>
 The I/O library provides two different styles for file manipulation.
@@ -8362,7 +8355,7 @@ instead of returning an error code.
 
 
 <p>
-<hr><h3><a name="pdf-io.lines"><code>io.lines ([filename])</code></a></h3>
+<hr><h3><a name="pdf-io.lines"><code>io.lines ([filename] [, keepNL])</code></a></h3>
 
 
 <p>
@@ -8385,6 +8378,11 @@ The call <code>io.lines()</code> (with no file name) is equivalent
 to <code>io.input():lines()</code>;
 that is, it iterates over the lines of the default input file.
 In this case it does not close the file when the loop ends.
+
+
+<p>
+By default, <code>lines</code> removes the newline at the end of each line.
+If <code>keepNL</code> is <b>true</b>, it will keep the newlines.
 
 
 
@@ -8521,7 +8519,7 @@ Saves any written data to <code>file</code>.
 
 
 <p>
-<hr><h3><a name="pdf-file:lines"><code>file:lines ()</code></a></h3>
+<hr><h3><a name="pdf-file:lines"><code>file:lines ([keepNL])</code></a></h3>
 
 
 <p>
@@ -8533,9 +8531,15 @@ Therefore, the construction
 <pre>
      for line in file:lines() do <em>body</em> end
 </pre><p>
-will iterate over all lines of the file.
+will iterate over all lines of the file,
+starting at the current position.
 (Unlike <a href="#pdf-io.lines"><code>io.lines</code></a>, this function does not close the file
 when the loop ends.)
+
+
+<p>
+By default, <code>lines</code> removes the newline at the end of each line.
+If <code>keepNL</code> is <b>true</b>, it will keep the newlines.
 
 
 
@@ -8551,7 +8555,7 @@ For each format,
 the function returns a string (or a number) with the characters read,
 or <b>nil</b> if it cannot read data with the specified format.
 When called without formats,
-it uses a default format that reads the entire next line
+it uses a default format that reads the next line
 (see below).
 
 
@@ -8571,9 +8575,14 @@ On end of file, it returns the empty string.
 </li>
 
 <li><b>"*l":</b>
-reads the next line (skipping the end of line),
+reads the next line skipping the end of line,
 returning <b>nil</b> on end of file.
 This is the default format.
+</li>
+
+<li><b>"*L":</b>
+reads the next line keeping the end of line (if present),
+returning <b>nil</b> on end of file.
 </li>
 
 <li><b><em>number</em>:</b>
@@ -8678,7 +8687,7 @@ Otherwise it returns <b>nil</b> plus a string describing the error.
 
 
 
-<h2>5.9 - <a name="5.9">Operating System Facilities</a></h2>
+<h2>6.9 - <a name="6.9">Operating System Facilities</a></h2>
 
 <p>
 This library is implemented through table <a name="pdf-os"><code>os</code></a>.
@@ -8904,23 +8913,20 @@ which automatically removes the file when the program ends.
 
 
 
-<h2>5.10 - <a name="5.10">The Debug Library</a></h2>
+<h2>6.10 - <a name="6.10">The Debug Library</a></h2>
 
 <p>
 This library provides
 the functionality of the debug interface to Lua programs.
 You should exert care when using this library.
-The functions provided here should be used exclusively for debugging
-and similar tasks, such as profiling.
-Please resist the temptation to use them as a
-usual programming tool:
-they can be very slow.
-Moreover, several of these functions
-violate some assumptions about Lua code
+Several of these functions
+violate basic assumptions about Lua code
 (e.g., that variables local to a function
-cannot be accessed from outside or
-that userdata metatables cannot be changed by Lua code)
+cannot be accessed from outside;
+that userdata metatables cannot be changed by Lua code;
+that Lua programs do not crash)
 and therefore can compromise otherwise secure code.
+Moreover, some functions in this library may be slow.
 
 
 <p>
@@ -9055,7 +9061,7 @@ or <b>nil</b> if it does not have a metatable.
 
 
 <p>
-Returns the registry table (see <a href="#3.5">&sect;3.5</a>).
+Returns the registry table (see <a href="#4.5">&sect;4.5</a>).
 
 
 
@@ -9217,7 +9223,7 @@ TO BE DONE!!
 
 
 
-<h1>6 - <a name="6">Lua Stand-alone</a></h1>
+<h1>7 - <a name="7">Lua Stand-alone</a></h1>
 
 <p>
 Although Lua has been designed as an extension language,
@@ -9268,7 +9274,7 @@ For instance, an invocation like
 </pre><p>
 will first set <code>a</code> to 1, then print the value of <code>a</code> (which is '<code>1</code>'),
 and finally run the file <code>script.lua</code> with no arguments.
-(Here <code>$</code> is the shell prompt. Your prompt may be different.)
+(Here <code>$</code> is the shell prompt. Your prompt can be different.)
 
 
 <p>
@@ -9352,7 +9358,7 @@ as in
      #!/usr/local/bin/lua
 </pre><p>
 (Of course,
-the location of the Lua interpreter may be different in your machine.
+the location of the Lua interpreter can be different in your machine.
 If <code>lua</code> is in your <code>PATH</code>,
 then 
 
@@ -9363,10 +9369,10 @@ is a more portable solution.)
 
 
 
-<h1>7 - <a name="7">Incompatibilities with the Previous Version</a></h1>
+<h1>8 - <a name="8">Incompatibilities with the Previous Version</a></h1>
 
 <p>
-Here we list the incompatibilities that you may find when moving a program
+Here we list the incompatibilities that you can find when moving a program
 from Lua&nbsp;5.1 to Lua&nbsp;5.2.
 You can avoid some incompatibilities compiling Lua with
 appropriate options (see file <code>luaconf.h</code>).
@@ -9375,7 +9381,7 @@ all these compatibility options will be removed in the next version of Lua.
 
 
 
-<h2>7.1 - <a name="7.1">Changes in the Language</a></h2>
+<h2>8.1 - <a name="8.1">Changes in the Language</a></h2>
 <ul>
 
 <li>
@@ -9396,12 +9402,19 @@ Threads do not have individual environments.
 All threads share a single fixed environment.
 </li>
 
+<li>
+The event <em>tail return</em> in debug hooks was removed.
+Instead, tail calls generate a special new event,
+<em>tail call</em>, so that the debuger can know there will
+not be a corresponding return event.
+</li>
+
 </ul>
 
 
 
 
-<h2>7.2 - <a name="7.2">Changes in the Libraries</a></h2>
+<h2>8.2 - <a name="8.2">Changes in the Libraries</a></h2>
 <ul>
 
 <li>
@@ -9412,9 +9425,13 @@ You must explicitly require it.
 <li>
 Functions <code>setfenv</code> and <code>getfenv</code> are deprecated.
 To set the environment of a Lua function,
-use lexical environments or the new function <a href="#pdf-loadin"><code>loadin</code></a>.
-(If you really need them,
-you may use their equivalents in the debug library.)
+use the variable <code>_ENV</code> or the new function <a href="#pdf-loadin"><code>loadin</code></a>.
+</li>
+
+<li>
+Function <code>ipairs</code> is deprecated.
+Use a numerical for loop instead,
+or write it in Lua.
 </li>
 
 <li>
@@ -9432,20 +9449,44 @@ Function <code>unpack</code> was moved into the table library
 and therefore must be called as <a href="#pdf-table.unpack"><code>table.unpack</code></a>.
 </li>
 
+<li>
+Character class <code>%z</code> in patterns is deprecated,
+as now patterns may contain '<code>\0</code>' as a regular character.
+</li>
+
+<li>
+Lua does not have bytecode verification anymore.
+So, all functions that load code
+(<a href="#pdf-load"><code>load</code></a>, <a href="#pdf-loadfile"><code>loadfile</code></a>, <a href="#pdf-loadstring"><code>loadstring</code></a>)
+are potentially insecure when loading untrusted binary data.
+(Actually, those functions were already insecure because
+of bugs in the verification algorithm.)
+When in doubt,
+use the <code>mode</code> argument in function <a href="#pdf-load"><code>load</code></a>
+to restrict it to loading textual chunks.
+</li>
+
 </ul>
 
 
 
 
-<h2>7.3 - <a name="7.3">Changes in the API</a></h2>
+<h2>8.3 - <a name="8.3">Changes in the API</a></h2>
 <ul>
 
 <li>
 Pseudoindex <code>LUA_GLOBALSINDEX</code> was removed.
-You may use the pseudoindex <a href="#pdf-LUA_ENVIRONINDEX"><code>LUA_ENVIRONINDEX</code></a> instead,
-if the C&nbsp;function does not change its standard environment.
-Otherwise, you should get the global environment from the registry
-(see <a href="#3.5">&sect;3.5</a>).
+You must get the global environment from the registry
+(see <a href="#4.5">&sect;4.5</a>).
+</li>
+
+<li>
+Pseudoindex <code>LUA_ENVIRONINDEX</code> was removed.
+C functions do not have environments any more.
+Use an upvalue with a shared table if you need to keep
+shared state among several C functions.
+(You may use <a href="#luaL_openlib"><code>luaL_openlib</code></a> to open a C library
+with all functions sharing a common upvalue.)
 </li>
 
 <li>
@@ -9462,8 +9503,8 @@ to have a correct spelling.
 
 <li>
 Function <code>lua_cpcall</code> is deprecated.
-Use the new <code>cpcall</code> function defined in the registry instead
-(see <a href="#3.5">&sect;3.5</a>).
+You can simply push the function with <a href="#lua_pushcfunction"><code>lua_pushcfunction</code></a>
+and call it with <a href="#lua_pcall"><code>lua_pcall</code></a>.
 </li>
 
 <li>
@@ -9480,7 +9521,7 @@ Function <code>lua_objlen</code> was renamed <a href="#lua_rawlen"><code>lua_raw
 
 
 
-<h1>8 - <a name="8">The Complete Syntax of Lua</a></h1>
+<h1>9 - <a name="9">The Complete Syntax of Lua</a></h1>
 
 <p>
 Here is the complete syntax of Lua in extended BNF.
@@ -9491,63 +9532,64 @@ Here is the complete syntax of Lua in extended BNF.
 
 <pre>
 
-	chunk ::= {stat [`<b>;</b>&acute;]} [laststat [`<b>;</b>&acute;]]
+	chunk ::= {stat} [laststat [&lsquo<b>;</b>&rsquo;]]
 
 	block ::= chunk
 
-	stat ::=  varlist `<b>=</b>&acute; explist | 
+	stat ::=  &lsquo<b>;</b>&rsquo; | 
+		 varlist &lsquo<b>=</b>&rsquo; explist | 
 		 functioncall | 
 		 <b>do</b> block <b>end</b> | 
 		 <b>while</b> exp <b>do</b> block <b>end</b> | 
 		 <b>repeat</b> block <b>until</b> exp | 
 		 <b>if</b> exp <b>then</b> block {<b>elseif</b> exp <b>then</b> block} [<b>else</b> block] <b>end</b> | 
-		 <b>for</b> Name `<b>=</b>&acute; exp `<b>,</b>&acute; exp [`<b>,</b>&acute; exp] <b>do</b> block <b>end</b> | 
+		 <b>for</b> Name &lsquo<b>=</b>&rsquo; exp &lsquo<b>,</b>&rsquo; exp [&lsquo<b>,</b>&rsquo; exp] <b>do</b> block <b>end</b> | 
 		 <b>for</b> namelist <b>in</b> explist <b>do</b> block <b>end</b> | 
 		 <b>function</b> funcname funcbody | 
 		 <b>local</b> <b>function</b> Name funcbody | 
-		 <b>local</b> namelist [`<b>=</b>&acute; explist] | 
+		 <b>local</b> namelist [&lsquo<b>=</b>&rsquo; explist] | 
 		 <b>in</b> exp <b>do</b> block <b>end</b> 
 
 	laststat ::= <b>return</b> [explist] | <b>break</b>
 
-	funcname ::= Name {`<b>.</b>&acute; Name} [`<b>:</b>&acute; Name]
+	funcname ::= Name {&lsquo<b>.</b>&rsquo; Name} [&lsquo<b>:</b>&rsquo; Name]
 
-	varlist ::= var {`<b>,</b>&acute; var}
+	varlist ::= var {&lsquo<b>,</b>&rsquo; var}
 
-	var ::=  Name | prefixexp `<b>[</b>&acute; exp `<b>]</b>&acute; | prefixexp `<b>.</b>&acute; Name 
+	var ::=  Name | prefixexp &lsquo<b>[</b>&rsquo; exp &lsquo<b>]</b>&rsquo; | prefixexp &lsquo<b>.</b>&rsquo; Name 
 
-	namelist ::= Name {`<b>,</b>&acute; Name}
+	namelist ::= Name {&lsquo<b>,</b>&rsquo; Name}
 
-	explist ::= {exp `<b>,</b>&acute;} exp
+	explist ::= {exp &lsquo<b>,</b>&rsquo;} exp
 
-	exp ::=  <b>nil</b> | <b>false</b> | <b>true</b> | Number | String | `<b>...</b>&acute; | function | 
+	exp ::=  <b>nil</b> | <b>false</b> | <b>true</b> | Number | String | &lsquo<b>...</b>&rsquo; | function | 
 		 prefixexp | tableconstructor | exp binop exp | unop exp 
 
-	prefixexp ::= var | functioncall | `<b>(</b>&acute; exp `<b>)</b>&acute;
+	prefixexp ::= var | functioncall | &lsquo<b>(</b>&rsquo; exp &lsquo<b>)</b>&rsquo;
 
-	functioncall ::=  prefixexp args | prefixexp `<b>:</b>&acute; Name args 
+	functioncall ::=  prefixexp args | prefixexp &lsquo<b>:</b>&rsquo; Name args 
 
-	args ::=  `<b>(</b>&acute; [explist] `<b>)</b>&acute; | tableconstructor | String 
+	args ::=  &lsquo<b>(</b>&rsquo; [explist] &lsquo<b>)</b>&rsquo; | tableconstructor | String 
 
 	function ::= <b>function</b> funcbody
 
-	funcbody ::= `<b>(</b>&acute; [parlist] `<b>)</b>&acute; block <b>end</b>
+	funcbody ::= &lsquo<b>(</b>&rsquo; [parlist] &lsquo<b>)</b>&rsquo; block <b>end</b>
 
-	parlist ::= namelist [`<b>,</b>&acute; `<b>...</b>&acute;] | `<b>...</b>&acute;
+	parlist ::= namelist [&lsquo<b>,</b>&rsquo; &lsquo<b>...</b>&rsquo;] | &lsquo<b>...</b>&rsquo;
 
-	tableconstructor ::= `<b>{</b>&acute; [fieldlist] `<b>}</b>&acute;
+	tableconstructor ::= &lsquo<b>{</b>&rsquo; [fieldlist] &lsquo<b>}</b>&rsquo;
 
 	fieldlist ::= field {fieldsep field} [fieldsep]
 
-	field ::= `<b>[</b>&acute; exp `<b>]</b>&acute; `<b>=</b>&acute; exp | Name `<b>=</b>&acute; exp | exp
+	field ::= &lsquo<b>[</b>&rsquo; exp &lsquo<b>]</b>&rsquo; &lsquo<b>=</b>&rsquo; exp | Name &lsquo<b>=</b>&rsquo; exp | exp
 
-	fieldsep ::= `<b>,</b>&acute; | `<b>;</b>&acute;
+	fieldsep ::= &lsquo<b>,</b>&rsquo; | &lsquo<b>;</b>&rsquo;
 
-	binop ::= `<b>+</b>&acute; | `<b>-</b>&acute; | `<b>*</b>&acute; | `<b>/</b>&acute; | `<b>^</b>&acute; | `<b>%</b>&acute; | `<b>..</b>&acute; | 
-		 `<b>&lt;</b>&acute; | `<b>&lt;=</b>&acute; | `<b>&gt;</b>&acute; | `<b>&gt;=</b>&acute; | `<b>==</b>&acute; | `<b>~=</b>&acute; | 
+	binop ::= &lsquo<b>+</b>&rsquo; | &lsquo<b>-</b>&rsquo; | &lsquo<b>*</b>&rsquo; | &lsquo<b>/</b>&rsquo; | &lsquo<b>^</b>&rsquo; | &lsquo<b>%</b>&rsquo; | &lsquo<b>..</b>&rsquo; | 
+		 &lsquo<b>&lt;</b>&rsquo; | &lsquo<b>&lt;=</b>&rsquo; | &lsquo<b>&gt;</b>&rsquo; | &lsquo<b>&gt;=</b>&rsquo; | &lsquo<b>==</b>&rsquo; | &lsquo<b>~=</b>&rsquo; | 
 		 <b>and</b> | <b>or</b>
 
-	unop ::= `<b>-</b>&acute; | <b>not</b> | `<b>#</b>&acute;
+	unop ::= &lsquo<b>-</b>&rsquo; | <b>not</b> | &lsquo<b>#</b>&rsquo;
 
 </pre>
 
@@ -9562,10 +9604,10 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL>
 Last update:
-Wed Jan 13 15:29:29 BRST 2010
+Mon May 17 16:24:08 BRT 2010
 </SMALL>
 <!--
-Last change: revised for Lua 5.2.0 (work2)
+Last change: revised for Lua 5.2.0 (work3)
 -->
 
 </body></html>

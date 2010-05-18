@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.133 2009/11/19 19:06:52 roberto Exp $
+** $Id: lopcodes.h,v 1.135 2010/03/12 19:14:06 roberto Exp $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -171,10 +171,10 @@ OP_LOADBOOL,/*	A B C	R(A) := (Bool)B; if (C) pc++			*/
 OP_LOADNIL,/*	A B	R(A) := ... := R(B) := nil			*/
 OP_GETUPVAL,/*	A B	R(A) := UpValue[B]				*/
 
-OP_GETGLOBAL,/*	A Bx	R(A) := Gbl[Kst(Bx - 1)]			*/
+OP_GETTABUP,/*	A B C	R(A) := UpValue[B][RK(C)]			*/
 OP_GETTABLE,/*	A B C	R(A) := R(B)[RK(C)]				*/
 
-OP_SETGLOBAL,/*	A Bx	Gbl[Kst(Bx - 1)] := R(A)			*/
+OP_SETTABUP,/*	A B C	UpValue[A][RK(B)] := RK(C)			*/
 OP_SETUPVAL,/*	A B	UpValue[B] := R(A)				*/
 OP_SETTABLE,/*	A B C	R(A)[RK(B)] := RK(C)				*/
 
@@ -243,8 +243,7 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
   (*) In OP_SETLIST, if (B == 0) then B = `top'; if (C == 0) then next
   'instruction' is EXTRAARG(real C).
 
-  (*) In OP_LOADK, OP_GETGLOBAL, and OP_SETGLOBAL, if (Bx == 0) then next
-  'instruction' is EXTRAARG(real Bx).
+  (*) In OP_LOADK, if (Bx == 0) then next 'instruction' is EXTRAARG(real Bx).
 
   (*) For comparisons, A specifies what condition the test should accept
   (true or false).

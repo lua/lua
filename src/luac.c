@@ -1,5 +1,5 @@
 /*
-** $Id: luac.c,v 1.57 2008/03/26 13:40:18 lhf Exp $
+** $Id: luac.c,v 1.61 2010/05/14 11:40:22 lhf Exp $
 ** Lua compiler (saves bytecodes to files; also list bytecodes)
 ** See Copyright Notice in lua.h
 */
@@ -60,7 +60,7 @@ static void usage(const char* message)
  "  -s       strip debug information\n"
  "  -v       show version information\n"
  "  --       stop handling options\n"
- "  -        process stdin and stop handling options\n"
+ "  -        stop handling options and process stdin\n"
  ,progname,Output);
  exit(EXIT_FAILURE);
 }
@@ -89,7 +89,7 @@ static int doargs(int argc, char* argv[])
   else if (IS("-o"))			/* output file */
   {
    output=argv[++i];
-   if (output==NULL || *output==0) usage(LUA_QL("-o") " needs argument");
+   if (output==NULL || *output==0 || *output=='-') usage(LUA_QL("-o") " needs argument");
    if (IS("-")) output=NULL;
   }
   else if (IS("-p"))			/* parse only */
@@ -150,16 +150,10 @@ static int writer(lua_State* L, const void* p, size_t size, void* u)
  return (fwrite(p,size,1,(FILE*)u)!=1) && (size!=0);
 }
 
-struct Smain {
- int argc;
- char** argv;
-};
-
 static int pmain(lua_State* L)
 {
- struct Smain* s = (struct Smain*)lua_touserdata(L, 1);
- int argc=s->argc;
- char** argv=s->argv;
+ int argc=lua_tointeger(L,1);
+ char** argv=lua_touserdata(L,2);
  const Proto* f;
  int i;
  if (!lua_checkstack(L,argc)) fatal("too many input files");
@@ -183,25 +177,18 @@ static int pmain(lua_State* L)
  return 0;
 }
 
-LUA_API int lua_cpcall (lua_State *L, lua_CFunction func, void *ud) {
-  lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_CPCALL);
-  lua_pushlightuserdata(L, &func);
-  lua_pushlightuserdata(L, ud);
-  return lua_pcall(L, 2, 0, 0);
-}
-
 int main(int argc, char* argv[])
 {
  lua_State* L;
- struct Smain s;
  int i=doargs(argc,argv);
  argc-=i; argv+=i;
  if (argc<=0) usage("no input files given");
  L=luaL_newstate();
  if (L==NULL) fatal("not enough memory for state");
- s.argc=argc;
- s.argv=argv;
- if (lua_cpcall(L,pmain,&s)!=0) fatal(lua_tostring(L,-1));
+ lua_pushcfunction(L,&pmain);
+ lua_pushinteger(L,argc);
+ lua_pushlightuserdata(L,argv);
+ if (lua_pcall(L,2,0,0)!=0) fatal(lua_tostring(L,-1));
  lua_close(L);
  return EXIT_SUCCESS;
 }

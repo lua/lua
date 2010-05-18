@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.235 2009/12/28 16:30:31 roberto Exp $
+** $Id: lbaselib.c,v 1.243 2010/04/19 17:02:02 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,7 @@
 static int luaB_print (lua_State *L) {
   int n = lua_gettop(L);  /* number of arguments */
   int i;
-  lua_getfield(L, LUA_ENVIRONINDEX, "tostring");
+  lua_getglobal(L, "tostring");
   for (i=1; i<=n; i++) {
     const char *s;
     size_t l;
@@ -107,49 +107,11 @@ static int luaB_setmetatable (lua_State *L) {
 }
 
 
-
-#if defined(LUA_COMPAT_FENV)
-
-static void getfunc (lua_State *L, int opt) {
-  if (lua_isfunction(L, 1)) lua_pushvalue(L, 1);
-  else {
-    lua_Debug ar;
-    int level = opt ? luaL_optint(L, 1, 1) : luaL_checkint(L, 1);
-    luaL_argcheck(L, level >= 0, 1, "level must be non-negative");
-    if (lua_getstack(L, level, &ar) == 0)
-      luaL_argerror(L, 1, "invalid level");
-    lua_getinfo(L, "f", &ar);
-  }
-}
-
-static int luaB_getfenv (lua_State *L) {
-  getfunc(L, 1);
-  if (lua_iscfunction(L, -1))  /* is a C function? */
-    lua_pushglobaltable(L);  /* return the global env. */
-  else
-    lua_getfenv(L, -1);
-  return 1;
-}
-
-static int luaB_setfenv (lua_State *L) {
-  luaL_checktype(L, 2, LUA_TTABLE);
-  getfunc(L, 0);
-  lua_pushvalue(L, 2);
-  if (lua_iscfunction(L, -2) || lua_setfenv(L, -2) == 0)
-    return luaL_error(L,
-             LUA_QL("setfenv") " cannot change environment of given object");
-  return 1;
-}
-
-#else
-
 static int luaB_getfenv (lua_State *L) {
   return luaL_error(L, "getfenv/setfenv deprecated");
 }
 
 #define luaB_setfenv	luaB_getfenv
-
-#endif
 
 
 static int luaB_rawequal (lua_State *L) {
@@ -178,18 +140,13 @@ static int luaB_rawset (lua_State *L) {
 }
 
 
-static int luaB_gcinfo (lua_State *L) {
-  lua_pushinteger(L, lua_gc(L, LUA_GCCOUNT, 0));
-  return 1;
-}
-
-
 static int luaB_collectgarbage (lua_State *L) {
   static const char *const opts[] = {"stop", "restart", "collect",
-    "count", "step", "setpause", "setstepmul", "isrunning", NULL};
+    "count", "step", "setpause", "setstepmul", "isrunning",
+    "gen", "inc", NULL};
   static const int optsnum[] = {LUA_GCSTOP, LUA_GCRESTART, LUA_GCCOLLECT,
     LUA_GCCOUNT, LUA_GCSTEP, LUA_GCSETPAUSE, LUA_GCSETSTEPMUL,
-    LUA_GCISRUNNING};
+    LUA_GCISRUNNING, LUA_GCGEN, LUA_GCINC};
   int o = optsnum[luaL_checkoption(L, 1, "collect", opts)];
   int ex = luaL_optint(L, 2, 0);
   int res = lua_gc(L, o, ex);
@@ -219,10 +176,11 @@ static int luaB_type (lua_State *L) {
 }
 
 
-static int pairsmeta (lua_State *L, const char *method, int iszero) {
+static int pairsmeta (lua_State *L, const char *method, int iszero,
+                      lua_CFunction iter) {
   if (!luaL_getmetafield(L, 1, method)) {  /* no metamethod? */
     luaL_checktype(L, 1, LUA_TTABLE);  /* argument must be a table */
-    lua_pushvalue(L, lua_upvalueindex(1));  /* will return generator, */
+    lua_pushcfunction(L, iter);  /* will return generator, */
     lua_pushvalue(L, 1);  /* state, */
     if (iszero) lua_pushinteger(L, 0);  /* and initial value */
     else lua_pushnil(L);
@@ -248,9 +206,11 @@ static int luaB_next (lua_State *L) {
 
 
 static int luaB_pairs (lua_State *L) {
-  return pairsmeta(L, "__pairs", 0);
+  return pairsmeta(L, "__pairs", 0, luaB_next);
 }
 
+
+#if defined(LUA_COMPAT_IPAIRS)
 
 static int ipairsaux (lua_State *L) {
   int i = luaL_checkint(L, 2);
@@ -263,8 +223,16 @@ static int ipairsaux (lua_State *L) {
 
 
 static int luaB_ipairs (lua_State *L) {
-  return pairsmeta(L, "__ipairs", 1);
+  return pairsmeta(L, "__ipairs", 1, ipairsaux);
 }
+
+#else
+
+static int luaB_ipairs (lua_State *L) {
+  return luaL_error(L, "'ipairs' deprecated");
+}
+
+#endif
 
 
 static int load_aux (lua_State *L, int status) {
@@ -376,7 +344,7 @@ static int luaB_loadin (lua_State *L) {
   n = luaB_load_aux(L, 2);
   if (n == 1) {  /* success? */
     lua_pushvalue(L, 1);  /* environment for loaded function */
-    lua_setfenv(L, -2);
+    lua_setupvalue(L, -2, 1);
   }
   return n;
 }
@@ -507,14 +475,15 @@ static const luaL_Reg base_funcs[] = {
   {"collectgarbage", luaB_collectgarbage},
   {"dofile", luaB_dofile},
   {"error", luaB_error},
-  {"gcinfo", luaB_gcinfo},
   {"getfenv", luaB_getfenv},
   {"getmetatable", luaB_getmetatable},
+  {"ipairs", luaB_ipairs},
   {"loadfile", luaB_loadfile},
   {"load", luaB_load},
   {"loadin", luaB_loadin},
   {"loadstring", luaB_loadstring},
   {"next", luaB_next},
+  {"pairs", luaB_pairs},
   {"pcall", luaB_pcall},
   {"print", luaB_print},
   {"rawequal", luaB_rawequal},
@@ -668,25 +637,15 @@ static const luaL_Reg co_funcs[] = {
 /* }====================================================== */
 
 
-static void auxopen (lua_State *L, const char *name,
-                     lua_CFunction f, lua_CFunction u) {
-  lua_pushcfunction(L, u);
-  lua_pushcclosure(L, f, 1);
-  lua_setfield(L, -2, name);
-}
-
-
 static void base_open (lua_State *L) {
   /* set global _G */
   lua_pushglobaltable(L);
-  lua_setfield(L, LUA_ENVIRONINDEX, "_G");
+  lua_pushglobaltable(L);
+  lua_setfield(L, -2, "_G");
   /* open lib into global table */
   luaL_register(L, "_G", base_funcs);
   lua_pushliteral(L, LUA_VERSION);
-  lua_setfield(L, LUA_ENVIRONINDEX, "_VERSION");  /* set global _VERSION */
-  /* `ipairs' and `pairs' need auxiliary functions as upvalues */
-  auxopen(L, "ipairs", luaB_ipairs, ipairsaux);
-  auxopen(L, "pairs", luaB_pairs, luaB_next);
+  lua_setfield(L, -2, "_VERSION");  /* set global _VERSION */
   /* `newproxy' needs a weaktable as upvalue */
   lua_createtable(L, 0, 1);  /* new table `w' */
   lua_pushvalue(L, -1);  /* `w' will be its own metatable */
@@ -694,7 +653,7 @@ static void base_open (lua_State *L) {
   lua_pushliteral(L, "kv");
   lua_setfield(L, -2, "__mode");  /* metatable(w).__mode = "kv" */
   lua_pushcclosure(L, luaB_newproxy, 1);
-  lua_setfield(L, LUA_ENVIRONINDEX, "newproxy");  /* set global `newproxy' */
+  lua_setfield(L, -2, "newproxy");  /* set global `newproxy' */
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.54 2010/01/13 19:59:10 roberto Exp $
+** $Id: ltablib.c,v 1.55 2010/03/13 03:57:46 roberto Exp $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -171,15 +171,15 @@ static int tconcat (lua_State *L) {
 static int pack (lua_State *L) {
   int top = lua_gettop(L);
   lua_createtable(L, top, 1);  /* create result table */
-  /* use function environment as a temporary place to keep new table */
-  lua_replace(L, LUA_ENVIRONINDEX);
   lua_pushinteger(L, top);  /* number of elements */
-  lua_setfield(L, LUA_ENVIRONINDEX, "n");  /* t.n = number of elements */
-  for (; top >= 1; top--)  /* assign elements */
-    lua_rawseti(L, LUA_ENVIRONINDEX, top);
-  lua_pushvalue(L, LUA_ENVIRONINDEX);  /* return new table */
-  /* remove new table from environment to allow its later collection */
-  lua_copy(L, LUA_REGISTRYINDEX, LUA_ENVIRONINDEX);
+  lua_setfield(L, -2, "n");  /* t.n = number of elements */
+  if (top > 0) {  /* at least one element? */
+    lua_pushvalue(L, 1);
+    lua_rawseti(L, -2, 1);  /* insert first element */
+    lua_replace(L, 1);  /* move table into its position (index 1) */
+    for (; top >= 2; top--)  /* assign other elements */
+      lua_rawseti(L, 1, top);
+  }
   return 1;
 }
 
@@ -328,7 +328,7 @@ LUAMOD_API int luaopen_table (lua_State *L) {
 #if defined(LUA_COMPAT_UNPACK)
   /* _G.unpack = table.unpack */
   lua_getfield(L, -1, "unpack");
-  lua_setfield(L, LUA_ENVIRONINDEX, "unpack");
+  lua_setglobal(L, "unpack");
 #endif
   return 1;
 }

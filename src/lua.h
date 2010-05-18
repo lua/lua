@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.261 2010/01/11 17:15:11 roberto Exp $
+** $Id: lua.h,v 1.270 2010/05/12 14:09:20 roberto Exp $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -17,7 +17,7 @@
 
 
 #define LUA_VERSION	"Lua 5.2"
-#define LUA_RELEASE	"Lua 5.2.0 (work2)"
+#define LUA_RELEASE	"Lua 5.2.0 (work3)"
 #define LUA_VERSION_NUM	502
 #define LUA_COPYRIGHT	LUA_RELEASE "  Copyright (C) 1994-2010 Lua.org, PUC-Rio"
 #define LUA_AUTHORS	"R. Ierusalimschy, L. H. de Figueiredo, W. Celes"
@@ -34,8 +34,7 @@
 ** pseudo-indices
 */
 #define LUA_REGISTRYINDEX	LUAI_FIRSTPSEUDOIDX
-#define LUA_ENVIRONINDEX	(LUA_REGISTRYINDEX - 1)
-#define lua_upvalueindex(i)	(LUA_ENVIRONINDEX - (i))
+#define lua_upvalueindex(i)	(LUA_REGISTRYINDEX - (i))
 
 
 /* thread status */
@@ -82,6 +81,8 @@ typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 #define LUA_TUSERDATA		7
 #define LUA_TTHREAD		8
 
+#define LUA_NUMTAGS		9
+
 
 
 /* minimum Lua stack available to a C function */
@@ -90,8 +91,7 @@ typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 
 /* predefined values in the registry */
 #define LUA_RIDX_MAINTHREAD	1
-#define LUA_RIDX_CPCALL		2
-#define LUA_RIDX_GLOBALS	3
+#define LUA_RIDX_GLOBALS	2
 #define LUA_RIDX_LAST		LUA_RIDX_GLOBALS
 
 
@@ -129,6 +129,7 @@ LUA_API const lua_Number *(lua_version) (lua_State *L);
 /*
 ** basic stack manipulation
 */
+LUA_API int   (lua_absindex) (lua_State *L, int idx);
 LUA_API int   (lua_gettop) (lua_State *L);
 LUA_API void  (lua_settop) (lua_State *L, int idx);
 LUA_API void  (lua_pushvalue) (lua_State *L, int idx);
@@ -212,7 +213,7 @@ LUA_API void  (lua_rawgeti) (lua_State *L, int idx, int n);
 LUA_API void  (lua_createtable) (lua_State *L, int narr, int nrec);
 LUA_API void *(lua_newuserdata) (lua_State *L, size_t sz);
 LUA_API int   (lua_getmetatable) (lua_State *L, int objindex);
-LUA_API void  (lua_getfenv) (lua_State *L, int idx);
+LUA_API void  (lua_getenv) (lua_State *L, int idx);
 
 
 /*
@@ -223,7 +224,7 @@ LUA_API void  (lua_setfield) (lua_State *L, int idx, const char *k);
 LUA_API void  (lua_rawset) (lua_State *L, int idx);
 LUA_API void  (lua_rawseti) (lua_State *L, int idx, int n);
 LUA_API int   (lua_setmetatable) (lua_State *L, int objindex);
-LUA_API int   (lua_setfenv) (lua_State *L, int idx);
+LUA_API void  (lua_setenv) (lua_State *L, int idx);
 
 
 /*
@@ -267,6 +268,8 @@ LUA_API int  (lua_status) (lua_State *L);
 #define LUA_GCSETPAUSE		6
 #define LUA_GCSETSTEPMUL	7
 #define LUA_GCISRUNNING		8
+#define LUA_GCGEN		9
+#define LUA_GCINC		10
 
 LUA_API int (lua_gc) (lua_State *L, int what, int data);
 
@@ -297,11 +300,14 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 
 #define lua_newtable(L)		lua_createtable(L, 0, 0)
 
-#define lua_setglobal(L,s)	lua_setfield(L, LUA_ENVIRONINDEX, (s))
-#define lua_getglobal(L,s)	lua_getfield(L, LUA_ENVIRONINDEX, (s))
+#define lua_setglobal(L,s)  \
+	(lua_pushglobaltable(L), lua_pushvalue(L, -2), \
+	 lua_setfield(L, -2, (s)), lua_pop(L, 2))
 
-#define lua_register(L,n,f) \
-	(lua_pushcfunction(L, (f)), lua_setfield(L, LUA_ENVIRONINDEX, (n)))
+#define lua_getglobal(L,s) \
+	(lua_pushglobaltable(L), lua_getfield(L, -1, (s)), lua_remove(L, -2))
+
+#define lua_register(L,n,f) (lua_pushcfunction(L, (f)), lua_setglobal(L, (n)))
 
 #define lua_pushcfunction(L,f)	lua_pushcclosure(L, (f), 0)
 

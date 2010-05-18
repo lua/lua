@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.63 2010/01/13 16:18:25 roberto Exp $
+** $Id: ldebug.c,v 2.70 2010/04/13 20:48:12 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -144,7 +144,7 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
 
 
 static void funcinfo (lua_Debug *ar, Closure *cl) {
-  if (cl->c.isC) {
+  if (cl == NULL || cl->c.isC) {
     ar->source = "=[C]";
     ar->linedefined = -1;
     ar->lastlinedefined = -1;
@@ -191,8 +191,8 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
         break;
       }
       case 'u': {
-        ar->nups = f->c.nupvalues;
-        if (f->c.isC) {
+        ar->nups = (f == NULL) ? 0 : f->c.nupvalues;
+        if (f == NULL || f->c.isC) {
           ar->isvararg = 1;
           ar->nparams = 0;
         }
@@ -226,28 +226,30 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
 
 LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
   int status;
-  Closure *f = NULL;
-  CallInfo *ci = NULL;
+  Closure *cl;
+  CallInfo *ci;
+  StkId func;
   lua_lock(L);
   if (*what == '>') {
-    StkId func = L->top - 1;
+    ci = NULL;
+    func = L->top - 1;
     luai_apicheck(L, ttisfunction(func));
     what++;  /* skip the '>' */
-    f = clvalue(func);
     L->top--;  /* pop function */
   }
   else {
     ci = ar->i_ci;
+    func = ci->func;
     lua_assert(ttisfunction(ci->func));
-    f = clvalue(ci->func);
   }
-  status = auxgetinfo(L, what, ar, f, ci);
+  cl = ttisclosure(func) ? clvalue(func) : NULL;
+  status = auxgetinfo(L, what, ar, cl, ci);
   if (strchr(what, 'f')) {
-    setclvalue(L, L->top, f);
+    setobjs2s(L, L->top, func);
     incr_top(L);
   }
   if (strchr(what, 'L'))
-    collectvalidlines(L, f);
+    collectvalidlines(L, cl);
   lua_unlock(L);
   return status;
 }
@@ -260,22 +262,23 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
 */
 
 
-static const char *kname (Proto *p, int c) {
-  if (ISK(c) && ttisstring(&p->k[INDEXK(c)]))
-    return svalue(&p->k[INDEXK(c)]);
+static void kname (Proto *p, int c, int reg, const char *what,
+                   const char **name) {
+  if (c == reg && *what == 'c')
+    return;  /* index is a constant; name already correct */
+  else if (ISK(c) && ttisstring(&p->k[INDEXK(c)]))
+    *name = svalue(&p->k[INDEXK(c)]);
   else
-    return "?";
+    *name = "?";
 }
 
 
 static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
                                const char **name) {
-  Proto *p;
-  int lastpc, pc;
+  Proto *p = ci_func(ci)->l.p;
   const char *what = NULL;
-  lua_assert(isLua(ci));
-  p = ci_func(ci)->l.p;
-  lastpc = currentpc(ci);
+  int lastpc = currentpc(ci);
+  int pc;
   *name = luaF_getlocalname(p, reg + 1, lastpc);
   if (*name)  /* is a local? */
     return "local";
@@ -285,17 +288,6 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
     OpCode op = GET_OPCODE(i);
     int a = GETARG_A(i);
     switch (op) {
-      case OP_GETGLOBAL: {
-        if (reg == a) {
-          int g = GETARG_Bx(i);
-          if (g != 0) g--;
-          else g = GETARG_Ax(p->code[++pc]);
-          lua_assert(ttisstring(&p->k[g]));
-          *name = svalue(&p->k[g]);
-          what = "global";
-        }
-        break;
-      }
       case OP_MOVE: {
         if (reg == a) {
           int b = GETARG_B(i);  /* move from 'b' to 'a' */
@@ -305,11 +297,16 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
         }
         break;
       }
+      case OP_GETTABUP:
       case OP_GETTABLE: {
         if (reg == a) {
           int k = GETARG_C(i);  /* key index */
-          *name = kname(p, k);
-          what = "field";
+          int t = GETARG_B(i);
+          const char *vn = (op == OP_GETTABLE)  /* name of indexed variable */ 
+                           ? luaF_getlocalname(p, t + 1, pc)
+                           : getstr(p->upvalues[t].name);
+          kname(p, k, a, what, name);
+          what = (vn && strcmp(vn, "_ENV") == 0) ? "global" : "field";
         }
         break;
       }
@@ -322,6 +319,17 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
         }
         break;
       }
+      case OP_LOADK: {
+        if (reg == a) {
+          int b = GETARG_Bx(i);
+          b = (b > 0) ? b - 1 : GETARG_Ax(p->code[pc + 1]);
+          if (ttisstring(&p->k[b])) {
+            what = "constant";
+            *name = svalue(&p->k[b]);
+          }
+        }
+        break;
+      }
       case OP_LOADNIL: {
         int b = GETARG_B(i);  /* move from 'b' to 'a' */
         if (a <= reg && reg <= b)  /* set registers from 'a' to 'b' */
@@ -331,7 +339,7 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
       case OP_SELF: {
         if (reg == a) {
           int k = GETARG_C(i);  /* key index */
-          *name = kname(p, k);
+          kname(p, k, a, what, name);
           what = "method";
         }
         break;
@@ -374,12 +382,15 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
   switch (GET_OPCODE(i)) {
     case OP_CALL:
     case OP_TAILCALL:
-    case OP_TFORLOOP:
       return getobjname(L, ci, GETARG_A(i), name);
-    case OP_GETGLOBAL:
+    case OP_TFORCALL: {
+      *name = "for iterator";
+       return "for iterator";
+    }
     case OP_SELF:
+    case OP_GETTABUP:
     case OP_GETTABLE: tm = TM_INDEX; break;
-    case OP_SETGLOBAL:
+    case OP_SETTABUP:
     case OP_SETTABLE: tm = TM_NEWINDEX; break;
     case OP_EQ: tm = TM_EQ; break;
     case OP_ADD: tm = TM_ADD; break;
@@ -413,13 +424,30 @@ static int isinstack (CallInfo *ci, const TValue *o) {
 }
 
 
+static const char *getupvalname (CallInfo *ci, const TValue *o,
+                               const char **name) {
+  LClosure *c = &ci_func(ci)->l;
+  int i;
+  for (i = 0; i < c->nupvalues; i++) {
+    if (c->upvals[i]->v == o) {
+      *name = getstr(c->p->upvalues[i].name);
+      return "upvalue";
+    }
+  }
+  return NULL;
+}
+
+
 void luaG_typeerror (lua_State *L, const TValue *o, const char *op) {
   CallInfo *ci = L->ci;
   const char *name = NULL;
-  const char *t = typename(ttype(o));
-  const char *kind = (isLua(ci) && isinstack(ci, o)) ?
-                         getobjname(L, ci, cast_int(o - ci->u.l.base), &name) :
-                         NULL;
+  const char *t = objtypename(o);
+  const char *kind = NULL;
+  if (isLua(ci)) {
+    kind = getupvalname(ci, o, &name);  /* check whether 'o' is an upvalue */
+    if (!kind && isinstack(ci, o))  /* no? try a register */ 
+      kind = getobjname(L, ci, cast_int(o - ci->u.l.base), &name);
+  }
   if (kind)
     luaG_runerror(L, "attempt to %s %s " LUA_QS " (a %s value)",
                 op, kind, name, t);
@@ -444,8 +472,8 @@ void luaG_aritherror (lua_State *L, const TValue *p1, const TValue *p2) {
 
 
 int luaG_ordererror (lua_State *L, const TValue *p1, const TValue *p2) {
-  const char *t1 = typename(ttype(p1));
-  const char *t2 = typename(ttype(p2));
+  const char *t1 = objtypename(p1);
+  const char *t2 = objtypename(p2);
   if (t1 == t2)
     luaG_runerror(L, "attempt to compare two %s values", t1);
   else

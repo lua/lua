@@ -81,7 +81,7 @@ none:
 	@echo "   $(PLATS)"
 	@echo "See doc/readme.html for complete instructions."
 
-# make may get confused with test/ and install/ in a case-insensitive OS
+# make may get confused with test/ and install/
 dummy:
 
 # echo config parameters

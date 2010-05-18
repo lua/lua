@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.130 2010/01/11 17:15:30 roberto Exp $
+** $Id: luaconf.h,v 1.137 2010/05/12 14:17:36 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -89,7 +89,7 @@
 #define LUA_CPATH_DEFAULT \
 		LUA_CDIR"?.dll;" LUA_CDIR"loadall.dll;" ".\\?.dll"
 
-#else
+#else  /* _WIN32 */
 #define LUA_ROOT	"/usr/local/"
 #define LUA_LDIR	LUA_ROOT "share/lua/5.2/"
 #define LUA_CDIR	LUA_ROOT "lib/lua/5.2/"
@@ -98,7 +98,7 @@
 		LUA_CDIR"?.lua;"  LUA_CDIR"?/init.lua;" "./?.lua"
 #define LUA_CPATH_DEFAULT \
 		LUA_CDIR"?.so;" LUA_CDIR"loadall.so;" "./?.so"
-#endif
+#endif  /* _WIN32 */
 
 
 /*
@@ -130,11 +130,12 @@
 #define LUA_API __declspec(dllimport)
 #endif
 
-#else
+#else  /* LUA_BUILD_AS_DLL */
 
 #define LUA_API		extern
 
-#endif
+#endif  /* LUA_BUILD_AS_DLL */
+
 
 /* more often than not the libs go together with the core */
 #define LUALIB_API	LUA_API
@@ -166,11 +167,11 @@
 #define LUAI_DDEC	LUAI_FUNC
 #define LUAI_DDEF	/* empty */
 
-#else
+#else  /* luaall_c */
 #define LUAI_FUNC	extern
 #define LUAI_DDEC	extern
 #define LUAI_DDEF	/* empty */
-#endif
+#endif  /* luaall_c */
 
 
 
@@ -192,9 +193,16 @@
 
 /*
 @@ luai_writestring defines how 'print' prints its results.
-** CHANGE it if your system does not have a useful stdout.
 */
+#include <stdio.h>
 #define luai_writestring(s,l)	fwrite((s), sizeof(char), (l), stdout)
+
+/*
+@@ luai_writestringerror defines how to print error messages.
+** (A format string with one argument is enough for Lua...)
+*/
+#define luai_writestringerror(s,p) \
+	(fprintf(stderr, (s), (p)), fflush(stderr))
 
 
 
@@ -220,18 +228,12 @@
 #define LUA_COMPAT_UNPACK
 
 /*
-@@ LUA_COMPAT_CPCALL controls the presence of function 'lua_cpcall'.
+@@ LUA_COMPAT_CPCALL controls the presence of macro 'lua_cpcall'.
 ** You can replace it with the preregistered function 'cpcall'.
 */
-#define LUA_COMPAT_CPCALL
-LUA_API int (lua_cpcall) (lua_State *L, lua_CFunction func, void *ud);
+#define lua_cpcall(L,f,u)  \
+	(lua_pushlightuserdata(L,(u)), luaL_cpcall(L,(f),1,0))
 
-/*
-@@ LUA_COMPAT_FENV controls the presence of functions 'setfenv/getfenv'.
-** You can replace them with lexical environments, 'loadin', or the
-** debug library.
-*/
-#define LUA_COMPAT_FENV
 
 /*
 @@ LUA_COMPAT_LOG10 defines the function 'log10' in the math library.
@@ -267,7 +269,7 @@ LUA_API int (lua_cpcall) (lua_State *L, lua_CFunction func, void *ud);
 /* compatibility with previous wrong spelling */
 #define luaL_typerror		luaL_typeerror
 
-#endif
+#endif  /* LUA_COMPAT_ALL */
 
 /* }================================================================== */
 
@@ -421,7 +423,7 @@ LUA_API int (lua_cpcall) (lua_State *L, lua_CFunction func, void *ud);
 
 /*
 @@ lua_number2int is a macro to convert lua_Number to int.
-@@ lua_number2integer is a macro to convert lua_Number to lUA_INTEGER.
+@@ lua_number2integer is a macro to convert lua_Number to LUA_INTEGER.
 @@ lua_number2uint is a macro to convert a lua_Number to an unsigned
 @* LUA_INT32.
 @@ lua_uint2number is a macro to convert an unsigned LUA_INT32
@@ -439,30 +441,31 @@ LUA_API int (lua_cpcall) (lua_State *L, lua_CFunction func, void *ud);
 /* On a Microsoft compiler, use assembler */
 #if defined(_MSC_VER)
 
-#define lua_number2int(i,d)   {__asm fld d   __asm fistp i}
+#define lua_number2int(i,n)  __asm {__asm fld n   __asm fistp i}
 #define lua_number2integer(i,n)		lua_number2int(i, n)
-#define lua_number2uint(i,n)		lua_number2int(i, n)
+#define lua_number2uint(i,n)  \
+  {__int64 l; __asm {__asm fld n   __asm fistp l} i = (unsigned int)l;}
 
-#else
+#else  /* _MSC_VER */
 /* the next trick should work on any Pentium, but sometimes clashes
    with a DirectX idiosyncrasy */
 
 union luai_Cast { double l_d; long l_l; };
-#define lua_number2int(i,d) \
-  { volatile union luai_Cast u; u.l_d = (d) + 6755399441055744.0; (i) = u.l_l; }
+#define lua_number2int(i,n) \
+  { volatile union luai_Cast u; u.l_d = (n) + 6755399441055744.0; (i) = u.l_l; }
 #define lua_number2integer(i,n)		lua_number2int(i, n)
 #define lua_number2uint(i,n)		lua_number2int(i, n)
 
-#endif
+#endif  /* _MSC_VER */
 
 
-#else
+#else  /* LUA_NUMBER_DOUBLE ... (Pentium) */
 /* this option always works, but may be slow */
-#define lua_number2int(i,d)	((i)=(int)(d))
-#define lua_number2integer(i,d)	((i)=(LUA_INTEGER)(d))
-#define lua_number2uint(i,d)	((i)=(unsigned LUA_INT32)(d))
+#define lua_number2int(i,n)	((i)=(int)(n))
+#define lua_number2integer(i,n)	((i)=(LUA_INTEGER)(n))
+#define lua_number2uint(i,n)	((i)=(unsigned LUA_INT32)(n))
 
-#endif
+#endif  /* LUA_NUMBER_DOUBLE ... (Pentium) */
 
 
 /* on several machines, coercion from unsigned to double is too slow,
@@ -483,11 +486,11 @@ union luai_Cast { double l_d; long l_l; };
 #include <float.h>
 #include <math.h>
 
-#define luai_hashnum(i,d) { int e;  \
-  d = frexp(d, &e) * (lua_Number)(INT_MAX - DBL_MAX_EXP);  \
-  lua_number2int(i, d); i += e; }
+#define luai_hashnum(i,n) { int e;  \
+  n = frexp(n, &e) * (lua_Number)(INT_MAX - DBL_MAX_EXP);  \
+  lua_number2int(i, n); i += e; }
 
-#endif
+#endif  /* ltable_c */
 
 /* }================================================================== */
 

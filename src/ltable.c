@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.47 2009/12/17 15:46:44 roberto Exp $
+** $Id: ltable.c,v 2.50 2010/04/18 13:22:48 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -31,6 +31,7 @@
 #include "lmem.h"
 #include "lobject.h"
 #include "lstate.h"
+#include "lstring.h"
 #include "ltable.h"
 
 
@@ -108,6 +109,8 @@ static Node *mainposition (const Table *t, const TValue *key) {
       return hashboolean(t, bvalue(key));
     case LUA_TLIGHTUSERDATA:
       return hashpointer(t, pvalue(key));
+    case LUA_TLCF:
+      return hashpointer(t, fvalue(key));
     default:
       return hashpointer(t, gcvalue(key));
   }
@@ -452,7 +455,7 @@ const TValue *luaH_getint (Table *t, int key) {
 const TValue *luaH_getstr (Table *t, TString *key) {
   Node *n = hashstr(t, key);
   do {  /* check whether `key' is somewhere in the chain */
-    if (ttisstring(gkey(n)) && rawtsvalue(gkey(n)) == key)
+    if (ttisstring(gkey(n)) && eqstr(rawtsvalue(gkey(n)), key))
       return gval(n);  /* that's it */
     else n = gnext(n);
   } while (n);

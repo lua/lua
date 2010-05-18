@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.182 2009/12/22 16:47:12 roberto Exp $
+** $Id: lua.c,v 1.190 2010/04/14 15:14:21 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -102,26 +102,31 @@ static void laction (int i) {
 }
 
 
-static void print_usage (void) {
-  fprintf(stderr,
+static void print_usage (const char *badoption) {
+  if (badoption[1] == 'e' || badoption[1] == 'l') {
+    luai_writestringerror("%s: ", progname);
+    luai_writestringerror("'%s' needs argument\n", badoption);
+  } else {
+    luai_writestringerror("%s: ", progname);
+    luai_writestringerror("unrecognized option '%s'\n", badoption);
+  }
+  luai_writestringerror(
   "usage: %s [options] [script [args]]\n"
   "Available options are:\n"
   "  -e stat  execute string " LUA_QL("stat") "\n"
-  "  -l name  require library " LUA_QL("name") "\n"
   "  -i       enter interactive mode after executing " LUA_QL("script") "\n"
+  "  -l name  require library " LUA_QL("name") "\n"
   "  -v       show version information\n"
   "  --       stop handling options\n"
-  "  -        execute stdin and stop handling options\n"
+  "  -        stop handling options and execute stdin\n"
   ,
   progname);
-  fflush(stderr);
 }
 
 
 static void l_message (const char *pname, const char *msg) {
-  if (pname) fprintf(stderr, "%s: ", pname);
-  fprintf(stderr, "%s\n", msg);
-  fflush(stderr);
+  if (pname) luai_writestringerror("%s: ", pname);
+  luai_writestringerror("%s\n", msg);
 }
 
 
@@ -214,7 +219,7 @@ static int dostring (lua_State *L, const char *s, const char *name) {
 
 
 static int dolibrary (lua_State *L, const char *name) {
-  lua_getfield(L, LUA_ENVIRONINDEX, "require");
+  lua_getglobal(L, "require");
   lua_pushstring(L, name);
   return report(L, docall(L, 1, 1));
 }
@@ -222,7 +227,7 @@ static int dolibrary (lua_State *L, const char *name) {
 
 static const char *get_prompt (lua_State *L, int firstline) {
   const char *p;
-  lua_getfield(L, LUA_ENVIRONINDEX, firstline ? "_PROMPT" : "_PROMPT2");
+  lua_getglobal(L, firstline ? "_PROMPT" : "_PROMPT2");
   p = lua_tostring(L, -1);
   if (p == NULL) p = (firstline ? LUA_PROMPT : LUA_PROMPT2);
   lua_pop(L, 1);  /* remove global */
@@ -296,7 +301,7 @@ static void dotty (lua_State *L) {
     report(L, status);
     if (status == LUA_OK && lua_gettop(L) > 0) {  /* any result to print? */
       luaL_checkstack(L, LUA_MINSTACK, "too many results to print");
-      lua_getfield(L, LUA_ENVIRONINDEX, "print");
+      lua_getglobal(L, "print");
       lua_insert(L, 1);
       if (lua_pcall(L, lua_gettop(L)-1, 0, 0) != LUA_OK)
         l_message(progname, lua_pushfstring(L,
@@ -306,7 +311,6 @@ static void dotty (lua_State *L) {
   }
   lua_settop(L, 0);  /* clear stack */
   luai_writestring("\n", 1);
-  fflush(stdout);
   progname = oldprogname;
 }
 
@@ -315,7 +319,7 @@ static int handle_script (lua_State *L, char **argv, int n) {
   int status;
   const char *fname;
   int narg = getargs(L, argv, n);  /* collect arguments */
-  lua_setfield(L, LUA_ENVIRONINDEX, "arg");
+  lua_setglobal(L, "arg");
   fname = argv[n];
   if (strcmp(fname, "-") == 0 && strcmp(argv[n-1], "--") != 0)
     fname = NULL;  /* stdin */
@@ -356,10 +360,11 @@ static int collectargs (char **argv, int *pi, int *pv, int *pe) {
       case 'l':
         if (argv[i][2] == '\0') {
           i++;
-          if (argv[i] == NULL) return -1;
+          if (argv[i] == NULL) return -(i - 1);
         }
         break;
-      default: return -1;  /* invalid option */
+      default:  /* invalid option; return its index... */
+        return -i;  /* ...as a negative value */
     }
   }
   return 0;
@@ -369,7 +374,6 @@ static int collectargs (char **argv, int *pi, int *pv, int *pe) {
 static int runargs (lua_State *L, char **argv, int n) {
   int i;
   for (i = 1; i < n; i++) {
-    if (argv[i] == NULL) continue;
     lua_assert(argv[i][0] == '-');
     switch (argv[i][1]) {  /* option */
       case 'e': {
@@ -412,8 +416,8 @@ static int pmain (lua_State *L) {
   int has_i = 0, has_v = 0, has_e = 0;
   if (argv[0] && argv[0][0]) progname = argv[0];
   script = collectargs(argv, &has_i, &has_v, &has_e);
-  if (script < 0) {  /* invalid args? */
-    print_usage();
+  if (script < 0) {  /* invalid arg? */
+    print_usage(argv[-script]);
     return 0;
   }
   if (has_v) print_version();
@@ -443,7 +447,6 @@ static int pmain (lua_State *L) {
 
 
 int main (int argc, char **argv) {
-  static lua_CFunction ppmain = &pmain;
   int status, result;
   lua_State *L = luaL_newstate();  /* create state */
   if (L == NULL) {
@@ -451,11 +454,10 @@ int main (int argc, char **argv) {
     return EXIT_FAILURE;
   }
   /* call 'pmain' in protected mode */
-  lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_CPCALL);  /* calling function */
-  lua_pushlightuserdata(L, &ppmain);
-  lua_pushinteger(L, argc); 
-  lua_pushlightuserdata(L, argv);
-  status = lua_pcall(L, 3, 1, 0);
+  lua_pushcfunction(L, &pmain);
+  lua_pushinteger(L, argc);  /* 1st argument */
+  lua_pushlightuserdata(L, argv); /* 2nd argument */
+  status = lua_pcall(L, 2, 1, 0);
   result = lua_toboolean(L, -1);  /* get result */
   finalreport(L, status);
   lua_close(L);

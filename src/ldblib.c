@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.119 2010/01/06 14:42:35 roberto Exp $
+** $Id: ldblib.c,v 1.121 2010/03/26 20:58:11 roberto Exp $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -44,19 +44,19 @@ static int db_setmetatable (lua_State *L) {
 }
 
 
-static int db_getfenv (lua_State *L) {
-  luaL_checkany(L, 1);
-  lua_getfenv(L, 1);
+static int db_getenv (lua_State *L) {
+  luaL_checktype(L, 1, LUA_TUSERDATA);
+  lua_getenv(L, 1);
   return 1;
 }
 
 
-static int db_setfenv (lua_State *L) {
-  luaL_checktype(L, 2, LUA_TTABLE);
+static int db_setenv (lua_State *L) {
+  luaL_checktype(L, 1, LUA_TUSERDATA);
+  if (!lua_isnoneornil(L, 2))
+    luaL_checktype(L, 2, LUA_TTABLE);
   lua_settop(L, 2);
-  if (lua_setfenv(L, 1) == 0)
-    luaL_error(L, LUA_QL("setfenv")
-                  " cannot change environment of given object");
+  lua_setenv(L, 1);
   return 1;
 }
 
@@ -339,15 +339,13 @@ static int db_gethook (lua_State *L) {
 static int db_debug (lua_State *L) {
   for (;;) {
     char buffer[250];
-    fputs("lua_debug> ", stderr);
+    luai_writestringerror("%s", "lua_debug> ");
     if (fgets(buffer, sizeof(buffer), stdin) == 0 ||
         strcmp(buffer, "cont\n") == 0)
       return 0;
     if (luaL_loadbuffer(L, buffer, strlen(buffer), "=(debug command)") ||
-        lua_pcall(L, 0, 0, 0)) {
-      fputs(lua_tostring(L, -1), stderr);
-      fputs("\n", stderr);
-    }
+        lua_pcall(L, 0, 0, 0))
+      luai_writestringerror("%s\n", lua_tostring(L, -1));
     lua_settop(L, 0);  /* remove eventual returns */
   }
 }
@@ -369,7 +367,7 @@ static int db_traceback (lua_State *L) {
 
 static const luaL_Reg dblib[] = {
   {"debug", db_debug},
-  {"getfenv", db_getfenv},
+  {"getenv", db_getenv},
   {"gethook", db_gethook},
   {"getinfo", db_getinfo},
   {"getlocal", db_getlocal},
@@ -378,7 +376,7 @@ static const luaL_Reg dblib[] = {
   {"getupvalue", db_getupvalue},
   {"upvaluejoin", db_upvaluejoin},
   {"upvalueid", db_upvalueid},
-  {"setfenv", db_setfenv},
+  {"setenv", db_setenv},
   {"sethook", db_sethook},
   {"setlocal", db_setlocal},
   {"setmetatable", db_setmetatable},

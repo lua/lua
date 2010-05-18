@@ -1,5 +1,5 @@
 /*
-** $Id: print.c,v 1.58 2008/09/11 12:05:06 lhf Exp $
+** $Id: print.c,v 1.60 2010/05/17 22:27:10 lhf Exp $
 ** print bytecodes
 ** See Copyright Notice in lua.h
 */
@@ -82,6 +82,7 @@ static void PrintCode(const Proto* f)
   int a=GETARG_A(i);
   int b=GETARG_B(i);
   int c=GETARG_C(i);
+  int ax=GETARG_Ax(i);
   int bx=GETARG_Bx(i);
   int sbx=GETARG_sBx(i);
   int line=getfuncline(f,pc);
@@ -99,24 +100,32 @@ static void PrintCode(const Proto* f)
     if (getCMode(o)!=OpArgN) printf(" %d",ISK(c) ? (-1-INDEXK(c)) : c);
     break;
    case iABx:
-    if (getBMode(o)==OpArgK) printf("%d %d",a,-1-bx); else printf("%d %d",a,bx);
+    if (getBMode(o)==OpArgK) printf("%d %d",a,-bx); else printf("%d %d",a,bx);
     break;
    case iAsBx:
     if (o==OP_JMP) printf("%d",sbx); else printf("%d %d",a,sbx);
+    break;
+   case iAx:
+    printf("%d",ax);
     break;
   }
   switch (o)
   {
    case OP_LOADK:
-    printf("\t; "); PrintConstant(f,bx);
+    printf("\t; "); PrintConstant(f,bx-1);
     break;
    case OP_GETUPVAL:
    case OP_SETUPVAL:
     printf("\t; %s", (f->sizeupvalues>0) ? getstr(f->upvalues[b].name) : "-");
     break;
-   case OP_GETGLOBAL:
-   case OP_SETGLOBAL:
-    printf("\t; %s",svalue(&f->k[bx]));
+   case OP_GETTABUP:
+    printf("\t; %s", (f->sizeupvalues>0) ? getstr(f->upvalues[b].name) : "-");
+    if (ISK(c)) { printf(" "); PrintConstant(f,INDEXK(c)); }
+    break;
+   case OP_SETTABUP:
+    printf("\t; %s", (f->sizeupvalues>0) ? getstr(f->upvalues[a].name) : "-");
+    if (ISK(b)) { printf(" "); PrintConstant(f,INDEXK(b)); }
+    if (ISK(c)) { printf(" "); PrintConstant(f,INDEXK(c)); }
     break;
    case OP_GETTABLE:
    case OP_SELF:

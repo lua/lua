@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.80 2010/01/13 16:30:27 roberto Exp $
+** $Id: loadlib.c,v 1.82 2010/03/19 15:02:34 roberto Exp $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -353,9 +353,7 @@ static int ll_loadfunc (lua_State *L, const char *path, const char *sym) {
     lua_CFunction f = ll_sym(L, *reg, sym);
     if (f == NULL)
       return ERRFUNC;  /* unable to find function */
-    lua_pushcfunction(L, f);  /* else create new function... */
-    lua_pushglobaltable(L);   /* ... and set the standard global table... */
-    lua_setfenv(L, -2);       /* ... as its environment */
+    lua_pushcfunction(L, f);  /* else create new function */
     return 0;  /* no errors */
   }
 }
@@ -435,7 +433,7 @@ static int ll_searchpath (lua_State *L) {
 static const char *findfile (lua_State *L, const char *name,
                                            const char *pname) {
   const char *path;
-  lua_getfield(L, LUA_ENVIRONINDEX, pname);
+  lua_getfield(L, lua_upvalueindex(1), pname);
   path = lua_tostring(L, -1);
   if (path == NULL)
     luaL_error(L, LUA_QL("package.%s") " must be a string", pname);
@@ -509,7 +507,7 @@ static int loader_Croot (lua_State *L) {
 
 static int loader_preload (lua_State *L) {
   const char *name = luaL_checkstring(L, 1);
-  lua_getfield(L, LUA_ENVIRONINDEX, "preload");
+  lua_getfield(L, lua_upvalueindex(1), "preload");
   if (!lua_istable(L, -1))
     luaL_error(L, LUA_QL("package.preload") " must be a table");
   lua_getfield(L, -1, name);
@@ -535,7 +533,7 @@ static int ll_require (lua_State *L) {
     return 1;  /* package is already loaded */
   }
   /* else must load it; iterate over available loaders */
-  lua_getfield(L, LUA_ENVIRONINDEX, "loaders");
+  lua_getfield(L, lua_upvalueindex(1), "loaders");
   if (!lua_istable(L, -1))
     luaL_error(L, LUA_QL("package.loaders") " must be a table");
   lua_pushliteral(L, "");  /* error message accumulator */
@@ -579,14 +577,18 @@ static int ll_require (lua_State *L) {
 */
 
 
-static void setfenv (lua_State *L) {
+/*
+** FOR COMPATIBILITY ONLY: changes the _ENV variable of
+** calling function
+*/
+static void set_env (lua_State *L) {
   lua_Debug ar;
   if (lua_getstack(L, 1, &ar) == 0 ||
       lua_getinfo(L, "f", &ar) == 0 ||  /* get calling function */
       lua_iscfunction(L, -1))
     luaL_error(L, LUA_QL("module") " not called from a Lua function");
   lua_pushvalue(L, -2);  /* copy new environment table to top */
-  lua_setfenv(L, -2);
+  lua_setupvalue(L, -2, 1);
   lua_pop(L, 1);  /* remove function */
 }
 
@@ -639,7 +641,7 @@ static int ll_module (lua_State *L) {
     modinit(L, modname);
   }
   lua_pushvalue(L, -1);
-  setfenv(L);
+  set_env(L);
   dooptions(L, loaded - 1);
   return 1;
 }
@@ -709,12 +711,12 @@ LUAMOD_API int luaopen_package (lua_State *L) {
   lua_setfield(L, -2, "__gc");
   /* create `package' table */
   luaL_register(L, LUA_LOADLIBNAME, pk_funcs);
-  lua_copy(L, -1, LUA_ENVIRONINDEX);
   /* create `loaders' table */
   lua_createtable(L, sizeof(loaders)/sizeof(loaders[0]) - 1, 0);
   /* fill it with pre-defined loaders */
   for (i=0; loaders[i] != NULL; i++) {
-    lua_pushcfunction(L, loaders[i]);
+    lua_pushvalue(L, -2);  /* set 'package' as upvalue for all loaders */
+    lua_pushcclosure(L, loaders[i], 1);
     lua_rawseti(L, -2, i+1);
   }
   lua_setfield(L, -2, "loaders");  /* put it in field `loaders' */
@@ -731,8 +733,9 @@ LUAMOD_API int luaopen_package (lua_State *L) {
   lua_newtable(L);
   lua_setfield(L, -2, "preload");
   lua_pushglobaltable(L);
-  luaL_register(L, NULL, ll_funcs);  /* open lib into global table */
-  lua_pop(L, 1);
+  lua_pushvalue(L, -2);  /* set 'package' as upvalue for next lib */
+  luaL_openlib(L, NULL, ll_funcs, 1);  /* open lib into global table */
+  lua_pop(L, 1);  /* pop global table */
   return 1;  /* return 'package' table */
 }
 

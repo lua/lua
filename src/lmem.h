@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.35 2009/12/16 16:42:58 roberto Exp $
+** $Id: lmem.h,v 1.36 2010/04/08 17:16:46 roberto Exp $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -12,8 +12,6 @@
 
 #include "llimits.h"
 #include "lua.h"
-
-#define MEMERRMSG	"not enough memory"
 
 
 #define luaM_reallocv(L,b,on,n,e) \

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.196 2009/12/22 15:32:50 roberto Exp $
+** $Id: lauxlib.c,v 1.212 2010/05/18 17:21:24 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -22,11 +22,6 @@
 #include "lua.h"
 
 #include "lauxlib.h"
-
-
-/* convert a stack index to positive */
-#define abs_index(L, i)		((i) > 0 || (i) <= LUA_REGISTRYINDEX ? (i) : \
-					lua_gettop(L) + (i) + 1)
 
 
 /*
@@ -347,54 +342,40 @@ LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int narg,
 ** =======================================================
 */
 
+/*
+** check whether buffer is using a userdata on the stack as a temporary
+** buffer
+*/
+#define buffonstack(B)	((B)->b != (B)->initb)
 
-#define bufflen(B)	((B)->p - (B)->buffer)
-#define bufffree(B)	((size_t)(LUAL_BUFFERSIZE - bufflen(B)))
 
-#define LIMIT	(LUA_MINSTACK/2)
-
-
-static int emptybuffer (luaL_Buffer *B) {
-  size_t l = bufflen(B);
-  if (l == 0) return 0;  /* put nothing on stack */
-  else {
-    lua_pushlstring(B->L, B->buffer, l);
-    B->p = B->buffer;
-    B->lvl++;
-    return 1;
+/*
+** returns a pointer to a free area with at least 'sz' bytes
+*/
+LUALIB_API char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz) {
+  lua_State *L = B->L;
+  if (B->size - B->n < sz) {  /* not enough space? */
+    char *newbuff;
+    size_t newsize = B->size * 2;  /* double buffer size */
+    if (newsize - B->n < sz)  /* not bit enough? */
+      newsize = B->n + sz;
+    if (newsize < B->n || newsize - B->n < sz)
+      luaL_error(L, "string too large");
+    newbuff = (char *)lua_newuserdata(L, newsize);  /* create larger buffer */
+    memcpy(newbuff, B->b, B->n);  /* move content to new buffer */
+    if (buffonstack(B))
+      lua_remove(L, -2);  /* remove old buffer */
+    B->b = newbuff;
+    B->size = newsize;
   }
-}
-
-
-static void adjuststack (luaL_Buffer *B) {
-  if (B->lvl > 1) {
-    lua_State *L = B->L;
-    int toget = 1;  /* number of levels to concat */
-    size_t toplen = lua_rawlen(L, -1);
-    do {
-      size_t l = lua_rawlen(L, -(toget+1));
-      if (B->lvl - toget + 1 >= LIMIT || toplen > l) {
-        toplen += l;
-        toget++;
-      }
-      else break;
-    } while (toget < B->lvl);
-    lua_concat(L, toget);
-    B->lvl = B->lvl - toget + 1;
-  }
-}
-
-
-LUALIB_API char *luaL_prepbuffer (luaL_Buffer *B) {
-  if (emptybuffer(B))
-    adjuststack(B);
-  return B->buffer;
+  return &B->b[B->n];
 }
 
 
 LUALIB_API void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l) {
-  while (l--)
-    luaL_addchar(B, *s++);
+  char *b = luaL_prepbuffsize(B, l);
+  memcpy(b, s, l);
+  luaL_addsize(B, l);
 }
 
 
@@ -404,35 +385,41 @@ LUALIB_API void luaL_addstring (luaL_Buffer *B, const char *s) {
 
 
 LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
-  emptybuffer(B);
-  lua_concat(B->L, B->lvl);
-  B->lvl = 1;
+  lua_State *L = B->L;
+  lua_pushlstring(L, B->b, B->n);
+  if (buffonstack(B))
+    lua_remove(L, -2);  /* remove old buffer */
+}
+
+
+LUALIB_API void luaL_pushresultsize (luaL_Buffer *B, size_t sz) {
+  luaL_addsize(B, sz);
+  luaL_pushresult(B);
 }
 
 
 LUALIB_API void luaL_addvalue (luaL_Buffer *B) {
   lua_State *L = B->L;
-  size_t vl;
-  const char *s = lua_tolstring(L, -1, &vl);
-  if (vl <= bufffree(B)) {  /* fit into buffer? */
-    memcpy(B->p, s, vl);  /* put it there */
-    B->p += vl;
-    lua_pop(L, 1);  /* remove from stack */
-  }
-  else {
-    if (emptybuffer(B))
-      lua_insert(L, -2);  /* put buffer before new value */
-    B->lvl++;  /* add new value into B stack */
-    adjuststack(B);
-  }
+  size_t l;
+  const char *s = lua_tolstring(L, -1, &l);
+  if (buffonstack(B))
+    lua_insert(L, -2);  /* put value below buffer */
+  luaL_addlstring(B, s, l);
+  lua_remove(L, (buffonstack(B)) ? -2 : -1);  /* remove value */
 }
 
 
 LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
-  luaL_checkstack(L, LIMIT + LUA_MINSTACK, "no space for new buffer");
   B->L = L;
-  B->p = B->buffer;
-  B->lvl = 0;
+  B->b = B->initb;
+  B->n = 0;
+  B->size = LUAL_BUFFERSIZE;
+}
+
+
+LUALIB_API char *luaL_buffinitsize (lua_State *L, luaL_Buffer *B, size_t sz) {
+  luaL_buffinit(L, B);
+  return luaL_prepbuffsize(B, sz);
 }
 
 /* }====================================================== */
@@ -444,32 +431,26 @@ LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
 ** =======================================================
 */
 
-/* number of prereserved references (for internal use) */
-#define FREELIST_REF	(LUA_RIDX_LAST + 1)	/* free list of references */
+/* index of free-list header */
+#define freelist	"lua-freelist"
 
 
 LUALIB_API int luaL_ref (lua_State *L, int t) {
   int ref;
-  t = abs_index(L, t);
+  t = lua_absindex(L, t);
   if (lua_isnil(L, -1)) {
     lua_pop(L, 1);  /* remove from stack */
     return LUA_REFNIL;  /* `nil' has a unique fixed reference */
   }
-  lua_rawgeti(L, t, FREELIST_REF);  /* get first free element */
+  lua_getfield(L, t, freelist);  /* get first free element */
   ref = (int)lua_tointeger(L, -1);  /* ref = t[FREELIST_REF] */
   lua_pop(L, 1);  /* remove it from stack */
   if (ref != 0) {  /* any free element? */
     lua_rawgeti(L, t, ref);  /* remove it from list */
-    lua_rawseti(L, t, FREELIST_REF);  /* (t[FREELIST_REF] = t[ref]) */
+    lua_setfield(L, t, freelist);  /* (t[freelist] = t[ref]) */
   }
-  else {  /* no free elements */
+  else  /* no free elements */
     ref = (int)lua_rawlen(L, t) + 1;  /* get a new reference */
-    if (ref == FREELIST_REF) {  /* FREELIST_REF not initialized? */
-      lua_pushinteger(L, 0);
-      lua_rawseti(L, t, FREELIST_REF);
-      ref = FREELIST_REF + 1;
-    }
-  }
   lua_rawseti(L, t, ref);
   return ref;
 }
@@ -477,11 +458,11 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
 
 LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
   if (ref >= 0) {
-    t = abs_index(L, t);
-    lua_rawgeti(L, t, FREELIST_REF);
-    lua_rawseti(L, t, ref);  /* t[ref] = t[FREELIST_REF] */
+    t = lua_absindex(L, t);
+    lua_getfield(L, t, freelist);
+    lua_rawseti(L, t, ref);  /* t[ref] = t[freelist] */
     lua_pushinteger(L, ref);
-    lua_rawseti(L, t, FREELIST_REF);  /* t[FREELIST_REF] = ref */
+    lua_setfield(L, t, freelist);  /* t[freelist] = ref */
   }
 }
 
@@ -495,7 +476,7 @@ LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
 */
 
 typedef struct LoadF {
-  int extraline;
+  int first;
   FILE *f;
   char buff[LUAL_BUFFERSIZE];
 } LoadF;
@@ -504,17 +485,19 @@ typedef struct LoadF {
 static const char *getF (lua_State *L, void *ud, size_t *size) {
   LoadF *lf = (LoadF *)ud;
   (void)L;
-  if (lf->extraline) {
-    lf->extraline = 0;
+  if (lf->first != EOF) {
     *size = 1;
-    return "\n";
+    lf->buff[0] = (char)lf->first;
+    lf->first = EOF;
   }
-  /* 'fread' can return > 0 *and* set the EOF flag. If next call to
-     'getF' calls 'fread', terminal may still wait for user input.
-     The next check avoids this problem. */
-  if (feof(lf->f)) return NULL;
-  *size = fread(lf->buff, 1, sizeof(lf->buff), lf->f);
-  return (*size > 0) ? lf->buff : NULL;
+  else {
+    /* 'fread' can return > 0 *and* set the EOF flag. If next call to
+       'getF' called 'fread', it might still wait for user input.
+       The next check avoids this problem. */
+    if (feof(lf->f)) return NULL;
+    *size = fread(lf->buff, 1, sizeof(lf->buff), lf->f);
+  }
+  return lf->buff;
 }
 
 
@@ -532,7 +515,6 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   int status, readstatus;
   int c;
   int fnameindex = lua_gettop(L) + 1;  /* index of filename on the stack */
-  lf.extraline = 0;
   if (filename == NULL) {
     lua_pushliteral(L, "=stdin");
     lf.f = stdin;
@@ -544,18 +526,14 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   }
   c = getc(lf.f);
   if (c == '#') {  /* Unix exec. file? */
-    lf.extraline = 1;
     while ((c = getc(lf.f)) != EOF && c != '\n') ;  /* skip first line */
-    if (c == '\n') c = getc(lf.f);
   }
-  if (c == LUA_SIGNATURE[0] && filename) {  /* binary file? */
+  else if (c == LUA_SIGNATURE[0] && filename) {  /* binary file? */
     lf.f = freopen(filename, "rb", lf.f);  /* reopen in binary mode */
     if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
-    /* skip eventual `#!...' */
-    while ((c = getc(lf.f)) != EOF && c != LUA_SIGNATURE[0]) ;
-    lf.extraline = 0;
+    c = getc(lf.f);  /* re-read first character */
   }
-  ungetc(c, lf.f);
+  lf.first = c;  /* 'c' is the first character of the stream */
   status = lua_load(L, getF, &lf, lua_tostring(L, -1));
   readstatus = ferror(lf.f);
   if (filename) fclose(lf.f);  /* close file (even in case of errors) */
@@ -618,7 +596,7 @@ LUALIB_API int luaL_getmetafield (lua_State *L, int obj, const char *event) {
 
 
 LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
-  obj = abs_index(L, obj);
+  obj = lua_absindex(L, obj);
   if (!luaL_getmetafield(L, obj, event))  /* no metafield? */
     return 0;
   lua_pushvalue(L, obj);
@@ -663,13 +641,13 @@ LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len) {
 
 static int libsize (const luaL_Reg *l) {
   int size = 0;
-  for (; l->name; l++) size++;
+  for (; l && l->name; l++) size++;
   return size;
 }
 
 
-LUALIB_API void luaL_register (lua_State *L, const char *libname,
-                               const luaL_Reg *l) {
+LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
+                               const luaL_Reg *l, int nup) {
   luaL_checkversion(L);
   if (libname) {
     /* check whether lib already exists */
@@ -685,12 +663,17 @@ LUALIB_API void luaL_register (lua_State *L, const char *libname,
       lua_setfield(L, -3, libname);  /* _LOADED[libname] = new table */
     }
     lua_remove(L, -2);  /* remove _LOADED table */
+    lua_insert(L, -(nup + 1));  /* move library table to below upvalues */
   }
-  if (l == NULL) return;  /* nothing to register? */
-  for (; l->name; l++) {  /* else fill the table with given functions */
-    lua_pushcfunction(L, l->func);
-    lua_setfield(L, -2, l->name);
+  luaL_checkstack(L, nup, "too many upvalues");
+  for (; l && l->name; l++) {  /* fill the table with given functions */
+    int i;
+    for (i = 0; i < nup; i++)  /* copy upvalues to the top */
+      lua_pushvalue(L, -nup);
+    lua_pushcclosure(L, l->func, nup);
+    lua_setfield(L, -(nup + 2), l->name);
   }
+  lua_pop(L, nup);  /* remove upvalues */
 }
 
 
@@ -751,7 +734,7 @@ static void *l_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
 
 
 static int panic (lua_State *L) {
-  fprintf(stderr, "PANIC: unprotected error in call to Lua API (%s)\n",
+  luai_writestringerror("PANIC: unprotected error in call to Lua API (%s)\n",
                    lua_tostring(L, -1));
   return 0;  /* return to Lua to abort */
 }

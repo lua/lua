@@ -9,12 +9,8 @@ blockquote, .display {
 	color: black ;
 	padding: 8px ;
 	border: solid #a0a0a0 2px ;
-	background-color: #EFEFFF ;
+	xbackground-color: #EFEFFF ;
 	margin-left: 0px ;
-}
-
-.review {
-	color: red ;
 }
 
 .external {
@@ -22,12 +18,22 @@ blockquote, .display {
 	background: transparent url(external.png) no-repeat center right;
 }
 
-tt, kbd {
+tt, kbd, code {
 	font-size: 120% ;
 	xcolor: black ;
 	xpadding: 4px ;
 	xbackground-color: #E0E0E0 ;
 }
+
+kbd {
+	color: black ;
+	background-color: #E8E8E8 ;
+}
+
+.review {
+	color: red ;
+}
+
 </STYLE>
 </HEAD>
 
@@ -38,6 +44,11 @@ tt, kbd {
 <A HREF="http://www.lua.org/"><IMG SRC="logo.gif" ALT="Lua" BORDER=0></A>
 Welcome to Lua 5.2
 </H1>
+
+<IMG SRC="alert.png" ALIGN="absbottom">
+<EM>This is a work version of Lua 5.2.
+Everything may change in the final version.</EM>
+<P>
 
 <A HREF="#about">about</A>
 &middot;
@@ -50,11 +61,6 @@ Welcome to Lua 5.2
 <A HREF="contents.html">reference manual</A>
 <HR>
 <P>
-
-<P>
-<IMG SRC="alert.png" ALIGN="absbottom">
-<EM>This is a work version of Lua 5.2.
-All details may change in the final version.</EM>
 
 <H2><A NAME="about">About Lua</A></H2>
 
@@ -270,6 +276,24 @@ compiler:
 
 <H2><A NAME="changes">Changes since Lua 5.1</A></H2>
 
+<IMG SRC="alert.png" ALIGN="absbottom">
+<EM>Everything may change in the final version.</EM>
+<P>
+
+Here are the main changes since the previous work version:
+<UL>
+<LI> new <CODE>_ENV</CODE> proposal
+<LI> generational collector (very experimental)
+<LI> light C functions
+
+<LI> order tag methods follow the same rules of other binary operators
+<LI> <CODE>lua_absindex</CODE>
+<LI> \0 in patterns
+<LI> empty statement
+<LI> options in <CODE>io.lines</CODE>
+</UL>
+<P>
+
 Here are the main changes in Lua since its last release.
 The
 <A HREF="contents.html">reference manual</A>
@@ -281,13 +305,13 @@ lists the
 <UL>
 <LI> new lexical environments.
 <LI> no more fenv for threads.
-<LI> ephemeron tables.
-<LI> yieldable pcall/metamethods.
+<LI> ephemeron tables
+	(tables with weak keys only visit value when key is accessible).
+<LI> yieldable pcall and metamethods.
 <LI> tables honor the <CODE>__len</CODE> metamethod.
 <LI> max constants per function raised to 2^26.
 <LI> hex escapes in strings.
 <LI> no more verification of opcode consistency.
-
 </UL>
 
 <H3>Libraries</H3>
@@ -299,27 +323,39 @@ lists the
 <LI> <CODE>loadlib</CODE> may load libraries with global names (RTLD_GLOBAL).
 <LI> new function <CODE>package.searchpath</CODE>.
 <LI> optional base in <CODE>math.log</CODE>.
-<LI> <CODE>file:write</CODE> returns file.
+<LI> <CODE>file:write</CODE> returns <CODE>file</CODE>.
 <LI> closing a pipe returns exit status.
 <LI> <CODE>os.exit</CODE> may close state.
 <LI> new option 'isrunning' for <CODE>collectgarbage</CODE> and <CODE>lua_gc</CODE>.
 <LI> frontier patterns.
 <LI> <CODE>ipairs</CODE> now goes until #t.
+</UL>
 
+<H3>C API</H3>
+<UL>
+<LI> mainthread predefined in the registry.
+<LI> <CODE>lua_cpcall</CODE> changed to a predefined function in the registry.
+<LI> new constants <CODE>LUA_OK</CODE> and <CODE>LUA_ERRGCMM</CODE>.
+<LI> new <CODE>lua_compare</CODE>, <CODE>lua_arith</CODE>, and <CODE>lua_len</CODE>.
+<LI> new <CODE>lua_version</CODE> and <CODE>luaL_version</CODE>.
+<LI> <CODE>lua_pushstring</CODE> and <CODE>pushlstring</CODE> return string.
+<LI> new <CODE>luaL_testudata</CODE>.
+<LI> new <CODE>luaL_tolstring</CODE>.
+<LI> new <CODE>lua_copy</CODE>.
+<LI> new <CODE>lua_upvalueid</CODE> and <CODE>lua_upvaluejoin</CODE>.
+<LI> <CODE>nparams</CODE> and <CODE>isvarag</CODE> available in debug API.
 </UL>
 
 <H3>Implementation</H3>
 <UL>
 <LI> emergency garbage collector
 	(core forces a full collection when allocation fails).
-<LI> ephemeron tables
-	(tables with weak keys only visit value when key is accessible)
-<LI> handling of non-string error messages in the standalone interpreter.
 <LI> udata with finalizers are kept in a separated list for the GC.
 <LI> CallInfo stack now is a linked list.
 <LI> internal (immutable) version of ctypes.
 <LI> parser uses much less C-stack space (no more auto arrays).
 <LI> new hash for floats.
+<LI> handling of non-string error messages in the standalone interpreter.
 </UL>
 
 
@@ -372,10 +408,10 @@ THE SOFTWARE.
 <HR>
 <SMALL>
 Last update:
-Wed Jan 13 15:35:05 BRST 2010
+Tue May 18 13:59:06 BRT 2010
 </SMALL>
 <!--
-Last change: revised for Lua 5.2.0 (work2)
+Last change: revised for Lua 5.2.0 (work3)
 -->
 
 </BODY>

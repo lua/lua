@@ -27,7 +27,7 @@ CORE_O=	lapi.o lcode.o lctype.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o \
 	lmem.o lobject.o lopcodes.o lparser.o lstate.o lstring.o ltable.o \
 	ltm.o lundump.o lvm.o lzio.o
 LIB_O=	lauxlib.o lbaselib.o lbitlib.o ldblib.o liolib.o lmathlib.o loslib.o \
-	ltablib.o lstrlib.o loadlib.o linit.o
+	lstrlib.o ltablib.o loadlib.o linit.o
 
 LUA_T=	lua
 LUA_O=	lua.o
@@ -103,7 +103,7 @@ macosx:
 	$(MAKE) $(ALL) MYCFLAGS="-DLUA_USE_MACOSX" MYLIBS="-lreadline"
 
 mingw:
-	$(MAKE) "LUA_A=lua51.dll" "LUA_T=lua.exe" \
+	$(MAKE) "LUA_A=lua52.dll" "LUA_T=lua.exe" \
 	"AR=$(CC) -shared -o" "RANLIB=strip --strip-unneeded" \
 	"MYCFLAGS=-DLUA_BUILD_AS_DLL" "MYLIBS=" "MYLDFLAGS=-s" lua.exe
 
@@ -137,8 +137,8 @@ ldo.o: ldo.c lua.h luaconf.h lapi.h llimits.h lstate.h lobject.h ltm.h \
   lstring.h ltable.h lundump.h lvm.h
 ldump.o: ldump.c lua.h luaconf.h lobject.h llimits.h lstate.h ltm.h \
   lzio.h lmem.h lundump.h
-lfunc.o: lfunc.c lua.h luaconf.h lfunc.h lobject.h llimits.h lgc.h lmem.h \
-  lopcodes.h lstate.h ltm.h lzio.h
+lfunc.o: lfunc.c lua.h luaconf.h lfunc.h lobject.h llimits.h lgc.h \
+  lstate.h ltm.h lzio.h lmem.h lopcodes.h
 lgc.o: lgc.c lua.h luaconf.h ldebug.h lstate.h lobject.h llimits.h ltm.h \
   lzio.h lmem.h ldo.h lfunc.h lgc.h lstring.h ltable.h
 linit.o: linit.c lua.h luaconf.h lualib.h lauxlib.h
@@ -163,7 +163,7 @@ lstring.o: lstring.c lua.h luaconf.h lmem.h llimits.h lobject.h lstate.h \
   ltm.h lzio.h lstring.h lgc.h
 lstrlib.o: lstrlib.c lua.h luaconf.h lauxlib.h lualib.h
 ltable.o: ltable.c lua.h luaconf.h ldebug.h lstate.h lobject.h llimits.h \
-  ltm.h lzio.h lmem.h ldo.h lgc.h ltable.h
+  ltm.h lzio.h lmem.h ldo.h lgc.h lstring.h ltable.h
 ltablib.o: ltablib.c lua.h luaconf.h lauxlib.h lualib.h
 ltm.o: ltm.c lua.h luaconf.h lobject.h llimits.h lstate.h ltm.h lzio.h \
   lmem.h lstring.h lgc.h ltable.h

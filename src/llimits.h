@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.77 2009/12/17 12:50:20 roberto Exp $
+** $Id: llimits.h,v 1.80 2010/05/07 18:44:12 roberto Exp $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -30,6 +30,7 @@ typedef unsigned char lu_byte;
 #define MAX_SIZET	((size_t)(~(size_t)0)-2)
 
 #define MAX_LUMEM	((lu_mem)(~(lu_mem)0)-2)
+#define MIN_LMEM	((l_mem)~((~(lu_mem)0)>>1))
 
 
 #define MAX_INT (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
@@ -59,7 +60,7 @@ typedef LUAI_UACNUMBER l_uacNumber;
 #if defined(lua_assert)
 #define check_exp(c,e)		(lua_assert(c), (e))
 #else
-#define lua_assert(c)		((void)0)
+#define lua_assert(c)		/* empty */
 #define check_exp(c,e)		(e)
 #endif
 
@@ -139,19 +140,19 @@ typedef lu_int32 Instruction;
 ** created/deleted/resumed/yielded.
 */
 #if !defined(luai_userstateopen)
-#define luai_userstateopen(L)           ((void)L)
+#define luai_userstateopen(L)		((void)L)
 #endif
 
 #if !defined(luai_userstateclose)
-#define luai_userstateclose(L)          ((void)L)
+#define luai_userstateclose(L)		((void)L)
 #endif
 
 #if !defined(luai_userstatethread)
-#define luai_userstatethread(L,L1)      ((void)L)
+#define luai_userstatethread(L,L1)	((void)L)
 #endif
 
 #if !defined(luai_userstatefree)
-#define luai_userstatefree(L)           ((void)L)
+#define luai_userstatefree(L,L1)	((void)L)
 #endif
 
 #if !defined(luai_userstateresume)

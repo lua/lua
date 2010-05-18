@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.34 2009/11/26 11:39:20 roberto Exp $
+** $Id: lobject.c,v 2.40 2010/04/18 13:22:48 roberto Exp $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -81,6 +81,10 @@ int luaO_rawequalObj (const TValue *t1, const TValue *t2) {
       return bvalue(t1) == bvalue(t2);  /* boolean true must be 1 !! */
     case LUA_TLIGHTUSERDATA:
       return pvalue(t1) == pvalue(t2);
+    case LUA_TSTRING:
+      return rawtsvalue(t1) == rawtsvalue(t2);
+    case LUA_TLCF:
+      return fvalue(t1) == fvalue(t2);
     default:
       lua_assert(iscollectable(t1));
       return gcvalue(t1) == gcvalue(t2);
@@ -96,7 +100,7 @@ lua_Number luaO_arith (int op, lua_Number v1, lua_Number v2) {
     case LUA_OPDIV: return luai_numdiv(NULL, v1, v2);
     case LUA_OPMOD: return luai_nummod(NULL, v1, v2);
     case LUA_OPPOW: return luai_numpow(NULL, v1, v2);
-    case LUA_OPUNM: return luai_numunm(N, v1);
+    case LUA_OPUNM: return luai_numunm(NULL, v1);
     default: lua_assert(0); return 0;
   }
 }
@@ -108,24 +112,21 @@ int luaO_str2d (const char *s, lua_Number *result) {
   if (endptr == s) return 0;  /* conversion failed */
   if (*endptr == 'x' || *endptr == 'X')  /* maybe an hexadecimal constant? */
     *result = cast_num(strtoul(s, &endptr, 16));
-  if (*endptr == '\0') return 1;  /* most common case */
   while (lisspace(cast(unsigned char, *endptr))) endptr++;
-  if (*endptr != '\0') return 0;  /* invalid trailing characters? */
-  return 1;
+  return (*endptr == '\0');  /* OK if no trailing characters */
 }
 
 
 
-static void pushstr (lua_State *L, const char *str) {
-  setsvalue2s(L, L->top, luaS_new(L, str));
+static void pushstr (lua_State *L, const char *str, size_t l) {
+  setsvalue2s(L, L->top, luaS_newlstr(L, str, l));
   incr_top(L);
 }
 
 
 /* this function handles only `%d', `%c', %f, %p, and `%s' formats */
 const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
-  int n = 1;
-  pushstr(L, "");
+  int n = 0;
   for (;;) {
     const char *e = strchr(fmt, '%');
     if (e == NULL) break;
@@ -135,14 +136,13 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
       case 's': {
         const char *s = va_arg(argp, char *);
         if (s == NULL) s = "(null)";
-        pushstr(L, s);
+        pushstr(L, s, strlen(s));
         break;
       }
       case 'c': {
-        char buff[2];
-        buff[0] = cast(char, va_arg(argp, int));
-        buff[1] = '\0';
-        pushstr(L, buff);
+        char buff;
+        buff = cast(char, va_arg(argp, int));
+        pushstr(L, &buff, 1);
         break;
       }
       case 'd': {
@@ -157,12 +157,12 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
       }
       case 'p': {
         char buff[4*sizeof(void *) + 8]; /* should be enough space for a `%p' */
-        sprintf(buff, "%p", va_arg(argp, void *));
-        pushstr(L, buff);
+        int l = sprintf(buff, "%p", va_arg(argp, void *));
+        pushstr(L, buff, l);
         break;
       }
       case '%': {
-        pushstr(L, "%");
+        pushstr(L, "%", 1);
         break;
       }
       default: {
@@ -175,8 +175,8 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
     n += 2;
     fmt = e+2;
   }
-  pushstr(L, fmt);
-  luaV_concat(L, n+1);
+  pushstr(L, fmt, strlen(fmt));
+  if (n > 0) luaV_concat(L, n + 1);
   return svalue(L->top - 1);
 }
 

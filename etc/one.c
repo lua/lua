@@ -5,8 +5,9 @@
 /* default is to build the full interpreter */
 #ifndef MAKE_LIB
 #ifndef MAKE_LUAC
-#undef  MAKE_LUA
+#ifndef MAKE_LUA
 #define MAKE_LUA
+#endif
 #endif
 #endif
 
@@ -16,7 +17,6 @@
 #define LUA_USE_LINUX
 #define LUA_USE_MACOSX
 #define LUA_USE_POSIX
-#define LUA_USE_DLOPEN
 #define LUA_ANSI
 #endif
 
@@ -58,11 +58,11 @@
 #include "loslib.c"
 #include "lstrlib.c"
 #include "ltablib.c"
+#include "linit.c"
 #endif
 
 /* lua */
 #ifdef MAKE_LUA
-#include "linit.c"
 #include "lua.c"
 #endif
 
