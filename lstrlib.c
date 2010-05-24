@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.151 2010/04/12 16:13:02 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.152 2010/05/04 17:20:33 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -241,6 +241,7 @@ static int match_class (int c, int cl) {
     case 'a' : res = isalpha(c); break;
     case 'c' : res = iscntrl(c); break;
     case 'd' : res = isdigit(c); break;
+    case 'g' : res = isgraph(c); break;
     case 'l' : res = islower(c); break;
     case 'p' : res = ispunct(c); break;
     case 's' : res = isspace(c); break;
