@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.136 2010/05/10 16:38:58 roberto Exp roberto $
+** $Id: luaconf.h,v 1.137 2010/05/12 14:17:36 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -229,10 +229,12 @@
 
 /*
 @@ LUA_COMPAT_CPCALL controls the presence of macro 'lua_cpcall'.
-** You can replace it with the preregistered function 'cpcall'.
+** You can call your C function directly (with light C functions)
 */
 #define lua_cpcall(L,f,u)  \
-	(lua_pushlightuserdata(L,(u)), luaL_cpcall(L,(f),1,0))
+	(lua_pushcfunction(L, (f)), \
+	 lua_pushlightuserdata(L,(u)), \
+	 lua_pcall(L,,1,0,0))
 
 
 /*
@@ -477,7 +479,7 @@ union luai_Cast { double l_d; long l_l; };
 /*
 @@ luai_hashnum is a macro do hash a lua_Number value into an integer.
 @* The hash must be deterministic and give reasonable values for
-@* both small and large values (outside the range of integers). 
+@* both small and large values (outside the range of integers).
 @* It is used only in ltable.c.
 */
 
