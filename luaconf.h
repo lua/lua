@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.137 2010/05/12 14:17:36 roberto Exp roberto $
+** $Id: luaconf.h,v 1.138 2010/05/27 12:06:42 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -234,7 +234,7 @@
 #define lua_cpcall(L,f,u)  \
 	(lua_pushcfunction(L, (f)), \
 	 lua_pushlightuserdata(L,(u)), \
-	 lua_pcall(L,,1,0,0))
+	 lua_pcall(L,1,0,0))
 
 
 /*
