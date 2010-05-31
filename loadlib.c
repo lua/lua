@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.81 2010/03/17 21:37:37 roberto Exp roberto $
+** $Id: loadlib.c,v 1.82 2010/03/19 15:02:34 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -620,18 +620,8 @@ static void modinit (lua_State *L, const char *modname) {
 
 static int ll_module (lua_State *L) {
   const char *modname = luaL_checkstring(L, 1);
-  int loaded = lua_gettop(L) + 1;  /* index of _LOADED table */
-  lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
-  lua_getfield(L, loaded, modname);  /* get _LOADED[modname] */
-  if (!lua_istable(L, -1)) {  /* not found? */
-    lua_pop(L, 1);  /* remove previous result */
-    /* try global variable (and create one if it does not exist) */
-    lua_pushglobaltable(L);
-    if (luaL_findtable(L, 0, modname, 1) != NULL)
-      return luaL_error(L, "name conflict for module " LUA_QS, modname);
-    lua_pushvalue(L, -1);
-    lua_setfield(L, loaded, modname);  /* _LOADED[modname] = new table */
-  }
+  int lastarg = lua_gettop(L);  /* last parameter */
+  luaL_pushmodule(L, modname, 1);  /* get/create module table */
   /* check whether table already has a _NAME field */
   lua_getfield(L, -1, "_NAME");
   if (!lua_isnil(L, -1))  /* is table an initialized module? */
@@ -642,7 +632,7 @@ static int ll_module (lua_State *L) {
   }
   lua_pushvalue(L, -1);
   set_env(L);
-  dooptions(L, loaded - 1);
+  dooptions(L, lastarg);
   return 1;
 }
 

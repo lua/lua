@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.212 2010/05/18 17:21:24 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.213 2010/05/18 17:32:19 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -639,6 +639,9 @@ LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len) {
 }
 
 
+/*
+** Count number of elements in a luaL_Reg list.
+*/
 static int libsize (const luaL_Reg *l) {
   int size = 0;
   for (; l && l->name; l++) size++;
@@ -646,23 +649,34 @@ static int libsize (const luaL_Reg *l) {
 }
 
 
+/*
+** Find or create a module table with a given name. The function
+** first looks at the _LOADED table and, if that fails, try a
+** global variable with that name. In any case, leaves on the stack
+** the module table.
+*/
+LUALIB_API void luaL_pushmodule (lua_State *L, const char *modname,
+                                 int sizehint) {
+  luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 1);  /* get _LOADED table */
+  lua_getfield(L, -1, modname);  /* get _LOADED[modname] */
+  if (!lua_istable(L, -1)) {  /* not found? */
+    lua_pop(L, 1);  /* remove previous result */
+    /* try global variable (and create one if it does not exist) */
+    lua_pushglobaltable(L);
+    if (luaL_findtable(L, 0, modname, sizehint) != NULL)
+      luaL_error(L, "name conflict for module " LUA_QS, modname);
+    lua_pushvalue(L, -1);
+    lua_setfield(L, -3, modname);  /* _LOADED[modname] = new table */
+  }
+  lua_remove(L, -2);  /* remove _LOADED table */
+}
+
+
 LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
                                const luaL_Reg *l, int nup) {
   luaL_checkversion(L);
   if (libname) {
-    /* check whether lib already exists */
-    luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 1);
-    lua_getfield(L, -1, libname);  /* get _LOADED[libname] */
-    if (!lua_istable(L, -1)) {  /* not found? */
-      lua_pop(L, 1);  /* remove previous result */
-      /* try global variable (and create one if it does not exist) */
-      lua_pushglobaltable(L);
-      if (luaL_findtable(L, 0, libname, libsize(l)) != NULL)
-        luaL_error(L, "name conflict for module " LUA_QS, libname);
-      lua_pushvalue(L, -1);
-      lua_setfield(L, -3, libname);  /* _LOADED[libname] = new table */
-    }
-    lua_remove(L, -2);  /* remove _LOADED table */
+    luaL_pushmodule(L, libname, libsize(l));  /* get/create library table */
     lua_insert(L, -(nup + 1));  /* move library table to below upvalues */
   }
   luaL_checkstack(L, nup, "too many upvalues");
