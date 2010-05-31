@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.80 2010/05/07 18:44:12 roberto Exp roberto $
+** $Id: llimits.h,v 1.81 2010/05/24 19:29:46 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -97,6 +97,11 @@ typedef LUAI_UACNUMBER l_uacNumber;
 #define LUAI_MAXCCALLS		200
 #endif
 
+/*
+** maximum number of upvalues in a closure (both C and Lua). (Value
+** must fit in an unsigned char.)
+*/
+#define MAXUPVAL	UCHAR_MAX
 
 
 /*

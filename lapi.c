@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.128 2010/05/12 14:09:20 roberto Exp roberto $
+** $Id: lapi.c,v 2.129 2010/05/14 13:15:26 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -55,7 +55,7 @@ static TValue *index2addr (lua_State *L, int idx) {
     return &G(L)->l_registry;
   else {  /* upvalues */
     idx = LUA_REGISTRYINDEX - idx;
-    api_check(L, idx <= UCHAR_MAX + 1, "upvalue index too large");
+    api_check(L, idx <= MAXUPVAL + 1, "upvalue index too large");
     if (ttislcf(ci->func))  /* light C function? */
       return cast(TValue *, luaO_nilobject);  /* it has no upvalues */
     else {
@@ -507,7 +507,7 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   else {
     Closure *cl;
     api_checknelems(L, n);
-    api_check(L, n <= UCHAR_MAX, "upvalue index too large");
+    api_check(L, n <= MAXUPVAL, "upvalue index too large");
     luaC_checkGC(L);
     cl = luaF_newCclosure(L, n);
     cl->c.f = fn;

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.85 2010/05/14 15:03:43 roberto Exp roberto $
+** $Id: lparser.c,v 2.86 2010/05/15 13:32:02 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -221,9 +221,9 @@ static int searchupvalue (FuncState *fs, TString *name) {
 static int newupvalue (FuncState *fs, TString *name, expdesc *v) {
   Proto *f = fs->f;
   int oldsize = f->sizeupvalues;
-  checklimit(fs, fs->nups + 1, UCHAR_MAX, "upvalues");
+  checklimit(fs, fs->nups + 1, MAXUPVAL, "upvalues");
   luaM_growvector(fs->L, f->upvalues, fs->nups, f->sizeupvalues,
-                  Upvaldesc, UCHAR_MAX, "upvalues");
+                  Upvaldesc, MAXUPVAL, "upvalues");
   while (oldsize < f->sizeupvalues) f->upvalues[oldsize++].name = NULL;
   f->upvalues[fs->nups].instack = (v->k == VLOCAL);
   f->upvalues[fs->nups].idx = cast_byte(v->u.s.info);
