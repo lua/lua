@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.95 2010/05/11 20:49:26 roberto Exp roberto $
+** $Id: lgc.c,v 2.96 2010/05/17 20:39:31 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -932,7 +932,8 @@ static void generationalcollection (lua_State *L) {
     g->lastmajormem = g->totalbytes;  /* update control */
   }
   else {
-    luaC_runtilstate(L, bitmask(GCSpause));  /* run collection */
+    luaC_runtilstate(L, ~bitmask(GCSpause));  /* run complete cycle */
+    luaC_runtilstate(L, bitmask(GCSpause));
     if (g->totalbytes > g->lastmajormem/100 * g->gcpause)
       g->lastmajormem = 0;  /* signal for a major collection */
   }
