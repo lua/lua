@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.96 2010/05/17 20:39:31 roberto Exp roberto $
+** $Id: lgc.c,v 2.97 2010/06/02 18:36:58 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -127,7 +127,7 @@ static int iscleared (const TValue *o, int iskey) {
 ** barrier that moves collector forward, that is, mark the white object
 ** being pointed by a black object.
 */
-void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v) {
+void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v) {
   global_State *g = G(L);
   lua_assert(isblack(o) && iswhite(v) && !isdead(g, v) && !isdead(g, o));
   lua_assert(isgenerational(g) || g->gcstate != GCSpause);
@@ -143,15 +143,28 @@ void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v) {
 
 /*
 ** barrier that moves collector backward, that is, mark the black object
-** pointing to a white object as gray again.
+** pointing to a white object as gray again. (Current implementation
+** only works for tables; access to 'gclist' is not uniform across
+** different types.)
 */
-void luaC_barrierback (lua_State *L, Table *t) {
+void luaC_barrierback_ (lua_State *L, GCObject *o) {
   global_State *g = G(L);
-  GCObject *o = obj2gco(t);
   lua_assert(isblack(o) && !isdead(g, o));
-  black2gray(o);  /* make table gray (again) */
-  t->gclist = g->grayagain;
+  black2gray(o);  /* make object gray (again) */
+  gco2t(o)->gclist = g->grayagain;
   g->grayagain = o;
+}
+
+
+/*
+** barrier for prototypes
+*/
+LUAI_FUNC void luaC_barrierproto_ (lua_State *L, GCObject *p) {
+  global_State *g = G(L);
+  lua_assert(isblack(p));
+  black2gray(p);  /* make object gray (again) */
+  gco2p(p)->gclist = g->clearcache;
+  g->clearcache = p;
 }
 
 
@@ -299,7 +312,7 @@ static void remarkupvals (global_State *g) {
 static void markroot (lua_State *L) {
   global_State *g = G(L);
   g->gray = g->grayagain = NULL;
-  g->weak = g->allweak = g->ephemeron = NULL;
+  g->weak = g->allweak = g->ephemeron = g->clearcache = NULL;
   markobject(g, g->mainthread);
   markvalue(g, &g->l_registry);
   markmt(g);
@@ -409,8 +422,19 @@ static int traversetable (global_State *g, Table *h) {
 }
 
 
+/*
+** if prototype's cached closure is not marked, erase it so it
+** can be collected
+*/
+static void checkcache (Proto *p) {
+  if (p->cache && iswhite(obj2gco(p->cache)))
+    p->cache = NULL;  /* allow cache to be collected */
+}
+
+
 static int traverseproto (global_State *g, Proto *f) {
   int i;
+  checkcache(f);
   stringmark(f->source);
   for (i = 0; i < f->sizek; i++)  /* mark literals */
     markvalue(g, &f->k[i]);
@@ -532,6 +556,15 @@ static void convergeephemerons (global_State *g) {
 ** Sweep Functions
 ** =======================================================
 */
+
+/*
+** clear cache field in all prototypes in list 'l'
+*/
+static void clearproto (GCObject *l) {
+  for (; l != NULL; l = gco2p(l)->gclist)
+    checkcache(gco2p(l));
+}
+
 
 /*
 ** clear collected entries from all weaktables in list 'l'
@@ -845,6 +878,7 @@ static void atomic (lua_State *L) {
   cleartable(g->weak);
   cleartable(g->ephemeron);
   cleartable(g->allweak);
+  clearproto(g->clearcache);
   g->sweepstrgc = 0;  /* prepare to sweep strings */
   g->gcstate = GCSsweepstring;
   g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */
