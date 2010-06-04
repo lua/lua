@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.129 2010/05/14 13:15:26 roberto Exp roberto $
+** $Id: lapi.c,v 2.130 2010/05/31 16:08:55 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -689,7 +689,7 @@ LUA_API void lua_rawset (lua_State *L, int idx) {
   t = index2addr(L, idx);
   api_check(L, ttistable(t), "table expected");
   setobj2t(L, luaH_set(L, hvalue(t), L->top-2), L->top-1);
-  luaC_barriert(L, hvalue(t), L->top-1);
+  luaC_barrierback(L, gcvalue(t), L->top-1);
   L->top -= 2;
   lua_unlock(L);
 }
@@ -702,7 +702,7 @@ LUA_API void lua_rawseti (lua_State *L, int idx, int n) {
   o = index2addr(L, idx);
   api_check(L, ttistable(o), "table expected");
   setobj2t(L, luaH_setint(L, hvalue(o), n), L->top-1);
-  luaC_barriert(L, hvalue(o), L->top-1);
+  luaC_barrierback(L, gcvalue(o), L->top-1);
   L->top--;
   lua_unlock(L);
 }
@@ -725,7 +725,7 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
     case LUA_TTABLE: {
       hvalue(obj)->metatable = mt;
       if (mt)
-        luaC_objbarriert(L, hvalue(obj), mt);
+        luaC_objbarrierback(L, gcvalue(obj), mt);
       break;
     }
     case LUA_TUSERDATA: {
