@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.120 2010/05/13 19:53:05 roberto Exp roberto $
+** $Id: lvm.c,v 2.121 2010/06/04 13:25:10 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -368,7 +368,9 @@ static Closure *getcached (Proto *p, UpVal **encup, StkId base) {
 
 /*
 ** create a new Lua closure, push it in the stack, and initialize
-** its upvalues
+** its upvalues. Note that the call to 'luaC_barrierproto' must come
+** before the assignment to 'p->cache', as the function needs the
+** orginal value of that field.
 */
 static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
                          StkId ra) {
@@ -383,8 +385,8 @@ static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
     else  /* get upvalue from enclosing function */
       ncl->l.upvals[i] = encup[uv[i].idx];
   }
-  p->cache = ncl;  /* save it on cache, so it can be reused */
-  luaC_barrierproto(L, obj2gco(p));
+  luaC_barrierproto(L, p, ncl);
+  p->cache = ncl;  /* save it on cache for reuse */
 }
 
 

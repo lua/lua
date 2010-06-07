@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.41 2010/05/10 18:23:45 roberto Exp roberto $
+** $Id: lgc.h,v 2.42 2010/06/04 13:25:10 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -124,8 +124,8 @@
 #define luaC_objbarrierback(L,p,o)  \
    { if (iswhite(obj2gco(o)) && isblack(obj2gco(p))) luaC_barrierback_(L,p); }
 
-#define luaC_barrierproto(L,p) \
-   { if (isblack(obj2gco(p))) luaC_barrierproto_(L,p); }
+#define luaC_barrierproto(L,p,c) \
+   { if (isblack(obj2gco(p))) luaC_barrierproto_(L,p,c); }
 
 LUAI_FUNC void luaC_separateudata (lua_State *L, int all);
 LUAI_FUNC void luaC_freeallobjects (lua_State *L);
@@ -136,7 +136,7 @@ LUAI_FUNC GCObject *luaC_newobj (lua_State *L, int tt, size_t sz,
                                  GCObject **list, int offset);
 LUAI_FUNC void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v);
 LUAI_FUNC void luaC_barrierback_ (lua_State *L, GCObject *o);
-LUAI_FUNC void luaC_barrierproto_ (lua_State *L, GCObject *p);
+LUAI_FUNC void luaC_barrierproto_ (lua_State *L, Proto *p, Closure *c);
 LUAI_FUNC void luaC_checkfinalizer (lua_State *L, Udata *u);
 LUAI_FUNC void luaC_checkupvalcolor (global_State *g, UpVal *uv);
 LUAI_FUNC void luaC_changemode (lua_State *L, int mode);

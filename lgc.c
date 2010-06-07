@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.97 2010/06/02 18:36:58 roberto Exp roberto $
+** $Id: lgc.c,v 2.98 2010/06/04 13:25:10 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -157,14 +157,24 @@ void luaC_barrierback_ (lua_State *L, GCObject *o) {
 
 
 /*
-** barrier for prototypes
+** barrier for prototypes. When creating first closure (cache is
+** NULL), use a forward barrier; this may be the only closure of the
+** prototype (if it is a "regular" function, with a single instance)
+** and the prototype may be big, so it is better to avoid traversing
+** it again. Otherwise, use a backward barrier, to avoid marking all
+** possible instances.
 */
-LUAI_FUNC void luaC_barrierproto_ (lua_State *L, GCObject *p) {
+LUAI_FUNC void luaC_barrierproto_ (lua_State *L, Proto *p, Closure *c) {
   global_State *g = G(L);
-  lua_assert(isblack(p));
-  black2gray(p);  /* make object gray (again) */
-  gco2p(p)->gclist = g->clearcache;
-  g->clearcache = p;
+  lua_assert(isblack(obj2gco(p)));
+  if (p->cache == NULL) {  /* first time? */
+    luaC_objbarrier(L, p, c);
+  }
+  else {  /* use a backward barrier */
+    black2gray(obj2gco(p));  /* make prototype gray (again) */
+    p->gclist = g->grayagain;
+    g->grayagain = obj2gco(p);
+  }
 }
 
 
@@ -312,7 +322,7 @@ static void remarkupvals (global_State *g) {
 static void markroot (lua_State *L) {
   global_State *g = G(L);
   g->gray = g->grayagain = NULL;
-  g->weak = g->allweak = g->ephemeron = g->clearcache = NULL;
+  g->weak = g->allweak = g->ephemeron = NULL;
   markobject(g, g->mainthread);
   markvalue(g, &g->l_registry);
   markmt(g);
@@ -422,19 +432,10 @@ static int traversetable (global_State *g, Table *h) {
 }
 
 
-/*
-** if prototype's cached closure is not marked, erase it so it
-** can be collected
-*/
-static void checkcache (Proto *p) {
-  if (p->cache && iswhite(obj2gco(p->cache)))
-    p->cache = NULL;  /* allow cache to be collected */
-}
-
-
 static int traverseproto (global_State *g, Proto *f) {
   int i;
-  checkcache(f);
+  if (f->cache && iswhite(obj2gco(f->cache)))
+    f->cache = NULL;  /* allow cache to be collected */
   stringmark(f->source);
   for (i = 0; i < f->sizek; i++)  /* mark literals */
     markvalue(g, &f->k[i]);
@@ -556,14 +557,6 @@ static void convergeephemerons (global_State *g) {
 ** Sweep Functions
 ** =======================================================
 */
-
-/*
-** clear cache field in all prototypes in list 'l'
-*/
-static void clearproto (GCObject *l) {
-  for (; l != NULL; l = gco2p(l)->gclist)
-    checkcache(gco2p(l));
-}
 
 
 /*
@@ -878,7 +871,6 @@ static void atomic (lua_State *L) {
   cleartable(g->weak);
   cleartable(g->ephemeron);
   cleartable(g->allweak);
-  clearproto(g->clearcache);
   g->sweepstrgc = 0;  /* prepare to sweep strings */
   g->gcstate = GCSsweepstring;
   g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */
