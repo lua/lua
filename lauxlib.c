@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.213 2010/05/18 17:32:19 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.214 2010/05/31 16:34:19 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -476,7 +476,7 @@ LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
 */
 
 typedef struct LoadF {
-  int first;  /* pre-read character */
+  int n;  /* number of pre-read characters */
   FILE *f;  /* file being read */
   char buff[LUAL_BUFFERSIZE];  /* area for reading file */
 } LoadF;
@@ -485,10 +485,9 @@ typedef struct LoadF {
 static const char *getF (lua_State *L, void *ud, size_t *size) {
   LoadF *lf = (LoadF *)ud;
   (void)L;
-  if (lf->first != EOF) {  /* first character not read yet? */
-    lf->buff[0] = (char)lf->first;  /* return it */
-    *size = 1;
-    lf->first = EOF;  /* now it has been read */
+  if (lf->n > 0) {  /* are there pre-read characters to be read? */
+    *size = lf->n;  /* return them (chars already in buffer) */
+    lf->n = 0;  /* no more pre-read characters */
   }
   else {  /* read a block from file */
     /* 'fread' can return > 0 *and* set the EOF flag. If next call to
@@ -510,6 +509,23 @@ static int errfile (lua_State *L, const char *what, int fnameindex) {
 }
 
 
+/*
+** reads the first character of file 'f' and skips its first line
+** if it starts with '#'. Returns true if it skipped the first line.
+** In any case, '*cp' has the first "valid" character of the file
+** (after the optional first-line comment).
+*/
+static int skipcomment (FILE *f, int *cp) {
+  int c = *cp = getc(f);
+  if (c == '#') {  /* first line is a comment (Unix exec. file)? */
+    while ((c = getc(f)) != EOF && c != '\n') ;  /* skip first line */
+    *cp = getc(f);  /* skip end-of-line */
+    return 1;  /* there was a comment */
+  }
+  else return 0;  /* no comment */
+}
+
+
 LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   LoadF lf;
   int status, readstatus;
@@ -524,16 +540,17 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
     lf.f = fopen(filename, "r");
     if (lf.f == NULL) return errfile(L, "open", fnameindex);
   }
-  c = getc(lf.f);
-  if (c == '#') {  /* Unix exec. file? */
-    while ((c = getc(lf.f)) != EOF && c != '\n') ;  /* skip first line */
-  }
-  else if (c == LUA_SIGNATURE[0] && filename) {  /* binary file? */
+  lf.n = 0;
+  if (skipcomment(lf.f, &c))  /* read initial portion */
+    lf.buff[lf.n++] = '\n';  /* add line to correct line numbers */
+  if (c == LUA_SIGNATURE[0] && filename) {  /* binary file? */
     lf.f = freopen(filename, "rb", lf.f);  /* reopen in binary mode */
     if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
-    c = getc(lf.f);  /* re-read first character */
+    lf.n = 0;
+    skipcomment(lf.f, &c);  /* re-read initial portion */
   }
-  lf.first = c;  /* 'c' is the first character of the stream */
+  if (c != EOF)
+    lf.buff[lf.n++] = c;  /* 'c' is the first character of the stream */
   status = lua_load(L, getF, &lf, lua_tostring(L, -1));
   readstatus = ferror(lf.f);
   if (filename) fclose(lf.f);  /* close file (even in case of errors) */
