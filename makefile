@@ -67,7 +67,7 @@ CORE_O=	lapi.o lcode.o lctype.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o \
 	ltm.o lundump.o lvm.o lzio.o ltests.o
 AUX_O=	lauxlib.o
 LIB_O=	lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o lstrlib.o \
-	lbitlib.o loadlib.o linit.o
+	lbitlib.o loadlib.o lcorolib.o linit.o
 
 LUA_T=	lua
 LUA_O=	lua.o
@@ -126,6 +126,7 @@ lbitlib.o: lbitlib.c lua.h luaconf.h lauxlib.h lualib.h
 lcode.o: lcode.c lua.h luaconf.h lcode.h llex.h lobject.h llimits.h \
  lzio.h lmem.h lopcodes.h lparser.h ldebug.h lstate.h ltm.h ldo.h lgc.h \
  lstring.h ltable.h
+lcorolib.o: lcorolib.c lua.h luaconf.h lauxlib.h lualib.h
 lctype.o: lctype.c lctype.h lua.h luaconf.h llimits.h
 ldblib.o: ldblib.c lua.h luaconf.h lauxlib.h lualib.h
 ldebug.o: ldebug.c lua.h luaconf.h lapi.h llimits.h lstate.h lobject.h \
@@ -136,8 +137,8 @@ ldo.o: ldo.c lua.h luaconf.h lapi.h llimits.h lstate.h lobject.h ltm.h \
  lstring.h ltable.h lundump.h lvm.h
 ldump.o: ldump.c lua.h luaconf.h lobject.h llimits.h lstate.h ltm.h \
  lzio.h lmem.h lundump.h
-lfunc.o: lfunc.c lua.h luaconf.h lfunc.h lobject.h llimits.h lgc.h lmem.h \
- lopcodes.h lstate.h ltm.h lzio.h
+lfunc.o: lfunc.c lua.h luaconf.h lfunc.h lobject.h llimits.h lgc.h \
+ lstate.h ltm.h lzio.h lmem.h
 lgc.o: lgc.c lua.h luaconf.h ldebug.h lstate.h lobject.h llimits.h ltm.h \
  lzio.h lmem.h ldo.h lfunc.h lgc.h lstring.h ltable.h
 linit.o: linit.c lua.h luaconf.h lualib.h lauxlib.h
