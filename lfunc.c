@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.24 2010/05/10 18:23:45 roberto Exp roberto $
+** $Id: lfunc.c,v 2.25 2010/06/04 13:25:10 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -16,7 +16,6 @@
 #include "lgc.h"
 #include "lmem.h"
 #include "lobject.h"
-#include "lopcodes.h"
 #include "lstate.h"
 
 
