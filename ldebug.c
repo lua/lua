@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.69 2010/04/08 17:06:33 roberto Exp roberto $
+** $Id: ldebug.c,v 2.70 2010/04/13 20:48:12 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -264,7 +264,7 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
 
 static void kname (Proto *p, int c, int reg, const char *what,
                    const char **name) {
-  if (c == reg && *what == 'c')
+  if (c == reg && what && *what == 'c')
     return;  /* index is a constant; name already correct */
   else if (ISK(c) && ttisstring(&p->k[INDEXK(c)]))
     *name = svalue(&p->k[INDEXK(c)]);
