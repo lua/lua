@@ -1,11 +1,11 @@
 /*
-** $Id: loadlib.c,v 1.83 2010/05/31 16:34:19 roberto Exp roberto $
+** $Id: loadlib.c,v 1.84 2010/06/13 19:36:17 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
 ** This module contains an implementation of loadlib for Unix systems
-** that have dlfcn, an implementation for Darwin (Mac OS X), an
-** implementation for Windows, and a stub for other systems.
+** that have dlfcn, an implementation for Windows, and a stub for other
+** systems.
 */
 
 
@@ -186,90 +186,6 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 }
 
 /* }====================================================== */
-
-
-
-#elif defined(LUA_DL_DYLD)
-/*
-** {======================================================================
-** Old native Mac OS X - only for old versions of Mac OS (< 10.3)
-** =======================================================================
-*/
-
-#include <mach-o/dyld.h>
-
-
-/* Mac appends a `_' before C function names */
-#undef POF
-#define POF	"_" LUA_POF
-
-
-static void pusherror (lua_State *L) {
-  const char *err_str;
-  const char *err_file;
-  NSLinkEditErrors err;
-  int err_num;
-  NSLinkEditError(&err, &err_num, &err_file, &err_str);
-  lua_pushstring(L, err_str);
-}
-
-
-static const char *errorfromcode (NSObjectFileImageReturnCode ret) {
-  switch (ret) {
-    case NSObjectFileImageInappropriateFile:
-      return "file is not a bundle";
-    case NSObjectFileImageArch:
-      return "library is for wrong CPU type";
-    case NSObjectFileImageFormat:
-      return "bad format";
-    case NSObjectFileImageAccess:
-      return "cannot access file";
-    case NSObjectFileImageFailure:
-    default:
-      return "unable to load library";
-  }
-}
-
-
-static void ll_unloadlib (void *lib) {
-  NSUnLinkModule((NSModule)lib, NSUNLINKMODULE_OPTION_RESET_LAZY_REFERENCES);
-}
-
-
-static void *ll_load (lua_State *L, const char *path, int seeglb) {
-  NSObjectFileImage img;
-  NSObjectFileImageReturnCode ret;
-  /* this would be a rare case, but prevents crashing if it happens */
-  if(!_dyld_present()) {
-    lua_pushliteral(L, "dyld not present");
-    return NULL;
-  }
-  ret = NSCreateObjectFileImageFromFile(path, &img);
-  if (ret == NSObjectFileImageSuccess) {
-    NSModule mod = NSLinkModule(img,
-                                path,
-                                NSLINKMODULE_OPTION_RETURN_ON_ERROR |
-                                  (seeglb ? 0 : NSLINKMODULE_OPTION_PRIVATE));
-    NSDestroyObjectFileImage(img);
-    if (mod == NULL) pusherror(L);
-    return mod;
-  }
-  lua_pushstring(L, errorfromcode(ret));
-  return NULL;
-}
-
-
-static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
-  NSSymbol nss = NSLookupSymbolInModule((NSModule)lib, sym);
-  if (nss == NULL) {
-    lua_pushfstring(L, "symbol " LUA_QS " not found", sym);
-    return NULL;
-  }
-  return (lua_CFunction)NSAddressOfSymbol(nss);
-}
-
-/* }====================================================== */
-
 
 
 #else
