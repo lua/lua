@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.120 2010/02/18 19:18:41 roberto Exp roberto $
+** $Id: ldblib.c,v 1.121 2010/03/26 20:58:11 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -157,18 +157,26 @@ static int db_getlocal (lua_State *L) {
   lua_State *L1 = getthread(L, &arg);
   lua_Debug ar;
   const char *name;
-  if (!lua_getstack(L1, luaL_checkint(L, arg+1), &ar))  /* out of range? */
-    return luaL_argerror(L, arg+1, "level out of range");
-  name = lua_getlocal(L1, &ar, luaL_checkint(L, arg+2));
-  if (name) {
-    lua_xmove(L1, L, 1);
-    lua_pushstring(L, name);
-    lua_pushvalue(L, -2);
-    return 2;
-  }
-  else {
-    lua_pushnil(L);
+  int nvar = luaL_checkint(L, arg+2);  /* local-variable index */
+  if (lua_isfunction(L, arg + 1)) {  /* function argument? */
+    lua_pushvalue(L, arg + 1);  /* push function */
+    lua_pushstring(L, lua_getlocal(L, NULL, nvar));  /* push local name */
     return 1;
+  }
+  else {  /* stack-level argument */
+    if (!lua_getstack(L1, luaL_checkint(L, arg+1), &ar))  /* out of range? */
+      return luaL_argerror(L, arg+1, "level out of range");
+    name = lua_getlocal(L1, &ar, nvar);
+    if (name) {
+      lua_xmove(L1, L, 1);  /* push local value */
+      lua_pushstring(L, name);  /* push name */
+      lua_pushvalue(L, -2);  /* re-order */
+      return 2;
+    }
+    else {
+      lua_pushnil(L);  /* no name (nor value) */
+      return 1;
+    }
   }
 }
 

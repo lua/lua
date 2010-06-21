@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.86 2010/05/15 13:32:02 roberto Exp roberto $
+** $Id: lparser.c,v 2.87 2010/05/31 16:08:55 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -402,8 +402,8 @@ static void close_func (LexState *ls) {
   lua_State *L = ls->L;
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
-  removevars(fs, 0);
   luaK_ret(fs, 0, 0);  /* final return */
+  removevars(fs, 0);
   luaM_reallocvector(L, f->code, f->sizecode, fs->pc, Instruction);
   f->sizecode = fs->pc;
   luaM_reallocvector(L, f->lineinfo, f->sizelineinfo, fs->pc, int);
