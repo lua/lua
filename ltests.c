@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.108 2010/05/17 20:10:17 roberto Exp roberto $
+** $Id: ltests.c,v 2.109 2010/06/10 21:29:47 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -689,7 +689,7 @@ static int table_query (lua_State *L) {
     if (!ttisnil(gval(gnode(t, i))) ||
         ttisnil(gkey(gnode(t, i))) ||
         ttisnumber(gkey(gnode(t, i)))) {
-      pushobject(L, key2tval(gnode(t, i)));
+      pushobject(L, gkey(gnode(t, i)));
     }
     else
       lua_pushliteral(L, "<undef>");

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.98 2010/06/04 13:25:10 roberto Exp roberto $
+** $Id: lgc.c,v 2.99 2010/06/07 16:55:34 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -371,7 +371,7 @@ static int traverseephemeron (global_State *g, Table *h) {
     if (ttisnil(gval(n)))  /* entry is empty? */
       removeentry(n);  /* remove it */
     else if (valiswhite(gval(n))) {  /* value not marked yet? */
-      if (iscleared(key2tval(n), 1))  /* key is not marked (yet)? */
+      if (iscleared(gkey(n), 1))  /* key is not marked (yet)? */
         hasclears = 1;  /* may have to propagate mark from key to value */
       else {  /* key is marked, so mark value */
         marked = 1;  /* value was not marked */
@@ -574,7 +574,7 @@ static void cleartable (GCObject *l) {
     }
     for (n = gnode(h, 0); n < limit; n++) {
       if (!ttisnil(gval(n)) &&  /* non-empty entry? */
-          (iscleared(key2tval(n), 1) || iscleared(gval(n), 0))) {
+          (iscleared(gkey(n), 1) || iscleared(gval(n), 0))) {
         setnilvalue(gval(n));  /* remove value ... */
         removeentry(n);  /* and remove entry from table */
       }

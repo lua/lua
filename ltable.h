@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.h,v 2.12 2009/08/07 16:17:41 roberto Exp roberto $
+** $Id: ltable.h,v 2.13 2009/11/06 17:07:48 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -14,8 +14,6 @@
 #define gkey(n)		(&(n)->i_key.tvk)
 #define gval(n)		(&(n)->i_val)
 #define gnext(n)	((n)->i_key.nk.next)
-
-#define key2tval(n)	(&(n)->i_key.tvk)
 
 
 LUAI_FUNC const TValue *luaH_getint (Table *t, int key);
