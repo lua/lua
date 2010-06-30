@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.214 2010/05/31 16:34:19 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.215 2010/06/09 17:53:59 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -657,6 +657,39 @@ LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len) {
 
 
 /*
+** {======================================================
+** Compatibility with 5.1 module functions
+** =======================================================
+*/
+
+static const char *luaL_findtablex (lua_State *L, int idx,
+                                    const char *fname, int szhint) {
+  const char *e;
+  if (idx) lua_pushvalue(L, idx);
+  do {
+    e = strchr(fname, '.');
+    if (e == NULL) e = fname + strlen(fname);
+    lua_pushlstring(L, fname, e - fname);
+    lua_rawget(L, -2);
+    if (lua_isnil(L, -1)) {  /* no such field? */
+      lua_pop(L, 1);  /* remove this nil */
+      lua_createtable(L, 0, (*e == '.' ? 1 : szhint)); /* new table for field */
+      lua_pushlstring(L, fname, e - fname);
+      lua_pushvalue(L, -2);
+      lua_settable(L, -4);  /* set new table into field */
+    }
+    else if (!lua_istable(L, -1)) {  /* field has a non-table value? */
+      lua_pop(L, 2);  /* remove table and value */
+      return fname;  /* return problematic part of the name */
+    }
+    lua_remove(L, -2);  /* remove previous table */
+    fname = e + 1;
+  } while (*e == '.');
+  return NULL;
+}
+
+
+/*
 ** Count number of elements in a luaL_Reg list.
 */
 static int libsize (const luaL_Reg *l) {
@@ -674,13 +707,13 @@ static int libsize (const luaL_Reg *l) {
 */
 LUALIB_API void luaL_pushmodule (lua_State *L, const char *modname,
                                  int sizehint) {
-  luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 1);  /* get _LOADED table */
+  luaL_findtablex(L, LUA_REGISTRYINDEX, "_LOADED", 1);  /* get _LOADED table */
   lua_getfield(L, -1, modname);  /* get _LOADED[modname] */
   if (!lua_istable(L, -1)) {  /* not found? */
     lua_pop(L, 1);  /* remove previous result */
     /* try global variable (and create one if it does not exist) */
     lua_pushglobaltable(L);
-    if (luaL_findtable(L, 0, modname, sizehint) != NULL)
+    if (luaL_findtablex(L, 0, modname, sizehint) != NULL)
       luaL_error(L, "name conflict for module " LUA_QS, modname);
     lua_pushvalue(L, -1);
     lua_setfield(L, -3, modname);  /* _LOADED[modname] = new table */
@@ -707,6 +740,21 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
   lua_pop(L, nup);  /* remove upvalues */
 }
 
+/* }====================================================== */
+
+
+LUALIB_API void luaL_findtable (lua_State *L, int idx, const char *fname) {
+  lua_getfield(L, idx, fname);
+  if (lua_istable(L, -1)) return;  /* table already there */
+  else {
+    idx = lua_absindex(L, idx);
+    lua_pop(L, 1);  /* remove previous result */
+    lua_newtable(L);
+    lua_pushvalue(L, -1);  /* copy to be left at top */
+    lua_setfield(L, idx, fname);  /* assign new table to field */
+  }
+}
+
 
 LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
                                                                const char *r) {
@@ -722,33 +770,6 @@ LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
   luaL_addstring(&b, s);  /* push last suffix */
   luaL_pushresult(&b);
   return lua_tostring(L, -1);
-}
-
-
-LUALIB_API const char *luaL_findtable (lua_State *L, int idx,
-                                       const char *fname, int szhint) {
-  const char *e;
-  if (idx) lua_pushvalue(L, idx);
-  do {
-    e = strchr(fname, '.');
-    if (e == NULL) e = fname + strlen(fname);
-    lua_pushlstring(L, fname, e - fname);
-    lua_rawget(L, -2);
-    if (lua_isnil(L, -1)) {  /* no such field? */
-      lua_pop(L, 1);  /* remove this nil */
-      lua_createtable(L, 0, (*e == '.' ? 1 : szhint)); /* new table for field */
-      lua_pushlstring(L, fname, e - fname);
-      lua_pushvalue(L, -2);
-      lua_settable(L, -4);  /* set new table into field */
-    }
-    else if (!lua_istable(L, -1)) {  /* field has a non-table value? */
-      lua_pop(L, 2);  /* remove table and value */
-      return fname;  /* return problematic part of the name */
-    }
-    lua_remove(L, -2);  /* remove previous table */
-    fname = e + 1;
-  } while (*e == '.');
-  return NULL;
 }
 
 

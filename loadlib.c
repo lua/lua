@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.84 2010/06/13 19:36:17 roberto Exp roberto $
+** $Id: loadlib.c,v 1.85 2010/06/18 17:23:02 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -423,7 +423,7 @@ static int loader_Croot (lua_State *L) {
 
 static int loader_preload (lua_State *L) {
   const char *name = luaL_checkstring(L, 1);
-  lua_getfield(L, lua_upvalueindex(1), "preload");
+  lua_getfield(L, LUA_REGISTRYINDEX, "_PRELOAD");
   if (!lua_istable(L, -1))
     luaL_error(L, LUA_QL("package.preload") " must be a table");
   lua_getfield(L, -1, name);
@@ -633,10 +633,10 @@ LUAMOD_API int luaopen_package (lua_State *L) {
                      LUA_EXEC_DIR "\n" LUA_IGMARK "\n");
   lua_setfield(L, -2, "config");
   /* set field `loaded' */
-  luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 2);
+  luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED");
   lua_setfield(L, -2, "loaded");
   /* set field `preload' */
-  lua_newtable(L);
+  luaL_findtable(L, LUA_REGISTRYINDEX, "_PRELOAD");
   lua_setfield(L, -2, "preload");
   lua_pushglobaltable(L);
   lua_pushvalue(L, -2);  /* set 'package' as upvalue for next lib */
