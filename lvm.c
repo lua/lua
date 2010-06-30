@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.121 2010/06/04 13:25:10 roberto Exp roberto $
+** $Id: lvm.c,v 2.122 2010/06/07 16:55:34 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -88,7 +88,7 @@ static void callTM (lua_State *L, const TValue *f, const TValue *p1,
   setobj2s(L, L->top++, p1);  /* 1st argument */
   setobj2s(L, L->top++, p2);  /* 2nd argument */
   if (!hasres)  /* no result? 'p3' is third argument */
-    setobj2s(L, L->top++, p3);  /* 3th argument */
+    setobj2s(L, L->top++, p3);  /* 3rd argument */
   luaD_checkstack(L, 0);
   /* metamethod may yield only when called from Lua code */
   luaD_call(L, L->top - (4 - hasres), hasres, isLua(L->ci));
@@ -370,7 +370,7 @@ static Closure *getcached (Proto *p, UpVal **encup, StkId base) {
 ** create a new Lua closure, push it in the stack, and initialize
 ** its upvalues. Note that the call to 'luaC_barrierproto' must come
 ** before the assignment to 'p->cache', as the function needs the
-** orginal value of that field.
+** original value of that field.
 */
 static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
                          StkId ra) {

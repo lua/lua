@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.42 2010/06/04 13:25:10 roberto Exp roberto $
+** $Id: lgc.h,v 2.43 2010/06/07 16:55:34 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -44,7 +44,7 @@
 /*
 ** macro to tell when main invariant (white objects cannot point to black
 ** ones) must be kept. During a non-generational collection, the sweep
-** phase may brak the invariant, as objects turned white may point to
+** phase may break the invariant, as objects turned white may point to
 ** still-black objects. The invariant is restored when sweep ends and
 ** all objects are white again. During a generational collection, the
 ** invariant must be kept all times.

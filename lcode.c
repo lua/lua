@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.45 2010/03/12 19:14:06 roberto Exp roberto $
+** $Id: lcode.c,v 2.46 2010/04/17 12:46:32 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -514,7 +514,7 @@ int luaK_exp2RK (FuncState *fs, expdesc *e) {
     case VTRUE:
     case VFALSE:
     case VNIL: {
-      if (fs->nk <= MAXINDEXRK) {  /* constant fit in RK operand? */
+      if (fs->nk <= MAXINDEXRK) {  /* constant fits in RK operand? */
         e->u.s.info = (e->k == VNIL) ? nilK(fs) : boolK(fs, (e->k == VTRUE));
         e->k = VK;
         return RKASK(e->u.s.info);
@@ -527,7 +527,7 @@ int luaK_exp2RK (FuncState *fs, expdesc *e) {
       /* go through */
     }
     case VK: {
-      if (e->u.s.info <= MAXINDEXRK)  /* constant fit in argC? */
+      if (e->u.s.info <= MAXINDEXRK)  /* constant fits in argC? */
         return RKASK(e->u.s.info);
       else break;
     }
