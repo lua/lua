@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.215 2010/06/09 17:53:59 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.216 2010/06/30 17:40:27 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -729,20 +729,33 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
     luaL_pushmodule(L, libname, libsize(l));  /* get/create library table */
     lua_insert(L, -(nup + 1));  /* move library table to below upvalues */
   }
+  luaL_setfuncs(L, l, nup);
+}
+
+/* }====================================================== */
+
+/*
+** set functions from list 'l' into table at top - 'nup'; each
+** function gets the 'nup' elements at the top as upvalues.
+** Returns with only the table at the stack.
+*/
+LUALIB_API void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup) {
   luaL_checkstack(L, nup, "too many upvalues");
   for (; l && l->name; l++) {  /* fill the table with given functions */
     int i;
     for (i = 0; i < nup; i++)  /* copy upvalues to the top */
       lua_pushvalue(L, -nup);
-    lua_pushcclosure(L, l->func, nup);
+    lua_pushcclosure(L, l->func, nup);  /* closure with those upvalues */
     lua_setfield(L, -(nup + 2), l->name);
   }
   lua_pop(L, nup);  /* remove upvalues */
 }
 
-/* }====================================================== */
 
-
+/*
+** ensure that stack[idx][fname] has a table and push that table
+** into the stack
+*/
 LUALIB_API void luaL_findtable (lua_State *L, int idx, const char *fname) {
   lua_getfield(L, idx, fname);
   if (lua_istable(L, -1)) return;  /* table already there */
@@ -752,6 +765,30 @@ LUALIB_API void luaL_findtable (lua_State *L, int idx, const char *fname) {
     lua_newtable(L);
     lua_pushvalue(L, -1);  /* copy to be left at top */
     lua_setfield(L, idx, fname);  /* assign new table to field */
+  }
+}
+
+
+/*
+** stripped-down 'require'. Calls 'openf' to open a module,
+** registers the result in 'package.loaded' table and, if 'glb'
+** is true, also registers the result in the global table.
+** Leaves resulting module on the top.
+*/
+LUALIB_API void luaL_requiref (lua_State *L, const char *modname,
+                               lua_CFunction openf, int glb) {
+  lua_pushcfunction(L, openf);
+  lua_pushstring(L, modname);  /* argument to open function */
+  lua_call(L, 1, 1);  /* open module */
+  luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED");
+  lua_pushvalue(L, -2);  /* make copy of module (call result) */
+  lua_setfield(L, -2, modname);  /* _LOADED[modname] = module */
+  lua_pop(L, 1);  /* remove _LOADED table */
+  if (glb) {
+    lua_pushglobaltable(L);
+    lua_pushvalue(L, -2);  /* copy of 'mod' */
+    lua_setfield(L, -2, modname);  /* _G[modname] = module */
+    lua_pop(L, 1);  /* remove _G table */
   }
 }
 

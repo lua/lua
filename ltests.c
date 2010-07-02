@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.109 2010/06/10 21:29:47 roberto Exp roberto $
+** $Id: ltests.c,v 2.110 2010/06/25 12:18:10 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -841,19 +841,23 @@ static lua_State *getstate (lua_State *L) {
 
 static int loadlib (lua_State *L) {
   static const luaL_Reg libs[] = {
-    {"baselibopen", luaopen_base},
-    {"corolibopen", luaopen_coroutine},
-    {"dblibopen", luaopen_debug},
-    {"iolibopen", luaopen_io},
-    {"mathlibopen", luaopen_math},
-    {"strlibopen", luaopen_string},
-    {"tablibopen", luaopen_table},
-    {"packageopen", luaopen_package},
+    {"_G", luaopen_base},
+    {"coroutine", luaopen_coroutine},
+    {"debug", luaopen_debug},
+    {"io", luaopen_io},
+    {"math", luaopen_math},
+    {"string", luaopen_string},
+    {"table", luaopen_table},
     {NULL, NULL}
   };
   lua_State *L1 = getstate(L);
-  lua_pushglobaltable(L1);
-  luaL_register(L1, NULL, libs);
+  int i;
+  luaL_requiref(L1, "package", luaopen_package, 1);
+  luaL_findtable(L1, LUA_REGISTRYINDEX, "_PRELOAD");
+  for (i = 0; libs[i].name; i++) {
+    lua_pushcfunction(L1, libs[i].func);
+    lua_setfield(L1, -2, libs[i].name);
+  }
   return 0;
 }
 
@@ -874,8 +878,8 @@ static int doremote (lua_State *L) {
     status = lua_pcall(L1, 0, LUA_MULTRET, 0);
   if (status != LUA_OK) {
     lua_pushnil(L);
-    lua_pushinteger(L, status);
     lua_pushstring(L, lua_tostring(L1, -1));
+    lua_pushinteger(L, status);
     return 3;
   }
   else {

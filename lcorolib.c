@@ -1,5 +1,5 @@
 /*
-** $Id: lcorolib.c,v $
+** $Id: lcorolib.c,v 1.1 2010/06/10 21:30:26 roberto Exp roberto $
 ** Coroutine Library
 ** See Copyright Notice in lua.h
 */
@@ -148,7 +148,7 @@ static const luaL_Reg co_funcs[] = {
 
 
 LUAMOD_API int luaopen_coroutine (lua_State *L) {
-  luaL_register(L, LUA_COLIBNAME, co_funcs);
+  luaL_newlib(L, co_funcs);
   return 1;
 }
 

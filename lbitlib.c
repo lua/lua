@@ -1,5 +1,5 @@
 /*
-** $Id: lbitlib.c,v 1.3 2010/01/12 19:40:02 roberto Exp roberto $
+** $Id: lbitlib.c,v 1.4 2010/02/11 15:55:29 roberto Exp roberto $
 ** Standard library for bitwise operations
 ** See Copyright Notice in lua.h
 */
@@ -141,6 +141,6 @@ static const luaL_Reg bitlib[] = {
 
 
 LUAMOD_API int luaopen_bit (lua_State *L) {
-  luaL_register(L, LUA_BITLIBNAME, bitlib);
+  luaL_newlib(L, bitlib);
   return 1;
 }

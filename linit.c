@@ -1,5 +1,5 @@
 /*
-** $Id: linit.c,v 1.26 2010/06/10 21:29:47 roberto Exp roberto $
+** $Id: linit.c,v 1.27 2010/06/30 17:40:27 roberto Exp roberto $
 ** Initialization of libraries for lua.c and other clients        
 ** See Copyright Notice in lua.h
 */
@@ -36,6 +36,9 @@ static const luaL_Reg loadedlibs[] = {
   {LUA_STRLIBNAME, luaopen_string},
   {LUA_BITLIBNAME, luaopen_bit},
   {LUA_MATHLIBNAME, luaopen_math},
+#if defined(LUA_COMPAT_DEBUGLIB)
+  {LUA_DBLIBNAME, luaopen_debug},
+#endif
   {NULL, NULL}
 };
 
@@ -51,25 +54,17 @@ static const luaL_Reg preloadedlibs[] = {
 
 LUALIB_API void luaL_openlibs (lua_State *L) {
   const luaL_Reg *lib;
-  /* call open functions from 'loadedlibs' */
+  /* call open functions from 'loadedlibs' and set results to global table */
   for (lib = loadedlibs; lib->func; lib++) {
-    lua_pushcfunction(L, lib->func);
-    lua_pushstring(L, lib->name);
-    lua_call(L, 1, 0);
+    luaL_requiref(L, lib->name, lib->func, 1);
+    lua_pop(L, 1);  /* remove lib */
   }
   /* add open functions from 'preloadedlibs' into 'package.preload' table */
-  lua_pushglobaltable(L);
   luaL_findtable(L, LUA_REGISTRYINDEX, "_PRELOAD");
   for (lib = preloadedlibs; lib->func; lib++) {
     lua_pushcfunction(L, lib->func);
     lua_setfield(L, -2, lib->name);
   }
-  lua_pop(L, 1);  /* remove package.preload table */
-#if defined(LUA_COMPAT_DEBUGLIB)
-  lua_getglobal(L, "require");
-  lua_pushliteral(L, LUA_DBLIBNAME);
-  lua_call(L, 1, 0);  /* call 'require"debug"' */
-  lua_pop(L, 1);  /* remove global table */
-#endif
+  lua_pop(L, 1);  /* remove _PRELOAD table */
 }
 

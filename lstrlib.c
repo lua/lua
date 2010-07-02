@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.152 2010/05/04 17:20:33 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.153 2010/05/24 19:34:57 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -913,7 +913,7 @@ static void createmetatable (lua_State *L) {
 ** Open string library
 */
 LUAMOD_API int luaopen_string (lua_State *L) {
-  luaL_register(L, LUA_STRLIBNAME, strlib);
+  luaL_newlib(L, strlib);
   createmetatable(L);
   return 1;
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.87 2010/03/17 21:37:37 roberto Exp roberto $
+** $Id: liolib.c,v 2.88 2010/03/26 20:58:11 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -615,8 +615,9 @@ LUAMOD_API int luaopen_io (lua_State *L) {
   createmeta(L);
   /* create (private) environment (with fields IO_INPUT, IO_OUTPUT, __close) */
   newenv(L, io_fclose);  /* upvalue for all io functions at index 1 */
-  lua_pushvalue(L, -1);  /* copy to be consumed by 'openlib' */
-  luaL_openlib(L, LUA_IOLIBNAME, iolib, 1);  /* new module at index 2 */
+  luaL_newlibtable(L, iolib);  /* new module at index 2 */
+  lua_pushvalue(L, 1);  /* copy of env to be consumed by 'setfuncs' */
+  luaL_setfuncs(L, iolib, 1);
   /* create (and set) default files */
   newenv(L, io_noclose);  /* environment for default files at index 3 */
   createstdfile(L, stdin, IO_INPUT, "stdin");

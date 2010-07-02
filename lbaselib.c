@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.244 2010/06/10 21:29:47 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.245 2010/06/13 19:41:34 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -496,7 +496,7 @@ LUAMOD_API int luaopen_base (lua_State *L) {
   lua_pushglobaltable(L);
   lua_setfield(L, -2, "_G");
   /* open lib into global table */
-  luaL_register(L, "_G", base_funcs);
+  luaL_setfuncs(L, base_funcs, 0);
   lua_pushliteral(L, LUA_VERSION);
   lua_setfield(L, -2, "_VERSION");  /* set global _VERSION */
   /* `newproxy' needs a weaktable as upvalue */
