@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.130 2010/05/31 16:08:55 roberto Exp roberto $
+** $Id: lapi.c,v 2.131 2010/06/04 13:05:29 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -316,27 +316,34 @@ LUA_API int lua_compare (lua_State *L, int index1, int index2, int op) {
 }
 
 
-LUA_API lua_Number lua_tonumber (lua_State *L, int idx) {
+LUA_API lua_Number lua_tonumberx (lua_State *L, int idx, int *isnum) {
   TValue n;
   const TValue *o = index2addr(L, idx);
-  if (tonumber(o, &n))
+  if (tonumber(o, &n)) {
+    if (isnum) *isnum = 1;
     return nvalue(o);
-  else
+  }
+  else {
+    if (isnum) *isnum = 0;
     return 0;
+  }
 }
 
 
-LUA_API lua_Integer lua_tointeger (lua_State *L, int idx) {
+LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *isnum) {
   TValue n;
   const TValue *o = index2addr(L, idx);
   if (tonumber(o, &n)) {
     lua_Integer res;
     lua_Number num = nvalue(o);
     lua_number2integer(res, num);
+    if (isnum) *isnum = 1;
     return res;
   }
-  else
+  else {
+    if (isnum) *isnum = 0;
     return 0;
+  }
 }
 
 

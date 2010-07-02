@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.216 2010/06/30 17:40:27 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.217 2010/07/02 11:38:13 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -308,8 +308,9 @@ LUALIB_API const char *luaL_optlstring (lua_State *L, int narg,
 
 
 LUALIB_API lua_Number luaL_checknumber (lua_State *L, int narg) {
-  lua_Number d = lua_tonumber(L, narg);
-  if (d == 0 && !lua_isnumber(L, narg))  /* avoid extra test when d is not 0 */
+  int isnum;
+  lua_Number d = lua_tonumberx(L, narg, &isnum);
+  if (!isnum)
     tag_error(L, narg, LUA_TNUMBER);
   return d;
 }
@@ -321,8 +322,9 @@ LUALIB_API lua_Number luaL_optnumber (lua_State *L, int narg, lua_Number def) {
 
 
 LUALIB_API lua_Integer luaL_checkinteger (lua_State *L, int narg) {
-  lua_Integer d = lua_tointeger(L, narg);
-  if (d == 0 && !lua_isnumber(L, narg))  /* avoid extra test when d is not 0 */
+  int isnum;
+  lua_Integer d = lua_tointegerx(L, narg, &isnum);
+  if (!isnum)
     tag_error(L, narg, LUA_TNUMBER);
   return d;
 }
@@ -624,9 +626,10 @@ LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
 
 LUALIB_API int luaL_len (lua_State *L, int idx) {
   int l;
+  int isnum;
   lua_len(L, idx);
-  l = lua_tointeger(L, -1);
-  if (l == 0 && !lua_isnumber(L, -1))
+  l = lua_tointegerx(L, -1, &isnum);
+  if (!isnum)
     luaL_error(L, "object length is not a number");
   lua_pop(L, 1);  /* remove object */
   return l;

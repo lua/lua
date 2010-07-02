@@ -1,5 +1,5 @@
 /*
-** $Id: lbitlib.c,v 1.4 2010/02/11 15:55:29 roberto Exp roberto $
+** $Id: lbitlib.c,v 1.5 2010/07/02 11:38:13 roberto Exp roberto $
 ** Standard library for bitwise operations
 ** See Copyright Notice in lua.h
 */
@@ -23,8 +23,9 @@ typedef unsigned LUA_INT32 b_uint;
 
 static b_uint getuintarg (lua_State *L, int arg) {
   b_uint r;
-  lua_Number x = lua_tonumber(L, arg);
-  if (x == 0) luaL_checktype(L, arg, LUA_TNUMBER);
+  int isnum;
+  lua_Number x = lua_tonumberx(L, arg, &isnum);
+  if (!isnum) luaL_typeerror(L, arg, "number");
   lua_number2uint(r, x);
   return r;
 }

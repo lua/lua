@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.29 2009/12/17 13:08:51 roberto Exp roberto $
+** $Id: loslib.c,v 1.30 2010/07/02 11:38:13 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -146,11 +146,10 @@ static int getboolfield (lua_State *L, const char *key) {
 
 
 static int getfield (lua_State *L, const char *key, int d) {
-  int res;
+  int res, isnum;
   lua_getfield(L, -1, key);
-  if (lua_isnumber(L, -1))
-    res = (int)lua_tointeger(L, -1);
-  else {
+  res = (int)lua_tointegerx(L, -1, &isnum);
+  if (!isnum) {
     if (d < 0)
       return luaL_error(L, "field " LUA_QS " missing in date table", key);
     res = d;
