@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.88 2010/06/21 16:30:12 roberto Exp roberto $
+** $Id: lparser.c,v 2.89 2010/07/02 20:42:40 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -969,26 +969,25 @@ struct LHS_assign {
 ** local value in a safe place and use this safe copy in the previous
 ** assignment.
 */
-static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v,
-                            expkind ix, OpCode op) {
+static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
   FuncState *fs = ls->fs;
   int extra = fs->freereg;  /* eventual position to save local variable */
   int conflict = 0;
   for (; lh; lh = lh->prev) {
-    if (lh->v.k == ix) {
-      if (lh->v.u.ind.t == v->u.info) {  /* conflict? */
-        conflict = 1;
-        lh->v.k = VINDEXED;
-        lh->v.u.ind.t = extra;  /* previous assignment will use safe copy */
-      }
-      if (v->k == VLOCAL && lh->v.u.ind.idx == v->u.info) {  /* conflict? */
-        conflict = 1;
-        lua_assert(lh->v.k == VINDEXED);
-        lh->v.u.ind.idx = extra;  /* previous assignment will use safe copy */
-      }
+    /* conflict in table 't'? */
+    if (lh->v.u.ind.vt == v->k && lh->v.u.ind.t == v->u.info) {
+      conflict = 1;
+      lh->v.u.ind.vt = VLOCAL;
+      lh->v.u.ind.t = extra;  /* previous assignment will use safe copy */
+    }
+    /* conflict in index 'idx'? */
+    if (v->k == VLOCAL && lh->v.u.ind.idx == v->u.info) {
+      conflict = 1;
+      lh->v.u.ind.idx = extra;  /* previous assignment will use safe copy */
     }
   }
   if (conflict) {
+    OpCode op = (v->k == VLOCAL) ? OP_MOVE : OP_GETUPVAL;
     luaK_codeABC(fs, op, fs->freereg, v->u.info, 0);  /* make copy */
     luaK_reserveregs(fs, 1);
   }
@@ -997,16 +996,13 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v,
 
 static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
   expdesc e;
-  check_condition(ls, VLOCAL <= lh->v.k && lh->v.k <= VINDEXEDUP,
-                      "syntax error");
+  check_condition(ls, vkisvar(lh->v.k), "syntax error");
   if (testnext(ls, ',')) {  /* assignment -> `,' primaryexp assignment */
     struct LHS_assign nv;
     nv.prev = lh;
     primaryexp(ls, &nv.v);
-    if (nv.v.k == VLOCAL)
-      check_conflict(ls, lh, &nv.v, VINDEXED, OP_MOVE);
-    else if (nv.v.k == VUPVAL)
-      check_conflict(ls, lh, &nv.v, VINDEXEDUP, OP_GETUPVAL);
+    if (nv.v.k != VINDEXED)
+      check_conflict(ls, lh, &nv.v);
     checklimit(ls->fs, nvars, LUAI_MAXCCALLS - G(ls->L)->nCcalls,
                     "variable names");
     assignment(ls, &nv, nvars+1);

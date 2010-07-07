@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.47 2010/06/30 14:11:17 roberto Exp roberto $
+** $Id: lcode.c,v 2.48 2010/07/02 20:42:40 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -373,15 +373,13 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
       break;
     }
     case VINDEXED: {
+      OpCode op = OP_GETTABUP;  /* assume 't' is in an upvalue */
       freereg(fs, e->u.ind.idx);
-      freereg(fs, e->u.ind.t);
-      e->u.info = luaK_codeABC(fs, OP_GETTABLE, 0, e->u.ind.t, e->u.ind.idx);
-      e->k = VRELOCABLE;
-      break;
-    }
-    case VINDEXEDUP: {
-      freereg(fs, e->u.ind.idx);
-      e->u.info = luaK_codeABC(fs, OP_GETTABUP, 0, e->u.ind.t, e->u.ind.idx);
+      if (e->u.ind.vt == VLOCAL) {  /* 't' is in a register? */
+        freereg(fs, e->u.ind.t);
+        op = OP_GETTABLE;
+      }
+      e->u.info = luaK_codeABC(fs, op, 0, e->u.ind.t, e->u.ind.idx);
       e->k = VRELOCABLE;
       break;
     }
@@ -551,13 +549,9 @@ void luaK_storevar (FuncState *fs, expdesc *var, expdesc *ex) {
       break;
     }
     case VINDEXED: {
+      OpCode op = (var->u.ind.vt == VLOCAL) ? OP_SETTABLE : OP_SETTABUP;
       int e = luaK_exp2RK(fs, ex);
-      luaK_codeABC(fs, OP_SETTABLE, var->u.ind.t, var->u.ind.idx, e);
-      break;
-    }
-    case VINDEXEDUP: {
-      int e = luaK_exp2RK(fs, ex);
-      luaK_codeABC(fs, OP_SETTABUP, var->u.ind.t, var->u.ind.idx, e);
+      luaK_codeABC(fs, op, var->u.ind.t, var->u.ind.idx, e);
       break;
     }
     default: {
@@ -705,7 +699,9 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
   lua_assert(!hasjumps(t));
   t->u.ind.t = t->u.info;
   t->u.ind.idx = luaK_exp2RK(fs, k);
-  t->k = (t->k == VUPVAL) ? VINDEXEDUP : VINDEXED;
+  t->u.ind.vt = (t->k == VUPVAL) ? VUPVAL
+                                 : check_exp(vkisinreg(t->k), VLOCAL);
+  t->k = VINDEXED;
 }
 
 

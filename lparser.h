@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.63 2010/03/12 19:14:06 roberto Exp roberto $
+** $Id: lparser.h,v 1.64 2010/07/02 20:42:40 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -23,27 +23,30 @@ typedef enum {
   VFALSE,
   VK,		/* info = index of constant in `k' */
   VKNUM,	/* nval = numerical value */
+  VNONRELOC,	/* info = result register */
   VLOCAL,	/* info = local register */
   VUPVAL,       /* info = index of upvalue in 'upvalues' */
-  VINDEXED,	/* t = table register; idx = index R/K */
-  VINDEXEDUP,	/* t = table upvalue; idx = index R/K */
+  VINDEXED,	/* t = table register/upvalue; idx = index R/K */
   VJMP,		/* info = instruction pc */
   VRELOCABLE,	/* info = instruction pc */
-  VNONRELOC,	/* info = result register */
   VCALL,	/* info = instruction pc */
   VVARARG	/* info = instruction pc */
 } expkind;
 
 
+#define vkisvar(k)	(VLOCAL <= (k) && (k) <= VINDEXED)
+#define vkisinreg(k)	((k) == VNONRELOC || (k) == VLOCAL)
+
 typedef struct expdesc {
   expkind k;
   union {
-    struct {
-      short idx;
-      lu_byte t;
-    } ind;  /* for indexed variables */
-    int info;
-    lua_Number nval;
+    struct {  /* for indexed variables (VINDEXED) */
+      short idx;  /* index (R/K) */
+      lu_byte t;  /* table (register or upvalue) */
+      lu_byte vt;  /* whether 't' is register (VLOCAL) or upvalue (VUPVAL) */
+    } ind;
+    int info;  /* for generic use */
+    lua_Number nval;  /* for VKNUM */
   } u;
   int t;  /* patch list of `exit when true' */
   int f;  /* patch list of `exit when false' */
