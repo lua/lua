@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.138 2010/05/27 12:06:42 roberto Exp roberto $
+** $Id: luaconf.h,v 1.139 2010/05/28 14:27:07 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -76,7 +76,7 @@
 ** hierarchy or if you want to install your libraries in
 ** non-conventional directories.
 */
-#if defined(_WIN32)
+#if defined(_WIN32)	/* { */
 /*
 ** In Windows, any exclamation mark ('!') in the path is replaced by the
 ** path of the directory of the executable file of the current process.
@@ -89,7 +89,7 @@
 #define LUA_CPATH_DEFAULT \
 		LUA_CDIR"?.dll;" LUA_CDIR"loadall.dll;" ".\\?.dll"
 
-#else  /* _WIN32 */
+#else			/* }{ */
 #define LUA_ROOT	"/usr/local/"
 #define LUA_LDIR	LUA_ROOT "share/lua/5.2/"
 #define LUA_CDIR	LUA_ROOT "lib/lua/5.2/"
@@ -98,7 +98,7 @@
 		LUA_CDIR"?.lua;"  LUA_CDIR"?/init.lua;" "./?.lua"
 #define LUA_CPATH_DEFAULT \
 		LUA_CDIR"?.so;" LUA_CDIR"loadall.so;" "./?.so"
-#endif  /* _WIN32 */
+#endif			/* } */
 
 
 /*
@@ -122,19 +122,19 @@
 ** the libraries, you may want to use the following definition (define
 ** LUA_BUILD_AS_DLL to get it).
 */
-#if defined(LUA_BUILD_AS_DLL)
+#if defined(LUA_BUILD_AS_DLL)	/* { */
 
-#if defined(LUA_CORE) || defined(LUA_LIB)
+#if defined(LUA_CORE) || defined(LUA_LIB)	/* { */
 #define LUA_API __declspec(dllexport)
-#else
+#else						/* }{ */
 #define LUA_API __declspec(dllimport)
-#endif
+#endif						/* } */
 
-#else  /* LUA_BUILD_AS_DLL */
+#else				/* }{ */
 
 #define LUA_API		extern
 
-#endif  /* LUA_BUILD_AS_DLL */
+#endif				/* } */
 
 
 /* more often than not the libs go together with the core */
@@ -156,7 +156,7 @@
 ** give a warning about it. To avoid these warnings, change to the
 ** default definition.
 */
-#if defined(luaall_c)
+#if defined(luaall_c)		/* { */
 #define LUAI_FUNC	static
 #define LUAI_DDEC	static
 #define LUAI_DDEF	static
@@ -167,11 +167,11 @@
 #define LUAI_DDEC	LUAI_FUNC
 #define LUAI_DDEF	/* empty */
 
-#else  /* luaall_c */
+#else				/* }{ */
 #define LUAI_FUNC	extern
 #define LUAI_DDEC	extern
 #define LUAI_DDEF	/* empty */
-#endif  /* luaall_c */
+#endif				/* } */
 
 
 
@@ -283,14 +283,14 @@
 ** your machine. Probably you do not need to change this.
 */
 /* avoid overflows in comparison */
-#if INT_MAX-20 < 32760
+#if INT_MAX-20 < 32760		/* { */
 #define LUAI_BITSINT	16
-#elif INT_MAX > 2147483640L
+#elif INT_MAX > 2147483640L	/* }{ */
 /* int has at least 32 bits */
 #define LUAI_BITSINT	32
-#else
+#else				/* }{ */
 #error "you must define LUA_BITSINT with number of bits in an integer"
-#endif
+#endif				/* } */
 
 
 /*
@@ -303,16 +303,16 @@
 ** good enough for your machine. Probably you do not need to change
 ** this.
 */
-#if LUAI_BITSINT >= 32
+#if LUAI_BITSINT >= 32		/* { */
 #define LUA_INT32	int
 #define LUAI_UMEM	size_t
 #define LUAI_MEM	ptrdiff_t
-#else
+#else				/* }{ */
 /* 16-bit ints */
 #define LUA_INT32	long
 #define LUAI_UMEM	unsigned long
 #define LUAI_MEM	long
-#endif
+#endif				/* } */
 
 
 /*
@@ -438,17 +438,17 @@
 
 /* On a Pentium, resort to a trick */
 #if defined(LUA_NUMBER_DOUBLE) && !defined(LUA_ANSI) && !defined(__SSE2__) && \
-	(defined(__i386) || defined (_M_IX86) || defined(__i386__))
+    (defined(__i386) || defined (_M_IX86) || defined(__i386__))	/* { */
 
 /* On a Microsoft compiler, use assembler */
-#if defined(_MSC_VER)
+#if defined(_MSC_VER)		/* { */
 
 #define lua_number2int(i,n)  __asm {__asm fld n   __asm fistp i}
 #define lua_number2integer(i,n)		lua_number2int(i, n)
 #define lua_number2uint(i,n)  \
   {__int64 l; __asm {__asm fld n   __asm fistp l} i = (unsigned int)l;}
 
-#else  /* _MSC_VER */
+#else				/* }{ */
 /* the next trick should work on any Pentium, but sometimes clashes
    with a DirectX idiosyncrasy */
 
@@ -458,16 +458,16 @@ union luai_Cast { double l_d; long l_l; };
 #define lua_number2integer(i,n)		lua_number2int(i, n)
 #define lua_number2uint(i,n)		lua_number2int(i, n)
 
-#endif  /* _MSC_VER */
+#endif				/* } */
 
 
-#else  /* LUA_NUMBER_DOUBLE ... (Pentium) */
+#else			/* }{ */
 /* this option always works, but may be slow */
 #define lua_number2int(i,n)	((i)=(int)(n))
 #define lua_number2integer(i,n)	((i)=(LUA_INTEGER)(n))
 #define lua_number2uint(i,n)	((i)=(unsigned LUA_INT32)(n))
 
-#endif  /* LUA_NUMBER_DOUBLE ... (Pentium) */
+#endif			/* } */
 
 
 /* on several machines, coercion from unsigned to double is too slow,
