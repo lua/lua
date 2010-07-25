@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.190 2010/04/14 15:14:21 roberto Exp roberto $
+** $Id: lua.c,v 1.191 2010/07/02 17:36:32 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -31,9 +31,12 @@
 #define LUA_MAXINPUT		512
 #endif
 
-#if !defined(LUA_INIT_VAR)
-#define LUA_INIT_VAR		"LUA_INIT"
+#if !defined(LUA_INIT)
+#define LUA_INIT		"LUA_INIT"
 #endif
+
+#define LUA_INITVERSION  \
+	LUA_INIT "_" LUA_VERSION_MAJOR "_" LUA_VERSION_MINOR
 
 
 /*
@@ -409,12 +412,17 @@ static int runargs (lua_State *L, char **argv, int n) {
 
 
 static int handle_luainit (lua_State *L) {
-  const char *init = getenv(LUA_INIT_VAR);
+  const char *name = "=" LUA_INITVERSION;
+  const char *init = getenv(name + 1);
+  if (init == NULL) {
+    name = "=" LUA_INIT;
+    init = getenv(name + 1);  /* try alternative name */
+  }
   if (init == NULL) return LUA_OK;
   else if (init[0] == '@')
     return dofile(L, init+1);
   else
-    return dostring(L, init, "=" LUA_INIT_VAR);
+    return dostring(L, init, name);
 }
 
 

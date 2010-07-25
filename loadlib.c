@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.86 2010/06/30 17:40:27 roberto Exp roberto $
+** $Id: loadlib.c,v 1.87 2010/07/02 11:38:13 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -23,17 +23,21 @@
 
 
 /*
-** LUA_PATH_VAR and LUA_CPATH_VAR are the names of the environment
+** LUA_PATH and LUA_CPATH are the names of the environment
 ** variables that Lua check to set its paths.
 */
-#if !defined(LUA_PATH_VAR)
-#define LUA_PATH_VAR	"LUA_PATH"
+#if !defined(LUA_PATH)
+#define LUA_PATH	"LUA_PATH"
 #endif
 
-#if !defined(LUA_CPATH_VAR)
-#define LUA_CPATH_VAR	"LUA_CPATH"
+#if !defined(LUA_CPATH)
+#define LUA_CPATH	"LUA_CPATH"
 #endif
 
+#define LUA_PATHSUFFIX		"_" LUA_VERSION_MAJOR "_" LUA_VERSION_MINOR
+
+#define LUA_PATHVERSION		LUA_PATH LUA_PATHSUFFIX
+#define LUA_CPATHVERSION	LUA_CPATH LUA_PATHSUFFIX
 
 /*
 ** LUA_PATH_SEP is the character that separates templates in a path.
@@ -573,9 +577,11 @@ static int ll_seeall (lua_State *L) {
 /* auxiliary mark (for internal use) */
 #define AUXMARK		"\1"
 
-static void setpath (lua_State *L, const char *fieldname, const char *envname,
-                                   const char *def) {
-  const char *path = getenv(envname);
+static void setpath (lua_State *L, const char *fieldname, const char *envname1,
+                                   const char *envname2, const char *def) {
+  const char *path = getenv(envname1);
+  if (path == NULL)  /* no environment variable? */
+    path = getenv(envname2);  /* try alternative name */
   if (path == NULL)  /* no environment variable? */
     lua_pushstring(L, def);  /* use default */
   else {
@@ -626,8 +632,10 @@ LUAMOD_API int luaopen_package (lua_State *L) {
     lua_rawseti(L, -2, i+1);
   }
   lua_setfield(L, -2, "loaders");  /* put it in field `loaders' */
-  setpath(L, "path", LUA_PATH_VAR, LUA_PATH_DEFAULT);  /* set field `path' */
-  setpath(L, "cpath", LUA_CPATH_VAR, LUA_CPATH_DEFAULT); /* set field `cpath' */
+  /* set field 'path' */
+  setpath(L, "path", LUA_PATHVERSION, LUA_PATH, LUA_PATH_DEFAULT);
+  /* set field 'cpath' */
+  setpath(L, "cpath", LUA_CPATHVERSION, LUA_CPATH, LUA_CPATH_DEFAULT);
   /* store config information */
   lua_pushliteral(L, LUA_DIRSEP "\n" LUA_PATH_SEP "\n" LUA_PATH_MARK "\n"
                      LUA_EXEC_DIR "\n" LUA_IGMARK "\n");
