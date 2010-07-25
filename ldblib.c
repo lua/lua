@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.122 2010/06/21 16:30:12 roberto Exp roberto $
+** $Id: ldblib.c,v 1.123 2010/07/02 11:38:13 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -44,19 +44,19 @@ static int db_setmetatable (lua_State *L) {
 }
 
 
-static int db_getenv (lua_State *L) {
+static int db_getuservalue (lua_State *L) {
   luaL_checktype(L, 1, LUA_TUSERDATA);
-  lua_getenv(L, 1);
+  lua_getuservalue(L, 1);
   return 1;
 }
 
 
-static int db_setenv (lua_State *L) {
+static int db_setuservalue (lua_State *L) {
   luaL_checktype(L, 1, LUA_TUSERDATA);
   if (!lua_isnoneornil(L, 2))
     luaL_checktype(L, 2, LUA_TTABLE);
   lua_settop(L, 2);
-  lua_setenv(L, 1);
+  lua_setuservalue(L, 1);
   return 1;
 }
 
@@ -375,7 +375,7 @@ static int db_traceback (lua_State *L) {
 
 static const luaL_Reg dblib[] = {
   {"debug", db_debug},
-  {"getenv", db_getenv},
+  {"getuservalue", db_getuservalue},
   {"gethook", db_gethook},
   {"getinfo", db_getinfo},
   {"getlocal", db_getlocal},
@@ -384,7 +384,7 @@ static const luaL_Reg dblib[] = {
   {"getupvalue", db_getupvalue},
   {"upvaluejoin", db_upvaluejoin},
   {"upvalueid", db_upvalueid},
-  {"setenv", db_setenv},
+  {"setuservalue", db_setuservalue},
   {"sethook", db_sethook},
   {"setlocal", db_setlocal},
   {"setmetatable", db_setmetatable},

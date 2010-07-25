@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.131 2010/06/04 13:05:29 roberto Exp roberto $
+** $Id: lapi.c,v 2.132 2010/07/02 17:35:06 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -644,7 +644,7 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
 }
 
 
-LUA_API void lua_getenv (lua_State *L, int idx) {
+LUA_API void lua_getuservalue (lua_State *L, int idx) {
   StkId o;
   lua_lock(L);
   o = index2addr(L, idx);
@@ -754,7 +754,7 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
 }
 
 
-LUA_API void lua_setenv (lua_State *L, int idx) {
+LUA_API void lua_setuservalue (lua_State *L, int idx) {
   StkId o;
   lua_lock(L);
   api_checknelems(L, 1);
