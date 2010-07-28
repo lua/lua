@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.89 2010/07/02 11:38:13 roberto Exp roberto $
+** $Id: liolib.c,v 2.90 2010/07/25 15:18:19 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -583,7 +583,7 @@ static void createmeta (lua_State *L) {
   luaL_newmetatable(L, LUA_FILEHANDLE);  /* create metatable for file handles */
   lua_pushvalue(L, -1);  /* push metatable */
   lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
-  luaL_register(L, NULL, flib);  /* add file methods to new metatable */
+  luaL_setfuncs(L, flib, 0);  /* add file methods to new metatable */
   lua_pop(L, 1);  /* pop new metatable */
 }
 

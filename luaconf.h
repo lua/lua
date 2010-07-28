@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.140 2010/07/18 14:34:45 roberto Exp roberto $
+** $Id: luaconf.h,v 1.141 2010/07/25 15:02:41 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -272,6 +272,12 @@
 
 /* compatibility with previous wrong spelling */
 #define luaL_typerror		luaL_typeerror
+
+/*
+@@ LUA_COMPAT_MODULE controls compatibility with previous
+** module functions 'module' (Lua) and 'luaL_register' (C).
+*/
+#define LUA_COMPAT_MODULE
 
 #endif  /* LUA_COMPAT_ALL */
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.31 2010/04/12 16:07:29 roberto Exp roberto $
+** $Id: ltests.h,v 2.32 2010/04/19 17:40:13 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -73,7 +73,8 @@ int luaB_opentests (lua_State *L);
 
 #if defined(lua_c)
 #define luaL_newstate()		lua_newstate(debug_realloc, &l_memcontrol)
-#define luaL_openlibs(L)	{ (luaL_openlibs)(L); luaB_opentests(L); }
+#define luaL_openlibs(L)  \
+  { (luaL_openlibs)(L); luaL_requiref(L, "T", luaB_opentests, 1); }
 #endif
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.87 2010/07/02 11:38:13 roberto Exp roberto $
+** $Id: loadlib.c,v 1.88 2010/07/25 15:03:37 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -495,11 +495,10 @@ static int ll_require (lua_State *L) {
 ** 'module' function
 ** =======================================================
 */
-
+#if defined(LUA_COMPAT_MODULE)
 
 /*
-** FOR COMPATIBILITY ONLY: changes the _ENV variable of
-** calling function
+** changes the _ENV variable of calling function
 */
 static void set_env (lua_State *L) {
   lua_Debug ar;
@@ -570,6 +569,17 @@ static int ll_seeall (lua_State *L) {
 }
 
 
+#else
+
+static int ll_seeall (lua_State *L) {
+  return luaL_error(L, "deprecated function");
+}
+
+static int ll_module (lua_State *L) {
+  return luaL_error(L, "deprecated function");
+}
+
+#endif
 /* }====================================================== */
 
 
@@ -648,7 +658,7 @@ LUAMOD_API int luaopen_package (lua_State *L) {
   lua_setfield(L, -2, "preload");
   lua_pushglobaltable(L);
   lua_pushvalue(L, -2);  /* set 'package' as upvalue for next lib */
-  luaL_openlib(L, NULL, ll_funcs, 1);  /* open lib into global table */
+  luaL_setfuncs(L, ll_funcs, 1);  /* open lib into global table */
   lua_pop(L, 1);  /* pop global table */
   return 1;  /* return 'package' table */
 }

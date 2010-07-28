@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.217 2010/07/02 11:38:13 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.218 2010/07/02 12:01:53 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -664,6 +664,7 @@ LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len) {
 ** Compatibility with 5.1 module functions
 ** =======================================================
 */
+#if defined(LUA_COMPAT_MODULE)
 
 static const char *luaL_findtablex (lua_State *L, int idx,
                                     const char *fname, int szhint) {
@@ -735,6 +736,7 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
   luaL_setfuncs(L, l, nup);
 }
 
+#endif
 /* }====================================================== */
 
 /*

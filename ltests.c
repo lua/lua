@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.110 2010/06/25 12:18:10 roberto Exp roberto $
+** $Id: ltests.c,v 2.111 2010/07/02 11:38:13 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1463,8 +1463,8 @@ int luaB_opentests (lua_State *L) {
   lua_assert(lua_getallocf(L, &ud) == debug_realloc);
   lua_assert(ud == cast(void *, &l_memcontrol));
   lua_setallocf(L, lua_getallocf(L, NULL), ud);
-  luaL_register(L, "T", tests_funcs);
-  return 0;
+  luaL_newlib(L, tests_funcs);
+  return 1;
 }
 
 #endif
