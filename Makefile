@@ -7,21 +7,19 @@
 PLAT= none
 
 # Where to install. The installation starts in the src and doc directories,
-# so take care if INSTALL_TOP is not an absolute path.
+# so take care if INSTALL_TOP is not an absolute path. See the local target.
+# You may want to make INSTALL_LMOD and INSTALL_CMOD consistent with
+# LUA_ROOT, LUA_LDIR, and LUA_CDIR in luaconf.h.
 INSTALL_TOP= /usr/local
 INSTALL_BIN= $(INSTALL_TOP)/bin
 INSTALL_INC= $(INSTALL_TOP)/include
 INSTALL_LIB= $(INSTALL_TOP)/lib
 INSTALL_MAN= $(INSTALL_TOP)/man/man1
-#
-# You may want to make INSTALL_LMOD and INSTALL_CMOD consistent with
-# LUA_ROOT, LUA_LDIR, and LUA_CDIR in luaconf.h.
 INSTALL_LMOD= $(INSTALL_TOP)/share/lua/$V
 INSTALL_CMOD= $(INSTALL_TOP)/lib/lua/$V
 
-# How to install.
-# If your install program does not support "-p", then you may have to run
-# ranlib on the installed liblua.a.
+# How to install. If your install program does not support "-p", then
+# you may have to run ranlib on the installed liblua.a.
 INSTALL= install -p
 INSTALL_EXEC= $(INSTALL) -m 0755
 INSTALL_DATA= $(INSTALL) -m 0644
@@ -31,7 +29,7 @@ INSTALL_DATA= $(INSTALL) -m 0644
 # INSTALL_EXEC= $(INSTALL)
 # INSTALL_DATA= $(INSTALL)
 
-# Utilities.
+# Other utilities.
 MKDIR= mkdir -p
 RM= rm -f
 
@@ -50,6 +48,7 @@ TO_MAN= lua.1 luac.1
 V= 5.2
 R= $V.0
 
+# Targets start here.
 all:	$(PLAT)
 
 $(PLATS) clean:
@@ -75,9 +74,7 @@ local:
 	$(MAKE) install INSTALL_TOP=../install
 
 none:
-	@echo "Please do"
-	@echo "   make PLATFORM"
-	@echo "where PLATFORM is one of these:"
+	@echo "Please do 'make PLATFORM' where PLATFORM is one of these:"
 	@echo "   $(PLATS)"
 	@echo "See doc/readme.html for complete instructions."
 
@@ -86,44 +83,30 @@ dummy:
 
 # echo config parameters
 echo:
-	@echo ""
-	@echo "These are the parameters currently set in src/Makefile to build Lua $R:"
-	@echo ""
 	@cd src && $(MAKE) -s echo
-	@echo ""
-	@echo "These are the parameters currently set in Makefile to install Lua $R:"
-	@echo ""
-	@echo "PLAT = $(PLAT)"
-	@echo "INSTALL_TOP = $(INSTALL_TOP)"
-	@echo "INSTALL_BIN = $(INSTALL_BIN)"
-	@echo "INSTALL_INC = $(INSTALL_INC)"
-	@echo "INSTALL_LIB = $(INSTALL_LIB)"
-	@echo "INSTALL_MAN = $(INSTALL_MAN)"
-	@echo "INSTALL_LMOD = $(INSTALL_LMOD)"
-	@echo "INSTALL_CMOD = $(INSTALL_CMOD)"
-	@echo "INSTALL_EXEC = $(INSTALL_EXEC)"
-	@echo "INSTALL_DATA = $(INSTALL_DATA)"
-	@echo ""
-	@echo "See also src/luaconf.h ."
-	@echo ""
+	@echo "PLAT= $(PLAT)"
+	@echo "V= $V"
+	@echo "R= $R"
+	@echo "TO_BIN= $(TO_BIN)"
+	@echo "TO_INC= $(TO_INC)"
+	@echo "TO_LIB= $(TO_LIB)"
+	@echo "TO_MAN= $(TO_MAN)"
+	@echo "INSTALL_TOP= $(INSTALL_TOP)"
+	@echo "INSTALL_BIN= $(INSTALL_BIN)"
+	@echo "INSTALL_INC= $(INSTALL_INC)"
+	@echo "INSTALL_LIB= $(INSTALL_LIB)"
+	@echo "INSTALL_MAN= $(INSTALL_MAN)"
+	@echo "INSTALL_LMOD= $(INSTALL_LMOD)"
+	@echo "INSTALL_CMOD= $(INSTALL_CMOD)"
+	@echo "INSTALL_EXEC= $(INSTALL_EXEC)"
+	@echo "INSTALL_DATA= $(INSTALL_DATA)"
 
-# echo private config parameters
-pecho:
-	@echo "V = $V"
-	@echo "R = $R"
-	@echo "TO_BIN = $(TO_BIN)"
-	@echo "TO_INC = $(TO_INC)"
-	@echo "TO_LIB = $(TO_LIB)"
-	@echo "TO_MAN = $(TO_MAN)"
-
-# echo config parameters as Lua code
-# uncomment the last sed expression if you want nil instead of empty strings
-lecho:
-	@echo "-- installation parameters for Lua $R"
-	@echo "VERSION = '$V'"
-	@echo "RELEASE = '$R'"
-	@$(MAKE) echo | grep = | sed -e 's/= /= "/' -e 's/$$/"/' #-e 's/""/nil/'
-	@echo "-- EOF"
+# echo pkg-config data
+pc:
+	@echo "version=$R"
+	@echo "prefix=$(INSTALL_TOP)"
+	@echo "libdir=$(INSTALL_LIB)"
+	@echo "includedir=$(INSTALL_INC)"
 
 # list targets that do not create files (but not all makes understand .PHONY)
 .PHONY: all $(PLATS) clean test install local none dummy echo pecho lecho

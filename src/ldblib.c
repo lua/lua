@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.121 2010/03/26 20:58:11 roberto Exp $
+** $Id: ldblib.c,v 1.124 2010/07/25 15:18:19 roberto Exp $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -44,19 +44,19 @@ static int db_setmetatable (lua_State *L) {
 }
 
 
-static int db_getenv (lua_State *L) {
+static int db_getuservalue (lua_State *L) {
   luaL_checktype(L, 1, LUA_TUSERDATA);
-  lua_getenv(L, 1);
+  lua_getuservalue(L, 1);
   return 1;
 }
 
 
-static int db_setenv (lua_State *L) {
+static int db_setuservalue (lua_State *L) {
   luaL_checktype(L, 1, LUA_TUSERDATA);
   if (!lua_isnoneornil(L, 2))
     luaL_checktype(L, 2, LUA_TTABLE);
   lua_settop(L, 2);
-  lua_setenv(L, 1);
+  lua_setuservalue(L, 1);
   return 1;
 }
 
@@ -157,18 +157,26 @@ static int db_getlocal (lua_State *L) {
   lua_State *L1 = getthread(L, &arg);
   lua_Debug ar;
   const char *name;
-  if (!lua_getstack(L1, luaL_checkint(L, arg+1), &ar))  /* out of range? */
-    return luaL_argerror(L, arg+1, "level out of range");
-  name = lua_getlocal(L1, &ar, luaL_checkint(L, arg+2));
-  if (name) {
-    lua_xmove(L1, L, 1);
-    lua_pushstring(L, name);
-    lua_pushvalue(L, -2);
-    return 2;
-  }
-  else {
-    lua_pushnil(L);
+  int nvar = luaL_checkint(L, arg+2);  /* local-variable index */
+  if (lua_isfunction(L, arg + 1)) {  /* function argument? */
+    lua_pushvalue(L, arg + 1);  /* push function */
+    lua_pushstring(L, lua_getlocal(L, NULL, nvar));  /* push local name */
     return 1;
+  }
+  else {  /* stack-level argument */
+    if (!lua_getstack(L1, luaL_checkint(L, arg+1), &ar))  /* out of range? */
+      return luaL_argerror(L, arg+1, "level out of range");
+    name = lua_getlocal(L1, &ar, nvar);
+    if (name) {
+      lua_xmove(L1, L, 1);  /* push local value */
+      lua_pushstring(L, name);  /* push name */
+      lua_pushvalue(L, -2);  /* re-order */
+      return 2;
+    }
+    else {
+      lua_pushnil(L);  /* no name (nor value) */
+      return 1;
+    }
   }
 }
 
@@ -367,7 +375,7 @@ static int db_traceback (lua_State *L) {
 
 static const luaL_Reg dblib[] = {
   {"debug", db_debug},
-  {"getenv", db_getenv},
+  {"getuservalue", db_getuservalue},
   {"gethook", db_gethook},
   {"getinfo", db_getinfo},
   {"getlocal", db_getlocal},
@@ -376,7 +384,7 @@ static const luaL_Reg dblib[] = {
   {"getupvalue", db_getupvalue},
   {"upvaluejoin", db_upvaluejoin},
   {"upvalueid", db_upvalueid},
-  {"setenv", db_setenv},
+  {"setuservalue", db_setuservalue},
   {"sethook", db_sethook},
   {"setlocal", db_setlocal},
   {"setmetatable", db_setmetatable},
@@ -387,7 +395,7 @@ static const luaL_Reg dblib[] = {
 
 
 LUAMOD_API int luaopen_debug (lua_State *L) {
-  luaL_register(L, LUA_DBLIBNAME, dblib);
+  luaL_newlib(L, dblib);
   return 1;
 }
 

@@ -12,6 +12,24 @@ h1, h2, h3, h4 {
 	font-style: italic ;
 }
 
+h2 {
+	padding-top: 0.4em ;
+	padding-bottom: 0.4em ;
+	padding-left: 20px ;
+	margin-left: -20px ;
+	background-color: #E0E0FF ;
+}
+
+h3 {
+	padding-left: 8px ;
+	border-left: solid #E0E0FF 1em ;
+}
+
+table h3 {
+	padding-left: 0px ;
+	border-left: none ; 
+}
+
 a:link {
 	color: #000080 ;
 	background-color: inherit ;

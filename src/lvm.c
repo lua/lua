@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.120 2010/05/13 19:53:05 roberto Exp $
+** $Id: lvm.c,v 2.123 2010/06/30 14:11:17 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -88,7 +88,7 @@ static void callTM (lua_State *L, const TValue *f, const TValue *p1,
   setobj2s(L, L->top++, p1);  /* 1st argument */
   setobj2s(L, L->top++, p2);  /* 2nd argument */
   if (!hasres)  /* no result? 'p3' is third argument */
-    setobj2s(L, L->top++, p3);  /* 3th argument */
+    setobj2s(L, L->top++, p3);  /* 3rd argument */
   luaD_checkstack(L, 0);
   /* metamethod may yield only when called from Lua code */
   luaD_call(L, L->top - (4 - hasres), hasres, isLua(L->ci));
@@ -136,7 +136,7 @@ void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
       if (!ttisnil(oldval) ||  /* result is not nil? */
           (tm = fasttm(L, h->metatable, TM_NEWINDEX)) == NULL) { /* or no TM? */
         setobj2t(L, oldval, val);
-        luaC_barriert(L, h, val);
+        luaC_barrierback(L, obj2gco(h), val);
         return;
       }
       /* else will try the tag method */
@@ -342,6 +342,51 @@ void luaV_arith (lua_State *L, StkId ra, const TValue *rb,
   }
   else if (!call_binTM(L, rb, rc, ra, op))
     luaG_aritherror(L, rb, rc);
+}
+
+
+/*
+** check whether cached closure in prototype 'p' may be reused, that is,
+** whether there is a cached closure with the same upvalues needed by
+** new closure to be created.
+*/
+static Closure *getcached (Proto *p, UpVal **encup, StkId base) {
+  Closure *c = p->cache;
+  if (c != NULL) {  /* is there a cached closure? */
+    int nup = p->sizeupvalues;
+    Upvaldesc *uv = p->upvalues;
+    int i;
+    for (i = 0; i < nup; i++) {  /* check whether it has right upvalues */
+      TValue *v = uv[i].instack ? base + uv[i].idx : encup[uv[i].idx]->v;
+      if (c->l.upvals[i]->v != v)
+        return NULL;  /* wrong upvalue; cannot reuse closure */
+    }
+  }
+  return c;  /* return cached closure (or NULL if no cached closure) */
+}
+
+
+/*
+** create a new Lua closure, push it in the stack, and initialize
+** its upvalues. Note that the call to 'luaC_barrierproto' must come
+** before the assignment to 'p->cache', as the function needs the
+** original value of that field.
+*/
+static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
+                         StkId ra) {
+  int nup = p->sizeupvalues;
+  Upvaldesc *uv = p->upvalues;
+  int i;
+  Closure *ncl = luaF_newLclosure(L, p);
+  setclvalue(L, ra, ncl);  /* anchor new closure in stack */
+  for (i = 0; i < nup; i++) {  /* fill in its upvalues */
+    if (uv[i].instack)  /* upvalue refers to local variable? */
+      ncl->l.upvals[i] = luaF_findupval(L, base + uv[i].idx);
+    else  /* get upvalue from enclosing function */
+      ncl->l.upvals[i] = encup[uv[i].idx];
+  }
+  luaC_barrierproto(L, p, ncl);
+  p->cache = ncl;  /* save it on cache for reuse */
 }
 
 
@@ -721,7 +766,7 @@ void luaV_execute (lua_State *L) {
         for (; n > 0; n--) {
           TValue *val = ra+n;
           setobj2t(L, luaH_setint(L, h, last--), val);
-          luaC_barriert(L, h, val);
+          luaC_barrierback(L, obj2gco(h), val);
         }
         L->top = ci->top;  /* correct top (in case of previous open call) */
       )
@@ -729,19 +774,12 @@ void luaV_execute (lua_State *L) {
         luaF_close(L, ra);
       )
       vmcase(OP_CLOSURE,
-        Proto *p = cl->p->p[GETARG_Bx(i)];  /* prototype for new closure */
-        int nup = p->sizeupvalues;
-        Closure *ncl = luaF_newLclosure(L, nup);
-        Upvaldesc *uv = p->upvalues;
-        int j;
-        ncl->l.p = p;
-        setclvalue(L, ra, ncl);  /* anchor new closure in stack */
-        for (j = 0; j < nup; j++) {  /* fill in upvalues */
-          if (uv[j].instack)  /* upvalue refers to local variable? */
-            ncl->l.upvals[j] = luaF_findupval(L, base + uv[j].idx);
-          else  /* get upvalue from enclosing function */
-            ncl->l.upvals[j] = cl->upvals[uv[j].idx];
-        }
+        Proto *p = cl->p->p[GETARG_Bx(i)];
+        Closure *ncl = getcached(p, cl->upvals, base);  /* cached closure */
+        if (ncl == NULL)  /* no match? */
+          pushclosure(L, p, cl->upvals, base, ra);  /* create a new one */
+        else
+          setclvalue(L, ra, ncl);  /* push cashed closure */
         checkGC(L);
       )
       vmcase(OP_VARARG,

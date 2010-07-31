@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.96 2010/05/17 20:39:31 roberto Exp $
+** $Id: lgc.c,v 2.101 2010/06/30 14:11:17 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -27,7 +27,7 @@
 /* how much to allocate before next GC step */
 #define GCSTEPSIZE	1024
 
-/* maximum numer of elements to sweep in each single step */
+/* maximum number of elements to sweep in each single step */
 #define GCSWEEPMAX	40
 
 /* cost of sweeping one element */
@@ -127,7 +127,7 @@ static int iscleared (const TValue *o, int iskey) {
 ** barrier that moves collector forward, that is, mark the white object
 ** being pointed by a black object.
 */
-void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v) {
+void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v) {
   global_State *g = G(L);
   lua_assert(isblack(o) && iswhite(v) && !isdead(g, v) && !isdead(g, o));
   lua_assert(isgenerational(g) || g->gcstate != GCSpause);
@@ -143,15 +143,38 @@ void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v) {
 
 /*
 ** barrier that moves collector backward, that is, mark the black object
-** pointing to a white object as gray again.
+** pointing to a white object as gray again. (Current implementation
+** only works for tables; access to 'gclist' is not uniform across
+** different types.)
 */
-void luaC_barrierback (lua_State *L, Table *t) {
+void luaC_barrierback_ (lua_State *L, GCObject *o) {
   global_State *g = G(L);
-  GCObject *o = obj2gco(t);
   lua_assert(isblack(o) && !isdead(g, o));
-  black2gray(o);  /* make table gray (again) */
-  t->gclist = g->grayagain;
+  black2gray(o);  /* make object gray (again) */
+  gco2t(o)->gclist = g->grayagain;
   g->grayagain = o;
+}
+
+
+/*
+** barrier for prototypes. When creating first closure (cache is
+** NULL), use a forward barrier; this may be the only closure of the
+** prototype (if it is a "regular" function, with a single instance)
+** and the prototype may be big, so it is better to avoid traversing
+** it again. Otherwise, use a backward barrier, to avoid marking all
+** possible instances.
+*/
+LUAI_FUNC void luaC_barrierproto_ (lua_State *L, Proto *p, Closure *c) {
+  global_State *g = G(L);
+  lua_assert(isblack(obj2gco(p)));
+  if (p->cache == NULL) {  /* first time? */
+    luaC_objbarrier(L, p, c);
+  }
+  else {  /* use a backward barrier */
+    black2gray(obj2gco(p));  /* make prototype gray (again) */
+    p->gclist = g->grayagain;
+    g->grayagain = obj2gco(p);
+  }
 }
 
 
@@ -348,7 +371,7 @@ static int traverseephemeron (global_State *g, Table *h) {
     if (ttisnil(gval(n)))  /* entry is empty? */
       removeentry(n);  /* remove it */
     else if (valiswhite(gval(n))) {  /* value not marked yet? */
-      if (iscleared(key2tval(n), 1))  /* key is not marked (yet)? */
+      if (iscleared(gkey(n), 1))  /* key is not marked (yet)? */
         hasclears = 1;  /* may have to propagate mark from key to value */
       else {  /* key is marked, so mark value */
         marked = 1;  /* value was not marked */
@@ -411,6 +434,8 @@ static int traversetable (global_State *g, Table *h) {
 
 static int traverseproto (global_State *g, Proto *f) {
   int i;
+  if (f->cache && iswhite(obj2gco(f->cache)))
+    f->cache = NULL;  /* allow cache to be collected */
   stringmark(f->source);
   for (i = 0; i < f->sizek; i++)  /* mark literals */
     markvalue(g, &f->k[i]);
@@ -533,6 +558,7 @@ static void convergeephemerons (global_State *g) {
 ** =======================================================
 */
 
+
 /*
 ** clear collected entries from all weaktables in list 'l'
 */
@@ -548,7 +574,7 @@ static void cleartable (GCObject *l) {
     }
     for (n = gnode(h, 0); n < limit; n++) {
       if (!ttisnil(gval(n)) &&  /* non-empty entry? */
-          (iscleared(key2tval(n), 1) || iscleared(gval(n), 0))) {
+          (iscleared(gkey(n), 1) || iscleared(gval(n), 0))) {
         setnilvalue(gval(n));  /* remove value ... */
         removeentry(n);  /* and remove entry from table */
       }
@@ -932,7 +958,8 @@ static void generationalcollection (lua_State *L) {
     g->lastmajormem = g->totalbytes;  /* update control */
   }
   else {
-    luaC_runtilstate(L, bitmask(GCSpause));  /* run collection */
+    luaC_runtilstate(L, ~bitmask(GCSpause));  /* run complete cycle */
+    luaC_runtilstate(L, bitmask(GCSpause));
     if (g->totalbytes > g->lastmajormem/100 * g->gcpause)
       g->lastmajormem = 0;  /* signal for a major collection */
   }

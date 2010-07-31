@@ -16,7 +16,7 @@
 Lua 5.2 Reference Manual
 </h1>
 
-<IMG SRC="alert.png" ALIGN="absbottom">
+<IMG SRC="alert.png" ALIGN="absbottom" ALT="[!]">
 <EM>This is a work version of Lua 5.2.
 Everything may change in the final version.</EM>
 <P>
@@ -38,7 +38,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.56 2010/05/17 18:28:03 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.58 2010/07/30 19:05:32 roberto Exp $ -->
 
 
 
@@ -212,7 +212,7 @@ As discussed in <a href="#3.2">&sect;3.2</a> and <a href="#3.3.3">&sect;3.3.3</a
 any reference to a global name <code>var</code> is syntactically translated 
 to <code>_ENV.var</code>.
 Moreover, any chunk is compiled in the scope of an external
-variable called <code>_ENV</code> (see <a href="#3.3.1">&sect;3.3.1</a>).
+variable called <code>_ENV</code> (see <a href="#3.3.2">&sect;3.3.2</a>).
 Any table used as the value of <code>_ENV</code> is usually called
 an <em>environment</em>.
 
@@ -971,6 +971,12 @@ When you run it, it produces the following output:
      main    false   cannot resume dead coroutine
 </pre>
 
+<p>
+You can also create and manipulate coroutines through the C API:
+see functions <a href="#lua_newthread"><code>lua_newthread</code></a>, <a href="#lua_resume"><code>lua_resume</code></a>,
+and <a href="#lua_yield"><code>lua_yield</code></a>.
+
+
 
 
 
@@ -1231,23 +1237,49 @@ and variable declarations.
 
 
 
-<h3>3.3.1 - <a name="3.3.1">Chunks</a></h3>
+<h3>3.3.1 - <a name="3.3.1">Blocks</a></h3>
 
 <p>
-The unit of execution of Lua is called a <em>chunk</em>.
-A chunk is simply a sequence of statements,
-which are executed sequentially.
+A block is a list of statements,
+which are executed sequentially:
 
 <pre>
-	chunk ::= {stat }
+	block ::= {stat}
 </pre><p>
 Lua has <em>empty statements</em>
 that allow you to separate statements with semicolons,
-start a chunk with a semicolon
+start a block with a semicolon
 or write two semicolons in sequence:
 
 <pre>
 	stat ::= &lsquo<b>;</b>&rsquo;
+</pre>
+
+<p>
+A block can be explicitly delimited to produce a single statement:
+
+<pre>
+	stat ::= <b>do</b> block <b>end</b>
+</pre><p>
+Explicit blocks are useful
+to control the scope of variable declarations.
+Explicit blocks are also sometimes used to
+add a <b>return</b> or <b>break</b> statement in the middle
+of another block (see <a href="#3.3.4">&sect;3.3.4</a>).
+
+
+
+
+
+<h3>3.3.2 - <a name="3.3.2">Chunks</a></h3>
+
+<p>
+The unit of execution of Lua is called a <em>chunk</em>.
+Syntactically,
+a chunk is simply a block:
+
+<pre>
+	chunk ::= block
 </pre>
 
 <p>
@@ -1274,30 +1306,6 @@ see program <code>luac</code> for details.
 Programs in source and compiled forms are interchangeable;
 Lua automatically detects the file type and acts accordingly.
 
-
-
-
-
-
-<h3>3.3.2 - <a name="3.3.2">Blocks</a></h3><p>
-A block is a list of statements;
-syntactically, a block is the same as a chunk:
-
-<pre>
-	block ::= chunk
-</pre>
-
-<p>
-A block can be explicitly delimited to produce a single statement:
-
-<pre>
-	stat ::= <b>do</b> block <b>end</b>
-</pre><p>
-Explicit blocks are useful
-to control the scope of variable declarations.
-Explicit blocks are also sometimes used to
-add a <b>return</b> or <b>break</b> statement in the middle
-of another block (see <a href="#3.3.4">&sect;3.3.4</a>).
 
 
 
@@ -1608,7 +1616,7 @@ Otherwise, all variables are initialized with <b>nil</b>.
 
 
 <p>
-A chunk is also a block (see <a href="#3.3.1">&sect;3.3.1</a>),
+A chunk is also a block (see <a href="#3.3.2">&sect;3.3.2</a>),
 and so local variables can be declared in a chunk outside any explicit block.
 The scope of such local variables extends until the end of the chunk.
 
@@ -1713,7 +1721,7 @@ Lua supports the usual arithmetic operators:
 the binary <code>+</code> (addition),
 <code>-</code> (subtraction), <code>*</code> (multiplication),
 <code>/</code> (division), <code>%</code> (modulo), and <code>^</code> (exponentiation);
-and unary <code>-</code> (negation).
+and unary <code>-</code> (mathematical negation).
 If the operands are numbers, or strings that can be converted to
 numbers (see <a href="#3.4.2">&sect;3.4.2</a>),
 then all operations have the usual meaning.
@@ -1762,12 +1770,15 @@ Equality (<code>==</code>) first compares the type of its operands.
 If the types are different, then the result is <b>false</b>.
 Otherwise, the values of the operands are compared.
 Numbers and strings are compared in the usual way.
-Objects (tables, userdata, threads, and functions)
+Tables, userdata, and threads
 are compared by <em>reference</em>:
 two objects are considered equal only if they are the <em>same</em> object.
 Every time you create a new object
-(a table, userdata, thread, or function),
+(a table, userdata, or thread),
 this new object is different from any previously existing object.
+Closures with the same reference are always equal.
+Closures with any detectable difference
+(different behavior, different definition) are always different.
 
 
 <p>
@@ -1860,10 +1871,10 @@ character is one byte).
 
 
 <p>
-The length of a table <code>t</code> is defined to be any
-integer index <code>n</code>
+The length of a table <code>t</code> can be any integer index <code>n</code>
 such that <code>t[n]</code> is not <b>nil</b> and <code>t[n+1]</code> is <b>nil</b>;
 moreover, if <code>t[1]</code> is <b>nil</b>, <code>n</code> can be zero.
+(All accesses are assumed to be raw for this description.)
 For a regular array, where all non-nil values
 have keys from 1 to a given <code>n</code>,
 its length is exactly that <code>n</code>,
@@ -2112,8 +2123,7 @@ the function is <em>instantiated</em> (or <em>closed</em>).
 This function instance (or <em>closure</em>)
 is the final value of the expression.
 Different instances of the same function
-can refer to different  external local variables
-and can have different environment tables.
+can refer to different  external local variables.
 
 
 <p>
@@ -2601,7 +2611,7 @@ only due to not enough memory;
 
 <hr><h3><a name="lua_absindex"><code>lua_absindex</code></a></h3><p>
 <span class="apii">[-0, +0, <em>-</em>]</span>
-<pre>void lua_absindex (lua_State *L, int idx);</pre>
+<pre>int lua_absindex (lua_State *L, int idx);</pre>
 
 <p>
 Converts the acceptable index <code>idx</code> into an absolute index
@@ -2694,6 +2704,41 @@ ANSI&nbsp;C ensures both behaviors.
 It also assumes that <code>realloc</code> does not fail when shrinking a block.
 (ANSI&nbsp;C does not ensure this behavior,
 but it seems a safe assumption.)
+
+
+
+
+
+<hr><h3><a name="lua_arith"><code>lua_arith</code></a></h3><p>
+<span class="apii">[-2, +1, <em>e</em>]</span>
+<pre>int lua_arith (lua_State *L, int op);</pre>
+
+<p>
+Performs an arithmetic operation over the two values at the top
+of the stack (with the value at the top being the second operand),
+pops these values, and pushes the result of the operation.
+The function follows the semantics of the corresponding Lua operator
+(that is, it may call metamethods).
+
+
+<p>
+The value of <code>op</code> must be one of the following constants:
+
+<ul>
+
+<li><b><a name="pdf-LUA_OPADD"><code>LUA_OPADD</code></a>:</b>performs addition (<code>+</code>)</li>
+<li><b><a name="pdf-LUA_OPSUB"><code>LUA_OPSUB</code></a>:</b>performs subtraction (<code>-</code>)</li>
+<li><b><a name="pdf-LUA_OPMUL"><code>LUA_OPMUL</code></a>:</b>performs multiplication (<code>*</code>)</li>
+<li><b><a name="pdf-LUA_OPDIV"><code>LUA_OPDIV</code></a>:</b>performs division (<code>/</code>)</li>
+<li><b><a name="pdf-LUA_OPMOD"><code>LUA_OPMOD</code></a>:</b>performs modulo (<code>%</code>)</li>
+<li><b><a name="pdf-LUA_OPPOw"><code>LUA_OPPOw</code></a>:</b>performs exponentiation (<code>^</code>)</li>
+<li><b><a name="pdf-LUA_OPUNM"><code>LUA_OPUNM</code></a>:</b>performs mathematical negation (unary <code>-</code>)</li>
+
+</ul>
+
+<p>
+When the operation is <code>LUA_OPUNM</code>,
+the caller must push a <b>nil</b> value for the second operand.
 
 
 
@@ -2886,7 +2931,7 @@ to avoid growing too large.
 Returns 1 if the value at acceptable index <code>index1</code> satisfies <code>op</code>
 when compared with the value at acceptable index <code>index2</code>,
 following the semantics of the corresponding Lua operator
-(that is, may call metamethods).
+(that is, it may call metamethods).
 Otherwise returns&nbsp;0.
 Also returns&nbsp;0 if any of the indices is non valid.
 
@@ -2896,9 +2941,9 @@ The value of <code>op</code> must be one of the following constants:
 
 <ul>
 
-<li><b>@<a name="pdf-LUA_OPEQ"><code>LUA_OPEQ</code></a>:</b>compares for equality (<code>==</code>)</li>
-<li><b>@<a name="pdf-LUA_OPLT"><code>LUA_OPLT</code></a>:</b>compares for less than (<code>&lt;</code>)</li>
-<li><b>@<a name="pdf-LUA_OPLE"><code>LUA_OPLE</code></a>:</b>compares for less or equal (<code>&lt;=</code>)</li>
+<li><b><a name="pdf-LUA_OPEQ"><code>LUA_OPEQ</code></a>:</b>compares for equality (<code>==</code>)</li>
+<li><b><a name="pdf-LUA_OPLT"><code>LUA_OPLT</code></a>:</b>compares for less than (<code>&lt;</code>)</li>
+<li><b><a name="pdf-LUA_OPLE"><code>LUA_OPLE</code></a>:</b>compares for less or equal (<code>&lt;=</code>)</li>
 
 </ul>
 
@@ -3113,13 +3158,14 @@ as in the case of an yield.
 
 
 
-<hr><h3><a name="lua_getfenv"><code>lua_getfenv</code></a></h3><p>
+<hr><h3><a name="lua_getuservalue"><code>lua_getuservalue</code></a></h3><p>
 <span class="apii">[-0, +1, <em>-</em>]</span>
-<pre>void lua_getfenv (lua_State *L, int index);</pre>
+<pre>void lua_getuservalue (lua_State *L, int index);</pre>
 
 <p>
-Pushes onto the stack the environment table of
-the value at the given index.
+Pushes onto the stack the Lua value associated with the userdata
+at the given index.
+This Lua value must be a table or <b>nil</b>.
 
 
 
@@ -4155,16 +4201,15 @@ with user data <code>ud</code>.
 
 
 
-<hr><h3><a name="lua_setfenv"><code>lua_setfenv</code></a></h3><p>
+<hr><h3><a name="lua_setuservalue"><code>lua_setuservalue</code></a></h3><p>
 <span class="apii">[-1, +0, <em>-</em>]</span>
-<pre>int lua_setfenv (lua_State *L, int index);</pre>
+<pre>int lua_setuservalue (lua_State *L, int index);</pre>
 
 <p>
-Pops a table from the stack and sets it as
-the new environment for the value at the given index.
-If the value at the given index is
-neither a function nor a userdata,
-<a href="#lua_setfenv"><code>lua_setfenv</code></a> returns 0.
+Pops a table or <b>nil</b> from the stack and sets it as
+the new value associated to the userdata at the given index.
+If the value at the given index is not a userdata,
+<code>lua_setuservalue</code> returns 0.
 Otherwise it returns 1.
 
 
@@ -4255,7 +4300,7 @@ If <code>index</code> is&nbsp;0, then all stack elements are removed.
 <pre>typedef struct lua_State lua_State;</pre>
 
 <p>
-Opaque structure that keeps the whole state of a Lua interpreter.
+An opaque structure that keeps the whole state of a Lua interpreter.
 The Lua library is fully reentrant:
 it has no global variables.
 All information about a state is kept in this structure.
@@ -4283,6 +4328,13 @@ The status can be 0 (<a href="#pdf-LUA_OK"><code>LUA_OK</code></a>) for a normal
 an error code if the thread finished the execution
 of a <a href="#lua_resume"><code>lua_resume</code></a> with an error,
 or <a name="pdf-LUA_YIELD"><code>LUA_YIELD</code></a> if the thread is suspended.
+
+
+<p>
+You can only call functions in threads with status <a href="#pdf-LUA_OK"><code>LUA_OK</code></a>.
+You can resume threads with status <a href="#pdf-LUA_OK"><code>LUA_OK</code></a>
+(to start a new coroutine) or <a href="#pdf-LUA_YIELD"><code>LUA_YIELD</code></a>
+(to resume a corotine).
 
 
 
@@ -4325,16 +4377,33 @@ otherwise, returns <code>NULL</code>.
 <pre>lua_Integer lua_tointeger (lua_State *L, int index);</pre>
 
 <p>
+A macro equivalent to <code>lua_tointegerx(L, index, NULL)</code>.
+
+
+
+
+
+<hr><h3><a name="lua_tointegerx"><code>lua_tointegerx</code></a></h3><p>
+<span class="apii">[-0, +0, <em>-</em>]</span>
+<pre>lua_Integer lua_tointegerx (lua_State *L, int index, int *isnum);</pre>
+
+<p>
 Converts the Lua value at the given acceptable index
 to the signed integral type <a href="#lua_Integer"><code>lua_Integer</code></a>.
 The Lua value must be a number or a string convertible to a number
 (see <a href="#3.4.2">&sect;3.4.2</a>);
-otherwise, <a href="#lua_tointeger"><code>lua_tointeger</code></a> returns&nbsp;0.
+otherwise, <a href="#lua_tointegerx"><code>lua_tointegerx</code></a> returns&nbsp;0.
 
 
 <p>
 If the number is not an integer,
 it is truncated in some non-specified way.
+
+
+<p>
+If <code>isnum</code> is different from <code>NULL</code>,
+its referent is assigned a boolean value that
+indicates whether the operation succeeded.
 
 
 
@@ -4376,11 +4445,28 @@ will be valid after the corresponding value is removed from the stack.
 <pre>lua_Number lua_tonumber (lua_State *L, int index);</pre>
 
 <p>
+A macro equivalent to <code>lua_tonumberx(L, index, NULL)</code>.
+
+
+
+
+
+<hr><h3><a name="lua_tonumberx"><code>lua_tonumberx</code></a></h3><p>
+<span class="apii">[-0, +0, <em>-</em>]</span>
+<pre>lua_Number lua_tonumberx (lua_State *L, int index, int *isnum);</pre>
+
+<p>
 Converts the Lua value at the given acceptable index
 to the C&nbsp;type <a href="#lua_Number"><code>lua_Number</code></a> (see <a href="#lua_Number"><code>lua_Number</code></a>).
 The Lua value must be a number or a string convertible to a number
 (see <a href="#3.4.2">&sect;3.4.2</a>);
-otherwise, <a href="#lua_tonumber"><code>lua_tonumber</code></a> returns&nbsp;0.
+otherwise, <a href="#lua_tonumberx"><code>lua_tonumberx</code></a> returns&nbsp;0.
+
+
+<p>
+If <code>isnum</code> is different from <code>NULL</code>,
+its referent is assigned a boolean value that
+indicates whether the operation succeeded.
 
 
 
@@ -4628,7 +4714,7 @@ that need "inside information" from the interpreter.
 
 <p>
 A structure used to carry different pieces of
-information about an active function.
+information about a function or an activation record.
 <a href="#lua_getstack"><code>lua_getstack</code></a> fills only the private part
 of this structure, for later use.
 To fill the other fields of <a href="#lua_Debug"><code>lua_Debug</code></a> with useful information,
@@ -4836,8 +4922,13 @@ This function returns 0 on error
 <pre>const char *lua_getlocal (lua_State *L, lua_Debug *ar, int n);</pre>
 
 <p>
-Gets information about a local variable of a given activation record.
-The parameter <code>ar</code> must be a valid activation record that was
+Gets information about a local variable of
+a given activation record or a given function.
+
+
+<p>
+In the first case,
+the parameter <code>ar</code> must be a valid activation record that was
 filled by a previous call to <a href="#lua_getstack"><code>lua_getstack</code></a> or
 given as argument to a hook (see <a href="#lua_Hook"><code>lua_Hook</code></a>).
 The index <code>n</code> selects which local variable to inspect
@@ -4851,6 +4942,14 @@ and returns its name.
 Variable names starting with '<code>(</code>' (open parentheses)
 represent internal variables
 (loop control variables, temporaries, and C&nbsp;function locals).
+
+
+<p>
+In the second case, <code>ar</code> should be <code>NULL</code> and the function
+to be inspected must be at the top of the stack.
+In this case, only parameters of Lua functions are visible
+(as there is no information about what variables are active)
+and no values are pushed onto the stack.
 
 
 <p>
@@ -5697,6 +5796,29 @@ it does not run it.
 
 
 
+<hr><h3><a name="luaL_newlib"><code>luaL_newlib</code></a></h3><p>
+<span class="apii">[-0, +1, <em>m</em>]</span>
+<pre>int luaL_newlib (lua_State *L, const luaL_Reg *l);</pre>
+
+<p>
+Equivalent to <a href="#luaL_setfuncs"><code>luaL_setfuncs</code></a> with no upvalues,
+but first creates a new table wherein to register the functions
+in list <code>l</code>. 
+
+
+<p>
+Leaves the new table on the stack.
+
+
+<p>
+It is implemented as a macro.
+The array <code>l</code> must be the actual array,
+not a pointer to it.
+
+
+
+
+
 <hr><h3><a name="luaL_newmetatable"><code>luaL_newmetatable</code></a></h3><p>
 <span class="apii">[-0, +1, <em>m</em>]</span>
 <pre>int luaL_newmetatable (lua_State *L, const char *tname);</pre>
@@ -5739,46 +5861,23 @@ or <code>NULL</code> if there is a memory allocation error.
 
 
 
-<hr><h3><a name="luaL_openlib"><code>luaL_openlib</code></a></h3><p>
-<span class="apii">[-(nup + (0|1)), +1, <em>e</em>]</span>
-<pre>void luaL_openlib (lua_State *L,
-                             const char *libname,
-                             const luaL_Reg *l,
-                             int nup);</pre>
+<hr><h3><a name="luaL_setfuncs"><code>luaL_setfuncs</code></a></h3><p>
+<span class="apii">[-nup, +0, <em>e</em>]</span>
+<pre>void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup);</pre>
 
 <p>
-Opens a library.
-
-
-<p>
-When called with <code>libname</code> equal to <code>NULL</code>,
-it simply registers all functions in the array <code>l</code>
-(see <a href="#luaL_Reg"><code>luaL_Reg</code></a>) into the table on the top of the stack.
+Registers all functions in the array <code>l</code>
+(see <a href="#luaL_Reg"><code>luaL_Reg</code></a>) into the table on the top of the stack
+(below optional upvalues, see next).
 The pointer <code>l</code> may be <code>NULL</code>,
 representing an empty list.
-
-
-<p>
-When called with a non-null <code>libname</code>,
-<code>luaL_openlib</code> creates a new table <code>t</code>,
-sets it as the value of the global variable <code>libname</code>,
-sets it as the value of <code>package.loaded[libname]</code>,
-and registers on it all functions in the list <code>l</code>.
-If there is a table in <code>package.loaded[libname]</code> or
-in global variable <code>libname</code>,
-reuses this table instead of creating a new one.
-
-
-<p>
-In any case the function leaves the table
-on the top of the stack.
 
 
 <p>
 When <code>nup</code> is not zero,
 all functions are created sharing <code>nup</code> upvalues,
 which must be previously pushed on the stack
-(on top of the library table, if present).
+on top of the library table.
 These values are popped from the stack after the registration.
 
 
@@ -5963,7 +6062,7 @@ from any reference returned by <a href="#luaL_ref"><code>luaL_ref</code></a>.
 
 <p>
 Type for arrays of functions to be registered by
-<a href="#luaL_openlib"><code>luaL_openlib</code></a>.
+<a href="#luaL_setfuncs"><code>luaL_setfuncs</code></a>.
 <code>name</code> is the function name and <code>func</code> is a pointer to
 the function.
 Any array of <a href="#luaL_Reg"><code>luaL_Reg</code></a> must end with an sentinel entry
@@ -5973,15 +6072,24 @@ in which both <code>name</code> and <code>func</code> are <code>NULL</code>.
 
 
 
-<hr><h3><a name="luaL_register"><code>luaL_register</code></a></h3><p>
-<span class="apii">[-(0|1), +1, <em>m</em>]</span>
-<pre>void luaL_register (lua_State *L,
-                    const char *libname,
-                    const luaL_Reg *l);</pre>
+<hr><h3><a name="luaL_requiref"><code>luaL_requiref</code></a></h3><p>
+<span class="apii">[-0, +1, <em>e</em>]</span>
+<pre>void luaL_requiref (lua_State *L, const char *modname,
+                              lua_CFunction openf, int glb);</pre>
 
 <p>
-This macro is equivalent to calling <a href="#luaL_openlib"><code>luaL_openlib</code></a>
-with no upvalues.
+Calls function <code>openf</code> with string <code>modname</code> as an argument
+and sets the call result in <code>package.loaded[modname]</code>,
+as if that function has been called through <a href="#pdf-require"><code>require</code></a>.
+
+
+<p>
+If <code>glb</code> is true,
+also stores the result into global <code>modname</code>.
+
+
+<p>
+Leaves a copy of that result on the stack.
 
 
 
@@ -6134,9 +6242,11 @@ Currently, Lua has the following standard libraries:
 
 <ul>
 
-<li>basic library, which includes the coroutine sub-library;</li>
+<li>basic library;</li>
 
 <li>package library;</li>
+
+<li>coroutine library;</li>
 
 <li>string manipulation;</li>
 
@@ -6166,6 +6276,7 @@ Alternatively,
 it can open them individually by calling
 <a name="pdf-luaopen_base"><code>luaopen_base</code></a> (for the basic library),
 <a name="pdf-luaopen_package"><code>luaopen_package</code></a> (for the package library),
+<a name="pdf-luaopen_coroutine"><code>luaopen_coroutine</code></a> (for the coroutine library),
 <a name="pdf-luaopen_string"><code>luaopen_string</code></a> (for the string library),
 <a name="pdf-luaopen_table"><code>luaopen_table</code></a> (for the table library),
 <a name="pdf-luaopen_math"><code>luaopen_math</code></a> (for the mathematical library),
@@ -6319,6 +6430,30 @@ Otherwise,
 if the object's metatable has a <code>"__metatable"</code> field,
 returns the associated value.
 Otherwise, returns the metatable of the given object.
+
+
+
+
+<p>
+<hr><h3><a name="pdf-ipairs"><code>ipairs (t)</code></a></h3>
+
+
+<p>
+If <code>t</code> has a metamethod <code>__ipairs</code>,
+calls it with <code>t</code> as argument and returns the first three
+results from the call.
+
+
+<p>
+Otherwise,
+returns three values: an iterator function, the table <code>t</code>, and 0,
+so that the construction
+
+<pre>
+     for i,v in ipairs(t) do <em>body</em> end
+</pre><p>
+will iterate over the pairs (<code>1,t[1]</code>), (<code>2,t[2]</code>), &middot;&middot;&middot;,
+up to the first integer key absent from the table.
 
 
 
@@ -6776,59 +6911,10 @@ Any arguments to <code>yield</code> are passed as extra results to <code>resume<
 
 <p>
 The package library provides basic
-facilities for loading and building modules in Lua.
-It exports two of its functions directly in the global environment:
-<a href="#pdf-require"><code>require</code></a> and <a href="#pdf-module"><code>module</code></a>.
+facilities for loading modules in Lua.
+It exports one function directly in the global environment:
+<a href="#pdf-require"><code>require</code></a>.
 Everything else is exported in a table <a name="pdf-package"><code>package</code></a>.
-
-
-<p>
-<hr><h3><a name="pdf-module"><code>module (name [, &middot;&middot;&middot;])</code></a></h3>
-
-
-<p>
-Creates and returns a module.
-If there is a table in <code>package.loaded[name]</code>,
-this table is the module.
-Otherwise, if there is a global table <code>t</code> with the given name,
-this table is the module.
-Otherwise creates a new table <code>t</code> and
-sets it as the value of the global <code>name</code> and
-the value of <code>package.loaded[name]</code>.
-This function also initializes <code>t._NAME</code> with the given name,
-<code>t._M</code> with the module (<code>t</code> itself),
-and <code>t._PACKAGE</code> with the package name
-(the full module name minus last component; see below).
-Finally, <code>module</code> sets <code>t</code> as the new value of <code>package.loaded[name]</code>,
-so that <a href="#pdf-require"><code>require</code></a> returns <code>t</code>.
-
-
-<p>
-The <code>module</code> function returns the module table <code>t</code>.
-
-
-<p>
-If <code>name</code> is a compound name
-(that is, one with components separated by dots),
-<code>module</code> creates (or reuses, if they already exist)
-tables for each component.
-For instance, if <code>name</code> is <code>a.b.c</code>,
-then <code>module</code> stores the module table in field <code>c</code> of
-field <code>b</code> of global <code>a</code>.
-
-
-<p>
-This function can receive optional <em>options</em> after
-the module name,
-where each option is a function to be applied over the module.
-
-
-<p>
-To keep compatibility with old versions of Lua,
-<code>module</code> also sets <code>t</code> as the new environment
-of the current function.
-
-
 
 
 <p>
@@ -6928,7 +7014,8 @@ The path used by <a href="#pdf-require"><code>require</code></a> to search for a
 <p>
 Lua initializes the C&nbsp;path <a href="#pdf-package.cpath"><code>package.cpath</code></a> in the same way
 it initializes the Lua path <a href="#pdf-package.path"><code>package.path</code></a>,
-using the environment variable <a name="pdf-LUA_CPATH"><code>LUA_CPATH</code></a>
+using the environment variable <a name="pdf-LUA_CPATH_5_2"><code>LUA_CPATH_5_2</code></a>
+or the environment variable <a name="pdf-LUA_CPATH"><code>LUA_CPATH</code></a>
 or a default path defined in <code>luaconf.h</code>.
 
 
@@ -7080,7 +7167,8 @@ The path used by <a href="#pdf-require"><code>require</code></a> to search for a
 
 <p>
 At start-up, Lua initializes this variable with
-the value of the environment variable <a name="pdf-LUA_PATH"><code>LUA_PATH</code></a> or
+the value of the environment variable <a name="pdf-LUA_PATH_5_2"><code>LUA_PATH_5_2</code></a> or
+the environment variable <a name="pdf-LUA_PATH"><code>LUA_PATH</code></a> or
 with a default path defined in <code>luaconf.h</code>,
 if the environment variable is not defined.
 Any "<code>;;</code>" in the value of the environment variable
@@ -7132,20 +7220,6 @@ Returns the resulting name of the first file that it can
 open in read mode (after closing the file),
 or <b>nil</b> plus an error message if none succeeds.
 (This error message lists all file names it tried to open.)
-
-
-
-
-<p>
-<hr><h3><a name="pdf-package.seeall"><code>package.seeall (module)</code></a></h3>
-
-
-<p>
-Sets a metatable for <code>module</code> with
-its <code>__index</code> field referring to the global environment,
-so that this module inherits values
-from the global environment.
-To be used as an option to function <a href="#pdf-module"><code>module</code></a>.
 
 
 
@@ -7222,6 +7296,9 @@ a copy of the function.
 
 <p>
 <hr><h3><a name="pdf-string.find"><code>string.find (s, pattern [, init [, plain]])</code></a></h3>
+
+
+<p>
 Looks for the first match of
 <code>pattern</code> in the string <code>s</code>.
 If it finds a match, then <code>find</code> returns the indices of&nbsp;<code>s</code>
@@ -7248,10 +7325,12 @@ after the two indices.
 
 <p>
 <hr><h3><a name="pdf-string.format"><code>string.format (formatstring, &middot;&middot;&middot;)</code></a></h3>
+
+
+<p>
 Returns a formatted version of its variable number of arguments
 following the description given in its first argument (which must be a string).
-The format string follows the same rules as the <code>printf</code> family of
-standard C&nbsp;functions.
+The format string follows the same rules as the C&nbsp;function <code>sprintf</code>.
 The only differences are that the options/modifiers
 <code>*</code>, <code>l</code>, <code>L</code>, <code>n</code>, <code>p</code>,
 and <code>h</code> are not supported
@@ -7499,6 +7578,8 @@ represents the character <em>x</em> itself.
 <li><b><code>%c</code>:</b> represents all control characters.</li>
 
 <li><b><code>%d</code>:</b> represents all digits.</li>
+
+<li><b><code>%g</code>:</b> represents all printable characters except space.</li>
 
 <li><b><code>%l</code>:</b> represents all lowercase letters.</li>
 
@@ -8329,7 +8410,7 @@ Without a <code>file</code>, closes the default output file.
 
 
 <p>
-Equivalent to <code>file:flush</code> over the default output file.
+Equivalent to <code>io.output():flush()</code>.
 
 
 
@@ -8450,7 +8531,7 @@ on all platforms.
 
 
 <p>
-Equivalent to <code>io.input():read</code>.
+Equivalent to <code>io.input():read(&middot;&middot;&middot;)</code>.
 
 
 
@@ -8485,7 +8566,7 @@ or <b>nil</b> if <code>obj</code> is not a file handle.
 
 
 <p>
-Equivalent to <code>io.output():write</code>.
+Equivalent to <code>io.output():write(&middot;&middot;&middot;)</code>.
 
 
 
@@ -8960,8 +9041,11 @@ within any function, and so have no direct access to local variables.
 
 
 <p>
-<hr><h3><a name="pdf-debug.getfenv"><code>debug.getfenv (o)</code></a></h3>
-Returns the environment of object <code>o</code>.
+<hr><h3><a name="pdf-debug.getuservalue"><code>debug.getuservalue (u)</code></a></h3>
+
+
+<p>
+Returns the Lua value associated to userdata <code>u</code>.
 
 
 
@@ -9023,17 +9107,17 @@ about the <a href="#pdf-print"><code>print</code></a> function.
 
 
 <p>
-<hr><h3><a name="pdf-debug.getlocal"><code>debug.getlocal ([thread,] level, local)</code></a></h3>
+<hr><h3><a name="pdf-debug.getlocal"><code>debug.getlocal ([thread,] f, local)</code></a></h3>
 
 
 <p>
 This function returns the name and the value of the local variable
-with index <code>local</code> of the function at level <code>level</code> of the stack.
+with index <code>local</code> of the function at level <code>f</code> of the stack.
 (The first parameter or local variable has index&nbsp;1, and so on,
 until the last active local variable.)
 The function returns <b>nil</b> if there is no local
 variable with the given index,
-and raises an error when called with a <code>level</code> out of range.
+and raises an error when called with a level out of range.
 (You can call <a href="#pdf-debug.getinfo"><code>debug.getinfo</code></a> to check whether the level is valid.)
 
 
@@ -9041,6 +9125,11 @@ and raises an error when called with a <code>level</code> out of range.
 Variable names starting with '<code>(</code>' (open parentheses)
 represent internal variables
 (loop control variables, temporaries, and C&nbsp;function locals).
+
+
+<p>
+The parameter <code>f</code> may also be a function.
+In that case, <code>getlocal</code> returns only the name of function parameters.
 
 
 
@@ -9079,12 +9168,17 @@ The function returns <b>nil</b> if there is no upvalue with the given index.
 
 
 <p>
-<hr><h3><a name="pdf-debug.setfenv"><code>debug.setfenv (object, table)</code></a></h3>
+<hr><h3><a name="pdf-debug.setuservalue"><code>debug.setuservalue (udata, value)</code></a></h3>
 
 
 <p>
-Sets the environment of the given <code>object</code> to the given <code>table</code>.
-Returns <code>object</code>.
+Sets the given <code>value</code> as
+the Lua value associated to the given <code>udata</code>.
+<code>value</code> must be a table or <b>nil</b>.
+
+
+<p>
+Returns <code>udata</code>.
 
 
 
@@ -9259,7 +9353,8 @@ and as <code>lua -</code> otherwise.
 
 <p>
 Before running any argument,
-the interpreter checks for an environment variable <a name="pdf-LUA_INIT"><code>LUA_INIT</code></a>.
+the interpreter checks for an environment variable <a name="pdf-LUA_INIT_5_2"><code>LUA_INIT_5_2</code></a>
+(or <a name="pdf-LUA_INIT"><code>LUA_INIT</code></a> if it is not defined).
 If its format is <code>@<em>filename</em></code>,
 then <code>lua</code> executes the file.
 Otherwise, <code>lua</code> executes the string itself.
@@ -9418,6 +9513,12 @@ not be a corresponding return event.
 <ul>
 
 <li>
+Function <code>module</code> is deprecated.
+Modules are not expected to set global variables anymore,
+and it is easy to set up a module with regular Lua code.
+</li>
+
+<li>
 The debug library is not loaded by default.
 You must explicitly require it.
 </li>
@@ -9426,12 +9527,6 @@ You must explicitly require it.
 Functions <code>setfenv</code> and <code>getfenv</code> are deprecated.
 To set the environment of a Lua function,
 use the variable <code>_ENV</code> or the new function <a href="#pdf-loadin"><code>loadin</code></a>.
-</li>
-
-<li>
-Function <code>ipairs</code> is deprecated.
-Use a numerical for loop instead,
-or write it in Lua.
 </li>
 
 <li>
@@ -9481,19 +9576,21 @@ You must get the global environment from the registry
 </li>
 
 <li>
-Pseudoindex <code>LUA_ENVIRONINDEX</code> was removed.
+Pseudoindex <code>LUA_ENVIRONINDEX</code>
+and functions <code>lua_getfenv</code>/<code>lua_setfenv</code>
+were removed.
 C functions do not have environments any more.
 Use an upvalue with a shared table if you need to keep
 shared state among several C functions.
-(You may use <a href="#luaL_openlib"><code>luaL_openlib</code></a> to open a C library
+(You may use <a href="#luaL_setfuncs"><code>luaL_setfuncs</code></a> to open a C library
 with all functions sharing a common upvalue.)
-</li>
 
-<li>
-Macros <a href="#lua_getglobal"><code>lua_getglobal</code></a>, <a href="#lua_setglobal"><code>lua_setglobal</code></a>, and <a href="#lua_register"><code>lua_register</code></a>
-now operate over the function environment instead of the global
-environment.
-(This is more consistent with how Lua manipulates global variables.)
+
+<p>
+To manipulate the "environment" of a userdata
+(which is not called "environment" anymore),
+use the new functions
+<a href="#lua_getuservalue"><code>lua_getuservalue</code></a> and <a href="#lua_setuservalue"><code>lua_setuservalue</code></a>.
 </li>
 
 <li>
@@ -9532,9 +9629,9 @@ Here is the complete syntax of Lua in extended BNF.
 
 <pre>
 
-	chunk ::= {stat} [laststat [&lsquo<b>;</b>&rsquo;]]
+	chunk ::= block
 
-	block ::= chunk
+	block ::= {stat} [laststat [&lsquo<b>;</b>&rsquo;]]
 
 	stat ::=  &lsquo<b>;</b>&rsquo; | 
 		 varlist &lsquo<b>=</b>&rsquo; explist | 
@@ -9604,10 +9701,10 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL>
 Last update:
-Mon May 17 16:24:08 BRT 2010
+Fri Jul 30 16:41:34 BRT 2010
 </SMALL>
 <!--
-Last change: revised for Lua 5.2.0 (work3)
+Last change: revised for Lua 5.2.0 (work4)
 -->
 
 </body></html>

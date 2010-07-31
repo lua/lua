@@ -1,11 +1,11 @@
 /*
-** $Id: loadlib.c,v 1.82 2010/03/19 15:02:34 roberto Exp $
+** $Id: loadlib.c,v 1.89 2010/07/28 15:51:59 roberto Exp $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
 ** This module contains an implementation of loadlib for Unix systems
-** that have dlfcn, an implementation for Darwin (Mac OS X), an
-** implementation for Windows, and a stub for other systems.
+** that have dlfcn, an implementation for Windows, and a stub for other
+** systems.
 */
 
 
@@ -23,17 +23,21 @@
 
 
 /*
-** LUA_PATH_VAR and LUA_CPATH_VAR are the names of the environment
+** LUA_PATH and LUA_CPATH are the names of the environment
 ** variables that Lua check to set its paths.
 */
-#if !defined(LUA_PATH_VAR)
-#define LUA_PATH_VAR	"LUA_PATH"
+#if !defined(LUA_PATH)
+#define LUA_PATH	"LUA_PATH"
 #endif
 
-#if !defined(LUA_CPATH_VAR)
-#define LUA_CPATH_VAR	"LUA_CPATH"
+#if !defined(LUA_CPATH)
+#define LUA_CPATH	"LUA_CPATH"
 #endif
 
+#define LUA_PATHSUFFIX		"_" LUA_VERSION_MAJOR "_" LUA_VERSION_MINOR
+
+#define LUA_PATHVERSION		LUA_PATH LUA_PATHSUFFIX
+#define LUA_CPATHVERSION	LUA_CPATH LUA_PATHSUFFIX
 
 /*
 ** LUA_PATH_SEP is the character that separates templates in a path.
@@ -145,7 +149,7 @@ static void setprogdir (lua_State *L) {
   char buff[MAX_PATH + 1];
   char *lb;
   DWORD nsize = sizeof(buff)/sizeof(char);
-  DWORD n = GetModuleFileName(NULL, buff, nsize);
+  DWORD n = GetModuleFileNameA(NULL, buff, nsize);
   if (n == 0 || n == nsize || (lb = strrchr(buff, '\\')) == NULL)
     luaL_error(L, "unable to get ModuleFileName");
   else {
@@ -159,7 +163,7 @@ static void setprogdir (lua_State *L) {
 static void pusherror (lua_State *L) {
   int error = GetLastError();
   char buffer[128];
-  if (FormatMessage(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_SYSTEM,
+  if (FormatMessageA(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_SYSTEM,
       NULL, error, 0, buffer, sizeof(buffer), NULL))
     lua_pushstring(L, buffer);
   else
@@ -172,7 +176,7 @@ static void ll_unloadlib (void *lib) {
 
 
 static void *ll_load (lua_State *L, const char *path, int seeglb) {
-  HMODULE lib = LoadLibraryEx(path, NULL, LUA_LLE_FLAGS);
+  HMODULE lib = LoadLibraryExA(path, NULL, LUA_LLE_FLAGS);
   (void)(seeglb);  /* symbols are 'global' by default? */
   if (lib == NULL) pusherror(L);
   return lib;
@@ -186,90 +190,6 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 }
 
 /* }====================================================== */
-
-
-
-#elif defined(LUA_DL_DYLD)
-/*
-** {======================================================================
-** Old native Mac OS X - only for old versions of Mac OS (< 10.3)
-** =======================================================================
-*/
-
-#include <mach-o/dyld.h>
-
-
-/* Mac appends a `_' before C function names */
-#undef POF
-#define POF	"_" LUA_POF
-
-
-static void pusherror (lua_State *L) {
-  const char *err_str;
-  const char *err_file;
-  NSLinkEditErrors err;
-  int err_num;
-  NSLinkEditError(&err, &err_num, &err_file, &err_str);
-  lua_pushstring(L, err_str);
-}
-
-
-static const char *errorfromcode (NSObjectFileImageReturnCode ret) {
-  switch (ret) {
-    case NSObjectFileImageInappropriateFile:
-      return "file is not a bundle";
-    case NSObjectFileImageArch:
-      return "library is for wrong CPU type";
-    case NSObjectFileImageFormat:
-      return "bad format";
-    case NSObjectFileImageAccess:
-      return "cannot access file";
-    case NSObjectFileImageFailure:
-    default:
-      return "unable to load library";
-  }
-}
-
-
-static void ll_unloadlib (void *lib) {
-  NSUnLinkModule((NSModule)lib, NSUNLINKMODULE_OPTION_RESET_LAZY_REFERENCES);
-}
-
-
-static void *ll_load (lua_State *L, const char *path, int seeglb) {
-  NSObjectFileImage img;
-  NSObjectFileImageReturnCode ret;
-  /* this would be a rare case, but prevents crashing if it happens */
-  if(!_dyld_present()) {
-    lua_pushliteral(L, "dyld not present");
-    return NULL;
-  }
-  ret = NSCreateObjectFileImageFromFile(path, &img);
-  if (ret == NSObjectFileImageSuccess) {
-    NSModule mod = NSLinkModule(img,
-                                path,
-                                NSLINKMODULE_OPTION_RETURN_ON_ERROR |
-                                  (seeglb ? 0 : NSLINKMODULE_OPTION_PRIVATE));
-    NSDestroyObjectFileImage(img);
-    if (mod == NULL) pusherror(L);
-    return mod;
-  }
-  lua_pushstring(L, errorfromcode(ret));
-  return NULL;
-}
-
-
-static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
-  NSSymbol nss = NSLookupSymbolInModule((NSModule)lib, sym);
-  if (nss == NULL) {
-    lua_pushfstring(L, "symbol " LUA_QS " not found", sym);
-    return NULL;
-  }
-  return (lua_CFunction)NSAddressOfSymbol(nss);
-}
-
-/* }====================================================== */
-
 
 
 #else
@@ -507,7 +427,7 @@ static int loader_Croot (lua_State *L) {
 
 static int loader_preload (lua_State *L) {
   const char *name = luaL_checkstring(L, 1);
-  lua_getfield(L, lua_upvalueindex(1), "preload");
+  lua_getfield(L, LUA_REGISTRYINDEX, "_PRELOAD");
   if (!lua_istable(L, -1))
     luaL_error(L, LUA_QL("package.preload") " must be a table");
   lua_getfield(L, -1, name);
@@ -575,11 +495,10 @@ static int ll_require (lua_State *L) {
 ** 'module' function
 ** =======================================================
 */
-
+#if defined(LUA_COMPAT_MODULE)
 
 /*
-** FOR COMPATIBILITY ONLY: changes the _ENV variable of
-** calling function
+** changes the _ENV variable of calling function
 */
 static void set_env (lua_State *L) {
   lua_Debug ar;
@@ -620,18 +539,8 @@ static void modinit (lua_State *L, const char *modname) {
 
 static int ll_module (lua_State *L) {
   const char *modname = luaL_checkstring(L, 1);
-  int loaded = lua_gettop(L) + 1;  /* index of _LOADED table */
-  lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
-  lua_getfield(L, loaded, modname);  /* get _LOADED[modname] */
-  if (!lua_istable(L, -1)) {  /* not found? */
-    lua_pop(L, 1);  /* remove previous result */
-    /* try global variable (and create one if it does not exist) */
-    lua_pushglobaltable(L);
-    if (luaL_findtable(L, 0, modname, 1) != NULL)
-      return luaL_error(L, "name conflict for module " LUA_QS, modname);
-    lua_pushvalue(L, -1);
-    lua_setfield(L, loaded, modname);  /* _LOADED[modname] = new table */
-  }
+  int lastarg = lua_gettop(L);  /* last parameter */
+  luaL_pushmodule(L, modname, 1);  /* get/create module table */
   /* check whether table already has a _NAME field */
   lua_getfield(L, -1, "_NAME");
   if (!lua_isnil(L, -1))  /* is table an initialized module? */
@@ -642,7 +551,7 @@ static int ll_module (lua_State *L) {
   }
   lua_pushvalue(L, -1);
   set_env(L);
-  dooptions(L, loaded - 1);
+  dooptions(L, lastarg);
   return 1;
 }
 
@@ -660,6 +569,17 @@ static int ll_seeall (lua_State *L) {
 }
 
 
+#else
+
+static int ll_seeall (lua_State *L) {
+  return luaL_error(L, "deprecated function");
+}
+
+static int ll_module (lua_State *L) {
+  return luaL_error(L, "deprecated function");
+}
+
+#endif
 /* }====================================================== */
 
 
@@ -667,9 +587,11 @@ static int ll_seeall (lua_State *L) {
 /* auxiliary mark (for internal use) */
 #define AUXMARK		"\1"
 
-static void setpath (lua_State *L, const char *fieldname, const char *envname,
-                                   const char *def) {
-  const char *path = getenv(envname);
+static void setpath (lua_State *L, const char *fieldname, const char *envname1,
+                                   const char *envname2, const char *def) {
+  const char *path = getenv(envname1);
+  if (path == NULL)  /* no environment variable? */
+    path = getenv(envname2);  /* try alternative name */
   if (path == NULL)  /* no environment variable? */
     lua_pushstring(L, def);  /* use default */
   else {
@@ -710,7 +632,7 @@ LUAMOD_API int luaopen_package (lua_State *L) {
   lua_pushcfunction(L, gctm);
   lua_setfield(L, -2, "__gc");
   /* create `package' table */
-  luaL_register(L, LUA_LOADLIBNAME, pk_funcs);
+  luaL_newlib(L, pk_funcs);
   /* create `loaders' table */
   lua_createtable(L, sizeof(loaders)/sizeof(loaders[0]) - 1, 0);
   /* fill it with pre-defined loaders */
@@ -720,21 +642,23 @@ LUAMOD_API int luaopen_package (lua_State *L) {
     lua_rawseti(L, -2, i+1);
   }
   lua_setfield(L, -2, "loaders");  /* put it in field `loaders' */
-  setpath(L, "path", LUA_PATH_VAR, LUA_PATH_DEFAULT);  /* set field `path' */
-  setpath(L, "cpath", LUA_CPATH_VAR, LUA_CPATH_DEFAULT); /* set field `cpath' */
+  /* set field 'path' */
+  setpath(L, "path", LUA_PATHVERSION, LUA_PATH, LUA_PATH_DEFAULT);
+  /* set field 'cpath' */
+  setpath(L, "cpath", LUA_CPATHVERSION, LUA_CPATH, LUA_CPATH_DEFAULT);
   /* store config information */
   lua_pushliteral(L, LUA_DIRSEP "\n" LUA_PATH_SEP "\n" LUA_PATH_MARK "\n"
                      LUA_EXEC_DIR "\n" LUA_IGMARK "\n");
   lua_setfield(L, -2, "config");
   /* set field `loaded' */
-  luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 2);
+  luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED");
   lua_setfield(L, -2, "loaded");
   /* set field `preload' */
-  lua_newtable(L);
+  luaL_findtable(L, LUA_REGISTRYINDEX, "_PRELOAD");
   lua_setfield(L, -2, "preload");
   lua_pushglobaltable(L);
   lua_pushvalue(L, -2);  /* set 'package' as upvalue for next lib */
-  luaL_openlib(L, NULL, ll_funcs, 1);  /* open lib into global table */
+  luaL_setfuncs(L, ll_funcs, 1);  /* open lib into global table */
   lua_pop(L, 1);  /* pop global table */
   return 1;  /* return 'package' table */
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: print.c,v 1.60 2010/05/17 22:27:10 lhf Exp $
+** $Id: print.c,v 1.61 2010/07/31 11:34:07 lhf Exp $
 ** print bytecodes
 ** See Copyright Notice in lua.h
 */
@@ -71,6 +71,8 @@ static void PrintConstant(const Proto* f, int i)
  }
 }
 
+#define UPVALNAME(x) ((f->upvalues[x].name) ? getstr(f->upvalues[x].name) : "-")
+
 static void PrintCode(const Proto* f)
 {
  const Instruction* code=f->code;
@@ -116,14 +118,14 @@ static void PrintCode(const Proto* f)
     break;
    case OP_GETUPVAL:
    case OP_SETUPVAL:
-    printf("\t; %s", (f->sizeupvalues>0) ? getstr(f->upvalues[b].name) : "-");
+    printf("\t; %s", UPVALNAME(b));
     break;
    case OP_GETTABUP:
-    printf("\t; %s", (f->sizeupvalues>0) ? getstr(f->upvalues[b].name) : "-");
+    printf("\t; %s", UPVALNAME(b));
     if (ISK(c)) { printf(" "); PrintConstant(f,INDEXK(c)); }
     break;
    case OP_SETTABUP:
-    printf("\t; %s", (f->sizeupvalues>0) ? getstr(f->upvalues[a].name) : "-");
+    printf("\t; %s", UPVALNAME(a));
     if (ISK(b)) { printf(" "); PrintConstant(f,INDEXK(b)); }
     if (ISK(c)) { printf(" "); PrintConstant(f,INDEXK(c)); }
     break;

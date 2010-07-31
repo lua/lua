@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.270 2010/05/12 14:09:20 roberto Exp $
+** $Id: lua.h,v 1.273 2010/07/25 15:18:19 roberto Exp $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -16,8 +16,12 @@
 #include "luaconf.h"
 
 
-#define LUA_VERSION	"Lua 5.2"
-#define LUA_RELEASE	"Lua 5.2.0 (work3)"
+#define LUA_VERSION_MAJOR	"5"
+#define LUA_VERSION_MINOR	"2"
+#define LUA_VERSION_RELEASE	"0" " (work4)"
+
+#define LUA_VERSION	"Lua " LUA_VERSION_MAJOR "." LUA_VERSION_MINOR
+#define LUA_RELEASE	LUA_VERSION "." LUA_VERSION_RELEASE
 #define LUA_VERSION_NUM	502
 #define LUA_COPYRIGHT	LUA_RELEASE "  Copyright (C) 1994-2010 Lua.org, PUC-Rio"
 #define LUA_AUTHORS	"R. Ierusalimschy, L. H. de Figueiredo, W. Celes"
@@ -153,8 +157,8 @@ LUA_API int             (lua_isuserdata) (lua_State *L, int idx);
 LUA_API int             (lua_type) (lua_State *L, int idx);
 LUA_API const char     *(lua_typename) (lua_State *L, int tp);
 
-LUA_API lua_Number      (lua_tonumber) (lua_State *L, int idx);
-LUA_API lua_Integer     (lua_tointeger) (lua_State *L, int idx);
+LUA_API lua_Number      (lua_tonumberx) (lua_State *L, int idx, int *isnum);
+LUA_API lua_Integer     (lua_tointegerx) (lua_State *L, int idx, int *isnum);
 LUA_API int             (lua_toboolean) (lua_State *L, int idx);
 LUA_API const char     *(lua_tolstring) (lua_State *L, int idx, size_t *len);
 LUA_API size_t          (lua_rawlen) (lua_State *L, int idx);
@@ -213,7 +217,7 @@ LUA_API void  (lua_rawgeti) (lua_State *L, int idx, int n);
 LUA_API void  (lua_createtable) (lua_State *L, int narr, int nrec);
 LUA_API void *(lua_newuserdata) (lua_State *L, size_t sz);
 LUA_API int   (lua_getmetatable) (lua_State *L, int objindex);
-LUA_API void  (lua_getenv) (lua_State *L, int idx);
+LUA_API void  (lua_getuservalue) (lua_State *L, int idx);
 
 
 /*
@@ -224,7 +228,7 @@ LUA_API void  (lua_setfield) (lua_State *L, int idx, const char *k);
 LUA_API void  (lua_rawset) (lua_State *L, int idx);
 LUA_API void  (lua_rawseti) (lua_State *L, int idx, int n);
 LUA_API int   (lua_setmetatable) (lua_State *L, int objindex);
-LUA_API void  (lua_setenv) (lua_State *L, int idx);
+LUA_API void  (lua_setuservalue) (lua_State *L, int idx);
 
 
 /*
@@ -295,6 +299,9 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 ** some useful macros
 ** ===============================================================
 */
+
+#define lua_tonumber(L,i)	lua_tonumberx(L,i,NULL)
+#define lua_tointeger(L,i)	lua_tointegerx(L,i,NULL)
 
 #define lua_pop(L,n)		lua_settop(L, -(n)-1)
 

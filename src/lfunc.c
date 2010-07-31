@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.24 2010/05/10 18:23:45 roberto Exp $
+** $Id: lfunc.c,v 2.27 2010/06/30 14:11:17 roberto Exp $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -16,7 +16,6 @@
 #include "lgc.h"
 #include "lmem.h"
 #include "lobject.h"
-#include "lopcodes.h"
 #include "lstate.h"
 
 
@@ -29,9 +28,11 @@ Closure *luaF_newCclosure (lua_State *L, int n) {
 }
 
 
-Closure *luaF_newLclosure (lua_State *L, int n) {
+Closure *luaF_newLclosure (lua_State *L, Proto *p) {
+  int n = p->sizeupvalues;
   Closure *c = &luaC_newobj(L, LUA_TFUNCTION, sizeLclosure(n), NULL, 0)->cl;
   c->l.isC = 0;
+  c->l.p = p;
   c->l.nupvalues = cast_byte(n);
   while (n--) c->l.upvals[n] = NULL;
   return c;
@@ -56,7 +57,7 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
     lua_assert(p->v != &p->u.value);
     if (p->v == level) {  /* found a corresponding upvalue? */
       if (isdead(g, o))  /* is it dead? */
-        changewhite(o);  /* ressurrect it */
+        changewhite(o);  /* resurrect it */
       return p;
     }
     resetoldbit(o);  /* may create a newer upval after this one */
@@ -116,6 +117,7 @@ Proto *luaF_newproto (lua_State *L) {
   f->p = NULL;
   f->sizep = 0;
   f->code = NULL;
+  f->cache = NULL;
   f->sizecode = 0;
   f->lineinfo = NULL;
   f->sizelineinfo = 0;

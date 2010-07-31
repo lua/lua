@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.50 2010/04/18 13:22:48 roberto Exp $
+** $Id: ltable.c,v 2.52 2010/06/25 12:18:10 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -148,7 +148,7 @@ static int findindex (lua_State *L, Table *t, StkId key) {
     Node *n = mainposition(t, key);
     do {  /* check whether `key' is somewhere in the chain */
       /* key may be dead already, but it is ok to use it in `next' */
-      if (luaO_rawequalObj(key2tval(n), key) ||
+      if (luaO_rawequalObj(gkey(n), key) ||
             (ttype(gkey(n)) == LUA_TDEADKEY && iscollectable(key) &&
              gcvalue(gkey(n)) == gcvalue(key))) {
         i = cast_int(n - gnode(t, 0));  /* key index in hash table */
@@ -174,7 +174,7 @@ int luaH_next (lua_State *L, Table *t, StkId key) {
   }
   for (i -= t->sizearray; i < sizenode(t); i++) {  /* then hash part */
     if (!ttisnil(gval(gnode(t, i)))) {  /* a non-nil value? */
-      setobj2s(L, key, key2tval(gnode(t, i)));
+      setobj2s(L, key, gkey(gnode(t, i)));
       setobj2s(L, key+1, gval(gnode(t, i)));
       return 1;
     }
@@ -255,7 +255,7 @@ static int numusehash (const Table *t, int *nums, int *pnasize) {
   while (i--) {
     Node *n = &t->node[i];
     if (!ttisnil(gval(n))) {
-      ause += countint(key2tval(n), nums);
+      ause += countint(gkey(n), nums);
       totaluse++;
     }
   }
@@ -321,7 +321,7 @@ void luaH_resize (lua_State *L, Table *t, int nasize, int nhsize) {
   for (i = twoto(oldhsize) - 1; i >= 0; i--) {
     Node *old = nold+i;
     if (!ttisnil(gval(old)))
-      setobjt2t(L, luaH_set(L, t, key2tval(old)), gval(old));
+      setobjt2t(L, luaH_set(L, t, gkey(old)), gval(old));
   }
   if (!isdummy(nold))
     luaM_freearray(L, nold, twoto(oldhsize));  /* free old array */
@@ -406,7 +406,7 @@ static TValue *newkey (lua_State *L, Table *t, const TValue *key) {
       return luaH_set(L, t, key);  /* re-insert key into grown table */
     }
     lua_assert(!isdummy(n));
-    othern = mainposition(t, key2tval(mp));
+    othern = mainposition(t, gkey(mp));
     if (othern != mp) {  /* is colliding node out of its main position? */
       /* yes; move colliding node into free position */
       while (gnext(othern) != mp) othern = gnext(othern);  /* find previous */
@@ -423,7 +423,7 @@ static TValue *newkey (lua_State *L, Table *t, const TValue *key) {
     }
   }
   setobj2t(L, gkey(mp), key);
-  luaC_barriert(L, t, key);
+  luaC_barrierback(L, obj2gco(t), key);
   lua_assert(ttisnil(gval(mp)));
   return gval(mp);
 }
@@ -481,7 +481,7 @@ const TValue *luaH_get (Table *t, const TValue *key) {
     default: {
       Node *n = mainposition(t, key);
       do {  /* check whether `key' is somewhere in the chain */
-        if (luaO_rawequalObj(key2tval(n), key))
+        if (luaO_rawequalObj(gkey(n), key))
           return gval(n);  /* that's it */
         else n = gnext(n);
       } while (n);

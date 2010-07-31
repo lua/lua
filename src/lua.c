@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.190 2010/04/14 15:14:21 roberto Exp $
+** $Id: lua.c,v 1.192 2010/07/25 15:03:37 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -31,9 +31,12 @@
 #define LUA_MAXINPUT		512
 #endif
 
-#if !defined(LUA_INIT_VAR)
-#define LUA_INIT_VAR		"LUA_INIT"
+#if !defined(LUA_INIT)
+#define LUA_INIT		"LUA_INIT"
 #endif
+
+#define LUA_INITVERSION  \
+	LUA_INIT "_" LUA_VERSION_MAJOR "_" LUA_VERSION_MINOR
 
 
 /*
@@ -167,14 +170,14 @@ static int traceback (lua_State *L) {
 }
 
 
-static int docall (lua_State *L, int narg, int clear) {
+static int docall (lua_State *L, int narg, int nres) {
   int status;
   int base = lua_gettop(L) - narg;  /* function index */
   lua_pushcfunction(L, traceback);  /* push traceback function */
   lua_insert(L, base);  /* put it under chunk and args */
   globalL = L;  /* to be available to 'laction' */
   signal(SIGINT, laction);
-  status = lua_pcall(L, narg, (clear ? 0 : LUA_MULTRET), base);
+  status = lua_pcall(L, narg, nres, base);
   signal(SIGINT, SIG_DFL);
   lua_remove(L, base);  /* remove traceback function */
   return status;
@@ -206,22 +209,31 @@ static int getargs (lua_State *L, char **argv, int n) {
 
 static int dofile (lua_State *L, const char *name) {
   int status = luaL_loadfile(L, name);
-  if (status == LUA_OK) status = docall(L, 0, 1);
+  if (status == LUA_OK) status = docall(L, 0, 0);
   return report(L, status);
 }
 
 
 static int dostring (lua_State *L, const char *s, const char *name) {
   int status = luaL_loadbuffer(L, s, strlen(s), name);
-  if (status == LUA_OK) status = docall(L, 0, 1);
+  if (status == LUA_OK) status = docall(L, 0, 0);
   return report(L, status);
 }
 
 
 static int dolibrary (lua_State *L, const char *name) {
-  lua_getglobal(L, "require");
+  int status;
+  lua_pushglobaltable(L);
+  lua_getfield(L, -1, "require");
   lua_pushstring(L, name);
-  return report(L, docall(L, 1, 1));
+  status = docall(L, 1, 1);
+  if (status == LUA_OK) {
+    lua_setfield(L, -2, name);  /* global[name] = require return */
+    lua_pop(L, 1);  /* remove global table */
+  }
+  else
+    lua_remove(L, -2);  /* remove global table (below error msg.) */
+  return report(L, status);
 }
 
 
@@ -297,7 +309,7 @@ static void dotty (lua_State *L) {
   const char *oldprogname = progname;
   progname = NULL;
   while ((status = loadline(L)) != -1) {
-    if (status == LUA_OK) status = docall(L, 0, 0);
+    if (status == LUA_OK) status = docall(L, 0, LUA_MULTRET);
     report(L, status);
     if (status == LUA_OK && lua_gettop(L) > 0) {  /* any result to print? */
       luaL_checkstack(L, LUA_MINSTACK, "too many results to print");
@@ -326,7 +338,7 @@ static int handle_script (lua_State *L, char **argv, int n) {
   status = luaL_loadfile(L, fname);
   lua_insert(L, -(narg+1));
   if (status == LUA_OK)
-    status = docall(L, narg, 0);
+    status = docall(L, narg, LUA_MULTRET);
   else
     lua_pop(L, narg);
   return report(L, status);
@@ -400,12 +412,17 @@ static int runargs (lua_State *L, char **argv, int n) {
 
 
 static int handle_luainit (lua_State *L) {
-  const char *init = getenv(LUA_INIT_VAR);
+  const char *name = "=" LUA_INITVERSION;
+  const char *init = getenv(name + 1);
+  if (init == NULL) {
+    name = "=" LUA_INIT;
+    init = getenv(name + 1);  /* try alternative name */
+  }
   if (init == NULL) return LUA_OK;
   else if (init[0] == '@')
     return dofile(L, init+1);
   else
-    return dostring(L, init, "=" LUA_INIT_VAR);
+    return dostring(L, init, name);
 }
 
 

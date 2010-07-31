@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.74 2009/11/24 12:05:44 roberto Exp $
+** $Id: lmathlib.c,v 1.75 2010/07/02 11:38:13 roberto Exp $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -263,7 +263,7 @@ static const luaL_Reg mathlib[] = {
 ** Open math library
 */
 LUAMOD_API int luaopen_math (lua_State *L) {
-  luaL_register(L, LUA_MATHLIBNAME, mathlib);
+  luaL_newlib(L, mathlib);
   lua_pushnumber(L, PI);
   lua_setfield(L, -2, "pi");
   lua_pushnumber(L, HUGE_VAL);

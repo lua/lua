@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.212 2010/05/18 17:21:24 roberto Exp $
+** $Id: lauxlib.c,v 1.219 2010/07/28 15:51:59 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -308,8 +308,9 @@ LUALIB_API const char *luaL_optlstring (lua_State *L, int narg,
 
 
 LUALIB_API lua_Number luaL_checknumber (lua_State *L, int narg) {
-  lua_Number d = lua_tonumber(L, narg);
-  if (d == 0 && !lua_isnumber(L, narg))  /* avoid extra test when d is not 0 */
+  int isnum;
+  lua_Number d = lua_tonumberx(L, narg, &isnum);
+  if (!isnum)
     tag_error(L, narg, LUA_TNUMBER);
   return d;
 }
@@ -321,8 +322,9 @@ LUALIB_API lua_Number luaL_optnumber (lua_State *L, int narg, lua_Number def) {
 
 
 LUALIB_API lua_Integer luaL_checkinteger (lua_State *L, int narg) {
-  lua_Integer d = lua_tointeger(L, narg);
-  if (d == 0 && !lua_isnumber(L, narg))  /* avoid extra test when d is not 0 */
+  int isnum;
+  lua_Integer d = lua_tointegerx(L, narg, &isnum);
+  if (!isnum)
     tag_error(L, narg, LUA_TNUMBER);
   return d;
 }
@@ -476,26 +478,25 @@ LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
 */
 
 typedef struct LoadF {
-  int first;
-  FILE *f;
-  char buff[LUAL_BUFFERSIZE];
+  int n;  /* number of pre-read characters */
+  FILE *f;  /* file being read */
+  char buff[LUAL_BUFFERSIZE];  /* area for reading file */
 } LoadF;
 
 
 static const char *getF (lua_State *L, void *ud, size_t *size) {
   LoadF *lf = (LoadF *)ud;
   (void)L;
-  if (lf->first != EOF) {
-    *size = 1;
-    lf->buff[0] = (char)lf->first;
-    lf->first = EOF;
+  if (lf->n > 0) {  /* are there pre-read characters to be read? */
+    *size = lf->n;  /* return them (chars already in buffer) */
+    lf->n = 0;  /* no more pre-read characters */
   }
-  else {
+  else {  /* read a block from file */
     /* 'fread' can return > 0 *and* set the EOF flag. If next call to
        'getF' called 'fread', it might still wait for user input.
        The next check avoids this problem. */
     if (feof(lf->f)) return NULL;
-    *size = fread(lf->buff, 1, sizeof(lf->buff), lf->f);
+    *size = fread(lf->buff, 1, sizeof(lf->buff), lf->f);  /* read block */
   }
   return lf->buff;
 }
@@ -507,6 +508,23 @@ static int errfile (lua_State *L, const char *what, int fnameindex) {
   lua_pushfstring(L, "cannot %s %s: %s", what, filename, serr);
   lua_remove(L, fnameindex);
   return LUA_ERRFILE;
+}
+
+
+/*
+** reads the first character of file 'f' and skips its first line
+** if it starts with '#'. Returns true if it skipped the first line.
+** In any case, '*cp' has the first "valid" character of the file
+** (after the optional first-line comment).
+*/
+static int skipcomment (FILE *f, int *cp) {
+  int c = *cp = getc(f);
+  if (c == '#') {  /* first line is a comment (Unix exec. file)? */
+    while ((c = getc(f)) != EOF && c != '\n') ;  /* skip first line */
+    *cp = getc(f);  /* skip end-of-line */
+    return 1;  /* there was a comment */
+  }
+  else return 0;  /* no comment */
 }
 
 
@@ -524,16 +542,17 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
     lf.f = fopen(filename, "r");
     if (lf.f == NULL) return errfile(L, "open", fnameindex);
   }
-  c = getc(lf.f);
-  if (c == '#') {  /* Unix exec. file? */
-    while ((c = getc(lf.f)) != EOF && c != '\n') ;  /* skip first line */
-  }
-  else if (c == LUA_SIGNATURE[0] && filename) {  /* binary file? */
+  lf.n = 0;
+  if (skipcomment(lf.f, &c))  /* read initial portion */
+    lf.buff[lf.n++] = '\n';  /* add line to correct line numbers */
+  if (c == LUA_SIGNATURE[0] && filename) {  /* binary file? */
     lf.f = freopen(filename, "rb", lf.f);  /* reopen in binary mode */
     if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
-    c = getc(lf.f);  /* re-read first character */
+    lf.n = 0;
+    skipcomment(lf.f, &c);  /* re-read initial portion */
   }
-  lf.first = c;  /* 'c' is the first character of the stream */
+  if (c != EOF)
+    lf.buff[lf.n++] = c;  /* 'c' is the first character of the stream */
   status = lua_load(L, getF, &lf, lua_tostring(L, -1));
   readstatus = ferror(lf.f);
   if (filename) fclose(lf.f);  /* close file (even in case of errors) */
@@ -607,9 +626,10 @@ LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
 
 LUALIB_API int luaL_len (lua_State *L, int idx) {
   int l;
+  int isnum;
   lua_len(L, idx);
-  l = lua_tointeger(L, -1);
-  if (l == 0 && !lua_isnumber(L, -1))
+  l = lua_tointegerx(L, -1, &isnum);
+  if (!isnum)
     luaL_error(L, "object length is not a number");
   lua_pop(L, 1);  /* remove object */
   return l;
@@ -639,63 +659,15 @@ LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len) {
 }
 
 
-static int libsize (const luaL_Reg *l) {
-  int size = 0;
-  for (; l && l->name; l++) size++;
-  return size;
-}
+/*
+** {======================================================
+** Compatibility with 5.1 module functions
+** =======================================================
+*/
+#if defined(LUA_COMPAT_MODULE)
 
-
-LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
-                               const luaL_Reg *l, int nup) {
-  luaL_checkversion(L);
-  if (libname) {
-    /* check whether lib already exists */
-    luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 1);
-    lua_getfield(L, -1, libname);  /* get _LOADED[libname] */
-    if (!lua_istable(L, -1)) {  /* not found? */
-      lua_pop(L, 1);  /* remove previous result */
-      /* try global variable (and create one if it does not exist) */
-      lua_pushglobaltable(L);
-      if (luaL_findtable(L, 0, libname, libsize(l)) != NULL)
-        luaL_error(L, "name conflict for module " LUA_QS, libname);
-      lua_pushvalue(L, -1);
-      lua_setfield(L, -3, libname);  /* _LOADED[libname] = new table */
-    }
-    lua_remove(L, -2);  /* remove _LOADED table */
-    lua_insert(L, -(nup + 1));  /* move library table to below upvalues */
-  }
-  luaL_checkstack(L, nup, "too many upvalues");
-  for (; l && l->name; l++) {  /* fill the table with given functions */
-    int i;
-    for (i = 0; i < nup; i++)  /* copy upvalues to the top */
-      lua_pushvalue(L, -nup);
-    lua_pushcclosure(L, l->func, nup);
-    lua_setfield(L, -(nup + 2), l->name);
-  }
-  lua_pop(L, nup);  /* remove upvalues */
-}
-
-
-LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
-                                                               const char *r) {
-  const char *wild;
-  size_t l = strlen(p);
-  luaL_Buffer b;
-  luaL_buffinit(L, &b);
-  while ((wild = strstr(s, p)) != NULL) {
-    luaL_addlstring(&b, s, wild - s);  /* push prefix */
-    luaL_addstring(&b, r);  /* push replacement in place of pattern */
-    s = wild + l;  /* continue after `p' */
-  }
-  luaL_addstring(&b, s);  /* push last suffix */
-  luaL_pushresult(&b);
-  return lua_tostring(L, -1);
-}
-
-
-LUALIB_API const char *luaL_findtable (lua_State *L, int idx,
-                                       const char *fname, int szhint) {
+static const char *luaL_findtablex (lua_State *L, int idx,
+                                    const char *fname, int szhint) {
   const char *e;
   if (idx) lua_pushvalue(L, idx);
   do {
@@ -718,6 +690,128 @@ LUALIB_API const char *luaL_findtable (lua_State *L, int idx,
     fname = e + 1;
   } while (*e == '.');
   return NULL;
+}
+
+
+/*
+** Count number of elements in a luaL_Reg list.
+*/
+static int libsize (const luaL_Reg *l) {
+  int size = 0;
+  for (; l && l->name; l++) size++;
+  return size;
+}
+
+
+/*
+** Find or create a module table with a given name. The function
+** first looks at the _LOADED table and, if that fails, try a
+** global variable with that name. In any case, leaves on the stack
+** the module table.
+*/
+LUALIB_API void luaL_pushmodule (lua_State *L, const char *modname,
+                                 int sizehint) {
+  luaL_findtablex(L, LUA_REGISTRYINDEX, "_LOADED", 1);  /* get _LOADED table */
+  lua_getfield(L, -1, modname);  /* get _LOADED[modname] */
+  if (!lua_istable(L, -1)) {  /* not found? */
+    lua_pop(L, 1);  /* remove previous result */
+    /* try global variable (and create one if it does not exist) */
+    lua_pushglobaltable(L);
+    if (luaL_findtablex(L, 0, modname, sizehint) != NULL)
+      luaL_error(L, "name conflict for module " LUA_QS, modname);
+    lua_pushvalue(L, -1);
+    lua_setfield(L, -3, modname);  /* _LOADED[modname] = new table */
+  }
+  lua_remove(L, -2);  /* remove _LOADED table */
+}
+
+
+LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
+                               const luaL_Reg *l, int nup) {
+  luaL_checkversion(L);
+  if (libname) {
+    luaL_pushmodule(L, libname, libsize(l));  /* get/create library table */
+    lua_insert(L, -(nup + 1));  /* move library table to below upvalues */
+  }
+  luaL_setfuncs(L, l, nup);
+}
+
+#endif
+/* }====================================================== */
+
+/*
+** set functions from list 'l' into table at top - 'nup'; each
+** function gets the 'nup' elements at the top as upvalues.
+** Returns with only the table at the stack.
+*/
+LUALIB_API void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup) {
+  luaL_checkstack(L, nup, "too many upvalues");
+  for (; l && l->name; l++) {  /* fill the table with given functions */
+    int i;
+    for (i = 0; i < nup; i++)  /* copy upvalues to the top */
+      lua_pushvalue(L, -nup);
+    lua_pushcclosure(L, l->func, nup);  /* closure with those upvalues */
+    lua_setfield(L, -(nup + 2), l->name);
+  }
+  lua_pop(L, nup);  /* remove upvalues */
+}
+
+
+/*
+** ensure that stack[idx][fname] has a table and push that table
+** into the stack
+*/
+LUALIB_API void luaL_findtable (lua_State *L, int idx, const char *fname) {
+  lua_getfield(L, idx, fname);
+  if (lua_istable(L, -1)) return;  /* table already there */
+  else {
+    idx = lua_absindex(L, idx);
+    lua_pop(L, 1);  /* remove previous result */
+    lua_newtable(L);
+    lua_pushvalue(L, -1);  /* copy to be left at top */
+    lua_setfield(L, idx, fname);  /* assign new table to field */
+  }
+}
+
+
+/*
+** stripped-down 'require'. Calls 'openf' to open a module,
+** registers the result in 'package.loaded' table and, if 'glb'
+** is true, also registers the result in the global table.
+** Leaves resulting module on the top.
+*/
+LUALIB_API void luaL_requiref (lua_State *L, const char *modname,
+                               lua_CFunction openf, int glb) {
+  lua_pushcfunction(L, openf);
+  lua_pushstring(L, modname);  /* argument to open function */
+  lua_call(L, 1, 1);  /* open module */
+  luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED");
+  lua_pushvalue(L, -2);  /* make copy of module (call result) */
+  lua_setfield(L, -2, modname);  /* _LOADED[modname] = module */
+  lua_pop(L, 1);  /* remove _LOADED table */
+  if (glb) {
+    lua_pushglobaltable(L);
+    lua_pushvalue(L, -2);  /* copy of 'mod' */
+    lua_setfield(L, -2, modname);  /* _G[modname] = module */
+    lua_pop(L, 1);  /* remove _G table */
+  }
+}
+
+
+LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
+                                                               const char *r) {
+  const char *wild;
+  size_t l = strlen(p);
+  luaL_Buffer b;
+  luaL_buffinit(L, &b);
+  while ((wild = strstr(s, p)) != NULL) {
+    luaL_addlstring(&b, s, wild - s);  /* push prefix */
+    luaL_addstring(&b, r);  /* push replacement in place of pattern */
+    s = wild + l;  /* continue after `p' */
+  }
+  luaL_addstring(&b, s);  /* push last suffix */
+  luaL_pushresult(&b);
+  return lua_tostring(L, -1);
 }
 
 

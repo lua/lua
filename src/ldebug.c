@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.70 2010/04/13 20:48:12 roberto Exp $
+** $Id: ldebug.c,v 2.72 2010/06/21 16:30:12 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -119,12 +119,21 @@ static const char *findlocal (lua_State *L, CallInfo *ci, int n,
 
 
 LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
-  StkId pos;
-  const char *name = findlocal(L, ar->i_ci, n, &pos);
+  const char *name;
   lua_lock(L);
-  if (name) {
-    setobj2s(L, L->top, pos);
-    api_incr_top(L);
+  if (ar == NULL) {  /* information about non-active function? */
+    if (!isLfunction(L->top - 1))  /* not a Lua function? */
+      name = NULL;
+    else  /* consider live variables at function start (parameters) */
+      name = luaF_getlocalname(clvalue(L->top - 1)->l.p, n, 0);
+  }
+  else {  /* active function; get information through 'ar' */
+    StkId pos;
+    name = findlocal(L, ar->i_ci, n, &pos);
+    if (name) {
+      setobj2s(L, L->top, pos);
+      api_incr_top(L);
+    }
   }
   lua_unlock(L);
   return name;
@@ -264,7 +273,7 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
 
 static void kname (Proto *p, int c, int reg, const char *what,
                    const char **name) {
-  if (c == reg && *what == 'c')
+  if (c == reg && what && *what == 'c')
     return;  /* index is a constant; name already correct */
   else if (ISK(c) && ttisstring(&p->k[INDEXK(c)]))
     *name = svalue(&p->k[INDEXK(c)]);

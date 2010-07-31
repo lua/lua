@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.129 2010/05/14 13:15:26 roberto Exp $
+** $Id: lapi.c,v 2.133 2010/07/25 15:18:19 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -55,7 +55,7 @@ static TValue *index2addr (lua_State *L, int idx) {
     return &G(L)->l_registry;
   else {  /* upvalues */
     idx = LUA_REGISTRYINDEX - idx;
-    api_check(L, idx <= UCHAR_MAX + 1, "upvalue index too large");
+    api_check(L, idx <= MAXUPVAL + 1, "upvalue index too large");
     if (ttislcf(ci->func))  /* light C function? */
       return cast(TValue *, luaO_nilobject);  /* it has no upvalues */
     else {
@@ -316,27 +316,34 @@ LUA_API int lua_compare (lua_State *L, int index1, int index2, int op) {
 }
 
 
-LUA_API lua_Number lua_tonumber (lua_State *L, int idx) {
+LUA_API lua_Number lua_tonumberx (lua_State *L, int idx, int *isnum) {
   TValue n;
   const TValue *o = index2addr(L, idx);
-  if (tonumber(o, &n))
+  if (tonumber(o, &n)) {
+    if (isnum) *isnum = 1;
     return nvalue(o);
-  else
+  }
+  else {
+    if (isnum) *isnum = 0;
     return 0;
+  }
 }
 
 
-LUA_API lua_Integer lua_tointeger (lua_State *L, int idx) {
+LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *isnum) {
   TValue n;
   const TValue *o = index2addr(L, idx);
   if (tonumber(o, &n)) {
     lua_Integer res;
     lua_Number num = nvalue(o);
     lua_number2integer(res, num);
+    if (isnum) *isnum = 1;
     return res;
   }
-  else
+  else {
+    if (isnum) *isnum = 0;
     return 0;
+  }
 }
 
 
@@ -507,7 +514,7 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   else {
     Closure *cl;
     api_checknelems(L, n);
-    api_check(L, n <= UCHAR_MAX, "upvalue index too large");
+    api_check(L, n <= MAXUPVAL, "upvalue index too large");
     luaC_checkGC(L);
     cl = luaF_newCclosure(L, n);
     cl->c.f = fn;
@@ -637,7 +644,7 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
 }
 
 
-LUA_API void lua_getenv (lua_State *L, int idx) {
+LUA_API void lua_getuservalue (lua_State *L, int idx) {
   StkId o;
   lua_lock(L);
   o = index2addr(L, idx);
@@ -689,7 +696,7 @@ LUA_API void lua_rawset (lua_State *L, int idx) {
   t = index2addr(L, idx);
   api_check(L, ttistable(t), "table expected");
   setobj2t(L, luaH_set(L, hvalue(t), L->top-2), L->top-1);
-  luaC_barriert(L, hvalue(t), L->top-1);
+  luaC_barrierback(L, gcvalue(t), L->top-1);
   L->top -= 2;
   lua_unlock(L);
 }
@@ -702,7 +709,7 @@ LUA_API void lua_rawseti (lua_State *L, int idx, int n) {
   o = index2addr(L, idx);
   api_check(L, ttistable(o), "table expected");
   setobj2t(L, luaH_setint(L, hvalue(o), n), L->top-1);
-  luaC_barriert(L, hvalue(o), L->top-1);
+  luaC_barrierback(L, gcvalue(o), L->top-1);
   L->top--;
   lua_unlock(L);
 }
@@ -725,7 +732,7 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
     case LUA_TTABLE: {
       hvalue(obj)->metatable = mt;
       if (mt)
-        luaC_objbarriert(L, hvalue(obj), mt);
+        luaC_objbarrierback(L, gcvalue(obj), mt);
       break;
     }
     case LUA_TUSERDATA: {
@@ -747,7 +754,7 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
 }
 
 
-LUA_API void lua_setenv (lua_State *L, int idx) {
+LUA_API void lua_setuservalue (lua_State *L, int idx) {
   StkId o;
   lua_lock(L);
   api_checknelems(L, 1);

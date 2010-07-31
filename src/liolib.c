@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.88 2010/03/26 20:58:11 roberto Exp $
+** $Id: liolib.c,v 2.91 2010/07/28 15:51:59 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -120,7 +120,7 @@ static FILE **newprefile (lua_State *L) {
 static FILE **newfile (lua_State *L) {
   FILE **pf = newprefile(L);
   lua_pushvalue(L, lua_upvalueindex(1));  /* set upvalue... */
-  lua_setenv(L, -2);  /* ... as environment for new file */
+  lua_setuservalue(L, -2);  /* ... as environment for new file */
   return pf;
 }
 
@@ -163,7 +163,7 @@ static int io_fclose (lua_State *L) {
 
 
 static int aux_close (lua_State *L) {
-  lua_getenv(L, 1);
+  lua_getuservalue(L, 1);
   lua_getfield(L, -1, "__close");
   return (lua_tocfunction(L, -1))(L);
 }
@@ -583,7 +583,7 @@ static void createmeta (lua_State *L) {
   luaL_newmetatable(L, LUA_FILEHANDLE);  /* create metatable for file handles */
   lua_pushvalue(L, -1);  /* push metatable */
   lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
-  luaL_register(L, NULL, flib);  /* add file methods to new metatable */
+  luaL_setfuncs(L, flib, 0);  /* add file methods to new metatable */
   lua_pop(L, 1);  /* pop new metatable */
 }
 
@@ -595,7 +595,7 @@ static void createstdfile (lua_State *L, FILE *f, int k, const char *fname) {
     lua_rawseti(L, 1, k);  /* add it to common upvalue */
   }
   lua_pushvalue(L, 3);  /* get environment for default files */
-  lua_setenv(L, -2);  /* set it as environment for file */
+  lua_setuservalue(L, -2);  /* set it as environment for file */
   lua_setfield(L, 2, fname);  /* add file to module */
 }
 
@@ -615,8 +615,9 @@ LUAMOD_API int luaopen_io (lua_State *L) {
   createmeta(L);
   /* create (private) environment (with fields IO_INPUT, IO_OUTPUT, __close) */
   newenv(L, io_fclose);  /* upvalue for all io functions at index 1 */
-  lua_pushvalue(L, -1);  /* copy to be consumed by 'openlib' */
-  luaL_openlib(L, LUA_IOLIBNAME, iolib, 1);  /* new module at index 2 */
+  luaL_newlibtable(L, iolib);  /* new module at index 2 */
+  lua_pushvalue(L, 1);  /* copy of env to be consumed by 'setfuncs' */
+  luaL_setfuncs(L, iolib, 1);
   /* create (and set) default files */
   newenv(L, io_noclose);  /* environment for default files at index 3 */
   createstdfile(L, stdin, IO_INPUT, "stdin");

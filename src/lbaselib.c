@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.243 2010/04/19 17:02:02 roberto Exp $
+** $Id: lbaselib.c,v 1.246 2010/07/02 11:38:13 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -210,29 +210,19 @@ static int luaB_pairs (lua_State *L) {
 }
 
 
-#if defined(LUA_COMPAT_IPAIRS)
-
 static int ipairsaux (lua_State *L) {
   int i = luaL_checkint(L, 2);
   luaL_checktype(L, 1, LUA_TTABLE);
   i++;  /* next value */
   lua_pushinteger(L, i);
   lua_rawgeti(L, 1, i);
-  return (lua_isnil(L, -1) && i > luaL_len(L, 1)) ? 0 : 2;
+  return (lua_isnil(L, -1)) ? 1 : 2;
 }
 
 
 static int luaB_ipairs (lua_State *L) {
   return pairsmeta(L, "__ipairs", 1, ipairsaux);
 }
-
-#else
-
-static int luaB_ipairs (lua_State *L) {
-  return luaL_error(L, "'ipairs' deprecated");
-}
-
-#endif
 
 
 static int load_aux (lua_State *L, int status) {
@@ -500,150 +490,13 @@ static const luaL_Reg base_funcs[] = {
 };
 
 
-/*
-** {======================================================
-** Coroutine library
-** =======================================================
-*/
-
-static int auxresume (lua_State *L, lua_State *co, int narg) {
-  int status;
-  if (!lua_checkstack(co, narg)) {
-    lua_pushliteral(L, "too many arguments to resume");
-    return -1;  /* error flag */
-  }
-  if (lua_status(co) == LUA_OK && lua_gettop(co) == 0) {
-    lua_pushliteral(L, "cannot resume dead coroutine");
-    return -1;  /* error flag */
-  }
-  lua_xmove(L, co, narg);
-  status = lua_resume(co, narg);
-  if (status == LUA_OK || status == LUA_YIELD) {
-    int nres = lua_gettop(co);
-    if (!lua_checkstack(L, nres + 1)) {
-      lua_pop(co, nres);  /* remove results anyway */
-      lua_pushliteral(L, "too many results to resume");
-      return -1;  /* error flag */
-    }
-    lua_xmove(co, L, nres);  /* move yielded values */
-    return nres;
-  }
-  else {
-    lua_xmove(co, L, 1);  /* move error message */
-    return -1;  /* error flag */
-  }
-}
-
-
-static int luaB_coresume (lua_State *L) {
-  lua_State *co = lua_tothread(L, 1);
-  int r;
-  luaL_argcheck(L, co, 1, "coroutine expected");
-  r = auxresume(L, co, lua_gettop(L) - 1);
-  if (r < 0) {
-    lua_pushboolean(L, 0);
-    lua_insert(L, -2);
-    return 2;  /* return false + error message */
-  }
-  else {
-    lua_pushboolean(L, 1);
-    lua_insert(L, -(r + 1));
-    return r + 1;  /* return true + `resume' returns */
-  }
-}
-
-
-static int luaB_auxwrap (lua_State *L) {
-  lua_State *co = lua_tothread(L, lua_upvalueindex(1));
-  int r = auxresume(L, co, lua_gettop(L));
-  if (r < 0) {
-    if (lua_isstring(L, -1)) {  /* error object is a string? */
-      luaL_where(L, 1);  /* add extra info */
-      lua_insert(L, -2);
-      lua_concat(L, 2);
-    }
-    lua_error(L);  /* propagate error */
-  }
-  return r;
-}
-
-
-static int luaB_cocreate (lua_State *L) {
-  lua_State *NL = lua_newthread(L);
-  luaL_checktype(L, 1, LUA_TFUNCTION);
-  lua_pushvalue(L, 1);  /* move function to top */
-  lua_xmove(L, NL, 1);  /* move function from L to NL */
-  return 1;
-}
-
-
-static int luaB_cowrap (lua_State *L) {
-  luaB_cocreate(L);
-  lua_pushcclosure(L, luaB_auxwrap, 1);
-  return 1;
-}
-
-
-static int luaB_yield (lua_State *L) {
-  return lua_yield(L, lua_gettop(L));
-}
-
-
-static int luaB_costatus (lua_State *L) {
-  lua_State *co = lua_tothread(L, 1);
-  luaL_argcheck(L, co, 1, "coroutine expected");
-  if (L == co) lua_pushliteral(L, "running");
-  else {
-    switch (lua_status(co)) {
-      case LUA_YIELD:
-        lua_pushliteral(L, "suspended");
-        break;
-      case LUA_OK: {
-        lua_Debug ar;
-        if (lua_getstack(co, 0, &ar) > 0)  /* does it have frames? */
-          lua_pushliteral(L, "normal");  /* it is running */
-        else if (lua_gettop(co) == 0)
-            lua_pushliteral(L, "dead");
-        else
-          lua_pushliteral(L, "suspended");  /* initial state */
-        break;
-      }
-      default:  /* some error occurred */
-        lua_pushliteral(L, "dead");
-        break;
-    }
-  }
-  return 1;
-}
-
-
-static int luaB_corunning (lua_State *L) {
-  int ismain = lua_pushthread(L);
-  lua_pushboolean(L, ismain);
-  return 2;
-}
-
-
-static const luaL_Reg co_funcs[] = {
-  {"create", luaB_cocreate},
-  {"resume", luaB_coresume},
-  {"running", luaB_corunning},
-  {"status", luaB_costatus},
-  {"wrap", luaB_cowrap},
-  {"yield", luaB_yield},
-  {NULL, NULL}
-};
-
-/* }====================================================== */
-
-
-static void base_open (lua_State *L) {
+LUAMOD_API int luaopen_base (lua_State *L) {
   /* set global _G */
   lua_pushglobaltable(L);
   lua_pushglobaltable(L);
   lua_setfield(L, -2, "_G");
   /* open lib into global table */
-  luaL_register(L, "_G", base_funcs);
+  luaL_setfuncs(L, base_funcs, 0);
   lua_pushliteral(L, LUA_VERSION);
   lua_setfield(L, -2, "_VERSION");  /* set global _VERSION */
   /* `newproxy' needs a weaktable as upvalue */
@@ -654,12 +507,6 @@ static void base_open (lua_State *L) {
   lua_setfield(L, -2, "__mode");  /* metatable(w).__mode = "kv" */
   lua_pushcclosure(L, luaB_newproxy, 1);
   lua_setfield(L, -2, "newproxy");  /* set global `newproxy' */
-}
-
-
-LUAMOD_API int luaopen_base (lua_State *L) {
-  base_open(L);
-  luaL_register(L, LUA_COLIBNAME, co_funcs);
-  return 2;
+  return 1;
 }
 

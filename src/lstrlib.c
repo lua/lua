@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.152 2010/05/04 17:20:33 roberto Exp $
+** $Id: lstrlib.c,v 1.154 2010/07/02 11:38:13 roberto Exp $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -241,6 +241,7 @@ static int match_class (int c, int cl) {
     case 'a' : res = isalpha(c); break;
     case 'c' : res = iscntrl(c); break;
     case 'd' : res = isdigit(c); break;
+    case 'g' : res = isgraph(c); break;
     case 'l' : res = islower(c); break;
     case 'p' : res = ispunct(c); break;
     case 's' : res = isspace(c); break;
@@ -912,7 +913,7 @@ static void createmetatable (lua_State *L) {
 ** Open string library
 */
 LUAMOD_API int luaopen_string (lua_State *L) {
-  luaL_register(L, LUA_STRLIBNAME, strlib);
+  luaL_newlib(L, strlib);
   createmetatable(L);
   return 1;
 }

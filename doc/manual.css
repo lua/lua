@@ -11,3 +11,10 @@ span.apii {
 	font-family: inherit ;
 }
 
+p+h1, ul+h1 {
+	padding-top: 0.4em ;
+	padding-bottom: 0.4em ;
+	padding-left: 20px ;
+	margin-left: -20px ;
+	background-color: #E0E0FF ;
+}
