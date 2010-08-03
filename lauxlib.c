@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.218 2010/07/02 12:01:53 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.219 2010/07/28 15:51:59 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -434,7 +434,7 @@ LUALIB_API char *luaL_buffinitsize (lua_State *L, luaL_Buffer *B, size_t sz) {
 */
 
 /* index of free-list header */
-#define freelist	"lua-freelist"
+#define freelist	0
 
 
 LUALIB_API int luaL_ref (lua_State *L, int t) {
@@ -444,12 +444,12 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
     lua_pop(L, 1);  /* remove from stack */
     return LUA_REFNIL;  /* `nil' has a unique fixed reference */
   }
-  lua_getfield(L, t, freelist);  /* get first free element */
-  ref = (int)lua_tointeger(L, -1);  /* ref = t[FREELIST_REF] */
+  lua_rawgeti(L, t, freelist);  /* get first free element */
+  ref = (int)lua_tointeger(L, -1);  /* ref = t[freelist] */
   lua_pop(L, 1);  /* remove it from stack */
   if (ref != 0) {  /* any free element? */
     lua_rawgeti(L, t, ref);  /* remove it from list */
-    lua_setfield(L, t, freelist);  /* (t[freelist] = t[ref]) */
+    lua_rawseti(L, t, freelist);  /* (t[freelist] = t[ref]) */
   }
   else  /* no free elements */
     ref = (int)lua_rawlen(L, t) + 1;  /* get a new reference */
@@ -461,10 +461,10 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
 LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
   if (ref >= 0) {
     t = lua_absindex(L, t);
-    lua_getfield(L, t, freelist);
+    lua_rawgeti(L, t, freelist);
     lua_rawseti(L, t, ref);  /* t[ref] = t[freelist] */
     lua_pushinteger(L, ref);
-    lua_setfield(L, t, freelist);  /* t[freelist] = ref */
+    lua_rawseti(L, t, freelist);  /* t[freelist] = ref */
   }
 }
 
