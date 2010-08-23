@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.245 2010/06/13 19:41:34 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.246 2010/07/02 11:38:13 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -330,11 +330,14 @@ static int luaB_load (lua_State *L) {
 
 static int luaB_loadin (lua_State *L) {
   int n;
-  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_checkany(L, 1);
   n = luaB_load_aux(L, 2);
   if (n == 1) {  /* success? */
+    const char *name;
     lua_pushvalue(L, 1);  /* environment for loaded function */
-    lua_setupvalue(L, -2, 1);
+    name = lua_setupvalue(L, -2, 1);
+    if (name == NULL || strcmp(name, "_ENV") != 0)
+      luaL_error(L, "loaded chunk does not have environment upvalue");
   }
   return n;
 }
