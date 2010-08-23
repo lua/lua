@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.89 2010/07/02 20:42:40 roberto Exp roberto $
+** $Id: lparser.c,v 2.90 2010/07/07 16:27:29 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -352,15 +352,20 @@ static void leaveblock (FuncState *fs) {
 }
 
 
-static void pushclosure (LexState *ls, Proto *clp, expdesc *v) {
+/*
+** adds prototype being created into its parent list of prototypes
+** and codes instruction to create new closure
+*/
+static void codeclosure (LexState *ls, Proto *clp, expdesc *v) {
   FuncState *fs = ls->fs->prev;
   Proto *f = fs->f;  /* prototype of function creating new closure */
-  int oldsize = f->sizep;
-  luaM_growvector(ls->L, f->p, fs->np, f->sizep, Proto *,
-                  MAXARG_Bx, "functions");
-  while (oldsize < f->sizep) f->p[oldsize++] = NULL;
+  if (fs->np >= f->sizep) {
+    int oldsize = f->sizep;
+    luaM_growvector(ls->L, f->p, fs->np, f->sizep, Proto *,
+                    MAXARG_Bx, "functions");
+    while (oldsize < f->sizep) f->p[oldsize++] = NULL;
+  }
   f->p[fs->np++] = clp;
-  /* initial environment for new function is current lexical environment */
   luaC_objbarrier(ls->L, f, clp);
   init_exp(v, VRELOCABLE, luaK_codeABx(fs, OP_CLOSURE, 0, fs->np-1));
 }
@@ -653,7 +658,7 @@ static void body (LexState *ls, expdesc *e, int needself, int line) {
   chunk(ls);
   new_fs.f->lastlinedefined = ls->linenumber;
   check_match(ls, TK_END, TK_FUNCTION, line);
-  pushclosure(ls, new_fs.f, e);
+  codeclosure(ls, new_fs.f, e);
   close_func(ls);
 }
 
