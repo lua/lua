@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.134 2010/08/04 18:40:28 roberto Exp roberto $
+** $Id: lapi.c,v 2.135 2010/09/03 14:14:01 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -891,7 +891,7 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
       /* get global table from registry */
       Table *reg = hvalue(&G(L)->l_registry);
       const TValue *gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
-      /* set global table as 1st upvalue of 'f' (may be _ENV) */
+      /* set global table as 1st upvalue of 'f' (may be LUA_ENV) */
       setobj(L, f->l.upvals[0]->v, gt);
       luaC_barrier(L, f->l.upvals[0], gt);
     }

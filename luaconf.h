@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.141 2010/07/25 15:02:41 roberto Exp roberto $
+** $Id: luaconf.h,v 1.142 2010/07/28 15:51:59 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -113,6 +113,14 @@
 #else
 #define LUA_DIRSEP	"/"
 #endif
+
+
+/*
+@@ LUA_ENV is the name of the variable that holds the current
+@@ environment, used to access global names.
+** CHANGE it if you do not like this name.
+*/
+#define LUA_ENV		"_ENV"
 
 
 /*

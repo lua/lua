@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.71 2010/06/16 13:44:36 roberto Exp roberto $
+** $Id: ldebug.c,v 2.72 2010/06/21 16:30:12 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -315,7 +315,7 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
                            ? luaF_getlocalname(p, t + 1, pc)
                            : getstr(p->upvalues[t].name);
           kname(p, k, a, what, name);
-          what = (vn && strcmp(vn, "_ENV") == 0) ? "global" : "field";
+          what = (vn && strcmp(vn, LUA_ENV) == 0) ? "global" : "field";
         }
         break;
       }

@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.89 2010/07/28 15:51:59 roberto Exp roberto $
+** $Id: loadlib.c,v 1.90 2010/08/02 17:14:48 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -496,7 +496,7 @@ static int ll_require (lua_State *L) {
 #if defined(LUA_COMPAT_MODULE)
 
 /*
-** changes the _ENV variable of calling function
+** changes the environment variable of calling function
 */
 static void set_env (lua_State *L) {
   lua_Debug ar;
