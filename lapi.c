@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.135 2010/09/03 14:14:01 roberto Exp roberto $
+** $Id: lapi.c,v 2.136 2010/09/07 19:21:39 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1107,11 +1107,15 @@ static const char *aux_upvalue (StkId fi, int n, TValue **val,
     return "";
   }
   else {
+    const char *name;
     Proto *p = f->l.p;
     if (!(1 <= n && n <= p->sizeupvalues)) return NULL;
     *val = f->l.upvals[n-1]->v;
     if (owner) *owner = obj2gco(f->l.upvals[n - 1]);
-    return getstr(p->upvalues[n-1].name);
+    name = getstr(p->upvalues[n-1].name);
+    if (name == NULL)  /* no debug information? */
+      name = "";
+    return name;
   }
 }
 
