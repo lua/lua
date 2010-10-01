@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.219 2010/07/28 15:51:59 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.220 2010/08/03 20:21:16 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -511,17 +511,32 @@ static int errfile (lua_State *L, const char *what, int fnameindex) {
 }
 
 
+static int skipBOM (LoadF *lf) {
+  const char *p = "\xEF\xBB\xBF";  /* Utf8 BOM mark */
+  int c;
+  lf->n = 0;
+  do {
+    c = getc(lf->f);
+    if (c == EOF || c != *(unsigned char *)p++) return c;
+    lf->buff[lf->n++] = c;  /* to be read by the parser */
+  } while (*p != '\0');
+  lf->n = 0;  /* prefix matched; discard it */
+  return getc(lf->f);  /* return next character */
+}
+
+
 /*
-** reads the first character of file 'f' and skips its first line
-** if it starts with '#'. Returns true if it skipped the first line.
-** In any case, '*cp' has the first "valid" character of the file
-** (after the optional first-line comment).
+** reads the first character of file 'f' and skips an optional BOM mark
+** in its beginning plus its first line if it starts with '#'. Returns
+** true if it skipped the first line.  In any case, '*cp' has the
+** first "valid" character of the file (after the optional BOM and
+** a first-line comment).
 */
-static int skipcomment (FILE *f, int *cp) {
-  int c = *cp = getc(f);
+static int skipcomment (LoadF *lf, int *cp) {
+  int c = *cp = skipBOM(lf);
   if (c == '#') {  /* first line is a comment (Unix exec. file)? */
-    while ((c = getc(f)) != EOF && c != '\n') ;  /* skip first line */
-    *cp = getc(f);  /* skip end-of-line */
+    while ((c = getc(lf->f)) != EOF && c != '\n') ;  /* skip first line */
+    *cp = getc(lf->f);  /* skip end-of-line */
     return 1;  /* there was a comment */
   }
   else return 0;  /* no comment */
@@ -542,14 +557,12 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
     lf.f = fopen(filename, "r");
     if (lf.f == NULL) return errfile(L, "open", fnameindex);
   }
-  lf.n = 0;
-  if (skipcomment(lf.f, &c))  /* read initial portion */
+  if (skipcomment(&lf, &c))  /* read initial portion */
     lf.buff[lf.n++] = '\n';  /* add line to correct line numbers */
   if (c == LUA_SIGNATURE[0] && filename) {  /* binary file? */
     lf.f = freopen(filename, "rb", lf.f);  /* reopen in binary mode */
     if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
-    lf.n = 0;
-    skipcomment(lf.f, &c);  /* re-read initial portion */
+    skipcomment(&lf, &c);  /* re-read initial portion */
   }
   if (c != EOF)
     lf.buff[lf.n++] = c;  /* 'c' is the first character of the stream */
