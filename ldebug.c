@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.72 2010/06/21 16:30:12 roberto Exp roberto $
+** $Id: ldebug.c,v 2.73 2010/09/07 19:21:39 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -160,9 +160,10 @@ static void funcinfo (lua_Debug *ar, Closure *cl) {
     ar->what = "C";
   }
   else {
-    ar->source = getstr(cl->l.p->source);
-    ar->linedefined = cl->l.p->linedefined;
-    ar->lastlinedefined = cl->l.p->lastlinedefined;
+    Proto *p = cl->l.p;
+    ar->source = p->source ? getstr(p->source) : "=?";
+    ar->linedefined = p->linedefined;
+    ar->lastlinedefined = p->lastlinedefined;
     ar->what = (ar->linedefined == 0) ? "main" : "Lua";
   }
   luaO_chunkid(ar->short_src, ar->source, LUA_IDSIZE);
@@ -496,7 +497,12 @@ static void addinfo (lua_State *L, const char *msg) {
   if (isLua(ci)) {  /* is Lua code? */
     char buff[LUA_IDSIZE];  /* add file:line information */
     int line = currentline(ci);
-    luaO_chunkid(buff, getstr(ci_func(ci)->l.p->source), LUA_IDSIZE);
+    TString *src = ci_func(ci)->l.p->source;
+    if (src)
+      luaO_chunkid(buff, getstr(src), LUA_IDSIZE);
+    else {  /* no source available; use "?" instead */
+      buff[0] = '?'; buff[1] = '\0';
+    }
     luaO_pushfstring(L, "%s:%d: %s", buff, line, msg);
   }
 }
