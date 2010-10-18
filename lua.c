@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.191 2010/07/02 17:36:32 roberto Exp roberto $
+** $Id: lua.c,v 1.192 2010/07/25 15:03:37 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -369,10 +369,11 @@ static int collectargs (char **argv, int *pi, int *pv, int *pe) {
         break;
       case 'e':
         *pe = 1;  /* go through */
-      case 'l':
-        if (argv[i][2] == '\0') {
-          i++;
-          if (argv[i] == NULL) return -(i - 1);
+      case 'l':  /* both options need an argument */
+        if (argv[i][2] == '\0') {  /* no concatenated argument? */
+          i++;  /* try next 'argv' */
+          if (argv[i] == NULL || argv[i][0] == '-')
+            return -(i - 1);  /* no next argument or it is another option */
         }
         break;
       default:  /* invalid option; return its index... */
