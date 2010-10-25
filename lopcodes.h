@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.135 2010/03/12 19:14:06 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.136 2010/10/13 16:45:54 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -123,7 +123,7 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 			| (cast(Instruction, bc)<<POS_Bx))
 
 #define CREATE_Ax(o,a)		((cast(Instruction, o)<<POS_OP) \
-			| (cast(Instruction, a)<<POS_A))
+			| (cast(Instruction, a)<<POS_Ax))
 
 
 /*
