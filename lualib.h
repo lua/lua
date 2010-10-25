@@ -1,5 +1,5 @@
 /*
-** $Id: lualib.h,v 1.39 2009/11/24 12:05:44 roberto Exp roberto $
+** $Id: lualib.h,v 1.40 2010/06/10 21:29:47 roberto Exp roberto $
 ** Lua standard libraries
 ** See Copyright Notice in lua.h
 */
@@ -32,8 +32,8 @@ LUAMOD_API int (luaopen_os) (lua_State *L);
 #define LUA_STRLIBNAME	"string"
 LUAMOD_API int (luaopen_string) (lua_State *L);
 
-#define LUA_BITLIBNAME	"bit"
-LUAMOD_API int (luaopen_bit) (lua_State *L);
+#define LUA_BITLIBNAME	"bit32"
+LUAMOD_API int (luaopen_bit32) (lua_State *L);
 
 #define LUA_MATHLIBNAME	"math"
 LUAMOD_API int (luaopen_math) (lua_State *L);

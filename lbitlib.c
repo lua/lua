@@ -1,5 +1,5 @@
 /*
-** $Id: lbitlib.c,v 1.5 2010/07/02 11:38:13 roberto Exp roberto $
+** $Id: lbitlib.c,v 1.6 2010/07/02 12:01:53 roberto Exp roberto $
 ** Standard library for bitwise operations
 ** See Copyright Notice in lua.h
 */
@@ -81,8 +81,7 @@ static int b_not (lua_State *L) {
 }
 
 
-static int b_shift (lua_State *L, int i) {
-  b_uint r = getuintarg(L, 1);
+static int b_shift (lua_State *L, b_uint r, int i) {
   if (i < 0) {  /* shift right? */
     i = -i;
     if (i >= NBITS) r = 0;
@@ -98,12 +97,27 @@ static int b_shift (lua_State *L, int i) {
 
 
 static int b_lshift (lua_State *L) {
-  return b_shift(L, luaL_checkint(L, 2));
+  return b_shift(L, getuintarg(L, 1), luaL_checkint(L, 2));
 }
 
 
 static int b_rshift (lua_State *L) {
-  return b_shift(L, -luaL_checkint(L, 2));
+  return b_shift(L, getuintarg(L, 1), -luaL_checkint(L, 2));
+}
+
+
+static int b_arshift (lua_State *L) {
+  b_uint r = getuintarg(L, 1);
+  int i = luaL_checkint(L, 2);
+  if (i < 0 || !(r & 0x80000000))
+    return b_shift(L, r, -i);
+  else {  /* arithmetic shift for 'negative' number */
+    if (i >= NBITS) r = 0xffffffff;
+    else
+      r = (r >> i) | ~(~(b_uint)0 >> i);  /* add signal bit */
+    lua_pushnumber(L, lua_uint2number(r));
+    return 1;
+  }
 }
 
 
@@ -133,6 +147,7 @@ static const luaL_Reg bitlib[] = {
   {"bxor", b_xor},
   {"bnot", b_not},
   {"lshift", b_lshift},
+  {"arshift", b_arshift},
   {"rshift", b_rshift},
   {"rol", b_rol},
   {"ror", b_ror},
@@ -141,7 +156,7 @@ static const luaL_Reg bitlib[] = {
 
 
 
-LUAMOD_API int luaopen_bit (lua_State *L) {
+LUAMOD_API int luaopen_bit32 (lua_State *L) {
   luaL_newlib(L, bitlib);
   return 1;
 }
