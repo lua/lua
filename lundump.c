@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.12 2009/09/30 15:38:37 roberto Exp roberto $
+** $Id: lundump.c,v 1.67 2010/10/13 21:04:52 lhf Exp $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -27,27 +27,20 @@ typedef struct {
  const char* name;
 } LoadState;
 
-#ifdef LUAC_TRUST_BINARIES
-#define IF(c,s)
-#else
-#define IF(c,s)		if (c) error(S,s)
-
 static void error(LoadState* S, const char* why)
 {
- luaO_pushfstring(S->L,"%s: %s in precompiled chunk",S->name,why);
+ luaO_pushfstring(S->L,"%s: %s precompiled chunk",S->name,why);
  luaD_throw(S->L,LUA_ERRSYNTAX);
 }
-#endif
 
 #define LoadMem(S,b,n,size)	LoadBlock(S,b,(n)*(size))
-#define	LoadByte(S)		(lu_byte)LoadChar(S)
+#define LoadByte(S)		(lu_byte)LoadChar(S)
 #define LoadVar(S,x)		LoadMem(S,&x,1,sizeof(x))
 #define LoadVector(S,b,n,size)	LoadMem(S,b,n,size)
 
 static void LoadBlock(LoadState* S, void* b, size_t size)
 {
- size_t r=luaZ_read(S->Z,b,size);
- IF (r!=0, "unexpected end");
+ if (luaZ_read(S->Z,b,size)!=0) error(S,"corrupted");
 }
 
 static int LoadChar(LoadState* S)
@@ -61,7 +54,6 @@ static int LoadInt(LoadState* S)
 {
  int x;
  LoadVar(S,x);
- IF (x<0, "bad integer");
  return x;
 }
 
@@ -94,7 +86,7 @@ static void LoadCode(LoadState* S, Proto* f)
  LoadVector(S,f->code,n,sizeof(Instruction));
 }
 
-static Proto* LoadFunction(LoadState* S, TString* p);
+static Proto* LoadFunction(LoadState* S);
 
 static void LoadConstants(LoadState* S, Proto* f)
 {
@@ -113,7 +105,7 @@ static void LoadConstants(LoadState* S, Proto* f)
 	setnilvalue(o);
 	break;
    case LUA_TBOOLEAN:
-	setbvalue(o,LoadChar(S)!=0);
+	setbvalue(o,LoadChar(S));
 	break;
    case LUA_TNUMBER:
 	setnvalue(o,LoadNumber(S));
@@ -121,16 +113,13 @@ static void LoadConstants(LoadState* S, Proto* f)
    case LUA_TSTRING:
 	setsvalue2n(S->L,o,LoadString(S));
 	break;
-   default:
-	IF (1, "bad constant");
-	break;
   }
  }
  n=LoadInt(S);
  f->p=luaM_newvector(S->L,n,Proto*);
  f->sizep=n;
  for (i=0; i<n; i++) f->p[i]=NULL;
- for (i=0; i<n; i++) f->p[i]=LoadFunction(S,f->source);
+ for (i=0; i<n; i++) f->p[i]=LoadFunction(S);
 }
 
 static void LoadUpvalues(LoadState* S, Proto* f)
@@ -150,6 +139,7 @@ static void LoadUpvalues(LoadState* S, Proto* f)
 static void LoadDebug(LoadState* S, Proto* f)
 {
  int i,n;
+ f->source=LoadString(S);
  n=LoadInt(S);
  f->lineinfo=luaM_newvector(S->L,n,int);
  f->sizelineinfo=n;
@@ -168,13 +158,10 @@ static void LoadDebug(LoadState* S, Proto* f)
  for (i=0; i<n; i++) f->upvalues[i].name=LoadString(S);
 }
 
-static Proto* LoadFunction(LoadState* S, TString* p)
+static Proto* LoadFunction(LoadState* S)
 {
- Proto* f;
- if (++G(S->L)->nCcalls > LUAI_MAXCCALLS) error(S, "function nest too deep");
- f=luaF_newproto(S->L);
+ Proto* f=luaF_newproto(S->L);
  setptvalue2s(S->L,S->L->top,f); incr_top(S->L);
- f->source=LoadString(S); if (f->source==NULL) f->source=p;
  f->linedefined=LoadInt(S);
  f->lastlinedefined=LoadInt(S);
  f->numparams=LoadByte(S);
@@ -185,7 +172,6 @@ static Proto* LoadFunction(LoadState* S, TString* p)
  LoadUpvalues(S,f);
  LoadDebug(S,f);
  S->L->top--;
- G(S->L)->nCcalls--;
  return f;
 }
 
@@ -195,7 +181,7 @@ static void LoadHeader(LoadState* S)
  char s[LUAC_HEADERSIZE];
  luaU_header(h);
  LoadBlock(S,s,LUAC_HEADERSIZE);
- IF (memcmp(h,s,LUAC_HEADERSIZE)!=0, "bad header");
+ if (memcmp(h,s,LUAC_HEADERSIZE)!=0) error(S,"incompatible");
 }
 
 /*
@@ -214,11 +200,13 @@ Proto* luaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name)
  S.Z=Z;
  S.b=buff;
  LoadHeader(&S);
- return LoadFunction(&S,luaS_newliteral(L,"=?"));
+ return LoadFunction(&S);
 }
 
 /*
 * make header
+* if you make any changes in the header or in LUA_SIGNATURE,
+* be sure to update LUAC_HEADERSIZE accordingly in lundump.h.
 */
 void luaU_header (char* h)
 {
