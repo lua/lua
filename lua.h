@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.273 2010/07/25 15:18:19 roberto Exp roberto $
+** $Id: lua.h,v 1.274 2010/09/03 14:14:01 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -106,6 +106,9 @@ typedef LUA_NUMBER lua_Number;
 /* type for integer functions */
 typedef LUA_INTEGER lua_Integer;
 
+/* unsigned integer type */
+typedef unsigned LUA_INT32 lua_Unsigned;
+
 
 
 /*
@@ -159,6 +162,7 @@ LUA_API const char     *(lua_typename) (lua_State *L, int tp);
 
 LUA_API lua_Number      (lua_tonumberx) (lua_State *L, int idx, int *isnum);
 LUA_API lua_Integer     (lua_tointegerx) (lua_State *L, int idx, int *isnum);
+LUA_API lua_Unsigned    (lua_tounsignedx) (lua_State *L, int idx, int *isnum);
 LUA_API int             (lua_toboolean) (lua_State *L, int idx);
 LUA_API const char     *(lua_tolstring) (lua_State *L, int idx, size_t *len);
 LUA_API size_t          (lua_rawlen) (lua_State *L, int idx);
@@ -196,6 +200,7 @@ LUA_API int   (lua_compare) (lua_State *L, int idx1, int idx2, int op);
 LUA_API void        (lua_pushnil) (lua_State *L);
 LUA_API void        (lua_pushnumber) (lua_State *L, lua_Number n);
 LUA_API void        (lua_pushinteger) (lua_State *L, lua_Integer n);
+LUA_API void        (lua_pushunsigned) (lua_State *L, lua_Unsigned n);
 LUA_API const char *(lua_pushlstring) (lua_State *L, const char *s, size_t l);
 LUA_API const char *(lua_pushstring) (lua_State *L, const char *s);
 LUA_API const char *(lua_pushvfstring) (lua_State *L, const char *fmt,
@@ -303,6 +308,7 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 
 #define lua_tonumber(L,i)	lua_tonumberx(L,i,NULL)
 #define lua_tointeger(L,i)	lua_tointegerx(L,i,NULL)
+#define lua_tounsigned(L,i)	lua_tounsignedx(L,i,NULL)
 
 #define lua_pop(L,n)		lua_settop(L, -(n)-1)
 

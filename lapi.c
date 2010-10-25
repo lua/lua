@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.137 2010/09/07 19:35:04 roberto Exp roberto $
+** $Id: lapi.c,v 2.138 2010/10/25 19:01:37 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -347,6 +347,23 @@ LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *isnum) {
 }
 
 
+LUA_API lua_Unsigned lua_tounsignedx (lua_State *L, int idx, int *isnum) {
+  TValue n;
+  const TValue *o = index2addr(L, idx);
+  if (tonumber(o, &n)) {
+    lua_Unsigned res;
+    lua_Number num = nvalue(o);
+    lua_number2uint(res, num);
+    if (isnum) *isnum = 1;
+    return res;
+  }
+  else {
+    if (isnum) *isnum = 0;
+    return 0;
+  }
+}
+
+
 LUA_API int lua_toboolean (lua_State *L, int idx) {
   const TValue *o = index2addr(L, idx);
   return !l_isfalse(o);
@@ -447,6 +464,16 @@ LUA_API void lua_pushnumber (lua_State *L, lua_Number n) {
 LUA_API void lua_pushinteger (lua_State *L, lua_Integer n) {
   lua_lock(L);
   setnvalue(L->top, cast_num(n));
+  api_incr_top(L);
+  lua_unlock(L);
+}
+
+
+LUA_API void lua_pushunsigned (lua_State *L, lua_Unsigned u) {
+  lua_Number n;
+  lua_lock(L);
+  n = lua_uint2number(u);
+  setnvalue(L->top, n);
   api_incr_top(L);
   lua_unlock(L);
 }
