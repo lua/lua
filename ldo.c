@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.88 2010/06/04 13:06:15 roberto Exp roberto $
+** $Id: ldo.c,v 2.89 2010/09/30 17:21:31 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -177,7 +177,7 @@ void luaD_growstack (lua_State *L, int n) {
   if (size > LUAI_MAXSTACK)  /* error after extra size? */
     luaD_throw(L, LUA_ERRERR);
   else {
-    int needed = L->top - L->stack + n + EXTRA_STACK;
+    int needed = cast_int(L->top - L->stack) + n + EXTRA_STACK;
     int newsize = 2 * size;
     if (newsize > LUAI_MAXSTACK) newsize = LUAI_MAXSTACK;
     if (newsize < needed) newsize = needed;

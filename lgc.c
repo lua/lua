@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.101 2010/06/30 14:11:17 roberto Exp roberto $
+** $Id: lgc.c,v 2.102 2010/09/03 14:14:01 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -449,7 +449,7 @@ static int traverseproto (global_State *g, Proto *f) {
 }
 
 
-static l_mem traverseclosure (global_State *g, Closure *cl) {
+static int traverseclosure (global_State *g, Closure *cl) {
   if (cl->c.isC) {
     int i;
     for (i=0; i<cl->c.nupvalues; i++)  /* mark its upvalues */

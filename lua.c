@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.192 2010/07/25 15:03:37 roberto Exp roberto $
+** $Id: lua.c,v 1.193 2010/10/18 16:06:33 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -428,7 +428,7 @@ static int handle_luainit (lua_State *L) {
 
 
 static int pmain (lua_State *L) {
-  int argc = lua_tointeger(L, 1);
+  int argc = (int)lua_tointeger(L, 1);
   char **argv = (char **)lua_touserdata(L, 2);
   int script;
   int has_i = 0, has_v = 0, has_e = 0;

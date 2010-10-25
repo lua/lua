@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.220 2010/08/03 20:21:16 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.221 2010/10/01 18:53:00 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -641,7 +641,7 @@ LUALIB_API int luaL_len (lua_State *L, int idx) {
   int l;
   int isnum;
   lua_len(L, idx);
-  l = lua_tointegerx(L, -1, &isnum);
+  l = (int)lua_tointegerx(L, -1, &isnum);
   if (!isnum)
     luaL_error(L, "object length is not a number");
   lua_pop(L, 1);  /* remove object */

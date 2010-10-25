@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.136 2010/09/07 19:21:39 roberto Exp roberto $
+** $Id: lapi.c,v 2.137 2010/09/07 19:35:04 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -85,7 +85,7 @@ LUA_API int lua_checkstack (lua_State *L, int size) {
   if (L->stack_last - L->top > size)  /* stack large enough? */
     res = 1;  /* yes; check is OK */
   else {  /* no; need to grow stack */
-    int inuse = L->top - L->stack + EXTRA_STACK;
+    int inuse = cast_int(L->top - L->stack) + EXTRA_STACK;
     if (inuse > LUAI_MAXSTACK - size)  /* can grow without overflow? */
       res = 0;  /* no */
     else  /* try to grow stack */
@@ -1155,13 +1155,11 @@ LUA_API const char *lua_setupvalue (lua_State *L, int funcindex, int n) {
 
 static UpVal **getupvalref (lua_State *L, int fidx, int n, Closure **pf) {
   Closure *f;
-  Proto *p;
   StkId fi = index2addr(L, fidx);
   api_check(L, ttisclosure(fi), "Lua function expected");
   f = clvalue(fi);
   api_check(L, !f->c.isC, "Lua function expected");
-  p = f->l.p;
-  api_check(L, (1 <= n && n <= p->sizeupvalues), "invalid upvalue index");
+  api_check(L, (1 <= n && n <= f->l.p->sizeupvalues), "invalid upvalue index");
   if (pf) *pf = f;
   return &f->l.upvals[n - 1];  /* get its upvalue pointer */
 }
