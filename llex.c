@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.38 2010/09/07 19:21:39 roberto Exp roberto $
+** $Id: llex.c,v 2.39 2010/09/13 21:49:58 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -232,7 +232,7 @@ static void read_numeral (LexState *ls, SemInfo *seminfo) {
 
 
 /*
-** skip a sequence '[=*=[' or ']=*]' and return its number of '='s or
+** skip a sequence '[=*[' or ']=*]' and return its number of '='s or
 ** -1 if sequence is malformed
 */
 static int skip_sep (LexState *ls) {
