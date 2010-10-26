@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.274 2010/09/03 14:14:01 roberto Exp roberto $
+** $Id: lua.h,v 1.275 2010/10/25 20:31:11 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -107,7 +107,7 @@ typedef LUA_NUMBER lua_Number;
 typedef LUA_INTEGER lua_Integer;
 
 /* unsigned integer type */
-typedef unsigned LUA_INT32 lua_Unsigned;
+typedef LUA_UNSIGNED lua_Unsigned;
 
 
 
