@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.143 2010/09/07 19:21:39 roberto Exp roberto $
+** $Id: luaconf.h,v 1.144 2010/10/26 19:32:19 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -477,6 +477,10 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
 @@ (0 for little endian, 1 for big endian); if not defined, Lua will
 @@ check it dynamically.
 */
+/* check for known architectures */
+#if defined(__i386__) || defined(__i386) || defined(i386)
+#define LUA_IEEEENDIAN	0
+#endif
 
 #if !defined(LUA_IEEEENDIAN)	/* { */
 #define LUAI_EXTRAIEEE	\
