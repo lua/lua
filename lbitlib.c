@@ -1,5 +1,5 @@
 /*
-** $Id: lbitlib.c,v 1.7 2010/10/25 14:32:36 roberto Exp roberto $
+** $Id: lbitlib.c,v 1.8 2010/10/25 20:31:11 roberto Exp roberto $
 ** Standard library for bitwise operations
 ** See Copyright Notice in lua.h
 */
@@ -134,16 +134,16 @@ static int b_ror (lua_State *L) {
 
 
 static const luaL_Reg bitlib[] = {
-  {"band", b_and},
-  {"btest", b_test},
-  {"bor", b_or},
-  {"bxor", b_xor},
-  {"bnot", b_not},
-  {"lshift", b_lshift},
-  {"arshift", b_arshift},
-  {"rshift", b_rshift},
-  {"rol", b_rol},
-  {"ror", b_ror},
+  {"AND", b_and},
+  {"TEST", b_test},
+  {"OR", b_or},
+  {"XOR", b_xor},
+  {"NOT", b_not},
+  {"SHL", b_lshift},
+  {"SAR", b_arshift},
+  {"SHR", b_rshift},
+  {"ROL", b_rol},
+  {"ROR", b_ror},
   {NULL, NULL}
 };
 
