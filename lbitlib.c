@@ -1,5 +1,5 @@
 /*
-** $Id: lbitlib.c,v 1.8 2010/10/25 20:31:11 roberto Exp roberto $
+** $Id: lbitlib.c,v 1.9 2010/10/27 16:50:32 roberto Exp roberto $
 ** Standard library for bitwise operations
 ** See Copyright Notice in lua.h
 */
@@ -13,12 +13,16 @@
 #include "lualib.h"
 
 
-/* number of bits considered when shifting/rotating (must be a power of 2) */
+/* number of bits to consider in a number */
 #define NBITS	32
 
+#define ALLONES		(~(((~(lua_Unsigned)0) << (NBITS - 1)) << 1))
 
-typedef LUA_INT32 b_int;
-typedef unsigned LUA_INT32 b_uint;
+/* mask to trim extra bits */
+#define trim(x)		((x) & ALLONES)
+
+
+typedef lua_Unsigned b_uint;
 
 
 #define getuintarg(L,arg)	luaL_checkunsigned(L,arg)
@@ -29,7 +33,7 @@ static b_uint andaux (lua_State *L) {
   b_uint r = ~(b_uint)0;
   for (i = 1; i <= n; i++)
     r &= getuintarg(L, i);
-  return r;
+  return trim(r);
 }
 
 
@@ -52,7 +56,7 @@ static int b_or (lua_State *L) {
   b_uint r = 0;
   for (i = 1; i <= n; i++)
     r |= getuintarg(L, i);
-  lua_pushunsigned(L, r);
+  lua_pushunsigned(L, trim(r));
   return 1;
 }
 
@@ -62,14 +66,14 @@ static int b_xor (lua_State *L) {
   b_uint r = 0;
   for (i = 1; i <= n; i++)
     r ^= getuintarg(L, i);
-  lua_pushunsigned(L, r);
+  lua_pushunsigned(L, trim(r));
   return 1;
 }
 
 
 static int b_not (lua_State *L) {
   b_uint r = ~getuintarg(L, 1);
-  lua_pushunsigned(L, r);
+  lua_pushunsigned(L, trim(r));
   return 1;
 }
 
@@ -77,12 +81,14 @@ static int b_not (lua_State *L) {
 static int b_shift (lua_State *L, b_uint r, int i) {
   if (i < 0) {  /* shift right? */
     i = -i;
+    r = trim(r);
     if (i >= NBITS) r = 0;
     else r >>= i;
   }
   else {  /* shift left */
     if (i >= NBITS) r = 0;
     else r <<= i;
+    r = trim(r);
   }
   lua_pushunsigned(L, r);
   return 1;
@@ -102,12 +108,12 @@ static int b_rshift (lua_State *L) {
 static int b_arshift (lua_State *L) {
   b_uint r = getuintarg(L, 1);
   int i = luaL_checkint(L, 2);
-  if (i < 0 || !(r & 0x80000000))
+  if (i < 0 || !(r & (1 << (NBITS - 1))))
     return b_shift(L, r, -i);
   else {  /* arithmetic shift for 'negative' number */
-    if (i >= NBITS) r = 0xffffffff;
+    if (i >= NBITS) r = ALLONES;
     else
-      r = (r >> i) | ~(~(b_uint)0 >> i);  /* add signal bit */
+      r = trim((r >> i) | ~(~(b_uint)0 >> i));  /* add signal bit */
     lua_pushunsigned(L, r);
     return 1;
   }
@@ -117,8 +123,9 @@ static int b_arshift (lua_State *L) {
 static int b_rot (lua_State *L, int i) {
   b_uint r = getuintarg(L, 1);
   i &= (NBITS - 1);  /* i = i % NBITS */
+  r = trim(r);
   r = (r << i) | (r >> (NBITS - i));
-  lua_pushunsigned(L, r);
+  lua_pushunsigned(L, trim(r));
   return 1;
 }
 
@@ -153,3 +160,4 @@ LUAMOD_API int luaopen_bit32 (lua_State *L) {
   luaL_newlib(L, bitlib);
   return 1;
 }
+
