@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.249 2010/09/07 19:21:39 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.250 2010/09/07 19:38:36 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -56,12 +56,15 @@ static int luaB_tonumber (lua_State *L) {
     const char *s1 = luaL_checkstring(L, 1);
     char *s2;
     unsigned long n;
+    int neg = 0;
     luaL_argcheck(L, 2 <= base && base <= 36, 2, "base out of range");
+    while (isspace((unsigned char)(*s1))) s1++;  /* skip initial spaces */
+    if (*s1 == '-') { s1++; neg = 1; }
     n = strtoul(s1, &s2, base);
     if (s1 != s2) {  /* at least one valid digit? */
       while (isspace((unsigned char)(*s2))) s2++;  /* skip trailing spaces */
       if (*s2 == '\0') {  /* no invalid trailing characters? */
-        lua_pushnumber(L, (lua_Number)n);
+        lua_pushnumber(L, (neg) ? -(lua_Number)n : (lua_Number)n);
         return 1;
       }
     }
