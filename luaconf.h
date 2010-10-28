@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.144 2010/10/26 19:32:19 roberto Exp roberto $
+** $Id: luaconf.h,v 1.145 2010/10/27 17:16:37 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -47,8 +47,8 @@
 
 #if defined(LUA_USE_MACOSX)
 #define LUA_USE_POSIX
-#define LUA_USE_DLOPEN
-#define LUA_USE_READLINE	/* needs some extra libraries */
+#define LUA_USE_DLOPEN		/* does not need -ldl */
+#define LUA_USE_READLINE	/* needs an extra library: -lreadline */
 #endif
 
 
@@ -478,8 +478,11 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
 @@ check it dynamically.
 */
 /* check for known architectures */
-#if defined(__i386__) || defined(__i386) || defined(i386)
+#if defined(__i386__) || defined(__i386) || defined(i386) || \
+    defined (__x86_64)
 #define LUA_IEEEENDIAN	0
+#elif defined(__POWERPC__)
+#define LUA_IEEEENDIAN	1
 #endif
 
 #if !defined(LUA_IEEEENDIAN)	/* { */
