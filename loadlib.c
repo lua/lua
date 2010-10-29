@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.90 2010/08/02 17:14:48 roberto Exp roberto $
+** $Id: loadlib.c,v 1.91 2010/09/07 19:21:39 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -177,7 +177,7 @@ static void ll_unloadlib (void *lib) {
 
 static void *ll_load (lua_State *L, const char *path, int seeglb) {
   HMODULE lib = LoadLibraryExA(path, NULL, LUA_LLE_FLAGS);
-  (void)(seeglb);  /* symbols are 'global' by default? */
+  (void)(seeglb);  /* symbols are 'global' by default */
   if (lib == NULL) pusherror(L);
   return lib;
 }
@@ -212,7 +212,7 @@ static void ll_unloadlib (void *lib) {
 
 
 static void *ll_load (lua_State *L, const char *path, int seeglb) {
-  (void)(path);  /* to avoid warnings */
+  (void)(path); (void)(seeglb);  /* to avoid warnings */
   lua_pushliteral(L, DLMSG);
   return NULL;
 }
