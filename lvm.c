@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.123 2010/06/30 14:11:17 roberto Exp roberto $
+** $Id: lvm.c,v 2.124 2010/10/25 19:01:37 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -301,7 +301,7 @@ void luaV_concat (lua_State *L, int total) {
       setsvalue2s(L, top-n, luaS_newlstr(L, buffer, tl));
     }
     total -= n-1;  /* got 'n' strings to create 1 new */
-    L->top -= n-1;  /* poped 'n' strings and pushed one */
+    L->top -= n-1;  /* popped 'n' strings and pushed one */
   } while (total > 1);  /* repeat until only 1 result left */
 }
 

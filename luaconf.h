@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.146 2010/10/28 15:18:25 roberto Exp roberto $
+** $Id: luaconf.h,v 1.147 2010/10/29 11:13:21 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -457,7 +457,7 @@
 #if defined(LUA_NUMBER_DOUBLE) && !defined(LUA_ANSI) && \
     !defined(LUA_NOIEEE754TRICK)	/* { */
 
-/* On a Microsoft compiler on a Pentium, use assembler to avoid chashes
+/* On a Microsoft compiler on a Pentium, use assembler to avoid clashes
    with a DirectX idiosyncrasy */
 #if defined(_MSC_VER) && defined(M_IX86)		/* { */
 
@@ -473,7 +473,7 @@
 union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
 
 /*
-@@ LUA_IEEEENDIAN is the endianess of doubles in your machine
+@@ LUA_IEEEENDIAN is the endianness of doubles in your machine
 @@ (0 for little endian, 1 for big endian); if not defined, Lua will
 @@ check it dynamically.
 */

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.66 2010/09/03 14:14:01 roberto Exp roberto $
+** $Id: lstate.h,v 2.67 2010/09/30 17:21:31 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -66,7 +66,7 @@ typedef struct stringtable {
 
 
 /*
-** informations about a call
+** information about a call
 */
 typedef struct CallInfo {
   StkId func;  /* function index in the stack */
