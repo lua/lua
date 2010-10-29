@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.145 2010/10/27 17:16:37 roberto Exp roberto $
+** $Id: luaconf.h,v 1.146 2010/10/28 15:18:25 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -481,7 +481,7 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
 #if defined(__i386__) || defined(__i386) || defined(i386) || \
     defined (__x86_64)
 #define LUA_IEEEENDIAN	0
-#elif defined(__POWERPC__)
+#elif defined(__POWERPC__) || defined(__ppc__)
 #define LUA_IEEEENDIAN	1
 #endif
 
