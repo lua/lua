@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.40 2010/04/18 13:22:48 roberto Exp roberto $
+** $Id: lobject.c,v 2.41 2010/10/28 15:39:03 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -116,7 +116,7 @@ static int checkend (const char *s, const char *endptr) {
 int luaO_str2d (const char *s, lua_Number *result) {
   char *endptr;
   *result = lua_str2number(s, &endptr);
-  if (checkend(s, endptr)) return 1;  /* convertion OK? */
+  if (checkend(s, endptr)) return 1;  /* conversion OK? */
   *result = cast_num(strtoul(s, &endptr, 0)); /* try hexadecimal */
   return checkend(s, endptr);
 }
