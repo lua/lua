@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.91 2010/07/28 15:51:59 roberto Exp $
+** $Id: liolib.c,v 2.92 2010/10/25 19:01:37 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -453,7 +453,7 @@ static int f_read (lua_State *L) {
 static int io_readline (lua_State *L) {
   FILE *f = *(FILE **)lua_touserdata(L, lua_upvalueindex(1));
   int i;
-  int n = lua_tointeger(L, lua_upvalueindex(2));
+  int n = (int)lua_tointeger(L, lua_upvalueindex(2));
   if (f == NULL)  /* file is already closed? */
     luaL_error(L, "file is already closed");
   lua_settop(L , 1);

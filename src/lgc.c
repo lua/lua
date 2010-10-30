@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.101 2010/06/30 14:11:17 roberto Exp $
+** $Id: lgc.c,v 2.103 2010/10/25 19:01:37 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -449,7 +449,7 @@ static int traverseproto (global_State *g, Proto *f) {
 }
 
 
-static l_mem traverseclosure (global_State *g, Closure *cl) {
+static int traverseclosure (global_State *g, Closure *cl) {
   if (cl->c.isC) {
     int i;
     for (i=0; i<cl->c.nupvalues; i++)  /* mark its upvalues */
@@ -960,7 +960,7 @@ static void generationalcollection (lua_State *L) {
   else {
     luaC_runtilstate(L, ~bitmask(GCSpause));  /* run complete cycle */
     luaC_runtilstate(L, bitmask(GCSpause));
-    if (g->totalbytes > g->lastmajormem/100 * g->gcpause)
+    if (g->totalbytes > g->lastmajormem/100 * g->gcmajorinc)
       g->lastmajormem = 0;  /* signal for a major collection */
   }
   g->GCdebt = stddebt(g);

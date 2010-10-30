@@ -1,5 +1,5 @@
 /*
-** $Id: luac.c,v 1.61 2010/05/14 11:40:22 lhf Exp $
+** $Id: luac.c,v 1.65 2010/10/26 09:07:52 lhf Exp $
 ** Lua compiler (saves bytecodes to files; also list bytecodes)
 ** See Copyright Notice in lua.h
 */
@@ -15,13 +15,12 @@
 #include "lua.h"
 #include "lauxlib.h"
 
-#include "ldo.h"
-#include "lfunc.h"
-#include "lmem.h"
 #include "lobject.h"
-#include "lopcodes.h"
-#include "lstring.h"
+#include "lstate.h"
 #include "lundump.h"
+
+static void PrintFunction(const Proto* f, int full);
+#define luaU_print	PrintFunction
 
 #define PROGNAME	"luac"		/* default program name */
 #define OUTPUT		PROGNAME ".out"	/* default output file */
@@ -52,16 +51,16 @@ static void usage(const char* message)
  else
   fprintf(stderr,"%s: %s\n",progname,message);
  fprintf(stderr,
- "usage: %s [options] [filenames]\n"
- "Available options are:\n"
- "  -l       list\n"
- "  -o name  output to file " LUA_QL("name") " (default is \"%s\")\n"
- "  -p       parse only\n"
- "  -s       strip debug information\n"
- "  -v       show version information\n"
- "  --       stop handling options\n"
- "  -        stop handling options and process stdin\n"
- ,progname,Output);
+  "usage: %s [options] [filenames]\n"
+  "Available options are:\n"
+  "  -l       list\n"
+  "  -o name  output to file " LUA_QL("name") " (default is \"%s\")\n"
+  "  -p       parse only\n"
+  "  -s       strip debug information\n"
+  "  -v       show version information\n"
+  "  --       stop handling options\n"
+  "  -        stop handling options and process stdin\n"
+  ,progname,Output);
  exit(EXIT_FAILURE);
 }
 
@@ -89,7 +88,8 @@ static int doargs(int argc, char* argv[])
   else if (IS("-o"))			/* output file */
   {
    output=argv[++i];
-   if (output==NULL || *output==0 || *output=='-') usage(LUA_QL("-o") " needs argument");
+   if (output==NULL || *output==0 || (*output=='-' && output[1]!=0))
+    usage(LUA_QL("-o") " needs argument");
    if (IS("-")) output=NULL;
   }
   else if (IS("-p"))			/* parse only */
@@ -114,7 +114,24 @@ static int doargs(int argc, char* argv[])
  return i;
 }
 
-#define toproto(L,i) (clvalue(L->top+(i))->l.p)
+#define FUNCTION "(function()end)();"
+
+static const char* reader(lua_State *L, void *ud, size_t *size)
+{
+ UNUSED(L);
+ if ((*(int*)ud)--)
+ {
+  *size=sizeof(FUNCTION)-1;
+  return FUNCTION;
+ }
+ else
+ {
+  *size=0;
+  return NULL;
+ }
+}
+
+#define toproto(L,i) getproto(L->top+(i))
 
 static const Proto* combine(lua_State* L, int n)
 {
@@ -122,24 +139,13 @@ static const Proto* combine(lua_State* L, int n)
   return toproto(L,-1);
  else
  {
-  int i,pc;
-  Proto* f=luaF_newproto(L);
-  setptvalue2s(L,L->top,f); incr_top(L);
-  f->source=luaS_newliteral(L,"=(" PROGNAME ")");
-  f->maxstacksize=1;
-  pc=2*n+1;
-  f->code=luaM_newvector(L,pc,Instruction);
-  f->sizecode=pc;
-  f->p=luaM_newvector(L,n,Proto*);
-  f->sizep=n;
-  pc=0;
-  for (i=0; i<n; i++)
-  {
-   f->p[i]=toproto(L,i-n-1);
-   f->code[pc++]=CREATE_ABx(OP_CLOSURE,0,i);
-   f->code[pc++]=CREATE_ABC(OP_CALL,0,1,1);
-  }
-  f->code[pc++]=CREATE_ABC(OP_RETURN,0,1,0);
+  Proto* f;
+  int i=n;
+  if (lua_load(L,reader,&i,"=(" PROGNAME ")")!=LUA_OK) fatal(lua_tostring(L,-1));
+  f=toproto(L,-1);
+  for (i=0; i<n; i++) f->p[i]=toproto(L,i-n-1);
+  f->sizelineinfo=0;
+  f->sizeupvalues=0;
   return f;
  }
 }
@@ -152,7 +158,7 @@ static int writer(lua_State* L, const void* p, size_t size, void* u)
 
 static int pmain(lua_State* L)
 {
- int argc=lua_tointeger(L,1);
+ int argc=(int)lua_tointeger(L,1);
  char** argv=lua_touserdata(L,2);
  const Proto* f;
  int i;
@@ -160,7 +166,7 @@ static int pmain(lua_State* L)
  for (i=0; i<argc; i++)
  {
   const char* filename=IS("-") ? NULL : argv[i];
-  if (luaL_loadfile(L,filename)!=0) fatal(lua_tostring(L,-1));
+  if (luaL_loadfile(L,filename)!=LUA_OK) fatal(lua_tostring(L,-1));
  }
  f=combine(L,argc);
  if (listing) luaU_print(f,listing>1);
@@ -188,7 +194,235 @@ int main(int argc, char* argv[])
  lua_pushcfunction(L,&pmain);
  lua_pushinteger(L,argc);
  lua_pushlightuserdata(L,argv);
- if (lua_pcall(L,2,0,0)!=0) fatal(lua_tostring(L,-1));
+ if (lua_pcall(L,2,0,0)!=LUA_OK) fatal(lua_tostring(L,-1));
  lua_close(L);
  return EXIT_SUCCESS;
+}
+
+/*
+** $Id: print.c,v 1.66 2010/10/26 09:07:52 lhf Exp $
+** print bytecodes
+** See Copyright Notice in lua.h
+*/
+
+#include <ctype.h>
+#include <stdio.h>
+
+#define luac_c
+#define LUA_CORE
+
+#include "ldebug.h"
+#include "lobject.h"
+#include "lopcodes.h"
+
+#define Sizeof(x)	((int)sizeof(x))
+#define VOID(p)		((const void*)(p))
+
+static void PrintString(const TString* ts)
+{
+ const char* s=getstr(ts);
+ size_t i,n=ts->tsv.len;
+ printf("%c",'"');
+ for (i=0; i<n; i++)
+ {
+  int c=(int)(unsigned char)s[i];
+  switch (c)
+  {
+   case '"':  printf("\\\""); break;
+   case '\\': printf("\\\\"); break;
+   case '\a': printf("\\a"); break;
+   case '\b': printf("\\b"); break;
+   case '\f': printf("\\f"); break;
+   case '\n': printf("\\n"); break;
+   case '\r': printf("\\r"); break;
+   case '\t': printf("\\t"); break;
+   case '\v': printf("\\v"); break;
+   default:	if (isprint(c))
+   			printf("%c",c);
+		else
+			printf("\\%03d",c);
+  }
+ }
+ printf("%c",'"');
+}
+
+static void PrintConstant(const Proto* f, int i)
+{
+ const TValue* o=&f->k[i];
+ switch (ttype(o))
+ {
+  case LUA_TNIL:
+	printf("nil");
+	break;
+  case LUA_TBOOLEAN:
+	printf(bvalue(o) ? "true" : "false");
+	break;
+  case LUA_TNUMBER:
+	printf(LUA_NUMBER_FMT,nvalue(o));
+	break;
+  case LUA_TSTRING:
+	PrintString(rawtsvalue(o));
+	break;
+  default:				/* cannot happen */
+	printf("? type=%d",ttype(o));
+	break;
+ }
+}
+
+#define UPVALNAME(x) ((f->upvalues[x].name) ? getstr(f->upvalues[x].name) : "-")
+
+static void PrintCode(const Proto* f)
+{
+ const Instruction* code=f->code;
+ int pc,n=f->sizecode;
+ for (pc=0; pc<n; pc++)
+ {
+  Instruction i=code[pc];
+  OpCode o=GET_OPCODE(i);
+  int a=GETARG_A(i);
+  int b=GETARG_B(i);
+  int c=GETARG_C(i);
+  int ax=GETARG_Ax(i);
+  int bx=GETARG_Bx(i);
+  int sbx=GETARG_sBx(i);
+  int line=getfuncline(f,pc);
+  printf("\t%d\t",pc+1);
+  if (line>0) printf("[%d]\t",line); else printf("[-]\t");
+  printf("%-9s\t",luaP_opnames[o]);
+  switch (getOpMode(o))
+  {
+   case iABC:
+    printf("%d",a);
+    if (getBMode(o)!=OpArgN) printf(" %d",ISK(b) ? (-1-INDEXK(b)) : b);
+    if (getCMode(o)!=OpArgN) printf(" %d",ISK(c) ? (-1-INDEXK(c)) : c);
+    break;
+   case iABx:
+    if (getBMode(o)==OpArgK) printf("%d %d",a,-bx); else printf("%d %d",a,bx);
+    break;
+   case iAsBx:
+    if (o==OP_JMP) printf("%d",sbx); else printf("%d %d",a,sbx);
+    break;
+   case iAx:
+    printf("%d",-1-ax);
+    break;
+  }
+  switch (o)
+  {
+   case OP_LOADK:
+    if (bx>0) { printf("\t; "); PrintConstant(f,bx-1); }
+    break;
+   case OP_GETUPVAL:
+   case OP_SETUPVAL:
+    printf("\t; %s",UPVALNAME(b));
+    break;
+   case OP_GETTABUP:
+    printf("\t; %s",UPVALNAME(b));
+    if (ISK(c)) { printf(" "); PrintConstant(f,INDEXK(c)); }
+    break;
+   case OP_SETTABUP:
+    printf("\t; %s",UPVALNAME(a));
+    if (ISK(b)) { printf(" "); PrintConstant(f,INDEXK(b)); }
+    if (ISK(c)) { printf(" "); PrintConstant(f,INDEXK(c)); }
+    break;
+   case OP_GETTABLE:
+   case OP_SELF:
+    if (ISK(c)) { printf("\t; "); PrintConstant(f,INDEXK(c)); }
+    break;
+   case OP_SETTABLE:
+   case OP_ADD:
+   case OP_SUB:
+   case OP_MUL:
+   case OP_DIV:
+   case OP_POW:
+   case OP_EQ:
+   case OP_LT:
+   case OP_LE:
+    if (ISK(b) || ISK(c))
+    {
+     printf("\t; ");
+     if (ISK(b)) PrintConstant(f,INDEXK(b)); else printf("-");
+     printf(" ");
+     if (ISK(c)) PrintConstant(f,INDEXK(c)); else printf("-");
+    }
+    break;
+   case OP_JMP:
+   case OP_FORLOOP:
+   case OP_FORPREP:
+   case OP_TFORLOOP:
+    printf("\t; to %d",sbx+pc+2);
+    break;
+   case OP_CLOSURE:
+    printf("\t; %p",VOID(f->p[bx]));
+    break;
+   case OP_SETLIST:
+    if (c==0) printf("\t; %d",(int)code[++pc]);
+    else printf("\t; %d",c);
+    break;
+   case OP_EXTRAARG:
+    printf("\t; "); PrintConstant(f,ax);
+    break;
+   default:
+    break;
+  }
+  printf("\n");
+ }
+}
+
+#define SS(x)	((x==1)?"":"s")
+#define S(x)	(int)(x),SS(x)
+
+static void PrintHeader(const Proto* f)
+{
+ const char* s=f->source ? getstr(f->source) : "=?";
+ if (*s=='@' || *s=='=')
+  s++;
+ else if (*s==LUA_SIGNATURE[0])
+  s="(bstring)";
+ else
+  s="(string)";
+ printf("\n%s <%s:%d,%d> (%d instruction%s at %p)\n",
+ 	(f->linedefined==0)?"main":"function",s,
+	f->linedefined,f->lastlinedefined,
+	S(f->sizecode),VOID(f));
+ printf("%d%s param%s, %d slot%s, %d upvalue%s, ",
+	(int)(f->numparams),f->is_vararg?"+":"",SS(f->numparams),
+	S(f->maxstacksize),S(f->sizeupvalues));
+ printf("%d local%s, %d constant%s, %d function%s\n",
+	S(f->sizelocvars),S(f->sizek),S(f->sizep));
+}
+
+static void PrintDebug(const Proto* f)
+{
+ int i,n;
+ n=f->sizek;
+ printf("constants (%d) for %p:\n",n,VOID(f));
+ for (i=0; i<n; i++)
+ {
+  printf("\t%d\t",i+1);
+  PrintConstant(f,i);
+  printf("\n");
+ }
+ n=f->sizelocvars;
+ printf("locals (%d) for %p:\n",n,VOID(f));
+ for (i=0; i<n; i++)
+ {
+  printf("\t%d\t%s\t%d\t%d\n",
+  i,getstr(f->locvars[i].varname),f->locvars[i].startpc+1,f->locvars[i].endpc+1);
+ }
+ n=f->sizeupvalues;
+ printf("upvalues (%d) for %p:\n",n,VOID(f));
+ for (i=0; i<n; i++)
+ {
+  printf("\t%d\t%s\t%d\t%d\n",
+  i,UPVALNAME(i),f->upvalues[i].instack,f->upvalues[i].idx);
+ }
+}
+
+static void PrintFunction(const Proto* f, int full)
+{
+ int i,n=f->sizep;
+ PrintHeader(f);
+ PrintCode(f);
+ if (full) PrintDebug(f);
+ for (i=0; i<n; i++) PrintFunction(f->p[i],full);
 }

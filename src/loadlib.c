@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.89 2010/07/28 15:51:59 roberto Exp $
+** $Id: loadlib.c,v 1.92 2010/10/29 14:35:09 roberto Exp $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -177,7 +177,7 @@ static void ll_unloadlib (void *lib) {
 
 static void *ll_load (lua_State *L, const char *path, int seeglb) {
   HMODULE lib = LoadLibraryExA(path, NULL, LUA_LLE_FLAGS);
-  (void)(seeglb);  /* symbols are 'global' by default? */
+  (void)(seeglb);  /* symbols are 'global' by default */
   if (lib == NULL) pusherror(L);
   return lib;
 }
@@ -212,7 +212,7 @@ static void ll_unloadlib (void *lib) {
 
 
 static void *ll_load (lua_State *L, const char *path, int seeglb) {
-  (void)(path);  /* to avoid warnings */
+  (void)(path); (void)(seeglb);  /* to avoid warnings */
   lua_pushliteral(L, DLMSG);
   return NULL;
 }
@@ -428,8 +428,6 @@ static int loader_Croot (lua_State *L) {
 static int loader_preload (lua_State *L) {
   const char *name = luaL_checkstring(L, 1);
   lua_getfield(L, LUA_REGISTRYINDEX, "_PRELOAD");
-  if (!lua_istable(L, -1))
-    luaL_error(L, LUA_QL("package.preload") " must be a table");
   lua_getfield(L, -1, name);
   if (lua_isnil(L, -1))  /* not found? */
     lua_pushfstring(L, "\n\tno field package.preload['%s']", name);
@@ -498,7 +496,7 @@ static int ll_require (lua_State *L) {
 #if defined(LUA_COMPAT_MODULE)
 
 /*
-** changes the _ENV variable of calling function
+** changes the environment variable of calling function
 */
 static void set_env (lua_State *L) {
   lua_Debug ar;

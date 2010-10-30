@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.273 2010/07/25 15:18:19 roberto Exp $
+** $Id: lua.h,v 1.276 2010/10/26 19:32:19 roberto Exp $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -18,7 +18,7 @@
 
 #define LUA_VERSION_MAJOR	"5"
 #define LUA_VERSION_MINOR	"2"
-#define LUA_VERSION_RELEASE	"0" " (work4)"
+#define LUA_VERSION_RELEASE	"0" " (work5)"
 
 #define LUA_VERSION	"Lua " LUA_VERSION_MAJOR "." LUA_VERSION_MINOR
 #define LUA_RELEASE	LUA_VERSION "." LUA_VERSION_RELEASE
@@ -106,6 +106,9 @@ typedef LUA_NUMBER lua_Number;
 /* type for integer functions */
 typedef LUA_INTEGER lua_Integer;
 
+/* unsigned integer type */
+typedef LUA_UNSIGNED lua_Unsigned;
+
 
 
 /*
@@ -159,6 +162,7 @@ LUA_API const char     *(lua_typename) (lua_State *L, int tp);
 
 LUA_API lua_Number      (lua_tonumberx) (lua_State *L, int idx, int *isnum);
 LUA_API lua_Integer     (lua_tointegerx) (lua_State *L, int idx, int *isnum);
+LUA_API lua_Unsigned    (lua_tounsignedx) (lua_State *L, int idx, int *isnum);
 LUA_API int             (lua_toboolean) (lua_State *L, int idx);
 LUA_API const char     *(lua_tolstring) (lua_State *L, int idx, size_t *len);
 LUA_API size_t          (lua_rawlen) (lua_State *L, int idx);
@@ -196,6 +200,7 @@ LUA_API int   (lua_compare) (lua_State *L, int idx1, int idx2, int op);
 LUA_API void        (lua_pushnil) (lua_State *L);
 LUA_API void        (lua_pushnumber) (lua_State *L, lua_Number n);
 LUA_API void        (lua_pushinteger) (lua_State *L, lua_Integer n);
+LUA_API void        (lua_pushunsigned) (lua_State *L, lua_Unsigned n);
 LUA_API const char *(lua_pushlstring) (lua_State *L, const char *s, size_t l);
 LUA_API const char *(lua_pushstring) (lua_State *L, const char *s);
 LUA_API const char *(lua_pushvfstring) (lua_State *L, const char *fmt,
@@ -271,9 +276,10 @@ LUA_API int  (lua_status) (lua_State *L);
 #define LUA_GCSTEP		5
 #define LUA_GCSETPAUSE		6
 #define LUA_GCSETSTEPMUL	7
-#define LUA_GCISRUNNING		8
-#define LUA_GCGEN		9
-#define LUA_GCINC		10
+#define LUA_GCSETMAJORINC	8
+#define LUA_GCISRUNNING		9
+#define LUA_GCGEN		10
+#define LUA_GCINC		11
 
 LUA_API int (lua_gc) (lua_State *L, int what, int data);
 
@@ -302,6 +308,7 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 
 #define lua_tonumber(L,i)	lua_tonumberx(L,i,NULL)
 #define lua_tointeger(L,i)	lua_tointegerx(L,i,NULL)
+#define lua_tounsigned(L,i)	lua_tounsignedx(L,i,NULL)
 
 #define lua_pop(L,n)		lua_settop(L, -(n)-1)
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.56 2010/07/02 11:38:13 roberto Exp $
+** $Id: ltablib.c,v 1.57 2010/10/25 19:01:37 roberto Exp $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -16,7 +16,8 @@
 #include "lualib.h"
 
 
-#define aux_getn(L,n)	(luaL_checktype(L, n, LUA_TTABLE), lua_rawlen(L, n))
+#define aux_getn(L,n)  \
+	(luaL_checktype(L, n, LUA_TTABLE), (int)lua_rawlen(L, n))
 
 
 static int foreachi (lua_State *L) {

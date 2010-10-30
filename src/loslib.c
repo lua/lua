@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.31 2010/07/02 12:01:53 roberto Exp $
+** $Id: loslib.c,v 1.32 2010/10/05 12:18:03 roberto Exp $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -276,7 +276,11 @@ static int os_setlocale (lua_State *L) {
 
 
 static int os_exit (lua_State *L) {
-  int status = luaL_optint(L, 1, EXIT_SUCCESS);
+  int status;
+  if (lua_isboolean(L, 1))
+    status = (lua_toboolean(L, 1) ? EXIT_SUCCESS : EXIT_FAILURE);
+  else
+    status = luaL_optint(L, 1, EXIT_SUCCESS);
   if (lua_toboolean(L, 2))
     lua_close(L);
   exit(status);

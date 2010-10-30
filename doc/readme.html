@@ -27,7 +27,7 @@ tt, kbd, code {
 <HR>
 <H1>
 <A HREF="http://www.lua.org/"><IMG SRC="logo.gif" ALT="Lua" BORDER=0></A>
-Welcome to Lua 5.2 (work4)
+Welcome to Lua 5.2 (work5)
 </H1>
 
 <P>
@@ -89,12 +89,10 @@ because
 Lua is implemented in pure ANSI C, and compiles unmodified in all known
 platforms that have an ANSI C compiler.
 Lua also compiles unmodified as C++.
-
-<P>
-The instructions below are for Unix-like platforms.
-There are also
-<A HREF="#other">instructions for other systems</A>.
-See below for
+The instructions given below for building Lua are for Unix-like platforms.
+See also
+<A HREF="#other">instructions for other systems</A>
+and
 <A HREF="#customization">customization options</A>.
 
 <P>
@@ -250,7 +248,7 @@ interpreter:
 <DT>
 compiler:
 <DD>
-  library, luac.c print.c
+  library, luac.c
 </DL>
 
 <P>
@@ -258,7 +256,7 @@ compiler:
   create and use libraries with your compiler. Moreover, to dynamically load
   C libraries for Lua you'll need to know how to create dynamic libraries
   and you'll need to make sure that the Lua API functions are accessible to
-  those dynamic libraries &mdash; but you do <EM>not</EM> want to link the Lua library
+  those dynamic libraries &mdash; but <EM>don't</EM> link the Lua library
   into each dynamic library. For Unix, we recommend that the Lua library
   be linked statically into the host program and its symbols exported for
   dynamic linking; src/Makefile does this for the Lua interpreter.
@@ -267,18 +265,6 @@ compiler:
 <P>
   As mentioned above, you may edit src/luaconf.h to customize
   some features before building Lua.
-
-<H2><A NAME="changes">Changes since Lua 5.2.0 (work3)</A></H2>
-
-<UL>
-<LI> <CODE>module</CODE> and <CODE>luaL_register</CODE> deprecated, replaced by <CODE>luaL_newlib</CODE> and <CODE>luaL_setfuncs</CODE>.
-<LI> new function <CODE>luaL_requiref</CODE>.
-<LI> caching of Lua closures for resue.
-<LI> version-specific environment variables (<CODE>LUA_PATH_5_2</CODE>, etc.).
-<LI> new class '%g' in patterns.
-<LI> <CODE>debug.getlocal</CODE> gets parameter names of inactive functions.
-<LI> new functions <CODE>lua_tonumberx</CODE> and <CODE>lua_tointegerx</CODE>.
-</UL>
 
 <H2><A NAME="changes">Changes since Lua 5.1</A></H2>
 
@@ -289,61 +275,73 @@ The
 lists the
 <A HREF="manual.html#8">incompatibilities</A> that had to be introduced.
 
+<H3>Main changes</H3>
+<UL>
+<LI> yieldable pcall and metamethods
+<LI> new <CODE>_ENV</CODE> scheme
+<LI> ephemeron tables
+<LI> new library for bitwise operations
+<LI> light C functions
+<LI> emergency garbage collector
+</UL>
+
+Here are the other changes introduced in Lua 5.2:
 <H3>Language</H3>
 <UL>
-<LI> new lexical environments.
-<LI> no more fenv for threads.
-<LI> ephemeron tables
-	(tables with weak keys only visit value when key is accessible).
-<LI> yieldable pcall and metamethods.
-<LI> tables honor the <CODE>__len</CODE> metamethod.
-<LI> max constants per function raised to 2^26.
-<LI> hex escapes in strings.
-<LI> no more verification of opcode consistency.
+<LI> no more fenv for threads or functions
+<LI> tables honor the <CODE>__len</CODE> metamethod
+<LI> hex and <CODE>\*</CODE> escapes in strings
+<LI> order metamethods work for different types
+<LI> no more verification of opcode consistency
+<LI> hook event "tail return" replaced by "tail call"
+<LI> empty statement
 </UL>
 
 <H3>Libraries</H3>
 <UL>
-<LI> new library for bitwise operations.
-<LI> new metamethods <CODE>__pairs</CODE> and <CODE>__ipairs</CODE>.
-<LI> arguments for function called through <CODE>xpcall</CODE>.
-<LI> optional argument to load (to control binary x text).
-<LI> <CODE>loadlib</CODE> may load libraries with global names (RTLD_GLOBAL).
-<LI> new function <CODE>package.searchpath</CODE>.
-<LI> optional base in <CODE>math.log</CODE>.
-<LI> <CODE>file:write</CODE> returns <CODE>file</CODE>.
-<LI> closing a pipe returns exit status.
-<LI> <CODE>os.exit</CODE> may close state.
-<LI> new option 'isrunning' for <CODE>collectgarbage</CODE> and <CODE>lua_gc</CODE>.
-<LI> frontier patterns.
-<LI> <CODE>ipairs</CODE> now goes until #t.
+<LI> new metamethods <CODE>__pairs</CODE> and <CODE>__ipairs</CODE>
+<LI> arguments for function called through <CODE>xpcall</CODE>
+<LI> optional 'mode' argument to load (to control binary x text)
+<LI> new function <CODE>loadin</CODE>
+<LI> <CODE>loadlib</CODE> may load libraries with global names (RTLD_GLOBAL)
+<LI> new function <CODE>package.searchpath</CODE>
+<LI> optional base in <CODE>math.log</CODE>
+<LI> <CODE>file:write</CODE> returns <CODE>file</CODE>
+<LI> closing a pipe returns exit status
+<LI> <CODE>os.exit</CODE> may close state
+<LI> new option 'isrunning' for <CODE>collectgarbage</CODE> and <CODE>lua_gc</CODE>
+<LI> frontier patterns
+<LI> <CODE>\0</CODE> in patterns
+<LI> new option <CODE>*L</CODE> for <CODE>io.read</CODE>
+<LI> options for <CODE>io.lines</CODE>
 </UL>
 
 <H3>C API</H3>
 <UL>
-<LI> mainthread predefined in the registry.
-<LI> <CODE>lua_cpcall</CODE> changed to a predefined function in the registry.
-<LI> new constants <CODE>LUA_OK</CODE> and <CODE>LUA_ERRGCMM</CODE>.
-<LI> new <CODE>lua_compare</CODE>, <CODE>lua_arith</CODE>, and <CODE>lua_len</CODE>.
-<LI> new <CODE>lua_version</CODE> and <CODE>luaL_version</CODE>.
-<LI> <CODE>lua_pushstring</CODE> and <CODE>pushlstring</CODE> return string.
-<LI> new <CODE>luaL_testudata</CODE>.
-<LI> new <CODE>luaL_tolstring</CODE>.
-<LI> new <CODE>lua_copy</CODE>.
-<LI> new <CODE>lua_upvalueid</CODE> and <CODE>lua_upvaluejoin</CODE>.
-<LI> <CODE>nparams</CODE> and <CODE>isvarag</CODE> available in debug API.
+<LI> main thread predefined in the registry
+<LI> new constants <CODE>LUA_OK</CODE> and <CODE>LUA_ERRGCMM</CODE>
+<LI> new <CODE>lua_compare</CODE>, <CODE>lua_arith</CODE>, and <CODE>lua_len</CODE>
+<LI> new <CODE>lua_version</CODE> and <CODE>luaL_version</CODE>
+<LI> <CODE>lua_pushstring</CODE> and <CODE>pushlstring</CODE> return string
+<LI> new <CODE>luaL_testudata</CODE>
+<LI> new <CODE>luaL_tolstring</CODE>
+<LI> new <CODE>lua_copy</CODE>
+<LI> new <CODE>lua_absindex</CODE>
+<LI> new <CODE>lua_upvalueid</CODE> and <CODE>lua_upvaluejoin</CODE>
+<LI> <CODE>nparams</CODE> and <CODE>isvarag</CODE> available in debug API
 </UL>
 
 <H3>Implementation</H3>
 <UL>
-<LI> emergency garbage collector
-	(core forces a full collection when allocation fails).
-<LI> udata with finalizers are kept in a separated list for the GC.
-<LI> CallInfo stack now is a linked list.
-<LI> internal (immutable) version of ctypes.
-<LI> parser uses much less C-stack space (no more auto arrays).
-<LI> new hash for floats.
-<LI> handling of non-string error messages in the standalone interpreter.
+<LI> max constants per function raised to 2<SUP>26</SUP>
+<LI> internal (immutable) version of ctypes
+<LI> simpler implementation for string buffers
+<LI> udata with finalizers are kept in a separated list for the GC
+<LI> <CODE>CallInfo</CODE>stack now is a linked list
+<LI> parser uses much less C-stack space (no more auto arrays)
+<LI> new hash for floats
+<LI> handling of non-string error messages in the standalone interpreter
+<LI> generational mode for garbage collection (experimental)
 </UL>
 
 <H2><A NAME="license">License</A></H2>
@@ -352,7 +350,7 @@ lists the
 </A>
 
 <P>
-Lua is free software licensed under the terms of the
+Lua is free software distributed under the terms of the
 <A HREF="http://www.opensource.org/licenses/mit-license.html">MIT license</A>
 reproduced below;
 it can be used for any purpose, including commercial purposes,
@@ -392,10 +390,10 @@ THE SOFTWARE.
 <HR>
 <SMALL>
 Last update:
-Fri Jul 30 15:12:25 BRT 2010
+Sat Oct 30 21:36:38 BRST 2010
 </SMALL>
 <!--
-Last change: revised for Lua 5.2.0 (work4)
+Last change: revised for Lua 5.2.0 (work5)
 -->
 
 </BODY>

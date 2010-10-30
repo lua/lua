@@ -33,7 +33,7 @@ LUA_T=	lua
 LUA_O=	lua.o
 
 LUAC_T=	luac
-LUAC_O=	luac.o print.o
+LUAC_O=	luac.o
 
 ALL_O= $(CORE_O) $(LIB_O) $(LUA_O) $(LUAC_O)
 ALL_T= $(LUA_A) $(LUA_T) $(LUAC_T)
@@ -62,7 +62,7 @@ clean:
 	$(RM) $(ALL_T) $(ALL_O)
 
 depend:
-	@$(CC) $(CFLAGS) -MM l*.c print.c
+	@$(CC) $(CFLAGS) -MM l*.c
 
 echo:
 	@echo "PLAT= $(PLAT)"
@@ -94,8 +94,7 @@ bsd:
 freebsd:
 	$(MAKE) $(ALL) MYCFLAGS="-DLUA_USE_LINUX" MYLIBS="-Wl,-E -lreadline"
 
-generic:
-	$(MAKE) $(ALL) MYCFLAGS=
+generic: $(ALL)
 
 linux:
 	$(MAKE) $(ALL) MYCFLAGS="-DLUA_USE_LINUX" MYLIBS="-Wl,-E -ldl -lreadline -lncurses"
@@ -170,16 +169,13 @@ ltablib.o: ltablib.c lua.h luaconf.h lauxlib.h lualib.h
 ltm.o: ltm.c lua.h luaconf.h lobject.h llimits.h lstate.h ltm.h lzio.h \
  lmem.h lstring.h lgc.h ltable.h
 lua.o: lua.c lua.h luaconf.h lauxlib.h lualib.h
-luac.o: luac.c lua.h luaconf.h lauxlib.h ldo.h lobject.h llimits.h \
- lstate.h ltm.h lzio.h lmem.h lfunc.h lopcodes.h lstring.h lgc.h \
- lundump.h
+luac.o: luac.c lua.h luaconf.h lauxlib.h lobject.h llimits.h lstate.h \
+ ltm.h lzio.h lmem.h lundump.h ldebug.h lopcodes.h
 lundump.o: lundump.c lua.h luaconf.h ldebug.h lstate.h lobject.h \
  llimits.h ltm.h lzio.h lmem.h ldo.h lfunc.h lstring.h lgc.h lundump.h
 lvm.o: lvm.c lua.h luaconf.h ldebug.h lstate.h lobject.h llimits.h ltm.h \
  lzio.h lmem.h ldo.h lfunc.h lgc.h lopcodes.h lstring.h ltable.h lvm.h
 lzio.o: lzio.c lua.h luaconf.h llimits.h lmem.h lstate.h lobject.h ltm.h \
  lzio.h
-print.o: print.c ldebug.h lstate.h lua.h luaconf.h lobject.h llimits.h \
- ltm.h lzio.h lmem.h lopcodes.h lundump.h
 
 # (end of Makefile)

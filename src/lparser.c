@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.90 2010/07/07 16:27:29 roberto Exp $
+** $Id: lparser.c,v 2.92 2010/09/07 19:21:39 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -289,7 +289,7 @@ static void singlevar (LexState *ls, expdesc *var) {
   FuncState *fs = ls->fs;
   if (singlevaraux(fs, varname, var, 1) == VVOID) {  /* global name? */
     expdesc key;
-    singlevaraux(fs, ls->envn, var, 1);  /* get _ENV variable */
+    singlevaraux(fs, ls->envn, var, 1);  /* get environment variable */
     lua_assert(var->k == VLOCAL || var->k == VUPVAL);
     codestring(ls, &key, varname);  /* key is variable name */
     luaK_indexed(fs, var, &key);  /* env[varname] */
@@ -352,15 +352,20 @@ static void leaveblock (FuncState *fs) {
 }
 
 
-static void pushclosure (LexState *ls, Proto *clp, expdesc *v) {
+/*
+** adds prototype being created into its parent list of prototypes
+** and codes instruction to create new closure
+*/
+static void codeclosure (LexState *ls, Proto *clp, expdesc *v) {
   FuncState *fs = ls->fs->prev;
   Proto *f = fs->f;  /* prototype of function creating new closure */
-  int oldsize = f->sizep;
-  luaM_growvector(ls->L, f->p, fs->np, f->sizep, Proto *,
-                  MAXARG_Bx, "functions");
-  while (oldsize < f->sizep) f->p[oldsize++] = NULL;
+  if (fs->np >= f->sizep) {
+    int oldsize = f->sizep;
+    luaM_growvector(ls->L, f->p, fs->np, f->sizep, Proto *,
+                    MAXARG_Bx, "functions");
+    while (oldsize < f->sizep) f->p[oldsize++] = NULL;
+  }
   f->p[fs->np++] = clp;
-  /* initial environment for new function is current lexical environment */
   luaC_objbarrier(ls->L, f, clp);
   init_exp(v, VRELOCABLE, luaK_codeABx(fs, OP_CLOSURE, 0, fs->np-1));
 }
@@ -428,14 +433,14 @@ static void close_func (LexState *ls) {
 
 /*
 ** opens the main function, which is a regular vararg function with an
-** upvalue named '_ENV'
+** upvalue named LUA_ENV
 */
 static void open_mainfunc (LexState *ls, FuncState *fs) {
   expdesc v;
   open_func(ls, fs);
   fs->f->is_vararg = 1;  /* main function is always vararg */
   init_exp(&v, VLOCAL, 0);
-  newupvalue(fs, ls->envn, &v);  /* create '_ENV' upvalue */
+  newupvalue(fs, ls->envn, &v);  /* create environment upvalue */
 }
 
 
@@ -653,7 +658,7 @@ static void body (LexState *ls, expdesc *e, int needself, int line) {
   chunk(ls);
   new_fs.f->lastlinedefined = ls->linenumber;
   check_match(ls, TK_END, TK_FUNCTION, line);
-  pushclosure(ls, new_fs.f, e);
+  codeclosure(ls, new_fs.f, e);
   close_func(ls);
 }
 

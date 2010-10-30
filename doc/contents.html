@@ -126,7 +126,7 @@ Freely available under the terms of the
 <LI><A HREF="manual.html#6.10">6.10 &ndash; The Debug Library</A>
 </UL>
 <P>
-<LI><A HREF="manual.html#7">7 &ndash; Lua Stand-alone</A>
+<LI><A HREF="manual.html#7">7 &ndash; Lua Standalone</A>
 <P>
 <LI><A HREF="manual.html#8">8 &ndash; Incompatibilities with the Previous Version</A>
 <UL>
@@ -172,15 +172,16 @@ Freely available under the terms of the
 <A HREF="manual.html#pdf-xpcall">xpcall</A><BR>
 
 <P>
-<A HREF="manual.html#pdf-bit.band">bit.band</A><BR>
-<A HREF="manual.html#pdf-bit.bnot">bit.bnot</A><BR>
-<A HREF="manual.html#pdf-bit.bor">bit.bor</A><BR>
-<A HREF="manual.html#pdf-bit.btest">bit.btest</A><BR>
-<A HREF="manual.html#pdf-bit.bxor">bit.bxor</A><BR>
-<A HREF="manual.html#pdf-bit.lshift">bit.lshift</A><BR>
-<A HREF="manual.html#pdf-bit.rol">bit.rol</A><BR>
-<A HREF="manual.html#pdf-bit.ror">bit.ror</A><BR>
-<A HREF="manual.html#pdf-bit.rshift">bit.rshift</A><BR>
+<A HREF="manual.html#pdf-bit32.AND">bit32.AND</A><BR>
+<A HREF="manual.html#pdf-bit32.NOT">bit32.NOT</A><BR>
+<A HREF="manual.html#pdf-bit32.OR">bit32.OR</A><BR>
+<A HREF="manual.html#pdf-bit32.ROL">bit32.ROL</A><BR>
+<A HREF="manual.html#pdf-bit32.ROR">bit32.ROR</A><BR>
+<A HREF="manual.html#pdf-bit32.SAR">bit32.SAR</A><BR>
+<A HREF="manual.html#pdf-bit32.SHL">bit32.SHL</A><BR>
+<A HREF="manual.html#pdf-bit32.SHR">bit32.SHR</A><BR>
+<A HREF="manual.html#pdf-bit32.TEST">bit32.TEST</A><BR>
+<A HREF="manual.html#pdf-bit32.XOR">bit32.XOR</A><BR>
 
 <P>
 <A HREF="manual.html#pdf-coroutine.create">coroutine.create</A><BR>
@@ -326,6 +327,7 @@ Freely available under the terms of the
 <A HREF="manual.html#lua_Number">lua_Number</A><BR>
 <A HREF="manual.html#lua_Reader">lua_Reader</A><BR>
 <A HREF="manual.html#lua_State">lua_State</A><BR>
+<A HREF="manual.html#lua_Unsigned">lua_Unsigned</A><BR>
 <A HREF="manual.html#lua_Writer">lua_Writer</A><BR>
 
 <P>
@@ -426,6 +428,8 @@ Freely available under the terms of the
 <A HREF="manual.html#lua_topointer">lua_topointer</A><BR>
 <A HREF="manual.html#lua_tostring">lua_tostring</A><BR>
 <A HREF="manual.html#lua_tothread">lua_tothread</A><BR>
+<A HREF="manual.html#lua_tounsigned">lua_tounsigned</A><BR>
+<A HREF="manual.html#lua_tounsignedx">lua_tounsignedx</A><BR>
 <A HREF="manual.html#lua_touserdata">lua_touserdata</A><BR>
 <A HREF="manual.html#lua_type">lua_type</A><BR>
 <A HREF="manual.html#lua_typename">lua_typename</A><BR>
@@ -465,6 +469,7 @@ Freely available under the terms of the
 <A HREF="manual.html#luaL_checkstring">luaL_checkstring</A><BR>
 <A HREF="manual.html#luaL_checktype">luaL_checktype</A><BR>
 <A HREF="manual.html#luaL_checkudata">luaL_checkudata</A><BR>
+<A HREF="manual.html#luaL_checkunsigned">luaL_checkunsigned</A><BR>
 <A HREF="manual.html#luaL_checkversion">luaL_checkversion</A><BR>
 <A HREF="manual.html#luaL_dofile">luaL_dofile</A><BR>
 <A HREF="manual.html#luaL_dostring">luaL_dostring</A><BR>
@@ -487,6 +492,7 @@ Freely available under the terms of the
 <A HREF="manual.html#luaL_optlstring">luaL_optlstring</A><BR>
 <A HREF="manual.html#luaL_optnumber">luaL_optnumber</A><BR>
 <A HREF="manual.html#luaL_optstring">luaL_optstring</A><BR>
+<A HREF="manual.html#luaL_optunsigned">luaL_optunsigned</A><BR>
 <A HREF="manual.html#luaL_prepbuffer">luaL_prepbuffer</A><BR>
 <A HREF="manual.html#luaL_pushresult">luaL_pushresult</A><BR>
 <A HREF="manual.html#luaL_ref">luaL_ref</A><BR>
@@ -506,10 +512,10 @@ Freely available under the terms of the
 <HR>
 <SMALL>
 Last update:
-Fri Jul 30 15:13:14 BRT 2010
+Sat Oct 30 21:34:44 BRST 2010
 </SMALL>
 <!--
-Last change: revised for Lua 5.2.0 (work4)
+Last change: revised for Lua 5.2.0 (work5)
 -->
 
 </BODY>

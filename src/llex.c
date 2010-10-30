@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.37 2010/04/16 12:31:07 roberto Exp $
+** $Id: llex.c,v 2.40 2010/10/25 12:24:36 roberto Exp $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -161,7 +161,7 @@ void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source) {
   ls->linenumber = 1;
   ls->lastline = 1;
   ls->source = source;
-  ls->envn = luaS_new(L, "_ENV");  /* create env name */
+  ls->envn = luaS_new(L, LUA_ENV);  /* create env name */
   luaS_fix(ls->envn);  /* never collect this name */
   luaZ_resizebuffer(ls->L, ls->buff, LUA_MINBUFFER);  /* initialize buffer */
   next(ls);  /* read first char */
@@ -221,11 +221,9 @@ static void read_numeral (LexState *ls, SemInfo *seminfo) {
   lua_assert(lisdigit(ls->current));
   do {
     save_and_next(ls);
-  } while (lisdigit(ls->current) || ls->current == '.');
-  if (check_next(ls, "Ee"))  /* `E'? */
-    check_next(ls, "+-");  /* optional exponent sign */
-  while (lislalnum(ls->current))
-    save_and_next(ls);
+    if (check_next(ls, "EePp"))  /* exponent part? */
+      check_next(ls, "+-");  /* optional exponent sign */
+  } while (lislalnum(ls->current) || ls->current == '.');
   save(ls, '\0');
   buffreplace(ls, '.', ls->decpoint);  /* follow locale for decimal point */
   if (!luaO_str2d(luaZ_buffer(ls->buff), &seminfo->r))  /* format error? */
@@ -234,7 +232,7 @@ static void read_numeral (LexState *ls, SemInfo *seminfo) {
 
 
 /*
-** skip a sequence '[=*=[' or ']=*]' and return its number of '='s or
+** skip a sequence '[=*[' or ']=*]' and return its number of '='s or
 ** -1 if sequence is malformed
 */
 static int skip_sep (LexState *ls) {

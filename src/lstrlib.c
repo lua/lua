@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.154 2010/07/02 11:38:13 roberto Exp $
+** $Id: lstrlib.c,v 1.156 2010/10/29 17:52:46 roberto Exp $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -424,7 +424,7 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
         default: goto dflt;
       }
     }
-    default: dflt: {  /* pattern class plus optional sufix */
+    default: dflt: {  /* pattern class plus optional suffix */
       const char *ep = classend(ms, p);  /* points to what is next */
       int m = s < ms->src_end && singlematch(uchar(*s), p, ep);
       switch (*ep) {
@@ -758,9 +758,9 @@ static void addquoted (lua_State *L, luaL_Buffer *b, int arg) {
     else if (*s == '\0' || iscntrl(uchar(*s))) {
       char buff[10];
       if (!isdigit(uchar(*(s+1))))
-        sprintf(buff, "\\%d", uchar(*s));
+        sprintf(buff, "\\%d", (int)uchar(*s));
       else
-        sprintf(buff, "\\%03d", uchar(*s));
+        sprintf(buff, "\\%03d", (int)uchar(*s));
       luaL_addstring(b, buff);
     }
     else

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.85 2010/04/30 18:36:22 roberto Exp $
+** $Id: lstate.c,v 2.86 2010/09/03 14:14:01 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -27,6 +27,10 @@
 
 #if !defined(LUAI_GCPAUSE)
 #define LUAI_GCPAUSE	200  /* 200% */
+#endif
+
+#if !defined(LUAI_GCMAJOR)
+#define LUAI_GCMAJOR	200  /* 200% */
 #endif
 
 #if !defined(LUAI_GCMUL)
@@ -254,6 +258,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->weak = g->ephemeron = g->allweak = NULL;
   g->totalbytes = sizeof(LG);
   g->gcpause = LUAI_GCPAUSE;
+  g->gcmajorinc = LUAI_GCMAJOR;
   g->gcstepmul = LUAI_GCMUL;
   for (i=0; i < LUA_NUMTAGS; i++) g->mt[i] = NULL;
   if (luaD_rawrunprotected(L, f_luaopen, NULL) != LUA_OK) {

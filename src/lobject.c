@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.40 2010/04/18 13:22:48 roberto Exp $
+** $Id: lobject.c,v 2.43 2010/10/29 15:54:55 roberto Exp $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -106,14 +106,19 @@ lua_Number luaO_arith (int op, lua_Number v1, lua_Number v2) {
 }
 
 
+static int checkend (const char *s, const char *endptr) {
+  if (endptr == s) return 0;  /* no characters converted */
+  while (lisspace(cast(unsigned char, *endptr))) endptr++;
+  return (*endptr == '\0');  /* OK if no trailing characters */
+}
+
+
 int luaO_str2d (const char *s, lua_Number *result) {
   char *endptr;
   *result = lua_str2number(s, &endptr);
-  if (endptr == s) return 0;  /* conversion failed */
-  if (*endptr == 'x' || *endptr == 'X')  /* maybe an hexadecimal constant? */
-    *result = cast_num(strtoul(s, &endptr, 16));
-  while (lisspace(cast(unsigned char, *endptr))) endptr++;
-  return (*endptr == '\0');  /* OK if no trailing characters */
+  if (checkend(s, endptr)) return 1;  /* conversion OK? */
+  *result = cast_num(strtoul(s, &endptr, 0)); /* try hexadecimal */
+  return checkend(s, endptr);
 }
 
 
@@ -221,7 +226,7 @@ void luaO_chunkid (char *out, const char *source, size_t bufflen) {
   else {  /* string; format as [string "source"] */
     const char *nl = strchr(source, '\n');  /* find first new line (if any) */
     addstr(out, PRE, LL(PRE));  /* add prefix */
-    bufflen -= LL(PRE RETS POS);  /* save space for prefix+suffix */
+    bufflen -= LL(PRE RETS POS) + 1;  /* save space for prefix+suffix+'\0' */
     if (l < bufflen && nl == NULL) {  /* small one-line source? */
       addstr(out, source, l);  /* keep it */
     }

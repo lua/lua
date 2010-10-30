@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.246 2010/07/02 11:38:13 roberto Exp $
+** $Id: lbaselib.c,v 1.251 2010/10/28 15:36:30 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -56,12 +56,15 @@ static int luaB_tonumber (lua_State *L) {
     const char *s1 = luaL_checkstring(L, 1);
     char *s2;
     unsigned long n;
+    int neg = 0;
     luaL_argcheck(L, 2 <= base && base <= 36, 2, "base out of range");
+    while (isspace((unsigned char)(*s1))) s1++;  /* skip initial spaces */
+    if (*s1 == '-') { s1++; neg = 1; }
     n = strtoul(s1, &s2, base);
     if (s1 != s2) {  /* at least one valid digit? */
       while (isspace((unsigned char)(*s2))) s2++;  /* skip trailing spaces */
       if (*s2 == '\0') {  /* no invalid trailing characters? */
-        lua_pushnumber(L, (lua_Number)n);
+        lua_pushnumber(L, (neg) ? -(lua_Number)n : (lua_Number)n);
         return 1;
       }
     }
@@ -142,11 +145,11 @@ static int luaB_rawset (lua_State *L) {
 
 static int luaB_collectgarbage (lua_State *L) {
   static const char *const opts[] = {"stop", "restart", "collect",
-    "count", "step", "setpause", "setstepmul", "isrunning",
-    "gen", "inc", NULL};
+    "count", "step", "setpause", "setstepmul",
+    "setmajorinc", "isrunning", "gen", "inc", NULL};
   static const int optsnum[] = {LUA_GCSTOP, LUA_GCRESTART, LUA_GCCOLLECT,
     LUA_GCCOUNT, LUA_GCSTEP, LUA_GCSETPAUSE, LUA_GCSETSTEPMUL,
-    LUA_GCISRUNNING, LUA_GCGEN, LUA_GCINC};
+    LUA_GCSETMAJORINC, LUA_GCISRUNNING, LUA_GCGEN, LUA_GCINC};
   int o = optsnum[luaL_checkoption(L, 1, "collect", opts)];
   int ex = luaL_optint(L, 2, 0);
   int res = lua_gc(L, o, ex);
@@ -330,11 +333,12 @@ static int luaB_load (lua_State *L) {
 
 static int luaB_loadin (lua_State *L) {
   int n;
-  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_checkany(L, 1);
   n = luaB_load_aux(L, 2);
   if (n == 1) {  /* success? */
     lua_pushvalue(L, 1);  /* environment for loaded function */
-    lua_setupvalue(L, -2, 1);
+    if (lua_setupvalue(L, -2, 1) == NULL)
+      luaL_error(L, "loaded chunk does not have an upvalue");
   }
   return n;
 }

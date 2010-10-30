@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.65 2010/05/03 17:39:48 roberto Exp $
+** $Id: lstate.h,v 2.68 2010/10/29 17:52:46 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -66,13 +66,13 @@ typedef struct stringtable {
 
 
 /*
-** informations about a call
+** information about a call
 */
 typedef struct CallInfo {
   StkId func;  /* function index in the stack */
   StkId	top;  /* top for this function */
   struct CallInfo *previous, *next;  /* dynamic call link */
-  short nresults;  /* expected number of results from a call */
+  short nresults;  /* expected number of results from this function */
   lu_byte callstatus;
   union {
     struct {  /* only for Lua functions */
@@ -136,6 +136,7 @@ typedef struct global_State {
   UpVal uvhead;  /* head of double-linked list of all open upvalues */
   Mbuffer buff;  /* temporary buffer for string concatenation */
   int gcpause;  /* size of pause between successive GCs */
+  int gcmajorinc;  /* how much to wait for a major GC (only in gen. mode) */
   int gcstepmul;  /* GC `granularity' */
   lua_CFunction panic;  /* to be called in unprotected errors */
   struct lua_State *mainthread;

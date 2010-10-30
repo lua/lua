@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.219 2010/07/28 15:51:59 roberto Exp $
+** $Id: lauxlib.c,v 1.224 2010/10/29 12:52:21 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -330,9 +330,24 @@ LUALIB_API lua_Integer luaL_checkinteger (lua_State *L, int narg) {
 }
 
 
+LUALIB_API lua_Unsigned luaL_checkunsigned (lua_State *L, int narg) {
+  int isnum;
+  lua_Unsigned d = lua_tounsignedx(L, narg, &isnum);
+  if (!isnum)
+    tag_error(L, narg, LUA_TNUMBER);
+  return d;
+}
+
+
 LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int narg,
                                                       lua_Integer def) {
   return luaL_opt(L, luaL_checkinteger, narg, def);
+}
+
+
+LUALIB_API lua_Unsigned luaL_optunsigned (lua_State *L, int narg,
+                                                        lua_Unsigned def) {
+  return luaL_opt(L, luaL_checkunsigned, narg, def);
 }
 
 /* }====================================================== */
@@ -434,7 +449,7 @@ LUALIB_API char *luaL_buffinitsize (lua_State *L, luaL_Buffer *B, size_t sz) {
 */
 
 /* index of free-list header */
-#define freelist	"lua-freelist"
+#define freelist	0
 
 
 LUALIB_API int luaL_ref (lua_State *L, int t) {
@@ -444,12 +459,12 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
     lua_pop(L, 1);  /* remove from stack */
     return LUA_REFNIL;  /* `nil' has a unique fixed reference */
   }
-  lua_getfield(L, t, freelist);  /* get first free element */
-  ref = (int)lua_tointeger(L, -1);  /* ref = t[FREELIST_REF] */
+  lua_rawgeti(L, t, freelist);  /* get first free element */
+  ref = (int)lua_tointeger(L, -1);  /* ref = t[freelist] */
   lua_pop(L, 1);  /* remove it from stack */
   if (ref != 0) {  /* any free element? */
     lua_rawgeti(L, t, ref);  /* remove it from list */
-    lua_setfield(L, t, freelist);  /* (t[freelist] = t[ref]) */
+    lua_rawseti(L, t, freelist);  /* (t[freelist] = t[ref]) */
   }
   else  /* no free elements */
     ref = (int)lua_rawlen(L, t) + 1;  /* get a new reference */
@@ -461,10 +476,10 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
 LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
   if (ref >= 0) {
     t = lua_absindex(L, t);
-    lua_getfield(L, t, freelist);
+    lua_rawgeti(L, t, freelist);
     lua_rawseti(L, t, ref);  /* t[ref] = t[freelist] */
     lua_pushinteger(L, ref);
-    lua_setfield(L, t, freelist);  /* t[freelist] = ref */
+    lua_rawseti(L, t, freelist);  /* t[freelist] = ref */
   }
 }
 
@@ -511,17 +526,32 @@ static int errfile (lua_State *L, const char *what, int fnameindex) {
 }
 
 
+static int skipBOM (LoadF *lf) {
+  const char *p = "\xEF\xBB\xBF";  /* Utf8 BOM mark */
+  int c;
+  lf->n = 0;
+  do {
+    c = getc(lf->f);
+    if (c == EOF || c != *(unsigned char *)p++) return c;
+    lf->buff[lf->n++] = c;  /* to be read by the parser */
+  } while (*p != '\0');
+  lf->n = 0;  /* prefix matched; discard it */
+  return getc(lf->f);  /* return next character */
+}
+
+
 /*
-** reads the first character of file 'f' and skips its first line
-** if it starts with '#'. Returns true if it skipped the first line.
-** In any case, '*cp' has the first "valid" character of the file
-** (after the optional first-line comment).
+** reads the first character of file 'f' and skips an optional BOM mark
+** in its beginning plus its first line if it starts with '#'. Returns
+** true if it skipped the first line.  In any case, '*cp' has the
+** first "valid" character of the file (after the optional BOM and
+** a first-line comment).
 */
-static int skipcomment (FILE *f, int *cp) {
-  int c = *cp = getc(f);
+static int skipcomment (LoadF *lf, int *cp) {
+  int c = *cp = skipBOM(lf);
   if (c == '#') {  /* first line is a comment (Unix exec. file)? */
-    while ((c = getc(f)) != EOF && c != '\n') ;  /* skip first line */
-    *cp = getc(f);  /* skip end-of-line */
+    while ((c = getc(lf->f)) != EOF && c != '\n') ;  /* skip first line */
+    *cp = getc(lf->f);  /* skip end-of-line */
     return 1;  /* there was a comment */
   }
   else return 0;  /* no comment */
@@ -542,14 +572,12 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
     lf.f = fopen(filename, "r");
     if (lf.f == NULL) return errfile(L, "open", fnameindex);
   }
-  lf.n = 0;
-  if (skipcomment(lf.f, &c))  /* read initial portion */
+  if (skipcomment(&lf, &c))  /* read initial portion */
     lf.buff[lf.n++] = '\n';  /* add line to correct line numbers */
   if (c == LUA_SIGNATURE[0] && filename) {  /* binary file? */
     lf.f = freopen(filename, "rb", lf.f);  /* reopen in binary mode */
     if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
-    lf.n = 0;
-    skipcomment(lf.f, &c);  /* re-read initial portion */
+    skipcomment(&lf, &c);  /* re-read initial portion */
   }
   if (c != EOF)
     lf.buff[lf.n++] = c;  /* 'c' is the first character of the stream */
@@ -628,7 +656,7 @@ LUALIB_API int luaL_len (lua_State *L, int idx) {
   int l;
   int isnum;
   lua_len(L, idx);
-  l = lua_tointegerx(L, -1, &isnum);
+  l = (int)lua_tointegerx(L, -1, &isnum);
   if (!isnum)
     luaL_error(L, "object length is not a number");
   lua_pop(L, 1);  /* remove object */
@@ -848,5 +876,12 @@ LUALIB_API void luaL_checkversion_ (lua_State *L, lua_Number ver) {
   else if (*v != ver)
     luaL_error(L, "version mismatch: app. needs %d, Lua core provides %f",
                   ver, *v);
+  /* check conversions number -> integer types */
+  lua_pushnumber(L, -(lua_Number)0x1234);
+  if (lua_tointeger(L, -1) != -0x1234 ||
+      lua_tounsigned(L, -1) != (lua_Unsigned)-0x1234)
+    luaL_error(L, "bad conversion number->int;"
+                  " must recompile Lua with proper settings");
+  lua_pop(L, 1);
 }
 

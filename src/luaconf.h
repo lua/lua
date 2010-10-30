@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.142 2010/07/28 15:51:59 roberto Exp $
+** $Id: luaconf.h,v 1.148 2010/10/29 17:52:46 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -47,8 +47,8 @@
 
 #if defined(LUA_USE_MACOSX)
 #define LUA_USE_POSIX
-#define LUA_USE_DLOPEN
-#define LUA_USE_READLINE	/* needs some extra libraries */
+#define LUA_USE_DLOPEN		/* does not need -ldl */
+#define LUA_USE_READLINE	/* needs an extra library: -lreadline */
 #endif
 
 
@@ -113,6 +113,14 @@
 #else
 #define LUA_DIRSEP	"/"
 #endif
+
+
+/*
+@@ LUA_ENV is the name of the variable that holds the current
+@@ environment, used to access global names.
+** CHANGE it if you do not like this name.
+*/
+#define LUA_ENV		"_ENV"
 
 
 /*
@@ -430,26 +438,28 @@
 */
 #define LUA_INTEGER	ptrdiff_t
 
+/*
+@@ LUA_UNSIGNED is the integral type used by lua_pushunsigned/lua_tounsigned.
+** It must have at least 32 bits.
+*/
+#define LUA_UNSIGNED	unsigned LUA_INT32
+
 
 /*
 @@ lua_number2int is a macro to convert lua_Number to int.
 @@ lua_number2integer is a macro to convert lua_Number to LUA_INTEGER.
-@@ lua_number2uint is a macro to convert a lua_Number to an unsigned
-@* LUA_INT32.
-@@ lua_uint2number is a macro to convert an unsigned LUA_INT32
-@* to a lua_Number.
-** CHANGE them if you know a faster way to convert a lua_Number to
-** int (with any rounding method and without throwing errors) in your
-** system. In Pentium machines, a naive typecast from double to int
-** in C is extremely slow, so any alternative is worth trying.
+@@ lua_number2uint is a macro to convert a lua_Number to a LUA_UNSIGNED.
+@@ lua_uint2number is a macro to convert a LUA_UNSIGNED to a lua_Number.
 */
 
-/* On a Pentium, resort to a trick */
-#if defined(LUA_NUMBER_DOUBLE) && !defined(LUA_ANSI) && !defined(__SSE2__) && \
-    (defined(__i386) || defined (_M_IX86) || defined(__i386__))	/* { */
+#if defined(LUA_CORE)		/* { */
 
-/* On a Microsoft compiler, use assembler */
-#if defined(_MSC_VER)		/* { */
+#if defined(LUA_NUMBER_DOUBLE) && !defined(LUA_ANSI) && \
+    !defined(LUA_NOIEEE754TRICK)	/* { */
+
+/* On a Microsoft compiler on a Pentium, use assembler to avoid clashes
+   with a DirectX idiosyncrasy */
+#if defined(_MSC_VER) && defined(M_IX86)		/* { */
 
 #define lua_number2int(i,n)  __asm {__asm fld n   __asm fistp i}
 #define lua_number2integer(i,n)		lua_number2int(i, n)
@@ -457,31 +467,76 @@
   {__int64 l; __asm {__asm fld n   __asm fistp l} i = (unsigned int)l;}
 
 #else				/* }{ */
-/* the next trick should work on any Pentium, but sometimes clashes
-   with a DirectX idiosyncrasy */
+/* the next trick should work on any machine using IEEE754 with
+   a 32-bit integer type */
 
-union luai_Cast { double l_d; long l_l; };
-#define lua_number2int(i,n) \
-  { volatile union luai_Cast u; u.l_d = (n) + 6755399441055744.0; (i) = u.l_l; }
-#define lua_number2integer(i,n)		lua_number2int(i, n)
-#define lua_number2uint(i,n)		lua_number2int(i, n)
+union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
+
+/*
+@@ LUA_IEEEENDIAN is the endianness of doubles in your machine
+@@ (0 for little endian, 1 for big endian); if not defined, Lua will
+@@ check it dynamically.
+*/
+/* check for known architectures */
+#if defined(__i386__) || defined(__i386) || defined(i386) || \
+    defined (__x86_64)
+#define LUA_IEEEENDIAN	0
+#elif defined(__POWERPC__) || defined(__ppc__)
+#define LUA_IEEEENDIAN	1
+#endif
+
+#if !defined(LUA_IEEEENDIAN)	/* { */
+#define LUAI_EXTRAIEEE	\
+  static const union luai_Cast ieeeendian = {-(33.0 + 6755399441055744.0)};
+#define LUA_IEEEENDIAN		(ieeeendian.l_p[1] == 33)
+#else
+#define LUAI_EXTRAIEEE		/* empty */
+#endif	/* } */
+
+#define lua_number2int32(i,n,t) \
+  { LUAI_EXTRAIEEE \
+    volatile union luai_Cast u; u.l_d = (n) + 6755399441055744.0; \
+    (i) = (t)u.l_p[LUA_IEEEENDIAN]; }
+
+#define lua_number2int(i,n)		lua_number2int32(i, n, int)
+#define lua_number2integer(i,n)		lua_number2int32(i, n, LUA_INTEGER)
+#define lua_number2uint(i,n)		lua_number2int32(i, n, LUA_UNSIGNED)
 
 #endif				/* } */
 
 
-#else			/* }{ */
-/* this option always works, but may be slow */
-#define lua_number2int(i,n)	((i)=(int)(n))
-#define lua_number2integer(i,n)	((i)=(LUA_INTEGER)(n))
-#define lua_number2uint(i,n)	((i)=(unsigned LUA_INT32)(n))
-
 #endif			/* } */
 
 
-/* on several machines, coercion from unsigned to double is too slow,
-   so avoid that if possible */
+/* the following definitions always work, but may be slow */
+
+#if !defined(lua_number2int)
+#define lua_number2int(i,n)	((i)=(int)(n))
+#endif
+
+#if !defined(lua_number2integer)
+#define lua_number2integer(i,n)	((i)=(LUA_INTEGER)(n))
+#endif
+
+#if !defined(lua_number2uint) && (defined(lapi_c) || defined(luaall_c))  /* { */
+/* the following definition assures proper modulo behavior */
+#if defined(LUA_NUMBER_DOUBLE)
+#include <math.h>
+#define lua_number2uint(i,n)  \
+	((i)=(LUA_UNSIGNED)((n) - floor((n)/4294967296.0)*4294967296.0))
+#else
+#define lua_number2uint(i,n)	((i)=(LUA_UNSIGNED)(n))
+#endif
+#endif	/* } */
+
+#if !defined(lua_uint2number)
+/* on several machines, coercion from unsigned to double is slow,
+   so it may be worth to avoid */
 #define lua_uint2number(u)  \
 	((LUA_INT32)(u) < 0 ? (lua_Number)(u) : (lua_Number)(LUA_INT32)(u))
+#endif
+
+#endif		/* } */
 
 
 /*

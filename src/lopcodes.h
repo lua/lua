@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.135 2010/03/12 19:14:06 roberto Exp $
+** $Id: lopcodes.h,v 1.137 2010/10/25 12:24:55 roberto Exp $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -17,6 +17,7 @@
 	`A' : 8 bits
 	`B' : 9 bits
 	`C' : 9 bits
+	'Ax' : 26 bits ('A', 'B', and 'C' together)
 	`Bx' : 18 bits (`B' and `C' together)
 	`sBx' : signed Bx
 
@@ -122,7 +123,7 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 			| (cast(Instruction, bc)<<POS_Bx))
 
 #define CREATE_Ax(o,a)		((cast(Instruction, o)<<POS_OP) \
-			| (cast(Instruction, a)<<POS_A))
+			| (cast(Instruction, a)<<POS_Ax))
 
 
 /*
@@ -212,14 +213,14 @@ OP_FORLOOP,/*	A sBx	R(A)+=R(A+2);
 OP_FORPREP,/*	A sBx	R(A)-=R(A+2); pc+=sBx				*/
 
 OP_TFORCALL,/*	A C	R(A+3), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2));	*/
+OP_TFORLOOP,/*	A sBx	if R(A+1) ~= nil then { R(A)=R(A+1); pc += sBx }*/
+
 OP_SETLIST,/*	A B C	R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B	*/
 
 OP_CLOSE,/*	A	close all variables in the stack up to (>=) R(A)*/
 OP_CLOSURE,/*	A Bx	R(A) := closure(KPROTO[Bx])			*/
 
 OP_VARARG,/*	A B	R(A), R(A+1), ..., R(A+B-2) = vararg		*/
-
-OP_TFORLOOP,/*	A sBx	if R(A+1) ~= nil then { R(A)=R(A+1); pc += sBx }*/
 
 OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
 } OpCode;

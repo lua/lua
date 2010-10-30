@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.133 2010/07/25 15:18:19 roberto Exp $
+** $Id: lapi.c,v 2.139 2010/10/25 20:31:11 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -85,7 +85,7 @@ LUA_API int lua_checkstack (lua_State *L, int size) {
   if (L->stack_last - L->top > size)  /* stack large enough? */
     res = 1;  /* yes; check is OK */
   else {  /* no; need to grow stack */
-    int inuse = L->top - L->stack + EXTRA_STACK;
+    int inuse = cast_int(L->top - L->stack) + EXTRA_STACK;
     if (inuse > LUAI_MAXSTACK - size)  /* can grow without overflow? */
       res = 0;  /* no */
     else  /* try to grow stack */
@@ -347,6 +347,23 @@ LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *isnum) {
 }
 
 
+LUA_API lua_Unsigned lua_tounsignedx (lua_State *L, int idx, int *isnum) {
+  TValue n;
+  const TValue *o = index2addr(L, idx);
+  if (tonumber(o, &n)) {
+    lua_Unsigned res;
+    lua_Number num = nvalue(o);
+    lua_number2uint(res, num);
+    if (isnum) *isnum = 1;
+    return res;
+  }
+  else {
+    if (isnum) *isnum = 0;
+    return 0;
+  }
+}
+
+
 LUA_API int lua_toboolean (lua_State *L, int idx) {
   const TValue *o = index2addr(L, idx);
   return !l_isfalse(o);
@@ -447,6 +464,16 @@ LUA_API void lua_pushnumber (lua_State *L, lua_Number n) {
 LUA_API void lua_pushinteger (lua_State *L, lua_Integer n) {
   lua_lock(L);
   setnvalue(L->top, cast_num(n));
+  api_incr_top(L);
+  lua_unlock(L);
+}
+
+
+LUA_API void lua_pushunsigned (lua_State *L, lua_Unsigned u) {
+  lua_Number n;
+  lua_lock(L);
+  n = lua_uint2number(u);
+  setnvalue(L->top, n);
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -799,6 +826,7 @@ LUA_API void lua_callk (lua_State *L, int nargs, int nresults, int ctx,
   api_check(L, k == NULL || !isLua(L->ci),
     "cannot use continuations inside hooks");
   api_checknelems(L, nargs+1);
+  api_check(L, L->status == LUA_OK, "cannot do calls on non-normal thread");
   checkresults(L, nargs, nresults);
   func = L->top - (nargs+1);
   if (k != NULL && L->nny == 0) {  /* need to prepare continuation? */
@@ -839,6 +867,7 @@ LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
   api_check(L, k == NULL || !isLua(L->ci),
     "cannot use continuations inside hooks");
   api_checknelems(L, nargs+1);
+  api_check(L, L->status == LUA_OK, "cannot do calls on non-normal thread");
   checkresults(L, nargs, nresults);
   if (errfunc == 0)
     func = 0;
@@ -889,7 +918,7 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
       /* get global table from registry */
       Table *reg = hvalue(&G(L)->l_registry);
       const TValue *gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
-      /* set global table as 1st upvalue of 'f' (may be _ENV) */
+      /* set global table as 1st upvalue of 'f' (may be LUA_ENV) */
       setobj(L, f->l.upvals[0]->v, gt);
       luaC_barrier(L, f->l.upvals[0], gt);
     }
@@ -972,6 +1001,11 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
     case LUA_GCSETPAUSE: {
       res = g->gcpause;
       g->gcpause = data;
+      break;
+    }
+    case LUA_GCSETMAJORINC: {
+      res = g->gcmajorinc;
+      g->gcmajorinc = data;
       break;
     }
     case LUA_GCSETSTEPMUL: {
@@ -1100,11 +1134,15 @@ static const char *aux_upvalue (StkId fi, int n, TValue **val,
     return "";
   }
   else {
+    const char *name;
     Proto *p = f->l.p;
     if (!(1 <= n && n <= p->sizeupvalues)) return NULL;
     *val = f->l.upvals[n-1]->v;
     if (owner) *owner = obj2gco(f->l.upvals[n - 1]);
-    return getstr(p->upvalues[n-1].name);
+    name = getstr(p->upvalues[n-1].name);
+    if (name == NULL)  /* no debug information? */
+      name = "";
+    return name;
   }
 }
 
@@ -1144,13 +1182,11 @@ LUA_API const char *lua_setupvalue (lua_State *L, int funcindex, int n) {
 
 static UpVal **getupvalref (lua_State *L, int fidx, int n, Closure **pf) {
   Closure *f;
-  Proto *p;
   StkId fi = index2addr(L, fidx);
   api_check(L, ttisclosure(fi), "Lua function expected");
   f = clvalue(fi);
   api_check(L, !f->c.isC, "Lua function expected");
-  p = f->l.p;
-  api_check(L, (1 <= n && n <= p->sizeupvalues), "invalid upvalue index");
+  api_check(L, (1 <= n && n <= f->l.p->sizeupvalues), "invalid upvalue index");
   if (pf) *pf = f;
   return &f->l.upvals[n - 1];  /* get its upvalue pointer */
 }
