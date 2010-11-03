@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.147 2010/10/29 11:13:21 roberto Exp roberto $
+** $Id: luaconf.h,v 1.148 2010/10/29 17:52:46 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -348,26 +348,12 @@
 
 
 
-/*
-** {==================================================================
-** CHANGE (to smaller values) the following definitions if your system
-** has a small C stack. (Or you may want to change them to larger
-** values if your system has a large C stack and these limits are
-** too rigid for you.) Some of these constants control the size of
-** stack-allocated arrays used by the compiler or the interpreter, while
-** others limit the maximum number of recursive calls that the compiler
-** or the interpreter can perform. Values too large may cause a C stack
-** overflow for some forms of deep constructs.
-** ===================================================================
-*/
-
 
 /*
 @@ LUAL_BUFFERSIZE is the buffer size used by the lauxlib buffer system.
+** CHANGE it if it uses too much C-stack space.
 */
 #define LUAL_BUFFERSIZE		BUFSIZ
-
-/* }================================================================== */
 
 
 
@@ -445,32 +431,21 @@
 #define LUA_UNSIGNED	unsigned LUA_INT32
 
 
-/*
-@@ lua_number2int is a macro to convert lua_Number to int.
-@@ lua_number2integer is a macro to convert lua_Number to LUA_INTEGER.
-@@ lua_number2uint is a macro to convert a lua_Number to a LUA_UNSIGNED.
-@@ lua_uint2number is a macro to convert a LUA_UNSIGNED to a lua_Number.
-*/
-
 #if defined(LUA_CORE)		/* { */
 
-#if defined(LUA_NUMBER_DOUBLE) && !defined(LUA_ANSI) && \
-    !defined(LUA_NOIEEE754TRICK)	/* { */
+#if defined(LUA_NUMBER_DOUBLE) && !defined(LUA_ANSI)	/* { */
 
 /* On a Microsoft compiler on a Pentium, use assembler to avoid clashes
    with a DirectX idiosyncrasy */
 #if defined(_MSC_VER) && defined(M_IX86)		/* { */
 
-#define lua_number2int(i,n)  __asm {__asm fld n   __asm fistp i}
-#define lua_number2integer(i,n)		lua_number2int(i, n)
-#define lua_number2uint(i,n)  \
-  {__int64 l; __asm {__asm fld n   __asm fistp l} i = (unsigned int)l;}
+#define MS_ASMTRICK
 
 #else				/* }{ */
-/* the next trick should work on any machine using IEEE754 with
-   a 32-bit integer type */
+/* the next definition uses a trick that should work on any machine
+   using IEEE754 with a 32-bit integer type */
 
-union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
+#define LUA_IEEE754TRICK
 
 /*
 @@ LUA_IEEEENDIAN is the endianness of doubles in your machine
@@ -485,77 +460,11 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
 #define LUA_IEEEENDIAN	1
 #endif
 
-#if !defined(LUA_IEEEENDIAN)	/* { */
-#define LUAI_EXTRAIEEE	\
-  static const union luai_Cast ieeeendian = {-(33.0 + 6755399441055744.0)};
-#define LUA_IEEEENDIAN		(ieeeendian.l_p[1] == 33)
-#else
-#define LUAI_EXTRAIEEE		/* empty */
-#endif	/* } */
-
-#define lua_number2int32(i,n,t) \
-  { LUAI_EXTRAIEEE \
-    volatile union luai_Cast u; u.l_d = (n) + 6755399441055744.0; \
-    (i) = (t)u.l_p[LUA_IEEEENDIAN]; }
-
-#define lua_number2int(i,n)		lua_number2int32(i, n, int)
-#define lua_number2integer(i,n)		lua_number2int32(i, n, LUA_INTEGER)
-#define lua_number2uint(i,n)		lua_number2int32(i, n, LUA_UNSIGNED)
-
 #endif				/* } */
-
 
 #endif			/* } */
 
-
-/* the following definitions always work, but may be slow */
-
-#if !defined(lua_number2int)
-#define lua_number2int(i,n)	((i)=(int)(n))
-#endif
-
-#if !defined(lua_number2integer)
-#define lua_number2integer(i,n)	((i)=(LUA_INTEGER)(n))
-#endif
-
-#if !defined(lua_number2uint) && (defined(lapi_c) || defined(luaall_c))  /* { */
-/* the following definition assures proper modulo behavior */
-#if defined(LUA_NUMBER_DOUBLE)
-#include <math.h>
-#define lua_number2uint(i,n)  \
-	((i)=(LUA_UNSIGNED)((n) - floor((n)/4294967296.0)*4294967296.0))
-#else
-#define lua_number2uint(i,n)	((i)=(LUA_UNSIGNED)(n))
-#endif
-#endif	/* } */
-
-#if !defined(lua_uint2number)
-/* on several machines, coercion from unsigned to double is slow,
-   so it may be worth to avoid */
-#define lua_uint2number(u)  \
-	((LUA_INT32)(u) < 0 ? (lua_Number)(u) : (lua_Number)(LUA_INT32)(u))
-#endif
-
-#endif		/* } */
-
-
-/*
-@@ luai_hashnum is a macro do hash a lua_Number value into an integer.
-@* The hash must be deterministic and give reasonable values for
-@* both small and large values (outside the range of integers).
-@* It is used only in ltable.c.
-*/
-
-#if defined(ltable_c) || defined(luaall_c)
-
-#include <float.h>
-#include <math.h>
-
-#define luai_hashnum(i,n) { int e;  \
-  n = frexp(n, &e) * (lua_Number)(INT_MAX - DBL_MAX_EXP);  \
-  lua_number2int(i, n); i += e; }
-
-#endif  /* ltable_c */
+#endif			/* } */
 
 /* }================================================================== */
 
