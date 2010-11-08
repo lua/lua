@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.82 2010/05/31 16:08:55 roberto Exp roberto $
+** $Id: llimits.h,v 1.83 2010/11/03 15:16:17 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -170,9 +170,9 @@ typedef lu_int32 Instruction;
 
 /*
 ** lua_number2int is a macro to convert lua_Number to int.
-** lua_number2integer is a macro to convert lua_Number to LUA_INTEGER.
-** lua_number2unsigned is a macro to convert a lua_Number to a LUA_UNSIGNED.
-** lua_unsigned2number is a macro to convert a LUA_UNSIGNED to a lua_Number.
+** lua_number2integer is a macro to convert lua_Number to lua_Integer.
+** lua_number2unsigned is a macro to convert a lua_Number to a lua_Unsigned.
+** lua_unsigned2number is a macro to convert a lua_Unsigned to a lua_Number.
 */
 
 #if defined(MS_ASMTRICK)	/* { */
@@ -204,8 +204,8 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
     (i) = (t)u.l_p[LUA_IEEEENDIAN]; }
 
 #define lua_number2int(i,n)		lua_number2int32(i, n, int)
-#define lua_number2integer(i,n)		lua_number2int32(i, n, LUA_INTEGER)
-#define lua_number2unsigned(i,n)	lua_number2int32(i, n, LUA_UNSIGNED)
+#define lua_number2integer(i,n)		lua_number2int32(i, n, lua_Integer)
+#define lua_number2unsigned(i,n)	lua_number2int32(i, n, lua_Unsigned)
 
 #endif				/* } */
 
@@ -217,17 +217,18 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
 #endif
 
 #if !defined(lua_number2integer)
-#define lua_number2integer(i,n)	((i)=(LUA_INTEGER)(n))
+#define lua_number2integer(i,n)	((i)=(lua_Integer)(n))
 #endif
 
 #if !defined(lua_number2unsigned)	/* { */
 /* the following definition assures proper modulo behavior */
 #if defined(LUA_NUMBER_DOUBLE)
 #include <math.h>
+#define SUPUNSIGNED	((lua_Number)(~(lua_Unsigned)0) + 1)
 #define lua_number2unsigned(i,n)  \
-	((i)=(LUA_UNSIGNED)((n) - floor((n)/4294967296.0)*4294967296.0))
+	((i)=(lua_Unsigned)((n) - floor((n)/SUPUNSIGNED)*SUPUNSIGNED))
 #else
-#define lua_number2unsigned(i,n)	((i)=(LUA_UNSIGNED)(n))
+#define lua_number2unsigned(i,n)	((i)=(lua_Unsigned)(n))
 #endif
 #endif				/* } */
 
@@ -236,7 +237,7 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
 /* on several machines, coercion from unsigned to double is slow,
    so it may be worth to avoid */
 #define lua_unsigned2number(u)  \
-	((LUA_INT32)(u) < 0 ? (lua_Number)(u) : (lua_Number)(LUA_INT32)(u))
+    (((u) <= (lua_Unsigned)INT_MAX) ? (lua_Number)(int)(u) : (lua_Number)(u))
 #endif
 
 
