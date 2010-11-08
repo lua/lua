@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.91 2010/07/28 15:51:59 roberto Exp roberto $
+** $Id: liolib.c,v 2.92 2010/10/25 19:01:37 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -17,6 +17,9 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
+
+
+#define MAX_SIZE_T	(~(size_t)0)
 
 
 /*
@@ -377,10 +380,13 @@ static int read_chars (lua_State *L, FILE *f, size_t n) {
   size_t nr;  /* number of chars actually read in each cycle */
   luaL_Buffer b;
   luaL_buffinit(L, &b);
-  rlen = LUAL_BUFFERSIZE;  /* try to read that much each time */
+  rlen = LUAL_BUFFERSIZE / 2;  /* to be doubled at 1st iteration */
   do {
-    char *p = luaL_prepbuffer(&b);
+    char *p;
+    if (rlen < (MAX_SIZE_T / 2))
+      rlen *= 2;  /* double buffer size at each iteration */
     if (rlen > tbr) rlen = tbr;  /* cannot read more than asked */
+    p = luaL_prepbuffsize(&b, rlen);
     nr = fread(p, sizeof(char), rlen, f);
     luaL_addsize(&b, nr);
     tbr -= nr;  /* still have to read 'tbr' chars */
@@ -421,7 +427,7 @@ static int g_read (lua_State *L, FILE *f, int first) {
             success = read_line(L, f, 0);
             break;
           case 'a':  /* file */
-            read_chars(L, f, ~((size_t)0));  /* read MAX_SIZE_T chars */
+            read_chars(L, f, MAX_SIZE_T);  /* read MAX_SIZE_T chars */
             success = 1; /* always success */
             break;
           default:
