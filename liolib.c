@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.92 2010/10/25 19:01:37 roberto Exp roberto $
+** $Id: liolib.c,v 2.93 2010/11/08 17:27:22 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -374,25 +374,32 @@ static int read_line (lua_State *L, FILE *f, int chop) {
 }
 
 
-static int read_chars (lua_State *L, FILE *f, size_t n) {
-  size_t tbr = n;  /* number of chars to be read */
-  size_t rlen;  /* how much to read in each cycle */
-  size_t nr;  /* number of chars actually read in each cycle */
+static void read_all (lua_State *L, FILE *f) {
+  size_t rlen = LUAL_BUFFERSIZE;  /* how much to read in each cycle */
   luaL_Buffer b;
   luaL_buffinit(L, &b);
-  rlen = LUAL_BUFFERSIZE / 2;  /* to be doubled at 1st iteration */
-  do {
-    char *p;
-    if (rlen < (MAX_SIZE_T / 2))
-      rlen *= 2;  /* double buffer size at each iteration */
-    if (rlen > tbr) rlen = tbr;  /* cannot read more than asked */
-    p = luaL_prepbuffsize(&b, rlen);
-    nr = fread(p, sizeof(char), rlen, f);
+  for (;;) {
+    char *p = luaL_prepbuffsize(&b, rlen);
+    size_t nr = fread(p, sizeof(char), rlen, f);
     luaL_addsize(&b, nr);
-    tbr -= nr;  /* still have to read 'tbr' chars */
-  } while (tbr > 0 && nr == rlen);  /* until end of count or eof */
+    if (nr < rlen) break;  /* eof? */
+    else if (rlen <= (MAX_SIZE_T / 4))  /* avoid buffers too large */
+      rlen *= 2;  /* double buffer size at each iteration */
+  }
   luaL_pushresult(&b);  /* close buffer */
-  return (tbr < n);  /* true iff read something */
+}
+
+
+static int read_chars (lua_State *L, FILE *f, size_t n) {
+  size_t nr;  /* number of chars actually read */
+  char *p;
+  luaL_Buffer b;
+  luaL_buffinit(L, &b);
+  p = luaL_prepbuffsize(&b, n);  /* prepare buffer to read whole block */
+  nr = fread(p, sizeof(char), n, f);  /* try to read 'n' chars */
+  luaL_addsize(&b, nr);
+  luaL_pushresult(&b);  /* close buffer */
+  return (nr > 0);  /* true iff read something */
 }
 
 
@@ -427,7 +434,7 @@ static int g_read (lua_State *L, FILE *f, int first) {
             success = read_line(L, f, 0);
             break;
           case 'a':  /* file */
-            read_chars(L, f, MAX_SIZE_T);  /* read MAX_SIZE_T chars */
+            read_all(L, f);  /* read entire file */
             success = 1; /* always success */
             break;
           default:
