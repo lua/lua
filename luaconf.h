@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.148 2010/10/29 17:52:46 roberto Exp roberto $
+** $Id: luaconf.h,v 1.149 2010/11/03 15:16:17 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -277,9 +277,6 @@
 
 #define lua_equal(L,idx1,idx2)	lua_compare(L,(idx1),(idx2),LUA_OPEQ)
 #define lua_lessthan(L,idx1,idx2)	lua_compare(L,(idx1),(idx2),LUA_OPLT)
-
-/* compatibility with previous wrong spelling */
-#define luaL_typerror		luaL_typeerror
 
 /*
 @@ LUA_COMPAT_MODULE controls compatibility with previous
