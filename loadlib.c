@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.91 2010/09/07 19:21:39 roberto Exp roberto $
+** $Id: loadlib.c,v 1.92 2010/10/29 14:35:09 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -239,8 +239,7 @@ static void **ll_register (lua_State *L, const char *path) {
     lua_pop(L, 1);  /* remove result from gettable */
     plib = (void **)lua_newuserdata(L, sizeof(const void *));
     *plib = NULL;
-    luaL_getmetatable(L, "_LOADLIB");
-    lua_setmetatable(L, -2);
+    luaL_setmetatable(L, "_LOADLIB");
     lua_pushfstring(L, "%s%s", LIBPREFIX, path);
     lua_pushvalue(L, -2);
     lua_settable(L, LUA_REGISTRYINDEX);

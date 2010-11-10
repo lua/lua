@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.225 2010/11/09 11:04:15 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.226 2010/11/10 17:38:10 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -221,6 +221,12 @@ LUALIB_API int luaL_newmetatable (lua_State *L, const char *tname) {
   lua_pushvalue(L, -1);
   lua_setfield(L, LUA_REGISTRYINDEX, tname);  /* registry.name = metatable */
   return 1;
+}
+
+
+LUALIB_API void luaL_setmetatable (lua_State *L, const char *tname) {
+  luaL_getmetatable(L, tname);
+  lua_setmetatable(L, -2);
 }
 
 

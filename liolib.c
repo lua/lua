@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.93 2010/11/08 17:27:22 roberto Exp roberto $
+** $Id: liolib.c,v 2.94 2010/11/09 16:57:49 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -114,8 +114,7 @@ static FILE *tofile (lua_State *L) {
 static FILE **newprefile (lua_State *L) {
   FILE **pf = (FILE **)lua_newuserdata(L, sizeof(FILE *));
   *pf = NULL;  /* file handle is currently `closed' */
-  luaL_getmetatable(L, LUA_FILEHANDLE);
-  lua_setmetatable(L, -2);
+  luaL_setmetatable(L, LUA_FILEHANDLE);
   return pf;
 }
 
