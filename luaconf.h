@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.149 2010/11/03 15:16:17 roberto Exp roberto $
+** $Id: luaconf.h,v 1.150 2010/11/10 17:38:10 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -229,7 +229,7 @@
 ** You can define it to get all options, or change specific options
 ** to fit your specific needs.
 */
-#if defined(LUA_COMPAT_ALL)
+#if defined(LUA_COMPAT_ALL)	/* { */
 
 /*
 @@ LUA_COMPAT_UNPACK controls the presence of global 'unpack'.
@@ -238,8 +238,8 @@
 #define LUA_COMPAT_UNPACK
 
 /*
-@@ LUA_COMPAT_CPCALL controls the presence of macro 'lua_cpcall'.
-** You can call your C function directly (with light C functions)
+@@ macro 'lua_cpcall' emulates deprecated function lua_cpcall.
+** You can call your C function directly (with light C functions).
 */
 #define lua_cpcall(L,f,u)  \
 	(lua_pushcfunction(L, (f)), \
@@ -259,14 +259,6 @@
 #define LUA_COMPAT_MAXN
 
 /*
-@@ LUA_COMPAT_DEBUGLIB controls compatibility with preloading
-** the debug library.
-** You should add 'require"debug"' everywhere you need the debug
-** library.
-*/
-#define LUA_COMPAT_DEBUGLIB
-
-/*
 @@ The following macros supply trivial compatibility for some
 ** changes in the API. The macros themselves document how to
 ** change your code to avoid using them.
@@ -275,7 +267,7 @@
 
 #define lua_objlen(L,i)		lua_rawlen(L, (i))
 
-#define lua_equal(L,idx1,idx2)	lua_compare(L,(idx1),(idx2),LUA_OPEQ)
+#define lua_equal(L,idx1,idx2)		lua_compare(L,(idx1),(idx2),LUA_OPEQ)
 #define lua_lessthan(L,idx1,idx2)	lua_compare(L,(idx1),(idx2),LUA_OPLT)
 
 /*
@@ -284,7 +276,7 @@
 */
 #define LUA_COMPAT_MODULE
 
-#endif  /* LUA_COMPAT_ALL */
+#endif				/* } */
 
 /* }================================================================== */
 
