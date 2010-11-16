@@ -27,13 +27,13 @@ tt, kbd, code {
 <HR>
 <H1>
 <A HREF="http://www.lua.org/"><IMG SRC="logo.gif" ALT="Lua" BORDER=0></A>
-Welcome to Lua 5.2 (work5)
+Welcome to Lua 5.2 (alpha)
 </H1>
 
 <P>
 <IMG SRC="alert.png" ALIGN="absbottom" ALT="[!]">
-<EM>This is a work version of Lua 5.2.
-Everything may change in the final version.</EM>
+<EM>This is an alpha version of Lua 5.2.
+Some details may change in the final version.</EM>
 
 <P>
 <A HREF="#about">about</A>
@@ -323,12 +323,13 @@ Here are the other changes introduced in Lua 5.2:
 <LI> new <CODE>lua_compare</CODE>, <CODE>lua_arith</CODE>, and <CODE>lua_len</CODE>
 <LI> new <CODE>lua_version</CODE> and <CODE>luaL_version</CODE>
 <LI> <CODE>lua_pushstring</CODE> and <CODE>pushlstring</CODE> return string
-<LI> new <CODE>luaL_testudata</CODE>
+<LI> new <CODE>luaL_testudata</CODE> and <CODE>luaL_setmetatable</CODE>
 <LI> new <CODE>luaL_tolstring</CODE>
 <LI> new <CODE>lua_copy</CODE>
 <LI> new <CODE>lua_absindex</CODE>
 <LI> new <CODE>lua_upvalueid</CODE> and <CODE>lua_upvaluejoin</CODE>
 <LI> <CODE>nparams</CODE> and <CODE>isvarag</CODE> available in debug API
+<LI> new <CODE>lua_Unsigned</CODE>
 </UL>
 
 <H3>Implementation</H3>
@@ -337,7 +338,7 @@ Here are the other changes introduced in Lua 5.2:
 <LI> internal (immutable) version of ctypes
 <LI> simpler implementation for string buffers
 <LI> udata with finalizers are kept in a separated list for the GC
-<LI> <CODE>CallInfo</CODE>stack now is a linked list
+<LI> <CODE>CallInfo</CODE> stack now is a linked list
 <LI> parser uses much less C-stack space (no more auto arrays)
 <LI> new hash for floats
 <LI> handling of non-string error messages in the standalone interpreter
@@ -390,10 +391,10 @@ THE SOFTWARE.
 <HR>
 <SMALL>
 Last update:
-Sat Oct 30 21:36:38 BRST 2010
+Thu Nov 11 15:16:22 BRST 2010
 </SMALL>
 <!--
-Last change: revised for Lua 5.2.0 (work5)
+Last change: revised for Lua 5.2.0 (alpha)
 -->
 
 </BODY>

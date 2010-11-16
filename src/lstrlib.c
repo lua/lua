@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.156 2010/10/29 17:52:46 roberto Exp $
+** $Id: lstrlib.c,v 1.157 2010/11/08 17:38:37 roberto Exp $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -722,6 +722,7 @@ static int str_gsub (lua_State *L) {
 ** 'string.format'; LUA_INTFRM_T is the integer type corresponding to
 ** the previous length
 */
+#if !defined(LUA_INTFRMLEN)	/* { */
 #if defined(LUA_USELONGLONG)
 
 #define LUA_INTFRMLEN           "ll"
@@ -731,6 +732,20 @@ static int str_gsub (lua_State *L) {
 
 #define LUA_INTFRMLEN           "l"
 #define LUA_INTFRM_T            long
+
+#endif
+#endif				/* } */
+
+
+/*
+** LUA_FLTFRMLEN is the length modifier for float conversions in
+** 'string.format'; LUA_FLTFRM_T is the float type corresponding to
+** the previous length
+*/
+#if !defined(LUA_FLTFRMLEN)
+
+#define LUA_FLTFRMLEN           ""
+#define LUA_FLTFRM_T            double
 
 #endif
 
@@ -793,14 +808,15 @@ static const char *scanformat (lua_State *L, const char *strfrmt, char *form) {
 
 
 /*
-** add length modifier into integer formats
+** add length modifier into formats
 */
-static void addintlen (char *form) {
+static void addlenmod (char *form, const char *lenmod) {
   size_t l = strlen(form);
+  size_t lm = strlen(lenmod);
   char spec = form[l - 1];
-  strcpy(form + l - 1, LUA_INTFRMLEN);
-  form[l + sizeof(LUA_INTFRMLEN) - 2] = spec;
-  form[l + sizeof(LUA_INTFRMLEN) - 1] = '\0';
+  strcpy(form + l - 1, lenmod);
+  form[l + lm - 1] = spec;
+  form[l + lm] = '\0';
 }
 
 
@@ -834,13 +850,14 @@ static int str_format (lua_State *L) {
           lua_Number n = luaL_checknumber(L, arg);
           LUA_INTFRM_T r = (n < 0) ? (LUA_INTFRM_T)n :
                                      (LUA_INTFRM_T)(unsigned LUA_INTFRM_T)n;
-          addintlen(form);
+          addlenmod(form, LUA_INTFRMLEN);
           nb = sprintf(buff, form, r);
           break;
         }
         case 'e':  case 'E': case 'f':
         case 'g': case 'G': {
-          nb = sprintf(buff, form, (double)luaL_checknumber(L, arg));
+          addlenmod(form, LUA_FLTFRMLEN);
+          nb = sprintf(buff, form, (LUA_FLTFRM_T)luaL_checknumber(L, arg));
           break;
         }
         case 'q': {

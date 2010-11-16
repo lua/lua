@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.224 2010/10/29 12:52:21 roberto Exp $
+** $Id: lauxlib.c,v 1.227 2010/11/10 18:05:36 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -168,7 +168,7 @@ LUALIB_API int luaL_argerror (lua_State *L, int narg, const char *extramsg) {
 }
 
 
-LUALIB_API int luaL_typeerror (lua_State *L, int narg, const char *tname) {
+static int typeerror (lua_State *L, int narg, const char *tname) {
   const char *msg = lua_pushfstring(L, "%s expected, got %s",
                                     tname, luaL_typename(L, narg));
   return luaL_argerror(L, narg, msg);
@@ -176,7 +176,7 @@ LUALIB_API int luaL_typeerror (lua_State *L, int narg, const char *tname) {
 
 
 static void tag_error (lua_State *L, int narg, int tag) {
-  luaL_typeerror(L, narg, lua_typename(L, tag));
+  typeerror(L, narg, lua_typename(L, tag));
 }
 
 
@@ -224,6 +224,12 @@ LUALIB_API int luaL_newmetatable (lua_State *L, const char *tname) {
 }
 
 
+LUALIB_API void luaL_setmetatable (lua_State *L, const char *tname) {
+  luaL_getmetatable(L, tname);
+  lua_setmetatable(L, -2);
+}
+
+
 LUALIB_API void *luaL_testudata (lua_State *L, int ud, const char *tname) {
   void *p = lua_touserdata(L, ud);
   if (p != NULL) {  /* value is a userdata? */
@@ -241,7 +247,7 @@ LUALIB_API void *luaL_testudata (lua_State *L, int ud, const char *tname) {
 
 LUALIB_API void *luaL_checkudata (lua_State *L, int ud, const char *tname) {
   void *p = luaL_testudata(L, ud, tname);
-  if (p == NULL) luaL_typeerror(L, ud, tname);
+  if (p == NULL) typeerror(L, ud, tname);
   return p;
 }
 
@@ -377,7 +383,7 @@ LUALIB_API char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz) {
     if (newsize - B->n < sz)  /* not bit enough? */
       newsize = B->n + sz;
     if (newsize < B->n || newsize - B->n < sz)
-      luaL_error(L, "string too large");
+      luaL_error(L, "buffer too large");
     newbuff = (char *)lua_newuserdata(L, newsize);  /* create larger buffer */
     memcpy(newbuff, B->b, B->n);  /* move content to new buffer */
     if (buffonstack(B))

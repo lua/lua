@@ -7,7 +7,7 @@
 PLAT= none
 
 CC= gcc
-CFLAGS= -O2 -Wall $(MYCFLAGS)
+CFLAGS= -O2 -Wall -DLUA_COMPAT_ALL $(MYCFLAGS)
 LIBS= -lm $(MYLIBS)
 
 AR= ar rcu
@@ -97,7 +97,7 @@ freebsd:
 generic: $(ALL)
 
 linux:
-	$(MAKE) $(ALL) MYCFLAGS="-DLUA_USE_LINUX" MYLIBS="-Wl,-E -ldl -lreadline -lncurses"
+	$(MAKE) $(ALL) MYCFLAGS="-DLUA_USE_LINUX" MYLIBS="-Wl,-E -ldl -lreadline"
 
 macosx:
 	$(MAKE) $(ALL) MYCFLAGS="-DLUA_USE_MACOSX" MYLIBS="-lreadline"

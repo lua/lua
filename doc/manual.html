@@ -17,8 +17,8 @@ Lua 5.2 Reference Manual
 </h1>
 
 <IMG SRC="alert.png" ALIGN="absbottom" ALT="[!]">
-<EM>This is a work version of Lua 5.2.
-Everything may change in the final version.</EM>
+<EM>This is an alpha version of Lua 5.2.
+Some details may change in the final version.</EM>
 <P>
 
 by Roberto Ierusalimschy, Luiz Henrique de Figueiredo, Waldemar Celes
@@ -38,7 +38,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.61 2010/10/29 12:51:39 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.62 2010/11/16 11:38:25 roberto Exp $ -->
 
 
 
@@ -287,7 +287,7 @@ you can use the <a href="#pdf-pcall"><code>pcall</code></a> function.
 
 
 
-<h2>2.4 &ndash; <a name="2.4">Metatables</a></h2>
+<h2>2.4 &ndash; <a name="2.4">Metatables and Metamethods</a></h2>
 
 <p>
 Every value in Lua can have a <em>metatable</em>.
@@ -305,7 +305,7 @@ Lua calls this function to perform the addition.
 <p>
 We call the keys in a metatable <em>events</em>
 and the values <em>metamethods</em>.
-In the previous example, the event is <code>"add"</code> 
+In the previous example, the event is <code>"__add"</code> 
 and the metamethod is the function that performs the addition.
 
 
@@ -383,7 +383,7 @@ and the access to objects with no metatables does not fail
 
 <p>
 For the unary <code>-</code> and <code>#</code> operators,
-the metamethod is called repeating the first argument as a second argument.
+the metamethod is called with a dummy second argument.
 This extra argument is only to simplify Lua's internals;
 it may be removed in future versions and therefore it is not present
 in the following code.
@@ -2731,13 +2731,12 @@ It is used in the auxiliary library by <a href="#luaL_newstate"><code>luaL_newst
          return realloc(ptr, nsize);
      }
 </pre><p>
-This code assumes
+Note that ANSI&nbsp;C ensures
 that <code>free(NULL)</code> has no effect and that
 <code>realloc(NULL, size)</code> is equivalent to <code>malloc(size)</code>.
-ANSI&nbsp;C ensures both behaviors.
-It also assumes that <code>realloc</code> does not fail when shrinking a block.
-(ANSI&nbsp;C does not ensure this behavior,
-but it seems a safe assumption.)
+This code assumes that <code>realloc</code> does not fail when shrinking a block.
+ANSI&nbsp;C does not ensure this behavior,
+but it seems a safe assumption.
 
 
 
@@ -5989,6 +5988,19 @@ These values are popped from the stack after the registration.
 
 
 
+<hr><h3><a name="luaL_setmetatable"><code>luaL_setmetatable</code></a></h3><p>
+<span class="apii">[-0, +0, <em>-</em>]</span>
+<pre>void luaL_setmetatable (lua_State *L, const char *tname);</pre>
+
+<p>
+Sets the metatable of the object at the top of the stack
+as the metatable associated with name <code>tname</code>
+in the registry (see <a href="#luaL_newmetatable"><code>luaL_newmetatable</code></a>).
+
+
+
+
+
 <hr><h3><a name="luaL_openlibs"><code>luaL_openlibs</code></a></h3><p>
 <span class="apii">[-0, +0, <em>e</em>]</span>
 <pre>void luaL_openlibs (lua_State *L);</pre>
@@ -6275,24 +6287,6 @@ to start the traceback.
 
 <p>
 Returns the name of the type of the value at the given index.
-
-
-
-
-
-<hr><h3><a name="luaL_typeerror"><code>luaL_typeerror</code></a></h3><p>
-<span class="apii">[-0, +0, <em>v</em>]</span>
-<pre>int luaL_typeerror (lua_State *L, int narg, const char *tname);</pre>
-
-<p>
-Generates an error with a message like the following:
-
-<pre>
-     <em>location</em>: bad argument <em>narg</em> to '<em>func</em>' (<em>tname</em> expected, got <em>rt</em>)
-</pre><p>
-where <code><em>location</em></code> is produced by <a href="#luaL_where"><code>luaL_where</code></a>,
-<code><em>func</em></code> is the name of the current function,
-and <code><em>rt</em></code> is the type name of the actual argument.
 
 
 
@@ -7020,8 +7014,6 @@ In case of error, propagates the error.
 
 <p>
 Suspends the execution of the calling coroutine.
-The coroutine cannot be running a C&nbsp;function,
-a metamethod, or an iterator.
 Any arguments to <code>yield</code> are passed as extra results to <code>resume</code>.
 
 
@@ -8586,20 +8578,13 @@ instead of returning an error code.
 
 
 <p>
-<hr><h3><a name="pdf-io.lines"><code>io.lines ([filename] [, keepNL])</code></a></h3>
+<hr><h3><a name="pdf-io.lines"><code>io.lines ([filename] &middot;&middot;&middot;)</code></a></h3>
 
 
 <p>
 Opens the given file name in read mode
-and returns an iterator function that,
-each time it is called,
-returns a new line from the file.
-Therefore, the construction
-
-<pre>
-     for line in io.lines(filename) do <em>body</em> end
-</pre><p>
-will iterate over all lines of the file.
+and returns an iterator function that
+works like <code>file:lines(&middot;&middot;&middot;)</code> over the oppened file.
 When the iterator function detects the end of file,
 it returns <b>nil</b> (to finish the loop) and automatically closes the file.
 
@@ -8609,11 +8594,6 @@ The call <code>io.lines()</code> (with no file name) is equivalent
 to <code>io.input():lines()</code>;
 that is, it iterates over the lines of the default input file.
 In this case it does not close the file when the loop ends.
-
-
-<p>
-By default, <code>lines</code> removes the newline at the end of each line.
-If <code>keepNL</code> is <b>true</b>, it will keep the newlines.
 
 
 
@@ -8750,27 +8730,24 @@ Saves any written data to <code>file</code>.
 
 
 <p>
-<hr><h3><a name="pdf-file:lines"><code>file:lines ([keepNL])</code></a></h3>
+<hr><h3><a name="pdf-file:lines"><code>file:lines (&middot;&middot;&middot;)</code></a></h3>
 
 
 <p>
 Returns an iterator function that,
 each time it is called,
-returns a new line from the file.
+reads the file according to the given formats.
+When no format is given,
+uses "*l" as a default.
 Therefore, the construction
 
 <pre>
-     for line in file:lines() do <em>body</em> end
+     for c in file:lines(1) do <em>body</em> end
 </pre><p>
-will iterate over all lines of the file,
+will iterate over all characters of the file,
 starting at the current position.
 (Unlike <a href="#pdf-io.lines"><code>io.lines</code></a>, this function does not close the file
 when the loop ends.)
-
-
-<p>
-By default, <code>lines</code> removes the newline at the end of each line.
-If <code>keepNL</code> is <b>true</b>, it will keep the newlines.
 
 
 
@@ -9674,11 +9651,6 @@ and it is easy to set up a module with regular Lua code.
 </li>
 
 <li>
-The debug library is not loaded by default.
-You must explicitly require it.
-</li>
-
-<li>
 Functions <code>setfenv</code> and <code>getfenv</code> are deprecated.
 To set the environment of a Lua function,
 use the variable <code>_ENV</code> or the new function <a href="#pdf-loadin"><code>loadin</code></a>.
@@ -9767,8 +9739,8 @@ even if it is set later.
 </li>
 
 <li>
-<code>luaL_typerror</code> was renamed <a href="#luaL_typeerror"><code>luaL_typeerror</code></a>,
-to have a correct spelling.
+<code>luaL_typerror</code> was deprecated.
+Write your own version if you need it.
 </li>
 
 <li>
@@ -9873,10 +9845,10 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL>
 Last update:
-Sat Oct 30 21:36:20 BRST 2010
+Tue Nov 16 09:52:41 BRST 2010
 </SMALL>
 <!--
-Last change: revised for Lua 5.2.0 (work5)
+Last change: revised for Lua 5.2.0 (alpha)
 -->
 
 </body></html>

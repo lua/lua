@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.76 2010/10/25 20:31:11 roberto Exp $
+** $Id: lmathlib.c,v 1.78 2010/11/12 15:47:34 roberto Exp $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -22,92 +22,101 @@
 #define RADIANS_PER_DEGREE (PI/180.0)
 
 
+/* macro 'l_tg' allows the addition of an 'l' or 'f' to all math operations */
+#if !defined(l_tg)
+#define l_tg(x)		(x)
+#endif
+
+
 
 static int math_abs (lua_State *L) {
-  lua_pushnumber(L, fabs(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, l_tg(fabs)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_sin (lua_State *L) {
-  lua_pushnumber(L, sin(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, l_tg(sin)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_sinh (lua_State *L) {
-  lua_pushnumber(L, sinh(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, l_tg(sinh)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_cos (lua_State *L) {
-  lua_pushnumber(L, cos(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, l_tg(cos)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_cosh (lua_State *L) {
-  lua_pushnumber(L, cosh(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, l_tg(cosh)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_tan (lua_State *L) {
-  lua_pushnumber(L, tan(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, l_tg(tan)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_tanh (lua_State *L) {
-  lua_pushnumber(L, tanh(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, l_tg(tanh)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_asin (lua_State *L) {
-  lua_pushnumber(L, asin(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, l_tg(asin)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_acos (lua_State *L) {
-  lua_pushnumber(L, acos(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, l_tg(acos)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_atan (lua_State *L) {
-  lua_pushnumber(L, atan(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, l_tg(atan)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_atan2 (lua_State *L) {
-  lua_pushnumber(L, atan2(luaL_checknumber(L, 1), luaL_checknumber(L, 2)));
+  lua_pushnumber(L, l_tg(atan2)(luaL_checknumber(L, 1),
+                                luaL_checknumber(L, 2)));
   return 1;
 }
 
 static int math_ceil (lua_State *L) {
-  lua_pushnumber(L, ceil(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, l_tg(ceil)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_floor (lua_State *L) {
-  lua_pushnumber(L, floor(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, l_tg(floor)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_fmod (lua_State *L) {
-  lua_pushnumber(L, fmod(luaL_checknumber(L, 1), luaL_checknumber(L, 2)));
+  lua_pushnumber(L, l_tg(fmod)(luaL_checknumber(L, 1),
+                               luaL_checknumber(L, 2)));
   return 1;
 }
 
 static int math_modf (lua_State *L) {
-  double ip;
-  double fp = modf(luaL_checknumber(L, 1), &ip);
+  lua_Number ip;
+  lua_Number fp = l_tg(modf)(luaL_checknumber(L, 1), &ip);
   lua_pushnumber(L, ip);
   lua_pushnumber(L, fp);
   return 2;
 }
 
 static int math_sqrt (lua_State *L) {
-  lua_pushnumber(L, sqrt(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, l_tg(sqrt)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_pow (lua_State *L) {
-  lua_pushnumber(L, pow(luaL_checknumber(L, 1), luaL_checknumber(L, 2)));
+  lua_pushnumber(L, l_tg(pow)(luaL_checknumber(L, 1),
+                              luaL_checknumber(L, 2)));
   return 1;
 }
 
@@ -115,11 +124,11 @@ static int math_log (lua_State *L) {
   lua_Number x = luaL_checknumber(L, 1);
   lua_Number res;
   if (lua_isnoneornil(L, 2))
-    res = log(x);
+    res = l_tg(log)(x);
   else {
     lua_Number base = luaL_checknumber(L, 2);
-    if (base == 10.0) res = log10(x);
-    else res = log(x)/log(base);
+    if (base == 10.0) res = l_tg(log10)(x);
+    else res = l_tg(log)(x)/l_tg(log)(base);
   }
   lua_pushnumber(L, res);
   return 1;
@@ -130,12 +139,12 @@ static int math_log10 (lua_State *L) {
   luaL_error(L, "function " LUA_QL("log10")
                 " is deprecated; use log(x, 10) instead");
 #endif
-  lua_pushnumber(L, log10(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, l_tg(log10)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_exp (lua_State *L) {
-  lua_pushnumber(L, exp(luaL_checknumber(L, 1)));
+  lua_pushnumber(L, l_tg(exp)(luaL_checknumber(L, 1)));
   return 1;
 }
 
@@ -151,13 +160,14 @@ static int math_rad (lua_State *L) {
 
 static int math_frexp (lua_State *L) {
   int e;
-  lua_pushnumber(L, frexp(luaL_checknumber(L, 1), &e));
+  lua_pushnumber(L, l_tg(frexp)(luaL_checknumber(L, 1), &e));
   lua_pushinteger(L, e);
   return 2;
 }
 
 static int math_ldexp (lua_State *L) {
-  lua_pushnumber(L, ldexp(luaL_checknumber(L, 1), luaL_checkint(L, 2)));
+  lua_pushnumber(L, l_tg(ldexp)(luaL_checknumber(L, 1),
+                                luaL_checkint(L, 2)));
   return 1;
 }
 
@@ -203,14 +213,14 @@ static int math_random (lua_State *L) {
     case 1: {  /* only upper limit */
       lua_Number u = luaL_checknumber(L, 1);
       luaL_argcheck(L, 1.0 <= u, 1, "interval is empty");
-      lua_pushnumber(L, floor(r*u) + 1.0);  /* int between 1 and `u' */
+      lua_pushnumber(L, l_tg(floor)(r*u) + 1.0);  /* int in [1, u] */
       break;
     }
     case 2: {  /* lower and upper limits */
       lua_Number l = luaL_checknumber(L, 1);
       lua_Number u = luaL_checknumber(L, 2);
       luaL_argcheck(L, l <= u, 2, "interval is empty");
-      lua_pushnumber(L, floor(r*(u-l+1)) + l);  /* int between `l' and `u' */
+      lua_pushnumber(L, l_tg(floor)(r*(u-l+1)) + l);  /* int in [l, u] */
       break;
     }
     default: return luaL_error(L, "wrong number of arguments");
