@@ -41,7 +41,7 @@ LOCAL = $(TESTS) $(CWARNS)
 
 
 # enable Linux goodies
-MYCFLAGS= $(LOCAL) -DLUA_USE_LINUX -g
+MYCFLAGS= $(LOCAL) -DLUA_USE_LINUX -DLUA_COMPAT_ALL -g
 MYLDFLAGS= -Wl,-E -g
 MYLIBS= -ldl -lreadline -lhistory -lncurses
 
