@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.111 2010/07/02 11:38:13 roberto Exp roberto $
+** $Id: ltests.c,v 2.112 2010/07/28 15:51:59 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -727,24 +727,23 @@ static int string_query (lua_State *L) {
 
 static int tref (lua_State *L) {
   int level = lua_gettop(L);
-  int lock = luaL_optint(L, 2, 1);
   luaL_checkany(L, 1);
   lua_pushvalue(L, 1);
-  lua_pushinteger(L, lua_ref(L, lock));
+  lua_pushinteger(L, luaL_ref(L, LUA_REGISTRYINDEX));
   lua_assert(lua_gettop(L) == level+1);  /* +1 for result */
   return 1;
 }
 
 static int getref (lua_State *L) {
   int level = lua_gettop(L);
-  lua_getref(L, luaL_checkint(L, 1));
+  lua_rawgeti(L, LUA_REGISTRYINDEX, luaL_checkint(L, 1));
   lua_assert(lua_gettop(L) == level+1);
   return 1;
 }
 
 static int unref (lua_State *L) {
   int level = lua_gettop(L);
-  lua_unref(L, luaL_checkint(L, 1));
+  luaL_unref(L, LUA_REGISTRYINDEX, luaL_checkint(L, 1));
   lua_assert(lua_gettop(L) == level);
   return 0;
 }

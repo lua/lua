@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.110 2010/11/10 17:38:10 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.111 2010/11/10 18:05:36 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -61,6 +61,10 @@ LUALIB_API int (luaL_error) (lua_State *L, const char *fmt, ...);
 
 LUALIB_API int (luaL_checkoption) (lua_State *L, int narg, const char *def,
                                    const char *const lst[]);
+
+/* pre-defined references */
+#define LUA_NOREF       (-2)
+#define LUA_REFNIL      (-1)
 
 LUALIB_API int (luaL_ref) (lua_State *L, int t);
 LUALIB_API void (luaL_unref) (lua_State *L, int t, int ref);
@@ -162,23 +166,6 @@ LUALIB_API void (luaL_pushmodule) (lua_State *L, const char *modname,
                                    int sizehint);
 LUALIB_API void (luaL_openlib) (lua_State *L, const char *libname,
                                 const luaL_Reg *l, int nup);
-
-
-/* compatibility with ref system */
-
-/* pre-defined references */
-#define LUA_NOREF       (-2)
-#define LUA_REFNIL      (-1)
-
-#define lua_ref(L,lock) ((lock) ? luaL_ref(L, LUA_REGISTRYINDEX) : \
-      (lua_pushstring(L, "unlocked references are obsolete"), lua_error(L), 0))
-
-#define lua_unref(L,ref)        luaL_unref(L, LUA_REGISTRYINDEX, (ref))
-
-#define lua_getref(L,ref)       lua_rawgeti(L, LUA_REGISTRYINDEX, (ref))
-
-
-#define luaL_reg	luaL_Reg
 
 
 #endif
