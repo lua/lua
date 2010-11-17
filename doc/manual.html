@@ -38,7 +38,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.62 2010/11/16 11:38:25 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.63 2010/11/17 15:35:05 roberto Exp $ -->
 
 
 
@@ -1026,7 +1026,7 @@ in which
 [<em>a</em>]&nbsp;means an optional <em>a</em>.
 Non-terminals are shown like non-terminal,
 keywords are shown like <b>kword</b>,
-and other terminal symbols are shown like &lsquo<b>=</b>&rsquo;.
+and other terminal symbols are shown like &lsquo;<b>=</b>&rsquo;.
 The complete syntax of Lua can be found in <a href="#9">&sect;9</a>
 at the end of this manual.
 
@@ -1225,7 +1225,7 @@ Before the first assignment to a variable, its value is <b>nil</b>.
 Square brackets are used to index a table:
 
 <pre>
-	var ::= prefixexp &lsquo<b>[</b>&rsquo; exp &lsquo<b>]</b>&rsquo;
+	var ::= prefixexp &lsquo;<b>[</b>&rsquo; exp &lsquo;<b>]</b>&rsquo;
 </pre><p>
 The meaning of accesses to table fields can be changed via metatables.
 An access to an indexed variable <code>t[i]</code> is equivalent to
@@ -1241,7 +1241,7 @@ The syntax <code>var.Name</code> is just syntactic sugar for
 <code>var["Name"]</code>:
 
 <pre>
-	var ::= prefixexp &lsquo<b>.</b>&rsquo; Name
+	var ::= prefixexp &lsquo;<b>.</b>&rsquo; Name
 </pre>
 
 <p>
@@ -1280,7 +1280,7 @@ start a block with a semicolon
 or write two semicolons in sequence:
 
 <pre>
-	stat ::= &lsquo<b>;</b>&rsquo;
+	stat ::= &lsquo;<b>;</b>&rsquo;
 </pre>
 
 <p>
@@ -1351,9 +1351,9 @@ and a list of expressions on the right side.
 The elements in both lists are separated by commas:
 
 <pre>
-	stat ::= varlist &lsquo<b>=</b>&rsquo; explist
-	varlist ::= var {&lsquo<b>,</b>&rsquo; var}
-	explist ::= exp {&lsquo<b>,</b>&rsquo; exp}
+	stat ::= varlist &lsquo;<b>=</b>&rsquo; explist
+	varlist ::= var {&lsquo;<b>,</b>&rsquo; var}
+	explist ::= exp {&lsquo;<b>,</b>&rsquo; exp}
 </pre><p>
 Expressions are discussed in <a href="#3.4">&sect;3.4</a>.
 
@@ -1454,11 +1454,11 @@ declared inside the loop block.
 The <b>return</b> statement is used to return values
 from a function or a chunk (which is just a function).
 
-Functions and chunks can return more than one value,
-and so the syntax for the <b>return</b> statement is
+Functions can return more than one value,
+so the syntax for the <b>return</b> statement is
 
 <pre>
-	stat ::= <b>return</b> [explist] [&lsquo<b>;</b>&rsquo;]
+	stat ::= <b>return</b> [explist] [&lsquo;<b>;</b>&rsquo;]
 </pre>
 
 <p>
@@ -1468,7 +1468,7 @@ skipping to the next statement after the loop:
 
 
 <pre>
-	stat ::= <b>break</b> [&lsquo<b>;</b>&rsquo;]
+	stat ::= <b>break</b> [&lsquo;<b>;</b>&rsquo;]
 </pre><p>
 A <b>break</b> ends the innermost enclosing loop.
 
@@ -1502,7 +1502,7 @@ control variable runs through an arithmetic progression.
 It has the following syntax:
 
 <pre>
-	stat ::= <b>for</b> Name &lsquo<b>=</b>&rsquo; exp &lsquo<b>,</b>&rsquo; exp [&lsquo<b>,</b>&rsquo; exp] <b>do</b> block <b>end</b>
+	stat ::= <b>for</b> Name &lsquo;<b>=</b>&rsquo; exp &lsquo;<b>,</b>&rsquo; exp [&lsquo;<b>,</b>&rsquo; exp] <b>do</b> block <b>end</b>
 </pre><p>
 The <em>block</em> is repeated for <em>name</em> starting at the value of
 the first <em>exp</em>, until it passes the second <em>exp</em> by steps of the
@@ -1567,7 +1567,7 @@ The generic <b>for</b> loop has the following syntax:
 
 <pre>
 	stat ::= <b>for</b> namelist <b>in</b> explist <b>do</b> block <b>end</b>
-	namelist ::= Name {&lsquo<b>,</b>&rsquo; Name}
+	namelist ::= Name {&lsquo;<b>,</b>&rsquo; Name}
 </pre><p>
 A <b>for</b> statement like
 
@@ -1638,7 +1638,7 @@ Local variables can be declared anywhere inside a block.
 The declaration can include an initial assignment:
 
 <pre>
-	stat ::= <b>local</b> namelist [&lsquo<b>=</b>&rsquo; explist]
+	stat ::= <b>local</b> namelist [&lsquo;<b>=</b>&rsquo; explist]
 </pre><p>
 If present, an initial assignment has the same semantics
 of a multiple assignment (see <a href="#3.3.3">&sect;3.3.3</a>).
@@ -1672,10 +1672,10 @@ The basic expressions in Lua are the following:
 	exp ::= String
 	exp ::= function
 	exp ::= tableconstructor
-	exp ::= &lsquo<b>...</b>&rsquo;
+	exp ::= &lsquo;<b>...</b>&rsquo;
 	exp ::= exp binop exp
 	exp ::= unop exp
-	prefixexp ::= var | functioncall | &lsquo<b>(</b>&rsquo; exp &lsquo<b>)</b>&rsquo;
+	prefixexp ::= var | functioncall | &lsquo;<b>(</b>&rsquo; exp &lsquo;<b>)</b>&rsquo;
 </pre>
 
 <p>
@@ -1957,10 +1957,10 @@ or to create a table and initialize some of its fields.
 The general syntax for constructors is
 
 <pre>
-	tableconstructor ::= &lsquo<b>{</b>&rsquo; [fieldlist] &lsquo<b>}</b>&rsquo;
+	tableconstructor ::= &lsquo;<b>{</b>&rsquo; [fieldlist] &lsquo;<b>}</b>&rsquo;
 	fieldlist ::= field {fieldsep field} [fieldsep]
-	field ::= &lsquo<b>[</b>&rsquo; exp &lsquo<b>]</b>&rsquo; &lsquo<b>=</b>&rsquo; exp | Name &lsquo<b>=</b>&rsquo; exp | exp
-	fieldsep ::= &lsquo<b>,</b>&rsquo; | &lsquo<b>;</b>&rsquo;
+	field ::= &lsquo;<b>[</b>&rsquo; exp &lsquo;<b>]</b>&rsquo; &lsquo;<b>=</b>&rsquo; exp | Name &lsquo;<b>=</b>&rsquo; exp | exp
+	fieldsep ::= &lsquo;<b>,</b>&rsquo; | &lsquo;<b>;</b>&rsquo;
 </pre>
 
 <p>
@@ -2032,7 +2032,7 @@ followed by the original call arguments
 The form
 
 <pre>
-	functioncall ::= prefixexp &lsquo<b>:</b>&rsquo; Name args
+	functioncall ::= prefixexp &lsquo;<b>:</b>&rsquo; Name args
 </pre><p>
 can be used to call "methods".
 A call <code>v:name(<em>args</em>)</code>
@@ -2044,7 +2044,7 @@ except that <code>v</code> is evaluated only once.
 Arguments have the following syntax:
 
 <pre>
-	args ::= &lsquo<b>(</b>&rsquo; [explist] &lsquo<b>)</b>&rsquo;
+	args ::= &lsquo;<b>(</b>&rsquo; [explist] &lsquo;<b>)</b>&rsquo;
 	args ::= tableconstructor
 	args ::= String
 </pre><p>
@@ -2093,7 +2093,7 @@ The syntax for function definition is
 
 <pre>
 	function ::= <b>function</b> funcbody
-	funcbody ::= &lsquo<b>(</b>&rsquo; [parlist] &lsquo<b>)</b>&rsquo; block <b>end</b>
+	funcbody ::= &lsquo;<b>(</b>&rsquo; [parlist] &lsquo;<b>)</b>&rsquo; block <b>end</b>
 </pre>
 
 <p>
@@ -2102,7 +2102,7 @@ The following syntactic sugar simplifies function definitions:
 <pre>
 	stat ::= <b>function</b> funcname funcbody
 	stat ::= <b>local</b> <b>function</b> Name funcbody
-	funcname ::= Name {&lsquo<b>.</b>&rsquo; Name} [&lsquo<b>:</b>&rsquo; Name]
+	funcname ::= Name {&lsquo;<b>.</b>&rsquo; Name} [&lsquo;<b>:</b>&rsquo; Name]
 </pre><p>
 The statement
 
@@ -2161,7 +2161,7 @@ Parameters act as local variables that are
 initialized with the argument values:
 
 <pre>
-	parlist ::= namelist [&lsquo<b>,</b>&rsquo; &lsquo<b>...</b>&rsquo;] | &lsquo<b>...</b>&rsquo;
+	parlist ::= namelist [&lsquo;<b>,</b>&rsquo; &lsquo;<b>...</b>&rsquo;] | &lsquo;<b>...</b>&rsquo;
 </pre><p>
 When a function is called,
 the list of arguments is adjusted to
@@ -2214,6 +2214,13 @@ Results are returned using the <b>return</b> statement (see <a href="#3.3.4">&se
 If control reaches the end of a function
 without encountering a <b>return</b> statement,
 then the function returns with no results.
+
+
+<p>
+
+There is a system-dependent limit on the number of values
+that a function may return.
+This limit is guaranteed to be larger than 1000.
 
 
 <p>
@@ -5321,7 +5328,7 @@ in alphabetical order.
 
 
 <hr><h3><a name="luaL_addchar"><code>luaL_addchar</code></a></h3><p>
-<span class="apii">[-0, +0, <em>m</em>]</span>
+<span class="apii">[-?, +?, <em>m</em>]</span>
 <pre>void luaL_addchar (luaL_Buffer *B, char c);</pre>
 
 <p>
@@ -5333,7 +5340,7 @@ Adds the character <code>c</code> to the buffer <code>B</code>
 
 
 <hr><h3><a name="luaL_addlstring"><code>luaL_addlstring</code></a></h3><p>
-<span class="apii">[-0, +0, <em>m</em>]</span>
+<span class="apii">[-?, +?, <em>m</em>]</span>
 <pre>void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l);</pre>
 
 <p>
@@ -5347,7 +5354,7 @@ The string can contain embedded zeros.
 
 
 <hr><h3><a name="luaL_addsize"><code>luaL_addsize</code></a></h3><p>
-<span class="apii">[-0, +0, <em>m</em>]</span>
+<span class="apii">[-?, +?, <em>m</em>]</span>
 <pre>void luaL_addsize (luaL_Buffer *B, size_t n);</pre>
 
 <p>
@@ -5360,7 +5367,7 @@ buffer area (see <a href="#luaL_prepbuffer"><code>luaL_prepbuffer</code></a>).
 
 
 <hr><h3><a name="luaL_addstring"><code>luaL_addstring</code></a></h3><p>
-<span class="apii">[-0, +0, <em>m</em>]</span>
+<span class="apii">[-?, +?, <em>m</em>]</span>
 <pre>void luaL_addstring (luaL_Buffer *B, const char *s);</pre>
 
 <p>
@@ -5374,7 +5381,7 @@ The string should not contain embedded zeros.
 
 
 <hr><h3><a name="luaL_addvalue"><code>luaL_addvalue</code></a></h3><p>
-<span class="apii">[-1, +0, <em>m</em>]</span>
+<span class="apii">[-1, +?, <em>m</em>]</span>
 <pre>void luaL_addvalue (luaL_Buffer *B);</pre>
 
 <p>
@@ -5463,6 +5470,27 @@ This call leaves the final string on the top of the stack.
 </ul>
 
 <p>
+If you know beforehand the total size of the resulting string,
+you can use the buffer like this:
+
+<ul>
+
+<li>First you declare a variable <code>b</code> of type <a href="#luaL_Buffer"><code>luaL_Buffer</code></a>.</li>
+
+<li>Then you initialize it and preallocate a space of
+size <code>sz</code> with a call <code>luaL_buffinitsize(L, &amp;b, sz)</code>.</li>
+
+<li>Then you copy the string into that space.</li>
+
+<li>
+You finish by calling <code>luaL_pushresult(&amp;b, sz)</code>,
+where <code>sz</code> is the total size of the resulting string
+copied into that space.
+</li>
+
+</ul>
+
+<p>
 During its normal operation,
 a string buffer uses a variable number of stack slots.
 So, while using a buffer, you cannot assume that you know where
@@ -5491,6 +5519,18 @@ Initializes a buffer <code>B</code>.
 This function does not allocate any space;
 the buffer must be declared as a variable
 (see <a href="#luaL_Buffer"><code>luaL_Buffer</code></a>).
+
+
+
+
+
+<hr><h3><a name="luaL_buffinitsize"><code>luaL_buffinitsize</code></a></h3><p>
+<span class="apii">[-?, +?, <em>m</em>]</span>
+<pre>char *luaL_buffinitsize (lua_State *L, luaL_Buffer *B, size_t sz);</pre>
+
+<p>
+Equivalent to the sequence
+<a href="#luaL_buffinit"><code>luaL_buffinit</code></a>, <a href="#luaL_prepbuffsize"><code>luaL_prepbuffsize</code></a>.
 
 
 
@@ -5770,6 +5810,20 @@ as <code>return luaL_error(<em>args</em>)</code>.
 
 
 
+<hr><h3><a name="luaL_findtable"><code>luaL_findtable</code></a></h3><p>
+<span class="apii">[-0, +1, <em>m</em>]</span>
+<pre>void luaL_findtable (lua_State *L, int idx, const char *fname);</pre>
+
+<p>
+Ensures that the value <code>t[fname]</code>,
+where <code>t</code> is the value at the valid index <code>idx</code>,
+is a table,
+and pushes that table onto the stack.
+
+
+
+
+
 <hr><h3><a name="luaL_getmetafield"><code>luaL_getmetafield</code></a></h3><p>
 <span class="apii">[-0, +(0|1), <em>m</em>]</span>
 <pre>int luaL_getmetafield (lua_State *L, int obj, const char *e);</pre>
@@ -5965,42 +6019,6 @@ or <code>NULL</code> if there is a memory allocation error.
 
 
 
-<hr><h3><a name="luaL_setfuncs"><code>luaL_setfuncs</code></a></h3><p>
-<span class="apii">[-nup, +0, <em>e</em>]</span>
-<pre>void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup);</pre>
-
-<p>
-Registers all functions in the array <code>l</code>
-(see <a href="#luaL_Reg"><code>luaL_Reg</code></a>) into the table on the top of the stack
-(below optional upvalues, see next).
-The pointer <code>l</code> may be <code>NULL</code>,
-representing an empty list.
-
-
-<p>
-When <code>nup</code> is not zero,
-all functions are created sharing <code>nup</code> upvalues,
-which must be previously pushed on the stack
-on top of the library table.
-These values are popped from the stack after the registration.
-
-
-
-
-
-<hr><h3><a name="luaL_setmetatable"><code>luaL_setmetatable</code></a></h3><p>
-<span class="apii">[-0, +0, <em>-</em>]</span>
-<pre>void luaL_setmetatable (lua_State *L, const char *tname);</pre>
-
-<p>
-Sets the metatable of the object at the top of the stack
-as the metatable associated with name <code>tname</code>
-in the registry (see <a href="#luaL_newmetatable"><code>luaL_newmetatable</code></a>).
-
-
-
-
-
 <hr><h3><a name="luaL_openlibs"><code>luaL_openlibs</code></a></h3><p>
 <span class="apii">[-0, +0, <em>e</em>]</span>
 <pre>void luaL_openlibs (lua_State *L);</pre>
@@ -6132,11 +6150,23 @@ Otherwise, raises an error.
 
 
 <hr><h3><a name="luaL_prepbuffer"><code>luaL_prepbuffer</code></a></h3><p>
-<span class="apii">[-0, +0, <em>-</em>]</span>
+<span class="apii">[-?, +?, <em>m</em>]</span>
 <pre>char *luaL_prepbuffer (luaL_Buffer *B);</pre>
 
 <p>
-Returns an address to a space of size <a name="pdf-LUAL_BUFFERSIZE"><code>LUAL_BUFFERSIZE</code></a>
+Equivalent to <a href="#luaL_prepbuffsize"><code>luaL_prepbuffsize</code></a>
+with the predefined size <a name="pdf-LUAL_BUFFERSIZE"><code>LUAL_BUFFERSIZE</code></a>.
+
+
+
+
+
+<hr><h3><a name="luaL_prepbuffsize"><code>luaL_prepbuffsize</code></a></h3><p>
+<span class="apii">[-?, +?, <em>m</em>]</span>
+<pre>char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz);</pre>
+
+<p>
+Returns an address to a space of size <code>sz</code>
 where you can copy a string to be added to buffer <code>B</code>
 (see <a href="#luaL_Buffer"><code>luaL_Buffer</code></a>).
 After copying the string into this space you must call
@@ -6154,6 +6184,17 @@ it to the buffer.
 <p>
 Finishes the use of buffer <code>B</code> leaving the final string on
 the top of the stack.
+
+
+
+
+
+<hr><h3><a name="luaL_pushresultsize"><code>luaL_pushresultsize</code></a></h3><p>
+<span class="apii">[-?, +1, <em>m</em>]</span>
+<pre>void luaL_pushresultsize (luaL_Buffer *B, size_t sz);</pre>
+
+<p>
+Equivalent to the sequence <a href="#luaL_addsize"><code>luaL_addsize</code></a>, <a href="#luaL_pushresult"><code>luaL_pushresult</code></a>.
 
 
 
@@ -6224,6 +6265,42 @@ also stores the result into global <code>modname</code>.
 
 <p>
 Leaves a copy of that result on the stack.
+
+
+
+
+
+<hr><h3><a name="luaL_setfuncs"><code>luaL_setfuncs</code></a></h3><p>
+<span class="apii">[-nup, +0, <em>e</em>]</span>
+<pre>void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup);</pre>
+
+<p>
+Registers all functions in the array <code>l</code>
+(see <a href="#luaL_Reg"><code>luaL_Reg</code></a>) into the table on the top of the stack
+(below optional upvalues, see next).
+The pointer <code>l</code> may be <code>NULL</code>,
+representing an empty list.
+
+
+<p>
+When <code>nup</code> is not zero,
+all functions are created sharing <code>nup</code> upvalues,
+which must be previously pushed on the stack
+on top of the library table.
+These values are popped from the stack after the registration.
+
+
+
+
+
+<hr><h3><a name="luaL_setmetatable"><code>luaL_setmetatable</code></a></h3><p>
+<span class="apii">[-0, +0, <em>-</em>]</span>
+<pre>void luaL_setmetatable (lua_State *L, const char *tname);</pre>
+
+<p>
+Sets the metatable of the object at the top of the stack
+as the metatable associated with name <code>tname</code>
+in the registry (see <a href="#luaL_newmetatable"><code>luaL_newmetatable</code></a>).
 
 
 
@@ -9176,7 +9253,9 @@ within any function, and so have no direct access to local variables.
 
 
 <p>
-Returns the Lua value associated to userdata <code>u</code>.
+Returns the Lua value associated to <code>u</code>.
+If <code>u</code> is not a userdata,
+returns <b>nil</b>.
 
 
 
@@ -9305,7 +9384,8 @@ The function returns <b>nil</b> if there is no upvalue with the given index.
 <p>
 Sets the given <code>value</code> as
 the Lua value associated to the given <code>udata</code>.
-<code>value</code> must be a table or <b>nil</b>.
+<code>value</code> must be a table or <b>nil</b>;
+<code>udata</code> must be a full userdata.
 
 
 <p>
@@ -9776,61 +9856,61 @@ Here is the complete syntax of Lua in extended BNF.
 
 	chunk ::= block
 
-	block ::= {stat} [laststat [&lsquo<b>;</b>&rsquo;]]
+	block ::= {stat} [laststat [&lsquo;<b>;</b>&rsquo;]]
 
-	stat ::=  &lsquo<b>;</b>&rsquo; | 
-		 varlist &lsquo<b>=</b>&rsquo; explist | 
+	stat ::=  &lsquo;<b>;</b>&rsquo; | 
+		 varlist &lsquo;<b>=</b>&rsquo; explist | 
 		 functioncall | 
 		 <b>do</b> block <b>end</b> | 
 		 <b>while</b> exp <b>do</b> block <b>end</b> | 
 		 <b>repeat</b> block <b>until</b> exp | 
 		 <b>if</b> exp <b>then</b> block {<b>elseif</b> exp <b>then</b> block} [<b>else</b> block] <b>end</b> | 
-		 <b>for</b> Name &lsquo<b>=</b>&rsquo; exp &lsquo<b>,</b>&rsquo; exp [&lsquo<b>,</b>&rsquo; exp] <b>do</b> block <b>end</b> | 
+		 <b>for</b> Name &lsquo;<b>=</b>&rsquo; exp &lsquo;<b>,</b>&rsquo; exp [&lsquo;<b>,</b>&rsquo; exp] <b>do</b> block <b>end</b> | 
 		 <b>for</b> namelist <b>in</b> explist <b>do</b> block <b>end</b> | 
 		 <b>function</b> funcname funcbody | 
 		 <b>local</b> <b>function</b> Name funcbody | 
-		 <b>local</b> namelist [&lsquo<b>=</b>&rsquo; explist] 
+		 <b>local</b> namelist [&lsquo;<b>=</b>&rsquo; explist] 
 
 	laststat ::= <b>return</b> [explist] | <b>break</b>
 
-	funcname ::= Name {&lsquo<b>.</b>&rsquo; Name} [&lsquo<b>:</b>&rsquo; Name]
+	funcname ::= Name {&lsquo;<b>.</b>&rsquo; Name} [&lsquo;<b>:</b>&rsquo; Name]
 
-	varlist ::= var {&lsquo<b>,</b>&rsquo; var}
+	varlist ::= var {&lsquo;<b>,</b>&rsquo; var}
 
-	var ::=  Name | prefixexp &lsquo<b>[</b>&rsquo; exp &lsquo<b>]</b>&rsquo; | prefixexp &lsquo<b>.</b>&rsquo; Name 
+	var ::=  Name | prefixexp &lsquo;<b>[</b>&rsquo; exp &lsquo;<b>]</b>&rsquo; | prefixexp &lsquo;<b>.</b>&rsquo; Name 
 
-	namelist ::= Name {&lsquo<b>,</b>&rsquo; Name}
+	namelist ::= Name {&lsquo;<b>,</b>&rsquo; Name}
 
-	explist ::= {exp &lsquo<b>,</b>&rsquo;} exp
+	explist ::= {exp &lsquo;<b>,</b>&rsquo;} exp
 
-	exp ::=  <b>nil</b> | <b>false</b> | <b>true</b> | Number | String | &lsquo<b>...</b>&rsquo; | function | 
+	exp ::=  <b>nil</b> | <b>false</b> | <b>true</b> | Number | String | &lsquo;<b>...</b>&rsquo; | function | 
 		 prefixexp | tableconstructor | exp binop exp | unop exp 
 
-	prefixexp ::= var | functioncall | &lsquo<b>(</b>&rsquo; exp &lsquo<b>)</b>&rsquo;
+	prefixexp ::= var | functioncall | &lsquo;<b>(</b>&rsquo; exp &lsquo;<b>)</b>&rsquo;
 
-	functioncall ::=  prefixexp args | prefixexp &lsquo<b>:</b>&rsquo; Name args 
+	functioncall ::=  prefixexp args | prefixexp &lsquo;<b>:</b>&rsquo; Name args 
 
-	args ::=  &lsquo<b>(</b>&rsquo; [explist] &lsquo<b>)</b>&rsquo; | tableconstructor | String 
+	args ::=  &lsquo;<b>(</b>&rsquo; [explist] &lsquo;<b>)</b>&rsquo; | tableconstructor | String 
 
 	function ::= <b>function</b> funcbody
 
-	funcbody ::= &lsquo<b>(</b>&rsquo; [parlist] &lsquo<b>)</b>&rsquo; block <b>end</b>
+	funcbody ::= &lsquo;<b>(</b>&rsquo; [parlist] &lsquo;<b>)</b>&rsquo; block <b>end</b>
 
-	parlist ::= namelist [&lsquo<b>,</b>&rsquo; &lsquo<b>...</b>&rsquo;] | &lsquo<b>...</b>&rsquo;
+	parlist ::= namelist [&lsquo;<b>,</b>&rsquo; &lsquo;<b>...</b>&rsquo;] | &lsquo;<b>...</b>&rsquo;
 
-	tableconstructor ::= &lsquo<b>{</b>&rsquo; [fieldlist] &lsquo<b>}</b>&rsquo;
+	tableconstructor ::= &lsquo;<b>{</b>&rsquo; [fieldlist] &lsquo;<b>}</b>&rsquo;
 
 	fieldlist ::= field {fieldsep field} [fieldsep]
 
-	field ::= &lsquo<b>[</b>&rsquo; exp &lsquo<b>]</b>&rsquo; &lsquo<b>=</b>&rsquo; exp | Name &lsquo<b>=</b>&rsquo; exp | exp
+	field ::= &lsquo;<b>[</b>&rsquo; exp &lsquo;<b>]</b>&rsquo; &lsquo;<b>=</b>&rsquo; exp | Name &lsquo;<b>=</b>&rsquo; exp | exp
 
-	fieldsep ::= &lsquo<b>,</b>&rsquo; | &lsquo<b>;</b>&rsquo;
+	fieldsep ::= &lsquo;<b>,</b>&rsquo; | &lsquo;<b>;</b>&rsquo;
 
-	binop ::= &lsquo<b>+</b>&rsquo; | &lsquo<b>-</b>&rsquo; | &lsquo<b>*</b>&rsquo; | &lsquo<b>/</b>&rsquo; | &lsquo<b>^</b>&rsquo; | &lsquo<b>%</b>&rsquo; | &lsquo<b>..</b>&rsquo; | 
-		 &lsquo<b>&lt;</b>&rsquo; | &lsquo<b>&lt;=</b>&rsquo; | &lsquo<b>&gt;</b>&rsquo; | &lsquo<b>&gt;=</b>&rsquo; | &lsquo<b>==</b>&rsquo; | &lsquo<b>~=</b>&rsquo; | 
+	binop ::= &lsquo;<b>+</b>&rsquo; | &lsquo;<b>-</b>&rsquo; | &lsquo;<b>*</b>&rsquo; | &lsquo;<b>/</b>&rsquo; | &lsquo;<b>^</b>&rsquo; | &lsquo;<b>%</b>&rsquo; | &lsquo;<b>..</b>&rsquo; | 
+		 &lsquo;<b>&lt;</b>&rsquo; | &lsquo;<b>&lt;=</b>&rsquo; | &lsquo;<b>&gt;</b>&rsquo; | &lsquo;<b>&gt;=</b>&rsquo; | &lsquo;<b>==</b>&rsquo; | &lsquo;<b>~=</b>&rsquo; | 
 		 <b>and</b> | <b>or</b>
 
-	unop ::= &lsquo<b>-</b>&rsquo; | <b>not</b> | &lsquo<b>#</b>&rsquo;
+	unop ::= &lsquo;<b>-</b>&rsquo; | <b>not</b> | &lsquo;<b>#</b>&rsquo;
 
 </pre>
 
@@ -9845,7 +9925,7 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL>
 Last update:
-Tue Nov 16 09:52:41 BRST 2010
+Wed Nov 17 14:49:08 BRST 2010
 </SMALL>
 <!--
 Last change: revised for Lua 5.2.0 (alpha)

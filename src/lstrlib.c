@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.157 2010/11/08 17:38:37 roberto Exp $
+** $Id: lstrlib.c,v 1.158 2010/11/16 20:39:41 roberto Exp $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -505,6 +505,18 @@ static int push_captures (MatchState *ms, const char *s, const char *e) {
 }
 
 
+/* check whether pattern has no special characters */
+static int nospecials (const char *p, size_t l) {
+  size_t upto = 0;
+  do {
+    if (strpbrk(p + upto, SPECIALS))
+      return 0;  /* pattern has a special character */ 
+    upto += strlen(p + upto) + 1;  /* may have more after \0 */
+  } while (upto <= l);
+  return 1;  /* no special chars found */
+}
+
+
 static int str_find_aux (lua_State *L, int find) {
   size_t ls, lp;
   const char *s = luaL_checklstring(L, 1, &ls);
@@ -515,8 +527,8 @@ static int str_find_aux (lua_State *L, int find) {
     lua_pushnil(L);  /* cannot find anything */
     return 1;
   }
-  if (find && (lua_toboolean(L, 4) ||  /* explicit request? */
-      strpbrk(p, SPECIALS) == NULL)) {  /* or no special characters? */
+  /* explicit request or no special characters? */
+  if (find && (lua_toboolean(L, 4) || nospecials(p, lp))) {
     /* do a plain search */
     const char *s2 = lmemfind(s + init - 1, ls - init + 1, p, lp);
     if (s2) {
