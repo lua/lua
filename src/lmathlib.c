@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.78 2010/11/12 15:47:34 roberto Exp $
+** $Id: lmathlib.c,v 1.79 2010/11/18 18:38:27 roberto Exp $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -136,11 +136,12 @@ static int math_log (lua_State *L) {
 
 static int math_log10 (lua_State *L) {
 #if !defined(LUA_COMPAT_LOG10)
-  luaL_error(L, "function " LUA_QL("log10")
-                " is deprecated; use log(x, 10) instead");
-#endif
+  return luaL_error(L, "function " LUA_QL("log10")
+                       " is deprecated; use log(x, 10) instead");
+#else
   lua_pushnumber(L, l_tg(log10)(luaL_checknumber(L, 1)));
   return 1;
+#endif
 }
 
 static int math_exp (lua_State *L) {

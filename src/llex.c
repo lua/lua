@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.40 2010/10/25 12:24:36 roberto Exp $
+** $Id: llex.c,v 2.41 2010/11/18 18:38:44 roberto Exp $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -471,10 +471,10 @@ static int llex (LexState *ls, SemInfo *seminfo) {
           } while (lislalnum(ls->current));
           ts = luaX_newstring(ls, luaZ_buffer(ls->buff),
                                   luaZ_bufflen(ls->buff));
+          seminfo->ts = ts;
           if (ts->tsv.reserved > 0)  /* reserved word? */
             return ts->tsv.reserved - 1 + FIRST_RESERVED;
           else {
-            seminfo->ts = ts;
             return TK_NAME;
           }
         }

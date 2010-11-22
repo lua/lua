@@ -38,7 +38,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.63 2010/11/17 15:35:05 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.66 2010/11/22 18:07:40 roberto Exp $ -->
 
 
 
@@ -53,22 +53,23 @@ It also offers good support for object-oriented programming,
 functional programming, and data-driven programming.
 Lua is intended to be used as a powerful, light-weight
 scripting language for any program that needs one.
-Lua is implemented as a library, written in <em>clean</em> C
-(that is, in the common subset of ANSI&nbsp;C and C++).
+Lua is implemented as a library, written in <em>clean</em> C,
+the common subset of ANSI&nbsp;C and C++.
 
 
 <p>
 Being an extension language, Lua has no notion of a "main" program:
 it only works <em>embedded</em> in a host client,
 called the <em>embedding program</em> or simply the <em>host</em>.
-This host program can invoke functions to execute a piece of Lua code,
+The host program can invoke functions to execute a piece of Lua code,
 can write and read Lua variables,
 and can register C&nbsp;functions to be called by Lua code.
 Through the use of C&nbsp;functions, Lua can be augmented to cope with
 a wide range of different domains,
 thus creating customized programming languages sharing a syntactical framework.
 The Lua distribution includes a sample host program called <code>lua</code>,
-which uses the Lua library to offer a complete, standalone Lua interpreter.
+which uses the Lua library to offer a complete, standalone Lua interpreter,
+for interactive or batch use.
 
 
 <p>
@@ -85,7 +86,7 @@ this document is dry in places.
 For a discussion of the decisions behind the design of Lua,
 see the technical papers available at Lua's web site.
 For a detailed introduction to programming in Lua,
-see Roberto's book, <em>Programming in Lua (Second Edition)</em>.
+see Roberto's book, <em>Programming in Lua</em> (second edition).
 
 
 
@@ -126,7 +127,7 @@ any other value makes it true.
 <em>Number</em> represents real (double-precision floating-point) numbers.
 (It is easy to build Lua interpreters that use other
 internal representations for numbers,
-such as single-precision float or long integers;
+such as single-precision floats or long integers;
 see file <code>luaconf.h</code>.)
 <em>String</em> represents arrays of characters.
 
@@ -211,7 +212,7 @@ of a given value.
 As discussed in <a href="#3.2">&sect;3.2</a> and <a href="#3.3.3">&sect;3.3.3</a>,
 any reference to a global name <code>var</code> is syntactically translated 
 to <code>_ENV.var</code>.
-Moreover, any chunk is compiled in the scope of an external
+Moreover, every chunk is compiled in the scope of an external
 variable called <code>_ENV</code> (see <a href="#3.3.2">&sect;3.3.2</a>),
 so <code>_ENV</code> itself is never a global name in a chunk.
 
@@ -256,7 +257,7 @@ If you change the global environment in the registry
 (through C code or the debug library),
 all chunks loaded after the change will get the new environment.
 Previously loaded chunks are not affected, however,
-as each has its own copy of the environment in its <code>_ENV</code> variable.
+as each has its own reference to the environment in its <code>_ENV</code> variable.
 Moreover, the variable <a href="#pdf-_G"><code>_G</code></a>
 (which is stored in the original global environment)
 is never updated by Lua.
@@ -271,8 +272,9 @@ is never updated by Lua.
 Because Lua is an embedded extension language,
 all Lua actions start from C&nbsp;code in the host program
 calling a function from the Lua library (see <a href="#lua_pcall"><code>lua_pcall</code></a>).
-Whenever an error occurs during Lua compilation or execution,
-control returns to C,
+Whenever an error occurs during
+the compilation or execution of a Lua chunk,
+control returns to the host,
 which can take appropriate measures
 (such as printing an error message).
 
@@ -281,7 +283,7 @@ which can take appropriate measures
 Lua code can explicitly generate an error by calling the
 <a href="#pdf-error"><code>error</code></a> function.
 If you need to catch errors in Lua,
-you can use the <a href="#pdf-pcall"><code>pcall</code></a> function.
+you can use the <a href="#pdf-pcall"><code>pcall</code></a> or the <a href="#pdf-xpcall"><code>xpcall</code></a> function.
 
 
 
@@ -297,27 +299,26 @@ under certain special operations.
 You can change several aspects of the behavior
 of operations over a value by setting specific fields in its metatable.
 For instance, when a non-numeric value is the operand of an addition,
-Lua checks for a function in the field "<code>__add</code>" in its metatable.
+Lua checks for a function in the field "<code>__add</code>" of the value's metatable.
 If it finds one,
 Lua calls this function to perform the addition.
 
 
 <p>
-We call the keys in a metatable <em>events</em>
-and the values <em>metamethods</em>.
-In the previous example, the event is <code>"__add"</code> 
+The keys in a metatable are derived from the <em>event</em> names;
+the corresponding values are called <em>metamethods</em>.
+In the previous example, the event is <code>"add"</code> 
 and the metamethod is the function that performs the addition.
 
 
 <p>
 You can query the metatable of any value
-through the <a href="#pdf-getmetatable"><code>getmetatable</code></a> function.
+using the <a href="#pdf-getmetatable"><code>getmetatable</code></a> function.
 
 
 <p>
 You can replace the metatable of tables
-through the <a href="#pdf-setmetatable"><code>setmetatable</code></a>
-function.
+using the <a href="#pdf-setmetatable"><code>setmetatable</code></a> function.
 You cannot change the metatable of other types from Lua
 (except by using the debug library);
 you must use the C&nbsp;API for that.
@@ -338,8 +339,6 @@ A metatable controls how an object behaves in arithmetic operations,
 order comparisons, concatenation, length operation, and indexing.
 A metatable also can define a function to be called when a userdata
 is garbage collected.
-For each of these operations Lua associates a specific key
-called an <em>event</em>.
 When Lua performs one of these operations over a value,
 it checks whether this value has a metatable with the corresponding event.
 If so, the value associated with that key (the metamethod)
@@ -353,11 +352,11 @@ The key for each operation is a string with its name prefixed by
 two underscores, '<code>__</code>';
 for instance, the key for operation "add" is the
 string "<code>__add</code>".
-The semantics of these operations is better explained by a Lua function
-describing how the interpreter executes the operation.
 
 
 <p>
+The semantics of these operations is better explained by a Lua function
+describing how the interpreter executes the operation.
 The code shown here in Lua is only illustrative;
 the real behavior is hard coded in the interpreter
 and it is much more efficient than this simulation.
@@ -719,7 +718,7 @@ It uses two numbers to control its garbage-collection cycles:
 the <em>garbage-collector pause</em> and
 the <em>garbage-collector step multiplier</em>.
 Both use percentage points as units
-(so that a value of 100 means an internal value of 1).
+(e.g., a value of 100 means an internal value of 1).
 
 
 <p>
@@ -733,14 +732,15 @@ to double before starting a new cycle.
 
 
 <p>
-The step multiplier
+The garbage-collector step multiplier
 controls the relative speed of the collector relative to
 memory allocation.
 Larger values make the collector more aggressive but also increase
 the size of each incremental step.
 Values smaller than 100 make the collector too slow and
 can result in the collector never finishing a cycle.
-The default, 200, means that the collector runs at "twice"
+The default is 200,
+which means that the collector runs at "twice"
 the speed of memory allocation.
 
 
@@ -767,7 +767,7 @@ the collector directly (e.g., stop and restart it).
 
 <p>
 Using the C&nbsp;API,
-you can set garbage-collector metamethods for userdata (see <a href="#2.4">&sect;2.4</a>).
+you can set garbage-collector metamethods for full userdata (see <a href="#2.4">&sect;2.4</a>).
 These metamethods are also called <em>finalizers</em>.
 Finalizers allow you to coordinate Lua's garbage collection
 with external resource management
@@ -777,12 +777,12 @@ or freeing your own memory).
 
 <p>
 For a userdata to be finalized when collected,
-you must <em>mark</em> it first.
+you must <em>mark</em> it for finalization.
 
 You mark a userdata for finalization when you set its metatable
 and the metatable has a field indexed by the string "<code>__gc</code>".
 Note that if you set a metatable without a <code>__gc</code> field
-and later create that field,
+and later create that field in the metatable,
 the userdata will not be marked for finalization.
 However, after a userdata is marked,
 you can freely change the <code>__gc</code> field of its metatable.
@@ -826,7 +826,7 @@ A <em>weak table</em> is a table whose elements are
 A weak reference is ignored by the garbage collector.
 In other words,
 if the only references to an object are weak references,
-then the garbage collector will collect this object.
+then the garbage collector will collect that object.
 
 
 <p>
@@ -873,11 +873,11 @@ Lua treats strings and light C functions as non-object values.
 
 
 <p>
-Userdata marked for finalization has a special behavior in weak tables.
+Userdata marked for finalization have a special behavior in weak tables.
 When a marked userdata is a value in a weak table,
 it is removed from the table the first time it is collected,
 before running its finalizer.
-When it is a key, however,
+However, when it is a key,
 it is removed from the table only when it is really freed,
 after running its finalizer.
 This behavior allows the finalizer to access values
@@ -901,15 +901,16 @@ a yield function.
 
 
 <p>
-You create a coroutine with a call to <a href="#pdf-coroutine.create"><code>coroutine.create</code></a>.
+You create a coroutine by calling <a href="#pdf-coroutine.create"><code>coroutine.create</code></a>.
 Its sole argument is a function
 that is the main function of the coroutine.
 The <code>create</code> function only creates a new coroutine and
 returns a handle to it (an object of type <em>thread</em>);
-it does not start the coroutine execution.
+it does not start the coroutine.
 
 
 <p>
+You execute a coroutine by calling <a href="#pdf-coroutine.resume"><code>coroutine.resume</code></a>.
 When you first call <a href="#pdf-coroutine.resume"><code>coroutine.resume</code></a>,
 passing as its first argument
 a thread returned by <a href="#pdf-coroutine.create"><code>coroutine.create</code></a>,
@@ -962,7 +963,7 @@ any error is propagated to the caller.
 
 
 <p>
-As an example,
+As an example of how coroutines work,
 consider the following code:
 
 <pre>
@@ -3657,6 +3658,11 @@ unless you know that the key is actually a string.
 Recall that <a href="#lua_tolstring"><code>lua_tolstring</code></a> <em>changes</em>
 the value at the given index;
 this confuses the next call to <a href="#lua_next"><code>lua_next</code></a>.
+
+
+<p>
+See function <a href="#pdf-next"><code>next</code></a> for the caveats of modifying
+the table during its traversal.
 
 
 
@@ -6972,7 +6978,7 @@ and "<code>userdata</code>".
 <hr><h3><a name="pdf-_VERSION"><code>_VERSION</code></a></h3>
 A global variable (not a function) that
 holds a string containing the current interpreter version.
-The current contents of this variable is "<code>Lua 5.1</code>".
+The current contents of this variable is "<code>Lua 5.2</code>".
 
 
 
@@ -7665,9 +7671,9 @@ Here are some examples:
          end)
      --&gt; x="4+5 = 9"
      
-     local t = {name="lua", version="5.1"}
+     local t = {name="lua", version="5.2"}
      x = string.gsub("$name-$version.tar.gz", "%$(%w+)", t)
-     --&gt; x="lua-5.1.tar.gz"
+     --&gt; x="lua-5.2.tar.gz"
 </pre>
 
 
@@ -8385,8 +8391,6 @@ Returns the hyperbolic tangent of <code>x</code>.
 <p>
 This library provides bitwise operations.
 It provides all its functions inside the table <a name="pdf-bit32"><code>bit32</code></a>.
-It uses upper case for function names to avoid collision with
-some reserved words (<b>and</b>, <b>or</b>, and <b>not</b>).
 
 
 <p>
@@ -8398,112 +8402,12 @@ the remainder of its division by <em>2<sup>32</sup></em>
 and truncated to an integer (in some unspecified way),
 so that its final value falls in the range <em>[0,2<sup>32</sup> - 1]</em>.
 Similarly, all results are in the range <em>[0,2<sup>32</sup> - 1]</em>.
-Note that <code>bit32.NOT(0)</code> is <code>0xFFFFFFFF</code>,
+Note that <code>bit32.bnot(0)</code> is <code>0xFFFFFFFF</code>,
 which is different from <code>-1</code>.
 
 
 <p>
-<hr><h3><a name="pdf-bit32.AND"><code>bit32.AND (&middot;&middot;&middot;)</code></a></h3>
-
-
-<p>
-Returns the bitwise and of its operands.
-
-
-
-
-<p>
-<hr><h3><a name="pdf-bit32.NOT"><code>bit32.NOT (x)</code></a></h3>
-
-
-<p>
-Returns the bitwise negation of <code>x</code>.
-For any integer <code>x</code>,
-the following identity holds:
-
-<pre>
-     assert(bit32.NOT(x) == (-1 - x) % 2^32)
-</pre>
-
-
-
-<p>
-<hr><h3><a name="pdf-bit32.OR"><code>bit32.OR (&middot;&middot;&middot;)</code></a></h3>
-
-
-<p>
-Returns the bitwise or of its operands.
-
-
-
-
-<p>
-<hr><h3><a name="pdf-bit32.TEST"><code>bit32.TEST (&middot;&middot;&middot;)</code></a></h3>
-
-
-<p>
-Returns a boolean signaling 
-whether the bitwise and of its operands is different from zero.
-
-
-
-
-<p>
-<hr><h3><a name="pdf-bit32.XOR"><code>bit32.XOR (&middot;&middot;&middot;)</code></a></h3>
-
-
-<p>
-Returns the bitwise exclusive or of its operands.
-
-
-
-
-<p>
-<hr><h3><a name="pdf-bit32.ROL"><code>bit32.ROL (x, disp)</code></a></h3>
-
-
-<p>
-Returns the number <code>x</code> rotated <code>disp</code> bits to the left.
-The number <code>disp</code> may be any representable integer.
-
-
-<p>
-For any valid displacement,
-the following identity holds:
-
-<pre>
-     assert(bit32.ROL(x, disp) == bit32.ROL(x, disp % 32))
-</pre><p>
-In particular,
-negative displacements rotate to the right.
-
-
-
-
-<p>
-<hr><h3><a name="pdf-bit32.ROR"><code>bit32.ROR (x, disp)</code></a></h3>
-
-
-<p>
-Returns the number <code>x</code> rotated <code>disp</code> bits to the right.
-The number <code>disp</code> may be any representable integer.
-
-
-<p>
-For any valid displacement,
-the following identity holds:
-
-<pre>
-     assert(bit32.ROR(x, disp) == bit32.ROR(x, disp % 32))
-</pre><p>
-In particular,
-negative displacements rotate to the left.
-
-
-
-
-<p>
-<hr><h3><a name="pdf-bit32.SAR"><code>bit32.SAR (x, disp)</code></a></h3>
+<hr><h3><a name="pdf-bit32.arshift"><code>bit32.arshift (x, disp)</code></a></h3>
 
 
 <p>
@@ -8519,13 +8423,91 @@ with copies of the higher bit of <code>x</code>;
 vacant bits on the right are filled with zeros.
 In particular,
 displacements with absolute values higher than 31
-result in zero or <code>0xFFFFFFFF</code> (all bits are shifted out).
+result in zero or <code>0xFFFFFFFF</code> (all original bits are shifted out).
 
 
 
 
 <p>
-<hr><h3><a name="pdf-bit32.SHL"><code>bit32.SHL (x, disp)</code></a></h3>
+<hr><h3><a name="pdf-bit32.band"><code>bit32.band (&middot;&middot;&middot;)</code></a></h3>
+
+
+<p>
+Returns the bitwise and of its operands.
+
+
+
+
+<p>
+<hr><h3><a name="pdf-bit32.bnot"><code>bit32.bnot (x)</code></a></h3>
+
+
+<p>
+Returns the bitwise negation of <code>x</code>.
+For any integer <code>x</code>,
+the following identity holds:
+
+<pre>
+     assert(bit32.bnot(x) == (-1 - x) % 2^32)
+</pre>
+
+
+
+<p>
+<hr><h3><a name="pdf-bit32.bor"><code>bit32.bor (&middot;&middot;&middot;)</code></a></h3>
+
+
+<p>
+Returns the bitwise or of its operands.
+
+
+
+
+<p>
+<hr><h3><a name="pdf-bit32.btest"><code>bit32.btest (&middot;&middot;&middot;)</code></a></h3>
+
+
+<p>
+Returns a boolean signaling 
+whether the bitwise and of its operands is different from zero.
+
+
+
+
+<p>
+<hr><h3><a name="pdf-bit32.bxor"><code>bit32.bxor (&middot;&middot;&middot;)</code></a></h3>
+
+
+<p>
+Returns the bitwise exclusive or of its operands.
+
+
+
+
+<p>
+<hr><h3><a name="pdf-bit32.lrotate"><code>bit32.lrotate (x, disp)</code></a></h3>
+
+
+<p>
+Returns the number <code>x</code> rotated <code>disp</code> bits to the left.
+The number <code>disp</code> may be any representable integer.
+
+
+<p>
+For any valid displacement,
+the following identity holds:
+
+<pre>
+     assert(bit32.lrotate(x, disp) == bit32.lrotate(x, disp % 32))
+</pre><p>
+In particular,
+negative displacements rotate to the right.
+
+
+
+
+<p>
+<hr><h3><a name="pdf-bit32.lshift"><code>bit32.lshift (x, disp)</code></a></h3>
 
 
 <p>
@@ -8543,13 +8525,35 @@ For positive displacements,
 the following equality holds:
 
 <pre>
-     assert(bit32.SHL(b, disp) == (b * 2^disp) % 2^32)
+     assert(bit32.lshift(b, disp) == (b * 2^disp) % 2^32)
 </pre>
 
 
 
 <p>
-<hr><h3><a name="pdf-bit32.SHR"><code>bit32.SHR (x, disp)</code></a></h3>
+<hr><h3><a name="pdf-bit32.rrotate"><code>bit32.rrotate (x, disp)</code></a></h3>
+
+
+<p>
+Returns the number <code>x</code> rotated <code>disp</code> bits to the right.
+The number <code>disp</code> may be any representable integer.
+
+
+<p>
+For any valid displacement,
+the following identity holds:
+
+<pre>
+     assert(bit32.rrotate(x, disp) == bit32.rrotate(x, disp % 32))
+</pre><p>
+In particular,
+negative displacements rotate to the left.
+
+
+
+
+<p>
+<hr><h3><a name="pdf-bit32.rshift"><code>bit32.rshift (x, disp)</code></a></h3>
 
 
 <p>
@@ -8567,7 +8571,7 @@ For positive displacements,
 the following equality holds:
 
 <pre>
-     assert(bit32.SHR(b, disp) == math.floor(b % 2^32 / 2^disp))
+     assert(bit32.rshift(b, disp) == math.floor(b % 2^32 / 2^disp))
 </pre>
 
 <p>
@@ -9925,7 +9929,7 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL>
 Last update:
-Wed Nov 17 14:49:08 BRST 2010
+Mon Nov 22 16:36:19 BRST 2010
 </SMALL>
 <!--
 Last change: revised for Lua 5.2.0 (alpha)

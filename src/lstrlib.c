@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.158 2010/11/16 20:39:41 roberto Exp $
+** $Id: lstrlib.c,v 1.159 2010/11/19 16:25:51 roberto Exp $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -614,12 +614,6 @@ static int gmatch (lua_State *L) {
 }
 
 
-static int gfind_nodef (lua_State *L) {
-  return luaL_error(L, LUA_QL("string.gfind") " was renamed to "
-                       LUA_QL("string.gmatch"));
-}
-
-
 static void add_s (MatchState *ms, luaL_Buffer *b, const char *s,
                                                    const char *e) {
   size_t l, i;
@@ -912,7 +906,6 @@ static const luaL_Reg strlib[] = {
   {"dump", str_dump},
   {"find", str_find},
   {"format", str_format},
-  {"gfind", gfind_nodef},
   {"gmatch", gmatch},
   {"gsub", str_gsub},
   {"len", str_len},
