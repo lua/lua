@@ -1,5 +1,5 @@
 /*
-** $Id: lbitlib.c,v 1.11 2010/11/08 16:31:22 roberto Exp roberto $
+** $Id: lbitlib.c,v 1.12 2010/11/22 16:39:20 roberto Exp roberto $
 ** Standard library for bitwise operations
 ** See Copyright Notice in lua.h
 */
@@ -150,7 +150,7 @@ static const luaL_Reg bitlib[] = {
   {"lshift", b_lshift},
   {"rrotate", b_rrot},
   {"rshift", b_rshift},
-  {"test", b_test},
+  {"btest", b_test},
   {NULL, NULL}
 };
 
