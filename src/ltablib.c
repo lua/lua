@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.57 2010/10/25 19:01:37 roberto Exp $
+** $Id: ltablib.c,v 1.58 2010/11/23 17:21:14 roberto Exp $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -20,47 +20,8 @@
 	(luaL_checktype(L, n, LUA_TTABLE), (int)lua_rawlen(L, n))
 
 
-static int foreachi (lua_State *L) {
-  int n = aux_getn(L, 1);
-  int i;
-  if (lua_getctx(L, &i) == LUA_YIELD) goto poscall;
-  luaL_checktype(L, 2, LUA_TFUNCTION);
-  for (i = 1; i <= n; i++) {
-    lua_pushvalue(L, 2);  /* function */
-    lua_pushinteger(L, i);  /* 1st argument */
-    lua_rawgeti(L, 1, i);  /* 2nd argument */
-    lua_callk(L, 2, 1, i, foreachi);
-    poscall:
-    if (!lua_isnil(L, -1))
-      return 1;
-    lua_pop(L, 1);  /* remove nil result */
-  }
-  return 0;
-}
-
-
-static int foreachcont (lua_State *L) {
-  for (;;) {
-    if (!lua_isnil(L, -1))
-      return 1;
-    lua_pop(L, 2);  /* remove value and result */
-    if (lua_next(L, 1) == 0)  /* no more elements? */
-      return 0;
-    lua_pushvalue(L, 2);  /* function */
-    lua_pushvalue(L, -3);  /* key */
-    lua_pushvalue(L, -3);  /* value */
-    lua_callk(L, 2, 1, 0, foreachcont);
-  }
-}
-
-
-static int foreach (lua_State *L) {
-  luaL_checktype(L, 1, LUA_TTABLE);
-  luaL_checktype(L, 2, LUA_TFUNCTION);
-  lua_pushnil(L);  /* first key */
-  lua_pushnil(L);  /* first value */
-  lua_pushnil(L);  /* first "return" */
-  return foreachcont(L);
+static int deprecatedfunc (lua_State *L) {
+  return luaL_error(L, "deprecated function");
 }
 
 
@@ -80,15 +41,8 @@ static int maxn (lua_State *L) {
   return 1;
 }
 #else
-static int maxn (lua_State *L) {
-  return luaL_error(L, "function 'maxn' is deprecated");
-}
+#define maxn	deprecatedfunc
 #endif
-
-static int getn (lua_State *L) {
-  lua_pushinteger(L, aux_getn(L, 1));
-  return 1;
-}
 
 
 static int tinsert (lua_State *L) {
@@ -311,9 +265,9 @@ static int sort (lua_State *L) {
 
 static const luaL_Reg tab_funcs[] = {
   {"concat", tconcat},
-  {"foreach", foreach},
-  {"foreachi", foreachi},
-  {"getn", getn},
+  {"foreach", deprecatedfunc},
+  {"foreachi", deprecatedfunc},
+  {"getn", deprecatedfunc},
   {"maxn", maxn},
   {"insert", tinsert},
   {"pack", pack},
