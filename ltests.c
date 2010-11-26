@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.112 2010/07/28 15:51:59 roberto Exp roberto $
+** $Id: ltests.c,v 2.113 2010/11/16 17:43:29 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -429,20 +429,21 @@ int lua_checkmemory (lua_State *L) {
     checkobject(g, o);
     lua_assert(!testbit(o->gch.marked, SEPARATED));
   }
-  /* check 'udgc' list */
-  checkold(g, g->udgc);
-  for (o = g->udgc; o != NULL; o = gch(o)->next) {
-    lua_assert(gch(o)->tt == LUA_TUSERDATA &&
-               !isdead(g, o) &&
-               testbit(o->gch.marked, SEPARATED));
+  /* check 'finobj' list */
+  checkold(g, g->finobj);
+  for (o = g->finobj; o != NULL; o = gch(o)->next) {
+    lua_assert(!isdead(g, o) && testbit(o->gch.marked, SEPARATED));
+    lua_assert(gch(o)->tt == LUA_TUSERDATA ||
+               gch(o)->tt == LUA_TTABLE);
     checkobject(g, o);
   }
   /* check 'tobefnz' list */
   checkold(g, g->tobefnz);
   for (o = g->tobefnz; o != NULL; o = gch(o)->next) {
-    lua_assert(gch(o)->tt == LUA_TUSERDATA);
-    lua_assert(isblack(o));
-    lua_assert(testbit(o->gch.marked, SEPARATED));
+    lua_assert(!iswhite(o));
+    lua_assert(!isdead(g, o) && testbit(o->gch.marked, SEPARATED));
+    lua_assert(gch(o)->tt == LUA_TUSERDATA ||
+               gch(o)->tt == LUA_TTABLE);
   }
   /* check 'uvhead' list */
   for (uv = g->uvhead.u.l.next; uv != &g->uvhead; uv = uv->u.l.next) {

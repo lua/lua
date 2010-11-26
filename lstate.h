@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.67 2010/09/30 17:21:31 roberto Exp roberto $
+** $Id: lstate.h,v 2.68 2010/10/29 17:52:46 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -32,9 +32,9 @@
 ** when traversing the respective threads, but the thread may already be
 ** dead, while the upvalue is still accessible through closures.)
 **
-** Userdata with finalizers are kept in the list g->udgc.
+** Objects with finalizers are kept in the list g->finobj.
 **
-** The list g->tobefnz links all userdata being finalized.
+** The list g->tobefnz links all objects being finalized.
 
 */
 
@@ -125,7 +125,7 @@ typedef struct global_State {
   lu_byte gckind;  /* kind of GC running */
   int sweepstrgc;  /* position of sweep in `strt' */
   GCObject *allgc;  /* list of all collectable objects */
-  GCObject *udgc;  /* list of collectable userdata with finalizers */
+  GCObject *finobj;  /* list of collectable objects with finalizers */
   GCObject **sweepgc;  /* current position of sweep */
   GCObject *gray;  /* list of gray objects */
   GCObject *grayagain;  /* list of objects to be traversed atomically */
