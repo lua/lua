@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.73 2010/09/07 19:21:39 roberto Exp roberto $
+** $Id: ldebug.c,v 2.74 2010/10/11 20:24:42 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -94,13 +94,28 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
 }
 
 
+static const char *findvararg (CallInfo *ci, int n, StkId *pos) {
+  int nparams = clvalue(ci->func)->l.p->numparams;
+  if (n >= ci->u.l.base - ci->func - nparams)
+    return NULL;  /* no such vararg */
+  else {
+    *pos = ci->func + nparams + n;
+    return "(*vararg)";  /* generic name for any vararg */
+  }
+}
+
+
 static const char *findlocal (lua_State *L, CallInfo *ci, int n,
                               StkId *pos) {
   const char *name = NULL;
   StkId base;
   if (isLua(ci)) {
-    base = ci->u.l.base;
-    name = luaF_getlocalname(ci_func(ci)->l.p, n, currentpc(ci));
+    if (n < 0)  /* access to vararg values? */
+      return findvararg(ci, -n, pos);
+    else {
+      base = ci->u.l.base;
+      name = luaF_getlocalname(ci_func(ci)->l.p, n, currentpc(ci));
+    }
   }
   else
     base = ci->func + 1;
@@ -108,10 +123,8 @@ static const char *findlocal (lua_State *L, CallInfo *ci, int n,
     StkId limit = (ci == L->ci) ? L->top : ci->next->func;
     if (limit - base >= n && n > 0)  /* is 'n' inside 'ci' stack? */
       name = "(*temporary)";  /* generic name for any valid slot */
-    else {
-      *pos = base;  /* to avoid warnings */
+    else
       return NULL;  /* no name */
-    }
   }
   *pos = base + (n - 1);
   return name;
@@ -128,7 +141,7 @@ LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
       name = luaF_getlocalname(clvalue(L->top - 1)->l.p, n, 0);
   }
   else {  /* active function; get information through 'ar' */
-    StkId pos;
+    StkId pos = 0;  /* to avoid warnings */
     name = findlocal(L, ar->i_ci, n, &pos);
     if (name) {
       setobj2s(L, L->top, pos);
@@ -141,11 +154,11 @@ LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
 
 
 LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
-  StkId pos;
+  StkId pos = 0;  /* to avoid warnings */
   const char *name = findlocal(L, ar->i_ci, n, &pos);
   lua_lock(L);
   if (name)
-      setobjs2s(L, pos, L->top - 1);
+    setobjs2s(L, pos, L->top - 1);
   L->top--;  /* pop value */
   lua_unlock(L);
   return name;
