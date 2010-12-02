@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.45 2010/11/18 19:15:00 roberto Exp $
+** $Id: lgc.h,v 2.45 2010/11/26 14:32:31 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -76,8 +76,8 @@
 #define WHITE0BIT	0  /* object is white (type 0) */
 #define WHITE1BIT	1  /* object is white (type 1) */
 #define BLACKBIT	2  /* object is black */
-#define FINALIZEDBIT	3  /* for userdata: has been finalized */
-#define SEPARATED	4  /*  "    ": it's in 'udgc' list or in 'tobefnz' */
+#define FINALIZEDBIT	3  /* object has been separated for finalization */
+#define SEPARATED	4  /* object is in 'finobj' list or in 'tobefnz' */
 #define FIXEDBIT	5  /* object is fixed (should not be collected) */
 #define OLDBIT		6  /* object is old (only in generational mode) */
 /* bit 7 is currently used by tests (luaL_checkmemory) */
