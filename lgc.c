@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.104 2010/11/18 19:15:00 roberto Exp roberto $
+** $Id: lgc.c,v 2.104 2010/11/26 14:32:31 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -689,12 +689,11 @@ static void checkSizes (lua_State *L) {
 static GCObject *udata2finalize (global_State *g) {
   GCObject *o = g->tobefnz;  /* get first element */
   lua_assert(isfinalized(o));
-  lua_assert(!isold(o));
   g->tobefnz = gch(o)->next;  /* remove it from 'tobefnz' list */
   gch(o)->next = g->allgc;  /* return it to 'allgc' list */
   g->allgc = o;
   resetbit(gch(o)->marked, SEPARATED);  /* mark that it is not in 'tobefnz' */
-  resetoldbit(o); /* see MOVE OLD rule */
+  lua_assert(!isold(o));  /* see MOVE OLD rule */
   if (!keepinvariant(g))  /* not keeping invariant? */
     makewhite(g, o);  /* "sweep" object */
   return o;
@@ -823,10 +822,14 @@ void luaC_changemode (lua_State *L, int mode) {
 
 
 /*
-** call all pending finalizers */
+** call all pending finalizers
+*/
 static void callallpendingfinalizers (lua_State *L, int propagateerrors) {
   global_State *g = G(L);
-  while (g->tobefnz) GCTM(L, propagateerrors);
+  while (g->tobefnz) {
+    resetoldbit(g->tobefnz);
+    GCTM(L, propagateerrors);
+  }
 }
 
 
