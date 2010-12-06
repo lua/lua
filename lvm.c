@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.124 2010/10/25 19:01:37 roberto Exp roberto $
+** $Id: lvm.c,v 2.125 2010/10/29 17:52:46 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,7 @@
 const TValue *luaV_tonumber (const TValue *obj, TValue *n) {
   lua_Number num;
   if (ttisnumber(obj)) return obj;
-  if (ttisstring(obj) && luaO_str2d(svalue(obj), &num)) {
+  if (ttisstring(obj) && luaO_str2d(svalue(obj), tsvalue(obj)->len, &num)) {
     setnvalue(n, num);
     return n;
   }

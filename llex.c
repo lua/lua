@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.40 2010/10/25 12:24:36 roberto Exp roberto $
+** $Id: llex.c,v 2.41 2010/11/18 18:38:44 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -200,6 +200,9 @@ static void buffreplace (LexState *ls, char from, char to) {
 #define getlocaledecpoint()	(localeconv()->decimal_point[0])
 #endif
 
+
+#define buff2d(b,e)	luaO_str2d(luaZ_buffer(b), luaZ_bufflen(b) - 1, e)
+
 /*
 ** in case of format error, try to change decimal point separator to
 ** the one defined in the current locale and check again
@@ -208,7 +211,7 @@ static void trydecpoint (LexState *ls, SemInfo *seminfo) {
   char old = ls->decpoint;
   ls->decpoint = getlocaledecpoint();
   buffreplace(ls, old, ls->decpoint);  /* try new decimal separator */
-  if (!luaO_str2d(luaZ_buffer(ls->buff), &seminfo->r)) {
+  if (!buff2d(ls->buff, &seminfo->r)) {
     /* format error with correct decimal point: no more options */
     buffreplace(ls, ls->decpoint, '.');  /* undo change (for error message) */
     lexerror(ls, "malformed number", TK_NUMBER);
@@ -226,7 +229,7 @@ static void read_numeral (LexState *ls, SemInfo *seminfo) {
   } while (lislalnum(ls->current) || ls->current == '.');
   save(ls, '\0');
   buffreplace(ls, '.', ls->decpoint);  /* follow locale for decimal point */
-  if (!luaO_str2d(luaZ_buffer(ls->buff), &seminfo->r))  /* format error? */
+  if (!buff2d(ls->buff, &seminfo->r))  /* format error? */
     trydecpoint(ls, seminfo); /* try to update decimal point separator */
 }
 
