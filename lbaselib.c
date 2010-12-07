@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.251 2010/10/28 15:36:30 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.252 2010/12/06 16:25:48 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -351,7 +351,7 @@ static int luaB_loadin (lua_State *L) {
 static int luaB_loadstring (lua_State *L) {
   lua_settop(L, 2);
   lua_pushliteral(L, "tb");
-  return luaB_load(L);  /* dostring(s, n) == load(s, n, "tb") */
+  return luaB_load(L);  /* loadstring(s, n) == load(s, n, "tb") */
 
 }
 /* }====================================================== */
