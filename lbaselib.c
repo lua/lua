@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.252 2010/12/06 16:25:48 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.253 2010/12/07 11:40:42 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -114,11 +114,9 @@ static int luaB_setmetatable (lua_State *L) {
 }
 
 
-static int luaB_getfenv (lua_State *L) {
-  return luaL_error(L, "getfenv/setfenv deprecated");
+static int luaB_deprecated (lua_State *L) {
+  return luaL_error(L, "deprecated function");
 }
-
-#define luaB_setfenv	luaB_getfenv
 
 
 static int luaB_rawequal (lua_State *L) {
@@ -348,12 +346,13 @@ static int luaB_loadin (lua_State *L) {
 }
 
 
-static int luaB_loadstring (lua_State *L) {
-  lua_settop(L, 2);
-  lua_pushliteral(L, "tb");
-  return luaB_load(L);  /* loadstring(s, n) == load(s, n, "tb") */
+#if defined(LUA_COMPAT_LOADSTRING)
+#define luaB_loadstring		luaB_load
+#else
+#define luaB_loadstring		luaB_deprecated
+#endif
 
-}
+
 /* }====================================================== */
 
 
@@ -473,7 +472,7 @@ static const luaL_Reg base_funcs[] = {
   {"collectgarbage", luaB_collectgarbage},
   {"dofile", luaB_dofile},
   {"error", luaB_error},
-  {"getfenv", luaB_getfenv},
+  {"getfenv", luaB_deprecated},
   {"getmetatable", luaB_getmetatable},
   {"ipairs", luaB_ipairs},
   {"loadfile", luaB_loadfile},
@@ -488,7 +487,7 @@ static const luaL_Reg base_funcs[] = {
   {"rawget", luaB_rawget},
   {"rawset", luaB_rawset},
   {"select", luaB_select},
-  {"setfenv", luaB_setfenv},
+  {"setfenv", luaB_deprecated},
   {"setmetatable", luaB_setmetatable},
   {"tonumber", luaB_tonumber},
   {"tostring", luaB_tostring},

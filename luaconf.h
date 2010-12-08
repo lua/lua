@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.150 2010/11/10 17:38:10 roberto Exp roberto $
+** $Id: luaconf.h,v 1.151 2010/11/12 15:48:30 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -252,6 +252,12 @@
 ** You can rewrite 'log10(x)' as 'log(x, 10)'.
 */
 #define LUA_COMPAT_LOG10
+
+/*
+@@ LUA_COMPAT_LOADSTRING defines the function 'loadstring' in the base
+** library. You can rewrite 'loadstring(s)' as 'load(s)'.
+*/
+#define LUA_COMPAT_LOADSTRING
 
 /*
 @@ LUA_COMPAT_MAXN defines the function 'maxn' in the table library.
