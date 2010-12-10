@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.113 2010/11/16 17:43:29 roberto Exp roberto $
+** $Id: ltests.c,v 2.114 2010/11/26 14:32:31 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -937,9 +937,9 @@ static int getnum_aux (lua_State *L, lua_State *L1, const char **pc) {
     sig = -1;
     (*pc)++;
   }
-  if (!lisdigit(cast(unsigned char, **pc)))
+  if (!lisdigit(cast_uchar(**pc)))
     luaL_error(L, "number expected (%s)", *pc);
-  while (lisdigit(cast(unsigned char, **pc))) res = res*10 + (*(*pc)++) - '0';
+  while (lisdigit(cast_uchar(**pc))) res = res*10 + (*(*pc)++) - '0';
   return sig*res;
 }
 
