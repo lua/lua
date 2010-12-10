@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.41 2010/11/18 18:38:44 roberto Exp roberto $
+** $Id: llex.c,v 2.42 2010/12/06 21:08:36 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -286,13 +286,6 @@ static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
 }
 
 
-static int hexavalue (int c) {
-  if (lisdigit(c)) return c - '0';
-  else if (lisupper(c)) return c - 'A' + 10;
-  else return c - 'a' + 10;
-}
-
-
 static int readhexaesc (LexState *ls) {
   int c1, c2 = EOZ;
   if (!lisxdigit(c1 = next(ls)) || !lisxdigit(c2 = next(ls))) {
@@ -302,7 +295,7 @@ static int readhexaesc (LexState *ls) {
     if (c2 != EOZ) save(ls, c2);
     lexerror(ls, "hexadecimal digit expected", TK_STRING);
   }
-  return (hexavalue(c1) << 4) + hexavalue(c2);
+  return (luaO_hexavalue(c1) << 4) + luaO_hexavalue(c2);
 }
 
 
