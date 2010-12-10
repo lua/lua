@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.151 2010/11/12 15:48:30 roberto Exp roberto $
+** $Id: luaconf.h,v 1.152 2010/12/08 12:58:04 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -35,6 +35,7 @@
 
 #if defined(LUA_WIN)
 #define LUA_DL_DLL
+#define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
 #endif
 
 
@@ -43,6 +44,8 @@
 #define LUA_USE_POSIX
 #define LUA_USE_DLOPEN		/* needs an extra library: -ldl */
 #define LUA_USE_READLINE	/* needs some extra libraries */
+#define LUA_USE_HEXAFLOAT	/* assume 'strtod' handles hexa formats */
+#define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
 #endif
 
 #if defined(LUA_USE_MACOSX)
@@ -377,13 +380,26 @@
 @@ LUA_NUMBER_FMT is the format for writing numbers.
 @@ lua_number2str converts a number to a string.
 @@ LUAI_MAXNUMBER2STR is maximum size of previous conversion.
-@@ lua_str2number converts a string to a number.
 */
 #define LUA_NUMBER_SCAN		"%lf"
 #define LUA_NUMBER_FMT		"%.14g"
 #define lua_number2str(s,n)	sprintf((s), LUA_NUMBER_FMT, (n))
 #define LUAI_MAXNUMBER2STR	32 /* 16 digits, sign, point, and \0 */
+
+
+/*
+@@ lua_str2number converts a decimal numeric string to a number.
+@@ lua_strx2number converts an hexadecimal numeric string to a number.
+** In C99, 'strtod' do both conversions. C89, however, has no function
+** to convert floating hexadecimal strings to numbers. For these
+** systems, you can leave 'lua_strx2number' undefined and Lua will
+** provide its own implementation.
+*/
 #define lua_str2number(s,p)	strtod((s), (p))
+
+#if defined(LUA_USE_HEXAFLOAT)
+#define lua_strx2number(s,p)	strtod((s), (p))
+#endif
 
 
 /*

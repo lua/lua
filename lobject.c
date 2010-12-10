@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.43 2010/10/29 15:54:55 roberto Exp roberto $
+** $Id: lobject.c,v 2.44 2010/12/06 21:08:36 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -106,20 +106,87 @@ lua_Number luaO_arith (int op, lua_Number v1, lua_Number v2) {
 }
 
 
-static int checkend (const char *s, const char *e, const char *endptr) {
-  if (endptr == s) return 0;  /* no characters converted */
-  while (lisspace(cast(unsigned char, *endptr))) endptr++;
-  return (endptr == e);  /* OK if no trailing characters */
+int luaO_hexavalue (int c) {
+  if (lisdigit(c)) return c - '0';
+  else if (lisupper(c)) return c - 'A' + 10;
+  else return c - 'a' + 10;
 }
+
+
+#if !defined(lua_strx2number)
+
+#include <math.h>
+
+
+static int isneg (const char **s) {
+  if (**s == '-') { (*s)++; return 1; }
+  else if (**s == '+') (*s)++;
+  return 0;
+}
+
+
+static lua_Number readhexa (const char **s, lua_Number r, int *count) {
+  while (lisxdigit(cast_uchar(**s))) {  /* read integer part */
+    r = (r * 16.0) + (double)luaO_hexavalue(*(*s)++);
+    (*count)++;
+  }
+  return r;
+}
+
+
+/*
+** convert an hexadecimal numeric string to a number, following
+** C99 specification for 'strtod'
+*/
+static lua_Number lua_strx2number (const char *s, char **endptr) {
+  lua_Number r = 0.0;
+  int e = 0, i = 0;
+  int neg = 0;  /* 1 if number is negative */
+  *endptr = cast(char *, s);  /* nothing is valid yet */
+  while (lisspace(cast_uchar(*s))) s++;  /* skip initial spaces */
+  neg = isneg(&s);  /* check signal */
+  if (!(*s == '0' && (*(s + 1) == 'x' || *(s + 1) == 'X')))  /* check '0x' */
+    return 0.0;  /* invalid format (no '0x') */
+  s += 2;  /* skip '0x' */
+  r = readhexa(&s, r, &i);  /* read integer part */
+  if (*s == '.') {
+    s++;  /* skip dot */
+    r = readhexa(&s, r, &e);  /* read fractional part */
+  }
+  if (i == 0 && e == 0)
+    return 0.0;  /* invalid format (no digit) */
+  e *= -4;  /* each fractional digit divides value by 2^-4 */
+  *endptr = cast(char *, s);  /* valid up to here */
+  if (*s == 'p' || *s == 'P') {  /* exponent part? */
+    int exp1 = 0;
+    int neg1;
+    s++;  /* skip 'p' */
+    neg1 = isneg(&s);  /* signal */
+    if (!lisdigit(cast_uchar(*s)))
+      goto ret;  /* must have at least one digit */
+    while (lisdigit(cast_uchar(*s)))  /* read exponent */
+      exp1 = exp1 * 10 + *(s++) - '0';
+    if (neg1) exp1 = -exp1;
+    e += exp1;
+  }
+  *endptr = cast(char *, s);  /* valid up to here */
+ ret:
+  if (neg) r = -r;
+  return ldexp(r, e);
+}
+
+#endif
 
 
 int luaO_str2d (const char *s, size_t len, lua_Number *result) {
   char *endptr;
-  const char *e = s + len;  /* string 's' ends here */
-  *result = lua_str2number(s, &endptr);
-  if (checkend(s, e, endptr)) return 1;  /* conversion OK? */
-  *result = cast_num(strtoul(s, &endptr, 0)); /* try hexadecimal */
-  return checkend(s, e, endptr);
+  if (strpbrk(s, "xX"))  /* hexa? */
+    *result = lua_strx2number(s, &endptr);
+  else
+    *result = lua_str2number(s, &endptr);
+  if (endptr == s) return 0;  /* nothing recognized */
+  while (lisspace(cast_uchar(*endptr))) endptr++;
+  return (endptr == s + len);  /* OK if no trailing characters */
 }
 
 
