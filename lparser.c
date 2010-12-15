@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.91 2010/08/23 17:32:34 roberto Exp roberto $
+** $Id: lparser.c,v 2.92 2010/09/07 19:21:39 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -596,7 +596,7 @@ static void constructor (LexState *ls, expdesc *t) {
   cc.t = t;
   init_exp(t, VRELOCABLE, pc);
   init_exp(&cc.v, VVOID, 0);  /* no value (yet) */
-  luaK_exp2nextreg(ls->fs, t);  /* fix it at stack top (for gc) */
+  luaK_exp2nextreg(ls->fs, t);  /* fix it at stack top */
   checknext(ls, '{');
   do {
     lua_assert(cc.v.k == VVOID || cc.tostore > 0);
