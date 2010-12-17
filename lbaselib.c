@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.254 2010/12/08 12:58:04 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.255 2010/12/13 16:38:00 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -425,34 +425,6 @@ static int luaB_tostring (lua_State *L) {
 }
 
 
-static int luaB_newproxy (lua_State *L) {
-  lua_settop(L, 1);
-  lua_newuserdata(L, 0);  /* create proxy */
-  if (lua_toboolean(L, 1) == 0)
-    return 1;  /* no metatable */
-  else if (lua_isboolean(L, 1)) {
-    lua_createtable(L, 0, 1);  /* create a new metatable `m' ... */
-    lua_pushboolean(L, 1);
-    lua_setfield(L, -2, "__gc");  /* ... m.__gc = true (HACK!!)... */
-    lua_pushvalue(L, -1);  /* ... and mark `m' as a valid metatable */
-    lua_pushboolean(L, 1);
-    lua_rawset(L, lua_upvalueindex(1));  /* weaktable[m] = true */
-  }
-  else {
-    int validproxy = 0;  /* to check if weaktable[metatable(u)] == true */
-    if (lua_getmetatable(L, 1)) {
-      lua_rawget(L, lua_upvalueindex(1));
-      validproxy = lua_toboolean(L, -1);
-      lua_pop(L, 1);  /* remove value */
-    }
-    luaL_argcheck(L, validproxy, 1, "boolean or proxy expected");
-    lua_getmetatable(L, 1);  /* metatable is valid; get it */
-  }
-  lua_setmetatable(L, 2);
-  return 1;
-}
-
-
 static const luaL_Reg base_funcs[] = {
   {"assert", luaB_assert},
   {"collectgarbage", luaB_collectgarbage},
@@ -491,14 +463,6 @@ LUAMOD_API int luaopen_base (lua_State *L) {
   luaL_setfuncs(L, base_funcs, 0);
   lua_pushliteral(L, LUA_VERSION);
   lua_setfield(L, -2, "_VERSION");  /* set global _VERSION */
-  /* `newproxy' needs a weaktable as upvalue */
-  lua_createtable(L, 0, 1);  /* new table `w' */
-  lua_pushvalue(L, -1);  /* `w' will be its own metatable */
-  lua_setmetatable(L, -2);
-  lua_pushliteral(L, "kv");
-  lua_setfield(L, -2, "__mode");  /* metatable(w).__mode = "kv" */
-  lua_pushcclosure(L, luaB_newproxy, 1);
-  lua_setfield(L, -2, "newproxy");  /* set global `newproxy' */
   return 1;
 }
 
