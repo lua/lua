@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.92 2010/09/07 19:21:39 roberto Exp roberto $
+** $Id: lparser.c,v 2.93 2010/12/15 19:13:29 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -368,6 +368,7 @@ static void codeclosure (LexState *ls, Proto *clp, expdesc *v) {
   f->p[fs->np++] = clp;
   luaC_objbarrier(ls->L, f, clp);
   init_exp(v, VRELOCABLE, luaK_codeABx(fs, OP_CLOSURE, 0, fs->np-1));
+  luaK_exp2nextreg(fs, v);  /* fix it at stack top (for GC) */
 }
 
 
@@ -1241,14 +1242,10 @@ static void ifstat (LexState *ls, int line) {
 
 
 static void localfunc (LexState *ls) {
-  expdesc v, b;
-  FuncState *fs = ls->fs;
-  new_localvar(ls, str_checkname(ls));
-  init_exp(&v, VLOCAL, fs->freereg);
-  luaK_reserveregs(fs, 1);
-  adjustlocalvars(ls, 1);
-  body(ls, &b, 0, ls->linenumber);
-  luaK_storevar(fs, &v, &b);
+  expdesc b;
+  new_localvar(ls, str_checkname(ls));  /* new local variable */
+  adjustlocalvars(ls, 1);  /* enter its scope */
+  body(ls, &b, 0, ls->linenumber);  /* function created in next register */
 }
 
 
