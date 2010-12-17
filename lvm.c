@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.125 2010/10/29 17:52:46 roberto Exp roberto $
+** $Id: lvm.c,v 2.126 2010/12/06 21:08:36 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -471,7 +471,7 @@ void luaV_finishOp (lua_State *L) {
 
 #define Protect(x)	{ {x;}; base = ci->u.l.base; }
 
-#define checkGC(L)	Protect(luaC_checkGC(L); luai_threadyield(L);)
+#define checkGC(L,c)	Protect(luaC_condGC(L, c); luai_threadyield(L);)
 
 
 #define arith_op(op,tm) { \
@@ -558,7 +558,11 @@ void luaV_execute (lua_State *L) {
         sethvalue(L, ra, t);
         if (b != 0 || c != 0)
           luaH_resize(L, t, luaO_fb2int(b), luaO_fb2int(c));
-        checkGC(L);
+        checkGC(L,
+          L->top = ra + 1;  /* limit of live values */
+          luaC_step(L);
+          L->top = ci->top;  /* restore top */
+        )
       )
       vmcase(OP_SELF,
         StkId rb = RB(i);
@@ -603,10 +607,17 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_CONCAT,
         int b = GETARG_B(i);
         int c = GETARG_C(i);
+        StkId rb;
         L->top = base + c + 1;  /* mark the end of concat operands */
-        Protect(luaV_concat(L, c-b+1); checkGC(L);)
+        Protect(luaV_concat(L, c - b + 1));
+        ra = RA(i);  /* 'luav_concat' may invoke TMs and move the stack */
+        rb = b + base;
+        setobjs2s(L, ra, rb);
+        checkGC(L,
+          L->top = (ra >= rb ? ra + 1 : rb);  /* limit of live values */
+          luaC_step(L);
+        )
         L->top = ci->top;  /* restore top */
-        setobjs2s(L, RA(i), base+b);
       )
       vmcase(OP_JMP,
         dojump(GETARG_sBx(i));
@@ -780,7 +791,11 @@ void luaV_execute (lua_State *L) {
           pushclosure(L, p, cl->upvals, base, ra);  /* create a new one */
         else
           setclvalue(L, ra, ncl);  /* push cashed closure */
-        checkGC(L);
+        checkGC(L,
+          L->top = ra + 1;  /* limit of live values */
+          luaC_step(L);
+          L->top = ci->top;  /* restore top */
+        )
       )
       vmcase(OP_VARARG,
         int b = GETARG_B(i) - 1;
