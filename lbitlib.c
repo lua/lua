@@ -1,5 +1,5 @@
 /*
-** $Id: lbitlib.c,v 1.13 2010/11/22 18:06:33 roberto Exp roberto $
+** $Id: lbitlib.c,v 1.14 2010/11/29 15:19:28 roberto Exp roberto $
 ** Standard library for bitwise operations
 ** See Copyright Notice in lua.h
 */
@@ -14,15 +14,18 @@
 
 
 /* number of bits to consider in a number */
-#define NBITS	32
+#if !defined(LUA_NBITS)
+#define LUA_NBITS	32
+#endif
 
-#define ALLONES		(~(((~(lua_Unsigned)0) << (NBITS - 1)) << 1))
+
+#define ALLONES		(~(((~(lua_Unsigned)0) << (LUA_NBITS - 1)) << 1))
 
 /* macro to trim extra bits */
 #define trim(x)		((x) & ALLONES)
 
 
-/* builds a number with 'n' ones (1 <= n <= NBITS) */
+/* builds a number with 'n' ones (1 <= n <= LUA_NBITS) */
 #define mask(n)		(~((ALLONES << 1) << ((n) - 1)))
 
 
@@ -84,11 +87,11 @@ static int b_shift (lua_State *L, b_uint r, int i) {
   if (i < 0) {  /* shift right? */
     i = -i;
     r = trim(r);
-    if (i >= NBITS) r = 0;
+    if (i >= LUA_NBITS) r = 0;
     else r >>= i;
   }
   else {  /* shift left */
-    if (i >= NBITS) r = 0;
+    if (i >= LUA_NBITS) r = 0;
     else r <<= i;
     r = trim(r);
   }
@@ -110,10 +113,10 @@ static int b_rshift (lua_State *L) {
 static int b_arshift (lua_State *L) {
   b_uint r = luaL_checkunsigned(L, 1);
   int i = luaL_checkint(L, 2);
-  if (i < 0 || !(r & ((b_uint)1 << (NBITS - 1))))
+  if (i < 0 || !(r & ((b_uint)1 << (LUA_NBITS - 1))))
     return b_shift(L, r, -i);
   else {  /* arithmetic shift for 'negative' number */
-    if (i >= NBITS) r = ALLONES;
+    if (i >= LUA_NBITS) r = ALLONES;
     else
       r = trim((r >> i) | ~(~(b_uint)0 >> i));  /* add signal bit */
     lua_pushunsigned(L, r);
@@ -124,9 +127,9 @@ static int b_arshift (lua_State *L) {
 
 static int b_rot (lua_State *L, int i) {
   b_uint r = luaL_checkunsigned(L, 1);
-  i &= (NBITS - 1);  /* i = i % NBITS */
+  i &= (LUA_NBITS - 1);  /* i = i % NBITS */
   r = trim(r);
-  r = (r << i) | (r >> (NBITS - i));
+  r = (r << i) | (r >> (LUA_NBITS - i));
   lua_pushunsigned(L, trim(r));
   return 1;
 }
@@ -151,7 +154,7 @@ static int fieldargs (lua_State *L, int farg, int *width) {
   int w = luaL_optint(L, farg + 1, 1);
   luaL_argcheck(L, 0 <= f, farg, "field cannot be netative");
   luaL_argcheck(L, 0 < w, farg + 1, "width must be positive");
-  if (f + w > NBITS)
+  if (f + w > LUA_NBITS)
     luaL_error(L, "trying to access non-existent bits");
   *width = w;
   return f;
