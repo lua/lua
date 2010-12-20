@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.105 2010/12/03 11:48:25 roberto Exp roberto $
+** $Id: lgc.c,v 2.106 2010/12/20 18:17:46 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -51,7 +51,7 @@
 ** standard negative debt for GC; a reasonable "time" to wait before
 ** starting a new cycle
 */
-#define stddebt(g)	(-cast(l_mem, g->totalbytes/100) * g->gcpause)
+#define stddebt(g)	(-cast(l_mem, gettotalbytes(g)/100) * g->gcpause)
 
 
 /*
@@ -634,6 +634,7 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
   int ow = otherwhite(g);
   int toclear, toset;  /* bits to clear and to set in all live objects */
   int tostop;  /* stop sweep when this is true */
+  l_mem debt = g->GCdebt;  /* current debt */
   if (isgenerational(g)) {  /* generational mode? */
     toclear = ~0;  /* clear nothing */
     toset = bitmask(OLDBIT);  /* set the old bit of all surviving objects */
@@ -656,13 +657,15 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
         sweepthread(L, gco2th(curr));  /* sweep thread's upvalues */
       if (testbits(marked, tostop)) {
         static GCObject *nullp = NULL;
-        return &nullp;  /* stop sweeping this list */
+        p = &nullp;  /* stop sweeping this list */
+        break;
       }
       /* update marks */
       gch(curr)->marked = cast_byte((marked & toclear) | toset);
       p = &gch(curr)->next;  /* go to next element */
     }
   }
+  luaE_setdebt(g, debt);  /* sweeping should not change debt */
   return p;
 }
 
@@ -807,7 +810,7 @@ void luaC_changemode (lua_State *L, int mode) {
   if (mode == KGC_GEN) {  /* change to generational mode */
     /* make sure gray lists are consistent */
     luaC_runtilstate(L, bitmask(GCSpropagate));
-    g->lastmajormem = g->totalbytes;
+    g->lastmajormem = gettotalbytes(g);
     g->gckind = KGC_GEN;
   }
   else {  /* change to incremental mode */
@@ -958,15 +961,15 @@ static void generationalcollection (lua_State *L) {
   global_State *g = G(L);
   if (g->lastmajormem == 0) {  /* signal for another major collection? */
     luaC_fullgc(L, 0);  /* perform a full regular collection */
-    g->lastmajormem = g->totalbytes;  /* update control */
+    g->lastmajormem = gettotalbytes(g);  /* update control */
   }
   else {
     luaC_runtilstate(L, ~bitmask(GCSpause));  /* run complete cycle */
     luaC_runtilstate(L, bitmask(GCSpause));
-    if (g->totalbytes > g->lastmajormem/100 * g->gcmajorinc)
+    if (gettotalbytes(g) > g->lastmajormem/100 * g->gcmajorinc)
       g->lastmajormem = 0;  /* signal for a major collection */
   }
-  g->GCdebt = stddebt(g);
+  luaE_setdebt(g, stddebt(g));
 }
 
 
@@ -977,9 +980,9 @@ static void step (lua_State *L) {
     lim -= singlestep(L);
   } while (lim > 0 && g->gcstate != GCSpause);
   if (g->gcstate != GCSpause)
-    g->GCdebt -= GCSTEPSIZE;
+    luaE_setdebt(g, g->GCdebt - GCSTEPSIZE);
   else
-    g->GCdebt = stddebt(g);
+    luaE_setdebt(g, stddebt(g));
 }
 
 
@@ -1022,7 +1025,7 @@ void luaC_fullgc (lua_State *L, int isemergency) {
     luaC_runtilstate(L, bitmask(GCSpropagate));
   }
   g->gckind = origkind;
-  g->GCdebt = stddebt(g);
+  luaE_setdebt(g, stddebt(g));
   if (!isemergency)   /* do not run finalizers during emergency GC */
     callallpendingfinalizers(L, 1);
 }

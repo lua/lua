@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.79 2010/05/05 18:49:56 roberto Exp roberto $
+** $Id: lmem.c,v 1.80 2010/12/20 18:17:46 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -94,8 +94,7 @@ void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
       luaD_throw(L, LUA_ERRMEM);
   }
   lua_assert((nsize == 0) == (newblock == NULL));
-  g->totalbytes = (g->totalbytes - realosize) + nsize;
-  g->GCdebt += nsize;  /* give some credit to garbage collector */
+  g->GCdebt = (g->GCdebt + nsize) - realosize;
 #if defined(TRACEMEM)
   { /* auxiliary patch to monitor garbage collection.
     ** To plot, gnuplot with following command:

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.141 2010/11/26 14:32:31 roberto Exp roberto $
+** $Id: lapi.c,v 2.142 2010/12/20 18:17:46 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -964,7 +964,7 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       break;
     }
     case LUA_GCRESTART: {
-      g->GCdebt = 0;
+      luaE_setdebt(g, 0);
       g->gcrunning = 1;
       break;
     }
@@ -975,11 +975,11 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
     }
     case LUA_GCCOUNT: {
       /* GC values are expressed in Kbytes: #bytes/2^10 */
-      res = cast_int(g->totalbytes >> 10);
+      res = cast_int(gettotalbytes(g) >> 10);
       break;
     }
     case LUA_GCCOUNTB: {
-      res = cast_int(g->totalbytes & 0x3ff);
+      res = cast_int(gettotalbytes(g) & 0x3ff);
       break;
     }
     case LUA_GCSTEP: {

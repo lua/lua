@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.87 2010/11/26 14:32:31 roberto Exp roberto $
+** $Id: lstate.c,v 2.88 2010/12/20 18:17:46 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -65,11 +65,14 @@ typedef struct LG {
 #define fromstate(L)	(cast(LX *, cast(lu_byte *, (L)) - offsetof(LX, l)))
 
 
-
 /*
-** maximum number of nested calls made by error-handling function
+** set GCdebt to a new value keeping the value (totalbytes + GCdebt)
+** invariant
 */
-#define LUAI_EXTRACALLS		10
+void luaE_setdebt (global_State *g, l_mem debt) {
+  g->totalbytes -= (debt - g->GCdebt);
+  g->GCdebt = debt;
+}
 
 
 CallInfo *luaE_extendCI (lua_State *L) {
@@ -154,7 +157,6 @@ static void f_luaopen (lua_State *L, void *ud) {
   /* pre-create memory-error message */
   g->memerrmsg = luaS_newliteral(L, MEMERRMSG);
   luaS_fix(g->memerrmsg);  /* it should never be collected */
-  g->GCdebt = 0;
   g->gcrunning = 1;  /* allow gc */
 }
 
@@ -188,7 +190,7 @@ static void close_state (lua_State *L) {
   luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size);
   luaZ_freebuffer(L, &g->buff);
   freestack(L);
-  lua_assert(g->totalbytes == sizeof(LG));
+  lua_assert(gettotalbytes(g) == sizeof(LG));
   (*g->frealloc)(g->ud, fromstate(L), sizeof(LG), 0);
 }
 
@@ -258,6 +260,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->gray = g->grayagain = NULL;
   g->weak = g->ephemeron = g->allweak = NULL;
   g->totalbytes = sizeof(LG);
+  g->GCdebt = 0;
   g->gcpause = LUAI_GCPAUSE;
   g->gcmajorinc = LUAI_GCMAJOR;
   g->gcstepmul = LUAI_GCMUL;
