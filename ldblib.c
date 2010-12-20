@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.125 2010/11/10 18:06:10 roberto Exp roberto $
+** $Id: ldblib.c,v 1.126 2010/11/16 18:01:28 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -39,8 +39,8 @@ static int db_setmetatable (lua_State *L) {
   luaL_argcheck(L, t == LUA_TNIL || t == LUA_TTABLE, 2,
                     "nil or table expected");
   lua_settop(L, 2);
-  lua_pushboolean(L, lua_setmetatable(L, 1));
-  return 1;
+  lua_setmetatable(L, 1);
+  return 1;  /* return 1st argument */
 }
 
 
