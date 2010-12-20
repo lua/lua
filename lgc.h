@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.46 2010/12/02 19:51:15 roberto Exp roberto $
+** $Id: lgc.h,v 2.47 2010/12/17 12:02:29 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -50,10 +50,6 @@
 ** invariant must be kept all times.
 */
 #define keepinvariant(g)  (isgenerational(g) || g->gcstate <= GCSatomic)
-
-
-#define gcstopped(g)	((g)->GCdebt == MIN_LMEM)
-#define stopgc(g)	((g)->GCdebt = MIN_LMEM)
 
 
 /*

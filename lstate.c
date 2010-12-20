@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.86 2010/09/03 14:14:01 roberto Exp roberto $
+** $Id: lstate.c,v 2.87 2010/11/26 14:32:31 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -155,6 +155,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   g->memerrmsg = luaS_newliteral(L, MEMERRMSG);
   luaS_fix(g->memerrmsg);  /* it should never be collected */
   g->GCdebt = 0;
+  g->gcrunning = 1;  /* allow gc */
 }
 
 
@@ -241,7 +242,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->mainthread = L;
   g->uvhead.u.l.prev = &g->uvhead;
   g->uvhead.u.l.next = &g->uvhead;
-  stopgc(g);  /* no GC while building state */
+  g->gcrunning = 0;  /* no GC while building state */
   g->lastmajormem = 0;
   g->strt.size = 0;
   g->strt.nuse = 0;

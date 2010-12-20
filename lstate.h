@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.68 2010/10/29 17:52:46 roberto Exp roberto $
+** $Id: lstate.h,v 2.69 2010/11/26 14:32:31 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -123,6 +123,7 @@ typedef struct global_State {
   lu_byte currentwhite;
   lu_byte gcstate;  /* state of garbage collector */
   lu_byte gckind;  /* kind of GC running */
+  lu_byte gcrunning;  /* true if GC is running */
   int sweepstrgc;  /* position of sweep in `strt' */
   GCObject *allgc;  /* list of all collectable objects */
   GCObject *finobj;  /* list of collectable objects with finalizers */

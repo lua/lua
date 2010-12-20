@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.104 2010/11/26 14:32:31 roberto Exp roberto $
+** $Id: lgc.c,v 2.105 2010/12/03 11:48:25 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -715,15 +715,15 @@ static void GCTM (lua_State *L, int propagateerrors) {
   if (tm != NULL && ttisfunction(tm)) {  /* is there a finalizer? */
     int status;
     lu_byte oldah = L->allowhook;
-    lu_mem oldd = g->GCdebt;
+    int running  = g->gcrunning;
     L->allowhook = 0;  /* stop debug hooks during GC tag method */
-    stopgc(g);  /* avoid GC steps */
+    g->gcrunning = 0;  /* avoid GC steps */
     setobj2s(L, L->top, tm);  /* push finalizer... */
     setobj2s(L, L->top + 1, &v);  /* ... and its argument */
     L->top += 2;  /* and (next line) call the finalizer */
     status = luaD_pcall(L, dothecall, NULL, savestack(L, L->top - 2), 0);
     L->allowhook = oldah;  /* restore hooks */
-    g->GCdebt = oldd;  /* restore threshold */
+    g->gcrunning = running;  /* restore state */
     if (status != LUA_OK && propagateerrors) {  /* error while running __gc? */
       if (status == LUA_ERRRUN) {  /* is there an error msg.? */
         luaO_pushfstring(L, "error in __gc tag method (%s)",
@@ -984,11 +984,14 @@ static void step (lua_State *L) {
 
 
 void luaC_step (lua_State *L) {
-  int i;
-  if (isgenerational(G(L))) generationalcollection(L);
-  else step(L);
-  for (i = 0; i < GCFINALIZENUM && G(L)->tobefnz; i++)
-    GCTM(L, 1);  /* Call a few pending finalizers */
+  global_State *g = G(L);
+  if (g->gcrunning) {
+    int i;
+    if (isgenerational(g)) generationalcollection(L);
+    else step(L);
+    for (i = 0; i < GCFINALIZENUM && g->tobefnz; i++)
+      GCTM(L, 1);  /* Call a few pending finalizers */
+  }
 }
 
 
