@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.255 2010/12/13 16:38:00 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.256 2010/12/17 15:14:58 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -47,33 +47,39 @@ static int luaB_print (lua_State *L) {
 
 static int luaB_tonumber (lua_State *L) {
   int base = luaL_optint(L, 2, 10);
+  luaL_argcheck(L, 2 <= base && base <= 36, 2, "base out of range");
   if (base == 10) {  /* standard conversion */
     luaL_checkany(L, 1);
     if (lua_isnumber(L, 1)) {
       lua_pushnumber(L, lua_tonumber(L, 1));
       return 1;
-    }
+    }  /* else not a number */
   }
   else {
-    size_t l1;
-    const char *s1 = luaL_checklstring(L, 1, &l1);
-    const char *e1 = s1 + l1;
-    char *s2;
-    unsigned long n;
+    size_t l;
+    const char *s = luaL_checklstring(L, 1, &l);
+    const char *e = s + l;  /* end point for 's' */
     int neg = 0;
-    luaL_argcheck(L, 2 <= base && base <= 36, 2, "base out of range");
-    s1 += strspn(s1, SPACECHARS);  /* skip initial spaces */
-    if (*s1 == '-') { s1++; neg = 1; }
-    n = strtoul(s1, &s2, base);
-    if (s1 != s2) {  /* at least one valid digit? */
-      s2 += strspn(s2, SPACECHARS);  /* skip trailing spaces */
-      if (s2 == e1) {  /* no invalid trailing characters? */
-        lua_pushnumber(L, (neg) ? -(lua_Number)n : (lua_Number)n);
+    s += strspn(s, SPACECHARS);  /* skip initial spaces */
+    if (*s == '-') { s++; neg = 1; }  /* handle signal */
+    else if (*s == '+') s++;
+    if (isalnum((unsigned char)*s)) {
+      lua_Number n = 0;
+      do {
+        int digit = (isdigit((unsigned char)*s)) ? *s - '0'
+                       : toupper((unsigned char)*s) - 'A' + 10;
+        if (digit >= base) break;  /* invalid numeral; force a fail */
+        n = n * (lua_Number)base + (lua_Number)digit;
+        s++;
+      } while (isalnum((unsigned char)*s));
+      s += strspn(s, SPACECHARS);  /* skip trailing spaces */
+      if (s == e) {  /* no invalid trailing characters? */
+        lua_pushnumber(L, (neg) ? -n : n);
         return 1;
-      }
-    }
+      }  /* else not a number */
+    }  /* else not a number */
   }
-  lua_pushnil(L);  /* else not a number */
+  lua_pushnil(L);  /* not a number */
   return 1;
 }
 
