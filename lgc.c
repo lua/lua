@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.106 2010/12/20 18:17:46 roberto Exp roberto $
+** $Id: lgc.c,v 2.107 2010/12/20 19:40:07 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -318,8 +318,7 @@ static void remarkupvals (global_State *g) {
 ** mark root set and reset all gray lists, to start a new
 ** incremental (or full) collection
 */
-static void markroot (lua_State *L) {
-  global_State *g = G(L);
+static void markroot (global_State *g) {
   g->gray = g->grayagain = NULL;
   g->weak = g->allweak = g->ephemeron = NULL;
   markobject(g, g->mainthread);
@@ -889,7 +888,7 @@ static l_mem singlestep (lua_State *L) {
   switch (g->gcstate) {
     case GCSpause: {
       if (!isgenerational(g))
-        markroot(L);  /* start a new collection */
+        markroot(g);  /* start a new collection */
       /* in any case, root must be marked */
       lua_assert(!iswhite(obj2gco(g->mainthread))
               && !iswhite(gcvalue(&g->l_registry)));
@@ -986,15 +985,24 @@ static void step (lua_State *L) {
 }
 
 
-void luaC_step (lua_State *L) {
+/*
+** performs a basic GC step even if the collector is stopped
+*/
+void luaC_forcestep (lua_State *L) {
   global_State *g = G(L);
-  if (g->gcrunning) {
-    int i;
-    if (isgenerational(g)) generationalcollection(L);
-    else step(L);
-    for (i = 0; i < GCFINALIZENUM && g->tobefnz; i++)
-      GCTM(L, 1);  /* Call a few pending finalizers */
-  }
+  int i;
+  if (isgenerational(g)) generationalcollection(L);
+  else step(L);
+  for (i = 0; i < GCFINALIZENUM && g->tobefnz; i++)
+    GCTM(L, 1);  /* Call a few pending finalizers */
+}
+
+
+/*
+** performs a basic GC step only if collector is running
+*/
+void luaC_step (lua_State *L) {
+  if (G(L)->gcrunning) luaC_forcestep(L);
 }
 
 

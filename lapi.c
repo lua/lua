@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.142 2010/12/20 18:17:46 roberto Exp roberto $
+** $Id: lapi.c,v 2.143 2010/12/20 19:40:07 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -969,7 +969,6 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       break;
     }
     case LUA_GCCOLLECT: {
-      g->gcrunning = 1;  /* restart collector if stopped ?? */
       luaC_fullgc(L, 0);
       break;
     }
@@ -983,22 +982,19 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       break;
     }
     case LUA_GCSTEP: {
-      int running = g->gcrunning;
-      g->gcrunning = 1;  /* allow steps */
       if (g->gckind == KGC_GEN) {  /* generational mode? */
         res = (g->lastmajormem == 0);  /* 1 if will do major collection */
-        luaC_step(L);  /* do a single step */
+        luaC_forcestep(L);  /* do a single step */
       }
       else {
         while (data-- >= 0) {
-          luaC_step(L);
+          luaC_forcestep(L);
           if (g->gcstate == GCSpause) {  /* end of cycle? */
             res = 1;  /* signal it */
             break;
           }
         }
       }
-      g->gcrunning = running;  /* restore previous state */
       break;
     }
     case LUA_GCSETPAUSE: {
