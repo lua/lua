@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.93 2010/11/10 18:05:36 roberto Exp roberto $
+** $Id: loadlib.c,v 1.94 2010/11/10 20:00:04 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -321,8 +321,10 @@ static const char *pushnexttemplate (lua_State *L, const char *path) {
 
 
 static const char *searchpath (lua_State *L, const char *name,
-                                             const char *path) {
-  name = luaL_gsub(L, name, ".", LUA_DIRSEP);
+                                             const char *path,
+                                             const char *sep) {
+  if (*sep != '\0')  /* non-empty separator? */
+    name = luaL_gsub(L, name, sep, LUA_DIRSEP);  /* replace it by proper one */
   lua_pushliteral(L, "");  /* error accumulator */
   while ((path = pushnexttemplate(L, path)) != NULL) {
     const char *filename = luaL_gsub(L, lua_tostring(L, -1),
@@ -339,7 +341,9 @@ static const char *searchpath (lua_State *L, const char *name,
 
 
 static int ll_searchpath (lua_State *L) {
-  const char *f = searchpath(L, luaL_checkstring(L, 1), luaL_checkstring(L, 2));
+  const char *f = searchpath(L, luaL_checkstring(L, 1),
+                                luaL_checkstring(L, 2),
+                                luaL_optstring(L, 3, "."));
   if (f != NULL) return 1;
   else {  /* error message is on top of the stack */
     lua_pushnil(L);
@@ -356,7 +360,7 @@ static const char *findfile (lua_State *L, const char *name,
   path = lua_tostring(L, -1);
   if (path == NULL)
     luaL_error(L, LUA_QL("package.%s") " must be a string", pname);
-  return searchpath(L, name, path);
+  return searchpath(L, name, path, ".");
 }
 
 
