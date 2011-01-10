@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.226 2010/11/10 17:38:10 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.227 2010/11/10 18:05:36 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -795,15 +795,16 @@ LUALIB_API void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup) {
 ** ensure that stack[idx][fname] has a table and push that table
 ** into the stack
 */
-LUALIB_API void luaL_findtable (lua_State *L, int idx, const char *fname) {
+LUALIB_API int luaL_findtable (lua_State *L, int idx, const char *fname) {
   lua_getfield(L, idx, fname);
-  if (lua_istable(L, -1)) return;  /* table already there */
+  if (lua_istable(L, -1)) return 1;  /* table already there */
   else {
     idx = lua_absindex(L, idx);
     lua_pop(L, 1);  /* remove previous result */
     lua_newtable(L);
     lua_pushvalue(L, -1);  /* copy to be left at top */
     lua_setfield(L, idx, fname);  /* assign new table to field */
+    return 0;  /* false, because did not find table there */
   }
 }
 
