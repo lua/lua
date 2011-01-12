@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.160 2010/12/10 19:03:46 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.161 2010/12/20 17:25:36 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -101,15 +101,29 @@ static int str_upper (lua_State *L) {
   return 1;
 }
 
+
+/* reasonable limit to avoid arithmetic overflow */
+#define MAXSIZE		((~(size_t)0) >> 1)
+
 static int str_rep (lua_State *L) {
-  size_t l;
-  luaL_Buffer b;
+  size_t l, lsep;
   const char *s = luaL_checklstring(L, 1, &l);
   int n = luaL_checkint(L, 2);
-  luaL_buffinit(L, &b);
-  while (n-- > 0)
-    luaL_addlstring(&b, s, l);
-  luaL_pushresult(&b);
+  const char *sep = luaL_optlstring(L, 3, "", &lsep);
+  if (n <= 0) lua_pushliteral(L, "");
+  else if (l + lsep < l || l + lsep >= MAXSIZE / n)  /* may overflow? */
+    return luaL_error(L, "resulting string too large");
+  else {
+    size_t totallen = n * l + (n - 1) * lsep;
+    luaL_Buffer b;
+    char *p = luaL_buffinitsize(L, &b, totallen);
+    while (n-- > 1) {  /* first n-1 copies (followed by separator) */
+      memcpy(p, s, l); p += l;
+      memcpy(p, sep, lsep); p += lsep;
+    }
+    memcpy(p, s, l);  /* last copy (not followed by separator) */
+    luaL_pushresultsize(&b, totallen);
+  }
   return 1;
 }
 
@@ -125,7 +139,7 @@ static int str_byte (lua_State *L) {
   if (posi > pose) return 0;  /* empty interval; return no values */
   n = (int)(pose -  posi + 1);
   if (posi + n <= pose)  /* overflow? */
-    luaL_error(L, "string slice too long");
+    return luaL_error(L, "string slice too long");
   luaL_checkstack(L, n, "string slice too long");
   for (i=0; i<n; i++)
     lua_pushinteger(L, uchar(s[posi+i-1]));
@@ -161,7 +175,7 @@ static int str_dump (lua_State *L) {
   lua_settop(L, 1);
   luaL_buffinit(L,&b);
   if (lua_dump(L, writer, &b) != 0)
-    luaL_error(L, "unable to dump given function");
+    return luaL_error(L, "unable to dump given function");
   luaL_pushresult(&b);
   return 1;
 }
