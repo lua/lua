@@ -1,16 +1,16 @@
 /*
-** $Id: linit.c,v 1.29 2010/10/25 14:32:36 roberto Exp roberto $
-** Initialization of libraries for lua.c and other clients        
+** $Id: linit.c,v 1.30 2010/11/12 15:48:30 roberto Exp roberto $
+** Initialization of libraries for lua.c and other clients
 ** See Copyright Notice in lua.h
 */
 
 
-/*                                                           
+/*
 ** If you embed Lua in your program and need to open the standard
 ** libraries, call luaL_openlibs in your program. If you need a
 ** different set of libraries, copy this file to your project and edit
 ** it to suit your needs.
-*/                                                              
+*/
 
 
 #define linit_c

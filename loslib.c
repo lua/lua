@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.31 2010/07/02 12:01:53 roberto Exp roberto $
+** $Id: loslib.c,v 1.32 2010/10/05 12:18:03 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -182,7 +182,7 @@ static const char *checkoption (lua_State *L, const char *conv, char *buff) {
   return conv;  /* to avoid warnings */
 }
 
-    
+
 static int os_date (lua_State *L) {
   const char *s = luaL_optstring(L, 1, "%c");
   time_t t = luaL_opt(L, (time_t)luaL_checknumber, 2, time(NULL));

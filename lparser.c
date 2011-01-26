@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.93 2010/12/15 19:13:29 roberto Exp roberto $
+** $Id: lparser.c,v 2.94 2010/12/17 12:03:41 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -587,7 +587,7 @@ static void field (LexState *ls, struct ConsControl *cc) {
 
 
 static void constructor (LexState *ls, expdesc *t) {
-  /* constructor -> '{' [ field { sep field } [sep] ] '}' 
+  /* constructor -> '{' [ field { sep field } [sep] ] '}'
      sep -> ',' | ';' */
   FuncState *fs = ls->fs;
   int line = ls->linenumber;

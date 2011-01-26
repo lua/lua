@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.94 2010/11/09 16:57:49 roberto Exp roberto $
+** $Id: liolib.c,v 2.95 2010/11/10 18:05:36 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -517,7 +517,7 @@ static int io_write (lua_State *L) {
 
 
 static int f_write (lua_State *L) {
-  FILE * f = tofile(L); 
+  FILE * f = tofile(L);
   lua_pushvalue(L, 1);  /* push file at the stack top (to be returned) */
   return g_write(L, f, 2);
 }

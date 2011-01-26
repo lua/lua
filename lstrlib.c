@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.161 2010/12/20 17:25:36 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.162 2011/01/12 20:36:01 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -524,7 +524,7 @@ static int nospecials (const char *p, size_t l) {
   size_t upto = 0;
   do {
     if (strpbrk(p + upto, SPECIALS))
-      return 0;  /* pattern has a special character */ 
+      return 0;  /* pattern has a special character */
     upto += strlen(p + upto) + 1;  /* may have more after \0 */
   } while (upto <= l);
   return 1;  /* no special chars found */

@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.127 2010/12/20 17:24:15 roberto Exp roberto $
+** $Id: ldblib.c,v 1.128 2011/01/10 15:51:19 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -253,7 +253,7 @@ static int db_upvaluejoin (lua_State *L) {
 }
 
 
-#define gethooktable(L)	luaL_findtable(L, LUA_REGISTRYINDEX, HOOKKEY); 
+#define gethooktable(L)	luaL_findtable(L, LUA_REGISTRYINDEX, HOOKKEY);
 
 
 static void hookf (lua_State *L, lua_Debug *ar) {

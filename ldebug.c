@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.74 2010/10/11 20:24:42 roberto Exp roberto $
+** $Id: ldebug.c,v 2.75 2010/11/30 17:17:51 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -325,7 +325,7 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
         if (reg == a) {
           int k = GETARG_C(i);  /* key index */
           int t = GETARG_B(i);
-          const char *vn = (op == OP_GETTABLE)  /* name of indexed variable */ 
+          const char *vn = (op == OP_GETTABLE)  /* name of indexed variable */
                            ? luaF_getlocalname(p, t + 1, pc)
                            : getstr(p->upvalues[t].name);
           kname(p, k, a, what, name);
@@ -468,7 +468,7 @@ void luaG_typeerror (lua_State *L, const TValue *o, const char *op) {
   const char *kind = NULL;
   if (isLua(ci)) {
     kind = getupvalname(ci, o, &name);  /* check whether 'o' is an upvalue */
-    if (!kind && isinstack(ci, o))  /* no? try a register */ 
+    if (!kind && isinstack(ci, o))  /* no? try a register */
       kind = getobjname(L, ci, cast_int(o - ci->u.l.base), &name);
   }
   if (kind)

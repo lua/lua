@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.257 2010/12/27 18:00:38 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.258 2011/01/07 12:41:48 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -135,7 +135,7 @@ static int luaB_rawequal (lua_State *L) {
 
 static int luaB_rawlen (lua_State *L) {
   int t = lua_type(L, 1);
-  luaL_argcheck(L, t == LUA_TTABLE || t == LUA_TSTRING, 1, 
+  luaL_argcheck(L, t == LUA_TTABLE || t == LUA_TSTRING, 1,
                    "table or string expected");
   lua_pushinteger(L, lua_rawlen(L, 1));
   return 1;

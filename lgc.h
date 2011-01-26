@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.48 2010/12/20 18:17:46 roberto Exp roberto $
+** $Id: lgc.h,v 2.49 2010/12/29 18:00:23 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -106,7 +106,7 @@
 
 #define luaC_condGC(L,c) \
 	{if (G(L)->GCdebt > 0) {c;}; condchangemem(L);}
-#define luaC_checkGC(L)		luaC_condGC(L, luaC_step(L);)  
+#define luaC_checkGC(L)		luaC_condGC(L, luaC_step(L);)
 
 
 #define luaC_barrier(L,p,v) { if (valiswhite(v) && isblack(obj2gco(p)))  \
