@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.107 2010/04/19 18:04:58 roberto Exp roberto $
-+** $Id: bugs,v 1.107 2010/04/19 18:04:58 roberto Exp roberto $
+-** $Id: bugs,v 1.108 2010/05/14 15:34:57 roberto Exp roberto $
++** $Id: bugs,v 1.108 2010/05/14 15:34:57 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2316,3 +2316,46 @@ patch = [[
 ]]
 }
 
+Bug{
+what = [[wrong code generation for some particular boolean expressions]],
+report = [[Thierry Van Elsuwe, 2011/01/20]],
+since = [[5.0]],
+example = [[
+print((('hi' or true) and true) or true)
+--> hi     (should be true)
+print(((nil and nil) or false) and true)
+--> nil    (should be false)
+]],
+patch = [[
+--- lcode.c	2009/06/15 14:12:25	2.25.1.4
++++ lcode.c	2011/01/31 14:44:25
+@@ -549,13 +549,6 @@
+       pc = e->u.s.info;
+       break;
+     }
+-    case VFALSE: {
+-      if (!hasjumps(e)) {
+-        pc = luaK_jump(fs);  /* always jump */
+-        break;
+-      }
+-      /* else go through */
+-    }
+     default: {
+       pc = jumponcond(fs, e, 0);
+       break;
+@@ -579,13 +572,6 @@
+       pc = e->u.s.info;
+       break;
+     }
+-    case VTRUE: {
+-      if (!hasjumps(e)) {
+-        pc = luaK_jump(fs);  /* always jump */
+-        break;
+-      }
+-      /* else go through */
+-    }
+     default: {
+       pc = jumponcond(fs, e, 1);
+       break;
+]]
+}
