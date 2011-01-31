@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.48 2010/07/02 20:42:40 roberto Exp roberto $
+** $Id: lcode.c,v 2.49 2010/07/07 16:27:29 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -603,21 +603,14 @@ void luaK_goiftrue (FuncState *fs, expdesc *e) {
   int pc;  /* pc of last jump */
   luaK_dischargevars(fs, e);
   switch (e->k) {
-    case VK: case VKNUM: case VTRUE: {
-      pc = NO_JUMP;  /* always true; do nothing */
-      break;
-    }
     case VJMP: {
       invertjump(fs, e);
       pc = e->u.info;
       break;
     }
-    case VFALSE: {
-      if (!hasjumps(e)) {
-        pc = luaK_jump(fs);  /* always jump */
-        break;
-      }
-      /* else go through */
+    case VK: case VKNUM: case VTRUE: {
+      pc = NO_JUMP;  /* always true; do nothing */
+      break;
     }
     default: {
       pc = jumponcond(fs, e, 0);
@@ -634,20 +627,13 @@ static void luaK_goiffalse (FuncState *fs, expdesc *e) {
   int pc;  /* pc of last jump */
   luaK_dischargevars(fs, e);
   switch (e->k) {
-    case VNIL: case VFALSE: {
-      pc = NO_JUMP;  /* always false; do nothing */
-      break;
-    }
     case VJMP: {
       pc = e->u.info;
       break;
     }
-    case VTRUE: {
-      if (!hasjumps(e)) {
-        pc = luaK_jump(fs);  /* always jump */
-        break;
-      }
-      /* else go through */
+    case VNIL: case VFALSE: {
+      pc = NO_JUMP;  /* always false; do nothing */
+      break;
     }
     default: {
       pc = jumponcond(fs, e, 1);
