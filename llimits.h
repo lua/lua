@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.85 2010/12/10 13:40:22 roberto Exp roberto $
+** $Id: llimits.h,v 1.86 2010/12/23 15:38:28 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -277,7 +277,7 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
 #define condchangemem(L)	condmovestack(L)
 #else
 #define condchangemem(L)  \
-	((void)(gcstopped(G(L)) || (luaC_fullgc(L, 0), 1)))
+	((void)(!(G(L)->gcrunning) || (luaC_fullgc(L, 0), 1)))
 #endif
 
 #endif
