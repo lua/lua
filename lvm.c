@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.127 2010/12/17 12:05:37 roberto Exp roberto $
+** $Id: lvm.c,v 2.128 2011/02/01 18:03:10 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -467,13 +467,13 @@ void luaV_finishOp (lua_State *L) {
 
 
 /* execute a jump instruction */
-#define dojump(ci,i) \
+#define dojump(ci,i,e) \
   { int a = GETARG_A(i); \
     if (a > 0) luaF_close(L, ci->u.l.base + a - 1); \
-    ci->u.l.savedpc += GETARG_sBx(i); }
+    ci->u.l.savedpc += GETARG_sBx(i) + e; }
 
 /* for test instructions, execute the jump instruction that follows it */
-#define donextjump(ci)  	dojump(ci, *ci->u.l.savedpc)
+#define donextjump(ci)	{ i = *ci->u.l.savedpc; dojump(ci, i, 1); }
 
 
 #define Protect(x)	{ {x;}; base = ci->u.l.base; }
@@ -627,43 +627,48 @@ void luaV_execute (lua_State *L) {
         L->top = ci->top;  /* restore top */
       )
       vmcase(OP_JMP,
-        dojump(ci, i);
+        dojump(ci, i, 0);
       )
       vmcase(OP_EQ,
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         Protect(
-          if (equalobj(L, rb, rc) == GETARG_A(i))
+          if (equalobj(L, rb, rc) != GETARG_A(i))
+            ci->u.l.savedpc++;
+          else
             donextjump(ci);
         )
-        ci->u.l.savedpc++;
       )
       vmcase(OP_LT,
         Protect(
-          if (luaV_lessthan(L, RKB(i), RKC(i)) == GETARG_A(i))
+          if (luaV_lessthan(L, RKB(i), RKC(i)) != GETARG_A(i))
+            ci->u.l.savedpc++;
+          else
             donextjump(ci);
         )
-        ci->u.l.savedpc++;
       )
       vmcase(OP_LE,
         Protect(
-          if (luaV_lessequal(L, RKB(i), RKC(i)) == GETARG_A(i))
+          if (luaV_lessequal(L, RKB(i), RKC(i)) != GETARG_A(i))
+            ci->u.l.savedpc++;
+          else
             donextjump(ci);
         )
-        ci->u.l.savedpc++;
       )
       vmcase(OP_TEST,
-        if (GETARG_C(i) ? !l_isfalse(ra) : l_isfalse(ra))
+        if (GETARG_C(i) ? l_isfalse(ra) : !l_isfalse(ra))
+            ci->u.l.savedpc++;
+          else
           donextjump(ci);
-        ci->u.l.savedpc++;
       )
       vmcase(OP_TESTSET,
         TValue *rb = RB(i);
-        if (GETARG_C(i) ? !l_isfalse(rb) : l_isfalse(rb)) {
+        if (GETARG_C(i) ? l_isfalse(rb) : !l_isfalse(rb))
+          ci->u.l.savedpc++;
+        else {
           setobjs2s(L, ra, rb);
           donextjump(ci);
         }
-        ci->u.l.savedpc++;
       )
       vmcase(OP_CALL,
         int b = GETARG_B(i);
