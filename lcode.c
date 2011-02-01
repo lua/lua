@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.49 2010/07/07 16:27:29 roberto Exp roberto $
+** $Id: lcode.c,v 2.50 2011/01/31 14:28:41 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -167,6 +167,19 @@ void luaK_patchlist (FuncState *fs, int list, int target) {
   else {
     lua_assert(target < fs->pc);
     patchlistaux(fs, list, target, NO_REG, target);
+  }
+}
+
+
+LUAI_FUNC void luaK_patchclose (FuncState *fs, int list, int level) {
+  level++;  /* argument is +1 to reserve 0 as non-op */
+  while (list != NO_JUMP) {
+    int next = getjump(fs, list);
+    lua_assert(GET_OPCODE(fs->f->code[list]) == OP_JMP &&
+                (GETARG_A(fs->f->code[list]) == 0 ||
+                 GETARG_A(fs->f->code[list]) >= level));
+    SETARG_A(fs->f->code[list], level);
+    list = next;
   }
 }
 

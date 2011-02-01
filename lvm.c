@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.126 2010/12/06 21:08:36 roberto Exp roberto $
+** $Id: lvm.c,v 2.127 2010/12/17 12:05:37 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -466,7 +466,14 @@ void luaV_finishOp (lua_State *L) {
   (k + (GETARG_Bx(i) != 0 ? GETARG_Bx(i) - 1 : GETARG_Ax(*ci->u.l.savedpc++)))
 
 
-#define dojump(i)	(ci->u.l.savedpc += (i))
+/* execute a jump instruction */
+#define dojump(ci,i) \
+  { int a = GETARG_A(i); \
+    if (a > 0) luaF_close(L, ci->u.l.base + a - 1); \
+    ci->u.l.savedpc += GETARG_sBx(i); }
+
+/* for test instructions, execute the jump instruction that follows it */
+#define donextjump(ci)  	dojump(ci, *ci->u.l.savedpc)
 
 
 #define Protect(x)	{ {x;}; base = ci->u.l.base; }
@@ -620,41 +627,41 @@ void luaV_execute (lua_State *L) {
         L->top = ci->top;  /* restore top */
       )
       vmcase(OP_JMP,
-        dojump(GETARG_sBx(i));
+        dojump(ci, i);
       )
       vmcase(OP_EQ,
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         Protect(
           if (equalobj(L, rb, rc) == GETARG_A(i))
-            dojump(GETARG_sBx(*ci->u.l.savedpc));
+            donextjump(ci);
         )
         ci->u.l.savedpc++;
       )
       vmcase(OP_LT,
         Protect(
           if (luaV_lessthan(L, RKB(i), RKC(i)) == GETARG_A(i))
-            dojump(GETARG_sBx(*ci->u.l.savedpc));
+            donextjump(ci);
         )
         ci->u.l.savedpc++;
       )
       vmcase(OP_LE,
         Protect(
           if (luaV_lessequal(L, RKB(i), RKC(i)) == GETARG_A(i))
-            dojump(GETARG_sBx(*ci->u.l.savedpc));
+            donextjump(ci);
         )
         ci->u.l.savedpc++;
       )
       vmcase(OP_TEST,
         if (GETARG_C(i) ? !l_isfalse(ra) : l_isfalse(ra))
-          dojump(GETARG_sBx(*ci->u.l.savedpc));
+          donextjump(ci);
         ci->u.l.savedpc++;
       )
       vmcase(OP_TESTSET,
         TValue *rb = RB(i);
         if (GETARG_C(i) ? !l_isfalse(rb) : l_isfalse(rb)) {
           setobjs2s(L, ra, rb);
-          dojump(GETARG_sBx(*ci->u.l.savedpc));
+          donextjump(ci);
         }
         ci->u.l.savedpc++;
       )
@@ -722,7 +729,7 @@ void luaV_execute (lua_State *L) {
         lua_Number limit = nvalue(ra+1);
         if (luai_numlt(L, 0, step) ? luai_numle(L, idx, limit)
                                    : luai_numle(L, limit, idx)) {
-          dojump(GETARG_sBx(i));  /* jump back */
+          ci->u.l.savedpc += GETARG_sBx(i);  /* jump back */
           setnvalue(ra, idx);  /* update internal index... */
           setnvalue(ra+3, idx);  /* ...and external index */
         }
@@ -738,7 +745,7 @@ void luaV_execute (lua_State *L) {
         else if (!tonumber(pstep, ra+2))
           luaG_runerror(L, LUA_QL("for") " step must be a number");
         setnvalue(ra, luai_numsub(L, nvalue(ra), nvalue(pstep)));
-        dojump(GETARG_sBx(i));
+        ci->u.l.savedpc += GETARG_sBx(i);
       )
       vmcase(OP_TFORCALL,
         StkId cb = ra + 3;  /* call base */
@@ -757,7 +764,7 @@ void luaV_execute (lua_State *L) {
         l_tforloop:
         if (!ttisnil(ra + 1)) {  /* continue loop? */
           setobjs2s(L, ra, ra + 1);  /* save control variable */
-          dojump(GETARG_sBx(i));  /* jump back */
+           ci->u.l.savedpc += GETARG_sBx(i);  /* jump back */
         }
       )
       vmcase(OP_SETLIST,

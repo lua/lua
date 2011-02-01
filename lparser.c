@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.94 2010/12/17 12:03:41 roberto Exp roberto $
+** $Id: lparser.c,v 2.95 2011/01/26 16:30:02 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -245,7 +245,7 @@ static int searchvar (FuncState *fs, TString *n) {
 
 /*
   Mark block where variable at given level was defined
-  (to emit OP_CLOSE later).
+  (to emit close instructions later).
 */
 static void markupval (FuncState *fs, int level) {
   BlockCnt *bl = fs->bl;
@@ -1053,9 +1053,9 @@ static void breakstat (LexState *ls) {
   }
   if (!bl)
     luaX_syntaxerror(ls, "no loop to break");
-  if (upval)
-    luaK_codeABC(fs, OP_CLOSE, bl->nactvar, 0, 0);
   luaK_concat(fs, &bl->breaklist, luaK_jump(fs));
+  if (upval)
+    luaK_patchclose(fs, bl->breaklist, bl->nactvar);
 }
 
 
