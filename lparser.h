@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.64 2010/07/02 20:42:40 roberto Exp roberto $
+** $Id: lparser.h,v 1.65 2010/07/07 16:27:29 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -53,17 +53,51 @@ typedef struct expdesc {
 } expdesc;
 
 
-typedef struct vardesc {
-  unsigned short idx;
-} vardesc;
+/* description of active local variable */
+typedef struct Vardesc {
+  unsigned short idx;  /* variable index in stack */
+} Vardesc;
 
 
 /* list of all active local variables */
 typedef struct Varlist {
-  vardesc *actvar;
+  Vardesc *actvar;
   int nactvar;
   int actvarsize;
 } Varlist;
+
+
+/* description of pending goto statement */
+typedef struct Gotodesc {
+  TString *name;
+  int pc;  /* where it is coded */
+  int line;  /* line where it appeared */
+  lu_byte currlevel;  /* variable level where it appears in current block */
+} Gotodesc;
+
+
+/* list of pending gotos */
+typedef struct Gotolist {
+  Gotodesc *gt;
+  int ngt;
+  int gtsize;
+} Gotolist;
+
+
+/* description of active labels */
+typedef struct Labeldesc {
+  TString *name;
+  int pc;  /* label position */
+  lu_byte nactvar;  /* variable level where it appears in current block */
+} Labeldesc;
+
+
+/* list of active labels */
+typedef struct Labellist {
+  Labeldesc *label;
+  int nlabel;
+  int labelsize;
+} Labellist;
 
 
 struct BlockCnt;  /* defined in lparser.c */
@@ -91,7 +125,8 @@ typedef struct FuncState {
 
 
 LUAI_FUNC Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
-                              Varlist *varl, const char *name);
+                              Varlist *varl, Gotolist *gtl,
+                              Labellist *labell,  const char *name);
 
 
 #endif

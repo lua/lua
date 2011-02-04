@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.95 2011/01/26 16:30:02 roberto Exp roberto $
+** $Id: lparser.c,v 2.96 2011/02/01 18:03:10 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -42,7 +42,9 @@
 typedef struct BlockCnt {
   struct BlockCnt *previous;  /* chain */
   int breaklist;  /* list of jumps out of this loop */
-  lu_byte nactvar;  /* # active locals outside the breakable structure */
+  int firstlabel;  /* index (in Labellist) of first label in this block */
+  int firstgoto;  /* index (in Gotolist) of first pending goto in this block */
+  lu_byte nactvar;  /* # active locals outside the block */
   lu_byte upval;  /* true if some variable in the block is an upvalue */
   lu_byte isbreakable;  /* true if `block' is a loop */
 } BlockCnt;
@@ -52,7 +54,7 @@ typedef struct BlockCnt {
 /*
 ** prototypes for recursive non-terminal functions
 */
-static void chunk (LexState *ls);
+static void statlist (LexState *ls);
 static void expr (LexState *ls, expdesc *v);
 
 
@@ -172,7 +174,7 @@ static void new_localvar (LexState *ls, TString *name) {
   checklimit(fs, vl->nactvar + 1 - fs->firstlocal,
                   MAXVARS, "local variables");
   luaM_growvector(ls->L, vl->actvar, vl->nactvar + 1,
-                  vl->actvarsize, vardesc, MAX_INT, "local variables");
+                  vl->actvarsize, Vardesc, MAX_INT, "local variables");
   vl->actvar[vl->nactvar++].idx = cast(unsigned short, reg);
 }
 
@@ -327,10 +329,93 @@ static void enterlevel (LexState *ls) {
 #define leavelevel(ls)	(G((ls)->L)->nCcalls--)
 
 
+static void closegoto (LexState *ls, int g, Labeldesc *label) {
+  int i;
+  FuncState *fs = ls->fs;
+  Gotodesc *gt = &ls->gtl->gt[g];
+  lua_assert(gt->name == label->name);
+  if (gt->currlevel < label->nactvar) {
+    const char *msg = luaO_pushfstring(ls->L,
+      "<goto> at line %d attemps to jump into the scope of local " LUA_QS,
+      gt->line, getstr(getlocvar(fs, gt->currlevel)->varname));;
+    luaX_syntaxerror(ls, msg);
+  }
+  luaK_patchlist(fs, gt->pc, label->pc);
+  /* remove goto from pending list */
+  for (i = g; i < ls->gtl->ngt - 1; i++)
+    ls->gtl->gt[i] = ls->gtl->gt[i + 1];
+  ls->gtl->ngt--;
+}
+
+
+/*
+** try to close a goto with existing labels; this solves backward jumps
+*/
+static int findlabel (LexState *ls, int g) {
+  int i;
+  BlockCnt *bl = ls->fs->bl;
+  Labellist *labell = ls->labell;
+  Gotodesc *gt = &ls->gtl->gt[g];
+  /* check labels in current block for a match */
+  for (i = bl->firstlabel; i < labell->nlabel; i++) {
+    Labeldesc *lb = &labell->label[i];
+    if (lb->name == gt->name) {
+      lua_assert(labell->label[i].pc <= gt->pc);
+      if (gt->currlevel > lb->nactvar &&
+          (bl->upval || ls->labell->nlabel > bl->firstlabel))
+        luaK_patchclose(ls->fs, gt->pc, lb->nactvar);
+      closegoto(ls, g, lb);  /* close it */
+      return 1;
+    }
+  }
+  return 0;  /* label not found; cannot close goto */
+}
+
+
+/*
+** check whether new label 'lb' matches any pending goto in current
+** block; solves forward jumps
+*/
+static void findgotos (LexState *ls, Labeldesc *lb) {
+  int i;
+  Gotolist *gtl = ls->gtl;
+  for (i = ls->fs->bl->firstgoto; i < gtl->ngt; i++) {
+    if (gtl->gt[i].name == lb->name)
+      closegoto(ls, i, lb);
+  }
+}
+
+
+/*
+** "export" pending gotos to outer level, to check them against
+** outer labels; if the block being exited has upvalues, and
+** the goto exists the scope of any variable (which can be the
+** upvalue), close those variables being exited.
+*/
+static void movegotosout (FuncState *fs, BlockCnt *bl) {
+  int i = bl->firstgoto;
+  LexState *ls = fs->ls;
+  /* correct pending gotos to current block and try to close it
+     with visible labels */ 
+  while (i < ls->gtl->ngt) {
+    Gotodesc *gt = &ls->gtl->gt[i];
+    if (gt->currlevel > bl->nactvar) {
+      if (bl->upval)
+        luaK_patchclose(fs, gt->pc, bl->nactvar);
+      gt->currlevel = bl->nactvar;
+    }
+    if (!findlabel(ls, i))
+      i++;  /* move to next one */
+  }
+}
+
+
 static void enterblock (FuncState *fs, BlockCnt *bl, lu_byte isbreakable) {
   bl->breaklist = NO_JUMP;
   bl->isbreakable = isbreakable;
   bl->nactvar = fs->nactvar;
+  bl->firstlabel = fs->ls->labell->nlabel;
+  bl->firstgoto = fs->ls->gtl->ngt;
   bl->upval = 0;
   bl->previous = fs->bl;
   fs->bl = bl;
@@ -342,6 +427,8 @@ static void leaveblock (FuncState *fs) {
   BlockCnt *bl = fs->bl;
   fs->bl = bl->previous;
   removevars(fs, bl->nactvar);
+  fs->ls->labell->nlabel = bl->firstlabel;  /* remove local labels */
+  movegotosout(fs, bl);
   if (bl->upval)
     luaK_codeABC(fs, OP_CLOSE, bl->nactvar, 0, 0);
   /* a block either controls scope or breaks (never both) */
@@ -445,8 +532,24 @@ static void open_mainfunc (LexState *ls, FuncState *fs) {
 }
 
 
+static void mainblock (LexState *ls, FuncState *fs) {
+  BlockCnt bl;
+  enterblock(fs, &bl, 0);
+  statlist(ls);  /* read main block */
+  if (bl.firstgoto < ls->gtl->ngt) {  /* check pending gotos */
+    Gotodesc *gt = &ls->gtl->gt[bl.firstgoto];
+    const char *msg = luaO_pushfstring(ls->L,
+       "label " LUA_QS " (<goto> at line %d) undefined",
+       getstr(gt->name), gt->line);
+    luaX_syntaxerror(ls, msg);
+  }
+  bl.upval = 0;  /* RETURN will close any pending upvalue */
+  leaveblock(fs);
+}
+
+
 Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, Varlist *varl,
-                    const char *name) {
+                    Gotolist *gtl, Labellist *labell, const char *name) {
   LexState lexstate;
   FuncState funcstate;
   TString *tname = luaS_new(L, name);
@@ -454,10 +557,12 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, Varlist *varl,
   incr_top(L);
   lexstate.buff = buff;
   lexstate.varl = varl;
+  lexstate.gtl = gtl;
+  lexstate.labell = labell;
   luaX_setinput(L, &lexstate, z, tname);
   open_mainfunc(&lexstate, &funcstate);
   luaX_next(&lexstate);  /* read first token */
-  chunk(&lexstate);  /* read main chunk */
+  mainblock(&lexstate, &funcstate);
   check(&lexstate, TK_EOS);
   close_func(&lexstate);
   L->top--;  /* pop name */
@@ -645,7 +750,7 @@ static void parlist (LexState *ls) {
 
 
 static void body (LexState *ls, expdesc *e, int needself, int line) {
-  /* body ->  `(' parlist `)' chunk END */
+  /* body ->  `(' parlist `)' block END */
   FuncState new_fs;
   open_func(ls, &new_fs);
   new_fs.f->linedefined = line;
@@ -656,7 +761,7 @@ static void body (LexState *ls, expdesc *e, int needself, int line) {
   }
   parlist(ls);
   checknext(ls, ')');
-  chunk(ls);
+  mainblock(ls, &new_fs);
   new_fs.f->lastlinedefined = ls->linenumber;
   check_match(ls, TK_END, TK_FUNCTION, line);
   codeclosure(ls, new_fs.f, e);
@@ -949,11 +1054,11 @@ static int block_follow (int token) {
 
 
 static void block (LexState *ls) {
-  /* block -> chunk */
+  /* block -> statlist */
   FuncState *fs = ls->fs;
   BlockCnt bl;
   enterblock(fs, &bl, 0);
-  chunk(ls);
+  statlist(ls);
   lua_assert(bl.breaklist == NO_JUMP);
   leaveblock(fs);
 }
@@ -1043,6 +1148,13 @@ static int cond (LexState *ls) {
 }
 
 
+/* code a break statement. The last 'if' decides the need to close
+   upvalues when leaving the block. If the block has upvalues, it
+   must be closed. If it has local variables and any label
+   before the break, those variables must be closed too, as they
+   may be used as upvalues after the break and through a goto
+   be exited through this break.
+*/
 static void breakstat (LexState *ls) {
   FuncState *fs = ls->fs;
   BlockCnt *bl = fs->bl;
@@ -1054,8 +1166,46 @@ static void breakstat (LexState *ls) {
   if (!bl)
     luaX_syntaxerror(ls, "no loop to break");
   luaK_concat(fs, &bl->breaklist, luaK_jump(fs));
-  if (upval)
+  if (upval || 
+      (fs->nactvar > bl->nactvar &&
+       ls->labell->nlabel > bl->firstlabel))
     luaK_patchclose(fs, bl->breaklist, bl->nactvar);
+}
+
+
+static void gotostat (LexState *ls, TString *label, int line) {
+  Gotolist *gtl = ls->gtl;
+  int g = gtl->ngt;  /* index of new goto being created */
+  /* create new entry for this goto */
+  luaM_growvector(ls->L, gtl->gt, gtl->ngt, gtl->gtsize,
+                  Gotodesc, MAX_INT, "labels");
+  gtl->gt[g].name = label;
+  gtl->gt[g].line = line;
+  gtl->gt[g].currlevel = ls->fs->nactvar;
+  gtl->gt[g].pc = luaK_jump(ls->fs);  /* create jump instruction */
+  gtl->ngt++;
+  findlabel(ls, g);
+}
+
+
+static void labelstat (LexState *ls, TString *label) {
+  /* label -> '@' NAME ':' */
+  FuncState *fs = ls->fs;
+  Labellist *labell = ls->labell;
+  int l = labell->nlabel;  /* index of new label being created */
+  checknext(ls, ':');
+  /* create new entry for this label */
+  luaM_growvector(ls->L, labell->label, labell->nlabel, labell->labelsize,
+                  Labeldesc, MAX_INT, "labels");
+  labell->label[l].name = label;
+  labell->label[l].pc = fs->pc;
+  /* if label is last statement in the block,
+     assume that local variables are already out of scope */
+  labell->label[l].nactvar = (ls->t.token == TK_END)
+                             ? fs->bl->nactvar
+                             : fs->nactvar;
+  labell->nlabel++;
+  findgotos(ls, &labell->label[l]);
 }
 
 
@@ -1087,7 +1237,7 @@ static void repeatstat (LexState *ls, int line) {
   enterblock(fs, &bl1, 1);  /* loop block */
   enterblock(fs, &bl2, 0);  /* scope block */
   luaX_next(ls);  /* skip REPEAT */
-  chunk(ls);
+  statlist(ls);
   check_match(ls, TK_UNTIL, TK_REPEAT, line);
   condexit = cond(ls);  /* read condition (inside scope block) */
   if (!bl2.upval) {  /* no upvalues? */
@@ -1382,6 +1532,11 @@ static int statement (LexState *ls) {
         localstat(ls);
       return 0;
     }
+    case '@': {  /* stat -> label */
+      luaX_next(ls);  /* skip '@' */
+      labelstat(ls, str_checkname(ls));
+      return 0;
+    }
     case TK_RETURN: {  /* stat -> retstat */
       luaX_next(ls);  /* skip RETURN */
       retstat(ls);
@@ -1392,6 +1547,11 @@ static int statement (LexState *ls) {
       breakstat(ls);
       return 1;  /* must be last statement */
     }
+    case TK_GOTO: {  /* stat -> 'goto' NAME */
+      luaX_next(ls);  /* skip GOTO */
+      gotostat(ls, str_checkname(ls), line);
+      return 0;
+    }
     default: {  /* stat -> func | assignment */
       exprstat(ls);
       return 0;
@@ -1400,8 +1560,8 @@ static int statement (LexState *ls) {
 }
 
 
-static void chunk (LexState *ls) {
-  /* chunk -> { stat [`;'] } */
+static void statlist (LexState *ls) {
+  /* statlist -> { stat [`;'] } */
   int islast = 0;
   enterlevel(ls);
   while (!islast && !block_follow(ls->t.token)) {

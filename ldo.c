@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.89 2010/09/30 17:21:31 roberto Exp roberto $
+** $Id: ldo.c,v 2.90 2010/10/25 19:01:37 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -617,6 +617,8 @@ struct SParser {  /* data to `f_parser' */
   ZIO *z;
   Mbuffer buff;  /* buffer to be used by the scanner */
   Varlist varl;  /* list of local variables (to be used by the parser) */
+  Gotolist gtl;  /* list of pending gotos (") */
+  Labellist labell;  /* list of active labels (") */
   const char *name;
 };
 
@@ -628,7 +630,8 @@ static void f_parser (lua_State *L, void *ud) {
   int c = luaZ_lookahead(p->z);
   tf = (c == LUA_SIGNATURE[0])
            ? luaU_undump(L, p->z, &p->buff, p->name)
-           : luaY_parser(L, p->z, &p->buff, &p->varl, p->name);
+           : luaY_parser(L, p->z, &p->buff, &p->varl,
+                            &p->gtl, &p->labell, p->name);
   setptvalue2s(L, L->top, tf);
   incr_top(L);
   cl = luaF_newLclosure(L, tf);
@@ -644,10 +647,14 @@ int luaD_protectedparser (lua_State *L, ZIO *z, const char *name) {
   L->nny++;  /* cannot yield during parsing */
   p.z = z; p.name = name;
   p.varl.actvar = NULL; p.varl.nactvar = p.varl.actvarsize = 0;
+  p.gtl.gt = NULL; p.gtl.ngt = p.gtl.gtsize = 0;
+  p.labell.label = NULL; p.labell.nlabel = p.labell.labelsize = 0;
   luaZ_initbuffer(L, &p.buff);
   status = luaD_pcall(L, f_parser, &p, savestack(L, L->top), L->errfunc);
   luaZ_freebuffer(L, &p.buff);
   luaM_freearray(L, p.varl.actvar, p.varl.actvarsize);
+  luaM_freearray(L, p.gtl.gt, p.gtl.gtsize);
+  luaM_freearray(L, p.labell.label, p.labell.labelsize);
   L->nny--;
   return status;
 }
