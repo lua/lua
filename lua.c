@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.194 2010/10/25 19:01:37 roberto Exp roberto $
+** $Id: lua.c,v 1.195 2010/12/03 17:20:50 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -106,13 +106,11 @@ static void laction (int i) {
 
 
 static void print_usage (const char *badoption) {
-  if (badoption[1] == 'e' || badoption[1] == 'l') {
-    luai_writestringerror("%s: ", progname);
+  luai_writestringerror("%s: ", progname);
+  if (badoption[1] == 'e' || badoption[1] == 'l')
     luai_writestringerror("'%s' needs argument\n", badoption);
-  } else {
-    luai_writestringerror("%s: ", progname);
+  else
     luai_writestringerror("unrecognized option '%s'\n", badoption);
-  }
   luai_writestringerror(
   "usage: %s [options] [script [args]]\n"
   "Available options are:\n"
