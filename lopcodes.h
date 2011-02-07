@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.137 2010/10/25 12:24:55 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.138 2011/02/01 18:03:10 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -216,7 +216,6 @@ OP_TFORLOOP,/*	A sBx	if R(A+1) ~= nil then { R(A)=R(A+1); pc += sBx }*/
 
 OP_SETLIST,/*	A B C	R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B	*/
 
-OP_CLOSE,/*	A	close all upvalues >= R(A)			*/
 OP_CLOSURE,/*	A Bx	R(A) := closure(KPROTO[Bx])			*/
 
 OP_VARARG,/*	A B	R(A), R(A+1), ..., R(A+B-2) = vararg		*/

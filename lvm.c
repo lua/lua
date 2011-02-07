@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.128 2011/02/01 18:03:10 roberto Exp roberto $
+** $Id: lvm.c,v 2.129 2011/02/01 18:32:55 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -792,9 +792,6 @@ void luaV_execute (lua_State *L) {
           luaC_barrierback(L, obj2gco(h), val);
         }
         L->top = ci->top;  /* correct top (in case of previous open call) */
-      )
-      vmcase(OP_CLOSE,
-        luaF_close(L, ra);
       )
       vmcase(OP_CLOSURE,
         Proto *p = cl->p->p[GETARG_Bx(i)];

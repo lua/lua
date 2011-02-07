@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.96 2011/02/01 18:03:10 roberto Exp roberto $
+** $Id: lparser.c,v 2.97 2011/02/04 17:34:43 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -429,8 +429,12 @@ static void leaveblock (FuncState *fs) {
   removevars(fs, bl->nactvar);
   fs->ls->labell->nlabel = bl->firstlabel;  /* remove local labels */
   movegotosout(fs, bl);
-  if (bl->upval)
-    luaK_codeABC(fs, OP_CLOSE, bl->nactvar, 0, 0);
+  if (bl->upval) {
+    /* create a 'jump to here' to close upvalues */
+    int j = luaK_jump(fs);
+    luaK_patchclose(fs, j, bl->nactvar);
+    luaK_patchtohere(fs, j);
+  }
   /* a block either controls scope or breaks (never both) */
   lua_assert(!bl->isbreakable || !bl->upval);
   lua_assert(bl->nactvar == fs->nactvar);
