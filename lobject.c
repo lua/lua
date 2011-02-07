@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.44 2010/12/06 21:08:36 roberto Exp roberto $
+** $Id: lobject.c,v 2.45 2010/12/10 19:03:46 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -265,7 +265,7 @@ const char *luaO_pushfstring (lua_State *L, const char *fmt, ...) {
 
 
 
-#define LL(x)	(sizeof(x) - 1)
+#define LL(x)	((sizeof(x) - 1)/sizeof(char))
 #define RETS	"..."
 #define PRE	"[string \""
 #define POS	"\"]"

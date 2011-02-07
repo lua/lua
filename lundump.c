@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.67 2010/10/13 21:04:52 lhf Exp $
+** $Id: lundump.c,v 2.14 2010/10/25 14:33:38 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -211,8 +211,8 @@ Proto* luaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name)
 void luaU_header (char* h)
 {
  int x=1;
- memcpy(h,LUA_SIGNATURE,sizeof(LUA_SIGNATURE)-1);
- h+=sizeof(LUA_SIGNATURE)-1;
+ memcpy(h,LUA_SIGNATURE,(sizeof(LUA_SIGNATURE)-1)*sizeof(char));
+ h+=(sizeof(LUA_SIGNATURE)-1)*sizeof(char);
  *h++=(char)LUAC_VERSION;
  *h++=(char)LUAC_FORMAT;
  *h++=(char)*(char*)&x;				/* endianness */

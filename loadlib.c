@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.94 2010/11/10 20:00:04 roberto Exp roberto $
+** $Id: loadlib.c,v 1.95 2011/01/07 18:54:49 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -164,7 +164,7 @@ static void pusherror (lua_State *L) {
   int error = GetLastError();
   char buffer[128];
   if (FormatMessageA(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_SYSTEM,
-      NULL, error, 0, buffer, sizeof(buffer), NULL))
+      NULL, error, 0, buffer, sizeof(buffer)/sizeof(char), NULL))
     lua_pushstring(L, buffer);
   else
     lua_pushfstring(L, "system error %d\n", error);

@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.162 2011/01/12 20:36:01 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.163 2011/01/26 16:30:02 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -808,7 +808,7 @@ static void addquoted (lua_State *L, luaL_Buffer *b, int arg) {
 static const char *scanformat (lua_State *L, const char *strfrmt, char *form) {
   const char *p = strfrmt;
   while (*p != '\0' && strchr(FLAGS, *p) != NULL) p++;  /* skip flags */
-  if ((size_t)(p - strfrmt) >= sizeof(FLAGS))
+  if ((size_t)(p - strfrmt) >= sizeof(FLAGS)/sizeof(char))
     luaL_error(L, "invalid format (repeated flags)");
   if (isdigit(uchar(*p))) p++;  /* skip width */
   if (isdigit(uchar(*p))) p++;  /* (2 digits at most) */

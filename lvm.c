@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.129 2011/02/01 18:32:55 roberto Exp roberto $
+** $Id: lvm.c,v 2.130 2011/02/07 12:24:42 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -288,14 +288,15 @@ void luaV_concat (lua_State *L, int total) {
       /* collect total length */
       for (n = 1; n < total && tostring(L, top-n-1); n++) {
         size_t l = tsvalue(top-n-1)->len;
-        if (l >= MAX_SIZET - tl) luaG_runerror(L, "string length overflow");
+        if (l >= (MAX_SIZET/sizeof(char)) - tl)
+          luaG_runerror(L, "string length overflow");
         tl += l;
       }
       buffer = luaZ_openspace(L, &G(L)->buff, tl);
       tl = 0;
       for (i=n; i>0; i--) {  /* concat all strings */
         size_t l = tsvalue(top-i)->len;
-        memcpy(buffer+tl, svalue(top-i), l);
+        memcpy(buffer+tl, svalue(top-i), l * sizeof(char));
         tl += l;
       }
       setsvalue2s(L, top-n, luaS_newlstr(L, buffer, tl));
