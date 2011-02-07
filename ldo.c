@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.90 2010/10/25 19:01:37 roberto Exp roberto $
+** $Id: ldo.c,v 2.91 2011/02/04 17:34:43 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -615,10 +615,8 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
 */
 struct SParser {  /* data to `f_parser' */
   ZIO *z;
-  Mbuffer buff;  /* buffer to be used by the scanner */
-  Varlist varl;  /* list of local variables (to be used by the parser) */
-  Gotolist gtl;  /* list of pending gotos (") */
-  Labellist labell;  /* list of active labels (") */
+  Mbuffer buff;  /* dynamic structure used by the scanner */
+  Dyndata dyd;  /* dynamic structures used by the parser */
   const char *name;
 };
 
@@ -630,8 +628,7 @@ static void f_parser (lua_State *L, void *ud) {
   int c = luaZ_lookahead(p->z);
   tf = (c == LUA_SIGNATURE[0])
            ? luaU_undump(L, p->z, &p->buff, p->name)
-           : luaY_parser(L, p->z, &p->buff, &p->varl,
-                            &p->gtl, &p->labell, p->name);
+           : luaY_parser(L, p->z, &p->buff, &p->dyd, p->name);
   setptvalue2s(L, L->top, tf);
   incr_top(L);
   cl = luaF_newLclosure(L, tf);
@@ -646,15 +643,15 @@ int luaD_protectedparser (lua_State *L, ZIO *z, const char *name) {
   int status;
   L->nny++;  /* cannot yield during parsing */
   p.z = z; p.name = name;
-  p.varl.actvar = NULL; p.varl.nactvar = p.varl.actvarsize = 0;
-  p.gtl.gt = NULL; p.gtl.ngt = p.gtl.gtsize = 0;
-  p.labell.label = NULL; p.labell.nlabel = p.labell.labelsize = 0;
+  p.dyd.actvar.arr = NULL; p.dyd.actvar.size = 0;
+  p.dyd.gt.arr = NULL; p.dyd.gt.size = 0;
+  p.dyd.label.arr = NULL; p.dyd.label.size = 0;
   luaZ_initbuffer(L, &p.buff);
   status = luaD_pcall(L, f_parser, &p, savestack(L, L->top), L->errfunc);
   luaZ_freebuffer(L, &p.buff);
-  luaM_freearray(L, p.varl.actvar, p.varl.actvarsize);
-  luaM_freearray(L, p.gtl.gt, p.gtl.gtsize);
-  luaM_freearray(L, p.labell.label, p.labell.labelsize);
+  luaM_freearray(L, p.dyd.actvar.arr, p.dyd.actvar.size);
+  luaM_freearray(L, p.dyd.gt.arr, p.dyd.gt.size);
+  luaM_freearray(L, p.dyd.label.arr, p.dyd.label.size);
   L->nny--;
   return status;
 }

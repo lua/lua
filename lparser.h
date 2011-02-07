@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.65 2010/07/07 16:27:29 roberto Exp roberto $
+** $Id: lparser.h,v 1.66 2011/02/04 17:34:43 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -59,47 +59,36 @@ typedef struct Vardesc {
 } Vardesc;
 
 
-/* list of all active local variables */
-typedef struct Varlist {
-  Vardesc *actvar;
-  int nactvar;
-  int actvarsize;
-} Varlist;
-
-
-/* description of pending goto statement */
-typedef struct Gotodesc {
-  TString *name;
-  int pc;  /* where it is coded */
-  int line;  /* line where it appeared */
-  lu_byte currlevel;  /* variable level where it appears in current block */
-} Gotodesc;
-
-
-/* list of pending gotos */
-typedef struct Gotolist {
-  Gotodesc *gt;
-  int ngt;
-  int gtsize;
-} Gotolist;
-
-
-/* description of active labels */
+/* description of pending goto statements and label statements */
 typedef struct Labeldesc {
-  TString *name;
-  int pc;  /* label position */
-  lu_byte nactvar;  /* variable level where it appears in current block */
+  TString *name;  /* label identifier */
+  int pc;  /* position in code */
+  int line;  /* line where it appeared */
+  lu_byte nactvar;  /* local level where it appears in current block */
 } Labeldesc;
 
 
-/* list of active labels */
+/* list of labels or gotos */
 typedef struct Labellist {
-  Labeldesc *label;
-  int nlabel;
-  int labelsize;
+  Labeldesc *arr;  /* array */
+  int n;  /* number of entries in use */
+  int size;  /* array size */
 } Labellist;
 
 
+/* dynamic structures used by the parser */
+typedef struct Dyndata {
+  struct {  /* list of active local variables */
+    Vardesc *arr;
+    int n;
+    int size;
+  } actvar;
+  Labellist gt;  /* list of pending gotos */
+  Labellist label;   /* list of active labels */
+} Dyndata;
+
+
+/* control of blocks */
 struct BlockCnt;  /* defined in lparser.c */
 
 
@@ -125,8 +114,7 @@ typedef struct FuncState {
 
 
 LUAI_FUNC Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
-                              Varlist *varl, Gotolist *gtl,
-                              Labellist *labell,  const char *name);
+                              Dyndata *dyd, const char *name);
 
 
 #endif

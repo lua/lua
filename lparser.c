@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.97 2011/02/04 17:34:43 roberto Exp roberto $
+** $Id: lparser.c,v 2.98 2011/02/07 12:28:27 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -42,8 +42,8 @@
 typedef struct BlockCnt {
   struct BlockCnt *previous;  /* chain */
   int breaklist;  /* list of jumps out of this loop */
-  int firstlabel;  /* index (in Labellist) of first label in this block */
-  int firstgoto;  /* index (in Gotolist) of first pending goto in this block */
+  int firstlabel;  /* index of first label in this block */
+  int firstgoto;  /* index of first pending goto in this block */
   lu_byte nactvar;  /* # active locals outside the block */
   lu_byte upval;  /* true if some variable in the block is an upvalue */
   lu_byte isbreakable;  /* true if `block' is a loop */
@@ -169,13 +169,13 @@ static int registerlocalvar (LexState *ls, TString *varname) {
 
 static void new_localvar (LexState *ls, TString *name) {
   FuncState *fs = ls->fs;
-  Varlist *vl = ls->varl;
+  Dyndata *dyd = ls->dyd;
   int reg = registerlocalvar(ls, name);
-  checklimit(fs, vl->nactvar + 1 - fs->firstlocal,
+  checklimit(fs, dyd->actvar.n + 1 - fs->firstlocal,
                   MAXVARS, "local variables");
-  luaM_growvector(ls->L, vl->actvar, vl->nactvar + 1,
-                  vl->actvarsize, Vardesc, MAX_INT, "local variables");
-  vl->actvar[vl->nactvar++].idx = cast(unsigned short, reg);
+  luaM_growvector(ls->L, dyd->actvar.arr, dyd->actvar.n + 1,
+                  dyd->actvar.size, Vardesc, MAX_INT, "local variables");
+  dyd->actvar.arr[dyd->actvar.n++].idx = cast(unsigned short, reg);
 }
 
 
@@ -188,7 +188,7 @@ static void new_localvarliteral_ (LexState *ls, const char *name, size_t sz) {
 
 
 static LocVar *getlocvar (FuncState *fs, int i) {
-  int idx = fs->ls->varl->actvar[fs->firstlocal + i].idx;
+  int idx = fs->ls->dyd->actvar.arr[fs->firstlocal + i].idx;
   lua_assert(idx < fs->nlocvars);
   return &fs->f->locvars[idx];
 }
@@ -204,7 +204,7 @@ static void adjustlocalvars (LexState *ls, int nvars) {
 
 
 static void removevars (FuncState *fs, int tolevel) {
-  fs->ls->varl->nactvar -= (fs->nactvar - tolevel);
+  fs->ls->dyd->actvar.n -= (fs->nactvar - tolevel);
   while (fs->nactvar > tolevel)
     getlocvar(fs, --fs->nactvar)->endpc = fs->pc;
 }
@@ -332,19 +332,20 @@ static void enterlevel (LexState *ls) {
 static void closegoto (LexState *ls, int g, Labeldesc *label) {
   int i;
   FuncState *fs = ls->fs;
-  Gotodesc *gt = &ls->gtl->gt[g];
+  Dyndata *dyd = ls->dyd;
+  Labeldesc *gt = &dyd->gt.arr[g];
   lua_assert(gt->name == label->name);
-  if (gt->currlevel < label->nactvar) {
+  if (gt->nactvar < label->nactvar) {
     const char *msg = luaO_pushfstring(ls->L,
       "<goto> at line %d attemps to jump into the scope of local " LUA_QS,
-      gt->line, getstr(getlocvar(fs, gt->currlevel)->varname));;
+      gt->line, getstr(getlocvar(fs, gt->nactvar)->varname));;
     luaX_syntaxerror(ls, msg);
   }
   luaK_patchlist(fs, gt->pc, label->pc);
   /* remove goto from pending list */
-  for (i = g; i < ls->gtl->ngt - 1; i++)
-    ls->gtl->gt[i] = ls->gtl->gt[i + 1];
-  ls->gtl->ngt--;
+  for (i = g; i < dyd->gt.n - 1; i++)
+    dyd->gt.arr[i] = dyd->gt.arr[i + 1];
+  dyd->gt.n--;
 }
 
 
@@ -354,15 +355,15 @@ static void closegoto (LexState *ls, int g, Labeldesc *label) {
 static int findlabel (LexState *ls, int g) {
   int i;
   BlockCnt *bl = ls->fs->bl;
-  Labellist *labell = ls->labell;
-  Gotodesc *gt = &ls->gtl->gt[g];
+  Dyndata *dyd = ls->dyd;
+  Labeldesc *gt = &dyd->gt.arr[g];
   /* check labels in current block for a match */
-  for (i = bl->firstlabel; i < labell->nlabel; i++) {
-    Labeldesc *lb = &labell->label[i];
+  for (i = bl->firstlabel; i < dyd->label.n; i++) {
+    Labeldesc *lb = &dyd->label.arr[i];
     if (lb->name == gt->name) {
-      lua_assert(labell->label[i].pc <= gt->pc);
-      if (gt->currlevel > lb->nactvar &&
-          (bl->upval || ls->labell->nlabel > bl->firstlabel))
+      lua_assert(lb->pc <= gt->pc);
+      if (gt->nactvar > lb->nactvar &&
+          (bl->upval || dyd->label.n > bl->firstlabel))
         luaK_patchclose(ls->fs, gt->pc, lb->nactvar);
       closegoto(ls, g, lb);  /* close it */
       return 1;
@@ -378,9 +379,9 @@ static int findlabel (LexState *ls, int g) {
 */
 static void findgotos (LexState *ls, Labeldesc *lb) {
   int i;
-  Gotolist *gtl = ls->gtl;
-  for (i = ls->fs->bl->firstgoto; i < gtl->ngt; i++) {
-    if (gtl->gt[i].name == lb->name)
+  Dyndata *dyd = ls->dyd;
+  for (i = ls->fs->bl->firstgoto; i < dyd->gt.n; i++) {
+    if (dyd->gt.arr[i].name == lb->name)
       closegoto(ls, i, lb);
   }
 }
@@ -394,17 +395,17 @@ static void findgotos (LexState *ls, Labeldesc *lb) {
 */
 static void movegotosout (FuncState *fs, BlockCnt *bl) {
   int i = bl->firstgoto;
-  LexState *ls = fs->ls;
+  Dyndata *dyd = fs->ls->dyd;
   /* correct pending gotos to current block and try to close it
      with visible labels */ 
-  while (i < ls->gtl->ngt) {
-    Gotodesc *gt = &ls->gtl->gt[i];
-    if (gt->currlevel > bl->nactvar) {
+  while (i < dyd->gt.n) {
+    Labeldesc *gt = &dyd->gt.arr[i];
+    if (gt->nactvar > bl->nactvar) {
       if (bl->upval)
         luaK_patchclose(fs, gt->pc, bl->nactvar);
-      gt->currlevel = bl->nactvar;
+      gt->nactvar = bl->nactvar;
     }
-    if (!findlabel(ls, i))
+    if (!findlabel(fs->ls, i))
       i++;  /* move to next one */
   }
 }
@@ -414,8 +415,8 @@ static void enterblock (FuncState *fs, BlockCnt *bl, lu_byte isbreakable) {
   bl->breaklist = NO_JUMP;
   bl->isbreakable = isbreakable;
   bl->nactvar = fs->nactvar;
-  bl->firstlabel = fs->ls->labell->nlabel;
-  bl->firstgoto = fs->ls->gtl->ngt;
+  bl->firstlabel = fs->ls->dyd->label.n;
+  bl->firstgoto = fs->ls->dyd->gt.n;
   bl->upval = 0;
   bl->previous = fs->bl;
   fs->bl = bl;
@@ -427,7 +428,7 @@ static void leaveblock (FuncState *fs) {
   BlockCnt *bl = fs->bl;
   fs->bl = bl->previous;
   removevars(fs, bl->nactvar);
-  fs->ls->labell->nlabel = bl->firstlabel;  /* remove local labels */
+  fs->ls->dyd->label.n = bl->firstlabel;  /* remove local labels */
   movegotosout(fs, bl);
   if (bl->upval) {
     /* create a 'jump to here' to close upvalues */
@@ -479,7 +480,7 @@ static void open_func (LexState *ls, FuncState *fs) {
   fs->nups = 0;
   fs->nlocvars = 0;
   fs->nactvar = 0;
-  fs->firstlocal = ls->varl->nactvar;
+  fs->firstlocal = ls->dyd->actvar.n;
   fs->bl = NULL;
   f = luaF_newproto(L);
   fs->f = f;
@@ -540,8 +541,8 @@ static void mainblock (LexState *ls, FuncState *fs) {
   BlockCnt bl;
   enterblock(fs, &bl, 0);
   statlist(ls);  /* read main block */
-  if (bl.firstgoto < ls->gtl->ngt) {  /* check pending gotos */
-    Gotodesc *gt = &ls->gtl->gt[bl.firstgoto];
+  if (bl.firstgoto < ls->dyd->gt.n) {  /* check pending gotos */
+    Labeldesc *gt = &ls->dyd->gt.arr[bl.firstgoto];
     const char *msg = luaO_pushfstring(ls->L,
        "label " LUA_QS " (<goto> at line %d) undefined",
        getstr(gt->name), gt->line);
@@ -552,17 +553,16 @@ static void mainblock (LexState *ls, FuncState *fs) {
 }
 
 
-Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, Varlist *varl,
-                    Gotolist *gtl, Labellist *labell, const char *name) {
+Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
+                    Dyndata *dyd, const char *name) {
   LexState lexstate;
   FuncState funcstate;
   TString *tname = luaS_new(L, name);
   setsvalue2s(L, L->top, tname);  /* push name to protect it */
   incr_top(L);
   lexstate.buff = buff;
-  lexstate.varl = varl;
-  lexstate.gtl = gtl;
-  lexstate.labell = labell;
+  lexstate.dyd = dyd;
+  dyd->actvar.n = dyd->gt.n = dyd->label.n = 0;
   luaX_setinput(L, &lexstate, z, tname);
   open_mainfunc(&lexstate, &funcstate);
   luaX_next(&lexstate);  /* read first token */
@@ -1172,22 +1172,27 @@ static void breakstat (LexState *ls) {
   luaK_concat(fs, &bl->breaklist, luaK_jump(fs));
   if (upval || 
       (fs->nactvar > bl->nactvar &&
-       ls->labell->nlabel > bl->firstlabel))
+       ls->dyd->label.n > bl->firstlabel))
     luaK_patchclose(fs, bl->breaklist, bl->nactvar);
 }
 
 
+static int newlabelentry (LexState *ls, Labellist *l, TString *name,
+                          int line, int pc) {
+  int n = l->n;
+  luaM_growvector(ls->L, l->arr, l->n, l->size, Labeldesc, MAX_INT, "labels");
+  l->arr[n].name = name;
+  l->arr[n].line = line;
+  l->arr[n].nactvar = ls->fs->nactvar;
+  l->arr[n].pc = pc;
+  l->n++;
+  return n;
+}
+
+
 static void gotostat (LexState *ls, TString *label, int line) {
-  Gotolist *gtl = ls->gtl;
-  int g = gtl->ngt;  /* index of new goto being created */
   /* create new entry for this goto */
-  luaM_growvector(ls->L, gtl->gt, gtl->ngt, gtl->gtsize,
-                  Gotodesc, MAX_INT, "labels");
-  gtl->gt[g].name = label;
-  gtl->gt[g].line = line;
-  gtl->gt[g].currlevel = ls->fs->nactvar;
-  gtl->gt[g].pc = luaK_jump(ls->fs);  /* create jump instruction */
-  gtl->ngt++;
+  int g = newlabelentry(ls, &ls->dyd->gt, label, line, luaK_jump(ls->fs));
   findlabel(ls, g);
 }
 
@@ -1195,21 +1200,17 @@ static void gotostat (LexState *ls, TString *label, int line) {
 static void labelstat (LexState *ls, TString *label) {
   /* label -> '@' NAME ':' */
   FuncState *fs = ls->fs;
-  Labellist *labell = ls->labell;
-  int l = labell->nlabel;  /* index of new label being created */
+  int l;  /* index of new label being created */
+  Labeldesc *lb;
   checknext(ls, ':');
   /* create new entry for this label */
-  luaM_growvector(ls->L, labell->label, labell->nlabel, labell->labelsize,
-                  Labeldesc, MAX_INT, "labels");
-  labell->label[l].name = label;
-  labell->label[l].pc = fs->pc;
+  l = newlabelentry(ls, &ls->dyd->label, label, 0, fs->pc);
+  lb = &ls->dyd->label.arr[l];
   /* if label is last statement in the block,
      assume that local variables are already out of scope */
-  labell->label[l].nactvar = (ls->t.token == TK_END)
-                             ? fs->bl->nactvar
-                             : fs->nactvar;
-  labell->nlabel++;
-  findgotos(ls, &labell->label[l]);
+  if (ls->t.token == TK_END)
+    lb->nactvar = fs->bl->nactvar;
+  findgotos(ls, lb);
 }
 
 

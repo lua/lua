@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.66 2011/02/02 14:55:17 roberto Exp roberto $
+** $Id: llex.h,v 1.67 2011/02/04 17:34:43 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -48,19 +48,19 @@ typedef struct Token {
 } Token;
 
 
+/* state of the lexer plus state of the parser when shared by all
+   functions */
 typedef struct LexState {
   int current;  /* current character (charint) */
   int linenumber;  /* input line counter */
   int lastline;  /* line of last token `consumed' */
   Token t;  /* current token */
   Token lookahead;  /* look ahead token */
-  struct FuncState *fs;  /* `FuncState' is private to the parser */
+  struct FuncState *fs;  /* current function (parser) */
   struct lua_State *L;
   ZIO *z;  /* input stream */
   Mbuffer *buff;  /* buffer for tokens */
-  struct Varlist *varl;  /* list of all active local variables */
-  struct Gotolist *gtl;  /* list of pending gotos */
-  struct Labellist *labell;  /* list of active labels */
+  struct Dyndata *dyd;  /* dynamic structures used by the parser */
   TString *source;  /* current source name */
   TString *envn;  /* environment variable name */
   char decpoint;  /* locale decimal point */
