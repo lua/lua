@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.101 2011/02/09 14:45:19 roberto Exp roberto $
+** $Id: lparser.c,v 2.102 2011/02/09 16:51:28 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1253,16 +1253,10 @@ static void repeatstat (LexState *ls, int line) {
   statlist(ls);
   check_match(ls, TK_UNTIL, TK_REPEAT, line);
   condexit = cond(ls);  /* read condition (inside scope block) */
-  if (!bl2.upval) {  /* no upvalues? */
-    leaveblock(fs);  /* finish scope */
-    luaK_patchlist(fs, condexit, repeat_init);  /* close the loop */
-  }
-  else {  /* complete semantics when there are upvalues */
-    breakstat(ls);  /* if condition then break */
-    luaK_patchtohere(ls->fs, condexit);  /* else... */
-    leaveblock(fs);  /* finish scope... */
-    luaK_jumpto(fs, repeat_init);  /* and repeat */
-  }
+  if (bl2.upval)  /* upvalues? */
+    luaK_patchclose(fs, condexit, bl2.nactvar);
+  leaveblock(fs);  /* finish scope */
+  luaK_patchlist(fs, condexit, repeat_init);  /* close the loop */
   leaveblock(fs);  /* finish loop */
 }
 
