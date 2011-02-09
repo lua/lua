@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.100 2011/02/07 19:00:30 roberto Exp roberto $
+** $Id: lparser.c,v 2.101 2011/02/09 14:45:19 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -342,7 +342,7 @@ static void closegoto (LexState *ls, int g, Labeldesc *label) {
   FuncState *fs = ls->fs;
   Dyndata *dyd = ls->dyd;
   Labeldesc *gt = &dyd->gt.arr[g];
-  lua_assert(gt->name == label->name);
+  lua_assert(eqstr(gt->name, label->name));
   if (gt->nactvar < label->nactvar) {
     const char *msg = luaO_pushfstring(ls->L,
       "<goto %s> at line %d jumps into the scope of local " LUA_QS,
@@ -368,7 +368,7 @@ static int findlabel (LexState *ls, int g) {
   /* check labels in current block for a match */
   for (i = bl->firstlabel; i < dyd->label.n; i++) {
     Labeldesc *lb = &dyd->label.arr[i];
-    if (lb->name == gt->name) {  /* correct label? */
+    if (eqstr(lb->name, gt->name)) {  /* correct label? */
       if (gt->nactvar > lb->nactvar &&
           (bl->upval || dyd->label.n > bl->firstlabel))
         luaK_patchclose(ls->fs, gt->pc, lb->nactvar);
@@ -388,7 +388,7 @@ static void findgotos (LexState *ls, Labeldesc *lb) {
   int i;
   Dyndata *dyd = ls->dyd;
   for (i = ls->fs->bl->firstgoto; i < dyd->gt.n; i++) {
-    if (dyd->gt.arr[i].name == lb->name)
+    if (eqstr(dyd->gt.arr[i].name, lb->name))
       closegoto(ls, i, lb);
   }
 }
@@ -439,7 +439,7 @@ static void leaveblock (FuncState *fs) {
   ls->dyd->label.n = bl->firstlabel;  /* remove local labels */
   if (bl->previous)  /* inner block? */
     movegotosout(fs, bl);  /* update pending gotos to outer block */
-  else if (bl->firstgoto < ls->dyd->gt.n) {  /* check pending gotos */
+  else if (bl->firstgoto < ls->dyd->gt.n) {  /* pending gotos in outer block? */
     Labeldesc *gt = &ls->dyd->gt.arr[bl->firstgoto];
     const char *msg = luaO_pushfstring(ls->L,
        "label " LUA_QS " (<goto> at line %d) undefined",
@@ -1048,11 +1048,17 @@ static void expr (LexState *ls, expdesc *v) {
 */
 
 
-static int block_follow (int token) {
-  switch (token) {
-    case TK_ELSE: case TK_ELSEIF: case TK_END:
-    case TK_UNTIL: case TK_EOS:
+/*
+** check whether current token is in the follow set of a block.
+** 'until' closes syntactical blocks, but do not close scope,
+** so it handled in separate.
+*/
+static int block_follow (LexState *ls, int withuntil) {
+  switch (ls->t.token) {
+    case TK_ELSE: case TK_ELSEIF:
+    case TK_END: case TK_EOS:
       return 1;
+    case TK_UNTIL: return withuntil;
     default: return 0;
   }
 }
@@ -1207,10 +1213,11 @@ static void labelstat (LexState *ls, TString *label) {
   /* create new entry for this label */
   l = newlabelentry(ls, &ls->dyd->label, label, 0, fs->pc);
   lb = &ls->dyd->label.arr[l];
-  /* if label is last statement in the block,
-     assume that local variables are already out of scope */
-  if (ls->t.token == TK_END)
+  while (testnext(ls, ';')) ;  /* skip trailing semicolons */
+  if (block_follow(ls, 0)) {  /* label is last statement in the block? */
+    /* assume that locals are already out of scope */
     lb->nactvar = fs->bl->nactvar;
+  }
   findgotos(ls, lb);
 }
 
@@ -1470,7 +1477,7 @@ static void retstat (LexState *ls) {
   FuncState *fs = ls->fs;
   expdesc e;
   int first, nret;  /* registers with returned values */
-  if (block_follow(ls->t.token) || ls->t.token == ';')
+  if (block_follow(ls, 1) || ls->t.token == ';')
     first = nret = 0;  /* return no values */
   else {
     nret = explist1(ls, &e);  /* optional return values */
@@ -1570,7 +1577,7 @@ static void statlist (LexState *ls) {
   /* statlist -> { stat [`;'] } */
   int islast = 0;
   enterlevel(ls);
-  while (!islast && !block_follow(ls->t.token)) {
+  while (!islast && !block_follow(ls, 1)) {
     islast = statement(ls);
     if (islast)
       testnext(ls, ';');
