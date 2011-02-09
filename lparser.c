@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.99 2011/02/07 17:14:50 roberto Exp roberto $
+** $Id: lparser.c,v 2.100 2011/02/07 19:00:30 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -68,6 +68,13 @@ static void anchor_token (LexState *ls) {
 }
 
 
+/* semantic error */
+static void semerror (LexState *ls, const char *msg) {
+  ls->t.token = 0;  /* remove 'near to' from final message */
+  luaX_syntaxerror(ls, msg);
+}
+
+
 static void error_expected (LexState *ls, int token) {
   luaX_syntaxerror(ls,
       luaO_pushfstring(ls->L, "%s expected", luaX_token2str(ls, token)));
@@ -104,6 +111,7 @@ static void check (LexState *ls, int c) {
   if (ls->t.token != c)
     error_expected(ls, c);
 }
+
 
 static void checknext (LexState *ls, int c) {
   check(ls, c);
@@ -337,9 +345,9 @@ static void closegoto (LexState *ls, int g, Labeldesc *label) {
   lua_assert(gt->name == label->name);
   if (gt->nactvar < label->nactvar) {
     const char *msg = luaO_pushfstring(ls->L,
-      "<goto> at line %d attemps to jump into the scope of local " LUA_QS,
-      gt->line, getstr(getlocvar(fs, gt->nactvar)->varname));;
-    luaX_syntaxerror(ls, msg);
+      "<goto %s> at line %d jumps into the scope of local " LUA_QS,
+      getstr(gt->name), gt->line, getstr(getlocvar(fs, gt->nactvar)->varname));
+    semerror(ls, msg);
   }
   luaK_patchlist(fs, gt->pc, label->pc);
   /* remove goto from pending list */
@@ -360,8 +368,7 @@ static int findlabel (LexState *ls, int g) {
   /* check labels in current block for a match */
   for (i = bl->firstlabel; i < dyd->label.n; i++) {
     Labeldesc *lb = &dyd->label.arr[i];
-    if (lb->name == gt->name) {
-      lua_assert(lb->pc <= gt->pc);
+    if (lb->name == gt->name) {  /* correct label? */
       if (gt->nactvar > lb->nactvar &&
           (bl->upval || dyd->label.n > bl->firstlabel))
         luaK_patchclose(ls->fs, gt->pc, lb->nactvar);
@@ -437,7 +444,7 @@ static void leaveblock (FuncState *fs) {
     const char *msg = luaO_pushfstring(ls->L,
        "label " LUA_QS " (<goto> at line %d) undefined",
        getstr(gt->name), gt->line);
-    luaX_syntaxerror(ls, msg);
+    semerror(ls, msg);
   }
   if (bl->previous && bl->upval) {
     /* create a 'jump to here' to close upvalues */
@@ -1162,7 +1169,7 @@ static void breakstat (LexState *ls) {
     bl = bl->previous;
   }
   if (!bl)
-    luaX_syntaxerror(ls, "no loop to break");
+    semerror(ls, "no loop to break");
   luaK_concat(fs, &bl->breaklist, luaK_jump(fs));
   if (upval || 
       (fs->nactvar > bl->nactvar &&
