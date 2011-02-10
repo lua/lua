@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.95 2010/11/10 18:05:36 roberto Exp roberto $
+** $Id: liolib.c,v 2.96 2011/01/26 16:30:02 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -26,27 +26,44 @@
 ** lua_popen spawns a new process connected to the current one through
 ** the file streams.
 */
-#if !defined(lua_popen)
+#if !defined(lua_popen)	/* { */
 
-#if defined(LUA_USE_POPEN)
+#if defined(LUA_USE_POPEN)	/* { */
 
-#define lua_popen(L,c,m)        ((void)L, fflush(NULL), popen(c,m))
-#define lua_pclose(L,file)      ((void)L, pclose(file))
+#define lua_popen(L,c,m)	((void)L, fflush(NULL), popen(c,m))
 
-#elif defined(LUA_WIN)
+#if defined(LUA_USE_POSIX)	/* { */
 
-#define lua_popen(L,c,m)        ((void)L, _popen(c,m))
-#define lua_pclose(L,file)      ((void)L, _pclose(file))
+#include <sys/wait.h>
 
-#else
+#define lua_pclose(L,file,stat,tp)  \
+  {(void)L;  \
+   stat = pclose(file);  \
+   if (stat == -1)  { /* keep this value */ } \
+   else if (WIFEXITED(stat))   { stat = WEXITSTATUS(stat); tp = "exit"; } \
+   else if (WIFSIGNALED(stat)) { stat = WTERMSIG(stat); tp = "signal"; } \
+   else if (WIFSTOPPED(stat))  { stat = WSTOPSIG(stat); tp = "stop"; } }
 
-#define lua_popen(L,c,m)        ((void)((void)c, m),  \
-                luaL_error(L, LUA_QL("popen") " not supported"), (FILE*)0)
-#define lua_pclose(L,file)              ((void)((void)L, file), -1)
+#else				/* }{ */
 
-#endif
+#define lua_pclose(L,file,stat,tp)	{(void)L; stat = pclose(file);}
 
-#endif
+#endif				/* } */
+
+#elif defined(LUA_WIN)		/* }{ */
+
+#define lua_popen(L,c,m)		((void)L, _popen(c,m))
+#define lua_pclose(L,file,stat,tp)	{(void)L; stat = _pclose(file);}
+
+#else				/* }{ */
+
+#define lua_popen(L,c,m)		((void)((void)c, m),  \
+		luaL_error(L, LUA_QL("popen") " not supported"), (FILE*)0)
+#define lua_pclose(L,file,stat,tp)	{(void)L; (void)file; stat = -1;}
+
+#endif				/* } */
+
+#endif			/* } */
 
 
 
@@ -142,13 +159,16 @@ static int io_noclose (lua_State *L) {
 */
 static int io_pclose (lua_State *L) {
   FILE **p = tofilep(L);
-  int stat = lua_pclose(L, *p);
+  int stat;
+  const char *tp = NULL;  /* type of termination (when available) */
+  lua_pclose(L, *p, stat, tp);
   *p = NULL;
   if (stat == -1)  /* error? */
     return pushresult(L, 0, NULL);
   else {
     lua_pushinteger(L, stat);
-    return 1;  /* return status */
+    lua_pushstring(L, tp);
+    return 2;  /* return status and type */
   }
 }
 
