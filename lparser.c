@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.102 2011/02/09 16:51:28 roberto Exp roberto $
+** $Id: lparser.c,v 2.103 2011/02/09 17:03:18 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -41,7 +41,6 @@
 */
 typedef struct BlockCnt {
   struct BlockCnt *previous;  /* chain */
-  int breaklist;  /* list of jumps out of this loop */
   int firstlabel;  /* index of first label in this block */
   int firstgoto;  /* index of first pending goto in this block */
   lu_byte nactvar;  /* # active locals outside the block */
@@ -380,16 +379,31 @@ static int findlabel (LexState *ls, int g) {
 }
 
 
+static int newlabelentry (LexState *ls, Labellist *l, TString *name,
+                          int line, int pc) {
+  int n = l->n;
+  luaM_growvector(ls->L, l->arr, n, l->size, Labeldesc, MAX_INT, "labels");
+  l->arr[n].name = name;
+  l->arr[n].line = line;
+  l->arr[n].nactvar = ls->fs->nactvar;
+  l->arr[n].pc = pc;
+  l->n++;
+  return n;
+}
+
+
 /*
-** check whether new label 'lb' matches any pending goto in current
+** check whether new label 'lb' matches any pending gotos in current
 ** block; solves forward jumps
 */
 static void findgotos (LexState *ls, Labeldesc *lb) {
-  int i;
   Dyndata *dyd = ls->dyd;
-  for (i = ls->fs->bl->firstgoto; i < dyd->gt.n; i++) {
+  int i = ls->fs->bl->firstgoto;
+  while (i < dyd->gt.n) {
     if (eqstr(dyd->gt.arr[i].name, lb->name))
       closegoto(ls, i, lb);
+    else
+      i++;
   }
 }
 
@@ -419,7 +433,6 @@ static void movegotosout (FuncState *fs, BlockCnt *bl) {
 
 
 static void enterblock (FuncState *fs, BlockCnt *bl, lu_byte isloop) {
-  bl->breaklist = NO_JUMP;
   bl->isloop = isloop;
   bl->nactvar = fs->nactvar;
   bl->firstlabel = fs->ls->dyd->label.n;
@@ -431,30 +444,48 @@ static void enterblock (FuncState *fs, BlockCnt *bl, lu_byte isloop) {
 }
 
 
+/*
+** create a label named "break" to resolve break statements
+*/
+static void breaklabel (LexState *ls) {
+  TString *n = luaS_new(ls->L, "break");
+  int l = newlabelentry(ls, &ls->dyd->label, n, 0, ls->fs->pc);
+  findgotos(ls, &ls->dyd->label.arr[l]);
+}
+
+/*
+** generates an error for an undefined 'goto'; choose appropriate
+** message when label name is a resserved word (which can only be 'break')
+*/
+static void undefgoto (LexState *ls, Labeldesc *gt) {
+  const char *msg = (gt->name->tsv.reserved > 0)
+                    ? "<%s> at line %d not inside a loop"
+                    : "label " LUA_QS " (<goto> at line %d) undefined";
+  msg = luaO_pushfstring(ls->L, msg, getstr(gt->name), gt->line);
+  semerror(ls, msg);
+}
+
+
 static void leaveblock (FuncState *fs) {
   BlockCnt *bl = fs->bl;
   LexState *ls = fs->ls;
-  fs->bl = bl->previous;
-  removevars(fs, bl->nactvar);
-  ls->dyd->label.n = bl->firstlabel;  /* remove local labels */
-  if (bl->previous)  /* inner block? */
-    movegotosout(fs, bl);  /* update pending gotos to outer block */
-  else if (bl->firstgoto < ls->dyd->gt.n) {  /* pending gotos in outer block? */
-    Labeldesc *gt = &ls->dyd->gt.arr[bl->firstgoto];
-    const char *msg = luaO_pushfstring(ls->L,
-       "label " LUA_QS " (<goto> at line %d) undefined",
-       getstr(gt->name), gt->line);
-    semerror(ls, msg);
-  }
   if (bl->previous && bl->upval) {
     /* create a 'jump to here' to close upvalues */
     int j = luaK_jump(fs);
     luaK_patchclose(fs, j, bl->nactvar);
     luaK_patchtohere(fs, j);
   }
+  if (bl->isloop)
+    breaklabel(ls);  /* close pending breaks */
+  fs->bl = bl->previous;
+  removevars(fs, bl->nactvar);
   lua_assert(bl->nactvar == fs->nactvar);
   fs->freereg = fs->nactvar;  /* free registers */
-  luaK_patchtohere(fs, bl->breaklist);
+  ls->dyd->label.n = bl->firstlabel;  /* remove local labels */
+  if (bl->previous)  /* inner block? */
+    movegotosout(fs, bl);  /* update pending gotos to outer block */
+  else if (bl->firstgoto < ls->dyd->gt.n)  /* pending gotos in outer block? */
+    undefgoto(ls, &ls->dyd->gt.arr[bl->firstgoto]);  /* error */
 }
 
 
@@ -1070,7 +1101,6 @@ static void block (LexState *ls) {
   BlockCnt bl;
   enterblock(fs, &bl, 0);
   statlist(ls);
-  lua_assert(bl.breaklist == NO_JUMP);
   leaveblock(fs);
 }
 
@@ -1156,44 +1186,6 @@ static int cond (LexState *ls) {
   if (v.k == VNIL) v.k = VFALSE;  /* `falses' are all equal here */
   luaK_goiftrue(ls->fs, &v);
   return v.f;
-}
-
-
-/* code a break statement. The last 'if' decides the need to close
-   upvalues when leaving the block. If the block has upvalues, it
-   must be closed. If it has local variables and any label
-   before the break, those variables must be closed too, as they
-   may be used as upvalues after the break and through a goto
-   be exited through this break.
-*/
-static void breakstat (LexState *ls) {
-  FuncState *fs = ls->fs;
-  BlockCnt *bl = fs->bl;
-  int upval = 0;
-  while (bl && !bl->isloop) {
-    upval |= bl->upval;
-    bl = bl->previous;
-  }
-  if (!bl)
-    semerror(ls, "no loop to break");
-  luaK_concat(fs, &bl->breaklist, luaK_jump(fs));
-  if (upval || 
-      (fs->nactvar > bl->nactvar &&
-       ls->dyd->label.n > bl->firstlabel))
-    luaK_patchclose(fs, bl->breaklist, bl->nactvar);
-}
-
-
-static int newlabelentry (LexState *ls, Labellist *l, TString *name,
-                          int line, int pc) {
-  int n = l->n;
-  luaM_growvector(ls->L, l->arr, l->n, l->size, Labeldesc, MAX_INT, "labels");
-  l->arr[n].name = name;
-  l->arr[n].line = line;
-  l->arr[n].nactvar = ls->fs->nactvar;
-  l->arr[n].pc = pc;
-  l->n++;
-  return n;
 }
 
 
@@ -1551,7 +1543,8 @@ static int statement (LexState *ls) {
     }
     case TK_BREAK: {  /* stat -> breakstat */
       luaX_next(ls);  /* skip BREAK */
-      breakstat(ls);
+      /* code it as "goto 'break'" */
+      gotostat(ls, luaS_new(ls->L, "break"), line);
       return 1;  /* must be last statement */
     }
     case TK_GOTO: {  /* stat -> 'goto' NAME */
