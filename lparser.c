@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.104 2011/02/10 14:50:41 roberto Exp roberto $
+** $Id: lparser.c,v 2.105 2011/02/14 14:59:28 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -339,8 +339,8 @@ static void enterlevel (LexState *ls) {
 static void closegoto (LexState *ls, int g, Labeldesc *label) {
   int i;
   FuncState *fs = ls->fs;
-  Dyndata *dyd = ls->dyd;
-  Labeldesc *gt = &dyd->gt.arr[g];
+  Labellist *gl = &ls->dyd->gt;
+  Labeldesc *gt = &gl->arr[g];
   lua_assert(eqstr(gt->name, label->name));
   if (gt->nactvar < label->nactvar) {
     const char *msg = luaO_pushfstring(ls->L,
@@ -350,9 +350,9 @@ static void closegoto (LexState *ls, int g, Labeldesc *label) {
   }
   luaK_patchlist(fs, gt->pc, label->pc);
   /* remove goto from pending list */
-  for (i = g; i < dyd->gt.n - 1; i++)
-    dyd->gt.arr[i] = dyd->gt.arr[i + 1];
-  dyd->gt.n--;
+  for (i = g; i < gl->n - 1; i++)
+    gl->arr[i] = gl->arr[i + 1];
+  gl->n--;
 }
 
 
@@ -397,10 +397,10 @@ static int newlabelentry (LexState *ls, Labellist *l, TString *name,
 ** block; solves forward jumps
 */
 static void findgotos (LexState *ls, Labeldesc *lb) {
-  Dyndata *dyd = ls->dyd;
+  Labellist *gl = &ls->dyd->gt;
   int i = ls->fs->bl->firstgoto;
-  while (i < dyd->gt.n) {
-    if (eqstr(dyd->gt.arr[i].name, lb->name))
+  while (i < gl->n) {
+    if (eqstr(gl->arr[i].name, lb->name))
       closegoto(ls, i, lb);
     else
       i++;
@@ -416,11 +416,11 @@ static void findgotos (LexState *ls, Labeldesc *lb) {
 */
 static void movegotosout (FuncState *fs, BlockCnt *bl) {
   int i = bl->firstgoto;
-  Dyndata *dyd = fs->ls->dyd;
+  Labellist *gl = &fs->ls->dyd->gt;
   /* correct pending gotos to current block and try to close it
      with visible labels */ 
-  while (i < dyd->gt.n) {
-    Labeldesc *gt = &dyd->gt.arr[i];
+  while (i < gl->n) {
+    Labeldesc *gt = &gl->arr[i];
     if (gt->nactvar > bl->nactvar) {
       if (bl->upval)
         luaK_patchclose(fs, gt->pc, bl->nactvar);
@@ -1185,21 +1185,31 @@ static void gotostat (LexState *ls, TString *label, int line) {
 }
 
 
-static void labelstat (LexState *ls, TString *label) {
+static void labelstat (LexState *ls, TString *label, int line) {
   /* label -> '@' NAME ':' */
   FuncState *fs = ls->fs;
-  int l;  /* index of new label being created */
-  Labeldesc *lb;
-  checknext(ls, ':');
-  /* create new entry for this label */
-  l = newlabelentry(ls, &ls->dyd->label, label, 0, fs->pc);
-  lb = &ls->dyd->label.arr[l];
-  while (testnext(ls, ';')) ;  /* skip trailing semicolons */
-  if (block_follow(ls, 0)) {  /* label is last statement in the block? */
-    /* assume that locals are already out of scope */
-    lb->nactvar = fs->bl->nactvar;
+  Labellist *ll = &ls->dyd->label;
+  int l, i;  /* index of new label being created */
+  /* check for repeated labels on the same block */
+  for (i = ls->fs->bl->firstlabel; i < ll->n; i++) {
+    if (eqstr(label, ll->arr[i].name)) {
+      const char *msg = luaO_pushfstring(ls->L, 
+        "label " LUA_QS " already defined on line %d",
+           getstr(label), ll->arr[i].line);
+      semerror(ls, msg);
+    }
   }
-  findgotos(ls, lb);
+  checknext(ls, ':');  /* skip colon */
+  /* create new entry for this label */
+  l = newlabelentry(ls, ll, label, line, fs->pc);
+  /* skip other no-op statements */
+  while (ls->t.token == ';' || ls->t.token == '@')
+    statement(ls);
+  if (block_follow(ls, 0)) {  /* label is last no-op statement in the block? */
+    /* assume that locals are already out of scope */
+    ll->arr[l].nactvar = fs->bl->nactvar;
+  }
+  findgotos(ls, &ll->arr[l]);
 }
 
 
@@ -1476,7 +1486,7 @@ static void retstat (LexState *ls) {
     }
   }
   luaK_ret(fs, first, nret);
-  testnext(ls, ';');  /* skip optional semicollon */
+  testnext(ls, ';');  /* skip optional semicolon */
 }
 
 
@@ -1524,7 +1534,7 @@ static void statement (LexState *ls) {
     }
     case '@': {  /* stat -> label */
       luaX_next(ls);  /* skip '@' */
-      labelstat(ls, str_checkname(ls));
+      labelstat(ls, str_checkname(ls), line);
       break;
     }
     case TK_RETURN: {  /* stat -> retstat */
