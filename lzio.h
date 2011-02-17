@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.h,v 1.21 2005/05/17 19:49:15 roberto Exp roberto $
+** $Id: lzio.h,v 1.22 2009/05/18 17:26:25 roberto Exp roberto $
 ** Buffered streams
 ** See Copyright Notice in lua.h
 */
@@ -59,9 +59,10 @@ LUAI_FUNC int luaZ_lookahead (ZIO *z);
 struct Zio {
   size_t n;			/* bytes still unread */
   const char *p;		/* current position in buffer */
-  lua_Reader reader;
+  lua_Reader reader;		/* reader function */
   void* data;			/* additional data */
   lua_State *L;			/* Lua state (for reader) */
+  int eoz;			/* true if reader has no more data */
 };
 
 

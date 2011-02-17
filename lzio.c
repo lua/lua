@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.c,v 1.30 2005/05/17 19:49:15 roberto Exp roberto $
+** $Id: lzio.c,v 1.31 2005/06/03 20:15:29 roberto Exp roberto $
 ** a generic input stream interface
 ** See Copyright Notice in lua.h
 */
@@ -22,10 +22,14 @@ int luaZ_fill (ZIO *z) {
   size_t size;
   lua_State *L = z->L;
   const char *buff;
+  if (z->eoz) return EOZ;
   lua_unlock(L);
   buff = z->reader(L, z->data, &size);
   lua_lock(L);
-  if (buff == NULL || size == 0) return EOZ;
+  if (buff == NULL || size == 0) {
+    z->eoz = 1;  /* avoid calling reader function next time */
+    return EOZ;
+  }
   z->n = size - 1;
   z->p = buff;
   return char2int(*(z->p++));
@@ -51,6 +55,7 @@ void luaZ_init (lua_State *L, ZIO *z, lua_Reader reader, void *data) {
   z->data = data;
   z->n = 0;
   z->p = NULL;
+  z->eoz = 0;
 }
 
 
