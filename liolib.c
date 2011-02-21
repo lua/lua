@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.96 2011/01/26 16:30:02 roberto Exp roberto $
+** $Id: liolib.c,v 2.97 2011/02/10 15:35:50 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -31,40 +31,42 @@
 #if defined(LUA_USE_POPEN)	/* { */
 
 #define lua_popen(L,c,m)	((void)L, fflush(NULL), popen(c,m))
+#define lua_pclose(L,file)	((void)L, pclose(file))
+
 
 #if defined(LUA_USE_POSIX)	/* { */
 
 #include <sys/wait.h>
 
-#define lua_pclose(L,file,stat,tp)  \
-  {(void)L;  \
-   stat = pclose(file);  \
-   if (stat == -1)  { /* keep this value */ } \
-   else if (WIFEXITED(stat))   { stat = WEXITSTATUS(stat); tp = "exit"; } \
-   else if (WIFSIGNALED(stat)) { stat = WTERMSIG(stat); tp = "signal"; } \
-   else if (WIFSTOPPED(stat))  { stat = WSTOPSIG(stat); tp = "stop"; } }
-
-#else				/* }{ */
-
-#define lua_pclose(L,file,stat,tp)	{(void)L; stat = pclose(file);}
+/*
+** use appropriate macros to interpret 'pclose' return status
+*/
+#define inspectstat(stat,what)  \
+   if (WIFEXITED(stat)) { stat = WEXITSTATUS(stat); } \
+   else if (WIFSIGNALED(stat)) { stat = WTERMSIG(stat); what = "signal"; }
 
 #endif				/* } */
 
 #elif defined(LUA_WIN)		/* }{ */
 
 #define lua_popen(L,c,m)		((void)L, _popen(c,m))
-#define lua_pclose(L,file,stat,tp)	{(void)L; stat = _pclose(file);}
+#define lua_pclose(L,file)		((void)L, _pclose(file))
+
 
 #else				/* }{ */
 
 #define lua_popen(L,c,m)		((void)((void)c, m),  \
 		luaL_error(L, LUA_QL("popen") " not supported"), (FILE*)0)
-#define lua_pclose(L,file,stat,tp)	{(void)L; (void)file; stat = -1;}
+#define lua_pclose(L,file)		((void)((void)L, file), -1)
+
 
 #endif				/* } */
 
 #endif			/* } */
 
+#if !defined(inspectstat)
+#define inspectstat(stat,what)	/* no op */
+#endif
 
 
 #define IO_INPUT	1
@@ -159,16 +161,21 @@ static int io_noclose (lua_State *L) {
 */
 static int io_pclose (lua_State *L) {
   FILE **p = tofilep(L);
-  int stat;
-  const char *tp = NULL;  /* type of termination (when available) */
-  lua_pclose(L, *p, stat, tp);
-  *p = NULL;
+  int stat = lua_pclose(L, *p);
+  const char *what = "exit";  /* type of termination */
+  *p = NULL;  /* mark stream as closed (for GC) */
   if (stat == -1)  /* error? */
     return pushresult(L, 0, NULL);
   else {
-    lua_pushinteger(L, stat);
-    lua_pushstring(L, tp);
-    return 2;  /* return status and type */
+    inspectstat(stat, what);  /* interpret result from 'pclose' */
+    if (*what == 'e' && stat == 0)  /* successful termination? */
+      return pushresult(L, 1, NULL);
+    else {  /* return nil,what,code */
+      lua_pushnil(L);
+      lua_pushstring(L, what);
+      lua_pushinteger(L, stat);
+      return 3;
+    }
   }
 }
 
@@ -179,7 +186,7 @@ static int io_pclose (lua_State *L) {
 static int io_fclose (lua_State *L) {
   FILE **p = tofilep(L);
   int ok = (fclose(*p) == 0);
-  *p = NULL;
+  *p = NULL;  /* mark stream as closed (for GC) */
   return pushresult(L, ok, NULL);
 }
 
@@ -201,8 +208,7 @@ static int io_close (lua_State *L) {
 
 static int io_gc (lua_State *L) {
   FILE *f = *tofilep(L);
-  /* ignore closed files */
-  if (f != NULL)
+  if (f != NULL)  /* ignore closed files */
     aux_close(L);
   return 0;
 }
@@ -225,8 +231,8 @@ static int io_open (lua_State *L) {
   int i = 0;
   /* check whether 'mode' matches '[rwa]%+?b?' */
   if (!(mode[i] != '\0' && strchr("rwa", mode[i++]) != NULL &&
-       (mode[i] != '+' || ++i) &&    /* skip if char is '+' */
-       (mode[i] != 'b' || ++i) &&    /* skip if char is 'b' */
+       (mode[i] != '+' || ++i) &&  /* skip if char is '+' */
+       (mode[i] != 'b' || ++i) &&  /* skip if char is 'b' */
        (mode[i] == '\0')))
     luaL_error(L, "invalid mode " LUA_QL("%s")
                   " (should match " LUA_QL("[rwa]%%+?b?") ")", mode);
@@ -325,7 +331,7 @@ static int io_lines (lua_State *L) {
   if (lua_isnone(L, 1)) lua_pushnil(L);  /* at least one argument */
   if (lua_isnil(L, 1)) {  /* no file name? */
     lua_rawgeti(L, lua_upvalueindex(1), IO_INPUT);  /* get default input */
-    lua_replace(L, 1);   /* put it at index 1 */
+    lua_replace(L, 1);  /* put it at index 1 */
     tofile(L);  /* check that it's a valid file handle */
     toclose = 0;  /* do not close it after iteration */
   }
@@ -335,7 +341,7 @@ static int io_lines (lua_State *L) {
     *pf = fopen(filename, "r");
     if (*pf == NULL)
       fileerror(L, 1, filename);
-    lua_replace(L, 1);   /* put file at index 1 */
+    lua_replace(L, 1);  /* put file at index 1 */
     toclose = 1;  /* close it after iteration */
   }
   aux_lines(L, toclose);
