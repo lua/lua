@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.105 2011/02/14 14:59:28 roberto Exp roberto $
+** $Id: lparser.c,v 2.106 2011/02/14 16:36:34 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1568,7 +1568,7 @@ static void statement (LexState *ls) {
 
 
 Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
-                    Dyndata *dyd, const char *name) {
+                    Dyndata *dyd, const char *name, int firstchar) {
   LexState lexstate;
   FuncState funcstate;
   BlockCnt bl;
@@ -1578,7 +1578,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
   lexstate.buff = buff;
   lexstate.dyd = dyd;
   dyd->actvar.n = dyd->gt.n = dyd->label.n = 0;
-  luaX_setinput(L, &lexstate, z, tname);
+  luaX_setinput(L, &lexstate, z, tname, firstchar);
   open_mainfunc(&lexstate, &funcstate, &bl);
   luaX_next(&lexstate);  /* read first token */
   statlist(&lexstate);  /* main body */

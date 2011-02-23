@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.14 2010/10/25 14:33:38 roberto Exp roberto $
+** $Id: lundump.c,v 2.15 2011/02/07 19:15:24 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -180,8 +180,8 @@ static void LoadHeader(LoadState* S)
  char h[LUAC_HEADERSIZE];
  char s[LUAC_HEADERSIZE];
  luaU_header(h);
- LoadBlock(S,s,LUAC_HEADERSIZE);
- if (memcmp(h,s,LUAC_HEADERSIZE)!=0) error(S,"incompatible");
+ LoadBlock(S,s,LUAC_HEADERSIZE-1);  /* 1st char already read */
+ if (memcmp(h+1,s,LUAC_HEADERSIZE-1)!=0) error(S,"incompatible");
 }
 
 /*
