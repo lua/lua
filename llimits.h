@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.86 2010/12/23 15:38:28 roberto Exp roberto $
+** $Id: llimits.h,v 1.87 2011/02/01 16:52:38 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -250,7 +250,7 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
 
 
 
-#if defined(ltable_c) && !defined(luai_hashnum)		/* { */
+#if (defined(ltable_c) || defined(luaall_c)) && !defined(luai_hashnum)
 
 #include <float.h>
 #include <math.h>
@@ -259,7 +259,7 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
   n = frexp(n, &e) * (lua_Number)(INT_MAX - DBL_MAX_EXP);  \
   lua_number2int(i, n); i += e; }
 
-#endif							/* } */
+#endif
 
 
 

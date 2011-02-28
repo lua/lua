@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.258 2011/01/07 12:41:48 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.259 2011/01/26 16:30:02 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -395,7 +395,7 @@ static int luaB_select (lua_State *L) {
 
 
 static int pcallcont (lua_State *L) {
-  int errfunc;  /* call has an error function in bottom of the stack */
+  int errfunc = 0;  /* =0 to avoid warnings */
   int status = lua_getctx(L, &errfunc);
   lua_assert(status != LUA_OK);
   lua_pushboolean(L, (status == LUA_YIELD));  /* first result (status) */

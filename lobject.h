@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.45 2010/12/10 14:53:15 roberto Exp roberto $
+** $Id: lobject.h,v 2.46 2011/01/07 15:46:27 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -22,6 +22,11 @@
 #define LUA_TPROTO	LUA_NUMTAGS
 #define LUA_TUPVAL	(LUA_NUMTAGS+1)
 #define LUA_TDEADKEY	(LUA_NUMTAGS+2)
+
+/*
+** number of all possible tags (including LUA_TNONE but excluding DEADKEY)
+*/
+#define LUA_TOTALTAGS	(LUA_TUPVAL+2)
 
 
 /*
