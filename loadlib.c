@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.95 2011/01/07 18:54:49 roberto Exp roberto $
+** $Id: loadlib.c,v 1.96 2011/02/07 19:15:24 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -364,9 +364,15 @@ static const char *findfile (lua_State *L, const char *name,
 }
 
 
-static void loaderror (lua_State *L, const char *filename) {
-  luaL_error(L, "error loading module " LUA_QS " from file " LUA_QS ":\n\t%s",
-                lua_tostring(L, 1), filename, lua_tostring(L, -1));
+static int checkload (lua_State *L, int stat, const char *filename) {
+  if (stat) {  /* module loaded successfully? */
+    lua_pushstring(L, filename);  /* will be 2nd argument to module */
+    return 2;  /* return open function and file name */
+  }
+  else
+    return luaL_error(L, "error loading module " LUA_QS
+                         " from file " LUA_QS ":\n\t%s",
+                          lua_tostring(L, 1), filename, lua_tostring(L, -1));
 }
 
 
@@ -374,10 +380,8 @@ static int loader_Lua (lua_State *L) {
   const char *filename;
   const char *name = luaL_checkstring(L, 1);
   filename = findfile(L, name, "path");
-  if (filename == NULL) return 1;  /* library not found in this path */
-  if (luaL_loadfile(L, filename) != LUA_OK)
-    loaderror(L, filename);
-  return 1;  /* library loaded successfully */
+  if (filename == NULL) return 1;  /* module not found in this path */
+  return checkload(L, (luaL_loadfile(L, filename) == LUA_OK), filename);
 }
 
 
@@ -402,10 +406,8 @@ static int loadfunc (lua_State *L, const char *filename, const char *modname) {
 static int loader_C (lua_State *L) {
   const char *name = luaL_checkstring(L, 1);
   const char *filename = findfile(L, name, "cpath");
-  if (filename == NULL) return 1;  /* library not found in this path */
-  if (loadfunc(L, filename, name) != 0)
-    loaderror(L, filename);
-  return 1;  /* library loaded successfully */
+  if (filename == NULL) return 1;  /* module not found in this path */
+  return checkload(L, (loadfunc(L, filename, name) == 0), filename);
 }
 
 
@@ -419,12 +421,16 @@ static int loader_Croot (lua_State *L) {
   filename = findfile(L, lua_tostring(L, -1), "cpath");
   if (filename == NULL) return 1;  /* root not found */
   if ((stat = loadfunc(L, filename, name)) != 0) {
-    if (stat != ERRFUNC) loaderror(L, filename);  /* real error */
-    lua_pushfstring(L, "\n\tno module " LUA_QS " in file " LUA_QS,
-                       name, filename);
-    return 1;  /* function not found */
+    if (stat != ERRFUNC)
+      return checkload(L, 0, filename);  /* real error */
+    else {  /* open function not found */
+      lua_pushfstring(L, "\n\tno module " LUA_QS " in file " LUA_QS,
+                         name, filename);
+      return 1;
+    }
   }
-  return 1;
+  lua_pushstring(L, filename);  /* will be 2nd argument to module */
+  return 2;
 }
 
 
@@ -457,16 +463,19 @@ static int ll_require (lua_State *L) {
       luaL_error(L, "module " LUA_QS " not found:%s",
                     name, lua_tostring(L, -2));
     lua_pushstring(L, name);
-    lua_call(L, 1, 1);  /* call it */
-    if (lua_isfunction(L, -1))  /* did it find module? */
+    lua_call(L, 1, 2);  /* call it */
+    if (lua_isfunction(L, -2))  /* did it find module? */
       break;  /* module loaded successfully */
-    else if (lua_isstring(L, -1))  /* loader returned error message? */
-      lua_concat(L, 2);  /* accumulate it */
+    else if (lua_isstring(L, -2)) {  /* loader returned error message? */
+      lua_pop(L, 1);  /* remove extra return */
+      lua_concat(L, 2);  /* accumulate error message */
+    }
     else
-      lua_pop(L, 1);
+      lua_pop(L, 2);  /* remove both returns */
   }
   lua_pushstring(L, name);  /* pass name as argument to module */
-  lua_call(L, 1, 1);  /* run loaded module */
+  lua_insert(L, -2);  /* name is 1st argument (before search data) */
+  lua_call(L, 2, 1);  /* run loaded module */
   if (!lua_isnil(L, -1))  /* non-nil return? */
     lua_setfield(L, 2, name);  /* _LOADED[name] = returned value */
   lua_getfield(L, 2, name);
