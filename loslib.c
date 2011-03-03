@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.32 2010/10/05 12:18:03 roberto Exp roberto $
+** $Id: loslib.c,v 1.33 2011/01/26 16:30:02 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -59,37 +59,28 @@
 
 
 
-static int os_pushresult (lua_State *L, int i, const char *filename) {
-  int en = errno;  /* calls to Lua API may change this value */
-  if (i) {
-    lua_pushboolean(L, 1);
+static int os_execute (lua_State *L) {
+  const char *cmd = luaL_optstring(L, 1, NULL);
+  int stat = system(cmd);
+  if (cmd != NULL)
+    return luaL_execresult(L, stat);
+  else {
+    lua_pushboolean(L, stat);  /* true if there is a shell */
     return 1;
   }
-  else {
-    lua_pushnil(L);
-    lua_pushfstring(L, "%s: %s", filename, strerror(en));
-    lua_pushinteger(L, en);
-    return 3;
-  }
-}
-
-
-static int os_execute (lua_State *L) {
-  lua_pushinteger(L, system(luaL_optstring(L, 1, NULL)));
-  return 1;
 }
 
 
 static int os_remove (lua_State *L) {
   const char *filename = luaL_checkstring(L, 1);
-  return os_pushresult(L, remove(filename) == 0, filename);
+  return luaL_fileresult(L, remove(filename) == 0, filename);
 }
 
 
 static int os_rename (lua_State *L) {
   const char *fromname = luaL_checkstring(L, 1);
   const char *toname = luaL_checkstring(L, 2);
-  return os_pushresult(L, rename(fromname, toname) == 0, fromname);
+  return luaL_fileresult(L, rename(fromname, toname) == 0, fromname);
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.97 2011/02/10 15:35:50 roberto Exp roberto $
+** $Id: liolib.c,v 2.98 2011/02/21 19:12:54 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -33,20 +33,6 @@
 #define lua_popen(L,c,m)	((void)L, fflush(NULL), popen(c,m))
 #define lua_pclose(L,file)	((void)L, pclose(file))
 
-
-#if defined(LUA_USE_POSIX)	/* { */
-
-#include <sys/wait.h>
-
-/*
-** use appropriate macros to interpret 'pclose' return status
-*/
-#define inspectstat(stat,what)  \
-   if (WIFEXITED(stat)) { stat = WEXITSTATUS(stat); } \
-   else if (WIFSIGNALED(stat)) { stat = WTERMSIG(stat); what = "signal"; }
-
-#endif				/* } */
-
 #elif defined(LUA_WIN)		/* }{ */
 
 #define lua_popen(L,c,m)		((void)L, _popen(c,m))
@@ -64,34 +50,12 @@
 
 #endif			/* } */
 
-#if !defined(inspectstat)
-#define inspectstat(stat,what)	/* no op */
-#endif
-
 
 #define IO_INPUT	1
 #define IO_OUTPUT	2
 
 
 static const char *const fnames[] = {"input", "output"};
-
-
-static int pushresult (lua_State *L, int i, const char *filename) {
-  int en = errno;  /* calls to Lua API may change this value */
-  if (i) {
-    lua_pushboolean(L, 1);
-    return 1;
-  }
-  else {
-    lua_pushnil(L);
-    if (filename)
-      lua_pushfstring(L, "%s: %s", filename, strerror(en));
-    else
-      lua_pushfstring(L, "%s", strerror(en));
-    lua_pushinteger(L, en);
-    return 3;
-  }
-}
 
 
 static void fileerror (lua_State *L, int arg, const char *filename) {
@@ -162,21 +126,8 @@ static int io_noclose (lua_State *L) {
 static int io_pclose (lua_State *L) {
   FILE **p = tofilep(L);
   int stat = lua_pclose(L, *p);
-  const char *what = "exit";  /* type of termination */
   *p = NULL;  /* mark stream as closed (for GC) */
-  if (stat == -1)  /* error? */
-    return pushresult(L, 0, NULL);
-  else {
-    inspectstat(stat, what);  /* interpret result from 'pclose' */
-    if (*what == 'e' && stat == 0)  /* successful termination? */
-      return pushresult(L, 1, NULL);
-    else {  /* return nil,what,code */
-      lua_pushnil(L);
-      lua_pushstring(L, what);
-      lua_pushinteger(L, stat);
-      return 3;
-    }
-  }
+  return luaL_execresult(L, stat);
 }
 
 
@@ -187,7 +138,7 @@ static int io_fclose (lua_State *L) {
   FILE **p = tofilep(L);
   int ok = (fclose(*p) == 0);
   *p = NULL;  /* mark stream as closed (for GC) */
-  return pushresult(L, ok, NULL);
+  return luaL_fileresult(L, ok, NULL);
 }
 
 
@@ -238,7 +189,7 @@ static int io_open (lua_State *L) {
                   " (should match " LUA_QL("[rwa]%%+?b?") ")", mode);
   pf = newfile(L);
   *pf = fopen(filename, mode);
-  return (*pf == NULL) ? pushresult(L, 0, filename) : 1;
+  return (*pf == NULL) ? luaL_fileresult(L, 0, filename) : 1;
 }
 
 
@@ -251,14 +202,14 @@ static int io_popen (lua_State *L) {
   const char *mode = luaL_optstring(L, 2, "r");
   FILE **pf = newfile(L);
   *pf = lua_popen(L, filename, mode);
-  return (*pf == NULL) ? pushresult(L, 0, filename) : 1;
+  return (*pf == NULL) ? luaL_fileresult(L, 0, filename) : 1;
 }
 
 
 static int io_tmpfile (lua_State *L) {
   FILE **pf = newfile(L);
   *pf = tmpfile();
-  return (*pf == NULL) ? pushresult(L, 0, NULL) : 1;
+  return (*pf == NULL) ? luaL_fileresult(L, 0, NULL) : 1;
 }
 
 
@@ -469,7 +420,7 @@ static int g_read (lua_State *L, FILE *f, int first) {
     }
   }
   if (ferror(f))
-    return pushresult(L, 0, NULL);
+    return luaL_fileresult(L, 0, NULL);
   if (!success) {
     lua_pop(L, 1);  /* remove last result */
     lua_pushnil(L);  /* push nil instead */
@@ -533,7 +484,7 @@ static int g_write (lua_State *L, FILE *f, int arg) {
     }
   }
   if (status) return 1;  /* file handle already on stack top */
-  else return pushresult(L, status, NULL);
+  else return luaL_fileresult(L, status, NULL);
 }
 
 
@@ -557,7 +508,7 @@ static int f_seek (lua_State *L) {
   long offset = luaL_optlong(L, 3, 0);
   op = fseek(f, offset, mode[op]);
   if (op)
-    return pushresult(L, 0, NULL);  /* error */
+    return luaL_fileresult(L, 0, NULL);  /* error */
   else {
     lua_pushinteger(L, ftell(f));
     return 1;
@@ -572,18 +523,18 @@ static int f_setvbuf (lua_State *L) {
   int op = luaL_checkoption(L, 2, NULL, modenames);
   lua_Integer sz = luaL_optinteger(L, 3, LUAL_BUFFERSIZE);
   int res = setvbuf(f, NULL, mode[op], sz);
-  return pushresult(L, res == 0, NULL);
+  return luaL_fileresult(L, res == 0, NULL);
 }
 
 
 
 static int io_flush (lua_State *L) {
-  return pushresult(L, fflush(getiofile(L, IO_OUTPUT)) == 0, NULL);
+  return luaL_fileresult(L, fflush(getiofile(L, IO_OUTPUT)) == 0, NULL);
 }
 
 
 static int f_flush (lua_State *L) {
-  return pushresult(L, fflush(tofile(L)) == 0, NULL);
+  return luaL_fileresult(L, fflush(tofile(L)) == 0, NULL);
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.227 2010/11/10 18:05:36 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.228 2011/01/10 15:51:42 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -201,6 +201,64 @@ LUALIB_API int luaL_error (lua_State *L, const char *fmt, ...) {
   va_end(argp);
   lua_concat(L, 2);
   return lua_error(L);
+}
+
+
+LUALIB_API int luaL_fileresult (lua_State *L, int stat, const char *fname) {
+  int en = errno;  /* calls to Lua API may change this value */
+  if (stat) {
+    lua_pushboolean(L, 1);
+    return 1;
+  }
+  else {
+    lua_pushnil(L);
+    if (fname)
+      lua_pushfstring(L, "%s: %s", fname, strerror(en));
+    else
+      lua_pushfstring(L, "%s", strerror(en));
+    lua_pushinteger(L, en);
+    return 3;
+  }
+}
+
+
+#if !defined(inspectstat)	/* { */
+
+#if defined(LUA_USE_POSIX)
+
+#include <sys/wait.h>
+
+/*
+** use appropriate macros to interpret 'pclose' return status
+*/
+#define inspectstat(stat,what)  \
+   if (WIFEXITED(stat)) { stat = WEXITSTATUS(stat); } \
+   else if (WIFSIGNALED(stat)) { stat = WTERMSIG(stat); what = "signal"; }
+
+#else
+
+#define inspectstat(stat,what)  /* no op */
+
+#endif
+
+#endif				/* } */
+
+
+LUALIB_API int luaL_execresult (lua_State *L, int stat) {
+  const char *what = "exit";  /* type of termination */
+  if (stat == -1)  /* error? */
+    return luaL_fileresult(L, 0, NULL);
+  else {
+    inspectstat(stat, what);  /* interpret result */
+    if (*what == 'e' && stat == 0)  /* successful termination? */
+      return luaL_fileresult(L, 1, NULL);
+    else {  /* return nil,what,code */
+      lua_pushnil(L);
+      lua_pushstring(L, what);
+      lua_pushinteger(L, stat);
+      return 3;
+    }
+  }
 }
 
 /* }====================================================== */
