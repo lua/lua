@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.45 2010/12/10 19:03:46 roberto Exp roberto $
+** $Id: lobject.c,v 2.46 2011/02/07 19:15:24 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -71,7 +71,7 @@ int luaO_ceillog2 (unsigned int x) {
 
 
 int luaO_rawequalObj (const TValue *t1, const TValue *t2) {
-  if (ttype(t1) != ttype(t2)) return 0;
+  if (!ttisequal(t1, t2)) return 0;
   else switch (ttype(t1)) {
     case LUA_TNIL:
       return 1;

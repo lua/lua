@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 2.13 2009/11/19 19:04:58 roberto Exp roberto $
+** $Id: lvm.h,v 2.14 2009/12/17 16:20:01 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -17,8 +17,7 @@
 
 #define tonumber(o,n)	(ttisnumber(o) || (((o) = luaV_tonumber(o,n)) != NULL))
 
-#define equalobj(L,o1,o2) \
-	(ttype(o1) == ttype(o2) && luaV_equalval_(L, o1, o2))
+#define equalobj(L,o1,o2)  (ttisequal(o1, o2) && luaV_equalval_(L, o1, o2))
 
 
 /* not to called directly */
