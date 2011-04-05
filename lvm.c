@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.130 2011/02/07 12:24:42 roberto Exp roberto $
+** $Id: lvm.c,v 2.131 2011/02/07 19:15:24 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -161,7 +161,6 @@ static int call_binTM (lua_State *L, const TValue *p1, const TValue *p2,
   if (ttisnil(tm))
     tm = luaT_gettmbyobj(L, p2, event);  /* try second operand */
   if (ttisnil(tm)) return 0;
-  if (event == TM_UNM) p2 = luaO_nilobject;
   callTM(L, tm, p1, p2, res, 1);
   return 1;
 }
@@ -328,7 +327,7 @@ void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
       break;
     }
   }
-  callTM(L, tm, rb, luaO_nilobject, ra, 1);
+  callTM(L, tm, rb, rb, ra, 1);
 }
 
 
