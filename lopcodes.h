@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.138 2011/02/01 18:03:10 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.139 2011/02/07 12:24:42 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -167,7 +167,8 @@ typedef enum {
 name		args	description
 ------------------------------------------------------------------------*/
 OP_MOVE,/*	A B	R(A) := R(B)					*/
-OP_LOADK,/*	A Bx	R(A) := Kst(Bx - 1)				*/
+OP_LOADK,/*	A Bx	R(A) := Kst(Bx)					*/
+OP_LOADKX,/*	A 	R(A) := Kst(extra arg)				*/
 OP_LOADBOOL,/*	A B C	R(A) := (Bool)B; if (C) pc++			*/
 OP_LOADNIL,/*	A B	R(A) := ... := R(B) := nil			*/
 OP_GETUPVAL,/*	A B	R(A) := UpValue[B]				*/
@@ -242,7 +243,7 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
   (*) In OP_SETLIST, if (B == 0) then B = `top'; if (C == 0) then next
   'instruction' is EXTRAARG(real C).
 
-  (*) In OP_LOADK, if (Bx == 0) then next 'instruction' is EXTRAARG(real Bx).
+  (*) In OP_LOADKX, the next 'instruction' is always EXTRAARG.
 
   (*) For comparisons, A specifies what condition the test should accept
   (true or false).

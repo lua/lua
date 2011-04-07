@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.75 2010/11/30 17:17:51 roberto Exp roberto $
+** $Id: ldebug.c,v 2.76 2011/01/26 16:30:02 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -342,10 +342,11 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
         }
         break;
       }
-      case OP_LOADK: {
+      case OP_LOADK:
+      case OP_LOADKX: {
         if (reg == a) {
-          int b = GETARG_Bx(i);
-          b = (b > 0) ? b - 1 : GETARG_Ax(p->code[pc + 1]);
+          int b = (op == OP_LOADK) ? GETARG_Bx(i)
+                                   : GETARG_Ax(p->code[pc + 1]);
           if (ttisstring(&p->k[b])) {
             what = "constant";
             *name = svalue(&p->k[b]);

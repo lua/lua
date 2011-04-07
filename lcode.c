@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.50 2011/01/31 14:28:41 roberto Exp roberto $
+** $Id: lcode.c,v 2.51 2011/02/01 18:03:10 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -242,11 +242,11 @@ static int codeextraarg (FuncState *fs, int a) {
 }
 
 
-int luaK_codeABxX (FuncState *fs, OpCode o, int reg, int k) {
-  if (k < MAXARG_Bx)
-    return luaK_codeABx(fs, o, reg, k + 1);
+int luaK_codek (FuncState *fs, int reg, int k) {
+  if (k <= MAXARG_Bx)
+    return luaK_codeABx(fs, OP_LOADK, reg, k);
   else {
-    int p = luaK_codeABx(fs, o, reg, 0);
+    int p = luaK_codeABx(fs, OP_LOADKX, reg, 0);
     codeextraarg(fs, k);
     return p;
   }

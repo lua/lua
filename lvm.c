@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.132 2011/04/05 14:26:23 roberto Exp roberto $
+** $Id: lvm.c,v 2.133 2011/04/05 18:32:06 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -522,7 +522,13 @@ void luaV_execute (lua_State *L) {
         setobjs2s(L, ra, RB(i));
       )
       vmcase(OP_LOADK,
-        TValue *rb = KBx(i);
+        TValue *rb = k + GETARG_Bx(i);
+        setobj2s(L, ra, rb);
+      )
+      vmcase(OP_LOADKX,
+        TValue *rb;
+        lua_assert(GET_OPCODE(*ci->u.l.savedpc) == OP_EXTRAARG);
+        rb = k + GETARG_Ax(*ci->u.l.savedpc++);
         setobj2s(L, ra, rb);
       )
       vmcase(OP_LOADBOOL,
