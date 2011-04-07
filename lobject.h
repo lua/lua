@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.47 2011/02/28 17:32:10 roberto Exp roberto $
+** $Id: lobject.h,v 2.48 2011/04/05 14:24:07 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -30,10 +30,23 @@
 
 
 /*
-** Variant tag for light C functions (negative to be considered
-** non collectable by 'iscollectable')
+** tags for Tagged Values have the following use of bits:
+** bits 0-3: actual tag (a LUA_T* value)
+** bit 4: variant bit (for functions, means a light C function)
+** bit 5: whether value is collectable
 */
-#define LUA_TLCF	(~0x0F | LUA_TFUNCTION)
+
+/* Variant tag for light C functions */
+#define BIT_ISVARIANT	(1 << 4)
+#define LUA_TLCF	(LUA_TFUNCTION | BIT_ISVARIANT)
+
+
+/* Bit mark for collectable types */
+#define BIT_ISCOLLECTABLE	(1 << 5)
+
+/* mark a tag as collectable */
+#define ctb(t)			((t) | BIT_ISCOLLECTABLE)
+
 
 /*
 ** Union of all collectable objects
@@ -86,31 +99,32 @@ typedef struct lua_TValue {
 #define NILCONSTANT    {NULL}, LUA_TNIL
 
 
-/*
-** type tag of a TValue
-*/
-#define ttype(o)	((o)->tt_)
+/* raw type tag of a TValue */
+#define rttype(o)	((o)->tt_)
+
+/* type tag of a TValue (bits 0-3 for tags + variant bit) */
+#define ttype(o)	(rttype(o) & 0x1F)
 
 
-/*
-** type tag of a TValue with no variants
-*/
-#define ttypenv(o)	(ttype(o) & 0x0F)
+/* type tag of a TValue with no variants (bits 0-3) */
+#define ttypenv(o)	(rttype(o) & 0x0F)
 
 
 /* Macros to test type */
-#define ttisnil(o)	(ttype(o) == LUA_TNIL)
-#define ttisnumber(o)	(ttype(o) == LUA_TNUMBER)
-#define ttisstring(o)	(ttype(o) == LUA_TSTRING)
-#define ttistable(o)	(ttype(o) == LUA_TTABLE)
-#define ttisfunction(o)	(ttypenv(o) == LUA_TFUNCTION)
-#define ttisclosure(o)	(ttype(o) == LUA_TFUNCTION)
-#define ttislcf(o)	(ttype(o) == LUA_TLCF)
-#define ttisboolean(o)	(ttype(o) == LUA_TBOOLEAN)
-#define ttisuserdata(o)	(ttype(o) == LUA_TUSERDATA)
-#define ttisthread(o)	(ttype(o) == LUA_TTHREAD)
-#define ttislightuserdata(o)	(ttype(o) == LUA_TLIGHTUSERDATA)
-#define ttisdeadkey(o)	(ttype(o) == LUA_TDEADKEY)
+#define ttisnil(o)		(rttype(o) == LUA_TNIL)
+#define ttisboolean(o)		(rttype(o) == LUA_TBOOLEAN)
+#define ttislightuserdata(o)	(rttype(o) == LUA_TLIGHTUSERDATA)
+#define ttisnumber(o)		(rttype(o) == LUA_TNUMBER)
+#define ttisstring(o)		(rttype(o) == ctb(LUA_TSTRING))
+#define ttistable(o)		(rttype(o) == ctb(LUA_TTABLE))
+#define ttisfunction(o)		(ttypenv(o) == LUA_TFUNCTION)
+#define ttisclosure(o)		(rttype(o) == ctb(LUA_TFUNCTION))
+#define ttislcf(o)		(rttype(o) == LUA_TLCF)
+#define ttisuserdata(o)		(rttype(o) == ctb(LUA_TUSERDATA))
+#define ttisthread(o)		(rttype(o) == ctb(LUA_TTHREAD))
+#define ttisdeadkey(o)		(rttype(o) == ctb(LUA_TDEADKEY))
+
+#define ttisequal(o1,o2)	(rttype(o1) == rttype(o2))
 
 /* Macros to access values */
 #define gcvalue(o)	check_exp(iscollectable(o), (o)->value_.gc)
@@ -129,7 +143,7 @@ typedef struct lua_TValue {
 #define l_isfalse(o)	(ttisnil(o) || (ttisboolean(o) && bvalue(o) == 0))
 
 
-#define iscollectable(o)	(ttype(o) >= LUA_TSTRING)
+#define iscollectable(o)	(rttype(o) & BIT_ISCOLLECTABLE)
 
 
 /* Macros for internal tests */
@@ -160,39 +174,39 @@ typedef struct lua_TValue {
 
 #define setgcovalue(L,obj,x) \
   { TValue *io_=(obj); GCObject *i_g=(x); \
-    io_->value_.gc=i_g; io_->tt_=gch(i_g)->tt; }
+    io_->value_.gc=i_g; io_->tt_=ctb(gch(i_g)->tt); }
 
 #define setsvalue(L,obj,x) \
   { TValue *io_=(obj); \
-    io_->value_.gc=cast(GCObject *, (x)); io_->tt_=LUA_TSTRING; \
+    io_->value_.gc=cast(GCObject *, (x)); io_->tt_=ctb(LUA_TSTRING); \
     checkliveness(G(L),io_); }
 
 #define setuvalue(L,obj,x) \
   { TValue *io_=(obj); \
-    io_->value_.gc=cast(GCObject *, (x)); io_->tt_=LUA_TUSERDATA; \
+    io_->value_.gc=cast(GCObject *, (x)); io_->tt_=ctb(LUA_TUSERDATA); \
     checkliveness(G(L),io_); }
 
 #define setthvalue(L,obj,x) \
   { TValue *io_=(obj); \
-    io_->value_.gc=cast(GCObject *, (x)); io_->tt_=LUA_TTHREAD; \
+    io_->value_.gc=cast(GCObject *, (x)); io_->tt_=ctb(LUA_TTHREAD); \
     checkliveness(G(L),io_); }
 
 #define setclvalue(L,obj,x) \
   { TValue *io_=(obj); \
-    io_->value_.gc=cast(GCObject *, (x)); io_->tt_=LUA_TFUNCTION; \
+    io_->value_.gc=cast(GCObject *, (x)); io_->tt_=ctb(LUA_TFUNCTION); \
     checkliveness(G(L),io_); }
 
 #define sethvalue(L,obj,x) \
   { TValue *io_=(obj); \
-    io_->value_.gc=cast(GCObject *, (x)); io_->tt_=LUA_TTABLE; \
+    io_->value_.gc=cast(GCObject *, (x)); io_->tt_=ctb(LUA_TTABLE); \
     checkliveness(G(L),io_); }
 
 #define setptvalue(L,obj,x) \
   { TValue *io_=(obj); \
-    io_->value_.gc=cast(GCObject *, (x)); io_->tt_=LUA_TPROTO; \
+    io_->value_.gc=cast(GCObject *, (x)); io_->tt_=ctb(LUA_TPROTO); \
     checkliveness(G(L),io_); }
 
-#define setdeadvalue(obj)	((obj)->tt_=LUA_TDEADKEY)
+#define setdeadvalue(obj)	((obj)->tt_=ctb(LUA_TDEADKEY))
 
 
 
