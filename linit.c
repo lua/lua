@@ -1,5 +1,5 @@
 /*
-** $Id: linit.c,v 1.30 2010/11/12 15:48:30 roberto Exp roberto $
+** $Id: linit.c,v 1.31 2011/01/26 16:30:02 roberto Exp roberto $
 ** Initialization of libraries for lua.c and other clients
 ** See Copyright Notice in lua.h
 */
@@ -57,7 +57,7 @@ LUALIB_API void luaL_openlibs (lua_State *L) {
     lua_pop(L, 1);  /* remove lib */
   }
   /* add open functions from 'preloadedlibs' into 'package.preload' table */
-  luaL_findtable(L, LUA_REGISTRYINDEX, "_PRELOAD");
+  luaL_getsubtable(L, LUA_REGISTRYINDEX, "_PRELOAD");
   for (lib = preloadedlibs; lib->func; lib++) {
     lua_pushcfunction(L, lib->func);
     lua_setfield(L, -2, lib->name);
