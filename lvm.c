@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.133 2011/04/05 18:32:06 roberto Exp roberto $
+** $Id: lvm.c,v 2.134 2011/04/07 18:14:12 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -454,6 +454,11 @@ void luaV_finishOp (lua_State *L) {
 ** some macros for common tasks in `luaV_execute'
 */
 
+#if !defined luai_runtimecheck
+#define luai_runtimecheck(L, c)		/* void */
+#endif
+
+
 #define RA(i)	(base+GETARG_A(i))
 /* to be used after possible stack reallocation */
 #define RB(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgR, base+GETARG_B(i))
@@ -788,6 +793,7 @@ void luaV_execute (lua_State *L) {
           lua_assert(GET_OPCODE(*ci->u.l.savedpc) == OP_EXTRAARG);
           c = GETARG_Ax(*ci->u.l.savedpc++);
         }
+        luai_runtimecheck(L, ttistable(ra));
         h = hvalue(ra);
         last = ((c-1)*LFIELDS_PER_FLUSH) + n;
         if (last > h->sizearray)  /* needs more space? */
