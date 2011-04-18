@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.77 2011/04/07 18:14:12 roberto Exp roberto $
+** $Id: ldebug.c,v 2.78 2011/04/18 15:02:37 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -383,6 +383,10 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
         /* jump is forward and do not skip `lastpc'? */
         if (pc < dest && dest <= lastpc)
           pc += b;  /* do the jump */
+        break;
+      }
+      case OP_TEST: {
+        if (reg == a) what = NULL;  /* jumped code can change 'a' */
         break;
       }
       default:
