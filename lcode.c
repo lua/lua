@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.51 2011/02/01 18:03:10 roberto Exp roberto $
+** $Id: lcode.c,v 2.52 2011/04/07 18:14:12 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -35,19 +35,23 @@ static int isnumeral(expdesc *e) {
 
 void luaK_nil (FuncState *fs, int from, int n) {
   Instruction *previous;
+  int l = from + n - 1;  /* last register to set nil */
   if (fs->pc > fs->lasttarget) {  /* no jumps to current position? */
     previous = &fs->f->code[fs->pc-1];
     if (GET_OPCODE(*previous) == OP_LOADNIL) {
       int pfrom = GETARG_A(*previous);
-      int pto = GETARG_B(*previous);
-      if (pfrom <= from && from <= pto+1) {  /* can connect both? */
-        if (from+n-1 > pto)
-          SETARG_B(*previous, from+n-1);
+      int pl = pfrom + GETARG_B(*previous);
+      if ((pfrom <= from && from <= pl + 1) ||
+          (from <= pfrom && pfrom <= l + 1)) {  /* can connect both? */
+        if (pfrom < from) from = pfrom;  /* from = min(from, pfrom) */ 
+        if (pl > l) l = pl;  /* l = max(l, pl) */ 
+        SETARG_A(*previous, from);
+        SETARG_B(*previous, l - from);
         return;
       }
-    }
+    }  /* else go through */
   }
-  luaK_codeABC(fs, OP_LOADNIL, from, from+n-1, 0);  /* else no optimization */
+  luaK_codeABC(fs, OP_LOADNIL, from, n - 1, 0);  /* else no optimization */
 }
 
 

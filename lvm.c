@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.134 2011/04/07 18:14:12 roberto Exp roberto $
+** $Id: lvm.c,v 2.135 2011/04/18 19:48:53 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -541,10 +541,10 @@ void luaV_execute (lua_State *L) {
         if (GETARG_C(i)) ci->u.l.savedpc++;  /* skip next instruction (if C) */
       )
       vmcase(OP_LOADNIL,
-        TValue *rb = RB(i);
+        int b = GETARG_B(i);
         do {
-          setnilvalue(rb--);
-        } while (rb >= ra);
+          setnilvalue(ra++);
+        } while (b--);
       )
       vmcase(OP_GETUPVAL,
         int b = GETARG_B(i);

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.78 2011/04/18 15:02:37 roberto Exp roberto $
+** $Id: ldebug.c,v 2.79 2011/04/18 19:49:13 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -355,8 +355,8 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
         break;
       }
       case OP_LOADNIL: {
-        int b = GETARG_B(i);  /* move from 'b' to 'a' */
-        if (a <= reg && reg <= b)  /* set registers from 'a' to 'b' */
+        int b = GETARG_B(i);
+        if (a <= reg && reg <= a + b)  /* set registers from 'a' to 'a+b' */
           what = NULL;
         break;
       }
