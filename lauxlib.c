@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.229 2011/03/03 16:34:46 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.230 2011/04/08 19:17:36 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -825,7 +825,10 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
     luaL_pushmodule(L, libname, libsize(l));  /* get/create library table */
     lua_insert(L, -(nup + 1));  /* move library table to below upvalues */
   }
-  luaL_setfuncs(L, l, nup);
+  if (l)
+    luaL_setfuncs(L, l, nup);
+  else
+    lua_pop(L, nup);  /* remove upvalues */
 }
 
 #endif
@@ -838,7 +841,7 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
 */
 LUALIB_API void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup) {
   luaL_checkstack(L, nup, "too many upvalues");
-  for (; l && l->name; l++) {  /* fill the table with given functions */
+  for (; l->name != NULL; l++) {  /* fill the table with given functions */
     int i;
     for (i = 0; i < nup; i++)  /* copy upvalues to the top */
       lua_pushvalue(L, -nup);
