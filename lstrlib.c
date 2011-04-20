@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.164 2011/02/07 19:15:24 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.165 2011/03/18 19:02:33 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -743,7 +743,7 @@ static int str_gsub (lua_State *L) {
 ** the previous length
 */
 #if !defined(LUA_INTFRMLEN)	/* { */
-#if defined(LUA_USELONGLONG)
+#if defined(LUA_USE_LONGLONG)
 
 #define LUA_INTFRMLEN           "ll"
 #define LUA_INTFRM_T            long long
