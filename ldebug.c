@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.79 2011/04/18 19:49:13 roberto Exp roberto $
+** $Id: ldebug.c,v 2.80 2011/04/19 16:22:13 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -284,15 +284,32 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
 ** =======================================================
 */
 
+static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
+                               const char **name);
 
-static void kname (Proto *p, int c, int reg, const char *what,
-                   const char **name) {
-  if (c == reg && what && *what == 'c')
-    return;  /* index is a constant; name already correct */
-  else if (ISK(c) && ttisstring(&p->k[INDEXK(c)]))
-    *name = svalue(&p->k[INDEXK(c)]);
-  else
-    *name = "?";
+
+/*
+** find a "name" for the RK value 'c'
+*/
+static void kname (lua_State *L, CallInfo *ci, int c, int oreg,
+                   const char *what, const char **name) {
+  if (ISK(c)) {  /* is 'c' a constant? */
+    TValue *kvalue = &ci_func(ci)->l.p->k[INDEXK(c)];
+    if (ttisstring(kvalue)) {  /* literal constant? */
+      *name = svalue(kvalue);  /* it is its own name */
+      return;
+    }
+    /* else no reasonable name found */
+  }
+  else {  /* 'c' is a register */
+    if (c != oreg)  /* not the original register? */
+      what = getobjname(L, ci, c, name); /* search for 'c' */
+    if (what && *what == 'c') {  /* found a constant name? */
+      return;  /* 'name' already filled */
+    }
+    /* else no reasonable name found */
+  }
+  *name = "?";  /* no reasonable name found */
 }
 
 
@@ -328,7 +345,7 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
           const char *vn = (op == OP_GETTABLE)  /* name of indexed variable */
                            ? luaF_getlocalname(p, t + 1, pc)
                            : getstr(p->upvalues[t].name);
-          kname(p, k, a, what, name);
+          kname(L, ci, k, a, what, name);
           what = (vn && strcmp(vn, LUA_ENV) == 0) ? "global" : "field";
         }
         break;
@@ -363,7 +380,7 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
       case OP_SELF: {
         if (reg == a) {
           int k = GETARG_C(i);  /* key index */
-          kname(p, k, a, what, name);
+          kname(L, ci, k, a, what, name);
           what = "method";
         }
         break;
@@ -443,7 +460,10 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
 
 
 
-/* only ANSI way to check whether a pointer points to an array */
+/*
+** only ANSI way to check whether a pointer points to an array
+** (used only for error messages, so efficiency is not a big concern)
+*/
 static int isinstack (CallInfo *ci, const TValue *o) {
   StkId p;
   for (p = ci->u.l.base; p < ci->top; p++)

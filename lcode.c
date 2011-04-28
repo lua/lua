@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.52 2011/04/07 18:14:12 roberto Exp roberto $
+** $Id: lcode.c,v 2.53 2011/04/19 16:22:13 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -581,15 +581,15 @@ void luaK_storevar (FuncState *fs, expdesc *var, expdesc *ex) {
 
 
 void luaK_self (FuncState *fs, expdesc *e, expdesc *key) {
-  int func;
+  int ereg;
   luaK_exp2anyreg(fs, e);
+  ereg = e->u.info;  /* register where 'e' was placed */
   freeexp(fs, e);
-  func = fs->freereg;
-  luaK_codeABC(fs, OP_SELF, func, e->u.info, luaK_exp2RK(fs, key));
-  freeexp(fs, key);
-  luaK_reserveregs(fs, 2);
-  e->u.info = func;
+  e->u.info = fs->freereg;  /* base register for op_self */
   e->k = VNONRELOC;
+  luaK_reserveregs(fs, 2);  /* function and 'self' produced by op_self */
+  luaK_codeABC(fs, OP_SELF, e->u.info, ereg, luaK_exp2RK(fs, key));
+  freeexp(fs, key);
 }
 
 
