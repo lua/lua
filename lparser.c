@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.107 2011/02/23 13:13:10 roberto Exp roberto $
+** $Id: lparser.c,v 2.108 2011/04/18 19:48:24 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -455,7 +455,7 @@ static void breaklabel (LexState *ls) {
 
 /*
 ** generates an error for an undefined 'goto'; choose appropriate
-** message when label name is a resserved word (which can only be 'break')
+** message when label name is a reserved word (which can only be 'break')
 */
 static void undefgoto (LexState *ls, Labeldesc *gt) {
   const char *msg = (gt->name->tsv.reserved > 0)
