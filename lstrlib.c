@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.165 2011/03/18 19:02:33 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.166 2011/04/20 16:36:28 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -118,10 +118,10 @@ static int str_rep (lua_State *L) {
     luaL_Buffer b;
     char *p = luaL_buffinitsize(L, &b, totallen);
     while (n-- > 1) {  /* first n-1 copies (followed by separator) */
-      memcpy(p, s, l); p += l;
-      memcpy(p, sep, lsep); p += lsep;
+      memcpy(p, s, l * sizeof(char)); p += l;
+      memcpy(p, sep, lsep * sizeof(char)); p += lsep;
     }
-    memcpy(p, s, l);  /* last copy (not followed by separator) */
+    memcpy(p, s, l * sizeof(char));  /* last copy (not followed by separator) */
     luaL_pushresultsize(&b, totallen);
   }
   return 1;
@@ -820,7 +820,7 @@ static const char *scanformat (lua_State *L, const char *strfrmt, char *form) {
   if (isdigit(uchar(*p)))
     luaL_error(L, "invalid format (width or precision too long)");
   *(form++) = '%';
-  memcpy(form, strfrmt, p - strfrmt + 1);
+  memcpy(form, strfrmt, (p - strfrmt + 1) * sizeof(char));
   form += p - strfrmt + 1;
   *form = '\0';
   return p;

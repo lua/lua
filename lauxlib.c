@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.230 2011/04/08 19:17:36 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.231 2011/04/19 18:29:41 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -442,8 +442,10 @@ LUALIB_API char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz) {
       newsize = B->n + sz;
     if (newsize < B->n || newsize - B->n < sz)
       luaL_error(L, "buffer too large");
-    newbuff = (char *)lua_newuserdata(L, newsize);  /* create larger buffer */
-    memcpy(newbuff, B->b, B->n);  /* move content to new buffer */
+    /* create larger buffer */
+    newbuff = (char *)lua_newuserdata(L, newsize * sizeof(char));
+    /* move content to new buffer */
+    memcpy(newbuff, B->b, B->n * sizeof(char));
     if (buffonstack(B))
       lua_remove(L, -2);  /* remove old buffer */
     B->b = newbuff;
@@ -455,7 +457,7 @@ LUALIB_API char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz) {
 
 LUALIB_API void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l) {
   char *b = luaL_prepbuffsize(B, l);
-  memcpy(b, s, l);
+  memcpy(b, s, l * sizeof(char));
   luaL_addsize(B, l);
 }
 

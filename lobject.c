@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.46 2011/02/07 19:15:24 roberto Exp roberto $
+** $Id: lobject.c,v 2.47 2011/04/05 18:32:06 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -264,19 +264,20 @@ const char *luaO_pushfstring (lua_State *L, const char *fmt, ...) {
 }
 
 
+/* number of chars of a literal string without the ending \0 */
+#define LL(x)	(sizeof(x)/sizeof(char) - 1)
 
-#define LL(x)	((sizeof(x) - 1)/sizeof(char))
 #define RETS	"..."
 #define PRE	"[string \""
 #define POS	"\"]"
 
-#define addstr(a,b,l)	( memcpy(a,b,l), a += (l) )
+#define addstr(a,b,l)	( memcpy(a,b,(l) * sizeof(char)), a += (l) )
 
 void luaO_chunkid (char *out, const char *source, size_t bufflen) {
   size_t l = strlen(source);
   if (*source == '=') {  /* 'literal' source */
     if (l <= bufflen)  /* small enough? */
-      memcpy(out, source + 1, l);
+      memcpy(out, source + 1, l * sizeof(char));
     else {  /* truncate it */
       addstr(out, source + 1, bufflen - 1);
       *out = '\0';
@@ -284,11 +285,11 @@ void luaO_chunkid (char *out, const char *source, size_t bufflen) {
   }
   else if (*source == '@') {  /* file name */
     if (l <= bufflen)  /* small enough? */
-      memcpy(out, source + 1, l);
+      memcpy(out, source + 1, l * sizeof(char));
     else {  /* add '...' before rest of name */
       addstr(out, RETS, LL(RETS));
       bufflen -= LL(RETS);
-      memcpy(out, source + 1 + l - bufflen, bufflen);
+      memcpy(out, source + 1 + l - bufflen, bufflen * sizeof(char));
     }
   }
   else {  /* string; format as [string "source"] */
@@ -304,6 +305,7 @@ void luaO_chunkid (char *out, const char *source, size_t bufflen) {
       addstr(out, source, l);
       addstr(out, RETS, LL(RETS));
     }
-    memcpy(out, POS, LL(POS) + 1);
+    memcpy(out, POS, (LL(POS) + 1) * sizeof(char));
   }
 }
+
