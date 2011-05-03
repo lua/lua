@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.68 2011/02/07 17:14:50 roberto Exp roberto $
+** $Id: llex.h,v 1.69 2011/02/23 13:13:10 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -13,8 +13,6 @@
 
 #define FIRST_RESERVED	257
 
-/* maximum length of a reserved word */
-#define TOKEN_LEN	(sizeof("function")/sizeof(char))
 
 
 /*
