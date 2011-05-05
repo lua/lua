@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.135 2011/04/18 19:48:53 roberto Exp roberto $
+** $Id: lvm.c,v 2.136 2011/04/19 16:22:13 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -616,7 +616,8 @@ void luaV_execute (lua_State *L) {
         }
       )
       vmcase(OP_NOT,
-        int res = l_isfalse(RB(i));  /* next assignment may change this value */
+        TValue *rb = RB(i);
+        int res = l_isfalse(rb);  /* next assignment may change this value */
         setbvalue(ra, res);
       )
       vmcase(OP_LEN,
