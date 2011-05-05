@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.51 2011/05/04 17:04:06 roberto Exp roberto $
+** $Id: lobject.h,v 2.52 2011/05/05 15:53:23 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -152,10 +152,9 @@ typedef struct lua_TValue {
 /* Macros for internal tests */
 #define righttt(obj)		(ttype(obj) == gcvalue(obj)->gch.tt)
 
-#define checkconsistency(obj)	lua_assert(!iscollectable(obj) || righttt(obj))
-
 #define checkliveness(g,obj) \
-  lua_assert(!iscollectable(obj) || (righttt(obj) && !isdead(g,gcvalue(obj))))
+  lua_longassert(!iscollectable(obj) || \
+                 (righttt(obj) && !isdead(g,gcvalue(obj))))
 
 
 /* Macros to set values */

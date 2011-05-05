@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.87 2011/02/01 16:52:38 roberto Exp roberto $
+** $Id: llimits.h,v 1.88 2011/02/28 17:32:10 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -59,9 +59,12 @@ typedef LUAI_UACNUMBER l_uacNumber;
 /* internal assertions for in-house debugging */
 #if defined(lua_assert)
 #define check_exp(c,e)		(lua_assert(c), (e))
+/* to avoid problems with conditions too long */
+#define lua_longassert(c)	{ if (!(c)) lua_assert(0); }
 #else
 #define lua_assert(c)		/* empty */
 #define check_exp(c,e)		(e)
+#define lua_longassert(c)	/* empty */
 #endif
 
 /*
