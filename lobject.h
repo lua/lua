@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.50 2011/05/03 16:01:57 roberto Exp roberto $
+** $Id: lobject.h,v 2.51 2011/05/04 17:04:06 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -99,6 +99,9 @@ typedef struct lua_TValue {
 #define NILCONSTANT    {NULL}, LUA_TNIL
 
 
+#define val_(o)		((o)->value_)
+
+
 /* raw type tag of a TValue */
 #define rttype(o)	((o)->tt_)
 
@@ -111,10 +114,10 @@ typedef struct lua_TValue {
 
 
 /* Macros to test type */
+#define ttisnumber(o)		(rttype(o) == LUA_TNUMBER)
 #define ttisnil(o)		(rttype(o) == LUA_TNIL)
 #define ttisboolean(o)		(rttype(o) == LUA_TBOOLEAN)
 #define ttislightuserdata(o)	(rttype(o) == LUA_TLIGHTUSERDATA)
-#define ttisnumber(o)		(rttype(o) == LUA_TNUMBER)
 #define ttisstring(o)		(rttype(o) == ctb(LUA_TSTRING))
 #define ttistable(o)		(rttype(o) == ctb(LUA_TTABLE))
 #define ttisfunction(o)		(ttypenv(o) == LUA_TFUNCTION)
@@ -127,18 +130,18 @@ typedef struct lua_TValue {
 #define ttisequal(o1,o2)	(rttype(o1) == rttype(o2))
 
 /* Macros to access values */
-#define gcvalue(o)	check_exp(iscollectable(o), (o)->value_.gc)
-#define pvalue(o)	check_exp(ttislightuserdata(o), (o)->value_.p)
-#define nvalue(o)	check_exp(ttisnumber(o), (o)->value_.n)
-#define rawtsvalue(o)	check_exp(ttisstring(o), &(o)->value_.gc->ts)
+#define nvalue(o)	check_exp(ttisnumber(o), val_(o).n)
+#define gcvalue(o)	check_exp(iscollectable(o), val_(o).gc)
+#define pvalue(o)	check_exp(ttislightuserdata(o), val_(o).p)
+#define rawtsvalue(o)	check_exp(ttisstring(o), &val_(o).gc->ts)
 #define tsvalue(o)	(&rawtsvalue(o)->tsv)
-#define rawuvalue(o)	check_exp(ttisuserdata(o), &(o)->value_.gc->u)
+#define rawuvalue(o)	check_exp(ttisuserdata(o), &val_(o).gc->u)
 #define uvalue(o)	(&rawuvalue(o)->uv)
-#define clvalue(o)	check_exp(ttisclosure(o), &(o)->value_.gc->cl)
-#define fvalue(o)	check_exp(ttislcf(o), (o)->value_.f)
-#define hvalue(o)	check_exp(ttistable(o), &(o)->value_.gc->h)
-#define bvalue(o)	check_exp(ttisboolean(o), (o)->value_.b)
-#define thvalue(o)	check_exp(ttisthread(o), &(o)->value_.gc->th)
+#define clvalue(o)	check_exp(ttisclosure(o), &val_(o).gc->cl)
+#define fvalue(o)	check_exp(ttislcf(o), val_(o).f)
+#define hvalue(o)	check_exp(ttistable(o), &val_(o).gc->h)
+#define bvalue(o)	check_exp(ttisboolean(o), val_(o).b)
+#define thvalue(o)	check_exp(ttisthread(o), &val_(o).gc->th)
 
 #define l_isfalse(o)	(ttisnil(o) || (ttisboolean(o) && bvalue(o) == 0))
 
@@ -156,64 +159,66 @@ typedef struct lua_TValue {
 
 
 /* Macros to set values */
-#define setnilvalue(obj) ((obj)->tt_=LUA_TNIL)
+#define settt_(o,t)	((o)->tt_=(t))
 
 #define setnvalue(obj,x) \
-  { TValue *io_=(obj); io_->value_.n=(x); io_->tt_=LUA_TNUMBER; }
+  { TValue *io=(obj); val_(io).n=(x); settt_(io, LUA_TNUMBER); }
+
+#define changenvalue(o,x)  check_exp(ttisnumber(o), val_(o).n=(x))
+
+#define setnilvalue(obj) settt_(obj, LUA_TNIL)
 
 #define setfvalue(obj,x) \
-  { TValue *io_=(obj); io_->value_.f=(x); io_->tt_=LUA_TLCF; }
-
-#define changenvalue(o,x)  check_exp(ttisnumber(o), (o)->value_.n=(x))
+  { TValue *io=(obj); val_(io).f=(x); settt_(io, LUA_TLCF); }
 
 #define setpvalue(obj,x) \
-  { TValue *io_=(obj); io_->value_.p=(x); io_->tt_=LUA_TLIGHTUSERDATA; }
+  { TValue *io=(obj); val_(io).p=(x); settt_(io, LUA_TLIGHTUSERDATA); }
 
 #define setbvalue(obj,x) \
-  { TValue *io_=(obj); io_->value_.b=(x); io_->tt_=LUA_TBOOLEAN; }
+  { TValue *io=(obj); val_(io).b=(x); settt_(io, LUA_TBOOLEAN); }
 
 #define setgcovalue(L,obj,x) \
-  { TValue *io_=(obj); GCObject *i_g=(x); \
-    io_->value_.gc=i_g; io_->tt_=ctb(gch(i_g)->tt); }
+  { TValue *io=(obj); GCObject *i_g=(x); \
+    val_(io).gc=i_g; settt_(io, ctb(gch(i_g)->tt)); }
 
 #define setsvalue(L,obj,x) \
-  { TValue *io_=(obj); \
-    io_->value_.gc=cast(GCObject *, (x)); io_->tt_=ctb(LUA_TSTRING); \
-    checkliveness(G(L),io_); }
+  { TValue *io=(obj); \
+    val_(io).gc=cast(GCObject *, (x)); settt_(io, ctb(LUA_TSTRING)); \
+    checkliveness(G(L),io); }
 
 #define setuvalue(L,obj,x) \
-  { TValue *io_=(obj); \
-    io_->value_.gc=cast(GCObject *, (x)); io_->tt_=ctb(LUA_TUSERDATA); \
-    checkliveness(G(L),io_); }
+  { TValue *io=(obj); \
+    val_(io).gc=cast(GCObject *, (x)); settt_(io, ctb(LUA_TUSERDATA)); \
+    checkliveness(G(L),io); }
 
 #define setthvalue(L,obj,x) \
-  { TValue *io_=(obj); \
-    io_->value_.gc=cast(GCObject *, (x)); io_->tt_=ctb(LUA_TTHREAD); \
-    checkliveness(G(L),io_); }
+  { TValue *io=(obj); \
+    val_(io).gc=cast(GCObject *, (x)); settt_(io, ctb(LUA_TTHREAD)); \
+    checkliveness(G(L),io); }
 
 #define setclvalue(L,obj,x) \
-  { TValue *io_=(obj); \
-    io_->value_.gc=cast(GCObject *, (x)); io_->tt_=ctb(LUA_TFUNCTION); \
-    checkliveness(G(L),io_); }
+  { TValue *io=(obj); \
+    val_(io).gc=cast(GCObject *, (x)); settt_(io, ctb(LUA_TFUNCTION)); \
+    checkliveness(G(L),io); }
 
 #define sethvalue(L,obj,x) \
-  { TValue *io_=(obj); \
-    io_->value_.gc=cast(GCObject *, (x)); io_->tt_=ctb(LUA_TTABLE); \
-    checkliveness(G(L),io_); }
+  { TValue *io=(obj); \
+    val_(io).gc=cast(GCObject *, (x)); settt_(io, ctb(LUA_TTABLE)); \
+    checkliveness(G(L),io); }
 
 #define setptvalue(L,obj,x) \
-  { TValue *io_=(obj); \
-    io_->value_.gc=cast(GCObject *, (x)); io_->tt_=ctb(LUA_TPROTO); \
-    checkliveness(G(L),io_); }
+  { TValue *io=(obj); \
+    val_(io).gc=cast(GCObject *, (x)); settt_(io, ctb(LUA_TPROTO)); \
+    checkliveness(G(L),io); }
 
-#define setdeadvalue(obj)	((obj)->tt_=ctb(LUA_TDEADKEY))
+#define setdeadvalue(obj)	settt_(obj, ctb(LUA_TDEADKEY))
 
 
 
 #define setobj(L,obj1,obj2) \
-	{ const TValue *o2_=(obj2); TValue *o1_=(obj1); \
-	  o1_->value_ = o2_->value_; o1_->tt_=o2_->tt_; \
-	  checkliveness(G(L),o1_); }
+	{ const TValue *io2=(obj2); TValue *io1=(obj1); \
+	  io1->value_ = io2->value_; io1->tt_ = io2->tt_; \
+	  checkliveness(G(L),io1); }
 
 
 /*
