@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.107 2010/12/20 19:40:07 roberto Exp roberto $
+** $Id: lgc.c,v 2.108 2010/12/29 18:00:23 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -71,6 +71,10 @@
 #define isfinalized(x)		testbit(gch(x)->marked, FINALIZEDBIT)
 
 #define checkdeadkey(n)	lua_assert(!ttisdeadkey(gkey(n)) || ttisnil(gval(n)))
+
+
+#define checkconsistency(obj)  \
+  lua_longassert(!iscollectable(obj) || righttt(obj))
 
 
 #define markvalue(g,o) { checkconsistency(o); \
