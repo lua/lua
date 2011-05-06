@@ -18,9 +18,9 @@ CWARNSC=-pedantic -Wextra \
 	-Wstrict-aliasing \
         # the next warnings generate to much noise, so they are disabled
 	# -Wlogical-op \
+	# -Wstrict-overflow=2 \
 	# -Wformat=2 \
-	# -Wstrict-overflow=5 \
-	#  -Wcast-qual \
+	# -Wcast-qual \
 
 # The next warnings are not valid for C++
 CWARNS= $(CWARNSC) \
@@ -35,14 +35,16 @@ CWARNS= $(CWARNSC) \
 # -DEXTERNMEMCHECK -DHARDSTACKTESTS -DHARDMEMTESTS  -DTRACEMEM='"tempmem"'
 # -g -DLUA_USER_H='"ltests.h"'
 # -fomit-frame-pointer #-pg -malign-double
-TESTS= -DLUA_USER_H='"ltests.h"'  # -g -O0
+# TESTS= -DLUA_USER_H='"ltests.h"'  # -g -O0 
 
-LOCAL = $(TESTS) $(CWARNS)
+# -mtune=native -fomit-frame-pointer 
+LOCAL = $(TESTS) $(CWARNS) -g
+
 
 
 # enable Linux goodies
-MYCFLAGS= $(LOCAL) -DLUA_USE_LINUX -DLUA_COMPAT_ALL -g
-MYLDFLAGS= -Wl,-E -g
+MYCFLAGS= $(LOCAL) -DLUA_USE_LINUX -DLUA_COMPAT_ALL
+MYLDFLAGS= $(LOCAL) -Wl,-E
 MYLIBS= -ldl -lreadline -lhistory -lncurses
 
 
