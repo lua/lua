@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.116 2011/04/08 19:17:36 roberto Exp roberto $
+** $Id: ltests.c,v 2.117 2011/05/05 16:18:53 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -83,7 +83,7 @@ typedef union Header {
 } Header;
 
 
-#ifndef EXTERNMEMCHECK
+#if !defined(EXTERNMEMCHECK)
 
 /* full memory check */
 #define MARKSIZE	16  /* size of marks after each block */
