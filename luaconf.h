@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.156 2011/04/20 18:25:54 roberto Exp roberto $
+** $Id: luaconf.h,v 1.157 2011/04/29 13:56:28 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -209,10 +209,11 @@
 
 
 /*
-@@ luai_writestring defines how 'print' prints its results.
+@@ luai_writestring/luai_writeline define how 'print' prints its results.
 */
 #include <stdio.h>
 #define luai_writestring(s,l)	fwrite((s), sizeof(char), (l), stdout)
+#define luai_writeline()	(luai_writestring("\n", 1), fflush(stdout))
 
 /*
 @@ luai_writestringerror defines how to print error messages.

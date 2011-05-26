@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.197 2011/03/14 15:39:42 roberto Exp roberto $
+** $Id: lua.c,v 1.198 2011/05/03 16:01:57 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -183,7 +183,8 @@ static int docall (lua_State *L, int narg, int nres) {
 
 
 static void print_version (void) {
-  luai_writestring(LUA_COPYRIGHT "\n", sizeof(LUA_COPYRIGHT) + 1);
+  luai_writestring(LUA_COPYRIGHT, sizeof(LUA_COPYRIGHT));
+  luai_writeline();
 }
 
 
@@ -320,7 +321,7 @@ static void dotty (lua_State *L) {
     }
   }
   lua_settop(L, 0);  /* clear stack */
-  luai_writestring("\n", 1);
+  luai_writeline();
   progname = oldprogname;
 }
 
