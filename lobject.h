@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.52 2011/05/05 15:53:23 roberto Exp roberto $
+** $Id: lobject.h,v 2.53 2011/05/05 19:43:14 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -114,18 +114,19 @@ typedef struct lua_TValue {
 
 
 /* Macros to test type */
-#define ttisnumber(o)		(rttype(o) == LUA_TNUMBER)
-#define ttisnil(o)		(rttype(o) == LUA_TNIL)
-#define ttisboolean(o)		(rttype(o) == LUA_TBOOLEAN)
-#define ttislightuserdata(o)	(rttype(o) == LUA_TLIGHTUSERDATA)
-#define ttisstring(o)		(rttype(o) == ctb(LUA_TSTRING))
-#define ttistable(o)		(rttype(o) == ctb(LUA_TTABLE))
+#define checktag(o,t)		(rttype(o) == (t))
+#define ttisnumber(o)		checktag((o), LUA_TNUMBER)
+#define ttisnil(o)		checktag((o), LUA_TNIL)
+#define ttisboolean(o)		checktag((o), LUA_TBOOLEAN)
+#define ttislightuserdata(o)	checktag((o), LUA_TLIGHTUSERDATA)
+#define ttisstring(o)		checktag((o), ctb(LUA_TSTRING))
+#define ttistable(o)		checktag((o), ctb(LUA_TTABLE))
 #define ttisfunction(o)		(ttypenv(o) == LUA_TFUNCTION)
-#define ttisclosure(o)		(rttype(o) == ctb(LUA_TFUNCTION))
-#define ttislcf(o)		(rttype(o) == LUA_TLCF)
-#define ttisuserdata(o)		(rttype(o) == ctb(LUA_TUSERDATA))
-#define ttisthread(o)		(rttype(o) == ctb(LUA_TTHREAD))
-#define ttisdeadkey(o)		(rttype(o) == ctb(LUA_TDEADKEY))
+#define ttisclosure(o)		checktag((o), ctb(LUA_TFUNCTION))
+#define ttislcf(o)		checktag((o), LUA_TLCF)
+#define ttisuserdata(o)		checktag((o), ctb(LUA_TUSERDATA))
+#define ttisthread(o)		checktag((o), ctb(LUA_TTHREAD))
+#define ttisdeadkey(o)		checktag((o), ctb(LUA_TDEADKEY))
 
 #define ttisequal(o1,o2)	(rttype(o1) == rttype(o2))
 
