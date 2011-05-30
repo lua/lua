@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.92 2011/02/07 17:14:50 roberto Exp roberto $
+** $Id: ldo.c,v 2.93 2011/02/23 13:13:10 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -299,16 +299,10 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
   if (!ttisfunction(func)) /* `func' is not a function? */
     func = tryfuncTM(L, func);  /* check the `function' tag method */
   funcr = savestack(L, func);
-  if (ttislcf(func)) {  /* light C function? */
-    f = fvalue(func);  /* get it */
-    goto isCfunc;  /* go to call it */
-  }
-  cl = clvalue(func);
-  if (cl->c.isC) {  /* C closure? */
+  if (ttislcf(func) || (cl = clvalue(func), cl->c.isC)) {  /* C function? */
     CallInfo *ci;
     int n;
-    f = cl->c.f;
-  isCfunc:  /* call C function 'f' */
+    f = (ttislcf(func) ? fvalue(func) : cl->c.f);
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
     ci = next_ci(L);  /* now 'enter' new function */
     ci->nresults = nresults;
