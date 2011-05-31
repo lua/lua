@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.54 2011/04/05 18:32:28 roberto Exp roberto $
+** $Id: ltable.c,v 2.55 2011/05/02 16:45:32 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -33,6 +33,7 @@
 #include "lstate.h"
 #include "lstring.h"
 #include "ltable.h"
+#include "lvm.h"
 
 
 /*
@@ -148,7 +149,7 @@ static int findindex (lua_State *L, Table *t, StkId key) {
     Node *n = mainposition(t, key);
     do {  /* check whether `key' is somewhere in the chain */
       /* key may be dead already, but it is ok to use it in `next' */
-      if (luaO_rawequalObj(gkey(n), key) ||
+      if (luaV_rawequalObj(gkey(n), key) ||
             (ttisdeadkey(gkey(n)) && iscollectable(key) &&
              gcvalue(gkey(n)) == gcvalue(key))) {
         i = cast_int(n - gnode(t, 0));  /* key index in hash table */
@@ -481,7 +482,7 @@ const TValue *luaH_get (Table *t, const TValue *key) {
     default: {
       Node *n = mainposition(t, key);
       do {  /* check whether `key' is somewhere in the chain */
-        if (luaO_rawequalObj(gkey(n), key))
+        if (luaV_rawequalObj(gkey(n), key))
           return gval(n);  /* that's it */
         else n = gnext(n);
       } while (n);

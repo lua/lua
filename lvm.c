@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.136 2011/04/19 16:22:13 roberto Exp roberto $
+** $Id: lvm.c,v 2.137 2011/05/05 16:16:33 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -174,7 +174,7 @@ static const TValue *get_equalTM (lua_State *L, Table *mt1, Table *mt2,
   if (mt1 == mt2) return tm1;  /* same metatables => same metamethods */
   tm2 = fasttm(L, mt2, event);
   if (tm2 == NULL) return NULL;  /* no metamethod */
-  if (luaO_rawequalObj(tm1, tm2))  /* same metamethods? */
+  if (luaV_rawequalObj(tm1, tm2))  /* same metamethods? */
     return tm1;
   return NULL;
 }
@@ -237,6 +237,9 @@ int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
 }
 
 
+/*
+** equality of Lua values. L == NULL means raw equality (no metamethods)
+*/
 int luaV_equalval_ (lua_State *L, const TValue *t1, const TValue *t2) {
   const TValue *tm;
   lua_assert(ttisequal(t1, t2));
@@ -249,15 +252,19 @@ int luaV_equalval_ (lua_State *L, const TValue *t1, const TValue *t2) {
     case LUA_TSTRING: return eqstr(rawtsvalue(t1), rawtsvalue(t2));
     case LUA_TUSERDATA: {
       if (uvalue(t1) == uvalue(t2)) return 1;
+      else if (L == NULL) return 0;
       tm = get_equalTM(L, uvalue(t1)->metatable, uvalue(t2)->metatable, TM_EQ);
       break;  /* will try TM */
     }
     case LUA_TTABLE: {
       if (hvalue(t1) == hvalue(t2)) return 1;
+      else if (L == NULL) return 0;
       tm = get_equalTM(L, hvalue(t1)->metatable, hvalue(t2)->metatable, TM_EQ);
       break;  /* will try TM */
     }
-    default: return gcvalue(t1) == gcvalue(t2);
+    default:
+      lua_assert(iscollectable(t1));
+      return gcvalue(t1) == gcvalue(t2);
   }
   if (tm == NULL) return 0;  /* no TM? */
   callTM(L, tm, t1, t2, L->top, 1);  /* call TM */
