@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.54 2011/05/26 17:12:31 roberto Exp roberto $
+** $Id: lobject.h,v 2.55 2011/05/31 18:24:36 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -100,6 +100,7 @@ typedef struct lua_TValue {
 
 
 #define val_(o)		((o)->value_)
+#define num_(o)		(val_(o).n)
 
 
 /* raw type tag of a TValue */
@@ -131,7 +132,7 @@ typedef struct lua_TValue {
 #define ttisequal(o1,o2)	(rttype(o1) == rttype(o2))
 
 /* Macros to access values */
-#define nvalue(o)	check_exp(ttisnumber(o), val_(o).n)
+#define nvalue(o)	check_exp(ttisnumber(o), num_(o))
 #define gcvalue(o)	check_exp(iscollectable(o), val_(o).gc)
 #define pvalue(o)	check_exp(ttislightuserdata(o), val_(o).p)
 #define rawtsvalue(o)	check_exp(ttisstring(o), &val_(o).gc->ts)
@@ -162,9 +163,9 @@ typedef struct lua_TValue {
 #define settt_(o,t)	((o)->tt_=(t))
 
 #define setnvalue(obj,x) \
-  { TValue *io=(obj); val_(io).n=(x); settt_(io, LUA_TNUMBER); }
+  { TValue *io=(obj); num_(io)=(x); settt_(io, LUA_TNUMBER); }
 
-#define changenvalue(o,x)  check_exp(ttisnumber(o), val_(o).n=(x))
+#define changenvalue(o,x)  check_exp(ttisnumber(o), num_(o)=(x))
 
 #define setnilvalue(obj) settt_(obj, LUA_TNIL)
 
