@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.137 2011/05/05 16:16:33 roberto Exp roberto $
+** $Id: lvm.c,v 2.138 2011/05/31 18:24:36 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -174,7 +174,7 @@ static const TValue *get_equalTM (lua_State *L, Table *mt1, Table *mt2,
   if (mt1 == mt2) return tm1;  /* same metatables => same metamethods */
   tm2 = fasttm(L, mt2, event);
   if (tm2 == NULL) return NULL;  /* no metamethod */
-  if (luaV_rawequalObj(tm1, tm2))  /* same metamethods? */
+  if (luaV_rawequalobj(tm1, tm2))  /* same metamethods? */
     return tm1;
   return NULL;
 }
@@ -240,7 +240,7 @@ int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
 /*
 ** equality of Lua values. L == NULL means raw equality (no metamethods)
 */
-int luaV_equalval_ (lua_State *L, const TValue *t1, const TValue *t2) {
+int luaV_equalobj_ (lua_State *L, const TValue *t1, const TValue *t2) {
   const TValue *tm;
   lua_assert(ttisequal(t1, t2));
   switch (ttype(t1)) {

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.54 2011/04/28 14:00:11 roberto Exp roberto $
+** $Id: lcode.c,v 2.55 2011/05/31 18:24:36 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -296,7 +296,7 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
   if (ttisnumber(idx)) {
     lua_Number n = nvalue(idx);
     lua_number2int(k, n);
-    if (luaV_rawequalObj(&f->k[k], v))
+    if (luaV_rawequalobj(&f->k[k], v))
       return k;
     /* else may be a collision (e.g., between 0.0 and "\0\0\0\0\0\0\0\0");
        go through and create a new entry for this value */

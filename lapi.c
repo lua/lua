@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.145 2011/04/05 14:26:23 roberto Exp roberto $
+** $Id: lapi.c,v 2.146 2011/05/31 18:24:36 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -278,7 +278,7 @@ LUA_API int lua_rawequal (lua_State *L, int index1, int index2) {
   StkId o1 = index2addr(L, index1);
   StkId o2 = index2addr(L, index2);
   return (o1 == luaO_nilobject || o2 == luaO_nilobject) ? 0
-         : luaV_rawequalObj(o1, o2);
+         : luaV_rawequalobj(o1, o2);
 }
 
 
