@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.55 2011/05/31 18:24:36 roberto Exp roberto $
+** $Id: lobject.h,v 2.56 2011/05/31 19:15:01 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -32,17 +32,25 @@
 /*
 ** tags for Tagged Values have the following use of bits:
 ** bits 0-3: actual tag (a LUA_T* value)
-** bit 4: variant bit (for functions, means a light C function)
-** bit 5: whether value is collectable
+** bits 4-5: variant bits
+** bit 6: whether value is collectable
 */
 
-/* Variant tag for light C functions */
-#define BIT_ISVARIANT	(1 << 4)
-#define LUA_TLCF	(LUA_TFUNCTION | BIT_ISVARIANT)
+/*
+** LUA_TFUNCTION variants:
+** 0 - Lua function
+** 1 - light C function
+** 2 - regular C function (closure)
+*/
+
+/* Variant tags for functions */
+#define LUA_TLCL	(LUA_TFUNCTION | (0 << 4))  /* Lua closure */
+#define LUA_TLCF	(LUA_TFUNCTION | (1 << 4))  /* light C function */
+#define LUA_TCCL	(LUA_TFUNCTION | (2 << 4))  /* C closure */
 
 
 /* Bit mark for collectable types */
-#define BIT_ISCOLLECTABLE	(1 << 5)
+#define BIT_ISCOLLECTABLE	(1 << 6)
 
 /* mark a tag as collectable */
 #define ctb(t)			((t) | BIT_ISCOLLECTABLE)
@@ -106,8 +114,8 @@ typedef struct lua_TValue {
 /* raw type tag of a TValue */
 #define rttype(o)	((o)->tt_)
 
-/* type tag of a TValue (bits 0-3 for tags + variant bit) */
-#define ttype(o)	(rttype(o) & 0x1F)
+/* type tag of a TValue (bits 0-3 for tags + variant bits 4-5) */
+#define ttype(o)	(rttype(o) & 0x3F)
 
 
 /* type tag of a TValue with no variants (bits 0-3) */
@@ -123,7 +131,9 @@ typedef struct lua_TValue {
 #define ttisstring(o)		checktag((o), ctb(LUA_TSTRING))
 #define ttistable(o)		checktag((o), ctb(LUA_TTABLE))
 #define ttisfunction(o)		(ttypenv(o) == LUA_TFUNCTION)
-#define ttisclosure(o)		checktag((o), ctb(LUA_TFUNCTION))
+#define ttisclosure(o)		((rttype(o) & 0x1F) == LUA_TFUNCTION)
+#define ttisCclosure(o)		checktag((o), ctb(LUA_TCCL))
+#define ttisLclosure(o)		checktag((o), ctb(LUA_TLCL))
 #define ttislcf(o)		checktag((o), LUA_TLCF)
 #define ttisuserdata(o)		checktag((o), ctb(LUA_TUSERDATA))
 #define ttisthread(o)		checktag((o), ctb(LUA_TTHREAD))
@@ -140,6 +150,8 @@ typedef struct lua_TValue {
 #define rawuvalue(o)	check_exp(ttisuserdata(o), &val_(o).gc->u)
 #define uvalue(o)	(&rawuvalue(o)->uv)
 #define clvalue(o)	check_exp(ttisclosure(o), &val_(o).gc->cl)
+#define clLvalue(o)	check_exp(ttisLclosure(o), &val_(o).gc->cl.l)
+#define clCvalue(o)	check_exp(ttisCclosure(o), &val_(o).gc->cl.c)
 #define fvalue(o)	check_exp(ttislcf(o), val_(o).f)
 #define hvalue(o)	check_exp(ttistable(o), &val_(o).gc->h)
 #define bvalue(o)	check_exp(ttisboolean(o), val_(o).b)
@@ -152,7 +164,7 @@ typedef struct lua_TValue {
 
 
 /* Macros for internal tests */
-#define righttt(obj)		(ttype(obj) == gcvalue(obj)->gch.tt)
+#define righttt(obj)		(ttypenv(obj) == gcvalue(obj)->gch.tt)
 
 #define checkliveness(g,obj) \
   lua_longassert(!iscollectable(obj) || \
@@ -197,9 +209,14 @@ typedef struct lua_TValue {
     val_(io).gc=cast(GCObject *, (x)); settt_(io, ctb(LUA_TTHREAD)); \
     checkliveness(G(L),io); }
 
-#define setclvalue(L,obj,x) \
+#define setclLvalue(L,obj,x) \
   { TValue *io=(obj); \
-    val_(io).gc=cast(GCObject *, (x)); settt_(io, ctb(LUA_TFUNCTION)); \
+    val_(io).gc=cast(GCObject *, (x)); settt_(io, ctb(LUA_TLCL)); \
+    checkliveness(G(L),io); }
+
+#define setclCvalue(L,obj,x) \
+  { TValue *io=(obj); \
+    val_(io).gc=cast(GCObject *, (x)); settt_(io, ctb(LUA_TCCL)); \
     checkliveness(G(L),io); }
 
 #define sethvalue(L,obj,x) \
@@ -375,9 +392,9 @@ typedef union Closure {
 } Closure;
 
 
-#define isLfunction(o)	(ttisclosure(o) && !clvalue(o)->c.isC)
+#define isLfunction(o)	ttisLclosure(o)
 
-#define getproto(o)	(clvalue(o)->l.p)
+#define getproto(o)	(clLvalue(o)->p)
 
 
 /*

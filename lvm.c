@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.138 2011/05/31 18:24:36 roberto Exp roberto $
+** $Id: lvm.c,v 2.139 2011/05/31 18:27:56 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -65,7 +65,7 @@ static void traceexec (lua_State *L) {
     luaD_hook(L, LUA_HOOKCOUNT, -1);
   }
   if (mask & LUA_MASKLINE) {
-    Proto *p = ci_func(ci)->l.p;
+    Proto *p = ci_func(ci)->p;
     int npc = pcRel(ci->u.l.savedpc, p);
     int newline = getfuncline(p, npc);
     if (npc == 0 ||  /* call linehook when enter a new function, */
@@ -315,7 +315,7 @@ void luaV_concat (lua_State *L, int total) {
 
 void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
   const TValue *tm;
-  switch (ttype(rb)) {
+  switch (ttypenv(rb)) {
     case LUA_TTABLE: {
       Table *h = hvalue(rb);
       tm = fasttm(L, h->metatable, TM_LEN);
@@ -385,7 +385,7 @@ static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
   Upvaldesc *uv = p->upvalues;
   int i;
   Closure *ncl = luaF_newLclosure(L, p);
-  setclvalue(L, ra, ncl);  /* anchor new closure in stack */
+  setclLvalue(L, ra, ncl);  /* anchor new closure in stack */
   for (i = 0; i < nup; i++) {  /* fill in its upvalues */
     if (uv[i].instack)  /* upvalue refers to local variable? */
       ncl->l.upvals[i] = luaF_findupval(L, base + uv[i].idx);
@@ -512,9 +512,8 @@ void luaV_execute (lua_State *L) {
   TValue *k;
   StkId base;
  newframe:  /* reentry point when frame changes (call/return) */
-  lua_assert(isLua(ci));
   lua_assert(ci == L->ci);
-  cl = &clvalue(ci->func)->l;
+  cl = clLvalue(ci->func);
   k = cl->p->k;
   base = ci->u.l.base;
   /* main loop of interpreter */
@@ -819,7 +818,7 @@ void luaV_execute (lua_State *L) {
         if (ncl == NULL)  /* no match? */
           pushclosure(L, p, cl->upvals, base, ra);  /* create a new one */
         else
-          setclvalue(L, ra, ncl);  /* push cashed closure */
+          setclLvalue(L, ra, ncl);  /* push cashed closure */
         checkGC(L,
           L->top = ra + 1;  /* limit of live values */
           luaC_step(L);

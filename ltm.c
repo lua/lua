@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.12 2010/04/13 20:48:12 roberto Exp roberto $
+** $Id: ltm.c,v 2.13 2011/02/28 17:32:10 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -62,7 +62,7 @@ const TValue *luaT_gettm (Table *events, TMS event, TString *ename) {
 
 const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
   Table *mt;
-  switch (ttype(o)) {
+  switch (ttypenv(o)) {
     case LUA_TTABLE:
       mt = hvalue(o)->metatable;
       break;

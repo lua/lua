@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.56 2011/05/31 18:24:36 roberto Exp roberto $
+** $Id: ltable.c,v 2.57 2011/05/31 18:27:56 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -468,7 +468,7 @@ const TValue *luaH_getstr (Table *t, TString *key) {
 ** main search function
 */
 const TValue *luaH_get (Table *t, const TValue *key) {
-  switch (ttype(key)) {
+  switch (ttypenv(key)) {
     case LUA_TNIL: return luaO_nilobject;
     case LUA_TSTRING: return luaH_getstr(t, rawtsvalue(key));
     case LUA_TNUMBER: {

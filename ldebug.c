@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.80 2011/04/19 16:22:13 roberto Exp roberto $
+** $Id: ldebug.c,v 2.81 2011/04/28 14:00:11 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -35,12 +35,12 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name);
 
 static int currentpc (CallInfo *ci) {
   lua_assert(isLua(ci));
-  return pcRel(ci->u.l.savedpc, ci_func(ci)->l.p);
+  return pcRel(ci->u.l.savedpc, ci_func(ci)->p);
 }
 
 
 static int currentline (CallInfo *ci) {
-  return getfuncline(ci_func(ci)->l.p, currentpc(ci));
+  return getfuncline(ci_func(ci)->p, currentpc(ci));
 }
 
 
@@ -95,7 +95,7 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
 
 
 static const char *findvararg (CallInfo *ci, int n, StkId *pos) {
-  int nparams = clvalue(ci->func)->l.p->numparams;
+  int nparams = clLvalue(ci->func)->p->numparams;
   if (n >= ci->u.l.base - ci->func - nparams)
     return NULL;  /* no such vararg */
   else {
@@ -114,7 +114,7 @@ static const char *findlocal (lua_State *L, CallInfo *ci, int n,
       return findvararg(ci, -n, pos);
     else {
       base = ci->u.l.base;
-      name = luaF_getlocalname(ci_func(ci)->l.p, n, currentpc(ci));
+      name = luaF_getlocalname(ci_func(ci)->p, n, currentpc(ci));
     }
   }
   else
@@ -138,7 +138,7 @@ LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
     if (!isLfunction(L->top - 1))  /* not a Lua function? */
       name = NULL;
     else  /* consider live variables at function start (parameters) */
-      name = luaF_getlocalname(clvalue(L->top - 1)->l.p, n, 0);
+      name = luaF_getlocalname(clLvalue(L->top - 1)->p, n, 0);
   }
   else {  /* active function; get information through 'ar' */
     StkId pos = 0;  /* to avoid warnings */
@@ -294,7 +294,7 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
 static void kname (lua_State *L, CallInfo *ci, int c, int oreg,
                    const char *what, const char **name) {
   if (ISK(c)) {  /* is 'c' a constant? */
-    TValue *kvalue = &ci_func(ci)->l.p->k[INDEXK(c)];
+    TValue *kvalue = &ci_func(ci)->p->k[INDEXK(c)];
     if (ttisstring(kvalue)) {  /* literal constant? */
       *name = svalue(kvalue);  /* it is its own name */
       return;
@@ -315,7 +315,7 @@ static void kname (lua_State *L, CallInfo *ci, int c, int oreg,
 
 static const char *getobjname (lua_State *L, CallInfo *ci, int reg,
                                const char **name) {
-  Proto *p = ci_func(ci)->l.p;
+  Proto *p = ci_func(ci)->p;
   const char *what = NULL;
   int lastpc = currentpc(ci);
   int pc;
@@ -421,9 +421,9 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
   if ((ci->callstatus & CIST_TAIL) || !isLua(ci->previous))
     return NULL;  /* calling function is not Lua (or is unknown) */
   ci = ci->previous;  /* calling function */
-  i = ci_func(ci)->l.p->code[currentpc(ci)];
+  i = ci_func(ci)->p->code[currentpc(ci)];
   if (GET_OPCODE(i) == OP_EXTRAARG)  /* extra argument? */
-    i = ci_func(ci)->l.p->code[currentpc(ci) - 1];  /* get 'real' instruction */
+    i = ci_func(ci)->p->code[currentpc(ci) - 1];  /* get 'real' instruction */
   switch (GET_OPCODE(i)) {
     case OP_CALL:
     case OP_TAILCALL:
@@ -474,7 +474,7 @@ static int isinstack (CallInfo *ci, const TValue *o) {
 
 static const char *getupvalname (CallInfo *ci, const TValue *o,
                                const char **name) {
-  LClosure *c = &ci_func(ci)->l;
+  LClosure *c = ci_func(ci);
   int i;
   for (i = 0; i < c->nupvalues; i++) {
     if (c->upvals[i]->v == o) {
@@ -535,7 +535,7 @@ static void addinfo (lua_State *L, const char *msg) {
   if (isLua(ci)) {  /* is Lua code? */
     char buff[LUA_IDSIZE];  /* add file:line information */
     int line = currentline(ci);
-    TString *src = ci_func(ci)->l.p->source;
+    TString *src = ci_func(ci)->p->source;
     if (src)
       luaO_chunkid(buff, getstr(src), LUA_IDSIZE);
     else {  /* no source available; use "?" instead */

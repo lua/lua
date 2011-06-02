@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.146 2011/05/31 18:24:36 roberto Exp roberto $
+** $Id: lapi.c,v 2.147 2011/05/31 18:27:56 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -59,9 +59,9 @@ static TValue *index2addr (lua_State *L, int idx) {
     if (ttislcf(ci->func))  /* light C function? */
       return cast(TValue *, luaO_nilobject);  /* it has no upvalues */
     else {
-      Closure *func = clvalue(ci->func);
-      return (idx <= func->c.nupvalues)
-             ? &func->c.upvalue[idx-1]
+      CClosure *func = clCvalue(ci->func);
+      return (idx <= func->nupvalues)
+             ? &func->upvalue[idx-1]
              : cast(TValue *, luaO_nilobject);
     }
   }
@@ -195,10 +195,8 @@ static void moveto (lua_State *L, TValue *fr, int idx) {
   TValue *to = index2addr(L, idx);
   api_checkvalidindex(L, to);
   setobj(L, to, fr);
-  if (idx < LUA_REGISTRYINDEX) {  /* function upvalue? */
-    lua_assert(ttisclosure(L->ci->func));
-    luaC_barrier(L, clvalue(L->ci->func), fr);
-  }
+  if (idx < LUA_REGISTRYINDEX)  /* function upvalue? */
+    luaC_barrier(L, clCvalue(L->ci->func), fr);
   /* LUA_REGISTRYINDEX does not need gc barrier
      (collector revisits it before finishing collection) */
 }
@@ -251,7 +249,7 @@ LUA_API const char *lua_typename (lua_State *L, int t) {
 
 LUA_API int lua_iscfunction (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
-  return (ttislcf(o) || (ttisclosure(o) && clvalue(o)->c.isC));
+  return (ttislcf(o) || (ttisCclosure(o)));
 }
 
 
@@ -398,7 +396,7 @@ LUA_API const char *lua_tolstring (lua_State *L, int idx, size_t *len) {
 
 LUA_API size_t lua_rawlen (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
-  switch (ttype(o)) {
+  switch (ttypenv(o)) {
     case LUA_TSTRING: return tsvalue(o)->len;
     case LUA_TUSERDATA: return uvalue(o)->len;
     case LUA_TTABLE: return luaH_getn(hvalue(o));
@@ -410,15 +408,15 @@ LUA_API size_t lua_rawlen (lua_State *L, int idx) {
 LUA_API lua_CFunction lua_tocfunction (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
   if (ttislcf(o)) return fvalue(o);
-  else if (ttisclosure(o) && clvalue(o)->c.isC)
-    return clvalue(o)->c.f;
+  else if (ttisCclosure(o))
+    return clCvalue(o)->f;
   else return NULL;  /* not a C function */
 }
 
 
 LUA_API void *lua_touserdata (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
-  switch (ttype(o)) {
+  switch (ttypenv(o)) {
     case LUA_TUSERDATA: return (rawuvalue(o) + 1);
     case LUA_TLIGHTUSERDATA: return pvalue(o);
     default: return NULL;
@@ -436,7 +434,8 @@ LUA_API const void *lua_topointer (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
   switch (ttype(o)) {
     case LUA_TTABLE: return hvalue(o);
-    case LUA_TFUNCTION: return clvalue(o);
+    case LUA_TLCL: return clLvalue(o);
+    case LUA_TCCL: return clCvalue(o);
     case LUA_TLCF: return cast(void *, cast(size_t, fvalue(o)));
     case LUA_TTHREAD: return thvalue(o);
     case LUA_TUSERDATA:
@@ -556,7 +555,7 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
     L->top -= n;
     while (n--)
       setobj2n(L, &cl->c.upvalue[n], L->top + n);
-    setclvalue(L, L->top, cl);
+    setclCvalue(L, L->top, cl);
   }
   api_incr_top(L);
   lua_unlock(L);
@@ -656,7 +655,7 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
   int res;
   lua_lock(L);
   obj = index2addr(L, objindex);
-  switch (ttype(obj)) {
+  switch (ttypenv(obj)) {
     case LUA_TTABLE:
       mt = hvalue(obj)->metatable;
       break;
@@ -763,7 +762,7 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
     api_check(L, ttistable(L->top - 1), "table expected");
     mt = hvalue(L->top - 1);
   }
-  switch (ttype(obj)) {
+  switch (ttypenv(obj)) {
     case LUA_TTABLE: {
       hvalue(obj)->metatable = mt;
       if (mt)
@@ -921,15 +920,14 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
   luaZ_init(L, &z, reader, data);
   status = luaD_protectedparser(L, &z, chunkname);
   if (status == LUA_OK) {  /* no errors? */
-    Closure *f = clvalue(L->top - 1);  /* get newly created function */
-    lua_assert(!f->c.isC);
-    if (f->l.nupvalues == 1) {  /* does it have one upvalue? */
+    LClosure *f = clLvalue(L->top - 1);  /* get newly created function */
+    if (f->nupvalues == 1) {  /* does it have one upvalue? */
       /* get global table from registry */
       Table *reg = hvalue(&G(L)->l_registry);
       const TValue *gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
       /* set global table as 1st upvalue of 'f' (may be LUA_ENV) */
-      setobj(L, f->l.upvals[0]->v, gt);
-      luaC_barrier(L, f->l.upvals[0], gt);
+      setobj(L, f->upvals[0]->v, gt);
+      luaC_barrier(L, f->upvals[0], gt);
     }
   }
   lua_unlock(L);
@@ -1131,25 +1129,27 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
 
 static const char *aux_upvalue (StkId fi, int n, TValue **val,
                                 GCObject **owner) {
-  Closure *f;
-  if (!ttisclosure(fi)) return NULL;
-  f = clvalue(fi);
-  if (f->c.isC) {
-    if (!(1 <= n && n <= f->c.nupvalues)) return NULL;
-    *val = &f->c.upvalue[n-1];
-    if (owner) *owner = obj2gco(f);
-    return "";
-  }
-  else {
-    const char *name;
-    Proto *p = f->l.p;
-    if (!(1 <= n && n <= p->sizeupvalues)) return NULL;
-    *val = f->l.upvals[n-1]->v;
-    if (owner) *owner = obj2gco(f->l.upvals[n - 1]);
-    name = getstr(p->upvalues[n-1].name);
-    if (name == NULL)  /* no debug information? */
-      name = "";
-    return name;
+  switch (ttype(fi)) {
+    case LUA_TCCL: {  /* C closure */
+      CClosure *f = clCvalue(fi);
+      if (!(1 <= n && n <= f->nupvalues)) return NULL;
+      *val = &f->upvalue[n-1];
+      if (owner) *owner = obj2gco(f);
+      return "";
+    }
+    case LUA_TLCL: {  /* Lua closure */
+      LClosure *f = clLvalue(fi);
+      const char *name;
+      Proto *p = f->p;
+      if (!(1 <= n && n <= p->sizeupvalues)) return NULL;
+      *val = f->upvals[n-1]->v;
+      if (owner) *owner = obj2gco(f->upvals[n - 1]);
+      name = getstr(p->upvalues[n-1].name);
+      if (name == NULL)  /* no debug information? */
+        name = "";
+      return name;
+    }
+    default: return NULL;  /* not a closure */
   }
 }
 
@@ -1187,34 +1187,39 @@ LUA_API const char *lua_setupvalue (lua_State *L, int funcindex, int n) {
 }
 
 
-static UpVal **getupvalref (lua_State *L, int fidx, int n, Closure **pf) {
-  Closure *f;
+static UpVal **getupvalref (lua_State *L, int fidx, int n, LClosure **pf) {
+  LClosure *f;
   StkId fi = index2addr(L, fidx);
-  api_check(L, ttisclosure(fi), "Lua function expected");
-  f = clvalue(fi);
-  api_check(L, !f->c.isC, "Lua function expected");
-  api_check(L, (1 <= n && n <= f->l.p->sizeupvalues), "invalid upvalue index");
+  api_check(L, ttisLclosure(fi), "Lua function expected");
+  f = clLvalue(fi);
+  api_check(L, (1 <= n && n <= f->p->sizeupvalues), "invalid upvalue index");
   if (pf) *pf = f;
-  return &f->l.upvals[n - 1];  /* get its upvalue pointer */
+  return &f->upvals[n - 1];  /* get its upvalue pointer */
 }
 
 
 LUA_API void *lua_upvalueid (lua_State *L, int fidx, int n) {
-  Closure *f;
   StkId fi = index2addr(L, fidx);
-  api_check(L, ttisclosure(fi), "function expected");
-  f = clvalue(fi);
-  if (f->c.isC) {
-    api_check(L, 1 <= n && n <= f->c.nupvalues, "invalid upvalue index");
-    return &f->c.upvalue[n - 1];
+  switch (ttype(fi)) {
+    case LUA_TLCL: {  /* lua closure */
+      return *getupvalref(L, fidx, n, NULL);
+    }
+    case LUA_TCCL: {  /* C closure */
+      CClosure *f = clCvalue(fi);
+      api_check(L, 1 <= n && n <= f->nupvalues, "invalid upvalue index");
+      return &f->upvalue[n - 1];
+    }
+    default: {
+      api_check(L, 0, "closure expected");
+      return NULL;
+    }
   }
-  else return *getupvalref(L, fidx, n, NULL);
 }
 
 
 LUA_API void lua_upvaluejoin (lua_State *L, int fidx1, int n1,
                                             int fidx2, int n2) {
-  Closure *f1;
+  LClosure *f1;
   UpVal **up1 = getupvalref(L, fidx1, n1, &f1);
   UpVal **up2 = getupvalref(L, fidx2, n2, NULL);
   *up1 = *up2;

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.93 2011/02/23 13:13:10 roberto Exp roberto $
+** $Id: ldo.c,v 2.94 2011/05/30 16:36:38 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -293,59 +293,59 @@ static StkId tryfuncTM (lua_State *L, StkId func) {
 ** returns true if function has been executed (C function)
 */
 int luaD_precall (lua_State *L, StkId func, int nresults) {
-  Closure *cl;
   lua_CFunction f;
-  ptrdiff_t funcr;
-  if (!ttisfunction(func)) /* `func' is not a function? */
-    func = tryfuncTM(L, func);  /* check the `function' tag method */
-  funcr = savestack(L, func);
-  if (ttislcf(func) || (cl = clvalue(func), cl->c.isC)) {  /* C function? */
-    CallInfo *ci;
-    int n;
-    f = (ttislcf(func) ? fvalue(func) : cl->c.f);
-    luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
-    ci = next_ci(L);  /* now 'enter' new function */
-    ci->nresults = nresults;
-    ci->func = restorestack(L, funcr);
-    ci->top = L->top + LUA_MINSTACK;
-    lua_assert(ci->top <= L->stack_last);
-    ci->callstatus = 0;
-    if (L->hookmask & LUA_MASKCALL)
-      luaD_hook(L, LUA_HOOKCALL, -1);
-    lua_unlock(L);
-    n = (*f)(L);  /* do the actual call */
-    lua_lock(L);
-    api_checknelems(L, n);
-    luaD_poscall(L, L->top - n);
-    return 1;
-  }
-  else {  /* Lua function: prepare its call */
-    CallInfo *ci;
-    int nparams, nargs;
-    StkId base;
-    Proto *p = cl->l.p;
-    luaD_checkstack(L, p->maxstacksize);
-    func = restorestack(L, funcr);
-    nargs = cast_int(L->top - func) - 1;  /* number of real arguments */
-    nparams = p->numparams;  /* number of expected parameters */
-    for (; nargs < nparams; nargs++)
-      setnilvalue(L->top++);  /* complete missing arguments */
-    if (!p->is_vararg)  /* no varargs? */
-      base = func + 1;
-    else  /* vararg function */
-      base = adjust_varargs(L, p, nargs);
-    ci = next_ci(L);  /* now 'enter' new function */
-    ci->nresults = nresults;
-    ci->func = func;
-    ci->u.l.base = base;
-    ci->top = base + p->maxstacksize;
-    lua_assert(ci->top <= L->stack_last);
-    ci->u.l.savedpc = p->code;  /* starting point */
-    ci->callstatus = CIST_LUA;
-    L->top = ci->top;
-    if (L->hookmask & LUA_MASKCALL)
-      callhook(L, ci);
-    return 0;
+  CallInfo *ci;
+  int n;  /* number of arguments (Lua) or returns (C) */
+  ptrdiff_t funcr = savestack(L, func);
+  switch (ttype(func)) {
+    case LUA_TLCF:  /* light C function */
+      f = fvalue(func);
+      goto Cfunc;
+    case LUA_TCCL: {  /* C closure */
+      f = clCvalue(func)->f;
+     Cfunc:
+      luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
+      ci = next_ci(L);  /* now 'enter' new function */
+      ci->nresults = nresults;
+      ci->func = restorestack(L, funcr);
+      ci->top = L->top + LUA_MINSTACK;
+      lua_assert(ci->top <= L->stack_last);
+      ci->callstatus = 0;
+      if (L->hookmask & LUA_MASKCALL)
+        luaD_hook(L, LUA_HOOKCALL, -1);
+      lua_unlock(L);
+      n = (*f)(L);  /* do the actual call */
+      lua_lock(L);
+      api_checknelems(L, n);
+      luaD_poscall(L, L->top - n);
+      return 1;
+    }
+    case LUA_TLCL: {  /* Lua function: prepare its call */
+      StkId base;
+      Proto *p = clLvalue(func)->p;
+      luaD_checkstack(L, p->maxstacksize);
+      func = restorestack(L, funcr);
+      n = cast_int(L->top - func) - 1;  /* number of real arguments */
+      for (; n < p->numparams; n++)
+        setnilvalue(L->top++);  /* complete missing arguments */
+      base = (!p->is_vararg) ? func + 1 : adjust_varargs(L, p, n);
+      ci = next_ci(L);  /* now 'enter' new function */
+      ci->nresults = nresults;
+      ci->func = func;
+      ci->u.l.base = base;
+      ci->top = base + p->maxstacksize;
+      lua_assert(ci->top <= L->stack_last);
+      ci->u.l.savedpc = p->code;  /* starting point */
+      ci->callstatus = CIST_LUA;
+      L->top = ci->top;
+      if (L->hookmask & LUA_MASKCALL)
+        callhook(L, ci);
+      return 0;
+    }
+    default: {  /* not a function */
+      func = tryfuncTM(L, func);  /* retry with 'function' tag method */
+      return luaD_precall(L, func, nresults);
+    }
   }
 }
 
@@ -626,7 +626,7 @@ static void f_parser (lua_State *L, void *ud) {
   setptvalue2s(L, L->top, tf);
   incr_top(L);
   cl = luaF_newLclosure(L, tf);
-  setclvalue(L, L->top - 1, cl);
+  setclLvalue(L, L->top - 1, cl);
   for (i = 0; i < tf->sizeupvalues; i++)  /* initialize upvalues */
     cl->l.upvals[i] = luaF_newupval(L);
 }
