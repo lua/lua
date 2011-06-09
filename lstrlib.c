@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.166 2011/04/20 16:36:28 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.167 2011/05/03 16:01:57 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -45,7 +45,7 @@ static int str_len (lua_State *L) {
 /* translate a relative string position: negative means back from end */
 static size_t posrelat (ptrdiff_t pos, size_t len) {
   if (pos >= 0) return (size_t)pos;
-  else if (pos == -pos || (size_t)-pos > len) return 0;
+  else if (-(size_t)pos > len) return 0;
   else return len - ((size_t)-pos) + 1;
 }
 
