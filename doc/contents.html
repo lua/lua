@@ -22,7 +22,7 @@ Lua 5.2 Reference Manual
 
 <P>
 <IMG SRC="alert.png" ALIGN="absbottom" ALT="[!]">
-<EM>This is an alpha version of Lua 5.2.
+<EM>This is a beta version of Lua 5.2.
 Some details may change in the final version.</EM>
 
 <P>
@@ -38,7 +38,7 @@ For a complete introduction to Lua programming, see the book
 <A HREF="#index">index</A>
 <HR>
 <SMALL>
-Copyright &copy; 2010 Lua.org, PUC-Rio.
+Copyright &copy; 2011 Lua.org, PUC-Rio.
 Freely available under the terms of the
 <a href="http://www.lua.org/license.html#5">Lua license</a>.
 </SMALL>
@@ -120,7 +120,7 @@ Freely available under the terms of the
 </UL>
 <LI><A HREF="manual.html#6.5">6.5 &ndash; Table Manipulation</A>
 <LI><A HREF="manual.html#6.6">6.6 &ndash; Mathematical Functions</A>
-<LI><A HREF="manual.html#6.7">6.7 &ndash; Bitwise operations</A>
+<LI><A HREF="manual.html#6.7">6.7 &ndash; Bitwise Operations</A>
 <LI><A HREF="manual.html#6.8">6.8 &ndash; Input and Output Facilities</A>
 <LI><A HREF="manual.html#6.9">6.9 &ndash; Operating System Facilities</A>
 <LI><A HREF="manual.html#6.10">6.10 &ndash; The Debug Library</A>
@@ -154,14 +154,13 @@ Freely available under the terms of the
 <A HREF="manual.html#pdf-ipairs">ipairs</A><BR>
 <A HREF="manual.html#pdf-load">load</A><BR>
 <A HREF="manual.html#pdf-loadfile">loadfile</A><BR>
-<A HREF="manual.html#pdf-loadin">loadin</A><BR>
-<A HREF="manual.html#pdf-loadstring">loadstring</A><BR>
 <A HREF="manual.html#pdf-next">next</A><BR>
 <A HREF="manual.html#pdf-pairs">pairs</A><BR>
 <A HREF="manual.html#pdf-pcall">pcall</A><BR>
 <A HREF="manual.html#pdf-print">print</A><BR>
 <A HREF="manual.html#pdf-rawequal">rawequal</A><BR>
 <A HREF="manual.html#pdf-rawget">rawget</A><BR>
+<A HREF="manual.html#pdf-rawlen">rawlen</A><BR>
 <A HREF="manual.html#pdf-rawset">rawset</A><BR>
 <A HREF="manual.html#pdf-require">require</A><BR>
 <A HREF="manual.html#pdf-select">select</A><BR>
@@ -178,8 +177,10 @@ Freely available under the terms of the
 <A HREF="manual.html#pdf-bit32.bor">bit32.bor</A><BR>
 <A HREF="manual.html#pdf-bit32.btest">bit32.btest</A><BR>
 <A HREF="manual.html#pdf-bit32.bxor">bit32.bxor</A><BR>
+<A HREF="manual.html#pdf-bit32.extract">bit32.extract</A><BR>
 <A HREF="manual.html#pdf-bit32.lrotate">bit32.lrotate</A><BR>
 <A HREF="manual.html#pdf-bit32.lshift">bit32.lshift</A><BR>
+<A HREF="manual.html#pdf-bit32.replace">bit32.replace</A><BR>
 <A HREF="manual.html#pdf-bit32.rrotate">bit32.rrotate</A><BR>
 <A HREF="manual.html#pdf-bit32.rshift">bit32.rshift</A><BR>
 
@@ -475,15 +476,18 @@ Freely available under the terms of the
 <A HREF="manual.html#luaL_dofile">luaL_dofile</A><BR>
 <A HREF="manual.html#luaL_dostring">luaL_dostring</A><BR>
 <A HREF="manual.html#luaL_error">luaL_error</A><BR>
-<A HREF="manual.html#luaL_findtable">luaL_findtable</A><BR>
+<A HREF="manual.html#luaL_execresult">luaL_execresult</A><BR>
+<A HREF="manual.html#luaL_fileresult">luaL_fileresult</A><BR>
 <A HREF="manual.html#luaL_getmetafield">luaL_getmetafield</A><BR>
 <A HREF="manual.html#luaL_getmetatable">luaL_getmetatable</A><BR>
+<A HREF="manual.html#luaL_getsubtable">luaL_getsubtable</A><BR>
 <A HREF="manual.html#luaL_gsub">luaL_gsub</A><BR>
 <A HREF="manual.html#luaL_len">luaL_len</A><BR>
 <A HREF="manual.html#luaL_loadbuffer">luaL_loadbuffer</A><BR>
 <A HREF="manual.html#luaL_loadfile">luaL_loadfile</A><BR>
 <A HREF="manual.html#luaL_loadstring">luaL_loadstring</A><BR>
 <A HREF="manual.html#luaL_newlib">luaL_newlib</A><BR>
+<A HREF="manual.html#luaL_newlibtable">luaL_newlibtable</A><BR>
 <A HREF="manual.html#luaL_newmetatable">luaL_newmetatable</A><BR>
 <A HREF="manual.html#luaL_newstate">luaL_newstate</A><BR>
 <A HREF="manual.html#luaL_openlibs">luaL_openlibs</A><BR>
@@ -516,10 +520,10 @@ Freely available under the terms of the
 <HR>
 <SMALL>
 Last update:
-Mon Nov 22 16:38:54 BRST 2010
+Mon Jun 13 15:09:33 BRT 2011
 </SMALL>
 <!--
-Last change: revised for Lua 5.2.0 (alpha)
+Last change: revised for Lua 5.2.0 (beta)
 -->
 
 </BODY>

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.h,v 2.5 2009/06/10 16:57:53 roberto Exp $
+** $Id: ldebug.h,v 2.6 2011/06/02 19:31:40 roberto Exp $
 ** Auxiliary functions from Debug Interface module
 ** See Copyright Notice in lua.h
 */
@@ -16,6 +16,9 @@
 #define getfuncline(f,pc)	(((f)->lineinfo) ? (f)->lineinfo[pc] : 0)
 
 #define resethookcount(L)	(L->hookcount = L->basehookcount)
+
+/* Active Lua function (given call info) */
+#define ci_func(ci)		(clLvalue((ci)->func))
 
 
 LUAI_FUNC void luaG_typeerror (lua_State *L, const TValue *o,

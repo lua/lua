@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.159 2010/11/19 16:25:51 roberto Exp $
+** $Id: lstrlib.c,v 1.168 2011/06/09 18:22:47 roberto Exp $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -45,7 +45,7 @@ static int str_len (lua_State *L) {
 /* translate a relative string position: negative means back from end */
 static size_t posrelat (ptrdiff_t pos, size_t len) {
   if (pos >= 0) return (size_t)pos;
-  else if (pos == -pos || (size_t)-pos > len) return 0;
+  else if (-(size_t)pos > len) return 0;
   else return len - ((size_t)-pos) + 1;
 }
 
@@ -101,15 +101,29 @@ static int str_upper (lua_State *L) {
   return 1;
 }
 
+
+/* reasonable limit to avoid arithmetic overflow */
+#define MAXSIZE		((~(size_t)0) >> 1)
+
 static int str_rep (lua_State *L) {
-  size_t l;
-  luaL_Buffer b;
+  size_t l, lsep;
   const char *s = luaL_checklstring(L, 1, &l);
   int n = luaL_checkint(L, 2);
-  luaL_buffinit(L, &b);
-  while (n-- > 0)
-    luaL_addlstring(&b, s, l);
-  luaL_pushresult(&b);
+  const char *sep = luaL_optlstring(L, 3, "", &lsep);
+  if (n <= 0) lua_pushliteral(L, "");
+  else if (l + lsep < l || l + lsep >= MAXSIZE / n)  /* may overflow? */
+    return luaL_error(L, "resulting string too large");
+  else {
+    size_t totallen = n * l + (n - 1) * lsep;
+    luaL_Buffer b;
+    char *p = luaL_buffinitsize(L, &b, totallen);
+    while (n-- > 1) {  /* first n-1 copies (followed by separator) */
+      memcpy(p, s, l * sizeof(char)); p += l;
+      memcpy(p, sep, lsep * sizeof(char)); p += lsep;
+    }
+    memcpy(p, s, l * sizeof(char));  /* last copy (not followed by separator) */
+    luaL_pushresultsize(&b, totallen);
+  }
   return 1;
 }
 
@@ -125,7 +139,7 @@ static int str_byte (lua_State *L) {
   if (posi > pose) return 0;  /* empty interval; return no values */
   n = (int)(pose -  posi + 1);
   if (posi + n <= pose)  /* overflow? */
-    luaL_error(L, "string slice too long");
+    return luaL_error(L, "string slice too long");
   luaL_checkstack(L, n, "string slice too long");
   for (i=0; i<n; i++)
     lua_pushinteger(L, uchar(s[posi+i-1]));
@@ -161,7 +175,7 @@ static int str_dump (lua_State *L) {
   lua_settop(L, 1);
   luaL_buffinit(L,&b);
   if (lua_dump(L, writer, &b) != 0)
-    luaL_error(L, "unable to dump given function");
+    return luaL_error(L, "unable to dump given function");
   luaL_pushresult(&b);
   return 1;
 }
@@ -510,7 +524,7 @@ static int nospecials (const char *p, size_t l) {
   size_t upto = 0;
   do {
     if (strpbrk(p + upto, SPECIALS))
-      return 0;  /* pattern has a special character */ 
+      return 0;  /* pattern has a special character */
     upto += strlen(p + upto) + 1;  /* may have more after \0 */
   } while (upto <= l);
   return 1;  /* no special chars found */
@@ -729,7 +743,7 @@ static int str_gsub (lua_State *L) {
 ** the previous length
 */
 #if !defined(LUA_INTFRMLEN)	/* { */
-#if defined(LUA_USELONGLONG)
+#if defined(LUA_USE_LONGLONG)
 
 #define LUA_INTFRMLEN           "ll"
 #define LUA_INTFRM_T            long long
@@ -794,7 +808,7 @@ static void addquoted (lua_State *L, luaL_Buffer *b, int arg) {
 static const char *scanformat (lua_State *L, const char *strfrmt, char *form) {
   const char *p = strfrmt;
   while (*p != '\0' && strchr(FLAGS, *p) != NULL) p++;  /* skip flags */
-  if ((size_t)(p - strfrmt) >= sizeof(FLAGS))
+  if ((size_t)(p - strfrmt) >= sizeof(FLAGS)/sizeof(char))
     luaL_error(L, "invalid format (repeated flags)");
   if (isdigit(uchar(*p))) p++;  /* skip width */
   if (isdigit(uchar(*p))) p++;  /* (2 digits at most) */
@@ -806,7 +820,7 @@ static const char *scanformat (lua_State *L, const char *strfrmt, char *form) {
   if (isdigit(uchar(*p)))
     luaL_error(L, "invalid format (width or precision too long)");
   *(form++) = '%';
-  memcpy(form, strfrmt, p - strfrmt + 1);
+  memcpy(form, strfrmt, (p - strfrmt + 1) * sizeof(char));
   form += p - strfrmt + 1;
   *form = '\0';
   return p;
@@ -861,6 +875,9 @@ static int str_format (lua_State *L) {
           break;
         }
         case 'e':  case 'E': case 'f':
+#if defined(LUA_USE_AFORMAT)
+        case 'a': case 'A':
+#endif
         case 'g': case 'G': {
           addlenmod(form, LUA_FLTFRMLEN);
           nb = sprintf(buff, form, (LUA_FLTFRM_T)luaL_checknumber(L, arg));
@@ -872,16 +889,16 @@ static int str_format (lua_State *L) {
         }
         case 's': {
           size_t l;
-          const char *s = luaL_checklstring(L, arg, &l);
+          const char *s = luaL_tolstring(L, arg, &l);
           if (!strchr(form, '.') && l >= 100) {
             /* no precision and string is too long to be formatted;
                keep original string */
-            lua_pushvalue(L, arg);
             luaL_addvalue(&b);
             break;
           }
           else {
             nb = sprintf(buff, form, s);
+            lua_pop(L, 1);  /* remove result from 'luaL_tolstring' */
             break;
           }
         }
@@ -900,6 +917,15 @@ static int str_format (lua_State *L) {
 /* }====================================================== */
 
 
+static int noindex (lua_State *L) {
+  const char *f = lua_tostring(L, 2);
+  if (f)
+    return luaL_error(L, "no field '%s' in strings", f);
+  else
+    return luaL_error(L, "no such field in strings");
+}
+
+
 static const luaL_Reg strlib[] = {
   {"byte", str_byte},
   {"char", str_char},
@@ -915,19 +941,22 @@ static const luaL_Reg strlib[] = {
   {"reverse", str_reverse},
   {"sub", str_sub},
   {"upper", str_upper},
+  {"__index", noindex},
   {NULL, NULL}
 };
 
 
 static void createmetatable (lua_State *L) {
-  lua_createtable(L, 0, 1);  /* create metatable for strings */
+  /* setmetatable("", {__index = string}) */
   lua_pushliteral(L, "");  /* dummy string */
-  lua_pushvalue(L, -2);
-  lua_setmetatable(L, -2);  /* set string metatable */
+  lua_createtable(L, 0, 1);  /* create metatable for strings */
+  lua_pushvalue(L, -3);  /* set the string library... */
+  lua_setfield(L, -2, "__index");  /* ...as the __index metamethod */
+  lua_setmetatable(L, -2);  /* set metatable for strings */
   lua_pop(L, 1);  /* pop dummy string */
-  lua_pushvalue(L, -2);  /* string library... */
-  lua_setfield(L, -2, "__index");  /* ...is the __index metamethod */
-  lua_pop(L, 1);  /* pop metatable */
+  /* setmetatable(string, string) */
+  lua_pushvalue(L, -1);  /* push string library */
+  lua_setmetatable(L, -2);  /* set it as its own metatable */
 }
 
 

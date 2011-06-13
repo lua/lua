@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.79 2010/05/05 18:49:56 roberto Exp $
+** $Id: lmem.c,v 1.81 2010/12/20 19:40:07 roberto Exp $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -79,14 +79,14 @@ void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
   size_t realosize = (block) ? osize : 0;
   lua_assert((realosize == 0) == (block == NULL));
 #if defined(HARDMEMTESTS)
-  if (nsize > realosize && !gcstopped(g))
+  if (nsize > realosize && g->gcrunning)
     luaC_fullgc(L, 1);  /* force a GC whenever possible */
 #endif
   newblock = (*g->frealloc)(g->ud, block, osize, nsize);
   if (newblock == NULL && nsize > 0) {
     api_check(L, nsize > realosize,
                  "realloc cannot fail when shrinking a block");
-    if (!gcstopped(g)) {
+    if (g->gcrunning) {
       luaC_fullgc(L, 1);  /* try to free some memory... */
       newblock = (*g->frealloc)(g->ud, block, osize, nsize);  /* try again */
     }
@@ -94,9 +94,7 @@ void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
       luaD_throw(L, LUA_ERRMEM);
   }
   lua_assert((nsize == 0) == (newblock == NULL));
-  g->totalbytes = (g->totalbytes - realosize) + nsize;
-  if (!gcstopped(g))
-    g->GCdebt += nsize;  /* give some credit to garbage collector */
+  g->GCdebt = (g->GCdebt + nsize) - realosize;
 #if defined(TRACEMEM)
   { /* auxiliary patch to monitor garbage collection.
     ** To plot, gnuplot with following command:
@@ -108,9 +106,7 @@ void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
     if ((total % 200) == 0) {
       if (f == NULL) f = fopen(TRACEMEM, "w");
       fprintf(f, "%lu %u %d %d\n", total,
-              g->totalbytes,
-              gcstopped(g) ? 0 : g->GCdebt,
-              g->gcstate * 1000);
+              g->totalbytes, g->GCdebt, g->gcstate * 1000);
     }
   }
 #endif

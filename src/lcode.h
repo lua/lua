@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.55 2010/07/02 20:42:40 roberto Exp $
+** $Id: lcode.h,v 1.57 2011/04/07 18:14:12 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -44,11 +44,9 @@ typedef enum UnOpr { OPR_MINUS, OPR_NOT, OPR_LEN, OPR_NOUNOPR } UnOpr;
 
 #define luaK_jumpto(fs,t)	luaK_patchlist(fs, luaK_jump(fs), t)
 
-#define luaK_codek(fs,reg,k)	    luaK_codeABxX(fs, OP_LOADK, reg, k)
-
 LUAI_FUNC int luaK_codeABx (FuncState *fs, OpCode o, int A, unsigned int Bx);
 LUAI_FUNC int luaK_codeABC (FuncState *fs, OpCode o, int A, int B, int C);
-LUAI_FUNC int luaK_codeABxX (FuncState *fs, OpCode o, int reg, int k);
+LUAI_FUNC int luaK_codek (FuncState *fs, int reg, int k);
 LUAI_FUNC void luaK_fixline (FuncState *fs, int line);
 LUAI_FUNC void luaK_nil (FuncState *fs, int from, int n);
 LUAI_FUNC void luaK_reserveregs (FuncState *fs, int n);
@@ -71,6 +69,7 @@ LUAI_FUNC int luaK_jump (FuncState *fs);
 LUAI_FUNC void luaK_ret (FuncState *fs, int first, int nret);
 LUAI_FUNC void luaK_patchlist (FuncState *fs, int list, int target);
 LUAI_FUNC void luaK_patchtohere (FuncState *fs, int list);
+LUAI_FUNC void luaK_patchclose (FuncState *fs, int list, int level);
 LUAI_FUNC void luaK_concat (FuncState *fs, int *l1, int l2);
 LUAI_FUNC int luaK_getlabel (FuncState *fs);
 LUAI_FUNC void luaK_prefix (FuncState *fs, UnOpr op, expdesc *v, int line);

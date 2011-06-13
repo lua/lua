@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.53 2010/11/11 15:38:43 roberto Exp $
+** $Id: ltable.c,v 2.59 2011/06/09 18:23:27 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -33,6 +33,7 @@
 #include "lstate.h"
 #include "lstring.h"
 #include "ltable.h"
+#include "lvm.h"
 
 
 /*
@@ -87,8 +88,9 @@ static Node *hashnum (const Table *t, lua_Number n) {
   int i;
   luai_hashnum(i, n);
   if (i < 0) {
-     i = -i;  /* must be a positive value */
-     if (i < 0) i = 0;  /* handle INT_MIN */
+    if ((unsigned int)i == -(unsigned int)i)
+      i = 0;  /* handle INT_MIN */
+    i = -i;  /* must be a positive value */
   }
   return hashmod(t, i);
 }
@@ -148,8 +150,8 @@ static int findindex (lua_State *L, Table *t, StkId key) {
     Node *n = mainposition(t, key);
     do {  /* check whether `key' is somewhere in the chain */
       /* key may be dead already, but it is ok to use it in `next' */
-      if (luaO_rawequalObj(gkey(n), key) ||
-            (ttype(gkey(n)) == LUA_TDEADKEY && iscollectable(key) &&
+      if (luaV_rawequalobj(gkey(n), key) ||
+            (ttisdeadkey(gkey(n)) && iscollectable(key) &&
              gcvalue(gkey(n)) == gcvalue(key))) {
         i = cast_int(n - gnode(t, 0));  /* key index in hash table */
         /* hash elements are numbered after array ones */
@@ -336,7 +338,7 @@ void luaH_resizearray (lua_State *L, Table *t, int nasize) {
 
 static void rehash (lua_State *L, Table *t, const TValue *ek) {
   int nasize, na;
-  int nums[MAXBITS+1];  /* nums[i] = number of keys between 2^(i-1) and 2^i */
+  int nums[MAXBITS+1];  /* nums[i] = number of keys with 2^(i-1) < k <= 2^i */
   int i;
   int totaluse;
   for (i=0; i<=MAXBITS; i++) nums[i] = 0;  /* reset counts */
@@ -467,7 +469,7 @@ const TValue *luaH_getstr (Table *t, TString *key) {
 ** main search function
 */
 const TValue *luaH_get (Table *t, const TValue *key) {
-  switch (ttype(key)) {
+  switch (ttypenv(key)) {
     case LUA_TNIL: return luaO_nilobject;
     case LUA_TSTRING: return luaH_getstr(t, rawtsvalue(key));
     case LUA_TNUMBER: {
@@ -481,7 +483,7 @@ const TValue *luaH_get (Table *t, const TValue *key) {
     default: {
       Node *n = mainposition(t, key);
       do {  /* check whether `key' is somewhere in the chain */
-        if (luaO_rawequalObj(gkey(n), key))
+        if (luaV_rawequalobj(gkey(n), key))
           return gval(n);  /* that's it */
         else n = gnext(n);
       } while (n);

@@ -8,6 +8,7 @@ body {
 }
 
 h1, h2, h3, h4 {
+	font-family: Verdana, sans-serif ;
 	font-weight: normal ;
 	font-style: italic ;
 }
@@ -27,7 +28,7 @@ h3 {
 
 table h3 {
 	padding-left: 0px ;
-	border-left: none ; 
+	border-left: none ;
 }
 
 a:link {
@@ -62,3 +63,21 @@ hr {
 	padding: 8px ;
 	border: solid #a0a0a0 2px ;
 }
+
+.footer {
+	color: gray ;
+	font-size: small ;
+}
+
+input[type=text] {
+	border: solid #a0a0a0 2px ;
+	border-radius: 2em ;
+	-moz-border-radius: 2em ;
+	background-image: url('images/search.png') ;
+	background-repeat: no-repeat;
+	background-position: left center ;
+	background-position: 4px center ;
+	padding-left: 20px ;
+	height: 2em ;
+}
+

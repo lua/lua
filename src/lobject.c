@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.43 2010/10/29 15:54:55 roberto Exp $
+** $Id: lobject.c,v 2.49 2011/05/31 18:24:36 roberto Exp $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -70,28 +70,6 @@ int luaO_ceillog2 (unsigned int x) {
 }
 
 
-int luaO_rawequalObj (const TValue *t1, const TValue *t2) {
-  if (ttype(t1) != ttype(t2)) return 0;
-  else switch (ttype(t1)) {
-    case LUA_TNIL:
-      return 1;
-    case LUA_TNUMBER:
-      return luai_numeq(nvalue(t1), nvalue(t2));
-    case LUA_TBOOLEAN:
-      return bvalue(t1) == bvalue(t2);  /* boolean true must be 1 !! */
-    case LUA_TLIGHTUSERDATA:
-      return pvalue(t1) == pvalue(t2);
-    case LUA_TSTRING:
-      return rawtsvalue(t1) == rawtsvalue(t2);
-    case LUA_TLCF:
-      return fvalue(t1) == fvalue(t2);
-    default:
-      lua_assert(iscollectable(t1));
-      return gcvalue(t1) == gcvalue(t2);
-  }
-}
-
-
 lua_Number luaO_arith (int op, lua_Number v1, lua_Number v2) {
   switch (op) {
     case LUA_OPADD: return luai_numadd(NULL, v1, v2);
@@ -106,19 +84,87 @@ lua_Number luaO_arith (int op, lua_Number v1, lua_Number v2) {
 }
 
 
-static int checkend (const char *s, const char *endptr) {
-  if (endptr == s) return 0;  /* no characters converted */
-  while (lisspace(cast(unsigned char, *endptr))) endptr++;
-  return (*endptr == '\0');  /* OK if no trailing characters */
+int luaO_hexavalue (int c) {
+  if (lisdigit(c)) return c - '0';
+  else if (lisupper(c)) return c - 'A' + 10;
+  else return c - 'a' + 10;
 }
 
 
-int luaO_str2d (const char *s, lua_Number *result) {
+#if !defined(lua_strx2number)
+
+#include <math.h>
+
+
+static int isneg (const char **s) {
+  if (**s == '-') { (*s)++; return 1; }
+  else if (**s == '+') (*s)++;
+  return 0;
+}
+
+
+static lua_Number readhexa (const char **s, lua_Number r, int *count) {
+  while (lisxdigit(cast_uchar(**s))) {  /* read integer part */
+    r = (r * 16.0) + (double)luaO_hexavalue(*(*s)++);
+    (*count)++;
+  }
+  return r;
+}
+
+
+/*
+** convert an hexadecimal numeric string to a number, following
+** C99 specification for 'strtod'
+*/
+static lua_Number lua_strx2number (const char *s, char **endptr) {
+  lua_Number r = 0.0;
+  int e = 0, i = 0;
+  int neg = 0;  /* 1 if number is negative */
+  *endptr = cast(char *, s);  /* nothing is valid yet */
+  while (lisspace(cast_uchar(*s))) s++;  /* skip initial spaces */
+  neg = isneg(&s);  /* check signal */
+  if (!(*s == '0' && (*(s + 1) == 'x' || *(s + 1) == 'X')))  /* check '0x' */
+    return 0.0;  /* invalid format (no '0x') */
+  s += 2;  /* skip '0x' */
+  r = readhexa(&s, r, &i);  /* read integer part */
+  if (*s == '.') {
+    s++;  /* skip dot */
+    r = readhexa(&s, r, &e);  /* read fractional part */
+  }
+  if (i == 0 && e == 0)
+    return 0.0;  /* invalid format (no digit) */
+  e *= -4;  /* each fractional digit divides value by 2^-4 */
+  *endptr = cast(char *, s);  /* valid up to here */
+  if (*s == 'p' || *s == 'P') {  /* exponent part? */
+    int exp1 = 0;
+    int neg1;
+    s++;  /* skip 'p' */
+    neg1 = isneg(&s);  /* signal */
+    if (!lisdigit(cast_uchar(*s)))
+      goto ret;  /* must have at least one digit */
+    while (lisdigit(cast_uchar(*s)))  /* read exponent */
+      exp1 = exp1 * 10 + *(s++) - '0';
+    if (neg1) exp1 = -exp1;
+    e += exp1;
+  }
+  *endptr = cast(char *, s);  /* valid up to here */
+ ret:
+  if (neg) r = -r;
+  return ldexp(r, e);
+}
+
+#endif
+
+
+int luaO_str2d (const char *s, size_t len, lua_Number *result) {
   char *endptr;
-  *result = lua_str2number(s, &endptr);
-  if (checkend(s, endptr)) return 1;  /* conversion OK? */
-  *result = cast_num(strtoul(s, &endptr, 0)); /* try hexadecimal */
-  return checkend(s, endptr);
+  if (strpbrk(s, "xX"))  /* hexa? */
+    *result = lua_strx2number(s, &endptr);
+  else
+    *result = lua_str2number(s, &endptr);
+  if (endptr == s) return 0;  /* nothing recognized */
+  while (lisspace(cast_uchar(*endptr))) endptr++;
+  return (endptr == s + len);  /* OK if no trailing characters */
 }
 
 
@@ -196,19 +242,20 @@ const char *luaO_pushfstring (lua_State *L, const char *fmt, ...) {
 }
 
 
+/* number of chars of a literal string without the ending \0 */
+#define LL(x)	(sizeof(x)/sizeof(char) - 1)
 
-#define LL(x)	(sizeof(x) - 1)
 #define RETS	"..."
 #define PRE	"[string \""
 #define POS	"\"]"
 
-#define addstr(a,b,l)	( memcpy(a,b,l), a += (l) )
+#define addstr(a,b,l)	( memcpy(a,b,(l) * sizeof(char)), a += (l) )
 
 void luaO_chunkid (char *out, const char *source, size_t bufflen) {
   size_t l = strlen(source);
   if (*source == '=') {  /* 'literal' source */
     if (l <= bufflen)  /* small enough? */
-      memcpy(out, source + 1, l);
+      memcpy(out, source + 1, l * sizeof(char));
     else {  /* truncate it */
       addstr(out, source + 1, bufflen - 1);
       *out = '\0';
@@ -216,11 +263,11 @@ void luaO_chunkid (char *out, const char *source, size_t bufflen) {
   }
   else if (*source == '@') {  /* file name */
     if (l <= bufflen)  /* small enough? */
-      memcpy(out, source + 1, l);
+      memcpy(out, source + 1, l * sizeof(char));
     else {  /* add '...' before rest of name */
       addstr(out, RETS, LL(RETS));
       bufflen -= LL(RETS);
-      memcpy(out, source + 1 + l - bufflen, bufflen);
+      memcpy(out, source + 1 + l - bufflen, bufflen * sizeof(char));
     }
   }
   else {  /* string; format as [string "source"] */
@@ -236,6 +283,7 @@ void luaO_chunkid (char *out, const char *source, size_t bufflen) {
       addstr(out, source, l);
       addstr(out, RETS, LL(RETS));
     }
-    memcpy(out, POS, LL(POS) + 1);
+    memcpy(out, POS, (LL(POS) + 1) * sizeof(char));
   }
 }
+

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.49 2010/07/07 16:27:29 roberto Exp $
+** $Id: lcode.c,v 2.56 2011/05/31 18:27:56 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -23,6 +23,7 @@
 #include "lparser.h"
 #include "lstring.h"
 #include "ltable.h"
+#include "lvm.h"
 
 
 #define hasjumps(e)	((e)->t != (e)->f)
@@ -35,19 +36,23 @@ static int isnumeral(expdesc *e) {
 
 void luaK_nil (FuncState *fs, int from, int n) {
   Instruction *previous;
+  int l = from + n - 1;  /* last register to set nil */
   if (fs->pc > fs->lasttarget) {  /* no jumps to current position? */
     previous = &fs->f->code[fs->pc-1];
     if (GET_OPCODE(*previous) == OP_LOADNIL) {
       int pfrom = GETARG_A(*previous);
-      int pto = GETARG_B(*previous);
-      if (pfrom <= from && from <= pto+1) {  /* can connect both? */
-        if (from+n-1 > pto)
-          SETARG_B(*previous, from+n-1);
+      int pl = pfrom + GETARG_B(*previous);
+      if ((pfrom <= from && from <= pl + 1) ||
+          (from <= pfrom && pfrom <= l + 1)) {  /* can connect both? */
+        if (pfrom < from) from = pfrom;  /* from = min(from, pfrom) */ 
+        if (pl > l) l = pl;  /* l = max(l, pl) */ 
+        SETARG_A(*previous, from);
+        SETARG_B(*previous, l - from);
         return;
       }
-    }
+    }  /* else go through */
   }
-  luaK_codeABC(fs, OP_LOADNIL, from, from+n-1, 0);  /* else no optimization */
+  luaK_codeABC(fs, OP_LOADNIL, from, n - 1, 0);  /* else no optimization */
 }
 
 
@@ -171,6 +176,19 @@ void luaK_patchlist (FuncState *fs, int list, int target) {
 }
 
 
+LUAI_FUNC void luaK_patchclose (FuncState *fs, int list, int level) {
+  level++;  /* argument is +1 to reserve 0 as non-op */
+  while (list != NO_JUMP) {
+    int next = getjump(fs, list);
+    lua_assert(GET_OPCODE(fs->f->code[list]) == OP_JMP &&
+                (GETARG_A(fs->f->code[list]) == 0 ||
+                 GETARG_A(fs->f->code[list]) >= level));
+    SETARG_A(fs->f->code[list], level);
+    list = next;
+  }
+}
+
+
 void luaK_patchtohere (FuncState *fs, int list) {
   luaK_getlabel(fs);
   luaK_concat(fs, &fs->jpc, list);
@@ -229,11 +247,11 @@ static int codeextraarg (FuncState *fs, int a) {
 }
 
 
-int luaK_codeABxX (FuncState *fs, OpCode o, int reg, int k) {
-  if (k < MAXARG_Bx)
-    return luaK_codeABx(fs, o, reg, k + 1);
+int luaK_codek (FuncState *fs, int reg, int k) {
+  if (k <= MAXARG_Bx)
+    return luaK_codeABx(fs, OP_LOADK, reg, k);
   else {
-    int p = luaK_codeABx(fs, o, reg, 0);
+    int p = luaK_codeABx(fs, OP_LOADKX, reg, 0);
     codeextraarg(fs, k);
     return p;
   }
@@ -278,7 +296,7 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
   if (ttisnumber(idx)) {
     lua_Number n = nvalue(idx);
     lua_number2int(k, n);
-    if (luaO_rawequalObj(&f->k[k], v))
+    if (luaV_rawequalobj(&f->k[k], v))
       return k;
     /* else may be a collision (e.g., between 0.0 and "\0\0\0\0\0\0\0\0");
        go through and create a new entry for this value */
@@ -564,15 +582,15 @@ void luaK_storevar (FuncState *fs, expdesc *var, expdesc *ex) {
 
 
 void luaK_self (FuncState *fs, expdesc *e, expdesc *key) {
-  int func;
+  int ereg;
   luaK_exp2anyreg(fs, e);
+  ereg = e->u.info;  /* register where 'e' was placed */
   freeexp(fs, e);
-  func = fs->freereg;
-  luaK_codeABC(fs, OP_SELF, func, e->u.info, luaK_exp2RK(fs, key));
-  freeexp(fs, key);
-  luaK_reserveregs(fs, 2);
-  e->u.info = func;
+  e->u.info = fs->freereg;  /* base register for op_self */
   e->k = VNONRELOC;
+  luaK_reserveregs(fs, 2);  /* function and 'self' produced by op_self */
+  luaK_codeABC(fs, OP_SELF, e->u.info, ereg, luaK_exp2RK(fs, key));
+  freeexp(fs, key);
 }
 
 
@@ -603,21 +621,14 @@ void luaK_goiftrue (FuncState *fs, expdesc *e) {
   int pc;  /* pc of last jump */
   luaK_dischargevars(fs, e);
   switch (e->k) {
-    case VK: case VKNUM: case VTRUE: {
-      pc = NO_JUMP;  /* always true; do nothing */
-      break;
-    }
     case VJMP: {
       invertjump(fs, e);
       pc = e->u.info;
       break;
     }
-    case VFALSE: {
-      if (!hasjumps(e)) {
-        pc = luaK_jump(fs);  /* always jump */
-        break;
-      }
-      /* else go through */
+    case VK: case VKNUM: case VTRUE: {
+      pc = NO_JUMP;  /* always true; do nothing */
+      break;
     }
     default: {
       pc = jumponcond(fs, e, 0);
@@ -634,20 +645,13 @@ static void luaK_goiffalse (FuncState *fs, expdesc *e) {
   int pc;  /* pc of last jump */
   luaK_dischargevars(fs, e);
   switch (e->k) {
-    case VNIL: case VFALSE: {
-      pc = NO_JUMP;  /* always false; do nothing */
-      break;
-    }
     case VJMP: {
       pc = e->u.info;
       break;
     }
-    case VTRUE: {
-      if (!hasjumps(e)) {
-        pc = luaK_jump(fs);  /* always jump */
-        break;
-      }
-      /* else go through */
+    case VNIL: case VFALSE: {
+      pc = NO_JUMP;  /* always false; do nothing */
+      break;
     }
     default: {
       pc = jumponcond(fs, e, 1);

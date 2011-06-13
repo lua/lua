@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.194 2010/10/25 19:01:37 roberto Exp $
+** $Id: lua.c,v 1.199 2011/05/26 16:09:40 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -106,13 +106,11 @@ static void laction (int i) {
 
 
 static void print_usage (const char *badoption) {
-  if (badoption[1] == 'e' || badoption[1] == 'l') {
-    luai_writestringerror("%s: ", progname);
+  luai_writestringerror("%s: ", progname);
+  if (badoption[1] == 'e' || badoption[1] == 'l')
     luai_writestringerror("'%s' needs argument\n", badoption);
-  } else {
-    luai_writestringerror("%s: ", progname);
+  else
     luai_writestringerror("unrecognized option '%s'\n", badoption);
-  }
   luai_writestringerror(
   "usage: %s [options] [script [args]]\n"
   "Available options are:\n"
@@ -185,7 +183,8 @@ static int docall (lua_State *L, int narg, int nres) {
 
 
 static void print_version (void) {
-  printf("%s\n", LUA_COPYRIGHT);
+  luai_writestring(LUA_COPYRIGHT, sizeof(LUA_COPYRIGHT));
+  luai_writeline();
 }
 
 
@@ -247,14 +246,14 @@ static const char *get_prompt (lua_State *L, int firstline) {
 }
 
 /* mark in error messages for incomplete statements */
-#define mark	"<eof>"
-#define marklen	(sizeof(mark) - 1)
+#define EOFMARK		"<eof>"
+#define marklen		(sizeof(EOFMARK)/sizeof(char) - 1)
 
 static int incomplete (lua_State *L, int status) {
   if (status == LUA_ERRSYNTAX) {
     size_t lmsg;
     const char *msg = lua_tolstring(L, -1, &lmsg);
-    if (lmsg >= marklen && strcmp(msg + lmsg - marklen, mark) == 0) {
+    if (lmsg >= marklen && strcmp(msg + lmsg - marklen, EOFMARK) == 0) {
       lua_pop(L, 1);
       return 1;
     }
@@ -322,7 +321,7 @@ static void dotty (lua_State *L) {
     }
   }
   lua_settop(L, 0);  /* clear stack */
-  luai_writestring("\n", 1);
+  luai_writeline();
   progname = oldprogname;
 }
 

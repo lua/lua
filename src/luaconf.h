@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.151 2010/11/12 15:48:30 roberto Exp $
+** $Id: luaconf.h,v 1.159 2011/06/13 14:13:06 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -35,6 +35,7 @@
 
 #if defined(LUA_WIN)
 #define LUA_DL_DLL
+#define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
 #endif
 
 
@@ -43,12 +44,18 @@
 #define LUA_USE_POSIX
 #define LUA_USE_DLOPEN		/* needs an extra library: -ldl */
 #define LUA_USE_READLINE	/* needs some extra libraries */
+#define LUA_USE_STRTODHEX	/* assume 'strtod' handles hexa formats */
+#define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
+#define LUA_USE_LONGLONG	/* assume support for long long */
 #endif
 
 #if defined(LUA_USE_MACOSX)
 #define LUA_USE_POSIX
 #define LUA_USE_DLOPEN		/* does not need -ldl */
 #define LUA_USE_READLINE	/* needs an extra library: -lreadline */
+#define LUA_USE_STRTODHEX	/* assume 'strtod' handles hexa formats */
+#define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
+#define LUA_USE_LONGLONG	/* assume support for long long */
 #endif
 
 
@@ -202,10 +209,11 @@
 
 
 /*
-@@ luai_writestring defines how 'print' prints its results.
+@@ luai_writestring/luai_writeline define how 'print' prints its results.
 */
 #include <stdio.h>
 #define luai_writestring(s,l)	fwrite((s), sizeof(char), (l), stdout)
+#define luai_writeline()	(luai_writestring("\n", 1), fflush(stdout))
 
 /*
 @@ luai_writestringerror defines how to print error messages.
@@ -252,6 +260,12 @@
 ** You can rewrite 'log10(x)' as 'log(x, 10)'.
 */
 #define LUA_COMPAT_LOG10
+
+/*
+@@ LUA_COMPAT_LOADSTRING defines the function 'loadstring' in the base
+** library. You can rewrite 'loadstring(s)' as 'load(s)'.
+*/
+#define LUA_COMPAT_LOADSTRING
 
 /*
 @@ LUA_COMPAT_MAXN defines the function 'maxn' in the table library.
@@ -371,13 +385,26 @@
 @@ LUA_NUMBER_FMT is the format for writing numbers.
 @@ lua_number2str converts a number to a string.
 @@ LUAI_MAXNUMBER2STR is maximum size of previous conversion.
-@@ lua_str2number converts a string to a number.
 */
 #define LUA_NUMBER_SCAN		"%lf"
 #define LUA_NUMBER_FMT		"%.14g"
 #define lua_number2str(s,n)	sprintf((s), LUA_NUMBER_FMT, (n))
 #define LUAI_MAXNUMBER2STR	32 /* 16 digits, sign, point, and \0 */
+
+
+/*
+@@ lua_str2number converts a decimal numeric string to a number.
+@@ lua_strx2number converts an hexadecimal numeric string to a number.
+** In C99, 'strtod' do both conversions. C89, however, has no function
+** to convert floating hexadecimal strings to numbers. For these
+** systems, you can leave 'lua_strx2number' undefined and Lua will
+** provide its own implementation.
+*/
 #define lua_str2number(s,p)	strtod((s), (p))
+
+#if defined(LUA_USE_STRTODHEX)
+#define lua_strx2number(s,p)	strtod((s), (p))
+#endif
 
 
 /*
@@ -438,11 +465,11 @@
 
 /*
 @@ LUA_IEEEENDIAN is the endianness of doubles in your machine
-@@ (0 for little endian, 1 for big endian); if not defined, Lua will
-@@ check it dynamically.
+** (0 for little endian, 1 for big endian); if not defined, Lua will
+** check it dynamically.
 */
 /* check for known architectures */
-#if defined(__i386__) || defined(__i386) || defined(i386) || \
+#if defined(__i386__) || defined(__i386) || defined(__X86__) || \
     defined (__x86_64)
 #define LUA_IEEEENDIAN	0
 #elif defined(__POWERPC__) || defined(__ppc__)
@@ -456,6 +483,30 @@
 #endif			/* } */
 
 /* }================================================================== */
+
+
+/*
+@@ LUA_NANTRICKLE/LUA_NANTRICKBE controls the use of a trick to pack all
+** types into a single double value, using NaN values to represent
+** non-number values. The trick only works on 32-bit machines (ints and
+** pointers are 32-bit values) with numbers represented as IEEE 754-2008
+** doubles with conventional endianess (12345678 or 87654321), in CPUs
+** that do not produce signaling NaN values (all NaNs are quiet).
+*/
+#if defined(LUA_CORE)		/* { */
+
+#if defined(LUA_NUMBER_DOUBLE) && !defined(LUA_ANSI)	/* { */
+
+/* little-endian architectures that satisfy those conditions */
+#if defined(__i386__) || defined(__i386) || defined(__X86__)
+
+#define LUA_NANTRICKLE
+
+#endif
+
+#endif							/* } */
+
+#endif			/* } */
 
 
 

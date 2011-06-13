@@ -126,7 +126,7 @@ lbaselib.o: lbaselib.c lua.h luaconf.h lauxlib.h lualib.h
 lbitlib.o: lbitlib.c lua.h luaconf.h lauxlib.h lualib.h
 lcode.o: lcode.c lua.h luaconf.h lcode.h llex.h lobject.h llimits.h \
  lzio.h lmem.h lopcodes.h lparser.h ldebug.h lstate.h ltm.h ldo.h lgc.h \
- lstring.h ltable.h
+ lstring.h ltable.h lvm.h
 lcorolib.o: lcorolib.c lua.h luaconf.h lauxlib.h lualib.h
 lctype.o: lctype.c lctype.h lua.h luaconf.h llimits.h
 ldblib.o: ldblib.c lua.h luaconf.h lauxlib.h lualib.h
@@ -164,7 +164,7 @@ lstring.o: lstring.c lua.h luaconf.h lmem.h llimits.h lobject.h lstate.h \
  ltm.h lzio.h lstring.h lgc.h
 lstrlib.o: lstrlib.c lua.h luaconf.h lauxlib.h lualib.h
 ltable.o: ltable.c lua.h luaconf.h ldebug.h lstate.h lobject.h llimits.h \
- ltm.h lzio.h lmem.h ldo.h lgc.h lstring.h ltable.h
+ ltm.h lzio.h lmem.h ldo.h lgc.h lstring.h ltable.h lvm.h
 ltablib.o: ltablib.c lua.h luaconf.h lauxlib.h lualib.h
 ltm.o: ltm.c lua.h luaconf.h lobject.h llimits.h lstate.h ltm.h lzio.h \
  lmem.h lstring.h lgc.h ltable.h

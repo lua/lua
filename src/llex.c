@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.41 2010/11/18 18:38:44 roberto Exp $
+** $Id: llex.c,v 2.47 2011/05/03 15:51:16 roberto Exp $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,7 @@
 /* ORDER RESERVED */
 static const char *const luaX_tokens [] = {
     "and", "break", "do", "else", "elseif",
-    "end", "false", "for", "function", "if",
+    "end", "false", "for", "function", "goto", "if",
     "in", "local", "nil", "not", "or", "repeat",
     "return", "then", "true", "until", "while",
     "..", "...", "==", ">=", "<=", "~=", "<eof>",
@@ -67,7 +67,6 @@ void luaX_init (lua_State *L) {
   for (i=0; i<NUM_RESERVED; i++) {
     TString *ts = luaS_new(L, luaX_tokens[i]);
     luaS_fix(ts);  /* reserved words are never collected */
-    lua_assert(strlen(luaX_tokens[i])+1 <= TOKEN_LEN);
     ts->tsv.reserved = cast_byte(i+1);  /* reserved word */
   }
 }
@@ -127,7 +126,7 @@ TString *luaX_newstring (LexState *ls, const char *str, size_t l) {
   TValue *o;  /* entry for `str' */
   TString *ts = luaS_newlstr(L, str, l);  /* create new string */
   setsvalue2s(L, L->top++, ts);  /* temporarily anchor it in stack */
-  o = luaH_setstr(L, ls->fs->h, ts); 
+  o = luaH_setstr(L, ls->fs->h, ts);
   if (ttisnil(o)) {
     setbvalue(o, 1);  /* t[string] = true */
     luaC_checkGC(L);
@@ -152,9 +151,11 @@ static void inclinenumber (LexState *ls) {
 }
 
 
-void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source) {
+void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source,
+                    int firstchar) {
   ls->decpoint = '.';
   ls->L = L;
+  ls->current = firstchar;
   ls->lookahead.token = TK_EOS;  /* no look-ahead token */
   ls->z = z;
   ls->fs = NULL;
@@ -164,7 +165,6 @@ void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source) {
   ls->envn = luaS_new(L, LUA_ENV);  /* create env name */
   luaS_fix(ls->envn);  /* never collect this name */
   luaZ_resizebuffer(ls->L, ls->buff, LUA_MINBUFFER);  /* initialize buffer */
-  next(ls);  /* read first char */
 }
 
 
@@ -185,7 +185,7 @@ static int check_next (LexState *ls, const char *set) {
 }
 
 
-/* 
+/*
 ** change all characters 'from' in buffer to 'to'
 */
 static void buffreplace (LexState *ls, char from, char to) {
@@ -200,6 +200,9 @@ static void buffreplace (LexState *ls, char from, char to) {
 #define getlocaledecpoint()	(localeconv()->decimal_point[0])
 #endif
 
+
+#define buff2d(b,e)	luaO_str2d(luaZ_buffer(b), luaZ_bufflen(b) - 1, e)
+
 /*
 ** in case of format error, try to change decimal point separator to
 ** the one defined in the current locale and check again
@@ -208,7 +211,7 @@ static void trydecpoint (LexState *ls, SemInfo *seminfo) {
   char old = ls->decpoint;
   ls->decpoint = getlocaledecpoint();
   buffreplace(ls, old, ls->decpoint);  /* try new decimal separator */
-  if (!luaO_str2d(luaZ_buffer(ls->buff), &seminfo->r)) {
+  if (!buff2d(ls->buff, &seminfo->r)) {
     /* format error with correct decimal point: no more options */
     buffreplace(ls, ls->decpoint, '.');  /* undo change (for error message) */
     lexerror(ls, "malformed number", TK_NUMBER);
@@ -226,7 +229,7 @@ static void read_numeral (LexState *ls, SemInfo *seminfo) {
   } while (lislalnum(ls->current) || ls->current == '.');
   save(ls, '\0');
   buffreplace(ls, '.', ls->decpoint);  /* follow locale for decimal point */
-  if (!luaO_str2d(luaZ_buffer(ls->buff), &seminfo->r))  /* format error? */
+  if (!buff2d(ls->buff, &seminfo->r))  /* format error? */
     trydecpoint(ls, seminfo); /* try to update decimal point separator */
 }
 
@@ -283,13 +286,6 @@ static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
 }
 
 
-static int hexavalue (int c) {
-  if (lisdigit(c)) return c - '0';
-  else if (lisupper(c)) return c - 'A' + 10;
-  else return c - 'a' + 10;
-}
-
-
 static int readhexaesc (LexState *ls) {
   int c1, c2 = EOZ;
   if (!lisxdigit(c1 = next(ls)) || !lisxdigit(c2 = next(ls))) {
@@ -299,7 +295,7 @@ static int readhexaesc (LexState *ls) {
     if (c2 != EOZ) save(ls, c2);
     lexerror(ls, "hexadecimal digit expected", TK_STRING);
   }
-  return (hexavalue(c1) << 4) + hexavalue(c2);
+  return (luaO_hexavalue(c1) << 4) + luaO_hexavalue(c2);
 }
 
 

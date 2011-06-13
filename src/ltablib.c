@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.58 2010/11/23 17:21:14 roberto Exp $
+** $Id: ltablib.c,v 1.59 2010/12/17 12:15:34 roberto Exp $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -17,7 +17,7 @@
 
 
 #define aux_getn(L,n)  \
-	(luaL_checktype(L, n, LUA_TTABLE), (int)lua_rawlen(L, n))
+	(luaL_checktype(L, n, LUA_TTABLE), luaL_len(L, n))
 
 
 static int deprecatedfunc (lua_State *L) {
@@ -104,7 +104,7 @@ static int tconcat (lua_State *L) {
   const char *sep = luaL_optlstring(L, 2, "", &lsep);
   luaL_checktype(L, 1, LUA_TTABLE);
   i = luaL_optint(L, 3, 1);
-  last = luaL_opt(L, luaL_checkint, 4, (int)lua_rawlen(L, 1));
+  last = luaL_opt(L, luaL_checkint, 4, luaL_len(L, 1));
   luaL_buffinit(L, &b);
   for (; i < last; i++) {
     addfield(L, &b, i);
@@ -143,7 +143,7 @@ static int unpack (lua_State *L) {
   int i, e, n;
   luaL_checktype(L, 1, LUA_TTABLE);
   i = luaL_optint(L, 2, 1);
-  e = luaL_opt(L, luaL_checkint, 3, (int)lua_rawlen(L, 1));
+  e = luaL_opt(L, luaL_checkint, 3, luaL_len(L, 1));
   if (i > e) return 0;  /* empty range */
   n = e - i + 1;  /* number of elements */
   if (n <= 0 || !lua_checkstack(L, n))  /* n <= 0 means arith. overflow */

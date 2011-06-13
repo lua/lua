@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.12 2010/04/13 20:48:12 roberto Exp $
+** $Id: ltm.c,v 2.14 2011/06/02 19:31:40 roberto Exp $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -21,11 +21,11 @@
 
 static const char udatatypename[] = "userdata";
 
-LUAI_DDEF const char *const luaT_typenames_[] = {
+LUAI_DDEF const char *const luaT_typenames_[LUA_TOTALTAGS] = {
   "no value",
   "nil", "boolean", udatatypename, "number",
   "string", "table", "function", udatatypename, "thread",
-  "proto", "upval"
+  "proto", "upval"  /* these last two cases are used for tests only */
 };
 
 
@@ -62,7 +62,7 @@ const TValue *luaT_gettm (Table *events, TMS event, TString *ename) {
 
 const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
   Table *mt;
-  switch (ttype(o)) {
+  switch (ttypenv(o)) {
     case LUA_TTABLE:
       mt = hvalue(o)->metatable;
       break;

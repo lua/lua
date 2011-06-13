@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.68 2010/10/29 17:52:46 roberto Exp $
+** $Id: lstate.h,v 2.72 2011/06/02 19:31:40 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -32,9 +32,9 @@
 ** when traversing the respective threads, but the thread may already be
 ** dead, while the upvalue is still accessible through closures.)
 **
-** Userdata with finalizers are kept in the list g->udgc.
+** Objects with finalizers are kept in the list g->finobj.
 **
-** The list g->tobefnz links all userdata being finalized.
+** The list g->tobefnz links all objects being finalized.
 
 */
 
@@ -104,7 +104,6 @@ typedef struct CallInfo {
 #define CIST_TAIL	(1<<6)	/* call was tail called */
 
 
-#define ci_func(ci)	(clvalue((ci)->func))
 #define isLua(ci)	((ci)->callstatus & CIST_LUA)
 
 
@@ -114,8 +113,8 @@ typedef struct CallInfo {
 typedef struct global_State {
   lua_Alloc frealloc;  /* function to reallocate memory */
   void *ud;         /* auxiliary data to `frealloc' */
-  lu_mem totalbytes;  /* number of bytes currently allocated */
-  l_mem GCdebt;  /* when positive, run a GC step */
+  lu_mem totalbytes;  /* number of bytes currently allocated - GCdebt */
+  l_mem GCdebt;  /* bytes allocated not yet compensated by the collector */
   lu_mem lastmajormem;  /* memory in use after last major collection */
   stringtable strt;  /* hash table for strings */
   TValue l_registry;
@@ -123,9 +122,10 @@ typedef struct global_State {
   lu_byte currentwhite;
   lu_byte gcstate;  /* state of garbage collector */
   lu_byte gckind;  /* kind of GC running */
+  lu_byte gcrunning;  /* true if GC is running */
   int sweepstrgc;  /* position of sweep in `strt' */
   GCObject *allgc;  /* list of all collectable objects */
-  GCObject *udgc;  /* list of collectable userdata with finalizers */
+  GCObject *finobj;  /* list of collectable objects with finalizers */
   GCObject **sweepgc;  /* current position of sweep */
   GCObject *gray;  /* list of gray objects */
   GCObject *grayagain;  /* list of objects to be traversed atomically */
@@ -209,6 +209,10 @@ union GCObject {
 #define obj2gco(v)	(cast(GCObject *, (v)))
 
 
+/* actual number of total bytes allocated */
+#define gettotalbytes(g)	((g)->totalbytes + (g)->GCdebt)
+
+LUAI_FUNC void luaE_setdebt (global_State *g, l_mem debt);
 LUAI_FUNC void luaE_freethread (lua_State *L, lua_State *L1);
 LUAI_FUNC CallInfo *luaE_extendCI (lua_State *L);
 LUAI_FUNC void luaE_freeCI (lua_State *L);

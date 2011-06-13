@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.227 2010/11/10 18:05:36 roberto Exp $
+** $Id: lauxlib.c,v 1.232 2011/05/03 16:01:57 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -203,6 +203,64 @@ LUALIB_API int luaL_error (lua_State *L, const char *fmt, ...) {
   return lua_error(L);
 }
 
+
+LUALIB_API int luaL_fileresult (lua_State *L, int stat, const char *fname) {
+  int en = errno;  /* calls to Lua API may change this value */
+  if (stat) {
+    lua_pushboolean(L, 1);
+    return 1;
+  }
+  else {
+    lua_pushnil(L);
+    if (fname)
+      lua_pushfstring(L, "%s: %s", fname, strerror(en));
+    else
+      lua_pushfstring(L, "%s", strerror(en));
+    lua_pushinteger(L, en);
+    return 3;
+  }
+}
+
+
+#if !defined(inspectstat)	/* { */
+
+#if defined(LUA_USE_POSIX)
+
+#include <sys/wait.h>
+
+/*
+** use appropriate macros to interpret 'pclose' return status
+*/
+#define inspectstat(stat,what)  \
+   if (WIFEXITED(stat)) { stat = WEXITSTATUS(stat); } \
+   else if (WIFSIGNALED(stat)) { stat = WTERMSIG(stat); what = "signal"; }
+
+#else
+
+#define inspectstat(stat,what)  /* no op */
+
+#endif
+
+#endif				/* } */
+
+
+LUALIB_API int luaL_execresult (lua_State *L, int stat) {
+  const char *what = "exit";  /* type of termination */
+  if (stat == -1)  /* error? */
+    return luaL_fileresult(L, 0, NULL);
+  else {
+    inspectstat(stat, what);  /* interpret result */
+    if (*what == 'e' && stat == 0)  /* successful termination? */
+      return luaL_fileresult(L, 1, NULL);
+    else {  /* return nil,what,code */
+      lua_pushnil(L);
+      lua_pushstring(L, what);
+      lua_pushinteger(L, stat);
+      return 3;
+    }
+  }
+}
+
 /* }====================================================== */
 
 
@@ -384,8 +442,10 @@ LUALIB_API char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz) {
       newsize = B->n + sz;
     if (newsize < B->n || newsize - B->n < sz)
       luaL_error(L, "buffer too large");
-    newbuff = (char *)lua_newuserdata(L, newsize);  /* create larger buffer */
-    memcpy(newbuff, B->b, B->n);  /* move content to new buffer */
+    /* create larger buffer */
+    newbuff = (char *)lua_newuserdata(L, newsize * sizeof(char));
+    /* move content to new buffer */
+    memcpy(newbuff, B->b, B->n * sizeof(char));
     if (buffonstack(B))
       lua_remove(L, -2);  /* remove old buffer */
     B->b = newbuff;
@@ -397,7 +457,7 @@ LUALIB_API char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz) {
 
 LUALIB_API void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l) {
   char *b = luaL_prepbuffsize(B, l);
-  memcpy(b, s, l);
+  memcpy(b, s, l * sizeof(char));
   luaL_addsize(B, l);
 }
 
@@ -700,8 +760,8 @@ LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len) {
 */
 #if defined(LUA_COMPAT_MODULE)
 
-static const char *luaL_findtablex (lua_State *L, int idx,
-                                    const char *fname, int szhint) {
+static const char *luaL_findtable (lua_State *L, int idx,
+                                   const char *fname, int szhint) {
   const char *e;
   if (idx) lua_pushvalue(L, idx);
   do {
@@ -745,13 +805,13 @@ static int libsize (const luaL_Reg *l) {
 */
 LUALIB_API void luaL_pushmodule (lua_State *L, const char *modname,
                                  int sizehint) {
-  luaL_findtablex(L, LUA_REGISTRYINDEX, "_LOADED", 1);  /* get _LOADED table */
+  luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 1);  /* get _LOADED table */
   lua_getfield(L, -1, modname);  /* get _LOADED[modname] */
   if (!lua_istable(L, -1)) {  /* not found? */
     lua_pop(L, 1);  /* remove previous result */
     /* try global variable (and create one if it does not exist) */
     lua_pushglobaltable(L);
-    if (luaL_findtablex(L, 0, modname, sizehint) != NULL)
+    if (luaL_findtable(L, 0, modname, sizehint) != NULL)
       luaL_error(L, "name conflict for module " LUA_QS, modname);
     lua_pushvalue(L, -1);
     lua_setfield(L, -3, modname);  /* _LOADED[modname] = new table */
@@ -767,7 +827,10 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
     luaL_pushmodule(L, libname, libsize(l));  /* get/create library table */
     lua_insert(L, -(nup + 1));  /* move library table to below upvalues */
   }
-  luaL_setfuncs(L, l, nup);
+  if (l)
+    luaL_setfuncs(L, l, nup);
+  else
+    lua_pop(L, nup);  /* remove upvalues */
 }
 
 #endif
@@ -780,7 +843,7 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
 */
 LUALIB_API void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup) {
   luaL_checkstack(L, nup, "too many upvalues");
-  for (; l && l->name; l++) {  /* fill the table with given functions */
+  for (; l->name != NULL; l++) {  /* fill the table with given functions */
     int i;
     for (i = 0; i < nup; i++)  /* copy upvalues to the top */
       lua_pushvalue(L, -nup);
@@ -795,15 +858,16 @@ LUALIB_API void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup) {
 ** ensure that stack[idx][fname] has a table and push that table
 ** into the stack
 */
-LUALIB_API void luaL_findtable (lua_State *L, int idx, const char *fname) {
+LUALIB_API int luaL_getsubtable (lua_State *L, int idx, const char *fname) {
   lua_getfield(L, idx, fname);
-  if (lua_istable(L, -1)) return;  /* table already there */
+  if (lua_istable(L, -1)) return 1;  /* table already there */
   else {
     idx = lua_absindex(L, idx);
     lua_pop(L, 1);  /* remove previous result */
     lua_newtable(L);
     lua_pushvalue(L, -1);  /* copy to be left at top */
     lua_setfield(L, idx, fname);  /* assign new table to field */
+    return 0;  /* false, because did not find table there */
   }
 }
 
@@ -819,7 +883,7 @@ LUALIB_API void luaL_requiref (lua_State *L, const char *modname,
   lua_pushcfunction(L, openf);
   lua_pushstring(L, modname);  /* argument to open function */
   lua_call(L, 1, 1);  /* open module */
-  luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED");
+  luaL_getsubtable(L, LUA_REGISTRYINDEX, "_LOADED");
   lua_pushvalue(L, -2);  /* make copy of module (call result) */
   lua_setfield(L, -2, modname);  /* _LOADED[modname] = module */
   lua_pop(L, 1);  /* remove _LOADED table */

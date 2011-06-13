@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.84 2010/11/08 16:33:20 roberto Exp $
+** $Id: llimits.h,v 1.89 2011/05/05 19:43:14 roberto Exp $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -59,9 +59,12 @@ typedef LUAI_UACNUMBER l_uacNumber;
 /* internal assertions for in-house debugging */
 #if defined(lua_assert)
 #define check_exp(c,e)		(lua_assert(c), (e))
+/* to avoid problems with conditions too long */
+#define lua_longassert(c)	{ if (!(c)) lua_assert(0); }
 #else
 #define lua_assert(c)		/* empty */
 #define check_exp(c,e)		(e)
+#define lua_longassert(c)	/* empty */
 #endif
 
 /*
@@ -87,6 +90,7 @@ typedef LUAI_UACNUMBER l_uacNumber;
 #define cast_byte(i)	cast(lu_byte, (i))
 #define cast_num(i)	cast(lua_Number, (i))
 #define cast_int(i)	cast(int, (i))
+#define cast_uchar(i)	cast(unsigned char, (i))
 
 
 /*
@@ -173,6 +177,9 @@ typedef lu_int32 Instruction;
 ** lua_number2integer is a macro to convert lua_Number to lua_Integer.
 ** lua_number2unsigned is a macro to convert a lua_Number to a lua_Unsigned.
 ** lua_unsigned2number is a macro to convert a lua_Unsigned to a lua_Number.
+** luai_hashnum is a macro to hash a lua_Number value into an integer.
+** The hash must be deterministic and give reasonable values for
+** both small and large values (outside the range of integers).
 */
 
 #if defined(MS_ASMTRICK)	/* { */
@@ -202,6 +209,10 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
   { LUAI_EXTRAIEEE \
     volatile union luai_Cast u; u.l_d = (n) + 6755399441055744.0; \
     (i) = (t)u.l_p[LUA_IEEEENDIAN]; }
+
+#define luai_hashnum(i,n)  \
+  { volatile union luai_Cast u; u.l_d = (n) + 1.0;  /* avoid -0 */ \
+    (i) = u.l_p[0] + u.l_p[1]; }  /* add double bits for his hash */
 
 #define lua_number2int(i,n)		lua_number2int32(i, n, int)
 #define lua_number2integer(i,n)		lua_number2int32(i, n, lua_Integer)
@@ -241,14 +252,8 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
 #endif
 
 
-/*
-** luai_hashnum is a macro do hash a lua_Number value into an integer.
-** The hash must be deterministic and give reasonable values for
-** both small and large values (outside the range of integers).
-** It is used only in ltable.c.
-*/
 
-#if !defined(luai_hashnum)	/* { */
+#if (defined(ltable_c) || defined(luaall_c)) && !defined(luai_hashnum)
 
 #include <float.h>
 #include <math.h>
@@ -257,7 +262,7 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
   n = frexp(n, &e) * (lua_Number)(INT_MAX - DBL_MAX_EXP);  \
   lua_number2int(i, n); i += e; }
 
-#endif						/* } */
+#endif
 
 
 
@@ -275,7 +280,7 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
 #define condchangemem(L)	condmovestack(L)
 #else
 #define condchangemem(L)  \
-	((void)(gcstopped(G(L)) || (luaC_fullgc(L, 0), 1)))
+	((void)(!(G(L)->gcrunning) || (luaC_fullgc(L, 0), 1)))
 #endif
 
 #endif
