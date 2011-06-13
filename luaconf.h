@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.157 2011/04/29 13:56:28 roberto Exp roberto $
+** $Id: luaconf.h,v 1.158 2011/05/26 16:09:40 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -465,11 +465,11 @@
 
 /*
 @@ LUA_IEEEENDIAN is the endianness of doubles in your machine
-@@ (0 for little endian, 1 for big endian); if not defined, Lua will
-@@ check it dynamically.
+** (0 for little endian, 1 for big endian); if not defined, Lua will
+** check it dynamically.
 */
 /* check for known architectures */
-#if defined(__i386__) || defined(__i386) || defined(i386) || \
+#if defined(__i386__) || defined(__i386) || defined(__X86__) || \
     defined (__x86_64)
 #define LUA_IEEEENDIAN	0
 #elif defined(__POWERPC__) || defined(__ppc__)
@@ -483,6 +483,30 @@
 #endif			/* } */
 
 /* }================================================================== */
+
+
+/*
+@@ LUA_NANTRICKLE/LUA_NANTRICKBE controls the use of a trick to pack all
+** types into a single double value, using NaN values to represent
+** non-number values. The trick only works on 32-bit machines (ints and
+** pointers are 32-bit values) with numbers represented as IEEE 754-2008
+** doubles with conventional endianess (12345678 or 87654321), in CPUs
+** that do not produce signaling NaN values (all NaNs are quiet).
+*/
+#if defined(LUA_CORE)		/* { */
+
+#if defined(LUA_NUMBER_DOUBLE) && !defined(LUA_ANSI)	/* { */
+
+/* little-endian architectures that satisfy those conditions */
+#if defined(__i386__) || defined(__i386) || defined(__X86__)
+
+#define LUA_NANTRICKLE
+
+#endif
+
+#endif							/* } */
+
+#endif			/* } */
 
 
 
