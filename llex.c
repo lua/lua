@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.46 2011/02/23 13:13:10 roberto Exp roberto $
+** $Id: llex.c,v 2.47 2011/05/03 15:51:16 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -287,25 +287,32 @@ static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
 
 
 static int readhexaesc (LexState *ls) {
-  int c1, c2 = EOZ;
-  if (!lisxdigit(c1 = next(ls)) || !lisxdigit(c2 = next(ls))) {
-    luaZ_resetbuffer(ls->buff);  /* prepare error message */
-    save(ls, '\\'); save(ls, 'x');
-    if (c1 != EOZ) save(ls, c1);
-    if (c2 != EOZ) save(ls, c2);
-    lexerror(ls, "hexadecimal digit expected", TK_STRING);
+  int c1 = next(ls);
+  int c2 = EOZ;
+  if (lisxdigit(c1)) {
+    c2 = next(ls);
+    if (lisxdigit(c2))
+      return (luaO_hexavalue(c1) << 4) + luaO_hexavalue(c2);
+    /* else go through to error */
   }
-  return (luaO_hexavalue(c1) << 4) + luaO_hexavalue(c2);
+  luaZ_resetbuffer(ls->buff);  /* prepare error message */
+  save(ls, '\\'); save(ls, 'x');
+  if (c1 != EOZ) save(ls, c1);
+  if (c2 != EOZ) save(ls, c2);
+  lexerror(ls, "hexadecimal digit expected", TK_STRING);
+  return 0;  /* to avoid warnings */
 }
 
 
 static int readdecesc (LexState *ls) {
-  int c1 = ls->current, c2, c3;
-  int c = c1 - '0';
-  if (lisdigit(c2 = next(ls))) {
-    c = 10*c + c2 - '0';
-    if (lisdigit(c3 = next(ls))) {
-      c = 10*c + c3 - '0';
+  int c1 = ls->current;  /* first char must be a digit */
+  int c2 = next(ls);  /* read second char */
+  int c = c1 - '0';  /* partial result */
+  if (lisdigit(c2)) {
+    int c3 = next(ls);  /* read third char */
+    c = 10*c + c2 - '0';  /* update result */
+    if (lisdigit(c3)) {
+      c = 10*c + c3 - '0';  /* update result */
       if (c > UCHAR_MAX) {
         luaZ_resetbuffer(ls->buff);  /* prepare error message */
         save(ls, '\\');
