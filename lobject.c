@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.48 2011/05/03 16:01:57 roberto Exp roberto $
+** $Id: lobject.c,v 2.49 2011/05/31 18:24:36 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -105,7 +105,7 @@ static int isneg (const char **s) {
 
 static lua_Number readhexa (const char **s, lua_Number r, int *count) {
   while (lisxdigit(cast_uchar(**s))) {  /* read integer part */
-    r = (r * 16.0) + (double)luaO_hexavalue(*(*s)++);
+    r = (r * 16.0) + cast_num(luaO_hexavalue(cast_uchar(*(*s)++)));
     (*count)++;
   }
   return r;
