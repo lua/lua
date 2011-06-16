@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.115 2011/03/03 16:34:46 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.116 2011/04/08 19:17:36 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -164,6 +164,7 @@ LUALIB_API char *(luaL_buffinitsize) (lua_State *L, luaL_Buffer *B, size_t sz);
 
 
 /* compatibility with old module system */
+#if defined(LUA_COMPAT_MODULE)
 
 LUALIB_API void (luaL_pushmodule) (lua_State *L, const char *modname,
                                    int sizehint);
@@ -171,6 +172,8 @@ LUALIB_API void (luaL_openlib) (lua_State *L, const char *libname,
                                 const luaL_Reg *l, int nup);
 
 #define luaL_register(L,n,l)	(luaL_openlib(L,(n),(l),0))
+
+#endif
 
 
 #endif
