@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.95 2011/06/02 19:31:40 roberto Exp roberto $
+** $Id: ldo.c,v 2.96 2011/06/18 17:08:58 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -624,7 +624,7 @@ static Proto *callparser (lua_State *L, struct SParser *p, int c) {
   const char *oldloc = setlocale(LC_ALL, NULL);  /* get current locale */
   p->savedlocale = luaS_new(L, oldloc);  /* make a copy */
   setsvalue2s(L, L->top - 1, p->savedlocale);  /* anchor it */
-  setlocale(LC_ALL, "C");  /* standard locale for parsing Lua files */
+  (void)setlocale(LC_ALL, "C");  /* standard locale for parsing Lua files */
   return luaY_parser(L, p->z, &p->buff, &p->dyd, p->name, c);
 }
 
@@ -663,7 +663,7 @@ int luaD_protectedparser (lua_State *L, ZIO *z, const char *name) {
   luaM_freearray(L, p.dyd.label.arr, p.dyd.label.size);
   L->nny--;
   if (p.savedlocale)  /* locale was changed? */
-    setlocale(LC_ALL, getstr(p.savedlocale));  /* restore old locale */
+    (void)setlocale(LC_ALL, getstr(p.savedlocale));  /* restore old locale */
   setobjs2s(L, L->top - 2, L->top - 1);  /* remove reserved space */
   --L->top;
   return status;
