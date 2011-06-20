@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.109 2011/05/02 17:33:01 roberto Exp roberto $
+** $Id: lparser.c,v 2.110 2011/06/16 16:36:39 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1209,16 +1209,16 @@ static void checkrepeated (LexState *ls, FuncState *fs, Labellist *ll,
 
 
 static void labelstat (LexState *ls, TString *label, int line) {
-  /* label -> '@' NAME ':' */
+  /* label -> '::' NAME '::' */
   FuncState *fs = ls->fs;
   Labellist *ll = &ls->dyd->label;
   int l;  /* index of new label being created */
   checkrepeated(ls, fs, ll, label);  /* check for repeated labels */
-  checknext(ls, ':');  /* skip colon */
+  checknext(ls, TK_DBCOLON);  /* skip double colon */
   /* create new entry for this label */
   l = newlabelentry(ls, ll, label, line, fs->pc);
   /* skip other no-op statements */
-  while (ls->t.token == ';' || ls->t.token == '@')
+  while (ls->t.token == ';' || ls->t.token == TK_DBCOLON)
     statement(ls);
   if (block_follow(ls, 0)) {  /* label is last no-op statement in the block? */
     /* assume that locals are already out of scope */
@@ -1552,8 +1552,8 @@ static void statement (LexState *ls) {
         localstat(ls);
       break;
     }
-    case '@': {  /* stat -> label */
-      luaX_next(ls);  /* skip '@' */
+    case TK_DBCOLON: {  /* stat -> label */
+      luaX_next(ls);  /* skip double colon */
       labelstat(ls, str_checkname(ls), line);
       break;
     }
