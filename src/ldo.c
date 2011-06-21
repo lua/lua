@@ -1,10 +1,11 @@
 /*
-** $Id: ldo.c,v 2.95 2011/06/02 19:31:40 roberto Exp $
+** $Id: ldo.c,v 2.97 2011/06/20 16:36:03 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
 
 
+#include <locale.h>
 #include <setjmp.h>
 #include <stdlib.h>
 #include <string.h>
@@ -612,7 +613,21 @@ struct SParser {  /* data to `f_parser' */
   Mbuffer buff;  /* dynamic structure used by the scanner */
   Dyndata dyd;  /* dynamic structures used by the parser */
   const char *name;
+  TString *savedlocale;
 };
+
+
+/*
+** save current locale and set locale to "C" for calling the parser
+*/
+static Proto *callparser (lua_State *L, struct SParser *p, int c) {
+  const char *oldloc = setlocale(LC_ALL, NULL);  /* get current locale */
+  p->savedlocale = luaS_new(L, oldloc);  /* make a copy */
+  setsvalue2s(L, L->top - 1, p->savedlocale);  /* anchor it */
+  (void)setlocale(LC_ALL, "C");  /* standard locale for parsing Lua files */
+  return luaY_parser(L, p->z, &p->buff, &p->dyd, p->name, c);
+}
+
 
 static void f_parser (lua_State *L, void *ud) {
   int i;
@@ -621,8 +636,7 @@ static void f_parser (lua_State *L, void *ud) {
   struct SParser *p = cast(struct SParser *, ud);
   int c = zgetc(p->z);  /* read first character */
   tf = (c == LUA_SIGNATURE[0])
-           ? luaU_undump(L, p->z, &p->buff, p->name)
-           : luaY_parser(L, p->z, &p->buff, &p->dyd, p->name, c);
+           ? luaU_undump(L, p->z, &p->buff, p->name) : callparser(L, p, c);
   setptvalue2s(L, L->top, tf);
   incr_top(L);
   cl = luaF_newLclosure(L, tf);
@@ -635,8 +649,9 @@ static void f_parser (lua_State *L, void *ud) {
 int luaD_protectedparser (lua_State *L, ZIO *z, const char *name) {
   struct SParser p;
   int status;
+  setnilvalue(L->top++);  /* reserve space for anchoring locale */
   L->nny++;  /* cannot yield during parsing */
-  p.z = z; p.name = name;
+  p.z = z; p.name = name; p.savedlocale = NULL;
   p.dyd.actvar.arr = NULL; p.dyd.actvar.size = 0;
   p.dyd.gt.arr = NULL; p.dyd.gt.size = 0;
   p.dyd.label.arr = NULL; p.dyd.label.size = 0;
@@ -647,6 +662,10 @@ int luaD_protectedparser (lua_State *L, ZIO *z, const char *name) {
   luaM_freearray(L, p.dyd.gt.arr, p.dyd.gt.size);
   luaM_freearray(L, p.dyd.label.arr, p.dyd.label.size);
   L->nny--;
+  if (p.savedlocale)  /* locale was changed? */
+    (void)setlocale(LC_ALL, getstr(p.savedlocale));  /* restore old locale */
+  setobjs2s(L, L->top - 2, L->top - 1);  /* remove reserved space */
+  --L->top;
   return status;
 }
 

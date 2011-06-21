@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.59 2011/06/09 18:23:27 roberto Exp $
+** $Id: ltable.c,v 2.60 2011/06/16 14:14:31 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -88,7 +88,7 @@ static Node *hashnum (const Table *t, lua_Number n) {
   int i;
   luai_hashnum(i, n);
   if (i < 0) {
-    if ((unsigned int)i == -(unsigned int)i)
+    if (cast(unsigned int, i) == 0u - i)  /* use unsigned to avoid overflows */
       i = 0;  /* handle INT_MIN */
     i = -i;  /* must be a positive value */
   }

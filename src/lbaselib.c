@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.261 2011/05/26 16:09:40 roberto Exp $
+** $Id: lbaselib.c,v 1.262 2011/06/16 14:12:24 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -268,6 +268,13 @@ static int luaB_loadfile (lua_State *L) {
 ** =======================================================
 */
 
+
+typedef struct {
+char c;
+  const char *mode;
+} loaddata;
+
+
 /*
 ** check whether a chunk (prefix in 's') satisfies given 'mode'
 ** ('t' for text, 'b' for binary). Returns error message (also
@@ -298,7 +305,7 @@ static const char *checkrights (lua_State *L, const char *mode, const char *s) {
 */
 static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
   const char *s;
-  const char **mode = (const char **)ud;
+  loaddata *ld = (loaddata *)ud;
   luaL_checkstack(L, 2, "too many nested functions");
   lua_pushvalue(L, 1);  /* get function */
   lua_call(L, 0, 1);  /* call it */
@@ -307,9 +314,9 @@ static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
     return NULL;
   }
   else if ((s = lua_tostring(L, -1)) != NULL) {
-    if (*mode != NULL) {  /* first time? */
-      s = checkrights(L, *mode, s);  /* check mode */
-      *mode = NULL;  /* to avoid further checks */
+    if (ld->mode != NULL) {  /* first time? */
+      s = checkrights(L, ld->mode, s);  /* check mode */
+      ld->mode = NULL;  /* to avoid further checks */
       if (s) luaL_error(L, s);
     }
     lua_replace(L, RESERVEDSLOT);  /* save string in reserved slot */
@@ -335,9 +342,11 @@ static int luaB_load (lua_State *L) {
   }
   else {  /* loading from a reader function */
     const char *chunkname = luaL_optstring(L, 2, "=(load)");
+    loaddata ld;
+    ld.mode = mode;
     luaL_checktype(L, 1, LUA_TFUNCTION);
     lua_settop(L, RESERVEDSLOT);  /* create reserved slot */
-    status = lua_load(L, generic_reader, &mode, chunkname);
+    status = lua_load(L, generic_reader, &ld, chunkname);
   }
   if (status == LUA_OK && top >= 4) {  /* is there an 'env' argument */
     lua_pushvalue(L, 4);  /* environment for loaded function */

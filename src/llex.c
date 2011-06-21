@@ -1,11 +1,11 @@
 /*
-** $Id: llex.c,v 2.47 2011/05/03 15:51:16 roberto Exp $
+** $Id: llex.c,v 2.50 2011/06/20 16:52:48 roberto Exp $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
 
 
-#include <locale.h>
+#include <ctype.h>
 #include <string.h>
 
 #define llex_c
@@ -13,7 +13,6 @@
 
 #include "lua.h"
 
-#include "lctype.h"
 #include "ldo.h"
 #include "llex.h"
 #include "lobject.h"
@@ -38,7 +37,7 @@ static const char *const luaX_tokens [] = {
     "end", "false", "for", "function", "goto", "if",
     "in", "local", "nil", "not", "or", "repeat",
     "return", "then", "true", "until", "while",
-    "..", "...", "==", ">=", "<=", "~=", "<eof>",
+    "..", "...", "==", ">=", "<=", "~=", "::", "<eof>",
     "<number>", "<name>", "<string>"
 };
 
@@ -75,7 +74,7 @@ void luaX_init (lua_State *L) {
 const char *luaX_token2str (LexState *ls, int token) {
   if (token < FIRST_RESERVED) {
     lua_assert(token == cast(unsigned char, token));
-    return (lisprint(token)) ? luaO_pushfstring(ls->L, LUA_QL("%c"), token) :
+    return (isprint(token)) ? luaO_pushfstring(ls->L, LUA_QL("%c"), token) :
                               luaO_pushfstring(ls->L, "char(%d)", token);
   }
   else {
@@ -185,52 +184,24 @@ static int check_next (LexState *ls, const char *set) {
 }
 
 
-/*
-** change all characters 'from' in buffer to 'to'
-*/
-static void buffreplace (LexState *ls, char from, char to) {
-  size_t n = luaZ_bufflen(ls->buff);
-  char *p = luaZ_buffer(ls->buff);
-  while (n--)
-    if (p[n] == from) p[n] = to;
-}
-
-
-#if !defined(getlocaledecpoint)
-#define getlocaledecpoint()	(localeconv()->decimal_point[0])
-#endif
-
 
 #define buff2d(b,e)	luaO_str2d(luaZ_buffer(b), luaZ_bufflen(b) - 1, e)
-
-/*
-** in case of format error, try to change decimal point separator to
-** the one defined in the current locale and check again
-*/
-static void trydecpoint (LexState *ls, SemInfo *seminfo) {
-  char old = ls->decpoint;
-  ls->decpoint = getlocaledecpoint();
-  buffreplace(ls, old, ls->decpoint);  /* try new decimal separator */
-  if (!buff2d(ls->buff, &seminfo->r)) {
-    /* format error with correct decimal point: no more options */
-    buffreplace(ls, ls->decpoint, '.');  /* undo change (for error message) */
-    lexerror(ls, "malformed number", TK_NUMBER);
-  }
-}
 
 
 /* LUA_NUMBER */
 static void read_numeral (LexState *ls, SemInfo *seminfo) {
-  lua_assert(lisdigit(ls->current));
+  lua_assert(isdigit(ls->current));
   do {
     save_and_next(ls);
     if (check_next(ls, "EePp"))  /* exponent part? */
       check_next(ls, "+-");  /* optional exponent sign */
-  } while (lislalnum(ls->current) || ls->current == '.');
+  } while (isalnum(ls->current) || ls->current == '.');
   save(ls, '\0');
-  buffreplace(ls, '.', ls->decpoint);  /* follow locale for decimal point */
-  if (!buff2d(ls->buff, &seminfo->r))  /* format error? */
-    trydecpoint(ls, seminfo); /* try to update decimal point separator */
+  if (!luaO_str2d(luaZ_buffer(ls->buff),
+       luaZ_bufflen(ls->buff) - 1,
+       &seminfo->r))  /* format error? */
+    lexerror(ls, "malformed number", TK_NUMBER);
+    
 }
 
 
@@ -287,25 +258,32 @@ static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
 
 
 static int readhexaesc (LexState *ls) {
-  int c1, c2 = EOZ;
-  if (!lisxdigit(c1 = next(ls)) || !lisxdigit(c2 = next(ls))) {
-    luaZ_resetbuffer(ls->buff);  /* prepare error message */
-    save(ls, '\\'); save(ls, 'x');
-    if (c1 != EOZ) save(ls, c1);
-    if (c2 != EOZ) save(ls, c2);
-    lexerror(ls, "hexadecimal digit expected", TK_STRING);
+  int c1 = next(ls);
+  int c2 = EOZ;
+  if (isxdigit(c1)) {
+    c2 = next(ls);
+    if (isxdigit(c2))
+      return (luaO_hexavalue(c1) << 4) + luaO_hexavalue(c2);
+    /* else go through to error */
   }
-  return (luaO_hexavalue(c1) << 4) + luaO_hexavalue(c2);
+  luaZ_resetbuffer(ls->buff);  /* prepare error message */
+  save(ls, '\\'); save(ls, 'x');
+  if (c1 != EOZ) save(ls, c1);
+  if (c2 != EOZ) save(ls, c2);
+  lexerror(ls, "hexadecimal digit expected", TK_STRING);
+  return 0;  /* to avoid warnings */
 }
 
 
 static int readdecesc (LexState *ls) {
-  int c1 = ls->current, c2, c3;
-  int c = c1 - '0';
-  if (lisdigit(c2 = next(ls))) {
-    c = 10*c + c2 - '0';
-    if (lisdigit(c3 = next(ls))) {
-      c = 10*c + c3 - '0';
+  int c1 = ls->current;  /* first char must be a digit */
+  int c2 = next(ls);  /* read second char */
+  int c = c1 - '0';  /* partial result */
+  if (isdigit(c2)) {
+    int c3 = next(ls);  /* read third char */
+    c = 10*c + c2 - '0';  /* update result */
+    if (isdigit(c3)) {
+      c = 10*c + c3 - '0';  /* update result */
       if (c > UCHAR_MAX) {
         luaZ_resetbuffer(ls->buff);  /* prepare error message */
         save(ls, '\\');
@@ -349,14 +327,14 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
           case EOZ: continue;  /* will raise an error next loop */
           case '*': {  /* skip following span of spaces */
             next(ls);  /* skip the '*' */
-            while (lisspace(ls->current)) {
+            while (isspace(ls->current)) {
               if (currIsNewline(ls)) inclinenumber(ls);
               else next(ls);
             }
             continue;  /* do not save 'c' */
           }
           default: {
-            if (!lisdigit(ls->current))
+            if (!isdigit(ls->current))
               c = ls->current;  /* handles \\, \", \', and \? */
             else  /* digital escape \ddd */
               c = readdecesc(ls);
@@ -437,6 +415,11 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         if (ls->current != '=') return '~';
         else { next(ls); return TK_NE; }
       }
+      case ':': {
+        next(ls);
+        if (ls->current != ':') return ':';
+        else { next(ls); return TK_DBCOLON; }
+      }
       case '"': case '\'': {  /* short literal strings */
         read_string(ls, ls->current, seminfo);
         return TK_STRING;
@@ -448,7 +431,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
             return TK_DOTS;   /* '...' */
           else return TK_CONCAT;   /* '..' */
         }
-        else if (!lisdigit(ls->current)) return '.';
+        else if (!isdigit(ls->current)) return '.';
         /* else go through */
       }
       case '0': case '1': case '2': case '3': case '4':
@@ -460,11 +443,12 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         return TK_EOS;
       }
       default: {
-        if (lislalpha(ls->current)) {  /* identifier or reserved word? */
+        if (isalpha(ls->current) || ls->current == '_') {
+          /* identifier or reserved word */
           TString *ts;
           do {
             save_and_next(ls);
-          } while (lislalnum(ls->current));
+          } while (isalnum(ls->current) || ls->current == '_');
           ts = luaX_newstring(ls, luaZ_buffer(ls->buff),
                                   luaZ_bufflen(ls->buff));
           seminfo->ts = ts;

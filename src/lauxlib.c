@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.232 2011/05/03 16:01:57 roberto Exp $
+** $Id: lauxlib.c,v 1.233 2011/06/16 14:11:04 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -251,13 +251,12 @@ LUALIB_API int luaL_execresult (lua_State *L, int stat) {
   else {
     inspectstat(stat, what);  /* interpret result */
     if (*what == 'e' && stat == 0)  /* successful termination? */
-      return luaL_fileresult(L, 1, NULL);
-    else {  /* return nil,what,code */
+      lua_pushboolean(L, 1);
+    else
       lua_pushnil(L);
-      lua_pushstring(L, what);
-      lua_pushinteger(L, stat);
-      return 3;
-    }
+    lua_pushstring(L, what);
+    lua_pushinteger(L, stat);
+    return 3;  /* return true/nil,what,code */
   }
 }
 

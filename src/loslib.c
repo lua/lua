@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.34 2011/03/03 16:34:46 roberto Exp $
+** $Id: loslib.c,v 1.35 2011/06/20 16:50:59 roberto Exp $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -21,7 +21,7 @@
 
 
 /*
-** list of valid conversion specifiers @* for the 'strftime' function
+** list of valid conversion specifiers for the 'strftime' function
 */
 #if !defined(LUA_STRFTIMEOPTIONS)
 

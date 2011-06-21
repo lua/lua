@@ -335,7 +335,7 @@ Here are the other changes introduced in Lua 5.2:
 <LI> new <CODE>lua_copy</CODE>
 <LI> new <CODE>lua_absindex</CODE>
 <LI> new <CODE>lua_upvalueid</CODE> and <CODE>lua_upvaluejoin</CODE>
-<LI> <CODE>nparams</CODE> and <CODE>isvarag</CODE> available in debug API
+<LI> <CODE>nparams</CODE> and <CODE>isvararg</CODE> available in debug API
 <LI> new <CODE>lua_Unsigned</CODE>
 </UL>
 
@@ -350,6 +350,7 @@ Here are the other changes introduced in Lua 5.2:
 <LI> new hash for floats
 <LI> handling of non-string error messages in the standalone interpreter
 <LI> generational mode for garbage collection (experimental)
+<LI> NaN trick (experimental)
 </UL>
 
 <H2><A NAME="license">License</A></H2>
@@ -396,9 +397,9 @@ THE SOFTWARE.
 </BLOCKQUOTE>
 
 <HR>
-<SMALL>
+<SMALL CLASS="footer">
 Last update:
-Mon Jun 13 15:07:49 BRT 2011
+Thu Jun 16 08:21:17 BRT 2011
 </SMALL>
 <!--
 Last change: revised for Lua 5.2.0 (beta)

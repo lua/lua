@@ -1,5 +1,5 @@
 /*
-** $Id: luac.c,v 1.66 2011/05/10 01:08:57 lhf Exp $
+** $Id: luac.c,v 1.67 2011/06/21 12:29:00 lhf Exp $
 ** Lua compiler (saves bytecodes to files; also list bytecodes)
 ** See Copyright Notice in lua.h
 */
@@ -162,7 +162,7 @@ static int writer(lua_State* L, const void* p, size_t size, void* u)
 static int pmain(lua_State* L)
 {
  int argc=(int)lua_tointeger(L,1);
- char** argv=lua_touserdata(L,2);
+ char** argv=(char**)lua_touserdata(L,2);
  const Proto* f;
  int i;
  if (!lua_checkstack(L,argc)) fatal("too many input files");
@@ -193,7 +193,7 @@ int main(int argc, char* argv[])
  argc-=i; argv+=i;
  if (argc<=0) usage("no input files given");
  L=luaL_newstate();
- if (L==NULL) fatal("not enough memory for state");
+ if (L==NULL) fatal("cannot create state: not enough memory");
  lua_pushcfunction(L,&pmain);
  lua_pushinteger(L,argc);
  lua_pushlightuserdata(L,argv);

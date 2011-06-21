@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.109 2011/05/02 17:33:01 roberto Exp $
+** $Id: lparser.c,v 2.111 2011/06/20 16:52:48 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -367,7 +367,7 @@ static int findlabel (LexState *ls, int g) {
   /* check labels in current block for a match */
   for (i = bl->firstlabel; i < dyd->label.n; i++) {
     Labeldesc *lb = &dyd->label.arr[i];
-    if (eqstr(lb->name, gt->name)) {  /* correct label? */
+    if (eqstr(lb->name, gt->name) && lb->pc != -1) {  /* correct label? */
       if (gt->nactvar > lb->nactvar &&
           (bl->upval || dyd->label.n > bl->firstlabel))
         luaK_patchclose(ls->fs, gt->pc, lb->nactvar);
@@ -411,7 +411,7 @@ static void findgotos (LexState *ls, Labeldesc *lb) {
 /*
 ** "export" pending gotos to outer level, to check them against
 ** outer labels; if the block being exited has upvalues, and
-** the goto exists the scope of any variable (which can be the
+** the goto exits the scope of any variable (which can be the
 ** upvalue), close those variables being exited.
 */
 static void movegotosout (FuncState *fs, BlockCnt *bl) {
@@ -460,9 +460,15 @@ static void breaklabel (LexState *ls) {
 static void undefgoto (LexState *ls, Labeldesc *gt) {
   const char *msg = (gt->name->tsv.reserved > 0)
                     ? "<%s> at line %d not inside a loop"
-                    : "label " LUA_QS " (<goto> at line %d) undefined";
+                    : "no visible label " LUA_QS " for <goto> at line %d";
   msg = luaO_pushfstring(ls->L, msg, getstr(gt->name), gt->line);
   semerror(ls, msg);
+}
+
+
+static void invalidatelabels (Labellist *ll, int level) {
+  for (; level < ll->n; level++)
+    ll->arr[level].pc = -1;  /* mark label as out of scope */
 }
 
 
@@ -481,7 +487,7 @@ static void leaveblock (FuncState *fs) {
   removevars(fs, bl->nactvar);
   lua_assert(bl->nactvar == fs->nactvar);
   fs->freereg = fs->nactvar;  /* free registers */
-  ls->dyd->label.n = bl->firstlabel;  /* remove local labels */
+  invalidatelabels(&ls->dyd->label, bl->firstlabel); /* remove local labels */
   if (bl->previous)  /* inner block? */
     movegotosout(fs, bl);  /* update pending gotos to outer block */
   else if (bl->firstgoto < ls->dyd->gt.n)  /* pending gotos in outer block? */
@@ -526,6 +532,7 @@ static void open_func (LexState *ls, FuncState *fs, BlockCnt *bl) {
   fs->nlocvars = 0;
   fs->nactvar = 0;
   fs->firstlocal = ls->dyd->actvar.n;
+  fs->firstlabel = ls->dyd->label.n;
   fs->bl = NULL;
   f = luaF_newproto(L);
   fs->f = f;
@@ -548,6 +555,7 @@ static void close_func (LexState *ls) {
   Proto *f = fs->f;
   luaK_ret(fs, 0, 0);  /* final return */
   leaveblock(fs);
+  ls->dyd->label.n = fs->firstlabel;  /* remove labels */
   luaM_reallocvector(L, f->code, f->sizecode, fs->pc, Instruction);
   f->sizecode = fs->pc;
   luaM_reallocvector(L, f->lineinfo, f->sizelineinfo, fs->pc, int);
@@ -1185,13 +1193,11 @@ static void gotostat (LexState *ls, TString *label, int line) {
 }
 
 
-static void labelstat (LexState *ls, TString *label, int line) {
-  /* label -> '@' NAME ':' */
-  FuncState *fs = ls->fs;
-  Labellist *ll = &ls->dyd->label;
-  int l, i;  /* index of new label being created */
-  /* check for repeated labels on the same block */
-  for (i = ls->fs->bl->firstlabel; i < ll->n; i++) {
+/* check for repeated labels on the same function */
+static void checkrepeated (LexState *ls, FuncState *fs, Labellist *ll,
+                           TString *label) {
+  int i;
+  for (i = fs->firstlabel; i < ll->n; i++) {
     if (eqstr(label, ll->arr[i].name)) {
       const char *msg = luaO_pushfstring(ls->L, 
         "label " LUA_QS " already defined on line %d",
@@ -1199,11 +1205,20 @@ static void labelstat (LexState *ls, TString *label, int line) {
       semerror(ls, msg);
     }
   }
-  checknext(ls, ':');  /* skip colon */
+}
+
+
+static void labelstat (LexState *ls, TString *label, int line) {
+  /* label -> '::' NAME '::' */
+  FuncState *fs = ls->fs;
+  Labellist *ll = &ls->dyd->label;
+  int l;  /* index of new label being created */
+  checkrepeated(ls, fs, ll, label);  /* check for repeated labels */
+  checknext(ls, TK_DBCOLON);  /* skip double colon */
   /* create new entry for this label */
   l = newlabelentry(ls, ll, label, line, fs->pc);
   /* skip other no-op statements */
-  while (ls->t.token == ';' || ls->t.token == '@')
+  while (ls->t.token == ';' || ls->t.token == TK_DBCOLON)
     statement(ls);
   if (block_follow(ls, 0)) {  /* label is last no-op statement in the block? */
     /* assume that locals are already out of scope */
@@ -1537,8 +1552,8 @@ static void statement (LexState *ls) {
         localstat(ls);
       break;
     }
-    case '@': {  /* stat -> label */
-      luaX_next(ls);  /* skip '@' */
+    case TK_DBCOLON: {  /* stat -> label */
+      luaX_next(ls);  /* skip double colon */
       labelstat(ls, str_checkname(ls), line);
       break;
     }

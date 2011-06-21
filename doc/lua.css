@@ -2,13 +2,14 @@ body {
 	color: #000000 ;
 	background-color: #FFFFFF ;
 	font-family: sans-serif ;
+	font-family: Helvetica, Arial, sans-serif ;
 	text-align: justify ;
 	margin-right: 20px ;
 	margin-left: 20px ;
 }
 
 h1, h2, h3, h4 {
-	font-family: Verdana, sans-serif ;
+	font-family: Verdana, Geneva, sans-serif ;
 	font-weight: normal ;
 	font-style: italic ;
 }

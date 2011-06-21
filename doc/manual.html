@@ -38,7 +38,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.77 2011/06/13 16:27:54 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.79 2011/06/21 14:35:46 roberto Exp $ -->
 
 
 
@@ -54,7 +54,7 @@ functional programming, and data-driven programming.
 Lua is intended to be used as a powerful, light-weight
 scripting language for any program that needs one.
 Lua is implemented as a library, written in <em>clean C</em>,
-the common subset of ANSI&nbsp;C and C++.
+the common subset of Standard&nbsp;C and C++.
 
 
 <p>
@@ -192,8 +192,9 @@ There are several convenient ways to create tables in Lua
 
 
 <p>
-We use the term <em>sequence</em> to denote a table where all
-integer keys comprise the set <em>{1..n}</em> for some integer <em>n</em>,
+We use the term <em>sequence</em> to denote a table where
+the set of all positive numeric keys is equal to <em>{1..n}</em>
+for some integer <em>n</em>,
 which is called the length of the sequence (see <a href="#3.4.6">&sect;3.4.6</a>).
 
 
@@ -234,7 +235,7 @@ of a given value.
 <h2>2.2 &ndash; <a name="2.2">Environments and the Global Environment</a></h2>
 
 <p>
-As discussed in <a href="#3.2">&sect;3.2</a> and <a href="#3.3.3">&sect;3.3.3</a>,
+As will be discussed in <a href="#3.2">&sect;3.2</a> and <a href="#3.3.3">&sect;3.3.3</a>,
 any reference to a global name <code>var</code> is syntactically translated
 to <code>_ENV.var</code>.
 Moreover, every chunk is compiled in the scope of an external
@@ -1136,7 +1137,7 @@ The following strings denote other tokens:
 <pre>
      +     -     *     /     %     ^     #
      ==    ~=    &lt;=    &gt;=    &lt;     &gt;     =
-     (     )     {     }     [     ]
+     (     )     {     }     [     ]     ::
      ;     :     ,     .     ..    ...
 </pre>
 
@@ -1239,7 +1240,7 @@ Lua also accepts hexadecimal constants,
 which start with <code>0x</code> or <code>0X</code>.
 Hexadecimal constants also accept an optional fractional part
 plus an optional binary exponent,
-marked by a letter '<code>e</code>' or '<code>E</code>'.
+marked by a letter '<code>p</code>' or '<code>P</code>'.
 Examples of valid numerical constants are
 
 <pre>
@@ -1531,12 +1532,13 @@ labels in Lua are considered statements too:
 <pre>
 	stat ::= <b>goto</b> Name
 	stat ::= label
-	label ::= &lsquo;<b>@</b>&rsquo; Name &lsquo;<b>:</b>&rsquo;
+	label ::= &lsquo;<b>::</b>&rsquo; Name &lsquo;<b>::</b>&rsquo;
 </pre>
 
 <p>
 A label is visible in the entire block where it is defined
 (including nested blocks, but not nested functions).
+A function cannot have more than one label with a given name.
 A goto may jump to any visible label as long as it does not
 enter into the scope of a local variable.
 
@@ -1995,10 +1997,17 @@ character is one byte).
 
 
 <p>
-The length of a table <code>t</code> is only defined if the
+A program can modify the behavior of the length operator for
+any value but strings through the <code>__len</code> metamethod (see <a href="#2.4">&sect;2.4</a>).
+
+
+<p>
+Unless a <code>__len</code> metamethod is given,
+the length of a table <code>t</code> is only defined if the
 table is a <em>sequence</em>,
 that is,
-all its numeric keys comprise the set <em>{1..n}</em> for some integer <em>n</em>.
+the set of its positive numeric keys is equal to <em>{1..n}</em>
+for some integer <em>n</em>.
 In that case, <em>n</em> is its length.
 Note that a table like
 
@@ -2008,14 +2017,9 @@ Note that a table like
 is not a sequence, because it has the key <code>4</code>
 but does not have the key <code>3</code>.
 (So, there is no <em>n</em> such that the set <em>{1..n}</em> is equal
-to the set of numeric keys of that table.)
+to the set of positive numeric keys of that table.)
 Note, however, that non-numeric keys do not interfere
 with whether a table is a sequence.
-
-
-<p>
-A program can modify the behavior of the length operator for
-any value but strings through the <code>__len</code> metamethod (see <a href="#2.4">&sect;2.4</a>).
 
 
 
@@ -2824,11 +2828,11 @@ It is used in the auxiliary library by <a href="#luaL_newstate"><code>luaL_newst
          return realloc(ptr, nsize);
      }
 </pre><p>
-Note that ANSI&nbsp;C ensures
+Note that Standard&nbsp;C ensures
 that <code>free(NULL)</code> has no effect and that
 <code>realloc(NULL, size)</code> is equivalent to <code>malloc(size)</code>.
 This code assumes that <code>realloc</code> does not fail when shrinking a block.
-ANSI&nbsp;C does not ensure this behavior,
+Standard&nbsp;C does not ensure this behavior,
 but it seems a safe assumption.
 
 
@@ -2863,11 +2867,6 @@ The value of <code>op</code> must be one of the following constants:
 <li><b><a name="pdf-LUA_OPUNM"><code>LUA_OPUNM</code></a>:</b>performs mathematical negation (unary <code>-</code>)</li>
 
 </ul>
-
-<p>
-When the operation is <code>LUA_OPUNM</code>,
-the caller must push a <b>nil</b> value for the second operand.
-
 
 
 
@@ -5907,7 +5906,7 @@ as <code>return luaL_error(<em>args</em>)</code>.
 
 
 <hr><h3><a name="luaL_execresult"><code>luaL_execresult</code></a></h3><p>
-<span class="apii">[-0, +(1/3), <em>m</em>]</span>
+<span class="apii">[-0, +3, <em>m</em>]</span>
 <pre>int luaL_execresult (lua_State *L, int stat);</pre>
 
 <p>
@@ -6097,7 +6096,7 @@ It is implemented as the following macro:
 
 <hr><h3><a name="luaL_newlibtable"><code>luaL_newlibtable</code></a></h3><p>
 <span class="apii">[-0, +1, <em>m</em>]</span>
-<pre>int luaL_newlibtable (lua_State *L, const luaL_Reg *l);</pre>
+<pre>int luaL_newlibtable (lua_State *L, const luaL_Reg l[]);</pre>
 
 <p>
 Creates a new table with a size optimized
@@ -7471,7 +7470,7 @@ including if necessary a path and an extension.
 
 
 <p>
-This function is not supported by ANSI&nbsp;C.
+This function is not supported by Standard&nbsp;C.
 As such, it is only available on some platforms
 (Windows, Linux, Mac OS X, Solaris, BSD,
 plus other Unix systems that support the <code>dlfcn</code> standard).
@@ -8098,15 +8097,13 @@ It provides all its functions inside the table <a name="pdf-table"><code>table</
 
 
 <p>
-Currently, all functions in the table library assume that the table
-represents a list.
-In particular, they all ignore non-numeric keys
-in tables given as arguments.
-All functions in the table library,
+Currently, all functions in the table library,
 except <a href="#pdf-table.pack"><code>table.pack</code></a>,
-may apply the length operator on the list.
-In that case, the list must be a proper sequence
-or have a <code>__len</code> metamethod (see <a href="#3.4.6">&sect;3.4.6</a>).
+work on lists.
+A list here means a proper sequence
+or a table with a <code>__len</code> metamethod (see <a href="#3.4.6">&sect;3.4.6</a>).
+In particular, all functions ignore non-numeric keys
+in lists given as arguments.
 
 
 <p>
@@ -8135,7 +8132,8 @@ If <code>i</code> is greater than <code>j</code>, returns the empty string.
 
 <p>
 Inserts element <code>value</code> at position <code>pos</code> in <code>list</code>,
-shifting up other elements to open space, if necessary.
+shifting up the elements
+<code>list[pos], list[pos+1], &middot;&middot;&middot;, list[#list]</code>.
 The default value for <code>pos</code> is <code>#list+1</code>,
 so that a call <code>table.insert(t,x)</code> inserts <code>x</code> at the end
 of list <code>t</code>.
@@ -8162,7 +8160,9 @@ if any parameter is <b>nil</b>.
 
 <p>
 Removes from <code>list</code> the element at position <code>pos</code>,
-shifting down other elements to close the space, if necessary.
+shifting down the elements
+<code>list[pos+1], list[pos+2], &middot;&middot;&middot;, list[#list]</code>
+and erasing element <code>list[#list]</code>.
 Returns the value of the removed element.
 The default value for <code>pos</code> is <code>#list</code>,
 so that a call <code>table.remove(t)</code> removes the last element
@@ -8177,12 +8177,12 @@ of list <code>t</code>.
 
 <p>
 Sorts list elements in a given order, <em>in-place</em>,
-from <code>table[1]</code> to <code>table[#list]</code>.
+from <code>list[1]</code> to <code>list[#list]</code>.
 If <code>comp</code> is given,
 then it must be a function that receives two list elements
 and returns true when the first element must come
 before the second in the final order
-(so that <code>not comp(a[i+1],a[i])</code> will be true after the sort).
+(so that <code>not comp(list[i+1],list[i])</code> will be true after the sort).
 If <code>comp</code> is not given,
 then the standard Lua operator <code>&lt;</code> is used instead.
 
@@ -8459,7 +8459,7 @@ Returns the angle <code>x</code> (given in degrees) in radians.
 
 <p>
 This function is an interface to the simple
-pseudo-random generator function <code>rand</code> provided by ANSI&nbsp;C.
+pseudo-random generator function <code>rand</code> provided by Standard&nbsp;C.
 (No guarantees can be given for its statistical properties.)
 
 
@@ -9242,9 +9242,11 @@ this value is exactly <code>t2</code><em>-</em><code>t1</code>.
 <p>
 This function is equivalent to the C&nbsp;function <code>system</code>.
 It passes <code>command</code> to be executed by an operating system shell.
-It returns <b>true</b>
-if the command terminated successfully.
-Otherwise, it returns <b>nil</b> plus a string and a number,
+Its first result is <b>true</b>
+if the command terminated successfully,
+or <b>nil</b> otherwise.
+After this first result
+the function returns a string and a number,
 as follows:
 
 <ul>
@@ -10139,7 +10141,7 @@ Here is the complete syntax of Lua in extended BNF.
 
 	retstat ::= <b>return</b> [explist] [&lsquo;<b>;</b>&rsquo;]
 
-	label ::= &lsquo;<b>@</b>&rsquo; Name &lsquo;<b>:</b>&rsquo;
+	label ::= &lsquo;<b>::</b>&rsquo; Name &lsquo;<b>::</b>&rsquo;
 
 	funcname ::= Name {&lsquo;<b>.</b>&rsquo; Name} [&lsquo;<b>:</b>&rsquo; Name]
 
@@ -10191,9 +10193,9 @@ Here is the complete syntax of Lua in extended BNF.
 
 
 <HR>
-<SMALL>
+<SMALL CLASS="footer">
 Last update:
-Mon Jun 13 14:56:14 BRT 2011
+Tue Jun 21 19:09:27 BRT 2011
 </SMALL>
 <!--
 Last change: revised for Lua 5.2.0 (beta)

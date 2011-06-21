@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.68 2011/02/23 13:13:10 roberto Exp $
+** $Id: lparser.h,v 1.69 2011/06/16 16:36:39 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -62,7 +62,7 @@ typedef struct Vardesc {
 /* description of pending goto statements and label statements */
 typedef struct Labeldesc {
   TString *name;  /* label identifier */
-  int pc;  /* position in code */
+  int pc;  /* position in code (for labels, -1 means out of scope) */
   int line;  /* line where it appeared */
   lu_byte nactvar;  /* local level where it appears in current block */
 } Labeldesc;
@@ -107,6 +107,7 @@ typedef struct FuncState {
   int nk;  /* number of elements in `k' */
   int np;  /* number of elements in `p' */
   int firstlocal;  /* index of first local var of this function */
+  int firstlabel;  /* index of first label of this function */
   short nlocvars;  /* number of elements in `locvars' */
   lu_byte nactvar;  /* number of active local variables */
   lu_byte nups;  /* number of upvalues */
