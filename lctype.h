@@ -1,11 +1,18 @@
 /*
-** $Id: lctype.h,v 1.7 2009/05/27 16:51:15 roberto Exp roberto $
+** $Id: lctype.h,v 1.8 2009/11/19 19:06:52 roberto Exp roberto $
 ** 'ctype' functions for Lua
 ** See Copyright Notice in lua.h
 */
 
 #ifndef lctype_h
 #define lctype_h
+
+
+/*
+** WARNING: the functions defined here do not necessarily correspond 
+** to the similar functions in the standard C ctype.h. They are
+** optimized for the specific needs of Lua
+*/
 
 
 #include <limits.h>
@@ -20,7 +27,6 @@
 #define PRINTBIT	2
 #define SPACEBIT	3
 #define XDIGITBIT	4
-#define UPPERBIT	5
 
 
 #define MASK(B)		(1 << (B))
@@ -36,11 +42,15 @@
 */
 #define lislalpha(c)	testprop(c, MASK(ALPHABIT))
 #define lislalnum(c)	testprop(c, (MASK(ALPHABIT) | MASK(DIGITBIT)))
-#define lisupper(c)	testprop(c, MASK(UPPERBIT))
 #define lisdigit(c)	testprop(c, MASK(DIGITBIT))
 #define lisspace(c)	testprop(c, MASK(SPACEBIT))
 #define lisprint(c)	testprop(c, MASK(PRINTBIT))
 #define lisxdigit(c)	testprop(c, MASK(XDIGITBIT))
+
+/*
+** this 'ltoupper' only works for alphabetic characters
+*/
+#define ltoupper(c)	((c) & ~32)
 
 
 /* one more entry for 0 and one more for -1 (EOZ) */
