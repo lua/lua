@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.118 2011/05/25 14:12:28 roberto Exp roberto $
+** $Id: ltests.c,v 2.119 2011/06/02 19:31:40 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -368,7 +368,7 @@ static void checkgraylist (GCObject *l) {
   while (l) {
     lua_assert(isgray(l));
     lua_assert(!testbit(l->gch.marked, TESTGRAYBIT));
-    l->gch.marked = l_setbit(l->gch.marked, TESTGRAYBIT);
+    l_setbit(l->gch.marked, TESTGRAYBIT);
     switch (gch(l)->tt) {
       case LUA_TTABLE: l = gco2t(l)->gclist; break;
       case LUA_TFUNCTION: l = gco2cl(l)->c.gclist; break;
@@ -405,7 +405,7 @@ static void checkold (global_State *g, GCObject *o) {
     else lua_assert(!isold);  /* non-old object cannot be after an old one */
     if (isgray(o)) {
       lua_assert(!keepinvariant(g) || testbit(o->gch.marked, TESTGRAYBIT));
-      o->gch.marked = resetbit(o->gch.marked, TESTGRAYBIT);
+      resetbit(o->gch.marked, TESTGRAYBIT);
     }
     lua_assert(!testbit(o->gch.marked, TESTGRAYBIT));
   }
@@ -422,7 +422,7 @@ int lua_checkmemory (lua_State *L) {
   }
   lua_assert(!isdead(g, gcvalue(&g->l_registry)));
   checkstack(g, g->mainthread);
-  g->mainthread->marked = resetbit(g->mainthread->marked, TESTGRAYBIT);
+  resetbit(g->mainthread->marked, TESTGRAYBIT);
   /* check 'allgc' list */
   markgrays(g);
   checkold(g, g->allgc);
