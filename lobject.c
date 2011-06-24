@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.50 2011/06/16 14:13:22 roberto Exp roberto $
+** $Id: lobject.c,v 2.51 2011/06/23 16:01:06 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -86,7 +86,7 @@ lua_Number luaO_arith (int op, lua_Number v1, lua_Number v2) {
 
 int luaO_hexavalue (int c) {
   if (lisdigit(c)) return c - '0';
-  else return ltoupper(c) - 'A' + 10;
+  else return ltolower(c) - 'a' + 10;
 }
 
 
