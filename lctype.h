@@ -1,11 +1,13 @@
 /*
-** $Id: lctype.h,v 1.8 2009/11/19 19:06:52 roberto Exp roberto $
+** $Id: lctype.h,v 1.9 2011/06/23 16:00:43 roberto Exp roberto $
 ** 'ctype' functions for Lua
 ** See Copyright Notice in lua.h
 */
 
 #ifndef lctype_h
 #define lctype_h
+
+#include "lua.h"
 
 
 /*
@@ -14,10 +16,22 @@
 ** optimized for the specific needs of Lua
 */
 
+#if !defined(LUA_USE_CTYPE)
+
+#if 'A' == 65 && '0' == 48
+/* ASCII case: can use its own tables; faster and fixed */
+#define LUA_USE_CTYPE	0
+#else
+/* must use standard C ctype */
+#define LUA_USE_CTYPE	1
+#endif
+
+#endif
+
+
+#if !LUA_USE_CTYPE	/* { */
 
 #include <limits.h>
-
-#include "lua.h"
 
 #include "llimits.h"
 
@@ -48,13 +62,34 @@
 #define lisxdigit(c)	testprop(c, MASK(XDIGITBIT))
 
 /*
-** this 'ltoupper' only works for alphabetic characters
+** this 'ltolower' only works for alphabetic characters
 */
-#define ltoupper(c)	((c) & ~32)
+#define ltolower(c)	((c) | 32)
 
 
-/* one more entry for 0 and one more for -1 (EOZ) */
+/* two more entries for 0 and -1 (EOZ) */
 LUAI_DDEC const lu_byte luai_ctype_[UCHAR_MAX + 2];
+
+
+#else			/* }{ */
+
+/*
+** use standard C ctypes
+*/
+
+#include <ctype.h>
+
+
+#define lislalpha(c)	(isalpha(c) || (c) == '_')
+#define lislalnum(c)	(isalnum(c) || (c) == '_')
+#define lisdigit(c)	(isdigit(c))
+#define lisspace(c)	(isspace(c))
+#define lisprint(c)	(isprint(c))
+#define lisxdigit(c)	(isxdigit(c))
+
+#define ltolower(c)	(tolower(c))
+
+#endif			/* } */
 
 #endif
 
