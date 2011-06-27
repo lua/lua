@@ -1,5 +1,5 @@
 /*
-** $Id: lctype.h,v 1.9 2011/06/23 16:00:43 roberto Exp roberto $
+** $Id: lctype.h,v 1.10 2011/06/24 12:25:33 roberto Exp roberto $
 ** 'ctype' functions for Lua
 ** See Copyright Notice in lua.h
 */
@@ -64,7 +64,7 @@
 /*
 ** this 'ltolower' only works for alphabetic characters
 */
-#define ltolower(c)	((c) | 32)
+#define ltolower(c)	((c) | ('A' ^ 'a'))
 
 
 /* two more entries for 0 and -1 (EOZ) */
