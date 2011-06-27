@@ -34,7 +34,7 @@ CWARNS= $(CWARNSC) \
 
 # -DEXTERNMEMCHECK -DHARDSTACKTESTS -DHARDMEMTESTS  -DTRACEMEM='"tempmem"'
 # -g -DLUA_USER_H='"ltests.h"'
-# -fomit-frame-pointer #-pg -malign-double
+# -fomit-frame-pointer #-pg -malign-double -DLUA_USE_CTYPE
 # TESTS= -DLUA_USER_H='"ltests.h"'  # -g -O0 
 
 # -mtune=native -fomit-frame-pointer 
@@ -118,6 +118,7 @@ echo:
 $(ALL_O): makefile
 
 # DO NOT DELETE
+# automatically made with 'gcc -MM'
 
 lapi.o: lapi.c lua.h luaconf.h lapi.h llimits.h lstate.h lobject.h ltm.h \
  lzio.h lmem.h ldebug.h ldo.h lfunc.h lgc.h lstring.h ltable.h lundump.h \
