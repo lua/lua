@@ -1,11 +1,11 @@
 /*
-** $Id: llex.c,v 2.50 2011/06/20 16:52:48 roberto Exp $
+** $Id: llex.c,v 2.49 2011/06/23 14:54:48 roberto Exp $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
 
 
-#include <ctype.h>
+#include <locale.h>
 #include <string.h>
 
 #define llex_c
@@ -13,6 +13,7 @@
 
 #include "lua.h"
 
+#include "lctype.h"
 #include "ldo.h"
 #include "llex.h"
 #include "lobject.h"
@@ -74,7 +75,7 @@ void luaX_init (lua_State *L) {
 const char *luaX_token2str (LexState *ls, int token) {
   if (token < FIRST_RESERVED) {
     lua_assert(token == cast(unsigned char, token));
-    return (isprint(token)) ? luaO_pushfstring(ls->L, LUA_QL("%c"), token) :
+    return (lisprint(token)) ? luaO_pushfstring(ls->L, LUA_QL("%c"), token) :
                               luaO_pushfstring(ls->L, "char(%d)", token);
   }
   else {
@@ -184,24 +185,52 @@ static int check_next (LexState *ls, const char *set) {
 }
 
 
+/*
+** change all characters 'from' in buffer to 'to'
+*/
+static void buffreplace (LexState *ls, char from, char to) {
+  size_t n = luaZ_bufflen(ls->buff);
+  char *p = luaZ_buffer(ls->buff);
+  while (n--)
+    if (p[n] == from) p[n] = to;
+}
+
+
+#if !defined(getlocaledecpoint)
+#define getlocaledecpoint()	(localeconv()->decimal_point[0])
+#endif
+
 
 #define buff2d(b,e)	luaO_str2d(luaZ_buffer(b), luaZ_bufflen(b) - 1, e)
+
+/*
+** in case of format error, try to change decimal point separator to
+** the one defined in the current locale and check again
+*/
+static void trydecpoint (LexState *ls, SemInfo *seminfo) {
+  char old = ls->decpoint;
+  ls->decpoint = getlocaledecpoint();
+  buffreplace(ls, old, ls->decpoint);  /* try new decimal separator */
+  if (!buff2d(ls->buff, &seminfo->r)) {
+    /* format error with correct decimal point: no more options */
+    buffreplace(ls, ls->decpoint, '.');  /* undo change (for error message) */
+    lexerror(ls, "malformed number", TK_NUMBER);
+  }
+}
 
 
 /* LUA_NUMBER */
 static void read_numeral (LexState *ls, SemInfo *seminfo) {
-  lua_assert(isdigit(ls->current));
+  lua_assert(lisdigit(ls->current));
   do {
     save_and_next(ls);
     if (check_next(ls, "EePp"))  /* exponent part? */
       check_next(ls, "+-");  /* optional exponent sign */
-  } while (isalnum(ls->current) || ls->current == '.');
+  } while (lislalnum(ls->current) || ls->current == '.');
   save(ls, '\0');
-  if (!luaO_str2d(luaZ_buffer(ls->buff),
-       luaZ_bufflen(ls->buff) - 1,
-       &seminfo->r))  /* format error? */
-    lexerror(ls, "malformed number", TK_NUMBER);
-    
+  buffreplace(ls, '.', ls->decpoint);  /* follow locale for decimal point */
+  if (!buff2d(ls->buff, &seminfo->r))  /* format error? */
+    trydecpoint(ls, seminfo); /* try to update decimal point separator */
 }
 
 
@@ -260,9 +289,9 @@ static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
 static int readhexaesc (LexState *ls) {
   int c1 = next(ls);
   int c2 = EOZ;
-  if (isxdigit(c1)) {
+  if (lisxdigit(c1)) {
     c2 = next(ls);
-    if (isxdigit(c2))
+    if (lisxdigit(c2))
       return (luaO_hexavalue(c1) << 4) + luaO_hexavalue(c2);
     /* else go through to error */
   }
@@ -279,10 +308,10 @@ static int readdecesc (LexState *ls) {
   int c1 = ls->current;  /* first char must be a digit */
   int c2 = next(ls);  /* read second char */
   int c = c1 - '0';  /* partial result */
-  if (isdigit(c2)) {
+  if (lisdigit(c2)) {
     int c3 = next(ls);  /* read third char */
     c = 10*c + c2 - '0';  /* update result */
-    if (isdigit(c3)) {
+    if (lisdigit(c3)) {
       c = 10*c + c3 - '0';  /* update result */
       if (c > UCHAR_MAX) {
         luaZ_resetbuffer(ls->buff);  /* prepare error message */
@@ -327,14 +356,14 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
           case EOZ: continue;  /* will raise an error next loop */
           case '*': {  /* skip following span of spaces */
             next(ls);  /* skip the '*' */
-            while (isspace(ls->current)) {
+            while (lisspace(ls->current)) {
               if (currIsNewline(ls)) inclinenumber(ls);
               else next(ls);
             }
             continue;  /* do not save 'c' */
           }
           default: {
-            if (!isdigit(ls->current))
+            if (!lisdigit(ls->current))
               c = ls->current;  /* handles \\, \", \', and \? */
             else  /* digital escape \ddd */
               c = readdecesc(ls);
@@ -431,7 +460,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
             return TK_DOTS;   /* '...' */
           else return TK_CONCAT;   /* '..' */
         }
-        else if (!isdigit(ls->current)) return '.';
+        else if (!lisdigit(ls->current)) return '.';
         /* else go through */
       }
       case '0': case '1': case '2': case '3': case '4':
@@ -443,12 +472,11 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         return TK_EOS;
       }
       default: {
-        if (isalpha(ls->current) || ls->current == '_') {
-          /* identifier or reserved word */
+        if (lislalpha(ls->current)) {  /* identifier or reserved word? */
           TString *ts;
           do {
             save_and_next(ls);
-          } while (isalnum(ls->current) || ls->current == '_');
+          } while (lislalnum(ls->current));
           ts = luaX_newstring(ls, luaZ_buffer(ls->buff),
                                   luaZ_bufflen(ls->buff));
           seminfo->ts = ts;

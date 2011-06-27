@@ -1,10 +1,9 @@
 /*
-** $Id: lobject.c,v 2.51 2011/06/18 17:25:15 roberto Exp $
+** $Id: lobject.c,v 2.52 2011/06/24 12:25:02 roberto Exp $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
 
-#include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +14,7 @@
 
 #include "lua.h"
 
+#include "lctype.h"
 #include "ldebug.h"
 #include "ldo.h"
 #include "lmem.h"
@@ -85,9 +85,8 @@ lua_Number luaO_arith (int op, lua_Number v1, lua_Number v2) {
 
 
 int luaO_hexavalue (int c) {
-  lua_assert(isxdigit(c));
-  if (isdigit(c)) return c - '0';
-  else return toupper(c) - 'A' + 10;
+  if (lisdigit(c)) return c - '0';
+  else return ltolower(c) - 'a' + 10;
 }
 
 
@@ -104,7 +103,7 @@ static int isneg (const char **s) {
 
 
 static lua_Number readhexa (const char **s, lua_Number r, int *count) {
-  while (isxdigit(cast_uchar(**s))) {  /* read integer part */
+  while (lisxdigit(cast_uchar(**s))) {  /* read integer part */
     r = (r * 16.0) + cast_num(luaO_hexavalue(cast_uchar(*(*s)++)));
     (*count)++;
   }
@@ -121,7 +120,7 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
   int e = 0, i = 0;
   int neg = 0;  /* 1 if number is negative */
   *endptr = cast(char *, s);  /* nothing is valid yet */
-  while (isspace(cast_uchar(*s))) s++;  /* skip initial spaces */
+  while (lisspace(cast_uchar(*s))) s++;  /* skip initial spaces */
   neg = isneg(&s);  /* check signal */
   if (!(*s == '0' && (*(s + 1) == 'x' || *(s + 1) == 'X')))  /* check '0x' */
     return 0.0;  /* invalid format (no '0x') */
@@ -140,9 +139,9 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
     int neg1;
     s++;  /* skip 'p' */
     neg1 = isneg(&s);  /* signal */
-    if (!isdigit(cast_uchar(*s)))
+    if (!lisdigit(cast_uchar(*s)))
       goto ret;  /* must have at least one digit */
-    while (isdigit(cast_uchar(*s)))  /* read exponent */
+    while (lisdigit(cast_uchar(*s)))  /* read exponent */
       exp1 = exp1 * 10 + *(s++) - '0';
     if (neg1) exp1 = -exp1;
     e += exp1;
@@ -163,7 +162,7 @@ int luaO_str2d (const char *s, size_t len, lua_Number *result) {
   else
     *result = lua_str2number(s, &endptr);
   if (endptr == s) return 0;  /* nothing recognized */
-  while (isspace(cast_uchar(*endptr))) endptr++;
+  while (lisspace(cast_uchar(*endptr))) endptr++;
   return (endptr == s + len);  /* OK if no trailing characters */
 }
 
