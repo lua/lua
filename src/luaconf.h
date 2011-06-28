@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.159 2011/06/13 14:13:06 roberto Exp $
+** $Id: luaconf.h,v 1.160 2011/06/28 17:14:12 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -244,6 +244,12 @@
 ** You can replace it with 'table.unpack'.
 */
 #define LUA_COMPAT_UNPACK
+
+/*
+@@ LUA_COMPAT_LOADERS controls the presence of table 'package.loaders'.
+** You can replace it with 'package.searchers'.
+*/
+#define LUA_COMPAT_LOADERS
 
 /*
 @@ macro 'lua_cpcall' emulates deprecated function lua_cpcall.

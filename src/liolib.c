@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.100 2011/06/21 13:43:48 roberto Exp $
+** $Id: liolib.c,v 2.101 2011/06/27 19:42:31 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -49,7 +49,7 @@
 #endif			/* } */
 
 
-#define IO_PREFIX	"lua_io_"
+#define IO_PREFIX	"_IO_"
 #define IO_INPUT	(IO_PREFIX "input")
 #define IO_OUTPUT	(IO_PREFIX "output")
 

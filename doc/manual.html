@@ -38,7 +38,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.80 2011/06/27 18:26:28 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.82 2011/06/28 17:17:36 roberto Exp $ -->
 
 
 
@@ -880,7 +880,7 @@ the execution of the regular code.
 
 <p>
 Because the object being collected must still be used by the finalizer 
-and even <em>resurrected</em>resurrection
+and even <em>resurrected</em>
 (e.g., stored by the finalizer in a global variable),
 the object memory is freed only when it becomes completely inaccessible
 (that is, in the next garbage-collection cycle unless it was resurrected).
@@ -7245,11 +7245,11 @@ Otherwise, it tries to find a <em>loader</em> for the module.
 
 <p>
 To find a loader,
-<code>require</code> is guided by the <a href="#pdf-package.loaders"><code>package.loaders</code></a> sequence.
+<code>require</code> is guided by the <a href="#pdf-package.searchers"><code>package.searchers</code></a> sequence.
 By changing this sequence,
 we can change how <code>require</code> looks for a module.
 The following explanation is based on the default configuration
-for <a href="#pdf-package.loaders"><code>package.loaders</code></a>.
+for <a href="#pdf-package.searchers"><code>package.searchers</code></a>.
 
 
 <p>
@@ -7261,7 +7261,7 @@ path stored in <a href="#pdf-package.path"><code>package.path</code></a>.
 If that also fails, it searches for a C&nbsp;loader using the
 path stored in <a href="#pdf-package.cpath"><code>package.cpath</code></a>.
 If that also fails,
-it tries an <em>all-in-one</em> loader (see <a href="#pdf-package.loaders"><code>package.loaders</code></a>).
+it tries an <em>all-in-one</em> loader (see <a href="#pdf-package.searchers"><code>package.searchers</code></a>).
 
 
 <p>
@@ -7359,7 +7359,84 @@ table used by <a href="#pdf-require"><code>require</code></a>.
 
 
 <p>
-<hr><h3><a name="pdf-package.loaders"><code>package.loaders</code></a></h3>
+<hr><h3><a name="pdf-package.loadlib"><code>package.loadlib (libname, funcname)</code></a></h3>
+
+
+<p>
+Dynamically links the host program with the C&nbsp;library <code>libname</code>.
+
+
+<p>
+If <code>funcname</code> is "<code>*</code>",
+then it only links with the library,
+making the symbols exported by the library
+available to other dynamically linked libraries.
+Otherwise,
+it looks for a function <code>funcname</code> inside the library
+and returns this function as a C&nbsp;function.
+(So, <code>funcname</code> must follow the protocol (see <a href="#lua_CFunction"><code>lua_CFunction</code></a>)).
+
+
+<p>
+This is a low-level function.
+It completely bypasses the package and module system.
+Unlike <a href="#pdf-require"><code>require</code></a>,
+it does not perform any path searching and
+does not automatically adds extensions.
+<code>libname</code> must be the complete file name of the C&nbsp;library,
+including if necessary a path and an extension.
+<code>funcname</code> must be the exact name exported by the C&nbsp;library
+(which may depend on the C&nbsp;compiler and linker used).
+
+
+<p>
+This function is not supported by Standard&nbsp;C.
+As such, it is only available on some platforms
+(Windows, Linux, Mac OS X, Solaris, BSD,
+plus other Unix systems that support the <code>dlfcn</code> standard).
+
+
+
+
+<p>
+<hr><h3><a name="pdf-package.path"><code>package.path</code></a></h3>
+
+
+<p>
+The path used by <a href="#pdf-require"><code>require</code></a> to search for a Lua loader.
+
+
+<p>
+At start-up, Lua initializes this variable with
+the value of the environment variable <a name="pdf-LUA_PATH_5_2"><code>LUA_PATH_5_2</code></a> or
+the environment variable <a name="pdf-LUA_PATH"><code>LUA_PATH</code></a> or
+with a default path defined in <code>luaconf.h</code>,
+if the environment variable is not defined.
+Any "<code>;;</code>" in the value of the environment variable
+is replaced by the default path.
+
+
+
+
+<p>
+<hr><h3><a name="pdf-package.preload"><code>package.preload</code></a></h3>
+
+
+<p>
+A table to store loaders for specific modules
+(see <a href="#pdf-require"><code>require</code></a>).
+
+
+<p>
+This variable is only a reference to the real table;
+assignments to this variable do not change the
+table used by <a href="#pdf-require"><code>require</code></a>.
+
+
+
+
+<p>
+<hr><h3><a name="pdf-package.searchers"><code>package.searchers</code></a></h3>
 
 
 <p>
@@ -7440,83 +7517,6 @@ All searchers except the first (preload) return as the extra value
 the file name where the module was found,
 as returned by <a href="#pdf-package.searchpath"><code>package.searchpath</code></a>.
 The first searcher returns no extra value.
-
-
-
-
-<p>
-<hr><h3><a name="pdf-package.loadlib"><code>package.loadlib (libname, funcname)</code></a></h3>
-
-
-<p>
-Dynamically links the host program with the C&nbsp;library <code>libname</code>.
-
-
-<p>
-If <code>funcname</code> is "<code>*</code>",
-then it only links with the library,
-making the symbols exported by the library
-available to other dynamically linked libraries.
-Otherwise,
-it looks for a function <code>funcname</code> inside the library
-and returns this function as a C&nbsp;function.
-(So, <code>funcname</code> must follow the protocol (see <a href="#lua_CFunction"><code>lua_CFunction</code></a>)).
-
-
-<p>
-This is a low-level function.
-It completely bypasses the package and module system.
-Unlike <a href="#pdf-require"><code>require</code></a>,
-it does not perform any path searching and
-does not automatically adds extensions.
-<code>libname</code> must be the complete file name of the C&nbsp;library,
-including if necessary a path and an extension.
-<code>funcname</code> must be the exact name exported by the C&nbsp;library
-(which may depend on the C&nbsp;compiler and linker used).
-
-
-<p>
-This function is not supported by Standard&nbsp;C.
-As such, it is only available on some platforms
-(Windows, Linux, Mac OS X, Solaris, BSD,
-plus other Unix systems that support the <code>dlfcn</code> standard).
-
-
-
-
-<p>
-<hr><h3><a name="pdf-package.path"><code>package.path</code></a></h3>
-
-
-<p>
-The path used by <a href="#pdf-require"><code>require</code></a> to search for a Lua loader.
-
-
-<p>
-At start-up, Lua initializes this variable with
-the value of the environment variable <a name="pdf-LUA_PATH_5_2"><code>LUA_PATH_5_2</code></a> or
-the environment variable <a name="pdf-LUA_PATH"><code>LUA_PATH</code></a> or
-with a default path defined in <code>luaconf.h</code>,
-if the environment variable is not defined.
-Any "<code>;;</code>" in the value of the environment variable
-is replaced by the default path.
-
-
-
-
-<p>
-<hr><h3><a name="pdf-package.preload"><code>package.preload</code></a></h3>
-
-
-<p>
-A table to store loaders for specific modules
-(see <a href="#pdf-require"><code>require</code></a>).
-
-
-<p>
-This variable is only a reference to the real table;
-assignments to this variable do not change the
-table used by <a href="#pdf-require"><code>require</code></a>.
 
 
 
@@ -10032,6 +10032,10 @@ as now patterns may contain '<code>\0</code>' as a regular character.
 </li>
 
 <li>
+The table <code>package.loaders</code> was renamed <code>package.searchers</code>.
+</li>
+
+<li>
 Lua does not have bytecode verification anymore.
 So, all functions that load code
 (<a href="#pdf-load"><code>load</code></a> and <a href="#pdf-loadfile"><code>loadfile</code></a>)
@@ -10203,7 +10207,7 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Mon Jun 27 15:48:15 BRT 2011
+Tue Jun 28 14:51:18 BRT 2011
 </SMALL>
 <!--
 Last change: revised for Lua 5.2.0 (beta)

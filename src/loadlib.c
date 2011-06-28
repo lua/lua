@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.98 2011/04/08 19:17:36 roberto Exp $
+** $Id: loadlib.c,v 1.99 2011/06/28 17:13:28 roberto Exp $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -376,7 +376,7 @@ static int checkload (lua_State *L, int stat, const char *filename) {
 }
 
 
-static int loader_Lua (lua_State *L) {
+static int searcher_Lua (lua_State *L) {
   const char *filename;
   const char *name = luaL_checkstring(L, 1);
   filename = findfile(L, name, "path");
@@ -403,7 +403,7 @@ static int loadfunc (lua_State *L, const char *filename, const char *modname) {
 }
 
 
-static int loader_C (lua_State *L) {
+static int searcher_C (lua_State *L) {
   const char *name = luaL_checkstring(L, 1);
   const char *filename = findfile(L, name, "cpath");
   if (filename == NULL) return 1;  /* module not found in this path */
@@ -411,7 +411,7 @@ static int loader_C (lua_State *L) {
 }
 
 
-static int loader_Croot (lua_State *L) {
+static int searcher_Croot (lua_State *L) {
   const char *filename;
   const char *name = luaL_checkstring(L, 1);
   const char *p = strchr(name, '.');
@@ -434,7 +434,7 @@ static int loader_Croot (lua_State *L) {
 }
 
 
-static int loader_preload (lua_State *L) {
+static int searcher_preload (lua_State *L) {
   const char *name = luaL_checkstring(L, 1);
   lua_getfield(L, LUA_REGISTRYINDEX, "_PRELOAD");
   lua_getfield(L, -1, name);
@@ -452,30 +452,30 @@ static int ll_require (lua_State *L) {
   lua_getfield(L, 2, name);
   if (lua_toboolean(L, -1))  /* is it there? */
     return 1;  /* package is already loaded */
-  /* else must load it; iterate over available loaders */
-  lua_getfield(L, lua_upvalueindex(1), "loaders");
+  /* else must load it; iterate over available seachers to find a loader */
+  lua_getfield(L, lua_upvalueindex(1), "searchers");
   if (!lua_istable(L, -1))
-    luaL_error(L, LUA_QL("package.loaders") " must be a table");
+    luaL_error(L, LUA_QL("package.searchers") " must be a table");
   lua_pushliteral(L, "");  /* error message accumulator */
   for (i=1; ; i++) {
-    lua_rawgeti(L, -2, i);  /* get a loader */
-    if (lua_isnil(L, -1))
+    lua_rawgeti(L, -2, i);  /* get a seacher */
+    if (lua_isnil(L, -1))  /* no more searchers? */
       luaL_error(L, "module " LUA_QS " not found:%s",
                     name, lua_tostring(L, -2));
     lua_pushstring(L, name);
     lua_call(L, 1, 2);  /* call it */
-    if (lua_isfunction(L, -2))  /* did it find module? */
-      break;  /* module loaded successfully */
-    else if (lua_isstring(L, -2)) {  /* loader returned error message? */
+    if (lua_isfunction(L, -2))  /* did it find a loader? */
+      break;  /* module loader found */
+    else if (lua_isstring(L, -2)) {  /* searcher returned error message? */
       lua_pop(L, 1);  /* remove extra return */
       lua_concat(L, 2);  /* accumulate error message */
     }
     else
       lua_pop(L, 2);  /* remove both returns */
   }
-  lua_pushstring(L, name);  /* pass name as argument to module */
+  lua_pushstring(L, name);  /* pass name as argument to module loader */
   lua_insert(L, -2);  /* name is 1st argument (before search data) */
-  lua_call(L, 2, 1);  /* run loaded module */
+  lua_call(L, 2, 1);  /* run loader to load module */
   if (!lua_isnil(L, -1))  /* non-nil return? */
     lua_setfield(L, 2, name);  /* _LOADED[name] = returned value */
   lua_getfield(L, 2, name);
@@ -622,8 +622,8 @@ static const luaL_Reg ll_funcs[] = {
 };
 
 
-static const lua_CFunction loaders[] =
-  {loader_preload, loader_Lua, loader_C, loader_Croot, NULL};
+static const lua_CFunction searchers[] =
+  {searcher_preload, searcher_Lua, searcher_C, searcher_Croot, NULL};
 
 
 LUAMOD_API int luaopen_package (lua_State *L) {
@@ -634,15 +634,19 @@ LUAMOD_API int luaopen_package (lua_State *L) {
   lua_setfield(L, -2, "__gc");
   /* create `package' table */
   luaL_newlib(L, pk_funcs);
-  /* create `loaders' table */
-  lua_createtable(L, sizeof(loaders)/sizeof(loaders[0]) - 1, 0);
-  /* fill it with pre-defined loaders */
-  for (i=0; loaders[i] != NULL; i++) {
-    lua_pushvalue(L, -2);  /* set 'package' as upvalue for all loaders */
-    lua_pushcclosure(L, loaders[i], 1);
+  /* create 'searchers' table */
+  lua_createtable(L, sizeof(searchers)/sizeof(searchers[0]) - 1, 0);
+  /* fill it with pre-defined searchers */
+  for (i=0; searchers[i] != NULL; i++) {
+    lua_pushvalue(L, -2);  /* set 'package' as upvalue for all searchers */
+    lua_pushcclosure(L, searchers[i], 1);
     lua_rawseti(L, -2, i+1);
   }
-  lua_setfield(L, -2, "loaders");  /* put it in field `loaders' */
+#if defined(LUA_COMPAT_LOADERS)
+  lua_pushvalue(L, -1);  /* make a copy of 'searchers' table */
+  lua_setfield(L, -3, "loaders");  /* put it in field `loaders' */
+#endif
+  lua_setfield(L, -2, "searchers");  /* put it in field 'searchers' */
   /* set field 'path' */
   setpath(L, "path", LUA_PATHVERSION, LUA_PATH, LUA_PATH_DEFAULT);
   /* set field 'cpath' */

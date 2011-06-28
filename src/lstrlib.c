@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.169 2011/06/16 14:14:05 roberto Exp $
+** $Id: lstrlib.c,v 1.170 2011/06/28 17:13:52 roberto Exp $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -917,15 +917,6 @@ static int str_format (lua_State *L) {
 /* }====================================================== */
 
 
-static int noindex (lua_State *L) {
-  const char *f = lua_tostring(L, 2);
-  if (f)
-    return luaL_error(L, "no field '%s' in strings", f);
-  else
-    return luaL_error(L, "no such field in strings");
-}
-
-
 static const luaL_Reg strlib[] = {
   {"byte", str_byte},
   {"char", str_char},
@@ -941,22 +932,19 @@ static const luaL_Reg strlib[] = {
   {"reverse", str_reverse},
   {"sub", str_sub},
   {"upper", str_upper},
-  {"__index", noindex},
   {NULL, NULL}
 };
 
 
 static void createmetatable (lua_State *L) {
-  /* setmetatable("", {__index = string}) */
+  lua_createtable(L, 0, 1);  /* table to be metatable for strings */
   lua_pushliteral(L, "");  /* dummy string */
-  lua_createtable(L, 0, 1);  /* create metatable for strings */
-  lua_pushvalue(L, -3);  /* set the string library... */
-  lua_setfield(L, -2, "__index");  /* ...as the __index metamethod */
-  lua_setmetatable(L, -2);  /* set metatable for strings */
+  lua_pushvalue(L, -2);  /* copy table */
+  lua_setmetatable(L, -2);  /* set table as metatable for strings */
   lua_pop(L, 1);  /* pop dummy string */
-  /* setmetatable(string, string) */
-  lua_pushvalue(L, -1);  /* push string library */
-  lua_setmetatable(L, -2);  /* set it as its own metatable */
+  lua_pushvalue(L, -2);  /* get string library */
+  lua_setfield(L, -2, "__index");  /* metatable.__index = string */
+  lua_pop(L, 1);  /* pop metatable */
 }
 
 
