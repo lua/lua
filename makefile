@@ -34,8 +34,9 @@ CWARNS= $(CWARNSC) \
 
 # -DEXTERNMEMCHECK -DHARDSTACKTESTS -DHARDMEMTESTS  -DTRACEMEM='"tempmem"'
 # -g -DLUA_USER_H='"ltests.h"'
-# -fomit-frame-pointer #-pg -malign-double -DLUA_USE_CTYPE
-# TESTS= -DLUA_USER_H='"ltests.h"'  # -g -O0 
+# -fomit-frame-pointer #-pg -malign-double
+# -DLUA_USE_CTYPE  -DLUA_USE_APICHECK
+TESTS= -DLUA_USER_H='"ltests.h"'
 
 # -mtune=native -fomit-frame-pointer 
 LOCAL = $(TESTS) $(CWARNS) -g
