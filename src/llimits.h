@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.89 2011/05/05 19:43:14 roberto Exp $
+** $Id: llimits.h,v 1.90 2011/07/02 15:57:25 roberto Exp $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -70,11 +70,15 @@ typedef LUAI_UACNUMBER l_uacNumber;
 /*
 ** assertion for checking API calls
 */
+#if !defined(luai_apicheck)
+
 #if defined(LUA_USE_APICHECK)
 #include <assert.h>
-#define luai_apicheck(L,e)	{ (void)L; assert(e); }
-#elif !defined(luai_apicheck)
+#define luai_apicheck(L,e)	assert(e)
+#else
 #define luai_apicheck(L,e)	lua_assert(e)
+#endif
+
 #endif
 
 #define api_check(l,e,msg)	luai_apicheck(l,(e) && msg)

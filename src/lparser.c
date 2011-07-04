@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.112 2011/06/27 18:18:59 roberto Exp $
+** $Id: lparser.c,v 2.113 2011/07/02 15:58:14 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1398,13 +1398,11 @@ static void ifstat (LexState *ls, int line) {
 static void localfunc (LexState *ls) {
   expdesc b;
   FuncState *fs = ls->fs;
-  int varidx = fs->nactvar;  /* index of new local variable */
   new_localvar(ls, str_checkname(ls));  /* new local variable */
   adjustlocalvars(ls, 1);  /* enter its scope */
   body(ls, &b, 0, ls->linenumber);  /* function created in next register */
-  lua_assert(b.k == VNONRELOC && b.u.ind.idx == varidx);
   /* debug information will only see the variable after this point! */
-  getlocvar(fs, varidx)->startpc = fs->pc;
+  getlocvar(fs, b.u.info)->startpc = fs->pc;
 }
 
 

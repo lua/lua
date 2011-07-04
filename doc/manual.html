@@ -38,7 +38,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.82 2011/06/28 17:17:36 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.84 2011/07/04 15:58:56 roberto Exp $ -->
 
 
 
@@ -8152,8 +8152,8 @@ of list <code>t</code>.
 <p>
 Returns a new table with all parameters stored into keys 1, 2, etc.
 and with a field "<code>n</code>" with the total number of parameters.
-Note that the result may not be a sequence,
-if any parameter is <b>nil</b>.
+Also returns, as a second result, the total number of parameters.
+Note that the resulting table may not be a sequence.
 
 
 
@@ -9995,7 +9995,7 @@ and it is easy to set up a module with regular Lua code.
 </li>
 
 <li>
-Functions <code>setfenv</code> and <code>getfenv</code> are deprecated,
+Functions <code>setfenv</code> and <code>getfenv</code> were removed,
 because of the changes in environments.
 </li>
 
@@ -10096,7 +10096,7 @@ even if it is set later.
 </li>
 
 <li>
-<code>luaL_typerror</code> was deprecated.
+<code>luaL_typerror</code> was removed.
 Write your own version if you need it.
 </li>
 
@@ -10207,7 +10207,7 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Tue Jun 28 14:51:18 BRT 2011
+Mon Jul  4 16:21:50 BRT 2011
 </SMALL>
 <!--
 Last change: revised for Lua 5.2.0 (beta)

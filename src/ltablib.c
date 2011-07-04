@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.59 2010/12/17 12:15:34 roberto Exp $
+** $Id: ltablib.c,v 1.60 2011/07/02 16:01:44 roberto Exp $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -20,8 +20,8 @@
 	(luaL_checktype(L, n, LUA_TTABLE), luaL_len(L, n))
 
 
-static int deprecatedfunc (lua_State *L) {
-  return luaL_error(L, "deprecated function");
+static int removedfunc (lua_State *L) {
+  return luaL_error(L, "removed function");
 }
 
 
@@ -41,7 +41,7 @@ static int maxn (lua_State *L) {
   return 1;
 }
 #else
-#define maxn	deprecatedfunc
+#define maxn	removedfunc
 #endif
 
 
@@ -124,18 +124,20 @@ static int tconcat (lua_State *L) {
 */
 
 static int pack (lua_State *L) {
-  int top = lua_gettop(L);
-  lua_createtable(L, top, 1);  /* create result table */
-  lua_pushinteger(L, top);  /* number of elements */
+  int n = lua_gettop(L);  /* number of elements to pack */
+  lua_createtable(L, n, 1);  /* create result table */
+  lua_pushinteger(L, n);
   lua_setfield(L, -2, "n");  /* t.n = number of elements */
-  if (top > 0) {  /* at least one element? */
+  if (n > 0) {  /* at least one element? */
+    int i;
     lua_pushvalue(L, 1);
     lua_rawseti(L, -2, 1);  /* insert first element */
-    lua_replace(L, 1);  /* move table into its position (index 1) */
-    for (; top >= 2; top--)  /* assign other elements */
-      lua_rawseti(L, 1, top);
+    lua_replace(L, 1);  /* move table into index 1 */
+    for (i = n; i >= 2; i--)  /* assign other elements */
+      lua_rawseti(L, 1, i);
   }
-  return 1;
+  lua_pushinteger(L, n);
+  return 2;  /* return table and number of elements */
 }
 
 
@@ -265,9 +267,9 @@ static int sort (lua_State *L) {
 
 static const luaL_Reg tab_funcs[] = {
   {"concat", tconcat},
-  {"foreach", deprecatedfunc},
-  {"foreachi", deprecatedfunc},
-  {"getn", deprecatedfunc},
+  {"foreach", removedfunc},
+  {"foreachi", removedfunc},
+  {"getn", removedfunc},
   {"maxn", maxn},
   {"insert", tinsert},
   {"pack", pack},
