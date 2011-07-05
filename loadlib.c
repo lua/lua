@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.98 2011/04/08 19:17:36 roberto Exp roberto $
+** $Id: loadlib.c,v 1.99 2011/06/28 17:13:28 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -569,17 +569,6 @@ static int ll_seeall (lua_State *L) {
   return 0;
 }
 
-
-#else
-
-static int ll_seeall (lua_State *L) {
-  return luaL_error(L, "deprecated function");
-}
-
-static int ll_module (lua_State *L) {
-  return luaL_error(L, "deprecated function");
-}
-
 #endif
 /* }====================================================== */
 
@@ -610,13 +599,17 @@ static void setpath (lua_State *L, const char *fieldname, const char *envname1,
 static const luaL_Reg pk_funcs[] = {
   {"loadlib", ll_loadlib},
   {"searchpath", ll_searchpath},
+#if defined(LUA_COMPAT_MODULE)
   {"seeall", ll_seeall},
+#endif
   {NULL, NULL}
 };
 
 
 static const luaL_Reg ll_funcs[] = {
+#if defined(LUA_COMPAT_MODULE)
   {"module", ll_module},
+#endif
   {"require", ll_require},
   {NULL, NULL}
 };
