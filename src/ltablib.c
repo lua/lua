@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.60 2011/07/02 16:01:44 roberto Exp $
+** $Id: ltablib.c,v 1.61 2011/07/05 12:49:35 roberto Exp $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -20,11 +20,6 @@
 	(luaL_checktype(L, n, LUA_TTABLE), luaL_len(L, n))
 
 
-static int removedfunc (lua_State *L) {
-  return luaL_error(L, "removed function");
-}
-
-
 #if defined(LUA_COMPAT_MAXN)
 static int maxn (lua_State *L) {
   lua_Number max = 0;
@@ -40,8 +35,6 @@ static int maxn (lua_State *L) {
   lua_pushnumber(L, max);
   return 1;
 }
-#else
-#define maxn	removedfunc
 #endif
 
 
@@ -267,10 +260,9 @@ static int sort (lua_State *L) {
 
 static const luaL_Reg tab_funcs[] = {
   {"concat", tconcat},
-  {"foreach", removedfunc},
-  {"foreachi", removedfunc},
-  {"getn", removedfunc},
+#if defined(LUA_COMPAT_MAXN)
   {"maxn", maxn},
+#endif
   {"insert", tinsert},
   {"pack", pack},
   {"unpack", unpack},

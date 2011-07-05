@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.60 2011/06/13 14:13:06 roberto Exp $
+** $Id: lobject.h,v 2.61 2011/07/04 20:29:02 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -275,14 +275,17 @@ typedef struct lua_TValue TValue;
 #endif
 
 #undef TValuefields
+#undef NILCONSTANT
 #if defined(LUA_NANTRICKLE)
 /* little endian */
 #define TValuefields  \
 	union { struct { Value v_; int tt_; } i; double d_; } u
+#define NILCONSTANT	{{{NULL}, tag2tt(LUA_TNIL)}}
 #else
 /* big endian */
 #define TValuefields  \
 	union { struct { int tt_; Value v_; } i; double d_; } u
+#define NILCONSTANT	{{tag2tt(LUA_TNIL), {NULL}}}
 #endif
 
 #undef numfield
@@ -293,9 +296,6 @@ typedef struct lua_TValue TValue;
 #define ttisnumber(o)	(((o)->u.i.tt_ & 0x7fffff00) != NNMARK)
 
 #define tag2tt(t)	(NNMARK | (t))
-
-#undef NILCONSTANT
-#define NILCONSTANT	{{{NULL}, tag2tt(LUA_TNIL)}}
 
 #undef val_
 #define val_(o)		((o)->u.i.v_)

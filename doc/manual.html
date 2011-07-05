@@ -38,7 +38,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.84 2011/07/04 15:58:56 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.85 2011/07/05 19:15:00 roberto Exp $ -->
 
 
 
@@ -1167,7 +1167,7 @@ and can contain the following C-like escape sequences:
 and '<code>\'</code>' (apostrophe [single quote]).
 A backslash followed by a real newline
 results in a newline in the string.
-The escape sequence '<code>\*</code>' skips the following span
+The escape sequence '<code>\z</code>' skips the following span
 of white-space characters,
 including line breaks;
 it is particularly useful to break and indent a long string
@@ -2603,12 +2603,12 @@ defined as constants in <code>lua.h</code>.
 The following constants are defined:
 
 <ul>
-<li><b>LUA_RIDX_MAINTHREAD: </b> At this index the registry has
+<li><b><a name="pdf-LUA_RIDX_MAINTHREAD"><code>LUA_RIDX_MAINTHREAD</code></a>: </b> At this index the registry has
 the main thread of the state.
 (The main thread is the one created together with the state.)
 </li>
 
-<li><b>LUA_RIDX_GLOBALS: </b> At this index the registry has
+<li><b><a name="pdf-LUA_RIDX_GLOBALS"><code>LUA_RIDX_GLOBALS</code></a>: </b> At this index the registry has
 the global environment.
 This is the C&nbsp;equivalent to the <a href="#pdf-_G"><code>_G</code></a> global variable.
 </li>
@@ -6656,22 +6656,22 @@ It performs different functions according to its first argument, <code>opt</code
 
 <ul>
 
-<li><b>"collect": </b>
+<li><b>"<code>collect</code>": </b>
 performs a full garbage-collection cycle.
 This is the default option.
 </li>
 
-<li><b>"stop": </b>
+<li><b>"<code>stop</code>": </b>
 stops automatic invocation of the garbage collector.
 The collector will run only when explcitly invoked,
 until a call to restart it.
 </li>
 
-<li><b>"restart": </b>
+<li><b>"<code>restart</code>": </b>
 restarts automatic invocation the garbage collector.
 </li>
 
-<li><b>"count": </b>
+<li><b>"<code>count</code>": </b>
 returns the total memory in use by Lua (in Kbytes) and
 a second value with the total memory in bytes modulo 1024.
 The first value has a fractional part,
@@ -6685,7 +6685,7 @@ so the following equality is always true:
 with a non floating-point type for numbers.)
 </li>
 
-<li><b>"step": </b>
+<li><b>"<code>step</code>": </b>
 performs a garbage-collection step.
 The step "size" is controlled by <code>arg</code>
 (larger values mean more steps) in a non-specified way.
@@ -6694,19 +6694,19 @@ you must experimentally tune the value of <code>arg</code>.
 Returns <b>true</b> if the step finished a collection cycle.
 </li>
 
-<li><b>"setpause": </b>
+<li><b>"<code>setpause</code>": </b>
 sets <code>arg</code> as the new value for the <em>pause</em> of
 the collector (see <a href="#2.5">&sect;2.5</a>).
 Returns the previous value for <em>pause</em>.
 </li>
 
-<li><b>"setstepmul": </b>
+<li><b>"<code>setstepmul</code>": </b>
 sets <code>arg</code> as the new value for the <em>step multiplier</em> of
 the collector (see <a href="#2.5">&sect;2.5</a>).
 Returns the previous value for <em>step</em>.
 </li>
 
-<li><b>"isrunning": </b>
+<li><b>"<code>isrunning</code>": </b>
 returns a boolean that tells whether the collector is running
 (i.e., not stopped).
 </li>
@@ -7649,7 +7649,7 @@ its default value is&nbsp;1 and can be negative.
 A value of <b>true</b> as a fourth, optional argument <code>plain</code>
 turns off the pattern matching facilities,
 so the function does a plain "find substring" operation,
-with no characters in <code>pattern</code> being considered "magic".
+with no characters in <code>pattern</code> being considered magic.
 Note that if <code>plain</code> is given, then <code>init</code> must be given as well.
 
 
@@ -7671,21 +7671,18 @@ Returns a formatted version of its variable number of arguments
 following the description given in its first argument (which must be a string).
 The format string follows the same rules as the C&nbsp;function <code>sprintf</code>.
 The only differences are that the options/modifiers
-<code>*</code>, <code>l</code>, <code>L</code>, <code>n</code>, <code>p</code>,
-and <code>h</code> are not supported
+<code>*</code>, <code>h</code>, <code>L</code>, <code>l</code>, <code>n</code>,
+and <code>p</code> are not supported
 and that there is an extra option, <code>q</code>.
-The <code>q</code> option formats a string in a form suitable to be safely read
-back by the Lua interpreter:
-the string is written between double quotes,
-and all double quotes, newlines, embedded zeros,
-and backslashes in the string
-are correctly escaped when written.
+The <code>q</code> option formats a string between double quotes,
+using escape sequences when necessary to ensure that
+it can safely be read back by the Lua interpreter.
 For instance, the call
 
 <pre>
      string.format('%q', 'a string with "quotes" and \n new line')
 </pre><p>
-will produce the string:
+may produce the string:
 
 <pre>
      "a string with \"quotes\" and \
@@ -7702,8 +7699,8 @@ Options <code>c</code>, <code>d</code>,
 expect an integer as argument;
 the range of that integer may be limited by
 the underlying C&nbsp;implementation.
-Option <code>q</code> expects a string
-and <code>s</code> expects a string without embedded zeros.
+Option <code>q</code> expects a string;
+option <code>s</code> expects a string without embedded zeros.
 If the argument to option <code>s</code> is not a string,
 it is converted to one following the same rules of <a href="#pdf-tostring"><code>tostring</code></a>.
 
@@ -8885,12 +8882,12 @@ or, in case of errors, <b>nil</b> plus an error message.
 The <code>mode</code> string can be any of the following:
 
 <ul>
-<li><b>"r": </b> read mode (the default);</li>
-<li><b>"w": </b> write mode;</li>
-<li><b>"a": </b> append mode;</li>
-<li><b>"r+": </b> update mode, all previous data is preserved;</li>
-<li><b>"w+": </b> update mode, all previous data is erased;</li>
-<li><b>"a+": </b> append update mode, previous data is preserved,
+<li><b>"<code>r</code>": </b> read mode (the default);</li>
+<li><b>"<code>w</code>": </b> write mode;</li>
+<li><b>"<code>a</code>": </b> append mode;</li>
+<li><b>"<code>r+</code>": </b> update mode, all previous data is preserved;</li>
+<li><b>"<code>w+</code>": </b> update mode, all previous data is erased;</li>
+<li><b>"<code>a+</code>": </b> append update mode, previous data is preserved,
   writing is only allowed at the end of file.</li>
 </ul><p>
 The <code>mode</code> string can also have a '<code>b</code>' at the end,
@@ -9045,23 +9042,23 @@ The available formats are
 
 <ul>
 
-<li><b>"*n": </b>
+<li><b>"<code>*n</code>": </b>
 reads a number;
 this is the only format that returns a number instead of a string.
 </li>
 
-<li><b>"*a": </b>
+<li><b>"<code>*a</code>": </b>
 reads the whole file, starting at the current position.
 On end of file, it returns the empty string.
 </li>
 
-<li><b>"*l": </b>
+<li><b>"<code>*l</code>": </b>
 reads the next line skipping the end of line,
 returning <b>nil</b> on end of file.
 This is the default format.
 </li>
 
-<li><b>"*L": </b>
+<li><b>"<code>*L</code>": </b>
 reads the next line keeping the end of line (if present),
 returning <b>nil</b> on end of file.
 </li>
@@ -9089,9 +9086,9 @@ to the position given by <code>offset</code> plus a base
 specified by the string <code>whence</code>, as follows:
 
 <ul>
-<li><b>"set": </b> base is position 0 (beginning of the file);</li>
-<li><b>"cur": </b> base is current position;</li>
-<li><b>"end": </b> base is end of file;</li>
+<li><b>"<code>set</code>": </b> base is position 0 (beginning of the file);</li>
+<li><b>"<code>cur</code>": </b> base is current position;</li>
+<li><b>"<code>end</code>": </b> base is end of file;</li>
 </ul><p>
 In case of success, function <code>seek</code> returns the final file position,
 measured in bytes from the beginning of the file.
@@ -9122,17 +9119,17 @@ There are three available modes:
 
 <ul>
 
-<li><b>"no": </b>
+<li><b>"<code>no</code>": </b>
 no buffering; the result of any output operation appears immediately.
 </li>
 
-<li><b>"full": </b>
+<li><b>"<code>full</code>": </b>
 full buffering; output operation is performed only
 when the buffer is full (or when you explicitly <code>flush</code> the file
 (see <a href="#pdf-io.flush"><code>io.flush</code></a>)).
 </li>
 
-<li><b>"line": </b>
+<li><b>"<code>line</code>": </b>
 line buffering; output is buffered until a newline is output
 or there is any input from some special files
 (such as a terminal device).
@@ -9615,9 +9612,9 @@ The string mask may have the following characters,
 with the given meaning:
 
 <ul>
-<li><b><code>"c"</code>: </b> the hook is called every time Lua calls a function;</li>
-<li><b><code>"r"</code>: </b> the hook is called every time Lua returns from a function;</li>
-<li><b><code>"l"</code>: </b> the hook is called every time Lua enters a new line of code.</li>
+<li><b>'<code>c</code>': </b> the hook is called every time Lua calls a function;</li>
+<li><b>'<code>r</code>': </b> the hook is called every time Lua returns from a function;</li>
+<li><b>'<code>l</code>': </b> the hook is called every time Lua enters a new line of code.</li>
 </ul><p>
 With a <code>count</code> different from zero,
 the hook is called after every <code>count</code> instructions.
@@ -10207,7 +10204,7 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Mon Jul  4 16:21:50 BRT 2011
+Tue Jul  5 19:16:15 BRT 2011
 </SMALL>
 <!--
 Last change: revised for Lua 5.2.0 (beta)
