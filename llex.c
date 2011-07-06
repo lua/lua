@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.49 2011/06/23 14:54:48 roberto Exp roberto $
+** $Id: llex.c,v 2.50 2011/07/05 19:13:45 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -355,7 +355,7 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
           case '\r': save(ls, '\n'); inclinenumber(ls); continue;
           case EOZ: continue;  /* will raise an error next loop */
           case 'z': {  /* zap following span of spaces */
-            next(ls);  /* skip the '*' */
+            next(ls);  /* skip the 'z' */
             while (lisspace(ls->current)) {
               if (currIsNewline(ls)) inclinenumber(ls);
               else next(ls);
