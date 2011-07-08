@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.160 2011/06/28 17:14:12 roberto Exp $
+** $Id: luaconf.h,v 1.161 2011/07/08 20:07:11 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -499,20 +499,18 @@
 ** doubles with conventional endianess (12345678 or 87654321), in CPUs
 ** that do not produce signaling NaN values (all NaNs are quiet).
 */
-#if defined(LUA_CORE)		/* { */
-
-#if defined(LUA_NUMBER_DOUBLE) && !defined(LUA_ANSI)	/* { */
+#if defined(LUA_CORE) && \
+    defined(LUA_NUMBER_DOUBLE) && !defined(LUA_ANSI)	/* { */
 
 /* little-endian architectures that satisfy those conditions */
-#if defined(__i386__) || defined(__i386) || defined(__X86__)
+#if defined(__i386__) || defined(__i386) || defined(__X86__) || \
+    defined(_M_IX86)
 
 #define LUA_NANTRICKLE
 
 #endif
 
 #endif							/* } */
-
-#endif			/* } */
 
 
 

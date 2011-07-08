@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.50 2011/07/05 19:13:45 roberto Exp $
+** $Id: llex.c,v 2.53 2011/07/08 20:01:38 roberto Exp $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -286,45 +286,51 @@ static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
 }
 
 
+static void escerror (LexState *ls, int *c, int n, const char *msg) {
+  int i;
+  luaZ_resetbuffer(ls->buff);  /* prepare error message */
+  save(ls, '\\');
+  for (i = 0; i < n && c[i] != EOZ; i++)
+    save(ls, c[i]);
+  lexerror(ls, msg, TK_STRING);
+}
+
+
 static int readhexaesc (LexState *ls) {
-  int c1 = next(ls);
-  int c2 = EOZ;
-  if (lisxdigit(c1)) {
-    c2 = next(ls);
-    if (lisxdigit(c2))
-      return (luaO_hexavalue(c1) << 4) + luaO_hexavalue(c2);
+  int c[3];  /* keep input for error message */
+  int i = 2;  /* at least 'x?' will go to error message */
+  c[0] = 'x';
+  c[1] = next(ls);  /* first hexa digit */
+  if (lisxdigit(c[1])) {
+    c[i++] = next(ls);  /* second hexa digit */
+    if (lisxdigit(c[2]))
+      return (luaO_hexavalue(c[1]) << 4) + luaO_hexavalue(c[2]);
     /* else go through to error */
   }
-  luaZ_resetbuffer(ls->buff);  /* prepare error message */
-  save(ls, '\\'); save(ls, 'x');
-  if (c1 != EOZ) save(ls, c1);
-  if (c2 != EOZ) save(ls, c2);
-  lexerror(ls, "hexadecimal digit expected", TK_STRING);
+  escerror(ls, c, i, "hexadecimal digit expected");
   return 0;  /* to avoid warnings */
 }
 
 
 static int readdecesc (LexState *ls) {
-  int c1 = ls->current;  /* first char must be a digit */
-  int c2 = next(ls);  /* read second char */
-  int c = c1 - '0';  /* partial result */
-  if (lisdigit(c2)) {
-    int c3 = next(ls);  /* read third char */
-    c = 10*c + c2 - '0';  /* update result */
-    if (lisdigit(c3)) {
-      c = 10*c + c3 - '0';  /* update result */
-      if (c > UCHAR_MAX) {
-        luaZ_resetbuffer(ls->buff);  /* prepare error message */
-        save(ls, '\\');
-        save(ls, c1); save(ls, c2); save(ls, c3);
-        lexerror(ls, "decimal escape too large", TK_STRING);
-      }
-      return c;
+  int c[3], r;
+  int i = 2;  /* at least two chars will be read */
+  c[0] = ls->current;  /* first char must be a digit */
+  c[1] = next(ls);  /* read second char */
+  r = c[0] - '0';  /* partial result */
+  if (lisdigit(c[1])) {
+    c[i++] = next(ls);  /* read third char */
+    r = 10*r + c[1] - '0';  /* update result */
+    if (lisdigit(c[2])) {
+      r = 10*r + c[2] - '0';  /* update result */
+      if (r > UCHAR_MAX)
+        escerror(ls, c, i, "decimal escape too large");
+      return r;
     }
   }
   /* else, has read one character that was not a digit */
   zungetc(ls->z);  /* return it to input stream */
-  return c;
+  return r;
 }
 
 
@@ -353,9 +359,10 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
           case 'x': c = readhexaesc(ls); break;
           case '\n':
           case '\r': save(ls, '\n'); inclinenumber(ls); continue;
+          case '\\': case '\"': case '\'': c = ls->current; break;
           case EOZ: continue;  /* will raise an error next loop */
           case 'z': {  /* zap following span of spaces */
-            next(ls);  /* skip the '*' */
+            next(ls);  /* skip the 'z' */
             while (lisspace(ls->current)) {
               if (currIsNewline(ls)) inclinenumber(ls);
               else next(ls);
@@ -364,9 +371,9 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
           }
           default: {
             if (!lisdigit(ls->current))
-              c = ls->current;  /* handles \\, \", and \' */
-            else  /* digital escape \ddd */
-              c = readdecesc(ls);
+              escerror(ls, &ls->current, 1, "invalid escape sequence");
+            /* digital escape \ddd */
+            c = readdecesc(ls);
             break;
           }
         }
