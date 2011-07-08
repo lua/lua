@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.51 2011/07/06 16:45:14 roberto Exp roberto $
+** $Id: llex.c,v 2.52 2011/07/08 19:17:30 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -314,9 +314,9 @@ static int readhexaesc (LexState *ls) {
 
 static int readdecesc (LexState *ls) {
   int c[3], r;
-  int i = 0;
-  c[i++] = ls->current;  /* first char must be a digit */
-  c[i++] = next(ls);  /* read second char */
+  int i = 2;  /* at least two chars will be read */
+  c[0] = ls->current;  /* first char must be a digit */
+  c[1] = next(ls);  /* read second char */
   r = c[0] - '0';  /* partial result */
   if (lisdigit(c[1])) {
     c[i++] = next(ls);  /* read third char */
