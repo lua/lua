@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.52 2011/07/08 19:17:30 roberto Exp roberto $
+** $Id: llex.c,v 2.53 2011/07/08 20:01:38 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -297,39 +297,30 @@ static void escerror (LexState *ls, int *c, int n, const char *msg) {
 
 
 static int readhexaesc (LexState *ls) {
-  int c[3];  /* keep input for error message */
-  int i = 2;  /* at least 'x?' will go to error message */
-  c[0] = 'x';
-  c[1] = next(ls);  /* first hexa digit */
-  if (lisxdigit(c[1])) {
-    c[i++] = next(ls);  /* second hexa digit */
-    if (lisxdigit(c[2]))
-      return (luaO_hexavalue(c[1]) << 4) + luaO_hexavalue(c[2]);
-    /* else go through to error */
+  int c[3], i;  /* keep input for error message */
+  int r = 0;  /* result accumulator */
+  c[0] = 'x';  /* for error message */
+  for (i = 1; i < 3; i++) {  /* read two hexa digits */
+    c[i] = next(ls);
+    if (!lisxdigit(c[i]))
+      escerror(ls, c, i + 1, "hexadecimal digit expected");
+    r = (r << 4) + luaO_hexavalue(c[i]);
   }
-  escerror(ls, c, i, "hexadecimal digit expected");
-  return 0;  /* to avoid warnings */
+  return r;
 }
 
 
 static int readdecesc (LexState *ls) {
-  int c[3], r;
-  int i = 2;  /* at least two chars will be read */
-  c[0] = ls->current;  /* first char must be a digit */
-  c[1] = next(ls);  /* read second char */
-  r = c[0] - '0';  /* partial result */
-  if (lisdigit(c[1])) {
-    c[i++] = next(ls);  /* read third char */
-    r = 10*r + c[1] - '0';  /* update result */
-    if (lisdigit(c[2])) {
-      r = 10*r + c[2] - '0';  /* update result */
-      if (r > UCHAR_MAX)
-        escerror(ls, c, i, "decimal escape too large");
-      return r;
-    }
+  int c[3], i;
+  int r = 0;  /* result accumulator */
+  for (i = 0; i < 3 && lisdigit(ls->current); i++) {  /* read up to 3 digits */
+    c[i] = ls->current;
+    r = 10*r + c[i] - '0';
+    next(ls);
   }
-  /* else, has read one character that was not a digit */
-  zungetc(ls->z);  /* return it to input stream */
+  if (r > UCHAR_MAX)
+    escerror(ls, c, i, "decimal escape too large");
+  zungetc(ls->z);
   return r;
 }
 
