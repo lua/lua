@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.55 2011/05/31 18:24:36 roberto Exp roberto $
+** $Id: lcode.c,v 2.56 2011/05/31 18:27:56 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -44,8 +44,8 @@ void luaK_nil (FuncState *fs, int from, int n) {
       int pl = pfrom + GETARG_B(*previous);
       if ((pfrom <= from && from <= pl + 1) ||
           (from <= pfrom && pfrom <= l + 1)) {  /* can connect both? */
-        if (pfrom < from) from = pfrom;  /* from = min(from, pfrom) */ 
-        if (pl > l) l = pl;  /* l = max(l, pl) */ 
+        if (pfrom < from) from = pfrom;  /* from = min(from, pfrom) */
+        if (pl > l) l = pl;  /* l = max(l, pl) */
         SETARG_A(*previous, from);
         SETARG_B(*previous, l - from);
         return;

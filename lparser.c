@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.112 2011/06/27 18:18:59 roberto Exp roberto $
+** $Id: lparser.c,v 2.113 2011/07/02 15:58:14 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -418,7 +418,7 @@ static void movegotosout (FuncState *fs, BlockCnt *bl) {
   int i = bl->firstgoto;
   Labellist *gl = &fs->ls->dyd->gt;
   /* correct pending gotos to current block and try to close it
-     with visible labels */ 
+     with visible labels */
   while (i < gl->n) {
     Labeldesc *gt = &gl->arr[i];
     if (gt->nactvar > bl->nactvar) {
@@ -1190,7 +1190,7 @@ static void checkrepeated (FuncState *fs, Labellist *ll, TString *label) {
   int i;
   for (i = fs->bl->firstlabel; i < ll->n; i++) {
     if (eqstr(label, ll->arr[i].name)) {
-      const char *msg = luaO_pushfstring(fs->ls->L, 
+      const char *msg = luaO_pushfstring(fs->ls->L,
                           "label " LUA_QS " already defined on line %d",
                           getstr(label), ll->arr[i].line);
       semerror(fs->ls, msg);
