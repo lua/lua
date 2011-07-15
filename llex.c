@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.53 2011/07/08 20:01:38 roberto Exp roberto $
+** $Id: llex.c,v 2.54 2011/07/15 12:30:41 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -320,7 +320,6 @@ static int readdecesc (LexState *ls) {
   }
   if (r > UCHAR_MAX)
     escerror(ls, c, i, "decimal escape too large");
-  zungetc(ls->z);
   return r;
 }
 
@@ -340,37 +339,38 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
         int c;  /* final character to be saved */
         next(ls);  /* do not save the `\' */
         switch (ls->current) {
-          case 'a': c = '\a'; break;
-          case 'b': c = '\b'; break;
-          case 'f': c = '\f'; break;
-          case 'n': c = '\n'; break;
-          case 'r': c = '\r'; break;
-          case 't': c = '\t'; break;
-          case 'v': c = '\v'; break;
-          case 'x': c = readhexaesc(ls); break;
-          case '\n':
-          case '\r': save(ls, '\n'); inclinenumber(ls); continue;
-          case '\\': case '\"': case '\'': c = ls->current; break;
-          case EOZ: continue;  /* will raise an error next loop */
+          case 'a': c = '\a'; goto read_save;
+          case 'b': c = '\b'; goto read_save;
+          case 'f': c = '\f'; goto read_save;
+          case 'n': c = '\n'; goto read_save;
+          case 'r': c = '\r'; goto read_save;
+          case 't': c = '\t'; goto read_save;
+          case 'v': c = '\v'; goto read_save;
+          case 'x': c = readhexaesc(ls); goto read_save;
+          case '\n': case '\r':
+            inclinenumber(ls); c = '\n'; goto only_save;
+          case '\\': case '\"': case '\'':
+            c = ls->current; goto read_save;
+          case EOZ: goto no_save;  /* will raise an error next loop */
           case 'z': {  /* zap following span of spaces */
             next(ls);  /* skip the 'z' */
             while (lisspace(ls->current)) {
               if (currIsNewline(ls)) inclinenumber(ls);
               else next(ls);
             }
-            continue;  /* do not save 'c' */
+            goto no_save;
           }
           default: {
             if (!lisdigit(ls->current))
               escerror(ls, &ls->current, 1, "invalid escape sequence");
             /* digital escape \ddd */
             c = readdecesc(ls);
-            break;
+            goto only_save;
           }
         }
-        next(ls);
-        save(ls, c);
-        break;
+       read_save: next(ls);  /* read next character */
+       only_save: save(ls, c);  /* save 'c' */
+       no_save: break;
       }
       default:
         save_and_next(ls);
