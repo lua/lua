@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.232 2011/05/03 16:01:57 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.233 2011/06/16 14:11:04 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -41,11 +41,10 @@
 ** return 1 + string at top if find a good name.
 */
 static int findfield (lua_State *L, int objidx, int level) {
-  int found = 0;
   if (level == 0 || !lua_istable(L, -1))
     return 0;  /* not found */
   lua_pushnil(L);  /* start 'next' loop */
-  while (!found && lua_next(L, -2)) {  /* for each pair in table */
+  while (lua_next(L, -2)) {  /* for each pair in table */
     if (lua_type(L, -2) == LUA_TSTRING) {  /* ignore non-string keys */
       if (lua_rawequal(L, objidx, -1)) {  /* found object? */
         lua_pop(L, 1);  /* remove value (but keep name) */
@@ -86,7 +85,7 @@ static void pushfuncname (lua_State *L, lua_Debug *ar) {
     lua_pushfstring(L, "function " LUA_QS, ar->name);
   else if (*ar->what == 'm')  /* main? */
       lua_pushfstring(L, "main chunk");
-  else if (*ar->what == 'C' || *ar->what == 't') {
+  else if (*ar->what == 'C') {
     if (pushglobalfuncname(L, ar)) {
       lua_pushfstring(L, "function " LUA_QS, lua_tostring(L, -1));
       lua_remove(L, -2);  /* remove name */
