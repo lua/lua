@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.113 2011/07/02 15:58:14 roberto Exp roberto $
+** $Id: lparser.c,v 2.114 2011/07/15 12:50:29 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -41,8 +41,8 @@
 */
 typedef struct BlockCnt {
   struct BlockCnt *previous;  /* chain */
-  int firstlabel;  /* index of first label in this block */
-  int firstgoto;  /* index of first pending goto in this block */
+  short firstlabel;  /* index of first label in this block */
+  short firstgoto;  /* index of first pending goto in this block */
   lu_byte nactvar;  /* # active locals outside the block */
   lu_byte upval;  /* true if some variable in the block is an upvalue */
   lu_byte isloop;  /* true if `block' is a loop */
@@ -81,13 +81,14 @@ static void error_expected (LexState *ls, int token) {
 
 
 static void errorlimit (FuncState *fs, int limit, const char *what) {
+  lua_State *L = fs->ls->L;
   const char *msg;
   int line = fs->f->linedefined;
   const char *where = (line == 0)
                       ? "main function"
-                      : luaO_pushfstring(fs->L, "function at line %d", line);
-  msg = luaO_pushfstring(fs->L, "too many %s (limit is %d) in %s",
-                                what, limit, where);
+                      : luaO_pushfstring(L, "function at line %d", line);
+  msg = luaO_pushfstring(L, "too many %s (limit is %d) in %s",
+                             what, limit, where);
   luaX_syntaxerror(fs->ls, msg);
 }
 
@@ -182,7 +183,7 @@ static void new_localvar (LexState *ls, TString *name) {
                   MAXVARS, "local variables");
   luaM_growvector(ls->L, dyd->actvar.arr, dyd->actvar.n + 1,
                   dyd->actvar.size, Vardesc, MAX_INT, "local variables");
-  dyd->actvar.arr[dyd->actvar.n++].idx = cast(unsigned short, reg);
+  dyd->actvar.arr[dyd->actvar.n++].idx = cast(short, reg);
 }
 
 
@@ -231,13 +232,13 @@ static int newupvalue (FuncState *fs, TString *name, expdesc *v) {
   Proto *f = fs->f;
   int oldsize = f->sizeupvalues;
   checklimit(fs, fs->nups + 1, MAXUPVAL, "upvalues");
-  luaM_growvector(fs->L, f->upvalues, fs->nups, f->sizeupvalues,
+  luaM_growvector(fs->ls->L, f->upvalues, fs->nups, f->sizeupvalues,
                   Upvaldesc, MAXUPVAL, "upvalues");
   while (oldsize < f->sizeupvalues) f->upvalues[oldsize++].name = NULL;
   f->upvalues[fs->nups].instack = (v->k == VLOCAL);
   f->upvalues[fs->nups].idx = cast_byte(v->u.info);
   f->upvalues[fs->nups].name = name;
-  luaC_objbarrier(fs->L, f, name);
+  luaC_objbarrier(fs->ls->L, f, name);
   return fs->nups++;
 }
 
@@ -382,7 +383,7 @@ static int findlabel (LexState *ls, int g) {
 static int newlabelentry (LexState *ls, Labellist *l, TString *name,
                           int line, int pc) {
   int n = l->n;
-  luaM_growvector(ls->L, l->arr, n, l->size, Labeldesc, MAX_INT, "labels");
+  luaM_growvector(ls->L, l->arr, n, l->size, Labeldesc, SHRT_MAX, "labels");
   l->arr[n].name = name;
   l->arr[n].line = line;
   l->arr[n].nactvar = ls->fs->nactvar;
@@ -514,7 +515,6 @@ static void open_func (LexState *ls, FuncState *fs, BlockCnt *bl) {
   Proto *f;
   fs->prev = ls->fs;  /* linked list of funcstates */
   fs->ls = ls;
-  fs->L = L;
   ls->fs = fs;
   fs->pc = 0;
   fs->lasttarget = 0;
@@ -1039,7 +1039,7 @@ static const struct {
 ** subexpr -> (simpleexp | unop subexpr) { binop subexpr }
 ** where `binop' is any binary operator with a priority higher than `limit'
 */
-static BinOpr subexpr (LexState *ls, expdesc *v, unsigned int limit) {
+static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
   BinOpr op;
   UnOpr uop;
   enterlevel(ls);
