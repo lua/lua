@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.263 2011/07/02 15:56:43 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.264 2011/07/05 12:49:35 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -46,20 +46,22 @@ static int luaB_print (lua_State *L) {
 #define SPACECHARS	" \f\n\r\t\v"
 
 static int luaB_tonumber (lua_State *L) {
-  int base = luaL_optint(L, 2, 10);
-  luaL_argcheck(L, 2 <= base && base <= 36, 2, "base out of range");
-  if (base == 10) {  /* standard conversion */
-    luaL_checkany(L, 1);
-    if (lua_isnumber(L, 1)) {
-      lua_pushnumber(L, lua_tonumber(L, 1));
+  if (lua_isnoneornil(L, 2)) {  /* standard conversion */
+    int isnum;
+    lua_Number n = lua_tonumberx(L, 1, &isnum);
+    if (isnum) {
+      lua_pushnumber(L, n);
       return 1;
-    }  /* else not a number */
+    }  /* else not a number; must be something */
+    luaL_checkany(L, 1);
   }
   else {
     size_t l;
     const char *s = luaL_checklstring(L, 1, &l);
     const char *e = s + l;  /* end point for 's' */
+    int base = luaL_checkint(L, 2);
     int neg = 0;
+    luaL_argcheck(L, 2 <= base && base <= 36, 2, "base out of range");
     s += strspn(s, SPACECHARS);  /* skip initial spaces */
     if (*s == '-') { s++; neg = 1; }  /* handle signal */
     else if (*s == '+') s++;
