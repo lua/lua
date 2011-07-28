@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.100 2011/06/21 13:43:48 roberto Exp roberto $
+** $Id: liolib.c,v 2.101 2011/06/27 19:42:31 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -59,11 +59,6 @@ typedef struct LStream {
   lua_CFunction closef;  /* to close stream (NULL for closed streams) */
 } LStream;
 
-
-static void fileerror (lua_State *L, int arg, const char *filename) {
-  lua_pushfstring(L, "%s: %s", filename, strerror(errno));
-  luaL_argerror(L, arg, lua_tostring(L, -1));
-}
 
 
 #define tolstream(L)	((LStream *)luaL_checkudata(L, 1, LUA_FILEHANDLE))
@@ -159,6 +154,16 @@ static LStream *newfile (lua_State *L) {
 }
 
 
+static void opencheck (lua_State *L, const char *fname, const char *mode) {
+  LStream *p = newfile(L);
+  p->f = fopen(fname, mode);
+  if (p->f == NULL) {
+    lua_pushfstring(L, "%s: %s", fname, strerror(errno));
+    luaL_argerror(L, 1, lua_tostring(L, -1));
+  }
+}
+
+
 static int io_open (lua_State *L) {
   const char *filename = luaL_checkstring(L, 1);
   const char *mode = luaL_optstring(L, 2, "r");
@@ -215,12 +220,8 @@ static FILE *getiofile (lua_State *L, const char *findex) {
 static int g_iofile (lua_State *L, const char *f, const char *mode) {
   if (!lua_isnoneornil(L, 1)) {
     const char *filename = lua_tostring(L, 1);
-    if (filename) {
-      LStream *p = newfile(L);
-      p->f = fopen(filename, mode);
-      if (p->f == NULL)
-        fileerror(L, 1, filename);
-    }
+    if (filename)
+      opencheck(L, filename, mode);
     else {
       tofile(L);  /* check that it's a valid file handle */
       lua_pushvalue(L, 1);
@@ -277,10 +278,7 @@ static int io_lines (lua_State *L) {
   }
   else {  /* open a new file */
     const char *filename = luaL_checkstring(L, 1);
-    LStream *p = newfile(L);
-    p->f = fopen(filename, "r");
-    if (p->f == NULL)
-      fileerror(L, 1, filename);
+    opencheck(L, filename, "r");
     lua_replace(L, 1);  /* put file at index 1 */
     toclose = 1;  /* close it after iteration */
   }
