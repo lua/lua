@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.101 2011/06/27 19:42:31 roberto Exp roberto $
+** $Id: liolib.c,v 2.102 2011/07/28 18:41:15 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -157,10 +157,8 @@ static LStream *newfile (lua_State *L) {
 static void opencheck (lua_State *L, const char *fname, const char *mode) {
   LStream *p = newfile(L);
   p->f = fopen(fname, mode);
-  if (p->f == NULL) {
-    lua_pushfstring(L, "%s: %s", fname, strerror(errno));
-    luaL_argerror(L, 1, lua_tostring(L, -1));
-  }
+  if (p->f == NULL)
+    luaL_error(L, "cannot open file " LUA_QS " (%s)", fname, strerror(errno));
 }
 
 
@@ -174,7 +172,7 @@ static int io_open (lua_State *L) {
        (mode[i] != '+' || ++i) &&  /* skip if char is '+' */
        (mode[i] != 'b' || ++i) &&  /* skip if char is 'b' */
        (mode[i] == '\0')))
-    return luaL_error(L, "invalid mode " LUA_QL("%s")
+    return luaL_error(L, "invalid mode " LUA_QS
                          " (should match " LUA_QL("[rwa]%%+?b?") ")", mode);
   p->f = fopen(filename, mode);
   return (p->f == NULL) ? luaL_fileresult(L, 0, filename) : 1;
