@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.199 2011/05/26 16:09:40 roberto Exp roberto $
+** $Id: lua.c,v 1.200 2011/06/16 14:30:58 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -348,7 +348,13 @@ static int handle_script (lua_State *L, char **argv, int n) {
 #define noextrachars(x)		{if ((x)[2] != '\0') return -1;}
 
 
-static int collectargs (char **argv, int *pi, int *pv, int *pe) {
+/* indices of various argument indicators in array args */
+#define has_i		0	/* -i */
+#define has_v		1	/* -v */
+#define has_e		2	/* -e */
+
+
+static int collectargs (char **argv, int *args) {
   int i;
   for (i = 1; argv[i] != NULL; i++) {
     if (argv[i][0] != '-')  /* not an option? */
@@ -361,13 +367,13 @@ static int collectargs (char **argv, int *pi, int *pv, int *pe) {
         return i;
       case 'i':
         noextrachars(argv[i]);
-        *pi = 1;  /* go through */
+        args[has_i] = 1;  /* go through */
       case 'v':
         noextrachars(argv[i]);
-        *pv = 1;
+        args[has_v] = 1;
         break;
       case 'e':
-        *pe = 1;  /* go through */
+        args[has_e] = 1;  /* go through */
       case 'l':  /* both options need an argument */
         if (argv[i][2] == '\0') {  /* no concatenated argument? */
           i++;  /* try next 'argv' */
@@ -430,14 +436,15 @@ static int pmain (lua_State *L) {
   int argc = (int)lua_tointeger(L, 1);
   char **argv = (char **)lua_touserdata(L, 2);
   int script;
-  int has_i = 0, has_v = 0, has_e = 0;
+  int args[3];
+  args[has_i] = args[has_v] = args[has_e] = 0;
   if (argv[0] && argv[0][0]) progname = argv[0];
-  script = collectargs(argv, &has_i, &has_v, &has_e);
+  script = collectargs(argv, args);
   if (script < 0) {  /* invalid arg? */
     print_usage(argv[-script]);
     return 0;
   }
-  if (has_v) print_version();
+  if (args[has_v]) print_version();
   /* open standard libraries */
   luaL_checkversion(L);
   lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
@@ -449,9 +456,9 @@ static int pmain (lua_State *L) {
   if (!runargs(L, argv, (script > 0) ? script : argc)) return 0;
   /* execute main script (if there is one) */
   if (script && handle_script(L, argv, script) != LUA_OK) return 0;
-  if (has_i)  /* -i option? */
+  if (args[has_i])  /* -i option? */
     dotty(L);
-  else if (script == 0 && !has_e && !has_v) {  /* no arguments? */
+  else if (script == 0 && !args[has_e] && !args[has_v]) {  /* no arguments? */
     if (lua_stdin_is_tty()) {
       print_version();
       dotty(L);
