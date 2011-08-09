@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.169 2011/06/16 14:14:05 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.170 2011/06/28 17:13:52 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -154,7 +154,7 @@ static int str_char (lua_State *L) {
   char *p = luaL_buffinitsize(L, &b, n);
   for (i=1; i<=n; i++) {
     int c = luaL_checkint(L, i);
-    luaL_argcheck(L, uchar(c) == c, i, "invalid value");
+    luaL_argcheck(L, uchar(c) == c, i, "value out of range");
     p[i - 1] = uchar(c);
   }
   luaL_pushresultsize(&b, n);
@@ -865,11 +865,20 @@ static int str_format (lua_State *L) {
           nb = sprintf(buff, form, luaL_checkint(L, arg));
           break;
         }
-        case 'd':  case 'i':
+        case 'd':  case 'i': {
+          lua_Number n = luaL_checknumber(L, arg);
+          LUA_INTFRM_T r = (LUA_INTFRM_T)n;
+          luaL_argcheck(L, (lua_Number)r == n, arg,
+                        "not an integer in proper range");
+          addlenmod(form, LUA_INTFRMLEN);
+          nb = sprintf(buff, form, r);
+          break;
+        }
         case 'o':  case 'u':  case 'x':  case 'X': {
           lua_Number n = luaL_checknumber(L, arg);
-          LUA_INTFRM_T r = (n < 0) ? (LUA_INTFRM_T)n :
-                                     (LUA_INTFRM_T)(unsigned LUA_INTFRM_T)n;
+          unsigned LUA_INTFRM_T r = (unsigned LUA_INTFRM_T)n;
+          luaL_argcheck(L, (lua_Number)r == n, arg,
+                        "not a non-negative integer in proper range");
           addlenmod(form, LUA_INTFRMLEN);
           nb = sprintf(buff, form, r);
           break;
