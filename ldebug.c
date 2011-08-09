@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.81 2011/04/28 14:00:11 roberto Exp roberto $
+** $Id: ldebug.c,v 2.82 2011/06/02 19:31:40 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -190,12 +190,14 @@ static void collectvalidlines (lua_State *L, Closure *f) {
   }
   else {
     int i;
+    TValue v;
     int *lineinfo = f->l.p->lineinfo;
-    Table *t = luaH_new(L);
-    sethvalue(L, L->top, t);
+    Table *t = luaH_new(L);  /* new table to store active lines */
+    sethvalue(L, L->top, t);  /* push it on stack */
     incr_top(L);
-    for (i=0; i<f->l.p->sizelineinfo; i++)
-      setbvalue(luaH_setint(L, t, lineinfo[i]), 1);
+    setbvalue(&v, 1);  /* boolean 'true' to be the value of all indices */
+    for (i = 0; i < f->l.p->sizelineinfo; i++)  /* for all lines with code */
+      luaH_setint(L, t, lineinfo[i], &v);  /* table[line] = true */
   }
 }
 

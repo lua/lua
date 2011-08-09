@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.59 2011/06/09 18:23:27 roberto Exp roberto $
+** $Id: ltable.c,v 2.60 2011/06/16 14:14:31 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -314,7 +314,7 @@ void luaH_resize (lua_State *L, Table *t, int nasize, int nhsize) {
     /* re-insert elements from vanishing slice */
     for (i=nasize; i<oldasize; i++) {
       if (!ttisnil(&t->array[i]))
-        setobjt2t(L, luaH_setint(L, t, i+1), &t->array[i]);
+        luaH_setint(L, t, i + 1, &t->array[i]);
     }
     /* shrink array */
     luaM_reallocvector(L, t->array, oldasize, nasize, TValue);
@@ -507,27 +507,17 @@ TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
 }
 
 
-TValue *luaH_setint (lua_State *L, Table *t, int key) {
+void luaH_setint (lua_State *L, Table *t, int key, TValue *value) {
   const TValue *p = luaH_getint(t, key);
+  TValue *cell;
   if (p != luaO_nilobject)
-    return cast(TValue *, p);
+    cell = cast(TValue *, p);
   else {
     TValue k;
     setnvalue(&k, cast_num(key));
-    return newkey(L, t, &k);
+    cell = newkey(L, t, &k);
   }
-}
-
-
-TValue *luaH_setstr (lua_State *L, Table *t, TString *key) {
-  const TValue *p = luaH_getstr(t, key);
-  if (p != luaO_nilobject)
-    return cast(TValue *, p);
-  else {
-    TValue k;
-    setsvalue(L, &k, key);
-    return newkey(L, t, &k);
-  }
+  setobj2t(L, cell, value);
 }
 
 

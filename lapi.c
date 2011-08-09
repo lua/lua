@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.148 2011/06/02 19:31:40 roberto Exp roberto $
+** $Id: lapi.c,v 2.149 2011/06/13 14:13:06 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -744,7 +744,7 @@ LUA_API void lua_rawseti (lua_State *L, int idx, int n) {
   api_checknelems(L, 1);
   o = index2addr(L, idx);
   api_check(L, ttistable(o), "table expected");
-  setobj2t(L, luaH_setint(L, hvalue(o), n), L->top-1);
+  luaH_setint(L, hvalue(o), n, L->top - 1);
   luaC_barrierback(L, gcvalue(o), L->top-1);
   L->top--;
   lua_unlock(L);

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.140 2011/06/02 19:31:40 roberto Exp roberto $
+** $Id: lvm.c,v 2.141 2011/06/09 18:24:22 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -808,7 +808,7 @@ void luaV_execute (lua_State *L) {
           luaH_resizearray(L, h, last);  /* pre-allocate it at once */
         for (; n > 0; n--) {
           TValue *val = ra+n;
-          setobj2t(L, luaH_setint(L, h, last--), val);
+          luaH_setint(L, h, last--, val);
           luaC_barrierback(L, obj2gco(h), val);
         }
         L->top = ci->top;  /* correct top (in case of previous open call) */

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.88 2010/12/20 18:17:46 roberto Exp roberto $
+** $Id: lstate.c,v 2.89 2010/12/20 19:40:07 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -136,10 +136,10 @@ static void init_registry (lua_State *L, global_State *g) {
   luaH_resize(L, registry, LUA_RIDX_LAST, 0);
   /* registry[LUA_RIDX_MAINTHREAD] = L */
   setthvalue(L, &mt, L);
-  setobj2t(L, luaH_setint(L, registry, LUA_RIDX_MAINTHREAD), &mt);
+  luaH_setint(L, registry, LUA_RIDX_MAINTHREAD, &mt);
   /* registry[LUA_RIDX_GLOBALS] = table of globals */
   sethvalue(L, &mt, luaH_new(L));
-  setobj2t(L, luaH_setint(L, registry, LUA_RIDX_GLOBALS), &mt);
+  luaH_setint(L, registry, LUA_RIDX_GLOBALS, &mt);
 }
 
 
