@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.55 2011/07/15 12:48:03 roberto Exp roberto $
+** $Id: llex.c,v 2.56 2011/08/09 20:58:29 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -127,7 +127,7 @@ TString *luaX_newstring (LexState *ls, const char *str, size_t l) {
   TString *ts = luaS_newlstr(L, str, l);  /* create new string */
   setsvalue2s(L, L->top++, ts);  /* temporarily anchor it in stack */
   o = luaH_set(L, ls->fs->h, L->top - 1);
-  if (ttisnil(o)) {
+  if (ttisnil(o)) {  /* not in use yet? (see 'addK') */
     setbvalue(o, 1);  /* t[string] = true */
     luaC_checkGC(L);
   }
