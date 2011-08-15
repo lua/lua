@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.57 2011/07/15 12:50:29 roberto Exp roberto $
+** $Id: lcode.c,v 2.58 2011/07/27 18:07:37 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -304,6 +304,8 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
   /* constant not found; create a new entry */
   oldsize = f->sizek;
   k = fs->nk;
+  /* numerical value does not need GC barrier;
+     table has no metatable, so it does not need to invalidate cache */
   setnvalue(idx, cast_num(k));
   luaM_growvector(L, f->k, k, f->sizek, TValue, MAXARG_Ax, "constants");
   while (oldsize < f->sizek) setnilvalue(&f->k[oldsize++]);
