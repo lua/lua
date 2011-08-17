@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.108 2010/05/14 15:34:57 roberto Exp roberto $
-+** $Id: bugs,v 1.108 2010/05/14 15:34:57 roberto Exp roberto $
+-** $Id: bugs,v 1.109 2011/01/31 14:52:32 roberto Exp roberto $
++** $Id: bugs,v 1.109 2011/01/31 14:52:32 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2359,3 +2359,30 @@ patch = [[
        break;
 ]]
 }
+
+Bug{
+what = [[__newindex metamethod may not work if metatable is its own
+metatable]],
+report = [[Cuero Bugot, 2011/08/09]],
+since = [[5.1]],
+example = [[
+meta={}
+setmetatable(meta, meta)
+meta.__newindex = function(t, key, value) print("set") end
+o = setmetatable({}, meta)
+o.x = 10    -- should print 'set'
+]],
+patch = [[
+--- lvm.c	2009/07/01 21:10:33	2.63.1.4
++++ lvm.c	2011/08/17 20:36:28
+@@ -142,6 +142,7 @@
+       if (!ttisnil(oldval) ||  /* result is no nil? */
+           (tm = fasttm(L, h->metatable, TM_NEWINDEX)) == NULL) { /* or no TM? */
+         setobj2t(L, oldval, val);
++        h->flags = 0;
+         luaC_barriert(L, h, val);
+         return;
+       }
+]]
+}
+
