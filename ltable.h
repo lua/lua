@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.h,v 2.14 2010/06/25 12:18:10 roberto Exp roberto $
+** $Id: ltable.h,v 2.15 2011/08/09 20:58:29 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -15,11 +15,14 @@
 #define gval(n)		(&(n)->i_val)
 #define gnext(n)	((n)->i_key.nk.next)
 
+#define invalidateTMcache(t)	((t)->flags = 0)
+
 
 LUAI_FUNC const TValue *luaH_getint (Table *t, int key);
 LUAI_FUNC void luaH_setint (lua_State *L, Table *t, int key, TValue *value);
 LUAI_FUNC const TValue *luaH_getstr (Table *t, TString *key);
 LUAI_FUNC const TValue *luaH_get (Table *t, const TValue *key);
+LUAI_FUNC TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key);
 LUAI_FUNC TValue *luaH_set (lua_State *L, Table *t, const TValue *key);
 LUAI_FUNC Table *luaH_new (lua_State *L);
 LUAI_FUNC void luaH_resize (lua_State *L, Table *t, int nasize, int nhsize);

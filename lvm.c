@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.141 2011/06/09 18:24:22 roberto Exp roberto $
+** $Id: lvm.c,v 2.142 2011/08/09 20:58:29 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -127,29 +127,38 @@ void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val) {
 
 void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
   int loop;
-  TValue temp;
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
     const TValue *tm;
     if (ttistable(t)) {  /* `t' is a table? */
       Table *h = hvalue(t);
-      TValue *oldval = luaH_set(L, h, key); /* do a primitive set */
-      if (!ttisnil(oldval) ||  /* result is not nil? */
-          (tm = fasttm(L, h->metatable, TM_NEWINDEX)) == NULL) { /* or no TM? */
-        setobj2t(L, oldval, val);
+      TValue *oldval = cast(TValue *, luaH_get(h, key));
+      /* if previous value is not nil, there must be a previous entry
+         in the table; moreover, a metamethod has no relevance */
+      if (!ttisnil(oldval) ||
+         /* previous value is nil; must check the metamethod */
+         ((tm = fasttm(L, h->metatable, TM_NEWINDEX)) == NULL &&
+         /* no metamethod; is there a previous entry in the table? */
+         (oldval != luaO_nilobject ||
+         /* no previous entry; must create one. (The next test is
+            always true; we only need the assignment.) */
+         (oldval = luaH_newkey(L, h, key), 1)))) {
+        /* no metamethod and (now) there is an entry with given key */
+        setobj2t(L, oldval, val);  /* assign new value to that entry */
+        invalidateTMcache(h);
         luaC_barrierback(L, obj2gco(h), val);
         return;
       }
-      /* else will try the tag method */
+      /* else will try the metamethod */
     }
-    else if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_NEWINDEX)))
-      luaG_typeerror(L, t, "index");
+    else  /* not a table; check metamethod */
+      if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_NEWINDEX)))
+        luaG_typeerror(L, t, "index");
+    /* there is a metamethod */
     if (ttisfunction(tm)) {
       callTM(L, tm, t, key, val, 0);
       return;
     }
-    /* else repeat with 'tm' */
-    setobj(L, &temp, tm);  /* avoid pointing inside table (may rehash) */
-    t = &temp;
+    t = tm;  /* else repeat with 'tm' */
   }
   luaG_runerror(L, "loop in settable");
 }
