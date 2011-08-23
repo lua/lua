@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.120 2011/06/24 14:36:21 roberto Exp roberto $
+** $Id: ltests.c,v 2.121 2011/07/02 15:59:17 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1210,7 +1210,7 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     }
     else if EQ("resume") {
       int i = getindex;
-      status = lua_resume(lua_tothread(L1, i), getnum);
+      status = lua_resume(lua_tothread(L1, i), L, getnum);
     }
     else if EQ("pushstatus") {
       pushcode(L1, status);
@@ -1397,7 +1397,7 @@ static int coresume (lua_State *L) {
   int status;
   lua_State *co = lua_tothread(L, 1);
   luaL_argcheck(L, co, 1, "coroutine expected");
-  status = lua_resume(co, 0);
+  status = lua_resume(co, L, 0);
   if (status != LUA_OK && status != LUA_YIELD) {
     lua_pushboolean(L, 0);
     lua_insert(L, -2);

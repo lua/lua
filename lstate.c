@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.89 2010/12/20 19:40:07 roberto Exp roberto $
+** $Id: lstate.c,v 2.90 2011/08/09 20:58:29 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -171,6 +171,7 @@ static void preinit_state (lua_State *L, global_State *g) {
   L->ci = NULL;
   L->stacksize = 0;
   L->errorJmp = NULL;
+  L->nCcalls = 0;
   L->hook = NULL;
   L->hookmask = 0;
   L->basehookcount = 0;
@@ -237,7 +238,6 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->currentwhite = bit2mask(WHITE0BIT, FIXEDBIT);
   L->marked = luaC_white(g);
   g->gckind = KGC_NORMAL;
-  g->nCcalls = 0;
   preinit_state(L, g);
   g->frealloc = f;
   g->ud = ud;

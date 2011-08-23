@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.97 2011/06/20 16:36:03 roberto Exp roberto $
+** $Id: ldo.c,v 2.98 2011/06/28 15:42:04 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -123,7 +123,7 @@ void luaD_throw (lua_State *L, int errcode) {
 
 
 int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
-  unsigned short oldnCcalls = G(L)->nCcalls;
+  unsigned short oldnCcalls = L->nCcalls;
   struct lua_longjmp lj;
   lj.status = LUA_OK;
   lj.previous = L->errorJmp;  /* chain new error handler */
@@ -132,7 +132,7 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
     (*f)(L, ud);
   );
   L->errorJmp = lj.previous;  /* restore old error handler */
-  G(L)->nCcalls = oldnCcalls;
+  L->nCcalls = oldnCcalls;
   return lj.status;
 }
 
@@ -382,18 +382,17 @@ int luaD_poscall (lua_State *L, StkId firstResult) {
 ** function position.
 */
 void luaD_call (lua_State *L, StkId func, int nResults, int allowyield) {
-  global_State *g = G(L);
-  if (++g->nCcalls >= LUAI_MAXCCALLS) {
-    if (g->nCcalls == LUAI_MAXCCALLS)
+  if (++L->nCcalls >= LUAI_MAXCCALLS) {
+    if (L->nCcalls == LUAI_MAXCCALLS)
       luaG_runerror(L, "C stack overflow");
-    else if (g->nCcalls >= (LUAI_MAXCCALLS + (LUAI_MAXCCALLS>>3)))
+    else if (L->nCcalls >= (LUAI_MAXCCALLS + (LUAI_MAXCCALLS>>3)))
       luaD_throw(L, LUA_ERRERR);  /* error while handing stack error */
   }
   if (!allowyield) L->nny++;
   if (!luaD_precall(L, func, nResults))  /* is a Lua function? */
     luaV_execute(L);  /* call it */
   if (!allowyield) L->nny--;
-  g->nCcalls--;
+  L->nCcalls--;
   luaC_checkGC(L);
 }
 
@@ -404,7 +403,7 @@ static void finishCcall (lua_State *L) {
   lua_assert(ci->u.c.k != NULL);  /* must have a continuation */
   lua_assert(L->nny == 0);
   /* finish 'luaD_call' */
-  G(L)->nCcalls--;
+  L->nCcalls--;
   /* finish 'lua_callk' */
   adjustresults(L, ci->nresults);
   /* call continuation function */
@@ -487,7 +486,7 @@ static void resume_error (lua_State *L, const char *msg, StkId firstArg) {
 static void resume (lua_State *L, void *ud) {
   StkId firstArg = cast(StkId, ud);
   CallInfo *ci = L->ci;
-  if (G(L)->nCcalls >= LUAI_MAXCCALLS)
+  if (L->nCcalls >= LUAI_MAXCCALLS)
     resume_error(L, "C stack overflow", firstArg);
   if (L->status == LUA_OK) {  /* may be starting a coroutine */
     if (ci != &L->base_ci)  /* not in base level? */
@@ -514,7 +513,7 @@ static void resume (lua_State *L, void *ud) {
         api_checknelems(L, n);
         firstArg = L->top - n;  /* yield results come from continuation */
       }
-      G(L)->nCcalls--;  /* finish 'luaD_call' */
+      L->nCcalls--;  /* finish 'luaD_call' */
       luaD_poscall(L, firstArg);  /* finish 'luaD_precall' */
     }
     unroll(L, NULL);
@@ -522,11 +521,11 @@ static void resume (lua_State *L, void *ud) {
 }
 
 
-LUA_API int lua_resume (lua_State *L, int nargs) {
+LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs) {
   int status;
   lua_lock(L);
   luai_userstateresume(L, nargs);
-  ++G(L)->nCcalls;  /* count resume */
+  L->nCcalls = (from) ? from->nCcalls + 1 : 1;
   L->nny = 0;  /* allow yields */
   api_checknelems(L, (L->status == LUA_OK) ? nargs + 1 : nargs);
   status = luaD_rawrunprotected(L, resume, L->top - nargs);
@@ -546,7 +545,8 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
     lua_assert(status == L->status);
   }
   L->nny = 1;  /* do not allow yields */
-  --G(L)->nCcalls;
+  L->nCcalls--;
+  lua_assert(L->nCcalls == ((from) ? from->nCcalls : 0));
   lua_unlock(L);
   return status;
 }

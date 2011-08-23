@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.114 2011/07/15 12:50:29 roberto Exp roberto $
+** $Id: lparser.c,v 2.115 2011/07/27 18:09:01 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -328,13 +328,13 @@ static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
 
 
 static void enterlevel (LexState *ls) {
-  global_State *g = G(ls->L);
-  ++g->nCcalls;
-  checklimit(ls->fs, g->nCcalls, LUAI_MAXCCALLS, "syntax levels");
+  lua_State *L = ls->L;
+  ++L->nCcalls;
+  checklimit(ls->fs, L->nCcalls, LUAI_MAXCCALLS, "syntax levels");
 }
 
 
-#define leavelevel(ls)	(G((ls)->L)->nCcalls--)
+#define leavelevel(ls)	((ls)->L->nCcalls--)
 
 
 static void closegoto (LexState *ls, int g, Labeldesc *label) {
@@ -1144,7 +1144,7 @@ static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
     primaryexp(ls, &nv.v);
     if (nv.v.k != VINDEXED)
       check_conflict(ls, lh, &nv.v);
-    checklimit(ls->fs, nvars, LUAI_MAXCCALLS - G(ls->L)->nCcalls,
+    checklimit(ls->fs, nvars, LUAI_MAXCCALLS - ls->L->nCcalls,
                     "variable names");
     assignment(ls, &nv, nvars+1);
   }
