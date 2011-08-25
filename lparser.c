@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.115 2011/07/27 18:09:01 roberto Exp roberto $
+** $Id: lparser.c,v 2.116 2011/08/23 17:24:34 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1360,38 +1360,32 @@ static void forstat (LexState *ls, int line) {
 }
 
 
-static int test_then_block (LexState *ls) {
+static void test_then_block (LexState *ls, int *escapelist) {
   /* test_then_block -> [IF | ELSEIF] cond THEN block */
+  FuncState *fs = ls->fs;
   int condexit;
   luaX_next(ls);  /* skip IF or ELSEIF */
-  condexit = cond(ls);
+  condexit = cond(ls);  /* 'if' condition */
   checknext(ls, TK_THEN);
   block(ls);  /* `then' part */
-  return condexit;
+  if (ls->t.token == TK_ELSE ||
+      ls->t.token == TK_ELSEIF)  /* followed by 'else'/'elseif'? */
+    luaK_concat(fs, escapelist, luaK_jump(fs));  /* must jump over it */
+  luaK_patchtohere(fs, condexit);  /* 'if' condition jumps to here */
 }
 
 
 static void ifstat (LexState *ls, int line) {
   /* ifstat -> IF cond THEN block {ELSEIF cond THEN block} [ELSE block] END */
   FuncState *fs = ls->fs;
-  int flist;
-  int escapelist = NO_JUMP;
-  flist = test_then_block(ls);  /* IF cond THEN block */
-  while (ls->t.token == TK_ELSEIF) {
-    luaK_concat(fs, &escapelist, luaK_jump(fs));
-    luaK_patchtohere(fs, flist);
-    flist = test_then_block(ls);  /* ELSEIF cond THEN block */
-  }
-  if (ls->t.token == TK_ELSE) {
-    luaK_concat(fs, &escapelist, luaK_jump(fs));
-    luaK_patchtohere(fs, flist);
-    luaX_next(ls);  /* skip ELSE (after patch, for correct line info) */
+  int escapelist = NO_JUMP;  /* exit list for finished parts */
+  test_then_block(ls, &escapelist);  /* IF cond THEN block */
+  while (ls->t.token == TK_ELSEIF)
+    test_then_block(ls, &escapelist);  /* ELSEIF cond THEN block */
+  if (testnext(ls, TK_ELSE))
     block(ls);  /* `else' part */
-  }
-  else
-    luaK_concat(fs, &escapelist, flist);
-  luaK_patchtohere(fs, escapelist);
   check_match(ls, TK_END, TK_IF, line);
+  luaK_patchtohere(fs, escapelist);  /* patch escape list to 'if' end */
 }
 
 
