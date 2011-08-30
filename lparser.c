@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.116 2011/08/23 17:24:34 roberto Exp roberto $
+** $Id: lparser.c,v 2.117 2011/08/25 13:45:24 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -383,7 +383,8 @@ static int findlabel (LexState *ls, int g) {
 static int newlabelentry (LexState *ls, Labellist *l, TString *name,
                           int line, int pc) {
   int n = l->n;
-  luaM_growvector(ls->L, l->arr, n, l->size, Labeldesc, SHRT_MAX, "labels");
+  luaM_growvector(ls->L, l->arr, n, l->size,
+                  Labeldesc, SHRT_MAX, "labels/gotos");
   l->arr[n].name = name;
   l->arr[n].line = line;
   l->arr[n].nactvar = ls->fs->nactvar;
@@ -1178,10 +1179,18 @@ static int cond (LexState *ls) {
 }
 
 
-static void gotostat (LexState *ls, TString *label, int line) {
-  /* create new entry for this goto */
-  int g = newlabelentry(ls, &ls->dyd->gt, label, line, luaK_jump(ls->fs));
-  findlabel(ls, g);
+static void gotostat (LexState *ls, int pc) {
+  int line = ls->linenumber;
+  TString *label;
+  int g;
+  if (testnext(ls, TK_GOTO))
+    label = str_checkname(ls);
+  else {
+    luaX_next(ls);  /* skip break */
+    label = luaS_new(ls->L, "break");
+  }
+  g = newlabelentry(ls, &ls->dyd->gt, label, line, pc);
+  findlabel(ls, g);  /* close it if label already defined */
 }
 
 
@@ -1362,16 +1371,32 @@ static void forstat (LexState *ls, int line) {
 
 static void test_then_block (LexState *ls, int *escapelist) {
   /* test_then_block -> [IF | ELSEIF] cond THEN block */
+  BlockCnt bl;
   FuncState *fs = ls->fs;
-  int condexit;
+  expdesc v;
+  int jf;  /* instruction to skip 'then' code (if condition is false) */
   luaX_next(ls);  /* skip IF or ELSEIF */
-  condexit = cond(ls);  /* 'if' condition */
+  enterblock(fs, &bl, 0);
+  expr(ls, &v);  /* read condition */
   checknext(ls, TK_THEN);
-  block(ls);  /* `then' part */
+  if (ls->t.token == TK_GOTO || ls->t.token == TK_BREAK) {
+    luaK_goiffalse(ls->fs, &v);  /* will jump to label if condition is true */
+    gotostat(ls, v.t);  /* handle goto/break */
+    if (block_follow(ls, 0))  /* no more code after 'goto'? */
+      goto leave;  /* that is it */
+    else  /* must skip over 'then' part if condition is false */
+      jf = luaK_jump(fs);
+  }
+  else {  /* regular case (not goto/break) */
+    luaK_goiftrue(ls->fs, &v);  /* skip over block if condition is false */
+    jf = v.f;
+  }
+  statlist(ls);  /* `then' part */
   if (ls->t.token == TK_ELSE ||
       ls->t.token == TK_ELSEIF)  /* followed by 'else'/'elseif'? */
     luaK_concat(fs, escapelist, luaK_jump(fs));  /* must jump over it */
-  luaK_patchtohere(fs, condexit);  /* 'if' condition jumps to here */
+  luaK_patchtohere(fs, jf);
+  leave: leaveblock(fs);
 }
 
 
@@ -1545,15 +1570,9 @@ static void statement (LexState *ls) {
       retstat(ls);
       break;
     }
-    case TK_BREAK: {  /* stat -> breakstat */
-      luaX_next(ls);  /* skip BREAK */
-      /* code it as "goto 'break'" */
-      gotostat(ls, luaS_new(ls->L, "break"), line);
-      break;
-    }
+    case TK_BREAK:   /* stat -> breakstat */
     case TK_GOTO: {  /* stat -> 'goto' NAME */
-      luaX_next(ls);  /* skip GOTO */
-      gotostat(ls, str_checkname(ls), line);
+      gotostat(ls, luaK_jump(ls->fs));
       break;
     }
     default: {  /* stat -> func | assignment */
