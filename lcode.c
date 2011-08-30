@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.58 2011/07/27 18:07:37 roberto Exp roberto $
+** $Id: lcode.c,v 2.59 2011/08/15 19:41:58 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -643,7 +643,7 @@ void luaK_goiftrue (FuncState *fs, expdesc *e) {
 }
 
 
-static void luaK_goiffalse (FuncState *fs, expdesc *e) {
+void luaK_goiffalse (FuncState *fs, expdesc *e) {
   int pc;  /* pc of last jump */
   luaK_dischargevars(fs, e);
   switch (e->k) {
