@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.98 2011/06/28 15:42:04 roberto Exp roberto $
+** $Id: ldo.c,v 2.99 2011/08/23 17:24:34 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -344,7 +344,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     }
     default: {  /* not a function */
       func = tryfuncTM(L, func);  /* retry with 'function' tag method */
-      return luaD_precall(L, func, nresults);
+      return luaD_precall(L, func, nresults);  /* now it must be a function */
     }
   }
 }
