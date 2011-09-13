@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.83 2011/08/09 20:58:29 roberto Exp roberto $
+** $Id: ldebug.c,v 2.84 2011/08/12 20:01:44 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -91,6 +91,13 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
   else status = 0;  /* no such level */
   lua_unlock(L);
   return status;
+}
+
+
+static const char *upvalname (Proto *p, int uv) {
+  TString *s = check_exp(uv < p->sizeupvalues, p->upvalues[uv].name);
+  if (s == NULL) return "?";
+  else return getstr(s);
 }
 
 
@@ -376,9 +383,9 @@ static const char *getobjname (Proto *p, int lastpc, int reg,
   if (pc != -1) {  /* could find instruction? */
     Instruction i = p->code[pc];
     OpCode op = GET_OPCODE(i);
-    int a = GETARG_A(i);
     switch (op) {
       case OP_MOVE: {
+        int a = GETARG_A(i);
         int b = GETARG_B(i);  /* move from 'b' to 'a' */
         lua_assert(reg == a);
         if (b < a)
@@ -390,14 +397,13 @@ static const char *getobjname (Proto *p, int lastpc, int reg,
         int t = GETARG_B(i);
         const char *vn = (op == OP_GETTABLE)  /* name of indexed variable */
                          ? luaF_getlocalname(p, t + 1, pc)
-                         : getstr(p->upvalues[t].name);
+                         : upvalname(p, t);
         kname(p, pc, k, name);
         return (vn && strcmp(vn, LUA_ENV) == 0) ? "global" : "field";
       }
       case OP_GETUPVAL: {
         int u = GETARG_B(i);  /* upvalue index */
-        TString *tn = p->upvalues[u].name;
-        *name = tn ? getstr(tn) : "?";
+        *name = upvalname(p, u);
         return "upvalue";
       }
       case OP_LOADK:
@@ -476,12 +482,12 @@ static int isinstack (CallInfo *ci, const TValue *o) {
 
 
 static const char *getupvalname (CallInfo *ci, const TValue *o,
-                               const char **name) {
+                                 const char **name) {
   LClosure *c = ci_func(ci);
   int i;
   for (i = 0; i < c->nupvalues; i++) {
     if (c->upvals[i]->v == o) {
-      *name = getstr(c->p->upvalues[i].name);
+      *name = upvalname(c->p, i);
       return "upvalue";
     }
   }
