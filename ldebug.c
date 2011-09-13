@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.84 2011/08/12 20:01:44 roberto Exp roberto $
+** $Id: ldebug.c,v 2.85 2011/09/13 17:40:20 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -385,16 +385,15 @@ static const char *getobjname (Proto *p, int lastpc, int reg,
     OpCode op = GET_OPCODE(i);
     switch (op) {
       case OP_MOVE: {
-        int a = GETARG_A(i);
         int b = GETARG_B(i);  /* move from 'b' to 'a' */
-        lua_assert(reg == a);
-        if (b < a)
+        if (b < GETARG_A(i))
           return getobjname(p, pc, b, name);  /* get name for 'b' */
+        break;
       }
       case OP_GETTABUP:
       case OP_GETTABLE: {
         int k = GETARG_C(i);  /* key index */
-        int t = GETARG_B(i);
+        int t = GETARG_B(i);  /* table index */
         const char *vn = (op == OP_GETTABLE)  /* name of indexed variable */
                          ? luaF_getlocalname(p, t + 1, pc)
                          : upvalname(p, t);
@@ -402,8 +401,7 @@ static const char *getobjname (Proto *p, int lastpc, int reg,
         return (vn && strcmp(vn, LUA_ENV) == 0) ? "global" : "field";
       }
       case OP_GETUPVAL: {
-        int u = GETARG_B(i);  /* upvalue index */
-        *name = upvalname(p, u);
+        *name = upvalname(p, GETARG_B(i));
         return "upvalue";
       }
       case OP_LOADK:
@@ -414,6 +412,7 @@ static const char *getobjname (Proto *p, int lastpc, int reg,
           *name = svalue(&p->k[b]);
           return "constant";
         }
+        break;
       }
       case OP_SELF: {
         int k = GETARG_C(i);  /* key index */
