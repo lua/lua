@@ -1,8 +1,18 @@
 /*
-** $Id: liolib.c,v 2.102 2011/07/28 18:41:15 roberto Exp roberto $
+** $Id: liolib.c,v 2.103 2011/08/02 18:00:01 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
+
+
+/*
+** POSIX idiosyncrasy!
+** This definition must come before the inclusion of 'stdio.h'; it
+** should not affect non-POSIX systems
+*/
+#if !defined(_FILE_OFFSET_BITS)
+#define _FILE_OFFSET_BITS 64
+#endif
 
 
 #include <errno.h>
@@ -21,9 +31,12 @@
 
 
 /*
-** lua_popen spawns a new process connected to the current one through
-** the file streams.
+** {======================================================
+** lua_popen spawns a new process connected to the current
+** one through the file streams.
+** =======================================================
 */
+
 #if !defined(lua_popen)	/* { */
 
 #if defined(LUA_USE_POPEN)	/* { */
@@ -47,6 +60,41 @@
 #endif				/* } */
 
 #endif			/* } */
+
+/* }====================================================== */
+
+
+/*
+** {======================================================
+** lua_fseek/lua_ftell: configuration for longer offsets
+** =======================================================
+*/
+
+#if !defined(lua_fseek)	/* { */
+
+#if defined(LUA_USE_POSIX)
+
+#define l_fseek(f,o,w)		fseeko(f,o,w)
+#define l_ftell(f)		ftello(f)
+#define l_seeknum		off_t
+
+#elif defined(LUA_WIN)
+
+#define l_fseek(f,o,w)		_fseeki64(f,o,w)
+#define l_ftell(f)		_ftelli64(f)
+#define l_seeknum		__int64
+
+#else
+
+#define l_fseek(f,o,w)		fseek(f,o,w)
+#define l_ftell(f)		ftell(f)
+#define l_seeknum		long
+
+#endif
+
+#endif			/* } */
+
+/* }====================================================== */
 
 
 #define IO_PREFIX	"_IO_"
@@ -492,12 +540,15 @@ static int f_seek (lua_State *L) {
   static const char *const modenames[] = {"set", "cur", "end", NULL};
   FILE *f = tofile(L);
   int op = luaL_checkoption(L, 2, "cur", modenames);
-  long offset = luaL_optlong(L, 3, 0);
-  op = fseek(f, offset, mode[op]);
+  lua_Number p3 = luaL_optnumber(L, 3, 0);
+  l_seeknum offset = (l_seeknum)p3;
+  luaL_argcheck(L, (lua_Number)offset == p3, 3,
+                  "not an integer in proper range");
+  op = l_fseek(f, offset, mode[op]);
   if (op)
     return luaL_fileresult(L, 0, NULL);  /* error */
   else {
-    lua_pushinteger(L, ftell(f));
+    lua_pushnumber(L, (lua_Number)l_ftell(f));
     return 1;
   }
 }
