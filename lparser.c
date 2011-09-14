@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.117 2011/08/25 13:45:24 roberto Exp roberto $
+** $Id: lparser.c,v 2.118 2011/08/30 16:38:58 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1376,27 +1376,30 @@ static void test_then_block (LexState *ls, int *escapelist) {
   expdesc v;
   int jf;  /* instruction to skip 'then' code (if condition is false) */
   luaX_next(ls);  /* skip IF or ELSEIF */
-  enterblock(fs, &bl, 0);
   expr(ls, &v);  /* read condition */
   checknext(ls, TK_THEN);
   if (ls->t.token == TK_GOTO || ls->t.token == TK_BREAK) {
     luaK_goiffalse(ls->fs, &v);  /* will jump to label if condition is true */
+    enterblock(fs, &bl, 0);  /* must enter block before 'goto' */
     gotostat(ls, v.t);  /* handle goto/break */
-    if (block_follow(ls, 0))  /* no more code after 'goto'? */
-      goto leave;  /* that is it */
+    if (block_follow(ls, 0)) {  /* 'goto' is the entire block? */
+      leaveblock(fs);
+      return;  /* and that is it */
+    }
     else  /* must skip over 'then' part if condition is false */
       jf = luaK_jump(fs);
   }
   else {  /* regular case (not goto/break) */
     luaK_goiftrue(ls->fs, &v);  /* skip over block if condition is false */
+    enterblock(fs, &bl, 0);
     jf = v.f;
   }
   statlist(ls);  /* `then' part */
+  leaveblock(fs);
   if (ls->t.token == TK_ELSE ||
       ls->t.token == TK_ELSEIF)  /* followed by 'else'/'elseif'? */
     luaK_concat(fs, escapelist, luaK_jump(fs));  /* must jump over it */
   luaK_patchtohere(fs, jf);
-  leave: leaveblock(fs);
 }
 
 
