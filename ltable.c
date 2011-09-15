@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.61 2011/08/09 20:58:29 roberto Exp roberto $
+** $Id: ltable.c,v 2.62 2011/08/17 20:26:47 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -402,10 +402,11 @@ static Node *getfreepos (Table *t) {
 ** position), new key goes to an empty position.
 */
 TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
-  Node *mp = mainposition(t, key);
+  Node *mp;
   if (ttisnil(key)) luaG_runerror(L, "table index is nil");
   else if (ttisnumber(key) && luai_numisnan(L, nvalue(key)))
     luaG_runerror(L, "table index is NaN");
+  mp = mainposition(t, key);
   if (!ttisnil(gval(mp)) || isdummy(mp)) {  /* main position is taken? */
     Node *othern;
     Node *n = getfreepos(t);  /* get a free place */
