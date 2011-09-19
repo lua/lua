@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.108 2010/12/29 18:00:23 roberto Exp roberto $
+** $Id: lgc.c,v 2.109 2011/05/05 19:42:25 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -357,7 +357,8 @@ static void traverseweakvalue (global_State *g, Table *h) {
 
 static int traverseephemeron (global_State *g, Table *h) {
   int marked = 0;  /* true if an object is marked in this traversal */
-  int hasclears = 0;  /* true if table has unmarked pairs */
+  int hasclears = 0;  /* true if table has white keys */
+  int prop = 0;  /* true if table has entry "white-key -> white-value" */
   Node *n, *limit = gnode(h, sizenode(h));
   int i;
   /* traverse array part (numeric keys are 'strong') */
@@ -372,19 +373,22 @@ static int traverseephemeron (global_State *g, Table *h) {
     checkdeadkey(n);
     if (ttisnil(gval(n)))  /* entry is empty? */
       removeentry(n);  /* remove it */
+    else if (iscleared(gkey(n), 1)) {  /* key is not marked (yet)? */
+      hasclears = 1;  /* table still have white keys */
+      if (valiswhite(gval(n)))  /* value not marked yet? */
+        prop = 1;
+    }
     else if (valiswhite(gval(n))) {  /* value not marked yet? */
-      if (iscleared(gkey(n), 1))  /* key is not marked (yet)? */
-        hasclears = 1;  /* may have to propagate mark from key to value */
-      else {  /* key is marked, so mark value */
-        marked = 1;  /* value was not marked */
-        reallymarkobject(g, gcvalue(gval(n)));
-      }
+      marked = 1;  /* mark it now */
+      reallymarkobject(g, gcvalue(gval(n)));
     }
   }
-  if (hasclears)  /* does table have unmarked pairs? */
-    linktable(h, &g->ephemeron);  /* will have to propagate again */
-  else  /* nothing to propagate */
-    linktable(h, &g->weak);  /* avoid convergence phase  */
+  if (prop)
+    linktable(h, &g->ephemeron);  /* have to propagate again */
+  else if (hasclears)  /* does table have white keys? */
+    linktable(h, &g->allweak);  /* may have to clean white keys */
+  else  /* no white keys */
+    linktable(h, &g->grayagain);  /* no need to clean */
   return marked;
 }
 
@@ -868,8 +872,8 @@ static void atomic (lua_State *L) {
   /* traverse objects caught by write barrier and by 'remarkupvals' */
   propagateall(g);
   traverselistofgrays(g, &g->weak);  /* remark weak tables */
-  traverselistofgrays(g, &g->ephemeron);  /* remark ephemeron tables */
   traverselistofgrays(g, &g->grayagain);  /* remark gray again */
+  traverselistofgrays(g, &g->ephemeron);  /* remark ephemeron tables */
   convergeephemerons(g);
   /* at this point, all strongly accessible objects are marked. */
   luaC_separateudata(L, 0);  /* separate userdata to be finalized */
