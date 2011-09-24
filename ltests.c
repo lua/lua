@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.121 2011/07/02 15:59:17 roberto Exp roberto $
+** $Id: ltests.c,v 2.122 2011/08/23 17:24:34 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -595,7 +595,10 @@ static int mem_query (lua_State *L) {
 
 
 static int settrick (lua_State *L) {
-  l_Trick = gcvalue(obj_at(L, 1));
+  if (ttisnil(obj_at(L, 1)))
+    l_Trick = NULL;
+  else
+    l_Trick = gcvalue(obj_at(L, 1));
   return 0;
 }
 
