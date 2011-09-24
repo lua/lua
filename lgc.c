@@ -100,12 +100,13 @@ static void reallymarkobject (global_State *g, GCObject *o);
 
 
 /*
-** mark a table entry as dead (therefore removing it from the table)
+** if key is not marked, mark its entry as dead (therefore removing it
+** from the table)
 */
 static void removeentry (Node *n) {
   lua_assert(ttisnil(gval(n)));
-  if (iscollectable(gkey(n)))
-    setdeadvalue(gkey(n));  /* dead key; remove it */
+  if (valiswhite(gkey(n)))
+    setdeadvalue(gkey(n));  /* unused and unmarked key; remove it */
 }
 
 

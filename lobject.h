@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.60 2011/06/13 14:13:06 roberto Exp roberto $
+** $Id: lobject.h,v 2.61 2011/07/04 20:29:02 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -132,7 +132,7 @@ typedef struct lua_TValue TValue;
 #define ttislcf(o)		checktag((o), LUA_TLCF)
 #define ttisuserdata(o)		checktag((o), ctb(LUA_TUSERDATA))
 #define ttisthread(o)		checktag((o), ctb(LUA_TTHREAD))
-#define ttisdeadkey(o)		checktag((o), ctb(LUA_TDEADKEY))
+#define ttisdeadkey(o)		checktag((o), LUA_TDEADKEY)
 
 #define ttisequal(o1,o2)	(rttype(o1) == rttype(o2))
 
@@ -151,6 +151,8 @@ typedef struct lua_TValue TValue;
 #define hvalue(o)	check_exp(ttistable(o), &val_(o).gc->h)
 #define bvalue(o)	check_exp(ttisboolean(o), val_(o).b)
 #define thvalue(o)	check_exp(ttisthread(o), &val_(o).gc->th)
+/* a dead value may get the 'gc' field, but cannot access its contents */
+#define deadvalue(o)	check_exp(ttisdeadkey(o), cast(void *, val_(o).gc))
 
 #define l_isfalse(o)	(ttisnil(o) || (ttisboolean(o) && bvalue(o) == 0))
 
@@ -224,7 +226,7 @@ typedef struct lua_TValue TValue;
     val_(io).gc=cast(GCObject *, (x)); settt_(io, ctb(LUA_TPROTO)); \
     checkliveness(G(L),io); }
 
-#define setdeadvalue(obj)	settt_(obj, ctb(LUA_TDEADKEY))
+#define setdeadvalue(obj)	settt_(obj, LUA_TDEADKEY)
 
 
 

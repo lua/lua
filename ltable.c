@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.62 2011/08/17 20:26:47 roberto Exp roberto $
+** $Id: ltable.c,v 2.63 2011/09/15 17:09:02 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -152,7 +152,7 @@ static int findindex (lua_State *L, Table *t, StkId key) {
       /* key may be dead already, but it is ok to use it in `next' */
       if (luaV_rawequalobj(gkey(n), key) ||
             (ttisdeadkey(gkey(n)) && iscollectable(key) &&
-             gcvalue(gkey(n)) == gcvalue(key))) {
+             deadvalue(gkey(n)) == gcvalue(key))) {
         i = cast_int(n - gnode(t, 0));  /* key index in hash table */
         /* hash elements are numbered after array ones */
         return i + t->sizearray;
