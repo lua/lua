@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.150 2011/08/09 20:58:29 roberto Exp roberto $
+** $Id: lapi.c,v 2.151 2011/08/17 20:26:47 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -34,9 +34,13 @@ const char lua_ident[] =
   "$LuaAuthors: " LUA_AUTHORS " $";
 
 
+/* value at a non-valid index */
+#define NONVALIDVALUE		cast(TValue *, luaO_nilobject)
 
-#define api_checkvalidindex(L, i)	api_check(L, (i) != luaO_nilobject, \
-					  "invalid index")
+/* corresponding test */
+#define isvalid(o)	((o) != luaO_nilobject)
+
+#define api_checkvalidindex(L, i)  api_check(L, isvalid(i), "invalid index")
 
 
 static TValue *index2addr (lua_State *L, int idx) {
@@ -44,7 +48,7 @@ static TValue *index2addr (lua_State *L, int idx) {
   if (idx > 0) {
     TValue *o = ci->func + idx;
     api_check(L, idx <= ci->top - (ci->func + 1), "unacceptable index");
-    if (o >= L->top) return cast(TValue *, luaO_nilobject);
+    if (o >= L->top) return NONVALIDVALUE;
     else return o;
   }
   else if (idx > LUA_REGISTRYINDEX) {
@@ -57,12 +61,10 @@ static TValue *index2addr (lua_State *L, int idx) {
     idx = LUA_REGISTRYINDEX - idx;
     api_check(L, idx <= MAXUPVAL + 1, "upvalue index too large");
     if (ttislcf(ci->func))  /* light C function? */
-      return cast(TValue *, luaO_nilobject);  /* it has no upvalues */
+      return NONVALIDVALUE;  /* it has no upvalues */
     else {
       CClosure *func = clCvalue(ci->func);
-      return (idx <= func->nupvalues)
-             ? &func->upvalue[idx-1]
-             : cast(TValue *, luaO_nilobject);
+      return (idx <= func->nupvalues) ? &func->upvalue[idx-1] : NONVALIDVALUE;
     }
   }
 }
@@ -237,7 +239,7 @@ LUA_API void lua_pushvalue (lua_State *L, int idx) {
 
 LUA_API int lua_type (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
-  return (o == luaO_nilobject) ? LUA_TNONE : ttypenv(o);
+  return (isvalid(o) ? ttypenv(o) : LUA_TNONE);
 }
 
 
@@ -275,8 +277,7 @@ LUA_API int lua_isuserdata (lua_State *L, int idx) {
 LUA_API int lua_rawequal (lua_State *L, int index1, int index2) {
   StkId o1 = index2addr(L, index1);
   StkId o2 = index2addr(L, index2);
-  return (o1 == luaO_nilobject || o2 == luaO_nilobject) ? 0
-         : luaV_rawequalobj(o1, o2);
+  return (isvalid(o1) && isvalid(o2)) ? luaV_rawequalobj(o1, o2) : 0;
 }
 
 
@@ -309,7 +310,7 @@ LUA_API int lua_compare (lua_State *L, int index1, int index2, int op) {
   lua_lock(L);  /* may call tag method */
   o1 = index2addr(L, index1);
   o2 = index2addr(L, index2);
-  if (o1 == luaO_nilobject || o2 == luaO_nilobject)
+  if (!isvalid(o1) || !isvalid(o2))
     i = 0;
   else switch (op) {
     case LUA_OPEQ: i = equalobj(L, o1, o2); break;
