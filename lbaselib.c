@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.264 2011/07/05 12:49:35 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.265 2011/07/27 12:14:06 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -267,7 +267,6 @@ static int luaB_loadfile (lua_State *L) {
 
 
 typedef struct {
-char c;
   const char *mode;
 } loaddata;
 
