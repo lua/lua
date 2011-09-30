@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.49 2010/12/29 18:00:23 roberto Exp roberto $
+** $Id: lgc.h,v 2.50 2011/01/26 16:30:02 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -63,9 +63,6 @@
 #define l_setbit(x,b)		setbits(x, bitmask(b))
 #define resetbit(x,b)		resetbits(x, bitmask(b))
 #define testbit(x,b)		testbits(x, bitmask(b))
-#define set2bits(x,b1,b2)	setbits(x, (bit2mask(b1, b2)))
-#define reset2bits(x,b1,b2)	resetbits(x, (bit2mask(b1, b2)))
-
 
 
 /* Layout for bit use in `marked' field: */
