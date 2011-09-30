@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.118 2011/08/30 16:38:58 roberto Exp roberto $
+** $Id: lparser.c,v 2.119 2011/09/14 17:40:26 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1611,8 +1611,8 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
   close_func(&lexstate);
   L->top--;  /* pop name */
   lua_assert(!funcstate.prev && funcstate.nups == 1 && !lexstate.fs);
-  return funcstate.f;
   /* all scopes should be correctly finished */
   lua_assert(dyd->actvar.n == 0 && dyd->gt.n == 0 && dyd->label.n == 0);
+  return funcstate.f;
 }
 

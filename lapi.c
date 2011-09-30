@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.151 2011/08/17 20:26:47 roberto Exp roberto $
+** $Id: lapi.c,v 2.152 2011/09/26 20:17:27 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -306,17 +306,17 @@ LUA_API void  lua_arith (lua_State *L, int op) {
 
 LUA_API int lua_compare (lua_State *L, int index1, int index2, int op) {
   StkId o1, o2;
-  int i;
+  int i = 0;
   lua_lock(L);  /* may call tag method */
   o1 = index2addr(L, index1);
   o2 = index2addr(L, index2);
-  if (!isvalid(o1) || !isvalid(o2))
-    i = 0;
-  else switch (op) {
-    case LUA_OPEQ: i = equalobj(L, o1, o2); break;
-    case LUA_OPLT: i = luaV_lessthan(L, o1, o2); break;
-    case LUA_OPLE: i = luaV_lessequal(L, o1, o2); break;
-    default: api_check(L, 0, "invalid option"); i = 0;
+  if (isvalid(o1) && isvalid(o2)) {
+    switch (op) {
+      case LUA_OPEQ: i = equalobj(L, o1, o2); break;
+      case LUA_OPLT: i = luaV_lessthan(L, o1, o2); break;
+      case LUA_OPLE: i = luaV_lessequal(L, o1, o2); break;
+      default: api_check(L, 0, "invalid option");
+    }
   }
   lua_unlock(L);
   return i;
