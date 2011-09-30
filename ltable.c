@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.63 2011/09/15 17:09:02 roberto Exp roberto $
+** $Id: ltable.c,v 2.64 2011/09/24 21:12:01 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -62,13 +62,6 @@
 
 
 #define hashpointer(t,p)	hashmod(t, IntPoint(p))
-
-
-/*
-** number of ints inside a lua_Number
-*/
-#define numints		cast_int(sizeof(lua_Number)/sizeof(int))
-
 
 
 #define dummynode		(&dummynode_)

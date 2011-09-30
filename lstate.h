@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.72 2011/06/02 19:31:40 roberto Exp roberto $
+** $Id: lstate.h,v 2.73 2011/08/23 17:24:34 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -46,8 +46,6 @@ struct lua_longjmp;  /* defined in ldo.c */
 /* extra stack space to handle TM calls and some other extras */
 #define EXTRA_STACK   5
 
-
-#define BASIC_CI_SIZE           8
 
 #define BASIC_STACK_SIZE        (2*LUA_MINSTACK)
 
