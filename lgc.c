@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.110 2011/09/19 17:03:38 roberto Exp roberto $
+** $Id: lgc.c,v 2.112 2011/09/24 21:12:01 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -153,7 +153,7 @@ void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v) {
 */
 void luaC_barrierback_ (lua_State *L, GCObject *o) {
   global_State *g = G(L);
-  lua_assert(isblack(o) && !isdead(g, o));
+  lua_assert(isblack(o) && !isdead(g, o) && gch(o)->tt == LUA_TTABLE);
   black2gray(o);  /* make object gray (again) */
   gco2t(o)->gclist = g->grayagain;
   g->grayagain = o;
@@ -343,6 +343,9 @@ static void markroot (global_State *g) {
 
 static void traverseweakvalue (global_State *g, Table *h) {
   Node *n, *limit = gnode(h, sizenode(h));
+  /* if there is array part, assume it may have white values (do not
+     traverse it just to check) */
+  int hasclears = (h->sizearray > 0);
   for (n = gnode(h, 0); n < limit; n++) {
     checkdeadkey(n);
     if (ttisnil(gval(n)))  /* entry is empty? */
@@ -350,9 +353,14 @@ static void traverseweakvalue (global_State *g, Table *h) {
     else {
       lua_assert(!ttisnil(gkey(n)));
       markvalue(g, gkey(n));  /* mark key */
+      if (!hasclears && iscleared(gval(n)))  /* is there a white value? */
+        hasclears = 1;  /* table will have to be cleared */
     }
   }
-  linktable(h, &g->weak);  /* link into appropriate list */
+  if (hasclears)
+    linktable(h, &g->weak);  /* has to be cleared later */
+  else  /* no white values */
+    linktable(h, &g->grayagain);  /* no need to clean */
 }
 
 
@@ -531,11 +539,26 @@ static void propagateall (global_State *g) {
 }
 
 
-static void traverselistofgrays (global_State *g, GCObject **l) {
+static void propagatelist (global_State *g, GCObject *l) {
   lua_assert(g->gray == NULL);  /* no grays left */
-  g->gray = *l;  /* now 'l' is new gray list */
-  *l = NULL;
-  propagateall(g);
+  g->gray = l;
+  propagateall(g);  /* traverse all elements from 'l' */
+}
+
+/*
+** retraverse all gray lists. Because tables may be reinserted in other
+** lists when traversed, traverse the original lists to avoid traversing
+** twice the same table (which is not wrong, but inefficient)
+*/
+static void retraversegrays (global_State *g) {
+  GCObject *weak = g->weak;  /* save original lists */
+  GCObject *grayagain = g->grayagain;
+  GCObject *ephemeron = g->ephemeron;
+  g->weak = g->grayagain = g->ephemeron = NULL;
+  propagateall(g);  /* traverse main gray list */
+  propagatelist(g, grayagain);
+  propagatelist(g, weak);
+  propagatelist(g, ephemeron);
 }
 
 
@@ -890,10 +913,7 @@ static void atomic (lua_State *L) {
   /* remark occasional upvalues of (maybe) dead threads */
   remarkupvals(g);
   /* traverse objects caught by write barrier and by 'remarkupvals' */
-  propagateall(g);
-  traverselistofgrays(g, &g->weak);  /* remark weak tables */
-  traverselistofgrays(g, &g->grayagain);  /* remark gray again */
-  traverselistofgrays(g, &g->ephemeron);  /* remark ephemeron tables */
+  retraversegrays(g);
   convergeephemerons(g);
   /* at this point, all strongly accessible objects are marked. */
   /* clear values from weak tables, before checking finalizers */
@@ -904,11 +924,11 @@ static void atomic (lua_State *L) {
   markbeingfnz(g);  /* mark userdata that will be finalized */
   propagateall(g);  /* remark, to propagate `preserveness' */
   convergeephemerons(g);
-  /* at this point, all accessible objects are marked. */
-  /* remove collected objects from weak tables */
+  /* at this point, all resurrected objects are marked. */
+  /* remove dead objects from weak tables */
   clearkeys(g->ephemeron, NULL);  /* clear keys from all ephemeron tables */
   clearkeys(g->allweak, NULL);  /* clear keys from all allweak tables */
-  /* clear values from weak tables accessible from separated objects  */
+  /* clear values from resurrected weak tables */
   clearvalues(g->weak, origweak);
   clearvalues(g->allweak, origall);
   g->sweepstrgc = 0;  /* prepare to sweep strings */
