@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.90 2011/08/09 20:58:29 roberto Exp roberto $
+** $Id: lstate.c,v 2.91 2011/08/23 17:24:34 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -192,7 +192,7 @@ static void close_state (lua_State *L) {
   luaZ_freebuffer(L, &g->buff);
   freestack(L);
   lua_assert(gettotalbytes(g) == sizeof(LG));
-  (*g->frealloc)(g->ud, fromstate(L), sizeof(LG), 0);
+  (*g->frealloc)(g->ud, fromstate(L), sizeof(LG), 0);  /* free main block */
 }
 
 
@@ -279,9 +279,6 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
 LUA_API void lua_close (lua_State *L) {
   L = G(L)->mainthread;  /* only the main thread can be closed */
   lua_lock(L);
-  luaF_close(L, L->stack);  /* close all upvalues for this thread */
-  luaC_separateudata(L, 1);  /* separate all udata with GC metamethods */
-  lua_assert(L->next == NULL);
   luai_userstateclose(L);
   close_state(L);
 }
