@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.50 2011/01/26 16:30:02 roberto Exp roberto $
+** $Id: lgc.h,v 2.51 2011/09/30 12:44:19 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -122,7 +122,6 @@
 #define luaC_barrierproto(L,p,c) \
    { if (isblack(obj2gco(p))) luaC_barrierproto_(L,p,c); }
 
-LUAI_FUNC void luaC_separateudata (lua_State *L, int all);
 LUAI_FUNC void luaC_freeallobjects (lua_State *L);
 LUAI_FUNC void luaC_step (lua_State *L);
 LUAI_FUNC void luaC_forcestep (lua_State *L);

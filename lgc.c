@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.112 2011/09/24 21:12:01 roberto Exp roberto $
+** $Id: lgc.c,v 2.113 2011/10/03 16:22:05 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -789,10 +789,10 @@ static void GCTM (lua_State *L, int propagateerrors) {
 
 
 /*
-** move all unreachable objects that need finalization from list 'finobj'
-** to list 'tobefnz'
+** move all unreachable objects (or 'all' objects) that need
+** finalization from list 'finobj' to list 'tobefnz' (to be finalized)
 */
-void luaC_separateudata (lua_State *L, int all) {
+static void separatetobefnz (lua_State *L, int all) {
   global_State *g = G(L);
   GCObject **p = &g->finobj;
   GCObject *curr;
@@ -888,14 +888,13 @@ static void callallpendingfinalizers (lua_State *L, int propagateerrors) {
 void luaC_freeallobjects (lua_State *L) {
   global_State *g = G(L);
   int i;
-  callallpendingfinalizers(L, 0);
-  /* following "white" makes all objects look dead */
-  g->currentwhite = WHITEBITS;
-  g->gckind = KGC_NORMAL;
-  sweepwholelist(L, &g->finobj);
+  separatetobefnz(L, 1);  /* separate all objects with finalizers */
   lua_assert(g->finobj == NULL);
+  callallpendingfinalizers(L, 0);
+  g->currentwhite = WHITEBITS; /* this "white" makes all objects look dead */
+  g->gckind = KGC_NORMAL;
+  sweepwholelist(L, &g->finobj);  /* finalizers can create objs. in 'finobj' */
   sweepwholelist(L, &g->allgc);
-  lua_assert(g->allgc == NULL);
   for (i = 0; i < g->strt.size; i++)  /* free all string lists */
     sweepwholelist(L, &g->strt.hash[i]);
   lua_assert(g->strt.nuse == 0);
@@ -920,7 +919,7 @@ static void atomic (lua_State *L) {
   clearvalues(g->weak, NULL);
   clearvalues(g->allweak, NULL);
   origweak = g->weak; origall = g->allweak;
-  luaC_separateudata(L, 0);  /* separate objects to be finalized */
+  separatetobefnz(L, 0);  /* separate objects to be finalized */
   markbeingfnz(g);  /* mark userdata that will be finalized */
   propagateall(g);  /* remark, to propagate `preserveness' */
   convergeephemerons(g);
