@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.85 2011/09/13 17:40:20 roberto Exp roberto $
+** $Id: ldebug.c,v 2.86 2011/09/13 18:05:59 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -520,7 +520,7 @@ void luaG_concaterror (lua_State *L, StkId p1, StkId p2) {
 }
 
 
-void luaG_aritherror (lua_State *L, const TValue *p1, const TValue *p2) {
+l_noret luaG_aritherror (lua_State *L, const TValue *p1, const TValue *p2) {
   TValue temp;
   if (luaV_tonumber(p1, &temp) == NULL)
     p2 = p1;  /* first operand is wrong */
@@ -528,14 +528,13 @@ void luaG_aritherror (lua_State *L, const TValue *p1, const TValue *p2) {
 }
 
 
-int luaG_ordererror (lua_State *L, const TValue *p1, const TValue *p2) {
+l_noret luaG_ordererror (lua_State *L, const TValue *p1, const TValue *p2) {
   const char *t1 = objtypename(p1);
   const char *t2 = objtypename(p2);
   if (t1 == t2)
     luaG_runerror(L, "attempt to compare two %s values", t1);
   else
     luaG_runerror(L, "attempt to compare %s with %s", t1, t2);
-  return 0;
 }
 
 
@@ -555,7 +554,7 @@ static void addinfo (lua_State *L, const char *msg) {
 }
 
 
-void luaG_errormsg (lua_State *L) {
+l_noret luaG_errormsg (lua_State *L) {
   if (L->errfunc != 0) {  /* is there an error handling function? */
     StkId errfunc = restorestack(L, L->errfunc);
     if (!ttisfunction(errfunc)) luaD_throw(L, LUA_ERRERR);
@@ -568,7 +567,7 @@ void luaG_errormsg (lua_State *L) {
 }
 
 
-void luaG_runerror (lua_State *L, const char *fmt, ...) {
+l_noret luaG_runerror (lua_State *L, const char *fmt, ...) {
   va_list argp;
   va_start(argp, fmt);
   addinfo(L, luaO_pushvfstring(L, fmt, argp));

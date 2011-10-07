@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.99 2011/08/23 17:24:34 roberto Exp roberto $
+** $Id: ldo.c,v 2.100 2011/09/12 20:33:03 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -100,7 +100,7 @@ static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
 }
 
 
-void luaD_throw (lua_State *L, int errcode) {
+l_noret luaD_throw (lua_State *L, int errcode) {
   if (L->errorJmp) {  /* thread has an error handler? */
     L->errorJmp->status = errcode;  /* set status */
     LUAI_THROW(L, L->errorJmp);  /* jump to it */
@@ -472,7 +472,7 @@ static int recover (lua_State *L, int status) {
 ** coroutine itself. (Such errors should not be handled by any coroutine
 ** error handler and should not kill the coroutine.)
 */
-static void resume_error (lua_State *L, const char *msg, StkId firstArg) {
+static l_noret resume_error (lua_State *L, const char *msg, StkId firstArg) {
   L->top = firstArg;  /* remove args from the stack */
   setsvalue2s(L, L->top, luaS_new(L, msg));  /* push error message */
   incr_top(L);

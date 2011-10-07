@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.91 2011/09/13 17:39:23 roberto Exp roberto $
+** $Id: llimits.h,v 1.92 2011/09/30 12:46:06 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -94,6 +94,19 @@ typedef LUAI_UACNUMBER l_uacNumber;
 #define cast_num(i)	cast(lua_Number, (i))
 #define cast_int(i)	cast(int, (i))
 #define cast_uchar(i)	cast(unsigned char, (i))
+
+
+/*
+** non-return type
+*/
+#if defined(__GNUC__)
+#define l_noret		void __attribute__((noreturn))
+#elif defined(_MSC_VER)
+#define l_noret		void __declspec(noreturn)
+#else
+#define l_noret		void
+#endif
+
 
 
 /*
