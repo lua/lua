@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.162 2011/07/25 17:20:47 roberto Exp roberto $
+** $Id: luaconf.h,v 1.163 2011/08/23 17:25:42 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -492,12 +492,13 @@
 
 
 /*
-@@ LUA_NANTRICKLE/LUA_NANTRICKBE controls the use of a trick to pack all
-** types into a single double value, using NaN values to represent
-** non-number values. The trick only works on 32-bit machines (ints and
-** pointers are 32-bit values) with numbers represented as IEEE 754-2008
-** doubles with conventional endianess (12345678 or 87654321), in CPUs
-** that do not produce signaling NaN values (all NaNs are quiet).
+@@ LUA_NANTRICK_LE/LUA_NANTRICK_BE controls the use of a trick to
+** pack all types into a single double value, using NaN values to
+** represent non-number values. The trick only works on 32-bit machines
+** (ints and pointers are 32-bit values) with numbers represented as
+** IEEE 754-2008 doubles with conventional endianess (12345678 or
+** 87654321), in CPUs that do not produce signaling NaN values (all NaNs
+** are quiet).
 */
 #if defined(LUA_CORE) && \
     defined(LUA_NUMBER_DOUBLE) && !defined(LUA_ANSI)	/* { */
@@ -506,7 +507,7 @@
 #if defined(__i386__) || defined(__i386) || defined(__X86__) || \
     defined(_M_IX86)
 
-#define LUA_NANTRICKLE
+#define LUA_NANTRICK_LE
 
 #endif
 
