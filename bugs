@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.109 2011/01/31 14:52:32 roberto Exp roberto $
-+** $Id: bugs,v 1.109 2011/01/31 14:52:32 roberto Exp roberto $
+-** $Id: bugs,v 1.110 2011/08/17 20:38:51 roberto Exp roberto $
++** $Id: bugs,v 1.110 2011/08/17 20:38:51 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2386,3 +2386,24 @@ patch = [[
 ]]
 }
 
+Bug{
+what = [[parser may collect a prototype while building it]],
+report = [[Ingo van Lil, 2011/10/13]],
+since = [[5.1.4 (caused by patch 5.1.4-6)]],
+example = nil,
+patch = [[
+--- lparser.c	2007/12/28 15:32:23	2.42.1.3
++++ lparser.c	2011/10/17 13:10:43
+@@ -374,9 +374,9 @@
+   lua_assert(luaG_checkcode(f));
+   lua_assert(fs->bl == NULL);
+   ls->fs = fs->prev;
+-  L->top -= 2;  /* remove table and prototype from the stack */
+   /* last token read was anchored in defunct function; must reanchor it */
+   if (fs) anchor_token(ls);
++  L->top -= 2;  /* remove table and prototype from the stack */
+ }
+ 
+ 
+]]
+}
