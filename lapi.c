@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.153 2011/09/30 12:43:17 roberto Exp roberto $
+** $Id: lapi.c,v 2.154 2011/10/24 14:54:05 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -596,6 +596,17 @@ LUA_API int lua_pushthread (lua_State *L) {
 */
 
 
+LUA_API void lua_getglobal (lua_State *L, const char *var) {
+  Table *reg = hvalue(&G(L)->l_registry);
+  const TValue *gt;  /* global table */
+  lua_lock(L);
+  gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
+  setsvalue2s(L, L->top++, luaS_new(L, var));
+  luaV_gettable(L, gt, L->top - 1, L->top - 1);
+  lua_unlock(L);
+}
+
+
 LUA_API void lua_gettable (lua_State *L, int idx) {
   StkId t;
   lua_lock(L);
@@ -712,6 +723,19 @@ LUA_API void lua_getuservalue (lua_State *L, int idx) {
 /*
 ** set functions (stack -> Lua)
 */
+
+
+LUA_API void lua_setglobal (lua_State *L, const char *var) {
+  Table *reg = hvalue(&G(L)->l_registry);
+  const TValue *gt;  /* global table */
+  lua_lock(L);
+  api_checknelems(L, 1);
+  gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
+  setsvalue2s(L, L->top++, luaS_new(L, var));
+  luaV_settable(L, gt, L->top - 1, L->top - 2);
+  L->top -= 2;  /* pop value and key */
+  lua_unlock(L);
+}
 
 
 LUA_API void lua_settable (lua_State *L, int idx) {

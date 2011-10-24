@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.279 2011/08/23 17:24:34 roberto Exp roberto $
+** $Id: lua.h,v 1.280 2011/10/24 14:54:05 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -215,6 +215,7 @@ LUA_API int   (lua_pushthread) (lua_State *L);
 /*
 ** get functions (Lua -> stack)
 */
+LUA_API void  (lua_getglobal) (lua_State *L, const char *var);
 LUA_API void  (lua_gettable) (lua_State *L, int idx);
 LUA_API void  (lua_getfield) (lua_State *L, int idx, const char *k);
 LUA_API void  (lua_rawget) (lua_State *L, int idx);
@@ -229,6 +230,7 @@ LUA_API void  (lua_getuservalue) (lua_State *L, int idx);
 /*
 ** set functions (stack -> Lua)
 */
+LUA_API void  (lua_setglobal) (lua_State *L, const char *var);
 LUA_API void  (lua_settable) (lua_State *L, int idx);
 LUA_API void  (lua_setfield) (lua_State *L, int idx, const char *k);
 LUA_API void  (lua_rawset) (lua_State *L, int idx);
@@ -315,13 +317,6 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 #define lua_pop(L,n)		lua_settop(L, -(n)-1)
 
 #define lua_newtable(L)		lua_createtable(L, 0, 0)
-
-#define lua_setglobal(L,s)  \
-	(lua_pushglobaltable(L), lua_pushvalue(L, -2), \
-	 lua_setfield(L, -2, (s)), lua_pop(L, 2))
-
-#define lua_getglobal(L,s) \
-	(lua_pushglobaltable(L), lua_getfield(L, -1, (s)), lua_remove(L, -2))
 
 #define lua_register(L,n,f) (lua_pushcfunction(L, (f)), lua_setglobal(L, (n)))
 
