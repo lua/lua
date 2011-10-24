@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.119 2011/09/14 17:40:26 roberto Exp roberto $
+** $Id: lparser.c,v 2.120 2011/09/30 12:44:45 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1106,31 +1106,34 @@ struct LHS_assign {
 
 
 /*
-** check whether, in an assignment to a local variable, the local variable
-** is needed in a previous assignment (to a table). If so, save original
-** local value in a safe place and use this safe copy in the previous
-** assignment.
+** check whether, in an assignment to an upvalue/local variable, the
+** upvalue/local variable is begin used in a previous assignment to a
+** table. If so, save original upvalue/local value in a safe place and
+** use this safe copy in the previous assignment.
 */
 static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
   FuncState *fs = ls->fs;
   int extra = fs->freereg;  /* eventual position to save local variable */
   int conflict = 0;
-  for (; lh; lh = lh->prev) {
-    /* conflict in table 't'? */
-    if (lh->v.u.ind.vt == v->k && lh->v.u.ind.t == v->u.info) {
-      conflict = 1;
-      lh->v.u.ind.vt = VLOCAL;
-      lh->v.u.ind.t = extra;  /* previous assignment will use safe copy */
-    }
-    /* conflict in index 'idx'? */
-    if (v->k == VLOCAL && lh->v.u.ind.idx == v->u.info) {
-      conflict = 1;
-      lh->v.u.ind.idx = extra;  /* previous assignment will use safe copy */
+  for (; lh; lh = lh->prev) {  /* check all previous assignments */
+    if (lh->v.k == VINDEXED) {  /* assigning to a table? */
+      /* table is the upvalue/local being assigned now? */
+      if (lh->v.u.ind.vt == v->k && lh->v.u.ind.t == v->u.info) {
+        conflict = 1;
+        lh->v.u.ind.vt = VLOCAL;
+        lh->v.u.ind.t = extra;  /* previous assignment will use safe copy */
+      }
+      /* index is the local being assigned? (index cannot be upvalue) */
+      if (v->k == VLOCAL && lh->v.u.ind.idx == v->u.info) {
+        conflict = 1;
+        lh->v.u.ind.idx = extra;  /* previous assignment will use safe copy */
+      }
     }
   }
   if (conflict) {
+    /* copy upvalue/local value to a temporary (in position 'extra') */
     OpCode op = (v->k == VLOCAL) ? OP_MOVE : OP_GETUPVAL;
-    luaK_codeABC(fs, op, fs->freereg, v->u.info, 0);  /* make copy */
+    luaK_codeABC(fs, op, extra, v->u.info, 0);
     luaK_reserveregs(fs, 1);
   }
 }
