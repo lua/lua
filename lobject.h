@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.62 2011/09/24 21:12:01 roberto Exp roberto $
+** $Id: lobject.h,v 2.63 2011/10/17 14:46:13 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -459,11 +459,11 @@ typedef struct Proto {
   TValue *k;  /* constants used by the function */
   Instruction *code;
   struct Proto **p;  /* functions defined inside the function */
-  int *lineinfo;  /* map from opcodes to source lines */
-  LocVar *locvars;  /* information about local variables */
+  int *lineinfo;  /* map from opcodes to source lines (debug information) */
+  LocVar *locvars;  /* information about local variables (debug information) */
   Upvaldesc *upvalues;  /* upvalue information */
   union Closure *cache;  /* last created closure with this prototype */
-  TString  *source;
+  TString  *source;  /* used for debug information */
   int sizeupvalues;  /* size of 'upvalues' */
   int sizek;  /* size of `k' */
   int sizecode;
