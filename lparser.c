@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.120 2011/09/30 12:44:45 roberto Exp roberto $
+** $Id: lparser.c,v 2.121 2011/10/24 14:51:44 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -344,9 +344,10 @@ static void closegoto (LexState *ls, int g, Labeldesc *label) {
   Labeldesc *gt = &gl->arr[g];
   lua_assert(eqstr(gt->name, label->name));
   if (gt->nactvar < label->nactvar) {
+    TString *vname = getlocvar(fs, gt->nactvar)->varname;
     const char *msg = luaO_pushfstring(ls->L,
       "<goto %s> at line %d jumps into the scope of local " LUA_QS,
-      getstr(gt->name), gt->line, getstr(getlocvar(fs, gt->nactvar)->varname));
+      getstr(gt->name), gt->line, getstr(vname));
     semerror(ls, msg);
   }
   luaK_patchlist(fs, gt->pc, label->pc);
