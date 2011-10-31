@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.154 2011/10/24 14:54:05 roberto Exp roberto $
+** $Id: lapi.c,v 2.155 2011/10/24 16:53:05 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1195,15 +1195,16 @@ static const char *aux_upvalue (StkId fi, int n, TValue **val,
     }
     case LUA_TLCL: {  /* Lua closure */
       LClosure *f = clLvalue(fi);
-      const char *name;
+      TString *name;
       Proto *p = f->p;
       if (!(1 <= n && n <= p->sizeupvalues)) return NULL;
       *val = f->upvals[n-1]->v;
       if (owner) *owner = obj2gco(f->upvals[n - 1]);
-      name = getstr(p->upvalues[n-1].name);
+      name = p->upvalues[n-1].name;
       if (name == NULL)  /* no debug information? */
-        name = "";
-      return name;
+        return "";
+      else
+      return getstr(name);
     }
     default: return NULL;  /* not a closure */
   }
