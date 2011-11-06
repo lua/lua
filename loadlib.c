@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.99 2011/06/28 17:13:28 roberto Exp roberto $
+** $Id: loadlib.c,v 1.100 2011/07/05 12:49:35 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -516,9 +516,11 @@ static void set_env (lua_State *L) {
 static void dooptions (lua_State *L, int n) {
   int i;
   for (i = 2; i <= n; i++) {
-    lua_pushvalue(L, i);  /* get option (a function) */
-    lua_pushvalue(L, -2);  /* module */
-    lua_call(L, 1, 0);
+    if (lua_isfunction(L, i)) {  /* avoid 'calling' extra info. */
+      lua_pushvalue(L, i);  /* get option (a function) */
+      lua_pushvalue(L, -2);  /* module */
+      lua_call(L, 1, 0);
+    }
   }
 }
 
