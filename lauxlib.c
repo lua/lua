@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.233 2011/06/16 14:11:04 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.234 2011/07/25 17:18:49 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -330,7 +330,9 @@ LUALIB_API int luaL_checkoption (lua_State *L, int narg, const char *def,
 
 
 LUALIB_API void luaL_checkstack (lua_State *L, int space, const char *msg) {
-  if (!lua_checkstack(L, space)) {
+  /* keep some extra space to run error routines, if needed */
+  const int extra = 2 * LUA_MINSTACK;
+  if (!lua_checkstack(L, space + extra)) {
     if (msg)
       luaL_error(L, "stack overflow (%s)", msg);
     else
