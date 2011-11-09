@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.164 2011/10/07 19:53:05 roberto Exp roberto $
+** $Id: luaconf.h,v 1.165 2011/11/05 15:29:05 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -210,10 +210,14 @@
 
 /*
 @@ luai_writestring/luai_writeline define how 'print' prints its results.
+** They are only used in libraries and the stand-alone program. (The #if
+** avoids including 'stdio.h' everywhere.)
 */
+#if defined(LUA_LIB) || defined(lua_c) || defined(luaall_c)
 #include <stdio.h>
 #define luai_writestring(s,l)	fwrite((s), sizeof(char), (l), stdout)
 #define luai_writeline()	(luai_writestring("\n", 1), fflush(stdout))
+#endif
 
 /*
 @@ luai_writestringerror defines how to print error messages.
