@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.265 2011/07/27 12:14:06 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.266 2011/09/30 12:43:54 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -391,16 +391,27 @@ static int luaB_select (lua_State *L) {
 }
 
 
-static int pcallcont (lua_State *L) {
-  int errfunc = 0;  /* =0 to avoid warnings */
-  int status = lua_getctx(L, &errfunc);
-  lua_assert(status != LUA_OK);
-  lua_pushboolean(L, (status == LUA_YIELD));  /* first result (status) */
-  if (errfunc)  /* came from xpcall? */
+static int finishpcall (lua_State *L, int status, int isx) {
+  if (!lua_checkstack(L, 1)) {  /* no space for extra boolean? */
+    lua_settop(L, 0);  /* create space for return values */
+    lua_pushboolean(L, 0);
+    lua_pushstring(L, "stack overflow");
+    return 2;  /* return false, msg */
+  }
+  lua_pushboolean(L, status);  /* first result (status) */
+  if (isx)  /* came from xpcall? */
     lua_replace(L, 1);  /* put first result in place of error function */
   else  /* came from pcall */
-    lua_insert(L, 1);  /* open space for first result */
+    lua_insert(L, 1);  /* insert first result before the others */
   return lua_gettop(L);
+}
+
+
+static int pcallcont (lua_State *L) {
+  int isx = 0;  /* =0 to avoid warnings */
+  int status = lua_getctx(L, &isx);
+  lua_assert(status != LUA_OK);
+  return finishpcall(L, (status == LUA_YIELD), isx);
 }
 
 
@@ -408,10 +419,7 @@ static int luaB_pcall (lua_State *L) {
   int status;
   luaL_checkany(L, 1);
   status = lua_pcallk(L, lua_gettop(L) - 1, LUA_MULTRET, 0, 0, pcallcont);
-  luaL_checkstack(L, 1, NULL);
-  lua_pushboolean(L, (status == LUA_OK));
-  lua_insert(L, 1);
-  return lua_gettop(L);  /* return status + all results */
+  return finishpcall(L, (status == LUA_OK), 0);
 }
 
 
@@ -423,10 +431,7 @@ static int luaB_xpcall (lua_State *L) {
   lua_copy(L, 2, 1);  /* ...and error handler */
   lua_replace(L, 2);
   status = lua_pcallk(L, n - 2, LUA_MULTRET, 1, 1, pcallcont);
-  luaL_checkstack(L, 1, NULL);
-  lua_pushboolean(L, (status == LUA_OK));
-  lua_replace(L, 1);
-  return lua_gettop(L);  /* return status + all results */
+  return finishpcall(L, (status == LUA_OK), 1);
 }
 
 
