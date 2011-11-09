@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.103 2011/08/02 18:00:01 roberto Exp roberto $
+** $Id: liolib.c,v 2.104 2011/09/13 21:09:04 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -488,9 +488,10 @@ static int io_readline (lua_State *L) {
   if (!lua_isnil(L, -n))  /* read at least one value? */
     return n;  /* return them */
   else {  /* first result is nil: EOF or error */
-    if (!lua_isnil(L, -1))  /* is there error information? */
-      return luaL_error(L, "%s", lua_tostring(L, -1));  /* error */
-    /* else EOF */
+    if (n > 1) {  /* is there error information? */
+      /* 2nd result is error message */
+      return luaL_error(L, "%s", lua_tostring(L, -n + 1));
+    }
     if (lua_toboolean(L, lua_upvalueindex(3))) {  /* generator created file? */
       lua_settop(L, 0);
       lua_pushvalue(L, lua_upvalueindex(1));
