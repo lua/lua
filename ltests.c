@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.122 2011/08/23 17:24:34 roberto Exp roberto $
+** $Id: ltests.c,v 2.123 2011/09/24 21:11:29 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1257,7 +1257,8 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       lua_pushinteger(L1, i);
     }
     else if EQ("checkstack") {
-      luaL_checkstack(L1, getnum, NULL);
+      int sz = getnum;
+      luaL_checkstack(L1, sz, getstring);
     }
     else if EQ("newmetatable") {
       lua_pushboolean(L1, luaL_newmetatable(L1, getstring));
