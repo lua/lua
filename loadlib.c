@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.101 2011/11/06 13:59:12 roberto Exp roberto $
+** $Id: loadlib.c,v 1.102 2011/11/09 15:18:04 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -344,19 +344,21 @@ static const char *searchpath (lua_State *L, const char *name,
                                              const char *path,
                                              const char *sep,
                                              const char *dirsep) {
+  int nerr = 0;  /* number of entries in possible error message */
   if (*sep != '\0')  /* non-empty separator? */
     name = luaL_gsub(L, name, sep, dirsep);  /* replace it by 'dirsep' */
-  lua_pushliteral(L, "");  /* error accumulator */
   while ((path = pushnexttemplate(L, path)) != NULL) {
     const char *filename = luaL_gsub(L, lua_tostring(L, -1),
                                      LUA_PATH_MARK, name);
     lua_remove(L, -2);  /* remove path template */
     if (readable(filename))  /* does file exist and is readable? */
       return filename;  /* return that file name */
+    luaL_checkstack(L, 1, "too many templates in path");
     lua_pushfstring(L, "\n\tno file " LUA_QS, filename);
     lua_remove(L, -2);  /* remove file name */
-    lua_concat(L, 2);  /* add entry to possible error message */
+    nerr++;
   }
+  lua_concat(L, nerr);  /* create error message */
   return NULL;  /* not found */
 }
 
@@ -467,35 +469,46 @@ static int searcher_preload (lua_State *L) {
 }
 
 
-static int ll_require (lua_State *L) {
-  const char *name = luaL_checkstring(L, 1);
+static void findloader (lua_State *L, const char *name) {
   int i;
-  lua_settop(L, 1);  /* _LOADED table will be at index 2 */
-  lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
-  lua_getfield(L, 2, name);
-  if (lua_toboolean(L, -1))  /* is it there? */
-    return 1;  /* package is already loaded */
-  /* else must load it; iterate over available seachers to find a loader */
-  lua_getfield(L, lua_upvalueindex(1), "searchers");
-  if (!lua_istable(L, -1))
+  int nerr = 0;  /* number of error messages on the stack */
+  lua_getfield(L, lua_upvalueindex(1), "searchers");  /* will be at index 3 */
+  if (!lua_istable(L, 3))
     luaL_error(L, LUA_QL("package.searchers") " must be a table");
-  lua_pushliteral(L, "");  /* error message accumulator */
-  for (i=1; ; i++) {
-    lua_rawgeti(L, -2, i);  /* get a seacher */
-    if (lua_isnil(L, -1))  /* no more searchers? */
+  /*  iterate over available seachers to find a loader */
+  for (i = 1; ; i++) {
+    lua_rawgeti(L, 3, i);  /* get a seacher */
+    if (lua_isnil(L, -1)) {  /* no more searchers? */
+      lua_pop(L, 1);  /* remove nil */
+      lua_concat(L, nerr);  /* concatenate all messages */
       luaL_error(L, "module " LUA_QS " not found:%s",
-                    name, lua_tostring(L, -2));
+                    name, lua_tostring(L, -1));
+    }
     lua_pushstring(L, name);
     lua_call(L, 1, 2);  /* call it */
     if (lua_isfunction(L, -2))  /* did it find a loader? */
-      break;  /* module loader found */
+      return;  /* module loader found */
     else if (lua_isstring(L, -2)) {  /* searcher returned error message? */
       lua_pop(L, 1);  /* remove extra return */
-      lua_concat(L, 2);  /* accumulate error message */
+      nerr++;  /* accumulate error message */
+      luaL_checkstack(L, 1, "too many searchers");
     }
     else
       lua_pop(L, 2);  /* remove both returns */
   }
+}
+
+
+static int ll_require (lua_State *L) {
+  const char *name = luaL_checkstring(L, 1);
+  lua_settop(L, 1);  /* _LOADED table will be at index 2 */
+  lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
+  lua_getfield(L, 2, name);  /* _LOADED[name] */
+  if (lua_toboolean(L, -1))  /* is it there? */
+    return 1;  /* package is already loaded */
+  /* else must load package */
+  lua_pop(L, 1);  /* remove 'getfield' result */
+  findloader(L, name);
   lua_pushstring(L, name);  /* pass name as argument to module loader */
   lua_insert(L, -2);  /* name is 1st argument (before search data) */
   lua_call(L, 2, 1);  /* run loader to load module */
