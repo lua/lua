@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.102 2011/11/09 15:18:04 roberto Exp roberto $
+** $Id: loadlib.c,v 1.103 2011/11/09 19:11:20 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -344,7 +344,8 @@ static const char *searchpath (lua_State *L, const char *name,
                                              const char *path,
                                              const char *sep,
                                              const char *dirsep) {
-  int nerr = 0;  /* number of entries in possible error message */
+  luaL_Buffer msg;  /* to build error message */
+  luaL_buffinit(L, &msg);
   if (*sep != '\0')  /* non-empty separator? */
     name = luaL_gsub(L, name, sep, dirsep);  /* replace it by 'dirsep' */
   while ((path = pushnexttemplate(L, path)) != NULL) {
@@ -353,12 +354,11 @@ static const char *searchpath (lua_State *L, const char *name,
     lua_remove(L, -2);  /* remove path template */
     if (readable(filename))  /* does file exist and is readable? */
       return filename;  /* return that file name */
-    luaL_checkstack(L, 1, "too many templates in path");
     lua_pushfstring(L, "\n\tno file " LUA_QS, filename);
     lua_remove(L, -2);  /* remove file name */
-    nerr++;
+    luaL_addvalue(&msg);  /* concatenate error msg. entry */
   }
-  lua_concat(L, nerr);  /* create error message */
+  luaL_pushresult(&msg);  /* create error message */
   return NULL;  /* not found */
 }
 
@@ -471,7 +471,8 @@ static int searcher_preload (lua_State *L) {
 
 static void findloader (lua_State *L, const char *name) {
   int i;
-  int nerr = 0;  /* number of error messages on the stack */
+  luaL_Buffer msg;  /* to build error message */
+  luaL_buffinit(L, &msg);
   lua_getfield(L, lua_upvalueindex(1), "searchers");  /* will be at index 3 */
   if (!lua_istable(L, 3))
     luaL_error(L, LUA_QL("package.searchers") " must be a table");
@@ -480,7 +481,7 @@ static void findloader (lua_State *L, const char *name) {
     lua_rawgeti(L, 3, i);  /* get a seacher */
     if (lua_isnil(L, -1)) {  /* no more searchers? */
       lua_pop(L, 1);  /* remove nil */
-      lua_concat(L, nerr);  /* concatenate all messages */
+      luaL_pushresult(&msg);  /* create error message */
       luaL_error(L, "module " LUA_QS " not found:%s",
                     name, lua_tostring(L, -1));
     }
@@ -490,8 +491,7 @@ static void findloader (lua_State *L, const char *name) {
       return;  /* module loader found */
     else if (lua_isstring(L, -2)) {  /* searcher returned error message? */
       lua_pop(L, 1);  /* remove extra return */
-      nerr++;  /* accumulate error message */
-      luaL_checkstack(L, 1, "too many searchers");
+      luaL_addvalue(&msg);  /* concatenate error message */
     }
     else
       lua_pop(L, 2);  /* remove both returns */
