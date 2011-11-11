@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.104 2011/09/13 21:09:04 roberto Exp roberto $
+** $Id: liolib.c,v 2.105 2011/11/09 14:10:43 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -102,11 +102,7 @@
 #define IO_OUTPUT	(IO_PREFIX "output")
 
 
-typedef struct LStream {
-  FILE *f;  /* stream */
-  lua_CFunction closef;  /* to close stream (NULL for closed streams) */
-} LStream;
-
+typedef luaIO_Stream LStream;
 
 
 #define tolstream(L)	((LStream *)luaL_checkudata(L, 1, LUA_FILEHANDLE))
