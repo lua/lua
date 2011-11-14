@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.267 2011/11/09 19:28:27 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.268 2011/11/09 19:38:00 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -255,7 +255,14 @@ static int load_aux (lua_State *L, int status) {
 
 static int luaB_loadfile (lua_State *L) {
   const char *fname = luaL_optstring(L, 1, NULL);
-  return load_aux(L, luaL_loadfile(L, fname));
+  const char *mode = luaL_optstring(L, 2, NULL);
+  int env = !lua_isnone(L, 3);  /* 'env' parameter? */
+  int status = luaL_loadfilex(L, fname, mode);
+  if (status == LUA_OK && env) {  /* 'env' parameter? */
+    lua_pushvalue(L, 3);
+    lua_setupvalue(L, -2, 1);  /* set it as 1st upvalue of loaded chunk */
+  }
+  return load_aux(L, status);
 }
 
 
@@ -277,11 +284,11 @@ typedef struct {
 ** pushed on the stack) in case of errors.
 */
 static const char *checkrights (lua_State *L, const char *mode, const char *s) {
-  if (strchr(mode, 'b') == NULL && *s == LUA_SIGNATURE[0])
-    return lua_pushstring(L, "attempt to load a binary chunk");
-  if (strchr(mode, 't') == NULL && *s != LUA_SIGNATURE[0])
-    return lua_pushstring(L, "attempt to load a text chunk");
-  return NULL;  /* chunk in allowed format */
+  const char *x = (*s == LUA_SIGNATURE[0]) ? "binary" : "text";
+  if (strchr(mode, x[0]) == NULL)
+    return lua_pushfstring(L,
+       "attempt to load a %s chunk (mode is " LUA_QS ")", x, mode);
+  else return NULL;
 }
 
 

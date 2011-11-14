@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.234 2011/07/25 17:18:49 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.235 2011/11/09 19:08:55 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -331,7 +331,7 @@ LUALIB_API int luaL_checkoption (lua_State *L, int narg, const char *def,
 
 LUALIB_API void luaL_checkstack (lua_State *L, int space, const char *msg) {
   /* keep some extra space to run error routines, if needed */
-  const int extra = 2 * LUA_MINSTACK;
+  const int extra = LUA_MINSTACK;
   if (!lua_checkstack(L, space + extra)) {
     if (msg)
       luaL_error(L, "stack overflow (%s)", msg);
@@ -592,6 +592,16 @@ static int errfile (lua_State *L, const char *what, int fnameindex) {
 }
 
 
+static int checkmode (lua_State *L, const char *mode, const char *x) {
+  if (mode && strchr(mode, x[0]) == NULL) {
+    lua_pushfstring(L,
+       "attempt to load a %s chunk (mode is " LUA_QS ")", x, mode);
+    return LUA_ERRFILE;
+  }
+  else return LUA_OK;
+}
+
+
 static int skipBOM (LoadF *lf) {
   const char *p = "\xEF\xBB\xBF";  /* Utf8 BOM mark */
   int c;
@@ -624,7 +634,8 @@ static int skipcomment (LoadF *lf, int *cp) {
 }
 
 
-LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
+LUALIB_API int luaL_loadfilex (lua_State *L, const char *filename,
+                                             const char *mode) {
   LoadF lf;
   int status, readstatus;
   int c;
@@ -640,14 +651,23 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   }
   if (skipcomment(&lf, &c))  /* read initial portion */
     lf.buff[lf.n++] = '\n';  /* add line to correct line numbers */
-  if (c == LUA_SIGNATURE[0] && filename) {  /* binary file? */
-    lf.f = freopen(filename, "rb", lf.f);  /* reopen in binary mode */
-    if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
-    skipcomment(&lf, &c);  /* re-read initial portion */
+  if (c == LUA_SIGNATURE[0]) {  /* binary file? */
+    if ((status = checkmode(L, mode, "binary")) != LUA_OK)
+      goto closefile;
+    if (filename) {
+      lf.f = freopen(filename, "rb", lf.f);  /* reopen in binary mode */
+      if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
+      skipcomment(&lf, &c);  /* re-read initial portion */
+    }
+  }
+  else {  /* text file */
+    if ((status = checkmode(L, mode, "text")) != LUA_OK)
+      goto closefile;
   }
   if (c != EOF)
     lf.buff[lf.n++] = c;  /* 'c' is the first character of the stream */
   status = lua_load(L, getF, &lf, lua_tostring(L, -1));
+ closefile:
   readstatus = ferror(lf.f);
   if (filename) fclose(lf.f);  /* close file (even in case of errors) */
   if (readstatus) {
