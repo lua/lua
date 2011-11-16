@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.155 2011/10/24 16:53:05 roberto Exp roberto $
+** $Id: lapi.c,v 2.156 2011/10/31 17:48:51 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1182,7 +1182,6 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
 
 
 
-
 static const char *aux_upvalue (StkId fi, int n, TValue **val,
                                 GCObject **owner) {
   switch (ttype(fi)) {
@@ -1201,10 +1200,7 @@ static const char *aux_upvalue (StkId fi, int n, TValue **val,
       *val = f->upvals[n-1]->v;
       if (owner) *owner = obj2gco(f->upvals[n - 1]);
       name = p->upvalues[n-1].name;
-      if (name == NULL)  /* no debug information? */
-        return "";
-      else
-      return getstr(name);
+      return (name == NULL) ? "" : getstr(name);
     }
     default: return NULL;  /* not a closure */
   }
@@ -1213,7 +1209,7 @@ static const char *aux_upvalue (StkId fi, int n, TValue **val,
 
 LUA_API const char *lua_getupvalue (lua_State *L, int funcindex, int n) {
   const char *name;
-  TValue *val;
+  TValue *val = NULL;  /* initialized to avoid warnings */
   lua_lock(L);
   name = aux_upvalue(index2addr(L, funcindex), n, &val, NULL);
   if (name) {
@@ -1227,8 +1223,8 @@ LUA_API const char *lua_getupvalue (lua_State *L, int funcindex, int n) {
 
 LUA_API const char *lua_setupvalue (lua_State *L, int funcindex, int n) {
   const char *name;
-  TValue *val;
-  GCObject *owner;
+  TValue *val = NULL;  /* initialized to avoid warnings */
+  GCObject *owner = NULL;  /* initialized to avoid warnings */
   StkId fi;
   lua_lock(L);
   fi = index2addr(L, funcindex);
