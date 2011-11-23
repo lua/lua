@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.268 2011/11/09 19:38:00 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.269 2011/11/14 17:10:24 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -160,7 +160,7 @@ static int luaB_rawset (lua_State *L) {
 static int luaB_collectgarbage (lua_State *L) {
   static const char *const opts[] = {"stop", "restart", "collect",
     "count", "step", "setpause", "setstepmul",
-    "setmajorinc", "isrunning", "gen", "inc", NULL};
+    "setmajorinc", "isrunning", "generational", "incremental", NULL};
   static const int optsnum[] = {LUA_GCSTOP, LUA_GCRESTART, LUA_GCCOLLECT,
     LUA_GCCOUNT, LUA_GCSTEP, LUA_GCSETPAUSE, LUA_GCSETSTEPMUL,
     LUA_GCSETMAJORINC, LUA_GCISRUNNING, LUA_GCGEN, LUA_GCINC};
