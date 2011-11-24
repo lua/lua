@@ -1,7 +1,6 @@
 body {
 	color: #000000 ;
 	background-color: #FFFFFF ;
-	font-family: sans-serif ;
 	font-family: Helvetica, Arial, sans-serif ;
 	text-align: justify ;
 	margin-right: 20px ;
@@ -18,12 +17,13 @@ h2 {
 	padding-top: 0.4em ;
 	padding-bottom: 0.4em ;
 	padding-left: 20px ;
+	padding-right: 20px ;
 	margin-left: -20px ;
 	background-color: #E0E0FF ;
 }
 
 h3 {
-	padding-left: 8px ;
+	padding-left: 0.5em ;
 	border-left: solid #E0E0FF 1em ;
 }
 
@@ -76,7 +76,6 @@ input[type=text] {
 	-moz-border-radius: 2em ;
 	background-image: url('images/search.png') ;
 	background-repeat: no-repeat;
-	background-position: left center ;
 	background-position: 4px center ;
 	padding-left: 20px ;
 	height: 2em ;

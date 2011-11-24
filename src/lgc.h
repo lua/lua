@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.50 2011/01/26 16:30:02 roberto Exp $
+** $Id: lgc.h,v 2.52 2011/10/03 17:54:25 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -63,9 +63,6 @@
 #define l_setbit(x,b)		setbits(x, bitmask(b))
 #define resetbit(x,b)		resetbits(x, bitmask(b))
 #define testbit(x,b)		testbits(x, bitmask(b))
-#define set2bits(x,b1,b2)	setbits(x, (bit2mask(b1, b2)))
-#define reset2bits(x,b1,b2)	resetbits(x, (bit2mask(b1, b2)))
-
 
 
 /* Layout for bit use in `marked' field: */
@@ -125,7 +122,6 @@
 #define luaC_barrierproto(L,p,c) \
    { if (isblack(obj2gco(p))) luaC_barrierproto_(L,p,c); }
 
-LUAI_FUNC void luaC_separateudata (lua_State *L, int all);
 LUAI_FUNC void luaC_freeallobjects (lua_State *L);
 LUAI_FUNC void luaC_step (lua_State *L);
 LUAI_FUNC void luaC_forcestep (lua_State *L);

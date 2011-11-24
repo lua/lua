@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.57 2011/04/07 18:14:12 roberto Exp $
+** $Id: lcode.h,v 1.58 2011/08/30 16:26:41 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -62,6 +62,7 @@ LUAI_FUNC int luaK_exp2RK (FuncState *fs, expdesc *e);
 LUAI_FUNC void luaK_self (FuncState *fs, expdesc *e, expdesc *key);
 LUAI_FUNC void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k);
 LUAI_FUNC void luaK_goiftrue (FuncState *fs, expdesc *e);
+LUAI_FUNC void luaK_goiffalse (FuncState *fs, expdesc *e);
 LUAI_FUNC void luaK_storevar (FuncState *fs, expdesc *var, expdesc *e);
 LUAI_FUNC void luaK_setreturns (FuncState *fs, expdesc *e, int nresults);
 LUAI_FUNC void luaK_setoneret (FuncState *fs, expdesc *e);

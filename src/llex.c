@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.53 2011/07/08 20:01:38 roberto Exp $
+** $Id: llex.c,v 2.58 2011/08/15 19:41:58 roberto Exp $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -126,8 +126,10 @@ TString *luaX_newstring (LexState *ls, const char *str, size_t l) {
   TValue *o;  /* entry for `str' */
   TString *ts = luaS_newlstr(L, str, l);  /* create new string */
   setsvalue2s(L, L->top++, ts);  /* temporarily anchor it in stack */
-  o = luaH_setstr(L, ls->fs->h, ts);
-  if (ttisnil(o)) {
+  o = luaH_set(L, ls->fs->h, L->top - 1);
+  if (ttisnil(o)) {  /* not in use yet? (see 'addK') */
+    /* boolean value does not need GC barrier;
+       table has no metatable, so it does not need to invalidate cache */
     setbvalue(o, 1);  /* t[string] = true */
     luaC_checkGC(L);
   }
@@ -297,39 +299,29 @@ static void escerror (LexState *ls, int *c, int n, const char *msg) {
 
 
 static int readhexaesc (LexState *ls) {
-  int c[3];  /* keep input for error message */
-  int i = 2;  /* at least 'x?' will go to error message */
-  c[0] = 'x';
-  c[1] = next(ls);  /* first hexa digit */
-  if (lisxdigit(c[1])) {
-    c[i++] = next(ls);  /* second hexa digit */
-    if (lisxdigit(c[2]))
-      return (luaO_hexavalue(c[1]) << 4) + luaO_hexavalue(c[2]);
-    /* else go through to error */
+  int c[3], i;  /* keep input for error message */
+  int r = 0;  /* result accumulator */
+  c[0] = 'x';  /* for error message */
+  for (i = 1; i < 3; i++) {  /* read two hexa digits */
+    c[i] = next(ls);
+    if (!lisxdigit(c[i]))
+      escerror(ls, c, i + 1, "hexadecimal digit expected");
+    r = (r << 4) + luaO_hexavalue(c[i]);
   }
-  escerror(ls, c, i, "hexadecimal digit expected");
-  return 0;  /* to avoid warnings */
+  return r;
 }
 
 
 static int readdecesc (LexState *ls) {
-  int c[3], r;
-  int i = 2;  /* at least two chars will be read */
-  c[0] = ls->current;  /* first char must be a digit */
-  c[1] = next(ls);  /* read second char */
-  r = c[0] - '0';  /* partial result */
-  if (lisdigit(c[1])) {
-    c[i++] = next(ls);  /* read third char */
-    r = 10*r + c[1] - '0';  /* update result */
-    if (lisdigit(c[2])) {
-      r = 10*r + c[2] - '0';  /* update result */
-      if (r > UCHAR_MAX)
-        escerror(ls, c, i, "decimal escape too large");
-      return r;
-    }
+  int c[3], i;
+  int r = 0;  /* result accumulator */
+  for (i = 0; i < 3 && lisdigit(ls->current); i++) {  /* read up to 3 digits */
+    c[i] = ls->current;
+    r = 10*r + c[i] - '0';
+    next(ls);
   }
-  /* else, has read one character that was not a digit */
-  zungetc(ls->z);  /* return it to input stream */
+  if (r > UCHAR_MAX)
+    escerror(ls, c, i, "decimal escape too large");
   return r;
 }
 
@@ -349,37 +341,38 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
         int c;  /* final character to be saved */
         next(ls);  /* do not save the `\' */
         switch (ls->current) {
-          case 'a': c = '\a'; break;
-          case 'b': c = '\b'; break;
-          case 'f': c = '\f'; break;
-          case 'n': c = '\n'; break;
-          case 'r': c = '\r'; break;
-          case 't': c = '\t'; break;
-          case 'v': c = '\v'; break;
-          case 'x': c = readhexaesc(ls); break;
-          case '\n':
-          case '\r': save(ls, '\n'); inclinenumber(ls); continue;
-          case '\\': case '\"': case '\'': c = ls->current; break;
-          case EOZ: continue;  /* will raise an error next loop */
+          case 'a': c = '\a'; goto read_save;
+          case 'b': c = '\b'; goto read_save;
+          case 'f': c = '\f'; goto read_save;
+          case 'n': c = '\n'; goto read_save;
+          case 'r': c = '\r'; goto read_save;
+          case 't': c = '\t'; goto read_save;
+          case 'v': c = '\v'; goto read_save;
+          case 'x': c = readhexaesc(ls); goto read_save;
+          case '\n': case '\r':
+            inclinenumber(ls); c = '\n'; goto only_save;
+          case '\\': case '\"': case '\'':
+            c = ls->current; goto read_save;
+          case EOZ: goto no_save;  /* will raise an error next loop */
           case 'z': {  /* zap following span of spaces */
             next(ls);  /* skip the 'z' */
             while (lisspace(ls->current)) {
               if (currIsNewline(ls)) inclinenumber(ls);
               else next(ls);
             }
-            continue;  /* do not save 'c' */
+            goto no_save;
           }
           default: {
             if (!lisdigit(ls->current))
               escerror(ls, &ls->current, 1, "invalid escape sequence");
             /* digital escape \ddd */
             c = readdecesc(ls);
-            break;
+            goto only_save;
           }
         }
-        next(ls);
-        save(ls, c);
-        break;
+       read_save: next(ls);  /* read next character */
+       only_save: save(ls, c);  /* save 'c' */
+       no_save: break;
       }
       default:
         save_and_next(ls);

@@ -1,5 +1,5 @@
 /*
-** $Id: lcorolib.c,v 1.2 2010/07/02 11:38:13 roberto Exp $
+** $Id: lcorolib.c,v 1.3 2011/08/23 17:24:34 roberto Exp $
 ** Coroutine Library
 ** See Copyright Notice in lua.h
 */
@@ -28,7 +28,7 @@ static int auxresume (lua_State *L, lua_State *co, int narg) {
     return -1;  /* error flag */
   }
   lua_xmove(L, co, narg);
-  status = lua_resume(co, narg);
+  status = lua_resume(co, L, narg);
   if (status == LUA_OK || status == LUA_YIELD) {
     int nres = lua_gettop(co);
     if (!lua_checkstack(L, nres + 1)) {

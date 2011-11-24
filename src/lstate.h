@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.72 2011/06/02 19:31:40 roberto Exp $
+** $Id: lstate.h,v 2.74 2011/09/30 12:45:07 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -46,8 +46,6 @@ struct lua_longjmp;  /* defined in ldo.c */
 /* extra stack space to handle TM calls and some other extras */
 #define EXTRA_STACK   5
 
-
-#define BASIC_CI_SIZE           8
 
 #define BASIC_STACK_SIZE        (2*LUA_MINSTACK)
 
@@ -118,7 +116,6 @@ typedef struct global_State {
   lu_mem lastmajormem;  /* memory in use after last major collection */
   stringtable strt;  /* hash table for strings */
   TValue l_registry;
-  unsigned short nCcalls;  /* number of nested C calls */
   lu_byte currentwhite;
   lu_byte gcstate;  /* state of garbage collector */
   lu_byte gckind;  /* kind of GC running */
@@ -161,6 +158,7 @@ struct lua_State {
   StkId stack;  /* stack base */
   int stacksize;
   unsigned short nny;  /* number of non-yieldable calls in stack */
+  unsigned short nCcalls;  /* number of nested C calls */
   lu_byte hookmask;
   lu_byte allowhook;
   int basehookcount;

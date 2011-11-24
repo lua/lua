@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.278 2011/07/02 16:00:15 roberto Exp $
+** $Id: lua.h,v 1.281 2011/10/24 16:53:05 roberto Exp $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -19,7 +19,7 @@
 #define LUA_VERSION_MAJOR	"5"
 #define LUA_VERSION_MINOR	"2"
 #define LUA_VERSION_NUM		502
-#define LUA_VERSION_RELEASE	"0" " (beta)"
+#define LUA_VERSION_RELEASE	"0"
 
 #define LUA_VERSION	"Lua " LUA_VERSION_MAJOR "." LUA_VERSION_MINOR
 #define LUA_RELEASE	LUA_VERSION "." LUA_VERSION_RELEASE
@@ -215,10 +215,12 @@ LUA_API int   (lua_pushthread) (lua_State *L);
 /*
 ** get functions (Lua -> stack)
 */
+LUA_API void  (lua_getglobal) (lua_State *L, const char *var);
 LUA_API void  (lua_gettable) (lua_State *L, int idx);
 LUA_API void  (lua_getfield) (lua_State *L, int idx, const char *k);
 LUA_API void  (lua_rawget) (lua_State *L, int idx);
 LUA_API void  (lua_rawgeti) (lua_State *L, int idx, int n);
+LUA_API void  (lua_rawgetp) (lua_State *L, int idx, const void *p);
 LUA_API void  (lua_createtable) (lua_State *L, int narr, int nrec);
 LUA_API void *(lua_newuserdata) (lua_State *L, size_t sz);
 LUA_API int   (lua_getmetatable) (lua_State *L, int objindex);
@@ -228,10 +230,12 @@ LUA_API void  (lua_getuservalue) (lua_State *L, int idx);
 /*
 ** set functions (stack -> Lua)
 */
+LUA_API void  (lua_setglobal) (lua_State *L, const char *var);
 LUA_API void  (lua_settable) (lua_State *L, int idx);
 LUA_API void  (lua_setfield) (lua_State *L, int idx, const char *k);
 LUA_API void  (lua_rawset) (lua_State *L, int idx);
 LUA_API void  (lua_rawseti) (lua_State *L, int idx, int n);
+LUA_API void  (lua_rawsetp) (lua_State *L, int idx, const void *p);
 LUA_API int   (lua_setmetatable) (lua_State *L, int objindex);
 LUA_API void  (lua_setuservalue) (lua_State *L, int idx);
 
@@ -261,7 +265,7 @@ LUA_API int (lua_dump) (lua_State *L, lua_Writer writer, void *data);
 LUA_API int  (lua_yieldk) (lua_State *L, int nresults, int ctx,
                            lua_CFunction k);
 #define lua_yield(L,n)		lua_yieldk(L, (n), 0, NULL)
-LUA_API int  (lua_resume) (lua_State *L, int narg);
+LUA_API int  (lua_resume) (lua_State *L, lua_State *from, int narg);
 LUA_API int  (lua_status) (lua_State *L);
 
 /*
@@ -313,13 +317,6 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 #define lua_pop(L,n)		lua_settop(L, -(n)-1)
 
 #define lua_newtable(L)		lua_createtable(L, 0, 0)
-
-#define lua_setglobal(L,s)  \
-	(lua_pushglobaltable(L), lua_pushvalue(L, -2), \
-	 lua_setfield(L, -2, (s)), lua_pop(L, 2))
-
-#define lua_getglobal(L,s) \
-	(lua_pushglobaltable(L), lua_getfield(L, -1, (s)), lua_remove(L, -2))
 
 #define lua_register(L,n,f) (lua_pushcfunction(L, (f)), lua_setglobal(L, (n)))
 

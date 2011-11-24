@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.200 2011/06/16 14:30:58 roberto Exp $
+** $Id: lua.c,v 1.202 2011/08/17 20:19:52 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -118,6 +118,7 @@ static void print_usage (const char *badoption) {
   "  -i       enter interactive mode after executing " LUA_QL("script") "\n"
   "  -l name  require library " LUA_QL("name") "\n"
   "  -v       show version information\n"
+  "  -E       ignore environment variables\n"
   "  --       stop handling options\n"
   "  -        stop handling options and execute stdin\n"
   ,
@@ -348,7 +349,16 @@ static int handle_script (lua_State *L, char **argv, int n) {
 #define noextrachars(x)		{if ((x)[2] != '\0') return -1;}
 
 
-static int collectargs (char **argv, int *pi, int *pv, int *pe) {
+/* indices of various argument indicators in array args */
+#define has_i		0	/* -i */
+#define has_v		1	/* -v */
+#define has_e		2	/* -e */
+#define has_E		3	/* -E */
+
+#define num_has		4	/* number of 'has_*' */
+
+
+static int collectargs (char **argv, int *args) {
   int i;
   for (i = 1; argv[i] != NULL; i++) {
     if (argv[i][0] != '-')  /* not an option? */
@@ -359,15 +369,18 @@ static int collectargs (char **argv, int *pi, int *pv, int *pe) {
         return (argv[i+1] != NULL ? i+1 : 0);
       case '\0':
         return i;
+      case 'E':
+        args[has_E] = 1;
+        break;
       case 'i':
         noextrachars(argv[i]);
-        *pi = 1;  /* go through */
+        args[has_i] = 1;  /* go through */
       case 'v':
         noextrachars(argv[i]);
-        *pv = 1;
+        args[has_v] = 1;
         break;
       case 'e':
-        *pe = 1;  /* go through */
+        args[has_e] = 1;  /* go through */
       case 'l':  /* both options need an argument */
         if (argv[i][2] == '\0') {  /* no concatenated argument? */
           i++;  /* try next 'argv' */
@@ -426,32 +439,46 @@ static int handle_luainit (lua_State *L) {
 }
 
 
+static void resetpaths (lua_State *L) {
+  lua_getglobal(L, "package");
+  if (!lua_istable(L, -1))  /* no module 'package'? */
+    return;  /* nothing to be done */
+  lua_pushliteral(L, LUA_PATH_DEFAULT);
+  lua_setfield(L, -2, "path");  /* package.path = default */
+  lua_pushliteral(L, LUA_CPATH_DEFAULT);
+  lua_setfield(L, -2, "cpath");  /* package.cpath = default */
+  lua_pop(L, 1);  /* remove 'package' */
+}
+
+
 static int pmain (lua_State *L) {
   int argc = (int)lua_tointeger(L, 1);
   char **argv = (char **)lua_touserdata(L, 2);
   int script;
-  int has_i = 0, has_v = 0, has_e = 0;
+  int args[num_has];
+  args[has_i] = args[has_v] = args[has_e] = args[has_E] = 0;
   if (argv[0] && argv[0][0]) progname = argv[0];
-  script = collectargs(argv, &has_i, &has_v, &has_e);
+  script = collectargs(argv, args);
   if (script < 0) {  /* invalid arg? */
     print_usage(argv[-script]);
     return 0;
   }
-  if (has_v) print_version();
+  if (args[has_v]) print_version();
   /* open standard libraries */
   luaL_checkversion(L);
   lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
   luaL_openlibs(L);  /* open libraries */
   lua_gc(L, LUA_GCRESTART, 0);
-  /* run LUA_INIT */
-  if (handle_luainit(L) != LUA_OK) return 0;
+  if (args[has_E])  /* avoid LUA_INIT? */
+    resetpaths(L);
+  else if (handle_luainit(L) != LUA_OK) return 0;
   /* execute arguments -e and -l */
   if (!runargs(L, argv, (script > 0) ? script : argc)) return 0;
   /* execute main script (if there is one) */
   if (script && handle_script(L, argv, script) != LUA_OK) return 0;
-  if (has_i)  /* -i option? */
+  if (args[has_i])  /* -i option? */
     dotty(L);
-  else if (script == 0 && !has_e && !has_v) {  /* no arguments? */
+  else if (script == 0 && !args[has_e] && !args[has_v]) {  /* no arguments? */
     if (lua_stdin_is_tty()) {
       print_version();
       dotty(L);

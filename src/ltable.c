@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.60 2011/06/16 14:14:31 roberto Exp $
+** $Id: ltable.c,v 2.65 2011/09/30 12:45:27 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -62,13 +62,6 @@
 
 
 #define hashpointer(t,p)	hashmod(t, IntPoint(p))
-
-
-/*
-** number of ints inside a lua_Number
-*/
-#define numints		cast_int(sizeof(lua_Number)/sizeof(int))
-
 
 
 #define dummynode		(&dummynode_)
@@ -152,7 +145,7 @@ static int findindex (lua_State *L, Table *t, StkId key) {
       /* key may be dead already, but it is ok to use it in `next' */
       if (luaV_rawequalobj(gkey(n), key) ||
             (ttisdeadkey(gkey(n)) && iscollectable(key) &&
-             gcvalue(gkey(n)) == gcvalue(key))) {
+             deadvalue(gkey(n)) == gcvalue(key))) {
         i = cast_int(n - gnode(t, 0));  /* key index in hash table */
         /* hash elements are numbered after array ones */
         return i + t->sizearray;
@@ -314,7 +307,7 @@ void luaH_resize (lua_State *L, Table *t, int nasize, int nhsize) {
     /* re-insert elements from vanishing slice */
     for (i=nasize; i<oldasize; i++) {
       if (!ttisnil(&t->array[i]))
-        setobjt2t(L, luaH_setint(L, t, i+1), &t->array[i]);
+        luaH_setint(L, t, i + 1, &t->array[i]);
     }
     /* shrink array */
     luaM_reallocvector(L, t->array, oldasize, nasize, TValue);
@@ -322,8 +315,11 @@ void luaH_resize (lua_State *L, Table *t, int nasize, int nhsize) {
   /* re-insert elements from hash part */
   for (i = twoto(oldhsize) - 1; i >= 0; i--) {
     Node *old = nold+i;
-    if (!ttisnil(gval(old)))
+    if (!ttisnil(gval(old))) {
+      /* doesn't need barrier/invalidate cache, as entry was
+         already present in the table */
       setobjt2t(L, luaH_set(L, t, gkey(old)), gval(old));
+    }
   }
   if (!isdummy(nold))
     luaM_freearray(L, nold, twoto(oldhsize));  /* free old array */
@@ -398,14 +394,19 @@ static Node *getfreepos (Table *t) {
 ** put new key in its main position; otherwise (colliding node is in its main
 ** position), new key goes to an empty position.
 */
-static TValue *newkey (lua_State *L, Table *t, const TValue *key) {
-  Node *mp = mainposition(t, key);
+TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
+  Node *mp;
+  if (ttisnil(key)) luaG_runerror(L, "table index is nil");
+  else if (ttisnumber(key) && luai_numisnan(L, nvalue(key)))
+    luaG_runerror(L, "table index is NaN");
+  mp = mainposition(t, key);
   if (!ttisnil(gval(mp)) || isdummy(mp)) {  /* main position is taken? */
     Node *othern;
     Node *n = getfreepos(t);  /* get a free place */
     if (n == NULL) {  /* cannot find a free place? */
       rehash(L, t, key);  /* grow table */
-      return luaH_set(L, t, key);  /* re-insert key into grown table */
+      /* whatever called 'newkey' take care of TM cache and GC barrier */
+      return luaH_set(L, t, key);  /* insert key into grown table */
     }
     lua_assert(!isdummy(n));
     othern = mainposition(t, gkey(mp));
@@ -493,41 +494,29 @@ const TValue *luaH_get (Table *t, const TValue *key) {
 }
 
 
+/*
+** beware: when using this function you probably need to check a GC
+** barrier and invalidate the TM cache.
+*/
 TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
   const TValue *p = luaH_get(t, key);
-  t->flags = 0;
   if (p != luaO_nilobject)
     return cast(TValue *, p);
-  else {
-    if (ttisnil(key)) luaG_runerror(L, "table index is nil");
-    else if (ttisnumber(key) && luai_numisnan(L, nvalue(key)))
-      luaG_runerror(L, "table index is NaN");
-    return newkey(L, t, key);
-  }
+  else return luaH_newkey(L, t, key);
 }
 
 
-TValue *luaH_setint (lua_State *L, Table *t, int key) {
+void luaH_setint (lua_State *L, Table *t, int key, TValue *value) {
   const TValue *p = luaH_getint(t, key);
+  TValue *cell;
   if (p != luaO_nilobject)
-    return cast(TValue *, p);
+    cell = cast(TValue *, p);
   else {
     TValue k;
     setnvalue(&k, cast_num(key));
-    return newkey(L, t, &k);
+    cell = luaH_newkey(L, t, &k);
   }
-}
-
-
-TValue *luaH_setstr (lua_State *L, Table *t, TString *key) {
-  const TValue *p = luaH_getstr(t, key);
-  if (p != luaO_nilobject)
-    return cast(TValue *, p);
-  else {
-    TValue k;
-    setsvalue(L, &k, key);
-    return newkey(L, t, &k);
-  }
+  setobj2t(L, cell, value);
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.109 2011/05/05 19:42:25 roberto Exp $
+** $Id: lgc.c,v 2.114 2011/10/03 17:54:25 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -100,12 +100,13 @@ static void reallymarkobject (global_State *g, GCObject *o);
 
 
 /*
-** mark a table entry as dead (therefore removing it from the table)
+** if key is not marked, mark its entry as dead (therefore removing it
+** from the table)
 */
 static void removeentry (Node *n) {
   lua_assert(ttisnil(gval(n)));
-  if (iscollectable(gkey(n)))
-    setdeadvalue(gkey(n));  /* dead key; remove it */
+  if (valiswhite(gkey(n)))
+    setdeadvalue(gkey(n));  /* unused and unmarked key; remove it */
 }
 
 
@@ -116,13 +117,13 @@ static void removeentry (Node *n) {
 ** other objects: if really collected, cannot keep them; for objects
 ** being finalized, keep them in keys, but not in values
 */
-static int iscleared (const TValue *o, int iskey) {
+static int iscleared (const TValue *o) {
   if (!iscollectable(o)) return 0;
   else if (ttisstring(o)) {
     stringmark(rawtsvalue(o));  /* strings are `values', so are never weak */
     return 0;
   }
-  else return iswhite(gcvalue(o)) || (!iskey && isfinalized(gcvalue(o)));
+  else return iswhite(gcvalue(o));
 }
 
 
@@ -152,7 +153,7 @@ void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v) {
 */
 void luaC_barrierback_ (lua_State *L, GCObject *o) {
   global_State *g = G(L);
-  lua_assert(isblack(o) && !isdead(g, o));
+  lua_assert(isblack(o) && !isdead(g, o) && gch(o)->tt == LUA_TTABLE);
   black2gray(o);  /* make object gray (again) */
   gco2t(o)->gclist = g->grayagain;
   g->grayagain = o;
@@ -342,6 +343,9 @@ static void markroot (global_State *g) {
 
 static void traverseweakvalue (global_State *g, Table *h) {
   Node *n, *limit = gnode(h, sizenode(h));
+  /* if there is array part, assume it may have white values (do not
+     traverse it just to check) */
+  int hasclears = (h->sizearray > 0);
   for (n = gnode(h, 0); n < limit; n++) {
     checkdeadkey(n);
     if (ttisnil(gval(n)))  /* entry is empty? */
@@ -349,15 +353,21 @@ static void traverseweakvalue (global_State *g, Table *h) {
     else {
       lua_assert(!ttisnil(gkey(n)));
       markvalue(g, gkey(n));  /* mark key */
+      if (!hasclears && iscleared(gval(n)))  /* is there a white value? */
+        hasclears = 1;  /* table will have to be cleared */
     }
   }
-  linktable(h, &g->weak);  /* link into appropriate list */
+  if (hasclears)
+    linktable(h, &g->weak);  /* has to be cleared later */
+  else  /* no white values */
+    linktable(h, &g->grayagain);  /* no need to clean */
 }
 
 
 static int traverseephemeron (global_State *g, Table *h) {
   int marked = 0;  /* true if an object is marked in this traversal */
-  int hasclears = 0;  /* true if table has unmarked pairs */
+  int hasclears = 0;  /* true if table has white keys */
+  int prop = 0;  /* true if table has entry "white-key -> white-value" */
   Node *n, *limit = gnode(h, sizenode(h));
   int i;
   /* traverse array part (numeric keys are 'strong') */
@@ -372,19 +382,22 @@ static int traverseephemeron (global_State *g, Table *h) {
     checkdeadkey(n);
     if (ttisnil(gval(n)))  /* entry is empty? */
       removeentry(n);  /* remove it */
+    else if (iscleared(gkey(n))) {  /* key is not marked (yet)? */
+      hasclears = 1;  /* table must be cleared */
+      if (valiswhite(gval(n)))  /* value not marked yet? */
+        prop = 1;  /* must propagate again */
+    }
     else if (valiswhite(gval(n))) {  /* value not marked yet? */
-      if (iscleared(gkey(n), 1))  /* key is not marked (yet)? */
-        hasclears = 1;  /* may have to propagate mark from key to value */
-      else {  /* key is marked, so mark value */
-        marked = 1;  /* value was not marked */
-        reallymarkobject(g, gcvalue(gval(n)));
-      }
+      marked = 1;
+      reallymarkobject(g, gcvalue(gval(n)));  /* mark it now */
     }
   }
-  if (hasclears)  /* does table have unmarked pairs? */
-    linktable(h, &g->ephemeron);  /* will have to propagate again */
-  else  /* nothing to propagate */
-    linktable(h, &g->weak);  /* avoid convergence phase  */
+  if (prop)
+    linktable(h, &g->ephemeron);  /* have to propagate again */
+  else if (hasclears)  /* does table have white keys? */
+    linktable(h, &g->allweak);  /* may have to clean white keys */
+  else  /* no white keys */
+    linktable(h, &g->grayagain);  /* no need to clean */
   return marked;
 }
 
@@ -526,11 +539,26 @@ static void propagateall (global_State *g) {
 }
 
 
-static void traverselistofgrays (global_State *g, GCObject **l) {
+static void propagatelist (global_State *g, GCObject *l) {
   lua_assert(g->gray == NULL);  /* no grays left */
-  g->gray = *l;  /* now 'l' is new gray list */
-  *l = NULL;
-  propagateall(g);
+  g->gray = l;
+  propagateall(g);  /* traverse all elements from 'l' */
+}
+
+/*
+** retraverse all gray lists. Because tables may be reinserted in other
+** lists when traversed, traverse the original lists to avoid traversing
+** twice the same table (which is not wrong, but inefficient)
+*/
+static void retraversegrays (global_State *g) {
+  GCObject *weak = g->weak;  /* save original lists */
+  GCObject *grayagain = g->grayagain;
+  GCObject *ephemeron = g->ephemeron;
+  g->weak = g->grayagain = g->ephemeron = NULL;
+  propagateall(g);  /* traverse main gray list */
+  propagatelist(g, grayagain);
+  propagatelist(g, weak);
+  propagatelist(g, ephemeron);
 }
 
 
@@ -562,21 +590,39 @@ static void convergeephemerons (global_State *g) {
 
 
 /*
-** clear collected entries from all weaktables in list 'l'
+** clear entries with unmarked keys from all weaktables in list 'l' up
+** to element 'f'
 */
-static void cleartable (GCObject *l) {
-  for (; l != NULL; l = gco2t(l)->gclist) {
+static void clearkeys (GCObject *l, GCObject *f) {
+  for (; l != f; l = gco2t(l)->gclist) {
+    Table *h = gco2t(l);
+    Node *n, *limit = gnode(h, sizenode(h));
+    for (n = gnode(h, 0); n < limit; n++) {
+      if (!ttisnil(gval(n)) && (iscleared(gkey(n)))) {
+        setnilvalue(gval(n));  /* remove value ... */
+        removeentry(n);  /* and remove entry from table */
+      }
+    }
+  }
+}
+
+
+/*
+** clear entries with unmarked values from all weaktables in list 'l' up
+** to element 'f'
+*/
+static void clearvalues (GCObject *l, GCObject *f) {
+  for (; l != f; l = gco2t(l)->gclist) {
     Table *h = gco2t(l);
     Node *n, *limit = gnode(h, sizenode(h));
     int i;
     for (i = 0; i < h->sizearray; i++) {
       TValue *o = &h->array[i];
-      if (iscleared(o, 0))  /* value was collected? */
+      if (iscleared(o))  /* value was collected? */
         setnilvalue(o);  /* remove value */
     }
     for (n = gnode(h, 0); n < limit; n++) {
-      if (!ttisnil(gval(n)) &&  /* non-empty entry? */
-          (iscleared(gkey(n), 1) || iscleared(gval(n), 0))) {
+      if (!ttisnil(gval(n)) && iscleared(gval(n))) {
         setnilvalue(gval(n));  /* remove value ... */
         removeentry(n);  /* and remove entry from table */
       }
@@ -743,10 +789,10 @@ static void GCTM (lua_State *L, int propagateerrors) {
 
 
 /*
-** move all unreachable objects that need finalization from list 'finobj'
-** to list 'tobefnz'
+** move all unreachable objects (or 'all' objects) that need
+** finalization from list 'finobj' to list 'tobefnz' (to be finalized)
 */
-void luaC_separateudata (lua_State *L, int all) {
+static void separatetobefnz (lua_State *L, int all) {
   global_State *g = G(L);
   GCObject **p = &g->finobj;
   GCObject *curr;
@@ -842,14 +888,13 @@ static void callallpendingfinalizers (lua_State *L, int propagateerrors) {
 void luaC_freeallobjects (lua_State *L) {
   global_State *g = G(L);
   int i;
-  callallpendingfinalizers(L, 0);
-  /* following "white" makes all objects look dead */
-  g->currentwhite = WHITEBITS;
-  g->gckind = KGC_NORMAL;
-  sweepwholelist(L, &g->finobj);
+  separatetobefnz(L, 1);  /* separate all objects with finalizers */
   lua_assert(g->finobj == NULL);
+  callallpendingfinalizers(L, 0);
+  g->currentwhite = WHITEBITS; /* this "white" makes all objects look dead */
+  g->gckind = KGC_NORMAL;
+  sweepwholelist(L, &g->finobj);  /* finalizers can create objs. in 'finobj' */
   sweepwholelist(L, &g->allgc);
-  lua_assert(g->allgc == NULL);
   for (i = 0; i < g->strt.size; i++)  /* free all string lists */
     sweepwholelist(L, &g->strt.hash[i]);
   lua_assert(g->strt.nuse == 0);
@@ -858,6 +903,7 @@ void luaC_freeallobjects (lua_State *L) {
 
 static void atomic (lua_State *L) {
   global_State *g = G(L);
+  GCObject *origweak, *origall;
   lua_assert(!iswhite(obj2gco(g->mainthread)));
   markobject(g, L);  /* mark running thread */
   /* registry and global metatables may be changed by API */
@@ -866,20 +912,24 @@ static void atomic (lua_State *L) {
   /* remark occasional upvalues of (maybe) dead threads */
   remarkupvals(g);
   /* traverse objects caught by write barrier and by 'remarkupvals' */
-  propagateall(g);
-  traverselistofgrays(g, &g->weak);  /* remark weak tables */
-  traverselistofgrays(g, &g->ephemeron);  /* remark ephemeron tables */
-  traverselistofgrays(g, &g->grayagain);  /* remark gray again */
+  retraversegrays(g);
   convergeephemerons(g);
   /* at this point, all strongly accessible objects are marked. */
-  luaC_separateudata(L, 0);  /* separate userdata to be finalized */
+  /* clear values from weak tables, before checking finalizers */
+  clearvalues(g->weak, NULL);
+  clearvalues(g->allweak, NULL);
+  origweak = g->weak; origall = g->allweak;
+  separatetobefnz(L, 0);  /* separate objects to be finalized */
   markbeingfnz(g);  /* mark userdata that will be finalized */
   propagateall(g);  /* remark, to propagate `preserveness' */
   convergeephemerons(g);
-  /* remove collected objects from weak tables */
-  cleartable(g->weak);
-  cleartable(g->ephemeron);
-  cleartable(g->allweak);
+  /* at this point, all resurrected objects are marked. */
+  /* remove dead objects from weak tables */
+  clearkeys(g->ephemeron, NULL);  /* clear keys from all ephemeron tables */
+  clearkeys(g->allweak, NULL);  /* clear keys from all allweak tables */
+  /* clear values from resurrected weak tables */
+  clearvalues(g->weak, origweak);
+  clearvalues(g->allweak, origall);
   g->sweepstrgc = 0;  /* prepare to sweep strings */
   g->gcstate = GCSsweepstring;
   g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */

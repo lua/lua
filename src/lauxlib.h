@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.117 2011/06/16 14:10:12 roberto Exp $
+** $Id: lauxlib.h,v 1.119 2011/11/14 17:10:24 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -72,7 +72,11 @@ LUALIB_API int (luaL_execresult) (lua_State *L, int stat);
 LUALIB_API int (luaL_ref) (lua_State *L, int t);
 LUALIB_API void (luaL_unref) (lua_State *L, int t, int ref);
 
-LUALIB_API int (luaL_loadfile) (lua_State *L, const char *filename);
+LUALIB_API int (luaL_loadfilex) (lua_State *L, const char *filename,
+                                               const char *mode);
+
+#define luaL_loadfile(L,f)	luaL_loadfilex(L,f,NULL)
+
 LUALIB_API int (luaL_loadbuffer) (lua_State *L, const char *buff, size_t sz,
                                   const char *name);
 LUALIB_API int (luaL_loadstring) (lua_State *L, const char *s);
@@ -161,6 +165,31 @@ LUALIB_API char *(luaL_buffinitsize) (lua_State *L, luaL_Buffer *B, size_t sz);
 #define luaL_prepbuffer(B)	luaL_prepbuffsize(B, LUAL_BUFFERSIZE)
 
 /* }====================================================== */
+
+
+
+/*
+** {======================================================
+** File handles for IO library
+** =======================================================
+*/
+
+/*
+** A file handle is a userdata with metatable 'LUA_FILEHANDLE' and
+** initial structure 'luaL_Stream' (it may contain other fields
+** after that initial structure).
+*/
+
+#define LUA_FILEHANDLE          "FILE*"
+
+
+typedef struct luaL_Stream {
+  FILE *f;  /* stream (NULL for incompletely created streams) */
+  lua_CFunction closef;  /* to close stream (NULL for closed streams) */
+} luaL_Stream;
+
+/* }====================================================== */
+
 
 
 /* compatibility with old module system */

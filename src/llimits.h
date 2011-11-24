@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.90 2011/07/02 15:57:25 roberto Exp $
+** $Id: llimits.h,v 1.93 2011/10/07 20:45:19 roberto Exp $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -30,7 +30,6 @@ typedef unsigned char lu_byte;
 #define MAX_SIZET	((size_t)(~(size_t)0)-2)
 
 #define MAX_LUMEM	((lu_mem)(~(lu_mem)0)-2)
-#define MIN_LMEM	((l_mem)~((~(lu_mem)0)>>1))
 
 
 #define MAX_INT (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
@@ -62,9 +61,9 @@ typedef LUAI_UACNUMBER l_uacNumber;
 /* to avoid problems with conditions too long */
 #define lua_longassert(c)	{ if (!(c)) lua_assert(0); }
 #else
-#define lua_assert(c)		/* empty */
+#define lua_assert(c)		((void)0)
 #define check_exp(c,e)		(e)
-#define lua_longassert(c)	/* empty */
+#define lua_longassert(c)	((void)0)
 #endif
 
 /*
@@ -95,6 +94,19 @@ typedef LUAI_UACNUMBER l_uacNumber;
 #define cast_num(i)	cast(lua_Number, (i))
 #define cast_int(i)	cast(int, (i))
 #define cast_uchar(i)	cast(unsigned char, (i))
+
+
+/*
+** non-return type
+*/
+#if defined(__GNUC__)
+#define l_noret		void __attribute__((noreturn))
+#elif defined(_MSC_VER)
+#define l_noret		void __declspec(noreturn)
+#else
+#define l_noret		void
+#endif
+
 
 
 /*

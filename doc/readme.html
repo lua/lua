@@ -6,18 +6,21 @@
 <META HTTP-EQUIV="content-type" CONTENT="text/html; charset=iso-8859-1">
 <STYLE TYPE="text/css">
 blockquote, .display {
-	color: black ;
-	padding: 8px ;
 	border: solid #a0a0a0 2px ;
-	xbackground-color: #EFEFFF ;
-	margin-left: 0px ;
+	padding: 1em ;
+	margin: 0px ;
+}
+
+.display {
+	word-spacing: 0.25em ;
+}
+
+dl.display dd {
+	padding-bottom: 0.2em ;
 }
 
 tt, kbd, code {
-	font-size: 120% ;
-	xcolor: black ;
-	xpadding: 4px ;
-	xbackground-color: #E0E0E0 ;
+	font-size: 12pt ;
 }
 </STYLE>
 </HEAD>
@@ -27,13 +30,8 @@ tt, kbd, code {
 <HR>
 <H1>
 <A HREF="http://www.lua.org/"><IMG SRC="logo.gif" ALT="Lua" BORDER=0></A>
-Welcome to Lua 5.2 (beta)
+Welcome to Lua 5.2
 </H1>
-
-<P>
-<IMG SRC="alert.png" ALIGN="absbottom" ALT="[!]">
-<EM>This is a beta version of Lua 5.2.
-Some details may change in the final version.</EM>
 
 <P>
 <A HREF="#about">about</A>
@@ -86,7 +84,7 @@ form.
 You need to build it before using it.
 Building Lua should be straightforward
 because
-Lua is implemented in pure ANSI C, and compiles unmodified in all known
+Lua is implemented in pure ANSI C and compiles unmodified in all known
 platforms that have an ANSI C compiler.
 Lua also compiles unmodified as C++.
 The instructions given below for building Lua are for Unix-like platforms.
@@ -120,15 +118,16 @@ Here are the details.
 <OL>
 <LI>
 Open a terminal window and move to
-the top-level directory, which is named lua-5.2.0.
+the top-level directory, which is named <TT>lua-5.2.0</TT>.
 The Makefile there controls both the build process and the installation process.
 <P>
 <LI>
   Do "<KBD>make</KBD>" and see if your platform is listed.
   The platforms currently supported are:
-<BLOCKQUOTE>
-    aix ansi bsd freebsd generic linux macosx mingw posix solaris
-</BLOCKQUOTE>
+<P>
+<P CLASS="display">
+   aix ansi bsd freebsd generic linux macosx mingw posix solaris
+</P>
 <P>
   If your platform is listed, just do "<KBD>make xxx</KBD>", where xxx
   is your platform name.
@@ -138,7 +137,7 @@ The Makefile there controls both the build process and the installation process.
 <P>
 <LI>
 The compilation takes only a few moments
-and produces three files in the src directory:
+and produces three files in the <TT>src</TT> directory:
 lua (the interpreter),
 luac (the compiler),
 and liblua.a (the library).
@@ -147,12 +146,15 @@ and liblua.a (the library).
   To check that Lua has been built correctly, do "<KBD>make test</KBD>"
   after building Lua. This will run the interpreter and print its version string.
 </OL>
+<P>
+If you're running Linux and get compilation errors,
+make sure you have installed the <TT>readline</TT> development package.
 
 <H3>Installing Lua</H3>
 <P>
   Once you have built Lua, you may want to install it in an official
   place in your system. In this case, do "<KBD>make install</KBD>". The official
-  place and the way to install files are defined in Makefile. You'll
+  place and the way to install files are defined in the Makefile. You'll
   probably need the right permissions to install files.
 
 <P>
@@ -198,9 +200,9 @@ and liblua.a (the library).
 <P>
   Three kinds of things can be customized by editing a file:
 <UL>
-    <LI> Where and how to install Lua &mdash; edit Makefile.
-    <LI> How to build Lua &mdash; edit src/Makefile.
-    <LI> Lua features &mdash; edit src/luaconf.h.
+    <LI> Where and how to install Lua &mdash; edit <TT>Makefile</TT>.
+    <LI> How to build Lua &mdash; edit <TT>src/Makefile</TT>.
+    <LI> Lua features &mdash; edit <TT>src/luaconf.h</TT>.
 </UL>
 
 <P>
@@ -211,13 +213,13 @@ and liblua.a (the library).
 
 <P>
   On the other hand, if you need to customize some Lua features, you'll need
-  to edit src/luaconf.h before building and installing Lua.
+  to edit <TT>src/luaconf.h</TT> before building and installing Lua.
   The edited file will be the one installed, and
   it will be used by any Lua clients that you build, to ensure consistency.
   Further customization is available to experts by editing the Lua sources.
 
 <P>
-  We strongly recommend that you enable dynamic loading in src/luaconf.h.
+  We strongly recommend that you enable dynamic loading in <TT>src/luaconf.h</TT>.
   This is done automatically for all platforms listed above that have
   this feature and also for Windows.
 
@@ -238,7 +240,6 @@ lmem.c lobject.c lopcodes.c lparser.c lstate.c lstring.c ltable.c
 ltm.c lundump.c lvm.c lzio.c
 lauxlib.c lbaselib.c lbitlib.c lcorolib.c ldblib.c liolib.c
 lmathlib.c loslib.c lstrlib.c ltablib.c loadlib.c linit.c
-
 <DT>
 interpreter:
 <DD>
@@ -257,11 +258,11 @@ compiler:
   those dynamic libraries &mdash; but <EM>don't</EM> link the Lua library
   into each dynamic library. For Unix, we recommend that the Lua library
   be linked statically into the host program and its symbols exported for
-  dynamic linking; src/Makefile does this for the Lua interpreter.
+  dynamic linking; <TT>src/Makefile</TT> does this for the Lua interpreter.
   For Windows, we recommend that the Lua library be a DLL.
 
 <P>
-  As mentioned above, you may edit src/luaconf.h to customize
+  As mentioned above, you may edit <TT>src/luaconf.h</TT> to customize
   some features before building Lua.
 
 <H2><A NAME="changes">Changes since Lua 5.1</A></H2>
@@ -290,7 +291,7 @@ Here are the other changes introduced in Lua 5.2:
 <UL>
 <LI> no more fenv for threads or functions
 <LI> tables honor the <CODE>__len</CODE> metamethod
-<LI> hex and <CODE>\*</CODE> escapes in strings
+<LI> hex and <CODE>\z</CODE> escapes in strings
 <LI> support for hexadecimal floats
 <LI> order metamethods work for different types
 <LI> no more verification of opcode consistency
@@ -302,8 +303,8 @@ Here are the other changes introduced in Lua 5.2:
 <H3>Libraries</H3>
 <UL>
 <LI> arguments for function called through <CODE>xpcall</CODE>
-<LI> optional 'mode' argument to load (to control binary x text)
-<LI> optional 'env' argument to load (environment for loaded chunk)
+<LI> optional 'mode' argument to load and loadfile (to control binary x text)
+<LI> optional 'env' argument to load and loadfile (environment for loaded chunk)
 <LI> <CODE>loadlib</CODE> may load libraries with global names (RTLD_GLOBAL)
 <LI> new function <CODE>package.searchpath</CODE>
 <LI> modules receive their paths when loaded
@@ -324,15 +325,23 @@ Here are the other changes introduced in Lua 5.2:
 <H3>C API</H3>
 <UL>
 <LI> main thread predefined in the registry
-<LI> new constants <CODE>LUA_OK</CODE> and <CODE>LUA_ERRGCMM</CODE>
-<LI> new <CODE>lua_compare</CODE>, <CODE>lua_arith</CODE>, and <CODE>lua_len</CODE>
-<LI> new <CODE>lua_version</CODE> and <CODE>luaL_checkversion</CODE>
+<LI> new functions
+<CODE>lua_absindex</CODE>,
+<CODE>lua_arith</CODE>,
+<CODE>lua_compare</CODE>,
+<CODE>lua_copy</CODE>,
+<CODE>lua_len</CODE>,
+<CODE>lua_rawgetp</CODE>,
+<CODE>lua_rawsetp</CODE>,
+<CODE>lua_upvalueid</CODE>,
+<CODE>lua_upvaluejoin</CODE>,
+<CODE>lua_version</CODE>.
+<LI> new functions
+<CODE>luaL_checkversion</CODE>,
+<CODE>luaL_setmetatable</CODE>,
+<CODE>luaL_testudata</CODE>,
+<CODE>luaL_tolstring</CODE>.
 <LI> <CODE>lua_pushstring</CODE> and <CODE>pushlstring</CODE> return string
-<LI> new <CODE>luaL_testudata</CODE> and <CODE>luaL_setmetatable</CODE>
-<LI> new <CODE>luaL_tolstring</CODE>
-<LI> new <CODE>lua_copy</CODE>
-<LI> new <CODE>lua_absindex</CODE>
-<LI> new <CODE>lua_upvalueid</CODE> and <CODE>lua_upvaluejoin</CODE>
 <LI> <CODE>nparams</CODE> and <CODE>isvararg</CODE> available in debug API
 <LI> new <CODE>lua_Unsigned</CODE>
 </UL>
@@ -340,15 +349,17 @@ Here are the other changes introduced in Lua 5.2:
 <H3>Implementation</H3>
 <UL>
 <LI> max constants per function raised to 2<SUP>26</SUP>
-<LI> internal (immutable) version of ctypes
-<LI> simpler implementation for string buffers
-<LI> udata with finalizers are kept in a separated list for the GC
-<LI> <CODE>CallInfo</CODE> stack now is a linked list
-<LI> parser uses much less C-stack space (no more auto arrays)
-<LI> new hash for floats
-<LI> handling of non-string error messages in the standalone interpreter
 <LI> generational mode for garbage collection (experimental)
 <LI> NaN trick (experimental)
+<LI> internal (immutable) version of ctypes
+<LI> simpler implementation for string buffers
+<LI> parser uses much less C-stack space (no more auto arrays)
+</UL>
+
+<H3>Lua standalone interpreter</H3>
+<UL>
+<LI> new <CODE>-E</CODE> option to avoid environment variables
+<LI> handling of non-string error messages
 </UL>
 
 <H2><A NAME="license">License</A></H2>
@@ -369,7 +380,7 @@ then you should give us credit by including the appropriate copyright notice som
 For details, see
 <A HREF="http://www.lua.org/license.html">this</A>.
 
-<BLOCKQUOTE>
+<BLOCKQUOTE STYLE="padding-bottom: 0em">
 Copyright &copy; 1994&ndash;2011 Lua.org, PUC-Rio.
 
 <P>
@@ -393,14 +404,15 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 </BLOCKQUOTE>
+<P>
 
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Fri Jun 24 11:30:57 BRT 2011
+Wed Nov 23 16:17:22 BRST 2011
 </SMALL>
 <!--
-Last change: revised for Lua 5.2.0 (beta)
+Last change: revised for Lua 5.2.0
 -->
 
 </BODY>

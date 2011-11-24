@@ -2,13 +2,16 @@ h3 code {
 	font-family: inherit ;
 }
 
-pre {
-	font-size: 105% ;
+pre, code {
+	font-size: 12pt ;
 }
 
 span.apii {
 	float: right ;
 	font-family: inherit ;
+	font-style: normal ;
+	font-size: small ;
+	color: gray ;
 }
 
 p+h1, ul+h1 {

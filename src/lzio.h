@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.h,v 1.24 2011/02/23 13:13:10 roberto Exp $
+** $Id: lzio.h,v 1.26 2011/07/15 12:48:03 roberto Exp $
 ** Buffered streams
 ** See Copyright Notice in lua.h
 */
@@ -17,11 +17,7 @@
 
 typedef struct Zio ZIO;
 
-#define char2int(c)	cast(int, cast(unsigned char, (c)))
-
-#define zgetc(z)  (((z)->n--)>0 ?  char2int(*(z)->p++) : luaZ_fill(z))
-
-#define zungetc(z)	((z)->n++, (z)->p--)
+#define zgetc(z)  (((z)->n--)>0 ?  cast_uchar(*(z)->p++) : luaZ_fill(z))
 
 
 typedef struct Mbuffer {

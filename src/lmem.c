@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.81 2010/12/20 19:40:07 roberto Exp $
+** $Id: lmem.c,v 1.82 2011/09/20 19:25:23 roberto Exp $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -106,7 +106,7 @@ void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
     if ((total % 200) == 0) {
       if (f == NULL) f = fopen(TRACEMEM, "w");
       fprintf(f, "%lu %u %d %d\n", total,
-              g->totalbytes, g->GCdebt, g->gcstate * 1000);
+              gettotalbytes(g), g->GCdebt, g->gcstate * 10000);
     }
   }
 #endif

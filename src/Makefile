@@ -112,6 +112,7 @@ mingw:
 	$(MAKE) "LUA_A=lua52.dll" "LUA_T=lua.exe" \
 	"AR=$(CC) -shared -o" "RANLIB=strip --strip-unneeded" \
 	"SYSCFLAGS=-DLUA_BUILD_AS_DLL" "SYSLIBS=" "SYSLDFLAGS=-s" lua.exe
+	$(MAKE) "LUAC_T=luac.exe" luac.exe
 
 posix:
 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_POSIX"

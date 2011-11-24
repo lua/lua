@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.56 2011/05/31 18:27:56 roberto Exp $
+** $Id: lcode.c,v 2.60 2011/08/30 16:26:41 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -44,8 +44,8 @@ void luaK_nil (FuncState *fs, int from, int n) {
       int pl = pfrom + GETARG_B(*previous);
       if ((pfrom <= from && from <= pl + 1) ||
           (from <= pfrom && pfrom <= l + 1)) {  /* can connect both? */
-        if (pfrom < from) from = pfrom;  /* from = min(from, pfrom) */ 
-        if (pl > l) l = pl;  /* l = max(l, pl) */ 
+        if (pfrom < from) from = pfrom;  /* from = min(from, pfrom) */
+        if (pl > l) l = pl;  /* l = max(l, pl) */
         SETARG_A(*previous, from);
         SETARG_B(*previous, l - from);
         return;
@@ -213,11 +213,11 @@ static int luaK_code (FuncState *fs, Instruction i) {
   Proto *f = fs->f;
   dischargejpc(fs);  /* `pc' will change */
   /* put new instruction in code array */
-  luaM_growvector(fs->L, f->code, fs->pc, f->sizecode, Instruction,
+  luaM_growvector(fs->ls->L, f->code, fs->pc, f->sizecode, Instruction,
                   MAX_INT, "opcodes");
   f->code[fs->pc] = i;
   /* save corresponding line information */
-  luaM_growvector(fs->L, f->lineinfo, fs->pc, f->sizelineinfo, int,
+  luaM_growvector(fs->ls->L, f->lineinfo, fs->pc, f->sizelineinfo, int,
                   MAX_INT, "opcodes");
   f->lineinfo[fs->pc] = fs->ls->lastline;
   return fs->pc++;
@@ -289,7 +289,7 @@ static void freeexp (FuncState *fs, expdesc *e) {
 
 
 static int addk (FuncState *fs, TValue *key, TValue *v) {
-  lua_State *L = fs->L;
+  lua_State *L = fs->ls->L;
   TValue *idx = luaH_set(L, fs->h, key);
   Proto *f = fs->f;
   int k, oldsize;
@@ -304,6 +304,8 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
   /* constant not found; create a new entry */
   oldsize = f->sizek;
   k = fs->nk;
+  /* numerical value does not need GC barrier;
+     table has no metatable, so it does not need to invalidate cache */
   setnvalue(idx, cast_num(k));
   luaM_growvector(L, f->k, k, f->sizek, TValue, MAXARG_Ax, "constants");
   while (oldsize < f->sizek) setnilvalue(&f->k[oldsize++]);
@@ -316,14 +318,14 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
 
 int luaK_stringK (FuncState *fs, TString *s) {
   TValue o;
-  setsvalue(fs->L, &o, s);
+  setsvalue(fs->ls->L, &o, s);
   return addk(fs, &o, &o);
 }
 
 
 int luaK_numberK (FuncState *fs, lua_Number r) {
   int n;
-  lua_State *L = fs->L;
+  lua_State *L = fs->ls->L;
   TValue o;
   setnvalue(&o, r);
   if (r == 0 || luai_numisnan(NULL, r)) {  /* handle -0 and NaN */
@@ -350,7 +352,7 @@ static int nilK (FuncState *fs) {
   TValue k, v;
   setnilvalue(&v);
   /* cannot use nil as key; instead use table itself to represent nil */
-  sethvalue(fs->L, &k, fs->h);
+  sethvalue(fs->ls->L, &k, fs->h);
   return addk(fs, &k, &v);
 }
 
@@ -641,7 +643,7 @@ void luaK_goiftrue (FuncState *fs, expdesc *e) {
 }
 
 
-static void luaK_goiffalse (FuncState *fs, expdesc *e) {
+void luaK_goiffalse (FuncState *fs, expdesc *e) {
   int pc;  /* pc of last jump */
   luaK_dischargevars(fs, e);
   switch (e->k) {

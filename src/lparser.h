@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.68 2011/02/23 13:13:10 roberto Exp $
+** $Id: lparser.h,v 1.69 2011/07/27 18:09:01 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -55,7 +55,7 @@ typedef struct expdesc {
 
 /* description of active local variable */
 typedef struct Vardesc {
-  unsigned short idx;  /* variable index in stack */
+  short idx;  /* variable index in stack */
 } Vardesc;
 
 
@@ -98,18 +98,17 @@ typedef struct FuncState {
   Table *h;  /* table to find (and reuse) elements in `k' */
   struct FuncState *prev;  /* enclosing function */
   struct LexState *ls;  /* lexical state */
-  struct lua_State *L;  /* copy of the Lua state */
   struct BlockCnt *bl;  /* chain of current blocks */
   int pc;  /* next position to code (equivalent to `ncode') */
-  int lasttarget;   /* `pc' of last `jump target' */
+  int lasttarget;   /* 'label' of last 'jump label' */
   int jpc;  /* list of pending jumps to `pc' */
-  int freereg;  /* first free register */
   int nk;  /* number of elements in `k' */
   int np;  /* number of elements in `p' */
-  int firstlocal;  /* index of first local var of this function */
-  short nlocvars;  /* number of elements in `locvars' */
+  int firstlocal;  /* index of first local var (in Dyndata array) */
+  short nlocvars;  /* number of elements in 'f->locvars' */
   lu_byte nactvar;  /* number of active local variables */
   lu_byte nups;  /* number of upvalues */
+  lu_byte freereg;  /* first free register */
 } FuncState;
 
 

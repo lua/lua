@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.61 2011/07/05 12:49:35 roberto Exp $
+** $Id: ltablib.c,v 1.62 2011/09/30 12:45:45 roberto Exp $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -86,7 +86,7 @@ static void addfield (lua_State *L, luaL_Buffer *b, int i) {
   if (!lua_isstring(L, -1))
     luaL_error(L, "invalid value (%s) at index %d in table for "
                   LUA_QL("concat"), luaL_typename(L, -1), i);
-    luaL_addvalue(b);
+  luaL_addvalue(b);
 }
 
 
