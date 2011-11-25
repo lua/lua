@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.106 2011/11/11 19:59:17 roberto Exp roberto $
+** $Id: liolib.c,v 2.107 2011/11/14 16:55:35 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -78,7 +78,9 @@
 #define l_ftell(f)		ftello(f)
 #define l_seeknum		off_t
 
-#elif defined(LUA_WIN)
+#elif defined(LUA_WIN) && !defined(_CRTIMP_TYPEINFO) \
+   && defined(_MSC_VER) && (_MSC_VER >= 1400)
+/* Windows (but not DDK) and Visual C++ 2005 or higher */
 
 #define l_fseek(f,o,w)		_fseeki64(f,o,w)
 #define l_ftell(f)		_ftelli64(f)
