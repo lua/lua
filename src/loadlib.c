@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.104 2011/11/10 11:42:58 roberto Exp $
+** $Id: loadlib.c,v 1.105 2011/11/25 12:52:03 roberto Exp $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -12,7 +12,7 @@
 /*
 ** if needed, includes windows header before everything else
 */
-#if defined(LUA_DL_DLL)
+#if defined(_WIN32)
 #include <windows.h>
 #endif
 
