@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.165 2011/11/05 15:29:05 roberto Exp roberto $
+** $Id: luaconf.h,v 1.166 2011/11/09 14:47:14 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -463,7 +463,7 @@
 
 /* On a Microsoft compiler on a Pentium, use assembler to avoid clashes
    with a DirectX idiosyncrasy */
-#if defined(LUA_WIN) && defined(_M_IX86)	/* { */
+#if defined(LUA_WIN) && defined(_MSC_VER) && defined(_M_IX86)	/* { */
 
 #define MS_ASMTRICK
 
