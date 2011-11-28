@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.64 2011/09/24 21:12:01 roberto Exp roberto $
+** $Id: ltable.c,v 2.65 2011/09/30 12:45:27 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -322,7 +322,7 @@ void luaH_resize (lua_State *L, Table *t, int nasize, int nhsize) {
     }
   }
   if (!isdummy(nold))
-    luaM_freearray(L, nold, twoto(oldhsize));  /* free old array */
+    luaM_freearray(L, nold, cast(size_t, twoto(oldhsize))); /* free old array */
 }
 
 
@@ -370,7 +370,7 @@ Table *luaH_new (lua_State *L) {
 
 void luaH_free (lua_State *L, Table *t) {
   if (!isdummy(t->node))
-    luaM_freearray(L, t->node, sizenode(t));
+    luaM_freearray(L, t->node, cast(size_t, sizenode(t)));
   luaM_freearray(L, t->array, t->sizearray);
   luaM_free(L, t);
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.113 2011/10/03 16:22:05 roberto Exp roberto $
+** $Id: lgc.c,v 2.114 2011/10/03 17:54:25 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -91,6 +91,12 @@ static void reallymarkobject (global_State *g, GCObject *o);
 ** Generic functions
 ** =======================================================
 */
+
+
+/*
+** one after last element in a hash array
+*/
+#define gnodelast(h)	gnode(h, cast(size_t, sizenode(h)))
 
 
 /*
@@ -342,7 +348,7 @@ static void markroot (global_State *g) {
 */
 
 static void traverseweakvalue (global_State *g, Table *h) {
-  Node *n, *limit = gnode(h, sizenode(h));
+  Node *n, *limit = gnodelast(h);
   /* if there is array part, assume it may have white values (do not
      traverse it just to check) */
   int hasclears = (h->sizearray > 0);
@@ -368,7 +374,7 @@ static int traverseephemeron (global_State *g, Table *h) {
   int marked = 0;  /* true if an object is marked in this traversal */
   int hasclears = 0;  /* true if table has white keys */
   int prop = 0;  /* true if table has entry "white-key -> white-value" */
-  Node *n, *limit = gnode(h, sizenode(h));
+  Node *n, *limit = gnodelast(h);
   int i;
   /* traverse array part (numeric keys are 'strong') */
   for (i = 0; i < h->sizearray; i++) {
@@ -403,7 +409,7 @@ static int traverseephemeron (global_State *g, Table *h) {
 
 
 static void traversestrongtable (global_State *g, Table *h) {
-  Node *n, *limit = gnode(h, sizenode(h));
+  Node *n, *limit = gnodelast(h);
   int i;
   for (i = 0; i < h->sizearray; i++)  /* traverse array part */
     markvalue(g, &h->array[i]);
@@ -596,7 +602,7 @@ static void convergeephemerons (global_State *g) {
 static void clearkeys (GCObject *l, GCObject *f) {
   for (; l != f; l = gco2t(l)->gclist) {
     Table *h = gco2t(l);
-    Node *n, *limit = gnode(h, sizenode(h));
+    Node *n, *limit = gnodelast(h);
     for (n = gnode(h, 0); n < limit; n++) {
       if (!ttisnil(gval(n)) && (iscleared(gkey(n)))) {
         setnilvalue(gval(n));  /* remove value ... */
@@ -614,7 +620,7 @@ static void clearkeys (GCObject *l, GCObject *f) {
 static void clearvalues (GCObject *l, GCObject *f) {
   for (; l != f; l = gco2t(l)->gclist) {
     Table *h = gco2t(l);
-    Node *n, *limit = gnode(h, sizenode(h));
+    Node *n, *limit = gnodelast(h);
     int i;
     for (i = 0; i < h->sizearray; i++) {
       TValue *o = &h->array[i];
