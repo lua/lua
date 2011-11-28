@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.143 2011/08/17 20:26:47 roberto Exp roberto $
+** $Id: lvm.c,v 2.144 2011/10/07 20:45:19 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -515,6 +515,7 @@ void luaV_finishOp (lua_State *L) {
 
 #define vmdispatch(o)	switch(o)
 #define vmcase(l,b)	case l: {b}  break;
+#define vmcasenb(l,b)	case l: {b}		/* nb = no break */
 
 void luaV_execute (lua_State *L) {
   CallInfo *ci = L->ci;
@@ -741,7 +742,7 @@ void luaV_execute (lua_State *L) {
           goto newframe;  /* restart luaV_execute over new Lua function */
         }
       )
-      vmcase(OP_RETURN,
+      vmcasenb(OP_RETURN,
         int b = GETARG_B(i);
         if (b != 0) L->top = ra+b-1;
         if (cl->p->sizep > 0) luaF_close(L, base);
@@ -780,7 +781,7 @@ void luaV_execute (lua_State *L) {
         setnvalue(ra, luai_numsub(L, nvalue(ra), nvalue(pstep)));
         ci->u.l.savedpc += GETARG_sBx(i);
       )
-      vmcase(OP_TFORCALL,
+      vmcasenb(OP_TFORCALL,
         StkId cb = ra + 3;  /* call base */
         setobjs2s(L, cb+2, ra+2);
         setobjs2s(L, cb+1, ra+1);
