@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.34 2011/03/03 16:34:46 roberto Exp roberto $
+** $Id: loslib.c,v 1.35 2011/06/20 16:50:59 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -274,7 +274,8 @@ static int os_exit (lua_State *L) {
     status = luaL_optint(L, 1, EXIT_SUCCESS);
   if (lua_toboolean(L, 2))
     lua_close(L);
-  exit(status);
+  if (L) exit(status);  /* 'if' to avoid warnings for unreachable 'return' */
+  return 0;
 }
 
 
