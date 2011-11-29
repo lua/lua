@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.92 2011/09/30 12:46:06 roberto Exp roberto $
+** $Id: llimits.h,v 1.93 2011/10/07 20:45:19 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -228,7 +228,7 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
 
 #define luai_hashnum(i,n)  \
   { volatile union luai_Cast u; u.l_d = (n) + 1.0;  /* avoid -0 */ \
-    (i) = u.l_p[0] + u.l_p[1]; }  /* add double bits for his hash */
+    (i) = u.l_p[0]; (i) += u.l_p[1]; }  /* add double bits for his hash */
 
 #define lua_number2int(i,n)		lua_number2int32(i, n, int)
 #define lua_number2integer(i,n)		lua_number2int32(i, n, lua_Integer)
