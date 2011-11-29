@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.144 2011/10/07 20:45:19 roberto Exp roberto $
+** $Id: lvm.c,v 2.145 2011/11/28 17:25:16 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -535,7 +535,7 @@ void luaV_execute (lua_State *L) {
         (--L->hookcount == 0 || L->hookmask & LUA_MASKLINE)) {
       Protect(traceexec(L));
     }
-    /* warning!! several calls may realloc the stack and invalidate `ra' */
+    /* WARNING: several calls may realloc the stack and invalidate `ra' */
     ra = RA(i);
     lua_assert(base == ci->u.l.base);
     lua_assert(base <= L->top && L->top < L->stack + L->stacksize);
