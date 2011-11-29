@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.100 2011/09/12 20:33:03 roberto Exp roberto $
+** $Id: ldo.c,v 2.101 2011/10/07 20:45:19 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -611,8 +611,19 @@ struct SParser {  /* data to `f_parser' */
   ZIO *z;
   Mbuffer buff;  /* dynamic structure used by the scanner */
   Dyndata dyd;  /* dynamic structures used by the parser */
+  const char *mode;
   const char *name;
 };
+
+
+static void checkmode (lua_State *L, const char *mode, const char *x) {
+  if (mode && strchr(mode, x[0]) == NULL) {
+    luaO_pushfstring(L,
+       "attempt to load a %s chunk (mode is " LUA_QS ")", x, mode);
+    luaD_throw(L, LUA_ERRSYNTAX);
+  }
+}
+
 
 static void f_parser (lua_State *L, void *ud) {
   int i;
@@ -620,9 +631,14 @@ static void f_parser (lua_State *L, void *ud) {
   Closure *cl;
   struct SParser *p = cast(struct SParser *, ud);
   int c = zgetc(p->z);  /* read first character */
-  tf = (c == LUA_SIGNATURE[0])
-           ? luaU_undump(L, p->z, &p->buff, p->name)
-           : luaY_parser(L, p->z, &p->buff, &p->dyd, p->name, c);
+  if (c == LUA_SIGNATURE[0]) {
+    checkmode(L, p->mode, "binary");
+    tf = luaU_undump(L, p->z, &p->buff, p->name);
+  }
+  else {
+    checkmode(L, p->mode, "text");
+    tf = luaY_parser(L, p->z, &p->buff, &p->dyd, p->name, c);
+  }
   setptvalue2s(L, L->top, tf);
   incr_top(L);
   cl = luaF_newLclosure(L, tf);
@@ -632,11 +648,12 @@ static void f_parser (lua_State *L, void *ud) {
 }
 
 
-int luaD_protectedparser (lua_State *L, ZIO *z, const char *name) {
+int luaD_protectedparser (lua_State *L, ZIO *z, const char *name,
+                                        const char *mode) {
   struct SParser p;
   int status;
   L->nny++;  /* cannot yield during parsing */
-  p.z = z; p.name = name;
+  p.z = z; p.name = name; p.mode = mode;
   p.dyd.actvar.arr = NULL; p.dyd.actvar.size = 0;
   p.dyd.gt.arr = NULL; p.dyd.gt.size = 0;
   p.dyd.label.arr = NULL; p.dyd.label.size = 0;

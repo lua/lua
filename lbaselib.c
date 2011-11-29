@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.269 2011/11/14 17:10:24 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.270 2011/11/23 17:29:04 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -273,25 +273,6 @@ static int luaB_loadfile (lua_State *L) {
 */
 
 
-typedef struct {
-  const char *mode;
-} loaddata;
-
-
-/*
-** check whether a chunk (prefix in 's') satisfies given 'mode'
-** ('t' for text, 'b' for binary). Returns error message (also
-** pushed on the stack) in case of errors.
-*/
-static const char *checkrights (lua_State *L, const char *mode, const char *s) {
-  const char *x = (*s == LUA_SIGNATURE[0]) ? "binary" : "text";
-  if (strchr(mode, x[0]) == NULL)
-    return lua_pushfstring(L,
-       "attempt to load a %s chunk (mode is " LUA_QS ")", x, mode);
-  else return NULL;
-}
-
-
 /*
 ** reserved slot, above all arguments, to hold a copy of the returned
 ** string to avoid it being collected while parsed. 'load' has four
@@ -308,7 +289,7 @@ static const char *checkrights (lua_State *L, const char *mode, const char *s) {
 */
 static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
   const char *s;
-  loaddata *ld = (loaddata *)ud;
+  (void)(ud);  /* not used */
   luaL_checkstack(L, 2, "too many nested functions");
   lua_pushvalue(L, 1);  /* get function */
   lua_call(L, 0, 1);  /* call it */
@@ -317,11 +298,6 @@ static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
     return NULL;
   }
   else if ((s = lua_tostring(L, -1)) != NULL) {
-    if (ld->mode != NULL) {  /* first time? */
-      s = checkrights(L, ld->mode, s);  /* check mode */
-      ld->mode = NULL;  /* to avoid further checks */
-      if (s) luaL_error(L, s);
-    }
     lua_replace(L, RESERVEDSLOT);  /* save string in reserved slot */
     return lua_tolstring(L, RESERVEDSLOT, size);
   }
@@ -340,16 +316,13 @@ static int luaB_load (lua_State *L) {
   const char *mode = luaL_optstring(L, 3, "bt");
   if (s != NULL) {  /* loading a string? */
     const char *chunkname = luaL_optstring(L, 2, s);
-    status = (checkrights(L, mode, s) != NULL)
-           || luaL_loadbuffer(L, s, l, chunkname);
+    status = luaL_loadbufferx(L, s, l, chunkname, mode);
   }
   else {  /* loading from a reader function */
     const char *chunkname = luaL_optstring(L, 2, "=(load)");
-    loaddata ld;
-    ld.mode = mode;
     luaL_checktype(L, 1, LUA_TFUNCTION);
     lua_settop(L, RESERVEDSLOT);  /* create reserved slot */
-    status = lua_load(L, generic_reader, &ld, chunkname);
+    status = lua_load(L, generic_reader, NULL, chunkname, mode);
   }
   if (status == LUA_OK && top >= 4) {  /* is there an 'env' argument */
     lua_pushvalue(L, 4);  /* environment for loaded function */

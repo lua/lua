@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.156 2011/10/31 17:48:51 roberto Exp roberto $
+** $Id: lapi.c,v 2.157 2011/11/16 18:51:36 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -968,13 +968,13 @@ LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
 
 
 LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
-                      const char *chunkname) {
+                      const char *chunkname, const char *mode) {
   ZIO z;
   int status;
   lua_lock(L);
   if (!chunkname) chunkname = "?";
   luaZ_init(L, &z, reader, data);
-  status = luaD_protectedparser(L, &z, chunkname);
+  status = luaD_protectedparser(L, &z, chunkname, mode);
   if (status == LUA_OK) {  /* no errors? */
     LClosure *f = clLvalue(L->top - 1);  /* get newly created function */
     if (f->nupvalues == 1) {  /* does it have one upvalue? */
