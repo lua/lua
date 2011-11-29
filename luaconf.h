@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.166 2011/11/09 14:47:14 roberto Exp roberto $
+** $Id: luaconf.h,v 1.167 2011/11/25 12:52:27 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -70,6 +70,7 @@
 #define LUA_USE_ISATTY
 #define LUA_USE_POPEN
 #define LUA_USE_ULONGJMP
+#define lUA_USE_GMTIME_R
 #endif
 
 

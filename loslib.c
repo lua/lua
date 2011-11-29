@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.35 2011/06/20 16:50:59 roberto Exp roberto $
+** $Id: loslib.c,v 1.36 2011/11/29 15:55:51 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -54,6 +54,23 @@
 
 #define LUA_TMPNAMBUFSIZE       L_tmpnam
 #define lua_tmpnam(b,e)         { e = (tmpnam(b) == NULL); }
+
+#endif
+
+
+/*
+** By default, Lua uses gmtime/localtime, except when POSIX is available,
+** where it uses gmtime_r/localtime_r
+*/
+#if defined(lUA_USE_GMTIME_R)
+
+#define l_gmtime(t,r)		gmtime_r(t,r)
+#define l_localtime(t,r)	localtime_r(t,r)
+
+#elif !defined(l_gmtime)
+
+#define l_gmtime(t,r)		((void)r, gmtime(t))
+#define l_localtime(t,r)  	((void)r, localtime(t))
 
 #endif
 
@@ -177,13 +194,13 @@ static const char *checkoption (lua_State *L, const char *conv, char *buff) {
 static int os_date (lua_State *L) {
   const char *s = luaL_optstring(L, 1, "%c");
   time_t t = luaL_opt(L, (time_t)luaL_checknumber, 2, time(NULL));
-  struct tm *stm;
+  struct tm tmr, *stm;
   if (*s == '!') {  /* UTC? */
-    stm = gmtime(&t);
+    stm = l_gmtime(&t, &tmr);
     s++;  /* skip `!' */
   }
   else
-    stm = localtime(&t);
+    stm = l_localtime(&t, &tmr);
   if (stm == NULL)  /* invalid date? */
     lua_pushnil(L);
   else if (strcmp(s, "*t") == 0) {
