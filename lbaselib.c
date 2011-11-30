@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.270 2011/11/23 17:29:04 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.271 2011/11/29 15:55:08 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -297,14 +297,10 @@ static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
     *size = 0;
     return NULL;
   }
-  else if ((s = lua_tostring(L, -1)) != NULL) {
-    lua_replace(L, RESERVEDSLOT);  /* save string in reserved slot */
-    return lua_tolstring(L, RESERVEDSLOT, size);
-  }
-  else {
+  else if ((s = lua_tostring(L, -1)) == NULL)
     luaL_error(L, "reader function must return a string");
-    return NULL;  /* to avoid warnings */
-  }
+  lua_replace(L, RESERVEDSLOT);  /* save string in reserved slot */
+  return lua_tolstring(L, RESERVEDSLOT, size);
 }
 
 

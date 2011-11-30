@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.81 2010/12/20 19:40:07 roberto Exp roberto $
+** $Id: lmem.c,v 1.82 2011/09/20 19:25:23 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -63,9 +63,8 @@ void *luaM_growaux_ (lua_State *L, void *block, int *size, size_t size_elems,
 }
 
 
-void *luaM_toobig (lua_State *L) {
+l_noret luaM_toobig (lua_State *L) {
   luaG_runerror(L, "memory allocation error: block too big");
-  return NULL;  /* to avoid warnings */
 }
 
 
