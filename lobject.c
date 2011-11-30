@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.53 2011/07/27 12:13:08 roberto Exp roberto $
+** $Id: lobject.c,v 2.54 2011/11/30 12:44:26 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -33,7 +33,7 @@ LUAI_DDEF const TValue luaO_nilobject_ = {NILCONSTANT};
 ** (eeeeexxx), where the real value is (1xxx) * 2^(eeeee - 1) if
 ** eeeee != 0 and (xxx) otherwise.
 */
-int luaO_int2fb (lu_int32 x) {
+int luaO_int2fb (unsigned int x) {
   int e = 0;  /* exponent */
   if (x < 8) return x;
   while (x >= 0x10) {
