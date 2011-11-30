@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.58 2011/08/15 19:41:58 roberto Exp $
+** $Id: llex.c,v 2.59 2011/11/30 12:43:51 roberto Exp $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -46,7 +46,7 @@ static const char *const luaX_tokens [] = {
 #define save_and_next(ls) (save(ls, ls->current), next(ls))
 
 
-static void lexerror (LexState *ls, const char *msg, int token);
+static l_noret lexerror (LexState *ls, const char *msg, int token);
 
 
 static void save (LexState *ls, int c) {
@@ -101,7 +101,7 @@ static const char *txtToken (LexState *ls, int token) {
 }
 
 
-static void lexerror (LexState *ls, const char *msg, int token) {
+static l_noret lexerror (LexState *ls, const char *msg, int token) {
   char buff[LUA_IDSIZE];
   luaO_chunkid(buff, getstr(ls->source), LUA_IDSIZE);
   msg = luaO_pushfstring(ls->L, "%s:%d: %s", buff, ls->linenumber, msg);
@@ -111,7 +111,7 @@ static void lexerror (LexState *ls, const char *msg, int token) {
 }
 
 
-void luaX_syntaxerror (LexState *ls, const char *msg) {
+l_noret luaX_syntaxerror (LexState *ls, const char *msg) {
   lexerror(ls, msg, ls->t.token);
 }
 

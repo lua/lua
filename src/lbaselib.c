@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.271 2011/11/29 15:55:08 roberto Exp $
+** $Id: lbaselib.c,v 1.273 2011/11/30 13:03:24 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -288,7 +288,6 @@ static int luaB_loadfile (lua_State *L) {
 ** reserved slot inside the stack.
 */
 static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
-  const char *s;
   (void)(ud);  /* not used */
   luaL_checkstack(L, 2, "too many nested functions");
   lua_pushvalue(L, 1);  /* get function */
@@ -297,14 +296,10 @@ static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
     *size = 0;
     return NULL;
   }
-  else if ((s = lua_tostring(L, -1)) != NULL) {
-    lua_replace(L, RESERVEDSLOT);  /* save string in reserved slot */
-    return lua_tolstring(L, RESERVEDSLOT, size);
-  }
-  else {
+  else if (!lua_isstring(L, -1))
     luaL_error(L, "reader function must return a string");
-    return NULL;  /* to avoid warnings */
-  }
+  lua_replace(L, RESERVEDSLOT);  /* save string in reserved slot */
+  return lua_tolstring(L, RESERVEDSLOT, size);
 }
 
 

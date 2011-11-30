@@ -33,7 +33,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.90 2011/11/29 17:14:45 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.91 2011/11/30 18:26:32 roberto Exp $ -->
 
 
 
@@ -2026,7 +2026,7 @@ The string concatenation operator in Lua is
 denoted by two dots ('<code>..</code>').
 If both operands are strings or numbers, then they are converted to
 strings according to the rules mentioned in <a href="#3.4.2">&sect;3.4.2</a>.
-Otherwise, the "concat" metamethod is called (see <a href="#2.4">&sect;2.4</a>).
+Otherwise, the <code>__concat</code> metamethod is called (see <a href="#2.4">&sect;2.4</a>).
 
 
 
@@ -3703,7 +3703,7 @@ which is used for error messages and in debug information (see <a href="#4.9">&s
 
 
 <p>
-id{lua_load} automatically detects whether the chunk is text or binary
+<code>lua_load</code> automatically detects whether the chunk is text or binary
 and loads it accordingly (see program <code>luac</code>).
 The string <code>mode</code> works as in function <a href="#pdf-load"><code>load</code></a>,
 with the addition that
@@ -6957,7 +6957,7 @@ A return of an empty string, <b>nil</b>, or no value signals the end of the chun
 
 
 <p>
-If there are no errors,
+If there are no syntactic errors,
 returns the compiled chunk as a function;
 otherwise, returns <b>nil</b> plus the error message.
 
@@ -7847,9 +7847,11 @@ Options
 <code>G</code>, and <code>g</code> all expect a number as argument.
 Options <code>c</code>, <code>d</code>,
 <code>i</code>, <code>o</code>, <code>u</code>, <code>X</code>, and <code>x</code>
-expect an integer as argument;
-the range of that integer may be limited by
+also expect a number,
+but the range of that number may be limited by
 the underlying C&nbsp;implementation.
+For options <code>o</code>, <code>u</code>, <code>X</code>, and <code>x</code>,
+the number cannot be negative.
 Option <code>q</code> expects a string;
 option <code>s</code> expects a string without embedded zeros.
 If the argument to option <code>s</code> is not a string,
@@ -9247,7 +9249,7 @@ or <b>nil</b> on end of file.
 
 
 <p>
-<hr><h3><a name="pdf-file:seek"><code>file:seek ([whence] [, offset])</code></a></h3>
+<hr><h3><a name="pdf-file:seek"><code>file:seek ([whence [, offset]])</code></a></h3>
 
 
 <p>
@@ -10380,7 +10382,7 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Tue Nov 29 15:37:33 BRST 2011
+Wed Nov 30 18:23:56 BRST 2011
 </SMALL>
 <!--
 Last change: revised for Lua 5.2.0
