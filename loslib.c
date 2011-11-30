@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.36 2011/11/29 15:55:51 roberto Exp roberto $
+** $Id: loslib.c,v 1.37 2011/11/29 17:15:42 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -62,7 +62,7 @@
 ** By default, Lua uses gmtime/localtime, except when POSIX is available,
 ** where it uses gmtime_r/localtime_r
 */
-#if defined(lUA_USE_GMTIME_R)
+#if defined(LUA_USE_GMTIME_R)
 
 #define l_gmtime(t,r)		gmtime_r(t,r)
 #define l_localtime(t,r)	localtime_r(t,r)
