@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.157 2011/11/16 18:51:36 roberto Exp roberto $
+** $Id: lapi.c,v 2.158 2011/11/29 15:55:08 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1209,7 +1209,7 @@ static const char *aux_upvalue (StkId fi, int n, TValue **val,
 
 LUA_API const char *lua_getupvalue (lua_State *L, int funcindex, int n) {
   const char *name;
-  TValue *val = NULL;  /* initialized to avoid warnings */
+  TValue *val = NULL;  /* to avoid warnings */
   lua_lock(L);
   name = aux_upvalue(index2addr(L, funcindex), n, &val, NULL);
   if (name) {
@@ -1223,8 +1223,8 @@ LUA_API const char *lua_getupvalue (lua_State *L, int funcindex, int n) {
 
 LUA_API const char *lua_setupvalue (lua_State *L, int funcindex, int n) {
   const char *name;
-  TValue *val = NULL;  /* initialized to avoid warnings */
-  GCObject *owner = NULL;  /* initialized to avoid warnings */
+  TValue *val = NULL;  /* to avoid warnings */
+  GCObject *owner = NULL;  /* to avoid warnings */
   StkId fi;
   lua_lock(L);
   fi = index2addr(L, funcindex);
