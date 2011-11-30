@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.119 2011/11/14 17:10:24 roberto Exp $
+** $Id: lauxlib.h,v 1.120 2011/11/29 15:55:08 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -77,8 +77,8 @@ LUALIB_API int (luaL_loadfilex) (lua_State *L, const char *filename,
 
 #define luaL_loadfile(L,f)	luaL_loadfilex(L,f,NULL)
 
-LUALIB_API int (luaL_loadbuffer) (lua_State *L, const char *buff, size_t sz,
-                                  const char *name);
+LUALIB_API int (luaL_loadbufferx) (lua_State *L, const char *buff, size_t sz,
+                                   const char *name, const char *mode);
 LUALIB_API int (luaL_loadstring) (lua_State *L, const char *s);
 
 LUALIB_API lua_State *(luaL_newstate) (void);
@@ -130,6 +130,8 @@ LUALIB_API void (luaL_requiref) (lua_State *L, const char *modname,
 #define luaL_getmetatable(L,n)	(lua_getfield(L, LUA_REGISTRYINDEX, (n)))
 
 #define luaL_opt(L,f,n,d)	(lua_isnoneornil(L,(n)) ? (d) : f(L,(n)))
+
+#define luaL_loadbuffer(L,s,sz,n)	luaL_loadbufferx(L,s,sz,n,NULL)
 
 
 /*

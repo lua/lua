@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.62 2011/09/30 12:45:45 roberto Exp $
+** $Id: ltablib.c,v 1.63 2011/11/28 17:26:30 roberto Exp $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -129,8 +129,7 @@ static int pack (lua_State *L) {
     for (i = n; i >= 2; i--)  /* assign other elements */
       lua_rawseti(L, 1, i);
   }
-  lua_pushinteger(L, n);
-  return 2;  /* return table and number of elements */
+  return 1;  /* return table */
 }
 
 
