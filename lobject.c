@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.53 2011/07/27 12:09:13 roberto Exp roberto $
+** $Id: lobject.c,v 2.53 2011/07/27 12:13:08 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -221,7 +221,6 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
         luaG_runerror(L,
             "invalid option " LUA_QL("%%%c") " to " LUA_QL("lua_pushfstring"),
             *(e + 1));
-        break;
       }
     }
     n += 2;
