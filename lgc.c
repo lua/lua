@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.114 2011/10/03 17:54:25 roberto Exp roberto $
+** $Id: lgc.c,v 2.115 2011/11/28 17:25:48 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -291,7 +291,7 @@ static void reallymarkobject (global_State *g, GCObject *o) {
 
 
 /*
-** mark tag methods for basic types
+** mark metamethods for basic types
 */
 static void markmt (global_State *g) {
   int i;
@@ -774,7 +774,7 @@ static void GCTM (lua_State *L, int propagateerrors) {
     int status;
     lu_byte oldah = L->allowhook;
     int running  = g->gcrunning;
-    L->allowhook = 0;  /* stop debug hooks during GC tag method */
+    L->allowhook = 0;  /* stop debug hooks during GC metamethod */
     g->gcrunning = 0;  /* avoid GC steps */
     setobj2s(L, L->top, tm);  /* push finalizer... */
     setobj2s(L, L->top + 1, &v);  /* ... and its argument */
@@ -784,7 +784,7 @@ static void GCTM (lua_State *L, int propagateerrors) {
     g->gcrunning = running;  /* restore state */
     if (status != LUA_OK && propagateerrors) {  /* error while running __gc? */
       if (status == LUA_ERRRUN) {  /* is there an error msg.? */
-        luaO_pushfstring(L, "error in __gc tag method (%s)",
+        luaO_pushfstring(L, "error in __gc metamethod (%s)",
                                         lua_tostring(L, -1));
         status = LUA_ERRGCMM;  /* error in __gc metamethod */
       }
