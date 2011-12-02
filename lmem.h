@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.36 2010/04/08 17:16:46 roberto Exp roberto $
+** $Id: lmem.h,v 1.37 2011/11/30 12:42:49 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -15,9 +15,9 @@
 
 
 #define luaM_reallocv(L,b,on,n,e) \
-	((cast(size_t, (n)+1) <= MAX_SIZET/(e)) ?  /* +1 to avoid warnings */ \
-		luaM_realloc_(L, (b), (on)*(e), (n)*(e)) : \
-		(luaM_toobig(L), NULL))
+	((cast(size_t, (n)+1) > MAX_SIZET/(e)) ?  /* +1 to avoid warnings */ \
+		(luaM_toobig(L), (void *)0) : \
+		luaM_realloc_(L, (b), (on)*(e), (n)*(e)))
 
 #define luaM_freemem(L, b, s)	luaM_realloc_(L, (b), (s), 0)
 #define luaM_free(L, b)		luaM_realloc_(L, (b), sizeof(*(b)), 0)
