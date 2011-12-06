@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.93 2011/10/07 20:45:19 roberto Exp roberto $
+** $Id: llimits.h,v 1.94 2011/11/29 15:39:48 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -269,7 +269,7 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
 
 
 
-#if (defined(ltable_c) || defined(luaall_c)) && !defined(luai_hashnum)
+#if defined(ltable_c) && !defined(luai_hashnum)
 
 #include <float.h>
 #include <math.h>
