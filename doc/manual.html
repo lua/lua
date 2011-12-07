@@ -33,7 +33,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.91 2011/11/30 18:26:32 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.92 2011/12/06 17:58:43 roberto Exp $ -->
 
 
 
@@ -2707,6 +2707,14 @@ never returning
 
 
 <p>
+The panic function runs as if it were a message handler (see <a href="#2.3">&sect;2.3</a>);
+in particular, the error message is at the top of the stack.
+However, there is no guarantees about stack space.
+To push anything on the stack,
+the panic function should first check the available space (see <a href="#4.2">&sect;4.2</a>).
+
+
+<p>
 Most functions in the API can throw an error,
 for instance due to a memory allocation error.
 The documentation for each function indicates whether
@@ -2950,13 +2958,6 @@ The value of <code>op</code> must be one of the following constants:
 
 <p>
 Sets a new panic function and returns the old one (see <a href="#4.6">&sect;4.6</a>).
-
-
-<p>
-The panic function should not try to run anything on the failed Lua state.
-However, it can still use the debug API (see <a href="#4.9">&sect;4.9</a>)
-to gather information about the state.
-In particular, the error message is at the top of the stack.
 
 
 
@@ -10382,7 +10383,7 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Mon Dec  5 11:07:57 BRST 2011
+Wed Dec  7 16:31:58 BRST 2011
 </SMALL>
 <!--
 Last change: revised for Lua 5.2.0

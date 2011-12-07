@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.70 2011/06/21 12:29:00 lhf Exp $
+** $Id: lundump.c,v 1.71 2011/12/07 10:39:12 lhf Exp $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -136,8 +136,8 @@ static void LoadUpvalues(LoadState* S, Proto* f)
  for (i=0; i<n; i++) f->upvalues[i].name=NULL;
  for (i=0; i<n; i++)
  {
-  f->upvalues[i].instack=LoadChar(S);
-  f->upvalues[i].idx=LoadChar(S);
+  f->upvalues[i].instack=LoadByte(S);
+  f->upvalues[i].idx=LoadByte(S);
  }
 }
 

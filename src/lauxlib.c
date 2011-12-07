@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.239 2011/12/02 13:25:57 roberto Exp $
+** $Id: lauxlib.c,v 1.240 2011/12/06 16:33:55 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -944,7 +944,7 @@ LUALIB_API void luaL_checkversion_ (lua_State *L, lua_Number ver) {
   if (v != lua_version(NULL))
     luaL_error(L, "multiple Lua VMs detected");
   else if (*v != ver)
-    luaL_error(L, "version mismatch: app. needs %d, Lua core provides %f",
+    luaL_error(L, "version mismatch: app. needs %f, Lua core provides %f",
                   ver, *v);
   /* check conversions number -> integer types */
   lua_pushnumber(L, -(lua_Number)0x1234);
