@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.145 2011/11/28 17:25:16 roberto Exp roberto $
+** $Id: lvm.c,v 2.146 2011/11/29 15:54:38 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -662,7 +662,7 @@ void luaV_execute (lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         Protect(
-          if (equalobj(L, rb, rc) != GETARG_A(i))
+          if (cast_int(equalobj(L, rb, rc)) != GETARG_A(i))
             ci->u.l.savedpc++;
           else
             donextjump(ci);
