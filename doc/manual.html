@@ -33,7 +33,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.92 2011/12/06 17:58:43 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.93 2011/12/08 12:12:34 roberto Exp $ -->
 
 
 
@@ -10341,7 +10341,7 @@ Here is the complete syntax of Lua in extended BNF.
 
 	explist ::= exp {&lsquo;<b>,</b>&rsquo; exp}
 
-	exp ::=  <b>nil</b> | <b>false</b> | <b>true</b> | Number | String | &lsquo;<b>...</b>&rsquo; | function | 
+	exp ::=  <b>nil</b> | <b>false</b> | <b>true</b> | Number | String | &lsquo;<b>...</b>&rsquo; | functiondef | 
 		 prefixexp | tableconstructor | exp binop exp | unop exp 
 
 	prefixexp ::= var | functioncall | &lsquo;<b>(</b>&rsquo; exp &lsquo;<b>)</b>&rsquo;
@@ -10383,7 +10383,7 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Wed Dec  7 16:31:58 BRST 2011
+Thu Dec  8 10:36:53 BRST 2011
 </SMALL>
 <!--
 Last change: revised for Lua 5.2.0
