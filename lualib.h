@@ -1,5 +1,5 @@
 /*
-** $Id: lualib.h,v 1.41 2010/10/25 14:32:36 roberto Exp roberto $
+** $Id: lualib.h,v 1.42 2011/05/25 14:12:28 roberto Exp roberto $
 ** Lua standard libraries
 ** See Copyright Notice in lua.h
 */
@@ -10,9 +10,6 @@
 
 #include "lua.h"
 
-
-/* Key to file-handle type */
-#define LUA_FILEHANDLE		"FILE*"
 
 
 LUAMOD_API int (luaopen_base) (lua_State *L);
