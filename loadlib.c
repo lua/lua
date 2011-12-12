@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.106 2011/11/28 17:27:51 roberto Exp roberto $
+** $Id: loadlib.c,v 1.107 2011/11/30 12:58:57 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -615,12 +615,25 @@ static int ll_seeall (lua_State *L) {
 /* auxiliary mark (for internal use) */
 #define AUXMARK		"\1"
 
+
+/*
+** return registry.LUA_NOENV as a boolean
+*/
+static int noenv (lua_State *L) {
+  int b;
+  lua_getfield(L, LUA_REGISTRYINDEX, "LUA_NOENV");
+  b = lua_toboolean(L, -1);
+  lua_pop(L, 1);  /* remove value */
+  return b;
+}
+
+
 static void setpath (lua_State *L, const char *fieldname, const char *envname1,
                                    const char *envname2, const char *def) {
   const char *path = getenv(envname1);
   if (path == NULL)  /* no environment variable? */
     path = getenv(envname2);  /* try alternative name */
-  if (path == NULL)  /* no environment variable? */
+  if (path == NULL || noenv(L))  /* no environment variable? */
     lua_pushstring(L, def);  /* use default */
   else {
     /* replace ";;" by ";AUXMARK;" and then AUXMARK by default path */

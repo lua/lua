@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.201 2011/08/04 18:16:16 roberto Exp roberto $
+** $Id: lua.c,v 1.202 2011/08/17 20:19:52 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -439,18 +439,6 @@ static int handle_luainit (lua_State *L) {
 }
 
 
-static void resetpaths (lua_State *L) {
-  lua_getglobal(L, "package");
-  if (!lua_istable(L, -1))  /* no module 'package'? */
-    return;  /* nothing to be done */
-  lua_pushliteral(L, LUA_PATH_DEFAULT);
-  lua_setfield(L, -2, "path");  /* package.path = default */
-  lua_pushliteral(L, LUA_CPATH_DEFAULT);
-  lua_setfield(L, -2, "cpath");  /* package.cpath = default */
-  lua_pop(L, 1);  /* remove 'package' */
-}
-
-
 static int pmain (lua_State *L) {
   int argc = (int)lua_tointeger(L, 1);
   char **argv = (char **)lua_touserdata(L, 2);
@@ -464,14 +452,17 @@ static int pmain (lua_State *L) {
     return 0;
   }
   if (args[has_v]) print_version();
+  if (args[has_E]) {  /* option '-E'? */
+    lua_pushboolean(L, 1);  /* signal for libraries to ignore env. vars. */
+    lua_setfield(L, LUA_REGISTRYINDEX, "LUA_NOENV");
+  }
   /* open standard libraries */
   luaL_checkversion(L);
   lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
   luaL_openlibs(L);  /* open libraries */
   lua_gc(L, LUA_GCRESTART, 0);
-  if (args[has_E])  /* avoid LUA_INIT? */
-    resetpaths(L);
-  else if (handle_luainit(L) != LUA_OK) return 0;
+  if (!args[has_E] && handle_luainit(L) != LUA_OK)
+    return 0;  /* error running LUA_INIT */
   /* execute arguments -e and -l */
   if (!runargs(L, argv, (script > 0) ? script : argc)) return 0;
   /* execute main script (if there is one) */
