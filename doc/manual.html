@@ -33,7 +33,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.93 2011/12/08 12:12:34 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.94 2011/12/12 15:26:26 roberto Exp $ -->
 
 
 
@@ -2745,7 +2745,7 @@ Lua raises an error whenever it tries to yield across an API call,
 except for three functions:
 <a href="#lua_yieldk"><code>lua_yieldk</code></a>, <a href="#lua_callk"><code>lua_callk</code></a>, and <a href="#lua_pcallk"><code>lua_pcallk</code></a>.
 All those functions receive a <em>continuation function</em>
-(as a parameter called <code>k</code>) to continue execution after an yield.
+(as a parameter called <code>k</code>) to continue execution after a yield.
 
 
 <p>
@@ -3371,7 +3371,7 @@ but instead may call the continuation function.
 In that case, a call to <a href="#lua_getctx"><code>lua_getctx</code></a> will return the error code
 (the value that would be returned by <a href="#lua_pcallk"><code>lua_pcallk</code></a>);
 the value of <code>ctx</code> will be set to the context information,
-as in the case of an yield.
+as in the case of a yield.
 
 
 
@@ -6741,7 +6741,8 @@ To have access to these libraries,
 the C&nbsp;host program should call the <a href="#luaL_openlibs"><code>luaL_openlibs</code></a> function,
 which opens all standard libraries.
 Alternatively,
-it can open them individually by calling
+the host program can open them individually by using
+<a href="#luaL_requiref"><code>luaL_requiref</code></a> to call
 <a name="pdf-luaopen_base"><code>luaopen_base</code></a> (for the basic library),
 <a name="pdf-luaopen_package"><code>luaopen_package</code></a> (for the package library),
 <a name="pdf-luaopen_coroutine"><code>luaopen_coroutine</code></a> (for the coroutine library),
@@ -6752,10 +6753,7 @@ it can open them individually by calling
 <a name="pdf-luaopen_io"><code>luaopen_io</code></a> (for the I/O library),
 <a name="pdf-luaopen_os"><code>luaopen_os</code></a> (for the Operating System library),
 and <a name="pdf-luaopen_debug"><code>luaopen_debug</code></a> (for the debug library).
-These functions are declared in <a name="pdf-lualib.h"><code>lualib.h</code></a>
-and should not be called directly:
-you must call them like any other Lua C&nbsp;function,
-e.g., by using <a href="#lua_call"><code>lua_call</code></a>.
+These functions are declared in <a name="pdf-lualib.h"><code>lualib.h</code></a>.
 
 
 
@@ -9986,10 +9984,11 @@ Otherwise, <code>lua</code> executes the string itself.
 <p>
 When called with option <code>-E</code>,
 besides ignoring <code>LUA_INIT</code>,
-the interpreter also resets the values of
+Lua also ignores
+the values of <code>LUA_PATH</code> and <code>LUA_CPATH</code>,
+setting the values of
 <a href="#pdf-package.path"><code>package.path</code></a> and <a href="#pdf-package.cpath"><code>package.cpath</code></a>
-with the default paths defined in <code>luaconf.h</code>,
-in effect ignoring the values of <code>LUA_PATH</code> and <code>LUA_CPATH</code>.
+with the default paths defined in <code>luaconf.h</code>.
 
 
 <p>
@@ -10291,6 +10290,11 @@ Function <a href="#lua_load"><code>lua_load</code></a> has an extra parameter, <
 Pass <code>NULL</code> to simulate the old behavior.
 </li>
 
+<li>
+Function <a href="#lua_resume"><code>lua_resume</code></a> has an extra parameter, <code>from</code>.
+Pass <code>NULL</code> or the thread doing the call.
+</li>
+
 </ul>
 
 
@@ -10383,7 +10387,7 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Thu Dec  8 10:36:53 BRST 2011
+Mon Dec 12 15:21:08 BRST 2011
 </SMALL>
 <!--
 Last change: revised for Lua 5.2.0
