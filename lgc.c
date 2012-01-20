@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.115 2011/11/28 17:25:48 roberto Exp roberto $
+** $Id: lgc.c,v 2.116 2011/12/02 13:18:41 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -217,7 +217,8 @@ void luaC_checkupvalcolor (global_State *g, UpVal *uv) {
 GCObject *luaC_newobj (lua_State *L, int tt, size_t sz, GCObject **list,
                        int offset) {
   global_State *g = G(L);
-  GCObject *o = obj2gco(cast(char *, luaM_newobject(L, tt, sz)) + offset);
+  char *raw = cast(char *, luaM_newobject(L, novariant(tt), sz));
+  GCObject *o = obj2gco(raw + offset);
   if (list == NULL)
     list = &g->allgc;  /* standard list for collectable objects */
   gch(o)->marked = luaC_white(g);
@@ -266,8 +267,13 @@ static void reallymarkobject (global_State *g, GCObject *o) {
         gray2black(o);  /* make it black */
       return;
     }
-    case LUA_TFUNCTION: {
-      gco2cl(o)->c.gclist = g->gray;
+    case LUA_TLCL: {
+      gco2lcl(o)->gclist = g->gray;
+      g->gray = o;
+      break;
+    }
+    case LUA_TCCL: {
+      gco2ccl(o)->gclist = g->gray;
       g->gray = o;
       break;
     }
@@ -470,20 +476,20 @@ static int traverseproto (global_State *g, Proto *f) {
 }
 
 
-static int traverseclosure (global_State *g, Closure *cl) {
-  if (cl->c.isC) {
-    int i;
-    for (i=0; i<cl->c.nupvalues; i++)  /* mark its upvalues */
-      markvalue(g, &cl->c.upvalue[i]);
-  }
-  else {
-    int i;
-    lua_assert(cl->l.nupvalues == cl->l.p->sizeupvalues);
-    markobject(g, cl->l.p);  /* mark its prototype */
-    for (i=0; i<cl->l.nupvalues; i++)  /* mark its upvalues */
-      markobject(g, cl->l.upvals[i]);
-  }
-  return TRAVCOST + cl->c.nupvalues;
+static int traverseCclosure (global_State *g, CClosure *cl) {
+  int i;
+  for (i = 0; i < cl->nupvalues; i++)  /* mark its upvalues */
+    markvalue(g, &cl->upvalue[i]);
+  return TRAVCOST + cl->nupvalues;
+}
+
+static int traverseLclosure (global_State *g, LClosure *cl) {
+  int i;
+  assert(cl->nupvalues == cl->p->sizeupvalues);
+  markobject(g, cl->p);  /* mark its prototype */
+  for (i = 0; i < cl->nupvalues; i++)  /* mark its upvalues */
+    markobject(g, cl->upvals[i]);
+  return TRAVCOST + cl->nupvalues;
 }
 
 
@@ -517,10 +523,15 @@ static int propagatemark (global_State *g) {
       g->gray = h->gclist;
       return traversetable(g, h);
     }
-    case LUA_TFUNCTION: {
-      Closure *cl = gco2cl(o);
-      g->gray = cl->c.gclist;
-      return traverseclosure(g, cl);
+    case LUA_TLCL: {
+      LClosure *cl = gco2lcl(o);
+      g->gray = cl->gclist;
+      return traverseLclosure(g, cl);
+    }
+    case LUA_TCCL: {
+      CClosure *cl = gco2ccl(o);
+      g->gray = cl->gclist;
+      return traverseCclosure(g, cl);
     }
     case LUA_TTHREAD: {
       lua_State *th = gco2th(o);
@@ -640,7 +651,14 @@ static void clearvalues (GCObject *l, GCObject *f) {
 static void freeobj (lua_State *L, GCObject *o) {
   switch (gch(o)->tt) {
     case LUA_TPROTO: luaF_freeproto(L, gco2p(o)); break;
-    case LUA_TFUNCTION: luaF_freeclosure(L, gco2cl(o)); break;
+    case LUA_TLCL: {
+      luaM_freemem(L, o, sizeLclosure(gco2lcl(o)->nupvalues));
+      break;
+    }
+    case LUA_TCCL: {
+      luaM_freemem(L, o, sizeCclosure(gco2ccl(o)->nupvalues));
+      break;
+    }
     case LUA_TUPVAL: luaF_freeupval(L, gco2uv(o)); break;
     case LUA_TTABLE: luaH_free(L, gco2t(o)); break;
     case LUA_TTHREAD: luaE_freethread(L, gco2th(o)); break;

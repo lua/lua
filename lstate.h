@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.73 2011/08/23 17:24:34 roberto Exp roberto $
+** $Id: lstate.h,v 2.74 2011/09/30 12:45:07 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -197,7 +197,10 @@ union GCObject {
 #define gco2ts(o)	(&rawgco2ts(o)->tsv)
 #define rawgco2u(o)	check_exp((o)->gch.tt == LUA_TUSERDATA, &((o)->u))
 #define gco2u(o)	(&rawgco2u(o)->uv)
-#define gco2cl(o)	check_exp((o)->gch.tt == LUA_TFUNCTION, &((o)->cl))
+#define gco2lcl(o)	check_exp((o)->gch.tt == LUA_TLCL, &((o)->cl.l))
+#define gco2ccl(o)	check_exp((o)->gch.tt == LUA_TCCL, &((o)->cl.c))
+#define gco2cl(o)  \
+	check_exp(novariant((o)->gch.tt) == LUA_TFUNCTION, &((o)->cl))
 #define gco2t(o)	check_exp((o)->gch.tt == LUA_TTABLE, &((o)->h))
 #define gco2p(o)	check_exp((o)->gch.tt == LUA_TPROTO, &((o)->p))
 #define gco2uv(o)	check_exp((o)->gch.tt == LUA_TUPVAL, &((o)->uv))

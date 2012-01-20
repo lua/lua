@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.63 2011/10/17 14:46:13 roberto Exp roberto $
+** $Id: lobject.h,v 2.64 2011/10/31 17:48:22 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -109,12 +109,14 @@ typedef struct lua_TValue TValue;
 /* raw type tag of a TValue */
 #define rttype(o)	((o)->tt_)
 
+/* tag with no variants (bits 0-3) */
+#define novariant(x)	((x) & 0x0F)
+
 /* type tag of a TValue (bits 0-3 for tags + variant bits 4-5) */
 #define ttype(o)	(rttype(o) & 0x3F)
 
-
 /* type tag of a TValue with no variants (bits 0-3) */
-#define ttypenv(o)	(rttype(o) & 0x0F)
+#define ttypenv(o)	(novariant(rttype(o)))
 
 
 /* Macros to test type */
@@ -161,7 +163,7 @@ typedef struct lua_TValue TValue;
 
 
 /* Macros for internal tests */
-#define righttt(obj)		(ttypenv(obj) == gcvalue(obj)->gch.tt)
+#define righttt(obj)		(ttype(obj) == gcvalue(obj)->gch.tt)
 
 #define checkliveness(g,obj) \
 	lua_longassert(!iscollectable(obj) || \
@@ -501,7 +503,7 @@ typedef struct UpVal {
 */
 
 #define ClosureHeader \
-	CommonHeader; lu_byte isC; lu_byte nupvalues; GCObject *gclist
+	CommonHeader; lu_byte nupvalues; GCObject *gclist
 
 typedef struct CClosure {
   ClosureHeader;

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.123 2011/09/24 21:11:29 roberto Exp roberto $
+** $Id: ltests.c,v 2.124 2011/11/09 19:08:07 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -267,22 +267,23 @@ static void checkproto (global_State *g, Proto *f) {
 
 
 
-static void checkclosure (global_State *g, Closure *cl) {
+static void checkCclosure (global_State *g, CClosure *cl) {
   GCObject *clgc = obj2gco(cl);
-  if (cl->c.isC) {
-    int i;
-    for (i=0; i<cl->c.nupvalues; i++)
-      checkvalref(g, clgc, &cl->c.upvalue[i]);
-  }
-  else {
-    int i;
-    lua_assert(cl->l.nupvalues == cl->l.p->sizeupvalues);
-    checkobjref(g, clgc, cl->l.p);
-    for (i=0; i<cl->l.nupvalues; i++) {
-      if (cl->l.upvals[i]) {
-        lua_assert(cl->l.upvals[i]->tt == LUA_TUPVAL);
-        checkobjref(g, clgc, cl->l.upvals[i]);
-      }
+  int i;
+  for (i = 0; i < cl->nupvalues; i++)
+    checkvalref(g, clgc, &cl->upvalue[i]);
+}
+
+
+static void checkLclosure (global_State *g, LClosure *cl) {
+  GCObject *clgc = obj2gco(cl);
+  int i;
+  lua_assert(cl->nupvalues == cl->p->sizeupvalues);
+  checkobjref(g, clgc, cl->p);
+  for (i=0; i<cl->nupvalues; i++) {
+    if (cl->upvals[i]) {
+      lua_assert(cl->upvals[i]->tt == LUA_TUPVAL);
+      checkobjref(g, clgc, cl->upvals[i]);
     }
   }
 }
@@ -347,8 +348,12 @@ static void checkobject (global_State *g, GCObject *o) {
         checkstack(g, gco2th(o));
         break;
       }
-      case LUA_TFUNCTION: {
-        checkclosure(g, gco2cl(o));
+      case LUA_TLCL: {
+        checkLclosure(g, gco2lcl(o));
+        break;
+      }
+      case LUA_TCCL: {
+        checkCclosure(g, gco2ccl(o));
         break;
       }
       case LUA_TPROTO: {
