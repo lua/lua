@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.110 2011/08/17 20:38:51 roberto Exp roberto $
-+** $Id: bugs,v 1.110 2011/08/17 20:38:51 roberto Exp roberto $
+-** $Id: bugs,v 1.111 2011/10/21 19:34:23 roberto Exp roberto $
++** $Id: bugs,v 1.111 2011/10/21 19:34:23 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2407,3 +2407,126 @@ patch = [[
  
 ]]
 }
+
+
+-----------------------------------------------------------------
+-- Lua 5.2.0
+
+Bug{
+what = [[memory hoarding when creating Lua hooks for coroutines]],
+report = [[Arseny Vakhrushev, 2012/01/16]],
+since = [[5.1]],
+example = [[
+collectgarbage(); print(collectgarbage'count' * 1024)
+
+for i = 1, 100 do
+  local co = coroutine.create(function () end)
+  local x = {}
+  for j=1,1000 do x[j] = j end
+  debug.sethook(co, function () return x end, 'l')
+end
+
+collectgarbage(); print(collectgarbage'count' * 1024)
+-- value should back to near the original level
+]],
+patch = [[
+-- For 5.2
+
+--- ldblib.c	2011/10/24 14:54:05	1.131
++++ ldblib.c	2012/01/18 02:36:59
+@@ -253,14 +253,15 @@
+ }
+ 
+ 
+-#define gethooktable(L)	luaL_getsubtable(L, LUA_REGISTRYINDEX, HOOKKEY);
++#define gethooktable(L)	luaL_getsubtable(L, LUA_REGISTRYINDEX, HOOKKEY)
+ 
+ 
+ static void hookf (lua_State *L, lua_Debug *ar) {
+   static const char *const hooknames[] =
+     {"call", "return", "line", "count", "tail call"};
+   gethooktable(L);
+-  lua_rawgetp(L, -1, L);
++  lua_pushthread(L);
++  lua_rawget(L, -2);
+   if (lua_isfunction(L, -1)) {
+     lua_pushstring(L, hooknames[(int)ar->event]);
+     if (ar->currentline >= 0)
+@@ -306,10 +307,15 @@
+     count = luaL_optint(L, arg+3, 0);
+     func = hookf; mask = makemask(smask, count);
+   }
+-  gethooktable(L);
++  if (gethooktable(L) == 0) {  /* creating hook table? */
++    lua_pushstring(L, "k");
++    lua_setfield(L, -2, "__mode");  /** hooktable.__mode = "k" */
++    lua_pushvalue(L, -1);
++    lua_setmetatable(L, -2);  /* setmetatable(hooktable) = hooktable */
++  }
++  lua_pushthread(L1); lua_xmove(L1, L, 1);
+   lua_pushvalue(L, arg+1);
+-  lua_rawsetp(L, -2, L1);  /* set new hook */
+-  lua_pop(L, 1);  /* remove hook table */
++  lua_rawset(L, -3);  /* set new hook */
+   lua_sethook(L1, func, mask, count);  /* set hooks */
+   return 0;
+ }
+@@ -325,7 +331,8 @@
+     lua_pushliteral(L, "external hook");
+   else {
+     gethooktable(L);
+-    lua_rawgetp(L, -1, L1);   /* get hook */
++    lua_pushthread(L1); lua_xmove(L1, L, 1);
++    lua_rawget(L, -2);   /* get hook */
+     lua_remove(L, -2);  /* remove hook table */
+   }
+   lua_pushstring(L, unmakemask(mask, buff));
+]]
+}
+
+Bug{
+what = [[Lexical gets confused with some combination of arithmetic
+operators and hexadecimal numbers]],
+report = [[Alexandra Barros, 2012/01/17]],
+since = [[5.2.0]],
+example = [[print(0xE+1)]],
+patch = [[
+--- llex.c      2011/11/30 12:43:51     2.59
++++ llex.c      2012/01/20 18:22:50
+@@ -223,12 +223,19 @@
+
+ /* LUA_NUMBER */
+ static void read_numeral (LexState *ls, SemInfo *seminfo) {
++  const char *expo = "Ee";
++  int first = ls->current;
+   lua_assert(lisdigit(ls->current));
+-  do {
+-    save_and_next(ls);
+-    if (check_next(ls, "EePp"))  /* exponent part? */
++  save_and_next(ls);
++  if (first == '0' && check_next(ls, "Xx"))  /* hexadecimal? */
++    expo = "Pp";
++  for (;;) {
++    if (check_next(ls, expo))  /* exponent part? */
+       check_next(ls, "+-");  /* optional exponent sign */
+-  } while (lislalnum(ls->current) || ls->current == '.');
++    if (lisxdigit(ls->current) || ls->current == '.')
++      save_and_next(ls);
++    else  break;
++  }
+   save(ls, '\0');
+   buffreplace(ls, '.', ls->decpoint);  /* follow locale for decimal point */
+   if (!buff2d(ls->buff, &seminfo->r))  /* format error? */
+]]
+}
+
+--[=[
+Bug{
+what = [[ ]],
+report = [[ ]],
+since = [[ ]],
+example = [[ ]],
+patch = [[
+]]
+}
+]=]
