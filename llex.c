@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.59 2011/11/30 12:43:51 roberto Exp roberto $
+** $Id: llex.c,v 2.60 2012/01/20 18:35:36 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -67,7 +67,7 @@ void luaX_init (lua_State *L) {
   for (i=0; i<NUM_RESERVED; i++) {
     TString *ts = luaS_new(L, luaX_tokens[i]);
     luaS_fix(ts);  /* reserved words are never collected */
-    ts->tsv.reserved = cast_byte(i+1);  /* reserved word */
+    ts->tsv.extra = cast_byte(i+1);  /* reserved word */
   }
 }
 
@@ -491,8 +491,8 @@ static int llex (LexState *ls, SemInfo *seminfo) {
           ts = luaX_newstring(ls, luaZ_buffer(ls->buff),
                                   luaZ_bufflen(ls->buff));
           seminfo->ts = ts;
-          if (ts->tsv.reserved > 0)  /* reserved word? */
-            return ts->tsv.reserved - 1 + FIRST_RESERVED;
+          if (isreserved(ts))  /* reserved word? */
+            return ts->tsv.extra - 1 + FIRST_RESERVED;
           else {
             return TK_NAME;
           }

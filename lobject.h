@@ -409,7 +409,7 @@ typedef union TString {
   L_Umaxalign dummy;  /* ensures maximum alignment for strings */
   struct {
     CommonHeader;
-    lu_byte reserved;
+    lu_byte extra;  /* reserved words for strings */
     unsigned int hash;
     size_t len;  /* number of characters in string */
   } tsv;
