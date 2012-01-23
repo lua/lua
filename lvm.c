@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.146 2011/11/29 15:54:38 roberto Exp roberto $
+** $Id: lvm.c,v 2.147 2011/12/07 14:43:55 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -258,7 +258,7 @@ int luaV_equalobj_ (lua_State *L, const TValue *t1, const TValue *t2) {
     case LUA_TBOOLEAN: return bvalue(t1) == bvalue(t2);  /* true must be 1 !! */
     case LUA_TLIGHTUSERDATA: return pvalue(t1) == pvalue(t2);
     case LUA_TLCF: return fvalue(t1) == fvalue(t2);
-    case LUA_TSTRING: return eqstr(rawtsvalue(t1), rawtsvalue(t2));
+    case LUA_TSTRING: return luaS_eqstr(rawtsvalue(t1), rawtsvalue(t2));
     case LUA_TUSERDATA: {
       if (uvalue(t1) == uvalue(t2)) return 1;
       else if (L == NULL) return 0;
@@ -293,7 +293,7 @@ void luaV_concat (lua_State *L, int total) {
     else if (tsvalue(top-1)->len == 0)  /* second operand is empty? */
       (void)tostring(L, top - 2);  /* result is first operand */
     else if (ttisstring(top-2) && tsvalue(top-2)->len == 0) {
-      setsvalue2s(L, top-2, rawtsvalue(top-1));  /* result is second op. */
+      setobjs2s(L, top - 2, top - 1);  /* result is second op. */
     }
     else {
       /* at least two non-empty string values; get as many as possible */

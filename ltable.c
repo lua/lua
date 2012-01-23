@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.66 2011/11/28 17:25:48 roberto Exp roberto $
+** $Id: ltable.c,v 2.67 2011/11/30 12:41:45 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -458,7 +458,7 @@ const TValue *luaH_getint (Table *t, int key) {
 const TValue *luaH_getstr (Table *t, TString *key) {
   Node *n = hashstr(t, key);
   do {  /* check whether `key' is somewhere in the chain */
-    if (ttisstring(gkey(n)) && eqstr(rawtsvalue(gkey(n)), key))
+    if (ttisstring(gkey(n)) && luaS_eqstr(rawtsvalue(gkey(n)), key))
       return gval(n);  /* that's it */
     else n = gnext(n);
   } while (n);

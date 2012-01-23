@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.123 2011/11/30 12:43:51 roberto Exp roberto $
+** $Id: lparser.c,v 2.124 2011/12/02 13:23:56 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -222,7 +222,7 @@ static int searchupvalue (FuncState *fs, TString *name) {
   int i;
   Upvaldesc *up = fs->f->upvalues;
   for (i = 0; i < fs->nups; i++) {
-    if (eqstr(up[i].name, name)) return i;
+    if (luaS_eqstr(up[i].name, name)) return i;
   }
   return -1;  /* not found */
 }
@@ -246,7 +246,7 @@ static int newupvalue (FuncState *fs, TString *name, expdesc *v) {
 static int searchvar (FuncState *fs, TString *n) {
   int i;
   for (i=fs->nactvar-1; i >= 0; i--) {
-    if (eqstr(n, getlocvar(fs, i)->varname))
+    if (luaS_eqstr(n, getlocvar(fs, i)->varname))
       return i;
   }
   return -1;  /* not found */
@@ -342,7 +342,7 @@ static void closegoto (LexState *ls, int g, Labeldesc *label) {
   FuncState *fs = ls->fs;
   Labellist *gl = &ls->dyd->gt;
   Labeldesc *gt = &gl->arr[g];
-  lua_assert(eqstr(gt->name, label->name));
+  lua_assert(luaS_eqstr(gt->name, label->name));
   if (gt->nactvar < label->nactvar) {
     TString *vname = getlocvar(fs, gt->nactvar)->varname;
     const char *msg = luaO_pushfstring(ls->L,
@@ -369,7 +369,7 @@ static int findlabel (LexState *ls, int g) {
   /* check labels in current block for a match */
   for (i = bl->firstlabel; i < dyd->label.n; i++) {
     Labeldesc *lb = &dyd->label.arr[i];
-    if (eqstr(lb->name, gt->name)) {  /* correct label? */
+    if (luaS_eqstr(lb->name, gt->name)) {  /* correct label? */
       if (gt->nactvar > lb->nactvar &&
           (bl->upval || dyd->label.n > bl->firstlabel))
         luaK_patchclose(ls->fs, gt->pc, lb->nactvar);
@@ -403,7 +403,7 @@ static void findgotos (LexState *ls, Labeldesc *lb) {
   Labellist *gl = &ls->dyd->gt;
   int i = ls->fs->bl->firstgoto;
   while (i < gl->n) {
-    if (eqstr(gl->arr[i].name, lb->name))
+    if (luaS_eqstr(gl->arr[i].name, lb->name))
       closegoto(ls, i, lb);
     else
       i++;
@@ -461,7 +461,7 @@ static void breaklabel (LexState *ls) {
 ** message when label name is a reserved word (which can only be 'break')
 */
 static l_noret undefgoto (LexState *ls, Labeldesc *gt) {
-  const char *msg = (gt->name->tsv.reserved > 0)
+  const char *msg = isreserved(gt->name)
                     ? "<%s> at line %d not inside a loop"
                     : "no visible label " LUA_QS " for <goto> at line %d";
   msg = luaO_pushfstring(ls->L, msg, getstr(gt->name), gt->line);
@@ -1200,7 +1200,7 @@ static void gotostat (LexState *ls, int pc) {
 static void checkrepeated (FuncState *fs, Labellist *ll, TString *label) {
   int i;
   for (i = fs->bl->firstlabel; i < ll->n; i++) {
-    if (eqstr(label, ll->arr[i].name)) {
+    if (luaS_eqstr(label, ll->arr[i].name)) {
       const char *msg = luaO_pushfstring(fs->ls->L,
                           "label " LUA_QS " already defined on line %d",
                           getstr(label), ll->arr[i].line);
