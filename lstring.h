@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.45 2010/04/03 20:24:18 roberto Exp roberto $
+** $Id: lstring.h,v 1.46 2010/04/05 16:26:37 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -23,10 +23,16 @@
 
 
 /*
-** as all string are internalized, string equality becomes
-** pointer equality
+** test whether a string is a reserved word
 */
-#define eqstr(a,b)	((a) == (b))
+#define isreserved(s)	((s)->tsv.extra > 0)
+
+
+/*
+** equality for strings, which are always internalized
+*/
+#define luaS_eqstr(a,b)		((a) == (b))
+
 
 LUAI_FUNC void luaS_resize (lua_State *L, int newsize);
 LUAI_FUNC Udata *luaS_newudata (lua_State *L, size_t s, Table *e);
