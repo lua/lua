@@ -52,6 +52,12 @@
 #define LUA_TCCL	(LUA_TFUNCTION | (2 << 4))  /* C closure */
 
 
+/*
+** LUA_TSTRING variants */
+#define LUA_TSHRSTR	(LUA_TSTRING | (0 << 4))  /* short strings */
+#define LUA_TLNGSTR	(LUA_TSTRING | (1 << 4))  /* long strings */
+
+
 /* Bit mark for collectable types */
 #define BIT_ISCOLLECTABLE	(1 << 6)
 
@@ -129,7 +135,9 @@ typedef struct lua_TValue TValue;
 #define ttisnil(o)		checktag((o), LUA_TNIL)
 #define ttisboolean(o)		checktag((o), LUA_TBOOLEAN)
 #define ttislightuserdata(o)	checktag((o), LUA_TLIGHTUSERDATA)
-#define ttisstring(o)		checktag((o), ctb(LUA_TSTRING))
+#define ttisstring(o)		checktype((o), LUA_TSTRING)
+#define ttisshrstring(o)	checktag((o), ctb(LUA_TSHRSTR))
+#define ttislngstring(o)	checktag((o), ctb(LUA_TLNGSTR))
 #define ttistable(o)		checktag((o), ctb(LUA_TTABLE))
 #define ttisfunction(o)		checktype(o, LUA_TFUNCTION)
 #define ttisclosure(o)		((rttype(o) & 0x1F) == LUA_TFUNCTION)
@@ -199,7 +207,8 @@ typedef struct lua_TValue TValue;
 
 #define setsvalue(L,obj,x) \
   { TValue *io=(obj); \
-    val_(io).gc=cast(GCObject *, (x)); settt_(io, ctb(LUA_TSTRING)); \
+    TString *x_ = (x); \
+    val_(io).gc=cast(GCObject *, x_); settt_(io, ctb(x_->tsv.tt)); \
     checkliveness(G(L),io); }
 
 #define setuvalue(L,obj,x) \
@@ -409,7 +418,7 @@ typedef union TString {
   L_Umaxalign dummy;  /* ensures maximum alignment for strings */
   struct {
     CommonHeader;
-    lu_byte extra;  /* reserved words for strings */
+    lu_byte extra;  /* reserved words for short strings; "has hash" for longs */
     unsigned int hash;
     size_t len;  /* number of characters in string */
   } tsv;

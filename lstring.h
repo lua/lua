@@ -25,15 +25,18 @@
 /*
 ** test whether a string is a reserved word
 */
-#define isreserved(s)	((s)->tsv.extra > 0)
+#define isreserved(s)	((s)->tsv.tt == LUA_TSHRSTR && (s)->tsv.extra > 0)
 
 
 /*
-** equality for strings, which are always internalized
+** equality for short strings, which are always internalized
 */
-#define luaS_eqstr(a,b)		((a) == (b))
+#define eqshrstr(a,b)	check_exp((a)->tsv.tt == LUA_TSHRSTR, (a) == (b))
 
 
+LUAI_FUNC unsigned int luaS_hash (const char *str, size_t l);
+LUAI_FUNC int luaS_eqlngstr (TString *a, TString *b);
+LUAI_FUNC int luaS_eqstr (TString *a, TString *b);
 LUAI_FUNC void luaS_resize (lua_State *L, int newsize);
 LUAI_FUNC Udata *luaS_newudata (lua_State *L, size_t s, Table *e);
 LUAI_FUNC TString *luaS_newlstr (lua_State *L, const char *str, size_t l);

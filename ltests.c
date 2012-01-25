@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.124 2011/11/09 19:08:07 roberto Exp roberto $
+** $Id: ltests.c,v 2.125 2012/01/20 22:05:50 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -360,7 +360,8 @@ static void checkobject (global_State *g, GCObject *o) {
         checkproto(g, gco2p(o));
         break;
       }
-      case LUA_TSTRING: break;
+      case LUA_TSHRSTR:
+      case LUA_TLNGSTR: break;
       default: lua_assert(0);
     }
   }

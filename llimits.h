@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.94 2011/11/29 15:39:48 roberto Exp roberto $
+** $Id: llimits.h,v 1.95 2011/12/06 16:58:36 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -122,6 +122,15 @@ typedef LUAI_UACNUMBER l_uacNumber;
 ** must fit in an unsigned char.)
 */
 #define MAXUPVAL	UCHAR_MAX
+
+
+/*
+** maximum length for short strings, that is, strings that are
+** internalized. (Cannot be smaller than reserved words or tags
+** for metamethods; #"function" = 8, #"__newindex" = 10; should
+** not be larger than 255, to allow future changes)
+*/
+#define LUA_MAXSHORTLEN		(8 * sizeof(void*))
 
 
 /*

@@ -65,7 +65,11 @@
 #define white2gray(x)	resetbits(gch(x)->marked, WHITEBITS)
 #define black2gray(x)	resetbit(gch(x)->marked, BLACKBIT)
 
-#define stringmark(s)	((void)((s) && resetbits((s)->tsv.marked, WHITEBITS)))
+/*
+** dirty trick: we know that 'reallymarkobject' does not use 'g' when
+** object is a string
+*/
+#define stringmark(s)	markobject(NULL, s)
 
 
 #define isfinalized(x)		testbit(gch(x)->marked, FINALIZEDBIT)
@@ -240,18 +244,18 @@ GCObject *luaC_newobj (lua_State *L, int tt, size_t sz, GCObject **list,
 
 
 /*
-** mark an object. Userdata and closed upvalues are visited and turned
-** black here. Strings remain gray (it is the same as making them
-** black). Other objects are marked gray and added to appropriate list
-** to be visited (and turned black) later. (Open upvalues are already
-** linked in 'headuv' list.)
+** mark an object. Userdata, strings, and closed upvalues are visited
+** and turned black here. Other objects are marked gray and added
+** to appropriate list to be visited (and turned black) later. (Open
+** upvalues are already linked in 'headuv' list.)
 */
 static void reallymarkobject (global_State *g, GCObject *o) {
-  lua_assert(iswhite(o) && !isdead(g, o));
   white2gray(o);
   switch (gch(o)->tt) {
-    case LUA_TSTRING: {
-      return;  /* for strings, gray is as good as black */
+    case LUA_TSHRSTR:
+    case LUA_TLNGSTR: {
+      gray2black(o);
+      return;  /* nothing else to mark */
     }
     case LUA_TUSERDATA: {
       Table *mt = gco2u(o)->metatable;
@@ -663,8 +667,10 @@ static void freeobj (lua_State *L, GCObject *o) {
     case LUA_TTABLE: luaH_free(L, gco2t(o)); break;
     case LUA_TTHREAD: luaE_freethread(L, gco2th(o)); break;
     case LUA_TUSERDATA: luaM_freemem(L, o, sizeudata(gco2u(o))); break;
-    case LUA_TSTRING: {
+    case LUA_TSHRSTR: 
       G(L)->strt.nuse--;
+      /* go through */
+    case LUA_TLNGSTR: {
       luaM_freemem(L, o, sizestring(gco2ts(o)));
       break;
     }
