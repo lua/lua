@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.46 2010/04/05 16:26:37 roberto Exp roberto $
+** $Id: lstring.h,v 1.48 2012/01/25 21:05:40 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -34,7 +34,7 @@
 #define eqshrstr(a,b)	check_exp((a)->tsv.tt == LUA_TSHRSTR, (a) == (b))
 
 
-LUAI_FUNC unsigned int luaS_hash (const char *str, size_t l);
+LUAI_FUNC unsigned int luaS_hash (const char *str, size_t l, unsigned int seed);
 LUAI_FUNC int luaS_eqlngstr (TString *a, TString *b);
 LUAI_FUNC int luaS_eqstr (TString *a, TString *b);
 LUAI_FUNC void luaS_resize (lua_State *L, int newsize);

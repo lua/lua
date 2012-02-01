@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.67 2011/11/30 12:41:45 roberto Exp roberto $
+** $Id: ltable.c,v 2.69 2012/01/25 21:05:40 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -101,7 +101,7 @@ static Node *mainposition (const Table *t, const TValue *key) {
     case LUA_TLNGSTR: {
       TString *s = rawtsvalue(key);
       if (s->tsv.extra == 0) {  /* no hash? */
-        s->tsv.hash = luaS_hash(getstr(s), s->tsv.len);
+        s->tsv.hash = luaS_hash(getstr(s), s->tsv.len, s->tsv.hash);
         s->tsv.extra = 1;  /* now it has its hash */
       }
       return hashstr(t, rawtsvalue(key));
