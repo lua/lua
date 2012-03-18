@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.239 2011/12/02 13:25:57 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.240 2011/12/06 16:33:55 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -843,6 +843,7 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
 ** Returns with only the table at the stack.
 */
 LUALIB_API void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup) {
+  luaL_checkversion(L);
   luaL_checkstack(L, nup, "too many upvalues");
   for (; l->name != NULL; l++) {  /* fill the table with given functions */
     int i;
