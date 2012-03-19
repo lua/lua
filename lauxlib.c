@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.240 2011/12/06 16:33:55 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.241 2012/03/18 16:52:49 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -616,8 +616,10 @@ static int skipBOM (LoadF *lf) {
 static int skipcomment (LoadF *lf, int *cp) {
   int c = *cp = skipBOM(lf);
   if (c == '#') {  /* first line is a comment (Unix exec. file)? */
-    while ((c = getc(lf->f)) != EOF && c != '\n') ;  /* skip first line */
-    *cp = getc(lf->f);  /* skip end-of-line */
+    do {  /* skip first line */
+      c = getc(lf->f);
+    } while (c != EOF && c != '\n') ;
+    *cp = getc(lf->f);  /* skip end-of-line, if present */
     return 1;  /* there was a comment */
   }
   else return 0;  /* no comment */
