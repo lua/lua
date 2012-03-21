@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.74 2011/09/30 12:45:07 roberto Exp $
+** $Id: lstate.h,v 2.77 2012/02/01 21:57:15 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -116,6 +116,7 @@ typedef struct global_State {
   lu_mem lastmajormem;  /* memory in use after last major collection */
   stringtable strt;  /* hash table for strings */
   TValue l_registry;
+  unsigned int seed;  /* randomized seed for hashes */
   lu_byte currentwhite;
   lu_byte gcstate;  /* state of garbage collector */
   lu_byte gckind;  /* kind of GC running */
@@ -193,11 +194,15 @@ union GCObject {
 #define gch(o)		(&(o)->gch)
 
 /* macros to convert a GCObject into a specific value */
-#define rawgco2ts(o)	check_exp((o)->gch.tt == LUA_TSTRING, &((o)->ts))
+#define rawgco2ts(o)  \
+	check_exp(novariant((o)->gch.tt) == LUA_TSTRING, &((o)->ts))
 #define gco2ts(o)	(&rawgco2ts(o)->tsv)
 #define rawgco2u(o)	check_exp((o)->gch.tt == LUA_TUSERDATA, &((o)->u))
 #define gco2u(o)	(&rawgco2u(o)->uv)
-#define gco2cl(o)	check_exp((o)->gch.tt == LUA_TFUNCTION, &((o)->cl))
+#define gco2lcl(o)	check_exp((o)->gch.tt == LUA_TLCL, &((o)->cl.l))
+#define gco2ccl(o)	check_exp((o)->gch.tt == LUA_TCCL, &((o)->cl.c))
+#define gco2cl(o)  \
+	check_exp(novariant((o)->gch.tt) == LUA_TFUNCTION, &((o)->cl))
 #define gco2t(o)	check_exp((o)->gch.tt == LUA_TTABLE, &((o)->h))
 #define gco2p(o)	check_exp((o)->gch.tt == LUA_TPROTO, &((o)->p))
 #define gco2uv(o)	check_exp((o)->gch.tt == LUA_TUPVAL, &((o)->uv))

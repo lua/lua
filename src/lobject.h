@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.64 2011/10/31 17:48:22 roberto Exp $
+** $Id: lobject.h,v 2.68 2012/01/25 21:05:40 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -36,6 +36,9 @@
 ** bit 6: whether value is collectable
 */
 
+#define VARBITS		(3 << 4)
+
+
 /*
 ** LUA_TFUNCTION variants:
 ** 0 - Lua function
@@ -47,6 +50,12 @@
 #define LUA_TLCL	(LUA_TFUNCTION | (0 << 4))  /* Lua closure */
 #define LUA_TLCF	(LUA_TFUNCTION | (1 << 4))  /* light C function */
 #define LUA_TCCL	(LUA_TFUNCTION | (2 << 4))  /* C closure */
+
+
+/*
+** LUA_TSTRING variants */
+#define LUA_TSHRSTR	(LUA_TSTRING | (0 << 4))  /* short strings */
+#define LUA_TLNGSTR	(LUA_TSTRING | (1 << 4))  /* long strings */
 
 
 /* Bit mark for collectable types */
@@ -109,23 +118,28 @@ typedef struct lua_TValue TValue;
 /* raw type tag of a TValue */
 #define rttype(o)	((o)->tt_)
 
+/* tag with no variants (bits 0-3) */
+#define novariant(x)	((x) & 0x0F)
+
 /* type tag of a TValue (bits 0-3 for tags + variant bits 4-5) */
 #define ttype(o)	(rttype(o) & 0x3F)
 
-
 /* type tag of a TValue with no variants (bits 0-3) */
-#define ttypenv(o)	(rttype(o) & 0x0F)
+#define ttypenv(o)	(novariant(rttype(o)))
 
 
 /* Macros to test type */
 #define checktag(o,t)		(rttype(o) == (t))
+#define checktype(o,t)		(ttypenv(o) == (t))
 #define ttisnumber(o)		checktag((o), LUA_TNUMBER)
 #define ttisnil(o)		checktag((o), LUA_TNIL)
 #define ttisboolean(o)		checktag((o), LUA_TBOOLEAN)
 #define ttislightuserdata(o)	checktag((o), LUA_TLIGHTUSERDATA)
-#define ttisstring(o)		checktag((o), ctb(LUA_TSTRING))
+#define ttisstring(o)		checktype((o), LUA_TSTRING)
+#define ttisshrstring(o)	checktag((o), ctb(LUA_TSHRSTR))
+#define ttislngstring(o)	checktag((o), ctb(LUA_TLNGSTR))
 #define ttistable(o)		checktag((o), ctb(LUA_TTABLE))
-#define ttisfunction(o)		(ttypenv(o) == LUA_TFUNCTION)
+#define ttisfunction(o)		checktype(o, LUA_TFUNCTION)
 #define ttisclosure(o)		((rttype(o) & 0x1F) == LUA_TFUNCTION)
 #define ttisCclosure(o)		checktag((o), ctb(LUA_TCCL))
 #define ttisLclosure(o)		checktag((o), ctb(LUA_TLCL))
@@ -161,7 +175,7 @@ typedef struct lua_TValue TValue;
 
 
 /* Macros for internal tests */
-#define righttt(obj)		(ttypenv(obj) == gcvalue(obj)->gch.tt)
+#define righttt(obj)		(ttype(obj) == gcvalue(obj)->gch.tt)
 
 #define checkliveness(g,obj) \
 	lua_longassert(!iscollectable(obj) || \
@@ -193,7 +207,8 @@ typedef struct lua_TValue TValue;
 
 #define setsvalue(L,obj,x) \
   { TValue *io=(obj); \
-    val_(io).gc=cast(GCObject *, (x)); settt_(io, ctb(LUA_TSTRING)); \
+    TString *x_ = (x); \
+    val_(io).gc=cast(GCObject *, x_); settt_(io, ctb(x_->tsv.tt)); \
     checkliveness(G(L),io); }
 
 #define setuvalue(L,obj,x) \
@@ -348,7 +363,9 @@ typedef struct lua_TValue TValue;
 */
 
 #undef checktag
+#undef checktype
 #define checktag(o,t)	(tt_(o) == tag2tt(t))
+#define checktype(o,t)	(ctb(tt_(o) | VARBITS) == ctb(tag2tt(t) | VARBITS))
 
 #undef ttisequal
 #define ttisequal(o1,o2)  \
@@ -401,7 +418,7 @@ typedef union TString {
   L_Umaxalign dummy;  /* ensures maximum alignment for strings */
   struct {
     CommonHeader;
-    lu_byte reserved;
+    lu_byte extra;  /* reserved words for short strings; "has hash" for longs */
     unsigned int hash;
     size_t len;  /* number of characters in string */
   } tsv;
@@ -501,7 +518,7 @@ typedef struct UpVal {
 */
 
 #define ClosureHeader \
-	CommonHeader; lu_byte isC; lu_byte nupvalues; GCObject *gclist
+	CommonHeader; lu_byte nupvalues; GCObject *gclist
 
 typedef struct CClosure {
   ClosureHeader;

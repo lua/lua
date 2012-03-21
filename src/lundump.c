@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.71 2011/12/07 10:39:12 lhf Exp $
+** $Id: lundump.c,v 1.72 2012/03/21 18:11:35 lhf Exp $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -27,7 +27,7 @@ typedef struct {
  const char* name;
 } LoadState;
 
-static void error(LoadState* S, const char* why)
+static l_noret error(LoadState* S, const char* why)
 {
  luaO_pushfstring(S->L,"%s: %s precompiled chunk",S->name,why);
  luaD_throw(S->L,LUA_ERRSYNTAX);
@@ -118,6 +118,7 @@ static void LoadConstants(LoadState* S, Proto* f)
    case LUA_TSTRING:
 	setsvalue2n(S->L,o,LoadString(S));
 	break;
+    default: lua_assert(0);
   }
  }
  n=LoadInt(S);
