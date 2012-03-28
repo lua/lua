@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.21 2012/01/25 21:05:40 roberto Exp roberto $
+** $Id: lstring.c,v 2.22 2012/02/01 21:57:15 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -19,12 +19,34 @@
 
 
 /*
+** maximum length for short strings, that is, strings that are
+** internalized. (Cannot be smaller than reserved words or tags
+** for metamethods, as these strings must be internalized;
+** #("function") = 8, #("__newindex") = 10.)
+*/
+#if !defined(LUAI_MAXSHORTLEN)
+#define LUAI_MAXSHORTLEN	40
+#endif
+
+
+/*
+** Lua will use at most ~(2^LUAI_HASHLIMIT) bytes from a string to
+** compute its hash
+*/
+#if !defined(LUAI_HASHLIMIT)
+#define LUAI_HASHLIMIT		5
+#endif
+
+
+/*
 ** equality for long strings
 */
 int luaS_eqlngstr (TString *a, TString *b) {
   size_t len = a->tsv.len;
   lua_assert(a->tsv.tt == LUA_TLNGSTR && b->tsv.tt == LUA_TLNGSTR);
-  return (len == b->tsv.len) && (memcmp(getstr(a), getstr(b), len) == 0);
+  return (a == b) ||  /* same instance or... */
+    ((len == b->tsv.len) &&  /* equal length and ... */
+     (memcmp(getstr(a), getstr(b), len) == 0));  /* equal contents */
 }
 
 
@@ -40,8 +62,9 @@ int luaS_eqstr (TString *a, TString *b) {
 unsigned int luaS_hash (const char *str, size_t l, unsigned int seed) {
   unsigned int h = seed ^ l;
   size_t l1;
-  for (l1 = 0; l1 < l; l1++)
-    h = h ^ ((h<<5) + (h>>2) + cast_byte(str[l1]));
+  size_t step = (l >> LUAI_HASHLIMIT) + 1;
+  for (l1 = l; l1 >= step; l1 -= step)
+    h = h ^ ((h<<5) + (h>>2) + cast_byte(str[l1 - 1]));
   return h;
 }
 
@@ -142,7 +165,7 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
 ** new string (with explicit length)
 */
 TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
-  if (l <= LUA_MAXSHORTLEN)  /* short string? */
+  if (l <= LUAI_MAXSHORTLEN)  /* short string? */
     return internshrstr(L, str, l);
   else {
     if (l + 1 > (MAX_SIZET - sizeof(TString))/sizeof(char))
