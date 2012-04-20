@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.124 2011/12/02 13:23:56 roberto Exp roberto $
+** $Id: lparser.c,v 2.125 2012/01/23 23:05:18 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -879,8 +879,8 @@ static void funcargs (LexState *ls, expdesc *f, int line) {
 */
 
 
-static void prefixexp (LexState *ls, expdesc *v) {
-  /* prefixexp -> NAME | '(' expr ')' */
+static void primaryexp (LexState *ls, expdesc *v) {
+  /* primaryexp -> NAME | '(' expr ')' */
   switch (ls->t.token) {
     case '(': {
       int line = ls->linenumber;
@@ -901,12 +901,12 @@ static void prefixexp (LexState *ls, expdesc *v) {
 }
 
 
-static void primaryexp (LexState *ls, expdesc *v) {
-  /* primaryexp ->
-        prefixexp { `.' NAME | `[' exp `]' | `:' NAME funcargs | funcargs } */
+static void suffixedexp (LexState *ls, expdesc *v) {
+  /* suffixedexp ->
+       primaryexp { '.' NAME | '[' exp ']' | ':' NAME funcargs | funcargs } */
   FuncState *fs = ls->fs;
   int line = ls->linenumber;
-  prefixexp(ls, v);
+  primaryexp(ls, v);
   for (;;) {
     switch (ls->t.token) {
       case '.': {  /* fieldsel */
@@ -941,7 +941,7 @@ static void primaryexp (LexState *ls, expdesc *v) {
 
 static void simpleexp (LexState *ls, expdesc *v) {
   /* simpleexp -> NUMBER | STRING | NIL | TRUE | FALSE | ... |
-                  constructor | FUNCTION body | primaryexp */
+                  constructor | FUNCTION body | suffixedexp */
   switch (ls->t.token) {
     case TK_NUMBER: {
       init_exp(v, VKNUM, 0);
@@ -981,7 +981,7 @@ static void simpleexp (LexState *ls, expdesc *v) {
       return;
     }
     default: {
-      primaryexp(ls, v);
+      suffixedexp(ls, v);
       return;
     }
   }
@@ -1141,10 +1141,10 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
 static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
   expdesc e;
   check_condition(ls, vkisvar(lh->v.k), "syntax error");
-  if (testnext(ls, ',')) {  /* assignment -> `,' primaryexp assignment */
+  if (testnext(ls, ',')) {  /* assignment -> ',' suffixedexp assignment */
     struct LHS_assign nv;
     nv.prev = lh;
-    primaryexp(ls, &nv.v);
+    suffixedexp(ls, &nv.v);
     if (nv.v.k != VINDEXED)
       check_conflict(ls, lh, &nv.v);
     checklimit(ls->fs, nvars + ls->L->nCcalls, LUAI_MAXCCALLS,
@@ -1480,12 +1480,14 @@ static void exprstat (LexState *ls) {
   /* stat -> func | assignment */
   FuncState *fs = ls->fs;
   struct LHS_assign v;
-  primaryexp(ls, &v.v);
-  if (v.v.k == VCALL)  /* stat -> func */
-    SETARG_C(getcode(fs, &v.v), 1);  /* call statement uses no results */
-  else {  /* stat -> assignment */
+  suffixedexp(ls, &v.v);
+  if (ls->t.token == '=' || ls->t.token == ',') { /* stat -> assignment ? */
     v.prev = NULL;
     assignment(ls, &v, 1);
+  }
+  else {  /* stat -> func */
+    check_condition(ls, v.v.k == VCALL, "syntax error");
+    SETARG_C(getcode(fs, &v.v), 1);  /* call statement uses no results */
   }
 }
 
