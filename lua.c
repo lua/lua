@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.202 2011/08/17 20:19:52 roberto Exp roberto $
+** $Id: lua.c,v 1.203 2011/12/12 16:34:03 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -223,16 +223,11 @@ static int dostring (lua_State *L, const char *s, const char *name) {
 
 static int dolibrary (lua_State *L, const char *name) {
   int status;
-  lua_pushglobaltable(L);
-  lua_getfield(L, -1, "require");
+  lua_getglobal(L, "require");
   lua_pushstring(L, name);
-  status = docall(L, 1, 1);
-  if (status == LUA_OK) {
-    lua_setfield(L, -2, name);  /* global[name] = require return */
-    lua_pop(L, 1);  /* remove global table */
-  }
-  else
-    lua_remove(L, -2);  /* remove global table (below error msg.) */
+  status = docall(L, 1, 1);  /* call 'require(name)' */
+  if (status == LUA_OK)
+    lua_setglobal(L, name);  /* global[name] = require return */
   return report(L, status);
 }
 
