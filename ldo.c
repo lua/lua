@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.101 2011/10/07 20:45:19 roberto Exp roberto $
+** $Id: ldo.c,v 2.102 2011/11/29 15:55:08 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -402,8 +402,6 @@ static void finishCcall (lua_State *L) {
   int n;
   lua_assert(ci->u.c.k != NULL);  /* must have a continuation */
   lua_assert(L->nny == 0);
-  /* finish 'luaD_call' */
-  L->nCcalls--;
   /* finish 'lua_callk' */
   adjustresults(L, ci->nresults);
   /* call continuation function */
@@ -484,9 +482,10 @@ static l_noret resume_error (lua_State *L, const char *msg, StkId firstArg) {
 ** do the work for 'lua_resume' in protected mode
 */
 static void resume (lua_State *L, void *ud) {
+  int nCcalls = L->nCcalls;
   StkId firstArg = cast(StkId, ud);
   CallInfo *ci = L->ci;
-  if (L->nCcalls >= LUAI_MAXCCALLS)
+  if (nCcalls >= LUAI_MAXCCALLS)
     resume_error(L, "C stack overflow", firstArg);
   if (L->status == LUA_OK) {  /* may be starting a coroutine */
     if (ci != &L->base_ci)  /* not in base level? */
@@ -513,11 +512,11 @@ static void resume (lua_State *L, void *ud) {
         api_checknelems(L, n);
         firstArg = L->top - n;  /* yield results come from continuation */
       }
-      L->nCcalls--;  /* finish 'luaD_call' */
       luaD_poscall(L, firstArg);  /* finish 'luaD_precall' */
     }
     unroll(L, NULL);
   }
+  lua_assert(nCcalls == L->nCcalls);
 }
 
 
