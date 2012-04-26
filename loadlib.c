@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.108 2011/12/12 16:34:03 roberto Exp roberto $
+** $Id: loadlib.c,v 1.109 2012/04/11 16:35:32 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -672,20 +672,10 @@ static const luaL_Reg ll_funcs[] = {
 };
 
 
-static const lua_CFunction searchers[] =
-  {searcher_preload, searcher_Lua, searcher_C, searcher_Croot, NULL};
-
-
-LUAMOD_API int luaopen_package (lua_State *L) {
+static void createsearcherstable (lua_State *L) {
+  static const lua_CFunction searchers[] =
+    {searcher_preload, searcher_Lua, searcher_C, searcher_Croot, NULL};
   int i;
-  /* create table CLIBS to keep track of loaded C libraries */
-  luaL_getsubtable(L, LUA_REGISTRYINDEX, CLIBS);
-  lua_createtable(L, 0, 1);  /* metatable for CLIBS */
-  lua_pushcfunction(L, gctm);
-  lua_setfield(L, -2, "__gc");  /* set finalizer for CLIBS table */
-  lua_setmetatable(L, -2);
-  /* create `package' table */
-  luaL_newlib(L, pk_funcs);
   /* create 'searchers' table */
   lua_createtable(L, sizeof(searchers)/sizeof(searchers[0]) - 1, 0);
   /* fill it with pre-defined searchers */
@@ -694,6 +684,19 @@ LUAMOD_API int luaopen_package (lua_State *L) {
     lua_pushcclosure(L, searchers[i], 1);
     lua_rawseti(L, -2, i+1);
   }
+}
+
+
+LUAMOD_API int luaopen_package (lua_State *L) {
+  /* create table CLIBS to keep track of loaded C libraries */
+  luaL_getsubtable(L, LUA_REGISTRYINDEX, CLIBS);
+  lua_createtable(L, 0, 1);  /* metatable for CLIBS */
+  lua_pushcfunction(L, gctm);
+  lua_setfield(L, -2, "__gc");  /* set finalizer for CLIBS table */
+  lua_setmetatable(L, -2);
+  /* create `package' table */
+  luaL_newlib(L, pk_funcs);
+  createsearcherstable(L);
 #if defined(LUA_COMPAT_LOADERS)
   lua_pushvalue(L, -1);  /* make a copy of 'searchers' table */
   lua_setfield(L, -3, "loaders");  /* put it in field `loaders' */
