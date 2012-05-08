@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.125 2012/01/20 22:05:50 roberto Exp roberto $
+** $Id: ltests.c,v 2.126 2012/01/25 21:05:40 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -278,8 +278,7 @@ static void checkCclosure (global_State *g, CClosure *cl) {
 static void checkLclosure (global_State *g, LClosure *cl) {
   GCObject *clgc = obj2gco(cl);
   int i;
-  lua_assert(cl->nupvalues == cl->p->sizeupvalues);
-  checkobjref(g, clgc, cl->p);
+  if (cl->p) checkobjref(g, clgc, cl->p);
   for (i=0; i<cl->nupvalues; i++) {
     if (cl->upvals[i]) {
       lua_assert(cl->upvals[i]->tt == LUA_TUPVAL);
@@ -855,6 +854,7 @@ static int loadlib (lua_State *L) {
     {"coroutine", luaopen_coroutine},
     {"debug", luaopen_debug},
     {"io", luaopen_io},
+    {"os", luaopen_os},
     {"math", luaopen_math},
     {"string", luaopen_string},
     {"table", luaopen_table},

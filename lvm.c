@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.147 2011/12/07 14:43:55 roberto Exp roberto $
+** $Id: lvm.c,v 2.149 2012/01/25 21:05:40 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -395,7 +395,8 @@ static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
   int nup = p->sizeupvalues;
   Upvaldesc *uv = p->upvalues;
   int i;
-  Closure *ncl = luaF_newLclosure(L, p);
+  Closure *ncl = luaF_newLclosure(L, nup);
+  ncl->l.p = p;
   setclLvalue(L, ra, ncl);  /* anchor new closure in stack */
   for (i = 0; i < nup; i++) {  /* fill in its upvalues */
     if (uv[i].instack)  /* upvalue refers to local variable? */

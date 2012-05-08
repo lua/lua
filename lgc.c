@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.117 2012/01/20 22:05:50 roberto Exp roberto $
+** $Id: lgc.c,v 2.119 2012/01/25 21:05:40 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -489,7 +489,6 @@ static int traverseCclosure (global_State *g, CClosure *cl) {
 
 static int traverseLclosure (global_State *g, LClosure *cl) {
   int i;
-  lua_assert(cl->nupvalues == cl->p->sizeupvalues);
   markobject(g, cl->p);  /* mark its prototype */
   for (i = 0; i < cl->nupvalues; i++)  /* mark its upvalues */
     markobject(g, cl->upvals[i]);

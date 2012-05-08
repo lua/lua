@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.125 2012/01/23 23:05:18 roberto Exp roberto $
+** $Id: lparser.c,v 2.126 2012/04/20 19:20:05 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -493,21 +493,30 @@ static void leaveblock (FuncState *fs) {
 
 
 /*
-** adds prototype being created into its parent list of prototypes
-** and codes instruction to create new closure
+** adds a new prototype into list of prototypes
 */
-static void codeclosure (LexState *ls, Proto *clp, expdesc *v) {
-  FuncState *fs = ls->fs->prev;
-  Proto *f = fs->f;  /* prototype of function creating new closure */
+static Proto *addprototype (LexState *ls) {
+  Proto *clp;
+  lua_State *L = ls->L;
+  FuncState *fs = ls->fs;
+  Proto *f = fs->f;  /* prototype of current function */
   if (fs->np >= f->sizep) {
     int oldsize = f->sizep;
-    luaM_growvector(ls->L, f->p, fs->np, f->sizep, Proto *,
-                    MAXARG_Bx, "functions");
+    luaM_growvector(L, f->p, fs->np, f->sizep, Proto *, MAXARG_Bx, "functions");
     while (oldsize < f->sizep) f->p[oldsize++] = NULL;
   }
-  f->p[fs->np++] = clp;
-  luaC_objbarrier(ls->L, f, clp);
-  init_exp(v, VRELOCABLE, luaK_codeABx(fs, OP_CLOSURE, 0, fs->np-1));
+  f->p[fs->np++] = clp = luaF_newproto(L);
+  luaC_objbarrier(L, f, clp);
+  return clp;
+}
+
+
+/*
+** codes instruction to create new closure in parent function
+*/
+static void codeclosure (LexState *ls, expdesc *v) {
+  FuncState *fs = ls->fs->prev;
+  init_exp(v, VRELOCABLE, luaK_codeABx(fs, OP_CLOSURE, 0, fs->np - 1));
   luaK_exp2nextreg(fs, v);  /* fix it at stack top (for GC) */
 }
 
@@ -529,13 +538,9 @@ static void open_func (LexState *ls, FuncState *fs, BlockCnt *bl) {
   fs->nactvar = 0;
   fs->firstlocal = ls->dyd->actvar.n;
   fs->bl = NULL;
-  f = luaF_newproto(L);
-  fs->f = f;
+  f = fs->f;
   f->source = ls->source;
   f->maxstacksize = 2;  /* registers 0/1 are always valid */
-  /* anchor prototype (to avoid being collected) */
-  setptvalue2s(L, L->top, f);
-  incr_top(L);
   fs->h = luaH_new(L);
   /* anchor table of constants (to avoid being collected) */
   sethvalue2s(L, L->top, fs->h);
@@ -568,20 +573,6 @@ static void close_func (LexState *ls) {
   anchor_token(ls);
   L->top--;  /* pop table of constants */
   luaC_checkGC(L);
-  L->top--;  /* pop prototype (after possible collection) */
-}
-
-
-/*
-** opens the main function, which is a regular vararg function with an
-** upvalue named LUA_ENV
-*/
-static void open_mainfunc (LexState *ls, FuncState *fs, BlockCnt *bl) {
-  expdesc v;
-  open_func(ls, fs, bl);
-  fs->f->is_vararg = 1;  /* main function is always vararg */
-  init_exp(&v, VLOCAL, 0);
-  newupvalue(fs, ls->envn, &v);  /* create environment upvalue */
 }
 
 
@@ -795,8 +786,9 @@ static void body (LexState *ls, expdesc *e, int ismethod, int line) {
   /* body ->  `(' parlist `)' block END */
   FuncState new_fs;
   BlockCnt bl;
-  open_func(ls, &new_fs, &bl);
+  new_fs.f = addprototype(ls);
   new_fs.f->linedefined = line;
+  open_func(ls, &new_fs, &bl);
   checknext(ls, '(');
   if (ismethod) {
     new_localvarliteral(ls, "self");  /* create 'self' parameter */
@@ -807,7 +799,7 @@ static void body (LexState *ls, expdesc *e, int ismethod, int line) {
   statlist(ls);
   new_fs.f->lastlinedefined = ls->linenumber;
   check_match(ls, TK_END, TK_FUNCTION, line);
-  codeclosure(ls, new_fs.f, e);
+  codeclosure(ls, e);
   close_func(ls);
 }
 
@@ -1596,27 +1588,42 @@ static void statement (LexState *ls) {
 /* }====================================================================== */
 
 
-Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
-                    Dyndata *dyd, const char *name, int firstchar) {
+/*
+** compiles the main function, which is a regular vararg function with an
+** upvalue named LUA_ENV
+*/
+static void mainfunc (LexState *ls, FuncState *fs) {
+  BlockCnt bl;
+  expdesc v;
+  open_func(ls, fs, &bl);
+  fs->f->is_vararg = 1;  /* main function is always vararg */
+  init_exp(&v, VLOCAL, 0);  /* create and... */
+  newupvalue(fs, ls->envn, &v);  /* ...set environment upvalue */
+  luaX_next(ls);  /* read first token */
+  statlist(ls);  /* parse main body */
+  check(ls, TK_EOS);
+  close_func(ls);
+}
+
+
+Closure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
+                      Dyndata *dyd, const char *name, int firstchar) {
   LexState lexstate;
   FuncState funcstate;
-  BlockCnt bl;
-  TString *tname = luaS_new(L, name);
-  setsvalue2s(L, L->top, tname);  /* push name to protect it */
+  Closure *cl = luaF_newLclosure(L, 1);  /* create main closure */
+  /* anchor closure (to avoid being collected) */
+  setclLvalue(L, L->top, cl);
   incr_top(L);
+  funcstate.f = cl->l.p = luaF_newproto(L);
+  funcstate.f->source = luaS_new(L, name);  /* create and anchor TString */
   lexstate.buff = buff;
   lexstate.dyd = dyd;
   dyd->actvar.n = dyd->gt.n = dyd->label.n = 0;
-  luaX_setinput(L, &lexstate, z, tname, firstchar);
-  open_mainfunc(&lexstate, &funcstate, &bl);
-  luaX_next(&lexstate);  /* read first token */
-  statlist(&lexstate);  /* main body */
-  check(&lexstate, TK_EOS);
-  close_func(&lexstate);
-  L->top--;  /* pop name */
+  luaX_setinput(L, &lexstate, z, funcstate.f->source, firstchar);
+  mainfunc(&lexstate, &funcstate);
   lua_assert(!funcstate.prev && funcstate.nups == 1 && !lexstate.fs);
   /* all scopes should be correctly finished */
   lua_assert(dyd->actvar.n == 0 && dyd->gt.n == 0 && dyd->label.n == 0);
-  return funcstate.f;
+  return cl;  /* it's on the stack too */
 }
 

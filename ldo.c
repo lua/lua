@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.102 2011/11/29 15:55:08 roberto Exp roberto $
+** $Id: ldo.c,v 2.103 2012/04/26 20:41:18 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -626,24 +626,23 @@ static void checkmode (lua_State *L, const char *mode, const char *x) {
 
 static void f_parser (lua_State *L, void *ud) {
   int i;
-  Proto *tf;
   Closure *cl;
   struct SParser *p = cast(struct SParser *, ud);
   int c = zgetc(p->z);  /* read first character */
   if (c == LUA_SIGNATURE[0]) {
     checkmode(L, p->mode, "binary");
-    tf = luaU_undump(L, p->z, &p->buff, p->name);
+    cl = luaU_undump(L, p->z, &p->buff, p->name);
   }
   else {
     checkmode(L, p->mode, "text");
-    tf = luaY_parser(L, p->z, &p->buff, &p->dyd, p->name, c);
+    cl = luaY_parser(L, p->z, &p->buff, &p->dyd, p->name, c);
   }
-  setptvalue2s(L, L->top, tf);
-  incr_top(L);
-  cl = luaF_newLclosure(L, tf);
-  setclLvalue(L, L->top - 1, cl);
-  for (i = 0; i < tf->sizeupvalues; i++)  /* initialize upvalues */
-    cl->l.upvals[i] = luaF_newupval(L);
+  lua_assert(cl->l.nupvalues == cl->l.p->sizeupvalues);
+  for (i = 0; i < cl->l.nupvalues; i++) {  /* initialize upvalues */
+    UpVal *up = luaF_newupval(L);
+    cl->l.upvals[i] = up;
+    luaC_objbarrier(L, cl, up);
+  }
 }
 
 
