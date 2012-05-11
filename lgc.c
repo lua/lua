@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.119 2012/01/25 21:05:40 roberto Exp roberto $
+** $Id: lgc.c,v 2.120 2012/05/08 13:53:33 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -1069,23 +1069,15 @@ static void step (lua_State *L) {
 
 
 /*
-** performs a basic GC step even if the collector is stopped
+** performs a basic GC step
 */
-void luaC_forcestep (lua_State *L) {
+void luaC_step (lua_State *L) {
   global_State *g = G(L);
   int i;
   if (isgenerational(g)) generationalcollection(L);
   else step(L);
   for (i = 0; i < GCFINALIZENUM && g->tobefnz; i++)
     GCTM(L, 1);  /* Call a few pending finalizers */
-}
-
-
-/*
-** performs a basic GC step only if collector is running
-*/
-void luaC_step (lua_State *L) {
-  if (G(L)->gcrunning) luaC_forcestep(L);
 }
 
 
