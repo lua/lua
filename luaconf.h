@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.170 2011/12/06 16:58:36 roberto Exp roberto $
+** $Id: luaconf.h,v 1.171 2012/05/11 14:10:50 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -223,6 +223,13 @@
 	(fprintf(stderr, (s), (p)), fflush(stderr))
 
 
+/*
+@@ LUAI_MAXSHORTLEN is the maximum length for short strings, that is,
+** strings that are internalized. (Cannot be smaller than reserved words
+** or tags for metamethods, as these strings must be internalized;
+** #("function") = 8, #("__newindex") = 10.)
+*/
+#define LUAI_MAXSHORTLEN        40
 
 
 

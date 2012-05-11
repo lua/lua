@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.22 2012/02/01 21:57:15 roberto Exp roberto $
+** $Id: lstring.c,v 2.23 2012/03/28 18:28:25 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -16,17 +16,6 @@
 #include "lobject.h"
 #include "lstate.h"
 #include "lstring.h"
-
-
-/*
-** maximum length for short strings, that is, strings that are
-** internalized. (Cannot be smaller than reserved words or tags
-** for metamethods, as these strings must be internalized;
-** #("function") = 8, #("__newindex") = 10.)
-*/
-#if !defined(LUAI_MAXSHORTLEN)
-#define LUAI_MAXSHORTLEN	40
-#endif
 
 
 /*
