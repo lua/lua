@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.112 2012/01/20 18:32:13 roberto Exp roberto $
-+** $Id: bugs,v 1.112 2012/01/20 18:32:13 roberto Exp roberto $
+-** $Id: bugs,v 1.113 2012/04/12 16:25:25 roberto Exp roberto $
++** $Id: bugs,v 1.113 2012/04/12 16:25:25 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2532,10 +2532,7 @@ foo = m.foo     -- 'foo' may be any function from 'mod'
 -- end program; it crashes
 ]],
 patch = [[
-===================================================================
-RCS file: RCS/loadlib.c,v
-retrieving revision 1.108
-diff -r1.108 loadlib.c
+loadlib.c:
 95c95
 < #define LIBPREFIX	"LOADLIB: "
 ---
@@ -2616,6 +2613,38 @@ diff -r1.108 loadlib.c
 >   lua_createtable(L, 0, 1);  /* metatable for CLIBS */
 678a686
 >   lua_setmetatable(L, -2);
+]]
+}
+
+Bug{
+what = [[wrong handling of 'nCcalls' in coroutines]],
+report = [[Alexander Gavrilov, 2012/04/18]],
+since = [[5.2.0]],
+example = [[
+coroutine.wrap(function()
+  print(pcall(pcall,pcall,pcall,pcall,pcall,error,3))
+end)()
+]],
+patch = [[
+--- ldo.c	2011/11/29 15:55:08	2.102
++++ ldo.c	2012/04/26 20:38:32
+@@ -402,8 +402,6 @@
+   int n;
+   lua_assert(ci->u.c.k != NULL);  /* must have a continuation */
+   lua_assert(L->nny == 0);
+-  /* finish 'luaD_call' */
+-  L->nCcalls--;
+   /* finish 'lua_callk' */
+   adjustresults(L, ci->nresults);
+   /* call continuation function */
+@@ -513,7 +511,6 @@
+         api_checknelems(L, n);
+         firstArg = L->top - n;  /* yield results come from continuation */
+       }
+-      L->nCcalls--;  /* finish 'luaD_call' */
+       luaD_poscall(L, firstArg);  /* finish 'luaD_precall' */
+     }
+     unroll(L, NULL);
 ]]
 }
 
