@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.149 2012/01/25 21:05:40 roberto Exp roberto $
+** $Id: lvm.c,v 2.150 2012/05/08 13:53:33 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -502,7 +502,11 @@ void luaV_finishOp (lua_State *L) {
 
 #define Protect(x)	{ {x;}; base = ci->u.l.base; }
 
-#define checkGC(L,c)	Protect(luaC_condGC(L, c); luai_threadyield(L);)
+#define checkGC(L,c)  \
+  Protect( luaC_condGC(L,{L->top = (c);  /* limit of live values */ \
+                          luaC_step(L); \
+                          L->top = ci->top;})  /* restore top */ \
+           luai_threadyield(L); )
 
 
 #define arith_op(op,tm) { \
@@ -595,11 +599,7 @@ void luaV_execute (lua_State *L) {
         sethvalue(L, ra, t);
         if (b != 0 || c != 0)
           luaH_resize(L, t, luaO_fb2int(b), luaO_fb2int(c));
-        checkGC(L,
-          L->top = ra + 1;  /* limit of live values */
-          luaC_step(L);
-          L->top = ci->top;  /* restore top */
-        )
+        checkGC(L, ra + 1);
       )
       vmcase(OP_SELF,
         StkId rb = RB(i);
@@ -651,10 +651,7 @@ void luaV_execute (lua_State *L) {
         ra = RA(i);  /* 'luav_concat' may invoke TMs and move the stack */
         rb = b + base;
         setobjs2s(L, ra, rb);
-        checkGC(L,
-          L->top = (ra >= rb ? ra + 1 : rb);  /* limit of live values */
-          luaC_step(L);
-        )
+        checkGC(L, (ra >= rb ? ra + 1 : rb));
         L->top = ci->top;  /* restore top */
       )
       vmcase(OP_JMP,
@@ -832,11 +829,7 @@ void luaV_execute (lua_State *L) {
           pushclosure(L, p, cl->upvals, base, ra);  /* create a new one */
         else
           setclLvalue(L, ra, ncl);  /* push cashed closure */
-        checkGC(L,
-          L->top = ra + 1;  /* limit of live values */
-          luaC_step(L);
-          L->top = ci->top;  /* restore top */
-        )
+        checkGC(L, ra + 1);
       )
       vmcase(OP_VARARG,
         int b = GETARG_B(i) - 1;
