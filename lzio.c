@@ -1,6 +1,6 @@
 /*
-** $Id: lzio.c,v 1.33 2011/02/23 13:13:10 roberto Exp roberto $
-** a generic input stream interface
+** $Id: lzio.c,v 1.34 2011/07/15 12:35:32 roberto Exp roberto $
+** Buffered streams
 ** See Copyright Notice in lua.h
 */
 
