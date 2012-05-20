@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.126 2012/04/20 19:20:05 roberto Exp roberto $
+** $Id: lparser.c,v 2.127 2012/05/08 13:53:33 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1202,6 +1202,13 @@ static void checkrepeated (FuncState *fs, Labellist *ll, TString *label) {
 }
 
 
+/* skip no-op statements */
+static void skipnoopstat (LexState *ls) {
+  while (ls->t.token == ';' || ls->t.token == TK_DBCOLON)
+    statement(ls);
+}
+
+
 static void labelstat (LexState *ls, TString *label, int line) {
   /* label -> '::' NAME '::' */
   FuncState *fs = ls->fs;
@@ -1211,9 +1218,7 @@ static void labelstat (LexState *ls, TString *label, int line) {
   checknext(ls, TK_DBCOLON);  /* skip double colon */
   /* create new entry for this label */
   l = newlabelentry(ls, ll, label, line, fs->pc);
-  /* skip other no-op statements */
-  while (ls->t.token == ';' || ls->t.token == TK_DBCOLON)
-    statement(ls);
+  skipnoopstat(ls);  /* skip other no-op statements */
   if (block_follow(ls, 0)) {  /* label is last no-op statement in the block? */
     /* assume that locals are already out of scope */
     ll->arr[l].nactvar = fs->bl->nactvar;
@@ -1376,6 +1381,7 @@ static void test_then_block (LexState *ls, int *escapelist) {
     luaK_goiffalse(ls->fs, &v);  /* will jump to label if condition is true */
     enterblock(fs, &bl, 0);  /* must enter block before 'goto' */
     gotostat(ls, v.t);  /* handle goto/break */
+    skipnoopstat(ls);  /* skip other no-op statements */
     if (block_follow(ls, 0)) {  /* 'goto' is the entire block? */
       leaveblock(fs);
       return;  /* and that is it */
