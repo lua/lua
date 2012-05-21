@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.122 2012/05/14 17:52:56 roberto Exp roberto $
+** $Id: lgc.c,v 2.123 2012/05/20 20:36:44 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -863,11 +863,18 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
     return;  /* nothing to be done */
   else {  /* move 'o' to 'finobj' list */
     GCObject **p;
-    for (p = &g->allgc; *p != o; p = &gch(*p)->next) ;
-    *p = gch(o)->next;  /* remove 'o' from root list */
-    gch(o)->next = g->finobj;  /* link it in list 'finobj' */
+    GCheader *ho = gch(o);
+    /* avoid removing current sweep object */
+    if (g->gcstate == GCSsweep && g->sweepgc == &ho->next) {
+      /* step to next object in the list */
+      g->sweepgc = (ho->next == NULL) ? NULL : &gch(ho->next)->next;
+    }
+    /* search for pointer pointing to 'o' */
+    for (p = &g->allgc; *p != o; p = &gch(*p)->next) { /* empty */ }
+    *p = ho->next;  /* remove 'o' from root list */
+    ho->next = g->finobj;  /* link it in list 'finobj' */
     g->finobj = o;
-    l_setbit(gch(o)->marked, SEPARATED);  /* mark it as such */
+    l_setbit(ho->marked, SEPARATED);  /* mark it as such */
     resetoldbit(o);  /* see MOVE OLD rule */
   }
 }
@@ -1085,7 +1092,7 @@ static void step (lua_State *L) {
 /*
 ** performs a basic GC step
 */
-void luaC_step (lua_State *L) {
+void luaC_forcestep (lua_State *L) {
   global_State *g = G(L);
   int i;
   if (isgenerational(g)) generationalcollection(L);
@@ -1094,6 +1101,17 @@ void luaC_step (lua_State *L) {
   for (i = 0; g->tobefnz && (i < GCFINALIZENUM || g->gcstate == GCSpause); i++)
     GCTM(L, 1);  /* call one finalizer */
 }
+
+
+/*
+** performs a basic GC step only if collector is running
+*/
+void luaC_step (lua_State *L) {
+  global_State *g = G(L);
+  if (g->gcrunning) luaC_forcestep(L);
+  else luaE_setdebt(g, -GCSTEPSIZE);  /* avoid being called too often */
+}
+
 
 
 /*

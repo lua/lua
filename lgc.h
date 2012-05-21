@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.53 2012/01/23 20:29:12 roberto Exp roberto $
+** $Id: lgc.h,v 2.54 2012/05/11 19:22:33 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -104,7 +104,7 @@
 
 
 #define luaC_condGC(L,c) \
-	{if (G(L)->GCdebt > 0 && G(L)->gcrunning) {c;}; condchangemem(L);}
+	{if (G(L)->GCdebt > 0) {c;}; condchangemem(L);}
 #define luaC_checkGC(L)		luaC_condGC(L, luaC_step(L);)
 
 
