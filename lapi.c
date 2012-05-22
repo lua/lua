@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.160 2012/05/11 19:22:33 roberto Exp roberto $
+** $Id: lapi.c,v 2.161 2012/05/21 13:18:10 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1045,7 +1045,7 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
     }
     case LUA_GCSTEP: {
       if (g->gckind == KGC_GEN) {  /* generational mode? */
-        res = (g->lastmajormem == 0);  /* 1 if will do major collection */
+        res = (g->GCestimate == 0);  /* true if it will do major collection */
         luaC_forcestep(L);  /* do a single step */
       }
       else {

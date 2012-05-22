@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.124 2012/05/21 13:18:10 roberto Exp roberto $
+** $Id: lgc.c,v 2.125 2012/05/22 17:32:25 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -917,7 +917,7 @@ void luaC_changemode (lua_State *L, int mode) {
   if (mode == KGC_GEN) {  /* change to generational mode */
     /* make sure gray lists are consistent */
     luaC_runtilstate(L, bitmask(GCSpropagate));
-    g->lastmajormem = gettotalbytes(g);
+    g->GCestimate = gettotalbytes(g);
     g->gckind = KGC_GEN;
   }
   else {  /* change to incremental mode */
@@ -1014,7 +1014,7 @@ static lu_mem singlestep (lua_State *L) {
       }
       else {  /* no more `gray' objects */
         g->gcstate = GCSatomic;  /* finish mark phase */
-        g->estimate = g->GCmemtrav;  /* save what was counted */
+        g->GCestimate = g->GCmemtrav;  /* save what was counted */
         atomic(L);
         return GCATOMICCOST;
       }
@@ -1070,15 +1070,16 @@ void luaC_runtilstate (lua_State *L, int statesmask) {
 
 static void generationalcollection (lua_State *L) {
   global_State *g = G(L);
-  if (g->lastmajormem == 0) {  /* signal for another major collection? */
+  if (g->GCestimate == 0) {  /* signal for another major collection? */
     luaC_fullgc(L, 0);  /* perform a full regular collection */
-    g->lastmajormem = gettotalbytes(g);  /* update control */
+    g->GCestimate = gettotalbytes(g);  /* update control */
   }
   else {
+    lu_mem estimate = g->GCestimate;
     luaC_runtilstate(L, ~bitmask(GCSpause));  /* run complete cycle */
     luaC_runtilstate(L, bitmask(GCSpause));
-    if (gettotalbytes(g) > g->lastmajormem/100 * g->gcmajorinc)
-      g->lastmajormem = 0;  /* signal for a major collection */
+    if (gettotalbytes(g) > (estimate / 100) * g->gcmajorinc)
+      g->GCestimate = 0;  /* signal for a major collection */
   }
   luaE_setdebt(g, stddebt(g));
 }
@@ -1095,7 +1096,7 @@ static void step (lua_State *L) {
     debt -= work;
   } while (debt > -GCSTEPSIZE && g->gcstate != GCSpause);
   if (g->gcstate == GCSpause)
-    debt = stddebtest(g, g->estimate);  /* pause until next cycle */
+    debt = stddebtest(g, g->GCestimate);  /* pause until next cycle */
   luaE_setdebt(g, debt);
 }
 
