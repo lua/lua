@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.125 2012/05/22 17:32:25 roberto Exp roberto $
+** $Id: lgc.c,v 2.126 2012/05/22 17:50:39 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -439,7 +439,7 @@ static void traversestrongtable (global_State *g, Table *h) {
 
 
 static lu_mem traversetable (global_State *g, Table *h) {
-  char *weakkey, *weakvalue;
+  const char *weakkey, *weakvalue;
   const TValue *mode = gfasttm(g, h->metatable, TM_MODE);
   markobject(g, h->metatable);
   if (mode && ttisstring(mode) &&  /* is there a weak mode? */
