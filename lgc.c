@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.123 2012/05/20 20:36:44 roberto Exp roberto $
+** $Id: lgc.c,v 2.124 2012/05/21 13:18:10 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -48,6 +48,7 @@
 */
 #define workrate(x,mul)  \
 	((x) < MAX_INT/80 ? ((x) * 80) / mul : ((x) / mul) * 80)
+
 
 /*
 ** standard negative debt for GC; a reasonable "time" to wait before
@@ -738,19 +739,16 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
       freeobj(L, curr);  /* erase 'curr' */
     }
     else {
+      if (testbits(marked, tostop))
+        return NULL;  /* stop sweeping this list */
       if (gch(curr)->tt == LUA_TTHREAD)
         sweepthread(L, gco2th(curr));  /* sweep thread's upvalues */
-      if (testbits(marked, tostop)) {
-        static GCObject *nullp = NULL;
-        p = &nullp;  /* stop sweeping this list */
-        break;
-      }
       /* update marks */
       gch(curr)->marked = cast_byte((marked & toclear) | toset);
       p = &gch(curr)->next;  /* go to next element */
     }
   }
-  return p;
+  return (*p == NULL) ? NULL : p;
 }
 
 /* }====================================================== */
@@ -865,7 +863,7 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
     GCObject **p;
     GCheader *ho = gch(o);
     /* avoid removing current sweep object */
-    if (g->gcstate == GCSsweep && g->sweepgc == &ho->next) {
+    if (g->sweepgc == &ho->next) {
       /* step to next object in the list */
       g->sweepgc = (ho->next == NULL) ? NULL : &gch(ho->next)->next;
     }
@@ -892,6 +890,24 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 #define sweepphases  \
 	(bitmask(GCSsweepstring) | bitmask(GCSsweepudata) | bitmask(GCSsweep))
 
+
+/*
+** enter first sweep phase (strings) and prepare pointers for other
+** sweep phases.  The calls to 'sweeplist' attempt to make pointers
+** point to an object inside the list (instead of to the header), so
+** that the real sweep do not need to skip objects created between "now"
+** and the start of the real sweep.
+*/
+static void entersweep (lua_State *L) {
+  global_State *g = G(L);
+  g->gcstate = GCSsweepstring;
+  lua_assert(g->sweepgc == NULL && g->sweepfin == NULL);
+  g->sweepstrgc = 0;  /* prepare to sweep strings, ... */
+  g->sweepfin = sweeplist(L, &g->finobj, 1);  /* finalizable objects, ... */
+  g->sweepgc = sweeplist(L, &g->allgc, 1);  /* and regular objects */
+}
+
+
 /*
 ** change GC mode
 */
@@ -907,9 +923,8 @@ void luaC_changemode (lua_State *L, int mode) {
   else {  /* change to incremental mode */
     /* sweep all objects to turn them back to white
        (as white has not changed, nothing extra will be collected) */
-    g->sweepstrgc = 0;
-    g->gcstate = GCSsweepstring;
     g->gckind = KGC_NORMAL;
+    entersweep(L);
     luaC_runtilstate(L, ~sweepphases);
   }
 }
@@ -972,9 +987,8 @@ static void atomic (lua_State *L) {
   /* clear values from resurrected weak tables */
   clearvalues(g, g->weak, origweak);
   clearvalues(g, g->allweak, origall);
-  g->sweepstrgc = 0;  /* prepare to sweep strings */
-  g->gcstate = GCSsweepstring;
   g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */
+  entersweep(L);  /* prepare to sweep strings */
   /*lua_checkmemory(L);*/
 }
 
@@ -1010,25 +1024,22 @@ static lu_mem singlestep (lua_State *L) {
       for (i = 0; i < GCSWEEPMAX && g->sweepstrgc + i < g->strt.size; i++)
         sweepwholelist(L, &g->strt.hash[g->sweepstrgc + i]);
       g->sweepstrgc += i;
-      if (g->sweepstrgc >= g->strt.size) {  /* no more strings to sweep? */
-        g->sweepgc = &g->finobj;  /* prepare to sweep finalizable objects */
+      if (g->sweepstrgc >= g->strt.size)  /* no more strings to sweep? */
         g->gcstate = GCSsweepudata;
-      }
       return i * GCSWEEPCOST;
     }
     case GCSsweepudata: {
-      if (*g->sweepgc) {
-        g->sweepgc = sweeplist(L, g->sweepgc, GCSWEEPMAX);
+      if (g->sweepfin) {
+        g->sweepfin = sweeplist(L, g->sweepfin, GCSWEEPMAX);
         return GCSWEEPMAX*GCSWEEPCOST;
       }
       else {
-        g->sweepgc = &g->allgc;  /* go to next phase */
         g->gcstate = GCSsweep;
         return 0;
       }
     }
     case GCSsweep: {
-      if (*g->sweepgc) {
+      if (g->sweepgc) {
         g->sweepgc = sweeplist(L, g->sweepgc, GCSWEEPMAX);
         return GCSWEEPMAX*GCSWEEPCOST;
       }
@@ -1121,16 +1132,19 @@ void luaC_step (lua_State *L) {
 void luaC_fullgc (lua_State *L, int isemergency) {
   global_State *g = G(L);
   int origkind = g->gckind;
+  int someblack = keepinvariant(g);
   lua_assert(origkind != KGC_EMERGENCY);
-  if (!isemergency)   /* do not run finalizers during emergency GC */
+  if (isemergency)  /* do not run finalizers during emergency GC */
+    g->gckind = KGC_EMERGENCY;
+  else {
+    g->gckind = KGC_NORMAL;
     callallpendingfinalizers(L, 1);
-  if (keepinvariant(g)) {  /* marking phase? */
+  }
+  if (someblack) {  /* may there be some black objects? */
     /* must sweep all objects to turn them back to white
        (as white has not changed, nothing will be collected) */
-    g->sweepstrgc = 0;
-    g->gcstate = GCSsweepstring;
+    entersweep(L);
   }
-  g->gckind = isemergency ? KGC_EMERGENCY : KGC_NORMAL;
   /* finish any pending sweep phase to start a new cycle */
   luaC_runtilstate(L, bitmask(GCSpause));
   /* run entire collector */
