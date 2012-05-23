@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.126 2012/05/22 17:50:39 roberto Exp roberto $
+** $Id: lgc.c,v 2.127 2012/05/22 18:38:56 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -24,11 +24,8 @@
 
 
 
-/* how much to allocate before next GC step */
-#define GCSTEPSIZE	(cast_int(256 * sizeof(void*)))
-
 /* cost of sweeping one element (half the size of a small object) */
-#define GCSWEEPCOST	((sizeof(TString) + 2) / 2)
+#define GCSWEEPCOST	((sizeof(TString) + 4) / 2)
 
 /* maximum number of elements to sweep in each single step */
 #define GCSWEEPMAX	(cast_int((GCSTEPSIZE / GCSWEEPCOST) / 4))

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.54 2012/05/11 19:22:33 roberto Exp roberto $
+** $Id: lgc.h,v 2.55 2012/05/21 13:18:10 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -20,11 +20,17 @@
 ** is that a black object can never point to a white one. Moreover,
 ** any gray object must be in a "gray list" (gray, grayagain, weak,
 ** allweak, ephemeron) so that it can be visited again before finishing
-** the collection cycle. (These rule does not apply to strings,
-** which are never black but do not need to be visited again.)
-**  These lists have no meaning when the invariant is not being enforced
-** (e.g., sweep phase).
+** the collection cycle. These lists have no meaning when the invariant
+** is not being enforced (e.g., sweep phase).
 */
+
+
+
+/* how much to allocate before next GC step */
+#if !defined(GCSTEPSIZE)
+/* ~100 small strings */
+#define GCSTEPSIZE	(cast_int(100 * sizeof(TString)))
+#endif
 
 
 /*
