@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.77 2012/02/01 21:57:15 roberto Exp $
+** $Id: lstate.h,v 2.80 2012/05/22 17:50:39 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -113,7 +113,8 @@ typedef struct global_State {
   void *ud;         /* auxiliary data to `frealloc' */
   lu_mem totalbytes;  /* number of bytes currently allocated - GCdebt */
   l_mem GCdebt;  /* bytes allocated not yet compensated by the collector */
-  lu_mem lastmajormem;  /* memory in use after last major collection */
+  lu_mem GCmemtrav;  /* memory traversed by the GC */
+  lu_mem GCestimate;  /* an estimate of the non-garbage memory in use */
   stringtable strt;  /* hash table for strings */
   TValue l_registry;
   unsigned int seed;  /* randomized seed for hashes */
@@ -124,7 +125,8 @@ typedef struct global_State {
   int sweepstrgc;  /* position of sweep in `strt' */
   GCObject *allgc;  /* list of all collectable objects */
   GCObject *finobj;  /* list of collectable objects with finalizers */
-  GCObject **sweepgc;  /* current position of sweep */
+  GCObject **sweepgc;  /* current position of sweep in list 'allgc' */
+  GCObject **sweepfin;  /* current position of sweep in list 'finobj' */
   GCObject *gray;  /* list of gray objects */
   GCObject *grayagain;  /* list of objects to be traversed atomically */
   GCObject *weak;  /* list of tables with weak values */

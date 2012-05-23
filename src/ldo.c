@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.102 2011/11/29 15:55:08 roberto Exp $
+** $Id: ldo.c,v 2.104 2012/05/08 13:53:33 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -402,8 +402,6 @@ static void finishCcall (lua_State *L) {
   int n;
   lua_assert(ci->u.c.k != NULL);  /* must have a continuation */
   lua_assert(L->nny == 0);
-  /* finish 'luaD_call' */
-  L->nCcalls--;
   /* finish 'lua_callk' */
   adjustresults(L, ci->nresults);
   /* call continuation function */
@@ -484,9 +482,10 @@ static l_noret resume_error (lua_State *L, const char *msg, StkId firstArg) {
 ** do the work for 'lua_resume' in protected mode
 */
 static void resume (lua_State *L, void *ud) {
+  int nCcalls = L->nCcalls;
   StkId firstArg = cast(StkId, ud);
   CallInfo *ci = L->ci;
-  if (L->nCcalls >= LUAI_MAXCCALLS)
+  if (nCcalls >= LUAI_MAXCCALLS)
     resume_error(L, "C stack overflow", firstArg);
   if (L->status == LUA_OK) {  /* may be starting a coroutine */
     if (ci != &L->base_ci)  /* not in base level? */
@@ -513,11 +512,11 @@ static void resume (lua_State *L, void *ud) {
         api_checknelems(L, n);
         firstArg = L->top - n;  /* yield results come from continuation */
       }
-      L->nCcalls--;  /* finish 'luaD_call' */
       luaD_poscall(L, firstArg);  /* finish 'luaD_precall' */
     }
     unroll(L, NULL);
   }
+  lua_assert(nCcalls == L->nCcalls);
 }
 
 
@@ -627,24 +626,23 @@ static void checkmode (lua_State *L, const char *mode, const char *x) {
 
 static void f_parser (lua_State *L, void *ud) {
   int i;
-  Proto *tf;
   Closure *cl;
   struct SParser *p = cast(struct SParser *, ud);
   int c = zgetc(p->z);  /* read first character */
   if (c == LUA_SIGNATURE[0]) {
     checkmode(L, p->mode, "binary");
-    tf = luaU_undump(L, p->z, &p->buff, p->name);
+    cl = luaU_undump(L, p->z, &p->buff, p->name);
   }
   else {
     checkmode(L, p->mode, "text");
-    tf = luaY_parser(L, p->z, &p->buff, &p->dyd, p->name, c);
+    cl = luaY_parser(L, p->z, &p->buff, &p->dyd, p->name, c);
   }
-  setptvalue2s(L, L->top, tf);
-  incr_top(L);
-  cl = luaF_newLclosure(L, tf);
-  setclLvalue(L, L->top - 1, cl);
-  for (i = 0; i < tf->sizeupvalues; i++)  /* initialize upvalues */
-    cl->l.upvals[i] = luaF_newupval(L);
+  lua_assert(cl->l.nupvalues == cl->l.p->sizeupvalues);
+  for (i = 0; i < cl->l.nupvalues; i++) {  /* initialize upvalues */
+    UpVal *up = luaF_newupval(L);
+    cl->l.upvals[i] = up;
+    luaC_objbarrier(L, cl, up);
+  }
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.93 2012/02/01 21:57:15 roberto Exp $
+** $Id: lstate.c,v 2.97 2012/05/23 15:37:09 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -39,7 +39,7 @@
 #endif
 
 
-#define MEMERRMSG       "not enough memory"
+#define MEMERRMSG	"not enough memory"
 
 
 /*
@@ -48,7 +48,7 @@
 */
 #if !defined(luai_makeseed)
 #include <time.h>
-#define luai_makeseed(L)	cast(size_t, time(NULL))
+#define luai_makeseed()		cast(size_t, time(NULL))
 #endif
 
 
@@ -280,7 +280,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->uvhead.u.l.prev = &g->uvhead;
   g->uvhead.u.l.next = &g->uvhead;
   g->gcrunning = 0;  /* no GC while building state */
-  g->lastmajormem = 0;
+  g->GCestimate = 0;
   g->strt.size = 0;
   g->strt.nuse = 0;
   g->strt.hash = NULL;
@@ -292,6 +292,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->allgc = NULL;
   g->finobj = NULL;
   g->tobefnz = NULL;
+  g->sweepgc = g->sweepfin = NULL;
   g->gray = g->grayagain = NULL;
   g->weak = g->ephemeron = g->allweak = NULL;
   g->totalbytes = sizeof(LG);

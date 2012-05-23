@@ -19,7 +19,7 @@ Lua 5.2 Reference Manual
 by Roberto Ierusalimschy, Luiz Henrique de Figueiredo, Waldemar Celes
 <p>
 <small>
-Copyright &copy; 2011 Lua.org, PUC-Rio.
+Copyright &copy; 2011&ndash;2012 Lua.org, PUC-Rio.
 Freely available under the terms of the
 <a href="http://www.lua.org/license.html#5">Lua license</a>.
 </small>
@@ -33,7 +33,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.94 2011/12/12 15:26:26 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.97 2012/05/23 15:50:01 roberto Exp $ -->
 
 
 
@@ -913,6 +913,14 @@ the object memory is freed only when it becomes completely inaccessible;
 its finalizer will never be called twice.
 
 
+<p>
+When you close a state (see <a href="#lua_close"><code>lua_close</code></a>),
+Lua calls the finalizers of all objects marked for collection,
+following the reverse order that they were marked.
+If any finalizer marks new objects for collection during that phase,
+these new objects will not be finalized.
+
+
 
 
 
@@ -1206,7 +1214,7 @@ results in a newline in the string.
 The escape sequence '<code>\z</code>' skips the following span
 of white-space characters,
 including line breaks;
-it is particularly useful to break and indent a long string
+it is particularly useful to break and indent a long literal string
 into multiple lines without adding the newlines and spaces
 into the string contents.
 
@@ -1234,7 +1242,7 @@ an opening long bracket of level&nbsp;1 is written as <code>[=[</code>,
 and so on.
 A <em>closing long bracket</em> is defined similarly;
 for instance, a closing long bracket of level&nbsp;4 is written as <code>]====]</code>.
-A long string starts with an opening long bracket of any level and
+A <em>long literal</em> starts with an opening long bracket of any level and
 ends at the first closing long bracket of the same level.
 It can contain any text except a closing bracket of the proper level.
 Literals in this bracketed form can run for several lines,
@@ -2922,7 +2930,7 @@ it seems to be a safe assumption.)
 
 <hr><h3><a name="lua_arith"><code>lua_arith</code></a></h3><p>
 <span class="apii">[-(2|1), +1, <em>e</em>]</span>
-<pre>int lua_arith (lua_State *L, int op);</pre>
+<pre>void lua_arith (lua_State *L, int op);</pre>
 
 <p>
 Performs an arithmetic operation over the two values
@@ -4400,7 +4408,7 @@ and then pops the top element.
 
 <hr><h3><a name="lua_resume"><code>lua_resume</code></a></h3><p>
 <span class="apii">[-?, +?, &ndash;]</span>
-<pre>int lua_resume (lua_State *L, lua_State *from, int narg);</pre>
+<pre>int lua_resume (lua_State *L, lua_State *from, int nargs);</pre>
 
 <p>
 Starts and resumes a coroutine in a given thread.
@@ -4410,7 +4418,7 @@ Starts and resumes a coroutine in a given thread.
 To start a coroutine,
 you push onto the thread stack the main function plus any arguments;
 then you call <a href="#lua_resume"><code>lua_resume</code></a>,
-with <code>narg</code> being the number of arguments.
+with <code>nargs</code> being the number of arguments.
 This call returns when the coroutine suspends or finishes its execution.
 When it returns, the stack contains all values passed to <a href="#lua_yield"><code>lua_yield</code></a>,
 or all values returned by the body function.
@@ -4550,14 +4558,15 @@ the new value associated to the userdata at the given index.
 <pre>typedef struct lua_State lua_State;</pre>
 
 <p>
-An opaque structure that keeps the whole state of a Lua interpreter.
+An opaque structure that points to a thread and indirectly
+(through the thread) to the whole state of a Lua interpreter.
 The Lua library is fully reentrant:
 it has no global variables.
-All information about a state is kept in this structure.
+All information about a state is accessible through this structure.
 
 
 <p>
-A pointer to this state must be passed as the first argument to
+A pointer to this structure must be passed as the first argument to
 every function in the library, except to <a href="#lua_newstate"><code>lua_newstate</code></a>,
 which creates a Lua state from scratch.
 
@@ -5149,7 +5158,7 @@ Returns the current hook mask.
 <pre>int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar);</pre>
 
 <p>
-Returns information about a specific function or function invocation.
+Gets information about a specific function or function invocation.
 
 
 <p>
@@ -5268,7 +5277,7 @@ the number of active local variables.
 <pre>int lua_getstack (lua_State *L, int level, lua_Debug *ar);</pre>
 
 <p>
-Get information about the interpreter runtime stack.
+Gets information about the interpreter runtime stack.
 
 
 <p>
@@ -5343,6 +5352,11 @@ in this case, there will be no corresponding return event.
 While Lua is running a hook, it disables other calls to hooks.
 Therefore, if a hook calls back Lua to execute a function or a chunk,
 this execution occurs without any calls to hooks.
+
+
+<p>
+Hook functions cannot yield
+(that is, call <a href="#lua_yieldk"><code>lua_yieldk</code></a> or <a href="#lua_yield"><code>lua_yield</code></a>).
 
 
 
@@ -5450,7 +5464,7 @@ when the index is greater than the number of upvalues.
 
 <p>
 Returns an unique identifier for the upvalue numbered <code>n</code>
-from the closure at index <code>fidx</code>.
+from the closure at index <code>funcindex</code>.
 Parameters <code>funcindex</code> and <code>n</code> are as in the <a href="#lua_getupvalue"><code>lua_getupvalue</code></a>
 (see <a href="#lua_getupvalue"><code>lua_getupvalue</code></a>)
 (but <code>n</code> cannot be greater than the number of upvalues).
@@ -5467,13 +5481,14 @@ will return identical ids for those upvalue indices.
 
 
 
-<hr><h3><a name="lua_upvaluejoin"><code>lua_upvaluejoin</code></a></h3>
-<pre>void lua_upvaluejoin (lua_State *L, int fidx1, int n1,
-                                    int fidx2, int n2);</pre>
+<hr><h3><a name="lua_upvaluejoin"><code>lua_upvaluejoin</code></a></h3><p>
+<span class="apii">[-0, +0, &ndash;]</span>
+<pre>void lua_upvaluejoin (lua_State *L, int funcindex1, int n1,
+                                    int funcindex2, int n2);</pre>
 
 <p>
-Make the <code>n1</code>-th upvalue of the Lua closure at index <code>fidx1</code>
-refer to the <code>n2</code>-th upvalue of the Lua closure at index <code>fidx2</code>.
+Make the <code>n1</code>-th upvalue of the Lua closure at index <code>funcindex1</code>
+refer to the <code>n2</code>-th upvalue of the Lua closure at index <code>funcindex2</code>.
 
 
 
@@ -5614,7 +5629,7 @@ which is the value to be added to the buffer.
 <span class="apii">[-0, +0, <em>v</em>]</span>
 <pre>void luaL_argcheck (lua_State *L,
                     int cond,
-                    int narg,
+                    int arg,
                     const char *extramsg);</pre>
 
 <p>
@@ -5627,7 +5642,7 @@ If not, raises an error with a standard message.
 
 <hr><h3><a name="luaL_argerror"><code>luaL_argerror</code></a></h3><p>
 <span class="apii">[-0, +0, <em>v</em>]</span>
-<pre>int luaL_argerror (lua_State *L, int narg, const char *extramsg);</pre>
+<pre>int luaL_argerror (lua_State *L, int arg, const char *extramsg);</pre>
 
 <p>
 Raises an error with a standard message
@@ -5686,7 +5701,7 @@ size <code>sz</code> with a call <code>luaL_buffinitsize(L, &amp;b, sz)</code>.<
 <li>Then copy the string into that space.</li>
 
 <li>
-Finish by calling <code>luaL_pushresult(&amp;b, sz)</code>,
+Finish by calling <code>luaL_pushresultsize(&amp;b, sz)</code>,
 where <code>sz</code> is the total size of the resulting string
 copied into that space.
 </li>
@@ -5762,11 +5777,11 @@ this function returns false (without pushing any value on the stack).
 
 <hr><h3><a name="luaL_checkany"><code>luaL_checkany</code></a></h3><p>
 <span class="apii">[-0, +0, <em>v</em>]</span>
-<pre>void luaL_checkany (lua_State *L, int narg);</pre>
+<pre>void luaL_checkany (lua_State *L, int arg);</pre>
 
 <p>
 Checks whether the function has an argument
-of any type (including <b>nil</b>) at position <code>narg</code>.
+of any type (including <b>nil</b>) at position <code>arg</code>.
 
 
 
@@ -5774,10 +5789,10 @@ of any type (including <b>nil</b>) at position <code>narg</code>.
 
 <hr><h3><a name="luaL_checkint"><code>luaL_checkint</code></a></h3><p>
 <span class="apii">[-0, +0, <em>v</em>]</span>
-<pre>int luaL_checkint (lua_State *L, int narg);</pre>
+<pre>int luaL_checkint (lua_State *L, int arg);</pre>
 
 <p>
-Checks whether the function argument <code>narg</code> is a number
+Checks whether the function argument <code>arg</code> is a number
 and returns this number cast to an <code>int</code>.
 
 
@@ -5786,10 +5801,10 @@ and returns this number cast to an <code>int</code>.
 
 <hr><h3><a name="luaL_checkinteger"><code>luaL_checkinteger</code></a></h3><p>
 <span class="apii">[-0, +0, <em>v</em>]</span>
-<pre>lua_Integer luaL_checkinteger (lua_State *L, int narg);</pre>
+<pre>lua_Integer luaL_checkinteger (lua_State *L, int arg);</pre>
 
 <p>
-Checks whether the function argument <code>narg</code> is a number
+Checks whether the function argument <code>arg</code> is a number
 and returns this number cast to a <a href="#lua_Integer"><code>lua_Integer</code></a>.
 
 
@@ -5798,10 +5813,10 @@ and returns this number cast to a <a href="#lua_Integer"><code>lua_Integer</code
 
 <hr><h3><a name="luaL_checklong"><code>luaL_checklong</code></a></h3><p>
 <span class="apii">[-0, +0, <em>v</em>]</span>
-<pre>long luaL_checklong (lua_State *L, int narg);</pre>
+<pre>long luaL_checklong (lua_State *L, int arg);</pre>
 
 <p>
-Checks whether the function argument <code>narg</code> is a number
+Checks whether the function argument <code>arg</code> is a number
 and returns this number cast to a <code>long</code>.
 
 
@@ -5810,10 +5825,10 @@ and returns this number cast to a <code>long</code>.
 
 <hr><h3><a name="luaL_checklstring"><code>luaL_checklstring</code></a></h3><p>
 <span class="apii">[-0, +0, <em>v</em>]</span>
-<pre>const char *luaL_checklstring (lua_State *L, int narg, size_t *l);</pre>
+<pre>const char *luaL_checklstring (lua_State *L, int arg, size_t *l);</pre>
 
 <p>
-Checks whether the function argument <code>narg</code> is a string
+Checks whether the function argument <code>arg</code> is a string
 and returns this string;
 if <code>l</code> is not <code>NULL</code> fills <code>*l</code>
 with the string's length.
@@ -5829,10 +5844,10 @@ so all conversions and caveats of that function apply here.
 
 <hr><h3><a name="luaL_checknumber"><code>luaL_checknumber</code></a></h3><p>
 <span class="apii">[-0, +0, <em>v</em>]</span>
-<pre>lua_Number luaL_checknumber (lua_State *L, int narg);</pre>
+<pre>lua_Number luaL_checknumber (lua_State *L, int arg);</pre>
 
 <p>
-Checks whether the function argument <code>narg</code> is a number
+Checks whether the function argument <code>arg</code> is a number
 and returns this number.
 
 
@@ -5842,12 +5857,12 @@ and returns this number.
 <hr><h3><a name="luaL_checkoption"><code>luaL_checkoption</code></a></h3><p>
 <span class="apii">[-0, +0, <em>v</em>]</span>
 <pre>int luaL_checkoption (lua_State *L,
-                      int narg,
+                      int arg,
                       const char *def,
                       const char *const lst[]);</pre>
 
 <p>
-Checks whether the function argument <code>narg</code> is a string and
+Checks whether the function argument <code>arg</code> is a string and
 searches for this string in the array <code>lst</code>
 (which must be NULL-terminated).
 Returns the index in the array where the string was found.
@@ -5858,7 +5873,7 @@ if the string cannot be found.
 <p>
 If <code>def</code> is not <code>NULL</code>,
 the function uses <code>def</code> as a default value when
-there is no argument <code>narg</code> or when this argument is <b>nil</b>.
+there is no argument <code>arg</code> or when this argument is <b>nil</b>.
 
 
 <p>
@@ -5886,10 +5901,10 @@ raising an error if the stack cannot grow to that size.
 
 <hr><h3><a name="luaL_checkstring"><code>luaL_checkstring</code></a></h3><p>
 <span class="apii">[-0, +0, <em>v</em>]</span>
-<pre>const char *luaL_checkstring (lua_State *L, int narg);</pre>
+<pre>const char *luaL_checkstring (lua_State *L, int arg);</pre>
 
 <p>
-Checks whether the function argument <code>narg</code> is a string
+Checks whether the function argument <code>arg</code> is a string
 and returns this string.
 
 
@@ -5903,10 +5918,10 @@ so all conversions and caveats of that function apply here.
 
 <hr><h3><a name="luaL_checktype"><code>luaL_checktype</code></a></h3><p>
 <span class="apii">[-0, +0, <em>v</em>]</span>
-<pre>void luaL_checktype (lua_State *L, int narg, int t);</pre>
+<pre>void luaL_checktype (lua_State *L, int arg, int t);</pre>
 
 <p>
-Checks whether the function argument <code>narg</code> has type <code>t</code>.
+Checks whether the function argument <code>arg</code> has type <code>t</code>.
 See <a href="#lua_type"><code>lua_type</code></a> for the encoding of types for <code>t</code>.
 
 
@@ -5915,10 +5930,10 @@ See <a href="#lua_type"><code>lua_type</code></a> for the encoding of types for 
 
 <hr><h3><a name="luaL_checkudata"><code>luaL_checkudata</code></a></h3><p>
 <span class="apii">[-0, +0, <em>v</em>]</span>
-<pre>void *luaL_checkudata (lua_State *L, int narg, const char *tname);</pre>
+<pre>void *luaL_checkudata (lua_State *L, int arg, const char *tname);</pre>
 
 <p>
-Checks whether the function argument <code>narg</code> is a userdata
+Checks whether the function argument <code>arg</code> is a userdata
 of the type <code>tname</code> (see <a href="#luaL_newmetatable"><code>luaL_newmetatable</code></a>) and
 returns the userdata address (see <a href="#lua_touserdata"><code>lua_touserdata</code></a>).
 
@@ -5928,10 +5943,10 @@ returns the userdata address (see <a href="#lua_touserdata"><code>lua_touserdata
 
 <hr><h3><a name="luaL_checkunsigned"><code>luaL_checkunsigned</code></a></h3><p>
 <span class="apii">[-0, +0, <em>v</em>]</span>
-<pre>lua_Unsigned luaL_checkunsigned (lua_State *L, int narg);</pre>
+<pre>lua_Unsigned luaL_checkunsigned (lua_State *L, int arg);</pre>
 
 <p>
-Checks whether the function argument <code>narg</code> is a number
+Checks whether the function argument <code>arg</code> is a number
 and returns this number cast to a <a href="#lua_Unsigned"><code>lua_Unsigned</code></a>.
 
 
@@ -6100,7 +6115,7 @@ Pushes the resulting string on the stack and returns it.
 
 
 <hr><h3><a name="luaL_len"><code>luaL_len</code></a></h3><p>
-<span class="apii">[-0, +1, <em>e</em>]</span>
+<span class="apii">[-0, +0, <em>e</em>]</span>
 <pre>int luaL_len (lua_State *L, int index);</pre>
 
 <p>
@@ -6108,7 +6123,7 @@ Returns the "length" of the value at the given acceptable index
 as a number;
 it is equivalent to the '<code>#</code>' operator in Lua (see <a href="#3.4.6">&sect;3.4.6</a>).
 Raises an error if the result of the operation is not a number.
-(This only can happen through metamethods.)
+(This case only can happen through metamethods.)
 
 
 
@@ -6309,10 +6324,10 @@ Opens all standard Lua libraries into the given state.
 
 <hr><h3><a name="luaL_optint"><code>luaL_optint</code></a></h3><p>
 <span class="apii">[-0, +0, <em>v</em>]</span>
-<pre>int luaL_optint (lua_State *L, int narg, int d);</pre>
+<pre>int luaL_optint (lua_State *L, int arg, int d);</pre>
 
 <p>
-If the function argument <code>narg</code> is a number,
+If the function argument <code>arg</code> is a number,
 returns this number cast to an <code>int</code>.
 If this argument is absent or is <b>nil</b>,
 returns <code>d</code>.
@@ -6325,11 +6340,11 @@ Otherwise, raises an error.
 <hr><h3><a name="luaL_optinteger"><code>luaL_optinteger</code></a></h3><p>
 <span class="apii">[-0, +0, <em>v</em>]</span>
 <pre>lua_Integer luaL_optinteger (lua_State *L,
-                             int narg,
+                             int arg,
                              lua_Integer d);</pre>
 
 <p>
-If the function argument <code>narg</code> is a number,
+If the function argument <code>arg</code> is a number,
 returns this number cast to a <a href="#lua_Integer"><code>lua_Integer</code></a>.
 If this argument is absent or is <b>nil</b>,
 returns <code>d</code>.
@@ -6341,10 +6356,10 @@ Otherwise, raises an error.
 
 <hr><h3><a name="luaL_optlong"><code>luaL_optlong</code></a></h3><p>
 <span class="apii">[-0, +0, <em>v</em>]</span>
-<pre>long luaL_optlong (lua_State *L, int narg, long d);</pre>
+<pre>long luaL_optlong (lua_State *L, int arg, long d);</pre>
 
 <p>
-If the function argument <code>narg</code> is a number,
+If the function argument <code>arg</code> is a number,
 returns this number cast to a <code>long</code>.
 If this argument is absent or is <b>nil</b>,
 returns <code>d</code>.
@@ -6357,12 +6372,12 @@ Otherwise, raises an error.
 <hr><h3><a name="luaL_optlstring"><code>luaL_optlstring</code></a></h3><p>
 <span class="apii">[-0, +0, <em>v</em>]</span>
 <pre>const char *luaL_optlstring (lua_State *L,
-                             int narg,
+                             int arg,
                              const char *d,
                              size_t *l);</pre>
 
 <p>
-If the function argument <code>narg</code> is a string,
+If the function argument <code>arg</code> is a string,
 returns this string.
 If this argument is absent or is <b>nil</b>,
 returns <code>d</code>.
@@ -6379,10 +6394,10 @@ fills the position <code>*l</code> with the result's length.
 
 <hr><h3><a name="luaL_optnumber"><code>luaL_optnumber</code></a></h3><p>
 <span class="apii">[-0, +0, <em>v</em>]</span>
-<pre>lua_Number luaL_optnumber (lua_State *L, int narg, lua_Number d);</pre>
+<pre>lua_Number luaL_optnumber (lua_State *L, int arg, lua_Number d);</pre>
 
 <p>
-If the function argument <code>narg</code> is a number,
+If the function argument <code>arg</code> is a number,
 returns this number.
 If this argument is absent or is <b>nil</b>,
 returns <code>d</code>.
@@ -6395,11 +6410,11 @@ Otherwise, raises an error.
 <hr><h3><a name="luaL_optstring"><code>luaL_optstring</code></a></h3><p>
 <span class="apii">[-0, +0, <em>v</em>]</span>
 <pre>const char *luaL_optstring (lua_State *L,
-                            int narg,
+                            int arg,
                             const char *d);</pre>
 
 <p>
-If the function argument <code>narg</code> is a string,
+If the function argument <code>arg</code> is a string,
 returns this string.
 If this argument is absent or is <b>nil</b>,
 returns <code>d</code>.
@@ -6412,11 +6427,11 @@ Otherwise, raises an error.
 <hr><h3><a name="luaL_optunsigned"><code>luaL_optunsigned</code></a></h3><p>
 <span class="apii">[-0, +0, <em>v</em>]</span>
 <pre>lua_Unsigned luaL_optunsigned (lua_State *L,
-                               int narg,
+                               int arg,
                                lua_Unsigned u);</pre>
 
 <p>
-If the function argument <code>narg</code> is a number,
+If the function argument <code>arg</code> is a number,
 returns this number cast to a <a href="#lua_Unsigned"><code>lua_Unsigned</code></a>.
 If this argument is absent or is <b>nil</b>,
 returns <code>u</code>.
@@ -6583,7 +6598,7 @@ in the registry (see <a href="#luaL_newmetatable"><code>luaL_newmetatable</code>
 
 <hr><h3><a name="luaL_testudata"><code>luaL_testudata</code></a></h3><p>
 <span class="apii">[-0, +0, <em>m</em>]</span>
-<pre>void *luaL_testudata (lua_State *L, int narg, const char *tname);</pre>
+<pre>void *luaL_testudata (lua_State *L, int arg, const char *tname);</pre>
 
 <p>
 This function works like <a href="#luaL_checkudata"><code>luaL_checkudata</code></a>,
@@ -6749,7 +6764,7 @@ the host program can open them individually by using
 <a name="pdf-luaopen_string"><code>luaopen_string</code></a> (for the string library),
 <a name="pdf-luaopen_table"><code>luaopen_table</code></a> (for the table library),
 <a name="pdf-luaopen_math"><code>luaopen_math</code></a> (for the mathematical library),
-<a name="pdf-luaopen_bitlib"><code>luaopen_bitlib</code></a> (for the bit library),
+<a name="pdf-luaopen_bit32"><code>luaopen_bit32</code></a> (for the bit library),
 <a name="pdf-luaopen_io"><code>luaopen_io</code></a> (for the I/O library),
 <a name="pdf-luaopen_os"><code>luaopen_os</code></a> (for the Operating System library),
 and <a name="pdf-luaopen_debug"><code>luaopen_debug</code></a> (for the debug library).
@@ -7914,24 +7929,26 @@ If <code>repl</code> is a string, then its value is used for replacement.
 The character&nbsp;<code>%</code> works as an escape character:
 any sequence in <code>repl</code> of the form <code>%<em>d</em></code>,
 with <em>d</em> between 1 and 9,
-stands for the value of the <em>d</em>-th captured substring (see below).
+stands for the value of the <em>d</em>-th captured substring.
 The sequence <code>%0</code> stands for the whole match.
 The sequence <code>%%</code> stands for a single&nbsp;<code>%</code>.
 
 
 <p>
 If <code>repl</code> is a table, then the table is queried for every match,
-using the first capture as the key;
-if the pattern specifies no captures,
-then the whole match is used as the key.
+using the first capture as the key.
 
 
 <p>
 If <code>repl</code> is a function, then this function is called every time a
 match occurs, with all captured substrings passed as arguments,
-in order;
+in order.
+
+
+<p>
+In any case,
 if the pattern specifies no captures,
-then the whole match is passed as a sole argument.
+then it behaves as if the whole pattern was inside a capture.
 
 
 <p>
@@ -10091,6 +10108,9 @@ You can avoid some incompatibilities by compiling Lua with
 appropriate options (see file <code>luaconf.h</code>).
 However,
 all these compatibility options will be removed in the next version of Lua.
+Similarly,
+all features marked as deprecated in Lua&nbsp;5.1
+have been removed in Lua&nbsp;5.2.
 
 
 
@@ -10387,10 +10407,10 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Mon Dec 12 15:21:08 BRST 2011
+Wed May 23 13:28:41 BRT 2012
 </SMALL>
 <!--
-Last change: revised for Lua 5.2.0
+Last change: revised for Lua 5.2.1
 -->
 
 </body></html>

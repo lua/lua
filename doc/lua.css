@@ -3,8 +3,8 @@ body {
 	background-color: #FFFFFF ;
 	font-family: Helvetica, Arial, sans-serif ;
 	text-align: justify ;
-	margin-right: 20px ;
-	margin-left: 20px ;
+	margin-right: 30px ;
+	margin-left: 30px ;
 }
 
 h1, h2, h3, h4 {
@@ -16,9 +16,9 @@ h1, h2, h3, h4 {
 h2 {
 	padding-top: 0.4em ;
 	padding-bottom: 0.4em ;
-	padding-left: 20px ;
-	padding-right: 20px ;
-	margin-left: -20px ;
+	padding-left: 30px ;
+	padding-right: 30px ;
+	margin-left: -30px ;
 	background-color: #E0E0FF ;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.242 2012/03/19 22:57:14 roberto Exp $
+** $Id: lauxlib.c,v 1.243 2012/04/20 17:05:17 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -892,10 +892,8 @@ LUALIB_API void luaL_requiref (lua_State *L, const char *modname,
   lua_setfield(L, -2, modname);  /* _LOADED[modname] = module */
   lua_pop(L, 1);  /* remove _LOADED table */
   if (glb) {
-    lua_pushglobaltable(L);
-    lua_pushvalue(L, -2);  /* copy of 'mod' */
-    lua_setfield(L, -2, modname);  /* _G[modname] = module */
-    lua_pop(L, 1);  /* remove _G table */
+    lua_pushvalue(L, -1);  /* copy of 'mod' */
+    lua_setglobal(L, modname);  /* _G[modname] = module */
   }
 }
 
