@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.161 2012/05/21 13:18:10 roberto Exp roberto $
+** $Id: lapi.c,v 2.162 2012/05/22 17:50:39 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1049,7 +1049,7 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
         luaC_forcestep(L);  /* do a single step */
       }
       else {
-       lu_mem debt = cast(lu_mem, data) * 1024;  /* count in Kbytes */
+       lu_mem debt = cast(lu_mem, data) * 1024 - GCSTEPSIZE;
        if (g->gcrunning)
          debt += g->GCdebt;  /* include current debt */
        luaE_setdebt(g, debt);
