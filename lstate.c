@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.95 2012/05/22 17:32:25 roberto Exp roberto $
+** $Id: lstate.c,v 2.96 2012/05/22 17:50:39 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -39,7 +39,7 @@
 #endif
 
 
-#define MEMERRMSG       "not enough memory"
+#define MEMERRMSG	"not enough memory"
 
 
 /*

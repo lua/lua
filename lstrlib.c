@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.174 2012/04/03 19:06:19 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.175 2012/04/20 13:16:48 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -30,7 +30,7 @@
 
 
 /* macro to `unsign' a character */
-#define uchar(c)        ((unsigned char)(c))
+#define uchar(c)	((unsigned char)(c))
 
 
 
@@ -747,13 +747,13 @@ static int str_gsub (lua_State *L) {
 #if !defined(LUA_INTFRMLEN)	/* { */
 #if defined(LUA_USE_LONGLONG)
 
-#define LUA_INTFRMLEN           "ll"
-#define LUA_INTFRM_T            long long
+#define LUA_INTFRMLEN		"ll"
+#define LUA_INTFRM_T		long long
 
 #else
 
-#define LUA_INTFRMLEN           "l"
-#define LUA_INTFRM_T            long
+#define LUA_INTFRMLEN		"l"
+#define LUA_INTFRM_T		long
 
 #endif
 #endif				/* } */
@@ -766,8 +766,8 @@ static int str_gsub (lua_State *L) {
 */
 #if !defined(LUA_FLTFRMLEN)
 
-#define LUA_FLTFRMLEN           ""
-#define LUA_FLTFRM_T            double
+#define LUA_FLTFRMLEN		""
+#define LUA_FLTFRM_T		double
 
 #endif
 
