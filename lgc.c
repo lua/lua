@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.127 2012/05/22 18:38:56 roberto Exp roberto $
+** $Id: lgc.c,v 2.128 2012/05/23 15:43:14 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -24,8 +24,11 @@
 
 
 
-/* cost of sweeping one element (half the size of a small object) */
-#define GCSWEEPCOST	((sizeof(TString) + 4) / 2)
+/*
+** cost of sweeping one element (the size of a small object divided
+** by some adjust for the sweep speed)
+*/
+#define GCSWEEPCOST	((sizeof(TString) + 4) / 4)
 
 /* maximum number of elements to sweep in each single step */
 #define GCSWEEPMAX	(cast_int((GCSTEPSIZE / GCSWEEPCOST) / 4))
@@ -33,25 +36,27 @@
 /* maximum number of finalizers to call in each GC step */
 #define GCFINALIZENUM	4
 
-/* (arbitrary) cost of atomic step */
-#define GCATOMICCOST	GCSTEPSIZE
-
 
 /*
-** macro to apply the "speed" of the garbage collector: the constant
-** 80 makes the standard 'stepmul' of 200 results in the GC handling
-** 80/200 = 1/2.5 = 0.4Kbytes for every 1Kb allocated.
-** (The computation tries to avoid overflows or underflows.)
+** macro to adjust 'stepmul': 'stepmul' is actually used like
+** 'stepmul / STEPMULADJ' (value chosen by tests)
 */
-#define workrate(x,mul)  \
-	((x) < MAX_INT/80 ? ((x) * 80) / mul : ((x) / mul) * 80)
+#define STEPMULADJ		200
+
+/*
+** macro to adjust 'pause': 'pause' is actually used like
+** 'pause / PAUSEADJ' (value chosen by tests)
+*/
+#define PAUSEADJ		200
+
+
 
 
 /*
 ** standard negative debt for GC; a reasonable "time" to wait before
 ** starting a new cycle
 */
-#define stddebtest(g,e)	(-cast(l_mem, (e)/100) * g->gcpause)
+#define stddebtest(g,e)	(-cast(l_mem, (e)/PAUSEADJ) * g->gcpause)
 #define stddebt(g)	stddebtest(g, gettotalbytes(g))
 
 
@@ -672,7 +677,7 @@ static void freeobj (lua_State *L, GCObject *o) {
     case LUA_TTABLE: luaH_free(L, gco2t(o)); break;
     case LUA_TTHREAD: luaE_freethread(L, gco2th(o)); break;
     case LUA_TUSERDATA: luaM_freemem(L, o, sizeudata(gco2u(o))); break;
-    case LUA_TSHRSTR: 
+    case LUA_TSHRSTR:
       G(L)->strt.nuse--;
       /* go through */
     case LUA_TLNGSTR: {
@@ -955,8 +960,9 @@ void luaC_freeallobjects (lua_State *L) {
 }
 
 
-static void atomic (lua_State *L) {
+static l_mem atomic (lua_State *L) {
   global_State *g = G(L);
+  l_mem trav = g->GCmemtrav;
   GCObject *origweak, *origall;
   lua_assert(!iswhite(obj2gco(g->mainthread)));
   markobject(g, L);  /* mark running thread */
@@ -976,6 +982,7 @@ static void atomic (lua_State *L) {
   separatetobefnz(L, 0);  /* separate objects to be finalized */
   markbeingfnz(g);  /* mark userdata that will be finalized */
   propagateall(g);  /* remark, to propagate `preserveness' */
+  trav = g->GCmemtrav - trav;  /* avoid adding convergence twice */
   convergeephemerons(g);
   /* at this point, all resurrected objects are marked. */
   /* remove dead objects from weak tables */
@@ -987,6 +994,7 @@ static void atomic (lua_State *L) {
   g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */
   entersweep(L);  /* prepare to sweep strings */
   /*lua_checkmemory(L);*/
+  return trav;  /* reasonable estimate of the work done by 'atomic' */
 }
 
 
@@ -1012,8 +1020,7 @@ static lu_mem singlestep (lua_State *L) {
       else {  /* no more `gray' objects */
         g->gcstate = GCSatomic;  /* finish mark phase */
         g->GCestimate = g->GCmemtrav;  /* save what was counted */
-        atomic(L);
-        return GCATOMICCOST;
+        return atomic(L);
       }
     }
     case GCSsweepstring: {
@@ -1086,14 +1093,18 @@ static void step (lua_State *L) {
   global_State *g = G(L);
   l_mem debt = g->GCdebt;
   int stepmul = g->gcstepmul;
-  if (stepmul <= 0) stepmul = 1;
+  if (stepmul < 40) stepmul = 40;  /* avoid ridiculous low values */
+  /* convert debt from Kb to 'work units' (avoid zero debt and overflows) */
+  debt = (debt / STEPMULADJ) + 1;
+  debt = (debt < MAX_LMEM / stepmul) ? debt * stepmul : MAX_LMEM;
   do {  /* always perform at least one single step */
     lu_mem work = singlestep(L);  /* do some work */
-    work = workrate(work, stepmul);  /* apply work rate */
     debt -= work;
   } while (debt > -GCSTEPSIZE && g->gcstate != GCSpause);
   if (g->gcstate == GCSpause)
     debt = stddebtest(g, g->GCestimate);  /* pause until next cycle */
+  else
+    debt = (debt / stepmul) * STEPMULADJ;  /* convert 'work units' to Kb */
   luaE_setdebt(g, debt);
 }
 
