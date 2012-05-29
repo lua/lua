@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.128 2012/05/23 15:43:14 roberto Exp roberto $
+** $Id: lgc.c,v 2.129 2012/05/28 20:41:00 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -962,7 +962,7 @@ void luaC_freeallobjects (lua_State *L) {
 
 static l_mem atomic (lua_State *L) {
   global_State *g = G(L);
-  l_mem trav = g->GCmemtrav;
+  l_mem trav = -g->GCmemtrav;  /* start counting work */
   GCObject *origweak, *origall;
   lua_assert(!iswhite(obj2gco(g->mainthread)));
   markobject(g, L);  /* mark running thread */
@@ -971,6 +971,8 @@ static l_mem atomic (lua_State *L) {
   markmt(g);  /* mark basic metatables */
   /* remark occasional upvalues of (maybe) dead threads */
   remarkupvals(g);
+  propagateall(g);  /* propagate changes */
+  trav += g->GCmemtrav;  /* count work done til now */
   /* traverse objects caught by write barrier and by 'remarkupvals' */
   retraversegrays(g);
   convergeephemerons(g);
@@ -979,10 +981,11 @@ static l_mem atomic (lua_State *L) {
   clearvalues(g, g->weak, NULL);
   clearvalues(g, g->allweak, NULL);
   origweak = g->weak; origall = g->allweak;
+  trav -= g->GCmemtrav;  /* restart counting work */
   separatetobefnz(L, 0);  /* separate objects to be finalized */
-  markbeingfnz(g);  /* mark userdata that will be finalized */
+  markbeingfnz(g);  /* mark objects that will be finalized */
   propagateall(g);  /* remark, to propagate `preserveness' */
-  trav = g->GCmemtrav - trav;  /* avoid adding convergence twice */
+  trav += g->GCmemtrav;  /* add work done til now */
   convergeephemerons(g);
   /* at this point, all resurrected objects are marked. */
   /* remove dead objects from weak tables */
@@ -994,7 +997,7 @@ static l_mem atomic (lua_State *L) {
   g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */
   entersweep(L);  /* prepare to sweep strings */
   /*lua_checkmemory(L);*/
-  return trav;  /* reasonable estimate of the work done by 'atomic' */
+  return trav;  /* estimate of the objects marked by 'atomic' */
 }
 
 
