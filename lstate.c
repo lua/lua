@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.96 2012/05/22 17:50:39 roberto Exp roberto $
+** $Id: lstate.c,v 2.97 2012/05/23 15:37:09 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -79,7 +79,7 @@ typedef struct LG {
 
 /*
 ** Compute an initial seed as random as possible. In ANSI, rely on
-** Address Space Layour Randomization (if present) to increase
+** Address Space Layout Randomization (if present) to increase
 ** randomness..
 */
 #define addbuff(b,p,e) \
