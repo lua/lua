@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.129 2012/05/28 20:41:00 roberto Exp roberto $
+** $Id: lgc.c,v 2.130 2012/05/29 17:52:17 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -864,10 +864,11 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
   else {  /* move 'o' to 'finobj' list */
     GCObject **p;
     GCheader *ho = gch(o);
+    lua_assert(!isdead(g, o));
     /* avoid removing current sweep object */
     if (g->sweepgc == &ho->next) {
       /* step to next object in the list */
-      g->sweepgc = (ho->next == NULL) ? NULL : &gch(ho->next)->next;
+      g->sweepgc = sweeplist(L, g->sweepgc, 1);
     }
     /* search for pointer pointing to 'o' */
     for (p = &g->allgc; *p != o; p = &gch(*p)->next) { /* empty */ }
@@ -875,7 +876,10 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
     ho->next = g->finobj;  /* link it in list 'finobj' */
     g->finobj = o;
     l_setbit(ho->marked, SEPARATED);  /* mark it as such */
-    resetoldbit(o);  /* see MOVE OLD rule */
+    if (!keepinvariant(g))  /* not keeping invariant? */
+      makewhite(g, o);  /* "sweep" object */
+    else
+      resetoldbit(o);  /* see MOVE OLD rule */
   }
 }
 
@@ -996,7 +1000,6 @@ static l_mem atomic (lua_State *L) {
   clearvalues(g, g->allweak, origall);
   g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */
   entersweep(L);  /* prepare to sweep strings */
-  /*lua_checkmemory(L);*/
   return trav;  /* estimate of the objects marked by 'atomic' */
 }
 
