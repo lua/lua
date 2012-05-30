@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.126 2012/01/25 21:05:40 roberto Exp roberto $
+** $Id: ltests.c,v 2.127 2012/05/08 13:53:33 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -189,10 +189,15 @@ static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
 
 
 static void printobj (global_State *g, GCObject *o) {
-  int i = 0;
+  int i = 1;
   GCObject *p;
   for (p = g->allgc; p != o && p != NULL; p = gch(p)->next) i++;
-  if (p == NULL) i = -1;
+  if (p == NULL) {
+    i = 1;
+    for (p = g->finobj; p != o && p != NULL; p = gch(p)->next) i++;
+    if (p == NULL) i = 0;  /* zero means 'not found' */
+    else i = -i;  /* negative means 'found in findobj list */
+  }
   printf("%d:%s(%p)-%c(%02X)", i, ttypename(gch(o)->tt), (void *)o,
            isdead(g,o)?'d':isblack(o)?'b':iswhite(o)?'w':'g', gch(o)->marked);
 }
@@ -376,7 +381,8 @@ static void checkgraylist (GCObject *l) {
     l_setbit(l->gch.marked, TESTGRAYBIT);
     switch (gch(l)->tt) {
       case LUA_TTABLE: l = gco2t(l)->gclist; break;
-      case LUA_TFUNCTION: l = gco2cl(l)->c.gclist; break;
+      case LUA_TLCL: l = gco2lcl(l)->gclist; break;
+      case LUA_TCCL: l = gco2ccl(l)->gclist; break;
       case LUA_TTHREAD: l = gco2th(l)->gclist; break;
       case LUA_TPROTO: l = gco2p(l)->gclist; break;
       default: lua_assert(0);  /* other objects cannot be gray */
