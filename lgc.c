@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.130 2012/05/29 17:52:17 roberto Exp roberto $
+** $Id: lgc.c,v 2.131 2012/05/30 16:01:10 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -753,6 +753,18 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
   return (*p == NULL) ? NULL : p;
 }
 
+
+/*
+** sweep a list until a live object (or end of list)
+*/
+static GCObject **sweeptolive (lua_State *L, GCObject **p) {
+  GCObject ** old = p;
+  do {
+    p = sweeplist(L, p, 1);
+  } while (p == old);
+  return p;
+}
+
 /* }====================================================== */
 
 
@@ -812,12 +824,14 @@ static void GCTM (lua_State *L, int propagateerrors) {
     L->allowhook = oldah;  /* restore hooks */
     g->gcrunning = running;  /* restore state */
     if (status != LUA_OK && propagateerrors) {  /* error while running __gc? */
-      if (status == LUA_ERRRUN) {  /* is there an error msg.? */
-        luaO_pushfstring(L, "error in __gc metamethod (%s)",
-                                        lua_tostring(L, -1));
+      if (status == LUA_ERRRUN) {  /* is there an error object? */
+        const char *msg = (ttisstring(L->top - 1))
+                            ? svalue(L->top - 1)
+                            : "no message";
+        luaO_pushfstring(L, "error in __gc metamethod (%s)", msg);
         status = LUA_ERRGCMM;  /* error in __gc metamethod */
       }
-      luaD_throw(L, status);  /* re-send error */
+      luaD_throw(L, status);  /* re-throw error */
     }
   }
 }
@@ -864,11 +878,9 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
   else {  /* move 'o' to 'finobj' list */
     GCObject **p;
     GCheader *ho = gch(o);
-    lua_assert(!isdead(g, o));
-    /* avoid removing current sweep object */
-    if (g->sweepgc == &ho->next) {
-      /* step to next object in the list */
-      g->sweepgc = sweeplist(L, g->sweepgc, 1);
+    if (g->sweepgc == &ho->next) {  /* avoid removing current sweep object */
+      lua_assert(issweepphase(g));
+      g->sweepgc = sweeptolive(L, g->sweepgc);
     }
     /* search for pointer pointing to 'o' */
     for (p = &g->allgc; *p != o; p = &gch(*p)->next) { /* empty */ }
@@ -899,18 +911,19 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 
 /*
 ** enter first sweep phase (strings) and prepare pointers for other
-** sweep phases.  The calls to 'sweeplist' attempt to make pointers
-** point to an object inside the list (instead of to the header), so
-** that the real sweep do not need to skip objects created between "now"
-** and the start of the real sweep.
+** sweep phases.  The calls to 'sweeptolive' make pointers point to an
+** object inside the list (instead of to the header), so that the real
+** sweep do not need to skip objects created between "now" and the start
+** of the real sweep.
 */
 static void entersweep (lua_State *L) {
   global_State *g = G(L);
   g->gcstate = GCSsweepstring;
   lua_assert(g->sweepgc == NULL && g->sweepfin == NULL);
-  g->sweepstrgc = 0;  /* prepare to sweep strings, ... */
-  g->sweepfin = sweeplist(L, &g->finobj, 1);  /* finalizable objects, ... */
-  g->sweepgc = sweeplist(L, &g->allgc, 1);  /* and regular objects */
+  /* prepare to sweep strings, finalizable objects, and regular objects */
+  g->sweepstrgc = 0;
+  g->sweepfin = sweeptolive(L, &g->finobj);
+  g->sweepgc = sweeptolive(L, &g->allgc);
 }
 
 
@@ -966,7 +979,7 @@ void luaC_freeallobjects (lua_State *L) {
 
 static l_mem atomic (lua_State *L) {
   global_State *g = G(L);
-  l_mem trav = -g->GCmemtrav;  /* start counting work */
+  l_mem work = -g->GCmemtrav;  /* start counting work */
   GCObject *origweak, *origall;
   lua_assert(!iswhite(obj2gco(g->mainthread)));
   markobject(g, L);  /* mark running thread */
@@ -976,20 +989,21 @@ static l_mem atomic (lua_State *L) {
   /* remark occasional upvalues of (maybe) dead threads */
   remarkupvals(g);
   propagateall(g);  /* propagate changes */
-  trav += g->GCmemtrav;  /* count work done til now */
+  work += g->GCmemtrav;  /* stop counting (do not (re)count grays) */
   /* traverse objects caught by write barrier and by 'remarkupvals' */
   retraversegrays(g);
+  work -= g->GCmemtrav;  /* restart counting */
   convergeephemerons(g);
   /* at this point, all strongly accessible objects are marked. */
   /* clear values from weak tables, before checking finalizers */
   clearvalues(g, g->weak, NULL);
   clearvalues(g, g->allweak, NULL);
   origweak = g->weak; origall = g->allweak;
-  trav -= g->GCmemtrav;  /* restart counting work */
+  work += g->GCmemtrav;  /* stop counting (objects being finalized) */
   separatetobefnz(L, 0);  /* separate objects to be finalized */
   markbeingfnz(g);  /* mark objects that will be finalized */
   propagateall(g);  /* remark, to propagate `preserveness' */
-  trav += g->GCmemtrav;  /* add work done til now */
+  work -= g->GCmemtrav;  /* restart counting */
   convergeephemerons(g);
   /* at this point, all resurrected objects are marked. */
   /* remove dead objects from weak tables */
@@ -999,8 +1013,8 @@ static l_mem atomic (lua_State *L) {
   clearvalues(g, g->weak, origweak);
   clearvalues(g, g->allweak, origall);
   g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */
-  entersweep(L);  /* prepare to sweep strings */
-  return trav;  /* estimate of the objects marked by 'atomic' */
+  work += g->GCmemtrav;  /* complete counting */
+  return work;  /* estimate of memory marked by 'atomic' */
 }
 
 
@@ -1024,9 +1038,13 @@ static lu_mem singlestep (lua_State *L) {
         return g->GCmemtrav - oldtrav;  /* memory traversed in this step */
       }
       else {  /* no more `gray' objects */
+        lu_mem work;
         g->gcstate = GCSatomic;  /* finish mark phase */
-        g->GCestimate = g->GCmemtrav;  /* save what was counted */
-        return atomic(L);
+        g->GCestimate = g->GCmemtrav;  /* save what was counted */;
+        work = atomic(L);  /* add what was traversed by 'atomic' */
+        g->GCestimate += work;  /* estimate of total memory traversed */ 
+        entersweep(L);
+        return work + 2 * GCSWEEPCOST;
       }
     }
     case GCSsweepstring: {
@@ -1095,7 +1113,7 @@ static void generationalcollection (lua_State *L) {
 }
 
 
-static void step (lua_State *L) {
+static void incstep (lua_State *L) {
   global_State *g = G(L);
   l_mem debt = g->GCdebt;
   int stepmul = g->gcstepmul;
@@ -1122,7 +1140,7 @@ void luaC_forcestep (lua_State *L) {
   global_State *g = G(L);
   int i;
   if (isgenerational(g)) generationalcollection(L);
-  else step(L);
+  else incstep(L);
   /* run a few finalizers (or all of them at the end of a collect cycle) */
   for (i = 0; g->tobefnz && (i < GCFINALIZENUM || g->gcstate == GCSpause); i++)
     GCTM(L, 1);  /* call one finalizer */
