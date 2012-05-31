@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.127 2012/05/08 13:53:33 roberto Exp roberto $
+** $Id: ltests.c,v 2.128 2012/05/30 16:40:29 roberto Exp $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -198,7 +198,7 @@ static void printobj (global_State *g, GCObject *o) {
     if (p == NULL) i = 0;  /* zero means 'not found' */
     else i = -i;  /* negative means 'found in findobj list */
   }
-  printf("%d:%s(%p)-%c(%02X)", i, ttypename(gch(o)->tt), (void *)o,
+  printf("||%d:%s(%p)-%c(%02X)||", i, ttypename(gch(o)->tt), (void *)o,
            isdead(g,o)?'d':isblack(o)?'b':iswhite(o)?'w':'g', gch(o)->marked);
 }
 
@@ -325,9 +325,9 @@ static void checkstack (global_State *g, lua_State *L1) {
 }
 
 
-static void checkobject (global_State *g, GCObject *o) {
+static void checkobject (global_State *g, GCObject *o, int maybedead) {
   if (isdead(g, o))
-    lua_assert(issweepphase(g));
+    lua_assert(maybedead);
   else {
     if (g->gcstate == GCSpause && !isgenerational(g))
       lua_assert(iswhite(o));
@@ -427,6 +427,7 @@ int lua_checkmemory (lua_State *L) {
   global_State *g = G(L);
   GCObject *o;
   UpVal *uv;
+  int maybedead;
   if (keepinvariant(g)) {
     lua_assert(!iswhite(obj2gco(g->mainthread)));
     lua_assert(!iswhite(gcvalue(&g->l_registry)));
@@ -437,17 +438,21 @@ int lua_checkmemory (lua_State *L) {
   /* check 'allgc' list */
   markgrays(g);
   checkold(g, g->allgc);
+  lua_assert(g->sweepgc == NULL || issweepphase(g));
+  maybedead = 0;
   for (o = g->allgc; o != NULL; o = gch(o)->next) {
-    checkobject(g, o);
+    if (g->sweepgc && o == *g->sweepgc)
+      maybedead = 1;  /* part of the list not yet sweeped */
+    checkobject(g, o, maybedead);
     lua_assert(!testbit(o->gch.marked, SEPARATED));
   }
   /* check 'finobj' list */
   checkold(g, g->finobj);
   for (o = g->finobj; o != NULL; o = gch(o)->next) {
-    lua_assert(!isdead(g, o) && testbit(o->gch.marked, SEPARATED));
+    lua_assert(testbit(o->gch.marked, SEPARATED));
     lua_assert(gch(o)->tt == LUA_TUSERDATA ||
                gch(o)->tt == LUA_TTABLE);
-    checkobject(g, o);
+    checkobject(g, o, 0);
   }
   /* check 'tobefnz' list */
   checkold(g, g->tobefnz);
