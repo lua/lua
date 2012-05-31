@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.131 2012/05/30 16:01:10 roberto Exp roberto $
+** $Id: lgc.c,v 2.132 2012/05/31 20:26:14 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -757,11 +757,14 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
 /*
 ** sweep a list until a live object (or end of list)
 */
-static GCObject **sweeptolive (lua_State *L, GCObject **p) {
+static GCObject **sweeptolive (lua_State *L, GCObject **p, int *n) {
   GCObject ** old = p;
+  int i = 0;
   do {
+    i++;
     p = sweeplist(L, p, 1);
   } while (p == old);
+  if (n) *n += i;
   return p;
 }
 
@@ -880,7 +883,7 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
     GCheader *ho = gch(o);
     if (g->sweepgc == &ho->next) {  /* avoid removing current sweep object */
       lua_assert(issweepphase(g));
-      g->sweepgc = sweeptolive(L, g->sweepgc);
+      g->sweepgc = sweeptolive(L, g->sweepgc, NULL);
     }
     /* search for pointer pointing to 'o' */
     for (p = &g->allgc; *p != o; p = &gch(*p)->next) { /* empty */ }
@@ -915,15 +918,18 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 ** object inside the list (instead of to the header), so that the real
 ** sweep do not need to skip objects created between "now" and the start
 ** of the real sweep.
+** Returns how many objects it sweeped.
 */
-static void entersweep (lua_State *L) {
+static int entersweep (lua_State *L) {
   global_State *g = G(L);
+  int n = 0;
   g->gcstate = GCSsweepstring;
   lua_assert(g->sweepgc == NULL && g->sweepfin == NULL);
   /* prepare to sweep strings, finalizable objects, and regular objects */
   g->sweepstrgc = 0;
-  g->sweepfin = sweeptolive(L, &g->finobj);
-  g->sweepgc = sweeptolive(L, &g->allgc);
+  g->sweepfin = sweeptolive(L, &g->finobj, &n);
+  g->sweepgc = sweeptolive(L, &g->allgc, &n);
+  return n;
 }
 
 
@@ -1039,12 +1045,13 @@ static lu_mem singlestep (lua_State *L) {
       }
       else {  /* no more `gray' objects */
         lu_mem work;
+        int sw;
         g->gcstate = GCSatomic;  /* finish mark phase */
         g->GCestimate = g->GCmemtrav;  /* save what was counted */;
         work = atomic(L);  /* add what was traversed by 'atomic' */
         g->GCestimate += work;  /* estimate of total memory traversed */ 
-        entersweep(L);
-        return work + 2 * GCSWEEPCOST;
+        sw = entersweep(L);
+        return work + sw * GCSWEEPCOST;
       }
     }
     case GCSsweepstring: {
