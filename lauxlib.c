@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.242 2012/03/19 22:57:14 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.243 2012/04/20 17:05:17 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -520,11 +520,11 @@ LUALIB_API char *luaL_buffinitsize (lua_State *L, luaL_Buffer *B, size_t sz) {
 
 LUALIB_API int luaL_ref (lua_State *L, int t) {
   int ref;
-  t = lua_absindex(L, t);
   if (lua_isnil(L, -1)) {
     lua_pop(L, 1);  /* remove from stack */
     return LUA_REFNIL;  /* `nil' has a unique fixed reference */
   }
+  t = lua_absindex(L, t);
   lua_rawgeti(L, t, freelist);  /* get first free element */
   ref = (int)lua_tointeger(L, -1);  /* ref = t[freelist] */
   lua_pop(L, 1);  /* remove it from stack */
@@ -866,8 +866,8 @@ LUALIB_API int luaL_getsubtable (lua_State *L, int idx, const char *fname) {
   lua_getfield(L, idx, fname);
   if (lua_istable(L, -1)) return 1;  /* table already there */
   else {
-    idx = lua_absindex(L, idx);
     lua_pop(L, 1);  /* remove previous result */
+    idx = lua_absindex(L, idx);
     lua_newtable(L);
     lua_pushvalue(L, -1);  /* copy to be left at top */
     lua_setfield(L, idx, fname);  /* assign new table to field */
