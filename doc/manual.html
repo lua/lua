@@ -33,7 +33,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.97 2012/05/23 15:50:01 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.98 2012/05/31 13:01:09 roberto Exp $ -->
 
 
 
@@ -2828,8 +2828,7 @@ by looking only at its arguments
 The third field, <code>x</code>,
 tells whether the function may throw errors:
 '<code>-</code>' means the function never throws any error;
-'<code>m</code>' means the function may throw only memory allocation errors;
-'<code>e</code>' means the function may throw other kinds of errors;
+'<code>e</code>' means the function may throw errors;
 '<code>v</code>' means the function may throw an error on purpose.
 
 
@@ -3191,7 +3190,7 @@ without shifting any element
 
 
 <hr><h3><a name="lua_createtable"><code>lua_createtable</code></a></h3><p>
-<span class="apii">[-0, +1, <em>m</em>]</span>
+<span class="apii">[-0, +1, <em>e</em>]</span>
 <pre>void lua_createtable (lua_State *L, int narr, int nrec);</pre>
 
 <p>
@@ -3210,7 +3209,7 @@ Otherwise you can use the function <a href="#lua_newtable"><code>lua_newtable</c
 
 
 <hr><h3><a name="lua_dump"><code>lua_dump</code></a></h3><p>
-<span class="apii">[-0, +0, <em>m</em>]</span>
+<span class="apii">[-0, +0, <em>e</em>]</span>
 <pre>int lua_dump (lua_State *L, lua_Writer writer, void *data);</pre>
 
 <p>
@@ -3748,7 +3747,7 @@ passes to the allocator in every call.
 
 
 <hr><h3><a name="lua_newtable"><code>lua_newtable</code></a></h3><p>
-<span class="apii">[-0, +1, <em>m</em>]</span>
+<span class="apii">[-0, +1, <em>e</em>]</span>
 <pre>void lua_newtable (lua_State *L);</pre>
 
 <p>
@@ -3760,7 +3759,7 @@ It is equivalent to <code>lua_createtable(L, 0, 0)</code>.
 
 
 <hr><h3><a name="lua_newthread"><code>lua_newthread</code></a></h3><p>
-<span class="apii">[-0, +1, <em>m</em>]</span>
+<span class="apii">[-0, +1, <em>e</em>]</span>
 <pre>lua_State *lua_newthread (lua_State *L);</pre>
 
 <p>
@@ -3781,7 +3780,7 @@ like any Lua object.
 
 
 <hr><h3><a name="lua_newuserdata"><code>lua_newuserdata</code></a></h3><p>
-<span class="apii">[-0, +1, <em>m</em>]</span>
+<span class="apii">[-0, +1, <em>e</em>]</span>
 <pre>void *lua_newuserdata (lua_State *L, size_t size);</pre>
 
 <p>
@@ -3967,7 +3966,7 @@ Pushes a boolean value with value <code>b</code> onto the stack.
 
 
 <hr><h3><a name="lua_pushcclosure"><code>lua_pushcclosure</code></a></h3><p>
-<span class="apii">[-n, +1, <em>m</em>]</span>
+<span class="apii">[-n, +1, <em>e</em>]</span>
 <pre>void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n);</pre>
 
 <p>
@@ -4033,7 +4032,7 @@ Note that <code>f</code> is used twice.
 
 
 <hr><h3><a name="lua_pushfstring"><code>lua_pushfstring</code></a></h3><p>
-<span class="apii">[-0, +1, <em>m</em>]</span>
+<span class="apii">[-0, +1, <em>e</em>]</span>
 <pre>const char *lua_pushfstring (lua_State *L, const char *fmt, ...);</pre>
 
 <p>
@@ -4100,7 +4099,7 @@ light userdata with the same C&nbsp;address.
 
 
 <hr><h3><a name="lua_pushliteral"><code>lua_pushliteral</code></a></h3><p>
-<span class="apii">[-0, +1, <em>m</em>]</span>
+<span class="apii">[-0, +1, <em>e</em>]</span>
 <pre>const char *lua_pushliteral (lua_State *L, const char *s);</pre>
 
 <p>
@@ -4113,7 +4112,7 @@ It automatically provides the string length.
 
 
 <hr><h3><a name="lua_pushlstring"><code>lua_pushlstring</code></a></h3><p>
-<span class="apii">[-0, +1, <em>m</em>]</span>
+<span class="apii">[-0, +1, <em>e</em>]</span>
 <pre>const char *lua_pushlstring (lua_State *L, const char *s, size_t len);</pre>
 
 <p>
@@ -4156,7 +4155,7 @@ Pushes a number with value <code>n</code> onto the stack.
 
 
 <hr><h3><a name="lua_pushstring"><code>lua_pushstring</code></a></h3><p>
-<span class="apii">[-0, +1, <em>m</em>]</span>
+<span class="apii">[-0, +1, <em>e</em>]</span>
 <pre>const char *lua_pushstring (lua_State *L, const char *s);</pre>
 
 <p>
@@ -4203,7 +4202,7 @@ onto the stack.
 
 
 <hr><h3><a name="lua_pushvfstring"><code>lua_pushvfstring</code></a></h3><p>
-<span class="apii">[-0, +1, <em>m</em>]</span>
+<span class="apii">[-0, +1, <em>e</em>]</span>
 <pre>const char *lua_pushvfstring (lua_State *L,
                               const char *fmt,
                               va_list argp);</pre>
@@ -4290,7 +4289,7 @@ for other values, it is&nbsp;0.
 
 
 <hr><h3><a name="lua_rawset"><code>lua_rawset</code></a></h3><p>
-<span class="apii">[-2, +0, <em>m</em>]</span>
+<span class="apii">[-2, +0, <em>e</em>]</span>
 <pre>void lua_rawset (lua_State *L, int index);</pre>
 
 <p>
@@ -4302,7 +4301,7 @@ Similar to <a href="#lua_settable"><code>lua_settable</code></a>, but does a raw
 
 
 <hr><h3><a name="lua_rawseti"><code>lua_rawseti</code></a></h3><p>
-<span class="apii">[-1, +0, <em>m</em>]</span>
+<span class="apii">[-1, +0, <em>e</em>]</span>
 <pre>void lua_rawseti (lua_State *L, int index, int n);</pre>
 
 <p>
@@ -4321,7 +4320,7 @@ that is, it does not invoke metamethods.
 
 
 <hr><h3><a name="lua_rawsetp"><code>lua_rawsetp</code></a></h3><p>
-<span class="apii">[-1, +0, <em>m</em>]</span>
+<span class="apii">[-1, +0, <em>e</em>]</span>
 <pre>void lua_rawsetp (lua_State *L, int index, const void *p);</pre>
 
 <p>
@@ -4669,7 +4668,7 @@ indicates whether the operation succeeded.
 
 
 <hr><h3><a name="lua_tolstring"><code>lua_tolstring</code></a></h3><p>
-<span class="apii">[-0, +0, <em>m</em>]</span>
+<span class="apii">[-0, +0, <em>e</em>]</span>
 <pre>const char *lua_tolstring (lua_State *L, int index, size_t *len);</pre>
 
 <p>
@@ -4752,7 +4751,7 @@ Typically this function is used only for debug information.
 
 
 <hr><h3><a name="lua_tostring"><code>lua_tostring</code></a></h3><p>
-<span class="apii">[-0, +0, <em>m</em>]</span>
+<span class="apii">[-0, +0, <em>e</em>]</span>
 <pre>const char *lua_tostring (lua_State *L, int index);</pre>
 
 <p>
@@ -5154,7 +5153,7 @@ Returns the current hook mask.
 
 
 <hr><h3><a name="lua_getinfo"><code>lua_getinfo</code></a></h3><p>
-<span class="apii">[-(0|1), +(0|1|2), <em>m</em>]</span>
+<span class="apii">[-(0|1), +(0|1|2), <em>e</em>]</span>
 <pre>int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar);</pre>
 
 <p>
@@ -5553,7 +5552,7 @@ in alphabetical order.
 
 
 <hr><h3><a name="luaL_addchar"><code>luaL_addchar</code></a></h3><p>
-<span class="apii">[-?, +?, <em>m</em>]</span>
+<span class="apii">[-?, +?, <em>e</em>]</span>
 <pre>void luaL_addchar (luaL_Buffer *B, char c);</pre>
 
 <p>
@@ -5565,7 +5564,7 @@ Adds the byte <code>c</code> to the buffer <code>B</code>
 
 
 <hr><h3><a name="luaL_addlstring"><code>luaL_addlstring</code></a></h3><p>
-<span class="apii">[-?, +?, <em>m</em>]</span>
+<span class="apii">[-?, +?, <em>e</em>]</span>
 <pre>void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l);</pre>
 
 <p>
@@ -5579,7 +5578,7 @@ The string can contain embedded zeros.
 
 
 <hr><h3><a name="luaL_addsize"><code>luaL_addsize</code></a></h3><p>
-<span class="apii">[-?, +?, <em>m</em>]</span>
+<span class="apii">[-?, +?, <em>e</em>]</span>
 <pre>void luaL_addsize (luaL_Buffer *B, size_t n);</pre>
 
 <p>
@@ -5592,7 +5591,7 @@ buffer area (see <a href="#luaL_prepbuffer"><code>luaL_prepbuffer</code></a>).
 
 
 <hr><h3><a name="luaL_addstring"><code>luaL_addstring</code></a></h3><p>
-<span class="apii">[-?, +?, <em>m</em>]</span>
+<span class="apii">[-?, +?, <em>e</em>]</span>
 <pre>void luaL_addstring (luaL_Buffer *B, const char *s);</pre>
 
 <p>
@@ -5606,7 +5605,7 @@ The string cannot contain embedded zeros.
 
 
 <hr><h3><a name="luaL_addvalue"><code>luaL_addvalue</code></a></h3><p>
-<span class="apii">[-1, +?, <em>m</em>]</span>
+<span class="apii">[-1, +?, <em>e</em>]</span>
 <pre>void luaL_addvalue (luaL_Buffer *B);</pre>
 
 <p>
@@ -5743,7 +5742,7 @@ the buffer must be declared as a variable
 
 
 <hr><h3><a name="luaL_buffinitsize"><code>luaL_buffinitsize</code></a></h3><p>
-<span class="apii">[-?, +?, <em>m</em>]</span>
+<span class="apii">[-?, +?, <em>e</em>]</span>
 <pre>char *luaL_buffinitsize (lua_State *L, luaL_Buffer *B, size_t sz);</pre>
 
 <p>
@@ -5970,7 +5969,7 @@ are using the same address space.
 
 
 <hr><h3><a name="luaL_dofile"><code>luaL_dofile</code></a></h3><p>
-<span class="apii">[-0, +?, <em>m</em>]</span>
+<span class="apii">[-0, +?, <em>e</em>]</span>
 <pre>int luaL_dofile (lua_State *L, const char *filename);</pre>
 
 <p>
@@ -6029,7 +6028,7 @@ as <code>return luaL_error(<em>args</em>)</code>.
 
 
 <hr><h3><a name="luaL_execresult"><code>luaL_execresult</code></a></h3><p>
-<span class="apii">[-0, +3, <em>m</em>]</span>
+<span class="apii">[-0, +3, <em>e</em>]</span>
 <pre>int luaL_execresult (lua_State *L, int stat);</pre>
 
 <p>
@@ -6042,7 +6041,7 @@ process-related functions in the standard library
 
 
 <hr><h3><a name="luaL_fileresult"><code>luaL_fileresult</code></a></h3><p>
-<span class="apii">[-0, +(1|3), <em>m</em>]</span>
+<span class="apii">[-0, +(1|3), <em>e</em>]</span>
 <pre>int luaL_fileresult (lua_State *L, int stat, const char *fname);</pre>
 
 <p>
@@ -6055,7 +6054,7 @@ file-related functions in the standard library
 
 
 <hr><h3><a name="luaL_getmetafield"><code>luaL_getmetafield</code></a></h3><p>
-<span class="apii">[-0, +(0|1), <em>m</em>]</span>
+<span class="apii">[-0, +(0|1), <em>e</em>]</span>
 <pre>int luaL_getmetafield (lua_State *L, int obj, const char *e);</pre>
 
 <p>
@@ -6082,7 +6081,7 @@ in the registry (see <a href="#luaL_newmetatable"><code>luaL_newmetatable</code>
 
 
 <hr><h3><a name="luaL_getsubtable"><code>luaL_getsubtable</code></a></h3><p>
-<span class="apii">[-0, +1, <em>m</em>]</span>
+<span class="apii">[-0, +1, <em>e</em>]</span>
 <pre>int luaL_getsubtable (lua_State *L, int idx, const char *fname);</pre>
 
 <p>
@@ -6098,7 +6097,7 @@ and false if it creates a new table.
 
 
 <hr><h3><a name="luaL_gsub"><code>luaL_gsub</code></a></h3><p>
-<span class="apii">[-0, +1, <em>m</em>]</span>
+<span class="apii">[-0, +1, <em>e</em>]</span>
 <pre>const char *luaL_gsub (lua_State *L,
                        const char *s,
                        const char *p,
@@ -6168,7 +6167,7 @@ The string <code>mode</code> works as in function <a href="#lua_load"><code>lua_
 
 
 <hr><h3><a name="luaL_loadfile"><code>luaL_loadfile</code></a></h3><p>
-<span class="apii">[-0, +1, <em>m</em>]</span>
+<span class="apii">[-0, +1, <em>e</em>]</span>
 <pre>int luaL_loadfile (lua_State *L, const char *filename);</pre>
 
 <p>
@@ -6179,7 +6178,7 @@ Equivalent to <a href="#luaL_loadfilex"><code>luaL_loadfilex</code></a> with <co
 
 
 <hr><h3><a name="luaL_loadfilex"><code>luaL_loadfilex</code></a></h3><p>
-<span class="apii">[-0, +1, <em>m</em>]</span>
+<span class="apii">[-0, +1, <em>e</em>]</span>
 <pre>int luaL_loadfilex (lua_State *L, const char *filename,
                                             const char *mode);</pre>
 
@@ -6233,7 +6232,7 @@ it does not run it.
 
 
 <hr><h3><a name="luaL_newlib"><code>luaL_newlib</code></a></h3><p>
-<span class="apii">[-0, +1, <em>m</em>]</span>
+<span class="apii">[-0, +1, <em>e</em>]</span>
 <pre>int luaL_newlib (lua_State *L, const luaL_Reg *l);</pre>
 
 <p>
@@ -6249,7 +6248,7 @@ It is implemented as the following macro:
 
 
 <hr><h3><a name="luaL_newlibtable"><code>luaL_newlibtable</code></a></h3><p>
-<span class="apii">[-0, +1, <em>m</em>]</span>
+<span class="apii">[-0, +1, <em>e</em>]</span>
 <pre>int luaL_newlibtable (lua_State *L, const luaL_Reg l[]);</pre>
 
 <p>
@@ -6270,7 +6269,7 @@ not a pointer to it.
 
 
 <hr><h3><a name="luaL_newmetatable"><code>luaL_newmetatable</code></a></h3><p>
-<span class="apii">[-0, +1, <em>m</em>]</span>
+<span class="apii">[-0, +1, <em>e</em>]</span>
 <pre>int luaL_newmetatable (lua_State *L, const char *tname);</pre>
 
 <p>
@@ -6442,7 +6441,7 @@ Otherwise, raises an error.
 
 
 <hr><h3><a name="luaL_prepbuffer"><code>luaL_prepbuffer</code></a></h3><p>
-<span class="apii">[-?, +?, <em>m</em>]</span>
+<span class="apii">[-?, +?, <em>e</em>]</span>
 <pre>char *luaL_prepbuffer (luaL_Buffer *B);</pre>
 
 <p>
@@ -6454,7 +6453,7 @@ with the predefined size <a name="pdf-LUAL_BUFFERSIZE"><code>LUAL_BUFFERSIZE</co
 
 
 <hr><h3><a name="luaL_prepbuffsize"><code>luaL_prepbuffsize</code></a></h3><p>
-<span class="apii">[-?, +?, <em>m</em>]</span>
+<span class="apii">[-?, +?, <em>e</em>]</span>
 <pre>char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz);</pre>
 
 <p>
@@ -6470,7 +6469,7 @@ it to the buffer.
 
 
 <hr><h3><a name="luaL_pushresult"><code>luaL_pushresult</code></a></h3><p>
-<span class="apii">[-?, +1, <em>m</em>]</span>
+<span class="apii">[-?, +1, <em>e</em>]</span>
 <pre>void luaL_pushresult (luaL_Buffer *B);</pre>
 
 <p>
@@ -6482,7 +6481,7 @@ the top of the stack.
 
 
 <hr><h3><a name="luaL_pushresultsize"><code>luaL_pushresultsize</code></a></h3><p>
-<span class="apii">[-?, +1, <em>m</em>]</span>
+<span class="apii">[-?, +1, <em>e</em>]</span>
 <pre>void luaL_pushresultsize (luaL_Buffer *B, size_t sz);</pre>
 
 <p>
@@ -6493,7 +6492,7 @@ Equivalent to the sequence <a href="#luaL_addsize"><code>luaL_addsize</code></a>
 
 
 <hr><h3><a name="luaL_ref"><code>luaL_ref</code></a></h3><p>
-<span class="apii">[-1, +0, <em>m</em>]</span>
+<span class="apii">[-1, +0, <em>e</em>]</span>
 <pre>int luaL_ref (lua_State *L, int t);</pre>
 
 <p>
@@ -6597,7 +6596,7 @@ in the registry (see <a href="#luaL_newmetatable"><code>luaL_newmetatable</code>
 
 
 <hr><h3><a name="luaL_testudata"><code>luaL_testudata</code></a></h3><p>
-<span class="apii">[-0, +0, <em>m</em>]</span>
+<span class="apii">[-0, +0, <em>e</em>]</span>
 <pre>void *luaL_testudata (lua_State *L, int arg, const char *tname);</pre>
 
 <p>
@@ -6633,7 +6632,7 @@ and uses the result of the call as its result.
 
 
 <hr><h3><a name="luaL_traceback"><code>luaL_traceback</code></a></h3><p>
-<span class="apii">[-0, +1, <em>m</em>]</span>
+<span class="apii">[-0, +1, <em>e</em>]</span>
 <pre>void luaL_traceback (lua_State *L, lua_State *L1, const char *msg,
                      int level);</pre>
 
@@ -6680,7 +6679,7 @@ If <code>ref</code> is <a href="#pdf-LUA_NOREF"><code>LUA_NOREF</code></a> or <a
 
 
 <hr><h3><a name="luaL_where"><code>luaL_where</code></a></h3><p>
-<span class="apii">[-0, +1, <em>m</em>]</span>
+<span class="apii">[-0, +1, <em>e</em>]</span>
 <pre>void luaL_where (lua_State *L, int lvl);</pre>
 
 <p>
@@ -10407,7 +10406,7 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Wed May 23 13:28:41 BRT 2012
+Fri Jun  1 12:38:38 BRT 2012
 </SMALL>
 <!--
 Last change: revised for Lua 5.2.1
