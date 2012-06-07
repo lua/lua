@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.128 2012/05/30 16:40:29 roberto Exp $
+** $Id: ltests.c,v 2.129 2012/05/31 20:25:42 roberto Exp $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -519,6 +519,12 @@ void luaI_printcode (Proto *pt, int size) {
     printf("%s\n", buildop(pt, pc, buff));
   }
   printf("-------\n");
+}
+
+
+void luaI_printinst (Proto *pt, int pc) {
+  char buff[100];
+  printf("%s\n", buildop(pt, pc, buff));
 }
 #endif
 
