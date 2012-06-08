@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.103 2012/04/26 20:41:18 roberto Exp roberto $
+** $Id: ldo.c,v 2.104 2012/05/08 13:53:33 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -451,7 +451,7 @@ static int recover (lua_State *L, int status) {
   CallInfo *ci = findpcall(L);
   if (ci == NULL) return 0;  /* no recovery point */
   /* "finish" luaD_pcall */
-  oldtop = restorestack(L, ci->u.c.extra);
+  oldtop = restorestack(L, ci->extra);
   luaF_close(L, oldtop);
   seterrorobj(L, status, oldtop);
   L->ci = ci;
@@ -498,10 +498,10 @@ static void resume (lua_State *L, void *ud) {
     resume_error(L, "cannot resume dead coroutine", firstArg);
   else {  /* resuming from previous yield */
     L->status = LUA_OK;
+    ci->func = restorestack(L, ci->extra);
     if (isLua(ci))  /* yielded inside a hook? */
       luaV_execute(L);  /* just continue running Lua code */
     else {  /* 'common' yield */
-      ci->func = restorestack(L, ci->u.c.extra);
       if (ci->u.c.k != NULL) {  /* does it have a continuation? */
         int n;
         ci->u.c.status = LUA_YIELD;  /* 'default' status */
@@ -563,13 +563,13 @@ LUA_API int lua_yieldk (lua_State *L, int nresults, int ctx, lua_CFunction k) {
       luaG_runerror(L, "attempt to yield from outside a coroutine");
   }
   L->status = LUA_YIELD;
+  ci->extra = savestack(L, ci->func);  /* save current 'func' */
   if (isLua(ci)) {  /* inside a hook? */
     api_check(L, k == NULL, "hooks cannot continue after yielding");
   }
   else {
     if ((ci->u.c.k = k) != NULL)  /* is there a continuation? */
       ci->u.c.ctx = ctx;  /* save context */
-    ci->u.c.extra = savestack(L, ci->func);  /* save current 'func' */
     ci->func = L->top - nresults - 1;  /* protect stack below results */
     luaD_throw(L, LUA_YIELD);
   }

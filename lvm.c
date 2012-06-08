@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.150 2012/05/08 13:53:33 roberto Exp roberto $
+** $Id: lvm.c,v 2.151 2012/05/14 17:50:49 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -60,10 +60,15 @@ int luaV_tostring (lua_State *L, StkId obj) {
 static void traceexec (lua_State *L) {
   CallInfo *ci = L->ci;
   lu_byte mask = L->hookmask;
-  if ((mask & LUA_MASKCOUNT) && L->hookcount == 0) {
-    resethookcount(L);
-    luaD_hook(L, LUA_HOOKCOUNT, -1);
+  int counthook = ((mask & LUA_MASKCOUNT) && L->hookcount == 0);
+  if (counthook)
+    resethookcount(L);  /* reset count */
+  if (ci->callstatus & CIST_HOOKYIELD) {  /* called hook last time? */
+    ci->callstatus &= ~CIST_HOOKYIELD;  /* erase mark */
+    return;  /* do not call hook again (VM yielded, so it did not move) */
   }
+  if (counthook)
+    luaD_hook(L, LUA_HOOKCOUNT, -1);  /* call count hook */
   if (mask & LUA_MASKLINE) {
     Proto *p = ci_func(ci)->p;
     int npc = pcRel(ci->u.l.savedpc, p);
@@ -71,11 +76,15 @@ static void traceexec (lua_State *L) {
     if (npc == 0 ||  /* call linehook when enter a new function, */
         ci->u.l.savedpc <= L->oldpc ||  /* when jump back (loop), or when */
         newline != getfuncline(p, pcRel(L->oldpc, p)))  /* enter a new line */
-      luaD_hook(L, LUA_HOOKLINE, newline);
+      luaD_hook(L, LUA_HOOKLINE, newline);  /* call line hook */
   }
   L->oldpc = ci->u.l.savedpc;
   if (L->status == LUA_YIELD) {  /* did hook yield? */
+    if (counthook)
+      L->hookcount = 1;  /* undo decrement to zero */
     ci->u.l.savedpc--;  /* undo increment (resume will increment it again) */
+    ci->callstatus |= CIST_HOOKYIELD;  /* mark that it yieled */
+    ci->func = L->top - 1;  /* protect stack below results */
     luaD_throw(L, LUA_YIELD);
   }
 }

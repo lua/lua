@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.79 2012/05/22 17:32:25 roberto Exp roberto $
+** $Id: lstate.h,v 2.80 2012/05/22 17:50:39 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -72,6 +72,7 @@ typedef struct CallInfo {
   struct CallInfo *previous, *next;  /* dynamic call link */
   short nresults;  /* expected number of results from this function */
   lu_byte callstatus;
+  ptrdiff_t extra;
   union {
     struct {  /* only for Lua functions */
       StkId base;  /* base for this function */
@@ -81,7 +82,6 @@ typedef struct CallInfo {
       int ctx;  /* context info. in case of yields */
       lua_CFunction k;  /* continuation in case of yields */
       ptrdiff_t old_errfunc;
-      ptrdiff_t extra;
       lu_byte old_allowhook;
       lu_byte status;
     } c;
@@ -100,6 +100,7 @@ typedef struct CallInfo {
 #define CIST_YPCALL	(1<<4)	/* call is a yieldable protected call */
 #define CIST_STAT	(1<<5)	/* call has an error status (pcall) */
 #define CIST_TAIL	(1<<6)	/* call was tail called */
+#define CIST_HOOKYIELD	(1<<7)	/* last hook called yielded */
 
 
 #define isLua(ci)	((ci)->callstatus & CIST_LUA)
