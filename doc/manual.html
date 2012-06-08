@@ -33,7 +33,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.98 2012/05/31 13:01:09 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.99 2012/06/08 15:30:20 roberto Exp $ -->
 
 
 
@@ -3350,7 +3350,7 @@ opaque pointer passed to <a href="#lua_newstate"><code>lua_newstate</code></a>.
 
 <hr><h3><a name="lua_getctx"><code>lua_getctx</code></a></h3><p>
 <span class="apii">[-0, +0, &ndash;]</span>
-<pre>int lua_getctx  (lua_State *L, int *ctx);</pre>
+<pre>int lua_getctx (lua_State *L, int *ctx);</pre>
 
 <p>
 This function is called by a continuation function (see <a href="#4.7">&sect;4.7</a>)
@@ -4856,7 +4856,7 @@ and
 
 <hr><h3><a name="lua_typename"><code>lua_typename</code></a></h3><p>
 <span class="apii">[-0, +0, &ndash;]</span>
-<pre>const char *lua_typename  (lua_State *L, int tp);</pre>
+<pre>const char *lua_typename (lua_State *L, int tp);</pre>
 
 <p>
 Returns the name of the type encoded by the value <code>tp</code>,
@@ -4940,7 +4940,7 @@ and pushes them onto the stack <code>to</code>.
 
 <hr><h3><a name="lua_yield"><code>lua_yield</code></a></h3><p>
 <span class="apii">[-?, +?, &ndash;]</span>
-<pre>int lua_yield  (lua_State *L, int nresults);</pre>
+<pre>int lua_yield (lua_State *L, int nresults);</pre>
 
 <p>
 This function is equivalent to <a href="#lua_yieldk"><code>lua_yieldk</code></a>,
@@ -4955,7 +4955,7 @@ the function calling <code>lua_yield</code>.
 
 <hr><h3><a name="lua_yieldk"><code>lua_yieldk</code></a></h3><p>
 <span class="apii">[-?, +?, &ndash;]</span>
-<pre>int lua_yieldk  (lua_State *L, int nresults, int ctx, lua_CFunction k);</pre>
+<pre>int lua_yieldk (lua_State *L, int nresults, int ctx, lua_CFunction k);</pre>
 
 <p>
 Yields a coroutine.
@@ -5354,8 +5354,17 @@ this execution occurs without any calls to hooks.
 
 
 <p>
-Hook functions cannot yield
-(that is, call <a href="#lua_yieldk"><code>lua_yieldk</code></a> or <a href="#lua_yield"><code>lua_yield</code></a>).
+Hook functions cannot have continuations,
+that is, they cannot call <a href="#lua_yieldk"><code>lua_yieldk</code></a>,
+<a href="#lua_pcallk"><code>lua_pcallk</code></a>, or <a href="#lua_callk"><code>lua_callk</code></a> with a non-null <code>k</code>.
+
+
+<p>
+Hook functions can yield under the following conditions:
+Only count and line events can yield
+and they cannot yield any value;
+to yield a hook function must finish its execution
+calling <a href="#lua_yield"><code>lua_yield</code></a> with <code>nresults</code> equal to zero.
 
 
 
@@ -10406,7 +10415,7 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Fri Jun  1 12:38:38 BRT 2012
+Fri Jun  8 16:13:40 BRT 2012
 </SMALL>
 <!--
 Last change: revised for Lua 5.2.1
