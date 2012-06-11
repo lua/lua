@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.113 2012/04/12 16:25:25 roberto Exp roberto $
-+** $Id: bugs,v 1.113 2012/04/12 16:25:25 roberto Exp roberto $
+-** $Id: bugs,v 1.114 2012/05/11 14:10:28 roberto Exp roberto $
++** $Id: bugs,v 1.114 2012/05/11 14:10:28 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2645,6 +2645,43 @@ patch = [[
        luaD_poscall(L, firstArg);  /* finish 'luaD_precall' */
      }
      unroll(L, NULL);
+]]
+}
+
+Bug{
+what = [[Internal Lua values may escape through the debug API]],
+report = [[Dan Tull, 2012/04/20]],
+since = [[5.1]],
+example = [[
+-- for Lua 5.1
+local firsttime = true
+local function foo ()
+  if firsttime then
+    firsttime = false
+    return "a = 1" 
+  else
+    for i = 1, 10 do
+      print(debug.getlocal(2, i))
+    end
+  end
+end
+
+print(load(foo))   -- prints some lines and then seg. fault.
+]],
+patch = [[
+]]
+}
+
+Bug{
+what = [[Problems when yielding from debug hooks]],
+report = [[Erik Cassel, 2012/06/05]],
+since = [[5.2.0]],
+example = [[
+Set, in C, a line hook that simply yields,
+and then call any Lua function.
+You get an infinite loop of yields.
+]],
+patch = [[
 ]]
 }
 
