@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.132 2012/05/31 20:26:14 roberto Exp $
+** $Id: lgc.c,v 2.133 2012/05/31 21:28:59 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -343,7 +343,7 @@ static void remarkupvals (global_State *g) {
 ** mark root set and reset all gray lists, to start a new
 ** incremental (or full) collection
 */
-static void markroot (global_State *g) {
+static void startcollection (global_State *g) {
   g->gray = g->grayagain = NULL;
   g->weak = g->allweak = g->ephemeron = NULL;
   markobject(g, g->mainthread);
@@ -1030,7 +1030,7 @@ static lu_mem singlestep (lua_State *L) {
     case GCSpause: {
       g->GCmemtrav = 0;  /* start to count memory traversed */
       if (!isgenerational(g))
-        markroot(g);  /* start a new collection */
+        startcollection(g);
       /* in any case, root must be marked at this point */
       lua_assert(!iswhite(obj2gco(g->mainthread))
               && !iswhite(gcvalue(&g->l_registry)));
@@ -1115,6 +1115,9 @@ static void generationalcollection (lua_State *L) {
     luaC_runtilstate(L, bitmask(GCSpause));
     if (gettotalbytes(g) > (estimate / 100) * g->gcmajorinc)
       g->GCestimate = 0;  /* signal for a major collection */
+    else
+      g->GCestimate = estimate;  /* keep estimate from last major coll. */
+
   }
   luaE_setdebt(g, stddebt(g));
 }
