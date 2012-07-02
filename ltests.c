@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.129 2012/05/31 20:25:42 roberto Exp $
+** $Id: ltests.c,v 2.130 2012/06/07 18:52:47 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -663,7 +663,15 @@ static int gc_state (lua_State *L) {
     return 1;
   }
   else {
+    global_State *g = G(L);
+    if (g->gckind == KGC_GEN && option == GCSpause)
+      luaL_error(L, "cannot go to 'pause' state in generational mode");
     lua_lock(L);
+    if (option < g->gcstate) {  /* must cross 'pause'? */
+      luaC_runtilstate(L, bitmask(GCSpause));  /* run until pause */
+      if (g->gckind == KGC_GEN)
+        g->gcstate = GCSpropagate;  /* skip pause in gen. mode */
+    }
     luaC_runtilstate(L, bitmask(option));
     lua_assert(G(L)->gcstate == option);
     lua_unlock(L);
