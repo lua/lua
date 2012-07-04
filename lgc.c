@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.133 2012/05/31 21:28:59 roberto Exp roberto $
+** $Id: lgc.c,v 2.134 2012/07/02 13:40:05 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -144,7 +144,7 @@ static int iscleared (global_State *g, const TValue *o) {
 void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v) {
   global_State *g = G(L);
   lua_assert(isblack(o) && iswhite(v) && !isdead(g, v) && !isdead(g, o));
-  lua_assert(isgenerational(g) || g->gcstate != GCSpause);
+  lua_assert(g->gcstate != GCSpause);
   lua_assert(gch(o)->tt != LUA_TTABLE);
   if (keepinvariant(g))  /* must keep invariant? */
     reallymarkobject(g, v);  /* restore invariant */
@@ -343,7 +343,7 @@ static void remarkupvals (global_State *g) {
 ** mark root set and reset all gray lists, to start a new
 ** incremental (or full) collection
 */
-static void startcollection (global_State *g) {
+static void restartcollection (global_State *g) {
   g->gray = g->grayagain = NULL;
   g->weak = g->allweak = g->ephemeron = NULL;
   markobject(g, g->mainthread);
@@ -855,7 +855,7 @@ static void separatetobefnz (lua_State *L, int all) {
   while ((curr = *p) != NULL) {  /* traverse all finalizable objects */
     lua_assert(!isfinalized(curr));
     lua_assert(testbit(gch(curr)->marked, SEPARATED));
-    if (!(all || iswhite(curr)))  /* not being collected? */
+    if (!(iswhite(curr) || all))  /* not being collected? */
       p = &gch(curr)->next;  /* don't bother with it */
     else {
       l_setbit(gch(curr)->marked, FINALIZEDBIT); /* won't be finalized again */
@@ -1029,11 +1029,8 @@ static lu_mem singlestep (lua_State *L) {
   switch (g->gcstate) {
     case GCSpause: {
       g->GCmemtrav = 0;  /* start to count memory traversed */
-      if (!isgenerational(g))
-        startcollection(g);
-      /* in any case, root must be marked at this point */
-      lua_assert(!iswhite(obj2gco(g->mainthread))
-              && !iswhite(gcvalue(&g->l_registry)));
+      lua_assert(!isgenerational(g));
+      restartcollection(g);
       g->gcstate = GCSpropagate;
       return g->GCmemtrav;
     }
@@ -1105,14 +1102,15 @@ void luaC_runtilstate (lua_State *L, int statesmask) {
 
 static void generationalcollection (lua_State *L) {
   global_State *g = G(L);
+  lua_assert(g->gcstate == GCSpropagate);
   if (g->GCestimate == 0) {  /* signal for another major collection? */
     luaC_fullgc(L, 0);  /* perform a full regular collection */
     g->GCestimate = gettotalbytes(g);  /* update control */
   }
   else {
     lu_mem estimate = g->GCestimate;
-    luaC_runtilstate(L, ~bitmask(GCSpause));  /* run complete cycle */
-    luaC_runtilstate(L, bitmask(GCSpause));
+    luaC_runtilstate(L, bitmask(GCSpause));  /* run complete (minor) cycle */
+    g->gcstate = GCSpropagate;  /* skip restart */
     if (gettotalbytes(g) > (estimate / 100) * g->gcmajorinc)
       g->GCestimate = 0;  /* signal for a major collection */
     else
@@ -1175,7 +1173,6 @@ void luaC_step (lua_State *L) {
 void luaC_fullgc (lua_State *L, int isemergency) {
   global_State *g = G(L);
   int origkind = g->gckind;
-  int someblack = keepinvariant(g);
   lua_assert(origkind != KGC_EMERGENCY);
   if (isemergency)  /* do not run finalizers during emergency GC */
     g->gckind = KGC_EMERGENCY;
@@ -1183,18 +1180,17 @@ void luaC_fullgc (lua_State *L, int isemergency) {
     g->gckind = KGC_NORMAL;
     callallpendingfinalizers(L, 1);
   }
-  if (someblack) {  /* may there be some black objects? */
+  if (keepinvariant(g)) {  /* may there be some black objects? */
     /* must sweep all objects to turn them back to white
        (as white has not changed, nothing will be collected) */
     entersweep(L);
   }
   /* finish any pending sweep phase to start a new cycle */
   luaC_runtilstate(L, bitmask(GCSpause));
-  /* run entire collector */
-  luaC_runtilstate(L, ~bitmask(GCSpause));
-  luaC_runtilstate(L, bitmask(GCSpause));
+  luaC_runtilstate(L, ~bitmask(GCSpause));  /* start new collection */
+  luaC_runtilstate(L, bitmask(GCSpause));  /* run entire collection */
   if (origkind == KGC_GEN) {  /* generational mode? */
-    /* generational mode must always start in propagate phase */
+    /* generational mode must be kept in propagate phase */
     luaC_runtilstate(L, bitmask(GCSpropagate));
   }
   g->gckind = origkind;

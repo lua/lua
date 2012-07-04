@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.130 2012/06/07 18:52:47 roberto Exp roberto $
+** $Id: ltests.c,v 2.131 2012/07/02 15:38:36 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -182,8 +182,8 @@ void *debug_realloc (void *ud, void *b, size_t oldsize, size_t size) {
 
 static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
   if (isdead(g,t)) return 0;
-  if (isgenerational(g) || !issweepphase(g))
-    return !isblack(f) || !iswhite(t);
+  if (!issweepphase(g))
+    return !(isblack(f) && iswhite(t));
   else return 1;
 }
 
@@ -329,7 +329,7 @@ static void checkobject (global_State *g, GCObject *o, int maybedead) {
   if (isdead(g, o))
     lua_assert(maybedead);
   else {
-    if (g->gcstate == GCSpause && !isgenerational(g))
+    if (g->gcstate == GCSpause)
       lua_assert(iswhite(o));
     switch (gch(o)->tt) {
       case LUA_TUPVAL: {
@@ -432,6 +432,8 @@ int lua_checkmemory (lua_State *L) {
     lua_assert(!iswhite(obj2gco(g->mainthread)));
     lua_assert(!iswhite(gcvalue(&g->l_registry)));
   }
+  else  /* generational mode keeps collector in 'propagate' state */
+    lua_assert(!isgenerational(g));
   lua_assert(!isdead(g, gcvalue(&g->l_registry)));
   checkstack(g, g->mainthread);
   resetbit(g->mainthread->marked, TESTGRAYBIT);
@@ -457,7 +459,7 @@ int lua_checkmemory (lua_State *L) {
   /* check 'tobefnz' list */
   checkold(g, g->tobefnz);
   for (o = g->tobefnz; o != NULL; o = gch(o)->next) {
-    lua_assert(!iswhite(o));
+    lua_assert(!iswhite(o) || g->gcstate == GCSpause);
     lua_assert(!isdead(g, o) && testbit(o->gch.marked, SEPARATED));
     lua_assert(gch(o)->tt == LUA_TUSERDATA ||
                gch(o)->tt == LUA_TTABLE);

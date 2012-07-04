@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.55 2012/05/21 13:18:10 roberto Exp roberto $
+** $Id: lgc.h,v 2.56 2012/05/23 15:43:14 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -55,9 +55,10 @@
 ** phase may break the invariant, as objects turned white may point to
 ** still-black objects. The invariant is restored when sweep ends and
 ** all objects are white again. During a generational collection, the
-** invariant must be kept all times.
+** invariant must be kept all times. (The state in generational mode
+** is kept in 'propagate', so 'keepinvariant' is always true.)
 */
-#define keepinvariant(g)  (isgenerational(g) || g->gcstate <= GCSatomic)
+#define keepinvariant(g)  (g->gcstate <= GCSatomic)
 
 
 /*
