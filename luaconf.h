@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.171 2012/05/11 14:10:50 roberto Exp roberto $
+** $Id: luaconf.h,v 1.172 2012/05/11 14:14:42 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -408,7 +408,7 @@
 /*
 @@ lua_str2number converts a decimal numeric string to a number.
 @@ lua_strx2number converts an hexadecimal numeric string to a number.
-** In C99, 'strtod' do both conversions. C89, however, has no function
+** In C99, 'strtod' does both conversions. C89, however, has no function
 ** to convert floating hexadecimal strings to numbers. For these
 ** systems, you can leave 'lua_strx2number' undefined and Lua will
 ** provide its own implementation.
