@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.176 2012/05/23 15:37:09 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.177 2012/07/31 17:48:42 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -914,7 +914,7 @@ static int str_format (lua_State *L) {
           nb = sprintf(buff, form, luaL_checkint(L, arg));
           break;
         }
-        case 'd':  case 'i': {
+        case 'd': case 'i': {
           lua_Number n = luaL_checknumber(L, arg);
           LUA_INTFRM_T ni = (LUA_INTFRM_T)n;
           lua_Number diff = n - (lua_Number)ni;
@@ -924,7 +924,7 @@ static int str_format (lua_State *L) {
           nb = sprintf(buff, form, ni);
           break;
         }
-        case 'o':  case 'u':  case 'x':  case 'X': {
+        case 'o': case 'u': case 'x': case 'X': {
           lua_Number n = luaL_checknumber(L, arg);
           unsigned LUA_INTFRM_T ni = (unsigned LUA_INTFRM_T)n;
           lua_Number diff = n - (lua_Number)ni;
@@ -934,7 +934,7 @@ static int str_format (lua_State *L) {
           nb = sprintf(buff, form, ni);
           break;
         }
-        case 'e':  case 'E': case 'f':
+        case 'e': case 'E': case 'f':
 #if defined(LUA_USE_AFORMAT)
         case 'a': case 'A':
 #endif

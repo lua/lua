@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.163 2012/05/23 15:42:27 roberto Exp roberto $
+** $Id: lapi.c,v 2.164 2012/06/08 15:14:04 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -281,7 +281,7 @@ LUA_API int lua_rawequal (lua_State *L, int index1, int index2) {
 }
 
 
-LUA_API void  lua_arith (lua_State *L, int op) {
+LUA_API void lua_arith (lua_State *L, int op) {
   StkId o1;  /* 1st operand */
   StkId o2;  /* 2nd operand */
   lua_lock(L);
@@ -1006,7 +1006,7 @@ LUA_API int lua_dump (lua_State *L, lua_Writer writer, void *data) {
 }
 
 
-LUA_API int  lua_status (lua_State *L) {
+LUA_API int lua_status (lua_State *L) {
   return L->status;
 }
 

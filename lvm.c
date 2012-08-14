@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.151 2012/05/14 17:50:49 roberto Exp roberto $
+** $Id: lvm.c,v 2.152 2012/06/08 15:14:04 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -470,7 +470,7 @@ void luaV_finishOp (lua_State *L) {
         L->top = ci->top;  /* adjust results */
       break;
     }
-    case OP_TAILCALL: case OP_SETTABUP:  case OP_SETTABLE:
+    case OP_TAILCALL: case OP_SETTABUP: case OP_SETTABLE:
       break;
     default: lua_assert(0);
   }
