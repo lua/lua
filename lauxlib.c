@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.243 2012/04/20 17:05:17 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.244 2012/05/31 20:28:45 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -84,7 +84,7 @@ static void pushfuncname (lua_State *L, lua_Debug *ar) {
   if (*ar->namewhat != '\0')  /* is there a name? */
     lua_pushfstring(L, "function " LUA_QS, ar->name);
   else if (*ar->what == 'm')  /* main? */
-      lua_pushfstring(L, "main chunk");
+      lua_pushliteral(L, "main chunk");
   else if (*ar->what == 'C') {
     if (pushglobalfuncname(L, ar)) {
       lua_pushfstring(L, "function " LUA_QS, lua_tostring(L, -1));
@@ -214,7 +214,7 @@ LUALIB_API int luaL_fileresult (lua_State *L, int stat, const char *fname) {
     if (fname)
       lua_pushfstring(L, "%s: %s", fname, strerror(en));
     else
-      lua_pushfstring(L, "%s", strerror(en));
+      lua_pushstring(L, strerror(en));
     lua_pushinteger(L, en);
     return 3;
   }
