@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.152 2012/06/08 15:14:04 roberto Exp roberto $
+** $Id: lvm.c,v 2.153 2012/08/14 18:12:34 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -98,7 +98,6 @@ static void callTM (lua_State *L, const TValue *f, const TValue *p1,
   setobj2s(L, L->top++, p2);  /* 2nd argument */
   if (!hasres)  /* no result? 'p3' is third argument */
     setobj2s(L, L->top++, p3);  /* 3rd argument */
-  luaD_checkstack(L, 0);
   /* metamethod may yield only when called from Lua code */
   luaD_call(L, L->top - (4 - hasres), hasres, isLua(L->ci));
   if (hasres) {  /* if has result, move it to its place */

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.60 2011/08/30 16:26:41 roberto Exp roberto $
+** $Id: lcode.c,v 2.61 2012/08/14 18:12:34 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -330,10 +330,9 @@ int luaK_numberK (FuncState *fs, lua_Number r) {
   setnvalue(&o, r);
   if (r == 0 || luai_numisnan(NULL, r)) {  /* handle -0 and NaN */
     /* use raw representation as key to avoid numeric problems */
-    setsvalue(L, L->top, luaS_newlstr(L, (char *)&r, sizeof(r)));
-     incr_top(L);
-     n = addk(fs, L->top - 1, &o);
-     L->top--;
+    setsvalue(L, L->top++, luaS_newlstr(L, (char *)&r, sizeof(r)));
+    n = addk(fs, L->top - 1, &o);
+    L->top--;
   }
   else
     n = addk(fs, &o, &o);  /* regular case */
