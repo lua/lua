@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.134 2012/07/02 13:40:05 roberto Exp roberto $
+** $Id: lgc.c,v 2.135 2012/07/04 15:52:38 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -146,7 +146,7 @@ void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v) {
   lua_assert(isblack(o) && iswhite(v) && !isdead(g, v) && !isdead(g, o));
   lua_assert(g->gcstate != GCSpause);
   lua_assert(gch(o)->tt != LUA_TTABLE);
-  if (keepinvariant(g))  /* must keep invariant? */
+  if (keepinvariantout(g))  /* must keep invariant? */
     reallymarkobject(g, v);  /* restore invariant */
   else {  /* sweep phase */
     lua_assert(issweepphase(g));
@@ -796,7 +796,7 @@ static GCObject *udata2finalize (global_State *g) {
   g->allgc = o;
   resetbit(gch(o)->marked, SEPARATED);  /* mark that it is not in 'tobefnz' */
   lua_assert(!isold(o));  /* see MOVE OLD rule */
-  if (!keepinvariant(g))  /* not keeping invariant? */
+  if (!keepinvariantout(g))  /* not keeping invariant? */
     makewhite(g, o);  /* "sweep" object */
   return o;
 }
@@ -891,7 +891,7 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
     ho->next = g->finobj;  /* link it in list 'finobj' */
     g->finobj = o;
     l_setbit(ho->marked, SEPARATED);  /* mark it as such */
-    if (!keepinvariant(g))  /* not keeping invariant? */
+    if (!keepinvariantout(g))  /* not keeping invariant? */
       makewhite(g, o);  /* "sweep" object */
     else
       resetoldbit(o);  /* see MOVE OLD rule */
@@ -985,7 +985,7 @@ void luaC_freeallobjects (lua_State *L) {
 
 static l_mem atomic (lua_State *L) {
   global_State *g = G(L);
-  l_mem work = -g->GCmemtrav;  /* start counting work */
+  l_mem work = -cast(l_mem, g->GCmemtrav);  /* start counting work */
   GCObject *origweak, *origall;
   lua_assert(!iswhite(obj2gco(g->mainthread)));
   markobject(g, L);  /* mark running thread */
@@ -1118,6 +1118,7 @@ static void generationalcollection (lua_State *L) {
 
   }
   luaE_setdebt(g, stddebt(g));
+  lua_assert(g->gcstate == GCSpropagate);
 }
 
 
@@ -1160,6 +1161,7 @@ void luaC_forcestep (lua_State *L) {
 */
 void luaC_step (lua_State *L) {
   global_State *g = G(L);
+  /* lua_checkmemory(L); */  /* for internal debugging */
   if (g->gcrunning) luaC_forcestep(L);
   else luaE_setdebt(g, -GCSTEPSIZE);  /* avoid being called too often */
 }
