@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.164 2012/06/08 15:14:04 roberto Exp roberto $
+** $Id: lapi.c,v 2.165 2012/08/14 18:12:34 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -295,7 +295,7 @@ LUA_API void lua_arith (lua_State *L, int op) {
   o1 = L->top - 2;
   o2 = L->top - 1;
   if (ttisnumber(o1) && ttisnumber(o2)) {
-    changenvalue(o1, luaO_arith(op, nvalue(o1), nvalue(o2)));
+    setnvalue(o1, luaO_arith(op, nvalue(o1), nvalue(o2)));
   }
   else
     luaV_arith(L, o1, o1, o2, cast(TMS, op - LUA_OPADD + TM_ADD));
