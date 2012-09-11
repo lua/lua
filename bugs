@@ -1050,7 +1050,7 @@ what = [[list constructors have wrong limit]],
 
 report = [[by Norman Ramsey, June 2006]],
 
-since = "Lua 5.1",
+since = "5.1",
 
 example = [[
 a = {}
@@ -1085,7 +1085,7 @@ what = [[wrong message error in some cases involving closures]],
 
 report = [[Shmuel Zeigerman, on 07/2006]],
 
-since = "Lua 5.1",
+since = "5.1",
 
 example = [[
 local Var
@@ -1126,7 +1126,7 @@ patch = [[
 Bug{
 what = [[string.format("%") may read past the string]],
 report = [[Roberto, on 09/2006]],
-since = [[5.0 (at least)]],
+since = [[5.0]],
 example = [[print(string.format("%"))]],
 patch = [[
 *lstrlib.c:
@@ -1376,7 +1376,7 @@ Bug{
 what = [[As a library, loadlib.c should not access Lua internals
 (via lobject.h)]],
 report = [[Jérôme Vuarand, on 03/2007]],
-since = [[5.0 (at least)]],
+since = [[5.0]],
 example = [[the bug has no effect on external behavior]],
 patch = [[remove the '#include "lobject.h" and use
 'lua_pushfstring' instead of 'luaO_pushfstring']],
@@ -1391,7 +1391,7 @@ Bug{
 what = [[Lua may close standard files,
 which then may be used by C]],
 report = [[David Manura/Ross Berteig, on 04/2007]],
-since = [[ ]],
+since = [[]],
 example = [[
 io.close(io.stderr)
 -- in some systems, following attempts to write to 'stderr' may crash
@@ -1424,7 +1424,7 @@ Bug{
 what = [[Count hook may be called without being set.]],
 report = [[Mike Pall, on 05/2007]],
 since = [[?]],
-example = [[ ]],
+example = [[]],
 patch = [[
 lvm.c:
 @@ -61,11 +61,9 @@
@@ -1484,8 +1484,8 @@ Bug{
 what = [[Very small numbers all collide in the hash function.
 (This creates only performance problems; the behavoir is correct.)]],
 report = [[, on ]],
-since = [[Lua 5.0]],
-example = [[ ]],
+since = [[5.0]],
+example = [[]],
 patch = [[
 ltable.c:
 87,88c87,88
@@ -1573,7 +1573,7 @@ Bug{
 what = [[table.remove removes last element of a table when given
 an out-of-bound index]],
 report = [[Patrick Donnelly, on 11/2007]],
-since = [[at least 5.0]],
+since = [[5.0]],
 example = [[
 a = {1,2,3}
 table.remove(a, 4)
@@ -1619,7 +1619,7 @@ Bug{
 what = [[stand-alone interpreter shows incorrect error message
 when the "message" is a coroutine]],
 report = [[Patrick Donnelly, on 17/12/2007]],
-since = [[i ]],
+since = [[5.1]],
 example = [[> error(coroutine.create(function() end))]],
 patch = [[
 lua.c:
@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.115 2012/06/11 17:49:37 roberto Exp roberto $
-+** $Id: bugs,v 1.115 2012/06/11 17:49:37 roberto Exp roberto $
+-** $Id: bugs,v 1.116 2012/07/13 14:53:38 roberto Exp roberto $
++** $Id: bugs,v 1.116 2012/07/13 14:53:38 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2416,6 +2416,7 @@ Bug{
 what = [[memory hoarding when creating Lua hooks for coroutines]],
 report = [[Arseny Vakhrushev, 2012/01/16]],
 since = [[5.1]],
+fix = [[5.2.1]],
 example = [[
 collectgarbage(); print(collectgarbage'count' * 1024)
 
@@ -2489,6 +2490,7 @@ what = [[Lexical gets confused with some combination of arithmetic
 operators and hexadecimal numbers]],
 report = [[Alexandra Barros, 2012/01/17]],
 since = [[5.2.0]],
+fix = [[5.2.1]],
 example = [[print(0xE+1)]],
 patch = [[
 --- llex.c      2011/11/30 12:43:51     2.59
@@ -2525,6 +2527,7 @@ what = [[Finalizers may call functions from a dynamic library after
 the library has been unloaded]],
 report = [[Josh Haberman, 2012/04/08]],
 since = [[5.1]],
+fix = [[5.2.1]],
 example = [[
 local u = setmetatable({}, {__gc = function () foo() end})
 local m = require 'mod'   -- 'mod' may be any dynamic library written in C
@@ -2620,6 +2623,7 @@ Bug{
 what = [[wrong handling of 'nCcalls' in coroutines]],
 report = [[Alexander Gavrilov, 2012/04/18]],
 since = [[5.2.0]],
+fix = [[5.2.1]],
 example = [[
 coroutine.wrap(function()
   print(pcall(pcall,pcall,pcall,pcall,pcall,error,3))
@@ -2652,6 +2656,7 @@ Bug{
 what = [[Internal Lua values may escape through the debug API]],
 report = [[Dan Tull, 2012/04/20]],
 since = [[5.1]],
+fix = [[5.2.1]],
 example = [[
 -- for Lua 5.1
 local firsttime = true
@@ -2676,6 +2681,7 @@ Bug{
 what = [[Problems when yielding from debug hooks]],
 report = [[Erik Cassel, 2012/06/05]],
 since = [[5.2.0]],
+fix = [[5.2.1]],
 example = [[
 Set, in C, a line hook that simply yields,
 and then call any Lua function.
@@ -2701,6 +2707,7 @@ Bug{
 what = [[ ]],
 report = [[ ]],
 since = [[ ]],
+fix = nil,
 example = [[ ]],
 patch = [[
 ]]
