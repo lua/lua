@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.244 2012/05/31 20:28:45 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.245 2012/08/16 17:32:20 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -438,7 +438,7 @@ LUALIB_API char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz) {
   if (B->size - B->n < sz) {  /* not enough space? */
     char *newbuff;
     size_t newsize = B->size * 2;  /* double buffer size */
-    if (newsize - B->n < sz)  /* not bit enough? */
+    if (newsize - B->n < sz)  /* not big enough? */
       newsize = B->n + sz;
     if (newsize < B->n || newsize - B->n < sz)
       luaL_error(L, "buffer too large");
