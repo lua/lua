@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.116 2012/07/13 14:53:38 roberto Exp roberto $
-+** $Id: bugs,v 1.116 2012/07/13 14:53:38 roberto Exp roberto $
+-** $Id: bugs,v 1.117 2012/09/11 12:42:14 roberto Exp roberto $
++** $Id: bugs,v 1.117 2012/09/11 12:42:14 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2691,6 +2691,10 @@ patch = [[
 ]]
 }
 
+
+-----------------------------------------------------------------
+-- Lua 5.2.1
+
 Bug{
 what = [[Some patterns can overflow the C stack, due to recursion]],
 report = [[Tim Starling, 2012/07/08]],
@@ -2701,6 +2705,97 @@ patch = [[
 }
 ]=]
 
+
+Bug{
+what = [['pcall' may not restore previous error function when
+inside coroutines]],
+report = [[Alexander Gavrilov, 2012/06/12]],
+since = [[5.2]],
+fix = nil,
+example = [[
+function errfunc(x)
+  return 'errfunc'
+end
+
+function test(do_yield)
+  print(do_yield and "yielding" or "not yielding")
+  pcall(function() -- this pcall sets errfunc back to none
+    if do_yield then
+      coroutine.yield() -- stops errfunc from being restored
+    end
+  end)
+  error('fail!')
+end
+
+coro = coroutine.wrap(function()
+  print(xpcall(test, errfunc, false))
+  print(xpcall(test, errfunc, true))
+  print(xpcall(test, errfunc, false))
+end)
+
+coro()
+--> not yielding
+--> false	errfunc
+--> yielding
+coro()
+--> false	temp:12: fail!       <<<< should be 'errfunc' too
+--> not yielding
+--> false	errfunc
+]],
+patch = [[
+--- ldo.c	2012/08/28 18:30:45	2.107
++++ ldo.c	2012/09/23 15:49:55
+@@ -403,7 +403,11 @@
+   int n;
+   lua_assert(ci->u.c.k != NULL);  /* must have a continuation */
+   lua_assert(L->nny == 0);
+-  /* finish 'lua_callk' */
++  if (ci->callstatus & CIST_YPCALL) {  /* was inside a pcall? */
++    ci->callstatus &= ~CIST_YPCALL;  /* finish 'lua_pcall' */
++    L->errfunc = ci->u.c.old_errfunc;
++  }
++  /* finish 'lua_callk'/'lua_pcall' */
+   adjustresults(L, ci->nresults);
+   /* call continuation function */
+   if (!(ci->callstatus & CIST_STAT))  /* no call status? */
+]]
+}
+
+Bug{
+what = [[Check for garbage collector in function calls does not cover
+all paths]],
+report = [[Roberto, 2012/08/15]],
+since = [[5.2.1]],
+fix = nil,
+example = [[
+See <a href="http://lua-users.org/lists/lua-l/2012-08/msg00149.html">
+http://lua-users.org/lists/lua-l/2012-08/msg00149.html</a>
+]],
+patch = [[
+@@ -311,6 +311,7 @@
+       ci->top = L->top + LUA_MINSTACK;
+       lua_assert(ci->top <= L->stack_last);
+       ci->callstatus = 0;
++      luaC_checkGC(L);  /* stack grow uses memory */
+       if (L->hookmask & LUA_MASKCALL)
+         luaD_hook(L, LUA_HOOKCALL, -1);
+       lua_unlock(L);
+@@ -338,6 +339,7 @@
+       ci->u.l.savedpc = p->code;  /* starting point */
+       ci->callstatus = CIST_LUA;
+       L->top = ci->top;
++      luaC_checkGC(L);  /* stack grow uses memory */
+       if (L->hookmask & LUA_MASKCALL)
+         callhook(L, ci);
+       return 0;
+@@ -393,7 +395,6 @@
+     luaV_execute(L);  /* call it */
+   if (!allowyield) L->nny--;
+   L->nCcalls--;
+-  luaC_checkGC(L);
+ }
+]]
+}
 
 --[=[
 Bug{
