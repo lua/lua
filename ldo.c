@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.106 2012/06/29 19:23:33 roberto Exp roberto $
+** $Id: ldo.c,v 2.107 2012/08/28 18:30:45 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -403,7 +403,11 @@ static void finishCcall (lua_State *L) {
   int n;
   lua_assert(ci->u.c.k != NULL);  /* must have a continuation */
   lua_assert(L->nny == 0);
-  /* finish 'lua_callk' */
+  if (ci->callstatus & CIST_YPCALL) {  /* was inside a pcall? */
+    ci->callstatus &= ~CIST_YPCALL;  /* finish 'lua_pcall' */
+    L->errfunc = ci->u.c.old_errfunc;
+  }
+  /* finish 'lua_callk'/'lua_pcall' */
   adjustresults(L, ci->nresults);
   /* call continuation function */
   if (!(ci->callstatus & CIST_STAT))  /* no call status? */
