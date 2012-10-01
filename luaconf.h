@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.172 2012/05/11 14:14:42 roberto Exp roberto $
+** $Id: luaconf.h,v 1.173 2012/07/13 14:54:14 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -465,13 +465,12 @@
 ** Some tricks with doubles
 */
 
-#if defined(LUA_CORE) && \
-    defined(LUA_NUMBER_DOUBLE) && !defined(LUA_ANSI)	/* { */
+#if defined(LUA_NUMBER_DOUBLE) && !defined(LUA_ANSI)	/* { */
 /*
 ** The next definitions activate some tricks to speed up the
 ** conversion from doubles to integer types, mainly to LUA_UNSIGNED.
 **
-@@ MS_ASMTRICK uses Microsoft assembler to avoid clashes with a
+@@ LUA_MSASMTRICK uses Microsoft assembler to avoid clashes with a
 ** DirectX idiosyncrasy.
 **
 @@ LUA_IEEE754TRICK uses a trick that should work on any machine
@@ -495,7 +494,7 @@
 /* Microsoft compiler on a Pentium (32 bit) ? */
 #if defined(LUA_WIN) && defined(_MSC_VER) && defined(_M_IX86)	/* { */
 
-#define MS_ASMTRICK
+#define LUA_MSASMTRICK
 #define LUA_IEEEENDIAN		0
 #define LUA_NANTRICK
 

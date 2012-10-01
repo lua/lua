@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.98 2012/05/11 14:10:50 roberto Exp roberto $
+** $Id: llimits.h,v 1.99 2012/05/28 20:32:28 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -200,7 +200,7 @@ typedef lu_int32 Instruction;
 ** both small and large values (outside the range of integers).
 */
 
-#if defined(MS_ASMTRICK)	/* { */
+#if defined(MS_ASMTRICK) || defined(LUA_MSASMTRICK)	/* { */
 /* trick with Microsoft assembler for X86 */
 
 #define lua_number2int(i,n)  __asm {__asm fld n   __asm fistp i}
