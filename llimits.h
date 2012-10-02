@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.99 2012/05/28 20:32:28 roberto Exp roberto $
+** $Id: llimits.h,v 1.100 2012/10/01 14:14:45 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -256,7 +256,7 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
 
 #if !defined(lua_number2unsigned)	/* { */
 /* the following definition assures proper modulo behavior */
-#if defined(LUA_NUMBER_DOUBLE)
+#if defined(LUA_NUMBER_DOUBLE) || defined(LUA_NUMBER_FLOAT)
 #include <math.h>
 #define SUPUNSIGNED	((lua_Number)(~(lua_Unsigned)0) + 1)
 #define lua_number2unsigned(i,n)  \
