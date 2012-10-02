@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.97 2012/05/23 15:37:09 roberto Exp roberto $
+** $Id: lstate.c,v 2.98 2012/05/30 12:33:44 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -48,7 +48,7 @@
 */
 #if !defined(luai_makeseed)
 #include <time.h>
-#define luai_makeseed()		cast(size_t, time(NULL))
+#define luai_makeseed()		cast(unsigned int, time(NULL))
 #endif
 
 
