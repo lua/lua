@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.23 2012/03/28 18:28:25 roberto Exp roberto $
+** $Id: lstring.c,v 2.24 2012/05/11 14:14:42 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -49,7 +49,7 @@ int luaS_eqstr (TString *a, TString *b) {
 
 
 unsigned int luaS_hash (const char *str, size_t l, unsigned int seed) {
-  unsigned int h = seed ^ l;
+  unsigned int h = seed ^ cast(unsigned int, l);
   size_t l1;
   size_t step = (l >> LUAI_HASHLIMIT) + 1;
   for (l1 = l; l1 >= step; l1 -= step)
