@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.135 2012/07/04 15:52:38 roberto Exp roberto $
+** $Id: lgc.c,v 2.136 2012/09/11 12:53:08 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -1161,7 +1161,6 @@ void luaC_forcestep (lua_State *L) {
 */
 void luaC_step (lua_State *L) {
   global_State *g = G(L);
-  /* lua_checkmemory(L); */  /* for internal debugging */
   if (g->gcrunning) luaC_forcestep(L);
   else luaE_setdebt(g, -GCSTEPSIZE);  /* avoid being called too often */
 }
