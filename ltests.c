@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.132 2012/07/04 15:52:38 roberto Exp roberto $
+** $Id: ltests.c,v 2.133 2012/08/16 17:34:28 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -469,9 +469,7 @@ int lua_checkmemory (lua_State *L) {
     lua_assert(uv->u.l.next->u.l.prev == uv && uv->u.l.prev->u.l.next == uv);
     lua_assert(uv->v != &uv->u.value);  /* must be open */
     lua_assert(!isblack(obj2gco(uv)));  /* open upvalues are never black */
-    if (isdead(g, obj2gco(uv)))
-      lua_assert(issweepphase(g));
-    else
+    if (!isdead(g, obj2gco(uv)))
       checkvalref(g, obj2gco(uv), uv->v);
   }
   return 0;
