@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.136 2012/09/11 12:53:08 roberto Exp roberto $
+** $Id: lgc.c,v 2.137 2012/10/03 12:36:17 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -43,21 +43,12 @@
 */
 #define STEPMULADJ		200
 
+
 /*
 ** macro to adjust 'pause': 'pause' is actually used like
 ** 'pause / PAUSEADJ' (value chosen by tests)
 */
-#define PAUSEADJ		200
-
-
-
-
-/*
-** standard negative debt for GC; a reasonable "time" to wait before
-** starting a new cycle
-*/
-#define stddebtest(g,e)	(-cast(l_mem, (e)/PAUSEADJ) * g->gcpause)
-#define stddebt(g)	stddebtest(g, gettotalbytes(g))
+#define PAUSEADJ		100
 
 
 /*
@@ -908,6 +899,21 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 */
 
 
+/*
+** set a reasonable "time" to wait before starting a new GC cycle;
+** cycle will start when memory use hits threshold
+*/
+static void setpause (global_State *g, l_mem estimate) {
+  l_mem debt, threshold;
+  estimate = estimate / PAUSEADJ;  /* adjust 'estimate' */
+  threshold = (g->gcpause < MAX_LMEM / estimate)  /* overflow? */
+            ? estimate * g->gcpause  /* no overflow */
+            : MAX_LMEM;  /* overflow; truncate to maximum */
+  debt = -cast(l_mem, threshold - gettotalbytes(g));
+  luaE_setdebt(g, debt);
+}
+
+
 #define sweepphases  \
 	(bitmask(GCSsweepstring) | bitmask(GCSsweepudata) | bitmask(GCSsweep))
 
@@ -1028,7 +1034,8 @@ static lu_mem singlestep (lua_State *L) {
   global_State *g = G(L);
   switch (g->gcstate) {
     case GCSpause: {
-      g->GCmemtrav = 0;  /* start to count memory traversed */
+      /* start to count memory traversed */
+      g->GCmemtrav = g->strt.size * sizeof(GCObject*);
       lua_assert(!isgenerational(g));
       restartcollection(g);
       g->gcstate = GCSpropagate;
@@ -1117,7 +1124,7 @@ static void generationalcollection (lua_State *L) {
       g->GCestimate = estimate;  /* keep estimate from last major coll. */
 
   }
-  luaE_setdebt(g, stddebt(g));
+  setpause(g, gettotalbytes(g));
   lua_assert(g->gcstate == GCSpropagate);
 }
 
@@ -1126,7 +1133,7 @@ static void incstep (lua_State *L) {
   global_State *g = G(L);
   l_mem debt = g->GCdebt;
   int stepmul = g->gcstepmul;
-  if (stepmul < 40) stepmul = 40;  /* avoid ridiculous low values */
+  if (stepmul < 40) stepmul = 40;  /* avoid ridiculous low values (and 0) */
   /* convert debt from Kb to 'work units' (avoid zero debt and overflows) */
   debt = (debt / STEPMULADJ) + 1;
   debt = (debt < MAX_LMEM / stepmul) ? debt * stepmul : MAX_LMEM;
@@ -1135,10 +1142,11 @@ static void incstep (lua_State *L) {
     debt -= work;
   } while (debt > -GCSTEPSIZE && g->gcstate != GCSpause);
   if (g->gcstate == GCSpause)
-    debt = stddebtest(g, g->GCestimate);  /* pause until next cycle */
-  else
+    setpause(g, g->GCestimate);  /* pause until next cycle */
+  else {
     debt = (debt / stepmul) * STEPMULADJ;  /* convert 'work units' to Kb */
-  luaE_setdebt(g, debt);
+    luaE_setdebt(g, debt);
+  }
 }
 
 
@@ -1195,7 +1203,7 @@ void luaC_fullgc (lua_State *L, int isemergency) {
     luaC_runtilstate(L, bitmask(GCSpropagate));
   }
   g->gckind = origkind;
-  luaE_setdebt(g, stddebt(g));
+  setpause(g, gettotalbytes(g));
   if (!isemergency)   /* do not run finalizers during emergency GC */
     callallpendingfinalizers(L, 1);
 }
