@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.166 2012/09/11 18:21:44 roberto Exp roberto $
+** $Id: lapi.c,v 2.167 2012/10/19 15:52:46 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1104,7 +1104,7 @@ LUA_API int lua_error (lua_State *L) {
   lua_lock(L);
   api_checknelems(L, 1);
   luaG_errormsg(L);
-  lua_unlock(L);
+  /* code unreacheable; will unlock when control actually leaves the kernel */
   return 0;  /* to avoid warnings */
 }
 
