@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.117 2012/09/11 12:42:14 roberto Exp roberto $
-+** $Id: bugs,v 1.117 2012/09/11 12:42:14 roberto Exp roberto $
+-** $Id: bugs,v 1.118 2012/10/01 14:05:31 roberto Exp roberto $
++** $Id: bugs,v 1.118 2012/10/01 14:05:31 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2703,7 +2703,6 @@ example = [[print(string.find(string.rep("a", 2^20), string.rep(".?", 2^20)))]],
 patch = [[
 ]]
 }
-]=]
 
 
 Bug{
@@ -2793,6 +2792,64 @@ patch = [[
    if (!allowyield) L->nny--;
    L->nCcalls--;
 -  luaC_checkGC(L);
+ }
+]]
+}
+
+Bug{
+what = [[load/loadfile returns wrong result when given an environment
+for a binary chunk with no upvalues]],
+report = [[Vladimir Strakh, 2012/11/28]],
+since = [[5.2]],
+fix = nil,
+example = [[
+f = load(string.dump(function () return 1 end), nil, "b", {})
+print(type(f))   --> table            (whould be a function)
+]],
+patch = [[
+--- lbaselib.c	2012/04/27 14:13:19	1.274
++++ lbaselib.c	2012/12/03 20:08:15
+@@ -244,5 +244,11 @@
+ 
+-static int load_aux (lua_State *L, int status) {
+-  if (status == LUA_OK)
++static int load_aux (lua_State *L, int status, int envidx) {
++  if (status == LUA_OK) {
++    if (envidx != 0) {  /* 'env' parameter? */
++      lua_pushvalue(L, envidx);  /* environment for loaded function */
++      if (!lua_setupvalue(L, -2, 1))  /* set it as 1st upvalue */
++        lua_pop(L, 1);  /* remove 'env' if not used by previous call */
++    }
+     return 1;
++  }
+   else {
+@@ -258,9 +264,5 @@
+   const char *mode = luaL_optstring(L, 2, NULL);
+-  int env = !lua_isnone(L, 3);  /* 'env' parameter? */
++  int env = (!lua_isnone(L, 3) ? 3 : 0);  /* 'env' index or 0 if no 'env' */
+   int status = luaL_loadfilex(L, fname, mode);
+-  if (status == LUA_OK && env) {  /* 'env' parameter? */
+-    lua_pushvalue(L, 3);
+-    lua_setupvalue(L, -2, 1);  /* set it as 1st upvalue of loaded chunk */
+-  }
+-  return load_aux(L, status);
++  return load_aux(L, status, env);
+ }
+@@ -309,5 +311,5 @@
+   size_t l;
+-  int top = lua_gettop(L);
+   const char *s = lua_tolstring(L, 1, &l);
+   const char *mode = luaL_optstring(L, 3, "bt");
++  int env = (!lua_isnone(L, 4) ? 4 : 0);  /* 'env' index or 0 if no 'env' */
+   if (s != NULL) {  /* loading a string? */
+@@ -322,7 +324,3 @@
+   }
+-  if (status == LUA_OK && top >= 4) {  /* is there an 'env' argument */
+-    lua_pushvalue(L, 4);  /* environment for loaded function */
+-    lua_setupvalue(L, -2, 1);  /* set it as 1st upvalue */
+-  }
+-  return load_aux(L, status);
++  return load_aux(L, status, env);
  }
 ]]
 }
