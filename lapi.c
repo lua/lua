@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.168 2012/11/04 20:08:17 roberto Exp roberto $
+** $Id: lapi.c,v 2.169 2012/12/05 19:09:23 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -196,7 +196,8 @@ LUA_API void lua_insert (lua_State *L, int idx) {
   lua_lock(L);
   p = index2addr(L, idx);
   api_checkstackindex(L, idx, p);
-  for (q = L->top; q>p; q--) setobjs2s(L, q, q-1);
+  for (q = L->top; q > p; q--)  /* use L->top as a temporary */
+    setobjs2s(L, q, q - 1);
   setobjs2s(L, p, L->top);
   lua_unlock(L);
 }
