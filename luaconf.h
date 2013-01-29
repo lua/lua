@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.173 2012/07/13 14:54:14 roberto Exp roberto $
+** $Id: luaconf.h,v 1.174 2012/10/01 14:14:45 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -406,6 +406,12 @@
 
 
 /*
+@@ l_mathop allows the addition of an 'l' or 'f' to all math operations
+*/
+#define l_mathop(x)		(x)
+
+
+/*
 @@ lua_str2number converts a decimal numeric string to a number.
 @@ lua_strx2number converts an hexadecimal numeric string to a number.
 ** In C99, 'strtod' does both conversions. C89, however, has no function
@@ -427,8 +433,8 @@
 /* the following operations need the math library */
 #if defined(lobject_c) || defined(lvm_c)
 #include <math.h>
-#define luai_nummod(L,a,b)	((a) - floor((a)/(b))*(b))
-#define luai_numpow(L,a,b)	(pow(a,b))
+#define luai_nummod(L,a,b)	((a) - l_mathop(floor)((a)/(b))*(b))
+#define luai_numpow(L,a,b)	(l_mathop(pow)(a,b))
 #endif
 
 /* these are quite standard operations */
