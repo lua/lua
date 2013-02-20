@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.38 2011/12/02 13:26:54 roberto Exp $
+** $Id: lmem.h,v 1.39 2012/11/14 17:21:34 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -18,7 +18,7 @@
 ** This macro avoids the runtime division MAX_SIZET/(e), as 'e' is
 ** always constant.
 ** The macro is somewhat complex to avoid warnings:
-** +1 avoids warnings of "comparsion has constant result";
+** +1 avoids warnings of "comparison has constant result";
 ** cast to 'void' avoids warnings of "value unused".
 */
 #define luaM_reallocv(L,b,on,n,e) \
