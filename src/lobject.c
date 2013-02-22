@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.57 2013/01/29 16:00:40 roberto Exp $
+** $Id: lobject.c,v 2.58 2013/02/20 14:08:56 roberto Exp $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -149,7 +149,7 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
   *endptr = cast(char *, s);  /* valid up to here */
  ret:
   if (neg) r = -r;
-  return l_tg(ldexp)(r, e);
+  return l_mathop(ldexp)(r, e);
 }
 
 #endif
