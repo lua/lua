@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.81 2012/05/18 17:47:53 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.82 2013/01/29 16:00:40 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -160,7 +160,7 @@ static int math_frexp (lua_State *L) {
 
 static int math_ldexp (lua_State *L) {
   lua_Number x = luaL_checknumber(L, 1);
-  lua_Number ep = luaL_checknumber(L, 2);
+  int ep = luaL_checkint(L, 2);
   lua_pushnumber(L, l_mathop(ldexp)(x, ep));
   return 1;
 }
