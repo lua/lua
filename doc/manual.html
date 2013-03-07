@@ -33,7 +33,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.101 2013/02/15 12:33:36 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.102 2013/03/07 18:25:28 roberto Exp $ -->
 
 
 
@@ -8412,10 +8412,17 @@ Note that the resulting table may not be a sequence.
 
 <p>
 Removes from <code>list</code> the element at position <code>pos</code>,
-shifting down the elements
+returning the value of the removed element.
+When <code>pos</code> is an integer between 1 and <code>#list</code>,
+it shifts down the elements
 <code>list[pos+1], list[pos+2], &middot;&middot;&middot;, list[#list]</code>
-and erasing element <code>list[#list]</code>.
-Returns the value of the removed element.
+and erases element <code>list[#list]</code>;
+The index <code>pos</code> can also be 0, when <code>#list</code> is 0,
+or <code>#list + 1</code>;
+in those cases, the function erases the element <code>list[pos]</code>.
+
+
+<p>
 The default value for <code>pos</code> is <code>#list</code>,
 so that a call <code>table.remove(t)</code> removes the last element
 of list <code>t</code>.
@@ -10490,7 +10497,7 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Tue Feb 19 16:28:19 BRT 2013
+Thu Mar  7 15:36:34 BRT 2013
 </SMALL>
 <!--
 Last change: revised for Lua 5.2.2
