@@ -17,6 +17,8 @@ CWARNSC=-pedantic -Wextra \
 	-Wdisabled-optimization \
 	-Wstrict-aliasing \
         # the next warnings generate to much noise, so they are disabled
+	# -Wsign-conversion \
+	# -Wconversion \
 	# -Wlogical-op \
 	# -Wstrict-overflow=2 \
 	# -Wformat=2 \
