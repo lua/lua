@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.283 2012/04/20 13:18:26 roberto Exp roberto $
+** $Id: lua.h,v 1.284 2013/02/19 18:39:04 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -118,6 +118,11 @@ typedef LUA_UNSIGNED lua_Unsigned;
 #include LUA_USER_H
 #endif
 
+
+/*
+** RCS ident string
+*/
+extern const char lua_ident[];
 
 
 /*
