@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.137 2012/10/03 12:36:17 roberto Exp roberto $
+** $Id: lgc.c,v 2.138 2012/10/19 19:00:33 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -450,7 +450,7 @@ static lu_mem traversetable (global_State *g, Table *h) {
   else  /* not weak */
     traversestrongtable(g, h);
   return sizeof(Table) + sizeof(TValue) * h->sizearray +
-                         sizeof(Node) * sizenode(h);
+                         sizeof(Node) * cast(size_t, sizenode(h));
 }
 
 
