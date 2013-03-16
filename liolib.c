@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.107 2011/11/14 16:55:35 roberto Exp roberto $
+** $Id: liolib.c,v 2.108 2011/11/25 12:50:03 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -29,6 +29,14 @@
 #include "lualib.h"
 
 
+#if !defined(lua_checkmode)
+
+/*
+** this macro can accept other 'modes' for 'fopen' besides the standard ones
+*/
+#define lua_checkmode(mode)	0
+
+#endif
 
 /*
 ** {======================================================
@@ -217,7 +225,7 @@ static int io_open (lua_State *L) {
   if (!(mode[i] != '\0' && strchr("rwa", mode[i++]) != NULL &&
        (mode[i] != '+' || ++i) &&  /* skip if char is '+' */
        (mode[i] != 'b' || ++i) &&  /* skip if char is 'b' */
-       (mode[i] == '\0')))
+       (mode[i] == '\0')) && !lua_checkmode(mode))
     return luaL_error(L, "invalid mode " LUA_QS
                          " (should match " LUA_QL("[rwa]%%+?b?") ")", mode);
   p->f = fopen(filename, mode);
