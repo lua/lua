@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.153 2012/08/14 18:12:34 roberto Exp roberto $
+** $Id: lvm.c,v 2.154 2012/08/16 17:34:28 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -83,7 +83,7 @@ static void traceexec (lua_State *L) {
     if (counthook)
       L->hookcount = 1;  /* undo decrement to zero */
     ci->u.l.savedpc--;  /* undo increment (resume will increment it again) */
-    ci->callstatus |= CIST_HOOKYIELD;  /* mark that it yieled */
+    ci->callstatus |= CIST_HOOKYIELD;  /* mark that it yielded */
     ci->func = L->top - 1;  /* protect stack below results */
     luaD_throw(L, LUA_YIELD);
   }

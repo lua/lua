@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.61 2012/01/23 23:05:51 roberto Exp roberto $
+** $Id: llex.c,v 2.62 2012/12/05 19:57:00 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -313,7 +313,7 @@ static int readhexaesc (LexState *ls) {
   int c[3], i;  /* keep input for error message */
   int r = 0;  /* result accumulator */
   c[0] = 'x';  /* for error message */
-  for (i = 1; i < 3; i++) {  /* read two hexa digits */
+  for (i = 1; i < 3; i++) {  /* read two hexadecimal digits */
     c[i] = next(ls);
     if (!lisxdigit(c[i]))
       escerror(ls, c, i + 1, "hexadecimal digit expected");

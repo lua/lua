@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.174 2012/10/01 14:14:45 roberto Exp roberto $
+** $Id: luaconf.h,v 1.175 2013/01/29 16:00:40 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -44,7 +44,7 @@
 #define LUA_USE_POSIX
 #define LUA_USE_DLOPEN		/* needs an extra library: -ldl */
 #define LUA_USE_READLINE	/* needs some extra libraries */
-#define LUA_USE_STRTODHEX	/* assume 'strtod' handles hexa formats */
+#define LUA_USE_STRTODHEX	/* assume 'strtod' handles hex formats */
 #define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
 #define LUA_USE_LONGLONG	/* assume support for long long */
 #endif
@@ -53,7 +53,7 @@
 #define LUA_USE_POSIX
 #define LUA_USE_DLOPEN		/* does not need -ldl */
 #define LUA_USE_READLINE	/* needs an extra library: -lreadline */
-#define LUA_USE_STRTODHEX	/* assume 'strtod' handles hexa formats */
+#define LUA_USE_STRTODHEX	/* assume 'strtod' handles hex formats */
 #define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
 #define LUA_USE_LONGLONG	/* assume support for long long */
 #endif

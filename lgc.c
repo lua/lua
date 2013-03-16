@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.138 2012/10/19 19:00:33 roberto Exp roberto $
+** $Id: lgc.c,v 2.139 2013/03/15 18:33:36 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -924,7 +924,7 @@ static void setpause (global_State *g, l_mem estimate) {
 ** object inside the list (instead of to the header), so that the real
 ** sweep do not need to skip objects created between "now" and the start
 ** of the real sweep.
-** Returns how many objects it sweeped.
+** Returns how many objects it swept.
 */
 static int entersweep (lua_State *L) {
   global_State *g = G(L);

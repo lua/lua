@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.133 2012/08/16 17:34:28 roberto Exp roberto $
+** $Id: ltests.c,v 2.134 2012/10/03 12:36:46 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -444,7 +444,7 @@ int lua_checkmemory (lua_State *L) {
   maybedead = 0;
   for (o = g->allgc; o != NULL; o = gch(o)->next) {
     if (g->sweepgc && o == *g->sweepgc)
-      maybedead = 1;  /* part of the list not yet sweeped */
+      maybedead = 1;  /* part of the list not yet swept */
     checkobject(g, o, maybedead);
     lua_assert(!testbit(o->gch.marked, SEPARATED));
   }
