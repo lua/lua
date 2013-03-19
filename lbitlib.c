@@ -1,5 +1,5 @@
 /*
-** $Id: lbitlib.c,v 1.16 2011/06/20 16:35:23 roberto Exp roberto $
+** $Id: lbitlib.c,v 1.17 2013/02/21 13:44:53 roberto Exp roberto $
 ** Standard library for bitwise operations
 ** See Copyright Notice in lua.h
 */
@@ -147,7 +147,9 @@ static int b_rrot (lua_State *L) {
 
 /*
 ** get field and width arguments for field-manipulation functions,
-** checking whether they are valid
+** checking whether they are valid.
+** ('luaL_error' called without 'return' to avoid later warnings about
+** 'width' being used uninitialized.)
 */
 static int fieldargs (lua_State *L, int farg, int *width) {
   int f = luaL_checkint(L, farg);
@@ -155,7 +157,7 @@ static int fieldargs (lua_State *L, int farg, int *width) {
   luaL_argcheck(L, 0 <= f, farg, "field cannot be negative");
   luaL_argcheck(L, 0 < w, farg + 1, "width must be positive");
   if (f + w > LUA_NBITS)
-    return luaL_error(L, "trying to access non-existent bits");
+    luaL_error(L, "trying to access non-existent bits");
   *width = w;
   return f;
 }
