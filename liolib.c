@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.108 2011/11/25 12:50:03 roberto Exp roberto $
+** $Id: liolib.c,v 2.109 2013/03/16 21:10:18 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -226,8 +226,7 @@ static int io_open (lua_State *L) {
        (mode[i] != '+' || ++i) &&  /* skip if char is '+' */
        (mode[i] != 'b' || ++i) &&  /* skip if char is 'b' */
        (mode[i] == '\0')) && !lua_checkmode(mode))
-    return luaL_error(L, "invalid mode " LUA_QS
-                         " (should match " LUA_QL("[rwa]%%+?b?") ")", mode);
+    return luaL_argerror(L, 2, "invalid mode");
   p->f = fopen(filename, mode);
   return (p->f == NULL) ? luaL_fileresult(L, 0, filename) : 1;
 }
