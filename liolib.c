@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.109 2013/03/16 21:10:18 roberto Exp roberto $
+** $Id: liolib.c,v 2.110 2013/03/20 19:40:07 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -32,9 +32,15 @@
 #if !defined(lua_checkmode)
 
 /*
-** this macro can accept other 'modes' for 'fopen' besides the standard ones
+** Check whether 'mode' matches '[rwa]%+?b?'.
+** Change this macro to accept other modes for 'fopen' besides
+** the standard ones.
 */
-#define lua_checkmode(mode)	0
+#define lua_checkmode(mode) \
+	(*mode != '\0' && strchr("rwa", *(mode++)) != NULL &&	\
+	(*mode != '+' || ++mode) &&  /* skip if char is '+' */	\
+	(*mode != 'b' || ++mode) &&  /* skip if char is 'b' */	\
+	(*mode == '\0'))
 
 #endif
 
@@ -220,13 +226,8 @@ static int io_open (lua_State *L) {
   const char *filename = luaL_checkstring(L, 1);
   const char *mode = luaL_optstring(L, 2, "r");
   LStream *p = newfile(L);
-  int i = 0;
-  /* check whether 'mode' matches '[rwa]%+?b?' */
-  if (!(mode[i] != '\0' && strchr("rwa", mode[i++]) != NULL &&
-       (mode[i] != '+' || ++i) &&  /* skip if char is '+' */
-       (mode[i] != 'b' || ++i) &&  /* skip if char is 'b' */
-       (mode[i] == '\0')) && !lua_checkmode(mode))
-    return luaL_argerror(L, 2, "invalid mode");
+  const char *md = mode;  /* to traverse/check mode */
+  luaL_argcheck(L, lua_checkmode(md), 2, "invalid mode");
   p->f = fopen(filename, mode);
   return (p->f == NULL) ? luaL_fileresult(L, 0, filename) : 1;
 }
