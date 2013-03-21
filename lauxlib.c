@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.246 2012/09/24 22:57:26 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.247 2012/10/19 15:55:01 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -599,7 +599,7 @@ static int skipBOM (LoadF *lf) {
   lf->n = 0;
   do {
     c = getc(lf->f);
-    if (c == EOF || c != *(unsigned char *)p++) return c;
+    if (c == EOF || c != *(const unsigned char *)p++) return c;
     lf->buff[lf->n++] = c;  /* to be read by the parser */
   } while (*p != '\0');
   lf->n = 0;  /* prefix matched; discard it */
