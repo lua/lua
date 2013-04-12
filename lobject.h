@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.70 2012/05/11 14:10:50 roberto Exp roberto $
+** $Id: lobject.h,v 2.71 2012/09/11 18:21:44 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -124,12 +124,12 @@ typedef struct lua_TValue TValue;
 #define ttype(o)	(rttype(o) & 0x3F)
 
 /* type tag of a TValue with no variants (bits 0-3) */
-#define ttypenv(o)	(novariant(rttype(o)))
+#define ttnov(o)	(novariant(rttype(o)))
 
 
 /* Macros to test type */
 #define checktag(o,t)		(rttype(o) == (t))
-#define checktype(o,t)		(ttypenv(o) == (t))
+#define checktype(o,t)		(ttnov(o) == (t))
 #define ttisnumber(o)		checktag((o), LUA_TNUMBER)
 #define ttisnil(o)		checktag((o), LUA_TNIL)
 #define ttisboolean(o)		checktag((o), LUA_TBOOLEAN)

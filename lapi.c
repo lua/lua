@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.170 2012/12/05 19:49:55 roberto Exp roberto $
+** $Id: lapi.c,v 2.171 2013/03/16 21:10:18 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -248,7 +248,7 @@ LUA_API void lua_pushvalue (lua_State *L, int idx) {
 
 LUA_API int lua_type (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
-  return (isvalid(o) ? ttypenv(o) : LUA_TNONE);
+  return (isvalid(o) ? ttnov(o) : LUA_TNONE);
 }
 
 
@@ -406,7 +406,7 @@ LUA_API const char *lua_tolstring (lua_State *L, int idx, size_t *len) {
 
 LUA_API size_t lua_rawlen (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
-  switch (ttypenv(o)) {
+  switch (ttnov(o)) {
     case LUA_TSTRING: return tsvalue(o)->len;
     case LUA_TUSERDATA: return uvalue(o)->len;
     case LUA_TTABLE: return luaH_getn(hvalue(o));
@@ -426,7 +426,7 @@ LUA_API lua_CFunction lua_tocfunction (lua_State *L, int idx) {
 
 LUA_API void *lua_touserdata (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
-  switch (ttypenv(o)) {
+  switch (ttnov(o)) {
     case LUA_TUSERDATA: return (rawuvalue(o) + 1);
     case LUA_TLIGHTUSERDATA: return pvalue(o);
     default: return NULL;
@@ -689,7 +689,7 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
   int res;
   lua_lock(L);
   obj = index2addr(L, objindex);
-  switch (ttypenv(obj)) {
+  switch (ttnov(obj)) {
     case LUA_TTABLE:
       mt = hvalue(obj)->metatable;
       break;
@@ -697,7 +697,7 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
       mt = uvalue(obj)->metatable;
       break;
     default:
-      mt = G(L)->mt[ttypenv(obj)];
+      mt = G(L)->mt[ttnov(obj)];
       break;
   }
   if (mt == NULL)
@@ -821,7 +821,7 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
     api_check(L, ttistable(L->top - 1), "table expected");
     mt = hvalue(L->top - 1);
   }
-  switch (ttypenv(obj)) {
+  switch (ttnov(obj)) {
     case LUA_TTABLE: {
       hvalue(obj)->metatable = mt;
       if (mt) {
@@ -839,7 +839,7 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
       break;
     }
     default: {
-      G(L)->mt[ttypenv(obj)] = mt;
+      G(L)->mt[ttnov(obj)] = mt;
       break;
     }
   }

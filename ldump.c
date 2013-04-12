@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 2.16 2011/11/24 13:25:41 roberto Exp roberto $
+** $Id: ldump.c,v 2.17 2012/01/23 23:02:10 roberto Exp roberto $
 ** save precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -84,8 +84,8 @@ static void DumpConstants(const Proto* f, DumpState* D)
  for (i=0; i<n; i++)
  {
   const TValue* o=&f->k[i];
-  DumpChar(ttypenv(o),D);
-  switch (ttypenv(o))
+  DumpChar(ttnov(o),D);
+  switch (ttnov(o))
   {
    case LUA_TNIL:
 	break;
