@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.61 2012/08/14 18:12:34 roberto Exp roberto $
+** $Id: lcode.c,v 2.62 2012/08/16 17:34:28 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -293,9 +293,8 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
   TValue *idx = luaH_set(L, fs->h, key);
   Proto *f = fs->f;
   int k, oldsize;
-  if (ttisnumber(idx)) {
-    lua_Number n = nvalue(idx);
-    lua_number2int(k, n);
+  if (ttisinteger(idx)) {
+    k = ivalue(idx);
     if (luaV_rawequalobj(&f->k[k], v))
       return k;
     /* else may be a collision (e.g., between 0.0 and "\0\0\0\0\0\0\0\0");
@@ -306,7 +305,7 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
   k = fs->nk;
   /* numerical value does not need GC barrier;
      table has no metatable, so it does not need to invalidate cache */
-  setnvalue(idx, cast_num(k));
+  setivalue(idx, k);
   luaM_growvector(L, f->k, k, f->sizek, TValue, MAXARG_Ax, "constants");
   while (oldsize < f->sizek) setnilvalue(&f->k[oldsize++]);
   setobj(L, &f->k[k], v);

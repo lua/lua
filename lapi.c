@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.171 2013/03/16 21:10:18 roberto Exp roberto $
+** $Id: lapi.c,v 2.172 2013/04/12 19:07:09 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -321,7 +321,7 @@ LUA_API int lua_compare (lua_State *L, int index1, int index2, int op) {
   o2 = index2addr(L, index2);
   if (isvalid(o1) && isvalid(o2)) {
     switch (op) {
-      case LUA_OPEQ: i = equalobj(L, o1, o2); break;
+      case LUA_OPEQ: i = luaV_equalobj(L, o1, o2); break;
       case LUA_OPLT: i = luaV_lessthan(L, o1, o2); break;
       case LUA_OPLE: i = luaV_lessequal(L, o1, o2); break;
       default: api_check(L, 0, "invalid option");
@@ -349,7 +349,11 @@ LUA_API lua_Number lua_tonumberx (lua_State *L, int idx, int *isnum) {
 LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *isnum) {
   TValue n;
   const TValue *o = index2addr(L, idx);
-  if (tonumber(o, &n)) {
+  if (ttisinteger(o)) {
+    if (isnum) *isnum = 1;
+    return ivalue(o);
+  }
+  else if (tonumber(o, &n)) {
     lua_Integer res;
     lua_Number num = nvalue(o);
     lua_number2integer(res, num);
@@ -482,7 +486,7 @@ LUA_API void lua_pushnumber (lua_State *L, lua_Number n) {
 
 LUA_API void lua_pushinteger (lua_State *L, lua_Integer n) {
   lua_lock(L);
-  setnvalue(L->top, cast_num(n));
+  setivalue(L->top, cast_num(n));
   api_incr_top(L);
   lua_unlock(L);
 }
