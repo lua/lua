@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 2.17 2011/05/31 18:27:56 roberto Exp roberto $
+** $Id: lvm.h,v 2.17 2011/05/31 18:27:56 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -15,17 +15,13 @@
 
 #define tostring(L,o) (ttisstring(o) || (luaV_tostring(L, o)))
 
-#define tonumber(o,n)	(ttisnumber(o) || (((o) = luaV_tonumber(o,n)) != NULL))
-
-#define equalobj(L,o1,o2)  (ttisequal(o1, o2) && luaV_equalobj_(L, o1, o2))
-
-#define luaV_rawequalobj(o1,o2)		equalobj(NULL,o1,o2)
+#define tonumber(o,n)	(ttisfloat(o) || (((o) = luaV_tonumber(o,n)) != NULL))
 
 
-/* not to called directly */
-LUAI_FUNC int luaV_equalobj_ (lua_State *L, const TValue *t1, const TValue *t2);
+#define luaV_rawequalobj(t1,t2)		luaV_equalobj(NULL,t1,t2)
 
 
+LUAI_FUNC int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2);
 LUAI_FUNC int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r);
 LUAI_FUNC int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r);
 LUAI_FUNC const TValue *luaV_tonumber (const TValue *obj, TValue *n);

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.155 2013/03/16 21:10:18 roberto Exp roberto $
+** $Id: lvm.c,v 2.154 2012/08/16 17:34:28 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -34,7 +34,11 @@
 
 const TValue *luaV_tonumber (const TValue *obj, TValue *n) {
   lua_Number num;
-  if (ttisnumber(obj)) return obj;
+  if (ttisfloat(obj)) return obj;
+  if (ttisinteger(obj)) {
+    setnvalue(n, cast_num(ivalue(obj)));
+    return n;
+  }
   if (ttisstring(obj) && luaO_str2d(svalue(obj), tsvalue(obj)->len, &num)) {
     setnvalue(n, num);
     return n;
@@ -257,12 +261,19 @@ int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
 /*
 ** equality of Lua values. L == NULL means raw equality (no metamethods)
 */
-int luaV_equalobj_ (lua_State *L, const TValue *t1, const TValue *t2) {
+int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
   const TValue *tm;
-  lua_assert(ttisequal(t1, t2));
+  if (ttype(t1) != ttype(t2)) {
+    if (ttnov(t1) != ttnov(t2) || ttnov(t1) != LUA_TNUMBER)
+      return 0;  /* only numbers can be equal with different variants */
+    else  /* two numbers with different variants */
+      return luai_numeq(nvalue(t1), nvalue(t2));
+  }
+  /* values have same type and same variant */
   switch (ttype(t1)) {
     case LUA_TNIL: return 1;
-    case LUA_TNUMBER: return luai_numeq(nvalue(t1), nvalue(t2));
+    case LUA_TNUMINT: return (ivalue(t1) == ivalue(t2));
+    case LUA_TNUMFLT: return luai_numeq(fltvalue(t1), fltvalue(t2));
     case LUA_TBOOLEAN: return bvalue(t1) == bvalue(t2);  /* true must be 1 !! */
     case LUA_TLIGHTUSERDATA: return pvalue(t1) == pvalue(t2);
     case LUA_TLCF: return fvalue(t1) == fvalue(t2);
@@ -281,7 +292,6 @@ int luaV_equalobj_ (lua_State *L, const TValue *t1, const TValue *t2) {
       break;  /* will try TM */
     }
     default:
-      lua_assert(iscollectable(t1));
       return gcvalue(t1) == gcvalue(t2);
   }
   if (tm == NULL) return 0;  /* no TM? */
@@ -615,7 +625,13 @@ void luaV_execute (lua_State *L) {
         Protect(luaV_gettable(L, rb, RKC(i), ra));
       )
       vmcase(OP_ADD,
-        arith_op(luai_numadd, TM_ADD);
+        TValue *rb1 = RKB(i);
+        TValue *rc1 = RKC(i);
+        if (ttisinteger(rb1) && ttisinteger(rc1)) {
+          lua_Integer ib = ivalue(rb1); lua_Integer ic = ivalue(rc1);
+          setivalue(ra, ib + ic);
+        }
+        else arith_op(luai_numadd, TM_ADD);
       )
       vmcase(OP_SUB,
         arith_op(luai_numsub, TM_SUB);
@@ -669,7 +685,7 @@ void luaV_execute (lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         Protect(
-          if (cast_int(equalobj(L, rb, rc)) != GETARG_A(i))
+          if (cast_int(luaV_equalobj(L, rb, rc)) != GETARG_A(i))
             ci->u.l.savedpc++;
           else
             donextjump(ci);
