@@ -1,5 +1,5 @@
 /*
-** $Id: lbitlib.c,v 1.17 2013/02/21 13:44:53 roberto Exp roberto $
+** $Id: lbitlib.c,v 1.18 2013/03/19 13:19:12 roberto Exp roberto $
 ** Standard library for bitwise operations
 ** See Copyright Notice in lua.h
 */
@@ -19,7 +19,12 @@
 #endif
 
 
-#define ALLONES		(~(((~(lua_Unsigned)0) << (LUA_NBITS - 1)) << 1))
+/* type with (at least) LUA_NBITS bits */
+typedef unsigned long b_uint;
+
+
+#define ALLONES		(~(((~(b_uint)0) << (LUA_NBITS - 1)) << 1))
+
 
 /* macro to trim extra bits */
 #define trim(x)		((x) & ALLONES)
@@ -27,9 +32,6 @@
 
 /* builds a number with 'n' ones (1 <= n <= LUA_NBITS) */
 #define mask(n)		(~((ALLONES << 1) << ((n) - 1)))
-
-
-typedef lua_Unsigned b_uint;
 
 
 
@@ -165,7 +167,7 @@ static int fieldargs (lua_State *L, int farg, int *width) {
 
 static int b_extract (lua_State *L) {
   int w;
-  b_uint r = luaL_checkunsigned(L, 1);
+  b_uint r = trim(luaL_checkunsigned(L, 1));
   int f = fieldargs(L, 2, &w);
   r = (r >> f) & mask(w);
   lua_pushunsigned(L, r);
