@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.69 2011/07/27 18:09:01 roberto Exp roberto $
+** $Id: lparser.h,v 1.70 2012/05/08 13:53:33 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -22,7 +22,8 @@ typedef enum {
   VTRUE,
   VFALSE,
   VK,		/* info = index of constant in `k' */
-  VKNUM,	/* nval = numerical value */
+  VKFLT,	/* nval = numerical float value */
+  VKINT,	/* nval = numerical integer value */
   VNONRELOC,	/* info = result register */
   VLOCAL,	/* info = local register */
   VUPVAL,       /* info = index of upvalue in 'upvalues' */
@@ -46,7 +47,8 @@ typedef struct expdesc {
       lu_byte vt;  /* whether 't' is register (VLOCAL) or upvalue (VUPVAL) */
     } ind;
     int info;  /* for generic use */
-    lua_Number nval;  /* for VKNUM */
+    lua_Number nval;  /* for VKFLT */
+    lua_Integer ival;    /* for VKINT */
   } u;
   int t;  /* patch list of `exit when true' */
   int f;  /* patch list of `exit when false' */

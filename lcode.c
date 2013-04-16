@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.62 2012/08/16 17:34:28 roberto Exp $
+** $Id: lcode.c,v 2.63 2013/04/15 15:43:34 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -30,7 +30,7 @@
 
 
 static int isnumeral(expdesc *e) {
-  return (e->k == VKNUM && e->t == NO_JUMP && e->f == NO_JUMP);
+  return (e->k == VKFLT && e->t == NO_JUMP && e->f == NO_JUMP);
 }
 
 
@@ -322,6 +322,13 @@ int luaK_stringK (FuncState *fs, TString *s) {
 }
 
 
+static int luaK_intK (FuncState *fs, lua_Integer n) {
+  TValue o;
+  setivalue(&o, n);
+  return addk(fs, &o, &o);
+}
+
+
 int luaK_numberK (FuncState *fs, lua_Number r) {
   int n;
   lua_State *L = fs->ls->L;
@@ -333,8 +340,11 @@ int luaK_numberK (FuncState *fs, lua_Number r) {
     n = addk(fs, L->top - 1, &o);
     L->top--;
   }
-  else
-    n = addk(fs, &o, &o);  /* regular case */
+  else {
+    TValue k;
+    setnvalue(&k, r + 0.5);  /* ???? (avoid some collisions with ints) */
+    n = addk(fs, &k, &o);  /* regular case */
+  }
   return n;
 }
 
@@ -432,8 +442,12 @@ static void discharge2reg (FuncState *fs, expdesc *e, int reg) {
       luaK_codek(fs, reg, e->u.info);
       break;
     }
-    case VKNUM: {
+    case VKFLT: {
       luaK_codek(fs, reg, luaK_numberK(fs, e->u.nval));
+      break;
+    }
+    case VKINT: {
+      luaK_codek(fs, reg, luaK_intK(fs, e->u.ival));
       break;
     }
     case VRELOCABLE: {
@@ -537,12 +551,18 @@ int luaK_exp2RK (FuncState *fs, expdesc *e) {
       }
       else break;
     }
-    case VKNUM: {
+    case VKINT: {
+      e->u.info = luaK_intK(fs, e->u.ival);
+      e->k = VK;
+      goto vk;
+    }
+    case VKFLT: {
       e->u.info = luaK_numberK(fs, e->u.nval);
       e->k = VK;
       /* go through */
     }
     case VK: {
+     vk:
       if (e->u.info <= MAXINDEXRK)  /* constant fits in argC? */
         return RKASK(e->u.info);
       else break;
@@ -626,7 +646,7 @@ void luaK_goiftrue (FuncState *fs, expdesc *e) {
       pc = e->u.info;
       break;
     }
-    case VK: case VKNUM: case VTRUE: {
+    case VK: case VKFLT: case VKINT: case VTRUE: {
       pc = NO_JUMP;  /* always true; do nothing */
       break;
     }
@@ -671,7 +691,7 @@ static void codenot (FuncState *fs, expdesc *e) {
       e->k = VTRUE;
       break;
     }
-    case VK: case VKNUM: case VTRUE: {
+    case VK: case VKFLT: case VKINT: case VTRUE: {
       e->k = VFALSE;
       break;
     }
@@ -760,7 +780,7 @@ static void codecomp (FuncState *fs, OpCode op, int cond, expdesc *e1,
 
 void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
   expdesc e2;
-  e2.t = e2.f = NO_JUMP; e2.k = VKNUM; e2.u.nval = 0;
+  e2.t = e2.f = NO_JUMP; e2.k = VKFLT; e2.u.nval = 0;
   switch (op) {
     case OPR_MINUS: {
       if (isnumeral(e))  /* minus constant? */

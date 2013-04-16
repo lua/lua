@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.57 2013/01/29 16:00:40 roberto Exp roberto $
+** $Id: lobject.c,v 2.58 2013/02/20 14:08:56 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -168,6 +168,25 @@ int luaO_str2d (const char *s, size_t len, lua_Number *result) {
   return (endptr == s + len);  /* OK if no trailing characters */
 }
 
+
+int luaO_str2int (const char *s, lua_Integer *result) {
+  lua_Unsigned a = 0;
+  if (s[0] == '0' &&
+      (s[1] == 'x' || s[1] == 'X')) {  /* hexa? */
+    s += 2;  /* skip '0x' */
+    for (; lisxdigit(cast_uchar(*s)); s++)
+      a = a * 16 + luaO_hexavalue(cast_uchar(*s));
+  }
+  else {  /* decimal */
+    for (; lisdigit(cast_uchar(*s)); s++)
+      a = a * 10 + luaO_hexavalue(cast_uchar(*s));
+  }
+  if (*s != '\0') return 0;  /* something wrong in the numeral */
+  else {
+    *result = cast(lua_Integer, a);
+    return 1;
+  }
+}
 
 
 static void pushstr (lua_State *L, const char *str, size_t l) {

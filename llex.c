@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.62 2012/12/05 19:57:00 roberto Exp roberto $
+** $Id: llex.c,v 2.63 2013/03/16 21:10:18 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -39,7 +39,7 @@ static const char *const luaX_tokens [] = {
     "in", "local", "nil", "not", "or", "repeat",
     "return", "then", "true", "until", "while",
     "..", "...", "==", ">=", "<=", "~=", "::", "<eof>",
-    "<number>", "<name>", "<string>"
+    "<number>", "<number>", "<name>", "<string>"
 };
 
 
@@ -90,9 +90,8 @@ const char *luaX_token2str (LexState *ls, int token) {
 
 static const char *txtToken (LexState *ls, int token) {
   switch (token) {
-    case TK_NAME:
-    case TK_STRING:
-    case TK_NUMBER:
+    case TK_NAME: case TK_STRING:
+    case TK_FLT: case TK_INT:
       save(ls, '\0');
       return luaO_pushfstring(ls->L, LUA_QS, luaZ_buffer(ls->buff));
     default:
@@ -216,7 +215,7 @@ static void trydecpoint (LexState *ls, SemInfo *seminfo) {
   if (!buff2d(ls->buff, &seminfo->r)) {
     /* format error with correct decimal point: no more options */
     buffreplace(ls, ls->decpoint, '.');  /* undo change (for error message) */
-    lexerror(ls, "malformed number", TK_NUMBER);
+    lexerror(ls, "malformed number", TK_FLT);
   }
 }
 
@@ -224,9 +223,10 @@ static void trydecpoint (LexState *ls, SemInfo *seminfo) {
 /* LUA_NUMBER */
 /*
 ** this function is quite liberal in what it accepts, as 'luaO_str2d'
-** will reject ill-formed numerals.
+** will reject ill-formed numerals. 'isf' means the numeral is not
+** an integer (it has a dot or an exponent).
 */
-static void read_numeral (LexState *ls, SemInfo *seminfo) {
+static int read_numeral (LexState *ls, SemInfo *seminfo, int isf) {
   const char *expo = "Ee";
   int first = ls->current;
   lua_assert(lisdigit(ls->current));
@@ -234,16 +234,30 @@ static void read_numeral (LexState *ls, SemInfo *seminfo) {
   if (first == '0' && check_next(ls, "Xx"))  /* hexadecimal? */
     expo = "Pp";
   for (;;) {
-    if (check_next(ls, expo))  /* exponent part? */
+    if (check_next(ls, expo)) {  /* exponent part? */
       check_next(ls, "+-");  /* optional exponent sign */
-    if (lisxdigit(ls->current) || ls->current == '.')
+      isf = 1;
+    }
+    if (lisxdigit(ls->current))
       save_and_next(ls);
-    else  break;
+    else if (ls->current == '.') {
+      save_and_next(ls);
+      isf = 1;
+    }
+    else break;
   }
   save(ls, '\0');
-  buffreplace(ls, '.', ls->decpoint);  /* follow locale for decimal point */
-  if (!buff2d(ls->buff, &seminfo->r))  /* format error? */
-    trydecpoint(ls, seminfo); /* try to update decimal point separator */
+  if (!isf) {
+    if (!luaO_str2int(luaZ_buffer(ls->buff), &seminfo->i))
+      lexerror(ls, "malformed number", TK_INT);
+    return TK_INT;
+  }
+  else {
+    buffreplace(ls, '.', ls->decpoint);  /* follow locale for decimal point */
+    if (!buff2d(ls->buff, &seminfo->r))  /* format error? */
+      trydecpoint(ls, seminfo); /* try to update decimal point separator */
+    return TK_FLT;
+  }
 }
 
 
@@ -472,12 +486,11 @@ static int llex (LexState *ls, SemInfo *seminfo) {
           else return TK_CONCAT;   /* '..' */
         }
         else if (!lisdigit(ls->current)) return '.';
-        /* else go through */
+        else return read_numeral(ls, seminfo, 1);
       }
       case '0': case '1': case '2': case '3': case '4':
       case '5': case '6': case '7': case '8': case '9': {
-        read_numeral(ls, seminfo);
-        return TK_NUMBER;
+        return read_numeral(ls, seminfo, 0);
       }
       case EOZ: {
         return TK_EOS;

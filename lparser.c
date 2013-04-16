@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.129 2012/08/06 13:36:34 roberto Exp roberto $
+** $Id: lparser.c,v 2.130 2013/02/06 13:37:39 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -935,12 +935,17 @@ static void suffixedexp (LexState *ls, expdesc *v) {
 
 
 static void simpleexp (LexState *ls, expdesc *v) {
-  /* simpleexp -> NUMBER | STRING | NIL | TRUE | FALSE | ... |
+  /* simpleexp -> FLT | INT | STRING | NIL | TRUE | FALSE | ... |
                   constructor | FUNCTION body | suffixedexp */
   switch (ls->t.token) {
-    case TK_NUMBER: {
-      init_exp(v, VKNUM, 0);
+    case TK_FLT: {
+      init_exp(v, VKFLT, 0);
       v->u.nval = ls->t.seminfo.r;
+      break;
+    }
+    case TK_INT: {
+      init_exp(v, VKINT, 0);
+      v->u.ival = ls->t.seminfo.i;
       break;
     }
     case TK_STRING: {
