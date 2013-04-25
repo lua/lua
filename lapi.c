@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.172 2013/04/12 19:07:09 roberto Exp roberto $
+** $Id: lapi.c,v 2.173 2013/04/15 15:43:34 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -261,6 +261,12 @@ LUA_API const char *lua_typename (lua_State *L, int t) {
 LUA_API int lua_iscfunction (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
   return (ttislcf(o) || (ttisCclosure(o)));
+}
+
+
+LUA_API int lua_isinteger (lua_State *L, int idx) {
+  StkId o = index2addr(L, idx);
+  return ttisinteger(o);
 }
 
 
