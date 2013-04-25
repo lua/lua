@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.15 2013/04/12 19:07:09 roberto Exp roberto $
+** $Id: ltm.c,v 2.16 2013/04/25 15:59:42 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,7 @@
 #include "lstring.h"
 #include "ltable.h"
 #include "ltm.h"
+#include "lvm.h"
 
 
 static const char udatatypename[] = "userdata";
@@ -102,5 +103,27 @@ int luaT_callbinTM (lua_State *L, const TValue *p1, const TValue *p2,
   if (ttisnil(tm)) return 0;
   luaT_callTM(L, tm, p1, p2, res, 1);
   return 1;
+}
+
+
+const TValue *luaT_getequalTM (lua_State *L, Table *mt1, Table *mt2) {
+  const TValue *tm1 = fasttm(L, mt1, TM_EQ);
+  const TValue *tm2;
+  if (tm1 == NULL) return NULL;  /* no metamethod */
+  if (mt1 == mt2) return tm1;  /* same metatables => same metamethods */
+  tm2 = fasttm(L, mt2, TM_EQ);
+  if (tm2 == NULL) return NULL;  /* no metamethod */
+  if (luaV_rawequalobj(tm1, tm2))  /* same metamethods? */
+    return tm1;
+  return NULL;
+}
+
+
+int luaT_callorderTM (lua_State *L, const TValue *p1, const TValue *p2,
+                      TMS event) {
+  if (!luaT_callbinTM(L, p1, p2, L->top, event))
+    return -1;  /* no metamethod */
+  else
+    return !l_isfalse(L->top);
 }
 

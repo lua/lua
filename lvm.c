@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.158 2013/04/16 18:43:05 roberto Exp roberto $
+** $Id: lvm.c,v 2.159 2013/04/25 15:59:42 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -126,29 +126,6 @@ void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
 }
 
 
-static const TValue *get_equalTM (lua_State *L, Table *mt1, Table *mt2,
-                                  TMS event) {
-  const TValue *tm1 = fasttm(L, mt1, event);
-  const TValue *tm2;
-  if (tm1 == NULL) return NULL;  /* no metamethod */
-  if (mt1 == mt2) return tm1;  /* same metatables => same metamethods */
-  tm2 = fasttm(L, mt2, event);
-  if (tm2 == NULL) return NULL;  /* no metamethod */
-  if (luaV_rawequalobj(tm1, tm2))  /* same metamethods? */
-    return tm1;
-  return NULL;
-}
-
-
-static int call_orderTM (lua_State *L, const TValue *p1, const TValue *p2,
-                         TMS event) {
-  if (!luaT_callbinTM(L, p1, p2, L->top, event))
-    return -1;  /* no metamethod */
-  else
-    return !l_isfalse(L->top);
-}
-
-
 static int l_strcmp (const TString *ls, const TString *rs) {
   const char *l = getstr(ls);
   size_t ll = ls->tsv.len;
@@ -177,7 +154,7 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
     return luai_numlt(L, nvalue(l), nvalue(r));
   else if (ttisstring(l) && ttisstring(r))
     return l_strcmp(rawtsvalue(l), rawtsvalue(r)) < 0;
-  else if ((res = call_orderTM(L, l, r, TM_LT)) < 0)
+  else if ((res = luaT_callorderTM(L, l, r, TM_LT)) < 0)
     luaG_ordererror(L, l, r);
   return res;
 }
@@ -189,9 +166,9 @@ int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
     return luai_numle(L, nvalue(l), nvalue(r));
   else if (ttisstring(l) && ttisstring(r))
     return l_strcmp(rawtsvalue(l), rawtsvalue(r)) <= 0;
-  else if ((res = call_orderTM(L, l, r, TM_LE)) >= 0)  /* first try `le' */
+  else if ((res = luaT_callorderTM(L, l, r, TM_LE)) >= 0)  /* first try `le' */
     return res;
-  else if ((res = call_orderTM(L, r, l, TM_LT)) < 0)  /* else try `lt' */
+  else if ((res = luaT_callorderTM(L, r, l, TM_LT)) < 0)  /* else try `lt' */
     luaG_ordererror(L, l, r);
   return !res;
 }
@@ -221,13 +198,13 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
     case LUA_TUSERDATA: {
       if (uvalue(t1) == uvalue(t2)) return 1;
       else if (L == NULL) return 0;
-      tm = get_equalTM(L, uvalue(t1)->metatable, uvalue(t2)->metatable, TM_EQ);
+      tm = luaT_getequalTM(L, uvalue(t1)->metatable, uvalue(t2)->metatable);
       break;  /* will try TM */
     }
     case LUA_TTABLE: {
       if (hvalue(t1) == hvalue(t2)) return 1;
       else if (L == NULL) return 0;
-      tm = get_equalTM(L, hvalue(t1)->metatable, hvalue(t2)->metatable, TM_EQ);
+      tm = luaT_getequalTM(L, hvalue(t1)->metatable, hvalue(t2)->metatable);
       break;  /* will try TM */
     }
     default:
