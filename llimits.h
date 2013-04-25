@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.102 2013/01/29 16:00:40 roberto Exp roberto $
+** $Id: llimits.h,v 1.103 2013/02/20 14:08:56 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -96,6 +96,8 @@ typedef LUAI_UACNUMBER l_uacNumber;
 #define cast_num(i)	cast(lua_Number, (i))
 #define cast_int(i)	cast(int, (i))
 #define cast_uchar(i)	cast(unsigned char, (i))
+#define cast_integer(i)	cast(lua_Integer, (i))
+#define cast_unsigned(i)	cast(lua_Unsigned, (i))
 
 
 /*
