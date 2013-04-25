@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.159 2013/04/25 15:59:42 roberto Exp roberto $
+** $Id: lvm.c,v 2.160 2013/04/25 16:07:52 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -150,7 +150,9 @@ static int l_strcmp (const TString *ls, const TString *rs) {
 
 int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
   int res;
-  if (ttisnumber(l) && ttisnumber(r))
+  if (ttisinteger(l) && ttisinteger(r))
+    return (ivalue(l) < ivalue(r));
+  else if (ttisnumber(l) && ttisnumber(r))
     return luai_numlt(L, nvalue(l), nvalue(r));
   else if (ttisstring(l) && ttisstring(r))
     return l_strcmp(rawtsvalue(l), rawtsvalue(r)) < 0;
@@ -162,7 +164,9 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
 
 int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
   int res;
-  if (ttisnumber(l) && ttisnumber(r))
+  if (ttisinteger(l) && ttisinteger(r))
+    return (ivalue(l) <= ivalue(r));
+  else if (ttisnumber(l) && ttisnumber(r))
     return luai_numle(L, nvalue(l), nvalue(r));
   else if (ttisstring(l) && ttisstring(r))
     return l_strcmp(rawtsvalue(l), rawtsvalue(r)) <= 0;
@@ -280,6 +284,54 @@ void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
     }
   }
   luaT_callTM(L, tm, rb, rb, ra, 1);
+}
+
+
+lua_Integer luaV_div (lua_State *L, lua_Integer x, lua_Integer y) {
+  if (cast_unsigned(y) + 1 <= 1U) {  /* special cases: -1 or 0 */
+    if (y == 0)
+      luaG_runerror(L, "attempt to divide by zero");
+    else  /* -1 */
+      return -x;   /* avoid overflow with 0x80000... */
+  }
+  else {
+    lua_Integer d = x / y;  /* perform division */
+    if ((x ^ y) >= 0 || x % y == 0)   /* same signal or no rest? */
+      return d;
+    else
+      return d - 1;  /* correct 'div' for negative case */
+  }
+}
+
+
+lua_Integer luaV_mod (lua_State *L, lua_Integer x, lua_Integer y) {
+  if (cast_unsigned(y) + 1 <= 1U) {  /* special cases: -1 or 0 */
+    if (y == 0)
+      luaG_runerror(L, "attempt to divide by zero (in '%%')");
+    else  /* -1 */
+      return 0;   /* avoid overflow with 0x80000... */
+  }
+  else {
+    lua_Integer r = x % y;
+    if (r == 0 || (x ^ y) >= 0)
+      return r;
+    else
+      return r + y;  /* correct 'mod' for negative case */
+  }
+}
+
+
+lua_Integer luaV_pow (lua_Integer x, lua_Integer y) {
+  lua_Integer r = 1;
+  lua_assert(y >= 0);
+  if (y == 0) return r;
+  for (; y > 1; y >>= 1) {
+    if (y & 1)
+      r = cast_integer(cast_unsigned(r) * cast_unsigned(x));
+    x = cast_integer(cast_unsigned(x) * cast_unsigned(x));
+  }
+  r = cast_integer(cast_unsigned(r) * cast_unsigned(x));
+  return r;
 }
 
 
@@ -589,10 +641,32 @@ void luaV_execute (lua_State *L) {
         else { Protect(luaV_arith(L, ra, rb, rc, TM_DIV)); }
       )
       vmcase(OP_MOD,
-        arith_op(luai_nummod, TM_MOD);
+        TValue *rb = RKB(i);
+        TValue *rc = RKC(i);
+        if (ttisinteger(rb) && ttisinteger(rc)) {
+          lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
+          setivalue(ra, luaV_mod(L, ib, ic));
+        }
+        else if (ttisnumber(rb) && ttisnumber(rc)) {
+          lua_Number nb = nvalue(rb); lua_Number nc = nvalue(rc);
+          setnvalue(ra, luai_nummod(L, nb, nc));
+        }
+        else { Protect(luaV_arith(L, ra, rb, rc, TM_MOD)); }
       )
       vmcase(OP_POW,
-        arith_op(luai_numpow, TM_POW);
+        TValue *rb = RKB(i);
+        TValue *rc = RKC(i);
+        lua_Integer ic;
+        if (ttisinteger(rb) && ttisinteger(rc) &&
+            (ic = ivalue(rc)) >= 0) {
+          lua_Integer ib = ivalue(rb);
+          setivalue(ra, luaV_pow(ib, ic));
+        }
+        else if (ttisnumber(rb) && ttisnumber(rc)) {
+          lua_Number nb = nvalue(rb); lua_Number nc = nvalue(rc);
+          setnvalue(ra, luai_numpow(L, nb, nc));
+        }
+        else { Protect(luaV_arith(L, ra, rb, rc, TM_POW)); }
       )
       vmcase(OP_UNM,
         TValue *rb = RB(i);

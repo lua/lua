@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 2.17 2011/05/31 18:27:56 roberto Exp $
+** $Id: lvm.h,v 2.19 2013/04/15 15:44:46 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -33,6 +33,9 @@ LUAI_FUNC void luaV_settable (lua_State *L, const TValue *t, TValue *key,
 LUAI_FUNC void luaV_finishOp (lua_State *L);
 LUAI_FUNC void luaV_execute (lua_State *L);
 LUAI_FUNC void luaV_concat (lua_State *L, int total);
+LUAI_FUNC lua_Integer luaV_div (lua_State *L, lua_Integer x, lua_Integer y);
+LUAI_FUNC lua_Integer luaV_mod (lua_State *L, lua_Integer x, lua_Integer y);
+LUAI_FUNC lua_Integer luaV_pow (lua_Integer x, lua_Integer y);
 LUAI_FUNC void luaV_arith (lua_State *L, StkId ra, const TValue *rb,
                            const TValue *rc, TMS op);
 LUAI_FUNC void luaV_objlen (lua_State *L, StkId ra, const TValue *rb);
