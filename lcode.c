@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.63 2013/04/15 15:43:34 roberto Exp roberto $
+** $Id: lcode.c,v 2.64 2013/04/16 18:46:28 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -322,14 +322,14 @@ int luaK_stringK (FuncState *fs, TString *s) {
 }
 
 
-static int luaK_intK (FuncState *fs, lua_Integer n) {
+int luaK_intK (FuncState *fs, lua_Integer n) {
   TValue o;
   setivalue(&o, n);
   return addk(fs, &o, &o);
 }
 
 
-int luaK_numberK (FuncState *fs, lua_Number r) {
+static int luaK_numberK (FuncState *fs, lua_Number r) {
   int n;
   lua_State *L = fs->ls->L;
   TValue o;
