@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.247 2012/10/19 15:55:01 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.248 2013/03/21 13:54:57 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -737,7 +737,17 @@ LUALIB_API int luaL_len (lua_State *L, int idx) {
 LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len) {
   if (!luaL_callmeta(L, idx, "__tostring")) {  /* no metafield? */
     switch (lua_type(L, idx)) {
-      case LUA_TNUMBER:
+      case LUA_TNUMBER: {
+        if (lua_isinteger(L, idx)) {
+          lua_Integer n = lua_tointeger(L, idx);
+          lua_pushfstring(L, "%I", n);
+        }
+        else {
+          lua_Number n = lua_tonumber(L, idx);
+          lua_pushfstring(L, "%f", n);
+        }
+        break;
+      }
       case LUA_TSTRING:
         lua_pushvalue(L, idx);
         break;
