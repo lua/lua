@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.14 2011/06/02 19:31:40 roberto Exp roberto $
+** $Id: ltm.c,v 2.15 2013/04/12 19:07:09 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -12,6 +12,7 @@
 
 #include "lua.h"
 
+#include "ldo.h" 
 #include "lobject.h"
 #include "lstate.h"
 #include "lstring.h"
@@ -73,5 +74,33 @@ const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
       mt = G(L)->mt[ttnov(o)];
   }
   return (mt ? luaH_getstr(mt, G(L)->tmname[event]) : luaO_nilobject);
+}
+
+
+void luaT_callTM (lua_State *L, const TValue *f, const TValue *p1,
+                  const TValue *p2, TValue *p3, int hasres) {
+  ptrdiff_t result = savestack(L, p3);
+  setobj2s(L, L->top++, f);  /* push function */
+  setobj2s(L, L->top++, p1);  /* 1st argument */
+  setobj2s(L, L->top++, p2);  /* 2nd argument */
+  if (!hasres)  /* no result? 'p3' is third argument */
+    setobj2s(L, L->top++, p3);  /* 3rd argument */
+  /* metamethod may yield only when called from Lua code */
+  luaD_call(L, L->top - (4 - hasres), hasres, isLua(L->ci));
+  if (hasres) {  /* if has result, move it to its place */
+    p3 = restorestack(L, result);
+    setobjs2s(L, p3, --L->top);
+  }
+}
+
+
+int luaT_callbinTM (lua_State *L, const TValue *p1, const TValue *p2,
+                    StkId res, TMS event) {
+  const TValue *tm = luaT_gettmbyobj(L, p1, event);  /* try first operand */
+  if (ttisnil(tm))
+    tm = luaT_gettmbyobj(L, p2, event);  /* try second operand */
+  if (ttisnil(tm)) return 0;
+  luaT_callTM(L, tm, p1, p2, res, 1);
+  return 1;
 }
 

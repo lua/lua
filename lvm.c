@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.157 2013/04/15 15:44:46 roberto Exp roberto $
+** $Id: lvm.c,v 2.158 2013/04/16 18:43:05 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -61,56 +61,6 @@ int luaV_tostring (lua_State *L, StkId obj) {
 }
 
 
-static void traceexec (lua_State *L) {
-  CallInfo *ci = L->ci;
-  lu_byte mask = L->hookmask;
-  int counthook = ((mask & LUA_MASKCOUNT) && L->hookcount == 0);
-  if (counthook)
-    resethookcount(L);  /* reset count */
-  if (ci->callstatus & CIST_HOOKYIELD) {  /* called hook last time? */
-    ci->callstatus &= ~CIST_HOOKYIELD;  /* erase mark */
-    return;  /* do not call hook again (VM yielded, so it did not move) */
-  }
-  if (counthook)
-    luaD_hook(L, LUA_HOOKCOUNT, -1);  /* call count hook */
-  if (mask & LUA_MASKLINE) {
-    Proto *p = ci_func(ci)->p;
-    int npc = pcRel(ci->u.l.savedpc, p);
-    int newline = getfuncline(p, npc);
-    if (npc == 0 ||  /* call linehook when enter a new function, */
-        ci->u.l.savedpc <= L->oldpc ||  /* when jump back (loop), or when */
-        newline != getfuncline(p, pcRel(L->oldpc, p)))  /* enter a new line */
-      luaD_hook(L, LUA_HOOKLINE, newline);  /* call line hook */
-  }
-  L->oldpc = ci->u.l.savedpc;
-  if (L->status == LUA_YIELD) {  /* did hook yield? */
-    if (counthook)
-      L->hookcount = 1;  /* undo decrement to zero */
-    ci->u.l.savedpc--;  /* undo increment (resume will increment it again) */
-    ci->callstatus |= CIST_HOOKYIELD;  /* mark that it yielded */
-    ci->func = L->top - 1;  /* protect stack below results */
-    luaD_throw(L, LUA_YIELD);
-  }
-}
-
-
-static void callTM (lua_State *L, const TValue *f, const TValue *p1,
-                    const TValue *p2, TValue *p3, int hasres) {
-  ptrdiff_t result = savestack(L, p3);
-  setobj2s(L, L->top++, f);  /* push function */
-  setobj2s(L, L->top++, p1);  /* 1st argument */
-  setobj2s(L, L->top++, p2);  /* 2nd argument */
-  if (!hasres)  /* no result? 'p3' is third argument */
-    setobj2s(L, L->top++, p3);  /* 3rd argument */
-  /* metamethod may yield only when called from Lua code */
-  luaD_call(L, L->top - (4 - hasres), hasres, isLua(L->ci));
-  if (hasres) {  /* if has result, move it to its place */
-    p3 = restorestack(L, result);
-    setobjs2s(L, p3, --L->top);
-  }
-}
-
-
 void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val) {
   int loop;
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
@@ -128,7 +78,7 @@ void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val) {
     else if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_INDEX)))
       luaG_typeerror(L, t, "index");
     if (ttisfunction(tm)) {
-      callTM(L, tm, t, key, val, 1);
+      luaT_callTM(L, tm, t, key, val, 1);
       return;
     }
     t = tm;  /* else repeat with 'tm' */
@@ -167,23 +117,12 @@ void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
         luaG_typeerror(L, t, "index");
     /* there is a metamethod */
     if (ttisfunction(tm)) {
-      callTM(L, tm, t, key, val, 0);
+      luaT_callTM(L, tm, t, key, val, 0);
       return;
     }
     t = tm;  /* else repeat with 'tm' */
   }
   luaG_runerror(L, "loop in settable");
-}
-
-
-static int call_binTM (lua_State *L, const TValue *p1, const TValue *p2,
-                       StkId res, TMS event) {
-  const TValue *tm = luaT_gettmbyobj(L, p1, event);  /* try first operand */
-  if (ttisnil(tm))
-    tm = luaT_gettmbyobj(L, p2, event);  /* try second operand */
-  if (ttisnil(tm)) return 0;
-  callTM(L, tm, p1, p2, res, 1);
-  return 1;
 }
 
 
@@ -203,7 +142,7 @@ static const TValue *get_equalTM (lua_State *L, Table *mt1, Table *mt2,
 
 static int call_orderTM (lua_State *L, const TValue *p1, const TValue *p2,
                          TMS event) {
-  if (!call_binTM(L, p1, p2, L->top, event))
+  if (!luaT_callbinTM(L, p1, p2, L->top, event))
     return -1;  /* no metamethod */
   else
     return !l_isfalse(L->top);
@@ -295,7 +234,7 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
       return gcvalue(t1) == gcvalue(t2);
   }
   if (tm == NULL) return 0;  /* no TM? */
-  callTM(L, tm, t1, t2, L->top, 1);  /* call TM */
+  luaT_callTM(L, tm, t1, t2, L->top, 1);  /* call TM */
   return !l_isfalse(L->top);
 }
 
@@ -306,7 +245,7 @@ void luaV_concat (lua_State *L, int total) {
     StkId top = L->top;
     int n = 2;  /* number of elements handled in this pass (at least 2) */
     if (!(ttisstring(top-2) || ttisnumber(top-2)) || !tostring(L, top-1)) {
-      if (!call_binTM(L, top-2, top-1, top-2, TM_CONCAT))
+      if (!luaT_callbinTM(L, top-2, top-1, top-2, TM_CONCAT))
         luaG_concaterror(L, top-2, top-1);
     }
     else if (tsvalue(top-1)->len == 0)  /* second operand is empty? */
@@ -363,7 +302,7 @@ void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
       break;
     }
   }
-  callTM(L, tm, rb, rb, ra, 1);
+  luaT_callTM(L, tm, rb, rb, ra, 1);
 }
 
 
@@ -376,7 +315,7 @@ void luaV_arith (lua_State *L, StkId ra, const TValue *rb,
     lua_Number res = luaO_arith(op - TM_ADD + LUA_OPADD, nvalue(b), nvalue(c));
     setnvalue(ra, res);
   }
-  else if (!call_binTM(L, rb, rc, ra, op))
+  else if (!luaT_callbinTM(L, rb, rc, ra, op))
     luaG_aritherror(L, rb, rc);
 }
 
@@ -456,7 +395,7 @@ void luaV_finishOp (lua_State *L) {
       break;
     }
     case OP_CONCAT: {
-      StkId top = L->top - 1;  /* top when 'call_binTM' was called */
+      StkId top = L->top - 1;  /* top when 'luaT_callbinTM' was called */
       int b = GETARG_B(inst);      /* first element to concatenate */
       int total = cast_int(top - 1 - (base + b));  /* yet to concatenate */
       setobj2s(L, top - 2, top);  /* put TM result in proper position */
@@ -557,7 +496,7 @@ void luaV_execute (lua_State *L) {
     StkId ra;
     if ((L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT)) &&
         (--L->hookcount == 0 || L->hookmask & LUA_MASKLINE)) {
-      Protect(traceexec(L));
+      Protect(luaG_traceexec(L));
     }
     /* WARNING: several calls may realloc the stack and invalidate `ra' */
     ra = RA(i);

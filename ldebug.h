@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.h,v 2.6 2011/06/02 19:31:40 roberto Exp roberto $
+** $Id: ldebug.h,v 2.7 2011/10/07 20:45:19 roberto Exp roberto $
 ** Auxiliary functions from Debug Interface module
 ** See Copyright Notice in lua.h
 */
@@ -30,5 +30,7 @@ LUAI_FUNC l_noret luaG_ordererror (lua_State *L, const TValue *p1,
                                                  const TValue *p2);
 LUAI_FUNC l_noret luaG_runerror (lua_State *L, const char *fmt, ...);
 LUAI_FUNC l_noret luaG_errormsg (lua_State *L);
+LUAI_FUNC void luaG_traceexec (lua_State *L);
+
 
 #endif

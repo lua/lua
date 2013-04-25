@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.89 2012/01/20 22:05:50 roberto Exp roberto $
+** $Id: ldebug.c,v 2.90 2012/08/16 17:34:28 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -576,5 +576,38 @@ l_noret luaG_runerror (lua_State *L, const char *fmt, ...) {
   addinfo(L, luaO_pushvfstring(L, fmt, argp));
   va_end(argp);
   luaG_errormsg(L);
+}
+
+
+void luaG_traceexec (lua_State *L) {
+  CallInfo *ci = L->ci;
+  lu_byte mask = L->hookmask;
+  int counthook = ((mask & LUA_MASKCOUNT) && L->hookcount == 0);
+  if (counthook)
+    resethookcount(L);  /* reset count */
+  if (ci->callstatus & CIST_HOOKYIELD) {  /* called hook last time? */
+    ci->callstatus &= ~CIST_HOOKYIELD;  /* erase mark */
+    return;  /* do not call hook again (VM yielded, so it did not move) */
+  }
+  if (counthook)
+    luaD_hook(L, LUA_HOOKCOUNT, -1);  /* call count hook */
+  if (mask & LUA_MASKLINE) {
+    Proto *p = ci_func(ci)->p;
+    int npc = pcRel(ci->u.l.savedpc, p);
+    int newline = getfuncline(p, npc);
+    if (npc == 0 ||  /* call linehook when enter a new function, */
+        ci->u.l.savedpc <= L->oldpc ||  /* when jump back (loop), or when */
+        newline != getfuncline(p, pcRel(L->oldpc, p)))  /* enter a new line */
+      luaD_hook(L, LUA_HOOKLINE, newline);  /* call line hook */
+  }
+  L->oldpc = ci->u.l.savedpc;
+  if (L->status == LUA_YIELD) {  /* did hook yield? */
+    if (counthook)
+      L->hookcount = 1;  /* undo decrement to zero */
+    ci->u.l.savedpc--;  /* undo increment (resume will increment it again) */
+    ci->callstatus |= CIST_HOOKYIELD;  /* mark that it yielded */
+    ci->func = L->top - 1;  /* protect stack below results */
+    luaD_throw(L, LUA_YIELD);
+  }
 }
 
