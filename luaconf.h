@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.175 2013/01/29 16:00:40 roberto Exp roberto $
+** $Id: luaconf.h,v 1.176 2013/03/16 21:10:18 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -394,13 +394,15 @@
 
 
 /*
-@@ LUA_NUMBER_SCAN is the format for reading numbers.
-@@ LUA_NUMBER_FMT is the format for writing numbers.
-@@ lua_number2str converts a number to a string.
+@@ LUA_NUMBER_FRMLEN is the length modifier for writing floats.
+@@ LUA_NUMBER_SCAN is the format for reading floats.
+@@ LUA_NUMBER_FMT is the format for writing floats.
+@@ lua_number2str converts a floats to a string.
 @@ LUAI_MAXNUMBER2STR is maximum size of previous conversion.
 */
+#define LUA_NUMBER_FRMLEN	""
 #define LUA_NUMBER_SCAN		"%lf"
-#define LUA_NUMBER_FMT		"%.14g"
+#define LUA_NUMBER_FMT		"%.14" LUA_NUMBER_FRMLEN "g"
 #define lua_number2str(s,n)	sprintf((s), LUA_NUMBER_FMT, (n))
 #define LUAI_MAXNUMBER2STR	32 /* 16 digits, sign, point, and \0 */
 
@@ -457,13 +459,25 @@
 ** CHANGE that if ptrdiff_t is not adequate on your machine. (On most
 ** machines, ptrdiff_t gives a good choice between int or long.)
 */
-#define LUA_INTEGER	ptrdiff_t
+#define LUA_INTEGER	long long
 
 /*
-@@ LUA_UNSIGNED is the integral type used by lua_pushunsigned/lua_tounsigned.
-** It must have at least 32 bits.
+@@ LUA_UNSIGNED is the unsigned version of LUA_INTEGER.
 */
-#define LUA_UNSIGNED	unsigned LUA_INT32
+#define LUA_UNSIGNED	unsigned long long
+
+/*
+@@ LUA_INTEGER_FRMLEN is the length modifier for writing integers.
+@@ LUA_INTEGER_SCAN is the format for reading integers.
+@@ LUA_INTEGER_FMT is the format for writing integers.
+@@ lua_integer2str converts an integer to a string.
+@@ LUAI_MAXINTEGER2STR is maximum size of previous conversion.
+*/
+#define LUA_INTEGER_FRMLEN	"ll"
+#define LUA_INTEGER_SCAN	"%Ld"
+#define LUA_INTEGER_FMT		"%" LUA_INTEGER_FRMLEN "d"
+#define lua_integer2str(s,n)	sprintf((s), LUA_INTEGER_FMT, (n))
+#define LUA_MAXINTEGER2STR	32
 
 
 
@@ -471,7 +485,7 @@
 ** Some tricks with doubles
 */
 
-#if defined(LUA_NUMBER_DOUBLE) && !defined(LUA_ANSI)	/* { */
+#if defined(LUA_NUMBER_DOUBLE) && !defined(LUA_ANSI) && 0	/* { */
 /*
 ** The next definitions activate some tricks to speed up the
 ** conversion from doubles to integer types, mainly to LUA_UNSIGNED.

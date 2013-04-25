@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.177 2012/07/31 17:48:42 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.178 2012/08/14 18:12:34 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -786,48 +786,17 @@ static int str_gsub (lua_State *L) {
 ** =======================================================
 */
 
-/*
-** LUA_INTFRMLEN is the length modifier for integer conversions in
-** 'string.format'; LUA_INTFRM_T is the integer type corresponding to
-** the previous length
-*/
-#if !defined(LUA_INTFRMLEN)	/* { */
-#if defined(LUA_USE_LONGLONG)
-
-#define LUA_INTFRMLEN		"ll"
-#define LUA_INTFRM_T		long long
-
-#else
-
-#define LUA_INTFRMLEN		"l"
-#define LUA_INTFRM_T		long
-
-#endif
-#endif				/* } */
-
-
-/*
-** LUA_FLTFRMLEN is the length modifier for float conversions in
-** 'string.format'; LUA_FLTFRM_T is the float type corresponding to
-** the previous length
-*/
-#if !defined(LUA_FLTFRMLEN)
-
-#define LUA_FLTFRMLEN		""
-#define LUA_FLTFRM_T		double
-
-#endif
-
-
 /* maximum size of each formatted item (> len(format('%99.99f', -1e308))) */
 #define MAX_ITEM	512
+
 /* valid flags in a format specification */
 #define FLAGS	"-+ #0"
+
 /*
-** maximum size of each format specification (such as '%-099.99d')
-** (+10 accounts for %99.99x plus margin of error)
+** maximum size of each format specification (such as "%-099.99d")
+** (+2 for length modifiers; +10 accounts for %99.99x plus margin of error)
 */
-#define MAX_FORMAT	(sizeof(FLAGS) + sizeof(LUA_INTFRMLEN) + 10)
+#define MAX_FORMAT	(sizeof(FLAGS) + 2 + 10)
 
 
 static void addquoted (lua_State *L, luaL_Buffer *b, int arg) {
@@ -914,24 +883,11 @@ static int str_format (lua_State *L) {
           nb = sprintf(buff, form, luaL_checkint(L, arg));
           break;
         }
-        case 'd': case 'i': {
-          lua_Number n = luaL_checknumber(L, arg);
-          LUA_INTFRM_T ni = (LUA_INTFRM_T)n;
-          lua_Number diff = n - (lua_Number)ni;
-          luaL_argcheck(L, -1 < diff && diff < 1, arg,
-                        "not a number in proper range");
-          addlenmod(form, LUA_INTFRMLEN);
-          nb = sprintf(buff, form, ni);
-          break;
-        }
+        case 'd': case 'i':
         case 'o': case 'u': case 'x': case 'X': {
-          lua_Number n = luaL_checknumber(L, arg);
-          unsigned LUA_INTFRM_T ni = (unsigned LUA_INTFRM_T)n;
-          lua_Number diff = n - (lua_Number)ni;
-          luaL_argcheck(L, -1 < diff && diff < 1, arg,
-                        "not a non-negative number in proper range");
-          addlenmod(form, LUA_INTFRMLEN);
-          nb = sprintf(buff, form, ni);
+          lua_Integer n = luaL_checkinteger(L, arg);
+          addlenmod(form, LUA_INTEGER_FRMLEN);
+          nb = sprintf(buff, form, n);
           break;
         }
         case 'e': case 'E': case 'f':
@@ -939,8 +895,8 @@ static int str_format (lua_State *L) {
         case 'a': case 'A':
 #endif
         case 'g': case 'G': {
-          addlenmod(form, LUA_FLTFRMLEN);
-          nb = sprintf(buff, form, (LUA_FLTFRM_T)luaL_checknumber(L, arg));
+          addlenmod(form, LUA_NUMBER_FRMLEN);
+          nb = sprintf(buff, form, luaL_checknumber(L, arg));
           break;
         }
         case 'q': {
