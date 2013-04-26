@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.71 2012/05/23 15:37:09 roberto Exp $
+** $Id: ltable.c,v 2.73 2013/04/15 15:44:46 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -123,9 +123,9 @@ static Node *mainposition (const Table *t, const TValue *key) {
 }
 
 
-static int numisint (lua_Number n, int *p) {
-  int k;
-  lua_number2int(k, n);
+static int numisint (lua_Number n, lua_Integer *p) {
+  lua_Integer k;
+  lua_number2integer(k, n);
   if (luai_numeq(cast_num(k), n)) {  /* 'k' is int? */
     *p = k;
     return 1;
@@ -139,8 +139,12 @@ static int numisint (lua_Number n, int *p) {
 ** the array part of the table, -1 otherwise.
 */
 static int arrayindex (const TValue *key) {
-  if (ttisinteger(key)) return ivalue(key);
-  else return -1;  /* `key' did not match some condition */
+  if (ttisinteger(key)) {
+    lua_Integer k = ivalue(key);
+    if (0 < k && k <= MAXASIZE)  /* is `key' an appropriate array index? */
+      return cast_int(k);
+  }
+  return -1;  /* `key' did not match some condition */
 }
 
 
@@ -225,7 +229,7 @@ static int computesizes (int nums[], int *narray) {
 
 static int countint (const TValue *key, int *nums) {
   int k = arrayindex(key);
-  if (0 < k && k <= MAXASIZE) {  /* is `key' an appropriate array index? */
+  if (k > 0) {  /* is `key' an appropriate array index? */
     nums[luaO_ceillog2(k)]++;  /* count as such */
     return 1;
   }
@@ -416,7 +420,7 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
   if (ttisnil(key)) luaG_runerror(L, "table index is nil");
   else if (ttisfloat(key)) {
     lua_Number n = fltvalue(key);
-    int k;
+    lua_Integer k;
     if (luai_numisnan(L, n))
       luaG_runerror(L, "table index is NaN");
     if (numisint(n, &k)) {  /* index is int? */
@@ -460,10 +464,10 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
 /*
 ** search function for integers
 */
-const TValue *luaH_getint (Table *t, int key) {
+const TValue *luaH_getint (Table *t, lua_Integer key) {
   /* (1 <= key && key <= t->sizearray) */
-  if (cast(unsigned int, key-1) < cast(unsigned int, t->sizearray))
-    return &t->array[key-1];
+  if (cast_unsigned(key - 1) < cast_unsigned(t->sizearray))
+    return &t->array[key - 1];
   else {
     Node *n = hashint(t, key);
     do {  /* check whether `key' is somewhere in the chain */
@@ -500,7 +504,7 @@ const TValue *luaH_get (Table *t, const TValue *key) {
     case LUA_TNUMINT: return luaH_getint(t, ivalue(key));
     case LUA_TNIL: return luaO_nilobject;
     case LUA_TNUMFLT: {
-      int k;
+      lua_Integer k;
       if (numisint(fltvalue(key), &k)) /* index is int? */
         return luaH_getint(t, k);  /* use specialized version */
       /* else go through */
@@ -530,7 +534,7 @@ TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
 }
 
 
-void luaH_setint (lua_State *L, Table *t, int key, TValue *value) {
+void luaH_setint (lua_State *L, Table *t, lua_Integer key, TValue *value) {
   const TValue *p = luaH_getint(t, key);
   TValue *cell;
   if (p != luaO_nilobject)
@@ -550,13 +554,13 @@ static int unbound_search (Table *t, unsigned int j) {
   /* find `i' and `j' such that i is present and j is not */
   while (!ttisnil(luaH_getint(t, j))) {
     i = j;
-    j *= 2;
-    if (j > cast(unsigned int, MAX_INT)) {  /* overflow? */
+    if (j > cast(unsigned int, MAX_INT)/2) {  /* overflow? */
       /* table was built with bad purposes: resort to linear search */
       i = 1;
       while (!ttisnil(luaH_getint(t, i))) i++;
       return i - 1;
     }
+    j *= 2;
   }
   /* now do a binary search between them */
   while (j - i > 1) {

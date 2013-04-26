@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.173 2013/04/15 15:43:34 roberto Exp roberto $
+** $Id: lapi.c,v 2.174 2013/04/25 13:52:49 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -656,7 +656,7 @@ LUA_API void lua_rawget (lua_State *L, int idx) {
 }
 
 
-LUA_API void lua_rawgeti (lua_State *L, int idx, int n) {
+LUA_API void lua_rawgeti (lua_State *L, int idx, lua_Integer n) {
   StkId t;
   lua_lock(L);
   t = index2addr(L, idx);
@@ -791,7 +791,7 @@ LUA_API void lua_rawset (lua_State *L, int idx) {
 }
 
 
-LUA_API void lua_rawseti (lua_State *L, int idx, int n) {
+LUA_API void lua_rawseti (lua_State *L, int idx, lua_Integer n) {
   StkId t;
   lua_lock(L);
   api_checknelems(L, 1);
