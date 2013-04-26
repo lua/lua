@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.91 2013/04/25 15:59:42 roberto Exp roberto $
+** $Id: ldebug.c,v 2.92 2013/04/26 13:07:53 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -525,8 +525,8 @@ l_noret luaG_concaterror (lua_State *L, StkId p1, StkId p2) {
 
 
 l_noret luaG_aritherror (lua_State *L, const TValue *p1, const TValue *p2) {
-  TValue temp;
-  if (luaV_tonumber(p1, &temp) == NULL)
+  lua_Number temp;
+  if (!tonumber(p1, &temp))
     p2 = p1;  /* first operand is wrong */
   luaG_typeerror(L, p2, "perform arithmetic on");
 }

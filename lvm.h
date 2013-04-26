@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 2.19 2013/04/15 15:44:46 roberto Exp roberto $
+** $Id: lvm.h,v 2.20 2013/04/25 19:12:41 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -15,7 +15,8 @@
 
 #define tostring(L,o) (ttisstring(o) || (luaV_tostring(L, o)))
 
-#define tonumber(o,n)	(ttisfloat(o) || (((o) = luaV_tonumber(o,n)) != NULL))
+#define tonumber(o,n) \
+	(ttisfloat(o) ? (*(n) = fltvalue(o), 1) : luaV_tonumber_(o,n))
 
 
 #define luaV_rawequalobj(t1,t2)		luaV_equalobj(NULL,t1,t2)
@@ -24,7 +25,7 @@
 LUAI_FUNC int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2);
 LUAI_FUNC int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r);
 LUAI_FUNC int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r);
-LUAI_FUNC const TValue *luaV_tonumber (const TValue *obj, TValue *n);
+LUAI_FUNC int luaV_tonumber_ (const TValue *obj, lua_Number *n);
 LUAI_FUNC int luaV_tostring (lua_State *L, StkId obj);
 LUAI_FUNC void luaV_gettable (lua_State *L, const TValue *t, TValue *key,
                                             StkId val);

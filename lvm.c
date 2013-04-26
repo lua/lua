@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.162 2013/04/25 19:50:02 roberto Exp roberto $
+** $Id: lvm.c,v 2.163 2013/04/26 13:07:53 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -32,19 +32,14 @@
 #define MAXTAGLOOP	100
 
 
-const TValue *luaV_tonumber (const TValue *obj, TValue *n) {
-  lua_Number num;
-  if (ttisfloat(obj)) return obj;
+int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
+  lua_assert(!ttisfloat(obj));
   if (ttisinteger(obj)) {
-    setnvalue(n, cast_num(ivalue(obj)));
-    return n;
-  }
-  if (ttisstring(obj) && luaO_str2d(svalue(obj), tsvalue(obj)->len, &num)) {
-    setnvalue(n, num);
-    return n;
+    *n = cast_num(ivalue(obj));
+    return 1;
   }
   else
-    return NULL;
+    return (ttisstring(obj) && luaO_str2d(svalue(obj), tsvalue(obj)->len, n));
 }
 
 
@@ -337,11 +332,9 @@ lua_Integer luaV_pow (lua_Integer x, lua_Integer y) {
 
 void luaV_arith (lua_State *L, StkId ra, const TValue *rb,
                  const TValue *rc, TMS op) {
-  TValue tempb, tempc;
-  const TValue *b, *c;
-  if ((b = luaV_tonumber(rb, &tempb)) != NULL &&
-      (c = luaV_tonumber(rc, &tempc)) != NULL) {
-    lua_Number res = luaO_arith(op - TM_ADD + LUA_OPADD, nvalue(b), nvalue(c));
+  lua_Number b, c;
+  if (tonumber(rb, &b) && tonumber(rc, &c)) {
+    lua_Number res = luaO_arith(op - TM_ADD + LUA_OPADD, b, c);
     setnvalue(ra, res);
   }
   else if (!luaT_callbinTM(L, rb, rc, ra, op))
@@ -841,20 +834,23 @@ void luaV_execute (lua_State *L) {
         }
       )
       vmcase(OP_FORPREP,
-        const TValue *init = ra;
-        const TValue *plimit = ra+1;
-        const TValue *pstep = ra+2;
+        TValue *init = ra;
+        TValue *plimit = ra + 1;
+        TValue *pstep = ra + 2;
         if (ttisinteger(ra) && ttisinteger(ra + 1) && ttisinteger(ra + 2)) {
           setivalue(ra, ivalue(ra) - ivalue(pstep));
         }
         else {  /* try with floats */
-          if (!tonumber(init, ra))
+          lua_Number ninit; lua_Number nlimit; lua_Number nstep;
+          if (!tonumber(init, &ninit))
             luaG_runerror(L, LUA_QL("for") " initial value must be a number");
-          else if (!tonumber(plimit, ra+1))
+          if (!tonumber(plimit, &nlimit))
             luaG_runerror(L, LUA_QL("for") " limit must be a number");
-          else if (!tonumber(pstep, ra+2))
+          setnvalue(plimit, nlimit);
+          if (!tonumber(pstep, &nstep))
             luaG_runerror(L, LUA_QL("for") " step must be a number");
-          setnvalue(ra, luai_numsub(L, fltvalue(ra), fltvalue(pstep)));
+          setnvalue(pstep, nstep);
+          setnvalue(ra, luai_numsub(L, ninit, nstep));
         }
         ci->u.l.savedpc += GETARG_sBx(i);
       )
