@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.285 2013/03/15 13:04:22 roberto Exp roberto $
+** $Id: lua.h,v 1.286 2013/04/25 13:52:49 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -186,9 +186,10 @@ LUA_API const void     *(lua_topointer) (lua_State *L, int idx);
 #define LUA_OPSUB	1
 #define LUA_OPMUL	2
 #define LUA_OPDIV	3
-#define LUA_OPMOD	4
-#define LUA_OPPOW	5
-#define LUA_OPUNM	6
+#define LUA_OPIDIV	4
+#define LUA_OPMOD	5
+#define LUA_OPPOW	6
+#define LUA_OPUNM	7
 
 LUA_API void  (lua_arith) (lua_State *L, int op);
 

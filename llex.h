@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.72 2011/11/30 12:43:51 roberto Exp roberto $
+** $Id: llex.h,v 1.73 2013/04/16 18:46:28 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -26,7 +26,8 @@ enum RESERVED {
   TK_GOTO, TK_IF, TK_IN, TK_LOCAL, TK_NIL, TK_NOT, TK_OR, TK_REPEAT,
   TK_RETURN, TK_THEN, TK_TRUE, TK_UNTIL, TK_WHILE,
   /* other terminal symbols */
-  TK_CONCAT, TK_DOTS, TK_EQ, TK_GE, TK_LE, TK_NE, TK_DBCOLON, TK_EOS,
+  TK_IDIV, TK_CONCAT, TK_DOTS, TK_EQ, TK_GE, TK_LE, TK_NE,
+  TK_DBCOLON, TK_EOS,
   TK_FLT, TK_INT, TK_NAME, TK_STRING
 };
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.161 2013/04/25 19:12:41 roberto Exp roberto $
+** $Id: lvm.c,v 2.162 2013/04/25 19:50:02 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -404,7 +404,7 @@ void luaV_finishOp (lua_State *L) {
   Instruction inst = *(ci->u.l.savedpc - 1);  /* interrupted instruction */
   OpCode op = GET_OPCODE(inst);
   switch (op) {  /* finish its execution */
-    case OP_ADD: case OP_SUB: case OP_MUL: case OP_DIV:
+    case OP_ADD: case OP_SUB: case OP_MUL: case OP_DIV: case OP_IDIV:
     case OP_MOD: case OP_POW: case OP_UNM: case OP_LEN:
     case OP_GETTABUP: case OP_GETTABLE: case OP_SELF: {
       setobjs2s(L, base + GETARG_A(inst), --L->top);
@@ -639,6 +639,19 @@ void luaV_execute (lua_State *L) {
           setnvalue(ra, luai_numdiv(L, nb, nc));
         }
         else { Protect(luaV_arith(L, ra, rb, rc, TM_DIV)); }
+      )
+      vmcase(OP_IDIV,  /* integer division */
+        TValue *rb = RKB(i);
+        TValue *rc = RKC(i);
+        if (ttisinteger(rb) && ttisinteger(rc)) {
+          lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
+          setivalue(ra, luaV_div(L, ib, ic));
+        }
+        else if (ttisnumber(rb) && ttisnumber(rc)) {
+          lua_Number nb = nvalue(rb); lua_Number nc = nvalue(rc);
+          setnvalue(ra, luai_numidiv(L, nb, nc));
+        }
+        else { Protect(luaV_arith(L, ra, rb, rc, TM_IDIV)); }
       )
       vmcase(OP_MOD,
         TValue *rb = RKB(i);

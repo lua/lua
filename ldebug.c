@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.90 2012/08/16 17:34:28 roberto Exp roberto $
+** $Id: ldebug.c,v 2.91 2013/04/25 15:59:42 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -453,6 +453,7 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
     case OP_SUB: tm = TM_SUB; break;
     case OP_MUL: tm = TM_MUL; break;
     case OP_DIV: tm = TM_DIV; break;
+    case OP_IDIV: tm = TM_IDIV; break;
     case OP_MOD: tm = TM_MOD; break;
     case OP_POW: tm = TM_POW; break;
     case OP_UNM: tm = TM_UNM; break;

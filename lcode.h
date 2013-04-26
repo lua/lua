@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.58 2011/08/30 16:26:41 roberto Exp roberto $
+** $Id: lcode.h,v 1.59 2013/04/25 19:35:19 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -24,7 +24,7 @@
 ** grep "ORDER OPR" if you change these enums  (ORDER OP)
 */
 typedef enum BinOpr {
-  OPR_ADD, OPR_SUB, OPR_MUL, OPR_DIV, OPR_MOD, OPR_POW,
+  OPR_ADD, OPR_SUB, OPR_MUL, OPR_DIV, OPR_IDIV, OPR_MOD, OPR_POW,
   OPR_CONCAT,
   OPR_EQ, OPR_LT, OPR_LE,
   OPR_NE, OPR_GT, OPR_GE,

@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 2.13 2013/04/25 15:59:42 roberto Exp roberto $
+** $Id: ltm.h,v 2.14 2013/04/25 16:07:52 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -26,6 +26,7 @@ typedef enum {
   TM_SUB,
   TM_MUL,
   TM_DIV,
+  TM_IDIV,
   TM_MOD,
   TM_POW,
   TM_UNM,
