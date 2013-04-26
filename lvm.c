@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.164 2013/04/26 16:03:50 roberto Exp roberto $
+** $Id: lvm.c,v 2.165 2013/04/26 16:06:53 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -145,10 +145,11 @@ static int l_strcmp (const TString *ls, const TString *rs) {
 
 int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
   int res;
+  lua_Number nl, nr;
   if (ttisinteger(l) && ttisinteger(r))
     return (ivalue(l) < ivalue(r));
-  else if (ttisnumber(l) && ttisnumber(r))
-    return luai_numlt(L, nvalue(l), nvalue(r));
+  else if (tonumber(l, &nl) && tonumber(r, &nr))
+    return luai_numlt(L, nl, nr);
   else if (ttisstring(l) && ttisstring(r))
     return l_strcmp(rawtsvalue(l), rawtsvalue(r)) < 0;
   else if ((res = luaT_callorderTM(L, l, r, TM_LT)) < 0)
@@ -159,10 +160,11 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
 
 int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
   int res;
+  lua_Number nl, nr;
   if (ttisinteger(l) && ttisinteger(r))
     return (ivalue(l) <= ivalue(r));
-  else if (ttisnumber(l) && ttisnumber(r))
-    return luai_numle(L, nvalue(l), nvalue(r));
+  else if (tonumber(l, &nl) && tonumber(r, &nr))
+    return luai_numle(L, nl, nr);
   else if (ttisstring(l) && ttisstring(r))
     return l_strcmp(rawtsvalue(l), rawtsvalue(r)) <= 0;
   else if ((res = luaT_callorderTM(L, l, r, TM_LE)) >= 0)  /* first try `le' */
@@ -181,8 +183,11 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
   if (ttype(t1) != ttype(t2)) {
     if (ttnov(t1) != ttnov(t2) || ttnov(t1) != LUA_TNUMBER)
       return 0;  /* only numbers can be equal with different variants */
-    else  /* two numbers with different variants */
-      return luai_numeq(nvalue(t1), nvalue(t2));
+    else {  /* two numbers with different variants */
+      lua_Number n1, n2;
+      tonumber(t1, &n1); tonumber(t2, &n2);
+      return luai_numeq(n1, n2);
+    }
   }
   /* values have same type and same variant */
   switch (ttype(t1)) {
@@ -488,16 +493,6 @@ void luaV_finishOp (lua_State *L) {
            luai_threadyield(L); )
 
 
-#define arith_op(op,tm) { \
-        TValue *rb = RKB(i); \
-        TValue *rc = RKC(i); \
-        if (ttisnumber(rb) && ttisnumber(rc)) { \
-          lua_Number nb = nvalue(rb), nc = nvalue(rc); \
-          setnvalue(ra, op(L, nb, nc)); \
-        } \
-        else { Protect(luaV_arith(L, ra, rb, rc, tm)); } }
-
-
 #define vmdispatch(o)	switch(o)
 #define vmcase(l,b)	case l: {b}  break;
 #define vmcasenb(l,b)	case l: {b}		/* nb = no break */
@@ -588,12 +583,12 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_ADD, 
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
+        lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
           setivalue(ra, ib + ic);
         }
-        else if (ttisnumber(rb) && ttisnumber(rc)) {
-          lua_Number nb = nvalue(rb); lua_Number nc = nvalue(rc);
+        else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setnvalue(ra, luai_numadd(L, nb, nc));
         }
         else { Protect(luaV_arith(L, ra, rb, rc, TM_ADD)); }
@@ -601,12 +596,12 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_SUB,
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
+        lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
           setivalue(ra, ib - ic);
         }
-        else if (ttisnumber(rb) && ttisnumber(rc)) {
-          lua_Number nb = nvalue(rb); lua_Number nc = nvalue(rc);
+        else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setnvalue(ra, luai_numsub(L, nb, nc));
         }
         else { Protect(luaV_arith(L, ra, rb, rc, TM_SUB)); }
@@ -614,12 +609,12 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_MUL,
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
+        lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
           setivalue(ra, ib * ic);
         }
-        else if (ttisnumber(rb) && ttisnumber(rc)) {
-          lua_Number nb = nvalue(rb); lua_Number nc = nvalue(rc);
+        else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setnvalue(ra, luai_nummul(L, nb, nc));
         }
         else { Protect(luaV_arith(L, ra, rb, rc, TM_MUL)); }
@@ -627,8 +622,8 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_DIV,  /* float division (always with floats) */
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
-        if (ttisnumber(rb) && ttisnumber(rc)) {
-          lua_Number nb = nvalue(rb); lua_Number nc = nvalue(rc);
+        lua_Number nb; lua_Number nc;
+        if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setnvalue(ra, luai_numdiv(L, nb, nc));
         }
         else { Protect(luaV_arith(L, ra, rb, rc, TM_DIV)); }
@@ -636,12 +631,12 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_IDIV,  /* integer division */
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
+        lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
           setivalue(ra, luaV_div(L, ib, ic));
         }
-        else if (ttisnumber(rb) && ttisnumber(rc)) {
-          lua_Number nb = nvalue(rb); lua_Number nc = nvalue(rc);
+        else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setnvalue(ra, luai_numidiv(L, nb, nc));
         }
         else { Protect(luaV_arith(L, ra, rb, rc, TM_IDIV)); }
@@ -649,12 +644,12 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_MOD,
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
+        lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
           setivalue(ra, luaV_mod(L, ib, ic));
         }
-        else if (ttisnumber(rb) && ttisnumber(rc)) {
-          lua_Number nb = nvalue(rb); lua_Number nc = nvalue(rc);
+        else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setnvalue(ra, luai_nummod(L, nb, nc));
         }
         else { Protect(luaV_arith(L, ra, rb, rc, TM_MOD)); }
@@ -662,14 +657,14 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_POW,
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
+        lua_Number nb; lua_Number nc;
         lua_Integer ic;
         if (ttisinteger(rb) && ttisinteger(rc) &&
             (ic = ivalue(rc)) >= 0) {
           lua_Integer ib = ivalue(rb);
           setivalue(ra, luaV_pow(ib, ic));
         }
-        else if (ttisnumber(rb) && ttisnumber(rc)) {
-          lua_Number nb = nvalue(rb); lua_Number nc = nvalue(rc);
+        else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setnvalue(ra, luai_numpow(L, nb, nc));
         }
         else { Protect(luaV_arith(L, ra, rb, rc, TM_POW)); }
