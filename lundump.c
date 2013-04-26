@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.21 2012/03/19 22:58:09 roberto Exp roberto $
+** $Id: lundump.c,v 2.22 2012/05/08 13:53:33 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -69,6 +69,13 @@ static lua_Number LoadNumber(LoadState* S)
  return x;
 }
 
+static lua_Integer LoadInteger(LoadState* S)
+{
+ lua_Integer x;
+ LoadVar(S,x);
+ return x;
+}
+
 static TString* LoadString(LoadState* S)
 {
  size_t size;
@@ -112,10 +119,13 @@ static void LoadConstants(LoadState* S, Proto* f)
    case LUA_TBOOLEAN:
 	setbvalue(o,LoadChar(S));
 	break;
-   case LUA_TNUMBER:
+   case LUA_TNUMFLT:
 	setnvalue(o,LoadNumber(S));
 	break;
-   case LUA_TSTRING:
+   case LUA_TNUMINT:
+	setivalue(o,LoadInteger(S));
+	break;
+   case LUA_TSHRSTR: case LUA_TLNGSTR:
 	setsvalue2n(S->L,o,LoadString(S));
 	break;
     default: lua_assert(0);
