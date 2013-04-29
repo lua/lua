@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.59 2013/04/16 18:46:28 roberto Exp roberto $
+** $Id: lobject.c,v 2.60 2013/04/25 13:53:13 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -70,7 +70,7 @@ int luaO_ceillog2 (unsigned int x) {
 }
 
 
-lua_Number luaO_arith (int op, lua_Number v1, lua_Number v2) {
+lua_Number luaO_numarith (int op, lua_Number v1, lua_Number v2) {
   switch (op) {
     case LUA_OPADD: return luai_numadd(NULL, v1, v2);
     case LUA_OPSUB: return luai_numsub(NULL, v1, v2);
