@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.165 2013/04/26 16:06:53 roberto Exp roberto $
+** $Id: lvm.c,v 2.166 2013/04/26 19:51:17 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -53,6 +53,28 @@ int luaV_tostring (lua_State *L, StkId obj) {
     setsvalue2s(L, obj, luaS_newlstr(L, s, l));
     return 1;
   }
+}
+
+
+int luaV_numtointeger (lua_Number n, lua_Integer *p) {
+  lua_Integer k;
+  lua_number2integer(k, n);
+  if (luai_numeq(cast_num(k), n)) {  /* 'k' is int? */
+    *p = k;
+    return 1;
+  }
+  return 0;
+}
+
+
+int luaV_tointeger_ (const TValue *obj, lua_Integer *p) {
+  lua_Number n;
+  lua_assert(!ttisinteger(obj));
+  if (tonumber(obj, &n)) {
+    n = l_mathop(floor)(n);
+    return luaV_numtointeger(n, p);
+  }
+  else return 0;
 }
 
 
@@ -225,10 +247,8 @@ void luaV_concat (lua_State *L, int total) {
   do {
     StkId top = L->top;
     int n = 2;  /* number of elements handled in this pass (at least 2) */
-    if (!(ttisstring(top-2) || ttisnumber(top-2)) || !tostring(L, top-1)) {
-      if (!luaT_callbinTM(L, top-2, top-1, top-2, TM_CONCAT))
-        luaG_concaterror(L, top-2, top-1);
-    }
+    if (!(ttisstring(top-2) || ttisnumber(top-2)) || !tostring(L, top-1))
+      luaT_trybinTM(L, top-2, top-1, top-2, TM_CONCAT);
     else if (tsvalue(top-1)->len == 0)  /* second operand is empty? */
       (void)tostring(L, top - 2);  /* result is first operand */
     else if (ttisstring(top-2) && tsvalue(top-2)->len == 0) {
@@ -335,18 +355,6 @@ lua_Integer luaV_pow (lua_Integer x, lua_Integer y) {
 }
 
 
-void luaV_arith (lua_State *L, StkId ra, const TValue *rb,
-                 const TValue *rc, TMS op) {
-  lua_Number b, c;
-  if (tonumber(rb, &b) && tonumber(rc, &c)) {
-    lua_Number res = luaO_arith(op - TM_ADD + LUA_OPADD, b, c);
-    setnvalue(ra, res);
-  }
-  else if (!luaT_callbinTM(L, rb, rc, ra, op))
-    luaG_aritherror(L, rb, rc);
-}
-
-
 /*
 ** check whether cached closure in prototype 'p' may be reused, that is,
 ** whether there is a cached closure with the same upvalues needed by
@@ -422,7 +430,7 @@ void luaV_finishOp (lua_State *L) {
       break;
     }
     case OP_CONCAT: {
-      StkId top = L->top - 1;  /* top when 'luaT_callbinTM' was called */
+      StkId top = L->top - 1;  /* top when 'luaT_trybinTM' was called */
       int b = GETARG_B(inst);      /* first element to concatenate */
       int total = cast_int(top - 1 - (base + b));  /* yet to concatenate */
       setobj2s(L, top - 2, top);  /* put TM result in proper position */
@@ -586,12 +594,12 @@ void luaV_execute (lua_State *L) {
         lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
-          setivalue(ra, ib + ic);
+          setivalue(ra, cast_integer(cast_unsigned(ib) + cast_unsigned(ic)));
         }
         else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setnvalue(ra, luai_numadd(L, nb, nc));
         }
-        else { Protect(luaV_arith(L, ra, rb, rc, TM_ADD)); }
+        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_ADD)); }
       )
       vmcase(OP_SUB,
         TValue *rb = RKB(i);
@@ -599,12 +607,12 @@ void luaV_execute (lua_State *L) {
         lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
-          setivalue(ra, ib - ic);
+          setivalue(ra, cast_integer(cast_unsigned(ib) - cast_unsigned(ic)));
         }
         else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setnvalue(ra, luai_numsub(L, nb, nc));
         }
-        else { Protect(luaV_arith(L, ra, rb, rc, TM_SUB)); }
+        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_SUB)); }
       )
       vmcase(OP_MUL,
         TValue *rb = RKB(i);
@@ -612,12 +620,12 @@ void luaV_execute (lua_State *L) {
         lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
-          setivalue(ra, ib * ic);
+          setivalue(ra, cast_integer(cast_unsigned(ib) * cast_unsigned(ic)));
         }
         else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setnvalue(ra, luai_nummul(L, nb, nc));
         }
-        else { Protect(luaV_arith(L, ra, rb, rc, TM_MUL)); }
+        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_MUL)); }
       )
       vmcase(OP_DIV,  /* float division (always with floats) */
         TValue *rb = RKB(i);
@@ -626,20 +634,16 @@ void luaV_execute (lua_State *L) {
         if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setnvalue(ra, luai_numdiv(L, nb, nc));
         }
-        else { Protect(luaV_arith(L, ra, rb, rc, TM_DIV)); }
+        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_DIV)); }
       )
       vmcase(OP_IDIV,  /* integer division */
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
-        lua_Number nb; lua_Number nc;
-        if (ttisinteger(rb) && ttisinteger(rc)) {
-          lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
+        lua_Integer ib; lua_Integer ic;
+        if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
           setivalue(ra, luaV_div(L, ib, ic));
         }
-        else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
-          setnvalue(ra, luai_numidiv(L, nb, nc));
-        }
-        else { Protect(luaV_arith(L, ra, rb, rc, TM_IDIV)); }
+        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_IDIV)); }
       )
       vmcase(OP_MOD,
         TValue *rb = RKB(i);
@@ -652,7 +656,7 @@ void luaV_execute (lua_State *L) {
         else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setnvalue(ra, luai_nummod(L, nb, nc));
         }
-        else { Protect(luaV_arith(L, ra, rb, rc, TM_MOD)); }
+        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_MOD)); }
       )
       vmcase(OP_POW,
         TValue *rb = RKB(i);
@@ -667,20 +671,20 @@ void luaV_execute (lua_State *L) {
         else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setnvalue(ra, luai_numpow(L, nb, nc));
         }
-        else { Protect(luaV_arith(L, ra, rb, rc, TM_POW)); }
+        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_POW)); }
       )
       vmcase(OP_UNM,
         TValue *rb = RB(i);
+        lua_Number nb;
         if (ttisinteger(rb)) {
           lua_Integer ib = ivalue(rb);
           setivalue(ra, -ib);
         }
-        else if (ttisfloat(rb)) {
-          lua_Number nb = fltvalue(rb);
+        else if (tonumber(rb, &nb)) {
           setnvalue(ra, luai_numunm(L, nb));
         }
         else {
-          Protect(luaV_arith(L, ra, rb, rb, TM_UNM));
+          Protect(luaT_trybinTM(L, rb, rb, ra, TM_UNM));
         }
       )
       vmcase(OP_NOT,

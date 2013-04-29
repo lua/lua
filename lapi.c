@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.176 2013/04/26 16:03:50 roberto Exp roberto $
+** $Id: lapi.c,v 2.177 2013/04/26 19:51:17 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -311,10 +311,9 @@ LUA_API void lua_arith (lua_State *L, int op) {
   o1 = L->top - 2;
   o2 = L->top - 1;
   if (tonumber(o1, &n1) && tonumber(o2, &n2)) {
-    setnvalue(o1, luaO_arith(op, n1, n2));
+    setnvalue(o1, luaO_numarith(op, n1, n2));
   }
-  else
-    luaV_arith(L, o1, o1, o2, cast(TMS, op - LUA_OPADD + TM_ADD));
+  else luaT_trybinTM(L, o1, o2, o1, cast(TMS, op - LUA_OPADD + TM_ADD));
   L->top--;
   lua_unlock(L);
 }
@@ -339,53 +338,30 @@ LUA_API int lua_compare (lua_State *L, int index1, int index2, int op) {
 }
 
 
-LUA_API lua_Number lua_tonumberx (lua_State *L, int idx, int *isnum) {
+LUA_API lua_Number lua_tonumberx (lua_State *L, int idx, int *pisnum) {
   lua_Number n;
   const TValue *o = index2addr(L, idx);
-  if (tonumber(o, &n)) {
-    if (isnum) *isnum = 1;
-    return n;
-  }
-  else {
-    if (isnum) *isnum = 0;
-    return 0;
-  }
+  int isnum = tonumber(o, &n);
+  if (!isnum)
+    n = 0;  /* call to 'tonumber' may change 'n' even if it fails */
+  if (pisnum) *pisnum = isnum;
+  return n;
 }
 
 
-LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *isnum) {
-  lua_Number n;
+LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *pisnum) {
+  lua_Integer res;
   const TValue *o = index2addr(L, idx);
-  if (ttisinteger(o)) {
-    if (isnum) *isnum = 1;
-    return ivalue(o);
-  }
-  else if (tonumber(o, &n)) {
-    lua_Integer res;
-    lua_number2integer(res, n);
-    if (isnum) *isnum = 1;
-    return res;
-  }
-  else {
-    if (isnum) *isnum = 0;
-    return 0;
-  }
+  int isnum = tointeger(o, &res);
+  if (!isnum)
+    res = 0;  /* call to 'tointeger' may change 'n' even if it fails */
+  if (pisnum) *pisnum = isnum;
+  return res;
 }
 
 
-LUA_API lua_Unsigned lua_tounsignedx (lua_State *L, int idx, int *isnum) {
-  lua_Number n;
-  const TValue *o = index2addr(L, idx);
-  if (tonumber(o, &n)) {
-    lua_Unsigned res;
-    lua_number2unsigned(res, n);
-    if (isnum) *isnum = 1;
-    return res;
-  }
-  else {
-    if (isnum) *isnum = 0;
-    return 0;
-  }
+LUA_API lua_Unsigned lua_tounsignedx (lua_State *L, int idx, int *pisnum) {
+  return lua_tointegerx(L, idx, pisnum);  /* at least for now... <<<< */
 }
 
 
@@ -491,17 +467,15 @@ LUA_API void lua_pushnumber (lua_State *L, lua_Number n) {
 
 LUA_API void lua_pushinteger (lua_State *L, lua_Integer n) {
   lua_lock(L);
-  setivalue(L->top, cast_num(n));
+  setivalue(L->top, n);
   api_incr_top(L);
   lua_unlock(L);
 }
 
 
 LUA_API void lua_pushunsigned (lua_State *L, lua_Unsigned u) {
-  lua_Number n;
   lua_lock(L);
-  n = lua_unsigned2number(u);
-  setnvalue(L->top, n);
+  setivalue(L->top, cast_integer(u));
   api_incr_top(L);
   lua_unlock(L);
 }
