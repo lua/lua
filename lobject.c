@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.60 2013/04/25 13:53:13 roberto Exp roberto $
+** $Id: lobject.c,v 2.61 2013/04/29 16:57:28 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -70,7 +70,21 @@ int luaO_ceillog2 (unsigned int x) {
 }
 
 
-lua_Number luaO_numarith (int op, lua_Number v1, lua_Number v2) {
+static lua_Integer intarith (lua_State *L, int op, lua_Integer v1,
+                                                   lua_Integer v2) {
+  switch (op) {
+    case LUA_OPADD: return intop(+, v1, v2);
+    case LUA_OPSUB:return intop(-, v1, v2);
+    case LUA_OPMUL:return intop(*, v1, v2);
+    case LUA_OPMOD: return luaV_mod(L, v1, v2);
+    case LUA_OPPOW: return luaV_pow(v1, v2);
+    case LUA_OPUNM: return -v1;
+    default: lua_assert(0); return 0;
+  }
+}
+
+
+static lua_Number numarith (int op, lua_Number v1, lua_Number v2) {
   switch (op) {
     case LUA_OPADD: return luai_numadd(NULL, v1, v2);
     case LUA_OPSUB: return luai_numsub(NULL, v1, v2);
@@ -81,6 +95,35 @@ lua_Number luaO_numarith (int op, lua_Number v1, lua_Number v2) {
     case LUA_OPUNM: return luai_numunm(NULL, v1);
     default: lua_assert(0); return 0;
   }
+}
+
+
+void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
+                 TValue *res) {
+  if (op == LUA_OPIDIV) {  /* operates only on integers */
+    lua_Integer i1; lua_Integer i2;
+    if (tointeger(p1, &i1) && tointeger(p2, &i2)) {
+      setivalue(res, luaV_div(L, i1, i2));
+      return;
+    }
+    /* else go to the end */
+  }
+  else {  /* other operations */
+    lua_Number n1; lua_Number n2;
+    if (ttisinteger(p1) && ttisinteger(p2) && op != LUA_OPDIV &&
+        (op != LUA_OPPOW || ivalue(p2) >= 0)) {
+      setivalue(res, intarith(L, op, ivalue(p1), ivalue(p2)));
+      return;
+    }
+    else if (tonumber(p1, &n1) && tonumber(p2, &n2)) {
+      setnvalue(res, numarith(op, n1, n2));
+      return;
+    }
+    /* else go to the end */
+  }
+  /* could not perform raw operation; try metmethod */
+  lua_assert(L != NULL);  /* cannot fail when folding (compile time) */
+  luaT_trybinTM(L, p1, p2, res, cast(TMS, op - LUA_OPADD + TM_ADD));
 }
 
 

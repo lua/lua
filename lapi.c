@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.177 2013/04/26 19:51:17 roberto Exp roberto $
+** $Id: lapi.c,v 2.178 2013/04/29 17:12:50 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -297,9 +297,6 @@ LUA_API int lua_rawequal (lua_State *L, int index1, int index2) {
 
 
 LUA_API void lua_arith (lua_State *L, int op) {
-  StkId o1;  /* 1st operand */
-  StkId o2;  /* 2nd operand */
-  lua_Number n1, n2;
   lua_lock(L);
   if (op != LUA_OPUNM) /* all other operations expect two operands */
     api_checknelems(L, 2);
@@ -308,13 +305,9 @@ LUA_API void lua_arith (lua_State *L, int op) {
     setobjs2s(L, L->top, L->top - 1);
     L->top++;
   }
-  o1 = L->top - 2;
-  o2 = L->top - 1;
-  if (tonumber(o1, &n1) && tonumber(o2, &n2)) {
-    setnvalue(o1, luaO_numarith(op, n1, n2));
-  }
-  else luaT_trybinTM(L, o1, o2, o1, cast(TMS, op - LUA_OPADD + TM_ADD));
-  L->top--;
+  /* first operand at top - 2, second at top - 1; result go to top - 2 */
+  luaO_arith(L, op, L->top - 2, L->top - 1, L->top - 2);
+  L->top--;  /* remove second operand */
   lua_unlock(L);
 }
 

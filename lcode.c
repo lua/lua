@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.66 2013/04/26 13:07:53 roberto Exp roberto $
+** $Id: lcode.c,v 2.67 2013/04/29 16:57:48 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -29,8 +29,18 @@
 #define hasjumps(e)	((e)->t != (e)->f)
 
 
-static int isnumeral(expdesc *e) {
-  return (e->k == VKFLT && e->t == NO_JUMP && e->f == NO_JUMP);
+static int tonumeral(expdesc *e, TValue *v) {
+  if (e->t != NO_JUMP || e->f != NO_JUMP)
+    return 0;  /* not a numeral */
+  switch (e->k) {
+    case VKINT:
+      if (v) setivalue(v, e->u.ival);
+      return 1;
+    case VKFLT:
+      if (v) setnvalue(v, e->u.nval);
+      return 1;
+    default: return 0;
+  }
 }
 
 
@@ -730,21 +740,28 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
 
 
 static int constfolding (OpCode op, expdesc *e1, expdesc *e2) {
-  lua_Number r;
-  if (!isnumeral(e1) || !isnumeral(e2)) return 0;
-  if ((op == OP_DIV || op == OP_IDIV || op == OP_MOD) && e2->u.nval == 0)
-    return 0;  /* do not attempt to divide by 0 */
-  r = luaO_numarith(op - OP_ADD + LUA_OPADD, e1->u.nval, e2->u.nval);
-  e1->u.nval = r;
+  TValue v1, v2, res;
+  lua_Integer i2;
+  if (!tonumeral(e1, &v1) || !tonumeral(e2, &v2))
+    return 0;
+  if ((op == OP_IDIV || op == OP_MOD) && tointeger(&v2, &i2) && i2 == 0)
+    return 0;  /* avoid division by 0 at compile time */
+  luaO_arith(NULL, op - OP_ADD + LUA_OPADD, &v1, &v2, &res);
+  if (ttisinteger(&res)) {
+    e1->k = VKINT;
+    e1->u.ival = ivalue(&res);
+  }
+  else {
+    e1->k = VKFLT;
+    e1->u.nval = fltvalue(&res);
+  }
   return 1;
 }
 
 
 static void codearith (FuncState *fs, OpCode op,
                        expdesc *e1, expdesc *e2, int line) {
-  if (constfolding(op, e1, e2))
-    return;
-  else {
+  if (!constfolding(op, e1, e2)) {  /* could not fold operation? */
     int o2 = (op != OP_UNM && op != OP_LEN) ? luaK_exp2RK(fs, e2) : 0;
     int o1 = luaK_exp2RK(fs, e1);
     if (o1 > o2) {
@@ -783,9 +800,7 @@ void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
   e2.t = e2.f = NO_JUMP; e2.k = VKFLT; e2.u.nval = 0;
   switch (op) {
     case OPR_MINUS: {
-      if (isnumeral(e))  /* minus constant? */
-        e->u.nval = luai_numunm(NULL, e->u.nval);  /* fold it */
-      else {
+      if (!constfolding(OP_UNM, e, e)) {  /* cannot fold it? */
         luaK_exp2anyreg(fs, e);
         codearith(fs, OP_UNM, e, &e2, line);
       }
@@ -819,7 +834,7 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
     case OPR_ADD: case OPR_SUB:
     case OPR_MUL: case OPR_DIV: case OPR_IDIV:
     case OPR_MOD: case OPR_POW: {
-      if (!isnumeral(v)) luaK_exp2RK(fs, v);
+      if (!tonumeral(v, NULL)) luaK_exp2RK(fs, v);
       break;
     }
     default: {
