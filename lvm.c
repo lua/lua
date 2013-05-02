@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.166 2013/04/26 19:51:17 roberto Exp roberto $
+** $Id: lvm.c,v 2.167 2013/04/29 17:12:50 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -327,7 +327,7 @@ lua_Integer luaV_div (lua_State *L, lua_Integer x, lua_Integer y) {
 lua_Integer luaV_mod (lua_State *L, lua_Integer x, lua_Integer y) {
   if (cast_unsigned(y) + 1 <= 1U) {  /* special cases: -1 or 0 */
     if (y == 0)
-      luaG_runerror(L, "attempt to divide by zero (in '%%')");
+      luaG_runerror(L, "attempt to perform 'n%%0'");
     else  /* -1 */
       return 0;   /* avoid overflow with 0x80000... */
   }
@@ -346,11 +346,10 @@ lua_Integer luaV_pow (lua_Integer x, lua_Integer y) {
   lua_assert(y >= 0);
   if (y == 0) return r;
   for (; y > 1; y >>= 1) {
-    if (y & 1)
-      r = cast_integer(cast_unsigned(r) * cast_unsigned(x));
-    x = cast_integer(cast_unsigned(x) * cast_unsigned(x));
+    if (y & 1) r = intop(*, r, x);
+    x = intop(*, x, x);
   }
-  r = cast_integer(cast_unsigned(r) * cast_unsigned(x));
+  r = intop(*, r, x);
   return r;
 }
 
@@ -594,7 +593,7 @@ void luaV_execute (lua_State *L) {
         lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
-          setivalue(ra, cast_integer(cast_unsigned(ib) + cast_unsigned(ic)));
+          setivalue(ra, intop(+, ib, ic));
         }
         else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setnvalue(ra, luai_numadd(L, nb, nc));
@@ -607,7 +606,7 @@ void luaV_execute (lua_State *L) {
         lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
-          setivalue(ra, cast_integer(cast_unsigned(ib) - cast_unsigned(ic)));
+          setivalue(ra, intop(-, ib, ic));
         }
         else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setnvalue(ra, luai_numsub(L, nb, nc));
@@ -620,7 +619,7 @@ void luaV_execute (lua_State *L) {
         lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
-          setivalue(ra, cast_integer(cast_unsigned(ib) * cast_unsigned(ic)));
+          setivalue(ra, intop(*, ib, ic));
         }
         else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setnvalue(ra, luai_nummul(L, nb, nc));
