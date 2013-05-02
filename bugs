@@ -179,13 +179,13 @@ Tue May  2 15:27:58 EST 2000
 ** lparser.c
 Fri May 12 15:11:12 EST 2000
 >> first element in a list constructor is not adjusted to one value
->> (e.g. «a = {gsub('a','a','')}»)
+>> (e.g. Â«a = {gsub('a','a','')}Â»)
 (by Tomas; since 4.0a)
 
 ** lparser.c
 Wed May 24 14:50:16 EST 2000
 >> record-constructor starting with an upvalue name gets an error
->> (e.g. «local a; function f() x = {a=1} end»)
+>> (e.g. Â«local a; function f() x = {a=1} endÂ»)
 (by Edgar Toernig; since 3.1)
 
 ** lparser.c
@@ -226,7 +226,7 @@ Wed Sep 27 09:50:19 EST 2000
 ** llex.h / llex.c / lparser.c
 Wed Sep 27 13:39:45 EST 2000
 >> parser overwrites semantic information when looking ahead
->> (e.g. «a = {print'foo'}»)
+>> (e.g. Â«a = {print'foo'}Â»)
 (by Edgar Toernig; since 4.0b, deriving from previous bug)
 
 ** liolib.c
@@ -257,7 +257,7 @@ Thu Feb  1 11:55:45 EDT 2001
 
 ** ldo.c
 Fri Feb  2 14:06:40 EDT 2001
->> «while 1 dostring[[print('hello\n')]] end» never reclaims memory
+>> Â«while 1 dostring[[print('hello\n')]] endÂ» never reclaims memory
 (by Andrew Paton; since 4.0b)
 
 ** lbaselib.c
@@ -1375,7 +1375,7 @@ patch = [[
 Bug{
 what = [[As a library, loadlib.c should not access Lua internals
 (via lobject.h)]],
-report = [[Jérôme Vuarand, on 03/2007]],
+report = [[JÃ©rÃ´me Vuarand, on 03/2007]],
 since = [[5.0]],
 example = [[the bug has no effect on external behavior]],
 patch = [[remove the '#include "lobject.h" and use
@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.119 2012/12/03 20:18:02 roberto Exp roberto $
-+** $Id: bugs,v 1.119 2012/12/03 20:18:02 roberto Exp roberto $
+-** $Id: bugs,v 1.120 2013/02/07 15:57:47 roberto Exp roberto $
++** $Id: bugs,v 1.120 2013/02/07 15:57:47 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2850,6 +2850,69 @@ patch = [[
 -  }
 -  return load_aux(L, status);
 +  return load_aux(L, status, env);
+ }
+]]
+}
+
+Bug{
+what = [[stack overflow in vararg functions with many fixed
+parameters called with few arguments]],
+report = [[äº‘é£Ž, 2013/04/17]],
+since = [[5.1]],
+fix = nil,
+example = [[
+function f(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10,
+           p11, p12, p13, p14, p15, p16, p17, p18, p19, p20,
+           p21, p22, p23, p24, p25, p26, p27, p28, p29, p30,
+           p31, p32, p33, p34, p35, p36, p37, p38, p39, p40,
+           p41, p42, p43, p44, p45, p46, p48, p49, p50, ...)
+  local a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14
+end
+
+f()   -- seg. fault (on some machines)
+]],
+patch = [[
+--- ldo.c	2012/10/01 14:05:04	2.108
++++ ldo.c	2013/04/19 20:56:06
+@@ -324,7 +324,7 @@
+     case LUA_TLCL: {  /* Lua function: prepare its call */
+       StkId base;
+       Proto *p = clLvalue(func)->p;
+-      luaD_checkstack(L, p->maxstacksize);
++      luaD_checkstack(L, p->maxstacksize + p->numparams);
+       func = restorestack(L, funcr);
+       n = cast_int(L->top - func) - 1;  /* number of real arguments */
+       for (; n < p->numparams; n++)
+]],
+}
+
+--[=[
+Bug{
+what = [[garbage collector can trigger too many times in recursive loops]],
+report = [[Roberto, 2013/04/25]],
+since = [[5.2.2]],
+fix = nil,
+example = [[
+function f() f() end
+f()   -- it takes too long before a "stack overflow" error
+]],
+patch = [[
+--- lgc.c	2013/04/12 18:48:47	2.140.1.1
++++ lgc.c	2013/04/25 21:30:20
+@@ -495,2 +495,3 @@
+ static lu_mem traversestack (global_State *g, lua_State *th) {
++  int n = 0;
+   StkId o = th->stack;
+@@ -505,3 +506,9 @@
+   }
+-  return sizeof(lua_State) + sizeof(TValue) * th->stacksize;
++  else {  /* count call infos to compute size */
++    CallInfo *ci;
++    for (ci = &th->base_ci; ci != th->ci; ci = ci->next)
++      n++;
++  }
++  return sizeof(lua_State) + sizeof(TValue) * th->stacksize +
++         sizeof(CallInfo) * n;
  }
 ]]
 }
