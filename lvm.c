@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.167 2013/04/29 17:12:50 roberto Exp roberto $
+** $Id: lvm.c,v 2.168 2013/05/02 12:31:26 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -48,9 +48,11 @@ int luaV_tostring (lua_State *L, StkId obj) {
     return 0;
   else {
     char s[LUAI_MAXNUMBER2STR];
-    lua_Number n = nvalue(obj);
-    int l = lua_number2str(s, n);
-    setsvalue2s(L, obj, luaS_newlstr(L, s, l));
+    lua_Number n;
+    int len;
+    (void)tonumber(obj, &n);
+    len = lua_number2str(s, n);
+    setsvalue2s(L, obj, luaS_newlstr(L, s, len));
     return 1;
   }
 }
@@ -207,7 +209,8 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
       return 0;  /* only numbers can be equal with different variants */
     else {  /* two numbers with different variants */
       lua_Number n1, n2;
-      tonumber(t1, &n1); tonumber(t2, &n2);
+      lua_assert(ttisnumber(t1) && ttisnumber(t2));
+      (void)tonumber(t1, &n1); (void)tonumber(t2, &n2);
       return luai_numeq(n1, n2);
     }
   }
