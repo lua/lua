@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.h,v 2.8 2013/04/25 15:59:42 roberto Exp roberto $
+** $Id: ldebug.h,v 2.9 2013/04/29 16:58:10 roberto Exp roberto $
 ** Auxiliary functions from Debug Interface module
 ** See Copyright Notice in lua.h
 */
@@ -26,6 +26,8 @@ LUAI_FUNC l_noret luaG_typeerror (lua_State *L, const TValue *o,
 LUAI_FUNC l_noret luaG_concaterror (lua_State *L, const TValue *p1,
                                                   const TValue *p2);
 LUAI_FUNC l_noret luaG_aritherror (lua_State *L, const TValue *p1,
+                                                 const TValue *p2);
+LUAI_FUNC l_noret luaG_tointerror (lua_State *L, const TValue *p1,
                                                  const TValue *p2);
 LUAI_FUNC l_noret luaG_ordererror (lua_State *L, const TValue *p1,
                                                  const TValue *p2);

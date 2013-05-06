@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.18 2013/04/26 13:07:53 roberto Exp roberto $
+** $Id: ltm.c,v 2.19 2013/04/29 16:56:50 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -112,6 +112,8 @@ void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
   if (!luaT_callbinTM(L, p1, p2, res, event)) {
     if (event == TM_CONCAT)
       luaG_concaterror(L, p1, p2);
+    else if (event == TM_IDIV && ttisnumber(p1) && ttisnumber(p2))
+      luaG_tointerror(L, p1, p2);
     else
       luaG_aritherror(L, p1, p2);
   }

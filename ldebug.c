@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.93 2013/04/26 16:03:50 roberto Exp roberto $
+** $Id: ldebug.c,v 2.94 2013/04/29 16:58:10 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -498,10 +498,9 @@ static const char *getupvalname (CallInfo *ci, const TValue *o,
 }
 
 
-l_noret luaG_typeerror (lua_State *L, const TValue *o, const char *op) {
+static const char *varinfo (lua_State *L, const TValue *o) {
+  const char *name;
   CallInfo *ci = L->ci;
-  const char *name = NULL;
-  const char *t = objtypename(o);
   const char *kind = NULL;
   if (isLua(ci)) {
     kind = getupvalname(ci, o, &name);  /* check whether 'o' is an upvalue */
@@ -509,17 +508,19 @@ l_noret luaG_typeerror (lua_State *L, const TValue *o, const char *op) {
       kind = getobjname(ci_func(ci)->p, currentpc(ci),
                         cast_int(o - ci->u.l.base), &name);
   }
-  if (kind)
-    luaG_runerror(L, "attempt to %s %s " LUA_QS " (a %s value)",
-                op, kind, name, t);
-  else
-    luaG_runerror(L, "attempt to %s a %s value", op, t);
+  return (kind) ? luaO_pushfstring(L, " (%s " LUA_QS ")", kind, name) : "";
+}
+
+
+l_noret luaG_typeerror (lua_State *L, const TValue *o, const char *op) {
+  const char *t = objtypename(o);
+  luaG_runerror(L, "attempt to %s a %s value%s", op, t, varinfo(L, o));
 }
 
 
 l_noret luaG_concaterror (lua_State *L, const TValue *p1, const TValue *p2) {
   if (ttisstring(p1) || ttisnumber(p1)) p1 = p2;
-  lua_assert(!ttisstring(p1) && !ttisnumber(p2));
+  lua_assert(!ttisstring(p1) && !ttisnumber(p1));
   luaG_typeerror(L, p1, "concatenate");
 }
 
@@ -529,6 +530,15 @@ l_noret luaG_aritherror (lua_State *L, const TValue *p1, const TValue *p2) {
   if (!tonumber(p1, &temp))
     p2 = p1;  /* first operand is wrong */
   luaG_typeerror(L, p2, "perform arithmetic on");
+}
+
+
+l_noret luaG_tointerror (lua_State *L, const TValue *p1, const TValue *p2) {
+  lua_Integer temp;
+  if (!tointeger(p1, &temp))
+    p2 = p1;
+  luaG_runerror(L, "attempt to convert an out of range float%s to an integer",
+                   varinfo(L, p2));
 }
 
 
