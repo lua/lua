@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.120 2013/02/07 15:57:47 roberto Exp roberto $
-+** $Id: bugs,v 1.120 2013/02/07 15:57:47 roberto Exp roberto $
+-** $Id: bugs,v 1.121 2013/05/02 16:13:27 roberto Exp roberto $
++** $Id: bugs,v 1.121 2013/05/02 16:13:27 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2913,6 +2913,29 @@ patch = [[
 +  }
 +  return sizeof(lua_State) + sizeof(TValue) * th->stacksize +
 +         sizeof(CallInfo) * n;
+ }
+]]
+}
+
+Bug{
+what = [[Wrong assert when reporting concatenation errors
+(manifests only when Lua is compiled in debug mode)]],
+report = [[Roberto, 2013/05/05]],
+since = [[?]],
+fix = nil,
+example = [[
+-- only with Lua compiled in debug mode
+print({} .. 2)
+]],
+patch = [[
+--- ldebug.c	2013/04/12 18:48:47	2.90.1.1
++++ ldebug.c	2013/05/05 14:38:30
+@@ -519,5 +519,5 @@
+ l_noret luaG_concaterror (lua_State *L, StkId p1, StkId p2) {
+   if (ttisstring(p1) || ttisnumber(p1)) p1 = p2;
+-  lua_assert(!ttisstring(p1) && !ttisnumber(p2));
++  lua_assert(!ttisstring(p1) && !ttisnumber(p1));
+   luaG_typeerror(L, p1, "concatenate");
  }
 ]]
 }
