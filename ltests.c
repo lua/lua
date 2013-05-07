@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.136 2013/04/24 19:41:48 roberto Exp roberto $
+** $Id: ltests.c,v 2.137 2013/04/26 13:07:53 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1109,6 +1109,9 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       lua_pop(L1, getnum);
     }
     else if EQ("pushnum") {
+      lua_pushnumber(L1, (lua_Number)getnum);
+    }
+    else if EQ("pushint") {
       lua_pushinteger(L1, getnum);
     }
     else if EQ("pushstring") {
