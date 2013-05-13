@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.121 2013/05/02 16:13:27 roberto Exp roberto $
-+** $Id: bugs,v 1.121 2013/05/02 16:13:27 roberto Exp roberto $
+-** $Id: bugs,v 1.122 2013/05/06 17:21:28 roberto Exp roberto $
++** $Id: bugs,v 1.122 2013/05/06 17:21:28 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2937,6 +2937,22 @@ patch = [[
 +  lua_assert(!ttisstring(p1) && !ttisnumber(p1));
    luaG_typeerror(L, p1, "concatenate");
  }
+]]
+}
+
+Bug{
+what = [[Wrong error message in some short-cut expressions]],
+report = [[Egor Skriptunoff, 2013/05/10]],
+since = [[5.0]],
+fix = nil,
+example = [[
+> a,b,c = true,true,true
+> (a and b or c)('', '')
+stdin:1: attempt to call a boolean value (global 'c')
+
+    (It should be global 'b' instead of 'c'.)
+]],
+patch = [[
 ]]
 }
 
