@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.64 2013/04/16 18:46:28 roberto Exp roberto $
+** $Id: llex.c,v 2.65 2013/04/26 13:07:53 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -248,7 +248,8 @@ static int read_numeral (LexState *ls, SemInfo *seminfo, int isf) {
   }
   save(ls, '\0');
   if (!isf) {
-    if (!luaO_str2int(luaZ_buffer(ls->buff), &seminfo->i))
+    if (!luaO_str2int(luaZ_buffer(ls->buff), luaZ_bufflen(ls->buff) - 1,
+                      &seminfo->i))
       lexerror(ls, "malformed number", TK_INT);
     return TK_INT;
   }

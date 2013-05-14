@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.61 2013/04/29 16:57:28 roberto Exp roberto $
+** $Id: lobject.c,v 2.62 2013/05/02 12:37:24 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -133,16 +133,16 @@ int luaO_hexavalue (int c) {
 }
 
 
-#if !defined(lua_strx2number)
-
-#include <math.h>
-
-
 static int isneg (const char **s) {
   if (**s == '-') { (*s)++; return 1; }
   else if (**s == '+') (*s)++;
   return 0;
 }
+
+
+#if !defined(lua_strx2number)
+
+#include <math.h>
 
 
 static lua_Number readhexa (const char **s, lua_Number r, int *count) {
@@ -212,21 +212,32 @@ int luaO_str2d (const char *s, size_t len, lua_Number *result) {
 }
 
 
-int luaO_str2int (const char *s, lua_Integer *result) {
+int luaO_str2int (const char *s, size_t len, lua_Integer *result) {
+  const char *ends = s + len;
   lua_Unsigned a = 0;
+  int empty = 1;
+  int neg;
+  while (lisspace(cast_uchar(*s))) s++;  /* skip initial spaces */
+  neg = isneg(&s);
   if (s[0] == '0' &&
       (s[1] == 'x' || s[1] == 'X')) {  /* hexa? */
     s += 2;  /* skip '0x' */
-    for (; lisxdigit(cast_uchar(*s)); s++)
+    for (; lisxdigit(cast_uchar(*s)); s++) {
       a = a * 16 + luaO_hexavalue(cast_uchar(*s));
+      empty = 0;
+    }
   }
   else {  /* decimal */
-    for (; lisdigit(cast_uchar(*s)); s++)
+    for (; lisdigit(cast_uchar(*s)); s++) {
       a = a * 10 + luaO_hexavalue(cast_uchar(*s));
+      empty = 0;
+    }
   }
-  if (*s != '\0') return 0;  /* something wrong in the numeral */
+  while (lisspace(cast_uchar(*s))) s++;  /* skip trailing spaces */
+  if (empty || s != ends) return 0;  /* something wrong in the numeral */
   else {
-    *result = cast(lua_Integer, a);
+    if (neg) *result = -cast(lua_Integer, a);
+    else *result = cast(lua_Integer, a);
     return 1;
   }
 }
