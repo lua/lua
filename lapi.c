@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.178 2013/04/29 17:12:50 roberto Exp roberto $
+** $Id: lapi.c,v 2.179 2013/05/02 12:37:24 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -328,6 +328,28 @@ LUA_API int lua_compare (lua_State *L, int index1, int index2, int op) {
   }
   lua_unlock(L);
   return i;
+}
+
+
+LUA_API int lua_cvtonum (lua_State *L, int idx) {
+  TValue *o = index2addr(L, idx);
+  if (ttisnumber(o)) return 1;  /* already a number? */
+  else if (!ttisstring(o)) return 0;  /* only strings can be converted */
+  else {
+    lua_Integer i; lua_Number n;
+    const char *s = svalue(o);
+    size_t len = tsvalue(o)->len;
+    if (luaO_str2int(s, len, &i)) {
+      setivalue(o, i);
+      return 1;
+    }
+    else if (luaO_str2d(s, len, &n)) {
+      setivalue(o, i);
+      setnvalue(o, n);
+      return 1;
+    }
+    else return 0;
+  }
 }
 
 
