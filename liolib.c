@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.111 2013/03/21 13:57:27 roberto Exp roberto $
+** $Id: liolib.c,v 2.112 2013/04/11 18:34:06 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -347,6 +347,19 @@ static int io_lines (lua_State *L) {
 */
 
 
+static int read_integer (lua_State *L, FILE *f) {
+  lua_Integer d;
+  if (fscanf(f, LUA_INTEGER_SCAN, &d) == 1) {
+    lua_pushinteger(L, d);
+    return 1;
+  }
+  else {
+   lua_pushnil(L);  /* "result" to be removed */
+   return 0;  /* read fails */
+  }
+}
+
+
 static int read_number (lua_State *L, FILE *f) {
   lua_Number d;
   if (fscanf(f, LUA_NUMBER_SCAN, &d) == 1) {
@@ -442,6 +455,9 @@ static int g_read (lua_State *L, FILE *f, int first) {
         const char *p = lua_tostring(L, n);
         luaL_argcheck(L, p && p[0] == '*', n, "invalid option");
         switch (p[1]) {
+          case 'i':  /* integer */
+            success = read_integer(L, f);
+            break;
           case 'n':  /* number */
             success = read_number(L, f);
             break;
