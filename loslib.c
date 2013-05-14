@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.39 2012/05/23 15:37:09 roberto Exp roberto $
+** $Id: loslib.c,v 1.40 2012/10/19 15:54:02 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -194,7 +194,7 @@ static const char *checkoption (lua_State *L, const char *conv, char *buff) {
 
 static int os_date (lua_State *L) {
   const char *s = luaL_optstring(L, 1, "%c");
-  time_t t = luaL_opt(L, (time_t)luaL_checknumber, 2, time(NULL));
+  time_t t = luaL_opt(L, (time_t)luaL_checkinteger, 2, time(NULL));
   struct tm tmr, *stm;
   if (*s == '!') {  /* UTC? */
     stm = l_gmtime(&t, &tmr);
@@ -258,14 +258,14 @@ static int os_time (lua_State *L) {
   if (t == (time_t)(-1))
     lua_pushnil(L);
   else
-    lua_pushnumber(L, (lua_Number)t);
+    lua_pushinteger(L, t);
   return 1;
 }
 
 
 static int os_difftime (lua_State *L) {
-  lua_pushnumber(L, difftime((time_t)(luaL_checknumber(L, 1)),
-                             (time_t)(luaL_optnumber(L, 2, 0))));
+  lua_pushnumber(L, difftime((time_t)(luaL_checkinteger(L, 1)),
+                             (time_t)(luaL_optinteger(L, 2, 0))));
   return 1;
 }
 
