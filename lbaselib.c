@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.275 2012/12/03 20:18:02 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.276 2013/02/21 13:44:53 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -47,13 +47,11 @@ static int luaB_print (lua_State *L) {
 
 static int luaB_tonumber (lua_State *L) {
   if (lua_isnoneornil(L, 2)) {  /* standard conversion */
-    int isnum;
-    lua_Number n = lua_tonumberx(L, 1, &isnum);
-    if (isnum) {
-      lua_pushnumber(L, n);
-      return 1;
-    }  /* else not a number; must be something */
     luaL_checkany(L, 1);
+    if (lua_cvtonum(L, 1)) {  /* can convert to a number? */
+      lua_settop(L, 1);  /* yes; return converted value */
+      return 1;
+    }  /* else not a number */
   }
   else {
     size_t l;
@@ -66,17 +64,17 @@ static int luaB_tonumber (lua_State *L) {
     if (*s == '-') { s++; neg = 1; }  /* handle signal */
     else if (*s == '+') s++;
     if (isalnum((unsigned char)*s)) {
-      lua_Number n = 0;
+      lua_Integer n = 0;
       do {
         int digit = (isdigit((unsigned char)*s)) ? *s - '0'
                        : toupper((unsigned char)*s) - 'A' + 10;
         if (digit >= base) break;  /* invalid numeral; force a fail */
-        n = n * (lua_Number)base + (lua_Number)digit;
+        n = n * base + digit;
         s++;
       } while (isalnum((unsigned char)*s));
       s += strspn(s, SPACECHARS);  /* skip trailing spaces */
       if (s == e) {  /* no invalid trailing characters? */
-        lua_pushnumber(L, (neg) ? -n : n);
+        lua_pushinteger(L, (neg) ? -n : n);
         return 1;
       }  /* else not a number */
     }  /* else not a number */
