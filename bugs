@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.122 2013/05/06 17:21:28 roberto Exp roberto $
-+** $Id: bugs,v 1.122 2013/05/06 17:21:28 roberto Exp roberto $
+-** $Id: bugs,v 1.123 2013/05/13 16:17:47 roberto Exp roberto $
++** $Id: bugs,v 1.123 2013/05/13 16:17:47 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2953,6 +2953,75 @@ stdin:1: attempt to call a boolean value (global 'c')
     (It should be global 'b' instead of 'c'.)
 ]],
 patch = [[
+--- ldebug.c	2013/05/06 17:20:22	2.90.1.2
++++ ldebug.c	2013/05/14 19:52:48
+@@ -327,12 +327,20 @@
+ }
+ 
+ 
++static int filterpc (int pc, int jmptarget) {
++  if (pc < jmptarget)  /* is code conditional (inside a jump)? */
++    return -1;  /* cannot know who sets that register */
++  else return pc;  /* current position sets that register */
++}
++
++
+ /*
+ ** try to find last instruction before 'lastpc' that modified register 'reg'
+ */
+ static int findsetreg (Proto *p, int lastpc, int reg) {
+   int pc;
+   int setreg = -1;  /* keep last instruction that changed 'reg' */
++  int jmptarget = 0;  /* any code before this address is conditional */
+   for (pc = 0; pc < lastpc; pc++) {
+     Instruction i = p->code[pc];
+     OpCode op = GET_OPCODE(i);
+@@ -341,33 +349,38 @@
+       case OP_LOADNIL: {
+         int b = GETARG_B(i);
+         if (a <= reg && reg <= a + b)  /* set registers from 'a' to 'a+b' */
+-          setreg = pc;
++          setreg = filterpc(pc, jmptarget);
+         break;
+       }
+       case OP_TFORCALL: {
+-        if (reg >= a + 2) setreg = pc;  /* affect all regs above its base */
++        if (reg >= a + 2)  /* affect all regs above its base */
++          setreg = filterpc(pc, jmptarget);
+         break;
+       }
+       case OP_CALL:
+       case OP_TAILCALL: {
+-        if (reg >= a) setreg = pc;  /* affect all registers above base */
++        if (reg >= a)  /* affect all registers above base */
++          setreg = filterpc(pc, jmptarget);
+         break;
+       }
+       case OP_JMP: {
+         int b = GETARG_sBx(i);
+         int dest = pc + 1 + b;
+         /* jump is forward and do not skip `lastpc'? */
+-        if (pc < dest && dest <= lastpc)
+-          pc += b;  /* do the jump */
++        if (pc < dest && dest <= lastpc) {
++          if (dest > jmptarget)
++            jmptarget = dest;  /* update 'jmptarget' */
++        }
+         break;
+       }
+       case OP_TEST: {
+-        if (reg == a) setreg = pc;  /* jumped code can change 'a' */
++        if (reg == a)  /* jumped code can change 'a' */
++          setreg = filterpc(pc, jmptarget);
+         break;
+       }
+       default:
+         if (testAMode(op) && reg == a)  /* any instruction that set A */
+-          setreg = pc;
++          setreg = filterpc(pc, jmptarget);
+         break;
+     }
+   }
 ]]
 }
 
