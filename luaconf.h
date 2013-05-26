@@ -410,7 +410,7 @@
 /*
 @@ l_mathop allows the addition of an 'l' or 'f' to all math operations
 */
-#define l_mathop(x)		(x)
+#define l_mathop(x)		x
 
 
 /*
@@ -464,20 +464,21 @@
 /*
 @@ LUA_UNSIGNED is the unsigned version of LUA_INTEGER.
 */
-#define LUA_UNSIGNED	unsigned long long
+#define LUA_UNSIGNED	unsigned LUA_INTEGER
 
 /*
-@@ LUA_INTEGER_FRMLEN is the length modifier for writing integers.
+@@ LUA_INTEGER_FRMLEN is the length modifier for reading/writing integers.
 @@ LUA_INTEGER_SCAN is the format for reading integers.
 @@ LUA_INTEGER_FMT is the format for writing integers.
 @@ lua_integer2str converts an integer to a string.
 @@ LUAI_MAXINTEGER2STR is maximum size of previous conversion.
 */
 #define LUA_INTEGER_FRMLEN	"ll"
-#define LUA_INTEGER_SCAN	"%Ld"
+#define LUA_INTEGER_SCAN	"%" LUA_INTEGER_FRMLEN "d"
 #define LUA_INTEGER_FMT		"%" LUA_INTEGER_FRMLEN "d"
 #define lua_integer2str(s,n)	sprintf((s), LUA_INTEGER_FMT, (n))
 #define LUA_MAXINTEGER2STR	32
+
 
 /* }================================================================== */
 
@@ -491,7 +492,38 @@
 ** without modifying the main part of the file.
 */
 
+#define	LUA_SMALL_INT
+#define	LUA_SMALL_FLOAT
 
+
+#if defined(LUA_SMALL_FLOAT)	/* { */
+
+#undef LUA_NUMBER_DOUBLE
+
+#undef LUA_NUMBER
+#define LUA_NUMBER	float
+
+#undef LUA_NUMBER_SCAN
+#define LUA_NUMBER_SCAN		"%f"
+
+#undef LUA_NUMBER_FMT
+#define LUA_NUMBER_FMT		"%.7g"
+
+#undef	l_mathop
+#define l_mathop(x)             x##f
+
+#endif	/* } */
+
+
+#if defined (LUA_SMALL_INT)	/* { */
+
+#undef LUA_INTEGER
+#define LUA_INTEGER	long
+
+#undef	LUA_INTEGER_FRMLEN
+#define LUA_INTEGER_FRMLEN	"l"
+
+#endif	/* } */
 
 #endif
 
