@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.168 2013/05/02 12:31:26 roberto Exp roberto $
+** $Id: lvm.c,v 2.169 2013/05/06 17:17:09 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -292,11 +292,11 @@ void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
       Table *h = hvalue(rb);
       tm = fasttm(L, h->metatable, TM_LEN);
       if (tm) break;  /* metamethod? break switch to call it */
-      setnvalue(ra, cast_num(luaH_getn(h)));  /* else primitive len */
+      setivalue(ra, luaH_getn(h));  /* else primitive len */
       return;
     }
     case LUA_TSTRING: {
-      setnvalue(ra, cast_num(tsvalue(rb)->len));
+      setivalue(ra, tsvalue(rb)->len);
       return;
     }
     default: {  /* try metamethod */
