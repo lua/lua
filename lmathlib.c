@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.84 2013/05/02 17:31:54 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.85 2013/05/06 17:22:55 roberto Exp $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -21,6 +21,11 @@
 #define PI	((lua_Number)(3.1415926535897932384626433832795))
 #define RADIANS_PER_DEGREE	((lua_Number)(PI/180.0))
 
+
+/* types for lua_Number pointers subject to 'l_mathop' changes */
+typedef float l_pnumf;
+typedef double l_pnum;
+typedef long double l_pnuml;
 
 
 static int math_abs (lua_State *L) {
@@ -96,7 +101,7 @@ static int math_fmod (lua_State *L) {
 }
 
 static int math_modf (lua_State *L) {
-  lua_Number ip;
+  l_mathop(l_pnum) ip;
   lua_Number fp = l_mathop(modf)(luaL_checknumber(L, 1), &ip);
   lua_pushnumber(L, ip);
   lua_pushnumber(L, fp);
