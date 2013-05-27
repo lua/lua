@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.63 2013/05/14 15:59:04 roberto Exp roberto $
+** $Id: lobject.c,v 2.64 2013/05/26 14:43:35 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -145,52 +145,64 @@ static int isneg (const char **s) {
 #include <math.h>
 
 
-static lua_Number readhexa (const char **s, lua_Number r, int *count) {
-  for (; lisxdigit(cast_uchar(**s)); (*s)++) {  /* read integer part */
-    r = (r * cast_num(16.0)) + cast_num(luaO_hexavalue(cast_uchar(**s)));
-    (*count)++;
-  }
-  return r;
-}
-
+/* maximum number of significant digits to read (to avoid overflows
+   even with single floats) */
+#define MAXSIGDIG	30
 
 /*
 ** convert an hexadecimal numeric string to a number, following
 ** C99 specification for 'strtod'
 */
 static lua_Number lua_strx2number (const char *s, char **endptr) {
-  lua_Number r = 0.0;
-  int e = 0, i = 0;
+  lua_Number r = 0.0;  /* result (accumulator) */
+  int sigdig = 0;  /* number of significant digits */
+  int nosigdig = 0;  /* number of non-significant digits */
+  int e = 0;  /* exponent correction */
   int neg = 0;  /* 1 if number is negative */
+  int dot = 0;  /* true after seen a dot */
   *endptr = cast(char *, s);  /* nothing is valid yet */
   while (lisspace(cast_uchar(*s))) s++;  /* skip initial spaces */
   neg = isneg(&s);  /* check signal */
   if (!(*s == '0' && (*(s + 1) == 'x' || *(s + 1) == 'X')))  /* check '0x' */
     return 0.0;  /* invalid format (no '0x') */
-  s += 2;  /* skip '0x' */
-  r = readhexa(&s, r, &i);  /* read integer part */
-  if (*s == '.') {
-    s++;  /* skip dot */
-    r = readhexa(&s, r, &e);  /* read fractional part */
+  for (s += 2; ; s++) {  /* skip '0x' and read numeral */
+    if (*s == '.') {
+      if (dot) break;  /* second dot? stop loop */
+      else dot = 1;
+    }
+    else if (lisxdigit(cast_uchar(*s))) {
+      if (sigdig == 0 && *s == '0') {  /* non-significant zero? */
+        nosigdig++;
+        if (dot) e--;  /* zero after dot? correct exponent */
+      }
+      else {
+        if (++sigdig <= MAXSIGDIG) {  /* can read it without overflow? */
+          r = (r * cast_num(16.0)) + luaO_hexavalue(cast_uchar(*s));
+          if (dot) e--;  /* decimal digit */
+        }
+        else  /* too many digits; ignore */ 
+          if (!dot) e++;  /* still count it for exponent */
+      }
+    }
+    else break;  /* neither a dot nor a digit */
   }
-  if (i == 0 && e == 0)
-    return 0.0;  /* invalid format (no digit) */
-  e *= -4;  /* each fractional digit divides value by 2^-4 */
+  if (nosigdig + sigdig == 0)  /* no digits? */
+    return 0.0;  /* invalid format */
   *endptr = cast(char *, s);  /* valid up to here */
+  e *= 4;  /* each digit multiplies/divides value by 2^4 */
   if (*s == 'p' || *s == 'P') {  /* exponent part? */
-    int exp1 = 0;
-    int neg1;
+    int exp1 = 0;  /* exponent value */
+    int neg1;  /* exponent signal */
     s++;  /* skip 'p' */
     neg1 = isneg(&s);  /* signal */
     if (!lisdigit(cast_uchar(*s)))
-      goto ret;  /* must have at least one digit */
+      return 0.0;  /* invalid; must have at least one digit */
     while (lisdigit(cast_uchar(*s)))  /* read exponent */
       exp1 = exp1 * 10 + *(s++) - '0';
     if (neg1) exp1 = -exp1;
     e += exp1;
+    *endptr = cast(char *, s);  /* valid up to here */
   }
-  *endptr = cast(char *, s);  /* valid up to here */
- ret:
   if (neg) r = -r;
   return l_mathop(ldexp)(r, e);
 }
