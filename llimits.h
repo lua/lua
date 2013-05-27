@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.104 2013/04/25 21:15:37 roberto Exp roberto $
+** $Id: llimits.h,v 1.105 2013/05/23 21:27:06 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -35,6 +35,12 @@ typedef unsigned char lu_byte;
 
 
 #define MAX_INT (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
+
+
+/* minimum and maximum values for lua_Integer */
+#define MAX_INTEGER	((lua_Integer)(~(lua_Unsigned)0 >> 1))
+#define MIN_INTEGER	(~MAX_INTEGER)
+
 
 /*
 ** conversion of pointer to integer
