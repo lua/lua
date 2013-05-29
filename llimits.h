@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.105 2013/05/23 21:27:06 roberto Exp roberto $
+** $Id: llimits.h,v 1.106 2013/05/27 12:43:37 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -196,48 +196,6 @@ typedef lu_int32 Instruction;
 
 #if !defined(luai_userstateyield)
 #define luai_userstateyield(L,n)        ((void)L)
-#endif
-
-/*
-** lua_number2int is a macro to convert lua_Number to int.
-** lua_number2integer is a macro to convert lua_Number to lua_Integer.
-** lua_number2unsigned is a macro to convert a lua_Number to a lua_Unsigned.
-** lua_unsigned2number is a macro to convert a lua_Unsigned to a lua_Number.
-** luai_hashnum is a macro to hash a lua_Number value into an integer.
-** The hash must be deterministic and give reasonable values for
-** both small and large values (outside the range of integers).
-*/
-
-#if !defined(lua_number2int)
-#define lua_number2int(i,n)	((i)=(int)(n))
-#endif
-
-#if !defined(lua_number2integer)
-#define lua_number2integer(i,n)	((i)=(lua_Integer)(n))
-#endif
-
-#if !defined(lua_number2unsigned)	/* { */
-/* the following definition assures proper modulo behavior */
-#if defined(LUA_NUMBER_DOUBLE) || defined(LUA_NUMBER_FLOAT)
-#include <math.h>
-#define SUPUNSIGNED	((lua_Number)(~(lua_Unsigned)0) + 1)
-#define lua_number2unsigned(i,n)  \
-	((i)=(lua_Unsigned)((n) - floor((n)/SUPUNSIGNED)*SUPUNSIGNED))
-#else
-#define lua_number2unsigned(i,n)	((i)=(lua_Unsigned)(n))
-#endif
-#endif				/* } */
-
-
-#if defined(ltable_c) && !defined(luai_hashnum)
-
-#include <float.h>
-#include <math.h>
-
-#define luai_hashnum(i,n) { int e;  \
-  n = l_mathop(frexp)(n, &e) * (lua_Number)(INT_MAX - DBL_MAX_EXP);  \
-  lua_number2int(i, n); i += e; }
-
 #endif
 
 
