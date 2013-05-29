@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.75 2013/04/29 17:12:50 roberto Exp roberto $
+** $Id: ltable.c,v 2.76 2013/05/27 12:43:37 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,8 @@
 ** Hence even when the load factor reaches 100%, performance remains good.
 */
 
+#include <float.h>
+#include <math.h>
 #include <string.h>
 
 #define ltable_c
@@ -82,11 +84,12 @@ static const Node dummynode_ = {
 
 
 /*
-** hash for lua_Numbers
+** hash for floating-point numbers
 */
-static Node *hashnum (const Table *t, lua_Number n) {
+static Node *hashfloat (const Table *t, lua_Number n) {
   int i;
-  luai_hashnum(i, n);
+  n = l_mathop(frexp)(n, &i) * cast_num(INT_MAX - DBL_MAX_EXP);
+  i += cast_int(n);
   if (i < 0) {
     if (cast(unsigned int, i) == 0u - i)  /* use unsigned to avoid overflows */
       i = 0;  /* handle INT_MIN */
@@ -106,7 +109,7 @@ static Node *mainposition (const Table *t, const TValue *key) {
     case LUA_TNUMINT:
       return hashint(t, ivalue(key));
     case LUA_TNUMFLT:
-      return hashnum(t, fltvalue(key));
+      return hashfloat(t, fltvalue(key));
     case LUA_TSHRSTR:
       return hashstr(t, rawtsvalue(key));
     case LUA_TLNGSTR: {
