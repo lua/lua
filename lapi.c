@@ -1,10 +1,11 @@
 /*
-** $Id: lapi.c,v 2.179 2013/05/02 12:37:24 roberto Exp roberto $
+** $Id: lapi.c,v 2.180 2013/05/14 16:00:11 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
 
 
+#include <math.h>
 #include <stdarg.h>
 #include <string.h>
 
@@ -376,7 +377,32 @@ LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *pisnum) {
 
 
 LUA_API lua_Unsigned lua_tounsignedx (lua_State *L, int idx, int *pisnum) {
-  return lua_tointegerx(L, idx, pisnum);  /* at least for now... <<<< */
+  lua_Unsigned res = 0;
+  const TValue *o = index2addr(L, idx);
+  int isnum = 0;
+  switch (ttype(o)) {
+    case LUA_TNUMINT: {
+      res = cast_unsigned(ivalue(o));
+      isnum = 1;
+      break;
+    }
+    case LUA_TNUMFLT: {
+      const lua_Number twop = (~(lua_Unsigned)0) + cast_num(1);
+      lua_Number n = fltvalue(o);
+      n = l_mathop(fmod)(n, twop);
+      n = l_mathop(floor)(n);
+      if (luai_numisnan(L,n))   /* not a number? */
+        break;  /* not an integer, too */
+      if (n < 0)
+        n += twop;  /* correct 'mod' */
+      res = cast_unsigned(n);
+      isnum = 1;
+      break;
+    }
+    default: break;
+  }
+  if (pisnum) *pisnum = isnum;
+  return res;
 }
 
 
