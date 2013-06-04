@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.170 2013/05/26 14:47:51 roberto Exp roberto $
+** $Id: lvm.c,v 2.171 2013/05/27 12:43:37 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -32,6 +32,10 @@
 #define MAXTAGLOOP	100
 
 
+/* maximum length of the conversion of a number to a string */
+#define MAXNUMBER2STR	50
+
+
 int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
   lua_assert(!ttisfloat(obj));
   if (ttisinteger(obj)) {
@@ -47,12 +51,19 @@ int luaV_tostring (lua_State *L, StkId obj) {
   if (!ttisnumber(obj))
     return 0;
   else {
-    char s[LUAI_MAXNUMBER2STR];
-    lua_Number n;
+    char buff[MAXNUMBER2STR];
     int len;
-    (void)tonumber(obj, &n);
-    len = lua_number2str(s, n);
-    setsvalue2s(L, obj, luaS_newlstr(L, s, len));
+    if (ttisinteger(obj))
+      len = lua_integer2str(buff, ivalue(obj));
+    else {
+      len = lua_number2str(buff, fltvalue(obj));
+      if (strpbrk(buff, ".eE") == NULL) {  /* no marks that it is a float? */
+        buff[len++] = '.';  /* add a '.0' */
+        buff[len++] = '0';
+        buff[len] = '\0';
+      }
+    }
+    setsvalue2s(L, obj, luaS_newlstr(L, buff, len));
     return 1;
   }
 }
