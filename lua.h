@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.288 2013/04/26 15:39:25 roberto Exp roberto $
+** $Id: lua.h,v 1.289 2013/05/14 16:00:11 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -61,7 +61,7 @@ typedef int (*lua_CFunction) (lua_State *L);
 */
 typedef const char * (*lua_Reader) (lua_State *L, void *ud, size_t *sz);
 
-typedef int (*lua_Writer) (lua_State *L, const void* p, size_t sz, void* ud);
+typedef int (*lua_Writer) (lua_State *L, const void *p, size_t sz, void *ud);
 
 
 /*

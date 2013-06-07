@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.h,v 1.25 2011/07/15 12:35:32 roberto Exp roberto $
+** $Id: lzio.h,v 1.26 2011/07/15 12:48:03 roberto Exp roberto $
 ** Buffered streams
 ** See Copyright Notice in lua.h
 */
@@ -45,7 +45,7 @@ typedef struct Mbuffer {
 LUAI_FUNC char *luaZ_openspace (lua_State *L, Mbuffer *buff, size_t n);
 LUAI_FUNC void luaZ_init (lua_State *L, ZIO *z, lua_Reader reader,
                                         void *data);
-LUAI_FUNC size_t luaZ_read (ZIO* z, void* b, size_t n);	/* read next n bytes */
+LUAI_FUNC size_t luaZ_read (ZIO* z, void *b, size_t n);	/* read next n bytes */
 
 
 
@@ -55,7 +55,7 @@ struct Zio {
   size_t n;			/* bytes still unread */
   const char *p;		/* current position in buffer */
   lua_Reader reader;		/* reader function */
-  void* data;			/* additional data */
+  void *data;			/* additional data */
   lua_State *L;			/* Lua state (for reader) */
 };
 
