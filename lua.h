@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.289 2013/05/14 16:00:11 roberto Exp roberto $
+** $Id: lua.h,v 1.290 2013/06/07 14:51:10 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -17,9 +17,9 @@
 
 
 #define LUA_VERSION_MAJOR	"5"
-#define LUA_VERSION_MINOR	"2"
-#define LUA_VERSION_NUM		502
-#define LUA_VERSION_RELEASE	"2"
+#define LUA_VERSION_MINOR	"3"
+#define LUA_VERSION_NUM		503
+#define LUA_VERSION_RELEASE	"work"
 
 #define LUA_VERSION	"Lua " LUA_VERSION_MAJOR "." LUA_VERSION_MINOR
 #define LUA_RELEASE	LUA_VERSION "." LUA_VERSION_RELEASE
