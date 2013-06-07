@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.171 2013/05/27 12:43:37 roberto Exp roberto $
+** $Id: lvm.c,v 2.172 2013/06/04 19:36:42 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -52,12 +52,12 @@ int luaV_tostring (lua_State *L, StkId obj) {
     return 0;
   else {
     char buff[MAXNUMBER2STR];
-    int len;
+    size_t len;
     if (ttisinteger(obj))
       len = lua_integer2str(buff, ivalue(obj));
     else {
       len = lua_number2str(buff, fltvalue(obj));
-      if (strpbrk(buff, ".eE") == NULL) {  /* no marks that it is a float? */
+      if (strspn(buff, "-0123456789") == len) {  /* look like an integer? */
         buff[len++] = '.';  /* add a '.0' */
         buff[len++] = '0';
         buff[len] = '\0';
