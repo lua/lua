@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.179 2013/04/29 17:12:12 roberto Exp roberto $
+** $Id: luaconf.h,v 1.181 2013/05/26 13:35:52 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -376,44 +376,34 @@
 
 /*
 ** {==================================================================
-@@ LUA_NUMBER is the type of numbers in Lua.
-** CHANGE the following definitions only if you want to build Lua
-** with a number type different from double. You may also need to
-** change lua_number2int & lua_number2integer.
+** The following definitions set the numeric types for Lua.
+** Lua should work fine with 32-bit or 64-bit integers mixed with
+** 32-bit or 64-bit floats. The usual configurations are 64-bit
+** integers and floats (the default) and 32-bit integers and floats.
 ** ===================================================================
 */
 
-#define LUA_NUMBER_DOUBLE
-#define LUA_NUMBER	double
-
 /*
-@@ LUAI_UACNUMBER is the result of an 'usual argument conversion'
-@* over a number.
+@@ LUA_SMALL_INT true makes Lua use a 32-bit integer type
+@@ LUA_SMALL_FLOAT true makes Lua use a 32-bit float type
 */
-#define LUAI_UACNUMBER	double
+#define LUA_SMALL_FLOAT		0
+#define LUA_SMALL_INT		0
 
 
 /*
+@@ LUA_NUMBER is the floating-point type used by Lua.
+**
+@@ LUAI_UACNUMBER is the result of an 'usual argument conversion'
+@* over a floating number.
+**
 @@ LUA_NUMBER_FRMLEN is the length modifier for writing floats.
 @@ LUA_NUMBER_SCAN is the format for reading floats.
 @@ LUA_NUMBER_FMT is the format for writing floats.
 @@ lua_number2str converts a floats to a string.
-@@ LUAI_MAXNUMBER2STR is maximum size of previous conversion.
-*/
-#define LUA_NUMBER_FRMLEN	""
-#define LUA_NUMBER_SCAN		"%lf"
-#define LUA_NUMBER_FMT		"%.14" LUA_NUMBER_FRMLEN "g"
-#define lua_number2str(s,n)	sprintf((s), LUA_NUMBER_FMT, (n))
-#define LUAI_MAXNUMBER2STR	32 /* 16 digits, sign, point, and \0 */
-
-
-/*
+**
 @@ l_mathop allows the addition of an 'l' or 'f' to all math operations
-*/
-#define l_mathop(x)		x
-
-
-/*
+**
 @@ lua_str2number converts a decimal numeric string to a number.
 @@ lua_strx2number converts an hexadecimal numeric string to a number.
 ** In C99, 'strtod' does both conversions. C89, however, has no function
@@ -421,15 +411,51 @@
 ** systems, you can leave 'lua_strx2number' undefined and Lua will
 ** provide its own implementation.
 */
+
+#if LUA_SMALL_FLOAT	/* { */
+
+#define LUA_NUMBER	float
+
+#define LUAI_UACNUMBER	double
+
+#define LUA_NUMBER_FRMLEN	""
+#define LUA_NUMBER_SCAN		"%f"
+#define LUA_NUMBER_FMT		"%.7g"
+
+#define l_mathop(op)		op##f
+
+#define lua_str2number(s,p)	strtof((s), (p))
+
+#else	/* }{ */
+
+#define LUA_NUMBER_DOUBLE
+#define LUA_NUMBER	double
+
+#define LUAI_UACNUMBER	double
+
+#define LUA_NUMBER_FRMLEN	""
+#define LUA_NUMBER_SCAN		"%lf"
+#define LUA_NUMBER_FMT		"%.14g"
+
+#define l_mathop(op)		op
+
 #define lua_str2number(s,p)	strtod((s), (p))
 
+#endif	/* } */
+
+
 #if defined(LUA_USE_STRTODHEX)
-#define lua_strx2number(s,p)	strtod((s), (p))
+#define lua_strx2number(s,p)	lua_str2number(s,p)
 #endif
+
+
+#define lua_number2str(s,n)	sprintf((s), LUA_NUMBER_FMT, (n))
+
 
 
 /*
 @@ The luai_num* macros define the primitive operations over numbers.
+@* They should work for any size of floating numbers.
 */
 
 /* the following operations need the math library */
@@ -455,30 +481,35 @@
 
 
 /*
-@@ LUA_INTEGER is the integral type used by lua_pushinteger/lua_tointeger.
-** CHANGE that if ptrdiff_t is not adequate on your machine. (On most
-** machines, ptrdiff_t gives a good choice between int or long.)
-*/
-#define LUA_INTEGER	long long
-
-/*
+@@ LUA_INTEGER is the integer type used by Lua.
+**
 @@ LUA_UNSIGNED is the unsigned version of LUA_INTEGER.
-*/
-#define LUA_UNSIGNED	unsigned LUA_INTEGER
-
-/*
+**
 @@ LUA_INTEGER_FRMLEN is the length modifier for reading/writing integers.
 @@ LUA_INTEGER_SCAN is the format for reading integers.
 @@ LUA_INTEGER_FMT is the format for writing integers.
 @@ lua_integer2str converts an integer to a string.
-@@ LUAI_MAXINTEGER2STR is maximum size of previous conversion.
 */
+
+#if LUA_SMALL_INT	/* { */
+
+#define LUA_INTEGER	long
+
+#define LUA_INTEGER_FRMLEN	"l"
+
+#else	/* }{ */
+
+#define LUA_INTEGER	long long
+
 #define LUA_INTEGER_FRMLEN	"ll"
+
+#endif	/* } */
+
 #define LUA_INTEGER_SCAN	"%" LUA_INTEGER_FRMLEN "d"
 #define LUA_INTEGER_FMT		"%" LUA_INTEGER_FRMLEN "d"
 #define lua_integer2str(s,n)	sprintf((s), LUA_INTEGER_FMT, (n))
-#define LUA_MAXINTEGER2STR	32
 
+#define LUA_UNSIGNED	unsigned LUA_INTEGER
 
 /* }================================================================== */
 
@@ -492,38 +523,9 @@
 ** without modifying the main part of the file.
 */
 
-#define	LUA_SMALL_INT
-#define	LUA_SMALL_FLOAT
 
 
-#if defined(LUA_SMALL_FLOAT)	/* { */
 
-#undef LUA_NUMBER_DOUBLE
-
-#undef LUA_NUMBER
-#define LUA_NUMBER	float
-
-#undef LUA_NUMBER_SCAN
-#define LUA_NUMBER_SCAN		"%f"
-
-#undef LUA_NUMBER_FMT
-#define LUA_NUMBER_FMT		"%.7g"
-
-#undef	l_mathop
-#define l_mathop(x)             x##f
-
-#endif	/* } */
-
-
-#if defined (LUA_SMALL_INT)	/* { */
-
-#undef LUA_INTEGER
-#define LUA_INTEGER	long
-
-#undef	LUA_INTEGER_FRMLEN
-#define LUA_INTEGER_FRMLEN	"l"
-
-#endif	/* } */
 
 #endif
 
