@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.250 2013/06/04 19:36:42 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.251 2013/06/14 18:12:53 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -386,11 +386,22 @@ LUALIB_API lua_Number luaL_optnumber (lua_State *L, int narg, lua_Number def) {
 }
 
 
+static void interror (lua_State *L, int narg) {
+  if (lua_type(L, narg) == LUA_TNUMBER) {
+    assert(!lua_isinteger(L, narg));
+    luaL_argerror(L, narg, "float value out of range");
+  }
+  else
+    tag_error(L, narg, LUA_TNUMBER);
+}
+
+
 LUALIB_API lua_Integer luaL_checkinteger (lua_State *L, int narg) {
   int isnum;
   lua_Integer d = lua_tointegerx(L, narg, &isnum);
-  if (!isnum)
-    tag_error(L, narg, LUA_TNUMBER);
+  if (!isnum) {
+    interror(L, narg);
+  }
   return d;
 }
 
@@ -399,7 +410,7 @@ LUALIB_API lua_Unsigned luaL_checkunsigned (lua_State *L, int narg) {
   int isnum;
   lua_Unsigned d = lua_tounsignedx(L, narg, &isnum);
   if (!isnum)
-    tag_error(L, narg, LUA_TNUMBER);
+    interror(L, narg);
   return d;
 }
 
