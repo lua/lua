@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.180 2013/05/14 16:00:11 roberto Exp roberto $
+** $Id: lapi.c,v 2.181 2013/06/04 19:34:51 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -389,13 +389,17 @@ LUA_API lua_Unsigned lua_tounsignedx (lua_State *L, int idx, int *pisnum) {
     case LUA_TNUMFLT: {
       const lua_Number twop = (~(lua_Unsigned)0) + cast_num(1);
       lua_Number n = fltvalue(o);
-      n = l_mathop(fmod)(n, twop);
+      int neg = 0;
       n = l_mathop(floor)(n);
+      if (n < 0) {
+        neg = 1;
+        n = -n;
+      }
+      n = l_mathop(fmod)(n, twop);
       if (luai_numisnan(L,n))   /* not a number? */
         break;  /* not an integer, too */
-      if (n < 0)
-        n += twop;  /* correct 'mod' */
       res = cast_unsigned(n);
+      if (neg) res = -res;
       isnum = 1;
       break;
     }
