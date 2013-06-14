@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.249 2013/04/25 13:53:13 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.250 2013/06/04 19:36:42 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -955,10 +955,11 @@ LUALIB_API void luaL_checkversion_ (lua_State *L, lua_Number ver) {
                   ver, *v);
   /* check conversions number -> integer types */
   lua_pushnumber(L, -(lua_Number)0x1234);
-  if (lua_tointeger(L, -1) != -0x1234 ||
-      lua_tounsigned(L, -1) != (lua_Unsigned)-0x1234)
+  lua_pushnumber(L, (lua_Number)0x4321);
+  if (lua_tointeger(L, -2) != -0x1234 ||
+      lua_tounsigned(L, -1) != (lua_Unsigned)0x4321)
     luaL_error(L, "bad conversion number->int;"
                   " must recompile Lua with proper settings");
-  lua_pop(L, 1);
+  lua_pop(L, 2);
 }
 
