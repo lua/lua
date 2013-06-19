@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.65 2013/04/26 13:07:53 roberto Exp roberto $
+** $Id: llex.c,v 2.66 2013/05/14 15:59:04 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -53,7 +53,7 @@ static void save (LexState *ls, int c) {
   Mbuffer *b = ls->buff;
   if (luaZ_bufflen(b) + 1 > luaZ_sizebuffer(b)) {
     size_t newsize;
-    if (luaZ_sizebuffer(b) >= MAX_SIZET/2)
+    if (luaZ_sizebuffer(b) >= MAX_SIZE/2)
       lexerror(ls, "lexical element too long", 0);
     newsize = luaZ_sizebuffer(b) * 2;
     luaZ_resizebuffer(ls->L, b, newsize);
