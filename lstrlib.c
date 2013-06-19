@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.179 2013/04/25 13:52:13 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.180 2013/06/07 14:51:10 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -43,20 +43,20 @@ static int str_len (lua_State *L) {
 
 
 /* translate a relative string position: negative means back from end */
-static size_t posrelat (ptrdiff_t pos, size_t len) {
-  if (pos >= 0) return (size_t)pos;
+static lua_Integer posrelat (lua_Integer pos, size_t len) {
+  if (pos >= 0) return pos;
   else if (0u - (size_t)pos > len) return 0;
-  else return len - ((size_t)-pos) + 1;
+  else return (lua_Integer)len + pos + 1;
 }
 
 
 static int str_sub (lua_State *L) {
   size_t l;
   const char *s = luaL_checklstring(L, 1, &l);
-  size_t start = posrelat(luaL_checkinteger(L, 2), l);
-  size_t end = posrelat(luaL_optinteger(L, 3, -1), l);
+  lua_Integer start = posrelat(luaL_checkinteger(L, 2), l);
+  lua_Integer end = posrelat(luaL_optinteger(L, 3, -1), l);
   if (start < 1) start = 1;
-  if (end > l) end = l;
+  if (end > (lua_Integer)l) end = l;
   if (start <= end)
     lua_pushlstring(L, s + start - 1, end - start + 1);
   else lua_pushliteral(L, "");
@@ -108,7 +108,7 @@ static int str_upper (lua_State *L) {
 static int str_rep (lua_State *L) {
   size_t l, lsep;
   const char *s = luaL_checklstring(L, 1, &l);
-  int n = luaL_checkint(L, 2);
+  lua_Integer n = luaL_checkinteger(L, 2);
   const char *sep = luaL_optlstring(L, 3, "", &lsep);
   if (n <= 0) lua_pushliteral(L, "");
   else if (l + lsep < l || l + lsep >= MAXSIZE / n)  /* may overflow? */
@@ -133,14 +133,14 @@ static int str_rep (lua_State *L) {
 static int str_byte (lua_State *L) {
   size_t l;
   const char *s = luaL_checklstring(L, 1, &l);
-  size_t posi = posrelat(luaL_optinteger(L, 2, 1), l);
-  size_t pose = posrelat(luaL_optinteger(L, 3, posi), l);
+  lua_Integer posi = posrelat(luaL_optinteger(L, 2, 1), l);
+  lua_Integer pose = posrelat(luaL_optinteger(L, 3, posi), l);
   int n, i;
   if (posi < 1) posi = 1;
-  if (pose > l) pose = l;
+  if (pose > (lua_Integer)l) pose = l;
   if (posi > pose) return 0;  /* empty interval; return no values */
   n = (int)(pose -  posi + 1);
-  if (posi + n <= pose)  /* (size_t -> int) overflow? */
+  if (posi + n <= pose)  /* arithmetic overflow? */
     return luaL_error(L, "string slice too long");
   luaL_checkstack(L, n, "string slice too long");
   for (i=0; i<n; i++)
@@ -155,7 +155,7 @@ static int str_char (lua_State *L) {
   luaL_Buffer b;
   char *p = luaL_buffinitsize(L, &b, n);
   for (i=1; i<=n; i++) {
-    int c = luaL_checkint(L, i);
+    lua_Integer c = luaL_checkinteger(L, i);
     luaL_argcheck(L, uchar(c) == c, i, "value out of range");
     p[i - 1] = uchar(c);
   }
@@ -578,9 +578,9 @@ static int str_find_aux (lua_State *L, int find) {
   size_t ls, lp;
   const char *s = luaL_checklstring(L, 1, &ls);
   const char *p = luaL_checklstring(L, 2, &lp);
-  size_t init = posrelat(luaL_optinteger(L, 3, 1), ls);
+  lua_Integer init = posrelat(luaL_optinteger(L, 3, 1), ls);
   if (init < 1) init = 1;
-  else if (init > ls + 1) {  /* start after string's end? */
+  else if (init > (lua_Integer)ls + 1) {  /* start after string's end? */
     lua_pushnil(L);  /* cannot find anything */
     return 1;
   }
