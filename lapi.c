@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.181 2013/06/04 19:34:51 roberto Exp roberto $
+** $Id: lapi.c,v 2.182 2013/06/14 18:32:45 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -390,7 +390,7 @@ LUA_API lua_Unsigned lua_tounsignedx (lua_State *L, int idx, int *pisnum) {
       const lua_Number twop = (~(lua_Unsigned)0) + cast_num(1);
       lua_Number n = fltvalue(o);
       int neg = 0;
-      n = l_mathop(floor)(n);
+      n = l_floor(n);
       if (n < 0) {
         neg = 1;
         n = -n;

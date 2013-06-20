@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.76 2013/05/27 12:43:37 roberto Exp roberto $
+** $Id: ltable.c,v 2.77 2013/05/29 14:05:03 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -70,7 +70,7 @@
 /* checks whether a float has a value representable as a lua_Integer
    (and does the conversion if so) */
 #define numisinteger(x,i) \
-	(((x) == l_mathop(floor)(x)) && luaV_numtointeger(x, i))
+	(((x) == l_floor(x)) && luaV_numtointeger(x, i))
 
 
 #define dummynode		(&dummynode_)

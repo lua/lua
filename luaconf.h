@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.181 2013/05/26 13:35:52 roberto Exp roberto $
+** $Id: luaconf.h,v 1.182 2013/06/13 19:35:08 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -423,6 +423,7 @@
 #define LUA_NUMBER_FMT		"%.7g"
 
 #define l_mathop(op)		op##f
+#define l_floor(x)		(floorf(x))
 
 #define lua_str2number(s,p)	strtof((s), (p))
 
@@ -438,6 +439,7 @@
 #define LUA_NUMBER_FMT		"%.14g"
 
 #define l_mathop(op)		op
+#define l_floor(x)		(floor(x))
 
 #define lua_str2number(s,p)	strtod((s), (p))
 
@@ -452,7 +454,6 @@
 #define lua_number2str(s,n)	sprintf((s), LUA_NUMBER_FMT, (n))
 
 
-
 /*
 @@ The luai_num* macros define the primitive operations over numbers.
 @* They should work for any size of floating numbers.
@@ -461,7 +462,7 @@
 /* the following operations need the math library */
 #if defined(lobject_c) || defined(lvm_c)
 #include <math.h>
-#define luai_nummod(L,a,b)	((a) - l_mathop(floor)((a)/(b))*(b))
+#define luai_nummod(L,a,b)	((a) - l_floor((a)/(b))*(b))
 #define luai_numpow(L,a,b)	(l_mathop(pow)(a,b))
 #endif
 

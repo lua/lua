@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.173 2013/06/07 19:02:05 roberto Exp roberto $
+** $Id: lvm.c,v 2.174 2013/06/19 14:27:00 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -92,7 +92,7 @@ int luaV_tointeger_ (const TValue *obj, lua_Integer *p) {
   lua_Number n;
   lua_assert(!ttisinteger(obj));
   if (tonumber(obj, &n)) {
-    n = l_mathop(floor)(n);
+    n = l_floor(n);
     return luaV_numtointeger(n, p);
   }
   else return 0;
