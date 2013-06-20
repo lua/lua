@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.137 2013/04/26 13:07:53 roberto Exp roberto $
+** $Id: ltests.c,v 2.138 2013/05/07 19:01:16 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -810,7 +810,8 @@ static int newuserdata (lua_State *L) {
 
 
 static int pushuserdata (lua_State *L) {
-  lua_pushlightuserdata(L, cast(void *, luaL_checkint(L, 1)));
+  lua_Integer u = luaL_checkinteger(L, 1);
+  lua_pushlightuserdata(L, cast(void *, cast(size_t, u)));
   return 1;
 }
 
