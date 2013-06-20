@@ -4,11 +4,12 @@
 
 # == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
 
-CWARNSC=-pedantic -Wextra \
+# Warnings valid for both C and C++
+CWARNSCPP=-pedantic -Wno-long-long \
+	-Wall -Wextra \
 	-Waggregate-return \
 	-Wcast-align \
         -Wdisabled-optimization \
-	-Wpointer-arith \
 	-Wshadow \
         -Wsign-compare \
 	-Wundef \
@@ -24,14 +25,16 @@ CWARNSC=-pedantic -Wextra \
 	# -Wformat=2 \
 	# -Wcast-qual \
 
-# The next warnings are not valid for C++
-CWARNS= $(CWARNSC) \
-        -Wdeclaration-after-statement \
+# The next warnings are neither valid nor needed for C++
+CWARNSC= -Wdeclaration-after-statement \
         -Wmissing-prototypes \
         -Wnested-externs \
 	-Wstrict-prototypes \
 	-Wc++-compat \
+	-Wold-style-declaration \
 	-Wold-style-definition \
+
+CWARNS= $(CWARNSCPP) $(CWARNSC)
 
 
 # -DEXTERNMEMCHECK -DHARDSTACKTESTS -DHARDMEMTESTS  -DTRACEMEM='"tempmem"'
@@ -174,8 +177,8 @@ ltablib.o: ltablib.c lua.h luaconf.h lauxlib.h lualib.h
 ltests.o: ltests.c lua.h luaconf.h lapi.h llimits.h lstate.h lobject.h \
  ltm.h lzio.h lmem.h lauxlib.h lcode.h llex.h lopcodes.h lparser.h \
  lctype.h ldebug.h ldo.h lfunc.h lstring.h lgc.h ltable.h lualib.h
-ltm.o: ltm.c lua.h luaconf.h lobject.h llimits.h lstate.h ltm.h lzio.h \
- lmem.h lstring.h lgc.h ltable.h
+ltm.o: ltm.c lua.h luaconf.h ldebug.h lstate.h lobject.h llimits.h ltm.h \
+ lzio.h lmem.h ldo.h lstring.h lgc.h ltable.h lvm.h
 lua.o: lua.c lua.h luaconf.h lauxlib.h lualib.h
 lundump.o: lundump.c lua.h luaconf.h ldebug.h lstate.h lobject.h \
  llimits.h ltm.h lzio.h lmem.h ldo.h lfunc.h lstring.h lgc.h lundump.h
