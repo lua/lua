@@ -1,11 +1,12 @@
 /*
-** $Id: lstrlib.c,v 1.180 2013/06/07 14:51:10 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.181 2013/06/19 14:29:01 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
 
 
 #include <ctype.h>
+#include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -102,8 +103,12 @@ static int str_upper (lua_State *L) {
 }
 
 
-/* reasonable limit to avoid arithmetic overflow */
-#define MAXSIZE		((~(size_t)0) >> 1)
+/* reasonable limit to avoid arithmetic overflow and strings too big */
+#if INT_MAX / 2 <= 0x10000000
+#define MAXSIZE		((size_t)(INT_MAX / 2))
+#else
+#define MAXSIZE		((size_t)0x10000000)
+#endif
 
 static int str_rep (lua_State *L) {
   size_t l, lsep;
