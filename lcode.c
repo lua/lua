@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.68 2013/05/02 12:37:24 roberto Exp roberto $
+** $Id: lcode.c,v 2.69 2013/05/06 17:22:16 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -333,9 +333,12 @@ int luaK_stringK (FuncState *fs, TString *s) {
 
 
 int luaK_intK (FuncState *fs, lua_Integer n) {
-  TValue o;
+  TValue k, o;
+  /* use userdata as key to avoid collision with float with same value;
+     conversion to 'void*' used only for hash, no "precision" problems */
+  setpvalue(&k, cast(void*, cast(size_t, n)));
   setivalue(&o, n);
-  return addk(fs, &o, &o);
+  return addk(fs, &k, &o);
 }
 
 
@@ -344,16 +347,13 @@ static int luaK_numberK (FuncState *fs, lua_Number r) {
   lua_State *L = fs->ls->L;
   TValue o;
   setnvalue(&o, r);
-  if (r == 0 || luai_numisnan(NULL, r)) {  /* handle -0 and NaN */
+  if (r != 0 && !luai_numisnan(NULL, r))  /* avoid -0 and NaN */
+    n = addk(fs, &o, &o);  /* regular case */
+  else {  /* handle -0 and NaN */
     /* use raw representation as key to avoid numeric problems */
     setsvalue(L, L->top++, luaS_newlstr(L, (char *)&r, sizeof(r)));
     n = addk(fs, L->top - 1, &o);
     L->top--;
-  }
-  else {
-    TValue k;
-    setnvalue(&k, r + 0.5);  /* ???? (avoid some collisions with ints) */
-    n = addk(fs, &k, &o);  /* regular case */
   }
   return n;
 }
