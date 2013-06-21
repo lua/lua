@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.182 2013/06/13 19:35:08 roberto Exp roberto $
+** $Id: luaconf.h,v 1.183 2013/06/20 15:02:49 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -494,14 +494,21 @@
 
 #if LUA_SMALL_INT	/* { */
 
-#define LUA_INTEGER	long
+#if LUAI_BITSINT >= 32
 
+#define LUA_INTEGER		int
+#define LUA_INTEGER_FRMLEN	""
+
+#else
+
+#define LUA_INTEGER		long
 #define LUA_INTEGER_FRMLEN	"l"
+
+#endif
 
 #else	/* }{ */
 
-#define LUA_INTEGER	long long
-
+#define LUA_INTEGER		long long
 #define LUA_INTEGER_FRMLEN	"ll"
 
 #endif	/* } */
@@ -510,7 +517,7 @@
 #define LUA_INTEGER_FMT		"%" LUA_INTEGER_FRMLEN "d"
 #define lua_integer2str(s,n)	sprintf((s), LUA_INTEGER_FMT, (n))
 
-#define LUA_UNSIGNED	unsigned LUA_INTEGER
+#define LUA_UNSIGNED		unsigned LUA_INTEGER
 
 /* }================================================================== */
 
