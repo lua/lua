@@ -1,5 +1,5 @@
 /*
-** $Id: lbitlib.c,v 1.18 2013/03/19 13:19:12 roberto Exp roberto $
+** $Id: lbitlib.c,v 1.19 2013/04/16 18:39:37 roberto Exp roberto $
 ** Standard library for bitwise operations
 ** See Copyright Notice in lua.h
 */
@@ -120,7 +120,7 @@ static int b_arshift (lua_State *L) {
   else {  /* arithmetic shift for 'negative' number */
     if (i >= LUA_NBITS) r = ALLONES;
     else
-      r = trim((r >> i) | ~(~(b_uint)0 >> i));  /* add signal bit */
+      r = trim((r >> i) | ~(trim(~(b_uint)0) >> i));  /* add signal bit */
     lua_pushunsigned(L, r);
     return 1;
   }
@@ -177,7 +177,7 @@ static int b_extract (lua_State *L) {
 
 static int b_replace (lua_State *L) {
   int w;
-  b_uint r = luaL_checkunsigned(L, 1);
+  b_uint r = trim(luaL_checkunsigned(L, 1));
   b_uint v = luaL_checkunsigned(L, 2);
   int f = fieldargs(L, 3, &w);
   int m = mask(w);
