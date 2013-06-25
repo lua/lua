@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.183 2013/06/20 15:02:49 roberto Exp roberto $
+** $Id: luaconf.h,v 1.184 2013/06/21 17:42:28 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -384,11 +384,12 @@
 */
 
 /*
-@@ LUA_SMALL_INT true makes Lua use a 32-bit integer type
-@@ LUA_SMALL_FLOAT true makes Lua use a 32-bit float type
+@@ LUA_INTSIZE defines size for Lua integer: 1=int, 2=long, 3=long long
+@@ LUA_FLOATSIZE defines size for Lua float: 1=float, 2=double, 3=long double
+** Default is long long + double
 */
-#define LUA_SMALL_FLOAT		0
-#define LUA_SMALL_INT		0
+#define LUA_INTSIZE		3
+#define LUA_FLOATSIZE		2
 
 
 /*
@@ -405,14 +406,9 @@
 @@ l_mathop allows the addition of an 'l' or 'f' to all math operations
 **
 @@ lua_str2number converts a decimal numeric string to a number.
-@@ lua_strx2number converts an hexadecimal numeric string to a number.
-** In C99, 'strtod' does both conversions. C89, however, has no function
-** to convert floating hexadecimal strings to numbers. For these
-** systems, you can leave 'lua_strx2number' undefined and Lua will
-** provide its own implementation.
 */
 
-#if LUA_SMALL_FLOAT	/* { */
+#if LUA_FLOATSIZE == 1	/* { single float */
 
 #define LUA_NUMBER	float
 
@@ -423,13 +419,26 @@
 #define LUA_NUMBER_FMT		"%.7g"
 
 #define l_mathop(op)		op##f
-#define l_floor(x)		(floorf(x))
 
 #define lua_str2number(s,p)	strtof((s), (p))
 
-#else	/* }{ */
 
-#define LUA_NUMBER_DOUBLE
+#elif LUA_FLOATSIZE == 3	/* }{ long double */
+
+#define LUA_NUMBER	long double
+
+#define LUAI_UACNUMBER	long double
+
+#define LUA_NUMBER_FRMLEN	"L"
+#define LUA_NUMBER_SCAN		"%Lf"
+#define LUA_NUMBER_FMT		"%.19Lg"
+
+#define l_mathop(op)		op##l
+
+#define lua_str2number(s,p)	strtold((s), (p))
+
+#else	/* }{ default: double */
+
 #define LUA_NUMBER	double
 
 #define LUAI_UACNUMBER	double
@@ -439,17 +448,27 @@
 #define LUA_NUMBER_FMT		"%.14g"
 
 #define l_mathop(op)		op
-#define l_floor(x)		(floor(x))
 
 #define lua_str2number(s,p)	strtod((s), (p))
 
 #endif	/* } */
 
 
-#if defined(LUA_USE_STRTODHEX)
-#define lua_strx2number(s,p)	lua_str2number(s,p)
+#if defined(LUA_ANSI)
+/* C89 does not support 'opf' variants for math functions */
+#undef l_mathop
+#define l_mathop(op)		(lua_Number)op
 #endif
 
+
+#if defined(LUA_ANSI) || defined(_WIN32)
+/* C89 and Windows do not support 'strtof'... */
+#undef lua_str2number
+#define lua_str2number(s,p)	((lua_Number)strtod((s), (p)))
+#endif
+
+
+#define l_floor(x)		(l_mathop(floor)(x))
 
 #define lua_number2str(s,n)	sprintf((s), LUA_NUMBER_FMT, (n))
 
@@ -492,26 +511,23 @@
 @@ lua_integer2str converts an integer to a string.
 */
 
-#if LUA_SMALL_INT	/* { */
-
-#if LUAI_BITSINT >= 32
+#if LUA_INTSIZE == 1	/* { int */
 
 #define LUA_INTEGER		int
 #define LUA_INTEGER_FRMLEN	""
 
-#else
+#elif LUA_INTSIZE == 2	/* }{ long */
 
 #define LUA_INTEGER		long
 #define LUA_INTEGER_FRMLEN	"l"
 
-#endif
-
-#else	/* }{ */
+#else	/* }{ default: long long */
 
 #define LUA_INTEGER		long long
 #define LUA_INTEGER_FRMLEN	"ll"
 
 #endif	/* } */
+
 
 #define LUA_INTEGER_SCAN	"%" LUA_INTEGER_FRMLEN "d"
 #define LUA_INTEGER_FMT		"%" LUA_INTEGER_FRMLEN "d"
