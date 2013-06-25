@@ -1,10 +1,11 @@
 /*
-** $Id: lcode.c,v 2.69 2013/05/06 17:22:16 roberto Exp roberto $
+** $Id: lcode.c,v 2.70 2013/06/20 17:37:31 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
 
 
+#include <math.h>
 #include <stdlib.h>
 
 #define lcode_c
@@ -24,6 +25,14 @@
 #include "lstring.h"
 #include "ltable.h"
 #include "lvm.h"
+
+
+/* test for x == -0 */
+#if defined(signbit)
+#define isminuszero(x)	((x) == 0.0 && signbit(x))
+#else
+#define isminuszero(x)	((x) == 0.0 && 1.0/(x) < 0.0)
+#endif
 
 
 #define hasjumps(e)	((e)->t != (e)->f)
@@ -332,30 +341,28 @@ int luaK_stringK (FuncState *fs, TString *s) {
 }
 
 
+/*
+** use userdata as key to avoid collision with float with same value;
+** conversion to 'void*' used only for hash, no "precision" problems
+*/
 int luaK_intK (FuncState *fs, lua_Integer n) {
   TValue k, o;
-  /* use userdata as key to avoid collision with float with same value;
-     conversion to 'void*' used only for hash, no "precision" problems */
   setpvalue(&k, cast(void*, cast(size_t, n)));
   setivalue(&o, n);
   return addk(fs, &k, &o);
 }
 
 
+/*
+** Both NaN and -0.0 should not go to the constant table, as they have
+** problems with the hashing. (NaN is not ** a valid key,
+** -0.0 collides with +0.0.)
+*/ 
 static int luaK_numberK (FuncState *fs, lua_Number r) {
-  int n;
-  lua_State *L = fs->ls->L;
   TValue o;
+  lua_assert(!luai_numisnan(NULL, r) && !isminuszero(r));
   setnvalue(&o, r);
-  if (r != 0 && !luai_numisnan(NULL, r))  /* avoid -0 and NaN */
-    n = addk(fs, &o, &o);  /* regular case */
-  else {  /* handle -0 and NaN */
-    /* use raw representation as key to avoid numeric problems */
-    setsvalue(L, L->top++, luaS_newlstr(L, (char *)&r, sizeof(r)));
-    n = addk(fs, L->top - 1, &o);
-    L->top--;
-  }
-  return n;
+  return addk(fs, &o, &o);
 }
 
 
@@ -755,8 +762,11 @@ static int constfolding (OpCode op, expdesc *e1, expdesc *e2) {
     e1->u.ival = ivalue(&res);
   }
   else {
+    lua_Number n = fltvalue(&res);
+    if (luai_numisnan(NULL, n) || isminuszero(n))
+      return 0;  /* folds neither NaN nor -0 */
     e1->k = VKFLT;
-    e1->u.nval = fltvalue(&res);
+    e1->u.nval = n;
   }
   return 1;
 }
