@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.252 2013/06/14 18:34:49 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.253 2013/06/14 20:46:40 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -731,13 +731,13 @@ LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
 }
 
 
-LUALIB_API int luaL_len (lua_State *L, int idx) {
-  int l;
+LUALIB_API lua_Integer luaL_len (lua_State *L, int idx) {
+  lua_Integer l;
   int isnum;
   lua_len(L, idx);
-  l = (int)lua_tointegerx(L, -1, &isnum);
+  l = lua_tointegerx(L, -1, &isnum);
   if (!isnum)
-    luaL_error(L, "object length is not a number");
+    luaL_error(L, "object length is not an integer");
   lua_pop(L, 1);  /* remove object */
   return l;
 }
