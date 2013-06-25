@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.86 2013/05/26 13:45:24 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.87 2013/06/13 19:32:52 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -20,12 +20,6 @@
 #undef PI
 #define PI	((lua_Number)(3.1415926535897932384626433832795))
 #define RADIANS_PER_DEGREE	((lua_Number)(PI/180.0))
-
-
-/* types for lua_Number pointers subject to 'l_mathop' changes */
-typedef float l_pnumf;
-typedef double l_pnum;
-typedef long double l_pnuml;
 
 
 static int math_abs (lua_State *L) {
@@ -100,13 +94,21 @@ static int math_fmod (lua_State *L) {
   return 1;
 }
 
+/*
+** next function does not use 'modf', avoiding problems with 'double*'
+** (which is not compatible with 'float*') when lua_Number is not
+** 'double'.
+*/
 static int math_modf (lua_State *L) {
-  l_mathop(l_pnum) ip;
-  lua_Number fp = l_mathop(modf)(luaL_checknumber(L, 1), &ip);
+  lua_Number n = luaL_checknumber(L, 1);
+  /* integer part (rounds toward zero) */
+  lua_Number ip = (n < 0) ? -l_mathop(floor)(-n) : l_mathop(floor)(n);
   lua_pushnumber(L, ip);
-  lua_pushnumber(L, fp);
+  /* fractionary part (test handles inf/-inf) */
+  lua_pushnumber(L, (n == ip) ? 0.0 : (n - ip));
   return 2;
 }
+
 
 static int math_sqrt (lua_State *L) {
   lua_pushnumber(L, l_mathop(sqrt)(luaL_checknumber(L, 1)));
