@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.131 2011/10/24 14:54:05 roberto Exp roberto $
+** $Id: ldblib.c,v 1.132 2012/01/19 20:14:44 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -20,6 +20,18 @@
 
 #define HOOKKEY		"_HKEY"
 
+
+
+static int db_numbits (lua_State *L) {
+  const char *s = luaL_checkstring(L, 1);
+  if (*s == 'i')
+    lua_pushinteger(L, sizeof(lua_Integer) * CHAR_BIT);
+  else if (*s == 'f')
+    lua_pushinteger(L, sizeof(lua_Number) * CHAR_BIT);
+  else
+    luaL_argerror(L, 1, lua_pushfstring(L, "invalid option '%s'", s));
+  return 1;
+}
 
 
 static int db_getregistry (lua_State *L) {
@@ -379,6 +391,7 @@ static const luaL_Reg dblib[] = {
   {"getregistry", db_getregistry},
   {"getmetatable", db_getmetatable},
   {"getupvalue", db_getupvalue},
+  {"numbits",   db_numbits},
   {"upvaluejoin", db_upvaluejoin},
   {"upvalueid", db_upvalueid},
   {"setuservalue", db_setuservalue},
