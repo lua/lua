@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.120 2011/11/29 15:55:08 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.121 2013/06/25 14:05:26 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -26,8 +26,11 @@ typedef struct luaL_Reg {
 } luaL_Reg;
 
 
-LUALIB_API void (luaL_checkversion_) (lua_State *L, lua_Number ver);
-#define luaL_checkversion(L)	luaL_checkversion_(L, LUA_VERSION_NUM)
+#define LUAL_NUMSIZES	(sizeof(lua_Integer)*16 + sizeof(lua_Number))
+
+LUALIB_API void (luaL_checkversion_) (lua_State *L, int ver, size_t sz);
+#define luaL_checkversion(L)  \
+	  luaL_checkversion_(L, LUA_VERSION_NUM, LUAL_NUMSIZES)
 
 LUALIB_API int (luaL_getmetafield) (lua_State *L, int obj, const char *e);
 LUALIB_API int (luaL_callmeta) (lua_State *L, int obj, const char *e);
@@ -108,7 +111,8 @@ LUALIB_API void (luaL_requiref) (lua_State *L, const char *modname,
 #define luaL_newlibtable(L,l)	\
   lua_createtable(L, 0, sizeof(l)/sizeof((l)[0]) - 1)
 
-#define luaL_newlib(L,l)	(luaL_newlibtable(L,l), luaL_setfuncs(L,l,0))
+#define luaL_newlib(L,l)  \
+  (luaL_checkversion(L), luaL_newlibtable(L,l), luaL_setfuncs(L,l,0))
 
 #define luaL_argcheck(L, cond,numarg,extramsg)	\
 		((void)((cond) || luaL_argerror(L, (numarg), (extramsg))))

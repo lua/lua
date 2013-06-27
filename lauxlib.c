@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.253 2013/06/14 20:46:40 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.254 2013/06/25 14:05:26 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -860,7 +860,6 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
 ** Returns with only the table at the stack.
 */
 LUALIB_API void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup) {
-  luaL_checkversion(L);
   luaL_checkstack(L, nup, "too many upvalues");
   for (; l->name != NULL; l++) {  /* fill the table with given functions */
     int i;
@@ -955,20 +954,15 @@ LUALIB_API lua_State *luaL_newstate (void) {
 }
 
 
-LUALIB_API void luaL_checkversion_ (lua_State *L, lua_Number ver) {
+LUALIB_API void luaL_checkversion_ (lua_State *L, int ver, size_t sz) {
   const lua_Number *v = lua_version(L);
   if (v != lua_version(NULL))
     luaL_error(L, "multiple Lua VMs detected");
   else if (*v != ver)
-    luaL_error(L, "version mismatch: app. needs %f, Lua core provides %f",
+    luaL_error(L, "version mismatch: app. needs %d, Lua core provides %f",
                   ver, *v);
-  /* check conversions number -> integer types */
-  lua_pushnumber(L, -(lua_Number)0x1234);
-  lua_pushnumber(L, (lua_Number)0x4321);
-  if (lua_tointeger(L, -2) != -0x1234 ||
-      lua_tounsigned(L, -1) != (lua_Unsigned)0x4321)
-    luaL_error(L, "bad conversion number->int;"
-                  " must recompile Lua with proper settings");
-  lua_pop(L, 2);
+  /* check numeric types */
+  if (sz != LUAL_NUMSIZES)
+    luaL_error(L, "core and library have incompatible numeric types");
 }
 
