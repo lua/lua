@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.88 2013/06/25 14:02:18 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.89 2013/06/25 19:37:00 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -85,6 +85,18 @@ static int math_ceil (lua_State *L) {
 
 static int math_floor (lua_State *L) {
   lua_pushnumber(L, l_mathop(floor)(luaL_checknumber(L, 1)));
+  return 1;
+}
+
+static int math_ifloor (lua_State *L) {
+  int valid;
+  lua_Integer n = lua_tointegerx(L, 1, &valid);
+  if (valid)
+    lua_pushinteger(L, n);
+  else {
+    luaL_checktype(L, 1, LUA_TNUMBER);  /* error if not a number */
+    lua_pushnil(L);  /* number with invalid integer value */
+  }
   return 1;
 }
 
@@ -258,6 +270,7 @@ static const luaL_Reg mathlib[] = {
   {"deg",   math_deg},
   {"exp",   math_exp},
   {"floor", math_floor},
+  {"ifloor", math_ifloor},
   {"fmod",   math_fmod},
   {"frexp", math_frexp},
   {"isfloat", math_isfloat},
