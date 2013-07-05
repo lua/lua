@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.123 2013/05/13 16:17:47 roberto Exp roberto $
-+** $Id: bugs,v 1.123 2013/05/13 16:17:47 roberto Exp roberto $
+-** $Id: bugs,v 1.124 2013/05/16 16:03:50 roberto Exp roberto $
++** $Id: bugs,v 1.124 2013/05/16 16:03:50 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2405,6 +2405,57 @@ patch = [[
  }
  
  
+]]
+}
+
+
+Bug{
+what = [[When loading a file,
+Lua may call the reader function again after it returned end of input
+]],
+report = [[Chris Howie, 2013/06/05]],
+since = [[5.1]],
+fix = [[5.2]],
+example = [[
+load(function () print("called"); return nil end)
+--> called
+--> called             (should be called only once!)
+]],
+patch = [[
+--- lzio.h	2007/12/27 13:02:25	1.21.1.1
++++ lzio.h	2013/07/04 13:55:59
+@@ -59,6 +59,7 @@
+   lua_Reader reader;
+   void* data;			/* additional data */
+   lua_State *L;			/* Lua state (for reader) */
++  int eoz;			/* true if reader has no more data */
+ };
+
+
+--- lzio.c	2007/12/27 13:02:25	1.31.1.1
++++ lzio.c	2013/07/04 13:53:06
+@@ -22,10 +22,14 @@
+   size_t size;
+   lua_State *L = z->L;
+   const char *buff;
++  if (z->eoz) return EOZ;
+   lua_unlock(L);
+   buff = z->reader(L, z->data, &size);
+   lua_lock(L);
+-  if (buff == NULL || size == 0) return EOZ;
++  if (buff == NULL || size == 0) {
++    z->eoz = 1;  /* avoid calling reader function next time */
++    return EOZ;
++  }
+   z->n = size - 1;
+   z->p = buff;
+   return char2int(*(z->p++));
+@@ -51,6 +55,7 @@
+   z->data = data;
+   z->n = 0;
+   z->p = NULL;
++  z->eoz = 0;
+ }
 ]]
 }
 
@@ -3024,6 +3075,31 @@ patch = [[
    }
 ]]
 }
+
+Bug{
+what = [[luac listings choke on long strings]],
+report = [[Ashwin Hirschi, 2013/07/03]],
+since = [[5.1.2]],
+fix = nil,
+example = [[
+-- When you call 'luac -l' over this chunk, it chokes the output
+s="Lorem ipsum dolor sit amet, consectetur, "
+]],
+patch = [[
+--- luac.c 2011-11-29 15:46:33 -0200  1.69
++++ luac.c 2013-07-03 21:26:01 -0300
+@@ -251,7 +251,7 @@
+ static void PrintConstant(const Proto* f, int i)
+ {
+  const TValue* o=&f->k[i];
+- switch (ttype(o))
++ switch (ttypenv(o))
+  {
+   case LUA_TNIL:
+        printf("nil");
+]]
+}
+
 
 --[=[
 Bug{
