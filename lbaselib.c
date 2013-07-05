@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.277 2013/05/16 18:35:57 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.278 2013/07/05 14:35:49 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -87,7 +87,7 @@ static int luaB_tonumber (lua_State *L) {
     size_t l;
     const char *s;
     lua_Integer n;
-    int base = lua_tointeger(L, 2);
+    int base = luaL_checkint(L, 2);
     luaL_checktype(L, 1, LUA_TSTRING);  /* before 'luaL_checklstring'! */
     s = luaL_checklstring(L, 1, &l);
     luaL_argcheck(L, 2 <= base && base <= 36, 2, "base out of range");
