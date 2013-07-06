@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.130 2013/02/06 13:37:39 roberto Exp $
+** $Id: lparser.c,v 2.133 2013/04/26 13:07:53 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -935,12 +935,17 @@ static void suffixedexp (LexState *ls, expdesc *v) {
 
 
 static void simpleexp (LexState *ls, expdesc *v) {
-  /* simpleexp -> NUMBER | STRING | NIL | TRUE | FALSE | ... |
+  /* simpleexp -> FLT | INT | STRING | NIL | TRUE | FALSE | ... |
                   constructor | FUNCTION body | suffixedexp */
   switch (ls->t.token) {
-    case TK_NUMBER: {
-      init_exp(v, VKNUM, 0);
+    case TK_FLT: {
+      init_exp(v, VKFLT, 0);
       v->u.nval = ls->t.seminfo.r;
+      break;
+    }
+    case TK_INT: {
+      init_exp(v, VKINT, 0);
+      v->u.ival = ls->t.seminfo.i;
       break;
     }
     case TK_STRING: {
@@ -1000,6 +1005,7 @@ static BinOpr getbinopr (int op) {
     case '-': return OPR_SUB;
     case '*': return OPR_MUL;
     case '/': return OPR_DIV;
+    case TK_IDIV: return OPR_IDIV;
     case '%': return OPR_MOD;
     case '^': return OPR_POW;
     case TK_CONCAT: return OPR_CONCAT;
@@ -1020,7 +1026,8 @@ static const struct {
   lu_byte left;  /* left priority for each binary operator */
   lu_byte right; /* right priority */
 } priority[] = {  /* ORDER OPR */
-   {6, 6}, {6, 6}, {7, 7}, {7, 7}, {7, 7},  /* `+' `-' `*' `/' `%' */
+   {6, 6}, {6, 6},  /* '+' '-' */
+   {7, 7}, {7, 7}, {7, 7}, {7, 7},  /* '*' '/' '//' '%' */
    {10, 9}, {5, 4},                 /* ^, .. (right associative) */
    {3, 3}, {3, 3}, {3, 3},          /* ==, <, <= */
    {3, 3}, {3, 3}, {3, 3},          /* ~=, >, >= */
@@ -1321,7 +1328,7 @@ static void fornum (LexState *ls, TString *varname, int line) {
   if (testnext(ls, ','))
     exp1(ls);  /* optional step */
   else {  /* default step = 1 */
-    luaK_codek(fs, fs->freereg, luaK_numberK(fs, 1));
+    luaK_codek(fs, fs->freereg, luaK_intK(fs, 1));
     luaK_reserveregs(fs, 1);
   }
   forbody(ls, base, line, 1, 1);

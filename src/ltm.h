@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 2.11 2011/02/28 17:32:10 roberto Exp $
+** $Id: ltm.h,v 2.16 2013/04/29 16:56:50 roberto Exp $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -26,6 +26,7 @@ typedef enum {
   TM_SUB,
   TM_MUL,
   TM_DIV,
+  TM_IDIV,
   TM_MOD,
   TM_POW,
   TM_UNM,
@@ -44,7 +45,7 @@ typedef enum {
 #define fasttm(l,et,e)	gfasttm(G(l), et, e)
 
 #define ttypename(x)	luaT_typenames_[(x) + 1]
-#define objtypename(x)	ttypename(ttypenv(x))
+#define objtypename(x)	ttypename(ttnov(x))
 
 LUAI_DDEC const char *const luaT_typenames_[LUA_TOTALTAGS];
 
@@ -53,5 +54,17 @@ LUAI_FUNC const TValue *luaT_gettm (Table *events, TMS event, TString *ename);
 LUAI_FUNC const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o,
                                                        TMS event);
 LUAI_FUNC void luaT_init (lua_State *L);
+
+LUAI_FUNC void luaT_callTM (lua_State *L, const TValue *f, const TValue *p1,
+                            const TValue *p2, TValue *p3, int hasres);
+LUAI_FUNC int luaT_callbinTM (lua_State *L, const TValue *p1, const TValue *p2,
+                              StkId res, TMS event);
+LUAI_FUNC void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
+                              StkId res, TMS event);
+LUAI_FUNC const TValue *luaT_getequalTM (lua_State *L, Table *mt1, Table *mt2);
+LUAI_FUNC int luaT_callorderTM (lua_State *L, const TValue *p1,
+                                const TValue *p2, TMS event);
+
+
 
 #endif

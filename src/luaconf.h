@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.176 2013/03/16 21:10:18 roberto Exp $
+** $Id: luaconf.h,v 1.185 2013/06/25 19:04:40 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -376,64 +376,112 @@
 
 /*
 ** {==================================================================
-@@ LUA_NUMBER is the type of numbers in Lua.
-** CHANGE the following definitions only if you want to build Lua
-** with a number type different from double. You may also need to
-** change lua_number2int & lua_number2integer.
+** The following definitions set the numeric types for Lua.
+** Lua should work fine with 32-bit or 64-bit integers mixed with
+** 32-bit or 64-bit floats. The usual configurations are 64-bit
+** integers and floats (the default) and 32-bit integers and floats.
 ** ===================================================================
 */
 
-#define LUA_NUMBER_DOUBLE
-#define LUA_NUMBER	double
+/*
+@@ LUA_INTSIZE defines size for Lua integer: 1=int, 2=long, 3=long long
+@@ LUA_FLOATSIZE defines size for Lua float: 1=float, 2=double, 3=long double
+** Default is long long + double
+*/
+#define LUA_INTSIZE		3
+#define LUA_FLOATSIZE		2
+
 
 /*
+@@ LUA_NUMBER is the floating-point type used by Lua.
+**
 @@ LUAI_UACNUMBER is the result of an 'usual argument conversion'
-@* over a number.
+@* over a floating number.
+**
+@@ LUA_NUMBER_FRMLEN is the length modifier for writing floats.
+@@ LUA_NUMBER_SCAN is the format for reading floats.
+@@ LUA_NUMBER_FMT is the format for writing floats.
+@@ lua_number2str converts a floats to a string.
+**
+@@ l_mathop allows the addition of an 'l' or 'f' to all math operations
+**
+@@ lua_str2number converts a decimal numeric string to a number.
 */
+
+#if LUA_FLOATSIZE == 1	/* { single float */
+
+#define LUA_NUMBER	float
+
 #define LUAI_UACNUMBER	double
 
+#define LUA_NUMBER_FRMLEN	""
+#define LUA_NUMBER_SCAN		"%f"
+#define LUA_NUMBER_FMT		"%.7g"
 
-/*
-@@ LUA_NUMBER_SCAN is the format for reading numbers.
-@@ LUA_NUMBER_FMT is the format for writing numbers.
-@@ lua_number2str converts a number to a string.
-@@ LUAI_MAXNUMBER2STR is maximum size of previous conversion.
-*/
+#define l_mathop(op)		op##f
+
+#define lua_str2number(s,p)	strtof((s), (p))
+
+
+#elif LUA_FLOATSIZE == 3	/* }{ long double */
+
+#define LUA_NUMBER	long double
+
+#define LUAI_UACNUMBER	long double
+
+#define LUA_NUMBER_FRMLEN	"L"
+#define LUA_NUMBER_SCAN		"%Lf"
+#define LUA_NUMBER_FMT		"%.19Lg"
+
+#define l_mathop(op)		op##l
+
+#define lua_str2number(s,p)	strtold((s), (p))
+
+#else	/* }{ default: double */
+
+#define LUA_NUMBER	double
+
+#define LUAI_UACNUMBER	double
+
+#define LUA_NUMBER_FRMLEN	""
 #define LUA_NUMBER_SCAN		"%lf"
 #define LUA_NUMBER_FMT		"%.14g"
-#define lua_number2str(s,n)	sprintf((s), LUA_NUMBER_FMT, (n))
-#define LUAI_MAXNUMBER2STR	32 /* 16 digits, sign, point, and \0 */
 
+#define l_mathop(op)		op
 
-/*
-@@ l_mathop allows the addition of an 'l' or 'f' to all math operations
-*/
-#define l_mathop(x)		(x)
-
-
-/*
-@@ lua_str2number converts a decimal numeric string to a number.
-@@ lua_strx2number converts an hexadecimal numeric string to a number.
-** In C99, 'strtod' does both conversions. C89, however, has no function
-** to convert floating hexadecimal strings to numbers. For these
-** systems, you can leave 'lua_strx2number' undefined and Lua will
-** provide its own implementation.
-*/
 #define lua_str2number(s,p)	strtod((s), (p))
 
-#if defined(LUA_USE_STRTODHEX)
-#define lua_strx2number(s,p)	strtod((s), (p))
+#endif	/* } */
+
+
+#if defined(LUA_ANSI)
+/* C89 does not support 'opf' variants for math functions */
+#undef l_mathop
+#define l_mathop(op)		(lua_Number)op
 #endif
+
+
+#if defined(LUA_ANSI) || defined(_WIN32)
+/* C89 and Windows do not support 'strtof'... */
+#undef lua_str2number
+#define lua_str2number(s,p)	((lua_Number)strtod((s), (p)))
+#endif
+
+
+#define l_floor(x)		(l_mathop(floor)(x))
+
+#define lua_number2str(s,n)	sprintf((s), LUA_NUMBER_FMT, (n))
 
 
 /*
 @@ The luai_num* macros define the primitive operations over numbers.
+@* They should work for any size of floating numbers.
 */
 
 /* the following operations need the math library */
 #if defined(lobject_c) || defined(lvm_c)
 #include <math.h>
-#define luai_nummod(L,a,b)	((a) - l_mathop(floor)((a)/(b))*(b))
+#define luai_nummod(L,a,b)	((a) - l_floor((a)/(b))*(b))
 #define luai_numpow(L,a,b)	(l_mathop(pow)(a,b))
 #endif
 
@@ -453,85 +501,39 @@
 
 
 /*
-@@ LUA_INTEGER is the integral type used by lua_pushinteger/lua_tointeger.
-** CHANGE that if ptrdiff_t is not adequate on your machine. (On most
-** machines, ptrdiff_t gives a good choice between int or long.)
-*/
-#define LUA_INTEGER	ptrdiff_t
-
-/*
-@@ LUA_UNSIGNED is the integral type used by lua_pushunsigned/lua_tounsigned.
-** It must have at least 32 bits.
-*/
-#define LUA_UNSIGNED	unsigned LUA_INT32
-
-
-
-/*
-** Some tricks with doubles
+@@ LUA_INTEGER is the integer type used by Lua.
+**
+@@ LUA_UNSIGNED is the unsigned version of LUA_INTEGER.
+**
+@@ LUA_INTEGER_FRMLEN is the length modifier for reading/writing integers.
+@@ LUA_INTEGER_SCAN is the format for reading integers.
+@@ LUA_INTEGER_FMT is the format for writing integers.
+@@ lua_integer2str converts an integer to a string.
 */
 
-#if defined(LUA_NUMBER_DOUBLE) && !defined(LUA_ANSI)	/* { */
-/*
-** The next definitions activate some tricks to speed up the
-** conversion from doubles to integer types, mainly to LUA_UNSIGNED.
-**
-@@ LUA_MSASMTRICK uses Microsoft assembler to avoid clashes with a
-** DirectX idiosyncrasy.
-**
-@@ LUA_IEEE754TRICK uses a trick that should work on any machine
-** using IEEE754 with a 32-bit integer type.
-**
-@@ LUA_IEEELL extends the trick to LUA_INTEGER; should only be
-** defined when LUA_INTEGER is a 32-bit integer.
-**
-@@ LUA_IEEEENDIAN is the endianness of doubles in your machine
-** (0 for little endian, 1 for big endian); if not defined, Lua will
-** check it dynamically for LUA_IEEE754TRICK (but not for LUA_NANTRICK).
-**
-@@ LUA_NANTRICK controls the use of a trick to pack all types into
-** a single double value, using NaN values to represent non-number
-** values. The trick only works on 32-bit machines (ints and pointers
-** are 32-bit values) with numbers represented as IEEE 754-2008 doubles
-** with conventional endianess (12345678 or 87654321), in CPUs that do
-** not produce signaling NaN values (all NaNs are quiet).
-*/
+#if LUA_INTSIZE == 1	/* { int */
 
-/* Microsoft compiler on a Pentium (32 bit) ? */
-#if defined(LUA_WIN) && defined(_MSC_VER) && defined(_M_IX86)	/* { */
+#define LUA_INTEGER		int
+#define LUA_INTEGER_FRMLEN	""
 
-#define LUA_MSASMTRICK
-#define LUA_IEEEENDIAN		0
-#define LUA_NANTRICK
+#elif LUA_INTSIZE == 2	/* }{ long */
+
+#define LUA_INTEGER		long
+#define LUA_INTEGER_FRMLEN	"l"
+
+#else	/* }{ default: long long */
+
+#define LUA_INTEGER		long long
+#define LUA_INTEGER_FRMLEN	"ll"
+
+#endif	/* } */
 
 
-/* pentium 32 bits? */
-#elif defined(__i386__) || defined(__i386) || defined(__X86__) /* }{ */
+#define LUA_INTEGER_SCAN	"%" LUA_INTEGER_FRMLEN "d"
+#define LUA_INTEGER_FMT		"%" LUA_INTEGER_FRMLEN "d"
+#define lua_integer2str(s,n)	sprintf((s), LUA_INTEGER_FMT, (n))
 
-#define LUA_IEEE754TRICK
-#define LUA_IEEELL
-#define LUA_IEEEENDIAN		0
-#define LUA_NANTRICK
-
-/* pentium 64 bits? */
-#elif defined(__x86_64)						/* }{ */
-
-#define LUA_IEEE754TRICK
-#define LUA_IEEEENDIAN		0
-
-#elif defined(__POWERPC__) || defined(__ppc__)			/* }{ */
-
-#define LUA_IEEE754TRICK
-#define LUA_IEEEENDIAN		1
-
-#else								/* }{ */
-
-/* assume IEEE754 and a 32-bit integer type */
-#define LUA_IEEE754TRICK
-
-#endif								/* } */
-
-#endif							/* } */
+#define LUA_UNSIGNED		unsigned LUA_INTEGER
 
 /* }================================================================== */
 
@@ -544,6 +546,8 @@
 ** Local configuration. You can use this space to add your redefinitions
 ** without modifying the main part of the file.
 */
+
+
 
 
 

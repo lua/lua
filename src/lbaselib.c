@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.276 2013/02/21 13:44:53 roberto Exp $
+** $Id: lbaselib.c,v 1.279 2013/07/05 14:39:15 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -45,42 +45,57 @@ static int luaB_print (lua_State *L) {
 
 #define SPACECHARS	" \f\n\r\t\v"
 
+static int b_str2int (const char *s, const char *e, int base, lua_Integer *pn) {
+  lua_Unsigned n = 0;
+  int neg = 0;
+  s += strspn(s, SPACECHARS);  /* skip initial spaces */
+  if (*s == '-') { s++; neg = 1; }  /* handle signal */
+  else if (*s == '+') s++;
+  if (!isalnum((unsigned char)*s))  /* no digit? */
+    return 0;
+  do {
+    int digit = (isdigit((unsigned char)*s)) ? *s - '0'
+                   : toupper((unsigned char)*s) - 'A' + 10;
+    if (digit >= base) return 0;  /* invalid numeral */
+    n = n * base + digit;
+    s++;
+  } while (isalnum((unsigned char)*s));
+  s += strspn(s, SPACECHARS);  /* skip trailing spaces */
+  if (s != e)  /* invalid trailing characters? */
+    return 0;
+  *pn = (neg) ? -(lua_Integer)n : (lua_Integer)n;
+  return 1;
+}
+
+
 static int luaB_tonumber (lua_State *L) {
   if (lua_isnoneornil(L, 2)) {  /* standard conversion */
-    int isnum;
-    lua_Number n = lua_tonumberx(L, 1, &isnum);
-    if (isnum) {
-      lua_pushnumber(L, n);
-      return 1;
-    }  /* else not a number; must be something */
     luaL_checkany(L, 1);
+    if (lua_type(L, 1) == LUA_TNUMBER) {  /* already a number? */
+      lua_settop(L, 1);  /* yes; return it */
+      return 1;
+    }
+    else {
+      size_t l;
+      const char *s = lua_tolstring(L, 1, &l);
+      if (s != NULL && lua_strtonum(L, s, l))  /* can convert to a number? */
+        return 1;
+      /* else not a number */
+    }
   }
   else {
     size_t l;
-    const char *s = luaL_checklstring(L, 1, &l);
-    const char *e = s + l;  /* end point for 's' */
+    const char *s;
+    lua_Integer n;
     int base = luaL_checkint(L, 2);
-    int neg = 0;
+    luaL_checktype(L, 1, LUA_TSTRING);  /* before 'luaL_checklstring'! */
+    s = luaL_checklstring(L, 1, &l);
     luaL_argcheck(L, 2 <= base && base <= 36, 2, "base out of range");
-    s += strspn(s, SPACECHARS);  /* skip initial spaces */
-    if (*s == '-') { s++; neg = 1; }  /* handle signal */
-    else if (*s == '+') s++;
-    if (isalnum((unsigned char)*s)) {
-      lua_Number n = 0;
-      do {
-        int digit = (isdigit((unsigned char)*s)) ? *s - '0'
-                       : toupper((unsigned char)*s) - 'A' + 10;
-        if (digit >= base) break;  /* invalid numeral; force a fail */
-        n = n * (lua_Number)base + (lua_Number)digit;
-        s++;
-      } while (isalnum((unsigned char)*s));
-      s += strspn(s, SPACECHARS);  /* skip trailing spaces */
-      if (s == e) {  /* no invalid trailing characters? */
-        lua_pushnumber(L, (neg) ? -n : n);
-        return 1;
-      }  /* else not a number */
+    if (b_str2int(s, s + l, base, &n)) {
+      lua_pushinteger(L, n);
+      return 1;
     }  /* else not a number */
-  }
+  }  /* else not a number */
   lua_pushnil(L);  /* not a number */
   return 1;
 }

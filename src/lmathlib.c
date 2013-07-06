@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.83 2013/03/07 18:21:32 roberto Exp $
+** $Id: lmathlib.c,v 1.90 2013/07/03 17:23:19 roberto Exp $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -20,7 +20,6 @@
 #undef PI
 #define PI	((lua_Number)(3.1415926535897932384626433832795))
 #define RADIANS_PER_DEGREE	((lua_Number)(PI/180.0))
-
 
 
 static int math_abs (lua_State *L) {
@@ -89,19 +88,39 @@ static int math_floor (lua_State *L) {
   return 1;
 }
 
+static int math_ifloor (lua_State *L) {
+  int valid;
+  lua_Integer n = lua_tointegerx(L, 1, &valid);
+  if (valid)
+    lua_pushinteger(L, n);
+  else {
+    luaL_checktype(L, 1, LUA_TNUMBER);  /* error if not a number */
+    lua_pushnil(L);  /* number with invalid integer value */
+  }
+  return 1;
+}
+
 static int math_fmod (lua_State *L) {
   lua_pushnumber(L, l_mathop(fmod)(luaL_checknumber(L, 1),
                                luaL_checknumber(L, 2)));
   return 1;
 }
 
+/*
+** next function does not use 'modf', avoiding problems with 'double*'
+** (which is not compatible with 'float*') when lua_Number is not
+** 'double'.
+*/
 static int math_modf (lua_State *L) {
-  lua_Number ip;
-  lua_Number fp = l_mathop(modf)(luaL_checknumber(L, 1), &ip);
+  lua_Number n = luaL_checknumber(L, 1);
+  /* integer part (rounds toward zero) */
+  lua_Number ip = (n < 0) ? -l_mathop(floor)(-n) : l_mathop(floor)(n);
   lua_pushnumber(L, ip);
-  lua_pushnumber(L, fp);
+  /* fractionary part (test handles inf/-inf) */
+  lua_pushnumber(L, (n == ip) ? 0.0 : (n - ip));
   return 2;
 }
+
 
 static int math_sqrt (lua_State *L) {
   lua_pushnumber(L, l_mathop(sqrt)(luaL_checknumber(L, 1)));
@@ -199,26 +218,28 @@ static int math_random (lua_State *L) {
   /* the `%' avoids the (rare) case of r==1, and is needed also because on
      some systems (SunOS!) `rand()' may return a value larger than RAND_MAX */
   lua_Number r = (lua_Number)(rand()%RAND_MAX) / (lua_Number)RAND_MAX;
+  lua_Integer low, up;
   switch (lua_gettop(L)) {  /* check number of arguments */
     case 0: {  /* no arguments */
       lua_pushnumber(L, r);  /* Number between 0 and 1 */
-      break;
+      return 1;
     }
     case 1: {  /* only upper limit */
-      lua_Number u = luaL_checknumber(L, 1);
-      luaL_argcheck(L, (lua_Number)1.0 <= u, 1, "interval is empty");
-      lua_pushnumber(L, l_mathop(floor)(r*u) + (lua_Number)(1.0));  /* [1, u] */
+      low = 1;
+      up = luaL_checkinteger(L, 1);
       break;
     }
     case 2: {  /* lower and upper limits */
-      lua_Number l = luaL_checknumber(L, 1);
-      lua_Number u = luaL_checknumber(L, 2);
-      luaL_argcheck(L, l <= u, 2, "interval is empty");
-      lua_pushnumber(L, l_mathop(floor)(r*(u-l+1)) + l);  /* [l, u] */
+      low = luaL_checkinteger(L, 1);
+      up = luaL_checkinteger(L, 2);
       break;
     }
     default: return luaL_error(L, "wrong number of arguments");
   }
+  /* random integer in the interval [low, up] */
+  up++;  /* change interval to [low, up) */
+  luaL_argcheck(L, up - low > 0, 1, "interval is empty");
+  lua_pushinteger(L, (lua_Integer)(r * (lua_Number)(up - low)) + low);
   return 1;
 }
 
@@ -227,6 +248,13 @@ static int math_randomseed (lua_State *L) {
   srand(luaL_checkunsigned(L, 1));
   (void)rand(); /* discard first value to avoid undesirable correlations */
   return 0;
+}
+
+
+static int math_isfloat (lua_State *L) {
+  luaL_checkany(L, 1);
+  lua_pushboolean(L, (lua_type(L, 1) == LUA_TNUMBER && !lua_isinteger(L, 1)));
+  return 1;
 }
 
 
@@ -242,8 +270,10 @@ static const luaL_Reg mathlib[] = {
   {"deg",   math_deg},
   {"exp",   math_exp},
   {"floor", math_floor},
+  {"ifloor", math_ifloor},
   {"fmod",   math_fmod},
   {"frexp", math_frexp},
+  {"isfloat", math_isfloat},
   {"ldexp", math_ldexp},
 #if defined(LUA_COMPAT_LOG10)
   {"log10", math_log10},

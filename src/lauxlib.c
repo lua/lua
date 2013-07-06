@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.248 2013/03/21 13:54:57 roberto Exp $
+** $Id: lauxlib.c,v 1.255 2013/06/27 18:32:33 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -386,11 +386,20 @@ LUALIB_API lua_Number luaL_optnumber (lua_State *L, int narg, lua_Number def) {
 }
 
 
+static void interror (lua_State *L, int narg) {
+  if (lua_type(L, narg) == LUA_TNUMBER)
+    luaL_argerror(L, narg, "float value out of range");
+  else
+    tag_error(L, narg, LUA_TNUMBER);
+}
+
+
 LUALIB_API lua_Integer luaL_checkinteger (lua_State *L, int narg) {
   int isnum;
   lua_Integer d = lua_tointegerx(L, narg, &isnum);
-  if (!isnum)
-    tag_error(L, narg, LUA_TNUMBER);
+  if (!isnum) {
+    interror(L, narg);
+  }
   return d;
 }
 
@@ -399,7 +408,7 @@ LUALIB_API lua_Unsigned luaL_checkunsigned (lua_State *L, int narg) {
   int isnum;
   lua_Unsigned d = lua_tounsignedx(L, narg, &isnum);
   if (!isnum)
-    tag_error(L, narg, LUA_TNUMBER);
+    interror(L, narg);
   return d;
 }
 
@@ -722,13 +731,13 @@ LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
 }
 
 
-LUALIB_API int luaL_len (lua_State *L, int idx) {
-  int l;
+LUALIB_API lua_Integer luaL_len (lua_State *L, int idx) {
+  lua_Integer l;
   int isnum;
   lua_len(L, idx);
-  l = (int)lua_tointegerx(L, -1, &isnum);
+  l = lua_tointegerx(L, -1, &isnum);
   if (!isnum)
-    luaL_error(L, "object length is not a number");
+    luaL_error(L, "object length is not an integer");
   lua_pop(L, 1);  /* remove object */
   return l;
 }
@@ -737,7 +746,12 @@ LUALIB_API int luaL_len (lua_State *L, int idx) {
 LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len) {
   if (!luaL_callmeta(L, idx, "__tostring")) {  /* no metafield? */
     switch (lua_type(L, idx)) {
-      case LUA_TNUMBER:
+      case LUA_TNUMBER: {  /* concatenate with empty string to convert */
+        lua_pushvalue(L, idx);
+        lua_pushliteral(L, "");
+        lua_concat(L, 2);
+        break;
+      }
       case LUA_TSTRING:
         lua_pushvalue(L, idx);
         break;
@@ -846,7 +860,6 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
 ** Returns with only the table at the stack.
 */
 LUALIB_API void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup) {
-  luaL_checkversion(L);
   luaL_checkstack(L, nup, "too many upvalues");
   for (; l->name != NULL; l++) {  /* fill the table with given functions */
     int i;
@@ -941,19 +954,15 @@ LUALIB_API lua_State *luaL_newstate (void) {
 }
 
 
-LUALIB_API void luaL_checkversion_ (lua_State *L, lua_Number ver) {
+LUALIB_API void luaL_checkversion_ (lua_State *L, int ver, size_t sz) {
   const lua_Number *v = lua_version(L);
   if (v != lua_version(NULL))
     luaL_error(L, "multiple Lua VMs detected");
   else if (*v != ver)
-    luaL_error(L, "version mismatch: app. needs %f, Lua core provides %f",
+    luaL_error(L, "version mismatch: app. needs %d, Lua core provides %f",
                   ver, *v);
-  /* check conversions number -> integer types */
-  lua_pushnumber(L, -(lua_Number)0x1234);
-  if (lua_tointeger(L, -1) != -0x1234 ||
-      lua_tounsigned(L, -1) != (lua_Unsigned)-0x1234)
-    luaL_error(L, "bad conversion number->int;"
-                  " must recompile Lua with proper settings");
-  lua_pop(L, 1);
+  /* check numeric types */
+  if (sz != LUAL_NUMSIZES)
+    luaL_error(L, "core and library have incompatible numeric types");
 }
 

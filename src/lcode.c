@@ -1,10 +1,11 @@
 /*
-** $Id: lcode.c,v 2.62 2012/08/16 17:34:28 roberto Exp $
+** $Id: lcode.c,v 2.71 2013/06/25 18:57:18 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
 
 
+#include <math.h>
 #include <stdlib.h>
 
 #define lcode_c
@@ -26,11 +27,29 @@
 #include "lvm.h"
 
 
+/* test for x == -0 */
+#if defined(signbit)
+#define isminuszero(x)	((x) == 0.0 && signbit(x))
+#else
+#define isminuszero(x)	((x) == 0.0 && 1.0/(x) < 0.0)
+#endif
+
+
 #define hasjumps(e)	((e)->t != (e)->f)
 
 
-static int isnumeral(expdesc *e) {
-  return (e->k == VKNUM && e->t == NO_JUMP && e->f == NO_JUMP);
+static int tonumeral(expdesc *e, TValue *v) {
+  if (e->t != NO_JUMP || e->f != NO_JUMP)
+    return 0;  /* not a numeral */
+  switch (e->k) {
+    case VKINT:
+      if (v) setivalue(v, e->u.ival);
+      return 1;
+    case VKFLT:
+      if (v) setnvalue(v, e->u.nval);
+      return 1;
+    default: return 0;
+  }
 }
 
 
@@ -293,9 +312,8 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
   TValue *idx = luaH_set(L, fs->h, key);
   Proto *f = fs->f;
   int k, oldsize;
-  if (ttisnumber(idx)) {
-    lua_Number n = nvalue(idx);
-    lua_number2int(k, n);
+  if (ttisinteger(idx)) {
+    k = ivalue(idx);
     if (luaV_rawequalobj(&f->k[k], v))
       return k;
     /* else may be a collision (e.g., between 0.0 and "\0\0\0\0\0\0\0\0");
@@ -306,7 +324,7 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
   k = fs->nk;
   /* numerical value does not need GC barrier;
      table has no metatable, so it does not need to invalidate cache */
-  setnvalue(idx, cast_num(k));
+  setivalue(idx, k);
   luaM_growvector(L, f->k, k, f->sizek, TValue, MAXARG_Ax, "constants");
   while (oldsize < f->sizek) setnilvalue(&f->k[oldsize++]);
   setobj(L, &f->k[k], v);
@@ -323,20 +341,28 @@ int luaK_stringK (FuncState *fs, TString *s) {
 }
 
 
-int luaK_numberK (FuncState *fs, lua_Number r) {
-  int n;
-  lua_State *L = fs->ls->L;
+/*
+** use userdata as key to avoid collision with float with same value;
+** conversion to 'void*' used only for hash, no "precision" problems
+*/
+int luaK_intK (FuncState *fs, lua_Integer n) {
+  TValue k, o;
+  setpvalue(&k, cast(void*, cast(size_t, n)));
+  setivalue(&o, n);
+  return addk(fs, &k, &o);
+}
+
+
+/*
+** Both NaN and -0.0 should not go to the constant table, as they have
+** problems with the hashing. (NaN is not ** a valid key,
+** -0.0 collides with +0.0.)
+*/ 
+static int luaK_numberK (FuncState *fs, lua_Number r) {
   TValue o;
+  lua_assert(!luai_numisnan(NULL, r) && !isminuszero(r));
   setnvalue(&o, r);
-  if (r == 0 || luai_numisnan(NULL, r)) {  /* handle -0 and NaN */
-    /* use raw representation as key to avoid numeric problems */
-    setsvalue(L, L->top++, luaS_newlstr(L, (char *)&r, sizeof(r)));
-    n = addk(fs, L->top - 1, &o);
-    L->top--;
-  }
-  else
-    n = addk(fs, &o, &o);  /* regular case */
-  return n;
+  return addk(fs, &o, &o);
 }
 
 
@@ -433,8 +459,12 @@ static void discharge2reg (FuncState *fs, expdesc *e, int reg) {
       luaK_codek(fs, reg, e->u.info);
       break;
     }
-    case VKNUM: {
+    case VKFLT: {
       luaK_codek(fs, reg, luaK_numberK(fs, e->u.nval));
+      break;
+    }
+    case VKINT: {
+      luaK_codek(fs, reg, luaK_intK(fs, e->u.ival));
       break;
     }
     case VRELOCABLE: {
@@ -538,12 +568,18 @@ int luaK_exp2RK (FuncState *fs, expdesc *e) {
       }
       else break;
     }
-    case VKNUM: {
+    case VKINT: {
+      e->u.info = luaK_intK(fs, e->u.ival);
+      e->k = VK;
+      goto vk;
+    }
+    case VKFLT: {
       e->u.info = luaK_numberK(fs, e->u.nval);
       e->k = VK;
       /* go through */
     }
     case VK: {
+     vk:
       if (e->u.info <= MAXINDEXRK)  /* constant fits in argC? */
         return RKASK(e->u.info);
       else break;
@@ -627,7 +663,7 @@ void luaK_goiftrue (FuncState *fs, expdesc *e) {
       pc = e->u.info;
       break;
     }
-    case VK: case VKNUM: case VTRUE: {
+    case VK: case VKFLT: case VKINT: case VTRUE: {
       pc = NO_JUMP;  /* always true; do nothing */
       break;
     }
@@ -672,7 +708,7 @@ static void codenot (FuncState *fs, expdesc *e) {
       e->k = VTRUE;
       break;
     }
-    case VK: case VKNUM: case VTRUE: {
+    case VK: case VKFLT: case VKINT: case VTRUE: {
       e->k = VFALSE;
       break;
     }
@@ -711,21 +747,34 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
 
 
 static int constfolding (OpCode op, expdesc *e1, expdesc *e2) {
-  lua_Number r;
-  if (!isnumeral(e1) || !isnumeral(e2)) return 0;
-  if ((op == OP_DIV || op == OP_MOD) && e2->u.nval == 0)
-    return 0;  /* do not attempt to divide by 0 */
-  r = luaO_arith(op - OP_ADD + LUA_OPADD, e1->u.nval, e2->u.nval);
-  e1->u.nval = r;
+  TValue v1, v2, res;
+  lua_Integer i;
+  if (!tonumeral(e1, &v1) || !tonumeral(e2, &v2))
+    return 0;
+  if (op == OP_IDIV &&
+        (!tointeger(&v1, &i) || !tointeger(&v2, &i) || i == 0))
+    return 0;  /* avoid division by 0 and conversion errors */
+  if (op == OP_MOD && ttisinteger(&v1) && ttisinteger(&v2) && ivalue(&v2) == 0)
+    return 0;  /* avoid module by 0 at compile time */
+  luaO_arith(NULL, op - OP_ADD + LUA_OPADD, &v1, &v2, &res);
+  if (ttisinteger(&res)) {
+    e1->k = VKINT;
+    e1->u.ival = ivalue(&res);
+  }
+  else {
+    lua_Number n = fltvalue(&res);
+    if (luai_numisnan(NULL, n) || isminuszero(n))
+      return 0;  /* folds neither NaN nor -0 */
+    e1->k = VKFLT;
+    e1->u.nval = n;
+  }
   return 1;
 }
 
 
 static void codearith (FuncState *fs, OpCode op,
                        expdesc *e1, expdesc *e2, int line) {
-  if (constfolding(op, e1, e2))
-    return;
-  else {
+  if (!constfolding(op, e1, e2)) {  /* could not fold operation? */
     int o2 = (op != OP_UNM && op != OP_LEN) ? luaK_exp2RK(fs, e2) : 0;
     int o1 = luaK_exp2RK(fs, e1);
     if (o1 > o2) {
@@ -761,12 +810,10 @@ static void codecomp (FuncState *fs, OpCode op, int cond, expdesc *e1,
 
 void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
   expdesc e2;
-  e2.t = e2.f = NO_JUMP; e2.k = VKNUM; e2.u.nval = 0;
+  e2.t = e2.f = NO_JUMP; e2.k = VKFLT; e2.u.nval = 0;
   switch (op) {
     case OPR_MINUS: {
-      if (isnumeral(e))  /* minus constant? */
-        e->u.nval = luai_numunm(NULL, e->u.nval);  /* fold it */
-      else {
+      if (!constfolding(OP_UNM, e, e)) {  /* cannot fold it? */
         luaK_exp2anyreg(fs, e);
         codearith(fs, OP_UNM, e, &e2, line);
       }
@@ -797,9 +844,10 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
       luaK_exp2nextreg(fs, v);  /* operand must be on the `stack' */
       break;
     }
-    case OPR_ADD: case OPR_SUB: case OPR_MUL: case OPR_DIV:
+    case OPR_ADD: case OPR_SUB:
+    case OPR_MUL: case OPR_DIV: case OPR_IDIV:
     case OPR_MOD: case OPR_POW: {
-      if (!isnumeral(v)) luaK_exp2RK(fs, v);
+      if (!tonumeral(v, NULL)) luaK_exp2RK(fs, v);
       break;
     }
     default: {
@@ -842,7 +890,7 @@ void luaK_posfix (FuncState *fs, BinOpr op,
       break;
     }
     case OPR_ADD: case OPR_SUB: case OPR_MUL: case OPR_DIV:
-    case OPR_MOD: case OPR_POW: {
+    case OPR_IDIV: case OPR_MOD: case OPR_POW: {
       codearith(fs, cast(OpCode, op - OPR_ADD + OP_ADD), e1, e2, line);
       break;
     }

@@ -1,17 +1,17 @@
 /*
-** $Id: liolib.c,v 2.111 2013/03/21 13:57:27 roberto Exp $
+** $Id: liolib.c,v 2.114 2013/06/07 19:01:35 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
 
 
 /*
-** POSIX idiosyncrasy!
 ** This definition must come before the inclusion of 'stdio.h'; it
 ** should not affect non-POSIX systems
 */
 #if !defined(_FILE_OFFSET_BITS)
-#define _FILE_OFFSET_BITS 64
+#define	_LARGEFILE_SOURCE	1
+#define _FILE_OFFSET_BITS	64
 #endif
 
 
@@ -80,35 +80,36 @@
 
 /*
 ** {======================================================
-** lua_fseek/lua_ftell: configuration for longer offsets
+** lua_fseek: configuration for longer offsets
 ** =======================================================
 */
 
-#if !defined(lua_fseek)	/* { */
+#if !defined(lua_fseek)	&& !defined(LUA_ANSI)	/* { */
 
-#if defined(LUA_USE_POSIX)
+#if defined(LUA_USE_POSIX)	/* { */
 
 #define l_fseek(f,o,w)		fseeko(f,o,w)
 #define l_ftell(f)		ftello(f)
 #define l_seeknum		off_t
 
 #elif defined(LUA_WIN) && !defined(_CRTIMP_TYPEINFO) \
-   && defined(_MSC_VER) && (_MSC_VER >= 1400)
+   && defined(_MSC_VER) && (_MSC_VER >= 1400)	/* }{ */
 /* Windows (but not DDK) and Visual C++ 2005 or higher */
 
 #define l_fseek(f,o,w)		_fseeki64(f,o,w)
 #define l_ftell(f)		_ftelli64(f)
 #define l_seeknum		__int64
 
-#else
+#endif	/* } */
 
+#endif			/* } */
+
+
+#if !defined(l_fseek)		/* default definitions */
 #define l_fseek(f,o,w)		fseek(f,o,w)
 #define l_ftell(f)		ftell(f)
 #define l_seeknum		long
-
 #endif
-
-#endif			/* } */
 
 /* }====================================================== */
 
@@ -346,6 +347,19 @@ static int io_lines (lua_State *L) {
 */
 
 
+static int read_integer (lua_State *L, FILE *f) {
+  lua_Integer d;
+  if (fscanf(f, LUA_INTEGER_SCAN, &d) == 1) {
+    lua_pushinteger(L, d);
+    return 1;
+  }
+  else {
+   lua_pushnil(L);  /* "result" to be removed */
+   return 0;  /* read fails */
+  }
+}
+
+
 static int read_number (lua_State *L, FILE *f) {
   lua_Number d;
   if (fscanf(f, LUA_NUMBER_SCAN, &d) == 1) {
@@ -441,6 +455,9 @@ static int g_read (lua_State *L, FILE *f, int first) {
         const char *p = lua_tostring(L, n);
         luaL_argcheck(L, p && p[0] == '*', n, "invalid option");
         switch (p[1]) {
+          case 'i':  /* integer */
+            success = read_integer(L, f);
+            break;
           case 'n':  /* number */
             success = read_number(L, f);
             break;
@@ -516,8 +533,10 @@ static int g_write (lua_State *L, FILE *f, int arg) {
   for (; nargs--; arg++) {
     if (lua_type(L, arg) == LUA_TNUMBER) {
       /* optimization: could be done exactly as for strings */
-      status = status &&
-          fprintf(f, LUA_NUMBER_FMT, lua_tonumber(L, arg)) > 0;
+      int len = lua_isinteger(L, arg)
+                ? fprintf(f, LUA_INTEGER_FMT, lua_tointeger(L, arg))
+                : fprintf(f, LUA_NUMBER_FMT, lua_tonumber(L, arg));
+      status = status && (len > 0);
     }
     else {
       size_t l;
