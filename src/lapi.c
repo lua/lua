@@ -1,10 +1,11 @@
 /*
-** $Id: lapi.c,v 2.171 2013/03/16 21:10:18 roberto Exp $
+** $Id: lapi.c,v 2.185 2013/07/05 14:29:51 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
 
 
+#include <math.h>
 #include <stdarg.h>
 #include <string.h>
 
@@ -248,7 +249,7 @@ LUA_API void lua_pushvalue (lua_State *L, int idx) {
 
 LUA_API int lua_type (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
-  return (isvalid(o) ? ttypenv(o) : LUA_TNONE);
+  return (isvalid(o) ? ttnov(o) : LUA_TNONE);
 }
 
 
@@ -264,8 +265,14 @@ LUA_API int lua_iscfunction (lua_State *L, int idx) {
 }
 
 
+LUA_API int lua_isinteger (lua_State *L, int idx) {
+  StkId o = index2addr(L, idx);
+  return ttisinteger(o);
+}
+
+
 LUA_API int lua_isnumber (lua_State *L, int idx) {
-  TValue n;
+  lua_Number n;
   const TValue *o = index2addr(L, idx);
   return tonumber(o, &n);
 }
@@ -291,8 +298,6 @@ LUA_API int lua_rawequal (lua_State *L, int index1, int index2) {
 
 
 LUA_API void lua_arith (lua_State *L, int op) {
-  StkId o1;  /* 1st operand */
-  StkId o2;  /* 2nd operand */
   lua_lock(L);
   if (op != LUA_OPUNM) /* all other operations expect two operands */
     api_checknelems(L, 2);
@@ -301,14 +306,9 @@ LUA_API void lua_arith (lua_State *L, int op) {
     setobjs2s(L, L->top, L->top - 1);
     L->top++;
   }
-  o1 = L->top - 2;
-  o2 = L->top - 1;
-  if (ttisnumber(o1) && ttisnumber(o2)) {
-    setnvalue(o1, luaO_arith(op, nvalue(o1), nvalue(o2)));
-  }
-  else
-    luaV_arith(L, o1, o1, o2, cast(TMS, op - LUA_OPADD + TM_ADD));
-  L->top--;
+  /* first operand at top - 2, second at top - 1; result go to top - 2 */
+  luaO_arith(L, op, L->top - 2, L->top - 1, L->top - 2);
+  L->top--;  /* remove second operand */
   lua_unlock(L);
 }
 
@@ -321,7 +321,7 @@ LUA_API int lua_compare (lua_State *L, int index1, int index2, int op) {
   o2 = index2addr(L, index2);
   if (isvalid(o1) && isvalid(o2)) {
     switch (op) {
-      case LUA_OPEQ: i = equalobj(L, o1, o2); break;
+      case LUA_OPEQ: i = luaV_equalobj(L, o1, o2); break;
       case LUA_OPLT: i = luaV_lessthan(L, o1, o2); break;
       case LUA_OPLE: i = luaV_lessequal(L, o1, o2); break;
       default: api_check(L, 0, "invalid option");
@@ -332,51 +332,74 @@ LUA_API int lua_compare (lua_State *L, int index1, int index2, int op) {
 }
 
 
-LUA_API lua_Number lua_tonumberx (lua_State *L, int idx, int *isnum) {
-  TValue n;
-  const TValue *o = index2addr(L, idx);
-  if (tonumber(o, &n)) {
-    if (isnum) *isnum = 1;
-    return nvalue(o);
+LUA_API int lua_strtonum (lua_State *L, const char *s, size_t len) {
+  lua_Integer i; lua_Number n;
+  if (luaO_str2int(s, len, &i)) {  /* try as an integer */
+    setivalue(L->top, i);
   }
-  else {
-    if (isnum) *isnum = 0;
-    return 0;
+  else if (luaO_str2d(s, len, &n)) {  /* else try as a float */
+    setnvalue(L->top, n);
   }
+  else
+    return 0;  /* conversion failed */
+  api_incr_top(L);
+  return 1;
 }
 
 
-LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *isnum) {
-  TValue n;
+LUA_API lua_Number lua_tonumberx (lua_State *L, int idx, int *pisnum) {
+  lua_Number n;
   const TValue *o = index2addr(L, idx);
-  if (tonumber(o, &n)) {
-    lua_Integer res;
-    lua_Number num = nvalue(o);
-    lua_number2integer(res, num);
-    if (isnum) *isnum = 1;
-    return res;
-  }
-  else {
-    if (isnum) *isnum = 0;
-    return 0;
-  }
+  int isnum = tonumber(o, &n);
+  if (!isnum)
+    n = 0;  /* call to 'tonumber' may change 'n' even if it fails */
+  if (pisnum) *pisnum = isnum;
+  return n;
 }
 
 
-LUA_API lua_Unsigned lua_tounsignedx (lua_State *L, int idx, int *isnum) {
-  TValue n;
+LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *pisnum) {
+  lua_Integer res;
   const TValue *o = index2addr(L, idx);
-  if (tonumber(o, &n)) {
-    lua_Unsigned res;
-    lua_Number num = nvalue(o);
-    lua_number2unsigned(res, num);
-    if (isnum) *isnum = 1;
-    return res;
+  int isnum = tointeger(o, &res);
+  if (!isnum)
+    res = 0;  /* call to 'tointeger' may change 'n' even if it fails */
+  if (pisnum) *pisnum = isnum;
+  return res;
+}
+
+
+LUA_API lua_Unsigned lua_tounsignedx (lua_State *L, int idx, int *pisnum) {
+  lua_Unsigned res = 0;
+  const TValue *o = index2addr(L, idx);
+  int isnum = 0;
+  switch (ttype(o)) {
+    case LUA_TNUMINT: {
+      res = cast_unsigned(ivalue(o));
+      isnum = 1;
+      break;
+    }
+    case LUA_TNUMFLT: {
+      const lua_Number twop = (~(lua_Unsigned)0) + cast_num(1);
+      lua_Number n = fltvalue(o);
+      int neg = 0;
+      n = l_floor(n);
+      if (n < 0) {
+        neg = 1;
+        n = -n;
+      }
+      n = l_mathop(fmod)(n, twop);
+      if (luai_numisnan(L,n))   /* not a number? */
+        break;  /* not an integer, too */
+      res = cast_unsigned(n);
+      if (neg) res = 0u - res;
+      isnum = 1;
+      break;
+    }
+    default: break;
   }
-  else {
-    if (isnum) *isnum = 0;
-    return 0;
-  }
+  if (pisnum) *pisnum = isnum;
+  return res;
 }
 
 
@@ -406,7 +429,7 @@ LUA_API const char *lua_tolstring (lua_State *L, int idx, size_t *len) {
 
 LUA_API size_t lua_rawlen (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
-  switch (ttypenv(o)) {
+  switch (ttnov(o)) {
     case LUA_TSTRING: return tsvalue(o)->len;
     case LUA_TUSERDATA: return uvalue(o)->len;
     case LUA_TTABLE: return luaH_getn(hvalue(o));
@@ -426,7 +449,7 @@ LUA_API lua_CFunction lua_tocfunction (lua_State *L, int idx) {
 
 LUA_API void *lua_touserdata (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
-  switch (ttypenv(o)) {
+  switch (ttnov(o)) {
     case LUA_TUSERDATA: return (rawuvalue(o) + 1);
     case LUA_TLIGHTUSERDATA: return pvalue(o);
     default: return NULL;
@@ -482,17 +505,15 @@ LUA_API void lua_pushnumber (lua_State *L, lua_Number n) {
 
 LUA_API void lua_pushinteger (lua_State *L, lua_Integer n) {
   lua_lock(L);
-  setnvalue(L->top, cast_num(n));
+  setivalue(L->top, n);
   api_incr_top(L);
   lua_unlock(L);
 }
 
 
 LUA_API void lua_pushunsigned (lua_State *L, lua_Unsigned u) {
-  lua_Number n;
   lua_lock(L);
-  n = lua_unsigned2number(u);
-  setnvalue(L->top, n);
+  setivalue(L->top, cast_integer(u));
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -646,7 +667,7 @@ LUA_API void lua_rawget (lua_State *L, int idx) {
 }
 
 
-LUA_API void lua_rawgeti (lua_State *L, int idx, int n) {
+LUA_API void lua_rawgeti (lua_State *L, int idx, lua_Integer n) {
   StkId t;
   lua_lock(L);
   t = index2addr(L, idx);
@@ -689,7 +710,7 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
   int res;
   lua_lock(L);
   obj = index2addr(L, objindex);
-  switch (ttypenv(obj)) {
+  switch (ttnov(obj)) {
     case LUA_TTABLE:
       mt = hvalue(obj)->metatable;
       break;
@@ -697,7 +718,7 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
       mt = uvalue(obj)->metatable;
       break;
     default:
-      mt = G(L)->mt[ttypenv(obj)];
+      mt = G(L)->mt[ttnov(obj)];
       break;
   }
   if (mt == NULL)
@@ -781,7 +802,7 @@ LUA_API void lua_rawset (lua_State *L, int idx) {
 }
 
 
-LUA_API void lua_rawseti (lua_State *L, int idx, int n) {
+LUA_API void lua_rawseti (lua_State *L, int idx, lua_Integer n) {
   StkId t;
   lua_lock(L);
   api_checknelems(L, 1);
@@ -821,7 +842,7 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
     api_check(L, ttistable(L->top - 1), "table expected");
     mt = hvalue(L->top - 1);
   }
-  switch (ttypenv(obj)) {
+  switch (ttnov(obj)) {
     case LUA_TTABLE: {
       hvalue(obj)->metatable = mt;
       if (mt) {
@@ -839,7 +860,7 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
       break;
     }
     default: {
-      G(L)->mt[ttypenv(obj)] = mt;
+      G(L)->mt[ttnov(obj)] = mt;
       break;
     }
   }
