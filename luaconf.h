@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.184 2013/06/21 17:42:28 roberto Exp roberto $
+** $Id: luaconf.h,v 1.185 2013/06/25 19:04:40 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -384,12 +384,13 @@
 */
 
 /*
-@@ LUA_INTSIZE defines size for Lua integer: 1=int, 2=long, 3=long long
-@@ LUA_FLOATSIZE defines size for Lua float: 1=float, 2=double, 3=long double
+@@ LUA_INT_INT/LUA_INT_LONG/LUA_INT_LONGLONG defines size for Lua integers;
+@@ LUA_REAL_FLOAT/LUA_REAL_DOUBLE/LUA_REAL_LONGDOUBLE defines size for
+@* Lua floats.
 ** Default is long long + double
 */
-#define LUA_INTSIZE		3
-#define LUA_FLOATSIZE		2
+#define LUA_INT_LONGLONG
+#define LUA_REAL_DOUBLE
 
 
 /*
@@ -408,7 +409,7 @@
 @@ lua_str2number converts a decimal numeric string to a number.
 */
 
-#if LUA_FLOATSIZE == 1	/* { single float */
+#if defined(LUA_REAL_FLOAT)		/* { single float */
 
 #define LUA_NUMBER	float
 
@@ -423,7 +424,7 @@
 #define lua_str2number(s,p)	strtof((s), (p))
 
 
-#elif LUA_FLOATSIZE == 3	/* }{ long double */
+#elif defined(LUA_REAL_LONGDOUBLE)	/* }{ long double */
 
 #define LUA_NUMBER	long double
 
@@ -437,7 +438,7 @@
 
 #define lua_str2number(s,p)	strtold((s), (p))
 
-#else	/* }{ default: double */
+#elif defined(LUA_REAL_DOUBLE)		/* }{ double */
 
 #define LUA_NUMBER	double
 
@@ -451,7 +452,11 @@
 
 #define lua_str2number(s,p)	strtod((s), (p))
 
-#endif	/* } */
+#else					/* }{ */
+
+#error "numeric real type not defined"
+
+#endif					/* } */
 
 
 #if defined(LUA_ANSI)
@@ -511,22 +516,31 @@
 @@ lua_integer2str converts an integer to a string.
 */
 
-#if LUA_INTSIZE == 1	/* { int */
+#if defined(LUA_INT_INT)		/* { int */
 
 #define LUA_INTEGER		int
 #define LUA_INTEGER_FRMLEN	""
 
-#elif LUA_INTSIZE == 2	/* }{ long */
+#elif defined(LUA_INT_LONG)	/* }{ long */
 
 #define LUA_INTEGER		long
 #define LUA_INTEGER_FRMLEN	"l"
 
-#else	/* }{ default: long long */
+#elif defined(LUA_INT_LONGLONG)	/* }{ long long */
 
+#if defined(_WIN32)
+#define LUA_INTEGER		__int64
+#define LUA_INTEGER_FRMLEN	"I64"
+#else
 #define LUA_INTEGER		long long
 #define LUA_INTEGER_FRMLEN	"ll"
+#endif
 
-#endif	/* } */
+#else				/* }{ */
+
+#error "numeric integer type not defined"
+
+#endif				/* } */
 
 
 #define LUA_INTEGER_SCAN	"%" LUA_INTEGER_FRMLEN "d"
