@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.174 2013/06/19 14:27:00 roberto Exp roberto $
+** $Id: lvm.c,v 2.175 2013/06/20 15:02:49 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -334,7 +334,7 @@ lua_Integer luaV_div (lua_State *L, lua_Integer x, lua_Integer y) {
     if (y == 0)
       luaG_runerror(L, "attempt to divide by zero");
     else  /* -1 */
-      return -x;   /* avoid overflow with 0x80000... */
+      return intop(-, 0, x);   /* avoid overflow with 0x80000... */
   }
   else {
     lua_Integer d = x / y;  /* perform division */
@@ -699,7 +699,7 @@ void luaV_execute (lua_State *L) {
         lua_Number nb;
         if (ttisinteger(rb)) {
           lua_Integer ib = ivalue(rb);
-          setivalue(ra, -ib);
+          setivalue(ra, intop(-, 0, ib));
         }
         else if (tonumber(rb, &nb)) {
           setnvalue(ra, luai_numunm(L, nb));

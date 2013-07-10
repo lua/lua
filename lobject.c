@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.66 2013/06/04 19:36:42 roberto Exp roberto $
+** $Id: lobject.c,v 2.67 2013/06/25 18:58:32 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -78,7 +78,7 @@ static lua_Integer intarith (lua_State *L, int op, lua_Integer v1,
     case LUA_OPMUL:return intop(*, v1, v2);
     case LUA_OPMOD: return luaV_mod(L, v1, v2);
     case LUA_OPPOW: return luaV_pow(v1, v2);
-    case LUA_OPUNM: return -v1;
+    case LUA_OPUNM: return intop(-, 0, v1);
     default: lua_assert(0); return 0;
   }
 }
@@ -260,8 +260,7 @@ int luaO_str2int (const char *s, size_t len, lua_Integer *result) {
   while (lisspace(cast_uchar(*s))) s++;  /* skip trailing spaces */
   if (empty || s != ends) return 0;  /* something wrong in the numeral */
   else {
-    if (neg) *result = -cast(lua_Integer, a);
-    else *result = cast(lua_Integer, a);
+    *result = cast_integer((neg) ? 0u - a : a);
     return 1;
   }
 }

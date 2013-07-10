@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.278 2013/07/05 14:35:49 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.279 2013/07/05 14:39:15 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -63,7 +63,7 @@ static int b_str2int (const char *s, const char *e, int base, lua_Integer *pn) {
   s += strspn(s, SPACECHARS);  /* skip trailing spaces */
   if (s != e)  /* invalid trailing characters? */
     return 0;
-  *pn = (neg) ? -(lua_Integer)n : (lua_Integer)n;
+  *pn = (lua_Integer)((neg) ? (0u - n) : n);
   return 1;
 }
 
