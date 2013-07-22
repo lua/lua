@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.133 2013/06/25 19:37:00 roberto Exp roberto $
+** $Id: ldblib.c,v 1.134 2013/07/10 20:57:05 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -30,38 +30,6 @@ static int db_numbits (lua_State *L) {
     lua_pushinteger(L, sizeof(lua_Number) * CHAR_BIT);
   else
     luaL_argerror(L, 1, lua_pushfstring(L, "invalid option '%s'", s));
-  return 1;
-}
-
-
-static int db_subtype (lua_State *L) {
-  int tp = lua_type(L, 1);
-  switch (tp) {
-    case LUA_TNONE:
-      luaL_checkany(L, 1);
-      break;
-    case LUA_TNUMBER:
-      if (lua_isinteger(L, 1))
-        lua_pushliteral(L, "integer"); 
-      else
-        lua_pushliteral(L, "float"); 
-      break;
-    case LUA_TFUNCTION:
-      if (lua_iscfunction(L, 1))
-        lua_pushliteral(L, "Cfunction"); 
-      else
-        lua_pushliteral(L, "Luafunction"); 
-      break;
-    case LUA_TUSERDATA:
-      if (lua_islightuserdata(L, 1))
-        lua_pushliteral(L, "lightudata"); 
-      else
-        lua_pushliteral(L, "fulludata"); 
-      break;
-    default:
-      lua_pushstring(L, lua_typename(L, tp));
-      break;
-  }
   return 1;
 }
 
@@ -431,7 +399,6 @@ static const luaL_Reg dblib[] = {
   {"setlocal", db_setlocal},
   {"setmetatable", db_setmetatable},
   {"setupvalue", db_setupvalue},
-  {"subtype", db_subtype},
   {"traceback", db_traceback},
   {NULL, NULL}
 };

@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.90 2013/07/03 17:23:19 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.91 2013/07/10 20:57:05 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -251,6 +251,20 @@ static int math_randomseed (lua_State *L) {
 }
 
 
+static int math_type (lua_State *L) {
+  luaL_checkany(L, 1);
+  if (lua_type(L, 1) == LUA_TNUMBER) {
+      if (lua_isinteger(L, 1))
+        lua_pushliteral(L, "integer"); 
+      else
+        lua_pushliteral(L, "float"); 
+  }
+  else
+    lua_pushnil(L);
+  return 1;
+}
+
+
 static const luaL_Reg mathlib[] = {
   {"abs",   math_abs},
   {"acos",  math_acos},
@@ -283,6 +297,7 @@ static const luaL_Reg mathlib[] = {
   {"sqrt",  math_sqrt},
   {"tanh",   math_tanh},
   {"tan",   math_tan},
+  {"type", math_type},
   {NULL, NULL}
 };
 
