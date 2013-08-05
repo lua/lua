@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.138 2013/05/07 19:01:16 roberto Exp roberto $
+** $Id: ltests.c,v 2.139 2013/06/20 21:59:13 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -405,15 +405,8 @@ static void markgrays (global_State *g) {
 }
 
 
-static void checkold (global_State *g, GCObject *o) {
-  int isold = 0;
+static void checkgray (global_State *g, GCObject *o) {
   for (; o != NULL; o = gch(o)->next) {
-    if (isold(o)) {  /* old generation? */
-      lua_assert(isgenerational(g));
-      if (!issweepphase(g))
-        isold = 1;
-    }
-    else lua_assert(!isold);  /* non-old object cannot be after an old one */
     if (isgray(o)) {
       lua_assert(!keepinvariant(g) || testbit(o->gch.marked, TESTGRAYBIT));
       resetbit(o->gch.marked, TESTGRAYBIT);
@@ -432,14 +425,12 @@ int lua_checkmemory (lua_State *L) {
     lua_assert(!iswhite(obj2gco(g->mainthread)));
     lua_assert(!iswhite(gcvalue(&g->l_registry)));
   }
-  else  /* generational mode keeps collector in 'propagate' state */
-    lua_assert(!isgenerational(g));
   lua_assert(!isdead(g, gcvalue(&g->l_registry)));
   checkstack(g, g->mainthread);
   resetbit(g->mainthread->marked, TESTGRAYBIT);
   /* check 'allgc' list */
   markgrays(g);
-  checkold(g, g->allgc);
+  checkgray(g, g->allgc);
   lua_assert(g->sweepgc == NULL || issweepphase(g));
   maybedead = 0;
   for (o = g->allgc; o != NULL; o = gch(o)->next) {
@@ -449,7 +440,7 @@ int lua_checkmemory (lua_State *L) {
     lua_assert(!testbit(o->gch.marked, SEPARATED));
   }
   /* check 'finobj' list */
-  checkold(g, g->finobj);
+  checkgray(g, g->finobj);
   for (o = g->finobj; o != NULL; o = gch(o)->next) {
     lua_assert(testbit(o->gch.marked, SEPARATED));
     lua_assert(gch(o)->tt == LUA_TUSERDATA ||
@@ -457,7 +448,7 @@ int lua_checkmemory (lua_State *L) {
     checkobject(g, o, 0);
   }
   /* check 'tobefnz' list */
-  checkold(g, g->tobefnz);
+  checkgray(g, g->tobefnz);
   for (o = g->tobefnz; o != NULL; o = gch(o)->next) {
     lua_assert(!iswhite(o) || g->gcstate == GCSpause);
     lua_assert(!isdead(g, o) && testbit(o->gch.marked, SEPARATED));
@@ -645,9 +636,6 @@ static int get_gccolor (lua_State *L) {
     if (testbit(marked, FIXEDBIT)) {
       lua_pushliteral(L, "/fixed"); n++;
     }
-    if (testbit(marked, OLDBIT)) {
-      lua_pushliteral(L, "/old"); n++;
-    }
     lua_concat(L, n);
   }
   return 1;
@@ -664,13 +652,9 @@ static int gc_state (lua_State *L) {
   }
   else {
     global_State *g = G(L);
-    if (g->gckind == KGC_GEN && option == GCSpause)
-      luaL_error(L, "cannot go to 'pause' state in generational mode");
     lua_lock(L);
     if (option < g->gcstate) {  /* must cross 'pause'? */
       luaC_runtilstate(L, bitmask(GCSpause));  /* run until pause */
-      if (g->gckind == KGC_GEN)
-        g->gcstate = GCSpropagate;  /* skip pause in gen. mode */
     }
     luaC_runtilstate(L, bitmask(option));
     lua_assert(G(L)->gcstate == option);

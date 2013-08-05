@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.184 2013/06/20 15:12:43 roberto Exp roberto $
+** $Id: lapi.c,v 2.185 2013/07/05 14:29:51 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1068,29 +1068,18 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       break;
     }
     case LUA_GCSTEP: {
-      if (g->gckind == KGC_GEN) {  /* generational mode? */
-        res = (g->GCestimate == 0);  /* true if it will do major collection */
-        luaC_forcestep(L);  /* do a single step */
-      }
-      else {
-       lu_mem debt = cast(lu_mem, data) * 1024 - GCSTEPSIZE;
-       if (g->gcrunning)
-         debt += g->GCdebt;  /* include current debt */
-       luaE_setdebt(g, debt);
-       luaC_forcestep(L);
-       if (g->gcstate == GCSpause)  /* end of cycle? */
-         res = 1;  /* signal it */
-      }
+      lu_mem debt = cast(lu_mem, data) * 1024 - GCSTEPSIZE;
+      if (g->gcrunning)
+        debt += g->GCdebt;  /* include current debt */
+      luaE_setdebt(g, debt);
+      luaC_forcestep(L);
+      if (g->gcstate == GCSpause)  /* end of cycle? */
+        res = 1;  /* signal it */
       break;
     }
     case LUA_GCSETPAUSE: {
       res = g->gcpause;
       g->gcpause = data;
-      break;
-    }
-    case LUA_GCSETMAJORINC: {
-      res = g->gcmajorinc;
-      g->gcmajorinc = data;
       break;
     }
     case LUA_GCSETSTEPMUL: {
@@ -1100,14 +1089,6 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
     }
     case LUA_GCISRUNNING: {
       res = g->gcrunning;
-      break;
-    }
-    case LUA_GCGEN: {  /* change collector to generational mode */
-      luaC_changemode(L, KGC_GEN);
-      break;
-    }
-    case LUA_GCINC: {  /* change collector to incremental mode */
-      luaC_changemode(L, KGC_NORMAL);
       break;
     }
     default: res = -1;  /* invalid option */

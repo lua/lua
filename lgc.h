@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.57 2012/07/04 15:52:38 roberto Exp roberto $
+** $Id: lgc.h,v 2.58 2012/09/11 12:53:08 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -47,27 +47,16 @@
 #define issweepphase(g)  \
 	(GCSsweepstring <= (g)->gcstate && (g)->gcstate <= GCSsweep)
 
-#define isgenerational(g)	((g)->gckind == KGC_GEN)
 
 /*
-** macros to tell when main invariant (white objects cannot point to black
-** ones) must be kept. During a non-generational collection, the sweep
+** macro to tell when main invariant (white objects cannot point to black
+** ones) must be kept. During a collection, the sweep
 ** phase may break the invariant, as objects turned white may point to
 ** still-black objects. The invariant is restored when sweep ends and
-** all objects are white again. During a generational collection, the
-** invariant must be kept all times.
+** all objects are white again.
 */
 
-#define keepinvariant(g)	(isgenerational(g) || g->gcstate <= GCSatomic)
-
-
-/*
-** Outside the collector, the state in generational mode is kept in
-** 'propagate', so 'keepinvariant' is always true.
-*/
-#define keepinvariantout(g)  \
-  check_exp(g->gcstate == GCSpropagate || !isgenerational(g),  \
-            g->gcstate <= GCSatomic)
+#define keepinvariant(g)	(g->gcstate <= GCSatomic)
 
 
 /*
@@ -90,7 +79,6 @@
 #define FINALIZEDBIT	3  /* object has been separated for finalization */
 #define SEPARATED	4  /* object is in 'finobj' list or in 'tobefnz' */
 #define FIXEDBIT	5  /* object is fixed (should not be collected) */
-#define OLDBIT		6  /* object is old (only in generational mode) */
 /* bit 7 is currently used by tests (luaL_checkmemory) */
 
 #define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)
@@ -101,11 +89,6 @@
 #define isgray(x)  /* neither white nor black */  \
 	(!testbits((x)->gch.marked, WHITEBITS | bitmask(BLACKBIT)))
 
-#define isold(x)	testbit((x)->gch.marked, OLDBIT)
-
-/* MOVE OLD rule: whenever an object is moved to the beginning of
-   a GC list, its old bit must be cleared */
-#define resetoldbit(o)	resetbit((o)->gch.marked, OLDBIT)
 
 #define otherwhite(g)	(g->currentwhite ^ WHITEBITS)
 #define isdeadm(ow,m)	(!(((m) ^ WHITEBITS) & (ow)))
@@ -152,6 +135,5 @@ LUAI_FUNC void luaC_barrierback_ (lua_State *L, GCObject *o);
 LUAI_FUNC void luaC_barrierproto_ (lua_State *L, Proto *p, Closure *c);
 LUAI_FUNC void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt);
 LUAI_FUNC void luaC_checkupvalcolor (global_State *g, UpVal *uv);
-LUAI_FUNC void luaC_changemode (lua_State *L, int mode);
 
 #endif

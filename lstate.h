@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.81 2012/06/08 15:14:04 roberto Exp roberto $
+** $Id: lstate.h,v 2.82 2012/07/02 13:37:04 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -53,7 +53,6 @@ struct lua_longjmp;  /* defined in ldo.c */
 /* kinds of Garbage Collection */
 #define KGC_NORMAL	0
 #define KGC_EMERGENCY	1	/* gc was forced by an allocation failure */
-#define KGC_GEN		2	/* generational collection */
 
 
 typedef struct stringtable {
@@ -137,7 +136,6 @@ typedef struct global_State {
   UpVal uvhead;  /* head of double-linked list of all open upvalues */
   Mbuffer buff;  /* temporary buffer for string concatenation */
   int gcpause;  /* size of pause between successive GCs */
-  int gcmajorinc;  /* pause between major collections (only in gen. mode) */
   int gcstepmul;  /* GC `granularity' */
   lua_CFunction panic;  /* to be called in unprotected errors */
   struct lua_State *mainthread;
