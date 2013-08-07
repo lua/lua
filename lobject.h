@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.77 2013/05/06 17:17:09 roberto Exp roberto $
+** $Id: lobject.h,v 2.78 2013/05/14 15:59:04 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -395,13 +395,7 @@ typedef struct Proto {
 typedef struct UpVal {
   CommonHeader;
   TValue *v;  /* points to stack or to its own value */
-  union {
-    TValue value;  /* the value (when closed) */
-    struct {  /* double linked list (when open) */
-      struct UpVal *prev;
-      struct UpVal *next;
-    } l;
-  } u;
+  TValue value;  /* the value (when closed) */
 } UpVal;
 
 

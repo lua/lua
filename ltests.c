@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.139 2013/06/20 21:59:13 roberto Exp roberto $
+** $Id: ltests.c,v 2.140 2013/08/05 16:58:28 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -310,7 +310,7 @@ static void checkstack (global_State *g, lua_State *L1) {
   lua_assert(!isdead(g, obj2gco(L1)));
   for (uvo = L1->openupval; uvo != NULL; uvo = gch(uvo)->next) {
     UpVal *uv = gco2uv(uvo);
-    lua_assert(uv->v != &uv->u.value);  /* must be open */
+    lua_assert(uv->v != &uv->value);  /* must be open */
     lua_assert(!isblack(uvo));  /* open upvalues cannot be black */
   }
   for (ci = L1->ci; ci != NULL; ci = ci->previous) {
@@ -334,7 +334,7 @@ static void checkobject (global_State *g, GCObject *o, int maybedead) {
     switch (gch(o)->tt) {
       case LUA_TUPVAL: {
         UpVal *uv = gco2uv(o);
-        lua_assert(uv->v == &uv->u.value);  /* must be closed */
+        lua_assert(uv->v == &uv->value);  /* must be closed */
         lua_assert(!isgray(o));  /* closed upvalues are never gray */
         checkvalref(g, o, uv->v);
         break;
@@ -419,8 +419,8 @@ static void checkgray (global_State *g, GCObject *o) {
 int lua_checkmemory (lua_State *L) {
   global_State *g = G(L);
   GCObject *o;
-  UpVal *uv;
   int maybedead;
+  int isthread;
   if (keepinvariant(g)) {
     lua_assert(!iswhite(obj2gco(g->mainthread)));
     lua_assert(!iswhite(gcvalue(&g->l_registry)));
@@ -433,9 +433,12 @@ int lua_checkmemory (lua_State *L) {
   checkgray(g, g->allgc);
   lua_assert(g->sweepgc == NULL || issweepphase(g));
   maybedead = 0;
+  isthread = 0;  /* not traversing threads (yet) */  
   for (o = g->allgc; o != NULL; o = gch(o)->next) {
     if (g->sweepgc && o == *g->sweepgc)
       maybedead = 1;  /* part of the list not yet swept */
+    if (gch(o)->tt == LUA_TTHREAD) isthread = 1;  /* now travesing threads... */
+    else lua_assert(!isthread);  /* ... and only threads */
     checkobject(g, o, maybedead);
     lua_assert(!testbit(o->gch.marked, SEPARATED));
   }
@@ -454,14 +457,6 @@ int lua_checkmemory (lua_State *L) {
     lua_assert(!isdead(g, o) && testbit(o->gch.marked, SEPARATED));
     lua_assert(gch(o)->tt == LUA_TUSERDATA ||
                gch(o)->tt == LUA_TTABLE);
-  }
-  /* check 'uvhead' list */
-  for (uv = g->uvhead.u.l.next; uv != &g->uvhead; uv = uv->u.l.next) {
-    lua_assert(uv->u.l.next->u.l.prev == uv && uv->u.l.prev->u.l.next == uv);
-    lua_assert(uv->v != &uv->u.value);  /* must be open */
-    lua_assert(!isblack(obj2gco(uv)));  /* open upvalues are never black */
-    if (!isdead(g, obj2gco(uv)))
-      checkvalref(g, obj2gco(uv), uv->v);
   }
   return 0;
 }

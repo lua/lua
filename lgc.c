@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.141 2013/04/26 18:26:49 roberto Exp roberto $
+** $Id: lgc.c,v 2.142 2013/08/05 16:58:28 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -258,7 +258,7 @@ static void reallymarkobject (global_State *g, GCObject *o) {
     case LUA_TUPVAL: {
       UpVal *uv = gco2uv(o);
       markvalue(g, uv->v);
-      if (uv->v != &uv->u.value)  /* open? */
+      if (uv->v != &uv->value)  /* open? */
         return;  /* open upvalues remain gray */
       size = sizeof(UpVal);
       break;
@@ -317,14 +317,21 @@ static void markbeingfnz (global_State *g) {
 
 
 /*
-** mark all values stored in marked open upvalues. (See comment in
-** 'lstate.h'.)
+** Mark all values stored in marked open upvalues from non-marked threads.
+** (Values from marked threads were already marked when traversing the
+** thread.)
 */
 static void remarkupvals (global_State *g) {
-  UpVal *uv;
-  for (uv = g->uvhead.u.l.next; uv != &g->uvhead; uv = uv->u.l.next) {
-    if (isgray(obj2gco(uv)))
-      markvalue(g, uv->v);
+  GCObject *thread = hvalue(&g->l_registry)->next;
+  for (; thread != NULL; thread = gch(thread)->next) {
+    lua_assert(!isblack(thread));  /* threads are never black */
+    if (!isgray(thread)) {  /* dead thread? */
+      GCObject *uv = gco2th(thread)->openupval;
+      for (; uv != NULL; uv = gch(uv)->next) {
+        if (isgray(uv))  /* marked? */
+          markvalue(g, gco2uv(uv)->v);  /* remark upvalue's value */
+      }
+    }
   }
 }
 
@@ -669,7 +676,7 @@ static void freeobj (lua_State *L, GCObject *o) {
       luaM_freemem(L, o, sizeCclosure(gco2ccl(o)->nupvalues));
       break;
     }
-    case LUA_TUPVAL: luaF_freeupval(L, gco2uv(o)); break;
+    case LUA_TUPVAL: luaM_free(L, gco2uv(o)); break;
     case LUA_TTABLE: luaH_free(L, gco2t(o)); break;
     case LUA_TTHREAD: luaE_freethread(L, gco2th(o)); break;
     case LUA_TUSERDATA: luaM_freemem(L, o, sizeudata(gco2u(o))); break;

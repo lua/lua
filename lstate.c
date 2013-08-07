@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.99 2012/10/02 17:40:53 roberto Exp roberto $
+** $Id: lstate.c,v 2.100 2013/08/05 16:58:28 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -230,7 +230,9 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   lua_State *L1;
   lua_lock(L);
   luaC_checkGC(L);
-  L1 = &luaC_newobj(L, LUA_TTHREAD, sizeof(LX), NULL, offsetof(LX, l))->th;
+  /* create new thread, linked after 'l_registry' */
+  L1 = &luaC_newobj(L, LUA_TTHREAD, sizeof(LX),
+         &hvalue(&G(L)->l_registry)->next, offsetof(LX, l))->th;
   setthvalue(L, L->top, L1);
   api_incr_top(L);
   preinit_state(L1, G(L));
@@ -273,8 +275,6 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->ud = ud;
   g->mainthread = L;
   g->seed = makeseed(L);
-  g->uvhead.u.l.prev = &g->uvhead;
-  g->uvhead.u.l.next = &g->uvhead;
   g->gcrunning = 0;  /* no GC while building state */
   g->GCestimate = 0;
   g->strt.size = 0;

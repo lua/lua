@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.82 2012/07/02 13:37:04 roberto Exp roberto $
+** $Id: lstate.h,v 2.83 2013/08/05 16:58:28 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -20,17 +20,18 @@
 ** be kept somehow accessible until being freed.
 **
 ** Lua keeps most objects linked in list g->allgc. The link uses field
-** 'next' of the CommonHeader.
+** 'next' of the CommonHeader. Threads (except the main one) ar kept
+** at the end of the 'allgc' list, after the 'l_registry' (which is
+** the first object to be added to the list).
 **
-** Strings are kept in several lists headed by the array g->strt.hash.
+** Short strings are kept in several lists headed by the array g->strt.hash.
 **
 ** Open upvalues are not subject to independent garbage collection. They
-** are collected together with their respective threads. Lua keeps a
-** double-linked list with all open upvalues (g->uvhead) so that it can
-** mark objects referred by them. (They are always gray, so they must
-** be remarked in the atomic step. Usually their contents would be marked
-** when traversing the respective threads, but the thread may already be
-** dead, while the upvalue is still accessible through closures.)
+** are collected together with their respective threads. (They are
+** always gray, so they must be remarked in the atomic step. Usually
+** their contents would be marked when traversing the respective
+** threads, but the thread may already be dead, while the upvalue is
+** still accessible through closures.)
 **
 ** Objects with finalizers are kept in the list g->finobj.
 **
@@ -133,7 +134,6 @@ typedef struct global_State {
   GCObject *ephemeron;  /* list of ephemeron tables (weak keys) */
   GCObject *allweak;  /* list of all-weak tables */
   GCObject *tobefnz;  /* list of userdata to be GC */
-  UpVal uvhead;  /* head of double-linked list of all open upvalues */
   Mbuffer buff;  /* temporary buffer for string concatenation */
   int gcpause;  /* size of pause between successive GCs */
   int gcstepmul;  /* GC `granularity' */

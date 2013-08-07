@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.30 2012/10/03 12:36:46 roberto Exp roberto $
+** $Id: lfunc.c,v 2.31 2013/08/05 16:58:28 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -38,7 +38,7 @@ Closure *luaF_newLclosure (lua_State *L, int n) {
 
 UpVal *luaF_newupval (lua_State *L) {
   UpVal *uv = &luaC_newobj(L, LUA_TUPVAL, sizeof(UpVal), NULL, 0)->uv;
-  uv->v = &uv->u.value;
+  uv->v = &uv->value;
   setnilvalue(uv->v);
   return uv;
 }
@@ -51,7 +51,7 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
   UpVal *uv;
   while (*pp != NULL && (p = gco2uv(*pp))->v >= level) {
     GCObject *o = obj2gco(p);
-    lua_assert(p->v != &p->u.value);
+    lua_assert(p->v != &p->value);
     if (p->v == level) {  /* found a corresponding upvalue? */
       if (isdead(g, o))  /* is it dead? */
         changewhite(o);  /* resurrect it */
@@ -62,26 +62,7 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
   /* not found: create a new one */
   uv = &luaC_newobj(L, LUA_TUPVAL, sizeof(UpVal), pp, 0)->uv;
   uv->v = level;  /* current value lives in the stack */
-  uv->u.l.prev = &g->uvhead;  /* double link it in `uvhead' list */
-  uv->u.l.next = g->uvhead.u.l.next;
-  uv->u.l.next->u.l.prev = uv;
-  g->uvhead.u.l.next = uv;
-  lua_assert(uv->u.l.next->u.l.prev == uv && uv->u.l.prev->u.l.next == uv);
   return uv;
-}
-
-
-static void unlinkupval (UpVal *uv) {
-  lua_assert(uv->u.l.next->u.l.prev == uv && uv->u.l.prev->u.l.next == uv);
-  uv->u.l.next->u.l.prev = uv->u.l.prev;  /* remove from `uvhead' list */
-  uv->u.l.prev->u.l.next = uv->u.l.next;
-}
-
-
-void luaF_freeupval (lua_State *L, UpVal *uv) {
-  if (uv->v != &uv->u.value)  /* is it open? */
-    unlinkupval(uv);  /* remove from open list */
-  luaM_free(L, uv);  /* free upvalue */
 }
 
 
@@ -90,14 +71,13 @@ void luaF_close (lua_State *L, StkId level) {
   global_State *g = G(L);
   while (L->openupval != NULL && (uv = gco2uv(L->openupval))->v >= level) {
     GCObject *o = obj2gco(uv);
-    lua_assert(!isblack(o) && uv->v != &uv->u.value);
+    lua_assert(!isblack(o) && uv->v != &uv->value);
     L->openupval = uv->next;  /* remove from `open' list */
     if (isdead(g, o))
-      luaF_freeupval(L, uv);  /* free upvalue */
+      luaM_free(L, uv);  /* free upvalue */
     else {
-      unlinkupval(uv);  /* remove upvalue from 'uvhead' list */
-      setobj(L, &uv->u.value, uv->v);  /* move value to upvalue slot */
-      uv->v = &uv->u.value;  /* now current value lives here */
+      setobj(L, &uv->value, uv->v);  /* move value to upvalue slot */
+      uv->v = &uv->value;  /* now current value lives here */
       gch(o)->next = g->allgc;  /* link upvalue into 'allgc' list */
       g->allgc = o;
       luaC_checkupvalcolor(g, uv);
