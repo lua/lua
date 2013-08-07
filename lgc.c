@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.142 2013/08/05 16:58:28 roberto Exp roberto $
+** $Id: lgc.c,v 2.143 2013/08/07 12:18:11 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -1009,21 +1009,22 @@ static lu_mem singlestep (lua_State *L) {
       return g->GCmemtrav;
     }
     case GCSpropagate: {
-      if (g->gray) {
-        lu_mem oldtrav = g->GCmemtrav;
-        propagatemark(g);
-        return g->GCmemtrav - oldtrav;  /* memory traversed in this step */
-      }
-      else {  /* no more `gray' objects */
-        lu_mem work;
-        int sw;
-        g->gcstate = GCSatomic;  /* finish mark phase */
-        g->GCestimate = g->GCmemtrav;  /* save what was counted */;
-        work = atomic(L);  /* add what was traversed by 'atomic' */
-        g->GCestimate += work;  /* estimate of total memory traversed */ 
-        sw = entersweep(L);
-        return work + sw * GCSWEEPCOST;
-      }
+      lu_mem oldtrav = g->GCmemtrav;
+      lua_assert(g->gray);
+      propagatemark(g);
+       if (g->gray == NULL)  /* no more `gray' objects? */
+        g->gcstate = GCSatomic;  /* finish propagate phase */
+      return g->GCmemtrav - oldtrav;  /* memory traversed in this step */
+    }
+    case GCSatomic: {
+      lu_mem work;
+      int sw;
+      propagateall(g);  /* make sure gray list is empty */
+      g->GCestimate = g->GCmemtrav;  /* save what was counted */;
+      work = atomic(L);  /* add what was traversed by 'atomic' */
+      g->GCestimate += work;  /* estimate of total memory traversed */ 
+      sw = entersweep(L);
+      return work + sw * GCSWEEPCOST;
     }
     case GCSsweepstring: {
       int i;
