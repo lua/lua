@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.143 2013/08/07 12:18:11 roberto Exp roberto $
+** $Id: lgc.c,v 2.144 2013/08/07 15:39:09 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -62,6 +62,8 @@
 #define white2gray(x)	resetbits(gch(x)->marked, WHITEBITS)
 #define black2gray(x)	resetbit(gch(x)->marked, BLACKBIT)
 
+
+#define valiswhite(x)   (iscollectable(x) && iswhite(gcvalue(x)))
 
 #define isfinalized(x)		testbit(gch(x)->marked, FINALIZEDBIT)
 

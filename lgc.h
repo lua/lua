@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.58 2012/09/11 12:53:08 roberto Exp roberto $
+** $Id: lgc.h,v 2.59 2013/08/05 16:58:28 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -97,8 +97,6 @@
 #define changewhite(x)	((x)->gch.marked ^= WHITEBITS)
 #define gray2black(x)	l_setbit((x)->gch.marked, BLACKBIT)
 
-#define valiswhite(x)	(iscollectable(x) && iswhite(gcvalue(x)))
-
 #define luaC_white(g)	cast(lu_byte, (g)->currentwhite & WHITEBITS)
 
 
@@ -107,18 +105,20 @@
 #define luaC_checkGC(L)		luaC_condGC(L, luaC_step(L);)
 
 
-#define luaC_barrier(L,p,v) { if (valiswhite(v) && isblack(obj2gco(p)))  \
+#define luaC_barrier(L,p,v) {  \
+	if (iscollectable(v) && isblack(obj2gco(p)) && iswhite(gcvalue(v)))  \
 	luaC_barrier_(L,obj2gco(p),gcvalue(v)); }
 
-#define luaC_barrierback(L,p,v) { if (valiswhite(v) && isblack(obj2gco(p)))  \
+#define luaC_barrierback(L,p,v) {  \
+	if (iscollectable(v) && isblack(obj2gco(p)) && iswhite(gcvalue(v)))  \
 	luaC_barrierback_(L,p); }
 
-#define luaC_objbarrier(L,p,o)  \
-	{ if (iswhite(obj2gco(o)) && isblack(obj2gco(p))) \
+#define luaC_objbarrier(L,p,o) {  \
+	if (isblack(obj2gco(p)) && iswhite(obj2gco(o))) \
 		luaC_barrier_(L,obj2gco(p),obj2gco(o)); }
 
 #define luaC_objbarrierback(L,p,o)  \
-   { if (iswhite(obj2gco(o)) && isblack(obj2gco(p))) luaC_barrierback_(L,p); }
+   { if (isblack(obj2gco(p)) && iswhite(obj2gco(o))) luaC_barrierback_(L,p); }
 
 #define luaC_barrierproto(L,p,c) \
    { if (isblack(obj2gco(p))) luaC_barrierproto_(L,p,c); }
