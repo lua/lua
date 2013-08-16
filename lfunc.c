@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.31 2013/08/05 16:58:28 roberto Exp roberto $
+** $Id: lfunc.c,v 2.32 2013/08/07 12:18:11 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -80,6 +80,7 @@ void luaF_close (lua_State *L, StkId level) {
       uv->v = &uv->value;  /* now current value lives here */
       gch(o)->next = g->allgc;  /* link upvalue into 'allgc' list */
       g->allgc = o;
+      valnolocal(uv->v);  /* keep local invariant */
       luaC_checkupvalcolor(g, uv);
     }
   }
@@ -88,6 +89,7 @@ void luaF_close (lua_State *L, StkId level) {
 
 Proto *luaF_newproto (lua_State *L) {
   Proto *f = &luaC_newobj(L, LUA_TPROTO, sizeof(Proto), NULL, 0)->p;
+  nolocal(obj2gco(f));  /* prototypes are never local */
   f->k = NULL;
   f->sizek = 0;
   f->p = NULL;

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.140 2013/08/05 16:58:28 roberto Exp roberto $
+** $Id: ltests.c,v 2.141 2013/08/07 12:18:11 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -188,6 +188,25 @@ static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
 }
 
 
+/*
+** Check locality
+*/
+static int testobjref2 (GCObject *f, GCObject *t) {
+  /* not a local or pointed by a thread? */
+  if (!islocal(t) || gch(f)->tt == LUA_TTHREAD)
+    return 1;  /* ok */
+  if (gch(t)->tt == LUA_TUPVAL) {
+    lua_assert(gch(f)->tt == LUA_TLCL);
+    return 1;  /* upvalue pointed by a closure */
+  }
+  if (gch(f)->tt == LUA_TUPVAL) {
+    UpVal *uv = gco2uv(f);
+    return (uv->v != &uv->value);  /* open upvalue can point to local stuff */
+  }
+  return 0;
+}
+
+
 static void printobj (global_State *g, GCObject *o) {
   int i = 1;
   GCObject *p;
@@ -198,24 +217,30 @@ static void printobj (global_State *g, GCObject *o) {
     if (p == NULL) i = 0;  /* zero means 'not found' */
     else i = -i;  /* negative means 'found in findobj list */
   }
-  printf("||%d:%s(%p)-%c(%02X)||", i, ttypename(gch(o)->tt), (void *)o,
+  printf("||%d:%s(%p)-%s-%c(%02X)||",
+           i, ttypename(novariant(gch(o)->tt)), (void *)o,
+           islocal(o)?"L":"NL",
            isdead(g,o)?'d':isblack(o)?'b':iswhite(o)?'w':'g', gch(o)->marked);
 }
 
 
 static int testobjref (global_State *g, GCObject *f, GCObject *t) {
-  int r = testobjref1(g,f,t);
-  if (!r) {
-    printf("%d(%02X) - ", g->gcstate, g->currentwhite);
+  int r1 = testobjref1(g,f,t);
+  int r2 = testobjref2(f,t);
+  if (!r1 || !r2) {
+    if (!r1)
+      printf("%d(%02X) - ", g->gcstate, g->currentwhite);
+    else
+      printf("local violation - ");
     printobj(g, f);
-    printf("\t-> ");
+    printf("  ->  ");
     printobj(g, t);
     printf("\n");
   }
-  return r;
+  return r1 && r2;
 }
 
-#define checkobjref(g,f,t) lua_assert(testobjref(g,f,obj2gco(t)))
+#define checkobjref(g,f,t)	lua_assert(testobjref(g,f,obj2gco(t)))
 
 
 static void checkvalref (global_State *g, GCObject *f, const TValue *t) {
@@ -349,6 +374,7 @@ static void checkobject (global_State *g, GCObject *o, int maybedead) {
         break;
       }
       case LUA_TTHREAD: {
+        lua_assert(!islocal(o));
         checkstack(g, gco2th(o));
         break;
       }
@@ -617,22 +643,9 @@ static int get_gccolor (lua_State *L) {
   o = obj_at(L, 1);
   if (!iscollectable(o))
     lua_pushstring(L, "no collectable");
-  else {
-    int marked = gcvalue(o)->gch.marked;
-    int n = 1;
+  else
     lua_pushstring(L, iswhite(gcvalue(o)) ? "white" :
                       isblack(gcvalue(o)) ? "black" : "grey");
-    if (testbit(marked, FINALIZEDBIT)) {
-      lua_pushliteral(L, "/finalized"); n++;
-    }
-    if (testbit(marked, SEPARATED)) {
-      lua_pushliteral(L, "/separated"); n++;
-    }
-    if (testbit(marked, FIXEDBIT)) {
-      lua_pushliteral(L, "/fixed"); n++;
-    }
-    lua_concat(L, n);
-  }
   return 1;
 }
 

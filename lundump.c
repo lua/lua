@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.22 2012/05/08 13:53:33 roberto Exp roberto $
+** $Id: lundump.c,v 2.23 2013/04/26 18:48:35 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -84,9 +84,12 @@ static TString* LoadString(LoadState* S)
   return NULL;
  else
  {
+  TString* ts;
   char* s=luaZ_openspace(S->L,S->b,size);
   LoadBlock(S,s,size*sizeof(char));
-  return luaS_newlstr(S->L,s,size-1);		/* remove trailing '\0' */
+  ts = luaS_newlstr(S->L,s,size-1);		/* remove trailing '\0' */
+  nolocal(obj2gco(ts));  /* all strings here anchored in non-thread objects */
+  return ts;
  }
 }
 

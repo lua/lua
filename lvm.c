@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.175 2013/06/20 15:02:49 roberto Exp roberto $
+** $Id: lvm.c,v 2.176 2013/07/10 17:15:12 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -416,6 +416,7 @@ static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
       ncl->l.upvals[i] = luaF_findupval(L, base + uv[i].idx);
     else  /* get upvalue from enclosing function */
       ncl->l.upvals[i] = encup[uv[i].idx];
+    /* new closure is white and local, so we do not need a barrier here */
   }
   luaC_barrierproto(L, p, ncl);
   p->cache = ncl;  /* save it on cache for reuse */

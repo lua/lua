@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.100 2013/08/05 16:58:28 roberto Exp roberto $
+** $Id: lstate.c,v 2.101 2013/08/07 12:18:11 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -159,17 +159,19 @@ static void freestack (lua_State *L) {
 ** Create registry table and its predefined values
 */
 static void init_registry (lua_State *L, global_State *g) {
-  TValue mt;
+  TValue temp;
   /* create registry */
   Table *registry = luaH_new(L);
   sethvalue(L, &g->l_registry, registry);
   luaH_resize(L, registry, LUA_RIDX_LAST, 0);
+  nolocal(obj2gco(registry));
   /* registry[LUA_RIDX_MAINTHREAD] = L */
-  setthvalue(L, &mt, L);
-  luaH_setint(L, registry, LUA_RIDX_MAINTHREAD, &mt);
+  setthvalue(L, &temp, L);  /* temp = L */
+  luaH_setint(L, registry, LUA_RIDX_MAINTHREAD, &temp);
   /* registry[LUA_RIDX_GLOBALS] = table of globals */
-  sethvalue(L, &mt, luaH_new(L));
-  luaH_setint(L, registry, LUA_RIDX_GLOBALS, &mt);
+  sethvalue(L, &temp, luaH_new(L));  /* temp = new table (global table) */
+  luaH_setint(L, registry, LUA_RIDX_GLOBALS, &temp);
+  valnolocal(&temp);  /* keep local invariant */
 }
 
 
@@ -236,6 +238,7 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   setthvalue(L, L->top, L1);
   api_incr_top(L);
   preinit_state(L1, G(L));
+  nolocal(obj2gco(L1));  /* threads are never local */
   L1->hookmask = L->hookmask;
   L1->basehookcount = L->basehookcount;
   L1->hook = L->hook;
@@ -268,7 +271,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   L->next = NULL;
   L->tt = LUA_TTHREAD;
   g->currentwhite = bit2mask(WHITE0BIT, FIXEDBIT);
-  L->marked = luaC_white(g);
+  L->marked = luaC_white(g) | bitmask(LOCALBIT);
   g->gckind = KGC_NORMAL;
   preinit_state(L, g);
   g->frealloc = f;

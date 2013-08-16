@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.144 2013/08/07 15:39:09 roberto Exp roberto $
+** $Id: lgc.c,v 2.145 2013/08/13 17:36:44 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -74,11 +74,19 @@
   lua_longassert(!iscollectable(obj) || righttt(obj))
 
 
-#define markvalue(g,o) { checkconsistency(o); \
+#define marklocalvalue(g,o) { checkconsistency(o); \
   if (valiswhite(o)) reallymarkobject(g,gcvalue(o)); }
 
-#define markobject(g,t) { if ((t) && iswhite(obj2gco(t))) \
-		reallymarkobject(g, obj2gco(t)); }
+#define markvalue(g,o) {  \
+  lua_longassert(!(iscollectable(o) && islocal(gcvalue(o)))); \
+  marklocalvalue(g,o); }
+
+#define marklocalobject(g,t) { \
+	if ((t) && iswhite(obj2gco(t))) \
+	  reallymarkobject(g, obj2gco(t)); }
+
+#define markobject(g,t) \
+  { lua_assert((t) == NULL || !islocal(obj2gco(t))); marklocalobject(g,t); }
 
 static void reallymarkobject (global_State *g, GCObject *o);
 
@@ -259,7 +267,7 @@ static void reallymarkobject (global_State *g, GCObject *o) {
     }
     case LUA_TUPVAL: {
       UpVal *uv = gco2uv(o);
-      markvalue(g, uv->v);
+      marklocalvalue(g, uv->v);
       if (uv->v != &uv->value)  /* open? */
         return;  /* open upvalues remain gray */
       size = sizeof(UpVal);
@@ -331,7 +339,7 @@ static void remarkupvals (global_State *g) {
       GCObject *uv = gco2th(thread)->openupval;
       for (; uv != NULL; uv = gch(uv)->next) {
         if (isgray(uv))  /* marked? */
-          markvalue(g, gco2uv(uv)->v);  /* remark upvalue's value */
+          marklocalvalue(g, gco2uv(uv)->v);  /* remark upvalue's value */
       }
     }
   }
@@ -486,7 +494,7 @@ static int traverseproto (global_State *g, Proto *f) {
 static lu_mem traverseCclosure (global_State *g, CClosure *cl) {
   int i;
   for (i = 0; i < cl->nupvalues; i++)  /* mark its upvalues */
-    markvalue(g, &cl->upvalue[i]);
+    marklocalvalue(g, &cl->upvalue[i]);
   return sizeCclosure(cl->nupvalues);
 }
 
@@ -494,7 +502,7 @@ static lu_mem traverseLclosure (global_State *g, LClosure *cl) {
   int i;
   markobject(g, cl->p);  /* mark its prototype */
   for (i = 0; i < cl->nupvalues; i++)  /* mark its upvalues */
-    markobject(g, cl->upvals[i]);
+    marklocalobject(g, cl->upvals[i]);
   return sizeLclosure(cl->nupvalues);
 }
 
@@ -505,7 +513,7 @@ static lu_mem traversestack (global_State *g, lua_State *th) {
   if (o == NULL)
     return 1;  /* stack not completely built yet */
   for (; o < th->top; o++)  /* mark live elements in the stack */
-    markvalue(g, o);
+    marklocalvalue(g, o);
   if (g->gcstate == GCSatomic) {  /* final traversal? */
     StkId lim = th->stack + th->stacksize;  /* real end of stack */
     for (; o < lim; o++)  /* clear not-marked stack slice */

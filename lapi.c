@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.185 2013/07/05 14:29:51 roberto Exp roberto $
+** $Id: lapi.c,v 2.186 2013/08/05 16:58:28 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -586,8 +586,11 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
     cl = luaF_newCclosure(L, n);
     cl->c.f = fn;
     L->top -= n;
-    while (n--)
+    while (n--) {
       setobj2n(L, &cl->c.upvalue[n], L->top + n);
+      /* does not need barrier because closure is white */
+      valnolocal(L->top + n);  /* but needs 'local barrier' */
+    }
     setclCvalue(L, L->top, cl);
   }
   api_incr_top(L);
@@ -861,6 +864,7 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
     }
     default: {
       G(L)->mt[ttnov(obj)] = mt;
+      if (mt) nolocal(obj2gco(mt));
       break;
     }
   }
