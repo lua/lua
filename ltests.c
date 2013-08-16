@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.141 2013/08/07 12:18:11 roberto Exp roberto $
+** $Id: ltests.c,v 2.142 2013/08/16 18:55:49 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -244,10 +244,8 @@ static int testobjref (global_State *g, GCObject *f, GCObject *t) {
 
 
 static void checkvalref (global_State *g, GCObject *f, const TValue *t) {
-  if (iscollectable(t)) {
-    lua_assert(righttt(t));
-    lua_assert(testobjref(g, f, gcvalue(t)));
-  }
+  lua_assert(!iscollectable(t) ||
+    (righttt(t) && testobjref(g, f, gcvalue(t))));
 }
 
 
@@ -354,8 +352,7 @@ static void checkobject (global_State *g, GCObject *o, int maybedead) {
   if (isdead(g, o))
     lua_assert(maybedead);
   else {
-    if (g->gcstate == GCSpause)
-      lua_assert(iswhite(o));
+    lua_assert(g->gcstate != GCSpause || iswhite(o));
     switch (gch(o)->tt) {
       case LUA_TUPVAL: {
         UpVal *uv = gco2uv(o);
