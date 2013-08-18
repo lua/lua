@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.142 2013/08/16 18:55:49 roberto Exp roberto $
+** $Id: ltests.c,v 2.143 2013/08/16 19:02:31 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -718,8 +718,8 @@ static int table_query (lua_State *L) {
     else
       lua_pushliteral(L, "<undef>");
     pushobject(L, gval(gnode(t, i)));
-    if (gnext(&t->node[i]))
-      lua_pushinteger(L, gnext(&t->node[i]) - t->node);
+    if (gnext(&t->node[i]) != 0)
+      lua_pushinteger(L, gnext(&t->node[i]));
     else
       lua_pushnil(L);
   }

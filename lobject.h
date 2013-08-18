@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.78 2013/05/14 15:59:04 roberto Exp roberto $
+** $Id: lobject.h,v 2.79 2013/08/07 12:18:11 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -438,7 +438,7 @@ typedef union Closure {
 typedef union TKey {
   struct {
     TValuefields;
-    struct Node *next;  /* for chaining */
+    int next;  /* for chaining (offset for next node) */
   } nk;
   TValue tvk;
 } TKey;
