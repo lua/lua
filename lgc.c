@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.145 2013/08/13 17:36:44 roberto Exp roberto $
+** $Id: lgc.c,v 2.146 2013/08/16 18:55:49 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -168,28 +168,6 @@ void luaC_barrierback_ (lua_State *L, GCObject *o) {
   black2gray(o);  /* make object gray (again) */
   gco2t(o)->gclist = g->grayagain;
   g->grayagain = o;
-}
-
-
-/*
-** barrier for prototypes. When creating first closure (cache is
-** NULL), use a forward barrier; this may be the only closure of the
-** prototype (if it is a "regular" function, with a single instance)
-** and the prototype may be big, so it is better to avoid traversing
-** it again. Otherwise, use a backward barrier, to avoid marking all
-** possible instances.
-*/
-LUAI_FUNC void luaC_barrierproto_ (lua_State *L, Proto *p, Closure *c) {
-  global_State *g = G(L);
-  lua_assert(isblack(obj2gco(p)));
-  if (p->cache == NULL) {  /* first time? */
-    luaC_objbarrier(L, p, c);
-  }
-  else {  /* use a backward barrier */
-    black2gray(obj2gco(p));  /* make prototype gray (again) */
-    p->gclist = g->grayagain;
-    g->grayagain = obj2gco(p);
-  }
 }
 
 

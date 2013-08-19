@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.176 2013/07/10 17:15:12 roberto Exp roberto $
+** $Id: lvm.c,v 2.177 2013/08/16 18:55:49 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -399,9 +399,9 @@ static Closure *getcached (Proto *p, UpVal **encup, StkId base) {
 
 /*
 ** create a new Lua closure, push it in the stack, and initialize
-** its upvalues. Note that the call to 'luaC_barrierproto' must come
-** before the assignment to 'p->cache', as the function needs the
-** original value of that field.
+** its upvalues. Note that the closure is not cached if prototype is
+** already black (which means that 'cache' was already cleared by the
+** GC).
 */
 static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
                          StkId ra) {
@@ -418,8 +418,8 @@ static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
       ncl->l.upvals[i] = encup[uv[i].idx];
     /* new closure is white and local, so we do not need a barrier here */
   }
-  luaC_barrierproto(L, p, ncl);
-  p->cache = ncl;  /* save it on cache for reuse */
+  if (!isblack(obj2gco(p)))  /* cache will not break GC invariant? */
+    p->cache = ncl;  /* save it on cache for reuse */
 }
 
 
