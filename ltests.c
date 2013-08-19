@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.143 2013/08/16 19:02:31 roberto Exp roberto $
+** $Id: ltests.c,v 2.144 2013/08/18 16:12:18 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -203,6 +203,8 @@ static int testobjref2 (GCObject *f, GCObject *t) {
     UpVal *uv = gco2uv(f);
     return (uv->v != &uv->value);  /* open upvalue can point to local stuff */
   }
+  if (gch(f)->tt == LUA_TPROTO && gch(t)->tt == LUA_TLCL)
+    return 1;  /* cache from a prototype */
   return 0;
 }
 
@@ -274,6 +276,7 @@ static void checktable (global_State *g, Table *h) {
 static void checkproto (global_State *g, Proto *f) {
   int i;
   GCObject *fgc = obj2gco(f);
+  if (f->cache) checkobjref(g, fgc, f->cache);
   if (f->source) checkobjref(g, fgc, f->source);
   for (i=0; i<f->sizek; i++) {
     if (ttisstring(f->k+i))
@@ -634,7 +637,7 @@ static int settrick (lua_State *L) {
 }
 
 
-static int get_gccolor (lua_State *L) {
+static int gc_color (lua_State *L) {
   TValue *o;
   luaL_checkany(L, 1);
   o = obj_at(L, 1);
@@ -643,6 +646,15 @@ static int get_gccolor (lua_State *L) {
   else
     lua_pushstring(L, iswhite(gcvalue(o)) ? "white" :
                       isblack(gcvalue(o)) ? "black" : "grey");
+  return 1;
+}
+
+
+static int gc_local (lua_State *L) {
+  TValue *o;
+  luaL_checkany(L, 1);
+  o = obj_at(L, 1);
+  lua_pushboolean(L, !iscollectable(o) || islocal(gcvalue(o)));
   return 1;
 }
 
@@ -1447,7 +1459,8 @@ static const struct luaL_Reg tests_funcs[] = {
   {"d2s", d2s},
   {"doonnewstack", doonnewstack},
   {"doremote", doremote},
-  {"gccolor", get_gccolor},
+  {"gccolor", gc_color},
+  {"isgclocal", gc_local},
   {"gcstate", gc_state},
   {"getref", getref},
   {"hash", hash_query},
