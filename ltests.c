@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.144 2013/08/18 16:12:18 roberto Exp roberto $
+** $Id: ltests.c,v 2.145 2013/08/19 14:16:33 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -466,12 +466,12 @@ int lua_checkmemory (lua_State *L) {
     if (gch(o)->tt == LUA_TTHREAD) isthread = 1;  /* now travesing threads... */
     else lua_assert(!isthread);  /* ... and only threads */
     checkobject(g, o, maybedead);
-    lua_assert(!testbit(o->gch.marked, SEPARATED));
+    lua_assert(!tofinalize(o));
   }
   /* check 'finobj' list */
   checkgray(g, g->finobj);
   for (o = g->finobj; o != NULL; o = gch(o)->next) {
-    lua_assert(testbit(o->gch.marked, SEPARATED));
+    lua_assert(tofinalize(o));
     lua_assert(gch(o)->tt == LUA_TUSERDATA ||
                gch(o)->tt == LUA_TTABLE);
     checkobject(g, o, 0);
@@ -480,7 +480,7 @@ int lua_checkmemory (lua_State *L) {
   checkgray(g, g->tobefnz);
   for (o = g->tobefnz; o != NULL; o = gch(o)->next) {
     lua_assert(!iswhite(o) || g->gcstate == GCSpause);
-    lua_assert(!isdead(g, o) && testbit(o->gch.marked, SEPARATED));
+    lua_assert(!isdead(g, o) && tofinalize(o));
     lua_assert(gch(o)->tt == LUA_TUSERDATA ||
                gch(o)->tt == LUA_TTABLE);
   }

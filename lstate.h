@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.83 2013/08/05 16:58:28 roberto Exp roberto $
+** $Id: lstate.h,v 2.84 2013/08/07 12:18:11 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -33,9 +33,9 @@
 ** threads, but the thread may already be dead, while the upvalue is
 ** still accessible through closures.)
 **
-** Objects with finalizers are kept in the list g->finobj.
-**
-** The list g->tobefnz links all objects being finalized.
+** Live objects with finalizers are kept in the list g->finobj. The
+** list g->tobefnz links all objects being finalized. In particular, an
+** object has its FINALIZEDBIT set iff it is in one of these lists.
 
 */
 

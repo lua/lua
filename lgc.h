@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.61 2013/08/16 18:55:49 roberto Exp roberto $
+** $Id: lgc.h,v 2.62 2013/08/19 14:18:43 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -76,10 +76,9 @@
 #define WHITE0BIT	0  /* object is white (type 0) */
 #define WHITE1BIT	1  /* object is white (type 1) */
 #define BLACKBIT	2  /* object is black */
-#define FINALIZEDBIT	3  /* object has been separated for finalization */
-#define SEPARATED	4  /* object is in 'finobj' list or in 'tobefnz' */
-#define FIXEDBIT	5  /* object is fixed (should not be collected) */
-#define LOCALBIT	6  /* object is not local */
+#define FINALIZEDBIT	3  /* object has been marked for finalization */
+#define FIXEDBIT	4  /* object is fixed (should not be collected) */
+#define LOCALBIT	5  /* object is not local */
 /* bit 7 is currently used by tests (luaL_checkmemory) */
 
 #define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)
@@ -91,6 +90,7 @@
 	(!testbits((x)->gch.marked, WHITEBITS | bitmask(BLACKBIT)))
 #define islocal(x)	(!testbit((x)->gch.marked, LOCALBIT))
 
+#define tofinalize(x)	testbit((x)->gch.marked, FINALIZEDBIT)
 
 #define otherwhite(g)	(g->currentwhite ^ WHITEBITS)
 #define isdeadm(ow,m)	(!(((m) ^ WHITEBITS) & (ow)))

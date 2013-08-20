@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.146 2013/08/16 18:55:49 roberto Exp roberto $
+** $Id: lgc.c,v 2.147 2013/08/19 14:18:43 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -64,8 +64,6 @@
 
 
 #define valiswhite(x)   (iscollectable(x) && iswhite(gcvalue(x)))
-
-#define isfinalized(x)		testbit(gch(x)->marked, FINALIZEDBIT)
 
 #define checkdeadkey(n)	lua_assert(!ttisdeadkey(gkey(n)) || ttisnil(gval(n)))
 
@@ -764,11 +762,11 @@ static void checkSizes (lua_State *L) {
 
 static GCObject *udata2finalize (global_State *g) {
   GCObject *o = g->tobefnz;  /* get first element */
-  lua_assert(isfinalized(o));
+  lua_assert(tofinalize(o));
   g->tobefnz = gch(o)->next;  /* remove it from 'tobefnz' list */
   gch(o)->next = g->allgc;  /* return it to 'allgc' list */
   g->allgc = o;
-  resetbit(gch(o)->marked, SEPARATED);  /* mark that it is not in 'tobefnz' */
+  resetbit(gch(o)->marked, FINALIZEDBIT);  /* object is back in 'allgc' */
   if (!keepinvariant(g))  /* not keeping invariant? */
     makewhite(g, o);  /* "sweep" object */
   return o;
@@ -826,12 +824,10 @@ static void separatetobefnz (lua_State *L, int all) {
   while (*lastnext != NULL)
     lastnext = &gch(*lastnext)->next;
   while ((curr = *p) != NULL) {  /* traverse all finalizable objects */
-    lua_assert(!isfinalized(curr));
-    lua_assert(testbit(gch(curr)->marked, SEPARATED));
+    lua_assert(tofinalize(curr));
     if (!(iswhite(curr) || all))  /* not being collected? */
       p = &gch(curr)->next;  /* don't bother with it */
     else {
-      l_setbit(gch(curr)->marked, FINALIZEDBIT); /* won't be finalized again */
       *p = gch(curr)->next;  /* remove 'curr' from 'finobj' list */
       gch(curr)->next = *lastnext;  /* link at the end of 'tobefnz' list */
       *lastnext = curr;
@@ -847,9 +843,8 @@ static void separatetobefnz (lua_State *L, int all) {
 */
 void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
   global_State *g = G(L);
-  if (testbit(gch(o)->marked, SEPARATED) || /* obj. is already separated... */
-      isfinalized(o) ||                           /* ... or is finalized... */
-      gfasttm(g, mt, TM_GC) == NULL)                /* or has no finalizer? */
+  if (tofinalize(o) ||                 /* obj. is already marked... */
+      gfasttm(g, mt, TM_GC) == NULL)   /* or has no finalizer? */
     return;  /* nothing to be done */
   else {  /* move 'o' to 'finobj' list */
     GCObject **p;
@@ -863,7 +858,7 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
     *p = ho->next;  /* remove 'o' from root list */
     ho->next = g->finobj;  /* link it in list 'finobj' */
     g->finobj = o;
-    l_setbit(ho->marked, SEPARATED);  /* mark it as such */
+    l_setbit(ho->marked, FINALIZEDBIT);  /* mark it as such */
     if (!keepinvariant(g))  /* not keeping invariant? */
       makewhite(g, o);  /* "sweep" object */
   }
