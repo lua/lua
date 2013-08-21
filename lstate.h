@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.84 2013/08/07 12:18:11 roberto Exp roberto $
+** $Id: lstate.h,v 2.85 2013/08/20 17:46:34 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -23,8 +23,6 @@
 ** 'next' of the CommonHeader. Threads (except the main one) ar kept
 ** at the end of the 'allgc' list, after the 'l_registry' (which is
 ** the first object to be added to the list).
-**
-** Short strings are kept in several lists headed by the array g->strt.hash.
 **
 ** Open upvalues are not subject to independent garbage collection. They
 ** are collected together with their respective threads. (They are
@@ -57,9 +55,10 @@ struct lua_longjmp;  /* defined in ldo.c */
 
 
 typedef struct stringtable {
-  GCObject **hash;
-  lu_int32 nuse;  /* number of elements */
-  int size;
+  TString **hash;
+  unsigned int nuse;  /* number of elements */
+  unsigned int empty;  /* number of available empty slots */
+  unsigned int size;
 } stringtable;
 
 
@@ -123,7 +122,6 @@ typedef struct global_State {
   lu_byte gcstate;  /* state of garbage collector */
   lu_byte gckind;  /* kind of GC running */
   lu_byte gcrunning;  /* true if GC is running */
-  int sweepstrgc;  /* position of sweep in `strt' */
   GCObject *allgc;  /* list of all collectable objects */
   GCObject *finobj;  /* list of collectable objects with finalizers */
   GCObject **sweepgc;  /* current position of sweep in list 'allgc' */

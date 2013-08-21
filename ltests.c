@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.145 2013/08/19 14:16:33 roberto Exp roberto $
+** $Id: ltests.c,v 2.146 2013/08/20 17:46:34 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -661,7 +661,7 @@ static int gc_local (lua_State *L) {
 
 static int gc_state (lua_State *L) {
   static const char *statenames[] = {"propagate", "atomic",
-    "sweepstring", "sweepudata", "sweep", "pause", ""};
+    "sweepudata", "sweep", "pause", ""};
   int option = luaL_checkoption(L, 1, "", statenames);
   if (option == GCSpause + 1) {
     lua_pushstring(L, statenames[G(L)->gcstate]);
@@ -742,22 +742,18 @@ static int table_query (lua_State *L) {
 static int string_query (lua_State *L) {
   stringtable *tb = &G(L)->strt;
   int s = luaL_optint(L, 2, 0) - 1;
-  if (s==-1) {
+  if (s < 0) {
     lua_pushinteger(L ,tb->nuse);
     lua_pushinteger(L ,tb->size);
     return 2;
   }
-  else if (s < tb->size) {
-    GCObject *ts;
-    int n = 0;
-    for (ts = tb->hash[s]; ts; ts = gch(ts)->next) {
-      setsvalue2s(L, L->top, rawgco2ts(ts));
-      api_incr_top(L);
-      n++;
-    }
-    return n;
+  else if ((unsigned int)s < tb->size) {
+    TString *ts = tb->hash[s];
+    setsvalue2s(L, L->top, ts);
+    api_incr_top(L);
+    return 1;
   }
-  return 0;
+  else return 0;
 }
 
 

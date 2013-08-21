@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.147 2013/08/19 14:18:43 roberto Exp roberto $
+** $Id: lgc.c,v 2.148 2013/08/20 17:46:34 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -667,7 +667,7 @@ static void freeobj (lua_State *L, GCObject *o) {
     case LUA_TTHREAD: luaE_freethread(L, gco2th(o)); break;
     case LUA_TUSERDATA: luaM_freemem(L, o, sizeudata(gco2u(o))); break;
     case LUA_TSHRSTR:
-      G(L)->strt.nuse--;
+      luaS_remove(L, rawgco2ts(o));  /* remove it from hash table */
       /* go through */
     case LUA_TLNGSTR: {
       luaM_freemem(L, o, sizestring(gco2ts(o)));
@@ -749,14 +749,10 @@ static GCObject **sweeptolive (lua_State *L, GCObject **p, int *n) {
 ** =======================================================
 */
 
-static void checkSizes (lua_State *L) {
+static void checkBuffer (lua_State *L) {
   global_State *g = G(L);
-  if (g->gckind != KGC_EMERGENCY) {  /* do not change sizes in emergency */
-    int hs = g->strt.size / 2;  /* half the size of the string table */
-    if (g->strt.nuse < cast(lu_int32, hs))  /* using less than that half? */
-      luaS_resize(L, hs);  /* halve its size */
+  if (g->gckind != KGC_EMERGENCY)
     luaZ_freebuffer(L, &g->buff);  /* free concatenation buffer */
-  }
 }
 
 
@@ -855,7 +851,7 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
     }
     /* search for pointer pointing to 'o' */
     for (p = &g->allgc; *p != o; p = &gch(*p)->next) { /* empty */ }
-    *p = ho->next;  /* remove 'o' from root list */
+    *p = ho->next;  /* remove 'o' from 'allgc' list */
     ho->next = g->finobj;  /* link it in list 'finobj' */
     g->finobj = o;
     l_setbit(ho->marked, FINALIZEDBIT);  /* mark it as such */
@@ -889,25 +885,23 @@ static void setpause (global_State *g, l_mem estimate) {
 }
 
 
-#define sweepphases  \
-	(bitmask(GCSsweepstring) | bitmask(GCSsweepudata) | bitmask(GCSsweep))
+#define sweepphases	(bitmask(GCSsweepudata) | bitmask(GCSsweep))
 
 
 /*
-** enter first sweep phase (strings) and prepare pointers for other
-** sweep phases.  The calls to 'sweeptolive' make pointers point to an
-** object inside the list (instead of to the header), so that the real
-** sweep do not need to skip objects created between "now" and the start
-** of the real sweep.
+** enter first sweep phase and prepare pointers for other sweep phases.
+** The calls to 'sweeptolive' make pointers point to an object inside
+** the list (instead of to the header), so that the real sweep do not
+** need to skip objects created between "now" and the start of the real
+** sweep.
 ** Returns how many objects it swept.
 */
 static int entersweep (lua_State *L) {
   global_State *g = G(L);
   int n = 0;
-  g->gcstate = GCSsweepstring;
+  g->gcstate = GCSsweepudata;
   lua_assert(g->sweepgc == NULL && g->sweepfin == NULL);
-  /* prepare to sweep strings, finalizable objects, and regular objects */
-  g->sweepstrgc = 0;
+  /* prepare to sweep finalizable objects and regular objects */
   g->sweepfin = sweeptolive(L, &g->finobj, &n);
   g->sweepgc = sweeptolive(L, &g->allgc, &n);
   return n;
@@ -926,7 +920,6 @@ static void callallpendingfinalizers (lua_State *L, int propagateerrors) {
 
 void luaC_freeallobjects (lua_State *L) {
   global_State *g = G(L);
-  int i;
   separatetobefnz(L, 1);  /* separate all objects with finalizers */
   lua_assert(g->finobj == NULL);
   callallpendingfinalizers(L, 0);
@@ -934,8 +927,6 @@ void luaC_freeallobjects (lua_State *L) {
   g->gckind = KGC_NORMAL;
   sweepwholelist(L, &g->finobj);  /* finalizers can create objs. in 'finobj' */
   sweepwholelist(L, &g->allgc);
-  for (i = 0; i < g->strt.size; i++)  /* free all string lists */
-    sweepwholelist(L, &g->strt.hash[i]);
   lua_assert(g->strt.nuse == 0);
 }
 
@@ -1009,15 +1000,6 @@ static lu_mem singlestep (lua_State *L) {
       sw = entersweep(L);
       return work + sw * GCSWEEPCOST;
     }
-    case GCSsweepstring: {
-      int i;
-      for (i = 0; i < GCSWEEPMAX && g->sweepstrgc + i < g->strt.size; i++)
-        sweepwholelist(L, &g->strt.hash[g->sweepstrgc + i]);
-      g->sweepstrgc += i;
-      if (g->sweepstrgc >= g->strt.size)  /* no more strings to sweep? */
-        g->gcstate = GCSsweepudata;
-      return i * GCSWEEPCOST;
-    }
     case GCSsweepudata: {
       if (g->sweepfin) {
         g->sweepfin = sweeplist(L, g->sweepfin, GCSWEEPMAX);
@@ -1037,7 +1019,7 @@ static lu_mem singlestep (lua_State *L) {
         /* sweep main thread */
         GCObject *mt = obj2gco(g->mainthread);
         sweeplist(L, &mt, 1);
-        checkSizes(L);
+        checkBuffer(L);
         g->gcstate = GCSpause;  /* finish collection */
         return GCSWEEPCOST;
       }
