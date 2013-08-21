@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.85 2013/08/20 17:46:34 roberto Exp roberto $
+** $Id: lstate.h,v 2.86 2013/08/21 19:21:16 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -23,6 +23,9 @@
 ** 'next' of the CommonHeader. Threads (except the main one) ar kept
 ** at the end of the 'allgc' list, after the 'l_registry' (which is
 ** the first object to be added to the list).
+**
+** List 'fixedgc' keep objects that are not to be collected (currently
+** only small strings, such as reserved words).
 **
 ** Open upvalues are not subject to independent garbage collection. They
 ** are collected together with their respective threads. (They are
@@ -132,6 +135,7 @@ typedef struct global_State {
   GCObject *ephemeron;  /* list of ephemeron tables (weak keys) */
   GCObject *allweak;  /* list of all-weak tables */
   GCObject *tobefnz;  /* list of userdata to be GC */
+  GCObject *fixedgc;  /* list of objects not to be collected */
   Mbuffer buff;  /* temporary buffer for string concatenation */
   int gcpause;  /* size of pause between successive GCs */
   int gcstepmul;  /* GC `granularity' */

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.102 2013/08/16 18:55:49 roberto Exp roberto $
+** $Id: lstate.c,v 2.103 2013/08/21 19:21:16 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -188,7 +188,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   luaX_init(L);
   /* pre-create memory-error message */
   g->memerrmsg = luaS_newliteral(L, MEMERRMSG);
-  luaS_fix(g->memerrmsg);  /* it should never be collected */
+  luaC_fix(L, obj2gco(g->memerrmsg));  /* it should never be collected */
   g->gcrunning = 1;  /* allow gc */
 }
 
@@ -270,7 +270,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g = &l->g;
   L->next = NULL;
   L->tt = LUA_TTHREAD;
-  g->currentwhite = bit2mask(WHITE0BIT, FIXEDBIT);
+  g->currentwhite = bitmask(WHITE0BIT);
   L->marked = luaC_white(g) | bitmask(LOCALBIT);
   g->gckind = KGC_NORMAL;
   preinit_state(L, g);
@@ -290,6 +290,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->allgc = NULL;
   g->finobj = NULL;
   g->tobefnz = NULL;
+  g->fixedgc = NULL;
   g->sweepgc = g->sweepfin = NULL;
   g->gray = g->grayagain = NULL;
   g->weak = g->ephemeron = g->allweak = NULL;

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.148 2013/08/20 17:46:34 roberto Exp roberto $
+** $Id: lgc.c,v 2.149 2013/08/21 19:21:16 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -186,6 +186,16 @@ void luaC_checkupvalcolor (global_State *g, UpVal *uv) {
       makewhite(g, o);
     }
   }
+}
+
+
+void luaC_fix (lua_State *L, GCObject *o) {
+  global_State *g = G(L);
+  lua_assert(g->allgc == o);
+  white2gray(o);
+  g->allgc = o->gch.next;  /* remove object from 'allgc' list */
+  o->gch.next = g->fixedgc;  /* link it to 'fixedgc' list */
+  g->fixedgc = o;
 }
 
 
@@ -927,6 +937,7 @@ void luaC_freeallobjects (lua_State *L) {
   g->gckind = KGC_NORMAL;
   sweepwholelist(L, &g->finobj);  /* finalizers can create objs. in 'finobj' */
   sweepwholelist(L, &g->allgc);
+  sweepwholelist(L, &g->fixedgc);  /* collect fixed objects */
   lua_assert(g->strt.nuse == 0);
 }
 

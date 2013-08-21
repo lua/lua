@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.63 2013/08/20 17:46:34 roberto Exp roberto $
+** $Id: lgc.h,v 2.64 2013/08/21 19:21:16 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -76,8 +76,7 @@
 #define WHITE1BIT	1  /* object is white (type 1) */
 #define BLACKBIT	2  /* object is black */
 #define FINALIZEDBIT	3  /* object has been marked for finalization */
-#define FIXEDBIT	4  /* object is fixed (should not be collected) */
-#define LOCALBIT	5  /* object is not local */
+#define LOCALBIT	4  /* object is not local */
 /* bit 7 is currently used by tests (luaL_checkmemory) */
 
 #define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)
@@ -127,6 +126,7 @@
    { if (nolocal(obj2gco(o)), isblack(obj2gco(p)) && iswhite(obj2gco(o))) \
 	luaC_barrierback_(L,p); }
 
+LUAI_FUNC void luaC_fix (lua_State *L, GCObject *o);
 LUAI_FUNC void luaC_freeallobjects (lua_State *L);
 LUAI_FUNC void luaC_step (lua_State *L);
 LUAI_FUNC void luaC_forcestep (lua_State *L);
