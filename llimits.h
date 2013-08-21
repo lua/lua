@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.107 2013/05/29 14:04:15 roberto Exp roberto $
+** $Id: llimits.h,v 1.108 2013/06/19 14:27:00 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -155,7 +155,7 @@ typedef lu_int32 Instruction;
 
 /* minimum size for the string table (must be power of 2) */
 #if !defined(MINSTRTABSIZE)
-#define MINSTRTABSIZE	32
+#define MINSTRTABSIZE	64	/* minimum size for "predefined" strings */
 #endif
 
 
