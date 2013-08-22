@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.28 2013/08/05 16:58:28 roberto Exp roberto $
+** $Id: lstring.c,v 2.29 2013/08/21 19:21:16 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -13,6 +13,7 @@
 #include "lua.h"
 
 #include "ldebug.h"
+#include "ldo.h"
 #include "lmem.h"
 #include "lobject.h"
 #include "lstate.h"
@@ -24,7 +25,7 @@
 
 
 /* second hash (for double hash) */
-#define h2(h1,hash,size)	lmod(h1 + ((hash % 31) | 1), size)
+#define h2(h1,hash,size)	lmod(h1 + ((hash % 61) | 1), size)
 
 
 /*
@@ -116,19 +117,18 @@ static TString *createstrobj (lua_State *L, const char *str, size_t l,
 
 
 static void rehash (lua_State *L, stringtable *tb) {
-  int newsize;
-  if (tb->nuse < tb->size / 2) {  /* using less than half the size? */
-    if (tb->nuse < tb->size / 4)  /* using less than half of that? */
-      newsize = tb->size / 2;  /* shrink table */
-    else
-      newsize = tb->size;  /* keep size (but reorganize table) */
+  int size = tb->size;
+  if (tb->nuse < size / 2) {  /* using less than half the size? */
+    if (tb->nuse < size / 4)  /* using less than half of that? */
+      size /= 2;  /* shrink table */
+    /* else keep size (but reorganize table) */
   }
   else {  /* table must grow */
-    if (tb->size >= MAX_INT/2)
-      luaG_runerror(L, "string-table overflow: too many strings");
-    newsize = tb->size * 2;
+    if (size >= MAX_INT/2)  /* avoid arith. overflow */
+      luaD_throw(L, LUA_ERRMEM);  /* regular errors need new strings... */
+    size *= 2;
   }
-  luaS_resize(L, newsize);
+  luaS_resize(L, size);
 }
 
 
@@ -154,12 +154,10 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
   stringtable *tb = &G(L)->strt;
   int vacant = -1;
   int h1;
-  if (tb->empty <= 0)
-    rehash(L, tb);
   h1 = lmod(hash, tb->size);  /* previous call can changed 'size' */
   while ((ts = tb->hash[h1]) != NULL) {  /* search the string in hash table */
     if (ts == VACANTK) {
-      if (vacant < 0) vacant = h1;  /* keep track of a vacant place */
+      if (vacant < 0) vacant = h1;  /* keep track of first vacant place */
     }
     else if (l == ts->tsv.len &&
             (memcmp(str, getstr(ts), l * sizeof(char)) == 0)) {
@@ -174,12 +172,16 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
     }
     h1 = h2(h1, hash, tb->size);
   }
+  if (tb->empty <= 0) {  /* no more empty spaces? */
+    rehash(L, tb);
+    return internshrstr(L, str, l);  /* recompute insertion with new size */
+  }
   ts = createstrobj(L, str, l, LUA_TSHRSTR, hash);
   tb->nuse++;
   if (vacant < 0)  /* found no vacant place? */
     tb->empty--;  /* will have to use the empty place */
   else
-    h1 = vacant;  /* insert string into vacant place */
+    h1 = vacant;  /* use vacant place */
   tb->hash[h1] = ts;
   return ts;
 }

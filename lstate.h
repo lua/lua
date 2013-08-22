@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.86 2013/08/21 19:21:16 roberto Exp roberto $
+** $Id: lstate.h,v 2.87 2013/08/21 20:09:51 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -59,9 +59,9 @@ struct lua_longjmp;  /* defined in ldo.c */
 
 typedef struct stringtable {
   TString **hash;
-  unsigned int nuse;  /* number of elements */
-  unsigned int empty;  /* number of available empty slots */
-  unsigned int size;
+  int nuse;  /* number of elements */
+  int empty;  /* number of available empty slots */
+  int size;
 } stringtable;
 
 
