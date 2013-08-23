@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.149 2013/08/21 19:21:16 roberto Exp roberto $
+** $Id: lgc.c,v 2.150 2013/08/21 20:09:51 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -22,6 +22,12 @@
 #include "ltable.h"
 #include "ltm.h"
 
+
+
+/*
+** How memory to allocate before a new local collection
+*/
+#define GCLOCALPAUSE	8000
 
 
 /*
@@ -191,9 +197,9 @@ void luaC_checkupvalcolor (global_State *g, UpVal *uv) {
 
 void luaC_fix (lua_State *L, GCObject *o) {
   global_State *g = G(L);
-  lua_assert(g->allgc == o);
+  lua_assert(g->localgc == o);
   white2gray(o);
-  g->allgc = o->gch.next;  /* remove object from 'allgc' list */
+  g->localgc = o->gch.next;  /* remove object from 'localgc' list */
   o->gch.next = g->fixedgc;  /* link it to 'fixedgc' list */
   g->fixedgc = o;
 }
@@ -875,6 +881,72 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 
 /*
 ** {======================================================
+** Local Collection
+** =======================================================
+*/
+
+/*
+** Traverse a thread, local marking all its collectable objects
+*/
+static void localmarkthread (lua_State *l) {
+  StkId o = l->stack;
+  if (o == NULL)
+    return;  /* stack not completely built yet */
+  for (; o < l->top; o++) {  /* mark live elements in the stack */
+    if (iscollectable(o))
+      l_setbit(gcvalue(o)->gch.marked, LOCALBLACK);
+  }
+}
+
+
+/*
+** Mark all that is locally accessible (accessible directly from
+** a thread)
+*/
+static void localmark (global_State *g) {
+  GCObject *thread = hvalue(&g->l_registry)->next;
+  for (; thread != NULL; thread = gch(thread)->next)  /* traverse all threads */
+    localmarkthread(gco2th(thread));
+  localmarkthread(g->mainthread);
+}
+
+
+static void localsweep (lua_State *L, global_State *g) {
+  GCObject **p = &g->localgc;
+  while (*p != NULL) {
+    GCObject *curr = *p;
+    if (!islocal(curr)) {  /* is 'curr' no more local? */
+      *p = curr->gch.next;  /* remove 'curr' from list */
+      curr->gch.next = g->allgc;  /* link 'curr' in 'allgc' list */
+      g->allgc = curr;
+    }
+    else {  /* still local */
+      if (testbit(curr->gch.marked, LOCALBLACK)) {  /* locally alive? */
+        resetbit(curr->gch.marked, LOCALBLACK);
+        p = &curr->gch.next;  /* go to next element */
+      }
+      else {  /* object is dead */
+        *p = curr->gch.next;  /* remove 'curr' from list */
+        freeobj(L, curr);  /* erase 'curr' */
+      }
+    }
+  }
+}
+
+
+static void luaC_localcollection (lua_State *L) {
+  global_State *g = G(L);
+  lua_assert(g->gcstate == GCSpause);
+  localmark(g);
+  localsweep(L, g);
+}
+
+/* }====================================================== */
+
+
+
+/*
+** {======================================================
 ** GC control
 ** =======================================================
 */
@@ -885,13 +957,13 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 ** cycle will start when memory use hits threshold
 */
 static void setpause (global_State *g, l_mem estimate) {
-  l_mem debt, threshold;
+  l_mem threshold;
   estimate = estimate / PAUSEADJ;  /* adjust 'estimate' */
   threshold = (g->gcpause < MAX_LMEM / estimate)  /* overflow? */
             ? estimate * g->gcpause  /* no overflow */
             : MAX_LMEM;  /* overflow; truncate to maximum */
-  debt = -cast(l_mem, threshold - gettotalbytes(g));
-  luaE_setdebt(g, debt);
+  g->GCthreshold = threshold;
+  luaE_setdebt(g, -GCLOCALPAUSE);
 }
 
 
@@ -936,6 +1008,7 @@ void luaC_freeallobjects (lua_State *L) {
   g->currentwhite = WHITEBITS; /* this "white" makes all objects look dead */
   g->gckind = KGC_NORMAL;
   sweepwholelist(L, &g->finobj);  /* finalizers can create objs. in 'finobj' */
+  sweepwholelist(L, &g->localgc);
   sweepwholelist(L, &g->allgc);
   sweepwholelist(L, &g->fixedgc);  /* collect fixed objects */
   lua_assert(g->strt.nuse == 0);
@@ -1017,8 +1090,9 @@ static lu_mem singlestep (lua_State *L) {
         return GCSWEEPMAX*GCSWEEPCOST;
       }
       else {
+        sweepwholelist(L, &g->localgc);
         g->gcstate = GCSsweep;
-        return 0;
+        return GCLOCALPAUSE / 4;  /* some magic for now */
       }
     }
     case GCSsweep: {
@@ -1090,7 +1164,19 @@ void luaC_forcestep (lua_State *L) {
 */
 void luaC_step (lua_State *L) {
   global_State *g = G(L);
-  if (g->gcrunning) luaC_forcestep(L);
+  if (g->gcrunning) {
+    if (g->gcstate != GCSpause) {
+      luaC_forcestep(L);
+    }
+    else {
+      luaC_localcollection(L);
+      if (gettotalbytes(g) > g->GCthreshold) {
+        luaC_forcestep(L);  /* restart collection */
+      }
+      else
+        luaE_setdebt(g, -GCLOCALPAUSE);
+    }
+  }
   else luaE_setdebt(g, -GCSTEPSIZE);  /* avoid being called too often */
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.32 2013/08/07 12:18:11 roberto Exp roberto $
+** $Id: lfunc.c,v 2.33 2013/08/16 18:55:49 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -21,7 +21,8 @@
 
 
 Closure *luaF_newCclosure (lua_State *L, int n) {
-  Closure *c = &luaC_newobj(L, LUA_TCCL, sizeCclosure(n), NULL, 0)->cl;
+  Closure *c = &luaC_newobj(L, LUA_TCCL, sizeCclosure(n),
+                               &G(L)->localgc, 0)->cl;
   c->c.nupvalues = cast_byte(n);
   return c;
 }

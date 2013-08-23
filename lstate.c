@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.103 2013/08/21 19:21:16 roberto Exp roberto $
+** $Id: lstate.c,v 2.104 2013/08/21 20:09:51 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -280,6 +280,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->seed = makeseed(L);
   g->gcrunning = 0;  /* no GC while building state */
   g->GCestimate = 0;
+  g->GCthreshold = 10000;
   g->strt.size = g->strt.nuse = g->strt.empty = 0;
   g->strt.hash = NULL;
   setnilvalue(&g->l_registry);
@@ -288,6 +289,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->version = lua_version(NULL);
   g->gcstate = GCSpause;
   g->allgc = NULL;
+  g->localgc = NULL;
   g->finobj = NULL;
   g->tobefnz = NULL;
   g->fixedgc = NULL;

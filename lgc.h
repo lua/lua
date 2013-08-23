@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.64 2013/08/21 19:21:16 roberto Exp roberto $
+** $Id: lgc.h,v 2.65 2013/08/21 20:09:51 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -77,6 +77,7 @@
 #define BLACKBIT	2  /* object is black */
 #define FINALIZEDBIT	3  /* object has been marked for finalization */
 #define LOCALBIT	4  /* object is not local */
+#define LOCALBLACK	5  /* object is 'locally black' */
 /* bit 7 is currently used by tests (luaL_checkmemory) */
 
 #define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)

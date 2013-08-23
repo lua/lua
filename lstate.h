@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.87 2013/08/21 20:09:51 roberto Exp roberto $
+** $Id: lstate.h,v 2.88 2013/08/22 15:21:48 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -118,6 +118,7 @@ typedef struct global_State {
   l_mem GCdebt;  /* bytes allocated not yet compensated by the collector */
   lu_mem GCmemtrav;  /* memory traversed by the GC */
   lu_mem GCestimate;  /* an estimate of the non-garbage memory in use */
+  lu_mem GCthreshold;  /* threshold to start a new GC cycle */
   stringtable strt;  /* hash table for strings */
   TValue l_registry;
   unsigned int seed;  /* randomized seed for hashes */
@@ -126,6 +127,7 @@ typedef struct global_State {
   lu_byte gckind;  /* kind of GC running */
   lu_byte gcrunning;  /* true if GC is running */
   GCObject *allgc;  /* list of all collectable objects */
+  GCObject *localgc;  /* list of local objects */
   GCObject *finobj;  /* list of collectable objects with finalizers */
   GCObject **sweepgc;  /* current position of sweep in list 'allgc' */
   GCObject **sweepfin;  /* current position of sweep in list 'finobj' */
