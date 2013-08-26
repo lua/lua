@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.33 2013/08/16 18:55:49 roberto Exp roberto $
+** $Id: lfunc.c,v 2.34 2013/08/23 13:34:54 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -29,7 +29,8 @@ Closure *luaF_newCclosure (lua_State *L, int n) {
 
 
 Closure *luaF_newLclosure (lua_State *L, int n) {
-  Closure *c = &luaC_newobj(L, LUA_TLCL, sizeLclosure(n), NULL, 0)->cl;
+  Closure *c = &luaC_newobj(L, LUA_TLCL, sizeLclosure(n),
+                               &G(L)->localgc, 0)->cl;
   c->l.p = NULL;
   c->l.nupvalues = cast_byte(n);
   while (n--) c->l.upvals[n] = NULL;
@@ -38,7 +39,8 @@ Closure *luaF_newLclosure (lua_State *L, int n) {
 
 
 UpVal *luaF_newupval (lua_State *L) {
-  UpVal *uv = &luaC_newobj(L, LUA_TUPVAL, sizeof(UpVal), NULL, 0)->uv;
+  UpVal *uv = &luaC_newobj(L, LUA_TUPVAL, sizeof(UpVal),
+                              &G(L)->localupv, 0)->uv;
   uv->v = &uv->value;
   setnilvalue(uv->v);
   return uv;
@@ -79,8 +81,15 @@ void luaF_close (lua_State *L, StkId level) {
     else {
       setobj(L, &uv->value, uv->v);  /* move value to upvalue slot */
       uv->v = &uv->value;  /* now current value lives here */
-      gch(o)->next = g->allgc;  /* link upvalue into 'allgc' list */
-      g->allgc = o;
+      if (islocal(o)) {
+        gch(o)->next = g->localupv;  /* link upvalue into 'localupv' list */
+        g->localupv = o;
+        resetbit(o->gch.marked, LOCALBLACK);
+      }
+      else {  /* link upvalue into 'allgc' list */
+        gch(o)->next = g->allgc;
+        g->allgc = o;
+      }
       valnolocal(uv->v);  /* keep local invariant */
       luaC_checkupvalcolor(g, uv);
     }

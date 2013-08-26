@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.147 2013/08/21 19:21:16 roberto Exp roberto $
+** $Id: ltests.c,v 2.148 2013/08/22 15:21:48 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -400,7 +400,8 @@ static void checkobject (global_State *g, GCObject *o, int maybedead) {
 
 #define TESTGRAYBIT		7
 
-static void checkgraylist (GCObject *l) {
+static void checkgraylist (global_State *g, GCObject *l) {
+  UNUSED(g);  /* better to keep it available if we need to print an object */
   while (l) {
     lua_assert(isgray(l));
     lua_assert(!testbit(l->gch.marked, TESTGRAYBIT));
@@ -423,11 +424,11 @@ static void checkgraylist (GCObject *l) {
 */
 static void markgrays (global_State *g) {
   if (!keepinvariant(g)) return;
-  checkgraylist(g->gray);
-  checkgraylist(g->grayagain);
-  checkgraylist(g->weak);
-  checkgraylist(g->ephemeron);
-  checkgraylist(g->allweak);
+  checkgraylist(g, g->gray);
+  checkgraylist(g, g->grayagain);
+  checkgraylist(g, g->weak);
+  checkgraylist(g, g->ephemeron);
+  checkgraylist(g, g->allweak);
 }
 
 
@@ -483,6 +484,17 @@ int lua_checkmemory (lua_State *L) {
     lua_assert(!isdead(g, o) && tofinalize(o));
     lua_assert(gch(o)->tt == LUA_TUSERDATA ||
                gch(o)->tt == LUA_TTABLE);
+  }
+  /* check 'localgc' list */
+  checkgray(g, g->localgc);
+  for (o = g->localgc; o != NULL; o = gch(o)->next) {
+    checkobject(g, o, 1);
+  }
+  /* check 'localupv' list */
+  checkgray(g, g->localupv);
+  for (o = g->localupv; o != NULL; o = gch(o)->next) {
+    lua_assert(gch(o)->tt == LUA_TUPVAL);
+    checkobject(g, o, 1);
   }
   return 0;
 }

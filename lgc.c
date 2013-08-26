@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.150 2013/08/21 20:09:51 roberto Exp roberto $
+** $Id: lgc.c,v 2.151 2013/08/23 13:34:54 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -885,6 +885,17 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 ** =======================================================
 */
 
+
+static void localmarkclosure (LClosure *cl, int bit) {
+  int i;
+  for (i = 0; i < cl->nupvalues; i++) {
+    if (cl->upvals[i]) {
+      l_setbit(cl->upvals[i]->marked, bit);
+    }
+  }
+}
+
+
 /*
 ** Traverse a thread, local marking all its collectable objects
 */
@@ -893,8 +904,16 @@ static void localmarkthread (lua_State *l) {
   if (o == NULL)
     return;  /* stack not completely built yet */
   for (; o < l->top; o++) {  /* mark live elements in the stack */
-    if (iscollectable(o))
-      l_setbit(gcvalue(o)->gch.marked, LOCALBLACK);
+    if (iscollectable(o)) {
+      GCObject *obj = gcvalue(o);
+      if (obj->gch.tt == LUA_TLCL &&  /* is it a Lua closure? */
+          islocal(obj) &&  /* is it still local? */
+          !testbit(obj->gch.marked, LOCALBLACK)) {  /* not visited yet? */
+        /* mark its upvalues as local black */
+        localmarkclosure(gco2lcl(obj), LOCALBLACK);
+      }
+      l_setbit(obj->gch.marked, LOCALBLACK);
+    }
   }
 }
 
@@ -911,14 +930,17 @@ static void localmark (global_State *g) {
 }
 
 
-static void localsweep (lua_State *L, global_State *g) {
-  GCObject **p = &g->localgc;
+static void localsweep (lua_State *L, global_State *g, GCObject **p) {
   while (*p != NULL) {
     GCObject *curr = *p;
     if (!islocal(curr)) {  /* is 'curr' no more local? */
       *p = curr->gch.next;  /* remove 'curr' from list */
       curr->gch.next = g->allgc;  /* link 'curr' in 'allgc' list */
       g->allgc = curr;
+      if (curr->gch.tt == LUA_TLCL) {  /* is it a Lua closure? */
+        /* mark its upvalues as non local */
+        localmarkclosure(gco2lcl(curr), LOCALBIT);
+      }
     }
     else {  /* still local */
       if (testbit(curr->gch.marked, LOCALBLACK)) {  /* locally alive? */
@@ -926,6 +948,10 @@ static void localsweep (lua_State *L, global_State *g) {
         p = &curr->gch.next;  /* go to next element */
       }
       else {  /* object is dead */
+        if (curr->gch.tt == LUA_TLCL) {  /* is it a Lua closure? */
+          if (gco2lcl(curr)->p->cache == gco2cl(curr))
+            gco2lcl(curr)->p->cache = NULL;  /* clear cache */
+        }
         *p = curr->gch.next;  /* remove 'curr' from list */
         freeobj(L, curr);  /* erase 'curr' */
       }
@@ -938,7 +964,8 @@ static void luaC_localcollection (lua_State *L) {
   global_State *g = G(L);
   lua_assert(g->gcstate == GCSpause);
   localmark(g);
-  localsweep(L, g);
+  localsweep(L, g, &g->localgc);
+  localsweep(L, g, &g->localupv);
 }
 
 /* }====================================================== */
@@ -1009,6 +1036,7 @@ void luaC_freeallobjects (lua_State *L) {
   g->gckind = KGC_NORMAL;
   sweepwholelist(L, &g->finobj);  /* finalizers can create objs. in 'finobj' */
   sweepwholelist(L, &g->localgc);
+  sweepwholelist(L, &g->localupv);
   sweepwholelist(L, &g->allgc);
   sweepwholelist(L, &g->fixedgc);  /* collect fixed objects */
   lua_assert(g->strt.nuse == 0);
@@ -1091,6 +1119,7 @@ static lu_mem singlestep (lua_State *L) {
       }
       else {
         sweepwholelist(L, &g->localgc);
+        sweepwholelist(L, &g->localupv);
         g->gcstate = GCSsweep;
         return GCLOCALPAUSE / 4;  /* some magic for now */
       }
