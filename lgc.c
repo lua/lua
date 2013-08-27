@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.152 2013/08/26 12:41:10 roberto Exp roberto $
+** $Id: lgc.c,v 2.153 2013/08/27 18:53:35 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -208,9 +208,11 @@ GCObject *luaC_newobj (lua_State *L, int tt, size_t sz, GCObject **list,
   global_State *g = G(L);
   char *raw = cast(char *, luaM_newobject(L, novariant(tt), sz));
   GCObject *o = obj2gco(raw + offset);
-  if (list == NULL)
-    list = &g->allgc;  /* standard list for collectable objects */
   gch(o)->marked = luaC_white(g);
+  if (list == NULL)
+    list = &g->localgc;  /* standard list for collectable objects */
+  else
+    l_setbit(gch(o)->marked, LOCALMARK);  /* mark object as not in 'localgc' */
   gch(o)->tt = tt;
   gch(o)->next = *list;
   *list = o;
@@ -894,7 +896,7 @@ static void localmarkthread (lua_State *l) {
     return;  /* stack not completely built yet */
   for (; o < l->top; o++) {  /* mark live elements in the stack */
     if (iscollectable(o))
-      l_setbit(gcvalue(o)->gch.marked, LOCALBLACK);
+      l_setbit(gcvalue(o)->gch.marked, LOCALMARK);
   }
 }
 
@@ -918,10 +920,12 @@ static void localsweep (lua_State *L, global_State *g, GCObject **p) {
       *p = curr->gch.next;  /* remove 'curr' from list */
       curr->gch.next = g->allgc;  /* link 'curr' in 'allgc' list */
       g->allgc = curr;
+      /* mark it as out of local list */
+      l_setbit(curr->gch.marked, LOCALMARK);
     }
     else {  /* still local */
-      if (testbit(curr->gch.marked, LOCALBLACK)) {  /* locally alive? */
-        resetbit(curr->gch.marked, LOCALBLACK);
+      if (testbit(curr->gch.marked, LOCALMARK)) {  /* locally alive? */
+        resetbit(curr->gch.marked, LOCALMARK);
         p = &curr->gch.next;  /* go to next element */
       }
       else {  /* object is dead */

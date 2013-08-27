@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.35 2013/08/26 12:41:10 roberto Exp roberto $
+** $Id: lfunc.c,v 2.36 2013/08/27 18:53:35 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -21,16 +21,14 @@
 
 
 Closure *luaF_newCclosure (lua_State *L, int n) {
-  Closure *c = &luaC_newobj(L, LUA_TCCL, sizeCclosure(n),
-                               &G(L)->localgc, 0)->cl;
+  Closure *c = &luaC_newobj(L, LUA_TCCL, sizeCclosure(n), NULL, 0)->cl;
   c->c.nupvalues = cast_byte(n);
   return c;
 }
 
 
 Closure *luaF_newLclosure (lua_State *L, int n) {
-  Closure *c = &luaC_newobj(L, LUA_TLCL, sizeLclosure(n),
-                               &G(L)->localgc, 0)->cl;
+  Closure *c = &luaC_newobj(L, LUA_TLCL, sizeLclosure(n), NULL, 0)->cl;
   c->l.p = NULL;
   c->l.nupvalues = cast_byte(n);
   while (n--) c->l.upvals[n] = NULL;
@@ -87,7 +85,7 @@ void luaF_close (lua_State *L, StkId level) {
 
 
 Proto *luaF_newproto (lua_State *L) {
-  Proto *f = &luaC_newobj(L, LUA_TPROTO, sizeof(Proto), NULL, 0)->p;
+  Proto *f = &luaC_newobj(L, LUA_TPROTO, sizeof(Proto), &G(L)->allgc, 0)->p;
   nolocal(obj2gco(f));  /* prototypes are never local */
   f->k = NULL;
   f->sizek = 0;

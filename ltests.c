@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.149 2013/08/26 12:41:10 roberto Exp roberto $
+** $Id: ltests.c,v 2.150 2013/08/27 18:53:35 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -452,6 +452,7 @@ int lua_checkmemory (lua_State *L) {
     else lua_assert(!isthread);  /* ... and only threads */
     checkobject(g, o, maybedead);
     lua_assert(!tofinalize(o));
+    lua_assert(testbit(o->gch.marked, LOCALMARK));
   }
   /* check 'finobj' list */
   checkgray(g, g->finobj);
@@ -473,6 +474,7 @@ int lua_checkmemory (lua_State *L) {
   checkgray(g, g->localgc);
   for (o = g->localgc; o != NULL; o = gch(o)->next) {
     checkobject(g, o, 1);
+    lua_assert(!testbit(o->gch.marked, LOCALMARK));
   }
   return 0;
 }
