@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.177 2013/08/16 18:55:49 roberto Exp roberto $
+** $Id: lvm.c,v 2.178 2013/08/19 14:18:43 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -416,7 +416,8 @@ static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
       ncl->l.upvals[i] = luaF_findupval(L, base + uv[i].idx);
     else  /* get upvalue from enclosing function */
       ncl->l.upvals[i] = encup[uv[i].idx];
-    /* new closure is white and local, so we do not need a barrier here */
+    ncl->l.upvals[i]->refcount++;
+    /* new closure is white, so we do not need a barrier here */
   }
   if (!isblack(obj2gco(p)))  /* cache will not break GC invariant? */
     p->cache = ncl;  /* save it on cache for reuse */
@@ -591,7 +592,7 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_SETUPVAL,
         UpVal *uv = cl->upvals[GETARG_B(i)];
         setobj(L, uv->v, ra);
-        luaC_barrier(L, uv, ra);
+        luaC_upvalbarrier(L, uv);
       )
       vmcase(OP_SETTABLE,
         Protect(luaV_settable(L, ra, RKB(i), RKC(i)));

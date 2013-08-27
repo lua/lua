@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.34 2013/08/23 13:34:54 roberto Exp roberto $
+** $Id: lfunc.c,v 2.35 2013/08/26 12:41:10 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -38,32 +38,33 @@ Closure *luaF_newLclosure (lua_State *L, int n) {
 }
 
 
-UpVal *luaF_newupval (lua_State *L) {
-  UpVal *uv = &luaC_newobj(L, LUA_TUPVAL, sizeof(UpVal),
-                              &G(L)->localupv, 0)->uv;
-  uv->v = &uv->value;
-  setnilvalue(uv->v);
-  return uv;
+void luaF_initupvals (lua_State *L, LClosure *cl) {
+  int i;
+  for (i = 0; i < cl->nupvalues; i++) {
+    UpVal *uv = luaM_new(L, UpVal);
+    uv->refcount = 1;
+    uv->v = &uv->u.value;  /* make it closed */
+    setnilvalue(uv->v);
+    cl->upvals[i] = uv;
+  }
 }
 
 
 UpVal *luaF_findupval (lua_State *L, StkId level) {
-  global_State *g = G(L);
-  GCObject **pp = &L->openupval;
+  UpVal **pp = &L->openupval;
   UpVal *p;
   UpVal *uv;
-  while (*pp != NULL && (p = gco2uv(*pp))->v >= level) {
-    GCObject *o = obj2gco(p);
-    lua_assert(p->v != &p->value);
-    if (p->v == level) {  /* found a corresponding upvalue? */
-      if (isdead(g, o))  /* is it dead? */
-        changewhite(o);  /* resurrect it */
-      return p;
-    }
-    pp = &p->next;
+  while (*pp != NULL && (p = *pp)->v >= level) {
+    lua_assert(upisopen(p));
+    if (p->v == level)  /* found a corresponding upvalue? */
+      return p;  /* return it */
+    pp = &p->u.op.next;
   }
   /* not found: create a new one */
-  uv = &luaC_newobj(L, LUA_TUPVAL, sizeof(UpVal), pp, 0)->uv;
+  uv = luaM_new(L, UpVal);
+  uv->refcount = 0;
+  uv->u.op.next = *pp;
+  *pp = uv;
   uv->v = level;  /* current value lives in the stack */
   return uv;
 }
@@ -71,27 +72,15 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
 
 void luaF_close (lua_State *L, StkId level) {
   UpVal *uv;
-  global_State *g = G(L);
-  while (L->openupval != NULL && (uv = gco2uv(L->openupval))->v >= level) {
-    GCObject *o = obj2gco(uv);
-    lua_assert(!isblack(o) && uv->v != &uv->value);
-    L->openupval = uv->next;  /* remove from `open' list */
-    if (isdead(g, o))
+  while (L->openupval != NULL && (uv = L->openupval)->v >= level) {
+    lua_assert(upisopen(uv));
+    L->openupval = uv->u.op.next;  /* remove from `open' list */
+    if (uv->refcount == 0)  /* no references? */
       luaM_free(L, uv);  /* free upvalue */
     else {
-      setobj(L, &uv->value, uv->v);  /* move value to upvalue slot */
-      uv->v = &uv->value;  /* now current value lives here */
-      if (islocal(o)) {
-        gch(o)->next = g->localupv;  /* link upvalue into 'localupv' list */
-        g->localupv = o;
-        resetbit(o->gch.marked, LOCALBLACK);
-      }
-      else {  /* link upvalue into 'allgc' list */
-        gch(o)->next = g->allgc;
-        g->allgc = o;
-      }
-      valnolocal(uv->v);  /* keep local invariant */
-      luaC_checkupvalcolor(g, uv);
+      setobj(L, &uv->u.value, uv->v);  /* move value to upvalue slot */
+      uv->v = &uv->u.value;  /* now current value lives here */
+      luaC_upvalbarrier(L, uv);
     }
   }
 }

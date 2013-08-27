@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.79 2013/08/07 12:18:11 roberto Exp roberto $
+** $Id: lobject.h,v 2.80 2013/08/18 16:12:18 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -20,13 +20,12 @@
 ** Extra tags for non-values
 */
 #define LUA_TPROTO	LUA_NUMTAGS
-#define LUA_TUPVAL	(LUA_NUMTAGS+1)
-#define LUA_TDEADKEY	(LUA_NUMTAGS+2)
+#define LUA_TDEADKEY	(LUA_NUMTAGS+1)
 
 /*
 ** number of all possible tags (including LUA_TNONE but excluding DEADKEY)
 */
-#define LUA_TOTALTAGS	(LUA_TUPVAL+2)
+#define LUA_TOTALTAGS	(LUA_TPROTO + 2)
 
 
 /*
@@ -392,11 +391,7 @@ typedef struct Proto {
 /*
 ** Lua Upvalues
 */
-typedef struct UpVal {
-  CommonHeader;
-  TValue *v;  /* points to stack or to its own value */
-  TValue value;  /* the value (when closed) */
-} UpVal;
+typedef struct UpVal UpVal;
 
 
 /*

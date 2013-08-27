@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.h,v 2.8 2012/05/08 13:53:33 roberto Exp roberto $
+** $Id: lfunc.h,v 2.9 2013/08/07 12:18:11 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -18,10 +18,28 @@
                          cast(int, sizeof(TValue *)*((n)-1)))
 
 
+/*
+** Upvalues for Lua closures
+*/
+struct UpVal {
+  TValue *v;  /* points to stack or to its own value */
+  unsigned int refcount;  /* reference counter */
+  union {
+    struct {  /* (when open) */
+      UpVal *next;  /* linked list */
+      int touched;  /* mark to avoid cycles with dead threads */
+    } op;
+    TValue value;  /* the value (when closed) */
+  } u;
+};
+
+#define upisopen(up)	((up)->v != &(up)->u.value)
+
+
 LUAI_FUNC Proto *luaF_newproto (lua_State *L);
 LUAI_FUNC Closure *luaF_newCclosure (lua_State *L, int nelems);
 LUAI_FUNC Closure *luaF_newLclosure (lua_State *L, int nelems);
-LUAI_FUNC UpVal *luaF_newupval (lua_State *L);
+LUAI_FUNC void luaF_initupvals (lua_State *L, LClosure *cl);
 LUAI_FUNC UpVal *luaF_findupval (lua_State *L, StkId level);
 LUAI_FUNC void luaF_close (lua_State *L, StkId level);
 LUAI_FUNC void luaF_freeproto (lua_State *L, Proto *f);

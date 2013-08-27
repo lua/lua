@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.20 2013/05/06 17:19:11 roberto Exp roberto $
+** $Id: ltm.c,v 2.21 2013/08/21 20:09:51 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -28,7 +28,7 @@ LUAI_DDEF const char *const luaT_typenames_[LUA_TOTALTAGS] = {
   "no value",
   "nil", "boolean", udatatypename, "number",
   "string", "table", "function", udatatypename, "thread",
-  "proto", "upval"  /* these last two cases are used for tests only */
+  "proto" /* this last case is used for tests only */
 };
 
 

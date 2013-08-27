@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.89 2013/08/23 13:34:54 roberto Exp roberto $
+** $Id: lstate.h,v 2.90 2013/08/26 12:41:10 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -26,13 +26,6 @@
 **
 ** List 'fixedgc' keep objects that are not to be collected (currently
 ** only small strings, such as reserved words).
-**
-** Open upvalues are not subject to independent garbage collection. They
-** are collected together with their respective threads. (They are
-** always gray, so they must be remarked in the atomic step. Usually
-** their contents would be marked when traversing the respective
-** threads, but the thread may already be dead, while the upvalue is
-** still accessible through closures.)
 **
 ** Live objects with finalizers are kept in the list g->finobj. The
 ** list g->tobefnz links all objects being finalized. In particular, an
@@ -128,7 +121,6 @@ typedef struct global_State {
   lu_byte gcrunning;  /* true if GC is running */
   GCObject *allgc;  /* list of all collectable objects */
   GCObject *localgc;  /* list of local objects */
-  GCObject *localupv;  /* list of local upvalues */
   GCObject *finobj;  /* list of collectable objects with finalizers */
   GCObject **sweepgc;  /* current position of sweep in list 'allgc' */
   GCObject **sweepfin;  /* current position of sweep in list 'finobj' */
@@ -171,7 +163,7 @@ struct lua_State {
   int basehookcount;
   int hookcount;
   lua_Hook hook;
-  GCObject *openupval;  /* list of open upvalues in this stack */
+  UpVal *openupval;  /* list of open upvalues in this stack */
   GCObject *gclist;
   struct lua_longjmp *errorJmp;  /* current error recover point */
   ptrdiff_t errfunc;  /* current error handling function (stack index) */
@@ -192,7 +184,6 @@ union GCObject {
   union Closure cl;
   struct Table h;
   struct Proto p;
-  struct UpVal uv;
   struct lua_State th;  /* thread */
 };
 
@@ -211,7 +202,6 @@ union GCObject {
 	check_exp(novariant((o)->gch.tt) == LUA_TFUNCTION, &((o)->cl))
 #define gco2t(o)	check_exp((o)->gch.tt == LUA_TTABLE, &((o)->h))
 #define gco2p(o)	check_exp((o)->gch.tt == LUA_TPROTO, &((o)->p))
-#define gco2uv(o)	check_exp((o)->gch.tt == LUA_TUPVAL, &((o)->uv))
 #define gco2th(o)	check_exp((o)->gch.tt == LUA_TTHREAD, &((o)->th))
 
 /* macro to convert any Lua object into a GCObject */

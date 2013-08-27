@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.148 2013/08/22 15:21:48 roberto Exp roberto $
+** $Id: ltests.c,v 2.149 2013/08/26 12:41:10 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -195,14 +195,6 @@ static int testobjref2 (GCObject *f, GCObject *t) {
   /* not a local or pointed by a thread? */
   if (!islocal(t) || gch(f)->tt == LUA_TTHREAD)
     return 1;  /* ok */
-  if (gch(t)->tt == LUA_TUPVAL) {
-    lua_assert(gch(f)->tt == LUA_TLCL);
-    return 1;  /* upvalue pointed by a closure */
-  }
-  if (gch(f)->tt == LUA_TUPVAL) {
-    UpVal *uv = gco2uv(f);
-    return (uv->v != &uv->value);  /* open upvalue can point to local stuff */
-  }
   if (gch(f)->tt == LUA_TPROTO && gch(t)->tt == LUA_TLCL)
     return 1;  /* cache from a prototype */
   return 0;
@@ -311,9 +303,11 @@ static void checkLclosure (global_State *g, LClosure *cl) {
   int i;
   if (cl->p) checkobjref(g, clgc, cl->p);
   for (i=0; i<cl->nupvalues; i++) {
-    if (cl->upvals[i]) {
-      lua_assert(cl->upvals[i]->tt == LUA_TUPVAL);
-      checkobjref(g, clgc, cl->upvals[i]);
+    UpVal *uv = cl->upvals[i];
+    if (uv) {
+      if (!upisopen(uv))  /* only closed upvalues matter to invariant */
+        checkvalref(g, clgc, uv->v);
+      lua_assert(uv->refcount > 0);
     }
   }
 }
@@ -332,13 +326,10 @@ static int lua_checkpc (pCallInfo ci) {
 static void checkstack (global_State *g, lua_State *L1) {
   StkId o;
   CallInfo *ci;
-  GCObject *uvo;
+  UpVal *uv;
   lua_assert(!isdead(g, obj2gco(L1)));
-  for (uvo = L1->openupval; uvo != NULL; uvo = gch(uvo)->next) {
-    UpVal *uv = gco2uv(uvo);
-    lua_assert(uv->v != &uv->value);  /* must be open */
-    lua_assert(!isblack(uvo));  /* open upvalues cannot be black */
-  }
+  for (uv = L1->openupval; uv != NULL; uv = uv->u.op.next)
+    lua_assert(upisopen(uv));  /* must be open */
   for (ci = L1->ci; ci != NULL; ci = ci->previous) {
     lua_assert(ci->top <= L1->stack_last);
     lua_assert(lua_checkpc(ci));
@@ -357,13 +348,6 @@ static void checkobject (global_State *g, GCObject *o, int maybedead) {
   else {
     lua_assert(g->gcstate != GCSpause || iswhite(o));
     switch (gch(o)->tt) {
-      case LUA_TUPVAL: {
-        UpVal *uv = gco2uv(o);
-        lua_assert(uv->v == &uv->value);  /* must be closed */
-        lua_assert(!isgray(o));  /* closed upvalues are never gray */
-        checkvalref(g, o, uv->v);
-        break;
-      }
       case LUA_TUSERDATA: {
         Table *mt = gco2u(o)->metatable;
         if (mt) checkobjref(g, o, mt);
@@ -488,12 +472,6 @@ int lua_checkmemory (lua_State *L) {
   /* check 'localgc' list */
   checkgray(g, g->localgc);
   for (o = g->localgc; o != NULL; o = gch(o)->next) {
-    checkobject(g, o, 1);
-  }
-  /* check 'localupv' list */
-  checkgray(g, g->localupv);
-  for (o = g->localupv; o != NULL; o = gch(o)->next) {
-    lua_assert(gch(o)->tt == LUA_TUPVAL);
     checkobject(g, o, 1);
   }
   return 0;

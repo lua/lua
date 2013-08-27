@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.108.1.2 2013/04/19 21:03:23 roberto Exp $
+** $Id: ldo.c,v 2.109 2013/04/19 21:05:04 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -141,10 +141,10 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 
 static void correctstack (lua_State *L, TValue *oldstack) {
   CallInfo *ci;
-  GCObject *up;
+  UpVal *up;
   L->top = (L->top - oldstack) + L->stack;
-  for (up = L->openupval; up != NULL; up = up->gch.next)
-    gco2uv(up)->v = (gco2uv(up)->v - oldstack) + L->stack;
+  for (up = L->openupval; up != NULL; up = up->u.op.next)
+    up->v = (up->v - oldstack) + L->stack;
   for (ci = L->ci; ci != NULL; ci = ci->previous) {
     ci->top = (ci->top - oldstack) + L->stack;
     ci->func = (ci->func - oldstack) + L->stack;
@@ -637,7 +637,6 @@ static void checkmode (lua_State *L, const char *mode, const char *x) {
 
 
 static void f_parser (lua_State *L, void *ud) {
-  int i;
   Closure *cl;
   struct SParser *p = cast(struct SParser *, ud);
   int c = zgetc(p->z);  /* read first character */
@@ -650,11 +649,7 @@ static void f_parser (lua_State *L, void *ud) {
     cl = luaY_parser(L, p->z, &p->buff, &p->dyd, p->name, c);
   }
   lua_assert(cl->l.nupvalues == cl->l.p->sizeupvalues);
-  for (i = 0; i < cl->l.nupvalues; i++) {  /* initialize upvalues */
-    UpVal *up = luaF_newupval(L);
-    cl->l.upvals[i] = up;
-    luaC_objbarrier(L, cl, up);
-  }
+  luaF_initupvals(L, &cl->l);
 }
 
 

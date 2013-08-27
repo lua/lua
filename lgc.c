@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.151 2013/08/23 13:34:54 roberto Exp roberto $
+** $Id: lgc.c,v 2.152 2013/08/26 12:41:10 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -85,12 +85,9 @@
   lua_longassert(!(iscollectable(o) && islocal(gcvalue(o)))); \
   marklocalvalue(g,o); }
 
-#define marklocalobject(g,t) { \
-	if ((t) && iswhite(obj2gco(t))) \
-	  reallymarkobject(g, obj2gco(t)); }
-
 #define markobject(g,t) \
-  { lua_assert((t) == NULL || !islocal(obj2gco(t))); marklocalobject(g,t); }
+  { lua_assert((t) == NULL || !islocal(obj2gco(t))); \
+    if ((t) && iswhite(obj2gco(t))) reallymarkobject(g, obj2gco(t)); }
 
 static void reallymarkobject (global_State *g, GCObject *o);
 
@@ -176,22 +173,18 @@ void luaC_barrierback_ (lua_State *L, GCObject *o) {
 
 
 /*
-** check color (and invariants) for an upvalue that is being closed,
-** i.e., moved into the 'allgc' list
+** barrier for assignments to closed upvalues. Because upvalues are
+** shared among closures, it is impossible to know the color of all
+** closured pointing to it. So, we assume that the object being assigned
+** must be marked.
 */
-void luaC_checkupvalcolor (global_State *g, UpVal *uv) {
-  GCObject *o = obj2gco(uv);
-  lua_assert(!isblack(o));  /* open upvalues are never black */
-  if (isgray(o)) {
-    if (keepinvariant(g)) {
-      gray2black(o);  /* it is being visited now */
-      markvalue(g, uv->v);
-    }
-    else {
-      lua_assert(issweepphase(g));
-      makewhite(g, o);
-    }
-  }
+LUAI_FUNC void luaC_upvalbarrier_ (lua_State *L, UpVal *uv) {
+  global_State *g = G(L);
+  GCObject *o = gcvalue(uv->v);
+  lua_assert(!upisopen(uv));  /* ensured by macro luaC_upvalbarrier */
+  nolocal(o);
+  if (keepinvariant(g))
+    markobject(g, o);
 }
 
 
@@ -257,14 +250,6 @@ static void reallymarkobject (global_State *g, GCObject *o) {
       size = sizeudata(gco2u(o));
       break;
     }
-    case LUA_TUPVAL: {
-      UpVal *uv = gco2uv(o);
-      marklocalvalue(g, uv->v);
-      if (uv->v != &uv->value)  /* open? */
-        return;  /* open upvalues remain gray */
-      size = sizeof(UpVal);
-      break;
-    }
     case LUA_TLCL: {
       gco2lcl(o)->gclist = g->gray;
       g->gray = o;
@@ -328,10 +313,12 @@ static void remarkupvals (global_State *g) {
   for (; thread != NULL; thread = gch(thread)->next) {
     lua_assert(!isblack(thread));  /* threads are never black */
     if (!isgray(thread)) {  /* dead thread? */
-      GCObject *uv = gco2th(thread)->openupval;
-      for (; uv != NULL; uv = gch(uv)->next) {
-        if (isgray(uv))  /* marked? */
-          marklocalvalue(g, gco2uv(uv)->v);  /* remark upvalue's value */
+      UpVal *uv = gco2th(thread)->openupval;
+      for (; uv != NULL; uv = uv->u.op.next) {
+        if (uv->u.op.touched) {
+          marklocalvalue(g, uv->v);  /* remark upvalue's value */
+          uv->u.op.touched = 0;
+        }
       }
     }
   }
@@ -493,8 +480,15 @@ static lu_mem traverseCclosure (global_State *g, CClosure *cl) {
 static lu_mem traverseLclosure (global_State *g, LClosure *cl) {
   int i;
   markobject(g, cl->p);  /* mark its prototype */
-  for (i = 0; i < cl->nupvalues; i++)  /* mark its upvalues */
-    marklocalobject(g, cl->upvals[i]);
+  for (i = 0; i < cl->nupvalues; i++) {  /* mark its upvalues */
+    UpVal *uv = cl->upvals[i];
+    if (uv != NULL) {
+      if (upisopen(uv))
+        uv->u.op.touched = 1;  /* can be marked in 'remarkupvals' */
+      else
+        markvalue(g, uv->v);
+    }
+  }
   return sizeLclosure(cl->nupvalues);
 }
 
@@ -511,10 +505,14 @@ static lu_mem traversestack (global_State *g, lua_State *th) {
     for (; o < lim; o++)  /* clear not-marked stack slice */
       setnilvalue(o);
   }
-  else {  /* count call infos to compute size */
+  else {
     CallInfo *ci;
+    luaE_freeCI(th);  /* free extra CallInfo slots */
     for (ci = &th->base_ci; ci != th->ci; ci = ci->next)
-      n++;
+      n++;  /* count call infos to compute size */
+    /* should not change the stack during an emergency gc cycle */
+    if (g->gckind != KGC_EMERGENCY)
+      luaD_shrinkstack(th);
   }
   return sizeof(lua_State) + sizeof(TValue) * th->stacksize +
          sizeof(CallInfo) * n;
@@ -667,18 +665,36 @@ static void clearvalues (global_State *g, GCObject *l, GCObject *f) {
 }
 
 
+void luaC_upvdeccount (lua_State *L, UpVal *uv) {
+  lua_assert(uv->refcount > 0);
+  uv->refcount--;
+  if (uv->refcount == 0 && !upisopen(uv))
+    luaM_free(L, uv);
+}
+
+
+static void freeLclosure (lua_State *L, LClosure *cl) {
+  int i;
+  for (i = 0; i < cl->nupvalues; i++) {
+    UpVal *uv = cl->upvals[i];
+    if (uv)
+      luaC_upvdeccount(L, uv);
+  }
+  luaM_freemem(L, cl, sizeLclosure(cl->nupvalues));
+}
+
+
 static void freeobj (lua_State *L, GCObject *o) {
   switch (gch(o)->tt) {
     case LUA_TPROTO: luaF_freeproto(L, gco2p(o)); break;
     case LUA_TLCL: {
-      luaM_freemem(L, o, sizeLclosure(gco2lcl(o)->nupvalues));
+      freeLclosure(L, gco2lcl(o));
       break;
     }
     case LUA_TCCL: {
       luaM_freemem(L, o, sizeCclosure(gco2ccl(o)->nupvalues));
       break;
     }
-    case LUA_TUPVAL: luaM_free(L, gco2uv(o)); break;
     case LUA_TTABLE: luaH_free(L, gco2t(o)); break;
     case LUA_TTHREAD: luaE_freethread(L, gco2th(o)); break;
     case LUA_TUSERDATA: luaM_freemem(L, o, sizeudata(gco2u(o))); break;
@@ -699,20 +715,6 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count);
 
 
 /*
-** sweep the (open) upvalues of a thread and resize its stack and
-** list of call-info structures.
-*/
-static void sweepthread (lua_State *L, lua_State *L1) {
-  if (L1->stack == NULL) return;  /* stack not completely built yet */
-  sweepwholelist(L, &L1->openupval);  /* sweep open upvalues */
-  luaE_freeCI(L1);  /* free extra CallInfo slots */
-  /* should not change the stack during an emergency gc cycle */
-  if (G(L)->gckind != KGC_EMERGENCY)
-    luaD_shrinkstack(L1);
-}
-
-
-/*
 ** sweep at most 'count' elements from a list of GCObjects erasing dead
 ** objects, where a dead (not alive) object is one marked with the "old"
 ** (non current) white and not fixed; change all non-dead objects back
@@ -730,10 +732,7 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
       *p = gch(curr)->next;  /* remove 'curr' from list */
       freeobj(L, curr);  /* erase 'curr' */
     }
-    else {
-      if (gch(curr)->tt == LUA_TTHREAD)
-        sweepthread(L, gco2th(curr));  /* sweep thread's upvalues */
-      /* update marks */
+    else {  /* update marks */
       gch(curr)->marked = cast_byte((marked & maskcolors) | white);
       p = &gch(curr)->next;  /* go to next element */
     }
@@ -886,16 +885,6 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 */
 
 
-static void localmarkclosure (LClosure *cl, int bit) {
-  int i;
-  for (i = 0; i < cl->nupvalues; i++) {
-    if (cl->upvals[i]) {
-      l_setbit(cl->upvals[i]->marked, bit);
-    }
-  }
-}
-
-
 /*
 ** Traverse a thread, local marking all its collectable objects
 */
@@ -904,16 +893,8 @@ static void localmarkthread (lua_State *l) {
   if (o == NULL)
     return;  /* stack not completely built yet */
   for (; o < l->top; o++) {  /* mark live elements in the stack */
-    if (iscollectable(o)) {
-      GCObject *obj = gcvalue(o);
-      if (obj->gch.tt == LUA_TLCL &&  /* is it a Lua closure? */
-          islocal(obj) &&  /* is it still local? */
-          !testbit(obj->gch.marked, LOCALBLACK)) {  /* not visited yet? */
-        /* mark its upvalues as local black */
-        localmarkclosure(gco2lcl(obj), LOCALBLACK);
-      }
-      l_setbit(obj->gch.marked, LOCALBLACK);
-    }
+    if (iscollectable(o))
+      l_setbit(gcvalue(o)->gch.marked, LOCALBLACK);
   }
 }
 
@@ -937,10 +918,6 @@ static void localsweep (lua_State *L, global_State *g, GCObject **p) {
       *p = curr->gch.next;  /* remove 'curr' from list */
       curr->gch.next = g->allgc;  /* link 'curr' in 'allgc' list */
       g->allgc = curr;
-      if (curr->gch.tt == LUA_TLCL) {  /* is it a Lua closure? */
-        /* mark its upvalues as non local */
-        localmarkclosure(gco2lcl(curr), LOCALBIT);
-      }
     }
     else {  /* still local */
       if (testbit(curr->gch.marked, LOCALBLACK)) {  /* locally alive? */
@@ -965,7 +942,6 @@ static void luaC_localcollection (lua_State *L) {
   lua_assert(g->gcstate == GCSpause);
   localmark(g);
   localsweep(L, g, &g->localgc);
-  localsweep(L, g, &g->localupv);
 }
 
 /* }====================================================== */
@@ -1036,7 +1012,6 @@ void luaC_freeallobjects (lua_State *L) {
   g->gckind = KGC_NORMAL;
   sweepwholelist(L, &g->finobj);  /* finalizers can create objs. in 'finobj' */
   sweepwholelist(L, &g->localgc);
-  sweepwholelist(L, &g->localupv);
   sweepwholelist(L, &g->allgc);
   sweepwholelist(L, &g->fixedgc);  /* collect fixed objects */
   lua_assert(g->strt.nuse == 0);
@@ -1119,7 +1094,6 @@ static lu_mem singlestep (lua_State *L) {
       }
       else {
         sweepwholelist(L, &g->localgc);
-        sweepwholelist(L, &g->localupv);
         g->gcstate = GCSsweep;
         return GCLOCALPAUSE / 4;  /* some magic for now */
       }

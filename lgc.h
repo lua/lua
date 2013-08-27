@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.65 2013/08/21 20:09:51 roberto Exp roberto $
+** $Id: lgc.h,v 2.66 2013/08/23 13:34:54 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -55,7 +55,7 @@
 ** all objects are white again.
 */
 
-#define keepinvariant(g)	(g->gcstate <= GCSatomic)
+#define keepinvariant(g)	((g)->gcstate <= GCSatomic)
 
 
 /*
@@ -91,7 +91,7 @@
 
 #define tofinalize(x)	testbit((x)->gch.marked, FINALIZEDBIT)
 
-#define otherwhite(g)	(g->currentwhite ^ WHITEBITS)
+#define otherwhite(g)	((g)->currentwhite ^ WHITEBITS)
 #define isdeadm(ow,m)	(!(((m) ^ WHITEBITS) & (ow)))
 #define isdead(g,v)	isdeadm(otherwhite(g), (v)->gch.marked)
 
@@ -127,6 +127,10 @@
    { if (nolocal(obj2gco(o)), isblack(obj2gco(p)) && iswhite(obj2gco(o))) \
 	luaC_barrierback_(L,p); }
 
+#define luaC_upvalbarrier(L,uv) \
+  { if (iscollectable((uv)->v) && !upisopen(uv)) \
+         luaC_upvalbarrier_(L,uv); }
+
 LUAI_FUNC void luaC_fix (lua_State *L, GCObject *o);
 LUAI_FUNC void luaC_freeallobjects (lua_State *L);
 LUAI_FUNC void luaC_step (lua_State *L);
@@ -138,7 +142,9 @@ LUAI_FUNC GCObject *luaC_newobj (lua_State *L, int tt, size_t sz,
 LUAI_FUNC void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v);
 LUAI_FUNC void luaC_barrierback_ (lua_State *L, GCObject *o);
 LUAI_FUNC void luaC_barrierproto_ (lua_State *L, Proto *p, Closure *c);
+LUAI_FUNC void luaC_upvalbarrier_ (lua_State *L, UpVal *uv);
 LUAI_FUNC void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt);
-LUAI_FUNC void luaC_checkupvalcolor (global_State *g, UpVal *uv);
+LUAI_FUNC void luaC_upvdeccount (lua_State *L, UpVal *uv);
+
 
 #endif
