@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.153 2013/08/27 18:53:35 roberto Exp roberto $
+** $Id: lgc.c,v 2.154 2013/08/27 20:04:00 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -867,11 +867,13 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
       g->sweepgc = sweeptolive(L, g->sweepgc, NULL);
     }
     /* search for pointer pointing to 'o' */
-    for (p = &g->allgc; *p != o; p = &gch(*p)->next) { /* empty */ }
+    p = (testbit(ho->marked, LOCALMARK)) ? &g->allgc : &g->localgc;
+    for (; *p != o; p = &gch(*p)->next) { /* empty */ }
     *p = ho->next;  /* remove 'o' from 'allgc' list */
     ho->next = g->finobj;  /* link it in list 'finobj' */
     g->finobj = o;
     l_setbit(ho->marked, FINALIZEDBIT);  /* mark it as such */
+    l_setbit(ho->marked, LOCALMARK);  /* not in 'localgc' anymore */
     if (!keepinvariant(g))  /* not keeping invariant? */
       makewhite(g, o);  /* "sweep" object */
   }

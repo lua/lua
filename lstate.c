@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.106 2013/08/26 12:41:10 roberto Exp roberto $
+** $Id: lstate.c,v 2.107 2013/08/27 18:53:35 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -165,6 +165,14 @@ static void init_registry (lua_State *L, global_State *g) {
   sethvalue(L, &g->l_registry, registry);
   luaH_resize(L, registry, LUA_RIDX_LAST, 0);
   nolocal(obj2gco(registry));
+  /* registry is the first "regular" object created by a state; move it
+     from 'localgc' to 'allgc' so that it act as a "sentinel" there */
+  lua_assert(g->allgc == NULL &&
+             registry->next == NULL &&
+             g->localgc == obj2gco(registry));
+  g->allgc = g->localgc;
+  g->localgc = NULL;
+  l_setbit(registry->marked, LOCALMARK);  /* mark that it is not in 'localgc' */
   /* registry[LUA_RIDX_MAINTHREAD] = L */
   setthvalue(L, &temp, L);  /* temp = L */
   luaH_setint(L, registry, LUA_RIDX_MAINTHREAD, &temp);
