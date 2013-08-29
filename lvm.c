@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.178 2013/08/19 14:18:43 roberto Exp roberto $
+** $Id: lvm.c,v 2.179 2013/08/27 18:53:35 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -145,7 +145,7 @@ void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
         /* no metamethod and (now) there is an entry with given key */
         setobj2t(L, oldval, val);  /* assign new value to that entry */
         invalidateTMcache(h);
-        luaC_barrierback(L, obj2gco(h), val);
+        luaC_barrierback(L, h, val);
         return;
       }
       /* else will try the metamethod */
@@ -914,7 +914,7 @@ void luaV_execute (lua_State *L) {
         for (; n > 0; n--) {
           TValue *val = ra+n;
           luaH_setint(L, h, last--, val);
-          luaC_barrierback(L, obj2gco(h), val);
+          luaC_barrierback(L, h, val);
         }
         L->top = ci->top;  /* correct top (in case of previous open call) */
       )
