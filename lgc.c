@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.154 2013/08/27 20:04:00 roberto Exp roberto $
+** $Id: lgc.c,v 2.155 2013/08/28 18:30:26 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -25,7 +25,7 @@
 
 
 /*
-** How memory to allocate before a new local collection
+** How much memory to allocate before a new local collection
 */
 #define GCLOCALPAUSE	8000
 
@@ -894,12 +894,15 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 */
 static void localmarkthread (lua_State *l) {
   StkId o = l->stack;
+  StkId lim = l->stack + l->stacksize;  /* real end of stack */
   if (o == NULL)
     return;  /* stack not completely built yet */
   for (; o < l->top; o++) {  /* mark live elements in the stack */
     if (iscollectable(o))
       l_setbit(gcvalue(o)->gch.marked, LOCALMARK);
   }
+  for (; o < lim; o++)  /* clear not-marked stack slice */
+    setnilvalue(o);
 }
 
 
