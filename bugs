@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.124 2013/05/16 16:03:50 roberto Exp roberto $
-+** $Id: bugs,v 1.124 2013/05/16 16:03:50 roberto Exp roberto $
+-** $Id: bugs,v 1.125 2013/07/05 18:02:28 roberto Exp roberto $
++** $Id: bugs,v 1.125 2013/07/05 18:02:28 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -3099,6 +3099,41 @@ patch = [[
         printf("nil");
 ]]
 }
+
+Bug{
+what = [[GC can collect a long string still in use during parser]],
+report = [[Roberto, 2013/08/30]],
+since = [[5.2]],
+fix = nil,
+example = [[This bug is very difficult to happen (and to reproduce),
+because it depends on the GC running in a very specific way when
+parsing a source code with long (larger than 40 characters) identifiers.]],
+patch = [[
+--- ltable.h	2013/04/12 18:48:47	2.16.1.1
++++ ltable.h	2013/08/30 15:34:24
+@@ -18,4 +18,8 @@
+ #define invalidateTMcache(t)	((t)->flags = 0)
+ 
++/* returns the key, given the value of a table entry */
++#define keyfromval(v) \
++  (gkey(cast(Node *, cast(char *, (v)) - offsetof(Node, i_val))))
++
+ 
+ LUAI_FUNC const TValue *luaH_getint (Table *t, int key);
+
+--- llex.c	2013/04/12 18:48:47	2.63.1.1
++++ llex.c	2013/08/30 15:34:59
+@@ -134,4 +134,7 @@
+     luaC_checkGC(L);
+   }
++  else {  /* string already present */
++    ts = rawtsvalue(keyfromval(o));  /* re-use value previously stored */
++  }
+   L->top--;  /* remove string from stack */
+   return ts;
+]]
+}
+]=]
 
 
 --[=[
