@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.h,v 2.16 2011/08/17 20:26:47 roberto Exp roberto $
+** $Id: ltable.h,v 2.17 2013/04/26 15:39:25 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -16,6 +16,11 @@
 #define gnext(n)	((n)->i_key.nk.next)
 
 #define invalidateTMcache(t)	((t)->flags = 0)
+
+
+/* returns the key, given the value of a table entry */
+#define keyfromval(v) \
+  (gkey(cast(Node *, cast(char *, (v)) - offsetof(Node, i_val))))
 
 
 LUAI_FUNC const TValue *luaH_getint (Table *t, lua_Integer key);

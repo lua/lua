@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.70 2012/05/08 13:53:33 roberto Exp roberto $
+** $Id: lparser.h,v 1.71 2013/04/16 18:46:28 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -97,7 +97,6 @@ struct BlockCnt;  /* defined in lparser.c */
 /* state needed to generate code for a given function */
 typedef struct FuncState {
   Proto *f;  /* current function header */
-  Table *h;  /* table to find (and reuse) elements in `k' */
   struct FuncState *prev;  /* enclosing function */
   struct LexState *ls;  /* lexical state */
   struct BlockCnt *bl;  /* chain of current blocks */

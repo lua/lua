@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.70 2013/06/20 17:37:31 roberto Exp roberto $
+** $Id: lcode.c,v 2.71 2013/06/25 18:57:18 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -307,17 +307,21 @@ static void freeexp (FuncState *fs, expdesc *e) {
 }
 
 
+/*
+** Use scanner's table to cache position of constants in contant list
+** and try to reuse constants
+*/
 static int addk (FuncState *fs, TValue *key, TValue *v) {
   lua_State *L = fs->ls->L;
-  TValue *idx = luaH_set(L, fs->h, key);
   Proto *f = fs->f;
+  TValue *idx = luaH_set(L, fs->ls->h, key);  /* index scanner table */
   int k, oldsize;
-  if (ttisinteger(idx)) {
+  if (ttisinteger(idx)) {  /* is there an index there? */
     k = ivalue(idx);
-    if (luaV_rawequalobj(&f->k[k], v))
-      return k;
-    /* else may be a collision (e.g., between 0.0 and "\0\0\0\0\0\0\0\0");
-       go through and create a new entry for this value */
+    /* correct value? (warning: must distinguish floats from integers!) */
+    if (k < fs->nk && ttype(&f->k[k]) == ttype(v) &&
+                      luaV_rawequalobj(&f->k[k], v))
+      return k;  /* reuse index */
   }
   /* constant not found; create a new entry */
   oldsize = f->sizek;
@@ -377,7 +381,7 @@ static int nilK (FuncState *fs) {
   TValue k, v;
   setnilvalue(&v);
   /* cannot use nil as key; instead use table itself to represent nil */
-  sethvalue(fs->ls->L, &k, fs->h);
+  sethvalue(fs->ls->L, &k, fs->ls->h);
   return addk(fs, &k, &v);
 }
 
