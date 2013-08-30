@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.68 2013/08/27 20:04:00 roberto Exp roberto $
+** $Id: lgc.h,v 2.69 2013/08/29 13:49:57 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -38,13 +38,15 @@
 */
 #define GCSpropagate	0
 #define GCSatomic	1
-#define GCSsweepudata	2
-#define GCSsweep	3
-#define GCSpause	4
+#define GCSsweeplocal	2
+#define GCSsweepfin	3
+#define GCSsweepall	4
+#define GCSsweepmainth	5
+#define GCSpause	6
 
 
 #define issweepphase(g)  \
-	(GCSsweepudata <= (g)->gcstate && (g)->gcstate <= GCSsweep)
+	(GCSsweeplocal <= (g)->gcstate && (g)->gcstate <= GCSsweepmainth)
 
 
 /*

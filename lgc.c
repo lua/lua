@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.155 2013/08/28 18:30:26 roberto Exp roberto $
+** $Id: lgc.c,v 2.156 2013/08/29 13:34:16 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -979,12 +979,9 @@ static void setpause (global_State *g, l_mem estimate) {
 }
 
 
-#define sweepphases	(bitmask(GCSsweepudata) | bitmask(GCSsweep))
-
-
 /*
-** enter first sweep phase and prepare pointers for other sweep phases.
-** The calls to 'sweeptolive' make pointers point to an object inside
+** Enter first sweep phase.
+** The call to 'sweeptolive' makes pointer point to an object inside
 ** the list (instead of to the header), so that the real sweep do not
 ** need to skip objects created between "now" and the start of the real
 ** sweep.
@@ -993,11 +990,9 @@ static void setpause (global_State *g, l_mem estimate) {
 static int entersweep (lua_State *L) {
   global_State *g = G(L);
   int n = 0;
-  g->gcstate = GCSsweepudata;
-  lua_assert(g->sweepgc == NULL && g->sweepfin == NULL);
-  /* prepare to sweep finalizable objects and regular objects */
-  g->sweepfin = sweeptolive(L, &g->finobj, &n);
-  g->sweepgc = sweeptolive(L, &g->allgc, &n);
+  g->gcstate = GCSsweeplocal;
+  lua_assert(g->sweepgc == NULL);
+  g->sweepgc = sweeptolive(L, &g->localgc, &n);
   return n;
 }
 
@@ -1068,6 +1063,20 @@ static l_mem atomic (lua_State *L) {
 }
 
 
+static lu_mem sweepstep (lua_State *L, global_State *g,
+                         int nextstate, GCObject **nextlist) {
+  if (g->sweepgc) {  /* is there still something to sweep? */
+    g->sweepgc = sweeplist(L, g->sweepgc, GCSWEEPMAX);
+    return (GCSWEEPMAX * GCSWEEPCOST);
+  }
+  else {  /* next phase */
+    g->gcstate = nextstate;
+    g->sweepgc = nextlist;
+    return 0;
+  }
+}
+
+
 static lu_mem singlestep (lua_State *L) {
   global_State *g = G(L);
   switch (g->gcstate) {
@@ -1096,30 +1105,21 @@ static lu_mem singlestep (lua_State *L) {
       sw = entersweep(L);
       return work + sw * GCSWEEPCOST;
     }
-    case GCSsweepudata: {
-      if (g->sweepfin) {
-        g->sweepfin = sweeplist(L, g->sweepfin, GCSWEEPMAX);
-        return GCSWEEPMAX*GCSWEEPCOST;
-      }
-      else {
-        sweepwholelist(L, &g->localgc);
-        g->gcstate = GCSsweep;
-        return GCLOCALPAUSE / 4;  /* some magic for now */
-      }
+    case GCSsweeplocal: {
+      return sweepstep(L, g, GCSsweepfin, &g->finobj);
     }
-    case GCSsweep: {
-      if (g->sweepgc) {
-        g->sweepgc = sweeplist(L, g->sweepgc, GCSWEEPMAX);
-        return GCSWEEPMAX*GCSWEEPCOST;
-      }
-      else {
-        /* sweep main thread */
-        GCObject *mt = obj2gco(g->mainthread);
-        sweeplist(L, &mt, 1);
-        checkBuffer(L);
-        g->gcstate = GCSpause;  /* finish collection */
-        return GCSWEEPCOST;
-      }
+    case GCSsweepfin: {
+      return sweepstep(L, g, GCSsweepall, &g->allgc);
+    }
+    case GCSsweepall: {
+      return sweepstep(L, g, GCSsweepmainth, NULL);
+    }
+    case GCSsweepmainth: {  /* sweep main thread */
+      GCObject *mt = obj2gco(g->mainthread);
+      sweeplist(L, &mt, 1);
+      checkBuffer(L);
+      g->gcstate = GCSpause;  /* finish collection */
+      return GCSWEEPCOST;
     }
     default: lua_assert(0); return 0;
   }
