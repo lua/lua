@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.151 2013/08/27 20:04:00 roberto Exp roberto $
+** $Id: ltests.c,v 2.152 2013/08/30 19:14:26 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -202,17 +202,8 @@ static int testobjref2 (GCObject *f, GCObject *t) {
 
 
 static void printobj (global_State *g, GCObject *o) {
-  int i = 1;
-  GCObject *p;
-  for (p = g->allgc; p != o && p != NULL; p = gch(p)->next) i++;
-  if (p == NULL) {
-    i = 1;
-    for (p = g->finobj; p != o && p != NULL; p = gch(p)->next) i++;
-    if (p == NULL) i = 0;  /* zero means 'not found' */
-    else i = -i;  /* negative means 'found in findobj list */
-  }
-  printf("||%d:%s(%p)-%s-%c(%02X)||",
-           i, ttypename(novariant(gch(o)->tt)), (void *)o,
+  printf("||%s(%p)-%s-%c(%02X)||",
+           ttypename(novariant(gch(o)->tt)), (void *)o,
            islocal(o)?"L":"NL",
            isdead(g,o)?'d':isblack(o)?'b':iswhite(o)?'w':'g', gch(o)->marked);
 }
@@ -344,9 +335,10 @@ static void checkstack (global_State *g, lua_State *L1) {
 
 static void checkobject (global_State *g, GCObject *o, int maybedead) {
   if (isdead(g, o))
-    lua_assert(maybedead);
+    lua_assert(maybedead && issweepphase(g));
   else {
     lua_assert(g->gcstate != GCSpause || iswhite(o));
+    lua_assert(!islocal(o) || !testbit(gch(o)->marked, LOCALMARK));
     switch (gch(o)->tt) {
       case LUA_TUSERDATA: {
         Table *mt = gco2u(o)->metatable;
@@ -384,18 +376,18 @@ static void checkobject (global_State *g, GCObject *o, int maybedead) {
 
 #define TESTGRAYBIT		7
 
-static void checkgraylist (global_State *g, GCObject *l) {
-  UNUSED(g);  /* better to keep it available if we need to print an object */
-  while (l) {
-    lua_assert(isgray(l));
-    lua_assert(!testbit(l->gch.marked, TESTGRAYBIT));
-    l_setbit(l->gch.marked, TESTGRAYBIT);
-    switch (gch(l)->tt) {
-      case LUA_TTABLE: l = gco2t(l)->gclist; break;
-      case LUA_TLCL: l = gco2lcl(l)->gclist; break;
-      case LUA_TCCL: l = gco2ccl(l)->gclist; break;
-      case LUA_TTHREAD: l = gco2th(l)->gclist; break;
-      case LUA_TPROTO: l = gco2p(l)->gclist; break;
+static void checkgraylist (global_State *g, GCObject *o) {
+  ((void)g);  /* better to keep it available if we need to print an object */
+  while (o) {
+    lua_assert(isgray(o));
+    lua_assert(!testbit(o->gch.marked, TESTGRAYBIT));
+    l_setbit(o->gch.marked, TESTGRAYBIT);
+    switch (gch(o)->tt) {
+      case LUA_TTABLE: o = gco2t(o)->gclist; break;
+      case LUA_TLCL: o = gco2lcl(o)->gclist; break;
+      case LUA_TCCL: o = gco2ccl(o)->gclist; break;
+      case LUA_TTHREAD: o = gco2th(o)->gclist; break;
+      case LUA_TPROTO: o = gco2p(o)->gclist; break;
       default: lua_assert(0);  /* other objects cannot be gray */
     }
   }
@@ -451,30 +443,35 @@ int lua_checkmemory (lua_State *L) {
     if (gch(o)->tt == LUA_TTHREAD) isthread = 1;  /* now travesing threads... */
     else lua_assert(!isthread);  /* ... and only threads */
     checkobject(g, o, maybedead);
-    lua_assert(!tofinalize(o));
-    lua_assert(testbit(o->gch.marked, LOCALMARK));
+    lua_assert(!tofinalize(o) && testbit(o->gch.marked, LOCALMARK));
   }
   /* check 'finobj' list */
   checkgray(g, g->finobj);
   for (o = g->finobj; o != NULL; o = gch(o)->next) {
-    lua_assert(tofinalize(o));
+    checkobject(g, o, 0);
+    lua_assert(tofinalize(o) && testbit(o->gch.marked, LOCALMARK));
     lua_assert(gch(o)->tt == LUA_TUSERDATA ||
                gch(o)->tt == LUA_TTABLE);
-    checkobject(g, o, 0);
   }
   /* check 'tobefnz' list */
   checkgray(g, g->tobefnz);
   for (o = g->tobefnz; o != NULL; o = gch(o)->next) {
     lua_assert(!iswhite(o) || g->gcstate == GCSpause);
     lua_assert(!isdead(g, o) && tofinalize(o));
-    lua_assert(gch(o)->tt == LUA_TUSERDATA ||
-               gch(o)->tt == LUA_TTABLE);
+    lua_assert(gch(o)->tt == LUA_TUSERDATA || gch(o)->tt == LUA_TTABLE);
   }
   /* check 'localgc' list */
   checkgray(g, g->localgc);
   for (o = g->localgc; o != NULL; o = gch(o)->next) {
     checkobject(g, o, 1);
-    lua_assert(!testbit(o->gch.marked, LOCALMARK));
+    lua_assert(!tofinalize(o) && !testbit(o->gch.marked, LOCALMARK));
+  }
+  /* check 'localfin' list */
+  checkgray(g, g->localfin);
+  for (o = g->localfin; o != NULL; o = gch(o)->next) {
+    checkobject(g, o, 0);
+    lua_assert(tofinalize(o) && !testbit(o->gch.marked, LOCALMARK));
+    lua_assert(gch(o)->tt == LUA_TUSERDATA || gch(o)->tt == LUA_TTABLE);
   }
   return 0;
 }
@@ -653,7 +650,7 @@ static int gc_local (lua_State *L) {
 
 static int gc_state (lua_State *L) {
   static const char *statenames[] = {"propagate", "atomic",
-    "sweeplocal", "sweepfin", "sweepall", "sweepmainth",
+    "sweeplocal", "sweeplocfin", "sweepfin", "sweepall", "sweepmainth",
     "pause", ""};
   int option = luaL_checkoption(L, 1, "", statenames);
   if (option == GCSpause + 1) {

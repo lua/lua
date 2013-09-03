@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.125 2013/07/05 18:02:28 roberto Exp roberto $
-+** $Id: bugs,v 1.125 2013/07/05 18:02:28 roberto Exp roberto $
+-** $Id: bugs,v 1.126 2013/08/30 15:51:12 roberto Exp roberto $
++** $Id: bugs,v 1.126 2013/08/30 15:51:12 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -3133,7 +3133,20 @@ patch = [[
    return ts;
 ]]
 }
-]=]
+]
+
+
+Bug{
+what = [[Call to macro 'luai_userstateclose' should be done only
+after the calls to __gc methods.]],
+report = [[Jean-Luc Jumpertz, 2013/09/02]],
+since = [[ ]],
+fix = nil,
+example = [[No example]],
+patch = [[
+]]
+}
+]=]=]
 
 
 --[=[

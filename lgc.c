@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.156 2013/08/29 13:34:16 roberto Exp roberto $
+** $Id: lgc.c,v 2.157 2013/08/30 19:14:26 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -777,8 +777,16 @@ static GCObject *udata2finalize (global_State *g) {
   GCObject *o = g->tobefnz;  /* get first element */
   lua_assert(tofinalize(o));
   g->tobefnz = gch(o)->next;  /* remove it from 'tobefnz' list */
-  gch(o)->next = g->allgc;  /* return it to 'allgc' list */
-  g->allgc = o;
+  if (islocal(o)) {
+    lua_assert(!testbit(gch(o)->marked, LOCALMARK));
+    gch(o)->next = g->localgc;  /* return it to 'localgc' list */
+    g->localgc = o;
+  }
+  else {  /* return it to 'allgc' list */
+    gch(o)->next = g->allgc;
+    g->allgc = o;
+    l_setbit(gch(o)->marked, LOCALMARK);
+  }
   resetbit(gch(o)->marked, FINALIZEDBIT);  /* object is back in 'allgc' */
   if (!keepinvariant(g))  /* not keeping invariant? */
     makewhite(g, o);  /* "sweep" object */
@@ -825,23 +833,38 @@ static void GCTM (lua_State *L, int propagateerrors) {
 
 
 /*
-** move all unreachable objects (or 'all' objects) that need
-** finalization from list 'finobj' to list 'tobefnz' (to be finalized)
+** call all pending finalizers
 */
-static void separatetobefnz (lua_State *L, int all) {
+static void callallpendingfinalizers (lua_State *L, int propagateerrors) {
   global_State *g = G(L);
-  GCObject **p = &g->finobj;
+  while (g->tobefnz)
+    GCTM(L, propagateerrors);
+}
+
+
+/*
+** find last 'next' field in list 'p' list (to add elements in its end)
+*/
+static GCObject **findlast (GCObject **p) {
+  while (*p != NULL)
+    p = &gch(*p)->next;
+  return p;
+}
+
+
+/*
+** move all unreachable objects (or 'all' objects) that need
+** finalization from list 'p' to list 'tobefnz' (to be finalized)
+*/
+static void separatetobefnz_aux (global_State *g, GCObject **p, int all) {
   GCObject *curr;
-  GCObject **lastnext = &g->tobefnz;
-  /* find last 'next' field in 'tobefnz' list (to add elements in its end) */
-  while (*lastnext != NULL)
-    lastnext = &gch(*lastnext)->next;
+  GCObject **lastnext = findlast(&g->tobefnz);
   while ((curr = *p) != NULL) {  /* traverse all finalizable objects */
     lua_assert(tofinalize(curr));
     if (!(iswhite(curr) || all))  /* not being collected? */
       p = &gch(curr)->next;  /* don't bother with it */
     else {
-      *p = gch(curr)->next;  /* remove 'curr' from 'finobj' list */
+      *p = gch(curr)->next;  /* remove 'curr' from "fin" list */
       gch(curr)->next = *lastnext;  /* link at the end of 'tobefnz' list */
       *lastnext = curr;
       lastnext = &gch(curr)->next;
@@ -850,9 +873,15 @@ static void separatetobefnz (lua_State *L, int all) {
 }
 
 
+static void separatetobefnz (global_State *g, int all) {
+  separatetobefnz_aux(g, &g->localfin, all);
+  separatetobefnz_aux(g, &g->finobj, all);
+}
+
+
 /*
 ** if object 'o' has a finalizer, remove it from 'allgc' list (must
-** search the list to find it) and link it in 'finobj' list.
+** search the list to find it) and link it in 'localfin' or 'finobj' list.
 */
 void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
   global_State *g = G(L);
@@ -869,11 +898,11 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
     /* search for pointer pointing to 'o' */
     p = (testbit(ho->marked, LOCALMARK)) ? &g->allgc : &g->localgc;
     for (; *p != o; p = &gch(*p)->next) { /* empty */ }
-    *p = ho->next;  /* remove 'o' from 'allgc' list */
-    ho->next = g->finobj;  /* link it in list 'finobj' */
-    g->finobj = o;
+    *p = ho->next;  /* remove 'o' from its list */
+    p = (testbit(ho->marked, LOCALMARK)) ? &g->finobj : &g->localfin;
+    ho->next = *p;  /* link it in a "fin" list */
+    *p = o;
     l_setbit(ho->marked, FINALIZEDBIT);  /* mark it as such */
-    l_setbit(ho->marked, LOCALMARK);  /* not in 'localgc' anymore */
     if (!keepinvariant(g))  /* not keeping invariant? */
       makewhite(g, o);  /* "sweep" object */
   }
@@ -918,7 +947,8 @@ static void localmark (global_State *g) {
 }
 
 
-static void localsweep (lua_State *L, global_State *g, GCObject **p) {
+static void localsweep (lua_State *L, global_State *g) {
+  GCObject **p = &g->localgc;
   while (*p != NULL) {
     GCObject *curr = *p;
     if (!islocal(curr)) {  /* is 'curr' no more local? */
@@ -946,11 +976,41 @@ static void localsweep (lua_State *L, global_State *g, GCObject **p) {
 }
 
 
+static void separatelocal (global_State *g, int all) {
+  GCObject **p = &g->localfin;
+  GCObject **lastnext = findlast(&g->tobefnz);
+  while (*p != NULL) {
+    GCObject *curr = *p;
+    if (!islocal(curr)) {  /* is 'curr' no more local? */
+      *p = curr->gch.next;  /* remove 'curr' from list */
+      curr->gch.next = g->finobj;  /* link 'curr' in 'finobj' list */
+      g->finobj = curr;
+      /* mark it as out of local list */
+      l_setbit(curr->gch.marked, LOCALMARK);
+    }
+    else {  /* still local */
+      if (testbit(curr->gch.marked, LOCALMARK) && !all) {  /* locally alive? */
+        resetbit(curr->gch.marked, LOCALMARK);
+        p = &curr->gch.next;  /* go to next element */
+      }
+      else {  /* object is "dead" */
+        *p = curr->gch.next;  /* remove 'curr' from list */
+        curr->gch.next = *lastnext;  /* link at the end of 'tobefnz' list */
+        *lastnext = curr;
+        lastnext = &curr->gch.next;
+      }
+    }
+  }
+}
+
+
 static void luaC_localcollection (lua_State *L) {
   global_State *g = G(L);
   lua_assert(g->gcstate == GCSpause);
   localmark(g);
-  localsweep(L, g, &g->localgc);
+  localsweep(L, g);
+  separatelocal(g, 0);
+  callallpendingfinalizers(L, 1);
 }
 
 /* }====================================================== */
@@ -997,24 +1057,15 @@ static int entersweep (lua_State *L) {
 }
 
 
-/*
-** call all pending finalizers
-*/
-static void callallpendingfinalizers (lua_State *L, int propagateerrors) {
-  global_State *g = G(L);
-  while (g->tobefnz)
-    GCTM(L, propagateerrors);
-}
-
-
 void luaC_freeallobjects (lua_State *L) {
   global_State *g = G(L);
-  separatetobefnz(L, 1);  /* separate all objects with finalizers */
-  lua_assert(g->finobj == NULL);
+  separatetobefnz(g, 1);  /* separate all objects with finalizers */
+  lua_assert(g->finobj == NULL && g->localfin == NULL);
   callallpendingfinalizers(L, 0);
   g->currentwhite = WHITEBITS; /* this "white" makes all objects look dead */
   g->gckind = KGC_NORMAL;
-  sweepwholelist(L, &g->finobj);  /* finalizers can create objs. in 'finobj' */
+  sweepwholelist(L, &g->localfin);  /* finalizers can create objs. with fins. */
+  sweepwholelist(L, &g->finobj);
   sweepwholelist(L, &g->localgc);
   sweepwholelist(L, &g->allgc);
   sweepwholelist(L, &g->fixedgc);  /* collect fixed objects */
@@ -1045,7 +1096,7 @@ static l_mem atomic (lua_State *L) {
   clearvalues(g, g->allweak, NULL);
   origweak = g->weak; origall = g->allweak;
   work += g->GCmemtrav;  /* stop counting (objects being finalized) */
-  separatetobefnz(L, 0);  /* separate objects to be finalized */
+  separatetobefnz(g, 0);  /* separate objects to be finalized */
   markbeingfnz(g);  /* mark objects that will be finalized */
   propagateall(g);  /* remark, to propagate `preserveness' */
   work -= g->GCmemtrav;  /* restart counting */
@@ -1106,6 +1157,9 @@ static lu_mem singlestep (lua_State *L) {
       return work + sw * GCSWEEPCOST;
     }
     case GCSsweeplocal: {
+      return sweepstep(L, g, GCSsweeplocfin, &g->localfin);
+    }
+    case GCSsweeplocfin: {
       return sweepstep(L, g, GCSsweepfin, &g->finobj);
     }
     case GCSsweepfin: {

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.91 2013/08/27 18:53:35 roberto Exp roberto $
+** $Id: lstate.h,v 2.92 2013/08/30 19:14:26 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -121,8 +121,9 @@ typedef struct global_State {
   lu_byte gcrunning;  /* true if GC is running */
   GCObject *allgc;  /* list of all collectable objects */
   GCObject *localgc;  /* list of local objects */
-  GCObject *finobj;  /* list of collectable objects with finalizers */
+  GCObject *localfin;  /* list of local objects with finalizers */
   GCObject **sweepgc;  /* current position of sweep in list */
+  GCObject *finobj;  /* list of collectable objects with finalizers */
   GCObject *gray;  /* list of gray objects */
   GCObject *grayagain;  /* list of objects to be traversed atomically */
   GCObject *weak;  /* list of tables with weak values */
