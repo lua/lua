@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.153 2013/09/03 15:37:10 roberto Exp roberto $
+** $Id: ltests.c,v 2.154 2013/09/04 15:34:24 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -730,17 +730,21 @@ static int table_query (lua_State *L) {
 
 static int string_query (lua_State *L) {
   stringtable *tb = &G(L)->strt;
-  int s = luaL_optint(L, 2, 0) - 1;
-  if (s < 0) {
-    lua_pushinteger(L ,tb->nuse);
+  int s = luaL_optint(L, 1, 0) - 1;
+  if (s == -1) {
     lua_pushinteger(L ,tb->size);
+    lua_pushinteger(L ,tb->nuse);
     return 2;
   }
   else if (s < tb->size) {
-    TString *ts = tb->hash[s];
-    setsvalue2s(L, L->top, ts);
-    api_incr_top(L);
-    return 1;
+    TString *ts;
+    int n = 0;
+    for (ts = tb->hash[s]; ts != NULL; ts = ts->tsv.hnext) {
+      setsvalue2s(L, L->top, ts);
+      api_incr_top(L);
+      n++;
+    }
+    return n;
   }
   else return 0;
 }

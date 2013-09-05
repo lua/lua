@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.80 2013/08/18 16:12:18 roberto Exp roberto $
+** $Id: lobject.h,v 2.81 2013/08/27 18:53:35 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -310,8 +310,9 @@ typedef union TString {
   struct {
     CommonHeader;
     lu_byte extra;  /* reserved words for short strings; "has hash" for longs */
-    unsigned int hash;
     size_t len;  /* number of characters in string */
+    union TString *hnext;  /* linked list for hash table */
+    unsigned int hash;
   } tsv;
 } TString;
 

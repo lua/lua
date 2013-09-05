@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.109 2013/08/30 19:14:26 roberto Exp roberto $
+** $Id: lstate.c,v 2.110 2013/09/03 15:37:10 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -289,7 +289,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->gcrunning = 0;  /* no GC while building state */
   g->GCestimate = 0;
   g->GCthreshold = 10000;
-  g->strt.size = g->strt.nuse = g->strt.empty = 0;
+  g->strt.size = g->strt.nuse = 0;
   g->strt.hash = NULL;
   setnilvalue(&g->l_registry);
   luaZ_initbuffer(L, &g->buff);

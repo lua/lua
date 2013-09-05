@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.32 2013/08/27 20:04:00 roberto Exp roberto $
+** $Id: lstring.c,v 2.33 2013/08/28 18:30:26 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -19,13 +19,6 @@
 #include "lstate.h"
 #include "lstring.h"
 
-
-/* mark for vacant places in hash table */
-#define VACANTK		cast(TString *, cast(size_t, -1))
-
-
-/* second hash (for double hash) */
-#define h2(h1,hash,size)	lmod(h1 + ((hash % 61) | 1), size)
 
 
 /*
@@ -74,28 +67,30 @@ unsigned int luaS_hash (const char *str, size_t l, unsigned int seed) {
 void luaS_resize (lua_State *L, int newsize) {
   int i;
   stringtable *tb = &G(L)->strt;
-  TString **oldhash = tb->hash;
-  int oldsize = tb->size;
-  tb->hash = luaM_newvector(L, newsize, TString *);
-  tb->size = newsize;
-  /* keep load factor below 75% */
-  tb->empty = newsize/2 + newsize/4 - tb->nuse;
-  for (i = 0; i < newsize; i++) tb->hash[i] = NULL;
-  tb->nuse = 0;
-  /* rehash */
-  for (i = 0; i < oldsize; i++) {
-    TString *ts = oldhash[i];
-    if (ts != NULL && ts != VACANTK) {
-      unsigned int hash = ts->tsv.hash;
-      int h1 = lmod(hash, tb->size);
-      while (tb->hash[h1] != NULL)
-        h1 = h2(h1, hash, tb->size);
-      tb->hash[h1] = ts;
-      tb->nuse++;
+  if (newsize > tb->size) {  /* grow table if needed */
+    luaM_reallocvector(L, tb->hash, tb->size, newsize, TString *);
+    for (i = tb->size; i < newsize; i++)
+      tb->hash[i] = NULL;
+  }
+  for (i = 0; i < tb->size; i++) {  /* rehash */
+    TString *p = tb->hash[i];
+    tb->hash[i] = NULL;
+    while (p) {  /* for each node in the list */
+      TString *hnext = p->tsv.hnext;  /* save next */
+      unsigned int h = lmod(p->tsv.hash, newsize);  /* new position */
+      p->tsv.hnext = tb->hash[h];  /* chain it */
+      tb->hash[h] = p;
+      p = hnext;
     }
   }
-  luaM_freearray(L, oldhash, oldsize);
+  if (newsize < tb->size) {  /* shrink table if needed */
+    /* vanishing slice should be empty */
+    lua_assert(tb->hash[newsize] == NULL && tb->hash[tb->size - 1] == NULL);
+    luaM_reallocvector(L, tb->hash, tb->size, newsize, TString *);
+  }
+  tb->size = newsize;
 }
+
 
 
 /*
@@ -116,32 +111,15 @@ static TString *createstrobj (lua_State *L, const char *str, size_t l,
 }
 
 
-static void rehash (lua_State *L, stringtable *tb) {
-  int size = tb->size;
-  if (tb->nuse < size / 2) {  /* using less than half the size? */
-    if (tb->nuse < size / 4)  /* using less than half of that? */
-      size /= 2;  /* shrink table */
-    /* else keep size (but reorganize table) */
-  }
-  else {  /* table must grow */
-    if (size >= MAX_INT/2)  /* avoid arith. overflow */
-      luaD_throw(L, LUA_ERRMEM);  /* regular errors need new strings... */
-    size *= 2;
-  }
-  luaS_resize(L, size);
-}
-
-
 LUAI_FUNC void luaS_remove (lua_State *L, TString *ts) {
   stringtable *tb = &G(L)->strt;
-  unsigned int hash = ts->tsv.hash;
-  int h1 = lmod(hash, tb->size);
-  while (tb->hash[h1] != ts) {
-    lua_assert(tb->hash[h1] != NULL);
-    h1 = h2(h1, hash, tb->size);
-  }
-  tb->hash[h1] = VACANTK;
+  TString **p = &tb->hash[lmod(ts->tsv.hash, tb->size)];
+  while (*p != ts)  /* find previous element */
+    p = &(*p)->tsv.hnext;
+  *p = (*p)->tsv.hnext;  /* remove element from its list */
   tb->nuse--;
+  if (tb->nuse < tb->size/4)
+    luaS_resize(L, tb->size/2);
 }
 
 
@@ -150,39 +128,26 @@ LUAI_FUNC void luaS_remove (lua_State *L, TString *ts) {
 */
 static TString *internshrstr (lua_State *L, const char *str, size_t l) {
   TString *ts;
-  unsigned int hash = luaS_hash(str, l, G(L)->seed);
-  stringtable *tb = &G(L)->strt;
-  int vacant = -1;
-  int h1;
-  h1 = lmod(hash, tb->size);  /* previous call can changed 'size' */
-  while ((ts = tb->hash[h1]) != NULL) {  /* search the string in hash table */
-    if (ts == VACANTK) {
-      if (vacant < 0) vacant = h1;  /* keep track of first vacant place */
-    }
-    else if (l == ts->tsv.len &&
-            (memcmp(str, getstr(ts), l * sizeof(char)) == 0)) {
+  global_State *g = G(L);
+  unsigned int h = luaS_hash(str, l, g->seed);
+  TString **list = &g->strt.hash[lmod(h, g->strt.size)];
+  for (ts = *list; ts != NULL; ts = ts->tsv.hnext) {
+    if (l == ts->tsv.len &&
+        (memcmp(str, getstr(ts), l * sizeof(char)) == 0)) {
       /* found! */
-      if (isdead(G(L), obj2gco(ts)))  /* dead (but was not collected yet)? */
+      if (isdead(g, obj2gco(ts)))  /* dead (but not collected yet)? */
         changewhite(obj2gco(ts));  /* resurrect it */
-      if (vacant >= 0) {  /* is there a better place for this string? */
-        tb->hash[vacant] = ts;  /* move it up the line */
-        tb->hash[h1] = VACANTK;
-      }
-      return ts;  /* found */
+      return ts;
     }
-    h1 = h2(h1, hash, tb->size);
   }
-  if (tb->empty <= 0) {  /* no more empty spaces? */
-    rehash(L, tb);
-    return internshrstr(L, str, l);  /* recompute insertion with new size */
+  if (g->strt.nuse >= g->strt.size && g->strt.size <= MAX_INT/2) {
+    luaS_resize(L, g->strt.size * 2);
+    list = &g->strt.hash[lmod(h, g->strt.size)];  /* recompute with new size */
   }
-  ts = createstrobj(L, str, l, LUA_TSHRSTR, hash);
-  tb->nuse++;
-  if (vacant < 0)  /* found no vacant place? */
-    tb->empty--;  /* will have to use the empty place */
-  else
-    h1 = vacant;  /* use vacant place */
-  tb->hash[h1] = ts;
+  ts = createstrobj(L, str, l, LUA_TSHRSTR, h);
+  ts->tsv.hnext = *list;
+  *list = ts;
+  g->strt.nuse++;
   return ts;
 }
 
