@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.h,v 2.9 2013/08/07 12:18:11 roberto Exp roberto $
+** $Id: lfunc.h,v 2.10 2013/08/27 18:53:35 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,7 @@
 */
 struct UpVal {
   TValue *v;  /* points to stack or to its own value */
-  unsigned int refcount;  /* reference counter */
+  lu_mem refcount;  /* reference counter */
   union {
     struct {  /* (when open) */
       UpVal *next;  /* linked list */
