@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.158 2013/09/03 15:37:10 roberto Exp roberto $
+** $Id: lgc.c,v 2.159 2013/09/11 12:26:14 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -85,9 +85,11 @@
   lua_longassert(!(iscollectable(o) && islocal(gcvalue(o)))); \
   marklocalvalue(g,o); }
 
+#define marklocalobject(g,t) \
+  { if ((t) && iswhite(obj2gco(t))) reallymarkobject(g, obj2gco(t)); }
+
 #define markobject(g,t) \
-  { lua_assert((t) == NULL || !islocal(obj2gco(t))); \
-    if ((t) && iswhite(obj2gco(t))) reallymarkobject(g, obj2gco(t)); }
+  { lua_assert((t) == NULL || !islocal(obj2gco(t))); marklocalobject(g,t); }
 
 static void reallymarkobject (global_State *g, GCObject *o);
 
@@ -291,10 +293,8 @@ static void markmt (global_State *g) {
 */
 static void markbeingfnz (global_State *g) {
   GCObject *o;
-  for (o = g->tobefnz; o != NULL; o = gch(o)->next) {
-    makewhite(g, o);
-    reallymarkobject(g, o);
-  }
+  for (o = g->tobefnz; o != NULL; o = gch(o)->next)
+    marklocalobject(g, o);
 }
 
 
@@ -781,7 +781,7 @@ static GCObject *udata2finalize (global_State *g) {
     l_setbit(gch(o)->marked, LOCALMARK);
   }
   resetbit(gch(o)->marked, FINALIZEDBIT);  /* object is back in 'allgc' */
-  if (!keepinvariant(g))  /* not keeping invariant? */
+  if (issweepphase(g))
     makewhite(g, o);  /* "sweep" object */
   return o;
 }
@@ -896,7 +896,7 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
     ho->next = *p;  /* link it in a "fin" list */
     *p = o;
     l_setbit(ho->marked, FINALIZEDBIT);  /* mark it as such */
-    if (!keepinvariant(g))  /* not keeping invariant? */
+    if (issweepphase(g))
       makewhite(g, o);  /* "sweep" object */
   }
 }
@@ -1159,6 +1159,9 @@ static lu_mem singlestep (lua_State *L) {
       return sweepstep(L, g, GCSsweepall, &g->allgc);
     }
     case GCSsweepall: {
+      return sweepstep(L, g, GCSsweeptobefnz, &g->tobefnz);
+    }
+    case GCSsweeptobefnz: {
       return sweepstep(L, g, GCSsweepmainth, NULL);
     }
     case GCSsweepmainth: {  /* sweep main thread */

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.155 2013/09/05 19:31:49 roberto Exp roberto $
+** $Id: ltests.c,v 2.156 2013/09/11 12:26:14 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -469,8 +469,8 @@ int lua_checkmemory (lua_State *L) {
   /* check 'tobefnz' list */
   checkgray(g, g->tobefnz);
   for (o = g->tobefnz; o != NULL; o = gch(o)->next) {
-    lua_assert(!iswhite(o) || g->gcstate == GCSpause);
-    lua_assert(!isdead(g, o) && tofinalize(o));
+    checkobject(g, o, 0);
+    lua_assert(tofinalize(o));
     lua_assert(gch(o)->tt == LUA_TUSERDATA || gch(o)->tt == LUA_TTABLE);
   }
   return 0;
@@ -650,8 +650,8 @@ static int gc_local (lua_State *L) {
 
 static int gc_state (lua_State *L) {
   static const char *statenames[] = {"propagate", "atomic",
-    "sweeplocal", "sweeplocfin", "sweepfin", "sweepall", "sweepmainth",
-    "pause", ""};
+    "sweeplocal", "sweeplocfin", "sweepfin", "sweepall", "sweeptobefnz",
+    "sweepmainth", "pause", ""};
   int option = luaL_checkoption(L, 1, "", statenames);
   if (option == GCSpause + 1) {
     lua_pushstring(L, statenames[G(L)->gcstate]);
