@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.161 2013/09/11 13:24:55 roberto Exp roberto $
+** $Id: lgc.c,v 2.162 2013/09/11 14:09:55 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -1042,7 +1042,7 @@ static void setpause (global_State *g, l_mem estimate) {
 static int entersweep (lua_State *L) {
   global_State *g = G(L);
   int n = 0;
-  g->gcstate = GCSsweeplocal;
+  g->gcstate = GCSswplocalgc;
   lua_assert(g->sweepgc == NULL);
   g->sweepgc = sweeptolive(L, &g->localgc, &n);
   if (g->sweepgc == NULL)  /* no live objects in local list? */
@@ -1151,25 +1151,25 @@ static lu_mem singlestep (lua_State *L) {
       sw = entersweep(L);
       return work + sw * GCSWEEPCOST;
     }
-    case GCSsweeplocal: {
-      return sweepstep(L, g, GCSsweeplocfin, &g->localfin);
+    case GCSswplocalgc: {  /* sweep local objects */
+      return sweepstep(L, g, GCSswpallgc, &g->allgc);
     }
-    case GCSsweeplocfin: {
-      return sweepstep(L, g, GCSsweepfin, &g->finobj);
+    case GCSswpallgc: {  /* sweep non-local objects */
+      return sweepstep(L, g, GCSswpthreads, &g->mainthread->next);
     }
-    case GCSsweepfin: {
-      return sweepstep(L, g, GCSsweepall, &g->allgc);
+    case GCSswpthreads: {  /* sweep threads */
+      return sweepstep(L, g, GCSswplocalfin, &g->localfin);
     }
-    case GCSsweepall: {
-      return sweepstep(L, g, GCSsweeptobefnz, &g->tobefnz);
+    case GCSswplocalfin: {  /* sweep local objects with finalizers */
+      return sweepstep(L, g, GCSswpfinobj, &g->finobj);
     }
-    case GCSsweeptobefnz: {
-      return sweepstep(L, g, GCSsweepthreads, &g->mainthread->next);
+    case GCSswpfinobj: {  /* sweep non-local objects with finalizers */
+      return sweepstep(L, g, GCSswptobefnz, &g->tobefnz);
     }
-    case GCSsweepthreads: {
-      return sweepstep(L, g, GCSsweepend, NULL);
+    case GCSswptobefnz: {  /* sweep objects to be finalized */
+      return sweepstep(L, g, GCSswpend, NULL);
     }
-    case GCSsweepend: {
+    case GCSswpend: {  /* finish sweeps */
       makewhite(g, obj2gco(g->mainthread));  /* sweep main thread */
       checkBuffer(L);
       g->gcstate = GCSpause;  /* finish collection */

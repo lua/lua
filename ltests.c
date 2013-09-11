@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.157 2013/09/11 12:47:48 roberto Exp roberto $
+** $Id: ltests.c,v 2.158 2013/09/11 14:09:55 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -434,14 +434,14 @@ int lua_checkmemory (lua_State *L) {
   markgrays(g);
   /* check 'localgc' list */
   checkgray(g, g->localgc);
-  maybedead = (GCSatomic < g->gcstate && g->gcstate <= GCSsweeplocal);
+  maybedead = (GCSatomic < g->gcstate && g->gcstate <= GCSswplocalgc);
   for (o = g->localgc; o != NULL; o = gch(o)->next) {
     checkobject(g, o, maybedead);
     lua_assert(!tofinalize(o) && !testbit(o->gch.marked, LOCALMARK));
   }
   /* check 'allgc' list */
   checkgray(g, g->allgc);
-  maybedead = (GCSatomic < g->gcstate && g->gcstate <= GCSsweepall);
+  maybedead = (GCSatomic < g->gcstate && g->gcstate <= GCSswpallgc);
   for (o = g->allgc; o != NULL; o = gch(o)->next) {
     checkobject(g, o, maybedead);
     lua_assert(!tofinalize(o) && testbit(o->gch.marked, LOCALMARK));
@@ -449,7 +449,7 @@ int lua_checkmemory (lua_State *L) {
   }
   /* check thread list */
   checkgray(g, obj2gco(g->mainthread));
-  maybedead = (GCSatomic < g->gcstate && g->gcstate <= GCSsweepthreads);
+  maybedead = (GCSatomic < g->gcstate && g->gcstate <= GCSswpthreads);
   for (o = obj2gco(g->mainthread); o != NULL; o = gch(o)->next) {
     checkobject(g, o, maybedead);
     lua_assert(!tofinalize(o) && testbit(o->gch.marked, LOCALMARK));
@@ -655,8 +655,8 @@ static int gc_local (lua_State *L) {
 
 static int gc_state (lua_State *L) {
   static const char *statenames[] = {"propagate", "atomic",
-    "sweeplocal", "sweeplocfin", "sweepfin", "sweepall",
-    "sweeptobefnz", "sweepthreads", "sweepend", "pause", ""};
+    "sweeplocalgc", "sweepallgc", "sweepthreads", "sweeplocalfin",
+    "sweepfinobj", "sweeptobefnz", "sweepend", "pause", ""};
   int option = luaL_checkoption(L, 1, "", statenames);
   if (option == GCSpause + 1) {
     lua_pushstring(L, statenames[G(L)->gcstate]);
