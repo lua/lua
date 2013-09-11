@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.159 2013/09/11 12:26:14 roberto Exp roberto $
+** $Id: lgc.c,v 2.160 2013/09/11 12:47:48 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -740,7 +740,7 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
 ** sweep a list until a live object (or end of list)
 */
 static GCObject **sweeptolive (lua_State *L, GCObject **p, int *n) {
-  GCObject ** old = p;
+  GCObject **old = p;
   int i = 0;
   do {
     i++;
@@ -1046,6 +1046,8 @@ static int entersweep (lua_State *L) {
   g->gcstate = GCSsweeplocal;
   lua_assert(g->sweepgc == NULL);
   g->sweepgc = sweeptolive(L, &g->localgc, &n);
+  if (g->sweepgc == NULL)  /* no live objects in local list? */
+    g->sweepgc = &g->localgc;  /* 'sweepgc' cannot be NULL here */
   return n;
 }
 
@@ -1109,11 +1111,10 @@ static l_mem atomic (lua_State *L) {
 
 static lu_mem sweepstep (lua_State *L, global_State *g,
                          int nextstate, GCObject **nextlist) {
-  if (g->sweepgc) {  /* is there still something to sweep? */
-    g->sweepgc = sweeplist(L, g->sweepgc, GCSWEEPMAX);
+  g->sweepgc = sweeplist(L, g->sweepgc, GCSWEEPMAX);
+  if (g->sweepgc)  /* is there still something to sweep? */
     return (GCSWEEPMAX * GCSWEEPCOST);
-  }
-  else {  /* next phase */
+  else {  /* enter next state */
     g->gcstate = nextstate;
     g->sweepgc = nextlist;
     return 0;
