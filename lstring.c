@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.33 2013/08/28 18:30:26 roberto Exp roberto $
+** $Id: lstring.c,v 2.34 2013/09/05 19:31:49 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -101,7 +101,7 @@ static TString *createstrobj (lua_State *L, const char *str, size_t l,
   TString *ts;
   size_t totalsize;  /* total size of TString object */
   totalsize = sizeof(TString) + ((l + 1) * sizeof(char));
-  ts = &luaC_newobj(L, tag, totalsize, NULL, 0)->ts;
+  ts = &luaC_newobj(L, tag, totalsize)->ts;
   ts->tsv.len = l;
   ts->tsv.hash = h;
   ts->tsv.extra = 0;
@@ -178,7 +178,7 @@ Udata *luaS_newudata (lua_State *L, size_t s, Table *e) {
   Udata *u;
   if (s > MAX_SIZE - sizeof(Udata))
     luaM_toobig(L);
-  u = &luaC_newobj(L, LUA_TUSERDATA, sizeof(Udata) + s, NULL, 0)->u;
+  u = &luaC_newobj(L, LUA_TUSERDATA, sizeof(Udata) + s)->u;
   u->uv.len = s;
   u->uv.metatable = NULL;
   u->uv.env = e;

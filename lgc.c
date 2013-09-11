@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.157 2013/08/30 19:14:26 roberto Exp roberto $
+** $Id: lgc.c,v 2.158 2013/09/03 15:37:10 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -200,22 +200,15 @@ void luaC_fix (lua_State *L, GCObject *o) {
 
 /*
 ** create a new collectable object (with given type and size) and link
-** it to '*list'. 'offset' tells how many bytes to allocate before the
-** object itself (used only by states).
+** it to 'localgc' list.
 */
-GCObject *luaC_newobj (lua_State *L, int tt, size_t sz, GCObject **list,
-                       int offset) {
+GCObject *luaC_newobj (lua_State *L, int tt, size_t sz) {
   global_State *g = G(L);
-  char *raw = cast(char *, luaM_newobject(L, novariant(tt), sz));
-  GCObject *o = obj2gco(raw + offset);
+  GCObject *o = cast(GCObject *, luaM_newobject(L, novariant(tt), sz));
   gch(o)->marked = luaC_white(g);
-  if (list == NULL)
-    list = &g->localgc;  /* standard list for collectable objects */
-  else
-    l_setbit(gch(o)->marked, LOCALMARK);  /* mark object as not in 'localgc' */
   gch(o)->tt = tt;
-  gch(o)->next = *list;
-  *list = o;
+  gch(o)->next = g->localgc;
+  g->localgc = o;
   return o;
 }
 

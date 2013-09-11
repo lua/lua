@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.110 2013/09/03 15:37:10 roberto Exp roberto $
+** $Id: lstate.c,v 2.111 2013/09/05 19:31:49 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -237,16 +237,20 @@ static void close_state (lua_State *L) {
 
 
 LUA_API lua_State *lua_newthread (lua_State *L) {
+    global_State *g = G(L);
   lua_State *L1;
   lua_lock(L);
   luaC_checkGC(L);
-  /* create new thread, linked after 'l_registry' */
-  L1 = &luaC_newobj(L, LUA_TTHREAD, sizeof(LX),
-         &hvalue(&G(L)->l_registry)->next, offsetof(LX, l))->th;
+  /* create new thread */
+  L1 = &cast(LX *, luaM_newobject(L, LUA_TTHREAD, sizeof(LX)))->l;
+  L1->marked = luaC_white(g) | bitmask(LOCALMARK) | bitmask(NOLOCALBIT);
+  L1->tt = LUA_TTHREAD;
+  /* link it after 'l_registry' */
+  L1->next = hvalue(&g->l_registry)->next;
+  hvalue(&g->l_registry)->next = obj2gco(L1);
   setthvalue(L, L->top, L1);
   api_incr_top(L);
-  preinit_state(L1, G(L));
-  nolocal(obj2gco(L1));  /* threads are never local */
+  preinit_state(L1, g);
   L1->hookmask = L->hookmask;
   L1->basehookcount = L->basehookcount;
   L1->hook = L->hook;
@@ -279,7 +283,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   L->next = NULL;
   L->tt = LUA_TTHREAD;
   g->currentwhite = bitmask(WHITE0BIT);
-  L->marked = luaC_white(g) | bitmask(LOCALBIT);
+  L->marked = luaC_white(g) | bitmask(NOLOCALBIT);
   g->gckind = KGC_NORMAL;
   preinit_state(L, g);
   g->frealloc = f;

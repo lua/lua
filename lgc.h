@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.70 2013/08/30 19:14:26 roberto Exp roberto $
+** $Id: lgc.h,v 2.71 2013/09/03 15:37:10 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -79,7 +79,7 @@
 #define WHITE1BIT	1  /* object is white (type 1) */
 #define BLACKBIT	2  /* object is black */
 #define FINALIZEDBIT	3  /* object has been marked for finalization */
-#define LOCALBIT	4  /* object is not local */
+#define NOLOCALBIT	4  /* object is not local */
 #define LOCALMARK	5  /* object is 'locally marked' or out of local list */
 /* bit 7 is currently used by tests (luaL_checkmemory) */
 
@@ -90,7 +90,7 @@
 #define isblack(x)      testbit((x)->gch.marked, BLACKBIT)
 #define isgray(x)  /* neither white nor black */  \
 	(!testbits((x)->gch.marked, WHITEBITS | bitmask(BLACKBIT)))
-#define islocal(x)	(!testbit((x)->gch.marked, LOCALBIT))
+#define islocal(x)	(!testbit((x)->gch.marked, NOLOCALBIT))
 
 #define tofinalize(x)	testbit((x)->gch.marked, FINALIZEDBIT)
 
@@ -101,7 +101,7 @@
 #define changewhite(x)	((x)->gch.marked ^= WHITEBITS)
 #define gray2black(x)	l_setbit((x)->gch.marked, BLACKBIT)
 
-#define nolocal(x)	l_setbit((x)->gch.marked, LOCALBIT)
+#define nolocal(x)	l_setbit((x)->gch.marked, NOLOCALBIT)
 #define valnolocal(v)	{ if (iscollectable(v)) nolocal(gcvalue(v)); }
 
 #define luaC_white(g)	cast(lu_byte, (g)->currentwhite & WHITEBITS)
@@ -140,8 +140,7 @@ LUAI_FUNC void luaC_step (lua_State *L);
 LUAI_FUNC void luaC_forcestep (lua_State *L);
 LUAI_FUNC void luaC_runtilstate (lua_State *L, int statesmask);
 LUAI_FUNC void luaC_fullgc (lua_State *L, int isemergency);
-LUAI_FUNC GCObject *luaC_newobj (lua_State *L, int tt, size_t sz,
-                                 GCObject **list, int offset);
+LUAI_FUNC GCObject *luaC_newobj (lua_State *L, int tt, size_t sz);
 LUAI_FUNC void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v);
 LUAI_FUNC void luaC_barrierback_ (lua_State *L, GCObject *o);
 LUAI_FUNC void luaC_barrierproto_ (lua_State *L, Proto *p, Closure *c);
