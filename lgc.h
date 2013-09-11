@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.72 2013/09/11 12:26:14 roberto Exp roberto $
+** $Id: lgc.h,v 2.73 2013/09/11 12:47:48 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -43,12 +43,13 @@
 #define GCSsweepfin	4
 #define GCSsweepall	5
 #define GCSsweeptobefnz	6
-#define GCSsweepmainth	7
-#define GCSpause	8
+#define GCSsweepthreads	7
+#define GCSsweepend	8
+#define GCSpause	9
 
 
 #define issweepphase(g)  \
-	(GCSsweeplocal <= (g)->gcstate && (g)->gcstate <= GCSsweepmainth)
+	(GCSsweeplocal <= (g)->gcstate && (g)->gcstate <= GCSsweepend)
 
 
 /*

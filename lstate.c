@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.111 2013/09/05 19:31:49 roberto Exp roberto $
+** $Id: lstate.c,v 2.112 2013/09/11 12:26:14 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -165,14 +165,6 @@ static void init_registry (lua_State *L, global_State *g) {
   sethvalue(L, &g->l_registry, registry);
   luaH_resize(L, registry, LUA_RIDX_LAST, 0);
   nolocal(obj2gco(registry));
-  /* registry is the first "regular" object created by a state; move it
-     from 'localgc' to 'allgc' so that it act as a "sentinel" there */
-  lua_assert(g->allgc == NULL &&
-             registry->next == NULL &&
-             g->localgc == obj2gco(registry));
-  g->allgc = g->localgc;
-  g->localgc = NULL;
-  l_setbit(registry->marked, LOCALMARK);  /* mark that it is not in 'localgc' */
   /* registry[LUA_RIDX_MAINTHREAD] = L */
   setthvalue(L, &temp, L);  /* temp = L */
   luaH_setint(L, registry, LUA_RIDX_MAINTHREAD, &temp);
@@ -243,11 +235,11 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   luaC_checkGC(L);
   /* create new thread */
   L1 = &cast(LX *, luaM_newobject(L, LUA_TTHREAD, sizeof(LX)))->l;
-  L1->marked = luaC_white(g) | bitmask(LOCALMARK) | bitmask(NOLOCALBIT);
+  L1->marked = luaC_white(g) | bit2mask(NOLOCALBIT, LOCALMARK);
   L1->tt = LUA_TTHREAD;
-  /* link it after 'l_registry' */
-  L1->next = hvalue(&g->l_registry)->next;
-  hvalue(&g->l_registry)->next = obj2gco(L1);
+  /* link it on list of threads */
+  L1->next = g->mainthread->next;
+  g->mainthread->next = obj2gco(L1);
   setthvalue(L, L->top, L1);
   api_incr_top(L);
   preinit_state(L1, g);
@@ -283,7 +275,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   L->next = NULL;
   L->tt = LUA_TTHREAD;
   g->currentwhite = bitmask(WHITE0BIT);
-  L->marked = luaC_white(g) | bitmask(NOLOCALBIT);
+  L->marked = luaC_white(g) | bit2mask(NOLOCALBIT, LOCALMARK);
   g->gckind = KGC_NORMAL;
   preinit_state(L, g);
   g->frealloc = f;

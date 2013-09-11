@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.93 2013/09/03 15:37:10 roberto Exp roberto $
+** $Id: lstate.h,v 2.94 2013/09/05 19:31:49 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -16,20 +16,19 @@
 
 /*
 
-** Some notes about garbage-collected objects:  All objects in Lua must
-** be kept somehow accessible until being freed.
+** Some notes about garbage-collected objects: All objects in Lua must
+** be kept somehow accessible until being freed, so all objects always
+** belong to one (and only one) of these lists, using field 'next' of
+** the 'CommonHeader' for the link:
 **
-** Lua keeps most objects linked in list g->allgc. The link uses field
-** 'next' of the CommonHeader. Threads (except the main one) ar kept
-** at the end of the 'allgc' list, after the 'l_registry' (which is
-** the first object to be added to the list).
-**
-** List 'fixedgc' keep objects that are not to be collected (currently
+** mainthread->next: all threads;
+** localgc: all local objects not marked for finalization;
+** localfin: all local objects marked for finalization;
+** allgc: all non local objects not marked for finalization;
+** finobj: all non local objects marked for finalization;
+** tobefnz: all objects ready to be finalized; 
+** fixedgc: all objects that are not to be collected (currently
 ** only small strings, such as reserved words).
-**
-** Live objects with finalizers are kept in the list g->finobj. The
-** list g->tobefnz links all objects being finalized. In particular, an
-** object has its FINALIZEDBIT set iff it is in one of these lists.
 
 */
 

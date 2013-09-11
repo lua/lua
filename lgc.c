@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.160 2013/09/11 12:47:48 roberto Exp roberto $
+** $Id: lgc.c,v 2.161 2013/09/11 13:24:55 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -304,7 +304,7 @@ static void markbeingfnz (global_State *g) {
 ** thread.)
 */
 static void remarkupvals (global_State *g) {
-  GCObject *thread = hvalue(&g->l_registry)->next;
+  GCObject *thread = g->mainthread->next;
   for (; thread != NULL; thread = gch(thread)->next) {
     lua_assert(!isblack(thread));  /* threads are never black */
     if (!isgray(thread)) {  /* dead thread? */
@@ -933,10 +933,9 @@ static void localmarkthread (lua_State *l) {
 ** a thread)
 */
 static void localmark (global_State *g) {
-  GCObject *thread = hvalue(&g->l_registry)->next;
+  GCObject *thread = obj2gco(g->mainthread);
   for (; thread != NULL; thread = gch(thread)->next)  /* traverse all threads */
     localmarkthread(gco2th(thread));
-  localmarkthread(g->mainthread);
 }
 
 
@@ -1057,12 +1056,14 @@ void luaC_freeallobjects (lua_State *L) {
   separatetobefnz(g, 1);  /* separate all objects with finalizers */
   lua_assert(g->finobj == NULL && g->localfin == NULL);
   callallpendingfinalizers(L, 0);
+  lua_assert(g->tobefnz == NULL);
   g->currentwhite = WHITEBITS; /* this "white" makes all objects look dead */
   g->gckind = KGC_NORMAL;
+  sweepwholelist(L, &g->localgc);
   sweepwholelist(L, &g->localfin);  /* finalizers can create objs. with fins. */
   sweepwholelist(L, &g->finobj);
-  sweepwholelist(L, &g->localgc);
   sweepwholelist(L, &g->allgc);
+  sweepwholelist(L, &g->mainthread->next);
   sweepwholelist(L, &g->fixedgc);  /* collect fixed objects */
   lua_assert(g->strt.nuse == 0);
 }
@@ -1163,11 +1164,13 @@ static lu_mem singlestep (lua_State *L) {
       return sweepstep(L, g, GCSsweeptobefnz, &g->tobefnz);
     }
     case GCSsweeptobefnz: {
-      return sweepstep(L, g, GCSsweepmainth, NULL);
+      return sweepstep(L, g, GCSsweepthreads, &g->mainthread->next);
     }
-    case GCSsweepmainth: {  /* sweep main thread */
-      GCObject *mt = obj2gco(g->mainthread);
-      sweeplist(L, &mt, 1);
+    case GCSsweepthreads: {
+      return sweepstep(L, g, GCSsweepend, NULL);
+    }
+    case GCSsweepend: {
+      makewhite(g, obj2gco(g->mainthread));  /* sweep main thread */
       checkBuffer(L);
       g->gcstate = GCSpause;  /* finish collection */
       return GCSWEEPCOST;
