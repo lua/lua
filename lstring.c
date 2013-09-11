@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.34 2013/09/05 19:31:49 roberto Exp roberto $
+** $Id: lstring.c,v 2.35 2013/09/11 12:26:14 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -118,8 +118,6 @@ LUAI_FUNC void luaS_remove (lua_State *L, TString *ts) {
     p = &(*p)->tsv.hnext;
   *p = (*p)->tsv.hnext;  /* remove element from its list */
   tb->nuse--;
-  if (tb->nuse < tb->size/4)
-    luaS_resize(L, tb->size/2);
 }
 
 

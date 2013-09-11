@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.162 2013/09/11 14:09:55 roberto Exp roberto $
+** $Id: lgc.c,v 2.163 2013/09/11 14:47:08 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -759,10 +759,15 @@ static GCObject **sweeptolive (lua_State *L, GCObject **p, int *n) {
 ** =======================================================
 */
 
-static void checkBuffer (lua_State *L) {
-  global_State *g = G(L);
-  if (g->gckind != KGC_EMERGENCY)
+/*
+** If possible, free concatenation buffer and shrink string table
+*/
+static void checkSizes (lua_State *L, global_State *g) {
+  if (g->gckind != KGC_EMERGENCY) {
     luaZ_freebuffer(L, &g->buff);  /* free concatenation buffer */
+    if (g->strt.nuse < g->strt.size / 4)  /* string table too big? */
+      luaS_resize(L, g->strt.size / 2);  /* shrink it a little */
+  }
 }
 
 
@@ -1171,7 +1176,7 @@ static lu_mem singlestep (lua_State *L) {
     }
     case GCSswpend: {  /* finish sweeps */
       makewhite(g, obj2gco(g->mainthread));  /* sweep main thread */
-      checkBuffer(L);
+      checkSizes(L, g);
       g->gcstate = GCSpause;  /* finish collection */
       return GCSWEEPCOST;
     }
