@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.112 2013/09/11 12:26:14 roberto Exp roberto $
+** $Id: lstate.c,v 2.113 2013/09/11 14:09:55 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -28,6 +28,10 @@
 
 #if !defined(LUAI_GCPAUSE)
 #define LUAI_GCPAUSE	200  /* 200% */
+#endif
+
+#if !defined(LUAI_GCLOCALPAUSE)
+#define LUAI_GCLOCALPAUSE	(1000 * sizeof(TString))
 #endif
 
 #if !defined(LUAI_GCMUL)
@@ -301,6 +305,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->totalbytes = sizeof(LG);
   g->GCdebt = 0;
   g->gcpause = LUAI_GCPAUSE;
+  g->gclocalpause = LUAI_GCLOCALPAUSE;
   g->gcstepmul = LUAI_GCMUL;
   for (i=0; i < LUA_NUMTAGS; i++) g->mt[i] = NULL;
   if (luaD_rawrunprotected(L, f_luaopen, NULL) != LUA_OK) {

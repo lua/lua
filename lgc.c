@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.163 2013/09/11 14:47:08 roberto Exp roberto $
+** $Id: lgc.c,v 2.164 2013/09/11 14:56:15 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -22,12 +22,6 @@
 #include "ltable.h"
 #include "ltm.h"
 
-
-
-/*
-** How much memory to allocate before a new local collection
-*/
-#define GCLOCALPAUSE	8000
 
 
 /*
@@ -149,7 +143,7 @@ void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v) {
   global_State *g = G(L);
   lua_assert(isblack(o) && iswhite(v) && !isdead(g, v) && !isdead(g, o));
   lua_assert(g->gcstate != GCSpause);
-  lua_assert(gch(o)->tt != LUA_TTABLE);
+  lua_assert(gch(o)->tt != LUA_TTABLE);  /* tables use a back barrier */
   if (keepinvariant(g))  /* must keep invariant? */
     reallymarkobject(g, v);  /* restore invariant */
   else {  /* sweep phase */
@@ -888,19 +882,18 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
     return;  /* nothing to be done */
   else {  /* move 'o' to 'finobj' list */
     GCObject **p;
-    GCheader *ho = gch(o);
-    if (g->sweepgc == &ho->next) {  /* avoid removing current sweep object */
+    if (g->sweepgc == &o->gch.next) {  /* avoid removing current sweep object */
       lua_assert(issweepphase(g));
       g->sweepgc = sweeptolive(L, g->sweepgc, NULL);
     }
     /* search for pointer pointing to 'o' */
-    p = (testbit(ho->marked, LOCALMARK)) ? &g->allgc : &g->localgc;
+    p = (testbit(o->gch.marked, LOCALMARK)) ? &g->allgc : &g->localgc;
     for (; *p != o; p = &gch(*p)->next) { /* empty */ }
-    *p = ho->next;  /* remove 'o' from its list */
-    p = (testbit(ho->marked, LOCALMARK)) ? &g->finobj : &g->localfin;
-    ho->next = *p;  /* link it in a "fin" list */
+    *p = o->gch.next;  /* remove 'o' from its list */
+    p = (testbit(o->gch.marked, LOCALMARK)) ? &g->finobj : &g->localfin;
+    o->gch.next = *p;  /* link it in a "fin" list */
     *p = o;
-    l_setbit(ho->marked, FINALIZEDBIT);  /* mark it as such */
+    l_setbit(o->gch.marked, FINALIZEDBIT);  /* mark it as such */
     if (issweepphase(g))
       makewhite(g, o);  /* "sweep" object */
   }
@@ -1032,7 +1025,7 @@ static void setpause (global_State *g, l_mem estimate) {
             ? estimate * g->gcpause  /* no overflow */
             : MAX_LMEM;  /* overflow; truncate to maximum */
   g->GCthreshold = threshold;
-  luaE_setdebt(g, -GCLOCALPAUSE);
+  luaE_setdebt(g, -g->gclocalpause);
 }
 
 
@@ -1050,8 +1043,6 @@ static int entersweep (lua_State *L) {
   g->gcstate = GCSswplocalgc;
   lua_assert(g->sweepgc == NULL);
   g->sweepgc = sweeptolive(L, &g->localgc, &n);
-  if (g->sweepgc == NULL)  /* no live objects in local list? */
-    g->sweepgc = &g->localgc;  /* 'sweepgc' cannot be NULL here */
   return n;
 }
 
@@ -1099,7 +1090,7 @@ static l_mem atomic (lua_State *L) {
   work += g->GCmemtrav;  /* stop counting (objects being finalized) */
   separatetobefnz(g, 0);  /* separate objects to be finalized */
   markbeingfnz(g);  /* mark objects that will be finalized */
-  propagateall(g);  /* remark, to propagate `preserveness' */
+  propagateall(g);  /* remark, to propagate 'resurrection' */
   work -= g->GCmemtrav;  /* restart counting */
   convergeephemerons(g);
   /* at this point, all resurrected objects are marked. */
@@ -1117,14 +1108,15 @@ static l_mem atomic (lua_State *L) {
 
 static lu_mem sweepstep (lua_State *L, global_State *g,
                          int nextstate, GCObject **nextlist) {
-  g->sweepgc = sweeplist(L, g->sweepgc, GCSWEEPMAX);
-  if (g->sweepgc)  /* is there still something to sweep? */
-    return (GCSWEEPMAX * GCSWEEPCOST);
-  else {  /* enter next state */
-    g->gcstate = nextstate;
-    g->sweepgc = nextlist;
-    return 0;
+  if (g->sweepgc) {
+    g->sweepgc = sweeplist(L, g->sweepgc, GCSWEEPMAX);
+    if (g->sweepgc)  /* is there still something to sweep? */
+      return (GCSWEEPMAX * GCSWEEPCOST);
   }
+  /* else enter next state */
+  g->gcstate = nextstate;
+  g->sweepgc = nextlist;
+  return 0;
 }
 
 
@@ -1245,7 +1237,7 @@ void luaC_step (lua_State *L) {
         luaC_forcestep(L);  /* restart collection */
       }
       else
-        luaE_setdebt(g, -GCLOCALPAUSE);
+        luaE_setdebt(g, -g->gclocalpause);
     }
   }
   else luaE_setdebt(g, -GCSTEPSIZE);  /* avoid being called too often */
