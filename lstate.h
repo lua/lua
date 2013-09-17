@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.95 2013/09/11 14:09:55 roberto Exp roberto $
+** $Id: lstate.h,v 2.96 2013/09/13 16:21:52 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -214,6 +214,7 @@ LUAI_FUNC void luaE_setdebt (global_State *g, l_mem debt);
 LUAI_FUNC void luaE_freethread (lua_State *L, lua_State *L1);
 LUAI_FUNC CallInfo *luaE_extendCI (lua_State *L);
 LUAI_FUNC void luaE_freeCI (lua_State *L);
+LUAI_FUNC void luaE_shrinkCI (lua_State *L);
 
 
 #endif

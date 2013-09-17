@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.109 2013/04/19 21:05:04 roberto Exp roberto $
+** $Id: ldo.c,v 2.110 2013/08/27 18:53:35 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -206,7 +206,11 @@ void luaD_shrinkstack (lua_State *L) {
   int inuse = stackinuse(L);
   int goodsize = inuse + (inuse / 8) + 2*EXTRA_STACK;
   if (goodsize > LUAI_MAXSTACK) goodsize = LUAI_MAXSTACK;
-  if (inuse > LUAI_MAXSTACK ||  /* handling stack overflow? */
+  if (L->stacksize > LUAI_MAXSTACK)  /* was handling stack overflow? */
+    luaE_freeCI(L);  /* free all CIs (list grew because of an error) */
+  else
+    luaE_shrinkCI(L);  /* shrink list */
+  if (inuse > LUAI_MAXSTACK ||  /* still handling stack overflow? */
       goodsize >= L->stacksize)  /* would grow instead of shrink? */
     condmovestack(L);  /* don't change stack (change only for debugging) */
   else

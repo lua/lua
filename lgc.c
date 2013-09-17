@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.164 2013/09/11 14:56:15 roberto Exp roberto $
+** $Id: lgc.c,v 2.165 2013/09/13 16:21:52 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -496,7 +496,6 @@ static lu_mem traversestack (global_State *g, lua_State *th) {
   }
   else {
     CallInfo *ci;
-    luaE_freeCI(th);  /* free extra CallInfo slots */
     for (ci = &th->base_ci; ci != th->ci; ci = ci->next)
       n++;  /* count call infos to compute size */
     /* should not change the stack during an emergency gc cycle */

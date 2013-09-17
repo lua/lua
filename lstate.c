@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.113 2013/09/11 14:09:55 roberto Exp roberto $
+** $Id: lstate.c,v 2.114 2013/09/13 16:21:52 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -119,6 +119,9 @@ CallInfo *luaE_extendCI (lua_State *L) {
 }
 
 
+/*
+** free all CallInfo structures not in use by a thread
+*/
 void luaE_freeCI (lua_State *L) {
   CallInfo *ci = L->ci;
   CallInfo *next = ci->next;
@@ -126,6 +129,22 @@ void luaE_freeCI (lua_State *L) {
   while ((ci = next) != NULL) {
     next = ci->next;
     luaM_free(L, ci);
+  }
+}
+
+
+/*
+** free half of the CallInfo structures not in use by a thread
+*/
+void luaE_shrinkCI (lua_State *L) {
+  CallInfo *ci = L->ci;
+  while (ci->next != NULL) {  /* while there is 'next' */
+    CallInfo *next2 = ci->next->next;  /* next's next */
+    if (next2 == NULL) break;
+    luaM_free(L, ci->next);  /* remove next */
+    ci->next = next2;  /* remove 'next' from the list */
+    next2->previous = ci;
+    ci = next2;
   }
 }
 
