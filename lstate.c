@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.114 2013/09/13 16:21:52 roberto Exp roberto $
+** $Id: lstate.c,v 2.115 2013/09/17 15:40:06 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -199,7 +199,8 @@ static void init_registry (lua_State *L, global_State *g) {
 
 
 /*
-** open parts of the state that may cause memory-allocation errors
+** open parts of the state that may cause memory-allocation errors.
+** ('g->version' != NULL flags that the state was completely build)
 */
 static void f_luaopen (lua_State *L, void *ud) {
   global_State *g = G(L);
@@ -213,6 +214,8 @@ static void f_luaopen (lua_State *L, void *ud) {
   g->memerrmsg = luaS_newliteral(L, MEMERRMSG);
   luaC_fix(L, obj2gco(g->memerrmsg));  /* it should never be collected */
   g->gcrunning = 1;  /* allow gc */
+  g->version = lua_version(NULL);
+  luai_userstateopen(L);
 }
 
 
@@ -243,6 +246,8 @@ static void close_state (lua_State *L) {
   global_State *g = G(L);
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
   luaC_freeallobjects(L);  /* collect all objects */
+  if (g->version)  /* closing a fully built state? */
+    luai_userstateclose(L);
   luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size);
   luaZ_freebuffer(L, &g->buff);
   freestack(L);
@@ -313,7 +318,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   setnilvalue(&g->l_registry);
   luaZ_initbuffer(L, &g->buff);
   g->panic = NULL;
-  g->version = lua_version(NULL);
+  g->version = NULL;
   g->gcstate = GCSpause;
   g->localgc = g->localfin = g->allgc = g->finobj = NULL;
   g->tobefnz = NULL;
@@ -332,8 +337,6 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
     close_state(L);
     L = NULL;
   }
-  else
-    luai_userstateopen(L);
   return L;
 }
 
@@ -341,7 +344,6 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
 LUA_API void lua_close (lua_State *L) {
   L = G(L)->mainthread;  /* only the main thread can be closed */
   lua_lock(L);
-  luai_userstateclose(L);
   close_state(L);
 }
 
