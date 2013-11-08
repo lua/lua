@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.126 2013/08/30 15:51:12 roberto Exp roberto $
-+** $Id: bugs,v 1.126 2013/08/30 15:51:12 roberto Exp roberto $
+-** $Id: bugs,v 1.127 2013/09/03 15:37:10 roberto Exp roberto $
++** $Id: bugs,v 1.127 2013/09/03 15:37:10 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -3144,6 +3144,32 @@ since = [[ ]],
 fix = nil,
 example = [[No example]],
 patch = [[
+--- lstate.c	2013/04/12 18:48:47	2.99.1.1
++++ lstate.c	2013/11/08 17:39:57
+@@ -194,2 +194,4 @@
+   g->gcrunning = 1;  /* allow gc */
++  g->version = lua_version(NULL);
++  luai_userstateopen(L);
+ }
+@@ -224,2 +226,4 @@
+   luaC_freeallobjects(L);  /* collect all objects */
++  if (g->version)  /* closing a fully built state? */
++    luai_userstateclose(L);
+   luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size);
+@@ -289,3 +293,3 @@
+   g->panic = NULL;
+-  g->version = lua_version(NULL);
++  g->version = NULL;
+   g->gcstate = GCSpause;
+@@ -308,4 +312,2 @@
+   }
+-  else
+-    luai_userstateopen(L);
+   return L;
+@@ -317,3 +319,2 @@
+   lua_lock(L);
+-  luai_userstateclose(L);
+   close_state(L);
 ]]
 }
 ]=]=]
