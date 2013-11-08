@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.127 2013/09/03 15:37:10 roberto Exp roberto $
-+** $Id: bugs,v 1.127 2013/09/03 15:37:10 roberto Exp roberto $
+-** $Id: bugs,v 1.128 2013/11/08 17:45:10 roberto Exp roberto $
++** $Id: bugs,v 1.128 2013/11/08 17:45:10 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -3173,6 +3173,36 @@ patch = [[
 ]]
 }
 ]=]=]
+
+
+--[=[
+Bug{
+what = [[Resuming the running coroutine makes it unyieldable]],
+report = [[Florian Nücke, 2013/10/28]],
+since = [[5.2]],
+fix = nil,
+example = [[
+-- should print 'true'
+print(coroutine.resume(coroutine.create(function()
+  coroutine.resume(coroutine.running())
+  coroutine.yield()
+end)))
+]],
+patch = [[
+--- ldo.c	2013/04/19 21:03:23	2.108.1.2
++++ ldo.c	2013/11/08 18:20:57
+@@ -536,2 +536,3 @@
+   int status;
++  int oldnny = L->nny;  /* save 'nny' */
+   lua_lock(L);
+@@ -557,3 +558,3 @@
+   }
+-  L->nny = 1;  /* do not allow yields */
++  L->nny = oldnny;  /* restore 'nny' */
+   L->nCcalls--;
+]]
+}
+]=]
 
 
 --[=[
