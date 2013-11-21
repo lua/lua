@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.176 2013/03/16 21:10:18 roberto Exp $
+** $Id: luaconf.h,v 1.176.1.1 2013/04/12 18:48:47 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -326,7 +326,7 @@
 
 
 /*
-@@ LUA_INT32 is an signed integer with exactly 32 bits.
+@@ LUA_INT32 is a signed integer with exactly 32 bits.
 @@ LUAI_UMEM is an unsigned integer big enough to count the total
 @* memory used by Lua.
 @@ LUAI_MEM is a signed integer big enough to count the total memory
@@ -350,7 +350,7 @@
 /*
 @@ LUAI_MAXSTACK limits the size of the Lua stack.
 ** CHANGE it if you need a different limit. This limit is arbitrary;
-** its only purpose is to stop Lua to consume unlimited stack
+** its only purpose is to stop Lua from consuming unlimited stack
 ** space (and to reserve some numbers for pseudo-indices).
 */
 #if LUAI_BITSINT >= 32
