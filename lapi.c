@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.189 2013/09/11 20:15:31 roberto Exp roberto $
+** $Id: lapi.c,v 2.190 2013/09/13 16:21:52 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -286,7 +286,7 @@ LUA_API int lua_isstring (lua_State *L, int idx) {
 
 LUA_API int lua_isuserdata (lua_State *L, int idx) {
   const TValue *o = index2addr(L, idx);
-  return (ttisuserdata(o) || ttislightuserdata(o));
+  return (ttisfulluserdata(o) || ttislightuserdata(o));
 }
 
 
@@ -740,7 +740,7 @@ LUA_API void lua_getuservalue (lua_State *L, int idx) {
   StkId o;
   lua_lock(L);
   o = index2addr(L, idx);
-  api_check(L, ttisuserdata(o), "userdata expected");
+  api_check(L, ttisfulluserdata(o), "full userdata expected");
   if (uvalue(o)->env) {
     sethvalue(L, L->top, uvalue(o)->env);
   } else
@@ -879,7 +879,7 @@ LUA_API void lua_setuservalue (lua_State *L, int idx) {
   lua_lock(L);
   api_checknelems(L, 1);
   o = index2addr(L, idx);
-  api_check(L, ttisuserdata(o), "userdata expected");
+  api_check(L, ttisfulluserdata(o), "full userdata expected");
   if (ttisnil(L->top - 1))
     uvalue(o)->env = NULL;
   else {

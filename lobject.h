@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.81 2013/08/27 18:53:35 roberto Exp roberto $
+** $Id: lobject.h,v 2.82 2013/09/05 19:31:49 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -146,7 +146,7 @@ typedef struct lua_TValue TValue;
 #define ttisCclosure(o)		checktag((o), ctb(LUA_TCCL))
 #define ttisLclosure(o)		checktag((o), ctb(LUA_TLCL))
 #define ttislcf(o)		checktag((o), LUA_TLCF)
-#define ttisuserdata(o)		checktag((o), ctb(LUA_TUSERDATA))
+#define ttisfulluserdata(o)	checktag((o), ctb(LUA_TUSERDATA))
 #define ttisthread(o)		checktag((o), ctb(LUA_TTHREAD))
 #define ttisdeadkey(o)		checktag((o), LUA_TDEADKEY)
 
@@ -158,7 +158,7 @@ typedef struct lua_TValue TValue;
 #define pvalue(o)	check_exp(ttislightuserdata(o), val_(o).p)
 #define rawtsvalue(o)	check_exp(ttisstring(o), &val_(o).gc->ts)
 #define tsvalue(o)	(&rawtsvalue(o)->tsv)
-#define rawuvalue(o)	check_exp(ttisuserdata(o), &val_(o).gc->u)
+#define rawuvalue(o)	check_exp(ttisfulluserdata(o), &val_(o).gc->u)
 #define uvalue(o)	(&rawuvalue(o)->uv)
 #define clvalue(o)	check_exp(ttisclosure(o), &val_(o).gc->cl)
 #define clLvalue(o)	check_exp(ttisLclosure(o), &val_(o).gc->cl.l)
