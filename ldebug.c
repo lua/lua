@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.95 2013/05/06 17:21:59 roberto Exp $
+** $Id: ldebug.c,v 2.96 2013/07/10 20:32:36 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -50,7 +50,7 @@ static int currentline (CallInfo *ci) {
 /*
 ** this function can be called asynchronous (e.g. during a signal)
 */
-LUA_API int lua_sethook (lua_State *L, lua_Hook func, int mask, int count) {
+LUA_API void lua_sethook (lua_State *L, lua_Hook func, int mask, int count) {
   if (func == NULL || mask == 0) {  /* turn off hooks? */
     mask = 0;
     func = NULL;
@@ -61,7 +61,6 @@ LUA_API int lua_sethook (lua_State *L, lua_Hook func, int mask, int count) {
   L->basehookcount = count;
   resethookcount(L);
   L->hookmask = cast_byte(mask);
-  return 1;
 }
 
 
