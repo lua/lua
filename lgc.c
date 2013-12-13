@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.166 2013/09/17 15:40:06 roberto Exp roberto $
+** $Id: lgc.c,v 2.167 2013/12/13 15:17:00 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -226,54 +226,50 @@ GCObject *luaC_newobj (lua_State *L, int tt, size_t sz) {
 ** upvalues are already linked in 'headuv' list.)
 */
 static void reallymarkobject (global_State *g, GCObject *o) {
-  lu_mem size;
  reentry:
   white2gray(o);
   switch (gch(o)->tt) {
     case LUA_TSHRSTR:
     case LUA_TLNGSTR: {
-      size = sizestring(gco2ts(o));
-      break;  /* nothing else to mark; make it black */
+      gray2black(o);
+      g->GCmemtrav += sizestring(gco2ts(o));
+      break;
     }
     case LUA_TUSERDATA: {
-      Table *mt = gco2u(o)->metatable;
-      markobject(g, mt);
+      markobject(g, gco2u(o)->metatable);  /* mark its metatable */
       gray2black(o);
       g->GCmemtrav += sizeudata(gco2u(o));
-      /* markobject(g, gco2u(o)->env); */
       o = obj2gco(gco2u(o)->env);
       if (o && iswhite(o))
-        goto reentry;
-      return;
+        goto reentry;  /* reallymarkobject(g, gco2u(o)->env); */
+      break;
     }
     case LUA_TLCL: {
       gco2lcl(o)->gclist = g->gray;
       g->gray = o;
-      return;
+      break;
     }
     case LUA_TCCL: {
       gco2ccl(o)->gclist = g->gray;
       g->gray = o;
-      return;
+      break;
     }
     case LUA_TTABLE: {
       linktable(gco2t(o), &g->gray);
-      return;
+      break;
     }
     case LUA_TTHREAD: {
       gco2th(o)->gclist = g->gray;
       g->gray = o;
-      return;
+      break;
     }
     case LUA_TPROTO: {
       gco2p(o)->gclist = g->gray;
       g->gray = o;
-      return;
+      break;
     }
-    default: lua_assert(0); return;
+    default: lua_assert(0); break;
   }
-  gray2black(o);
-  g->GCmemtrav += size;
 }
 
 
