@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 2.15 2013/04/26 13:07:53 roberto Exp roberto $
+** $Id: ltm.h,v 2.16 2013/04/29 16:56:50 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -13,7 +13,7 @@
 
 /*
 * WARNING: if you change the order of this enumeration,
-* grep "ORDER TM"
+* grep "ORDER TM" and "ORDER OP"
 */
 typedef enum {
   TM_INDEX,
@@ -25,10 +25,10 @@ typedef enum {
   TM_ADD,
   TM_SUB,
   TM_MUL,
-  TM_DIV,
-  TM_IDIV,
   TM_MOD,
   TM_POW,
+  TM_DIV,
+  TM_IDIV,
   TM_UNM,
   TM_LT,
   TM_LE,
