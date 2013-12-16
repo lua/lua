@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.71 2013/06/25 18:57:18 roberto Exp roberto $
+** $Id: lcode.c,v 2.72 2013/08/30 16:01:37 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -754,12 +754,14 @@ static int constfolding (OpCode op, expdesc *e1, expdesc *e2) {
   TValue v1, v2, res;
   lua_Integer i;
   if (!tonumeral(e1, &v1) || !tonumeral(e2, &v2))
-    return 0;
+    return 0;  /* non-numeric operands */
   if (op == OP_IDIV &&
         (!tointeger(&v1, &i) || !tointeger(&v2, &i) || i == 0))
     return 0;  /* avoid division by 0 and conversion errors */
-  if (op == OP_MOD && ttisinteger(&v1) && ttisinteger(&v2) && ivalue(&v2) == 0)
-    return 0;  /* avoid module by 0 at compile time */
+  if (ttisinteger(&v1) && ttisinteger(&v2) &&  /* for integer operations... */
+       ((op == OP_MOD && ivalue(&v2) == 0) ||   /* ...avoid module by 0... */
+        (op == OP_POW && ivalue(&v2) < 0)))  /* ...and negative exponents */
+    return 0;
   luaO_arith(NULL, op - OP_ADD + LUA_OPADD, &v1, &v2, &res);
   if (ttisinteger(&res)) {
     e1->k = VKINT;

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.67 2013/06/25 18:58:32 roberto Exp roberto $
+** $Id: lobject.c,v 2.68 2013/07/10 17:15:12 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -77,7 +77,7 @@ static lua_Integer intarith (lua_State *L, int op, lua_Integer v1,
     case LUA_OPSUB:return intop(-, v1, v2);
     case LUA_OPMUL:return intop(*, v1, v2);
     case LUA_OPMOD: return luaV_mod(L, v1, v2);
-    case LUA_OPPOW: return luaV_pow(v1, v2);
+    case LUA_OPPOW: return luaV_pow(L, v1, v2);
     case LUA_OPUNM: return intop(-, 0, v1);
     default: lua_assert(0); return 0;
   }
@@ -110,8 +110,7 @@ void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
   }
   else {  /* other operations */
     lua_Number n1; lua_Number n2;
-    if (ttisinteger(p1) && ttisinteger(p2) && op != LUA_OPDIV &&
-        (op != LUA_OPPOW || ivalue(p2) >= 0)) {
+    if (ttisinteger(p1) && ttisinteger(p2) && op != LUA_OPDIV) {
       setivalue(res, intarith(L, op, ivalue(p1), ivalue(p2)));
       return;
     }
@@ -122,7 +121,7 @@ void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
     /* else go to the end */
   }
   /* could not perform raw operation; try metmethod */
-  lua_assert(L != NULL);  /* cannot fail when folding (compile time) */
+  lua_assert(L != NULL);  /* should not fail when folding (compile time) */
   luaT_trybinTM(L, p1, p2, res, cast(TMS, op - LUA_OPADD + TM_ADD));
 }
 

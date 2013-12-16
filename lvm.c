@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.179 2013/08/27 18:53:35 roberto Exp roberto $
+** $Id: lvm.c,v 2.180 2013/08/29 13:49:57 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -333,8 +333,7 @@ lua_Integer luaV_div (lua_State *L, lua_Integer x, lua_Integer y) {
   if (cast_unsigned(y) + 1 <= 1U) {  /* special cases: -1 or 0 */
     if (y == 0)
       luaG_runerror(L, "attempt to divide by zero");
-    else  /* -1 */
-      return intop(-, 0, x);   /* avoid overflow with 0x80000... */
+    return intop(-, 0, x);   /* y==-1; avoid overflow with 0x80000...//-1 */
   }
   else {
     lua_Integer d = x / y;  /* perform division */
@@ -350,8 +349,7 @@ lua_Integer luaV_mod (lua_State *L, lua_Integer x, lua_Integer y) {
   if (cast_unsigned(y) + 1 <= 1U) {  /* special cases: -1 or 0 */
     if (y == 0)
       luaG_runerror(L, "attempt to perform 'n%%0'");
-    else  /* -1 */
-      return 0;   /* avoid overflow with 0x80000... */
+    return 0;   /* y==-1; avoid overflow with 0x80000...%-1 */
   }
   else {
     lua_Integer r = x % y;
@@ -363,16 +361,21 @@ lua_Integer luaV_mod (lua_State *L, lua_Integer x, lua_Integer y) {
 }
 
 
-lua_Integer luaV_pow (lua_Integer x, lua_Integer y) {
-  lua_Integer r = 1;
-  lua_assert(y >= 0);
-  if (y == 0) return r;
-  for (; y > 1; y >>= 1) {
-    if (y & 1) r = intop(*, r, x);
-    x = intop(*, x, x);
+lua_Integer luaV_pow (lua_State *L, lua_Integer x, lua_Integer y) {
+  if (y <= 0) {  /* special cases: 0 or negative exponent */
+    if (y < 0)
+      luaG_runerror(L, "integer exponentiation with negative exponent");
+    return 1;  /* x^0 == 1 */
   }
-  r = intop(*, r, x);
-  return r;
+  else {
+    lua_Integer r = 1;
+    for (; y > 1; y >>= 1) {
+      if (y & 1) r = intop(*, r, x);
+      x = intop(*, x, x);
+    }
+    r = intop(*, r, x);
+    return r;
+  }
 }
 
 
@@ -685,11 +688,9 @@ void luaV_execute (lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
-        lua_Integer ic;
-        if (ttisinteger(rb) && ttisinteger(rc) &&
-            (ic = ivalue(rc)) >= 0) {
-          lua_Integer ib = ivalue(rb);
-          setivalue(ra, luaV_pow(ib, ic));
+        if (ttisinteger(rb) && ttisinteger(rc)) {
+          lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
+          setivalue(ra, luaV_pow(L, ib, ic));
         }
         else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setnvalue(ra, luai_numpow(L, nb, nc));
