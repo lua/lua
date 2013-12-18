@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.74 2013/12/16 19:06:52 roberto Exp roberto $
+** $Id: lcode.c,v 2.75 2013/12/18 14:12:03 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -791,8 +791,15 @@ static int constfolding (OpCode op, expdesc *e1, expdesc *e2) {
 static void codearith (FuncState *fs, OpCode op,
                        expdesc *e1, expdesc *e2, int line) {
   if (!constfolding(op, e1, e2)) {  /* could not fold operation? */
-    int o2 = (op != OP_UNM && op != OP_LEN) ? luaK_exp2RK(fs, e2) : 0;
-    int o1 = luaK_exp2RK(fs, e1);
+    int o1, o2;
+    if (op == OP_UNM || op == OP_LEN) {
+      o2 = 0;
+      o1 = luaK_exp2anyreg(fs, e1);  /* cannot operate on constants */
+    }
+    else {  /* regular case (binary operators) */
+      o2 = luaK_exp2RK(fs, e2);
+      o1 = luaK_exp2RK(fs, e1);
+    }
     if (o1 > o2) {
       freeexp(fs, e1);
       freeexp(fs, e2);
@@ -826,21 +833,13 @@ static void codecomp (FuncState *fs, OpCode op, int cond, expdesc *e1,
 
 void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
   expdesc e2;
-  e2.t = e2.f = NO_JUMP; e2.k = VKFLT; e2.u.nval = 0;
+  e2.t = e2.f = NO_JUMP; e2.k = VKINT; e2.u.ival = 0;
   switch (op) {
-    case OPR_MINUS: {
-      if (!constfolding(OP_UNM, e, e)) {  /* cannot fold it? */
-        luaK_exp2anyreg(fs, e);
-        codearith(fs, OP_UNM, e, &e2, line);
-      }
+    case OPR_MINUS: case OPR_LEN: {
+      codearith(fs, op - OPR_MINUS + OP_UNM, e, &e2, line);
       break;
     }
     case OPR_NOT: codenot(fs, e); break;
-    case OPR_LEN: {
-      luaK_exp2anyreg(fs, e);  /* cannot operate on constants */
-      codearith(fs, OP_LEN, e, &e2, line);
-      break;
-    }
     default: lua_assert(0);
   }
 }
