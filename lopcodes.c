@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.50 2013/04/26 13:07:53 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.51 2013/12/16 19:06:52 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -35,6 +35,9 @@ LUAI_DDEF const char *const luaP_opnames[NUM_OPCODES+1] = {
   "POW",
   "DIV",
   "IDIV",
+  "BAND",
+  "BOR",
+  "BXOR",
   "UNM",
   "NOT",
   "LEN",
@@ -84,6 +87,9 @@ LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_POW */
  ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_DIV */
  ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_IDIV */
+ ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_BAND */
+ ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_BOR */
+ ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_BXOR */
  ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_UNM */
  ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_NOT */
  ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_LEN */

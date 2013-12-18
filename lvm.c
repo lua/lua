@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.180 2013/08/29 13:49:57 roberto Exp roberto $
+** $Id: lvm.c,v 2.181 2013/12/16 14:30:22 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -437,6 +437,7 @@ void luaV_finishOp (lua_State *L) {
   OpCode op = GET_OPCODE(inst);
   switch (op) {  /* finish its execution */
     case OP_ADD: case OP_SUB: case OP_MUL: case OP_DIV: case OP_IDIV:
+    case OP_BAND: case OP_BOR: case OP_BXOR:
     case OP_MOD: case OP_POW: case OP_UNM: case OP_LEN:
     case OP_GETTABUP: case OP_GETTABLE: case OP_SELF: {
       setobjs2s(L, base + GETARG_A(inst), --L->top);
@@ -670,6 +671,33 @@ void luaV_execute (lua_State *L) {
           setivalue(ra, luaV_div(L, ib, ic));
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_IDIV)); }
+      )
+      vmcase(OP_BAND,
+        TValue *rb = RKB(i);
+        TValue *rc = RKC(i);
+        lua_Integer ib; lua_Integer ic;
+        if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
+          setivalue(ra, intop(&, ib, ic));
+        }
+        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_BAND)); }
+      )
+      vmcase(OP_BOR,
+        TValue *rb = RKB(i);
+        TValue *rc = RKC(i);
+        lua_Integer ib; lua_Integer ic;
+        if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
+          setivalue(ra, intop(|, ib, ic));
+        }
+        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_BOR)); }
+      )
+      vmcase(OP_BXOR,
+        TValue *rb = RKB(i);
+        TValue *rc = RKC(i);
+        lua_Integer ib; lua_Integer ic;
+        if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
+          setivalue(ra, intop(^, ib, ic));
+        }
+        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_BXOR)); }
       )
       vmcase(OP_MOD,
         TValue *rb = RKB(i);

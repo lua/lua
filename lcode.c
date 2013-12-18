@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.73 2013/12/16 14:30:22 roberto Exp roberto $
+** $Id: lcode.c,v 2.74 2013/12/16 19:06:52 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -750,18 +750,27 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
 }
 
 
+/* return false if folding can raise an error */
+static int validop (OpCode op, TValue *v1, TValue *v2) {
+  lua_Integer i;
+  switch (op) {
+    case OP_IDIV:  /* division by 0 and conversion errors */
+      return (tointeger(v1, &i) && tointeger(v2, &i) && i != 0);
+    case OP_BAND: case OP_BOR: case OP_BXOR:  /* conversion errors */
+      return (tointeger(v1, &i) && tointeger(v2, &i));
+    case OP_MOD:  /* integer module by 0 */
+      return !(ttisinteger(v1) && ttisinteger(v2) && ivalue(v2) == 0);
+    case OP_POW:  /* negative integer exponentiation */
+      return !(ttisinteger(v1) && ttisinteger(v2) && ivalue(v2) < 0);
+    default: return 1;  /* everything else is valid */
+  }
+}
+
+
 static int constfolding (OpCode op, expdesc *e1, expdesc *e2) {
   TValue v1, v2, res;
-  lua_Integer i;
-  if (!tonumeral(e1, &v1) || !tonumeral(e2, &v2))
-    return 0;  /* non-numeric operands */
-  if (op == OP_IDIV &&
-        (!tointeger(&v1, &i) || !tointeger(&v2, &i) || i == 0))
-    return 0;  /* avoid division by 0 and conversion errors */
-  if (ttisinteger(&v1) && ttisinteger(&v2) &&  /* for integer operations... */
-       ((op == OP_MOD && ivalue(&v2) == 0) ||   /* ...avoid module by 0... */
-        (op == OP_POW && ivalue(&v2) < 0)))  /* ...and negative exponents */
-    return 0;
+  if (!tonumeral(e1, &v1) || !tonumeral(e2, &v2) || !validop(op, &v1, &v2))
+    return 0;  /* non-numeric operands or not safe to fold */
   lua_assert(OP_IDIV - OP_ADD + LUA_OPADD == LUA_OPIDIV);
   luaO_arith(NULL, op - OP_ADD + LUA_OPADD, &v1, &v2, &res);
   if (ttisinteger(&res)) {
@@ -853,7 +862,8 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
     }
     case OPR_ADD: case OPR_SUB:
     case OPR_MUL: case OPR_DIV: case OPR_IDIV:
-    case OPR_MOD: case OPR_POW: {
+    case OPR_MOD: case OPR_POW:
+    case OPR_BAND: case OPR_BOR: case OPR_BXOR: {
       if (!tonumeral(v, NULL)) luaK_exp2RK(fs, v);
       break;
     }
@@ -897,7 +907,8 @@ void luaK_posfix (FuncState *fs, BinOpr op,
       break;
     }
     case OPR_ADD: case OPR_SUB: case OPR_MUL: case OPR_DIV:
-    case OPR_IDIV: case OPR_MOD: case OPR_POW: {
+    case OPR_IDIV: case OPR_MOD: case OPR_POW:
+    case OPR_BAND: case OPR_BOR: case OPR_BXOR: {
       codearith(fs, cast(OpCode, op - OPR_ADD + OP_ADD), e1, e2, line);
       break;
     }

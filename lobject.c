@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.68 2013/07/10 17:15:12 roberto Exp roberto $
+** $Id: lobject.c,v 2.69 2013/12/16 14:30:22 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -78,6 +78,10 @@ static lua_Integer intarith (lua_State *L, int op, lua_Integer v1,
     case LUA_OPMUL:return intop(*, v1, v2);
     case LUA_OPMOD: return luaV_mod(L, v1, v2);
     case LUA_OPPOW: return luaV_pow(L, v1, v2);
+    case LUA_OPIDIV: return luaV_div(L, v1, v2);
+    case LUA_OPBAND: return intop(&, v1, v2);
+    case LUA_OPBOR: return intop(|, v1, v2);
+    case LUA_OPBXOR: return intop(^, v1, v2);
     case LUA_OPUNM: return intop(-, 0, v1);
     default: lua_assert(0); return 0;
   }
@@ -100,25 +104,36 @@ static lua_Number numarith (int op, lua_Number v1, lua_Number v2) {
 
 void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
                  TValue *res) {
-  if (op == LUA_OPIDIV) {  /* operates only on integers */
-    lua_Integer i1; lua_Integer i2;
-    if (tointeger(p1, &i1) && tointeger(p2, &i2)) {
-      setivalue(res, luaV_div(L, i1, i2));
-      return;
+  switch (op) {
+    case LUA_OPIDIV: case LUA_OPBAND: case LUA_OPBOR:
+    case LUA_OPBXOR: {  /* operates only on integers */
+      lua_Integer i1; lua_Integer i2;
+      if (tointeger(p1, &i1) && tointeger(p2, &i2)) {
+        setivalue(res, intarith(L, op, i1, i2));
+        return;
+      }
+      else break;  /* go to the end */
     }
-    /* else go to the end */
-  }
-  else {  /* other operations */
-    lua_Number n1; lua_Number n2;
-    if (ttisinteger(p1) && ttisinteger(p2) && op != LUA_OPDIV) {
-      setivalue(res, intarith(L, op, ivalue(p1), ivalue(p2)));
-      return;
+    case LUA_OPDIV: {  /* operates only on floats */
+      lua_Number n1; lua_Number n2;
+      if (tonumber(p1, &n1) && tonumber(p2, &n2)) {
+        setnvalue(res, numarith(op, n1, n2));
+        return;
+      }
+      else break;  /* go to the end */
     }
-    else if (tonumber(p1, &n1) && tonumber(p2, &n2)) {
-      setnvalue(res, numarith(op, n1, n2));
-      return;
+    default: {  /* other operations */
+      lua_Number n1; lua_Number n2;
+      if (ttisinteger(p1) && ttisinteger(p2)) {
+        setivalue(res, intarith(L, op, ivalue(p1), ivalue(p2)));
+        return;
+      }
+      else if (tonumber(p1, &n1) && tonumber(p2, &n2)) {
+        setnvalue(res, numarith(op, n1, n2));
+        return;
+      }
+      else break;  /* go to the end */
     }
-    /* else go to the end */
   }
   /* could not perform raw operation; try metmethod */
   lua_assert(L != NULL);  /* should not fail when folding (compile time) */

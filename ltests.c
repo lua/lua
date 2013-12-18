@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.159 2013/09/11 14:47:08 roberto Exp roberto $
+** $Id: ltests.c,v 2.160 2013/12/16 19:06:52 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1198,7 +1198,7 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       }
     }
     else if EQ("arith") {
-      static char ops[] = "+-*%^/\\_";  /* '\'  -> '//'; '_' -> '..' */
+      static char ops[] = "+-*%^/\\&|~_";  /* '\'  -> '//'; '_' -> '..' */
       int op;
       skip(&pc);
       op = strchr(ops, *pc++) - ops;
