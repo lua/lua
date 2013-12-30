@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 2.23 2013/05/02 12:31:26 roberto Exp roberto $
+** $Id: lvm.h,v 2.24 2013/12/16 14:30:22 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -44,6 +44,7 @@ LUAI_FUNC void luaV_concat (lua_State *L, int total);
 LUAI_FUNC lua_Integer luaV_div (lua_State *L, lua_Integer x, lua_Integer y);
 LUAI_FUNC lua_Integer luaV_mod (lua_State *L, lua_Integer x, lua_Integer y);
 LUAI_FUNC lua_Integer luaV_pow (lua_State *L, lua_Integer x, lua_Integer y);
+LUAI_FUNC lua_Integer luaV_shiftl (lua_Integer x, lua_Integer y);
 LUAI_FUNC void luaV_objlen (lua_State *L, StkId ra, const TValue *rb);
 
 #endif

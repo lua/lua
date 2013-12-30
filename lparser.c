@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.136 2013/12/16 19:06:52 roberto Exp roberto $
+** $Id: lparser.c,v 2.137 2013/12/18 14:12:03 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -979,6 +979,7 @@ static UnOpr getunopr (int op) {
   switch (op) {
     case TK_NOT: return OPR_NOT;
     case '-': return OPR_MINUS;
+    case '~': return OPR_BNOT;
     case '#': return OPR_LEN;
     default: return OPR_NOUNOPR;
   }
@@ -997,6 +998,8 @@ static BinOpr getbinopr (int op) {
     case '&': return OPR_BAND;
     case '|': return OPR_BOR;
     case '~': return OPR_BXOR;
+    case TK_SHL: return OPR_SHL;
+    case TK_SHR: return OPR_SHR;
     case TK_CONCAT: return OPR_CONCAT;
     case TK_NE: return OPR_NE;
     case TK_EQ: return OPR_EQ;
@@ -1015,18 +1018,19 @@ static const struct {
   lu_byte left;  /* left priority for each binary operator */
   lu_byte right; /* right priority */
 } priority[] = {  /* ORDER OPR */
-   {8, 8}, {8, 8},           /* '+' '-' */
-   {9, 9}, {9, 9},           /* '*' '%' */
-   {12, 11},                  /* '^' (right associative) */
-   {9, 9}, {9, 9},           /* '/' '//' */
+   {10, 10}, {10, 10},           /* '+' '-' */
+   {11, 11}, {11, 11},           /* '*' '%' */
+   {14, 13},                  /* '^' (right associative) */
+   {11, 11}, {11, 11},           /* '/' '//' */
    {6, 6}, {4, 4}, {5, 5},   /* '&' '|' '~' */
-   {7, 6},                   /* '..' (right associative) */
+   {7, 7}, {7, 7},           /* '<<' '>>' */
+   {9, 8},                   /* '..' (right associative) */
    {3, 3}, {3, 3}, {3, 3},   /* ==, <, <= */
    {3, 3}, {3, 3}, {3, 3},   /* ~=, >, >= */
    {2, 2}, {1, 1}            /* and, or */
 };
 
-#define UNARY_PRIORITY	10  /* priority for unary operators */
+#define UNARY_PRIORITY	12  /* priority for unary operators */
 
 
 /*

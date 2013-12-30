@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.160 2013/12/16 19:06:52 roberto Exp roberto $
+** $Id: ltests.c,v 2.161 2013/12/18 14:12:03 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1023,6 +1023,16 @@ static void pushcode (lua_State *L, int code) {
 static int testC (lua_State *L);
 static int Cfunck (lua_State *L);
 
+/*
+** arithmetic operation encoding for 'arith' instruction
+** LUA_OPIDIV  -> \
+** LUA_OPSHL   -> <
+** LUA_OPSHR   -> >
+** LUA_OPUNM   -> _
+** LUA_OPBNOT  -> !
+*/
+static char ops[] = "+-*%^/\\&|~<>_!";
+
 static int runC (lua_State *L, lua_State *L1, const char *pc) {
   char buff[300];
   int status = 0;
@@ -1198,7 +1208,6 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       }
     }
     else if EQ("arith") {
-      static char ops[] = "+-*%^/\\&|~_";  /* '\'  -> '//'; '_' -> '..' */
       int op;
       skip(&pc);
       op = strchr(ops, *pc++) - ops;

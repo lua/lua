@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.69 2013/12/16 14:30:22 roberto Exp roberto $
+** $Id: lobject.c,v 2.70 2013/12/18 14:12:03 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -82,7 +82,10 @@ static lua_Integer intarith (lua_State *L, int op, lua_Integer v1,
     case LUA_OPBAND: return intop(&, v1, v2);
     case LUA_OPBOR: return intop(|, v1, v2);
     case LUA_OPBXOR: return intop(^, v1, v2);
+    case LUA_OPSHL: return luaV_shiftl(v1, v2);
+    case LUA_OPSHR: return luaV_shiftl(v1, -v2);
     case LUA_OPUNM: return intop(-, 0, v1);
+    case LUA_OPBNOT: return intop(^, cast_integer(-1), v1);
     default: lua_assert(0); return 0;
   }
 }
@@ -106,7 +109,8 @@ void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
                  TValue *res) {
   switch (op) {
     case LUA_OPIDIV: case LUA_OPBAND: case LUA_OPBOR:
-    case LUA_OPBXOR: {  /* operates only on integers */
+    case LUA_OPBXOR: case LUA_OPSHL: case LUA_OPSHR:
+    case LUA_OPBNOT: {  /* operates only on integers */
       lua_Integer i1; lua_Integer i2;
       if (tointeger(p1, &i1) && tointeger(p2, &i2)) {
         setivalue(res, intarith(L, op, i1, i2));

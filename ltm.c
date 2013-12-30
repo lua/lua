@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.23 2013/12/16 19:06:52 roberto Exp roberto $
+** $Id: ltm.c,v 2.24 2013/12/18 14:12:03 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -38,8 +38,8 @@ void luaT_init (lua_State *L) {
     "__gc", "__mode", "__len", "__eq",
     "__add", "__sub", "__mul", "__mod", "__pow",
     "__div", "__idiv",
-    "__band", "__bor", "__bxor",
-    "__unm", "__lt", "__le",
+    "__band", "__bor", "__bxor", "__shl", "__shr",
+    "__unm", "__bnot", "__lt", "__le",
     "__concat", "__call"
   };
   int i;
@@ -112,12 +112,17 @@ int luaT_callbinTM (lua_State *L, const TValue *p1, const TValue *p2,
 void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
                     StkId res, TMS event) {
   if (!luaT_callbinTM(L, p1, p2, res, event)) {
-    if (event == TM_CONCAT)
-      luaG_concaterror(L, p1, p2);
-    else if (event == TM_IDIV && ttisnumber(p1) && ttisnumber(p2))
-      luaG_tointerror(L, p1, p2);
-    else
-      luaG_aritherror(L, p1, p2);
+    switch (event) {
+      case TM_CONCAT:
+        luaG_concaterror(L, p1, p2);
+      case TM_IDIV: case TM_BAND: case TM_BOR: case TM_BXOR:
+      case TM_SHL: case TM_SHR: case TM_BNOT:
+        if (ttisnumber(p1) && ttisnumber(p2))
+          luaG_tointerror(L, p1, p2);
+        /* else go through */
+      default:
+        luaG_aritherror(L, p1, p2);
+    }
   }
 }
 

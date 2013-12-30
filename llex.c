@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.68 2013/08/21 20:09:51 roberto Exp roberto $
+** $Id: llex.c,v 2.69 2013/08/30 16:01:37 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -39,7 +39,8 @@ static const char *const luaX_tokens [] = {
     "end", "false", "for", "function", "goto", "if",
     "in", "local", "nil", "not", "or", "repeat",
     "return", "then", "true", "until", "while",
-    "//", "..", "...", "==", ">=", "<=", "~=", "::", "<eof>",
+    "//", "..", "...", "==", ">=", "<=", "~=",
+    "<<", ">>", "::", "<eof>",
     "<number>", "<number>", "<name>", "<string>"
 };
 
@@ -462,13 +463,15 @@ static int llex (LexState *ls, SemInfo *seminfo) {
       }
       case '<': {
         next(ls);
-        if (ls->current != '=') return '<';
-        else { next(ls); return TK_LE; }
+        if (ls->current == '=') { next(ls); return TK_LE; }
+        if (ls->current == '<') { next(ls); return TK_SHL; }
+        return '<';
       }
       case '>': {
         next(ls);
-        if (ls->current != '=') return '>';
-        else { next(ls); return TK_GE; }
+        if (ls->current == '=') { next(ls); return TK_GE; }
+        if (ls->current == '>') { next(ls); return TK_SHR; }
+        return '>';
       }
       case '/': {
         next(ls);

@@ -1,10 +1,11 @@
 /*
-** $Id: lvm.c,v 2.181 2013/12/16 14:30:22 roberto Exp roberto $
+** $Id: lvm.c,v 2.182 2013/12/18 14:12:03 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
 
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -379,6 +380,21 @@ lua_Integer luaV_pow (lua_State *L, lua_Integer x, lua_Integer y) {
 }
 
 
+/* number of bits in an integer */
+#define NBITS	cast_int(sizeof(lua_Integer) * CHAR_BIT)
+
+LUAI_FUNC lua_Integer luaV_shiftl (lua_Integer x, lua_Integer y) {
+  if (y < 0) {  /* shift right? */
+    if (y <= -NBITS) return 0;
+    else return cast_integer(cast_unsigned(x) >> (-y));
+  }
+  else {  /* shift left */
+    if (y >= NBITS) return 0;
+    else return x << y;
+  }
+}
+
+
 /*
 ** check whether cached closure in prototype 'p' may be reused, that is,
 ** whether there is a cached closure with the same upvalues needed by
@@ -437,8 +453,9 @@ void luaV_finishOp (lua_State *L) {
   OpCode op = GET_OPCODE(inst);
   switch (op) {  /* finish its execution */
     case OP_ADD: case OP_SUB: case OP_MUL: case OP_DIV: case OP_IDIV:
-    case OP_BAND: case OP_BOR: case OP_BXOR:
-    case OP_MOD: case OP_POW: case OP_UNM: case OP_LEN:
+    case OP_BAND: case OP_BOR: case OP_BXOR: case OP_SHL: case OP_SHR:
+    case OP_MOD: case OP_POW:
+    case OP_UNM: case OP_BNOT: case OP_LEN:
     case OP_GETTABUP: case OP_GETTABLE: case OP_SELF: {
       setobjs2s(L, base + GETARG_A(inst), --L->top);
       break;
@@ -699,6 +716,24 @@ void luaV_execute (lua_State *L) {
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_BXOR)); }
       )
+      vmcase(OP_SHL,
+        TValue *rb = RKB(i);
+        TValue *rc = RKC(i);
+        lua_Integer ib; lua_Integer ic;
+        if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
+          setivalue(ra, luaV_shiftl(ib, ic));
+        }
+        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_SHL)); }
+      )
+      vmcase(OP_SHR,
+        TValue *rb = RKB(i);
+        TValue *rc = RKC(i);
+        lua_Integer ib; lua_Integer ic;
+        if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
+          setivalue(ra, luaV_shiftl(ib, -ic));
+        }
+        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_SHR)); }
+      )
       vmcase(OP_MOD,
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
@@ -737,6 +772,16 @@ void luaV_execute (lua_State *L) {
         }
         else {
           Protect(luaT_trybinTM(L, rb, rb, ra, TM_UNM));
+        }
+      )
+      vmcase(OP_BNOT,
+        TValue *rb = RB(i);
+        lua_Integer ib;
+        if (tointeger(rb, &ib)) {
+          setivalue(ra, intop(^, cast_integer(-1), ib));
+        }
+        else {
+          Protect(luaT_trybinTM(L, rb, rb, ra, TM_BNOT));
         }
       )
       vmcase(OP_NOT,

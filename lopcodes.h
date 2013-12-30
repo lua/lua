@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.144 2013/12/16 19:06:52 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.145 2013/12/18 14:12:03 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -194,7 +194,10 @@ OP_IDIV,/*	A B C	R(A) := RK(B) // RK(C)				*/
 OP_BAND,/*	A B C	R(A) := RK(B) & RK(C)				*/
 OP_BOR,/*	A B C	R(A) := RK(B) | RK(C)				*/
 OP_BXOR,/*	A B C	R(A) := RK(B) ~ RK(C)				*/
+OP_SHL,/*	A B C	R(A) := RK(B) << RK(C)				*/
+OP_SHR,/*	A B C	R(A) := RK(B) >> RK(C)				*/
 OP_UNM,/*	A B	R(A) := -R(B)					*/
+OP_BNOT,/*	A B	R(A) := ~R(B)					*/
 OP_NOT,/*	A B	R(A) := not R(B)				*/
 OP_LEN,/*	A B	R(A) := length of R(B)				*/
 
