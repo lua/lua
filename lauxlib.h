@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.121 2013/06/25 14:05:26 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.122 2013/06/27 18:32:33 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -35,24 +35,24 @@ LUALIB_API void (luaL_checkversion_) (lua_State *L, int ver, size_t sz);
 LUALIB_API int (luaL_getmetafield) (lua_State *L, int obj, const char *e);
 LUALIB_API int (luaL_callmeta) (lua_State *L, int obj, const char *e);
 LUALIB_API const char *(luaL_tolstring) (lua_State *L, int idx, size_t *len);
-LUALIB_API int (luaL_argerror) (lua_State *L, int numarg, const char *extramsg);
-LUALIB_API const char *(luaL_checklstring) (lua_State *L, int numArg,
+LUALIB_API int (luaL_argerror) (lua_State *L, int arg, const char *extramsg);
+LUALIB_API const char *(luaL_checklstring) (lua_State *L, int arg,
                                                           size_t *l);
-LUALIB_API const char *(luaL_optlstring) (lua_State *L, int numArg,
+LUALIB_API const char *(luaL_optlstring) (lua_State *L, int arg,
                                           const char *def, size_t *l);
-LUALIB_API lua_Number (luaL_checknumber) (lua_State *L, int numArg);
-LUALIB_API lua_Number (luaL_optnumber) (lua_State *L, int nArg, lua_Number def);
+LUALIB_API lua_Number (luaL_checknumber) (lua_State *L, int arg);
+LUALIB_API lua_Number (luaL_optnumber) (lua_State *L, int arg, lua_Number def);
 
-LUALIB_API lua_Integer (luaL_checkinteger) (lua_State *L, int numArg);
-LUALIB_API lua_Integer (luaL_optinteger) (lua_State *L, int nArg,
+LUALIB_API lua_Integer (luaL_checkinteger) (lua_State *L, int arg);
+LUALIB_API lua_Integer (luaL_optinteger) (lua_State *L, int arg,
                                           lua_Integer def);
-LUALIB_API lua_Unsigned (luaL_checkunsigned) (lua_State *L, int numArg);
-LUALIB_API lua_Unsigned (luaL_optunsigned) (lua_State *L, int numArg,
+LUALIB_API lua_Unsigned (luaL_checkunsigned) (lua_State *L, int arg);
+LUALIB_API lua_Unsigned (luaL_optunsigned) (lua_State *L, int arg,
                                             lua_Unsigned def);
 
 LUALIB_API void (luaL_checkstack) (lua_State *L, int sz, const char *msg);
-LUALIB_API void (luaL_checktype) (lua_State *L, int narg, int t);
-LUALIB_API void (luaL_checkany) (lua_State *L, int narg);
+LUALIB_API void (luaL_checktype) (lua_State *L, int arg, int t);
+LUALIB_API void (luaL_checkany) (lua_State *L, int arg);
 
 LUALIB_API int   (luaL_newmetatable) (lua_State *L, const char *tname);
 LUALIB_API void  (luaL_setmetatable) (lua_State *L, const char *tname);
@@ -62,7 +62,7 @@ LUALIB_API void *(luaL_checkudata) (lua_State *L, int ud, const char *tname);
 LUALIB_API void (luaL_where) (lua_State *L, int lvl);
 LUALIB_API int (luaL_error) (lua_State *L, const char *fmt, ...);
 
-LUALIB_API int (luaL_checkoption) (lua_State *L, int narg, const char *def,
+LUALIB_API int (luaL_checkoption) (lua_State *L, int arg, const char *def,
                                    const char *const lst[]);
 
 LUALIB_API int (luaL_fileresult) (lua_State *L, int stat, const char *fname);
@@ -114,8 +114,8 @@ LUALIB_API void (luaL_requiref) (lua_State *L, const char *modname,
 #define luaL_newlib(L,l)  \
   (luaL_checkversion(L), luaL_newlibtable(L,l), luaL_setfuncs(L,l,0))
 
-#define luaL_argcheck(L, cond,numarg,extramsg)	\
-		((void)((cond) || luaL_argerror(L, (numarg), (extramsg))))
+#define luaL_argcheck(L, cond,arg,extramsg)	\
+		((void)((cond) || luaL_argerror(L, (arg), (extramsg))))
 #define luaL_checkstring(L,n)	(luaL_checklstring(L, (n), NULL))
 #define luaL_optstring(L,n,d)	(luaL_optlstring(L, (n), (d), NULL))
 #define luaL_checkint(L,n)	((int)luaL_checkinteger(L, (n)))
