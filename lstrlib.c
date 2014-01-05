@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.181 2013/06/19 14:29:01 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.182 2013/06/20 15:06:51 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -938,6 +938,127 @@ static int str_format (lua_State *L) {
 /* }====================================================== */
 
 
+/*
+** {======================================================
+** PACK/UNPACK
+** =======================================================
+*/
+
+/* maximum size for the binary representation of an integer */
+#define MAXINTSIZE	8
+
+
+static union {
+  int dummy;
+  char little;  /* true iff machine is little endian */
+} const nativeendian = {1};
+
+
+static int getendian (lua_State *L, int arg) {
+  const char *endian = luaL_optstring(L, arg,
+                             (nativeendian.little ? "l" : "b"));
+  luaL_argcheck(L, *endian == 'l' || *endian == 'b', arg,
+                   "endianess must be 'l' or 'b'");
+  return (*endian == 'l');
+}
+
+
+static int getintsize (lua_State *L, int arg) {
+  int size = luaL_optint(L, arg, sizeof(lua_Integer));
+  luaL_argcheck(L, 1 <= size && size <= MAXINTSIZE, arg,
+                   "integer size out of valid range");
+  return size;
+}
+
+
+static int packint (char *buff, lua_Integer n, int littleendian, int size) {
+  int i;
+  if (littleendian) {
+    for (i = 0; i < size - 1; i++) {
+      buff[i] = (n & 0xff);
+      n >>= 8;
+    }
+  }
+  else {
+    for (i = size - 1; i > 0; i--) {
+      buff[i] = (n & 0xff);
+      n >>= 8;
+    }
+  }
+  buff[i] = (n & 0xff);  /* last byte */
+  /* test for overflow: OK if there are only zeros left in higher bytes,
+     or if there are only oneś left and packed number is negative (signal
+     bit, the higher bit in last byte, is one) */
+  return ((n & ~(lua_Integer)0xff) == 0 || (n | 0x7f) == ~(lua_Integer)0);
+}
+
+
+static int packint_l (lua_State *L) {
+  char buff[MAXINTSIZE];
+  lua_Integer n = luaL_checkinteger(L, 1);
+  int size = getintsize(L, 2);
+  int endian = getendian(L, 3);
+  if (packint(buff, n, endian, size))
+    lua_pushlstring(L, buff, size);
+  else
+    luaL_error(L, "integer does not fit into given size (%d)", size);
+  return 1;
+}
+
+
+/* mask to check higher-order byte in a Lua integer */
+#define HIGHERBYTE	(~((lua_Unsigned)~0 >> 8))
+
+/* mask to check higher-order byte + signal bit of next byte */
+#define HIGHERBYTE1	(~((lua_Unsigned)~0 >> 9))
+
+static int unpackint (const char *buff, lua_Integer *res,
+                      int littleendian, int size) {
+  lua_Integer n = 0;
+  int i;
+  for (i = 0; i < size; i++) {
+    if (i >= (int)sizeof(lua_Integer)) {  /* will throw away a byte? */
+      /* check for overflow: it is OK to throw away leading zeros for a
+         positive number; leading ones for a negative number; and one
+         last leading zero to allow unsigned integers with a 1 in
+         its "signal bit" */
+      if (!((n & HIGHERBYTE1) == 0 ||  /* zeros for pos. number */
+          (n & HIGHERBYTE1) == HIGHERBYTE1 ||  /* ones for neg. number */
+          ((n & HIGHERBYTE) == 0 && i == size - 1)))  /* last zero */
+        return 0;  /* overflow */
+    }
+    n <<= 8;
+    n |= (lua_Integer)(unsigned char)buff[littleendian ? size - 1 - i : i];
+  }
+  if (size < (int)sizeof(lua_Integer)) {  /* need sign extension? */
+    lua_Integer mask = (~(lua_Integer)0) << (size*8 - 1);
+    if (n & mask)  /* negative value? */
+      n |= mask;  /* signal extension */
+  }
+  *res = n;
+  return 1;
+}
+
+
+static int unpackint_l (lua_State *L) {
+  lua_Integer res;
+  size_t len;
+  const char *s = luaL_checklstring(L, 1, &len);
+  lua_Integer pos = posrelat(luaL_optinteger(L, 2, 1), len);
+  int size = getintsize(L, 3);
+  int endian = getendian(L, 4);
+  luaL_argcheck(L, 1 <= pos && (size_t)pos + size - 1 <= len, 1,
+                   "string too short");
+  if(unpackint(s + pos - 1, &res, endian, size))
+    lua_pushinteger(L, res);
+  else
+    luaL_error(L, "result does not fit into a Lua integer");
+  return 1;
+}
+
+/* }====================================================== */
+
+
 static const luaL_Reg strlib[] = {
   {"byte", str_byte},
   {"char", str_char},
@@ -953,6 +1074,8 @@ static const luaL_Reg strlib[] = {
   {"reverse", str_reverse},
   {"sub", str_sub},
   {"upper", str_upper},
+  {"packint", packint_l},
+  {"unpackint", unpackint_l},
   {NULL, NULL}
 };
 
