@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.183 2014/01/05 14:05:58 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.184 2014/01/08 18:34:34 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -970,14 +970,17 @@ static union {
 static int getendian (lua_State *L, int arg) {
   const char *endian = luaL_optstring(L, arg,
                              (nativeendian.little ? "l" : "b"));
+  if (*endian == 'n')  /* native? */
+    return nativeendian.little;
   luaL_argcheck(L, *endian == 'l' || *endian == 'b', arg,
-                   "endianess must be 'l' or 'b'");
+                   "endianess must be 'l'/'b'/'n'");
   return (*endian == 'l');
 }
 
 
 static int getintsize (lua_State *L, int arg) {
-  int size = luaL_optint(L, arg, SZINT);
+  int size = luaL_optint(L, arg, 0);
+  if (size == 0) size = SZINT;
   luaL_argcheck(L, 1 <= size && size <= MAXINTSIZE, arg,
                    "integer size out of valid range");
   return size;
@@ -1087,9 +1090,10 @@ static void correctendianess (lua_State *L, char *b, int size, int endianarg) {
 	(sizeof(lua_Number) == sizeof(float) ? "f" : "d")
 
 static int getfloatsize (lua_State *L, int arg) {
-  const char *size = luaL_optstring(L, arg, DEFAULTFLOATSIZE);
+  const char *size = luaL_optstring(L, arg, "n");
+  if (*size == 'n') size = DEFAULTFLOATSIZE;
   luaL_argcheck(L, *size == 'd' || *size == 'f', arg,
-                   "size must be 'f' or 'd'");
+                   "size must be 'f'/'d'/'n'");
   return (*size == 'd' ? sizeof(double) : sizeof(float));
 }
 
