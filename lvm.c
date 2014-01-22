@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.182 2013/12/18 14:12:03 roberto Exp roberto $
+** $Id: lvm.c,v 2.183 2013/12/30 20:47:58 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -30,7 +30,7 @@
 
 
 /* limit for table tag-method chains (to avoid loops) */
-#define MAXTAGLOOP	100
+#define MAXTAGLOOP	2000
 
 
 /* maximum length of the conversion of a number to a string */
@@ -122,7 +122,7 @@ void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val) {
     }
     t = tm;  /* else repeat with 'tm' */
   }
-  luaG_runerror(L, "loop in gettable");
+  luaG_runerror(L, "gettable chain too long; possible loop");
 }
 
 
@@ -161,7 +161,7 @@ void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
     }
     t = tm;  /* else repeat with 'tm' */
   }
-  luaG_runerror(L, "loop in settable");
+  luaG_runerror(L, "settable chain too long; possible loop");
 }
 
 
