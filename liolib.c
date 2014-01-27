@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.113 2013/05/14 15:57:43 roberto Exp roberto $
+** $Id: liolib.c,v 2.114 2013/06/07 19:01:35 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -375,7 +375,7 @@ static int read_number (lua_State *L, FILE *f) {
 
 static int test_eof (lua_State *L, FILE *f) {
   int c = getc(f);
-  ungetc(c, f);
+  ungetc(c, f);  /* no-op when c == EOF */
   lua_pushlstring(L, NULL, 0);
   return (c != EOF);
 }
