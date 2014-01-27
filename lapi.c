@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.191 2013/12/04 12:15:22 roberto Exp roberto $
+** $Id: lapi.c,v 2.192 2013/12/30 20:47:58 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -389,7 +389,7 @@ LUA_API lua_Unsigned lua_tounsignedx (lua_State *L, int idx, int *pisnum) {
         n = -n;
       }
       n = l_mathop(fmod)(n, twop);
-      if (luai_numisnan(L,n))   /* not a number? */
+      if (luai_numisnan(n))   /* not a number? */
         break;  /* not an integer, too */
       res = cast_unsigned(n);
       if (neg) res = 0u - res;

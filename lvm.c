@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.183 2013/12/30 20:47:58 roberto Exp roberto $
+** $Id: lvm.c,v 2.184 2014/01/22 20:02:04 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -193,7 +193,7 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
   if (ttisinteger(l) && ttisinteger(r))
     return (ivalue(l) < ivalue(r));
   else if (tonumber(l, &nl) && tonumber(r, &nr))
-    return luai_numlt(L, nl, nr);
+    return luai_numlt(nl, nr);
   else if (ttisstring(l) && ttisstring(r))
     return l_strcmp(rawtsvalue(l), rawtsvalue(r)) < 0;
   else if ((res = luaT_callorderTM(L, l, r, TM_LT)) < 0)
@@ -208,7 +208,7 @@ int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
   if (ttisinteger(l) && ttisinteger(r))
     return (ivalue(l) <= ivalue(r));
   else if (tonumber(l, &nl) && tonumber(r, &nr))
-    return luai_numle(L, nl, nr);
+    return luai_numle(nl, nr);
   else if (ttisstring(l) && ttisstring(r))
     return l_strcmp(rawtsvalue(l), rawtsvalue(r)) <= 0;
   else if ((res = luaT_callorderTM(L, l, r, TM_LE)) >= 0)  /* first try `le' */
@@ -641,7 +641,7 @@ void luaV_execute (lua_State *L) {
           setivalue(ra, intop(+, ib, ic));
         }
         else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
-          setnvalue(ra, luai_numadd(L, nb, nc));
+          setnvalue(ra, luai_numadd(nb, nc));
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_ADD)); }
       )
@@ -654,7 +654,7 @@ void luaV_execute (lua_State *L) {
           setivalue(ra, intop(-, ib, ic));
         }
         else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
-          setnvalue(ra, luai_numsub(L, nb, nc));
+          setnvalue(ra, luai_numsub(nb, nc));
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_SUB)); }
       )
@@ -667,7 +667,7 @@ void luaV_execute (lua_State *L) {
           setivalue(ra, intop(*, ib, ic));
         }
         else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
-          setnvalue(ra, luai_nummul(L, nb, nc));
+          setnvalue(ra, luai_nummul(nb, nc));
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_MUL)); }
       )
@@ -676,7 +676,7 @@ void luaV_execute (lua_State *L) {
         TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
         if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
-          setnvalue(ra, luai_numdiv(L, nb, nc));
+          setnvalue(ra, luai_numdiv(nb, nc));
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_DIV)); }
       )
@@ -743,7 +743,7 @@ void luaV_execute (lua_State *L) {
           setivalue(ra, luaV_mod(L, ib, ic));
         }
         else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
-          setnvalue(ra, luai_nummod(L, nb, nc));
+          setnvalue(ra, luai_nummod(nb, nc));
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_MOD)); }
       )
@@ -756,7 +756,7 @@ void luaV_execute (lua_State *L) {
           setivalue(ra, luaV_pow(L, ib, ic));
         }
         else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
-          setnvalue(ra, luai_numpow(L, nb, nc));
+          setnvalue(ra, luai_numpow(nb, nc));
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_POW)); }
       )
@@ -768,7 +768,7 @@ void luaV_execute (lua_State *L) {
           setivalue(ra, intop(-, 0, ib));
         }
         else if (tonumber(rb, &nb)) {
-          setnvalue(ra, luai_numunm(L, nb));
+          setnvalue(ra, luai_numunm(nb));
         }
         else {
           Protect(luaT_trybinTM(L, rb, rb, ra, TM_UNM));
@@ -919,10 +919,10 @@ void luaV_execute (lua_State *L) {
         }
         else {  /* floating count */
           lua_Number step = fltvalue(ra + 2);
-          lua_Number idx = luai_numadd(L, fltvalue(ra), step); /* inc. index */
+          lua_Number idx = luai_numadd(fltvalue(ra), step); /* inc. index */
           lua_Number limit = fltvalue(ra + 1);
-          if (luai_numlt(L, 0, step) ? luai_numle(L, idx, limit)
-                                     : luai_numle(L, limit, idx)) {
+          if (luai_numlt(0, step) ? luai_numle(idx, limit)
+                                     : luai_numle(limit, idx)) {
             ci->u.l.savedpc += GETARG_sBx(i);  /* jump back */
             setnvalue(ra, idx);  /* update internal index... */
             setnvalue(ra + 3, idx);  /* ...and external index */
@@ -946,7 +946,7 @@ void luaV_execute (lua_State *L) {
           setnvalue(pstep, nstep);
           if (!tonumber(init, &ninit))
             luaG_runerror(L, LUA_QL("for") " initial value must be a number");
-          setnvalue(ra, luai_numsub(L, ninit, nstep));
+          setnvalue(ra, luai_numsub(ninit, nstep));
         }
         ci->u.l.savedpc += GETARG_sBx(i);
       )

@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.187 2013/10/10 15:45:03 roberto Exp roberto $
+** $Id: luaconf.h,v 1.188 2013/11/21 17:23:14 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -488,21 +488,21 @@
 /* the following operations need the math library */
 #if defined(lobject_c) || defined(lvm_c)
 #include <math.h>
-#define luai_nummod(L,a,b)	((a) - l_floor((a)/(b))*(b))
-#define luai_numpow(L,a,b)	(l_mathop(pow)(a,b))
+#define luai_nummod(a,b)	((a) - l_floor((a)/(b))*(b))
+#define luai_numpow(a,b)	(l_mathop(pow)(a,b))
 #endif
 
 /* these are quite standard operations */
 #if defined(LUA_CORE)
-#define luai_numadd(L,a,b)	((a)+(b))
-#define luai_numsub(L,a,b)	((a)-(b))
-#define luai_nummul(L,a,b)	((a)*(b))
-#define luai_numdiv(L,a,b)	((a)/(b))
-#define luai_numunm(L,a)	(-(a))
+#define luai_numadd(a,b)	((a)+(b))
+#define luai_numsub(a,b)	((a)-(b))
+#define luai_nummul(a,b)	((a)*(b))
+#define luai_numdiv(a,b)	((a)/(b))
+#define luai_numunm(a)		(-(a))
 #define luai_numeq(a,b)		((a)==(b))
-#define luai_numlt(L,a,b)	((a)<(b))
-#define luai_numle(L,a,b)	((a)<=(b))
-#define luai_numisnan(L,a)	(!luai_numeq((a), (a)))
+#define luai_numlt(a,b)		((a)<(b))
+#define luai_numle(a,b)		((a)<=(b))
+#define luai_numisnan(a)	(!luai_numeq((a), (a)))
 #endif
 
 

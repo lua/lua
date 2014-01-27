@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.76 2013/12/18 18:44:42 roberto Exp roberto $
+** $Id: lcode.c,v 2.77 2013/12/30 20:47:58 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -364,7 +364,7 @@ int luaK_intK (FuncState *fs, lua_Integer n) {
 */ 
 static int luaK_numberK (FuncState *fs, lua_Number r) {
   TValue o;
-  lua_assert(!luai_numisnan(NULL, r) && !isminuszero(r));
+  lua_assert(!luai_numisnan(r) && !isminuszero(r));
   setnvalue(&o, r);
   return addk(fs, &o, &o);
 }
@@ -779,7 +779,7 @@ static int constfolding (OpCode op, expdesc *e1, expdesc *e2) {
   }
   else {
     lua_Number n = fltvalue(&res);
-    if (luai_numisnan(NULL, n) || isminuszero(n))
+    if (luai_numisnan(n) || isminuszero(n))
       return 0;  /* folds neither NaN nor -0 */
     e1->k = VKFLT;
     e1->u.nval = n;
