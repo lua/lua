@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.69 2013/08/30 16:01:37 roberto Exp roberto $
+** $Id: llex.c,v 2.70 2013/12/30 20:47:58 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -320,40 +320,39 @@ static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
 }
 
 
-static void escerror (LexState *ls, int *c, int n, const char *msg) {
-  int i;
-  luaZ_resetbuffer(ls->buff);  /* prepare error message */
-  save(ls, '\\');
-  for (i = 0; i < n && c[i] != EOZ; i++)
-    save(ls, c[i]);
+static void escerror (LexState *ls, const char *msg) {
+  if (ls->current != EOZ)
+    save_and_next(ls);  /* add current to buffer for error message */
   lexerror(ls, msg, TK_STRING);
 }
 
 
+static int gethexa (LexState *ls) {
+  save_and_next(ls);
+  if (!lisxdigit(ls->current))
+    escerror(ls, "hexadecimal digit expected");
+  return luaO_hexavalue(ls->current);
+}
+
+
 static int readhexaesc (LexState *ls) {
-  int c[3], i;  /* keep input for error message */
-  int r = 0;  /* result accumulator */
-  c[0] = 'x';  /* for error message */
-  for (i = 1; i < 3; i++) {  /* read two hexadecimal digits */
-    c[i] = next(ls);
-    if (!lisxdigit(c[i]))
-      escerror(ls, c, i + 1, "hexadecimal digit expected");
-    r = (r << 4) + luaO_hexavalue(c[i]);
-  }
+  int r = gethexa(ls);
+  r = (r << 4) + gethexa(ls);
+  luaZ_buffremove(ls->buff, 2);  /* remove saved chars from buffer */
   return r;
 }
 
 
 static int readdecesc (LexState *ls) {
-  int c[3], i;
+  int i;
   int r = 0;  /* result accumulator */
   for (i = 0; i < 3 && lisdigit(ls->current); i++) {  /* read up to 3 digits */
-    c[i] = ls->current;
-    r = 10*r + c[i] - '0';
-    next(ls);
+    r = 10*r + ls->current - '0';
+    save_and_next(ls);
   }
   if (r > UCHAR_MAX)
-    escerror(ls, c, i, "decimal escape too large");
+    escerror(ls, "decimal escape too large");
+  luaZ_buffremove(ls->buff, i);  /* remove read digits from buffer */
   return r;
 }
 
@@ -371,7 +370,7 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
         break;  /* to avoid warnings */
       case '\\': {  /* escape sequences */
         int c;  /* final character to be saved */
-        next(ls);  /* do not save the `\' */
+        save_and_next(ls);  /* keep '\\' for error messages */
         switch (ls->current) {
           case 'a': c = '\a'; goto read_save;
           case 'b': c = '\b'; goto read_save;
@@ -387,6 +386,7 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
             c = ls->current; goto read_save;
           case EOZ: goto no_save;  /* will raise an error next loop */
           case 'z': {  /* zap following span of spaces */
+            luaZ_buffremove(ls->buff, 1);  /* remove '\\' */
             next(ls);  /* skip the 'z' */
             while (lisspace(ls->current)) {
               if (currIsNewline(ls)) inclinenumber(ls);
@@ -396,14 +396,18 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
           }
           default: {
             if (!lisdigit(ls->current))
-              escerror(ls, &ls->current, 1, "invalid escape sequence");
-            /* digital escape \ddd */
-            c = readdecesc(ls);
+              escerror(ls, "invalid escape sequence");
+            c = readdecesc(ls);  /* digital escape \ddd */
             goto only_save;
           }
         }
-       read_save: next(ls);  /* read next character */
-       only_save: save(ls, c);  /* save 'c' */
+       read_save:
+         next(ls);
+         /* go through */
+       only_save:
+         luaZ_buffremove(ls->buff, 1);  /* remove '\\' */
+         save(ls, c);
+         /* go through */
        no_save: break;
       }
       default:
