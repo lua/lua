@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.70 2013/12/30 20:47:58 roberto Exp roberto $
+** $Id: llex.c,v 2.71 2014/01/31 15:14:22 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -320,17 +320,18 @@ static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
 }
 
 
-static void escerror (LexState *ls, const char *msg) {
-  if (ls->current != EOZ)
-    save_and_next(ls);  /* add current to buffer for error message */
-  lexerror(ls, msg, TK_STRING);
+static void esccheck (LexState *ls, int c, const char *msg) {
+  if (!c) {
+    if (ls->current != EOZ)
+      save_and_next(ls);  /* add current to buffer for error message */
+    lexerror(ls, msg, TK_STRING);
+  }
 }
 
 
 static int gethexa (LexState *ls) {
   save_and_next(ls);
-  if (!lisxdigit(ls->current))
-    escerror(ls, "hexadecimal digit expected");
+  esccheck (ls, lisxdigit(ls->current), "hexadecimal digit expected");
   return luaO_hexavalue(ls->current);
 }
 
@@ -343,6 +344,40 @@ static int readhexaesc (LexState *ls) {
 }
 
 
+static unsigned int readutf8esc (LexState *ls) {
+  int i = 3;  /* chars to be removed: '\', 'u', and first digit */
+  unsigned int r = gethexa(ls);  /* must have at least one digit */
+  while ((save_and_next(ls), lisxdigit(ls->current))) {
+    i++;
+    r = (r << 4) + luaO_hexavalue(ls->current);
+    esccheck(ls, r <= 0x10FFFF, "UTF-8 value too large");
+  }
+  esccheck(ls, ls->current == ';', "missing ';' in UTF-8 escape");
+  next(ls);  /* skip ';' */
+  luaZ_buffremove(ls->buff, i);  /* remove saved chars from buffer */
+  return r;
+}
+
+
+static void utf8esc (LexState *ls, unsigned int r) {
+  if (r < 0x80)  /* ascii? */
+    save(ls, r);
+  else {  /* need continuation bytes */
+    int buff[4];  /* to store continuation bytes */
+    int n = 0;  /* number of continuation bytes */
+    unsigned int mfb = 0x3f;  /* maximum that fits in first byte */
+    do {
+      buff[n++] = 0x80 | (r & 0x3f);  /* add continuation byte */
+      r >>= 6;  /* remove added bits */
+      mfb >>= 1;  /* now there is one less bit in first byte */
+    } while (r > mfb);  /* needs continuation byte? */
+    save(ls, (~mfb << 1) | r);  /* add first byte */
+    while (n-- > 0)  /* add 'buff' to string, reversed */
+      save(ls, buff[n]);
+  }
+}
+
+
 static int readdecesc (LexState *ls) {
   int i;
   int r = 0;  /* result accumulator */
@@ -350,8 +385,7 @@ static int readdecesc (LexState *ls) {
     r = 10*r + ls->current - '0';
     save_and_next(ls);
   }
-  if (r > UCHAR_MAX)
-    escerror(ls, "decimal escape too large");
+  esccheck(ls, r <= UCHAR_MAX, "decimal escape too large");
   luaZ_buffremove(ls->buff, i);  /* remove read digits from buffer */
   return r;
 }
@@ -380,6 +414,7 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
           case 't': c = '\t'; goto read_save;
           case 'v': c = '\v'; goto read_save;
           case 'x': c = readhexaesc(ls); goto read_save;
+          case 'u': utf8esc(ls, readutf8esc(ls));  goto no_save;
           case '\n': case '\r':
             inclinenumber(ls); c = '\n'; goto only_save;
           case '\\': case '\"': case '\'':
@@ -395,8 +430,7 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
             goto no_save;
           }
           default: {
-            if (!lisdigit(ls->current))
-              escerror(ls, "invalid escape sequence");
+            esccheck(ls, lisdigit(ls->current), "invalid escape sequence");
             c = readdecesc(ls);  /* digital escape \ddd */
             goto only_save;
           }
