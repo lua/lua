@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.184 2014/01/22 20:02:04 roberto Exp roberto $
+** $Id: lvm.c,v 2.185 2014/01/27 13:34:32 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -53,17 +53,9 @@ int luaV_tostring (lua_State *L, StkId obj) {
     return 0;
   else {
     char buff[MAXNUMBER2STR];
-    size_t len;
-    if (ttisinteger(obj))
-      len = lua_integer2str(buff, ivalue(obj));
-    else {
-      len = lua_number2str(buff, fltvalue(obj));
-      if (strspn(buff, "-0123456789") == len) {  /* look like an integer? */
-        buff[len++] = '.';  /* add a '.0' */
-        buff[len++] = '0';
-        buff[len] = '\0';
-      }
-    }
+    size_t len = (ttisinteger(obj))
+                 ? lua_integer2str(buff, ivalue(obj))
+                 : lua_number2str(buff, fltvalue(obj));
     setsvalue2s(L, obj, luaS_newlstr(L, buff, len));
     return 1;
   }

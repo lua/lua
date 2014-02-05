@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.255 2013/06/27 18:32:33 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.256 2014/01/05 14:04:46 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -746,10 +746,16 @@ LUALIB_API lua_Integer luaL_len (lua_State *L, int idx) {
 LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len) {
   if (!luaL_callmeta(L, idx, "__tostring")) {  /* no metafield? */
     switch (lua_type(L, idx)) {
-      case LUA_TNUMBER: {  /* concatenate with empty string to convert */
-        lua_pushvalue(L, idx);
-        lua_pushliteral(L, "");
-        lua_concat(L, 2);
+      case LUA_TNUMBER: {
+        if (lua_isinteger(L, idx))
+          lua_pushfstring(L, "%I", lua_tointeger(L, idx));
+        else {
+          const char *s = lua_pushfstring(L, "%f", lua_tonumber(L, idx));
+          if (s[strspn(s, "-0123456789")] == '\0') {  /* looks like an int? */
+            lua_pushliteral(L, ".0");  /* add a '.0' to result */
+            lua_concat(L, 2);
+          }
+        }
         break;
       }
       case LUA_TSTRING:
