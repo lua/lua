@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.71 2014/01/31 15:14:22 roberto Exp roberto $
+** $Id: llex.c,v 2.72 2014/02/04 18:57:34 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -359,22 +359,11 @@ static unsigned int readutf8esc (LexState *ls) {
 }
 
 
-static void utf8esc (LexState *ls, unsigned int r) {
-  if (r < 0x80)  /* ascii? */
-    save(ls, r);
-  else {  /* need continuation bytes */
-    int buff[4];  /* to store continuation bytes */
-    int n = 0;  /* number of continuation bytes */
-    unsigned int mfb = 0x3f;  /* maximum that fits in first byte */
-    do {
-      buff[n++] = 0x80 | (r & 0x3f);  /* add continuation byte */
-      r >>= 6;  /* remove added bits */
-      mfb >>= 1;  /* now there is one less bit in first byte */
-    } while (r > mfb);  /* needs continuation byte? */
-    save(ls, (~mfb << 1) | r);  /* add first byte */
-    while (n-- > 0)  /* add 'buff' to string, reversed */
-      save(ls, buff[n]);
-  }
+static void utf8esc (LexState *ls) {
+  char buff[UTF8BUFFSZ];
+  int n = luaO_utf8esc(buff, readutf8esc(ls));
+  for (; n > 0; n--)  /* add 'buff' to string */
+    save(ls, buff[UTF8BUFFSZ - n]);
 }
 
 
@@ -414,7 +403,7 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
           case 't': c = '\t'; goto read_save;
           case 'v': c = '\v'; goto read_save;
           case 'x': c = readhexaesc(ls); goto read_save;
-          case 'u': utf8esc(ls, readutf8esc(ls));  goto no_save;
+          case 'u': utf8esc(ls);  goto no_save;
           case '\n': case '\r':
             inclinenumber(ls); c = '\n'; goto only_save;
           case '\\': case '\"': case '\'':

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.71 2013/12/30 20:47:58 roberto Exp roberto $
+** $Id: lobject.c,v 2.72 2014/01/27 13:34:32 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -284,12 +284,30 @@ int luaO_str2int (const char *s, size_t len, lua_Integer *result) {
 }
 
 
+int luaO_utf8esc (char *buff, unsigned int x) {
+  int n = 1;  /* number of bytes put in buffer (backwards) */
+  if (x < 0x80)  /* ascii? */
+    buff[UTF8BUFFSZ - 1] = x;
+  else {  /* need continuation bytes */
+    unsigned int mfb = 0x3f;  /* maximum that fits in first byte */
+    do {
+      buff[UTF8BUFFSZ - (n++)] = 0x80 | (x & 0x3f);  /* add continuation byte */
+      x >>= 6;  /* remove added bits */
+      mfb >>= 1;  /* now there is one less bit available in first byte */
+    } while (x > mfb);  /* still needs continuation byte? */
+    buff[UTF8BUFFSZ - n] = (~mfb << 1) | x;  /* add first byte */
+  }
+  return n;
+}
+
+
 static void pushstr (lua_State *L, const char *str, size_t l) {
   setsvalue2s(L, L->top++, luaS_newlstr(L, str, l));
 }
 
 
-/* this function handles only `%d', `%c', %f, %p, and `%s' formats */
+/* this function handles only '%d', '%c', '%f', '%p', and '%s' 
+   conventional formats, plus Lua-specific '%L' and '%U' */
 const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
   int n = 0;
   for (;;) {
@@ -326,6 +344,12 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
         char buff[4*sizeof(void *) + 8]; /* should be enough space for a `%p' */
         int l = sprintf(buff, "%p", va_arg(argp, void *));
         pushstr(L, buff, l);
+        break;
+      }
+      case 'U': {
+        char buff[UTF8BUFFSZ];
+        int l = luaO_utf8esc(buff, va_arg(argp, int));
+        pushstr(L, buff + UTF8BUFFSZ - l, l);
         break;
       }
       case '%': {

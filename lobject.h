@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.82 2013/09/05 19:31:49 roberto Exp roberto $
+** $Id: lobject.h,v 2.83 2013/12/04 12:15:22 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -479,9 +479,12 @@ typedef struct Table {
 
 LUAI_DDEC const TValue luaO_nilobject_;
 
+/* size of buffer for 'luaO_utf8esc' function */
+#define UTF8BUFFSZ	8
 
 LUAI_FUNC int luaO_int2fb (unsigned int x);
 LUAI_FUNC int luaO_fb2int (int x);
+LUAI_FUNC int luaO_utf8esc (char *buff, unsigned int x);
 LUAI_FUNC int luaO_ceillog2 (unsigned int x);
 LUAI_FUNC void luaO_arith (lua_State *L, int op, const TValue *p1,
                            const TValue *p2, TValue *res);
