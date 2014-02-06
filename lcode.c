@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.77 2013/12/30 20:47:58 roberto Exp roberto $
+** $Id: lcode.c,v 2.78 2014/01/27 13:34:32 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -836,7 +836,7 @@ void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
   e2.t = e2.f = NO_JUMP; e2.k = VKINT; e2.u.ival = 0;
   switch (op) {
     case OPR_MINUS: case OPR_BNOT: case OPR_LEN: {
-      codearith(fs, op - OPR_MINUS + OP_UNM, e, &e2, line);
+      codearith(fs, cast(OpCode, (op - OPR_MINUS) + OP_UNM), e, &e2, line);
       break;
     }
     case OPR_NOT: codenot(fs, e); break;
@@ -910,7 +910,7 @@ void luaK_posfix (FuncState *fs, BinOpr op,
     case OPR_IDIV: case OPR_MOD: case OPR_POW:
     case OPR_BAND: case OPR_BOR: case OPR_BXOR:
     case OPR_SHL: case OPR_SHR: {
-      codearith(fs, cast(OpCode, op - OPR_ADD + OP_ADD), e1, e2, line);
+      codearith(fs, cast(OpCode, (op - OPR_ADD) + OP_ADD), e1, e2, line);
       break;
     }
     case OPR_EQ: case OPR_LT: case OPR_LE: {
