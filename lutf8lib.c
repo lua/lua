@@ -1,11 +1,21 @@
-/* gcc -shared -o utf8.so -fpic -O2 -Wall -I.. utf8.c */
+/*
+** $Id: $
+** Standard library for UTF-8 manipulation
+** See Copyright Notice in lua.h
+*/
+
 
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
+#define lutf8lib_c
+#define LUA_LIB
+
 #include "lua.h"
+
 #include "lauxlib.h"
+#include "lualib.h"
 
 #define MAXUNICODE	0x10FFFF
 
@@ -220,9 +230,6 @@ static struct luaL_Reg funcs[] = {
   {NULL, NULL}
 };
 
-
-
-int luaopen_utf8 (lua_State *L);
 
 int luaopen_utf8 (lua_State *L) {
   luaL_newlib(L, funcs);
