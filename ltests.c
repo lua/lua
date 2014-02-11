@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.161 2013/12/18 14:12:03 roberto Exp roberto $
+** $Id: ltests.c,v 2.162 2013/12/30 20:47:58 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -338,7 +338,6 @@ static void checkobject (global_State *g, GCObject *o, int maybedead) {
     lua_assert(maybedead);
   else {
     lua_assert(g->gcstate != GCSpause || iswhite(o));
-    lua_assert(!islocal(o) || !testbit(gch(o)->marked, LOCALMARK));
     switch (gch(o)->tt) {
       case LUA_TUSERDATA: {
         Table *mt = gco2u(o)->metatable;
@@ -456,19 +455,12 @@ int lua_checkmemory (lua_State *L) {
     lua_assert(testbit(o->gch.marked, NOLOCALBIT));
     lua_assert(gch(o)->tt == LUA_TTHREAD);
   }
-  /* check 'localfin' list */
-  checkgray(g, g->localfin);
-  for (o = g->localfin; o != NULL; o = gch(o)->next) {
-    checkobject(g, o, 0);
-    lua_assert(tofinalize(o) && !testbit(o->gch.marked, LOCALMARK));
-    lua_assert(gch(o)->tt == LUA_TUSERDATA || gch(o)->tt == LUA_TTABLE);
-  }
   /* check 'finobj' list */
   checkgray(g, g->finobj);
   for (o = g->finobj; o != NULL; o = gch(o)->next) {
     checkobject(g, o, 0);
-    lua_assert(tofinalize(o) && testbit(o->gch.marked, LOCALMARK));
-    lua_assert(testbit(o->gch.marked, NOLOCALBIT));
+    lua_assert(tofinalize(o));
+    lua_assert(!islocal(o) || !testbit(gch(o)->marked, LOCALMARK));
     lua_assert(gch(o)->tt == LUA_TUSERDATA || gch(o)->tt == LUA_TTABLE);
   }
   /* check 'tobefnz' list */
@@ -655,10 +647,13 @@ static int gc_local (lua_State *L) {
 
 static int gc_state (lua_State *L) {
   static const char *statenames[] = {"propagate", "atomic",
-    "sweeplocalgc", "sweepallgc", "sweepthreads", "sweeplocalfin",
-    "sweepfinobj", "sweeptobefnz", "sweepend", "pause", ""};
-  int option = luaL_checkoption(L, 1, "", statenames);
-  if (option == GCSpause + 1) {
+    "sweeplocalgc", "sweepallgc", "sweepthreads", "sweepfinobj",
+    "sweeptobefnz", "sweepend", "pause", ""};
+  static const int states[] = {GCSpropagate, GCSatomic,
+    GCSswplocalgc, GCSswpallgc, GCSswpthreads, GCSswpfinobj,
+    GCSswptobefnz, GCSswpend, GCSpause, -1};
+  int option = states[luaL_checkoption(L, 1, "", statenames)];
+  if (option == -1) {
     lua_pushstring(L, statenames[G(L)->gcstate]);
     return 1;
   }

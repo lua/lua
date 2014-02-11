@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.96 2013/09/13 16:21:52 roberto Exp roberto $
+** $Id: lstate.h,v 2.97 2013/09/17 15:40:06 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -23,9 +23,8 @@
 **
 ** mainthread->next: all threads;
 ** localgc: all local objects not marked for finalization;
-** localfin: all local objects marked for finalization;
 ** allgc: all non local objects not marked for finalization;
-** finobj: all non local objects marked for finalization;
+** finobj: all objects marked for finalization;
 ** tobefnz: all objects ready to be finalized; 
 ** fixedgc: all objects that are not to be collected (currently
 ** only small strings, such as reserved words).
@@ -119,7 +118,6 @@ typedef struct global_State {
   lu_byte gcrunning;  /* true if GC is running */
   GCObject *allgc;  /* list of all collectable objects */
   GCObject *localgc;  /* list of local objects */
-  GCObject *localfin;  /* list of local objects with finalizers */
   GCObject **sweepgc;  /* current position of sweep in list */
   GCObject *finobj;  /* list of collectable objects with finalizers */
   GCObject *gray;  /* list of gray objects */
