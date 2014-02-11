@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.168 2013/12/13 15:42:08 roberto Exp roberto $
+** $Id: lgc.c,v 2.169 2014/02/11 12:18:12 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -1208,24 +1208,23 @@ void luaC_forcestep (lua_State *L) {
 
 
 /*
-** performs a basic GC step only if collector is running
+** performs a basic GC step or a local collection when collector is running
 */
 void luaC_step (lua_State *L) {
   global_State *g = G(L);
-  if (g->gcrunning) {
-    if (g->gcstate != GCSpause) {
-      luaC_forcestep(L);
-    }
+  if (!g->gcrunning)
+    luaE_setdebt(g, -GCSTEPSIZE);  /* avoid being called too often */
+  else {
+    if (g->gcstate != GCSpause)  /* in the middle of a cycle? */
+      luaC_forcestep(L);  /* continue it */
     else {
-      luaC_localcollection(L);
-      if (gettotalbytes(g) > g->GCthreshold) {
-        luaC_forcestep(L);  /* restart collection */
-      }
-      else
+      luaC_localcollection(L);  /* try a local collection */
+      if (gettotalbytes(g) <= g->GCthreshold)  /* enough? */
         luaE_setdebt(g, -g->gclocalpause);
+      else  /* local collection did not collect enough memory */
+        luaC_forcestep(L);  /* start a full collection */
     }
   }
-  else luaE_setdebt(g, -GCSTEPSIZE);  /* avoid being called too often */
 }
 
 
