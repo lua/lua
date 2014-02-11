@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.256 2014/01/05 14:04:46 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.257 2014/02/05 19:14:53 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -169,8 +169,14 @@ LUALIB_API int luaL_argerror (lua_State *L, int arg, const char *extramsg) {
 
 
 static int typeerror (lua_State *L, int arg, const char *tname) {
-  const char *msg = lua_pushfstring(L, "%s expected, got %s",
-                                    tname, luaL_typename(L, arg));
+  const char *msg;
+  const char *typearg = luaL_typename(L, arg);
+  if (lua_getmetatable(L, arg)) {
+    lua_getfield(L, -1, "__name");
+    if (lua_isstring(L, -1))
+      typearg = lua_tostring(L, -1);
+  }
+  msg = lua_pushfstring(L, "%s expected, got %s", tname, typearg);
   return luaL_argerror(L, arg, msg);
 }
 
@@ -275,6 +281,8 @@ LUALIB_API int luaL_newmetatable (lua_State *L, const char *tname) {
     return 0;  /* leave previous value on top, but return 0 */
   lua_pop(L, 1);
   lua_newtable(L);  /* create metatable */
+  lua_pushstring(L, tname);
+  lua_setfield(L, -2, "__name");  /* metatable.__name = tname */
   lua_pushvalue(L, -1);
   lua_setfield(L, LUA_REGISTRYINDEX, tname);  /* registry.name = metatable */
   return 1;
