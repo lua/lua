@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.170 2014/02/11 12:28:47 roberto Exp roberto $
+** $Id: lgc.c,v 2.171 2014/02/13 12:11:34 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -33,8 +33,8 @@
 /* maximum number of elements to sweep in each single step */
 #define GCSWEEPMAX	(cast_int((GCSTEPSIZE / GCSWEEPCOST) / 4))
 
-/* maximum number of finalizers to call in each GC step */
-#define GCFINALIZENUM	4
+/* cost of calling one finalizer */
+#define GCFINALIZECOST	GCSWEEPCOST
 
 
 /*
@@ -960,6 +960,7 @@ static l_mem atomic (lua_State *L) {
   origweak = g->weak; origall = g->allweak;
   work += g->GCmemtrav;  /* stop counting (objects being finalized) */
   separatetobefnz(g, 0);  /* separate objects to be finalized */
+  g->gcfinnum = 1;  /* there may be objects to be finalized */
   markbeingfnz(g);  /* mark objects that will be finalized */
   propagateall(g);  /* remark, to propagate 'resurrection' */
   work -= g->GCmemtrav;  /* restart counting */
@@ -1014,7 +1015,7 @@ static lu_mem singlestep (lua_State *L) {
       int sw;
       propagateall(g);  /* make sure gray list is empty */
       g->GCestimate = g->GCmemtrav;  /* save what was counted */;
-      work = atomic(L);  /* add what was traversed by 'atomic' */
+      work = atomic(L);  /* work is what was traversed by 'atomic' */
       g->GCestimate += work;  /* estimate of total memory traversed */ 
       sw = entersweep(L);
       return work + sw * GCSWEEPCOST;
@@ -1034,8 +1035,13 @@ static lu_mem singlestep (lua_State *L) {
     case GCSswpend: {  /* finish sweeps */
       makewhite(g, obj2gco(g->mainthread));  /* sweep main thread */
       checkSizes(L, g);
+      g->gcstate = GCScallfin;
+      return 0;
+    }
+    case GCScallfin: {  /* state to finish calling finalizers */
+      /* do nothing here; should be handled by 'luaC_forcestep' */
       g->gcstate = GCSpause;  /* finish collection */
-      return GCSWEEPCOST;
+      return 0;
     }
     default: lua_assert(0); return 0;
   }
@@ -1053,24 +1059,18 @@ void luaC_runtilstate (lua_State *L, int statesmask) {
 }
 
 
-static void incstep (lua_State *L) {
+/*
+** run a few finalizers
+*/
+static int dosomefinalization (lua_State *L) {
   global_State *g = G(L);
-  l_mem debt = g->GCdebt;
-  int stepmul = g->gcstepmul;
-  if (stepmul < 40) stepmul = 40;  /* avoid ridiculous low values (and 0) */
-  /* convert debt from Kb to 'work units' (avoid zero debt and overflows) */
-  debt = (debt / STEPMULADJ) + 1;
-  debt = (debt < MAX_LMEM / stepmul) ? debt * stepmul : MAX_LMEM;
-  do {  /* always perform at least one single step */
-    lu_mem work = singlestep(L);  /* do some work */
-    debt -= work;
-  } while (debt > -GCSTEPSIZE && g->gcstate != GCSpause);
-  if (g->gcstate == GCSpause)
-    setpause(g, g->GCestimate);  /* pause until next cycle */
-  else {
-    debt = (debt / stepmul) * STEPMULADJ;  /* convert 'work units' to Kb */
-    luaE_setdebt(g, debt);
-  }
+  unsigned int i;
+  lua_assert(!g->tobefnz || g->gcfinnum > 0);
+  for (i = 0; g->tobefnz && i < g->gcfinnum; i++)
+    GCTM(L, 1);  /* call one finalizer */
+  g->gcfinnum = (!g->tobefnz) ? 0  /* nothing more to finalize? */
+                    : g->gcfinnum * 2;  /* else call a few more next time */
+  return i;
 }
 
 
@@ -1079,11 +1079,29 @@ static void incstep (lua_State *L) {
 */
 void luaC_forcestep (lua_State *L) {
   global_State *g = G(L);
-  int i;
-  incstep(L);
-  /* run a few finalizers (or all of them at the end of a collect cycle) */
-  for (i = 0; g->tobefnz && (i < GCFINALIZENUM || g->gcstate == GCSpause); i++)
-    GCTM(L, 1);  /* call one finalizer */
+  l_mem debt = g->GCdebt;
+  int stepmul = g->gcstepmul;
+  if (stepmul < 40) stepmul = 40;  /* avoid ridiculous low values (and 0) */
+  /* convert debt from Kb to 'work units' (avoid zero debt and overflows) */
+  debt = (debt / STEPMULADJ) + 1;
+  debt = (debt < MAX_LMEM / stepmul) ? debt * stepmul : MAX_LMEM;
+  do {
+    if (g->gcstate == GCScallfin && g->tobefnz) {
+      unsigned int n = dosomefinalization(L);
+      debt -= (n * GCFINALIZECOST);
+    }
+    else {  /* perform one single step */
+      lu_mem work = singlestep(L);
+      debt -= work;
+    }
+  } while (debt > -GCSTEPSIZE && g->gcstate != GCSpause);
+  if (g->gcstate == GCSpause)
+    setpause(g, g->GCestimate);  /* pause until next cycle */
+  else {
+    debt = (debt / stepmul) * STEPMULADJ;  /* convert 'work units' to Kb */
+    luaE_setdebt(g, debt);
+    dosomefinalization(L);
+  }
 }
 
 

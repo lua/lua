@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.117 2014/02/11 12:18:12 roberto Exp roberto $
+** $Id: lstate.c,v 2.118 2014/02/13 12:11:34 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -214,10 +214,10 @@ static void f_luaopen (lua_State *L, void *ud) {
 
 
 /*
-** preinitialize a state with consistent values without allocating
+** preinitialize a thread with consistent values without allocating
 ** any memory (to avoid errors)
 */
-static void preinit_state (lua_State *L, global_State *g) {
+static void preinit_thread (lua_State *L, global_State *g) {
   G(L) = g;
   L->stack = NULL;
   L->ci = NULL;
@@ -264,7 +264,7 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   g->mainthread->next = obj2gco(L1);
   setthvalue(L, L->top, L1);
   api_incr_top(L);
-  preinit_state(L1, g);
+  preinit_thread(L1, g);
   L1->hookmask = L->hookmask;
   L1->basehookcount = L->basehookcount;
   L1->hook = L->hook;
@@ -298,8 +298,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   L->tt = LUA_TTHREAD;
   g->currentwhite = bitmask(WHITE0BIT);
   L->marked = luaC_white(g);
-  g->gckind = KGC_NORMAL;
-  preinit_state(L, g);
+  preinit_thread(L, g);
   g->frealloc = f;
   g->ud = ud;
   g->mainthread = L;
@@ -313,12 +312,14 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->panic = NULL;
   g->version = NULL;
   g->gcstate = GCSpause;
+  g->gckind = KGC_NORMAL;
   g->allgc = g->finobj = g->tobefnz = g->fixedgc = NULL;
   g->sweepgc = NULL;
   g->gray = g->grayagain = NULL;
   g->weak = g->ephemeron = g->allweak = NULL;
   g->totalbytes = sizeof(LG);
   g->GCdebt = 0;
+  g->gcfinnum = 0;
   g->gcpause = LUAI_GCPAUSE;
   g->gcstepmul = LUAI_GCMUL;
   for (i=0; i < LUA_NUMTAGS; i++) g->mt[i] = NULL;
