@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.37 2013/08/27 20:04:00 roberto Exp roberto $
+** $Id: lfunc.c,v 2.38 2013/09/11 12:26:14 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -86,7 +86,6 @@ void luaF_close (lua_State *L, StkId level) {
 
 Proto *luaF_newproto (lua_State *L) {
   Proto *f = &luaC_newobj(L, LUA_TPROTO, sizeof(Proto))->p;
-  nolocal(obj2gco(f));  /* prototypes are never local */
   f->k = NULL;
   f->sizek = 0;
   f->p = NULL;

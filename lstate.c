@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.116 2013/11/08 17:34:22 roberto Exp roberto $
+** $Id: lstate.c,v 2.117 2014/02/11 12:18:12 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -28,10 +28,6 @@
 
 #if !defined(LUAI_GCPAUSE)
 #define LUAI_GCPAUSE	200  /* 200% */
-#endif
-
-#if !defined(LUAI_GCLOCALPAUSE)
-#define LUAI_GCLOCALPAUSE	(1000 * sizeof(TString))
 #endif
 
 #if !defined(LUAI_GCMUL)
@@ -187,14 +183,12 @@ static void init_registry (lua_State *L, global_State *g) {
   Table *registry = luaH_new(L);
   sethvalue(L, &g->l_registry, registry);
   luaH_resize(L, registry, LUA_RIDX_LAST, 0);
-  nolocal(obj2gco(registry));
   /* registry[LUA_RIDX_MAINTHREAD] = L */
   setthvalue(L, &temp, L);  /* temp = L */
   luaH_setint(L, registry, LUA_RIDX_MAINTHREAD, &temp);
   /* registry[LUA_RIDX_GLOBALS] = table of globals */
   sethvalue(L, &temp, luaH_new(L));  /* temp = new table (global table) */
   luaH_setint(L, registry, LUA_RIDX_GLOBALS, &temp);
-  valnolocal(&temp);  /* keep local invariant */
 }
 
 
@@ -263,7 +257,7 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   luaC_checkGC(L);
   /* create new thread */
   L1 = &cast(LX *, luaM_newobject(L, LUA_TTHREAD, sizeof(LX)))->l;
-  L1->marked = luaC_white(g) | bit2mask(NOLOCALBIT, LOCALMARK);
+  L1->marked = luaC_white(g);
   L1->tt = LUA_TTHREAD;
   /* link it on list of threads */
   L1->next = g->mainthread->next;
@@ -303,7 +297,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   L->next = NULL;
   L->tt = LUA_TTHREAD;
   g->currentwhite = bitmask(WHITE0BIT);
-  L->marked = luaC_white(g) | bit2mask(NOLOCALBIT, LOCALMARK);
+  L->marked = luaC_white(g);
   g->gckind = KGC_NORMAL;
   preinit_state(L, g);
   g->frealloc = f;
@@ -312,7 +306,6 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->seed = makeseed(L);
   g->gcrunning = 0;  /* no GC while building state */
   g->GCestimate = 0;
-  g->GCthreshold = 10000;
   g->strt.size = g->strt.nuse = 0;
   g->strt.hash = NULL;
   setnilvalue(&g->l_registry);
@@ -320,16 +313,13 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->panic = NULL;
   g->version = NULL;
   g->gcstate = GCSpause;
-  g->localgc = g->allgc = g->finobj = NULL;
-  g->tobefnz = NULL;
-  g->fixedgc = NULL;
+  g->allgc = g->finobj = g->tobefnz = g->fixedgc = NULL;
   g->sweepgc = NULL;
   g->gray = g->grayagain = NULL;
   g->weak = g->ephemeron = g->allweak = NULL;
   g->totalbytes = sizeof(LG);
   g->GCdebt = 0;
   g->gcpause = LUAI_GCPAUSE;
-  g->gclocalpause = LUAI_GCLOCALPAUSE;
   g->gcstepmul = LUAI_GCMUL;
   for (i=0; i < LUA_NUMTAGS; i++) g->mt[i] = NULL;
   if (luaD_rawrunprotected(L, f_luaopen, NULL) != LUA_OK) {

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.297 2013/12/18 14:12:03 roberto Exp roberto $
+** $Id: lua.h,v 1.298 2013/12/30 20:47:58 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -294,7 +294,6 @@ LUA_API int  (lua_status) (lua_State *L);
 #define LUA_GCSTEP		5
 #define LUA_GCSETPAUSE		6
 #define LUA_GCSETSTEPMUL	7
-#define LUA_GCSETLOCALPAUSE	8
 #define LUA_GCISRUNNING		9
 
 LUA_API int (lua_gc) (lua_State *L, int what, int data);

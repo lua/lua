@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.97 2013/09/17 15:40:06 roberto Exp roberto $
+** $Id: lstate.h,v 2.98 2014/02/11 12:18:12 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -22,8 +22,7 @@
 ** the 'CommonHeader' for the link:
 **
 ** mainthread->next: all threads;
-** localgc: all local objects not marked for finalization;
-** allgc: all non local objects not marked for finalization;
+** allgc: all objects not marked for finalization;
 ** finobj: all objects marked for finalization;
 ** tobefnz: all objects ready to be finalized; 
 ** fixedgc: all objects that are not to be collected (currently
@@ -108,7 +107,6 @@ typedef struct global_State {
   l_mem GCdebt;  /* bytes allocated not yet compensated by the collector */
   lu_mem GCmemtrav;  /* memory traversed by the GC */
   lu_mem GCestimate;  /* an estimate of the non-garbage memory in use */
-  lu_mem GCthreshold;  /* threshold to start a new GC cycle */
   stringtable strt;  /* hash table for strings */
   TValue l_registry;
   unsigned int seed;  /* randomized seed for hashes */
@@ -117,7 +115,6 @@ typedef struct global_State {
   lu_byte gckind;  /* kind of GC running */
   lu_byte gcrunning;  /* true if GC is running */
   GCObject *allgc;  /* list of all collectable objects */
-  GCObject *localgc;  /* list of local objects */
   GCObject **sweepgc;  /* current position of sweep in list */
   GCObject *finobj;  /* list of collectable objects with finalizers */
   GCObject *gray;  /* list of gray objects */
@@ -129,7 +126,6 @@ typedef struct global_State {
   GCObject *fixedgc;  /* list of objects not to be collected */
   Mbuffer buff;  /* temporary buffer for string concatenation */
   int gcpause;  /* size of pause between successive GCs */
-  int gclocalpause;  /* size of pause between local collections */
   int gcstepmul;  /* GC `granularity' */
   lua_CFunction panic;  /* to be called in unprotected errors */
   struct lua_State *mainthread;

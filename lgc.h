@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.76 2013/09/11 20:15:31 roberto Exp roberto $
+** $Id: lgc.h,v 2.77 2014/02/11 12:18:12 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -38,17 +38,16 @@
 */
 #define GCSpropagate	0
 #define GCSatomic	1
-#define GCSswplocalgc	2
-#define GCSswpallgc	3
-#define GCSswpthreads	4
-#define GCSswpfinobj	5
-#define GCSswptobefnz	6
-#define GCSswpend	7
-#define GCSpause	8
+#define GCSswpallgc	2
+#define GCSswpthreads	3
+#define GCSswpfinobj	4
+#define GCSswptobefnz	5
+#define GCSswpend	6
+#define GCSpause	7
 
 
 #define issweepphase(g)  \
-	(GCSswplocalgc <= (g)->gcstate && (g)->gcstate <= GCSswpend)
+	(GCSswpallgc <= (g)->gcstate && (g)->gcstate <= GCSswpend)
 
 
 /*
@@ -80,8 +79,6 @@
 #define WHITE1BIT	1  /* object is white (type 1) */
 #define BLACKBIT	2  /* object is black */
 #define FINALIZEDBIT	3  /* object has been marked for finalization */
-#define NOLOCALBIT	4  /* object is not local */
-#define LOCALMARK	5  /* object is 'locally marked' or out of local list */
 /* bit 7 is currently used by tests (luaL_checkmemory) */
 
 #define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)
@@ -91,7 +88,6 @@
 #define isblack(x)      testbit((x)->gch.marked, BLACKBIT)
 #define isgray(x)  /* neither white nor black */  \
 	(!testbits((x)->gch.marked, WHITEBITS | bitmask(BLACKBIT)))
-#define islocal(x)	(!testbit((x)->gch.marked, NOLOCALBIT))
 
 #define tofinalize(x)	testbit((x)->gch.marked, FINALIZEDBIT)
 
@@ -102,9 +98,6 @@
 #define changewhite(x)	((x)->gch.marked ^= WHITEBITS)
 #define gray2black(x)	l_setbit((x)->gch.marked, BLACKBIT)
 
-#define nolocal(x)	l_setbit((x)->gch.marked, NOLOCALBIT)
-#define valnolocal(v)	{ if (iscollectable(v)) nolocal(gcvalue(v)); }
-
 #define luaC_white(g)	cast(lu_byte, (g)->currentwhite & WHITEBITS)
 
 
@@ -114,17 +107,15 @@
 
 
 #define luaC_barrier(L,p,v) {  \
-	if (iscollectable(v) && \
-          (nolocal(gcvalue(v)), isblack(obj2gco(p)) && iswhite(gcvalue(v))))  \
+	if (iscollectable(v) && isblack(obj2gco(p)) && iswhite(gcvalue(v)))  \
 	luaC_barrier_(L,obj2gco(p),gcvalue(v)); }
 
 #define luaC_barrierback(L,p,v) {  \
-	if (iscollectable(v) && \
-          (nolocal(gcvalue(v)), isblack(obj2gco(p)) && iswhite(gcvalue(v))))  \
+	if (iscollectable(v) && isblack(obj2gco(p)) && iswhite(gcvalue(v)))  \
 	luaC_barrierback_(L,obj2gco(p)); }
 
 #define luaC_objbarrier(L,p,o) {  \
-	if (nolocal(obj2gco(o)), isblack(obj2gco(p)) && iswhite(obj2gco(o))) \
+	if (isblack(obj2gco(p)) && iswhite(obj2gco(o))) \
 		luaC_barrier_(L,obj2gco(p),obj2gco(o)); }
 
 #define luaC_upvalbarrier(L,uv) \

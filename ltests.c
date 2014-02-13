@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.162 2013/12/30 20:47:58 roberto Exp roberto $
+** $Id: ltests.c,v 2.163 2014/02/11 12:18:12 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -188,41 +188,23 @@ static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
 }
 
 
-/*
-** Check locality
-*/
-static int testobjref2 (GCObject *f, GCObject *t) {
-  /* not a local or pointed by a thread? */
-  if (!islocal(t) || gch(f)->tt == LUA_TTHREAD)
-    return 1;  /* ok */
-  if (gch(f)->tt == LUA_TPROTO && gch(t)->tt == LUA_TLCL)
-    return 1;  /* cache from a prototype */
-  return 0;
-}
-
-
 static void printobj (global_State *g, GCObject *o) {
-  printf("||%s(%p)-%s-%c(%02X)||",
+  printf("||%s(%p)-%c(%02X)||",
            ttypename(novariant(gch(o)->tt)), (void *)o,
-           islocal(o)?"L":"NL",
            isdead(g,o)?'d':isblack(o)?'b':iswhite(o)?'w':'g', gch(o)->marked);
 }
 
 
 static int testobjref (global_State *g, GCObject *f, GCObject *t) {
-  int r1 = testobjref1(g,f,t);
-  int r2 = testobjref2(f,t);
-  if (!r1 || !r2) {
-    if (!r1)
-      printf("%d(%02X) - ", g->gcstate, g->currentwhite);
-    else
-      printf("local violation - ");
+  int r1 = testobjref1(g, f, t);
+  if (!r1) {
+    printf("%d(%02X) - ", g->gcstate, g->currentwhite);
     printobj(g, f);
     printf("  ->  ");
     printobj(g, t);
     printf("\n");
   }
-  return r1 && r2;
+  return r1;
 }
 
 #define checkobjref(g,f,t)	lua_assert(testobjref(g,f,obj2gco(t)))
@@ -349,7 +331,6 @@ static void checkobject (global_State *g, GCObject *o, int maybedead) {
         break;
       }
       case LUA_TTHREAD: {
-        lua_assert(!islocal(o));
         checkstack(g, gco2th(o));
         break;
       }
@@ -366,7 +347,10 @@ static void checkobject (global_State *g, GCObject *o, int maybedead) {
         break;
       }
       case LUA_TSHRSTR:
-      case LUA_TLNGSTR: break;
+      case LUA_TLNGSTR: {
+        lua_assert(!isgray(o));  /* strings are never gray */
+        break;
+      }
       default: lua_assert(0);
     }
   }
@@ -431,28 +415,23 @@ int lua_checkmemory (lua_State *L) {
   resetbit(g->mainthread->marked, TESTGRAYBIT);
   lua_assert(g->sweepgc == NULL || issweepphase(g));
   markgrays(g);
-  /* check 'localgc' list */
-  checkgray(g, g->localgc);
-  maybedead = (GCSatomic < g->gcstate && g->gcstate <= GCSswplocalgc);
-  for (o = g->localgc; o != NULL; o = gch(o)->next) {
-    checkobject(g, o, maybedead);
-    lua_assert(!tofinalize(o) && !testbit(o->gch.marked, LOCALMARK));
+  /* check 'fixedgc' list */
+  for (o = g->fixedgc; o != NULL; o = gch(o)->next) {
+    lua_assert(gch(o)->tt == LUA_TSHRSTR && isgray(o));
   }
   /* check 'allgc' list */
   checkgray(g, g->allgc);
   maybedead = (GCSatomic < g->gcstate && g->gcstate <= GCSswpallgc);
   for (o = g->allgc; o != NULL; o = gch(o)->next) {
     checkobject(g, o, maybedead);
-    lua_assert(!tofinalize(o) && testbit(o->gch.marked, LOCALMARK));
-    lua_assert(testbit(o->gch.marked, NOLOCALBIT));
+    lua_assert(!tofinalize(o));
   }
   /* check thread list */
   checkgray(g, obj2gco(g->mainthread));
   maybedead = (GCSatomic < g->gcstate && g->gcstate <= GCSswpthreads);
   for (o = obj2gco(g->mainthread); o != NULL; o = gch(o)->next) {
     checkobject(g, o, maybedead);
-    lua_assert(!tofinalize(o) && testbit(o->gch.marked, LOCALMARK));
-    lua_assert(testbit(o->gch.marked, NOLOCALBIT));
+    lua_assert(!tofinalize(o));
     lua_assert(gch(o)->tt == LUA_TTHREAD);
   }
   /* check 'finobj' list */
@@ -460,7 +439,6 @@ int lua_checkmemory (lua_State *L) {
   for (o = g->finobj; o != NULL; o = gch(o)->next) {
     checkobject(g, o, 0);
     lua_assert(tofinalize(o));
-    lua_assert(!islocal(o) || !testbit(gch(o)->marked, LOCALMARK));
     lua_assert(gch(o)->tt == LUA_TUSERDATA || gch(o)->tt == LUA_TTABLE);
   }
   /* check 'tobefnz' list */
@@ -636,21 +614,12 @@ static int gc_color (lua_State *L) {
 }
 
 
-static int gc_local (lua_State *L) {
-  TValue *o;
-  luaL_checkany(L, 1);
-  o = obj_at(L, 1);
-  lua_pushboolean(L, !iscollectable(o) || islocal(gcvalue(o)));
-  return 1;
-}
-
-
 static int gc_state (lua_State *L) {
   static const char *statenames[] = {"propagate", "atomic",
-    "sweeplocalgc", "sweepallgc", "sweepthreads", "sweepfinobj",
+    "sweepallgc", "sweepthreads", "sweepfinobj",
     "sweeptobefnz", "sweepend", "pause", ""};
   static const int states[] = {GCSpropagate, GCSatomic,
-    GCSswplocalgc, GCSswpallgc, GCSswpthreads, GCSswpfinobj,
+    GCSswpallgc, GCSswpthreads, GCSswpfinobj,
     GCSswptobefnz, GCSswpend, GCSpause, -1};
   int option = states[luaL_checkoption(L, 1, "", statenames)];
   if (option == -1) {
@@ -1459,7 +1428,6 @@ static const struct luaL_Reg tests_funcs[] = {
   {"doonnewstack", doonnewstack},
   {"doremote", doremote},
   {"gccolor", gc_color},
-  {"isgclocal", gc_local},
   {"gcstate", gc_state},
   {"getref", getref},
   {"hash", hash_query},
@@ -1509,3 +1477,4 @@ int luaB_opentests (lua_State *L) {
 }
 
 #endif
+
