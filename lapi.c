@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.193 2014/01/27 13:34:32 roberto Exp roberto $
+** $Id: lapi.c,v 2.194 2014/02/13 12:11:34 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1086,6 +1086,7 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
     }
     case LUA_GCSETSTEPMUL: {
       res = g->gcstepmul;
+      if (data < 40) data = 40;  /* avoid ridiculous low values (and 0) */
       g->gcstepmul = data;
       break;
     }

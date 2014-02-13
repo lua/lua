@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.171 2014/02/13 12:11:34 roberto Exp roberto $
+** $Id: lgc.c,v 2.172 2014/02/13 14:46:38 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -1060,9 +1060,9 @@ void luaC_runtilstate (lua_State *L, int statesmask) {
 
 
 /*
-** run a few finalizers
+** run a few (up to 'g->gcfinnum') finalizers
 */
-static int dosomefinalization (lua_State *L) {
+static int runafewfinalizers (lua_State *L) {
   global_State *g = G(L);
   unsigned int i;
   lua_assert(!g->tobefnz || g->gcfinnum > 0);
@@ -1075,19 +1075,26 @@ static int dosomefinalization (lua_State *L) {
 
 
 /*
+** get GC debt and convert it from Kb to 'work units' (avoid zero debt
+** and overflows)
+*/
+static l_mem getdebt (global_State *g) {
+  l_mem debt = g->GCdebt;
+  int stepmul = g->gcstepmul;
+  debt = (debt / STEPMULADJ) + 1;
+  debt = (debt < MAX_LMEM / stepmul) ? debt * stepmul : MAX_LMEM;
+  return debt;
+}
+
+/*
 ** performs a basic GC step
 */
 void luaC_forcestep (lua_State *L) {
   global_State *g = G(L);
-  l_mem debt = g->GCdebt;
-  int stepmul = g->gcstepmul;
-  if (stepmul < 40) stepmul = 40;  /* avoid ridiculous low values (and 0) */
-  /* convert debt from Kb to 'work units' (avoid zero debt and overflows) */
-  debt = (debt / STEPMULADJ) + 1;
-  debt = (debt < MAX_LMEM / stepmul) ? debt * stepmul : MAX_LMEM;
+  l_mem debt = getdebt(g);
   do {
     if (g->gcstate == GCScallfin && g->tobefnz) {
-      unsigned int n = dosomefinalization(L);
+      unsigned int n = runafewfinalizers(L);
       debt -= (n * GCFINALIZECOST);
     }
     else {  /* perform one single step */
@@ -1098,9 +1105,9 @@ void luaC_forcestep (lua_State *L) {
   if (g->gcstate == GCSpause)
     setpause(g, g->GCestimate);  /* pause until next cycle */
   else {
-    debt = (debt / stepmul) * STEPMULADJ;  /* convert 'work units' to Kb */
+    debt = (debt / g->gcstepmul) * STEPMULADJ;  /* convert 'work units' to Kb */
     luaE_setdebt(g, debt);
-    dosomefinalization(L);
+    runafewfinalizers(L);
   }
 }
 
