@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.282 2013/09/13 16:21:52 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.283 2014/02/13 12:11:34 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -185,9 +185,8 @@ static int luaB_collectgarbage (lua_State *L) {
   switch (o) {
     case LUA_GCCOUNT: {
       int b = lua_gc(L, LUA_GCCOUNTB, 0);
-      lua_pushnumber(L, res + ((lua_Number)b/1024));
-      lua_pushinteger(L, b);
-      return 2;
+      lua_pushnumber(L, (lua_Number)res + ((lua_Number)b/1024));
+      return 1;
     }
     case LUA_GCSTEP: case LUA_GCISRUNNING: {
       lua_pushboolean(L, res);
