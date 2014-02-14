@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.172 2014/02/13 14:46:38 roberto Exp roberto $
+** $Id: lgc.c,v 2.173 2014/02/13 17:25:20 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -1087,11 +1087,15 @@ static l_mem getdebt (global_State *g) {
 }
 
 /*
-** performs a basic GC step
+** performs a basic GC step when collector is running
 */
-void luaC_forcestep (lua_State *L) {
+void luaC_step (lua_State *L) {
   global_State *g = G(L);
   l_mem debt = getdebt(g);
+  if (!g->gcrunning) {  /* not running? */
+    luaE_setdebt(g, -GCSTEPSIZE * 10);  /* avoid being called too often */
+    return;
+  }
   do {
     if (g->gcstate == GCScallfin && g->tobefnz) {
       unsigned int n = runafewfinalizers(L);
@@ -1110,18 +1114,6 @@ void luaC_forcestep (lua_State *L) {
     runafewfinalizers(L);
   }
 }
-
-
-/*
-** performs a basic GC step when collector is running
-*/
-void luaC_step (lua_State *L) {
-  if (!G(L)->gcrunning)
-    luaE_setdebt(G(L), -GCSTEPSIZE);  /* avoid being called too often */
-  else
-    luaC_forcestep(L);
-}
-
 
 
 /*

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.194 2014/02/13 12:11:34 roberto Exp roberto $
+** $Id: lapi.c,v 2.195 2014/02/13 17:25:20 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1070,12 +1070,20 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       break;
     }
     case LUA_GCSTEP: {
-      lu_mem debt = cast(lu_mem, data) * 1024 - GCSTEPSIZE;
-      if (g->gcrunning)
-        debt += g->GCdebt;  /* include current debt */
-      luaE_setdebt(g, debt);
-      luaC_forcestep(L);
-      if (g->gcstate == GCSpause)  /* end of cycle? */
+      l_mem debt = 1;  /* =1 to signal that it did an actual step */
+      int oldrunning = g->gcrunning;
+      g->gcrunning = 1;  /* force GC to run */
+      if (data == 0) {
+        luaE_setdebt(g, -GCSTEPSIZE);  /* to do a "small" step */
+        luaC_step(L);
+      }
+      else {  /* add 'data' to total debt */
+        debt = cast(l_mem, data) * 1024 + g->GCdebt;
+        luaE_setdebt(g, debt);
+        luaC_checkGC(L);
+      }
+      g->gcrunning = oldrunning;  /* restore previous state */
+      if (debt > 0 && g->gcstate == GCSpause)  /* end of cycle? */
         res = 1;  /* signal it */
       break;
     }
