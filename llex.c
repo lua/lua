@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.72 2014/02/04 18:57:34 roberto Exp roberto $
+** $Id: llex.c,v 2.73 2014/02/06 15:59:24 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -345,15 +345,18 @@ static int readhexaesc (LexState *ls) {
 
 
 static unsigned int readutf8esc (LexState *ls) {
-  int i = 3;  /* chars to be removed: '\', 'u', and first digit */
-  unsigned int r = gethexa(ls);  /* must have at least one digit */
+  unsigned int r;
+  int i = 4;  /* chars to be removed: '\', 'u', '{', and first digit */
+  save_and_next(ls);  /* skip 'u' */
+  esccheck(ls, ls->current == '{', "missing '{'");
+  r = gethexa(ls);  /* must have at least one digit */
   while ((save_and_next(ls), lisxdigit(ls->current))) {
     i++;
     r = (r << 4) + luaO_hexavalue(ls->current);
     esccheck(ls, r <= 0x10FFFF, "UTF-8 value too large");
   }
-  esccheck(ls, ls->current == ';', "missing ';' in UTF-8 escape");
-  next(ls);  /* skip ';' */
+  esccheck(ls, ls->current == '}', "missing '}'");
+  next(ls);  /* skip '}' */
   luaZ_buffremove(ls->buff, i);  /* remove saved chars from buffer */
   return r;
 }
