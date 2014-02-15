@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.38 2013/09/11 12:26:14 roberto Exp roberto $
+** $Id: lfunc.c,v 2.39 2014/02/13 12:11:34 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -56,12 +56,12 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
     lua_assert(upisopen(p));
     if (p->v == level)  /* found a corresponding upvalue? */
       return p;  /* return it */
-    pp = &p->u.op.next;
+    pp = &p->u.open.next;
   }
   /* not found: create a new one */
   uv = luaM_new(L, UpVal);
   uv->refcount = 0;
-  uv->u.op.next = *pp;
+  uv->u.open.next = *pp;
   *pp = uv;
   uv->v = level;  /* current value lives in the stack */
   return uv;
@@ -72,7 +72,7 @@ void luaF_close (lua_State *L, StkId level) {
   UpVal *uv;
   while (L->openupval != NULL && (uv = L->openupval)->v >= level) {
     lua_assert(upisopen(uv));
-    L->openupval = uv->u.op.next;  /* remove from `open' list */
+    L->openupval = uv->u.open.next;  /* remove from `open' list */
     if (uv->refcount == 0)  /* no references? */
       luaM_free(L, uv);  /* free upvalue */
     else {

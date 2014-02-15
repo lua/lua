@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.h,v 2.10 2013/08/27 18:53:35 roberto Exp roberto $
+** $Id: lfunc.h,v 2.11 2013/09/11 15:17:00 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -28,7 +28,7 @@ struct UpVal {
     struct {  /* (when open) */
       UpVal *next;  /* linked list */
       int touched;  /* mark to avoid cycles with dead threads */
-    } op;
+    } open;
     TValue value;  /* the value (when closed) */
   } u;
 };

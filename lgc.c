@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.173 2014/02/13 17:25:20 roberto Exp roberto $
+** $Id: lgc.c,v 2.174 2014/02/14 16:43:14 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -296,10 +296,10 @@ static void remarkupvals (global_State *g) {
     lua_assert(!isblack(thread));  /* threads are never black */
     if (!isgray(thread)) {  /* dead thread? */
       UpVal *uv = gco2th(thread)->openupval;
-      for (; uv != NULL; uv = uv->u.op.next) {
-        if (uv->u.op.touched) {
+      for (; uv != NULL; uv = uv->u.open.next) {
+        if (uv->u.open.touched) {
           markvalue(g, uv->v);  /* remark upvalue's value */
-          uv->u.op.touched = 0;
+          uv->u.open.touched = 0;
         }
       }
     }
@@ -466,7 +466,7 @@ static lu_mem traverseLclosure (global_State *g, LClosure *cl) {
     UpVal *uv = cl->upvals[i];
     if (uv != NULL) {
       if (upisopen(uv))
-        uv->u.op.touched = 1;  /* can be marked in 'remarkupvals' */
+        uv->u.open.touched = 1;  /* can be marked in 'remarkupvals' */
       else
         markvalue(g, uv->v);
     }

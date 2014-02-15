@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.163 2014/02/11 12:18:12 roberto Exp roberto $
+** $Id: ltests.c,v 2.164 2014/02/13 12:11:34 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -301,7 +301,7 @@ static void checkstack (global_State *g, lua_State *L1) {
   CallInfo *ci;
   UpVal *uv;
   lua_assert(!isdead(g, obj2gco(L1)));
-  for (uv = L1->openupval; uv != NULL; uv = uv->u.op.next)
+  for (uv = L1->openupval; uv != NULL; uv = uv->u.open.next)
     lua_assert(upisopen(uv));  /* must be open */
   for (ci = L1->ci; ci != NULL; ci = ci->previous) {
     lua_assert(ci->top <= L1->stack_last);
