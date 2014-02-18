@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.39 2014/02/13 12:11:34 roberto Exp roberto $
+** $Id: lfunc.c,v 2.40 2014/02/15 13:12:01 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,9 @@ Closure *luaF_newLclosure (lua_State *L, int n) {
   return c;
 }
 
-
+/*
+** fill a closure with new closed upvalues
+*/
 void luaF_initupvals (lua_State *L, LClosure *cl) {
   int i;
   for (i = 0; i < cl->nupvalues; i++) {
@@ -52,18 +54,24 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
   UpVal **pp = &L->openupval;
   UpVal *p;
   UpVal *uv;
+  lua_assert(isintwups(L) || L->openupval == NULL);
   while (*pp != NULL && (p = *pp)->v >= level) {
     lua_assert(upisopen(p));
     if (p->v == level)  /* found a corresponding upvalue? */
       return p;  /* return it */
     pp = &p->u.open.next;
   }
-  /* not found: create a new one */
+  /* not found: create a new upvalue */
   uv = luaM_new(L, UpVal);
   uv->refcount = 0;
-  uv->u.open.next = *pp;
+  uv->u.open.next = *pp;  /* link it to list of open upvalues */
+  uv->u.open.touched = 1;
   *pp = uv;
   uv->v = level;  /* current value lives in the stack */
+  if (!isintwups(L)) {  /* thread not in list of threads with upvalues? */
+    L->twups = G(L)->twups;  /* link it to the list */
+    G(L)->twups = L;
+  }
   return uv;
 }
 

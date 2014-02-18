@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.118 2014/02/13 12:11:34 roberto Exp roberto $
+** $Id: lstate.c,v 2.119 2014/02/13 14:46:38 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -222,6 +222,7 @@ static void preinit_thread (lua_State *L, global_State *g) {
   L->stack = NULL;
   L->ci = NULL;
   L->stacksize = 0;
+  L->twups = L;  /* thread has no upvalues */
   L->errorJmp = NULL;
   L->nCcalls = 0;
   L->hook = NULL;
@@ -317,6 +318,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->sweepgc = NULL;
   g->gray = g->grayagain = NULL;
   g->weak = g->ephemeron = g->allweak = NULL;
+  g->twups = NULL;
   g->totalbytes = sizeof(LG);
   g->GCdebt = 0;
   g->gcfinnum = 0;

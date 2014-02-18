@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.h,v 2.11 2013/09/11 15:17:00 roberto Exp roberto $
+** $Id: lfunc.h,v 2.12 2014/02/15 13:12:01 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -16,6 +16,10 @@
 
 #define sizeLclosure(n)	(cast(int, sizeof(LClosure)) + \
                          cast(int, sizeof(TValue *)*((n)-1)))
+
+
+/* test whether thread is in 'twups' list */
+#define isintwups(L)	(L->twups != L)
 
 
 /*

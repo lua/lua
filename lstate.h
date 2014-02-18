@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.99 2014/02/13 12:11:34 roberto Exp roberto $
+** $Id: lstate.h,v 2.100 2014/02/13 14:46:38 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -124,6 +124,7 @@ typedef struct global_State {
   GCObject *allweak;  /* list of all-weak tables */
   GCObject *tobefnz;  /* list of userdata to be GC */
   GCObject *fixedgc;  /* list of objects not to be collected */
+  struct lua_State *twups;  /* list of threads with open upvalues */
   Mbuffer buff;  /* temporary buffer for string concatenation */
   unsigned int gcfinnum;  /* number of finalizers to call in each GC step */
   int gcpause;  /* size of pause between successive GCs */
@@ -159,6 +160,7 @@ struct lua_State {
   lua_Hook hook;
   UpVal *openupval;  /* list of open upvalues in this stack */
   GCObject *gclist;
+  struct lua_State *twups;  /* list of threads with open upvalues */
   struct lua_longjmp *errorJmp;  /* current error recover point */
   ptrdiff_t errfunc;  /* current error handling function (stack index) */
   CallInfo base_ci;  /* CallInfo for first level (C calling Lua) */

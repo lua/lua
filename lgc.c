@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.174 2014/02/14 16:43:14 roberto Exp roberto $
+** $Id: lgc.c,v 2.175 2014/02/15 13:12:01 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -23,6 +23,11 @@
 #include "ltm.h"
 
 
+/*
+** internal state for collector while inside the atomic phase. The
+** collector should never be in this state while running regular code.
+*/
+#define GCSinsideatomic		(GCSpause + 1)
 
 /*
 ** cost of sweeping one element (the size of a small object divided
@@ -288,15 +293,21 @@ static void markbeingfnz (global_State *g) {
 /*
 ** Mark all values stored in marked open upvalues from non-marked threads.
 ** (Values from marked threads were already marked when traversing the
-** thread.)
+** thread.) Remove from the list threads that no longer have upvalues and
+** not-marked threads.
 */
 static void remarkupvals (global_State *g) {
-  GCObject *thread = g->mainthread->next;
-  for (; thread != NULL; thread = gch(thread)->next) {
-    lua_assert(!isblack(thread));  /* threads are never black */
-    if (!isgray(thread)) {  /* dead thread? */
-      UpVal *uv = gco2th(thread)->openupval;
-      for (; uv != NULL; uv = uv->u.open.next) {
+  lua_State *thread;
+  lua_State **p = &g->twups;
+  while ((thread = *p) != NULL) {
+    lua_assert(!isblack(obj2gco(thread)));  /* threads are never black */
+    if (isgray(obj2gco(thread)) && thread->openupval != NULL)
+      p = &thread->twups;  /* keep marked thread with upvalues in the list */
+    else {  /* thread is not marked or without upvalues */
+      UpVal *uv;
+      *p = thread->twups;  /* remove thread from the list */
+      thread->twups = thread;  /* mark that it is out of list */
+      for (uv = thread->openupval; uv != NULL; uv = uv->u.open.next) {
         if (uv->u.open.touched) {
           markvalue(g, uv->v);  /* remark upvalue's value */
           uv->u.open.touched = 0;
@@ -459,13 +470,19 @@ static lu_mem traverseCclosure (global_State *g, CClosure *cl) {
   return sizeCclosure(cl->nupvalues);
 }
 
+/*
+** open upvalues point to values in a thread, so those values should
+** be marked when the thread is traversed except in the atomic phase
+** (because then the value cannot be changed by the thread and the
+** thread may not be traversed again)
+*/
 static lu_mem traverseLclosure (global_State *g, LClosure *cl) {
   int i;
   markobject(g, cl->p);  /* mark its prototype */
   for (i = 0; i < cl->nupvalues; i++) {  /* mark its upvalues */
     UpVal *uv = cl->upvals[i];
     if (uv != NULL) {
-      if (upisopen(uv))
+      if (upisopen(uv) && g->gcstate != GCSinsideatomic)
         uv->u.open.touched = 1;  /* can be marked in 'remarkupvals' */
       else
         markvalue(g, uv->v);
@@ -480,12 +497,19 @@ static lu_mem traversestack (global_State *g, lua_State *th) {
   StkId o = th->stack;
   if (o == NULL)
     return 1;  /* stack not completely built yet */
+  lua_assert(g->gcstate == GCSinsideatomic ||
+             th->openupval == NULL || isintwups(th));
   for (; o < th->top; o++)  /* mark live elements in the stack */
     markvalue(g, o);
-  if (g->gcstate == GCSatomic) {  /* final traversal? */
+  if (g->gcstate == GCSinsideatomic) {  /* final traversal? */
     StkId lim = th->stack + th->stacksize;  /* real end of stack */
     for (; o < lim; o++)  /* clear not-marked stack slice */
       setnilvalue(o);
+    /* 'remarkupvals' may have removed thread from 'twups' list */ 
+    if (!isintwups(th) && th->openupval != NULL) {
+      th->twups = g->twups;  /* link it back to the list */
+      g->twups = th;
+    }
   }
   else {
     CallInfo *ci;
@@ -941,6 +965,7 @@ static l_mem atomic (lua_State *L) {
   l_mem work = -cast(l_mem, g->GCmemtrav);  /* start counting work */
   GCObject *origweak, *origall;
   lua_assert(!iswhite(obj2gco(g->mainthread)));
+  g->gcstate = GCSinsideatomic;
   markobject(g, L);  /* mark running thread */
   /* registry and global metatables may be changed by API */
   markvalue(g, &g->l_registry);
