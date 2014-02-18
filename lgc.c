@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.175 2014/02/15 13:12:01 roberto Exp roberto $
+** $Id: lgc.c,v 2.176 2014/02/18 13:39:37 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -954,7 +954,6 @@ void luaC_freeallobjects (lua_State *L) {
   g->gckind = KGC_NORMAL;
   sweepwholelist(L, &g->finobj);
   sweepwholelist(L, &g->allgc);
-  sweepwholelist(L, &g->mainthread->next);
   sweepwholelist(L, &g->fixedgc);  /* collect fixed objects */
   lua_assert(g->strt.nuse == 0);
 }
@@ -1046,9 +1045,6 @@ static lu_mem singlestep (lua_State *L) {
       return work + sw * GCSWEEPCOST;
     }
     case GCSswpallgc: {  /* sweep "regular" objects */
-      return sweepstep(L, g, GCSswpthreads, &g->mainthread->next);
-    }
-    case GCSswpthreads: {  /* sweep threads */
       return sweepstep(L, g, GCSswpfinobj, &g->finobj);
     }
     case GCSswpfinobj: {  /* sweep objects with finalizers */

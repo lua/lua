@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.79 2014/02/13 14:46:38 roberto Exp roberto $
+** $Id: lgc.h,v 2.80 2014/02/14 16:43:14 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -39,12 +39,11 @@
 #define GCSpropagate	0
 #define GCSatomic	1
 #define GCSswpallgc	2
-#define GCSswpthreads	3
-#define GCSswpfinobj	4
-#define GCSswptobefnz	5
-#define GCSswpend	6
-#define GCScallfin	7
-#define GCSpause	8
+#define GCSswpfinobj	3
+#define GCSswptobefnz	4
+#define GCSswpend	5
+#define GCScallfin	6
+#define GCSpause	7
 
 
 #define issweepphase(g)  \

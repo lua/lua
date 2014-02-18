@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.100 2014/02/13 14:46:38 roberto Exp roberto $
+** $Id: lstate.h,v 2.101 2014/02/18 13:39:37 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -21,7 +21,6 @@
 ** belong to one (and only one) of these lists, using field 'next' of
 ** the 'CommonHeader' for the link:
 **
-** mainthread->next: all threads;
 ** allgc: all objects not marked for finalization;
 ** finobj: all objects marked for finalization;
 ** tobefnz: all objects ready to be finalized; 

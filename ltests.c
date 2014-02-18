@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.164 2014/02/13 12:11:34 roberto Exp roberto $
+** $Id: ltests.c,v 2.165 2014/02/15 13:12:01 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -426,14 +426,6 @@ int lua_checkmemory (lua_State *L) {
     checkobject(g, o, maybedead);
     lua_assert(!tofinalize(o));
   }
-  /* check thread list */
-  checkgray(g, obj2gco(g->mainthread));
-  maybedead = (GCSatomic < g->gcstate && g->gcstate <= GCSswpthreads);
-  for (o = obj2gco(g->mainthread); o != NULL; o = gch(o)->next) {
-    checkobject(g, o, maybedead);
-    lua_assert(!tofinalize(o));
-    lua_assert(gch(o)->tt == LUA_TTHREAD);
-  }
   /* check 'finobj' list */
   checkgray(g, g->finobj);
   for (o = g->finobj; o != NULL; o = gch(o)->next) {
@@ -615,12 +607,10 @@ static int gc_color (lua_State *L) {
 
 
 static int gc_state (lua_State *L) {
-  static const char *statenames[] = {"propagate", "atomic",
-    "sweepallgc", "sweepthreads", "sweepfinobj",
-    "sweeptobefnz", "sweepend", "pause", ""};
-  static const int states[] = {GCSpropagate, GCSatomic,
-    GCSswpallgc, GCSswpthreads, GCSswpfinobj,
-    GCSswptobefnz, GCSswpend, GCSpause, -1};
+  static const char *statenames[] = {"propagate", "atomic", "sweepallgc",
+      "sweepfinobj", "sweeptobefnz", "sweepend", "pause", ""};
+  static const int states[] = {GCSpropagate, GCSatomic, GCSswpallgc,
+      GCSswpfinobj, GCSswptobefnz, GCSswpend, GCSpause, -1};
   int option = states[luaL_checkoption(L, 1, "", statenames)];
   if (option == -1) {
     lua_pushstring(L, statenames[G(L)->gcstate]);
