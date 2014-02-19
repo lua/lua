@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.257 2014/02/05 19:14:53 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.258 2014/02/11 17:39:15 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -176,6 +176,8 @@ static int typeerror (lua_State *L, int arg, const char *tname) {
     if (lua_isstring(L, -1))
       typearg = lua_tostring(L, -1);
   }
+  else if (lua_type(L, arg) == LUA_TLIGHTUSERDATA)
+    typearg = "light userdata";
   msg = lua_pushfstring(L, "%s expected, got %s", tname, typearg);
   return luaL_argerror(L, arg, msg);
 }
