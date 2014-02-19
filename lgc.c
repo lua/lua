@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.176 2014/02/18 13:39:37 roberto Exp roberto $
+** $Id: lgc.c,v 2.177 2014/02/18 13:46:26 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -233,12 +233,15 @@ static void reallymarkobject (global_State *g, GCObject *o) {
       break;
     }
     case LUA_TUSERDATA: {
+      TValue uvalue;
       markobject(g, gco2u(o)->metatable);  /* mark its metatable */
       gray2black(o);
       g->GCmemtrav += sizeudata(gco2u(o));
-      o = obj2gco(gco2u(o)->env);
-      if (o && iswhite(o))
-        goto reentry;  /* reallymarkobject(g, gco2u(o)->env); */
+      getuservalue(g->mainthread, rawgco2u(o), &uvalue);
+      if (valiswhite(&uvalue)) {  /* markvalue(g, &uvalue); */
+        o = gcvalue(&uvalue);
+        goto reentry;
+      }
       break;
     }
     case LUA_TLCL: {

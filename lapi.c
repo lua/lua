@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.196 2014/02/14 16:43:14 roberto Exp roberto $
+** $Id: lapi.c,v 2.197 2014/02/15 13:12:01 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -740,10 +740,7 @@ LUA_API void lua_getuservalue (lua_State *L, int idx) {
   lua_lock(L);
   o = index2addr(L, idx);
   api_check(L, ttisfulluserdata(o), "full userdata expected");
-  if (uvalue(o)->env) {
-    sethvalue(L, L->top, uvalue(o)->env);
-  } else
-    setnilvalue(L->top);
+  getuservalue(L, rawuvalue(o), L->top);
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -878,13 +875,8 @@ LUA_API void lua_setuservalue (lua_State *L, int idx) {
   api_checknelems(L, 1);
   o = index2addr(L, idx);
   api_check(L, ttisfulluserdata(o), "full userdata expected");
-  if (ttisnil(L->top - 1))
-    uvalue(o)->env = NULL;
-  else {
-    api_check(L, ttistable(L->top - 1), "table expected");
-    uvalue(o)->env = hvalue(L->top - 1);
-    luaC_objbarrier(L, gcvalue(o), hvalue(L->top - 1));
-  }
+  setuservalue(L, rawuvalue(o), L->top - 1);
+  luaC_barrier(L, gcvalue(o), L->top - 1);
   L->top--;
   lua_unlock(L);
 }
@@ -1189,7 +1181,7 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
   Udata *u;
   lua_lock(L);
   luaC_checkGC(L);
-  u = luaS_newudata(L, size, NULL);
+  u = luaS_newudata(L, size);
   setuvalue(L, L->top, u);
   api_incr_top(L);
   lua_unlock(L);

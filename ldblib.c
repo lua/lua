@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.134 2013/07/10 20:57:05 roberto Exp roberto $
+** $Id: ldblib.c,v 1.135 2013/07/22 16:05:53 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -69,11 +69,8 @@ static int db_getuservalue (lua_State *L) {
 
 
 static int db_setuservalue (lua_State *L) {
-  if (lua_type(L, 1) == LUA_TLIGHTUSERDATA)
-    luaL_argerror(L, 1, "full userdata expected, got light userdata");
   luaL_checktype(L, 1, LUA_TUSERDATA);
-  if (!lua_isnoneornil(L, 2))
-    luaL_checktype(L, 2, LUA_TTABLE);
+  luaL_checkany(L, 2);
   lua_settop(L, 2);
   lua_setuservalue(L, 1);
   return 1;

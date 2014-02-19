@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.83 2013/12/04 12:15:22 roberto Exp roberto $
+** $Id: lobject.h,v 2.85 2014/02/19 13:51:09 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -331,12 +331,24 @@ typedef union Udata {
   L_Umaxalign dummy;  /* ensures maximum alignment for `local' udata */
   struct {
     CommonHeader;
+    lu_byte ttuv_;  /* user value's tag */
     struct Table *metatable;
-    struct Table *env;
     size_t len;  /* number of bytes */
+    union Value user_;  /* user value */
   } uv;
 } Udata;
 
+
+#define setuservalue(L,u,o) \
+	{ const TValue *io=(o); Udata *iu = (u); \
+	  iu->uv.user_ = io->value_; iu->uv.ttuv_ = io->tt_; \
+	  checkliveness(G(L),io); }
+
+
+#define getuservalue(L,u,o) \
+	{ TValue *io=(o); const Udata *iu = (u); \
+	  io->value_ = iu->uv.user_; io->tt_ = iu->uv.ttuv_; \
+	  checkliveness(G(L),io); }
 
 
 /*

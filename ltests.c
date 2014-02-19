@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.165 2014/02/15 13:12:01 roberto Exp roberto $
+** $Id: ltests.c,v 2.166 2014/02/18 13:46:26 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -322,8 +322,11 @@ static void checkobject (global_State *g, GCObject *o, int maybedead) {
     lua_assert(g->gcstate != GCSpause || iswhite(o));
     switch (gch(o)->tt) {
       case LUA_TUSERDATA: {
+        TValue uservalue;
         Table *mt = gco2u(o)->metatable;
         if (mt) checkobjref(g, o, mt);
+        getuservalue(g->mainthread, rawgco2u(o), &uservalue);
+        checkobjref(g, o, &uservalue);
         break;
       }
       case LUA_TTABLE: {
