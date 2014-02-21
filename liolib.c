@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.114 2013/06/07 19:01:35 roberto Exp roberto $
+** $Id: liolib.c,v 2.115 2014/01/27 13:28:45 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -403,20 +403,15 @@ static int read_line (lua_State *L, FILE *f, int chop) {
 }
 
 
-#define MAX_SIZE_T	(~(size_t)0)
-
 static void read_all (lua_State *L, FILE *f) {
-  size_t rlen = LUAL_BUFFERSIZE;  /* how much to read in each cycle */
+  size_t nr;
   luaL_Buffer b;
   luaL_buffinit(L, &b);
-  for (;;) {
-    char *p = luaL_prepbuffsize(&b, rlen);
-    size_t nr = fread(p, sizeof(char), rlen, f);
+  do {  /* read file in chunks of LUAL_BUFFERSIZE bytes */
+    char *p = luaL_prepbuffsize(&b, LUAL_BUFFERSIZE);
+    nr = fread(p, sizeof(char), LUAL_BUFFERSIZE, f);
     luaL_addsize(&b, nr);
-    if (nr < rlen) break;  /* eof? */
-    else if (rlen <= (MAX_SIZE_T / 4))  /* avoid buffers too large */
-      rlen *= 2;  /* double buffer size at each iteration */
-  }
+  } while (nr == LUAL_BUFFERSIZE);
   luaL_pushresult(&b);  /* close buffer */
 }
 
