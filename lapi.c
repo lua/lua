@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.197 2014/02/15 13:12:01 roberto Exp roberto $
+** $Id: lapi.c,v 2.198 2014/02/19 13:51:09 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1009,14 +1009,14 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
 }
 
 
-LUA_API int lua_dump (lua_State *L, lua_Writer writer, void *data) {
+LUA_API int lua_dump (lua_State *L, lua_Writer writer, void *data, int strip) {
   int status;
   TValue *o;
   lua_lock(L);
   api_checknelems(L, 1);
   o = L->top - 1;
   if (isLfunction(o))
-    status = luaU_dump(L, getproto(o), writer, data, 0);
+    status = luaU_dump(L, getproto(o), writer, data, strip);
   else
     status = 1;
   lua_unlock(L);
@@ -1208,7 +1208,7 @@ static const char *aux_upvalue (StkId fi, int n, TValue **val,
       *val = f->upvals[n-1]->v;
       if (uv) *uv = f->upvals[n - 1];
       name = p->upvalues[n-1].name;
-      return (name == NULL) ? "" : getstr(name);
+      return (name == NULL) ? "(*no name)" : getstr(name);
     }
     default: return NULL;  /* not a closure */
   }
