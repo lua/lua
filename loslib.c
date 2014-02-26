@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.41 2013/05/14 15:57:11 roberto Exp roberto $
+** $Id: loslib.c,v 1.42 2014/02/26 15:27:56 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -29,8 +29,8 @@
 #define LUA_STRFTIMEOPTIONS	{ "aAbBcdHIjmMpSUwWxXyYz%", "" }
 #else
 #define LUA_STRFTIMEOPTIONS \
-	{ "aAbBcCdDeFgGhHIjmMnprRStTuUVwWxXyYzZ%", "" \
-	  "", "E", "cCxXyY",  \
+	{ "aAbBcCdDeFgGhHIjmMnprRStTuUVwWxXyYzZ%", "", \
+	  "E", "cCxXyY",  \
 	  "O", "deHImMSuUVwWy" }
 #endif
 
