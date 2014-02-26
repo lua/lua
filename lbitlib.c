@@ -1,5 +1,5 @@
 /*
-** $Id: lbitlib.c,v 1.21 2013/07/09 17:49:50 roberto Exp roberto $
+** $Id: lbitlib.c,v 1.22 2013/07/09 18:31:01 roberto Exp roberto $
 ** Standard library for bitwise operations
 ** See Copyright Notice in lua.h
 */
@@ -19,7 +19,11 @@
 #endif
 
 
-
+/*
+** a lua_Unsigned with its first LUA_NBITS bits equal to 1. (Shift must
+** be made in two parts to avoid problems when LUA_NBITS is equal to the
+** number of bits in a lua_Unsigned.)
+*/
 #define ALLONES		(~(((~(lua_Unsigned)0) << (LUA_NBITS - 1)) << 1))
 
 
