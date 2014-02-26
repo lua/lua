@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.72 2014/01/27 13:34:32 roberto Exp roberto $
+** $Id: lobject.c,v 2.73 2014/02/06 15:59:24 roberto Exp $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -159,21 +159,25 @@ static int isneg (const char **s) {
 
 
 /*
+** {======================================================
 ** lua_strx2number converts an hexadecimal numeric string to a number.
 ** In C99, 'strtod' does both conversions. C89, however, has no function
 ** to convert floating hexadecimal strings to numbers. For these
 ** systems, you can leave 'lua_strx2number' undefined and Lua will
 ** provide its own implementation.
+** =======================================================
 */
-#if defined(LUA_USE_STRTODHEX)
+#if !defined(lua_strx2number)		/* { */
+
+#if defined(LUA_USE_C99)		/* { */
+
 #define lua_strx2number(s,p)    lua_str2number(s,p)
-#endif
 
+#else					/* }{ */
 
-#if !defined(lua_strx2number)
+/* Lua's implementation for 'lua_strx2number' */
 
 #include <math.h>
-
 
 /* maximum number of significant digits to read (to avoid overflows
    even with single floats) */
@@ -237,7 +241,11 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
   return l_mathop(ldexp)(r, e);
 }
 
-#endif
+#endif					/* } */
+
+#endif					/* } */
+
+/* }====================================================== */
 
 
 int luaO_str2d (const char *s, size_t len, lua_Number *result) {

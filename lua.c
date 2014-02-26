@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.208 2013/12/16 14:27:17 roberto Exp roberto $
+** $Id: lua.c,v 1.209 2014/02/05 14:22:55 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -43,16 +43,26 @@
 ** lua_stdin_is_tty detects whether the standard input is a 'tty' (that
 ** is, whether we're running lua interactively).
 */
-#if defined(LUA_USE_ISATTY)
+#if !defined(lua_stdin_is_tty)	/* { */
+
+#if defined(LUA_USE_POSIX)	/* { */
+
 #include <unistd.h>
 #define lua_stdin_is_tty()	isatty(0)
-#elif defined(LUA_WIN)
+
+#elif defined(LUA_WIN)		/* }{ */
+
 #include <io.h>
-#include <stdio.h>
 #define lua_stdin_is_tty()	_isatty(_fileno(stdin))
-#else
+
+#else				/* }{ */
+
+/* ANSI definition */
 #define lua_stdin_is_tty()	1  /* assume stdin is a tty */
-#endif
+
+#endif				/* } */
+
+#endif				/* } */
 
 
 /*
@@ -61,9 +71,10 @@
 ** lua_saveline defines how to "save" a read line in a "history".
 ** lua_freeline defines how to free a line read by lua_readline.
 */
-#if defined(LUA_USE_READLINE)
+#if !defined(lua_readline)	/* { */
 
-#include <stdio.h>
+#if defined(LUA_USE_READLINE)	/* { */
+
 #include <readline/readline.h>
 #include <readline/history.h>
 #define lua_readline(L,b,p)	((void)L, ((b)=readline(p)) != NULL)
@@ -72,7 +83,7 @@
           add_history(lua_tostring(L, idx));  /* add it to history */
 #define lua_freeline(L,b)	((void)L, free(b))
 
-#elif !defined(lua_readline)
+#else				/* }{ */
 
 #define lua_readline(L,b,p) \
         ((void)L, fputs(p, stdout), fflush(stdout),  /* show prompt */ \
@@ -80,7 +91,9 @@
 #define lua_saveline(L,idx)	{ (void)L; (void)idx; }
 #define lua_freeline(L,b)	{ (void)L; (void)b; }
 
-#endif
+#endif				/* } */
+
+#endif				/* } */
 
 
 
