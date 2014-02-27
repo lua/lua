@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 2.18 2013/04/12 19:07:09 roberto Exp roberto $
+** $Id: ldump.c,v 2.19 2013/04/26 18:48:35 roberto Exp roberto $
 ** save precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -159,9 +159,17 @@ static void DumpFunction(const Proto* f, DumpState* D)
 
 static void DumpHeader(DumpState* D)
 {
- lu_byte h[LUAC_HEADERSIZE];
- luaU_header(h);
- DumpBlock(h,LUAC_HEADERSIZE,D);
+ DumpBlock(LUA_SIGNATURE,sizeof(LUA_SIGNATURE),D);
+ DumpBlock(LUAC_DATA,sizeof(LUAC_DATA),D);
+ DumpChar(LUAC_VERSION,D);
+ DumpChar(LUAC_FORMAT,D);
+ DumpChar(sizeof(int),D);
+ DumpChar(sizeof(size_t),D);
+ DumpChar(sizeof(Instruction),D);
+ DumpChar(sizeof(lua_Integer),D);
+ DumpChar(sizeof(lua_Number),D);
+ DumpInteger(LUAC_INT,D);
+ DumpNumber(LUAC_NUM,D);
 }
 
 /*

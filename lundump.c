@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.24 2013/08/16 18:55:49 roberto Exp roberto $
+** $Id: lundump.c,v 2.25 2014/02/13 12:11:34 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -84,11 +84,9 @@ static TString* LoadString(LoadState* S)
   return NULL;
  else
  {
-  TString* ts;
   char* s=luaZ_openspace(S->L,S->b,size);
   LoadBlock(S,s,size*sizeof(char));
-  ts = luaS_newlstr(S->L,s,size-1);		/* remove trailing '\0' */
-  return ts;
+  return luaS_newlstr(S->L,s,size-1);		/* remove trailing '\0' */
  }
 }
 
@@ -193,23 +191,34 @@ static void LoadFunction(LoadState* S, Proto* f)
  LoadDebug(S,f);
 }
 
-/* the code below must be consistent with the code in luaU_header */
-#define N0	LUAC_HEADERSIZE
-#define N1	(sizeof(LUA_SIGNATURE)-sizeof(char))
-#define N2	N1+2
-#define N3	N2+6
-
-static void LoadHeader(LoadState* S)
+static void checkstring(LoadState *S, const char *s, const char *msg)
 {
- lu_byte h[LUAC_HEADERSIZE];
- lu_byte s[LUAC_HEADERSIZE];
- luaU_header(h);
- memcpy(s,h,sizeof(char));			/* first char already read */
- LoadBlock(S,s+sizeof(char),LUAC_HEADERSIZE-sizeof(char));
- if (memcmp(h,s,N0)==0) return;
- if (memcmp(h,s,N1)!=0) error(S,"not a");
- if (memcmp(h,s,N2)!=0) error(S,"version mismatch in");
- if (memcmp(h,s,N3)!=0) error(S,"incompatible"); else error(S,"corrupted");
+ char buff[sizeof(LUA_SIGNATURE)+sizeof(LUAC_DATA)];  /* larger than each */
+ LoadMem(S,buff,strlen(s)+1,sizeof(char));
+ if (strcmp(s,buff)!=0) error(S,msg);
+}
+
+static void fchecksize(LoadState *S, size_t size, const char *tname)
+{
+ if (LoadByte(S) != size)
+  error(S,luaO_pushfstring(S->L,"%s size mismatch in",tname));
+}
+
+#define checksize(S,t)	fchecksize(S,sizeof(t),#t)
+
+static void checkHeader(LoadState* S)
+{
+ checkstring(S,LUA_SIGNATURE+1,"not a");
+ checkstring(S,LUAC_DATA,"corrupted");
+ if (LoadByte(S) != LUAC_VERSION) error(S,"version mismatch in");
+ if (LoadByte(S) != LUAC_FORMAT) error(S,"format mismatch in");
+ checksize(S,int);
+ checksize(S,size_t);
+ checksize(S,Instruction);
+ checksize(S,lua_Integer);
+ checksize(S,lua_Number);
+ if (LoadInteger(S) != LUAC_INT) error(S,"endianess mismatch in");
+ if (LoadNumber(S) != LUAC_NUM) error(S,"float format mismatch in");
 }
 
 /*
@@ -228,7 +237,7 @@ Closure* luaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name)
  S.L=L;
  S.Z=Z;
  S.b=buff;
- LoadHeader(&S);
+ checkHeader(&S);
  cl=luaF_newLclosure(L,1);
  setclLvalue(L,L->top,cl); incr_top(L);
  cl->l.p=luaF_newproto(L);
@@ -242,29 +251,4 @@ Closure* luaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name)
  }
  luai_verifycode(L,buff,cl->l.p);
  return cl;
-}
-
-#define MYINT(s)	(s[0]-'0')
-#define VERSION		MYINT(LUA_VERSION_MAJOR)*16+MYINT(LUA_VERSION_MINOR)
-#define FORMAT		0		/* this is the official format */
-
-/*
-* make header for precompiled chunks
-* if you change the code below be sure to update LoadHeader and FORMAT above
-* and LUAC_HEADERSIZE in lundump.h
-*/
-void luaU_header (lu_byte* h)
-{
- int x=1;
- memcpy(h,LUA_SIGNATURE,sizeof(LUA_SIGNATURE)-sizeof(char));
- h+=sizeof(LUA_SIGNATURE)-sizeof(char);
- *h++=cast_byte(VERSION);
- *h++=cast_byte(FORMAT);
- *h++=cast_byte(*(char*)&x);			/* endianness */
- *h++=cast_byte(sizeof(int));
- *h++=cast_byte(sizeof(size_t));
- *h++=cast_byte(sizeof(Instruction));
- *h++=cast_byte(sizeof(lua_Number));
- *h++=cast_byte(((lua_Number)0.5)==0);		/* is lua_Number integral? */
- memcpy(h,LUAC_TAIL,sizeof(LUAC_TAIL)-sizeof(char));
 }
