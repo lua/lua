@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 2.19 2013/04/26 18:48:35 roberto Exp roberto $
+** $Id: ldump.c,v 2.20 2014/02/27 16:56:20 roberto Exp roberto $
 ** save precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -184,6 +184,7 @@ int luaU_dump (lua_State* L, const Proto* f, lua_Writer w, void* data, int strip
  D.strip=strip;
  D.status=0;
  DumpHeader(&D);
+ DumpChar(f->sizeupvalues,&D);
  DumpFunction(f,&D);
  return D.status;
 }
