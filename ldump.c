@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 2.21 2014/02/27 18:56:15 roberto Exp roberto $
+** $Id: ldump.c,v 2.22 2014/02/28 12:25:12 roberto Exp roberto $
 ** save precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -23,8 +23,9 @@ typedef struct {
  int status;
 } DumpState;
 
-#define DumpMem(b,n,size,D)	DumpBlock(b,(n)*(size),D)
-#define DumpVar(x,D)		DumpMem(&x,1,sizeof(x),D)
+
+#define DumpVar(x,D)		DumpBlock(&x,sizeof(x),D)
+#define DumpVector(v,n,D)	DumpBlock(v,(n)*sizeof((v)[0]),D)
 
 static void DumpBlock(const void* b, size_t size, DumpState* D)
 {
@@ -57,12 +58,6 @@ static void DumpInteger(lua_Integer x, DumpState* D)
  DumpVar(x,D);
 }
 
-static void DumpVector(const void* b, int n, size_t size, DumpState* D)
-{
- DumpInt(n,D);
- DumpMem(b,n,size,D);
-}
-
 static void DumpString(const TString* s, DumpState* D)
 {
  if (s==NULL)
@@ -78,7 +73,11 @@ static void DumpString(const TString* s, DumpState* D)
  }
 }
 
-#define DumpCode(f,D)	 DumpVector(f->code,f->sizecode,sizeof(Instruction),D)
+static void DumpCode(const Proto* f, DumpState* D)
+{
+ DumpInt(f->sizecode,D);
+ DumpVector(f->code,f->sizecode,D);
+}
 
 static void DumpFunction(const Proto* f, DumpState* D);
 
@@ -130,7 +129,8 @@ static void DumpDebug(const Proto* f, DumpState* D)
  int i,n;
  DumpString((D->strip) ? NULL : f->source,D);
  n= (D->strip) ? 0 : f->sizelineinfo;
- DumpVector(f->lineinfo,n,sizeof(int),D);
+ DumpInt(n,D);
+ DumpVector(f->lineinfo,n,D);
  n= (D->strip) ? 0 : f->sizelocvars;
  DumpInt(n,D);
  for (i=0; i<n; i++)

@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.27 2014/02/27 18:56:15 roberto Exp roberto $
+** $Id: lundump.c,v 2.28 2014/02/28 12:25:12 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -33,9 +33,8 @@ static l_noret error(LoadState* S, const char* why)
  luaD_throw(S->L,LUA_ERRSYNTAX);
 }
 
-#define LoadMem(S,b,n,size)	LoadBlock(S,b,(n)*(size))
-#define LoadVar(S,x)		LoadMem(S,&x,1,sizeof(x))
-#define LoadVector(S,b,n,size)	LoadMem(S,b,n,size)
+#define LoadVar(S,x)		LoadBlock(S,&x,sizeof(x))
+#define LoadVector(S,b,n)	LoadBlock(S,b,(n)*sizeof((b)[0]))
 
 #if !defined(luai_verifycode)
 #define luai_verifycode(L,b,f)	/* empty */
@@ -84,7 +83,7 @@ static TString* LoadString(LoadState* S)
  else
  {
   char* s=luaZ_openspace(S->L,S->b,size);
-  LoadBlock(S,s,size*sizeof(char));
+  LoadVector(S,s,size);
   return luaS_newlstr(S->L,s,size-1);		/* remove trailing '\0' */
  }
 }
@@ -94,7 +93,7 @@ static void LoadCode(LoadState* S, Proto* f)
  int n=LoadInt(S);
  f->code=luaM_newvector(S->L,n,Instruction);
  f->sizecode=n;
- LoadVector(S,f->code,n,sizeof(Instruction));
+ LoadVector(S,f->code,n);
 }
 
 static void LoadFunction(LoadState* S, Proto* f);
@@ -162,7 +161,7 @@ static void LoadDebug(LoadState* S, Proto* f)
  n=LoadInt(S);
  f->lineinfo=luaM_newvector(S->L,n,int);
  f->sizelineinfo=n;
- LoadVector(S,f->lineinfo,n,sizeof(int));
+ LoadVector(S,f->lineinfo,n);
  n=LoadInt(S);
  f->locvars=luaM_newvector(S->L,n,LocVar);
  f->sizelocvars=n;
@@ -193,7 +192,7 @@ static void LoadFunction(LoadState* S, Proto* f)
 static void checkstring(LoadState *S, const char *s, const char *msg)
 {
  char buff[sizeof(LUA_SIGNATURE)+sizeof(LUAC_DATA)];  /* larger than each */
- LoadMem(S,buff,strlen(s)+1,sizeof(char));
+ LoadVector(S,buff,strlen(s)+1);
  if (strcmp(s,buff)!=0) error(S,msg);
 }
 
