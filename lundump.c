@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.26 2014/02/27 16:56:20 roberto Exp roberto $
+** $Id: lundump.c,v 2.27 2014/02/27 18:56:15 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -34,7 +34,6 @@ static l_noret error(LoadState* S, const char* why)
 }
 
 #define LoadMem(S,b,n,size)	LoadBlock(S,b,(n)*(size))
-#define LoadByte(S)		(lu_byte)LoadChar(S)
 #define LoadVar(S,x)		LoadMem(S,&x,1,sizeof(x))
 #define LoadVector(S,b,n,size)	LoadMem(S,b,n,size)
 
@@ -47,9 +46,9 @@ static void LoadBlock(LoadState* S, void* b, size_t size)
  if (luaZ_read(S->Z,b,size)!=0) error(S,"truncated");
 }
 
-static int LoadChar(LoadState* S)
+static lu_byte LoadByte(LoadState* S)
 {
- char x;
+ lu_byte x;
  LoadVar(S,x);
  return x;
 }
@@ -110,14 +109,14 @@ static void LoadConstants(LoadState* S, Proto* f)
  for (i=0; i<n; i++)
  {
   TValue* o=&f->k[i];
-  int t=LoadChar(S);
+  int t=LoadByte(S);
   switch (t)
   {
    case LUA_TNIL:
 	setnilvalue(o);
 	break;
    case LUA_TBOOLEAN:
-	setbvalue(o,LoadChar(S));
+	setbvalue(o,LoadByte(S));
 	break;
    case LUA_TNUMFLT:
 	setnvalue(o,LoadNumber(S));

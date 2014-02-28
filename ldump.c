@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 2.20 2014/02/27 16:56:20 roberto Exp roberto $
+** $Id: ldump.c,v 2.21 2014/02/27 18:56:15 roberto Exp roberto $
 ** save precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -36,9 +36,9 @@ static void DumpBlock(const void* b, size_t size, DumpState* D)
  }
 }
 
-static void DumpChar(int y, DumpState* D)
+static void DumpByte(int y, DumpState* D)
 {
- char x=(char)y;
+ lu_byte x=(lu_byte)y;
  DumpVar(x,D);
 }
 
@@ -89,13 +89,13 @@ static void DumpConstants(const Proto* f, DumpState* D)
  for (i=0; i<n; i++)
  {
   const TValue* o=&f->k[i];
-  DumpChar(ttype(o),D);
+  DumpByte(ttype(o),D);
   switch (ttype(o))
   {
    case LUA_TNIL:
 	break;
    case LUA_TBOOLEAN:
-	DumpChar(bvalue(o),D);
+	DumpByte(bvalue(o),D);
 	break;
    case LUA_TNUMFLT:
 	DumpNumber(fltvalue(o),D);
@@ -120,8 +120,8 @@ static void DumpUpvalues(const Proto* f, DumpState* D)
  DumpInt(n,D);
  for (i=0; i<n; i++)
  {
-  DumpChar(f->upvalues[i].instack,D);
-  DumpChar(f->upvalues[i].idx,D);
+  DumpByte(f->upvalues[i].instack,D);
+  DumpByte(f->upvalues[i].idx,D);
  }
 }
 
@@ -148,9 +148,9 @@ static void DumpFunction(const Proto* f, DumpState* D)
 {
  DumpInt(f->linedefined,D);
  DumpInt(f->lastlinedefined,D);
- DumpChar(f->numparams,D);
- DumpChar(f->is_vararg,D);
- DumpChar(f->maxstacksize,D);
+ DumpByte(f->numparams,D);
+ DumpByte(f->is_vararg,D);
+ DumpByte(f->maxstacksize,D);
  DumpCode(f,D);
  DumpConstants(f,D);
  DumpUpvalues(f,D);
@@ -161,13 +161,13 @@ static void DumpHeader(DumpState* D)
 {
  DumpBlock(LUA_SIGNATURE,sizeof(LUA_SIGNATURE),D);
  DumpBlock(LUAC_DATA,sizeof(LUAC_DATA),D);
- DumpChar(LUAC_VERSION,D);
- DumpChar(LUAC_FORMAT,D);
- DumpChar(sizeof(int),D);
- DumpChar(sizeof(size_t),D);
- DumpChar(sizeof(Instruction),D);
- DumpChar(sizeof(lua_Integer),D);
- DumpChar(sizeof(lua_Number),D);
+ DumpByte(LUAC_VERSION,D);
+ DumpByte(LUAC_FORMAT,D);
+ DumpByte(sizeof(int),D);
+ DumpByte(sizeof(size_t),D);
+ DumpByte(sizeof(Instruction),D);
+ DumpByte(sizeof(lua_Integer),D);
+ DumpByte(sizeof(lua_Number),D);
  DumpInteger(LUAC_INT,D);
  DumpNumber(LUAC_NUM,D);
 }
@@ -184,7 +184,7 @@ int luaU_dump (lua_State* L, const Proto* f, lua_Writer w, void* data, int strip
  D.strip=strip;
  D.status=0;
  DumpHeader(&D);
- DumpChar(f->sizeupvalues,&D);
+ DumpByte(f->sizeupvalues,&D);
  DumpFunction(f,&D);
  return D.status;
 }
