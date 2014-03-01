@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.28 2014/02/28 12:25:12 roberto Exp roberto $
+** $Id: lundump.c,v 2.29 2014/02/28 16:13:01 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -76,15 +76,15 @@ static lua_Integer LoadInteger(LoadState* S)
 
 static TString* LoadString(LoadState* S)
 {
- size_t size;
- LoadVar(S,size);
+ size_t size = LoadByte(S);
+ if (size == 0xFF) LoadVar(S,size);
  if (size==0)
   return NULL;
  else
  {
-  char* s=luaZ_openspace(S->L,S->b,size);
+  char* s=luaZ_openspace(S->L,S->b,--size);
   LoadVector(S,s,size);
-  return luaS_newlstr(S->L,s,size-1);		/* remove trailing '\0' */
+  return luaS_newlstr(S->L,s,size);
  }
 }
 
