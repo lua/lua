@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.73 2014/02/06 15:59:24 roberto Exp $
+** $Id: lobject.c,v 2.74 2014/02/26 15:27:56 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -91,15 +91,16 @@ static lua_Integer intarith (lua_State *L, int op, lua_Integer v1,
 }
 
 
-static lua_Number numarith (int op, lua_Number v1, lua_Number v2) {
+static lua_Number numarith (lua_State *L, int op, lua_Number v1,
+                                                  lua_Number v2) {
   switch (op) {
-    case LUA_OPADD: return luai_numadd(v1, v2);
-    case LUA_OPSUB: return luai_numsub(v1, v2);
-    case LUA_OPMUL: return luai_nummul(v1, v2);
-    case LUA_OPDIV: return luai_numdiv(v1, v2);
-    case LUA_OPMOD: return luai_nummod(v1, v2);
-    case LUA_OPPOW: return luai_numpow(v1, v2);
-    case LUA_OPUNM: return luai_numunm(v1);
+    case LUA_OPADD: return luai_numadd(L, v1, v2);
+    case LUA_OPSUB: return luai_numsub(L, v1, v2);
+    case LUA_OPMUL: return luai_nummul(L, v1, v2);
+    case LUA_OPDIV: return luai_numdiv(L, v1, v2);
+    case LUA_OPMOD: return luai_nummod(L, v1, v2);
+    case LUA_OPPOW: return luai_numpow(L, v1, v2);
+    case LUA_OPUNM: return luai_numunm(L, v1);
     default: lua_assert(0); return 0;
   }
 }
@@ -121,7 +122,7 @@ void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
     case LUA_OPDIV: {  /* operates only on floats */
       lua_Number n1; lua_Number n2;
       if (tonumber(p1, &n1) && tonumber(p2, &n2)) {
-        setnvalue(res, numarith(op, n1, n2));
+        setnvalue(res, numarith(L, op, n1, n2));
         return;
       }
       else break;  /* go to the end */
@@ -133,7 +134,7 @@ void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
         return;
       }
       else if (tonumber(p1, &n1) && tonumber(p2, &n2)) {
-        setnvalue(res, numarith(op, n1, n2));
+        setnvalue(res, numarith(L, op, n1, n2));
         return;
       }
       else break;  /* go to the end */
