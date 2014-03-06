@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.116 2014/02/21 14:39:50 roberto Exp roberto $
+** $Id: liolib.c,v 2.117 2014/02/26 15:27:56 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -77,6 +77,21 @@
 #endif				/* } */
 
 /* }====================================================== */
+
+
+#if !defined(lua_getc)		/* { */
+
+#if defined(LUA_USE_POSIX)
+#define lua_getc(f)		getc_unlocked(f)
+#define lua_lockfile(f)		flockfile(f)
+#define lua_unlockfile(f)	funlockfile(f)
+#else
+#define lua_getc(f)		getc(f)
+#define lua_lockfile(f)		((void)0)
+#define lua_unlockfile(f)	((void)0)
+#endif
+
+#endif				/* } */
 
 
 /*
@@ -384,23 +399,15 @@ static int test_eof (lua_State *L, FILE *f) {
 
 static int read_line (lua_State *L, FILE *f, int chop) {
   luaL_Buffer b;
+  int c;
   luaL_buffinit(L, &b);
-  for (;;) {
-    size_t l;
-    char *p = luaL_prepbuffer(&b);
-    if (fgets(p, LUAL_BUFFERSIZE, f) == NULL) {  /* eof? */
-      luaL_pushresult(&b);  /* close buffer */
-      return (lua_rawlen(L, -1) > 0);  /* check whether read something */
-    }
-    l = strlen(p);
-    if (l == 0 || p[l-1] != '\n')
-      luaL_addsize(&b, l);
-    else {
-      luaL_addsize(&b, l - chop);  /* chop 'eol' if needed */
-      luaL_pushresult(&b);  /* close buffer */
-      return 1;  /* read at least an `eol' */
-    }
-  }
+  lua_lockfile(f);
+  while ((c = lua_getc(f)) != EOF && c != '\n')
+    luaL_addchar(&b, c);
+  lua_unlockfile(f);
+  if (!chop && c == '\n') luaL_addchar(&b, c);
+  luaL_pushresult(&b);  /* close buffer */
+  return (c == '\n' || lua_rawlen(L, -1) > 0);
 }
 
 
