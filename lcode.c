@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.78 2014/01/27 13:34:32 roberto Exp $
+** $Id: lcode.c,v 2.79 2014/02/06 19:55:55 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -750,29 +750,34 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
 }
 
 
-/* return false if folding can raise an error */
+/*
+** return false if folding can raise an error
+*/
 static int validop (OpCode op, TValue *v1, TValue *v2) {
   lua_Integer i;
   switch (op) {
-    case OP_IDIV:  /* division by 0 and conversion errors */
+    case LUA_OPIDIV:  /* division by 0 and conversion errors */
       return (tointeger(v1, &i) && tointeger(v2, &i) && i != 0);
-    case OP_BAND: case OP_BOR: case OP_BXOR:
-    case OP_SHL: case OP_SHR: case OP_BNOT:  /* conversion errors */
+    case LUA_OPBAND: case LUA_OPBOR: case LUA_OPBXOR:
+    case LUA_OPSHL: case LUA_OPSHR: case LUA_OPBNOT:  /* conversion errors */
       return (tointeger(v1, &i) && tointeger(v2, &i));
-    case OP_MOD:  /* integer module by 0 */
+    case LUA_OPMOD:  /* integer module by 0 */
       return !(ttisinteger(v1) && ttisinteger(v2) && ivalue(v2) == 0);
-    case OP_POW:  /* negative integer exponentiation */
+    case LUA_OPPOW:  /* negative integer exponentiation */
       return !(ttisinteger(v1) && ttisinteger(v2) && ivalue(v2) < 0);
     default: return 1;  /* everything else is valid */
   }
 }
 
 
-static int constfolding (OpCode op, expdesc *e1, expdesc *e2) {
+/*
+** Try to "constant-fold" an operation; return 1 iff successful
+*/
+static int constfolding (int op, expdesc *e1, expdesc *e2) {
   TValue v1, v2, res;
   if (!tonumeral(e1, &v1) || !tonumeral(e2, &v2) || !validop(op, &v1, &v2))
     return 0;  /* non-numeric operands or not safe to fold */
-  luaO_arith(NULL, op - OP_ADD + LUA_OPADD, &v1, &v2, &res);
+  luaO_arith(NULL, op, &v1, &v2, &res);
   if (ttisinteger(&res)) {
     e1->k = VKINT;
     e1->u.ival = ivalue(&res);
@@ -790,7 +795,7 @@ static int constfolding (OpCode op, expdesc *e1, expdesc *e2) {
 
 static void codearith (FuncState *fs, OpCode op,
                        expdesc *e1, expdesc *e2, int line) {
-  if (!constfolding(op, e1, e2)) {  /* could not fold operation? */
+  if (!constfolding(op - OP_ADD + LUA_OPADD, e1, e2)) {
     int o1, o2;
     if (op == OP_UNM || op == OP_BNOT || op == OP_LEN) {
       o2 = 0;
