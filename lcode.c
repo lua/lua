@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.79 2014/02/06 19:55:55 roberto Exp roberto $
+** $Id: lcode.c,v 2.80 2014/03/06 13:39:05 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -773,11 +773,11 @@ static int validop (OpCode op, TValue *v1, TValue *v2) {
 /*
 ** Try to "constant-fold" an operation; return 1 iff successful
 */
-static int constfolding (int op, expdesc *e1, expdesc *e2) {
+static int constfolding (FuncState *fs, int op, expdesc *e1, expdesc *e2) {
   TValue v1, v2, res;
   if (!tonumeral(e1, &v1) || !tonumeral(e2, &v2) || !validop(op, &v1, &v2))
     return 0;  /* non-numeric operands or not safe to fold */
-  luaO_arith(NULL, op, &v1, &v2, &res);
+  luaO_arith(fs->ls->L, op, &v1, &v2, &res);
   if (ttisinteger(&res)) {
     e1->k = VKINT;
     e1->u.ival = ivalue(&res);
@@ -795,7 +795,7 @@ static int constfolding (int op, expdesc *e1, expdesc *e2) {
 
 static void codearith (FuncState *fs, OpCode op,
                        expdesc *e1, expdesc *e2, int line) {
-  if (!constfolding(op - OP_ADD + LUA_OPADD, e1, e2)) {
+  if (!constfolding(fs, op - OP_ADD + LUA_OPADD, e1, e2)) {
     int o1, o2;
     if (op == OP_UNM || op == OP_BNOT || op == OP_LEN) {
       o2 = 0;
