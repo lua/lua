@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.186 2014/02/05 19:14:53 roberto Exp roberto $
+** $Id: lvm.c,v 2.187 2014/03/06 16:15:18 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -222,7 +222,7 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
     else {  /* two numbers with different variants */
       lua_Number n1, n2;
       lua_assert(ttisnumber(t1) && ttisnumber(t2));
-      (void)tonumber(t1, &n1); (void)tonumber(t2, &n2);
+      cast_void(tonumber(t1, &n1)); cast_void(tonumber(t2, &n2));
       return luai_numeq(n1, n2);
     }
   }
@@ -265,7 +265,7 @@ void luaV_concat (lua_State *L, int total) {
     if (!(ttisstring(top-2) || ttisnumber(top-2)) || !tostring(L, top-1))
       luaT_trybinTM(L, top-2, top-1, top-2, TM_CONCAT);
     else if (tsvalue(top-1)->len == 0)  /* second operand is empty? */
-      (void)tostring(L, top - 2);  /* result is first operand */
+      cast_void(tostring(L, top - 2));  /* result is first operand */
     else if (ttisstring(top-2) && tsvalue(top-2)->len == 0) {
       setobjs2s(L, top - 2, top - 1);  /* result is second op. */
     }
