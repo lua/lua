@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.h,v 1.39 2012/05/08 13:53:33 roberto Exp roberto $
+** $Id: lundump.h,v 1.40 2014/02/27 16:56:20 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -22,9 +22,11 @@
 #define LUAC_FORMAT	0	/* this is the official format */
 
 /* load one chunk; from lundump.c */
-LUAI_FUNC Closure* luaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name);
+LUAI_FUNC Closure* luaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff,
+                                const char* name);
 
 /* dump one chunk; from ldump.c */
-LUAI_FUNC int luaU_dump (lua_State* L, const Proto* f, lua_Writer w, void* data, int strip);
+LUAI_FUNC int luaU_dump (lua_State* L, const Proto* f, lua_Writer w,
+                         void* data, int strip);
 
 #endif
