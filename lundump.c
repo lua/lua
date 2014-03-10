@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.30 2014/03/01 15:18:44 roberto Exp roberto $
+** $Id: lundump.c,v 2.31 2014/03/10 17:56:32 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -59,8 +59,6 @@ static lu_byte LoadByte (LoadState *S) {
 static int LoadInt (LoadState *S) {
   int x;
   LoadVar(S, x);
-  if (x < 0)
-    error(S, "corrupted");
   return x;
 }
 
