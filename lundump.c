@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.32 2014/03/10 19:50:19 roberto Exp roberto $
+** $Id: lundump.c,v 2.33 2014/03/11 18:05:46 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -21,9 +21,6 @@
 #include "lzio.h"
 
 
-#define LoadVar(S,x)		LoadBlock(S,&x,sizeof(x))
-#define LoadVector(S,b,n)	LoadBlock(S,b,(n)*sizeof((b)[0]))
-
 #if !defined(luai_verifycode)
 #define luai_verifycode(L,b,f)  /* empty */
 #endif
@@ -43,10 +40,19 @@ static l_noret error(LoadState *S, const char *why) {
 }
 
 
+/*
+** All high-level loads go through LoadVector; you can change it to
+** adapt to the endianess of the input
+*/
+#define LoadVector(S,b,n)	LoadBlock(S,b,(n)*sizeof((b)[0]))
+
 static void LoadBlock (LoadState *S, void *b, size_t size) {
   if (luaZ_read(S->Z, b, size) != 0)
     error(S, "truncated");
 }
+
+
+#define LoadVar(S,x)		LoadVector(S,&x,1)
 
 
 static lu_byte LoadByte (LoadState *S) {

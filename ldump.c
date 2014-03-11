@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 2.25 2014/03/10 17:56:32 roberto Exp roberto $
+** $Id: ldump.c,v 2.26 2014/03/11 18:05:46 roberto Exp roberto $
 ** save precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -25,8 +25,13 @@ typedef struct {
 } DumpState;
 
 
-#define DumpVar(x,D)		DumpBlock(&x,sizeof(x),D)
+/*
+** All high-level dumps go through DumpVector; you can change it to
+** change the endianess of the result
+*/
 #define DumpVector(v,n,D)	DumpBlock(v,(n)*sizeof((v)[0]),D)
+
+#define DumpLiteral(s,D)	DumpBlock(s, sizeof(s) - sizeof(char), D)
 
 
 static void DumpBlock (const void *b, size_t size, DumpState *D) {
@@ -36,6 +41,9 @@ static void DumpBlock (const void *b, size_t size, DumpState *D) {
     lua_lock(D->L);
   }
 }
+
+
+#define DumpVar(x,D)		DumpVector(&x,1,D)
 
 
 static void DumpByte (int y, DumpState *D) {
@@ -159,8 +167,6 @@ static void DumpFunction (const Proto *f, DumpState *D) {
   DumpDebug(f, D);
 }
 
-
-#define DumpLiteral(s,D)	DumpBlock(s, sizeof(s) - sizeof(char), D)
 
 static void DumpHeader (DumpState *D) {
   DumpLiteral(LUA_SIGNATURE, D);
