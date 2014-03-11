@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.31 2014/03/10 17:56:32 roberto Exp roberto $
+** $Id: lundump.c,v 2.32 2014/03/10 19:50:19 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -195,10 +195,11 @@ static void LoadFunction (LoadState *S, Proto *f) {
 }
 
 
-static void checkstring (LoadState *S, const char *s, const char *msg) {
-  char buff[sizeof(LUA_SIGNATURE) + sizeof(LUAC_DATA)]; /* larger than each */
-  LoadVector(S, buff, strlen(s) + 1);
-  if (strcmp(s, buff) != 0)
+static void checkliteral (LoadState *S, const char *s, const char *msg) {
+  char buff[sizeof(LUA_SIGNATURE) + sizeof(LUAC_DATA)]; /* larger than both */
+  int len = strlen(s);
+  LoadVector(S, buff, len);
+  if (memcmp(s, buff, len) != 0)
     error(S, msg);
 }
 
@@ -212,12 +213,12 @@ static void fchecksize (LoadState *S, size_t size, const char *tname) {
 #define checksize(S,t)	fchecksize(S,sizeof(t),#t)
 
 static void checkHeader (LoadState *S) {
-  checkstring(S, LUA_SIGNATURE + 1, "not a");
-  checkstring(S, LUAC_DATA, "corrupted");
+  checkliteral(S, LUA_SIGNATURE + 1, "not a");  /* 1st char already checked */
   if (LoadByte(S) != LUAC_VERSION)
     error(S, "version mismatch in");
   if (LoadByte(S) != LUAC_FORMAT)
     error(S, "format mismatch in");
+  checkliteral(S, LUAC_DATA, "corrupted");
   checksize(S, int);
   checksize(S, size_t);
   checksize(S, Instruction);
