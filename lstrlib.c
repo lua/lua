@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.185 2014/01/09 16:21:28 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.186 2014/02/25 14:30:21 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -116,7 +116,7 @@ static int str_rep (lua_State *L) {
   lua_Integer n = luaL_checkinteger(L, 2);
   const char *sep = luaL_optlstring(L, 3, "", &lsep);
   if (n <= 0) lua_pushliteral(L, "");
-  else if (l + lsep < l || l + lsep >= MAXSIZE / n)  /* may overflow? */
+  else if (l + lsep < l || l + lsep > MAXSIZE / n)  /* may overflow? */
     return luaL_error(L, "resulting string too large");
   else {
     size_t totallen = n * l + (n - 1) * lsep;
@@ -124,8 +124,9 @@ static int str_rep (lua_State *L) {
     char *p = luaL_buffinitsize(L, &b, totallen);
     while (n-- > 1) {  /* first n-1 copies (followed by separator) */
       memcpy(p, s, l * sizeof(char)); p += l;
-      if (lsep > 0) {  /* avoid empty 'memcpy' (may be expensive) */
-        memcpy(p, sep, lsep * sizeof(char)); p += lsep;
+      if (lsep > 0) {  /* empty 'memcpy' is not that cheap */
+        memcpy(p, sep, lsep * sizeof(char));
+        p += lsep;
       }
     }
     memcpy(p, s, l * sizeof(char));  /* last copy (not followed by separator) */
