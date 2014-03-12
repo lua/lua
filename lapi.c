@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.199 2014/02/25 14:30:21 roberto Exp roberto $
+** $Id: lapi.c,v 2.200 2014/02/26 12:39:30 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -628,7 +628,7 @@ LUA_API int lua_pushthread (lua_State *L) {
 */
 
 
-LUA_API void lua_getglobal (lua_State *L, const char *var) {
+LUA_API int lua_getglobal (lua_State *L, const char *var) {
   Table *reg = hvalue(&G(L)->l_registry);
   const TValue *gt;  /* global table */
   lua_lock(L);
@@ -636,19 +636,21 @@ LUA_API void lua_getglobal (lua_State *L, const char *var) {
   setsvalue2s(L, L->top++, luaS_new(L, var));
   luaV_gettable(L, gt, L->top - 1, L->top - 1);
   lua_unlock(L);
+  return ttnov(L->top - 1);
 }
 
 
-LUA_API void lua_gettable (lua_State *L, int idx) {
+LUA_API int lua_gettable (lua_State *L, int idx) {
   StkId t;
   lua_lock(L);
   t = index2addr(L, idx);
   luaV_gettable(L, t, L->top - 1, L->top - 1);
   lua_unlock(L);
+  return ttnov(L->top - 1);
 }
 
 
-LUA_API void lua_getfield (lua_State *L, int idx, const char *k) {
+LUA_API int lua_getfield (lua_State *L, int idx, const char *k) {
   StkId t;
   lua_lock(L);
   t = index2addr(L, idx);
@@ -656,20 +658,22 @@ LUA_API void lua_getfield (lua_State *L, int idx, const char *k) {
   api_incr_top(L);
   luaV_gettable(L, t, L->top - 1, L->top - 1);
   lua_unlock(L);
+  return ttnov(L->top - 1);
 }
 
 
-LUA_API void lua_rawget (lua_State *L, int idx) {
+LUA_API int lua_rawget (lua_State *L, int idx) {
   StkId t;
   lua_lock(L);
   t = index2addr(L, idx);
   api_check(L, ttistable(t), "table expected");
   setobj2s(L, L->top - 1, luaH_get(hvalue(t), L->top - 1));
   lua_unlock(L);
+  return ttnov(L->top - 1);
 }
 
 
-LUA_API void lua_rawgeti (lua_State *L, int idx, lua_Integer n) {
+LUA_API int lua_rawgeti (lua_State *L, int idx, lua_Integer n) {
   StkId t;
   lua_lock(L);
   t = index2addr(L, idx);
@@ -677,10 +681,11 @@ LUA_API void lua_rawgeti (lua_State *L, int idx, lua_Integer n) {
   setobj2s(L, L->top, luaH_getint(hvalue(t), n));
   api_incr_top(L);
   lua_unlock(L);
+  return ttnov(L->top - 1);
 }
 
 
-LUA_API void lua_rawgetp (lua_State *L, int idx, const void *p) {
+LUA_API int lua_rawgetp (lua_State *L, int idx, const void *p) {
   StkId t;
   TValue k;
   lua_lock(L);
@@ -690,6 +695,7 @@ LUA_API void lua_rawgetp (lua_State *L, int idx, const void *p) {
   setobj2s(L, L->top, luaH_get(hvalue(t), &k));
   api_incr_top(L);
   lua_unlock(L);
+  return ttnov(L->top - 1);
 }
 
 

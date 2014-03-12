@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.258 2014/02/11 17:39:15 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.259 2014/02/19 13:48:53 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -172,8 +172,7 @@ static int typeerror (lua_State *L, int arg, const char *tname) {
   const char *msg;
   const char *typearg = luaL_typename(L, arg);
   if (lua_getmetatable(L, arg)) {
-    lua_getfield(L, -1, "__name");
-    if (lua_isstring(L, -1))
+    if (lua_getfield(L, -1, "__name") == LUA_TSTRING)
       typearg = lua_tostring(L, -1);
   }
   else if (lua_type(L, arg) == LUA_TLIGHTUSERDATA)
@@ -719,8 +718,7 @@ LUALIB_API int luaL_getmetafield (lua_State *L, int obj, const char *event) {
   if (!lua_getmetatable(L, obj))  /* no metatable? */
     return 0;
   lua_pushstring(L, event);
-  lua_rawget(L, -2);
-  if (lua_isnil(L, -1)) {
+  if (lua_rawget(L, -2) == LUA_TNIL) {  /* is metafield nil? */
     lua_pop(L, 2);  /* remove metatable and metafield */
     return 0;
   }
@@ -802,8 +800,7 @@ static const char *luaL_findtable (lua_State *L, int idx,
     e = strchr(fname, '.');
     if (e == NULL) e = fname + strlen(fname);
     lua_pushlstring(L, fname, e - fname);
-    lua_rawget(L, -2);
-    if (lua_isnil(L, -1)) {  /* no such field? */
+    if (lua_rawget(L, -2) == LUA_TNIL) {  /* no such field? */
       lua_pop(L, 1);  /* remove this nil */
       lua_createtable(L, 0, (*e == '.' ? 1 : szhint)); /* new table for field */
       lua_pushlstring(L, fname, e - fname);
@@ -840,8 +837,7 @@ static int libsize (const luaL_Reg *l) {
 LUALIB_API void luaL_pushmodule (lua_State *L, const char *modname,
                                  int sizehint) {
   luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 1);  /* get _LOADED table */
-  lua_getfield(L, -1, modname);  /* get _LOADED[modname] */
-  if (!lua_istable(L, -1)) {  /* not found? */
+  if (lua_getfield(L, -1, modname) != LUA_TTABLE) {  /* no _LOADED[modname]? */
     lua_pop(L, 1);  /* remove previous result */
     /* try global variable (and create one if it does not exist) */
     lua_pushglobaltable(L);
@@ -893,8 +889,8 @@ LUALIB_API void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup) {
 ** into the stack
 */
 LUALIB_API int luaL_getsubtable (lua_State *L, int idx, const char *fname) {
-  lua_getfield(L, idx, fname);
-  if (lua_istable(L, -1)) return 1;  /* table already there */
+  if (lua_getfield(L, idx, fname) == LUA_TTABLE)
+    return 1;  /* table already there */
   else {
     lua_pop(L, 1);  /* remove previous result */
     idx = lua_absindex(L, idx);

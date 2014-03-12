@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.135 2013/07/22 16:05:53 roberto Exp roberto $
+** $Id: ldblib.c,v 1.136 2014/02/19 13:51:09 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -270,8 +270,7 @@ static void hookf (lua_State *L, lua_Debug *ar) {
     {"call", "return", "line", "count", "tail call"};
   gethooktable(L);
   lua_pushthread(L);
-  lua_rawget(L, -2);
-  if (lua_isfunction(L, -1)) {
+  if (lua_rawget(L, -2) == LUA_TFUNCTION) {
     lua_pushstring(L, hooknames[(int)ar->event]);
     if (ar->currentline >= 0)
       lua_pushinteger(L, ar->currentline);

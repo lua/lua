@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.111 2012/05/30 12:33:44 roberto Exp roberto $
+** $Id: loadlib.c,v 1.112 2013/10/07 14:20:31 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -468,8 +468,7 @@ static int searcher_Croot (lua_State *L) {
 static int searcher_preload (lua_State *L) {
   const char *name = luaL_checkstring(L, 1);
   lua_getfield(L, LUA_REGISTRYINDEX, "_PRELOAD");
-  lua_getfield(L, -1, name);
-  if (lua_isnil(L, -1))  /* not found? */
+  if (lua_getfield(L, -1, name) == LUA_TNIL)  /* not found? */
     lua_pushfstring(L, "\n\tno field package.preload['%s']", name);
   return 1;
 }
@@ -484,8 +483,7 @@ static void findloader (lua_State *L, const char *name) {
     luaL_error(L, LUA_QL("package.searchers") " must be a table");
   /*  iterate over available searchers to find a loader */
   for (i = 1; ; i++) {
-    lua_rawgeti(L, 3, i);  /* get a searcher */
-    if (lua_isnil(L, -1)) {  /* no more searchers? */
+    if (lua_rawgeti(L, 3, i) == LUA_TNIL) {  /* no more searchers? */
       lua_pop(L, 1);  /* remove nil */
       luaL_pushresult(&msg);  /* create error message */
       luaL_error(L, "module " LUA_QS " not found:%s",
@@ -520,8 +518,7 @@ static int ll_require (lua_State *L) {
   lua_call(L, 2, 1);  /* run loader to load module */
   if (!lua_isnil(L, -1))  /* non-nil return? */
     lua_setfield(L, 2, name);  /* _LOADED[name] = returned value */
-  lua_getfield(L, 2, name);
-  if (lua_isnil(L, -1)) {   /* module did not set a value? */
+  if (lua_getfield(L, 2, name) == LUA_TNIL) {   /* module set no value? */
     lua_pushboolean(L, 1);  /* use true as result */
     lua_pushvalue(L, -1);  /* extra copy to be returned */
     lua_setfield(L, 2, name);  /* _LOADED[name] = true */
@@ -587,9 +584,8 @@ static int ll_module (lua_State *L) {
   int lastarg = lua_gettop(L);  /* last parameter */
   luaL_pushmodule(L, modname, 1);  /* get/create module table */
   /* check whether table already has a _NAME field */
-  lua_getfield(L, -1, "_NAME");
-  if (!lua_isnil(L, -1))  /* is table an initialized module? */
-    lua_pop(L, 1);
+  if (lua_getfield(L, -1, "_NAME") != LUA_TNIL)
+    lua_pop(L, 1);  /* table is an initialized module */
   else {  /* no; initialize it */
     lua_pop(L, 1);
     modinit(L, modname);

@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.42 2014/02/26 15:27:56 roberto Exp roberto $
+** $Id: loslib.c,v 1.43 2014/02/26 15:55:58 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -158,8 +158,7 @@ static void setboolfield (lua_State *L, const char *key, int value) {
 
 static int getboolfield (lua_State *L, const char *key) {
   int res;
-  lua_getfield(L, -1, key);
-  res = lua_isnil(L, -1) ? -1 : lua_toboolean(L, -1);
+  res = (lua_getfield(L, -1, key) == LUA_TNIL) ? -1 : lua_toboolean(L, -1);
   lua_pop(L, 1);
   return res;
 }
