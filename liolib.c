@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.117 2014/02/26 15:27:56 roberto Exp roberto $
+** $Id: liolib.c,v 2.118 2014/03/06 17:12:02 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -29,14 +29,14 @@
 #include "lualib.h"
 
 
-#if !defined(lua_checkmode)
+#if !defined(l_checkmode)
 
 /*
 ** Check whether 'mode' matches '[rwa]%+?b?'.
 ** Change this macro to accept other modes for 'fopen' besides
 ** the standard ones.
 */
-#define lua_checkmode(mode) \
+#define l_checkmode(mode) \
 	(*mode != '\0' && strchr("rwa", *(mode++)) != NULL &&	\
 	(*mode != '+' || ++mode) &&  /* skip if char is '+' */	\
 	(*mode != 'b' || ++mode) &&  /* skip if char is 'b' */	\
@@ -46,31 +46,31 @@
 
 /*
 ** {======================================================
-** lua_popen spawns a new process connected to the current
+** l_popen spawns a new process connected to the current
 ** one through the file streams.
 ** =======================================================
 */
 
-#if !defined(lua_popen)		/* { */
+#if !defined(l_popen)		/* { */
 
 #if defined(LUA_USE_POSIX)	/* { */
 
-#define lua_popen(L,c,m)	(fflush(NULL), popen(c,m))
-#define lua_pclose(L,file)	(pclose(file))
+#define l_popen(L,c,m)		(fflush(NULL), popen(c,m))
+#define l_pclose(L,file)	(pclose(file))
 
 #elif defined(LUA_WIN)		/* }{ */
 
-#define lua_popen(L,c,m)		(_popen(c,m))
-#define lua_pclose(L,file)		(_pclose(file))
+#define l_popen(L,c,m)		(_popen(c,m))
+#define l_pclose(L,file)	(_pclose(file))
 
 #else				/* }{ */
 
 /* ANSI definitions */
-#define lua_popen(L,c,m)  \
+#define l_popen(L,c,m)  \
 	  ((void)((void)c, m), \
 	  luaL_error(L, LUA_QL("popen") " not supported"), \
 	  (FILE*)0)
-#define lua_pclose(L,file)		((void)((void)L, file), -1)
+#define l_pclose(L,file)		((void)L, (void)file, -1)
 
 #endif				/* } */
 
@@ -79,16 +79,16 @@
 /* }====================================================== */
 
 
-#if !defined(lua_getc)		/* { */
+#if !defined(l_getc)		/* { */
 
 #if defined(LUA_USE_POSIX)
-#define lua_getc(f)		getc_unlocked(f)
-#define lua_lockfile(f)		flockfile(f)
-#define lua_unlockfile(f)	funlockfile(f)
+#define l_getc(f)		getc_unlocked(f)
+#define l_lockfile(f)		flockfile(f)
+#define l_unlockfile(f)		funlockfile(f)
 #else
-#define lua_getc(f)		getc(f)
-#define lua_lockfile(f)		((void)0)
-#define lua_unlockfile(f)	((void)0)
+#define l_getc(f)		getc(f)
+#define l_lockfile(f)		((void)0)
+#define l_unlockfile(f)		((void)0)
 #endif
 
 #endif				/* } */
@@ -96,11 +96,11 @@
 
 /*
 ** {======================================================
-** lua_fseek: configuration for longer offsets
+** l_fseek: configuration for longer offsets
 ** =======================================================
 */
 
-#if !defined(lua_fseek)		/* { */
+#if !defined(l_fseek)		/* { */
 
 #if defined(LUA_USE_POSIX)	/* { */
 
@@ -244,7 +244,7 @@ static int io_open (lua_State *L) {
   const char *mode = luaL_optstring(L, 2, "r");
   LStream *p = newfile(L);
   const char *md = mode;  /* to traverse/check mode */
-  luaL_argcheck(L, lua_checkmode(md), 2, "invalid mode");
+  luaL_argcheck(L, l_checkmode(md), 2, "invalid mode");
   p->f = fopen(filename, mode);
   return (p->f == NULL) ? luaL_fileresult(L, 0, filename) : 1;
 }
@@ -255,7 +255,7 @@ static int io_open (lua_State *L) {
 */
 static int io_pclose (lua_State *L) {
   LStream *p = tolstream(L);
-  return luaL_execresult(L, lua_pclose(L, p->f));
+  return luaL_execresult(L, l_pclose(L, p->f));
 }
 
 
@@ -263,7 +263,7 @@ static int io_popen (lua_State *L) {
   const char *filename = luaL_checkstring(L, 1);
   const char *mode = luaL_optstring(L, 2, "r");
   LStream *p = newprefile(L);
-  p->f = lua_popen(L, filename, mode);
+  p->f = l_popen(L, filename, mode);
   p->closef = &io_pclose;
   return (p->f == NULL) ? luaL_fileresult(L, 0, filename) : 1;
 }
@@ -401,10 +401,10 @@ static int read_line (lua_State *L, FILE *f, int chop) {
   luaL_Buffer b;
   int c;
   luaL_buffinit(L, &b);
-  lua_lockfile(f);
-  while ((c = lua_getc(f)) != EOF && c != '\n')
+  l_lockfile(f);
+  while ((c = l_getc(f)) != EOF && c != '\n')
     luaL_addchar(&b, c);
-  lua_unlockfile(f);
+  l_unlockfile(f);
   if (!chop && c == '\n') luaL_addchar(&b, c);
   luaL_pushresult(&b);  /* close buffer */
   return (c == '\n' || lua_rawlen(L, -1) > 0);
