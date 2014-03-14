@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.187 2014/03/06 16:15:18 roberto Exp roberto $
+** $Id: lvm.c,v 2.188 2014/03/07 16:19:00 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -899,7 +899,7 @@ void luaV_execute (lua_State *L) {
         }
       )
       vmcase(OP_FORLOOP,
-        if (ttisinteger(ra)) {  /* integer count? */
+        if (ttisinteger(ra)) {  /* integer loop? */
           lua_Integer step = ivalue(ra + 2);
           lua_Integer idx = ivalue(ra) + step; /* increment index */
           lua_Integer limit = ivalue(ra + 1);
@@ -909,7 +909,7 @@ void luaV_execute (lua_State *L) {
             setivalue(ra + 3, idx);  /* ...and external index */
           }
         }
-        else {  /* floating count */
+        else {  /* floating loop */
           lua_Number step = fltvalue(ra + 2);
           lua_Number idx = luai_numadd(L, fltvalue(ra), step); /* inc. index */
           lua_Number limit = fltvalue(ra + 1);
@@ -925,10 +925,11 @@ void luaV_execute (lua_State *L) {
         TValue *init = ra;
         TValue *plimit = ra + 1;
         TValue *pstep = ra + 2;
-        if (ttisinteger(ra) && ttisinteger(ra + 1) && ttisinteger(ra + 2)) {
-          setivalue(ra, ivalue(ra) - ivalue(pstep));
+        if (ttisinteger(init) && ttisinteger(plimit) && ttisinteger(pstep)) {
+          /* all values are integer */
+          setivalue(init, ivalue(init) - ivalue(pstep));
         }
-        else {  /* try with floats */
+        else {  /* try making all values floats */
           lua_Number ninit; lua_Number nlimit; lua_Number nstep;
           if (!tonumber(plimit, &nlimit))
             luaG_runerror(L, LUA_QL("for") " limit must be a number");
@@ -938,7 +939,7 @@ void luaV_execute (lua_State *L) {
           setnvalue(pstep, nstep);
           if (!tonumber(init, &ninit))
             luaG_runerror(L, LUA_QL("for") " initial value must be a number");
-          setnvalue(ra, luai_numsub(L, ninit, nstep));
+          setnvalue(init, luai_numsub(L, ninit, nstep));
         }
         ci->u.l.savedpc += GETARG_sBx(i);
       )
