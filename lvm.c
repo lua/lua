@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.188 2014/03/07 16:19:00 roberto Exp roberto $
+** $Id: lvm.c,v 2.189 2014/03/14 16:54:08 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -66,7 +66,7 @@ int luaV_tostring (lua_State *L, StkId obj) {
 ** Check whether a float number is within the range of a lua_Integer.
 ** (The comparisons are tricky because of rounding, which can or
 ** not occur depending on the relative sizes of floats and integers.)
-** This function is called only when 'n' has an integer value.
+** This function should be called only when 'n' has an integral value.
 */
 int luaV_numtointeger (lua_Number n, lua_Integer *p) {
   if (cast_num(MIN_INTEGER) <= n && n < (MAX_INTEGER + cast_num(1))) {
