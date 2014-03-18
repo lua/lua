@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.190 2014/02/26 15:27:56 roberto Exp roberto $
+** $Id: luaconf.h,v 1.191 2014/03/06 16:15:18 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -246,6 +246,11 @@
 ** to fit your specific needs.
 */
 #if defined(LUA_COMPAT_ALL)	/* { */
+
+/*
+@@ LUA_COMPAT_BITLIB controls the presence of library 'bit32'.
+*/
+#define LUA_COMPAT_BITLIB
 
 /*
 @@ LUA_COMPAT_UNPACK controls the presence of global 'unpack'.
