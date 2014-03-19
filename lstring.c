@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.36 2013/09/11 14:56:15 roberto Exp roberto $
+** $Id: lstring.c,v 2.37 2014/02/19 13:51:09 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -39,15 +39,6 @@ int luaS_eqlngstr (TString *a, TString *b) {
   return (a == b) ||  /* same instance or... */
     ((len == b->tsv.len) &&  /* equal length and ... */
      (memcmp(getstr(a), getstr(b), len) == 0));  /* equal contents */
-}
-
-
-/*
-** equality for strings
-*/
-int luaS_eqstr (TString *a, TString *b) {
-  return (a->tsv.tt == b->tsv.tt) &&
-         (a->tsv.tt == LUA_TSHRSTR ? eqshrstr(a, b) : luaS_eqlngstr(a, b));
 }
 
 
