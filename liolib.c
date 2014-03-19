@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.118 2014/03/06 17:12:02 roberto Exp roberto $
+** $Id: liolib.c,v 2.119 2014/03/13 20:07:18 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -569,15 +569,15 @@ static int f_seek (lua_State *L) {
   static const char *const modenames[] = {"set", "cur", "end", NULL};
   FILE *f = tofile(L);
   int op = luaL_checkoption(L, 2, "cur", modenames);
-  lua_Number p3 = luaL_optnumber(L, 3, 0);
+  lua_Integer p3 = luaL_optinteger(L, 3, 0);
   l_seeknum offset = (l_seeknum)p3;
-  luaL_argcheck(L, (lua_Number)offset == p3, 3,
+  luaL_argcheck(L, (lua_Integer)offset == p3, 3,
                   "not an integer in proper range");
   op = l_fseek(f, offset, mode[op]);
   if (op)
     return luaL_fileresult(L, 0, NULL);  /* error */
   else {
-    lua_pushnumber(L, (lua_Number)l_ftell(f));
+    lua_pushinteger(L, (lua_Integer)l_ftell(f));
     return 1;
   }
 }
