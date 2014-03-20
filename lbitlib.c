@@ -1,5 +1,5 @@
 /*
-** $Id: lbitlib.c,v 1.23 2014/02/26 12:38:18 roberto Exp roberto $
+** $Id: lbitlib.c,v 1.24 2014/03/18 18:27:08 roberto Exp roberto $
 ** Standard library for bitwise operations
 ** See Copyright Notice in lua.h
 */
@@ -219,17 +219,9 @@ LUAMOD_API int luaopen_bit32 (lua_State *L) {
 
 #else					/* }{ */
 
-static int b_err (lua_State *L) {
-  return luaL_error(L, "library 'bit32' is deprecated");
-}
-
 
 LUAMOD_API int luaopen_bit32 (lua_State *L) {
-  lua_createtable(L, 0, 1);  /* new table to represent the module */
-  lua_pushvalue(L, -1);
-  lua_setmetatable(L, -2);  /* set it as its own metatable */
-  lua_pushcfunction(L, b_err);
-  lua_setfield(L, -2, "__index");  /* metatable.__index = b_errret */
+  lua_pushnil(L);
   return 1;
 }
 
