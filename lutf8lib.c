@@ -1,5 +1,5 @@
 /*
-** $Id: lutf8lib.c,v 1.2 2014/02/06 20:03:24 roberto Exp roberto $
+** $Id: lutf8lib.c,v 1.3 2014/03/20 14:11:00 roberto Exp roberto $
 ** Standard library for UTF-8 manipulation
 ** See Copyright Notice in lua.h
 */
@@ -108,7 +108,7 @@ static int codepoint (lua_State *L) {
     int code;
     s = utf8_decode(s, &code);
     if (s == NULL)
-      luaL_error(L, "invalid UTF-8 code");
+      return luaL_error(L, "invalid UTF-8 code");
     lua_pushinteger(L, code);
     n++;
   }
@@ -200,7 +200,7 @@ static int iter_aux (lua_State *L) {
     int code;
     const char *next = utf8_decode(s + n, &code);
     if (next == NULL || iscont(next))
-      luaL_error(L, "invalid UTF-8 code");
+      return luaL_error(L, "invalid UTF-8 code");
     lua_pushinteger(L, n + 1);
     lua_pushinteger(L, code);
     return 2;
