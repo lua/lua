@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: lutf8lib.c,v 1.2 2014/02/06 20:03:24 roberto Exp roberto $
 ** Standard library for UTF-8 manipulation
 ** See Copyright Notice in lua.h
 */
@@ -24,7 +24,7 @@
 
 /* from strlib */
 /* translate a relative string position: negative means back from end */
-static lua_Integer posrelat (lua_Integer pos, size_t len) {
+static lua_Integer u_posrelat (lua_Integer pos, size_t len) {
   if (pos >= 0) return pos;
   else if (0u - (size_t)pos > len) return 0;
   else return (lua_Integer)len + pos + 1;
@@ -69,7 +69,7 @@ static int utflen (lua_State *L) {
   const char *ends;
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
-  lua_Integer posi = posrelat(luaL_optinteger(L, 2, 1), 1);
+  lua_Integer posi = u_posrelat(luaL_optinteger(L, 2, 1), 1);
   luaL_argcheck(L, 1 <= posi && posi <= (lua_Integer)len, 1,
                    "initial position out of string");
   ends = s + len;
@@ -91,8 +91,8 @@ static int utflen (lua_State *L) {
 static int codepoint (lua_State *L) {
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
-  lua_Integer posi = posrelat(luaL_optinteger(L, 2, 1), len);
-  lua_Integer pose = posrelat(luaL_optinteger(L, 3, posi), len);
+  lua_Integer posi = u_posrelat(luaL_optinteger(L, 2, 1), len);
+  lua_Integer pose = u_posrelat(luaL_optinteger(L, 3, posi), len);
   int n;
   const char *se;
   luaL_argcheck(L, posi >= 1, 2, "out of range");
@@ -152,7 +152,7 @@ static int byteoffset (lua_State *L) {
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
   int n  = luaL_checkint(L, 2);
-  lua_Integer posi = posrelat(luaL_optinteger(L, 3, 1), len) - 1;
+  lua_Integer posi = u_posrelat(luaL_optinteger(L, 3, 1), len) - 1;
   luaL_argcheck(L, 0 <= posi && posi <= (lua_Integer)len, 3,
                    "position out of range");
   if (n == 0) {
