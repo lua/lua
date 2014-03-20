@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.300 2014/02/25 14:30:21 roberto Exp roberto $
+** $Id: lua.h,v 1.301 2014/03/12 20:57:40 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -23,7 +23,7 @@
 
 #define LUA_VERSION	"Lua " LUA_VERSION_MAJOR "." LUA_VERSION_MINOR
 #define LUA_RELEASE	LUA_VERSION "." LUA_VERSION_RELEASE
-#define LUA_COPYRIGHT	LUA_RELEASE "  Copyright (C) 1994-2013 Lua.org, PUC-Rio"
+#define LUA_COPYRIGHT	LUA_RELEASE "  Copyright (C) 1994-2014 Lua.org, PUC-Rio"
 #define LUA_AUTHORS	"R. Ierusalimschy, L. H. de Figueiredo, W. Celes"
 
 
@@ -426,7 +426,7 @@ struct lua_Debug {
 
 
 /******************************************************************************
-* Copyright (C) 1994-2013 Lua.org, PUC-Rio.
+* Copyright (C) 1994-2014 Lua.org, PUC-Rio.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
