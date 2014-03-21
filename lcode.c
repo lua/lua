@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.83 2014/03/07 16:19:00 roberto Exp roberto $
+** $Id: lcode.c,v 2.84 2014/03/09 19:21:34 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -308,7 +308,7 @@ static void freeexp (FuncState *fs, expdesc *e) {
 
 
 /*
-** Use scanner's table to cache position of constants in contant list
+** Use scanner's table to cache position of constants in constant list
 ** and try to reuse constants
 */
 static int addk (FuncState *fs, TValue *key, TValue *v) {

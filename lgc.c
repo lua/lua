@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.177 2014/02/18 13:46:26 roberto Exp roberto $
+** $Id: lgc.c,v 2.178 2014/02/19 13:51:09 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -169,7 +169,7 @@ void luaC_barrierback_ (lua_State *L, GCObject *o) {
 /*
 ** barrier for assignments to closed upvalues. Because upvalues are
 ** shared among closures, it is impossible to know the color of all
-** closured pointing to it. So, we assume that the object being assigned
+** closures pointing to it. So, we assume that the object being assigned
 ** must be marked.
 */
 LUAI_FUNC void luaC_upvalbarrier_ (lua_State *L, UpVal *uv) {

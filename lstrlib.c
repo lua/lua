@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.186 2014/02/25 14:30:21 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.187 2014/03/12 18:09:06 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -1005,7 +1005,7 @@ static int packint (char *buff, lua_Integer n, int littleendian, int size) {
   }
   buff[i] = (n & MC);  /* last byte */
   /* test for overflow: OK if there are only zeros left in higher bytes,
-     or if there are only oneś left and packed number is negative (signal
+     or if there are only ones left and packed number is negative (signal
      bit, the higher bit in last byte, is one) */
   return ((n & ~MC) == 0 || (n | SM) == ~(lua_Integer)0);
 }
@@ -1027,7 +1027,7 @@ static int packint_l (lua_State *L) {
 /* mask to check higher-order byte in a Lua integer */
 #define HIGHERBYTE	(MC << (NB * (SZINT - 1)))
 
-/* mask to check higher-order byte + signal bit of next byte */
+/* mask to check higher-order byte + signal bit of next (lower) byte */
 #define HIGHERBYTE1	(HIGHERBYTE | (HIGHERBYTE >> 1))
 
 static int unpackint (const char *buff, lua_Integer *res,
@@ -1037,12 +1037,12 @@ static int unpackint (const char *buff, lua_Integer *res,
   for (i = 0; i < size; i++) {
     if (i >= SZINT) {  /* will throw away a byte? */
       /* check for overflow: it is OK to throw away leading zeros for a
-         positive number; leading ones for a negative number; and one
-         last leading zero to allow unsigned integers with a 1 in
+         positive number, leading ones for a negative number, and a
+         leading zero byte to allow unsigned integers with a 1 in
          its "signal bit" */
-      if (!((n & HIGHERBYTE1) == 0 ||  /* zeros for pos. number */
-          (n & HIGHERBYTE1) == HIGHERBYTE1 ||  /* ones for neg. number */
-          ((n & HIGHERBYTE) == 0 && i == size - 1)))  /* last zero */
+      if (!((n & HIGHERBYTE1) == 0 ||  /* zeros for positive number */
+          (n & HIGHERBYTE1) == HIGHERBYTE1 ||  /* ones for negative number */
+          ((n & HIGHERBYTE) == 0 && i == size - 1)))  /* leading zero */
         return 0;  /* overflow */
     }
     n <<= NB;

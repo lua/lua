@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.74 2014/02/26 15:27:56 roberto Exp roberto $
+** $Id: lobject.c,v 2.75 2014/03/06 16:15:18 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -140,7 +140,7 @@ void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
       else break;  /* go to the end */
     }
   }
-  /* could not perform raw operation; try metmethod */
+  /* could not perform raw operation; try metamethod */
   lua_assert(L != NULL);  /* should not fail when folding (compile time) */
   luaT_trybinTM(L, p1, p2, res, cast(TMS, op - LUA_OPADD + TM_ADD));
 }

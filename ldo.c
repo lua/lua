@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.113 2014/02/15 13:12:01 roberto Exp roberto $
+** $Id: ldo.c,v 2.114 2014/02/26 15:27:56 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -58,7 +58,7 @@
 
 #elif defined(LUA_USE_POSIX)				/* }{ */
 
-/* in Posix, try _longjmp/_setjmp (more efficient) */
+/* in POSIX, try _longjmp/_setjmp (more efficient) */
 #define LUAI_THROW(L,c)		_longjmp((c)->b, 1)
 #define LUAI_TRY(L,c,a)		if (_setjmp((c)->b) == 0) { a }
 #define luai_jmpbuf		jmp_buf

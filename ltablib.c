@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.64 2013/02/06 18:29:03 roberto Exp roberto $
+** $Id: ltablib.c,v 1.65 2013/03/07 18:17:24 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -140,7 +140,7 @@ static int unpack (lua_State *L) {
   e = luaL_opt(L, luaL_checkint, 3, luaL_len(L, 1));
   if (i > e) return 0;  /* empty range */
   n = e - i + 1;  /* number of elements */
-  if (n <= 0 || !lua_checkstack(L, n))  /* n <= 0 means arith. overflow */
+  if (n <= 0 || !lua_checkstack(L, n))  /* n <= 0 means arithmetic overflow */
     return luaL_error(L, "too many results to unpack");
   lua_rawgeti(L, 1, i);  /* push arg[i] (avoiding overflow problems) */
   while (i++ < e)  /* push arg[i + 1...e] */
