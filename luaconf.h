@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.191 2014/03/06 16:15:18 roberto Exp roberto $
+** $Id: luaconf.h,v 1.192 2014/03/18 18:27:08 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -17,6 +17,24 @@
 ** Search for "@@" to find all configurable definitions.
 ** ===================================================================
 */
+
+
+/*
+** ===================================================================
+@@ LUA_INT_INT / LUA_INT_LONG / LUA_INT_LONGLONG defines size for
+@* Lua integers;
+@@ LUA_REAL_FLOAT / LUA_REAL_DOUBLE / LUA_REAL_LONGDOUBLE defines size for
+@* Lua floats.
+**
+** These definitions set the numeric types for Lua. Lua should work
+** fine with 32-bit or 64-bit integers mixed with 32-bit or 64-bit
+** floats. The usual configurations are 64-bit integers and floats (the
+** default) and 32-bit integers and floats (Small Lua, for restricted
+** hardware).
+** =====================================================================
+*/
+#define LUA_INT_LONGLONG
+#define LUA_REAL_DOUBLE
 
 
 /*
@@ -378,27 +396,13 @@
 #define LUAL_BUFFERSIZE		BUFSIZ
 
 
-
-
 /*
 ** {==================================================================
-** The following definitions set the numeric types for Lua.
-** Lua should work fine with 32-bit or 64-bit integers mixed with
-** 32-bit or 64-bit floats. The usual configurations are 64-bit
-** integers and floats (the default) and 32-bit integers and floats
-** (for restricted hardware).
+** Configuration for Numbers.
+** Change these definitions if no predefined LUA_REAL_* / LUA_INT_*
+** satisfy your needs.
 ** ===================================================================
 */
-
-/*
-@@ LUA_INT_INT/LUA_INT_LONG/LUA_INT_LONGLONG defines size for Lua integers;
-@@ LUA_REAL_FLOAT/LUA_REAL_DOUBLE/LUA_REAL_LONGDOUBLE defines size for
-@* Lua floats.
-** Default is long long + double
-*/
-#define LUA_INT_LONGLONG
-#define LUA_REAL_DOUBLE
-
 
 /*
 @@ LUA_NUMBER is the floating-point type used by Lua.
@@ -409,7 +413,7 @@
 @@ LUA_NUMBER_FRMLEN is the length modifier for writing floats.
 @@ LUA_NUMBER_SCAN is the format for reading floats.
 @@ LUA_NUMBER_FMT is the format for writing floats.
-@@ lua_number2str converts a floats to a string.
+@@ lua_number2str converts a float to a string.
 **
 @@ l_mathop allows the addition of an 'l' or 'f' to all math operations
 **
