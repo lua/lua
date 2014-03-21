@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.187 2014/03/12 18:09:06 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.188 2014/03/21 13:52:33 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -1088,12 +1088,9 @@ static void correctendianess (lua_State *L, char *b, int size, int endianarg) {
 }
 
 
-#define DEFAULTFLOATSIZE  \
-	(sizeof(lua_Number) == sizeof(float) ? "f" : "d")
-
 static int getfloatsize (lua_State *L, int arg) {
   const char *size = luaL_optstring(L, arg, "n");
-  if (*size == 'n') size = DEFAULTFLOATSIZE;
+  if (*size == 'n') return sizeof(lua_Number);
   luaL_argcheck(L, *size == 'd' || *size == 'f', arg,
                    "size must be 'f'/'d'/'n'");
   return (*size == 'd' ? sizeof(double) : sizeof(float));
@@ -1105,13 +1102,16 @@ static int packfloat_l (lua_State *L) {
   char *pn;  /* pointer to number */
   lua_Number n = luaL_checknumber(L, 1);
   int size = getfloatsize(L, 2);
-  if (size == sizeof(double)) {
-    d = (double)n;
-    pn = (char*)&d;
-  }  
-  else {
+  if (size == sizeof(lua_Number))
+    pn = (char*)&n;
+  else if (size == sizeof(float)) {
     f = (float)n;
     pn = (char*)&f;
+  }  
+  else {  /* native lua_Number may be neither float nor double */
+    lua_assert(size == sizeof(double));
+    d = (double)n;
+    pn = (char*)&d;
   }
   correctendianess(L, pn, size, 3);
   lua_pushlstring(L, pn, size);
@@ -1127,17 +1127,22 @@ static int unpackfloat_l (lua_State *L) {
   int size = getfloatsize(L, 3);
   luaL_argcheck(L, 1 <= pos && (size_t)pos + size - 1 <= len, 1,
                    "string too short");
-  if (size == sizeof(double)) {
-    double d;
-    memcpy(&d, s + pos - 1, size); 
-    correctendianess(L, (char*)&d, size, 4);
-    res = (lua_Number)d;
-  }  
-  else {
+  if (size == sizeof(lua_Number)) {
+    memcpy(&res, s + pos - 1, size); 
+    correctendianess(L, (char*)&res, size, 4);
+  }
+  else if (size == sizeof(float)) {
     float f;
     memcpy(&f, s + pos - 1, size); 
     correctendianess(L, (char*)&f, size, 4);
     res = (lua_Number)f;
+  }  
+  else {  /* native lua_Number may be neither float nor double */
+    double d;
+    lua_assert(size == sizeof(double));
+    memcpy(&d, s + pos - 1, size); 
+    correctendianess(L, (char*)&d, size, 4);
+    res = (lua_Number)d;
   }
   lua_pushnumber(L, res);
   return 1;
