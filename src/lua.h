@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.292 2013/07/05 14:29:51 roberto Exp $
+** $Id: lua.h,v 1.302 2014/03/20 19:42:35 roberto Exp $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -19,11 +19,11 @@
 #define LUA_VERSION_MAJOR	"5"
 #define LUA_VERSION_MINOR	"3"
 #define LUA_VERSION_NUM		503
-#define LUA_VERSION_RELEASE	"0 (work1)"
+#define LUA_VERSION_RELEASE	"0 (work2)"
 
 #define LUA_VERSION	"Lua " LUA_VERSION_MAJOR "." LUA_VERSION_MINOR
 #define LUA_RELEASE	LUA_VERSION "." LUA_VERSION_RELEASE
-#define LUA_COPYRIGHT	LUA_RELEASE "  Copyright (C) 1994-2013 Lua.org, PUC-Rio"
+#define LUA_COPYRIGHT	LUA_RELEASE "  Copyright (C) 1994-2014 Lua.org, PUC-Rio"
 #define LUA_AUTHORS	"R. Ierusalimschy, L. H. de Figueiredo, W. Celes"
 
 
@@ -182,14 +182,20 @@ LUA_API const void     *(lua_topointer) (lua_State *L, int idx);
 ** Comparison and arithmetic functions
 */
 
-#define LUA_OPADD	0	/* ORDER TM */
+#define LUA_OPADD	0	/* ORDER TM, ORDER OP */
 #define LUA_OPSUB	1
 #define LUA_OPMUL	2
-#define LUA_OPDIV	3
-#define LUA_OPIDIV	4
-#define LUA_OPMOD	5
-#define LUA_OPPOW	6
-#define LUA_OPUNM	7
+#define LUA_OPMOD	3
+#define LUA_OPPOW	4
+#define LUA_OPDIV	5
+#define LUA_OPIDIV	6
+#define LUA_OPBAND	7
+#define LUA_OPBOR	8
+#define LUA_OPBXOR	9
+#define LUA_OPSHL	10
+#define LUA_OPSHR	11
+#define LUA_OPUNM	12
+#define LUA_OPBNOT	13
 
 LUA_API void  (lua_arith) (lua_State *L, int op);
 
@@ -222,12 +228,13 @@ LUA_API int   (lua_pushthread) (lua_State *L);
 /*
 ** get functions (Lua -> stack)
 */
-LUA_API void  (lua_getglobal) (lua_State *L, const char *var);
-LUA_API void  (lua_gettable) (lua_State *L, int idx);
-LUA_API void  (lua_getfield) (lua_State *L, int idx, const char *k);
-LUA_API void  (lua_rawget) (lua_State *L, int idx);
-LUA_API void  (lua_rawgeti) (lua_State *L, int idx, lua_Integer n);
-LUA_API void  (lua_rawgetp) (lua_State *L, int idx, const void *p);
+LUA_API int (lua_getglobal) (lua_State *L, const char *var);
+LUA_API int (lua_gettable) (lua_State *L, int idx);
+LUA_API int (lua_getfield) (lua_State *L, int idx, const char *k);
+LUA_API int (lua_rawget) (lua_State *L, int idx);
+LUA_API int (lua_rawgeti) (lua_State *L, int idx, lua_Integer n);
+LUA_API int (lua_rawgetp) (lua_State *L, int idx, const void *p);
+
 LUA_API void  (lua_createtable) (lua_State *L, int narr, int nrec);
 LUA_API void *(lua_newuserdata) (lua_State *L, size_t sz);
 LUA_API int   (lua_getmetatable) (lua_State *L, int objindex);
@@ -264,7 +271,7 @@ LUA_API int   (lua_load) (lua_State *L, lua_Reader reader, void *dt,
                                         const char *chunkname,
                                         const char *mode);
 
-LUA_API int (lua_dump) (lua_State *L, lua_Writer writer, void *data);
+LUA_API int (lua_dump) (lua_State *L, lua_Writer writer, void *data, int strip);
 
 
 /*
@@ -288,10 +295,7 @@ LUA_API int  (lua_status) (lua_State *L);
 #define LUA_GCSTEP		5
 #define LUA_GCSETPAUSE		6
 #define LUA_GCSETSTEPMUL	7
-#define LUA_GCSETMAJORINC	8
 #define LUA_GCISRUNNING		9
-#define LUA_GCGEN		10
-#define LUA_GCINC		11
 
 LUA_API int (lua_gc) (lua_State *L, int what, int data);
 
@@ -394,7 +398,7 @@ LUA_API void *(lua_upvalueid) (lua_State *L, int fidx, int n);
 LUA_API void  (lua_upvaluejoin) (lua_State *L, int fidx1, int n1,
                                                int fidx2, int n2);
 
-LUA_API int (lua_sethook) (lua_State *L, lua_Hook func, int mask, int count);
+LUA_API void (lua_sethook) (lua_State *L, lua_Hook func, int mask, int count);
 LUA_API lua_Hook (lua_gethook) (lua_State *L);
 LUA_API int (lua_gethookmask) (lua_State *L);
 LUA_API int (lua_gethookcount) (lua_State *L);
@@ -422,7 +426,7 @@ struct lua_Debug {
 
 
 /******************************************************************************
-* Copyright (C) 1994-2013 Lua.org, PUC-Rio.
+* Copyright (C) 1994-2014 Lua.org, PUC-Rio.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the

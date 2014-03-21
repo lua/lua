@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.71 2013/06/25 18:57:18 roberto Exp $
+** $Id: lcode.c,v 2.85 2014/03/21 13:52:33 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -307,17 +307,21 @@ static void freeexp (FuncState *fs, expdesc *e) {
 }
 
 
+/*
+** Use scanner's table to cache position of constants in constant list
+** and try to reuse constants
+*/
 static int addk (FuncState *fs, TValue *key, TValue *v) {
   lua_State *L = fs->ls->L;
-  TValue *idx = luaH_set(L, fs->h, key);
   Proto *f = fs->f;
+  TValue *idx = luaH_set(L, fs->ls->h, key);  /* index scanner table */
   int k, oldsize;
-  if (ttisinteger(idx)) {
+  if (ttisinteger(idx)) {  /* is there an index there? */
     k = ivalue(idx);
-    if (luaV_rawequalobj(&f->k[k], v))
-      return k;
-    /* else may be a collision (e.g., between 0.0 and "\0\0\0\0\0\0\0\0");
-       go through and create a new entry for this value */
+    /* correct value? (warning: must distinguish floats from integers!) */
+    if (k < fs->nk && ttype(&f->k[k]) == ttype(v) &&
+                      luaV_rawequalobj(&f->k[k], v))
+      return k;  /* reuse index */
   }
   /* constant not found; create a new entry */
   oldsize = f->sizek;
@@ -360,7 +364,7 @@ int luaK_intK (FuncState *fs, lua_Integer n) {
 */ 
 static int luaK_numberK (FuncState *fs, lua_Number r) {
   TValue o;
-  lua_assert(!luai_numisnan(NULL, r) && !isminuszero(r));
+  lua_assert(!luai_numisnan(r) && !isminuszero(r));
   setnvalue(&o, r);
   return addk(fs, &o, &o);
 }
@@ -377,7 +381,7 @@ static int nilK (FuncState *fs) {
   TValue k, v;
   setnilvalue(&v);
   /* cannot use nil as key; instead use table itself to represent nil */
-  sethvalue(fs->ls->L, &k, fs->h);
+  sethvalue(fs->ls->L, &k, fs->ls->h);
   return addk(fs, &k, &v);
 }
 
@@ -746,24 +750,46 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
 }
 
 
-static int constfolding (OpCode op, expdesc *e1, expdesc *e2) {
-  TValue v1, v2, res;
+/*
+** return false if folding can raise an error
+*/
+static int validop (int op, TValue *v1, TValue *v2) {
+  lua_Number a, b;
   lua_Integer i;
-  if (!tonumeral(e1, &v1) || !tonumeral(e2, &v2))
+  cast_void(a); cast_void(b);  /* macro may not use its arguments */
+  if (luai_numinvalidop(op, (cast_void(tonumber(v1, &a)), a),
+                            (cast_void(tonumber(v2, &b)), b)))
     return 0;
-  if (op == OP_IDIV &&
-        (!tointeger(&v1, &i) || !tointeger(&v2, &i) || i == 0))
-    return 0;  /* avoid division by 0 and conversion errors */
-  if (op == OP_MOD && ttisinteger(&v1) && ttisinteger(&v2) && ivalue(&v2) == 0)
-    return 0;  /* avoid module by 0 at compile time */
-  luaO_arith(NULL, op - OP_ADD + LUA_OPADD, &v1, &v2, &res);
+  switch (op) {
+    case LUA_OPIDIV:  /* division by 0 and conversion errors */
+      return (tointeger(v1, &i) && tointeger(v2, &i) && i != 0);
+    case LUA_OPBAND: case LUA_OPBOR: case LUA_OPBXOR:
+    case LUA_OPSHL: case LUA_OPSHR: case LUA_OPBNOT:  /* conversion errors */
+      return (tointeger(v1, &i) && tointeger(v2, &i));
+    case LUA_OPMOD:  /* integer module by 0 */
+      return !(ttisinteger(v1) && ttisinteger(v2) && ivalue(v2) == 0);
+    case LUA_OPPOW:  /* negative integer exponentiation */
+      return !(ttisinteger(v1) && ttisinteger(v2) && ivalue(v2) < 0);
+    default: return 1;  /* everything else is valid */
+  }
+}
+
+
+/*
+** Try to "constant-fold" an operation; return 1 iff successful
+*/
+static int constfolding (FuncState *fs, int op, expdesc *e1, expdesc *e2) {
+  TValue v1, v2, res;
+  if (!tonumeral(e1, &v1) || !tonumeral(e2, &v2) || !validop(op, &v1, &v2))
+    return 0;  /* non-numeric operands or not safe to fold */
+  luaO_arith(fs->ls->L, op, &v1, &v2, &res);
   if (ttisinteger(&res)) {
     e1->k = VKINT;
     e1->u.ival = ivalue(&res);
   }
   else {
     lua_Number n = fltvalue(&res);
-    if (luai_numisnan(NULL, n) || isminuszero(n))
+    if (luai_numisnan(n) || isminuszero(n))
       return 0;  /* folds neither NaN nor -0 */
     e1->k = VKFLT;
     e1->u.nval = n;
@@ -774,9 +800,16 @@ static int constfolding (OpCode op, expdesc *e1, expdesc *e2) {
 
 static void codearith (FuncState *fs, OpCode op,
                        expdesc *e1, expdesc *e2, int line) {
-  if (!constfolding(op, e1, e2)) {  /* could not fold operation? */
-    int o2 = (op != OP_UNM && op != OP_LEN) ? luaK_exp2RK(fs, e2) : 0;
-    int o1 = luaK_exp2RK(fs, e1);
+  if (!constfolding(fs, op - OP_ADD + LUA_OPADD, e1, e2)) {
+    int o1, o2;
+    if (op == OP_UNM || op == OP_BNOT || op == OP_LEN) {
+      o2 = 0;
+      o1 = luaK_exp2anyreg(fs, e1);  /* cannot operate on constants */
+    }
+    else {  /* regular case (binary operators) */
+      o2 = luaK_exp2RK(fs, e2);
+      o1 = luaK_exp2RK(fs, e1);
+    }
     if (o1 > o2) {
       freeexp(fs, e1);
       freeexp(fs, e2);
@@ -810,21 +843,13 @@ static void codecomp (FuncState *fs, OpCode op, int cond, expdesc *e1,
 
 void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
   expdesc e2;
-  e2.t = e2.f = NO_JUMP; e2.k = VKFLT; e2.u.nval = 0;
+  e2.t = e2.f = NO_JUMP; e2.k = VKINT; e2.u.ival = 0;
   switch (op) {
-    case OPR_MINUS: {
-      if (!constfolding(OP_UNM, e, e)) {  /* cannot fold it? */
-        luaK_exp2anyreg(fs, e);
-        codearith(fs, OP_UNM, e, &e2, line);
-      }
+    case OPR_MINUS: case OPR_BNOT: case OPR_LEN: {
+      codearith(fs, cast(OpCode, (op - OPR_MINUS) + OP_UNM), e, &e2, line);
       break;
     }
     case OPR_NOT: codenot(fs, e); break;
-    case OPR_LEN: {
-      luaK_exp2anyreg(fs, e);  /* cannot operate on constants */
-      codearith(fs, OP_LEN, e, &e2, line);
-      break;
-    }
     default: lua_assert(0);
   }
 }
@@ -846,7 +871,9 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
     }
     case OPR_ADD: case OPR_SUB:
     case OPR_MUL: case OPR_DIV: case OPR_IDIV:
-    case OPR_MOD: case OPR_POW: {
+    case OPR_MOD: case OPR_POW:
+    case OPR_BAND: case OPR_BOR: case OPR_BXOR:
+    case OPR_SHL: case OPR_SHR: {
       if (!tonumeral(v, NULL)) luaK_exp2RK(fs, v);
       break;
     }
@@ -890,8 +917,10 @@ void luaK_posfix (FuncState *fs, BinOpr op,
       break;
     }
     case OPR_ADD: case OPR_SUB: case OPR_MUL: case OPR_DIV:
-    case OPR_IDIV: case OPR_MOD: case OPR_POW: {
-      codearith(fs, cast(OpCode, op - OPR_ADD + OP_ADD), e1, e2, line);
+    case OPR_IDIV: case OPR_MOD: case OPR_POW:
+    case OPR_BAND: case OPR_BOR: case OPR_BXOR:
+    case OPR_SHL: case OPR_SHR: {
+      codearith(fs, cast(OpCode, (op - OPR_ADD) + OP_ADD), e1, e2, line);
       break;
     }
     case OPR_EQ: case OPR_LT: case OPR_LE: {

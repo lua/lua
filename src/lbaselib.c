@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.279 2013/07/05 14:39:15 roberto Exp $
+** $Id: lbaselib.c,v 1.285 2014/03/12 20:57:40 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -63,7 +63,7 @@ static int b_str2int (const char *s, const char *e, int base, lua_Integer *pn) {
   s += strspn(s, SPACECHARS);  /* skip trailing spaces */
   if (s != e)  /* invalid trailing characters? */
     return 0;
-  *pn = (neg) ? -(lua_Integer)n : (lua_Integer)n;
+  *pn = (lua_Integer)((neg) ? (0u - n) : n);
   return 1;
 }
 
@@ -175,19 +175,18 @@ static int luaB_rawset (lua_State *L) {
 static int luaB_collectgarbage (lua_State *L) {
   static const char *const opts[] = {"stop", "restart", "collect",
     "count", "step", "setpause", "setstepmul",
-    "setmajorinc", "isrunning", "generational", "incremental", NULL};
+    "isrunning", NULL};
   static const int optsnum[] = {LUA_GCSTOP, LUA_GCRESTART, LUA_GCCOLLECT,
     LUA_GCCOUNT, LUA_GCSTEP, LUA_GCSETPAUSE, LUA_GCSETSTEPMUL,
-    LUA_GCSETMAJORINC, LUA_GCISRUNNING, LUA_GCGEN, LUA_GCINC};
+    LUA_GCISRUNNING};
   int o = optsnum[luaL_checkoption(L, 1, "collect", opts)];
   int ex = luaL_optint(L, 2, 0);
   int res = lua_gc(L, o, ex);
   switch (o) {
     case LUA_GCCOUNT: {
       int b = lua_gc(L, LUA_GCCOUNTB, 0);
-      lua_pushnumber(L, res + ((lua_Number)b/1024));
-      lua_pushinteger(L, b);
-      return 2;
+      lua_pushnumber(L, (lua_Number)res + ((lua_Number)b/1024));
+      return 1;
     }
     case LUA_GCSTEP: case LUA_GCISRUNNING: {
       lua_pushboolean(L, res);
@@ -247,8 +246,7 @@ static int ipairsaux (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   i++;  /* next value */
   lua_pushinteger(L, i);
-  lua_rawgeti(L, 1, i);
-  return (lua_isnil(L, -1)) ? 1 : 2;
+  return (lua_rawgeti(L, 1, i) == LUA_TNIL) ? 1 : 2;
 }
 
 

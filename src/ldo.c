@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.109 2013/04/19 21:05:04 roberto Exp $
+** $Id: ldo.c,v 2.115 2014/03/21 13:52:33 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -46,30 +46,33 @@
 ** C++ code, with _longjmp/_setjmp when asked to use them, and with
 ** longjmp/setjmp otherwise.
 */
-#if !defined(LUAI_THROW)
+#if !defined(LUAI_THROW)				/* { */
 
-#if defined(__cplusplus) && !defined(LUA_USE_LONGJMP)
+#if defined(__cplusplus) && !defined(LUA_USE_LONGJMP)	/* { */
+
 /* C++ exceptions */
 #define LUAI_THROW(L,c)		throw(c)
 #define LUAI_TRY(L,c,a) \
 	try { a } catch(...) { if ((c)->status == 0) (c)->status = -1; }
 #define luai_jmpbuf		int  /* dummy variable */
 
-#elif defined(LUA_USE_ULONGJMP)
-/* in Unix, try _longjmp/_setjmp (more efficient) */
+#elif defined(LUA_USE_POSIX)				/* }{ */
+
+/* in POSIX, try _longjmp/_setjmp (more efficient) */
 #define LUAI_THROW(L,c)		_longjmp((c)->b, 1)
 #define LUAI_TRY(L,c,a)		if (_setjmp((c)->b) == 0) { a }
 #define luai_jmpbuf		jmp_buf
 
-#else
-/* default handling with long jumps */
+#else							/* }{ */
+
+/* ANSI handling with long jumps */
 #define LUAI_THROW(L,c)		longjmp((c)->b, 1)
 #define LUAI_TRY(L,c,a)		if (setjmp((c)->b) == 0) { a }
 #define luai_jmpbuf		jmp_buf
 
-#endif
+#endif							/* } */
 
-#endif
+#endif							/* } */
 
 
 
@@ -141,10 +144,10 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 
 static void correctstack (lua_State *L, TValue *oldstack) {
   CallInfo *ci;
-  GCObject *up;
+  UpVal *up;
   L->top = (L->top - oldstack) + L->stack;
-  for (up = L->openupval; up != NULL; up = up->gch.next)
-    gco2uv(up)->v = (gco2uv(up)->v - oldstack) + L->stack;
+  for (up = L->openupval; up != NULL; up = up->u.open.next)
+    up->v = (up->v - oldstack) + L->stack;
   for (ci = L->ci; ci != NULL; ci = ci->previous) {
     ci->top = (ci->top - oldstack) + L->stack;
     ci->func = (ci->func - oldstack) + L->stack;
@@ -206,7 +209,11 @@ void luaD_shrinkstack (lua_State *L) {
   int inuse = stackinuse(L);
   int goodsize = inuse + (inuse / 8) + 2*EXTRA_STACK;
   if (goodsize > LUAI_MAXSTACK) goodsize = LUAI_MAXSTACK;
-  if (inuse > LUAI_MAXSTACK ||  /* handling stack overflow? */
+  if (L->stacksize > LUAI_MAXSTACK)  /* was handling stack overflow? */
+    luaE_freeCI(L);  /* free all CIs (list grew because of an error) */
+  else
+    luaE_shrinkCI(L);  /* shrink list */
+  if (inuse > LUAI_MAXSTACK ||  /* still handling stack overflow? */
       goodsize >= L->stacksize)  /* would grow instead of shrink? */
     condmovestack(L);  /* don't change stack (change only for debugging) */
   else
@@ -534,6 +541,7 @@ static void resume (lua_State *L, void *ud) {
 
 LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs) {
   int status;
+  int oldnny = L->nny;  /* save 'nny' */
   lua_lock(L);
   luai_userstateresume(L, nargs);
   L->nCcalls = (from) ? from->nCcalls + 1 : 1;
@@ -555,7 +563,7 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs) {
     }
     lua_assert(status == L->status);
   }
-  L->nny = 1;  /* do not allow yields */
+  L->nny = oldnny;  /* restore 'nny' */
   L->nCcalls--;
   lua_assert(L->nCcalls == ((from) ? from->nCcalls : 0));
   lua_unlock(L);
@@ -637,7 +645,6 @@ static void checkmode (lua_State *L, const char *mode, const char *x) {
 
 
 static void f_parser (lua_State *L, void *ud) {
-  int i;
   Closure *cl;
   struct SParser *p = cast(struct SParser *, ud);
   int c = zgetc(p->z);  /* read first character */
@@ -650,11 +657,7 @@ static void f_parser (lua_State *L, void *ud) {
     cl = luaY_parser(L, p->z, &p->buff, &p->dyd, p->name, c);
   }
   lua_assert(cl->l.nupvalues == cl->l.p->sizeupvalues);
-  for (i = 0; i < cl->l.nupvalues; i++) {  /* initialize upvalues */
-    UpVal *up = luaF_newupval(L);
-    cl->l.upvals[i] = up;
-    luaC_objbarrier(L, cl, up);
-  }
+  luaF_initupvals(L, &cl->l);
 }
 
 
