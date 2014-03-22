@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.78 2013/05/14 15:59:04 roberto Exp $
+** $Id: lobject.h,v 2.86 2014/02/19 13:52:42 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -20,13 +20,12 @@
 ** Extra tags for non-values
 */
 #define LUA_TPROTO	LUA_NUMTAGS
-#define LUA_TUPVAL	(LUA_NUMTAGS+1)
-#define LUA_TDEADKEY	(LUA_NUMTAGS+2)
+#define LUA_TDEADKEY	(LUA_NUMTAGS+1)
 
 /*
 ** number of all possible tags (including LUA_TNONE but excluding DEADKEY)
 */
-#define LUA_TOTALTAGS	(LUA_TUPVAL+2)
+#define LUA_TOTALTAGS	(LUA_TPROTO + 2)
 
 
 /*
@@ -147,7 +146,7 @@ typedef struct lua_TValue TValue;
 #define ttisCclosure(o)		checktag((o), ctb(LUA_TCCL))
 #define ttisLclosure(o)		checktag((o), ctb(LUA_TLCL))
 #define ttislcf(o)		checktag((o), LUA_TLCF)
-#define ttisuserdata(o)		checktag((o), ctb(LUA_TUSERDATA))
+#define ttisfulluserdata(o)	checktag((o), ctb(LUA_TUSERDATA))
 #define ttisthread(o)		checktag((o), ctb(LUA_TTHREAD))
 #define ttisdeadkey(o)		checktag((o), LUA_TDEADKEY)
 
@@ -159,7 +158,7 @@ typedef struct lua_TValue TValue;
 #define pvalue(o)	check_exp(ttislightuserdata(o), val_(o).p)
 #define rawtsvalue(o)	check_exp(ttisstring(o), &val_(o).gc->ts)
 #define tsvalue(o)	(&rawtsvalue(o)->tsv)
-#define rawuvalue(o)	check_exp(ttisuserdata(o), &val_(o).gc->u)
+#define rawuvalue(o)	check_exp(ttisfulluserdata(o), &val_(o).gc->u)
 #define uvalue(o)	(&rawuvalue(o)->uv)
 #define clvalue(o)	check_exp(ttisclosure(o), &val_(o).gc->cl)
 #define clLvalue(o)	check_exp(ttisLclosure(o), &val_(o).gc->cl.l)
@@ -311,8 +310,9 @@ typedef union TString {
   struct {
     CommonHeader;
     lu_byte extra;  /* reserved words for short strings; "has hash" for longs */
-    unsigned int hash;
     size_t len;  /* number of characters in string */
+    union TString *hnext;  /* linked list for hash table */
+    unsigned int hash;
   } tsv;
 } TString;
 
@@ -331,12 +331,24 @@ typedef union Udata {
   L_Umaxalign dummy;  /* ensures maximum alignment for `local' udata */
   struct {
     CommonHeader;
+    lu_byte ttuv_;  /* user value's tag */
     struct Table *metatable;
-    struct Table *env;
     size_t len;  /* number of bytes */
+    union Value user_;  /* user value */
   } uv;
 } Udata;
 
+
+#define setuservalue(L,u,o) \
+	{ const TValue *io=(o); Udata *iu = (u); \
+	  iu->uv.user_ = io->value_; iu->uv.ttuv_ = io->tt_; \
+	  checkliveness(G(L),io); }
+
+
+#define getuservalue(L,u,o) \
+	{ TValue *io=(o); const Udata *iu = (u); \
+	  io->value_ = iu->uv.user_; io->tt_ = iu->uv.ttuv_; \
+	  checkliveness(G(L),io); }
 
 
 /*
@@ -392,17 +404,7 @@ typedef struct Proto {
 /*
 ** Lua Upvalues
 */
-typedef struct UpVal {
-  CommonHeader;
-  TValue *v;  /* points to stack or to its own value */
-  union {
-    TValue value;  /* the value (when closed) */
-    struct {  /* double linked list (when open) */
-      struct UpVal *prev;
-      struct UpVal *next;
-    } l;
-  } u;
-} UpVal;
+typedef struct UpVal UpVal;
 
 
 /*
@@ -444,7 +446,7 @@ typedef union Closure {
 typedef union TKey {
   struct {
     TValuefields;
-    struct Node *next;  /* for chaining */
+    int next;  /* for chaining (offset for next node) */
   } nk;
   TValue tvk;
 } TKey;
@@ -489,9 +491,12 @@ typedef struct Table {
 
 LUAI_DDEC const TValue luaO_nilobject_;
 
+/* size of buffer for 'luaO_utf8esc' function */
+#define UTF8BUFFSZ	8
 
 LUAI_FUNC int luaO_int2fb (unsigned int x);
 LUAI_FUNC int luaO_fb2int (int x);
+LUAI_FUNC int luaO_utf8esc (char *buff, unsigned int x);
 LUAI_FUNC int luaO_ceillog2 (unsigned int x);
 LUAI_FUNC void luaO_arith (lua_State *L, int op, const TValue *p1,
                            const TValue *p2, TValue *res);

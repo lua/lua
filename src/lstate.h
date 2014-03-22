@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.82 2012/07/02 13:37:04 roberto Exp $
+** $Id: lstate.h,v 2.102 2014/02/18 13:46:26 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -16,25 +16,16 @@
 
 /*
 
-** Some notes about garbage-collected objects:  All objects in Lua must
-** be kept somehow accessible until being freed.
+** Some notes about garbage-collected objects: All objects in Lua must
+** be kept somehow accessible until being freed, so all objects always
+** belong to one (and only one) of these lists, using field 'next' of
+** the 'CommonHeader' for the link:
 **
-** Lua keeps most objects linked in list g->allgc. The link uses field
-** 'next' of the CommonHeader.
-**
-** Strings are kept in several lists headed by the array g->strt.hash.
-**
-** Open upvalues are not subject to independent garbage collection. They
-** are collected together with their respective threads. Lua keeps a
-** double-linked list with all open upvalues (g->uvhead) so that it can
-** mark objects referred by them. (They are always gray, so they must
-** be remarked in the atomic step. Usually their contents would be marked
-** when traversing the respective threads, but the thread may already be
-** dead, while the upvalue is still accessible through closures.)
-**
-** Objects with finalizers are kept in the list g->finobj.
-**
-** The list g->tobefnz links all objects being finalized.
+** allgc: all objects not marked for finalization;
+** finobj: all objects marked for finalization;
+** tobefnz: all objects ready to be finalized; 
+** fixedgc: all objects that are not to be collected (currently
+** only small strings, such as reserved words).
 
 */
 
@@ -53,12 +44,11 @@ struct lua_longjmp;  /* defined in ldo.c */
 /* kinds of Garbage Collection */
 #define KGC_NORMAL	0
 #define KGC_EMERGENCY	1	/* gc was forced by an allocation failure */
-#define KGC_GEN		2	/* generational collection */
 
 
 typedef struct stringtable {
-  GCObject **hash;
-  lu_int32 nuse;  /* number of elements */
+  TString **hash;
+  int nuse;  /* number of elements */
   int size;
 } stringtable;
 
@@ -123,21 +113,20 @@ typedef struct global_State {
   lu_byte gcstate;  /* state of garbage collector */
   lu_byte gckind;  /* kind of GC running */
   lu_byte gcrunning;  /* true if GC is running */
-  int sweepstrgc;  /* position of sweep in `strt' */
   GCObject *allgc;  /* list of all collectable objects */
+  GCObject **sweepgc;  /* current position of sweep in list */
   GCObject *finobj;  /* list of collectable objects with finalizers */
-  GCObject **sweepgc;  /* current position of sweep in list 'allgc' */
-  GCObject **sweepfin;  /* current position of sweep in list 'finobj' */
   GCObject *gray;  /* list of gray objects */
   GCObject *grayagain;  /* list of objects to be traversed atomically */
   GCObject *weak;  /* list of tables with weak values */
   GCObject *ephemeron;  /* list of ephemeron tables (weak keys) */
   GCObject *allweak;  /* list of all-weak tables */
   GCObject *tobefnz;  /* list of userdata to be GC */
-  UpVal uvhead;  /* head of double-linked list of all open upvalues */
+  GCObject *fixedgc;  /* list of objects not to be collected */
+  struct lua_State *twups;  /* list of threads with open upvalues */
   Mbuffer buff;  /* temporary buffer for string concatenation */
+  unsigned int gcfinnum;  /* number of finalizers to call in each GC step */
   int gcpause;  /* size of pause between successive GCs */
-  int gcmajorinc;  /* pause between major collections (only in gen. mode) */
   int gcstepmul;  /* GC `granularity' */
   lua_CFunction panic;  /* to be called in unprotected errors */
   struct lua_State *mainthread;
@@ -168,8 +157,9 @@ struct lua_State {
   int basehookcount;
   int hookcount;
   lua_Hook hook;
-  GCObject *openupval;  /* list of open upvalues in this stack */
+  UpVal *openupval;  /* list of open upvalues in this stack */
   GCObject *gclist;
+  struct lua_State *twups;  /* list of threads with open upvalues */
   struct lua_longjmp *errorJmp;  /* current error recover point */
   ptrdiff_t errfunc;  /* current error handling function (stack index) */
   CallInfo base_ci;  /* CallInfo for first level (C calling Lua) */
@@ -189,7 +179,6 @@ union GCObject {
   union Closure cl;
   struct Table h;
   struct Proto p;
-  struct UpVal uv;
   struct lua_State th;  /* thread */
 };
 
@@ -208,7 +197,6 @@ union GCObject {
 	check_exp(novariant((o)->gch.tt) == LUA_TFUNCTION, &((o)->cl))
 #define gco2t(o)	check_exp((o)->gch.tt == LUA_TTABLE, &((o)->h))
 #define gco2p(o)	check_exp((o)->gch.tt == LUA_TPROTO, &((o)->p))
-#define gco2uv(o)	check_exp((o)->gch.tt == LUA_TUPVAL, &((o)->uv))
 #define gco2th(o)	check_exp((o)->gch.tt == LUA_TTHREAD, &((o)->th))
 
 /* macro to convert any Lua object into a GCObject */
@@ -222,6 +210,7 @@ LUAI_FUNC void luaE_setdebt (global_State *g, l_mem debt);
 LUAI_FUNC void luaE_freethread (lua_State *L, lua_State *L1);
 LUAI_FUNC CallInfo *luaE_extendCI (lua_State *L);
 LUAI_FUNC void luaE_freeCI (lua_State *L);
+LUAI_FUNC void luaE_shrinkCI (lua_State *L);
 
 
 #endif
