@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.33 2014/03/11 18:05:46 roberto Exp roberto $
+** $Id: lundump.c,v 2.34 2014/03/11 18:56:27 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -42,7 +42,7 @@ static l_noret error(LoadState *S, const char *why) {
 
 /*
 ** All high-level loads go through LoadVector; you can change it to
-** adapt to the endianess of the input
+** adapt to the endianness of the input
 */
 #define LoadVector(S,b,n)	LoadBlock(S,b,(n)*sizeof((b)[0]))
 
@@ -231,7 +231,7 @@ static void checkHeader (LoadState *S) {
   checksize(S, lua_Integer);
   checksize(S, lua_Number);
   if (LoadInteger(S) != LUAC_INT)
-    error(S, "endianess mismatch in");
+    error(S, "endianness mismatch in");
   if (LoadNumber(S) != LUAC_NUM)
     error(S, "float format mismatch in");
 }

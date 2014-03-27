@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.188 2014/03/21 13:52:33 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.189 2014/03/21 14:26:44 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -975,7 +975,7 @@ static int getendian (lua_State *L, int arg) {
   if (*endian == 'n')  /* native? */
     return nativeendian.little;
   luaL_argcheck(L, *endian == 'l' || *endian == 'b', arg,
-                   "endianess must be 'l'/'b'/'n'");
+                   "endianness must be 'l'/'b'/'n'");
   return (*endian == 'l');
 }
 
@@ -1075,9 +1075,9 @@ static int unpackint_l (lua_State *L) {
 }
 
 
-static void correctendianess (lua_State *L, char *b, int size, int endianarg) {
+static void correctendianness (lua_State *L, char *b, int size, int endianarg) {
   int endian = getendian(L, endianarg);
-  if (endian != nativeendian.little) {  /* not native endianess? */
+  if (endian != nativeendian.little) {  /* not native endianness? */
     int i = 0;
     while (i < --size) {
       char temp = b[i];
@@ -1113,7 +1113,7 @@ static int packfloat_l (lua_State *L) {
     d = (double)n;
     pn = (char*)&d;
   }
-  correctendianess(L, pn, size, 3);
+  correctendianness(L, pn, size, 3);
   lua_pushlstring(L, pn, size);
   return 1;
 }
@@ -1129,19 +1129,19 @@ static int unpackfloat_l (lua_State *L) {
                    "string too short");
   if (size == sizeof(lua_Number)) {
     memcpy(&res, s + pos - 1, size); 
-    correctendianess(L, (char*)&res, size, 4);
+    correctendianness(L, (char*)&res, size, 4);
   }
   else if (size == sizeof(float)) {
     float f;
     memcpy(&f, s + pos - 1, size); 
-    correctendianess(L, (char*)&f, size, 4);
+    correctendianness(L, (char*)&f, size, 4);
     res = (lua_Number)f;
   }  
   else {  /* native lua_Number may be neither float nor double */
     double d;
     lua_assert(size == sizeof(double));
     memcpy(&d, s + pos - 1, size); 
-    correctendianess(L, (char*)&d, size, 4);
+    correctendianness(L, (char*)&d, size, 4);
     res = (lua_Number)d;
   }
   lua_pushnumber(L, res);

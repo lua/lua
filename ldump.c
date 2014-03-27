@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 2.26 2014/03/11 18:05:46 roberto Exp roberto $
+** $Id: ldump.c,v 2.27 2014/03/11 18:56:27 roberto Exp roberto $
 ** save precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -27,7 +27,7 @@ typedef struct {
 
 /*
 ** All high-level dumps go through DumpVector; you can change it to
-** change the endianess of the result
+** change the endianness of the result
 */
 #define DumpVector(v,n,D)	DumpBlock(v,(n)*sizeof((v)[0]),D)
 
