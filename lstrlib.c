@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.189 2014/03/21 14:26:44 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.190 2014/03/27 15:58:05 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -1049,9 +1049,8 @@ static int unpackint (const char *buff, lua_Integer *res,
     n |= (lua_Integer)(unsigned char)buff[littleendian ? size - 1 - i : i];
   }
   if (size < SZINT) {  /* need sign extension? */
-    lua_Integer mask = (~(lua_Integer)0) << (size*NB - 1);
-    if (n & mask)  /* negative value? */
-      n |= mask;  /* signal extension */
+    lua_Unsigned mask = (lua_Unsigned)1 << (size*NB - 1);
+    n = (lua_Integer)((n ^ mask) - mask);  /* do sign extension */
   }
   *res = n;
   return 1;
