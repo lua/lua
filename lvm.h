@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 2.24 2013/12/16 14:30:22 roberto Exp roberto $
+** $Id: lvm.h,v 2.25 2013/12/30 20:47:58 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -12,8 +12,6 @@
 #include "lobject.h"
 #include "ltm.h"
 
-
-#define tostring(L,o) (ttisstring(o) || (luaV_tostring(L, o)))
 
 #define tonumber(o,n) \
 	(ttisfloat(o) ? (*(n) = fltvalue(o), 1) : luaV_tonumber_(o,n))

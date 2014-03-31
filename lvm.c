@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.189 2014/03/14 16:54:08 roberto Exp roberto $
+** $Id: lvm.c,v 2.190 2014/03/15 12:29:48 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -256,6 +256,8 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
   return !l_isfalse(L->top);
 }
 
+
+#define tostring(L,o) (ttisstring(o) || (luaV_tostring(L, o)))
 
 void luaV_concat (lua_State *L, int total) {
   lua_assert(total >= 2);
