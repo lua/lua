@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.91 2013/07/10 20:57:05 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.92 2013/07/22 16:05:53 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,13 @@
 
 
 static int math_abs (lua_State *L) {
-  lua_pushnumber(L, l_mathop(fabs)(luaL_checknumber(L, 1)));
+  if (lua_isinteger(L, 1)) {
+    lua_Integer n = lua_tointeger(L, 1);
+    if (n < 0) n = (lua_Integer)(0u - n);
+    lua_pushinteger(L, n);
+  }
+  else
+    lua_pushnumber(L, l_mathop(fabs)(luaL_checknumber(L, 1)));
   return 1;
 }
 
@@ -185,31 +191,30 @@ static int math_ldexp (lua_State *L) {
 }
 
 
-
 static int math_min (lua_State *L) {
   int n = lua_gettop(L);  /* number of arguments */
-  lua_Number dmin = luaL_checknumber(L, 1);
+  int imax = 1;
   int i;
-  for (i=2; i<=n; i++) {
-    lua_Number d = luaL_checknumber(L, i);
-    if (d < dmin)
-      dmin = d;
+  luaL_argcheck(L, n >= 1, 1, "value expected");
+  for (i = 2; i <= n; i++) {
+    if (lua_compare(L, i, imax, LUA_OPLT))
+      imax = i;
   }
-  lua_pushnumber(L, dmin);
+  lua_pushvalue(L, imax);
   return 1;
 }
 
 
 static int math_max (lua_State *L) {
   int n = lua_gettop(L);  /* number of arguments */
-  lua_Number dmax = luaL_checknumber(L, 1);
+  int imax = 1;
   int i;
-  for (i=2; i<=n; i++) {
-    lua_Number d = luaL_checknumber(L, i);
-    if (d > dmax)
-      dmax = d;
+  luaL_argcheck(L, n >= 1, 1, "value expected");
+  for (i = 2; i <= n; i++) {
+    if (lua_compare(L, imax, i, LUA_OPLT))
+      imax = i;
   }
-  lua_pushnumber(L, dmax);
+  lua_pushvalue(L, imax);
   return 1;
 }
 
