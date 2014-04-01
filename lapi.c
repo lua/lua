@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.200 2014/02/26 12:39:30 roberto Exp roberto $
+** $Id: lapi.c,v 2.201 2014/03/12 20:57:40 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -94,6 +94,7 @@ LUA_API int lua_checkstack (lua_State *L, int size) {
   int res;
   CallInfo *ci = L->ci;
   lua_lock(L);
+  api_check(L, size >= 0, "negative 'size'");
   if (L->stack_last - L->top > size)  /* stack large enough? */
     res = 1;  /* yes; check is OK */
   else {  /* no; need to grow stack */
