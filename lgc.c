@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.178 2014/02/19 13:51:09 roberto Exp roberto $
+** $Id: lgc.c,v 2.179 2014/03/21 13:52:33 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -777,9 +777,11 @@ static GCObject **sweeptolive (lua_State *L, GCObject **p, int *n) {
 */
 static void checkSizes (lua_State *L, global_State *g) {
   if (g->gckind != KGC_EMERGENCY) {
+    l_mem olddebt = g->GCdebt;
     luaZ_freebuffer(L, &g->buff);  /* free concatenation buffer */
     if (g->strt.nuse < g->strt.size / 4)  /* string table too big? */
       luaS_resize(L, g->strt.size / 2);  /* shrink it a little */
+    g->GCestimate += g->GCdebt - olddebt;  /* update estimate */
   }
 }
 
@@ -888,18 +890,17 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
     return;  /* nothing to be done */
   else {  /* move 'o' to 'finobj' list */
     GCObject **p;
-    if (g->sweepgc == &o->gch.next) {  /* avoid removing current sweep object */
-      lua_assert(issweepphase(g));
-      g->sweepgc = sweeptolive(L, g->sweepgc, NULL);
+    if (issweepphase(g)) {
+      makewhite(g, o);  /* "sweep" object 'o' */
+      if (g->sweepgc == &o->gch.next)  /* shoud not remove 'sweepgc' object */
+        g->sweepgc = sweeptolive(L, g->sweepgc, NULL);  /* change 'sweepgc' */
     }
     /* search for pointer pointing to 'o' */
     for (p = &g->allgc; *p != o; p = &gch(*p)->next) { /* empty */ }
-    *p = o->gch.next;  /* remove 'o' from its list */
+    *p = o->gch.next;  /* remove 'o' from 'allgc' list */
     o->gch.next = g->finobj;  /* link it in "fin" list */
     g->finobj = o;
     l_setbit(o->gch.marked, FINALIZEDBIT);  /* mark it as such */
-    if (issweepphase(g))
-      makewhite(g, o);  /* "sweep" object */
   }
 }
 
@@ -918,9 +919,9 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 ** set a reasonable "time" to wait before starting a new GC cycle;
 ** cycle will start when memory use hits threshold
 */
-static void setpause (global_State *g, l_mem estimate) {
+static void setpause (global_State *g) {
   l_mem threshold, debt;
-  estimate = estimate / PAUSEADJ;  /* adjust 'estimate' */
+  l_mem estimate = g->GCestimate / PAUSEADJ;  /* adjust 'estimate' */
   threshold = (g->gcpause < MAX_LMEM / estimate)  /* overflow? */
             ? estimate * g->gcpause  /* no overflow */
             : MAX_LMEM;  /* overflow; truncate to maximum */
@@ -1008,7 +1009,9 @@ static l_mem atomic (lua_State *L) {
 static lu_mem sweepstep (lua_State *L, global_State *g,
                          int nextstate, GCObject **nextlist) {
   if (g->sweepgc) {
+    l_mem olddebt = g->GCdebt;
     g->sweepgc = sweeplist(L, g->sweepgc, GCSWEEPMAX);
+    g->GCestimate += g->GCdebt - olddebt;  /* update estimate */
     if (g->sweepgc)  /* is there still something to sweep? */
       return (GCSWEEPMAX * GCSWEEPCOST);
   }
@@ -1041,10 +1044,9 @@ static lu_mem singlestep (lua_State *L) {
       lu_mem work;
       int sw;
       propagateall(g);  /* make sure gray list is empty */
-      g->GCestimate = g->GCmemtrav;  /* save what was counted */;
       work = atomic(L);  /* work is what was traversed by 'atomic' */
-      g->GCestimate += work;  /* estimate of total memory traversed */ 
       sw = entersweep(L);
+      g->GCestimate = gettotalbytes(g);  /* first estimate */;
       return work + sw * GCSWEEPCOST;
     }
     case GCSswpallgc: {  /* sweep "regular" objects */
@@ -1063,7 +1065,7 @@ static lu_mem singlestep (lua_State *L) {
       return 0;
     }
     case GCScallfin: {  /* state to finish calling finalizers */
-      /* do nothing here; should be handled by 'luaC_forcestep' */
+      /* do nothing here; this state is handled by 'luaC_step' */
       g->gcstate = GCSpause;  /* finish collection */
       return 0;
     }
@@ -1131,7 +1133,7 @@ void luaC_step (lua_State *L) {
     }
   } while (debt > -GCSTEPSIZE && g->gcstate != GCSpause);
   if (g->gcstate == GCSpause)
-    setpause(g, g->GCestimate);  /* pause until next cycle */
+    setpause(g);  /* pause until next cycle */
   else {
     debt = (debt / g->gcstepmul) * STEPMULADJ;  /* convert 'work units' to Kb */
     luaE_setdebt(g, debt);
@@ -1160,8 +1162,10 @@ void luaC_fullgc (lua_State *L, int isemergency) {
   luaC_runtilstate(L, bitmask(GCSpause));
   luaC_runtilstate(L, ~bitmask(GCSpause));  /* start new collection */
   luaC_runtilstate(L, bitmask(GCSpause));  /* run entire collection */
+  /* estimate must be correct after full GC cycles */
+  lua_assert(g->GCestimate == gettotalbytes(g));
   g->gckind = KGC_NORMAL;
-  setpause(g, gettotalbytes(g));
+  setpause(g);
   if (!isemergency)   /* do not run finalizers during emergency GC */
     callallpendingfinalizers(L, 1);
 }
