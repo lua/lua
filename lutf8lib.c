@@ -1,5 +1,5 @@
 /*
-** $Id: lutf8lib.c,v 1.3 2014/03/20 14:11:00 roberto Exp roberto $
+** $Id: lutf8lib.c,v 1.4 2014/03/20 19:36:02 roberto Exp roberto $
 ** Standard library for UTF-8 manipulation
 ** See Copyright Notice in lua.h
 */
@@ -187,7 +187,7 @@ static int byteoffset (lua_State *L) {
 static int iter_aux (lua_State *L) {
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
-  int n = lua_tointeger(L, 2) - 1;
+  lua_Integer n = lua_tointeger(L, 2) - 1;
   if (n < 0)  /* first iteration? */
     n = 0;  /* start from here */
   else if (n < (lua_Integer)len) {

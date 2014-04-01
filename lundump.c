@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.34 2014/03/11 18:56:27 roberto Exp roberto $
+** $Id: lundump.c,v 2.35 2014/03/27 15:58:05 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -203,7 +203,7 @@ static void LoadFunction (LoadState *S, Proto *f) {
 
 static void checkliteral (LoadState *S, const char *s, const char *msg) {
   char buff[sizeof(LUA_SIGNATURE) + sizeof(LUAC_DATA)]; /* larger than both */
-  int len = strlen(s);
+  size_t len = strlen(s);
   LoadVector(S, buff, len);
   if (memcmp(s, buff, len) != 0)
     error(S, msg);

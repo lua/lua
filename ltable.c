@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.83 2013/09/11 12:26:14 roberto Exp roberto $
+** $Id: ltable.c,v 2.84 2014/01/27 13:34:32 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -443,10 +443,10 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
       /* yes; move colliding node into free position */
       while (othern + gnext(othern) != mp)  /* find previous */
         othern += gnext(othern);
-      gnext(othern) = f - othern;  /* re-chain with 'f' in place of 'mp' */
+      gnext(othern) = cast_int(f - othern);  /* rechain to point to 'f' */
       *f = *mp;  /* copy colliding node into free pos. (mp->next also goes) */
       if (gnext(mp) != 0) {
-        gnext(f) += mp - f;  /* correct 'next' */
+        gnext(f) += cast_int(mp - f);  /* correct 'next' */
         gnext(mp) = 0;  /* now 'mp' is free */
       }
       setnilvalue(gval(mp));
@@ -454,9 +454,9 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
     else {  /* colliding node is in its own main position */
       /* new node will go into free position */
       if (gnext(mp) != 0)
-        gnext(f) = (mp + gnext(mp)) - f;  /* chain new position */
+        gnext(f) = cast_int((mp + gnext(mp)) - f);  /* chain new position */
       else lua_assert(gnext(f) == 0);
-      gnext(mp) = f - mp;
+      gnext(mp) = cast_int(f - mp);
       mp = f;
     }
   }
