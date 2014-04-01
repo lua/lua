@@ -1,10 +1,11 @@
 /*
-** $Id: ltablib.c,v 1.65 2013/03/07 18:17:24 roberto Exp roberto $
+** $Id: ltablib.c,v 1.66 2014/03/21 13:52:33 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
 
 
+#include <limits.h>
 #include <stddef.h>
 
 #define ltablib_c
@@ -134,17 +135,19 @@ static int pack (lua_State *L) {
 
 
 static int unpack (lua_State *L) {
-  int i, e, n;
+  lua_Integer i, e;
+  lua_Unsigned n;
   luaL_checktype(L, 1, LUA_TTABLE);
-  i = luaL_optint(L, 2, 1);
-  e = luaL_opt(L, luaL_checkint, 3, luaL_len(L, 1));
+  i = luaL_optinteger(L, 2, 1);
+  e = luaL_opt(L, luaL_checkinteger, 3, luaL_len(L, 1));
   if (i > e) return 0;  /* empty range */
-  n = e - i + 1;  /* number of elements */
-  if (n <= 0 || !lua_checkstack(L, n))  /* n <= 0 means arithmetic overflow */
+  n = (lua_Unsigned)e - i;  /* number of elements minus 1 (avoid overflows) */
+  if (n >= (lua_Unsigned)INT_MAX  || !lua_checkstack(L, ++n))
     return luaL_error(L, "too many results to unpack");
-  lua_rawgeti(L, 1, i);  /* push arg[i] (avoiding overflow problems) */
-  while (i++ < e)  /* push arg[i + 1...e] */
-    lua_rawgeti(L, 1, i);
+  do {  /* must have at least one element */
+    lua_rawgeti(L, 1, i);  /* push arg[i..e] */
+  } while (i++ < e); 
+
   return n;
 }
 
