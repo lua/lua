@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.191 2014/03/31 18:37:52 roberto Exp roberto $
+** $Id: lvm.c,v 2.192 2014/03/31 19:18:24 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -35,6 +35,21 @@
 
 /* maximum length of the conversion of a number to a string */
 #define MAXNUMBER2STR	50
+
+
+/*
+** Similar to 'tonumber', but does not attempt to convert strings.
+** Used in comparisons.
+*/
+static int tofloat (const TValue *obj, lua_Number *n) {
+  if (ttisfloat(obj)) *n = fltvalue(obj);
+  else if (ttisinteger(obj)) *n = cast_num(ivalue(obj));
+  else {
+    *n = 0;  /* to avoid warnings */
+    return 0;
+  }
+  return 1;
+}
 
 
 int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
@@ -184,7 +199,7 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
   lua_Number nl, nr;
   if (ttisinteger(l) && ttisinteger(r))
     return (ivalue(l) < ivalue(r));
-  else if (tonumber(l, &nl) && tonumber(r, &nr))
+  else if (tofloat(l, &nl) && tofloat(r, &nr))
     return luai_numlt(nl, nr);
   else if (ttisstring(l) && ttisstring(r))
     return l_strcmp(rawtsvalue(l), rawtsvalue(r)) < 0;
@@ -199,7 +214,7 @@ int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
   lua_Number nl, nr;
   if (ttisinteger(l) && ttisinteger(r))
     return (ivalue(l) <= ivalue(r));
-  else if (tonumber(l, &nl) && tonumber(r, &nr))
+  else if (tofloat(l, &nl) && tofloat(r, &nr))
     return luai_numle(nl, nr);
   else if (ttisstring(l) && ttisstring(r))
     return l_strcmp(rawtsvalue(l), rawtsvalue(r)) <= 0;
@@ -222,7 +237,7 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
     else {  /* two numbers with different variants */
       lua_Number n1, n2;
       lua_assert(ttisnumber(t1) && ttisnumber(t2));
-      cast_void(tonumber(t1, &n1)); cast_void(tonumber(t2, &n2));
+      cast_void(tofloat(t1, &n1)); cast_void(tofloat(t2, &n2));
       return luai_numeq(n1, n2);
     }
   }
@@ -377,7 +392,7 @@ lua_Integer luaV_pow (lua_State *L, lua_Integer x, lua_Integer y) {
 /* number of bits in an integer */
 #define NBITS	cast_int(sizeof(lua_Integer) * CHAR_BIT)
 
-LUAI_FUNC lua_Integer luaV_shiftl (lua_Integer x, lua_Integer y) {
+lua_Integer luaV_shiftl (lua_Integer x, lua_Integer y) {
   if (y < 0) {  /* shift right? */
     if (y <= -NBITS) return 0;
     else return cast_integer(cast_unsigned(x) >> (-y));
