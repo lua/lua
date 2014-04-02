@@ -1,5 +1,5 @@
 /*
-** $Id: lutf8lib.c,v 1.4 2014/03/20 19:36:02 roberto Exp roberto $
+** $Id: lutf8lib.c,v 1.5 2014/04/01 14:39:55 roberto Exp roberto $
 ** Standard library for UTF-8 manipulation
 ** See Copyright Notice in lua.h
 */
@@ -61,25 +61,30 @@ static const char *utf8_decode (const char *o, int *val) {
 
 
 /*
-** utf8len(s, [i])   --> number of codepoints in 's' after 'i';
-** nil if 's' not well formed
+** utf8len(s [, i [, j]])   --> number of codepoints in 's' between 'i';
+** nil + current position if 's' not well formed
 */
 static int utflen (lua_State *L) {
   int n = 0;
-  const char *ends;
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
-  lua_Integer posi = u_posrelat(luaL_optinteger(L, 2, 1), 1);
-  luaL_argcheck(L, 1 <= posi && posi <= (lua_Integer)len, 1,
+  lua_Integer posi = u_posrelat(luaL_optinteger(L, 2, 1), len);
+  lua_Integer posj = u_posrelat(luaL_optinteger(L, 3, -1), len);
+  luaL_argcheck(L, 1 <= posi && --posi <= (lua_Integer)len, 2,
                    "initial position out of string");
-  ends = s + len;
-  s += posi - 1;
-  while (s < ends && (s = utf8_decode(s, NULL)) != NULL)
+  luaL_argcheck(L, --posj < (lua_Integer)len, 3,
+                   "final position out of string");
+  while (posi <= posj) {
+    const char *s1 = utf8_decode(s + posi, NULL);
+    if (s1 == NULL) {  /* conversion error? */
+      lua_pushnil(L);  /* return nil ... */
+      lua_pushinteger(L, posi + 1);  /* ... and current position */
+      return 2;
+    }
+    posi = s1 - s;
     n++;
-  if (s == ends)
-    lua_pushinteger(L, n);
-  else
-    lua_pushnil(L);
+  }
+  lua_pushinteger(L, n);
   return 1;
 }
 
