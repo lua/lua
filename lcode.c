@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.85 2014/03/21 13:52:33 roberto Exp roberto $
+** $Id: lcode.c,v 2.86 2014/04/01 14:39:55 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -195,7 +195,7 @@ void luaK_patchlist (FuncState *fs, int list, int target) {
 }
 
 
-LUAI_FUNC void luaK_patchclose (FuncState *fs, int list, int level) {
+void luaK_patchclose (FuncState *fs, int list, int level) {
   level++;  /* argument is +1 to reserve 0 as non-op */
   while (list != NO_JUMP) {
     int next = getjump(fs, list);

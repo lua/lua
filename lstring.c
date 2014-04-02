@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.37 2014/02/19 13:51:09 roberto Exp roberto $
+** $Id: lstring.c,v 2.38 2014/03/19 18:51:42 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -102,7 +102,7 @@ static TString *createstrobj (lua_State *L, const char *str, size_t l,
 }
 
 
-LUAI_FUNC void luaS_remove (lua_State *L, TString *ts) {
+void luaS_remove (lua_State *L, TString *ts) {
   stringtable *tb = &G(L)->strt;
   TString **p = &tb->hash[lmod(ts->tsv.hash, tb->size)];
   while (*p != ts)  /* find previous element */

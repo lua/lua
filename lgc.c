@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.179 2014/03/21 13:52:33 roberto Exp roberto $
+** $Id: lgc.c,v 2.180 2014/04/01 14:06:59 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -172,7 +172,7 @@ void luaC_barrierback_ (lua_State *L, GCObject *o) {
 ** closures pointing to it. So, we assume that the object being assigned
 ** must be marked.
 */
-LUAI_FUNC void luaC_upvalbarrier_ (lua_State *L, UpVal *uv) {
+void luaC_upvalbarrier_ (lua_State *L, UpVal *uv) {
   global_State *g = G(L);
   GCObject *o = gcvalue(uv->v);
   lua_assert(!upisopen(uv));  /* ensured by macro luaC_upvalbarrier */
