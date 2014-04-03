@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.93 2014/03/31 19:00:52 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.94 2014/04/01 14:39:55 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -316,6 +316,10 @@ LUAMOD_API int luaopen_math (lua_State *L) {
   lua_setfield(L, -2, "pi");
   lua_pushnumber(L, HUGE_VAL);
   lua_setfield(L, -2, "huge");
+  lua_pushinteger(L, LUA_MAXINTEGER);
+  lua_setfield(L, -2, "maxint");
+  lua_pushinteger(L, LUA_MININTEGER);
+  lua_setfield(L, -2, "minint");
   return 1;
 }
 
