@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.192 2014/03/18 18:27:08 roberto Exp roberto $
+** $Id: luaconf.h,v 1.193 2014/03/21 14:27:16 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -531,6 +531,8 @@
 @@ LUA_INTEGER_FRMLEN is the length modifier for reading/writing integers.
 @@ LUA_INTEGER_SCAN is the format for reading integers.
 @@ LUA_INTEGER_FMT is the format for writing integers.
+@@ LUA_MAXINTEGER is the maximum value for a LUA_INTEGER.
+@@ LUA_MININTEGER is the minimum value for a LUA_INTEGER.
 @@ lua_integer2str converts an integer to a string.
 */
 
@@ -566,6 +568,9 @@
 #define lua_integer2str(s,n)	sprintf((s), LUA_INTEGER_FMT, (n))
 
 #define LUA_UNSIGNED		unsigned LUA_INTEGER
+
+#define LUA_MAXINTEGER		((LUA_INTEGER)(~(LUA_UNSIGNED)0 >> 1))
+#define LUA_MININTEGER		((LUA_INTEGER)~(~(LUA_UNSIGNED)0 >> 1))
 
 /* }================================================================== */
 
