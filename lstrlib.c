@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.190 2014/03/27 15:58:05 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.191 2014/03/31 18:38:26 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -954,10 +954,10 @@ static int str_format (lua_State *L) {
 #define NB	CHAR_BIT
 
 /* mask for one character (NB ones) */
-#define MC	(((lua_Integer)1 << NB) - 1)
+#define MC	((1 << NB) - 1)
 
 /* mask for one character without sign ((NB - 1) ones) */
-#define SM	(((lua_Integer)1 << (NB - 1)) - 1)
+#define SM	((1 << (NB - 1)) - 1)
 
 
 #define SZINT	((int)sizeof(lua_Integer))
@@ -1007,7 +1007,7 @@ static int packint (char *buff, lua_Integer n, int littleendian, int size) {
   /* test for overflow: OK if there are only zeros left in higher bytes,
      or if there are only ones left and packed number is negative (signal
      bit, the higher bit in last byte, is one) */
-  return ((n & ~MC) == 0 || (n | SM) == ~(lua_Integer)0);
+  return ((n & ~(lua_Integer)MC) == 0 || (n | SM) == ~(lua_Integer)0);
 }
 
 
@@ -1025,7 +1025,7 @@ static int packint_l (lua_State *L) {
 
 
 /* mask to check higher-order byte in a Lua integer */
-#define HIGHERBYTE	(MC << (NB * (SZINT - 1)))
+#define HIGHERBYTE	((lua_Unsigned)MC << (NB * (SZINT - 1)))
 
 /* mask to check higher-order byte + signal bit of next (lower) byte */
 #define HIGHERBYTE1	(HIGHERBYTE | (HIGHERBYTE >> 1))
