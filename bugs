@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.128 2013/11/08 17:45:10 roberto Exp roberto $
-+** $Id: bugs,v 1.128 2013/11/08 17:45:10 roberto Exp roberto $
+-** $Id: bugs,v 1.129 2013/11/08 18:23:16 roberto Exp roberto $
++** $Id: bugs,v 1.129 2013/11/08 18:23:16 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -3172,10 +3172,8 @@ patch = [[
    close_state(L);
 ]]
 }
-]=]=]
 
 
---[=[
 Bug{
 what = [[Resuming the running coroutine makes it unyieldable]],
 report = [[Florian Nücke, 2013/10/28]],
@@ -3202,7 +3200,20 @@ patch = [[
    L->nCcalls--;
 ]]
 }
-]=]
+
+
+Bug{
+what = [[compiler can optimize away overflow check in 'table.concat']],
+report = [[Paige DePol, 2014/03/30]],
+since = [[5.1 (at least)]],
+fix = nil,
+example = [[
+> unpack({}, 0, 2^31 - 1)
+(segfaults on some platforms with some compiler options)
+]],
+patch = [[
+]]
+}
 
 
 --[=[
