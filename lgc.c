@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.180 2014/04/01 14:06:59 roberto Exp roberto $
+** $Id: lgc.c,v 2.181 2014/04/02 16:44:42 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -965,8 +965,9 @@ void luaC_freeallobjects (lua_State *L) {
 
 static l_mem atomic (lua_State *L) {
   global_State *g = G(L);
-  l_mem work = -cast(l_mem, g->GCmemtrav);  /* start counting work */
+  l_mem work;
   GCObject *origweak, *origall;
+  g->GCmemtrav = 0;  /* start counting work */
   lua_assert(!iswhite(obj2gco(g->mainthread)));
   g->gcstate = GCSinsideatomic;
   markobject(g, L);  /* mark running thread */
@@ -976,10 +977,10 @@ static l_mem atomic (lua_State *L) {
   /* remark occasional upvalues of (maybe) dead threads */
   remarkupvals(g);
   propagateall(g);  /* propagate changes */
-  work += g->GCmemtrav;  /* stop counting (do not (re)count grays) */
+  work = g->GCmemtrav;  /* stop counting (do not (re)count grays) */
   /* traverse objects caught by write barrier and by 'remarkupvals' */
   retraversegrays(g);
-  work -= g->GCmemtrav;  /* restart counting */
+  g->GCmemtrav = 0;  /* restart counting */
   convergeephemerons(g);
   /* at this point, all strongly accessible objects are marked. */
   /* Clear values from weak tables, before checking finalizers */
@@ -991,7 +992,7 @@ static l_mem atomic (lua_State *L) {
   g->gcfinnum = 1;  /* there may be objects to be finalized */
   markbeingfnz(g);  /* mark objects that will be finalized */
   propagateall(g);  /* remark, to propagate 'resurrection' */
-  work -= g->GCmemtrav;  /* restart counting */
+  g->GCmemtrav = 0;  /* restart counting */
   convergeephemerons(g);
   /* at this point, all resurrected objects are marked. */
   /* remove dead objects from weak tables */
@@ -1026,19 +1027,18 @@ static lu_mem singlestep (lua_State *L) {
   global_State *g = G(L);
   switch (g->gcstate) {
     case GCSpause: {
-      /* start to count memory traversed */
       g->GCmemtrav = g->strt.size * sizeof(GCObject*);
       restartcollection(g);
       g->gcstate = GCSpropagate;
       return g->GCmemtrav;
     }
     case GCSpropagate: {
-      lu_mem oldtrav = g->GCmemtrav;
+      g->GCmemtrav = 0;
       lua_assert(g->gray);
       propagatemark(g);
        if (g->gray == NULL)  /* no more `gray' objects? */
         g->gcstate = GCSatomic;  /* finish propagate phase */
-      return g->GCmemtrav - oldtrav;  /* memory traversed in this step */
+      return g->GCmemtrav;  /* memory traversed in this step */
     }
     case GCSatomic: {
       lu_mem work;
