@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.192 2014/03/31 19:18:24 roberto Exp roberto $
+** $Id: lvm.c,v 2.193 2014/04/02 16:54:20 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -38,12 +38,15 @@
 
 
 /*
-** Similar to 'tonumber', but does not attempt to convert strings.
-** Used in comparisons.
+** Similar to 'tonumber', but does not attempt to convert strings and
+** ensure correct precision (no extra bits). Used in comparisons.
 */
 static int tofloat (const TValue *obj, lua_Number *n) {
   if (ttisfloat(obj)) *n = fltvalue(obj);
-  else if (ttisinteger(obj)) *n = cast_num(ivalue(obj));
+  else if (ttisinteger(obj)) {
+    volatile lua_Number x = cast_num(ivalue(obj));  /* avoid extra precision */
+    *n = x;
+  }
   else {
     *n = 0;  /* to avoid warnings */
     return 0;
