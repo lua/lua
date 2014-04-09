@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.94 2014/04/01 14:39:55 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.95 2014/04/03 14:18:19 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -18,8 +18,7 @@
 
 
 #undef PI
-#define PI	((lua_Number)(3.1415926535897932384626433832795))
-#define RADIANS_PER_DEGREE	((lua_Number)(PI/180.0))
+#define PI	(l_mathop(3.141592653589793238462643383279502884))
 
 
 static int math_abs (lua_State *L) {
@@ -167,12 +166,12 @@ static int math_exp (lua_State *L) {
 }
 
 static int math_deg (lua_State *L) {
-  lua_pushnumber(L, luaL_checknumber(L, 1)/RADIANS_PER_DEGREE);
+  lua_pushnumber(L, luaL_checknumber(L, 1) * (180.0 / PI));
   return 1;
 }
 
 static int math_rad (lua_State *L) {
-  lua_pushnumber(L, luaL_checknumber(L, 1)*RADIANS_PER_DEGREE);
+  lua_pushnumber(L, luaL_checknumber(L, 1) * (PI / 180.0));
   return 1;
 }
 
@@ -317,9 +316,9 @@ LUAMOD_API int luaopen_math (lua_State *L) {
   lua_pushnumber(L, HUGE_VAL);
   lua_setfield(L, -2, "huge");
   lua_pushinteger(L, LUA_MAXINTEGER);
-  lua_setfield(L, -2, "maxint");
+  lua_setfield(L, -2, "maxinteger");
   lua_pushinteger(L, LUA_MININTEGER);
-  lua_setfield(L, -2, "minint");
+  lua_setfield(L, -2, "mininteger");
   return 1;
 }
 
