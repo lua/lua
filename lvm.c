@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.193 2014/04/02 16:54:20 roberto Exp roberto $
+** $Id: lvm.c,v 2.194 2014/04/08 14:28:04 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -755,7 +755,9 @@ void luaV_execute (lua_State *L) {
           setivalue(ra, luaV_mod(L, ib, ic));
         }
         else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
-          setnvalue(ra, luai_nummod(L, nb, nc));
+          lua_Number m;
+          luai_nummod(L, nb, nc, m);
+          setnvalue(ra, m);
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_MOD)); }
       )

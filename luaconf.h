@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.193 2014/03/21 14:27:16 roberto Exp roberto $
+** $Id: luaconf.h,v 1.194 2014/04/03 14:18:02 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -497,7 +497,8 @@
 /* the following operations need the math library */
 #if defined(lobject_c) || defined(lvm_c)
 #include <math.h>
-#define luai_nummod(L,a,b)	((void)L, (a) - l_floor((a)/(b))*(b))
+#define luai_nummod(L,a,b,m)  \
+  { (m) = l_mathop(fmod)(a,b); if ((m) != 0 && (a)*(b) < 0) (m) += (b); }
 #define luai_numpow(L,a,b)	((void)L, l_mathop(pow)(a,b))
 #endif
 

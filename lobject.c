@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.75 2014/03/06 16:15:18 roberto Exp roberto $
+** $Id: lobject.c,v 2.76 2014/03/21 13:52:33 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -98,9 +98,13 @@ static lua_Number numarith (lua_State *L, int op, lua_Number v1,
     case LUA_OPSUB: return luai_numsub(L, v1, v2);
     case LUA_OPMUL: return luai_nummul(L, v1, v2);
     case LUA_OPDIV: return luai_numdiv(L, v1, v2);
-    case LUA_OPMOD: return luai_nummod(L, v1, v2);
     case LUA_OPPOW: return luai_numpow(L, v1, v2);
     case LUA_OPUNM: return luai_numunm(L, v1);
+    case LUA_OPMOD: {
+      lua_Number m;
+      luai_nummod(L, v1, v2, m);
+      return m;
+    }
     default: lua_assert(0); return 0;
   }
 }
