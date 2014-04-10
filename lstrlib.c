@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.192 2014/04/03 13:29:24 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.193 2014/04/10 18:24:12 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -946,9 +946,6 @@ static int str_format (lua_State *L) {
 ** =======================================================
 */
 
-/* maximum size for the binary representation of an integer */
-#define MAXINTSIZE	8
-
 
 /* number of bits in a character */
 #define NB	CHAR_BIT
@@ -959,8 +956,11 @@ static int str_format (lua_State *L) {
 /* mask for one character without sign ((NB - 1) ones) */
 #define SM	((1 << (NB - 1)) - 1)
 
-
+/* size of a lua_Integer */
 #define SZINT	((int)sizeof(lua_Integer))
+
+/* maximum size for the binary representation of an integer */
+#define MAXINTSIZE	SZINT
 
 
 static union {
@@ -989,7 +989,7 @@ static int getintsize (lua_State *L, int arg) {
 }
 
 
-static int dumpint (char *buff, lua_Integer n, int littleendian, int size) {
+static int dumpint (char *buff, lua_Unsigned n, int littleendian, int size) {
   int i;
   if (littleendian) {
     for (i = 0; i < size - 1; i++) {
@@ -1004,10 +1004,13 @@ static int dumpint (char *buff, lua_Integer n, int littleendian, int size) {
     }
   }
   buff[i] = (n & MC);  /* last byte */
-  /* test for overflow: OK if there are only zeros left in higher bytes,
-     or if there are only ones left and dumped number is negative (signal
-     bit, the higher bit in last byte, is one) */
-  return ((n & ~(lua_Integer)MC) == 0 || (n | SM) == ~(lua_Integer)0);
+  if (size < SZINT) {  /* need test for overflow? */
+    /* OK if there are only zeros left in higher bytes,
+       or only ones left (excluding non-signal bits in last byte) */
+    return ((n & ~(lua_Integer)MC) == 0 ||
+            (n | SM) == (~(lua_Unsigned)0 >> ((size - 1) * NB)));
+  }
+  else return 1;  /* no overflow can occur with full size */
 }
 
 
@@ -1016,7 +1019,7 @@ static int dumpint_l (lua_State *L) {
   lua_Integer n = luaL_checkinteger(L, 1);
   int size = getintsize(L, 2);
   int endian = getendian(L, 3);
-  if (dumpint(buff, n, endian, size))
+  if (dumpint(buff, (lua_Unsigned)n, endian, size))
     lua_pushlstring(L, buff, size);
   else
     luaL_error(L, "integer does not fit into given size (%d)", size);
@@ -1024,27 +1027,10 @@ static int dumpint_l (lua_State *L) {
 }
 
 
-/* mask to check higher-order byte in a Lua integer */
-#define HIGHERBYTE	((lua_Unsigned)MC << (NB * (SZINT - 1)))
-
-/* mask to check higher-order byte + signal bit of next (lower) byte */
-#define HIGHERBYTE1	(HIGHERBYTE | (HIGHERBYTE >> 1))
-
-static int undumpint (const char *buff, lua_Integer *res,
-                      int littleendian, int size) {
+static lua_Integer undumpint (const char *buff, int littleendian, int size) {
   lua_Integer n = 0;
   int i;
   for (i = 0; i < size; i++) {
-    if (i >= SZINT) {  /* will throw away a byte? */
-      /* check for overflow: it is OK to throw away leading zeros for a
-         positive number, leading ones for a negative number, and a
-         leading zero byte to allow unsigned integers with a 1 in
-         its "signal bit" */
-      if (!((n & HIGHERBYTE1) == 0 ||  /* zeros for positive number */
-          (n & HIGHERBYTE1) == HIGHERBYTE1 ||  /* ones for negative number */
-          ((n & HIGHERBYTE) == 0 && i == size - 1)))  /* leading zero */
-        return 0;  /* overflow */
-    }
     n <<= NB;
     n |= (lua_Integer)(unsigned char)buff[littleendian ? size - 1 - i : i];
   }
@@ -1052,13 +1038,11 @@ static int undumpint (const char *buff, lua_Integer *res,
     lua_Unsigned mask = (lua_Unsigned)1 << (size*NB - 1);
     n = (lua_Integer)((n ^ mask) - mask);  /* do sign extension */
   }
-  *res = n;
-  return 1;
+  return n;
 }
 
 
 static int undumpint_l (lua_State *L) {
-  lua_Integer res;
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
   lua_Integer pos = posrelat(luaL_optinteger(L, 2, 1), len);
@@ -1066,10 +1050,7 @@ static int undumpint_l (lua_State *L) {
   int endian = getendian(L, 4);
   luaL_argcheck(L, 1 <= pos && (size_t)pos + size - 1 <= len, 1,
                    "string too short");
-  if(undumpint(s + pos - 1, &res, endian, size))
-    lua_pushinteger(L, res);
-  else
-    luaL_error(L, "result does not fit into a Lua integer");
+  lua_pushinteger(L, undumpint(s + pos - 1, endian, size));
   return 1;
 }
 
