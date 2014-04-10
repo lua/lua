@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.191 2014/03/31 18:38:26 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.192 2014/04/03 13:29:24 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -989,7 +989,7 @@ static int getintsize (lua_State *L, int arg) {
 }
 
 
-static int packint (char *buff, lua_Integer n, int littleendian, int size) {
+static int dumpint (char *buff, lua_Integer n, int littleendian, int size) {
   int i;
   if (littleendian) {
     for (i = 0; i < size - 1; i++) {
@@ -1005,18 +1005,18 @@ static int packint (char *buff, lua_Integer n, int littleendian, int size) {
   }
   buff[i] = (n & MC);  /* last byte */
   /* test for overflow: OK if there are only zeros left in higher bytes,
-     or if there are only ones left and packed number is negative (signal
+     or if there are only ones left and dumped number is negative (signal
      bit, the higher bit in last byte, is one) */
   return ((n & ~(lua_Integer)MC) == 0 || (n | SM) == ~(lua_Integer)0);
 }
 
 
-static int packint_l (lua_State *L) {
+static int dumpint_l (lua_State *L) {
   char buff[MAXINTSIZE];
   lua_Integer n = luaL_checkinteger(L, 1);
   int size = getintsize(L, 2);
   int endian = getendian(L, 3);
-  if (packint(buff, n, endian, size))
+  if (dumpint(buff, n, endian, size))
     lua_pushlstring(L, buff, size);
   else
     luaL_error(L, "integer does not fit into given size (%d)", size);
@@ -1030,7 +1030,7 @@ static int packint_l (lua_State *L) {
 /* mask to check higher-order byte + signal bit of next (lower) byte */
 #define HIGHERBYTE1	(HIGHERBYTE | (HIGHERBYTE >> 1))
 
-static int unpackint (const char *buff, lua_Integer *res,
+static int undumpint (const char *buff, lua_Integer *res,
                       int littleendian, int size) {
   lua_Integer n = 0;
   int i;
@@ -1057,7 +1057,7 @@ static int unpackint (const char *buff, lua_Integer *res,
 }
 
 
-static int unpackint_l (lua_State *L) {
+static int undumpint_l (lua_State *L) {
   lua_Integer res;
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
@@ -1066,7 +1066,7 @@ static int unpackint_l (lua_State *L) {
   int endian = getendian(L, 4);
   luaL_argcheck(L, 1 <= pos && (size_t)pos + size - 1 <= len, 1,
                    "string too short");
-  if(unpackint(s + pos - 1, &res, endian, size))
+  if(undumpint(s + pos - 1, &res, endian, size))
     lua_pushinteger(L, res);
   else
     luaL_error(L, "result does not fit into a Lua integer");
@@ -1096,7 +1096,7 @@ static int getfloatsize (lua_State *L, int arg) {
 }
 
 
-static int packfloat_l (lua_State *L) {
+static int dumpfloat_l (lua_State *L) {
   float f;  double d;
   char *pn;  /* pointer to number */
   lua_Number n = luaL_checknumber(L, 1);
@@ -1118,7 +1118,7 @@ static int packfloat_l (lua_State *L) {
 }
 
 
-static int unpackfloat_l (lua_State *L) {
+static int undumpfloat_l (lua_State *L) {
   lua_Number res;
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
@@ -1165,10 +1165,10 @@ static const luaL_Reg strlib[] = {
   {"reverse", str_reverse},
   {"sub", str_sub},
   {"upper", str_upper},
-  {"packfloat", packfloat_l},
-  {"packint", packint_l},
-  {"unpackfloat", unpackfloat_l},
-  {"unpackint", unpackint_l},
+  {"dumpfloat", dumpfloat_l},
+  {"dumpint", dumpint_l},
+  {"undumpfloat", undumpfloat_l},
+  {"undumpint", undumpint_l},
   {NULL, NULL}
 };
 
