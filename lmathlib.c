@@ -21,6 +21,17 @@
 #define PI	(l_mathop(3.141592653589793238462643383279502884))
 
 
+#if !defined(l_rand)		/* { */
+#if defined(LUA_USE_POSIX)
+#define l_rand()	random()
+#define l_srand(x)	srandom(x)
+#else
+#define l_rand()	rand()
+#define l_srand(x)	srand(x)
+#endif
+#endif				/* } */
+
+
 static int math_abs (lua_State *L) {
   if (lua_isinteger(L, 1)) {
     lua_Integer n = lua_tointeger(L, 1);
@@ -146,7 +157,7 @@ static int math_log (lua_State *L) {
     res = l_mathop(log)(x);
   else {
     lua_Number base = luaL_checknumber(L, 2);
-    if (base == (lua_Number)10.0) res = l_mathop(log10)(x);
+    if (base == 10.0) res = l_mathop(log10)(x);
     else res = l_mathop(log)(x)/l_mathop(log)(base);
   }
   lua_pushnumber(L, res);
@@ -219,10 +230,10 @@ static int math_max (lua_State *L) {
 
 
 static int math_random (lua_State *L) {
-  /* the `%' avoids the (rare) case of r==1, and is needed also because on
-     some systems (SunOS!) `rand()' may return a value larger than RAND_MAX */
-  lua_Number r = (lua_Number)(rand()%RAND_MAX) / (lua_Number)RAND_MAX;
   lua_Integer low, up;
+  lua_Number r = (lua_Number)l_rand() * (1.0 / ((lua_Number)RAND_MAX + 1.0));
+  if (r >= 1.0)  /* can occur if lua_Number has no precision for RAND_MAX */
+    r = 0.0;  /* statistically irrelevant; avoids out-of-range results */
   switch (lua_gettop(L)) {  /* check number of arguments */
     case 0: {  /* no arguments */
       lua_pushnumber(L, r);  /* Number between 0 and 1 */
@@ -241,15 +252,15 @@ static int math_random (lua_State *L) {
     default: return luaL_error(L, "wrong number of arguments");
   }
   /* random integer in the interval [low, up] */
-  up++;  /* change interval to [low, up) */
-  luaL_argcheck(L, up - low > 0, 1, "interval is empty");
-  lua_pushinteger(L, (lua_Integer)(r * (lua_Number)(up - low)) + low);
+  luaL_argcheck(L, low <= up, 1, "interval is empty");
+  r *= ((lua_Number)((lua_Unsigned)up - (lua_Unsigned)low) + 1.0);
+  lua_pushinteger(L, (lua_Integer)((lua_Unsigned)r + (lua_Unsigned)low));
   return 1;
 }
 
 
 static int math_randomseed (lua_State *L) {
-  srand((unsigned int)luaL_checkunsigned(L, 1));
+  l_srand((unsigned int)luaL_checkunsigned(L, 1));
   (void)rand(); /* discard first value to avoid undesirable correlations */
   return 0;
 }
