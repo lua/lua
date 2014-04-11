@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.24 2013/12/18 14:12:03 roberto Exp roberto $
+** $Id: ltm.c,v 2.25 2013/12/30 20:47:58 roberto Exp $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -116,10 +116,12 @@ void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
       case TM_CONCAT:
         luaG_concaterror(L, p1, p2);
       case TM_IDIV: case TM_BAND: case TM_BOR: case TM_BXOR:
-      case TM_SHL: case TM_SHR: case TM_BNOT:
-        if (ttisnumber(p1) && ttisnumber(p2))
+      case TM_SHL: case TM_SHR: case TM_BNOT: {
+        lua_Number dummy;
+        if (tonumber(p1, &dummy) && tonumber(p2, &dummy))
           luaG_tointerror(L, p1, p2);
         /* else go through */
+      }
       default:
         luaG_aritherror(L, p1, p2);
     }
