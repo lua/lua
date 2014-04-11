@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.111 2014/03/07 16:19:00 roberto Exp roberto $
+** $Id: llimits.h,v 1.112 2014/04/11 19:02:16 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -27,12 +27,16 @@ typedef LUAI_MEM l_mem;
 typedef unsigned char lu_byte;
 
 
+/* maximum value for a lua_Unsigned */
+#define MAX_UINTEGER	(((lua_Unsigned)LUA_MAXINTEGER << 1) + 1u)
+
+
 /* maximum value for size_t */
 #define MAX_SIZET	((size_t)(~(size_t)0)-2)
 
 /* maximum size visible for Lua (must be representable in a lua_Integer */
-#define MAX_SIZE	(sizeof(size_t) <= sizeof(lua_Integer) ? MAX_SIZET \
-                          : (size_t)(~(lua_Unsigned)0)-2)
+#define MAX_SIZE	(sizeof(size_t) < sizeof(lua_Integer) ? MAX_SIZET \
+                          : (size_t)(LUA_MAXINTEGER)-2)
 
 
 #define MAX_LUMEM	((lu_mem)(~(lu_mem)0)-2)
@@ -41,10 +45,6 @@ typedef unsigned char lu_byte;
 
 
 #define MAX_INT (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
-
-
-/* maximum value for a lua_Unsigned */
-#define MAX_UINTEGER	(((lua_Unsigned)LUA_MAXINTEGER << 1) + 1u)
 
 
 /*
@@ -64,8 +64,9 @@ typedef unsigned char lu_byte;
 typedef LUAI_USER_ALIGNMENT_T L_Umaxalign;
 
 
-/* result of a `usual argument conversion' over lua_Number */
+/* types of 'usual argument conversions' for lua_Number and lua_Integer */
 typedef LUAI_UACNUMBER l_uacNumber;
+typedef LUAI_UACINT l_uacInt;
 
 
 /* internal assertions for in-house debugging */
