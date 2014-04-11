@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.194 2014/04/08 14:28:04 roberto Exp roberto $
+** $Id: lvm.c,v 2.195 2014/04/09 17:05:11 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -87,7 +87,7 @@ int luaV_tostring (lua_State *L, StkId obj) {
 ** This function should be called only when 'n' has an integral value.
 */
 int luaV_numtointeger (lua_Number n, lua_Integer *p) {
-  if (cast_num(MIN_INTEGER) <= n && n < (MAX_INTEGER + cast_num(1))) {
+  if (cast_num(LUA_MININTEGER) <= n && n < (LUA_MAXINTEGER + cast_num(1))) {
     *p = cast_integer(n);
     lua_assert(cast_num(*p) == n);
     return 1;
@@ -343,7 +343,7 @@ void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
 
 
 lua_Integer luaV_div (lua_State *L, lua_Integer x, lua_Integer y) {
-  if (cast_unsigned(y) + 1 <= 1u) {  /* special cases: -1 or 0 */
+  if (cast_unsigned(y) + 1u <= 1u) {  /* special cases: -1 or 0 */
     if (y == 0)
       luaG_runerror(L, "attempt to divide by zero");
     return intop(-, 0, x);   /* y==-1; avoid overflow with 0x80000...//-1 */
@@ -359,7 +359,7 @@ lua_Integer luaV_div (lua_State *L, lua_Integer x, lua_Integer y) {
 
 
 lua_Integer luaV_mod (lua_State *L, lua_Integer x, lua_Integer y) {
-  if (cast_unsigned(y) + 1 <= 1u) {  /* special cases: -1 or 0 */
+  if (cast_unsigned(y) + 1u <= 1u) {  /* special cases: -1 or 0 */
     if (y == 0)
       luaG_runerror(L, "attempt to perform 'n%%0'");
     return 0;   /* y==-1; avoid overflow with 0x80000...%-1 */
