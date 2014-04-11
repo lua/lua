@@ -1,5 +1,5 @@
 /*
-** $Id: lutf8lib.c,v 1.6 2014/04/02 17:01:22 roberto Exp roberto $
+** $Id: lutf8lib.c,v 1.7 2014/04/03 13:45:09 roberto Exp roberto $
 ** Standard library for UTF-8 manipulation
 ** See Copyright Notice in lua.h
 */
@@ -32,7 +32,7 @@ static lua_Integer u_posrelat (lua_Integer pos, size_t len) {
 
 
 /*
-** Decode an UTF-8 sequence, returning NULL if byte sequence is invalid.
+** Decode one UTF-8 sequence, returning NULL if byte sequence is invalid.
 */
 static const char *utf8_decode (const char *o, int *val) {
   static unsigned int limits[] = {0xFF, 0x7F, 0x7FF, 0xFFFF};
@@ -61,8 +61,9 @@ static const char *utf8_decode (const char *o, int *val) {
 
 
 /*
-** utf8len(s [, i [, j]])   --> number of codepoints in 's' between 'i';
-** nil + current position if 's' not well formed
+** utf8len(s [, i [, j]]) --> number of characters that start in the
+** range [i,j], or nil + current position if 's' is not well formed in
+** that interval
 */
 static int utflen (lua_State *L) {
   int n = 0;
@@ -91,7 +92,7 @@ static int utflen (lua_State *L) {
 
 /*
 ** codepoint(s, [i, [j]])  -> returns codepoints for all characters
-** between i and j
+** that start in the range [i,j]
 */
 static int codepoint (lua_State *L) {
   size_t len;
