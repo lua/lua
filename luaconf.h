@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.194 2014/04/03 14:18:02 roberto Exp $
+** $Id: luaconf.h,v 1.195 2014/04/09 17:05:11 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -529,6 +529,8 @@
 **
 @@ LUA_UNSIGNED is the unsigned version of LUA_INTEGER.
 **
+@@ LUAI_UACINT is the result of an 'usual argument conversion'
+@* over a lUA_INTEGER.
 @@ LUA_INTEGER_FRMLEN is the length modifier for reading/writing integers.
 @@ LUA_INTEGER_SCAN is the format for reading integers.
 @@ LUA_INTEGER_FMT is the format for writing integers.
@@ -572,6 +574,8 @@
 
 #define LUA_MAXINTEGER		((LUA_INTEGER)(~(LUA_UNSIGNED)0 >> 1))
 #define LUA_MININTEGER		((LUA_INTEGER)~(~(LUA_UNSIGNED)0 >> 1))
+
+#define LUAI_UACINT		LUA_INTEGER
 
 /* }================================================================== */
 
