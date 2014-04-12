@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.201 2014/03/12 20:57:40 roberto Exp roberto $
+** $Id: lapi.c,v 2.202 2014/04/01 18:51:23 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -381,7 +381,7 @@ LUA_API lua_Unsigned lua_tounsignedx (lua_State *L, int idx, int *pisnum) {
       break;
     }
     case LUA_TNUMFLT: {  /* compute floor(n) % 2^(numbits in an integer) */
-      const lua_Number twop = cast_num(MAX_UINTEGER) + cast_num(1);  /* 2^n */
+      const lua_Number two2n = cast_num(LUA_MAXUNSIGNED) + cast_num(1);
       lua_Number n = fltvalue(o);  /* get value */
       int neg = 0;
       n = l_floor(n);  /* get its floor */
@@ -389,7 +389,7 @@ LUA_API lua_Unsigned lua_tounsignedx (lua_State *L, int idx, int *pisnum) {
         neg = 1;
         n = -n;  /* make 'n' positive, so that 'fmod' is the same as '%' */
       }
-      n = l_mathop(fmod)(n, twop);  /* n = n % 2^(numbits in an integer) */
+      n = l_mathop(fmod)(n, two2n);  /* n = n % 2^(numbits in an integer) */
       if (luai_numisnan(n))   /* not a number? */
         break;  /* not an integer, too */
       res = cast_unsigned(n);  /* 'n' now must fit in an unsigned */

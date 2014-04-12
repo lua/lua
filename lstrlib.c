@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.193 2014/04/10 18:24:12 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.194 2014/04/10 19:45:43 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -1008,7 +1008,7 @@ static int dumpint (char *buff, lua_Unsigned n, int littleendian, int size) {
     /* OK if there are only zeros left in higher bytes,
        or only ones left (excluding non-signal bits in last byte) */
     return ((n & ~(lua_Integer)MC) == 0 ||
-            (n | SM) == (~(lua_Unsigned)0 >> ((size - 1) * NB)));
+            (n | SM) == (LUA_MAXUNSIGNED >> ((size - 1) * NB)));
   }
   else return 1;  /* no overflow can occur with full size */
 }
