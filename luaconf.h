@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.195 2014/04/09 17:05:11 roberto Exp roberto $
+** $Id: luaconf.h,v 1.196 2014/04/11 19:53:45 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -536,8 +536,31 @@
 @@ LUA_INTEGER_FMT is the format for writing integers.
 @@ LUA_MAXINTEGER is the maximum value for a LUA_INTEGER.
 @@ LUA_MININTEGER is the minimum value for a LUA_INTEGER.
+@@ LUA_MAXUNSIGNED is the maximum value for a LUA_UNSIGNED.
 @@ lua_integer2str converts an integer to a string.
 */
+
+
+/* The following definitions are good for most cases here */
+
+#define LUA_INTEGER_SCAN	"%" LUA_INTEGER_FRMLEN "d"
+#define LUA_INTEGER_FMT		"%" LUA_INTEGER_FRMLEN "d"
+#define lua_integer2str(s,n)	sprintf((s), LUA_INTEGER_FMT, (n))
+
+#define LUA_MAXUNSIGNED		(~(LUA_UNSIGNED)0)
+#define LUA_MAXINTEGER		((LUA_INTEGER)(LUA_MAXUNSIGNED >> 1))
+#define LUA_MININTEGER		((LUA_INTEGER)~(LUA_MAXUNSIGNED >> 1))
+
+#define LUAI_UACINT		LUA_INTEGER
+
+/*
+** use LUAI_UACINT here to avoid problems with promotions (which can change
+** an unsigned back to a signed type)
+*/
+#define LUA_UNSIGNED		unsigned LUAI_UACINT
+
+
+/* now the variable definitions */
 
 #if defined(LUA_INT_INT)		/* { int */
 
@@ -559,23 +582,24 @@
 #define LUA_INTEGER_FRMLEN	"ll"
 #endif
 
+#elif defined(LUA_INT_SHORT)	/* }{ short int; for tests */
+
+#define LUA_INTEGER		short int
+#define LUA_INTEGER_FRMLEN	""
+
+#undef LUA_MAXUNSIGNED
+#undef LUAI_UACINT
+#undef LUA_INTEGER_SCAN
+
+#define LUA_MAXUNSIGNED		0xffffu
+#define LUAI_UACINT		int
+#define LUA_INTEGER_SCAN	"%hd"
+
 #else				/* }{ */
 
 #error "numeric integer type not defined"
 
 #endif				/* } */
-
-
-#define LUA_INTEGER_SCAN	"%" LUA_INTEGER_FRMLEN "d"
-#define LUA_INTEGER_FMT		"%" LUA_INTEGER_FRMLEN "d"
-#define lua_integer2str(s,n)	sprintf((s), LUA_INTEGER_FMT, (n))
-
-#define LUA_UNSIGNED		unsigned LUA_INTEGER
-
-#define LUA_MAXINTEGER		((LUA_INTEGER)(~(LUA_UNSIGNED)0 >> 1))
-#define LUA_MININTEGER		((LUA_INTEGER)~(~(LUA_UNSIGNED)0 >> 1))
-
-#define LUAI_UACINT		LUA_INTEGER
 
 /* }================================================================== */
 
