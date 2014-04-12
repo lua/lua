@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.67 2014/04/01 18:50:34 roberto Exp roberto $
+** $Id: ltablib.c,v 1.68 2014/04/04 16:38:11 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -142,7 +142,7 @@ static int unpack (lua_State *L) {
   e = luaL_opt(L, luaL_checkinteger, 3, luaL_len(L, 1));
   if (i > e) return 0;  /* empty range */
   n = (lua_Unsigned)e - i;  /* number of elements minus 1 (avoid overflows) */
-  if (n >= (lua_Unsigned)INT_MAX  || !lua_checkstack(L, ++n))
+  if (n >= (unsigned int)INT_MAX  || !lua_checkstack(L, ++n))
     return luaL_error(L, "too many results to unpack");
   do {  /* must have at least one element */
     lua_rawgeti(L, 1, i);  /* push arg[i..e] */
