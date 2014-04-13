@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.84 2014/01/27 13:34:32 roberto Exp roberto $
+** $Id: ltable.c,v 2.85 2014/04/01 14:39:55 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -21,6 +21,7 @@
 #include <float.h>
 #include <math.h>
 #include <string.h>
+#include <limits.h>
 
 #define ltable_c
 #define LUA_CORE
@@ -39,14 +40,13 @@
 
 
 /*
-** max size of array part is 2^MAXBITS
+** Maximum size of array part (MAXASIZE) is 2^MAXBITS. (SIZEINT is the
+** minimum between size of int and size of LUA_INTEGER; array indices
+** are limited by both types.)
 */
-#if LUAI_BITSINT >= 32
-#define MAXBITS		30
-#else
-#define MAXBITS		(LUAI_BITSINT-2)
-#endif
-
+#define SIZEINT	 \
+  (sizeof(int) < sizeof(LUA_INTEGER) ? sizeof(int) : sizeof(LUA_INTEGER))
+#define MAXBITS		cast_int(SIZEINT * CHAR_BIT - 2)
 #define MAXASIZE	(1 << MAXBITS)
 
 
