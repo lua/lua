@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.196 2014/04/11 19:53:45 roberto Exp roberto $
+** $Id: luaconf.h,v 1.197 2014/04/12 14:51:53 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -21,16 +21,15 @@
 
 /*
 ** ===================================================================
-@@ LUA_INT_INT / LUA_INT_LONG / LUA_INT_LONGLONG defines size for
+@@ LUA_INT_INT / LUA_INT_LONG / LUA_INT_LONGLONG defines type for
 @* Lua integers;
-@@ LUA_REAL_FLOAT / LUA_REAL_DOUBLE / LUA_REAL_LONGDOUBLE defines size for
-@* Lua floats.
+@@ LUA_REAL_FLOAT / LUA_REAL_DOUBLE / LUA_REAL_LONGDOUBLE defines
+@* type for Lua floats.
 **
 ** These definitions set the numeric types for Lua. Lua should work
-** fine with 32-bit or 64-bit integers mixed with 32-bit or 64-bit
-** floats. The usual configurations are 64-bit integers and floats (the
-** default) and 32-bit integers and floats (Small Lua, for restricted
-** hardware).
+** fine with any mix of these previous options.
+** The usual configurations are 64-bit integers and floats (the default)
+** and 32-bit integers and floats (Small Lua, for restricted hardware).
 ** =====================================================================
 */
 #define LUA_INT_LONGLONG
@@ -547,10 +546,6 @@
 #define LUA_INTEGER_FMT		"%" LUA_INTEGER_FRMLEN "d"
 #define lua_integer2str(s,n)	sprintf((s), LUA_INTEGER_FMT, (n))
 
-#define LUA_MAXUNSIGNED		(~(LUA_UNSIGNED)0)
-#define LUA_MAXINTEGER		((LUA_INTEGER)(LUA_MAXUNSIGNED >> 1))
-#define LUA_MININTEGER		((LUA_INTEGER)~(LUA_MAXUNSIGNED >> 1))
-
 #define LUAI_UACINT		LUA_INTEGER
 
 /*
@@ -567,10 +562,18 @@
 #define LUA_INTEGER		int
 #define LUA_INTEGER_FRMLEN	""
 
+#define LUA_MAXUNSIGNED		UINT_MAX
+#define LUA_MAXINTEGER		INT_MAX
+#define LUA_MININTEGER		INT_MIN
+
 #elif defined(LUA_INT_LONG)	/* }{ long */
 
 #define LUA_INTEGER		long
 #define LUA_INTEGER_FRMLEN	"l"
+
+#define LUA_MAXUNSIGNED		ULONG_MAX
+#define LUA_MAXINTEGER		LONG_MAX
+#define LUA_MININTEGER		LONG_MIN
 
 #elif defined(LUA_INT_LONGLONG)	/* }{ long long */
 
@@ -582,18 +585,27 @@
 #define LUA_INTEGER_FRMLEN	"ll"
 #endif
 
+#define LUA_MAXUNSIGNED		ULLONG_MAX
+#define LUA_MAXINTEGER		LLONG_MAX
+#define LUA_MININTEGER		LLONG_MIN
+
 #elif defined(LUA_INT_SHORT)	/* }{ short int; for tests */
 
 #define LUA_INTEGER		short int
 #define LUA_INTEGER_FRMLEN	""
 
-#undef LUA_MAXUNSIGNED
-#undef LUAI_UACINT
-#undef LUA_INTEGER_SCAN
+#define LUA_MAXUNSIGNED		((LUA_UNSIGNED)USHRT_MAX)
+#define LUA_MAXINTEGER		SHRT_MAX
+#define LUA_MININTEGER		SHRT_MIN
 
-#define LUA_MAXUNSIGNED		0xffffu
+#undef  LUAI_UACINT
 #define LUAI_UACINT		int
+
+#undef  LUA_INTEGER_SCAN
 #define LUA_INTEGER_SCAN	"%hd"
+
+#undef  LUAI_MAXSTACK
+#define LUAI_MAXSTACK           15000
 
 #else				/* }{ */
 
