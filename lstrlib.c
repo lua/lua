@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.194 2014/04/10 19:45:43 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.195 2014/04/12 14:45:10 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -104,8 +104,8 @@ static int str_upper (lua_State *L) {
 
 
 /* reasonable limit to avoid arithmetic overflow and strings too big */
-#if INT_MAX / 2 <= 0x10000000
-#define MAXSIZE		((size_t)(INT_MAX / 2))
+#if LUA_MAXINTEGER / 2 <= 0x10000000
+#define MAXSIZE		((size_t)(LUA_MAXINTEGER / 2))
 #else
 #define MAXSIZE		((size_t)0x10000000)
 #endif
