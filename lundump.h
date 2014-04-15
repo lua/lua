@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.h,v 1.41 2014/03/10 19:52:47 roberto Exp roberto $
+** $Id: lundump.h,v 1.42 2014/03/11 14:22:54 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -15,7 +15,7 @@
 /* data to catch conversion errors */
 #define LUAC_DATA	"\x19\x93\r\n\x1a\n"
 
-#define LUAC_INT	cast_integer(0xABCD)
+#define LUAC_INT	0x5678
 #define LUAC_NUM	cast_num(370.5)
 
 #define MYINT(s)	(s[0]-'0')

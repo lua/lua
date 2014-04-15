@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 2.25 2013/12/30 20:47:58 roberto Exp roberto $
+** $Id: lvm.h,v 2.26 2014/03/31 18:37:52 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -19,8 +19,7 @@
 #define tointeger(o,i) \
 	(ttisinteger(o) ? (*(i) = ivalue(o), 1) : luaV_tointeger_(o,i))
 
-#define intop(op,v1,v2) \
-	cast_integer(cast_unsigned(v1) op cast_unsigned(v2))
+#define intop(op,v1,v2) cast_u2s(cast_s2u(v1) op cast_s2u(v2))
 
 #define luaV_rawequalobj(t1,t2)		luaV_equalobj(NULL,t1,t2)
 

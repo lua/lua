@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.77 2014/04/09 17:05:11 roberto Exp roberto $
+** $Id: lobject.c,v 2.78 2014/04/11 19:52:26 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -85,7 +85,7 @@ static lua_Integer intarith (lua_State *L, int op, lua_Integer v1,
     case LUA_OPSHL: return luaV_shiftl(v1, v2);
     case LUA_OPSHR: return luaV_shiftl(v1, -v2);
     case LUA_OPUNM: return intop(-, 0, v1);
-    case LUA_OPBNOT: return intop(^, cast_integer(-1), v1);
+    case LUA_OPBNOT: return intop(^, ~cast_s2u(0), v1);
     default: lua_assert(0); return 0;
   }
 }
@@ -291,7 +291,7 @@ int luaO_str2int (const char *s, size_t len, lua_Integer *result) {
   while (lisspace(cast_uchar(*s))) s++;  /* skip trailing spaces */
   if (empty || s != ends) return 0;  /* something wrong in the numeral */
   else {
-    *result = cast_integer((neg) ? 0u - a : a);
+    *result = cast_u2s((neg) ? 0u - a : a);
     return 1;
   }
 }
@@ -346,7 +346,7 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
         break;
       }
       case 'I': {
-        setivalue(L->top++, cast_integer(va_arg(argp, l_uacInt)));
+        setivalue(L->top++, cast(lua_Integer, va_arg(argp, l_uacInt)));
         break;
       }
       case 'f': {
