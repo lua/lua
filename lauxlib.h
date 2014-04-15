@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.122 2013/06/27 18:32:33 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.123 2014/01/05 14:04:46 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -28,7 +28,7 @@ typedef struct luaL_Reg {
 
 #define LUAL_NUMSIZES	(sizeof(lua_Integer)*16 + sizeof(lua_Number))
 
-LUALIB_API void (luaL_checkversion_) (lua_State *L, int ver, size_t sz);
+LUALIB_API void (luaL_checkversion_) (lua_State *L, lua_Number ver, size_t sz);
 #define luaL_checkversion(L)  \
 	  luaL_checkversion_(L, LUA_VERSION_NUM, LUAL_NUMSIZES)
 
