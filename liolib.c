@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.119 2014/03/13 20:07:18 roberto Exp roberto $
+** $Id: liolib.c,v 2.120 2014/03/19 18:57:42 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -455,9 +455,9 @@ static int g_read (lua_State *L, FILE *f, int first) {
         success = (l == 0) ? test_eof(L, f) : read_chars(L, f, l);
       }
       else {
-        const char *p = lua_tostring(L, n);
-        luaL_argcheck(L, p && p[0] == '*', n, "invalid option");
-        switch (p[1]) {
+        const char *p = luaL_checkstring(L, n);
+        if (*p == '*') p++;  /* skip optional '*' (for compatibility) */
+        switch (*p) {
           case 'i':  /* integer */
             success = read_integer(L, f);
             break;
