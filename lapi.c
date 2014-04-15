@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.203 2014/04/12 14:45:10 roberto Exp roberto $
+** $Id: lapi.c,v 2.204 2014/04/15 14:29:30 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -376,7 +376,7 @@ LUA_API lua_Unsigned lua_tounsignedx (lua_State *L, int idx, int *pisnum) {
   int isnum = 0;
   switch (ttype(o)) {
     case LUA_TNUMINT: {
-      res = cast_s2u(ivalue(o));
+      res = l_castS2U(ivalue(o));
       isnum = 1;
       break;
     }
@@ -514,7 +514,7 @@ LUA_API void lua_pushinteger (lua_State *L, lua_Integer n) {
 
 LUA_API void lua_pushunsigned (lua_State *L, lua_Unsigned u) {
   lua_lock(L);
-  setivalue(L->top, cast_u2s(u));
+  setivalue(L->top, l_castU2S(u));
   api_incr_top(L);
   lua_unlock(L);
 }

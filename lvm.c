@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.196 2014/04/11 19:02:16 roberto Exp roberto $
+** $Id: lvm.c,v 2.197 2014/04/15 14:28:20 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -343,7 +343,7 @@ void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
 
 
 lua_Integer luaV_div (lua_State *L, lua_Integer x, lua_Integer y) {
-  if (cast_s2u(y) + 1u <= 1u) {  /* special cases: -1 or 0 */
+  if (l_castS2U(y) + 1u <= 1u) {  /* special cases: -1 or 0 */
     if (y == 0)
       luaG_runerror(L, "attempt to divide by zero");
     return intop(-, 0, x);   /* y==-1; avoid overflow with 0x80000...//-1 */
@@ -359,7 +359,7 @@ lua_Integer luaV_div (lua_State *L, lua_Integer x, lua_Integer y) {
 
 
 lua_Integer luaV_mod (lua_State *L, lua_Integer x, lua_Integer y) {
-  if (cast_s2u(y) + 1u <= 1u) {  /* special cases: -1 or 0 */
+  if (l_castS2U(y) + 1u <= 1u) {  /* special cases: -1 or 0 */
     if (y == 0)
       luaG_runerror(L, "attempt to perform 'n%%0'");
     return 0;   /* y==-1; avoid overflow with 0x80000...%-1 */
@@ -792,7 +792,7 @@ void luaV_execute (lua_State *L) {
         TValue *rb = RB(i);
         lua_Integer ib;
         if (tointeger(rb, &ib)) {
-          setivalue(ra, intop(^, ~cast_s2u(0), ib));
+          setivalue(ra, intop(^, ~l_castS2U(0), ib));
         }
         else {
           Protect(luaT_trybinTM(L, rb, rb, ra, TM_BNOT));
