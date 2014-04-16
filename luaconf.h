@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.197 2014/04/12 14:51:53 roberto Exp roberto $
+** $Id: luaconf.h,v 1.198 2014/04/14 16:58:54 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -578,18 +578,27 @@
 #elif defined(LUA_INT_LONGLONG)	/* }{ long long */
 
 #if defined(_WIN32)
+
 #define LUA_INTEGER		__int64
 #define LUA_INTEGER_FRMLEN	"I64"
+
+#define LUA_MAXUNSIGNED		_UI64_MAX
+#define LUA_MAXINTEGER		_I64_MAX
+#define LUA_MININTEGER		_I64_MIN
+
 #else
+
 #define LUA_INTEGER		long long
 #define LUA_INTEGER_FRMLEN	"ll"
-#endif
 
 #define LUA_MAXUNSIGNED		ULLONG_MAX
 #define LUA_MAXINTEGER		LLONG_MAX
 #define LUA_MININTEGER		LLONG_MIN
 
-#elif defined(LUA_INT_SHORT)	/* }{ short int; for tests */
+#endif
+
+#elif defined(LUA_INT_SHORT)	/* }{ short int */
+/* this option is for tests only; it is not fully functional */
 
 #define LUA_INTEGER		short int
 #define LUA_INTEGER_FRMLEN	""
@@ -606,6 +615,8 @@
 
 #undef  LUAI_MAXSTACK
 #define LUAI_MAXSTACK           15000
+
+#define l_castS2U(x)		((LUA_UNSIGNED)(unsigned short)(x))
 
 #else				/* }{ */
 
