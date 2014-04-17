@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.95 2014/04/03 14:18:19 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.97 2014/04/10 17:53:33 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -228,12 +228,14 @@ static int math_max (lua_State *L) {
   return 1;
 }
 
-
+/*
+** This function uses 'double' (instead of 'lua_Number') to ensure that
+** all bits from 'l_rand' can be represented, and that 'RAND_MAX + 1.0'
+** will keep full precision (ensuring that 'r' is always less than 1.0.)
+*/
 static int math_random (lua_State *L) {
   lua_Integer low, up;
-  lua_Number r = (lua_Number)l_rand() * (1.0 / ((lua_Number)RAND_MAX + 1.0));
-  if (r >= 1.0)  /* can occur if lua_Number has no precision for RAND_MAX */
-    r = 0.0;  /* statistically irrelevant; avoids out-of-range results */
+  double r = (double)l_rand() * (1.0 / ((double)RAND_MAX + 1.0));
   switch (lua_gettop(L)) {  /* check number of arguments */
     case 0: {  /* no arguments */
       lua_pushnumber(L, r);  /* Number between 0 and 1 */
@@ -252,9 +254,11 @@ static int math_random (lua_State *L) {
     default: return luaL_error(L, "wrong number of arguments");
   }
   /* random integer in the interval [low, up] */
-  luaL_argcheck(L, low <= up, 1, "interval is empty");
-  r *= ((lua_Number)((lua_Unsigned)up - (lua_Unsigned)low) + 1.0);
-  lua_pushinteger(L, (lua_Integer)((lua_Unsigned)r + (lua_Unsigned)low));
+  luaL_argcheck(L, low <= up, 1, "interval is empty"); 
+  luaL_argcheck(L, (lua_Unsigned)up - low <= (lua_Unsigned)LUA_MAXINTEGER,
+                   1, "interval too large");
+  r *= (double)(up - low) + 1.0;
+  lua_pushinteger(L, (lua_Integer)r + low);
   return 1;
 }
 
