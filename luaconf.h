@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.198 2014/04/14 16:58:54 roberto Exp roberto $
+** $Id: luaconf.h,v 1.199 2014/04/16 18:45:51 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -549,8 +549,8 @@
 #define LUAI_UACINT		LUA_INTEGER
 
 /*
-** use LUAI_UACINT here to avoid problems with promotions (which can change
-** an unsigned back to a signed type)
+** use LUAI_UACINT here to avoid problems with promotions (which 
+** can turn a comparison between unsigneds into a signed comparison)
 */
 #define LUA_UNSIGNED		unsigned LUAI_UACINT
 
