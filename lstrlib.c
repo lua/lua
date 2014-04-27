@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.196 2014/04/14 16:59:46 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.197 2014/04/16 18:48:31 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -1013,8 +1013,8 @@ static int dumpint (char *buff, lua_Integer m, int littleendian, int size) {
   if (size < SZINT) {  /* need test for overflow? */
     /* OK if there are only zeros left in higher bytes,
        or only ones left (excluding non-signal bits in last byte) */
-    return ((n & ~(lua_Integer)MC) == 0 ||
-            (n | SM) == ~(lua_Integer)0);
+    return ((n & ~(lua_Unsigned)MC) == 0 ||
+            (n | SM) == ~(lua_Unsigned)0);
   }
   else return 1;  /* no overflow can occur with full size */
 }
@@ -1039,7 +1039,7 @@ static int dumpint_l (lua_State *L) {
 
 static int undumpint (const char *buff, lua_Integer *res,
                       int littleendian, int size) {
-  lua_Integer n = 0;
+  lua_Unsigned n = 0;
   int i;
   for (i = 0; i < size; i++) {
     if (i >= SZINT) {  /* will throw away a byte? */
@@ -1053,13 +1053,14 @@ static int undumpint (const char *buff, lua_Integer *res,
         return 0;  /* overflow */
     }
     n <<= NB;
-    n |= (lua_Integer)(unsigned char)buff[littleendian ? size - 1 - i : i];
+    n |= (lua_Unsigned)(unsigned char)buff[littleendian ? size - 1 - i : i];
   }
   if (size < SZINT) {  /* need sign extension? */
     lua_Unsigned mask = (lua_Unsigned)1 << (size*NB - 1);
-    n = (lua_Integer)((n ^ mask) - mask);  /* do sign extension */
+    *res = (lua_Integer)((n ^ mask) - mask);  /* do sign extension */
   }
-  *res = n;
+  else
+    *res = (lua_Integer)n;
   return 1;
 }
 
