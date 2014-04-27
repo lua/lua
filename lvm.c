@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.197 2014/04/15 14:28:20 roberto Exp roberto $
+** $Id: lvm.c,v 2.198 2014/04/15 16:32:49 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -374,12 +374,10 @@ lua_Integer luaV_mod (lua_State *L, lua_Integer x, lua_Integer y) {
 }
 
 
-lua_Integer luaV_pow (lua_State *L, lua_Integer x, lua_Integer y) {
-  if (y <= 0) {  /* special cases: 0 or negative exponent */
-    if (y < 0)
-      luaG_runerror(L, "integer exponentiation with negative exponent");
+lua_Integer luaV_pow (lua_Integer x, lua_Integer y) {
+  lua_assert(y >= 0);
+  if (y == 0)
     return 1;  /* x^0 == 1 */
-  }
   else {
     lua_Integer r = 1;
     for (; y > 1; y >>= 1) {
@@ -765,9 +763,10 @@ void luaV_execute (lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
-        if (ttisinteger(rb) && ttisinteger(rc)) {
-          lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
-          setivalue(ra, luaV_pow(L, ib, ic));
+        lua_Integer ic;
+        if (ttisinteger(rb) && ttisinteger(rc) && (ic = ivalue(rc)) >= 0) {
+          lua_Integer ib = ivalue(rb);
+          setivalue(ra, luaV_pow(ib, ic));
         }
         else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setnvalue(ra, luai_numpow(L, nb, nc));
