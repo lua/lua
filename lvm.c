@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.198 2014/04/15 16:32:49 roberto Exp roberto $
+** $Id: lvm.c,v 2.199 2014/04/27 14:41:11 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -107,6 +107,24 @@ int luaV_tointeger_ (const TValue *obj, lua_Integer *p) {
     return luaV_numtointeger(n, p);
   }
   else return 0;
+}
+
+
+/*
+** Check whether the limit of a 'for' loop can be safely converted
+** to an integer (rounding down or up depending on the signal of 'step')
+*/
+static int limittointeger (const TValue *n, lua_Integer *p, lua_Integer step) {
+  if (ttisinteger(n)) {
+    *p = ivalue(n);
+    return 1;
+  }
+  else if (!ttisfloat(n)) return 0;
+  else {
+    lua_Number f = fltvalue(n);
+    f = (step >= 0) ? l_floor(f) : -l_floor(-f);
+    return luaV_numtointeger(f, p);
+  }
 }
 
 
@@ -946,9 +964,12 @@ void luaV_execute (lua_State *L) {
         TValue *init = ra;
         TValue *plimit = ra + 1;
         TValue *pstep = ra + 2;
-        if (ttisinteger(init) && ttisinteger(plimit) && ttisinteger(pstep)) {
+        lua_Integer ilimit;
+        if (ttisinteger(init) && ttisinteger(pstep) &&
+            limittointeger(plimit, &ilimit, ivalue(pstep))) {
           /* all values are integer */
           setivalue(init, ivalue(init) - ivalue(pstep));
+          setivalue(plimit, ilimit);
         }
         else {  /* try making all values floats */
           lua_Number ninit; lua_Number nlimit; lua_Number nstep;
