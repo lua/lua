@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.200 2014/04/29 18:11:57 roberto Exp roberto $
+** $Id: lvm.c,v 2.201 2014/04/29 18:14:16 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -97,16 +97,25 @@ int luaV_numtointeger (lua_Number n, lua_Integer *p) {
 
 
 /*
-** try to convert a non-integer value to an integer
+** try to convert a non-integer value to an integer, rounding up if
+** 'up' is true
 */
-int luaV_tointeger_ (const TValue *obj, lua_Integer *p) {
+static int tointeger_aux (const TValue *obj, lua_Integer *p, int up) {
   lua_Number n;
   lua_assert(!ttisinteger(obj));
   if (tonumber(obj, &n)) {
-    n = l_floor(n);
+    n = (up ? -l_floor(-n) : l_floor(n));
     return luaV_numtointeger(n, p);
   }
   else return 0;
+}
+
+
+/*
+** try to convert a non-integer value to an integer, rounding down
+*/
+int luaV_tointeger_ (const TValue *obj, lua_Integer *p) {
+  return tointeger_aux(obj, p, 0);
 }
 
 
@@ -119,12 +128,8 @@ static int limittointeger (const TValue *n, lua_Integer *p, lua_Integer step) {
     *p = ivalue(n);
     return 1;
   }
-  else if (!ttisfloat(n)) return 0;
-  else {
-    lua_Number f = fltvalue(n);
-    f = (step >= 0) ? l_floor(f) : -l_floor(-f);
-    return luaV_numtointeger(f, p);
-  }
+  else
+    return tointeger_aux(n, p, (step < 0));
 }
 
 
