@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.80 2014/04/15 16:32:49 roberto Exp roberto $
+** $Id: lobject.c,v 2.81 2014/04/27 14:41:11 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -126,7 +126,7 @@ void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
     case LUA_OPDIV: {  /* operates only on floats */
       lua_Number n1; lua_Number n2;
       if (tonumber(p1, &n1) && tonumber(p2, &n2)) {
-        setnvalue(res, numarith(L, op, n1, n2));
+        setfltvalue(res, numarith(L, op, n1, n2));
         return;
       }
       else break;  /* go to the end */
@@ -139,7 +139,7 @@ void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
         return;
       }
       else if (tonumber(p1, &n1) && tonumber(p2, &n2)) {
-        setnvalue(res, numarith(L, op, n1, n2));
+        setfltvalue(res, numarith(L, op, n1, n2));
         return;
       }
       else break;  /* go to the end */
@@ -351,7 +351,7 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
         break;
       }
       case 'f': {
-        setnvalue(L->top++, cast_num(va_arg(argp, l_uacNumber)));
+        setfltvalue(L->top++, cast_num(va_arg(argp, l_uacNumber)));
         break;
       }
       case 'p': {

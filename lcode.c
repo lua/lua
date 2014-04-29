@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.87 2014/04/02 16:44:42 roberto Exp roberto $
+** $Id: lcode.c,v 2.88 2014/04/27 14:41:11 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -46,7 +46,7 @@ static int tonumeral(expdesc *e, TValue *v) {
       if (v) setivalue(v, e->u.ival);
       return 1;
     case VKFLT:
-      if (v) setnvalue(v, e->u.nval);
+      if (v) setfltvalue(v, e->u.nval);
       return 1;
     default: return 0;
   }
@@ -365,7 +365,7 @@ int luaK_intK (FuncState *fs, lua_Integer n) {
 static int luaK_numberK (FuncState *fs, lua_Number r) {
   TValue o;
   lua_assert(!luai_numisnan(r) && !isminuszero(r));
-  setnvalue(&o, r);
+  setfltvalue(&o, r);
   return addk(fs, &o, &o);
 }
 

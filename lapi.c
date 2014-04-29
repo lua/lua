@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.204 2014/04/15 14:29:30 roberto Exp roberto $
+** $Id: lapi.c,v 2.205 2014/04/15 16:32:49 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -339,7 +339,7 @@ LUA_API int lua_strtonum (lua_State *L, const char *s, size_t len) {
     setivalue(L->top, i);
   }
   else if (luaO_str2d(s, len, &n)) {  /* else try as a float */
-    setnvalue(L->top, n);
+    setfltvalue(L->top, n);
   }
   else
     return 0;  /* conversion failed */
@@ -496,7 +496,7 @@ LUA_API void lua_pushnil (lua_State *L) {
 
 LUA_API void lua_pushnumber (lua_State *L, lua_Number n) {
   lua_lock(L);
-  setnvalue(L->top, n);
+  setfltvalue(L->top, n);
   luai_checknum(L, L->top,
     luaG_runerror(L, "C API - attempt to push a signaling NaN"));
   api_incr_top(L);
