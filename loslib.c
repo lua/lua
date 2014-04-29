@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.44 2014/03/12 20:57:40 roberto Exp roberto $
+** $Id: loslib.c,v 1.45 2014/03/20 19:18:54 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -59,9 +59,15 @@
 #if defined(LUA_USE_POSIX)	/* { */
 
 #include <unistd.h>
+
 #define LUA_TMPNAMBUFSIZE	32
+
+#if !defined(LUA_TMPNAMTEMPLATE)
+#define LUA_TMPNAMTEMPLATE	"/tmp/lua_XXXXXX"
+#endif
+
 #define lua_tmpnam(b,e) { \
-        strcpy(b, "/tmp/lua_XXXXXX"); \
+        strcpy(b, LUA_TMPNAMTEMPLATE); \
         e = mkstemp(b); \
         if (e != -1) close(e); \
         e = (e == -1); }
