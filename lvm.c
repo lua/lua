@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.202 2014/04/29 20:06:05 roberto Exp roberto $
+** $Id: lvm.c,v 2.203 2014/04/30 16:50:16 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -123,20 +123,6 @@ static int tointeger_aux (const TValue *obj, lua_Integer *p, int up) {
 */
 int luaV_tointeger_ (const TValue *obj, lua_Integer *p) {
   return tointeger_aux(obj, p, 0);
-}
-
-
-/*
-** Check whether the limit of a 'for' loop can be safely converted
-** to an integer (rounding down or up depending on the signal of 'step')
-*/
-static int limittointeger (const TValue *n, lua_Integer *p, lua_Integer step) {
-  if (ttisinteger(n)) {
-    *p = ivalue(n);
-    return 1;
-  }
-  else
-    return tointeger_aux(n, p, (step < 0));
 }
 
 
@@ -995,7 +981,7 @@ void luaV_execute (lua_State *L) {
         TValue *pstep = ra + 2;
         lua_Integer ilimit;
         if (ttisinteger(init) && ttisinteger(pstep) &&
-            limittointeger(plimit, &ilimit, ivalue(pstep))) {
+            tointeger_aux(plimit, &ilimit, (ivalue(pstep) < 0))) {
           /* all values are integer */
           setivalue(init, ivalue(init) - ivalue(pstep));
           setivalue(plimit, ilimit);
