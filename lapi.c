@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.205 2014/04/15 16:32:49 roberto Exp roberto $
+** $Id: lapi.c,v 2.206 2014/04/29 18:14:16 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -334,17 +334,12 @@ LUA_API int lua_compare (lua_State *L, int index1, int index2, int op) {
 
 
 LUA_API int lua_strtonum (lua_State *L, const char *s, size_t len) {
-  lua_Integer i; lua_Number n;
-  if (luaO_str2int(s, len, &i)) {  /* try as an integer */
-    setivalue(L->top, i);
-  }
-  else if (luaO_str2d(s, len, &n)) {  /* else try as a float */
-    setfltvalue(L->top, n);
-  }
-  else
+  if (!luaO_str2num(s, len, L->top))
     return 0;  /* conversion failed */
-  api_incr_top(L);
-  return 1;
+  else {
+    api_incr_top(L);
+    return 1;
+  }
 }
 
 

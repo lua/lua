@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.86 2014/02/19 13:52:42 roberto Exp roberto $
+** $Id: lobject.h,v 2.87 2014/04/29 18:14:16 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -500,8 +500,7 @@ LUAI_FUNC int luaO_utf8esc (char *buff, unsigned int x);
 LUAI_FUNC int luaO_ceillog2 (unsigned int x);
 LUAI_FUNC void luaO_arith (lua_State *L, int op, const TValue *p1,
                            const TValue *p2, TValue *res);
-LUAI_FUNC int luaO_str2d (const char *s, size_t len, lua_Number *result);
-LUAI_FUNC int luaO_str2int (const char *s, size_t len, lua_Integer *result);
+LUAI_FUNC int luaO_str2num (const char *s, size_t len, TValue *o);
 LUAI_FUNC int luaO_hexavalue (int c);
 LUAI_FUNC const char *luaO_pushvfstring (lua_State *L, const char *fmt,
                                                        va_list argp);

@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.73 2014/02/06 15:59:24 roberto Exp roberto $
+** $Id: llex.c,v 2.74 2014/02/14 15:23:51 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -196,10 +196,12 @@ static int check_next (LexState *ls, const char *set) {
 ** change all characters 'from' in buffer to 'to'
 */
 static void buffreplace (LexState *ls, char from, char to) {
-  size_t n = luaZ_bufflen(ls->buff);
-  char *p = luaZ_buffer(ls->buff);
-  while (n--)
-    if (p[n] == from) p[n] = to;
+  if (from != to) {
+    size_t n = luaZ_bufflen(ls->buff);
+    char *p = luaZ_buffer(ls->buff);
+    while (n--)
+      if (p[n] == from) p[n] = to;
+  }
 }
 
 
@@ -208,17 +210,17 @@ static void buffreplace (LexState *ls, char from, char to) {
 #endif
 
 
-#define buff2d(b,e)	luaO_str2d(luaZ_buffer(b), luaZ_bufflen(b) - 1, e)
+#define buff2num(b,o)	luaO_str2num(luaZ_buffer(b), luaZ_bufflen(b) - 1, o)
 
 /*
 ** in case of format error, try to change decimal point separator to
 ** the one defined in the current locale and check again
 */
-static void trydecpoint (LexState *ls, SemInfo *seminfo) {
+static void trydecpoint (LexState *ls, TValue *o) {
   char old = ls->decpoint;
   ls->decpoint = getlocaledecpoint();
   buffreplace(ls, old, ls->decpoint);  /* try new decimal separator */
-  if (!buff2d(ls->buff, &seminfo->r)) {
+  if (!buff2num(ls->buff, o)) {
     /* format error with correct decimal point: no more options */
     buffreplace(ls, ls->decpoint, '.');  /* undo change (for error message) */
     lexerror(ls, "malformed number", TK_FLT);
@@ -228,11 +230,11 @@ static void trydecpoint (LexState *ls, SemInfo *seminfo) {
 
 /* LUA_NUMBER */
 /*
-** this function is quite liberal in what it accepts, as 'luaO_str2d'
-** will reject ill-formed numerals. 'isf' means the numeral is not
-** an integer (it has a dot or an exponent).
+** this function is quite liberal in what it accepts, as 'luaO_str2num'
+** will reject ill-formed numerals.
 */
-static int read_numeral (LexState *ls, SemInfo *seminfo, int isf) {
+static int read_numeral (LexState *ls, SemInfo *seminfo) {
+  TValue obj;
   const char *expo = "Ee";
   int first = ls->current;
   lua_assert(lisdigit(ls->current));
@@ -240,29 +242,25 @@ static int read_numeral (LexState *ls, SemInfo *seminfo, int isf) {
   if (first == '0' && check_next(ls, "Xx"))  /* hexadecimal? */
     expo = "Pp";
   for (;;) {
-    if (check_next(ls, expo)) {  /* exponent part? */
+    if (check_next(ls, expo))  /* exponent part? */
       check_next(ls, "+-");  /* optional exponent sign */
-      isf = 1;
-    }
     if (lisxdigit(ls->current))
       save_and_next(ls);
-    else if (ls->current == '.') {
+    else if (ls->current == '.')
       save_and_next(ls);
-      isf = 1;
-    }
     else break;
   }
   save(ls, '\0');
-  if (!isf) {
-    if (!luaO_str2int(luaZ_buffer(ls->buff), luaZ_bufflen(ls->buff) - 1,
-                      &seminfo->i))
-      lexerror(ls, "malformed number", TK_INT);
+  buffreplace(ls, '.', ls->decpoint);  /* follow locale for decimal point */
+  if (!buff2num(ls->buff, &obj))  /* format error? */
+    trydecpoint(ls, &obj); /* try to update decimal point separator */
+  if (ttisinteger(&obj)) {
+    seminfo->i = ivalue(&obj);
     return TK_INT;
   }
   else {
-    buffreplace(ls, '.', ls->decpoint);  /* follow locale for decimal point */
-    if (!buff2d(ls->buff, &seminfo->r))  /* format error? */
-      trydecpoint(ls, seminfo); /* try to update decimal point separator */
+    lua_assert(ttisfloat(&obj));
+    seminfo->r = fltvalue(&obj);
     return TK_FLT;
   }
 }
@@ -530,11 +528,11 @@ static int llex (LexState *ls, SemInfo *seminfo) {
           else return TK_CONCAT;   /* '..' */
         }
         else if (!lisdigit(ls->current)) return '.';
-        else return read_numeral(ls, seminfo, 1);
+        else return read_numeral(ls, seminfo);
       }
       case '0': case '1': case '2': case '3': case '4':
       case '5': case '6': case '7': case '8': case '9': {
-        return read_numeral(ls, seminfo, 0);
+        return read_numeral(ls, seminfo);
       }
       case EOZ: {
         return TK_EOS;

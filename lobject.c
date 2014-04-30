@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.81 2014/04/27 14:41:11 roberto Exp roberto $
+** $Id: lobject.c,v 2.82 2014/04/29 18:14:16 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -254,7 +254,7 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
 /* }====================================================== */
 
 
-int luaO_str2d (const char *s, size_t len, lua_Number *result) {
+static int l_str2d (const char *s, size_t len, lua_Number *result) {
   char *endptr;
   if (strpbrk(s, "nN"))  /* reject 'inf' and 'nan' */
     return 0;
@@ -268,7 +268,7 @@ int luaO_str2d (const char *s, size_t len, lua_Number *result) {
 }
 
 
-int luaO_str2int (const char *s, size_t len, lua_Integer *result) {
+static int l_str2int (const char *s, size_t len, lua_Integer *result) {
   const char *ends = s + len;
   lua_Unsigned a = 0;
   int empty = 1;
@@ -295,6 +295,20 @@ int luaO_str2int (const char *s, size_t len, lua_Integer *result) {
     *result = l_castU2S((neg) ? 0u - a : a);
     return 1;
   }
+}
+
+
+int luaO_str2num (const char *s, size_t len, TValue *o) {
+  lua_Integer i; lua_Number n;
+  if (l_str2int(s, len, &i)) {  /* try as an integer */
+    setivalue(o, i);
+  }
+  else if (l_str2d(s, len, &n)) {  /* else try as a float */
+    setfltvalue(o, n);
+  }
+  else
+    return 0;  /* conversion failed */
+  return 1;  /* success */
 }
 
 
