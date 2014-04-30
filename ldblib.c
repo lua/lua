@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.136 2014/02/19 13:51:09 roberto Exp roberto $
+** $Id: ldblib.c,v 1.137 2014/03/12 20:57:40 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -21,16 +21,30 @@
 #define HOOKKEY		"_HKEY"
 
 
-
-static int db_numbits (lua_State *L) {
+static int db_Csize (lua_State *L) {
+  static struct {
+    char c;
+    unsigned char sz;
+  } sizes[] = {
+    {'I', sizeof(lua_Integer)},
+    {'F', sizeof(lua_Number)},
+    {'b', CHAR_BIT},
+    {'h', sizeof(short)},
+    {'i', sizeof(int)},
+    {'l', sizeof(long)},
+    {'z', sizeof(size_t)},
+    {'f', sizeof(float)},
+    {'d', sizeof(double)}
+  };
   const char *s = luaL_checkstring(L, 1);
-  if (*s == 'i')
-    lua_pushinteger(L, sizeof(lua_Integer) * CHAR_BIT);
-  else if (*s == 'f')
-    lua_pushinteger(L, sizeof(lua_Number) * CHAR_BIT);
-  else
-    luaL_argerror(L, 1, lua_pushfstring(L, "invalid option '%s'", s));
-  return 1;
+  int i;
+  for (i = 0; i < (int)(sizeof(sizes)/sizeof(sizes[0])); i++) {
+    if (*s == sizes[i].c) {
+      lua_pushinteger(L, sizes[i].sz);
+      return 1;
+    }
+  }
+  return luaL_argerror(L, 1, lua_pushfstring(L, "invalid option '%c'", *s));
 }
 
 
@@ -379,6 +393,7 @@ static int db_traceback (lua_State *L) {
 
 
 static const luaL_Reg dblib[] = {
+  {"Csize",   db_Csize},
   {"debug", db_debug},
   {"getuservalue", db_getuservalue},
   {"gethook", db_gethook},
@@ -387,7 +402,6 @@ static const luaL_Reg dblib[] = {
   {"getregistry", db_getregistry},
   {"getmetatable", db_getmetatable},
   {"getupvalue", db_getupvalue},
-  {"numbits",   db_numbits},
   {"upvaluejoin", db_upvaluejoin},
   {"upvalueid", db_upvalueid},
   {"setuservalue", db_setuservalue},
