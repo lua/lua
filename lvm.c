@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.201 2014/04/29 18:14:16 roberto Exp roberto $
+** $Id: lvm.c,v 2.202 2014/04/29 20:06:05 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -55,28 +55,26 @@ static int tofloat (const TValue *obj, lua_Number *n) {
 }
 
 
+/*
+** Try to convert a value to a float
+*/
 int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
-  lua_assert(!ttisfloat(obj));
+  TValue v;
+ again:
   if (ttisinteger(obj)) {
     *n = cast_num(ivalue(obj));
     return 1;
   }
-  else
-    return (ttisstring(obj) && luaO_str2d(svalue(obj), tsvalue(obj)->len, n));
-}
-
-
-int luaV_tostring (lua_State *L, StkId obj) {
-  if (!ttisnumber(obj))
-    return 0;
-  else {
-    char buff[MAXNUMBER2STR];
-    size_t len = (ttisinteger(obj))
-                 ? lua_integer2str(buff, ivalue(obj))
-                 : lua_number2str(buff, fltvalue(obj));
-    setsvalue2s(L, obj, luaS_newlstr(L, buff, len));
+  else if (ttisfloat(obj)) {
+    *n = fltvalue(obj);
     return 1;
   }
+  else if (ttisstring(obj) &&
+            luaO_str2num(svalue(obj), tsvalue(obj)->len, &v)) {
+    obj = &v;
+    goto again;  /* convert result from 'luaO_str2num' to a float */
+  }
+  return 0;  /* conversion failed */
 }
 
 
@@ -97,17 +95,26 @@ int luaV_numtointeger (lua_Number n, lua_Integer *p) {
 
 
 /*
-** try to convert a non-integer value to an integer, rounding up if
-** 'up' is true
+** try to convert a value to an integer, rounding up if 'up' is true
 */
 static int tointeger_aux (const TValue *obj, lua_Integer *p, int up) {
-  lua_Number n;
-  lua_assert(!ttisinteger(obj));
-  if (tonumber(obj, &n)) {
+  TValue v;
+ again:
+  if (ttisfloat(obj)) {
+    lua_Number n = fltvalue(obj);
     n = (up ? -l_floor(-n) : l_floor(n));
     return luaV_numtointeger(n, p);
   }
-  else return 0;
+  else if (ttisinteger(obj)) {
+    *p = ivalue(obj);
+    return 1;
+  }
+  if (ttisstring(obj) &&
+       luaO_str2num(svalue(obj), tsvalue(obj)->len, &v)) {
+    obj = &v;
+    goto again;  /* convert result from 'luaO_str2num' to an integer */
+  }
+  return 0;  /* conversion failed */
 }
 
 
@@ -130,6 +137,23 @@ static int limittointeger (const TValue *n, lua_Integer *p, lua_Integer step) {
   }
   else
     return tointeger_aux(n, p, (step < 0));
+}
+
+
+/*
+** Convert a number object to a string
+*/
+int luaV_tostring (lua_State *L, StkId obj) {
+  if (!ttisnumber(obj))
+    return 0;
+  else {
+    char buff[MAXNUMBER2STR];
+    size_t len = (ttisinteger(obj))
+                 ? lua_integer2str(buff, ivalue(obj))
+                 : lua_number2str(buff, fltvalue(obj));
+    setsvalue2s(L, obj, luaS_newlstr(L, buff, len));
+    return 1;
+  }
 }
 
 
