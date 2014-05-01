@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.302 2014/03/20 19:42:35 roberto Exp roberto $
+** $Id: lua.h,v 1.303 2014/05/01 18:18:06 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -238,7 +238,7 @@ LUA_API int (lua_rawgetp) (lua_State *L, int idx, const void *p);
 LUA_API void  (lua_createtable) (lua_State *L, int narr, int nrec);
 LUA_API void *(lua_newuserdata) (lua_State *L, size_t sz);
 LUA_API int   (lua_getmetatable) (lua_State *L, int objindex);
-LUA_API void  (lua_getuservalue) (lua_State *L, int idx);
+LUA_API int  (lua_getuservalue) (lua_State *L, int idx);
 
 
 /*
