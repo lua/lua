@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.74 2014/02/14 15:23:51 roberto Exp roberto $
+** $Id: llex.c,v 2.75 2014/04/30 16:48:44 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -210,7 +210,7 @@ static void buffreplace (LexState *ls, char from, char to) {
 #endif
 
 
-#define buff2num(b,o)	luaO_str2num(luaZ_buffer(b), luaZ_bufflen(b) - 1, o)
+#define buff2num(b,o)	(luaO_str2num(luaZ_buffer(b), o) != 0)
 
 /*
 ** in case of format error, try to change decimal point separator to

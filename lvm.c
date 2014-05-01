@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.203 2014/04/30 16:50:16 roberto Exp roberto $
+** $Id: lvm.c,v 2.204 2014/04/30 19:29:51 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -70,7 +70,7 @@ int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
     return 1;
   }
   else if (ttisstring(obj) &&
-            luaO_str2num(svalue(obj), tsvalue(obj)->len, &v)) {
+            luaO_str2num(svalue(obj), &v) == tsvalue(obj)->len + 1) {
     obj = &v;
     goto again;  /* convert result from 'luaO_str2num' to a float */
   }
@@ -109,8 +109,8 @@ static int tointeger_aux (const TValue *obj, lua_Integer *p, int up) {
     *p = ivalue(obj);
     return 1;
   }
-  if (ttisstring(obj) &&
-       luaO_str2num(svalue(obj), tsvalue(obj)->len, &v)) {
+  else if (ttisstring(obj) &&
+            luaO_str2num(svalue(obj), &v) == tsvalue(obj)->len + 1) {
     obj = &v;
     goto again;  /* convert result from 'luaO_str2num' to an integer */
   }
