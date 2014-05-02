@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.97 2014/04/10 17:53:33 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.98 2014/04/17 16:09:40 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -117,8 +117,18 @@ static int math_ifloor (lua_State *L) {
 }
 
 static int math_fmod (lua_State *L) {
-  lua_pushnumber(L, l_mathop(fmod)(luaL_checknumber(L, 1),
-                               luaL_checknumber(L, 2)));
+  if (lua_isinteger(L, 1) && lua_isinteger(L, 2)) {
+    lua_Integer d = lua_tointeger(L, 2);
+    if ((lua_Unsigned)d + 1u <= 1u) {  /* special cases: -1 or 0 */
+      luaL_argcheck(L, d != 0, 2, "zero");
+      lua_pushinteger(L, 0);  /* avoid overflow with 0x80000... / -1 */
+    }
+    else
+      lua_pushinteger(L, lua_tointeger(L, 1) % d);
+  }
+  else
+    lua_pushnumber(L, l_mathop(fmod)(luaL_checknumber(L, 1),
+                                     luaL_checknumber(L, 2)));
   return 1;
 }
 
@@ -132,7 +142,7 @@ static int math_modf (lua_State *L) {
   /* integer part (rounds toward zero) */
   lua_Number ip = (n < 0) ? -l_mathop(floor)(-n) : l_mathop(floor)(n);
   lua_pushnumber(L, ip);
-  /* fractionary part (test handles inf/-inf) */
+  /* fractionary part (test needed for inf/-inf) */
   lua_pushnumber(L, (n == ip) ? 0.0 : (n - ip));
   return 2;
 }
