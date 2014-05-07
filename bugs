@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.129 2013/11/08 18:23:16 roberto Exp roberto $
-+** $Id: bugs,v 1.129 2013/11/08 18:23:16 roberto Exp roberto $
+-** $Id: bugs,v 1.130 2014/04/03 13:30:23 roberto Exp roberto $
++** $Id: bugs,v 1.130 2014/04/03 13:30:23 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2905,6 +2905,12 @@ patch = [[
 ]]
 }
 
+
+
+-----------------------------------------------------------------
+-- Lua 5.2.2
+
+
 Bug{
 what = [[stack overflow in vararg functions with many fixed
 parameters called with few arguments]],
@@ -3202,8 +3208,12 @@ patch = [[
 }
 
 
+
+-----------------------------------------------------------------
+-- Lua 5.2.3
+
 Bug{
-what = [[compiler can optimize away overflow check in 'table.concat']],
+what = [[compiler can optimize away overflow check in 'table.unpack']],
 report = [[Paige DePol, 2014/03/30]],
 since = [[5.1 (at least)]],
 fix = nil,
