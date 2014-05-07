@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.88 2014/04/30 16:48:44 roberto Exp roberto $
+** $Id: lobject.h,v 2.89 2014/05/01 18:18:06 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -310,9 +310,9 @@ typedef union TString {
   struct {
     CommonHeader;
     lu_byte extra;  /* reserved words for short strings; "has hash" for longs */
+    unsigned int hash;
     size_t len;  /* number of characters in string */
     union TString *hnext;  /* linked list for hash table */
-    unsigned int hash;
   } tsv;
 } TString;
 
@@ -462,12 +462,12 @@ typedef struct Table {
   CommonHeader;
   lu_byte flags;  /* 1<<p means tagmethod(p) is not present */
   lu_byte lsizenode;  /* log2 of size of `node' array */
-  struct Table *metatable;
+  int sizearray;  /* size of `array' array */
   TValue *array;  /* array part */
   Node *node;
   Node *lastfree;  /* any free position is before this position */
+  struct Table *metatable;
   GCObject *gclist;
-  int sizearray;  /* size of `array' array */
 } Table;
 
 
