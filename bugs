@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.130 2014/04/03 13:30:23 roberto Exp roberto $
-+** $Id: bugs,v 1.130 2014/04/03 13:30:23 roberto Exp roberto $
+-** $Id: bugs,v 1.131 2014/05/07 16:35:24 roberto Exp roberto $
++** $Id: bugs,v 1.131 2014/05/07 16:35:24 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2750,6 +2750,7 @@ Bug{
 what = [[Some patterns can overflow the C stack, due to recursion]],
 report = [[Tim Starling, 2012/07/08]],
 since = [[2.5]],
+fix = [[5.2.2]],
 example = [[print(string.find(string.rep("a", 2^20), string.rep(".?", 2^20)))]],
 patch = [[
 ]]
@@ -2761,7 +2762,7 @@ what = [['pcall' may not restore previous error function when
 inside coroutines]],
 report = [[Alexander Gavrilov, 2012/06/12]],
 since = [[5.2.0]],
-fix = nil,
+fix = [[5.2.2]],
 example = [[
 function errfunc(x)
   return 'errfunc'
@@ -2816,7 +2817,7 @@ what = [[Check for garbage collector in function calls does not cover
 all paths]],
 report = [[Roberto, 2012/08/15]],
 since = [[5.2.1]],
-fix = nil,
+fix = [[5.2.2]],
 example = [[
 See <a href="http://lua-users.org/lists/lua-l/2012-08/msg00149.html">
 http://lua-users.org/lists/lua-l/2012-08/msg00149.html</a>
@@ -2852,7 +2853,7 @@ what = [[load/loadfile returns wrong result when given an environment
 for a binary chunk with no upvalues]],
 report = [[Vladimir Strakh, 2012/11/28]],
 since = [[5.2.0]],
-fix = nil,
+fix = [[5.2.2]],
 example = [[
 f = load(string.dump(function () return 1 end), nil, "b", {})
 print(type(f))   --> table            (whould be a function)
@@ -2916,7 +2917,7 @@ what = [[stack overflow in vararg functions with many fixed
 parameters called with few arguments]],
 report = [[云风, 2013/04/17]],
 since = [[5.1]],
-fix = nil,
+fix = [[5.2.3]],
 example = [[
 function f(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10,
            p11, p12, p13, p14, p15, p16, p17, p18, p19, p20,
@@ -2943,12 +2944,11 @@ patch = [[
 ]],
 }
 
---[=[
 Bug{
 what = [[garbage collector can trigger too many times in recursive loops]],
 report = [[Roberto, 2013/04/25]],
 since = [[5.2.2]],
-fix = nil,
+fix = [[5.2.3]],
 example = [[
 function f() f() end
 f()   -- it takes too long before a "stack overflow" error
@@ -2971,7 +2971,6 @@ patch = [[
 +  return sizeof(lua_State) + sizeof(TValue) * th->stacksize +
 +         sizeof(CallInfo) * n;
  }
-]]
 }
 
 Bug{
@@ -2979,7 +2978,7 @@ what = [[Wrong assert when reporting concatenation errors
 (manifests only when Lua is compiled in debug mode)]],
 report = [[Roberto, 2013/05/05]],
 since = [[?]],
-fix = nil,
+fix = [[5.2.3]],
 example = [[
 -- only with Lua compiled in debug mode
 print({} .. 2)
@@ -3001,7 +3000,7 @@ Bug{
 what = [[Wrong error message in some short-cut expressions]],
 report = [[Egor Skriptunoff, 2013/05/10]],
 since = [[5.0]],
-fix = nil,
+fix = [[5.2.3]],
 example = [[
 > a,b,c = true,true,true
 > (a and b or c)('', '')
@@ -3086,7 +3085,7 @@ Bug{
 what = [[luac listings choke on long strings]],
 report = [[Ashwin Hirschi, 2013/07/03]],
 since = [[5.1.2]],
-fix = nil,
+fix = [[5.2.3]],
 example = [[
 -- When you call 'luac -l' over this chunk, it chokes the output
 s="Lorem ipsum dolor sit amet, consectetur, "
@@ -3110,7 +3109,7 @@ Bug{
 what = [[GC can collect a long string still in use during parser]],
 report = [[Roberto, 2013/08/30]],
 since = [[5.2]],
-fix = nil,
+fix = [[5.2.3]],
 example = [[This bug is very difficult to happen (and to reproduce),
 because it depends on the GC running in a very specific way when
 parsing a source code with long (larger than 40 characters) identifiers.]],
@@ -3139,7 +3138,6 @@ patch = [[
    return ts;
 ]]
 }
-]
 
 
 Bug{
@@ -3184,7 +3182,7 @@ Bug{
 what = [[Resuming the running coroutine makes it unyieldable]],
 report = [[Florian Nücke, 2013/10/28]],
 since = [[5.2]],
-fix = nil,
+fix = [[5.2.3]],
 example = [[
 -- should print 'true'
 print(coroutine.resume(coroutine.create(function()
