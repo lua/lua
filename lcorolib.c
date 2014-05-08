@@ -1,5 +1,5 @@
 /*
-** $Id: lcorolib.c,v 1.4 2012/04/27 18:59:04 roberto Exp roberto $
+** $Id: lcorolib.c,v 1.5 2013/02/21 13:44:53 roberto Exp roberto $
 ** Coroutine Library
 ** See Copyright Notice in lua.h
 */
@@ -15,6 +15,13 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
+
+
+static lua_State *getco (lua_State *L) {
+  lua_State *co = lua_tothread(L, 1);
+  luaL_argcheck(L, co, 1, "coroutine expected");
+  return co;
+}
 
 
 static int auxresume (lua_State *L, lua_State *co, int narg) {
@@ -47,9 +54,8 @@ static int auxresume (lua_State *L, lua_State *co, int narg) {
 
 
 static int luaB_coresume (lua_State *L) {
-  lua_State *co = lua_tothread(L, 1);
+  lua_State *co = getco(L);
   int r;
-  luaL_argcheck(L, co, 1, "coroutine expected");
   r = auxresume(L, co, lua_gettop(L) - 1);
   if (r < 0) {
     lua_pushboolean(L, 0);
@@ -102,8 +108,7 @@ static int luaB_yield (lua_State *L) {
 
 
 static int luaB_costatus (lua_State *L) {
-  lua_State *co = lua_tothread(L, 1);
-  luaL_argcheck(L, co, 1, "coroutine expected");
+  lua_State *co = getco(L);
   if (L == co) lua_pushliteral(L, "running");
   else {
     switch (lua_status(co)) {
@@ -129,6 +134,12 @@ static int luaB_costatus (lua_State *L) {
 }
 
 
+static int luaB_yieldable (lua_State *L) {
+  lua_pushboolean(L, lua_isyieldable(L));
+  return 1;
+}
+
+
 static int luaB_corunning (lua_State *L) {
   int ismain = lua_pushthread(L);
   lua_pushboolean(L, ismain);
@@ -143,6 +154,7 @@ static const luaL_Reg co_funcs[] = {
   {"status", luaB_costatus},
   {"wrap", luaB_cowrap},
   {"yield", luaB_yield},
+  {"isyieldable", luaB_yieldable},
   {NULL, NULL}
 };
 

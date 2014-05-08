@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.303 2014/05/01 18:18:06 roberto Exp roberto $
+** $Id: lua.h,v 1.304 2014/05/01 18:21:32 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -282,6 +282,8 @@ LUA_API int  (lua_yieldk) (lua_State *L, int nresults, int ctx,
 #define lua_yield(L,n)		lua_yieldk(L, (n), 0, NULL)
 LUA_API int  (lua_resume) (lua_State *L, lua_State *from, int narg);
 LUA_API int  (lua_status) (lua_State *L);
+LUA_API int lua_isyieldable (lua_State *L);
+
 
 /*
 ** garbage-collection function and options
