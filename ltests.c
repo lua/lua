@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.167 2014/02/19 13:51:09 roberto Exp roberto $
+** $Id: ltests.c,v 2.168 2014/04/14 18:42:44 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -570,7 +570,9 @@ static int mem_query (lua_State *L) {
     return 3;
   }
   else if (lua_isnumber(L, 1)) {
-    l_memcontrol.memlimit = luaL_checkint(L, 1);
+    unsigned long limit = cast(unsigned long, luaL_checkinteger(L, 1));
+    if (limit == 0) limit = ULONG_MAX;
+    l_memcontrol.memlimit = limit;
     return 0;
   }
   else {
@@ -755,7 +757,7 @@ static int upvalue (lua_State *L) {
 
 
 static int newuserdata (lua_State *L) {
-  size_t size = luaL_checkint(L, 1);
+  size_t size = cast(size_t, luaL_checkinteger(L, 1));
   char *p = cast(char *, lua_newuserdata(L, size));
   while (size--) *p++ = '\0';
   return 1;
