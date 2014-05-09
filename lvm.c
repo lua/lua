@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.204 2014/04/30 19:29:51 roberto Exp roberto $
+** $Id: lvm.c,v 2.205 2014/05/01 18:18:06 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -140,6 +140,41 @@ int luaV_tostring (lua_State *L, StkId obj) {
     setsvalue2s(L, obj, luaS_newlstr(L, buff, len));
     return 1;
   }
+}
+
+
+/*
+** Try to convert a 'for' limit to an integer, preserving the
+** semantics of the loop.
+** (The following explanation assumes a non-negative step; it is valid
+** for negative steps, mutatis mutandis.)
+** If the limit can be converted to an integer, rounding down, that is
+** it.
+** Otherwise, check whether the limit can be converted to a number.  If
+** the number is too large, it is OK to set the limit as LUA_MAXINTEGER,
+** which means no limit.  If the number is too negative, the loop
+** should not run, because any initial integer value is larger than the
+** limit. So, it sets the limit to LUA_MININTEGER. 'stopnow' corrects
+** the extreme case when the initial value is LUA_MININTEGER, in which
+** case the LUA_MININTEGER limit would run the loop once.
+*/
+static int forlimit (const TValue *obj, lua_Integer *p, lua_Integer step,
+                     int *stopnow) {
+  *stopnow = 0;  /* usually, let loops run */
+  if (!tointeger_aux(obj, p, (step < 0))) {  /* does not fit in integer? */
+    lua_Number n;  /* try to convert to float */
+    if (!tonumber(obj, &n)) /* cannot convert to float? */
+      return 0;  /* not a number */
+    if (n > 0) {  /* if true, float is larger than max integer */
+      *p = LUA_MAXINTEGER;
+      if (step < 0) *stopnow = 1;
+    }
+    else {  /* float is smaller than min integer */
+      *p = LUA_MININTEGER;
+      if (step >= 0) *stopnow = 1;
+    }
+  }
+  return 1;
 }
 
 
@@ -980,11 +1015,13 @@ void luaV_execute (lua_State *L) {
         TValue *plimit = ra + 1;
         TValue *pstep = ra + 2;
         lua_Integer ilimit;
+        int stopnow;
         if (ttisinteger(init) && ttisinteger(pstep) &&
-            tointeger_aux(plimit, &ilimit, (ivalue(pstep) < 0))) {
+            forlimit(plimit, &ilimit, ivalue(pstep), &stopnow)) {
           /* all values are integer */
-          setivalue(init, ivalue(init) - ivalue(pstep));
+          lua_Integer initv = (stopnow ? 0 : ivalue(init));
           setivalue(plimit, ilimit);
+          setivalue(init, initv - ivalue(pstep));
         }
         else {  /* try making all values floats */
           lua_Number ninit; lua_Number nlimit; lua_Number nstep;
