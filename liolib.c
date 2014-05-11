@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.120 2014/03/19 18:57:42 roberto Exp roberto $
+** $Id: liolib.c,v 2.121 2014/04/15 16:46:45 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -103,6 +103,8 @@
 #if !defined(l_fseek)		/* { */
 
 #if defined(LUA_USE_POSIX)	/* { */
+
+#include <sys/types.h>
 
 #define l_fseek(f,o,w)		fseeko(f,o,w)
 #define l_ftell(f)		ftello(f)
