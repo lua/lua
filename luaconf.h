@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.199 2014/04/16 18:45:51 roberto Exp roberto $
+** $Id: luaconf.h,v 1.200 2014/04/17 14:41:11 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -549,7 +549,7 @@
 #define LUAI_UACINT		LUA_INTEGER
 
 /*
-** use LUAI_UACINT here to avoid problems with promotions (which 
+** use LUAI_UACINT here to avoid problems with promotions (which
 ** can turn a comparison between unsigneds into a signed comparison)
 */
 #define LUA_UNSIGNED		unsigned LUAI_UACINT
@@ -598,7 +598,10 @@
 #endif
 
 #elif defined(LUA_INT_SHORT)	/* }{ short int */
-/* this option is for tests only; it is not fully functional */
+/*
+** this option is for tests only; it is not particularly useful and
+** it does not pass the test suit.
+*/
 
 #define LUA_INTEGER		short int
 #define LUA_INTEGER_FRMLEN	""
