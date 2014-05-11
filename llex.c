@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.75 2014/04/30 16:48:44 roberto Exp roberto $
+** $Id: llex.c,v 2.76 2014/05/01 18:18:06 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -284,15 +284,19 @@ static int skip_sep (LexState *ls) {
 
 
 static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
+  int line = ls->linenumber;  /* initial line (for error message) */
   save_and_next(ls);  /* skip 2nd `[' */
   if (currIsNewline(ls))  /* string starts with a newline? */
     inclinenumber(ls);  /* skip it */
   for (;;) {
     switch (ls->current) {
-      case EOZ:
-        lexerror(ls, (seminfo) ? "unfinished long string" :
-                                 "unfinished long comment", TK_EOS);
+      case EOZ: {  /* error */
+        const char *what = (seminfo ? "string" : "comment");
+        const char *msg = luaO_pushfstring(ls->L,
+                     "unfinished long %s (starting at line %d)", what, line);
+        lexerror(ls, msg, TK_EOS);
         break;  /* to avoid warnings */
+      }
       case ']': {
         if (skip_sep(ls) == sep) {
           save_and_next(ls);  /* skip 2nd `]' */
