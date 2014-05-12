@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.205 2014/05/01 18:18:06 roberto Exp roberto $
+** $Id: lvm.c,v 2.206 2014/05/09 14:20:52 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -56,7 +56,8 @@ static int tofloat (const TValue *obj, lua_Number *n) {
 
 
 /*
-** Try to convert a value to a float
+** Try to convert a value to a float. Check 'isinteger' first, because
+** in general the float case is already handled by the macro 'tonumber'.
 */
 int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
   TValue v;
@@ -69,7 +70,7 @@ int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
     *n = fltvalue(obj);
     return 1;
   }
-  else if (ttisstring(obj) &&
+  else if (ttisstring(obj) &&  /* string convertible to number? */
             luaO_str2num(svalue(obj), &v) == tsvalue(obj)->len + 1) {
     obj = &v;
     goto again;  /* convert result from 'luaO_str2num' to a float */
@@ -178,8 +179,12 @@ static int forlimit (const TValue *obj, lua_Integer *p, lua_Integer step,
 }
 
 
+/*
+** Main function for table access (invoking metamethods if needed).
+** Compute 'val = t[key]'
+*/
 void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val) {
-  int loop;
+  int loop;  /* counter to avoid infinite loops */
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
     const TValue *tm;
     if (ttistable(t)) {  /* `t' is a table? */
@@ -187,32 +192,36 @@ void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val) {
       const TValue *res = luaH_get(h, key); /* do a primitive get */
       if (!ttisnil(res) ||  /* result is not nil? */
           (tm = fasttm(L, h->metatable, TM_INDEX)) == NULL) { /* or no TM? */
-        setobj2s(L, val, res);
+        setobj2s(L, val, res);  /* result is the raw get */
         return;
       }
-      /* else will try the tag method */
+      /* else will try metamethod */
     }
     else if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_INDEX)))
-      luaG_typeerror(L, t, "index");
-    if (ttisfunction(tm)) {
+      luaG_typeerror(L, t, "index");  /* no metamethod */
+    if (ttisfunction(tm)) {  /* metamethod is a function */
       luaT_callTM(L, tm, t, key, val, 1);
       return;
     }
-    t = tm;  /* else repeat with 'tm' */
+    t = tm;  /* else repeat access over 'tm' */
   }
   luaG_runerror(L, "gettable chain too long; possible loop");
 }
 
 
+/*
+** Main function for table assignment (invoking metamethods if needed).
+** Compute 't[key] = val'
+*/
 void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
-  int loop;
+  int loop;  /* counter to avoid infinite loops */
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
     const TValue *tm;
     if (ttistable(t)) {  /* `t' is a table? */
       Table *h = hvalue(t);
       TValue *oldval = cast(TValue *, luaH_get(h, key));
       /* if previous value is not nil, there must be a previous entry
-         in the table; moreover, a metamethod has no relevance */
+         in the table; a metamethod has no relevance */
       if (!ttisnil(oldval) ||
          /* previous value is nil; must check the metamethod */
          ((tm = fasttm(L, h->metatable, TM_NEWINDEX)) == NULL &&
@@ -232,32 +241,40 @@ void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
     else  /* not a table; check metamethod */
       if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_NEWINDEX)))
         luaG_typeerror(L, t, "index");
-    /* there is a metamethod */
+    /* try the metamethod */
     if (ttisfunction(tm)) {
       luaT_callTM(L, tm, t, key, val, 0);
       return;
     }
-    t = tm;  /* else repeat with 'tm' */
+    t = tm;  /* else repeat assginment over 'tm' */
   }
   luaG_runerror(L, "settable chain too long; possible loop");
 }
 
 
+/*
+** Compare two strings 'ls' x 'rs', returning an integer smaller-equal-
+** -larger than zero if 'ls' is smaller-equal-larger than 'rs'.
+** The code is a little tricky because it allows '\0' in the strings
+** and it uses 'strcoll' (to respect locales) for each segments
+** of the strings.
+*/
 static int l_strcmp (const TString *ls, const TString *rs) {
   const char *l = getstr(ls);
   size_t ll = ls->tsv.len;
   const char *r = getstr(rs);
   size_t lr = rs->tsv.len;
-  for (;;) {
+  for (;;) {  /* for each segment */
     int temp = strcoll(l, r);
-    if (temp != 0) return temp;
-    else {  /* strings are equal up to a `\0' */
+    if (temp != 0)  /* not equal? */
+      return temp;  /* done */
+    else {  /* strings are equal up to a '\0' */
       size_t len = strlen(l);  /* index of first `\0' in both strings */
-      if (len == lr)  /* r is finished? */
-        return (len == ll) ? 0 : 1;
-      else if (len == ll)  /* l is finished? */
-        return -1;  /* l is smaller than r (because r is not finished) */
-      /* both strings longer than `len'; go on comparing (after the `\0') */
+      if (len == lr)  /* 'rs' is finished? */
+        return (len == ll) ? 0 : 1;  /* check 'ls' */
+      else if (len == ll)  /* 'ls' is finished? */
+        return -1;  /* 'ls' is smaller than 'rs' ('rs' is not finished) */
+      /* both strings longer than `len'; go on comparing after the '\0' */
       len++;
       l += len; ll -= len; r += len; lr -= len;
     }
@@ -265,29 +282,35 @@ static int l_strcmp (const TString *ls, const TString *rs) {
 }
 
 
+/*
+** Main operation less than; return 'l < r'.
+*/
 int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
   int res;
   lua_Number nl, nr;
-  if (ttisinteger(l) && ttisinteger(r))
+  if (ttisinteger(l) && ttisinteger(r))  /* both operands are integers? */
     return (ivalue(l) < ivalue(r));
-  else if (tofloat(l, &nl) && tofloat(r, &nr))
+  else if (tofloat(l, &nl) && tofloat(r, &nr))  /* both are numbers? */
     return luai_numlt(nl, nr);
-  else if (ttisstring(l) && ttisstring(r))
+  else if (ttisstring(l) && ttisstring(r))  /* both are strings? */
     return l_strcmp(rawtsvalue(l), rawtsvalue(r)) < 0;
-  else if ((res = luaT_callorderTM(L, l, r, TM_LT)) < 0)
-    luaG_ordererror(L, l, r);
+  else if ((res = luaT_callorderTM(L, l, r, TM_LT)) < 0)  /* no metamethod? */
+    luaG_ordererror(L, l, r);  /* error */
   return res;
 }
 
 
+/*
+** Main operation less than or equal to; return 'l <= r'.
+*/
 int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
   int res;
   lua_Number nl, nr;
-  if (ttisinteger(l) && ttisinteger(r))
+  if (ttisinteger(l) && ttisinteger(r))  /* both operands are integers? */
     return (ivalue(l) <= ivalue(r));
-  else if (tofloat(l, &nl) && tofloat(r, &nr))
+  else if (tofloat(l, &nl) && tofloat(r, &nr))  /* both are numbers? */
     return luai_numle(nl, nr);
-  else if (ttisstring(l) && ttisstring(r))
+  else if (ttisstring(l) && ttisstring(r))  /* both are strings? */
     return l_strcmp(rawtsvalue(l), rawtsvalue(r)) <= 0;
   else if ((res = luaT_callorderTM(L, l, r, TM_LE)) >= 0)  /* first try `le' */
     return res;
@@ -298,15 +321,16 @@ int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
 
 
 /*
-** equality of Lua values. L == NULL means raw equality (no metamethods)
+** Main operation for equality of Lua values; return 't1 == t2'. 
+** L == NULL means raw equality (no metamethods)
 */
 int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
   const TValue *tm;
-  if (ttype(t1) != ttype(t2)) {
+  if (ttype(t1) != ttype(t2)) {  /* not the same variant? */
     if (ttnov(t1) != ttnov(t2) || ttnov(t1) != LUA_TNUMBER)
       return 0;  /* only numbers can be equal with different variants */
     else {  /* two numbers with different variants */
-      lua_Number n1, n2;
+      lua_Number n1, n2;  /* compare them as floats */
       lua_assert(ttisnumber(t1) && ttisnumber(t2));
       cast_void(tofloat(t1, &n1)); cast_void(tofloat(t2, &n2));
       return luai_numeq(n1, n2);
@@ -343,8 +367,13 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
 }
 
 
+/* macro used by 'luaV_concat' to ensure that element at 'o' is a string */
 #define tostring(L,o) (ttisstring(o) || (luaV_tostring(L, o)))
 
+/*
+** Main operation for concatenation: concat 'total' values in the stack,
+** from 'L->top - total' up to 'L->top - 1'.
+*/
 void luaV_concat (lua_State *L, int total) {
   lua_assert(total >= 2);
   do {
@@ -372,12 +401,12 @@ void luaV_concat (lua_State *L, int total) {
       buffer = luaZ_openspace(L, &G(L)->buff, tl);
       tl = 0;
       n = i;
-      do {  /* concat all strings */
+      do {  /* copy all strings to buffer */
         size_t l = tsvalue(top-i)->len;
         memcpy(buffer+tl, svalue(top-i), l * sizeof(char));
         tl += l;
       } while (--i > 0);
-      setsvalue2s(L, top-n, luaS_newlstr(L, buffer, tl));
+      setsvalue2s(L, top-n, luaS_newlstr(L, buffer, tl));  /* create result */
     }
     total -= n-1;  /* got 'n' strings to create 1 new */
     L->top -= n-1;  /* popped 'n' strings and pushed one */
@@ -385,6 +414,9 @@ void luaV_concat (lua_State *L, int total) {
 }
 
 
+/*
+** Main operation 'ra' = #rb'.
+*/
 void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
   const TValue *tm;
   switch (ttnov(rb)) {
@@ -410,15 +442,18 @@ void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
 }
 
 
-lua_Integer luaV_div (lua_State *L, lua_Integer x, lua_Integer y) {
-  if (l_castS2U(y) + 1u <= 1u) {  /* special cases: -1 or 0 */
-    if (y == 0)
+/*
+** Integer division; return 'm // n'.
+*/
+lua_Integer luaV_div (lua_State *L, lua_Integer m, lua_Integer n) {
+  if (l_castS2U(n) + 1u <= 1u) {  /* special cases: -1 or 0 */
+    if (n == 0)
       luaG_runerror(L, "attempt to divide by zero");
-    return intop(-, 0, x);   /* y==-1; avoid overflow with 0x80000...//-1 */
+    return intop(-, 0, m);   /* n==-1; avoid overflow with 0x80000...//-1 */
   }
   else {
-    lua_Integer d = x / y;  /* perform division */
-    if ((x ^ y) >= 0 || x % y == 0)   /* same signal or no rest? */
+    lua_Integer d = m / n;  /* perform division */
+    if ((m ^ n) >= 0 || m % n == 0)   /* same signal or no rest? */
       return d;
     else
       return d - 1;  /* correct 'div' for negative case */
@@ -426,33 +461,36 @@ lua_Integer luaV_div (lua_State *L, lua_Integer x, lua_Integer y) {
 }
 
 
-lua_Integer luaV_mod (lua_State *L, lua_Integer x, lua_Integer y) {
-  if (l_castS2U(y) + 1u <= 1u) {  /* special cases: -1 or 0 */
-    if (y == 0)
+/*
+** Integer modulus; return 'm % n'.
+*/
+lua_Integer luaV_mod (lua_State *L, lua_Integer m, lua_Integer n) {
+  if (l_castS2U(n) + 1u <= 1u) {  /* special cases: -1 or 0 */
+    if (n == 0)
       luaG_runerror(L, "attempt to perform 'n%%0'");
-    return 0;   /* y==-1; avoid overflow with 0x80000...%-1 */
+    return 0;   /* m % -1 == 0; avoid overflow with 0x80000...%-1 */
   }
   else {
-    lua_Integer r = x % y;
-    if (r == 0 || (x ^ y) >= 0)
+    lua_Integer r = m % n;
+    if (r == 0 || (m ^ n) >= 0)
       return r;
     else
-      return r + y;  /* correct 'mod' for negative case */
+      return r + n;  /* correct 'mod' for negative case */
   }
 }
 
 
-lua_Integer luaV_pow (lua_Integer x, lua_Integer y) {
-  lua_assert(y >= 0);
-  if (y == 0)
-    return 1;  /* x^0 == 1 */
+lua_Integer luaV_pow (lua_Integer m, lua_Integer n) {
+  lua_assert(n >= 0);
+  if (n == 0)
+    return 1;  /* m^0 == 1 */
   else {
     lua_Integer r = 1;
-    for (; y > 1; y >>= 1) {
-      if (y & 1) r = intop(*, r, x);
-      x = intop(*, x, x);
+    for (; n > 1; n >>= 1) {
+      if (n & 1) r = intop(*, r, m);
+      m = intop(*, m, m);
     }
-    r = intop(*, r, x);
+    r = intop(*, r, m);
     return r;
   }
 }
