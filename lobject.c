@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.83 2014/04/30 16:48:44 roberto Exp roberto $
+** $Id: lobject.c,v 2.84 2014/05/01 18:18:06 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -77,7 +77,6 @@ static lua_Integer intarith (lua_State *L, int op, lua_Integer v1,
     case LUA_OPSUB:return intop(-, v1, v2);
     case LUA_OPMUL:return intop(*, v1, v2);
     case LUA_OPMOD: return luaV_mod(L, v1, v2);
-    case LUA_OPPOW: return luaV_pow(v1, v2);
     case LUA_OPIDIV: return luaV_div(L, v1, v2);
     case LUA_OPBAND: return intop(&, v1, v2);
     case LUA_OPBOR: return intop(|, v1, v2);
@@ -123,7 +122,7 @@ void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
       }
       else break;  /* go to the end */
     }
-    case LUA_OPDIV: {  /* operates only on floats */
+    case LUA_OPDIV: case LUA_OPPOW: {  /* operate only on floats */
       lua_Number n1; lua_Number n2;
       if (tonumber(p1, &n1) && tonumber(p2, &n2)) {
         setfltvalue(res, numarith(L, op, n1, n2));
@@ -133,8 +132,7 @@ void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
     }
     default: {  /* other operations */
       lua_Number n1; lua_Number n2;
-      if (ttisinteger(p1) && ttisinteger(p2) &&
-          (op != LUA_OPPOW || ivalue(p2) >= 0)) {
+      if (ttisinteger(p1) && ttisinteger(p2)) {
         setivalue(res, intarith(L, op, ivalue(p1), ivalue(p2)));
         return;
       }

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.206 2014/05/09 14:20:52 roberto Exp roberto $
+** $Id: lvm.c,v 2.207 2014/05/12 19:13:32 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -480,22 +480,6 @@ lua_Integer luaV_mod (lua_State *L, lua_Integer m, lua_Integer n) {
 }
 
 
-lua_Integer luaV_pow (lua_Integer m, lua_Integer n) {
-  lua_assert(n >= 0);
-  if (n == 0)
-    return 1;  /* m^0 == 1 */
-  else {
-    lua_Integer r = 1;
-    for (; n > 1; n >>= 1) {
-      if (n & 1) r = intop(*, r, m);
-      m = intop(*, m, m);
-    }
-    r = intop(*, r, m);
-    return r;
-  }
-}
-
-
 /* number of bits in an integer */
 #define NBITS	cast_int(sizeof(lua_Integer) * CHAR_BIT)
 
@@ -869,12 +853,7 @@ void luaV_execute (lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
-        lua_Integer ic;
-        if (ttisinteger(rb) && ttisinteger(rc) && (ic = ivalue(rc)) >= 0) {
-          lua_Integer ib = ivalue(rb);
-          setivalue(ra, luaV_pow(ib, ic));
-        }
-        else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
+        if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setfltvalue(ra, luai_numpow(L, nb, nc));
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_POW)); }
