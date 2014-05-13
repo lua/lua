@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.208 2014/05/01 18:18:06 roberto Exp roberto $
+** $Id: lapi.c,v 2.209 2014/05/01 18:21:32 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -181,26 +181,31 @@ LUA_API void lua_settop (lua_State *L, int idx) {
 }
 
 
-LUA_API void lua_remove (lua_State *L, int idx) {
-  StkId p;
-  lua_lock(L);
-  p = index2addr(L, idx);
-  api_checkstackindex(L, idx, p);
-  while (++p < L->top) setobjs2s(L, p-1, p);
-  L->top--;
-  lua_unlock(L);
+/*
+** Reverse the stack segment from 'from' to 'to'
+** (auxiliar to 'lua_rotate')
+*/
+static void reverse (lua_State *L, StkId from, StkId to) {
+  for (; from < to; from++, to--) {
+    TValue temp;
+    setobj(L, &temp, from);
+    setobj(L, from, to);
+    setobj(L, to, &temp);
+  }
 }
 
 
-LUA_API void lua_insert (lua_State *L, int idx) {
-  StkId p;
-  StkId q;
+LUA_API void lua_rotate (lua_State *L, int idx, int n) {
+  StkId p, t, m;
   lua_lock(L);
+  t = L->top - 1;
   p = index2addr(L, idx);
+  m = (n >= 0 ? t - n : p - n - 1);
   api_checkstackindex(L, idx, p);
-  for (q = L->top; q > p; q--)  /* use L->top as a temporary */
-    setobjs2s(L, q, q - 1);
-  setobjs2s(L, p, L->top);
+  api_check(L, p <= m + 1 && m <= t, "invalid 'n'");
+  reverse(L, p, m);
+  reverse(L, m + 1, t);
+  reverse(L, p, t);
   lua_unlock(L);
 }
 

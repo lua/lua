@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.168 2014/04/14 18:42:44 roberto Exp roberto $
+** $Id: ltests.c,v 2.169 2014/05/08 19:08:46 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1214,6 +1214,10 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
           lua_pushstring(L, lua_tostring(L1, -(n - i)));
       }
       return n;
+    }
+    else if EQ("rotate") {
+      int i = getindex;
+      lua_rotate(L1, i, getnum);
     }
     else if EQ("setfield") {
       int t = getindex;

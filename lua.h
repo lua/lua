@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.304 2014/05/01 18:21:32 roberto Exp roberto $
+** $Id: lua.h,v 1.305 2014/05/08 13:52:20 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -145,8 +145,7 @@ LUA_API int   (lua_absindex) (lua_State *L, int idx);
 LUA_API int   (lua_gettop) (lua_State *L);
 LUA_API void  (lua_settop) (lua_State *L, int idx);
 LUA_API void  (lua_pushvalue) (lua_State *L, int idx);
-LUA_API void  (lua_remove) (lua_State *L, int idx);
-LUA_API void  (lua_insert) (lua_State *L, int idx);
+LUA_API void  (lua_rotate) (lua_State *L, int idx, int n);
 LUA_API void  (lua_replace) (lua_State *L, int idx);
 LUA_API void  (lua_copy) (lua_State *L, int fromidx, int toidx);
 LUA_API int   (lua_checkstack) (lua_State *L, int sz);
@@ -326,9 +325,9 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 ** ===============================================================
 */
 
-#define lua_tonumber(L,i)	lua_tonumberx(L,i,NULL)
-#define lua_tointeger(L,i)	lua_tointegerx(L,i,NULL)
-#define lua_tounsigned(L,i)	lua_tounsignedx(L,i,NULL)
+#define lua_tonumber(L,i)	lua_tonumberx(L,(i),NULL)
+#define lua_tointeger(L,i)	lua_tointegerx(L,(i),NULL)
+#define lua_tounsigned(L,i)	lua_tounsignedx(L,(i),NULL)
 
 #define lua_pop(L,n)		lua_settop(L, -(n)-1)
 
@@ -355,6 +354,10 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 
 #define lua_tostring(L,i)	lua_tolstring(L, (i), NULL)
 
+
+#define lua_insert(L,idx)	lua_rotate(L, (idx), 1)
+
+#define lua_remove(L,idx)	(lua_rotate(L, (idx), -1), lua_pop(L, 1))
 
 
 /*
