@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.210 2014/05/13 19:40:28 roberto Exp roberto $
+** $Id: lapi.c,v 2.211 2014/05/14 14:20:17 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -189,8 +189,8 @@ static void reverse (lua_State *L, StkId from, StkId to) {
   for (; from < to; from++, to--) {
     TValue temp;
     setobj(L, &temp, from);
-    setobj(L, from, to);
-    setobj(L, to, &temp);
+    setobjs2s(L, from, to);
+    setobj2s(L, to, &temp);
   }
 }
 
