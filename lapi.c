@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.209 2014/05/01 18:21:32 roberto Exp roberto $
+** $Id: lapi.c,v 2.210 2014/05/13 19:40:28 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -195,17 +195,21 @@ static void reverse (lua_State *L, StkId from, StkId to) {
 }
 
 
+/*
+** Let x = AB, where A is a prefix of length 'n'. Then,
+** rotate x n == BA. But BA == (A^r . B^r)^r.
+*/
 LUA_API void lua_rotate (lua_State *L, int idx, int n) {
   StkId p, t, m;
   lua_lock(L);
-  t = L->top - 1;
-  p = index2addr(L, idx);
-  m = (n >= 0 ? t - n : p - n - 1);
+  t = L->top - 1;  /* end of stack segment being rotated */
+  p = index2addr(L, idx);  /* start of segment */
+  m = (n >= 0 ? t - n : p - n - 1);  /* end of prefix */
   api_checkstackindex(L, idx, p);
   api_check(L, p <= m + 1 && m <= t, "invalid 'n'");
-  reverse(L, p, m);
-  reverse(L, m + 1, t);
-  reverse(L, p, t);
+  reverse(L, p, m);  /* reverse the prefix with length 'n' */
+  reverse(L, m + 1, t);  /* reverse the suffix */
+  reverse(L, p, t);  /* reverse the entire segment */
   lua_unlock(L);
 }
 
