@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.209 2014/05/12 21:44:17 roberto Exp roberto $
+** $Id: lvm.c,v 2.210 2014/05/14 19:47:11 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -492,6 +492,9 @@ lua_Integer luaV_mod (lua_State *L, lua_Integer m, lua_Integer n) {
 /* number of bits in an integer */
 #define NBITS	cast_int(sizeof(lua_Integer) * CHAR_BIT)
 
+/*
+** Shift left operation. (Shift right just negates 'y'.)
+*/
 lua_Integer luaV_shiftl (lua_Integer x, lua_Integer y) {
   if (y < 0) {  /* shift right? */
     if (y <= -NBITS) return 0;
@@ -612,6 +615,14 @@ void luaV_finishOp (lua_State *L) {
   }
 }
 
+
+
+
+/*
+** {==================================================================
+** Function 'luaV_execute': main interpreter loop
+** ===================================================================
+*/
 
 
 /*
@@ -1139,4 +1150,6 @@ void luaV_execute (lua_State *L) {
     }
   }
 }
+
+/* }================================================================== */
 
