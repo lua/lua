@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.90 2014/05/07 11:12:51 roberto Exp roberto $
+** $Id: lobject.h,v 2.91 2014/05/15 20:28:39 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -373,14 +373,9 @@ typedef struct LocVar {
 */
 typedef struct Proto {
   CommonHeader;
-  TValue *k;  /* constants used by the function */
-  Instruction *code;
-  struct Proto **p;  /* functions defined inside the function */
-  int *lineinfo;  /* map from opcodes to source lines (debug information) */
-  LocVar *locvars;  /* information about local variables (debug information) */
-  Upvaldesc *upvalues;  /* upvalue information */
-  union Closure *cache;  /* last created closure with this prototype */
-  TString  *source;  /* used for debug information */
+  lu_byte numparams;  /* number of fixed parameters */
+  lu_byte is_vararg;
+  lu_byte maxstacksize;  /* maximum stack used by this function */
   int sizeupvalues;  /* size of 'upvalues' */
   int sizek;  /* size of `k' */
   int sizecode;
@@ -389,10 +384,15 @@ typedef struct Proto {
   int sizelocvars;
   int linedefined;
   int lastlinedefined;
+  TValue *k;  /* constants used by the function */
+  Instruction *code;
+  struct Proto **p;  /* functions defined inside the function */
+  int *lineinfo;  /* map from opcodes to source lines (debug information) */
+  LocVar *locvars;  /* information about local variables (debug information) */
+  Upvaldesc *upvalues;  /* upvalue information */
+  union Closure *cache;  /* last created closure with this prototype */
+  TString  *source;  /* used for debug information */
   GCObject *gclist;
-  lu_byte numparams;  /* number of fixed parameters */
-  lu_byte is_vararg;
-  lu_byte maxstacksize;  /* maximum stack used by this function */
 } Proto;
 
 
