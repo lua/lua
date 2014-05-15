@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.211 2014/05/14 14:20:17 roberto Exp roberto $
+** $Id: lapi.c,v 2.212 2014/05/14 18:32:30 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -204,9 +204,9 @@ LUA_API void lua_rotate (lua_State *L, int idx, int n) {
   lua_lock(L);
   t = L->top - 1;  /* end of stack segment being rotated */
   p = index2addr(L, idx);  /* start of segment */
-  m = (n >= 0 ? t - n : p - n - 1);  /* end of prefix */
   api_checkstackindex(L, idx, p);
-  api_check(L, p <= m + 1 && m <= t, "invalid 'n'");
+  api_check(L, (n >= 0 ? n : -n) <= (t - p + 1), "invalid 'n'");
+  m = (n >= 0 ? t - n : p - n - 1);  /* end of prefix */
   reverse(L, p, m);  /* reverse the prefix with length 'n' */
   reverse(L, m + 1, t);  /* reverse the suffix */
   reverse(L, p, t);  /* reverse the entire segment */
