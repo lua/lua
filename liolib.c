@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.122 2014/05/11 14:46:19 roberto Exp roberto $
+** $Id: liolib.c,v 2.123 2014/05/13 19:40:28 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -320,8 +320,6 @@ static int io_readline (lua_State *L);
 
 static void aux_lines (lua_State *L, int toclose) {
   int n = lua_gettop(L) - 1;  /* number of arguments to read */
-  /* ensure that arguments will fit here and into 'io_readline' stack */
-  luaL_argcheck(L, n <= LUA_MINSTACK - 3, LUA_MINSTACK - 3, "too many options");
   lua_pushinteger(L, n);  /* number of arguments to read */
   lua_pushboolean(L, toclose);  /* close/not close file when finished */
   lua_rotate(L, 2, 2);  /* move 'n' and 'toclose' to their positions */
@@ -507,6 +505,7 @@ static int io_readline (lua_State *L) {
   if (isclosed(p))  /* file is already closed? */
     return luaL_error(L, "file is already closed");
   lua_settop(L , 1);
+  luaL_checkstack(L, n, "too many arguments");
   for (i = 1; i <= n; i++)  /* push arguments to 'g_read' */
     lua_pushvalue(L, lua_upvalueindex(3 + i));
   n = g_read(L, p->f, 2);  /* 'n' is number of results */
