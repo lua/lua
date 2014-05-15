@@ -1,5 +1,5 @@
 /*
-** $Id: lbitlib.c,v 1.24 2014/03/18 18:27:08 roberto Exp roberto $
+** $Id: lbitlib.c,v 1.25 2014/03/20 19:22:16 roberto Exp roberto $
 ** Standard library for bitwise operations
 ** See Copyright Notice in lua.h
 */
@@ -221,8 +221,7 @@ LUAMOD_API int luaopen_bit32 (lua_State *L) {
 
 
 LUAMOD_API int luaopen_bit32 (lua_State *L) {
-  lua_pushnil(L);
-  return 1;
+  return luaL_error(L, "library 'bit32' has been deprecated");
 }
 
 #endif					/* } */
