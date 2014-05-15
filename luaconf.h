@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.200 2014/04/17 14:41:11 roberto Exp roberto $
+** $Id: luaconf.h,v 1.201 2014/05/11 13:03:48 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -22,9 +22,9 @@
 /*
 ** ===================================================================
 @@ LUA_INT_INT / LUA_INT_LONG / LUA_INT_LONGLONG defines type for
-@* Lua integers;
+@@ Lua integers;
 @@ LUA_REAL_FLOAT / LUA_REAL_DOUBLE / LUA_REAL_LONGDOUBLE defines
-@* type for Lua floats.
+@@ type for Lua floats.
 **
 ** These definitions set the numeric types for Lua. Lua should work
 ** fine with any mix of these previous options.
@@ -73,7 +73,7 @@
 
 
 /*
-@@ LUA_USE_C99 includes all functionality from C 99.
+@@ LUA_USE_C99 includes all functionality that depends on C 99.
 ** CHANGE it (define it) if your system is compatible.
 */
 #if defined(LUA_USE_C99)
@@ -83,7 +83,7 @@
 
 /*
 @@ LUA_USE_POSIX includes all functionality listed as X/Open System
-@* Interfaces Extension (XSI).
+@@ Interfaces Extension (XSI).
 ** CHANGE it (define it) if your system is XSI compatible.
 */
 #if defined(LUA_USE_POSIX)
@@ -93,9 +93,9 @@
 
 /*
 @@ LUA_PATH_DEFAULT is the default path that Lua uses to look for
-@* Lua libraries.
+@@ Lua libraries.
 @@ LUA_CPATH_DEFAULT is the default path that Lua uses to look for
-@* C libraries.
+@@ C libraries.
 ** CHANGE them if your machine has a non-conventional directory
 ** hierarchy or if you want to install your libraries in
 ** non-conventional directories.
@@ -180,10 +180,10 @@
 
 /*
 @@ LUAI_FUNC is a mark for all extern functions that are not to be
-@* exported to outside modules.
+@@ exported to outside modules.
 @@ LUAI_DDEF and LUAI_DDEC are marks for all extern (const) variables
-@* that are not to be exported to outside modules (LUAI_DDEF for
-@* definitions and LUAI_DDEC for declarations).
+@@ that are not to be exported to outside modules (LUAI_DDEF for
+@@ definitions and LUAI_DDEC for declarations).
 ** CHANGE them if you need to mark them in some special way. Elf/gcc
 ** (versions 3.2 and later) mark them as "hidden" to optimize access
 ** when Lua is compiled as a shared library. Not all elf targets support
@@ -216,7 +216,7 @@
 
 /*
 @@ LUA_IDSIZE gives the maximum size for the description of the source
-@* of a function in debug information.
+@@ of a function in debug information.
 ** CHANGE it if you want a different size.
 */
 #define LUA_IDSIZE	60
@@ -258,16 +258,37 @@
 */
 
 /*
-@@ LUA_COMPAT_ALL controls all compatibility options.
+@@ LUA_COMPAT_5_2 controls other macros for compatibility with Lua 5.2.
+@@ LUA_COMPAT_5_1 controls other macros for compatibility with Lua 5.1.
 ** You can define it to get all options, or change specific options
 ** to fit your specific needs.
 */
-#if defined(LUA_COMPAT_ALL)	/* { */
+#if defined(LUA_COMPAT_5_2)	/* { */
+
+/*
+@@ LUA_COMPAT_MATHLIB controls the presence of several deprecated
+** functions in the mathematical library.
+*/
+#define LUA_COMPAT_MATHLIB
 
 /*
 @@ LUA_COMPAT_BITLIB controls the presence of library 'bit32'.
 */
 #define LUA_COMPAT_BITLIB
+
+
+/*
+@@ LUA_COMPAT_FLOATSTRING makes Lua format integral floats without a
+@@ a float mark ('.0').
+** This macro is not on by default even in compatibility mode,
+** because this is not really an incompatibility.
+*/
+/* #define LUA_COMPAT_FLOATSTRING */
+
+#endif				/* } */
+
+
+#if defined(LUA_COMPAT_5_1)	/* { */
 
 /*
 @@ LUA_COMPAT_UNPACK controls the presence of global 'unpack'.
@@ -351,9 +372,9 @@
 /*
 @@ LUA_INT32 is an signed integer with exactly 32 bits.
 @@ LUAI_UMEM is an unsigned integer big enough to count the total
-@* memory used by Lua.
+@@ memory used by Lua.
 @@ LUAI_MEM is a signed integer big enough to count the total memory
-@* used by Lua.
+@@ used by Lua.
 ** CHANGE here if for some weird reason the default definitions are not
 ** good enough for your machine. Probably you do not need to change
 ** this.
@@ -407,7 +428,7 @@
 @@ LUA_NUMBER is the floating-point type used by Lua.
 **
 @@ LUAI_UACNUMBER is the result of an 'usual argument conversion'
-@* over a floating number.
+@@ over a floating number.
 **
 @@ LUA_NUMBER_FRMLEN is the length modifier for writing floats.
 @@ LUA_NUMBER_SCAN is the format for reading floats.
@@ -490,7 +511,7 @@
 
 /*
 @@ The luai_num* macros define the primitive operations over numbers.
-@* They should work for any size of floating numbers.
+** They should work for any size of floating numbers.
 */
 
 /* the following operations need the math library */
@@ -529,7 +550,7 @@
 @@ LUA_UNSIGNED is the unsigned version of LUA_INTEGER.
 **
 @@ LUAI_UACINT is the result of an 'usual argument conversion'
-@* over a lUA_INTEGER.
+@@ over a lUA_INTEGER.
 @@ LUA_INTEGER_FRMLEN is the length modifier for reading/writing integers.
 @@ LUA_INTEGER_SCAN is the format for reading integers.
 @@ LUA_INTEGER_FMT is the format for writing integers.
