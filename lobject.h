@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.89 2014/05/01 18:18:06 roberto Exp roberto $
+** $Id: lobject.h,v 2.90 2014/05/07 11:12:51 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -267,10 +267,6 @@ typedef struct lua_TValue TValue;
 /* to new object */
 #define setobj2n	setobj
 #define setsvalue2n	setsvalue
-
-
-/* check whether a number is valid (useful only for NaN trick) */
-#define luai_checknum(L,o,c)	{ /* empty */ }
 
 
 

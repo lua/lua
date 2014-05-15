@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.212 2014/05/14 18:32:30 roberto Exp roberto $
+** $Id: lapi.c,v 2.213 2014/05/15 15:22:45 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -499,8 +499,6 @@ LUA_API void lua_pushnil (lua_State *L) {
 LUA_API void lua_pushnumber (lua_State *L, lua_Number n) {
   lua_lock(L);
   setfltvalue(L->top, n);
-  luai_checknum(L, L->top,
-    luaG_runerror(L, "C API - attempt to push a signaling NaN"));
   api_incr_top(L);
   lua_unlock(L);
 }
