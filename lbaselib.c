@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.285 2014/03/12 20:57:40 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.286 2014/05/01 18:18:06 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -379,44 +379,59 @@ static int luaB_select (lua_State *L) {
 }
 
 
-static int finishpcall (lua_State *L, int status) {
-  if (!lua_checkstack(L, 1)) {  /* no space for extra boolean? */
-    lua_settop(L, 0);  /* create space for return values */
-    lua_pushboolean(L, 0);
-    lua_pushstring(L, "stack overflow");
+/*
+** Finishes a 'pcall' or 'xpcall'. Both functions already pushed a
+** 'true' before doing the call, so in case of sucess 'finishpcall'
+** only has to return everything in the stack minus 'extra' values
+** (where 'extra' is exactly the number of items to be ignored).
+*/
+static int finishpcall (lua_State *L, int ok, int extra) {
+  if (!ok) {  /* error? */
+    lua_pushboolean(L, 0);  /* first result (false) */
+    lua_pushvalue(L, -2);  /* error message */
     return 2;  /* return false, msg */
   }
-  lua_pushboolean(L, status);  /* first result (status) */
-  lua_replace(L, 1);  /* put first result in first slot */
-  return lua_gettop(L);
+  else
+    return lua_gettop(L) - extra;  /* return all results */
 }
 
 
+/*
+** Continuation function for 'pcall' and 'xpcall': get appropriate
+** state through 'lua_getctx' and call 'finishpcall' to finish the
+** original function.
+*/
 static int pcallcont (lua_State *L) {
-  int status = lua_getctx(L, NULL);
-  return finishpcall(L, (status == LUA_YIELD));
+  int extra;
+  int status = lua_getctx(L, &extra);
+  return finishpcall(L, (status == LUA_YIELD), extra);
 }
 
 
 static int luaB_pcall (lua_State *L) {
   int status;
   luaL_checkany(L, 1);
-  lua_pushnil(L);
-  lua_insert(L, 1);  /* create space for status result */
+  lua_pushboolean(L, 1);  /* first result if no errors */
+  lua_insert(L, 1);  /* put it in place */
   status = lua_pcallk(L, lua_gettop(L) - 2, LUA_MULTRET, 0, 0, pcallcont);
-  return finishpcall(L, (status == LUA_OK));
+  return finishpcall(L, (status == LUA_OK), 0);
 }
 
 
+/*
+** Do a protected call with error handling. After 'lua_rotate', the
+** stack will have <f, err, true, f, [args...]>; so, the function passes
+** 2 to 'finishpcall' to skip the 2 first values when returning results.
+*/
 static int luaB_xpcall (lua_State *L) {
   int status;
   int n = lua_gettop(L);
-  luaL_argcheck(L, n >= 2, 2, "value expected");
-  lua_pushvalue(L, 1);  /* exchange function... */
-  lua_copy(L, 2, 1);  /* ...and error handler */
-  lua_replace(L, 2);
-  status = lua_pcallk(L, n - 2, LUA_MULTRET, 1, 0, pcallcont);
-  return finishpcall(L, (status == LUA_OK));
+  luaL_checktype(L, 2, LUA_TFUNCTION);  /* check error function */
+  lua_pushboolean(L, 1);  /* first result */
+  lua_pushvalue(L, 1);  /* function */
+  lua_rotate(L, 3, 2);  /* move them below function's arguments */
+  status = lua_pcallk(L, n - 2, LUA_MULTRET, 2, 2, pcallcont);
+  return finishpcall(L, (status == LUA_OK), 2);
 }
 
 
