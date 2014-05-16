@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.68 2014/04/04 16:38:11 roberto Exp roberto $
+** $Id: ltablib.c,v 1.69 2014/04/12 14:43:50 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -118,18 +118,14 @@ static int tconcat (lua_State *L) {
 */
 
 static int pack (lua_State *L) {
+  int i;
   int n = lua_gettop(L);  /* number of elements to pack */
   lua_createtable(L, n, 1);  /* create result table */
+  lua_insert(L, 1);  /* put it at index 1 */
+  for (i = n; i >= 1; i--)  /* assign elements */
+    lua_rawseti(L, 1, i);
   lua_pushinteger(L, n);
-  lua_setfield(L, -2, "n");  /* t.n = number of elements */
-  if (n > 0) {  /* at least one element? */
-    int i;
-    lua_pushvalue(L, 1);
-    lua_rawseti(L, -2, 1);  /* insert first element */
-    lua_replace(L, 1);  /* move table into index 1 */
-    for (i = n; i >= 2; i--)  /* assign other elements */
-      lua_rawseti(L, 1, i);
-  }
+  lua_setfield(L, 1, "n");  /* t.n = number of elements */
   return 1;  /* return table */
 }
 
