@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.210 2014/05/14 19:47:11 roberto Exp roberto $
+** $Id: lvm.c,v 2.211 2014/05/15 20:08:32 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -452,7 +452,8 @@ void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
 
 
 /*
-** Integer division; return 'm // n'.
+** Integer division; return 'm // n'. (Assume that C division with
+** negative operands follows C99 behavior.)
 */
 lua_Integer luaV_div (lua_State *L, lua_Integer m, lua_Integer n) {
   if (l_castS2U(n) + 1u <= 1u) {  /* special cases: -1 or 0 */
@@ -471,7 +472,8 @@ lua_Integer luaV_div (lua_State *L, lua_Integer m, lua_Integer n) {
 
 
 /*
-** Integer modulus; return 'm % n'.
+** Integer modulus; return 'm % n'. (Assume that C '%' with 
+** negative operands follows C99 behavior.)
 */
 lua_Integer luaV_mod (lua_State *L, lua_Integer m, lua_Integer n) {
   if (l_castS2U(n) + 1u <= 1u) {  /* special cases: -1 or 0 */
@@ -481,7 +483,7 @@ lua_Integer luaV_mod (lua_State *L, lua_Integer m, lua_Integer n) {
   }
   else {
     lua_Integer r = m % n;
-    if (r == 0 || (m ^ n) >= 0)
+    if (r == 0 || (m ^ n) >= 0)  /* no rest or same signal? */
       return r;
     else
       return r + n;  /* correct 'mod' for negative case */
