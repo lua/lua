@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.76 2014/05/01 18:18:06 roberto Exp roberto $
+** $Id: llex.c,v 2.77 2014/05/11 14:45:43 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -183,12 +183,26 @@ void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source,
 */
 
 
+static int check_next1 (LexState *ls, int c) {
+  if (ls->current == c) {
+    next(ls);
+    return 1;
+  }
+  else return 0;
+}
 
-static int check_next (LexState *ls, const char *set) {
-  if (ls->current == '\0' || !strchr(set, ls->current))
-    return 0;
-  save_and_next(ls);
-  return 1;
+
+/*
+** Check whether current char is in set 'set' (with two chars) and
+** saves it
+*/
+static int check_next2 (LexState *ls, const char *set) {
+  lua_assert(set[2] == '\0');
+  if (ls->current == set[0] || ls->current == set[1]) {
+    save_and_next(ls);
+    return 1;
+  }
+  else return 0;
 }
 
 
@@ -239,11 +253,11 @@ static int read_numeral (LexState *ls, SemInfo *seminfo) {
   int first = ls->current;
   lua_assert(lisdigit(ls->current));
   save_and_next(ls);
-  if (first == '0' && check_next(ls, "Xx"))  /* hexadecimal? */
+  if (first == '0' && check_next2(ls, "xX"))  /* hexadecimal? */
     expo = "Pp";
   for (;;) {
-    if (check_next(ls, expo))  /* exponent part? */
-      check_next(ls, "+-");  /* optional exponent sign */
+    if (check_next2(ls, expo))  /* exponent part? */
+      check_next2(ls, "-+");  /* optional exponent sign */
     if (lisxdigit(ls->current))
       save_and_next(ls);
     else if (ls->current == '.')
@@ -490,35 +504,35 @@ static int llex (LexState *ls, SemInfo *seminfo) {
       }
       case '=': {
         next(ls);
-        if (ls->current != '=') return '=';
-        else { next(ls); return TK_EQ; }
+        if (check_next1(ls, '=')) return TK_EQ;
+        else return '=';
       }
       case '<': {
         next(ls);
-        if (ls->current == '=') { next(ls); return TK_LE; }
-        if (ls->current == '<') { next(ls); return TK_SHL; }
-        return '<';
+        if (check_next1(ls, '=')) return TK_LE;
+        else if (check_next1(ls, '<')) return TK_SHL;
+        else return '<';
       }
       case '>': {
         next(ls);
-        if (ls->current == '=') { next(ls); return TK_GE; }
-        if (ls->current == '>') { next(ls); return TK_SHR; }
-        return '>';
+        if (check_next1(ls, '=')) return TK_GE;
+        else if (check_next1(ls, '>')) return TK_SHR;
+        else return '>';
       }
       case '/': {
         next(ls);
-        if (ls->current != '/') return '/';
-        else { next(ls); return TK_IDIV; }
+        if (check_next1(ls, '/')) return TK_IDIV;
+        else return '/';
       }
       case '~': {
         next(ls);
-        if (ls->current != '=') return '~';
-        else { next(ls); return TK_NE; }
+        if (check_next1(ls, '=')) return TK_NE;
+        else return '~';
       }
       case ':': {
         next(ls);
-        if (ls->current != ':') return ':';
-        else { next(ls); return TK_DBCOLON; }
+        if (check_next1(ls, ':')) return TK_DBCOLON;
+        else return ':';
       }
       case '"': case '\'': {  /* short literal strings */
         read_string(ls, ls->current, seminfo);
@@ -526,8 +540,8 @@ static int llex (LexState *ls, SemInfo *seminfo) {
       }
       case '.': {  /* '.', '..', '...', or number */
         save_and_next(ls);
-        if (check_next(ls, ".")) {
-          if (check_next(ls, "."))
+        if (check_next1(ls, '.')) {
+          if (check_next1(ls, '.'))
             return TK_DOTS;   /* '...' */
           else return TK_CONCAT;   /* '..' */
         }
