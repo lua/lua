@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.201 2014/05/11 13:03:48 roberto Exp roberto $
+** $Id: luaconf.h,v 1.202 2014/05/15 15:24:32 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -431,7 +431,6 @@
 @@ over a floating number.
 **
 @@ LUA_NUMBER_FRMLEN is the length modifier for writing floats.
-@@ LUA_NUMBER_SCAN is the format for reading floats.
 @@ LUA_NUMBER_FMT is the format for writing floats.
 @@ lua_number2str converts a float to a string.
 **
@@ -447,7 +446,6 @@
 #define LUAI_UACNUMBER	double
 
 #define LUA_NUMBER_FRMLEN	""
-#define LUA_NUMBER_SCAN		"%f"
 #define LUA_NUMBER_FMT		"%.7g"
 
 #define l_mathop(op)		op##f
@@ -462,7 +460,6 @@
 #define LUAI_UACNUMBER	long double
 
 #define LUA_NUMBER_FRMLEN	"L"
-#define LUA_NUMBER_SCAN		"%Lf"
 #define LUA_NUMBER_FMT		"%.19Lg"
 
 #define l_mathop(op)		op##l
@@ -476,7 +473,6 @@
 #define LUAI_UACNUMBER	double
 
 #define LUA_NUMBER_FRMLEN	""
-#define LUA_NUMBER_SCAN		"%lf"
 #define LUA_NUMBER_FMT		"%.14g"
 
 #define l_mathop(op)		op
@@ -552,7 +548,6 @@
 @@ LUAI_UACINT is the result of an 'usual argument conversion'
 @@ over a lUA_INTEGER.
 @@ LUA_INTEGER_FRMLEN is the length modifier for reading/writing integers.
-@@ LUA_INTEGER_SCAN is the format for reading integers.
 @@ LUA_INTEGER_FMT is the format for writing integers.
 @@ LUA_MAXINTEGER is the maximum value for a LUA_INTEGER.
 @@ LUA_MININTEGER is the minimum value for a LUA_INTEGER.
@@ -563,7 +558,6 @@
 
 /* The following definitions are good for most cases here */
 
-#define LUA_INTEGER_SCAN	"%" LUA_INTEGER_FRMLEN "d"
 #define LUA_INTEGER_FMT		"%" LUA_INTEGER_FRMLEN "d"
 #define lua_integer2str(s,n)	sprintf((s), LUA_INTEGER_FMT, (n))
 
@@ -633,9 +627,6 @@
 
 #undef  LUAI_UACINT
 #define LUAI_UACINT		int
-
-#undef  LUA_INTEGER_SCAN
-#define LUA_INTEGER_SCAN	"%hd"
 
 #undef  LUAI_MAXSTACK
 #define LUAI_MAXSTACK           15000

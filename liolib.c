@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.123 2014/05/13 19:40:28 roberto Exp roberto $
+** $Id: liolib.c,v 2.124 2014/05/15 15:21:06 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -15,7 +15,9 @@
 #endif
 
 
+#include <ctype.h>
 #include <errno.h>
+#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -361,26 +363,91 @@ static int io_lines (lua_State *L) {
 */
 
 
-static int read_integer (lua_State *L, FILE *f) {
-  lua_Integer d;
-  if (fscanf(f, LUA_INTEGER_SCAN, &d) == 1) {
-    lua_pushinteger(L, d);
-    return 1;
-  }
+/* maximum length of a numeral */
+#define MAXRN		200
+
+/* auxiliary structure used by 'read_number' */
+typedef struct {
+  FILE *f;  /* file being read */
+  int c;  /* current character (look ahead) */
+  int n;  /* number of elements in buffer 'buff' */
+  char buff[MAXRN];
+} RN;
+
+
+/*
+** Add current char to buffer (if not out of space) and read next one
+*/
+static int nextc (RN *rn) {
+  if (rn->n >= MAXRN)  /* buffer overflow? */
+    return 0;  /* fail */
   else {
-   lua_pushnil(L);  /* "result" to be removed */
-   return 0;  /* read fails */
+    rn->buff[rn->n++] = rn->c;  /* save current char */
+    rn->c = l_getc(rn->f);  /* read next one */
+    return 1;
   }
 }
 
 
+/*
+** Accept current char if it is in 'set' (of size 1 or 2)
+*/
+static int test2 (RN *rn, const char *set) {
+  if (rn->c == set[0] || (rn->c == set[1] && rn->c != '\0'))
+    return nextc(rn);
+  else return 0;
+}
+
+
+/*
+** Read a sequence of (hexa)digits
+*/
+static int readdigits (RN *rn, int hexa) {
+  int count = 0;
+  while ((hexa ? isxdigit(rn->c) : isdigit(rn->c)) && nextc(rn))
+    count++;
+  return count;
+}
+
+
+/* access to locale "radix character" (decimal point) */
+#if !defined(getlocaledecpoint)
+#define getlocaledecpoint()     (localeconv()->decimal_point[0])
+#endif
+
+
+/*
+** Read a number: first reads a valid prefix of a numeral into a buffer.
+** Then it calls 'lua_strtonum' to check whether the format is correct
+** and to convert it to a Lua number
+*/
 static int read_number (lua_State *L, FILE *f) {
-  lua_Number d;
-  if (fscanf(f, LUA_NUMBER_SCAN, &d) == 1) {
-    lua_pushnumber(L, d);
-    return 1;
+  RN rn;
+  int count = 0;
+  int hexa = 0;
+  char decp[2] = ".";
+  rn.f = f; rn.n = 0;
+  decp[0] = getlocaledecpoint();  /* get decimal point from locale */
+  l_lockfile(rn.f);
+  do { rn.c = l_getc(rn.f); } while (isspace(rn.c));  /* skip spaces */
+  test2(&rn, "-+");  /* optional signal */
+  if (test2(&rn, "0")) {
+    if (test2(&rn, "xX")) hexa = 1;  /* numeral is hexadecimal */
+    else count = 1;  /* count initial '0' as a valid digit */
   }
-  else {
+  count += readdigits(&rn, hexa);  /* integral part */
+  if (test2(&rn, decp))  /* decimal point? */
+    count += readdigits(&rn, hexa);  /* fractionary part */
+  if (count > 0 && test2(&rn, (hexa ? "pP" : "eE"))) {  /* exponent mark? */
+    test2(&rn, "-+");  /* exponent signal */
+    readdigits(&rn, 0);  /* exponent digits */
+  }
+  ungetc(rn.c, rn.f);  /* unread look-ahead char */
+  l_unlockfile(rn.f);
+  rn.buff[rn.n] = '\0';  /* finish string */
+  if (lua_strtonum(L, rn.buff))  /* is this a valid number? */
+    return 1;  /* ok */
+  else {  /* invalid format */
    lua_pushnil(L);  /* "result" to be removed */
    return 0;  /* read fails */
   }
@@ -456,9 +523,6 @@ static int g_read (lua_State *L, FILE *f, int first) {
         const char *p = luaL_checkstring(L, n);
         if (*p == '*') p++;  /* skip optional '*' (for compatibility) */
         switch (*p) {
-          case 'i':  /* integer */
-            success = read_integer(L, f);
-            break;
           case 'n':  /* number */
             success = read_number(L, f);
             break;
