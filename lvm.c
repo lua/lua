@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.211 2014/05/15 20:08:32 roberto Exp roberto $
+** $Id: lvm.c,v 2.212 2014/05/20 14:12:59 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -157,7 +157,7 @@ int luaV_tostring (lua_State *L, StkId obj) {
 ** Try to convert a 'for' limit to an integer, preserving the
 ** semantics of the loop.
 ** (The following explanation assumes a non-negative step; it is valid
-** for negative steps, mutatis mutandis.)
+** for negative steps mutatis mutandis.)
 ** If the limit can be converted to an integer, rounding down, that is
 ** it.
 ** Otherwise, check whether the limit can be converted to a number.  If
@@ -166,7 +166,7 @@ int luaV_tostring (lua_State *L, StkId obj) {
 ** should not run, because any initial integer value is larger than the
 ** limit. So, it sets the limit to LUA_MININTEGER. 'stopnow' corrects
 ** the extreme case when the initial value is LUA_MININTEGER, in which
-** case the LUA_MININTEGER limit would run the loop once.
+** case the LUA_MININTEGER limit would still run the loop once.
 */
 static int forlimit (const TValue *obj, lua_Integer *p, lua_Integer step,
                      int *stopnow) {
