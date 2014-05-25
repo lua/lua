@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.181 2014/04/02 16:44:42 roberto Exp roberto $
+** $Id: lgc.c,v 2.182 2014/04/04 17:01:04 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -495,8 +495,7 @@ static lu_mem traverseLclosure (global_State *g, LClosure *cl) {
 }
 
 
-static lu_mem traversestack (global_State *g, lua_State *th) {
-  int n = 0;
+static lu_mem traversethread (global_State *g, lua_State *th) {
   StkId o = th->stack;
   if (o == NULL)
     return 1;  /* stack not completely built yet */
@@ -514,16 +513,9 @@ static lu_mem traversestack (global_State *g, lua_State *th) {
       g->twups = th;
     }
   }
-  else {
-    CallInfo *ci;
-    for (ci = &th->base_ci; ci != th->ci; ci = ci->next)
-      n++;  /* count call infos to compute size */
-    /* should not change the stack during an emergency gc cycle */
-    if (g->gckind != KGC_EMERGENCY)
-      luaD_shrinkstack(th);
-  }
-  return sizeof(lua_State) + sizeof(TValue) * th->stacksize +
-         sizeof(CallInfo) * n;
+  else if (g->gckind != KGC_EMERGENCY)
+    luaD_shrinkstack(th); /* do not change stack in emergency cycle */
+  return (sizeof(lua_State) + sizeof(TValue) * th->stacksize);
 }
 
 
@@ -561,7 +553,7 @@ static void propagatemark (global_State *g) {
       th->gclist = g->grayagain;
       g->grayagain = o;  /* insert into 'grayagain' list */
       black2gray(o);
-      size = traversestack(g, th);
+      size = traversethread(g, th);
       break;
     }
     case LUA_TPROTO: {
@@ -838,6 +830,21 @@ static void GCTM (lua_State *L, int propagateerrors) {
 
 
 /*
+** call a few (up to 'g->gcfinnum') finalizers
+*/
+static int runafewfinalizers (lua_State *L) {
+  global_State *g = G(L);
+  unsigned int i;
+  lua_assert(!g->tobefnz || g->gcfinnum > 0);
+  for (i = 0; g->tobefnz && i < g->gcfinnum; i++)
+    GCTM(L, 1);  /* call one finalizer */
+  g->gcfinnum = (!g->tobefnz) ? 0  /* nothing more to finalize? */
+                    : g->gcfinnum * 2;  /* else call a few more next time */
+  return i;
+}
+
+
+/*
 ** call all pending finalizers
 */
 static void callallpendingfinalizers (lua_State *L, int propagateerrors) {
@@ -1064,10 +1071,15 @@ static lu_mem singlestep (lua_State *L) {
       g->gcstate = GCScallfin;
       return 0;
     }
-    case GCScallfin: {  /* state to finish calling finalizers */
-      /* do nothing here; this state is handled by 'luaC_step' */
-      g->gcstate = GCSpause;  /* finish collection */
-      return 0;
+    case GCScallfin: {  /* call remaining finalizers */
+      if (g->tobefnz && g->gckind != KGC_EMERGENCY) {
+        int n = runafewfinalizers(L);
+        return (n * GCFINALIZECOST);
+      }
+      else {  /* emergency mode or no more finalizers */
+        g->gcstate = GCSpause;  /* finish collection */
+        return 0;
+      }
     }
     default: lua_assert(0); return 0;
   }
@@ -1082,21 +1094,6 @@ void luaC_runtilstate (lua_State *L, int statesmask) {
   global_State *g = G(L);
   while (!testbit(statesmask, g->gcstate))
     singlestep(L);
-}
-
-
-/*
-** run a few (up to 'g->gcfinnum') finalizers
-*/
-static int runafewfinalizers (lua_State *L) {
-  global_State *g = G(L);
-  unsigned int i;
-  lua_assert(!g->tobefnz || g->gcfinnum > 0);
-  for (i = 0; g->tobefnz && i < g->gcfinnum; i++)
-    GCTM(L, 1);  /* call one finalizer */
-  g->gcfinnum = (!g->tobefnz) ? 0  /* nothing more to finalize? */
-                    : g->gcfinnum * 2;  /* else call a few more next time */
-  return i;
 }
 
 
@@ -1117,20 +1114,14 @@ static l_mem getdebt (global_State *g) {
 */
 void luaC_step (lua_State *L) {
   global_State *g = G(L);
-  l_mem debt = getdebt(g);
+  l_mem debt = getdebt(g);  /* GC deficit (be paid now) */
   if (!g->gcrunning) {  /* not running? */
     luaE_setdebt(g, -GCSTEPSIZE * 10);  /* avoid being called too often */
     return;
   }
-  do {
-    if (g->gcstate == GCScallfin && g->tobefnz) {
-      unsigned int n = runafewfinalizers(L);
-      debt -= (n * GCFINALIZECOST);
-    }
-    else {  /* perform one single step */
-      lu_mem work = singlestep(L);
-      debt -= work;
-    }
+  do {  /* repeat until pause or enough "credit" (negative debt) */
+    lu_mem work = singlestep(L);  /* perform one single step */
+    debt -= work;
   } while (debt > -GCSTEPSIZE && g->gcstate != GCSpause);
   if (g->gcstate == GCSpause)
     setpause(g);  /* pause until next cycle */
@@ -1143,31 +1134,30 @@ void luaC_step (lua_State *L) {
 
 
 /*
-** performs a full GC cycle; if "isemergency", does not call
-** finalizers (which could change stack positions)
+** Performs a full GC cycle; if "isemergency", set a flag to avoid
+** some operations which could change the interpreter state in some
+** unexpected ways (running finalizers and shrinking some structures).
+** Before running the collection, check 'keepinvariant'; if it is true,
+** there may be some objects marked as black, so the collector has
+** to sweep all objects to turn them back to white (as white has not
+** changed, nothing will be collected).
 */
 void luaC_fullgc (lua_State *L, int isemergency) {
   global_State *g = G(L);
   lua_assert(g->gckind == KGC_NORMAL);
-  if (isemergency)  /* do not run finalizers during emergency GC */
-    g->gckind = KGC_EMERGENCY;
-  else
-    callallpendingfinalizers(L, 1);
-  if (keepinvariant(g)) {  /* may there be some black objects? */
-    /* must sweep all objects to turn them back to white
-       (as white has not changed, nothing will be collected) */
-    entersweep(L);
+  if (isemergency) g->gckind = KGC_EMERGENCY;  /* set flag */
+  if (keepinvariant(g)) {  /* black objects? */
+    entersweep(L); /* sweep everything to turn them back to white */
   }
   /* finish any pending sweep phase to start a new cycle */
   luaC_runtilstate(L, bitmask(GCSpause));
   luaC_runtilstate(L, ~bitmask(GCSpause));  /* start new collection */
-  luaC_runtilstate(L, bitmask(GCSpause));  /* run entire collection */
-  /* estimate must be correct after full GC cycles */
+  luaC_runtilstate(L, bitmask(GCScallfin));  /* run up to finalizers */
+  /* estimate must be correct after a full GC cycle */
   lua_assert(g->GCestimate == gettotalbytes(g));
+  luaC_runtilstate(L, bitmask(GCSpause));  /* finish collection */
   g->gckind = KGC_NORMAL;
   setpause(g);
-  if (!isemergency)   /* do not run finalizers during emergency GC */
-    callallpendingfinalizers(L, 1);
 }
 
 /* }====================================================== */
