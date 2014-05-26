@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.212 2014/05/20 14:12:59 roberto Exp roberto $
+** $Id: lvm.c,v 2.213 2014/05/23 18:32:21 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -80,22 +80,6 @@ int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
 
 
 /*
-** Check whether a float number is within the range of a lua_Integer.
-** (The comparisons are tricky because of rounding, which can or
-** not occur depending on the relative sizes of floats and integers.)
-** This function should be called only when 'n' has an integral value.
-*/
-int luaV_numtointeger (lua_Number n, lua_Integer *p) {
-  if (cast_num(LUA_MININTEGER) <= n && n < (LUA_MAXINTEGER + cast_num(1))) {
-    *p = cast(lua_Integer, n);
-    lua_assert(cast_num(*p) == n);
-    return 1;
-  }
-  return 0;  /* number is outside integer limits */
-}
-
-
-/*
 ** try to convert a value to an integer, rounding up if 'up' is true
 */
 static int tointeger_aux (const TValue *obj, lua_Integer *p, int up) {
@@ -104,7 +88,7 @@ static int tointeger_aux (const TValue *obj, lua_Integer *p, int up) {
   if (ttisfloat(obj)) {
     lua_Number n = fltvalue(obj);
     n = (up ? -l_floor(-n) : l_floor(n));
-    return luaV_numtointeger(n, p);
+    return lua_numtointeger(n, p);
   }
   else if (ttisinteger(obj)) {
     *p = ivalue(obj);

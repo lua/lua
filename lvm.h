@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 2.29 2014/04/27 14:41:11 roberto Exp roberto $
+** $Id: lvm.h,v 2.30 2014/05/12 21:22:05 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -29,7 +29,6 @@ LUAI_FUNC int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r);
 LUAI_FUNC int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r);
 LUAI_FUNC int luaV_tonumber_ (const TValue *obj, lua_Number *n);
 LUAI_FUNC int luaV_tointeger_ (const TValue *obj, lua_Integer *p);
-LUAI_FUNC int luaV_numtointeger (lua_Number n, lua_Integer *p);
 LUAI_FUNC int luaV_tostring (lua_State *L, StkId obj);
 LUAI_FUNC void luaV_gettable (lua_State *L, const TValue *t, TValue *key,
                                             StkId val);

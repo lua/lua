@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.87 2014/04/15 14:28:20 roberto Exp roberto $
+** $Id: ltable.c,v 2.88 2014/04/15 16:32:49 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -67,12 +67,6 @@
 #define hashpointer(t,p)	hashmod(t, IntPoint(p))
 
 
-/* checks whether a float has a value representable as a lua_Integer
-   (and does the conversion if so) */
-#define numisinteger(x,i) \
-	(((x) == l_floor(x)) && luaV_numtointeger(x, i))
-
-
 #define dummynode		(&dummynode_)
 
 #define isdummy(n)		((n) == dummynode)
@@ -81,6 +75,17 @@ static const Node dummynode_ = {
   {NILCONSTANT},  /* value */
   {{NILCONSTANT, 0}}  /* key */
 };
+
+
+/*
+** Checks whether a float has a value representable as a lua_Integer
+** (and does the conversion if so)
+*/
+static int numisinteger (lua_Number x, lua_Integer *p) {
+  if ((x) == l_floor(x))  /* integral value? */
+    return lua_numtointeger(x, p);  /* try as an integer */
+  else return 0;
+}
 
 
 /*
@@ -424,7 +429,7 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
     if (luai_numisnan(n))
       luaG_runerror(L, "table index is NaN");
     if (numisinteger(n, &k)) {  /* index is int? */
-      setivalue(&aux, k); 
+      setivalue(&aux, k);
       key = &aux;  /* insert it as an integer */
     }
   }
