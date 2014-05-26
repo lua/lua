@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.99 2014/05/02 16:36:51 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.100 2014/05/14 16:59:27 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -75,27 +75,31 @@ static int math_atan (lua_State *L) {
   return 1;
 }
 
-static int math_ceil (lua_State *L) {
-  lua_pushnumber(L, l_mathop(ceil)(luaL_checknumber(L, 1)));
-  return 1;
-}
 
 static int math_floor (lua_State *L) {
-  lua_pushnumber(L, l_mathop(floor)(luaL_checknumber(L, 1)));
-  return 1;
-}
-
-static int math_ifloor (lua_State *L) {
   int valid;
   lua_Integer n = lua_tointegerx(L, 1, &valid);
   if (valid)
-    lua_pushinteger(L, n);
+    lua_pushinteger(L, n);  /* floor computed by Lua */
+  else
+    lua_pushnumber(L, l_mathop(floor)(luaL_checknumber(L, 1)));
+  return 1;
+}
+
+static int math_ceil (lua_State *L) {
+  if (lua_isinteger(L, 1))
+    lua_settop(L, 1);  /* integer is its own ceil */
   else {
-    luaL_checktype(L, 1, LUA_TNUMBER);  /* error if not a number */
-    lua_pushnil(L);  /* number with invalid integer value */
+    lua_Integer n;
+    lua_Number d = l_mathop(ceil)(luaL_checknumber(L, 1));
+    if (lua_numtointeger(d, &n))  /* fits in an integer? */
+      lua_pushinteger(L, n);  /* result is integer */
+    else
+      lua_pushnumber(L, d);  /* result is float */
   }
   return 1;
 }
+
 
 static int math_fmod (lua_State *L) {
   if (lua_isinteger(L, 1) && lua_isinteger(L, 2)) {
@@ -112,6 +116,7 @@ static int math_fmod (lua_State *L) {
                                      luaL_checknumber(L, 2)));
   return 1;
 }
+
 
 /*
 ** next function does not use 'modf', avoiding problems with 'double*'
@@ -310,7 +315,6 @@ static const luaL_Reg mathlib[] = {
   {"deg",   math_deg},
   {"exp",   math_exp},
   {"floor", math_floor},
-  {"ifloor", math_ifloor},
   {"fmod",   math_fmod},
   {"log",   math_log},
   {"max",   math_max},
