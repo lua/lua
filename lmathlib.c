@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.100 2014/05/14 16:59:27 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.101 2014/05/26 17:13:52 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -86,16 +86,22 @@ static int math_floor (lua_State *L) {
   return 1;
 }
 
+
+static void pushnumint (lua_State *L, lua_Number d) {
+  lua_Integer n;
+  if (lua_numtointeger(d, &n))  /* fits in an integer? */
+    lua_pushinteger(L, n);  /* result is integer */
+  else
+    lua_pushnumber(L, d);  /* result is float */
+}
+
+
 static int math_ceil (lua_State *L) {
   if (lua_isinteger(L, 1))
     lua_settop(L, 1);  /* integer is its own ceil */
   else {
-    lua_Integer n;
     lua_Number d = l_mathop(ceil)(luaL_checknumber(L, 1));
-    if (lua_numtointeger(d, &n))  /* fits in an integer? */
-      lua_pushinteger(L, n);  /* result is integer */
-    else
-      lua_pushnumber(L, d);  /* result is float */
+    pushnumint(L, d);
   }
   return 1;
 }
@@ -124,12 +130,18 @@ static int math_fmod (lua_State *L) {
 ** 'double'.
 */
 static int math_modf (lua_State *L) {
-  lua_Number n = luaL_checknumber(L, 1);
-  /* integer part (rounds toward zero) */
-  lua_Number ip = (n < 0) ? -l_mathop(floor)(-n) : l_mathop(floor)(n);
-  lua_pushnumber(L, ip);
-  /* fractionary part (test needed for inf/-inf) */
-  lua_pushnumber(L, (n == ip) ? 0.0 : (n - ip));
+  if (lua_isinteger(L ,1)) {
+    lua_settop(L, 1);  /* number is its own integer part */
+    lua_pushnumber(L, 0);  /* no fractionary part */
+  }
+  else {
+    lua_Number n = luaL_checknumber(L, 1);
+    /* integer part (rounds toward zero) */
+    lua_Number ip = (n < 0) ? l_mathop(ceil)(n) : l_mathop(floor)(n);
+    pushnumint(L, ip);
+    /* fractionary part (test needed for inf/-inf) */
+    lua_pushnumber(L, (n == ip) ? 0.0 : (n - ip));
+  }
   return 2;
 }
 
