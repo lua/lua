@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.204 2014/05/26 17:10:22 roberto Exp roberto $
+** $Id: luaconf.h,v 1.205 2014/05/27 13:59:03 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -507,18 +507,16 @@
 
 /*
 @@ lua_numtointeger converts a float number to an integer, or
-** return 0 if float is not within the range of a lua_Integer.
-** (The comparisons are tricky because of rounding.
-** The tests here assume a two-complement representation, where
-** MININTEGER always has an exact representation as a float,
-** while LUA_MAXINTEGER may not have one, and therefore its
-** conversion to float may have an ill-defined value.)
-** This macro should be used only when 'n' has an integral value.
+** returns 0 if float is not within the range of a lua_Integer.
+** (The range comparisons are tricky because of rounding. The tests
+** here assume a two-complement representation, where MININTEGER always
+** has an exact representation as a float; MAXINTEGER may not have one,
+** and therefore its conversion to float may have an ill-defined value.)
 */
 #define lua_numtointeger(n,p) \
   ((n) >= (LUA_NUMBER)(LUA_MININTEGER) && \
    (n) < -(LUA_NUMBER)(LUA_MININTEGER) && \
-      (*p = (LUA_INTEGER)(n), 1))
+      (*(p) = (LUA_INTEGER)(n), 1))
 
 
 /*
