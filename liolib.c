@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.124 2014/05/15 15:21:06 roberto Exp $
+** $Id: liolib.c,v 2.125 2014/05/21 15:24:21 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -371,7 +371,7 @@ typedef struct {
   FILE *f;  /* file being read */
   int c;  /* current character (look ahead) */
   int n;  /* number of elements in buffer 'buff' */
-  char buff[MAXRN];
+  char buff[MAXRN + 1];  /* +1 for ending '\0' */
 } RN;
 
 
@@ -379,8 +379,10 @@ typedef struct {
 ** Add current char to buffer (if not out of space) and read next one
 */
 static int nextc (RN *rn) {
-  if (rn->n >= MAXRN)  /* buffer overflow? */
+  if (rn->n >= MAXRN) {  /* buffer overflow? */
+    rn->buff[0] = '\0';  /* invalidate result */
     return 0;  /* fail */
+  }
   else {
     rn->buff[rn->n++] = rn->c;  /* save current char */
     rn->c = l_getc(rn->f);  /* read next one */
