@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.115 2014/03/21 13:52:33 roberto Exp roberto $
+** $Id: ldo.c,v 2.116 2014/05/08 13:52:20 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -412,6 +412,10 @@ void luaD_call (lua_State *L, StkId func, int nResults, int allowyield) {
 }
 
 
+/*
+** Completes the execution of an interrupted C function, calling its
+** continuation function.
+*/
 static void finishCcall (lua_State *L) {
   CallInfo *ci = L->ci;
   int n;
@@ -437,13 +441,16 @@ static void finishCcall (lua_State *L) {
 }
 
 
+/*
+** Executes "full continuation" (everything in the stack) of a
+** previously interrupted coroutine until the stack is empty (or another
+** interruption long-jumps out of the loop)
+*/
 static void unroll (lua_State *L, void *ud) {
   UNUSED(ud);
-  for (;;) {
-    if (L->ci == &L->base_ci)  /* stack is empty? */
-      return;  /* coroutine finished normally */
+  while (L->ci != &L->base_ci) {  /* something in the stack */
     if (!isLua(L->ci))  /* C function? */
-      finishCcall(L);
+      finishCcall(L);  /* complete its execution */
     else {  /* Lua function */
       luaV_finishOp(L);  /* finish interrupted instruction */
       luaV_execute(L);  /* execute down to higher C 'boundary' */
@@ -453,7 +460,8 @@ static void unroll (lua_State *L, void *ud) {
 
 
 /*
-** check whether thread has a suspended protected call
+** Try to find a suspended protected call (a "recover point") for the
+** given thread.
 */
 static CallInfo *findpcall (lua_State *L) {
   CallInfo *ci;
@@ -465,6 +473,11 @@ static CallInfo *findpcall (lua_State *L) {
 }
 
 
+/*
+** Recovers from an error in a coroutine. Finds a recover point (if
+** there is one) and completes the execution of the interrupted
+** 'luaD_pcall'. If there is no recover point, returns zero.
+*/
 static int recover (lua_State *L, int status) {
   StkId oldtop;
   CallInfo *ci = findpcall(L);
