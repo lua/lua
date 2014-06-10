@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.118 2014/06/10 17:41:38 roberto Exp roberto $
+** $Id: ldo.c,v 2.119 2014/06/10 18:51:21 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -425,10 +425,10 @@ static void finishCcall (lua_State *L, int status) {
     ci->callstatus &= ~CIST_YPCALL;  /* finish 'lua_pcall' */
     L->errfunc = ci->u.c.old_errfunc;
   }
-  /* finish 'lua_callk'/'lua_pcall' */
+  /* finish 'lua_callk'/'lua_pcall'; CIST_YPCALL and 'errfunc' already
+     handled */
   adjustresults(L, ci->nresults);
   /* call continuation function */
-  ci->callstatus = (ci->callstatus & ~CIST_YPCALL) | CIST_YIELDED;
   lua_unlock(L);
   n = (*ci->u.c.k)(L, status, ci->u.c.ctx);
   lua_lock(L);
@@ -536,7 +536,6 @@ static void resume (lua_State *L, void *ud) {
     else {  /* 'common' yield */
       if (ci->u.c.k != NULL) {  /* does it have a continuation? */
         int n;
-        ci->callstatus |= CIST_YIELDED;
         lua_unlock(L);
         n = (*ci->u.c.k)(L, LUA_YIELD, ci->u.c.ctx); /* call continuation */
         lua_lock(L);

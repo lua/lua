@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.104 2014/06/10 17:41:38 roberto Exp roberto $
+** $Id: lstate.h,v 2.105 2014/06/10 18:51:21 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -84,11 +84,10 @@ typedef struct CallInfo {
 #define CIST_HOOKED	(1<<1)	/* call is running a debug hook */
 #define CIST_REENTRY	(1<<2)	/* call is running on same invocation of
                                    luaV_execute of previous call */
-#define CIST_YIELDED	(1<<3)	/* call reentered after suspension */
-#define CIST_YPCALL	(1<<4)	/* call is a yieldable protected call */
-#define CIST_TAIL	(1<<5)	/* call was tail called */
-#define CIST_HOOKYIELD	(1<<6)	/* last hook called yielded */
-#define CIST_OAH	(1<<7)	/* original value of 'allowhook' */
+#define CIST_YPCALL	(1<<3)	/* call is a yieldable protected call */
+#define CIST_TAIL	(1<<4)	/* call was tail called */
+#define CIST_HOOKYIELD	(1<<5)	/* last hook called yielded */
+#define CIST_OAH	(1<<6)	/* original value of 'allowhook' */
 
 
 #define isLua(ci)	((ci)->callstatus & CIST_LUA)
