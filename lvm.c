@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.213 2014/05/23 18:32:21 roberto Exp roberto $
+** $Id: lvm.c,v 2.214 2014/05/26 17:10:22 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -342,19 +342,24 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
     case LUA_TUSERDATA: {
       if (uvalue(t1) == uvalue(t2)) return 1;
       else if (L == NULL) return 0;
-      tm = luaT_getequalTM(L, uvalue(t1)->metatable, uvalue(t2)->metatable);
+      tm = fasttm(L, uvalue(t1)->metatable, TM_EQ);
+      if (tm == NULL)
+        tm = fasttm(L, uvalue(t2)->metatable, TM_EQ);
       break;  /* will try TM */
     }
     case LUA_TTABLE: {
       if (hvalue(t1) == hvalue(t2)) return 1;
       else if (L == NULL) return 0;
-      tm = luaT_getequalTM(L, hvalue(t1)->metatable, hvalue(t2)->metatable);
+      tm = fasttm(L, hvalue(t1)->metatable, TM_EQ);
+      if (tm == NULL)
+        tm = fasttm(L, hvalue(t2)->metatable, TM_EQ);
       break;  /* will try TM */
     }
     default:
       return gcvalue(t1) == gcvalue(t2);
   }
-  if (tm == NULL) return 0;  /* no TM? */
+  if (tm == NULL)  /* no TM? */
+    return 0;  /* objects are different */
   luaT_callTM(L, tm, t1, t2, L->top, 1);  /* call TM */
   return !l_isfalse(L->top);
 }
