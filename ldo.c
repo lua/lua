@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.117 2014/06/09 16:32:18 roberto Exp roberto $
+** $Id: ldo.c,v 2.118 2014/06/10 17:41:38 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -416,7 +416,7 @@ void luaD_call (lua_State *L, StkId func, int nResults, int allowyield) {
 ** Completes the execution of an interrupted C function, calling its
 ** continuation function.
 */
-static void finishCcall (lua_State *L) {
+static void finishCcall (lua_State *L, int status) {
   CallInfo *ci = L->ci;
   int n;
   lua_assert(ci->u.c.k != NULL);  /* must have a continuation */
@@ -428,12 +428,9 @@ static void finishCcall (lua_State *L) {
   /* finish 'lua_callk'/'lua_pcall' */
   adjustresults(L, ci->nresults);
   /* call continuation function */
-  if (!(ci->callstatus & CIST_STAT))  /* no call status? */
-    ci->u.c.status = LUA_YIELD;  /* 'default' status */
-  lua_assert(ci->u.c.status != LUA_OK);
-  ci->callstatus = (ci->callstatus & ~(CIST_YPCALL | CIST_STAT)) | CIST_YIELDED;
+  ci->callstatus = (ci->callstatus & ~CIST_YPCALL) | CIST_YIELDED;
   lua_unlock(L);
-  n = (*ci->u.c.k)(L, ci->u.c.status, ci->u.c.ctx);
+  n = (*ci->u.c.k)(L, status, ci->u.c.ctx);
   lua_lock(L);
   api_checknelems(L, n);
   /* finish 'luaD_precall' */
@@ -444,13 +441,18 @@ static void finishCcall (lua_State *L) {
 /*
 ** Executes "full continuation" (everything in the stack) of a
 ** previously interrupted coroutine until the stack is empty (or another
-** interruption long-jumps out of the loop)
+** interruption long-jumps out of the loop). If the coroutine is
+** recovering from an error, 'ud' points to the error status, which must
+** be passed to the first (only the first) continuation (otherwise the
+** default status is LUA_YIELD).
 */
 static void unroll (lua_State *L, void *ud) {
-  UNUSED(ud);
+  int status = (ud) ? *(int *)ud : LUA_YIELD;
   while (L->ci != &L->base_ci) {  /* something in the stack */
-    if (!isLua(L->ci))  /* C function? */
-      finishCcall(L);  /* complete its execution */
+    if (!isLua(L->ci)) {  /* C function? */
+      finishCcall(L, status);  /* complete its execution */
+      status = LUA_YIELD;  /* back to default status */
+    }
     else {  /* Lua function */
       luaV_finishOp(L);  /* finish interrupted instruction */
       luaV_execute(L);  /* execute down to higher C 'boundary' */
@@ -487,12 +489,10 @@ static int recover (lua_State *L, int status) {
   luaF_close(L, oldtop);
   seterrorobj(L, status, oldtop);
   L->ci = ci;
-  L->allowhook = ci->u.c.old_allowhook;
+  L->allowhook = (ci->callstatus & CIST_OAH);
   L->nny = 0;  /* should be zero to be yieldable */
   luaD_shrinkstack(L);
   L->errfunc = ci->u.c.old_errfunc;
-  ci->callstatus |= CIST_STAT;  /* call has error status */
-  ci->u.c.status = status;  /* (here it is) */
   return 1;  /* continue running the coroutine */
 }
 
@@ -536,10 +536,9 @@ static void resume (lua_State *L, void *ud) {
     else {  /* 'common' yield */
       if (ci->u.c.k != NULL) {  /* does it have a continuation? */
         int n;
-        ci->u.c.status = LUA_YIELD;  /* 'default' status */
         ci->callstatus |= CIST_YIELDED;
         lua_unlock(L);
-        n = (*ci->u.c.k)(L, ci->u.c.status, ci->u.c.ctx); /* call continuation */
+        n = (*ci->u.c.k)(L, LUA_YIELD, ci->u.c.ctx); /* call continuation */
         lua_lock(L);
         api_checknelems(L, n);
         firstArg = L->top - n;  /* yield results come from continuation */
@@ -563,15 +562,17 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs) {
   status = luaD_rawrunprotected(L, resume, L->top - nargs);
   if (status == -1)  /* error calling 'lua_resume'? */
     status = LUA_ERRRUN;
-  else {  /* yield or regular error */
+  else {  /* yield or error running coroutine */
     while (status != LUA_OK && status != LUA_YIELD) {  /* error? */
-      if (recover(L, status))  /* recover point? */
-        status = luaD_rawrunprotected(L, unroll, NULL);  /* run continuation */
+      if (recover(L, status)) {  /* recover point? */
+        /* unroll continuation */
+        status = luaD_rawrunprotected(L, unroll, &status);
+      }
       else {  /* unrecoverable error */
         L->status = cast_byte(status);  /* mark thread as `dead' */
         seterrorobj(L, status, L->top);
         L->ci->top = L->top;
-        break;
+        break;  /* stop running it */
       }
     }
     lua_assert(status == L->status);

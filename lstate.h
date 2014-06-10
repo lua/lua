@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.103 2014/05/15 20:41:27 roberto Exp roberto $
+** $Id: lstate.h,v 2.104 2014/06/10 17:41:38 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -60,9 +60,9 @@ typedef struct CallInfo {
   StkId func;  /* function index in the stack */
   StkId	top;  /* top for this function */
   struct CallInfo *previous, *next;  /* dynamic call link */
+  ptrdiff_t extra;
   short nresults;  /* expected number of results from this function */
   lu_byte callstatus;
-  ptrdiff_t extra;
   union {
     struct {  /* only for Lua functions */
       StkId base;  /* base for this function */
@@ -72,8 +72,6 @@ typedef struct CallInfo {
       lua_KFunction k;  /* continuation in case of yields */
       ptrdiff_t old_errfunc;
       int ctx;  /* context info. in case of yields */
-      lu_byte old_allowhook;
-      lu_byte status;
     } c;
   } u;
 } CallInfo;
@@ -88,9 +86,9 @@ typedef struct CallInfo {
                                    luaV_execute of previous call */
 #define CIST_YIELDED	(1<<3)	/* call reentered after suspension */
 #define CIST_YPCALL	(1<<4)	/* call is a yieldable protected call */
-#define CIST_STAT	(1<<5)	/* call has an error status (pcall) */
-#define CIST_TAIL	(1<<6)	/* call was tail called */
-#define CIST_HOOKYIELD	(1<<7)	/* last hook called yielded */
+#define CIST_TAIL	(1<<5)	/* call was tail called */
+#define CIST_HOOKYIELD	(1<<6)	/* last hook called yielded */
+#define CIST_OAH	(1<<7)	/* original value of 'allowhook' */
 
 
 #define isLua(ci)	((ci)->callstatus & CIST_LUA)

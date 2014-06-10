@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.214 2014/05/15 20:28:39 roberto Exp roberto $
+** $Id: lapi.c,v 2.215 2014/06/10 17:41:38 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -968,9 +968,10 @@ LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
     ci->u.c.ctx = ctx;  /* save context */
     /* save information for error recovery */
     ci->extra = savestack(L, c.func);
-    ci->u.c.old_allowhook = L->allowhook;
     ci->u.c.old_errfunc = L->errfunc;
     L->errfunc = func;
+    if (L->allowhook)
+      ci->callstatus |= CIST_OAH;  /* save original value of 'allowhook' */
     /* mark that function may do error recovery */
     ci->callstatus |= CIST_YPCALL;
     luaD_call(L, c.func, nresults, 1);  /* do the call */
