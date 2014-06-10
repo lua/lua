@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.169 2014/05/08 19:08:46 roberto Exp roberto $
+** $Id: ltests.c,v 2.170 2014/05/13 19:40:28 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -980,7 +980,7 @@ static void pushcode (lua_State *L, int code) {
 
 
 static int testC (lua_State *L);
-static int Cfunck (lua_State *L);
+static int Cfunck (lua_State *L, int status, int ctx);
 
 /*
 ** arithmetic operation encoding for 'arith' instruction
@@ -1043,12 +1043,6 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("func2num") {
       lua_CFunction func = lua_tocfunction(L1, getindex);
       lua_pushnumber(L1, cast(size_t, func));
-    }
-    else if EQ("getctx") {
-      int i = 0;
-      int s = lua_getctx(L1, &i);
-      pushcode(L1, s);
-      lua_pushinteger(L1, i);
     }
     else if EQ("getfield") {
       int t = getindex;
@@ -1326,10 +1320,12 @@ static int Cfunc (lua_State *L) {
 }
 
 
-static int Cfunck (lua_State *L) {
-  int i = 0;
-  lua_getctx(L, &i);
-  return runC(L, L, lua_tostring(L, i));
+static int Cfunck (lua_State *L, int status, int ctx) {
+  pushcode(L, status);
+  lua_setglobal(L, "status");
+  lua_pushinteger(L, ctx);
+  lua_setglobal(L, "ctx");
+  return runC(L, L, lua_tostring(L, ctx));
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.116 2014/05/08 13:52:20 roberto Exp roberto $
+** $Id: ldo.c,v 2.117 2014/06/09 16:32:18 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -433,7 +433,7 @@ static void finishCcall (lua_State *L) {
   lua_assert(ci->u.c.status != LUA_OK);
   ci->callstatus = (ci->callstatus & ~(CIST_YPCALL | CIST_STAT)) | CIST_YIELDED;
   lua_unlock(L);
-  n = (*ci->u.c.k)(L);
+  n = (*ci->u.c.k)(L, ci->u.c.status, ci->u.c.ctx);
   lua_lock(L);
   api_checknelems(L, n);
   /* finish 'luaD_precall' */
@@ -539,7 +539,7 @@ static void resume (lua_State *L, void *ud) {
         ci->u.c.status = LUA_YIELD;  /* 'default' status */
         ci->callstatus |= CIST_YIELDED;
         lua_unlock(L);
-        n = (*ci->u.c.k)(L);  /* call continuation */
+        n = (*ci->u.c.k)(L, ci->u.c.status, ci->u.c.ctx); /* call continuation */
         lua_lock(L);
         api_checknelems(L, n);
         firstArg = L->top - n;  /* yield results come from continuation */
@@ -589,7 +589,7 @@ LUA_API int lua_isyieldable (lua_State *L) {
 }
 
 
-LUA_API int lua_yieldk (lua_State *L, int nresults, int ctx, lua_CFunction k) {
+LUA_API int lua_yieldk (lua_State *L, int nresults, int ctx, lua_KFunction k) {
   CallInfo *ci = L->ci;
   luai_userstateyield(L, nresults);
   lua_lock(L);

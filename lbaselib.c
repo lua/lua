@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.287 2014/05/16 18:54:01 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.288 2014/06/02 03:06:26 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -341,7 +341,8 @@ static int luaB_load (lua_State *L) {
 /* }====================================================== */
 
 
-static int dofilecont (lua_State *L) {
+static int dofilecont (lua_State *L, int d1, int d2) {
+  (void)d1;  (void)d2;  /* only to match 'lua_Kfunction' prototype */
   return lua_gettop(L) - 1;
 }
 
@@ -352,7 +353,7 @@ static int luaB_dofile (lua_State *L) {
   if (luaL_loadfile(L, fname) != LUA_OK)
     return lua_error(L);
   lua_callk(L, 0, LUA_MULTRET, 0, dofilecont);
-  return dofilecont(L);
+  return dofilecont(L, 0, 0);
 }
 
 
@@ -385,13 +386,14 @@ static int luaB_select (lua_State *L) {
 
 
 /*
-** Finishes a 'pcall' or 'xpcall'. Both functions already pushed a
-** 'true' before doing the call, so in case of sucess 'finishpcall'
-** only has to return everything in the stack minus 'extra' values
-** (where 'extra' is exactly the number of items to be ignored).
+** Continuation function for 'pcall' and 'xpcall'. Both functions
+** already pushed a 'true' before doing the call, so in case of sucess
+** 'finishpcall' only has to return everything in the stack minus
+** 'extra' values (where 'extra' is exactly the number of items to be
+** ignored).
 */
-static int finishpcall (lua_State *L, int ok, int extra) {
-  if (!ok) {  /* error? */
+static int finishpcall (lua_State *L, int status, int extra) {
+  if (status != LUA_OK && status != LUA_YIELD) {  /* error? */
     lua_pushboolean(L, 0);  /* first result (false) */
     lua_pushvalue(L, -2);  /* error message */
     return 2;  /* return false, msg */
@@ -401,25 +403,13 @@ static int finishpcall (lua_State *L, int ok, int extra) {
 }
 
 
-/*
-** Continuation function for 'pcall' and 'xpcall': get appropriate
-** state through 'lua_getctx' and call 'finishpcall' to finish the
-** original function.
-*/
-static int pcallcont (lua_State *L) {
-  int extra;
-  int status = lua_getctx(L, &extra);
-  return finishpcall(L, (status == LUA_YIELD), extra);
-}
-
-
 static int luaB_pcall (lua_State *L) {
   int status;
   luaL_checkany(L, 1);
   lua_pushboolean(L, 1);  /* first result if no errors */
   lua_insert(L, 1);  /* put it in place */
-  status = lua_pcallk(L, lua_gettop(L) - 2, LUA_MULTRET, 0, 0, pcallcont);
-  return finishpcall(L, (status == LUA_OK), 0);
+  status = lua_pcallk(L, lua_gettop(L) - 2, LUA_MULTRET, 0, 0, finishpcall);
+  return finishpcall(L, status, 0);
 }
 
 
@@ -435,8 +425,8 @@ static int luaB_xpcall (lua_State *L) {
   lua_pushboolean(L, 1);  /* first result */
   lua_pushvalue(L, 1);  /* function */
   lua_rotate(L, 3, 2);  /* move them below function's arguments */
-  status = lua_pcallk(L, n - 2, LUA_MULTRET, 2, 2, pcallcont);
-  return finishpcall(L, (status == LUA_OK), 2);
+  status = lua_pcallk(L, n - 2, LUA_MULTRET, 2, 2, finishpcall);
+  return finishpcall(L, status, 2);
 }
 
 
