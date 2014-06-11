@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.119 2014/06/10 18:51:21 roberto Exp roberto $
+** $Id: ldo.c,v 2.120 2014/06/10 19:18:50 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -32,6 +32,8 @@
 #include "lzio.h"
 
 
+
+#define errorstatus(s)	((s) > LUA_YIELD)
 
 
 /*
@@ -419,8 +421,10 @@ void luaD_call (lua_State *L, StkId func, int nResults, int allowyield) {
 static void finishCcall (lua_State *L, int status) {
   CallInfo *ci = L->ci;
   int n;
-  lua_assert(ci->u.c.k != NULL);  /* must have a continuation */
-  lua_assert(L->nny == 0);
+  /* must have a continuation and must be able to call it */
+  lua_assert(ci->u.c.k != NULL && L->nny == 0);
+  /* error status can only happen in a protected call */
+  lua_assert((ci->callstatus & CIST_YPCALL) || status == LUA_YIELD);
   if (ci->callstatus & CIST_YPCALL) {  /* was inside a pcall? */
     ci->callstatus &= ~CIST_YPCALL;  /* finish 'lua_pcall' */
     L->errfunc = ci->u.c.old_errfunc;
@@ -443,16 +447,15 @@ static void finishCcall (lua_State *L, int status) {
 ** previously interrupted coroutine until the stack is empty (or another
 ** interruption long-jumps out of the loop). If the coroutine is
 ** recovering from an error, 'ud' points to the error status, which must
-** be passed to the first (only the first) continuation (otherwise the
-** default status is LUA_YIELD).
+** be passed to the first continuation function (otherwise the default
+** status is LUA_YIELD).
 */
 static void unroll (lua_State *L, void *ud) {
-  int status = (ud) ? *(int *)ud : LUA_YIELD;
+  if (ud != NULL)  /* error status? */
+    finishCcall(L, *(int *)ud);  /* finish 'lua_pcallk' callee */
   while (L->ci != &L->base_ci) {  /* something in the stack */
-    if (!isLua(L->ci)) {  /* C function? */
-      finishCcall(L, status);  /* complete its execution */
-      status = LUA_YIELD;  /* back to default status */
-    }
+    if (!isLua(L->ci))  /* C function? */
+      finishCcall(L, LUA_YIELD);  /* complete its execution */
     else {  /* Lua function */
       luaV_finishOp(L);  /* finish interrupted instruction */
       luaV_execute(L);  /* execute down to higher C 'boundary' */
@@ -511,7 +514,11 @@ static l_noret resume_error (lua_State *L, const char *msg, StkId firstArg) {
 
 
 /*
-** do the work for 'lua_resume' in protected mode
+** Do the work for 'lua_resume' in protected mode. Most of the work
+** depends on the status of the coroutine: initial state, suspended
+** inside a hook, or regulary suspended (optionally with a continuation
+** function), plus erroneous cases: non-suspended coroutine or dead
+** coroutine.
 */
 static void resume (lua_State *L, void *ud) {
   int nCcalls = L->nCcalls;
@@ -529,12 +536,12 @@ static void resume (lua_State *L, void *ud) {
   else if (L->status != LUA_YIELD)
     resume_error(L, "cannot resume dead coroutine", firstArg);
   else {  /* resuming from previous yield */
-    L->status = LUA_OK;
+    L->status = LUA_OK;  /* mark that it is running (again) */
     ci->func = restorestack(L, ci->extra);
     if (isLua(ci))  /* yielded inside a hook? */
       luaV_execute(L);  /* just continue running Lua code */
     else {  /* 'common' yield */
-      if (ci->u.c.k != NULL) {  /* does it have a continuation? */
+      if (ci->u.c.k != NULL) {  /* does it have a continuation function? */
         int n;
         lua_unlock(L);
         n = (*ci->u.c.k)(L, LUA_YIELD, ci->u.c.ctx); /* call continuation */
@@ -544,7 +551,7 @@ static void resume (lua_State *L, void *ud) {
       }
       luaD_poscall(L, firstArg);  /* finish 'luaD_precall' */
     }
-    unroll(L, NULL);
+    unroll(L, NULL);  /* run continuation */
   }
   lua_assert(nCcalls == L->nCcalls);
 }
@@ -552,7 +559,7 @@ static void resume (lua_State *L, void *ud) {
 
 LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs) {
   int status;
-  int oldnny = L->nny;  /* save 'nny' */
+  int oldnny = L->nny;  /* save "number of non-yieldable" calls */
   lua_lock(L);
   luai_userstateresume(L, nargs);
   L->nCcalls = (from) ? from->nCcalls + 1 : 1;
@@ -561,20 +568,17 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs) {
   status = luaD_rawrunprotected(L, resume, L->top - nargs);
   if (status == -1)  /* error calling 'lua_resume'? */
     status = LUA_ERRRUN;
-  else {  /* yield or error running coroutine */
-    while (status != LUA_OK && status != LUA_YIELD) {  /* error? */
-      if (recover(L, status)) {  /* recover point? */
-        /* unroll continuation */
-        status = luaD_rawrunprotected(L, unroll, &status);
-      }
-      else {  /* unrecoverable error */
-        L->status = cast_byte(status);  /* mark thread as `dead' */
-        seterrorobj(L, status, L->top);
-        L->ci->top = L->top;
-        break;  /* stop running it */
-      }
+  else {  /* continue running after recoverable errors */
+    while (errorstatus(status) && recover(L, status)) {
+      /* unroll continuation */
+      status = luaD_rawrunprotected(L, unroll, &status);
     }
-    lua_assert(status == L->status);
+    if (errorstatus(status)) {  /* unrecoverable error? */
+      L->status = cast_byte(status);  /* mark thread as `dead' */
+      seterrorobj(L, status, L->top);  /* push error message */
+      L->ci->top = L->top;
+    }
+    else lua_assert(status == L->status);  /* normal end or yield */
   }
   L->nny = oldnny;  /* restore 'nny' */
   L->nCcalls--;
