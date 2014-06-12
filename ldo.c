@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.120 2014/06/10 19:18:50 roberto Exp roberto $
+** $Id: ldo.c,v 2.121 2014/06/11 16:01:55 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -492,7 +492,7 @@ static int recover (lua_State *L, int status) {
   luaF_close(L, oldtop);
   seterrorobj(L, status, oldtop);
   L->ci = ci;
-  L->allowhook = (ci->callstatus & CIST_OAH);
+  L->allowhook = getoah(ci->callstatus);  /* restore original 'allowhook' */
   L->nny = 0;  /* should be zero to be yieldable */
   luaD_shrinkstack(L);
   L->errfunc = ci->u.c.old_errfunc;
