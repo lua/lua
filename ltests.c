@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.170 2014/05/13 19:40:28 roberto Exp roberto $
+** $Id: ltests.c,v 2.171 2014/06/10 17:41:38 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -207,7 +207,8 @@ static int testobjref (global_State *g, GCObject *f, GCObject *t) {
   return r1;
 }
 
-#define checkobjref(g,f,t)	lua_assert(testobjref(g,f,obj2gco(t)))
+#define checkobjref(g,f,t)  \
+	lua_assert((t) == NULL || testobjref(g,f,obj2gco(t)))
 
 
 static void checkvalref (global_State *g, GCObject *f, const TValue *t) {
@@ -220,8 +221,7 @@ static void checktable (global_State *g, Table *h) {
   int i;
   Node *n, *limit = gnode(h, sizenode(h));
   GCObject *hgc = obj2gco(h);
-  if (h->metatable)
-    checkobjref(g, hgc, h->metatable);
+  checkobjref(g, hgc, h->metatable);
   for (i = 0; i < h->sizearray; i++)
     checkvalref(g, hgc, &h->array[i]);
   for (n = gnode(h, 0); n < limit; n++) {
@@ -241,24 +241,18 @@ static void checktable (global_State *g, Table *h) {
 static void checkproto (global_State *g, Proto *f) {
   int i;
   GCObject *fgc = obj2gco(f);
-  if (f->cache) checkobjref(g, fgc, f->cache);
-  if (f->source) checkobjref(g, fgc, f->source);
+  checkobjref(g, fgc, f->cache);
+  checkobjref(g, fgc, f->source);
   for (i=0; i<f->sizek; i++) {
     if (ttisstring(f->k+i))
       checkobjref(g, fgc, rawtsvalue(f->k+i));
   }
-  for (i=0; i<f->sizeupvalues; i++) {
-    if (f->upvalues[i].name)
-      checkobjref(g, fgc, f->upvalues[i].name);
-  }
-  for (i=0; i<f->sizep; i++) {
-    if (f->p[i])
-      checkobjref(g, fgc, f->p[i]);
-  }
-  for (i=0; i<f->sizelocvars; i++) {
-    if (f->locvars[i].varname)
-      checkobjref(g, fgc, f->locvars[i].varname);
-  }
+  for (i=0; i<f->sizeupvalues; i++)
+    checkobjref(g, fgc, f->upvalues[i].name);
+  for (i=0; i<f->sizep; i++)
+    checkobjref(g, fgc, f->p[i]);
+  for (i=0; i<f->sizelocvars; i++)
+    checkobjref(g, fgc, f->locvars[i].varname);
 }
 
 
@@ -274,7 +268,7 @@ static void checkCclosure (global_State *g, CClosure *cl) {
 static void checkLclosure (global_State *g, LClosure *cl) {
   GCObject *clgc = obj2gco(cl);
   int i;
-  if (cl->p) checkobjref(g, clgc, cl->p);
+  checkobjref(g, clgc, cl->p);
   for (i=0; i<cl->nupvalues; i++) {
     UpVal *uv = cl->upvals[i];
     if (uv) {
@@ -324,9 +318,9 @@ static void checkobject (global_State *g, GCObject *o, int maybedead) {
       case LUA_TUSERDATA: {
         TValue uservalue;
         Table *mt = gco2u(o)->metatable;
-        if (mt) checkobjref(g, o, mt);
+        checkobjref(g, o, mt);
         getuservalue(g->mainthread, rawgco2u(o), &uservalue);
-        checkobjref(g, o, &uservalue);
+        checkvalref(g, o, &uservalue);
         break;
       }
       case LUA_TTABLE: {
