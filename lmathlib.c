@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.101 2014/05/26 17:13:52 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.102 2014/06/02 23:09:28 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -72,6 +72,19 @@ static int math_atan (lua_State *L) {
   lua_Number y = luaL_checknumber(L, 1);
   lua_Number x = luaL_optnumber(L, 2, 1);
   lua_pushnumber(L, l_mathop(atan2)(y, x));
+  return 1;
+}
+
+
+static int math_ifloor (lua_State *L) {
+  int valid;
+  lua_Integer n = lua_tointegerx(L, 1, &valid);
+  if (valid)
+    lua_pushinteger(L, n);  /* floor computed by Lua */
+  else {
+    luaL_checktype(L, 1, LUA_TNUMBER);  /* argument must be a number */
+    lua_pushnil(L);  /* number is not convertible to integer */
+  }
   return 1;
 }
 
@@ -326,6 +339,7 @@ static const luaL_Reg mathlib[] = {
   {"cos",   math_cos},
   {"deg",   math_deg},
   {"exp",   math_exp},
+  {"ifloor", math_ifloor},
   {"floor", math_floor},
   {"fmod",   math_fmod},
   {"log",   math_log},
