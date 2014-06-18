@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.38 2014/03/19 18:51:42 roberto Exp roberto $
+** $Id: lstring.c,v 2.39 2014/04/02 16:44:42 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -90,9 +90,11 @@ void luaS_resize (lua_State *L, int newsize) {
 static TString *createstrobj (lua_State *L, const char *str, size_t l,
                               int tag, unsigned int h) {
   TString *ts;
+  GCObject *o;
   size_t totalsize;  /* total size of TString object */
   totalsize = sizeof(TString) + ((l + 1) * sizeof(char));
-  ts = &luaC_newobj(L, tag, totalsize)->ts;
+  o = luaC_newobj(L, tag, totalsize);
+  ts = rawgco2ts(o);
   ts->tsv.len = l;
   ts->tsv.hash = h;
   ts->tsv.extra = 0;
@@ -165,9 +167,11 @@ TString *luaS_new (lua_State *L, const char *str) {
 
 Udata *luaS_newudata (lua_State *L, size_t s) {
   Udata *u;
+  GCObject *o;
   if (s > MAX_SIZE - sizeof(Udata))
     luaM_toobig(L);
-  u = &luaC_newobj(L, LUA_TUSERDATA, sizeof(Udata) + s)->u;
+  o = luaC_newobj(L, LUA_TUSERDATA, sizeof(Udata) + s);
+  u = rawgco2u(o);
   u->uv.len = s;
   u->uv.metatable = NULL;
   setuservalue(L, u, luaO_nilobject);
