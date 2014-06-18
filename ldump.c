@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 2.29 2014/04/01 14:39:55 roberto Exp roberto $
+** $Id: ldump.c,v 2.30 2014/06/18 13:21:12 roberto Exp roberto $
 ** save precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -120,8 +120,10 @@ static void DumpConstants (const Proto *f, DumpState *D) {
   }
   n = f->sizep;
   DumpInt(n, D);
-  for (i = 0; i < n; i++)
+  for (i = 0; i < n; i++) {
+    lua_assert(f->source == f->p[i]->source);  /* same source for all protos */
     DumpFunction(f->p[i], D);
+  }
 }
 
 
