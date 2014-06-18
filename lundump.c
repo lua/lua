@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.37 2014/04/29 18:14:16 roberto Exp roberto $
+** $Id: lundump.c,v 2.38 2014/06/18 13:19:17 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -31,7 +31,6 @@ typedef struct {
   ZIO *Z;
   Mbuffer *b;
   const char *name;
-  TString *source;  /* source (the same for all prototypes) */
 } LoadState;
 
 
@@ -106,12 +105,12 @@ static void LoadCode (LoadState *S, Proto *f) {
 }
 
 
-static void LoadFunction(LoadState *S, Proto *f);
+static void LoadFunction(LoadState *S, Proto *f, TString *psource);
 
 
 static void LoadConstants (LoadState *S, Proto *f) {
-  int i, n;
-  n = LoadInt(S);
+  int i;
+  int n = LoadInt(S);
   f->k = luaM_newvector(S->L, n, TValue);
   f->sizek = n;
   for (i = 0; i < n; i++)
@@ -140,14 +139,19 @@ static void LoadConstants (LoadState *S, Proto *f) {
       lua_assert(0);
     }
   }
-  n = LoadInt(S);
+}
+
+
+static void LoadProtos (LoadState *S, Proto *f) {
+  int i;
+  int n = LoadInt(S);
   f->p = luaM_newvector(S->L, n, Proto *);
   f->sizep = n;
   for (i = 0; i < n; i++)
     f->p[i] = NULL;
   for (i = 0; i < n; i++) {
     f->p[i] = luaF_newproto(S->L);
-    LoadFunction(S, f->p[i]);
+    LoadFunction(S, f->p[i], f->source);
   }
 }
 
@@ -168,7 +172,6 @@ static void LoadUpvalues (LoadState *S, Proto *f) {
 
 static void LoadDebug (LoadState *S, Proto *f) {
   int i, n;
-  f->source = S->source;
   n = LoadInt(S);
   f->lineinfo = luaM_newvector(S->L, n, int);
   f->sizelineinfo = n;
@@ -189,7 +192,10 @@ static void LoadDebug (LoadState *S, Proto *f) {
 }
 
 
-static void LoadFunction (LoadState *S, Proto *f) {
+static void LoadFunction (LoadState *S, Proto *f, TString *psource) {
+  f->source = LoadString(S);
+  if (f->source == NULL)  /* no source in dump? */
+    f->source = psource;  /* reuse parent's source */
   f->linedefined = LoadInt(S);
   f->lastlinedefined = LoadInt(S);
   f->numparams = LoadByte(S);
@@ -198,6 +204,7 @@ static void LoadFunction (LoadState *S, Proto *f) {
   LoadCode(S, f);
   LoadConstants(S, f);
   LoadUpvalues(S, f);
+  LoadProtos(S, f);
   LoadDebug(S, f);
 }
 
@@ -259,8 +266,7 @@ Closure *luaU_undump(lua_State *L, ZIO *Z, Mbuffer *buff,
   setclLvalue(L, L->top, cl);
   incr_top(L);
   cl->l.p = luaF_newproto(L);
-  S.source = cl->l.p->source = LoadString(&S);  /* read source */
-  LoadFunction(&S, cl->l.p);
+  LoadFunction(&S, cl->l.p, NULL);
   lua_assert(cl->l.nupvalues == cl->l.p->sizeupvalues);
   luai_verifycode(L, buff, cl->l.p);
   return cl;

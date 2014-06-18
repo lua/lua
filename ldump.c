@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 2.30 2014/06/18 13:21:12 roberto Exp roberto $
+** $Id: ldump.c,v 2.31 2014/06/18 13:54:31 roberto Exp roberto $
 ** save precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -89,7 +89,7 @@ static void DumpCode (const Proto *f, DumpState *D) {
 }
 
 
-static void DumpFunction(const Proto *f, DumpState *D);
+static void DumpFunction(const Proto *f, TString *psource, DumpState *D);
 
 static void DumpConstants (const Proto *f, DumpState *D) {
   int i;
@@ -118,12 +118,15 @@ static void DumpConstants (const Proto *f, DumpState *D) {
       lua_assert(0);
     }
   }
-  n = f->sizep;
+}
+
+
+static void DumpProtos (const Proto *f, DumpState *D) {
+  int i;
+  int n = f->sizep;
   DumpInt(n, D);
-  for (i = 0; i < n; i++) {
-    lua_assert(f->source == f->p[i]->source);  /* same source for all protos */
-    DumpFunction(f->p[i], D);
-  }
+  for (i = 0; i < n; i++)
+    DumpFunction(f->p[i], f->source, D);
 }
 
 
@@ -156,7 +159,11 @@ static void DumpDebug (const Proto *f, DumpState *D) {
 }
 
 
-static void DumpFunction (const Proto *f, DumpState *D) {
+static void DumpFunction (const Proto *f, TString *psource, DumpState *D) {
+  if (D->strip || f->source == psource)
+    DumpString(NULL, D);  /* no debug info or same source as its parent */
+  else
+    DumpString(f->source, D);
   DumpInt(f->linedefined, D);
   DumpInt(f->lastlinedefined, D);
   DumpByte(f->numparams, D);
@@ -165,6 +172,7 @@ static void DumpFunction (const Proto *f, DumpState *D) {
   DumpCode(f, D);
   DumpConstants(f, D);
   DumpUpvalues(f, D);
+  DumpProtos(f, D);
   DumpDebug(f, D);
 }
 
@@ -197,8 +205,7 @@ int luaU_dump(lua_State *L, const Proto *f, lua_Writer w, void *data,
   D.status = 0;
   DumpHeader(&D);
   DumpByte(f->sizeupvalues, &D);
-  DumpString((D.strip) ? NULL : f->source, &D);
-  DumpFunction(f, &D);
+  DumpFunction(f, NULL, &D);
   return D.status;
 }
 
