@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 2.28 2014/03/27 15:58:05 roberto Exp roberto $
+** $Id: ldump.c,v 2.29 2014/04/01 14:39:55 roberto Exp roberto $
 ** save precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -137,7 +137,6 @@ static void DumpUpvalues (const Proto *f, DumpState *D) {
 
 static void DumpDebug (const Proto *f, DumpState *D) {
   int i, n;
-  DumpString((D->strip) ? NULL : f->source, D);
   n = (D->strip) ? 0 : f->sizelineinfo;
   DumpInt(n, D);
   DumpVector(f->lineinfo, n, D);
@@ -196,6 +195,7 @@ int luaU_dump(lua_State *L, const Proto *f, lua_Writer w, void *data,
   D.status = 0;
   DumpHeader(&D);
   DumpByte(f->sizeupvalues, &D);
+  DumpString((D.strip) ? NULL : f->source, &D);
   DumpFunction(f, &D);
   return D.status;
 }

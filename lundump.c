@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.36 2014/04/01 14:39:55 roberto Exp roberto $
+** $Id: lundump.c,v 2.37 2014/04/29 18:14:16 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -31,6 +31,7 @@ typedef struct {
   ZIO *Z;
   Mbuffer *b;
   const char *name;
+  TString *source;  /* source (the same for all prototypes) */
 } LoadState;
 
 
@@ -167,7 +168,7 @@ static void LoadUpvalues (LoadState *S, Proto *f) {
 
 static void LoadDebug (LoadState *S, Proto *f) {
   int i, n;
-  f->source = LoadString(S);
+  f->source = S->source;
   n = LoadInt(S);
   f->lineinfo = luaM_newvector(S->L, n, int);
   f->sizelineinfo = n;
@@ -258,6 +259,7 @@ Closure *luaU_undump(lua_State *L, ZIO *Z, Mbuffer *buff,
   setclLvalue(L, L->top, cl);
   incr_top(L);
   cl->l.p = luaF_newproto(L);
+  S.source = cl->l.p->source = LoadString(&S);  /* read source */
   LoadFunction(&S, cl->l.p);
   lua_assert(cl->l.nupvalues == cl->l.p->sizeupvalues);
   luai_verifycode(L, buff, cl->l.p);
