@@ -43,13 +43,13 @@ CWARNS= $(CWARNSCPP) $(CWARNSC)
 # -DLUA_USE_CTYPE  -DLUA_USE_APICHECK
 TESTS= -DLUA_USER_H='"ltests.h"'
 
-# -mtune=native -fomit-frame-pointer 
+# -mtune=native -fomit-frame-pointer
 LOCAL = $(TESTS) $(CWARNS) -g
 
 
 
 # enable Linux goodies
-MYCFLAGS= $(LOCAL) -DLUA_USE_LINUX -DLUA_COMPAT_ALL
+MYCFLAGS= $(LOCAL) -DLUA_USE_LINUX -DLUA_COMPAT_5_2
 MYLDFLAGS= $(LOCAL) -Wl,-E
 MYLIBS= -ldl -lreadline -lhistory -lncurses
 
@@ -123,8 +123,8 @@ echo:
 
 $(ALL_O): makefile
 
-# DO NOT DELETE
-# automatically made with 'gcc -MM'
+# DO NOT EDIT
+# automatically made with 'gcc -MM l*.c'
 
 lapi.o: lapi.c lua.h luaconf.h lapi.h llimits.h lstate.h lobject.h ltm.h \
  lzio.h lmem.h ldebug.h ldo.h lfunc.h lgc.h lstring.h ltable.h lundump.h \
@@ -182,7 +182,7 @@ ltm.o: ltm.c lua.h luaconf.h ldebug.h lstate.h lobject.h llimits.h ltm.h \
 lua.o: lua.c lua.h luaconf.h lauxlib.h lualib.h
 lundump.o: lundump.c lua.h luaconf.h ldebug.h lstate.h lobject.h \
  llimits.h ltm.h lzio.h lmem.h ldo.h lfunc.h lstring.h lgc.h lundump.h
-lutf8lib.o: lutf8lib.c lua.h luaconf.h lauxlib.h
+lutf8lib.o: lutf8lib.c lua.h luaconf.h lauxlib.h lualib.h
 lvm.o: lvm.c lua.h luaconf.h ldebug.h lstate.h lobject.h llimits.h ltm.h \
  lzio.h lmem.h ldo.h lfunc.h lgc.h lopcodes.h lstring.h ltable.h lvm.h
 lzio.o: lzio.c lua.h luaconf.h llimits.h lmem.h lstate.h lobject.h ltm.h \
