@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.171 2014/06/10 17:41:38 roberto Exp roberto $
+** $Id: ltests.c,v 2.172 2014/06/17 17:13:29 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -207,8 +207,10 @@ static int testobjref (global_State *g, GCObject *f, GCObject *t) {
   return r1;
 }
 
-#define checkobjref(g,f,t)  \
-	lua_assert((t) == NULL || testobjref(g,f,obj2gco(t)))
+#define checkobjref(g,f,t)	checkobjref_(g,f,obj2gco(t))
+static void checkobjref_ (global_State *g, GCObject *f, GCObject *t) {
+  lua_assert((t) == NULL || testobjref(g,f,obj2gco(t)));
+}
 
 
 static void checkvalref (global_State *g, GCObject *f, const TValue *t) {
