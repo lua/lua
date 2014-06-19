@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.137 2013/12/18 14:12:03 roberto Exp roberto $
+** $Id: lparser.c,v 2.138 2013/12/30 20:47:58 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1618,17 +1618,17 @@ static void mainfunc (LexState *ls, FuncState *fs) {
 }
 
 
-Closure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
-                      Dyndata *dyd, const char *name, int firstchar) {
+LClosure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
+                       Dyndata *dyd, const char *name, int firstchar) {
   LexState lexstate;
   FuncState funcstate;
-  Closure *cl = luaF_newLclosure(L, 1);  /* create main closure */
+  LClosure *cl = luaF_newLclosure(L, 1);  /* create main closure */
   setclLvalue(L, L->top, cl);  /* anchor it (to avoid being collected) */
   incr_top(L);
   lexstate.h = luaH_new(L);  /* create table for scanner */
   sethvalue(L, L->top, lexstate.h);  /* anchor it */
   incr_top(L);
-  funcstate.f = cl->l.p = luaF_newproto(L);
+  funcstate.f = cl->p = luaF_newproto(L);
   funcstate.f->source = luaS_new(L, name);  /* create and anchor TString */
   luaC_objbarrier(L, funcstate.f, funcstate.f->source);
   lexstate.buff = buff;

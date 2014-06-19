@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.217 2014/06/10 19:13:26 roberto Exp roberto $
+** $Id: lapi.c,v 2.218 2014/06/12 19:07:30 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -580,15 +580,15 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
     setfvalue(L->top, fn);
   }
   else {
-    Closure *cl;
+    CClosure *cl;
     api_checknelems(L, n);
     api_check(L, n <= MAXUPVAL, "upvalue index too large");
     luaC_checkGC(L);
     cl = luaF_newCclosure(L, n);
-    cl->c.f = fn;
+    cl->f = fn;
     L->top -= n;
     while (n--) {
-      setobj2n(L, &cl->c.upvalue[n], L->top + n);
+      setobj2n(L, &cl->upvalue[n], L->top + n);
       /* does not need barrier because closure is white */
     }
     setclCvalue(L, L->top, cl);

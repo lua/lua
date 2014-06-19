@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.38 2014/06/18 13:19:17 roberto Exp roberto $
+** $Id: lundump.c,v 2.39 2014/06/18 18:35:43 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -248,10 +248,10 @@ static void checkHeader (LoadState *S) {
 /*
 ** load precompiled chunk
 */
-Closure *luaU_undump(lua_State *L, ZIO *Z, Mbuffer *buff,
-                     const char *name) {
+LClosure *luaU_undump(lua_State *L, ZIO *Z, Mbuffer *buff,
+                      const char *name) {
   LoadState S;
-  Closure *cl;
+  LClosure *cl;
   if (*name == '@' || *name == '=')
     S.name = name + 1;
   else if (*name == LUA_SIGNATURE[0])
@@ -265,10 +265,10 @@ Closure *luaU_undump(lua_State *L, ZIO *Z, Mbuffer *buff,
   cl = luaF_newLclosure(L, LoadByte(&S));
   setclLvalue(L, L->top, cl);
   incr_top(L);
-  cl->l.p = luaF_newproto(L);
-  LoadFunction(&S, cl->l.p, NULL);
-  lua_assert(cl->l.nupvalues == cl->l.p->sizeupvalues);
-  luai_verifycode(L, buff, cl->l.p);
+  cl->p = luaF_newproto(L);
+  LoadFunction(&S, cl->p, NULL);
+  lua_assert(cl->nupvalues == cl->p->sizeupvalues);
+  luai_verifycode(L, buff, cl->p);
   return cl;
 }
 

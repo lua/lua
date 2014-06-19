@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.214 2014/05/26 17:10:22 roberto Exp roberto $
+** $Id: lvm.c,v 2.215 2014/06/10 18:53:18 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -503,15 +503,15 @@ lua_Integer luaV_shiftl (lua_Integer x, lua_Integer y) {
 ** whether there is a cached closure with the same upvalues needed by
 ** new closure to be created.
 */
-static Closure *getcached (Proto *p, UpVal **encup, StkId base) {
-  Closure *c = p->cache;
+static LClosure *getcached (Proto *p, UpVal **encup, StkId base) {
+  LClosure *c = p->cache;
   if (c != NULL) {  /* is there a cached closure? */
     int nup = p->sizeupvalues;
     Upvaldesc *uv = p->upvalues;
     int i;
     for (i = 0; i < nup; i++) {  /* check whether it has right upvalues */
       TValue *v = uv[i].instack ? base + uv[i].idx : encup[uv[i].idx]->v;
-      if (c->l.upvals[i]->v != v)
+      if (c->upvals[i]->v != v)
         return NULL;  /* wrong upvalue; cannot reuse closure */
     }
   }
@@ -530,15 +530,15 @@ static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
   int nup = p->sizeupvalues;
   Upvaldesc *uv = p->upvalues;
   int i;
-  Closure *ncl = luaF_newLclosure(L, nup);
-  ncl->l.p = p;
+  LClosure *ncl = luaF_newLclosure(L, nup);
+  ncl->p = p;
   setclLvalue(L, ra, ncl);  /* anchor new closure in stack */
   for (i = 0; i < nup; i++) {  /* fill in its upvalues */
     if (uv[i].instack)  /* upvalue refers to local variable? */
-      ncl->l.upvals[i] = luaF_findupval(L, base + uv[i].idx);
+      ncl->upvals[i] = luaF_findupval(L, base + uv[i].idx);
     else  /* get upvalue from enclosing function */
-      ncl->l.upvals[i] = encup[uv[i].idx];
-    ncl->l.upvals[i]->refcount++;
+      ncl->upvals[i] = encup[uv[i].idx];
+    ncl->upvals[i]->refcount++;
     /* new closure is white, so we do not need a barrier here */
   }
   if (!isblack(obj2gco(p)))  /* cache will not break GC invariant? */
@@ -1109,7 +1109,7 @@ void luaV_execute (lua_State *L) {
       )
       vmcase(OP_CLOSURE,
         Proto *p = cl->p->p[GETARG_Bx(i)];
-        Closure *ncl = getcached(p, cl->upvals, base);  /* cached closure */
+        LClosure *ncl = getcached(p, cl->upvals, base);  /* cached closure */
         if (ncl == NULL)  /* no match? */
           pushclosure(L, p, cl->upvals, base, ra);  /* create a new one */
         else
