@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.25 2013/12/30 20:47:58 roberto Exp $
+** $Id: ltm.c,v 2.27 2014/06/10 18:53:18 roberto Exp $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -116,27 +116,16 @@ void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
       case TM_CONCAT:
         luaG_concaterror(L, p1, p2);
       case TM_IDIV: case TM_BAND: case TM_BOR: case TM_BXOR:
-      case TM_SHL: case TM_SHR: case TM_BNOT:
-        if (ttisnumber(p1) && ttisnumber(p2))
+      case TM_SHL: case TM_SHR: case TM_BNOT: {
+        lua_Number dummy;
+        if (tonumber(p1, &dummy) && tonumber(p2, &dummy))
           luaG_tointerror(L, p1, p2);
         /* else go through */
+      }
       default:
         luaG_aritherror(L, p1, p2);
     }
   }
-}
-
-
-const TValue *luaT_getequalTM (lua_State *L, Table *mt1, Table *mt2) {
-  const TValue *tm1 = fasttm(L, mt1, TM_EQ);
-  const TValue *tm2;
-  if (tm1 == NULL) return NULL;  /* no metamethod */
-  if (mt1 == mt2) return tm1;  /* same metatables => same metamethods */
-  tm2 = fasttm(L, mt2, TM_EQ);
-  if (tm2 == NULL) return NULL;  /* no metamethod */
-  if (luaV_rawequalobj(tm1, tm2))  /* same metamethods? */
-    return tm1;
-  return NULL;
 }
 
 

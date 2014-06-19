@@ -174,6 +174,7 @@ Freely available under the terms of the
 
 <P>
 <A HREF="manual.html#pdf-coroutine.create">coroutine.create</A><BR>
+<A HREF="manual.html#pdf-coroutine.isyieldable">coroutine.isyieldable</A><BR>
 <A HREF="manual.html#pdf-coroutine.resume">coroutine.resume</A><BR>
 <A HREF="manual.html#pdf-coroutine.running">coroutine.running</A><BR>
 <A HREF="manual.html#pdf-coroutine.status">coroutine.status</A><BR>
@@ -182,6 +183,7 @@ Freely available under the terms of the
 
 <P>
 <A HREF="manual.html#pdf-debug.debug">debug.debug</A><BR>
+<A HREF="manual.html#pdf-debug.Csize">debug.Csize</A><BR>
 <A HREF="manual.html#pdf-debug.gethook">debug.gethook</A><BR>
 <A HREF="manual.html#pdf-debug.getinfo">debug.getinfo</A><BR>
 <A HREF="manual.html#pdf-debug.getlocal">debug.getlocal</A><BR>
@@ -189,7 +191,6 @@ Freely available under the terms of the
 <A HREF="manual.html#pdf-debug.getregistry">debug.getregistry</A><BR>
 <A HREF="manual.html#pdf-debug.getupvalue">debug.getupvalue</A><BR>
 <A HREF="manual.html#pdf-debug.getuservalue">debug.getuservalue</A><BR>
-<A HREF="manual.html#pdf-debug.numbits">debug.numbits</A><BR>
 <A HREF="manual.html#pdf-debug.sethook">debug.sethook</A><BR>
 <A HREF="manual.html#pdf-debug.setlocal">debug.setlocal</A><BR>
 <A HREF="manual.html#pdf-debug.setmetatable">debug.setmetatable</A><BR>
@@ -228,39 +229,32 @@ Freely available under the terms of the
 <TD>
 <H3>&nbsp;</H3>
 <P>
+<A HREF="manual.html#pdf-math">math</A><BR>
 <A HREF="manual.html#pdf-math.abs">math.abs</A><BR>
 <A HREF="manual.html#pdf-math.acos">math.acos</A><BR>
 <A HREF="manual.html#pdf-math.asin">math.asin</A><BR>
 <A HREF="manual.html#pdf-math.atan">math.atan</A><BR>
-<A HREF="manual.html#pdf-math.atan2">math.atan2</A><BR>
 <A HREF="manual.html#pdf-math.ceil">math.ceil</A><BR>
 <A HREF="manual.html#pdf-math.cos">math.cos</A><BR>
-<A HREF="manual.html#pdf-math.cosh">math.cosh</A><BR>
 <A HREF="manual.html#pdf-math.deg">math.deg</A><BR>
-<A HREF="manual.html#pdf-math.exp">math.exp</A><BR>
 <A HREF="manual.html#pdf-math.floor">math.floor</A><BR>
 <A HREF="manual.html#pdf-math.fmod">math.fmod</A><BR>
-<A HREF="manual.html#pdf-math.frexp">math.frexp</A><BR>
 <A HREF="manual.html#pdf-math.huge">math.huge</A><BR>
 <A HREF="manual.html#pdf-math.ifloor">math.ifloor</A><BR>
-<A HREF="manual.html#pdf-math.isfloat">math.isfloat</A><BR>
-<A HREF="manual.html#pdf-math.ldexp">math.ldexp</A><BR>
 <A HREF="manual.html#pdf-math.log">math.log</A><BR>
 <A HREF="manual.html#pdf-math.max">math.max</A><BR>
+<A HREF="manual.html#pdf-math.maxinteger">math.maxinteger</A><BR>
 <A HREF="manual.html#pdf-math.min">math.min</A><BR>
+<A HREF="manual.html#pdf-math.mininteger">math.mininteger</A><BR>
 <A HREF="manual.html#pdf-math.modf">math.modf</A><BR>
 <A HREF="manual.html#pdf-math.pi">math.pi</A><BR>
-<A HREF="manual.html#pdf-math.pow">math.pow</A><BR>
 <A HREF="manual.html#pdf-math.rad">math.rad</A><BR>
 <A HREF="manual.html#pdf-math.random">math.random</A><BR>
 <A HREF="manual.html#pdf-math.randomseed">math.randomseed</A><BR>
 <A HREF="manual.html#pdf-math.sin">math.sin</A><BR>
-<A HREF="manual.html#pdf-math.sinh">math.sinh</A><BR>
 <A HREF="manual.html#pdf-math.sqrt">math.sqrt</A><BR>
 <A HREF="manual.html#pdf-math.tan">math.tan</A><BR>
-<A HREF="manual.html#pdf-math.tanh">math.tanh</A><BR>
 <A HREF="manual.html#pdf-math.type">math.type</A><BR>
-
 
 <P>
 <A HREF="manual.html#pdf-os.clock">os.clock</A><BR>
@@ -289,6 +283,8 @@ Freely available under the terms of the
 <A HREF="manual.html#pdf-string.byte">string.byte</A><BR>
 <A HREF="manual.html#pdf-string.char">string.char</A><BR>
 <A HREF="manual.html#pdf-string.dump">string.dump</A><BR>
+<A HREF="manual.html#pdf-string.dumpfloat">string.dumpfloat</A><BR>
+<A HREF="manual.html#pdf-string.dumpint">string.dumpint</A><BR>
 <A HREF="manual.html#pdf-string.find">string.find</A><BR>
 <A HREF="manual.html#pdf-string.format">string.format</A><BR>
 <A HREF="manual.html#pdf-string.gmatch">string.gmatch</A><BR>
@@ -296,13 +292,11 @@ Freely available under the terms of the
 <A HREF="manual.html#pdf-string.len">string.len</A><BR>
 <A HREF="manual.html#pdf-string.lower">string.lower</A><BR>
 <A HREF="manual.html#pdf-string.match">string.match</A><BR>
-<A HREF="manual.html#pdf-string.packfloat">string.packfloat</A><BR>
-<A HREF="manual.html#pdf-string.packint">string.packint</A><BR>
 <A HREF="manual.html#pdf-string.rep">string.rep</A><BR>
 <A HREF="manual.html#pdf-string.reverse">string.reverse</A><BR>
 <A HREF="manual.html#pdf-string.sub">string.sub</A><BR>
-<A HREF="manual.html#pdf-string.unpackfloat">string.unpackfloat</A><BR>
-<A HREF="manual.html#pdf-string.unpackint">string.unpackint</A><BR>
+<A HREF="manual.html#pdf-string.undumpfloat">string.undumpfloat</A><BR>
+<A HREF="manual.html#pdf-string.undumpint">string.undumpint</A><BR>
 <A HREF="manual.html#pdf-string.upper">string.upper</A><BR>
 
 <P>
@@ -330,6 +324,7 @@ Freely available under the terms of the
 <A HREF="manual.html#lua_Debug">lua_Debug</A><BR>
 <A HREF="manual.html#lua_Hook">lua_Hook</A><BR>
 <A HREF="manual.html#lua_Integer">lua_Integer</A><BR>
+<A HREF="manual.html#lua_KFunction">lua_KFunction</A><BR>
 <A HREF="manual.html#lua_Number">lua_Number</A><BR>
 <A HREF="manual.html#lua_Reader">lua_Reader</A><BR>
 <A HREF="manual.html#lua_State">lua_State</A><BR>
@@ -352,7 +347,6 @@ Freely available under the terms of the
 <A HREF="manual.html#lua_error">lua_error</A><BR>
 <A HREF="manual.html#lua_gc">lua_gc</A><BR>
 <A HREF="manual.html#lua_getallocf">lua_getallocf</A><BR>
-<A HREF="manual.html#lua_getctx">lua_getctx</A><BR>
 <A HREF="manual.html#lua_getfield">lua_getfield</A><BR>
 <A HREF="manual.html#lua_getglobal">lua_getglobal</A><BR>
 <A HREF="manual.html#lua_gethook">lua_gethook</A><BR>
@@ -380,6 +374,7 @@ Freely available under the terms of the
 <A HREF="manual.html#lua_istable">lua_istable</A><BR>
 <A HREF="manual.html#lua_isthread">lua_isthread</A><BR>
 <A HREF="manual.html#lua_isuserdata">lua_isuserdata</A><BR>
+<A HREF="manual.html#lua_isyieldable">lua_isyieldable</A><BR>
 <A HREF="manual.html#lua_len">lua_len</A><BR>
 <A HREF="manual.html#lua_load">lua_load</A><BR>
 <A HREF="manual.html#lua_newstate">lua_newstate</A><BR>
@@ -387,6 +382,7 @@ Freely available under the terms of the
 <A HREF="manual.html#lua_newthread">lua_newthread</A><BR>
 <A HREF="manual.html#lua_newuserdata">lua_newuserdata</A><BR>
 <A HREF="manual.html#lua_next">lua_next</A><BR>
+<A HREF="manual.html#lua_numtointeger">lua_numtointeger</A><BR>
 <A HREF="manual.html#lua_pcall">lua_pcall</A><BR>
 <A HREF="manual.html#lua_pcallk">lua_pcallk</A><BR>
 <A HREF="manual.html#lua_pop">lua_pop</A><BR>
@@ -418,6 +414,7 @@ Freely available under the terms of the
 <A HREF="manual.html#lua_remove">lua_remove</A><BR>
 <A HREF="manual.html#lua_replace">lua_replace</A><BR>
 <A HREF="manual.html#lua_resume">lua_resume</A><BR>
+<A HREF="manual.html#lua_rotate">lua_rotate</A><BR>
 <A HREF="manual.html#lua_setallocf">lua_setallocf</A><BR>
 <A HREF="manual.html#lua_setfield">lua_setfield</A><BR>
 <A HREF="manual.html#lua_setglobal">lua_setglobal</A><BR>
@@ -534,10 +531,10 @@ Freely available under the terms of the
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Fri Mar 21 17:34:12 BRT 2014
+Thu Jun 19 17:09:46 BRT 2014
 </SMALL>
 <!--
-Last change: updated for Lua 5.3.0 (work2)
+Last change: updated for Lua 5.3.0 (work3)
 -->
 
 </BODY>

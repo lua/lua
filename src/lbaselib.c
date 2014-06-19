@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.285 2014/03/12 20:57:40 roberto Exp $
+** $Id: lbaselib.c,v 1.289 2014/06/10 17:41:38 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -45,31 +45,31 @@ static int luaB_print (lua_State *L) {
 
 #define SPACECHARS	" \f\n\r\t\v"
 
-static int b_str2int (const char *s, const char *e, int base, lua_Integer *pn) {
+static const char *b_str2int (const char *s, int base, lua_Integer *pn) {
   lua_Unsigned n = 0;
   int neg = 0;
   s += strspn(s, SPACECHARS);  /* skip initial spaces */
   if (*s == '-') { s++; neg = 1; }  /* handle signal */
   else if (*s == '+') s++;
   if (!isalnum((unsigned char)*s))  /* no digit? */
-    return 0;
+    return NULL;
   do {
     int digit = (isdigit((unsigned char)*s)) ? *s - '0'
                    : toupper((unsigned char)*s) - 'A' + 10;
-    if (digit >= base) return 0;  /* invalid numeral */
+    if (digit >= base) return NULL;  /* invalid numeral */
     n = n * base + digit;
     s++;
   } while (isalnum((unsigned char)*s));
   s += strspn(s, SPACECHARS);  /* skip trailing spaces */
-  if (s != e)  /* invalid trailing characters? */
-    return 0;
+  if (*s != '\0')  /* invalid trailing characters? */
+    return NULL;
   *pn = (lua_Integer)((neg) ? (0u - n) : n);
-  return 1;
+  return s;
 }
 
 
 static int luaB_tonumber (lua_State *L) {
-  if (lua_isnoneornil(L, 2)) {  /* standard conversion */
+  if (lua_isnoneornil(L, 2)) {  /* standard conversion? */
     luaL_checkany(L, 1);
     if (lua_type(L, 1) == LUA_TNUMBER) {  /* already a number? */
       lua_settop(L, 1);  /* yes; return it */
@@ -78,20 +78,20 @@ static int luaB_tonumber (lua_State *L) {
     else {
       size_t l;
       const char *s = lua_tolstring(L, 1, &l);
-      if (s != NULL && lua_strtonum(L, s, l))  /* can convert to a number? */
-        return 1;
+      if (s != NULL && lua_strtonum(L, s) == l + 1)
+        return 1;  /* successful conversion to number */
       /* else not a number */
     }
   }
   else {
     size_t l;
     const char *s;
-    lua_Integer n;
+    lua_Integer n = 0;  /* to avoid warnings */
     int base = luaL_checkint(L, 2);
     luaL_checktype(L, 1, LUA_TSTRING);  /* before 'luaL_checklstring'! */
     s = luaL_checklstring(L, 1, &l);
     luaL_argcheck(L, 2 <= base && base <= 36, 2, "base out of range");
-    if (b_str2int(s, s + l, base, &n)) {
+    if (b_str2int(s, base, &n) == s + l) {
       lua_pushinteger(L, n);
       return 1;
     }  /* else not a number */
@@ -341,7 +341,8 @@ static int luaB_load (lua_State *L) {
 /* }====================================================== */
 
 
-static int dofilecont (lua_State *L) {
+static int dofilecont (lua_State *L, int d1, int d2) {
+  (void)d1;  (void)d2;  /* only to match 'lua_Kfunction' prototype */
   return lua_gettop(L) - 1;
 }
 
@@ -352,14 +353,19 @@ static int luaB_dofile (lua_State *L) {
   if (luaL_loadfile(L, fname) != LUA_OK)
     return lua_error(L);
   lua_callk(L, 0, LUA_MULTRET, 0, dofilecont);
-  return dofilecont(L);
+  return dofilecont(L, 0, 0);
 }
 
 
 static int luaB_assert (lua_State *L) {
-  if (!lua_toboolean(L, 1))
-    return luaL_error(L, "%s", luaL_optstring(L, 2, "assertion failed!"));
-  return lua_gettop(L);
+  if (lua_toboolean(L, 1))  /* condition is true? */
+    return lua_gettop(L);  /* return all arguments */
+  else {  /* error */
+    if (lua_isnone(L, 2))  /* no error message? */
+      lua_pushliteral(L, "assertion failed!");  /* use standard message */
+    lua_remove(L, 1);  /* remove the condition (if there is one...) */
+    return luaB_error(L);  /* call 'error' */
+  }
 }
 
 
@@ -379,44 +385,48 @@ static int luaB_select (lua_State *L) {
 }
 
 
-static int finishpcall (lua_State *L, int status) {
-  if (!lua_checkstack(L, 1)) {  /* no space for extra boolean? */
-    lua_settop(L, 0);  /* create space for return values */
-    lua_pushboolean(L, 0);
-    lua_pushstring(L, "stack overflow");
+/*
+** Continuation function for 'pcall' and 'xpcall'. Both functions
+** already pushed a 'true' before doing the call, so in case of sucess
+** 'finishpcall' only has to return everything in the stack minus
+** 'extra' values (where 'extra' is exactly the number of items to be
+** ignored).
+*/
+static int finishpcall (lua_State *L, int status, int extra) {
+  if (status != LUA_OK && status != LUA_YIELD) {  /* error? */
+    lua_pushboolean(L, 0);  /* first result (false) */
+    lua_pushvalue(L, -2);  /* error message */
     return 2;  /* return false, msg */
   }
-  lua_pushboolean(L, status);  /* first result (status) */
-  lua_replace(L, 1);  /* put first result in first slot */
-  return lua_gettop(L);
-}
-
-
-static int pcallcont (lua_State *L) {
-  int status = lua_getctx(L, NULL);
-  return finishpcall(L, (status == LUA_YIELD));
+  else
+    return lua_gettop(L) - extra;  /* return all results */
 }
 
 
 static int luaB_pcall (lua_State *L) {
   int status;
   luaL_checkany(L, 1);
-  lua_pushnil(L);
-  lua_insert(L, 1);  /* create space for status result */
-  status = lua_pcallk(L, lua_gettop(L) - 2, LUA_MULTRET, 0, 0, pcallcont);
-  return finishpcall(L, (status == LUA_OK));
+  lua_pushboolean(L, 1);  /* first result if no errors */
+  lua_insert(L, 1);  /* put it in place */
+  status = lua_pcallk(L, lua_gettop(L) - 2, LUA_MULTRET, 0, 0, finishpcall);
+  return finishpcall(L, status, 0);
 }
 
 
+/*
+** Do a protected call with error handling. After 'lua_rotate', the
+** stack will have <f, err, true, f, [args...]>; so, the function passes
+** 2 to 'finishpcall' to skip the 2 first values when returning results.
+*/
 static int luaB_xpcall (lua_State *L) {
   int status;
   int n = lua_gettop(L);
-  luaL_argcheck(L, n >= 2, 2, "value expected");
-  lua_pushvalue(L, 1);  /* exchange function... */
-  lua_copy(L, 2, 1);  /* ...and error handler */
-  lua_replace(L, 2);
-  status = lua_pcallk(L, n - 2, LUA_MULTRET, 1, 0, pcallcont);
-  return finishpcall(L, (status == LUA_OK));
+  luaL_checktype(L, 2, LUA_TFUNCTION);  /* check error function */
+  lua_pushboolean(L, 1);  /* first result */
+  lua_pushvalue(L, 1);  /* function */
+  lua_rotate(L, 3, 2);  /* move them below function's arguments */
+  status = lua_pcallk(L, n - 2, LUA_MULTRET, 2, 2, finishpcall);
+  return finishpcall(L, status, 2);
 }
 
 

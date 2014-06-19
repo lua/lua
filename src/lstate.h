@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.102 2014/02/18 13:46:26 roberto Exp $
+** $Id: lstate.h,v 2.107 2014/06/12 19:07:30 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -60,20 +60,18 @@ typedef struct CallInfo {
   StkId func;  /* function index in the stack */
   StkId	top;  /* top for this function */
   struct CallInfo *previous, *next;  /* dynamic call link */
+  ptrdiff_t extra;
   short nresults;  /* expected number of results from this function */
   lu_byte callstatus;
-  ptrdiff_t extra;
   union {
     struct {  /* only for Lua functions */
       StkId base;  /* base for this function */
       const Instruction *savedpc;
     } l;
     struct {  /* only for C functions */
-      int ctx;  /* context info. in case of yields */
-      lua_CFunction k;  /* continuation in case of yields */
+      lua_KFunction k;  /* continuation in case of yields */
       ptrdiff_t old_errfunc;
-      lu_byte old_allowhook;
-      lu_byte status;
+      int ctx;  /* context info. in case of yields */
     } c;
   } u;
 } CallInfo;
@@ -82,18 +80,20 @@ typedef struct CallInfo {
 /*
 ** Bits in CallInfo status
 */
-#define CIST_LUA	(1<<0)	/* call is running a Lua function */
-#define CIST_HOOKED	(1<<1)	/* call is running a debug hook */
-#define CIST_REENTRY	(1<<2)	/* call is running on same invocation of
+#define CIST_OAH	(1<<0)	/* original value of 'allowhook' */
+#define CIST_LUA	(1<<1)	/* call is running a Lua function */
+#define CIST_HOOKED	(1<<2)	/* call is running a debug hook */
+#define CIST_REENTRY	(1<<3)	/* call is running on same invocation of
                                    luaV_execute of previous call */
-#define CIST_YIELDED	(1<<3)	/* call reentered after suspension */
 #define CIST_YPCALL	(1<<4)	/* call is a yieldable protected call */
-#define CIST_STAT	(1<<5)	/* call has an error status (pcall) */
-#define CIST_TAIL	(1<<6)	/* call was tail called */
-#define CIST_HOOKYIELD	(1<<7)	/* last hook called yielded */
-
+#define CIST_TAIL	(1<<5)	/* call was tail called */
+#define CIST_HOOKYIELD	(1<<6)	/* last hook called yielded */
 
 #define isLua(ci)	((ci)->callstatus & CIST_LUA)
+
+/* assume that CIST_OAH has offset 0 and that 'v' is strictly 0/1 */
+#define setoah(st,v)	((st) = ((st) & ~CIST_OAH) | (v))
+#define getoah(st)	((st) & CIST_OAH)
 
 
 /*

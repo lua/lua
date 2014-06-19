@@ -202,10 +202,8 @@ int main(int argc, char* argv[])
  return EXIT_SUCCESS;
 }
 
-#define nvalue(x) ((lua_Number)0)
-#define ttypenv(x) ttnov(x)
 /*
-** $Id: print.c,v 1.69 2013/07/04 01:03:46 lhf Exp $
+** $Id: print.c,v 1.73 2014/06/12 02:41:25 lhf Exp $
 ** print bytecodes
 ** See Copyright Notice in lua.h
 */
@@ -253,7 +251,7 @@ static void PrintString(const TString* ts)
 static void PrintConstant(const Proto* f, int i)
 {
  const TValue* o=&f->k[i];
- switch (ttypenv(o))
+ switch (ttype(o))
  {
   case LUA_TNIL:
 	printf("nil");
@@ -261,10 +259,13 @@ static void PrintConstant(const Proto* f, int i)
   case LUA_TBOOLEAN:
 	printf(bvalue(o) ? "true" : "false");
 	break;
-  case LUA_TNUMBER:
-	printf(LUA_NUMBER_FMT,nvalue(o));
+  case LUA_TNUMFLT:
+	printf(LUA_NUMBER_FMT,fltvalue(o));
 	break;
-  case LUA_TSTRING:
+  case LUA_TNUMINT:
+	printf(LUA_INTEGER_FMT,ivalue(o));
+	break;
+  case LUA_TSHRSTR: case LUA_TLNGSTR:
 	PrintString(rawtsvalue(o));
 	break;
   default:				/* cannot happen */
@@ -339,8 +340,14 @@ static void PrintCode(const Proto* f)
    case OP_ADD:
    case OP_SUB:
    case OP_MUL:
-   case OP_DIV:
    case OP_POW:
+   case OP_DIV:
+   case OP_IDIV:
+   case OP_BAND:
+   case OP_BOR:
+   case OP_BXOR:
+   case OP_SHL:
+   case OP_SHR:
    case OP_EQ:
    case OP_LT:
    case OP_LE:

@@ -109,7 +109,7 @@ macosx:
 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLIBS="-lreadline" CC=cc
 
 mingw:
-	$(MAKE) "LUA_A=lua52.dll" "LUA_T=lua.exe" \
+	$(MAKE) "LUA_A=lua53.dll" "LUA_T=lua.exe" \
 	"AR=$(CC) -shared -o" "RANLIB=strip --strip-unneeded" \
 	"SYSCFLAGS=-DLUA_BUILD_AS_DLL" "SYSLIBS=" "SYSLDFLAGS=-s" lua.exe
 	$(MAKE) "LUAC_T=luac.exe" luac.exe
@@ -118,7 +118,7 @@ posix:
 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_POSIX"
 
 solaris:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN" SYSLIBS="-ldl"
+	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN -D_REENTRANT" SYSLIBS="-ldl"
 
 # list targets that do not create files (but not all makes understand .PHONY)
 .PHONY: all $(PLATS) default o a clean depend echo none

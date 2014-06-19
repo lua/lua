@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.260 2014/03/12 20:57:40 roberto Exp $
+** $Id: lauxlib.c,v 1.263 2014/05/12 21:44:17 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -397,7 +397,7 @@ LUALIB_API lua_Number luaL_optnumber (lua_State *L, int arg, lua_Number def) {
 
 static void interror (lua_State *L, int arg) {
   if (lua_type(L, arg) == LUA_TNUMBER)
-    luaL_argerror(L, arg, "float value out of range");
+    luaL_argerror(L, arg, "float value out of integer range");
   else
     tag_error(L, arg, LUA_TNUMBER);
 }
@@ -757,13 +757,8 @@ LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len) {
       case LUA_TNUMBER: {
         if (lua_isinteger(L, idx))
           lua_pushfstring(L, "%I", lua_tointeger(L, idx));
-        else {
-          const char *s = lua_pushfstring(L, "%f", lua_tonumber(L, idx));
-          if (s[strspn(s, "-0123456789")] == '\0') {  /* looks like an int? */
-            lua_pushliteral(L, ".0");  /* add a '.0' to result */
-            lua_concat(L, 2);
-          }
-        }
+        else
+          lua_pushfstring(L, "%f", lua_tonumber(L, idx));
         break;
       }
       case LUA_TSTRING:
@@ -966,12 +961,12 @@ LUALIB_API lua_State *luaL_newstate (void) {
 }
 
 
-LUALIB_API void luaL_checkversion_ (lua_State *L, int ver, size_t sz) {
+LUALIB_API void luaL_checkversion_ (lua_State *L, lua_Number ver, size_t sz) {
   const lua_Number *v = lua_version(L);
   if (v != lua_version(NULL))
     luaL_error(L, "multiple Lua VMs detected");
   else if (*v != ver)
-    luaL_error(L, "version mismatch: app. needs %d, Lua core provides %f",
+    luaL_error(L, "version mismatch: app. needs %f, Lua core provides %f",
                   ver, *v);
   /* check numeric types */
   if (sz != LUAL_NUMSIZES)
