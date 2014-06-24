@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.218 2014/06/12 19:07:30 roberto Exp roberto $
+** $Id: lapi.c,v 2.219 2014/06/19 18:27:20 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -372,6 +372,11 @@ LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *pisnum) {
 }
 
 
+#if !defined(LUAI_FTWO2N)
+/* 2.0^(numbits in an integer), computed without roundings */
+#define LUAI_FTWO2N	(cast_num(LUA_MININTEGER) * cast_num(-2))
+#endif
+
 LUA_API lua_Unsigned lua_tounsignedx (lua_State *L, int idx, int *pisnum) {
   lua_Unsigned res = 0;
   const TValue *o = index2addr(L, idx);
@@ -383,7 +388,7 @@ LUA_API lua_Unsigned lua_tounsignedx (lua_State *L, int idx, int *pisnum) {
       break;
     }
     case LUA_TNUMFLT: {  /* compute floor(n) % 2^(numbits in an integer) */
-      const lua_Number two2n = cast_num(LUA_MAXUNSIGNED) + cast_num(1);
+      const lua_Number two2n = LUAI_FTWO2N;
       lua_Number n = fltvalue(o);  /* get value */
       int neg = 0;
       n = l_floor(n);  /* get its floor */

@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.206 2014/06/02 00:03:16 roberto Exp roberto $
+** $Id: luaconf.h,v 1.207 2014/06/10 19:21:20 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -569,7 +569,6 @@
 @@ LUA_INTEGER_FMT is the format for writing integers.
 @@ LUA_MAXINTEGER is the maximum value for a LUA_INTEGER.
 @@ LUA_MININTEGER is the minimum value for a LUA_INTEGER.
-@@ LUA_MAXUNSIGNED is the maximum value for a LUA_UNSIGNED.
 @@ lua_integer2str converts an integer to a string.
 */
 
@@ -595,7 +594,6 @@
 #define LUA_INTEGER		int
 #define LUA_INTEGER_FRMLEN	""
 
-#define LUA_MAXUNSIGNED		UINT_MAX
 #define LUA_MAXINTEGER		INT_MAX
 #define LUA_MININTEGER		INT_MIN
 
@@ -604,7 +602,6 @@
 #define LUA_INTEGER		long
 #define LUA_INTEGER_FRMLEN	"l"
 
-#define LUA_MAXUNSIGNED		ULONG_MAX
 #define LUA_MAXINTEGER		LONG_MAX
 #define LUA_MININTEGER		LONG_MIN
 
@@ -615,7 +612,6 @@
 #define LUA_INTEGER		__int64
 #define LUA_INTEGER_FRMLEN	"I64"
 
-#define LUA_MAXUNSIGNED		_UI64_MAX
 #define LUA_MAXINTEGER		_I64_MAX
 #define LUA_MININTEGER		_I64_MIN
 
@@ -624,7 +620,6 @@
 #define LUA_INTEGER		long long
 #define LUA_INTEGER_FRMLEN	"ll"
 
-#define LUA_MAXUNSIGNED		ULLONG_MAX
 #define LUA_MAXINTEGER		LLONG_MAX
 #define LUA_MININTEGER		LLONG_MIN
 
@@ -639,7 +634,6 @@
 #define LUA_INTEGER		short int
 #define LUA_INTEGER_FRMLEN	""
 
-#define LUA_MAXUNSIGNED		((LUA_UNSIGNED)USHRT_MAX)
 #define LUA_MAXINTEGER		SHRT_MAX
 #define LUA_MININTEGER		SHRT_MIN
 
