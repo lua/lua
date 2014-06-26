@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.207 2014/06/10 19:21:20 roberto Exp roberto $
+** $Id: luaconf.h,v 1.208 2014/06/24 17:02:00 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -279,6 +279,12 @@
 @@ LUA_COMPAT_BITLIB controls the presence of library 'bit32'.
 */
 #define LUA_COMPAT_BITLIB
+
+/*
+@@ LUA_COMPAT_APIUNSIGNED controls the presence of macros for
+** manipulating unsigned integers (lua_pushunsigned, lua_tounsigned, etc.)
+*/
+#define LUA_COMPAT_APIUNSIGNED
 
 
 /*

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.262 2014/04/15 18:25:49 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.263 2014/05/12 21:44:17 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -413,24 +413,9 @@ LUALIB_API lua_Integer luaL_checkinteger (lua_State *L, int arg) {
 }
 
 
-LUALIB_API lua_Unsigned luaL_checkunsigned (lua_State *L, int arg) {
-  int isnum;
-  lua_Unsigned d = lua_tounsignedx(L, arg, &isnum);
-  if (!isnum)
-    interror(L, arg);
-  return d;
-}
-
-
 LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int arg,
                                                       lua_Integer def) {
   return luaL_opt(L, luaL_checkinteger, arg, def);
-}
-
-
-LUALIB_API lua_Unsigned luaL_optunsigned (lua_State *L, int arg,
-                                                        lua_Unsigned def) {
-  return luaL_opt(L, luaL_checkunsigned, arg, def);
 }
 
 /* }====================================================== */
