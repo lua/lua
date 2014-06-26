@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.115 2014/04/15 14:28:20 roberto Exp roberto $
+** $Id: llimits.h,v 1.116 2014/04/15 16:32:49 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -44,11 +44,11 @@ typedef unsigned char lu_byte;
 
 
 /*
-** conversion of pointer to integer
+** conversion of pointer to integer:
 ** this is for hashing only; there is no problem if the integer
 ** cannot hold the whole pointer value
 */
-#define IntPoint(p)  ((unsigned int)(lu_mem)(p))
+#define point2int(p)	((unsigned int)((lu_mem)(p) & UINT_MAX))
 
 
 

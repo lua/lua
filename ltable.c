@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.89 2014/05/26 17:10:22 roberto Exp roberto $
+** $Id: ltable.c,v 2.90 2014/06/18 22:59:29 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -64,7 +64,7 @@
 #define hashmod(t,n)	(gnode(t, ((n) % ((sizenode(t)-1)|1))))
 
 
-#define hashpointer(t,p)	hashmod(t, IntPoint(p))
+#define hashpointer(t,p)	hashmod(t, point2int(p))
 
 
 #define dummynode		(&dummynode_)
