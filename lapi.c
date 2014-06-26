@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.219 2014/06/19 18:27:20 roberto Exp roberto $
+** $Id: lapi.c,v 2.220 2014/06/24 17:00:13 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -372,45 +372,6 @@ LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *pisnum) {
 }
 
 
-#if !defined(LUAI_FTWO2N)
-/* 2.0^(numbits in an integer), computed without roundings */
-#define LUAI_FTWO2N	(cast_num(LUA_MININTEGER) * cast_num(-2))
-#endif
-
-LUA_API lua_Unsigned lua_tounsignedx (lua_State *L, int idx, int *pisnum) {
-  lua_Unsigned res = 0;
-  const TValue *o = index2addr(L, idx);
-  int isnum = 0;
-  switch (ttype(o)) {
-    case LUA_TNUMINT: {
-      res = l_castS2U(ivalue(o));
-      isnum = 1;
-      break;
-    }
-    case LUA_TNUMFLT: {  /* compute floor(n) % 2^(numbits in an integer) */
-      const lua_Number two2n = LUAI_FTWO2N;
-      lua_Number n = fltvalue(o);  /* get value */
-      int neg = 0;
-      n = l_floor(n);  /* get its floor */
-      if (n < 0) {
-        neg = 1;
-        n = -n;  /* make 'n' positive, so that 'fmod' is the same as '%' */
-      }
-      n = l_mathop(fmod)(n, two2n);  /* n = n % 2^(numbits in an integer) */
-      if (luai_numisnan(n))   /* not a number? */
-        break;  /* not an integer, too */
-      res = cast(lua_Unsigned, n);  /* 'n' now must fit in an unsigned */
-      if (neg) res = 0u - res;  /* back to negative, if needed */
-      isnum = 1;
-      break;
-    }
-    default: break;
-  }
-  if (pisnum) *pisnum = isnum;
-  return res;
-}
-
-
 LUA_API int lua_toboolean (lua_State *L, int idx) {
   const TValue *o = index2addr(L, idx);
   return !l_isfalse(o);
@@ -512,14 +473,6 @@ LUA_API void lua_pushnumber (lua_State *L, lua_Number n) {
 LUA_API void lua_pushinteger (lua_State *L, lua_Integer n) {
   lua_lock(L);
   setivalue(L->top, n);
-  api_incr_top(L);
-  lua_unlock(L);
-}
-
-
-LUA_API void lua_pushunsigned (lua_State *L, lua_Unsigned u) {
-  lua_lock(L);
-  setivalue(L->top, l_castU2S(u));
   api_incr_top(L);
   lua_unlock(L);
 }
