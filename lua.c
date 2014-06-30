@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.211 2014/06/05 20:42:06 roberto Exp roberto $
+** $Id: lua.c,v 1.212 2014/06/26 17:08:52 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -115,7 +115,7 @@ static void lstop (lua_State *L, lua_Debug *ar) {
 
 /*
 ** Function to be called at a C signal. Because a C signal cannot
-** just change a Lua state (as there is no proper syncronization),
+** just change a Lua state (as there is no proper synchronization),
 ** this function only sets a hook that, when called, will stop the
 ** interpreter.
 */
@@ -284,7 +284,7 @@ static const char *get_prompt (lua_State *L, int firstline) {
 /*
 ** Check whether 'status' signals a syntax error and the error
 ** message at the top of the stack ends with the above mark for
-** incoplete statements.
+** incomplete statements.
 */
 static int incomplete (lua_State *L, int status) {
   if (status == LUA_ERRSYNTAX) {

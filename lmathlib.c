@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.103 2014/06/18 12:35:53 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.104 2014/06/26 18:38:28 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -145,14 +145,14 @@ static int math_fmod (lua_State *L) {
 static int math_modf (lua_State *L) {
   if (lua_isinteger(L ,1)) {
     lua_settop(L, 1);  /* number is its own integer part */
-    lua_pushnumber(L, 0);  /* no fractionary part */
+    lua_pushnumber(L, 0);  /* no fractional part */
   }
   else {
     lua_Number n = luaL_checknumber(L, 1);
     /* integer part (rounds toward zero) */
     lua_Number ip = (n < 0) ? l_mathop(ceil)(n) : l_mathop(floor)(n);
     pushnumint(L, ip);
-    /* fractionary part (test needed for inf/-inf) */
+    /* fractional part (test needed for inf/-inf) */
     lua_pushnumber(L, (n == ip) ? 0.0 : (n - ip));
   }
   return 2;

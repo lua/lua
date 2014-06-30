@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.122 2014/06/12 19:07:30 roberto Exp roberto $
+** $Id: ldo.c,v 2.123 2014/06/19 18:27:20 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -516,7 +516,7 @@ static l_noret resume_error (lua_State *L, const char *msg, StkId firstArg) {
 /*
 ** Do the work for 'lua_resume' in protected mode. Most of the work
 ** depends on the status of the coroutine: initial state, suspended
-** inside a hook, or regulary suspended (optionally with a continuation
+** inside a hook, or regularly suspended (optionally with a continuation
 ** function), plus erroneous cases: non-suspended coroutine or dead
 ** coroutine.
 */

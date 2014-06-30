@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.288 2014/06/02 03:06:26 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.289 2014/06/10 17:41:38 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -387,7 +387,7 @@ static int luaB_select (lua_State *L) {
 
 /*
 ** Continuation function for 'pcall' and 'xpcall'. Both functions
-** already pushed a 'true' before doing the call, so in case of sucess
+** already pushed a 'true' before doing the call, so in case of success
 ** 'finishpcall' only has to return everything in the stack minus
 ** 'extra' values (where 'extra' is exactly the number of items to be
 ** ignored).

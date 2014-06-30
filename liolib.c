@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.125 2014/05/21 15:24:21 roberto Exp roberto $
+** $Id: liolib.c,v 2.126 2014/06/02 03:00:51 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -402,11 +402,11 @@ static int test2 (RN *rn, const char *set) {
 
 
 /*
-** Read a sequence of (hexa)digits
+** Read a sequence of (hex)digits
 */
-static int readdigits (RN *rn, int hexa) {
+static int readdigits (RN *rn, int hex) {
   int count = 0;
-  while ((hexa ? isxdigit(rn->c) : isdigit(rn->c)) && nextc(rn))
+  while ((hex ? isxdigit(rn->c) : isdigit(rn->c)) && nextc(rn))
     count++;
   return count;
 }
@@ -426,7 +426,7 @@ static int readdigits (RN *rn, int hexa) {
 static int read_number (lua_State *L, FILE *f) {
   RN rn;
   int count = 0;
-  int hexa = 0;
+  int hex = 0;
   char decp[2] = ".";
   rn.f = f; rn.n = 0;
   decp[0] = getlocaledecpoint();  /* get decimal point from locale */
@@ -434,13 +434,13 @@ static int read_number (lua_State *L, FILE *f) {
   do { rn.c = l_getc(rn.f); } while (isspace(rn.c));  /* skip spaces */
   test2(&rn, "-+");  /* optional signal */
   if (test2(&rn, "0")) {
-    if (test2(&rn, "xX")) hexa = 1;  /* numeral is hexadecimal */
+    if (test2(&rn, "xX")) hex = 1;  /* numeral is hexadecimal */
     else count = 1;  /* count initial '0' as a valid digit */
   }
-  count += readdigits(&rn, hexa);  /* integral part */
+  count += readdigits(&rn, hex);  /* integral part */
   if (test2(&rn, decp))  /* decimal point? */
-    count += readdigits(&rn, hexa);  /* fractionary part */
-  if (count > 0 && test2(&rn, (hexa ? "pP" : "eE"))) {  /* exponent mark? */
+    count += readdigits(&rn, hex);  /* fractional part */
+  if (count > 0 && test2(&rn, (hex ? "pP" : "eE"))) {  /* exponent mark? */
     test2(&rn, "-+");  /* exponent signal */
     readdigits(&rn, 0);  /* exponent digits */
   }

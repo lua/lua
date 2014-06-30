@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.85 2014/05/12 21:22:05 roberto Exp roberto $
+** $Id: lobject.c,v 2.86 2014/05/12 21:44:17 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -256,7 +256,7 @@ static const char *l_str2d (const char *s, lua_Number *result) {
   char *endptr;
   if (strpbrk(s, "nN"))  /* reject 'inf' and 'nan' */
     return NULL;
-  else if (strpbrk(s, "xX"))  /* hexa? */
+  else if (strpbrk(s, "xX"))  /* hex? */
     *result = lua_strx2number(s, &endptr);
   else
     *result = lua_str2number(s, &endptr);
@@ -273,7 +273,7 @@ static const char *l_str2int (const char *s, lua_Integer *result) {
   while (lisspace(cast_uchar(*s))) s++;  /* skip initial spaces */
   neg = isneg(&s);
   if (s[0] == '0' &&
-      (s[1] == 'x' || s[1] == 'X')) {  /* hexa? */
+      (s[1] == 'x' || s[1] == 'X')) {  /* hex? */
     s += 2;  /* skip '0x' */
     for (; lisxdigit(cast_uchar(*s)); s++) {
       a = a * 16 + luaO_hexavalue(cast_uchar(*s));

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.182 2014/04/04 17:01:04 roberto Exp roberto $
+** $Id: lgc.c,v 2.183 2014/05/25 19:08:32 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -899,7 +899,7 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
     GCObject **p;
     if (issweepphase(g)) {
       makewhite(g, o);  /* "sweep" object 'o' */
-      if (g->sweepgc == &o->gch.next)  /* shoud not remove 'sweepgc' object */
+      if (g->sweepgc == &o->gch.next)  /* should not remove 'sweepgc' object */
         g->sweepgc = sweeptolive(L, g->sweepgc, NULL);  /* change 'sweepgc' */
     }
     /* search for pointer pointing to 'o' */
