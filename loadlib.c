@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.112 2013/10/07 14:20:31 roberto Exp roberto $
+** $Id: loadlib.c,v 1.113 2014/03/12 20:57:40 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -655,6 +655,12 @@ static const luaL_Reg pk_funcs[] = {
 #if defined(LUA_COMPAT_MODULE)
   {"seeall", ll_seeall},
 #endif
+  /* placeholders */
+  {"preload", NULL},
+  {"cpath", NULL},
+  {"path", NULL},
+  {"searchers", NULL},
+  {"loaded", NULL},
   {NULL, NULL}
 };
 

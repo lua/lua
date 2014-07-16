@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.104 2014/06/26 18:38:28 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.105 2014/06/30 19:48:08 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -363,6 +363,11 @@ static const luaL_Reg mathlib[] = {
   {"ldexp", math_ldexp},
   {"log10", math_log10},
 #endif
+  /* placeholders */
+  {"pi", NULL},
+  {"huge", NULL},
+  {"maxinteger", NULL},
+  {"mininteger", NULL},
   {NULL, NULL}
 };
 
