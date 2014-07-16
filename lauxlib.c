@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.263 2014/05/12 21:44:17 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.264 2014/06/26 17:25:11 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -883,22 +883,26 @@ LUALIB_API int luaL_getsubtable (lua_State *L, int idx, const char *fname) {
 
 
 /*
-** stripped-down 'require'. Calls 'openf' to open a module,
-** registers the result in 'package.loaded' table and, if 'glb'
-** is true, also registers the result in the global table.
+** Stripped-down 'require': After checking "loaded" table, calls 'openf'
+** to open a module, registers the result in 'package.loaded' table and,
+** if 'glb' is true, also registers the result in the global table.
 ** Leaves resulting module on the top.
 */
 LUALIB_API void luaL_requiref (lua_State *L, const char *modname,
                                lua_CFunction openf, int glb) {
-  lua_pushcfunction(L, openf);
-  lua_pushstring(L, modname);  /* argument to open function */
-  lua_call(L, 1, 1);  /* open module */
   luaL_getsubtable(L, LUA_REGISTRYINDEX, "_LOADED");
-  lua_pushvalue(L, -2);  /* make copy of module (call result) */
-  lua_setfield(L, -2, modname);  /* _LOADED[modname] = module */
-  lua_pop(L, 1);  /* remove _LOADED table */
+  lua_getfield(L, -1, modname);  /* _LOADED[modname] */
+  if (!lua_toboolean(L, -1)) {  /* package not already loaded? */
+    lua_pop(L, 1);  /* remove field */
+    lua_pushcfunction(L, openf);
+    lua_pushstring(L, modname);  /* argument to open function */
+    lua_call(L, 1, 1);  /* call 'openf' to open module */
+    lua_pushvalue(L, -1);  /* make copy of module (call result) */
+    lua_setfield(L, -3, modname);  /* _LOADED[modname] = module */
+  }
+  lua_remove(L, -2);  /* remove _LOADED table */
   if (glb) {
-    lua_pushvalue(L, -1);  /* copy of 'mod' */
+    lua_pushvalue(L, -1);  /* copy of module */
     lua_setglobal(L, modname);  /* _G[modname] = module */
   }
 }
