@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.307 2014/06/10 17:41:38 roberto Exp roberto $
+** $Id: lua.h,v 1.308 2014/06/26 17:25:11 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -53,30 +53,6 @@
 
 typedef struct lua_State lua_State;
 
-/*
-** Type for C functions registered with Lua
-*/
-typedef int (*lua_CFunction) (lua_State *L);
-
-/*
-** Type for continuation functions
-*/
-typedef int (*lua_KFunction) (lua_State *L, int status, int ctx);
-
-
-/*
-** functions that read/write blocks when loading/dumping Lua chunks
-*/
-typedef const char * (*lua_Reader) (lua_State *L, void *ud, size_t *sz);
-
-typedef int (*lua_Writer) (lua_State *L, const void *p, size_t sz, void *ud);
-
-
-/*
-** prototype for memory-allocation functions
-*/
-typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
-
 
 /*
 ** basic types
@@ -116,6 +92,34 @@ typedef LUA_INTEGER lua_Integer;
 
 /* unsigned integer type */
 typedef LUA_UNSIGNED lua_Unsigned;
+
+/* type for continuation-function contexts */
+typedef LUA_CTXT lua_Ctx;
+
+
+/*
+** Type for C functions registered with Lua
+*/
+typedef int (*lua_CFunction) (lua_State *L);
+
+/*
+** Type for continuation functions
+*/
+typedef int (*lua_KFunction) (lua_State *L, int status, lua_Ctx ctx);
+
+
+/*
+** Type for functions that read/write blocks when loading/dumping Lua chunks
+*/
+typedef const char * (*lua_Reader) (lua_State *L, void *ud, size_t *sz);
+
+typedef int (*lua_Writer) (lua_State *L, const void *p, size_t sz, void *ud);
+
+
+/*
+** Type for memory-allocation functions
+*/
+typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 
 
 
@@ -262,12 +266,12 @@ LUA_API void  (lua_setuservalue) (lua_State *L, int idx);
 /*
 ** 'load' and 'call' functions (load and run Lua code)
 */
-LUA_API void  (lua_callk) (lua_State *L, int nargs, int nresults, int ctx,
+LUA_API void  (lua_callk) (lua_State *L, int nargs, int nresults, lua_Ctx ctx,
                            lua_KFunction k);
 #define lua_call(L,n,r)		lua_callk(L, (n), (r), 0, NULL)
 
 LUA_API int   (lua_pcallk) (lua_State *L, int nargs, int nresults, int errfunc,
-                            int ctx, lua_KFunction k);
+                            lua_Ctx ctx, lua_KFunction k);
 #define lua_pcall(L,n,r,f)	lua_pcallk(L, (n), (r), (f), 0, NULL)
 
 LUA_API int   (lua_load) (lua_State *L, lua_Reader reader, void *dt,
@@ -280,7 +284,7 @@ LUA_API int (lua_dump) (lua_State *L, lua_Writer writer, void *data, int strip);
 /*
 ** coroutine functions
 */
-LUA_API int  (lua_yieldk) (lua_State *L, int nresults, int ctx,
+LUA_API int  (lua_yieldk) (lua_State *L, int nresults, lua_Ctx ctx,
                            lua_KFunction k);
 #define lua_yield(L,n)		lua_yieldk(L, (n), 0, NULL)
 LUA_API int  (lua_resume) (lua_State *L, lua_State *from, int narg);

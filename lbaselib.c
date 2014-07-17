@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.290 2014/06/30 19:48:08 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.291 2014/07/16 13:56:59 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -344,7 +344,7 @@ static int luaB_load (lua_State *L) {
 /* }====================================================== */
 
 
-static int dofilecont (lua_State *L, int d1, int d2) {
+static int dofilecont (lua_State *L, int d1, lua_Ctx d2) {
   (void)d1;  (void)d2;  /* only to match 'lua_Kfunction' prototype */
   return lua_gettop(L) - 1;
 }
@@ -395,7 +395,7 @@ static int luaB_select (lua_State *L) {
 ** 'extra' values (where 'extra' is exactly the number of items to be
 ** ignored).
 */
-static int finishpcall (lua_State *L, int status, int extra) {
+static int finishpcall (lua_State *L, int status, lua_Ctx extra) {
   if (status != LUA_OK && status != LUA_YIELD) {  /* error? */
     lua_pushboolean(L, 0);  /* first result (false) */
     lua_pushvalue(L, -2);  /* error message */

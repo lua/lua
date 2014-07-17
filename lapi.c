@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.224 2014/07/15 21:14:49 roberto Exp roberto $
+** $Id: lapi.c,v 2.225 2014/07/15 21:26:50 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -859,7 +859,7 @@ LUA_API void lua_setuservalue (lua_State *L, int idx) {
 	"results from function overflow current stack size")
 
 
-LUA_API void lua_callk (lua_State *L, int nargs, int nresults, int ctx,
+LUA_API void lua_callk (lua_State *L, int nargs, int nresults, lua_Ctx ctx,
                         lua_KFunction k) {
   StkId func;
   lua_lock(L);
@@ -899,7 +899,7 @@ static void f_call (lua_State *L, void *ud) {
 
 
 LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
-                        int ctx, lua_KFunction k) {
+                        lua_Ctx ctx, lua_KFunction k) {
   struct CallS c;
   int status;
   ptrdiff_t func;

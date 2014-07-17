@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.208 2014/06/24 17:02:00 roberto Exp roberto $
+** $Id: luaconf.h,v 1.209 2014/06/26 18:30:27 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -253,6 +253,22 @@
 */
 #define LUAI_MAXSHORTLEN        40
 
+
+/*
+@@ LUA_CTXT is the type of the context ('ctx') for continuation functions.
+@@ It must be a numerical type; Lua will use 'intptr_t' if available.
+*/
+#if defined (LUA_USE_C99)
+#include <stdint.h>
+#if defined (INTPTR_MAX)  /* even in C99 this type is optional */
+#define LUA_CTXT	intptr_t
+#endif
+#endif
+
+#if !defined(LUA_CTXT)
+/* default definition (the nearest thing to 'intptr_t' in C89) */
+#define LUA_CTXT	ptrdiff_t
+#endif
 
 
 /*
