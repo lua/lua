@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.105 2014/06/30 19:48:08 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.106 2014/07/16 13:47:13 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -76,36 +76,36 @@ static int math_atan (lua_State *L) {
 }
 
 
-static int math_ifloor (lua_State *L) {
+static int math_toint (lua_State *L) {
   int valid;
   lua_Integer n = lua_tointegerx(L, 1, &valid);
   if (valid)
-    lua_pushinteger(L, n);  /* floor computed by Lua */
+    lua_pushinteger(L, n);
   else {
-    luaL_checktype(L, 1, LUA_TNUMBER);  /* argument must be a number */
-    lua_pushnil(L);  /* number is not convertible to integer */
+    luaL_checkany(L, 1);
+    lua_pushnil(L);  /* value is not convertible to integer */
   }
-  return 1;
-}
-
-
-static int math_floor (lua_State *L) {
-  int valid;
-  lua_Integer n = lua_tointegerx(L, 1, &valid);
-  if (valid)
-    lua_pushinteger(L, n);  /* floor computed by Lua */
-  else
-    lua_pushnumber(L, l_mathop(floor)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 
 static void pushnumint (lua_State *L, lua_Number d) {
   lua_Integer n;
-  if (lua_numtointeger(d, &n))  /* fits in an integer? */
+  if (lua_numtointeger(d, &n))  /* does 'd' fit in an integer? */
     lua_pushinteger(L, n);  /* result is integer */
   else
     lua_pushnumber(L, d);  /* result is float */
+}
+
+
+static int math_floor (lua_State *L) {
+  if (lua_isinteger(L, 1))
+    lua_settop(L, 1);  /* integer is its own floor */
+  else {
+    lua_Number d = l_mathop(floor)(luaL_checknumber(L, 1));
+    pushnumint(L, d);
+  }
+  return 1;
 }
 
 
@@ -264,15 +264,16 @@ static int math_randomseed (lua_State *L) {
 
 
 static int math_type (lua_State *L) {
-  luaL_checkany(L, 1);
   if (lua_type(L, 1) == LUA_TNUMBER) {
       if (lua_isinteger(L, 1))
         lua_pushliteral(L, "integer"); 
       else
         lua_pushliteral(L, "float"); 
   }
-  else
+  else {
+    luaL_checkany(L, 1);
     lua_pushnil(L);
+  }
   return 1;
 }
 
@@ -339,7 +340,7 @@ static const luaL_Reg mathlib[] = {
   {"cos",   math_cos},
   {"deg",   math_deg},
   {"exp",   math_exp},
-  {"ifloor", math_ifloor},
+  {"tointeger", math_toint},
   {"floor", math_floor},
   {"fmod",   math_fmod},
   {"log",   math_log},

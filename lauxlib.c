@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.264 2014/06/26 17:25:11 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.265 2014/07/16 14:51:36 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -396,8 +396,8 @@ LUALIB_API lua_Number luaL_optnumber (lua_State *L, int arg, lua_Number def) {
 
 
 static void interror (lua_State *L, int arg) {
-  if (lua_type(L, arg) == LUA_TNUMBER)
-    luaL_argerror(L, arg, "float value out of integer range");
+  if (lua_isnumber(L, arg))
+    luaL_argerror(L, arg, "number has no integer representation");
   else
     tag_error(L, arg, LUA_TNUMBER);
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.216 2014/06/19 18:27:20 roberto Exp roberto $
+** $Id: lvm.c,v 2.217 2014/06/30 19:48:08 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -80,15 +80,23 @@ int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
 
 
 /*
-** try to convert a value to an integer, rounding up if 'up' is true
+** try to convert a value to an integer, rounding according to 'mode':
+** mode == 0: accepts only integral values
+** mode < 0: takes the floor of the number
+** mode > 0: takes the ceil of the number
 */
-static int tointeger_aux (const TValue *obj, lua_Integer *p, int up) {
+static int tointeger_aux (const TValue *obj, lua_Integer *p, int mode) {
   TValue v;
  again:
   if (ttisfloat(obj)) {
     lua_Number n = fltvalue(obj);
-    n = (up ? -l_floor(-n) : l_floor(n));
-    return lua_numtointeger(n, p);
+    lua_Number f = l_floor(n);
+    if (n != f) {  /* not an integral value? */
+      if (mode == 0) return 0;  /* fails if mode demands integral value */
+      else if (mode > 0)  /* needs ceil? */
+        f += 1;  /* convert floor to ceil (remember: n != f) */
+    }
+    return lua_numtointeger(f, p);
   }
   else if (ttisinteger(obj)) {
     *p = ivalue(obj);
@@ -104,7 +112,7 @@ static int tointeger_aux (const TValue *obj, lua_Integer *p, int up) {
 
 
 /*
-** try to convert a non-integer value to an integer, rounding down
+** try to convert a value to an integer
 */
 int luaV_tointeger_ (const TValue *obj, lua_Integer *p) {
   return tointeger_aux(obj, p, 0);
@@ -155,7 +163,7 @@ int luaV_tostring (lua_State *L, StkId obj) {
 static int forlimit (const TValue *obj, lua_Integer *p, lua_Integer step,
                      int *stopnow) {
   *stopnow = 0;  /* usually, let loops run */
-  if (!tointeger_aux(obj, p, (step < 0))) {  /* does not fit in integer? */
+  if (!tointeger_aux(obj, p, (step < 0 ? 1 : -1))) {  /* not fit in integer? */
     lua_Number n;  /* try to convert to float */
     if (!tonumber(obj, &n)) /* cannot convert to float? */
       return 0;  /* not a number */

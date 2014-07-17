@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.97 2013/12/09 14:21:10 roberto Exp roberto $
+** $Id: ldebug.c,v 2.98 2014/07/15 21:26:50 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -534,18 +534,20 @@ l_noret luaG_concaterror (lua_State *L, const TValue *p1, const TValue *p2) {
 
 l_noret luaG_aritherror (lua_State *L, const TValue *p1, const TValue *p2) {
   lua_Number temp;
-  if (!tonumber(p1, &temp))
-    p2 = p1;  /* first operand is wrong */
+  if (!tonumber(p1, &temp))  /* first operand is wrong? */
+    p2 = p1;  /* now second is wrong */
   luaG_typeerror(L, p2, "perform arithmetic on");
 }
 
 
+/*
+** Error when both values are convertible to numbers, but not to integers
+*/
 l_noret luaG_tointerror (lua_State *L, const TValue *p1, const TValue *p2) {
   lua_Integer temp;
   if (!tointeger(p1, &temp))
     p2 = p1;
-  luaG_runerror(L, "attempt to convert an out of range float%s to an integer",
-                   varinfo(L, p2));
+  luaG_runerror(L, "number%s has no integer representation", varinfo(L, p2));
 }
 
 
