@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.175 2014/07/16 14:51:36 roberto Exp roberto $
+** $Id: ltests.c,v 2.176 2014/07/17 13:53:37 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -190,8 +190,8 @@ static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
 
 static void printobj (global_State *g, GCObject *o) {
   printf("||%s(%p)-%c(%02X)||",
-           ttypename(novariant(gch(o)->tt)), (void *)o,
-           isdead(g,o)?'d':isblack(o)?'b':iswhite(o)?'w':'g', gch(o)->marked);
+           ttypename(novariant(o->tt)), (void *)o,
+           isdead(g,o)?'d':isblack(o)?'b':iswhite(o)?'w':'g', o->marked);
 }
 
 
@@ -316,7 +316,7 @@ static void checkobject (global_State *g, GCObject *o, int maybedead) {
     lua_assert(maybedead);
   else {
     lua_assert(g->gcstate != GCSpause || iswhite(o));
-    switch (gch(o)->tt) {
+    switch (o->tt) {
       case LUA_TUSERDATA: {
         TValue uservalue;
         Table *mt = gco2u(o)->metatable;
@@ -362,9 +362,9 @@ static void checkgraylist (global_State *g, GCObject *o) {
   ((void)g);  /* better to keep it available if we need to print an object */
   while (o) {
     lua_assert(isgray(o));
-    lua_assert(!testbit(o->gch.marked, TESTGRAYBIT));
-    l_setbit(o->gch.marked, TESTGRAYBIT);
-    switch (gch(o)->tt) {
+    lua_assert(!testbit(o->marked, TESTGRAYBIT));
+    l_setbit(o->marked, TESTGRAYBIT);
+    switch (o->tt) {
       case LUA_TTABLE: o = gco2t(o)->gclist; break;
       case LUA_TLCL: o = gco2lcl(o)->gclist; break;
       case LUA_TCCL: o = gco2ccl(o)->gclist; break;
@@ -391,12 +391,12 @@ static void markgrays (global_State *g) {
 
 
 static void checkgray (global_State *g, GCObject *o) {
-  for (; o != NULL; o = gch(o)->next) {
+  for (; o != NULL; o = o->next) {
     if (isgray(o)) {
-      lua_assert(!keepinvariant(g) || testbit(o->gch.marked, TESTGRAYBIT));
-      resetbit(o->gch.marked, TESTGRAYBIT);
+      lua_assert(!keepinvariant(g) || testbit(o->marked, TESTGRAYBIT));
+      resetbit(o->marked, TESTGRAYBIT);
     }
-    lua_assert(!testbit(o->gch.marked, TESTGRAYBIT));
+    lua_assert(!testbit(o->marked, TESTGRAYBIT));
   }
 }
 
@@ -415,29 +415,29 @@ int lua_checkmemory (lua_State *L) {
   lua_assert(g->sweepgc == NULL || issweepphase(g));
   markgrays(g);
   /* check 'fixedgc' list */
-  for (o = g->fixedgc; o != NULL; o = gch(o)->next) {
-    lua_assert(gch(o)->tt == LUA_TSHRSTR && isgray(o));
+  for (o = g->fixedgc; o != NULL; o = o->next) {
+    lua_assert(o->tt == LUA_TSHRSTR && isgray(o));
   }
   /* check 'allgc' list */
   checkgray(g, g->allgc);
   maybedead = (GCSatomic < g->gcstate && g->gcstate <= GCSswpallgc);
-  for (o = g->allgc; o != NULL; o = gch(o)->next) {
+  for (o = g->allgc; o != NULL; o = o->next) {
     checkobject(g, o, maybedead);
     lua_assert(!tofinalize(o));
   }
   /* check 'finobj' list */
   checkgray(g, g->finobj);
-  for (o = g->finobj; o != NULL; o = gch(o)->next) {
+  for (o = g->finobj; o != NULL; o = o->next) {
     checkobject(g, o, 0);
     lua_assert(tofinalize(o));
-    lua_assert(gch(o)->tt == LUA_TUSERDATA || gch(o)->tt == LUA_TTABLE);
+    lua_assert(o->tt == LUA_TUSERDATA || o->tt == LUA_TTABLE);
   }
   /* check 'tobefnz' list */
   checkgray(g, g->tobefnz);
-  for (o = g->tobefnz; o != NULL; o = gch(o)->next) {
+  for (o = g->tobefnz; o != NULL; o = o->next) {
     checkobject(g, o, 0);
     lua_assert(tofinalize(o));
-    lua_assert(gch(o)->tt == LUA_TUSERDATA || gch(o)->tt == LUA_TTABLE);
+    lua_assert(o->tt == LUA_TUSERDATA || o->tt == LUA_TTABLE);
   }
   return 0;
 }

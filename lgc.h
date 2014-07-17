@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.81 2014/02/18 13:46:26 roberto Exp roberto $
+** $Id: lgc.h,v 2.82 2014/03/19 18:51:16 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -84,19 +84,19 @@
 #define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)
 
 
-#define iswhite(x)      testbits((x)->gch.marked, WHITEBITS)
-#define isblack(x)      testbit((x)->gch.marked, BLACKBIT)
+#define iswhite(x)      testbits((x)->marked, WHITEBITS)
+#define isblack(x)      testbit((x)->marked, BLACKBIT)
 #define isgray(x)  /* neither white nor black */  \
-	(!testbits((x)->gch.marked, WHITEBITS | bitmask(BLACKBIT)))
+	(!testbits((x)->marked, WHITEBITS | bitmask(BLACKBIT)))
 
-#define tofinalize(x)	testbit((x)->gch.marked, FINALIZEDBIT)
+#define tofinalize(x)	testbit((x)->marked, FINALIZEDBIT)
 
 #define otherwhite(g)	((g)->currentwhite ^ WHITEBITS)
 #define isdeadm(ow,m)	(!(((m) ^ WHITEBITS) & (ow)))
-#define isdead(g,v)	isdeadm(otherwhite(g), (v)->gch.marked)
+#define isdead(g,v)	isdeadm(otherwhite(g), (v)->marked)
 
-#define changewhite(x)	((x)->gch.marked ^= WHITEBITS)
-#define gray2black(x)	l_setbit((x)->gch.marked, BLACKBIT)
+#define changewhite(x)	((x)->marked ^= WHITEBITS)
+#define gray2black(x)	l_setbit((x)->marked, BLACKBIT)
 
 #define luaC_white(g)	cast(lu_byte, (g)->currentwhite & WHITEBITS)
 

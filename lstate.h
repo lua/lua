@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.108 2014/07/17 13:53:37 roberto Exp roberto $
+** $Id: lstate.h,v 2.109 2014/07/17 17:09:50 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -183,29 +183,21 @@ union GCUnion {
 };
 
 
-#define gch(o)		(&(o)->gch)
-
 #define cast_u(o)	cast(union GCUnion *, (o))
 
 /* macros to convert a GCObject into a specific value */
 #define rawgco2ts(o)  \
-	check_exp(novariant((o)->gch.tt) == LUA_TSTRING, &((cast_u(o))->ts))
+	check_exp(novariant((o)->tt) == LUA_TSTRING, &((cast_u(o))->ts))
 #define gco2ts(o)	(&rawgco2ts(o)->tsv)
-#define rawgco2u(o)  \
-	check_exp((o)->gch.tt == LUA_TUSERDATA, &((cast_u(o))->u))
+#define rawgco2u(o)  check_exp((o)->tt == LUA_TUSERDATA, &((cast_u(o))->u))
 #define gco2u(o)	(&rawgco2u(o)->uv)
-#define gco2lcl(o)  \
-	check_exp((o)->gch.tt == LUA_TLCL, &((cast_u(o))->cl.l))
-#define gco2ccl(o)  \
-	check_exp((o)->gch.tt == LUA_TCCL, &((cast_u(o))->cl.c))
+#define gco2lcl(o)  check_exp((o)->tt == LUA_TLCL, &((cast_u(o))->cl.l))
+#define gco2ccl(o)  check_exp((o)->tt == LUA_TCCL, &((cast_u(o))->cl.c))
 #define gco2cl(o)  \
-	check_exp(novariant((o)->gch.tt) == LUA_TFUNCTION, &((cast_u(o))->cl))
-#define gco2t(o)  \
-	check_exp((o)->gch.tt == LUA_TTABLE, &((cast_u(o))->h))
-#define gco2p(o)  \
-	check_exp((o)->gch.tt == LUA_TPROTO, &((cast_u(o))->p))
-#define gco2th(o)  \
-	check_exp((o)->gch.tt == LUA_TTHREAD, &((cast_u(o))->th))
+	check_exp(novariant((o)->tt) == LUA_TFUNCTION, &((cast_u(o))->cl))
+#define gco2t(o)  check_exp((o)->tt == LUA_TTABLE, &((cast_u(o))->h))
+#define gco2p(o)  check_exp((o)->tt == LUA_TPROTO, &((cast_u(o))->p))
+#define gco2th(o)  check_exp((o)->tt == LUA_TTHREAD, &((cast_u(o))->th))
 
 
 /* macro to convert any Lua object into a GCObject */

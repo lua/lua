@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.94 2014/06/19 18:39:36 roberto Exp roberto $
+** $Id: lobject.h,v 2.95 2014/07/17 17:09:50 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -85,9 +85,7 @@ typedef struct GCObject GCObject;
 ** Common type has only the common header
 */
 struct GCObject {
-  struct {
-    CommonHeader;
-  } gch;
+  CommonHeader;
 };
 
 
@@ -179,7 +177,7 @@ typedef struct lua_TValue TValue;
 
 
 /* Macros for internal tests */
-#define righttt(obj)		(ttype(obj) == gcvalue(obj)->gch.tt)
+#define righttt(obj)		(ttype(obj) == gcvalue(obj)->tt)
 
 #define checkliveness(g,obj) \
 	lua_longassert(!iscollectable(obj) || \
@@ -208,7 +206,7 @@ typedef struct lua_TValue TValue;
 
 #define setgcovalue(L,obj,x) \
   { TValue *io = (obj); GCObject *i_g=(x); \
-    val_(io).gc = i_g; settt_(io, ctb(gch(i_g)->tt)); }
+    val_(io).gc = i_g; settt_(io, ctb(i_g->tt)); }
 
 #define setsvalue(L,obj,x) \
   { TValue *io = (obj); TString *x_ = (x); \
