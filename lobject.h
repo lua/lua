@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.93 2014/05/29 19:30:07 roberto Exp roberto $
+** $Id: lobject.h,v 2.94 2014/06/19 18:39:36 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -69,9 +69,9 @@
 
 
 /*
-** Union of all collectable objects
+** Common type for all collectable objects
 */
-typedef union GCObject GCObject;
+typedef struct GCObject GCObject;
 
 
 /*
@@ -82,11 +82,13 @@ typedef union GCObject GCObject;
 
 
 /*
-** Common header in struct form
+** Common type has only the common header
 */
-typedef struct GCheader {
-  CommonHeader;
-} GCheader;
+struct GCObject {
+  struct {
+    CommonHeader;
+  } gch;
+};
 
 
 
