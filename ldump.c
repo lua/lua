@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 2.31 2014/06/18 13:54:31 roberto Exp roberto $
+** $Id: ldump.c,v 2.32 2014/06/18 18:35:43 roberto Exp roberto $
 ** save precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -71,7 +71,7 @@ static void DumpString (const TString *s, DumpState *D) {
   if (s == NULL)
     DumpByte(0, D);
   else {
-    size_t size = s->tsv.len + 1;  /* include trailing '\0' */
+    size_t size = s->len + 1;  /* include trailing '\0' */
     if (size < 0xFF)
       DumpByte(cast_int(size), D);
     else {
@@ -112,7 +112,7 @@ static void DumpConstants (const Proto *f, DumpState *D) {
       break;
     case LUA_TSHRSTR:
     case LUA_TLNGSTR:
-      DumpString(rawtsvalue(o), D);
+      DumpString(tsvalue(o), D);
       break;
     default:
       lua_assert(0);

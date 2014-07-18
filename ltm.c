@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.27 2014/06/10 18:53:18 roberto Exp roberto $
+** $Id: ltm.c,v 2.28 2014/07/18 12:17:54 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -45,7 +45,7 @@ void luaT_init (lua_State *L) {
   int i;
   for (i=0; i<TM_N; i++) {
     G(L)->tmname[i] = luaS_new(L, luaT_eventname[i]);
-    luaC_fix(L, ts2gco(G(L)->tmname[i]));  /* never collect these names */
+    luaC_fix(L, obj2gco(G(L)->tmname[i]));  /* never collect these names */
   }
 }
 

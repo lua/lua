@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.217 2014/06/30 19:48:08 roberto Exp roberto $
+** $Id: lvm.c,v 2.218 2014/07/17 12:30:53 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -262,9 +262,9 @@ void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
 */
 static int l_strcmp (const TString *ls, const TString *rs) {
   const char *l = getstr(ls);
-  size_t ll = ls->tsv.len;
+  size_t ll = ls->len;
   const char *r = getstr(rs);
-  size_t lr = rs->tsv.len;
+  size_t lr = rs->len;
   for (;;) {  /* for each segment */
     int temp = strcoll(l, r);
     if (temp != 0)  /* not equal? */
@@ -294,7 +294,7 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
   else if (tofloat(l, &nl) && tofloat(r, &nr))  /* both are numbers? */
     return luai_numlt(nl, nr);
   else if (ttisstring(l) && ttisstring(r))  /* both are strings? */
-    return l_strcmp(rawtsvalue(l), rawtsvalue(r)) < 0;
+    return l_strcmp(tsvalue(l), tsvalue(r)) < 0;
   else if ((res = luaT_callorderTM(L, l, r, TM_LT)) < 0)  /* no metamethod? */
     luaG_ordererror(L, l, r);  /* error */
   return res;
@@ -312,7 +312,7 @@ int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
   else if (tofloat(l, &nl) && tofloat(r, &nr))  /* both are numbers? */
     return luai_numle(nl, nr);
   else if (ttisstring(l) && ttisstring(r))  /* both are strings? */
-    return l_strcmp(rawtsvalue(l), rawtsvalue(r)) <= 0;
+    return l_strcmp(tsvalue(l), tsvalue(r)) <= 0;
   else if ((res = luaT_callorderTM(L, l, r, TM_LE)) >= 0)  /* first try `le' */
     return res;
   else if ((res = luaT_callorderTM(L, r, l, TM_LT)) < 0)  /* else try `lt' */
@@ -345,8 +345,8 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
     case LUA_TBOOLEAN: return bvalue(t1) == bvalue(t2);  /* true must be 1 !! */
     case LUA_TLIGHTUSERDATA: return pvalue(t1) == pvalue(t2);
     case LUA_TLCF: return fvalue(t1) == fvalue(t2);
-    case LUA_TSHRSTR: return eqshrstr(rawtsvalue(t1), rawtsvalue(t2));
-    case LUA_TLNGSTR: return luaS_eqlngstr(rawtsvalue(t1), rawtsvalue(t2));
+    case LUA_TSHRSTR: return eqshrstr(tsvalue(t1), tsvalue(t2));
+    case LUA_TLNGSTR: return luaS_eqlngstr(tsvalue(t1), tsvalue(t2));
     case LUA_TUSERDATA: {
       if (uvalue(t1) == uvalue(t2)) return 1;
       else if (L == NULL) return 0;

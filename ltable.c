@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.90 2014/06/18 22:59:29 roberto Exp roberto $
+** $Id: ltable.c,v 2.91 2014/06/26 16:17:35 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -52,7 +52,7 @@
 
 #define hashpow2(t,n)		(gnode(t, lmod((n), sizenode(t))))
 
-#define hashstr(t,str)		hashpow2(t, (str)->tsv.hash)
+#define hashstr(t,str)		hashpow2(t, (str)->hash)
 #define hashboolean(t,p)	hashpow2(t, p)
 #define hashint(t,i)		hashpow2(t, i)
 
@@ -116,14 +116,14 @@ static Node *mainposition (const Table *t, const TValue *key) {
     case LUA_TNUMFLT:
       return hashfloat(t, fltvalue(key));
     case LUA_TSHRSTR:
-      return hashstr(t, rawtsvalue(key));
+      return hashstr(t, tsvalue(key));
     case LUA_TLNGSTR: {
-      TString *s = rawtsvalue(key);
-      if (s->tsv.extra == 0) {  /* no hash? */
-        s->tsv.hash = luaS_hash(getstr(s), s->tsv.len, s->tsv.hash);
-        s->tsv.extra = 1;  /* now it has its hash */
+      TString *s = tsvalue(key);
+      if (s->extra == 0) {  /* no hash? */
+        s->hash = luaS_hash(getstr(s), s->len, s->hash);
+        s->extra = 1;  /* now it has its hash */
       }
-      return hashstr(t, rawtsvalue(key));
+      return hashstr(t, tsvalue(key));
     }
     case LUA_TBOOLEAN:
       return hashboolean(t, bvalue(key));
@@ -501,9 +501,9 @@ const TValue *luaH_getint (Table *t, lua_Integer key) {
 */
 const TValue *luaH_getstr (Table *t, TString *key) {
   Node *n = hashstr(t, key);
-  lua_assert(key->tsv.tt == LUA_TSHRSTR);
+  lua_assert(key->tt == LUA_TSHRSTR);
   for (;;) {  /* check whether `key' is somewhere in the chain */
-    if (ttisshrstring(gkey(n)) && eqshrstr(rawtsvalue(gkey(n)), key))
+    if (ttisshrstring(gkey(n)) && eqshrstr(tsvalue(gkey(n)), key))
       return gval(n);  /* that's it */
     else {
       int nx = gnext(n);
@@ -520,7 +520,7 @@ const TValue *luaH_getstr (Table *t, TString *key) {
 */
 const TValue *luaH_get (Table *t, const TValue *key) {
   switch (ttype(key)) {
-    case LUA_TSHRSTR: return luaH_getstr(t, rawtsvalue(key));
+    case LUA_TSHRSTR: return luaH_getstr(t, tsvalue(key));
     case LUA_TNUMINT: return luaH_getint(t, ivalue(key));
     case LUA_TNIL: return luaO_nilobject;
     case LUA_TNUMFLT: {

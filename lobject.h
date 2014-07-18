@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.96 2014/07/17 17:27:49 roberto Exp roberto $
+** $Id: lobject.h,v 2.97 2014/07/18 12:17:54 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -156,8 +156,7 @@ typedef struct lua_TValue TValue;
 #define fltvalue(o)	check_exp(ttisfloat(o), val_(o).n)
 #define gcvalue(o)	check_exp(iscollectable(o), val_(o).gc)
 #define pvalue(o)	check_exp(ttislightuserdata(o), val_(o).p)
-#define rawtsvalue(o)	check_exp(ttisstring(o), rawgco2ts(val_(o).gc))
-#define tsvalue(o)	(&rawtsvalue(o)->tsv)
+#define tsvalue(o)	check_exp(ttisstring(o), gco2ts(val_(o).gc))
 #define rawuvalue(o)	check_exp(ttisfulluserdata(o), rawgco2u(val_(o).gc))
 #define uvalue(o)	(&rawuvalue(o)->uv)
 #define clvalue(o)	check_exp(ttisclosure(o), gco2cl(val_(o).gc))
@@ -210,7 +209,7 @@ typedef struct lua_TValue TValue;
 
 #define setsvalue(L,obj,x) \
   { TValue *io = (obj); TString *x_ = (x); \
-    val_(io).gc = obj2gco(&x_->tsv); settt_(io, ctb(x_->tsv.tt)); \
+    val_(io).gc = obj2gco(x_); settt_(io, ctb(x_->tt)); \
     checkliveness(G(L),io); }
 
 #define setuvalue(L,obj,x) \
@@ -299,24 +298,36 @@ typedef TValue *StkId;  /* index to stack elements */
 
 /*
 ** Header for string value; string bytes follow the end of this structure
+** (aligned according to 'UTString'; see next).
 */
-typedef union TString {
-  L_Umaxalign dummy;  /* ensures maximum alignment for strings */
-  struct {
-    CommonHeader;
-    lu_byte extra;  /* reserved words for short strings; "has hash" for longs */
-    unsigned int hash;
-    size_t len;  /* number of characters in string */
-    union TString *hnext;  /* linked list for hash table */
-  } tsv;
+typedef struct TString {
+  CommonHeader;
+  lu_byte extra;  /* reserved words for short strings; "has hash" for longs */
+  unsigned int hash;
+  size_t len;  /* number of characters in string */
+  struct TString *hnext;  /* linked list for hash table */
 } TString;
 
 
-/* get the actual string (array of bytes) from a TString */
-#define getstr(ts)	cast(const char *, (ts) + 1)
+/*
+** Ensures that address after this type is always fully aligned.
+*/
+typedef union UTString {
+  L_Umaxalign dummy;  /* ensures maximum alignment for strings */
+  TString tsv;
+} UTString;
+
+
+/*
+** Get the actual string (array of bytes) from a 'TString'.
+** (Access to 'extra' ensures that value is really a 'TString'.)
+*/
+#define getaddrstr(ts)	(cast(char *, (ts)) + sizeof(UTString))
+#define getstr(ts)  \
+	((void)(ts)->extra, cast(const char*, getaddrstr(ts)))
 
 /* get the actual string (array of bytes) from a Lua value */
-#define svalue(o)       getstr(rawtsvalue(o))
+#define svalue(o)       getstr(tsvalue(o))
 
 
 /*

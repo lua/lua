@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.185 2014/07/17 17:27:49 roberto Exp roberto $
+** $Id: lgc.c,v 2.186 2014/07/18 12:17:54 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -82,9 +82,6 @@
 
 #define markobject(g,t) \
   { if ((t) && iswhite(obj2gco(t))) reallymarkobject(g, obj2gco(t)); }
-
-#define markstring(g,t) \
-  { if ((t) && iswhite(ts2gco(t))) reallymarkobject(g, ts2gco(t)); }
 
 static void reallymarkobject (global_State *g, GCObject *o);
 
@@ -451,15 +448,15 @@ static int traverseproto (global_State *g, Proto *f) {
   int i;
   if (f->cache && iswhite(obj2gco(f->cache)))
     f->cache = NULL;  /* allow cache to be collected */
-  markstring(g, f->source);
+  markobject(g, f->source);
   for (i = 0; i < f->sizek; i++)  /* mark literals */
     markvalue(g, &f->k[i]);
   for (i = 0; i < f->sizeupvalues; i++)  /* mark upvalue names */
-    markstring(g, f->upvalues[i].name);
+    markobject(g, f->upvalues[i].name);
   for (i = 0; i < f->sizep; i++)  /* mark nested protos */
     markobject(g, f->p[i]);
   for (i = 0; i < f->sizelocvars; i++)  /* mark local-variable names */
-    markstring(g, f->locvars[i].varname);
+    markobject(g, f->locvars[i].varname);
   return sizeof(Proto) + sizeof(Instruction) * f->sizecode +
                          sizeof(Proto *) * f->sizep +
                          sizeof(TValue) * f->sizek +
@@ -702,7 +699,7 @@ static void freeobj (lua_State *L, GCObject *o) {
     case LUA_TTHREAD: luaE_freethread(L, gco2th(o)); break;
     case LUA_TUSERDATA: luaM_freemem(L, o, sizeudata(gco2u(o))); break;
     case LUA_TSHRSTR:
-      luaS_remove(L, rawgco2ts(o));  /* remove it from hash table */
+      luaS_remove(L, gco2ts(o));  /* remove it from hash table */
       /* go through */
     case LUA_TLNGSTR: {
       luaM_freemem(L, o, sizestring(gco2ts(o)));

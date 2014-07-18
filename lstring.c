@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.40 2014/06/18 22:59:29 roberto Exp roberto $
+** $Id: lstring.c,v 2.41 2014/07/18 12:17:54 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -34,10 +34,10 @@
 ** equality for long strings
 */
 int luaS_eqlngstr (TString *a, TString *b) {
-  size_t len = a->tsv.len;
-  lua_assert(a->tsv.tt == LUA_TLNGSTR && b->tsv.tt == LUA_TLNGSTR);
+  size_t len = a->len;
+  lua_assert(a->tt == LUA_TLNGSTR && b->tt == LUA_TLNGSTR);
   return (a == b) ||  /* same instance or... */
-    ((len == b->tsv.len) &&  /* equal length and ... */
+    ((len == b->len) &&  /* equal length and ... */
      (memcmp(getstr(a), getstr(b), len) == 0));  /* equal contents */
 }
 
@@ -67,9 +67,9 @@ void luaS_resize (lua_State *L, int newsize) {
     TString *p = tb->hash[i];
     tb->hash[i] = NULL;
     while (p) {  /* for each node in the list */
-      TString *hnext = p->tsv.hnext;  /* save next */
-      unsigned int h = lmod(p->tsv.hash, newsize);  /* new position */
-      p->tsv.hnext = tb->hash[h];  /* chain it */
+      TString *hnext = p->hnext;  /* save next */
+      unsigned int h = lmod(p->hash, newsize);  /* new position */
+      p->hnext = tb->hash[h];  /* chain it */
       tb->hash[h] = p;
       p = hnext;
     }
@@ -92,24 +92,24 @@ static TString *createstrobj (lua_State *L, const char *str, size_t l,
   TString *ts;
   GCObject *o;
   size_t totalsize;  /* total size of TString object */
-  totalsize = sizeof(TString) + ((l + 1) * sizeof(char));
+  totalsize = sizelstring(l);
   o = luaC_newobj(L, tag, totalsize);
-  ts = rawgco2ts(o);
-  ts->tsv.len = l;
-  ts->tsv.hash = h;
-  ts->tsv.extra = 0;
-  memcpy(ts+1, str, l*sizeof(char));
-  ((char *)(ts+1))[l] = '\0';  /* ending 0 */
+  ts = gco2ts(o);
+  ts->len = l;
+  ts->hash = h;
+  ts->extra = 0;
+  memcpy(getaddrstr(ts), str, l * sizeof(char));
+  getaddrstr(ts)[l] = '\0';  /* ending 0 */
   return ts;
 }
 
 
 void luaS_remove (lua_State *L, TString *ts) {
   stringtable *tb = &G(L)->strt;
-  TString **p = &tb->hash[lmod(ts->tsv.hash, tb->size)];
+  TString **p = &tb->hash[lmod(ts->hash, tb->size)];
   while (*p != ts)  /* find previous element */
-    p = &(*p)->tsv.hnext;
-  *p = (*p)->tsv.hnext;  /* remove element from its list */
+    p = &(*p)->hnext;
+  *p = (*p)->hnext;  /* remove element from its list */
   tb->nuse--;
 }
 
@@ -122,12 +122,12 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
   global_State *g = G(L);
   unsigned int h = luaS_hash(str, l, g->seed);
   TString **list = &g->strt.hash[lmod(h, g->strt.size)];
-  for (ts = *list; ts != NULL; ts = ts->tsv.hnext) {
-    if (l == ts->tsv.len &&
+  for (ts = *list; ts != NULL; ts = ts->hnext) {
+    if (l == ts->len &&
         (memcmp(str, getstr(ts), l * sizeof(char)) == 0)) {
       /* found! */
-      if (isdead(g, ts2gco(ts)))  /* dead (but not collected yet)? */
-        changewhite(ts2gco(ts));  /* resurrect it */
+      if (isdead(g, obj2gco(ts)))  /* dead (but not collected yet)? */
+        changewhite(obj2gco(ts));  /* resurrect it */
       return ts;
     }
   }
@@ -136,7 +136,7 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
     list = &g->strt.hash[lmod(h, g->strt.size)];  /* recompute with new size */
   }
   ts = createstrobj(L, str, l, LUA_TSHRSTR, h);
-  ts->tsv.hnext = *list;
+  ts->hnext = *list;
   *list = ts;
   g->strt.nuse++;
   return ts;

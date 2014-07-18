@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.121 2014/02/18 13:46:26 roberto Exp roberto $
+** $Id: lstate.c,v 2.122 2014/07/18 12:17:54 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -206,7 +206,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   luaX_init(L);
   /* pre-create memory-error message */
   g->memerrmsg = luaS_newliteral(L, MEMERRMSG);
-  luaC_fix(L, ts2gco(g->memerrmsg));  /* it should never be collected */
+  luaC_fix(L, obj2gco(g->memerrmsg));  /* it should never be collected */
   g->gcrunning = 1;  /* allow gc */
   g->version = lua_version(NULL);
   luai_userstateopen(L);

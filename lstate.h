@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.110 2014/07/17 17:27:49 roberto Exp roberto $
+** $Id: lstate.h,v 2.111 2014/07/18 12:17:54 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -174,7 +174,7 @@ struct lua_State {
 */
 union GCUnion {
   GCObject gc;  /* common header */
-  union TString ts;
+  struct TString ts;
   union Udata u;
   union Closure cl;
   struct Table h;
@@ -186,9 +186,8 @@ union GCUnion {
 #define cast_u(o)	cast(union GCUnion *, (o))
 
 /* macros to convert a GCObject into a specific value */
-#define rawgco2ts(o)  \
+#define gco2ts(o)  \
 	check_exp(novariant((o)->tt) == LUA_TSTRING, &((cast_u(o))->ts))
-#define gco2ts(o)	(&rawgco2ts(o)->tsv)
 #define rawgco2u(o)  check_exp((o)->tt == LUA_TUSERDATA, &((cast_u(o))->u))
 #define gco2u(o)	(&rawgco2u(o)->uv)
 #define gco2lcl(o)  check_exp((o)->tt == LUA_TLCL, &((cast_u(o))->cl.l))
@@ -203,13 +202,6 @@ union GCUnion {
 /* macro to convert a Lua object into a GCObject */
 #define obj2gco(v) \
 	check_exp(novariant((v)->tt) < LUA_TDEADKEY, (&(cast_u(v)->gc)))
-
-/*
-** macro to convert a TString into a GCObject.
-** (TString is a union, and therefore needs an access slightly different
-** from the other objects.)
-*/
-#define ts2gco(v)	(obj2gco(&(v)->tsv))
 
 
 /* actual number of total bytes allocated */

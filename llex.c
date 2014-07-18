@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.78 2014/05/21 15:22:02 roberto Exp roberto $
+** $Id: llex.c,v 2.79 2014/07/18 12:17:54 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -67,11 +67,11 @@ static void save (LexState *ls, int c) {
 void luaX_init (lua_State *L) {
   int i;
   TString *e = luaS_new(L, LUA_ENV);  /* create env name */
-  luaC_fix(L, ts2gco(e));  /* never collect this name */
+  luaC_fix(L, obj2gco(e));  /* never collect this name */
   for (i=0; i<NUM_RESERVED; i++) {
     TString *ts = luaS_new(L, luaX_tokens[i]);
-    luaC_fix(L, ts2gco(ts));  /* reserved words are never collected */
-    ts->tsv.extra = cast_byte(i+1);  /* reserved word */
+    luaC_fix(L, obj2gco(ts));  /* reserved words are never collected */
+    ts->extra = cast_byte(i+1);  /* reserved word */
   }
 }
 
@@ -137,7 +137,7 @@ TString *luaX_newstring (LexState *ls, const char *str, size_t l) {
     luaC_checkGC(L);
   }
   else {  /* string already present */
-    ts = rawtsvalue(keyfromval(o));  /* re-use value previously stored */
+    ts = tsvalue(keyfromval(o));  /* re-use value previously stored */
   }
   L->top--;  /* remove string from stack */
   return ts;
@@ -565,7 +565,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
                                   luaZ_bufflen(ls->buff));
           seminfo->ts = ts;
           if (isreserved(ts))  /* reserved word? */
-            return ts->tsv.extra - 1 + FIRST_RESERVED;
+            return ts->extra - 1 + FIRST_RESERVED;
           else {
             return TK_NAME;
           }
