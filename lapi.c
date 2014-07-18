@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.226 2014/07/17 13:53:37 roberto Exp roberto $
+** $Id: lapi.c,v 2.227 2014/07/18 12:17:54 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -420,7 +420,7 @@ LUA_API lua_CFunction lua_tocfunction (lua_State *L, int idx) {
 LUA_API void *lua_touserdata (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
   switch (ttnov(o)) {
-    case LUA_TUSERDATA: return (rawuvalue(o) + 1);
+    case LUA_TUSERDATA: return getudatamem(uvalue(o));
     case LUA_TLIGHTUSERDATA: return pvalue(o);
     default: return NULL;
   }
@@ -706,7 +706,7 @@ LUA_API int lua_getuservalue (lua_State *L, int idx) {
   lua_lock(L);
   o = index2addr(L, idx);
   api_check(ttisfulluserdata(o), "full userdata expected");
-  getuservalue(L, rawuvalue(o), L->top);
+  getuservalue(L, uvalue(o), L->top);
   api_incr_top(L);
   lua_unlock(L);
   return ttnov(L->top - 1);
@@ -842,7 +842,7 @@ LUA_API void lua_setuservalue (lua_State *L, int idx) {
   api_checknelems(L, 1);
   o = index2addr(L, idx);
   api_check(ttisfulluserdata(o), "full userdata expected");
-  setuservalue(L, rawuvalue(o), L->top - 1);
+  setuservalue(L, uvalue(o), L->top - 1);
   luaC_barrier(L, gcvalue(o), L->top - 1);
   L->top--;
   lua_unlock(L);
@@ -1142,7 +1142,7 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
   setuvalue(L, L->top, u);
   api_incr_top(L);
   lua_unlock(L);
-  return u + 1;
+  return getudatamem(u);
 }
 
 

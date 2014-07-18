@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.97 2014/07/18 12:17:54 roberto Exp roberto $
+** $Id: lobject.h,v 2.98 2014/07/18 13:36:14 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -157,8 +157,7 @@ typedef struct lua_TValue TValue;
 #define gcvalue(o)	check_exp(iscollectable(o), val_(o).gc)
 #define pvalue(o)	check_exp(ttislightuserdata(o), val_(o).p)
 #define tsvalue(o)	check_exp(ttisstring(o), gco2ts(val_(o).gc))
-#define rawuvalue(o)	check_exp(ttisfulluserdata(o), rawgco2u(val_(o).gc))
-#define uvalue(o)	(&rawuvalue(o)->uv)
+#define uvalue(o)	check_exp(ttisfulluserdata(o), gco2u(val_(o).gc))
 #define clvalue(o)	check_exp(ttisclosure(o), gco2cl(val_(o).gc))
 #define clLvalue(o)	check_exp(ttisLclosure(o), gco2lcl(val_(o).gc))
 #define clCvalue(o)	check_exp(ttisCclosure(o), gco2ccl(val_(o).gc))
@@ -214,7 +213,7 @@ typedef struct lua_TValue TValue;
 
 #define setuvalue(L,obj,x) \
   { TValue *io = (obj); Udata *x_ = (x); \
-    val_(io).gc = obj2gco(&x_->uv); settt_(io, ctb(LUA_TUSERDATA)); \
+    val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TUSERDATA)); \
     checkliveness(G(L),io); }
 
 #define setthvalue(L,obj,x) \
@@ -324,7 +323,7 @@ typedef union UTString {
 */
 #define getaddrstr(ts)	(cast(char *, (ts)) + sizeof(UTString))
 #define getstr(ts)  \
-	((void)(ts)->extra, cast(const char*, getaddrstr(ts)))
+  check_exp(sizeof((ts)->extra), cast(const char*, getaddrstr(ts)))
 
 /* get the actual string (array of bytes) from a Lua value */
 #define svalue(o)       getstr(tsvalue(o))
@@ -332,28 +331,42 @@ typedef union UTString {
 
 /*
 ** Header for userdata; memory area follows the end of this structure
+** (aligned according to 'UUdata'; see next).
 */
-typedef union Udata {
-  L_Umaxalign dummy;  /* ensures maximum alignment for `local' udata */
-  struct {
-    CommonHeader;
-    lu_byte ttuv_;  /* user value's tag */
-    struct Table *metatable;
-    size_t len;  /* number of bytes */
-    union Value user_;  /* user value */
-  } uv;
+typedef struct Udata {
+  CommonHeader;
+  lu_byte ttuv_;  /* user value's tag */
+  struct Table *metatable;
+  size_t len;  /* number of bytes */
+  union Value user_;  /* user value */
 } Udata;
 
 
+/*
+** Ensures that address after this type is always fully aligned.
+*/
+typedef union UUdata {
+  L_Umaxalign dummy;  /* ensures maximum alignment for `local' udata */
+  Udata uv;
+} UUdata;
+
+
+/*
+**  Get the address of memory block inside 'Udata'.
+** (Access to 'ttuv_' ensures that value is really a 'Udata'.)
+*/
+#define getudatamem(u)  \
+  check_exp(sizeof((u)->ttuv_), (cast(char*, (u)) + sizeof(UUdata)))
+
 #define setuservalue(L,u,o) \
 	{ const TValue *io=(o); Udata *iu = (u); \
-	  iu->uv.user_ = io->value_; iu->uv.ttuv_ = io->tt_; \
+	  iu->user_ = io->value_; iu->ttuv_ = io->tt_; \
 	  checkliveness(G(L),io); }
 
 
 #define getuservalue(L,u,o) \
 	{ TValue *io=(o); const Udata *iu = (u); \
-	  io->value_ = iu->uv.user_; io->tt_ = iu->uv.ttuv_; \
+	  io->value_ = iu->user_; io->tt_ = iu->ttuv_; \
 	  checkliveness(G(L),io); }
 
 

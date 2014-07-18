@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.111 2014/07/18 12:17:54 roberto Exp roberto $
+** $Id: lstate.h,v 2.112 2014/07/18 13:36:14 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -175,7 +175,7 @@ struct lua_State {
 union GCUnion {
   GCObject gc;  /* common header */
   struct TString ts;
-  union Udata u;
+  struct Udata u;
   union Closure cl;
   struct Table h;
   struct Proto p;
@@ -188,8 +188,7 @@ union GCUnion {
 /* macros to convert a GCObject into a specific value */
 #define gco2ts(o)  \
 	check_exp(novariant((o)->tt) == LUA_TSTRING, &((cast_u(o))->ts))
-#define rawgco2u(o)  check_exp((o)->tt == LUA_TUSERDATA, &((cast_u(o))->u))
-#define gco2u(o)	(&rawgco2u(o)->uv)
+#define gco2u(o)  check_exp((o)->tt == LUA_TUSERDATA, &((cast_u(o))->u))
 #define gco2lcl(o)  check_exp((o)->tt == LUA_TLCL, &((cast_u(o))->cl.l))
 #define gco2ccl(o)  check_exp((o)->tt == LUA_TCCL, &((cast_u(o))->cl.c))
 #define gco2cl(o)  \

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.178 2014/07/18 12:17:54 roberto Exp roberto $
+** $Id: ltests.c,v 2.179 2014/07/18 13:36:14 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -319,7 +319,7 @@ static void checkobject (global_State *g, GCObject *o, int maybedead) {
         TValue uservalue;
         Table *mt = gco2u(o)->metatable;
         checkobjref(g, o, mt);
-        getuservalue(g->mainthread, rawgco2u(o), &uservalue);
+        getuservalue(g->mainthread, gco2u(o), &uservalue);
         checkvalref(g, o, &uservalue);
         break;
       }

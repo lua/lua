@@ -15,7 +15,8 @@
 #define sizelstring(l)  (sizeof(union UTString) + ((l) + 1) * sizeof(char))
 #define sizestring(s)	sizelstring((s)->len)
 
-#define sizeudata(u)	(sizeof(union Udata)+(u)->len)
+#define sizeludata(l)	(sizeof(union UUdata) + (l))
+#define sizeudata(u)	sizeludata((u)->len)
 
 #define luaS_newliteral(L, s)	(luaS_newlstr(L, "" s, \
                                  (sizeof(s)/sizeof(char))-1))
