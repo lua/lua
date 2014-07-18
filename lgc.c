@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.184 2014/06/30 19:48:08 roberto Exp roberto $
+** $Id: lgc.c,v 2.185 2014/07/17 17:27:49 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -83,6 +83,9 @@
 #define markobject(g,t) \
   { if ((t) && iswhite(obj2gco(t))) reallymarkobject(g, obj2gco(t)); }
 
+#define markstring(g,t) \
+  { if ((t) && iswhite(ts2gco(t))) reallymarkobject(g, ts2gco(t)); }
+
 static void reallymarkobject (global_State *g, GCObject *o);
 
 
@@ -126,7 +129,7 @@ static void removeentry (Node *n) {
 static int iscleared (global_State *g, const TValue *o) {
   if (!iscollectable(o)) return 0;
   else if (ttisstring(o)) {
-    markobject(g, rawtsvalue(o));  /* strings are `values', so are never weak */
+    markobject(g, tsvalue(o));  /* strings are `values', so are never weak */
     return 0;
   }
   else return iswhite(gcvalue(o));
@@ -448,15 +451,15 @@ static int traverseproto (global_State *g, Proto *f) {
   int i;
   if (f->cache && iswhite(obj2gco(f->cache)))
     f->cache = NULL;  /* allow cache to be collected */
-  markobject(g, f->source);
+  markstring(g, f->source);
   for (i = 0; i < f->sizek; i++)  /* mark literals */
     markvalue(g, &f->k[i]);
   for (i = 0; i < f->sizeupvalues; i++)  /* mark upvalue names */
-    markobject(g, f->upvalues[i].name);
+    markstring(g, f->upvalues[i].name);
   for (i = 0; i < f->sizep; i++)  /* mark nested protos */
     markobject(g, f->p[i]);
   for (i = 0; i < f->sizelocvars; i++)  /* mark local-variable names */
-    markobject(g, f->locvars[i].varname);
+    markstring(g, f->locvars[i].varname);
   return sizeof(Proto) + sizeof(Instruction) * f->sizecode +
                          sizeof(Proto *) * f->sizep +
                          sizeof(TValue) * f->sizek +

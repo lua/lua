@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.176 2014/07/17 13:53:37 roberto Exp roberto $
+** $Id: ltests.c,v 2.177 2014/07/17 17:27:49 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -207,10 +207,11 @@ static int testobjref (global_State *g, GCObject *f, GCObject *t) {
   return r1;
 }
 
-#define checkobjref(g,f,t)	checkobjref_(g,f,obj2gco(t))
-static void checkobjref_ (global_State *g, GCObject *f, GCObject *t) {
-  lua_assert((t) == NULL || testobjref(g,f,obj2gco(t)));
-}
+#define checkobjref(g,f,t)  \
+	{ if (t) lua_longassert(testobjref(g,f,obj2gco(t))); }
+
+#define checkstrref(g,f,t)  \
+	{ if (t) lua_longassert(testobjref(g,f,ts2gco(t))); }
 
 
 static void checkvalref (global_State *g, GCObject *f, const TValue *t) {
@@ -244,17 +245,17 @@ static void checkproto (global_State *g, Proto *f) {
   int i;
   GCObject *fgc = obj2gco(f);
   checkobjref(g, fgc, f->cache);
-  checkobjref(g, fgc, f->source);
+  checkstrref(g, fgc, f->source);
   for (i=0; i<f->sizek; i++) {
-    if (ttisstring(f->k+i))
-      checkobjref(g, fgc, rawtsvalue(f->k+i));
+    if (ttisstring(f->k + i))
+      checkobjref(g, fgc, tsvalue(f->k + i));
   }
   for (i=0; i<f->sizeupvalues; i++)
-    checkobjref(g, fgc, f->upvalues[i].name);
+    checkstrref(g, fgc, f->upvalues[i].name);
   for (i=0; i<f->sizep; i++)
     checkobjref(g, fgc, f->p[i]);
   for (i=0; i<f->sizelocvars; i++)
-    checkobjref(g, fgc, f->locvars[i].varname);
+    checkstrref(g, fgc, f->locvars[i].varname);
 }
 
 

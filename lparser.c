@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.138 2013/12/30 20:47:58 roberto Exp roberto $
+** $Id: lparser.c,v 2.139 2014/06/19 18:27:20 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -164,7 +164,7 @@ static int registerlocalvar (LexState *ls, TString *varname) {
                   LocVar, SHRT_MAX, "local variables");
   while (oldsize < f->sizelocvars) f->locvars[oldsize++].varname = NULL;
   f->locvars[fs->nlocvars].varname = varname;
-  luaC_objbarrier(ls->L, f, varname);
+  luaC_objbarrier(ls->L, f, ts2gco(varname));
   return fs->nlocvars++;
 }
 
@@ -232,7 +232,7 @@ static int newupvalue (FuncState *fs, TString *name, expdesc *v) {
   f->upvalues[fs->nups].instack = (v->k == VLOCAL);
   f->upvalues[fs->nups].idx = cast_byte(v->u.info);
   f->upvalues[fs->nups].name = name;
-  luaC_objbarrier(fs->ls->L, f, name);
+  luaC_objbarrier(fs->ls->L, f, ts2gco(name));
   return fs->nups++;
 }
 
@@ -1630,7 +1630,7 @@ LClosure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
   incr_top(L);
   funcstate.f = cl->p = luaF_newproto(L);
   funcstate.f->source = luaS_new(L, name);  /* create and anchor TString */
-  luaC_objbarrier(L, funcstate.f, funcstate.f->source);
+  luaC_objbarrier(L, funcstate.f, ts2gco(funcstate.f->source));
   lexstate.buff = buff;
   lexstate.dyd = dyd;
   dyd->actvar.n = dyd->gt.n = dyd->label.n = 0;

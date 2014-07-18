@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.109 2014/07/17 17:09:50 roberto Exp roberto $
+** $Id: lstate.h,v 2.110 2014/07/17 17:27:49 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -170,7 +170,7 @@ struct lua_State {
 
 
 /*
-** Union of all collectable objects
+** Union of all collectable objects (only for conversions)
 */
 union GCUnion {
   GCObject gc;  /* common header */
@@ -200,8 +200,16 @@ union GCUnion {
 #define gco2th(o)  check_exp((o)->tt == LUA_TTHREAD, &((cast_u(o))->th))
 
 
-/* macro to convert any Lua object into a GCObject */
-#define obj2gco(v)	(&(cast_u(v)->gc))
+/* macro to convert a Lua object into a GCObject */
+#define obj2gco(v) \
+	check_exp(novariant((v)->tt) < LUA_TDEADKEY, (&(cast_u(v)->gc)))
+
+/*
+** macro to convert a TString into a GCObject.
+** (TString is a union, and therefore needs an access slightly different
+** from the other objects.)
+*/
+#define ts2gco(v)	(obj2gco(&(v)->tsv))
 
 
 /* actual number of total bytes allocated */

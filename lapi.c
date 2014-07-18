@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.225 2014/07/15 21:26:50 roberto Exp roberto $
+** $Id: lapi.c,v 2.226 2014/07/17 13:53:37 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -820,7 +820,7 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
     case LUA_TUSERDATA: {
       uvalue(obj)->metatable = mt;
       if (mt) {
-        luaC_objbarrier(L, rawuvalue(obj), mt);
+        luaC_objbarrier(L, uvalue(obj), mt);
         luaC_checkfinalizer(L, gcvalue(obj), mt);
       }
       break;
@@ -958,7 +958,7 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
       const TValue *gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
       /* set global table as 1st upvalue of 'f' (may be LUA_ENV) */
       setobj(L, f->upvals[0]->v, gt);
-      luaC_barrier(L, f->upvals[0], gt);
+      luaC_upvalbarrier(L, f->upvals[0]);
     }
   }
   lua_unlock(L);
