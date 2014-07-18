@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.118 2014/07/15 21:26:50 roberto Exp roberto $
+** $Id: llimits.h,v 1.119 2014/07/18 18:18:45 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -28,19 +28,19 @@ typedef unsigned char lu_byte;
 
 
 /* maximum value for size_t */
-#define MAX_SIZET	((size_t)(~(size_t)0)-2)
+#define MAX_SIZET	((size_t)(~(size_t)0))
 
 /* maximum size visible for Lua (must be representable in a lua_Integer */
 #define MAX_SIZE	(sizeof(size_t) < sizeof(lua_Integer) ? MAX_SIZET \
-                          : (size_t)(LUA_MAXINTEGER)-2)
+                          : (size_t)(LUA_MAXINTEGER))
 
 
-#define MAX_LUMEM	((lu_mem)(~(lu_mem)0)-2)
+#define MAX_LUMEM	((lu_mem)(~(lu_mem)0))
 
-#define MAX_LMEM	((l_mem) ((MAX_LUMEM >> 1) - 2))
+#define MAX_LMEM	((l_mem)(MAX_LUMEM >> 1))
 
 
-#define MAX_INT (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
+#define MAX_INT		INT_MAX  /* maximum value of an int */
 
 
 /*
