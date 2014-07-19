@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.187 2014/07/18 13:36:14 roberto Exp roberto $
+** $Id: lgc.c,v 2.188 2014/07/18 14:46:47 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -135,13 +135,13 @@ static int iscleared (global_State *g, const TValue *o) {
 
 /*
 ** barrier that moves collector forward, that is, mark the white object
-** being pointed by a black object.
+** being pointed by a black object. (If in sweep phase, clear the black
+** object to white [sweep it] to avoid other barrier calls for this
+** same object.)
 */
 void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v) {
   global_State *g = G(L);
   lua_assert(isblack(o) && iswhite(v) && !isdead(g, v) && !isdead(g, o));
-  lua_assert(g->gcstate != GCSpause);
-  lua_assert(o->tt != LUA_TTABLE);  /* tables use a back barrier */
   if (keepinvariant(g))  /* must keep invariant? */
     reallymarkobject(g, v);  /* restore invariant */
   else {  /* sweep phase */
