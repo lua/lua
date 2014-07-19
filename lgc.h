@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.83 2014/07/17 17:27:49 roberto Exp roberto $
+** $Id: lgc.h,v 2.84 2014/07/19 15:09:37 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -107,15 +107,15 @@
 
 
 #define luaC_barrier(L,p,v) {  \
-	if (iscollectable(v) && isblack(obj2gco(p)) && iswhite(gcvalue(v)))  \
+	if (iscollectable(v) && isblack(p) && iswhite(gcvalue(v)))  \
 	luaC_barrier_(L,obj2gco(p),gcvalue(v)); }
 
 #define luaC_barrierback(L,p,v) {  \
-	if (iscollectable(v) && isblack(obj2gco(p)) && iswhite(gcvalue(v)))  \
+	if (iscollectable(v) && isblack(p) && iswhite(gcvalue(v)))  \
 	luaC_barrierback_(L,p); }
 
 #define luaC_objbarrier(L,p,o) {  \
-	if (isblack(obj2gco(p)) && iswhite(obj2gco(o))) \
+	if (isblack(p) && iswhite(o)) \
 		luaC_barrier_(L,obj2gco(p),obj2gco(o)); }
 
 #define luaC_upvalbarrier(L,uv) \

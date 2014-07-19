@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.189 2014/07/19 14:44:19 roberto Exp roberto $
+** $Id: lgc.c,v 2.190 2014/07/19 15:09:37 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -81,7 +81,7 @@
   if (valiswhite(o)) reallymarkobject(g,gcvalue(o)); }
 
 #define markobject(g,t) \
-  { if ((t) && iswhite(obj2gco(t))) reallymarkobject(g, obj2gco(t)); }
+  { if ((t) && iswhite(t)) reallymarkobject(g, obj2gco(t)); }
 
 static void reallymarkobject (global_State *g, GCObject *o);
 
@@ -301,8 +301,8 @@ static void remarkupvals (global_State *g) {
   lua_State *thread;
   lua_State **p = &g->twups;
   while ((thread = *p) != NULL) {
-    lua_assert(!isblack(obj2gco(thread)));  /* threads are never black */
-    if (isgray(obj2gco(thread)) && thread->openupval != NULL)
+    lua_assert(!isblack(thread));  /* threads are never black */
+    if (isgray(thread) && thread->openupval != NULL)
       p = &thread->twups;  /* keep marked thread with upvalues in the list */
     else {  /* thread is not marked or without upvalues */
       UpVal *uv;
@@ -427,7 +427,7 @@ static lu_mem traversetable (global_State *g, Table *h) {
       ((weakkey = strchr(svalue(mode), 'k')),
        (weakvalue = strchr(svalue(mode), 'v')),
        (weakkey || weakvalue))) {  /* is really weak? */
-    black2gray(obj2gco(h));  /* keep table gray */
+    black2gray(h);  /* keep table gray */
     if (!weakkey)  /* strong keys? */
       traverseweakvalue(g, h);
     else if (!weakvalue)  /* strong values? */
@@ -444,7 +444,7 @@ static lu_mem traversetable (global_State *g, Table *h) {
 
 static int traverseproto (global_State *g, Proto *f) {
   int i;
-  if (f->cache && iswhite(obj2gco(f->cache)))
+  if (f->cache && iswhite(f->cache))
     f->cache = NULL;  /* allow cache to be collected */
   markobject(g, f->source);
   for (i = 0; i < f->sizek; i++)  /* mark literals */
@@ -973,7 +973,7 @@ static l_mem atomic (lua_State *L) {
   l_mem work;
   GCObject *origweak, *origall;
   g->GCmemtrav = 0;  /* start counting work */
-  lua_assert(!iswhite(obj2gco(g->mainthread)));
+  lua_assert(!iswhite(g->mainthread));
   g->gcstate = GCSinsideatomic;
   markobject(g, L);  /* mark running thread */
   /* registry and global metatables may be changed by API */
@@ -1064,7 +1064,7 @@ static lu_mem singlestep (lua_State *L) {
       return sweepstep(L, g, GCSswpend, NULL);
     }
     case GCSswpend: {  /* finish sweeps */
-      makewhite(g, obj2gco(g->mainthread));  /* sweep main thread */
+      makewhite(g, g->mainthread);  /* sweep main thread */
       checkSizes(L, g);
       g->gcstate = GCScallfin;
       return 0;

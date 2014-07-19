@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.179 2014/07/18 13:36:14 roberto Exp roberto $
+** $Id: ltests.c,v 2.180 2014/07/18 14:46:47 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -294,7 +294,7 @@ static void checkstack (global_State *g, lua_State *L1) {
   StkId o;
   CallInfo *ci;
   UpVal *uv;
-  lua_assert(!isdead(g, obj2gco(L1)));
+  lua_assert(!isdead(g, L1));
   for (uv = L1->openupval; uv != NULL; uv = uv->u.open.next)
     lua_assert(upisopen(uv));  /* must be open */
   for (ci = L1->ci; ci != NULL; ci = ci->previous) {
@@ -404,7 +404,7 @@ int lua_checkmemory (lua_State *L) {
   GCObject *o;
   int maybedead;
   if (keepinvariant(g)) {
-    lua_assert(!iswhite(obj2gco(g->mainthread)));
+    lua_assert(!iswhite(g->mainthread));
     lua_assert(!iswhite(gcvalue(&g->l_registry)));
   }
   lua_assert(!isdead(g, gcvalue(&g->l_registry)));
