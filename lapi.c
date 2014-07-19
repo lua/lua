@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.227 2014/07/18 12:17:54 roberto Exp roberto $
+** $Id: lapi.c,v 2.228 2014/07/18 14:46:47 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -755,42 +755,48 @@ LUA_API void lua_setfield (lua_State *L, int idx, const char *k) {
 
 
 LUA_API void lua_rawset (lua_State *L, int idx) {
-  StkId t;
+  StkId o;
+  Table *t;
   lua_lock(L);
   api_checknelems(L, 2);
-  t = index2addr(L, idx);
-  api_check(ttistable(t), "table expected");
-  setobj2t(L, luaH_set(L, hvalue(t), L->top-2), L->top-1);
-  invalidateTMcache(hvalue(t));
-  luaC_barrierback(L, gcvalue(t), L->top-1);
+  o = index2addr(L, idx);
+  api_check(ttistable(o), "table expected");
+  t = hvalue(o);
+  setobj2t(L, luaH_set(L, t, L->top-2), L->top-1);
+  invalidateTMcache(t);
+  luaC_barrierback(L, t, L->top-1);
   L->top -= 2;
   lua_unlock(L);
 }
 
 
 LUA_API void lua_rawseti (lua_State *L, int idx, lua_Integer n) {
-  StkId t;
+  StkId o;
+  Table *t;
   lua_lock(L);
   api_checknelems(L, 1);
-  t = index2addr(L, idx);
-  api_check(ttistable(t), "table expected");
-  luaH_setint(L, hvalue(t), n, L->top - 1);
-  luaC_barrierback(L, gcvalue(t), L->top-1);
+  o = index2addr(L, idx);
+  api_check(ttistable(o), "table expected");
+  t = hvalue(o);
+  luaH_setint(L, t, n, L->top - 1);
+  luaC_barrierback(L, t, L->top-1);
   L->top--;
   lua_unlock(L);
 }
 
 
 LUA_API void lua_rawsetp (lua_State *L, int idx, const void *p) {
-  StkId t;
+  StkId o;
+  Table *t;
   TValue k;
   lua_lock(L);
   api_checknelems(L, 1);
-  t = index2addr(L, idx);
-  api_check(ttistable(t), "table expected");
+  o = index2addr(L, idx);
+  api_check(ttistable(o), "table expected");
+  t = hvalue(o);
   setpvalue(&k, cast(void *, p));
-  setobj2t(L, luaH_set(L, hvalue(t), &k), L->top - 1);
-  luaC_barrierback(L, gcvalue(t), L->top - 1);
+  setobj2t(L, luaH_set(L, t, &k), L->top - 1);
+  luaC_barrierback(L, t, L->top - 1);
   L->top--;
   lua_unlock(L);
 }

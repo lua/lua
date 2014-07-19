@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.188 2014/07/18 14:46:47 roberto Exp roberto $
+** $Id: lgc.c,v 2.189 2014/07/19 14:44:19 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -153,16 +153,14 @@ void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v) {
 
 /*
 ** barrier that moves collector backward, that is, mark the black object
-** pointing to a white object as gray again. (Current implementation
-** only works for tables; access to 'gclist' is not uniform across
-** different types.)
+** pointing to a white object as gray again.
 */
-void luaC_barrierback_ (lua_State *L, GCObject *o) {
+void luaC_barrierback_ (lua_State *L, Table *t) {
   global_State *g = G(L);
-  lua_assert(isblack(o) && !isdead(g, o) && o->tt == LUA_TTABLE);
-  black2gray(o);  /* make object gray (again) */
-  gco2t(o)->gclist = g->grayagain;
-  g->grayagain = o;
+  lua_assert(isblack(t) && !isdead(g, t));
+  black2gray(t);  /* make table gray (again) */
+  t->gclist = g->grayagain;
+  g->grayagain = obj2gco(t);
 }
 
 

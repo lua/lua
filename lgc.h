@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.82 2014/03/19 18:51:16 roberto Exp roberto $
+** $Id: lgc.h,v 2.83 2014/07/17 17:27:49 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -112,7 +112,7 @@
 
 #define luaC_barrierback(L,p,v) {  \
 	if (iscollectable(v) && isblack(obj2gco(p)) && iswhite(gcvalue(v)))  \
-	luaC_barrierback_(L,obj2gco(p)); }
+	luaC_barrierback_(L,p); }
 
 #define luaC_objbarrier(L,p,o) {  \
 	if (isblack(obj2gco(p)) && iswhite(obj2gco(o))) \
@@ -129,7 +129,7 @@ LUAI_FUNC void luaC_runtilstate (lua_State *L, int statesmask);
 LUAI_FUNC void luaC_fullgc (lua_State *L, int isemergency);
 LUAI_FUNC GCObject *luaC_newobj (lua_State *L, int tt, size_t sz);
 LUAI_FUNC void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v);
-LUAI_FUNC void luaC_barrierback_ (lua_State *L, GCObject *o);
+LUAI_FUNC void luaC_barrierback_ (lua_State *L, Table *o);
 LUAI_FUNC void luaC_upvalbarrier_ (lua_State *L, UpVal *uv);
 LUAI_FUNC void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt);
 LUAI_FUNC void luaC_upvdeccount (lua_State *L, UpVal *uv);
