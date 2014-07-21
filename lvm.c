@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.218 2014/07/17 12:30:53 roberto Exp roberto $
+** $Id: lvm.c,v 2.219 2014/07/18 13:36:14 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -549,7 +549,7 @@ static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
     ncl->upvals[i]->refcount++;
     /* new closure is white, so we do not need a barrier here */
   }
-  if (!isblack(obj2gco(p)))  /* cache will not break GC invariant? */
+  if (!isblack(p))  /* cache will not break GC invariant? */
     p->cache = ncl;  /* save it on cache for reuse */
 }
 
