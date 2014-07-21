@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.228 2014/07/18 14:46:47 roberto Exp roberto $
+** $Id: lapi.c,v 2.229 2014/07/19 15:09:37 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1154,13 +1154,13 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
 
 
 static const char *aux_upvalue (StkId fi, int n, TValue **val,
-                                GCObject **owner, UpVal **uv) {
+                                CClosure **owner, UpVal **uv) {
   switch (ttype(fi)) {
     case LUA_TCCL: {  /* C closure */
       CClosure *f = clCvalue(fi);
       if (!(1 <= n && n <= f->nupvalues)) return NULL;
       *val = &f->upvalue[n-1];
-      if (owner) *owner = obj2gco(f);
+      if (owner) *owner = f;
       return "";
     }
     case LUA_TLCL: {  /* Lua closure */
@@ -1195,7 +1195,7 @@ LUA_API const char *lua_getupvalue (lua_State *L, int funcindex, int n) {
 LUA_API const char *lua_setupvalue (lua_State *L, int funcindex, int n) {
   const char *name;
   TValue *val = NULL;  /* to avoid warnings */
-  GCObject *owner = NULL;
+  CClosure *owner = NULL;
   UpVal *uv = NULL;
   StkId fi;
   lua_lock(L);
