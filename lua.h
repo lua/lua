@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.308 2014/06/26 17:25:11 roberto Exp roberto $
+** $Id: lua.h,v 1.309 2014/07/17 13:53:37 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -158,7 +158,6 @@ LUA_API int   (lua_gettop) (lua_State *L);
 LUA_API void  (lua_settop) (lua_State *L, int idx);
 LUA_API void  (lua_pushvalue) (lua_State *L, int idx);
 LUA_API void  (lua_rotate) (lua_State *L, int idx, int n);
-LUA_API void  (lua_replace) (lua_State *L, int idx);
 LUA_API void  (lua_copy) (lua_State *L, int fromidx, int toidx);
 LUA_API int   (lua_checkstack) (lua_State *L, int sz);
 
@@ -365,6 +364,8 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 #define lua_insert(L,idx)	lua_rotate(L, (idx), 1)
 
 #define lua_remove(L,idx)	(lua_rotate(L, (idx), -1), lua_pop(L, 1))
+
+#define lua_replace(L,idx)	(lua_copy(L, -1, (idx)), lua_pop(L, 1))
 
 /* }============================================================== */
 

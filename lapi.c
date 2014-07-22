@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.229 2014/07/19 15:09:37 roberto Exp roberto $
+** $Id: lapi.c,v 2.230 2014/07/21 16:02:57 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -43,6 +43,9 @@ const char lua_ident[] =
 
 /* test for pseudo index */
 #define ispseudo(i)		((i) <= LUA_REGISTRYINDEX)
+
+/* test for upvalue */
+#define isupvalue(i)		((i) < LUA_REGISTRYINDEX)
 
 /* test for valid but not pseudo index */
 #define isstackindex(i, o)	(isvalid(o) && !ispseudo(i))
@@ -214,31 +217,17 @@ LUA_API void lua_rotate (lua_State *L, int idx, int n) {
 }
 
 
-static void moveto (lua_State *L, TValue *fr, int idx) {
-  TValue *to = index2addr(L, idx);
+LUA_API void lua_copy (lua_State *L, int fromidx, int toidx) {
+  TValue *fr, *to;
+  lua_lock(L);
+  fr = index2addr(L, fromidx);
+  to = index2addr(L, toidx);
   api_checkvalidindex(to);
   setobj(L, to, fr);
-  if (idx < LUA_REGISTRYINDEX)  /* function upvalue? */
+  if (isupvalue(toidx))  /* function upvalue? */
     luaC_barrier(L, clCvalue(L->ci->func), fr);
   /* LUA_REGISTRYINDEX does not need gc barrier
      (collector revisits it before finishing collection) */
-}
-
-
-LUA_API void lua_replace (lua_State *L, int idx) {
-  lua_lock(L);
-  api_checknelems(L, 1);
-  moveto(L, L->top - 1, idx);
-  L->top--;
-  lua_unlock(L);
-}
-
-
-LUA_API void lua_copy (lua_State *L, int fromidx, int toidx) {
-  TValue *fr;
-  lua_lock(L);
-  fr = index2addr(L, fromidx);
-  moveto(L, fr, toidx);
   lua_unlock(L);
 }
 
