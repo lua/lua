@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.34 2013/11/08 17:36:05 roberto Exp roberto $
+** $Id: ltests.h,v 2.35 2014/07/18 13:27:45 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -10,11 +10,23 @@
 
 #include <stdlib.h>
 
-/* do not use compatibility macros in Lua code */
-#undef LUA_COMPAT_API
+/* test Lua with no compatibility code */
+#undef LUA_COMPAT_MATHLIB
+#undef LUA_COMPAT_BITLIB
+#undef LUA_COMPAT_APIUNSIGNED
+#undef LUA_COMPAT_FLOATSTRING
+#undef LUA_COMPAT_UNPACK
+#undef LUA_COMPAT_LOADERS
+#undef LUA_COMPAT_LOG10
+#undef LUA_COMPAT_LOADSTRING
+#undef LUA_COMPAT_MAXN
+#undef LUA_COMPAT_MODULE
+
 
 #define LUA_DEBUG
 
+
+/* turn on assertions */
 #undef NDEBUG
 #include <assert.h>
 #define lua_assert(c)           assert(c)
@@ -24,7 +36,7 @@
 #define UNUSED(x)       (x=0, (void)(x))
 
 
-/* memory allocator control variables */
+/* memory-allocator control variables */
 typedef struct Memcontrol {
   unsigned long numblocks;
   unsigned long total;
@@ -42,19 +54,14 @@ extern Memcontrol l_memcontrol;
 extern void *l_Trick;
 
 
-void *debug_realloc (void *ud, void *block, size_t osize, size_t nsize);
 
-
-typedef struct CallInfo *pCallInfo;
-
+/*
+** Function to traverse and check all memory used by Lua
+*/
 int lua_checkmemory (lua_State *L);
 
 
 /* test for lock/unlock */
-#undef luai_userstateopen
-#undef luai_userstatethread
-#undef lua_lock
-#undef lua_unlock
 
 struct L_EXTRA { int lock; int *plock; };
 #define LUAI_EXTRASPACE		sizeof(struct L_EXTRA)
@@ -70,8 +77,10 @@ struct L_EXTRA { int lock; int *plock; };
 #define lua_unlock(l)   lua_assert(--(*getlock(l)->plock) == 0)
 
 
+
 int luaB_opentests (lua_State *L);
 
+void *debug_realloc (void *ud, void *block, size_t osize, size_t nsize);
 
 #if defined(lua_c)
 #define luaL_newstate()		lua_newstate(debug_realloc, &l_memcontrol)
@@ -93,3 +102,4 @@ int luaB_opentests (lua_State *L);
 
 
 #endif
+
