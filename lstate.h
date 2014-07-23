@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.112 2014/07/18 13:36:14 roberto Exp roberto $
+** $Id: lstate.h,v 2.113 2014/07/18 14:46:47 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -60,9 +60,6 @@ typedef struct CallInfo {
   StkId func;  /* function index in the stack */
   StkId	top;  /* top for this function */
   struct CallInfo *previous, *next;  /* dynamic call link */
-  ptrdiff_t extra;
-  short nresults;  /* expected number of results from this function */
-  lu_byte callstatus;
   union {
     struct {  /* only for Lua functions */
       StkId base;  /* base for this function */
@@ -74,6 +71,9 @@ typedef struct CallInfo {
       lua_Ctx ctx;  /* context info. in case of yields */
     } c;
   } u;
+  ptrdiff_t extra;
+  short nresults;  /* expected number of results from this function */
+  lu_byte callstatus;
 } CallInfo;
 
 
@@ -149,20 +149,20 @@ struct lua_State {
   const Instruction *oldpc;  /* last pc traced */
   StkId stack_last;  /* last free slot in the stack */
   StkId stack;  /* stack base */
-  int stacksize;
-  unsigned short nny;  /* number of non-yieldable calls in stack */
-  unsigned short nCcalls;  /* number of nested C calls */
-  lu_byte hookmask;
-  lu_byte allowhook;
-  int basehookcount;
-  int hookcount;
-  lua_Hook hook;
   UpVal *openupval;  /* list of open upvalues in this stack */
   GCObject *gclist;
   struct lua_State *twups;  /* list of threads with open upvalues */
   struct lua_longjmp *errorJmp;  /* current error recover point */
-  ptrdiff_t errfunc;  /* current error handling function (stack index) */
   CallInfo base_ci;  /* CallInfo for first level (C calling Lua) */
+  lua_Hook hook;
+  ptrdiff_t errfunc;  /* current error handling function (stack index) */
+  int stacksize;
+  int basehookcount;
+  int hookcount;
+  unsigned short nny;  /* number of non-yieldable calls in stack */
+  unsigned short nCcalls;  /* number of nested C calls */
+  lu_byte hookmask;
+  lu_byte allowhook;
 };
 
 
