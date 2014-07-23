@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.35 2014/07/18 13:27:45 roberto Exp roberto $
+** $Id: ltests.h,v 2.36 2014/07/23 16:47:47 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -64,7 +64,8 @@ int lua_checkmemory (lua_State *L);
 /* test for lock/unlock */
 
 struct L_EXTRA { int lock; int *plock; };
-#define LUAI_EXTRASPACE		sizeof(struct L_EXTRA)
+/* extra space before a Lua state (+1 to make it unaligned) */
+#define LUAI_EXTRASPACE		(sizeof(struct L_EXTRA) + 1)
 #define getlock(l)	(cast(struct L_EXTRA *, l) - 1)
 #define luai_userstateopen(l)  \
 	(getlock(l)->lock = 0, getlock(l)->plock = &(getlock(l)->lock))
