@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.180 2014/07/18 14:46:47 roberto Exp roberto $
+** $Id: ltests.c,v 2.181 2014/07/19 15:14:46 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -280,7 +280,7 @@ static void checkLclosure (global_State *g, LClosure *cl) {
 }
 
 
-static int lua_checkpc (pCallInfo ci) {
+static int lua_checkpc (CallInfo *ci) {
   if (!isLua(ci)) return 1;
   else {
     Proto *p = ci_func(ci)->p;
