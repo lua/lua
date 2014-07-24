@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.291 2014/07/16 13:56:59 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.292 2014/07/17 13:53:37 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -244,17 +244,53 @@ static int luaB_pairs (lua_State *L) {
 }
 
 
-static int ipairsaux (lua_State *L) {
-  int i = luaL_checkint(L, 2);
+/*
+** Traversal function for 'ipairs' for raw tables
+*/
+static int ipairsaux_raw (lua_State *L) {
+  int i = luaL_checkint(L, 2) + 1;
   luaL_checktype(L, 1, LUA_TTABLE);
-  i++;  /* next value */
   lua_pushinteger(L, i);
   return (lua_rawgeti(L, 1, i) == LUA_TNIL) ? 1 : 2;
 }
 
 
+/*
+** Traversal function for 'ipairs' for tables with metamethods
+*/
+static int ipairsaux (lua_State *L) {
+  int i = luaL_checkint(L, 2) + 1;
+  if (i > luaL_len(L, 1)) {  /* larger than length? */
+    lua_pushnil(L);  /* end traversal */
+    return 1;
+  }
+  else {
+    lua_pushinteger(L, i);
+    lua_pushinteger(L, i);  /* key for indexing table */
+    lua_gettable(L, 1);
+    return 2;
+  }
+}
+
+
+/*
+** This function will use either 'ipairsaux' or 'ipairsaux_raw' to
+** traverse a table, depending on whether the table has metamethods
+** that can affect the traversal.
+*/
 static int luaB_ipairs (lua_State *L) {
-  return pairsmeta(L, "__ipairs", 1, ipairsaux);
+  lua_CFunction iter =
+     (luaL_getmetafield(L, 1, "__len") ||
+      luaL_getmetafield(L, 1, "__index"))
+        ? ipairsaux : ipairsaux_raw;
+#if defined(LUA_COMPAT_IPAIRS)
+  return pairsmeta(L, "__ipairs", 1, iter);
+#else
+  lua_pushcfunction(L, iter);  /* iteration function */
+  lua_pushvalue(L, 1);  /* state */
+  lua_pushinteger(L, 0);  /* initial value */
+  return 3;
+#endif
 }
 
 
