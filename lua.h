@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.309 2014/07/17 13:53:37 roberto Exp roberto $
+** $Id: lua.h,v 1.310 2014/07/22 18:07:47 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -331,6 +331,8 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 ** some useful macros
 ** ===============================================================
 */
+
+#define lua_getextraspace(L)	((void *)((char *)(L) - LUA_EXTRASPACE))
 
 #define lua_tonumber(L,i)	lua_tonumberx(L,(i),NULL)
 #define lua_tointeger(L,i)	lua_tointegerx(L,(i),NULL)

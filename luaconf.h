@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.209 2014/06/26 18:30:27 roberto Exp roberto $
+** $Id: luaconf.h,v 1.210 2014/07/17 13:53:37 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -208,6 +208,14 @@
 #define LUAI_DDEF	/* empty */
 #endif				/* } */
 
+
+
+/*
+@@ LUA_EXTRASPACE defines the size of a raw memory area associated with
+** a Lua state with very fast access.
+** CHANGE it if you need a different size.
+*/
+#define LUA_EXTRASPACE		(sizeof(void *))
 
 
 /*
