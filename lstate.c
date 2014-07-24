@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.123 2014/07/18 13:36:14 roberto Exp roberto $
+** $Id: lstate.c,v 2.124 2014/07/24 14:00:16 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -250,7 +250,7 @@ static void close_state (lua_State *L) {
 
 
 LUA_API lua_State *lua_newthread (lua_State *L) {
-    global_State *g = G(L);
+  global_State *g = G(L);
   lua_State *L1;
   lua_lock(L);
   luaC_checkGC(L);
@@ -270,7 +270,8 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   L1->hook = L->hook;
   resethookcount(L1);
   /* initialize L1 extra space */
-  memcpy(lua_getextraspace(L1), lua_getextraspace(L), LUA_EXTRASPACE);
+  memcpy(lua_getextraspace(L1), lua_getextraspace(g->mainthread),
+         LUA_EXTRASPACE);
   luai_userstatethread(L, L1);
   stack_init(L1, L);  /* init stack */
   lua_unlock(L);
