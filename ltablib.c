@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.70 2014/05/16 18:53:25 roberto Exp roberto $
+** $Id: ltablib.c,v 1.71 2014/07/16 12:44:52 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -128,6 +128,43 @@ static int tremove (lua_State *L) {
   }
   lua_pushnil(L);
   (*ta.seti)(L, 1, pos);  /* t[pos] = nil */
+  return 1;
+}
+
+
+static int tcopy (lua_State *L) {
+  TabA ta;
+  lua_Integer f = luaL_checkinteger(L, 2);
+  lua_Integer e = luaL_checkinteger(L, 3);
+  lua_Integer t;
+  int tt = 4;  /* destination table */
+  /* the following restriction avoids several problems with overflows */
+  luaL_argcheck(L, f > 0, 2, "initial position must be positive");
+  if (lua_istable(L, tt))
+    t = luaL_checkinteger(L, 5);
+  else {
+    tt = 1;  /* destination table is equal to source */
+    t = luaL_checkinteger(L, 4);
+  }
+  if (e >= f) {  /* otherwise, nothing to move */
+    lua_Integer n, i;
+    ta.geti = (!luaL_getmetafield(L, 1, "__index")) ? lua_rawgeti : geti;
+    ta.seti = (!luaL_getmetafield(L, tt, "__newindex")) ? lua_rawseti : seti;
+    n = e - f + 1;  /* number of elements to move */
+    if (t > f) {
+      for (i = n - 1; i >= 0; i--) {
+        (*ta.geti)(L, 1, f + i);
+        (*ta.seti)(L, tt, t + i);
+      }
+    }
+    else {
+      for (i = 0; i < n; i++) {
+        (*ta.geti)(L, 1, f + i);
+        (*ta.seti)(L, tt, t + i);
+      }
+    }
+  }
+  lua_pushvalue(L, tt);  /* return "to table" */
   return 1;
 }
 
@@ -318,6 +355,7 @@ static const luaL_Reg tab_funcs[] = {
   {"pack", pack},
   {"unpack", unpack},
   {"remove", tremove},
+  {"copy", tcopy},
   {"sort", sort},
   {NULL, NULL}
 };
