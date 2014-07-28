@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.106 2014/07/16 13:47:13 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.107 2014/07/17 12:30:53 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -161,6 +161,14 @@ static int math_modf (lua_State *L) {
 
 static int math_sqrt (lua_State *L) {
   lua_pushnumber(L, l_mathop(sqrt)(luaL_checknumber(L, 1)));
+  return 1;
+}
+
+
+static int math_ult (lua_State *L) {
+  lua_Integer a = luaL_checkinteger(L, 1);
+  lua_Integer b = luaL_checkinteger(L, 2);
+  lua_pushboolean(L, (lua_Unsigned)a < (lua_Unsigned)b);
   return 1;
 }
 
@@ -343,6 +351,7 @@ static const luaL_Reg mathlib[] = {
   {"tointeger", math_toint},
   {"floor", math_floor},
   {"fmod",   math_fmod},
+  {"ult",   math_ult},
   {"log",   math_log},
   {"max",   math_max},
   {"min",   math_min},
