@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.71 2014/07/16 12:44:52 roberto Exp roberto $
+** $Id: ltablib.c,v 1.72 2014/07/25 18:46:00 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -227,13 +227,13 @@ static int unpack (lua_State *L) {
   e = luaL_opt(L, luaL_checkinteger, 3, luaL_len(L, 1));
   if (i > e) return 0;  /* empty range */
   n = (lua_Unsigned)e - i;  /* number of elements minus 1 (avoid overflows) */
-  if (n >= (unsigned int)INT_MAX  || !lua_checkstack(L, ++n))
+  if (n >= (unsigned int)INT_MAX  || !lua_checkstack(L, (int)(++n)))
     return luaL_error(L, "too many results to unpack");
   do {  /* must have at least one element */
     (*ta.geti)(L, 1, i);  /* push arg[i..e] */
   } while (i++ < e); 
 
-  return n;
+  return (int)n;
 }
 
 /* }====================================================== */
@@ -334,11 +334,11 @@ static void auxsort (lua_State *L, TabA *ta, int l, int u) {
 
 static int sort (lua_State *L) {
   TabA ta;
-  int n = aux_getn(L, 1, &ta);
+  int n = (int)aux_getn(L, 1, &ta);
   luaL_checkstack(L, 50, "");  /* assume array is smaller than 2^50 */
   if (!lua_isnoneornil(L, 2))  /* is there a 2nd argument? */
     luaL_checktype(L, 2, LUA_TFUNCTION);
-  lua_settop(L, 2);  /* make sure there is two arguments */
+  lua_settop(L, 2);  /* make sure there are two arguments */
   auxsort(L, &ta, 1, n);
   return 0;
 }

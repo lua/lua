@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.114 2014/07/16 13:56:14 roberto Exp roberto $
+** $Id: loadlib.c,v 1.115 2014/07/28 17:47:53 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -293,7 +293,7 @@ static void addtoclib (lua_State *L, const char *path, void *plib) {
 ** handles in list CLIBS
 */
 static int gctm (lua_State *L) {
-  int n = luaL_len(L, 1);
+  lua_Integer n = luaL_len(L, 1);
   for (; n >= 1; n--) {  /* for each handle, in reverse order */
     lua_rawgeti(L, 1, n);  /* get handle CLIBS[n] */
     lsys_unloadlib(lua_touserdata(L, -1));
