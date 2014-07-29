@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.190 2014/07/19 15:09:37 roberto Exp roberto $
+** $Id: lgc.c,v 2.191 2014/07/19 15:14:46 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -112,7 +112,7 @@ static void reallymarkobject (global_State *g, GCObject *o);
 static void removeentry (Node *n) {
   lua_assert(ttisnil(gval(n)));
   if (valiswhite(gkey(n)))
-    setdeadvalue(gkey(n));  /* unused and unmarked key; remove it */
+    setdeadvalue(wgkey(n));  /* unused and unmarked key; remove it */
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.98 2014/07/18 13:36:14 roberto Exp roberto $
+** $Id: lobject.h,v 2.99 2014/07/18 14:46:47 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -241,8 +241,7 @@ typedef struct lua_TValue TValue;
 
 
 #define setobj(L,obj1,obj2) \
-	{ const TValue *io2=(obj2); TValue *io1=(obj1); \
-	  io1->value_ = io2->value_; io1->tt_ = io2->tt_; \
+	{ TValue *io1=(obj1); *io1 = *(obj2); \
 	  (void)L; checkliveness(G(L),io1); }
 
 
@@ -469,6 +468,13 @@ typedef union TKey {
   } nk;
   TValue tvk;
 } TKey;
+
+
+/* copy a value into a key without messing up field 'next' */
+#define setkey(L,key,obj) \
+	{ TKey *k_=(key); const TValue *io_=(obj); \
+	  k_->nk.value_ = io_->value_; k_->nk.tt_ = io_->tt_; \
+	  (void)L; checkliveness(G(L),io_); }
 
 
 typedef struct Node {

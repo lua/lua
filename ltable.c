@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.91 2014/06/26 16:17:35 roberto Exp roberto $
+** $Id: ltable.c,v 2.92 2014/07/18 13:36:14 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -309,7 +309,7 @@ static void setnodevector (lua_State *L, Table *t, int size) {
     for (i=0; i<size; i++) {
       Node *n = gnode(t, i);
       gnext(n) = 0;
-      setnilvalue(gkey(n));
+      setnilvalue(wgkey(n));
       setnilvalue(gval(n));
     }
   }
@@ -466,7 +466,7 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
       mp = f;
     }
   }
-  setobj2t(L, gkey(mp), key);
+  setkey(L, &mp->i_key, key);
   luaC_barrierback(L, t, key);
   lua_assert(ttisnil(gval(mp)));
   return gval(mp);
@@ -503,7 +503,8 @@ const TValue *luaH_getstr (Table *t, TString *key) {
   Node *n = hashstr(t, key);
   lua_assert(key->tt == LUA_TSHRSTR);
   for (;;) {  /* check whether `key' is somewhere in the chain */
-    if (ttisshrstring(gkey(n)) && eqshrstr(tsvalue(gkey(n)), key))
+    const TValue *k = gkey(n);
+    if (ttisshrstring(k) && eqshrstr(tsvalue(k), key))
       return gval(n);  /* that's it */
     else {
       int nx = gnext(n);

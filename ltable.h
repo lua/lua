@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.h,v 2.17 2013/04/26 15:39:25 roberto Exp roberto $
+** $Id: ltable.h,v 2.18 2013/08/30 16:01:37 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -11,9 +11,14 @@
 
 
 #define gnode(t,i)	(&(t)->node[i])
-#define gkey(n)		(&(n)->i_key.tvk)
 #define gval(n)		(&(n)->i_val)
 #define gnext(n)	((n)->i_key.nk.next)
+
+
+/* 'const' to avoid wrong writings that can mess up field 'next' */ 
+#define gkey(n)		cast(const TValue*, (&(n)->i_key.tvk))
+
+#define wgkey(n)		(&(n)->i_key.nk)
 
 #define invalidateTMcache(t)	((t)->flags = 0)
 
