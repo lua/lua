@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 2.31 2014/05/26 17:10:22 roberto Exp roberto $
+** $Id: lvm.h,v 2.32 2014/07/30 14:00:14 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -13,6 +13,20 @@
 #include "ltm.h"
 
 
+#if !defined(LUA_NOCVTN2S)
+#define cvt2str(o)	ttisnumber(o)
+#else
+#define cvt2str(o)	0	/* no convertion from numbers to strings */
+#endif
+
+
+#if !defined(LUA_NOCVTS2N)
+#define cvt2num(o)	ttisstring(o)
+#else
+#define cvt2num(o)	0	/* no convertion from strings to numbers */
+#endif
+
+
 #define tonumber(o,n) \
 	(ttisfloat(o) ? (*(n) = fltvalue(o), 1) : luaV_tonumber_(o,n))
 
@@ -22,13 +36,6 @@
 #define intop(op,v1,v2) l_castU2S(l_castS2U(v1) op l_castS2U(v2))
 
 #define luaV_rawequalobj(t1,t2)		luaV_equalobj(NULL,t1,t2)
-
-
-#if !defined(LUA_NOCVTN2S)
-#define cvt2str(o)	ttisnumber(o)
-#else
-#define cvt2str(o)	0	/* no convertion from numbers to strings */
-#endif
 
 
 LUAI_FUNC int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2);
