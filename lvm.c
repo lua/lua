@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.219 2014/07/18 13:36:14 roberto Exp roberto $
+** $Id: lvm.c,v 2.220 2014/07/21 16:02:10 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -31,10 +31,6 @@
 
 /* limit for table tag-method chains (to avoid loops) */
 #define MAXTAGLOOP	2000
-
-
-/* maximum length of the conversion of a number to a string */
-#define MAXNUMBER2STR	50
 
 
 /*
@@ -116,32 +112,6 @@ static int tointeger_aux (const TValue *obj, lua_Integer *p, int mode) {
 */
 int luaV_tointeger_ (const TValue *obj, lua_Integer *p) {
   return tointeger_aux(obj, p, 0);
-}
-
-
-/*
-** Convert a number object to a string
-*/
-int luaV_tostring (lua_State *L, StkId obj) {
-  if (!ttisnumber(obj))
-    return 0;
-  else {
-    char buff[MAXNUMBER2STR];
-    size_t len;
-    if (ttisinteger(obj))
-      len = lua_integer2str(buff, ivalue(obj));
-    else {
-      len = lua_number2str(buff, fltvalue(obj));
-#if !defined(LUA_COMPAT_FLOATSTRING)
-      if (buff[strspn(buff, "-0123456789")] == '\0') {  /* looks like an int? */
-        buff[len++] = '.';
-        buff[len++] = '0';  /* adds '.0' to result */
-      }
-#endif
-    }
-    setsvalue2s(L, obj, luaS_newlstr(L, buff, len));
-    return 1;
-  }
 }
 
 
@@ -374,7 +344,8 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
 
 
 /* macro used by 'luaV_concat' to ensure that element at 'o' is a string */
-#define tostring(L,o) (ttisstring(o) || (luaV_tostring(L, o)))
+#define tostring(L,o)  \
+	(ttisstring(o) || (cvt2str(o) && (luaO_tostring(L, o), 1)))
 
 /*
 ** Main operation for concatenation: concat 'total' values in the stack,
@@ -385,7 +356,7 @@ void luaV_concat (lua_State *L, int total) {
   do {
     StkId top = L->top;
     int n = 2;  /* number of elements handled in this pass (at least 2) */
-    if (!(ttisstring(top-2) || ttisnumber(top-2)) || !tostring(L, top-1))
+    if (!(ttisstring(top-2) || cvt2str(top-2)) || !tostring(L, top-1))
       luaT_trybinTM(L, top-2, top-1, top-2, TM_CONCAT);
     else if (tsvalue(top-1)->len == 0)  /* second operand is empty? */
       cast_void(tostring(L, top - 2));  /* result is first operand */

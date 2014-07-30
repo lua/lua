@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.86 2014/05/12 21:44:17 roberto Exp roberto $
+** $Id: lobject.c,v 2.87 2014/06/30 19:48:08 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -327,6 +327,32 @@ int luaO_utf8esc (char *buff, unsigned int x) {
 }
 
 
+/* maximum length of the conversion of a number to a string */
+#define MAXNUMBER2STR	50
+
+
+/*
+** Convert a number object to a string
+*/
+void luaO_tostring (lua_State *L, StkId obj) {
+  char buff[MAXNUMBER2STR];
+  size_t len;
+  lua_assert(ttisnumber(obj));
+  if (ttisinteger(obj))
+    len = lua_integer2str(buff, ivalue(obj));
+  else {
+    len = lua_number2str(buff, fltvalue(obj));
+#if !defined(LUA_COMPAT_FLOATSTRING)
+    if (buff[strspn(buff, "-0123456789")] == '\0') {  /* looks like an int? */
+      buff[len++] = '.';
+      buff[len++] = '0';  /* adds '.0' to result */
+    }
+#endif
+  }
+  setsvalue2s(L, obj, luaS_newlstr(L, buff, len));
+}
+
+
 static void pushstr (lua_State *L, const char *str, size_t l) {
   setsvalue2s(L, L->top++, luaS_newlstr(L, str, l));
 }
@@ -349,24 +375,23 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
         break;
       }
       case 'c': {
-        char buff;
-        buff = cast(char, va_arg(argp, int));
+        char buff = cast(char, va_arg(argp, int));
         pushstr(L, &buff, 1);
         break;
       }
       case 'd': {
-        setivalue(L->top++, cast_int(va_arg(argp, int)));
-        luaV_tostring(L, L->top - 1);
+        setivalue(L->top++, va_arg(argp, int));
+        luaO_tostring(L, L->top - 1);
         break;
       }
       case 'I': {
         setivalue(L->top++, cast(lua_Integer, va_arg(argp, l_uacInt)));
-        luaV_tostring(L, L->top - 1);
+        luaO_tostring(L, L->top - 1);
         break;
       }
       case 'f': {
         setfltvalue(L->top++, cast_num(va_arg(argp, l_uacNumber)));
-        luaV_tostring(L, L->top - 1);
+        luaO_tostring(L, L->top - 1);
         break;
       }
       case 'p': {
