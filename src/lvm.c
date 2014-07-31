@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.216 2014/06/19 18:27:20 roberto Exp $
+** $Id: lvm.c,v 2.222 2014/07/30 14:42:44 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -31,10 +31,6 @@
 
 /* limit for table tag-method chains (to avoid loops) */
 #define MAXTAGLOOP	2000
-
-
-/* maximum length of the conversion of a number to a string */
-#define MAXNUMBER2STR	50
 
 
 /*
@@ -70,7 +66,7 @@ int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
     *n = fltvalue(obj);
     return 1;
   }
-  else if (ttisstring(obj) &&  /* string convertible to number? */
+  else if (cvt2num(obj) &&  /* string convertible to number? */
             luaO_str2num(svalue(obj), &v) == tsvalue(obj)->len + 1) {
     obj = &v;
     goto again;  /* convert result from 'luaO_str2num' to a float */
@@ -80,21 +76,29 @@ int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
 
 
 /*
-** try to convert a value to an integer, rounding up if 'up' is true
+** try to convert a value to an integer, rounding according to 'mode':
+** mode == 0: accepts only integral values
+** mode < 0: takes the floor of the number
+** mode > 0: takes the ceil of the number
 */
-static int tointeger_aux (const TValue *obj, lua_Integer *p, int up) {
+static int tointeger_aux (const TValue *obj, lua_Integer *p, int mode) {
   TValue v;
  again:
   if (ttisfloat(obj)) {
     lua_Number n = fltvalue(obj);
-    n = (up ? -l_floor(-n) : l_floor(n));
-    return lua_numtointeger(n, p);
+    lua_Number f = l_floor(n);
+    if (n != f) {  /* not an integral value? */
+      if (mode == 0) return 0;  /* fails if mode demands integral value */
+      else if (mode > 0)  /* needs ceil? */
+        f += 1;  /* convert floor to ceil (remember: n != f) */
+    }
+    return lua_numtointeger(f, p);
   }
   else if (ttisinteger(obj)) {
     *p = ivalue(obj);
     return 1;
   }
-  else if (ttisstring(obj) &&
+  else if (cvt2num(obj) &&
             luaO_str2num(svalue(obj), &v) == tsvalue(obj)->len + 1) {
     obj = &v;
     goto again;  /* convert result from 'luaO_str2num' to an integer */
@@ -104,36 +108,10 @@ static int tointeger_aux (const TValue *obj, lua_Integer *p, int up) {
 
 
 /*
-** try to convert a non-integer value to an integer, rounding down
+** try to convert a value to an integer
 */
 int luaV_tointeger_ (const TValue *obj, lua_Integer *p) {
   return tointeger_aux(obj, p, 0);
-}
-
-
-/*
-** Convert a number object to a string
-*/
-int luaV_tostring (lua_State *L, StkId obj) {
-  if (!ttisnumber(obj))
-    return 0;
-  else {
-    char buff[MAXNUMBER2STR];
-    size_t len;
-    if (ttisinteger(obj))
-      len = lua_integer2str(buff, ivalue(obj));
-    else {
-      len = lua_number2str(buff, fltvalue(obj));
-#if !defined(LUA_COMPAT_FLOATSTRING)
-      if (buff[strspn(buff, "-0123456789")] == '\0') {  /* looks like an int? */
-        buff[len++] = '.';
-        buff[len++] = '0';  /* adds '.0' to result */
-      }
-#endif
-    }
-    setsvalue2s(L, obj, luaS_newlstr(L, buff, len));
-    return 1;
-  }
 }
 
 
@@ -155,7 +133,7 @@ int luaV_tostring (lua_State *L, StkId obj) {
 static int forlimit (const TValue *obj, lua_Integer *p, lua_Integer step,
                      int *stopnow) {
   *stopnow = 0;  /* usually, let loops run */
-  if (!tointeger_aux(obj, p, (step < 0))) {  /* does not fit in integer? */
+  if (!tointeger_aux(obj, p, (step < 0 ? 1 : -1))) {  /* not fit in integer? */
     lua_Number n;  /* try to convert to float */
     if (!tonumber(obj, &n)) /* cannot convert to float? */
       return 0;  /* not a number */
@@ -239,7 +217,7 @@ void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
       luaT_callTM(L, tm, t, key, val, 0);
       return;
     }
-    t = tm;  /* else repeat assginment over 'tm' */
+    t = tm;  /* else repeat assignment over 'tm' */
   }
   luaG_runerror(L, "settable chain too long; possible loop");
 }
@@ -254,9 +232,9 @@ void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
 */
 static int l_strcmp (const TString *ls, const TString *rs) {
   const char *l = getstr(ls);
-  size_t ll = ls->tsv.len;
+  size_t ll = ls->len;
   const char *r = getstr(rs);
-  size_t lr = rs->tsv.len;
+  size_t lr = rs->len;
   for (;;) {  /* for each segment */
     int temp = strcoll(l, r);
     if (temp != 0)  /* not equal? */
@@ -286,7 +264,7 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
   else if (tofloat(l, &nl) && tofloat(r, &nr))  /* both are numbers? */
     return luai_numlt(nl, nr);
   else if (ttisstring(l) && ttisstring(r))  /* both are strings? */
-    return l_strcmp(rawtsvalue(l), rawtsvalue(r)) < 0;
+    return l_strcmp(tsvalue(l), tsvalue(r)) < 0;
   else if ((res = luaT_callorderTM(L, l, r, TM_LT)) < 0)  /* no metamethod? */
     luaG_ordererror(L, l, r);  /* error */
   return res;
@@ -304,7 +282,7 @@ int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
   else if (tofloat(l, &nl) && tofloat(r, &nr))  /* both are numbers? */
     return luai_numle(nl, nr);
   else if (ttisstring(l) && ttisstring(r))  /* both are strings? */
-    return l_strcmp(rawtsvalue(l), rawtsvalue(r)) <= 0;
+    return l_strcmp(tsvalue(l), tsvalue(r)) <= 0;
   else if ((res = luaT_callorderTM(L, l, r, TM_LE)) >= 0)  /* first try `le' */
     return res;
   else if ((res = luaT_callorderTM(L, r, l, TM_LT)) < 0)  /* else try `lt' */
@@ -337,8 +315,8 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
     case LUA_TBOOLEAN: return bvalue(t1) == bvalue(t2);  /* true must be 1 !! */
     case LUA_TLIGHTUSERDATA: return pvalue(t1) == pvalue(t2);
     case LUA_TLCF: return fvalue(t1) == fvalue(t2);
-    case LUA_TSHRSTR: return eqshrstr(rawtsvalue(t1), rawtsvalue(t2));
-    case LUA_TLNGSTR: return luaS_eqlngstr(rawtsvalue(t1), rawtsvalue(t2));
+    case LUA_TSHRSTR: return eqshrstr(tsvalue(t1), tsvalue(t2));
+    case LUA_TLNGSTR: return luaS_eqlngstr(tsvalue(t1), tsvalue(t2));
     case LUA_TUSERDATA: {
       if (uvalue(t1) == uvalue(t2)) return 1;
       else if (L == NULL) return 0;
@@ -366,7 +344,8 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
 
 
 /* macro used by 'luaV_concat' to ensure that element at 'o' is a string */
-#define tostring(L,o) (ttisstring(o) || (luaV_tostring(L, o)))
+#define tostring(L,o)  \
+	(ttisstring(o) || (cvt2str(o) && (luaO_tostring(L, o), 1)))
 
 /*
 ** Main operation for concatenation: concat 'total' values in the stack,
@@ -377,7 +356,7 @@ void luaV_concat (lua_State *L, int total) {
   do {
     StkId top = L->top;
     int n = 2;  /* number of elements handled in this pass (at least 2) */
-    if (!(ttisstring(top-2) || ttisnumber(top-2)) || !tostring(L, top-1))
+    if (!(ttisstring(top-2) || cvt2str(top-2)) || !tostring(L, top-1))
       luaT_trybinTM(L, top-2, top-1, top-2, TM_CONCAT);
     else if (tsvalue(top-1)->len == 0)  /* second operand is empty? */
       cast_void(tostring(L, top - 2));  /* result is first operand */
@@ -541,7 +520,7 @@ static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
     ncl->upvals[i]->refcount++;
     /* new closure is white, so we do not need a barrier here */
   }
-  if (!isblack(obj2gco(p)))  /* cache will not break GC invariant? */
+  if (!isblack(p))  /* cache will not break GC invariant? */
     p->cache = ncl;  /* save it on cache for reuse */
 }
 

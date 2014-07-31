@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.86 2014/05/12 21:44:17 roberto Exp $
+** $Id: lobject.c,v 2.88 2014/07/30 14:00:14 roberto Exp $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -256,7 +256,7 @@ static const char *l_str2d (const char *s, lua_Number *result) {
   char *endptr;
   if (strpbrk(s, "nN"))  /* reject 'inf' and 'nan' */
     return NULL;
-  else if (strpbrk(s, "xX"))  /* hexa? */
+  else if (strpbrk(s, "xX"))  /* hex? */
     *result = lua_strx2number(s, &endptr);
   else
     *result = lua_str2number(s, &endptr);
@@ -273,7 +273,7 @@ static const char *l_str2int (const char *s, lua_Integer *result) {
   while (lisspace(cast_uchar(*s))) s++;  /* skip initial spaces */
   neg = isneg(&s);
   if (s[0] == '0' &&
-      (s[1] == 'x' || s[1] == 'X')) {  /* hexa? */
+      (s[1] == 'x' || s[1] == 'X')) {  /* hex? */
     s += 2;  /* skip '0x' */
     for (; lisxdigit(cast_uchar(*s)); s++) {
       a = a * 16 + luaO_hexavalue(cast_uchar(*s));
@@ -327,6 +327,32 @@ int luaO_utf8esc (char *buff, unsigned int x) {
 }
 
 
+/* maximum length of the conversion of a number to a string */
+#define MAXNUMBER2STR	50
+
+
+/*
+** Convert a number object to a string
+*/
+void luaO_tostring (lua_State *L, StkId obj) {
+  char buff[MAXNUMBER2STR];
+  size_t len;
+  lua_assert(ttisnumber(obj));
+  if (ttisinteger(obj))
+    len = lua_integer2str(buff, ivalue(obj));
+  else {
+    len = lua_number2str(buff, fltvalue(obj));
+#if !defined(LUA_COMPAT_FLOATSTRING)
+    if (buff[strspn(buff, "-0123456789")] == '\0') {  /* looks like an int? */
+      buff[len++] = '.';
+      buff[len++] = '0';  /* adds '.0' to result */
+    }
+#endif
+  }
+  setsvalue2s(L, obj, luaS_newlstr(L, buff, len));
+}
+
+
 static void pushstr (lua_State *L, const char *str, size_t l) {
   setsvalue2s(L, L->top++, luaS_newlstr(L, str, l));
 }
@@ -349,24 +375,23 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
         break;
       }
       case 'c': {
-        char buff;
-        buff = cast(char, va_arg(argp, int));
+        char buff = cast(char, va_arg(argp, int));
         pushstr(L, &buff, 1);
         break;
       }
       case 'd': {
-        setivalue(L->top++, cast_int(va_arg(argp, int)));
-        luaV_tostring(L, L->top - 1);
+        setivalue(L->top++, va_arg(argp, int));
+        luaO_tostring(L, L->top - 1);
         break;
       }
       case 'I': {
         setivalue(L->top++, cast(lua_Integer, va_arg(argp, l_uacInt)));
-        luaV_tostring(L, L->top - 1);
+        luaO_tostring(L, L->top - 1);
         break;
       }
       case 'f': {
         setfltvalue(L->top++, cast_num(va_arg(argp, l_uacNumber)));
-        luaV_tostring(L, L->top - 1);
+        luaO_tostring(L, L->top - 1);
         break;
       }
       case 'p': {

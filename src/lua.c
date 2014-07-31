@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.211 2014/06/05 20:42:06 roberto Exp $
+** $Id: lua.c,v 1.213 2014/06/30 19:48:08 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -115,7 +115,7 @@ static void lstop (lua_State *L, lua_Debug *ar) {
 
 /*
 ** Function to be called at a C signal. Because a C signal cannot
-** just change a Lua state (as there is no proper syncronization),
+** just change a Lua state (as there is no proper synchronization),
 ** this function only sets a hook that, when called, will stop the
 ** interpreter.
 */
@@ -284,7 +284,7 @@ static const char *get_prompt (lua_State *L, int firstline) {
 /*
 ** Check whether 'status' signals a syntax error and the error
 ** message at the top of the stack ends with the above mark for
-** incoplete statements.
+** incomplete statements.
 */
 static int incomplete (lua_State *L, int status) {
   if (status == LUA_ERRSYNTAX) {
@@ -417,25 +417,31 @@ static void doREPL (lua_State *L) {
 
 
 /*
-** Push on the stack 'n' strings from 'argv'
+** Push on the stack the contents of table 'arg' from 1 to #arg
 */
-static void pushargs (lua_State *L, char **argv, int n) {
-  int i;
+static int pushargs (lua_State *L) {
+  int i, n;
+  lua_getglobal(L, "arg");
+  if (!lua_istable(L, -1))
+    luaL_error(L, "'arg' is not a table");
+  n = (int)luaL_len(L, -1);
   luaL_checkstack(L, n + 3, "too many arguments to script");
-  for (i = 1; i < n; i++)  /* skip 0 (the script name) */
-    lua_pushstring(L, argv[i]);
+  for (i = 1; i <= n; i++)
+    lua_rawgeti(L, -i, i);
+  lua_remove(L, -i);  /* remove table from the stack */
+  return n;
 }
 
 
-static int handle_script (lua_State *L, char **argv, int n) {
+static int handle_script (lua_State *L, char **argv) {
   int status;
   const char *fname = argv[0];
   if (strcmp(fname, "-") == 0 && strcmp(argv[-1], "--") != 0)
     fname = NULL;  /* stdin */
   status = luaL_loadfile(L, fname);
   if (status == LUA_OK) {
-    pushargs(L, argv, n);  /* push arguments to script */
-    status = docall(L, n - 1, LUA_MULTRET);
+    int n = pushargs(L);  /* push arguments to script */
+    status = docall(L, n, LUA_MULTRET);
   }
   return report(L, status);
 }
@@ -570,7 +576,7 @@ static int pmain (lua_State *L) {
   if (!runargs(L, argv, script))  /* execute arguments -e and -l */
     return 0;  /* something failed */
   if (script < argc &&  /* execute main script (if there is one) */
-      handle_script(L, argv + script, argc - script) != LUA_OK)
+      handle_script(L, argv + script) != LUA_OK)
     return 0;
   if (args & has_i)  /* -i option? */
     doREPL(L);  /* do read-eval-print loop */

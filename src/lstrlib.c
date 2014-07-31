@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.198 2014/04/27 14:42:26 roberto Exp $
+** $Id: lstrlib.c,v 1.200 2014/07/30 13:59:24 roberto Exp $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -59,7 +59,7 @@ static int str_sub (lua_State *L) {
   if (start < 1) start = 1;
   if (end > (lua_Integer)l) end = l;
   if (start <= end)
-    lua_pushlstring(L, s + start - 1, end - start + 1);
+    lua_pushlstring(L, s + start - 1, (size_t)(end - start + 1));
   else lua_pushliteral(L, "");
   return 1;
 }
@@ -119,7 +119,7 @@ static int str_rep (lua_State *L) {
   else if (l + lsep < l || l + lsep > MAXSIZE / n)  /* may overflow? */
     return luaL_error(L, "resulting string too large");
   else {
-    size_t totallen = n * l + (n - 1) * lsep;
+    size_t totallen = (size_t)n * l + (size_t)(n - 1) * lsep;
     luaL_Buffer b;
     char *p = luaL_buffinitsize(L, &b, totallen);
     while (n-- > 1) {  /* first n-1 copies (followed by separator) */
@@ -594,7 +594,7 @@ static int str_find_aux (lua_State *L, int find) {
   /* explicit request or no special characters? */
   if (find && (lua_toboolean(L, 4) || nospecials(p, lp))) {
     /* do a plain search */
-    const char *s2 = lmemfind(s + init - 1, ls - init + 1, p, lp);
+    const char *s2 = lmemfind(s + init - 1, ls - (size_t)init + 1, p, lp);
     if (s2) {
       lua_pushinteger(L, s2 - s + 1);
       lua_pushinteger(L, s2 - s + lp);
@@ -685,7 +685,8 @@ static int gmatch (lua_State *L) {
 static void add_s (MatchState *ms, luaL_Buffer *b, const char *s,
                                                    const char *e) {
   size_t l, i;
-  const char *news = lua_tolstring(ms->L, 3, &l);
+  lua_State *L = ms->L;
+  const char *news = lua_tolstring(L, 3, &l);
   for (i = 0; i < l; i++) {
     if (news[i] != L_ESC)
       luaL_addchar(b, news[i]);
@@ -693,14 +694,16 @@ static void add_s (MatchState *ms, luaL_Buffer *b, const char *s,
       i++;  /* skip ESC */
       if (!isdigit(uchar(news[i]))) {
         if (news[i] != L_ESC)
-          luaL_error(ms->L, "invalid use of " LUA_QL("%c")
-                           " in replacement string", L_ESC);
+          luaL_error(L, "invalid use of " LUA_QL("%c")
+                        " in replacement string", L_ESC);
         luaL_addchar(b, news[i]);
       }
       else if (news[i] == '0')
           luaL_addlstring(b, s, e - s);
       else {
         push_onecapture(ms, news[i] - '1', s, e);
+        luaL_tolstring(L, -1, NULL);  /* if number, convert it to string */
+        lua_remove(L, -2);  /* remove original value */
         luaL_addvalue(b);  /* add capture to accumulated result */
       }
     }
@@ -744,9 +747,9 @@ static int str_gsub (lua_State *L) {
   const char *src = luaL_checklstring(L, 1, &srcl);
   const char *p = luaL_checklstring(L, 2, &lp);
   int tr = lua_type(L, 3);
-  size_t max_s = luaL_optinteger(L, 4, srcl+1);
+  lua_Integer max_s = luaL_optinteger(L, 4, srcl + 1);
   int anchor = (*p == '^');
-  size_t n = 0;
+  lua_Integer n = 0;
   MatchState ms;
   luaL_Buffer b;
   luaL_argcheck(L, tr == LUA_TNUMBER || tr == LUA_TSTRING ||

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.121 2014/02/18 13:46:26 roberto Exp $
+** $Id: lstate.c,v 2.125 2014/07/24 16:17:56 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -53,9 +53,7 @@
 ** thread state + extra space
 */
 typedef struct LX {
-#if defined(LUAI_EXTRASPACE)
-  char buff[LUAI_EXTRASPACE];
-#endif
+  lu_byte extra_[LUA_EXTRASPACE];
   lua_State l;
 } LX;
 
@@ -252,7 +250,7 @@ static void close_state (lua_State *L) {
 
 
 LUA_API lua_State *lua_newthread (lua_State *L) {
-    global_State *g = G(L);
+  global_State *g = G(L);
   lua_State *L1;
   lua_lock(L);
   luaC_checkGC(L);
@@ -263,6 +261,7 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   /* link it on list 'allgc' */
   L1->next = g->allgc;
   g->allgc = obj2gco(L1);
+  /* anchor it on L stack */
   setthvalue(L, L->top, L1);
   api_incr_top(L);
   preinit_thread(L1, g);
@@ -270,6 +269,9 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   L1->basehookcount = L->basehookcount;
   L1->hook = L->hook;
   resethookcount(L1);
+  /* initialize L1 extra space */
+  memcpy(lua_getextraspace(L1), lua_getextraspace(g->mainthread),
+         LUA_EXTRASPACE);
   luai_userstatethread(L, L1);
   stack_init(L1, L);  /* init stack */
   lua_unlock(L);
