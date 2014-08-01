@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.292 2014/07/17 13:53:37 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.293 2014/07/24 19:33:29 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -438,7 +438,7 @@ static int finishpcall (lua_State *L, int status, lua_Ctx extra) {
     return 2;  /* return false, msg */
   }
   else
-    return lua_gettop(L) - extra;  /* return all results */
+    return lua_gettop(L) - (int)extra;  /* return all results */
 }
 
 
