@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.211 2014/07/24 14:00:16 roberto Exp roberto $
+** $Id: luaconf.h,v 1.212 2014/07/24 19:33:29 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -263,19 +263,20 @@
 
 
 /*
-@@ LUA_CTXT is the type of the context ('ctx') for continuation functions.
-@@ It must be a numerical type; Lua will use 'intptr_t' if available.
+@@ LUA_KCONTEXT is the type of the context ('ctx') for continuation
+@@ functions.  It must be a numerical type; Lua will use 'intptr_t' if
+@@ available.
 */
 #if defined (LUA_USE_C99)
 #include <stdint.h>
 #if defined (INTPTR_MAX)  /* even in C99 this type is optional */
-#define LUA_CTXT	intptr_t
+#define LUA_KCONTEXT	intptr_t
 #endif
 #endif
 
-#if !defined(LUA_CTXT)
+#if !defined(LUA_KCONTEXT)
 /* default definition (the nearest thing to 'intptr_t' in C89) */
-#define LUA_CTXT	ptrdiff_t
+#define LUA_KCONTEXT	ptrdiff_t
 #endif
 
 
@@ -305,7 +306,7 @@
 #define LUA_COMPAT_BITLIB
 
 /*
-@@ LUA_COMPAT_IPAIRS controls the effectivness of the __ipairs metamethod.
+@@ LUA_COMPAT_IPAIRS controls the effectivnness of the __ipairs metamethod.
 */
 #define LUA_COMPAT_IPAIRS
 
