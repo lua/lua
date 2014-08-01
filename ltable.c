@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.92 2014/07/18 13:36:14 roberto Exp roberto $
+** $Id: ltable.c,v 2.93 2014/07/29 16:22:24 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -440,7 +440,7 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
     Node *f = getfreepos(t);  /* get a free place */
     if (f == NULL) {  /* cannot find a free place? */
       rehash(L, t, key);  /* grow table */
-      /* whatever called 'newkey' take care of TM cache and GC barrier */
+      /* whatever called 'newkey' takes care of TM cache and GC barrier */
       return luaH_set(L, t, key);  /* insert key into grown table */
     }
     lua_assert(!isdummy(f));
