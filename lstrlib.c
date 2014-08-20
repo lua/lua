@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.199 2014/07/29 16:01:00 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.200 2014/07/30 13:59:24 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -1177,9 +1177,9 @@ static const luaL_Reg strlib[] = {
   {"sub", str_sub},
   {"upper", str_upper},
   {"dumpfloat", dumpfloat_l},
-  {"dumpint", dumpint_l},
+  {"dumpinteger", dumpint_l},
   {"undumpfloat", undumpfloat_l},
-  {"undumpint", undumpint_l},
+  {"undumpinteger", undumpint_l},
   {NULL, NULL}
 };
 
