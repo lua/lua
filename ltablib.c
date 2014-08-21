@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.72 2014/07/25 18:46:00 roberto Exp roberto $
+** $Id: ltablib.c,v 1.73 2014/07/29 16:01:00 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -51,17 +51,20 @@ static void seti (lua_State *L, int idx, lua_Integer n) {
 ** or non-raw according to the presence of corresponding metamethods.
 */
 static void checktab (lua_State *L, int arg, TabA *ta) {
-  luaL_checktype(L, arg, LUA_TTABLE);
-  if (!lua_getmetatable(L, arg)) {  /* fast track */
-    ta->geti = lua_rawgeti;  /* with no metatable, all is raw */
-    ta->seti = lua_rawseti;
-  }
-  else {
+  ta->geti = NULL; ta->seti = NULL;
+  if (lua_getmetatable(L, arg)) {
     lua_pushliteral(L, "__index");  /* 'index' metamethod */
-    ta->geti = (lua_rawget(L, -2) == LUA_TNIL) ? lua_rawgeti : geti;
+    if (lua_rawget(L, -2) != LUA_TNIL)
+      ta->geti = geti;
     lua_pushliteral(L, "__newindex");  /* 'newindex' metamethod */
-    ta->seti = (lua_rawget(L, -3) == LUA_TNIL) ? lua_rawseti : seti;
+    if (lua_rawget(L, -3) != LUA_TNIL)
+      ta->seti = seti;
     lua_pop(L, 3);  /* pop metatable plus both metamethods */
+  }
+  if (ta->geti == NULL || ta->seti == NULL) {
+    luaL_checktype(L, arg, LUA_TTABLE);  /* must be table for raw methods */
+    if (ta->geti == NULL) ta->geti = lua_rawgeti;
+    if (ta->seti == NULL) ta->seti = lua_rawseti;
   }
 }
 
@@ -132,24 +135,22 @@ static int tremove (lua_State *L) {
 }
 
 
-static int tcopy (lua_State *L) {
+static int tmove (lua_State *L) {
   TabA ta;
   lua_Integer f = luaL_checkinteger(L, 2);
   lua_Integer e = luaL_checkinteger(L, 3);
-  lua_Integer t;
-  int tt = 4;  /* destination table */
+  lua_Integer t = luaL_checkinteger(L, 4);
+  int tt = !lua_isnoneornil(L, 5) ? 5 : 1;  /* destination table */
   /* the following restriction avoids several problems with overflows */
   luaL_argcheck(L, f > 0, 2, "initial position must be positive");
-  if (lua_istable(L, tt))
-    t = luaL_checkinteger(L, 5);
-  else {
-    tt = 1;  /* destination table is equal to source */
-    t = luaL_checkinteger(L, 4);
-  }
   if (e >= f) {  /* otherwise, nothing to move */
     lua_Integer n, i;
-    ta.geti = (!luaL_getmetafield(L, 1, "__index")) ? lua_rawgeti : geti;
-    ta.seti = (!luaL_getmetafield(L, tt, "__newindex")) ? lua_rawseti : seti;
+    ta.geti = (!luaL_getmetafield(L, 1, "__index"))
+      ? (luaL_checktype(L, 1, LUA_TTABLE), lua_rawgeti)
+      : geti;
+    ta.seti = (!luaL_getmetafield(L, tt, "__newindex"))
+      ? (luaL_checktype(L, tt, LUA_TTABLE), lua_rawseti)
+      : seti;
     n = e - f + 1;  /* number of elements to move */
     if (t > f) {
       for (i = n - 1; i >= 0; i--) {
@@ -355,7 +356,7 @@ static const luaL_Reg tab_funcs[] = {
   {"pack", pack},
   {"unpack", unpack},
   {"remove", tremove},
-  {"copy", tcopy},
+  {"move", tmove},
   {"sort", sort},
   {NULL, NULL}
 };
