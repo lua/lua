@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.73 2014/07/29 16:01:00 roberto Exp roberto $
+** $Id: ltablib.c,v 1.74 2014/08/21 19:13:55 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -28,25 +28,6 @@ typedef struct {
 
 
 /*
-** equivalent to 'lua_rawgeti', but not raw
-*/
-static int geti (lua_State *L, int idx, lua_Integer n) {
-  lua_pushinteger(L, n);
-  return lua_gettable(L, idx);  /* assume 'idx' is not negative */
-}
-
-
-/*
-** equivalent to 'lua_rawseti', but not raw
-*/
-static void seti (lua_State *L, int idx, lua_Integer n) {
-  lua_pushinteger(L, n);
-  lua_rotate(L, -2, 1);  /* exchange key and value */
-  lua_settable(L, idx);  /* assume 'idx' is not negative */
-}
-
-
-/*
 ** Check that 'arg' has a table and set access functions in 'ta' to raw
 ** or non-raw according to the presence of corresponding metamethods.
 */
@@ -55,10 +36,10 @@ static void checktab (lua_State *L, int arg, TabA *ta) {
   if (lua_getmetatable(L, arg)) {
     lua_pushliteral(L, "__index");  /* 'index' metamethod */
     if (lua_rawget(L, -2) != LUA_TNIL)
-      ta->geti = geti;
+      ta->geti = lua_geti;
     lua_pushliteral(L, "__newindex");  /* 'newindex' metamethod */
     if (lua_rawget(L, -3) != LUA_TNIL)
-      ta->seti = seti;
+      ta->seti = lua_seti;
     lua_pop(L, 3);  /* pop metatable plus both metamethods */
   }
   if (ta->geti == NULL || ta->seti == NULL) {
@@ -147,10 +128,10 @@ static int tmove (lua_State *L) {
     lua_Integer n, i;
     ta.geti = (!luaL_getmetafield(L, 1, "__index"))
       ? (luaL_checktype(L, 1, LUA_TTABLE), lua_rawgeti)
-      : geti;
+      : lua_geti;
     ta.seti = (!luaL_getmetafield(L, tt, "__newindex"))
       ? (luaL_checktype(L, tt, LUA_TTABLE), lua_rawseti)
-      : seti;
+      : lua_seti;
     n = e - f + 1;  /* number of elements to move */
     if (t > f) {
       for (i = n - 1; i >= 0; i--) {

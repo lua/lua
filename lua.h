@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.312 2014/07/31 13:44:30 roberto Exp roberto $
+** $Id: lua.h,v 1.313 2014/08/01 17:33:08 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -239,6 +239,7 @@ LUA_API int   (lua_pushthread) (lua_State *L);
 LUA_API int (lua_getglobal) (lua_State *L, const char *var);
 LUA_API int (lua_gettable) (lua_State *L, int idx);
 LUA_API int (lua_getfield) (lua_State *L, int idx, const char *k);
+LUA_API int (lua_geti) (lua_State *L, int idx, lua_Integer n);
 LUA_API int (lua_rawget) (lua_State *L, int idx);
 LUA_API int (lua_rawgeti) (lua_State *L, int idx, lua_Integer n);
 LUA_API int (lua_rawgetp) (lua_State *L, int idx, const void *p);
@@ -255,6 +256,7 @@ LUA_API int  (lua_getuservalue) (lua_State *L, int idx);
 LUA_API void  (lua_setglobal) (lua_State *L, const char *var);
 LUA_API void  (lua_settable) (lua_State *L, int idx);
 LUA_API void  (lua_setfield) (lua_State *L, int idx, const char *k);
+LUA_API void  (lua_seti) (lua_State *L, int idx, lua_Integer n);
 LUA_API void  (lua_rawset) (lua_State *L, int idx);
 LUA_API void  (lua_rawseti) (lua_State *L, int idx, lua_Integer n);
 LUA_API void  (lua_rawsetp) (lua_State *L, int idx, const void *p);

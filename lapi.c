@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.232 2014/07/30 14:00:14 roberto Exp roberto $
+** $Id: lapi.c,v 2.233 2014/08/01 17:33:08 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -611,6 +611,18 @@ LUA_API int lua_getfield (lua_State *L, int idx, const char *k) {
 }
 
 
+LUA_API int lua_geti (lua_State *L, int idx, lua_Integer n) {
+  StkId t;
+  lua_lock(L);
+  t = index2addr(L, idx);
+  setivalue(L->top, n);
+  api_incr_top(L);
+  luaV_gettable(L, t, L->top - 1, L->top - 1);
+  lua_unlock(L);
+  return ttnov(L->top - 1);
+}
+
+
 LUA_API int lua_rawget (lua_State *L, int idx) {
   StkId t;
   lua_lock(L);
@@ -737,6 +749,18 @@ LUA_API void lua_setfield (lua_State *L, int idx, const char *k) {
   api_checknelems(L, 1);
   t = index2addr(L, idx);
   setsvalue2s(L, L->top++, luaS_new(L, k));
+  luaV_settable(L, t, L->top - 1, L->top - 2);
+  L->top -= 2;  /* pop value and key */
+  lua_unlock(L);
+}
+
+
+LUA_API void lua_seti (lua_State *L, int idx, lua_Integer n) {
+  StkId t;
+  lua_lock(L);
+  api_checknelems(L, 1);
+  t = index2addr(L, idx);
+  setivalue(L->top++, n);
   luaV_settable(L, t, L->top - 1, L->top - 2);
   L->top -= 2;  /* pop value and key */
   lua_unlock(L);
