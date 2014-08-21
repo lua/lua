@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.138 2014/04/30 18:59:15 roberto Exp roberto $
+** $Id: ldblib.c,v 1.139 2014/05/15 19:27:33 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -28,7 +28,6 @@ static int db_Csize (lua_State *L) {
   } sizes[] = {
     {'I', sizeof(lua_Integer)},
     {'F', sizeof(lua_Number)},
-    {'b', CHAR_BIT},  /* here is number of bits (not bytes) */
     {'h', sizeof(short)},
     {'i', sizeof(int)},
     {'l', sizeof(long)},
@@ -426,7 +425,7 @@ static int db_traceback (lua_State *L) {
 
 
 static const luaL_Reg dblib[] = {
-  {"Csize",   db_Csize},
+  {"sizeof",   db_Csize},
   {"debug", db_debug},
   {"getuservalue", db_getuservalue},
   {"gethook", db_gethook},
