@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.139 2014/05/15 19:27:33 roberto Exp roberto $
+** $Id: ldblib.c,v 1.140 2014/08/21 19:12:40 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -33,7 +33,8 @@ static int db_Csize (lua_State *L) {
     {'l', sizeof(long)},
     {'z', sizeof(size_t)},
     {'f', sizeof(float)},
-    {'d', sizeof(double)}
+    {'d', sizeof(double)},
+    {'p', sizeof(void*)}
   };
   const char *s = luaL_checkstring(L, 1);
   int i;
