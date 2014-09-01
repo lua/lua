@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.182 2014/07/23 16:44:30 roberto Exp roberto $
+** $Id: ltests.c,v 2.183 2014/08/01 17:33:08 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -598,9 +598,12 @@ static int gc_color (lua_State *L) {
   o = obj_at(L, 1);
   if (!iscollectable(o))
     lua_pushstring(L, "no collectable");
-  else
-    lua_pushstring(L, iswhite(gcvalue(o)) ? "white" :
-                      isblack(gcvalue(o)) ? "black" : "grey");
+  else {
+    GCObject *obj = gcvalue(o);
+    lua_pushstring(L, isdead(G(L), obj) ? "dead" :
+                      iswhite(obj) ? "white" :
+                      isblack(obj) ? "black" : "grey");
+  }
   return 1;
 }
 
