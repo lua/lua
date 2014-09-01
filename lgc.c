@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.191 2014/07/19 15:14:46 roberto Exp roberto $
+** $Id: lgc.c,v 2.192 2014/07/29 16:22:24 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -100,9 +100,9 @@ static void reallymarkobject (global_State *g, GCObject *o);
 
 
 /*
-** link table 'h' into list pointed by 'p'
+** link collectable object 'o' into list pointed by 'p'
 */
-#define linktable(h,p)	((h)->gclist = *(p), *(p) = obj2gco(h))
+#define linkgclist(o,p)	((o)->gclist = (p), (p) = obj2gco(o))
 
 
 /*
@@ -159,8 +159,7 @@ void luaC_barrierback_ (lua_State *L, Table *t) {
   global_State *g = G(L);
   lua_assert(isblack(t) && !isdead(g, t));
   black2gray(t);  /* make table gray (again) */
-  t->gclist = g->grayagain;
-  g->grayagain = obj2gco(t);
+  linkgclist(t, g->grayagain);
 }
 
 
@@ -243,27 +242,23 @@ static void reallymarkobject (global_State *g, GCObject *o) {
       break;
     }
     case LUA_TLCL: {
-      gco2lcl(o)->gclist = g->gray;
-      g->gray = o;
+      linkgclist(gco2lcl(o), g->gray);
       break;
     }
     case LUA_TCCL: {
-      gco2ccl(o)->gclist = g->gray;
-      g->gray = o;
+      linkgclist(gco2ccl(o), g->gray);
       break;
     }
     case LUA_TTABLE: {
-      linktable(gco2t(o), &g->gray);
+      linkgclist(gco2t(o), g->gray);
       break;
     }
     case LUA_TTHREAD: {
-      gco2th(o)->gclist = g->gray;
-      g->gray = o;
+      linkgclist(gco2th(o), g->gray);
       break;
     }
     case LUA_TPROTO: {
-      gco2p(o)->gclist = g->gray;
-      g->gray = o;
+      linkgclist(gco2p(o), g->gray);
       break;
     }
     default: lua_assert(0); break;
@@ -357,9 +352,9 @@ static void traverseweakvalue (global_State *g, Table *h) {
     }
   }
   if (hasclears)
-    linktable(h, &g->weak);  /* has to be cleared later */
+    linkgclist(h, g->weak);  /* has to be cleared later */
   else  /* no white values */
-    linktable(h, &g->grayagain);  /* no need to clean */
+    linkgclist(h, g->grayagain);  /* no need to clean */
 }
 
 
@@ -392,11 +387,11 @@ static int traverseephemeron (global_State *g, Table *h) {
     }
   }
   if (prop)
-    linktable(h, &g->ephemeron);  /* have to propagate again */
+    linkgclist(h, g->ephemeron);  /* have to propagate again */
   else if (hasclears)  /* does table have white keys? */
-    linktable(h, &g->allweak);  /* may have to clean white keys */
+    linkgclist(h, g->allweak);  /* may have to clean white keys */
   else  /* no white keys */
-    linktable(h, &g->grayagain);  /* no need to clean */
+    linkgclist(h, g->grayagain);  /* no need to clean */
   return marked;
 }
 
@@ -433,7 +428,7 @@ static lu_mem traversetable (global_State *g, Table *h) {
     else if (!weakvalue)  /* strong values? */
       traverseephemeron(g, h);
     else  /* all weak */
-      linktable(h, &g->allweak);  /* nothing to traverse now */
+      linkgclist(h, g->allweak);  /* nothing to traverse now */
   }
   else  /* not weak */
     traversestrongtable(g, h);
@@ -548,8 +543,7 @@ static void propagatemark (global_State *g) {
     case LUA_TTHREAD: {
       lua_State *th = gco2th(o);
       g->gray = th->gclist;  /* remove from 'gray' list */
-      th->gclist = g->grayagain;
-      g->grayagain = o;  /* insert into 'grayagain' list */
+      linkgclist(th, g->grayagain);  /* insert into 'grayagain' list */
       black2gray(o);
       size = traversethread(g, th);
       break;
