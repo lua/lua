@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.131 2014/05/07 16:35:24 roberto Exp roberto $
-+** $Id: bugs,v 1.131 2014/05/07 16:35:24 roberto Exp roberto $
+-** $Id: bugs,v 1.132 2014/05/07 16:57:27 roberto Exp roberto $
++** $Id: bugs,v 1.132 2014/05/07 16:57:27 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -3220,6 +3220,31 @@ example = [[
 (segfaults on some platforms with some compiler options)
 ]],
 patch = [[
+]]
+}
+
+Bug{
+what = [[Ephemeron table can wrongly collect entry with strong key]],
+report = [[Jörg Richter, 2014/08/22]],
+since = [[5.2]],
+fix = nil,
+example = [[
+(This bug is very hard to reproduce,
+because it depends on a specific interleaving of
+events between the incremental collector and the program.)
+]],
+patch = [[
+--- lgc.c	2013/04/26 18:22:05	2.140.1.2
++++ lgc.c	2014/09/01 13:24:33
+@@ -403,7 +403,7 @@
+       reallymarkobject(g, gcvalue(gval(n)));  /* mark it now */
+     }
+   }
+-  if (prop)
++  if (g->gcstate != GCSatomic || prop)
+     linktable(h, &g->ephemeron);  /* have to propagate again */
+   else if (hasclears)  /* does table have white keys? */
+     linktable(h, &g->allweak);  /* may have to clean white keys */
 ]]
 }
 
