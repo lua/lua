@@ -1,10 +1,11 @@
 /*
-** $Id: ltablib.c,v 1.66 2014/03/21 13:52:33 roberto Exp $
+** $Id: ltablib.c,v 1.73 2014/07/29 16:01:00 roberto Exp $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
 
 
+#include <limits.h>
 #include <stddef.h>
 
 #define ltablib_c
@@ -16,8 +17,56 @@
 #include "lualib.h"
 
 
-#define aux_getn(L,n)	(luaL_checktype(L, n, LUA_TTABLE), luaL_len(L, n))
 
+/*
+** Structure with table-access functions
+*/
+typedef struct {
+  int (*geti) (lua_State *L, int idx, lua_Integer n);
+  void (*seti) (lua_State *L, int idx, lua_Integer n);
+} TabA;
+
+
+/*
+** equivalent to 'lua_rawgeti', but not raw
+*/
+static int geti (lua_State *L, int idx, lua_Integer n) {
+  lua_pushinteger(L, n);
+  return lua_gettable(L, idx);  /* assume 'idx' is not negative */
+}
+
+
+/*
+** equivalent to 'lua_rawseti', but not raw
+*/
+static void seti (lua_State *L, int idx, lua_Integer n) {
+  lua_pushinteger(L, n);
+  lua_rotate(L, -2, 1);  /* exchange key and value */
+  lua_settable(L, idx);  /* assume 'idx' is not negative */
+}
+
+
+/*
+** Check that 'arg' has a table and set access functions in 'ta' to raw
+** or non-raw according to the presence of corresponding metamethods.
+*/
+static void checktab (lua_State *L, int arg, TabA *ta) {
+  luaL_checktype(L, arg, LUA_TTABLE);
+  if (!lua_getmetatable(L, arg)) {  /* fast track */
+    ta->geti = lua_rawgeti;  /* with no metatable, all is raw */
+    ta->seti = lua_rawseti;
+  }
+  else {
+    lua_pushliteral(L, "__index");  /* 'index' metamethod */
+    ta->geti = (lua_rawget(L, -2) == LUA_TNIL) ? lua_rawgeti : geti;
+    lua_pushliteral(L, "__newindex");  /* 'newindex' metamethod */
+    ta->seti = (lua_rawget(L, -3) == LUA_TNIL) ? lua_rawseti : seti;
+    lua_pop(L, 3);  /* pop metatable plus both metamethods */
+  }
+}
+
+
+#define aux_getn(L,n,ta)	(checktab(L, n, ta), luaL_len(L, n))
 
 
 #if defined(LUA_COMPAT_MAXN)
@@ -39,20 +88,21 @@ static int maxn (lua_State *L) {
 
 
 static int tinsert (lua_State *L) {
-  int e = aux_getn(L, 1) + 1;  /* first empty element */
-  int pos;  /* where to insert new element */
+  TabA ta;
+  lua_Integer e = aux_getn(L, 1, &ta) + 1;  /* first empty element */
+  lua_Integer pos;  /* where to insert new element */
   switch (lua_gettop(L)) {
     case 2: {  /* called with only 2 arguments */
       pos = e;  /* insert new element at the end */
       break;
     }
     case 3: {
-      int i;
-      pos = luaL_checkint(L, 2);  /* 2nd argument is the position */
+      lua_Integer i;
+      pos = luaL_checkinteger(L, 2);  /* 2nd argument is the position */
       luaL_argcheck(L, 1 <= pos && pos <= e, 2, "position out of bounds");
       for (i = e; i > pos; i--) {  /* move up elements */
-        lua_rawgeti(L, 1, i-1);
-        lua_rawseti(L, 1, i);  /* t[i] = t[i-1] */
+        (*ta.geti)(L, 1, i - 1);
+        (*ta.seti)(L, 1, i);  /* t[i] = t[i - 1] */
       }
       break;
     }
@@ -60,29 +110,67 @@ static int tinsert (lua_State *L) {
       return luaL_error(L, "wrong number of arguments to " LUA_QL("insert"));
     }
   }
-  lua_rawseti(L, 1, pos);  /* t[pos] = v */
+  (*ta.seti)(L, 1, pos);  /* t[pos] = v */
   return 0;
 }
 
 
 static int tremove (lua_State *L) {
-  int size = aux_getn(L, 1);
-  int pos = luaL_optint(L, 2, size);
+  TabA ta;
+  lua_Integer size = aux_getn(L, 1, &ta);
+  lua_Integer pos = luaL_optinteger(L, 2, size);
   if (pos != size)  /* validate 'pos' if given */
     luaL_argcheck(L, 1 <= pos && pos <= size + 1, 1, "position out of bounds");
-  lua_rawgeti(L, 1, pos);  /* result = t[pos] */
+  (*ta.geti)(L, 1, pos);  /* result = t[pos] */
   for ( ; pos < size; pos++) {
-    lua_rawgeti(L, 1, pos+1);
-    lua_rawseti(L, 1, pos);  /* t[pos] = t[pos+1] */
+    (*ta.geti)(L, 1, pos + 1);
+    (*ta.seti)(L, 1, pos);  /* t[pos] = t[pos + 1] */
   }
   lua_pushnil(L);
-  lua_rawseti(L, 1, pos);  /* t[pos] = nil */
+  (*ta.seti)(L, 1, pos);  /* t[pos] = nil */
   return 1;
 }
 
 
-static void addfield (lua_State *L, luaL_Buffer *b, int i) {
-  lua_rawgeti(L, 1, i);
+static int tcopy (lua_State *L) {
+  TabA ta;
+  lua_Integer f = luaL_checkinteger(L, 2);
+  lua_Integer e = luaL_checkinteger(L, 3);
+  lua_Integer t;
+  int tt = 4;  /* destination table */
+  /* the following restriction avoids several problems with overflows */
+  luaL_argcheck(L, f > 0, 2, "initial position must be positive");
+  if (lua_istable(L, tt))
+    t = luaL_checkinteger(L, 5);
+  else {
+    tt = 1;  /* destination table is equal to source */
+    t = luaL_checkinteger(L, 4);
+  }
+  if (e >= f) {  /* otherwise, nothing to move */
+    lua_Integer n, i;
+    ta.geti = (!luaL_getmetafield(L, 1, "__index")) ? lua_rawgeti : geti;
+    ta.seti = (!luaL_getmetafield(L, tt, "__newindex")) ? lua_rawseti : seti;
+    n = e - f + 1;  /* number of elements to move */
+    if (t > f) {
+      for (i = n - 1; i >= 0; i--) {
+        (*ta.geti)(L, 1, f + i);
+        (*ta.seti)(L, tt, t + i);
+      }
+    }
+    else {
+      for (i = 0; i < n; i++) {
+        (*ta.geti)(L, 1, f + i);
+        (*ta.seti)(L, tt, t + i);
+      }
+    }
+  }
+  lua_pushvalue(L, tt);  /* return "to table" */
+  return 1;
+}
+
+
+static void addfield (lua_State *L, luaL_Buffer *b, TabA *ta, lua_Integer i) {
+  (*ta->geti)(L, 1, i);
   if (!lua_isstring(L, -1))
     luaL_error(L, "invalid value (%s) at index %d in table for "
                   LUA_QL("concat"), luaL_typename(L, -1), i);
@@ -91,20 +179,21 @@ static void addfield (lua_State *L, luaL_Buffer *b, int i) {
 
 
 static int tconcat (lua_State *L) {
+  TabA ta;
   luaL_Buffer b;
   size_t lsep;
-  int i, last;
+  lua_Integer i, last;
   const char *sep = luaL_optlstring(L, 2, "", &lsep);
-  luaL_checktype(L, 1, LUA_TTABLE);
-  i = luaL_optint(L, 3, 1);
-  last = luaL_opt(L, luaL_checkint, 4, luaL_len(L, 1));
+  checktab(L, 1, &ta);
+  i = luaL_optinteger(L, 3, 1);
+  last = luaL_opt(L, luaL_checkinteger, 4, luaL_len(L, 1));
   luaL_buffinit(L, &b);
   for (; i < last; i++) {
-    addfield(L, &b, i);
+    addfield(L, &b, &ta, i);
     luaL_addlstring(&b, sep, lsep);
   }
   if (i == last)  /* add last value (if interval was not empty) */
-    addfield(L, &b, i);
+    addfield(L, &b, &ta, i);
   luaL_pushresult(&b);
   return 1;
 }
@@ -117,35 +206,34 @@ static int tconcat (lua_State *L) {
 */
 
 static int pack (lua_State *L) {
+  int i;
   int n = lua_gettop(L);  /* number of elements to pack */
   lua_createtable(L, n, 1);  /* create result table */
+  lua_insert(L, 1);  /* put it at index 1 */
+  for (i = n; i >= 1; i--)  /* assign elements */
+    lua_rawseti(L, 1, i);
   lua_pushinteger(L, n);
-  lua_setfield(L, -2, "n");  /* t.n = number of elements */
-  if (n > 0) {  /* at least one element? */
-    int i;
-    lua_pushvalue(L, 1);
-    lua_rawseti(L, -2, 1);  /* insert first element */
-    lua_replace(L, 1);  /* move table into index 1 */
-    for (i = n; i >= 2; i--)  /* assign other elements */
-      lua_rawseti(L, 1, i);
-  }
+  lua_setfield(L, 1, "n");  /* t.n = number of elements */
   return 1;  /* return table */
 }
 
 
 static int unpack (lua_State *L) {
-  int i, e, n;
-  luaL_checktype(L, 1, LUA_TTABLE);
-  i = luaL_optint(L, 2, 1);
-  e = luaL_opt(L, luaL_checkint, 3, luaL_len(L, 1));
+  TabA ta;
+  lua_Integer i, e;
+  lua_Unsigned n;
+  checktab(L, 1, &ta);
+  i = luaL_optinteger(L, 2, 1);
+  e = luaL_opt(L, luaL_checkinteger, 3, luaL_len(L, 1));
   if (i > e) return 0;  /* empty range */
-  n = e - i + 1;  /* number of elements */
-  if (n <= 0 || !lua_checkstack(L, n))  /* n <= 0 means arithmetic overflow */
+  n = (lua_Unsigned)e - i;  /* number of elements minus 1 (avoid overflows) */
+  if (n >= (unsigned int)INT_MAX  || !lua_checkstack(L, (int)(++n)))
     return luaL_error(L, "too many results to unpack");
-  lua_rawgeti(L, 1, i);  /* push arg[i] (avoiding overflow problems) */
-  while (i++ < e)  /* push arg[i + 1...e] */
-    lua_rawgeti(L, 1, i);
-  return n;
+  do {  /* must have at least one element */
+    (*ta.geti)(L, 1, i);  /* push arg[i..e] */
+  } while (i++ < e); 
+
+  return (int)n;
 }
 
 /* }====================================================== */
@@ -161,9 +249,9 @@ static int unpack (lua_State *L) {
 */
 
 
-static void set2 (lua_State *L, int i, int j) {
-  lua_rawseti(L, 1, i);
-  lua_rawseti(L, 1, j);
+static void set2 (lua_State *L, TabA *ta, int i, int j) {
+  (*ta->seti)(L, 1, i);
+  (*ta->seti)(L, 1, j);
 }
 
 static int sort_comp (lua_State *L, int a, int b) {
@@ -181,45 +269,45 @@ static int sort_comp (lua_State *L, int a, int b) {
     return lua_compare(L, a, b, LUA_OPLT);
 }
 
-static void auxsort (lua_State *L, int l, int u) {
+static void auxsort (lua_State *L, TabA *ta, int l, int u) {
   while (l < u) {  /* for tail recursion */
     int i, j;
     /* sort elements a[l], a[(l+u)/2] and a[u] */
-    lua_rawgeti(L, 1, l);
-    lua_rawgeti(L, 1, u);
+    (*ta->geti)(L, 1, l);
+    (*ta->geti)(L, 1, u);
     if (sort_comp(L, -1, -2))  /* a[u] < a[l]? */
-      set2(L, l, u);  /* swap a[l] - a[u] */
+      set2(L, ta, l, u);  /* swap a[l] - a[u] */
     else
       lua_pop(L, 2);
     if (u-l == 1) break;  /* only 2 elements */
     i = (l+u)/2;
-    lua_rawgeti(L, 1, i);
-    lua_rawgeti(L, 1, l);
+    (*ta->geti)(L, 1, i);
+    (*ta->geti)(L, 1, l);
     if (sort_comp(L, -2, -1))  /* a[i]<a[l]? */
-      set2(L, i, l);
+      set2(L, ta, i, l);
     else {
       lua_pop(L, 1);  /* remove a[l] */
-      lua_rawgeti(L, 1, u);
+      (*ta->geti)(L, 1, u);
       if (sort_comp(L, -1, -2))  /* a[u]<a[i]? */
-        set2(L, i, u);
+        set2(L, ta, i, u);
       else
         lua_pop(L, 2);
     }
     if (u-l == 2) break;  /* only 3 elements */
-    lua_rawgeti(L, 1, i);  /* Pivot */
+    (*ta->geti)(L, 1, i);  /* Pivot */
     lua_pushvalue(L, -1);
-    lua_rawgeti(L, 1, u-1);
-    set2(L, i, u-1);
+    (*ta->geti)(L, 1, u-1);
+    set2(L, ta, i, u-1);
     /* a[l] <= P == a[u-1] <= a[u], only need to sort from l+1 to u-2 */
     i = l; j = u-1;
     for (;;) {  /* invariant: a[l..i] <= P <= a[j..u] */
       /* repeat ++i until a[i] >= P */
-      while (lua_rawgeti(L, 1, ++i), sort_comp(L, -1, -2)) {
+      while ((*ta->geti)(L, 1, ++i), sort_comp(L, -1, -2)) {
         if (i>=u) luaL_error(L, "invalid order function for sorting");
         lua_pop(L, 1);  /* remove a[i] */
       }
       /* repeat --j until a[j] <= P */
-      while (lua_rawgeti(L, 1, --j), sort_comp(L, -3, -1)) {
+      while ((*ta->geti)(L, 1, --j), sort_comp(L, -3, -1)) {
         if (j<=l) luaL_error(L, "invalid order function for sorting");
         lua_pop(L, 1);  /* remove a[j] */
       }
@@ -227,11 +315,11 @@ static void auxsort (lua_State *L, int l, int u) {
         lua_pop(L, 3);  /* pop pivot, a[i], a[j] */
         break;
       }
-      set2(L, i, j);
+      set2(L, ta, i, j);
     }
-    lua_rawgeti(L, 1, u-1);
-    lua_rawgeti(L, 1, i);
-    set2(L, u-1, i);  /* swap pivot (a[u-1]) with a[i] */
+    (*ta->geti)(L, 1, u-1);
+    (*ta->geti)(L, 1, i);
+    set2(L, ta, u-1, i);  /* swap pivot (a[u-1]) with a[i] */
     /* a[l..i-1] <= a[i] == P <= a[i+1..u] */
     /* adjust so that smaller half is in [j..i] and larger one in [l..u] */
     if (i-l < u-i) {
@@ -240,17 +328,18 @@ static void auxsort (lua_State *L, int l, int u) {
     else {
       j=i+1; i=u; u=j-2;
     }
-    auxsort(L, j, i);  /* call recursively the smaller one */
+    auxsort(L, ta, j, i);  /* call recursively the smaller one */
   }  /* repeat the routine for the larger one */
 }
 
 static int sort (lua_State *L) {
-  int n = aux_getn(L, 1);
-  luaL_checkstack(L, 40, "");  /* assume array is smaller than 2^40 */
+  TabA ta;
+  int n = (int)aux_getn(L, 1, &ta);
+  luaL_checkstack(L, 50, "");  /* assume array is smaller than 2^50 */
   if (!lua_isnoneornil(L, 2))  /* is there a 2nd argument? */
     luaL_checktype(L, 2, LUA_TFUNCTION);
-  lua_settop(L, 2);  /* make sure there is two arguments */
-  auxsort(L, 1, n);
+  lua_settop(L, 2);  /* make sure there are two arguments */
+  auxsort(L, &ta, 1, n);
   return 0;
 }
 
@@ -266,6 +355,7 @@ static const luaL_Reg tab_funcs[] = {
   {"pack", pack},
   {"unpack", unpack},
   {"remove", tremove},
+  {"copy", tcopy},
   {"sort", sort},
   {NULL, NULL}
 };

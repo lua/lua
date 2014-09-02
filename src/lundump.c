@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.34 2014/03/11 18:56:27 roberto Exp $
+** $Id: lundump.c,v 2.40 2014/06/19 18:27:20 roberto Exp $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -42,7 +42,7 @@ static l_noret error(LoadState *S, const char *why) {
 
 /*
 ** All high-level loads go through LoadVector; you can change it to
-** adapt to the endianess of the input
+** adapt to the endianness of the input
 */
 #define LoadVector(S,b,n)	LoadBlock(S,b,(n)*sizeof((b)[0]))
 
@@ -105,12 +105,12 @@ static void LoadCode (LoadState *S, Proto *f) {
 }
 
 
-static void LoadFunction(LoadState *S, Proto *f);
+static void LoadFunction(LoadState *S, Proto *f, TString *psource);
 
 
 static void LoadConstants (LoadState *S, Proto *f) {
-  int i, n;
-  n = LoadInt(S);
+  int i;
+  int n = LoadInt(S);
   f->k = luaM_newvector(S->L, n, TValue);
   f->sizek = n;
   for (i = 0; i < n; i++)
@@ -126,7 +126,7 @@ static void LoadConstants (LoadState *S, Proto *f) {
       setbvalue(o, LoadByte(S));
       break;
     case LUA_TNUMFLT:
-      setnvalue(o, LoadNumber(S));
+      setfltvalue(o, LoadNumber(S));
       break;
     case LUA_TNUMINT:
       setivalue(o, LoadInteger(S));
@@ -139,14 +139,19 @@ static void LoadConstants (LoadState *S, Proto *f) {
       lua_assert(0);
     }
   }
-  n = LoadInt(S);
+}
+
+
+static void LoadProtos (LoadState *S, Proto *f) {
+  int i;
+  int n = LoadInt(S);
   f->p = luaM_newvector(S->L, n, Proto *);
   f->sizep = n;
   for (i = 0; i < n; i++)
     f->p[i] = NULL;
   for (i = 0; i < n; i++) {
     f->p[i] = luaF_newproto(S->L);
-    LoadFunction(S, f->p[i]);
+    LoadFunction(S, f->p[i], f->source);
   }
 }
 
@@ -167,7 +172,6 @@ static void LoadUpvalues (LoadState *S, Proto *f) {
 
 static void LoadDebug (LoadState *S, Proto *f) {
   int i, n;
-  f->source = LoadString(S);
   n = LoadInt(S);
   f->lineinfo = luaM_newvector(S->L, n, int);
   f->sizelineinfo = n;
@@ -188,7 +192,10 @@ static void LoadDebug (LoadState *S, Proto *f) {
 }
 
 
-static void LoadFunction (LoadState *S, Proto *f) {
+static void LoadFunction (LoadState *S, Proto *f, TString *psource) {
+  f->source = LoadString(S);
+  if (f->source == NULL)  /* no source in dump? */
+    f->source = psource;  /* reuse parent's source */
   f->linedefined = LoadInt(S);
   f->lastlinedefined = LoadInt(S);
   f->numparams = LoadByte(S);
@@ -197,13 +204,14 @@ static void LoadFunction (LoadState *S, Proto *f) {
   LoadCode(S, f);
   LoadConstants(S, f);
   LoadUpvalues(S, f);
+  LoadProtos(S, f);
   LoadDebug(S, f);
 }
 
 
 static void checkliteral (LoadState *S, const char *s, const char *msg) {
   char buff[sizeof(LUA_SIGNATURE) + sizeof(LUAC_DATA)]; /* larger than both */
-  int len = strlen(s);
+  size_t len = strlen(s);
   LoadVector(S, buff, len);
   if (memcmp(s, buff, len) != 0)
     error(S, msg);
@@ -231,7 +239,7 @@ static void checkHeader (LoadState *S) {
   checksize(S, lua_Integer);
   checksize(S, lua_Number);
   if (LoadInteger(S) != LUAC_INT)
-    error(S, "endianess mismatch in");
+    error(S, "endianness mismatch in");
   if (LoadNumber(S) != LUAC_NUM)
     error(S, "float format mismatch in");
 }
@@ -240,10 +248,10 @@ static void checkHeader (LoadState *S) {
 /*
 ** load precompiled chunk
 */
-Closure *luaU_undump(lua_State *L, ZIO *Z, Mbuffer *buff,
-                     const char *name) {
+LClosure *luaU_undump(lua_State *L, ZIO *Z, Mbuffer *buff,
+                      const char *name) {
   LoadState S;
-  Closure *cl;
+  LClosure *cl;
   if (*name == '@' || *name == '=')
     S.name = name + 1;
   else if (*name == LUA_SIGNATURE[0])
@@ -257,10 +265,10 @@ Closure *luaU_undump(lua_State *L, ZIO *Z, Mbuffer *buff,
   cl = luaF_newLclosure(L, LoadByte(&S));
   setclLvalue(L, L->top, cl);
   incr_top(L);
-  cl->l.p = luaF_newproto(L);
-  LoadFunction(&S, cl->l.p);
-  lua_assert(cl->l.nupvalues == cl->l.p->sizeupvalues);
-  luai_verifycode(L, buff, cl->l.p);
+  cl->p = luaF_newproto(L);
+  LoadFunction(&S, cl->p, NULL);
+  lua_assert(cl->nupvalues == cl->p->sizeupvalues);
+  luai_verifycode(L, buff, cl->p);
   return cl;
 }
 

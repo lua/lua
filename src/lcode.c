@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.85 2014/03/21 13:52:33 roberto Exp $
+** $Id: lcode.c,v 2.90 2014/05/08 18:58:46 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -46,7 +46,7 @@ static int tonumeral(expdesc *e, TValue *v) {
       if (v) setivalue(v, e->u.ival);
       return 1;
     case VKFLT:
-      if (v) setnvalue(v, e->u.nval);
+      if (v) setfltvalue(v, e->u.nval);
       return 1;
     default: return 0;
   }
@@ -195,7 +195,7 @@ void luaK_patchlist (FuncState *fs, int list, int target) {
 }
 
 
-LUAI_FUNC void luaK_patchclose (FuncState *fs, int list, int level) {
+void luaK_patchclose (FuncState *fs, int list, int level) {
   level++;  /* argument is +1 to reserve 0 as non-op */
   while (list != NO_JUMP) {
     int next = getjump(fs, list);
@@ -317,7 +317,7 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
   TValue *idx = luaH_set(L, fs->ls->h, key);  /* index scanner table */
   int k, oldsize;
   if (ttisinteger(idx)) {  /* is there an index there? */
-    k = ivalue(idx);
+    k = cast_int(ivalue(idx));
     /* correct value? (warning: must distinguish floats from integers!) */
     if (k < fs->nk && ttype(&f->k[k]) == ttype(v) &&
                       luaV_rawequalobj(&f->k[k], v))
@@ -346,8 +346,9 @@ int luaK_stringK (FuncState *fs, TString *s) {
 
 
 /*
-** use userdata as key to avoid collision with float with same value;
-** conversion to 'void*' used only for hash, no "precision" problems
+** Integers use userdata as keys to avoid collision with floats with same
+** value; conversion to 'void*' used only for hashing, no "precision"
+** problems
 */
 int luaK_intK (FuncState *fs, lua_Integer n) {
   TValue k, o;
@@ -359,13 +360,13 @@ int luaK_intK (FuncState *fs, lua_Integer n) {
 
 /*
 ** Both NaN and -0.0 should not go to the constant table, as they have
-** problems with the hashing. (NaN is not ** a valid key,
-** -0.0 collides with +0.0.)
+** problems with the hashing. (NaN is not a valid key, -0.0 collides
+** with +0.0.)
 */ 
 static int luaK_numberK (FuncState *fs, lua_Number r) {
   TValue o;
   lua_assert(!luai_numisnan(r) && !isminuszero(r));
-  setnvalue(&o, r);
+  setfltvalue(&o, r);
   return addk(fs, &o, &o);
 }
 
@@ -768,8 +769,6 @@ static int validop (int op, TValue *v1, TValue *v2) {
       return (tointeger(v1, &i) && tointeger(v2, &i));
     case LUA_OPMOD:  /* integer module by 0 */
       return !(ttisinteger(v1) && ttisinteger(v2) && ivalue(v2) == 0);
-    case LUA_OPPOW:  /* negative integer exponentiation */
-      return !(ttisinteger(v1) && ttisinteger(v2) && ivalue(v2) < 0);
     default: return 1;  /* everything else is valid */
   }
 }
