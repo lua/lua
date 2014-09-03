@@ -335,12 +335,18 @@ static void restartcollection (global_State *g) {
 ** =======================================================
 */
 
+/*
+** Traverse a table with weak values and link it to proper list. During
+** propagate phase, keep it in 'grayagain' list, to be revisited in the
+** atomic phase. In the atomic phase, if table has any white value,
+** put it in 'weak' list, to be cleared.
+*/
 static void traverseweakvalue (global_State *g, Table *h) {
   Node *n, *limit = gnodelast(h);
-  /* if there is array part, assume it may have white values (do not
-     traverse it just to check) */
+  /* if there is array part, assume it may have white values (it is not
+     worth traversing it now just to check) */
   int hasclears = (h->sizearray > 0);
-  for (n = gnode(h, 0); n < limit; n++) {
+  for (n = gnode(h, 0); n < limit; n++) {  /* traverse hash part */
     checkdeadkey(n);
     if (ttisnil(gval(n)))  /* entry is empty? */
       removeentry(n);  /* remove it */
@@ -351,20 +357,30 @@ static void traverseweakvalue (global_State *g, Table *h) {
         hasclears = 1;  /* table will have to be cleared */
     }
   }
-  if (hasclears)
+  if (g->gcstate == GCSpropagate)
+    linkgclist(h, g->grayagain);  /* must retraverse it in atomic phase */
+  else if (hasclears)
     linkgclist(h, g->weak);  /* has to be cleared later */
-  else  /* no white values */
-    linkgclist(h, g->grayagain);  /* no need to clean */
 }
 
 
+/*
+** Traverse an ephemeron table and link it to proper list. Returns true
+** iff any object was marked during this traversal (which implies that
+** convergence has to continue). During propagation phase, keep table
+** in 'grayagain' list, to be visited again in the atomic phase. In
+** the atomic phase, if table has any white->white entry, it has to
+** be revisited during ephemeron convergence (as that key may turn
+** black). Otherwise, if it has any white key, table has to be cleared
+** (in the atomic phase).
+*/
 static int traverseephemeron (global_State *g, Table *h) {
   int marked = 0;  /* true if an object is marked in this traversal */
   int hasclears = 0;  /* true if table has white keys */
-  int prop = 0;  /* true if table has entry "white-key -> white-value" */
+  int hasww = 0;  /* true if table has entry "white-key -> white-value" */
   Node *n, *limit = gnodelast(h);
   int i;
-  /* traverse array part (numeric keys are 'strong') */
+  /* traverse array part */
   for (i = 0; i < h->sizearray; i++) {
     if (valiswhite(&h->array[i])) {
       marked = 1;
@@ -379,19 +395,20 @@ static int traverseephemeron (global_State *g, Table *h) {
     else if (iscleared(g, gkey(n))) {  /* key is not marked (yet)? */
       hasclears = 1;  /* table must be cleared */
       if (valiswhite(gval(n)))  /* value not marked yet? */
-        prop = 1;  /* must propagate again */
+        hasww = 1;  /* white-white entry */
     }
     else if (valiswhite(gval(n))) {  /* value not marked yet? */
       marked = 1;
       reallymarkobject(g, gcvalue(gval(n)));  /* mark it now */
     }
   }
-  if (prop)
+  /* link table into proper list */
+  if (g->gcstate == GCSpropagate)
+    linkgclist(h, g->grayagain);  /* must retraverse it in atomic phase */
+  else if (hasww)  /* table has white->white entries? */
     linkgclist(h, g->ephemeron);  /* have to propagate again */
-  else if (hasclears)  /* does table have white keys? */
+  else if (hasclears)  /* table has white keys? */
     linkgclist(h, g->allweak);  /* may have to clean white keys */
-  else  /* no white keys */
-    linkgclist(h, g->grayagain);  /* no need to clean */
   return marked;
 }
 
@@ -565,35 +582,12 @@ static void propagateall (global_State *g) {
 }
 
 
-static void propagatelist (global_State *g, GCObject *l) {
-  lua_assert(g->gray == NULL);  /* no grays left */
-  g->gray = l;
-  propagateall(g);  /* traverse all elements from 'l' */
-}
-
-/*
-** retraverse all gray lists. Because tables may be reinserted in other
-** lists when traversed, traverse the original lists to avoid traversing
-** twice the same table (which is not wrong, but inefficient)
-*/
-static void retraversegrays (global_State *g) {
-  GCObject *weak = g->weak;  /* save original lists */
-  GCObject *grayagain = g->grayagain;
-  GCObject *ephemeron = g->ephemeron;
-  g->weak = g->grayagain = g->ephemeron = NULL;
-  propagateall(g);  /* traverse main gray list */
-  propagatelist(g, grayagain);
-  propagatelist(g, weak);
-  propagatelist(g, ephemeron);
-}
-
-
 static void convergeephemerons (global_State *g) {
   int changed;
   do {
     GCObject *w;
     GCObject *next = g->ephemeron;  /* get ephemeron list */
-    g->ephemeron = NULL;  /* tables will return to this list when traversed */
+    g->ephemeron = NULL;  /* tables may return to this list when traversed */
     changed = 0;
     while ((w = next) != NULL) {
       next = gco2t(w)->gclist;
@@ -966,19 +960,21 @@ static l_mem atomic (lua_State *L) {
   global_State *g = G(L);
   l_mem work;
   GCObject *origweak, *origall;
-  g->GCmemtrav = 0;  /* start counting work */
+  GCObject *grayagain = g->grayagain;  /* save original list */
+  lua_assert(g->ephemeron == NULL && g->weak == NULL);
   lua_assert(!iswhite(g->mainthread));
   g->gcstate = GCSinsideatomic;
+  g->GCmemtrav = 0;  /* start counting work */
   markobject(g, L);  /* mark running thread */
   /* registry and global metatables may be changed by API */
   markvalue(g, &g->l_registry);
-  markmt(g);  /* mark basic metatables */
+  markmt(g);  /* mark global metatables */
   /* remark occasional upvalues of (maybe) dead threads */
   remarkupvals(g);
   propagateall(g);  /* propagate changes */
-  work = g->GCmemtrav;  /* stop counting (do not (re)count grays) */
-  /* traverse objects caught by write barrier and by 'remarkupvals' */
-  retraversegrays(g);
+  work = g->GCmemtrav;  /* stop counting (do not recount gray-agains) */
+  g->gray = grayagain;
+  propagateall(g);  /* traverse 'grayagain' list */
   g->GCmemtrav = 0;  /* restart counting */
   convergeephemerons(g);
   /* at this point, all strongly accessible objects are marked. */
