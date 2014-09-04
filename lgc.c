@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.192 2014/07/29 16:22:24 roberto Exp roberto $
+** $Id: lgc.c,v 2.194 2014/09/03 16:54:41 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -379,7 +379,7 @@ static int traverseephemeron (global_State *g, Table *h) {
   int hasclears = 0;  /* true if table has white keys */
   int hasww = 0;  /* true if table has entry "white-key -> white-value" */
   Node *n, *limit = gnodelast(h);
-  int i;
+  unsigned int i;
   /* traverse array part */
   for (i = 0; i < h->sizearray; i++) {
     if (valiswhite(&h->array[i])) {
@@ -415,7 +415,7 @@ static int traverseephemeron (global_State *g, Table *h) {
 
 static void traversestrongtable (global_State *g, Table *h) {
   Node *n, *limit = gnodelast(h);
-  int i;
+  unsigned int i;
   for (i = 0; i < h->sizearray; i++)  /* traverse array part */
     markvalue(g, &h->array[i]);
   for (n = gnode(h, 0); n < limit; n++) {  /* traverse hash part */
@@ -635,7 +635,7 @@ static void clearvalues (global_State *g, GCObject *l, GCObject *f) {
   for (; l != f; l = gco2t(l)->gclist) {
     Table *h = gco2t(l);
     Node *n, *limit = gnodelast(h);
-    int i;
+    unsigned int i;
     for (i = 0; i < h->sizearray; i++) {
       TValue *o = &h->array[i];
       if (iscleared(g, o))  /* value was collected? */

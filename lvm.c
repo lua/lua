@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.221 2014/07/30 14:00:14 roberto Exp roberto $
+** $Id: lvm.c,v 2.222 2014/07/30 14:42:44 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1067,7 +1067,7 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_SETLIST,
         int n = GETARG_B(i);
         int c = GETARG_C(i);
-        int last;
+        unsigned int last;
         Table *h;
         if (n == 0) n = cast_int(L->top - ra) - 1;
         if (c == 0) {

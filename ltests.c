@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.183 2014/08/01 17:33:08 roberto Exp roberto $
+** $Id: ltests.c,v 2.184 2014/09/01 17:58:55 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -218,7 +218,7 @@ static void checkvalref (global_State *g, GCObject *f, const TValue *t) {
 
 
 static void checktable (global_State *g, Table *h) {
-  int i;
+  unsigned int i;
   Node *n, *limit = gnode(h, sizenode(h));
   GCObject *hgc = obj2gco(h);
   checkobjref(g, hgc, h->metatable);
@@ -667,7 +667,7 @@ static int table_query (lua_State *L) {
     lua_pushinteger(L, luaH_isdummy(t->node) ? 0 : sizenode(t));
     lua_pushinteger(L, t->lastfree - t->node);
   }
-  else if (i < t->sizearray) {
+  else if ((unsigned int)i < t->sizearray) {
     lua_pushinteger(L, i);
     pushobject(L, &t->array[i]);
     lua_pushnil(L);
