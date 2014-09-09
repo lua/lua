@@ -59,6 +59,10 @@ a:link:active, a:visited:active {
 	color: #FF0000 ;
 }
 
+h1 a img {
+	vertical-align: text-bottom ;
+}
+
 hr {
 	border: 0 ;
 	height: 1px ;
@@ -88,9 +92,8 @@ input[type=text] {
 	border-radius: 2em ;
 	-moz-border-radius: 2em ;
 	background-image: url('images/search.png') ;
-	background-repeat: no-repeat;
+	background-repeat: no-repeat ;
 	background-position: 4px center ;
 	padding-left: 20px ;
 	height: 2em ;
 }
-

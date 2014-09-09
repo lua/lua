@@ -1,5 +1,5 @@
 /*
-** $Id: linit.c,v 1.33 2014/02/06 17:32:33 roberto Exp $
+** $Id: linit.c,v 1.34 2014/05/15 19:28:34 roberto Exp $
 ** Initialization of libraries for lua.c and other clients
 ** See Copyright Notice in lua.h
 */
@@ -34,10 +34,12 @@ static const luaL_Reg loadedlibs[] = {
   {LUA_IOLIBNAME, luaopen_io},
   {LUA_OSLIBNAME, luaopen_os},
   {LUA_STRLIBNAME, luaopen_string},
-  {LUA_UTF8LIBNAME, luaopen_utf8},
-  {LUA_BITLIBNAME, luaopen_bit32},
   {LUA_MATHLIBNAME, luaopen_math},
   {LUA_DBLIBNAME, luaopen_debug},
+  {LUA_UTF8LIBNAME, luaopen_utf8},
+#if defined(LUA_COMPAT_BITLIB)
+  {LUA_BITLIBNAME, luaopen_bit32},
+#endif
   {NULL, NULL}
 };
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.260 2014/03/12 20:57:40 roberto Exp $
+** $Id: lauxlib.c,v 1.267 2014/07/19 14:37:09 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -396,8 +396,8 @@ LUALIB_API lua_Number luaL_optnumber (lua_State *L, int arg, lua_Number def) {
 
 
 static void interror (lua_State *L, int arg) {
-  if (lua_type(L, arg) == LUA_TNUMBER)
-    luaL_argerror(L, arg, "float value out of range");
+  if (lua_isnumber(L, arg))
+    luaL_argerror(L, arg, "number has no integer representation");
   else
     tag_error(L, arg, LUA_TNUMBER);
 }
@@ -413,24 +413,9 @@ LUALIB_API lua_Integer luaL_checkinteger (lua_State *L, int arg) {
 }
 
 
-LUALIB_API lua_Unsigned luaL_checkunsigned (lua_State *L, int arg) {
-  int isnum;
-  lua_Unsigned d = lua_tounsignedx(L, arg, &isnum);
-  if (!isnum)
-    interror(L, arg);
-  return d;
-}
-
-
 LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int arg,
                                                       lua_Integer def) {
   return luaL_opt(L, luaL_checkinteger, arg, def);
-}
-
-
-LUALIB_API lua_Unsigned luaL_optunsigned (lua_State *L, int arg,
-                                                        lua_Unsigned def) {
-  return luaL_opt(L, luaL_checkunsigned, arg, def);
 }
 
 /* }====================================================== */
@@ -757,13 +742,8 @@ LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len) {
       case LUA_TNUMBER: {
         if (lua_isinteger(L, idx))
           lua_pushfstring(L, "%I", lua_tointeger(L, idx));
-        else {
-          const char *s = lua_pushfstring(L, "%f", lua_tonumber(L, idx));
-          if (s[strspn(s, "-0123456789")] == '\0') {  /* looks like an int? */
-            lua_pushliteral(L, ".0");  /* add a '.0' to result */
-            lua_concat(L, 2);
-          }
-        }
+        else
+          lua_pushfstring(L, "%f", lua_tonumber(L, idx));
         break;
       }
       case LUA_TSTRING:
@@ -903,22 +883,26 @@ LUALIB_API int luaL_getsubtable (lua_State *L, int idx, const char *fname) {
 
 
 /*
-** stripped-down 'require'. Calls 'openf' to open a module,
-** registers the result in 'package.loaded' table and, if 'glb'
-** is true, also registers the result in the global table.
+** Stripped-down 'require': After checking "loaded" table, calls 'openf'
+** to open a module, registers the result in 'package.loaded' table and,
+** if 'glb' is true, also registers the result in the global table.
 ** Leaves resulting module on the top.
 */
 LUALIB_API void luaL_requiref (lua_State *L, const char *modname,
                                lua_CFunction openf, int glb) {
-  lua_pushcfunction(L, openf);
-  lua_pushstring(L, modname);  /* argument to open function */
-  lua_call(L, 1, 1);  /* open module */
   luaL_getsubtable(L, LUA_REGISTRYINDEX, "_LOADED");
-  lua_pushvalue(L, -2);  /* make copy of module (call result) */
-  lua_setfield(L, -2, modname);  /* _LOADED[modname] = module */
-  lua_pop(L, 1);  /* remove _LOADED table */
+  lua_getfield(L, -1, modname);  /* _LOADED[modname] */
+  if (!lua_toboolean(L, -1)) {  /* package not already loaded? */
+    lua_pop(L, 1);  /* remove field */
+    lua_pushcfunction(L, openf);
+    lua_pushstring(L, modname);  /* argument to open function */
+    lua_call(L, 1, 1);  /* call 'openf' to open module */
+    lua_pushvalue(L, -1);  /* make copy of module (call result) */
+    lua_setfield(L, -3, modname);  /* _LOADED[modname] = module */
+  }
+  lua_remove(L, -2);  /* remove _LOADED table */
   if (glb) {
-    lua_pushvalue(L, -1);  /* copy of 'mod' */
+    lua_pushvalue(L, -1);  /* copy of module */
     lua_setglobal(L, modname);  /* _G[modname] = module */
   }
 }
@@ -966,15 +950,14 @@ LUALIB_API lua_State *luaL_newstate (void) {
 }
 
 
-LUALIB_API void luaL_checkversion_ (lua_State *L, int ver, size_t sz) {
+LUALIB_API void luaL_checkversion_ (lua_State *L, lua_Number ver, size_t sz) {
   const lua_Number *v = lua_version(L);
+  if (sz != LUAL_NUMSIZES)  /* check numeric types */
+    luaL_error(L, "core and library have incompatible numeric types");
   if (v != lua_version(NULL))
     luaL_error(L, "multiple Lua VMs detected");
   else if (*v != ver)
-    luaL_error(L, "version mismatch: app. needs %d, Lua core provides %f",
+    luaL_error(L, "version mismatch: app. needs %f, Lua core provides %f",
                   ver, *v);
-  /* check numeric types */
-  if (sz != LUAL_NUMSIZES)
-    luaL_error(L, "core and library have incompatible numeric types");
 }
 

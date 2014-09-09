@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.111 2014/03/07 16:19:00 roberto Exp $
+** $Id: llimits.h,v 1.120 2014/07/18 18:29:12 roberto Exp $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -28,47 +28,42 @@ typedef unsigned char lu_byte;
 
 
 /* maximum value for size_t */
-#define MAX_SIZET	((size_t)(~(size_t)0)-2)
+#define MAX_SIZET	((size_t)(~(size_t)0))
 
 /* maximum size visible for Lua (must be representable in a lua_Integer */
-#define MAX_SIZE	(sizeof(size_t) <= sizeof(lua_Integer) ? MAX_SIZET \
-                          : (size_t)(~(lua_Unsigned)0)-2)
+#define MAX_SIZE	(sizeof(size_t) < sizeof(lua_Integer) ? MAX_SIZET \
+                          : (size_t)(LUA_MAXINTEGER))
 
 
-#define MAX_LUMEM	((lu_mem)(~(lu_mem)0)-2)
+#define MAX_LUMEM	((lu_mem)(~(lu_mem)0))
 
-#define MAX_LMEM	((l_mem) ((MAX_LUMEM >> 1) - 2))
-
-
-#define MAX_INT (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
+#define MAX_LMEM	((l_mem)(MAX_LUMEM >> 1))
 
 
-/* maximum value for a lua_Unsigned */
-#define MAX_UINTEGER	(~(lua_Unsigned)0)
+#define MAX_INT		INT_MAX  /* maximum value of an int */
 
-/* minimum and maximum values for lua_Integer */
-#define MAX_INTEGER	((lua_Integer)(MAX_UINTEGER >> 1))
-#define MIN_INTEGER	(~MAX_INTEGER)
 
 /*
-** conversion of pointer to integer
+** conversion of pointer to integer:
 ** this is for hashing only; there is no problem if the integer
 ** cannot hold the whole pointer value
 */
-#define IntPoint(p)  ((unsigned int)(lu_mem)(p))
+#define point2int(p)	((unsigned int)((lu_mem)(p) & UINT_MAX))
 
 
 
 /* type to ensure maximum alignment */
-#if !defined(LUAI_USER_ALIGNMENT_T)
-#define LUAI_USER_ALIGNMENT_T	union { double u; void *s; long l; }
+#if defined(LUAI_USER_ALIGNMENT_T)
+typedef LUAI_USER_ALIGNMENT_T L_Umaxalign;
+#else
+typedef union { double u; void *s; lua_Integer i; long l; } L_Umaxalign;
 #endif
 
-typedef LUAI_USER_ALIGNMENT_T L_Umaxalign;
 
 
-/* result of a `usual argument conversion' over lua_Number */
+/* types of 'usual argument conversions' for lua_Number and lua_Integer */
 typedef LUAI_UACNUMBER l_uacNumber;
+typedef LUAI_UACINT l_uacInt;
 
 
 /* internal assertions for in-house debugging */
@@ -85,18 +80,15 @@ typedef LUAI_UACNUMBER l_uacNumber;
 /*
 ** assertion for checking API calls
 */
-#if !defined(luai_apicheck)
-
 #if defined(LUA_USE_APICHECK)
 #include <assert.h>
-#define luai_apicheck(L,e)	assert(e)
+#define luai_apicheck(e)	assert(e)
 #else
-#define luai_apicheck(L,e)	lua_assert(e)
+#define luai_apicheck(e)	lua_assert(e)
 #endif
 
-#endif
 
-#define api_check(l,e,msg)	luai_apicheck(l,(e) && msg)
+#define api_check(e,msg)	luai_apicheck((e) && msg)
 
 
 #if !defined(UNUSED)
@@ -111,8 +103,21 @@ typedef LUAI_UACNUMBER l_uacNumber;
 #define cast_num(i)	cast(lua_Number, (i))
 #define cast_int(i)	cast(int, (i))
 #define cast_uchar(i)	cast(unsigned char, (i))
-#define cast_integer(i)	cast(lua_Integer, (i))
-#define cast_unsigned(i)	cast(lua_Unsigned, (i))
+
+
+/* cast a signed lua_Integer to lua_Unsigned */
+#if !defined(l_castS2U)
+#define l_castS2U(i)	((lua_Unsigned)(i))
+#endif
+
+/*
+** cast a lua_Unsigned to a signed lua_Integer; this cast is
+** not strict ANSI C, but two-complement architectures should
+** work fine.
+*/
+#if !defined(l_castU2S)
+#define l_castU2S(i)	((lua_Integer)(i))
+#endif
 
 
 /*

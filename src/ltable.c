@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.84 2014/01/27 13:34:32 roberto Exp $
+** $Id: ltable.c,v 2.93 2014/07/29 16:22:24 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -21,6 +21,7 @@
 #include <float.h>
 #include <math.h>
 #include <string.h>
+#include <limits.h>
 
 #define ltable_c
 #define LUA_CORE
@@ -39,20 +40,19 @@
 
 
 /*
-** max size of array part is 2^MAXBITS
+** Maximum size of array part (MAXASIZE) is 2^MAXBITS. (SIZEINT is the
+** minimum between size of int and size of LUA_INTEGER; array indices
+** are limited by both types.)
 */
-#if LUAI_BITSINT >= 32
-#define MAXBITS		30
-#else
-#define MAXBITS		(LUAI_BITSINT-2)
-#endif
-
+#define SIZEINT	 \
+  (sizeof(int) < sizeof(LUA_INTEGER) ? sizeof(int) : sizeof(LUA_INTEGER))
+#define MAXBITS		cast_int(SIZEINT * CHAR_BIT - 2)
 #define MAXASIZE	(1 << MAXBITS)
 
 
 #define hashpow2(t,n)		(gnode(t, lmod((n), sizenode(t))))
 
-#define hashstr(t,str)		hashpow2(t, (str)->tsv.hash)
+#define hashstr(t,str)		hashpow2(t, (str)->hash)
 #define hashboolean(t,p)	hashpow2(t, p)
 #define hashint(t,i)		hashpow2(t, i)
 
@@ -64,13 +64,7 @@
 #define hashmod(t,n)	(gnode(t, ((n) % ((sizenode(t)-1)|1))))
 
 
-#define hashpointer(t,p)	hashmod(t, IntPoint(p))
-
-
-/* checks whether a float has a value representable as a lua_Integer
-   (and does the conversion if so) */
-#define numisinteger(x,i) \
-	(((x) == l_floor(x)) && luaV_numtointeger(x, i))
+#define hashpointer(t,p)	hashmod(t, point2int(p))
 
 
 #define dummynode		(&dummynode_)
@@ -81,6 +75,17 @@ static const Node dummynode_ = {
   {NILCONSTANT},  /* value */
   {{NILCONSTANT, 0}}  /* key */
 };
+
+
+/*
+** Checks whether a float has a value representable as a lua_Integer
+** (and does the conversion if so)
+*/
+static int numisinteger (lua_Number x, lua_Integer *p) {
+  if ((x) == l_floor(x))  /* integral value? */
+    return lua_numtointeger(x, p);  /* try as an integer */
+  else return 0;
+}
 
 
 /*
@@ -111,14 +116,14 @@ static Node *mainposition (const Table *t, const TValue *key) {
     case LUA_TNUMFLT:
       return hashfloat(t, fltvalue(key));
     case LUA_TSHRSTR:
-      return hashstr(t, rawtsvalue(key));
+      return hashstr(t, tsvalue(key));
     case LUA_TLNGSTR: {
-      TString *s = rawtsvalue(key);
-      if (s->tsv.extra == 0) {  /* no hash? */
-        s->tsv.hash = luaS_hash(getstr(s), s->tsv.len, s->tsv.hash);
-        s->tsv.extra = 1;  /* now it has its hash */
+      TString *s = tsvalue(key);
+      if (s->extra == 0) {  /* no hash? */
+        s->hash = luaS_hash(getstr(s), s->len, s->hash);
+        s->extra = 1;  /* now it has its hash */
       }
-      return hashstr(t, rawtsvalue(key));
+      return hashstr(t, tsvalue(key));
     }
     case LUA_TBOOLEAN:
       return hashboolean(t, bvalue(key));
@@ -304,7 +309,7 @@ static void setnodevector (lua_State *L, Table *t, int size) {
     for (i=0; i<size; i++) {
       Node *n = gnode(t, i);
       gnext(n) = 0;
-      setnilvalue(gkey(n));
+      setnilvalue(wgkey(n));
       setnilvalue(gval(n));
     }
   }
@@ -378,7 +383,8 @@ static void rehash (lua_State *L, Table *t, const TValue *ek) {
 
 
 Table *luaH_new (lua_State *L) {
-  Table *t = &luaC_newobj(L, LUA_TTABLE, sizeof(Table))->h;
+  GCObject *o = luaC_newobj(L, LUA_TTABLE, sizeof(Table));
+  Table *t = gco2t(o);
   t->metatable = NULL;
   t->flags = cast_byte(~0);
   t->array = NULL;
@@ -424,7 +430,7 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
     if (luai_numisnan(n))
       luaG_runerror(L, "table index is NaN");
     if (numisinteger(n, &k)) {  /* index is int? */
-      setivalue(&aux, k); 
+      setivalue(&aux, k);
       key = &aux;  /* insert it as an integer */
     }
   }
@@ -443,10 +449,10 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
       /* yes; move colliding node into free position */
       while (othern + gnext(othern) != mp)  /* find previous */
         othern += gnext(othern);
-      gnext(othern) = f - othern;  /* re-chain with 'f' in place of 'mp' */
+      gnext(othern) = cast_int(f - othern);  /* rechain to point to 'f' */
       *f = *mp;  /* copy colliding node into free pos. (mp->next also goes) */
       if (gnext(mp) != 0) {
-        gnext(f) += mp - f;  /* correct 'next' */
+        gnext(f) += cast_int(mp - f);  /* correct 'next' */
         gnext(mp) = 0;  /* now 'mp' is free */
       }
       setnilvalue(gval(mp));
@@ -454,13 +460,13 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
     else {  /* colliding node is in its own main position */
       /* new node will go into free position */
       if (gnext(mp) != 0)
-        gnext(f) = (mp + gnext(mp)) - f;  /* chain new position */
+        gnext(f) = cast_int((mp + gnext(mp)) - f);  /* chain new position */
       else lua_assert(gnext(f) == 0);
-      gnext(mp) = f - mp;
+      gnext(mp) = cast_int(f - mp);
       mp = f;
     }
   }
-  setobj2t(L, gkey(mp), key);
+  setkey(L, &mp->i_key, key);
   luaC_barrierback(L, t, key);
   lua_assert(ttisnil(gval(mp)));
   return gval(mp);
@@ -472,7 +478,7 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
 */
 const TValue *luaH_getint (Table *t, lua_Integer key) {
   /* (1 <= key && key <= t->sizearray) */
-  if (cast_unsigned(key - 1) < cast_unsigned(t->sizearray))
+  if (l_castS2U(key - 1) < cast(unsigned int, t->sizearray))
     return &t->array[key - 1];
   else {
     Node *n = hashint(t, key);
@@ -495,9 +501,10 @@ const TValue *luaH_getint (Table *t, lua_Integer key) {
 */
 const TValue *luaH_getstr (Table *t, TString *key) {
   Node *n = hashstr(t, key);
-  lua_assert(key->tsv.tt == LUA_TSHRSTR);
+  lua_assert(key->tt == LUA_TSHRSTR);
   for (;;) {  /* check whether `key' is somewhere in the chain */
-    if (ttisshrstring(gkey(n)) && eqshrstr(rawtsvalue(gkey(n)), key))
+    const TValue *k = gkey(n);
+    if (ttisshrstring(k) && eqshrstr(tsvalue(k), key))
       return gval(n);  /* that's it */
     else {
       int nx = gnext(n);
@@ -514,7 +521,7 @@ const TValue *luaH_getstr (Table *t, TString *key) {
 */
 const TValue *luaH_get (Table *t, const TValue *key) {
   switch (ttype(key)) {
-    case LUA_TSHRSTR: return luaH_getstr(t, rawtsvalue(key));
+    case LUA_TSHRSTR: return luaH_getstr(t, tsvalue(key));
     case LUA_TNUMINT: return luaH_getint(t, ivalue(key));
     case LUA_TNIL: return luaO_nilobject;
     case LUA_TNUMFLT: {
