@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.266 2014/07/17 12:30:53 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.267 2014/07/19 14:37:09 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -170,13 +170,13 @@ LUALIB_API int luaL_argerror (lua_State *L, int arg, const char *extramsg) {
 
 static int typeerror (lua_State *L, int arg, const char *tname) {
   const char *msg;
-  const char *typearg = luaL_typename(L, arg);
-  if (lua_getmetatable(L, arg)) {
-    if (lua_getfield(L, -1, "__name") == LUA_TSTRING)
-      typearg = lua_tostring(L, -1);
-  }
+  const char *typearg;  /* name for the type of the actual argument */
+  if (luaL_getmetafield(L, arg, "__name") == LUA_TSTRING)
+    typearg = lua_tostring(L, -1);  /* use the given type name */
   else if (lua_type(L, arg) == LUA_TLIGHTUSERDATA)
-    typearg = "light userdata";
+    typearg = "light userdata";  /* special name for messages */
+  else
+    typearg = luaL_typename(L, arg);  /* standard name */
   msg = lua_pushfstring(L, "%s expected, got %s", tname, typearg);
   return luaL_argerror(L, arg, msg);
 }
@@ -701,22 +701,23 @@ LUALIB_API int luaL_loadstring (lua_State *L, const char *s) {
 
 LUALIB_API int luaL_getmetafield (lua_State *L, int obj, const char *event) {
   if (!lua_getmetatable(L, obj))  /* no metatable? */
-    return 0;
-  lua_pushstring(L, event);
-  if (lua_rawget(L, -2) == LUA_TNIL) {  /* is metafield nil? */
-    lua_pop(L, 2);  /* remove metatable and metafield */
-    return 0;
-  }
+    return LUA_TNIL;
   else {
-    lua_remove(L, -2);  /* remove only metatable */
-    return 1;
+    int tt;
+    lua_pushstring(L, event);
+    tt = lua_rawget(L, -2);
+    if (tt == LUA_TNIL)  /* is metafield nil? */
+      lua_pop(L, 2);  /* remove metatable and metafield */
+    else
+      lua_remove(L, -2);  /* remove only metatable */
+    return tt;  /* return metafield type */
   }
 }
 
 
 LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
   obj = lua_absindex(L, obj);
-  if (!luaL_getmetafield(L, obj, event))  /* no metafield? */
+  if (luaL_getmetafield(L, obj, event) == LUA_TNIL)  /* no metafield? */
     return 0;
   lua_pushvalue(L, obj);
   lua_call(L, 1, 1);

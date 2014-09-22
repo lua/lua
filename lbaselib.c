@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.295 2014/08/01 17:33:08 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.296 2014/08/21 20:07:56 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -129,7 +129,7 @@ static int luaB_setmetatable (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   luaL_argcheck(L, t == LUA_TNIL || t == LUA_TTABLE, 2,
                     "nil or table expected");
-  if (luaL_getmetafield(L, 1, "__metatable"))
+  if (luaL_getmetafield(L, 1, "__metatable") != LUA_TNIL)
     return luaL_error(L, "cannot change a protected metatable");
   lua_settop(L, 2);
   lua_setmetatable(L, 1);
@@ -212,7 +212,7 @@ static int luaB_type (lua_State *L) {
 
 static int pairsmeta (lua_State *L, const char *method, int iszero,
                       lua_CFunction iter) {
-  if (!luaL_getmetafield(L, 1, method)) {  /* no metamethod? */
+  if (luaL_getmetafield(L, 1, method) == LUA_TNIL) {  /* no metamethod? */
     luaL_checktype(L, 1, LUA_TTABLE);  /* argument must be a table */
     lua_pushcfunction(L, iter);  /* will return generator, */
     lua_pushvalue(L, 1);  /* state, */
@@ -279,8 +279,8 @@ static int ipairsaux (lua_State *L) {
 */
 static int luaB_ipairs (lua_State *L) {
   lua_CFunction iter =
-     (luaL_getmetafield(L, 1, "__len") ||
-      luaL_getmetafield(L, 1, "__index"))
+     (luaL_getmetafield(L, 1, "__len") != LUA_TNIL ||
+      luaL_getmetafield(L, 1, "__index") != LUA_TNIL)
         ? ipairsaux : ipairsaux_raw;
 #if defined(LUA_COMPAT_IPAIRS)
   return pairsmeta(L, "__ipairs", 1, iter);

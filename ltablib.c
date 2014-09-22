@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.74 2014/08/21 19:13:55 roberto Exp roberto $
+** $Id: ltablib.c,v 1.75 2014/08/21 20:07:56 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -126,10 +126,10 @@ static int tmove (lua_State *L) {
   luaL_argcheck(L, f > 0, 2, "initial position must be positive");
   if (e >= f) {  /* otherwise, nothing to move */
     lua_Integer n, i;
-    ta.geti = (!luaL_getmetafield(L, 1, "__index"))
+    ta.geti = (luaL_getmetafield(L, 1, "__index") == LUA_TNIL)
       ? (luaL_checktype(L, 1, LUA_TTABLE), lua_rawgeti)
       : lua_geti;
-    ta.seti = (!luaL_getmetafield(L, tt, "__newindex"))
+    ta.seti = (luaL_getmetafield(L, tt, "__newindex") == LUA_TNIL)
       ? (luaL_checktype(L, tt, LUA_TTABLE), lua_rawseti)
       : lua_seti;
     n = e - f + 1;  /* number of elements to move */
