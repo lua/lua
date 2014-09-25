@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.212 2014/06/26 17:08:52 roberto Exp roberto $
+** $Id: lua.c,v 1.213 2014/06/30 19:48:08 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -164,9 +164,9 @@ static void l_message (const char *pname, const char *msg) {
 */
 static int report (lua_State *L, int status) {
   if (status != LUA_OK) {
-    const char *msg = (lua_type(L, -1) == LUA_TSTRING) ? lua_tostring(L, -1)
-                                                       : NULL;
-    if (msg == NULL) msg = "(error object is not a string)";
+    const char *msg = (lua_type(L, -1) == LUA_TSTRING)
+                      ? lua_tostring(L, -1)
+                      : "(error object is not a string)";
     l_message(progname, msg);
     lua_pop(L, 1);
   }
@@ -181,10 +181,9 @@ static int msghandler (lua_State *L) {
   const char *msg = lua_tostring(L, 1);
   if (msg)  /* is error object a string? */
     luaL_traceback(L, L, msg, 1);  /* use standard traceback */
-  else if (!lua_isnoneornil(L, 1)) {  /* non-string error object? */
-    if (!luaL_callmeta(L, 1, "__tostring"))  /* try its 'tostring' metamethod */
-      lua_pushliteral(L, "(no error message)");
-  }  /* else no error object, does nothing */
+  else  /* non-string error object */
+    luaL_callmeta(L, 1, "__tostring");  /* try its 'tostring' metamethod */
+  /* if no metamethod, original object still is in the stack */
   return 1;
 }
 
