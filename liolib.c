@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.127 2014/06/30 19:48:08 roberto Exp roberto $
+** $Id: liolib.c,v 2.128 2014/07/29 16:01:00 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -193,9 +193,14 @@ static LStream *newprefile (lua_State *L) {
 }
 
 
+/*
+** Calls the 'close' function from a file handle. The 'volatile' avoids
+** a bug in some verisions of the Clang compiler (e.g., clang 3.0 for
+** 32 bits).
+*/
 static int aux_close (lua_State *L) {
   LStream *p = tolstream(L);
-  lua_CFunction cf = p->closef;
+  volatile lua_CFunction cf = p->closef;
   p->closef = NULL;  /* mark stream as closed */
   return (*cf)(L);  /* close it */
 }
