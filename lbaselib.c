@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.296 2014/08/21 20:07:56 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.297 2014/09/22 06:42:15 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -260,15 +260,8 @@ static int ipairsaux_raw (lua_State *L) {
 */
 static int ipairsaux (lua_State *L) {
   int i = luaL_checkint(L, 2) + 1;
-  if (i > luaL_len(L, 1)) {  /* larger than length? */
-    lua_pushnil(L);  /* end traversal */
-    return 1;
-  }
-  else {
-    lua_pushinteger(L, i);
-    lua_geti(L, 1, i);
-    return 2;
-  }
+  lua_pushinteger(L, i);
+  return (lua_geti(L, 1, i) == LUA_TNIL) ? 1 : 2;
 }
 
 
@@ -278,10 +271,8 @@ static int ipairsaux (lua_State *L) {
 ** that can affect the traversal.
 */
 static int luaB_ipairs (lua_State *L) {
-  lua_CFunction iter =
-     (luaL_getmetafield(L, 1, "__len") != LUA_TNIL ||
-      luaL_getmetafield(L, 1, "__index") != LUA_TNIL)
-        ? ipairsaux : ipairsaux_raw;
+  lua_CFunction iter = (luaL_getmetafield(L, 1, "__index") != LUA_TNIL)
+                       ? ipairsaux : ipairsaux_raw;
 #if defined(LUA_COMPAT_IPAIRS)
   return pairsmeta(L, "__ipairs", 1, iter);
 #else
