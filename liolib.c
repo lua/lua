@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.128 2014/07/29 16:01:00 roberto Exp roberto $
+** $Id: liolib.c,v 2.129 2014/09/26 14:09:21 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -581,7 +581,7 @@ static int io_readline (lua_State *L) {
     lua_pushvalue(L, lua_upvalueindex(3 + i));
   n = g_read(L, p->f, 2);  /* 'n' is number of results */
   lua_assert(n > 0);  /* should return at least a nil */
-  if (!lua_isnil(L, -n))  /* read at least one value? */
+  if (lua_toboolean(L, -n))  /* read at least one value? */
     return n;  /* return them */
   else {  /* first result is nil: EOF or error */
     if (n > 1) {  /* is there error information? */
