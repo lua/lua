@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.297 2014/09/22 06:42:15 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.298 2014/09/30 13:53:26 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -87,11 +87,11 @@ static int luaB_tonumber (lua_State *L) {
     size_t l;
     const char *s;
     lua_Integer n = 0;  /* to avoid warnings */
-    int base = luaL_checkint(L, 2);
+    lua_Integer base = luaL_checkinteger(L, 2);
     luaL_checktype(L, 1, LUA_TSTRING);  /* before 'luaL_checklstring'! */
     s = luaL_checklstring(L, 1, &l);
     luaL_argcheck(L, 2 <= base && base <= 36, 2, "base out of range");
-    if (b_str2int(s, base, &n) == s + l) {
+    if (b_str2int(s, (int)base, &n) == s + l) {
       lua_pushinteger(L, n);
       return 1;
     }  /* else not a number */
@@ -102,7 +102,7 @@ static int luaB_tonumber (lua_State *L) {
 
 
 static int luaB_error (lua_State *L) {
-  int level = luaL_optint(L, 2, 1);
+  int level = (int)luaL_optinteger(L, 2, 1);
   lua_settop(L, 1);
   if (lua_isstring(L, 1) && level > 0) {  /* add extra information? */
     luaL_where(L, level);
@@ -180,7 +180,7 @@ static int luaB_collectgarbage (lua_State *L) {
     LUA_GCCOUNT, LUA_GCSTEP, LUA_GCSETPAUSE, LUA_GCSETSTEPMUL,
     LUA_GCISRUNNING};
   int o = optsnum[luaL_checkoption(L, 1, "collect", opts)];
-  int ex = luaL_optint(L, 2, 0);
+  int ex = (int)luaL_optinteger(L, 2, 0);
   int res = lua_gc(L, o, ex);
   switch (o) {
     case LUA_GCCOUNT: {
@@ -248,7 +248,7 @@ static int luaB_pairs (lua_State *L) {
 ** Traversal function for 'ipairs' for raw tables
 */
 static int ipairsaux_raw (lua_State *L) {
-  int i = luaL_checkint(L, 2) + 1;
+  lua_Integer i = luaL_checkinteger(L, 2) + 1;
   luaL_checktype(L, 1, LUA_TTABLE);
   lua_pushinteger(L, i);
   return (lua_rawgeti(L, 1, i) == LUA_TNIL) ? 1 : 2;
@@ -259,7 +259,7 @@ static int ipairsaux_raw (lua_State *L) {
 ** Traversal function for 'ipairs' for tables with metamethods
 */
 static int ipairsaux (lua_State *L) {
-  int i = luaL_checkint(L, 2) + 1;
+  lua_Integer i = luaL_checkinteger(L, 2) + 1;
   lua_pushinteger(L, i);
   return (lua_geti(L, 1, i) == LUA_TNIL) ? 1 : 2;
 }
@@ -405,11 +405,11 @@ static int luaB_select (lua_State *L) {
     return 1;
   }
   else {
-    int i = luaL_checkint(L, 1);
+    lua_Integer i = luaL_checkinteger(L, 1);
     if (i < 0) i = n + i;
     else if (i > n) i = n;
     luaL_argcheck(L, 1 <= i, 1, "index out of range");
-    return n - i;
+    return n - (int)i;
   }
 }
 

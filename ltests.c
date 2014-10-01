@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.184 2014/09/01 17:58:55 roberto Exp roberto $
+** $Id: ltests.c,v 2.185 2014/09/04 18:15:29 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -530,7 +530,7 @@ static int listk (lua_State *L) {
 
 static int listlocals (lua_State *L) {
   Proto *p;
-  int pc = luaL_checkint(L, 2) - 1;
+  int pc = (int)luaL_checkinteger(L, 2) - 1;
   int i = 0;
   const char *name;
   luaL_argcheck(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
@@ -659,7 +659,7 @@ static int stacklevel (lua_State *L) {
 
 static int table_query (lua_State *L) {
   const Table *t;
-  int i = luaL_optint(L, 2, -1);
+  int i = (int)luaL_optinteger(L, 2, -1);
   luaL_checktype(L, 1, LUA_TTABLE);
   t = hvalue(obj_at(L, 1));
   if (i == -1) {
@@ -692,7 +692,7 @@ static int table_query (lua_State *L) {
 
 static int string_query (lua_State *L) {
   stringtable *tb = &G(L)->strt;
-  int s = luaL_optint(L, 1, 0) - 1;
+  int s = (int)luaL_optinteger(L, 1, 0) - 1;
   if (s == -1) {
     lua_pushinteger(L ,tb->size);
     lua_pushinteger(L ,tb->nuse);
@@ -723,21 +723,21 @@ static int tref (lua_State *L) {
 
 static int getref (lua_State *L) {
   int level = lua_gettop(L);
-  lua_rawgeti(L, LUA_REGISTRYINDEX, luaL_checkint(L, 1));
+  lua_rawgeti(L, LUA_REGISTRYINDEX, luaL_checkinteger(L, 1));
   lua_assert(lua_gettop(L) == level+1);
   return 1;
 }
 
 static int unref (lua_State *L) {
   int level = lua_gettop(L);
-  luaL_unref(L, LUA_REGISTRYINDEX, luaL_checkint(L, 1));
+  luaL_unref(L, LUA_REGISTRYINDEX, (int)luaL_checkinteger(L, 1));
   lua_assert(lua_gettop(L) == level);
   return 0;
 }
 
 
 static int upvalue (lua_State *L) {
-  int n = luaL_checkint(L, 2);
+  int n = (int)luaL_checkinteger(L, 2);
   luaL_checktype(L, 1, LUA_TFUNCTION);
   if (lua_isnone(L, 3)) {
     const char *name = lua_getupvalue(L, 1, n);
@@ -886,7 +886,7 @@ static int doremote (lua_State *L) {
 
 
 static int int2fb_aux (lua_State *L) {
-  int b = luaO_int2fb(luaL_checkint(L, 1));
+  int b = luaO_int2fb((unsigned int)luaL_checkinteger(L, 1));
   lua_pushinteger(L, b);
   lua_pushinteger(L, luaO_fb2int(b));
   return 2;
@@ -1389,7 +1389,7 @@ static int sethook (lua_State *L) {
   else {
     const char *scpt = luaL_checkstring(L, 1);
     const char *smask = luaL_checkstring(L, 2);
-    int count = luaL_optint(L, 3, 0);
+    int count = (int)luaL_optinteger(L, 3, 0);
     int mask = 0;
     if (strchr(smask, 'c')) mask |= LUA_MASKCALL;
     if (strchr(smask, 'r')) mask |= LUA_MASKRET;

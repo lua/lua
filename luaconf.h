@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.212 2014/07/24 19:33:29 roberto Exp roberto $
+** $Id: luaconf.h,v 1.213 2014/08/01 17:33:08 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -311,10 +311,11 @@
 #define LUA_COMPAT_IPAIRS
 
 /*
-@@ LUA_COMPAT_APIUNSIGNED controls the presence of macros for
-** manipulating unsigned integers (lua_pushunsigned, lua_tounsigned, etc.)
+@@ LUA_COMPAT_APIINTCASTS controls the presence of macros for
+** manipulating other integer types (lua_pushunsigned, lua_tounsigned,
+** luaL_checkint, luaL_checklong, etc.)
 */
-#define LUA_COMPAT_APIUNSIGNED
+#define LUA_COMPAT_APIINTCASTS
 
 
 /*

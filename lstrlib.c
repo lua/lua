@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.200 2014/07/30 13:59:24 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.201 2014/08/20 22:06:41 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -890,7 +890,7 @@ static int str_format (lua_State *L) {
       strfrmt = scanformat(L, strfrmt, form);
       switch (*strfrmt++) {
         case 'c': {
-          nb = sprintf(buff, form, luaL_checkint(L, arg));
+          nb = sprintf(buff, form, (int)luaL_checkinteger(L, arg));
           break;
         }
         case 'd': case 'i':
@@ -984,11 +984,11 @@ static int getendian (lua_State *L, int arg) {
 
 
 static int getintsize (lua_State *L, int arg) {
-  int size = luaL_optint(L, arg, 0);
+  lua_Integer size = luaL_optinteger(L, arg, 0);
   if (size == 0) size = SZINT;
   luaL_argcheck(L, 1 <= size && size <= MAXINTSIZE, arg,
                    "integer size out of valid range");
-  return size;
+  return (int)size;
 }
 
 

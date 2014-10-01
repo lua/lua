@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.313 2014/08/01 17:33:08 roberto Exp roberto $
+** $Id: lua.h,v 1.314 2014/08/21 20:07:56 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -379,7 +379,7 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 ** compatibility macros for unsigned conversions
 ** ===============================================================
 */
-#if defined(LUA_COMPAT_APIUNSIGNED)
+#if defined(LUA_COMPAT_APIINTCASTS)
 
 #define lua_pushunsigned(L,n)	lua_pushinteger(L, (lua_Integer)(n))
 #define lua_tounsignedx(L,i,is)	((lua_Integer)lua_tointegerx(L,i,is))

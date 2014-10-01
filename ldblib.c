@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.140 2014/08/21 19:12:40 roberto Exp roberto $
+** $Id: ldblib.c,v 1.141 2014/08/22 16:22:42 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -160,7 +160,7 @@ static int db_getinfo (lua_State *L) {
     lua_xmove(L, L1, 1);
   }
   else {  /* stack level */
-    if (!lua_getstack(L1, luaL_checkint(L, arg + 1), &ar)) {
+    if (!lua_getstack(L1, (int)luaL_checkinteger(L, arg + 1), &ar)) {
       lua_pushnil(L);  /* level out of range */
       return 1;
     }
@@ -201,14 +201,15 @@ static int db_getlocal (lua_State *L) {
   lua_State *L1 = getthread(L, &arg);
   lua_Debug ar;
   const char *name;
-  int nvar = luaL_checkint(L, arg+2);  /* local-variable index */
+  int nvar = (int)luaL_checkinteger(L, arg + 2);  /* local-variable index */
   if (lua_isfunction(L, arg + 1)) {  /* function argument? */
     lua_pushvalue(L, arg + 1);  /* push function */
     lua_pushstring(L, lua_getlocal(L, NULL, nvar));  /* push local name */
     return 1;  /* return only name (there is no value) */
   }
   else {  /* stack-level argument */
-    if (!lua_getstack(L1, luaL_checkint(L, arg+1), &ar))  /* out of range? */
+    int level = (int)luaL_checkinteger(L, arg + 1);
+    if (!lua_getstack(L1, level, &ar))  /* out of range? */
       return luaL_argerror(L, arg+1, "level out of range");
     name = lua_getlocal(L1, &ar, nvar);
     if (name) {
@@ -229,12 +230,13 @@ static int db_setlocal (lua_State *L) {
   int arg;
   lua_State *L1 = getthread(L, &arg);
   lua_Debug ar;
-  if (!lua_getstack(L1, luaL_checkint(L, arg+1), &ar))  /* out of range? */
+  int level = (int)luaL_checkinteger(L, arg + 1);
+  if (!lua_getstack(L1, level, &ar))  /* out of range? */
     return luaL_argerror(L, arg+1, "level out of range");
   luaL_checkany(L, arg+3);
   lua_settop(L, arg+3);
   lua_xmove(L, L1, 1);
-  lua_pushstring(L, lua_setlocal(L1, &ar, luaL_checkint(L, arg+2)));
+  lua_pushstring(L, lua_setlocal(L1, &ar, (int)luaL_checkinteger(L, arg+2)));
   return 1;
 }
 
@@ -244,7 +246,7 @@ static int db_setlocal (lua_State *L) {
 */
 static int auxupvalue (lua_State *L, int get) {
   const char *name;
-  int n = luaL_checkint(L, 2);  /* upvalue index */
+  int n = (int)luaL_checkinteger(L, 2);  /* upvalue index */
   luaL_checktype(L, 1, LUA_TFUNCTION);  /* closure */
   name = get ? lua_getupvalue(L, 1, n) : lua_setupvalue(L, 1, n);
   if (name == NULL) return 0;
@@ -270,7 +272,7 @@ static int db_setupvalue (lua_State *L) {
 ** returns its index
 */
 static int checkupval (lua_State *L, int argf, int argnup) {
-  int nup = luaL_checkint(L, argnup);  /* upvalue index */
+  int nup = (int)luaL_checkinteger(L, argnup);  /* upvalue index */
   luaL_checktype(L, argf, LUA_TFUNCTION);  /* closure */
   luaL_argcheck(L, (lua_getupvalue(L, argf, nup) != NULL), argnup,
                    "invalid upvalue index");
@@ -359,7 +361,7 @@ static int db_sethook (lua_State *L) {
   else {
     const char *smask = luaL_checkstring(L, arg+2);
     luaL_checktype(L, arg+1, LUA_TFUNCTION);
-    count = luaL_optint(L, arg+3, 0);
+    count = (int)luaL_optinteger(L, arg + 3, 0);
     func = hookf; mask = makemask(smask, count);
   }
   if (gethooktable(L) == 0) {  /* creating hook table? */
@@ -418,7 +420,7 @@ static int db_traceback (lua_State *L) {
   if (msg == NULL && !lua_isnoneornil(L, arg + 1))  /* non-string 'msg'? */
     lua_pushvalue(L, arg + 1);  /* return it untouched */
   else {
-    int level = luaL_optint(L, arg + 2, (L == L1) ? 1 : 0);
+    int level = (int)luaL_optinteger(L, arg + 2, (L == L1) ? 1 : 0);
     luaL_traceback(L, L1, msg, level);
   }
   return 1;

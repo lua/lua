@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.38 2014/07/24 14:00:16 roberto Exp roberto $
+** $Id: ltests.h,v 2.39 2014/07/24 19:33:29 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -14,7 +14,7 @@
 #undef LUA_COMPAT_MATHLIB
 #undef LUA_COMPAT_IPAIRS
 #undef LUA_COMPAT_BITLIB
-#undef LUA_COMPAT_APIUNSIGNED
+#undef LUA_COMPAT_APIINTCASTS
 #undef LUA_COMPAT_FLOATSTRING
 #undef LUA_COMPAT_UNPACK
 #undef LUA_COMPAT_LOADERS
