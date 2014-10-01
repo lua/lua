@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.88 2014/07/30 14:00:14 roberto Exp roberto $
+** $Id: lobject.c,v 2.89 2014/08/01 17:24:02 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -310,8 +310,9 @@ size_t luaO_str2num (const char *s, TValue *o) {
 }
 
 
-int luaO_utf8esc (char *buff, unsigned int x) {
+int luaO_utf8esc (char *buff, unsigned long x) {
   int n = 1;  /* number of bytes put in buffer (backwards) */
+  lua_assert(x <= 0x10FFFF);
   if (x < 0x80)  /* ascii? */
     buff[UTF8BUFFSZ - 1] = x;
   else {  /* need continuation bytes */
@@ -402,7 +403,7 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
       }
       case 'U': {
         char buff[UTF8BUFFSZ];
-        int l = luaO_utf8esc(buff, va_arg(argp, int));
+        int l = luaO_utf8esc(buff, cast(long, va_arg(argp, long)));
         pushstr(L, buff + UTF8BUFFSZ - l, l);
         break;
       }

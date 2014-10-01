@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.79 2014/07/18 12:17:54 roberto Exp roberto $
+** $Id: llex.c,v 2.80 2014/07/18 13:36:14 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -360,8 +360,8 @@ static int readhexaesc (LexState *ls) {
 }
 
 
-static unsigned int readutf8esc (LexState *ls) {
-  unsigned int r;
+static unsigned long readutf8esc (LexState *ls) {
+  unsigned long r;
   int i = 4;  /* chars to be removed: '\', 'u', '{', and first digit */
   save_and_next(ls);  /* skip 'u' */
   esccheck(ls, ls->current == '{', "missing '{'");
