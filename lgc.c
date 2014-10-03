@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.194 2014/09/03 16:54:41 roberto Exp roberto $
+** $Id: lgc.c,v 2.195 2014/09/04 18:15:29 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -852,7 +852,7 @@ static GCObject **findlast (GCObject **p) {
 
 /*
 ** move all unreachable objects (or 'all' objects) that need
-** finalization from list 'p' to list 'tobefnz' (to be finalized)
+** finalization from list 'finobj' to list 'tobefnz' (to be finalized)
 */
 static void separatetobefnz (global_State *g, int all) {
   GCObject *curr;
@@ -863,7 +863,7 @@ static void separatetobefnz (global_State *g, int all) {
     if (!(iswhite(curr) || all))  /* not being collected? */
       p = &curr->next;  /* don't bother with it */
     else {
-      *p = curr->next;  /* remove 'curr' from "fin" list */
+      *p = curr->next;  /* remove 'curr' from 'finobj' list */
       curr->next = *lastnext;  /* link at the end of 'tobefnz' list */
       *lastnext = curr;
       lastnext = &curr->next;
@@ -891,7 +891,7 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
     /* search for pointer pointing to 'o' */
     for (p = &g->allgc; *p != o; p = &(*p)->next) { /* empty */ }
     *p = o->next;  /* remove 'o' from 'allgc' list */
-    o->next = g->finobj;  /* link it in "fin" list */
+    o->next = g->finobj;  /* link it in 'finobj' list */
     g->finobj = o;
     l_setbit(o->marked, FINALIZEDBIT);  /* mark it as such */
   }
