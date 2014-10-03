@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.213 2014/08/01 17:33:08 roberto Exp roberto $
+** $Id: luaconf.h,v 1.214 2014/10/01 11:54:56 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -29,11 +29,20 @@
 ** These definitions set the numeric types for Lua. Lua should work
 ** fine with any mix of these previous options.
 ** The usual configurations are 64-bit integers and floats (the default)
-** and 32-bit integers and floats (Small Lua, for restricted hardware).
+** and 32-bit integers and floats (Lua 32, for restricted hardware).
 ** =====================================================================
 */
+
+/* just uncomment the next line for Lua 32 */
+/* #define LUA_32 */
+
+#if !defined(LUA_32)
 #define LUA_INT_LONGLONG
 #define LUA_REAL_DOUBLE
+#else	/* Lua 32 bits */
+#define LUA_INT_LONG
+#define LUA_REAL_FLOAT
+#endif
 
 
 /*
@@ -306,7 +315,7 @@
 #define LUA_COMPAT_BITLIB
 
 /*
-@@ LUA_COMPAT_IPAIRS controls the effectivnness of the __ipairs metamethod.
+@@ LUA_COMPAT_IPAIRS controls the effectiveness of the __ipairs metamethod.
 */
 #define LUA_COMPAT_IPAIRS
 
