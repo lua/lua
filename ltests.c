@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.185 2014/09/04 18:15:29 roberto Exp roberto $
+** $Id: ltests.c,v 2.186 2014/10/01 11:54:56 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -280,10 +280,14 @@ static void checkLclosure (global_State *g, LClosure *cl) {
 }
 
 
-static int lua_checkpc (CallInfo *ci) {
+static int lua_checkpc (lua_State *L, CallInfo *ci) {
   if (!isLua(ci)) return 1;
   else {
-    Proto *p = ci_func(ci)->p;
+    Proto *p;
+    if (L->status != LUA_YIELD || ci != L->ci)
+      p = ci_func(ci)->p;
+    else  /* real 'func' was saved in 'extra' field */
+      p = clLvalue(restorestack(L, ci->extra))->p;
     return p->code <= ci->u.l.savedpc &&
            ci->u.l.savedpc <= p->code + p->sizecode;
   }
@@ -299,7 +303,7 @@ static void checkstack (global_State *g, lua_State *L1) {
     lua_assert(upisopen(uv));  /* must be open */
   for (ci = L1->ci; ci != NULL; ci = ci->previous) {
     lua_assert(ci->top <= L1->stack_last);
-    lua_assert(lua_checkpc(ci));
+    lua_assert(lua_checkpc(L1, ci));
   }
   if (L1->stack) {
     for (o = L1->stack; o < L1->top; o++)
