@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.186 2014/10/01 11:54:56 roberto Exp roberto $
+** $Id: ltests.c,v 2.187 2014/10/06 17:06:49 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -986,7 +986,7 @@ static void pushcode (lua_State *L, int code) {
 
 
 static int testC (lua_State *L);
-static int Cfunck (lua_State *L, int status, lua_Kcontext ctx);
+static int Cfunck (lua_State *L, int status, lua_KContext ctx);
 
 /*
 ** arithmetic operation encoding for 'arith' instruction
@@ -1323,7 +1323,7 @@ static int Cfunc (lua_State *L) {
 }
 
 
-static int Cfunck (lua_State *L, int status, lua_Kcontext ctx) {
+static int Cfunck (lua_State *L, int status, lua_KContext ctx) {
   pushcode(L, status);
   lua_setglobal(L, "status");
   lua_pushinteger(L, ctx);

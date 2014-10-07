@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.234 2014/08/21 20:07:56 roberto Exp roberto $
+** $Id: lapi.c,v 2.235 2014/08/27 14:59:33 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -877,7 +877,7 @@ LUA_API void lua_setuservalue (lua_State *L, int idx) {
 
 
 LUA_API void lua_callk (lua_State *L, int nargs, int nresults,
-                        lua_Kcontext ctx, lua_KFunction k) {
+                        lua_KContext ctx, lua_KFunction k) {
   StkId func;
   lua_lock(L);
   api_check(k == NULL || !isLua(L->ci),
@@ -916,7 +916,7 @@ static void f_call (lua_State *L, void *ud) {
 
 
 LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
-                        lua_Kcontext ctx, lua_KFunction k) {
+                        lua_KContext ctx, lua_KFunction k) {
   struct CallS c;
   int status;
   ptrdiff_t func;

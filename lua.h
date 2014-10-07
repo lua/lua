@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.315 2014/10/01 11:54:56 roberto Exp roberto $
+** $Id: lua.h,v 1.316 2014/10/04 22:57:36 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -94,7 +94,7 @@ typedef LUA_INTEGER lua_Integer;
 typedef LUA_UNSIGNED lua_Unsigned;
 
 /* type for continuation-function contexts */
-typedef LUA_KCONTEXT lua_Kcontext;
+typedef LUA_KCONTEXT lua_KContext;
 
 
 /*
@@ -105,7 +105,7 @@ typedef int (*lua_CFunction) (lua_State *L);
 /*
 ** Type for continuation functions
 */
-typedef int (*lua_KFunction) (lua_State *L, int status, lua_Kcontext ctx);
+typedef int (*lua_KFunction) (lua_State *L, int status, lua_KContext ctx);
 
 
 /*
@@ -268,11 +268,11 @@ LUA_API void  (lua_setuservalue) (lua_State *L, int idx);
 ** 'load' and 'call' functions (load and run Lua code)
 */
 LUA_API void  (lua_callk) (lua_State *L, int nargs, int nresults,
-                           lua_Kcontext ctx, lua_KFunction k);
+                           lua_KContext ctx, lua_KFunction k);
 #define lua_call(L,n,r)		lua_callk(L, (n), (r), 0, NULL)
 
 LUA_API int   (lua_pcallk) (lua_State *L, int nargs, int nresults, int errfunc,
-                            lua_Kcontext ctx, lua_KFunction k);
+                            lua_KContext ctx, lua_KFunction k);
 #define lua_pcall(L,n,r,f)	lua_pcallk(L, (n), (r), (f), 0, NULL)
 
 LUA_API int   (lua_load) (lua_State *L, lua_Reader reader, void *dt,
@@ -285,7 +285,7 @@ LUA_API int (lua_dump) (lua_State *L, lua_Writer writer, void *data, int strip);
 /*
 ** coroutine functions
 */
-LUA_API int  (lua_yieldk) (lua_State *L, int nresults, lua_Kcontext ctx,
+LUA_API int  (lua_yieldk) (lua_State *L, int nresults, lua_KContext ctx,
                            lua_KFunction k);
 #define lua_yield(L,n)		lua_yieldk(L, (n), 0, NULL)
 LUA_API int  (lua_resume) (lua_State *L, lua_State *from, int narg);

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.115 2014/08/01 17:33:08 roberto Exp roberto $
+** $Id: lstate.h,v 2.116 2014/10/06 21:34:34 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -74,7 +74,7 @@ typedef struct CallInfo {
     struct {  /* only for C functions */
       lua_KFunction k;  /* continuation in case of yields */
       ptrdiff_t old_errfunc;
-      lua_Kcontext ctx;  /* context info. in case of yields */
+      lua_KContext ctx;  /* context info. in case of yields */
     } c;
   } u;
   ptrdiff_t extra;

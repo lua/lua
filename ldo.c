@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.126 2014/07/17 13:53:37 roberto Exp roberto $
+** $Id: ldo.c,v 2.127 2014/08/01 17:33:08 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -593,7 +593,7 @@ LUA_API int lua_isyieldable (lua_State *L) {
 }
 
 
-LUA_API int lua_yieldk (lua_State *L, int nresults, lua_Kcontext ctx,
+LUA_API int lua_yieldk (lua_State *L, int nresults, lua_KContext ctx,
                         lua_KFunction k) {
   CallInfo *ci = L->ci;
   luai_userstateyield(L, nresults);
