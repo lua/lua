@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.214 2014/10/01 11:54:56 roberto Exp roberto $
+** $Id: luaconf.h,v 1.216 2014/10/08 20:24:43 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -20,29 +20,42 @@
 
 
 /*
-** ===================================================================
+** {==================================================================
 @@ LUA_INT_INT / LUA_INT_LONG / LUA_INT_LONGLONG defines type for
-@@ Lua integers;
+@@ Lua integers; you must define one of them.
 @@ LUA_REAL_FLOAT / LUA_REAL_DOUBLE / LUA_REAL_LONGDOUBLE defines
-@@ type for Lua floats.
+@@ type for Lua floats. You must define one of them.
 **
-** These definitions set the numeric types for Lua. Lua should work
-** fine with any mix of these previous options.
-** The usual configurations are 64-bit integers and floats (the default)
-** and 32-bit integers and floats (Lua 32, for restricted hardware).
+** These definitions set the numeric types for Lua. Lua should work fine
+** with any mix of these previous options.  The usual configurations
+** are 64-bit integers and floats (the default) and 32-bit integers and
+** floats (Small Lua, for restricted platforms).
+**
+** Note that C compilers not compliant with C99 may not have
+** support for 'long long'. In that case, you should not use option
+** 'LUA_INT_LONGLONG'; use instead option 'LUA_32BITS' for Small Lua
+** (see below), or LUA_INT_LONG plus LUA_REAL_DOUBLE for an interpreter
+** with 32-bit integers and double floating-point numbers.
 ** =====================================================================
 */
 
-/* just uncomment the next line for Lua 32 */
-/* #define LUA_32 */
+/*
+** Just uncomment the next line for Small Lua; you can also define
+** LUA_32BITS in the make file, but changing here you ensure that
+** all software connected to Lua will be compiled with the same
+** configuration.
+*/
+/* #define LUA_32BITS */
 
-#if !defined(LUA_32)
+#if !defined(LUA_32BITS)
 #define LUA_INT_LONGLONG
 #define LUA_REAL_DOUBLE
 #else	/* Lua 32 bits */
 #define LUA_INT_LONG
 #define LUA_REAL_FLOAT
 #endif
+
+/* }================================================================== */
 
 
 /*
@@ -662,6 +675,10 @@
 #define LUA_MININTEGER		_I64_MIN
 
 #else
+
+#if !defined(LLONG_MAX)
+#error "Compiler does not support 'long long'. See file 'luaconf.h' line 24"
+#endif
 
 #define LUA_INTEGER		long long
 #define LUA_INTEGER_FRMLEN	"ll"
