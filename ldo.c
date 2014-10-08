@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.127 2014/08/01 17:33:08 roberto Exp roberto $
+** $Id: ldo.c,v 2.128 2014/10/07 18:29:13 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -111,15 +111,16 @@ l_noret luaD_throw (lua_State *L, int errcode) {
     LUAI_THROW(L, L->errorJmp);  /* jump to it */
   }
   else {  /* thread has no error handler */
+    global_State *g = G(L);
     L->status = cast_byte(errcode);  /* mark it as dead */
-    if (G(L)->mainthread->errorJmp) {  /* main thread has a handler? */
-      setobjs2s(L, G(L)->mainthread->top++, L->top - 1);  /* copy error obj. */
-      luaD_throw(G(L)->mainthread, errcode);  /* re-throw in main thread */
+    if (g->mainthread->errorJmp) {  /* main thread has a handler? */
+      setobjs2s(L, g->mainthread->top++, L->top - 1);  /* copy error obj. */
+      luaD_throw(g->mainthread, errcode);  /* re-throw in main thread */
     }
     else {  /* no handler at all; abort */
-      if (G(L)->panic) {  /* panic function? */
+      if (g->panic) {  /* panic function? */
         lua_unlock(L);
-        G(L)->panic(L);  /* call it (last chance to jump out) */
+        g->panic(L);  /* call it (last chance to jump out) */
       }
       abort();
     }
