@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.90 2014/10/01 11:52:33 roberto Exp roberto $
+** $Id: lobject.c,v 2.91 2014/10/04 22:57:10 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -377,7 +377,10 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
       }
       case 'c': {
         char buff = cast(char, va_arg(argp, int));
-        pushstr(L, &buff, 1);
+        if (lisprint(cast_uchar(buff)))
+          pushstr(L, &buff, 1);
+        else  /* non-printable character; print its code */
+          luaO_pushfstring(L, "<\\%d>", cast_uchar(buff));
         break;
       }
       case 'd': {

@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.80 2014/07/18 13:36:14 roberto Exp roberto $
+** $Id: llex.c,v 2.81 2014/10/01 11:52:33 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -78,9 +78,8 @@ void luaX_init (lua_State *L) {
 
 const char *luaX_token2str (LexState *ls, int token) {
   if (token < FIRST_RESERVED) {  /* single-byte symbols? */
-    lua_assert(token == cast(unsigned char, token));
-    return (lisprint(token)) ? luaO_pushfstring(ls->L, LUA_QL("%c"), token) :
-                              luaO_pushfstring(ls->L, "char(%d)", token);
+    lua_assert(token == cast_uchar(token));
+    return luaO_pushfstring(ls->L, LUA_QL("%c"), token);
   }
   else {
     const char *s = luaX_tokens[token - FIRST_RESERVED];
