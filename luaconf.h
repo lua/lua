@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.216 2014/10/08 20:24:43 roberto Exp $
+** $Id: luaconf.h,v 1.216 2014/10/08 20:32:50 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -7,9 +7,6 @@
 
 #ifndef lconfig_h
 #define lconfig_h
-
-#include <limits.h>
-#include <stddef.h>
 
 
 /*
@@ -73,6 +70,7 @@
 #endif
 
 #if defined(LUA_WIN)
+#define	_CRT_SECURE_NO_WARNINGS  /* avoid warnings about ANSI C functions */
 #define LUA_DL_DLL
 #define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
 #endif
@@ -112,6 +110,9 @@
 #endif
 
 
+
+#include <limits.h>
+#include <stddef.h>
 
 /*
 @@ LUA_PATH_DEFAULT is the default path that Lua uses to look for
@@ -258,14 +259,10 @@
 
 /*
 @@ luai_writestring/luai_writeline define how 'print' prints its results.
-** They are only used in libraries and the stand-alone program. (The #if
-** avoids including 'stdio.h' everywhere.)
+** They are only used in libraries and the stand-alone program.
 */
-#if defined(LUA_LIB) || defined(lua_c)
-#include <stdio.h>
 #define luai_writestring(s,l)	fwrite((s), sizeof(char), (l), stdout)
 #define luai_writeline()	(luai_writestring("\n", 1), fflush(stdout))
-#endif
 
 /*
 @@ luai_writestringerror defines how to print error messages.
