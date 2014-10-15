@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.235 2014/08/27 14:59:33 roberto Exp roberto $
+** $Id: lapi.c,v 2.236 2014/10/07 18:29:13 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -332,7 +332,7 @@ LUA_API int lua_compare (lua_State *L, int index1, int index2, int op) {
 }
 
 
-LUA_API size_t lua_strtonum (lua_State *L, const char *s) {
+LUA_API size_t lua_stringtonum (lua_State *L, const char *s) {
   size_t sz = luaO_str2num(s, L->top);
   if (sz != 0)
     api_incr_top(L);

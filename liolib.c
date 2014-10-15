@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.130 2014/10/01 16:05:06 roberto Exp roberto $
+** $Id: liolib.c,v 2.131 2014/10/03 12:54:57 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -425,7 +425,7 @@ static int readdigits (RN *rn, int hex) {
 
 /*
 ** Read a number: first reads a valid prefix of a numeral into a buffer.
-** Then it calls 'lua_strtonum' to check whether the format is correct
+** Then it calls 'lua_stringtonum' to check whether the format is correct
 ** and to convert it to a Lua number
 */
 static int read_number (lua_State *L, FILE *f) {
@@ -452,7 +452,7 @@ static int read_number (lua_State *L, FILE *f) {
   ungetc(rn.c, rn.f);  /* unread look-ahead char */
   l_unlockfile(rn.f);
   rn.buff[rn.n] = '\0';  /* finish string */
-  if (lua_strtonum(L, rn.buff))  /* is this a valid number? */
+  if (lua_stringtonum(L, rn.buff))  /* is this a valid number? */
     return 1;  /* ok */
   else {  /* invalid format */
    lua_pushnil(L);  /* "result" to be removed */
