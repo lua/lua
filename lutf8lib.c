@@ -1,5 +1,5 @@
 /*
-** $Id: lutf8lib.c,v 1.10 2014/07/16 13:56:14 roberto Exp roberto $
+** $Id: lutf8lib.c,v 1.11 2014/10/01 11:52:33 roberto Exp roberto $
 ** Standard library for UTF-8 manipulation
 ** See Copyright Notice in lua.h
 */
@@ -239,7 +239,7 @@ static struct luaL_Reg funcs[] = {
   {"len", utflen},
   {"codes", iter_codes},
   /* placeholders */
-  {"charpatt", NULL},
+  {"charpattern", NULL},
   {NULL, NULL}
 };
 
@@ -247,7 +247,7 @@ static struct luaL_Reg funcs[] = {
 LUAMOD_API int luaopen_utf8 (lua_State *L) {
   luaL_newlib(L, funcs);
   lua_pushliteral(L, UTF8PATT);
-  lua_setfield(L, -2, "charpatt");
+  lua_setfield(L, -2, "charpattern");
   return 1;
 }
 
