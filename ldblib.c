@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.141 2014/08/22 16:22:42 roberto Exp roberto $
+** $Id: ldblib.c,v 1.142 2014/10/01 11:54:56 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -19,33 +19,6 @@
 
 
 #define HOOKKEY		"_HKEY"
-
-
-static int db_Csize (lua_State *L) {
-  static struct {
-    char c;
-    unsigned char sz;
-  } sizes[] = {
-    {'I', sizeof(lua_Integer)},
-    {'F', sizeof(lua_Number)},
-    {'h', sizeof(short)},
-    {'i', sizeof(int)},
-    {'l', sizeof(long)},
-    {'z', sizeof(size_t)},
-    {'f', sizeof(float)},
-    {'d', sizeof(double)},
-    {'p', sizeof(void*)}
-  };
-  const char *s = luaL_checkstring(L, 1);
-  int i;
-  for (i = 0; i < (int)(sizeof(sizes)/sizeof(sizes[0])); i++) {
-    if (*s == sizes[i].c) {
-      lua_pushinteger(L, sizes[i].sz);
-      return 1;
-    }
-  }
-  return luaL_argerror(L, 1, lua_pushfstring(L, "invalid option '%c'", *s));
-}
 
 
 static int db_getregistry (lua_State *L) {
@@ -428,7 +401,6 @@ static int db_traceback (lua_State *L) {
 
 
 static const luaL_Reg dblib[] = {
-  {"sizeof",   db_Csize},
   {"debug", db_debug},
   {"getuservalue", db_getuservalue},
   {"gethook", db_gethook},
