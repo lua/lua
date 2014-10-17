@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.301 2014/10/15 14:27:40 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.302 2014/10/17 16:28:21 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -77,7 +77,7 @@ static int luaB_tonumber (lua_State *L) {
     else {
       size_t l;
       const char *s = lua_tolstring(L, 1, &l);
-      if (s != NULL && lua_stringtonum(L, s) == l + 1)
+      if (s != NULL && lua_stringtonumber(L, s) == l + 1)
         return 1;  /* successful conversion to number */
       /* else not a number */
     }
