@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.216 2014/10/08 20:32:50 roberto Exp roberto $
+** $Id: luaconf.h,v 1.217 2014/10/15 14:53:20 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -243,7 +243,8 @@
 
 /*
 @@ LUA_QL describes how error messages quote program elements.
-** CHANGE it if you want a different appearance.
+** Lua does not use these macros anymore; they are here for
+** compatibility only.
 */
 #define LUA_QL(x)	"'" x "'"
 #define LUA_QS		LUA_QL("%s")

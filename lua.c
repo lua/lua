@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.213 2014/06/30 19:48:08 roberto Exp roberto $
+** $Id: lua.c,v 1.214 2014/09/25 14:20:37 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -134,9 +134,9 @@ static void print_usage (const char *badoption) {
   luai_writestringerror(
   "usage: %s [options] [script [args]]\n"
   "Available options are:\n"
-  "  -e stat  execute string " LUA_QL("stat") "\n"
-  "  -i       enter interactive mode after executing " LUA_QL("script") "\n"
-  "  -l name  require library " LUA_QL("name") "\n"
+  "  -e stat  execute string 'stat'\n"
+  "  -i       enter interactive mode after executing 'script'\n"
+  "  -l name  require library 'name'\n"
   "  -v       show version information\n"
   "  -E       ignore environment variables\n"
   "  --       stop handling options\n"
@@ -388,9 +388,8 @@ static void l_print (lua_State *L) {
     lua_getglobal(L, "print");
     lua_insert(L, 1);
     if (lua_pcall(L, n, 0, 0) != LUA_OK)
-      l_message(progname, lua_pushfstring(L,
-                             "error calling " LUA_QL("print") " (%s)",
-                             lua_tostring(L, -1)));
+      l_message(progname, lua_pushfstring(L, "error calling 'print' (%s)",
+                                             lua_tostring(L, -1)));
   }
 }
 

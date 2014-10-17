@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.267 2014/07/19 14:37:09 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.268 2014/09/22 06:42:15 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -82,12 +82,12 @@ static int pushglobalfuncname (lua_State *L, lua_Debug *ar) {
 
 static void pushfuncname (lua_State *L, lua_Debug *ar) {
   if (*ar->namewhat != '\0')  /* is there a name? */
-    lua_pushfstring(L, "function " LUA_QS, ar->name);
+    lua_pushfstring(L, "function '%s'", ar->name);
   else if (*ar->what == 'm')  /* main? */
       lua_pushliteral(L, "main chunk");
   else if (*ar->what == 'C') {
     if (pushglobalfuncname(L, ar)) {
-      lua_pushfstring(L, "function " LUA_QS, lua_tostring(L, -1));
+      lua_pushfstring(L, "function '%s'", lua_tostring(L, -1));
       lua_remove(L, -2);  /* remove name */
     }
     else
@@ -158,12 +158,12 @@ LUALIB_API int luaL_argerror (lua_State *L, int arg, const char *extramsg) {
   if (strcmp(ar.namewhat, "method") == 0) {
     arg--;  /* do not count `self' */
     if (arg == 0)  /* error is in the self argument itself? */
-      return luaL_error(L, "calling " LUA_QS " on bad self (%s)",
+      return luaL_error(L, "calling '%s' on bad self (%s)",
                            ar.name, extramsg);
   }
   if (ar.name == NULL)
     ar.name = (pushglobalfuncname(L, &ar)) ? lua_tostring(L, -1) : "?";
-  return luaL_error(L, "bad argument #%d to " LUA_QS " (%s)",
+  return luaL_error(L, "bad argument #%d to '%s' (%s)",
                         arg, ar.name, extramsg);
 }
 
@@ -335,7 +335,7 @@ LUALIB_API int luaL_checkoption (lua_State *L, int arg, const char *def,
     if (strcmp(lst[i], name) == 0)
       return i;
   return luaL_argerror(L, arg,
-                       lua_pushfstring(L, "invalid option " LUA_QS, name));
+                       lua_pushfstring(L, "invalid option '%s'", name));
 }
 
 
@@ -823,7 +823,7 @@ LUALIB_API void luaL_pushmodule (lua_State *L, const char *modname,
     /* try global variable (and create one if it does not exist) */
     lua_pushglobaltable(L);
     if (luaL_findtable(L, 0, modname, sizehint) != NULL)
-      luaL_error(L, "name conflict for module " LUA_QS, modname);
+      luaL_error(L, "name conflict for module '%s'", modname);
     lua_pushvalue(L, -1);
     lua_setfield(L, -3, modname);  /* _LOADED[modname] = new table */
   }

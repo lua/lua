@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.94 2014/08/01 17:24:02 roberto Exp roberto $
+** $Id: ltable.c,v 2.95 2014/09/04 18:15:29 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -181,7 +181,7 @@ static unsigned int findindex (lua_State *L, Table *t, StkId key) {
       }
       nx = gnext(n);
       if (nx == 0)
-        luaG_runerror(L, "invalid key to " LUA_QL("next"));  /* key not found */
+        luaG_runerror(L, "invalid key to 'next'");  /* key not found */
       else n += nx;
     }
   }

@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.47 2014/10/01 11:54:56 roberto Exp roberto $
+** $Id: loslib.c,v 1.48 2014/10/08 19:57:31 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -189,7 +189,7 @@ static int getfield (lua_State *L, const char *key, int d) {
   res = (int)lua_tointegerx(L, -1, &isnum);
   if (!isnum) {
     if (d < 0)
-      return luaL_error(L, "field " LUA_QS " missing in date table", key);
+      return luaL_error(L, "field '%s' missing in date table", key);
     res = d;
   }
   lua_pop(L, 1);

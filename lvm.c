@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.222 2014/07/30 14:42:44 roberto Exp roberto $
+** $Id: lvm.c,v 2.223 2014/09/04 18:15:29 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1033,13 +1033,13 @@ void luaV_execute (lua_State *L) {
         else {  /* try making all values floats */
           lua_Number ninit; lua_Number nlimit; lua_Number nstep;
           if (!tonumber(plimit, &nlimit))
-            luaG_runerror(L, LUA_QL("for") " limit must be a number");
+            luaG_runerror(L, "'for' limit must be a number");
           setfltvalue(plimit, nlimit);
           if (!tonumber(pstep, &nstep))
-            luaG_runerror(L, LUA_QL("for") " step must be a number");
+            luaG_runerror(L, "'for' step must be a number");
           setfltvalue(pstep, nstep);
           if (!tonumber(init, &ninit))
-            luaG_runerror(L, LUA_QL("for") " initial value must be a number");
+            luaG_runerror(L, "'for' initial value must be a number");
           setfltvalue(init, luai_numsub(L, ninit, nstep));
         }
         ci->u.l.savedpc += GETARG_sBx(i);

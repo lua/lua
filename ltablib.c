@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.75 2014/08/21 20:07:56 roberto Exp roberto $
+** $Id: ltablib.c,v 1.76 2014/09/22 06:42:15 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -91,7 +91,7 @@ static int tinsert (lua_State *L) {
       break;
     }
     default: {
-      return luaL_error(L, "wrong number of arguments to " LUA_QL("insert"));
+      return luaL_error(L, "wrong number of arguments to 'insert'");
     }
   }
   (*ta.seti)(L, 1, pos);  /* t[pos] = v */
@@ -154,8 +154,8 @@ static int tmove (lua_State *L) {
 static void addfield (lua_State *L, luaL_Buffer *b, TabA *ta, lua_Integer i) {
   (*ta->geti)(L, 1, i);
   if (!lua_isstring(L, -1))
-    luaL_error(L, "invalid value (%s) at index %d in table for "
-                  LUA_QL("concat"), luaL_typename(L, -1), i);
+    luaL_error(L, "invalid value (%s) at index %d in table for 'concat'",
+                  luaL_typename(L, -1), i);
   luaL_addvalue(b);
 }
 

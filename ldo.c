@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.128 2014/10/07 18:29:13 roberto Exp roberto $
+** $Id: ldo.c,v 2.129 2014/10/08 12:20:26 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -662,7 +662,7 @@ struct SParser {  /* data to `f_parser' */
 static void checkmode (lua_State *L, const char *mode, const char *x) {
   if (mode && strchr(mode, x[0]) == NULL) {
     luaO_pushfstring(L,
-       "attempt to load a %s chunk (mode is " LUA_QS ")", x, mode);
+       "attempt to load a %s chunk (mode is '%s')", x, mode);
     luaD_throw(L, LUA_ERRSYNTAX);
   }
 }

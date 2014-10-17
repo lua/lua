@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.202 2014/10/01 11:54:56 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.203 2014/10/17 10:55:28 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -250,14 +250,14 @@ static const char *classend (MatchState *ms, const char *p) {
   switch (*p++) {
     case L_ESC: {
       if (p == ms->p_end)
-        luaL_error(ms->L, "malformed pattern (ends with " LUA_QL("%%") ")");
+        luaL_error(ms->L, "malformed pattern (ends with '%%')");
       return p+1;
     }
     case '[': {
       if (*p == '^') p++;
       do {  /* look for a `]' */
         if (p == ms->p_end)
-          luaL_error(ms->L, "malformed pattern (missing " LUA_QL("]") ")");
+          luaL_error(ms->L, "malformed pattern (missing ']')");
         if (*(p++) == L_ESC && p < ms->p_end)
           p++;  /* skip escapes (e.g. `%]') */
       } while (*p != ']');
@@ -332,8 +332,7 @@ static int singlematch (MatchState *ms, const char *s, const char *p,
 static const char *matchbalance (MatchState *ms, const char *s,
                                    const char *p) {
   if (p >= ms->p_end - 1)
-    luaL_error(ms->L, "malformed pattern "
-                      "(missing arguments to " LUA_QL("%%b") ")");
+    luaL_error(ms->L, "malformed pattern (missing arguments to '%%b')");
   if (*s != *p) return NULL;
   else {
     int b = *p;
@@ -450,8 +449,7 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
             const char *ep; char previous;
             p += 2;
             if (*p != '[')
-              luaL_error(ms->L, "missing " LUA_QL("[") " after "
-                                 LUA_QL("%%f") " in pattern");
+              luaL_error(ms->L, "missing '[' after '%%f' in pattern");
             ep = classend(ms, p);  /* points to what is next */
             previous = (s == ms->src_init) ? '\0' : *(s - 1);
             if (!matchbracketclass(uchar(previous), p, ep - 1) &&
@@ -694,8 +692,7 @@ static void add_s (MatchState *ms, luaL_Buffer *b, const char *s,
       i++;  /* skip ESC */
       if (!isdigit(uchar(news[i]))) {
         if (news[i] != L_ESC)
-          luaL_error(L, "invalid use of " LUA_QL("%c")
-                        " in replacement string", L_ESC);
+          luaL_error(L, "invalid use of '%c' in replacement string", L_ESC);
         luaL_addchar(b, news[i]);
       }
       else if (news[i] == '0')
@@ -929,8 +926,8 @@ static int str_format (lua_State *L) {
           }
         }
         default: {  /* also treat cases `pnLlh' */
-          return luaL_error(L, "invalid option " LUA_QL("%%%c") " to "
-                               LUA_QL("format"), *(strfrmt - 1));
+          return luaL_error(L, "invalid option '%%%c' to 'format'",
+                               *(strfrmt - 1));
         }
       }
       luaL_addsize(&b, nb);

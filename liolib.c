@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.131 2014/10/03 12:54:57 roberto Exp roberto $
+** $Id: liolib.c,v 2.132 2014/10/15 14:27:40 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -70,7 +70,7 @@
 /* ANSI definitions */
 #define l_popen(L,c,m)  \
 	  ((void)((void)c, m), \
-	  luaL_error(L, LUA_QL("popen") " not supported"), \
+	  luaL_error(L, "'popen' not supported"), \
 	  (FILE*)0)
 #define l_pclose(L,file)		((void)L, (void)file, -1)
 
@@ -244,7 +244,7 @@ static void opencheck (lua_State *L, const char *fname, const char *mode) {
   LStream *p = newfile(L);
   p->f = fopen(fname, mode);
   if (p->f == NULL)
-    luaL_error(L, "cannot open file " LUA_QS " (%s)", fname, strerror(errno));
+    luaL_error(L, "cannot open file '%s' (%s)", fname, strerror(errno));
 }
 
 
