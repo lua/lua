@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.214 2014/09/25 14:20:37 roberto Exp roberto $
+** $Id: lua.c,v 1.215 2014/10/17 16:28:21 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -158,32 +158,32 @@ static void l_message (const char *pname, const char *msg) {
 
 /*
 ** Check whether 'status' is not OK and, if so, prints the error
-** message on the top of the stack. Because this function can be called
-** unprotected, it only accepts actual strings as error messages. (A
-** coercion could raise a memory error.)
+** message on the top of the stack.
 */
 static int report (lua_State *L, int status) {
   if (status != LUA_OK) {
-    const char *msg = (lua_type(L, -1) == LUA_TSTRING)
-                      ? lua_tostring(L, -1)
-                      : "(error object is not a string)";
+    const char *msg = lua_tostring(L, -1);
     l_message(progname, msg);
-    lua_pop(L, 1);
+    lua_pop(L, 1);  /* remove message */
   }
   return status;
 }
 
 
 /*
-** Message handler to be used to run all chunks
+** Message handler used to run all chunks
 */
 static int msghandler (lua_State *L) {
   const char *msg = lua_tostring(L, 1);
-  if (msg)  /* is error object a string? */
-    luaL_traceback(L, L, msg, 1);  /* use standard traceback */
-  else  /* non-string error object */
-    luaL_callmeta(L, 1, "__tostring");  /* try its 'tostring' metamethod */
-  /* if no metamethod, original object still is in the stack */
+  if (msg == NULL) {  /* is error object not a string? */
+    if (luaL_callmeta(L, 1, "__tostring") &&  /* did have a metamethod */
+        lua_type(L, -1) == LUA_TSTRING)  /* and it produce a string? */
+      return 1;  /* that is the message */
+    else
+      msg = lua_pushfstring(L, "(error object is a %s value)",
+                               luaL_typename(L, 1));
+  }
+  luaL_traceback(L, L, msg, 1);  /* append a standard traceback */
   return 1;
 }
 
