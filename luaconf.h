@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.217 2014/10/15 14:53:20 roberto Exp roberto $
+** $Id: luaconf.h,v 1.218 2014/10/17 16:28:21 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -44,7 +44,7 @@
 */
 /* #define LUA_32BITS */
 
-#if !defined(LUA_32BITS)
+#if !defined(LUA_32BITS) && !defined(LUA_ANSI)
 #define LUA_INT_LONGLONG
 #define LUA_REAL_DOUBLE
 #else	/* Lua 32 bits */
