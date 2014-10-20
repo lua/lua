@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.203 2014/10/17 10:55:28 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.204 2014/10/17 16:28:21 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -1000,8 +1000,21 @@ typedef struct Header {
 } Header;
 
 
-typedef enum KOption {Kint, Kuint, Kfloat, Kchar, Kstring, Kstring0,
-                      Kspace, Kpadding, Kpaddalig} KOption;
+/*
+** options for pack/unpack
+*/
+typedef enum KOption {
+  Kint,		/* signed integers */
+  Kuint,	/* unsigned integers */
+  Kfloat,	/* floating-point numbers */
+  Kchar,	/* fixed-length strings */
+  Kstring,	/* strings with prefixed length */
+  Kzstr,	/* zero-terminated strings */
+  Kpadding,	/* padding */
+  Kpaddalign,	/* padding for alignment */
+  Knop,		/* no-op (configuration or spaces) */
+  Keof		/* end of format */
+} KOption;
 
 
 /*
@@ -1036,37 +1049,12 @@ static int getnumlimit (Header *h, const char **fmt, int df) {
 
 
 /*
-** Reads an option endianness indication ('<'/'>') and
-** returns true if operation should use little endian.
+** Initialize Header
 */
-static int getendian (const char **fmt) {
-  if (**fmt == '<' || **fmt == '>')  /* explicit endianness? */
-    return (*((*fmt)++) == '<');  /* true iff little endian */
-  else  /* no endian indication */
-    return nativeendian.little;  /* use native */
-}
-
-
-/*
-** Read and return maximum alignment to be used
-*/
-static int getalignment (Header *h, const char **fmt) {
-  if (**fmt == '!') {  /* explicit alignment? */
-    (*fmt)++;  /* skip '!' */
-    return getnumlimit(h, fmt, MAXALIGN);
-  }
-  else
-    return 1;  /* default is no alignment */
-}
-
-
-/*
-** Read optional endianness and alignment indications
-*/
-static void getheader (lua_State *L, Header *h, const char **fmt) {
+static void initheader (lua_State *L, Header *h) {
   h->L = L;
-  h->islittle = getendian(fmt);
-  h->maxalign = getalignment(h, fmt);
+  h->islittle = nativeendian.little;
+  h->maxalign = 1;
 }
 
 
@@ -1075,6 +1063,7 @@ static void getheader (lua_State *L, Header *h, const char **fmt) {
 */
 static KOption getoption (Header *h, const char **fmt, int *size) {
   int opt = *((*fmt)++);
+  *size = 0;  /* default */
   switch (opt) {
     case 'b': *size = sizeof(char); return Kint;
     case 'B': *size = sizeof(char); return Kuint;
@@ -1092,14 +1081,17 @@ static KOption getoption (Header *h, const char **fmt, int *size) {
     case 'I': *size = getnumlimit(h, fmt, sizeof(int)); return Kuint;
     case 's': *size = getnumlimit(h, fmt, sizeof(size_t)); return Kstring;
     case 'c': *size = getnum(fmt, 1); return Kchar;
-    case 'z': *size = 0; return Kstring0;
+    case 'z': return Kzstr;
     case 'x': *size = 1; return Kpadding;
-    case 'X': *size = 0; return Kpaddalig;
-    case ' ': *size = 0; return Kspace;
+    case 'X': return Kpaddalign;
+    case ' ': return Knop;
+    case '\0': return Keof;
+    case '<': h->islittle = 1; return Knop;
+    case '>': h->islittle = 0; return Knop;
+    case '!': h->maxalign = getnumlimit(h, fmt, MAXALIGN); return Knop;
     default: {
-      *size = 0;  /* to avoid warnings */
       luaL_error(h->L, "invalid format option '%c'", opt);
-      return (KOption)0;
+      return Knop;
     }
   }
 }
@@ -1116,17 +1108,20 @@ static KOption getoption (Header *h, const char **fmt, int *size) {
 */
 static KOption getdetails (Header *h, size_t totalsize,
                            const char **fmt, int *psize, int *ntoalign) {
-  KOption opt = getoption(h, fmt, psize);
-  int align = *psize;  /* usually, alignment follows size */
-  if (opt == Kpaddalig) {
-    if (**fmt == '\0' || strchr("Xc ", **fmt) != NULL)
+  int align;
+  KOption opt;
+  do {
+    opt = getoption(h, fmt, psize);
+  } while (opt == Knop);  /* skip no-op options */
+  align = *psize;  /* usually, alignment follows size */
+  if (opt == Kpaddalign) {  /* 'X' gets alignment from following option */
+    if (getoption(h, fmt, &align) == Kchar || align == 0)
       luaL_argerror(h->L, 1, "invalid next option for option 'X'");
-    getoption(h, fmt, &align);  /* get next element's size for alignment */
   }
   if (align <= 1 || opt == Kchar)  /* need no alignment? */
     *ntoalign = 0;
   else {
-    if (align > h->maxalign)
+    if (align > h->maxalign)  /* enforce maximum alignment */
       align = h->maxalign;
     if ((align & (align - 1)) != 0)  /* is 'align' not a power of 2? */
       luaL_argerror(h->L, 1, "format asks for alignment not power of 2");
@@ -1173,10 +1168,10 @@ static int str_pack (lua_State *L) {
   const char *fmt = luaL_checkstring(L, 1);  /* format string */
   int arg = 1;  /* current argument to pack */
   size_t totalsize = 0;  /* accumulate total size of result */
-  getheader(L, &h, &fmt);
+  initheader(L, &h);
   lua_pushnil(L);  /* mark to separate arguments from string buffer */
   luaL_buffinit(L, &b);
-  while (*fmt != '\0') {
+  for (;;) {
     int size, ntoalign;
     KOption opt = getdetails(&h, totalsize, &fmt, &size, &ntoalign);
     totalsize += ntoalign + size;
@@ -1231,7 +1226,7 @@ static int str_pack (lua_State *L) {
         totalsize += len;
         break;
       }
-      case Kstring0: {  /* zero-terminated string */
+      case Kzstr: {  /* zero-terminated string */
         size_t len;
         const char *s = luaL_checklstring(L, arg, &len);
         luaL_argcheck(L, strlen(s) == len, arg, "string contains zeros");
@@ -1241,13 +1236,14 @@ static int str_pack (lua_State *L) {
         break;
       }
       case Kpadding: luaL_addchar(&b, '\0');  /* go through */
-      case Kpaddalig: case Kspace:
+      case Kpaddalign: case Knop:
         arg--;  /* undo increment */
         break;
+      case Keof:  /* end of format */
+        luaL_pushresult(&b);
+        return 1;
     }
   }
-  luaL_pushresult(&b);
-  return 1;
 }
 
 
@@ -1285,8 +1281,8 @@ static int str_unpack (lua_State *L) {
   size_t pos = (size_t)posrelat(luaL_optinteger(L, 3, 1), ld) - 1;
   int n = 0;  /* number of results */
   luaL_argcheck(L, pos <= ld, 3, "initial position out of string");
-  getheader(L, &h, &fmt);
-  while (*fmt) {
+  initheader(L, &h);
+  for (;;) {
     int size, ntoalign;
     KOption opt = getdetails(&h, pos, &fmt, &size, &ntoalign);
     if ((size_t)ntoalign + size > ~pos || pos + ntoalign + size > ld)
@@ -1324,20 +1320,21 @@ static int str_unpack (lua_State *L) {
         pos += len;
         break;
       }
-      case Kstring0: {
+      case Kzstr: {
         size_t len = (int)strlen(data + pos);
         lua_pushlstring(L, data + pos, len);
         pos += len + 1;  /* skip final '\0' */
         break;
       }
-      case Kpaddalig: case Kpadding: case Kspace:
+      case Kpaddalign: case Kpadding: case Knop:
         n--;  /* undo increment */
         break;
+      case Keof:  /* end of format */
+        lua_pushinteger(L, pos + 1);  /* next position */
+        return n;
     }
     pos += size;
   }
-  lua_pushinteger(L, pos + 1);  /* next position */
-  return n + 1;
 }
 
 /* }====================================================== */
