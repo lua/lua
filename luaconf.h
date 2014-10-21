@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.218 2014/10/17 16:28:21 roberto Exp roberto $
+** $Id: luaconf.h,v 1.219 2014/10/20 16:32:05 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -547,16 +547,11 @@
 #endif					/* } */
 
 
-#if defined(LUA_ANSI)
-/* C89 does not support 'opf' variants for math functions */
+#if !defined(LUA_USE_C99)
+/* 'strtof' and 'opf' variants for math functions are C99 */
 #undef l_mathop
-#define l_mathop(op)		(lua_Number)op
-#endif
-
-
-#if defined(LUA_ANSI) || defined(_WIN32)
-/* C89 and Windows do not support 'strtof'... */
 #undef lua_str2number
+#define l_mathop(op)		(lua_Number)op
 #define lua_str2number(s,p)	((lua_Number)strtod((s), (p)))
 #endif
 
