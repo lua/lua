@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.134 2014/10/17 19:17:55 roberto Exp roberto $
+** $Id: liolib.c,v 2.135 2014/10/22 11:44:20 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -135,6 +135,7 @@
 
 
 #define IO_PREFIX	"_IO_"
+#define IOPREF_LEN	(sizeof(IO_PREFIX)/sizeof(char) - 1)
 #define IO_INPUT	(IO_PREFIX "input")
 #define IO_OUTPUT	(IO_PREFIX "output")
 
@@ -290,7 +291,7 @@ static FILE *getiofile (lua_State *L, const char *findex) {
   lua_getfield(L, LUA_REGISTRYINDEX, findex);
   p = (LStream *)lua_touserdata(L, -1);
   if (isclosed(p))
-    luaL_error(L, "standard %s file is closed", findex + strlen(IO_PREFIX));
+    luaL_error(L, "standard %s file is closed", findex + IOPREF_LEN);
   return p->f;
 }
 
