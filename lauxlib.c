@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.268 2014/09/22 06:42:15 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.269 2014/10/17 16:28:21 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -229,7 +229,7 @@ LUALIB_API int luaL_fileresult (lua_State *L, int stat, const char *fname) {
 }
 
 
-#if !defined(inspectstat)	/* { */
+#if !defined(l_inspectstat)	/* { */
 
 #if defined(LUA_USE_POSIX)
 
@@ -238,13 +238,13 @@ LUALIB_API int luaL_fileresult (lua_State *L, int stat, const char *fname) {
 /*
 ** use appropriate macros to interpret 'pclose' return status
 */
-#define inspectstat(stat,what)  \
+#define l_inspectstat(stat,what)  \
    if (WIFEXITED(stat)) { stat = WEXITSTATUS(stat); } \
    else if (WIFSIGNALED(stat)) { stat = WTERMSIG(stat); what = "signal"; }
 
 #else
 
-#define inspectstat(stat,what)  /* no op */
+#define l_inspectstat(stat,what)  /* no op */
 
 #endif
 
@@ -256,7 +256,7 @@ LUALIB_API int luaL_execresult (lua_State *L, int stat) {
   if (stat == -1)  /* error? */
     return luaL_fileresult(L, 0, NULL);
   else {
-    inspectstat(stat, what);  /* interpret result */
+    l_inspectstat(stat, what);  /* interpret result */
     if (*what == 'e' && stat == 0)  /* successful termination? */
       lua_pushboolean(L, 1);
     else

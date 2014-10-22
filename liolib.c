@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.133 2014/10/17 16:28:21 roberto Exp roberto $
+** $Id: liolib.c,v 2.134 2014/10/17 19:17:55 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -418,8 +418,8 @@ static int readdigits (RN *rn, int hex) {
 
 
 /* access to locale "radix character" (decimal point) */
-#if !defined(getlocaledecpoint)
-#define getlocaledecpoint()     (localeconv()->decimal_point[0])
+#if !defined(l_getlocaledecpoint)
+#define l_getlocaledecpoint()     (localeconv()->decimal_point[0])
 #endif
 
 
@@ -434,7 +434,7 @@ static int read_number (lua_State *L, FILE *f) {
   int hex = 0;
   char decp[2] = ".";
   rn.f = f; rn.n = 0;
-  decp[0] = getlocaledecpoint();  /* get decimal point from locale */
+  decp[0] = l_getlocaledecpoint();  /* get decimal point from locale */
   l_lockfile(rn.f);
   do { rn.c = l_getc(rn.f); } while (isspace(rn.c));  /* skip spaces */
   test2(&rn, "-+");  /* optional signal */
