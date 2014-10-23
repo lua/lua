@@ -1,5 +1,5 @@
 /*
-** $Id: lutf8lib.c,v 1.10 2014/07/16 13:56:14 roberto Exp $
+** $Id: lutf8lib.c,v 1.12 2014/10/15 14:31:10 roberto Exp $
 ** Standard library for UTF-8 manipulation
 ** See Copyright Notice in lua.h
 */
@@ -123,9 +123,9 @@ static int codepoint (lua_State *L) {
 
 
 static void pushutfchar (lua_State *L, int arg) {
-  int code = luaL_checkint(L, arg);
+  lua_Integer code = luaL_checkinteger(L, arg);
   luaL_argcheck(L, 0 <= code && code <= MAXUNICODE, arg, "value out of range");
-  lua_pushfstring(L, "%U", code);
+  lua_pushfstring(L, "%U", (long)code);
 }
 
 
@@ -157,7 +157,7 @@ static int utfchar (lua_State *L) {
 static int byteoffset (lua_State *L) {
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
-  int n  = luaL_checkint(L, 2);
+  lua_Integer n  = luaL_checkinteger(L, 2);
   lua_Integer posi = (n >= 0) ? 1 : len + 1;
   posi = u_posrelat(luaL_optinteger(L, 3, posi), len);
   luaL_argcheck(L, 1 <= posi && --posi <= (lua_Integer)len, 3,
@@ -239,7 +239,7 @@ static struct luaL_Reg funcs[] = {
   {"len", utflen},
   {"codes", iter_codes},
   /* placeholders */
-  {"charpatt", NULL},
+  {"charpattern", NULL},
   {NULL, NULL}
 };
 
@@ -247,7 +247,7 @@ static struct luaL_Reg funcs[] = {
 LUAMOD_API int luaopen_utf8 (lua_State *L) {
   luaL_newlib(L, funcs);
   lua_pushliteral(L, UTF8PATT);
-  lua_setfield(L, -2, "charpatt");
+  lua_setfield(L, -2, "charpattern");
   return 1;
 }
 

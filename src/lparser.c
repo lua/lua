@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.142 2014/07/21 16:02:10 roberto Exp $
+** $Id: lparser.c,v 2.143 2014/10/17 16:28:21 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -340,7 +340,7 @@ static void closegoto (LexState *ls, int g, Labeldesc *label) {
   if (gt->nactvar < label->nactvar) {
     TString *vname = getlocvar(fs, gt->nactvar)->varname;
     const char *msg = luaO_pushfstring(ls->L,
-      "<goto %s> at line %d jumps into the scope of local " LUA_QS,
+      "<goto %s> at line %d jumps into the scope of local '%s'",
       getstr(gt->name), gt->line, getstr(vname));
     semerror(ls, msg);
   }
@@ -457,7 +457,7 @@ static void breaklabel (LexState *ls) {
 static l_noret undefgoto (LexState *ls, Labeldesc *gt) {
   const char *msg = isreserved(gt->name)
                     ? "<%s> at line %d not inside a loop"
-                    : "no visible label " LUA_QS " for <goto> at line %d";
+                    : "no visible label '%s' for <goto> at line %d";
   msg = luaO_pushfstring(ls->L, msg, getstr(gt->name), gt->line);
   semerror(ls, msg);
 }
@@ -761,7 +761,7 @@ static void parlist (LexState *ls) {
           f->is_vararg = 1;
           break;
         }
-        default: luaX_syntaxerror(ls, "<name> or " LUA_QL("...") " expected");
+        default: luaX_syntaxerror(ls, "<name> or '...' expected");
       }
     } while (!f->is_vararg && testnext(ls, ','));
   }
@@ -953,7 +953,7 @@ static void simpleexp (LexState *ls, expdesc *v) {
     case TK_DOTS: {  /* vararg */
       FuncState *fs = ls->fs;
       check_condition(ls, fs->f->is_vararg,
-                      "cannot use " LUA_QL("...") " outside a vararg function");
+                      "cannot use '...' outside a vararg function");
       init_exp(v, VVARARG, luaK_codeABC(fs, OP_VARARG, 0, 1, 0));
       break;
     }
@@ -1200,7 +1200,7 @@ static void checkrepeated (FuncState *fs, Labellist *ll, TString *label) {
   for (i = fs->bl->firstlabel; i < ll->n; i++) {
     if (eqstr(label, ll->arr[i].name)) {
       const char *msg = luaO_pushfstring(fs->ls->L,
-                          "label " LUA_QS " already defined on line %d",
+                          "label '%s' already defined on line %d",
                           getstr(label), ll->arr[i].line);
       semerror(fs->ls, msg);
     }
@@ -1367,7 +1367,7 @@ static void forstat (LexState *ls, int line) {
   switch (ls->t.token) {
     case '=': fornum(ls, varname, line); break;
     case ',': case TK_IN: forlist(ls, varname); break;
-    default: luaX_syntaxerror(ls, LUA_QL("=") " or " LUA_QL("in") " expected");
+    default: luaX_syntaxerror(ls, "'=' or 'in' expected");
   }
   check_match(ls, TK_END, TK_FOR, line);
   leaveblock(fs);  /* loop scope (`break' jumps to this point) */

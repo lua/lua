@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.46 2014/04/29 17:05:13 roberto Exp $
+** $Id: loslib.c,v 1.49 2014/10/17 16:28:21 roberto Exp $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -189,7 +189,7 @@ static int getfield (lua_State *L, const char *key, int d) {
   res = (int)lua_tointegerx(L, -1, &isnum);
   if (!isnum) {
     if (d < 0)
-      return luaL_error(L, "field " LUA_QS " missing in date table", key);
+      return luaL_error(L, "field '%s' missing in date table", key);
     res = d;
   }
   lua_pop(L, 1);
@@ -295,7 +295,8 @@ static int os_time (lua_State *L) {
 
 
 static int os_difftime (lua_State *L) {
-  lua_pushnumber(L, difftime((l_checktime(L, 1)), (l_checktime(L, 2))));
+  double res = difftime((l_checktime(L, 1)), (l_checktime(L, 2)));
+  lua_pushnumber(L, (lua_Number)res);
   return 1;
 }
 
@@ -319,7 +320,7 @@ static int os_exit (lua_State *L) {
   if (lua_isboolean(L, 1))
     status = (lua_toboolean(L, 1) ? EXIT_SUCCESS : EXIT_FAILURE);
   else
-    status = luaL_optint(L, 1, EXIT_SUCCESS);
+    status = (int)luaL_optinteger(L, 1, EXIT_SUCCESS);
   if (lua_toboolean(L, 2))
     lua_close(L);
   if (L) exit(status);  /* 'if' to avoid warnings for unreachable 'return' */

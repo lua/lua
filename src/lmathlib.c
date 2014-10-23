@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.108 2014/07/28 17:35:47 roberto Exp $
+** $Id: lmathlib.c,v 1.110 2014/10/08 19:57:31 roberto Exp $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -153,7 +153,7 @@ static int math_modf (lua_State *L) {
     lua_Number ip = (n < 0) ? l_mathop(ceil)(n) : l_mathop(floor)(n);
     pushnumint(L, ip);
     /* fractional part (test needed for inf/-inf) */
-    lua_pushnumber(L, (n == ip) ? 0.0 : (n - ip));
+    lua_pushnumber(L, (n == ip) ? l_mathop(0.0) : (n - ip));
   }
   return 2;
 }
@@ -192,12 +192,12 @@ static int math_exp (lua_State *L) {
 }
 
 static int math_deg (lua_State *L) {
-  lua_pushnumber(L, luaL_checknumber(L, 1) * (180.0 / PI));
+  lua_pushnumber(L, luaL_checknumber(L, 1) * (l_mathop(180.0) / PI));
   return 1;
 }
 
 static int math_rad (lua_State *L) {
-  lua_pushnumber(L, luaL_checknumber(L, 1) * (PI / 180.0));
+  lua_pushnumber(L, luaL_checknumber(L, 1) * (PI / l_mathop(180.0)));
   return 1;
 }
 
@@ -239,7 +239,7 @@ static int math_random (lua_State *L) {
   double r = (double)l_rand() * (1.0 / ((double)RAND_MAX + 1.0));
   switch (lua_gettop(L)) {  /* check number of arguments */
     case 0: {  /* no arguments */
-      lua_pushnumber(L, r);  /* Number between 0 and 1 */
+      lua_pushnumber(L, (lua_Number)r);  /* Number between 0 and 1 */
       return 1;
     }
     case 1: {  /* only upper limit */
@@ -324,7 +324,7 @@ static int math_frexp (lua_State *L) {
 
 static int math_ldexp (lua_State *L) {
   lua_Number x = luaL_checknumber(L, 1);
-  int ep = luaL_checkint(L, 2);
+  int ep = (int)luaL_checkinteger(L, 2);
   lua_pushnumber(L, l_mathop(ldexp)(x, ep));
   return 1;
 }
@@ -389,7 +389,7 @@ LUAMOD_API int luaopen_math (lua_State *L) {
   luaL_newlib(L, mathlib);
   lua_pushnumber(L, PI);
   lua_setfield(L, -2, "pi");
-  lua_pushnumber(L, HUGE_VAL);
+  lua_pushnumber(L, (lua_Number)HUGE_VAL);
   lua_setfield(L, -2, "huge");
   lua_pushinteger(L, LUA_MAXINTEGER);
   lua_setfield(L, -2, "maxinteger");

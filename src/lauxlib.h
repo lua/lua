@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.125 2014/06/26 17:25:11 roberto Exp $
+** $Id: lauxlib.h,v 1.126 2014/10/01 11:54:56 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -115,10 +115,6 @@ LUALIB_API void (luaL_requiref) (lua_State *L, const char *modname,
 		((void)((cond) || luaL_argerror(L, (arg), (extramsg))))
 #define luaL_checkstring(L,n)	(luaL_checklstring(L, (n), NULL))
 #define luaL_optstring(L,n,d)	(luaL_optlstring(L, (n), (d), NULL))
-#define luaL_checkint(L,n)	((int)luaL_checkinteger(L, (n)))
-#define luaL_optint(L,n,d)	((int)luaL_optinteger(L, (n), (d)))
-#define luaL_checklong(L,n)	((long)luaL_checkinteger(L, (n)))
-#define luaL_optlong(L,n,d)	((long)luaL_optinteger(L, (n), (d)))
 
 #define luaL_typename(L,i)	lua_typename(L, lua_type(L,(i)))
 
@@ -210,14 +206,20 @@ LUALIB_API void (luaL_openlib) (lua_State *L, const char *libname,
 
 /*
 ** {============================================================
-** Compatibility with deprecated unsigned conversions
+** Compatibility with deprecated conversions
 ** =============================================================
 */
-#if defined(LUA_COMPAT_APIUNSIGNED)
+#if defined(LUA_COMPAT_APIINTCASTS)
 
-#define luaL_checkunsigned(L,a)		((lua_Unsigned)luaL_checkinteger(L,a))
+#define luaL_checkunsigned(L,a)	((lua_Unsigned)luaL_checkinteger(L,a))
 #define luaL_optunsigned(L,a,d)	\
 	((lua_Unsigned)luaL_optinteger(L,a,(lua_Integer)(d)))
+
+#define luaL_checkint(L,n)	((int)luaL_checkinteger(L, (n)))
+#define luaL_optint(L,n,d)	((int)luaL_optinteger(L, (n), (d)))
+
+#define luaL_checklong(L,n)	((long)luaL_checkinteger(L, (n)))
+#define luaL_optlong(L,n,d)	((long)luaL_optinteger(L, (n), (d)))
 
 #endif
 /* }============================================================ */

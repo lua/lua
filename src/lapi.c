@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.232 2014/07/30 14:00:14 roberto Exp $
+** $Id: lapi.c,v 2.238 2014/10/17 19:17:55 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -332,7 +332,7 @@ LUA_API int lua_compare (lua_State *L, int index1, int index2, int op) {
 }
 
 
-LUA_API size_t lua_strtonum (lua_State *L, const char *s) {
+LUA_API size_t lua_stringtonumber (lua_State *L, const char *s) {
   size_t sz = luaO_str2num(s, L->top);
   if (sz != 0)
     api_incr_top(L);
@@ -611,6 +611,18 @@ LUA_API int lua_getfield (lua_State *L, int idx, const char *k) {
 }
 
 
+LUA_API int lua_geti (lua_State *L, int idx, lua_Integer n) {
+  StkId t;
+  lua_lock(L);
+  t = index2addr(L, idx);
+  setivalue(L->top, n);
+  api_incr_top(L);
+  luaV_gettable(L, t, L->top - 1, L->top - 1);
+  lua_unlock(L);
+  return ttnov(L->top - 1);
+}
+
+
 LUA_API int lua_rawget (lua_State *L, int idx) {
   StkId t;
   lua_lock(L);
@@ -664,7 +676,7 @@ LUA_API void lua_createtable (lua_State *L, int narray, int nrec) {
 LUA_API int lua_getmetatable (lua_State *L, int objindex) {
   const TValue *obj;
   Table *mt = NULL;
-  int res;
+  int res = 0;
   lua_lock(L);
   obj = index2addr(L, objindex);
   switch (ttnov(obj)) {
@@ -678,9 +690,7 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
       mt = G(L)->mt[ttnov(obj)];
       break;
   }
-  if (mt == NULL)
-    res = 0;
-  else {
+  if (mt != NULL) {
     sethvalue(L, L->top, mt);
     api_incr_top(L);
     res = 1;
@@ -737,6 +747,18 @@ LUA_API void lua_setfield (lua_State *L, int idx, const char *k) {
   api_checknelems(L, 1);
   t = index2addr(L, idx);
   setsvalue2s(L, L->top++, luaS_new(L, k));
+  luaV_settable(L, t, L->top - 1, L->top - 2);
+  L->top -= 2;  /* pop value and key */
+  lua_unlock(L);
+}
+
+
+LUA_API void lua_seti (lua_State *L, int idx, lua_Integer n) {
+  StkId t;
+  lua_lock(L);
+  api_checknelems(L, 1);
+  t = index2addr(L, idx);
+  setivalue(L->top++, n);
   luaV_settable(L, t, L->top - 1, L->top - 2);
   L->top -= 2;  /* pop value and key */
   lua_unlock(L);
@@ -854,8 +876,8 @@ LUA_API void lua_setuservalue (lua_State *L, int idx) {
 	"results from function overflow current stack size")
 
 
-LUA_API void lua_callk (lua_State *L, int nargs, int nresults, lua_Ctx ctx,
-                        lua_KFunction k) {
+LUA_API void lua_callk (lua_State *L, int nargs, int nresults,
+                        lua_KContext ctx, lua_KFunction k) {
   StkId func;
   lua_lock(L);
   api_check(k == NULL || !isLua(L->ci),
@@ -894,7 +916,7 @@ static void f_call (lua_State *L, void *ud) {
 
 
 LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
-                        lua_Ctx ctx, lua_KFunction k) {
+                        lua_KContext ctx, lua_KFunction k) {
   struct CallS c;
   int status;
   ptrdiff_t func;

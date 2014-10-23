@@ -31,12 +31,12 @@ tt, kbd, code {
 <HR>
 <H1>
 <A HREF="http://www.lua.org/"><IMG SRC="logo.gif" ALT="Lua" BORDER=0></A>
-Welcome to Lua 5.3 (alpha)
+Welcome to Lua 5.3 (beta)
 </H1>
 
 <P>
 <IMG SRC="alert.png" ALIGN="absbottom">
-<EM>Some details may change in the final version.</EM>
+<EM>A few details may change in the final version.</EM>
 
 <P>
 <A HREF="#about">about</A>
@@ -114,7 +114,7 @@ Here are the details.
 <OL>
 <LI>
 Open a terminal window and move to
-the top-level directory, which is named <TT>lua-5.3.0-alpha</TT>.
+the top-level directory, which is named <TT>lua-5.3.0-beta</TT>.
 The <TT>Makefile</TT> there controls both the build process and the installation process.
 <P>
 <LI>
@@ -271,13 +271,11 @@ lists the
 
 <H3>Main changes</H3>
 <UL>
-<LI> support for integers (64-bit by default)
-<LI> better support for small architectures ("Small Lua" with 32-bit numbers)
+<LI> integers (64-bit by default)
+<LI> official support for small architectures ("Small Lua" with 32-bit numbers)
 <LI> bitwise operators
-<LI> basic utf-8 library
+<LI> basic utf-8 support
 
-<LI> utf-8 escapes in literal strings
-<LI> strip option in <CODE>lua_dump</CODE>/<CODE>string.dump</CODE>
 </UL>
 
 Here are the other changes introduced in Lua 5.3:
@@ -286,20 +284,33 @@ Here are the other changes introduced in Lua 5.3:
 <LI> userdata can have any Lua value as uservalue
 <LI> integer division
 <LI> more flexible rules for some metamethods
+<LI> utf-8 escapes in literal strings
 </UL>
 
 <H3>Libraries</H3>
 <UL>
-<LI> functions for packing/unpacking numbers
+<LI> basic utf-8 library
+<LI> <CODE>ipairs</CODE> and the table library respect metamethods
+<LI> functions for packing and unpacking numbers
 <LI> strip option in <CODE>string.dump</CODE>
 <LI> table library respects metamethods
 <LI> new function <CODE>table.copy</CODE>
-<LI> new function <CODE>debug.Csize</CODE>
+<LI> new function <CODE>debug.sizeof</CODE>
+<LI> strip option in
+<CODE>string.dump</CODE>
+and
+<CODE>lua_dump</CODE>
 </UL>
 
 <H3>C API</H3>
 <UL>
-<LI>  new functions: <CODE>lua_rotate</CODE>, <CODE>lua_isyieldable</CODE>, <CODE>lua_strtonum</CODE>
+<LI> simpler API for continuation functions in C
+<LI> new functions:
+<CODE>lua_rotate</CODE>,
+<CODE>lua_isyieldable</CODE>,
+<CODE>lua_strtonum</CODE>,
+<CODE>lua_geti</CODE>,
+<CODE>lua_seti</CODE>
 <LI> <CODE>lua_gettable</CODE> and similar functions return type of resulted value
 </UL>
 
@@ -356,10 +367,10 @@ THE SOFTWARE.
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Thu Jul 31 15:23:46 BRT 2014
+Tue Oct  7 18:16:28 BRT 2014
 </SMALL>
 <!--
-Last change: updated for Lua 5.3.0 (alpha)
+Last change: updated for Lua 5.3.0 (beta)
 -->
 
 </BODY>
