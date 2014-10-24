@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.219 2014/10/20 16:32:05 roberto Exp roberto $
+** $Id: luaconf.h,v 1.220 2014/10/21 14:38:46 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -70,7 +70,9 @@
 #endif
 
 #if defined(LUA_WIN)
+#if !defined(_CRT_SECURE_NO_WARNINGS)
 #define	_CRT_SECURE_NO_WARNINGS  /* avoid warnings about ANSI C functions */
+#endif
 #define LUA_DL_DLL
 #define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
 #endif
@@ -562,14 +564,14 @@
 
 
 /*
-@@ lua_numtointeger converts a float number to an integer, or
+@@ lua_numbertointeger converts a float number to an integer, or
 ** returns 0 if float is not within the range of a lua_Integer.
 ** (The range comparisons are tricky because of rounding. The tests
 ** here assume a two-complement representation, where MININTEGER always
 ** has an exact representation as a float; MAXINTEGER may not have one,
 ** and therefore its conversion to float may have an ill-defined value.)
 */
-#define lua_numtointeger(n,p) \
+#define lua_numbertointeger(n,p) \
   ((n) >= (LUA_NUMBER)(LUA_MININTEGER) && \
    (n) < -(LUA_NUMBER)(LUA_MININTEGER) && \
       (*(p) = (LUA_INTEGER)(n), 1))
