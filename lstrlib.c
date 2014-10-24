@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.204 2014/10/17 16:28:21 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.205 2014/10/20 16:44:54 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -1136,10 +1136,10 @@ static void packint (luaL_Buffer *b, lua_Unsigned n,
   char *buff = luaL_prepbuffsize(b, size);
   int i;
   for (i = 0; i < size - 1; i++) {
-    buff[islittle ? i : size - 1 - i] = (n & MC);
+    buff[islittle ? i : size - 1 - i] = (char)(n & MC);
     n = (n >> NB) | mask;
   }
-  buff[islittle ? i : size - 1 - i] = (n & MC);
+  buff[islittle ? i : size - 1 - i] = (char)(n & MC);
   luaL_addsize(b, size);  /* add result to buffer */
 }
 

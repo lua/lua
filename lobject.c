@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.92 2014/10/10 22:23:04 roberto Exp roberto $
+** $Id: lobject.c,v 2.93 2014/10/17 16:28:21 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -317,8 +317,8 @@ int luaO_utf8esc (char *buff, unsigned long x) {
     buff[UTF8BUFFSZ - 1] = cast(char, x);
   else {  /* need continuation bytes */
     unsigned int mfb = 0x3f;  /* maximum that fits in first byte */
-    do {
-      buff[UTF8BUFFSZ - (n++)] = 0x80 | (x & 0x3f);  /* add continuation byte */
+    do {  /* add continuation bytes */
+      buff[UTF8BUFFSZ - (n++)] = cast(char, 0x80 | (x & 0x3f));
       x >>= 6;  /* remove added bits */
       mfb >>= 1;  /* now there is one less bit available in first byte */
     } while (x > mfb);  /* still needs continuation byte? */
