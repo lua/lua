@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.95 2014/09/04 18:15:29 roberto Exp roberto $
+** $Id: ltable.c,v 2.96 2014/10/17 16:28:21 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -88,7 +88,7 @@ static const Node dummynode_ = {
 */
 static int numisinteger (lua_Number x, lua_Integer *p) {
   if ((x) == l_floor(x))  /* integral value? */
-    return lua_numtointeger(x, p);  /* try as an integer */
+    return lua_numbertointeger(x, p);  /* try as an integer */
   else return 0;
 }
 

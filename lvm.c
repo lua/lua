@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.223 2014/09/04 18:15:29 roberto Exp roberto $
+** $Id: lvm.c,v 2.224 2014/10/17 16:28:21 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -92,7 +92,7 @@ static int tointeger_aux (const TValue *obj, lua_Integer *p, int mode) {
       else if (mode > 0)  /* needs ceil? */
         f += 1;  /* convert floor to ceil (remember: n != f) */
     }
-    return lua_numtointeger(f, p);
+    return lua_numbertointeger(f, p);
   }
   else if (ttisinteger(obj)) {
     *p = ivalue(obj);

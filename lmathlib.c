@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.109 2014/10/01 11:54:56 roberto Exp $
+** $Id: lmathlib.c,v 1.110 2014/10/08 19:57:31 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -91,7 +91,7 @@ static int math_toint (lua_State *L) {
 
 static void pushnumint (lua_State *L, lua_Number d) {
   lua_Integer n;
-  if (lua_numtointeger(d, &n))  /* does 'd' fit in an integer? */
+  if (lua_numbertointeger(d, &n))  /* does 'd' fit in an integer? */
     lua_pushinteger(L, n);  /* result is integer */
   else
     lua_pushnumber(L, d);  /* result is float */
