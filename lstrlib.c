@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.205 2014/10/20 16:44:54 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.206 2014/10/24 11:42:29 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -30,7 +30,7 @@
 #endif
 
 
-/* macro to `unsign' a character */
+/* macro to 'unsign' a character */
 #define uchar(c)	((unsigned char)(c))
 
 
@@ -255,11 +255,11 @@ static const char *classend (MatchState *ms, const char *p) {
     }
     case '[': {
       if (*p == '^') p++;
-      do {  /* look for a `]' */
+      do {  /* look for a ']' */
         if (p == ms->p_end)
           luaL_error(ms->L, "malformed pattern (missing ']')");
         if (*(p++) == L_ESC && p < ms->p_end)
-          p++;  /* skip escapes (e.g. `%]') */
+          p++;  /* skip escapes (e.g. '%]') */
       } while (*p != ']');
       return p+1;
     }
@@ -294,7 +294,7 @@ static int matchbracketclass (int c, const char *p, const char *ec) {
   int sig = 1;
   if (*(p+1) == '^') {
     sig = 0;
-    p++;  /* skip the `^' */
+    p++;  /* skip the '^' */
   }
   while (++p < ec) {
     if (*p == L_ESC) {
@@ -431,7 +431,7 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
         break;
       }
       case '$': {
-        if ((p + 1) != ms->p_end)  /* is the `$' the last char in pattern? */
+        if ((p + 1) != ms->p_end)  /* is the '$' the last char in pattern? */
           goto dflt;  /* no; go to default */
         s = (s == ms->src_end) ? s : NULL;  /* check end of string */
         break;
@@ -519,16 +519,16 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
 static const char *lmemfind (const char *s1, size_t l1,
                                const char *s2, size_t l2) {
   if (l2 == 0) return s1;  /* empty strings are everywhere */
-  else if (l2 > l1) return NULL;  /* avoids a negative `l1' */
+  else if (l2 > l1) return NULL;  /* avoids a negative 'l1' */
   else {
-    const char *init;  /* to search for a `*s2' inside `s1' */
-    l2--;  /* 1st char will be checked by `memchr' */
-    l1 = l1-l2;  /* `s2' cannot be found after that */
+    const char *init;  /* to search for a '*s2' inside 's1' */
+    l2--;  /* 1st char will be checked by 'memchr' */
+    l1 = l1-l2;  /* 's2' cannot be found after that */
     while (l1 > 0 && (init = (const char *)memchr(s1, *s2, l1)) != NULL) {
       init++;   /* 1st char is already checked */
       if (memcmp(init, s2+1, l2) == 0)
         return init-1;
-      else {  /* correct `l1' and `s1' to try again */
+      else {  /* correct 'l1' and 's1' to try again */
         l1 -= init-s1;
         s1 = init;
       }
@@ -879,7 +879,7 @@ static int str_format (lua_State *L) {
     else if (*++strfrmt == L_ESC)
       luaL_addchar(&b, *strfrmt++);  /* %% */
     else { /* format item */
-      char form[MAX_FORMAT];  /* to store the format (`%...') */
+      char form[MAX_FORMAT];  /* to store the format ('%...') */
       char *buff = luaL_prepbuffsize(&b, MAX_ITEM);  /* to put formatted item */
       int nb = 0;  /* number of bytes in added item */
       if (++arg > top)
@@ -925,7 +925,7 @@ static int str_format (lua_State *L) {
             break;
           }
         }
-        default: {  /* also treat cases `pnLlh' */
+        default: {  /* also treat cases 'pnLlh' */
           return luaL_error(L, "invalid option '%%%c' to 'format'",
                                *(strfrmt - 1));
         }

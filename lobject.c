@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.93 2014/10/17 16:28:21 roberto Exp roberto $
+** $Id: lobject.c,v 2.94 2014/10/24 11:42:29 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -399,7 +399,7 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
         break;
       }
       case 'p': {
-        char buff[4*sizeof(void *) + 8]; /* should be enough space for a `%p' */
+        char buff[4*sizeof(void *) + 8]; /* should be enough space for a '%p' */
         int l = sprintf(buff, "%p", va_arg(argp, void *));
         pushstr(L, buff, l);
         break;

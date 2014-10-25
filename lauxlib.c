@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.269 2014/10/17 16:28:21 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.270 2014/10/22 11:44:20 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -156,7 +156,7 @@ LUALIB_API int luaL_argerror (lua_State *L, int arg, const char *extramsg) {
     return luaL_error(L, "bad argument #%d (%s)", arg, extramsg);
   lua_getinfo(L, "n", &ar);
   if (strcmp(ar.namewhat, "method") == 0) {
-    arg--;  /* do not count `self' */
+    arg--;  /* do not count 'self' */
     if (arg == 0)  /* error is in the self argument itself? */
       return luaL_error(L, "calling '%s' on bad self (%s)",
                            ar.name, extramsg);
@@ -526,7 +526,7 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
   int ref;
   if (lua_isnil(L, -1)) {
     lua_pop(L, 1);  /* remove from stack */
-    return LUA_REFNIL;  /* `nil' has a unique fixed reference */
+    return LUA_REFNIL;  /* 'nil' has a unique fixed reference */
   }
   t = lua_absindex(L, t);
   lua_rawgeti(L, t, freelist);  /* get first free element */
@@ -658,7 +658,7 @@ LUALIB_API int luaL_loadfilex (lua_State *L, const char *filename,
   readstatus = ferror(lf.f);
   if (filename) fclose(lf.f);  /* close file (even in case of errors) */
   if (readstatus) {
-    lua_settop(L, fnameindex);  /* ignore results from `lua_load' */
+    lua_settop(L, fnameindex);  /* ignore results from 'lua_load' */
     return errfile(L, "read", fnameindex);
   }
   lua_remove(L, fnameindex);
@@ -918,7 +918,7 @@ LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
   while ((wild = strstr(s, p)) != NULL) {
     luaL_addlstring(&b, s, wild - s);  /* push prefix */
     luaL_addstring(&b, r);  /* push replacement in place of pattern */
-    s = wild + l;  /* continue after `p' */
+    s = wild + l;  /* continue after 'p' */
   }
   luaL_addstring(&b, s);  /* push last suffix */
   luaL_pushresult(&b);

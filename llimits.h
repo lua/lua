@@ -1,6 +1,6 @@
 /*
-** $Id: llimits.h,v 1.119 2014/07/18 18:18:45 roberto Exp roberto $
-** Limits, basic types, and some other `installation-dependent' definitions
+** $Id: llimits.h,v 1.120 2014/07/18 18:29:12 roberto Exp roberto $
+** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
 
@@ -23,7 +23,7 @@ typedef LUAI_MEM l_mem;
 
 
 
-/* chars used as small naturals (so that `char' is reserved for characters) */
+/* chars used as small naturals (so that 'char' is reserved for characters) */
 typedef unsigned char lu_byte;
 
 

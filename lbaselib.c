@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.302 2014/10/17 16:28:21 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.303 2014/10/17 19:17:55 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -325,7 +325,7 @@ static int luaB_loadfile (lua_State *L) {
 
 
 /*
-** Reader for generic `load' function: `lua_load' uses the
+** Reader for generic 'load' function: 'lua_load' uses the
 ** stack for internal stuff, so the reader cannot change the
 ** stack top. Instead, it keeps its resulting string in a
 ** reserved slot inside the stack.

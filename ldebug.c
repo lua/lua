@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.100 2014/07/30 14:00:14 roberto Exp roberto $
+** $Id: ldebug.c,v 2.101 2014/10/17 16:28:21 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -365,7 +365,7 @@ static int findsetreg (Proto *p, int lastpc, int reg) {
       case OP_JMP: {
         int b = GETARG_sBx(i);
         int dest = pc + 1 + b;
-        /* jump is forward and do not skip `lastpc'? */
+        /* jump is forward and do not skip 'lastpc'? */
         if (pc < dest && dest <= lastpc) {
           if (dest > jmptarget)
             jmptarget = dest;  /* update 'jmptarget' */

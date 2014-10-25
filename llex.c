@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.83 2014/10/17 16:28:21 roberto Exp roberto $
+** $Id: llex.c,v 2.84 2014/10/22 11:44:20 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -125,7 +125,7 @@ l_noret luaX_syntaxerror (LexState *ls, const char *msg) {
 */
 TString *luaX_newstring (LexState *ls, const char *str, size_t l) {
   lua_State *L = ls->L;
-  TValue *o;  /* entry for `str' */
+  TValue *o;  /* entry for 'str' */
   TString *ts = luaS_newlstr(L, str, l);  /* create new string */
   setsvalue2s(L, L->top++, ts);  /* temporarily anchor it in stack */
   o = luaH_set(L, ls->h, L->top - 1);
@@ -150,9 +150,9 @@ TString *luaX_newstring (LexState *ls, const char *str, size_t l) {
 static void inclinenumber (LexState *ls) {
   int old = ls->current;
   lua_assert(currIsNewline(ls));
-  next(ls);  /* skip `\n' or `\r' */
+  next(ls);  /* skip '\n' or '\r' */
   if (currIsNewline(ls) && ls->current != old)
-    next(ls);  /* skip `\n\r' or `\r\n' */
+    next(ls);  /* skip '\n\r' or '\r\n' */
   if (++ls->linenumber >= MAX_INT)
     luaX_syntaxerror(ls, "chunk has too many lines");
 }
@@ -298,7 +298,7 @@ static int skip_sep (LexState *ls) {
 
 static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
   int line = ls->linenumber;  /* initial line (for error message) */
-  save_and_next(ls);  /* skip 2nd `[' */
+  save_and_next(ls);  /* skip 2nd '[' */
   if (currIsNewline(ls))  /* string starts with a newline? */
     inclinenumber(ls);  /* skip it */
   for (;;) {
@@ -312,7 +312,7 @@ static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
       }
       case ']': {
         if (skip_sep(ls) == sep) {
-          save_and_next(ls);  /* skip 2nd `]' */
+          save_and_next(ls);  /* skip 2nd ']' */
           goto endloop;
         }
         break;
@@ -480,7 +480,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         next(ls);
         if (ls->current == '[') {  /* long comment? */
           int sep = skip_sep(ls);
-          luaZ_resetbuffer(ls->buff);  /* `skip_sep' may dirty the buffer */
+          luaZ_resetbuffer(ls->buff);  /* 'skip_sep' may dirty the buffer */
           if (sep >= 0) {
             read_long_string(ls, NULL, sep);  /* skip long comment */
             luaZ_resetbuffer(ls->buff);  /* previous call may dirty the buff. */

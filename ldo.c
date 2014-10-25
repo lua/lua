@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.129 2014/10/08 12:20:26 roberto Exp roberto $
+** $Id: ldo.c,v 2.130 2014/10/17 16:28:21 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -287,7 +287,7 @@ static StkId tryfuncTM (lua_State *L, StkId func) {
   ptrdiff_t funcr = savestack(L, func);
   if (!ttisfunction(tm))
     luaG_typeerror(L, func, "call");
-  /* Open a hole inside the stack at `func' */
+  /* Open a hole inside the stack at 'func' */
   for (p = L->top; p > func; p--) setobjs2s(L, p, p-1);
   incr_top(L);
   func = restorestack(L, funcr);  /* previous call may change stack */
@@ -575,7 +575,7 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs) {
       status = luaD_rawrunprotected(L, unroll, &status);
     }
     if (errorstatus(status)) {  /* unrecoverable error? */
-      L->status = cast_byte(status);  /* mark thread as `dead' */
+      L->status = cast_byte(status);  /* mark thread as 'dead' */
       seterrorobj(L, status, L->top);  /* push error message */
       L->ci->top = L->top;
     }
@@ -650,7 +650,7 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
 /*
 ** Execute a protected parser.
 */
-struct SParser {  /* data to `f_parser' */
+struct SParser {  /* data to 'f_parser' */
   ZIO *z;
   Mbuffer buff;  /* dynamic structure used by the scanner */
   Dyndata dyd;  /* dynamic structures used by the parser */

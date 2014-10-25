@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.224 2014/10/17 16:28:21 roberto Exp roberto $
+** $Id: lvm.c,v 2.225 2014/10/24 11:42:06 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -158,7 +158,7 @@ void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val) {
   int loop;  /* counter to avoid infinite loops */
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
     const TValue *tm;
-    if (ttistable(t)) {  /* `t' is a table? */
+    if (ttistable(t)) {  /* 't' is a table? */
       Table *h = hvalue(t);
       const TValue *res = luaH_get(h, key); /* do a primitive get */
       if (!ttisnil(res) ||  /* result is not nil? */
@@ -188,7 +188,7 @@ void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
   int loop;  /* counter to avoid infinite loops */
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
     const TValue *tm;
-    if (ttistable(t)) {  /* `t' is a table? */
+    if (ttistable(t)) {  /* 't' is a table? */
       Table *h = hvalue(t);
       TValue *oldval = cast(TValue *, luaH_get(h, key));
       /* if previous value is not nil, there must be a previous entry
@@ -240,12 +240,12 @@ static int l_strcmp (const TString *ls, const TString *rs) {
     if (temp != 0)  /* not equal? */
       return temp;  /* done */
     else {  /* strings are equal up to a '\0' */
-      size_t len = strlen(l);  /* index of first `\0' in both strings */
+      size_t len = strlen(l);  /* index of first '\0' in both strings */
       if (len == lr)  /* 'rs' is finished? */
         return (len == ll) ? 0 : 1;  /* check 'ls' */
       else if (len == ll)  /* 'ls' is finished? */
         return -1;  /* 'ls' is smaller than 'rs' ('rs' is not finished) */
-      /* both strings longer than `len'; go on comparing after the '\0' */
+      /* both strings longer than 'len'; go on comparing after the '\0' */
       len++;
       l += len; ll -= len; r += len; lr -= len;
     }
@@ -283,9 +283,9 @@ int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
     return luai_numle(nl, nr);
   else if (ttisstring(l) && ttisstring(r))  /* both are strings? */
     return l_strcmp(tsvalue(l), tsvalue(r)) <= 0;
-  else if ((res = luaT_callorderTM(L, l, r, TM_LE)) >= 0)  /* first try `le' */
+  else if ((res = luaT_callorderTM(L, l, r, TM_LE)) >= 0)  /* first try 'le' */
     return res;
-  else if ((res = luaT_callorderTM(L, r, l, TM_LT)) < 0)  /* else try `lt' */
+  else if ((res = luaT_callorderTM(L, r, l, TM_LT)) < 0)  /* else try 'lt' */
     luaG_ordererror(L, l, r);
   return !res;
 }
@@ -596,7 +596,7 @@ void luaV_finishOp (lua_State *L) {
 
 
 /*
-** some macros for common tasks in `luaV_execute'
+** some macros for common tasks in 'luaV_execute'
 */
 
 #if !defined luai_runtimecheck
@@ -657,7 +657,7 @@ void luaV_execute (lua_State *L) {
         (--L->hookcount == 0 || L->hookmask & LUA_MASKLINE)) {
       Protect(luaG_traceexec(L));
     }
-    /* WARNING: several calls may realloc the stack and invalidate `ra' */
+    /* WARNING: several calls may realloc the stack and invalidate 'ra' */
     ra = RA(i);
     lua_assert(base == ci->u.l.base);
     lua_assert(base <= L->top && L->top < L->stack + L->stacksize);

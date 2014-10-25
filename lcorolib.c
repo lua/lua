@@ -1,5 +1,5 @@
 /*
-** $Id: lcorolib.c,v 1.6 2014/05/08 13:52:20 roberto Exp roberto $
+** $Id: lcorolib.c,v 1.7 2014/09/01 18:00:04 roberto Exp roberto $
 ** Coroutine Library
 ** See Copyright Notice in lua.h
 */
@@ -65,7 +65,7 @@ static int luaB_coresume (lua_State *L) {
   else {
     lua_pushboolean(L, 1);
     lua_insert(L, -(r + 1));
-    return r + 1;  /* return true + `resume' returns */
+    return r + 1;  /* return true + 'resume' returns */
   }
 }
 

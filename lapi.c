@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.237 2014/10/15 14:27:40 roberto Exp roberto $
+** $Id: lapi.c,v 2.238 2014/10/17 19:17:55 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -178,7 +178,7 @@ LUA_API void lua_settop (lua_State *L, int idx) {
   }
   else {
     api_check(-(idx+1) <= (L->top - (func + 1)), "invalid new top");
-    L->top += idx+1;  /* `subtract' index (index is negative) */
+    L->top += idx+1;  /* 'subtract' index (index is negative) */
   }
   lua_unlock(L);
 }
@@ -375,7 +375,7 @@ LUA_API const char *lua_tolstring (lua_State *L, int idx, size_t *len) {
       if (len != NULL) *len = 0;
       return NULL;
     }
-    lua_lock(L);  /* `luaO_tostring' may create a new string */
+    lua_lock(L);  /* 'luaO_tostring' may create a new string */
     luaC_checkGC(L);
     o = index2addr(L, idx);  /* previous call may reallocate the stack */
     luaO_tostring(L, o);
@@ -867,7 +867,7 @@ LUA_API void lua_setuservalue (lua_State *L, int idx) {
 
 
 /*
-** `load' and `call' functions (run Lua code)
+** 'load' and 'call' functions (run Lua code)
 */
 
 
@@ -902,7 +902,7 @@ LUA_API void lua_callk (lua_State *L, int nargs, int nresults,
 /*
 ** Execute a protected call.
 */
-struct CallS {  /* data to `f_call' */
+struct CallS {  /* data to 'f_call' */
   StkId func;
   int nresults;
 };

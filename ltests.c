@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.187 2014/10/06 17:06:49 roberto Exp roberto $
+** $Id: ltests.c,v 2.188 2014/10/07 18:29:13 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -152,7 +152,7 @@ void *debug_realloc (void *ud, void *b, size_t oldsize, size_t size) {
       memcpy(newblock + 1, block + 1, commonsize);  /* copy old contents */
       freeblock(mc, block);  /* erase (and check) old copy */
     }
-    /* initialize new part of the block with something `weird' */
+    /* initialize new part of the block with something weird */
     fillmem(cast(char *, newblock + 1) + commonsize, size - commonsize);
     /* initialize marks after block */
     for (i = 0; i < MARKSIZE; i++)

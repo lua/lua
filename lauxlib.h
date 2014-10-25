@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.125 2014/06/26 17:25:11 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.126 2014/10/01 11:54:56 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -16,7 +16,7 @@
 
 
 
-/* extra error code for `luaL_load' */
+/* extra error code for 'luaL_load' */
 #define LUA_ERRFILE     (LUA_ERRERR+1)
 
 

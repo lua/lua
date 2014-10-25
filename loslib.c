@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.48 2014/10/08 19:57:31 roberto Exp roberto $
+** $Id: loslib.c,v 1.49 2014/10/17 16:28:21 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -227,7 +227,7 @@ static int os_date (lua_State *L) {
   struct tm tmr, *stm;
   if (*s == '!') {  /* UTC? */
     stm = l_gmtime(&t, &tmr);
-    s++;  /* skip `!' */
+    s++;  /* skip '!' */
   }
   else
     stm = l_localtime(&t, &tmr);

@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.116 2014/07/29 16:01:00 roberto Exp roberto $
+** $Id: loadlib.c,v 1.117 2014/10/17 16:28:21 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -729,7 +729,7 @@ static void createsearcherstable (lua_State *L) {
   }
 #if defined(LUA_COMPAT_LOADERS)
   lua_pushvalue(L, -1);  /* make a copy of 'searchers' table */
-  lua_setfield(L, -3, "loaders");  /* put it in field `loaders' */
+  lua_setfield(L, -3, "loaders");  /* put it in field 'loaders' */
 #endif
   lua_setfield(L, -2, "searchers");  /* put it in field 'searchers' */
 }
@@ -750,7 +750,7 @@ static void createclibstable (lua_State *L) {
 
 LUAMOD_API int luaopen_package (lua_State *L) {
   createclibstable(L);
-  luaL_newlib(L, pk_funcs);  /* create `package' table */
+  luaL_newlib(L, pk_funcs);  /* create 'package' table */
   createsearcherstable(L);
   /* set field 'path' */
   setpath(L, "path", LUA_PATHVARVERSION, LUA_PATH_VAR, LUA_PATH_DEFAULT);
@@ -760,10 +760,10 @@ LUAMOD_API int luaopen_package (lua_State *L) {
   lua_pushliteral(L, LUA_DIRSEP "\n" LUA_PATH_SEP "\n" LUA_PATH_MARK "\n"
                      LUA_EXEC_DIR "\n" LUA_IGMARK "\n");
   lua_setfield(L, -2, "config");
-  /* set field `loaded' */
+  /* set field 'loaded' */
   luaL_getsubtable(L, LUA_REGISTRYINDEX, "_LOADED");
   lua_setfield(L, -2, "loaded");
-  /* set field `preload' */
+  /* set field 'preload' */
   luaL_getsubtable(L, LUA_REGISTRYINDEX, "_PRELOAD");
   lua_setfield(L, -2, "preload");
   lua_pushglobaltable(L);

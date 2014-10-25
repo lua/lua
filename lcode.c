@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.89 2014/04/29 18:14:16 roberto Exp roberto $
+** $Id: lcode.c,v 2.90 2014/05/08 18:58:46 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -107,7 +107,7 @@ static void fixjump (FuncState *fs, int pc, int dest) {
 
 
 /*
-** returns current `pc' and marks it as a jump target (to avoid wrong
+** returns current 'pc' and marks it as a jump target (to avoid wrong
 ** optimizations with consecutive instructions not in the same basic block).
 */
 int luaK_getlabel (FuncState *fs) {
@@ -230,7 +230,7 @@ void luaK_concat (FuncState *fs, int *l1, int l2) {
 
 static int luaK_code (FuncState *fs, Instruction i) {
   Proto *f = fs->f;
-  dischargejpc(fs);  /* `pc' will change */
+  dischargejpc(fs);  /* 'pc' will change */
   /* put new instruction in code array */
   luaM_growvector(fs->ls->L, f->code, fs->pc, f->sizecode, Instruction,
                   MAX_INT, "opcodes");
@@ -503,7 +503,7 @@ static void discharge2anyreg (FuncState *fs, expdesc *e) {
 static void exp2reg (FuncState *fs, expdesc *e, int reg) {
   discharge2reg(fs, e, reg);
   if (e->k == VJMP)
-    luaK_concat(fs, &e->t, e->u.info);  /* put this jump in `t' list */
+    luaK_concat(fs, &e->t, e->u.info);  /* put this jump in 't' list */
   if (hasjumps(e)) {
     int final;  /* position after whole expression */
     int p_f = NO_JUMP;  /* position of an eventual LOAD false */
@@ -677,7 +677,7 @@ void luaK_goiftrue (FuncState *fs, expdesc *e) {
       break;
     }
   }
-  luaK_concat(fs, &e->f, pc);  /* insert last jump in `f' list */
+  luaK_concat(fs, &e->f, pc);  /* insert last jump in 'f' list */
   luaK_patchtohere(fs, e->t);
   e->t = NO_JUMP;
 }
@@ -700,7 +700,7 @@ void luaK_goiffalse (FuncState *fs, expdesc *e) {
       break;
     }
   }
-  luaK_concat(fs, &e->t, pc);  /* insert last jump in `t' list */
+  luaK_concat(fs, &e->t, pc);  /* insert last jump in 't' list */
   luaK_patchtohere(fs, e->f);
   e->f = NO_JUMP;
 }
@@ -831,7 +831,7 @@ static void codecomp (FuncState *fs, OpCode op, int cond, expdesc *e1,
   freeexp(fs, e2);
   freeexp(fs, e1);
   if (cond == 0 && op != OP_EQ) {
-    int temp;  /* exchange args to replace by `<' or `<=' */
+    int temp;  /* exchange args to replace by '<' or '<=' */
     temp = o1; o1 = o2; o2 = temp;  /* o1 <==> o2 */
     cond = 1;
   }
@@ -865,7 +865,7 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
       break;
     }
     case OPR_CONCAT: {
-      luaK_exp2nextreg(fs, v);  /* operand must be on the `stack' */
+      luaK_exp2nextreg(fs, v);  /* operand must be on the 'stack' */
       break;
     }
     case OPR_ADD: case OPR_SUB:

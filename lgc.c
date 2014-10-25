@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.195 2014/09/04 18:15:29 roberto Exp roberto $
+** $Id: lgc.c,v 2.196 2014/10/03 12:54:37 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -119,14 +119,14 @@ static void removeentry (Node *n) {
 /*
 ** tells whether a key or value can be cleared from a weak
 ** table. Non-collectable objects are never removed from weak
-** tables. Strings behave as `values', so are never removed too. for
+** tables. Strings behave as 'values', so are never removed too. for
 ** other objects: if really collected, cannot keep them; for objects
 ** being finalized, keep them in keys, but not in values
 */
 static int iscleared (global_State *g, const TValue *o) {
   if (!iscollectable(o)) return 0;
   else if (ttisstring(o)) {
-    markobject(g, tsvalue(o));  /* strings are `values', so are never weak */
+    markobject(g, tsvalue(o));  /* strings are 'values', so are never weak */
     return 0;
   }
   else return iswhite(gcvalue(o));
@@ -1031,7 +1031,7 @@ static lu_mem singlestep (lua_State *L) {
       g->GCmemtrav = 0;
       lua_assert(g->gray);
       propagatemark(g);
-       if (g->gray == NULL)  /* no more `gray' objects? */
+       if (g->gray == NULL)  /* no more gray objects? */
         g->gcstate = GCSatomic;  /* finish propagate phase */
       return g->GCmemtrav;  /* memory traversed in this step */
     }
