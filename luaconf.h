@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.220 2014/10/21 14:38:46 roberto Exp roberto $
+** $Id: luaconf.h,v 1.221 2014/10/24 11:42:47 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -417,23 +417,21 @@
 
 
 /*
-@@ LUAI_BITSINT defines the number of bits in an int.
+@@ LUAI_BITSINT defines the (minimum) number of bits in an int.
 ** CHANGE here if Lua cannot automatically detect the number of bits of
 ** your machine. Probably you do not need to change this.
 */
-/* avoid overflows in comparison */
-#if INT_MAX-20 < 32760		/* { */
-#define LUAI_BITSINT	16
-#elif INT_MAX > 2147483640L	/* }{ */
-/* int has at least 32 bits */
+/* avoid undefined shifts */
+#if ((INT_MAX >> 15) >> 15) >= 1
 #define LUAI_BITSINT	32
-#else				/* }{ */
-#error "you must define LUA_BITSINT with number of bits in an integer"
-#endif				/* } */
+#else
+/* 'int' always must have at least 16 bits */
+#define LUAI_BITSINT	16
+#endif
 
 
 /*
-@@ LUA_INT32 is an signed integer with exactly 32 bits.
+@@ LUA_INT32 is a signed integer with at least 32 bits.
 @@ LUAI_UMEM is an unsigned integer big enough to count the total
 @@ memory used by Lua.
 @@ LUAI_MEM is a signed integer big enough to count the total memory
