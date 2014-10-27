@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.120 2014/07/18 18:29:12 roberto Exp roberto $
+** $Id: llimits.h,v 1.121 2014/10/25 11:50:46 roberto Exp roberto $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -154,10 +154,6 @@ typedef LUAI_UACINT l_uacInt;
 */
 typedef lu_int32 Instruction;
 
-
-
-/* maximum stack for a Lua function */
-#define MAXSTACK	250
 
 
 

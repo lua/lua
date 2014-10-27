@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.90 2014/05/08 18:58:46 roberto Exp roberto $
+** $Id: lcode.c,v 2.91 2014/10/25 11:50:46 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -25,6 +25,10 @@
 #include "lstring.h"
 #include "ltable.h"
 #include "lvm.h"
+
+
+/* Maximum number of registers in a Lua function */
+#define MAXREGS		250
 
 
 /* test for x == -0 */
@@ -280,7 +284,7 @@ int luaK_codek (FuncState *fs, int reg, int k) {
 void luaK_checkstack (FuncState *fs, int n) {
   int newstack = fs->freereg + n;
   if (newstack > fs->f->maxstacksize) {
-    if (newstack >= MAXSTACK)
+    if (newstack >= MAXREGS)
       luaX_syntaxerror(fs->ls, "function or expression too complex");
     fs->f->maxstacksize = cast_byte(newstack);
   }
