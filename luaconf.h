@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.221 2014/10/24 11:42:47 roberto Exp roberto $
+** $Id: luaconf.h,v 1.222 2014/10/27 16:59:31 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -23,10 +23,11 @@
 @@ LUA_REAL_FLOAT / LUA_REAL_DOUBLE / LUA_REAL_LONGDOUBLE defines
 @@ type for Lua floats. You must define one of them.
 **
-** These definitions set the numeric types for Lua. Lua should work fine
-** with any mix of these previous options.  The usual configurations
-** are 64-bit integers and floats (the default) and 32-bit integers and
-** floats (Small Lua, for restricted platforms).
+** These definitions set the numeric types for Lua. Lua should work
+** fine with any mix of these previous options (if supported by your
+** C compiler).  The usual configurations are 64-bit integers and
+** 'double' (the default) and 32-bit integers and 'float' (Small Lua,
+** for restricted platforms).
 **
 ** Note that C compilers not compliant with C99 may not have
 ** support for 'long long'. In that case, you should not use option
@@ -659,7 +660,7 @@
 
 #elif defined(LUA_INT_LONGLONG)	/* }{ long long */
 
-#if defined(_WIN32)
+#if defined(LUA_WIN)
 
 #define LUA_INTEGER		__int64
 #define LUA_INTEGER_FRMLEN	"I64"
