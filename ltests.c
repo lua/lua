@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.188 2014/10/07 18:29:13 roberto Exp roberto $
+** $Id: ltests.c,v 2.189 2014/10/25 11:50:46 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -553,8 +553,11 @@ static int listlocals (lua_State *L) {
 static int get_limits (lua_State *L) {
   lua_createtable(L, 0, 5);
   setnameval(L, "BITS_INT", LUAI_BITSINT);
+  setnameval(L, "MAXARG_Ax", MAXARG_Ax);
+  setnameval(L, "MAXARG_Bx", MAXARG_Bx);
+  setnameval(L, "MAXARG_sBx", MAXARG_sBx);
+  setnameval(L, "BITS_INT", LUAI_BITSINT);
   setnameval(L, "LFPF", LFIELDS_PER_FLUSH);
-  setnameval(L, "MAXSTACK", MAXSTACK);
   setnameval(L, "NUM_OPCODES", NUM_OPCODES);
   return 1;
 }
