@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.94 2014/10/24 11:42:29 roberto Exp roberto $
+** $Id: lobject.c,v 2.95 2014/10/25 11:50:46 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -162,24 +162,8 @@ static int isneg (const char **s) {
 }
 
 
-/*
-** {======================================================
-** lua_strx2number converts an hexadecimal numeric string to a number.
-** In C99, 'strtod' does both conversions. C89, however, has no function
-** to convert floating hexadecimal strings to numbers. For these
-** systems, you can leave 'lua_strx2number' undefined and Lua will
-** provide its own implementation.
-** =======================================================
-*/
-#if !defined(lua_strx2number)		/* { */
-
-#if defined(LUA_USE_C99)		/* { */
-
-#define lua_strx2number(s,p)    lua_str2number(s,p)
-
-#else					/* }{ */
-
 /* Lua's implementation for 'lua_strx2number' */
+#if !defined(lua_strx2number) 		/* { */
 
 #include <math.h>
 
@@ -244,8 +228,6 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
   if (neg) r = -r;
   return l_mathop(ldexp)(r, e);
 }
-
-#endif					/* } */
 
 #endif					/* } */
 

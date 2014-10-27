@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.222 2014/10/27 16:59:31 roberto Exp roberto $
+** $Id: luaconf.h,v 1.223 2014/10/27 18:06:03 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -92,24 +92,6 @@
 #define LUA_USE_POSIX
 #define LUA_USE_DLOPEN		/* does not need -ldl */
 #define LUA_USE_READLINE	/* needs an extra library: -lreadline */
-#endif
-
-
-/*
-@@ LUA_USE_C99 includes all functionality that depends on C 99.
-** CHANGE it (define it) if your system is compatible.
-*/
-#if defined(LUA_USE_C99)
-#define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
-#endif
-
-
-/*
-@@ LUA_USE_POSIX includes all functionality listed as X/Open System
-@@ Interfaces Extension (XSI).
-** CHANGE it (define it) if your system is XSI compatible.
-*/
-#if defined(LUA_USE_POSIX)
 #endif
 
 
@@ -287,8 +269,8 @@
 
 /*
 @@ LUA_KCONTEXT is the type of the context ('ctx') for continuation
-@@ functions.  It must be a numerical type; Lua will use 'intptr_t' if
-@@ available.
+** functions.  It must be a numerical type; Lua will use 'intptr_t' if
+** available.
 */
 #if defined (LUA_USE_C99)
 #include <stdint.h>
@@ -300,6 +282,27 @@
 #if !defined(LUA_KCONTEXT)
 /* default definition (the nearest thing to 'intptr_t' in C89) */
 #define LUA_KCONTEXT	ptrdiff_t
+#endif
+
+
+/*
+@@ lua_strx2number converts an hexadecimal numeric string to a number.
+** In C99, 'strtod' does both conversions. Otherwise, you can
+** leave 'lua_strx2number' undefined and Lua will provide its own
+** implementation.
+*/
+#if defined(LUA_USE_C99)
+#define lua_strx2number(s,p)    lua_str2number(s,p)
+#endif
+
+
+/*
+@@ LUA_USE_AFORMAT allows '%a'/'%A' specifiers in 'string.format'
+** Enable it if the C function 'printf' supports these specifiers.
+** (C99 demands it.)
+*/
+#if !defined(LUA_USE_AFORMAT) && defined(LUA_USE_C99)
+#define LUA_USE_AFORMAT
 #endif
 
 
