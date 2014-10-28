@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.95 2014/10/25 11:50:46 roberto Exp roberto $
+** $Id: lobject.c,v 2.96 2014/10/27 19:21:56 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -162,8 +162,13 @@ static int isneg (const char **s) {
 }
 
 
-/* Lua's implementation for 'lua_strx2number' */
-#if !defined(lua_strx2number) 		/* { */
+
+/*
+** {==================================================================
+** Lua's implementation for 'lua_strx2number'
+** ===================================================================
+*/
+#if !defined(lua_strx2number)
 
 #include <math.h>
 
@@ -193,18 +198,12 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
       else dot = 1;
     }
     else if (lisxdigit(cast_uchar(*s))) {
-      if (sigdig == 0 && *s == '0') {  /* non-significant zero? */
+      if (sigdig == 0 && *s == '0')  /* non-significant digit (zero)? */
         nosigdig++;
-        if (dot) e--;  /* zero after dot? correct exponent */
-      }
-      else {
-        if (++sigdig <= MAXSIGDIG) {  /* can read it without overflow? */
+      else if (++sigdig <= MAXSIGDIG)  /* can read it without overflow? */
           r = (r * cast_num(16.0)) + luaO_hexavalue(cast_uchar(*s));
-          if (dot) e--;  /* decimal digit */
-        }
-        else  /* too many digits; ignore */ 
-          if (!dot) e++;  /* still count it for exponent */
-      }
+      else e++; /* too many digits; ignore, but still count for exponent */
+      if (dot) e--;  /* decimal digit? correct exponent */
     }
     else break;  /* neither a dot nor a digit */
   }
@@ -229,8 +228,7 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
   return l_mathop(ldexp)(r, e);
 }
 
-#endif					/* } */
-
+#endif
 /* }====================================================== */
 
 
