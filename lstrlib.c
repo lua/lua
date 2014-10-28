@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.207 2014/10/25 11:50:46 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.208 2014/10/27 13:30:24 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -897,10 +897,10 @@ static int str_format (lua_State *L) {
           nb = sprintf(buff, form, n);
           break;
         }
-        case 'e': case 'E': case 'f':
 #if defined(LUA_USE_AFORMAT)
         case 'a': case 'A':
 #endif
+        case 'e': case 'E': case 'f':
         case 'g': case 'G': {
           addlenmod(form, LUA_NUMBER_FRMLEN);
           nb = sprintf(buff, form, luaL_checknumber(L, arg));
