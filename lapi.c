@@ -1,11 +1,10 @@
 /*
-** $Id: lapi.c,v 2.238 2014/10/17 19:17:55 roberto Exp roberto $
+** $Id: lapi.c,v 2.239 2014/10/25 11:50:46 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
 
 
-#include <math.h>
 #include <stdarg.h>
 #include <string.h>
 
