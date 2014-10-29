@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.303 2014/10/17 19:17:55 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.304 2014/10/25 11:50:46 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -33,11 +33,11 @@ static int luaB_print (lua_State *L) {
     s = lua_tolstring(L, -1, &l);  /* get result */
     if (s == NULL)
       return luaL_error(L, "'tostring' must return a string to 'print'");
-    if (i>1) luai_writestring("\t", 1);
-    luai_writestring(s, l);
+    if (i>1) lua_writestring("\t", 1);
+    lua_writestring(s, l);
     lua_pop(L, 1);  /* pop result */
   }
-  luai_writeline();
+  lua_writeline();
   return 0;
 }
 
