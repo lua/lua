@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.76 2013/12/30 20:47:58 roberto Exp roberto $
+** $Id: llex.h,v 1.77 2014/10/25 11:50:46 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -13,6 +13,10 @@
 
 #define FIRST_RESERVED	257
 
+
+#if !defined(LUA_ENV)
+#define LUA_ENV		"_ENV"
+#endif
 
 
 /*
