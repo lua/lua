@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.224 2014/10/27 19:21:56 roberto Exp roberto $
+** $Id: luaconf.h,v 1.225 2014/10/29 18:01:26 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -8,9 +8,12 @@
 #ifndef lconfig_h
 #define lconfig_h
 
+#include <limits.h>
+#include <stddef.h>
+
 
 /*
-** ==================================================================
+** ===================================================================
 ** Search for "@@" to find all configurable definitions.
 ** ===================================================================
 */
@@ -18,73 +21,43 @@
 
 /*
 ** {==================================================================
-@@ LUA_INT_INT / LUA_INT_LONG / LUA_INT_LONGLONG defines type for
-** Lua integers; you must define one of them.
-@@ LUA_REAL_FLOAT / LUA_REAL_DOUBLE / LUA_REAL_LONGDOUBLE defines
-** type for Lua floats. You must define one of them.
-**
-** These definitions set the numeric types for Lua. Lua should work
-** fine with any mix of these previous options (if supported by your
-** C compiler). The usual configurations are 64-bit integers and
-** 'double' (the default) and 32-bit integers and 'float' (Small Lua,
-** for restricted platforms).
-**
-** Note that C compilers not compliant with C99 may not have
-** support for 'long long'. In that case, you should not use option
-** 'LUA_INT_LONGLONG'; use instead option 'LUA_32BITS' for Small Lua
-** (see below), or LUA_INT_LONG plus LUA_REAL_DOUBLE for an interpreter
-** with 32-bit integers and double floating-point numbers.
-** =====================================================================
-*/
-
-/*
-** Just uncomment the next line for Small Lua; you can also define
-** LUA_32BITS in the make file, but changing here you ensure that
-** all software connected to Lua will be compiled with the same
-** configuration.
-*/
-/* #define LUA_32BITS */
-
-#if !defined(LUA_32BITS) && !defined(LUA_ANSI)
-#define LUA_INT_LONGLONG
-#define LUA_REAL_DOUBLE
-#else	/* Lua 32 bits */
-#define LUA_INT_LONG
-#define LUA_REAL_FLOAT
-#endif
-
-/* }================================================================== */
-
-
-
-/*
-** {==================================================================
-** System Configuration
+** System Configuration: macros to adapt (if needed) Lua to some
+** particular platform, for instance compiling it as Small Lua (32
+** bits) or restricting it to C89.
 ** ===================================================================
 */
 
 /*
-@@ LUA_ANSI controls the use of non-ansi features.
-** CHANGE it (define it) if you want Lua to avoid the use of any
-** non-ansi feature or library.
+@@ LUA_32BITS enables Small Lua (that is, Lua with 32-bit integers
+** and 32-bit floats). You can also define LUA_32BITS in the make file,
+** but changing here you ensure that all software connected to Lua will
+** be compiled with the same configuration.
 */
-#if !defined(LUA_ANSI) && defined(__STRICT_ANSI__)
-#define LUA_ANSI
+/* #define LUA_32BITS */
+
+
+/*
+@@ LUA_USE_C89 controls the use of non-ansi-C89 features.
+** Define it if you want Lua to avoid the use of a few C99 features.
+*/
+/* #define LUA_USE_C89 */
+
+
+/*
+** By default, Lua on Windows use (some) specific Windows features
+*/
+#if !defined(LUA_USE_C89) && defined(_WIN32) && !defined(_WIN32_WCE)
+#define LUA_USE_WINDOWS  /* enable goodies for regular Windows */
 #endif
 
 
-#if !defined(LUA_ANSI) && defined(_WIN32) && !defined(_WIN32_WCE)
-#define LUA_WIN		/* enable goodies for regular Windows platforms */
-#endif
-
-#if defined(LUA_WIN)
-#define LUA_DL_DLL
-#define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
+#if defined(LUA_USE_WINDOWS)
+#define LUA_DL_DLL	/* enable support for DLL */
+#define LUA_USE_C89	/* broadly, Windows is C89 */
 #endif
 
 
 #if defined(LUA_USE_LINUX)
-#define LUA_USE_C99
 #define LUA_USE_POSIX
 #define LUA_USE_DLOPEN		/* needs an extra library: -ldl */
 #define LUA_USE_READLINE	/* needs some extra libraries */
@@ -92,19 +65,67 @@
 
 
 #if defined(LUA_USE_MACOSX)
-#define LUA_USE_C99
 #define LUA_USE_POSIX
-#define LUA_USE_DLOPEN		/* does not need -ldl */
+#define LUA_USE_DLOPEN		/* MacOS does not need -ldl */
 #define LUA_USE_READLINE	/* needs an extra library: -lreadline */
 #endif
+
+
+
+/*
+@@ LUAI_BITSINT defines the (minimum) number of bits in an int.
+** CHANGE here if Lua cannot automatically detect the number of bits of
+** your machine. Probably you do not need to change this.
+*/
+/* avoid undefined shifts */
+#if ((INT_MAX >> 15) >> 15) >= 1
+#define LUAI_BITSINT	32
+#else
+/* 'int' always must have at least 16 bits */
+#define LUAI_BITSINT	16
+#endif
+
+
+/*
+@@ LUA_INT_INT / LUA_INT_LONG / LUA_INT_LONGLONG defines the type for
+** Lua integers.
+@@ LUA_REAL_FLOAT / LUA_REAL_DOUBLE / LUA_REAL_LONGDOUBLE defines
+** the type for Lua floats.
+** Lua should work fine with any mix of these options (if supported by
+** your C compiler). The usual configurations are 64-bit integers and
+** 'double' (the default) and 32-bit integers and 'float' (Small Lua,
+** for restricted platforms).  C compilers not compliant with C99 may
+** not have support for 'long long', so the default in that case is
+** 'long'/'double'.
+*/
+
+#if defined(LUA_32BITS)		/* { */
+
+/* Small Lua */
+#if LUAI_BITSINT >= 32  /* use 'int' if big enough */
+#define LUA_INT_INT
+#else  /* otherwise use 'long' */
+#define LUA_INT_LONG
+#endif
+#define LUA_REAL_FLOAT
+
+#elif defined(LUA_USE_C89)	/* }{ */
+
+/* use largerst types available for C89 ('long' and 'double') */
+#define LUA_INT_LONG
+#define LUA_REAL_DOUBLE
+
+#else				/* }{ */
+
+/* default configuration for 64-bit Lua ('long long' and 'double') */
+#define LUA_INT_LONGLONG
+#define LUA_REAL_DOUBLE
+
+#endif				/* } */
 
 /* }================================================================== */
 
 
-
-
-#include <limits.h>
-#include <stddef.h>
 
 
 /*
@@ -346,21 +367,6 @@
 
 
 /*
-@@ LUAI_BITSINT defines the (minimum) number of bits in an int.
-** CHANGE here if Lua cannot automatically detect the number of bits of
-** your machine. Probably you do not need to change this.
-*/
-/* avoid undefined shifts */
-#if ((INT_MAX >> 15) >> 15) >= 1
-#define LUAI_BITSINT	32
-#else
-/* 'int' always must have at least 16 bits */
-#define LUAI_BITSINT	16
-#endif
-
-
-
-/*
 ** {==================================================================
 ** Configuration for Numbers.
 ** Change these definitions if no predefined LUA_REAL_* / LUA_INT_*
@@ -378,7 +384,7 @@
 @@ LUA_NUMBER_FMT is the format for writing floats.
 @@ lua_number2str converts a float to a string.
 **
-@@ l_mathop allows the addition of an 'l' or 'f' to all math operations
+@@ l_mathop allows the addition of an 'l' or 'f' to all math operations.
 **
 @@ lua_str2number converts a decimal numeric string to a number.
 */
@@ -533,7 +539,7 @@
 
 #elif defined(LUA_INT_LONGLONG)	/* }{ long long */
 
-#if defined(LUA_WIN)
+#if defined(LUA_USE_WINDOWS)
 
 #define LUA_INTEGER		__int64
 #define LUA_INTEGER_FRMLEN	"I64"
@@ -544,7 +550,8 @@
 #else
 
 #if !defined(LLONG_MAX)
-#error "Compiler does not support 'long long'. See file 'luaconf.h' line 24"
+#error "Compiler does not support 'long long'. Use option '-DLUA_32BITS' \
+  or '-DLUA_USE_C89' (see file 'luaconf.h' for details)"
 #endif
 
 #define LUA_INTEGER		long long
@@ -596,7 +603,7 @@
 ** leave 'lua_strx2number' undefined and Lua will provide its own
 ** implementation.
 */
-#if defined(LUA_USE_C99)
+#if !defined(LUA_USE_C89)
 #define lua_strx2number(s,p)	lua_str2number(s,p)
 #endif
 
@@ -604,21 +611,23 @@
 /*
 @@ LUA_USE_AFORMAT allows '%a'/'%A' specifiers in 'string.format'
 ** Enable it if the C function 'printf' supports these specifiers.
-** (C99 demands it.)
+** (C99 demands it and Windows also supports it.)
 */
-#if !defined(LUA_USE_AFORMAT) && defined(LUA_USE_C99)
+#if !defined(LUA_USE_C89) || defined(LUA_USE_WINDOWS)
 #define LUA_USE_AFORMAT
 #endif
 
 
 /*
-** 'strtof' and 'opf' variants for math functions are valid only
-** in C99
+** 'strtof' and 'opf' variants for math functions are not valid in
+** C89. Otherwise, the macro 'HUGE_VALF' is a good proxy for testing the
+** availability of these variants. ('math.h' is already included in
+** all files that use these macros.)
 */
-#if !defined(LUA_USE_C99)
-#undef l_mathop
+#if defined(LUA_USE_C89) || (defined(HUGE_VAL) && !defined(HUGE_VALF))
+#undef l_mathop  /* variants not available */
 #undef lua_str2number
-#define l_mathop(op)		(lua_Number)op
+#define l_mathop(op)		(lua_Number)op  /* no variant */
 #define lua_str2number(s,p)	((lua_Number)strtod((s), (p)))
 #endif
 
@@ -631,7 +640,8 @@
 */
 #define LUA_KCONTEXT	ptrdiff_t
 
-#if defined (LUA_USE_C99)
+#if !defined(LUA_USE_C89) && defined(__STDC_VERSION__) && \
+    __STDC_VERSION__ >= 199901L
 #include <stdint.h>
 #if defined (INTPTR_MAX)  /* even in C99 this type is optional */
 #undef LUA_KCONTEXT
