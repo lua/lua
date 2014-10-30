@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.117 2014/10/07 18:29:13 roberto Exp roberto $
+** $Id: lstate.h,v 2.118 2014/10/25 11:50:46 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -21,10 +21,10 @@
 ** belong to one (and only one) of these lists, using field 'next' of
 ** the 'CommonHeader' for the link:
 **
-** allgc: all objects not marked for finalization;
-** finobj: all objects marked for finalization;
-** tobefnz: all objects ready to be finalized; 
-** fixedgc: all objects that are not to be collected (currently
+** 'allgc': all objects not marked for finalization;
+** 'finobj': all objects marked for finalization;
+** 'tobefnz': all objects ready to be finalized; 
+** 'fixedgc': all objects that are not to be collected (currently
 ** only small strings, such as reserved words).
 
 */

@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.85 2014/10/25 11:50:46 roberto Exp roberto $
+** $Id: llex.c,v 2.86 2014/10/26 15:45:41 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -438,7 +438,7 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
           }
           default: {
             esccheck(ls, lisdigit(ls->current), "invalid escape sequence");
-            c = readdecesc(ls);  /* digital escape \ddd */
+            c = readdecesc(ls);  /* digital escape '\ddd' */
             goto only_save;
           }
         }

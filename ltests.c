@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.189 2014/10/25 11:50:46 roberto Exp roberto $
+** $Id: ltests.c,v 2.190 2014/10/27 17:00:02 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1369,7 +1369,7 @@ static void Chook (lua_State *L, lua_Debug *ar) {
 
 
 /*
-** sets registry.C_HOOK[L] = scpt and sets Chook as a hook
+** sets 'registry.C_HOOK[L] = scpt' and sets 'Chook' as a hook
 */
 static void sethookaux (lua_State *L, int mask, int count, const char *scpt) {
   if (*scpt == '\0') {  /* no script? */

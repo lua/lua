@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.197 2014/10/25 11:50:46 roberto Exp roberto $
+** $Id: lgc.c,v 2.198 2014/10/29 15:02:53 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -975,7 +975,7 @@ static l_mem atomic (lua_State *L) {
   /* remark occasional upvalues of (maybe) dead threads */
   remarkupvals(g);
   propagateall(g);  /* propagate changes */
-  work = g->GCmemtrav;  /* stop counting (do not recount gray-agains) */
+  work = g->GCmemtrav;  /* stop counting (do not recount 'grayagain') */
   g->gray = grayagain;
   propagateall(g);  /* traverse 'grayagain' list */
   g->GCmemtrav = 0;  /* restart counting */
@@ -995,7 +995,7 @@ static l_mem atomic (lua_State *L) {
   /* at this point, all resurrected objects are marked. */
   /* remove dead objects from weak tables */
   clearkeys(g, g->ephemeron, NULL);  /* clear keys from all ephemeron tables */
-  clearkeys(g, g->allweak, NULL);  /* clear keys from all allweak tables */
+  clearkeys(g, g->allweak, NULL);  /* clear keys from all 'allweak' tables */
   /* clear values from resurrected weak tables */
   clearvalues(g, g->weak, origweak);
   clearvalues(g, g->allweak, origall);
@@ -1125,7 +1125,7 @@ void luaC_step (lua_State *L) {
 
 
 /*
-** Performs a full GC cycle; if "isemergency", set a flag to avoid
+** Performs a full GC cycle; if 'isemergency', set a flag to avoid
 ** some operations which could change the interpreter state in some
 ** unexpected ways (running finalizers and shrinking some structures).
 ** Before running the collection, check 'keepinvariant'; if it is true,

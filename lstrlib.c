@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.208 2014/10/27 13:30:24 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.209 2014/10/28 18:23:31 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -1101,7 +1101,7 @@ static KOption getoption (Header *h, const char **fmt, int *size) {
 ** alignment requirements.
 ** Local variable 'size' gets the size to be aligned. (Kpadal option
 ** always gets its full alignment, other options are limited by 
-** the maximum alignment ('maxalign). Kchar option needs no aligment
+** the maximum alignment ('maxalign'). Kchar option needs no alignment
 ** despite its size.
 */
 static KOption getdetails (Header *h, size_t totalsize,
