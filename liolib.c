@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.136 2014/10/22 16:55:57 roberto Exp roberto $
+** $Id: liolib.c,v 2.137 2014/10/25 11:50:46 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -60,7 +60,7 @@
 #define l_popen(L,c,m)		(fflush(NULL), popen(c,m))
 #define l_pclose(L,file)	(pclose(file))
 
-#elif defined(LUA_WIN)		/* }{ */
+#elif defined(LUA_USE_WINDOWS)	/* }{ */
 
 #define l_popen(L,c,m)		(_popen(c,m))
 #define l_pclose(L,file)	(_pclose(file))
@@ -112,7 +112,7 @@
 #define l_ftell(f)		ftello(f)
 #define l_seeknum		off_t
 
-#elif defined(LUA_WIN) && !defined(_CRTIMP_TYPEINFO) \
+#elif defined(LUA_USE_WINDOWS) && !defined(_CRTIMP_TYPEINFO) \
    && defined(_MSC_VER) && (_MSC_VER >= 1400)	/* }{ */
 
 /* Windows (but not DDK) and Visual C++ 2005 or higher */

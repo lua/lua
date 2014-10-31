@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.217 2014/10/20 22:21:05 roberto Exp roberto $
+** $Id: lua.c,v 1.218 2014/10/29 16:11:17 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -50,7 +50,7 @@
 #include <unistd.h>
 #define lua_stdin_is_tty()	isatty(0)
 
-#elif defined(LUA_WIN)		/* }{ */
+#elif defined(LUA_USE_WINDOWS)	/* }{ */
 
 #include <io.h>
 #define lua_stdin_is_tty()	_isatty(_fileno(stdin))
