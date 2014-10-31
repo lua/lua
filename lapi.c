@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.239 2014/10/25 11:50:46 roberto Exp roberto $
+** $Id: lapi.c,v 2.240 2014/10/28 17:27:50 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -968,7 +968,7 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
   status = luaD_protectedparser(L, &z, chunkname, mode);
   if (status == LUA_OK) {  /* no errors? */
     LClosure *f = clLvalue(L->top - 1);  /* get newly created function */
-    if (f->nupvalues == 1) {  /* does it have one upvalue? */
+    if (f->nupvalues >= 1) {  /* does it have an upvalue? */
       /* get global table from registry */
       Table *reg = hvalue(&G(L)->l_registry);
       const TValue *gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
