@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.209 2014/10/28 18:23:31 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.210 2014/10/30 18:53:28 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -1086,6 +1086,7 @@ static KOption getoption (Header *h, const char **fmt, int *size) {
     case ' ': return Knop;
     case '<': h->islittle = 1; return Knop;
     case '>': h->islittle = 0; return Knop;
+    case '=': h->islittle = nativeendian.little; return Knop;
     case '!': h->maxalign = getnumlimit(h, fmt, MAXALIGN); return Knop;
     default: {
       luaL_error(h->L, "invalid format option '%c'", opt);
