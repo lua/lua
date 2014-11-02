@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.138 2014/10/31 15:54:06 roberto Exp roberto $
+** $Id: liolib.c,v 2.139 2014/11/02 19:19:04 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -59,7 +59,7 @@
 
 #else				/* }{ */
 
-/* ANSI definitions */
+/* ISO C definitions */
 #define l_popen(L,c,m)  \
 	  ((void)((void)c, m), \
 	  luaL_error(L, "'popen' not supported"), \
@@ -114,7 +114,7 @@
 
 #else				/* }{ */
 
-/* ANSI definitions */
+/* ISO C definitions */
 #define l_fseek(f,o,w)		fseek(f,o,w)
 #define l_ftell(f)		ftell(f)
 #define l_seeknum		long

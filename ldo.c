@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.131 2014/10/25 11:50:46 roberto Exp roberto $
+** $Id: ldo.c,v 2.132 2014/11/02 19:19:04 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -69,7 +69,7 @@
 
 #else							/* }{ */
 
-/* ANSI handling with long jumps */
+/* ISO C handling with long jumps */
 #define LUAI_THROW(L,c)		longjmp((c)->b, 1)
 #define LUAI_TRY(L,c,a)		if (setjmp((c)->b) == 0) { a }
 #define luai_jmpbuf		jmp_buf

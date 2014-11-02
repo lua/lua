@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.102 2014/10/25 11:50:46 roberto Exp roberto $
+** $Id: ldebug.c,v 2.103 2014/11/02 19:19:04 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -481,7 +481,7 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
 
 
 /*
-** only ANSI way to check whether a pointer points to an array
+** only portable way to check whether a pointer points to an array
 ** (used only for error messages, so efficiency is not a big concern)
 */
 static int isinstack (CallInfo *ci, const TValue *o) {

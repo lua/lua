@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.219 2014/10/31 15:54:06 roberto Exp roberto $
+** $Id: lua.c,v 1.220 2014/11/02 19:19:04 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -59,7 +59,7 @@
 
 #else				/* }{ */
 
-/* ANSI definition */
+/* ISO C definition */
 #define lua_stdin_is_tty()	1  /* assume stdin is a tty */
 
 #endif				/* } */

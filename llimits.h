@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.122 2014/10/27 16:29:58 roberto Exp roberto $
+** $Id: llimits.h,v 1.123 2014/10/29 17:07:45 roberto Exp roberto $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -120,7 +120,7 @@ typedef LUAI_UACINT l_uacInt;
 
 /*
 ** cast a lua_Unsigned to a signed lua_Integer; this cast is
-** not strict ANSI C, but two-complement architectures should
+** not strict ISO C, but two-complement architectures should
 ** work fine.
 */
 #if !defined(l_castU2S)

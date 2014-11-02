@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.50 2014/10/25 11:50:46 roberto Exp roberto $
+** $Id: loslib.c,v 1.51 2014/11/02 19:19:04 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -76,7 +76,7 @@
 
 #else				/* }{ */
 
-/* ANSI definitions */
+/* ISO C definitions */
 #define LUA_TMPNAMBUFSIZE	L_tmpnam
 #define lua_tmpnam(b,e)		{ e = (tmpnam(b) == NULL); }
 
@@ -99,7 +99,7 @@
 
 #else				/* }{ */
 
-/* ANSI definitions */
+/* ISO C definitions */
 #define l_gmtime(t,r)		((void)r, gmtime(t))
 #define l_localtime(t,r)  	((void)r, localtime(t))
 
