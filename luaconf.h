@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.225 2014/10/29 18:01:26 roberto Exp roberto $
+** $Id: luaconf.h,v 1.226 2014/10/30 18:50:03 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -37,7 +37,7 @@
 
 
 /*
-@@ LUA_USE_C89 controls the use of non-ansi-C89 features.
+@@ LUA_USE_C89 controls the use of non-ISO-C89 features.
 ** Define it if you want Lua to avoid the use of a few C99 features.
 */
 /* #define LUA_USE_C89 */
@@ -99,9 +99,10 @@
 ** 'long'/'double'.
 */
 
-#if defined(LUA_32BITS)		/* { */
-
-/* Small Lua */
+#if defined(LUA_32BITS)						/* { */
+/*
+** Small Lua
+*/
 #if LUAI_BITSINT >= 32  /* use 'int' if big enough */
 #define LUA_INT_INT
 #else  /* otherwise use 'long' */
@@ -109,19 +110,23 @@
 #endif
 #define LUA_REAL_FLOAT
 
-#elif defined(LUA_USE_C89)	/* }{ */
-
-/* use largerst types available for C89 ('long' and 'double') */
+#elif defined(LUA_USE_C89) && !defined(LUA_USE_WINDOWS)		/* }{ */
+/*
+** use largerst types available for C89 ('long' and 'double');
+** Windows has '__int64', so does not need to use this case
+*/
 #define LUA_INT_LONG
 #define LUA_REAL_DOUBLE
 
-#else				/* }{ */
-
-/* default configuration for 64-bit Lua ('long long' and 'double') */
+#else								/* }{ */
+/*
+** default configuration for 64-bit Lua ('long long' and 'double');
+** Windows will use '__int64'
+*/
 #define LUA_INT_LONGLONG
 #define LUA_REAL_DOUBLE
 
-#endif				/* } */
+#endif								/* } */
 
 /* }================================================================== */
 
