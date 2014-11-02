@@ -1,11 +1,14 @@
 /*
-** $Id: lbitlib.c,v 1.26 2014/05/15 19:28:34 roberto Exp roberto $
+** $Id: lbitlib.c,v 1.27 2014/10/01 11:54:56 roberto Exp roberto $
 ** Standard library for bitwise operations
 ** See Copyright Notice in lua.h
 */
 
 #define lbitlib_c
 #define LUA_LIB
+
+#include "lprefix.h"
+
 
 #include "lua.h"
 

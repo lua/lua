@@ -1,16 +1,19 @@
 /*
-** $Id: lobject.c,v 2.96 2014/10/27 19:21:56 roberto Exp roberto $
+** $Id: lobject.c,v 2.97 2014/10/28 18:41:38 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
+
+#define lobject_c
+#define LUA_CORE
+
+#include "lprefix.h"
+
 
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define lobject_c
-#define LUA_CORE
 
 #include "lua.h"
 

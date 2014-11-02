@@ -1,8 +1,13 @@
 /*
-** $Id: ltable.c,v 2.97 2014/10/24 11:42:06 roberto Exp roberto $
+** $Id: ltable.c,v 2.98 2014/10/25 11:50:46 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
+
+#define ltable_c
+#define LUA_CORE
+
+#include "lprefix.h"
 
 
 /*
@@ -22,9 +27,6 @@
 #include <math.h>
 #include <string.h>
 #include <limits.h>
-
-#define ltable_c
-#define LUA_CORE
 
 #include "lua.h"
 

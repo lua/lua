@@ -1,8 +1,13 @@
 /*
-** $Id: loslib.c,v 1.49 2014/10/17 16:28:21 roberto Exp roberto $
+** $Id: loslib.c,v 1.50 2014/10/25 11:50:46 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
+
+#define loslib_c
+#define LUA_LIB
+
+#include "lprefix.h"
 
 
 #include <errno.h>
@@ -10,9 +15,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-#define loslib_c
-#define LUA_LIB
 
 #include "lua.h"
 

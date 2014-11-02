@@ -1,13 +1,16 @@
 /*
-** $Id: lundump.c,v 2.39 2014/06/18 18:35:43 roberto Exp roberto $
+** $Id: lundump.c,v 2.40 2014/06/19 18:27:20 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
 
-#include <string.h>
-
 #define lundump_c
 #define LUA_CORE
+
+#include "lprefix.h"
+
+
+#include <string.h>
 
 #include "lua.h"
 

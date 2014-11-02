@@ -1,17 +1,19 @@
 /*
-** $Id: ltests.c,v 2.190 2014/10/27 17:00:02 roberto Exp roberto $
+** $Id: ltests.c,v 2.191 2014/10/30 18:53:28 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
+
+#define ltests_c
+#define LUA_CORE
+
+#include "lprefix.h"
 
 
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define ltests_c
-#define LUA_CORE
 
 #include "lua.h"
 

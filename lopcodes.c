@@ -1,12 +1,13 @@
 /*
-** $Id: lopcodes.c,v 1.52 2013/12/18 14:12:03 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.53 2013/12/30 20:47:58 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
 
-
 #define lopcodes_c
 #define LUA_CORE
+
+#include "lprefix.h"
 
 
 #include "lopcodes.h"

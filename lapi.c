@@ -1,15 +1,17 @@
 /*
-** $Id: lapi.c,v 2.240 2014/10/28 17:27:50 roberto Exp roberto $
+** $Id: lapi.c,v 2.241 2014/10/31 17:41:51 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
 
+#define lapi_c
+#define LUA_CORE
+
+#include "lprefix.h"
+
 
 #include <stdarg.h>
 #include <string.h>
-
-#define lapi_c
-#define LUA_CORE
 
 #include "lua.h"
 

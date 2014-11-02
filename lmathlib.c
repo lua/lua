@@ -1,15 +1,17 @@
 /*
-** $Id: lmathlib.c,v 1.110 2014/10/08 19:57:31 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.111 2014/10/24 11:42:06 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
 
+#define lmathlib_c
+#define LUA_LIB
+
+#include "lprefix.h"
+
 
 #include <stdlib.h>
 #include <math.h>
-
-#define lmathlib_c
-#define LUA_LIB
 
 #include "lua.h"
 

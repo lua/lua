@@ -1,15 +1,16 @@
 /*
-** $Id: lcorolib.c,v 1.7 2014/09/01 18:00:04 roberto Exp roberto $
+** $Id: lcorolib.c,v 1.8 2014/10/25 11:50:46 roberto Exp roberto $
 ** Coroutine Library
 ** See Copyright Notice in lua.h
 */
 
-
-#include <stdlib.h>
-
-
 #define lcorolib_c
 #define LUA_LIB
+
+#include "lprefix.h"
+
+
+#include <stdlib.h>
 
 #include "lua.h"
 

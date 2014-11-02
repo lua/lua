@@ -1,17 +1,19 @@
 /*
-** $Id: lvm.c,v 2.225 2014/10/24 11:42:06 roberto Exp roberto $
+** $Id: lvm.c,v 2.226 2014/10/25 11:50:46 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
+
+#define lvm_c
+#define LUA_CORE
+
+#include "lprefix.h"
 
 
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define lvm_c
-#define LUA_CORE
 
 #include "lua.h"
 

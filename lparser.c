@@ -1,14 +1,16 @@
 /*
-** $Id: lparser.c,v 2.143 2014/10/17 16:28:21 roberto Exp roberto $
+** $Id: lparser.c,v 2.144 2014/10/25 11:50:46 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
 
-
-#include <string.h>
-
 #define lparser_c
 #define LUA_CORE
+
+#include "lprefix.h"
+
+
+#include <string.h>
 
 #include "lua.h"
 

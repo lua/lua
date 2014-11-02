@@ -1,15 +1,17 @@
 /*
-** $Id: ltablib.c,v 1.77 2014/10/17 16:28:21 roberto Exp roberto $
+** $Id: ltablib.c,v 1.78 2014/10/25 11:50:46 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
 
+#define ltablib_c
+#define LUA_LIB
+
+#include "lprefix.h"
+
 
 #include <limits.h>
 #include <stddef.h>
-
-#define ltablib_c
-#define LUA_LIB
 
 #include "lua.h"
 

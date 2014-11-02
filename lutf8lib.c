@@ -1,16 +1,18 @@
 /*
-** $Id: lutf8lib.c,v 1.11 2014/10/01 11:52:33 roberto Exp roberto $
+** $Id: lutf8lib.c,v 1.12 2014/10/15 14:31:10 roberto Exp roberto $
 ** Standard library for UTF-8 manipulation
 ** See Copyright Notice in lua.h
 */
+
+#define lutf8lib_c
+#define LUA_LIB
+
+#include "lprefix.h"
 
 
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define lutf8lib_c
-#define LUA_LIB
 
 #include "lua.h"
 

@@ -1,8 +1,14 @@
 /*
-** $Id: linit.c,v 1.33 2014/02/06 17:32:33 roberto Exp roberto $
+** $Id: linit.c,v 1.34 2014/05/15 19:28:34 roberto Exp roberto $
 ** Initialization of libraries for lua.c and other clients
 ** See Copyright Notice in lua.h
 */
+
+
+#define linit_c
+#define LUA_LIB
+
+#include "lprefix.h"
 
 
 /*
@@ -11,10 +17,6 @@
 ** different set of libraries, copy this file to your project and edit
 ** it to suit your needs.
 */
-
-
-#define linit_c
-#define LUA_LIB
 
 #include "lua.h"
 

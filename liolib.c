@@ -1,18 +1,13 @@
 /*
-** $Id: liolib.c,v 2.137 2014/10/25 11:50:46 roberto Exp roberto $
+** $Id: liolib.c,v 2.138 2014/10/31 15:54:06 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
 
+#define liolib_c
+#define LUA_LIB
 
-/*
-** This definition must come before the inclusion of 'stdio.h'; it
-** should not affect non-POSIX systems
-*/
-#if !defined(_FILE_OFFSET_BITS)
-#define	_LARGEFILE_SOURCE	1
-#define _FILE_OFFSET_BITS	64
-#endif
+#include "lprefix.h"
 
 
 #include <ctype.h>
@@ -21,9 +16,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define liolib_c
-#define LUA_LIB
 
 #include "lua.h"
 
