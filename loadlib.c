@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.119 2014/10/27 18:05:37 roberto Exp roberto $
+** $Id: loadlib.c,v 1.120 2014/11/02 19:19:04 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -160,6 +160,8 @@ static lua_CFunction lsys_sym (lua_State *L, void *lib, const char *sym) {
 ** This is an implementation of loadlib for Windows using native functions.
 ** =======================================================================
 */
+
+#include <windows.h>
 
 #undef setprogdir
 
