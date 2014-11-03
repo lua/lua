@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.226 2014/10/25 11:50:46 roberto Exp roberto $
+** $Id: lvm.c,v 2.227 2014/11/02 19:19:04 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -29,6 +29,15 @@
 #include "ltm.h"
 #include "lvm.h"
 
+
+/*
+** You can define LUA_FLOORN2I if you want to convert floats to integers
+** by flooring them (instead of raising an error if they are not
+** integral values)
+*/
+#if !defined(LUA_FLOORN2I)
+#define LUA_FLOORN2I		0
+#endif
 
 
 /* limit for table tag-method chains (to avoid loops) */
@@ -80,8 +89,8 @@ int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
 /*
 ** try to convert a value to an integer, rounding according to 'mode':
 ** mode == 0: accepts only integral values
-** mode < 0: takes the floor of the number
-** mode > 0: takes the ceil of the number
+** mode == 1: takes the floor of the number
+** mode == 2: takes the ceil of the number
 */
 static int tointeger_aux (const TValue *obj, lua_Integer *p, int mode) {
   TValue v;
@@ -91,7 +100,7 @@ static int tointeger_aux (const TValue *obj, lua_Integer *p, int mode) {
     lua_Number f = l_floor(n);
     if (n != f) {  /* not an integral value? */
       if (mode == 0) return 0;  /* fails if mode demands integral value */
-      else if (mode > 0)  /* needs ceil? */
+      else if (mode > 1)  /* needs ceil? */
         f += 1;  /* convert floor to ceil (remember: n != f) */
     }
     return lua_numbertointeger(f, p);
@@ -113,7 +122,7 @@ static int tointeger_aux (const TValue *obj, lua_Integer *p, int mode) {
 ** try to convert a value to an integer
 */
 int luaV_tointeger_ (const TValue *obj, lua_Integer *p) {
-  return tointeger_aux(obj, p, 0);
+  return tointeger_aux(obj, p, LUA_FLOORN2I);
 }
 
 
@@ -135,7 +144,7 @@ int luaV_tointeger_ (const TValue *obj, lua_Integer *p) {
 static int forlimit (const TValue *obj, lua_Integer *p, lua_Integer step,
                      int *stopnow) {
   *stopnow = 0;  /* usually, let loops run */
-  if (!tointeger_aux(obj, p, (step < 0 ? 1 : -1))) {  /* not fit in integer? */
+  if (!tointeger_aux(obj, p, (step < 0 ? 2 : 1))) {  /* not fit in integer? */
     lua_Number n;  /* try to convert to float */
     if (!tonumber(obj, &n)) /* cannot convert to float? */
       return 0;  /* not a number */
