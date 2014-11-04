@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.211 2014/10/31 15:53:31 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.212 2014/11/02 19:19:04 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -949,6 +949,11 @@ static int str_format (lua_State *L) {
 */
 
 
+/* value used for padding */
+#if !defined(LUA_PACKPADBYTE)
+#define LUA_PACKPADBYTE		0x00
+#endif
+
 /* maximum size for the binary representation of an integer */
 #define MAXINTSIZE	16
 
@@ -1172,7 +1177,8 @@ static int str_pack (lua_State *L) {
     int size, ntoalign;
     KOption opt = getdetails(&h, totalsize, &fmt, &size, &ntoalign);
     totalsize += ntoalign + size;
-    while (ntoalign-- > 0) luaL_addchar(&b, '\0');  /* fill alignment */
+    while (ntoalign-- > 0)
+     luaL_addchar(&b, LUA_PACKPADBYTE);  /* fill alignment */
     arg++;
     switch (opt) {
       case Kint: {  /* signed integers */
@@ -1232,7 +1238,7 @@ static int str_pack (lua_State *L) {
         totalsize += len + 1;
         break;
       }
-      case Kpadding: luaL_addchar(&b, '\0');  /* go through */
+      case Kpadding: luaL_addchar(&b, LUA_PACKPADBYTE);  /* go through */
       case Kpaddalign: case Knop:
         arg--;  /* undo increment */
         break;
@@ -1283,7 +1289,7 @@ static int str_unpack (lua_State *L) {
     KOption opt = getdetails(&h, pos, &fmt, &size, &ntoalign);
     if ((size_t)ntoalign + size > ~pos || pos + ntoalign + size > ld)
       luaL_argerror(L, 2, "data string too short");
-    pos += ntoalign;
+    pos += ntoalign;  /* skip alignment */
     /* stack space for item + next position */
     luaL_checkstack(L, 2, "too many results");
     n++;
@@ -1313,13 +1319,13 @@ static int str_unpack (lua_State *L) {
         size_t len = (size_t)unpackint(L, data + pos, h.islittle, size, 0);
         luaL_argcheck(L, pos + len + size <= ld, 2, "data string too short");
         lua_pushlstring(L, data + pos + size, len);
-        pos += len;
+        pos += len;  /* skip string */
         break;
       }
       case Kzstr: {
         size_t len = (int)strlen(data + pos);
         lua_pushlstring(L, data + pos, len);
-        pos += len + 1;  /* skip final '\0' */
+        pos += len + 1;  /* skip string plus final '\0' */
         break;
       }
       case Kpaddalign: case Kpadding: case Knop:
