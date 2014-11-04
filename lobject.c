@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.97 2014/10/28 18:41:38 roberto Exp roberto $
+** $Id: lobject.c,v 2.98 2014/11/02 19:19:04 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -204,7 +204,7 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
       if (sigdig == 0 && *s == '0')  /* non-significant digit (zero)? */
         nosigdig++;
       else if (++sigdig <= MAXSIGDIG)  /* can read it without overflow? */
-          r = (r * cast_num(16.0)) + luaO_hexavalue(cast_uchar(*s));
+          r = (r * cast_num(16.0)) + luaO_hexavalue(*s);
       else e++; /* too many digits; ignore, but still count for exponent */
       if (dot) e--;  /* decimal digit? correct exponent */
     }
@@ -259,13 +259,13 @@ static const char *l_str2int (const char *s, lua_Integer *result) {
       (s[1] == 'x' || s[1] == 'X')) {  /* hex? */
     s += 2;  /* skip '0x' */
     for (; lisxdigit(cast_uchar(*s)); s++) {
-      a = a * 16 + luaO_hexavalue(cast_uchar(*s));
+      a = a * 16 + luaO_hexavalue(*s);
       empty = 0;
     }
   }
   else {  /* decimal */
     for (; lisdigit(cast_uchar(*s)); s++) {
-      a = a * 10 + luaO_hexavalue(cast_uchar(*s));
+      a = a * 10 + *s - '0';
       empty = 0;
     }
   }
