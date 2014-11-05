@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.212 2014/11/02 19:19:04 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.213 2014/11/04 14:34:43 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -966,9 +966,6 @@ static int str_format (lua_State *L) {
 /* size of a lua_Integer */
 #define SZINT	((int)sizeof(lua_Integer))
 
-/* mask for all ones in last byte in a lua Integer */
-#define HIGHERBYTE	((lua_Unsigned)MC << (NB * (SZINT - 1)))
-
 
 /* dummy union to get native endianness */
 static const union {
@@ -1049,7 +1046,8 @@ static int getnum (const char **fmt, int df) {
 static int getnumlimit (Header *h, const char **fmt, int df) {
   int sz = getnum(fmt, df);
   if (sz > MAXINTSIZE || sz <= 0)
-    luaL_error(h->L, "integral size (%d) out of limits [1,%d]", sz, MAXINTSIZE);
+    luaL_error(h->L, "integral size (%d) out of limits [1,%d]",
+                     sz, MAXINTSIZE);
   return sz;
 }
 
@@ -1133,15 +1131,25 @@ static KOption getdetails (Header *h, size_t totalsize,
 }
 
 
+/*
+** Pack integer 'n' with 'size' bytes and 'islittle' endianness.
+** The final 'if' handles the case when 'size' is larger than
+** the size of a Lua integer, correcting the extra sign-extension
+** bytes if necessary (by default they would be zeros).
+*/
 static void packint (luaL_Buffer *b, lua_Unsigned n,
-                     int islittle, int size, lua_Unsigned mask) {
+                     int islittle, int size, int neg) {
   char *buff = luaL_prepbuffsize(b, size);
   int i;
-  for (i = 0; i < size - 1; i++) {
+  buff[islittle ? 0 : size - 1] = (char)(n & MC);  /* first byte */
+  for (i = 1; i < size; i++) {
+    n >>= NB;
     buff[islittle ? i : size - 1 - i] = (char)(n & MC);
-    n = (n >> NB) | mask;
   }
-  buff[islittle ? i : size - 1 - i] = (char)(n & MC);
+  if (neg) {  /* need sign extension (negative number)? */
+    for (i = SZINT; i < size; i++)  /* correct extra bytes */
+      buff[islittle ? i : size - 1 - i] = (char)MC;
+  }
   luaL_addsize(b, size);  /* add result to buffer */
 }
 
@@ -1183,12 +1191,11 @@ static int str_pack (lua_State *L) {
     switch (opt) {
       case Kint: {  /* signed integers */
         lua_Integer n = luaL_checkinteger(L, arg);
-        lua_Unsigned mask = (n < 0) ? HIGHERBYTE : 0;  /*  sign extension */
         if (size < SZINT) {  /* need overflow check? */
           lua_Integer lim = (lua_Integer)1 << ((size * NB) - 1);
           luaL_argcheck(L, -lim <= n && n < lim, arg, "integer overflow");
         }
-        packint(&b, (lua_Unsigned)n, h.islittle, size, mask);
+        packint(&b, (lua_Unsigned)n, h.islittle, size, (n < 0));
         break;
       }
       case Kuint: {  /* unsigned integers */
@@ -1249,6 +1256,14 @@ static int str_pack (lua_State *L) {
 }
 
 
+/*
+** Unpack an integer with 'size' bytes and 'islittle' endianness.
+** If size is smaller than the size of a Lua integer and integer
+** is signed, must do sign extension (propagating the sign to the
+** higher bits); if size is larger than the size of a Lua integer,
+** it must check the unread bytes to see whether they do not cause an
+** overflow.
+*/
 static lua_Integer unpackint (lua_State *L, const char *str,
                               int islittle, int size, int issigned) {
   lua_Unsigned res = 0;
@@ -1264,11 +1279,12 @@ static lua_Integer unpackint (lua_State *L, const char *str,
       res = ((res ^ mask) - mask);  /* do sign extension */
     }
   }
-  else {  /* must check unread bytes */
+  else if (size > SZINT) {  /* must check unread bytes */
     int mask = (!issigned || (lua_Integer)res >= 0) ? 0 : MC;
     for (i = limit; i < size; i++) {
       if ((unsigned char)str[islittle ? i : size - 1 - i] != mask)
-        luaL_error(L, "%d-bit integer does not fit into Lua Integer", size);
+        luaL_error(L, "%d-bit integer does not fit into Lua Integer",
+                      size * NB);
     }
   }
   return (lua_Integer)res;
