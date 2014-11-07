@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.111 2014/10/24 11:42:06 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.112 2014/11/02 19:19:04 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -258,8 +258,8 @@ static int math_random (lua_State *L) {
   }
   /* random integer in the interval [low, up] */
   luaL_argcheck(L, low <= up, 1, "interval is empty"); 
-  luaL_argcheck(L, (lua_Unsigned)up - low <= (lua_Unsigned)LUA_MAXINTEGER,
-                   1, "interval too large");
+  luaL_argcheck(L, low >= 0 || up <= LUA_MAXINTEGER + low, 1,
+                   "interval too large");
   r *= (double)(up - low) + 1.0;
   lua_pushinteger(L, (lua_Integer)r + low);
   return 1;
