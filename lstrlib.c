@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.214 2014/11/05 18:50:29 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.215 2014/11/05 18:55:43 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -546,7 +546,7 @@ static void push_onecapture (MatchState *ms, int i, const char *s,
     if (i == 0)  /* ms->level == 0, too */
       lua_pushlstring(ms->L, s, e - s);  /* add whole match */
     else
-      luaL_error(ms->L, "invalid capture index");
+      luaL_error(ms->L, "invalid capture index %%%d", i + 1);
   }
   else {
     ptrdiff_t l = ms->capture[i].len;
@@ -1283,8 +1283,7 @@ static lua_Integer unpackint (lua_State *L, const char *str,
     int mask = (!issigned || (lua_Integer)res >= 0) ? 0 : MC;
     for (i = limit; i < size; i++) {
       if ((unsigned char)str[islittle ? i : size - 1 - i] != mask)
-        luaL_error(L, "%d-bit integer does not fit into Lua Integer",
-                      size * NB);
+        luaL_error(L, "%d-byte integer does not fit into Lua Integer", size);
     }
   }
   return (lua_Integer)res;
