@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.126 2014/07/17 13:53:37 roberto Exp $
+** $Id: ldo.c,v 2.130 2014/10/17 16:28:21 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -111,15 +111,16 @@ l_noret luaD_throw (lua_State *L, int errcode) {
     LUAI_THROW(L, L->errorJmp);  /* jump to it */
   }
   else {  /* thread has no error handler */
+    global_State *g = G(L);
     L->status = cast_byte(errcode);  /* mark it as dead */
-    if (G(L)->mainthread->errorJmp) {  /* main thread has a handler? */
-      setobjs2s(L, G(L)->mainthread->top++, L->top - 1);  /* copy error obj. */
-      luaD_throw(G(L)->mainthread, errcode);  /* re-throw in main thread */
+    if (g->mainthread->errorJmp) {  /* main thread has a handler? */
+      setobjs2s(L, g->mainthread->top++, L->top - 1);  /* copy error obj. */
+      luaD_throw(g->mainthread, errcode);  /* re-throw in main thread */
     }
     else {  /* no handler at all; abort */
-      if (G(L)->panic) {  /* panic function? */
+      if (g->panic) {  /* panic function? */
         lua_unlock(L);
-        G(L)->panic(L);  /* call it (last chance to jump out) */
+        g->panic(L);  /* call it (last chance to jump out) */
       }
       abort();
     }
@@ -593,7 +594,7 @@ LUA_API int lua_isyieldable (lua_State *L) {
 }
 
 
-LUA_API int lua_yieldk (lua_State *L, int nresults, lua_Ctx ctx,
+LUA_API int lua_yieldk (lua_State *L, int nresults, lua_KContext ctx,
                         lua_KFunction k) {
   CallInfo *ci = L->ci;
   luai_userstateyield(L, nresults);
@@ -661,7 +662,7 @@ struct SParser {  /* data to `f_parser' */
 static void checkmode (lua_State *L, const char *mode, const char *x) {
   if (mode && strchr(mode, x[0]) == NULL) {
     luaO_pushfstring(L,
-       "attempt to load a %s chunk (mode is " LUA_QS ")", x, mode);
+       "attempt to load a %s chunk (mode is '%s')", x, mode);
     luaD_throw(L, LUA_ERRSYNTAX);
   }
 }

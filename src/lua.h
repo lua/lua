@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.312 2014/07/31 13:44:30 roberto Exp $
+** $Id: lua.h,v 1.319 2014/10/17 19:17:55 roberto Exp $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -19,7 +19,7 @@
 #define LUA_VERSION_MAJOR	"5"
 #define LUA_VERSION_MINOR	"3"
 #define LUA_VERSION_NUM		503
-#define LUA_VERSION_RELEASE	"0 (alpha)"
+#define LUA_VERSION_RELEASE	"0 (beta)"
 
 #define LUA_VERSION	"Lua " LUA_VERSION_MAJOR "." LUA_VERSION_MINOR
 #define LUA_RELEASE	LUA_VERSION "." LUA_VERSION_RELEASE
@@ -94,7 +94,7 @@ typedef LUA_INTEGER lua_Integer;
 typedef LUA_UNSIGNED lua_Unsigned;
 
 /* type for continuation-function contexts */
-typedef LUA_CTXT lua_Ctx;
+typedef LUA_KCONTEXT lua_KContext;
 
 
 /*
@@ -105,7 +105,7 @@ typedef int (*lua_CFunction) (lua_State *L);
 /*
 ** Type for continuation functions
 */
-typedef int (*lua_KFunction) (lua_State *L, int status, lua_Ctx ctx);
+typedef int (*lua_KFunction) (lua_State *L, int status, lua_KContext ctx);
 
 
 /*
@@ -239,6 +239,7 @@ LUA_API int   (lua_pushthread) (lua_State *L);
 LUA_API int (lua_getglobal) (lua_State *L, const char *var);
 LUA_API int (lua_gettable) (lua_State *L, int idx);
 LUA_API int (lua_getfield) (lua_State *L, int idx, const char *k);
+LUA_API int (lua_geti) (lua_State *L, int idx, lua_Integer n);
 LUA_API int (lua_rawget) (lua_State *L, int idx);
 LUA_API int (lua_rawgeti) (lua_State *L, int idx, lua_Integer n);
 LUA_API int (lua_rawgetp) (lua_State *L, int idx, const void *p);
@@ -255,6 +256,7 @@ LUA_API int  (lua_getuservalue) (lua_State *L, int idx);
 LUA_API void  (lua_setglobal) (lua_State *L, const char *var);
 LUA_API void  (lua_settable) (lua_State *L, int idx);
 LUA_API void  (lua_setfield) (lua_State *L, int idx, const char *k);
+LUA_API void  (lua_seti) (lua_State *L, int idx, lua_Integer n);
 LUA_API void  (lua_rawset) (lua_State *L, int idx);
 LUA_API void  (lua_rawseti) (lua_State *L, int idx, lua_Integer n);
 LUA_API void  (lua_rawsetp) (lua_State *L, int idx, const void *p);
@@ -265,12 +267,12 @@ LUA_API void  (lua_setuservalue) (lua_State *L, int idx);
 /*
 ** 'load' and 'call' functions (load and run Lua code)
 */
-LUA_API void  (lua_callk) (lua_State *L, int nargs, int nresults, lua_Ctx ctx,
-                           lua_KFunction k);
+LUA_API void  (lua_callk) (lua_State *L, int nargs, int nresults,
+                           lua_KContext ctx, lua_KFunction k);
 #define lua_call(L,n,r)		lua_callk(L, (n), (r), 0, NULL)
 
 LUA_API int   (lua_pcallk) (lua_State *L, int nargs, int nresults, int errfunc,
-                            lua_Ctx ctx, lua_KFunction k);
+                            lua_KContext ctx, lua_KFunction k);
 #define lua_pcall(L,n,r,f)	lua_pcallk(L, (n), (r), (f), 0, NULL)
 
 LUA_API int   (lua_load) (lua_State *L, lua_Reader reader, void *dt,
@@ -283,7 +285,7 @@ LUA_API int (lua_dump) (lua_State *L, lua_Writer writer, void *data, int strip);
 /*
 ** coroutine functions
 */
-LUA_API int  (lua_yieldk) (lua_State *L, int nresults, lua_Ctx ctx,
+LUA_API int  (lua_yieldk) (lua_State *L, int nresults, lua_KContext ctx,
                            lua_KFunction k);
 #define lua_yield(L,n)		lua_yieldk(L, (n), 0, NULL)
 LUA_API int  (lua_resume) (lua_State *L, lua_State *from, int narg);
@@ -319,7 +321,7 @@ LUA_API int   (lua_next) (lua_State *L, int idx);
 LUA_API void  (lua_concat) (lua_State *L, int n);
 LUA_API void  (lua_len)    (lua_State *L, int idx);
 
-LUA_API size_t   (lua_strtonum) (lua_State *L, const char *s);
+LUA_API size_t   (lua_stringtonumber) (lua_State *L, const char *s);
 
 LUA_API lua_Alloc (lua_getallocf) (lua_State *L, void **ud);
 LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
@@ -377,7 +379,7 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 ** compatibility macros for unsigned conversions
 ** ===============================================================
 */
-#if defined(LUA_COMPAT_APIUNSIGNED)
+#if defined(LUA_COMPAT_APIINTCASTS)
 
 #define lua_pushunsigned(L,n)	lua_pushinteger(L, (lua_Integer)(n))
 #define lua_tounsignedx(L,i,is)	((lua_Integer)lua_tointegerx(L,i,is))

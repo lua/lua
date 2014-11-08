@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.80 2014/07/18 13:36:14 roberto Exp $
+** $Id: llex.c,v 2.84 2014/10/22 11:44:20 roberto Exp $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -78,14 +78,13 @@ void luaX_init (lua_State *L) {
 
 const char *luaX_token2str (LexState *ls, int token) {
   if (token < FIRST_RESERVED) {  /* single-byte symbols? */
-    lua_assert(token == cast(unsigned char, token));
-    return (lisprint(token)) ? luaO_pushfstring(ls->L, LUA_QL("%c"), token) :
-                              luaO_pushfstring(ls->L, "char(%d)", token);
+    lua_assert(token == cast_uchar(token));
+    return luaO_pushfstring(ls->L, "'%c'", token);
   }
   else {
     const char *s = luaX_tokens[token - FIRST_RESERVED];
     if (token < TK_EOS)  /* fixed format (symbols and reserved words)? */
-      return luaO_pushfstring(ls->L, LUA_QS, s);
+      return luaO_pushfstring(ls->L, "'%s'", s);
     else  /* names, strings, and numerals */
       return s;
   }
@@ -97,7 +96,7 @@ static const char *txtToken (LexState *ls, int token) {
     case TK_NAME: case TK_STRING:
     case TK_FLT: case TK_INT:
       save(ls, '\0');
-      return luaO_pushfstring(ls->L, LUA_QS, luaZ_buffer(ls->buff));
+      return luaO_pushfstring(ls->L, "'%s'", luaZ_buffer(ls->buff));
     default:
       return luaX_token2str(ls, token);
   }
@@ -219,8 +218,8 @@ static void buffreplace (LexState *ls, char from, char to) {
 }
 
 
-#if !defined(getlocaledecpoint)
-#define getlocaledecpoint()	(localeconv()->decimal_point[0])
+#if !defined(l_getlocaledecpoint)
+#define l_getlocaledecpoint()	(localeconv()->decimal_point[0])
 #endif
 
 
@@ -232,7 +231,7 @@ static void buffreplace (LexState *ls, char from, char to) {
 */
 static void trydecpoint (LexState *ls, TValue *o) {
   char old = ls->decpoint;
-  ls->decpoint = getlocaledecpoint();
+  ls->decpoint = l_getlocaledecpoint();
   buffreplace(ls, old, ls->decpoint);  /* try new decimal separator */
   if (!buff2num(ls->buff, o)) {
     /* format error with correct decimal point: no more options */
@@ -360,8 +359,8 @@ static int readhexaesc (LexState *ls) {
 }
 
 
-static unsigned int readutf8esc (LexState *ls) {
-  unsigned int r;
+static unsigned long readutf8esc (LexState *ls) {
+  unsigned long r;
   int i = 4;  /* chars to be removed: '\', 'u', '{', and first digit */
   save_and_next(ls);  /* skip 'u' */
   esccheck(ls, ls->current == '{', "missing '{'");

@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.116 2014/07/29 16:01:00 roberto Exp $
+** $Id: loadlib.c,v 1.117 2014/10/17 16:28:21 roberto Exp $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -396,7 +396,7 @@ static const char *searchpath (lua_State *L, const char *name,
     lua_remove(L, -2);  /* remove path template */
     if (readable(filename))  /* does file exist and is readable? */
       return filename;  /* return that file name */
-    lua_pushfstring(L, "\n\tno file " LUA_QS, filename);
+    lua_pushfstring(L, "\n\tno file '%s'", filename);
     lua_remove(L, -2);  /* remove file name */
     luaL_addvalue(&msg);  /* concatenate error msg. entry */
   }
@@ -426,7 +426,7 @@ static const char *findfile (lua_State *L, const char *name,
   lua_getfield(L, lua_upvalueindex(1), pname);
   path = lua_tostring(L, -1);
   if (path == NULL)
-    luaL_error(L, LUA_QL("package.%s") " must be a string", pname);
+    luaL_error(L, "'package.%s' must be a string", pname);
   return searchpath(L, name, path, ".", dirsep);
 }
 
@@ -437,8 +437,7 @@ static int checkload (lua_State *L, int stat, const char *filename) {
     return 2;  /* return open function and file name */
   }
   else
-    return luaL_error(L, "error loading module " LUA_QS
-                         " from file " LUA_QS ":\n\t%s",
+    return luaL_error(L, "error loading module '%s' from file '%s':\n\t%s",
                           lua_tostring(L, 1), filename, lua_tostring(L, -1));
 }
 
@@ -499,8 +498,7 @@ static int searcher_Croot (lua_State *L) {
     if (stat != ERRFUNC)
       return checkload(L, 0, filename);  /* real error */
     else {  /* open function not found */
-      lua_pushfstring(L, "\n\tno module " LUA_QS " in file " LUA_QS,
-                         name, filename);
+      lua_pushfstring(L, "\n\tno module '%s' in file '%s'", name, filename);
       return 1;
     }
   }
@@ -524,14 +522,13 @@ static void findloader (lua_State *L, const char *name) {
   luaL_buffinit(L, &msg);
   lua_getfield(L, lua_upvalueindex(1), "searchers");  /* will be at index 3 */
   if (!lua_istable(L, 3))
-    luaL_error(L, LUA_QL("package.searchers") " must be a table");
+    luaL_error(L, "'package.searchers' must be a table");
   /*  iterate over available searchers to find a loader */
   for (i = 1; ; i++) {
     if (lua_rawgeti(L, 3, i) == LUA_TNIL) {  /* no more searchers? */
       lua_pop(L, 1);  /* remove nil */
       luaL_pushresult(&msg);  /* create error message */
-      luaL_error(L, "module " LUA_QS " not found:%s",
-                    name, lua_tostring(L, -1));
+      luaL_error(L, "module '%s' not found:%s", name, lua_tostring(L, -1));
     }
     lua_pushstring(L, name);
     lua_call(L, 1, 2);  /* call it */
@@ -589,7 +586,7 @@ static void set_env (lua_State *L) {
   if (lua_getstack(L, 1, &ar) == 0 ||
       lua_getinfo(L, "f", &ar) == 0 ||  /* get calling function */
       lua_iscfunction(L, -1))
-    luaL_error(L, LUA_QL("module") " not called from a Lua function");
+    luaL_error(L, "'module' not called from a Lua function");
   lua_pushvalue(L, -2);  /* copy new environment table to top */
   lua_setupvalue(L, -2, 1);
   lua_pop(L, 1);  /* remove function */

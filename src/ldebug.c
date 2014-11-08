@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.100 2014/07/30 14:00:14 roberto Exp $
+** $Id: ldebug.c,v 2.101 2014/10/17 16:28:21 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -515,7 +515,7 @@ static const char *varinfo (lua_State *L, const TValue *o) {
       kind = getobjname(ci_func(ci)->p, currentpc(ci),
                         cast_int(o - ci->u.l.base), &name);
   }
-  return (kind) ? luaO_pushfstring(L, " (%s " LUA_QS ")", kind, name) : "";
+  return (kind) ? luaO_pushfstring(L, " (%s '%s')", kind, name) : "";
 }
 
 

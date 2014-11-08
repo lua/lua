@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.101 2014/07/30 14:00:14 roberto Exp $
+** $Id: lobject.h,v 2.103 2014/10/01 11:52:33 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -487,7 +487,7 @@ typedef struct Table {
   CommonHeader;
   lu_byte flags;  /* 1<<p means tagmethod(p) is not present */
   lu_byte lsizenode;  /* log2 of size of `node' array */
-  int sizearray;  /* size of `array' array */
+  unsigned int sizearray;  /* size of `array' array */
   TValue *array;  /* array part */
   Node *node;
   Node *lastfree;  /* any free position is before this position */
@@ -521,7 +521,7 @@ LUAI_DDEC const TValue luaO_nilobject_;
 
 LUAI_FUNC int luaO_int2fb (unsigned int x);
 LUAI_FUNC int luaO_fb2int (int x);
-LUAI_FUNC int luaO_utf8esc (char *buff, unsigned int x);
+LUAI_FUNC int luaO_utf8esc (char *buff, unsigned long x);
 LUAI_FUNC int luaO_ceillog2 (unsigned int x);
 LUAI_FUNC void luaO_arith (lua_State *L, int op, const TValue *p1,
                            const TValue *p2, TValue *res);
