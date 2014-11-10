@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.103 2014/11/02 19:19:04 roberto Exp roberto $
+** $Id: ldebug.c,v 2.104 2014/11/02 19:33:33 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -451,24 +451,26 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
        return "for iterator";
     }
     /* all other instructions can call only through metamethods */
-    case OP_SELF:
-    case OP_GETTABUP:
-    case OP_GETTABLE: tm = TM_INDEX; break;
-    case OP_SETTABUP:
-    case OP_SETTABLE: tm = TM_NEWINDEX; break;
-    case OP_EQ: tm = TM_EQ; break;
-    case OP_ADD: tm = TM_ADD; break;
-    case OP_SUB: tm = TM_SUB; break;
-    case OP_MUL: tm = TM_MUL; break;
-    case OP_DIV: tm = TM_DIV; break;
-    case OP_IDIV: tm = TM_IDIV; break;
-    case OP_MOD: tm = TM_MOD; break;
-    case OP_POW: tm = TM_POW; break;
+    case OP_SELF: case OP_GETTABUP: case OP_GETTABLE:
+      tm = TM_INDEX;
+      break;
+    case OP_SETTABUP: case OP_SETTABLE:
+      tm = TM_NEWINDEX;
+      break;
+    case OP_ADD: case OP_SUB: case OP_MUL: case OP_MOD:
+    case OP_POW: case OP_DIV: case OP_IDIV: case OP_BAND:
+    case OP_BOR: case OP_BXOR: case OP_SHL: case OP_SHR: {
+      int offset = cast_int(GET_OPCODE(i)) - cast_int(OP_ADD);  /* ORDER OP */
+      tm = cast(TMS, offset + cast_int(TM_ADD));  /* ORDER TM */
+      break;
+    }
     case OP_UNM: tm = TM_UNM; break;
+    case OP_BNOT: tm = TM_BNOT; break;
     case OP_LEN: tm = TM_LEN; break;
+    case OP_CONCAT: tm = TM_CONCAT; break;
+    case OP_EQ: tm = TM_EQ; break;
     case OP_LT: tm = TM_LT; break;
     case OP_LE: tm = TM_LE; break;
-    case OP_CONCAT: tm = TM_CONCAT; break;
     default:
       return NULL;  /* else no useful name can be found */
   }
@@ -532,11 +534,12 @@ l_noret luaG_concaterror (lua_State *L, const TValue *p1, const TValue *p2) {
 }
 
 
-l_noret luaG_aritherror (lua_State *L, const TValue *p1, const TValue *p2) {
+l_noret luaG_opinterror (lua_State *L, const TValue *p1,
+                         const TValue *p2, const char *msg) {
   lua_Number temp;
   if (!tonumber(p1, &temp))  /* first operand is wrong? */
     p2 = p1;  /* now second is wrong */
-  luaG_typeerror(L, p2, "perform arithmetic on");
+  luaG_typeerror(L, p2, msg);
 }
 
 
