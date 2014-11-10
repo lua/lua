@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.193 2014/11/07 18:07:17 roberto Exp roberto $
+** $Id: ltests.c,v 2.194 2014/11/10 14:47:29 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -11,6 +11,7 @@
 
 
 #include <limits.h>
+#include <setjmp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,6 +47,9 @@ int islocked = 0;
 
 
 #define obj_at(L,k)	(L->ci->func + (k))
+
+
+static int runC (lua_State *L, lua_State *L1, const char *pc);
 
 
 static void setnameval (lua_State *L, const char *name, int val) {
@@ -902,6 +906,49 @@ static int int2fb_aux (lua_State *L) {
 }
 
 
+struct Aux { jmp_buf jb; const char *msg; };
+
+/*
+** does a long-jump back to "main program".
+*/
+static int panicback (lua_State *L) {
+  struct Aux *b;
+  const char *msg = lua_tostring(L, -1);
+  lua_pop(L, 1);
+  lua_getfield(L, LUA_REGISTRYINDEX, "_jmpbuf");  /* get 'Aux' struct */
+  b = (struct Aux *)lua_touserdata(L, -1);
+  lua_pop(L, 1);  /* remove 'Aux' struct */
+  b->msg = msg;
+  longjmp(b->jb, 1);
+  return 1;  /* to avoid warnings */
+}
+
+static int checkpanic (lua_State *L) {
+  struct Aux b;
+  void *ud;
+  const char *code = luaL_checkstring(L, 1);  /* create new state */
+  lua_Alloc f = lua_getallocf(L, &ud);
+  lua_State *L1 = lua_newstate(f, ud);
+  if (L1 == NULL) {  /* error? */
+    lua_pushnil(L);
+    return 1;
+  }
+  lua_atpanic(L1, panicback);  /* set its panic function */
+  lua_pushlightuserdata(L1, &b);
+  lua_setfield(L1, LUA_REGISTRYINDEX, "_jmpbuf");  /* store 'Aux' struct */
+  if (setjmp(b.jb) == 0) {  /* set jump buffer */
+    runC(L, L1, code);  /* run code unprotected */
+    lua_pushliteral(L, "no errors");
+  }
+  else {  /* error handling */
+    /* move error message to original state */
+    lua_pushstring(L, b.msg);
+  }
+  lua_close(L1);
+  return 1;
+}
+
+
 
 /*
 ** {======================================================
@@ -1256,6 +1303,9 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       int i = getindex;
       lua_pushboolean(L1, luaL_testudata(L1, i, getstring) != NULL);
     }
+    else if EQ("error") {
+      lua_error(L1);
+    }
     else if EQ("throw") {
 #if defined(__cplusplus)
 static struct X { int x; } x;
@@ -1453,6 +1503,7 @@ static const struct luaL_Reg tests_funcs[] = {
   {"listk", listk},
   {"listlocals", listlocals},
   {"loadlib", loadlib},
+  {"checkpanic", checkpanic},
   {"newstate", newstate},
   {"newuserdata", newuserdata},
   {"num2int", num2int},
