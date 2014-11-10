@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.120 2014/11/02 19:19:04 roberto Exp roberto $
+** $Id: loadlib.c,v 1.121 2014/11/03 15:11:10 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -85,8 +85,11 @@
 #define LUA_OFSEP	"_"
 
 
-/* table (in the registry) that keeps handles for all loaded C libraries */
-#define CLIBS		"_CLIBS"
+/*
+** unique key for table in the registry that keeps handles
+** for all loaded C libraries
+*/
+static const int CLIBS = 0;
 
 #define LIB_FAIL	"open"
 
@@ -261,7 +264,7 @@ static lua_CFunction lsys_sym (lua_State *L, void *lib, const char *sym) {
 */
 static void *checkclib (lua_State *L, const char *path) {
   void *plib;
-  lua_getfield(L, LUA_REGISTRYINDEX, CLIBS);
+  lua_rawgetp(L, LUA_REGISTRYINDEX, &CLIBS);
   lua_getfield(L, -1, path);
   plib = lua_touserdata(L, -1);  /* plib = CLIBS[path] */
   lua_pop(L, 2);  /* pop CLIBS table and 'plib' */
@@ -274,7 +277,7 @@ static void *checkclib (lua_State *L, const char *path) {
 ** registry.CLIBS[#CLIBS + 1] = plib  -- also keep a list of all libraries
 */
 static void addtoclib (lua_State *L, const char *path, void *plib) {
-  lua_getfield(L, LUA_REGISTRYINDEX, CLIBS);
+  lua_rawgetp(L, LUA_REGISTRYINDEX, &CLIBS);
   lua_pushlightuserdata(L, plib);
   lua_pushvalue(L, -1);
   lua_setfield(L, -3, path);  /* CLIBS[path] = plib */
@@ -735,11 +738,12 @@ static void createsearcherstable (lua_State *L) {
 ** setting a finalizer to close all libraries when closing state.
 */
 static void createclibstable (lua_State *L) {
-  luaL_getsubtable(L, LUA_REGISTRYINDEX, CLIBS);  /* create CLIBS table */
+  lua_newtable(L);  /* create CLIBS table */
   lua_createtable(L, 0, 1);  /* create metatable for CLIBS */
   lua_pushcfunction(L, gctm);
   lua_setfield(L, -2, "__gc");  /* set finalizer for CLIBS table */
   lua_setmetatable(L, -2);
+  lua_rawsetp(L, LUA_REGISTRYINDEX, &CLIBS);  /* set CLIBS table in registry */
 }
 
 
