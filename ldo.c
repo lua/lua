@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.132 2014/11/02 19:19:04 roberto Exp roberto $
+** $Id: ldo.c,v 2.133 2014/11/02 19:33:33 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -121,6 +121,9 @@ l_noret luaD_throw (lua_State *L, int errcode) {
     }
     else {  /* no handler at all; abort */
       if (g->panic) {  /* panic function? */
+        seterrorobj(L, errcode, L->top);  /* assume EXTRA_STACK */
+        if (L->ci->top < L->top)
+          L->ci->top = L->top + 2;
         lua_unlock(L);
         g->panic(L);  /* call it (last chance to jump out) */
       }
@@ -283,12 +286,21 @@ static StkId adjust_varargs (lua_State *L, Proto *p, int actual) {
 }
 
 
+/*
+** Check whether __call metafield of 'func' is a function. If so, put
+** it in stack below original 'func' so that 'luaD_precall' can call
+** it. Raise an error if __call metafield is not a function. (The
+** check 'luaD_checkstack' avoids problems of errors in tag methods,
+** because both tag methods and error messages may need EXTRA_STACK.)
+*/
 static StkId tryfuncTM (lua_State *L, StkId func) {
   const TValue *tm = luaT_gettmbyobj(L, func, TM_CALL);
   StkId p;
   ptrdiff_t funcr = savestack(L, func);
-  if (!ttisfunction(tm))
+  if (!ttisfunction(tm)) {
+    luaD_checkstack(L, 1);
     luaG_typeerror(L, func, "call");
+  }
   /* Open a hole inside the stack at 'func' */
   for (p = L->top; p > func; p--) setobjs2s(L, p, p-1);
   incr_top(L);
