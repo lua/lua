@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.144 2014/10/29 16:12:30 roberto Exp roberto $
+** $Id: ldblib.c,v 1.145 2014/11/02 19:19:04 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -20,7 +20,11 @@
 #include "lualib.h"
 
 
-#define HOOKKEY		"_HKEY"
+/*
+** The hook table at registry[&HOOKKEY] maps threads to their current
+** hook function. (We only need the unique address of 'HOOKKEY'.)
+*/
+static const int HOOKKEY = 0;
 
 
 static int db_getregistry (lua_State *L) {
@@ -273,20 +277,13 @@ static int db_upvaluejoin (lua_State *L) {
 
 
 /*
-** The hook table (at registry[HOOKKEY]) maps threads to their current
-** hook function
-*/
-#define gethooktable(L)	luaL_getsubtable(L, LUA_REGISTRYINDEX, HOOKKEY)
-
-
-/*
 ** Call hook function registered at hook table for the current
 ** thread (if there is one)
 */
 static void hookf (lua_State *L, lua_Debug *ar) {
   static const char *const hooknames[] =
     {"call", "return", "line", "count", "tail call"};
-  gethooktable(L);
+  lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY);
   lua_pushthread(L);
   if (lua_rawget(L, -2) == LUA_TFUNCTION) {  /* is there a hook function? */
     lua_pushstring(L, hooknames[(int)ar->event]);  /* push event name */
@@ -339,7 +336,10 @@ static int db_sethook (lua_State *L) {
     count = (int)luaL_optinteger(L, arg + 3, 0);
     func = hookf; mask = makemask(smask, count);
   }
-  if (gethooktable(L) == 0) {  /* creating hook table? */
+  if (lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY) == LUA_TNIL) {
+    lua_createtable(L, 0, 2);  /* create a hook table */
+    lua_pushvalue(L, -1);
+    lua_rawsetp(L, LUA_REGISTRYINDEX, &HOOKKEY);  /* set it in position */
     lua_pushstring(L, "k");
     lua_setfield(L, -2, "__mode");  /** hooktable.__mode = "k" */
     lua_pushvalue(L, -1);
@@ -362,7 +362,7 @@ static int db_gethook (lua_State *L) {
   if (hook != NULL && hook != hookf)  /* external hook? */
     lua_pushliteral(L, "external hook");
   else {
-    gethooktable(L);
+    lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY);
     lua_pushthread(L1); lua_xmove(L1, L, 1);
     lua_rawget(L, -2);   /* 1st result = hooktable[L1] */
     lua_remove(L, -2);  /* remove hook table */
