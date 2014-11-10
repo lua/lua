@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.29 2014/07/18 13:36:14 roberto Exp roberto $
+** $Id: ltm.c,v 2.30 2014/11/02 19:19:04 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -122,10 +122,12 @@ void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
         lua_Number dummy;
         if (tonumber(p1, &dummy) && tonumber(p2, &dummy))
           luaG_tointerror(L, p1, p2);
+        else if (event != TM_IDIV)
+          luaG_opinterror(L, p1, p2, "perform bitwise operation on");
         /* else go through */
       }
       default:
-        luaG_aritherror(L, p1, p2);
+        luaG_opinterror(L, p1, p2, "perform arithmetic on");
     }
   }
 }
