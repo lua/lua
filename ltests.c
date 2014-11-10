@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.192 2014/11/02 19:19:04 roberto Exp roberto $
+** $Id: ltests.c,v 2.193 2014/11/07 18:07:17 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1118,9 +1118,8 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       luaL_loadfile(L1, luaL_checkstring(L1, getnum));
     }
     else if EQ("loadstring") {
-      size_t sl;
-      const char *s = luaL_checklstring(L1, getnum, &sl);
-      luaL_loadbuffer(L1, s, sl, s);
+      const char *s = luaL_checkstring(L1, getnum);
+      luaL_loadstring(L1, s);
     }
     else if EQ("newmetatable") {
       lua_pushboolean(L1, luaL_newmetatable(L1, getstring));
@@ -1200,6 +1199,14 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("rawgeti") {
       int t = getindex;
       lua_rawgeti(L1, t, getnum);
+    }
+    else if EQ("rawgetp") {
+      int t = getindex;
+      lua_rawgetp(L1, t, cast(void *, cast(size_t, getnum)));
+    }
+    else if EQ("rawsetp") {
+      int t = getindex;
+      lua_rawsetp(L1, t, cast(void *, cast(size_t, getnum)));
     }
     else if EQ("remove") {
       lua_remove(L1, getnum);
