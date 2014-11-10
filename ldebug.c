@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.104 2014/11/02 19:33:33 roberto Exp roberto $
+** $Id: ldebug.c,v 2.105 2014/11/10 14:46:46 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -483,17 +483,21 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
 
 
 /*
-** only portable way to check whether a pointer points to an array
-** (used only for error messages, so efficiency is not a big concern)
+** The subtraction of two potentially unrelated pointers is
+** not ISO C, but it should not crash a program; the subsequent
+** checks are ISO C and ensure a correct result.
 */
 static int isinstack (CallInfo *ci, const TValue *o) {
-  StkId p;
-  for (p = ci->u.l.base; p < ci->top; p++)
-    if (o == p) return 1;
-  return 0;
+  ptrdiff_t i = o - ci->u.l.base;
+  return (0 <= i && i < (ci->top - ci->u.l.base) && ci->u.l.base + i == o);
 }
 
 
+/*
+** Checks whether value 'o' came from an upvalue. (That can only happen
+** with instructions OP_GETTABUP/OP_SETTABUP, which operate directly on
+** upvalues.)
+*/
 static const char *getupvalname (CallInfo *ci, const TValue *o,
                                  const char **name) {
   LClosure *c = ci_func(ci);
