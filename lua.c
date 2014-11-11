@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.220 2014/11/02 19:19:04 roberto Exp roberto $
+** $Id: lua.c,v 1.221 2014/11/02 19:33:33 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -422,8 +422,7 @@ static void doREPL (lua_State *L) {
 */
 static int pushargs (lua_State *L) {
   int i, n;
-  lua_getglobal(L, "arg");
-  if (!lua_istable(L, -1))
+  if (lua_getglobal(L, "arg") != LUA_TTABLE)
     luaL_error(L, "'arg' is not a table");
   n = (int)luaL_len(L, -1);
   luaL_checkstack(L, n + 3, "too many arguments to script");
