@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.215 2014/11/05 18:55:43 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.216 2014/11/08 18:12:53 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -1088,16 +1088,14 @@ static KOption getoption (Header *h, const char **fmt, int *size) {
     case 'z': return Kzstr;
     case 'x': *size = 1; return Kpadding;
     case 'X': return Kpaddalign;
-    case ' ': return Knop;
-    case '<': h->islittle = 1; return Knop;
-    case '>': h->islittle = 0; return Knop;
-    case '=': h->islittle = nativeendian.little; return Knop;
-    case '!': h->maxalign = getnumlimit(h, fmt, MAXALIGN); return Knop;
-    default: {
-      luaL_error(h->L, "invalid format option '%c'", opt);
-      return Knop;
-    }
+    case ' ': break;
+    case '<': h->islittle = 1; break;
+    case '>': h->islittle = 0; break;
+    case '=': h->islittle = nativeendian.little; break;
+    case '!': h->maxalign = getnumlimit(h, fmt, MAXALIGN); break;
+    default: luaL_error(h->L, "invalid format option '%c'", opt);
   }
+  return Knop;
 }
 
 
