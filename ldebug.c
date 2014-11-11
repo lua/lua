@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.105 2014/11/10 14:46:46 roberto Exp roberto $
+** $Id: ldebug.c,v 2.106 2014/11/10 18:41:19 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -513,7 +513,7 @@ static const char *getupvalname (CallInfo *ci, const TValue *o,
 
 
 static const char *varinfo (lua_State *L, const TValue *o) {
-  const char *name;
+  const char *name = NULL;  /* to avoid warnings */
   CallInfo *ci = L->ci;
   const char *kind = NULL;
   if (isLua(ci)) {
@@ -590,7 +590,7 @@ l_noret luaG_errormsg (lua_State *L) {
     if (!ttisfunction(errfunc)) luaD_throw(L, LUA_ERRERR);
     setobjs2s(L, L->top, L->top - 1);  /* move argument */
     setobjs2s(L, L->top - 1, errfunc);  /* push function */
-    L->top++;
+    L->top++;  /* assume EXTRA_STACK */
     luaD_call(L, L->top - 2, 1, 0);  /* call it */
   }
   luaD_throw(L, LUA_ERRRUN);
