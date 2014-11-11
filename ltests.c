@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.194 2014/11/10 14:47:29 roberto Exp roberto $
+** $Id: ltests.c,v 2.195 2014/11/10 17:41:36 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -555,6 +555,16 @@ static int listlocals (lua_State *L) {
 
 
 
+static void printstack (lua_State *L) {
+  int i;
+  int n = lua_gettop(L);
+  for (i = 1; i <= n; i++) {
+    printf("%3d: %s\n", i, luaL_tolstring(L, i, NULL));
+    lua_pop(L, 1);
+  }
+  printf("\n");
+}
+
 
 static int get_limits (lua_State *L) {
   lua_createtable(L, 0, 5);
@@ -906,19 +916,18 @@ static int int2fb_aux (lua_State *L) {
 }
 
 
-struct Aux { jmp_buf jb; const char *msg; };
+struct Aux { jmp_buf jb; const char *paniccode; lua_State *L; };
 
 /*
 ** does a long-jump back to "main program".
 */
 static int panicback (lua_State *L) {
   struct Aux *b;
-  const char *msg = lua_tostring(L, -1);
-  lua_pop(L, 1);
+  lua_checkstack(L, 1);  /* open space for 'Aux' struct */
   lua_getfield(L, LUA_REGISTRYINDEX, "_jmpbuf");  /* get 'Aux' struct */
   b = (struct Aux *)lua_touserdata(L, -1);
   lua_pop(L, 1);  /* remove 'Aux' struct */
-  b->msg = msg;
+  runC(b->L, L, b->paniccode);  /* run optional panic code */
   longjmp(b->jb, 1);
   return 1;  /* to avoid warnings */
 }
@@ -926,9 +935,12 @@ static int panicback (lua_State *L) {
 static int checkpanic (lua_State *L) {
   struct Aux b;
   void *ud;
-  const char *code = luaL_checkstring(L, 1);  /* create new state */
+  lua_State *L1;
+  const char *code = luaL_checkstring(L, 1);
   lua_Alloc f = lua_getallocf(L, &ud);
-  lua_State *L1 = lua_newstate(f, ud);
+  b.paniccode = luaL_optstring(L, 2, "");
+  b.L = L;
+  L1 = lua_newstate(f, ud);  /* create new state */
   if (L1 == NULL) {  /* error? */
     lua_pushnil(L);
     return 1;
@@ -942,7 +954,7 @@ static int checkpanic (lua_State *L) {
   }
   else {  /* error handling */
     /* move error message to original state */
-    lua_pushstring(L, b.msg);
+    lua_pushstring(L, lua_tostring(L1, -1));
   }
   lua_close(L1);
   return 1;
@@ -1206,15 +1218,7 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
         printf("%s\n", luaL_tolstring(L1, n, NULL));
         lua_pop(L1, 1);
       }
-      else {
-        int i;
-        n = lua_gettop(L1);
-        for (i = 1; i <= n; i++) {
-          printf("%s  ", luaL_tolstring(L1, i, NULL));
-          lua_pop(L1, 1);
-        }
-        printf("\n");
-      }
+      else printstack(L1);
     }
     else if EQ("pushbool") {
       lua_pushboolean(L1, getnum);
