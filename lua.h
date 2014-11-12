@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.319 2014/10/17 19:17:55 roberto Exp roberto $
+** $Id: lua.h,v 1.320 2014/11/08 17:57:08 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -159,7 +159,7 @@ LUA_API void  (lua_settop) (lua_State *L, int idx);
 LUA_API void  (lua_pushvalue) (lua_State *L, int idx);
 LUA_API void  (lua_rotate) (lua_State *L, int idx, int n);
 LUA_API void  (lua_copy) (lua_State *L, int fromidx, int toidx);
-LUA_API int   (lua_checkstack) (lua_State *L, int sz);
+LUA_API int   (lua_checkstack) (lua_State *L, int n);
 
 LUA_API void  (lua_xmove) (lua_State *from, lua_State *to, int n);
 
@@ -222,7 +222,7 @@ LUA_API int   (lua_compare) (lua_State *L, int idx1, int idx2, int op);
 LUA_API void        (lua_pushnil) (lua_State *L);
 LUA_API void        (lua_pushnumber) (lua_State *L, lua_Number n);
 LUA_API void        (lua_pushinteger) (lua_State *L, lua_Integer n);
-LUA_API const char *(lua_pushlstring) (lua_State *L, const char *s, size_t l);
+LUA_API const char *(lua_pushlstring) (lua_State *L, const char *s, size_t len);
 LUA_API const char *(lua_pushstring) (lua_State *L, const char *s);
 LUA_API const char *(lua_pushvfstring) (lua_State *L, const char *fmt,
                                                       va_list argp);
@@ -236,7 +236,7 @@ LUA_API int   (lua_pushthread) (lua_State *L);
 /*
 ** get functions (Lua -> stack)
 */
-LUA_API int (lua_getglobal) (lua_State *L, const char *var);
+LUA_API int (lua_getglobal) (lua_State *L, const char *name);
 LUA_API int (lua_gettable) (lua_State *L, int idx);
 LUA_API int (lua_getfield) (lua_State *L, int idx, const char *k);
 LUA_API int (lua_geti) (lua_State *L, int idx, lua_Integer n);
@@ -253,7 +253,7 @@ LUA_API int  (lua_getuservalue) (lua_State *L, int idx);
 /*
 ** set functions (stack -> Lua)
 */
-LUA_API void  (lua_setglobal) (lua_State *L, const char *var);
+LUA_API void  (lua_setglobal) (lua_State *L, const char *name);
 LUA_API void  (lua_settable) (lua_State *L, int idx);
 LUA_API void  (lua_setfield) (lua_State *L, int idx, const char *k);
 LUA_API void  (lua_seti) (lua_State *L, int idx, lua_Integer n);
@@ -284,12 +284,13 @@ LUA_API int (lua_dump) (lua_State *L, lua_Writer writer, void *data, int strip);
 /*
 ** coroutine functions
 */
-LUA_API int  (lua_yieldk) (lua_State *L, int nresults, lua_KContext ctx,
-                           lua_KFunction k);
+LUA_API int  (lua_yieldk)     (lua_State *L, int nresults, lua_KContext ctx,
+                               lua_KFunction k);
+LUA_API int  (lua_resume)     (lua_State *L, lua_State *from, int narg);
+LUA_API int  (lua_status)     (lua_State *L);
+LUA_API int (lua_isyieldable) (lua_State *L);
+
 #define lua_yield(L,n)		lua_yieldk(L, (n), 0, NULL)
-LUA_API int  (lua_resume) (lua_State *L, lua_State *from, int narg);
-LUA_API int  (lua_status) (lua_State *L);
-LUA_API int lua_isyieldable (lua_State *L);
 
 
 /*
