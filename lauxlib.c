@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.272 2014/10/29 16:11:17 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.273 2014/11/02 19:19:04 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -279,8 +279,7 @@ LUALIB_API int luaL_execresult (lua_State *L, int stat) {
 */
 
 LUALIB_API int luaL_newmetatable (lua_State *L, const char *tname) {
-  luaL_getmetatable(L, tname);  /* try to get metatable */
-  if (!lua_isnil(L, -1))  /* name already in use? */
+  if (luaL_getmetatable(L, tname))  /* name already in use? */
     return 0;  /* leave previous value on top, but return 0 */
   lua_pop(L, 1);
   lua_newtable(L);  /* create metatable */
