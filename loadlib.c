@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.121 2014/11/03 15:11:10 roberto Exp roberto $
+** $Id: loadlib.c,v 1.122 2014/11/10 14:28:31 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -518,8 +518,8 @@ static void findloader (lua_State *L, const char *name) {
   int i;
   luaL_Buffer msg;  /* to build error message */
   luaL_buffinit(L, &msg);
-  lua_getfield(L, lua_upvalueindex(1), "searchers");  /* will be at index 3 */
-  if (!lua_istable(L, 3))
+  /* push 'package.searchers' to index 3 in the stack */
+  if (lua_getfield(L, lua_upvalueindex(1), "searchers") != LUA_TTABLE)
     luaL_error(L, "'package.searchers' must be a table");
   /*  iterate over available searchers to find a loader */
   for (i = 1; ; i++) {
