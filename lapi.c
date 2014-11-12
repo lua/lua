@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.241 2014/10/31 17:41:51 roberto Exp roberto $
+** $Id: lapi.c,v 2.242 2014/11/02 19:19:04 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -94,22 +94,22 @@ static void growstack (lua_State *L, void *ud) {
 }
 
 
-LUA_API int lua_checkstack (lua_State *L, int size) {
+LUA_API int lua_checkstack (lua_State *L, int n) {
   int res;
   CallInfo *ci = L->ci;
   lua_lock(L);
-  api_check(size >= 0, "negative 'size'");
-  if (L->stack_last - L->top > size)  /* stack large enough? */
+  api_check(n >= 0, "negative 'n'");
+  if (L->stack_last - L->top > n)  /* stack large enough? */
     res = 1;  /* yes; check is OK */
   else {  /* no; need to grow stack */
     int inuse = cast_int(L->top - L->stack) + EXTRA_STACK;
-    if (inuse > LUAI_MAXSTACK - size)  /* can grow without overflow? */
+    if (inuse > LUAI_MAXSTACK - n)  /* can grow without overflow? */
       res = 0;  /* no */
     else  /* try to grow stack */
-      res = (luaD_rawrunprotected(L, &growstack, &size) == LUA_OK);
+      res = (luaD_rawrunprotected(L, &growstack, &n) == LUA_OK);
   }
-  if (res && ci->top < L->top + size)
-    ci->top = L->top + size;  /* adjust frame top */
+  if (res && ci->top < L->top + n)
+    ci->top = L->top + n;  /* adjust frame top */
   lua_unlock(L);
   return res;
 }
@@ -578,12 +578,12 @@ LUA_API int lua_pushthread (lua_State *L) {
 */
 
 
-LUA_API int lua_getglobal (lua_State *L, const char *var) {
+LUA_API int lua_getglobal (lua_State *L, const char *name) {
   Table *reg = hvalue(&G(L)->l_registry);
   const TValue *gt;  /* global table */
   lua_lock(L);
   gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
-  setsvalue2s(L, L->top++, luaS_new(L, var));
+  setsvalue2s(L, L->top++, luaS_new(L, name));
   luaV_gettable(L, gt, L->top - 1, L->top - 1);
   lua_unlock(L);
   return ttnov(L->top - 1);
@@ -718,13 +718,13 @@ LUA_API int lua_getuservalue (lua_State *L, int idx) {
 */
 
 
-LUA_API void lua_setglobal (lua_State *L, const char *var) {
+LUA_API void lua_setglobal (lua_State *L, const char *name) {
   Table *reg = hvalue(&G(L)->l_registry);
   const TValue *gt;  /* global table */
   lua_lock(L);
   api_checknelems(L, 1);
   gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
-  setsvalue2s(L, L->top++, luaS_new(L, var));
+  setsvalue2s(L, L->top++, luaS_new(L, name));
   luaV_settable(L, gt, L->top - 1, L->top - 2);
   L->top -= 2;  /* pop value and key */
   lua_unlock(L);
