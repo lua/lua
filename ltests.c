@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.195 2014/11/10 17:41:36 roberto Exp roberto $
+** $Id: ltests.c,v 2.196 2014/11/11 17:15:06 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1096,7 +1096,10 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     }
     else if EQ("checkstack") {
       int sz = getnum;
-      luaL_checkstack(L1, sz, getstring);
+      const char *msg = getstring;
+      if (*msg == '\0')
+        msg = NULL;  /* to test 'luaL_checkstack' with no message */
+      luaL_checkstack(L1, sz, msg);
     }
     else if EQ("compare") {
       int a = getindex;
