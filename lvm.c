@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.227 2014/11/02 19:19:04 roberto Exp roberto $
+** $Id: lvm.c,v 2.228 2014/11/03 20:07:47 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -63,26 +63,23 @@ static int tofloat (const TValue *obj, lua_Number *n) {
 
 
 /*
-** Try to convert a value to a float. Check 'isinteger' first, because
-** in general the float case is already handled by the macro 'tonumber'.
+** Try to convert a value to a float. The float case is already handled
+** by the macro 'tonumber'.
 */
 int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
   TValue v;
- again:
   if (ttisinteger(obj)) {
     *n = cast_num(ivalue(obj));
     return 1;
   }
-  else if (ttisfloat(obj)) {
-    *n = fltvalue(obj);
-    return 1;
-  }
   else if (cvt2num(obj) &&  /* string convertible to number? */
             luaO_str2num(svalue(obj), &v) == tsvalue(obj)->len + 1) {
-    obj = &v;
-    goto again;  /* convert result from 'luaO_str2num' to a float */
+    /* convert result of 'luaO_str2num' to a float */
+      *n = (ttisinteger(&v)) ? cast_num(ivalue(&v)) : fltvalue(&v);
+    return 1;
   }
-  return 0;  /* conversion failed */
+  else
+    return 0;  /* conversion failed */
 }
 
 
