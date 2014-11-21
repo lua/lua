@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.227 2014/11/02 19:35:39 roberto Exp roberto $
+** $Id: luaconf.h,v 1.228 2014/11/19 15:00:42 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -468,9 +468,23 @@
 /* the following operations need the math library */
 #if defined(lobject_c) || defined(lvm_c)
 #include <math.h>
+
+/* floor division (defined as 'floor(a/b)') */
+#define luai_numidiv(L,a,b)	((void)L, l_mathop(floor)((a)/(b)))
+
+/*
+** module: defined as 'a - floor(a/b)*b'; the previous definition gives
+** NaN when 'b' is huge, but the result should be 'a'. 'fmod' gives the
+** result of 'a - trunc(a/b)*b', and therefore must be corrected when
+** 'trunc(a/b) ~= floor(a/b)'. That happens when the division has a
+** non-integer negative result, which is equivalent to the test below
+*/
 #define luai_nummod(L,a,b,m)  \
-  { (m) = l_mathop(fmod)(a,b); if ((m) != 0 && (a)*(b) < 0) (m) += (b); }
+  { (m) = l_mathop(fmod)(a,b); if ((m)*(b) < 0) (m) += (b); }
+
+/* exponentiation */
 #define luai_numpow(L,a,b)	((void)L, l_mathop(pow)(a,b))
+
 #endif
 
 /* these are quite standard operations */

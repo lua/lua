@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.228 2014/11/03 20:07:47 roberto Exp roberto $
+** $Id: lvm.c,v 2.229 2014/11/19 15:05:15 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -428,8 +428,10 @@ void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
 
 
 /*
-** Integer division; return 'm // n'. (Assume that C division with
-** negative operands follows C99 behavior.)
+** Integer division; return 'm // n', that is, floor(m/n).
+** C division truncates its result (rounds towards zero).
+** 'floor(q) == trunc(q)' when 'q >= 0' or when 'q' is integer,
+** otherwise 'floor(q) == trunc(q) - 1'.
 */
 lua_Integer luaV_div (lua_State *L, lua_Integer m, lua_Integer n) {
   if (l_castS2U(n) + 1u <= 1u) {  /* special cases: -1 or 0 */
@@ -438,18 +440,18 @@ lua_Integer luaV_div (lua_State *L, lua_Integer m, lua_Integer n) {
     return intop(-, 0, m);   /* n==-1; avoid overflow with 0x80000...//-1 */
   }
   else {
-    lua_Integer d = m / n;  /* perform division */
-    if ((m ^ n) >= 0 || m % n == 0)   /* same signal or no rest? */
-      return d;
-    else
-      return d - 1;  /* correct 'div' for negative case */
+    lua_Integer q = m / n;  /* perform C division */
+    if ((m ^ n) < 0 && m % n != 0)  /* 'm/n' would be negative non-integer? */
+      q -= 1;  /* correct result for different rounding */
+    return q;
   }
 }
 
 
 /*
 ** Integer modulus; return 'm % n'. (Assume that C '%' with 
-** negative operands follows C99 behavior.)
+** negative operands follows C99 behavior. See previous comment
+** about luaV_div.)
 */
 lua_Integer luaV_mod (lua_State *L, lua_Integer m, lua_Integer n) {
   if (l_castS2U(n) + 1u <= 1u) {  /* special cases: -1 or 0 */
@@ -459,10 +461,9 @@ lua_Integer luaV_mod (lua_State *L, lua_Integer m, lua_Integer n) {
   }
   else {
     lua_Integer r = m % n;
-    if (r == 0 || (m ^ n) >= 0)  /* no rest or same signal? */
-      return r;
-    else
-      return r + n;  /* correct 'mod' for negative case */
+    if (r != 0 && (m ^ n) < 0)  /* 'm/n' would be non-integer negative? */
+      r += n;  /* correct result for different rounding */
+    return r;
   }
 }
 
@@ -778,15 +779,6 @@ void luaV_execute (lua_State *L) {
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_DIV)); }
       )
-      vmcase(OP_IDIV,  /* integer division */
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
-        lua_Integer ib; lua_Integer ic;
-        if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
-          setivalue(ra, luaV_div(L, ib, ic));
-        }
-        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_IDIV)); }
-      )
       vmcase(OP_BAND,
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
@@ -846,6 +838,19 @@ void luaV_execute (lua_State *L) {
           setfltvalue(ra, m);
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_MOD)); }
+      )
+      vmcase(OP_IDIV,  /* floor division */
+        TValue *rb = RKB(i);
+        TValue *rc = RKC(i);
+        lua_Number nb; lua_Number nc;
+        if (ttisinteger(rb) && ttisinteger(rc)) {
+          lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
+          setivalue(ra, luaV_div(L, ib, ic));
+        }
+        else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
+          setfltvalue(ra, luai_numidiv(L, nb, nc));
+        }
+        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_IDIV)); }
       )
       vmcase(OP_POW,
         TValue *rb = RKB(i);
