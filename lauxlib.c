@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.273 2014/11/02 19:19:04 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.274 2014/11/12 13:32:27 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -566,7 +566,7 @@ LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
 typedef struct LoadF {
   int n;  /* number of pre-read characters */
   FILE *f;  /* file being read */
-  char buff[LUAL_BUFFERSIZE];  /* area for reading file */
+  char buff[BUFSIZ];  /* area for reading file */
 } LoadF;
 
 
