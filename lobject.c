@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.98 2014/11/02 19:19:04 roberto Exp roberto $
+** $Id: lobject.c,v 2.99 2014/11/04 19:16:25 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -101,6 +101,7 @@ static lua_Number numarith (lua_State *L, int op, lua_Number v1,
     case LUA_OPMUL: return luai_nummul(L, v1, v2);
     case LUA_OPDIV: return luai_numdiv(L, v1, v2);
     case LUA_OPPOW: return luai_numpow(L, v1, v2);
+    case LUA_OPIDIV: return luai_numidiv(L, v1, v2);
     case LUA_OPUNM: return luai_numunm(L, v1);
     case LUA_OPMOD: {
       lua_Number m;
@@ -115,9 +116,9 @@ static lua_Number numarith (lua_State *L, int op, lua_Number v1,
 void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
                  TValue *res) {
   switch (op) {
-    case LUA_OPIDIV: case LUA_OPBAND: case LUA_OPBOR:
-    case LUA_OPBXOR: case LUA_OPSHL: case LUA_OPSHR:
-    case LUA_OPBNOT: {  /* operates only on integers */
+    case LUA_OPBAND: case LUA_OPBOR: case LUA_OPBXOR:
+    case LUA_OPSHL: case LUA_OPSHR:
+    case LUA_OPBNOT: {  /* operate only on integers */
       lua_Integer i1; lua_Integer i2;
       if (tointeger(p1, &i1) && tointeger(p2, &i2)) {
         setivalue(res, intarith(L, op, i1, i2));

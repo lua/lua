@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.94 2014/10/30 18:53:28 roberto Exp roberto $
+** $Id: lcode.c,v 2.95 2014/11/02 19:19:04 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -768,12 +768,10 @@ static int validop (int op, TValue *v1, TValue *v2) {
                             (cast_void(tonumber(v2, &b)), b)))
     return 0;
   switch (op) {
-    case LUA_OPIDIV:  /* division by 0 and conversion errors */
-      return (tointeger(v1, &i) && tointeger(v2, &i) && i != 0);
     case LUA_OPBAND: case LUA_OPBOR: case LUA_OPBXOR:
     case LUA_OPSHL: case LUA_OPSHR: case LUA_OPBNOT:  /* conversion errors */
       return (tointeger(v1, &i) && tointeger(v2, &i));
-    case LUA_OPMOD:  /* integer module by 0 */
+    case LUA_OPIDIV: case LUA_OPMOD:  /* integer division by 0 */
       return !(ttisinteger(v1) && ttisinteger(v2) && ivalue(v2) == 0);
     default: return 1;  /* everything else is valid */
   }
