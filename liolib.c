@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.139 2014/11/02 19:19:04 roberto Exp roberto $
+** $Id: liolib.c,v 2.140 2014/11/02 19:33:33 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -466,12 +466,21 @@ static int read_line (lua_State *L, FILE *f, int chop) {
   luaL_Buffer b;
   int c;
   luaL_buffinit(L, &b);
-  l_lockfile(f);
-  while ((c = l_getc(f)) != EOF && c != '\n')
-    luaL_addchar(&b, c);
-  l_unlockfile(f);
-  if (!chop && c == '\n') luaL_addchar(&b, c);
+  for (;;) {
+    char *buff = luaL_prepbuffer(&b);  /* pre-allocate buffer */
+    int i = 0;
+    l_lockfile(f);  /* no memory errors can happen inside the lock */
+    while (i < LUAL_BUFFERSIZE && (c = l_getc(f)) != EOF && c != '\n')
+      buff[i++] = c;
+    l_unlockfile(f);
+    luaL_addsize(&b, i);
+    if (i < LUAL_BUFFERSIZE)
+      break;
+  }
+  if (!chop && c == '\n')  /* want a newline and have one? */
+    luaL_addchar(&b, c);  /* add ending newline to result */
   luaL_pushresult(&b);  /* close buffer */
+  /* return ok if read something (either a newline or something else) */
   return (c == '\n' || lua_rawlen(L, -1) > 0);
 }
 
@@ -516,7 +525,7 @@ static int g_read (lua_State *L, FILE *f, int first) {
     success = 1;
     for (n = first; nargs-- && success; n++) {
       if (lua_type(L, n) == LUA_TNUMBER) {
-        size_t l = (size_t)lua_tointeger(L, n);
+        size_t l = (size_t)luaL_checkinteger(L, n);
         success = (l == 0) ? test_eof(L, f) : read_chars(L, f, l);
       }
       else {
