@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.95 2014/11/02 19:19:04 roberto Exp roberto $
+** $Id: lcode.c,v 2.96 2014/11/21 12:15:57 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -801,19 +801,30 @@ static int constfolding (FuncState *fs, int op, expdesc *e1, expdesc *e2) {
 }
 
 
-static void codearith (FuncState *fs, OpCode op,
-                       expdesc *e1, expdesc *e2, int line) {
-  if (!constfolding(fs, op - OP_ADD + LUA_OPADD, e1, e2)) {
+/*
+** Code for binary and unary expressions that "produce values"
+** (arithmetic operations, bitwise operations, concat, length). First
+** try to do constant folding (only for numeric [arithmetic and
+** bitwise] operations, which is what 'lua_arith' accepts).
+** Expression to produce final result will be encoded in 'e1'.
+*/
+static void codeexpval (FuncState *fs, OpCode op,
+                        expdesc *e1, expdesc *e2, int line) {
+  lua_assert(op >= OP_ADD);
+  if (op <= OP_BNOT && constfolding(fs, op - OP_ADD + LUA_OPADD, e1, e2))
+    return;  /* result has been folded */
+  else {
     int o1, o2;
-    if (op == OP_UNM || op == OP_BNOT || op == OP_LEN) {
-      o2 = 0;
+    /* move operands to registers (if needed) */
+    if (op == OP_UNM || op == OP_BNOT || op == OP_LEN) {  /* unary op? */
+      o2 = 0;  /* no second expression */
       o1 = luaK_exp2anyreg(fs, e1);  /* cannot operate on constants */
     }
     else {  /* regular case (binary operators) */
-      o2 = luaK_exp2RK(fs, e2);
+      o2 = luaK_exp2RK(fs, e2);  /* both operands are "RK" */
       o1 = luaK_exp2RK(fs, e1);
     }
-    if (o1 > o2) {
+    if (o1 > o2) {  /* free registers in proper order */
       freeexp(fs, e1);
       freeexp(fs, e2);
     }
@@ -821,8 +832,8 @@ static void codearith (FuncState *fs, OpCode op,
       freeexp(fs, e2);
       freeexp(fs, e1);
     }
-    e1->u.info = luaK_codeABC(fs, op, 0, o1, o2);
-    e1->k = VRELOCABLE;
+    e1->u.info = luaK_codeABC(fs, op, 0, o1, o2);  /* generate opcode */
+    e1->k = VRELOCABLE;  /* all those operations are relocable */
     luaK_fixline(fs, line);
   }
 }
@@ -849,7 +860,7 @@ void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
   e2.t = e2.f = NO_JUMP; e2.k = VKINT; e2.u.ival = 0;
   switch (op) {
     case OPR_MINUS: case OPR_BNOT: case OPR_LEN: {
-      codearith(fs, cast(OpCode, (op - OPR_MINUS) + OP_UNM), e, &e2, line);
+      codeexpval(fs, cast(OpCode, (op - OPR_MINUS) + OP_UNM), e, &e2, line);
       break;
     }
     case OPR_NOT: codenot(fs, e); break;
@@ -915,7 +926,7 @@ void luaK_posfix (FuncState *fs, BinOpr op,
       }
       else {
         luaK_exp2nextreg(fs, e2);  /* operand must be on the 'stack' */
-        codearith(fs, OP_CONCAT, e1, e2, line);
+        codeexpval(fs, OP_CONCAT, e1, e2, line);
       }
       break;
     }
@@ -923,7 +934,7 @@ void luaK_posfix (FuncState *fs, BinOpr op,
     case OPR_IDIV: case OPR_MOD: case OPR_POW:
     case OPR_BAND: case OPR_BOR: case OPR_BXOR:
     case OPR_SHL: case OPR_SHR: {
-      codearith(fs, cast(OpCode, (op - OPR_ADD) + OP_ADD), e1, e2, line);
+      codeexpval(fs, cast(OpCode, (op - OPR_ADD) + OP_ADD), e1, e2, line);
       break;
     }
     case OPR_EQ: case OPR_LT: case OPR_LE: {
