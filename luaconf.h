@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.228 2014/11/19 15:00:42 roberto Exp roberto $
+** $Id: luaconf.h,v 1.229 2014/11/21 12:15:00 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -38,7 +38,8 @@
 
 /*
 @@ LUA_USE_C89 controls the use of non-ISO-C89 features.
-** Define it if you want Lua to avoid the use of a few C99 features.
+** Define it if you want Lua to avoid the use of a few C99 features
+** or Windows-specific features on Windows.
 */
 /* #define LUA_USE_C89 */
 
@@ -73,9 +74,7 @@
 
 
 /*
-@@ LUAI_BITSINT defines the (minimum) number of bits in an int.
-** CHANGE here if Lua cannot automatically detect the number of bits of
-** your machine. Probably you do not need to change this.
+@@ LUAI_BITSINT defines the (minimum) number of bits in an 'int'.
 */
 /* avoid undefined shifts */
 #if ((INT_MAX >> 15) >> 15) >= 1
@@ -112,7 +111,7 @@
 
 #elif defined(LUA_USE_C89) && !defined(LUA_USE_WINDOWS)		/* }{ */
 /*
-** use largerst types available for C89 ('long' and 'double');
+** use largest types available for C89 ('long' and 'double');
 ** Windows has '__int64', so does not need to use this case
 */
 #define LUA_INT_LONG
