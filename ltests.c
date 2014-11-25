@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.196 2014/11/11 17:15:06 roberto Exp roberto $
+** $Id: ltests.c,v 2.197 2014/11/14 18:15:17 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1060,7 +1060,7 @@ static int Cfunck (lua_State *L, int status, lua_KContext ctx);
 ** LUA_OPUNM   -> _
 ** LUA_OPBNOT  -> !
 */
-static char ops[] = "+-*%^/\\&|~<>_!";
+static const char ops[] = "+-*%^/\\&|~<>_!";
 
 static int runC (lua_State *L, lua_State *L1, const char *pc) {
   char buff[300];
@@ -1102,9 +1102,12 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       luaL_checkstack(L1, sz, msg);
     }
     else if EQ("compare") {
+      const char *opt = getstring;  /* EQ, LT, or LE */
+      int op = (opt[0] == 'E') ? LUA_OPEQ
+                               : (opt[1] == 'T') ? LUA_OPLT : LUA_OPLE;
       int a = getindex;
       int b = getindex;
-      lua_pushboolean(L1, lua_compare(L1, a, b, getnum));
+      lua_pushboolean(L1, lua_compare(L1, a, b, op));
     }
     else if EQ("concat") {
       lua_concat(L1, getnum);
