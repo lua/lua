@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.40 2014/10/01 11:54:56 roberto Exp roberto $
+** $Id: ltests.h,v 2.41 2014/11/24 14:56:56 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -46,7 +46,7 @@ typedef struct Memcontrol {
   unsigned long objcount[LUA_NUMTAGS];
 } Memcontrol;
 
-extern Memcontrol l_memcontrol;
+LUA_API Memcontrol l_memcontrol;
 
 
 /*
@@ -81,9 +81,10 @@ struct L_EXTRA { int lock; int *plock; };
 
 
 
-int luaB_opentests (lua_State *L);
+LUA_API int luaB_opentests (lua_State *L);
 
-void *debug_realloc (void *ud, void *block, size_t osize, size_t nsize);
+LUA_API void *debug_realloc (void *ud, void *block,
+                             size_t osize, size_t nsize);
 
 #if defined(lua_c)
 #define luaL_newstate()		lua_newstate(debug_realloc, &l_memcontrol)
