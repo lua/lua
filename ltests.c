@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.197 2014/11/14 18:15:17 roberto Exp roberto $
+** $Id: ltests.c,v 2.198 2014/11/25 14:51:33 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -540,7 +540,7 @@ static int listk (lua_State *L) {
 
 static int listlocals (lua_State *L) {
   Proto *p;
-  int pc = (int)luaL_checkinteger(L, 2) - 1;
+  int pc = cast_int(luaL_checkinteger(L, 2)) - 1;
   int i = 0;
   const char *name;
   luaL_argcheck(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
@@ -682,7 +682,7 @@ static int stacklevel (lua_State *L) {
 
 static int table_query (lua_State *L) {
   const Table *t;
-  int i = (int)luaL_optinteger(L, 2, -1);
+  int i = cast_int(luaL_optinteger(L, 2, -1));
   luaL_checktype(L, 1, LUA_TTABLE);
   t = hvalue(obj_at(L, 1));
   if (i == -1) {
@@ -715,7 +715,7 @@ static int table_query (lua_State *L) {
 
 static int string_query (lua_State *L) {
   stringtable *tb = &G(L)->strt;
-  int s = (int)luaL_optinteger(L, 1, 0) - 1;
+  int s = cast_int(luaL_optinteger(L, 1, 0)) - 1;
   if (s == -1) {
     lua_pushinteger(L ,tb->size);
     lua_pushinteger(L ,tb->nuse);
@@ -753,14 +753,14 @@ static int getref (lua_State *L) {
 
 static int unref (lua_State *L) {
   int level = lua_gettop(L);
-  luaL_unref(L, LUA_REGISTRYINDEX, (int)luaL_checkinteger(L, 1));
+  luaL_unref(L, LUA_REGISTRYINDEX, cast_int(luaL_checkinteger(L, 1)));
   lua_assert(lua_gettop(L) == level);
   return 0;
 }
 
 
 static int upvalue (lua_State *L) {
-  int n = (int)luaL_checkinteger(L, 2);
+  int n = cast_int(luaL_checkinteger(L, 2));
   luaL_checktype(L, 1, LUA_TFUNCTION);
   if (lua_isnone(L, 3)) {
     const char *name = lua_getupvalue(L, 1, n);
@@ -989,7 +989,7 @@ static int getnum_aux (lua_State *L, lua_State *L1, const char **pc) {
   int sig = 1;
   skip(pc);
   if (**pc == '.') {
-    res = lua_tointeger(L1, -1);
+    res = cast_int(lua_tointeger(L1, -1));
     lua_pop(L1, 1);
     (*pc)++;
     return res;
@@ -1343,7 +1343,7 @@ static struct X { int x; } x;
     else if EQ("tostring") {
       const char *s = lua_tostring(L1, getindex);
       const char *s1 = lua_pushstring(L1, s);
-      lua_assert((s == NULL && s1 == NULL) || (strcmp)(s, s1) == 0);
+      lua_assert((s == NULL && s1 == NULL) || strcmp(s, s1) == 0);
     }
     else if EQ("type") {
       lua_pushstring(L1, luaL_typename(L1, getnum));
@@ -1465,7 +1465,7 @@ static int sethook (lua_State *L) {
   else {
     const char *scpt = luaL_checkstring(L, 1);
     const char *smask = luaL_checkstring(L, 2);
-    int count = (int)luaL_optinteger(L, 3, 0);
+    int count = cast_int(luaL_optinteger(L, 3, 0));
     int mask = 0;
     if (strchr(smask, 'c')) mask |= LUA_MASKCALL;
     if (strchr(smask, 'r')) mask |= LUA_MASKRET;
