@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.321 2014/11/12 13:30:15 roberto Exp roberto $
+** $Id: lua.h,v 1.322 2014/11/28 19:13:39 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -382,7 +382,7 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 #if defined(LUA_COMPAT_APIINTCASTS)
 
 #define lua_pushunsigned(L,n)	lua_pushinteger(L, (lua_Integer)(n))
-#define lua_tounsignedx(L,i,is)	((lua_Integer)lua_tointegerx(L,i,is))
+#define lua_tounsignedx(L,i,is)	((lua_Unsigned)lua_tointegerx(L,i,is))
 #define lua_tounsigned(L,i)	lua_tounsignedx(L,(i),NULL)
 
 #endif
