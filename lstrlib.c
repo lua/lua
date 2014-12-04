@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.216 2014/11/08 18:12:53 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.217 2014/11/11 19:40:20 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -1084,7 +1084,11 @@ static KOption getoption (Header *h, const char **fmt, int *size) {
     case 'i': *size = getnumlimit(h, fmt, sizeof(int)); return Kint;
     case 'I': *size = getnumlimit(h, fmt, sizeof(int)); return Kuint;
     case 's': *size = getnumlimit(h, fmt, sizeof(size_t)); return Kstring;
-    case 'c': *size = getnum(fmt, 1); return Kchar;
+    case 'c':
+      *size = getnum(fmt, -1);
+      if (*size == -1)
+        luaL_error(h->L, "missing size for format option 'c'");
+      return Kchar;
     case 'z': return Kzstr;
     case 'x': *size = 1; return Kpadding;
     case 'X': return Kpaddalign;
