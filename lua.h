@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.322 2014/11/28 19:13:39 roberto Exp roberto $
+** $Id: lua.h,v 1.323 2014/11/29 17:24:05 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -28,7 +28,7 @@
 
 
 /* mark for precompiled code ('<esc>Lua') */
-#define LUA_SIGNATURE	"\033Lua"
+#define LUA_SIGNATURE	"\x1bLua"
 
 /* option for multiple returns in 'lua_pcall' and 'lua_call' */
 #define LUA_MULTRET	(-1)
