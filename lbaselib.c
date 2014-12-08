@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.306 2014/11/02 19:19:04 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.307 2014/11/10 14:25:52 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -388,9 +388,10 @@ static int luaB_assert (lua_State *L) {
   if (lua_toboolean(L, 1))  /* condition is true? */
     return lua_gettop(L);  /* return all arguments */
   else {  /* error */
-    if (lua_isnone(L, 2))  /* no error message? */
-      lua_pushliteral(L, "assertion failed!");  /* use standard message */
-    lua_remove(L, 1);  /* remove the condition (if there is one...) */
+    luaL_checkany(L, 1);  /* there must be a condition */
+    lua_remove(L, 1);  /* remove it */
+    lua_pushliteral(L, "assertion failed!");  /* default message */
+    lua_settop(L, 1);  /* leave only message (default if no other one) */
     return luaB_error(L);  /* call 'error' */
   }
 }
