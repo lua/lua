@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.145 2014/11/02 19:19:04 roberto Exp roberto $
+** $Id: ldblib.c,v 1.146 2014/11/10 14:27:16 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -345,10 +345,10 @@ static int db_sethook (lua_State *L) {
     lua_pushvalue(L, -1);
     lua_setmetatable(L, -2);  /* setmetatable(hooktable) = hooktable */
   }
-  lua_pushthread(L1); lua_xmove(L1, L, 1);  /* key */
-  lua_pushvalue(L, arg+1);  /* value */
+  lua_pushthread(L1); lua_xmove(L1, L, 1);  /* key (thread) */
+  lua_pushvalue(L, arg + 1);  /* value (hook function) */
   lua_rawset(L, -3);  /* hooktable[L1] = new Lua hook */
-  lua_sethook(L1, func, mask, count);  /* set hooks */
+  lua_sethook(L1, func, mask, count);
   return 0;
 }
 
@@ -359,9 +359,11 @@ static int db_gethook (lua_State *L) {
   char buff[5];
   int mask = lua_gethookmask(L1);
   lua_Hook hook = lua_gethook(L1);
-  if (hook != NULL && hook != hookf)  /* external hook? */
+  if (hook == NULL)  /* no hook? */
+    lua_pushnil(L);
+  else if (hook != hookf)  /* external hook? */
     lua_pushliteral(L, "external hook");
-  else {
+  else {  /* hook table must exist */
     lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY);
     lua_pushthread(L1); lua_xmove(L1, L, 1);
     lua_rawget(L, -2);   /* 1st result = hooktable[L1] */
