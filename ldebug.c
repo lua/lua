@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.106 2014/11/10 18:41:19 roberto Exp roberto $
+** $Id: ldebug.c,v 2.107 2014/11/11 17:08:19 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -438,10 +438,14 @@ static const char *getobjname (Proto *p, int lastpc, int reg,
 
 
 static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
-  TMS tm;
+  TMS tm = (TMS)0;  /* to avoid warnings */
   Proto *p = ci_func(ci)->p;  /* calling function */
   int pc = currentpc(ci);  /* calling instruction index */
   Instruction i = p->code[pc];  /* calling instruction */
+  if (ci->callstatus & CIST_HOOKED) {  /* was it called inside a hook? */
+    *name = "?";
+    return "hook";
+  }
   switch (GET_OPCODE(i)) {
     case OP_CALL:
     case OP_TAILCALL:  /* get function name */
@@ -471,8 +475,7 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
     case OP_EQ: tm = TM_EQ; break;
     case OP_LT: tm = TM_LT; break;
     case OP_LE: tm = TM_LE; break;
-    default:
-      return NULL;  /* else no useful name can be found */
+    default: lua_assert(0);  /* other instructions cannot call a function */
   }
   *name = getstr(G(L)->tmname[tm]);
   return "metamethod";
