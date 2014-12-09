@@ -1,5 +1,5 @@
 /*
-** $Id: linit.c,v 1.35 2014/11/02 19:19:04 roberto Exp roberto $
+** $Id: linit.c,v 1.36 2014/12/06 20:42:58 roberto Exp roberto $
 ** Initialization of libraries for lua.c and other clients
 ** See Copyright Notice in lua.h
 */
@@ -16,6 +16,15 @@
 ** libraries, call luaL_openlibs in your program. If you need a
 ** different set of libraries, copy this file to your project and edit
 ** it to suit your needs.
+**
+** You can also *preload* libraries, so that a later 'require' can
+** open the library, which is already linked to the application.
+** For that, do the following code:
+**
+**  luaL_getsubtable(L, LUA_REGISTRYINDEX, "_PRELOAD");
+**  lua_pushcfunction(L, luaopen_modname);
+**  lua_setfield(L, -2, modname);
+**  lua_pop(L, 1);  // remove _PRELOAD table
 */
 
 #include "lua.h"
@@ -38,9 +47,7 @@ static const luaL_Reg loadedlibs[] = {
   {LUA_STRLIBNAME, luaopen_string},
   {LUA_MATHLIBNAME, luaopen_math},
   {LUA_UTF8LIBNAME, luaopen_utf8},
-#if !defined(LUA_NODEBUGLIB)
   {LUA_DBLIBNAME, luaopen_debug},
-#endif
 #if defined(LUA_COMPAT_BITLIB)
   {LUA_BITLIBNAME, luaopen_bit32},
 #endif
@@ -48,30 +55,12 @@ static const luaL_Reg loadedlibs[] = {
 };
 
 
-/*
-** these libs are preloaded and must be required before used
-*/
-static const luaL_Reg preloadedlibs[] = {
-#if defined(LUA_NODEBUGLIB)
-  {LUA_DBLIBNAME, luaopen_debug},
-#endif
-  {NULL, NULL}
-};
-
-
 LUALIB_API void luaL_openlibs (lua_State *L) {
   const luaL_Reg *lib;
-  /* call open functions from 'loadedlibs' and set results to global table */
+  /* "require" functions from 'loadedlibs' and set results to global table */
   for (lib = loadedlibs; lib->func; lib++) {
     luaL_requiref(L, lib->name, lib->func, 1);
     lua_pop(L, 1);  /* remove lib */
   }
-  /* add open functions from 'preloadedlibs' into 'package.preload' table */
-  luaL_getsubtable(L, LUA_REGISTRYINDEX, "_PRELOAD");
-  for (lib = preloadedlibs; lib->func; lib++) {
-    lua_pushcfunction(L, lib->func);
-    lua_setfield(L, -2, lib->name);
-  }
-  lua_pop(L, 1);  /* remove _PRELOAD table */
 }
 
