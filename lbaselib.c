@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.307 2014/11/10 14:25:52 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.308 2014/12/08 15:26:55 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -274,6 +274,7 @@ static int luaB_ipairs (lua_State *L) {
 #if defined(LUA_COMPAT_IPAIRS)
   return pairsmeta(L, "__ipairs", 1, iter);
 #else
+  luaL_checkany(L, 1);
   lua_pushcfunction(L, iter);  /* iteration function */
   lua_pushvalue(L, 1);  /* state */
   lua_pushinteger(L, 0);  /* initial value */
