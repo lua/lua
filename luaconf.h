@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.229 2014/11/21 12:15:00 roberto Exp roberto $
+** $Id: luaconf.h,v 1.230 2014/11/25 18:21:57 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -72,6 +72,16 @@
 #endif
 
 
+/*
+@@ LUA_C89_NUMBERS ensures that Lua uses the largest types available for
+** C89 ('long' and 'double'); Windows has '__int64', so it does not need
+** to use this case.
+*/
+#if defined(LUA_USE_C89) && !defined(LUA_USE_WINDOWS)
+#define LUA_C89_NUMBERS
+#endif
+
+
 
 /*
 @@ LUAI_BITSINT defines the (minimum) number of bits in an 'int'.
@@ -90,17 +100,16 @@
 ** Lua integers.
 @@ LUA_REAL_FLOAT / LUA_REAL_DOUBLE / LUA_REAL_LONGDOUBLE defines
 ** the type for Lua floats.
-** Lua should work fine with any mix of these options (if supported by
-** your C compiler). The usual configurations are 64-bit integers and
-** 'double' (the default) and 32-bit integers and 'float' (Small Lua,
-** for restricted platforms).  C compilers not compliant with C99 may
-** not have support for 'long long', so the default in that case is
-** 'long'/'double'.
+** Lua should work fine with any mix of these options (if supported
+** by your C compiler). The usual configurations are 64-bit integers
+** and 'double' (the default), 32-bit integers and 'float' (Small Lua,
+** for restricted platforms), and 'long'/'double' (for C compilers not
+** compliant with C99, which may not have support for 'long long').
 */
 
-#if defined(LUA_32BITS)						/* { */
+#if defined(LUA_32BITS)		/* { */
 /*
-** Small Lua
+** Small Lua (32-bit integers and 'float')
 */
 #if LUAI_BITSINT >= 32  /* use 'int' if big enough */
 #define LUA_INT_INT
@@ -109,15 +118,14 @@
 #endif
 #define LUA_REAL_FLOAT
 
-#elif defined(LUA_USE_C89) && !defined(LUA_USE_WINDOWS)		/* }{ */
+#elif defined(LUA_C89_NUMBERS)	/* }{ */
 /*
-** use largest types available for C89 ('long' and 'double');
-** Windows has '__int64', so does not need to use this case
+** largest types available for C89 ('long' and 'double')
 */
 #define LUA_INT_LONG
 #define LUA_REAL_DOUBLE
 
-#else								/* }{ */
+#else				/* }{ */
 /*
 ** default configuration for 64-bit Lua ('long long' and 'double');
 ** Windows will use '__int64'
@@ -557,7 +565,7 @@
 
 #elif defined(LUA_INT_LONGLONG)	/* }{ long long */
 
-#if defined(LUA_USE_WINDOWS)
+#if defined(LUA_USE_WINDOWS)	/* { */
 
 #define LUA_INTEGER		__int64
 #define LUA_INTEGER_FRMLEN	"I64"
@@ -565,11 +573,11 @@
 #define LUA_MAXINTEGER		_I64_MAX
 #define LUA_MININTEGER		_I64_MIN
 
-#else
+#else				/* }{ */
 
 #if !defined(LLONG_MAX)
 #error "Compiler does not support 'long long'. Use option '-DLUA_32BITS' \
-  or '-DLUA_USE_C89' (see file 'luaconf.h' for details)"
+  or '-DLUA_C89_NUMBERS' (see file 'luaconf.h' for details)"
 #endif
 
 #define LUA_INTEGER		long long
@@ -578,27 +586,7 @@
 #define LUA_MAXINTEGER		LLONG_MAX
 #define LUA_MININTEGER		LLONG_MIN
 
-#endif
-
-#elif defined(LUA_INT_SHORT)	/* }{ short int */
-/*
-** this option is for internal tests only; it is not particularly useful
-** and it does not pass the test suit.
-*/
-
-#define LUA_INTEGER		short int
-#define LUA_INTEGER_FRMLEN	""
-
-#define LUA_MAXINTEGER		SHRT_MAX
-#define LUA_MININTEGER		SHRT_MIN
-
-#undef  LUAI_UACINT
-#define LUAI_UACINT		int
-
-#undef  LUAI_BITSINT
-#define LUAI_BITSINT		16
-
-#define l_castS2U(x)		((LUA_UNSIGNED)(unsigned short)(x))
+#endif				/* } */
 
 #else				/* }{ */
 
