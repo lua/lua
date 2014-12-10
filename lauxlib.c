@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.275 2014/11/21 12:17:58 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.276 2014/12/08 15:26:09 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -83,20 +83,18 @@ static int pushglobalfuncname (lua_State *L, lua_Debug *ar) {
 
 
 static void pushfuncname (lua_State *L, lua_Debug *ar) {
-  if (*ar->namewhat != '\0')  /* is there a name? */
-    lua_pushfstring(L, "%s '%s'", ar->namewhat, ar->name);
+  if (pushglobalfuncname(L, ar)) {  /* try first a global name */
+    lua_pushfstring(L, "function '%s'", lua_tostring(L, -1));
+    lua_remove(L, -2);  /* remove name */
+  }
+  else if (*ar->namewhat != '\0')  /* is there a name from code? */
+    lua_pushfstring(L, "%s '%s'", ar->namewhat, ar->name);  /* use it */
   else if (*ar->what == 'm')  /* main? */
       lua_pushliteral(L, "main chunk");
-  else if (*ar->what == 'C') {
-    if (pushglobalfuncname(L, ar)) {
-      lua_pushfstring(L, "function '%s'", lua_tostring(L, -1));
-      lua_remove(L, -2);  /* remove name */
-    }
-    else
-      lua_pushliteral(L, "?");
-  }
-  else
+  else if (*ar->what != 'C')  /* for Lua functions, use <file:line> */
     lua_pushfstring(L, "function <%s:%d>", ar->short_src, ar->linedefined);
+  else  /* nothing left... */
+    lua_pushliteral(L, "?");
 }
 
 
