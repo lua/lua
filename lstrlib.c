@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.217 2014/11/11 19:40:20 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.218 2014/12/04 16:25:40 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -1258,6 +1258,28 @@ static int str_pack (lua_State *L) {
 }
 
 
+static int str_packsize (lua_State *L) {
+  Header h;
+  const char *fmt = luaL_checkstring(L, 1);  /* format string */
+  lua_Integer totalsize = 0;  /* accumulate total size of result */
+  initheader(L, &h);
+  while (*fmt != '\0') {
+    int size, ntoalign;
+    KOption opt = getdetails(&h, totalsize, &fmt, &size, &ntoalign);
+    totalsize += ntoalign + size;
+    switch (opt) {
+      case Kstring:  /* strings with length count */
+      case Kzstr:    /* zero-terminated string */
+        luaL_argerror(L, 1, "variable-length format");
+        break;
+      default:  break;
+    }
+  }
+  lua_pushinteger(L, totalsize);
+  return 1;
+}
+
+
 /*
 ** Unpack an integer with 'size' bytes and 'islittle' endianness.
 ** If size is smaller than the size of a Lua integer and integer
@@ -1374,6 +1396,7 @@ static const luaL_Reg strlib[] = {
   {"sub", str_sub},
   {"upper", str_upper},
   {"pack", str_pack},
+  {"packsize", str_packsize},
   {"unpack", str_unpack},
   {NULL, NULL}
 };
