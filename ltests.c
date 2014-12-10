@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.198 2014/11/25 14:51:33 roberto Exp roberto $
+** $Id: ltests.c,v 2.199 2014/11/29 17:38:33 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -963,10 +963,10 @@ static int checkpanic (lua_State *L) {
 
 
 /*
-** {======================================================
+** {====================================================================
 ** function to test the API with C. It interprets a kind of assembler
 ** language with calls to the API, so the test can be driven by Lua code
-** =======================================================
+** =====================================================================
 */
 
 
@@ -1207,7 +1207,7 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("pcall") {
       int narg = getnum;
       int nres = getnum;
-      status = lua_pcall(L1, narg, nres, 0);
+      status = lua_pcall(L1, narg, nres, getnum);
     }
     else if EQ("pcallk") {
       int narg = getnum;
