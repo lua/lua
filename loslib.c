@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.51 2014/11/02 19:19:04 roberto Exp roberto $
+** $Id: loslib.c,v 1.52 2014/11/02 19:33:33 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -27,9 +27,9 @@
 ** list of valid conversion specifiers for the 'strftime' function
 */
 
-#if !defined(LUA_USE_POSIX)
+#if defined(LUA_USE_C89)
 #define LUA_STRFTIMEOPTIONS	{ "aAbBcdHIjmMpSUwWxXyYz%", "" }
-#else
+#else  /* C99 specification */
 #define LUA_STRFTIMEOPTIONS \
 	{ "aAbBcCdDeFgGhHIjmMnprRStTuUVwWxXyYzZ%", "", \
 	  "E", "cCxXyY",  \
