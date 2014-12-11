@@ -1,18 +1,13 @@
 /*
-** $Id: liolib.c,v 2.136 2014/10/22 16:55:57 roberto Exp $
+** $Id: liolib.c,v 2.141 2014/11/21 12:17:33 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
 
+#define liolib_c
+#define LUA_LIB
 
-/*
-** This definition must come before the inclusion of 'stdio.h'; it
-** should not affect non-POSIX systems
-*/
-#if !defined(_FILE_OFFSET_BITS)
-#define	_LARGEFILE_SOURCE	1
-#define _FILE_OFFSET_BITS	64
-#endif
+#include "lprefix.h"
 
 
 #include <ctype.h>
@@ -21,9 +16,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define liolib_c
-#define LUA_LIB
 
 #include "lua.h"
 
@@ -60,14 +52,14 @@
 #define l_popen(L,c,m)		(fflush(NULL), popen(c,m))
 #define l_pclose(L,file)	(pclose(file))
 
-#elif defined(LUA_WIN)		/* }{ */
+#elif defined(LUA_USE_WINDOWS)	/* }{ */
 
 #define l_popen(L,c,m)		(_popen(c,m))
 #define l_pclose(L,file)	(_pclose(file))
 
 #else				/* }{ */
 
-/* ANSI definitions */
+/* ISO C definitions */
 #define l_popen(L,c,m)  \
 	  ((void)((void)c, m), \
 	  luaL_error(L, "'popen' not supported"), \
@@ -112,7 +104,7 @@
 #define l_ftell(f)		ftello(f)
 #define l_seeknum		off_t
 
-#elif defined(LUA_WIN) && !defined(_CRTIMP_TYPEINFO) \
+#elif defined(LUA_USE_WINDOWS) && !defined(_CRTIMP_TYPEINFO) \
    && defined(_MSC_VER) && (_MSC_VER >= 1400)	/* }{ */
 
 /* Windows (but not DDK) and Visual C++ 2005 or higher */
@@ -122,7 +114,7 @@
 
 #else				/* }{ */
 
-/* ANSI definitions */
+/* ISO C definitions */
 #define l_fseek(f,o,w)		fseek(f,o,w)
 #define l_ftell(f)		ftell(f)
 #define l_seeknum		long
@@ -182,7 +174,7 @@ static FILE *tofile (lua_State *L) {
 
 
 /*
-** When creating file handles, always creates a `closed' file handle
+** When creating file handles, always creates a 'closed' file handle
 ** before opening the actual file; so, if there is a memory error, the
 ** file is not left opened.
 */
@@ -474,12 +466,21 @@ static int read_line (lua_State *L, FILE *f, int chop) {
   luaL_Buffer b;
   int c;
   luaL_buffinit(L, &b);
-  l_lockfile(f);
-  while ((c = l_getc(f)) != EOF && c != '\n')
-    luaL_addchar(&b, c);
-  l_unlockfile(f);
-  if (!chop && c == '\n') luaL_addchar(&b, c);
+  for (;;) {
+    char *buff = luaL_prepbuffer(&b);  /* pre-allocate buffer */
+    int i = 0;
+    l_lockfile(f);  /* no memory errors can happen inside the lock */
+    while (i < LUAL_BUFFERSIZE && (c = l_getc(f)) != EOF && c != '\n')
+      buff[i++] = c;
+    l_unlockfile(f);
+    luaL_addsize(&b, i);
+    if (i < LUAL_BUFFERSIZE)
+      break;
+  }
+  if (!chop && c == '\n')  /* want a newline and have one? */
+    luaL_addchar(&b, c);  /* add ending newline to result */
   luaL_pushresult(&b);  /* close buffer */
+  /* return ok if read something (either a newline or something else) */
   return (c == '\n' || lua_rawlen(L, -1) > 0);
 }
 
@@ -524,7 +525,7 @@ static int g_read (lua_State *L, FILE *f, int first) {
     success = 1;
     for (n = first; nargs-- && success; n++) {
       if (lua_type(L, n) == LUA_TNUMBER) {
-        size_t l = (size_t)lua_tointeger(L, n);
+        size_t l = (size_t)luaL_checkinteger(L, n);
         success = (l == 0) ? test_eof(L, f) : read_chars(L, f, l);
       }
       else {

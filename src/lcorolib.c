@@ -1,15 +1,16 @@
 /*
-** $Id: lcorolib.c,v 1.7 2014/09/01 18:00:04 roberto Exp $
+** $Id: lcorolib.c,v 1.9 2014/11/02 19:19:04 roberto Exp $
 ** Coroutine Library
 ** See Copyright Notice in lua.h
 */
 
-
-#include <stdlib.h>
-
-
 #define lcorolib_c
 #define LUA_LIB
+
+#include "lprefix.h"
+
+
+#include <stdlib.h>
 
 #include "lua.h"
 
@@ -65,7 +66,7 @@ static int luaB_coresume (lua_State *L) {
   else {
     lua_pushboolean(L, 1);
     lua_insert(L, -(r + 1));
-    return r + 1;  /* return true + `resume' returns */
+    return r + 1;  /* return true + 'resume' returns */
   }
 }
 

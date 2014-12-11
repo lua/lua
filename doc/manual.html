@@ -16,11 +16,6 @@
 Lua 5.3 Reference Manual
 </h1>
 
-<P>
-<IMG SRC="alert.png" ALIGN="absbottom">
-<EM>A few details may change in the final version.</EM>
-<P>
-
 by Roberto Ierusalimschy, Luiz Henrique de Figueiredo, Waldemar Celes
 <p>
 <small>
@@ -38,7 +33,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.136 2014/10/22 16:16:43 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.140 2014/12/10 11:58:42 roberto Exp $ -->
 
 
 
@@ -131,7 +126,7 @@ integer numbers and real (floating-point) numbers.
 Lua is 8-bit clean:
 strings can contain any 8-bit value,
 including embedded zeros ('<code>\0</code>').
-Lua is also enconding-agnostic;
+Lua is also encoding-agnostic;
 it makes no assumptions about the contents of a string.
 
 
@@ -150,6 +145,7 @@ uses 32-bit integers and/or single-precision (32-bit) floats.
 The option with 32 bits for both integers and floats 
 (called <em>Small Lua</em>) is particularly attractive
 for small machines and embedded systems.
+(See <code>LUA_INT</code> in file <code>luaconf.h</code>.)
 
 
 <p>
@@ -504,18 +500,18 @@ Behavior similar to the "add" operation.
 </li>
 
 <li><b>"idiv": </b>
-the <code>//</code> (integer division) operation.
+the <code>//</code> (floor division) operation.
 
-Behavior similar to the "add" operation,
-except that Lua will try a metamethod
-if any operator is neither an integer
-nor a value coercible to an integer (see <a href="#3.4.3">&sect;3.4.3</a>).
+Behavior similar to the "add" operation.
 </li>
 
 <li><b>"band": </b>
 the <code>&amp;</code> (bitwise and) operation.
 
-Behavior similar to the "idiv" operation.
+Behavior similar to the "add" operation,
+except that Lua will try a metamethod
+if any operator is neither an integer
+nor a value coercible to an integer (see <a href="#3.4.3">&sect;3.4.3</a>).
 </li>
 
 <li><b>"bor": </b>
@@ -634,7 +630,7 @@ The metamethod is looked up in <code>table</code>.
 
 
 <p>
-Again like with indexing,
+Like with indexing,
 the metamethod for this event can be either a function or a table.
 If it is a function,
 it is called with <code>table</code>, <code>key</code>, and <code>value</code> as arguments.
@@ -1392,7 +1388,7 @@ even if it does not use that variable.
 <p>
 A chunk can be stored in a file or in a string inside the host program.
 To execute a chunk,
-Lua first \emph{loads} it,
+Lua first <em>loads</em> it,
 precompiling the chunk's code into instructions for a virtual machine,
 and then Lua executes the compiled code
 with an interpreter for the virtual machine.
@@ -1846,20 +1842,20 @@ or <b>nil</b> if <code>f</code> does not return any values.)
 
 <h3>3.4.1 &ndash; <a name="3.4.1">Arithmetic Operators</a></h3><p>
 Lua supports the following arithmetic operators:
-<table border="1">
-<tr><td><code>+</code></td><td>addition</td></tr>
-<tr><td><code>-</code></td><td>subtraction</td></tr>
-<tr><td><code>*</code></td><td>multiplication</td></tr>
-<tr><td><code>/</code></td><td>float division</td></tr>
-<tr><td><code>//</code></td><td>integer division</td></tr>
-<tr><td><code>%</code></td><td>modulo</td></tr>
-<tr><td><code>^</code></td><td>exponentiation</td></tr>
-<tr><td><code>-</code></td><td>unary minus</td></tr>
-</table>
 
+<ul>
+<li><b><code>+</code>: </b>addition</li>
+<li><b><code>-</code>: </b>subtraction</li>
+<li><b><code>*</code>: </b>multiplication</li>
+<li><b><code>/</code>: </b>float division</li>
+<li><b><code>//</code>: </b>floor division</li>
+<li><b><code>%</code>: </b>modulo</li>
+<li><b><code>^</code>: </b>exponentiation</li>
+<li><b><code>-</code>: </b>unary minus</li>
+</ul>
 
 <p>
-With the exception of divisions and exponentiation,
+With the exception of float division and exponentiation,
 the arithmetic operators work as follows:
 If both operands are integers,
 the operation is performed over integers and the result is an integer.
@@ -1877,16 +1873,14 @@ and the result is a float.
 Float division (<code>/</code>) and exponentiation
 always convert their operands to floats
 and the result is always a float.
-Exponentiation uses the ANSI&nbsp;C function <code>pow</code>,
+Exponentiation uses the ISO&nbsp;C function <code>pow</code>,
 so that it works for non-integer exponents too.
 
 
 <p>
-Integer division (<code>//</code>) converts its operands to integers
-(see <a href="#3.4.3">&sect;3.4.3</a>)
-and its result is always an integer.
-The result is always rounded towards minus infinite
-(floor division).
+Floor division (<code>//</code>) is a division 
+that rounds the quotient towards minus infinite,
+that is, the floor of the division of its operands.
 
 
 <p>
@@ -1906,15 +1900,15 @@ that is equal modulo <em>2<sup>64</sup></em> to the mathematical result.)
 
 <h3>3.4.2 &ndash; <a name="3.4.2">Bitwise Operators</a></h3><p>
 Lua supports the following bitwise operators:
-<table border="1">
-<tr><td><code>&amp;</code></td><td>bitwise and</td></tr>
-<tr><td><code>|</code></td><td>bitwise or</td></tr>
-<tr><td><code>~</code></td><td>bitwise exclusive or</td></tr>
-<tr><td><code>&gt;&gt;</code></td><td>right shift</td></tr>
-<tr><td><code>&lt;&lt;</code></td><td>left shift</td></tr>
-<tr><td><code>~</code></td><td>unary bitwise not</td></tr>
-</table>
 
+<ul>
+<li><b><code>&amp;</code>: </b>bitwise and</li>
+<li><b><code>|</code>: </b>bitwise or</li>
+<li><b><code>~</code>: </b>bitwise exclusive or</li>
+<li><b><code>&gt;&gt;</code>: </b>right shift</li>
+<li><b><code>&lt;&lt;</code>: </b>left shift</li>
+<li><b><code>~</code>: </b>unary bitwise not</li>
+</ul>
 
 <p>
 All bitwise operations convert its operands to integers
@@ -1937,12 +1931,12 @@ result in zero (as all bits are shifted out).
 <h3>3.4.3 &ndash; <a name="3.4.3">Coercions and Conversions</a></h3><p>
 Lua provides some automatic conversions between some
 types and representations at run time.
-Most arithmetic operations applied to mixed numbers
+Bitwise operators always convert float operands to integers.
+Float division and exponentiation
+always convert integer operands to floats.
+All other arithmetic operations applied to mixed numbers
 (integers and floats) convert the integer operand to a float;
 this is called the <em>usual rule</em>.
-Float division always converts integer operands to floats;
-integer division and bitwise operators
-always convert float operands to integers.
 The C API also converts both integers to floats and
 floats to integers, as needed.
 Moreover, string concatenation accepts numbers as arguments,
@@ -1995,14 +1989,15 @@ use the <code>format</code> function from the string library
 
 <h3>3.4.4 &ndash; <a name="3.4.4">Relational Operators</a></h3><p>
 Lua supports the following relational operators:
-<table border="1">
-<tr><td><code>==</code></td><td>equality</td></tr>
-<tr><td><code>~=</code></td><td>inequality</td></tr>
-<tr><td><code>&lt;</code></td><td>less than</td></tr>
-<tr><td><code>&gt;</code></td><td>greater than</td></tr>
-<tr><td><code>&lt;=</code></td><td>less or equal</td></tr>
-<tr><td><code>&gt;=</code></td><td>greater or equal</td></tr>
-</table>
+
+<ul>
+<li><b><code>==</code>: </b>equality</li>
+<li><b><code>~=</code>: </b>inequality</li>
+<li><b><code>&lt;</code>: </b>less than</li>
+<li><b><code>&gt;</code>: </b>greater than</li>
+<li><b><code>&lt;=</code>: </b>less or equal</li>
+<li><b><code>&gt;=</code>: </b>greater or equal</li>
+</ul><p>
 These operators always result in <b>false</b> or <b>true</b>.
 
 
@@ -2895,7 +2890,15 @@ replacing <a href="#lua_pcall"><code>lua_pcall</code></a> by <a href="#lua_pcall
        ...     /* code 1 */
        return k(L, lua_pcallk(L, n, m, h, ctx2, k), ctx1);
      }
-</pre>
+</pre><p>
+Note the external, explicit call to the continuation:
+Lua will call the continuation only if needed, that is,
+in case of errors or resuming after an yield.
+If the called function returns normally without ever yielding,
+<a href="#lua_pcallk"><code>lua_pcallk</code></a> (and <a href="#lua_callk"><code>lua_callk</code></a>) will also return normally.
+(Of course, instead of calling the continuation in that case,
+you can do the equivalent work directly inside the original function.)
+
 
 <p>
 Besides the Lua state,
@@ -3085,13 +3088,13 @@ The value of <code>op</code> must be one of the following constants:
 <li><b><a name="pdf-LUA_OPSUB"><code>LUA_OPSUB</code></a>: </b> performs subtraction (<code>-</code>)</li>
 <li><b><a name="pdf-LUA_OPMUL"><code>LUA_OPMUL</code></a>: </b> performs multiplication (<code>*</code>)</li>
 <li><b><a name="pdf-LUA_OPDIV"><code>LUA_OPDIV</code></a>: </b> performs float division (<code>/</code>)</li>
-<li><b><a name="pdf-LUA_OPIDIV"><code>LUA_OPIDIV</code></a>: </b> performs integer division (<code>//</code>)</li>
+<li><b><a name="pdf-LUA_OPIDIV"><code>LUA_OPIDIV</code></a>: </b> performs floor division (<code>//</code>)</li>
 <li><b><a name="pdf-LUA_OPMOD"><code>LUA_OPMOD</code></a>: </b> performs modulo (<code>%</code>)</li>
 <li><b><a name="pdf-LUA_OPPOW"><code>LUA_OPPOW</code></a>: </b> performs exponentiation (<code>^</code>)</li>
 <li><b><a name="pdf-LUA_OPUNM"><code>LUA_OPUNM</code></a>: </b> performs mathematical negation (unary <code>-</code>)</li>
 <li><b><a name="pdf-LUA_OPBNOT"><code>LUA_OPBNOT</code></a>: </b> performs bitwise negation (<code>~</code>)</li>
 <li><b><a name="pdf-LUA_OPBAND"><code>LUA_OPBAND</code></a>: </b> performs bitwise and (<code>&amp;</code>)</li>
-<li><b><a name="pdf-LUA_OPBOR"><code>LUA_OPBOR</code></a>: </b> performs bitwise or (<code>|</code>)</li>
+<li><b><a name="pdf-LUA_OPBOR"><code>LUA_OPBOR</code></a>|   performs bitwise or (<code>: </b></code>)</li>
 <li><b><a name="pdf-LUA_OPBXOR"><code>LUA_OPBXOR</code></a>: </b> performs bitwise exclusive or (<code>~</code>)</li>
 <li><b><a name="pdf-LUA_OPSHL"><code>LUA_OPSHL</code></a>: </b> performs left shift (<code>&lt;&lt;</code>)</li>
 <li><b><a name="pdf-LUA_OPSHR"><code>LUA_OPSHR</code></a>: </b> performs right shift (<code>&gt;&gt;</code>)</li>
@@ -3881,7 +3884,7 @@ The result is pushed on the stack.
 <pre>int lua_load (lua_State *L,
               lua_Reader reader,
               void *data,
-              const char *source,
+              const char *chunkname,
               const char *mode);</pre>
 
 <p>
@@ -3920,7 +3923,7 @@ The <code>data</code> argument is an opaque value passed to the reader function.
 
 
 <p>
-The <code>source</code> argument gives a name to the chunk,
+The <code>chunkname</code> argument gives a name to the chunk,
 which is used for error messages and in debug information (see <a href="#4.9">&sect;4.9</a>).
 
 
@@ -3939,11 +3942,12 @@ unmodified when returning.
 
 
 <p>
-If the resulting function has one upvalue,
-this upvalue is set to the value of the global environment
+If the resulting function has upvalues,
+its first upvalue is set to the value of the global environment
 stored at index <code>LUA_RIDX_GLOBALS</code> in the registry (see <a href="#4.5">&sect;4.5</a>).
 When loading main chunks,
 this upvalue will be the <code>_ENV</code> variable (see <a href="#2.2">&sect;2.2</a>).
+Other upvalues are initialized with <b>nil</b>.
 
 
 
@@ -4074,8 +4078,8 @@ but that can be changed to a single float.
 
 
 
-<hr><h3><a name="lua_numtointeger"><code>lua_numtointeger</code></a></h3>
-<pre>int lua_numtointeger (lua_Number n, lua_Integer *p);</pre>
+<hr><h3><a name="lua_numbertointeger"><code>lua_numbertointeger</code></a></h3>
+<pre>int lua_numbertointeger (lua_Number n, lua_Integer *p);</pre>
 
 <p>
 Converts a Lua float to a Lua integer.
@@ -4282,7 +4286,7 @@ Note that <code>f</code> is used twice.
 <p>
 Pushes onto the stack a formatted string
 and returns a pointer to this string.
-It is similar to the ANSI&nbsp;C function <code>sprintf</code>,
+It is similar to the ISO&nbsp;C function <code>sprintf</code>,
 but has some important differences:
 
 <ul>
@@ -5344,7 +5348,7 @@ The fields of <a href="#lua_Debug"><code>lua_Debug</code></a> have the following
 <ul>
 
 <li><b><code>source</code>: </b>
-the source of the chunk that created the function.
+the name of the chunk that created the function.
 If <code>source</code> starts with a '<code>@</code>',
 it means that the function was defined in a file where
 the file name follows the '<code>@</code>'.
@@ -5542,7 +5546,7 @@ This function returns 0 on error
 
 <hr><h3><a name="lua_getlocal"><code>lua_getlocal</code></a></h3><p>
 <span class="apii">[-0, +(0|1), &ndash;]</span>
-<pre>const char *lua_getlocal (lua_State *L, lua_Debug *ar, int n);</pre>
+<pre>const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n);</pre>
 
 <p>
 Gets information about a local variable of
@@ -5735,7 +5739,7 @@ A hook is disabled by setting <code>mask</code> to zero.
 
 <hr><h3><a name="lua_setlocal"><code>lua_setlocal</code></a></h3><p>
 <span class="apii">[-(0|1), +0, &ndash;]</span>
-<pre>const char *lua_setlocal (lua_State *L, lua_Debug *ar, int n);</pre>
+<pre>const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n);</pre>
 
 <p>
 Sets the value of a local variable of a given activation record.
@@ -6354,11 +6358,13 @@ pushes nothing and returns <code>LUA_TNIL</code>.
 
 <hr><h3><a name="luaL_getmetatable"><code>luaL_getmetatable</code></a></h3><p>
 <span class="apii">[-0, +1, &ndash;]</span>
-<pre>void luaL_getmetatable (lua_State *L, const char *tname);</pre>
+<pre>int luaL_getmetatable (lua_State *L, const char *tname);</pre>
 
 <p>
 Pushes onto the stack the metatable associated with name <code>tname</code>
 in the registry (see <a href="#luaL_newmetatable"><code>luaL_newmetatable</code></a>).
+If there is no metatable associated with <code>tname</code>,
+returns false and pushes <b>nil</b>.
 
 
 
@@ -6854,8 +6860,8 @@ which is used by the standard I/O library.
 
 <p>
 A file handle is implemented as a full userdata,
-with a metatable called <code>LUA_FILEHANDLE</code>.
-<code>LUA_FILEHANDLE</code> is a macro with the actual metatable's name.
+with a metatable called <code>LUA_FILEHANDLE</code>
+(where <code>LUA_FILEHANDLE</code> is a macro with the actual metatable's name).
 The metatable is created by the I/O library
 (see <a href="#luaL_newmetatable"><code>luaL_newmetatable</code></a>).
 
@@ -7045,10 +7051,11 @@ the host program can open them individually by using
 <a name="pdf-luaopen_package"><code>luaopen_package</code></a> (for the package library),
 <a name="pdf-luaopen_coroutine"><code>luaopen_coroutine</code></a> (for the coroutine library),
 <a name="pdf-luaopen_string"><code>luaopen_string</code></a> (for the string library),
+<a name="pdf-luaopen_utf8"><code>luaopen_utf8</code></a> (for the UTF8 library),
 <a name="pdf-luaopen_table"><code>luaopen_table</code></a> (for the table library),
 <a name="pdf-luaopen_math"><code>luaopen_math</code></a> (for the mathematical library),
 <a name="pdf-luaopen_io"><code>luaopen_io</code></a> (for the I/O library),
-<a name="pdf-luaopen_os"><code>luaopen_os</code></a> (for the Operating System library),
+<a name="pdf-luaopen_os"><code>luaopen_os</code></a> (for the operating system library),
 and <a name="pdf-luaopen_debug"><code>luaopen_debug</code></a> (for the debug library).
 These functions are declared in <a name="pdf-lualib.h"><code>lualib.h</code></a>.
 
@@ -7220,7 +7227,7 @@ up to the first integer key absent from the table.
 
 
 <p>
-<hr><h3><a name="pdf-load"><code>load (ld [, source [, mode [, env]]])</code></a></h3>
+<hr><h3><a name="pdf-load"><code>load (chunk [, chunkname [, mode [, env]]])</code></a></h3>
 
 
 <p>
@@ -7228,10 +7235,10 @@ Loads a chunk.
 
 
 <p>
-If <code>ld</code> is a string, the chunk is this string.
-If <code>ld</code> is a function,
+If <code>chunk</code> is a string, the chunk is this string.
+If <code>chunk</code> is a function,
 <code>load</code> calls it repeatedly to get the chunk pieces.
-Each call to <code>ld</code> must return a string that concatenates
+Each call to <code>chunk</code> must return a string that concatenates
 with previous results.
 A return of an empty string, <b>nil</b>, or no value signals the end of the chunk.
 
@@ -7247,19 +7254,22 @@ If the resulting function has upvalues,
 the first upvalue is set to the value of <code>env</code>,
 if that parameter is given,
 or to the value of the global environment.
+Other upvalues are initialized with <b>nil</b>.
 (When you load a main chunk,
 the resulting function will always have exactly one upvalue,
 the <code>_ENV</code> variable (see <a href="#2.2">&sect;2.2</a>).
 However,
 when you load a binary chunk created from a function (see <a href="#pdf-string.dump"><code>string.dump</code></a>),
-the resulting function can have arbitrary upvalues.)
+the resulting function can have an arbitrary number of upvalues.)
+All upvalues are fresh, that is,
+they are not shared with any other function.
 
 
 <p>
-<code>source</code> is used as the source of the chunk for error messages
+<code>chunkname</code> is used as the name of the chunk for error messages
 and debug information (see <a href="#4.9">&sect;4.9</a>).
 When absent,
-it defaults to <code>ld</code>, if <code>ld</code> is a string,
+it defaults to <code>chunk</code>, if <code>chunk</code> is a string,
 or to "<code>=(load)</code>" otherwise.
 
 
@@ -8101,6 +8111,15 @@ about the function
 (local variable names, lines, etc.).
 
 
+<p>
+Functions with upvalues have only their number of upvalues saved.
+When (re)loaded,
+those upvalues receive fresh instances containing <b>nil</b>.
+(You can use the debug library to serialize
+and reload the upvalues of a function
+in a way adequate to your needs.)
+
+
 
 
 <p>
@@ -8139,7 +8158,7 @@ after the two indices.
 <p>
 Returns a formatted version of its variable number of arguments
 following the description given in its first argument (which must be a string).
-The format string follows the same rules as the ANSI&nbsp;C function <code>sprintf</code>.
+The format string follows the same rules as the ISO&nbsp;C function <code>sprintf</code>.
 The only differences are that the options/modifiers
 <code>*</code>, <code>h</code>, <code>L</code>, <code>l</code>, <code>n</code>,
 and <code>p</code> are not supported
@@ -8339,11 +8358,25 @@ according to the format string fmt (see <a href="#6.4.2">&sect;6.4.2</a>).
 
 
 <p>
+<hr><h3><a name="pdf-string.packsize"><code>string.packsize (fmt)</code></a></h3>
+
+
+<p>
+Returns the size of a string resulting from <a href="#pdf-string.pack"><code>string.pack</code></a>
+with the given format.
+The format string cannot have the variable-length options
+'<code>s</code>' or '<code>z</code>' (see <a href="#6.4.2">&sect;6.4.2</a>).
+
+
+
+
+<p>
 <hr><h3><a name="pdf-string.rep"><code>string.rep (s, n [, sep])</code></a></h3>
 Returns a string that is the concatenation of <code>n</code> copies of
 the string <code>s</code> separated by the string <code>sep</code>.
 The default value for <code>sep</code> is the empty string
 (that is, no separator).
+Returns the empty string if <code>n</code> is not positive.
 
 
 
@@ -8614,7 +8647,8 @@ string <code>"flaaap"</code>, there will be two captures: 3&nbsp;and&nbsp;5.
 <h3>6.4.2 &ndash; <a name="6.4.2">Format Strings for Pack and Unpack</a></h3>
 
 <p>
-The first argument to both <a href="#pdf-string.pack"><code>string.pack</code></a> and <a href="#pdf-string.unpack"><code>string.unpack</code></a>
+The first argument to <a href="#pdf-string.pack"><code>string.pack</code></a>,
+<a href="#pdf-string.packsize"><code>string.packsize</code></a>, and <a href="#pdf-string.unpack"><code>string.unpack</code></a>
 is a format string,
 which describes the layout of the structure being created or read.
 
@@ -8622,42 +8656,43 @@ which describes the layout of the structure being created or read.
 <p>
 A format string is a sequence of conversion options.
 The conversion options are as follows:
-<table border="1">
-<tr><td><code>&lt;</code></td><td>sets little endian</td></tr>
-<tr><td><code>&gt;</code></td><td>sets big endian</td></tr>
-<tr><td><code>![<em>n</em>]</code></td><td>sets maximum alignment to <code>n</code>
-(default is native alignment)</td></tr>
-<tr><td><code>b</code></td><td>a signed byte (<code>char</code>)</td></tr>
-<tr><td><code>B</code></td><td>an unsigned byte (<code>char</code>)</td></tr>
-<tr><td><code>h</code></td><td>a signed <code>short</code> (native size)</td></tr>
-<tr><td><code>H</code></td><td>an unsigned <code>short</code> (native size)</td></tr>
-<tr><td><code>l</code></td><td>a signed <code>long</code> (native size)</td></tr>
-<tr><td><code>L</code></td><td>an unsigned <code>long</code> (native size)</td></tr>
-<tr><td><code>j</code></td><td>a <code>lua_Integer</code></td></tr>
-<tr><td><code>J</code></td><td>a <code>lua_Unsigned</code></td></tr>
-<tr><td><code>T</code></td><td>a <code>size_t</code> (native size)</td></tr>
-<tr><td><code>i[<em>n</em>]</code></td><td>a signed <code>int</code> with <code>n</code> bytes
-(default is native size)</td></tr>
-<tr><td><code>I[<em>n</em>]</code></td><td>an unsigned <code>int</code> with <code>n</code> bytes
-(default is native size)</td></tr>
-<tr><td><code>f</code></td><td>a <code>float</code> (native size)</td></tr>
-<tr><td><code>d</code></td><td>a <code>double</code> (native size)</td></tr>
-<tr><td><code>n</code></td><td>a <code>lua_Number</code></td></tr>
-<tr><td><code>c[<em>n</em>]</code></td><td>a fixed-sized string with <code>n</code> bytes
-(default is 1)</td></tr>
-<tr><td><code>z</code></td><td>a zero-terminated string</td></tr>
-<tr><td><code>s[<em>n</em>]</code></td><td>a string preceded by its length
+
+<ul>
+<li><b><code>&lt;</code>: </b>sets little endian</li>
+<li><b><code>&gt;</code>: </b>sets big endian</li>
+<li><b><code>=</code>: </b>sets native endian</li>
+<li><b><code>![<em>n</em>]</code>: </b>sets maximum alignment to <code>n</code>
+(default is native alignment)</li>
+<li><b><code>b</code>: </b>a signed byte (<code>char</code>)</li>
+<li><b><code>B</code>: </b>an unsigned byte (<code>char</code>)</li>
+<li><b><code>h</code>: </b>a signed <code>short</code> (native size)</li>
+<li><b><code>H</code>: </b>an unsigned <code>short</code> (native size)</li>
+<li><b><code>l</code>: </b>a signed <code>long</code> (native size)</li>
+<li><b><code>L</code>: </b>an unsigned <code>long</code> (native size)</li>
+<li><b><code>j</code>: </b>a <code>lua_Integer</code></li>
+<li><b><code>J</code>: </b>a <code>lua_Unsigned</code></li>
+<li><b><code>T</code>: </b>a <code>size_t</code> (native size)</li>
+<li><b><code>i[<em>n</em>]</code>: </b>a signed <code>int</code> with <code>n</code> bytes
+(default is native size)</li>
+<li><b><code>I[<em>n</em>]</code>: </b>an unsigned <code>int</code> with <code>n</code> bytes
+(default is native size)</li>
+<li><b><code>f</code>: </b>a <code>float</code> (native size)</li>
+<li><b><code>d</code>: </b>a <code>double</code> (native size)</li>
+<li><b><code>n</code>: </b>a <code>lua_Number</code></li>
+<li><b><code>c<em>n</em></code>: </b>a fixed-sized string with <code>n</code> bytes</li>
+<li><b><code>z</code>: </b>a zero-terminated string</li>
+<li><b><code>s[<em>n</em>]</code>: </b>a string preceded by its length
 coded as an unsigned integer with <code>n</code> bytes
-(default is a <code>size_t</code>)</td></tr>
-<tr><td><code>x</code></td><td>one byte of padding</td></tr>
-<tr><td><code>X<em>op</em></code></td><td>an empty item that aligns
+(default is a <code>size_t</code>)</li>
+<li><b><code>x</code>: </b>one byte of padding</li>
+<li><b><code>X<em>op</em></code>: </b>an empty item that aligns
 according to option <code>op</code>
-(which is otherwise ignored)</td></tr>
-<tr><td>'<code> </code>'</td><td>(empty space) ignored</td></tr>
-</table>
+(which is otherwise ignored)</li>
+<li><b>'<code> </code>': </b>(empty space) ignored</li>
+</ul><p>
 (A "<code>[<em>n</em>]</code>" means an optional integral numeral.)
 Except for padding, spaces, and configurations
-(options "<code>xX &lt;&gt;!</code>"),
+(options "<code>xX &lt;=&gt;!</code>"),
 each option corresponds to an argument (in <a href="#pdf-string.pack"><code>string.pack</code></a>)
 or a result (in <a href="#pdf-string.unpack"><code>string.unpack</code></a>).
 
@@ -8671,9 +8706,10 @@ All integral options check overflows;
 
 
 <p>
-Before any configuration option,
-the default alignment is 1 (that is, no alignment)
-and the default endianness is the native endianness.
+Any format string starts as if prefixed by "<code>!1=</code>",
+that is,
+with maximum alignment of 1 (no alignment)
+and native endianness.
 
 
 <p>
@@ -8681,10 +8717,15 @@ Alignment works as follows:
 For each option,
 the format gets extra padding until the data starts
 at an offset that is a multiple of the minimum between the
-option size and the maximum alignment.
-This minimum must be a power of 2 (1, 2, 4, 8, or 16).
-Options "<code>c</code>" and "<code>z</code>" are not aligned.
-Option "<code>s</code>" is aligned according to the size of its starting length.
+option size and the maximum alignment;
+this minimum must be a power of 2.
+Options "<code>c</code>" and "<code>z</code>" are not aligned;
+option "<code>s</code>" follows the alignment of its starting integer.
+
+
+<p>
+All padding is filled with zeros by <a href="#pdf-string.pack"><code>string.pack</code></a>
+(and ignored by <a href="#pdf-string.unpack"><code>string.unpack</code></a>).
 
 
 
@@ -8780,8 +8821,8 @@ The default for <code>i</code> is 1 when <code>n</code> is non-negative
 and <code>#s + 1</code> otherwise,
 so that <code>utf8.offset(s, -n)</code> gets the offset of the
 <code>n</code>-th character from the end of the string.
-If the specified character is not in the subject
-or right after its end,
+If the specified character is neither in the subject
+nor right after its end,
 the function returns <b>nil</b>.
 
 
@@ -8812,7 +8853,7 @@ Remember that, whenever an operation needs the length of a table,
 the table must be a proper sequence
 or have a <code>__len</code> metamethod (see <a href="#3.4.7">&sect;3.4.7</a>).
 All functions ignore non-numeric keys
-in tables given as arguments.
+in the tables given as arguments.
 
 
 <p>
@@ -8951,7 +8992,7 @@ and float results for float (or mixed) arguments.
 Rounding functions
 (<a href="#pdf-math.ceil"><code>math.ceil</code></a>, <a href="#pdf-math.floor"><code>math.floor</code></a>, and <a href="#pdf-math.modf"><code>math.modf</code></a>)
 return an integer when the result fits in the range of an integer,
-otherwise they return a float.
+or a float otherwise.
 
 
 <p>
@@ -9009,7 +9050,7 @@ returns the arc tangent of <code>y</code>.
 
 
 <p>
-Returns the smaller integral value larger than or equal to <code>x</code>.
+Returns the smallest integral value larger than or equal to <code>x</code>.
 
 
 
@@ -9167,7 +9208,7 @@ in the range  <em>[0,1)</em>.
 When called with two integers <code>m</code> and <code>n</code>,
 <code>math.random</code> returns a pseudo-random integer
 with uniform distribution in the range <em>[m, n]</em>.
-(The interval size must fit in a Lua integer.)
+(The value <em>m-n</em> cannot be negative and must fit in a Lua integer.)
 The call <code>math.random(n)</code> is equivalent to <code>math.random(1,n)</code>.
 
 
@@ -9732,7 +9773,7 @@ if the information is not available.
 <p>
 If <code>format</code> is not "<code>*t</code>",
 then <code>date</code> returns the date as a string,
-formatted according to the same rules as the ANSI&nbsp;C function <code>strftime</code>.
+formatted according to the same rules as the ISO&nbsp;C function <code>strftime</code>.
 
 
 <p>
@@ -9767,7 +9808,7 @@ this value is exactly <code>t2</code><em>-</em><code>t1</code>.
 
 
 <p>
-This function is equivalent to the ANSI&nbsp;C function <code>system</code>.
+This function is equivalent to the ISO&nbsp;C function <code>system</code>.
 It passes <code>command</code> to be executed by an operating system shell.
 Its first result is <b>true</b>
 if the command terminated successfully,
@@ -9802,7 +9843,7 @@ When called without a <code>command</code>,
 
 
 <p>
-Calls the ANSI&nbsp;C function <code>exit</code> to terminate the host program.
+Calls the ISO&nbsp;C function <code>exit</code> to terminate the host program.
 If <code>code</code> is <b>true</b>,
 the returned status is <code>EXIT_SUCCESS</code>;
 if <code>code</code> is <b>false</b>,
@@ -10584,7 +10625,7 @@ changed the way it handles versioned names.
 Now, the version should come after the module name
 (as is usual in most other tools).
 For compatibility, that searcher still tries the old format
-if if cannot find an open function according to the new style.
+if it cannot find an open function according to the new style.
 (Lua&nbsp;5.2 already worked that way,
 but it did not document the change.)
 </li>
@@ -10727,10 +10768,10 @@ and LiteralString, see <a href="#3.1">&sect;3.1</a>.)
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Thu Oct 23 09:03:14 BRST 2014
+Wed Dec 10 15:49:17 BRST 2014
 </SMALL>
 <!--
-Last change: revised for Lua 5.3.0 (beta)
+Last change: revised for Lua 5.3.0 (final)
 -->
 
 </body></html>

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.126 2014/10/01 11:54:56 roberto Exp $
+** $Id: lauxlib.h,v 1.128 2014/10/29 16:11:17 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -16,7 +16,7 @@
 
 
 
-/* extra error code for `luaL_load' */
+/* extra error code for 'luaL_load' */
 #define LUA_ERRFILE     (LUA_ERRERR+1)
 
 
@@ -202,6 +202,31 @@ LUALIB_API void (luaL_openlib) (lua_State *L, const char *libname,
 #define luaL_register(L,n,l)	(luaL_openlib(L,(n),(l),0))
 
 #endif
+
+
+/*
+** {==================================================================
+** "Abstraction Layer" for basic report of messages and errors
+** ===================================================================
+*/
+
+/* print a string */
+#if !defined(lua_writestring)
+#define lua_writestring(s,l)   fwrite((s), sizeof(char), (l), stdout)
+#endif
+
+/* print a newline and flush the output */
+#if !defined(lua_writeline)
+#define lua_writeline()        (lua_writestring("\n", 1), fflush(stdout))
+#endif
+
+/* print an error message */
+#if !defined(lua_writestringerror)
+#define lua_writestringerror(s,p) \
+        (fprintf(stderr, (s), (p)), fflush(stderr))
+#endif
+
+/* }================================================================== */
 
 
 /*

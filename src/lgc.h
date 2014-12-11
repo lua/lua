@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.85 2014/07/19 15:14:46 roberto Exp $
+** $Id: lgc.h,v 2.86 2014/10/25 11:50:46 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -74,7 +74,7 @@
 #define testbit(x,b)		testbits(x, bitmask(b))
 
 
-/* Layout for bit use in `marked' field: */
+/* Layout for bit use in 'marked' field: */
 #define WHITE0BIT	0  /* object is white (type 0) */
 #define WHITE1BIT	1  /* object is white (type 1) */
 #define BLACKBIT	2  /* object is black */

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.73 2014/06/19 18:27:20 roberto Exp $
+** $Id: lparser.h,v 1.74 2014/10/25 11:50:46 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -21,7 +21,7 @@ typedef enum {
   VNIL,
   VTRUE,
   VFALSE,
-  VK,		/* info = index of constant in `k' */
+  VK,		/* info = index of constant in 'k' */
   VKFLT,	/* nval = numerical float value */
   VKINT,	/* nval = numerical integer value */
   VNONRELOC,	/* info = result register */
@@ -50,8 +50,8 @@ typedef struct expdesc {
     lua_Number nval;  /* for VKFLT */
     lua_Integer ival;    /* for VKINT */
   } u;
-  int t;  /* patch list of `exit when true' */
-  int f;  /* patch list of `exit when false' */
+  int t;  /* patch list of 'exit when true' */
+  int f;  /* patch list of 'exit when false' */
 } expdesc;
 
 
@@ -100,11 +100,11 @@ typedef struct FuncState {
   struct FuncState *prev;  /* enclosing function */
   struct LexState *ls;  /* lexical state */
   struct BlockCnt *bl;  /* chain of current blocks */
-  int pc;  /* next position to code (equivalent to `ncode') */
+  int pc;  /* next position to code (equivalent to 'ncode') */
   int lasttarget;   /* 'label' of last 'jump label' */
-  int jpc;  /* list of pending jumps to `pc' */
-  int nk;  /* number of elements in `k' */
-  int np;  /* number of elements in `p' */
+  int jpc;  /* list of pending jumps to 'pc' */
+  int nk;  /* number of elements in 'k' */
+  int np;  /* number of elements in 'p' */
   int firstlocal;  /* index of first local var (in Dyndata array) */
   short nlocvars;  /* number of elements in 'f->locvars' */
   lu_byte nactvar;  /* number of active local variables */

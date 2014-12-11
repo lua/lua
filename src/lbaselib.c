@@ -1,18 +1,19 @@
 /*
-** $Id: lbaselib.c,v 1.303 2014/10/17 19:17:55 roberto Exp $
+** $Id: lbaselib.c,v 1.309 2014/12/10 12:26:42 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
 
+#define lbaselib_c
+#define LUA_LIB
+
+#include "lprefix.h"
 
 
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define lbaselib_c
-#define LUA_LIB
 
 #include "lua.h"
 
@@ -33,11 +34,11 @@ static int luaB_print (lua_State *L) {
     s = lua_tolstring(L, -1, &l);  /* get result */
     if (s == NULL)
       return luaL_error(L, "'tostring' must return a string to 'print'");
-    if (i>1) luai_writestring("\t", 1);
-    luai_writestring(s, l);
+    if (i>1) lua_writestring("\t", 1);
+    lua_writestring(s, l);
     lua_pop(L, 1);  /* pop result */
   }
-  luai_writeline();
+  lua_writeline();
   return 0;
 }
 
@@ -60,8 +61,6 @@ static const char *b_str2int (const char *s, int base, lua_Integer *pn) {
     s++;
   } while (isalnum((unsigned char)*s));
   s += strspn(s, SPACECHARS);  /* skip trailing spaces */
-  if (*s != '\0')  /* invalid trailing characters? */
-    return NULL;
   *pn = (lua_Integer)((neg) ? (0u - n) : n);
   return s;
 }
@@ -275,6 +274,7 @@ static int luaB_ipairs (lua_State *L) {
 #if defined(LUA_COMPAT_IPAIRS)
   return pairsmeta(L, "__ipairs", 1, iter);
 #else
+  luaL_checkany(L, 1);
   lua_pushcfunction(L, iter);  /* iteration function */
   lua_pushvalue(L, 1);  /* state */
   lua_pushinteger(L, 0);  /* initial value */
@@ -325,7 +325,7 @@ static int luaB_loadfile (lua_State *L) {
 
 
 /*
-** Reader for generic `load' function: `lua_load' uses the
+** Reader for generic 'load' function: 'lua_load' uses the
 ** stack for internal stuff, so the reader cannot change the
 ** stack top. Instead, it keeps its resulting string in a
 ** reserved slot inside the stack.
@@ -389,9 +389,10 @@ static int luaB_assert (lua_State *L) {
   if (lua_toboolean(L, 1))  /* condition is true? */
     return lua_gettop(L);  /* return all arguments */
   else {  /* error */
-    if (lua_isnone(L, 2))  /* no error message? */
-      lua_pushliteral(L, "assertion failed!");  /* use standard message */
-    lua_remove(L, 1);  /* remove the condition (if there is one...) */
+    luaL_checkany(L, 1);  /* there must be a condition */
+    lua_remove(L, 1);  /* remove it */
+    lua_pushliteral(L, "assertion failed!");  /* default message */
+    lua_settop(L, 1);  /* leave only message (default if no other one) */
     return luaB_error(L);  /* call 'error' */
   }
 }
