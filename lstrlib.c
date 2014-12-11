@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.219 2014/12/10 11:36:03 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.220 2014/12/11 13:40:40 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -1034,8 +1034,8 @@ static int getnum (const char **fmt, int df) {
   else {
     int a = 0;
     do {
-      a = a*10 + *((*fmt)++) - '0';
-    } while (digit(**fmt) && a < ((int)MAXSIZE/10 - 10));
+      a = a*10 + (*((*fmt)++) - '0');
+    } while (digit(**fmt) && a <= ((int)MAXSIZE - 9)/10);
     return a;
   }
 }
