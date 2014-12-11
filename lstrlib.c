@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.218 2014/12/04 16:25:40 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.219 2014/12/10 11:36:03 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -34,6 +34,15 @@
 
 /* macro to 'unsign' a character */
 #define uchar(c)	((unsigned char)(c))
+
+
+/*
+** Some sizes are better limited to fit in 'int', but must also fit in
+** 'size_t'. (We assume that 'lua_Integer' cannot be smaller than 'int'.)
+*/
+#define MAXSIZE  \
+	(sizeof(size_t) < sizeof(int) ? (~(size_t)0) : (size_t)(INT_MAX))
+
 
 
 
@@ -104,13 +113,6 @@ static int str_upper (lua_State *L) {
   return 1;
 }
 
-
-/* reasonable limit to avoid arithmetic overflow and strings too big */
-#if LUA_MAXINTEGER / 2 <= 0x10000000
-#define MAXSIZE		((size_t)(LUA_MAXINTEGER / 2))
-#else
-#define MAXSIZE		((size_t)0x10000000)
-#endif
 
 static int str_rep (lua_State *L) {
   size_t l, lsep;
@@ -1033,7 +1035,7 @@ static int getnum (const char **fmt, int df) {
     int a = 0;
     do {
       a = a*10 + *((*fmt)++) - '0';
-    } while (digit(**fmt) && a < (INT_MAX/10 - 10));
+    } while (digit(**fmt) && a < ((int)MAXSIZE/10 - 10));
     return a;
   }
 }
@@ -1261,12 +1263,15 @@ static int str_pack (lua_State *L) {
 static int str_packsize (lua_State *L) {
   Header h;
   const char *fmt = luaL_checkstring(L, 1);  /* format string */
-  lua_Integer totalsize = 0;  /* accumulate total size of result */
+  size_t totalsize = 0;  /* accumulate total size of result */
   initheader(L, &h);
   while (*fmt != '\0') {
     int size, ntoalign;
     KOption opt = getdetails(&h, totalsize, &fmt, &size, &ntoalign);
-    totalsize += ntoalign + size;
+    size += ntoalign;  /* total space used by option */
+    luaL_argcheck(L, totalsize <= MAXSIZE - size, 1,
+                     "format result too large");
+    totalsize += size;
     switch (opt) {
       case Kstring:  /* strings with length count */
       case Kzstr:    /* zero-terminated string */
@@ -1275,7 +1280,7 @@ static int str_packsize (lua_State *L) {
       default:  break;
     }
   }
-  lua_pushinteger(L, totalsize);
+  lua_pushinteger(L, (lua_Integer)totalsize);
   return 1;
 }
 
