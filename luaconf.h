@@ -1,12 +1,12 @@
 /*
-** $Id: luaconf.h,v 1.230 2014/11/25 18:21:57 roberto Exp roberto $
+** $Id: luaconf.h,v 1.231 2014/12/10 11:56:55 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
 
 
-#ifndef lconfig_h
-#define lconfig_h
+#ifndef luaconf_h
+#define luaconf_h
 
 #include <limits.h>
 #include <stddef.h>
