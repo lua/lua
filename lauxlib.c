@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.276 2014/12/08 15:26:09 roberto Exp $
+** $Id: lauxlib.c,v 1.277 2014/12/10 11:31:32 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -48,7 +48,7 @@ static int findfield (lua_State *L, int objidx, int level) {
   lua_pushnil(L);  /* start 'next' loop */
   while (lua_next(L, -2)) {  /* for each pair in table */
     if (lua_type(L, -2) == LUA_TSTRING) {  /* ignore non-string keys */
-      if (lua_rawequal(L, objidx, -1)) {  /* found object? */
+      if (level == 1 && lua_rawequal(L, objidx, -1)) {  /* found object? */
         lua_pop(L, 1);  /* remove value (but keep name) */
         return 1;
       }
@@ -70,7 +70,8 @@ static int pushglobalfuncname (lua_State *L, lua_Debug *ar) {
   int top = lua_gettop(L);
   lua_getinfo(L, "f", ar);  /* push function */
   lua_pushglobaltable(L);
-  if (findfield(L, top + 1, 2)) {
+  /* try first global names, and then global.name names */
+  if (findfield(L, top + 1, 1) || findfield(L, top + 1, 2)) {
     lua_copy(L, -1, top + 1);  /* move name to proper place */
     lua_pop(L, 2);  /* remove pushed values */
     return 1;
