@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.231 2014/12/10 11:56:55 roberto Exp roberto $
+** $Id: luaconf.h,v 1.232 2014/12/12 11:49:32 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -20,18 +20,18 @@
 
 
 /*
-** {==================================================================
+** {====================================================================
 ** System Configuration: macros to adapt (if needed) Lua to some
-** particular platform, for instance compiling it as Small Lua (32
-** bits) or restricting it to C89.
-** ===================================================================
+** particular platform, for instance compiling it with 32-bit numbers or
+** restricting it to C89.
+** =====================================================================
 */
 
 /*
-@@ LUA_32BITS enables Small Lua (that is, Lua with 32-bit integers
-** and 32-bit floats). You can also define LUA_32BITS in the make file,
-** but changing here you ensure that all software connected to Lua will
-** be compiled with the same configuration.
+@@ LUA_32BITS enables Lua with 32-bit integers and 32-bit floats. You
+** can also define LUA_32BITS in the make file, but changing here you
+** ensure that all software connected to Lua will be compiled with the
+** same configuration.
 */
 /* #define LUA_32BITS */
 
@@ -102,8 +102,8 @@
 ** the type for Lua floats.
 ** Lua should work fine with any mix of these options (if supported
 ** by your C compiler). The usual configurations are 64-bit integers
-** and 'double' (the default), 32-bit integers and 'float' (Small Lua,
-** for restricted platforms), and 'long'/'double' (for C compilers not
+** and 'double' (the default), 32-bit integers and 'float' (for
+** restricted platforms), and 'long'/'double' (for C compilers not
 ** compliant with C99, which may not have support for 'long long').
 */
 
