@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.277 2014/12/10 11:31:32 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.278 2014/12/13 17:47:58 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -48,7 +48,7 @@ static int findfield (lua_State *L, int objidx, int level) {
   lua_pushnil(L);  /* start 'next' loop */
   while (lua_next(L, -2)) {  /* for each pair in table */
     if (lua_type(L, -2) == LUA_TSTRING) {  /* ignore non-string keys */
-      if (level == 1 && lua_rawequal(L, objidx, -1)) {  /* found object? */
+      if (lua_rawequal(L, objidx, -1)) {  /* found object? */
         lua_pop(L, 1);  /* remove value (but keep name) */
         return 1;
       }
@@ -66,12 +66,20 @@ static int findfield (lua_State *L, int objidx, int level) {
 }
 
 
+/*
+** Search for a name for a function in all loaded modules
+** (registry._LOADED).
+*/
 static int pushglobalfuncname (lua_State *L, lua_Debug *ar) {
   int top = lua_gettop(L);
   lua_getinfo(L, "f", ar);  /* push function */
-  lua_pushglobaltable(L);
-  /* try first global names, and then global.name names */
-  if (findfield(L, top + 1, 1) || findfield(L, top + 1, 2)) {
+  lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
+  if (findfield(L, top + 1, 2)) {
+    const char *name = lua_tostring(L, -1);
+    if (strncmp(name, "_G.", 3) == 0) {  /* name start with '_G.'? */
+      lua_pushstring(L, name + 3);  /* push name without prefix */
+      lua_remove(L, -2);  /* remove original name */
+    }
     lua_copy(L, -1, top + 1);  /* move name to proper place */
     lua_pop(L, 2);  /* remove pushed values */
     return 1;
