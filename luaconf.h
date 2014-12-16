@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.233 2014/12/13 17:57:00 roberto Exp roberto $
+** $Id: luaconf.h,v 1.234 2014/12/16 16:20:01 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -55,7 +55,6 @@
 #if defined(LUA_USE_WINDOWS)
 #define LUA_DL_DLL	/* enable support for DLL */
 #define LUA_USE_C89	/* broadly, Windows is C89 */
-#define LUA_USE_I64	/* use Windows-specifc type for 64-bit integers */
 #endif
 
 
@@ -75,8 +74,8 @@
 
 /*
 @@ LUA_C89_NUMBERS ensures that Lua uses the largest types available for
-** C89 ('long' and 'double'); Windows has '__int64', so it does not need
-** to use this case.
+** C89 ('long' and 'double'); Windows always has '__int64', so it does
+** not need to use this case.
 */
 #if defined(LUA_USE_C89) && !defined(LUA_USE_WINDOWS)
 #define LUA_C89_NUMBERS
@@ -128,8 +127,7 @@
 
 #else				/* }{ */
 /*
-** default configuration for 64-bit Lua ('long long' and 'double');
-** Windows will use '__int64'
+** default configuration for 64-bit Lua ('long long' and 'double')
 */
 #define LUA_INT_LONGLONG
 #define LUA_REAL_DOUBLE
@@ -566,7 +564,17 @@
 
 #elif defined(LUA_INT_LONGLONG)	/* }{ long long */
 
-#if defined(LUA_USE_I64)	/* { */
+#if defined(LLONG_MAX)		/* { */
+/* use ISO C99 stuff */
+
+#define LUA_INTEGER		long long
+#define LUA_INTEGER_FRMLEN	"ll"
+
+#define LUA_MAXINTEGER		LLONG_MAX
+#define LUA_MININTEGER		LLONG_MIN
+
+#elif defined(LUA_USE_WINDOWS) /* }{ */
+/* in Windows, can use specific Windows types */
 
 #define LUA_INTEGER		__int64
 #define LUA_INTEGER_FRMLEN	"I64"
@@ -576,16 +584,8 @@
 
 #else				/* }{ */
 
-#if !defined(LLONG_MAX)
 #error "Compiler does not support 'long long'. Use option '-DLUA_32BITS' \
   or '-DLUA_C89_NUMBERS' (see file 'luaconf.h' for details)"
-#endif
-
-#define LUA_INTEGER		long long
-#define LUA_INTEGER_FRMLEN	"ll"
-
-#define LUA_MAXINTEGER		LLONG_MAX
-#define LUA_MININTEGER		LLONG_MIN
 
 #endif				/* } */
 
