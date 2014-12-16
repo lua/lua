@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.232 2014/12/12 11:49:32 roberto Exp roberto $
+** $Id: luaconf.h,v 1.233 2014/12/13 17:57:00 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -55,6 +55,7 @@
 #if defined(LUA_USE_WINDOWS)
 #define LUA_DL_DLL	/* enable support for DLL */
 #define LUA_USE_C89	/* broadly, Windows is C89 */
+#define LUA_USE_I64	/* use Windows-specifc type for 64-bit integers */
 #endif
 
 
@@ -565,7 +566,7 @@
 
 #elif defined(LUA_INT_LONGLONG)	/* }{ long long */
 
-#if defined(LUA_USE_WINDOWS)	/* { */
+#if defined(LUA_USE_I64)	/* { */
 
 #define LUA_INTEGER		__int64
 #define LUA_INTEGER_FRMLEN	"I64"
