@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.40 2013/02/20 14:08:21 roberto Exp roberto $
+** $Id: lmem.h,v 1.41 2014/10/08 20:25:51 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -31,6 +31,11 @@
   (((sizeof(n) >= sizeof(size_t) && cast(size_t, (n)) + 1 > MAX_SIZET/(e)) \
       ? luaM_toobig(L) : cast_void(0)) , \
    luaM_realloc_(L, (b), (on)*(e), (n)*(e)))
+
+/*
+** Arrays of chars do not need any test
+*/
+#define luaM_reallocvchar(L,b,on,n)   luaM_realloc_(L, (b), (on), (n))
 
 #define luaM_freemem(L, b, s)	luaM_realloc_(L, (b), (s), 0)
 #define luaM_free(L, b)		luaM_realloc_(L, (b), sizeof(*(b)), 0)
