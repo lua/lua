@@ -1,16 +1,19 @@
 /*
-** $Id: lobject.c,v 2.93 2014/10/17 16:28:21 roberto Exp $
+** $Id: lobject.c,v 2.100 2014/11/21 12:15:57 roberto Exp $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
+
+#define lobject_c
+#define LUA_CORE
+
+#include "lprefix.h"
+
 
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define lobject_c
-#define LUA_CORE
 
 #include "lua.h"
 
@@ -98,6 +101,7 @@ static lua_Number numarith (lua_State *L, int op, lua_Number v1,
     case LUA_OPMUL: return luai_nummul(L, v1, v2);
     case LUA_OPDIV: return luai_numdiv(L, v1, v2);
     case LUA_OPPOW: return luai_numpow(L, v1, v2);
+    case LUA_OPIDIV: return luai_numidiv(L, v1, v2);
     case LUA_OPUNM: return luai_numunm(L, v1);
     case LUA_OPMOD: {
       lua_Number m;
@@ -112,9 +116,9 @@ static lua_Number numarith (lua_State *L, int op, lua_Number v1,
 void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
                  TValue *res) {
   switch (op) {
-    case LUA_OPIDIV: case LUA_OPBAND: case LUA_OPBOR:
-    case LUA_OPBXOR: case LUA_OPSHL: case LUA_OPSHR:
-    case LUA_OPBNOT: {  /* operates only on integers */
+    case LUA_OPBAND: case LUA_OPBOR: case LUA_OPBXOR:
+    case LUA_OPSHL: case LUA_OPSHR:
+    case LUA_OPBNOT: {  /* operate only on integers */
       lua_Integer i1; lua_Integer i2;
       if (tointeger(p1, &i1) && tointeger(p2, &i2)) {
         setivalue(res, intarith(L, op, i1, i2));
@@ -162,24 +166,13 @@ static int isneg (const char **s) {
 }
 
 
+
 /*
-** {======================================================
-** lua_strx2number converts an hexadecimal numeric string to a number.
-** In C99, 'strtod' does both conversions. C89, however, has no function
-** to convert floating hexadecimal strings to numbers. For these
-** systems, you can leave 'lua_strx2number' undefined and Lua will
-** provide its own implementation.
-** =======================================================
+** {==================================================================
+** Lua's implementation for 'lua_strx2number'
+** ===================================================================
 */
-#if !defined(lua_strx2number)		/* { */
-
-#if defined(LUA_USE_C99)		/* { */
-
-#define lua_strx2number(s,p)    lua_str2number(s,p)
-
-#else					/* }{ */
-
-/* Lua's implementation for 'lua_strx2number' */
+#if !defined(lua_strx2number)
 
 #include <math.h>
 
@@ -209,18 +202,12 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
       else dot = 1;
     }
     else if (lisxdigit(cast_uchar(*s))) {
-      if (sigdig == 0 && *s == '0') {  /* non-significant zero? */
+      if (sigdig == 0 && *s == '0')  /* non-significant digit (zero)? */
         nosigdig++;
-        if (dot) e--;  /* zero after dot? correct exponent */
-      }
-      else {
-        if (++sigdig <= MAXSIGDIG) {  /* can read it without overflow? */
-          r = (r * cast_num(16.0)) + luaO_hexavalue(cast_uchar(*s));
-          if (dot) e--;  /* decimal digit */
-        }
-        else  /* too many digits; ignore */ 
-          if (!dot) e++;  /* still count it for exponent */
-      }
+      else if (++sigdig <= MAXSIGDIG)  /* can read it without overflow? */
+          r = (r * cast_num(16.0)) + luaO_hexavalue(*s);
+      else e++; /* too many digits; ignore, but still count for exponent */
+      if (dot) e--;  /* decimal digit? correct exponent */
     }
     else break;  /* neither a dot nor a digit */
   }
@@ -245,10 +232,7 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
   return l_mathop(ldexp)(r, e);
 }
 
-#endif					/* } */
-
-#endif					/* } */
-
+#endif
 /* }====================================================== */
 
 
@@ -276,13 +260,13 @@ static const char *l_str2int (const char *s, lua_Integer *result) {
       (s[1] == 'x' || s[1] == 'X')) {  /* hex? */
     s += 2;  /* skip '0x' */
     for (; lisxdigit(cast_uchar(*s)); s++) {
-      a = a * 16 + luaO_hexavalue(cast_uchar(*s));
+      a = a * 16 + luaO_hexavalue(*s);
       empty = 0;
     }
   }
   else {  /* decimal */
     for (; lisdigit(cast_uchar(*s)); s++) {
-      a = a * 10 + luaO_hexavalue(cast_uchar(*s));
+      a = a * 10 + *s - '0';
       empty = 0;
     }
   }
@@ -317,8 +301,8 @@ int luaO_utf8esc (char *buff, unsigned long x) {
     buff[UTF8BUFFSZ - 1] = cast(char, x);
   else {  /* need continuation bytes */
     unsigned int mfb = 0x3f;  /* maximum that fits in first byte */
-    do {
-      buff[UTF8BUFFSZ - (n++)] = 0x80 | (x & 0x3f);  /* add continuation byte */
+    do {  /* add continuation bytes */
+      buff[UTF8BUFFSZ - (n++)] = cast(char, 0x80 | (x & 0x3f));
       x >>= 6;  /* remove added bits */
       mfb >>= 1;  /* now there is one less bit available in first byte */
     } while (x > mfb);  /* still needs continuation byte? */
@@ -399,7 +383,7 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
         break;
       }
       case 'p': {
-        char buff[4*sizeof(void *) + 8]; /* should be enough space for a `%p' */
+        char buff[4*sizeof(void *) + 8]; /* should be enough space for a '%p' */
         int l = sprintf(buff, "%p", va_arg(argp, void *));
         pushstr(L, buff, l);
         break;

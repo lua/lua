@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.117 2014/10/07 18:29:13 roberto Exp $
+** $Id: lstate.h,v 2.119 2014/10/30 18:53:28 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -21,10 +21,10 @@
 ** belong to one (and only one) of these lists, using field 'next' of
 ** the 'CommonHeader' for the link:
 **
-** allgc: all objects not marked for finalization;
-** finobj: all objects marked for finalization;
-** tobefnz: all objects ready to be finalized; 
-** fixedgc: all objects that are not to be collected (currently
+** 'allgc': all objects not marked for finalization;
+** 'finobj': all objects marked for finalization;
+** 'tobefnz': all objects ready to be finalized; 
+** 'fixedgc': all objects that are not to be collected (currently
 ** only small strings, such as reserved words).
 
 */
@@ -103,11 +103,11 @@ typedef struct CallInfo {
 
 
 /*
-** `global state', shared by all threads of this state
+** 'global state', shared by all threads of this state
 */
 typedef struct global_State {
   lua_Alloc frealloc;  /* function to reallocate memory */
-  void *ud;         /* auxiliary data to `frealloc' */
+  void *ud;         /* auxiliary data to 'frealloc' */
   lu_mem totalbytes;  /* number of bytes currently allocated - GCdebt */
   l_mem GCdebt;  /* bytes allocated not yet compensated by the collector */
   lu_mem GCmemtrav;  /* memory traversed by the GC */
@@ -133,7 +133,7 @@ typedef struct global_State {
   Mbuffer buff;  /* temporary buffer for string concatenation */
   unsigned int gcfinnum;  /* number of finalizers to call in each GC step */
   int gcpause;  /* size of pause between successive GCs */
-  int gcstepmul;  /* GC `granularity' */
+  int gcstepmul;  /* GC 'granularity' */
   lua_CFunction panic;  /* to be called in unprotected errors */
   struct lua_State *mainthread;
   const lua_Number *version;  /* pointer to version number */
@@ -144,7 +144,7 @@ typedef struct global_State {
 
 
 /*
-** `per thread' state
+** 'per thread' state
 */
 struct lua_State {
   CommonHeader;

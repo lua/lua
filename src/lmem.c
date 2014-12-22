@@ -1,14 +1,16 @@
 /*
-** $Id: lmem.c,v 1.86 2014/07/15 21:26:50 roberto Exp $
+** $Id: lmem.c,v 1.89 2014/11/02 19:33:33 roberto Exp $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
 
-
-#include <stddef.h>
-
 #define lmem_c
 #define LUA_CORE
+
+#include "lprefix.h"
+
+
+#include <stddef.h>
 
 #include "lua.h"
 
@@ -24,15 +26,15 @@
 /*
 ** About the realloc function:
 ** void * frealloc (void *ud, void *ptr, size_t osize, size_t nsize);
-** (`osize' is the old size, `nsize' is the new size)
+** ('osize' is the old size, 'nsize' is the new size)
 **
-** * frealloc(ud, NULL, x, s) creates a new block of size `s' (no
+** * frealloc(ud, NULL, x, s) creates a new block of size 's' (no
 ** matter 'x').
 **
-** * frealloc(ud, p, x, 0) frees the block `p'
+** * frealloc(ud, p, x, 0) frees the block 'p'
 ** (in this specific case, frealloc must return NULL);
 ** particularly, frealloc(ud, NULL, 0, 0) does nothing
-** (which is equivalent to free(NULL) in ANSI C)
+** (which is equivalent to free(NULL) in ISO C)
 **
 ** frealloc returns NULL if it cannot create or reallocate the area
 ** (any reallocation to an equal or smaller size cannot fail!)

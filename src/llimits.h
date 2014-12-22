@@ -1,6 +1,6 @@
 /*
-** $Id: llimits.h,v 1.120 2014/07/18 18:29:12 roberto Exp $
-** Limits, basic types, and some other `installation-dependent' definitions
+** $Id: llimits.h,v 1.124 2014/11/02 19:33:33 roberto Exp $
+** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
 
@@ -14,16 +14,24 @@
 
 #include "lua.h"
 
-
-typedef unsigned LUA_INT32 lu_int32;
-
+/*
+** 'lu_mem' and 'l_mem' are unsigned/signed integers big enough to count
+** the total memory used by Lua (in bytes). Usually, 'size_t' and
+** 'ptrdiff_t' should work, but we use 'long' for 16-bit machines.
+*/
+#if defined(LUAI_MEM)		/* { external definitions? */
 typedef LUAI_UMEM lu_mem;
-
 typedef LUAI_MEM l_mem;
+#elif LUAI_BITSINT >= 32	/* }{ */
+typedef size_t lu_mem;
+typedef ptrdiff_t l_mem;
+#else  /* 16-bit ints */	/* }{ */
+typedef unsigned long lu_mem;
+typedef long l_mem;
+#endif				/* } */
 
 
-
-/* chars used as small naturals (so that `char' is reserved for characters) */
+/* chars used as small naturals (so that 'char' is reserved for characters) */
 typedef unsigned char lu_byte;
 
 
@@ -48,7 +56,7 @@ typedef unsigned char lu_byte;
 ** this is for hashing only; there is no problem if the integer
 ** cannot hold the whole pointer value
 */
-#define point2int(p)	((unsigned int)((lu_mem)(p) & UINT_MAX))
+#define point2int(p)	((unsigned int)((size_t)(p) & UINT_MAX))
 
 
 
@@ -112,7 +120,7 @@ typedef LUAI_UACINT l_uacInt;
 
 /*
 ** cast a lua_Unsigned to a signed lua_Integer; this cast is
-** not strict ANSI C, but two-complement architectures should
+** not strict ISO C, but two-complement architectures should
 ** work fine.
 */
 #if !defined(l_castU2S)
@@ -149,15 +157,15 @@ typedef LUAI_UACINT l_uacInt;
 
 
 /*
-** type for virtual-machine instructions
+** type for virtual-machine instructions;
 ** must be an unsigned with (at least) 4 bytes (see details in lopcodes.h)
 */
-typedef lu_int32 Instruction;
+#if LUAI_BITSINT >= 32
+typedef unsigned int Instruction;
+#else
+typedef unsigned long Instruction;
+#endif
 
-
-
-/* maximum stack for a Lua function */
-#define MAXSTACK	250
 
 
 
@@ -174,12 +182,12 @@ typedef lu_int32 Instruction;
 
 
 #if !defined(lua_lock)
-#define lua_lock(L)     ((void) 0)
-#define lua_unlock(L)   ((void) 0)
+#define lua_lock(L)	((void) 0)
+#define lua_unlock(L)	((void) 0)
 #endif
 
 #if !defined(luai_threadyield)
-#define luai_threadyield(L)     {lua_unlock(L); lua_lock(L);}
+#define luai_threadyield(L)	{lua_unlock(L); lua_lock(L);}
 #endif
 
 
@@ -205,11 +213,11 @@ typedef lu_int32 Instruction;
 #endif
 
 #if !defined(luai_userstateresume)
-#define luai_userstateresume(L,n)       ((void)L)
+#define luai_userstateresume(L,n)	((void)L)
 #endif
 
 #if !defined(luai_userstateyield)
-#define luai_userstateyield(L,n)        ((void)L)
+#define luai_userstateyield(L,n)	((void)L)
 #endif
 
 

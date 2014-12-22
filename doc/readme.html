@@ -31,12 +31,8 @@ tt, kbd, code {
 <HR>
 <H1>
 <A HREF="http://www.lua.org/"><IMG SRC="logo.gif" ALT="Lua" BORDER=0></A>
-Welcome to Lua 5.3 (beta)
+Welcome to Lua 5.3.0
 </H1>
-
-<P>
-<IMG SRC="alert.png" ALIGN="absbottom">
-<EM>A few details may change in the final version.</EM>
 
 <P>
 <A HREF="#about">about</A>
@@ -114,7 +110,7 @@ Here are the details.
 <OL>
 <LI>
 Open a terminal window and move to
-the top-level directory, which is named <TT>lua-5.3.0-beta</TT>.
+the top-level directory, which is named <TT>lua-5.3.0</TT>.
 The <TT>Makefile</TT> there controls both the build process and the installation process.
 <P>
 <LI>
@@ -122,14 +118,14 @@ The <TT>Makefile</TT> there controls both the build process and the installation
   The platforms currently supported are:
 <P>
 <P CLASS="display">
-   aix ansi bsd freebsd generic linux macosx mingw posix solaris
+   aix bsd c89 freebsd generic linux macosx mingw posix solaris
 </P>
 <P>
   If your platform is listed, just do "<KBD>make xxx</KBD>", where xxx
   is your platform name.
 <P>
   If your platform is not listed, try the closest one or posix, generic,
-  ansi, in this order.
+  c89, in this order.
 <P>
 <LI>
 The compilation takes only a few moments
@@ -255,6 +251,7 @@ compiler:
   be linked statically into the host program and its symbols exported for
   dynamic linking; <TT>src/Makefile</TT> does this for the Lua interpreter.
   For Windows, we recommend that the Lua library be a DLL.
+  In all cases, the compiler luac should be linked statically.
 
 <P>
   As mentioned above, you may edit <TT>src/luaconf.h</TT> to customize
@@ -272,9 +269,10 @@ lists the
 <H3>Main changes</H3>
 <UL>
 <LI> integers (64-bit by default)
-<LI> official support for small architectures ("Small Lua" with 32-bit numbers)
+<LI> official support for 32-bit numbers
 <LI> bitwise operators
 <LI> basic utf-8 support
+<LI> functions for packing and unpacking values
 
 </UL>
 
@@ -284,34 +282,30 @@ Here are the other changes introduced in Lua 5.3:
 <LI> userdata can have any Lua value as uservalue
 <LI> integer division
 <LI> more flexible rules for some metamethods
-<LI> utf-8 escapes in literal strings
 </UL>
 
 <H3>Libraries</H3>
 <UL>
-<LI> basic utf-8 library
 <LI> <CODE>ipairs</CODE> and the table library respect metamethods
-<LI> functions for packing and unpacking numbers
 <LI> strip option in <CODE>string.dump</CODE>
 <LI> table library respects metamethods
-<LI> new function <CODE>table.copy</CODE>
-<LI> new function <CODE>debug.sizeof</CODE>
-<LI> strip option in
-<CODE>string.dump</CODE>
-and
-<CODE>lua_dump</CODE>
+<LI> new function <CODE>table.move</CODE>
+<LI> new function <CODE>string.pack</CODE>
+<LI> new function <CODE>string.unpack</CODE>
+<LI> new function <CODE>string.packsize</CODE>
 </UL>
 
 <H3>C API</H3>
 <UL>
 <LI> simpler API for continuation functions in C
-<LI> new functions:
-<CODE>lua_rotate</CODE>,
-<CODE>lua_isyieldable</CODE>,
-<CODE>lua_strtonum</CODE>,
-<CODE>lua_geti</CODE>,
-<CODE>lua_seti</CODE>
 <LI> <CODE>lua_gettable</CODE> and similar functions return type of resulted value
+<LI> strip option in <CODE>lua_dump</CODE>
+<LI> new function: <CODE>lua_geti</CODE>
+<LI> new function: <CODE>lua_seti</CODE>
+<LI> new function: <CODE>lua_isyieldable</CODE>
+<LI> new function: <CODE>lua_numbertointeger</CODE>
+<LI> new function: <CODE>lua_rotate</CODE>
+<LI> new function: <CODE>lua_stringtonumber</CODE>
 </UL>
 
 <H3>Lua standalone interpreter</H3>
@@ -367,10 +361,10 @@ THE SOFTWARE.
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Tue Oct  7 18:16:28 BRT 2014
+Fri Dec 12 09:58:42 BRST 2014
 </SMALL>
 <!--
-Last change: updated for Lua 5.3.0 (beta)
+Last change: updated for Lua 5.3.0 (final)
 -->
 
 </BODY>

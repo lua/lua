@@ -1,19 +1,24 @@
 /*
-** $Id: ltable.c,v 2.96 2014/10/17 16:28:21 roberto Exp $
+** $Id: ltable.c,v 2.99 2014/11/02 19:19:04 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
+
+#define ltable_c
+#define LUA_CORE
+
+#include "lprefix.h"
 
 
 /*
 ** Implementation of tables (aka arrays, objects, or hash tables).
 ** Tables keep its elements in two parts: an array part and a hash part.
 ** Non-negative integer keys are all candidates to be kept in the array
-** part. The actual size of the array is the largest `n' such that at
+** part. The actual size of the array is the largest 'n' such that at
 ** least half the slots between 0 and n are in use.
 ** Hash uses a mix of chained scatter table with Brent's variation.
 ** A main invariant of these tables is that, if an element is not
-** in its main position (i.e. the `original' position that its hash gives
+** in its main position (i.e. the 'original' position that its hash gives
 ** to it), then the colliding element is in its own main position.
 ** Hence even when the load factor reaches 100%, performance remains good.
 */
@@ -22,9 +27,6 @@
 #include <math.h>
 #include <string.h>
 #include <limits.h>
-
-#define ltable_c
-#define LUA_CORE
 
 #include "lua.h"
 
@@ -88,7 +90,7 @@ static const Node dummynode_ = {
 */
 static int numisinteger (lua_Number x, lua_Integer *p) {
   if ((x) == l_floor(x))  /* integral value? */
-    return lua_numtointeger(x, p);  /* try as an integer */
+    return lua_numbertointeger(x, p);  /* try as an integer */
   else return 0;
 }
 
@@ -111,7 +113,7 @@ static Node *hashfloat (const Table *t, lua_Number n) {
 
 
 /*
-** returns the `main' position of an element in a table (that is, the index
+** returns the 'main' position of an element in a table (that is, the index
 ** of its hash value)
 */
 static Node *mainposition (const Table *t, const TValue *key) {
@@ -143,7 +145,7 @@ static Node *mainposition (const Table *t, const TValue *key) {
 
 
 /*
-** returns the index for `key' if `key' is an appropriate key to live in
+** returns the index for 'key' if 'key' is an appropriate key to live in
 ** the array part of the table, 0 otherwise.
 */
 static unsigned int arrayindex (const TValue *key) {
@@ -152,12 +154,12 @@ static unsigned int arrayindex (const TValue *key) {
     if (0 < k && (lua_Unsigned)k <= MAXASIZE)
       return cast(unsigned int, k);  /* 'key' is an appropriate array index */
   }
-  return 0;  /* `key' did not match some condition */
+  return 0;  /* 'key' did not match some condition */
 }
 
 
 /*
-** returns the index of a `key' for table traversals. First goes all
+** returns the index of a 'key' for table traversals. First goes all
 ** elements in the array part, then elements in the hash part. The
 ** beginning of a traversal is signaled by 0.
 */
@@ -165,13 +167,13 @@ static unsigned int findindex (lua_State *L, Table *t, StkId key) {
   unsigned int i;
   if (ttisnil(key)) return 0;  /* first iteration */
   i = arrayindex(key);
-  if (i != 0 && i <= t->sizearray)  /* is `key' inside array part? */
+  if (i != 0 && i <= t->sizearray)  /* is 'key' inside array part? */
     return i;  /* yes; that's the index */
   else {
     int nx;
     Node *n = mainposition(t, key);
-    for (;;) {  /* check whether `key' is somewhere in the chain */
-      /* key may be dead already, but it is ok to use it in `next' */
+    for (;;) {  /* check whether 'key' is somewhere in the chain */
+      /* key may be dead already, but it is ok to use it in 'next' */
       if (luaV_rawequalobj(gkey(n), key) ||
             (ttisdeadkey(gkey(n)) && iscollectable(key) &&
              deadvalue(gkey(n)) == gcvalue(key))) {
@@ -244,7 +246,7 @@ static unsigned int computesizes (unsigned int nums[], unsigned int *narray) {
 
 static int countint (const TValue *key, unsigned int *nums) {
   unsigned int k = arrayindex(key);
-  if (k != 0) {  /* is `key' an appropriate array index? */
+  if (k != 0) {  /* is 'key' an appropriate array index? */
     nums[luaO_ceillog2(k)]++;  /* count as such */
     return 1;
   }
@@ -256,7 +258,7 @@ static int countint (const TValue *key, unsigned int *nums) {
 static unsigned int numusearray (const Table *t, unsigned int *nums) {
   int lg;
   unsigned int ttlg;  /* 2^lg */
-  unsigned int ause = 0;  /* summation of `nums' */
+  unsigned int ause = 0;  /* summation of 'nums' */
   unsigned int i = 1;  /* count to traverse all array keys */
   /* traverse each slice */
   for (lg = 0, ttlg = 1; lg <= MAXABITS; lg++, ttlg *= 2) {
@@ -308,7 +310,7 @@ static void setarrayvector (lua_State *L, Table *t, unsigned int size) {
 static void setnodevector (lua_State *L, Table *t, unsigned int size) {
   int lsize;
   if (size == 0) {  /* no elements to hash part? */
-    t->node = cast(Node *, dummynode);  /* use common `dummynode' */
+    t->node = cast(Node *, dummynode);  /* use common 'dummynode' */
     lsize = 0;
   }
   else {
@@ -498,7 +500,7 @@ const TValue *luaH_getint (Table *t, lua_Integer key) {
     return &t->array[key - 1];
   else {
     Node *n = hashint(t, key);
-    for (;;) {  /* check whether `key' is somewhere in the chain */
+    for (;;) {  /* check whether 'key' is somewhere in the chain */
       if (ttisinteger(gkey(n)) && ivalue(gkey(n)) == key)
         return gval(n);  /* that's it */
       else {
@@ -518,7 +520,7 @@ const TValue *luaH_getint (Table *t, lua_Integer key) {
 const TValue *luaH_getstr (Table *t, TString *key) {
   Node *n = hashstr(t, key);
   lua_assert(key->tt == LUA_TSHRSTR);
-  for (;;) {  /* check whether `key' is somewhere in the chain */
+  for (;;) {  /* check whether 'key' is somewhere in the chain */
     const TValue *k = gkey(n);
     if (ttisshrstring(k) && eqshrstr(tsvalue(k), key))
       return gval(n);  /* that's it */
@@ -548,7 +550,7 @@ const TValue *luaH_get (Table *t, const TValue *key) {
     }
     default: {
       Node *n = mainposition(t, key);
-      for (;;) {  /* check whether `key' is somewhere in the chain */
+      for (;;) {  /* check whether 'key' is somewhere in the chain */
         if (luaV_rawequalobj(gkey(n), key))
           return gval(n);  /* that's it */
         else {
@@ -592,7 +594,7 @@ void luaH_setint (lua_State *L, Table *t, lua_Integer key, TValue *value) {
 static int unbound_search (Table *t, unsigned int j) {
   unsigned int i = j;  /* i is zero or a present index */
   j++;
-  /* find `i' and `j' such that i is present and j is not */
+  /* find 'i' and 'j' such that i is present and j is not */
   while (!ttisnil(luaH_getint(t, j))) {
     i = j;
     if (j > cast(unsigned int, MAX_INT)/2) {  /* overflow? */
@@ -614,7 +616,7 @@ static int unbound_search (Table *t, unsigned int j) {
 
 
 /*
-** Try to find a boundary in table `t'. A `boundary' is an integer index
+** Try to find a boundary in table 't'. A 'boundary' is an integer index
 ** such that t[i] is non-nil and t[i+1] is nil (and 0 if t[1] is nil).
 */
 int luaH_getn (Table *t) {

@@ -1,16 +1,18 @@
 /*
-** $Id: lua.c,v 1.217 2014/10/20 22:21:05 roberto Exp $
+** $Id: lua.c,v 1.222 2014/11/11 19:41:27 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
+
+#define lua_c
+
+#include "lprefix.h"
 
 
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define lua_c
 
 #include "lua.h"
 
@@ -50,14 +52,14 @@
 #include <unistd.h>
 #define lua_stdin_is_tty()	isatty(0)
 
-#elif defined(LUA_WIN)		/* }{ */
+#elif defined(LUA_USE_WINDOWS)	/* }{ */
 
 #include <io.h>
 #define lua_stdin_is_tty()	_isatty(_fileno(stdin))
 
 #else				/* }{ */
 
-/* ANSI definition */
+/* ISO C definition */
 #define lua_stdin_is_tty()	1  /* assume stdin is a tty */
 
 #endif				/* } */
@@ -126,12 +128,12 @@ static void laction (int i) {
 
 
 static void print_usage (const char *badoption) {
-  luai_writestringerror("%s: ", progname);
+  lua_writestringerror("%s: ", progname);
   if (badoption[1] == 'e' || badoption[1] == 'l')
-    luai_writestringerror("'%s' needs argument\n", badoption);
+    lua_writestringerror("'%s' needs argument\n", badoption);
   else
-    luai_writestringerror("unrecognized option '%s'\n", badoption);
-  luai_writestringerror(
+    lua_writestringerror("unrecognized option '%s'\n", badoption);
+  lua_writestringerror(
   "usage: %s [options] [script [args]]\n"
   "Available options are:\n"
   "  -e stat  execute string 'stat'\n"
@@ -151,8 +153,8 @@ static void print_usage (const char *badoption) {
 ** (if present)
 */
 static void l_message (const char *pname, const char *msg) {
-  if (pname) luai_writestringerror("%s: ", pname);
-  luai_writestringerror("%s\n", msg);
+  if (pname) lua_writestringerror("%s: ", pname);
+  lua_writestringerror("%s\n", msg);
 }
 
 
@@ -208,8 +210,8 @@ static int docall (lua_State *L, int narg, int nres) {
 
 
 static void print_version (void) {
-  luai_writestring(LUA_COPYRIGHT, strlen(LUA_COPYRIGHT));
-  luai_writeline();
+  lua_writestring(LUA_COPYRIGHT, strlen(LUA_COPYRIGHT));
+  lua_writeline();
 }
 
 
@@ -410,7 +412,7 @@ static void doREPL (lua_State *L) {
     else report(L, status);
   }
   lua_settop(L, 0);  /* clear stack */
-  luai_writeline();
+  lua_writeline();
   progname = oldprogname;
 }
 
@@ -420,8 +422,7 @@ static void doREPL (lua_State *L) {
 */
 static int pushargs (lua_State *L) {
   int i, n;
-  lua_getglobal(L, "arg");
-  if (!lua_istable(L, -1))
+  if (lua_getglobal(L, "arg") != LUA_TTABLE)
     luaL_error(L, "'arg' is not a table");
   n = (int)luaL_len(L, -1);
   luaL_checkstack(L, n + 3, "too many arguments to script");

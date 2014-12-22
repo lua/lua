@@ -1,15 +1,17 @@
 /*
-** $Id: lmathlib.c,v 1.110 2014/10/08 19:57:31 roberto Exp $
+** $Id: lmathlib.c,v 1.113 2014/11/07 11:31:58 roberto Exp $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
 
+#define lmathlib_c
+#define LUA_LIB
+
+#include "lprefix.h"
+
 
 #include <stdlib.h>
 #include <math.h>
-
-#define lmathlib_c
-#define LUA_LIB
 
 #include "lua.h"
 
@@ -91,7 +93,7 @@ static int math_toint (lua_State *L) {
 
 static void pushnumint (lua_State *L, lua_Number d) {
   lua_Integer n;
-  if (lua_numtointeger(d, &n))  /* does 'd' fit in an integer? */
+  if (lua_numbertointeger(d, &n))  /* does 'd' fit in an integer? */
     lua_pushinteger(L, n);  /* result is integer */
   else
     lua_pushnumber(L, d);  /* result is float */
@@ -256,8 +258,8 @@ static int math_random (lua_State *L) {
   }
   /* random integer in the interval [low, up] */
   luaL_argcheck(L, low <= up, 1, "interval is empty"); 
-  luaL_argcheck(L, (lua_Unsigned)up - low <= (lua_Unsigned)LUA_MAXINTEGER,
-                   1, "interval too large");
+  luaL_argcheck(L, low >= 0 || up <= LUA_MAXINTEGER + low, 1,
+                   "interval too large");
   r *= (double)(up - low) + 1.0;
   lua_pushinteger(L, (lua_Integer)r + low);
   return 1;

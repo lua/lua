@@ -1,13 +1,16 @@
 /*
-** $Id: lgc.c,v 2.196 2014/10/03 12:54:37 roberto Exp $
+** $Id: lgc.c,v 2.200 2014/11/02 19:19:04 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
 
-#include <string.h>
-
 #define lgc_c
 #define LUA_CORE
+
+#include "lprefix.h"
+
+
+#include <string.h>
 
 #include "lua.h"
 
@@ -119,14 +122,14 @@ static void removeentry (Node *n) {
 /*
 ** tells whether a key or value can be cleared from a weak
 ** table. Non-collectable objects are never removed from weak
-** tables. Strings behave as `values', so are never removed too. for
+** tables. Strings behave as 'values', so are never removed too. for
 ** other objects: if really collected, cannot keep them; for objects
 ** being finalized, keep them in keys, but not in values
 */
 static int iscleared (global_State *g, const TValue *o) {
   if (!iscollectable(o)) return 0;
   else if (ttisstring(o)) {
-    markobject(g, tsvalue(o));  /* strings are `values', so are never weak */
+    markobject(g, tsvalue(o));  /* strings are 'values', so are never weak */
     return 0;
   }
   else return iswhite(gcvalue(o));
@@ -909,12 +912,15 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 
 
 /*
-** set a reasonable "time" to wait before starting a new GC cycle;
-** cycle will start when memory use hits threshold
+** Set a reasonable "time" to wait before starting a new GC cycle; cycle
+** will start when memory use hits threshold. (Division by 'estimate'
+** should be OK: it cannot be zero (because Lua cannot even start with
+** less than PAUSEADJ bytes).
 */
 static void setpause (global_State *g) {
   l_mem threshold, debt;
   l_mem estimate = g->GCestimate / PAUSEADJ;  /* adjust 'estimate' */
+  lua_assert(estimate > 0);
   threshold = (g->gcpause < MAX_LMEM / estimate)  /* overflow? */
             ? estimate * g->gcpause  /* no overflow */
             : MAX_LMEM;  /* overflow; truncate to maximum */
@@ -972,7 +978,7 @@ static l_mem atomic (lua_State *L) {
   /* remark occasional upvalues of (maybe) dead threads */
   remarkupvals(g);
   propagateall(g);  /* propagate changes */
-  work = g->GCmemtrav;  /* stop counting (do not recount gray-agains) */
+  work = g->GCmemtrav;  /* stop counting (do not recount 'grayagain') */
   g->gray = grayagain;
   propagateall(g);  /* traverse 'grayagain' list */
   g->GCmemtrav = 0;  /* restart counting */
@@ -992,7 +998,7 @@ static l_mem atomic (lua_State *L) {
   /* at this point, all resurrected objects are marked. */
   /* remove dead objects from weak tables */
   clearkeys(g, g->ephemeron, NULL);  /* clear keys from all ephemeron tables */
-  clearkeys(g, g->allweak, NULL);  /* clear keys from all allweak tables */
+  clearkeys(g, g->allweak, NULL);  /* clear keys from all 'allweak' tables */
   /* clear values from resurrected weak tables */
   clearvalues(g, g->weak, origweak);
   clearvalues(g, g->allweak, origall);
@@ -1031,7 +1037,7 @@ static lu_mem singlestep (lua_State *L) {
       g->GCmemtrav = 0;
       lua_assert(g->gray);
       propagatemark(g);
-       if (g->gray == NULL)  /* no more `gray' objects? */
+       if (g->gray == NULL)  /* no more gray objects? */
         g->gcstate = GCSatomic;  /* finish propagate phase */
       return g->GCmemtrav;  /* memory traversed in this step */
     }
@@ -1122,7 +1128,7 @@ void luaC_step (lua_State *L) {
 
 
 /*
-** Performs a full GC cycle; if "isemergency", set a flag to avoid
+** Performs a full GC cycle; if 'isemergency', set a flag to avoid
 ** some operations which could change the interpreter state in some
 ** unexpected ways (running finalizers and shrinking some structures).
 ** Before running the collection, check 'keepinvariant'; if it is true,

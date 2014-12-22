@@ -1,16 +1,18 @@
 /*
-** $Id: ldblib.c,v 1.143 2014/10/17 11:07:26 roberto Exp $
+** $Id: ldblib.c,v 1.147 2014/12/08 15:47:25 roberto Exp $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
+
+#define ldblib_c
+#define LUA_LIB
+
+#include "lprefix.h"
 
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define ldblib_c
-#define LUA_LIB
 
 #include "lua.h"
 
@@ -18,7 +20,11 @@
 #include "lualib.h"
 
 
-#define HOOKKEY		"_HKEY"
+/*
+** The hook table at registry[&HOOKKEY] maps threads to their current
+** hook function. (We only need the unique address of 'HOOKKEY'.)
+*/
+static const int HOOKKEY = 0;
 
 
 static int db_getregistry (lua_State *L) {
@@ -271,20 +277,13 @@ static int db_upvaluejoin (lua_State *L) {
 
 
 /*
-** The hook table (at registry[HOOKKEY]) maps threads to their current
-** hook function
-*/
-#define gethooktable(L)	luaL_getsubtable(L, LUA_REGISTRYINDEX, HOOKKEY)
-
-
-/*
 ** Call hook function registered at hook table for the current
 ** thread (if there is one)
 */
 static void hookf (lua_State *L, lua_Debug *ar) {
   static const char *const hooknames[] =
     {"call", "return", "line", "count", "tail call"};
-  gethooktable(L);
+  lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY);
   lua_pushthread(L);
   if (lua_rawget(L, -2) == LUA_TFUNCTION) {  /* is there a hook function? */
     lua_pushstring(L, hooknames[(int)ar->event]);  /* push event name */
@@ -337,16 +336,19 @@ static int db_sethook (lua_State *L) {
     count = (int)luaL_optinteger(L, arg + 3, 0);
     func = hookf; mask = makemask(smask, count);
   }
-  if (gethooktable(L) == 0) {  /* creating hook table? */
+  if (lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY) == LUA_TNIL) {
+    lua_createtable(L, 0, 2);  /* create a hook table */
+    lua_pushvalue(L, -1);
+    lua_rawsetp(L, LUA_REGISTRYINDEX, &HOOKKEY);  /* set it in position */
     lua_pushstring(L, "k");
     lua_setfield(L, -2, "__mode");  /** hooktable.__mode = "k" */
     lua_pushvalue(L, -1);
     lua_setmetatable(L, -2);  /* setmetatable(hooktable) = hooktable */
   }
-  lua_pushthread(L1); lua_xmove(L1, L, 1);  /* key */
-  lua_pushvalue(L, arg+1);  /* value */
+  lua_pushthread(L1); lua_xmove(L1, L, 1);  /* key (thread) */
+  lua_pushvalue(L, arg + 1);  /* value (hook function) */
   lua_rawset(L, -3);  /* hooktable[L1] = new Lua hook */
-  lua_sethook(L1, func, mask, count);  /* set hooks */
+  lua_sethook(L1, func, mask, count);
   return 0;
 }
 
@@ -357,10 +359,12 @@ static int db_gethook (lua_State *L) {
   char buff[5];
   int mask = lua_gethookmask(L1);
   lua_Hook hook = lua_gethook(L1);
-  if (hook != NULL && hook != hookf)  /* external hook? */
+  if (hook == NULL)  /* no hook? */
+    lua_pushnil(L);
+  else if (hook != hookf)  /* external hook? */
     lua_pushliteral(L, "external hook");
-  else {
-    gethooktable(L);
+  else {  /* hook table must exist */
+    lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY);
     lua_pushthread(L1); lua_xmove(L1, L, 1);
     lua_rawget(L, -2);   /* 1st result = hooktable[L1] */
     lua_remove(L, -2);  /* remove hook table */
@@ -374,13 +378,13 @@ static int db_gethook (lua_State *L) {
 static int db_debug (lua_State *L) {
   for (;;) {
     char buffer[250];
-    luai_writestringerror("%s", "lua_debug> ");
+    lua_writestringerror("%s", "lua_debug> ");
     if (fgets(buffer, sizeof(buffer), stdin) == 0 ||
         strcmp(buffer, "cont\n") == 0)
       return 0;
     if (luaL_loadbuffer(L, buffer, strlen(buffer), "=(debug command)") ||
         lua_pcall(L, 0, 0, 0))
-      luai_writestringerror("%s\n", lua_tostring(L, -1));
+      lua_writestringerror("%s\n", lua_tostring(L, -1));
     lua_settop(L, 0);  /* remove eventual returns */
   }
 }
