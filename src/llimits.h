@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.124 2014/11/02 19:33:33 roberto Exp $
+** $Id: llimits.h,v 1.125 2014/12/19 13:30:23 roberto Exp $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -133,7 +133,7 @@ typedef LUAI_UACINT l_uacInt;
 */
 #if defined(__GNUC__)
 #define l_noret		void __attribute__((noreturn))
-#elif defined(_MSC_VER)
+#elif defined(_MSC_VER) && _MSC_VER >= 1200
 #define l_noret		void __declspec(noreturn)
 #else
 #define l_noret		void

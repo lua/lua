@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.200 2014/11/02 19:19:04 roberto Exp $
+** $Id: lgc.c,v 2.201 2014/12/20 13:58:15 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -705,10 +705,10 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count);
 
 /*
 ** sweep at most 'count' elements from a list of GCObjects erasing dead
-** objects, where a dead (not alive) object is one marked with the "old"
-** (non current) white and not fixed; change all non-dead objects back
-** to white, preparing for next collection cycle.
-** When object is a thread, sweep its list of open upvalues too.
+** objects, where a dead object is one marked with the old (non current)
+** white; change all non-dead objects back to white, preparing for next
+** collection cycle. Return where to continue the traversal or NULL if
+** list is finished.
 */
 static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
   global_State *g = G(L);
@@ -721,7 +721,7 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
       *p = curr->next;  /* remove 'curr' from list */
       freeobj(L, curr);  /* erase 'curr' */
     }
-    else {  /* update marks */
+    else {  /* change mark to 'white' */
       curr->marked = cast_byte((marked & maskcolors) | white);
       p = &curr->next;  /* go to next element */
     }

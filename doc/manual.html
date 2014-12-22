@@ -33,7 +33,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.141 2014/12/16 16:21:31 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.142 2014/12/22 13:31:36 roberto Exp $ -->
 
 
 
@@ -8346,13 +8346,13 @@ its default value is&nbsp;1 and can be negative.
 
 
 <p>
-<hr><h3><a name="pdf-string.pack"><code>string.pack (fmt, v1, v2, ...)</code></a></h3>
+<hr><h3><a name="pdf-string.pack"><code>string.pack (fmt, v1, v2, &middot;&middot;&middot;)</code></a></h3>
 
 
 <p>
-Returns a binary string containing the values v1, v2, etc.
+Returns a binary string containing the values <code>v1</code>, <code>v2</code>, etc.
 packed (that is, serialized in binary form)
-according to the format string fmt (see <a href="#6.4.2">&sect;6.4.2</a>). 
+according to the format string <code>fmt</code> (see <a href="#6.4.2">&sect;6.4.2</a>). 
 
 
 
@@ -8803,7 +8803,7 @@ It raises an error if it meets any invalid byte sequence.
 <p>
 <hr><h3><a name="pdf-utf8.len"><code>utf8.len (s [, i [, j]])</code></a></h3>
 Returns the number of UTF-8 characters in string <code>s</code>
-that start between positions <code>i</code> and @{j} (both inclusive).
+that start between positions <code>i</code> and <code>j</code> (both inclusive).
 The default for <code>i</code> is 1 and for <code>j</code> is -1.
 If it finds any invalid byte sequence,
 returns a false value plus the position of the first invalid byte. 
@@ -9796,7 +9796,9 @@ because of its reliance on C&nbsp;function <code>gmtime</code> and C&nbsp;functi
 
 
 <p>
-Returns the number of seconds from time <code>t1</code> to time <code>t2</code>.
+Returns the difference, in seconds,
+from time <code>t1</code> to time <code>t2</code>
+(where the times are values returned by <a href="#pdf-os.time"><code>os.time</code></a>).
 In POSIX, Windows, and some other systems,
 this value is exactly <code>t2</code><em>-</em><code>t1</code>.
 
@@ -10768,7 +10770,7 @@ and LiteralString, see <a href="#3.1">&sect;3.1</a>.)
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Tue Dec 16 14:45:50 BRST 2014
+Mon Dec 22 12:28:03 BRST 2014
 </SMALL>
 <!--
 Last change: revised for Lua 5.3.0 (final)
