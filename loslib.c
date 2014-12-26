@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.52 2014/11/02 19:33:33 roberto Exp roberto $
+** $Id: loslib.c,v 1.53 2014/12/10 15:42:42 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -100,8 +100,8 @@
 #else				/* }{ */
 
 /* ISO C definitions */
-#define l_gmtime(t,r)		((void)r, gmtime(t))
-#define l_localtime(t,r)  	((void)r, localtime(t))
+#define l_gmtime(t,r)		((void)(r)->tm_sec, gmtime(t))
+#define l_localtime(t,r)  	((void)(r)->tm_sec, localtime(t))
 
 #endif				/* } */
 
