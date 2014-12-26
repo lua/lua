@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.45 2014/12/09 17:17:40 roberto Exp roberto $
+** $Id: ltests.h,v 2.46 2014/12/19 13:33:06 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -108,11 +108,6 @@ LUA_API void *debug_realloc (void *ud, void *block,
 
 #undef LUAI_USER_ALIGNMENT_T
 #define LUAI_USER_ALIGNMENT_T   union { char b[sizeof(void*) * 8]; }
-
-
-/* check macro 'luai_numinvalidop' */
-#undef luai_numinvalidop
-#define luai_numinvalidop(op,a,b)	(op == LUA_OPADD && a == 1.5 && b == 1)
 
 #endif
 

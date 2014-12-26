@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.235 2014/12/16 17:17:30 roberto Exp roberto $
+** $Id: luaconf.h,v 1.236 2014/12/19 13:31:12 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -505,14 +505,6 @@
 #define luai_numle(a,b)		((a)<=(b))
 #define luai_numisnan(a)	(!luai_numeq((a), (a)))
 #endif
-
-
-/*
-** The following macro checks whether an operation is not safe to be
-** performed by the constant folder. It should result in zero only if
-** the operation is safe.
-*/
-#define luai_numinvalidop(op,a,b)	0
 
 
 /*
