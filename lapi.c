@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.242 2014/11/02 19:19:04 roberto Exp roberto $
+** $Id: lapi.c,v 2.243 2014/11/12 13:28:54 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -676,7 +676,7 @@ LUA_API void lua_createtable (lua_State *L, int narray, int nrec) {
 
 LUA_API int lua_getmetatable (lua_State *L, int objindex) {
   const TValue *obj;
-  Table *mt = NULL;
+  Table *mt;
   int res = 0;
   lua_lock(L);
   obj = index2addr(L, objindex);
