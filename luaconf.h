@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.236 2014/12/19 13:31:12 roberto Exp roberto $
+** $Id: luaconf.h,v 1.237 2014/12/26 14:44:44 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -476,7 +476,7 @@
 #include <math.h>
 
 /* floor division (defined as 'floor(a/b)') */
-#define luai_numidiv(L,a,b)	((void)L, l_mathop(floor)((a)/(b)))
+#define luai_numidiv(L,a,b)	((void)L, l_mathop(floor)(luai_numdiv(L,a,b)))
 
 /*
 ** module: defined as 'a - floor(a/b)*b'; the previous definition gives
