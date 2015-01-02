@@ -17,6 +17,7 @@ CWARNSCPP= \
 	-Wdisabled-optimization \
 	-Wstrict-aliasing \
 	# the next warnings generate to much noise, so they are disabled
+	# -Wconversion  -Wno-sign-conversion \
 	# -Wsign-conversion \
 	# -Wconversion \
 	# -Wlogical-op \
