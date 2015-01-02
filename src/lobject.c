@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.100 2014/11/21 12:15:57 roberto Exp $
+** $Id: lobject.c,v 2.101 2014/12/26 14:43:45 roberto Exp $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -189,7 +189,7 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
   int sigdig = 0;  /* number of significant digits */
   int nosigdig = 0;  /* number of non-significant digits */
   int e = 0;  /* exponent correction */
-  int neg = 0;  /* 1 if number is negative */
+  int neg;  /* 1 if number is negative */
   int dot = 0;  /* true after seen a dot */
   *endptr = cast(char *, s);  /* nothing is valid yet */
   while (lisspace(cast_uchar(*s))) s++;  /* skip initial spaces */

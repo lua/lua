@@ -1,5 +1,5 @@
 /*
-** $Id: lprefix.h,v 1.1 2014/11/03 15:12:44 roberto Exp $
+** $Id: lprefix.h,v 1.2 2014/12/29 16:54:13 roberto Exp $
 ** Definitions for Lua code that must come before any other header file
 ** See Copyright Notice in lua.h
 */
@@ -11,17 +11,23 @@
 /*
 ** Allows POSIX/XSI stuff
 */
+#if !defined(LUA_USE_C89)	/* { */
+
 #if !defined(_XOPEN_SOURCE)
 #define _XOPEN_SOURCE           600
+#elif _XOPEN_SOURCE == 0
+#undef _XOPEN_SOURCE  /* use -D_XOPEN_SOURCE=0 to undefine it */
 #endif
 
 /*
 ** Allows manipulation of large files in gcc and some other compilers
 */
-#if !defined(_FILE_OFFSET_BITS)
+#if !defined(LUA_32BITS) && !defined(_FILE_OFFSET_BITS)
 #define _LARGEFILE_SOURCE       1
 #define _FILE_OFFSET_BITS       64
 #endif
+
+#endif				/* } */
 
 
 /*

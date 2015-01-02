@@ -19,7 +19,7 @@ Lua 5.3 Reference Manual
 by Roberto Ierusalimschy, Luiz Henrique de Figueiredo, Waldemar Celes
 <p>
 <small>
-Copyright &copy; 2014 Lua.org, PUC-Rio.
+Copyright &copy; 2015 Lua.org, PUC-Rio.
 Freely available under the terms of the
 <a href="http://www.lua.org/license.html">Lua license</a>.
 </small>
@@ -33,7 +33,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.142 2014/12/22 13:31:36 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.143 2015/01/02 13:07:38 roberto Exp $ -->
 
 
 
@@ -1855,7 +1855,7 @@ Lua supports the following arithmetic operators:
 </ul>
 
 <p>
-With the exception of float division and exponentiation,
+With the exception of exponentiation and float division,
 the arithmetic operators work as follows:
 If both operands are integers,
 the operation is performed over integers and the result is an integer.
@@ -1870,7 +1870,7 @@ and the result is a float.
 
 
 <p>
-Float division (<code>/</code>) and exponentiation
+Exponentiation and float division (<code>/</code>)
 always convert their operands to floats
 and the result is always a float.
 Exponentiation uses the ISO&nbsp;C function <code>pow</code>,
@@ -1932,7 +1932,7 @@ result in zero (as all bits are shifted out).
 Lua provides some automatic conversions between some
 types and representations at run time.
 Bitwise operators always convert float operands to integers.
-Float division and exponentiation
+Exponentiation and float division
 always convert integer operands to floats.
 All other arithmetic operations applied to mixed numbers
 (integers and floats) convert the integer operand to a float;
@@ -2893,7 +2893,7 @@ replacing <a href="#lua_pcall"><code>lua_pcall</code></a> by <a href="#lua_pcall
 </pre><p>
 Note the external, explicit call to the continuation:
 Lua will call the continuation only if needed, that is,
-in case of errors or resuming after an yield.
+in case of errors or resuming after a yield.
 If the called function returns normally without ever yielding,
 <a href="#lua_pcallk"><code>lua_pcallk</code></a> (and <a href="#lua_callk"><code>lua_callk</code></a>) will also return normally.
 (Of course, instead of calling the continuation in that case,
@@ -2910,7 +2910,7 @@ it only passes this value from the original function to the
 continuation function.)
 For <a href="#lua_pcallk"><code>lua_pcallk</code></a>,
 the status is the same value that would be returned by <a href="#lua_pcallk"><code>lua_pcallk</code></a>,
-except that it is <a href="#pdf-LUA_YIELD"><code>LUA_YIELD</code></a> when being executed after an yield
+except that it is <a href="#pdf-LUA_YIELD"><code>LUA_YIELD</code></a> when being executed after a yield
 (instead of <a href="#pdf-LUA_OK"><code>LUA_OK</code></a>).
 For <a href="#lua_yieldk"><code>lua_yieldk</code></a> and <a href="#lua_callk"><code>lua_callk</code></a>,
 the status is always <a href="#pdf-LUA_YIELD"><code>LUA_YIELD</code></a> when Lua calls the continuation.
@@ -5785,7 +5785,7 @@ when the index is greater than the number of upvalues.
 <pre>void *lua_upvalueid (lua_State *L, int funcindex, int n);</pre>
 
 <p>
-Returns an unique identifier for the upvalue numbered <code>n</code>
+Returns a unique identifier for the upvalue numbered <code>n</code>
 from the closure at index <code>funcindex</code>.
 Parameters <code>funcindex</code> and <code>n</code> are as in the <a href="#lua_getupvalue"><code>lua_getupvalue</code></a>
 (see <a href="#lua_getupvalue"><code>lua_getupvalue</code></a>)
@@ -6576,6 +6576,7 @@ creates a new table to be used as a metatable for userdata,
 adds to this new table the pair <code>__name = tname</code>,
 adds to the registry the pair <code>[tname] = new table</code>,
 and returns 1.
+(The entry <code>__name</code> is used by some error-reporting functions.)
 
 
 <p>
@@ -6782,7 +6783,7 @@ Type for arrays of functions to be registered by
 <a href="#luaL_setfuncs"><code>luaL_setfuncs</code></a>.
 <code>name</code> is the function name and <code>func</code> is a pointer to
 the function.
-Any array of <a href="#luaL_Reg"><code>luaL_Reg</code></a> must end with an sentinel entry
+Any array of <a href="#luaL_Reg"><code>luaL_Reg</code></a> must end with a sentinel entry
 in which both <code>name</code> and <code>func</code> are <code>NULL</code>.
 
 
@@ -8552,26 +8553,27 @@ which matches any single character in the class;
 
 <li>
 a single character class followed by '<code>*</code>',
-which matches 0 or more repetitions of characters in the class.
+which matches zero or more repetitions of characters in the class.
 These repetition items will always match the longest possible sequence;
 </li>
 
 <li>
 a single character class followed by '<code>+</code>',
-which matches 1 or more repetitions of characters in the class.
+which matches one or more repetitions of characters in the class.
 These repetition items will always match the longest possible sequence;
 </li>
 
 <li>
 a single character class followed by '<code>-</code>',
-which also matches 0 or more repetitions of characters in the class.
+which also matches zero or more repetitions of characters in the class.
 Unlike '<code>*</code>',
 these repetition items will always match the shortest possible sequence;
 </li>
 
 <li>
 a single character class followed by '<code>?</code>',
-which matches 0 or 1 occurrence of a character in the class;
+which matches zero or one occurrence of a character in the class.
+It always matches one occurrence if possible;
 </li>
 
 <li>
@@ -10108,7 +10110,9 @@ but also parameters, temporaries, etc.
 
 <p>
 The first parameter or local variable has index&nbsp;1, and so on,
-until the last active variable.
+following the order that they are declared in the code,
+counting only the variables that are active
+in the current scope of the function.
 Negative indices refer to vararg parameters;
 -1 is the first vararg parameter.
 The function returns <b>nil</b> if there is no variable with the given index,
@@ -10119,7 +10123,7 @@ and raises an error when called with a level out of range.
 <p>
 Variable names starting with '<code>(</code>' (open parenthesis) 
 represent variables with no known names
-(internal variables like loop control variables,
+(internal variables such as loop control variables,
 and variables from chunks saved without debug information).
 
 
@@ -10310,7 +10314,7 @@ to start the traceback
 
 
 <p>
-Returns an unique identifier (as a light userdata)
+Returns a unique identifier (as a light userdata)
 for the upvalue numbered <code>n</code>
 from the given function.
 
@@ -10770,7 +10774,7 @@ and LiteralString, see <a href="#3.1">&sect;3.1</a>.)
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Mon Dec 22 12:28:03 BRST 2014
+Fri Jan  2 11:29:40 BRST 2015
 </SMALL>
 <!--
 Last change: revised for Lua 5.3.0 (final)

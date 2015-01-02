@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.98 2014/12/19 13:36:32 roberto Exp $
+** $Id: lcode.c,v 2.99 2014/12/29 16:49:25 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -31,14 +31,6 @@
 
 /* Maximum number of registers in a Lua function */
 #define MAXREGS		250
-
-
-/* test for x == -0 ('signbit' needs 'math.h') */
-#if defined(signbit)
-#define isminuszero(x)	((x) == 0.0 && signbit(x))
-#else
-#define isminuszero(x)	((x) == 0.0 && 1.0/(x) < 0.0)
-#endif
 
 
 #define hasjumps(e)	((e)->t != (e)->f)
@@ -364,14 +356,8 @@ int luaK_intK (FuncState *fs, lua_Integer n) {
 }
 
 
-/*
-** Both NaN and -0.0 should not go to the constant table, as they have
-** problems with the hashing. (NaN is not a valid key, -0.0 collides
-** with +0.0.)
-*/ 
 static int luaK_numberK (FuncState *fs, lua_Number r) {
   TValue o;
-  lua_assert(!luai_numisnan(r) && !isminuszero(r));
   setfltvalue(&o, r);
   return addk(fs, &o, &o);
 }
@@ -761,14 +747,14 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
 ** return false if folding can raise an error
 */
 static int validop (int op, TValue *v1, TValue *v2) {
-  lua_Integer i;
-  if (luai_numinvalidop(op, nvalue(v1), nvalue(v2))) return 0;
   switch (op) {
     case LUA_OPBAND: case LUA_OPBOR: case LUA_OPBXOR:
-    case LUA_OPSHL: case LUA_OPSHR: case LUA_OPBNOT:  /* conversion errors */
+    case LUA_OPSHL: case LUA_OPSHR: case LUA_OPBNOT: {  /* conversion errors */
+      lua_Integer i;
       return (tointeger(v1, &i) && tointeger(v2, &i));
-    case LUA_OPIDIV: case LUA_OPMOD:  /* integer division by 0 */
-      return !(ttisinteger(v1) && ttisinteger(v2) && ivalue(v2) == 0);
+    }
+    case LUA_OPDIV: case LUA_OPIDIV: case LUA_OPMOD:  /* division by 0 */
+      return (nvalue(v2) != 0);
     default: return 1;  /* everything else is valid */
   }
 }
@@ -781,15 +767,15 @@ static int constfolding (FuncState *fs, int op, expdesc *e1, expdesc *e2) {
   TValue v1, v2, res;
   if (!tonumeral(e1, &v1) || !tonumeral(e2, &v2) || !validop(op, &v1, &v2))
     return 0;  /* non-numeric operands or not safe to fold */
-  luaO_arith(fs->ls->L, op, &v1, &v2, &res);
+  luaO_arith(fs->ls->L, op, &v1, &v2, &res);  /* does operation */
   if (ttisinteger(&res)) {
     e1->k = VKINT;
     e1->u.ival = ivalue(&res);
   }
-  else {
+  else {  /* folds neither NaN nor 0.0 (to avoid collapsing with -0.0) */
     lua_Number n = fltvalue(&res);
-    if (luai_numisnan(n) || isminuszero(n))
-      return 0;  /* folds neither NaN nor -0 */
+    if (luai_numisnan(n) || n == 0)
+      return 0;
     e1->k = VKFLT;
     e1->u.nval = n;
   }

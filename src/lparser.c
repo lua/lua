@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.146 2014/11/27 18:41:43 roberto Exp $
+** $Id: lparser.c,v 2.147 2014/12/27 20:31:43 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -47,8 +47,8 @@
 */
 typedef struct BlockCnt {
   struct BlockCnt *previous;  /* chain */
-  short firstlabel;  /* index of first label in this block */
-  short firstgoto;  /* index of first pending goto in this block */
+  int firstlabel;  /* index of first label in this block */
+  int firstgoto;  /* index of first pending goto in this block */
   lu_byte nactvar;  /* # active locals outside the block */
   lu_byte upval;  /* true if some variable in the block is an upvalue */
   lu_byte isloop;  /* true if 'block' is a loop */
@@ -386,7 +386,7 @@ static int newlabelentry (LexState *ls, Labellist *l, TString *name,
   l->arr[n].line = line;
   l->arr[n].nactvar = ls->fs->nactvar;
   l->arr[n].pc = pc;
-  l->n++;
+  l->n = n + 1;
   return n;
 }
 
