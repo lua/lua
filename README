@@ -24,8 +24,8 @@ See HISTORY for a summary of changes since the last released version.
 * Installation
   ------------
   Lua is implemented in pure ANSI C, and compiles unmodified in all known
-  platforms that have an ANSI C compiler. Under Unix, simply typing "make"
-  should work. See INSTALL for detailed instructions.
+  platforms that have an ANSI C compiler. In most Unix-like platforms, simply
+  do "make" with a suitable target. See INSTALL for detailed instructions.
 
 * Origin
   ------

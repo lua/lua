@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.25 2006/03/21 19:28:49 roberto Exp $
+** $Id: lcode.c,v 2.25a 2006/03/21 19:28:49 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -35,15 +35,20 @@ static int isnumeral(expdesc *e) {
 void luaK_nil (FuncState *fs, int from, int n) {
   Instruction *previous;
   if (fs->pc > fs->lasttarget) {  /* no jumps to current position? */
-    if (fs->pc == 0)  /* function start? */
-      return;  /* positions are already clean */
-    if (GET_OPCODE(*(previous = &fs->f->code[fs->pc-1])) == OP_LOADNIL) {
-      int pfrom = GETARG_A(*previous);
-      int pto = GETARG_B(*previous);
-      if (pfrom <= from && from <= pto+1) {  /* can connect both? */
-        if (from+n-1 > pto)
-          SETARG_B(*previous, from+n-1);
-        return;
+    if (fs->pc == 0) {  /* function start? */
+      if (from >= fs->nactvar)
+        return;  /* positions are already clean */
+    }
+    else {
+      previous = &fs->f->code[fs->pc-1];
+      if (GET_OPCODE(*previous) == OP_LOADNIL) {
+        int pfrom = GETARG_A(*previous);
+        int pto = GETARG_B(*previous);
+        if (pfrom <= from && from <= pto+1) {  /* can connect both? */
+          if (from+n-1 > pto)
+            SETARG_B(*previous, from+n-1);
+          return;
+        }
       }
     }
   }
@@ -657,10 +662,16 @@ static void codearith (FuncState *fs, OpCode op, expdesc *e1, expdesc *e2) {
   if (constfolding(op, e1, e2))
     return;
   else {
-    int o1 = luaK_exp2RK(fs, e1);
     int o2 = (op != OP_UNM && op != OP_LEN) ? luaK_exp2RK(fs, e2) : 0;
-    freeexp(fs, e2);
-    freeexp(fs, e1);
+    int o1 = luaK_exp2RK(fs, e1);
+    if (o1 > o2) {
+      freeexp(fs, e1);
+      freeexp(fs, e2);
+    }
+    else {
+      freeexp(fs, e2);
+      freeexp(fs, e1);
+    }
     e1->u.s.info = luaK_codeABC(fs, op, 0, o1, o2);
     e1->k = VRELOCABLE;
   }
@@ -718,8 +729,13 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
       luaK_exp2nextreg(fs, v);  /* operand must be on the `stack' */
       break;
     }
-    default: {
+    case OPR_ADD: case OPR_SUB: case OPR_MUL: case OPR_DIV:
+    case OPR_MOD: case OPR_POW: {
       if (!isnumeral(v)) luaK_exp2RK(fs, v);
+      break;
+    }
+    default: {
+      luaK_exp2RK(fs, v);
       break;
     }
   }

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.42 2006/06/05 15:57:59 roberto Exp $
+** $Id: lparser.c,v 2.42a 2006/06/05 15:57:59 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -489,7 +489,7 @@ static void lastlistfield (FuncState *fs, struct ConsControl *cc) {
 
 static void listfield (LexState *ls, struct ConsControl *cc) {
   expr(ls, &cc->v);
-  luaY_checklimit(ls->fs, cc->na, MAXARG_Bx, "items in a constructor");
+  luaY_checklimit(ls->fs, cc->na, MAX_INT, "items in a constructor");
   cc->na++;
   cc->tostore++;
 }

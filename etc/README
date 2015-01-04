@@ -20,6 +20,7 @@ lua.pc
 
 luavs.bat
 	Script to build Lua under "Visual Studio .NET Command Prompt".
+	Run it from the toplevel as etc\luavs.bat.
 
 min.c
 	A minimal Lua interpreter.
