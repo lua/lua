@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.108.1.3 2013/11/08 18:22:50 roberto Exp $
+** $Id: ldo.c,v 2.109 2013/04/19 21:05:04 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -534,7 +534,6 @@ static void resume (lua_State *L, void *ud) {
 
 LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs) {
   int status;
-  int oldnny = L->nny;  /* save 'nny' */
   lua_lock(L);
   luai_userstateresume(L, nargs);
   L->nCcalls = (from) ? from->nCcalls + 1 : 1;
@@ -556,7 +555,7 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs) {
     }
     lua_assert(status == L->status);
   }
-  L->nny = oldnny;  /* restore 'nny' */
+  L->nny = 1;  /* do not allow yields */
   L->nCcalls--;
   lua_assert(L->nCcalls == ((from) ? from->nCcalls : 0));
   lua_unlock(L);

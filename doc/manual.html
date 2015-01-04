@@ -2,7 +2,7 @@
 <html>
 
 <head>
-<title>Lua 5.2 Reference Manual</title>
+<title>Lua 5.3 Reference Manual</title>
 <link rel="stylesheet" type="text/css" href="lua.css">
 <link rel="stylesheet" type="text/css" href="manual.css">
 <META HTTP-EQUIV="content-type" CONTENT="text/html; charset=iso-8859-1">
@@ -13,7 +13,7 @@
 <hr>
 <h1>
 <a href="http://www.lua.org/"><img src="logo.gif" alt="" border="0"></a>
-Lua 5.2 Reference Manual
+Lua 5.3 Reference Manual
 </h1>
 
 by Roberto Ierusalimschy, Luiz Henrique de Figueiredo, Waldemar Celes
@@ -33,7 +33,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.103 2013/03/14 18:51:56 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.105 2013/07/05 18:48:52 roberto Exp $ -->
 
 
 
@@ -119,14 +119,11 @@ it usually represents the absence of a useful value.
 <em>Boolean</em> is the type of the values <b>false</b> and <b>true</b>.
 Both <b>nil</b> and <b>false</b> make a condition false;
 any other value makes it true.
-<em>Number</em> represents real (double-precision floating-point) numbers.
-Operations on numbers follow the same rules of
-the underlying C&nbsp;implementation,
-which, in turn, usually follows the IEEE 754 standard.
-(It is easy to build Lua interpreters that use other
-internal representations for numbers,
-such as single-precision floats or long integers;
-see file <code>luaconf.h</code>.)
+<em>Number</em> represents both integer numbers and
+real (floating-point) numbers.
+Standard Lua uses 64-bit integers and double-precision floats,
+but it is easy to compile Lua so that it
+uses 32-bit integers and single-precision floats.
 <em>String</em> represents immutable sequences of bytes.
 
 Lua is 8-bit clean:
@@ -829,7 +826,7 @@ the collector directly (e.g., stop and restart it).
 
 
 <p>
-As an experimental feature in Lua 5.2,
+As an experimental feature in Lua 5.3,
 you can change the collector's operation mode
 from incremental to <em>generational</em>.
 A <em>generational collector</em> assumes that most objects die young,
@@ -1293,11 +1290,19 @@ which start with <code>0x</code> or <code>0X</code>.
 Hexadecimal constants also accept an optional fractional part
 plus an optional binary exponent,
 marked by a letter '<code>p</code>' or '<code>P</code>'.
-Examples of valid numerical constants are
+A numeric constant with an fractional dot or an exponent 
+denotes a floating-point number;
+otherwise it denotes an integer number.
+Examples of valid integer constants are
 
 <pre>
-     3     3.0     3.1416     314.16e-2     0.31416E1
-     0xff  0x0.1E  0xA23p-4   0X1.921FB54442D18P+1
+     3   345   0xff   0xBEBADA
+</pre><p>
+Examples of valid floating-point constants are
+
+<pre>
+     3.0     3.1416     314.16e-2     0.31416E1     34e1
+     0x0.1E  0xA23p-4   0X1.921FB54442D18P+1
 </pre>
 
 <p>
@@ -1923,38 +1928,113 @@ or <b>nil</b> if <code>f</code> does not return any values.)
 
 
 <h3>3.4.1 &ndash; <a name="3.4.1">Arithmetic Operators</a></h3><p>
-Lua supports the usual arithmetic operators:
+Lua supports the following arithmetic operators:
 the binary <code>+</code> (addition),
 <code>-</code> (subtraction), <code>*</code> (multiplication),
-<code>/</code> (division), <code>%</code> (modulo), and <code>^</code> (exponentiation);
+<code>/</code> (division), <code>//</code> (integer division),
+<code>%</code> (modulo), and <code>^</code> (exponentiation);
 and unary <code>-</code> (mathematical negation).
-If the operands are numbers, or strings that can be converted to
-numbers (see <a href="#3.4.2">&sect;3.4.2</a>),
-then all operations have the usual meaning.
-Exponentiation works for any exponent.
-For instance, <code>x^(-0.5)</code> computes the inverse of the square root of <code>x</code>.
-Modulo is defined as
+Modulo is defined as the remainder of a division
+that rounds the quotient towards minus infinite (floor).
 
-<pre>
-     a % b == a - math.floor(a/b)*b
-</pre><p>
-That is, it is the remainder of a division that rounds
-the quotient towards minus infinity.
-
-
-
-
-
-<h3>3.4.2 &ndash; <a name="3.4.2">Coercion</a></h3>
 
 <p>
-Lua provides automatic conversion between
-string and number values at run time.
-Any arithmetic operation applied to a string tries to convert
-this string to a number, following the rules of the Lua lexer.
+With the exception of division, integer division, and exponentiation,
+the arithmetic operators work as follows:
+If both operands are integers,
+the operation is performed over integers and the result is an integer.
+Otherwise, if both operands are numbers
+or strings that can be converted to
+numbers (see <a href="#3.4.2">&sect;3.4.2</a>),
+then they are converted to floating-point numbers,
+the operation is performed following the usual rules
+for floating-point arithmetic
+(usually following the IEEE 754 standard),
+and the result is a floating-point number.
+
+
+<p>
+Division (<code>/</code>) always converts its operands to floating-point numbers
+and its result is always a floating-point number.
+
+
+<p>
+Integer division (<code>//</code>) converts its operands to integer numbers
+(see <a href="#3.4.2">&sect;3.4.2</a>)
+and its result is always an integer number.
+The result is always rounded towards minus infinite (floor).
+
+
+<p>
+Exponentiation (<code>^</code>) checks whether both operands are integers and
+the exponent is non-negative.
+In that case, the exponentiation is performed as an integer operation
+and the result is an integer number.
+Otherwise, it is performed as a floatint-point operation (<code>pow</code>).
+
+
+<p>
+In case of overflows in integer arithmetic,
+all operations <em>wrap around</em>,
+according to the usual rules of two-complement arithmetic.
+
+
+
+
+
+<h3>3.4.2 &ndash; <a name="3.4.2">Coercions and Conversions</a></h3>
+
+<p>
+Lua provides some automatic conversions between types at run time.
+Most binary operations applied to mixed numbers
+(integers and floats) convert the integer operand to a float;
+this is called the <em>usual rule</em>.
+Division always convert integer operands to floats,
+and integer division always convert floating operands to integers.
+The C API also converts both integers to floats and
+floats to integers, as needed.
+Moreover, string concatenation accepts numbers as arguments,
+besides strings. 
+
+
+<p>
+Lua also converts strings to numbers,
+whenever a number is expected.
+(This conversion may be deprecated in future versions.)
+
+
+<p>
+In a conversion from integer to float,
+if the integer value has an exact representation as a float,
+that is the result.
+Otherwise,
+the conversion gets the nearest higher or lower representable value.
+This kind of conversion never fails.
+
+
+<p>
+The conversion from float to integer
+first takes the floor of the float number.
+If that value can be represented as an integer number
+(that is, it is in the range of integer numbers),
+that is the result.
+Otherwise, the conversion fails.
+
+
+<p>
+The conversion from strings to floats
+follows the rules of the Lua lexer.
 (The string may have leading and trailing spaces and a sign.)
-Conversely, whenever a number is used where a string is expected,
-the number is converted to a string, in a reasonable format.
+There is no direct conversion from strings to integers:
+If a string is provided where an integer is needed,
+Lua converts the string to a float an then the float to an integer.
+
+
+<p>
+The conversion from numbers to strings use a reasonable,
+non-specified format.
+Floating-point numbers always produce strings with some
+floating-point indication (either a decimal dot or an exponent).
 For complete control over how numbers are converted to strings,
 use the <code>format</code> function from the string library
 (see <a href="#pdf-string.format"><code>string.format</code></a>).
@@ -1976,7 +2056,15 @@ These operators always result in <b>false</b> or <b>true</b>.
 Equality (<code>==</code>) first compares the type of its operands.
 If the types are different, then the result is <b>false</b>.
 Otherwise, the values of the operands are compared.
-Numbers and strings are compared in the usual way.
+Strings are compared in the obvious way.
+Numbers follow the usual rule for binary operations:
+if both operands are integers,
+the are compared as integers.
+Otherwise, they are converted to floating-point numbers
+and compared as such.
+
+
+<p>
 Tables, userdata, and threads
 are compared by reference:
 two objects are considered equal only if they are the same object.
@@ -1994,8 +2082,8 @@ by using the "eq" metamethod (see <a href="#2.4">&sect;2.4</a>).
 
 
 <p>
-The conversion rules of <a href="#3.4.2">&sect;3.4.2</a>
-do not apply to equality comparisons.
+Equality comparisons never convert strings to numbers
+or vice versa.
 Thus, <code>"0"==0</code> evaluates to <b>false</b>,
 and <code>t[0]</code> and <code>t["0"]</code> denote different
 entries in a table.
@@ -2007,7 +2095,9 @@ The operator <code>~=</code> is exactly the negation of equality (<code>==</code
 
 <p>
 The order operators work as follows.
-If both arguments are numbers, then they are compared as such.
+If both arguments are numbers,
+then they are compared following
+the usual rule for binary operations.
 Otherwise, if both arguments are strings,
 then their values are compared according to the current locale.
 Otherwise, Lua tries to call the "lt" or the "le"
@@ -2088,7 +2178,7 @@ the length of a table <code>t</code> is only defined if the
 table is a <em>sequence</em>,
 that is,
 the set of its positive numeric keys is equal to <em>{1..n}</em>
-for some integer <em>n</em>.
+for some non-negative integer <em>n</em>.
 In that case, <em>n</em> is its length.
 Note that a table like
 
@@ -2116,7 +2206,7 @@ from lower to higher priority:
      &lt;     &gt;     &lt;=    &gt;=    ~=    ==
      ..
      +     -
-     *     /     %
+     *     /     //    %
      not   #     - (unary)
      ^
 </pre><p>
@@ -3511,13 +3601,14 @@ because a pseudo-index is not an actual stack position.
 <pre>typedef ptrdiff_t lua_Integer;</pre>
 
 <p>
-The type used by the Lua API to represent signed integral values.
+The type of integer numbers in Lua.
 
 
 <p>
-By default it is a <code>ptrdiff_t</code>,
-which is usually the largest signed integral type the machine handles
-"comfortably".
+By default it is defined as <code>long long</code>,
+usually a 64-bit two-complement integer,
+but it can also be <code>long</code> or <code>int</code>,
+usually a 32-bit two-complement integer.
 
 
 
@@ -3554,6 +3645,19 @@ and 0&nbsp;otherwise.
 <p>
 Returns 1 if the value at the given index is a function
 (either C or Lua), and 0&nbsp;otherwise.
+
+
+
+
+
+<hr><h3><a name="lua_isinteger"><code>lua_isinteger</code></a></h3><p>
+<span class="apii">[-0, +0, &ndash;]</span>
+<pre>int lua_isinteger (lua_State *L, int index);</pre>
+
+<p>
+Returns 1 if the value at the given index is an integer
+(that is, the value is a number and is represented as an integer),
+and 0&nbsp;otherwise.
 
 
 
@@ -3762,7 +3866,7 @@ this upvalue will be the <code>_ENV</code> variable (see <a href="#2.2">&sect;2.
 
 <p>
 Creates a new thread running in a new, independent state.
-Returns <code>NULL</code> if cannot create the thread or the state
+Returns <code>NULL</code> if it cannot create the thread or the state
 (due to lack of memory).
 The argument <code>f</code> is the allocator function;
 Lua does all memory allocation for this state through this function.
@@ -3869,10 +3973,9 @@ the table during its traversal.
 <pre>typedef double lua_Number;</pre>
 
 <p>
-The type of numbers in Lua.
-By default, it is double, but that can be changed in <code>luaconf.h</code>.
-Through this configuration file you can change
-Lua to operate with another type for numbers (e.g., float or long).
+The type of floating-point numbers in Lua.
+By default, it is double,
+but that can be changed in <code>luaconf.h</code> to a single float.
 
 
 
@@ -4109,7 +4212,7 @@ Pushes the global environment onto the stack.
 <pre>void lua_pushinteger (lua_State *L, lua_Integer n);</pre>
 
 <p>
-Pushes a number with value <code>n</code> onto the stack.
+Pushes an integer with value <code>n</code> onto the stack.
 
 
 
@@ -4293,7 +4396,7 @@ Similar to <a href="#lua_gettable"><code>lua_gettable</code></a>, but does a raw
 
 <hr><h3><a name="lua_rawgeti"><code>lua_rawgeti</code></a></h3><p>
 <span class="apii">[-0, +1, &ndash;]</span>
-<pre>void lua_rawgeti (lua_State *L, int index, int n);</pre>
+<pre>void lua_rawgeti (lua_State *L, int index, lua_Integer n);</pre>
 
 <p>
 Pushes onto the stack the value <code>t[n]</code>,
@@ -4351,7 +4454,7 @@ Similar to <a href="#lua_settable"><code>lua_settable</code></a>, but does a raw
 
 <hr><h3><a name="lua_rawseti"><code>lua_rawseti</code></a></h3><p>
 <span class="apii">[-1, +0, <em>e</em>]</span>
-<pre>void lua_rawseti (lua_State *L, int index, int n);</pre>
+<pre>void lua_rawseti (lua_State *L, int index, lua_Integer n);</pre>
 
 <p>
 Does the equivalent of <code>t[n] = v</code>,
@@ -4648,6 +4751,23 @@ You can resume threads with status <a href="#pdf-LUA_OK"><code>LUA_OK</code></a>
 
 
 
+<hr><h3><a name="lua_strtonum"><code>lua_strtonum</code></a></h3><p>
+<span class="apii">[-0, +1, &ndash;]</span>
+<pre>int lua_strtonum (lua_State *L, const char *s, size_t len);</pre>
+
+<p>
+Converts the string <code>s</code> (with length <code>len</code>) to a number and
+pushes that number into the stack.
+The conversion can result in an integer or a float,
+according to the lexical conventions of Lua (see <a href="#3.1">&sect;3.1</a>).
+The string may have leading and trailing spaces and a sign.
+If the string is not a valid numeral,
+returns 0 and pushes nothing.
+
+
+
+
+
 <hr><h3><a name="lua_toboolean"><code>lua_toboolean</code></a></h3><p>
 <span class="apii">[-0, +0, &ndash;]</span>
 <pre>int lua_toboolean (lua_State *L, int index);</pre>
@@ -4697,14 +4817,9 @@ Equivalent to <a href="#lua_tointegerx"><code>lua_tointegerx</code></a> with <co
 <p>
 Converts the Lua value at the given index
 to the signed integral type <a href="#lua_Integer"><code>lua_Integer</code></a>.
-The Lua value must be a number or a string convertible to a number
-(see <a href="#3.4.2">&sect;3.4.2</a>);
+The Lua value must be an integer,
+or a number or string convertible to an integer (see <a href="#3.4.2">&sect;3.4.2</a>);
 otherwise, <code>lua_tointegerx</code> returns&nbsp;0.
-
-
-<p>
-If the number is not an integer,
-it is truncated in some non-specified way.
 
 
 <p>
@@ -4842,16 +4957,18 @@ Equivalent to <a href="#lua_tounsignedx"><code>lua_tounsignedx</code></a> with <
 <p>
 Converts the Lua value at the given index
 to the unsigned integral type <a href="#lua_Unsigned"><code>lua_Unsigned</code></a>.
-The Lua value must be a number or a string convertible to a number
+The Lua value must be an integer,
+or a float,
+or a string convertible to a number
 (see <a href="#3.4.2">&sect;3.4.2</a>);
 otherwise, <code>lua_tounsignedx</code> returns&nbsp;0.
 
 
 <p>
 If the number is not an integer,
-it is truncated in some non-specified way.
-If the number is outside the range of representable values,
-it is normalized to the remainder of its division by
+it is rounded towards minus infinite (floor).
+If the result is outside the range of representable values,
+it is normalized to the module of its division by
 one more than the maximum representable value.
 
 
@@ -4919,13 +5036,7 @@ which must be one the values returned by <a href="#lua_type"><code>lua_type</cod
 <pre>typedef unsigned long lua_Unsigned;</pre>
 
 <p>
-The type used by the Lua API to represent unsigned integral values.
-It must have at least 32 bits.
-
-
-<p>
-By default it is an <code>unsigned int</code> or an <code>unsigned long</code>,
-whichever can hold 32-bit values.
+The unsigned version of <a href="#lua_Integer"><code>lua_Integer</code></a>.
 
 
 
@@ -5861,8 +5972,9 @@ of any type (including <b>nil</b>) at position <code>arg</code>.
 <pre>int luaL_checkint (lua_State *L, int arg);</pre>
 
 <p>
-Checks whether the function argument <code>arg</code> is a number
-and returns this number cast to an <code>int</code>.
+Checks whether the function argument <code>arg</code> is an integer
+(or can be converted to an integer)
+and returns this integer cast to an <code>int</code>.
 
 
 
@@ -5873,8 +5985,9 @@ and returns this number cast to an <code>int</code>.
 <pre>lua_Integer luaL_checkinteger (lua_State *L, int arg);</pre>
 
 <p>
-Checks whether the function argument <code>arg</code> is a number
-and returns this number cast to a <a href="#lua_Integer"><code>lua_Integer</code></a>.
+Checks whether the function argument <code>arg</code> is an integer
+(or can be converted to an integer)
+and returns this integer cast to a <a href="#lua_Integer"><code>lua_Integer</code></a>.
 
 
 
@@ -5885,8 +5998,9 @@ and returns this number cast to a <a href="#lua_Integer"><code>lua_Integer</code
 <pre>long luaL_checklong (lua_State *L, int arg);</pre>
 
 <p>
-Checks whether the function argument <code>arg</code> is a number
-and returns this number cast to a <code>long</code>.
+Checks whether the function argument <code>arg</code> is an integer
+(or can be converted to an integer)
+and returns this integer cast to a <code>long</code>.
 
 
 
@@ -6016,7 +6130,7 @@ returns the userdata address (see <a href="#lua_touserdata"><code>lua_touserdata
 
 <p>
 Checks whether the function argument <code>arg</code> is a number
-and returns this number cast to a <a href="#lua_Unsigned"><code>lua_Unsigned</code></a>.
+and returns this number converted to a <a href="#lua_Unsigned"><code>lua_Unsigned</code></a>.
 
 
 
@@ -6185,13 +6299,13 @@ Pushes the resulting string on the stack and returns it.
 
 <hr><h3><a name="luaL_len"><code>luaL_len</code></a></h3><p>
 <span class="apii">[-0, +0, <em>e</em>]</span>
-<pre>int luaL_len (lua_State *L, int index);</pre>
+<pre>lua_Integer luaL_len (lua_State *L, int index);</pre>
 
 <p>
 Returns the "length" of the value at the given index
 as a number;
 it is equivalent to the '<code>#</code>' operator in Lua (see <a href="#3.4.6">&sect;3.4.6</a>).
-Raises an error if the result of the operation is not a number.
+Raises an error if the result of the operation is not an integer.
 (This case only can happen through metamethods.)
 
 
@@ -6413,8 +6527,9 @@ Otherwise, raises an error.
                              lua_Integer d);</pre>
 
 <p>
-If the function argument <code>arg</code> is a number,
-returns this number cast to a <a href="#lua_Integer"><code>lua_Integer</code></a>.
+If the function argument <code>arg</code> is an integer
+(or convertible to an integer),
+returns this integer.
 If this argument is absent or is <b>nil</b>,
 returns <code>d</code>.
 Otherwise, raises an error.
@@ -6428,8 +6543,9 @@ Otherwise, raises an error.
 <pre>long luaL_optlong (lua_State *L, int arg, long d);</pre>
 
 <p>
-If the function argument <code>arg</code> is a number,
-returns this number cast to a <code>long</code>.
+If the function argument <code>arg</code> is an integer
+(or convertible to an integer),
+returns this integer cast to a <code>long</code>.
 If this argument is absent or is <b>nil</b>,
 returns <code>d</code>.
 Otherwise, raises an error.
@@ -6501,7 +6617,7 @@ Otherwise, raises an error.
 
 <p>
 If the function argument <code>arg</code> is a number,
-returns this number cast to a <a href="#lua_Unsigned"><code>lua_Unsigned</code></a>.
+returns this number converted to a <a href="#lua_Unsigned"><code>lua_Unsigned</code></a>.
 If this argument is absent or is <b>nil</b>,
 returns <code>u</code>.
 Otherwise, raises an error.
@@ -7273,9 +7389,15 @@ This function returns <code>table</code>.
 When called with no <code>base</code>,
 <code>tonumber</code> tries to convert its argument to a number.
 If the argument is already a number or
-a string convertible to a number (see <a href="#3.4.2">&sect;3.4.2</a>),
+a string convertible to a number,
 then <code>tonumber</code> returns this number;
 otherwise, it returns <b>nil</b>.
+
+
+<p>
+The conversion of strings can result in integers or floats,
+according to the lexical conventions of Lua (see <a href="#3.1">&sect;3.1</a>).
+(The string may have leading and trailing spaces and a sign.)
 
 
 <p>
@@ -7329,7 +7451,7 @@ and "<code>userdata</code>".
 <hr><h3><a name="pdf-_VERSION"><code>_VERSION</code></a></h3>
 A global variable (not a function) that
 holds a string containing the current interpreter version.
-The current contents of this variable is "<code>Lua 5.2</code>".
+The current contents of this variable is "<code>Lua 5.3</code>".
 
 
 
@@ -8478,6 +8600,9 @@ By default, <code>i</code> is&nbsp;1 and <code>j</code> is <code>#list</code>.
 <p>
 This library is an interface to the standard C&nbsp;math library.
 It provides all its functions inside the table <a name="pdf-math"><code>math</code></a>.
+Unless stated otherwise,
+all functions in this library operate with and return
+floating-point numbers.
 
 
 <p>
@@ -8629,6 +8754,29 @@ a value larger than or equal to any other numerical value.
 
 
 <p>
+<hr><h3><a name="pdf-math.ifloor"><code>math.ifloor (x)</code></a></h3>
+
+
+<p>
+Returns the largest integer smaller than or equal to <code>x</code>
+as an integer number.
+If the value does not fit in an integer,
+returns <b>nil</b>.
+
+
+
+
+<p>
+<hr><h3><a name="pdf-math.isfloat"><code>math.isfloat (x)</code></a></h3>
+
+
+<p>
+Returns whether <code>x</code> is a floating-point number.
+
+
+
+
+<p>
 <hr><h3><a name="pdf-math.ldexp"><code>math.ldexp (m, e)</code></a></h3>
 
 
@@ -8724,14 +8872,12 @@ pseudo-random generator function <code>rand</code> provided by Standard&nbsp;C.
 
 <p>
 When called without arguments,
-returns a uniform pseudo-random real number
+returns a uniform pseudo-random float number
 in the range <em>[0,1)</em>.  
-When called with an integer number <code>m</code>,
-<code>math.random</code> returns
-a uniform pseudo-random integer in the range <em>[1, m]</em>.
-When called with two integer numbers <code>m</code> and <code>n</code>,
+When called with two integer values <code>m</code> and <code>n</code>,
 <code>math.random</code> returns a uniform pseudo-random
-integer in the range <em>[m, n]</em>.
+integer number in the range <em>[m, n]</em>.
+The call <code>math.random(n)</code> is equivalent to <code>math.random(1,n)</code>.
 
 
 
@@ -9886,6 +10032,18 @@ returns <b>nil</b>.
 
 
 <p>
+<hr><h3><a name="pdf-debug.numbits"><code>debug.numbits (t)</code></a></h3>
+
+
+<p>
+Returns the number of bits in the underlying representation
+of integer (if <code>t</code> is "<code>i</code>")
+or float numbers (if  <code>t</code> is "<code>f</code>").
+
+
+
+
+<p>
 <hr><h3><a name="pdf-debug.sethook"><code>debug.sethook ([thread,] hook, mask [, count])</code></a></h3>
 
 
@@ -9893,7 +10051,7 @@ returns <b>nil</b>.
 Sets the given function as a hook.
 The string <code>mask</code> and the number <code>count</code> describe
 when the hook will be called.
-The string mask may have the following characters,
+The string mask may have any combination of the following characters,
 with the given meaning:
 
 <ul>
@@ -9901,8 +10059,9 @@ with the given meaning:
 <li><b>'<code>r</code>': </b> the hook is called every time Lua returns from a function;</li>
 <li><b>'<code>l</code>': </b> the hook is called every time Lua enters a new line of code.</li>
 </ul><p>
-With a <code>count</code> different from zero,
-the hook is called after every <code>count</code> instructions.
+Moreover,
+with a <code>count</code> different from zero,
+the hook is called also after every <code>count</code> instructions.
 
 
 <p>
@@ -10497,10 +10656,10 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Thu Mar 21 12:58:59 BRT 2013
+Fri Jul  5 23:09:01 BRT 2013
 </SMALL>
 <!--
-Last change: revised for Lua 5.2.2
+Last change: updated for Lua 5.3.0 (work1)
 -->
 
 </body></html>

@@ -1,5 +1,5 @@
 /*
-** $Id: lbitlib.c,v 1.18.1.2 2013/07/09 18:01:41 roberto Exp $
+** $Id: lbitlib.c,v 1.20 2013/06/21 17:27:24 roberto Exp $
 ** Standard library for bitwise operations
 ** See Copyright Notice in lua.h
 */
@@ -19,7 +19,12 @@
 #endif
 
 
-#define ALLONES		(~(((~(lua_Unsigned)0) << (LUA_NBITS - 1)) << 1))
+/* type with (at least) LUA_NBITS bits */
+typedef unsigned long b_uint;
+
+
+#define ALLONES		(~(((~(b_uint)0) << (LUA_NBITS - 1)) << 1))
+
 
 /* macro to trim extra bits */
 #define trim(x)		((x) & ALLONES)
@@ -27,9 +32,6 @@
 
 /* builds a number with 'n' ones (1 <= n <= LUA_NBITS) */
 #define mask(n)		(~((ALLONES << 1) << ((n) - 1)))
-
-
-typedef lua_Unsigned b_uint;
 
 
 
@@ -118,7 +120,7 @@ static int b_arshift (lua_State *L) {
   else {  /* arithmetic shift for 'negative' number */
     if (i >= LUA_NBITS) r = ALLONES;
     else
-      r = trim((r >> i) | ~(~(b_uint)0 >> i));  /* add signal bit */
+      r = trim((r >> i) | ~(trim(~(b_uint)0) >> i));  /* add signal bit */
     lua_pushunsigned(L, r);
     return 1;
   }
@@ -129,8 +131,7 @@ static int b_rot (lua_State *L, int i) {
   b_uint r = luaL_checkunsigned(L, 1);
   i &= (LUA_NBITS - 1);  /* i = i % NBITS */
   r = trim(r);
-  if (i != 0)  /* avoid undefined shift of LUA_NBITS when i == 0 */
-    r = (r << i) | (r >> (LUA_NBITS - i));
+  r = (r << i) | (r >> (LUA_NBITS - i));
   lua_pushunsigned(L, trim(r));
   return 1;
 }
@@ -166,7 +167,7 @@ static int fieldargs (lua_State *L, int farg, int *width) {
 
 static int b_extract (lua_State *L) {
   int w;
-  b_uint r = luaL_checkunsigned(L, 1);
+  b_uint r = trim(luaL_checkunsigned(L, 1));
   int f = fieldargs(L, 2, &w);
   r = (r >> f) & mask(w);
   lua_pushunsigned(L, r);
@@ -176,7 +177,7 @@ static int b_extract (lua_State *L) {
 
 static int b_replace (lua_State *L) {
   int w;
-  b_uint r = luaL_checkunsigned(L, 1);
+  b_uint r = trim(luaL_checkunsigned(L, 1));
   b_uint v = luaL_checkunsigned(L, 2);
   int f = fieldargs(L, 3, &w);
   int m = mask(w);

@@ -202,6 +202,8 @@ int main(int argc, char* argv[])
  return EXIT_SUCCESS;
 }
 
+#define nvalue(x) 0
+#define ttypenv(x) ttnov(x)
 /*
 ** $Id: print.c,v 1.69 2013/07/04 01:03:46 lhf Exp $
 ** print bytecodes
