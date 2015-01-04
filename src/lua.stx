@@ -1,9 +1,10 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.36 1996/03/21 16:31:32 roberto Exp $";
+char *rcs_luastx = "$Id: lua.stx,v 3.41 1996/11/08 12:49:35 roberto Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "luadebug.h"
 #include "mem.h"
@@ -58,58 +59,48 @@ int lua_debug = 0;
 
 static void yyerror (char *s)
 {
- char msg[256];
- char *token = lua_lasttext();
- if (token[0] == 0)
-   token = "<eof>";
- sprintf (msg,"%s; last token read: \"%s\" at line %d in file `%s'",
-          s, token, lua_linenumber, lua_parsedfile);
- lua_error (msg);
+  luaI_syntaxerror(s);
+}
+
+static void check_space (int i)
+{
+  if (pc+i>maxcurr-1)  /* 1 byte free to code HALT of main code */
+    maxcurr = growvector(&basepc, maxcurr, Byte, codeEM, MAX_INT);
 }
 
 static void code_byte (Byte c)
 {
- if (pc>maxcurr-2)  /* 1 byte free to code HALT of main code */
-   maxcurr = growvector(&basepc, maxcurr, Byte, codeEM, MAX_INT);
+ check_space(1);
  basepc[pc++] = c;
 }
 
 static void code_word (Word n)
 {
- CodeWord code;
- code.w = n;
- code_byte(code.m.c1);
- code_byte(code.m.c2);
+  check_space(sizeof(Word));
+  memcpy(basepc+pc, &n, sizeof(Word));
+  pc += sizeof(Word);
 }
 
-static void code_float (float n)
+static void code_float (real n)
 {
- CodeFloat code;
- code.f = n;
- code_byte(code.m.c1);
- code_byte(code.m.c2);
- code_byte(code.m.c3);
- code_byte(code.m.c4);
+  check_space(sizeof(real));
+  memcpy(basepc+pc, &n, sizeof(real));
+  pc += sizeof(real);
 }
 
 static void code_code (TFunc *tf)
 {
- CodeCode code;
- code.tf = tf;
- code_byte(code.m.c1);
- code_byte(code.m.c2);
- code_byte(code.m.c3);
- code_byte(code.m.c4);
+  check_space(sizeof(TFunc *));
+  memcpy(basepc+pc, &tf, sizeof(TFunc *));
+  pc += sizeof(TFunc *);
 }
 
 static void code_word_at (Byte *p, int n)
 {
- CodeWord code;
- if ((Word)n != n)
-   yyerror("block too big");
- code.w = (Word)n;
- *p++ = code.m.c1;
- *p++ = code.m.c2;
+  Word w = n;
+  if (w != n)
+    yyerror("block too big");
+  memcpy(p, &w, sizeof(Word));
 }
 
 static void push_field (Word name)
@@ -322,6 +313,19 @@ static void adjust_mult_assign (int vars, Long exps, int temps)
     lua_codeadjust(temps);
 }
 
+static int close_parlist (int dots)
+{
+  if (!dots)
+    lua_codeadjust(0);
+  else
+  {
+    code_byte(VARARGS);
+    code_byte(nlocalvar);
+    add_localvar(luaI_createfixedstring("arg"));
+  }
+  return lua_linenumber;
+}
+
 static void storesinglevar (Long v)
 {
  if (v > 0)		/* global var */
@@ -418,7 +422,7 @@ void lua_parse (TFunc *tf)
  TaggedString *pTStr;
 }
 
-%start functionlist
+%start chunk
 
 %token WRONGTOKEN
 %token NIL
@@ -426,10 +430,10 @@ void lua_parse (TFunc *tf)
 %token RETURN
 %token LOCAL
 %token FUNCTION
+%token DOTS
 %token <vFloat> NUMBER
 %token <vWord>  STRING
 %token <pTStr>  NAME 
-%token <vInt>   DEBUG
 
 %type <vLong> PrepJump
 %type <vLong> exprlist, exprlist1  /* if > 0, points to function return
@@ -440,7 +444,7 @@ void lua_parse (TFunc *tf)
 %type <vInt>  fieldlist, localdeclist, decinit
 %type <vInt>  ffieldlist, ffieldlist1, semicolonpart
 %type <vInt>  lfieldlist, lfieldlist1
-%type <vInt>  parlist
+%type <vInt>  parlist, parlist1, par
 %type <vLong> var, singlevar, funcname
 %type <pFunc> body
 
@@ -455,15 +459,12 @@ void lua_parse (TFunc *tf)
 
 %% /* beginning of rules section */
 
+chunk	: chunklist ret
 
-functionlist : /* empty */
-	     | functionlist globalstat
-	     | functionlist function
-	     ;
-
-globalstat   : stat sc
-	     | setdebug
-	     ;
+chunklist : /* empty */
+	  | chunklist stat sc
+	  | chunklist function
+	  ;
 
 function     : FUNCTION funcname body 	 
 	       { 
@@ -580,6 +581,7 @@ PrepJump : /* empty */
 	  code_byte(0);		/* open space */
 	  code_word (0);
          }
+	 ;
 	   
 expr1	 : expr { adjust_functioncall($1, 1); }
 	 ;
@@ -674,13 +676,22 @@ exprlist1 :  expr	{ if ($1 != 0) $$ = $1; else $$ = -1; }
 	}
 	  ;
 
-parlist  :	/* empty */ { lua_codeadjust(0); $$ = lua_linenumber; }
-	  |	parlist1    { lua_codeadjust(0); $$ = lua_linenumber; }
+parlist  :	/* empty */ { $$ = close_parlist(0); }
+	  |	parlist1    { $$ = close_parlist($1); }
 	  ;
 		
-parlist1 :	NAME		  { add_localvar($1); }
-	  |	parlist1 ',' NAME { add_localvar($3); }
+parlist1 :	par		  { $$ = $1; }
+	  |	parlist1 ',' par
+	{
+	  if ($1)
+            lua_error("invalid parameter list");
+          $$ = $3;
+	}
 	  ;
+
+par : NAME	{ add_localvar($1); $$ = 0; }
+    | DOTS	{ $$ = 1; }
+    ;
 		
 fieldlist  : lfieldlist
   	     { flush_list($1/FIELDS_PER_FLUSH, $1%FIELDS_PER_FLUSH); }
@@ -782,7 +793,4 @@ decinit	  : /* empty */  { $$ = 0; }
 	  | '=' exprlist1 { $$ = $2; }
 	  ;
 	  
-setdebug  : DEBUG  { lua_debug = $1; }
-	  ;
-
 %%

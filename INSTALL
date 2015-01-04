@@ -19,8 +19,8 @@
 
 * Shared libraries
   If you are running SunOs 4.x, type the following after "make" succeeds:
-	ld -o lib/liblua.so.2.4 src/*.o
-	ld -o lib/liblualib.so.2.4 clients/lib/*.o
+	ld -o lib/liblua.so.2.5 src/*.o
+	ld -o lib/liblualib.so.2.5 clients/lib/*.o
 
   For AIX, the OpenGL clone Mesa includes a script for making shared libraries.
   For other systems, please let us know how!

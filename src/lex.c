@@ -1,5 +1,5 @@
-char *rcs_lex = "$Id: lex.c,v 2.32 1996/03/21 16:33:47 roberto Exp $";
- 
+char *rcs_lex = "$Id: lex.c,v 2.39 1996/11/08 19:08:30 roberto Exp $";
+
 
 #include <ctype.h>
 #include <string.h>
@@ -14,32 +14,31 @@ char *rcs_lex = "$Id: lex.c,v 2.32 1996/03/21 16:33:47 roberto Exp $";
 
 #define MINBUFF 260
 
-#define next() { current = input(); }
-#define save(x) { *yytextLast++ = (x); }
-#define save_and_next()  { save(current); next(); }
+#define next() (current = input())
+#define save(x) (yytext[tokensize++] = (x))
+#define save_and_next()  (save(current), next())
 
-static int current;
-static char *yytext = NULL;
-static int textsize = 0;
-static char *yytextLast;
 
-static Input input;
+static int current;  /* look ahead character */
+static Input input;  /* input function */
+
 
 void lua_setinput (Input fn)
 {
-  current = ' ';
+  current = '\n';
+  lua_linenumber = 0;
   input = fn;
-  if (yytext == NULL)
-  {
-    textsize = MINBUFF;
-    yytext = newvector(textsize, char);
-  }
 }
 
-char *lua_lasttext (void)
+void luaI_syntaxerror (char *s)
 {
-  *yytextLast = 0;
-  return yytext;
+  char msg[256];
+  char *token = luaI_buffer(1);
+  if (token[0] == 0)
+    token = "<eof>";
+  sprintf (msg,"%s;\n> last token read: \"%s\" at line %d in file %s",
+           s, token, lua_linenumber, lua_parsedfile);
+  lua_error (msg);
 }
 
 
@@ -79,95 +78,97 @@ void luaI_addReserved (void)
   }
 }
 
-
-static void growtext (void)
+static int inclinenumber (int pragma_allowed)
 {
-  int size = yytextLast - yytext;
-  textsize = growvector(&yytext, textsize, char, lexEM, MAX_WORD);
-  yytextLast = yytext + size;
+  ++lua_linenumber;
+  if (pragma_allowed && current == '$') {  /* is a pragma? */
+    char *buff = luaI_buffer(MINBUFF+1);
+    int i = 0;
+    next();  /* skip $ */
+    while (isalnum(current)) {
+      if (i >= MINBUFF) luaI_syntaxerror("pragma too long");
+      buff[i++] = current;
+      next();
+    }
+    buff[i] = 0;
+    if (strcmp(buff, "debug") == 0)
+      lua_debug = 1;
+    else if (strcmp(buff, "nodebug") == 0)
+      lua_debug = 0;
+    else luaI_syntaxerror("invalid pragma");
+  }
+  return lua_linenumber;
 }
 
-
-static int read_long_string (void)
+static int read_long_string (char *yytext, int buffsize)
 {
   int cont = 0;
-  int spaceleft = textsize - (yytextLast - yytext);
+  int tokensize = 2;  /* '[[' already stored */
   while (1)
   {
-    if (spaceleft <= 2)  /* may read more than 1 char in one cicle */
-    {
-      growtext();
-      spaceleft = textsize - (yytextLast - yytext);
-    }
+    if (buffsize-tokensize <= 2) /* may read more than 1 char in one cicle */
+      yytext = luaI_buffer(buffsize *= 2);
     switch (current)
     {
-      case EOF:
       case 0:
+        save(0);
         return WRONGTOKEN;
       case '[':
-        save_and_next(); spaceleft--;
+        save_and_next();
         if (current == '[')
         {
           cont++;
-          save_and_next(); spaceleft--;
+          save_and_next();
         }
-        continue; 
+        continue;
       case ']':
-        save_and_next(); spaceleft--;
+        save_and_next();
         if (current == ']')
         {
-          if (cont == 0) return STRING;
+          if (cont == 0) goto endloop;
           cont--;
-          save_and_next(); spaceleft--;
+          save_and_next();
         }
-        continue; 
+        continue;
       case '\n':
-        lua_linenumber++;  /* goes through */
+        save_and_next();
+        inclinenumber(0);
+        continue;
       default:
-        save_and_next(); spaceleft--;
+        save_and_next();
     }
-  }
+  } endloop:
+  save_and_next();  /* pass the second ']' */
+  yytext[tokensize-2] = 0;  /* erases ']]' */
+  luaY_lval.vWord = luaI_findconstantbyname(yytext+2);
+  yytext[tokensize-2] = ']';  /* restores ']]' */
+  save(0);
+  return STRING;
 }
-
 
 int luaY_lex (void)
 {
-  double a;
   static int linelasttoken = 0;
+  double a;
+  int buffsize = MINBUFF;
+  char *yytext = luaI_buffer(buffsize);
+  yytext[1] = yytext[2] = yytext[3] = 0;
   if (lua_debug)
     luaI_codedebugline(linelasttoken);
   linelasttoken = lua_linenumber;
   while (1)
   {
-    yytextLast = yytext;
+    int tokensize = 0;
     switch (current)
     {
-      case EOF:
-      case 0:
-       return 0;
-      case '\n': linelasttoken = ++lua_linenumber;
-      case ' ':
-      case '\r':  /* CR: to avoid problems with DOS/Windows */
-      case '\t':
+      case '\n':
         next();
+        linelasttoken = inclinenumber(1);
         continue;
 
-      case '$':
-	next();
-	while (isalnum(current) || current == '_')
-          save_and_next();
-        *yytextLast = 0;
-	if (strcmp(yytext, "debug") == 0)
-	{
-	  luaY_lval.vInt = 1;
-	  return DEBUG;
-        }
-	else if (strcmp(yytext, "nodebug") == 0)
-	{
-	  luaY_lval.vInt = 0;
-	  return DEBUG;
-        }
-	return WRONGTOKEN;
+      case ' ': case '\t': case '\r':  /* CR: to avoid problems with DOS */
+        next();
+        continue;
 
       case '-':
         save_and_next();
@@ -181,12 +182,7 @@ int luaY_lex (void)
         else
         {
           save_and_next();  /* pass the second '[' */
-          if (read_long_string() == WRONGTOKEN)
-            return WRONGTOKEN;
-          save_and_next();  /* pass the second ']' */
-          *(yytextLast-2) = 0;  /* erases ']]' */
-          luaY_lval.vWord = luaI_findconstantbyname(yytext+2);
-          return STRING;
+          return read_long_string(yytext, buffsize);
         }
 
       case '=':
@@ -213,21 +209,16 @@ int luaY_lex (void)
       case '\'':
       {
         int del = current;
-        int spaceleft = textsize - (yytextLast - yytext);
-        next();  /* skip the delimiter */
+        save_and_next();
         while (current != del)
         {
-          if (spaceleft <= 2) /* may read more than 1 char in one cicle */
-          {
-            growtext();
-            spaceleft = textsize - (yytextLast - yytext);
-          }
-          spaceleft--;
+          if (buffsize-tokensize <= 2) /* may read more than 1 char in one cicle */
+            yytext = luaI_buffer(buffsize *= 2);
           switch (current)
           {
-            case EOF:
             case 0:
             case '\n':
+              save(0);
               return WRONGTOKEN;
             case '\\':
               next();  /* do not save the '\' */
@@ -236,17 +227,19 @@ int luaY_lex (void)
                 case 'n': save('\n'); next(); break;
                 case 't': save('\t'); next(); break;
                 case 'r': save('\r'); next(); break;
-                case '\n': lua_linenumber++;  /* goes through */
-                default : save(current); next(); break;
+                case '\n': save_and_next(); inclinenumber(0); break;
+                default : save_and_next(); break;
               }
               break;
             default:
               save_and_next();
           }
         }
-        next();  /* skip the delimiter */
-        *yytextLast = 0;
-        luaY_lval.vWord = luaI_findconstantbyname(yytext);
+        next();  /* skip delimiter */
+        save(0);
+        luaY_lval.vWord = luaI_findconstantbyname(yytext+1);
+        tokensize--;
+        save(del); save(0);  /* restore delimiter */
         return STRING;
       }
 
@@ -266,7 +259,7 @@ int luaY_lex (void)
       {
         TaggedString *ts;
         do { save_and_next(); } while (isalnum(current) || current == '_');
-        *yytextLast = 0;
+        save(0);
         ts = lua_createstring(yytext);
         if (ts->marked > 2)
           return ts->marked;  /* reserved word */
@@ -280,7 +273,12 @@ int luaY_lex (void)
         if (current == '.')
         {
           save_and_next();
-          return CONC;
+          if (current == '.')
+          {
+            save_and_next();
+            return DOTS;   /* ... */
+          }
+          else return CONC;   /* .. */
         }
         else if (!isdigit(current)) return '.';
         /* current is a digit: goes through to number */
@@ -290,12 +288,24 @@ int luaY_lex (void)
       case '0': case '1': case '2': case '3': case '4':
       case '5': case '6': case '7': case '8': case '9':
 	a=0.0;
-        do { a=10.0*a+(current-'0'); save_and_next(); } while (isdigit(current));
-        if (current == '.') save_and_next();
-fraction:
+        do {
+          a=10.0*a+(current-'0');
+          save_and_next();
+        } while (isdigit(current));
+        if (current == '.') {
+          save_and_next();
+          if (current == '.')
+            luaI_syntaxerror(
+              "ambiguous syntax (decimal point x string concatenation)");
+        }
+      fraction:
 	{ double da=0.1;
 	  while (isdigit(current))
-	  {a+=(current-'0')*da; da/=10.0; save_and_next()};
+	  {
+            a+=(current-'0')*da;
+            da/=10.0;
+            save_and_next();
+          }
           if (current == 'e' || current == 'E')
           {
 	    int e=0;
@@ -304,19 +314,23 @@ fraction:
             save_and_next();
 	    neg=(current=='-');
             if (current == '+' || current == '-') save_and_next();
-            if (!isdigit(current)) return WRONGTOKEN;
-            do { e=10.0*e+(current-'0'); save_and_next(); } while (isdigit(current));
-	    for (ea=neg?0.1:10.0; e>0; e>>=1) 
+            if (!isdigit(current)) { save(0); return WRONGTOKEN; }
+            do {
+              e=10.0*e+(current-'0');
+              save_and_next();
+            } while (isdigit(current));
+	    for (ea=neg?0.1:10.0; e>0; e>>=1)
 	    {
 	      if (e & 1) a*=ea;
 	      ea*=ea;
 	    }
           }
           luaY_lval.vFloat = a;
+          save(0);
           return NUMBER;
         }
 
-      default: 		/* also end of file */
+      default: 		/* also end of program (0) */
       {
         save_and_next();
         return yytext[0];
@@ -324,3 +338,4 @@ fraction:
     }
   }
 }
+

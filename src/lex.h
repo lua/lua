@@ -1,7 +1,7 @@
 /*
 ** lex.h
 ** TecCGraf - PUC-Rio
-** $Id: lex.h,v 1.2 1996/02/14 13:35:51 roberto Exp $
+** $Id: lex.h,v 1.3 1996/11/08 12:49:35 roberto Exp $
 */
 
 #ifndef lex_h
@@ -11,7 +11,7 @@
 typedef int  (*Input) (void);
 
 void    lua_setinput   (Input fn);
-char   *lua_lasttext   (void);
+void luaI_syntaxerror (char *s);
 int     luaY_lex (void);
 void luaI_addReserved (void);
 

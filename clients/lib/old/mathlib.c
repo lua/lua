@@ -3,7 +3,7 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.18 1996/08/01 14:55:33 roberto Exp $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.17 1996/04/30 21:13:55 roberto Exp $";
 
 #include <stdlib.h>
 #include <math.h>
@@ -92,9 +92,9 @@ static void math_floor (void)
 
 static void math_mod (void)
 {
-  float x = lua_check_number(1, "mod");
-  float y = lua_check_number(2, "mod");
-  lua_pushnumber(fmod(x, y));
+ int d1 = (int)lua_check_number(1, "mod");
+ int d2 = (int)lua_check_number(2, "mod");
+ lua_pushnumber (d1%d2);
 }
 
 

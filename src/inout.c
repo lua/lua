@@ -5,9 +5,10 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.36 1996/03/19 22:28:37 roberto Exp $";
+char *rcs_inout="$Id: inout.c,v 2.43 1996/09/25 12:57:22 roberto Exp $";
 
 #include <stdio.h>
+#include <string.h>
 
 #include "lex.h"
 #include "opcode.h"
@@ -31,7 +32,8 @@ static char *st;
 */
 static int fileinput (void)
 {
- return fgetc (fp);
+  int c = fgetc(fp);
+  return (c == EOF) ? 0 : c;
 }
 
 /*
@@ -58,7 +60,6 @@ FILE *lua_openfile (char *fn)
    fp = fopen (fn, "r");
  if (fp == NULL)
    return NULL;
- lua_linenumber = 1;
  lua_parsedfile = luaI_createfixedstring(fn)->str;
  return fp;
 }
@@ -78,12 +79,16 @@ void lua_closefile (void)
 /*
 ** Function to open a string to be input unit
 */
+#define SIZE_PREF 20  /* size of string prefix to appear in error messages */
 void lua_openstring (char *s)
 {
- lua_setinput (stringinput);
- st = s;
- lua_linenumber = 1;
- lua_parsedfile = luaI_createfixedstring("(string)")->str;
+  char buff[SIZE_PREF+25];
+  lua_setinput(stringinput);
+  st = s;
+  strcpy(buff, "(dostring) >> ");
+  strncat(buff, s, SIZE_PREF);
+  if (strlen(s) > SIZE_PREF) strcat(buff, "...");
+  lua_parsedfile = luaI_createfixedstring(buff)->str;
 }
 
 /*
@@ -93,17 +98,36 @@ void lua_closestring (void)
 {
 }
 
+
+static void check_arg (int cond, char *func)
+{
+  if (!cond)
+  {
+    char buff[100];
+    sprintf(buff, "incorrect argument to function `%s'", func);
+    lua_error(buff);
+  }
+}
+
+
+static int passresults (void)
+{
+  int arg = 0;
+  lua_Object obj;
+  while ((obj = lua_getresult(++arg)) != LUA_NOOBJECT)
+    lua_pushobject(obj);
+  return arg-1;
+}
  
 /*
 ** Internal function: do a string
 */
 void lua_internaldostring (void)
 {
- lua_Object obj = lua_getparam (1);
- if (lua_isstring(obj) && !lua_dostring(lua_getstring(obj)))
-  lua_pushnumber(1);
- else
-  lua_pushnil();
+  lua_Object obj = lua_getparam (1);
+  if (lua_isstring(obj) && lua_dostring(lua_getstring(obj)) == 0)
+    if (passresults() == 0)
+      lua_pushuserdata(NULL);  /* at least one result to signal no errors */
 }
 
 /*
@@ -118,10 +142,9 @@ void lua_internaldofile (void)
  else if (obj != LUA_NOOBJECT)
    lua_error("invalid argument to function `dofile'");
  /* else fname = NULL */
- if (!lua_dofile(fname))
-  lua_pushnumber(1);
- else
-  lua_pushnil();
+ if (lua_dofile(fname) == 0)
+    if (passresults() == 0)
+      lua_pushuserdata(NULL);  /* at least one result to signal no errors */
 }
  
 
@@ -207,8 +230,6 @@ void lua_obj2number (void)
   lua_Object o = lua_getparam(1);
   if (lua_isnumber(o))
     lua_pushnumber(lua_getnumber(o));
-  else
-    lua_pushnil();
 }
 
 
@@ -230,8 +251,7 @@ void luaI_setglobal (void)
 {
   lua_Object name = lua_getparam(1);
   lua_Object value = lua_getparam(2);
-  if (!lua_isstring(name))
-    lua_error("incorrect argument to function `setglobal'");
+  check_arg(lua_isstring(name), "setglobal");
   lua_pushobject(value);
   lua_storeglobal(lua_getstring(name));
   lua_pushobject(value);  /* return given value */
@@ -240,7 +260,41 @@ void luaI_setglobal (void)
 void luaI_getglobal (void)
 {
   lua_Object name = lua_getparam(1);
-  if (!lua_isstring(name))
-    lua_error("incorrect argument to function `getglobal'");
+  check_arg(lua_isstring(name), "getglobal");
   lua_pushobject(lua_getglobal(lua_getstring(name)));
+}
+
+#define MAXPARAMS	256
+void luaI_call (void)
+{
+  lua_Object f = lua_getparam(1);
+  lua_Object arg = lua_getparam(2);
+  lua_Object temp, params[MAXPARAMS];
+  int narg, i;
+  check_arg(lua_istable(arg), "call");
+  check_arg(lua_isfunction(f), "call");
+  /* narg = arg.n */
+  lua_pushobject(arg);
+  lua_pushstring("n");
+  temp = lua_getsubscript();
+  narg = lua_isnumber(temp) ? lua_getnumber(temp) : MAXPARAMS+1;
+  /* read arg[1...n] */
+  for (i=0; i<narg; i++) {
+    if (i>=MAXPARAMS)
+      lua_error("argument list too long in function `call'");
+    lua_pushobject(arg);
+    lua_pushnumber(i+1);
+    params[i] = lua_getsubscript();
+    if (narg == MAXPARAMS+1 && lua_isnil(params[i])) {
+      narg = i;
+      break;
+    }
+  }
+  /* push parameters and do the call */
+  for (i=0; i<narg; i++)
+    lua_pushobject(params[i]);
+  if (lua_callfunction(f))
+    lua_error(NULL);
+  else
+    passresults();
 }

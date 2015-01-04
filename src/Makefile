@@ -46,8 +46,8 @@ SLIB= $(LIB)/liblua.a
 all: $(SLIB)
 
 $(SLIB): $(OBJS)
-	ar rcuv $@ $(OBJS)
-	ranlib $@
+	ar rcu $@ $(OBJS)
+	$(RANLIB) $@
 
 clean:
 	rm -f $(OBJS) $(SLIB)

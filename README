@@ -18,8 +18,10 @@
   The latest version of Lua is always available at the following locations:
   In Brazil:	ftp://ftp.icad.puc-rio.br/pub/lua/lua.tar.gz
   In Canada:	ftp://csg.uwaterloo.ca/pub/lhf/lua/lua.tar.gz
+  In Germany:	ftp://ftp.uni-trier.de/pub/languages/lua/lua.tar.gz
+  In Greece:	ftp://ftp.ntua.gr/pub/lang/lua/lua.tar.gz
   Home page:	http://www.inf.puc-rio.br/~roberto/lua.html
-  The current version is 2.4.
+  The current version is 2.5.
 
 * Legal matters
   Lua is freely available for both academic and commercial purposes.
