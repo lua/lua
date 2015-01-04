@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.235 2014/12/16 17:17:30 roberto Exp $
+** $Id: luaconf.h,v 1.236 2014/12/19 13:31:12 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -109,7 +109,7 @@
 
 #if defined(LUA_32BITS)		/* { */
 /*
-** Small Lua (32-bit integers and 'float')
+** 32-bit integers and 'float'
 */
 #if LUAI_BITSINT >= 32  /* use 'int' if big enough */
 #define LUA_INT_INT

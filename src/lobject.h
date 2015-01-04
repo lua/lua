@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.104 2014/10/25 11:50:46 roberto Exp $
+** $Id: lobject.h,v 2.105 2014/12/19 13:36:32 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -154,6 +154,8 @@ typedef struct lua_TValue TValue;
 /* Macros to access values */
 #define ivalue(o)	check_exp(ttisinteger(o), val_(o).i)
 #define fltvalue(o)	check_exp(ttisfloat(o), val_(o).n)
+#define nvalue(o)	check_exp(ttisnumber(o), \
+	(ttisinteger(o) ? cast_num(ivalue(o)) : fltvalue(o)))
 #define gcvalue(o)	check_exp(iscollectable(o), val_(o).gc)
 #define pvalue(o)	check_exp(ttislightuserdata(o), val_(o).p)
 #define tsvalue(o)	check_exp(ttisstring(o), gco2ts(val_(o).gc))

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.97 2014/11/24 14:59:22 roberto Exp $
+** $Id: lcode.c,v 2.98 2014/12/19 13:36:32 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -761,12 +761,8 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
 ** return false if folding can raise an error
 */
 static int validop (int op, TValue *v1, TValue *v2) {
-  lua_Number a, b;
   lua_Integer i;
-  cast_void(a); cast_void(b);  /* macro may not use its arguments */
-  if (luai_numinvalidop(op, (cast_void(tonumber(v1, &a)), a),
-                            (cast_void(tonumber(v2, &b)), b)))
-    return 0;
+  if (luai_numinvalidop(op, nvalue(v1), nvalue(v2))) return 0;
   switch (op) {
     case LUA_OPBAND: case LUA_OPBOR: case LUA_OPBXOR:
     case LUA_OPSHL: case LUA_OPSHR: case LUA_OPBNOT:  /* conversion errors */
