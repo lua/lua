@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.29a 2005/12/22 16:19:56 roberto Exp $
+** $Id: ldebug.c,v 2.29.1.3 2007/12/28 15:32:23 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -563,8 +563,8 @@ void luaG_typeerror (lua_State *L, const TValue *o, const char *op) {
 
 
 void luaG_concaterror (lua_State *L, StkId p1, StkId p2) {
-  if (ttisstring(p1)) p1 = p2;
-  lua_assert(!ttisstring(p1));
+  if (ttisstring(p1) || ttisnumber(p1)) p1 = p2;
+  lua_assert(!ttisstring(p1) && !ttisnumber(p1));
   luaG_typeerror(L, p1, "concatenate");
 }
 

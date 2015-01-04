@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.25a 2006/03/21 19:28:49 roberto Exp $
+** $Id: lcode.c,v 2.25.1.3 2007/12/28 15:32:23 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -699,7 +699,7 @@ void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e) {
   e2.t = e2.f = NO_JUMP; e2.k = VKNUM; e2.u.nval = 0;
   switch (op) {
     case OPR_MINUS: {
-      if (e->k == VK)
+      if (!isnumeral(e))
         luaK_exp2anyreg(fs, e);  /* cannot operate on non-numeric constants */
       codearith(fs, OP_UNM, e, &e2);
       break;

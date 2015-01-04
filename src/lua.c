@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.160 2006/06/02 15:34:00 roberto Exp $
+** $Id: lua.c,v 1.160.1.2 2007/12/28 15:32:23 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -74,6 +74,8 @@ static int report (lua_State *L, int status) {
 
 
 static int traceback (lua_State *L) {
+  if (!lua_isstring(L, 1))  /* 'message' not a string? */
+    return 1;  /* keep it intact */
   lua_getfield(L, LUA_GLOBALSINDEX, "debug");
   if (!lua_istable(L, -1)) {
     lua_pop(L, 1);
@@ -144,7 +146,7 @@ static int dostring (lua_State *L, const char *s, const char *name) {
 static int dolibrary (lua_State *L, const char *name) {
   lua_getglobal(L, "require");
   lua_pushstring(L, name);
-  return report(L, lua_pcall(L, 1, 0, 0));
+  return report(L, docall(L, 1, 1));
 }
 
 

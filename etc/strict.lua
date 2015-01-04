@@ -6,6 +6,8 @@
 -- anywhere or assigned to inside a function.
 --
 
+local getinfo, error, rawset, rawget = debug.getinfo, error, rawset, rawget
+
 local mt = getmetatable(_G)
 if mt == nil then
   mt = {}
@@ -15,7 +17,7 @@ end
 mt.__declared = {}
 
 local function what ()
-  local d = debug.getinfo(3, "S")
+  local d = getinfo(3, "S")
   return d and d.what or "C"
 end
 
