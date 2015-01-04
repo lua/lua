@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.37 1999/06/17 17:04:03 roberto Exp $
+** $Id: lparser.c,v 1.37a 1999/06/17 17:04:03 roberto Exp $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -665,7 +665,8 @@ static int checkname (LexState *ls) {
 
 
 static TaggedString *str_checkname (LexState *ls) {
-  return tsvalue(&ls->fs->f->consts[checkname(ls)]);
+  int i = checkname(ls);  /* this call may realloc `f->consts' */
+  return tsvalue(&ls->fs->f->consts[i]);
 }
 
 
