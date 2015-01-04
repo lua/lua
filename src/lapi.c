@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.47 1999/06/22 20:37:23 roberto Exp $
+** $Id: lapi.c,v 1.47b 1999/06/22 20:37:23 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -179,6 +179,7 @@ lua_Object lua_rawgettable (void) {
 
 void lua_settable (void) {
   checkCparams(3);
+  luaD_checkstack(3);  /* may need that to call T.M. */
   luaV_settable(L->stack.top-3);
   L->stack.top -= 2;  /* pop table and index */
 }
