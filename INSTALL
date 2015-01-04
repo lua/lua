@@ -1,5 +1,7 @@
-* Installation
+This is Lua 3.2
 
+* Installation
+  ------------
   Building Lua on a Unix system should be very easy:
 
 	1. Edit "config" to suit your platform, if at all necessary.
@@ -8,7 +10,7 @@
   See below for instructions for Windows and Macintosh.
 
 * What you get
-
+  ------------
   If "make" succeeds, you get:
 	* an interpreter in ./bin/lua and a compiler in ./bin/luac;
 	* libraries in ./lib;
@@ -19,26 +21,36 @@
   and some useful stuff in ./etc.
   You don't need these directories for development.
 
-* If you have problems (and solutions!)
+  See also the README files in the various subdirectories.
+  A convenient staring point is ./doc/readme.html.
 
+* If you have problems (and solutions!)
+  -------------------------------------
   If "make" fails, please let us know (lua@tecgraf.puc-rio.br).
   If you make changes to "config", please send them to us.
 
 * Shared libraries
-
+  ----------------
   If you are running SunOs 4.x, type the following after "make" succeeds:
-	ld -o lib/liblua.so.3.1 src/*.o
-	ld -o lib/liblualib.so.3.1 src/lib/*.o
+	ld -o lib/liblua.so.3.2 src/*.o
+	ld -o lib/liblualib.so.3.2 src/lib/*.o
 
-  If you want the interpreter to use shared libraries, then do:
+  If you are running Linux, type the following after "make" succeeds:
+	ld -o lib/liblua.so.3.2 -shared src/*.o
+	ld -o lib/liblualib.so.3.2 -shared src/lib/*.o
+	cd lib
+	ln -s liblua.so.3.2 liblua.so
+	ln -s liblualib.so.3.2 liblualib.so.3.2
+
+  If you want the interpreter to use shared libraries, then do this too:
 	rm bin/lua
 	cd src/lua; make
+  You may need to include lib/ in the LD_LIBRAY_PATH environment variable.
 
-  For AIX, the OpenGL clone Mesa includes a script for making shared libraries.
-  For other systems, please tell us how!
+  Building shared libraries in other systems is similar but details differ.
 
 * Installation on Windows or Macintosh
-
+  ------------------------------------
   The instructions for building Lua on a Mac or Windows machine depend on
   the particular compiler you are using.
   The simplest way is to create a folder with all .c and .h files.
@@ -49,11 +61,11 @@
 		llex.c lmem.c lobject.c lparser.c lstate.c lstring.c ltable.c
 		ltm.c lundump.c lvm.c lzio.c
 
-  standard lib:	liolib.c lmathlib.c lstrlib.c
+  standard lib:	linit.c ldblib.c liolib.c lmathlib.c lstrlib.c
 
   interpreter:	basic lib, standard lib, lua.c
 
-  compiler:	basic lib, dump.c luac.c print.c stubs.c opcode.c opt.c
+  compiler:	basic lib, dump.c luac.c opcode.c opt.c print.c stubs.c test.c
 
   Of course, to use Lua as a library, you'll have to know how to create
   and use libraries with your compiler.

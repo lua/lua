@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.21 1998/06/18 16:57:03 roberto Exp $
+** $Id: lobject.h,v 1.28 1999/03/16 16:43:27 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -32,10 +32,6 @@
 #define LUA_NUM_TYPE double
 #endif
 
-/*
-** format to convert number to strings
-*/
-#define NUMBER_FMT  "%g"
 
 typedef LUA_NUM_TYPE real;
 
@@ -44,13 +40,6 @@ typedef unsigned char  Byte;  /* unsigned 8 bits */
 
 
 #define MAX_INT   (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
-
-/* maximum value of a word of 2 bytes (-2 for safety); must fit in an "int" */
-#if MAX_INT < 65534
-#define MAX_WORD	MAX_INT
-#else
-#define MAX_WORD	65534
-#endif
 
 typedef unsigned int IntPoint; /* unsigned with same size as a pointer (for hashing) */
 
@@ -75,7 +64,6 @@ typedef enum {
   LUA_T_LINE     = -11
 } lua_Type;
 
-#define NUM_TYPES 11
 #define NUM_TAGS  7
 
 
@@ -139,7 +127,7 @@ typedef struct TProtoFunc {
   int nconsts;
   Byte *code;  /* ends with opcode ENDCODE */
   int lineDefined;
-  TaggedString  *fileName;
+  TaggedString  *source;
   struct LocVar *locvars;  /* ends with line = -1 */
 } TProtoFunc;
 
@@ -192,11 +180,17 @@ typedef struct Hash {
 
 extern char *luaO_typenames[];
 
+#define luaO_typename(o)        luaO_typenames[-ttype(o)]
+
+
 extern TObject luaO_nilobject;
 
-int luaO_equalObj (TObject *t1, TObject *t2);
+#define luaO_equalObj(t1,t2)	((ttype(t1) != ttype(t2)) ? 0 \
+                                      : luaO_equalval(t1,t2))
+int luaO_equalval (TObject *t1, TObject *t2);
 int luaO_redimension (int oldsize);
 void luaO_insertlist (GCnode *root, GCnode *node);
+double luaO_str2d (char *s);
 
 #ifdef OLD_ANSI
 void luaO_memup (void *dest, void *src, int size);

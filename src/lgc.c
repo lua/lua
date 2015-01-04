@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.18 1998/03/09 21:49:52 roberto Exp $
+** $Id: lgc.c,v 1.23 1999/03/04 21:17:26 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -29,23 +29,18 @@ static int markobject (TObject *o);
 */
 
 
-int luaC_ref (TObject *o, int lock)
-{
+int luaC_ref (TObject *o, int lock) {
   int ref;
   if (ttype(o) == LUA_T_NIL)
     ref = -1;   /* special ref for nil */
   else {
     for (ref=0; ref<L->refSize; ref++)
       if (L->refArray[ref].status == FREE)
-        goto found;
-    /* no more empty spaces */ {
-      int oldSize = L->refSize;
-      L->refSize = luaM_growvector(&L->refArray, L->refSize, struct ref,
-                                   refEM, MAX_INT);
-      for (ref=oldSize; ref<L->refSize; ref++)
-        L->refArray[ref].status = FREE;
-      ref = oldSize;
-    } found:
+        break;
+    if (ref == L->refSize) {  /* no more empty spaces? */
+      luaM_growvector(L->refArray, L->refSize, 1, struct ref, refEM, MAX_INT);
+      L->refSize++;
+    }
     L->refArray[ref].o = *o;
     L->refArray[ref].status = lock ? LOCK : HOLD;
   }
@@ -163,21 +158,13 @@ static void strmark (TaggedString *s)
 }
 
 
-static void protomark (TProtoFunc *f)
-{
+static void protomark (TProtoFunc *f) {
   if (!f->head.marked) {
-    LocVar *v = f->locvars;
     int i;
     f->head.marked = 1;
-    if (f->fileName)
-      strmark(f->fileName);
+    strmark(f->source);
     for (i=0; i<f->nconsts; i++)
       markobject(&f->consts[i]);
-    if (v) {
-      for (; v->line != -1; v++)
-        if (v->varname)
-          strmark(v->varname);
-    }
   }
 }
 

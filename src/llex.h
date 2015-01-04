@@ -1,6 +1,6 @@
 /*
-** $Id: llex.h,v 1.9 1998/06/19 16:14:09 roberto Exp $
-** Lexical Analizer
+** $Id: llex.h,v 1.12 1999/06/17 17:04:03 roberto Exp $
+** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
 
@@ -25,12 +25,14 @@ enum RESERVED {
   NAME, CONC, DOTS, EQ, GE, LE, NE, NUMBER, STRING, EOS};
 
 
-#define MAX_IFS 5
+#ifndef MAX_IFS
+#define MAX_IFS 5  /* arbitrary limit */
+#endif
 
 /* "ifstate" keeps the state of each nested $if the lexical is dealing with. */
 
 struct ifState {
-  int elsepart;  /* true if its in the $else part */
+  int elsepart;  /* true if it's in the $else part */
   int condition;  /* true if $if condition is true */
   int skip;  /* true if part must be skipped */
 };
@@ -56,7 +58,7 @@ void luaX_setinput (LexState *LS, ZIO *z);
 int luaX_lex (LexState *LS);
 void luaX_syntaxerror (LexState *ls, char *s, char *token);
 void luaX_error (LexState *ls, char *s);
-void luaX_token2str (LexState *ls, int token, char *s);
+void luaX_token2str (int token, char *s);
 
 
 #endif

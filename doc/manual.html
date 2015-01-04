@@ -1,9 +1,12 @@
 <HEAD>
-<TITLE>Lua 3.1 Reference Manual</TITLE>
+<TITLE>Lua 3.2 Reference Manual</TITLE>
 </HEAD>
-<BODY>
-<h1>Lua 3.1 Reference Manual</h1>
+<BODY BGCOLOR="#FFFFFF">
+<h1>Lua 3.2 Reference Manual</h1>
 
+<!--  $Id: manual.tex,v 1.33 1999/05/27 20:21:03 roberto Exp $ -->
+<P>
+<P>
 <!-- ====================================================================== -->
 <HR>
 <A NAME="1."></A>
@@ -14,10 +17,6 @@ general procedural programming with data description
 facilities.
 Lua is intended to be used as a light-weight, but powerful,
 configuration language for any program that needs one.
-Lua has been designed and implemented by
-W.&nbsp;Celes,
-R.&nbsp;Ierusalimschy and
-L.&nbsp;H.&nbsp;de Figueiredo.
 <P>
 Lua is implemented as a library, written in C.
 Being an extension language, Lua has no notion of a ``main'' program:
@@ -48,15 +47,17 @@ at the following URL's:
 <P>
 All statements in Lua are executed in a <A NAME="global environment"><EM>global environment</EM></A>.
 This environment, which keeps all global variables,
-is initialized at the beginning of the embedding program and
-persists until its end.
+is initialized with a call from the embedding program to
+<CODE>lua_open</CODE> and
+persists until a call to <CODE>lua_close</CODE>,
+or the end of the embedding program.
 Optionally, a user can create multiple independent global
 environments (see Section&nbsp;<A HREF="#mangstate">5.1</A>).
 <P>
 The global environment can be manipulated by Lua code or
 by the embedding program,
 which can read and write global variables
-using functions from the API library that implements Lua.
+using API functions from the library that implements Lua.
 <P>
 <A NAME="Global variables">Global variables</A> do not need declaration.
 Any variable is assumed to be global unless explicitly declared local
@@ -79,7 +80,7 @@ A chunk may optionally end with a <CODE>return</CODE> statement (see Section&nbs
 When a chunk is executed, first all its code is pre-compiled,
 then the statements are executed in sequential order.
 All modifications a chunk effects on the global environment persist
-after its end.
+after the chunk end.
 <P>
 Chunks may also be pre-compiled into binary form;
 see program <A NAME="luac"><TT><A HREF="luac.html">luac</A></TT></A> for details.
@@ -104,7 +105,7 @@ There are six <A NAME="basic types">basic types</A> in Lua: <A NAME="nil"><EM>ni
 <A NAME="string"><EM>string</EM></A>, <A NAME="function"><EM>function</EM></A>, <A NAME="userdata"><EM>userdata</EM></A>, and <A NAME="table"><EM>table</EM></A>.
 <EM>Nil</EM> is the type of the value <B>nil</B>,
 whose main property is to be different from any other value.
-<EM>Number</EM> represents real (double precision floating point) numbers,
+<EM>Number</EM> represents real (double-precision floating-point) numbers,
 while <EM>string</EM> has the usual meaning.
 Lua is <A NAME="eight-bit clean">eight-bit clean</A>,
 and so strings may contain any 8-bit character,
@@ -160,7 +161,7 @@ semantics of Lua (see Section&nbsp;<A HREF="#tag-method">4.8</A>).
 Each of the types <EM>nil</EM>, <EM>number</EM> and <EM>string</EM> has a different tag.
 All values of each of these types have this same pre-defined tag.
 Values of type <EM>function</EM> can have two different tags,
-depending on whether they are Lua or C functions.
+depending on whether they are Lua functions or C functions.
 Finally,
 values of type <EM>userdata</EM> and <EM>table</EM> can have
 as many different tags as needed (see Section&nbsp;<A HREF="#tag-method">4.8</A>).
@@ -200,7 +201,7 @@ Lua is a case-sensitive language:
 <TT>and</TT> is a reserved word, but <TT>And</TT> and <TT>\'and</TT>
 (if the locale permits) are two other different identifiers.
 As a convention, identifiers starting with underscore followed by
-uppercase letters should not be used in regular programs.
+uppercase letters are reserved for internal variables.
 <P>
 The following strings denote other <A NAME="tokens">tokens</A>:
 <PRE>
@@ -211,7 +212,7 @@ The following strings denote other <A NAME="tokens">tokens</A>:
 <A NAME="Literal strings">Literal strings</A> can be delimited by matching single or double quotes,
 and can contain the C-like escape sequences
 <CODE>'\a'</CODE> (bell),
-<CODE>'\b'</CODE> (back space),
+<CODE>'\b'</CODE> (backspace),
 <CODE>'\f'</CODE> (form feed),
 <CODE>'\n'</CODE> (new line),
 <CODE>'\r'</CODE> (carriage return),
@@ -251,9 +252,9 @@ in Unix systems (see Section&nbsp;<A HREF="#lua-sa">8</A>).
 <P>
 <A NAME="Numerical constants">Numerical constants</A> may be written with an optional decimal part,
 and an optional decimal exponent.
-Examples of valid numerical constants are:
+Examples of valid numerical constants are
 <PRE>
-       4     4.0     0.4     4.57e-3     0.3e12
+       3     3.0     3.1416  314.16e-2   0.31416E1
 </PRE>
 <P>
 <A NAME="pre-processor"></A>
@@ -280,7 +281,7 @@ Directives may be freely nested.
 Particularly, a <CODE>$endinput</CODE> may occur inside a <CODE>$if</CODE>;
 in that case, even the matching <CODE>$end</CODE> is not parsed.
 <P>
-A <EM>cond</EM> part may be:
+A <EM>cond</EM> part may be
 <DL>
 <DT><B><TT>nil</TT></B><DD> - always false.
 <DT><B><TT>1</TT></B><DD> - always true.
@@ -298,11 +299,7 @@ Lua provides some automatic conversions between values at run time.
 Any arithmetic operation applied to a string tries to convert
 that string to a number, following the usual rules.
 Conversely, whenever a number is used when a string is expected,
-that number is converted to a string, according to the following rule:
-if the number is an integer, it is written without exponent or decimal point;
-otherwise, it is formatted following the <CODE>%g</CODE>
-conversion specification of the <CODE>printf</CODE> function in the
-standard C library.
+that number is converted to a string, in a reasonable format.
 For complete control on how numbers are converted to strings,
 use the <CODE>format</CODE> function (see Section&nbsp;<A HREF="#format">6.2</A>).
 <P>
@@ -313,12 +310,13 @@ use the <CODE>format</CODE> function (see Section&nbsp;<A HREF="#format">6.2</A>
 <P>
 Functions in Lua can return many values.
 Because there are no type declarations,
+when a function is called
 the system does not know how many values a function will return,
 or how many parameters it needs.
 Therefore, sometimes, a list of values must be <EM>adjusted</EM>, at run time,
 to a given length.
 If there are more values than are needed,
-then the last values are thrown away.
+then the excess values are thrown away.
 If there are more needs than values,
 then the list is extended with as many  <B>nil</B>'s as needed.
 Adjustment occurs in multiple assignment (see Section&nbsp;<A HREF="#assignment">4.5.2</A>)
@@ -376,7 +374,7 @@ The two lists may have different lengths.
 Before the assignment, the list of values is <EM>adjusted</EM> to
 the length of the list of variables (see Section&nbsp;<A HREF="#adjust">4.4</A>).
 <P>
-A single name can denote a global or a local variable,
+A single name can denote a global variable, a local variable,
 or a formal parameter:
 <PRE>
 var ::= name
@@ -414,15 +412,14 @@ only <B>nil</B> is considered false.
 <P>
 <A NAME="while-do"></A><A NAME="repeat-until"></A><A NAME="if-then-else"></A>
 <PRE>
-stat ::= <B>while</B> exp1 <B>do</B> block <B>end</B> <BR>	| <B>repeat</B> block <B>until</B> exp1 <BR>	| <B>if</B> exp1 <B>then</B> block {elseif} [<B>else</B> block] <B>end</B>
-elseif ::= <B>elseif</B> exp1 <B>then</B> block
+stat ::= <B>while</B> exp1 <B>do</B> block <B>end</B> <BR>	| <B>repeat</B> block <B>until</B> exp1 <BR>	| <B>if</B> exp1 <B>then</B> block {<B>elseif</B> exp1 <B>then</B> block} [<B>else</B> block] <B>end</B>
 </PRE>
 <P>
 A <TT>return</TT> is used to return values from a function or from a chunk.
 <A NAME="return"></A>
 
 Because they may return more than one value,
-the syntax for a <A NAME="return statement">return statement</A> is:
+the syntax for a <A NAME="return statement">return statement</A> is
 <PRE>
 ret ::= <B>return</B> [explist1] [sc]
 </PRE>
@@ -457,7 +454,7 @@ Otherwise, all variables are initialized with <B>nil</B>.
 <H2>4.6 - Expressions</H2>
 <P>
 <H3>4.6.1 - <A NAME="Basic Expressions</H3>">Basic Expressions</H3></A>
-Basic expressions are:
+Basic expressions are
 <PRE>
 exp ::= '<B>(</B>' exp '<B>)</B>'
 exp ::= <B>nil</B>
@@ -477,7 +474,7 @@ string literals are explained in Section&nbsp;<A HREF="#lexical">4.1</A>;
 variables are explained in Section&nbsp;<A HREF="#assignment">4.5.2</A>;
 upvalues are explained in Section&nbsp;<A HREF="#upvalue">4.7</A>;
 function definitions (<EM>function</EM>) are explained in Section&nbsp;<A HREF="#func-def">4.6.9</A>;
-function call are explained in Section&nbsp;<A HREF="#functioncall">4.6.8</A>.
+function calls are explained in Section&nbsp;<A HREF="#functioncall">4.6.8</A>.
 <P>
 An access to a global variable <CODE>x</CODE> is equivalent to a
 call <CODE>getglobal('x')</CODE>;
@@ -535,7 +532,7 @@ then their values are compared using lexicographical order.
 Otherwise, the ``order'' tag method is called (see Section&nbsp;<A HREF="#tag-method">4.8</A>).
 <P>
 <H3>4.6.4 - Logical Operators</H3>
-The <A NAME="logical operators">logical operators</A> are:
+The <A NAME="logical operators">logical operators</A> are
 <A NAME="and"></A><A NAME="or"></A><A NAME="not"></A>
 <PRE>
              and   or   not
@@ -589,7 +586,7 @@ every time a constructor is evaluated, a new table is created.
 Constructors can be used to create empty tables,
 or to create a table and initialize some fields.
 <P>
-The general syntax for constructors is:
+The general syntax for constructors is
 <PRE>
 tableconstructor ::= '<B>{</B>' fieldlist '<B>}</B>'
 fieldlist ::= lfieldlist | ffieldlist | lfieldlist '<B>;</B>' ffieldlist | ffieldlist '<B>;</B>' lfieldlist
@@ -597,17 +594,17 @@ lfieldlist ::= [lfieldlist1]
 ffieldlist ::= [ffieldlist1]
 </PRE>
 <P>
-The form <EM>lfieldlist1</EM> is used to initialize lists.
+The form <EM>lfieldlist1</EM> is used to initialize lists:
 <PRE>
 lfieldlist1 ::= exp {'<B>,</B>' exp} ['<B>,</B>']
 </PRE>
 The expressions in the list are assigned to consecutive numerical indices,
 starting with 1.
-For example:
+For example,
 <PRE>
    a = {"v1", "v2", 34}
 </PRE>
-is equivalent to:
+is equivalent to
 <PRE>
   do
     local temp = {}
@@ -623,11 +620,11 @@ The form <EM>ffieldlist1</EM> initializes other fields in a table:
 ffieldlist1 ::= ffield {'<B>,</B>' ffield} ['<B>,</B>']
 ffield ::= '<B>[</B>' exp '<B>]</B>' '<B>=</B>' exp | name '<B>=</B>' exp
 </PRE>
-For example:
+For example,
 <PRE>
    a = {[f(k)] = g(y), x = 1, y = 3, [0] = b+c}
 </PRE>
-is equivalent to:
+is equivalent to
 <PRE>
   do
     local temp = {}
@@ -649,7 +646,7 @@ For example, all forms below are correct:
    x = {;}
    x = {'a', 'b',}
    x = {type='list'; 'a', 'b'}
-   x = {f(0), f(1), f(2),; n=3}
+   x = {f(0), f(1), f(2),; n=3,}
 </PRE>
 <P>
 <A NAME="functioncall"></A>
@@ -678,6 +675,7 @@ is syntactic sugar for
 </PRE>
 except that <CODE>simpleexp</CODE> is evaluated only once.
 <P>
+Arguments have the following syntax:
 <PRE>
 args ::= '<B>(</B>' [explist1] '<B>)</B>'
 args ::= tableconstructor
@@ -707,33 +705,33 @@ If the function is called in a place that can hold many values
 (syntactically denoted by the non-terminal <EM>exp</EM>),
 then no adjustment is made.
 Note that the only place that can hold many values
-is the last expression (or the only one) in an assignment
+is the last (or the only) expression in an assignment
 or in a return statement; see examples below.
 <PRE>
-      f();  -- adjusted to 0
-      g(x, f());     -- f() is adjusted to 1
-      a,b,c = f(), x;   -- f() is adjusted to 1 result (and c gets nil)
-      a,b,c = x, f();   -- f() is adjusted to 2
-      a,b,c = f();   -- f() is adjusted to 3
-      return f();   -- returns all values returned by f()
+      f();               -- adjusted to 0
+      g(x, f());         -- f() is adjusted to 1
+      a,b,c = f(), x;    -- f() is adjusted to 1 result (and c gets nil)
+      a,b,c = x, f();    -- f() is adjusted to 2
+      a,b,c = f();       -- f() is adjusted to 3
+      return f();        -- returns all values returned by f()
 </PRE>
 <P>
 <A NAME="func-def"></A>
 <H3>4.6.9 - <A NAME="Function Definitions</H3>">Function Definitions</H3></A> 
 <P>
-The syntax for function definition is:
+The syntax for function definition is
 <PRE>
 function ::= <B>function</B> '<B>(</B>' [parlist1] '<B>)</B>' block <B>end</B>
 stat ::= <B>function</B> funcname '<B>(</B>' [parlist1] '<B>)</B>' block <B>end</B>
 funcname ::= name | name '<B>.</B>' name
 </PRE>
-The statement:
+The statement
 <PRE>
       function f (...)
         ...
       end
 </PRE>
-is just syntactic sugar for:
+is just syntactic sugar for
 <PRE>
       f = function (...)
             ...
@@ -769,8 +767,8 @@ A vararg function does not adjust its argument list;
 instead, it collects any extra arguments into an implicit parameter,
 called <A NAME="arg"><TT>arg</TT></A>.
 This parameter is always initialized as a table,
-with a field <CODE>n</CODE> with the number of extra arguments,
-and the extra arguments at positions 1, 2, ...
+with a field <CODE>n</CODE> whose value is the number of extra arguments,
+and the extra arguments at positions 1,&nbsp;2,&nbsp;...
 <P>
 As an example, suppose definitions like:
 <PRE>
@@ -795,21 +793,21 @@ If control reaches the end of a function without a return instruction,
 then the function returns with no results.
 <P>
 There is a special syntax for defining <A NAME="methods">methods</A>,
-that is, functions that have an implicit extra parameter <A NAME="self"><TT>self</TT></A>.
+that is, functions that have an implicit extra parameter <A NAME="self"><TT>self</TT></A>:
 <PRE>
 function ::= <B>function</B> name '<B>:</B>' name '<B>(</B>' [parlist1] '<B>)</B>' block <B>end</B>
 </PRE>
 Thus, a declaration like
 <PRE>
-function v:f (...)
-  ...
-end
+      function v:f (...)
+        ...
+      end
 </PRE>
 is equivalent to
 <PRE>
-v.f = function (self, ...)
-  ...
-end
+      v.f = function (self, ...)
+        ...
+      end
 </PRE>
 that is, the function gets an extra formal parameter called <CODE>self</CODE>.
 Note that the variable <CODE>v</CODE> must have been
@@ -842,19 +840,19 @@ at the point where the function is defined.
 <P>
 Here are some examples:
 <PRE>
-a,b,c = 1,2,3   -- global variables
-function f (x)
-  local b   -- x and b are local to f
-  local g = function (a)
-    local y  -- a and y are local to g
-    p = a   -- OK, access local 'a'
-    p = c   -- OK, access global 'c'
-    p = b   -- ERROR: cannot access a variable in outer scope
-    p = %b  -- OK, access frozen value of 'b' (local to 'f')
-    p = %c  -- OK, access frozen value of global 'c'
-    p = %y  -- ERROR: 'y' is not visible where 'g' is defined
-  end  -- g
-end  -- f
+      a,b,c = 1,2,3   -- global variables
+      function f (x)
+        local b       -- x and b are local to f
+        local g = function (a)
+          local y     -- a and y are local to g
+          p = a       -- OK, access local 'a'
+          p = c       -- OK, access global 'c'
+          p = b       -- ERROR: cannot access a variable in outer scope
+          p = %b      -- OK, access frozen value of 'b' (local to 'f')
+          p = %c      -- OK, access frozen value of global 'c'
+          p = %y      -- ERROR: 'y' is not visible where 'g' is defined
+        end           -- g
+      end             -- f
 </PRE>
 <P>
 <P>
@@ -863,7 +861,7 @@ end  -- f
 <H2>4.8 - Tag Methods</H2> 
 <P>
 Lua provides a powerful mechanism to extend its semantics,
-called <A NAME="Tag Methods"><EM>Tag Methods</EM></A>.
+called <A NAME="tag methods"><EM>tag methods</EM></A>.
 A tag method is a programmer-defined function
 that is called at specific key points during the evaluation of a program,
 allowing the programmer to change the standard Lua behavior at these points.
@@ -874,10 +872,10 @@ according to the tag of the values involved
 in the event (see Section&nbsp;<A HREF="#TypesSec">3</A>).
 The function <A NAME="settagmethod"><TT>settagmethod</TT></A> changes the tag method
 associated with a given pair <EM>(tag, event)</EM>.
-Its first parameter is the tag, the second is the event name
-(a string, see below),
+Its first parameter is the tag, the second parameter is the event name
+(a string; see below),
 and the third parameter is the new method (a function),
-or <B>nil</B> to restore the default behavior.
+or <B>nil</B> to restore the default behavior for the pair.
 The function returns the previous tag method for that pair.
 Another function, <A NAME="gettagmethod"><TT>gettagmethod</TT></A>,
 receives a tag and an event name and returns the
@@ -893,7 +891,7 @@ Please notice that the code shown here is only illustrative;
 the real behavior is hard coded in the interpreter,
 and it is much more efficient than this simulation.
 All functions used in these descriptions
-(<CODE>rawgetglobal</CODE>, <CODE>tonumber</CODE>, <CODE>call</CODE>, etc)
+(<CODE>rawgetglobal</CODE>, <CODE>tonumber</CODE>, <CODE>call</CODE>, etc.)
 are described in Section&nbsp;<A HREF="#predefined">6.1</A>.
 <P>
 <DL>
@@ -1137,7 +1135,7 @@ called when Lua tries to call a non function value.
 </PRE>
 <P>
 <DT><B>``gc'':</B><DD><A NAME="gc event"></A>
-called when Lua is garbage collecting an object.
+called when Lua is ``garbage collecting'' an object.
 This method cannot be set for strings, numbers, functions,
 and userdata with default tag.
 For each object to be collected,
@@ -1165,29 +1163,27 @@ Because Lua is an extension language,
 all Lua actions start from C code in the host program
 calling a function from the Lua library.
 Whenever an error occurs during Lua compilation or execution,
-the <A NAME="error method"><EM>error method</EM></A> is called,
+function <CODE>_ERRORMESSAGE</CODE> is called <A NAME="_ERRORMESSAGE"></A>
+(provided it is different from <B>nil</B>),
 and then the corresponding function from the library
 (<CODE>lua_dofile</CODE>, <CODE>lua_dostring</CODE>,
 <CODE>lua_dobuffer</CODE>, or <CODE>lua_callfunction</CODE>)
 is terminated, returning an error condition.
 <P>
-The only argument to the error method is a string
+The only argument to <CODE>_ERRORMESSAGE</CODE> is a string
 describing the error.
-The default method prints this message to <CODE>stderr</CODE>.
-If needed, it is possible to change the error method with the
-function <CODE>seterrormethod</CODE>,
-which gets the new error handler as its only parameter
-(see Section&nbsp;<A HREF="#pdf-seterrormethod">6.1</A>).
-The standard I/O library uses this facility to redefine the error method,
-using the debug facilities (see Section&nbsp;<A HREF="#debugI">7</A>),
-in order to print some extra information,
+The default definition for this function calls <CODE>_ALERT</CODE>,
+which prints the message to <CODE>stderr</CODE> (see Section&nbsp;<A HREF="#alert">6.1</A>).
+The standard I/O library redefines <CODE>_ERRORMESSAGE</CODE>,
+and uses the debug facilities (see Section&nbsp;<A HREF="#debugI">7</A>)
+to print some extra information,
 such as the call stack.
 <P>
 To provide more information about errors,
 Lua programs should include the compilation pragma <CODE>$debug</CODE>.
 <A NAME="pragma"></A>
 <A NAME="debug pragma"></A>
-When an error occurs in a program compiled with this option,
+When an error occurs in a chunk compiled with this option,
 the I/O error routine is able to print the number of the
 lines where the calls (and the error) were made.
 <P>
@@ -1229,6 +1225,8 @@ is stored in a dynamic structure pointed by<A NAME="lua_state"></A>
 typedef struct lua_State lua_State;
 extern lua_State *lua_state;
 </PRE>
+The variable <CODE>lua_state</CODE> is the only C global variable in
+the Lua library.
 <P>
 Before calling any API function,
 this state must be initialized.
@@ -1255,19 +1253,19 @@ For that, you must set <CODE>lua_state</CODE> back to <CODE>NULL</CODE> before
 calling <CODE>lua_open</CODE>.
 An easy way to do that is defining an auxiliary function:
 <PRE>
-lua_State *lua_newstate (void) {
-  lua_State *old = lua_setstate(NULL);
-  lua_open();
-  return lua_setstate(old);
-}
+      lua_State *lua_newstate (void) {
+        lua_State *old = lua_setstate(NULL);
+        lua_open();
+        return lua_setstate(old);
+      }
 </PRE>
 This function creates a new state without changing the current state
 of the interpreter.
-Note that any new state is built with all predefined functions,
+Note that any new state is created with all predefined functions,
 but any additional library (such as the standard libraries) must be
 explicitly open in the new state, if needed.
 <P>
-If necessary, a state may be released:<A NAME="lua_close"></A>
+If necessary, a state may be released by calling<A NAME="lua_close"></A>
 <PRE>
 void lua_close (void);
 </PRE>
@@ -1281,14 +1279,14 @@ If <CODE>lua_state</CODE> is already <CODE>NULL</CODE>,
 <CODE>lua_close</CODE> has no effect.
 <P>
 If you are using multiple states,
-you may find useful the following function,
+you may find useful to define the following function,
 which releases a given state:
 <PRE>
-void lua_freestate (lua_State *st) {
-  lua_State *old = lua_setstate(st);
-  lua_close();
-  if (old != st) lua_setstate(old);
-}
+      void lua_freestate (lua_State *st) {
+        lua_State *old = lua_setstate(st);
+        lua_close();
+        if (old != st) lua_setstate(old);
+      }
 </PRE>
 <P>
 <A NAME="valuesCLua"></A>
@@ -1316,7 +1314,7 @@ int lua_isfunction  (lua_Object object);
 int lua_iscfunction (lua_Object object);
 int lua_isuserdata  (lua_Object object);
 </PRE>
-All macros return 1 if the object is compatible with the given type,
+These functions return 1 if the object is compatible with the given type,
 and 0 otherwise.
 The function <CODE>lua_isnumber</CODE> accepts numbers and numerical strings,
 whereas
@@ -1356,7 +1354,8 @@ but may contain other zeros in their body.
 If you do not know whether a string may contain zeros,
 you can use <CODE>lua_strlen</CODE> to get the actual length.
 Because Lua has garbage collection,
-there is no guarantee that such pointer will be valid after the block ends
+there is no guarantee that the pointer returned by <CODE>lua_getstring</CODE>
+will be valid after the block ends
 (see Section&nbsp;<A HREF="#GC">5.3</A>).
 <P>
 <CODE>lua_getcfunction</CODE> converts a <CODE>lua_Object</CODE> to a C function.
@@ -1415,7 +1414,7 @@ Note that the structure lua2C cannot be directly modified by C code.
 <P>
 The second structure, C2lua, is an abstract stack.
 Pushing elements into this stack
-is done with the following functions and macros:
+is done with the following functions:
 <A NAME="lua_pushnumber"></A><A NAME="lua_pushlstring"></A><A NAME="lua_pushstring"></A>
 <A NAME="lua_pushcfunction"></A><A NAME="lua_pushusertag"></A>
 <A NAME="lua_pushnil"></A><A NAME="lua_pushobject"></A>
@@ -1433,7 +1432,7 @@ void lua_pushcfunction (lua_CFunction f);  /* macro */
 All of them receive a C value,
 convert it to a corresponding <CODE>lua_Object</CODE>,
 and leave the result on the top of C2lua.
-Particularly, functions <CODE>lua_pushlstring</CODE> and <CODE>lua_pushstring</CODE>
+In particular, functions <CODE>lua_pushlstring</CODE> and <CODE>lua_pushstring</CODE>
 make an internal copy of the given string.
 Function <CODE>lua_pushstring</CODE> can only be used to push proper C strings
 (that is, strings that do not contain zeros and end with a zero);
@@ -1518,9 +1517,6 @@ is the ``name of the chunk'',
 used in error messages and debug information.
 If <CODE>name</CODE> is <CODE>NULL</CODE>,
 Lua gives a default name to the chunk.
-In files this name is the file name,
-and <CODE>lua_dostring</CODE> uses a small prefix
-of the string as the chunk name.
 <P>
 These functions return, in structure lua2C,
 any values eventually returned by the chunks.
@@ -1565,7 +1561,7 @@ The function
 <PRE>
 lua_Object lua_gettable (void);
 </PRE>
-pops from the stack C2lua a table and an index,
+pops a table and an index from the stack C2lua,
 and returns the contents of the table at that index.
 As in Lua, this operation may trigger a tag method.
 To get the real value of any table index,
@@ -1579,7 +1575,7 @@ lua_Object lua_rawgettable (void);
 To store a value in an index,
 the program must push the table, the index,
 and the value onto C2lua,
-and then call the function:
+and then call the function
 <A NAME="lua_settable"></A>
 <PRE>
 void lua_settable (void);
@@ -1636,9 +1632,9 @@ equivalent to the Lua code:
   lua_pushnumber(4);                                   /* 3rd argument */
   lua_callfunction(lua_getglobal("f"));           /* call Lua function */
   lua_pushobject(lua_getresult(1));   /* push first result of the call */
-  lua_setglobal("a");                      /* sets global variable 'a' */
-  lua_pushobject(lua_getresult(2));   /* push second result of the call */
-  lua_setglobal("b");                      /* sets global variable 'b' */
+  lua_setglobal("a");                       /* set global variable 'a' */
+  lua_pushobject(lua_getresult(2));  /* push second result of the call */
+  lua_setglobal("b");                       /* set global variable 'b' */
 </PRE>
 <P>
 Some special Lua functions have exclusive interfaces.
@@ -1651,19 +1647,11 @@ This function never returns.
 If the C function has been called from Lua,
 then the corresponding Lua execution terminates,
 as if an error had occurred inside Lua code.
-Otherwise, the whole program terminates with a call to <CODE>exit(1)</CODE>.
-The <CODE>message</CODE> is passed to the error handler method.
+Otherwise, the whole host program terminates with a call to <CODE>exit(1)</CODE>.
+The <CODE>message</CODE> is passed to the error handler function,
+<CODE>_ERRORMESSAGE</CODE>.
 If <CODE>message</CODE> is <CODE>NULL</CODE>,
-the error handler method is not called.
-<P>
-The error handler method (see Section&nbsp;<A HREF="#error">4.9</A>) can be
-changed with: <A NAME="lua_seterrormethod"></A>
-<PRE>
-lua_Object lua_seterrormethod (void);
-</PRE>
-This function sets the object at the top of C2lua
-as the new error method,
-and returns the old error method value.
+then <CODE>_ERRORMESSAGE</CODE> is not called.
 <P>
 Tag methods can be changed with: <A NAME="lua_settagmethod"></A>
 <PRE>
@@ -1722,12 +1710,13 @@ Like a Lua function, a C function called by Lua can also return
 many results.
 <P>
 When a C function is created,
-it is possible to associate some <EM>upvalues</EM> to it;
+it is possible to associate some <EM>upvalues</EM> to it,
+thus creating a C closure;
 then these values are passed to the function whenever it is called,
 as common arguments.
 To associate upvalues to a function,
 first these values must be pushed on C2lua.
-Then the function:
+Then the function
 <A NAME="lua_pushcclosure"></A>
 <PRE>
 void lua_pushcclosure (lua_CFunction fn, int n);
@@ -1792,7 +1781,7 @@ The libraries, on the other hand, provide useful routines
 that are implemented directly through the standard API.
 Therefore, they are not necessary to the language,
 and are provided as separate C modules.
-Currently there are three standard libraries:
+Currently, there are three standard libraries:
 <UL>
 <LI>string manipulation;
 <LI>mathematical functions (sin, log, etc);
@@ -1809,17 +1798,16 @@ and <CODE>lua_iolibopen</CODE>, declared in <CODE>lualib.h</CODE>.
 <A NAME="6.1"></A>
 <H2>6.1 - Predefined Functions</H2> 
 <P>
-<h3> <TT>call (func, arg [, mode [, errmethod]])</TT></h3><A NAME="call"></A>
+<h3> <TT>call (func, arg [, mode [, errhandler]])</TT></h3><A NAME="call"></A>
 <A NAME="pdf-call"></A>
 
-This function calls function <CODE>func</CODE> with
+Calls function <CODE>func</CODE> with
 the arguments given by the table <CODE>arg</CODE>.
 The call is equivalent to
 <PRE>
-      func(arg[1], arg[2], ..., arg[arg.n])
+      func(arg[1], arg[2], ..., arg[n])
 </PRE>
-If <CODE>arg.n</CODE> is not defined,
-then Lua stops getting arguments at the first <B>nil</B> value.
+where <CODE>n</CODE> is the result of <CODE>getn(arg)</CODE> (see Section&nbsp;<A HREF="#getn">6.1</A>).
 <P>
 By default,
 all results from <CODE>func</CODE> are just returned by the call.
@@ -1833,6 +1821,7 @@ For instance, the following calls produce the following results:
 <PRE>
 a = call(sin, {5})                --&gt; a = 0.0871557 = sin(5)
 a = call(max, {1,4,5; n=2})       --&gt; a = 4 (only 1 and 4 are arguments)
+a = call(max, {1,4,5; n=2}, "p")  --&gt; a = {4; n=1}
 t = {x=1}
 a = call(next, {t,nil;n=2}, "p")  --&gt; a={"x", 1; n=2}
 </PRE>
@@ -1842,14 +1831,15 @@ if an error occurs during the function call,
 the error is propagated.
 If the string <CODE>mode</CODE> contains <CODE>"x"</CODE>,
 then the call is <EM>protected</EM>.<A NAME="protected calls"></A>
-In this mode, function <CODE>call</CODE> does not generate an error,
-whatever happens during the call.
+In this mode, function <CODE>call</CODE> does not propagate an error,
+regardless of what happens during the call.
 Instead, it returns <B>nil</B> to signal the error
-(besides calling the appropriated error method).
+(besides calling the appropriated error handler).
 <P>
-If provided, <CODE>errmethod</CODE> is temporarily set as the error method,
-while <CODE>func</CODE> runs.
-As a particular case, if <CODE>errmethod</CODE> is <B>nil</B>,
+If provided,
+<CODE>errhandler</CODE> is temporarily set as the error function
+<CODE>_ERRORMESSAGE</CODE>, while <CODE>func</CODE> runs.
+In particular, if <CODE>errhandler</CODE> is <B>nil</B>,
 no error messages will be issued during the execution of the called function.
 <P>
 <h3> <TT>collectgarbage ([limit])</TT></h3><A NAME="collectgarbage"></A>
@@ -1858,13 +1848,13 @@ Returns the number of objects collected.
 An optional argument, <CODE>limit</CODE>, is a number that
 makes the next cycle occur only after that number of new
 objects have been created.
-If absent, Lua uses an adaptive algorithm to set
-this limit.
+If <CODE>limit</CODE> is absent or equal to 0,
+Lua uses an adaptive algorithm to set this limit.
 <CODE>collectgarbage</CODE> is equivalent to
 the API function <CODE>lua_collectgarbage</CODE>.
 <P>
 <h3> <TT>dofile (filename)</TT></h3><A NAME="dofile"></A>
-This function receives a file name,
+Receives a file name,
 opens the file, and executes the file contents as a Lua chunk,
 or as pre-compiled chunks.
 When called without arguments,
@@ -1877,7 +1867,7 @@ It issues an error when called with a non string argument.
 <CODE>dofile</CODE> is equivalent to the API function <CODE>lua_dofile</CODE>.
 <P>
 <h3> <TT>dostring (string [, chunkname])</TT></h3><A NAME="dostring"></A>
-This function executes a given string as a Lua chunk.
+Executes a given string as a Lua chunk.
 If there is any error executing the string,
 <CODE>dostring</CODE> returns <B>nil</B>.
 Otherwise, it returns the values returned by the chunk,
@@ -1893,7 +1883,7 @@ Returns a new tag.
 <CODE>newtag</CODE> is equivalent to the API function <CODE>lua_newtag</CODE>.
 <P>
 <h3> <TT>next (table, index)</TT></h3><A NAME="next"></A>
-This function allows a program to traverse all fields of a table.
+Allows a program to traverse all fields of a table.
 Its first argument is a table and its second argument
 is an index in this table.
 It returns the next index of the table and the
@@ -1911,8 +1901,9 @@ field not present in a table or a field with value <B>nil</B>.
 Therefore, the function only considers fields with non <B>nil</B> values.
 The order in which the indices are enumerated is not specified,
 <EM>even for numeric indices</EM>
-(to traverse a table in numeric order, use a counter).
-If the table is modified in any way during a traversal,
+(to traverse a table in numeric order,
+use a counter or the function <CODE>foreachi</CODE>).
+If the table indices are modified in any way during a traversal,
 the semantics of <CODE>next</CODE> is undefined.
 <P>
 This function cannot be written with the standard API.
@@ -1925,67 +1916,35 @@ or <B>nil</B> to get a first name.
 Similarly to <CODE>next</CODE>, it returns the name of another variable
 and its value,
 or <B>nil</B> if there are no more variables.
-There can be no assignments to global variables during the traversal;
+There can be no creation of new global variables during the traversal;
 otherwise the semantics of <CODE>nextvar</CODE> is undefined.
 <P>
 This function cannot be written with the standard API.
 <P>
-<h3> <TT>foreach (table, function)</TT></h3><A NAME="foreach"></A>
-Executes the given <CODE>function</CODE> over all elements of <CODE>table</CODE>.
-For each element, the function is called with the index and
-respective value as arguments.
-If the function returns any non-<B>nil</B> value,
-the loop is broken, and the value is returned
-as the final value of <CODE>foreach</CODE>.
-<P>
-This function could be defined in Lua:
-<PRE>
-function foreach (t, f)
-  local i, v = next(t, nil)
-  while i do
-    local res = f(i, v)
-    if res then return res end
-    i, v = next(t, i)
-  end
-end
-</PRE>
-<P>
-<h3> <TT>foreachvar (function)</TT></h3><A NAME="foreachvar"></A>
-Executes <CODE>function</CODE> over all global variables.
-For each variable,
-the function is called with its name and its value as arguments.
-If the function returns any non-nil value,
-the loop is broken, and the value is returned
-as the final value of <CODE>foreachvar</CODE>.
-<P>
-This function could be defined in Lua:
-<PRE>
-function foreachvar (f)
-  local n, v = nextvar(nil)
-  while n do
-    local res = f(n, v)
-    if res then return res end
-    n, v = nextvar(n)
-  end
-end
-</PRE>
-<P>
 <h3> <TT>tostring (e)</TT></h3><A NAME="tostring"></A>
-This function receives an argument of any type and
+Receives an argument of any type and
 converts it to a string in a reasonable format.
 For complete control on how numbers are converted,
 use function <CODE>format</CODE>.
 <P>
 <h3> <TT>print (e1, e2, ...)</TT></h3><A NAME="print"></A>
-This function receives any number of arguments,
+Receives any number of arguments,
 and prints their values using the strings returned by <CODE>tostring</CODE>.
 This function is not intended for formatted output,
 but only as a quick way to show a value,
-for instance for error messages or debugging.
+for instance for debugging.
 See Section&nbsp;<A HREF="#libio">6.4</A> for functions for formatted output.
 <P>
+<A NAME="alert"></A>
+<h3> <TT>_ALERT (message)</TT></h3><A NAME="alert"></A>
+Prints its only string argument to <A NAME="stderr"><TT>stderr</TT></A>.
+All error messages in Lua are printed through this function.
+Therefore, a program may redefine it
+to change the way such messages are shown
+(for instance, for systems without <CODE>stderr</CODE>).
+<P>
 <h3> <TT>tonumber (e [, base])</TT></h3><A NAME="tonumber"></A>
-This function receives one argument,
+Receives one argument,
 and tries to convert it to a number.
 If the argument is already a number or a string convertible
 to a number, then <CODE>tonumber</CODE> returns that number;
@@ -2002,7 +1961,7 @@ In other bases, only integers are accepted.
 <P>
 <A NAME="pdf-type"></A>
 <h3> <TT>type (v)</TT></h3><A NAME="type"></A>
-This function allows Lua to test the type of a value.
+Allows Lua to test the type of a value.
 It receives one argument, and returns its type, coded as a string.
 The possible results of this function are
 <CODE>"nil"</CODE> (a string, not the value <B>nil</B>),
@@ -2013,12 +1972,12 @@ The possible results of this function are
 and <CODE>"userdata"</CODE>.
 <P>
 <h3> <TT>tag (v)</TT></h3><A NAME="tag"></A>
-This function allows Lua to test the tag of a value (see Section&nbsp;<A HREF="#TypesSec">3</A>).
+Allows Lua to test the tag of a value (see Section&nbsp;<A HREF="#TypesSec">3</A>).
 It receives one argument, and returns its tag (a number).
 <CODE>tag</CODE> is equivalent to the API function <CODE>lua_tag</CODE>.
 <P>
 <h3> <TT>settag (t, tag)</TT></h3><A NAME="settag"></A>
-This function sets the tag of a given table (see Section&nbsp;<A HREF="#TypesSec">3</A>).
+Sets the tag of a given table (see Section&nbsp;<A HREF="#TypesSec">3</A>).
 <CODE>tag</CODE> must be a value created with <CODE>newtag</CODE>
 (see Section&nbsp;<A HREF="#pdf-newtag">6.1</A>).
 It returns the value of its first argument (the table).
@@ -2027,21 +1986,21 @@ it is impossible to change the tag of a userdata from Lua.
 <P>
 <P>
 <h3> <TT>assert (v [, message])</TT></h3><A NAME="assert"></A>
-This function issues an <EM>``assertion failed!''</EM> error
+Issues an <EM>``assertion failed!''</EM> error
 when its argument is <B>nil</B>.
 This function is equivalent to the following Lua function:
 <PRE>
-function assert (v, m)
-  if not v then
-    m = m or ""
-    error("assertion failed!  " .. m)
-  end
-end
+      function assert (v, m)
+        if not v then
+          m = m or ""
+          error("assertion failed!  " .. m)
+        end
+      end
 </PRE>
 <P>
 <A NAME="pdf-error"></A>
 <h3> <TT>error (message)</TT></h3><A NAME="error"></A>
-This function calls the error handler and then terminates
+Calls the error handler and then terminates
 the last protected function called
 (in&nbsp;C: <CODE>lua_dofile</CODE>, <CODE>lua_dostring</CODE>,
 <CODE>lua_dobuffer</CODE>, or <CODE>lua_callfunction</CODE>;
@@ -2064,7 +2023,7 @@ without invoking any tag method.
 and <CODE>value</CODE> is any Lua value.
 <P>
 <h3> <TT>rawsetglobal (name, value)</TT></h3><A NAME="rawsetglobal"></A>
-This function assigns the given value to a global variable.
+Assigns the given value to a global variable.
 The string <CODE>name</CODE> does not need to be a
 syntactically valid variable name.
 Therefore,
@@ -2073,7 +2032,7 @@ this function can set global variables with strange names like
 Function <CODE>rawsetglobal</CODE> returns the value of its second argument.
 <P>
 <h3> <TT>setglobal (name, value)</TT></h3><A NAME="setglobal"></A>
-This function assigns the given value to a global variable,
+Assigns the given value to a global variable,
 or calls a tag method.
 Its full semantics is explained in Section&nbsp;<A HREF="#tag-method">4.8</A>.
 The string <CODE>name</CODE> does not need to be a
@@ -2081,41 +2040,196 @@ syntactically valid variable name.
 Function <CODE>setglobal</CODE> returns the value of its second argument.
 <P>
 <h3> <TT>rawgetglobal (name)</TT></h3><A NAME="rawgetglobal"></A>
-This function retrieves the value of a global variable.
+Retrieves the value of a global variable.
 The string <CODE>name</CODE> does not need to be a
 syntactically valid variable name.
 <P>
 <h3> <TT>getglobal (name)</TT></h3><A NAME="getglobal"></A>
-This function retrieves the value of a global variable,
+Retrieves the value of a global variable,
 or calls a tag method.
 Its full semantics is explained in Section&nbsp;<A HREF="#tag-method">4.8</A>.
 The string <CODE>name</CODE> does not need to be a
 syntactically valid variable name.
 <P>
-<h3> <TT>seterrormethod (newmethod)</TT></h3>
-<A NAME="pdf-seterrormethod"></A>
-
-Sets the error handler (see Section&nbsp;<A HREF="#error">4.9</A>).
-<CODE>newmethod</CODE> must be a function or <B>nil</B>,
-in which case the error handler does nothing.
-Returns the old error handler.
-<P>
 <h3> <TT>settagmethod (tag, event, newmethod)</TT></h3>
 <A NAME="settagmethod"></A>
-This function sets a new tag method to the given pair <EM>(tag, event)</EM>.
+Sets a new tag method to the given pair <EM>(tag, event)</EM>.
 It returns the old method.
 If <CODE>newmethod</CODE> is <B>nil</B>,
 <CODE>settagmethod</CODE> restores the default behavior for the given event.
 <P>
 <h3> <TT>gettagmethod (tag, event)</TT></h3>
 <A NAME="gettagmethod"></A>
-This function returns the current tag method
+Returns the current tag method
 for a given pair <EM>(tag, event)</EM>.
 <P>
 <h3> <TT>copytagmethods (tagto, tagfrom)</TT></h3>
 <A NAME="copytagmethods"></A>
-This function copies all tag methods from one tag to another;
+Copies all tag methods from one tag to another;
 it returns <CODE>tagto</CODE>.
+<P>
+<A NAME="getn"></A>
+<h3> <TT>getn (table)</TT></h3><A NAME="getn"></A>
+Returns the ``size'' of a table, when seen as a list.
+If the table has an <CODE>n</CODE> field with a numeric value,
+this is its ``size''.
+Otherwise, the size is the largest numerical index with a non-nil
+value in the table.
+This function could be defined in Lua:
+<PRE>
+      function getn (t)
+        if type(t.n) == 'number' then return t.n end
+        local max = 0
+        local i = next(t, nil)
+        while i do
+          if type(i) == 'number' and i&gt;max then max=i end
+          i = next(t, i)
+        end
+        return max
+      end
+</PRE>
+<P>
+<P>
+<h3> <TT>foreach (table, function)</TT></h3><A NAME="foreach"></A>
+Executes the given <CODE>function</CODE> over all elements of <CODE>table</CODE>.
+For each element, the function is called with the index and
+respective value as arguments.
+If the function returns any non-<B>nil</B> value,
+the loop is broken, and the value is returned
+as the final value of <CODE>foreach</CODE>.
+<P>
+This function could be defined in Lua:
+<PRE>
+      function foreach (t, f)
+        local i, v = next(t, nil)
+        while i do
+          local res = f(i, v)
+          if res then return res end
+          i, v = next(t, i)
+        end
+      end
+</PRE>
+<P>
+<P>
+<h3> <TT>foreachi (table, function)</TT></h3><A NAME="foreachi"></A>
+Executes the given <CODE>function</CODE> over the
+numerical indices of <CODE>table</CODE>.
+For each index, the function is called with the index and
+respective value as arguments.
+Indices are visited in sequential order,
+from 1 to <CODE>n</CODE>,
+where <CODE>n</CODE> is the result of <CODE>getn(table)</CODE> (see Section&nbsp;<A HREF="#getn">6.1</A>).
+If the function returns any non-<B>nil</B> value,
+the loop is broken, and the value is returned
+as the final value of <CODE>foreachi</CODE>.
+<P>
+This function could be defined in Lua:
+<PRE>
+      function foreachi (t, f)
+        local i, n = 1, getn(t)
+        while i &lt;= n do
+          local res = f(i, t[i])
+          if res then return res end
+          i = i+1
+        end
+      end
+</PRE>
+<P>
+<h3> <TT>foreachvar (function)</TT></h3><A NAME="foreachvar"></A>
+Executes <CODE>function</CODE> over all global variables.
+For each variable,
+the function is called with its name and its value as arguments.
+If the function returns any non-nil value,
+the loop is broken, and the value is returned
+as the final value of <CODE>foreachvar</CODE>.
+<P>
+This function could be defined in Lua:
+<PRE>
+      function foreachvar (f)
+        local n, v = nextvar(nil)
+        while n do
+          local res = f(n, v)
+          if res then return res end
+          n, v = nextvar(n)
+        end
+      end
+</PRE>
+<P>
+<h3> <TT>tinsert (table [, pos] , value)</TT></h3><A NAME="tinsert"></A>
+<P>
+Inserts element <CODE>value</CODE> at table position <CODE>pos</CODE>,
+shifting other elements to open space.
+The default value for <CODE>pos</CODE> is <CODE>n+1</CODE>
+(where <CODE>n</CODE> is the result of <CODE>getn(table)</CODE> (see Section&nbsp;<A HREF="#getn">6.1</A>))
+so that a call <CODE>tinsert(t,x)</CODE> inserts <CODE>x</CODE> at the end
+of table <CODE>t</CODE>.
+<P>
+This function also sets or increments the field <CODE>n</CODE> of the table,
+to <CODE>n+1</CODE>.
+<P>
+This function is equivalent to the following Lua function,
+except that the table accesses are all raw (that is, without tag methods):
+<PRE>
+      function tinsert (t, ...)
+        local pos, value
+        local n = getn(t)
+        if arg.n == 1 then
+          pos = n+1; value = arg[1]
+        else
+          pos = arg[1]; value = arg[2]
+        end
+        t.n = n+1;
+        while n &gt;= pos do
+          t[n+1] = t[n]
+          n = n-1
+        end
+        t[pos] = value
+      end
+</PRE>
+<P>
+<h3> <TT>tremove (table [, pos])</TT></h3><A NAME="tremove"></A>
+<P>
+Removes from <CODE>table</CODE> the element at position <CODE>pos</CODE>,
+shifting other elements to close the space.
+Returns the value of the removed element.
+The default value for <CODE>pos</CODE> is <CODE>n</CODE>
+(where <CODE>n</CODE> is the result of <CODE>getn(table)</CODE> (see Section&nbsp;<A HREF="#getn">6.1</A>)),
+so that a call <CODE>tremove(t)</CODE> removes the last element
+of table <CODE>t</CODE>.
+<P>
+This function also sets or decrements the field <CODE>n</CODE> of the table,
+to <CODE>n-1</CODE>.
+<P>
+This function is equivalent to the following Lua function,
+except that the table accesses are all raw (that is, without tag methods):
+<PRE>
+      function tremove (t, pos)
+        local n = getn(t)
+        pos = pos or n
+        local value = t[pos]
+        if n&lt;=0 then return end
+        while pos &lt; n do
+          t[pos] = t[pos+1]
+          pos = pos+1
+        end
+        t[n] = nil
+        t.n = n-1
+        return value
+      end
+</PRE>
+<P>
+<h3> <TT>sort (table [, comp])</TT></h3><A NAME="sort"></A>
+Sorts table elements in a given order, <EM>in-place</EM>,
+from <CODE>table[1]</CODE> to <CODE>table[n]</CODE>,
+where <CODE>n</CODE> is the result of <CODE>getn(table)</CODE> (see Section&nbsp;<A HREF="#getn">6.1</A>).
+If <CODE>comp</CODE> is given,
+it must be a function that receives two table elements,
+and returns true when the first is less than the second
+(so that <CODE>not comp(a[i+1], a[i])</CODE> will be true after the sort).
+If <CODE>comp</CODE> is not given,
+the standard <CODE>&lt;</CODE> Lua operator is used instead.
+<P>
+Function <CODE>sort</CODE> returns the (sorted) table.
 <P>
 <P>
 <A NAME="6.2"></A>
@@ -2127,7 +2241,7 @@ When indexing a string, the first character is at position&nbsp;1
 <P>
 <h3> <TT>strfind (str, pattern [, init [, plain]])</TT></h3>
 <A NAME="strfind"></A>
-This function looks for the first <EM>match</EM> of
+Looks for the first <EM>match</EM> of
 <CODE>pattern</CODE> in <CODE>str</CODE>.
 If it finds one, then it returns the indices on <CODE>str</CODE>
 where this occurrence starts and ends;
@@ -2203,7 +2317,7 @@ Note that numerical codes are not necessarily portable across platforms.
 <h3> <TT>format (formatstring, e1, e2, ...)</TT></h3><A NAME="format"></A>
 <A NAME="format"></A>
 
-This function returns a formatted version of its variable number of arguments
+Returns a formatted version of its variable number of arguments
 following the description given in its first argument (which must be a string).
 The format string follows the same rules as the <CODE>printf</CODE> family of
 standard C functions.
@@ -2212,9 +2326,8 @@ The only differences are that the options/modifiers
 and <CODE>h</CODE> are not supported,
 and there is an extra option, <CODE>q</CODE>.
 This option formats a string in a form suitable to be safely read
-back by the Lua interpreter;
-that is,
-the string is written between double quotes,
+back by the Lua interpreter:
+The string is written between double quotes,
 and all double quotes, returns and backslashes in the string
 are correctly escaped when written.
 For instance, the call
@@ -2241,7 +2354,7 @@ The options <CODE>c</CODE>, <CODE>d</CODE>, <CODE>E</CODE>, <CODE>e</CODE>, <COD
 <CODE>g</CODE>, <CODE>G</CODE>, <CODE>i</CODE>, <CODE>o</CODE>, <CODE>u</CODE>, <CODE>X</CODE>, and <CODE>x</CODE> all
 expect a number as argument,
 whereas <CODE>q</CODE> and <CODE>s</CODE> expect a string.
-Note that the <CODE>*</CODE> modifier can be simulated by building
+The <CODE>*</CODE> modifier can be simulated by building
 the appropriate format string.
 For example, <CODE>"%*g"</CODE> can be simulated with
 <CODE>"%"..width.."g"</CODE>.
@@ -2273,30 +2386,29 @@ the maximum number of substitutions to occur.
 For instance, when <CODE>n</CODE> is 1 only the first occurrence of
 <CODE>pat</CODE> is replaced.
 <P>
-See some examples below:
+Here are some examples:
 <PRE>
-  x = gsub("hello world", "(%w%w*)", "%1 %1")
+  x = gsub("hello world", "(%w+)", "%1 %1")
   --&gt; x="hello hello world world"
 <P>
-  x = gsub("hello world", "(%w%w*)", "%1 %1", 1)
+  x = gsub("hello world", "(%w+)", "%1 %1", 1)
   --&gt; x="hello hello world"
 <P>
-  x = gsub("hello world from Lua", "(%w%w*)%s*(%w%w*)", "%2 %1")
+  x = gsub("hello world from Lua", "(%w+)%s*(%w+)", "%2 %1")
   --&gt; x="world hello Lua from"
 <P>
-  x = gsub("home = $HOME, user = $USER", "$(%w%w*)", getenv)
+  x = gsub("home = $HOME, user = $USER", "%$(%w+)", getenv)
   --&gt; x="home = /home/roberto, user = roberto"  (for instance)
 <P>
-  x = gsub("4+5 = $return 4+5$", "$(.-)%$", dostring)
+  x = gsub("4+5 = $return 4+5$", "%$(.-)%$", dostring)
   --&gt; x="4+5 = 9"
 <P>
-  local t = {name="lua", version="3.1"}
-  x = gsub("$name - $version", "$(%w%w*)", function (v) return %t[v] end)
-  --&gt; x="lua - 3.1"
+  local t = {name="lua", version="3.2"}
+  x = gsub("$name - $version", "%$(%w+)", function (v) return %t[v] end)
+  --&gt; x="lua - 3.2"
 <P>
   t = {n=0}
-  gsub("first second word", "(%w%w*)",
-       function (w) %t.n = %t.n+1; %t[%t.n] = w end)
+  gsub("first second word", "(%w+)", function (w) tinsert(%t, w) end)
   --&gt; t={"first", "second", "word"; n=3}
 </PRE>
 <P>
@@ -2308,24 +2420,25 @@ See some examples below:
 a <A NAME="character class"><EM>character class</EM></A> is used to represent a set of characters.
 The following combinations are allowed in describing a character class:
 <DL>
-<DT><B><EM>x</EM></B><DD> (where <EM>x</EM> is any character not in the list <CODE>()%.[*-?</CODE>)
+<DT><B><EM>x</EM></B><DD> (where <EM>x</EM> is any character not in the list
+<CODE>^$()%.[]*+-?</CODE>)
 - represents the character <EM>x</EM> itself.
 <DT><B><TT>.</TT></B><DD> - (a dot) represents all characters.
 <DT><B><TT>%a</TT></B><DD> - represents all letters.
-<DT><B><TT>%A</TT></B><DD> - represents all non letter characters.
+<DT><B><TT>%c</TT></B><DD> - represents all control characters.
 <DT><B><TT>%d</TT></B><DD> - represents all digits.
-<DT><B><TT>%D</TT></B><DD> - represents all non digits.
 <DT><B><TT>%l</TT></B><DD> - represents all lower case letters.
-<DT><B><TT>%L</TT></B><DD> - represents all non lower case letter characters.
+<DT><B><TT>%p</TT></B><DD> - represents all punctuation characters.
 <DT><B><TT>%s</TT></B><DD> - represents all space characters.
-<DT><B><TT>%S</TT></B><DD> - represents all non space characters.
 <DT><B><TT>%u</TT></B><DD> - represents all upper case letters.
-<DT><B><TT>%U</TT></B><DD> - represents all non upper case letter characters.
 <DT><B><TT>%w</TT></B><DD> - represents all alphanumeric characters.
-<DT><B><TT>%W</TT></B><DD> - represents all non alphanumeric characters.
-<DT><B><TT>%</TT><EM>x</EM></B><DD> (where <EM>x</EM> is any non alphanumeric character)  -
+<DT><B><TT>%x</TT></B><DD> - represents all hexa-decimal digits.
+<DT><B><TT>%z</TT></B><DD> - represents the character with representation 0.
+<DT><B><TT>%<EM>x</TT></EM></B><DD> (where <EM>x</EM> is any non alphanumeric character)  -
 represents the character <EM>x</EM>.
-This is the standard way to escape the magic characters <CODE>()%.[*-?</CODE>.
+This is the standard way to escape the magic characters <CODE>()%.[]*-?</CODE>.
+It is strongly recommended that any control character (even the non magic),
+when used to represent itself in a pattern, should be preceded by a <CODE>%</CODE>.
 <DT><B><TT>[char-set</TT></B>]<DD> -
 Represents the class which is the union of all
 characters in char-set.
@@ -2343,13 +2456,16 @@ E.g., assuming an <EM>ascii</EM> character set,
 represents the complement of char-set,
 where char-set is interpreted as above.
 </DL>
+For all classes represented by single letters (<CODE>%a</CODE>, <CODE>%c</CODE>, ...),
+the correspondent upper-case letter represents the complement of the class.
+For instance, <CODE>%S</CODE> represents all non-space characters.
 <P>
 The definitions of letter, space, etc. depend on the current locale.
 In particular, the class <CODE>[a-z]</CODE> may not be equivalent to <CODE>%l</CODE>.
 The second form should be preferred for more portable programs.
 <P>
 <H4>Pattern Item:</H4>
-a <A NAME="pattern item"><EM>pattern item</EM></A> may be:
+a <A NAME="pattern item"><EM>pattern item</EM></A> may be
 <UL>
 <LI>
 a single character class,
@@ -2357,12 +2473,16 @@ which matches any single character in the class;
 <LI>
 a single character class followed by <CODE>*</CODE>,
 which matches 0 or more repetitions of characters in the class.
-These repetition items will always match the longest possible sequence.
+These repetition items will always match the longest possible sequence;
+<LI>
+a single character class followed by <CODE>+</CODE>,
+which matches 1 or more repetitions of characters in the class.
+These repetition items will always match the longest possible sequence;
 <LI>
 a single character class followed by <CODE>-</CODE>,
 which also matches 0 or more repetitions of characters in the class.
 Unlike <CODE>*</CODE>,
-these repetition items will always match the shortest possible sequence.
+these repetition items will always match the shortest possible sequence;
 <LI>
 a single character class followed by <CODE>?</CODE>,
 which matches 0 or 1 occurrence of a character in the class;
@@ -2441,14 +2561,16 @@ The function <CODE>random</CODE>, when called without arguments,
 returns a pseudo-random real number in the range <I>[0,1)</I>.
 When called with a number <I>n</I>,
 <CODE>random</CODE> returns a pseudo-random integer in the range <I>[1,n]</I>.
+When called with two arguments, <I>l</I> and <I>u</I>,
+<CODE>random</CODE> returns a pseudo-random integer in the range <I>[l,u]</I>.
 <P>
 <P>
 <A NAME="libio"></A>
 <A NAME="6.4"></A>
 <H2>6.4 - I/O Facilities</H2> 
 <P>
-All input and output operations in Lua are done over two
-<A NAME="file handles"><EM>file handles</EM></A>, one for reading and one for writing.
+All input and output operations in Lua are done, by default,
+over two <A NAME="file handles"><EM>file handles</EM></A>, one for reading and one for writing.
 These handles are stored in two Lua global variables,
 called <CODE>_INPUT</CODE> and <CODE>_OUTPUT</CODE>.
 The global variables
@@ -2461,11 +2583,38 @@ Initially, <CODE>_INPUT=_STDIN</CODE> and <CODE>_OUTPUT=_STDOUT</CODE>.
 <P>
 A file handle is a userdata containing the file stream <CODE>FILE*</CODE>,
 and with a distinctive tag created by the I/O library.
-<P>
+Whenever a file handle is collected by the garbage collector,
+its correspondent stream is automatically closed.
 <P>
 Unless otherwise stated,
 all I/O functions return <B>nil</B> on failure and
 some value different from <B>nil</B> on success.
+<P>
+<h3> <TT>openfile (filename, mode)</TT></h3><A NAME="openfile"></A>
+<P>
+This function opens a file,
+in the mode specified in the string <CODE>mode</CODE>.
+It returns a new file handle,
+or, in case of errors, <B>nil</B> plus a string describing the error.
+This function does not modify either <CODE>_INPUT</CODE> or <CODE>_OUTPUT</CODE>.
+<P>
+The string mode can be any of the following:
+<DL>
+<DT><B>"r"</B><DD> read mode;
+<DT><B>"w"</B><DD> write mode;
+<DT><B>"a"</B><DD> append mode;
+<DT><B>"r+"</B><DD> update mode, all previous data is preserved;
+<DT><B>"w+"</B><DD> update mode, all previous data is erased;
+<DT><B>"a+"</B><DD> append update mode, previous data is preserved,
+  writing is only allowed at the end of file.
+</DL>
+The string mode may also have a <CODE>b</CODE> at the end,
+which is needed in some systems to open the file in binary mode.
+<P>
+<h3> <TT>closefile (handle)</TT></h3><A NAME="closefile"></A>
+<P>
+This function closes the given file.
+It does not modify either <CODE>_INPUT</CODE> or <CODE>_OUTPUT</CODE>.
 <P>
 <h3> <TT>readfrom (filename)</TT></h3><A NAME="readfrom"></A>
 <P>
@@ -2519,52 +2668,81 @@ usually limited and depends on the system.
 <P>
 <h3> <TT>appendto (filename)</TT></h3><A NAME="appendto"></A>
 <P>
-This function opens a file named <CODE>filename</CODE> and sets it as the
+Opens a file named <CODE>filename</CODE> and sets it as the
 value of <CODE>_OUTPUT</CODE>.
 Unlike the <CODE>writeto</CODE> operation,
 this function does not erase any previous content of the file.
 If this function fails, it returns <B>nil</B>,
 plus a string describing the error.
 <P>
-Note that function <CODE>writeto</CODE> is
-available to close an output file opened by <CODE>appendto</CODE>.
-<P>
 <h3> <TT>remove (filename)</TT></h3><A NAME="remove"></A>
 <P>
-This function deletes the file with the given name.
+Deletes the file with the given name.
 If this function fails, it returns <B>nil</B>,
 plus a string describing the error.
 <P>
 <h3> <TT>rename (name1, name2)</TT></h3><A NAME="rename"></A>
 <P>
-This function renames file named <CODE>name1</CODE> to <CODE>name2</CODE>.
+Renames file named <CODE>name1</CODE> to <CODE>name2</CODE>.
 If this function fails, it returns <B>nil</B>,
 plus a string describing the error.
 <P>
+<h3> <TT>flush ([filehandle])</TT></h3><A NAME="flush"></A>
+<P>
+Saves any written data to the given file.
+If <CODE>filehandle</CODE> is not specified,
+flushes all open files.
+If this function fails, it returns <B>nil</B>,
+plus a string describing the error.
+<P>
+<h3> <TT>seek (filehandle [, whence] [, offset])</TT></h3><A NAME="seek"></A>
+<P>
+Sets and gets the file position,
+measured in bytes from the beginning of the file,
+to the position given by <CODE>offset</CODE> plus a base
+specified by the string <CODE>whence</CODE>, as follows:
+<DL>
+<DT><B>"set"</B><DD> base is position 0 (beginning of the file);
+<DT><B>"cur"</B><DD> base is current position;
+<DT><B>"end"</B><DD> base is end of file;
+</DL>
+In case of success, function <CODE>seek</CODE> returns the final file position,
+measured in bytes from the beginning of the file.
+If the call fails, it returns <B>nil</B>,
+plus a string describing the error.
+<P>
+The default value for <CODE>whence</CODE> is <CODE>"cur"</CODE>,
+and for <CODE>offset</CODE> is 0.
+Therefore, the call <CODE>seek(file)</CODE> returns the current
+file position, without changing it;
+the call <CODE>seek(file, "set")</CODE> sets the position to the
+beginning of the file (and returns 0);
+and the call <CODE>seek(file, "end")</CODE> sets the position to the
+end of the file, and returns its size.
+<P>
 <h3> <TT>tmpname ()</TT></h3><A NAME="tmpname"></A>
 <P>
-This function returns a string with a file name that can safely
+Returns a string with a file name that can safely
 be used for a temporary file.
 The file must be explicitly removed when no longer needed.
 <P>
-<h3> <TT>read ([filehandle] [readpattern])</TT></h3><A NAME="read"></A>
+<h3> <TT>read ([filehandle,] readpattern1, ...)</TT></h3><A NAME="read"></A>
 <P>
-This function reads the file <CODE>_INPUT</CODE>,
-or from <CODE>filehandle</CODE> if this argument is given,
-according to a read pattern, which specifies how much to read;
-characters are read from the input file until
-the read pattern fails or ends.
-The function <CODE>read</CODE> returns a string with the characters read,
+Reads file <CODE>_INPUT</CODE>,
+or <CODE>filehandle</CODE> if this argument is given,
+according to read patterns, which specify how much to read.
+For each pattern,
+the function returns a string with the characters read,
 even if the pattern succeeds only partially,
 or <B>nil</B> if the read pattern fails <EM>and</EM>
 the result string would be empty.
-When called without parameters,
+When called without patterns,
 it uses a default pattern that reads the next line
 (see below).
 <P>
 A <A NAME="read pattern"><EM>read pattern</EM></A> is a sequence of read pattern items.
 An item may be a single character class
-or a character class followed by <CODE>?</CODE> or by <CODE>*</CODE>.
+or a character class followed by <CODE>?</CODE>, by <CODE>*</CODE>, or by <CODE>+</CODE>.
 A single character class reads the next character from the input
 if it belongs to the class, otherwise it fails.
 A character class followed by <CODE>?</CODE> reads the next character
@@ -2573,6 +2751,9 @@ it never fails.
 A character class followed by <CODE>*</CODE> reads until a character that
 does not belong to the class, or end of file;
 since it can match a sequence of zero characters, it never fails.
+A character class followed by <CODE>+</CODE> reads until a character that
+does not belong to the class, or end of file;
+it fails if it cannot read at least one character.
 Note that the behavior of read patterns is slightly different from
 the regular pattern matching behavior,
 where a <CODE>*</CODE> expands to the maximum length <EM>such that</EM>
@@ -2585,26 +2766,27 @@ that describe <A NAME="skips"><EM>skips</EM></A>.
 Characters matching a skip are read,
 but are not included in the resulting string.
 <P>
-Following are some examples of read patterns and their meanings:
-<UL>
-<LI><CODE>"."</CODE> returns the next character, or <B>nil</B> on end of file.
-<LI><CODE>".*"</CODE> reads the whole file.
-<LI><CODE>"[^\n]*{\n}"</CODE> returns the next line
+There are some predefined patterns, as follows:
+<DL>
+<DT><B>``*n''</B><DD> reads a number;
+this is the only pattern that returns a number instead of a string.
+<DT><B>``*l''</B><DD> returns the next line
 (skipping the end of line), or <B>nil</B> on end of file.
 This is the default pattern.
-<LI><CODE>"{%s*}%S%S*"</CODE> returns the next word
+It is equivalent to the pattern <CODE>"[^\n]*{\n}"</CODE>.
+<DT><B>``*a''</B><DD> reads the whole file.
+It is equivalent to the pattern <CODE>".*"</CODE>.
+<DT><B>``*w''</B><DD> returns the next word
 (maximal sequence of non white-space characters),
-skipping spaces if necessary,
-or <B>nil</B> on end of file.
-<LI><CODE>"{%s*}[+-]?%d%d*"</CODE> returns the next integer
-or <B>nil</B> if the next characters do not conform to an integer format.
-</UL>
+skipping spaces if necessary, or <B>nil</B> on end of file.
+It is equivalent to the pattern <CODE>"{%s*}%S+"</CODE>.
+</DL>
 <P>
 <h3> <TT>write ([filehandle, ] value1, ...)</TT></h3><A NAME="write"></A>
 <P>
-This function writes the value of each of its arguments to the
+Writes the value of each of its arguments to
 file <CODE>_OUTPUT</CODE>,
-or to <CODE>filehandle</CODE> if this argument is given,
+or to <CODE>filehandle</CODE> if this argument is given.
 The arguments must be strings or numbers.
 To write other values,
 use <CODE>tostring</CODE> or <CODE>format</CODE> before <CODE>write</CODE>.
@@ -2613,21 +2795,21 @@ plus a string describing the error.
 <P>
 <h3> <TT>date ([format])</TT></h3><A NAME="date"></A>
 <P>
-This function returns a string containing date and time
+Returns a string containing date and time
 formatted according to the given string <CODE>format</CODE>,
 following the same rules of the ANSI C function <CODE>strftime</CODE>.
 When called without arguments,
 it returns a reasonable date and time representation that depends on
-the host system and the locale.
+the host system and on the locale.
 <P>
 <h3> <TT>clock ()</TT></h3><A NAME="clock"></A>
 <P>
-This function returns an approximation of the amount of CPU time
+Returns an approximation of the amount of CPU time
 used by the program, in seconds.
 <P>
 <h3> <TT>exit ([code])</TT></h3><A NAME="exit"></A>
 <P>
-This function calls the C function <CODE>exit</CODE>,
+Calls the C function <CODE>exit</CODE>,
 with an optional <CODE>code</CODE>,
 to terminate the program.
 The default value for <CODE>code</CODE> is 1.
@@ -2694,12 +2876,16 @@ it accepts only a handle returned by
 <P>
 Three other functions produce extra information about a function:
 <PRE>
-void lua_funcinfo (lua_Object func, char **filename, int *linedefined);
+void lua_funcinfo (lua_Object func, char **source, int *linedefined);
 int lua_currentline (lua_Function func);
 char *lua_getobjname (lua_Object o, char **name);
 </PRE>
-<CODE>lua_funcinfo</CODE> gives the file name and the line where the
-given function has been defined.
+<CODE>lua_funcinfo</CODE> gives the source and the line where the
+given function has been defined:
+If the function was defined in a string,
+<CODE>source</CODE> is that string;
+If the function was defined in a file,
+<CODE>source</CODE> starts with a <CODE>@</CODE> followed by the file name.
 If the ``function'' is in fact the main code of a chunk,
 then <CODE>linedefined</CODE> is 0.
 If the function is a C function,
@@ -2708,9 +2894,17 @@ then <CODE>linedefined</CODE> is <I>-1</I>, and <CODE>filename</CODE> is <CODE>"
 The function <CODE>lua_currentline</CODE> gives the current line where
 a given function is executing.
 It only works if the function has been compiled with debug
-information (see Section&nbsp;<A HREF="#pragma">4.9</A>).
+information.
 When no line information is available,
 <CODE>lua_currentline</CODE> returns <I>-1</I>.
+<P>
+The generation of debug information is controled by an internal flag,
+which can be switched with
+<PRE>
+int lua_setdebug (int debug);
+</PRE>
+This function sets the flag and returns its previous value.
+This flag can also be set from Lua&nbsp;(see Section&nbsp;<A HREF="#pragma">4.9</A>).
 <P>
 Function <CODE>lua_getobjname</CODE> tries to find a reasonable name for
 a given function.
@@ -2718,11 +2912,12 @@ Because functions in Lua are first class values,
 they do not have a fixed name:
 Some functions may be the value of many global variables,
 while others may be stored only in a table field.
-Function <CODE>lua_getobjname</CODE> first checks whether the given
-function is a tag method.
-If so, it returns the string <CODE>"tag-method"</CODE>,
+Function <CODE>lua_getobjname</CODE> checks whether the given
+function is a tag method or the value of a global variable.
+If the given function is a tag method, then <CODE>lua_getobjname</CODE>
+returns the string <CODE>"tag-method"</CODE>,
 and <CODE>name</CODE> is set to point to the event name.
-Otherwise, if the given function is the value of a global variable,
+If the given function is the value of a global variable,
 then <CODE>lua_getobjname</CODE> returns the string <CODE>"global"</CODE>,
 and <CODE>name</CODE> points to the variable name.
 If the given function is neither a tag method nor a global variable,
@@ -2736,6 +2931,8 @@ The following functions allow the manipulation of the
 local variables of a given activation record.
 They only work if the function has been compiled with debug
 information (see Section&nbsp;<A HREF="#pragma">4.9</A>).
+Moreover, for these functions, a local variable becomes
+visible in the line after its definition. 
 <PRE>
 lua_Object lua_getlocal (lua_Function func, int local_number, char **name);
 int lua_setlocal (lua_Function func, int local_number);
@@ -2766,17 +2963,17 @@ then this function fails and returns 0.
 The Lua interpreter offers two hooks for debugging purposes:
 <PRE>
 typedef void (*lua_CHFunction) (lua_Function func, char *file, int line);
-extern lua_CHFunction lua_callhook;
+lua_CHFunction lua_setcallhook (lua_CHFunction func);
 <P>
 typedef void (*lua_LHFunction) (int line);
-extern lua_LHFunction lua_linehook;
+lua_LHFunction lua_setlinehook (lua_LHFunction func);
 </PRE>
-The first one is called whenever the interpreter enters or leaves a
+The first hook is called whenever the interpreter enters or leaves a
 function.
 When entering a function,
 its parameters are a handle to the function activation record,
-plus the file and the line where the function is defined (the same
-information which is provided by <CODE>lua_funcinfo</CODE>);
+plus the file and the line where the function is defined
+(the same information which is provided by <CODE>lua_funcinfo</CODE>);
 when leaving a function, <CODE>func</CODE> is <CODE>LUA_NOOBJECT</CODE>,
 <CODE>file</CODE> is <CODE>"(return)"</CODE>, and <CODE>line</CODE> is 0.
 <P>
@@ -2785,12 +2982,131 @@ the line of code it is executing.
 Its only parameter is the line number
 (the same information which is provided by the call
 <CODE>lua_currentline(lua_stackedfunction(0))</CODE>).
-This second hook is only called if the active function
+This second hook is called only if the active function
 has been compiled with debug information (see Section&nbsp;<A HREF="#pragma">4.9</A>).
 <P>
 A hook is disabled when its value is <CODE>NULL</CODE>,
 which is the initial value of both hooks.
+Both <CODE>lua_setcallhook</CODE> and <CODE>lua_setlinehook</CODE>
+set their corresponding hooks and return their previous values.
 <P>
+<P>
+<P>
+<A NAME="7.4"></A>
+<H2>7.4 - The Reflexive Debugger Interface</H2>
+<P>
+The library <CODE>ldblib</CODE> provides
+the functionallity of the debugger interface to Lua programs.
+If you want to use this library,
+your host application must open it,
+calling <CODE>lua_dblibopen</CODE>.
+<P>
+You should exert great care when using this library.
+The functions provided here should be used exclusively for debugging
+and similar tasks (e.g. profiling).
+Please resist the temptation to use them as a
+usual programming tool.
+They are slow and violate some (otherwise) secure aspects of the
+language (e.g. privacy of local variables).
+As a general rule, if your program does not need this library,
+do not open it.
+<P>
+<P>
+<h3> <TT>funcinfo (function)</TT></h3><A NAME="funcinfo"></A>
+<P>
+This function returns a table with information about the given function.
+The table contains the following fields:
+<DL>
+<DT><B>kind</B><DD>: may be <CODE>"C"</CODE>, if this is a C function,
+<CODE>"chunk"</CODE>, if this is the main part of a chunk,
+or <CODE>"Lua"</CODE> if this is a Lua function.
+<P>
+<DT><B>source</B><DD> the source where the function was defined.
+If the function was defined in a string,
+<CODE>source</CODE> is that string;
+If the function was defined in a file,
+<CODE>source</CODE> starts with a <CODE>@</CODE> followed by the file name.
+<P>
+<DT><B>def_line</B><DD> the line where the function was defined in the source
+(only valid if this is a Lua function).
+<P>
+<DT><B>where</B><DD> can be <CODE>"global"</CODE> if this function has a global name,
+or <CODE>"tag-method"</CODE> if this function is a tag method handler.
+<P>
+<DT><B>name</B><DD> if <CODE>where</CODE> = <CODE>global</CODE>,
+<CODE>name</CODE> is the global name of the function;
+if <CODE>where</CODE> = <CODE>tag-method</CODE>,
+<CODE>name</CODE> is the event name of the tag method.
+</DL>
+<P>
+<h3> <TT>getstack (index)</TT></h3><A NAME="getstack"></A>
+<P>
+This function returns a table with informations about the function
+running at level <CODE>index</CODE> of the stack.
+Index 0 is the current function (<CODE>getstack</CODE> itself).
+If <CODE>index</CODE> is bigger than the number of active functions,
+the function returns <B>nil</B>.
+The table contains all the fields returned by <CODE>funcinfo</CODE>,
+plus the following:
+<DL>
+<DT><B>func</B><DD> the function at that level.
+<DT><B>current</B><DD> the current line on the function execution;
+this will be available only when the function is
+precompiled with debug information.
+</DL>
+<P>
+<h3> <TT>getlocal (index [, local])</TT></h3><A NAME="getlocal"></A>
+<P>
+This function returns information about the local variables of the
+function at level <CODE>index</CODE> of the stack.
+It can be called in three ways.
+When called without a <CODE>local</CODE> argument,
+it returns a table, which associates variable names to their values.
+When called with a name (a string) as <CODE>local</CODE>,
+it returns the value of the local variable with that name.
+Finally, when called with an index (a number),
+it returns the value and the name of the local variable
+with that index.
+(The first parameter has index 1, and so on,
+until the last active local variable.)
+In that case, the function returns <B>nil</B> if there is no local
+variable with the given index.
+The specification by index is the only way to distinguish
+homonym variables in a function.
+<P>
+<h3> <TT>setlocal (index, local, newvalue)</TT></h3><A NAME="setlocal"></A>
+<P>
+This function changes the values of  the local variables of the
+function at level <CODE>index</CODE> of the stack.
+The local variable can be specified by name or by index;
+see function <CODE>getlocal</CODE>.
+<P>
+<h3> <TT>setcallhook (hook)</TT></h3><A NAME="setcallhook"></A>
+<P>
+Sets the function <CODE>hook</CODE> as the call hook;
+this hook will be called every time the interpreter starts and
+exits the execution of a function.
+When Lua enters a function,
+the hook is called with the function been called,
+plus the source and the line where the function is defined.
+When Lua exits a function,
+the hook is called with no arguments.
+<P>
+When called without arguments,
+this function turns off call hooks.
+<P>
+<h3> <TT>setlinehook (hook)</TT></h3><A NAME="setlinehook"></A>
+<P>
+Sets the function <CODE>hook</CODE> as the line hook;
+this hook will be called every time the interpreter changes
+the line of code it is executing.
+The only argument to the hook is the line number the interpreter
+is about to execut.
+This hook is called only if the active function
+has been compiled with debug information (see Section&nbsp;<A HREF="#pragma">4.9</A>).
+<P>
+When called without arguments,
+this function turns off line hooks.
 <P>
 <P>
 <A NAME="lua-sa"></A>
@@ -2866,6 +3182,18 @@ the previous public versions of Lua,
 some differences had to be introduced.
 Here is a list of all these incompatibilities.
 <P>
+<h2>Incompatibilities with <A NAME="version 3.1</h2>">version 3.1</h2></A>
+<UL>
+<LI>
+In the debug API, the old variables <CODE>lua_debug</CODE>,
+<CODE>lua_callhook</CODE> and <CODE>lua_linehook</CODE> now live inside <CODE>lua_state</CODE>.
+Therefore, they are no longer directly accessible, and must be
+manipulated only through the new functions <CODE>lua_setdebug</CODE>,
+<CODE>lua_setcallhook</CODE> and <CODE>lua_setlinehook</CODE>.
+<P>
+<LI>Old pre-compiled code is obsolete, and must be re-compiled.
+</UL>
+<P>
 <h2>Incompatibilities with <A NAME="version 3.0</h2>">version 3.0</h2></A>
 <UL>
 <P>
@@ -2877,7 +3205,7 @@ so any existing program that opens at least one standard
 library before calling Lua does not need to be modified.
 <P>
 <LI>Function <CODE>dostring</CODE> no longer accepts an optional second argument,
-with a temporary error method.
+with a temporary error handler.
 This facility is now provided by function <CODE>call</CODE>.
 <P>
 <LI>Function <CODE>gsub</CODE> no longer accepts an optional fourth argument
@@ -2898,11 +3226,13 @@ programs should use an explicit assignment instead, such as
 <P>
 </UL>
 <P>
-<P>
 
 <HR>
+<SMALL>
 Last update:
-Fri Jul 10 15:10:14 EST 1998
+Wed Jul  7 13:36:24 EST 1999
 by <A HREF="http://www.tecgraf.puc-rio.br/~lhf/">lhf</A>.
+</SMALL>
+
 </BODY>
 </HTML>

@@ -1,4 +1,4 @@
-MANIFEST contents of Lua 3.1 distribution on Sat Jul 11 22:48:43 EST 1998
+MANIFEST contents of Lua 3.2 distribution on Thu Jul  8 10:34:45 EST 1999
 lua
 lua/COPYRIGHT
 lua/HISTORY
@@ -14,6 +14,7 @@ lua/doc/index.html
 lua/doc/luac.html
 lua/doc/luac.man
 lua/doc/manual.html
+lua/doc/readme.html
 lua/etc
 lua/etc/Makefile
 lua/etc/README
@@ -45,6 +46,8 @@ lua/src/lgc.h
 lua/src/lib
 lua/src/lib/Makefile
 lua/src/lib/README
+lua/src/lib/ldblib.c
+lua/src/lib/linit.c
 lua/src/lib/liolib.c
 lua/src/lib/lmathlib.c
 lua/src/lib/lstrlib.c
@@ -80,6 +83,7 @@ lua/src/luac/opcode.h
 lua/src/luac/opt.c
 lua/src/luac/print.c
 lua/src/luac/stubs.c
+lua/src/luac/test.c
 lua/src/lundump.c
 lua/src/lundump.h
 lua/src/lvm.c

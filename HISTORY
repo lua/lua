@@ -1,6 +1,18 @@
-This is version 3.1.
+This is Lua 3.2
+
+* Changes from version 3.1 to 3.2
+  -------------------------------
+  + redirected all output in Lua's core to _ERRORMESSAGE and _ALERT.
+  + increased limit on the number of constants and globals per function
+    (from 2^16 to 2^24).
+  + debugging info (lua_debug and hooks) moved into lua_state and new API
+    functions provided to get and set this info.
+  + new debug lib gives full debugging access within Lua.
+  + new table functions "foreachi", "sort", "tinsert", "tremove", "getn".
+  + new io functions "flush", "seek".
 
 * Changes from version 3.0 to 3.1
+  -------------------------------
   + NEW FEATURE: anonymous functions with closures (via "upvalues").
   + new syntax:
     - local variables in chunks.
@@ -23,6 +35,7 @@ This is version 3.1.
     handles control-C interruptions gracefully.
 
 * Changes from version 2.5 to 3.0
+  -------------------------------
   + NEW CONCEPT: "tag methods".
     Tag methods replace fallbacks as the meta-mechanism for extending the
     semantics of Lua. Whereas fallbacks had a global nature, tag methods
@@ -37,6 +50,7 @@ This is version 3.1.
   + luac can now also undump.
 
 * Changes from version 2.4 to 2.5
+  -------------------------------
   + io and string libraries are now based on pattern matching;
     the old libraries are still available for compatibility
   + dofile and dostring can now return values (via return statement)
@@ -44,6 +58,7 @@ This is version 3.1.
   + expanded documentation, with more examples
 
 * Changes from version 2.2 to 2.4
+  -------------------------------
   + external compiler creates portable binary files that can be loaded faster
   + interface for debugging and profiling
   + new "getglobal" fallback
@@ -53,11 +68,13 @@ This is version 3.1.
   + expanded documentation, with more examples
 
 * Changes from version 2.1 to 2.2
+  -------------------------------
   + functions now may be declared with any "lvalue" as a name
   + garbage collection of functions
   + support for pipes
 
 * Changes from version 1.1 to 2.1
+  -------------------------------
   + object-oriented support
   + fallbacks
   + simplified syntax for tables

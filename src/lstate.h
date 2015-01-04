@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.11 1998/06/24 13:33:00 roberto Exp $
+** $Id: lstate.h,v 1.19 1999/05/11 20:08:20 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -11,14 +11,23 @@
 
 #include "lobject.h"
 #include "lua.h"
+#include "luadebug.h"
 
-
-#define MAX_C_BLOCKS 10
 
 #define GARBAGE_BLOCK 150
 
 
 typedef int StkId;  /* index to stack elements */
+
+
+/*
+** "jmp_buf" may be an array, so it is better to make sure it has an
+** address (and not that it *is* an address...)
+*/
+struct lua_longjmp {
+  jmp_buf b;
+};
+
 
 struct Stack {
   TObject *top;
@@ -34,7 +43,7 @@ struct C_Lua_Stack {
 };
 
 
-typedef struct {
+typedef struct stringtable {
   int size;
   int nuse;  /* number of elements (including EMPTYs) */
   TaggedString **hash;
@@ -53,22 +62,23 @@ struct lua_State {
   /* thread-specific state */
   struct Stack stack;  /* Lua stack */
   struct C_Lua_Stack Cstack;  /* C2lua struct */
-  jmp_buf *errorJmp;  /* current error recover point */
+  struct lua_longjmp *errorJmp;  /* current error recover point */
   char *Mbuffer;  /* global buffer */
-  char *Mbuffbase;  /* current first position of Mbuffer */
+  int Mbuffbase;  /* current first position of Mbuffer */
   int Mbuffsize;  /* size of Mbuffer */
   int Mbuffnext;  /* next position to fill in Mbuffer */
-  struct C_Lua_Stack Cblocks[MAX_C_BLOCKS];
+  struct C_Lua_Stack *Cblocks;
   int numCblocks;  /* number of nested Cblocks */
+  int debug;
+  lua_CHFunction callhook;
+  lua_LHFunction linehook;
   /* global state */
-  TObject errorim;  /* error tag method */
   GCnode rootproto;  /* list of all prototypes */
   GCnode rootcl;  /* list of all closures */
   GCnode roottable;  /* list of all tables */
   GCnode rootglobal;  /* list of strings with global values */
   stringtable *string_root;  /* array of hash tables for strings and udata */
   struct IM *IMtable;  /* table for tag methods */
-  int IMtable_size;  /* size of IMtable */
   int last_tag;  /* last used tag in IMtable */
   struct ref *refArray;  /* locked objects */
   int refSize;  /* size of refArray */
@@ -77,10 +87,8 @@ struct lua_State {
 };
 
 
-extern lua_State *lua_state;
-
-
 #define L	lua_state
 
 
 #endif
+

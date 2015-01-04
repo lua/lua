@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.18 1998/06/25 14:37:00 roberto Exp $
+** $Id: lopcodes.h,v 1.33 1999/06/17 17:04:03 roberto Exp $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -10,172 +10,129 @@
 
 /*
 ** NOTICE: variants of the same opcode must be consecutive: First, those
-** with byte parameter, then with built-in parameters, and last with
-** word parameter.
+** with word parameter, then with byte parameter.
 */
 
 
 typedef enum {
 /* name          parm    before          after           side effect
 -----------------------------------------------------------------------------*/
-ENDCODE,/*	-	-		-  */
+ENDCODE,/*	-	-		(return)			*/
+RETCODE,/*	b	-		(return)			*/
 
-PUSHNIL,/*	b	-		nil_0...nil_b  */
-PUSHNIL0,/*	-	-		nil  */
+CALL,/*		b c	v_c...v_1 f	r_b...r_1	f(v1,...,v_c)	*/
 
-PUSHNUMBER,/*	b	-		(float)b  */
-PUSHNUMBER0,/*	-	-		0.0  */
-PUSHNUMBER1,/*	-	-		1.0  */
-PUSHNUMBER2,/*	-	-		2.0  */
-PUSHNUMBERW,/*	w	-		(float)w  */
+TAILCALL,/*	b c	v_c...v_1 f	(return)	f(v1,...,v_c)	*/
 
-PUSHCONSTANT,/*	b	-		CNST[b] */
-PUSHCONSTANT0,/*-	-		CNST[0] */
-PUSHCONSTANT1,/*-	-		CNST[1] */
-PUSHCONSTANT2,/*-	-		CNST[2] */
-PUSHCONSTANT3,/*-	-		CNST[3] */
-PUSHCONSTANT4,/*-	-		CNST[4] */
-PUSHCONSTANT5,/*-	-		CNST[5] */
-PUSHCONSTANT6,/*-	-		CNST[6] */
-PUSHCONSTANT7,/*-	-		CNST[7] */
-PUSHCONSTANTW,/*w	-		CNST[w] */
+PUSHNIL,/*	b	-		nil_0...nil_b			*/
+POP,/*		b	a_b...a_1	-				*/
 
-PUSHUPVALUE,/*	b	-		Closure[b] */
-PUSHUPVALUE0,/*	-	-		Closure[0] */
-PUSHUPVALUE1,/*	-	-		Closure[1] */
+PUSHNUMBERW,/*	w	-		(float)w			*/
+PUSHNUMBER,/*	b	-		(float)b			*/
 
-PUSHLOCAL,/*	b	-		LOC[b]  */
-PUSHLOCAL0,/*	-	-		LOC[0]  */
-PUSHLOCAL1,/*	-	-		LOC[1]  */
-PUSHLOCAL2,/*	-	-		LOC[2]  */
-PUSHLOCAL3,/*	-	-		LOC[3]  */
-PUSHLOCAL4,/*	-	-		LOC[4]  */
-PUSHLOCAL5,/*	-	-		LOC[5]  */
-PUSHLOCAL6,/*	-	-		LOC[6]  */
-PUSHLOCAL7,/*	-	-		LOC[7]  */
+PUSHNUMBERNEGW,/* w	-		(float)-w			*/
+PUSHNUMBERNEG,/* b	-		(float)-b			*/
 
-GETGLOBAL,/*	b 	-		VAR[CNST[b]]  */
-GETGLOBAL0,/*	-	-		VAR[CNST[0]]  */
-GETGLOBAL1,/*	-	-		VAR[CNST[1]]  */
-GETGLOBAL2,/*	-	-		VAR[CNST[2]]  */
-GETGLOBAL3,/*	-	-		VAR[CNST[3]]  */
-GETGLOBAL4,/*	-	-		VAR[CNST[4]]  */
-GETGLOBAL5,/*	-	-		VAR[CNST[5]]  */
-GETGLOBAL6,/*	-	-		VAR[CNST[6]]  */
-GETGLOBAL7,/*	-	-		VAR[CNST[7]]  */
-GETGLOBALW,/*	w	-		VAR[CNST[w]]  */
+PUSHCONSTANTW,/*w	-		CNST[w]				*/
+PUSHCONSTANT,/*	b	-		CNST[b]				*/
 
-GETTABLE,/*	-	i t		t[i]  */
+PUSHUPVALUE,/*	b	-		Closure[b]			*/
 
-GETDOTTED,/*	b	t		t[CNST[b]]  */
-GETDOTTED0,/*	-	t		t[CNST[0]]  */
-GETDOTTED1,/*	-	t		t[CNST[1]]  */
-GETDOTTED2,/*	-	t		t[CNST[2]]  */
-GETDOTTED3,/*	-	t		t[CNST[3]]  */
-GETDOTTED4,/*	-	t		t[CNST[4]]  */
-GETDOTTED5,/*	-	t		t[CNST[5]]  */
-GETDOTTED6,/*	-	t		t[CNST[6]]  */
-GETDOTTED7,/*	-	t		t[CNST[7]]  */
-GETDOTTEDW,/*	w	t		t[CNST[w]]  */
+PUSHLOCAL,/*	b	-		LOC[b]				*/
 
-PUSHSELF,/*	b	t		t t[CNST[b]]  */
-PUSHSELF0,/*	-	t		t t[CNST[0]]  */
-PUSHSELF1,/*	-	t		t t[CNST[1]]  */
-PUSHSELF2,/*	-	t		t t[CNST[2]]  */
-PUSHSELF3,/*	-	t		t t[CNST[3]]  */
-PUSHSELF4,/*	-	t		t t[CNST[4]]  */
-PUSHSELF5,/*	-	t		t t[CNST[5]]  */
-PUSHSELF6,/*	-	t		t t[CNST[6]]  */
-PUSHSELF7,/*	-	t		t t[CNST[7]]  */
-PUSHSELFW,/*	w	t		t t[CNST[w]]  */
+GETGLOBALW,/*	w	-		VAR[CNST[w]]			*/
+GETGLOBAL,/*	b	-		VAR[CNST[b]]			*/
 
-CREATEARRAY,/*	b	-		newarray(size = b)  */
-CREATEARRAY0,/*	-	-		newarray(size = 0)  */
-CREATEARRAY1,/*	-	-		newarray(size = 1)  */
-CREATEARRAYW,/*	w	-		newarray(size = w)  */
+GETTABLE,/*	-	i t		t[i]				*/
 
-SETLOCAL,/*	b	x		-		LOC[b]=x  */
-SETLOCAL0,/*	-	x		-		LOC[0]=x  */
-SETLOCAL1,/*	-	x		-		LOC[1]=x  */
-SETLOCAL2,/*	-	x		-		LOC[2]=x  */
-SETLOCAL3,/*	-	x		-		LOC[3]=x  */
-SETLOCAL4,/*	-	x		-		LOC[4]=x  */
-SETLOCAL5,/*	-	x		-		LOC[5]=x  */
-SETLOCAL6,/*	-	x		-		LOC[6]=x  */
-SETLOCAL7,/*	-	x		-		LOC[7]=x  */
+GETDOTTEDW,/*	w	t		t[CNST[w]]			*/
+GETDOTTED,/*	b	t		t[CNST[b]]			*/
 
-SETGLOBAL,/*	b	x		-		VAR[CNST[b]]=x  */
-SETGLOBAL0,/*	-	x		-		VAR[CNST[0]]=x  */
-SETGLOBAL1,/*	-	x		-		VAR[CNST[1]]=x  */
-SETGLOBAL2,/*	-	x		-		VAR[CNST[2]]=x  */
-SETGLOBAL3,/*	-	x		-		VAR[CNST[3]]=x  */
-SETGLOBAL4,/*	-	x		-		VAR[CNST[4]]=x  */
-SETGLOBAL5,/*	-	x		-		VAR[CNST[5]]=x  */
-SETGLOBAL6,/*	-	x		-		VAR[CNST[6]]=x  */
-SETGLOBAL7,/*	-	x		-		VAR[CNST[7]]=x  */
-SETGLOBALW,/*	w	x		-		VAR[CNST[w]]=x  */
+PUSHSELFW,/*	w	t		t t[CNST[w]]			*/
+PUSHSELF,/*	b	t		t t[CNST[b]]			*/
 
-SETTABLE0,/*	-	v i t		-		t[i]=v  */
+CREATEARRAYW,/*	w	-		newarray(size = w)		*/
+CREATEARRAY,/*	b	-		newarray(size = b)		*/
 
-SETTABLE,/*	b	v a_b...a_1 i t	a_b...a_1 i t	t[i]=v  */
+SETLOCAL,/*	b	x		-		LOC[b]=x	*/
 
-SETLIST,/*	b c	v_c...v_1 t	-		t[i+b*FPF]=v_i  */
-SETLIST0,/*	b	v_b...v_1 t	-		t[i]=v_i  */
-SETLISTW,/*	w c	v_c...v_1 t	-		t[i+w*FPF]=v_i  */
+SETGLOBALW,/*	w	x		-		VAR[CNST[w]]=x	*/
+SETGLOBAL,/*	b	x		-		VAR[CNST[b]]=x	*/
 
-SETMAP,/*	b	v_b k_b ...v_0 k_0 t	t	t[k_i]=v_i  */
-SETMAP0,/*	-	v_0 k_0 t		t	t[k_0]=v_0  */
+SETTABLEPOP,/*	-	v i t		-		t[i]=v		*/
 
-EQOP,/*		-	y x		(x==y)? 1 : nil  */
-NEQOP,/*	-	y x		(x~=y)? 1 : nil  */
-LTOP,/*		-	y x		(x<y)? 1 : nil  */
-LEOP,/*		-	y x		(x<y)? 1 : nil  */
-GTOP,/*		-	y x		(x>y)? 1 : nil  */
-GEOP,/*		-	y x		(x>=y)? 1 : nil  */
-ADDOP,/*	-	y x		x+y  */
-SUBOP,/*	-	y x		x-y  */
-MULTOP,/*	-	y x		x*y  */
-DIVOP,/*	-	y x		x/y  */
-POWOP,/*	-	y x		x^y  */
-CONCOP,/*	-	y x		x..y  */
-MINUSOP,/*	-	x		-x  */
-NOTOP,/*	-	x		(x==nil)? 1 : nil  */
+SETTABLE,/*	b	v a_b...a_1 i t	 a_b...a_1 i t	  t[i]=v	*/
 
-ONTJMP,/*	b	x		(x!=nil)? x : -	(x!=nil)? PC+=b  */
-ONTJMPW,/*	w	x		(x!=nil)? x : -	(x!=nil)? PC+=w  */
-ONFJMP,/*	b	x		(x==nil)? x : -	(x==nil)? PC+=b  */
-ONFJMPW,/*	w	x		(x==nil)? x : -	(x==nil)? PC+=w  */
-JMP,/*		b	-		-		PC+=b  */
-JMPW,/*		w	-		-		PC+=w  */
-IFFJMP,/*	b	x		-		(x==nil)? PC+=b  */
-IFFJMPW,/*	w	x		-		(x==nil)? PC+=w  */
-IFTUPJMP,/*	b	x		-		(x!=nil)? PC-=b  */
-IFTUPJMPW,/*	w	x		-		(x!=nil)? PC-=w  */
-IFFUPJMP,/*	b	x		-		(x==nil)? PC-=b  */
-IFFUPJMPW,/*	w	x		-		(x==nil)? PC-=w  */
+SETLISTW,/*	w c	v_c...v_1 t	t		t[i+w*FPF]=v_i	*/
+SETLIST,/*	b c	v_c...v_1 t	t		t[i+b*FPF]=v_i	*/
 
-CLOSURE,/*	b c	v_c...v_1	closure(CNST[b], v_c...v_1) */
-CLOSUREW,/*	w c	v_b...v_1	closure(CNST[w], v_c...v_1) */
+SETMAP,/*	b	v_b k_b ...v_0 k_0 t	t	t[k_i]=v_i	*/
 
-CALLFUNC,/*	b c	v_c...v_1 f	r_b...r_1	f(v1,...,v_c)  */
-CALLFUNC0,/*	b	v_b...v_1 f	-		f(v1,...,v_b)  */
-CALLFUNC1,/*	b	v_b...v_1 f	r_1		f(v1,...,v_b)  */
+NEQOP,/*	-	y x		(x~=y)? 1 : nil			*/
+EQOP,/*		-	y x		(x==y)? 1 : nil			*/
+LTOP,/*		-	y x		(x<y)? 1 : nil			*/
+LEOP,/*		-	y x		(x<y)? 1 : nil			*/
+GTOP,/*		-	y x		(x>y)? 1 : nil			*/
+GEOP,/*		-	y x		(x>=y)? 1 : nil			*/
+ADDOP,/*	-	y x		x+y				*/
+SUBOP,/*	-	y x		x-y				*/
+MULTOP,/*	-	y x		x*y				*/
+DIVOP,/*	-	y x		x/y				*/
+POWOP,/*	-	y x		x^y				*/
+CONCOP,/*	-	y x		x..y				*/
+MINUSOP,/*	-	x		-x				*/
+NOTOP,/*	-	x		(x==nil)? 1 : nil		*/
 
-RETCODE,/*	b	-		-  */
+ONTJMPW,/*	w	x		(x!=nil)? x : -	(x!=nil)? PC+=w	*/
+ONTJMP,/*	b	x		(x!=nil)? x : -	(x!=nil)? PC+=b	*/
+ONFJMPW,/*	w	x		(x==nil)? x : -	(x==nil)? PC+=w	*/
+ONFJMP,/*	b	x		(x==nil)? x : -	(x==nil)? PC+=b	*/
+JMPW,/*		w	-		-		PC+=w		*/
+JMP,/*		b	-		-		PC+=b		*/
+IFFJMPW,/*	w	x		-		(x==nil)? PC+=w	*/
+IFFJMP,/*	b	x		-		(x==nil)? PC+=b	*/
+IFTUPJMPW,/*	w	x		-		(x!=nil)? PC-=w	*/
+IFTUPJMP,/*	b	x		-		(x!=nil)? PC-=b	*/
+IFFUPJMPW,/*	w	x		-		(x==nil)? PC-=w	*/
+IFFUPJMP,/*	b	x		-		(x==nil)? PC-=b	*/
 
-SETLINE,/*	b	-		-		LINE=b  */
-SETLINEW,/*	w	-		-		LINE=w  */
+CLOSUREW,/*	w c	v_c...v_1	closure(CNST[w], v_c...v_1)	*/
+CLOSURE,/*	b c	v_c...v_1	closure(CNST[b], v_c...v_1)	*/
 
-POP,/*		b	-		-		TOP-=(b+1)  */
-POP0,/*		-	-		-		TOP-=1  */
-POP1/*		-	-		-		TOP-=2  */
+SETLINEW,/*	w	-		-		LINE=w		*/
+SETLINE,/*	b	-		-		LINE=b		*/
+
+LONGARGW,/*	w	(add w*(1<<16) to arg of next instruction)	*/
+LONGARG,/*	b	(add b*(1<<16) to arg of next instruction)	*/
+
+CHECKSTACK /*	b  (assert #temporaries == b; only for internal debuging!) */
 
 } OpCode;
 
 
 #define RFIELDS_PER_FLUSH 32	/* records (SETMAP) */
-#define LFIELDS_PER_FLUSH 64    /* lists (SETLIST) */
+#define LFIELDS_PER_FLUSH 64    /* FPF - lists (SETLIST) */
 
-#define ZEROVARARG	64
+#define ZEROVARARG	128
+
+
+/* maximum value of an arg of 3 bytes; must fit in an "int" */
+#if MAX_INT < (1<<24)
+#define MAX_ARG	MAX_INT
+#else
+#define MAX_ARG	((1<<24)-1)
+#endif
+
+/* maximum value of a word of 2 bytes; cannot be bigger than MAX_ARG */
+#if MAX_ARG < (1<<16)
+#define MAX_WORD	MAX_ARG
+#else
+#define MAX_WORD	((1<<16)-1)
+#endif
+
+
+/* maximum value of a byte */
+#define MAX_BYTE	((1<<8)-1)
+
 
 #endif

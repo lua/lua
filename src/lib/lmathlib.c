@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.10 1998/06/19 16:14:09 roberto Exp $
+** $Id: lmathlib.c,v 1.17 1999/07/07 17:54:08 roberto Exp $
 ** Lua standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -12,107 +12,96 @@
 #include "lua.h"
 #include "lualib.h"
 
-#ifdef M_PI
-#define PI                      M_PI
+
+#undef PI
+#define PI	(3.14159265358979323846)
+#define RADIANS_PER_DEGREE	(PI/180.0)
+
+
+
+/*
+** If you want Lua to operate in radians (instead of degrees),
+** define RADIANS
+*/
+#ifdef RADIANS
+#define FROMRAD(a)	(a)
+#define TORAD(a)	(a)
 #else
-#define PI          ((double)3.14159265358979323846)
+#define FROMRAD(a)	((a)/RADIANS_PER_DEGREE)
+#define TORAD(a)	((a)*RADIANS_PER_DEGREE)
 #endif
 
 
-#define FROMRAD(a) ((a)*(180.0/PI))
-#define TORAD(a)    ((a)*(PI/180.0))
-
-
-static void math_abs (void)
-{
-  double d = luaL_check_number(1);
-  if (d < 0) d = -d;
-  lua_pushnumber(d);
+static void math_abs (void) {
+  lua_pushnumber(fabs(luaL_check_number(1)));
 }
 
-static void math_sin (void)
-{
+static void math_sin (void) {
   lua_pushnumber(sin(TORAD(luaL_check_number(1))));
 }
 
-static void math_cos (void)
-{
+static void math_cos (void) {
   lua_pushnumber(cos(TORAD(luaL_check_number(1))));
 }
 
-static void math_tan (void)
-{
+static void math_tan (void) {
   lua_pushnumber(tan(TORAD(luaL_check_number(1))));
 }
 
-static void math_asin (void)
-{
+static void math_asin (void) {
   lua_pushnumber(FROMRAD(asin(luaL_check_number(1))));
 }
 
-static void math_acos (void)
-{
+static void math_acos (void) {
   lua_pushnumber(FROMRAD(acos(luaL_check_number(1))));
 }
 
-static void math_atan (void)
-{
+static void math_atan (void) {
   lua_pushnumber(FROMRAD(atan(luaL_check_number(1))));
 }
 
-static void math_atan2 (void)
-{
+static void math_atan2 (void) {
   lua_pushnumber(FROMRAD(atan2(luaL_check_number(1), luaL_check_number(2))));
 }
 
-static void math_ceil (void)
-{
+static void math_ceil (void) {
   lua_pushnumber(ceil(luaL_check_number(1)));
 }
 
-static void math_floor (void)
-{
+static void math_floor (void) {
   lua_pushnumber(floor(luaL_check_number(1)));
 }
 
-static void math_mod (void)
-{
+static void math_mod (void) {
   lua_pushnumber(fmod(luaL_check_number(1), luaL_check_number(2)));
 }
 
-static void math_sqrt (void)
-{
+static void math_sqrt (void) {
   lua_pushnumber(sqrt(luaL_check_number(1)));
 }
 
-static void math_pow (void)
-{
+static void math_pow (void) {
   lua_pushnumber(pow(luaL_check_number(1), luaL_check_number(2)));
 }
 
-static void math_log (void)
-{
+static void math_log (void) {
   lua_pushnumber(log(luaL_check_number(1)));
 }
 
-static void math_log10 (void)
-{
+static void math_log10 (void) {
   lua_pushnumber(log10(luaL_check_number(1)));
 }
 
-static void math_exp (void)
-{
+static void math_exp (void) {
   lua_pushnumber(exp(luaL_check_number(1)));
 }
 
-static void math_deg (void)
-{
-  lua_pushnumber(luaL_check_number(1)*(180.0/PI));
+static void math_deg (void) {
+  lua_pushnumber(luaL_check_number(1)/RADIANS_PER_DEGREE);
 }
 
-static void math_rad (void)
-{
-  lua_pushnumber(luaL_check_number(1)*(PI/180.0));
+static void math_rad (void) {
+  lua_pushnumber(luaL_check_number(1)*RADIANS_PER_DEGREE);
 }
 
 static void math_frexp (void) {
@@ -122,13 +111,12 @@ static void math_frexp (void) {
 }
 
 static void math_ldexp (void) {
-  lua_pushnumber(ldexp(luaL_check_number(1), luaL_check_number(2)));
+  lua_pushnumber(ldexp(luaL_check_number(1), luaL_check_int(2)));
 }
 
 
 
-static void math_min (void)
-{
+static void math_min (void) {
   int i = 1;
   double dmin = luaL_check_number(i);
   while (lua_getparam(++i) != LUA_NOOBJECT) {
@@ -140,8 +128,7 @@ static void math_min (void)
 }
 
 
-static void math_max (void)
-{
+static void math_max (void) {
   int i = 1;
   double dmax = luaL_check_number(i);
   while (lua_getparam(++i) != LUA_NOOBJECT) {
@@ -153,22 +140,27 @@ static void math_max (void)
 }
 
 
-static void math_random (void)
-{
-  /* the '%' is needed because on some systems (SunOS!) "rand()" may */
-  /* return a value bigger than RAND_MAX... */
+static void math_random (void) {
+  /* the '%' avoids the (rare) case of r==1, and is needed also because on
+     some systems (SunOS!) "rand()" may return a value bigger than RAND_MAX */
   double r = (double)(rand()%RAND_MAX) / (double)RAND_MAX;
-  double l = luaL_opt_number(1, 0);
+  int l = luaL_opt_int(1, 0);
   if (l == 0)
     lua_pushnumber(r);
-  else
-    lua_pushnumber((int)(r*l)+1);
+  else {
+    int u = luaL_opt_int(2, 0);
+    if (u == 0) {
+      u = l;
+      l = 1;
+    }
+    luaL_arg_check(l<=u, 1, "interval is empty");
+    lua_pushnumber((int)(r*(u-l+1))+l);
+  }
 }
 
 
-static void math_randomseed (void)
-{
-  srand(luaL_check_number(1));
+static void math_randomseed (void) {
+  srand(luaL_check_int(1));
 }
 
 
@@ -201,10 +193,8 @@ static struct luaL_reg mathlib[] = {
 /*
 ** Open math library
 */
-void lua_mathlibopen (void)
-{
+void lua_mathlibopen (void) {
   luaL_openlib(mathlib, (sizeof(mathlib)/sizeof(mathlib[0])));
-  lua_pushstring("deg"); lua_setglobal("_TRIGMODE");
   lua_pushcfunction(math_pow);
   lua_pushnumber(0);  /* to get its tag */
   lua_settagmethod(lua_tag(lua_pop()), "pow");
