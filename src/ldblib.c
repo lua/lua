@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.147 2014/12/08 15:47:25 roberto Exp $
+** $Id: ldblib.c,v 1.148 2015/01/02 12:52:22 roberto Exp $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -207,15 +207,20 @@ static int db_getlocal (lua_State *L) {
 
 static int db_setlocal (lua_State *L) {
   int arg;
+  const char *name;
   lua_State *L1 = getthread(L, &arg);
   lua_Debug ar;
   int level = (int)luaL_checkinteger(L, arg + 1);
+  int nvar = (int)luaL_checkinteger(L, arg + 2);
   if (!lua_getstack(L1, level, &ar))  /* out of range? */
     return luaL_argerror(L, arg+1, "level out of range");
   luaL_checkany(L, arg+3);
   lua_settop(L, arg+3);
   lua_xmove(L, L1, 1);
-  lua_pushstring(L, lua_setlocal(L1, &ar, (int)luaL_checkinteger(L, arg+2)));
+  name = lua_setlocal(L1, &ar, nvar);
+  if (name == NULL)
+    lua_pop(L1, 1);  /* pop value (if not popped by 'lua_setlocal') */
+  lua_pushstring(L, name);
   return 1;
 }
 
