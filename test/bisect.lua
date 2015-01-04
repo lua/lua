@@ -18,9 +18,12 @@ function solve(f,a,b)
  write(format("after %d steps, root is %.10g, f=%g\n",n,z,f(z)))
 end
 
+-- an example
+
 -- our function
 function f(x)
  return x*x*x-x-1
 end
 
+-- find zero in [1,2]
 solve(f,1,2)

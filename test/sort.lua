@@ -1,3 +1,6 @@
+-- two implementations of a sort function
+-- this is an example only. Lua has now a built-in function "sort"
+
 -- extracted from Programming Pearls, page 110
 function qsort(x,l,u,f)
  if l<u then
@@ -57,7 +60,7 @@ function testsorts(x)
  show("after quicksort again",x)
 end
 
--- array t be sorted
+-- array to be sorted
 x={"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"}
 
 testsorts(x)

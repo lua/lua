@@ -1,0 +1,10 @@
+
+# Lua precompiled files
+0	string	\33Lua	precompiled chunk for Lua
+>4	byte	0x23	2.3
+>4	byte	0x24	2.4
+>4	byte	0x25	2.5
+>4	byte	0x30	3.0
+>4	byte	0x31	3.1
+>4	byte	0x32	3.2
+>4	byte	0x40	4.0

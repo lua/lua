@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.12 1999/06/17 17:04:03 roberto Exp $
+** $Id: llex.h,v 1.31 2000/09/27 17:41:58 roberto Exp $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -11,53 +11,61 @@
 #include "lzio.h"
 
 
-#define FIRST_RESERVED	260
+#define FIRST_RESERVED	257
 
-/* maximum length of a reserved word (+1 for terminal 0) */
+/* maximum length of a reserved word (+1 for final 0) */
 #define TOKEN_LEN	15
 
+
+/*
+* WARNING: if you change the order of this enumeration,
+* grep "ORDER RESERVED"
+*/
 enum RESERVED {
   /* terminal symbols denoted by reserved words */
-  AND = FIRST_RESERVED,
-  DO, ELSE, ELSEIF, END, FUNCTION, IF, LOCAL, NIL, NOT, OR,
-  REPEAT, RETURN, THEN, UNTIL, WHILE,
+  TK_AND = FIRST_RESERVED, TK_BREAK,
+  TK_DO, TK_ELSE, TK_ELSEIF, TK_END, TK_FOR, TK_FUNCTION, TK_IF, TK_LOCAL,
+  TK_NIL, TK_NOT, TK_OR, TK_REPEAT, TK_RETURN, TK_THEN, TK_UNTIL, TK_WHILE,
   /* other terminal symbols */
-  NAME, CONC, DOTS, EQ, GE, LE, NE, NUMBER, STRING, EOS};
-
-
-#ifndef MAX_IFS
-#define MAX_IFS 5  /* arbitrary limit */
-#endif
-
-/* "ifstate" keeps the state of each nested $if the lexical is dealing with. */
-
-struct ifState {
-  int elsepart;  /* true if it's in the $else part */
-  int condition;  /* true if $if condition is true */
-  int skip;  /* true if part must be skipped */
+  TK_NAME, TK_CONCAT, TK_DOTS, TK_EQ, TK_GE, TK_LE, TK_NE, TK_NUMBER,
+  TK_STRING, TK_EOS
 };
+
+/* number of reserved words */
+#define NUM_RESERVED	((int)(TK_WHILE-FIRST_RESERVED+1))
+
+
+typedef union {
+  Number r;
+  TString *ts;
+} SemInfo;  /* semantics information */
+
+
+typedef struct Token {
+  int token;
+  SemInfo seminfo;
+} Token;
 
 
 typedef struct LexState {
-  int current;  /* look ahead character */
-  int token;  /* look ahead token */
-  struct FuncState *fs;  /* 'FuncState' is private for the parser */
-  union {
-    real r;
-    TaggedString *ts;
-  } seminfo;  /* semantics information */
-  struct zio *lex_z;  /* input stream */
+  int current;  /* current character */
+  Token t;  /* current token */
+  Token lookahead;  /* look ahead token */
+  struct FuncState *fs;  /* `FuncState' is private to the parser */
+  struct lua_State *L;
+  struct zio *z;  /* input stream */
   int linenumber;  /* input line counter */
-  int iflevel;  /* level of nested $if's (for lexical analysis) */
-  struct ifState ifstate[MAX_IFS];
+  int lastline;  /* line of last token `consumed' */
+  TString *source;  /* current source name */
 } LexState;
 
 
-void luaX_init (void);
-void luaX_setinput (LexState *LS, ZIO *z);
-int luaX_lex (LexState *LS);
-void luaX_syntaxerror (LexState *ls, char *s, char *token);
-void luaX_error (LexState *ls, char *s);
+void luaX_init (lua_State *L);
+void luaX_setinput (lua_State *L, LexState *LS, ZIO *z, TString *source);
+int luaX_lex (LexState *LS, SemInfo *seminfo);
+void luaX_checklimit (LexState *ls, int val, int limit, const char *msg);
+void luaX_syntaxerror (LexState *ls, const char *s, const char *token);
+void luaX_error (LexState *ls, const char *s, int token);
 void luaX_token2str (int token, char *s);
 
 

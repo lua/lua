@@ -1,7 +1,5 @@
-$debug
-
 readfrom("template.html")
-TEMPLATE=read(".*")
+TEMPLATE=read("*a")
 readfrom()
 
 PAT="|(%a%a*)|"
@@ -17,10 +15,8 @@ function get(i)
 end
 
 function global(t)
- local i,v=next(t,nil)
- while i do
+ for i,v in t do
   GLOBAL[i]=v
-  i,v=next(t,i)
  end
 end
 

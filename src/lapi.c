@@ -1,15 +1,15 @@
 /*
-** $Id: lapi.c,v 1.47b 1999/06/22 20:37:23 roberto Exp $
+** $Id: lapi.c,v 1.110a 2000/10/30 12:50:09 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
 
 
-#include <stdlib.h>
 #include <string.h>
 
+#include "lua.h"
+
 #include "lapi.h"
-#include "lauxlib.h"
 #include "ldo.h"
 #include "lfunc.h"
 #include "lgc.h"
@@ -19,676 +19,476 @@
 #include "lstring.h"
 #include "ltable.h"
 #include "ltm.h"
-#include "lua.h"
-#include "luadebug.h"
 #include "lvm.h"
 
 
-char lua_ident[] = "$Lua: " LUA_VERSION " " LUA_COPYRIGHT " $\n"
-                   "$Authors:  " LUA_AUTHORS " $";
+const char lua_ident[] = "$Lua: " LUA_VERSION " " LUA_COPYRIGHT " $\n"
+                               "$Authors: " LUA_AUTHORS " $";
 
 
 
-TObject *luaA_Address (lua_Object o) {
-  return (o != LUA_NOOBJECT) ?  Address(o) : NULL;
+#define Index(L,i)	((i) >= 0 ? (L->Cbase+((i)-1)) : (L->top+(i)))
+
+#define api_incr_top(L)	incr_top
+
+
+
+
+TObject *luaA_index (lua_State *L, int index) {
+  return Index(L, index);
 }
 
 
-static lua_Type normalized_type (TObject *o)
-{
-  int t = ttype(o);
-  switch (t) {
-    case LUA_T_PMARK:
-      return LUA_T_PROTO;
-    case LUA_T_CMARK:
-      return LUA_T_CPROTO;
-    case LUA_T_CLMARK:
-      return LUA_T_CLOSURE;
-    default:
-      return t;
+static TObject *luaA_indexAcceptable (lua_State *L, int index) {
+  if (index >= 0) {
+    TObject *o = L->Cbase+(index-1);
+    if (o >= L->top) return NULL;
+    else return o;
   }
+  else return L->top+index;
 }
 
 
-static void set_normalized (TObject *d, TObject *s)
-{
-  d->value = s->value;
-  d->ttype = normalized_type(s);
-}
-
-
-static TObject *luaA_protovalue (TObject *o)
-{
-  return (normalized_type(o) == LUA_T_CLOSURE) ?  protovalue(o) : o;
-}
-
-
-void luaA_packresults (void)
-{
-  luaV_pack(L->Cstack.lua2C, L->Cstack.num, L->stack.top);
+void luaA_pushobject (lua_State *L, const TObject *o) {
+  *L->top = *o;
   incr_top;
 }
 
-
-int luaA_passresults (void) {
-  L->Cstack.base = L->Cstack.lua2C;  /* position of first result */
-  return L->Cstack.num;
+LUA_API int lua_stackspace (lua_State *L) {
+  return (L->stack_last - L->top);
 }
 
-
-static void checkCparams (int nParams)
-{
-  if (L->stack.top-L->stack.stack < L->Cstack.base+nParams)
-    lua_error("API error - wrong number of arguments in C2lua stack");
-}
-
-
-static lua_Object put_luaObject (TObject *o) {
-  luaD_openstack((L->stack.top-L->stack.stack)-L->Cstack.base);
-  L->stack.stack[L->Cstack.base++] = *o;
-  return L->Cstack.base;  /* this is +1 real position (see Ref) */
-}
-
-
-static lua_Object put_luaObjectonTop (void) {
-  luaD_openstack((L->stack.top-L->stack.stack)-L->Cstack.base);
-  L->stack.stack[L->Cstack.base++] = *(--L->stack.top);
-  return L->Cstack.base;  /* this is +1 real position (see Ref) */
-}
-
-
-static void top2LC (int n) {
-  /* Put the 'n' elements on the top as the Lua2C contents */
-  L->Cstack.base = (L->stack.top-L->stack.stack);  /* new base */
-  L->Cstack.lua2C = L->Cstack.base-n;  /* position of the new results */
-  L->Cstack.num = n;  /* number of results */
-}
-
-
-lua_Object lua_pop (void) {
-  checkCparams(1);
-  return put_luaObjectonTop();
-}
 
 
 /*
-** Get a parameter, returning the object handle or LUA_NOOBJECT on error.
-** 'number' must be 1 to get the first parameter.
+** basic stack manipulation
 */
-lua_Object lua_lua2C (int number)
-{
-  if (number <= 0 || number > L->Cstack.num) return LUA_NOOBJECT;
-  /* Ref(L->stack.stack+(L->Cstack.lua2C+number-1)) ==
-     L->stack.stack+(L->Cstack.lua2C+number-1)-L->stack.stack+1 == */
-  return L->Cstack.lua2C+number;
+
+
+LUA_API int lua_gettop (lua_State *L) {
+  return (L->top - L->Cbase);
 }
 
 
-int lua_callfunction (lua_Object function)
-{
-  if (function == LUA_NOOBJECT)
-    return 1;
-  else {
-    luaD_openstack((L->stack.top-L->stack.stack)-L->Cstack.base);
-    set_normalized(L->stack.stack+L->Cstack.base, Address(function));
-    return luaD_protectedrun();
-  }
-}
-
-
-lua_Object lua_gettagmethod (int tag, char *event)
-{
-  return put_luaObject(luaT_gettagmethod(tag, event));
-}
-
-
-lua_Object lua_settagmethod (int tag, char *event)
-{
-  checkCparams(1);
-  luaT_settagmethod(tag, event, L->stack.top-1);
-  return put_luaObjectonTop();
-}
-
-
-lua_Object lua_seterrormethod (void) {
-  lua_Object temp;
-  checkCparams(1);
-  temp = lua_getglobal("_ERRORMESSAGE");
-  lua_setglobal("_ERRORMESSAGE");
-  return temp;
-}
-
-
-lua_Object lua_gettable (void)
-{
-  checkCparams(2);
-  luaV_gettable();
-  return put_luaObjectonTop();
-}
-
-
-lua_Object lua_rawgettable (void) {
-  checkCparams(2);
-  if (ttype(L->stack.top-2) != LUA_T_ARRAY)
-    lua_error("indexed expression not a table in rawgettable");
-  *(L->stack.top-2) = *luaH_get(avalue(L->stack.top-2), L->stack.top-1);
-  --L->stack.top;
-  return put_luaObjectonTop();
-}
-
-
-void lua_settable (void) {
-  checkCparams(3);
-  luaD_checkstack(3);  /* may need that to call T.M. */
-  luaV_settable(L->stack.top-3);
-  L->stack.top -= 2;  /* pop table and index */
-}
-
-
-void lua_rawsettable (void) {
-  checkCparams(3);
-  luaV_rawsettable(L->stack.top-3);
-}
-
-
-lua_Object lua_createtable (void)
-{
-  TObject o;
-  luaC_checkGC();
-  avalue(&o) = luaH_new(0);
-  ttype(&o) = LUA_T_ARRAY;
-  return put_luaObject(&o);
-}
-
-
-lua_Object lua_getglobal (char *name)
-{
-  luaD_checkstack(2);  /* may need that to call T.M. */
-  luaV_getglobal(luaS_new(name));
-  return put_luaObjectonTop();
-}
-
-
-lua_Object lua_rawgetglobal (char *name)
-{
-  TaggedString *ts = luaS_new(name);
-  return put_luaObject(&ts->u.s.globalval);
-}
-
-
-void lua_setglobal (char *name)
-{
-  checkCparams(1);
-  luaD_checkstack(2);  /* may need that to call T.M. */
-  luaV_setglobal(luaS_new(name));
-}
-
-
-void lua_rawsetglobal (char *name)
-{
-  TaggedString *ts = luaS_new(name);
-  checkCparams(1);
-  luaS_rawsetglobal(ts, --L->stack.top);
-}
-
-
-
-int lua_isnil (lua_Object o)
-{
-  return (o!= LUA_NOOBJECT) && (ttype(Address(o)) == LUA_T_NIL);
-}
-
-int lua_istable (lua_Object o)
-{
-  return (o!= LUA_NOOBJECT) && (ttype(Address(o)) == LUA_T_ARRAY);
-}
-
-int lua_isuserdata (lua_Object o)
-{
-  return (o!= LUA_NOOBJECT) && (ttype(Address(o)) == LUA_T_USERDATA);
-}
-
-int lua_iscfunction (lua_Object o)
-{
-  return (lua_tag(o) == LUA_T_CPROTO);
-}
-
-int lua_isnumber (lua_Object o)
-{
-  return (o!= LUA_NOOBJECT) && (tonumber(Address(o)) == 0);
-}
-
-int lua_isstring (lua_Object o)
-{
-  int t = lua_tag(o);
-  return (t == LUA_T_STRING) || (t == LUA_T_NUMBER);
-}
-
-int lua_isfunction (lua_Object o)
-{
-  int t = lua_tag(o);
-  return (t == LUA_T_PROTO) || (t == LUA_T_CPROTO);
-}
-
-
-double lua_getnumber (lua_Object object)
-{
- if (object == LUA_NOOBJECT) return 0.0;
- if (tonumber(Address(object))) return 0.0;
- else return (nvalue(Address(object)));
-}
-
-char *lua_getstring (lua_Object object)
-{
-  luaC_checkGC();  /* "tostring" may create a new string */
-  if (object == LUA_NOOBJECT || tostring(Address(object)))
-    return NULL;
-  else return (svalue(Address(object)));
-}
-
-long lua_strlen (lua_Object object)
-{
-  luaC_checkGC();  /* "tostring" may create a new string */
-  if (object == LUA_NOOBJECT || tostring(Address(object)))
-    return 0L;
-  else return (tsvalue(Address(object))->u.s.len);
-}
-
-void *lua_getuserdata (lua_Object object)
-{
-  if (object == LUA_NOOBJECT || ttype(Address(object)) != LUA_T_USERDATA)
-    return NULL;
-  else return tsvalue(Address(object))->u.d.v;
-}
-
-lua_CFunction lua_getcfunction (lua_Object object)
-{
-  if (!lua_iscfunction(object))
-    return NULL;
-  else return fvalue(luaA_protovalue(Address(object)));
-}
-
-
-void lua_pushnil (void)
-{
-  ttype(L->stack.top) = LUA_T_NIL;
-  incr_top;
-}
-
-void lua_pushnumber (double n)
-{
-  ttype(L->stack.top) = LUA_T_NUMBER;
-  nvalue(L->stack.top) = n;
-  incr_top;
-}
-
-void lua_pushlstring (char *s, long len)
-{
-  tsvalue(L->stack.top) = luaS_newlstr(s, len);
-  ttype(L->stack.top) = LUA_T_STRING;
-  incr_top;
-  luaC_checkGC();
-}
-
-void lua_pushstring (char *s)
-{
-  if (s == NULL)
-    lua_pushnil();
+LUA_API void lua_settop (lua_State *L, int index) {
+  if (index >= 0)
+    luaD_adjusttop(L, L->Cbase, index);
   else
-    lua_pushlstring(s, strlen(s));
-}
-
-void lua_pushcclosure (lua_CFunction fn, int n)
-{
-  if (fn == NULL)
-    lua_error("API error - attempt to push a NULL Cfunction");
-  checkCparams(n);
-  ttype(L->stack.top) = LUA_T_CPROTO;
-  fvalue(L->stack.top) = fn;
-  incr_top;
-  luaV_closure(n);
-  luaC_checkGC();
-}
-
-void lua_pushusertag (void *u, int tag)
-{
-  if (tag < 0 && tag != LUA_ANYTAG)
-    luaT_realtag(tag);  /* error if tag is not valid */
-  tsvalue(L->stack.top) = luaS_createudata(u, tag);
-  ttype(L->stack.top) = LUA_T_USERDATA;
-  incr_top;
-  luaC_checkGC();
-}
-
-void luaA_pushobject (TObject *o)
-{
-  *L->stack.top = *o;
-  incr_top;
-}
-
-void lua_pushobject (lua_Object o) {
-  if (o == LUA_NOOBJECT)
-    lua_error("API error - attempt to push a NOOBJECT");
-  set_normalized(L->stack.top, Address(o));
-  incr_top;
+    L->top = L->top+index+1;  /* index is negative */
 }
 
 
-int lua_tag (lua_Object lo)
-{
-  if (lo == LUA_NOOBJECT)
-     return LUA_T_NIL;
-  else {
-    TObject *o = Address(lo);
-    int t;
-    switch (t = ttype(o)) {
-      case LUA_T_USERDATA:
-        return o->value.ts->u.d.tag;
-      case LUA_T_ARRAY:
-        return o->value.a->htag;
-      case LUA_T_PMARK:
-        return LUA_T_PROTO;
-      case LUA_T_CMARK:
-        return LUA_T_CPROTO;
-      case LUA_T_CLOSURE: case LUA_T_CLMARK:
-        return o->value.cl->consts[0].ttype;
-#ifdef DEBUG
-      case LUA_T_LINE:
-        LUA_INTERNALERROR("invalid type");
-#endif
-      default:
-        return t;
-    }
-  }
+LUA_API void lua_remove (lua_State *L, int index) {
+  StkId p = luaA_index(L, index);
+  while (++p < L->top) *(p-1) = *p;
+  L->top--;
 }
 
 
-void lua_settag (int tag)
-{
-  checkCparams(1);
-  luaT_realtag(tag);
-  switch (ttype(L->stack.top-1)) {
-    case LUA_T_ARRAY:
-      (L->stack.top-1)->value.a->htag = tag;
-      break;
-    case LUA_T_USERDATA:
-      (L->stack.top-1)->value.ts->u.d.tag = tag;
-      break;
-    default:
-      luaL_verror("cannot change the tag of a %.20s",
-                  luaO_typename(L->stack.top-1));
-  }
-  L->stack.top--;
+LUA_API void lua_insert (lua_State *L, int index) {
+  StkId p = luaA_index(L, index);
+  StkId q;
+  for (q = L->top; q>p; q--)
+    *q = *(q-1);
+  *p = *L->top;
 }
 
 
-TaggedString *luaA_nextvar (TaggedString *g) {
-  if (g == NULL)
-    g = (TaggedString *)L->rootglobal.next;  /* first variable */
-  else {
-    /* check whether name is in global var list */
-    luaL_arg_check((GCnode *)g != g->head.next, 1, "variable name expected");
-    g = (TaggedString *)g->head.next;  /* get next */
-  }
-  while (g && g->u.s.globalval.ttype == LUA_T_NIL)  /* skip globals with nil */
-    g = (TaggedString *)g->head.next;
-  if (g) {
-    ttype(L->stack.top) = LUA_T_STRING; tsvalue(L->stack.top) = g;
-    incr_top;
-    luaA_pushobject(&g->u.s.globalval);
-  }
-  return g;
-}
-
-
-char *lua_nextvar (char *varname) {
-  TaggedString *g = (varname == NULL) ? NULL : luaS_new(varname);
-  g = luaA_nextvar(g);
-  if (g) {
-    top2LC(2);
-    return g->str;
-  }
-  else {
-    top2LC(0);
-    return NULL;
-  }
-}
-
-
-int luaA_next (Hash *t, int i) {
-  int tsize = nhash(t);
-  for (; i<tsize; i++) {
-    Node *n = node(t, i);
-    if (ttype(val(n)) != LUA_T_NIL) {
-      luaA_pushobject(ref(n));
-      luaA_pushobject(val(n));
-      return i+1;  /* index to be used next time */
-    }
-  }
-  return 0;  /* no more elements */
-}
-
-
-int lua_next (lua_Object o, int i) {
-  TObject *t = Address(o);
-  if (ttype(t) != LUA_T_ARRAY)
-    lua_error("API error - object is not a table in `lua_next'"); 
-  i = luaA_next(avalue(t), i);
-  top2LC((i==0) ? 0 : 2);
-  return i;
+LUA_API void lua_pushvalue (lua_State *L, int index) {
+  *L->top = *luaA_index(L, index);
+  api_incr_top(L);
 }
 
 
 
 /*
-** {======================================================
-** To manipulate some state information
-** =======================================================
+** access functions (stack -> C)
 */
 
-lua_State *lua_setstate (lua_State *st) {
-  lua_State *old = lua_state;
-  lua_state = st;
-  return old;
+
+LUA_API int lua_type (lua_State *L, int index) {
+  StkId o = luaA_indexAcceptable(L, index);
+  return (o == NULL) ? LUA_TNONE : ttype(o);
 }
 
-lua_LHFunction lua_setlinehook (lua_LHFunction func) {
-  lua_LHFunction old = L->linehook;
-  L->linehook = func;
-  return old;
+LUA_API const char *lua_typename (lua_State *L, int t) {
+  UNUSED(L);
+  return (t == LUA_TNONE) ? "no value" : luaO_typenames[t];
 }
 
-lua_CHFunction lua_setcallhook (lua_CHFunction func) {
-  lua_CHFunction old = L->callhook;
-  L->callhook = func;
-  return old;
+
+LUA_API int lua_iscfunction (lua_State *L, int index) {
+  StkId o = luaA_indexAcceptable(L, index);
+  return (o == NULL) ? 0 : iscfunction(o);
 }
 
-int lua_setdebug (int debug) {
-  int old = L->debug;
-  L->debug = debug;
-  return old;
+LUA_API int lua_isnumber (lua_State *L, int index) {
+  TObject *o = luaA_indexAcceptable(L, index);
+  return (o == NULL) ? 0 : (tonumber(o) == 0);
 }
 
-/* }====================================================== */
+LUA_API int lua_isstring (lua_State *L, int index) {
+  int t = lua_type(L, index);
+  return (t == LUA_TSTRING || t == LUA_TNUMBER);
+}
+
+
+LUA_API int lua_tag (lua_State *L, int index) {
+  StkId o = luaA_indexAcceptable(L, index);
+  return (o == NULL) ? LUA_NOTAG : luaT_tag(o);
+}
+
+LUA_API int lua_equal (lua_State *L, int index1, int index2) {
+  StkId o1 = luaA_indexAcceptable(L, index1);
+  StkId o2 = luaA_indexAcceptable(L, index2);
+  if (o1 == NULL || o2 == NULL) return 0;  /* index out-of-range */
+  else return luaO_equalObj(o1, o2);
+}
+
+LUA_API int lua_lessthan (lua_State *L, int index1, int index2) {
+  StkId o1 = luaA_indexAcceptable(L, index1);
+  StkId o2 = luaA_indexAcceptable(L, index2);
+  if (o1 == NULL || o2 == NULL) return 0;  /* index out-of-range */
+  else return luaV_lessthan(L, o1, o2, L->top);
+}
+
+
+
+LUA_API double lua_tonumber (lua_State *L, int index) {
+  StkId o = luaA_indexAcceptable(L, index);
+  return (o == NULL || tonumber(o)) ? 0 : nvalue(o);
+}
+
+LUA_API const char *lua_tostring (lua_State *L, int index) {
+  StkId o = luaA_indexAcceptable(L, index);
+  return (o == NULL || tostring(L, o)) ? NULL : svalue(o);
+}
+
+LUA_API size_t lua_strlen (lua_State *L, int index) {
+  StkId o = luaA_indexAcceptable(L, index);
+  return (o == NULL || tostring(L, o)) ? 0 : tsvalue(o)->len;
+}
+
+LUA_API lua_CFunction lua_tocfunction (lua_State *L, int index) {
+  StkId o = luaA_indexAcceptable(L, index);
+  return (o == NULL || !iscfunction(o)) ? NULL : clvalue(o)->f.c;
+}
+
+LUA_API void *lua_touserdata (lua_State *L, int index) {
+  StkId o = luaA_indexAcceptable(L, index);
+  return (o == NULL || ttype(o) != LUA_TUSERDATA) ? NULL :
+                                                    tsvalue(o)->u.d.value;
+}
+
+LUA_API const void *lua_topointer (lua_State *L, int index) {
+  StkId o = luaA_indexAcceptable(L, index);
+  if (o == NULL) return NULL;
+  switch (ttype(o)) {
+    case LUA_TTABLE: 
+      return hvalue(o);
+    case LUA_TFUNCTION:
+      return clvalue(o);
+    default: return NULL;
+  }
+}
+
 
 
 /*
-** {======================================================
-** Debug interface
-** =======================================================
+** push functions (C -> stack)
 */
 
 
-lua_Function lua_stackedfunction (int level)
-{
-  StkId i;
-  for (i = (L->stack.top-1)-L->stack.stack; i>=0; i--) {
-    int t = L->stack.stack[i].ttype;
-    if (t == LUA_T_CLMARK || t == LUA_T_PMARK || t == LUA_T_CMARK)
-      if (level-- == 0)
-        return Ref(L->stack.stack+i);
-  }
-  return LUA_NOOBJECT;
+LUA_API void lua_pushnil (lua_State *L) {
+  ttype(L->top) = LUA_TNIL;
+  api_incr_top(L);
 }
 
 
-int lua_nups (lua_Function func) {
-  TObject *o = luaA_Address(func);
-  return (!o || normalized_type(o) != LUA_T_CLOSURE) ? 0 : o->value.cl->nelems;
+LUA_API void lua_pushnumber (lua_State *L, double n) {
+  nvalue(L->top) = n;
+  ttype(L->top) = LUA_TNUMBER;
+  api_incr_top(L);
 }
 
 
-int lua_currentline (lua_Function func)
-{
-  TObject *f = Address(func);
-  return (f+1 < L->stack.top && (f+1)->ttype == LUA_T_LINE) ?
-             (f+1)->value.i : -1;
+LUA_API void lua_pushlstring (lua_State *L, const char *s, size_t len) {
+  tsvalue(L->top) = luaS_newlstr(L, s, len);
+  ttype(L->top) = LUA_TSTRING;
+  api_incr_top(L);
 }
 
 
-lua_Object lua_getlocal (lua_Function func, int local_number, char **name) {
-  /* check whether func is a Lua function */
-  if (lua_tag(func) != LUA_T_PROTO)
-    return LUA_NOOBJECT;
-  else {
-    TObject *f = Address(func);
-    TProtoFunc *fp = luaA_protovalue(f)->value.tf;
-    *name = luaF_getlocalname(fp, local_number, lua_currentline(func));
-    if (*name) {
-      /* if "*name", there must be a LUA_T_LINE */
-      /* therefore, f+2 points to function base */
-      return put_luaObject((f+2)+(local_number-1));
-    }
-    else
-      return LUA_NOOBJECT;
-  }
+LUA_API void lua_pushstring (lua_State *L, const char *s) {
+  if (s == NULL)
+    lua_pushnil(L);
+  else
+    lua_pushlstring(L, s, strlen(s));
 }
 
 
-int lua_setlocal (lua_Function func, int local_number)
-{
-  /* check whether func is a Lua function */
-  if (lua_tag(func) != LUA_T_PROTO)
+LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
+  luaV_Cclosure(L, fn, n);
+}
+
+
+LUA_API void lua_pushusertag (lua_State *L, void *u, int tag) {
+  /* ORDER LUA_T */
+  if (!(tag == LUA_ANYTAG || tag == LUA_TUSERDATA || validtag(tag)))
+    luaO_verror(L, "invalid tag for a userdata (%d)", tag);
+  tsvalue(L->top) = luaS_createudata(L, u, tag);
+  ttype(L->top) = LUA_TUSERDATA;
+  api_incr_top(L);
+}
+
+
+
+/*
+** get functions (Lua -> stack)
+*/
+
+
+LUA_API void lua_getglobal (lua_State *L, const char *name) {
+  StkId top = L->top;
+  *top = *luaV_getglobal(L, luaS_new(L, name));
+  L->top = top;
+  api_incr_top(L);
+}
+
+
+LUA_API void lua_gettable (lua_State *L, int index) {
+  StkId t = Index(L, index);
+  StkId top = L->top;
+  *(top-1) = *luaV_gettable(L, t);
+  L->top = top;  /* tag method may change top */
+}
+
+
+LUA_API void lua_rawget (lua_State *L, int index) {
+  StkId t = Index(L, index);
+  LUA_ASSERT(ttype(t) == LUA_TTABLE, "table expected");
+  *(L->top - 1) = *luaH_get(L, hvalue(t), L->top - 1);
+}
+
+
+LUA_API void lua_rawgeti (lua_State *L, int index, int n) {
+  StkId o = Index(L, index);
+  LUA_ASSERT(ttype(o) == LUA_TTABLE, "table expected");
+  *L->top = *luaH_getnum(hvalue(o), n);
+  api_incr_top(L);
+}
+
+
+LUA_API void lua_getglobals (lua_State *L) {
+  hvalue(L->top) = L->gt;
+  ttype(L->top) = LUA_TTABLE;
+  api_incr_top(L);
+}
+
+
+LUA_API int lua_getref (lua_State *L, int ref) {
+  if (ref == LUA_REFNIL)
+    ttype(L->top) = LUA_TNIL;
+  else if (0 <= ref && ref < L->refSize &&
+          (L->refArray[ref].st == LOCK || L->refArray[ref].st == HOLD))
+    *L->top = L->refArray[ref].o;
+  else
     return 0;
-  else {
-    TObject *f = Address(func);
-    TProtoFunc *fp = luaA_protovalue(f)->value.tf;
-    char *name = luaF_getlocalname(fp, local_number, lua_currentline(func));
-    checkCparams(1);
-    --L->stack.top;
-    if (name) {
-      /* if "name", there must be a LUA_T_LINE */
-      /* therefore, f+2 points to function base */
-      *((f+2)+(local_number-1)) = *L->stack.top;
-      return 1;
-    }
-    else
-      return 0;
-  }
+  api_incr_top(L);
+  return 1;
 }
 
 
-void lua_funcinfo (lua_Object func, char **source, int *linedefined) {
-  if (!lua_isfunction(func))
-    lua_error("API error - `funcinfo' called with a non-function value");
-  else {
-    TObject *f = luaA_protovalue(Address(func));
-    if (normalized_type(f) == LUA_T_PROTO) {
-      *source = tfvalue(f)->source->str;
-      *linedefined = tfvalue(f)->lineDefined;
-    }
-    else {
-      *source = "(C)";
-      *linedefined = -1;
-    }
-  }
+LUA_API void lua_newtable (lua_State *L) {
+  hvalue(L->top) = luaH_new(L, 0);
+  ttype(L->top) = LUA_TTABLE;
+  api_incr_top(L);
 }
 
-
-static int checkfunc (TObject *o)
-{
-  return luaO_equalObj(o, L->stack.top);
-}
-
-
-char *lua_getobjname (lua_Object o, char **name)
-{ /* try to find a name for given function */
-  set_normalized(L->stack.top, Address(o)); /* to be accessed by "checkfunc" */
-  if ((*name = luaS_travsymbol(checkfunc)) != NULL)
-    return "global";
-  else if ((*name = luaT_travtagmethods(checkfunc)) != NULL)
-    return "tag-method";
-  else return "";
-}
-
-/* }====================================================== */
 
 
 /*
-** {======================================================
-** BLOCK mechanism
-** =======================================================
+** set functions (stack -> Lua)
 */
 
 
-#ifndef	MAX_C_BLOCKS
-#define MAX_C_BLOCKS	1000  /* arbitrary limit */
-#endif
-
-
-void lua_beginblock (void) {
-  luaM_growvector(L->Cblocks, L->numCblocks, 1, struct C_Lua_Stack,
-                  "too many nested blocks", MAX_C_BLOCKS);
-  L->Cblocks[L->numCblocks] = L->Cstack;
-  L->numCblocks++;
-}
-
-void lua_endblock (void) {
-  --L->numCblocks;
-  L->Cstack = L->Cblocks[L->numCblocks];
-  luaD_adjusttop(L->Cstack.base);
+LUA_API void lua_setglobal (lua_State *L, const char *name) {
+  StkId top = L->top;
+  luaV_setglobal(L, luaS_new(L, name));
+  L->top = top-1;  /* remove element from the top */
 }
 
 
+LUA_API void lua_settable (lua_State *L, int index) {
+  StkId t = Index(L, index);
+  StkId top = L->top;
+  luaV_settable(L, t, top-2);
+  L->top = top-2;  /* pop index and value */
+}
 
-int lua_ref (int lock) {
+
+LUA_API void lua_rawset (lua_State *L, int index) {
+  StkId t = Index(L, index);
+  LUA_ASSERT(ttype(t) == LUA_TTABLE, "table expected");
+  *luaH_set(L, hvalue(t), L->top-2) = *(L->top-1);
+  L->top -= 2;
+}
+
+
+LUA_API void lua_rawseti (lua_State *L, int index, int n) {
+  StkId o = Index(L, index);
+  LUA_ASSERT(ttype(o) == LUA_TTABLE, "table expected");
+  *luaH_setint(L, hvalue(o), n) = *(L->top-1);
+  L->top--;
+}
+
+
+LUA_API void lua_setglobals (lua_State *L) {
+  StkId newtable = --L->top;
+  LUA_ASSERT(ttype(newtable) == LUA_TTABLE, "table expected");
+  L->gt = hvalue(newtable);
+}
+
+
+LUA_API int lua_ref (lua_State *L,  int lock) {
   int ref;
-  checkCparams(1);
-  ref = luaC_ref(L->stack.top-1, lock);
-  L->stack.top--;
+  if (ttype(L->top-1) == LUA_TNIL)
+    ref = LUA_REFNIL;
+  else {
+    if (L->refFree != NONEXT) {  /* is there a free place? */
+      ref = L->refFree;
+      L->refFree = L->refArray[ref].st;
+    }
+    else {  /* no more free places */
+      luaM_growvector(L, L->refArray, L->refSize, 1, struct Ref,
+                      "reference table overflow", MAX_INT);
+      L->nblocks += sizeof(struct Ref);
+      ref = L->refSize++;
+    }
+    L->refArray[ref].o = *(L->top-1);
+    L->refArray[ref].st = lock ? LOCK : HOLD;
+  }
+  L->top--;
   return ref;
 }
 
 
-
-lua_Object lua_getref (int ref) {
-  TObject *o = luaC_getref(ref);
-  return (o ? put_luaObject(o) : LUA_NOOBJECT);
-}
-
-/* }====================================================== */
-
-
-
-#ifdef LUA_COMPAT2_5
 /*
-** API: set a function as a fallback
+** "do" functions (run Lua code)
+** (most of them are in ldo.c)
 */
 
-static void do_unprotectedrun (lua_CFunction f, int nParams, int nResults) {
-  luaD_openstack(nParams);
-  (L->stack.top-nParams)->ttype = LUA_T_CPROTO;
-  (L->stack.top-nParams)->value.f = f;
-  luaD_calln(nParams, nResults);
+LUA_API void lua_rawcall (lua_State *L, int nargs, int nresults) {
+  luaD_call(L, L->top-(nargs+1), nresults);
 }
 
 
-lua_Object lua_setfallback (char *name, lua_CFunction fallback) {
-  lua_pushstring(name);
-  lua_pushcfunction(fallback);
-  do_unprotectedrun(luaT_setfallback, 2, 1);
-  return put_luaObjectonTop();
+/*
+** Garbage-collection functions
+*/
+
+/* GC values are expressed in Kbytes: #bytes/2^10 */
+#define GCscale(x)		((int)((x)>>10))
+#define GCunscale(x)		((unsigned long)(x)<<10)
+
+LUA_API int lua_getgcthreshold (lua_State *L) {
+  return GCscale(L->GCthreshold);
 }
-#endif
+
+LUA_API int lua_getgccount (lua_State *L) {
+  return GCscale(L->nblocks);
+}
+
+LUA_API void lua_setgcthreshold (lua_State *L, int newthreshold) {
+  if (newthreshold > GCscale(ULONG_MAX))
+    L->GCthreshold = ULONG_MAX;
+  else
+    L->GCthreshold = GCunscale(newthreshold);
+  luaC_checkGC(L);
+}
+
+
+/*
+** miscellaneous functions
+*/
+
+LUA_API void lua_settag (lua_State *L, int tag) {
+  luaT_realtag(L, tag);
+  switch (ttype(L->top-1)) {
+    case LUA_TTABLE:
+      hvalue(L->top-1)->htag = tag;
+      break;
+    case LUA_TUSERDATA:
+      tsvalue(L->top-1)->u.d.tag = tag;
+      break;
+    default:
+      luaO_verror(L, "cannot change the tag of a %.20s",
+                  luaO_typename(L->top-1));
+  }
+}
+
+
+LUA_API void lua_unref (lua_State *L, int ref) {
+  if (ref >= 0) {
+    LUA_ASSERT(ref < L->refSize && L->refArray[ref].st < 0, "invalid ref");
+    L->refArray[ref].st = L->refFree;
+    L->refFree = ref;
+  }
+}
+
+
+LUA_API int lua_next (lua_State *L, int index) {
+  StkId t = luaA_index(L, index);
+  Node *n;
+  LUA_ASSERT(ttype(t) == LUA_TTABLE, "table expected");
+  n = luaH_next(L, hvalue(t), luaA_index(L, -1));
+  if (n) {
+    *(L->top-1) = *key(n);
+    *L->top = *val(n);
+    api_incr_top(L);
+    return 1;
+  }
+  else {  /* no more elements */
+    L->top -= 1;  /* remove key */
+    return 0;
+  }
+}
+
+
+LUA_API int lua_getn (lua_State *L, int index) {
+  Hash *h = hvalue(luaA_index(L, index));
+  const TObject *value = luaH_getstr(h, luaS_new(L, "n"));  /* value = h.n */
+  if (ttype(value) == LUA_TNUMBER)
+    return (int)nvalue(value);
+  else {
+    Number max = 0;
+    int i = h->size;
+    Node *n = h->node;
+    while (i--) {
+      if (ttype(key(n)) == LUA_TNUMBER &&
+          ttype(val(n)) != LUA_TNIL &&
+          nvalue(key(n)) > max)
+        max = nvalue(key(n));
+      n++;
+    }
+    return (int)max;
+  }
+}
+
+
+LUA_API void lua_concat (lua_State *L, int n) {
+  StkId top = L->top;
+  luaV_strconc(L, n, top);
+  L->top = top-(n-1);
+  luaC_checkGC(L);
+}
+
+
+LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
+  TString *ts = luaS_newudata(L, (size==0) ? 1 : size, NULL);
+  tsvalue(L->top) = ts;
+  ttype(L->top) = LUA_TUSERDATA;
+  api_incr_top(L);
+  return ts->u.d.value;
+}
 

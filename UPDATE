@@ -1,0 +1,19 @@
+This is an update of Lua 4.0 that includes the following bug fixes and
+improvements:
+
+lua/src/lapi.c
+lua/src/lstring.c
+	Fixed a bug in lua_pushuserdata(L, NULL)
+lua/src/ldo.c
+lua/src/lgc.c
+lua/src/lgc.h
+	Give a good chance for GC before parsing
+lua/src/lparser.c
+	Fixed a bug (did not accept `;' after a `return')
+lua/src/lvm.c
+	Fixed a bug (linehook off by 1)
+lua/src/lib/lbaselib.c
+	Fixed a bug in rawget and rawset (seg. fault if given extra arguments)
+	Fixed a bug in dostring (identification of precompiled chunks)
+
+To use simply open this tarball over the original Lua 4.0 source.

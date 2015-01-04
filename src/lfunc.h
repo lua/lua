@@ -1,6 +1,6 @@
 /*
-** $Id: lfunc.h,v 1.5 1997/12/15 16:17:20 roberto Exp $
-** Lua Function structures
+** $Id: lfunc.h,v 1.13 2000/09/29 12:42:13 roberto Exp $
+** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
 
@@ -12,12 +12,13 @@
 
 
 
-TProtoFunc *luaF_newproto (void);
-Closure *luaF_newclosure (int nelems);
-void luaF_freeproto (TProtoFunc *l);
-void luaF_freeclosure (Closure *l);
+Proto *luaF_newproto (lua_State *L);
+void luaF_protook (lua_State *L, Proto *f, int pc);
+Closure *luaF_newclosure (lua_State *L, int nelems);
+void luaF_freeproto (lua_State *L, Proto *f);
+void luaF_freeclosure (lua_State *L, Closure *c);
 
-char *luaF_getlocalname (TProtoFunc *func, int local_number, int line);
+const char *luaF_getlocalname (const Proto *func, int local_number, int pc);
 
 
 #endif

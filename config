@@ -1,68 +1,100 @@
 # configuration file for making Lua
+# see INSTALL for installation instructions
 
 # == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
 
 # ------------------------------------------------------------------ Lua
 
-# if you need compatibility with version 2.5 or older, uncomment the line below.
-#COMPAT= -DLUA_COMPAT2_5
-
 # Lua uses double for numbers. To change this, uncomment one of the lines below.
 #NUMBER= -DLUA_NUM_TYPE=double
 #NUMBER= -DLUA_NUM_TYPE=float
 #NUMBER= -DLUA_NUM_TYPE=long
+# Optionally, you may also want change how numbers are converted to strings,
+# and vice-versa. Look for LUA_NUMBER in llimits.h and in the rest of the code.
 
-# if you want support for pipes, uncomment the following line.
+# If you want support for pipes, uncomment the following line.
+# You need popen in your C library.
 #POPEN= -DPOPEN
+
+# If you need compatibility with previous versions, edit and uncomment the
+# definition of COMPAT below.
+# Use -DLUA_COMPAT_READPATTERN if you need complex read patterns.
+# Use -DLUA_COMPAT_ARGRET if you need the old semantics that used only the
+# first value returned by a function when it is called as the last parameter.
+# Use -DLUA_DEPRECATEDFUNCS if you need the obsolete functions in the standard 
+# Lua library (not recommended).
+#COMPAT= -DLUA_COMPAT_READPATTERN -DLUA_COMPAT_ARGRET -DLUA_DEPRECATEDFUNCS
 
 # ------------------------------------------------------------------ C compiler
 
-# you need an ANSI C compiler. gcc is a popular one.
+# You need an ANSI C compiler. gcc is a popular one.
 CC= gcc
-WARN= -ansi -Wall
+WARN= -ansi -pedantic -Wall
 
-# on IRIX, cc is a good ANSI compiler.
+# On IRIX, cc is a good ANSI compiler.
 #CC= cc
 #WARN= -ansi -fullwarn
 
-# on Solaris, cc is optional. you may have to add -Dsparc if you use -Xc.
+# On Solaris, cc is optional. You may have to add -Dsparc if you use -Xc.
 #CC= cc
 #WARN= -Xc # -Dsparc
 
 # ------------------------------------------------------------------ C library
 
-# if your C library is not POSIX compliant, comment the following line.
+# If your C library is not POSIX compliant, comment the following line.
 POSIX= -D_POSIX_SOURCE
 
-# if your C library does not have the newer ANSI functions memmove, strerror,
+# If your C library does not have the newer ANSI functions strerror, strcoll,
 # and locale support, uncomment the following line. SunOs 4.1.x is one example.
 #OLD_ANSI= -DOLD_ANSI
 
-# in SunOs 4.1.x, standard headers in /usr/include are not ANSI,
+# In SunOs 4.1.x, standard headers in /usr/include are not ANSI,
 # so uncomment the following line to avoid prototypes warnings.
-#EXTRA_INCS=  -I/usr/5include
+#EXTRA_INCS= -I/usr/5include
+
+# The stand-alone Lua interpreter needs the math functions, which are usually
+# in libm.a (-lm).  If your C library already includes the math functions,
+# or if you are using a modified interpreter that does not need them,
+# then comment the following line.
+EXTRA_LIBS= -lm
 
 # ------------------------------------------------------------------ librarian
 
-# this should work in all unix systems.
+# This should work in all Unix systems.
 AR= ar rcu
 
-# if your system doesn't have (or need) ranlib, use RANLIB=true.
-# on some systems, "ar s" does what ranlib would do.
+# If your system doesn't have (or need) ranlib, use RANLIB=true.
+# On some systems, "ar s" does what ranlib would do.
 RANLIB= ranlib
 #RANLIB= ar s
 #RANLIB= true
 
+# ------------------------------------------------------------------ install
+
+# Locations for "make install". You may need to be root do "make install".
+INSTALL_ROOT= /usr/local
+INSTALL_BIN= $(INSTALL_ROOT)/bin
+INSTALL_INC= $(INSTALL_ROOT)/include
+INSTALL_LIB= $(INSTALL_ROOT)/lib
+INSTALL_MAN= $(INSTALL_ROOT)/man/man1
+
+# You might prefer to use "install" if you have it.
+INSTALL_EXEC= cp
+INSTALL_DATA= cp
+#INSTALL_EXEC= install -m 0755
+#INSTALL_DATA= install -m 0644
+
 # == END OF USER SETTINGS. DO NOT CHANGE ANYTHING BELOW THIS LINE =============
 
-VERSION= 3.2
-
+BIN= $(LUA)/bin
 INC= $(LUA)/include
 LIB= $(LUA)/lib
-BIN= $(LUA)/bin
 
 INCS= -I$(INC) $(EXTRA_INCS)
-DEFS= $(COMPAT) $(NUMBER) $(OLD_ANSI) $(EXTRALIB) $(EXTRA_DEFS)
+DEFS= $(COMPAT) $(NUMBER) $(OLD_ANSI) $(EXTRA_DEFS)
 
 CFLAGS= -O2 $(WARN) $(INCS) $(DEFS)
 
+V=4.0
+
+# (end of config)

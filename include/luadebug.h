@@ -1,5 +1,5 @@
 /*
-** $Id: luadebug.h,v 1.6 1999/03/04 21:17:26 roberto Exp $
+** $Id: luadebug.h,v 1.17 2000/10/30 12:38:50 roberto Exp $
 ** Debugging API
 ** See Copyright Notice in lua.h
 */
@@ -11,24 +11,36 @@
 
 #include "lua.h"
 
-typedef lua_Object lua_Function;
+typedef struct lua_Debug lua_Debug;  /* activation record */
+typedef struct lua_Localvar lua_Localvar;
 
-typedef void (*lua_LHFunction) (int line);
-typedef void (*lua_CHFunction) (lua_Function func, char *file, int line);
+typedef void (*lua_Hook) (lua_State *L, lua_Debug *ar);
 
-lua_Function lua_stackedfunction (int level);
-void lua_funcinfo (lua_Object func, char **source, int *linedefined);
-int lua_currentline (lua_Function func);
-char *lua_getobjname (lua_Object o, char **name);
 
-lua_Object lua_getlocal (lua_Function func, int local_number, char **name);
-int lua_setlocal (lua_Function func, int local_number);
+LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar);
+LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar);
+LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n);
+LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n);
 
-int lua_nups (lua_Function func);
+LUA_API lua_Hook lua_setcallhook (lua_State *L, lua_Hook func);
+LUA_API lua_Hook lua_setlinehook (lua_State *L, lua_Hook func);
 
-lua_LHFunction lua_setlinehook (lua_LHFunction func);
-lua_CHFunction lua_setcallhook (lua_CHFunction func);
-int lua_setdebug (int debug);
+
+#define LUA_IDSIZE	60
+
+struct lua_Debug {
+  const char *event;     /* `call', `return' */
+  int currentline;       /* (l) */
+  const char *name;      /* (n) */
+  const char *namewhat;  /* (n) `global', `tag method', `local', `field' */
+  int nups;              /* (u) number of upvalues */
+  int linedefined;       /* (S) */
+  const char *what;      /* (S) `Lua' function, `C' function, Lua `main' */
+  const char *source;    /* (S) */
+  char short_src[LUA_IDSIZE]; /* (S) */
+  /* private part */
+  struct lua_TObject *_func;  /* active function */
+};
 
 
 #endif

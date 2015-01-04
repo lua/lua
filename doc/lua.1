@@ -1,0 +1,143 @@
+.\" lua.man,v 1.3 2000/09/04 21:41:28 lhf Exp
+.TH LUA 1 "2000/09/04 21:41:28"
+.SH NAME
+lua \- Lua interpreter
+.SH SYNOPSIS
+.B lua
+[
+.I arguments
+]
+.SH DESCRIPTION
+.B lua
+is the stand-alone Lua interpreter.
+It loads and executes Lua programs,
+either in textual source form or
+in precompiled binary form,
+as output by
+.BR luac ,
+the Lua compiler.
+.B lua
+can be used as a batch interpreter and also interactively.
+.LP
+The
+.I arguments
+can be options, assignments, or filenames,
+and are processed in order,
+from left to right.
+.LP
+Options start with
+.B \-
+and are described below.
+.LP
+An assignment is an argument of the form
+.BR a=b ,
+which assigns the string
+.RB ` b '
+to the global variable
+.BR a .
+Note that no quotes are needed around the string if it does not contain spaces
+or other characters special to the shell.
+This is for convenience only.
+(In general,
+you should be careful when using quotes and spaces on the command line
+because they are usually handled by the shell.)
+.LP
+If the argument is neither an option nor an assignment,
+then it is assumed to be a filename,
+which is then loaded and executed.
+.LP
+If no arguments are given,
+then
+.B "\-v \-i"
+is assumed when the standard input is a terminal;
+otherwise,
+.B \-
+is assumed.
+.SH OPTIONS
+.TP
+.B \-
+load the standard input as a file,
+that is,
+not interactively,
+even when the standard input is a terminal.
+.TP
+.B \-c
+close Lua before exiting.
+.TP
+.BI \-e " stat"
+execute statement
+.IR stat .
+You will need to quote
+.I stat 
+if it contains spaces or quotes.
+.TP
+.BI \-f " file"
+collect all remaining arguments as strings into a global table named
+.B arg
+and then execute
+.IR file .
+The arguments in
+.B arg
+start at 0,
+which contains the string
+.RI ` file '.
+The index of the last argument is stored in
+.BR "arg.n" .
+.TP
+.B \-i
+enter interactive mode,
+displaying a prompt.
+In this mode,
+.B lua
+reads lines from the standard input and executes them as they are read.
+Each line must contain a complete statement.
+To span a statement across several lines, end each line with a backslash
+.BR `\e' .
+The prompt shown is the value of the global variable
+.BR _PROMPT ,
+if this value is a string.
+So,
+to change the prompt,
+set
+.B _PROMPT
+to a string of your choice.
+You can do that after calling the interpreter
+or on the command line with
+.BR "_PROMPT=\'lua: \'" ,
+for example.
+(Note the need for quotes, because the string contains a space.)
+The default prompt is ``> ''.
+.TP
+.B \-q
+enter interactive mode,
+but without displaying a prompt.
+.TP
+.BI \-s n
+set the stack size to
+.IB n .
+If present,
+this must be the first option.
+Note that
+.I n
+is in the same argument as
+.BR -s .
+For example,
+to specify a stack size of 2000,
+use
+.BR -s2000 .
+.TP
+.B \-v
+print version information.
+.SH "SEE ALSO"
+.BR luac (1)
+.br
+http://www.tecgraf.puc-rio.br/lua/
+.SH DIAGNOSTICS
+Error messages should be self explanatory.
+.SH AUTHORS
+R. Ierusalimschy,
+L. H. de Figueiredo,
+and
+W. Celes
+(lua@tecgraf.puc-rio.br)
+.\" EOF

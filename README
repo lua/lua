@@ -1,37 +1,53 @@
-This is Lua 3.2
+This is Lua 4.0.
+See HISTORY for a summary of changes since the last version.
 
 * What is Lua?
   ------------
-  Lua is a programming language originally designed for extending applications,
-  but also frequently used as a general-purpose, stand-alone language.
+  Lua is a powerful, light-weight programming language designed for extending
+  applications. Lua is also frequently used as a general-purpose, stand-alone
+  language.
+
   Lua combines simple procedural syntax (similar to Pascal) with powerful
   data description constructs based on associative arrays and extensible
   semantics. Lua is dynamically typed, interpreted from bytecodes, and has
   automatic memory management, making it ideal for configuration, scripting,
   and rapid prototyping.
 
+  Lua is a language engine that you can embed into your application.
+  This means that, besides syntax and semantics, Lua has an API that
+  allows the application to exchange data with Lua programs and also to
+  extend Lua with C functions. In this sense, Lua can be regarded as a
+  language framework for building domain-specific languages.
+
   Lua is implemented as a small library of C functions, written in ANSI C,
   and compiles unmodified in all known platforms. The implementation goals
   are simplicity, efficiency, portability, and low embedding cost.
+  The result is a fast language engine with small footprint, making it
+  ideal in embedded systems too.
 
-  Lua was awarded the first prize (technological category) in the Second Compaq 
-  Award for Research and Development in Computer Science in 1997. This award
-  is a joint venture of Compaq Computer in Brazil, the Brazilian Ministry of
-  Science and Technology, and the Brazilian Academy of Sciences.
+  Lua was awarded the first prize (technological category) in the
+  Second Compaq Award for Research and Development in Computer Science in 1997.
+  This award was a joint venture of Compaq Computer in Brazil, the Brazilian
+  Ministry of Science and Technology, and the Brazilian Academy of Sciences.
+
+  Lua has been used in many different projects around the world.
+  For a short list, see http://www.tecgraf.puc-rio.br/lua/uses.html .
 
 * Availability
   ------------
   Lua is freely available for both academic and commercial purposes and
   can be downloaded from the sites below. See COPYRIGHT for details.
 
-    Home page:	http://www.tecgraf.puc-rio.br/lua/
-		http://csg.uwaterloo.ca/~lhf/lua/
-    In Brazil:	ftp://ftp.tecgraf.puc-rio.br/pub/lua/lua.tar.gz
-    In Canada:	ftp://csg.uwaterloo.ca/pub/lhf/lua/lua.tar.gz
-    In the US:	ftp://ftp.cdrom.com/pub/languages/lua/lua.tar.gz
-    In Germany:	ftp://ftp.uni-trier.de/pub/languages/lua/lua.tar.gz
-    In Germany: ftp://ftp.gwdg.de/pub/languages/lua/lua.tar.gz
-    In Greece:	ftp://ftp.ntua.gr/pub/lang/lua/lua.tar.gz
+    Home page:  http://www.tecgraf.puc-rio.br/lua/
+                http://csg.uwaterloo.ca/~lhf/lua/
+    In Brazil:  ftp://ftp.tecgraf.puc-rio.br/pub/lua/
+    In Canada:  ftp://csg.uwaterloo.ca/pub/lhf/lua/
+    In the US:  ftp://ftp.freesoftware.com/pub/languages/lua/
+    In Germany: ftp://ftp.uni-trier.de/pub/languages/lua/
+    In Germany: ftp://ftp.gwdg.de/pub/languages/lua/
+    In Greece:  ftp://ftp.ntua.gr/pub/lang/lua/
+    In Japan:   ftp://ftp.u-aizu.ac.jp/pub/lang/lua/
+    In Denmark: ftp://ftp.ucore.com/lua/dist
 
 * Installation
   ------------
@@ -39,16 +55,18 @@ This is Lua 3.2
 
 * Contacting the authors
   ----------------------
-  Lua has been designed and implemented by Waldemar Celes,
-  Roberto Ierusalimschy and Luiz Henrique de Figueiredo.
+  Lua was designed and implemented by Waldemar Celes, Roberto Ierusalimschy
+  and Luiz Henrique de Figueiredo.
   They can be contacted by email at lua@tecgraf.puc-rio.br. 
 
-  Send your comments, bug reports and anything else to lua@tecgraf.puc-rio.br.
+  Send your comments, questions, and bug reports to lua@tecgraf.puc-rio.br.
   For reporting bugs, try also the mailing list: lua-l@tecgraf.puc-rio.br.
-  To subscribe to this list, send "subscribe lua-l YOUR-NAME" to
-  listproc@tecgraf.puc-rio.br in the body of the message (not in the subject).
+  For more information about this list, including instructions on how to
+  subscribe, see http://www.tecgraf.puc-rio.br/lua/lua-l.html .
 
-  Lua has been developed at TeCGraf, the Computer Graphics Technology Group
+  Lua is developed at TeCGraf, the Computer Graphics Technology Group
   of PUC-Rio (the Pontifical Catholic University of Rio de Janeiro in Brazil). 
   TeCGraf is a laboratory of the Department of Computer Science.
   Dozens of industrial products developed by TeCGraf use Lua.
+
+(end of README)

@@ -1,129 +1,125 @@
 /*
-** $Id: lobject.c,v 1.19 1999/04/13 19:28:49 roberto Exp $
+** $Id: lobject.c,v 1.55 2000/10/20 16:36:32 roberto Exp $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
 
 #include <ctype.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include "lobject.h"
 #include "lua.h"
 
+#include "lmem.h"
+#include "lobject.h"
+#include "lstate.h"
 
-char *luaO_typenames[] = { /* ORDER LUA_T */
-    "userdata", "number", "string", "table", "function", "function",
-    "nil", "function", "mark", "mark", "mark", "line", NULL
+
+
+const TObject luaO_nilobject = {LUA_TNIL, {NULL}};
+
+
+const char *const luaO_typenames[] = {
+  "userdata", "nil", "number", "string", "table", "function"
 };
 
 
-TObject luaO_nilobject = {LUA_T_NIL, {NULL}};
 
-
-
-/* hash dimensions values */
-static long dimensions[] =
- {5L, 11L, 23L, 47L, 97L, 197L, 397L, 797L, 1597L, 3203L, 6421L,
-  12853L, 25717L, 51437L, 102811L, 205619L, 411233L, 822433L,
-  1644817L, 3289613L, 6579211L, 13158023L, MAX_INT};
-
-
-int luaO_redimension (int oldsize)
-{
-  int i;
-  for (i=0; dimensions[i]<MAX_INT; i++) {
-    if (dimensions[i] > oldsize)
-      return dimensions[i];
-  }
-  lua_error("tableEM");
-  return 0;  /* to avoid warnings */
+/*
+** returns smaller power of 2 larger than `n' (minimum is MINPOWER2) 
+*/
+lint32 luaO_power2 (lint32 n) {
+  lint32 p = MINPOWER2;
+  while (p<=n) p<<=1;
+  return p;
 }
 
 
-int luaO_equalval (TObject *t1, TObject *t2) {
+int luaO_equalObj (const TObject *t1, const TObject *t2) {
+  if (ttype(t1) != ttype(t2)) return 0;
   switch (ttype(t1)) {
-    case LUA_T_NIL: return 1;
-    case LUA_T_NUMBER: return nvalue(t1) == nvalue(t2);
-    case LUA_T_STRING: case LUA_T_USERDATA: return svalue(t1) == svalue(t2);
-    case LUA_T_ARRAY: return avalue(t1) == avalue(t2);
-    case LUA_T_PROTO: return tfvalue(t1)  == tfvalue(t2);
-    case LUA_T_CPROTO: return fvalue(t1)  == fvalue(t2);
-    case LUA_T_CLOSURE: return t1->value.cl == t2->value.cl;
+    case LUA_TNUMBER:
+      return nvalue(t1) == nvalue(t2);
+    case LUA_TSTRING: case LUA_TUSERDATA:
+      return tsvalue(t1) == tsvalue(t2);
+    case LUA_TTABLE: 
+      return hvalue(t1) == hvalue(t2);
+    case LUA_TFUNCTION:
+      return clvalue(t1) == clvalue(t2);
     default:
-     LUA_INTERNALERROR("invalid type");
-     return 0; /* UNREACHABLE */
+      LUA_ASSERT(ttype(t1) == LUA_TNIL, "invalid type");
+      return 1; /* LUA_TNIL */
   }
 }
 
 
-void luaO_insertlist (GCnode *root, GCnode *node)
-{
-  node->next = root->next;
-  root->next = node;
-  node->marked = 0;
-}
-
-
-#ifdef OLD_ANSI
-void luaO_memup (void *dest, void *src, int size) {
-  while (size--)
-    ((char *)dest)[size]=((char *)src)[size];
-}
-
-void luaO_memdown (void *dest, void *src, int size) {
-  int i;
-  for (i=0; i<size; i++)
-    ((char *)dest)[i]=((char *)src)[i];
-}
-#endif
-
-
-
-static double expten (unsigned int e) {
-  double exp = 10.0;
-  double res = 1.0;
-  for (; e; e>>=1) {
-    if (e & 1) res *= exp;
-    exp *= exp;
+char *luaO_openspace (lua_State *L, size_t n) {
+  if (n > L->Mbuffsize) {
+    luaM_reallocvector(L, L->Mbuffer, n, char);
+    L->nblocks += (n - L->Mbuffsize)*sizeof(char);
+    L->Mbuffsize = n;
   }
-  return res;
+  return L->Mbuffer;
 }
 
 
-double luaO_str2d (char *s) {  /* LUA_NUMBER */
-  double a = 0.0;
-  int point = 0;
-  while (isdigit((unsigned char)*s)) {
-    a = 10.0*a + (*(s++)-'0');
+int luaO_str2d (const char *s, Number *result) {  /* LUA_NUMBER */
+  char *endptr;
+  Number res = lua_str2number(s, &endptr);
+  if (endptr == s) return 0;  /* no conversion */
+  while (isspace((unsigned char)*endptr)) endptr++;
+  if (*endptr != '\0') return 0;  /* invalid trailing characters? */
+  *result = res;
+  return 1;
+}
+
+
+/* maximum length of a string format for `luaO_verror' */
+#define MAX_VERROR	280
+
+/* this function needs to handle only '%d' and '%.XXs' formats */
+void luaO_verror (lua_State *L, const char *fmt, ...) {
+  va_list argp;
+  char buff[MAX_VERROR];  /* to hold formatted message */
+  va_start(argp, fmt);
+  vsprintf(buff, fmt, argp);
+  va_end(argp);
+  lua_error(L, buff);
+}
+
+
+void luaO_chunkid (char *out, const char *source, int bufflen) {
+  if (*source == '=') {
+    strncpy(out, source+1, bufflen);  /* remove first char */
+    out[bufflen-1] = '\0';  /* ensures null termination */
   }
-  if (*s == '.') {
-    s++;
-    while (isdigit((unsigned char)*s)) {
-      a = 10.0*a + (*(s++)-'0');
-      point++;
+  else {
+    if (*source == '@') {
+      int l;
+      source++;  /* skip the `@' */
+      bufflen -= sizeof("file `...%s'");
+      l = strlen(source);
+      if (l>bufflen) {
+        source += (l-bufflen);  /* get last part of file name */
+        sprintf(out, "file `...%.99s'", source);
+      }
+      else
+        sprintf(out, "file `%.99s'", source);
+    }
+    else {
+      int len = strcspn(source, "\n");  /* stop at first newline */
+      bufflen -= sizeof("string \"%.*s...\"");
+      if (len > bufflen) len = bufflen;
+      if (source[len] != '\0') {  /* must truncate? */
+        strcpy(out, "string \"");
+        out += strlen(out);
+        strncpy(out, source, len);
+        strcpy(out+len, "...\"");
+      }
+      else
+        sprintf(out, "string \"%.99s\"", source);
     }
   }
-  if (toupper((unsigned char)*s) == 'E') {
-    int e = 0;
-    int sig = 1;
-    s++;
-    if (*s == '-') {
-      s++;
-      sig = -1;
-    }
-    else if (*s == '+') s++;
-    if (!isdigit((unsigned char)*s)) return -1;  /* no digit in the exponent? */
-    do {
-      e = 10*e + (*(s++)-'0');
-    } while (isdigit((unsigned char)*s));
-    point -= sig*e;
-  }
-  while (isspace((unsigned char)*s)) s++;
-  if (*s != '\0') return -1;  /* invalid trailing characters? */
-  if (point > 0)
-    a /= expten(point);
-  else if (point < 0)
-    a *= expten(-point);
-  return a;
 }
-

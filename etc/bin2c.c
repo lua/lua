@@ -2,7 +2,7 @@
 * bin2c.c
 * convert binary files to byte arrays
 * Luiz Henrique de Figueiredo (lhf@tecgraf.puc-rio.br)
-* 24 Nov 98 12:15:27
+* 11 Sep 2000 22:37:14
 */
 
 #include <ctype.h>
@@ -45,7 +45,7 @@ void fdump(char* fn, int n)
 
 void emit(char* fn, int n)
 {
- printf(" lua_dobuffer(B%d,sizeof(B%d),\"%s\");\n",n,n,fn);
+ printf(" lua_dobuffer(L,B%d,sizeof(B%d),\"%s\");\n",n,n,fn);
 }
 
 int main(int argc, char* argv[])
@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
  {
   int i;
   printf("/* #include'ing this file in a C program is equivalent to calling\n");
-  for (i=1; i<argc; i++) printf("  lua_dofile(\"%s\");\n",argv[i]);
+  for (i=1; i<argc; i++) printf("  lua_dofile(L,\"%s\");\n",argv[i]);
   printf("*/\n");
   for (i=1; i<argc; i++) fdump(argv[i],i);
   for (i=1; i<argc; i++) emit(argv[i],i);
