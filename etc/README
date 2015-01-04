@@ -1,0 +1,25 @@
+This directory contains some code that might be useful.
+
+bin2c.c
+	This program converts files to byte arrays that are automatically
+	run with lua_dobuffer.
+	This allows C programs to include all necessary Lua code, even in
+	precompiled form.
+	Even if code is include in source form, bin2c is useful because it
+	avoids the hassle of having to quote special characters in C strings.
+	Example of usage: run bin2c file1 file2 ... > init.h. The in your C
+	program, just do #include "init.h" anywhere in the *body* of a
+	function. This will be equivalent to calling
+		lua_dofile("file1"); lua_dofile("file2"); ...
+
+min.c
+	The smallest Lua interpreter possible.
+
+setfallback.lua
+	An implementation of fallbacks on top of tag methods.
+	Useful if you have Lua code written for version 2.5 or earlier.
+	If you have C code that uses lua_setfallback, then define LUA_COMPAT2_5
+	before building Lua (see config).
+
+trace.c
+	A simple execution tracer. An example of how to use the debugging hooks.

@@ -1,0 +1,158 @@
+<!-- $Id: luac.man,v 1.8 1998/06/13 16:54:15 lhf Exp $ -->
+<TITLE>LUAC 1 "06 February 1998"</TITLE>
+<H1>NAME</H1>
+luac - Lua compiler
+<H1>SYNOPSIS</H1>
+<B>luac</B>
+[
+<B>-c</B>
+|
+<B>-u</B>
+] [
+<B>-D</B>
+<I>name</I>
+] [
+<B>-d</B>
+] [
+<B>-l</B>
+] [
+<B>-O</B>
+] [
+<B>-o</B>
+<I>filename</I>
+] [
+<B>-p</B>
+] [
+<B>-q</B>
+] [
+<B>-v</B>
+] [
+<B>-V</B>
+]
+<I>sourcefile </I>...
+<H1>DESCRIPTION</H1>
+<B>luac</B>
+is the Lua compiler.
+It translates programs written in the Lua programming language
+into binary files that can be loaded and executed with
+<B>lua_dofile</B>
+in C or with
+<B>dofile</B>
+in Lua.
+<P>
+The main advantages of pre-compiling chunks are:
+faster loading,
+protecting source code from user changes,
+off-line syntax error detection.
+The binary files created by
+<B>luac</B>
+are portable to all known architectures.
+<P>
+<B>luac</B>
+produces a single output file containing the bytecodes
+for all source files given.
+By default,
+the output file is named
+<B>luac.out</B>,
+but you can change this with the
+<B>-o</B>
+option.
+<P>
+You can use
+<B>"-"</B>
+to indicate
+<I>stdin</I>
+as a source file.
+<P>
+<B>luac</B>
+can also load and list binary files with the
+<B>-u</B>
+option.
+<P>
+Binary files produced by differents runs of
+<B>luac</B>
+can be combined into one large file,
+using 
+<B>cat</B>(1).
+The result is still a valid binary file,
+and can be loaded with a single call to
+<B>lua_dofile</B>
+or 
+<B>dofile</B>.
+<P>
+<H1>OPTIONS</H1>
+<P>
+<B>-c</B>
+compile (this is the default).
+<P>
+<B>-u</B>
+undump, i.e., load and list the given binary files.
+If no files are given, then luac undumps
+<B>luac.out</B>.
+<P>
+<B>-D "</B><I>name"</I>
+predefine symbol
+<I>name</I>
+for conditional compilation.
+<P>
+<B>-d</B>
+turn debugging on.
+Individual chunks may
+still control the generation of debug information with
+$debug and $nodebug.
+<P>
+<B>-l</B>
+produce a listing of the compiled bytecode for Lua's virtual machine.
+This is the default when undumping.
+<P>
+<B>-O</B>
+optimize code.
+Debug information is removed,
+duplicate constants are coalesced.
+<P>
+<B>-o "</B><I>filename"</I>
+output to
+<I>filename</I>,
+instead of the default
+<B>luac.out</B>.
+The output file cannot be a source file.
+<P>
+<B>-p</B>
+parse sources files but does not generate any output file.
+Used mainly for syntax checking.
+<P>
+<B>-q</B>
+quiet; produces no listing.
+This is the default when compiling.
+<P>
+<B>-v</B>
+print version information.
+<P>
+<B>-V</B>
+verbose;
+print the names of the source files as they are processed.
+<H1>FILES</H1>
+<P>
+<B>luac.out</B>
+default output file
+<H1>"SEE ALSO"</H1>
+<B>lua</B>(1)
+<BR>
+<I>"Reference Manual of the Programming Language Lua"</I>
+<BR>
+<A HREF="http://www.tecgraf.puc-rio.br/lua/">http://www.tecgraf.puc-rio.br/lua/</A>
+<BR>
+"Lua: an extensible extension language",
+<I>Software: Practice &amp; Experience</I>
+<B>26</B>
+#6 (1996) 635-652.
+<H1>DIAGNOSTICS</H1>
+Error messages should be self explanatory.
+<H1>BUGS</H1>
+Inherits any bugs from Lua,
+but Lua has no bugs...
+<H1>AUTHORS</H1>
+L. H. de Figueiredo,
+R. Ierusalimschy and
+W. Celes
+<I>(<A HREF="mailto:lua@tecgraf.puc-rio.br">lua@tecgraf.puc-rio.br</A>)</I>

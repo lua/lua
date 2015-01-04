@@ -1,0 +1,4 @@
+This is the standard Lua library.
+It is implemented entirely on top of the official Lua API as declared in lua.h,
+using src/lauxlib.c, which contains several useful functions.
+The code can be read as an example of how to export C functions to Lua.
