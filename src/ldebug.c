@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.29.1.3 2007/12/28 15:32:23 roberto Exp $
+** $Id: ldebug.c,v 2.29.1.6 2008/05/08 16:56:26 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -275,12 +275,12 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
 
 static int precheck (const Proto *pt) {
   check(pt->maxstacksize <= MAXSTACK);
-  lua_assert(pt->numparams+(pt->is_vararg & VARARG_HASARG) <= pt->maxstacksize);
-  lua_assert(!(pt->is_vararg & VARARG_NEEDSARG) ||
+  check(pt->numparams+(pt->is_vararg & VARARG_HASARG) <= pt->maxstacksize);
+  check(!(pt->is_vararg & VARARG_NEEDSARG) ||
               (pt->is_vararg & VARARG_HASARG));
   check(pt->sizeupvalues <= pt->nups);
   check(pt->sizelineinfo == pt->sizecode || pt->sizelineinfo == 0);
-  check(GET_OPCODE(pt->code[pt->sizecode-1]) == OP_RETURN);
+  check(pt->sizecode > 0 && GET_OPCODE(pt->code[pt->sizecode-1]) == OP_RETURN);
   return 1;
 }
 
@@ -346,9 +346,18 @@ static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
           int dest = pc+1+b;
           check(0 <= dest && dest < pt->sizecode);
           if (dest > 0) {
-            /* cannot jump to a setlist count */
-            Instruction d = pt->code[dest-1];
-            check(!(GET_OPCODE(d) == OP_SETLIST && GETARG_C(d) == 0));
+            int j;
+            /* check that it does not jump to a setlist count; this
+               is tricky, because the count from a previous setlist may
+               have the same value of an invalid setlist; so, we must
+               go all the way back to the first of them (if any) */
+            for (j = 0; j < dest; j++) {
+              Instruction d = pt->code[dest-1-j];
+              if (!(GET_OPCODE(d) == OP_SETLIST && GETARG_C(d) == 0)) break;
+            }
+            /* if 'j' is even, previous value is not a setlist (even if
+               it looks like one) */
+            check((j&1) == 0);
           }
         }
         break;
@@ -363,7 +372,11 @@ static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
     }
     switch (op) {
       case OP_LOADBOOL: {
-        check(c == 0 || pc+2 < pt->sizecode);  /* check its jump */
+        if (c == 1) {  /* does it jump? */
+          check(pc+2 < pt->sizecode);  /* check its jump */
+          check(GET_OPCODE(pt->code[pc+1]) != OP_SETLIST ||
+                GETARG_C(pt->code[pc+1]) != 0);
+        }
         break;
       }
       case OP_LOADNIL: {
@@ -428,7 +441,10 @@ static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
       }
       case OP_SETLIST: {
         if (b > 0) checkreg(pt, a + b);
-        if (c == 0) pc++;
+        if (c == 0) {
+          pc++;
+          check(pc < pt->sizecode - 1);
+        }
         break;
       }
       case OP_CLOSURE: {
