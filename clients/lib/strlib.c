@@ -3,34 +3,72 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.2 1994/03/28 15:14:02 celes Exp $";
+char *rcs_strlib="$Id: strlib.c,v 1.14 1995/11/10 17:54:31 roberto Exp $";
 
-#include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <ctype.h>
 
-#include "mm.h"
-
-
 #include "lua.h"
+#include "lualib.h"
+
+
+void lua_arg_error(char *funcname)
+{
+  char buff[100];
+  sprintf(buff, "incorrect arguments to function `%s'", funcname);
+  lua_error(buff);
+}
+
+char *lua_check_string (int numArg, char *funcname)
+{
+  lua_Object o = lua_getparam(numArg);
+  if (!(lua_isstring(o) || lua_isnumber(o)))
+    lua_arg_error(funcname);
+  return lua_getstring(o);
+}
+
+float lua_check_number (int numArg, char *funcname)
+{
+  lua_Object o = lua_getparam(numArg);
+  if (!lua_isnumber(o))
+    lua_arg_error(funcname);
+  return lua_getnumber(o);
+}
+
+static char *newstring (char *s)
+{
+  char *ns = (char *)malloc(strlen(s)+1);
+  if (ns == 0)
+    lua_error("not enough memory for new string");
+  strcpy(ns, s);
+  return ns;
+}
+
 
 /*
 ** Return the position of the first caracter of a substring into a string
 ** LUA interface:
-**			n = strfind (string, substring)
+**			n = strfind (string, substring, init, end)
 */
 static void str_find (void)
 {
- char *s1, *s2, *f;
- lua_Object o1 = lua_getparam (1);
- lua_Object o2 = lua_getparam (2);
- if (!lua_isstring(o1) || !lua_isstring(o2))
- { lua_error ("incorrect arguments to function `strfind'"); return; }
- s1 = lua_getstring(o1);
- s2 = lua_getstring(o2);
- f = strstr(s1,s2);
+ char *s1 = lua_check_string(1, "strfind");
+ char *s2 = lua_check_string(2, "strfind");
+ int init = (lua_getparam(3) == LUA_NOOBJECT) ? 0 :
+                                 (int)lua_check_number(3, "strfind")-1;
+ char *f = strstr(s1+init,s2);
  if (f != NULL)
-  lua_pushnumber (f-s1+1);
+ {
+  int pos = f-s1+1;
+  if (lua_getparam (4) == LUA_NOOBJECT)
+   lua_pushnumber (pos);
+  else if ((int)lua_check_number(4, "strfind") >= pos+strlen(s2)-1)
+   lua_pushnumber (pos);
+  else
+   lua_pushnil();
+ }
  else
   lua_pushnil();
 }
@@ -42,10 +80,8 @@ static void str_find (void)
 */
 static void str_len (void)
 {
- lua_Object o = lua_getparam (1);
- if (!lua_isstring(o))
- { lua_error ("incorrect arguments to function `strlen'"); return; }
- lua_pushnumber(strlen(lua_getstring(o)));
+ char *s = lua_check_string(1, "strlen");
+ lua_pushnumber(strlen(s));
 }
 
 
@@ -56,26 +92,36 @@ static void str_len (void)
 */
 static void str_sub (void)
 {
- int start, end;
- char *s;
- lua_Object o1 = lua_getparam (1);
- lua_Object o2 = lua_getparam (2);
- lua_Object o3 = lua_getparam (3);
- if (!lua_isstring(o1) || !lua_isnumber(o2))
- { lua_error ("incorrect arguments to function `strsub'"); return; }
- if (o3 != NULL && !lua_isnumber(o3))
- { lua_error ("incorrect third argument to function `strsub'"); return; }
- s = lua_copystring(o1);
- start = lua_getnumber (o2);
- end = o3 == NULL ? strlen(s) : lua_getnumber (o3);
+ char *s = lua_check_string(1, "strsub");
+ int start = (int)lua_check_number(2, "strsub");
+ int end = (lua_getparam(3) == LUA_NOOBJECT) ? strlen(s) :
+                                    (int)lua_check_number(3, "strsub");
  if (end < start || start < 1 || end > strlen(s))
-  lua_pushstring("");
+  lua_pushliteral("");
  else
  {
+  char temp = s[end];
   s[end] = 0;
   lua_pushstring (&s[start-1]);
+  s[end] = temp;
  }
- free (s);
+}
+
+/*
+** Convert a string according to given function.
+*/
+typedef int (*strfunc)(int s);
+static void str_apply (strfunc f, char *funcname)
+{
+ char *s, *c;
+ c = s = newstring(lua_check_string(1, funcname));
+ while (*c != 0)
+ {
+  *c = f(*c);
+  c++;
+ }
+ lua_pushstring(s);
+ free(s);
 }
 
 /*
@@ -85,19 +131,8 @@ static void str_sub (void)
 */
 static void str_lower (void)
 {
- char *s, *c;
- lua_Object o = lua_getparam (1);
- if (!lua_isstring(o))
- { lua_error ("incorrect arguments to function `strlower'"); return; }
- c = s = strdup(lua_getstring(o));
- while (*c != 0)
- {
-  *c = tolower(*c);
-  c++;
- }
- lua_pushstring(s);
- free(s);
-} 
+  str_apply(tolower, "strlower");
+}
 
 
 /*
@@ -107,20 +142,40 @@ static void str_lower (void)
 */
 static void str_upper (void)
 {
- char *s, *c;
- lua_Object o = lua_getparam (1);
- if (!lua_isstring(o))
- { lua_error ("incorrect arguments to function `strlower'"); return; }
- c = s = strdup(lua_getstring(o));
- while (*c != 0)
- {
-  *c = toupper(*c);
-  c++;
- }
- lua_pushstring(s);
- free(s);
-} 
+  str_apply(toupper, "strupper");
+}
 
+/*
+** get ascii value of a character in a string
+*/
+static void str_ascii (void)
+{
+  char *s = lua_check_string(1, "ascii");
+  lua_Object o2 = lua_getparam(2);
+  int pos;
+  pos = (o2 == LUA_NOOBJECT) ? 0 : (int)lua_check_number(2, "ascii")-1;
+  if (pos<0 || pos>=strlen(s))
+    lua_arg_error("ascii");
+  lua_pushnumber(s[pos]);
+}
+
+/*
+** converts one or more integers to chars in a string
+*/
+#define maxparams 50
+static void str_int2str (void)
+{
+  char s[maxparams+1];
+  int i = 0;
+  while (lua_getparam(++i) != LUA_NOOBJECT)
+  {
+    if (i > maxparams)
+      lua_error("too many parameters to function `int2str'");
+    s[i-1] = (int)lua_check_number(i, "int2str");
+  }
+  s[i-1] = 0;
+  lua_pushstring(s);
+}
 
 /*
 ** Open string library
@@ -132,4 +187,6 @@ void strlib_open (void)
  lua_register ("strsub", str_sub);
  lua_register ("strlower", str_lower);
  lua_register ("strupper", str_upper);
+ lua_register ("ascii", str_ascii);
+ lua_register ("int2str", str_int2str);
 }

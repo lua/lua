@@ -1,0 +1,7 @@
+These are simple tests for Lua.  Some of them contain useful code.
+They are meant to be run to make sure Lua is ok and also to be read, to see
+how Lua programs can look like.
+In the directory examples/, there is more useful code, such as a library for
+complex arithmetic (a good example of fallbacks for overloading and redefinition
+of primitive functions), and a library for PostScript output.  Both libraries
+include simple examples.

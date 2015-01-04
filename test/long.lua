@@ -12,7 +12,7 @@ function sort(a,n)                      -- selection sort
 end
 
 
-v = @(5000)
+v = { }
 
 i=1
 while i <= 5000 do v[i] = 5000-i i=i+1 end

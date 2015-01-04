@@ -1,0 +1,24 @@
+Copyright (c) 1994-1995 TeCGraf, PUC-Rio.  Written by Waldemar Celes Filho,
+Roberto Ierusalimschy, Luiz Henrique de Figueiredo.  All rights reserved.
+
+Permission is hereby granted, without written agreement and without license or
+royalty fees, to use, copy, modify, and distribute this software and its
+documentation for any purpose, subject to the following conditions:
+
+The above copyright notice and this permission notice shall appear in all
+copies or substantial portions of this software.
+
+The name "Lua" cannot be used for any modified form of this software that does
+not originate from the authors.  Nevertheless, the name "Lua" may and should be
+used to designate the language implemented and described in this package,
+even if embedded in any other system, as long as its syntax and semantics
+remain unchanged.
+
+The authors specifically disclaim any warranties, including, but not limited
+to, the implied warranties of merchantability and fitness for a particular
+purpose.  The software provided hereunder is on an "as is" basis, and the
+authors have no obligation to provide maintenance, support, updates,
+enhancements, or modifications.  In no event shall TeCGraf, PUC-Rio, or the
+authors be liable to any party for direct, indirect, special, incidental, or
+consequential damages arising out of the use of this software and its
+documentation.

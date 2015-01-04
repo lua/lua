@@ -2,49 +2,46 @@
 ** inout.c
 ** Provide function to realise the input/output function and debugger 
 ** facilities.
+** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 1.2 1993/12/22 21:15:16 roberto Exp $";
+char *rcs_inout="$Id: inout.c,v 2.25 1995/10/25 13:05:51 roberto Exp $";
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
+#include "mem.h"
 #include "opcode.h"
 #include "hash.h"
 #include "inout.h"
 #include "table.h"
+#include "tree.h"
+#include "lua.h"
+
+
+#ifndef MAXFUNCSTACK
+#define MAXFUNCSTACK 100
+#endif
+
+#define MAXMESSAGE MAXFUNCSTACK*80
+
 
 /* Exported variables */
-int lua_linenumber;
-int lua_debug;
-int lua_debugline;
+Word lua_linenumber;
+Bool lua_debug = 0;
+char *lua_parsedfile;
 
-/* Internal variables */
-#ifndef MAXFUNCSTACK
-#define MAXFUNCSTACK 32
-#endif
-static struct { int file; int function; } funcstack[MAXFUNCSTACK];
-static int nfuncstack=0;
 
 static FILE *fp;
 static char *st;
-static void (*usererror) (char *s);
-
-/*
-** Function to set user function to handle errors.
-*/
-void lua_errorfunction (void (*fn) (char *s))
-{
- usererror = fn;
-}
 
 /*
 ** Function to get the next character from the input file
 */
 static int fileinput (void)
 {
- int c = fgetc (fp);
- return (c == EOF ? 0 : c);
+ return fgetc (fp);
 }
 
 /*
@@ -52,22 +49,32 @@ static int fileinput (void)
 */
 static int stringinput (void)
 {
- st++;
- return (*(st-1));
+ return *st++;
 }
 
 /*
 ** Function to open a file to be input unit. 
-** Return 0 on success or 1 on error.
+** Return 0 on success or error message on error.
 */
-int lua_openfile (char *fn)
+char *lua_openfile (char *fn)
 {
- lua_linenumber = 1;
  lua_setinput (fileinput);
- fp = fopen (fn, "r");
- if (fp == NULL) return 1;
- if (lua_addfile (fn)) return 1;
- return 0;
+ if (fn == NULL)
+ {
+   fp = stdin;
+   fn = "(stdin)";
+ }
+ else
+   fp = fopen (fn, "r");
+ if (fp == NULL)
+ {
+   static char buff[255];
+   sprintf(buff, "unable to open file `%.200s'", fn);
+   return buff;
+ }
+ lua_linenumber = 1;
+ lua_parsedfile = lua_constcreate(fn)->ts.str;
+ return NULL;
 }
 
 /*
@@ -75,9 +82,8 @@ int lua_openfile (char *fn)
 */
 void lua_closefile (void)
 {
- if (fp != NULL)
+ if (fp != NULL && fp != stdin)
  {
-  lua_delfile();
   fclose (fp);
   fp = NULL;
  }
@@ -86,17 +92,12 @@ void lua_closefile (void)
 /*
 ** Function to open a string to be input unit
 */
-int lua_openstring (char *s)
+void lua_openstring (char *s)
 {
- lua_linenumber = 1;
  lua_setinput (stringinput);
  st = s;
- {
-  char sn[64];
-  sprintf (sn, "String: %10.10s...", s);
-  if (lua_addfile (sn)) return 1;
- }
- return 0;
+ lua_linenumber = 1;
+ lua_parsedfile = lua_constcreate("(string)")->ts.str;
 }
 
 /*
@@ -104,74 +105,116 @@ int lua_openstring (char *s)
 */
 void lua_closestring (void)
 {
- lua_delfile();
+}
+
+ 
+/*
+** Internal function: do a string
+*/
+void lua_internaldostring (void)
+{
+ lua_Object obj = lua_getparam (1);
+ if (lua_isstring(obj) && !lua_dostring(lua_getstring(obj)))
+  lua_pushnumber(1);
+ else
+  lua_pushnil();
 }
 
 /*
-** Call user function to handle error messages, if registred. Or report error
-** using standard function (fprintf).
+** Internal function: do a file
 */
-void lua_error (char *s)
+void lua_internaldofile (void)
 {
- if (usererror != NULL) usererror (s);
- else			    fprintf (stderr, "lua: %s\n", s);
+ lua_Object obj = lua_getparam (1);
+ if (lua_isstring(obj) && !lua_dofile(lua_getstring(obj)))
+  lua_pushnumber(1);
+ else
+  lua_pushnil();
 }
-
+ 
 /*
-** Called to execute  SETFUNCTION opcode, this function pushs a function into
-** function stack. Return 0 on success or 1 on error.
+** Internal function: print object values
 */
-int lua_pushfunction (int file, int function)
+void lua_print (void)
 {
- if (nfuncstack >= MAXFUNCSTACK-1)
+ int i=1;
+ lua_Object obj;
+ while ((obj=lua_getparam (i++)) != LUA_NOOBJECT)
  {
-  lua_error ("function stack overflow");
-  return 1;
+  if      (lua_isnumber(obj))    printf("%g\n",lua_getnumber(obj));
+  else if (lua_isstring(obj))    printf("%s\n",lua_getstring(obj));
+  else if (lua_isfunction(obj))  printf("function: %p\n",(luaI_Address(obj))->value.tf);
+  else if (lua_iscfunction(obj)) printf("cfunction: %p\n",lua_getcfunction(obj)
+);
+  else if (lua_isuserdata(obj))  printf("userdata: %p\n",lua_getuserdata(obj));
+  else if (lua_istable(obj))     printf("table: %p\n",avalue(luaI_Address(obj)));
+  else if (lua_isnil(obj))       printf("nil\n");
+  else                           printf("invalid value to print\n");
  }
- funcstack[nfuncstack].file = file;
- funcstack[nfuncstack].function = function;
- nfuncstack++;
- return 0;
 }
 
-/*
-** Called to execute  RESET opcode, this function pops a function from 
-** function stack.
-*/
-void lua_popfunction (void)
-{
- nfuncstack--;
-}
 
 /*
-** Report bug building a message and sending it to lua_error function.
+** Internal function: return an object type.
 */
-void lua_reportbug (char *s)
+void luaI_type (void)
 {
- char msg[1024];
- strcpy (msg, s);
- if (lua_debugline != 0)
- {
-  int i;
-  if (nfuncstack > 0)
+  lua_Object o = lua_getparam(1);
+  int t;
+  if (o == LUA_NOOBJECT)
+    lua_error("no parameter to function 'type'");
+  t = lua_type(o);
+  switch (t)
   {
-   sprintf (strchr(msg,0), 
-         "\n\tin statement begining at line %d in function \"%s\" of file \"%s\"",
-         lua_debugline, s_name(funcstack[nfuncstack-1].function),
-  	 lua_file[funcstack[nfuncstack-1].file]);
-   sprintf (strchr(msg,0), "\n\tactive stack\n");
-   for (i=nfuncstack-1; i>=0; i--)
-    sprintf (strchr(msg,0), "\t-> function \"%s\" of file \"%s\"\n", 
-                            s_name(funcstack[i].function),
-			    lua_file[funcstack[i].file]);
+    case LUA_T_NIL :
+      lua_pushliteral("nil");
+      break;
+    case LUA_T_NUMBER :
+      lua_pushliteral("number");
+      break;
+    case LUA_T_STRING :
+      lua_pushliteral("string");
+      break;
+    case LUA_T_ARRAY :
+      lua_pushliteral("table");
+      break;
+    case LUA_T_FUNCTION :
+    case LUA_T_CFUNCTION :
+      lua_pushliteral("function");
+      break;
+    default :
+      lua_pushliteral("userdata");
+      break;
+  }
+  lua_pushnumber(t);
+}
+ 
+/*
+** Internal function: convert an object to a number
+*/
+void lua_obj2number (void)
+{
+  lua_Object o = lua_getparam(1);
+  if (lua_isnumber(o))
+    lua_pushobject(o);
+  else if (lua_isstring(o))
+  {
+    char c;
+    float f;
+    if (sscanf(lua_getstring(o),"%f %c",&f,&c) == 1)
+      lua_pushnumber(f);
+    else
+      lua_pushnil();
   }
   else
-  {
-   sprintf (strchr(msg,0),
-         "\n\tin statement begining at line %d of file \"%s\"", 
-         lua_debugline, lua_filename());
-  }
- }
- lua_error (msg);
+    lua_pushnil();
+}
+
+
+void luaI_error (void)
+{
+  char *s = lua_getstring(lua_getparam(1));
+  if (s == NULL) s = "(no message)";
+  lua_error(s);
 }
 

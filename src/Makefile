@@ -1,24 +1,40 @@
-# makefile for lua
+# makefile for lua distribution
 
-LIB= $(LUA)/lib
 INC= $(LUA)/include
+LIB= $(LUA)/lib
+
+# in SunOs /usr/5include contains prototypes for standard lib
+INCS= -I/usr/5include -I$(INC)
+WARN= -Wall -Wmissing-prototypes -Wshadow -ansi
 
 CC= gcc
-CFLAGS= -g -Wall -O2 -I$(INC) $(DEFS)
-DEFS= -DMAXCODE=64000 -DMAXCONSTANT=1024 -DMAXSYMBOL=1024 -DMAXARRAY=1024
+CFLAGS= $(INCS) $(DEFS) $(WARN) -O2
 
-OBJS= hash.o inout.o lex.o opcode.o table.o y.tab.o
+OBJS= fallback.o func.o hash.o inout.o lex.o mem.o opcode.o parser.o table.o tree.o
+SRCS= fallback.c func.c hash.c inout.c lex.c mem.c opcode.c table.c tree.c fallback.h func.h hash.h inout.h mem.h opcode.h table.h tree.h types.h ugly.h lua.stx
+
 SLIB= $(LIB)/liblua.a
-DLIB= $(LIB)/liblua.so.1.1
 
-libs: $(SLIB) $(DLIB)
+# dynamic libraries only work for SunOs
+DLIB= $(LIB)/liblua.so.$(VERSION)
+
+all: $(SLIB)
+
+dynamic: $(DLIB)
 
 $(SLIB): $(OBJS)
-	ar ruvl $@ $(OBJS)
-	ranlib $(SLIB)
+	ar rcuv $@ $(OBJS)
+	ranlib $@
 
 $(DLIB): $(OBJS)
 	ld -o $@ $(OBJS)
 
 clean:
 	rm -f $(OBJS) $(SLIB) $(DLIB)
+
+co:
+	co -f -M $(SRCS)
+	yacc -d lua.stx ; mv -f y.tab.c parser.c ; mv -f y.tab.h parser.h
+
+klean:	clean
+	rm -f $(SRCS) parser.c parser.h
