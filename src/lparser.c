@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.40 2005/12/22 16:19:56 roberto Exp $
+** $Id: lparser.c,v 2.42 2006/06/05 15:57:59 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,7 @@
 #include "lparser.h"
 #include "lstate.h"
 #include "lstring.h"
-
+#include "ltable.h"
 
 
 
@@ -299,7 +299,8 @@ static void leaveblock (FuncState *fs) {
   removevars(fs->ls, bl->nactvar);
   if (bl->upval)
     luaK_codeABC(fs, OP_CLOSE, bl->nactvar, 0, 0);
-  lua_assert(!bl->isbreakable || !bl->upval);  /* loops have no body */
+  /* a block either controls scope or breaks (never both) */
+  lua_assert(!bl->isbreakable || !bl->upval);
   lua_assert(bl->nactvar == fs->nactvar);
   fs->freereg = fs->nactvar;  /* free registers */
   luaK_patchtohere(fs, bl->breaklist);
@@ -444,6 +445,7 @@ static void recfield (LexState *ls, struct ConsControl *cc) {
   FuncState *fs = ls->fs;
   int reg = ls->fs->freereg;
   expdesc key, val;
+  int rkkey;
   if (ls->t.token == TK_NAME) {
     luaY_checklimit(fs, cc->nh, MAX_INT, "items in a constructor");
     checkname(ls, &key);
@@ -452,10 +454,9 @@ static void recfield (LexState *ls, struct ConsControl *cc) {
     yindex(ls, &key);
   cc->nh++;
   checknext(ls, '=');
-  luaK_exp2RK(fs, &key);
+  rkkey = luaK_exp2RK(fs, &key);
   expr(ls, &val);
-  luaK_codeABC(fs, OP_SETTABLE, cc->t->u.s.info, luaK_exp2RK(fs, &key),
-                                                 luaK_exp2RK(fs, &val));
+  luaK_codeABC(fs, OP_SETTABLE, cc->t->u.s.info, rkkey, luaK_exp2RK(fs, &val));
   fs->freereg = reg;  /* free registers */
 }
 

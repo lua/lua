@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.51 2005/12/29 15:32:11 roberto Exp $
+** $Id: loadlib.c,v 1.52 2006/04/10 18:27:23 roberto Exp $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -21,10 +21,6 @@
 #include "lua.h"
 #include "lualib.h"
 
-
-/* environment variables that hold the search path for packages */
-#define LUA_PATH	"LUA_PATH"
-#define LUA_CPATH	"LUA_CPATH"
 
 /* prefix for open functions in C libraries */
 #define LUA_POF		"luaopen_"

@@ -45,8 +45,9 @@ TO_INC= lua.h luaconf.h lualib.h lauxlib.h ../etc/lua.hpp
 TO_LIB= liblua.a
 TO_MAN= lua.1 luac.1
 
-# Lua version. Currently used only for messages.
+# Lua version and release.
 V= 5.1
+R= 5.1.1
 
 all:	$(PLAT)
 
@@ -80,11 +81,11 @@ dummy:
 # echo config parameters
 echo:
 	@echo ""
-	@echo "These are the parameters currently set in src/Makefile to build Lua $V:"
+	@echo "These are the parameters currently set in src/Makefile to build Lua $R:"
 	@echo ""
 	@cd src && $(MAKE) -s echo
 	@echo ""
-	@echo "These are the parameters currently set in Makefile to install Lua $V:"
+	@echo "These are the parameters currently set in Makefile to install Lua $R:"
 	@echo ""
 	@echo "PLAT = $(PLAT)"
 	@echo "INSTALL_TOP = $(INSTALL_TOP)"
@@ -103,6 +104,7 @@ echo:
 # echo private config parameters
 pecho:
 	@echo "V = $(V)"
+	@echo "R = $(R)"
 	@echo "TO_BIN = $(TO_BIN)"
 	@echo "TO_INC = $(TO_INC)"
 	@echo "TO_LIB = $(TO_LIB)"
@@ -111,8 +113,9 @@ pecho:
 # echo config parameters as Lua code
 # uncomment the last sed expression if you want nil instead of empty strings
 lecho:
-	@echo "-- installation parameters for Lua $V"
+	@echo "-- installation parameters for Lua $R"
 	@echo "VERSION = '$V'"
+	@echo "RELEASE = '$R'"
 	@$(MAKE) echo | grep = | sed -e 's/= /= "/' -e 's/$$/"/' #-e 's/""/nil/'
 	@echo "-- EOF"
 

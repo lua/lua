@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.72 2006/01/28 12:59:13 roberto Exp $
+** $Id: liolib.c,v 2.73 2006/05/08 20:14:16 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -99,7 +99,7 @@ static FILE **newfile (lua_State *L) {
 static int io_pclose (lua_State *L) {
   FILE **p = topfile(L);
   int ok = lua_pclose(L, *p);
-  if (ok) *p = NULL;
+  *p = NULL;
   return pushresult(L, ok, NULL);
 }
 
@@ -107,7 +107,7 @@ static int io_pclose (lua_State *L) {
 static int io_fclose (lua_State *L) {
   FILE **p = topfile(L);
   int ok = (fclose(*p) == 0);
-  if (ok) *p = NULL;
+  *p = NULL;
   return pushresult(L, ok, NULL);
 }
 

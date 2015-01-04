@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.53 2006/01/10 12:50:00 roberto Exp $
+** $Id: lapi.c,v 2.55 2006/06/07 12:37:17 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -32,7 +32,7 @@
 
 
 const char lua_ident[] =
-  "$Lua: " LUA_VERSION " " LUA_COPYRIGHT " $\n"
+  "$Lua: " LUA_RELEASE " " LUA_COPYRIGHT " $\n"
   "$Authors: " LUA_AUTHORS " $\n"
   "$URL: www.lua.org $\n";
 
@@ -199,6 +199,9 @@ LUA_API void lua_insert (lua_State *L, int idx) {
 LUA_API void lua_replace (lua_State *L, int idx) {
   StkId o;
   lua_lock(L);
+  /* explicit test for incompatible code */
+  if (idx == LUA_ENVIRONINDEX && L->ci == L->base_ci)
+    luaG_runerror(L, "no calling environment");
   api_checknelems(L, 1);
   o = index2adr(L, idx);
   api_checkvalidindex(L, o);

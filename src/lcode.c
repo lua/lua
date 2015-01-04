@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.24 2005/12/22 16:19:56 roberto Exp $
+** $Id: lcode.c,v 2.25 2006/03/21 19:28:49 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -731,17 +731,15 @@ void luaK_posfix (FuncState *fs, BinOpr op, expdesc *e1, expdesc *e2) {
     case OPR_AND: {
       lua_assert(e1->t == NO_JUMP);  /* list must be closed */
       luaK_dischargevars(fs, e2);
-      luaK_concat(fs, &e1->f, e2->f);
-      e1->k = e2->k; e1->u.s.info = e2->u.s.info;
-      e1->u.s.aux = e2->u.s.aux; e1->t = e2->t;
+      luaK_concat(fs, &e2->f, e1->f);
+      *e1 = *e2;
       break;
     }
     case OPR_OR: {
       lua_assert(e1->f == NO_JUMP);  /* list must be closed */
       luaK_dischargevars(fs, e2);
-      luaK_concat(fs, &e1->t, e2->t);
-      e1->k = e2->k; e1->u.s.info = e2->u.s.info;
-      e1->u.s.aux = e2->u.s.aux; e1->f = e2->f;
+      luaK_concat(fs, &e2->t, e1->t);
+      *e1 = *e2;
       break;
     }
     case OPR_CONCAT: {
@@ -750,7 +748,7 @@ void luaK_posfix (FuncState *fs, BinOpr op, expdesc *e1, expdesc *e2) {
         lua_assert(e1->u.s.info == GETARG_B(getcode(fs, e2))-1);
         freeexp(fs, e1);
         SETARG_B(getcode(fs, e2), e1->u.s.info);
-        e1->k = e2->k; e1->u.s.info = e2->u.s.info;
+        e1->k = VRELOCABLE; e1->u.s.info = e2->u.s.info;
       }
       else {
         luaK_exp2nextreg(fs, e2);  /* operand must be on the 'stack' */

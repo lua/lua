@@ -80,7 +80,7 @@ none:
 	@echo "Please choose a platform: $(PLATS)"
 
 aix:
-	$(MAKE) all CC="xlc" CFLAGS="-O2" MYCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN" MYLIBS="-ldl" MYLDFLAGS="-brtl -bexpall"
+	$(MAKE) all CC="xlc" CFLAGS="-O2 -DLUA_USE_POSIX -DLUA_USE_DLOPEN" MYLIBS="-ldl" MYLDFLAGS="-brtl -bexpall"
 
 ansi:
 	$(MAKE) all MYCFLAGS=-DLUA_ANSI
@@ -121,15 +121,15 @@ lapi.o: lapi.c lua.h luaconf.h lapi.h lobject.h llimits.h ldebug.h \
 lauxlib.o: lauxlib.c lua.h luaconf.h lauxlib.h
 lbaselib.o: lbaselib.c lua.h luaconf.h lauxlib.h lualib.h
 lcode.o: lcode.c lua.h luaconf.h lcode.h llex.h lobject.h llimits.h \
-  lzio.h lmem.h lopcodes.h lparser.h ltable.h ldebug.h lstate.h ltm.h \
-  ldo.h lgc.h
+  lzio.h lmem.h lopcodes.h lparser.h ldebug.h lstate.h ltm.h ldo.h lgc.h \
+  ltable.h
 ldblib.o: ldblib.c lua.h luaconf.h lauxlib.h lualib.h
 ldebug.o: ldebug.c lua.h luaconf.h lapi.h lobject.h llimits.h lcode.h \
-  llex.h lzio.h lmem.h lopcodes.h lparser.h ltable.h ldebug.h lstate.h \
-  ltm.h ldo.h lfunc.h lstring.h lgc.h lvm.h
+  llex.h lzio.h lmem.h lopcodes.h lparser.h ldebug.h lstate.h ltm.h ldo.h \
+  lfunc.h lstring.h lgc.h ltable.h lvm.h
 ldo.o: ldo.c lua.h luaconf.h ldebug.h lstate.h lobject.h llimits.h ltm.h \
-  lzio.h lmem.h ldo.h lfunc.h lgc.h lopcodes.h lparser.h ltable.h \
-  lstring.h lundump.h lvm.h
+  lzio.h lmem.h ldo.h lfunc.h lgc.h lopcodes.h lparser.h lstring.h \
+  ltable.h lundump.h lvm.h
 ldump.o: ldump.c lua.h luaconf.h lobject.h llimits.h lstate.h ltm.h \
   lzio.h lmem.h lundump.h
 lfunc.o: lfunc.c lua.h luaconf.h lfunc.h lobject.h llimits.h lgc.h lmem.h \
@@ -139,7 +139,7 @@ lgc.o: lgc.c lua.h luaconf.h ldebug.h lstate.h lobject.h llimits.h ltm.h \
 linit.o: linit.c lua.h luaconf.h lualib.h lauxlib.h
 liolib.o: liolib.c lua.h luaconf.h lauxlib.h lualib.h
 llex.o: llex.c lua.h luaconf.h ldo.h lobject.h llimits.h lstate.h ltm.h \
-  lzio.h lmem.h llex.h lparser.h ltable.h lstring.h lgc.h
+  lzio.h lmem.h llex.h lparser.h lstring.h lgc.h ltable.h
 lmathlib.o: lmathlib.c lua.h luaconf.h lauxlib.h lualib.h
 lmem.o: lmem.c lua.h luaconf.h ldebug.h lstate.h lobject.h llimits.h \
   ltm.h lzio.h lmem.h ldo.h
@@ -150,8 +150,8 @@ lobject.o: lobject.c lua.h luaconf.h ldo.h lobject.h llimits.h lstate.h \
 lopcodes.o: lopcodes.c lopcodes.h llimits.h lua.h luaconf.h
 loslib.o: loslib.c lua.h luaconf.h lauxlib.h lualib.h
 lparser.o: lparser.c lua.h luaconf.h lcode.h llex.h lobject.h llimits.h \
-  lzio.h lmem.h lopcodes.h lparser.h ltable.h ldebug.h lstate.h ltm.h \
-  ldo.h lfunc.h lstring.h lgc.h
+  lzio.h lmem.h lopcodes.h lparser.h ldebug.h lstate.h ltm.h ldo.h \
+  lfunc.h lstring.h lgc.h ltable.h
 lstate.o: lstate.c lua.h luaconf.h ldebug.h lstate.h lobject.h llimits.h \
   ltm.h lzio.h lmem.h ldo.h lfunc.h lgc.h llex.h lstring.h ltable.h
 lstring.o: lstring.c lua.h luaconf.h lmem.h llimits.h lobject.h lstate.h \
