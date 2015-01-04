@@ -1,16 +1,18 @@
-This is Lua 4.0.
+This is Lua 5.0.
 
 * Installation
   ------------
   Building Lua on a Unix system should be very easy:
 
-	1. Edit "config" to suit your platform, if at all necessary.
+	1. Read "config" and edit it to suit your platform and needs.
+	   We strongly recommend that you enable support for dynamic loading,
+	   if your platform allows it.
 	2. Do "make".
 	3. If you want to install Lua in an "official" place in your system,
 	   then do "make install". The official place and the way to install
 	   files are defined in "config". You may have to be root to do this.
 
-  See below for instructions for Windows and Macintosh.
+  See below for instructions for Windows and other systems.
 
 * What you get
   ------------
@@ -20,7 +22,7 @@ This is Lua 4.0.
 	* include files in ./include.
   These are the only directories you need for development.
 
-  There man pages for lua and luac in both nroff and html, and a reference
+  There are man pages for lua and luac, in both nroff and html; a reference
   manual in html in ./doc, some sample code in ./test, and some useful stuff
   in ./etc. You don't need these directories for development.
 
@@ -35,38 +37,44 @@ This is Lua 4.0.
 * Shared libraries
   ----------------
   If you are running Linux, do "make so" after "make" succeeds.
-  This will create shared libraries in ./lib. It's probably better to
-  build shared libraries before "make install".
+  This will create shared libraries in ./lib.
+  To install those shared libraries in an official place, do "make soinstall".
 
   If you want the interpreter and the compiler to use shared libraries,
-  then do "make sobin" too.
+  then do "make sobin" too. You may want to do this before "make install".
 
-  You may need to include lib/ in the LD_LIBRAY_PATH environment variable
-  to link programs that use the shared libraries if you don't put them in
-  the "official" places with "make install".
+  If you only want the shared libraries, you may want to add -fPIC to MYCFLAGS
+  in "config". Also, you may need to run "ldconfig" as root.
+
+  You may need to include ./lib in the LD_LIBRARY_PATH environment variable
+  to link programs that use the shared libraries if you don't put them in the
+  official places with "make install". (You may need to use the full path.)
 
   Building shared libraries in other systems is similar but details differ;
   you may need to fix a few details in the top-level Makefile.
 
-* Installation on Windows or Macintosh
-  ------------------------------------
-  The instructions for building Lua on a Mac or Windows machine depend on
-  the particular compiler you are using.
-  The simplest way is to create a folder with all .c and .h files.
-  Then create projects for the core library, the standard library,
-  the interpreter, and the compiler, as follows:
+* Installation on Windows and other systems
+  -----------------------------------------------------
+  The instructions for building Lua on other systems machine depend on the
+  particular compiler you are using. The simplest way is to create a folder
+  with all .c and .h files, and then create projects for the core library,
+  the standard library, the interpreter, and the compiler, as follows:
 
-  core lib:	lapi.c lcode.c ldebug.c ldo.c lfunc.c lgc.c llex.c lmem.c
-		lobject.c lparser.c lstate.c lstring.c ltable.c ltests.c
-		ltm.c lundump.c lvm.c lzio.c
+  core lib:	lapi.c lcode.c ldebug.c ldo.c ldump.c lfunc.c lgc.c llex.c
+                lmem.c lobject.c lopcodes.c lparser.c lstate.c lstring.c
+		ltable.c ltests.c ltm.c lundump.c lvm.c lzio.c
 
-  standard lib:	lauxlib.c lbaselib.c ldblib.c liolib.c lmathlib.c lstrlib.c
+  standard lib:	lauxlib.c lbaselib.c ldblib.c liolib.c lmathlib.c ltablib.c
+                lstrlib.c loadlib.c
 
   interpreter:	core lib, standard lib, lua.c
 
-  compiler:	core lib, dump.c luac.c opt.c print.c stubs.c
+  compiler:	core lib, standard lib, luac.c print.c
+		and also lopcodes.c (with LUA_OPNAMES defined) from core.
 
   Of course, to use Lua as a library, you'll have to know how to create
   and use libraries with your compiler.
+
+  Also, read "config" to see what can be customized at compilation time.
 
 (end of INSTALL)

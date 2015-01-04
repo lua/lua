@@ -1,34 +1,30 @@
 /*
 * bin2c.c
-* convert binary files to byte arrays
+* convert files to byte arrays for automatic loading with lua_dobuffer
 * Luiz Henrique de Figueiredo (lhf@tecgraf.puc-rio.br)
-* 11 Sep 2000 22:37:14
+* 02 Apr 2003 20:44:31
 */
 
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-void dump(FILE* f, int n)
+static void dump(FILE* f, int n)
 {
- printf("static unsigned char B%d[]={\n",n);
+ printf("static const unsigned char B%d[]={\n",n);
  for (n=1;;n++)
  {
   int c=getc(f); 
   if (c==EOF) break;
-#if 0
-  printf("0x%02x,",c);
-#else
   printf("%3u,",c);
-#endif
   if (n==20) { putchar('\n'); n=0; }
  }
  printf("\n};\n\n");
 }
 
-void fdump(char* fn, int n)
+static void fdump(const char* fn, int n)
 {
- FILE* f= (fn==NULL) ? stdin : fopen(fn,"rb");	/* must open in binary mode */
+ FILE* f= fopen(fn,"rb");		/* must open in binary mode */
  if (f==NULL)
  {
   fprintf(stderr,"bin2c: cannot open ");
@@ -37,15 +33,15 @@ void fdump(char* fn, int n)
  }
  else
  {
-  if (fn!=NULL) printf("/* %s */\n",fn);
+  printf("/* %s */\n",fn);
   dump(f,n);
   fclose(f);
  }
 }
 
-void emit(char* fn, int n)
+static void emit(const char* fn, int n)
 {
- printf(" lua_dobuffer(L,B%d,sizeof(B%d),\"%s\");\n",n,n,fn);
+ printf(" lua_dobuffer(L,(const char*)B%d,sizeof(B%d),\"%s\");\n",n,n,fn);
 }
 
 int main(int argc, char* argv[])
@@ -55,7 +51,7 @@ int main(int argc, char* argv[])
  if (argc<2)
  {
   dump(stdin,0);
-  emit("(stdin)",0);
+  emit("=stdin",0);
  }
  else
  {

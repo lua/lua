@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.16 2000/10/30 16:29:59 roberto Exp $
+** $Id: lmem.h,v 1.26 2002/05/01 20:40:42 roberto Exp $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -13,29 +13,31 @@
 #include "llimits.h"
 #include "lua.h"
 
-void *luaM_realloc (lua_State *L, void *oldblock, lint32 size);
-void *luaM_growaux (lua_State *L, void *block, size_t nelems,
-                    int inc, size_t size, const char *errormsg,
-                    size_t limit);
-
-#define luaM_free(L, b)		luaM_realloc(L, (b), 0)
-#define luaM_malloc(L, t)	luaM_realloc(L, NULL, (t))
-#define luaM_new(L, t)          ((t *)luaM_malloc(L, sizeof(t)))
-#define luaM_newvector(L, n,t)  ((t *)luaM_malloc(L, (n)*(lint32)sizeof(t)))
-
-#define luaM_growvector(L, v,nelems,inc,t,e,l) \
-          ((v)=(t *)luaM_growaux(L, v,nelems,inc,sizeof(t),e,l))
-
-#define luaM_reallocvector(L, v,n,t) \
-	((v)=(t *)luaM_realloc(L, v,(n)*(lint32)sizeof(t)))
+#define MEMERRMSG	"not enough memory"
 
 
-#ifdef LUA_DEBUG
-extern unsigned long memdebug_numblocks;
-extern unsigned long memdebug_total;
-extern unsigned long memdebug_maxmem;
-extern unsigned long memdebug_memlimit;
-#endif
+void *luaM_realloc (lua_State *L, void *oldblock, lu_mem oldsize, lu_mem size);
+
+void *luaM_growaux (lua_State *L, void *block, int *size, int size_elem,
+                    int limit, const char *errormsg);
+
+#define luaM_free(L, b, s)	luaM_realloc(L, (b), (s), 0)
+#define luaM_freelem(L, b)	luaM_realloc(L, (b), sizeof(*(b)), 0)
+#define luaM_freearray(L, b, n, t)	luaM_realloc(L, (b), \
+                                      cast(lu_mem, n)*cast(lu_mem, sizeof(t)), 0)
+
+#define luaM_malloc(L, t)	luaM_realloc(L, NULL, 0, (t))
+#define luaM_new(L, t)          cast(t *, luaM_malloc(L, sizeof(t)))
+#define luaM_newvector(L, n,t)  cast(t *, luaM_malloc(L, \
+                                         cast(lu_mem, n)*cast(lu_mem, sizeof(t))))
+
+#define luaM_growvector(L,v,nelems,size,t,limit,e) \
+          if (((nelems)+1) > (size)) \
+            ((v)=cast(t *, luaM_growaux(L,v,&(size),sizeof(t),limit,e)))
+
+#define luaM_reallocvector(L, v,oldn,n,t) \
+   ((v)=cast(t *, luaM_realloc(L, v,cast(lu_mem, oldn)*cast(lu_mem, sizeof(t)), \
+                                    cast(lu_mem, n)*cast(lu_mem, sizeof(t)))))
 
 
 #endif

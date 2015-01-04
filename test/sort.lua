@@ -4,7 +4,7 @@
 -- extracted from Programming Pearls, page 110
 function qsort(x,l,u,f)
  if l<u then
-  local m=random(u-(l-1))+l-1		-- choose a random pivot in range l..u
+  local m=math.random(u-(l-1))+l-1	-- choose a random pivot in range l..u
   x[l],x[m]=x[m],x[l]			-- swap pivot to first position
   local t=x[l]				-- pivot value
   m=l
@@ -38,14 +38,14 @@ function selectionsort(x,n,f)
 end
 
 function show(m,x)
- write(m,"\n\t")
+ io.write(m,"\n\t")
  local i=1
  while x[i] do
-  write(x[i])
+  io.write(x[i])
   i=i+1
-  if x[i] then write(",") end
+  if x[i] then io.write(",") end
  end
- write("\n")
+ io.write("\n")
 end
 
 function testsorts(x)

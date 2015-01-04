@@ -1,5 +1,6 @@
--- very inefficient fibonacci function
+-- fibonacci function with cache
 
+-- very inefficient fibonacci function
 function fib(n)
 	N=N+1
 	if n<2 then
@@ -9,31 +10,31 @@ function fib(n)
 	end
 end
 
--- a much faster cached version
-
+-- a general-purpose value cache
 function cache(f)
 	local c={}
 	return function (x)
-		local y=%c[x]
+		local y=c[x]
 		if not y then
-			y=%f(x)
-			%c[x]=y
+			y=f(x)
+			c[x]=y
 		end
 		return y
 	end
 end
 
-function test(s)
+-- run and time it
+function test(s,f)
 	N=0
-	local c=clock()
-	local v=fib(n)
-	local t=clock()-c
+	local c=os.clock()
+	local v=f(n)
+	local t=os.clock()-c
 	print(s,n,v,t,N)
 end
 
-n=n or 24		-- for other values, do lua -e n=XX fib.lua
+n=arg[1] or 24		-- for other values, do lua fib.lua XX
 n=tonumber(n)
 print("","n","value","time","evals")
-test("plain")
+test("plain",fib)
 fib=cache(fib)
-test("cached")
+test("cached",fib)

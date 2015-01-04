@@ -1,5 +1,5 @@
-.\" luac.man,v 1.20 2000/10/06 15:11:21 lhf Exp
-.TH LUAC 1 "2000/10/06 15:11:21"
+.\" luac.man,v 1.25 2002/12/13 11:45:12 lhf Exp
+.TH LUAC 1 "2002/12/13 11:45:12"
 .SH NAME
 luac \- Lua compiler
 .SH SYNOPSIS
@@ -13,17 +13,13 @@ luac \- Lua compiler
 .B luac
 is the Lua compiler.
 It translates programs written in the Lua programming language
-into binary files that can be loaded and executed with
-.B lua_dofile
-in C or with
-.B dofile
-in Lua.
+into binary files that can be latter loaded and executed.
 .LP
 The main advantages of precompiling chunks are:
 faster loading,
 protecting source code from user changes,
 and
-off-line syntax error detection.
+off-line syntax checking.
 .LP
 Pre-compiling does not imply faster execution
 because in Lua chunks are always compiled into bytecodes before being executed.
@@ -46,9 +42,10 @@ are portable to all architectures with the same word size.
 This means that
 binary files created on a 32-bit platform (such as Intel)
 can be read without change in another 32-bit platform (such as Sparc),
-even if the byte order (``endianess'') is different.
+even if the byte order (``endianness'') is different.
 On the other hand,
-binary files created on a 16-bit platform cannot be read in a 32-bit platform.
+binary files created on a 16-bit platform cannot be read in a 32-bit platform,
+nor vice-versa.
 .LP
 In the command line,
 you can mix
@@ -60,15 +57,17 @@ into a single precompiled chunk.
 .LP
 You can use
 .B "\-"
-to indicate
-.I stdin
-as a source file.
+to indicate the standard input as a source file
+and
+.B "\--"
+to signal the end of options
+(that is,
+all remaining arguments will be treated as files even if they start with
+.BR "\-" ).
 .LP
 The internal format of the binary files produced by
 .B luac
-may change when a new version of Lua is released.
-We try to maintain compatibility even for binary files,
-but it is not always possible.
+is likely to change when a new version of Lua is released.
 So,
 save the source files of all Lua programs that you precompile.
 .LP
@@ -89,26 +88,16 @@ output to
 .IR file ,
 instead of the default
 .BR luac.out .
-The output file can be a source file because
+The output file may be a source file because
 all files are loaded before the output file is written.
+Be careful not to overwrite precious files.
 .TP
 .B \-p
 load files but do not generate any output file.
-Used mainly for syntax checking or testing precompiled chunks:
+Used mainly for syntax checking and for testing precompiled chunks:
 corrupted files will probably generate errors when loaded.
-For a thourough integrity test,
-use
-.BR \-t .
-.TP
-.B \-s
-strip debug information before writing the output file.
-This saves some space in very large chunks,
-but if errors occur when running these chunks,
-then the error messages might not contain the full information they usually do.
-.TP
-.B \-t
-perform a thourough integrity test of precompiled chunks.
-Code that passes this test is completely safe,
+Lua always performs a thorough integrity test on precompiled chunks.
+Bytecode that passes this test is completely safe,
 in the sense that it will not break the interpreter.
 However,
 there is no guarantee that such code does anything sensible.
@@ -118,9 +107,17 @@ If no files are given, then
 loads
 .B luac.out
 and tests its contents.
+No messages are displayed if the file passes the integrity test.
+.TP
+.B \-s
+strip debug information before writing the output file.
+This saves some space in very large chunks,
+but if errors occur when running these chunks,
+then the error messages may not contain the full information they usually do
+(line numbers and names of locals are lost).
 .TP
 .B \-v
-print version information.
+show version information.
 .SH FILES
 .TP 15
 .B luac.out
@@ -128,7 +125,7 @@ default output file
 .SH "SEE ALSO"
 .BR lua (1)
 .br
-http://www.tecgraf.puc-rio.br/lua/
+http://www.lua.org/
 .SH DIAGNOSTICS
 Error messages should be self explanatory.
 .SH AUTHORS

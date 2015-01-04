@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.h,v 1.21 2000/10/31 16:57:23 lhf Exp $
+** $Id: lundump.h,v 1.30 2003/04/07 20:34:20 lhf Exp $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -10,26 +10,25 @@
 #include "lobject.h"
 #include "lzio.h"
 
-/* load one chunk */
-Proto* luaU_undump (lua_State* L, ZIO* Z);
+/* load one chunk; from lundump.c */
+Proto* luaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff);
 
-/* find byte order */
-int luaU_endianess (void);
+/* find byte order; from lundump.c */
+int luaU_endianness (void);
+
+/* dump one chunk; from ldump.c */
+void luaU_dump (lua_State* L, const Proto* Main, lua_Chunkwriter w, void* data);
+
+/* print one chunk; from print.c */
+void luaU_print (const Proto* Main);
 
 /* definitions for headers of binary files */
-#define	VERSION		0x40		/* last format change was in 4.0 */
-#define	VERSION0	0x40		/* last major  change was in 4.0 */
-#define ID_CHUNK	27		/* binary files start with ESC... */
-#define	SIGNATURE	"Lua"		/* ...followed by this signature */
-
-/* formats for error messages */
-#define SOURCE_FMT	"<%d:%.99s>"
-#define SOURCE		tf->lineDefined,tf->source->str
-#define IN_FMT		" in %p " SOURCE_FMT
-#define IN		tf,SOURCE
+#define	LUA_SIGNATURE	"\033Lua"	/* binary files start with "<esc>Lua" */
+#define	VERSION		0x50		/* last format change was in 5.0 */
+#define	VERSION0	0x50		/* last major  change was in 5.0 */
 
 /* a multiple of PI for testing native format */
-/* multiplying by 1E8 gives non-trivial integer values */
-#define	TEST_NUMBER	3.14159265358979323846E8
+/* multiplying by 1E7 gives non-trivial integer values */
+#define	TEST_NUMBER	((lua_Number)3.14159265358979323846E7)
 
 #endif

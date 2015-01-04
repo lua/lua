@@ -1,28 +1,25 @@
 -- life.lua
 -- original by Dave Bollinger <DBollinger@compuserve.com> posted to lua-l
 -- modified to use ANSI terminal escape sequences
+-- modified to use for instead of while
 
-ALIVE="O"
-DEAD="-"
+local write=io.write
+
+ALIVE="¥"	DEAD="þ"
+ALIVE="O"	DEAD="-"
 
 function delay() -- NOTE: SYSTEM-DEPENDENT, adjust as necessary
-  local i=10000
-  while i>0 do i=i-1 end
-  -- local i=clock()+1 while(clock()<i) do end
+  for i=1,10000 do end
+  -- local i=os.clock()+1 while(os.clock()<i) do end
 end
 
 function ARRAY2D(w,h)
-  local t = {}
-  t.w=w
-  t.h=h
-  while h>0 do
-    t[h] = {}
-    local x=w
-    while x>0 do
-      t[h][x]=0
-      x=x-1
+  local t = {w=w,h=h}
+  for y=1,h do
+    t[y] = {}
+    for x=1,w do
+      t[y][x]=0
     end
-    h=h-1
   end
   return t
 end
@@ -31,14 +28,10 @@ _CELLS = {}
 
 -- give birth to a "shape" within the cell array
 function _CELLS:spawn(shape,left,top)
-  local y=0
-  while y<shape.h do
-    local x=0
-    while x<shape.w do
+  for y=0,shape.h-1 do
+    for x=0,shape.w-1 do
       self[top+y][left+x] = shape[y*shape.w+x+1]
-      x=x+1
     end
-    y=y+1
   end
 end
 
@@ -61,15 +54,11 @@ end
 -- output the array to screen
 function _CELLS:draw()
   local out="" -- accumulate to reduce flicker
-  local y=1
-  while y <= self.h do
-    local x=1
-    while x <= self.w do
+  for y=1,self.h do
+   for x=1,self.w do
       out=out..(((self[y][x]>0) and ALIVE) or DEAD)
-      x=x+1
     end
     out=out.."\n"
-    y=y+1
   end
   write(out)
 end
@@ -112,8 +101,9 @@ function LIFE(w,h)
     thisgen,nextgen = nextgen,thisgen
     write("\027[H")	-- ANSI home cursor
     thisgen:draw()
-    write("Generation: "..gen.."\n")
+    write("Life - generation ",gen,"\n")
     gen=gen+1
+    if gen>2000 then break end
     --delay()		-- no delay
   end
 end

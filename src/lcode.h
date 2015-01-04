@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.16 2000/08/09 14:49:13 roberto Exp $
+** $Id: lcode.h,v 1.38 2002/12/11 12:34:22 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -26,45 +26,49 @@
 typedef enum BinOpr {
   OPR_ADD, OPR_SUB, OPR_MULT, OPR_DIV, OPR_POW,
   OPR_CONCAT,
-  OPR_NE, OPR_EQ, OPR_LT, OPR_LE, OPR_GT, OPR_GE,
+  OPR_NE, OPR_EQ,
+  OPR_LT, OPR_LE, OPR_GT, OPR_GE,
   OPR_AND, OPR_OR,
   OPR_NOBINOPR
 } BinOpr;
 
+#define binopistest(op)	((op) >= OPR_NE)
+
 typedef enum UnOpr { OPR_MINUS, OPR_NOT, OPR_NOUNOPR } UnOpr;
 
 
-enum Mode {iO, iU, iS, iAB};  /* instruction format */
+#define getcode(fs,e)	((fs)->f->code[(e)->info])
 
-#define VD	100	/* flag for variable delta */
+#define luaK_codeAsBx(fs,o,A,sBx)	luaK_codeABx(fs,o,A,(sBx)+MAXARG_sBx)
 
-extern const struct OpProperties {
-  char mode;
-  unsigned char push;
-  unsigned char pop;
-} luaK_opproperties[];
-
-
-void luaK_error (LexState *ls, const char *msg);
-int luaK_code0 (FuncState *fs, OpCode o);
-int luaK_code1 (FuncState *fs, OpCode o, int arg1);
-int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2);
+int luaK_code (FuncState *fs, Instruction i, int line);
+int luaK_codeABx (FuncState *fs, OpCode o, int A, unsigned int Bx);
+int luaK_codeABC (FuncState *fs, OpCode o, int A, int B, int C);
+void luaK_fixline (FuncState *fs, int line);
+void luaK_nil (FuncState *fs, int from, int n);
+void luaK_reserveregs (FuncState *fs, int n);
+void luaK_checkstack (FuncState *fs, int n);
+int luaK_stringK (FuncState *fs, TString *s);
+int luaK_numberK (FuncState *fs, lua_Number r);
+void luaK_dischargevars (FuncState *fs, expdesc *e);
+int luaK_exp2anyreg (FuncState *fs, expdesc *e);
+void luaK_exp2nextreg (FuncState *fs, expdesc *e);
+void luaK_exp2val (FuncState *fs, expdesc *e);
+int luaK_exp2RK (FuncState *fs, expdesc *e);
+void luaK_self (FuncState *fs, expdesc *e, expdesc *key);
+void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k);
+void luaK_goiftrue (FuncState *fs, expdesc *e);
+void luaK_goiffalse (FuncState *fs, expdesc *e);
+void luaK_storevar (FuncState *fs, expdesc *var, expdesc *e);
+void luaK_setcallreturns (FuncState *fs, expdesc *var, int nresults);
 int luaK_jump (FuncState *fs);
 void luaK_patchlist (FuncState *fs, int list, int target);
+void luaK_patchtohere (FuncState *fs, int list);
 void luaK_concat (FuncState *fs, int *l1, int l2);
-void luaK_goiftrue (FuncState *fs, expdesc *v, int keepvalue);
 int luaK_getlabel (FuncState *fs);
-void luaK_deltastack (FuncState *fs, int delta);
-void luaK_kstr (LexState *ls, int c);
-void luaK_number (FuncState *fs, Number f);
-void luaK_adjuststack (FuncState *fs, int n);
-int luaK_lastisopen (FuncState *fs);
-void luaK_setcallreturns (FuncState *fs, int nresults);
-void luaK_tostack (LexState *ls, expdesc *v, int onlyone);
-void luaK_storevar (LexState *ls, const expdesc *var);
-void luaK_prefix (LexState *ls, UnOpr op, expdesc *v);
-void luaK_infix (LexState *ls, BinOpr op, expdesc *v);
-void luaK_posfix (LexState *ls, BinOpr op, expdesc *v1, expdesc *v2);
+void luaK_prefix (FuncState *fs, UnOpr op, expdesc *v);
+void luaK_infix (FuncState *fs, BinOpr op, expdesc *v);
+void luaK_posfix (FuncState *fs, BinOpr op, expdesc *v1, expdesc *v2);
 
 
 #endif

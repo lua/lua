@@ -1,0 +1,9 @@
+#!/bin/sh
+
+# Lua does not use GNU autoconf; just edit ./config if needed to suit your
+# platform and then run make.
+
+# This shows the parameters currently set in ./config:
+make echo
+
+# If you want config as a Lua program, run "make lecho".

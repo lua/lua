@@ -1,16 +1,14 @@
-# makefile for etc
+# makefile for Lua etc
 
 LUA= ..
 
 include $(LUA)/config
 
 LIBLUA=$(LIB)/liblua.a
-ALL= bin2c min trace lua.def
+ALL= bin2c min trace noparser luab
 
-x:
-	@echo 'choose a target:' all $(ALL)
-
-all: $(ALL)
+all:
+	@echo 'choose a target:' $(ALL)
 
 bin2c:	bin2c.c
 	$(CC) $(CFLAGS) -o $@ $@.c
@@ -19,20 +17,26 @@ min:	min.c $(LIBLUA)
 	$(CC) $(CFLAGS) -o $@ $@.c -L$(LIB) -llua
 
 trace:	trace.c $(LIBLUA)
-	$(CC) $(CFLAGS) -o $@ $@.c -L$(LIB) -llua -llualib -lm
+	$(CC) -g $(CFLAGS) -o $@ $@.c -L$(LIB) -llua -llualib $(EXTRA_LIBS)
 
-def:	lua.def
+noparser: noparser.c
+	$(CC) $(CFLAGS) -I$(LUA)/src -o $@.o -c $@.c
 
-lua.def: $(INC)/lua.h
-	$(BIN)/lua def.lua < $(INC)/lua.h > $@
-	# cat $(INC)/l*.h | $(BIN)/lua def.lua > $@
+luab:	noparser $(LIBLUA)
+	cc -o $@ noparser.o $(LUA)/src/lua/lua.o -L$(LIB) -llua -llualib $(EXTRA_LIBS)
+	$(BIN)/luac $(LUA)/test/hello.lua
+	$@ luac.out
+	-$@ -e'a=1'
 
-stdcall:
-	mkdir -p Stdcall
-	grep -l _API $(LUA)/src/*.[ch] $(LUA)/src/*/*.[ch] | xargs -n1 -i echo $(BIN)/lua stdcall.lua '<{}' '>Stdcall/{}'
+flat:
+	cd ..; mkdir flat; mv include/*.h src/*.[ch] src/*/*.[ch] flat
 
 $(LIBLUA):
 	cd ../src; $(MAKE)
 
 clean:
-	rm -f $(ALL)
+	rm -f $(ALL) a.out core *.o luac.out
+
+luser_tests.h: RCS/ltests.h,v
+	co -q -M ltests.h
+	mv -f ltests.h $@

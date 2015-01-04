@@ -1,4 +1,52 @@
-This is Lua 4.0.
+This is Lua 5.0.
+
+* Changes from version 4.0 to 5.0
+  -------------------------------
+  Language:
+  + lexical scoping.
+  + Lua coroutines.
+  + standard libraries now packaged in tables.
+  + tags replaced by metatables and tag methods replaced by metamethods,
+    stored in metatables.
+  + proper tail calls.
+  + each function can have its own global table, which can be shared.
+  + new __newindex metamethod, called when we insert a new key into a table.
+  + new block comments: --[[ ... ]].
+  + new generic for.
+  + new weak tables.
+  + new boolean type.
+  + new syntax "local function".
+  + (f()) returns the first value returned by f.
+  + {f()} fills a table with all values returned by f.
+  + \n ignored in [[\n .
+  + fixed and-or priorities.
+  + more general syntax for function definition (e.g. function a.x.y:f()...end).
+  + more general syntax for function calls (e.g. (print or write)(9)).
+  + new functions (time/date, tmpfile, unpack, require, load*, etc.).
+  API:
+  + chunks are loaded by using lua_load; new luaL_loadfile and luaL_loadbuffer.
+  + introduced lightweight userdata, a simple "void*" without a metatable.
+  + new error handling protocol: the core no longer prints error messages;
+    all errors are reported to the caller on the stack.
+  + new lua_atpanic for host cleanup.
+  + new, signal-safe, hook scheme.
+  Implementation:
+  + new license: MIT.
+  + new, faster, register-based virtual machine.
+  + support for external multithreading and coroutines.
+  + new and consistent error message format.
+  + the core no longer needs "stdio.h" for anything (except for a single
+    use of sprintf to convert numbers to strings).
+  + lua.c now runs the environment variable LUA_INIT, if present. It can
+    be "@filename", to run a file, or the chunk itself.
+  + support for user extensions in lua.c.
+    sample implementation given for command line editing.
+  + new dynamic loading library, active by default on several platforms.
+  + safe garbage-collector metamethods.
+  + precompiled bytecodes checked for integrity (secure binary dostring).
+  + strings are fully aligned.
+  + position capture in string.find.
+  + read('*l') can read lines with embedded zeros.
 
 * Changes from version 3.2 to 4.0
   -------------------------------
@@ -18,7 +66,7 @@ This is Lua 4.0.
   + New API: fully re-entrant, simpler, and more efficient.
   + New debug API.
   Implementation:
-  + cleaner virtual machine -- at least 20% faster.
+  + faster than ever: cleaner virtual machine and new hashing algorithm.
   + non-recursive garbage-collector algorithm.
   + reduced memory usage for programs with many strings.
   + improved treatment for memory allocation errors.
