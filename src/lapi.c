@@ -1,16 +1,17 @@
 /*
-** $Id: lapi.c,v 2.238 2014/10/17 19:17:55 roberto Exp $
+** $Id: lapi.c,v 2.243 2014/11/12 13:28:54 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
 
-
-#include <math.h>
-#include <stdarg.h>
-#include <string.h>
-
 #define lapi_c
 #define LUA_CORE
+
+#include "lprefix.h"
+
+
+#include <stdarg.h>
+#include <string.h>
 
 #include "lua.h"
 
@@ -93,22 +94,22 @@ static void growstack (lua_State *L, void *ud) {
 }
 
 
-LUA_API int lua_checkstack (lua_State *L, int size) {
+LUA_API int lua_checkstack (lua_State *L, int n) {
   int res;
   CallInfo *ci = L->ci;
   lua_lock(L);
-  api_check(size >= 0, "negative 'size'");
-  if (L->stack_last - L->top > size)  /* stack large enough? */
+  api_check(n >= 0, "negative 'n'");
+  if (L->stack_last - L->top > n)  /* stack large enough? */
     res = 1;  /* yes; check is OK */
   else {  /* no; need to grow stack */
     int inuse = cast_int(L->top - L->stack) + EXTRA_STACK;
-    if (inuse > LUAI_MAXSTACK - size)  /* can grow without overflow? */
+    if (inuse > LUAI_MAXSTACK - n)  /* can grow without overflow? */
       res = 0;  /* no */
     else  /* try to grow stack */
-      res = (luaD_rawrunprotected(L, &growstack, &size) == LUA_OK);
+      res = (luaD_rawrunprotected(L, &growstack, &n) == LUA_OK);
   }
-  if (res && ci->top < L->top + size)
-    ci->top = L->top + size;  /* adjust frame top */
+  if (res && ci->top < L->top + n)
+    ci->top = L->top + n;  /* adjust frame top */
   lua_unlock(L);
   return res;
 }
@@ -178,7 +179,7 @@ LUA_API void lua_settop (lua_State *L, int idx) {
   }
   else {
     api_check(-(idx+1) <= (L->top - (func + 1)), "invalid new top");
-    L->top += idx+1;  /* `subtract' index (index is negative) */
+    L->top += idx+1;  /* 'subtract' index (index is negative) */
   }
   lua_unlock(L);
 }
@@ -375,7 +376,7 @@ LUA_API const char *lua_tolstring (lua_State *L, int idx, size_t *len) {
       if (len != NULL) *len = 0;
       return NULL;
     }
-    lua_lock(L);  /* `luaO_tostring' may create a new string */
+    lua_lock(L);  /* 'luaO_tostring' may create a new string */
     luaC_checkGC(L);
     o = index2addr(L, idx);  /* previous call may reallocate the stack */
     luaO_tostring(L, o);
@@ -577,12 +578,12 @@ LUA_API int lua_pushthread (lua_State *L) {
 */
 
 
-LUA_API int lua_getglobal (lua_State *L, const char *var) {
+LUA_API int lua_getglobal (lua_State *L, const char *name) {
   Table *reg = hvalue(&G(L)->l_registry);
   const TValue *gt;  /* global table */
   lua_lock(L);
   gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
-  setsvalue2s(L, L->top++, luaS_new(L, var));
+  setsvalue2s(L, L->top++, luaS_new(L, name));
   luaV_gettable(L, gt, L->top - 1, L->top - 1);
   lua_unlock(L);
   return ttnov(L->top - 1);
@@ -717,13 +718,13 @@ LUA_API int lua_getuservalue (lua_State *L, int idx) {
 */
 
 
-LUA_API void lua_setglobal (lua_State *L, const char *var) {
+LUA_API void lua_setglobal (lua_State *L, const char *name) {
   Table *reg = hvalue(&G(L)->l_registry);
   const TValue *gt;  /* global table */
   lua_lock(L);
   api_checknelems(L, 1);
   gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
-  setsvalue2s(L, L->top++, luaS_new(L, var));
+  setsvalue2s(L, L->top++, luaS_new(L, name));
   luaV_settable(L, gt, L->top - 1, L->top - 2);
   L->top -= 2;  /* pop value and key */
   lua_unlock(L);
@@ -867,7 +868,7 @@ LUA_API void lua_setuservalue (lua_State *L, int idx) {
 
 
 /*
-** `load' and `call' functions (run Lua code)
+** 'load' and 'call' functions (run Lua code)
 */
 
 
@@ -902,7 +903,7 @@ LUA_API void lua_callk (lua_State *L, int nargs, int nresults,
 /*
 ** Execute a protected call.
 */
-struct CallS {  /* data to `f_call' */
+struct CallS {  /* data to 'f_call' */
   StkId func;
   int nresults;
 };
@@ -969,7 +970,7 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
   status = luaD_protectedparser(L, &z, chunkname, mode);
   if (status == LUA_OK) {  /* no errors? */
     LClosure *f = clLvalue(L->top - 1);  /* get newly created function */
-    if (f->nupvalues == 1) {  /* does it have one upvalue? */
+    if (f->nupvalues >= 1) {  /* does it have an upvalue? */
       /* get global table from registry */
       Table *reg = hvalue(&G(L)->l_registry);
       const TValue *gt = luaH_getint(reg, LUA_RIDX_GLOBALS);

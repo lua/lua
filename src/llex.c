@@ -1,15 +1,17 @@
 /*
-** $Id: llex.c,v 2.84 2014/10/22 11:44:20 roberto Exp $
+** $Id: llex.c,v 2.89 2014/11/14 16:06:09 roberto Exp $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
 
+#define llex_c
+#define LUA_CORE
+
+#include "lprefix.h"
+
 
 #include <locale.h>
 #include <string.h>
-
-#define llex_c
-#define LUA_CORE
 
 #include "lua.h"
 
@@ -41,7 +43,7 @@ static const char *const luaX_tokens [] = {
     "return", "then", "true", "until", "while",
     "//", "..", "...", "==", ">=", "<=", "~=",
     "<<", ">>", "::", "<eof>",
-    "<number>", "<number>", "<name>", "<string>"
+    "<number>", "<integer>", "<name>", "<string>"
 };
 
 
@@ -125,7 +127,7 @@ l_noret luaX_syntaxerror (LexState *ls, const char *msg) {
 */
 TString *luaX_newstring (LexState *ls, const char *str, size_t l) {
   lua_State *L = ls->L;
-  TValue *o;  /* entry for `str' */
+  TValue *o;  /* entry for 'str' */
   TString *ts = luaS_newlstr(L, str, l);  /* create new string */
   setsvalue2s(L, L->top++, ts);  /* temporarily anchor it in stack */
   o = luaH_set(L, ls->h, L->top - 1);
@@ -150,16 +152,17 @@ TString *luaX_newstring (LexState *ls, const char *str, size_t l) {
 static void inclinenumber (LexState *ls) {
   int old = ls->current;
   lua_assert(currIsNewline(ls));
-  next(ls);  /* skip `\n' or `\r' */
+  next(ls);  /* skip '\n' or '\r' */
   if (currIsNewline(ls) && ls->current != old)
-    next(ls);  /* skip `\n\r' or `\r\n' */
+    next(ls);  /* skip '\n\r' or '\r\n' */
   if (++ls->linenumber >= MAX_INT)
-    luaX_syntaxerror(ls, "chunk has too many lines");
+    lexerror(ls, "chunk has too many lines", 0);
 }
 
 
 void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source,
                     int firstchar) {
+  ls->t.token = 0;
   ls->decpoint = '.';
   ls->L = L;
   ls->current = firstchar;
@@ -298,7 +301,7 @@ static int skip_sep (LexState *ls) {
 
 static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
   int line = ls->linenumber;  /* initial line (for error message) */
-  save_and_next(ls);  /* skip 2nd `[' */
+  save_and_next(ls);  /* skip 2nd '[' */
   if (currIsNewline(ls))  /* string starts with a newline? */
     inclinenumber(ls);  /* skip it */
   for (;;) {
@@ -312,7 +315,7 @@ static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
       }
       case ']': {
         if (skip_sep(ls) == sep) {
-          save_and_next(ls);  /* skip 2nd `]' */
+          save_and_next(ls);  /* skip 2nd ']' */
           goto endloop;
         }
         break;
@@ -438,7 +441,7 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
           }
           default: {
             esccheck(ls, lisdigit(ls->current), "invalid escape sequence");
-            c = readdecesc(ls);  /* digital escape \ddd */
+            c = readdecesc(ls);  /* digital escape '\ddd' */
             goto only_save;
           }
         }
@@ -480,7 +483,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         next(ls);
         if (ls->current == '[') {  /* long comment? */
           int sep = skip_sep(ls);
-          luaZ_resetbuffer(ls->buff);  /* `skip_sep' may dirty the buffer */
+          luaZ_resetbuffer(ls->buff);  /* 'skip_sep' may dirty the buffer */
           if (sep >= 0) {
             read_long_string(ls, NULL, sep);  /* skip long comment */
             luaZ_resetbuffer(ls->buff);  /* previous call may dirty the buff. */

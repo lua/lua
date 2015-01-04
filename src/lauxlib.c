@@ -1,8 +1,13 @@
 /*
-** $Id: lauxlib.c,v 1.270 2014/10/22 11:44:20 roberto Exp $
+** $Id: lauxlib.c,v 1.277 2014/12/10 11:31:32 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
+
+#define lauxlib_c
+#define LUA_LIB
+
+#include "lprefix.h"
 
 
 #include <errno.h>
@@ -15,9 +20,6 @@
 /* This file uses only the official API of Lua.
 ** Any function declared here could be written as an application function.
 */
-
-#define lauxlib_c
-#define LUA_LIB
 
 #include "lua.h"
 
@@ -81,20 +83,18 @@ static int pushglobalfuncname (lua_State *L, lua_Debug *ar) {
 
 
 static void pushfuncname (lua_State *L, lua_Debug *ar) {
-  if (*ar->namewhat != '\0')  /* is there a name? */
-    lua_pushfstring(L, "function '%s'", ar->name);
+  if (pushglobalfuncname(L, ar)) {  /* try first a global name */
+    lua_pushfstring(L, "function '%s'", lua_tostring(L, -1));
+    lua_remove(L, -2);  /* remove name */
+  }
+  else if (*ar->namewhat != '\0')  /* is there a name from code? */
+    lua_pushfstring(L, "%s '%s'", ar->namewhat, ar->name);  /* use it */
   else if (*ar->what == 'm')  /* main? */
       lua_pushliteral(L, "main chunk");
-  else if (*ar->what == 'C') {
-    if (pushglobalfuncname(L, ar)) {
-      lua_pushfstring(L, "function '%s'", lua_tostring(L, -1));
-      lua_remove(L, -2);  /* remove name */
-    }
-    else
-      lua_pushliteral(L, "?");
-  }
-  else
+  else if (*ar->what != 'C')  /* for Lua functions, use <file:line> */
     lua_pushfstring(L, "function <%s:%d>", ar->short_src, ar->linedefined);
+  else  /* nothing left... */
+    lua_pushliteral(L, "?");
 }
 
 
@@ -156,7 +156,7 @@ LUALIB_API int luaL_argerror (lua_State *L, int arg, const char *extramsg) {
     return luaL_error(L, "bad argument #%d (%s)", arg, extramsg);
   lua_getinfo(L, "n", &ar);
   if (strcmp(ar.namewhat, "method") == 0) {
-    arg--;  /* do not count `self' */
+    arg--;  /* do not count 'self' */
     if (arg == 0)  /* error is in the self argument itself? */
       return luaL_error(L, "calling '%s' on bad self (%s)",
                            ar.name, extramsg);
@@ -277,8 +277,7 @@ LUALIB_API int luaL_execresult (lua_State *L, int stat) {
 */
 
 LUALIB_API int luaL_newmetatable (lua_State *L, const char *tname) {
-  luaL_getmetatable(L, tname);  /* try to get metatable */
-  if (!lua_isnil(L, -1))  /* name already in use? */
+  if (luaL_getmetatable(L, tname))  /* name already in use? */
     return 0;  /* leave previous value on top, but return 0 */
   lua_pop(L, 1);
   lua_newtable(L);  /* create metatable */
@@ -526,7 +525,7 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
   int ref;
   if (lua_isnil(L, -1)) {
     lua_pop(L, 1);  /* remove from stack */
-    return LUA_REFNIL;  /* `nil' has a unique fixed reference */
+    return LUA_REFNIL;  /* 'nil' has a unique fixed reference */
   }
   t = lua_absindex(L, t);
   lua_rawgeti(L, t, freelist);  /* get first free element */
@@ -565,7 +564,7 @@ LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
 typedef struct LoadF {
   int n;  /* number of pre-read characters */
   FILE *f;  /* file being read */
-  char buff[LUAL_BUFFERSIZE];  /* area for reading file */
+  char buff[BUFSIZ];  /* area for reading file */
 } LoadF;
 
 
@@ -658,7 +657,7 @@ LUALIB_API int luaL_loadfilex (lua_State *L, const char *filename,
   readstatus = ferror(lf.f);
   if (filename) fclose(lf.f);  /* close file (even in case of errors) */
   if (readstatus) {
-    lua_settop(L, fnameindex);  /* ignore results from `lua_load' */
+    lua_settop(L, fnameindex);  /* ignore results from 'lua_load' */
     return errfile(L, "read", fnameindex);
   }
   lua_remove(L, fnameindex);
@@ -918,7 +917,7 @@ LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
   while ((wild = strstr(s, p)) != NULL) {
     luaL_addlstring(&b, s, wild - s);  /* push prefix */
     luaL_addstring(&b, r);  /* push replacement in place of pattern */
-    s = wild + l;  /* continue after `p' */
+    s = wild + l;  /* continue after 'p' */
   }
   luaL_addstring(&b, s);  /* push last suffix */
   luaL_pushresult(&b);
@@ -938,8 +937,8 @@ static void *l_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
 
 
 static int panic (lua_State *L) {
-  luai_writestringerror("PANIC: unprotected error in call to Lua API (%s)\n",
-                   lua_tostring(L, -1));
+  lua_writestringerror("PANIC: unprotected error in call to Lua API (%s)\n",
+                        lua_tostring(L, -1));
   return 0;  /* return to Lua to abort */
 }
 

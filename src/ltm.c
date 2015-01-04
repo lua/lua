@@ -1,14 +1,16 @@
 /*
-** $Id: ltm.c,v 2.29 2014/07/18 13:36:14 roberto Exp $
+** $Id: ltm.c,v 2.33 2014/11/21 12:15:57 roberto Exp $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
 
-
-#include <string.h>
-
 #define ltm_c
 #define LUA_CORE
+
+#include "lprefix.h"
+
+
+#include <string.h>
 
 #include "lua.h"
 
@@ -84,7 +86,7 @@ const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
 void luaT_callTM (lua_State *L, const TValue *f, const TValue *p1,
                   const TValue *p2, TValue *p3, int hasres) {
   ptrdiff_t result = savestack(L, p3);
-  setobj2s(L, L->top++, f);  /* push function */
+  setobj2s(L, L->top++, f);  /* push function (assume EXTRA_STACK) */
   setobj2s(L, L->top++, p1);  /* 1st argument */
   setobj2s(L, L->top++, p2);  /* 2nd argument */
   if (!hasres)  /* no result? 'p3' is third argument */
@@ -115,15 +117,17 @@ void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
     switch (event) {
       case TM_CONCAT:
         luaG_concaterror(L, p1, p2);
-      case TM_IDIV: case TM_BAND: case TM_BOR: case TM_BXOR:
+      case TM_BAND: case TM_BOR: case TM_BXOR:
       case TM_SHL: case TM_SHR: case TM_BNOT: {
         lua_Number dummy;
         if (tonumber(p1, &dummy) && tonumber(p2, &dummy))
           luaG_tointerror(L, p1, p2);
+        else
+          luaG_opinterror(L, p1, p2, "perform bitwise operation on");
         /* else go through */
       }
       default:
-        luaG_aritherror(L, p1, p2);
+        luaG_opinterror(L, p1, p2, "perform arithmetic on");
     }
   }
 }

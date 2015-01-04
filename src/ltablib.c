@@ -1,15 +1,17 @@
 /*
-** $Id: ltablib.c,v 1.77 2014/10/17 16:28:21 roberto Exp $
+** $Id: ltablib.c,v 1.79 2014/11/02 19:19:04 roberto Exp $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
 
+#define ltablib_c
+#define LUA_LIB
+
+#include "lprefix.h"
+
 
 #include <limits.h>
 #include <stddef.h>
-
-#define ltablib_c
-#define LUA_LIB
 
 #include "lua.h"
 
@@ -225,7 +227,7 @@ static int unpack (lua_State *L) {
 /*
 ** {======================================================
 ** Quicksort
-** (based on `Algorithms in MODULA-3', Robert Sedgewick;
+** (based on 'Algorithms in MODULA-3', Robert Sedgewick;
 **  Addison-Wesley, 1993.)
 ** =======================================================
 */
@@ -241,7 +243,7 @@ static int sort_comp (lua_State *L, int a, int b) {
     int res;
     lua_pushvalue(L, 2);
     lua_pushvalue(L, a-1);  /* -1 to compensate function */
-    lua_pushvalue(L, b-2);  /* -2 to compensate function and `a' */
+    lua_pushvalue(L, b-2);  /* -2 to compensate function and 'a' */
     lua_call(L, 2, 1);
     res = lua_toboolean(L, -1);
     lua_pop(L, 1);
