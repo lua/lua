@@ -1,0 +1,66 @@
+
+
+
+LUAC(1)                   User Commands                   LUAC(1)
+
+
+
+NAME
+     luac - Lua compiler
+
+SYNOPSIS
+     luac [ -dlpv ] [ -o outputfile ] sourcefile ...
+
+DESCRIPTION
+     luac is the Lua compiler.  It translates programs written in
+     the Lua programming language into binary files that can be
+     loaded and executed with lua_dofile in C or dofile in Lua.
+
+     luac produces a single output file containing the bytecode
+     for all named source files.  By default, the output file is
+     named luac.out, but you can change this with the -o option.
+
+     You can use "-" to indicate stdin as a source file.
+
+OPTIONS
+     -d        turns debugging on.
+
+     -l        produces a listing of the compiled bytecode for
+               Lua's virtual machine.
+
+     -p        parses sources files but does not generate any
+               output file.
+
+     -v        prints version information.
+
+     -o outputfile
+               Name the output file output, instead of the
+               default luac.out.  The output file cannot be a
+               source file.
+
+FILES
+     luac.out            default output file
+
+SEE ALSO
+     lua(1)
+
+     Reference Manual of the Programming Language Lua
+
+DIAGNOSTICS
+     Error messages should be self explanatory.
+
+BUGS
+     Inherits any bugs from Lua, but Lua has no bugs...
+
+AUTHORS
+     W. Celes, R. Ierusalimschy & L. H. de Figueiredo
+     (lua@icad.puc-rio.br)
+
+
+
+
+
+Formatted 96/03/29        12 March 1996                         1
+
+
+

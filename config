@@ -1,0 +1,28 @@
+# configuration file for making Lua
+
+# you need an ANSI C compiler
+CC= gcc
+WARN= -Wall -Wmissing-prototypes -Wshadow -ansi
+
+# in SunOs 4.1.x, uncomment the following line to avoid prototypes warnings
+# for standard functions
+#EXTRA_INCS=  -I/usr/5include
+
+# if you don't have popen() in your C library, comment the following line:
+POPEN= -DPOPEN
+
+# if your C library is not POSIX compliant, comment the following line:
+POSIX= -DPOSIX
+
+### NO NEED TO CHANGE ANYTHING BELOW THIS LINE ================================
+
+VERSION= 2.4
+
+INC= $(LUA)/include
+LIB= $(LUA)/lib
+BIN= $(LUA)/bin
+
+INCS= -I$(INC) $(EXTRA_INCS)
+DEFS= $(EXTRA_DEFS)
+
+CFLAGS= -O2 $(WARN) $(INCS) $(DEFS)

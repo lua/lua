@@ -3,15 +3,14 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.29 1995/11/10 18:32:59 roberto Exp $";
+char *rcs_iolib="$Id: iolib.c,v 1.44 1996/05/03 20:10:59 roberto Exp $";
 
 #include <stdio.h>
 #include <ctype.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include "lua.h"
 #include "luadebug.h"
@@ -28,6 +27,14 @@ int pclose();
 #define pclose(x)  (-1)
 #endif
 
+
+static void pushresult (int i)
+{
+  if (i)
+    lua_pushnumber (1);
+  else
+   lua_pushnil();
+}
 
 static void closeread (void)
 {
@@ -116,15 +123,12 @@ static void io_writeto (void)
 ** LUA interface:
 **			status = appendto (filename)
 ** where:
-**			status = 2 -> success (already exist)
-**			status = 1 -> success (new file)
+**			status = 1 -> success
 **			status = nil -> error
 */
 static void io_appendto (void)
 {
  char *s = lua_check_string(1, "appendto");
- struct stat st;
- int r = (stat(s, &st) == -1) ? 1 : 2;
  FILE *fp = fopen (s, "a");
  if (fp == NULL)
   lua_pushnil();
@@ -132,7 +136,7 @@ static void io_appendto (void)
  {
   if (out != stdout) fclose (out);
   out = fp;
-  lua_pushnumber (r);
+  lua_pushnumber(1);
  }
 }
 
@@ -142,14 +146,13 @@ static char getformat (char *f, int *just, int *m, int *n)
   int t;
   switch (*f++)
   {
+    case 'q': case 'Q':
     case 's': case 'S':
-      t = 's';
+    case 'i': case 'I':
+      t = tolower(*(f-1));
       break;
     case 'f': case 'F': case 'g': case 'G': case 'e': case 'E':
       t = 'f';
-      break;
-    case 'i': case 'I':
-      t = 'i';
       break;
     default:
       t = 0;  /* to avoid compiler warnings */
@@ -177,32 +180,6 @@ static char getformat (char *f, int *just, int *m, int *n)
 }
 
 
-static char *add_char (int c)
-{
-  static char *buff = NULL;
-  static int max = 0;
-  static int n = 0;
-  if (n >= max)
-  {
-    if (max == 0)
-    {
-      max = 100;
-      buff = (char *)malloc(max);
-    }
-    else
-    {
-      max *= 2;
-      buff = (char *)realloc(buff, max);
-    }
-    if (buff == NULL)
-      lua_error("memory overflow");
-  }
-  buff[n++] = c;
-  if (c == 0)
-    n = 0;  /* prepare for next string */
-  return buff;
-}
-
 /*
 ** Read a variable. On error put nil on stack.
 ** LUA interface:
@@ -222,23 +199,23 @@ static int read_until_char (int del)
 {
   int c;
   while((c = fgetc(in)) != EOF && c != del)
-    add_char(c);
+    luaI_addchar(c);
   return c;
 }
 
-static int read_until_blank (void)
+static void read_until_blank (void)
 {
   int c;
   while((c = fgetc(in)) != EOF && !isspace(c))
-    add_char(c);
-  return c;
+    luaI_addchar(c);
+  if (c != EOF) ungetc(c,in);
 }
 
 static void read_m (int m)
 {
   int c;
   while (m-- && (c = fgetc(in)) != EOF)
-    add_char(c);
+    luaI_addchar(c);
 }
 
 
@@ -256,21 +233,18 @@ static void read_free (void)
   { /* string */
     c = read_until_char(c);
     if (c == EOF)
-    {
-      add_char(0);  /* to be ready for next time */
       lua_pushnil();
-    }
     else
-      lua_pushstring(add_char(0));
+      lua_pushstring(luaI_addchar(0));
   }
   else
   {
     double d;
     char dummy;
     char *s;
-    add_char(c);
+    luaI_addchar(c);
     read_until_blank();
-    s = add_char(0);
+    s = luaI_addchar(0);
     if (sscanf(s, "%lf %c", &d, &dummy) == 1)
       lua_pushnumber(d);
     else
@@ -281,6 +255,7 @@ static void read_free (void)
 static void io_read (void)
 {
   lua_Object o = lua_getparam (1);
+  luaI_addchar(0);  /* initialize buffer */
   if (o == LUA_NOOBJECT) 	/* free format */
     read_free();
   else				/* formatted */
@@ -289,12 +264,19 @@ static void io_read (void)
     switch (getformat(lua_check_string(1, "read"), &dummy1, &m, &dummy2))
     {
       case 's':
+      {
+        char *s;
         if (m < 0)
           read_until_blank();
         else
           read_m(m);
-        lua_pushstring(add_char(0));
+        s = luaI_addchar(0);
+        if ((m >= 0 && strlen(s) == m) || (m < 0 && strlen(s) > 0))
+          lua_pushstring(s);
+        else
+          lua_pushnil();
         break;
+      }
 
       case 'i':  /* can read as float, since it makes no difference to Lua */
       case 'f':
@@ -306,7 +288,7 @@ static void io_read (void)
         else
         {
           read_m(m);
-          result = sscanf(add_char(0), "%lf", &d);
+          result = sscanf(luaI_addchar(0), "%lf", &d);
         }
         if (result == 1)
           lua_pushnumber(d);
@@ -314,6 +296,8 @@ static void io_read (void)
           lua_pushnil();
         break;
       }
+      default:
+        lua_arg_error("read (format)");
     }
   }
 }
@@ -324,10 +308,16 @@ static void io_read (void)
 */
 static void io_readuntil (void)
 {
- int del = *lua_check_string(1, "readuntil");
- int c = read_until_char(del);
+ int del, c;
+ lua_Object p = lua_getparam(1);
+ luaI_addchar(0);  /* initialize buffer */
+ if (p == LUA_NOOBJECT || lua_isnil(p))
+   del = EOF;
+ else
+  del = *lua_check_string(1, "readuntil");
+ c = read_until_char(del);
  if (c != EOF) ungetc(c,in);
- lua_pushstring(add_char(0));
+ lua_pushstring(luaI_addchar(0));
 }
 
 
@@ -384,6 +374,13 @@ static int write_string (char *s, int just, int m)
   return status;
 }
 
+static int write_quoted (int just, int m)
+{
+  luaI_addchar(0);
+  luaI_addquoted(lua_check_string(1, "write"));
+  return write_string(luaI_addchar(0), just, m);
+}
+
 static int write_float (int just, int m, int n)
 {
   char buffer[100];
@@ -420,15 +417,16 @@ static void io_write (void)
   if (lua_getparam (2) == LUA_NOOBJECT)   /* free format */
   {
     lua_Object o1 = lua_getparam(1);
-    if (lua_isnumber(o1))
+    int t = lua_type(o1);
+    if (t == LUA_T_NUMBER)
       status = fprintf (out, "%g", lua_getnumber(o1)) >= 0;
-    else if (lua_isstring(o1))
+    else if (t == LUA_T_STRING)
       status = fprintf (out, "%s", lua_getstring(o1)) >= 0;
   }
   else					/* formated */
   {
     int just, m, n;
-    switch (getformat (lua_check_string(2, "write"), &just, &m, &n))
+    switch (getformat(lua_check_string(2, "write"), &just, &m, &n))
     {
       case 's':
       {
@@ -439,6 +437,9 @@ static void io_write (void)
           status = 0;
         break;
       }
+      case 'q':
+        status = write_quoted(just, m);
+        break;
       case 'f':
         status = write_float(just, m, n);
         break;
@@ -467,59 +468,54 @@ static void io_execute (void)
 */
 static void io_remove  (void)
 {
- if (remove(lua_check_string(1, "remove")) == 0)
-   lua_pushnumber (1);
- else
-   lua_pushnil();
+  pushresult(remove(lua_check_string(1, "remove")) == 0);
+}
+
+static void io_rename (void)
+{
+  char *f1 = lua_check_string(1, "rename");
+  char *f2 = lua_check_string(2, "rename");
+  pushresult(rename(f1, f2) == 0);
+}
+
+static void io_tmpname (void)
+{
+  lua_pushstring(tmpnam(NULL));
+}
+
+static void io_errorno (void)
+{
+/*  lua_pushstring(strerror(errno));*/
 }
 
 
 /*
-** To get a environment variables
+** To get a environment variable
 */
 static void io_getenv (void)
 {
  char *env = getenv(lua_check_string(1, "getenv"));
- if (env == NULL) lua_pushnil();
- else             lua_pushstring(env); 
+ lua_pushstring(env);  /* if NULL push nil */
 }
 
 /*
-** Return time: hour, min, sec
-*/
-static void io_time (void)
-{
- time_t t;
- struct tm *s;
- 
- time(&t);
- s = localtime(&t);
- lua_pushnumber(s->tm_hour);
- lua_pushnumber(s->tm_min);
- lua_pushnumber(s->tm_sec);
-}
- 
-/*
-** Return date: dd, mm, yyyy
+** Return user formatted time stamp
 */
 static void io_date (void)
 {
  time_t t;
- struct tm *s;
- 
- time(&t);
- s = localtime(&t);
- lua_pushnumber(s->tm_mday);
- lua_pushnumber(s->tm_mon+1);
- lua_pushnumber(s->tm_year+1900);
-}
- 
-/*
-** Beep
-*/
-static void io_beep (void)
-{
- printf("\a");
+ struct tm *tm;
+ char *s;
+ char b[BUFSIZ];
+ if (lua_getparam(1) == LUA_NOOBJECT)
+  s = "%c";
+ else
+  s = lua_check_string(1, "date");
+ time(&t); tm = localtime(&t);
+ if (strftime(b,sizeof(b),s,tm))
+  lua_pushstring(b);
+ else
+  lua_error("invalid `date' format");
 }
  
 /*
@@ -528,9 +524,8 @@ static void io_beep (void)
 static void io_exit (void)
 {
  lua_Object o = lua_getparam(1);
- if (lua_isstring(o))
-  fprintf(stderr, "%s\n", lua_getstring(o));
- exit(1);
+ int code = lua_isnumber(o) ? (int)lua_getnumber(o) : 1;
+ exit(code);
 }
 
 /*
@@ -543,14 +538,14 @@ static void io_debug (void)
   {
     char buffer[250];
     fprintf(stderr, "lua_debug> ");
-    if (gets(buffer) == 0) return;
+    if (fgets(buffer, sizeof(buffer), stdin) == 0) return;
     if (strcmp(buffer, "cont") == 0) return;
     lua_dostring(buffer);
   }
 }
 
 
-void lua_printstack (FILE *f)
+static void lua_printstack (FILE *f)
 {
   int level = 0;
   lua_Object func;
@@ -560,13 +555,13 @@ void lua_printstack (FILE *f)
     char *name;
     int currentline;
     fprintf(f, "\t");
-    switch (*getobjname(func, &name))
+    switch (*lua_getobjname(func, &name))
     {
       case 'g':
         fprintf(f, "function %s", name);
         break;
       case 'f':
-        fprintf(f, "fallback %s", name);
+        fprintf(f, "`%s' fallback", name);
         break;
       default:
       {
@@ -582,7 +577,7 @@ void lua_printstack (FILE *f)
       }
     }
     if ((currentline = lua_currentline(func)) > 0)
-      fprintf(f, "  at line %d", currentline);
+      fprintf(f, " at line %d", currentline);
     fprintf(f, "\n");
   }
 }
@@ -597,26 +592,27 @@ static void errorfb (void)
 }
 
 
-/*
-** Open io library
-*/
+static struct lua_reg iolib[] = {
+{"readfrom", io_readfrom},
+{"writeto",  io_writeto},
+{"appendto", io_appendto},
+{"read",     io_read},
+{"readuntil",io_readuntil},
+{"write",    io_write},
+{"execute",  io_execute},
+{"remove",   io_remove},
+{"rename",   io_rename},
+{"tmpname",   io_tmpname},
+{"ioerror",   io_errorno},
+{"getenv",   io_getenv},
+{"date",     io_date},
+{"exit",     io_exit},
+{"debug",    io_debug},
+{"print_stack", errorfb}
+};
+
 void iolib_open (void)
 {
- lua_register ("readfrom", io_readfrom);
- lua_register ("writeto",  io_writeto);
- lua_register ("appendto", io_appendto);
- lua_register ("read",     io_read);
- lua_register ("readuntil",io_readuntil);
- lua_register ("write",    io_write);
- lua_register ("execute",  io_execute);
- lua_register ("remove",   io_remove);
- lua_register ("getenv",   io_getenv);
- lua_register ("time",     io_time);
- lua_register ("date",     io_date);
- lua_register ("beep",     io_beep);
- lua_register ("exit",     io_exit);
- lua_register ("debug",    io_debug);
- lua_register ("print_stack", errorfb);
- lua_setfallback("error", errorfb);
+  luaI_openlib(iolib, (sizeof(iolib)/sizeof(iolib[0])));
+  lua_setfallback("error", errorfb);
 }
-

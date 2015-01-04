@@ -1,22 +1,18 @@
-char *rcs_lex = "$Id: lex.c,v 2.21 1995/11/16 20:46:24 roberto Exp $";
+char *rcs_lex = "$Id: lex.c,v 2.32 1996/03/21 16:33:47 roberto Exp $";
  
 
 #include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "mem.h"
 #include "tree.h"
 #include "table.h"
-#include "opcode.h"
+#include "lex.h"
 #include "inout.h"
+#include "luadebug.h"
 #include "parser.h"
-#include "ugly.h"
 
 #define MINBUFF 260
-
-#define lua_strcmp(a,b)	(a[0]<b[0]?(-1):(a[0]>b[0]?(1):strcmp(a,b)))
 
 #define next() { current = input(); }
 #define save(x) { *yytextLast++ = (x); }
@@ -47,7 +43,6 @@ char *lua_lasttext (void)
 }
 
 
-/* The reserved words must be listed in lexicographic order */
 static struct
   {
     char *name;
@@ -74,30 +69,21 @@ static struct
 #define RESERVEDSIZE (sizeof(reserved)/sizeof(reserved[0]))
 
 
-static int findReserved (char *name)
+void luaI_addReserved (void)
 {
-  int l = 0;
-  int h = RESERVEDSIZE - 1;
-  while (l <= h)
+  int i;
+  for (i=0; i<RESERVEDSIZE; i++)
   {
-    int m = (l+h)/2;
-    int comp = lua_strcmp(name, reserved[m].name);
-    if (comp < 0)
-      h = m-1;
-    else if (comp == 0)
-      return reserved[m].token;
-    else
-      l = m+1;
+    TaggedString *ts = lua_createstring(reserved[i].name);
+    ts->marked = reserved[i].token;  /* reserved word  (always > 255) */
   }
-  return 0;
 }
 
 
 static void growtext (void)
 {
   int size = yytextLast - yytext;
-  textsize *= 2;
-  yytext = growvector(yytext, textsize, char);
+  textsize = growvector(&yytext, textsize, char, lexEM, MAX_WORD);
   yytextLast = yytext + size;
 }
 
@@ -144,9 +130,9 @@ static int read_long_string (void)
 }
 
 
-int yylex (void)
+int luaY_lex (void)
 {
-  float a;
+  double a;
   static int linelasttoken = 0;
   if (lua_debug)
     luaI_codedebugline(linelasttoken);
@@ -154,9 +140,6 @@ int yylex (void)
   while (1)
   {
     yytextLast = yytext;
-#if 0
-    fprintf(stderr,"'%c' %d\n",current,current);
-#endif
     switch (current)
     {
       case EOF:
@@ -174,22 +157,21 @@ int yylex (void)
 	while (isalnum(current) || current == '_')
           save_and_next();
         *yytextLast = 0;
-	if (lua_strcmp(yytext, "debug") == 0)
+	if (strcmp(yytext, "debug") == 0)
 	{
-	  yylval.vInt = 1;
+	  luaY_lval.vInt = 1;
 	  return DEBUG;
         }
-	else if (lua_strcmp(yytext, "nodebug") == 0)
+	else if (strcmp(yytext, "nodebug") == 0)
 	{
-	  yylval.vInt = 0;
+	  luaY_lval.vInt = 0;
 	  return DEBUG;
         }
 	return WRONGTOKEN;
 
       case '-':
         save_and_next();
-        if (current != '-') return '-';  /* else goes through */
-      case '#':
+        if (current != '-') return '-';
         do { next(); } while (current != '\n' && current != 0);
         continue;
 
@@ -203,7 +185,7 @@ int yylex (void)
             return WRONGTOKEN;
           save_and_next();  /* pass the second ']' */
           *(yytextLast-2) = 0;  /* erases ']]' */
-          yylval.vWord = luaI_findconstantbyname(yytext+2);
+          luaY_lval.vWord = luaI_findconstantbyname(yytext+2);
           return STRING;
         }
 
@@ -254,6 +236,7 @@ int yylex (void)
                 case 'n': save('\n'); next(); break;
                 case 't': save('\t'); next(); break;
                 case 'r': save('\r'); next(); break;
+                case '\n': lua_linenumber++;  /* goes through */
                 default : save(current); next(); break;
               }
               break;
@@ -263,7 +246,7 @@ int yylex (void)
         }
         next();  /* skip the delimiter */
         *yytextLast = 0;
-        yylval.vWord = luaI_findconstantbyname(yytext);
+        luaY_lval.vWord = luaI_findconstantbyname(yytext);
         return STRING;
       }
 
@@ -281,12 +264,14 @@ int yylex (void)
       case 'Z':
       case '_':
       {
-        Word res;
+        TaggedString *ts;
         do { save_and_next(); } while (isalnum(current) || current == '_');
         *yytextLast = 0;
-        res = findReserved(yytext);
-        if (res) return res;
-        yylval.pNode = lua_constcreate(yytext);
+        ts = lua_createstring(yytext);
+        if (ts->marked > 2)
+          return ts->marked;  /* reserved word */
+        luaY_lval.pTStr = ts;
+        ts->marked = 2;  /* avoid GC */
         return NAME;
       }
 
@@ -305,47 +290,31 @@ int yylex (void)
       case '0': case '1': case '2': case '3': case '4':
       case '5': case '6': case '7': case '8': case '9':
 	a=0.0;
-        do { a=10*a+current-'0'; save_and_next(); } while (isdigit(current));
+        do { a=10.0*a+(current-'0'); save_and_next(); } while (isdigit(current));
         if (current == '.') save_and_next();
 fraction:
-	{ float da=0.1;
+	{ double da=0.1;
 	  while (isdigit(current))
 	  {a+=(current-'0')*da; da/=10.0; save_and_next()};
           if (current == 'e' || current == 'E')
           {
 	    int e=0;
 	    int neg;
-	    float ea;
+	    double ea;
             save_and_next();
 	    neg=(current=='-');
             if (current == '+' || current == '-') save_and_next();
             if (!isdigit(current)) return WRONGTOKEN;
-            do { e=10*e+current-'0'; save_and_next(); } while (isdigit(current));
+            do { e=10.0*e+(current-'0'); save_and_next(); } while (isdigit(current));
 	    for (ea=neg?0.1:10.0; e>0; e>>=1) 
 	    {
 	      if (e & 1) a*=ea;
 	      ea*=ea;
 	    }
           }
-          yylval.vFloat = a;
+          luaY_lval.vFloat = a;
           return NUMBER;
         }
-
-      case U_and: case U_do: case U_else: case U_elseif: case U_end:
-      case U_function: case U_if: case U_local: case U_nil: case U_not:
-      case U_or: case U_repeat: case U_return: case U_then:
-      case U_until: case U_while:
-      {
-        int old = current;
-        next();
-        return reserved[old-U_and].token;
-      }
-
-      case U_eq:	next(); return EQ;
-      case U_le:	next(); return LE;
-      case U_ge:	next(); return GE;
-      case U_ne:	next(); return NE;
-      case U_sc:	next(); return CONC;
 
       default: 		/* also end of file */
       {

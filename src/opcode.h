@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.14 1995/10/25 13:05:51 roberto Exp $
+** $Id: opcode.h,v 3.20 1996/03/15 13:13:13 roberto Exp $
 */
 
 #ifndef opcode_h
@@ -11,9 +11,6 @@
 #include "tree.h"
 #include "func.h"
 
-#ifndef real
-#define real float
-#endif
 
 #define FIELDS_PER_FLUSH 40
 
@@ -74,12 +71,9 @@ typedef enum
 #define MULT_RET	255
 
 
-typedef void (*Cfunction) (void);
-typedef int  (*Input) (void);
-
 typedef union
 {
- Cfunction     f;
+ lua_CFunction f;
  real          n;
  TaggedString *ts;
  TFunc         *tf;
@@ -94,10 +88,6 @@ typedef struct Object
  Value value;
 } Object;
 
-typedef struct
-{
- Object  object;
-} Symbol;
 
 /* Macros to access structure members */
 #define tag(o)		((o)->tag)
@@ -119,14 +109,14 @@ typedef struct
 
 typedef union
 {
- struct {char c1; char c2;} m;
+ struct {Byte c1; Byte c2;} m;
  Word w;
 } CodeWord;
 #define get_word(code,pc)    {code.m.c1 = *pc++; code.m.c2 = *pc++;}
 
 typedef union
 {
- struct {char c1; char c2; char c3; char c4;} m;
+ struct {Byte c1; Byte c2; Byte c3; Byte c4;} m;
  float f;
 } CodeFloat;
 #define get_float(code,pc)   {code.m.c1 = *pc++; code.m.c2 = *pc++;\
@@ -134,7 +124,7 @@ typedef union
 
 typedef union
 {
- struct {char c1; char c2; char c3; char c4;} m;
+ struct {Byte c1; Byte c2; Byte c3; Byte c4;} m;
  TFunc *tf;
 } CodeCode;
 #define get_code(code,pc)    {code.m.c1 = *pc++; code.m.c2 = *pc++;\
@@ -142,16 +132,12 @@ typedef union
 
 
 /* Exported functions */
-char   *lua_strdup (char *l);
-
-void    lua_setinput   (Input fn);	/* from "lex.c" module */
-char   *lua_lasttext   (void);		/* from "lex.c" module */
-int     yylex (void);		        /* from "lex.c" module */
 void    lua_parse      (TFunc *tf);	/* from "lua.stx" module */
 void	luaI_codedebugline (int line);  /* from "lua.stx" module */
 void    lua_travstack (int (*fn)(Object *));
 Object *luaI_Address (lua_Object o);
 void	luaI_pushobject (Object *o);
 void    luaI_gcFB       (Object *o);
+int     luaI_dorun (TFunc *tf);
 
 #endif

@@ -1,40 +1,66 @@
-# makefile for lua distribution
+# makefile for lua distribution (main library)
 
-INC= $(LUA)/include
-LIB= $(LUA)/lib
+LUA= ..
 
-# in SunOs /usr/5include contains prototypes for standard lib
-INCS= -I/usr/5include -I$(INC)
-WARN= -Wall -Wmissing-prototypes -Wshadow -ansi
+include $(LUA)/config
 
-CC= gcc
-CFLAGS= $(INCS) $(DEFS) $(WARN) -O2
+OBJS=	fallback.o\
+	func.o\
+	hash.o\
+	inout.o\
+	lex.o\
+	mem.o\
+	opcode.o\
+	parser.o\
+	table.o\
+	tree.o\
+	undump.o
 
-OBJS= fallback.o func.o hash.o inout.o lex.o mem.o opcode.o parser.o table.o tree.o
-SRCS= fallback.c func.c hash.c inout.c lex.c mem.c opcode.c table.c tree.c fallback.h func.h hash.h inout.h mem.h opcode.h table.h tree.h types.h ugly.h lua.stx
+SRCS=	fallback.c\
+	fallback.h\
+	func.c\
+	func.h\
+	hash.c\
+	hash.h\
+	inout.c\
+	inout.h\
+	lex.c\
+	lex.h\
+	mem.c\
+	mem.h\
+	opcode.c\
+	opcode.h\
+	parser.c\
+	parser.h\
+	table.c\
+	table.h\
+	tree.c\
+	tree.h\
+	types.h\
+	undump.c\
+	undump.h\
+	lua.stx
 
 SLIB= $(LIB)/liblua.a
 
-# dynamic libraries only work for SunOs
-DLIB= $(LIB)/liblua.so.$(VERSION)
-
 all: $(SLIB)
-
-dynamic: $(DLIB)
 
 $(SLIB): $(OBJS)
 	ar rcuv $@ $(OBJS)
 	ranlib $@
 
-$(DLIB): $(OBJS)
-	ld -o $@ $(OBJS)
-
 clean:
-	rm -f $(OBJS) $(SLIB) $(DLIB)
+	rm -f $(OBJS) $(SLIB)
 
 co:
 	co -f -M $(SRCS)
-	yacc -d lua.stx ; mv -f y.tab.c parser.c ; mv -f y.tab.h parser.h
+
+parser:
+	yacc -d lua.stx
+	rm -f parser.c parser.h
+	sed -e 's/yy/luaY_/g' y.tab.c > parser.c
+	sed -e 's/yy/luaY_/g' y.tab.h > parser.h
+	rm y.tab.c y.tab.h
 
 klean:	clean
-	rm -f $(SRCS) parser.c parser.h
+	rm -f $(SRCS)

@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: types.h,v 1.3 1995/02/06 19:32:43 roberto Exp $
+** $Id: types.h,v 1.4 1996/02/07 14:13:17 roberto Exp $
 */
 
 #ifndef types_h
@@ -11,8 +11,6 @@
 #ifndef real
 #define real float
 #endif
-
-typedef int Bool;  /* boolean values */
 
 #define Byte lua_Byte	/* some systems have Byte as a predefined type */
 typedef unsigned char  Byte;  /* unsigned 8 bits */

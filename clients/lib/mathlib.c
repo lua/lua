@@ -3,9 +3,9 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.13 1995/11/10 17:54:31 roberto Exp $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.17 1996/04/30 21:13:55 roberto Exp $";
 
-#include <stdio.h>		/* NULL */
+#include <stdlib.h>
 #include <math.h>
 
 #include "lualib.h"
@@ -113,7 +113,7 @@ static void math_pow (void)
  lua_Object op = lua_getparam(3);
  if (!lua_isnumber(o1) || !lua_isnumber(o2) || *(lua_getstring(op)) != 'p')
  {
-   lua_Object old = lua_getlocked(old_pow);
+   lua_Object old = lua_getref(old_pow);
    lua_pushobject(o1);
    lua_pushobject(o2);
    lua_pushobject(op);
@@ -184,29 +184,47 @@ static void math_rad (void)
  lua_pushnumber (d/180.*PI);
 }
 
+static void math_random (void)
+{
+  lua_pushnumber((double)(rand()%RAND_MAX) / (double)RAND_MAX);
+}
+
+static void math_randomseed (void)
+{
+  srand(lua_check_number(1, "randomseed"));
+}
+
+
+static struct lua_reg mathlib[] = {
+{"abs",   math_abs},
+{"sin",   math_sin},
+{"cos",   math_cos},
+{"tan",   math_tan},
+{"asin",  math_asin},
+{"acos",  math_acos},
+{"atan",  math_atan},
+{"atan2",  math_atan2},
+{"ceil",  math_ceil},
+{"floor", math_floor},
+{"mod",   math_mod},
+{"sqrt",  math_sqrt},
+{"min",   math_min},
+{"max",   math_max},
+{"log",   math_log},
+{"log10", math_log10},
+{"exp",   math_exp},
+{"deg",   math_deg},
+{"rad",   math_rad},
+{"random",     math_random},
+{"randomseed", math_randomseed}
+};
+
 /*
 ** Open math library
 */
 void mathlib_open (void)
 {
- lua_register ("abs",   math_abs);
- lua_register ("sin",   math_sin);
- lua_register ("cos",   math_cos);
- lua_register ("tan",   math_tan);
- lua_register ("asin",  math_asin);
- lua_register ("acos",  math_acos);
- lua_register ("atan",  math_atan);
- lua_register ("atan2",  math_atan2);
- lua_register ("ceil",  math_ceil);
- lua_register ("floor", math_floor);
- lua_register ("mod",   math_mod);
- lua_register ("sqrt",  math_sqrt);
- lua_register ("min",   math_min);
- lua_register ("max",   math_max);
- lua_register ("log",   math_log);
- lua_register ("log10", math_log10);
- lua_register ("exp",   math_exp);
- lua_register ("deg",   math_deg);
- lua_register ("rad",   math_rad);
- old_pow = lua_lockobject(lua_setfallback("arith", math_pow));
+  luaI_openlib(mathlib, (sizeof(mathlib)/sizeof(mathlib[0])));
+  old_pow = lua_refobject(lua_setfallback("arith", math_pow), 1);
 }
+

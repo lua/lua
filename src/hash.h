@@ -1,14 +1,14 @@
 /*
 ** hash.h
 ** hash manager for lua
-** Luiz Henrique de Figueiredo - 17 Aug 90
-** $Id: hash.h,v 2.8 1995/01/12 14:19:04 roberto Exp $
+** $Id: hash.h,v 2.12 1996/05/06 14:30:27 roberto Exp $
 */
 
 #ifndef hash_h
 #define hash_h
 
 #include "types.h"
+#include "opcode.h"
 
 typedef struct node
 {
@@ -19,15 +19,16 @@ typedef struct node
 typedef struct Hash
 {
  struct Hash   *next;
- char           mark;
- Word          nhash;
- Word           nuse;
  Node          *node;
+ int           nhash;
+ int            nuse;
+ char           mark;
 } Hash;
 
 
-Bool     lua_equalObj (Object *t1, Object *t2);
-Hash    *lua_createarray (Word nhash);
+int      lua_equalObj (Object *t1, Object *t2);
+int      luaI_redimension (int nhash);
+Hash    *lua_createarray (int nhash);
 void     lua_hashmark (Hash *h);
 Long     lua_hashcollector (void);
 Object  *lua_hashget (Hash *t, Object *ref);
