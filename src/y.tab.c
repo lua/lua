@@ -1,8 +1,13 @@
+
 # line 2 "lua.stx"
+
+char *rcs_luastx = "$Id: lua.stx,v 2.4 1994/04/20 16:22:21 celes Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "mm.h"
 
 #include "opcode.h"
 #include "hash.h"
@@ -10,62 +15,111 @@
 #include "table.h"
 #include "lua.h"
 
-#ifndef ALIGNMENT
-#define ALIGNMENT	(sizeof(void *))
-#endif
+#define LISTING 0
 
-#ifndef MAXCODE
-#define MAXCODE 1024
+#ifndef GAPCODE
+#define GAPCODE 50
 #endif
-static long   buffer[MAXCODE];
-static Byte  *code = (Byte *)buffer;
-static long   mainbuffer[MAXCODE];
-static Byte  *maincode = (Byte *)mainbuffer;
+static Word   maxcode;
+static Word   maxmain;
+static Word   maxcurr ;
+static Byte  *code = NULL;
+static Byte  *initcode;
 static Byte  *basepc;
-static Byte  *pc;
+static Word   maincode;
+static Word   pc;
 
 #define MAXVAR 32
-static long    varbuffer[MAXVAR];
-static Byte    nvarbuffer=0;	     /* number of variables at a list */
+static long    varbuffer[MAXVAR];    /* variables in an assignment list;
+				it's long to store negative Word values */
+static int     nvarbuffer=0;	     /* number of variables at a list */
 
-static Word    localvar[STACKGAP];
-static Byte    nlocalvar=0;	     /* number of local variables */
+static Word    localvar[STACKGAP];   /* store local variable names */
+static int     nlocalvar=0;	     /* number of local variables */
+
+#define MAXFIELDS FIELDS_PER_FLUSH*2
+static Word    fields[MAXFIELDS];     /* fieldnames to be flushed */
+static int     nfields=0;
 static int     ntemp;		     /* number of temporary var into stack */
 static int     err;		     /* flag to indicate error */
 
 /* Internal functions */
-#define align(n)  align_n(sizeof(n))
 
 static void code_byte (Byte c)
 {
- if (pc-basepc>MAXCODE-1)
+ if (pc>maxcurr-2)  /* 1 byte free to code HALT of main code */
  {
-  lua_error ("code buffer overflow");
-  err = 1;
+  maxcurr += GAPCODE;
+  basepc = (Byte *)realloc(basepc, maxcurr*sizeof(Byte));
+  if (basepc == NULL)
+  {
+   lua_error ("not enough memory");
+   err = 1;
+  }
  }
- *pc++ = c;
+ basepc[pc++] = c;
 }
 
 static void code_word (Word n)
 {
- if (pc-basepc>MAXCODE-sizeof(Word))
- {
-  lua_error ("code buffer overflow");
-  err = 1;
- }
- *((Word *)pc) = n;
- pc += sizeof(Word);
+ CodeWord code;
+ code.w = n;
+ code_byte(code.m.c1);
+ code_byte(code.m.c2);
 }
 
 static void code_float (float n)
 {
- if (pc-basepc>MAXCODE-sizeof(float))
- {
-  lua_error ("code buffer overflow");
-  err = 1;
- }
- *((float *)pc) = n;
- pc += sizeof(float);
+ CodeFloat code;
+ code.f = n;
+ code_byte(code.m.c1);
+ code_byte(code.m.c2);
+ code_byte(code.m.c3);
+ code_byte(code.m.c4);
+}
+
+static void code_word_at (Byte *p, Word n)
+{
+ CodeWord code;
+ code.w = n;
+ *p++ = code.m.c1;
+ *p++ = code.m.c2;
+}
+
+static void push_field (Word name)
+{
+  if (nfields < STACKGAP-1)
+    fields[nfields++] = name;
+  else
+  {
+   lua_error ("too many fields in a constructor");
+   err = 1;
+  }
+}
+
+static void flush_record (int n)
+{
+  int i;
+  if (n == 0) return;
+  code_byte(STORERECORD);
+  code_byte(n);
+  for (i=0; i<n; i++)
+    code_word(fields[--nfields]);
+  ntemp -= n;
+}
+
+static void flush_list (int m, int n)
+{
+  if (n == 0) return;
+  if (m == 0)
+    code_byte(STORELIST0); 
+  else
+  {
+    code_byte(STORELIST);
+    code_byte(m);
+  }
+  code_byte(n);
+  ntemp-=n;
 }
 
 static void incr_ntemp (void)
@@ -79,10 +133,10 @@ static void incr_ntemp (void)
  }
 }
 
-static void incr_nlocalvar (void)
+static void add_nlocalvar (int n)
 {
- if (ntemp+nlocalvar+MAXVAR+1 < STACKGAP)
-  nlocalvar++;
+ if (ntemp+nlocalvar+MAXVAR+n < STACKGAP)
+  nlocalvar += n;
  else
  {
   lua_error ("too many local variables or expression too complicate");
@@ -101,16 +155,9 @@ static void incr_nvarbuffer (void)
  }
 }
 
-static void align_n (unsigned size)
-{
- if (size > ALIGNMENT) size = ALIGNMENT;
- while (((pc+1-code)%size) != 0)	/* +1 to include BYTECODE */
-  code_byte (NOP);
-}
-
 static void code_number (float f)
-{ int i = f;
-  if (f == i)  /* f has an integer value */
+{ Word i = (Word)f;
+  if (f == (float)i)  /* f has an (short) integer value */
   {
    if (i <= 2) code_byte(PUSH0 + i);
    else if (i <= 255)
@@ -120,14 +167,12 @@ static void code_number (float f)
    }
    else
    {
-    align(Word);
     code_byte(PUSHWORD);
     code_word(i);
    }
   }
   else
   {
-   align(float);
    code_byte(PUSHFLOAT);
    code_float(f);
   }
@@ -135,33 +180,34 @@ static void code_number (float f)
 }
 
 
-# line 140 "lua.stx"
+# line 184 "lua.stx"
 typedef union  
 {
  int   vInt;
  long  vLong;
  float vFloat;
+ char *pChar;
  Word  vWord;
  Byte *pByte;
 } YYSTYPE;
-# define NIL 257
-# define IF 258
-# define THEN 259
-# define ELSE 260
-# define ELSEIF 261
-# define WHILE 262
-# define DO 263
-# define REPEAT 264
-# define UNTIL 265
-# define END 266
-# define RETURN 267
-# define LOCAL 268
-# define NUMBER 269
-# define FUNCTION 270
-# define NAME 271
+# define WRONGTOKEN 257
+# define NIL 258
+# define IF 259
+# define THEN 260
+# define ELSE 261
+# define ELSEIF 262
+# define WHILE 263
+# define DO 264
+# define REPEAT 265
+# define UNTIL 266
+# define END 267
+# define RETURN 268
+# define LOCAL 269
+# define NUMBER 270
+# define FUNCTION 271
 # define STRING 272
-# define DEBUG 273
-# define NOT 274
+# define NAME 273
+# define DEBUG 274
 # define AND 275
 # define OR 276
 # define NE 277
@@ -169,6 +215,7 @@ typedef union
 # define GE 279
 # define CONC 280
 # define UNARY 281
+# define NOT 282
 #define yyclearin yychar = -1
 #define yyerrok yyerrflag = 0
 extern int yychar;
@@ -179,7 +226,7 @@ extern int yyerrflag;
 YYSTYPE yylval, yyval;
 # define YYERRCODE 256
 
-# line 530 "lua.stx"
+# line 622 "lua.stx"
 
 
 /*
@@ -202,7 +249,6 @@ static void lua_pushvar (long number)
 { 
  if (number > 0)	/* global var */
  {
-  align(Word);
   code_byte(PUSHGLOBAL);
   code_word(number-1);
   incr_ntemp();
@@ -235,7 +281,6 @@ static void lua_codestore (int i)
 {
  if (varbuffer[i] > 0)		/* global var */
  {
-  align(Word);
   code_byte(STOREGLOBAL);
   code_word(varbuffer[i]-1);
  }
@@ -288,27 +333,37 @@ int yywrap (void)
 */
 int lua_parse (void)
 {
- Byte *initcode = maincode;
+ Byte *init = initcode = (Byte *) calloc(GAPCODE, sizeof(Byte));
+ maincode = 0; 
+ maxmain = GAPCODE;
+ if (init == NULL)
+ {
+  lua_error("not enough memory");
+  return 1;
+ }
  err = 0;
  if (yyparse () || (err==1)) return 1;
- *maincode++ = HALT;
- if (lua_execute (initcode)) return 1;
- maincode = initcode;
+ initcode[maincode++] = HALT;
+ init = initcode;
+#if LISTING
+ PrintCode(init,init+maincode);
+#endif
+ if (lua_execute (init)) return 1;
+ free(init);
  return 0;
 }
 
 
-#if 0
+#if LISTING
 
-static void PrintCode (void)
+static void PrintCode (Byte *code, Byte *end)
 {
  Byte *p = code;
  printf ("\n\nCODE\n");
- while (p != pc)
+ while (p != end)
  {
   switch ((OpCode)*p)
   {
-   case NOP:		printf ("%d    NOP\n", (p++)-code); break;
    case PUSHNIL:	printf ("%d    PUSHNIL\n", (p++)-code); break;
    case PUSH0: case PUSH1: case PUSH2:
     			printf ("%d    PUSH%c\n", p-code, *p-PUSH0+'0');
@@ -319,16 +374,31 @@ static void PrintCode (void)
     			p++;
    			break;
    case PUSHWORD:
-    			printf ("%d    PUSHWORD   %d\n", p-code, *((Word *)(p+1)));
-    			p += 1 + sizeof(Word);
+                        {
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    PUSHWORD   %d\n", n, c.w);
+			}
    			break;
    case PUSHFLOAT:
-    			printf ("%d    PUSHFLOAT  %f\n", p-code, *((float *)(p+1)));
-    			p += 1 + sizeof(float);
+			{
+			 CodeFloat c;
+			 int n = p-code;
+			 p++;
+			 get_float(c,p);
+    			 printf ("%d    PUSHFLOAT  %f\n", n, c.f);
+			}
    			break;
    case PUSHSTRING:
-    			printf ("%d    PUSHSTRING   %d\n", p-code, *((Word *)(p+1)));
-    			p += 1 + sizeof(Word);
+    			{
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    PUSHSTRING   %d\n", n, c.w);
+			}
    			break;
    case PUSHLOCAL0: case PUSHLOCAL1: case PUSHLOCAL2: case PUSHLOCAL3:
    case PUSHLOCAL4: case PUSHLOCAL5: case PUSHLOCAL6: case PUSHLOCAL7:
@@ -340,8 +410,13 @@ static void PrintCode (void)
     			p++;
    			break;
    case PUSHGLOBAL:
-    			printf ("%d    PUSHGLOBAL   %d\n", p-code, *((Word *)(p+1)));
-    			p += 1 + sizeof(Word);
+    			{
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    PUSHGLOBAL   %d\n", n, c.w);
+			}
    			break;
    case PUSHINDEXED:    printf ("%d    PUSHINDEXED\n", (p++)-code); break;
    case PUSHMARK:       printf ("%d    PUSHMARK\n", (p++)-code); break;
@@ -353,18 +428,34 @@ static void PrintCode (void)
     			p++;
    			break;
    case STORELOCAL:
-    			printf ("%d    STORELOCAK   %d\n", p-code, *(++p));
+    			printf ("%d    STORELOCAL   %d\n", p-code, *(++p));
     			p++;
    			break;
    case STOREGLOBAL:
-    			printf ("%d    STOREGLOBAL   %d\n", p-code, *((Word *)(p+1)));
-    			p += 1 + sizeof(Word);
+    			{
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    STOREGLOBAL   %d\n", n, c.w);
+			}
    			break;
    case STOREINDEXED0:  printf ("%d    STOREINDEXED0\n", (p++)-code); break;
    case STOREINDEXED:   printf ("%d    STOREINDEXED   %d\n", p-code, *(++p));
     			p++;
    			break;
-   case STOREFIELD:     printf ("%d    STOREFIELD\n", (p++)-code); break;
+   case STORELIST0:
+	printf("%d      STORELIST0  %d\n", p-code, *(++p));
+        p++;
+        break;
+   case STORELIST:
+	printf("%d      STORELIST  %d %d\n", p-code, *(p+1), *(p+2));
+        p+=3;
+        break;
+   case STORERECORD:
+       printf("%d      STORERECORD  %d\n", p-code, *(++p));
+       p += *p*sizeof(Word) + 1;
+       break;
    case ADJUST:
     			printf ("%d    ADJUST   %d\n", p-code, *(++p));
     			p++;
@@ -381,28 +472,58 @@ static void PrintCode (void)
    case MINUSOP:       	printf ("%d    MINUSOP\n", (p++)-code); break;
    case NOTOP:       	printf ("%d    NOTOP\n", (p++)-code); break;
    case ONTJMP:	   
-    			printf ("%d    ONTJMP  %d\n", p-code, *((Word *)(p+1)));
-    			p += sizeof(Word) + 1;
+    			{
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    ONTJMP  %d\n", n, c.w);
+			}
    			break;
    case ONFJMP:	   
-    			printf ("%d    ONFJMP  %d\n", p-code, *((Word *)(p+1)));
-    			p += sizeof(Word) + 1;
+    			{
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    ONFJMP  %d\n", n, c.w);
+			}
    			break;
    case JMP:	   
-    			printf ("%d    JMP  %d\n", p-code, *((Word *)(p+1)));
-    			p += sizeof(Word) + 1;
+    			{
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    JMP  %d\n", n, c.w);
+			}
    			break;
    case UPJMP:
-    			printf ("%d    UPJMP  %d\n", p-code, *((Word *)(p+1)));
-    			p += sizeof(Word) + 1;
+    			{
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    UPJMP  %d\n", n, c.w);
+			}
    			break;
    case IFFJMP:
-    			printf ("%d    IFFJMP  %d\n", p-code, *((Word *)(p+1)));
-    			p += sizeof(Word) + 1;
+    			{
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    IFFJMP  %d\n", n, c.w);
+			}
    			break;
    case IFFUPJMP:
-    			printf ("%d    IFFUPJMP  %d\n", p-code, *((Word *)(p+1)));
-    			p += sizeof(Word) + 1;
+    			{
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    IFFUPJMP  %d\n", n, c.w);
+			}
    			break;
    case POP:       	printf ("%d    POP\n", (p++)-code); break;
    case CALLFUNC:	printf ("%d    CALLFUNC\n", (p++)-code); break;
@@ -410,7 +531,29 @@ static void PrintCode (void)
     			printf ("%d    RETCODE   %d\n", p-code, *(++p));
     			p++;
    			break;
-   default:		printf ("%d    Cannot happen\n", (p++)-code); break;
+   case HALT:		printf ("%d    HALT\n", (p++)-code); break;
+   case SETFUNCTION:
+                        {
+                         CodeWord c1, c2;
+                         int n = p-code;
+                         p++;
+                         get_word(c1,p);
+                         get_word(c2,p);
+                         printf ("%d    SETFUNCTION  %d  %d\n", n, c1.w, c2.w);
+                        }
+                        break;
+   case SETLINE:
+                        {
+                         CodeWord c;
+                         int n = p-code;
+                         p++;
+                         get_word(c,p);
+                         printf ("%d    SETLINE  %d\n", n, c.w);
+                        }
+                        break;
+
+   case RESET:		printf ("%d    RESET\n", (p++)-code); break;
+   default:		printf ("%d    Cannot happen: code %d\n", (p++)-code, *(p-1)); break;
   }
  }
 }
@@ -420,194 +563,195 @@ int yyexca[] ={
 -1, 1,
 	0, -1,
 	-2, 2,
--1, 19,
-	40, 65,
-	91, 95,
-	46, 97,
-	-2, 92,
--1, 29,
-	40, 65,
-	91, 95,
-	46, 97,
+-1, 20,
+	40, 67,
+	91, 94,
+	46, 96,
+	-2, 91,
+-1, 32,
+	40, 67,
+	91, 94,
+	46, 96,
 	-2, 51,
--1, 70,
-	275, 33,
-	276, 33,
-	61, 33,
-	277, 33,
-	62, 33,
-	60, 33,
-	278, 33,
-	279, 33,
-	280, 33,
-	43, 33,
-	45, 33,
-	42, 33,
-	47, 33,
-	-2, 68,
--1, 71,
-	91, 95,
-	46, 97,
-	-2, 93,
--1, 102,
-	260, 27,
-	261, 27,
-	265, 27,
-	266, 27,
-	267, 27,
-	-2, 11,
--1, 117,
-	93, 85,
-	-2, 87,
--1, 122,
-	267, 30,
-	-2, 29,
--1, 145,
-	275, 33,
-	276, 33,
-	61, 33,
-	277, 33,
-	62, 33,
-	60, 33,
-	278, 33,
-	279, 33,
-	280, 33,
-	43, 33,
-	45, 33,
-	42, 33,
-	47, 33,
+-1, 73,
+	275, 34,
+	276, 34,
+	61, 34,
+	277, 34,
+	62, 34,
+	60, 34,
+	278, 34,
+	279, 34,
+	280, 34,
+	43, 34,
+	45, 34,
+	42, 34,
+	47, 34,
 	-2, 70,
+-1, 74,
+	91, 94,
+	46, 96,
+	-2, 92,
+-1, 105,
+	261, 28,
+	262, 28,
+	266, 28,
+	267, 28,
+	268, 28,
+	-2, 11,
+-1, 125,
+	268, 31,
+	-2, 30,
+-1, 146,
+	275, 34,
+	276, 34,
+	61, 34,
+	277, 34,
+	62, 34,
+	60, 34,
+	278, 34,
+	279, 34,
+	280, 34,
+	43, 34,
+	45, 34,
+	42, 34,
+	47, 34,
+	-2, 72,
 	};
-# define YYNPROD 105
-# define YYLAST 318
+# define YYNPROD 103
+# define YYLAST 364
 int yyact[]={
 
-    54,    52,   136,    53,    13,    55,    54,    52,    14,    53,
-    15,    55,     5,   166,    18,     6,   129,    21,    47,    46,
-    48,   107,   104,    97,    47,    46,    48,    54,    52,    80,
-    53,    21,    55,    54,    52,    40,    53,     9,    55,    54,
-    52,   158,    53,   160,    55,    47,    46,    48,   159,   101,
-    81,    47,    46,    48,    10,    54,    52,   126,    53,    67,
-    55,    54,    52,    60,    53,   155,    55,   148,   149,   135,
-   147,   108,   150,    47,    46,    48,    73,    23,    75,    47,
-    46,    48,     7,    25,    38,   153,    26,   164,    27,   117,
-    61,    62,    74,    11,    76,    54,    24,   127,    65,    66,
-    55,    37,   154,   151,   103,   111,    72,    28,    93,    94,
-    82,    83,    84,    85,    86,    87,    88,    89,    90,    91,
-    92,   116,    59,    77,    54,    52,   118,    53,    99,    55,
-   110,    95,    64,    44,    70,   109,    29,    33,   105,   106,
-    42,   112,    41,   165,   139,    19,    17,   152,    79,   123,
-    43,   119,    20,   114,   113,    98,    63,   144,   143,   122,
-    68,    39,    36,   130,    35,   120,    12,     8,   102,   125,
-   128,   141,    78,    69,    70,    71,   142,   131,   132,   140,
-    22,   124,     4,     3,     2,   121,    96,   138,   146,   137,
-   134,   157,   133,   115,    16,     1,     0,     0,     0,     0,
-     0,     0,     0,   156,     0,     0,     0,     0,   161,     0,
-     0,     0,     0,   162,     0,     0,     0,   168,     0,   172,
-   145,   163,   171,     0,   174,     0,     0,     0,   169,   156,
-   167,   170,   173,    57,    58,    49,    50,    51,    56,    57,
-    58,    49,    50,    51,    56,   175,     0,     0,   100,     0,
-    45,     0,     0,     0,     0,    70,     0,     0,     0,     0,
-    57,    58,    49,    50,    51,    56,    57,    58,    49,    50,
-    51,    56,     0,     0,     0,     0,     0,    56,     0,     0,
-     0,     0,     0,     0,     0,     0,     0,     0,    57,    58,
-    49,    50,    51,    56,     0,     0,    49,    50,    51,    56,
-    32,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-     0,     0,    30,     0,    21,    31,     0,    34 };
+    58,    56,    22,    57,   132,    59,    58,    56,   137,    57,
+   110,    59,    58,    56,   107,    57,    85,    59,    51,    50,
+    52,    82,    23,    43,    51,    50,    52,    58,    56,     9,
+    57,   157,    59,    58,    56,   165,    57,     5,    59,   162,
+     6,   161,   104,   154,   155,    51,    50,    52,    64,   153,
+    70,    51,    50,    52,    26,    58,    56,   127,    57,    10,
+    59,   111,    25,    78,    27,    58,    56,    28,    57,    29,
+    59,   131,   147,    51,    50,    52,     7,    65,    66,   115,
+   150,   112,    63,    51,    50,    52,    68,    69,    31,   159,
+    11,    79,    58,    76,   128,    73,    41,    59,   151,    87,
+    88,    89,    90,    91,    92,    93,    94,    95,    96,    97,
+    77,   114,   148,    40,    58,    56,   102,    57,   106,    59,
+   117,    32,    72,   121,   116,   100,    80,   109,    67,    48,
+    20,    36,    73,    30,    45,    73,    44,   118,   149,    84,
+    17,   126,    18,    46,    21,    47,   120,   119,   101,   145,
+   144,   125,    71,   123,    75,    39,    38,    12,     8,   108,
+   105,   136,    83,    74,   135,    24,     4,     3,   139,   140,
+     2,    81,   134,   141,   133,   130,   129,    42,   113,    16,
+     1,   146,   124,     0,   143,     0,     0,   152,     0,     0,
+     0,    86,     0,     0,     0,     0,     0,    13,     0,     0,
+   160,    14,     0,    15,   164,   163,     0,    19,   167,     0,
+     0,    23,    73,     0,     0,     0,     0,     0,   168,   166,
+   158,   171,   173,     0,     0,     0,   169,     0,     0,     0,
+     0,     0,     0,    61,    62,    53,    54,    55,    60,    61,
+    62,    53,    54,    55,    60,     0,     0,     0,     0,   103,
+    60,    49,     0,    98,    99,     0,     0,     0,     0,     0,
+    61,    62,    53,    54,    55,    60,    61,    62,    53,    54,
+    55,    60,     0,     0,     0,     0,     0,     0,     0,     0,
+     0,     0,    35,     0,     0,     0,     0,     0,    61,    62,
+    53,    54,    55,    60,    33,   122,    34,    23,     0,     0,
+    53,    54,    55,    60,     0,     0,    37,     0,     0,     0,
+   138,     0,     0,     0,     0,   142,     0,     0,     0,     0,
+     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+     0,     0,     0,   156,     0,     0,     0,     0,     0,     0,
+     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+   170,     0,     0,   172 };
 int yypact[]={
 
- -1000,  -258, -1000, -1000, -1000,  -234, -1000,    34,  -254, -1000,
- -1000, -1000, -1000,    43, -1000, -1000,    40, -1000,  -236, -1000,
- -1000, -1000,    93,    -9, -1000,    43,    43,    43,    92, -1000,
- -1000, -1000, -1000, -1000,    43,    43, -1000,    43,  -240,    62,
-    31,   -13,    48,    83,  -242, -1000,    43,    43,    43,    43,
-    43,    43,    43,    43,    43,    43,    43, -1000, -1000,    90,
-    13, -1000, -1000,  -248,    43,    19,   -15,  -216, -1000,    60,
- -1000, -1000,  -249, -1000, -1000,    43,  -250,    43,    89,    61,
- -1000, -1000,    -3,    -3,    -3,    -3,    -3,    -3,    53,    53,
- -1000, -1000,    82, -1000, -1000, -1000,    -2, -1000,    85,    13,
- -1000,    43, -1000, -1000,    31,    43,   -36, -1000,    56,    60,
- -1000,  -255, -1000,    43,    43, -1000,  -269, -1000, -1000, -1000,
-    13,    34, -1000,    43, -1000,    13, -1000, -1000, -1000, -1000,
-  -193,    19,    19,   -53,    59, -1000, -1000,    -8,    58,    43,
- -1000, -1000, -1000, -1000,  -226, -1000,  -218,  -223, -1000,    43,
- -1000,  -269,    26, -1000, -1000, -1000,    13,  -253,    43, -1000,
- -1000, -1000,   -42, -1000,    43,    43, -1000,    34, -1000,    13,
- -1000, -1000, -1000, -1000,  -193, -1000 };
+ -1000,  -234, -1000, -1000, -1000,  -244, -1000,    31,   -62, -1000,
+ -1000, -1000, -1000,    24, -1000, -1000,    52, -1000, -1000,  -250,
+ -1000, -1000, -1000, -1000,    89,    -9, -1000,    24,    24,    24,
+ -1000,    88, -1000, -1000, -1000, -1000, -1000,    24,    24, -1000,
+    24,  -251,    49, -1000,   -28,    45,    86,  -252,  -257, -1000,
+    24,    24,    24,    24,    24,    24,    24,    24,    24,    24,
+    24, -1000, -1000,    84,    13, -1000, -1000,    24, -1000,   -15,
+  -224, -1000,    74, -1000, -1000, -1000,  -259,    24,    24,  -263,
+    24,   -12, -1000,    83,    76, -1000, -1000,   -30,   -30,   -30,
+   -30,   -30,   -30,    50,    50, -1000, -1000,    72, -1000, -1000,
+ -1000,    82,    13, -1000,    24, -1000, -1000, -1000,    74,   -36,
+ -1000,    53,    74, -1000,  -269,    24, -1000,  -265, -1000,    24,
+    24, -1000, -1000,    13,    31, -1000,    24, -1000, -1000,   -53,
+    68, -1000, -1000,   -13,    54,    13, -1000, -1000,  -218,    23,
+    23, -1000, -1000, -1000, -1000,  -237, -1000, -1000,  -269,    28,
+ -1000,    24,  -226,  -228, -1000,    24,  -232,    24, -1000,    24,
+    13, -1000, -1000, -1000,   -42, -1000,    31,    13, -1000, -1000,
+ -1000, -1000,  -218, -1000 };
 int yypgo[]={
 
-     0,   195,    50,    96,    71,   135,   194,   193,   192,   190,
-   189,   187,   136,   186,   184,    82,    54,   183,   182,   180,
-   172,   170,    59,   168,   167,   166,    63,    70,   164,   162,
-   137,   161,   160,   159,   158,   157,   156,   155,   154,   153,
-   152,   150,   149,   148,    69,   147,   144,    65,   143,   142,
-   140,    76,   138 };
+     0,   180,   191,    54,    61,    81,   179,   133,   178,   177,
+   176,   175,   174,   172,   121,   171,   170,    76,    59,   167,
+   166,   165,   162,   161,    50,   160,   158,   157,    48,    49,
+   156,   155,   131,   154,   152,   151,   150,   149,   148,   147,
+   146,   145,   144,   143,   141,   139,    71,   138,   136,   134 };
 int yyr1[]={
 
-     0,     1,    14,     1,     1,     1,    19,    21,    17,    23,
-    23,    24,    15,    16,    16,    25,    28,    25,    29,    25,
-    25,    25,    25,    27,    27,    27,    32,    33,    22,    34,
-    35,    34,     2,    26,     3,     3,     3,     3,     3,     3,
-     3,     3,     3,     3,     3,     3,     3,     3,    36,     3,
-     3,     3,     3,     3,     3,     3,     3,    38,     3,    39,
-     3,    37,    37,    41,    30,    40,     4,     4,     5,    42,
-     5,    20,    20,    43,    43,    13,    13,     7,     7,     8,
-     8,     9,     9,    45,    44,    10,    10,    46,    11,    48,
-    11,    47,     6,     6,    12,    49,    12,    50,    12,    31,
-    31,    51,    52,    51,    18 };
+     0,     1,    16,     1,     1,     1,    21,    23,    19,    25,
+    25,    26,    17,    18,    18,    27,    30,    27,    31,    27,
+    27,    27,    27,    27,    29,    29,    29,    34,    35,    24,
+    36,    37,    36,     2,    28,     3,     3,     3,     3,     3,
+     3,     3,     3,     3,     3,     3,     3,     3,     3,     3,
+     3,     3,     3,     3,     3,     3,     3,    39,     3,    40,
+     3,    41,     7,    38,    38,    43,    32,    42,     4,     4,
+     5,    44,     5,    22,    22,    45,    45,    15,    15,     8,
+     8,    10,    10,    11,    11,    47,    46,    12,    12,    13,
+    13,     6,     6,    14,    48,    14,    49,    14,     9,     9,
+    33,    33,    20 };
 int yyr2[]={
 
      0,     0,     1,     9,     4,     4,     1,     1,    19,     0,
      6,     1,     4,     0,     2,    17,     1,    17,     1,    13,
-     7,     3,     4,     0,     4,    15,     1,     1,     9,     0,
-     1,     9,     1,     3,     7,     7,     7,     7,     7,     7,
-     7,     7,     7,     7,     7,     7,     5,     5,     1,     9,
+     7,     3,     3,     7,     0,     4,    15,     1,     1,     9,
+     0,     1,     9,     1,     3,     7,     7,     7,     7,     7,
+     7,     7,     7,     7,     7,     7,     7,     5,     5,     3,
      9,     3,     3,     3,     3,     3,     5,     1,    11,     1,
-    11,     1,     2,     1,    11,     3,     1,     3,     3,     1,
-     9,     0,     2,     3,     7,     1,     3,     7,     7,     1,
-     3,     3,     7,     1,     9,     1,     3,     1,     5,     1,
-     9,     3,     3,     7,     3,     1,    11,     1,     9,     5,
-     9,     1,     1,     6,     3 };
+    11,     1,     9,     1,     2,     1,    11,     3,     1,     3,
+     3,     1,     9,     0,     2,     3,     7,     1,     3,     7,
+     7,     1,     3,     3,     7,     1,     9,     1,     3,     3,
+     7,     3,     7,     3,     1,    11,     1,     9,     3,     7,
+     0,     4,     3 };
 int yychk[]={
 
- -1000,    -1,   -14,   -17,   -18,   270,   273,   -15,   -24,   271,
-   -16,    59,   -25,   258,   262,   264,    -6,   -30,   268,   -12,
-   -40,   271,   -19,   -26,    -3,    40,    43,    45,    64,   -12,
-   269,   272,   257,   -30,   274,   -28,   -29,    61,    44,   -31,
-   271,   -49,   -50,   -41,    40,   259,    61,    60,    62,   277,
-   278,   279,    43,    45,    42,    47,   280,   275,   276,    -3,
-   -26,   -26,   -26,   -36,    40,   -26,   -26,   -22,   -32,    -5,
-    -3,   -12,    44,   -51,    61,    91,    46,    40,   -20,   -43,
-   271,    -2,   -26,   -26,   -26,   -26,   -26,   -26,   -26,   -26,
-   -26,   -26,   -26,    -2,    -2,    41,   -13,   271,   -37,   -26,
-   263,   265,   -23,    44,   271,   -52,   -26,   271,    -4,    -5,
-    41,    44,   -22,   -38,   -39,    -7,   123,    91,    41,    -2,
-   -26,   -15,   -33,   -42,   -51,   -26,    93,    41,   -21,   271,
-    -2,   -26,   -26,    -8,    -9,   -44,   271,   -10,   -11,   -46,
-   -22,    -2,   -16,   -34,   -35,    -3,   -22,   -27,   260,   261,
-   125,    44,   -45,    93,    44,   -47,   -26,    -2,   267,   266,
-   266,   -22,   -26,   -44,    61,   -48,   266,    -4,   259,   -26,
-   -47,   -16,    -2,   -22,    -2,   -27 };
+ -1000,    -1,   -16,   -19,   -20,   271,   274,   -17,   -26,   273,
+   -18,    59,   -27,   259,   263,   265,    -6,   -32,    -7,   269,
+   -14,   -42,    64,   273,   -21,   -28,    -3,    40,    43,    45,
+    -7,    64,   -14,   270,   272,   258,   -32,   282,   -30,   -31,
+    61,    44,    -9,   273,   -48,   -49,   -43,   -41,    40,   260,
+    61,    60,    62,   277,   278,   279,    43,    45,    42,    47,
+   280,   275,   276,    -3,   -28,   -28,   -28,    40,   -28,   -28,
+   -24,   -34,    -5,    -3,   -14,   -33,    44,    61,    91,    46,
+    40,   -15,   273,   -22,   -45,   273,    -2,   -28,   -28,   -28,
+   -28,   -28,   -28,   -28,   -28,   -28,   -28,   -28,    -2,    -2,
+    41,   -38,   -28,   264,   266,   -25,    44,   273,    -5,   -28,
+   273,    -4,    -5,    -8,   123,    91,    41,    44,   -24,   -39,
+   -40,    41,    -2,   -28,   -17,   -35,   -44,    93,    41,   -10,
+   -11,   -46,   273,   -12,   -13,   -28,   -23,   273,    -2,   -28,
+   -28,   -24,    -2,   -18,   -36,   -37,    -3,   125,    44,   -47,
+    93,    44,   -24,   -29,   261,   262,    -2,   268,   -46,    61,
+   -28,   267,   267,   -24,   -28,   267,    -4,   -28,   260,   -18,
+    -2,   -24,    -2,   -29 };
 int yydef[]={
 
-     1,    -2,    11,     4,     5,     0,   104,    13,     0,     6,
-     3,    14,    12,     0,    16,    18,     0,    21,     0,    -2,
-    63,    94,     0,     0,    33,     0,     0,     0,    48,    -2,
-    52,    53,    54,    55,     0,     0,    26,     0,     0,    22,
-   101,     0,     0,     0,    71,    32,     0,     0,     0,     0,
-     0,     0,     0,     0,     0,     0,     0,    32,    32,    33,
-     0,    46,    47,    75,    61,    56,     0,     0,     9,    20,
-    -2,    -2,     0,    99,   102,     0,     0,    66,     0,    72,
-    73,    26,    35,    36,    37,    38,    39,    40,    41,    42,
-    43,    44,    45,    57,    59,    34,     0,    76,     0,    62,
-    32,     0,    -2,    69,   101,     0,     0,    98,     0,    67,
-     7,     0,    32,     0,     0,    49,    79,    -2,    50,    26,
-    32,    13,    -2,     0,   100,   103,    96,    64,    26,    74,
-    23,    58,    60,     0,    80,    81,    83,     0,    86,     0,
-    32,    19,    10,    28,     0,    -2,     0,     0,    26,     0,
-    77,     0,     0,    78,    89,    88,    91,     0,    66,     8,
-    15,    24,     0,    82,     0,     0,    17,    13,    32,    84,
-    90,    31,    26,    32,    23,    25 };
+     1,    -2,    11,     4,     5,     0,   102,    13,     0,     6,
+     3,    14,    12,     0,    16,    18,     0,    21,    22,     0,
+    -2,    65,    61,    93,     0,     0,    34,     0,     0,     0,
+    49,    61,    -2,    52,    53,    54,    55,     0,     0,    27,
+     0,     0,   100,    98,     0,     0,     0,    77,    73,    33,
+     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+     0,    33,    33,    34,     0,    47,    48,    63,    56,     0,
+     0,     9,    20,    -2,    -2,    23,     0,     0,     0,     0,
+    68,     0,    78,     0,    74,    75,    27,    36,    37,    38,
+    39,    40,    41,    42,    43,    44,    45,    46,    57,    59,
+    35,     0,    64,    33,     0,    -2,    71,    99,   101,     0,
+    97,     0,    69,    62,    81,    87,     7,     0,    33,     0,
+     0,    50,    27,    33,    13,    -2,     0,    95,    66,     0,
+    82,    83,    85,     0,    88,    89,    27,    76,    24,    58,
+    60,    33,    19,    10,    29,     0,    -2,    79,     0,     0,
+    80,     0,     0,     0,    27,     0,     0,    68,    84,     0,
+    90,     8,    15,    25,     0,    17,    13,    86,    33,    32,
+    27,    33,    24,    26 };
 typedef struct { char *t_name; int t_val; } yytoktype;
 #ifndef YYDEBUG
 #	define YYDEBUG	0	/* don't allow debugging */
@@ -617,24 +761,24 @@ typedef struct { char *t_name; int t_val; } yytoktype;
 
 yytoktype yytoks[] =
 {
-	"NIL",	257,
-	"IF",	258,
-	"THEN",	259,
-	"ELSE",	260,
-	"ELSEIF",	261,
-	"WHILE",	262,
-	"DO",	263,
-	"REPEAT",	264,
-	"UNTIL",	265,
-	"END",	266,
-	"RETURN",	267,
-	"LOCAL",	268,
-	"NUMBER",	269,
-	"FUNCTION",	270,
-	"NAME",	271,
+	"WRONGTOKEN",	257,
+	"NIL",	258,
+	"IF",	259,
+	"THEN",	260,
+	"ELSE",	261,
+	"ELSEIF",	262,
+	"WHILE",	263,
+	"DO",	264,
+	"REPEAT",	265,
+	"UNTIL",	266,
+	"END",	267,
+	"RETURN",	268,
+	"LOCAL",	269,
+	"NUMBER",	270,
+	"FUNCTION",	271,
 	"STRING",	272,
-	"DEBUG",	273,
-	"NOT",	274,
+	"NAME",	273,
+	"DEBUG",	274,
 	"AND",	275,
 	"OR",	276,
 	"=",	61,
@@ -648,8 +792,8 @@ yytoktype yytoks[] =
 	"-",	45,
 	"*",	42,
 	"/",	47,
-	"%",	37,
 	"UNARY",	281,
+	"NOT",	282,
 	"-unknown-",	-1	/* ends search */
 };
 
@@ -677,7 +821,8 @@ char * yyreds[] =
 	"stat1 : REPEAT block UNTIL expr1 PrepJump",
 	"stat1 : varlist1 '=' exprlist1",
 	"stat1 : functioncall",
-	"stat1 : LOCAL declist",
+	"stat1 : typeconstructor",
+	"stat1 : LOCAL localdeclist decinit",
 	"elsepart : /* empty */",
 	"elsepart : ELSE block",
 	"elsepart : ELSEIF expr1 THEN PrepJump block PrepJump elsepart",
@@ -703,8 +848,7 @@ char * yyreds[] =
 	"expr : expr1 CONC expr1",
 	"expr : '+' expr1",
 	"expr : '-' expr1",
-	"expr : '@'",
-	"expr : '@' objectname fieldlist",
+	"expr : typeconstructor",
 	"expr : '@' '(' dimension ')'",
 	"expr : var",
 	"expr : NUMBER",
@@ -716,6 +860,8 @@ char * yyreds[] =
 	"expr : expr1 AND PrepJump expr1",
 	"expr : expr1 OR PrepJump",
 	"expr : expr1 OR PrepJump expr1",
+	"typeconstructor : '@'",
+	"typeconstructor : '@' objectname fieldlist",
 	"dimension : /* empty */",
 	"dimension : expr1",
 	"functioncall : functionvalue",
@@ -742,11 +888,8 @@ char * yyreds[] =
 	"ffield : NAME '=' expr1",
 	"lfieldlist : /* empty */",
 	"lfieldlist : lfieldlist1",
-	"lfieldlist1 : /* empty */",
-	"lfieldlist1 : lfield",
-	"lfieldlist1 : lfieldlist1 ','",
-	"lfieldlist1 : lfieldlist1 ',' lfield",
-	"lfield : expr1",
+	"lfieldlist1 : expr1",
+	"lfieldlist1 : lfieldlist1 ',' expr1",
 	"varlist1 : var",
 	"varlist1 : varlist1 ',' var",
 	"var : NAME",
@@ -754,11 +897,10 @@ char * yyreds[] =
 	"var : var '[' expr1 ']'",
 	"var : var",
 	"var : var '.' NAME",
-	"declist : NAME init",
-	"declist : declist ',' NAME init",
-	"init : /* empty */",
-	"init : '='",
-	"init : '=' expr1",
+	"localdeclist : NAME",
+	"localdeclist : localdeclist ',' NAME",
+	"decinit : /* empty */",
+	"decinit : '=' exprlist1",
 	"setdebug : DEBUG",
 };
 #endif /* YYDEBUG */
@@ -1203,87 +1345,113 @@ yyparse()
 	{
 		
 case 2:
-# line 179 "lua.stx"
-{pc=basepc=maincode; nlocalvar=0;} break;
+# line 227 "lua.stx"
+{
+	  	  pc=maincode; basepc=initcode; maxcurr=maxmain;
+		  nlocalvar=0;
+	        } break;
 case 3:
-# line 179 "lua.stx"
-{maincode=pc;} break;
+# line 232 "lua.stx"
+{
+		  maincode=pc; initcode=basepc; maxmain=maxcurr;
+		} break;
 case 6:
-# line 184 "lua.stx"
-{pc=basepc=code; nlocalvar=0;} break;
+# line 240 "lua.stx"
+{
+		if (code == NULL)	/* first function */
+		{
+		 code = (Byte *) calloc(GAPCODE, sizeof(Byte));
+		 if (code == NULL)
+		 {
+		  lua_error("not enough memory");
+		  err = 1;
+		 }
+		 maxcode = GAPCODE;
+		}
+		pc=0; basepc=code; maxcurr=maxcode; 
+		nlocalvar=0;
+		yyval.vWord = lua_findsymbol(yypvt[-0].pChar); 
+	       } break;
 case 7:
-# line 185 "lua.stx"
+# line 256 "lua.stx"
 {
 	        if (lua_debug)
 		{
-		 align(Word);
 	         code_byte(SETFUNCTION); 
-                 code_word(yypvt[-5].vWord);
-		 code_word(yypvt[-4].vWord);
+                 code_word(lua_nfile-1);
+		 code_word(yypvt[-3].vWord);
 		}
 	        lua_codeadjust (0);
 	       } break;
 case 8:
-# line 197 "lua.stx"
+# line 267 "lua.stx"
 { 
                 if (lua_debug) code_byte(RESET); 
 	        code_byte(RETCODE); code_byte(nlocalvar);
-	        s_tag(yypvt[-7].vWord) = T_FUNCTION;
-	        s_bvalue(yypvt[-7].vWord) = calloc (pc-code, sizeof(Byte));
-	        memcpy (s_bvalue(yypvt[-7].vWord), code, (pc-code)*sizeof(Byte));
+	        s_tag(yypvt[-6].vWord) = T_FUNCTION;
+	        s_bvalue(yypvt[-6].vWord) = calloc (pc, sizeof(Byte));
+		if (s_bvalue(yypvt[-6].vWord) == NULL)
+		{
+		 lua_error("not enough memory");
+		 err = 1;
+		}
+	        memcpy (s_bvalue(yypvt[-6].vWord), basepc, pc*sizeof(Byte));
+		code = basepc; maxcode=maxcurr;
+#if LISTING
+PrintCode(code,code+pc);
+#endif
 	       } break;
 case 11:
-# line 210 "lua.stx"
+# line 289 "lua.stx"
 {
             ntemp = 0; 
             if (lua_debug)
             {
-             align(Word); code_byte(SETLINE); code_word(lua_linenumber);
+             code_byte(SETLINE); code_word(lua_linenumber);
             }
 	   } break;
 case 15:
-# line 223 "lua.stx"
+# line 302 "lua.stx"
 {
         {
-	 Byte *elseinit = yypvt[-2].pByte + sizeof(Word)+1;
+	 Word elseinit = yypvt[-2].vWord+sizeof(Word)+1;
 	 if (pc - elseinit == 0)		/* no else */
 	 {
 	  pc -= sizeof(Word)+1;
-	 /* if (*(pc-1) == NOP) --pc; */
 	  elseinit = pc;
 	 }
 	 else
 	 {
-	  *(yypvt[-2].pByte) = JMP;
-	  *((Word *)(yypvt[-2].pByte+1)) = pc - elseinit;
+	  basepc[yypvt[-2].vWord] = JMP;
+	  code_word_at(basepc+yypvt[-2].vWord+1, pc - elseinit);
 	 }
-	 *(yypvt[-4].pByte) = IFFJMP;
-	 *((Word *)(yypvt[-4].pByte+1)) = elseinit - (yypvt[-4].pByte + sizeof(Word)+1);
+	 basepc[yypvt[-4].vWord] = IFFJMP;
+	 code_word_at(basepc+yypvt[-4].vWord+1,elseinit-(yypvt[-4].vWord+sizeof(Word)+1));
 	}
        } break;
 case 16:
-# line 242 "lua.stx"
-{yyval.pByte = pc;} break;
+# line 320 "lua.stx"
+{yyval.vWord=pc;} break;
 case 17:
-# line 244 "lua.stx"
+# line 322 "lua.stx"
 {
-        *(yypvt[-3].pByte) = IFFJMP;
-        *((Word *)(yypvt[-3].pByte+1)) = pc - (yypvt[-3].pByte + sizeof(Word)+1);
+        basepc[yypvt[-3].vWord] = IFFJMP;
+	code_word_at(basepc+yypvt[-3].vWord+1, pc - (yypvt[-3].vWord + sizeof(Word)+1));
         
-        *(yypvt[-1].pByte) = UPJMP;
-        *((Word *)(yypvt[-1].pByte+1)) = pc - yypvt[-6].pByte;
+        basepc[yypvt[-1].vWord] = UPJMP;
+	code_word_at(basepc+yypvt[-1].vWord+1, pc - (yypvt[-6].vWord));
        } break;
 case 18:
-# line 252 "lua.stx"
-{yyval.pByte = pc;} break;
+# line 330 "lua.stx"
+{yyval.vWord=pc;} break;
 case 19:
-# line 254 "lua.stx"
+# line 332 "lua.stx"
 {
-        *(yypvt[-0].pByte) = IFFUPJMP;
-        *((Word *)(yypvt[-0].pByte+1)) = pc - yypvt[-4].pByte;
+        basepc[yypvt[-0].vWord] = IFFUPJMP;
+	code_word_at(basepc+yypvt[-0].vWord+1, pc - (yypvt[-4].vWord));
        } break;
 case 20:
-# line 261 "lua.stx"
+# line 339 "lua.stx"
 {
         {
          int i;
@@ -1296,36 +1464,41 @@ case 20:
 	}
        } break;
 case 21:
-# line 272 "lua.stx"
+# line 350 "lua.stx"
 { lua_codeadjust (0); } break;
-case 25:
-# line 279 "lua.stx"
+case 22:
+# line 351 "lua.stx"
+{ lua_codeadjust (0); } break;
+case 23:
+# line 352 "lua.stx"
+{ add_nlocalvar(yypvt[-1].vInt); lua_codeadjust (0); } break;
+case 26:
+# line 358 "lua.stx"
 {
           {
-  	   Byte *elseinit = yypvt[-1].pByte + sizeof(Word)+1;
+  	   Word elseinit = yypvt[-1].vWord+sizeof(Word)+1;
   	   if (pc - elseinit == 0)		/* no else */
   	   {
   	    pc -= sizeof(Word)+1;
-  	    /* if (*(pc-1) == NOP) --pc; */
 	    elseinit = pc;
 	   }
 	   else
 	   {
-	    *(yypvt[-1].pByte) = JMP;
-	    *((Word *)(yypvt[-1].pByte+1)) = pc - elseinit;
+	    basepc[yypvt[-1].vWord] = JMP;
+	    code_word_at(basepc+yypvt[-1].vWord+1, pc - elseinit);
 	   }
-	   *(yypvt[-3].pByte) = IFFJMP;
-	   *((Word *)(yypvt[-3].pByte+1)) = elseinit - (yypvt[-3].pByte + sizeof(Word)+1);
+	   basepc[yypvt[-3].vWord] = IFFJMP;
+	   code_word_at(basepc+yypvt[-3].vWord+1, elseinit - (yypvt[-3].vWord + sizeof(Word)+1));
 	  }  
          } break;
-case 26:
-# line 299 "lua.stx"
-{yyval.vInt = nlocalvar;} break;
 case 27:
-# line 299 "lua.stx"
-{ntemp = 0;} break;
+# line 377 "lua.stx"
+{yyval.vInt = nlocalvar;} break;
 case 28:
-# line 300 "lua.stx"
+# line 377 "lua.stx"
+{ntemp = 0;} break;
+case 29:
+# line 378 "lua.stx"
 {
 	  if (nlocalvar != yypvt[-3].vInt)
 	  {
@@ -1333,80 +1506,137 @@ case 28:
 	   lua_codeadjust (0);
 	  }
          } break;
-case 30:
-# line 310 "lua.stx"
-{ if (lua_debug){align(Word);code_byte(SETLINE);code_word(lua_linenumber);}} break;
 case 31:
-# line 312 "lua.stx"
+# line 388 "lua.stx"
+{ if (lua_debug){code_byte(SETLINE);code_word(lua_linenumber);}} break;
+case 32:
+# line 390 "lua.stx"
 { 
            if (lua_debug) code_byte(RESET); 
            code_byte(RETCODE); code_byte(nlocalvar);
           } break;
-case 32:
-# line 319 "lua.stx"
+case 33:
+# line 397 "lua.stx"
 { 
-          align(Word); 
-	  yyval.pByte = pc;
+	  yyval.vWord = pc;
 	  code_byte(0);		/* open space */
 	  code_word (0);
          } break;
-case 33:
-# line 326 "lua.stx"
-{ if (yypvt[-0].vInt == 0) {lua_codeadjust (ntemp+1); incr_ntemp();}} break;
 case 34:
-# line 329 "lua.stx"
-{ yyval.vInt = yypvt[-1].vInt; } break;
+# line 403 "lua.stx"
+{ if (yypvt[-0].vInt == 0) {lua_codeadjust (ntemp+1); incr_ntemp();}} break;
 case 35:
-# line 330 "lua.stx"
-{ code_byte(EQOP);   yyval.vInt = 1; ntemp--;} break;
+# line 406 "lua.stx"
+{ yyval.vInt = yypvt[-1].vInt; } break;
 case 36:
-# line 331 "lua.stx"
-{ code_byte(LTOP);   yyval.vInt = 1; ntemp--;} break;
+# line 407 "lua.stx"
+{ code_byte(EQOP);   yyval.vInt = 1; ntemp--;} break;
 case 37:
-# line 332 "lua.stx"
-{ code_byte(LEOP); code_byte(NOTOP); yyval.vInt = 1; ntemp--;} break;
+# line 408 "lua.stx"
+{ code_byte(LTOP);   yyval.vInt = 1; ntemp--;} break;
 case 38:
-# line 333 "lua.stx"
-{ code_byte(EQOP); code_byte(NOTOP); yyval.vInt = 1; ntemp--;} break;
+# line 409 "lua.stx"
+{ code_byte(LEOP); code_byte(NOTOP); yyval.vInt = 1; ntemp--;} break;
 case 39:
-# line 334 "lua.stx"
-{ code_byte(LEOP);   yyval.vInt = 1; ntemp--;} break;
+# line 410 "lua.stx"
+{ code_byte(EQOP); code_byte(NOTOP); yyval.vInt = 1; ntemp--;} break;
 case 40:
-# line 335 "lua.stx"
-{ code_byte(LTOP); code_byte(NOTOP); yyval.vInt = 1; ntemp--;} break;
+# line 411 "lua.stx"
+{ code_byte(LEOP);   yyval.vInt = 1; ntemp--;} break;
 case 41:
-# line 336 "lua.stx"
-{ code_byte(ADDOP);  yyval.vInt = 1; ntemp--;} break;
+# line 412 "lua.stx"
+{ code_byte(LTOP); code_byte(NOTOP); yyval.vInt = 1; ntemp--;} break;
 case 42:
-# line 337 "lua.stx"
-{ code_byte(SUBOP);  yyval.vInt = 1; ntemp--;} break;
+# line 413 "lua.stx"
+{ code_byte(ADDOP);  yyval.vInt = 1; ntemp--;} break;
 case 43:
-# line 338 "lua.stx"
-{ code_byte(MULTOP); yyval.vInt = 1; ntemp--;} break;
+# line 414 "lua.stx"
+{ code_byte(SUBOP);  yyval.vInt = 1; ntemp--;} break;
 case 44:
-# line 339 "lua.stx"
-{ code_byte(DIVOP);  yyval.vInt = 1; ntemp--;} break;
+# line 415 "lua.stx"
+{ code_byte(MULTOP); yyval.vInt = 1; ntemp--;} break;
 case 45:
-# line 340 "lua.stx"
-{ code_byte(CONCOP);  yyval.vInt = 1; ntemp--;} break;
+# line 416 "lua.stx"
+{ code_byte(DIVOP);  yyval.vInt = 1; ntemp--;} break;
 case 46:
-# line 341 "lua.stx"
-{ yyval.vInt = 1; } break;
+# line 417 "lua.stx"
+{ code_byte(CONCOP);  yyval.vInt = 1; ntemp--;} break;
 case 47:
-# line 342 "lua.stx"
-{ code_byte(MINUSOP); yyval.vInt = 1;} break;
+# line 418 "lua.stx"
+{ yyval.vInt = 1; } break;
 case 48:
-# line 344 "lua.stx"
+# line 419 "lua.stx"
+{ code_byte(MINUSOP); yyval.vInt = 1;} break;
+case 49:
+# line 420 "lua.stx"
+{ yyval.vInt = yypvt[-0].vInt; } break;
+case 50:
+# line 422 "lua.stx"
+{ 
+      code_byte(CREATEARRAY);
+      yyval.vInt = 1;
+     } break;
+case 51:
+# line 426 "lua.stx"
+{ lua_pushvar (yypvt[-0].vLong); yyval.vInt = 1;} break;
+case 52:
+# line 427 "lua.stx"
+{ code_number(yypvt[-0].vFloat); yyval.vInt = 1; } break;
+case 53:
+# line 429 "lua.stx"
+{
+      code_byte(PUSHSTRING);
+      code_word(yypvt[-0].vWord);
+      yyval.vInt = 1;
+      incr_ntemp();
+     } break;
+case 54:
+# line 435 "lua.stx"
+{code_byte(PUSHNIL); yyval.vInt = 1; incr_ntemp();} break;
+case 55:
+# line 437 "lua.stx"
+{
+      yyval.vInt = 0;
+      if (lua_debug)
+      {
+       code_byte(SETLINE); code_word(lua_linenumber);
+      }
+     } break;
+case 56:
+# line 444 "lua.stx"
+{ code_byte(NOTOP);  yyval.vInt = 1;} break;
+case 57:
+# line 445 "lua.stx"
+{code_byte(POP); ntemp--;} break;
+case 58:
+# line 446 "lua.stx"
+{ 
+      basepc[yypvt[-2].vWord] = ONFJMP;
+      code_word_at(basepc+yypvt[-2].vWord+1, pc - (yypvt[-2].vWord + sizeof(Word)+1));
+      yyval.vInt = 1;
+     } break;
+case 59:
+# line 451 "lua.stx"
+{code_byte(POP); ntemp--;} break;
+case 60:
+# line 452 "lua.stx"
+{ 
+      basepc[yypvt[-2].vWord] = ONTJMP;
+      code_word_at(basepc+yypvt[-2].vWord+1, pc - (yypvt[-2].vWord + sizeof(Word)+1));
+      yyval.vInt = 1;
+     } break;
+case 61:
+# line 460 "lua.stx"
 {
       code_byte(PUSHBYTE);
-      yyval.pByte = pc; code_byte(0);
+      yyval.vWord = pc; code_byte(0);
       incr_ntemp();
       code_byte(CREATEARRAY);
      } break;
-case 49:
-# line 351 "lua.stx"
+case 62:
+# line 467 "lua.stx"
 {
-      *(yypvt[-2].pByte) = yypvt[-0].vInt; 
+      basepc[yypvt[-2].vWord] = yypvt[-0].vInt; 
       if (yypvt[-1].vLong < 0)	/* there is no function to be called */
       {
        yyval.vInt = 1;
@@ -1423,216 +1653,158 @@ case 49:
        yyval.vInt = 0;
        if (lua_debug)
        {
-        align(Word); code_byte(SETLINE); code_word(lua_linenumber);
+        code_byte(SETLINE); code_word(lua_linenumber);
        }
       }
      } break;
-case 50:
-# line 374 "lua.stx"
-{ 
-      code_byte(CREATEARRAY);
-      yyval.vInt = 1;
-     } break;
-case 51:
-# line 378 "lua.stx"
-{ lua_pushvar (yypvt[-0].vLong); yyval.vInt = 1;} break;
-case 52:
-# line 379 "lua.stx"
-{ code_number(yypvt[-0].vFloat); yyval.vInt = 1; } break;
-case 53:
-# line 381 "lua.stx"
-{
-      align(Word);
-      code_byte(PUSHSTRING);
-      code_word(yypvt[-0].vWord);
-      yyval.vInt = 1;
-      incr_ntemp();
-     } break;
-case 54:
-# line 388 "lua.stx"
-{code_byte(PUSHNIL); yyval.vInt = 1; incr_ntemp();} break;
-case 55:
-# line 390 "lua.stx"
-{
-      yyval.vInt = 0;
-      if (lua_debug)
-      {
-       align(Word); code_byte(SETLINE); code_word(lua_linenumber);
-      }
-     } break;
-case 56:
-# line 397 "lua.stx"
-{ code_byte(NOTOP);  yyval.vInt = 1;} break;
-case 57:
-# line 398 "lua.stx"
-{code_byte(POP); ntemp--;} break;
-case 58:
-# line 399 "lua.stx"
-{ 
-      *(yypvt[-2].pByte) = ONFJMP;
-      *((Word *)(yypvt[-2].pByte+1)) = pc - (yypvt[-2].pByte + sizeof(Word)+1);
-      yyval.vInt = 1;
-     } break;
-case 59:
-# line 404 "lua.stx"
-{code_byte(POP); ntemp--;} break;
-case 60:
-# line 405 "lua.stx"
-{ 
-      *(yypvt[-2].pByte) = ONTJMP;
-      *((Word *)(yypvt[-2].pByte+1)) = pc - (yypvt[-2].pByte + sizeof(Word)+1);
-      yyval.vInt = 1;
-     } break;
-case 61:
-# line 412 "lua.stx"
-{ code_byte(PUSHNIL); incr_ntemp();} break;
 case 63:
-# line 416 "lua.stx"
-{code_byte(PUSHMARK); yyval.vInt = ntemp; incr_ntemp();} break;
-case 64:
-# line 417 "lua.stx"
-{ code_byte(CALLFUNC); ntemp = yypvt[-3].vInt-1;} break;
+# line 491 "lua.stx"
+{ code_byte(PUSHNIL); incr_ntemp();} break;
 case 65:
-# line 419 "lua.stx"
-{lua_pushvar (yypvt[-0].vLong); } break;
+# line 495 "lua.stx"
+{code_byte(PUSHMARK); yyval.vInt = ntemp; incr_ntemp();} break;
 case 66:
-# line 422 "lua.stx"
-{ yyval.vInt = 1; } break;
+# line 496 "lua.stx"
+{ code_byte(CALLFUNC); ntemp = yypvt[-3].vInt-1;} break;
 case 67:
-# line 423 "lua.stx"
-{ yyval.vInt = yypvt[-0].vInt; } break;
+# line 498 "lua.stx"
+{lua_pushvar (yypvt[-0].vLong); } break;
 case 68:
-# line 426 "lua.stx"
-{ yyval.vInt = yypvt[-0].vInt; } break;
+# line 501 "lua.stx"
+{ yyval.vInt = 1; } break;
 case 69:
-# line 427 "lua.stx"
-{if (!yypvt[-1].vInt){lua_codeadjust (ntemp+1); incr_ntemp();}} break;
+# line 502 "lua.stx"
+{ yyval.vInt = yypvt[-0].vInt; } break;
 case 70:
-# line 428 "lua.stx"
+# line 505 "lua.stx"
+{ yyval.vInt = yypvt[-0].vInt; } break;
+case 71:
+# line 506 "lua.stx"
+{if (!yypvt[-1].vInt){lua_codeadjust (ntemp+1); incr_ntemp();}} break;
+case 72:
+# line 507 "lua.stx"
 {yyval.vInt = yypvt[-0].vInt;} break;
-case 73:
-# line 435 "lua.stx"
-{localvar[nlocalvar]=yypvt[-0].vWord; incr_nlocalvar();} break;
-case 74:
-# line 436 "lua.stx"
-{localvar[nlocalvar]=yypvt[-0].vWord; incr_nlocalvar();} break;
 case 75:
-# line 439 "lua.stx"
-{yyval.vLong=-1;} break;
+# line 515 "lua.stx"
+{
+		 localvar[nlocalvar]=lua_findsymbol(yypvt[-0].pChar); 
+		 add_nlocalvar(1);
+		} break;
 case 76:
-# line 440 "lua.stx"
-{yyval.vLong=yypvt[-0].vWord;} break;
+# line 520 "lua.stx"
+{
+		 localvar[nlocalvar]=lua_findsymbol(yypvt[-0].pChar); 
+		 add_nlocalvar(1);
+		} break;
 case 77:
-# line 443 "lua.stx"
-{ yyval.vInt = yypvt[-1].vInt; } break;
+# line 526 "lua.stx"
+{yyval.vLong=-1;} break;
 case 78:
-# line 444 "lua.stx"
-{ yyval.vInt = yypvt[-1].vInt; } break;
+# line 527 "lua.stx"
+{yyval.vLong=lua_findsymbol(yypvt[-0].pChar);} break;
 case 79:
-# line 447 "lua.stx"
-{ yyval.vInt = 0; } break;
+# line 531 "lua.stx"
+{ 
+	       flush_record(yypvt[-1].vInt%FIELDS_PER_FLUSH); 
+	       yyval.vInt = yypvt[-1].vInt;
+	      } break;
 case 80:
-# line 448 "lua.stx"
-{ yyval.vInt = yypvt[-0].vInt; } break;
+# line 536 "lua.stx"
+{ 
+	       flush_list(yypvt[-1].vInt/FIELDS_PER_FLUSH, yypvt[-1].vInt%FIELDS_PER_FLUSH);
+	       yyval.vInt = yypvt[-1].vInt;
+     	      } break;
 case 81:
-# line 451 "lua.stx"
-{yyval.vInt=1;} break;
-case 82:
-# line 452 "lua.stx"
-{yyval.vInt=yypvt[-2].vInt+1;} break;
-case 83:
-# line 456 "lua.stx"
-{
-            align(Word); 
-            code_byte(PUSHSTRING);
-	    code_word(lua_findconstant (s_name(yypvt[-0].vWord)));
-            incr_ntemp();
-	   } break;
-case 84:
-# line 463 "lua.stx"
-{
-	    code_byte(STOREFIELD);
-	    ntemp-=2;
-	   } break;
-case 85:
-# line 469 "lua.stx"
+# line 542 "lua.stx"
 { yyval.vInt = 0; } break;
-case 86:
-# line 470 "lua.stx"
+case 82:
+# line 543 "lua.stx"
 { yyval.vInt = yypvt[-0].vInt; } break;
-case 87:
-# line 473 "lua.stx"
-{ code_number(1); } break;
-case 88:
-# line 473 "lua.stx"
+case 83:
+# line 546 "lua.stx"
 {yyval.vInt=1;} break;
-case 89:
-# line 474 "lua.stx"
-{ code_number(yypvt[-1].vInt+1); } break;
-case 90:
-# line 475 "lua.stx"
-{yyval.vInt=yypvt[-3].vInt+1;} break;
-case 91:
-# line 479 "lua.stx"
+case 84:
+# line 548 "lua.stx"
 {
-	    code_byte(STOREFIELD);
-	    ntemp-=2;
-	   } break;
-case 92:
-# line 486 "lua.stx"
+		  yyval.vInt=yypvt[-2].vInt+1;
+		  if (yyval.vInt%FIELDS_PER_FLUSH == 0) flush_record(FIELDS_PER_FLUSH);
+		} break;
+case 85:
+# line 554 "lua.stx"
+{yyval.vWord = lua_findconstant(yypvt[-0].pChar);} break;
+case 86:
+# line 555 "lua.stx"
+{ 
+	       push_field(yypvt[-2].vWord);
+	      } break;
+case 87:
+# line 560 "lua.stx"
+{ yyval.vInt = 0; } break;
+case 88:
+# line 561 "lua.stx"
+{ yyval.vInt = yypvt[-0].vInt; } break;
+case 89:
+# line 564 "lua.stx"
+{yyval.vInt=1;} break;
+case 90:
+# line 566 "lua.stx"
+{
+		  yyval.vInt=yypvt[-2].vInt+1;
+		  if (yyval.vInt%FIELDS_PER_FLUSH == 0) 
+		    flush_list(yyval.vInt/FIELDS_PER_FLUSH - 1, FIELDS_PER_FLUSH);
+		} break;
+case 91:
+# line 574 "lua.stx"
 {
 	   nvarbuffer = 0; 
            varbuffer[nvarbuffer] = yypvt[-0].vLong; incr_nvarbuffer();
 	   yyval.vInt = (yypvt[-0].vLong == 0) ? 1 : 0;
 	  } break;
-case 93:
-# line 492 "lua.stx"
+case 92:
+# line 580 "lua.stx"
 { 
            varbuffer[nvarbuffer] = yypvt[-0].vLong; incr_nvarbuffer();
 	   yyval.vInt = (yypvt[-0].vLong == 0) ? yypvt[-2].vInt + 1 : yypvt[-2].vInt;
 	  } break;
-case 94:
-# line 499 "lua.stx"
-{ 
-	   int local = lua_localname (yypvt[-0].vWord);
+case 93:
+# line 587 "lua.stx"
+{
+	   Word s = lua_findsymbol(yypvt[-0].pChar);
+	   int local = lua_localname (s);
 	   if (local == -1)	/* global var */
-	    yyval.vLong = yypvt[-0].vWord + 1;		/* return positive value */
+	    yyval.vLong = s + 1;		/* return positive value */
            else
 	    yyval.vLong = -(local+1);		/* return negative value */
 	  } break;
+case 94:
+# line 596 "lua.stx"
+{lua_pushvar (yypvt[-0].vLong);} break;
 case 95:
-# line 507 "lua.stx"
-{lua_pushvar (yypvt[-0].vLong);} break;
+# line 597 "lua.stx"
+{
+	   yyval.vLong = 0;		/* indexed variable */
+	  } break;
 case 96:
-# line 508 "lua.stx"
-{
-	   yyval.vLong = 0;		/* indexed variable */
-	  } break;
-case 97:
-# line 511 "lua.stx"
+# line 600 "lua.stx"
 {lua_pushvar (yypvt[-0].vLong);} break;
-case 98:
-# line 512 "lua.stx"
+case 97:
+# line 601 "lua.stx"
 {
-	   align(Word);
 	   code_byte(PUSHSTRING);
-	   code_word(lua_findconstant (s_name(yypvt[-0].vWord))); incr_ntemp();
+	   code_word(lua_findconstant(yypvt[-0].pChar)); incr_ntemp();
 	   yyval.vLong = 0;		/* indexed variable */
 	  } break;
+case 98:
+# line 608 "lua.stx"
+{localvar[nlocalvar]=lua_findsymbol(yypvt[-0].pChar); yyval.vInt = 1;} break;
 case 99:
-# line 520 "lua.stx"
-{localvar[nlocalvar]=yypvt[-1].vWord; incr_nlocalvar();} break;
-case 100:
-# line 521 "lua.stx"
-{localvar[nlocalvar]=yypvt[-1].vWord; incr_nlocalvar();} break;
-case 101:
-# line 524 "lua.stx"
-{ code_byte(PUSHNIL); } break;
+# line 610 "lua.stx"
+{
+	     localvar[nlocalvar+yypvt[-2].vInt]=lua_findsymbol(yypvt[-0].pChar); 
+	     yyval.vInt = yypvt[-2].vInt+1;
+	    } break;
 case 102:
-# line 525 "lua.stx"
-{ntemp = 0;} break;
-case 104:
-# line 528 "lua.stx"
+# line 620 "lua.stx"
 {lua_debug = yypvt[-0].vInt;} break;
 	}
 	goto yystack;		/* reset registers in driver code */

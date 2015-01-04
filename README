@@ -1,0 +1,47 @@
+* What is Lua?
+  Lua is a simple, yet powerful, language for extending applications.
+  Lua has been developed by TeCGraf, the Computer Graphics Technology Group
+  of PUC-Rio, the Pontifical Catholic University of Rio de Janeiro, Brazil.
+  Dozens of industrial products developed by TeCGraf use Lua.
+
+* Some features of Lua
+  Lua has a simple, pascal-like, syntax.
+  Variables need no declaration, but Lua has user-controlled type constructors.
+  Lua has powerful data description constructs (e.g., associative arrays).
+  Functions can receive a variable number of arguments and can return multiple
+  values.
+  Lua programs are compiled into bytecodes, which are then interpreted to
+  simulate a virtual machine.
+  Lua is written in ANSI C and is completely portable.
+
+* Coming soon
+  Object-oriented extensions.
+  Lazy evaluation.
+
+* Installing
+  To make, simply type domake.
+  If make succeeds, you get an interpreter in ./bin/lua.
+  The libraries are in ./lib.  The include files are in ./include.
+  You don't need the other directories for development.
+  There is documentation in ./doc and tests in ./test.
+  The documentation includes a reference manual and an article on the
+  design and implementation of Lua.
+  This distribution is biased towards SunOS 4 with gcc but it is simple to
+  change the Makefiles for other systems.
+
+* Legal matters
+  Lua is not in the public domain;  TeCGraf keeps its copyright.
+  Nevertheless, Lua is freely available for academic purposes by anonymous ftp
+  at ftp.icad.puc-rio.br:/pub/lua/lua-1.1.tar.Z.
+  For commercial purposes, please contact us.
+
+* Contacting the authors
+  Send your comments, bug reports and anything else to lhf@icad.puc-rio.br.
+  Please send me email if you download Lua so that we can know how far it goes.
+
+--
+Luiz Henrique de Figueiredo                          email: lhf@icad.puc-rio.br
+TeCGraf-Grupo de Tecnologia em Computacao Grafica, ITS, PUC-Rio
+Rua Marques de Sao Vicente 225                       voice: +55 21 529-9424
+22453-900 Rio de Janeiro, RJ, Brasil                   fax: +55 21 511-5645
+--

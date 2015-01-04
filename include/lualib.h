@@ -1,8 +1,8 @@
 /*
-** Libraries to use in LUA programs
+** Libraries to be used in LUA programs
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** 19 May 93
+** $Id: lualib.h,v 1.1 1993/12/17 19:01:46 celes Exp $
 */
 
 #ifndef lualib_h
@@ -13,3 +13,4 @@ void strlib_open  (void);
 void mathlib_open (void);
 
 #endif
+

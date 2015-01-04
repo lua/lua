@@ -2,9 +2,7 @@ $debug
 
 function quicksort(r,s)
 	if s<=r then return end		-- caso basico da recursao
-	local v=x[r]
-	local i=r
-	local j=s+1
+	local v, i, j = x[r], r, s+1
 		i=i+1; while x[i]<v do i=i+1 end
 		j=j-1; while x[j]>v do j=j-1 end
 		x[i],x[j]=x[j],x[i]
@@ -22,8 +20,7 @@ end
 function sort(a,n)			-- selection sort
  local i=1
  while i<=n do
-  local m=i
-  local j=i+1
+  local m, j = i, i+1
   while j<=n do
    if a[j]<a[m] then m=j end
    j=j+1
@@ -47,10 +44,11 @@ function main()
  n=n+1;	x[n]="marcelo"
  n=n+1;	x[n]="sedrez"
  n=n+1;	x[n]="z"
--- quicksort(1,n-1)
+ print(x[0]..","..x[1]..","..x[2]..","..x[3]..","..x[4]..","..x[5]..","..x[6]..","..x[7]..","..x[8]..","..x[9]..","..x[10])
+ quicksort(1,n-1)
  print(x[0]..","..x[1]..","..x[2]..","..x[3]..","..x[4]..","..x[5]..","..x[6]..","..x[7]..","..x[8]..","..x[9]..","..x[10])
  sort (x, n-1)
  print(x[0]..","..x[1]..","..x[2]..","..x[3]..","..x[4]..","..x[5]..","..x[6]..","..x[7]..","..x[8]..","..x[9]..","..x[10])
 end
 
-
+main()

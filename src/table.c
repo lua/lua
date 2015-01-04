@@ -1,12 +1,14 @@
 /*
 ** table.c
 ** Module to control static tables
-** TeCGraf - PUC-Rio
-** 11 May 93
 */
+
+char *rcs_table="$Id: table.c,v 2.1 1994/04/20 22:07:57 celes Exp $";
 
 #include <stdlib.h>
 #include <string.h>
+
+#include "mm.h"
 
 #include "opcode.h"
 #include "hash.h"
@@ -14,7 +16,7 @@
 #include "table.h"
 #include "lua.h"
 
-#define streq(s1,s2)	(strcmp(s1,s2)==0)
+#define streq(s1,s2)	(s1[0]==s2[0]&&strcmp(s1+1,s2+1)==0)
 
 #ifndef MAXSYMBOL
 #define MAXSYMBOL	512
@@ -24,20 +26,47 @@ static Symbol  		tablebuffer[MAXSYMBOL] = {
                                     {"tonumber",{T_CFUNCTION,{lua_obj2number}}},
                                     {"next",{T_CFUNCTION,{lua_next}}},
                                     {"nextvar",{T_CFUNCTION,{lua_nextvar}}},
-                                    {"print",{T_CFUNCTION,{lua_print}}}
+                                    {"print",{T_CFUNCTION,{lua_print}}},
+                                    {"dofile",{T_CFUNCTION,{lua_internaldofile}}},
+                                    {"dostring",{T_CFUNCTION,{lua_internaldostring}}}
                                                  };
 Symbol	       	       *lua_table=tablebuffer;
-Word   	 		lua_ntable=5;
+Word   	 		lua_ntable=7;
+
+struct List
+{
+ Symbol *s;
+ struct List *next;
+};
+
+static struct List o6={ tablebuffer+6, 0};
+static struct List o5={ tablebuffer+5, &o6 };
+static struct List o4={ tablebuffer+4, &o5 };
+static struct List o3={ tablebuffer+3, &o4 };
+static struct List o2={ tablebuffer+2, &o3 };
+static struct List o1={ tablebuffer+1, &o2 };
+static struct List o0={ tablebuffer+0, &o1 };
+static struct List *searchlist=&o0;
 
 #ifndef MAXCONSTANT
 #define MAXCONSTANT	256
 #endif
-static char  	       *constantbuffer[MAXCONSTANT] = {"mark","nil","number",
-                                                       "string","table",
-                                                       "function","cfunction"
+/* pre-defined constants need garbage collection extra byte */ 
+static char tm[] = " mark";
+static char ti[] = " nil";
+static char tn[] = " number";
+static char ts[] = " string";
+static char tt[] = " table";
+static char tf[] = " function";
+static char tc[] = " cfunction";
+static char tu[] = " userdata";
+static char  	       *constantbuffer[MAXCONSTANT] = {tm+1, ti+1,
+						       tn+1, ts+1,
+						       tt+1, tf+1,
+						       tc+1, tu+1
                                                       };
 char  	      	      **lua_constant = constantbuffer;
-Word    		lua_nconstant=T_CFUNCTION+1;
+Word    		lua_nconstant=T_USERDATA+1;
 
 #ifndef MAXSTRING
 #define MAXSTRING	512
@@ -46,16 +75,17 @@ static char 	       *stringbuffer[MAXSTRING];
 char  		      **lua_string = stringbuffer;
 Word    		lua_nstring=0;
 
-#ifndef MAXARRAY
-#define MAXARRAY	512
-#endif
-static Hash             *arraybuffer[MAXARRAY];
-Hash  	              **lua_array = arraybuffer;
-Word    		lua_narray=0;
-
 #define MAXFILE 	20
 char  		       *lua_file[MAXFILE];
 int      		lua_nfile;
+
+
+#define markstring(s)   (*((s)-1))
+
+
+/* Variables to controll garbage collection */
+Word lua_block=10; /* to check when garbage collector will be called */
+Word lua_nentity;   /* counter of new entities (strings and arrays) */
 
 
 /*
@@ -65,10 +95,19 @@ int      		lua_nfile;
 */
 int lua_findsymbol (char *s)
 {
- int i;
- for (i=0; i<lua_ntable; i++)
-  if (streq(s,s_name(i)))
-   return i;
+ struct List *l, *p;
+ for (p=NULL, l=searchlist; l!=NULL; p=l, l=l->next)
+  if (streq(s,l->s->name))
+  {
+   if (p!=NULL)
+   {
+    p->next = l->next;
+    l->next = searchlist;
+    searchlist = l;
+   }
+   return (l->s-lua_table);
+  }
+
  if (lua_ntable >= MAXSYMBOL-1)
  {
   lua_error ("symbol table overflow");
@@ -80,60 +119,13 @@ int lua_findsymbol (char *s)
   lua_error ("not enough memory");
   return -1;
  }
- s_tag(lua_ntable++) = T_NIL;
- 
- return (lua_ntable-1);
-}
+ s_tag(lua_ntable) = T_NIL;
+ p = malloc(sizeof(*p)); 
+ p->s = lua_table+lua_ntable;
+ p->next = searchlist;
+ searchlist = p;
 
-/*
-** Given a constant string, eliminate its delimeters (" or '), search it at 
-** constant table and return its index. If not found, allocate at end of 
-** the table, checking oveflow and return its index.
-**
-** For each allocation, the function allocate a extra char to be used to
-** mark used string (it's necessary to deal with constant and string 
-** uniformily). The function store at the table the second position allocated,
-** that represents the beginning of the real string. On error, return -1.
-** 
-*/
-int lua_findenclosedconstant (char *s)
-{
- int i, j, l=strlen(s);
- char *c = calloc (l, sizeof(char)); 	/* make a copy */
- 
- c++;		/* create mark space */
-
- /* introduce scape characters */ 
- for (i=1,j=0; i<l-1; i++)
- {
-  if (s[i] == '\\')
-  {
-   switch (s[++i])
-   {
-    case 'n': c[j++] = '\n'; break;
-    case 't': c[j++] = '\t'; break;
-    case 'r': c[j++] = '\r'; break;
-    default : c[j++] = '\\'; c[j++] = c[i]; break;
-   }
-  }
-  else
-   c[j++] = s[i];
- }
- c[j++] = 0;
- 
- for (i=0; i<lua_nconstant; i++)
-  if (streq(c,lua_constant[i]))
-  {
-   free (c-1);
-   return i;
-  }
- if (lua_nconstant >= MAXCONSTANT-1)
- {
-  lua_error ("lua: constant string table overflow"); 
-  return -1;
- }
- lua_constant[lua_nconstant++] = c;
- return (lua_nconstant-1);
+ return lua_ntable++;
 }
 
 /*
@@ -168,65 +160,64 @@ int lua_findconstant (char *s)
 
 
 /*
+** Traverse symbol table objects
+*/
+void lua_travsymbol (void (*fn)(Object *))
+{
+ int i;
+ for (i=0; i<lua_ntable; i++)
+  fn(&s_object(i));
+}
+
+
+/*
 ** Mark an object if it is a string or a unmarked array.
 */
 void lua_markobject (Object *o)
 {
  if (tag(o) == T_STRING)
-  lua_markstring (svalue(o)) = 1;
- else if (tag(o) == T_ARRAY && markarray(avalue(o)) == 0)
+  markstring (svalue(o)) = 1;
+ else if (tag(o) == T_ARRAY)
    lua_hashmark (avalue(o));
 }
 
+
 /*
-** Mark all strings and arrays used by any object stored at symbol table.
+** Garbage collection. 
+** Delete all unused strings and arrays.
 */
-static void lua_marktable (void)
+void lua_pack (void)
 {
- int i;
- for (i=0; i<lua_ntable; i++)
-  lua_markobject (&s_object(i));
+ /* mark stack strings */
+ lua_travstack(lua_markobject);
+ 
+ /* mark symbol table strings */
+ lua_travsymbol(lua_markobject);
+
+ lua_stringcollector();
+ lua_hashcollector();
+
+ lua_nentity = 0;      /* reset counter */
 } 
 
 /*
-** Simulate a garbage colection. When string table or array table overflows,
-** this function check if all allocated strings and arrays are in use. If
-** there are unused ones, pack (compress) the tables.
+** Garbage collection to atrings.
+** Delete all unmarked strings
 */
-static void lua_pack (void)
+void lua_stringcollector (void)
 {
- lua_markstack ();
- lua_marktable ();
- 
- { /* pack string */
-  int i, j;
-  for (i=j=0; i<lua_nstring; i++)
-   if (lua_markstring(lua_string[i]) == 1)
-   {
-    lua_string[j++] = lua_string[i];
-    lua_markstring(lua_string[i]) = 0;
-   }
-   else
-   {
-    free (lua_string[i]-1);
-   }
-  lua_nstring = j;
- }
-
- { /* pack array */
-  int i, j;
-  for (i=j=0; i<lua_narray; i++)
-   if (markarray(lua_array[i]) == 1)
-   {
-    lua_array[j++] = lua_array[i];
-    markarray(lua_array[i]) = 0;
-   }
-   else
-   {
-    lua_hashdelete (lua_array[i]);
-   }
-  lua_narray = j;
- }
+ int i, j;
+ for (i=j=0; i<lua_nstring; i++)
+  if (markstring(lua_string[i]) == 1)
+  {
+   lua_string[j++] = lua_string[i];
+   markstring(lua_string[i]) = 0;
+  }
+  else
+  {
+   free (lua_string[i]-1);
+  }
+ lua_nstring = j;
 }
 
 /*
@@ -236,9 +227,17 @@ static void lua_pack (void)
 */
 char *lua_createstring (char *s)
 {
+ int i;
  if (s == NULL) return NULL;
  
- if (lua_nstring >= MAXSTRING-1)
+ for (i=0; i<lua_nstring; i++)
+  if (streq(s,lua_string[i]))
+  {
+   free(s-1);
+   return lua_string[i];
+  }
+
+ if (lua_nentity == lua_block || lua_nstring >= MAXSTRING-1)
  {
   lua_pack ();
   if (lua_nstring >= MAXSTRING-1)
@@ -248,31 +247,9 @@ char *lua_createstring (char *s)
   }
  } 
  lua_string[lua_nstring++] = s;
+ lua_nentity++;
  return s;
 }
-
-/*
-** Allocate a new array, already created, at array table. The function puts 
-** it at the end of the table, checking overflow, and returns its own pointer,
-** or NULL on error.
-*/
-void *lua_createarray (void *a)
-{
- if (a == NULL) return NULL;
- 
- if (lua_narray >= MAXARRAY-1)
- {
-  lua_pack ();
-  if (lua_narray >= MAXARRAY-1)
-  {
-   lua_error ("indexed table overflow");
-   return NULL;
-  }
- } 
- lua_array[lua_narray++] = a;
- return a;
-}
-
 
 /*
 ** Add a file name at file table, checking overflow. This function also set
@@ -292,6 +269,15 @@ int lua_addfile (char *fn)
   return 1;
  }
  return 0;
+}
+
+/*
+** Delete a file from file stack
+*/
+int lua_delfile (void)
+{
+ lua_nfile--; 
+ return 1;
 }
 
 /*
@@ -332,9 +318,9 @@ void lua_nextvar (void)
    return;
   }
   index++;
-  while (index < lua_ntable-1 && tag(&s_object(index)) == T_NIL) index++;
+  while (index < lua_ntable && tag(&s_object(index)) == T_NIL) index++;
   
-  if (index == lua_ntable-1)
+  if (index == lua_ntable)
   {
    lua_pushnil();
    lua_pushnil();

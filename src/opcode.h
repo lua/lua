@@ -1,7 +1,6 @@
 /*
-** opcode.h
 ** TeCGraf - PUC-Rio
-** 16 Apr 92
+** $Id: opcode.h,v 2.1 1994/04/20 22:07:57 celes Exp $
 */
 
 #ifndef opcode_h
@@ -15,13 +14,26 @@
 #define real float
 #endif
 
+#define FIELDS_PER_FLUSH 40
+
 typedef unsigned char  Byte;
 
 typedef unsigned short Word;
 
+typedef union
+{
+ struct {char c1; char c2;} m;
+ Word w;
+} CodeWord;
+
+typedef union
+{
+ struct {char c1; char c2; char c3; char c4;} m;
+ float f;
+} CodeFloat;
+
 typedef enum 
 { 
- NOP,
  PUSHNIL,
  PUSH0, PUSH1, PUSH2,
  PUSHBYTE,
@@ -41,7 +53,9 @@ typedef enum
  STOREGLOBAL,
  STOREINDEXED0,
  STOREINDEXED,
- STOREFIELD,
+ STORELIST0,
+ STORELIST,
+ STORERECORD,
  ADJUST,
  CREATEARRAY,
  EQOP,
@@ -83,7 +97,6 @@ typedef enum
 
 typedef void (*Cfunction) (void);
 typedef int  (*Input) (void);
-typedef void (*Unput) (int );
 
 typedef union
 {
@@ -127,18 +140,25 @@ typedef struct
 #define s_fvalue(i)	(fvalue(&s_object(i)))
 #define s_uvalue(i)	(uvalue(&s_object(i)))
 
+#define get_word(code,pc)    {code.m.c1 = *pc++; code.m.c2 = *pc++;}
+#define get_float(code,pc)   {code.m.c1 = *pc++; code.m.c2 = *pc++;\
+                              code.m.c3 = *pc++; code.m.c4 = *pc++;}
+ 
+
 
 /* Exported functions */
 int     lua_execute   (Byte *pc);
 void    lua_markstack (void);
 char   *lua_strdup (char *l);
 
-void    lua_setinput   (Input fn);	/* from "lua.lex" module */
-void    lua_setunput   (Unput fn);	/* from "lua.lex" module */
-char   *lua_lasttext   (void);		/* from "lua.lex" module */
+void    lua_setinput   (Input fn);	/* from "lex.c" module */
+char   *lua_lasttext   (void);		/* from "lex.c" module */
 int     lua_parse      (void); 		/* from "lua.stx" module */
 void    lua_type       (void);
 void 	lua_obj2number (void);
 void 	lua_print      (void);
+void 	lua_internaldofile (void);
+void 	lua_internaldostring (void);
+void    lua_travstack (void (*fn)(Object *));
 
 #endif

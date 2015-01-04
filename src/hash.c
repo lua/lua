@@ -2,12 +2,14 @@
 ** hash.c
 ** hash manager for lua
 ** Luiz Henrique de Figueiredo - 17 Aug 90
-** Modified by Waldemar Celes Filho
-** 12 May 93
 */
+
+char *rcs_hash="$Id: hash.c,v 2.1 1994/04/20 22:07:57 celes Exp $";
 
 #include <string.h>
 #include <stdlib.h>
+
+#include "mm.h"
 
 #include "opcode.h"
 #include "hash.h"
@@ -24,9 +26,22 @@
 #define nhash(t)	((t)->nhash)
 #define nodelist(t)	((t)->list)
 #define list(t,i)	((t)->list[i])
+#define markarray(t)    ((t)->mark)
 #define ref_tag(n)	(tag(&(n)->ref))
 #define ref_nvalue(n)	(nvalue(&(n)->ref))
 #define ref_svalue(n)	(svalue(&(n)->ref))
+
+#ifndef ARRAYBLOCK
+#define ARRAYBLOCK 50
+#endif
+
+typedef struct ArrayList
+{
+ Hash *array;
+ struct ArrayList *next;
+} ArrayList;
+
+static ArrayList *listhead = NULL;
 
 static int head (Hash *t, Object *ref)		/* hash function */
 {
@@ -89,7 +104,7 @@ static void freelist (Node *n)
 /*
 ** Create a new hash. Return the hash pointer or NULL on error.
 */
-Hash *lua_hashcreate (unsigned int nhash)
+static Hash *hashcreate (unsigned int nhash)
 {
  Hash *t = new (Hash);
  if (t == NULL)
@@ -111,7 +126,7 @@ Hash *lua_hashcreate (unsigned int nhash)
 /*
 ** Delete a hash
 */
-void lua_hashdelete (Hash *h)
+static void hashdelete (Hash *h)
 {
  int i;
  for (i=0; i<nhash(h); i++)
@@ -119,6 +134,86 @@ void lua_hashdelete (Hash *h)
  free (nodelist(h));
  free(h);
 }
+
+
+/*
+** Mark a hash and check its elements 
+*/
+void lua_hashmark (Hash *h)
+{
+ if (markarray(h) == 0)
+ {
+  int i;
+  markarray(h) = 1;
+  for (i=0; i<nhash(h); i++)
+  {
+   Node *n;
+   for (n = list(h,i); n != NULL; n = n->next)
+   {
+    lua_markobject(&n->ref);
+    lua_markobject(&n->val);
+   }
+  }
+ } 
+}
+ 
+/*
+** Garbage collection to arrays
+** Delete all unmarked arrays.
+*/
+void lua_hashcollector (void)
+{
+ ArrayList *curr = listhead, *prev = NULL;
+ while (curr != NULL)
+ {
+  ArrayList *next = curr->next;
+  if (markarray(curr->array) != 1)
+  {
+   if (prev == NULL) listhead = next;
+   else              prev->next = next;
+   hashdelete(curr->array);
+   free(curr);
+  }
+  else
+  {
+   markarray(curr->array) = 0;
+   prev = curr;
+  }
+  curr = next;
+ }
+}
+
+
+/*
+** Create a new array
+** This function insert the new array at array list. It also
+** execute garbage collection if the number of array created
+** exceed a pre-defined range.
+*/
+Hash *lua_createarray (int nhash)
+{
+ ArrayList *new = new(ArrayList);
+ if (new == NULL)
+ {
+  lua_error ("not enough memory");
+  return NULL;
+ }
+ new->array = hashcreate(nhash);
+ if (new->array == NULL)
+ {
+  lua_error ("not enough memory");
+  return NULL;
+ }
+
+ if (lua_nentity == lua_block)
+  lua_pack(); 
+
+ lua_nentity++;
+ new->next = listhead;
+ listhead = new;
+ return new->array;
+}
+
 
 /*
 ** If the hash node is present, return its pointer, otherwise create a new
@@ -149,26 +244,6 @@ Object *lua_hashdefine (Hash *t, Object *ref)
  return (&n->val);
 }
 
-/*
-** Mark a hash and check its elements 
-*/
-void lua_hashmark (Hash *h)
-{
- int i;
- 
- markarray(h) = 1;
- 
- for (i=0; i<nhash(h); i++)
- {
-  Node *n;
-  for (n = list(h,i); n != NULL; n = n->next)
-  {
-   lua_markobject (&n->ref);
-   lua_markobject (&n->val);
-  }
- }
-}
-
 
 /*
 ** Internal function to manipulate arrays. 
@@ -176,7 +251,6 @@ void lua_hashmark (Hash *h)
 ** in the hash.
 ** This function pushs the element value and its reference to the stack.
 */
-#include "lua.h"
 static void firstnode (Hash *a, int h)
 {
  if (h < nhash(a))
@@ -184,11 +258,25 @@ static void firstnode (Hash *a, int h)
   int i;
   for (i=h; i<nhash(a); i++)
   {
-   if (list(a,i) != NULL && tag(&list(a,i)->val) != T_NIL)
+   if (list(a,i) != NULL)
    {
-    lua_pushobject (&list(a,i)->ref);
-    lua_pushobject (&list(a,i)->val);
-    return;
+    if (tag(&list(a,i)->val) != T_NIL)
+    {
+     lua_pushobject (&list(a,i)->ref);
+     lua_pushobject (&list(a,i)->val);
+     return;
+    }
+    else
+    {
+     Node *next = list(a,i)->next;
+     while (next != NULL && tag(&next->val) == T_NIL) next = next->next;
+     if (next != NULL)
+     {
+      lua_pushobject (&next->ref);
+      lua_pushobject (&next->val);
+      return;
+     }
+    }
    }
   }
  }

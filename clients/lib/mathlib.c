@@ -1,16 +1,17 @@
 /*
 ** mathlib.c
-** Mathematica library to LUA
-**
-** Waldemar Celes Filho
-** TeCGraf - PUC-Rio
-** 19 May 93
+** Mathematics library to LUA
 */
+
+char *rcs_mathlib="$Id: mathlib.c,v 1.1 1993/12/17 18:41:19 celes Exp $";
 
 #include <stdio.h>		/* NULL */
 #include <math.h>
 
 #include "lua.h"
+
+#define TODEGREE(a) ((a)*180.0/3.14159)
+#define TORAD(a)    ((a)*3.14159/180.0)
 
 static void math_abs (void)
 {
@@ -35,7 +36,7 @@ static void math_sin (void)
  if (!lua_isnumber(o))
  { lua_error ("incorrect arguments to function `sin'"); return; }
  d = lua_getnumber(o);
- lua_pushnumber (sin(d));
+ lua_pushnumber (sin(TORAD(d)));
 }
 
 
@@ -49,7 +50,7 @@ static void math_cos (void)
  if (!lua_isnumber(o))
  { lua_error ("incorrect arguments to function `cos'"); return; }
  d = lua_getnumber(o);
- lua_pushnumber (cos(d));
+ lua_pushnumber (cos(TORAD(d)));
 }
 
 
@@ -63,7 +64,7 @@ static void math_tan (void)
  if (!lua_isnumber(o))
  { lua_error ("incorrect arguments to function `tan'"); return; }
  d = lua_getnumber(o);
- lua_pushnumber (tan(d));
+ lua_pushnumber (tan(TORAD(d)));
 }
 
 
@@ -76,7 +77,7 @@ static void math_asin (void)
  if (!lua_isnumber(o))
  { lua_error ("incorrect arguments to function `asin'"); return; }
  d = lua_getnumber(o);
- lua_pushnumber (asin(d));
+ lua_pushnumber (TODEGREE(asin(d)));
 }
 
 
@@ -89,7 +90,7 @@ static void math_acos (void)
  if (!lua_isnumber(o))
  { lua_error ("incorrect arguments to function `acos'"); return; }
  d = lua_getnumber(o);
- lua_pushnumber (acos(d));
+ lua_pushnumber (TODEGREE(acos(d)));
 }
 
 
@@ -103,7 +104,7 @@ static void math_atan (void)
  if (!lua_isnumber(o))
  { lua_error ("incorrect arguments to function `atan'"); return; }
  d = lua_getnumber(o);
- lua_pushnumber (atan(d));
+ lua_pushnumber (TODEGREE(atan(d)));
 }
 
 

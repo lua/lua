@@ -1,15 +1,15 @@
 /*
 ** strlib.c
 ** String library to LUA
-**
-** Waldemar Celes Filho
-** TeCGraf - PUC-Rio
-** 19 May 93
 */
+
+char *rcs_strlib="$Id: strlib.c,v 1.2 1994/03/28 15:14:02 celes Exp $";
 
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+
+#include "mm.h"
 
 
 #include "lua.h"
@@ -21,16 +21,18 @@
 */
 static void str_find (void)
 {
- int n;
- char *s1, *s2;
+ char *s1, *s2, *f;
  lua_Object o1 = lua_getparam (1);
  lua_Object o2 = lua_getparam (2);
  if (!lua_isstring(o1) || !lua_isstring(o2))
  { lua_error ("incorrect arguments to function `strfind'"); return; }
  s1 = lua_getstring(o1);
  s2 = lua_getstring(o2);
- n = strstr(s1,s2) - s1 + 1;
- lua_pushnumber (n);
+ f = strstr(s1,s2);
+ if (f != NULL)
+  lua_pushnumber (f-s1+1);
+ else
+  lua_pushnil();
 }
 
 /*
@@ -59,13 +61,15 @@ static void str_sub (void)
  lua_Object o1 = lua_getparam (1);
  lua_Object o2 = lua_getparam (2);
  lua_Object o3 = lua_getparam (3);
- if (!lua_isstring(o1) || !lua_isnumber(o2) || !lua_isnumber(o3))
+ if (!lua_isstring(o1) || !lua_isnumber(o2))
  { lua_error ("incorrect arguments to function `strsub'"); return; }
- s = strdup (lua_getstring(o1));
+ if (o3 != NULL && !lua_isnumber(o3))
+ { lua_error ("incorrect third argument to function `strsub'"); return; }
+ s = lua_copystring(o1);
  start = lua_getnumber (o2);
- end = lua_getnumber (o3);
+ end = o3 == NULL ? strlen(s) : lua_getnumber (o3);
  if (end < start || start < 1 || end > strlen(s))
-  lua_pushstring ("");
+  lua_pushstring("");
  else
  {
   s[end] = 0;

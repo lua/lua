@@ -2,11 +2,9 @@
 ** inout.c
 ** Provide function to realise the input/output function and debugger 
 ** facilities.
-**
-** Waldemar Celes Filho
-** TeCGraf - PUC-Rio
-** 11 May 93
 */
+
+char *rcs_inout="$Id: inout.c,v 1.2 1993/12/22 21:15:16 roberto Exp $";
 
 #include <stdio.h>
 #include <string.h>
@@ -50,28 +48,12 @@ static int fileinput (void)
 }
 
 /*
-** Function to unget the next character from to input file
-*/
-static void fileunput (int c)
-{
- ungetc (c, fp);
-}
-
-/*
 ** Function to get the next character from the input string
 */
 static int stringinput (void)
 {
  st++;
  return (*(st-1));
-}
-
-/*
-** Function to unget the next character from to input string
-*/
-static void stringunput (int c)
-{
- st--;
 }
 
 /*
@@ -82,7 +64,6 @@ int lua_openfile (char *fn)
 {
  lua_linenumber = 1;
  lua_setinput (fileinput);
- lua_setunput (fileunput);
  fp = fopen (fn, "r");
  if (fp == NULL) return 1;
  if (lua_addfile (fn)) return 1;
@@ -96,6 +77,7 @@ void lua_closefile (void)
 {
  if (fp != NULL)
  {
+  lua_delfile();
   fclose (fp);
   fp = NULL;
  }
@@ -108,7 +90,6 @@ int lua_openstring (char *s)
 {
  lua_linenumber = 1;
  lua_setinput (stringinput);
- lua_setunput (stringunput);
  st = s;
  {
   char sn[64];
@@ -116,6 +97,14 @@ int lua_openstring (char *s)
   if (lua_addfile (sn)) return 1;
  }
  return 0;
+}
+
+/*
+** Function to close an opened string
+*/
+void lua_closestring (void)
+{
+ lua_delfile();
 }
 
 /*

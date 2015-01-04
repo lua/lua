@@ -1,4 +1,3 @@
-$debug
 
 
 function savevar (n,v)
