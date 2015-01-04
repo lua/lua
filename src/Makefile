@@ -92,7 +92,11 @@ aix:
 	$(MAKE) $(ALL) CC="xlc" CFLAGS="-O2 -DLUA_USE_POSIX -DLUA_USE_DLOPEN" SYSLIBS="-ldl" SYSLDFLAGS="-brtl -bexpall"
 
 ansi:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_ANSI"
+	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_ANSI -DLUA_32BITS"
+	@echo ""
+	@echo "Note: in ANSI mode, Lua is built with 32-bit numbers"
+	@echo "      because ANSI C89 does not support 'long long'"
+	@echo ""
 
 bsd:
 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN" SYSLIBS="-Wl,-E"

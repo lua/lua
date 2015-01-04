@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 2.33 2014/07/30 14:42:44 roberto Exp $
+** $Id: lvm.h,v 2.34 2014/08/01 17:24:02 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -16,14 +16,14 @@
 #if !defined(LUA_NOCVTN2S)
 #define cvt2str(o)	ttisnumber(o)
 #else
-#define cvt2str(o)	0	/* no convertion from numbers to strings */
+#define cvt2str(o)	0	/* no conversion from numbers to strings */
 #endif
 
 
 #if !defined(LUA_NOCVTS2N)
 #define cvt2num(o)	ttisstring(o)
 #else
-#define cvt2num(o)	0	/* no convertion from strings to numbers */
+#define cvt2num(o)	0	/* no conversion from strings to numbers */
 #endif
 
 

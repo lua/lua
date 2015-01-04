@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.88 2014/07/30 14:00:14 roberto Exp $
+** $Id: lobject.c,v 2.93 2014/10/17 16:28:21 roberto Exp $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -310,10 +310,11 @@ size_t luaO_str2num (const char *s, TValue *o) {
 }
 
 
-int luaO_utf8esc (char *buff, unsigned int x) {
+int luaO_utf8esc (char *buff, unsigned long x) {
   int n = 1;  /* number of bytes put in buffer (backwards) */
+  lua_assert(x <= 0x10FFFF);
   if (x < 0x80)  /* ascii? */
-    buff[UTF8BUFFSZ - 1] = x;
+    buff[UTF8BUFFSZ - 1] = cast(char, x);
   else {  /* need continuation bytes */
     unsigned int mfb = 0x3f;  /* maximum that fits in first byte */
     do {
@@ -321,7 +322,7 @@ int luaO_utf8esc (char *buff, unsigned int x) {
       x >>= 6;  /* remove added bits */
       mfb >>= 1;  /* now there is one less bit available in first byte */
     } while (x > mfb);  /* still needs continuation byte? */
-    buff[UTF8BUFFSZ - n] = (~mfb << 1) | x;  /* add first byte */
+    buff[UTF8BUFFSZ - n] = cast(char, (~mfb << 1) | x);  /* add first byte */
   }
   return n;
 }
@@ -359,7 +360,7 @@ static void pushstr (lua_State *L, const char *str, size_t l) {
 
 
 /* this function handles only '%d', '%c', '%f', '%p', and '%s' 
-   conventional formats, plus Lua-specific '%L' and '%U' */
+   conventional formats, plus Lua-specific '%I' and '%U' */
 const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
   int n = 0;
   for (;;) {
@@ -376,7 +377,10 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
       }
       case 'c': {
         char buff = cast(char, va_arg(argp, int));
-        pushstr(L, &buff, 1);
+        if (lisprint(cast_uchar(buff)))
+          pushstr(L, &buff, 1);
+        else  /* non-printable character; print its code */
+          luaO_pushfstring(L, "<\\%d>", cast_uchar(buff));
         break;
       }
       case 'd': {
@@ -402,7 +406,7 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
       }
       case 'U': {
         char buff[UTF8BUFFSZ];
-        int l = luaO_utf8esc(buff, va_arg(argp, int));
+        int l = luaO_utf8esc(buff, cast(long, va_arg(argp, long)));
         pushstr(L, buff + UTF8BUFFSZ - l, l);
         break;
       }
@@ -411,9 +415,8 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
         break;
       }
       default: {
-        luaG_runerror(L,
-            "invalid option " LUA_QL("%%%c") " to " LUA_QL("lua_pushfstring"),
-            *(e + 1));
+        luaG_runerror(L, "invalid option '%%%c' to 'lua_pushfstring'",
+                         *(e + 1));
       }
     }
     n += 2;

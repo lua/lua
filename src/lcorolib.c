@@ -1,5 +1,5 @@
 /*
-** $Id: lcorolib.c,v 1.6 2014/05/08 13:52:20 roberto Exp $
+** $Id: lcorolib.c,v 1.7 2014/09/01 18:00:04 roberto Exp $
 ** Coroutine Library
 ** See Copyright Notice in lua.h
 */
@@ -19,7 +19,7 @@
 
 static lua_State *getco (lua_State *L) {
   lua_State *co = lua_tothread(L, 1);
-  luaL_argcheck(L, co, 1, "coroutine expected");
+  luaL_argcheck(L, co, 1, "thread expected");
   return co;
 }
 
