@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.208 2003/04/03 13:35:34 roberto Exp $
+** $Id: lparser.c,v 1.208a 2003/04/03 13:35:34 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1141,11 +1141,15 @@ static void ifstat (LexState *ls, int line) {
 
 static void localfunc (LexState *ls) {
   expdesc v, b;
+  FuncState *fs = ls->fs;
   new_localvar(ls, str_checkname(ls), 0);
-  init_exp(&v, VLOCAL, ls->fs->freereg++);
+  init_exp(&v, VLOCAL, fs->freereg);
+  luaK_reserveregs(fs, 1);
   adjustlocalvars(ls, 1);
   body(ls, &b, 0, ls->linenumber);
-  luaK_storevar(ls->fs, &v, &b);
+  luaK_storevar(fs, &v, &b);
+  /* debug information will only see the variable after this point! */
+  getlocvar(fs, fs->nactvar - 1).startpc = fs->pc;
 }
 
 

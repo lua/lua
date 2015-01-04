@@ -1,0 +1,224 @@
+diff -r lua-5.0/COPYRIGHT lua-5.0.2/COPYRIGHT
+12c12
+< Copyright (C) 2003 Tecgraf, PUC-Rio.
+---
+> Copyright (C) 2003-2004 Tecgraf, PUC-Rio.
+diff -r lua-5.0/Makefile lua-5.0.2/Makefile
+98a99,101
+> newer:
+> 	@find . -newer MANIFEST -type f
+> 
+diff -r lua-5.0/doc/readme.html lua-5.0.2/doc/readme.html
+16c16
+< <LI><A HREF="manual.html">Reference manual</A>
+---
+> <LI><A HREF="contents.html">Reference manual</A>
+31c31
+< Tue Apr  1 14:35:18 EST 2003
+---
+> Thu Mar 11 23:08:56 BRT 2004
+diff -r lua-5.0/include/lua.h lua-5.0.2/include/lua.h
+2c2
+< ** $Id: lua.h,v 1.175 2003/03/18 12:31:39 roberto Exp $
+---
+> ** $Id: lua.h,v 1.175b 2003/03/18 12:31:39 roberto Exp $
+17,18c17,18
+< #define LUA_VERSION	"Lua 5.0"
+< #define LUA_COPYRIGHT	"Copyright (C) 1994-2003 Tecgraf, PUC-Rio"
+---
+> #define LUA_VERSION	"Lua 5.0.2"
+> #define LUA_COPYRIGHT	"Copyright (C) 1994-2004 Tecgraf, PUC-Rio"
+368c368
+< * Copyright (C) 1994-2003 Tecgraf, PUC-Rio.  All rights reserved.
+---
+> * Copyright (C) 1994-2004 Tecgraf, PUC-Rio.  All rights reserved.
+diff -r lua-5.0/src/ldo.c lua-5.0.2/src/ldo.c
+2c2
+< ** $Id: ldo.c,v 1.217 2003/04/03 13:35:34 roberto Exp $
+---
+> ** $Id: ldo.c,v 1.217a 2003/04/03 13:35:34 roberto Exp $
+325,326c325
+<     if (nargs >= L->top - L->base)
+<       luaG_runerror(L, "cannot resume dead coroutine");
+---
+>     lua_assert(nargs < L->top - L->base);
+329c328,329
+<   else if (ci->state & CI_YIELD) {  /* inside a yield? */
+---
+>   else {  /* inside a yield */
+>     lua_assert(ci->state & CI_YIELD);
+344,345d343
+<   else
+<     luaG_runerror(L, "cannot resume non-suspended coroutine");
+351a350,358
+> static int resume_error (lua_State *L, const char *msg) {
+>   L->top = L->ci->base;
+>   setsvalue2s(L->top, luaS_new(L, msg));
+>   incr_top(L);
+>   lua_unlock(L);
+>   return LUA_ERRRUN;
+> }
+> 
+> 
+355a363,368
+>   if (L->ci == L->base_ci) {
+>     if (nargs >= L->top - L->base)
+>       return resume_error(L, "cannot resume dead coroutine");
+>   }
+>   else if (!(L->ci->state & CI_YIELD))  /* not inside a yield? */
+>     return resume_error(L, "cannot resume non-suspended coroutine");
+diff -r lua-5.0/src/lgc.c lua-5.0.2/src/lgc.c
+2c2
+< ** $Id: lgc.c,v 1.171 2003/04/03 13:35:34 roberto Exp $
+---
+> ** $Id: lgc.c,v 1.171a 2003/04/03 13:35:34 roberto Exp $
+113c113,114
+< void luaC_separateudata (lua_State *L) {
+---
+> size_t luaC_separateudata (lua_State *L) {
+>   size_t deadmem = 0;
+127a129
+>       deadmem += sizeudata(gcotou(curr)->uv.len);
+136a139
+>   return deadmem;
+247c250
+<     if (!(ci->state & CI_C) && lim < ci->top)
+---
+>     if (lim < ci->top)
+390c393
+< static void checkSizes (lua_State *L) {
+---
+> static void checkSizes (lua_State *L, size_t deadmem) {
+400c403
+<   G(L)->GCthreshold = 2*G(L)->nblocks;  /* new threshold */
+---
+>   G(L)->GCthreshold = 2*G(L)->nblocks - deadmem;  /* new threshold */
+454c457,458
+< static void mark (lua_State *L) {
+---
+> static size_t mark (lua_State *L) {
+>   size_t deadmem;
+467c471
+<   luaC_separateudata(L);  /* separate userdata to be preserved */
+---
+>   deadmem = luaC_separateudata(L);  /* separate userdata to be preserved */
+475a480
+>   return deadmem;
+480c485
+<   mark(L);
+---
+>   size_t deadmem = mark(L);
+482c487
+<   checkSizes(L);
+---
+>   checkSizes(L, deadmem);
+diff -r lua-5.0/src/lgc.h lua-5.0.2/src/lgc.h
+2c2
+< ** $Id: lgc.h,v 1.19 2003/02/28 19:45:15 roberto Exp $
+---
+> ** $Id: lgc.h,v 1.19a 2003/02/28 19:45:15 roberto Exp $
+18c18
+< void luaC_separateudata (lua_State *L);
+---
+> size_t luaC_separateudata (lua_State *L);
+diff -r lua-5.0/src/lib/lbaselib.c lua-5.0.2/src/lib/lbaselib.c
+2c2
+< ** $Id: lbaselib.c,v 1.130 2003/04/03 13:35:34 roberto Exp $
+---
+> ** $Id: lbaselib.c,v 1.130b 2003/04/03 13:35:34 roberto Exp $
+276a277
+>   int n = lua_gettop(L);
+280c281
+<   return lua_gettop(L) - 1;
+---
+>   return lua_gettop(L) - n;
+327c328
+<   char buff[64];
+---
+>   char buff[128];
+diff -r lua-5.0/src/lib/liolib.c lua-5.0.2/src/lib/liolib.c
+2c2
+< ** $Id: liolib.c,v 2.39 2003/03/19 21:16:12 roberto Exp $
+---
+> ** $Id: liolib.c,v 2.39a 2003/03/19 21:16:12 roberto Exp $
+161c161
+<   if (lua_isnone(L, 1)) {
+---
+>   if (lua_isnone(L, 1) && lua_type(L, lua_upvalueindex(1)) == LUA_TTABLE) {
+178c178
+<   char buff[32];
+---
+>   char buff[128];
+diff -r lua-5.0/src/lparser.c lua-5.0.2/src/lparser.c
+2c2
+< ** $Id: lparser.c,v 1.208 2003/04/03 13:35:34 roberto Exp $
+---
+> ** $Id: lparser.c,v 1.208a 2003/04/03 13:35:34 roberto Exp $
+1143a1144
+>   FuncState *fs = ls->fs;
+1145c1146,1147
+<   init_exp(&v, VLOCAL, ls->fs->freereg++);
+---
+>   init_exp(&v, VLOCAL, fs->freereg);
+>   luaK_reserveregs(fs, 1);
+1148c1150,1152
+<   luaK_storevar(ls->fs, &v, &b);
+---
+>   luaK_storevar(fs, &v, &b);
+>   /* debug information will only see the variable after this point! */
+>   getlocvar(fs, fs->nactvar - 1).startpc = fs->pc;
+diff -r lua-5.0/src/luac/Makefile lua-5.0.2/src/luac/Makefile
+16c16
+< 	$(CC) -o $@ $(MYLDFLAGS) $(OBJS) -L$(LIB) -llua -llualib $(EXTRA_LIBS)
+---
+> 	$(CC) -o $@ $(MYLDFLAGS) $(OBJS) -L$(LIB) -llua -llualib $(EXTRA_LIBS) $(DLLIB)
+diff -r lua-5.0/src/luac/luac.c lua-5.0.2/src/luac/luac.c
+2c2
+< ** $Id: luac.c,v 1.44 2003/04/07 20:34:20 lhf Exp $
+---
+> ** $Id: luac.c,v 1.44a 2003/04/07 20:34:20 lhf Exp $
+184a185
+>   lua_lock(L);
+185a187
+>   lua_unlock(L);
+diff -r lua-5.0/src/lvm.c lua-5.0.2/src/lvm.c
+2c2
+< ** $Id: lvm.c,v 1.284 2003/04/03 13:35:34 roberto Exp $
+---
+> ** $Id: lvm.c,v 1.284b 2003/04/03 13:35:34 roberto Exp $
+69c69
+<   if (mask > LUA_MASKLINE) {  /* instruction-hook set? */
+---
+>   if (mask & LUA_MASKCOUNT) {  /* instruction-hook set? */
+402,403c402,403
+<   L->ci->u.l.pc = &pc;
+<   if (L->hookmask & LUA_MASKCALL)
+---
+>   if (L->hookmask & LUA_MASKCALL) {
+>     L->ci->u.l.pc = &pc;
+404a405
+>   }
+405a407
+>   L->ci->u.l.pc = &pc;
+676,678c678
+<           lua_assert(ci->u.l.pc == &pc &&
+<                      ttisfunction(ci->base - 1) &&
+<                      (ci->state & CI_SAVEDPC));
+---
+>           lua_assert(ttisfunction(ci->base - 1) && (ci->state & CI_SAVEDPC));
+779a780
+> 
+diff -r lua-5.0/test/luac.lua lua-5.0.2/test/luac.lua
+4,6c4,6
+< assert(arg[1]~=nil,"usage: lua luac.lua file.lua")
+< f=assert(io.open("luac.out","w"))
+< f:write(string.dump(loadfile(arg[1])))
+---
+> assert(arg[1]~=nil and arg[2]==nil,"usage: lua luac.lua file.lua")
+> f=assert(io.open("luac.out","wb"))
+> f:write(string.dump(assert(loadfile(arg[1]))))
+diff -r lua-5.0/test/table.lua lua-5.0.2/test/table.lua
+8c8
+<  local _,_,a,b=string.find(l,'"?(%w+)"?%s*(.*)$')
+---
+>  local _,_,a,b=string.find(l,'"?([_%w]+)"?%s*(.*)$')

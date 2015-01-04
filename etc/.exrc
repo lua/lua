@@ -1,1 +1,0 @@
-/home/n/lhf/lib/vi/c

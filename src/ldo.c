@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.217 2003/04/03 13:35:34 roberto Exp $
+** $Id: ldo.c,v 1.217a 2003/04/03 13:35:34 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -322,11 +322,11 @@ static void resume (lua_State *L, void *ud) {
   int nargs = *cast(int *, ud);
   CallInfo *ci = L->ci;
   if (ci == L->base_ci) {  /* no activation record? */
-    if (nargs >= L->top - L->base)
-      luaG_runerror(L, "cannot resume dead coroutine");
+    lua_assert(nargs < L->top - L->base);
     luaD_precall(L, L->top - (nargs + 1));  /* start coroutine */
   }
-  else if (ci->state & CI_YIELD) {  /* inside a yield? */
+  else {  /* inside a yield */
+    lua_assert(ci->state & CI_YIELD);
     if (ci->state & CI_C) {  /* `common' yield? */
       /* finish interrupted execution of `OP_CALL' */
       int nresults;
@@ -341,11 +341,18 @@ static void resume (lua_State *L, void *ud) {
       ci->state &= ~CI_YIELD;
     }
   }
-  else
-    luaG_runerror(L, "cannot resume non-suspended coroutine");
   firstResult = luaV_execute(L);
   if (firstResult != NULL)   /* return? */
     luaD_poscall(L, LUA_MULTRET, firstResult);  /* finalize this coroutine */
+}
+
+
+static int resume_error (lua_State *L, const char *msg) {
+  L->top = L->ci->base;
+  setsvalue2s(L->top, luaS_new(L, msg));
+  incr_top(L);
+  lua_unlock(L);
+  return LUA_ERRRUN;
 }
 
 
@@ -353,6 +360,12 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
   int status;
   lu_byte old_allowhooks;
   lua_lock(L);
+  if (L->ci == L->base_ci) {
+    if (nargs >= L->top - L->base)
+      return resume_error(L, "cannot resume dead coroutine");
+  }
+  else if (!(L->ci->state & CI_YIELD))  /* not inside a yield? */
+    return resume_error(L, "cannot resume non-suspended coroutine");
   old_allowhooks = L->allowhook;
   lua_assert(L->errfunc == 0 && L->nCcalls == 0);
   status = luaD_rawrunprotected(L, resume, &nargs);
