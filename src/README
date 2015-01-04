@@ -1,0 +1,22 @@
+This is Lua 1.0. It was never publicly released. This code is a snapshot of
+the status of Lua on 28 Jul 1993. It is distributed for historical curiosity
+to celebrate 10 years of Lua and is hereby placed in the public domain.
+
+There is no documentation, except the test programs. The manual for Lua 1.1
+probably works for this version as well.
+
+The source files for the lexer and parser have been lost: all that is left is
+the output of lex and yacc. A grammar can be found inside y_tab.c in yyreds.
+
+The code compiles and runs in RedHat 5.2 with gcc 2.7.2.3. It may not run in
+newer systems, because it assumes that stdin and stdout are constants, though
+ANSI C does not promise they are. If make fails, try using the fixed modules
+provided in the "fixed" directory. To see the differences (which are really
+quite minor), do "make diff".
+
+To see Lua 1.0 in action, do "make test". (The last test raises an error on
+purpose.)
+
+Enjoy!
+
+-- The Lua team, lua@tecgraf.puc-rio.br
