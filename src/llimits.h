@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.111 2014/03/07 16:19:00 roberto Exp $
+** $Id: llimits.h,v 1.116 2014/04/15 16:32:49 roberto Exp $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -31,8 +31,8 @@ typedef unsigned char lu_byte;
 #define MAX_SIZET	((size_t)(~(size_t)0)-2)
 
 /* maximum size visible for Lua (must be representable in a lua_Integer */
-#define MAX_SIZE	(sizeof(size_t) <= sizeof(lua_Integer) ? MAX_SIZET \
-                          : (size_t)(~(lua_Unsigned)0)-2)
+#define MAX_SIZE	(sizeof(size_t) < sizeof(lua_Integer) ? MAX_SIZET \
+                          : (size_t)(LUA_MAXINTEGER)-2)
 
 
 #define MAX_LUMEM	((lu_mem)(~(lu_mem)0)-2)
@@ -42,13 +42,6 @@ typedef unsigned char lu_byte;
 
 #define MAX_INT (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
 
-
-/* maximum value for a lua_Unsigned */
-#define MAX_UINTEGER	(~(lua_Unsigned)0)
-
-/* minimum and maximum values for lua_Integer */
-#define MAX_INTEGER	((lua_Integer)(MAX_UINTEGER >> 1))
-#define MIN_INTEGER	(~MAX_INTEGER)
 
 /*
 ** conversion of pointer to integer
@@ -67,8 +60,9 @@ typedef unsigned char lu_byte;
 typedef LUAI_USER_ALIGNMENT_T L_Umaxalign;
 
 
-/* result of a `usual argument conversion' over lua_Number */
+/* types of 'usual argument conversions' for lua_Number and lua_Integer */
 typedef LUAI_UACNUMBER l_uacNumber;
+typedef LUAI_UACINT l_uacInt;
 
 
 /* internal assertions for in-house debugging */
@@ -111,8 +105,21 @@ typedef LUAI_UACNUMBER l_uacNumber;
 #define cast_num(i)	cast(lua_Number, (i))
 #define cast_int(i)	cast(int, (i))
 #define cast_uchar(i)	cast(unsigned char, (i))
-#define cast_integer(i)	cast(lua_Integer, (i))
-#define cast_unsigned(i)	cast(lua_Unsigned, (i))
+
+
+/* cast a signed lua_Integer to lua_Unsigned */
+#if !defined(l_castS2U)
+#define l_castS2U(i)	((lua_Unsigned)(i))
+#endif
+
+/*
+** cast a lua_Unsigned to a signed lua_Integer; this cast is
+** not strict ANSI C, but two-complement architectures should
+** work fine.
+*/
+#if !defined(l_castU2S)
+#define l_castU2S(i)	((lua_Integer)(i))
+#endif
 
 
 /*

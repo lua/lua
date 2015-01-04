@@ -38,7 +38,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.114 2014/03/21 18:32:52 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.121 2014/06/18 19:12:23 roberto Exp $ -->
 
 
 
@@ -139,9 +139,9 @@ one called <em>integer</em> and the other called <em>float</em>.
 Lua has explicit rules about when each representation is used,
 but it also converts between them automatically as needed (see <a href="#3.4.3">&sect;3.4.3</a>).
 Therefore,
-the programmer has the option of mostly ignore the difference
+the programmer has the option of mostly ignoring the difference
 between integers and floats
-or assume complete control about the representation of each value.
+or assuming complete control over the representation of each value.
 Standard Lua uses 64-bit integers and double-precision (64-bit) floats,
 but you can also compile Lua so that it
 uses 32-bit integers and/or single-precision (32-bit) floats.
@@ -437,7 +437,7 @@ with the following code:
 </pre>
 
 <p>
-For the unary minus and the bitwise not operators,
+For the unary operators (negation, length, and bitwise not),
 the metamethod is computed and called with a dummy second operand,
 equal to the first one.
 This extra operand is only to simplify Lua's internals
@@ -575,9 +575,9 @@ Otherwise, Lua raises an error.
 <li><b>"eq": </b>
 the <code>==</code> (equal) operation.
 
-Lua will try a metamethod only when the values
-being compared are both either tables or full userdata,
-both have the same metamethod,
+Behavior similar to the "add" operation,
+except that Lua will try a metamethod only when the values
+being compared are either both tables or both full userdata
 and they are not primitively equal.
 The result of the call is always converted to a boolean.
 </li>
@@ -586,7 +586,9 @@ The result of the call is always converted to a boolean.
 the <code>&lt;</code> (less than) operation.
 
 Behavior similar to the "add" operation,
-except that the result of the call is always converted to a boolean.
+except that Lua will try a metamethod only when the values
+being compared are neither both numbers nor both strings.
+The result of the call is always converted to a boolean.
 </li>
 
 <li><b>"le": </b>
@@ -595,7 +597,7 @@ the <code>&lt;=</code> (less equal) operation.
 Unlike other operations,
 The less-equal operation can use two different events.
 First, Lua looks for the "<code>__le</code>" metamethod in both operands,
-like in the "add" operation.
+like in the "lt" operation.
 If it cannot find such a metamethod,
 then it will try the "<code>__lt</code>" event,
 assuming that <code>a &lt;= b</code> is equivalent to <code>not (b &lt; a)</code>.
@@ -775,7 +777,7 @@ Lua simply ignores it.)
 <p>
 At the end of each garbage-collection cycle,
 the finalizers for objects are called in
-the reverse order that they were marked for collection,
+the reverse order that they were marked for finalization,
 among those collected in that cycle;
 that is, the first finalizer to be called is the one associated
 with the object marked last in the program.
@@ -792,17 +794,20 @@ and the object memory is freed in the next garbage-collection cycle.
 However, if the finalizer stores the object in some global place
 (e.g., a global variable),
 then there is a permanent resurrection.
+Moreover, if the finalizer marks a finalizing object for finalization again,
+its finalizer will be called again in the next cycle where the
+object is unreachable.
 In any case,
-the object memory is freed only when it becomes completely inaccessible;
-its finalizer will never be called twice.
+the object memory is freed only in the GC cycle where
+the object is unreachable and not marked for finalization.
 
 
 <p>
 When you close a state (see <a href="#lua_close"><code>lua_close</code></a>),
 Lua calls the finalizers of all objects marked for finalization,
 following the reverse order that they were marked.
-If any finalizer marks new objects for collection during that phase,
-these new objects will not be finalized.
+If any finalizer marks objects for collection during that phase,
+these marks have no effect.
 
 
 
@@ -1064,9 +1069,10 @@ and cannot be used as names:
 Lua is a case-sensitive language:
 <code>and</code> is a reserved word, but <code>And</code> and <code>AND</code>
 are two different, valid names.
-As a convention, names starting with an underscore followed by
-uppercase letters (such as <a href="#pdf-_VERSION"><code>_VERSION</code></a>)
-are reserved for variables used by Lua.
+As a convention,
+programs should avoid creating 
+names that start with an underscore followed by
+one or more uppercase letters (such as <a href="#pdf-_VERSION"><code>_VERSION</code></a>).
 
 
 <p>
@@ -1074,6 +1080,7 @@ The following strings denote other tokens:
 
 <pre>
      +     -     *     /     %     ^     #
+     &amp;     ~     |     &lt;&lt;    &gt;&gt;    //
      ==    ~=    &lt;=    &gt;=    &lt;     &gt;     =
      (     )     {     }     [     ]     ::
      ;     :     ,     .     ..    ...
@@ -1130,11 +1137,12 @@ enclosed by <em>long brackets</em>.
 We define an <em>opening long bracket of level <em>n</em></em> as an opening
 square bracket followed by <em>n</em> equal signs followed by another
 opening square bracket.
-So, an opening long bracket of level&nbsp;0 is written as <code>[[</code>,
-an opening long bracket of level&nbsp;1 is written as <code>[=[</code>,
+So, an opening long bracket of level&nbsp;0 is written as <code>[[</code>, 
+an opening long bracket of level&nbsp;1 is written as <code>[=[</code>, 
 and so on.
 A <em>closing long bracket</em> is defined similarly;
-for instance, a closing long bracket of level&nbsp;4 is written as <code>]====]</code>.
+for instance,
+a closing long bracket of level&nbsp;4 is written as  <code>]====]</code>.
 A <em>long literal</em> starts with an opening long bracket of any level and
 ends at the first closing long bracket of the same level.
 It can contain any text except a closing bracket of the proper level.
@@ -1594,20 +1602,19 @@ is equivalent to the code:
 
 <pre>
      do
-       local <em>var</em>, <em>limit</em>, <em>step</em> = convert(<em>e1</em>, <em>e2</em>, <em>e3</em>)
+       local <em>var</em>, <em>limit</em>, <em>step</em> = tonumber(<em>e1</em>), tonumber(<em>e2</em>), tonumber(<em>e3</em>)
        if not (<em>var</em> and <em>limit</em> and <em>step</em>) then error() end
-       while (<em>step</em> &gt; 0 and <em>var</em> &lt;= <em>limit</em>) or (<em>step</em> &lt;= 0 and <em>var</em> &gt;= <em>limit</em>) do
+       <em>var</em> = <em>var</em> - <em>step</em>
+       while true do
+         <em>var</em> = <em>var</em> + <em>step</em>
+         if (<em>step</em> &gt;= 0 and <em>var</em> &gt; <em>limit</em>) or (<em>step</em> &lt; 0 and <em>var</em> &lt; <em>limit</em>) then
+           break
+         end
          local v = <em>var</em>
          <em>block</em>
-         <em>var</em> = <em>var</em> + <em>step</em>
        end
      end
-</pre><p>
-where <code>convert</code> returns
-its three arguments unaltered
-if they are all integers,
-otherwise it converts them to floats.
-
+</pre>
 
 <p>
 Note the following:
@@ -1618,12 +1625,6 @@ Note the following:
 All three control expressions are evaluated only once,
 before the loop starts.
 They must all result in numbers.
-</li>
-
-<li>
-If any of the three control values is not an integer,
-all three values are converted to floats,
-so that the loop is done with floats.
 </li>
 
 <li>
@@ -1641,9 +1642,8 @@ You can use <b>break</b> and <b>goto</b> to exit a <b>for</b> loop.
 </li>
 
 <li>
-The loop variable <code>v</code> is local to the loop;
-you cannot use its value after the <b>for</b> ends or is broken.
-If you need its value,
+The loop variable <code>v</code> is local to the loop body.
+If you need its value after the loop,
 assign it to another variable before exiting the loop.
 </li>
 
@@ -1840,17 +1840,20 @@ or <b>nil</b> if <code>f</code> does not return any values.)
 
 <h3>3.4.1 &ndash; <a name="3.4.1">Arithmetic Operators</a></h3><p>
 Lua supports the following arithmetic operators:
-the binary <code>+</code> (addition),
-<code>-</code> (subtraction), <code>*</code> (multiplication),
-<code>/</code> (division), <code>//</code> (integer division),
-<code>%</code> (modulo), and <code>^</code> (exponentiation);
-and unary <code>-</code> (mathematical negation).
-Modulo is defined as the remainder of a division
-that rounds the quotient towards minus infinite (floor).
+<table border="1">
+<tr><td><code>+</code></td><td>addition</td></tr>
+<tr><td><code>-</code></td><td>subtraction</td></tr>
+<tr><td><code>*</code></td><td>multiplication</td></tr>
+<tr><td><code>/</code></td><td>float division</td></tr>
+<tr><td><code>//</code></td><td>integer division</td></tr>
+<tr><td><code>%</code></td><td>modulo</td></tr>
+<tr><td><code>^</code></td><td>exponentiation</td></tr>
+<tr><td><code>-</code></td><td>unary minus</td></tr>
+</table>
 
 
 <p>
-With the exception of division and integer division,
+With the exception of divisions and exponentiation,
 the arithmetic operators work as follows:
 If both operands are integers,
 the operation is performed over integers and the result is an integer.
@@ -1865,8 +1868,11 @@ and the result is a float.
 
 
 <p>
-Division (<code>/</code>) always converts its operands to floats
-and its result is always a float.
+Float division (<code>/</code>) and exponentiation
+always convert their operands to floats
+and the result is always a float.
+Exponentiation uses the ANSI&nbsp;C function <code>pow</code>,
+so that it works for non-integer exponents too.
 
 
 <p>
@@ -1877,9 +1883,15 @@ The result is always rounded towards minus infinite (floor).
 
 
 <p>
+Modulo is defined as the remainder of a division
+that rounds the quotient towards minus infinite (floor).
+
+
+<p>
 In case of overflows in integer arithmetic,
 all operations <em>wrap around</em>,
 according to the usual rules of two-complement arithmetic.
+(In other words, they return the correct result modulo <em>2<sup>64</sup></em>.)
 
 
 
@@ -1887,10 +1899,14 @@ according to the usual rules of two-complement arithmetic.
 
 <h3>3.4.2 &ndash; <a name="3.4.2">Bitwise Operators</a></h3><p>
 Lua supports the following bitwise operators:
-the binary <code>&amp;</code> (bitwise and),
-<code>|</code> (bitwise or), <code>~</code> (bitwise exclusive or),
-<code>&gt;&gt;</code> (right shift), <code>&lt;&lt;</code> (left shift),
-and unary <code>~</code> (bitwise not).
+<table border="1">
+<tr><td><code>&amp;</code></td><td>bitwise and</td></tr>
+<tr><td><code>|</code></td><td>bitwise or</td></tr>
+<tr><td><code>~</code></td><td>bitwise exclusive or</td></tr>
+<tr><td><code>&gt;&gt;</code></td><td>right shift</td></tr>
+<tr><td><code>&lt;&lt;</code></td><td>left shift</td></tr>
+<tr><td><code>~</code></td><td>unary bitwise not</td></tr>
+</table>
 
 
 <p>
@@ -1901,7 +1917,7 @@ and result in an integer.
 
 
 <p>
-Both right and left shifts fill with zeros the vacant bits.
+Both right and left shifts fill the vacant bits with zeros.
 Negative displacements shift to the other direction;
 displacements with absolute values equal to or higher than
 the number of bits in an integer
@@ -1917,7 +1933,7 @@ types and representations at run time.
 Most arithmetic operations applied to mixed numbers
 (integers and floats) convert the integer operand to a float;
 this is called the <em>usual rule</em>.
-Division always convert integer operands to floats;
+Float division always convert integer operands to floats;
 integer division and bitwise operators
 always convert float operands to integers.
 The C API also converts both integers to floats and
@@ -1929,7 +1945,6 @@ besides strings.
 <p>
 Lua also converts strings to numbers,
 whenever a number is expected.
-(This conversion may be deprecated in future versions.)
 
 
 <p>
@@ -1951,16 +1966,16 @@ Otherwise, the conversion fails.
 
 
 <p>
-The conversion from strings to floats
-follows the rules of the Lua lexer.
-(The string may have leading and trailing spaces and a sign.)
-There is no direct conversion from strings to integers:
-If a string is provided where an integer is needed,
-Lua converts the string to a float and then the float to an integer.
+The conversion from strings to numbers goes as follows:
+First, the string is converted to an integer or a float,
+following its syntax and the rules of the Lua lexer.
+(The string may have also leading and trailing spaces and a sign.)
+Then, the resulting number is converted to the required type
+(float or integer) according to the previous rules.
 
 
 <p>
-The conversion from numbers to strings use a human-readable,
+The conversion from numbers to strings uses a human-readable,
 non-specified format.
 For complete control over how numbers are converted to strings,
 use the <code>format</code> function from the string library
@@ -1971,11 +1986,15 @@ use the <code>format</code> function from the string library
 
 
 <h3>3.4.4 &ndash; <a name="3.4.4">Relational Operators</a></h3><p>
-The relational operators in Lua are
-
-<pre>
-     ==    ~=    &lt;     &gt;     &lt;=    &gt;=
-</pre><p>
+Lua supports the following relational operators:
+<table border="1">
+<tr><td><code>==</code></td><td>equality</td></tr>
+<tr><td><code>~=</code></td><td>inequality</td></tr>
+<tr><td><code>&lt;</code></td><td>less than</td></tr>
+<tr><td><code>&gt;</code></td><td>greater than</td></tr>
+<tr><td><code>&lt;=</code></td><td>less or equal</td></tr>
+<tr><td><code>&gt;=</code></td><td>greater or equal</td></tr>
+</table>
 These operators always result in <b>false</b> or <b>true</b>.
 
 
@@ -1986,8 +2005,8 @@ Otherwise, the values of the operands are compared.
 Strings are compared in the obvious way.
 Numbers follow the usual rule for binary operations:
 if both operands are integers,
-the are compared as integers.
-Otherwise, they are converted to floats
+the are compared as integers;
+otherwise, they are converted to floats
 and compared as such.
 
 
@@ -2131,10 +2150,14 @@ from lower to higher priority:
      or
      and
      &lt;     &gt;     &lt;=    &gt;=    ~=    ==
+     |
+     ~
+     &amp;
+     &lt;&lt;    &gt;&gt;
      ..
      +     -
      *     /     //    %
-     not   #     - (unary)
+     unary operators (not   #     -     ~)
      ^
 </pre><p>
 As usual,
@@ -2690,7 +2713,7 @@ The registry table is always located at pseudo-index
 <a name="pdf-LUA_REGISTRYINDEX"><code>LUA_REGISTRYINDEX</code></a>,
 which is a valid index.
 Any C&nbsp;library can store data into this table,
-but it should take care to choose keys
+but it must take care to choose keys
 that are different from those used
 by other libraries, to avoid collisions.
 Typically, you should use as key a string containing your library name,
@@ -2705,7 +2728,7 @@ uppercase letters are reserved for Lua.
 The integer keys in the registry are used by the reference mechanism,
 implemented by the auxiliary library,
 and by some predefined values.
-Therefore, integer keys should not be used for other purposes.
+Therefore, integer keys must not be used for other purposes.
 
 
 <p>
@@ -2760,18 +2783,18 @@ The panic function runs as if it were a message handler (see <a href="#2.3">&sec
 in particular, the error message is at the top of the stack.
 However, there is no guarantees about stack space.
 To push anything on the stack,
-the panic function should first check the available space (see <a href="#4.2">&sect;4.2</a>).
+the panic function must first check the available space (see <a href="#4.2">&sect;4.2</a>).
 
 
 <p>
-Most functions in the API can throw an error,
+Most functions in the API can raise an error,
 for instance due to a memory allocation error.
 The documentation for each function indicates whether
-it can throw errors.
+it can raise errors.
 
 
 <p>
-Inside a C&nbsp;function you can throw an error by calling <a href="#lua_error"><code>lua_error</code></a>.
+Inside a C&nbsp;function you can raise an error by calling <a href="#lua_error"><code>lua_error</code></a>.
 
 
 
@@ -2781,7 +2804,7 @@ Inside a C&nbsp;function you can throw an error by calling <a href="#lua_error">
 
 <p>
 Internally, Lua uses the C <code>longjmp</code> facility to yield a coroutine.
-Therefore, if a function <code>foo</code> calls an API function
+Therefore, if a C function <code>foo</code> calls an API function
 and this API function yields
 (directly or indirectly by calling another function that yields),
 Lua cannot return to <code>foo</code> any more,
@@ -2824,6 +2847,67 @@ of the original function.
 
 
 <p>
+As an illustration, consider the following function:
+
+<pre>
+     int original_function (lua_State *L) {
+       ...     /* code 1 */
+       status = lua_pcall(L, n, m, h);  /* calls Lua */
+       ...     /* code 2 */
+     }
+</pre><p>
+Now we want to allow
+the Lua code being ran by <a href="#lua_pcall"><code>lua_pcall</code></a> to yield.
+First, we can rewrite our function like here:
+
+<pre>
+     int k (lua_State *L, int status, int ctx) {
+       ...  /* code 2 */
+     }
+     
+     int original_function (lua_State *L) {
+       ...     /* code 1 */
+       return k(L, lua_pcall(L, n, m, h), ctx);
+     }
+</pre><p>
+In the above code,
+the new function <code>k</code> is a
+<em>continuation function</em> (with type <a href="#lua_KFunction"><code>lua_KFunction</code></a>),
+which should do all the work that the original function
+was doing after calling <a href="#lua_pcall"><code>lua_pcall</code></a>.
+Now, we must inform Lua that it must call <code>k</code> if the Lua code
+begin running by <a href="#lua_pcall"><code>lua_pcall</code></a> gets interrupted in some way
+(errors or yielding),
+so we rewrite the code as here,
+replacing <a href="#lua_pcall"><code>lua_pcall</code></a> by <a href="#lua_pcallk"><code>lua_pcallk</code></a>:
+
+<pre>
+     int original_function (lua_State *L) {
+       ...     /* code 1 */
+       return k(L, lua_pcallk(L, n, m, h, ctx2, k), ctx1);
+     }
+</pre>
+
+<p>
+Besides the Lua state,
+the continuation function has two other parameters:
+the final status of the call plus the context value (<code>ctx</code>) that
+was passed originally to <a href="#lua_pcallk"><code>lua_pcallk</code></a>.
+(Lua does not use this context value;
+it only passes this value from the original function to the
+continuation function.)
+For <a href="#lua_pcallk"><code>lua_pcallk</code></a>,
+the status is the same value that would be returned by <a href="#lua_pcallk"><code>lua_pcallk</code></a>,
+except that it is <a href="#pdf-LUA_YIELD"><code>LUA_YIELD</code></a> when being executed after an yield
+(instead of <a href="#pdf-LUA_OK"><code>LUA_OK</code></a>).
+For <a href="#lua_yieldk"><code>lua_yieldk</code></a> and <a href="#lua_callk"><code>lua_callk</code></a>,
+the status is always <a href="#pdf-LUA_YIELD"><code>LUA_YIELD</code></a> when Lua calls the continuation.
+(For these two functions,
+Lua will not call the continuation in case of errors,
+because they do not handle errors.)
+
+
+<p>
 Lua treats the continuation function as if it were the original function.
 The continuation function receives the same Lua stack
 from the original function,
@@ -2834,11 +2918,6 @@ removed from the stack and replaced by the results from the call.)
 It also has the same upvalues.
 Whatever it returns is handled by Lua as if it were the return
 of the original function.
-
-
-<p>
-The only difference in the Lua state between the original function
-and its continuation is the result of a call to <a href="#lua_getctx"><code>lua_getctx</code></a>.
 
 
 
@@ -2867,10 +2946,10 @@ we cannot know how many elements the function pops/pushes
 by looking only at its arguments
 (e.g., they may depend on what is on the stack).
 The third field, <code>x</code>,
-tells whether the function may throw errors:
-'<code>-</code>' means the function never throws any error;
-'<code>e</code>' means the function may throw errors;
-'<code>v</code>' means the function may throw an error on purpose.
+tells whether the function may raise errors:
+'<code>-</code>' means the function never raises any error;
+'<code>e</code>' means the function may raise errors;
+'<code>v</code>' means the function may raise an error on purpose.
 
 
 
@@ -2928,13 +3007,13 @@ Lua assumes the following behavior from the allocator function:
 
 <p>
 When <code>nsize</code> is zero,
-the allocator should behave like <code>free</code>
+the allocator must behave like <code>free</code>
 and return <code>NULL</code>.
 
 
 <p>
 When <code>nsize</code> is not zero,
-the allocator should behave like <code>realloc</code>.
+the allocator must behave like <code>realloc</code>.
 The allocator returns <code>NULL</code>
 if and only if it cannot fulfill the request.
 Lua assumes that the allocator never fails when
@@ -2990,7 +3069,7 @@ The value of <code>op</code> must be one of the following constants:
 <li><b><a name="pdf-LUA_OPADD"><code>LUA_OPADD</code></a>: </b> performs addition (<code>+</code>)</li>
 <li><b><a name="pdf-LUA_OPSUB"><code>LUA_OPSUB</code></a>: </b> performs subtraction (<code>-</code>)</li>
 <li><b><a name="pdf-LUA_OPMUL"><code>LUA_OPMUL</code></a>: </b> performs multiplication (<code>*</code>)</li>
-<li><b><a name="pdf-LUA_OPDIV"><code>LUA_OPDIV</code></a>: </b> performs division (<code>/</code>)</li>
+<li><b><a name="pdf-LUA_OPDIV"><code>LUA_OPDIV</code></a>: </b> performs float division (<code>/</code>)</li>
 <li><b><a name="pdf-LUA_OPIDIV"><code>LUA_OPIDIV</code></a>: </b> performs integer division (<code>//</code>)</li>
 <li><b><a name="pdf-LUA_OPMOD"><code>LUA_OPMOD</code></a>: </b> performs modulo (<code>%</code>)</li>
 <li><b><a name="pdf-LUA_OPPOW"><code>LUA_OPPOW</code></a>: </b> performs exponentiation (<code>^</code>)</li>
@@ -3081,7 +3160,7 @@ This is considered good programming practice.
 <hr><h3><a name="lua_callk"><code>lua_callk</code></a></h3><p>
 <span class="apii">[-(nargs + 1), +nresults, <em>e</em>]</span>
 <pre>void lua_callk (lua_State *L, int nargs, int nresults, int ctx,
-                lua_CFunction k);</pre>
+                lua_KFunction k);</pre>
 
 <p>
 This function behaves exactly like <a href="#lua_call"><code>lua_call</code></a>,
@@ -3258,7 +3337,10 @@ Otherwise you can use the function <a href="#lua_newtable"><code>lua_newtable</c
 
 <hr><h3><a name="lua_dump"><code>lua_dump</code></a></h3><p>
 <span class="apii">[-0, +0, <em>e</em>]</span>
-<pre>int lua_dump (lua_State *L, lua_Writer writer, void *data);</pre>
+<pre>int lua_dump (lua_State *L,
+                        lua_Writer writer,
+                        void *data,
+                        int strip);</pre>
 
 <p>
 Dumps a function as a binary chunk.
@@ -3270,6 +3352,12 @@ As it produces parts of the chunk,
 <a href="#lua_dump"><code>lua_dump</code></a> calls function <code>writer</code> (see <a href="#lua_Writer"><code>lua_Writer</code></a>)
 with the given <code>data</code>
 to write them.
+
+
+<p>
+If <code>strip</code> is true,
+the binary representation is created without debug information
+about the function.
 
 
 <p>
@@ -3291,8 +3379,7 @@ This function does not pop the Lua function from the stack.
 
 <p>
 Generates a Lua error.
-The error message (which can actually be a Lua value of any type)
-must be on the stack top.
+The error object must be on the stack top.
 This function does a long jump,
 and therefore never returns
 (see <a href="#luaL_error"><code>luaL_error</code></a>).
@@ -3380,51 +3467,19 @@ opaque pointer passed to <a href="#lua_newstate"><code>lua_newstate</code></a>.
 
 
 
-<hr><h3><a name="lua_getctx"><code>lua_getctx</code></a></h3><p>
-<span class="apii">[-0, +0, &ndash;]</span>
-<pre>int lua_getctx (lua_State *L, int *ctx);</pre>
-
-<p>
-This function is called by a continuation function (see <a href="#4.7">&sect;4.7</a>)
-to retrieve the status of the thread and a context information.
-
-
-<p>
-When called in the original function,
-<a href="#lua_getctx"><code>lua_getctx</code></a> always returns <a href="#pdf-LUA_OK"><code>LUA_OK</code></a>
-and does not change the value of its argument <code>ctx</code>.
-When called inside a continuation function,
-<a href="#lua_getctx"><code>lua_getctx</code></a> returns <a href="#pdf-LUA_YIELD"><code>LUA_YIELD</code></a> and sets
-the value of <code>ctx</code> to be the context information
-(the value passed as the <code>ctx</code> argument
-to the callee together with the continuation function).
-
-
-<p>
-When the callee is <a href="#lua_pcallk"><code>lua_pcallk</code></a>,
-Lua may also call its continuation function
-to handle errors during the call.
-That is, upon an error in the function called by <a href="#lua_pcallk"><code>lua_pcallk</code></a>,
-Lua may not return to the original function
-but instead may call the continuation function.
-In that case, a call to <a href="#lua_getctx"><code>lua_getctx</code></a> will return the error code
-(the value that would be returned by <a href="#lua_pcallk"><code>lua_pcallk</code></a>);
-the value of <code>ctx</code> will be set to the context information,
-as in the case of a yield.
-
-
-
-
-
 <hr><h3><a name="lua_getfield"><code>lua_getfield</code></a></h3><p>
 <span class="apii">[-0, +1, <em>e</em>]</span>
-<pre>void lua_getfield (lua_State *L, int index, const char *k);</pre>
+<pre>int lua_getfield (lua_State *L, int index, const char *k);</pre>
 
 <p>
 Pushes onto the stack the value <code>t[k]</code>,
 where <code>t</code> is the value at the given index.
 As in Lua, this function may trigger a metamethod
 for the "index" event (see <a href="#2.4">&sect;2.4</a>).
+
+
+<p>
+Returns the type of the pushed value.
 
 
 
@@ -3495,11 +3550,15 @@ this result is equal to the number of elements in the stack
 
 <hr><h3><a name="lua_getuservalue"><code>lua_getuservalue</code></a></h3><p>
 <span class="apii">[-0, +1, &ndash;]</span>
-<pre>void lua_getuservalue (lua_State *L, int index);</pre>
+<pre>int lua_getuservalue (lua_State *L, int index);</pre>
 
 <p>
 Pushes onto the stack the Lua value associated with the userdata
 at the given index.
+
+
+<p>
+Returns the type of the pushed value.
 
 
 
@@ -3520,7 +3579,7 @@ because a pseudo-index is not an actual stack position.
 
 
 <hr><h3><a name="lua_Integer"><code>lua_Integer</code></a></h3>
-<pre>typedef long long int lua_Integer;</pre>
+<pre>typedef ... lua_Integer;</pre>
 
 <p>
 The type of integers in Lua.
@@ -3532,6 +3591,12 @@ By default this type is <code>long long</code>
 but that can be changed in <code>luaconf.h</code>
 to <code>long</code> or <code>int</code>
 (usually a 32-bit two-complement integer).
+
+
+<p>
+Lua also defines the constants
+<a name="pdf-LUA_MININTEGER"><code>LUA_MININTEGER</code></a> and <a name="pdf-LUA_MAXINTEGER"><code>LUA_MAXINTEGER</code></a>,
+with the minimum and the maximum values that fit in this type.
 
 
 
@@ -3697,6 +3762,28 @@ Returns 1 if the value at the given index is a userdata
 
 
 
+<hr><h3><a name="lua_isyieldable"><code>lua_isyieldable</code></a></h3><p>
+<span class="apii">[-0, +0, &ndash;]</span>
+<pre>int lua_isyieldable (lua_State *L);</pre>
+
+<p>
+Returns 1 if the given coroutine can yield,
+and 0&nbsp;otherwise.
+
+
+
+
+
+<hr><h3><a name="lua_KFunction"><code>lua_KFunction</code></a></h3>
+<pre>typedef int (*lua_KFunction) (lua_State *L, int status, int ctx);</pre>
+
+<p>
+Type for continuation functions (see <a href="#4.7">&sect;4.7</a>).
+
+
+
+
+
 <hr><h3><a name="lua_len"><code>lua_len</code></a></h3><p>
 <span class="apii">[-0, +1, <em>e</em>]</span>
 <pre>void lua_len (lua_State *L, int index);</pre>
@@ -3768,7 +3855,7 @@ a <code>NULL</code> value is equivalent to the string "<code>bt</code>".
 
 <p>
 <code>lua_load</code> uses the stack internally,
-so the reader function should always leave the stack
+so the reader function must always leave the stack
 unmodified when returning.
 
 
@@ -3907,6 +3994,28 @@ but that can be changed in <code>luaconf.h</code> to a single float.
 
 
 
+<hr><h3><a name="lua_numtointeger"><code>lua_numtointeger</code></a></h3>
+<pre>int lua_numtointeger (lua_Number n, lua_Integer *p);</pre>
+
+<p>
+Converts a Lua float to a Lua integer.
+This macro assumes that <code>n</code> has an integral value.
+If that value is within the range of Lua integers,
+it is converted to an integer and assigned to <code>*p</code>.
+The macro results in a boolean indicating whether the
+conversion was successful.
+(Note that this range test can be tricky to do
+correctly without this macro,
+due to roundings.)
+
+
+<p>
+This macro may evaluate its arguments more than once.
+
+
+
+
+
 <hr><h3><a name="lua_pcall"><code>lua_pcall</code></a></h3><p>
 <span class="apii">[-(nargs + 1), +(nresults|1), &ndash;]</span>
 <pre>int lua_pcall (lua_State *L, int nargs, int nresults, int msgh);</pre>
@@ -3950,7 +4059,7 @@ since by then the stack has unwound.
 
 
 <p>
-The <a href="#lua_pcall"><code>lua_pcall</code></a> function returns one of the following codes
+The <a href="#lua_pcall"><code>lua_pcall</code></a> function returns one of the following constants
 (defined in <code>lua.h</code>):
 
 <ul>
@@ -3973,8 +4082,7 @@ error while running the message handler.
 
 <li><b><a name="pdf-LUA_ERRGCMM"><code>LUA_ERRGCMM</code></a>: </b>
 error while running a <code>__gc</code> metamethod.
-(This error typically has no relation with the function being called.
-It is generated by the garbage collector.)
+(This error typically has no relation with the function being called.)
 </li>
 
 </ul>
@@ -3989,7 +4097,7 @@ It is generated by the garbage collector.)
                 int nresults,
                 int errfunc,
                 int ctx,
-                lua_CFunction k);</pre>
+                lua_KFunction k);</pre>
 
 <p>
 This function behaves exactly like <a href="#lua_pcall"><code>lua_pcall</code></a>,
@@ -4035,11 +4143,11 @@ it is possible to associate some values with it,
 thus creating a C&nbsp;closure (see <a href="#4.4">&sect;4.4</a>);
 these values are then accessible to the function whenever it is called.
 To associate values with a C&nbsp;function,
-first these values should be pushed onto the stack
+first these values must be pushed onto the stack
 (when there are multiple values, the first value is pushed first).
 Then <a href="#lua_pushcclosure"><code>lua_pushcclosure</code></a>
 is called to create and push the C&nbsp;function onto the stack,
-with the argument <code>n</code> telling how many values should be
+with the argument <code>n</code> telling how many values will be
 associated with the function.
 <a href="#lua_pushcclosure"><code>lua_pushcclosure</code></a> also pops these values from the stack.
 
@@ -4052,7 +4160,7 @@ The maximum value for <code>n</code> is 255.
 When <code>n</code> is zero,
 this function creates a <em>light C function</em>,
 which is just a pointer to the C&nbsp;function.
-In that case, it never throws a memory error.
+In that case, it never raises a memory error.
 
 
 
@@ -4540,6 +4648,22 @@ this parameter can be <code>NULL</code>.
 
 
 
+<hr><h3><a name="lua_rotate"><code>lua_rotate</code></a></h3><p>
+<span class="apii">[-0, +0, &ndash;]</span>
+<pre>void lua_rotate (lua_State *L, int idx, int n);</pre>
+
+<p>
+Rotates the stack elements from <code>idx</code> to the top <code>n</code> positions
+in the direction of the top, for a positive <code>n</code>,
+or <code>-n</code> positions in the direction of the bottom,
+for a negative <code>n</code>.
+The absolute value of <code>n</code> must not be greater than the size
+of the slice being rotated.
+
+
+
+
+
 <hr><h3><a name="lua_setallocf"><code>lua_setallocf</code></a></h3><p>
 <span class="apii">[-0, +0, &ndash;]</span>
 <pre>void lua_setallocf (lua_State *L, lua_Alloc f, void *ud);</pre>
@@ -4689,11 +4813,13 @@ You can resume threads with status <a href="#pdf-LUA_OK"><code>LUA_OK</code></a>
 
 <hr><h3><a name="lua_strtonum"><code>lua_strtonum</code></a></h3><p>
 <span class="apii">[-0, +1, &ndash;]</span>
-<pre>int lua_strtonum (lua_State *L, const char *s, size_t len);</pre>
+<pre>size_t lua_strtonum (lua_State *L, const char *s);</pre>
 
 <p>
-Converts the string <code>s</code> (with length <code>len</code>) to a number and
-pushes that number into the stack.
+Converts the zero-terminated string <code>s</code> to a number,
+pushes that number into the stack,
+and returns the total size of the string
+(that is, its length plus one).
 The conversion can result in an integer or a float,
 according to the lexical conventions of Lua (see <a href="#3.1">&sect;3.1</a>).
 The string may have leading and trailing spaces and a sign.
@@ -4969,10 +5095,15 @@ which must be one the values returned by <a href="#lua_type"><code>lua_type</cod
 
 
 <hr><h3><a name="lua_Unsigned"><code>lua_Unsigned</code></a></h3>
-<pre>typedef unsigned long lua_Unsigned;</pre>
+<pre>typedef ... lua_Unsigned;</pre>
 
 <p>
 The unsigned version of <a href="#lua_Integer"><code>lua_Integer</code></a>.
+
+
+<p>
+Lua also defines the constant <a name="pdf-LUA_MAXUNSIGNED"><code>LUA_MAXUNSIGNED</code></a>,
+with the maximum value that fits in this type.
 
 
 
@@ -5063,7 +5194,7 @@ the function calling <code>lua_yield</code>.
 
 <hr><h3><a name="lua_yieldk"><code>lua_yieldk</code></a></h3><p>
 <span class="apii">[-?, +?, &ndash;]</span>
-<pre>int lua_yieldk (lua_State *L, int nresults, int ctx, lua_CFunction k);</pre>
+<pre>int lua_yieldk (lua_State *L, int nresults, int ctx, lua_KFunction k);</pre>
 
 <p>
 Yields a coroutine.
@@ -5074,13 +5205,13 @@ This function should only be called as the
 return expression of a C&nbsp;function, as follows:
 
 <pre>
-     return lua_yieldk (L, n, i, k);
+     return lua_yieldk (L, n, ctx, k);
 </pre><p>
 When a C&nbsp;function calls <a href="#lua_yieldk"><code>lua_yieldk</code></a> in that way,
 the running coroutine suspends its execution,
 and the call to <a href="#lua_resume"><code>lua_resume</code></a> that started this coroutine returns.
 The parameter <code>nresults</code> is the number of values from the stack
-that are passed as results to <a href="#lua_resume"><code>lua_resume</code></a>.
+that will be passed as results to <a href="#lua_resume"><code>lua_resume</code></a>.
 
 
 <p>
@@ -5089,11 +5220,11 @@ Lua calls the given continuation function <code>k</code> to continue
 the execution of the C function that yielded (see <a href="#4.7">&sect;4.7</a>).
 This continuation function receives the same stack
 from the previous function,
-with the results removed and
+with the <code>n</code> results removed and
 replaced by the arguments passed to <a href="#lua_resume"><code>lua_resume</code></a>.
 Moreover,
-the continuation function may access the value <code>ctx</code>
-by calling <a href="#lua_getctx"><code>lua_getctx</code></a>.
+the continuation function receives the value <code>ctx</code>
+that was passed to <a href="#lua_yieldk"><code>lua_yieldk</code></a>.
 
 
 
@@ -5326,6 +5457,11 @@ numbers of the lines that are valid on the function.
 (A <em>valid line</em> is a line with some associated code,
 that is, a line where you can put a break point.
 Non-valid lines include empty lines and comments.)
+
+
+<p>
+If this option is given together with option '<code>f</code>',
+its table is pushed after the function.
 </li>
 
 </ul>
@@ -5363,7 +5499,7 @@ and returns its name.
 
 
 <p>
-In the second case, <code>ar</code> should be <code>NULL</code> and the function
+In the second case, <code>ar</code> must be <code>NULL</code> and the function
 to be inspected must be at the top of the stack.
 In this case, only parameters of Lua functions are visible
 (as there is no information about what variables are active)
@@ -5656,7 +5792,7 @@ you should not use these functions for other stack values.
 
 <p>
 Functions called <code>luaL_check*</code>
-always throw an error if the check is not satisfied.
+always raise an error if the check is not satisfied.
 
 
 
@@ -6398,7 +6534,7 @@ returns 0.
 Otherwise,
 creates a new table to be used as a metatable for userdata,
 adds to this new table the pair <code>__name = tname</code>,
-adds to the registry the pair <code></code>[tname] = new table,
+adds to the registry the pair <code>[tname] = new table</code>,
 and returns 1.
 
 
@@ -6762,7 +6898,7 @@ the field value is changed to <b>nil</b> to signal that the handle is closed.
 <p>
 This function works like <a href="#luaL_checkudata"><code>luaL_checkudata</code></a>,
 except that, when the test fails,
-it returns <code>NULL</code> instead of throwing an error.
+it returns <code>NULL</code> instead of raising an error.
 
 
 
@@ -6862,6 +6998,8 @@ This function is used to build a prefix for error messages.
 
 
 
+
+
 <h1>6 &ndash; <a name="6">Standard Libraries</a></h1>
 
 <p>
@@ -6939,11 +7077,15 @@ implementations for some of its facilities.
 
 <p>
 <hr><h3><a name="pdf-assert"><code>assert (v [, message])</code></a></h3>
-Issues an  error when
+
+
+<p>
+Calls <a href="#pdf-error"><code>error</code></a> if
 the value of its argument <code>v</code> is false (i.e., <b>nil</b> or <b>false</b>);
 otherwise, returns all its arguments.
-<code>message</code> is an error message;
-when absent, it defaults to "assertion failed!"
+In case of error,
+<code>message</code> is the error object;
+when absent, it defaults to "<code>assertion failed!</code>"
 
 
 
@@ -7009,16 +7151,6 @@ returns a boolean that tells whether the collector is running
 (i.e., not stopped).
 </li>
 
-<li><b>"<code>generational</code>": </b>
-changes the collector to generational mode.
-This is an experimental feature (see <a href="#2.5">&sect;2.5</a>).
-</li>
-
-<li><b>"<code>incremental</code>": </b>
-changes the collector to incremental mode.
-This is the default mode.
-</li>
-
 </ul>
 
 
@@ -7038,7 +7170,7 @@ to its caller (that is, <code>dofile</code> does not run in protected mode).
 <p>
 <hr><h3><a name="pdf-error"><code>error (message [, level])</code></a></h3>
 Terminates the last protected function called
-and returns <code>message</code> as the error message.
+and returns <code>message</code> as the error object.
 Function <code>error</code> never returns.
 
 
@@ -7375,7 +7507,7 @@ according to the lexical conventions of Lua (see <a href="#3.1">&sect;3.1</a>).
 
 <p>
 When called with <code>base</code>,
-then <code>e</code> should be a string to be interpreted as
+then <code>e</code> must be a string to be interpreted as
 an integer numeral in that base.
 The base may be any integer between 2 and 36, inclusive.
 In bases above&nbsp;10, the letter '<code>A</code>' (in either upper or lower case)
@@ -7467,6 +7599,21 @@ an object with type <code>"thread"</code>.
 
 
 <p>
+<hr><h3><a name="pdf-coroutine.isyieldable"><code>coroutine.isyieldable ()</code></a></h3>
+
+
+<p>
+Returns true when the running coroutine can yield.
+
+
+<p>
+A running coroutine is yieldable if it is not the main thread and
+it is not inside a non-yieldable C function.
+
+
+
+
+<p>
 <hr><h3><a name="pdf-coroutine.resume"><code>coroutine.resume (co [, val1, &middot;&middot;&middot;])</code></a></h3>
 
 
@@ -7485,8 +7632,8 @@ as the results from the yield.
 <p>
 If the coroutine runs without any errors,
 <code>resume</code> returns <b>true</b> plus any values passed to <code>yield</code>
-(if the coroutine yields) or any values returned by the body function
-(if the coroutine terminates).
+(when the coroutine yields) or any values returned by the body function
+(when the coroutine terminates).
 If there is any error,
 <code>resume</code> returns <b>false</b> plus the error message.
 
@@ -7588,7 +7735,7 @@ for <a href="#pdf-package.searchers"><code>package.searchers</code></a>.
 <p>
 First <code>require</code> queries <code>package.preload[modname]</code>.
 If it has a value,
-this value (which should be a function) is the loader.
+this value (which must be a function) is the loader.
 Otherwise <code>require</code> searches for a Lua loader using the
 path stored in <a href="#pdf-package.path"><code>package.path</code></a>.
 If that also fails, it searches for a C&nbsp;loader using the
@@ -7663,7 +7810,7 @@ The path used by <a href="#pdf-require"><code>require</code></a> to search for a
 <p>
 Lua initializes the C&nbsp;path <a href="#pdf-package.cpath"><code>package.cpath</code></a> in the same way
 it initializes the Lua path <a href="#pdf-package.path"><code>package.path</code></a>,
-using the environment variable <a name="pdf-LUA_CPATH_5_2"><code>LUA_CPATH_5_2</code></a>
+using the environment variable <a name="pdf-LUA_CPATH_5_3"><code>LUA_CPATH_5_3</code></a>
 or the environment variable <a name="pdf-LUA_CPATH"><code>LUA_CPATH</code></a>
 or a default path defined in <code>luaconf.h</code>.
 
@@ -7741,7 +7888,7 @@ The path used by <a href="#pdf-require"><code>require</code></a> to search for a
 
 <p>
 At start-up, Lua initializes this variable with
-the value of the environment variable <a name="pdf-LUA_PATH_5_2"><code>LUA_PATH_5_2</code></a> or
+the value of the environment variable <a name="pdf-LUA_PATH_5_3"><code>LUA_PATH_5_3</code></a> or
 the environment variable <a name="pdf-LUA_PATH"><code>LUA_PATH</code></a> or
 with a default path defined in <code>luaconf.h</code>,
 if those environment variables are not defined.
@@ -7974,6 +8121,45 @@ about the function
 
 
 <p>
+<hr><h3><a name="pdf-string.dumpfloat"><code>string.dumpfloat (n [, size [, endianness]])</code></a></h3>
+Returns a string with the machine representation of float <code>n</code>,
+with given size and endianness.
+The <code>size</code> is the string "<code>f</code>" (single precision),
+"<code>d</code>" (double precision), or "<code>n</code>",
+which means the size of a <a href="#lua_Number"><code>lua_Number</code></a>;
+its default is "<code>n</code>".
+The endianness is the string "<code>l</code>" (little endian), "<code>b</code>" (big endian),
+or "<code>n</code>" (native);
+the default is the native endianness.
+
+
+<p>
+This function may not work correctly in architectures
+with mixed endian.
+
+
+<p>
+<hr><h3><a name="pdf-string.dumpint"><code>string.dumpint (n [, size [, endianness]])</code></a></h3>
+Returns a string with the two-complement representation of integer <code>n</code>,
+with <code>size</code> bytes and given endianness.
+The <code>size</code> can be any value from 1 to 12,
+or 0, which means the size of a <a href="#lua_Integer"><code>lua_Integer</code></a>
+(8 bytes in standard Lua);
+its default is zero.
+The endianness is the string "<code>l</code>" (little endian), "<code>b</code>" (big endian),
+or "<code>n</code>" (native);
+the default is the native endianness.
+
+
+<p>
+This function may not work correctly in architectures
+with mixed endian or
+that do not use a two-complement representation for integers.
+
+
+
+
+<p>
 <hr><h3><a name="pdf-string.find"><code>string.find (s, pattern [, init [, plain]])</code></a></h3>
 
 
@@ -8196,45 +8382,6 @@ its default value is&nbsp;1 and can be negative.
 
 
 <p>
-<hr><h3><a name="pdf-string.packfloat"><code>string.packfloat (n [, size [, endianess]])</code></a></h3>
-Returns a string with the machine representation of float <code>n</code>,
-with given size and endianess.
-The <code>size</code> is the string "<code>f</code>" (single precision),
-"<code>d</code>" (double precision), or "<code>n</code>",
-which means the size of a <a href="#lua_Number"><code>lua_Number</code></a>;
-its default is St{n}.
-The endianess is the string "<code>l</code>" (little endian), "<code>b</code>" (big endian),
-or "<code>n</code>" (native);
-the default is the native endianess.
-
-
-<p>
-(This function may not work correctly for non-native endianess
-in mixed-endian architectures.)
-
-
-
-
-<p>
-<hr><h3><a name="pdf-string.packint"><code>string.packint (n [, size [, endianess]])</code></a></h3>
-Returns a string with the machine representation of integer <code>n</code>,
-with <code>size</code> bytes and given endianess.
-The <code>size</code> can be any value from 1 to 8 or 0,
-which means the size of a <a href="#lua_Integer"><code>lua_Integer</code></a>;
-its default is zero.
-The endianess is the string "<code>l</code>" (little endian), "<code>b</code>" (big endian),
-or "<code>n</code>" (native);
-the default is the native endianess.
-
-
-<p>
-(This function may not work correctly for native endianess
-in mixed-endian architectures.)
-
-
-
-
-<p>
 <hr><h3><a name="pdf-string.rep"><code>string.rep (s, n [, sep])</code></a></h3>
 Returns a string that is the concatenation of <code>n</code> copies of
 the string <code>s</code> separated by the string <code>sep</code>.
@@ -8279,19 +8426,19 @@ the function returns the empty string.
 
 
 <p>
-<hr><h3><a name="pdf-string.unpackfloat"><code>string.unpackfloat (s [, pos [, size [, endianess]]])</code></a></h3>
+<hr><h3><a name="pdf-string.undumpfloat"><code>string.undumpfloat (s [, pos [, size [, endianness]]])</code></a></h3>
 Reads the machine representation of a float starting at position
 <code>pos</code> in string <code>s</code> and returns that number.
-See <a href="#pdf-string.packfloat"><code>string.packfloat</code></a> for details about <code>size</code> and <code>endianess</code>.
+See <a href="#pdf-string.dumpfloat"><code>string.dumpfloat</code></a> for details about <code>size</code> and <code>endianness</code>.
 
 
 
 
 <p>
-<hr><h3><a name="pdf-string.unpackint"><code>string.unpackint (s [, pos [, size [, endianess]]])</code></a></h3>
+<hr><h3><a name="pdf-string.undumpint"><code>string.undumpint (s [, pos [, size [, endianness]]])</code></a></h3>
 Reads the machine representation of an integer starting at position
 <code>pos</code> in string <code>s</code> and returns that integer.
-See <a href="#pdf-string.packint"><code>string.packint</code></a> for details about <code>size</code> and <code>endianess</code>.
+See <a href="#pdf-string.dumpint"><code>string.dumpint</code></a> for details about <code>size</code> and <code>endianness</code>.
 
 
 <p>
@@ -8517,7 +8664,7 @@ such as character classification, is outside its scope.
 
 <p>
 Unless stated otherwise,
-all functions that expect a byte index as a parameter
+all functions that expect a byte position as a parameter
 assume that the given position is either the start of a byte sequence
 or one plus the length of the subject string.
 As in the string library,
@@ -8572,24 +8719,29 @@ It raises an error if it meets any invalid byte sequence.
 
 
 <p>
-<hr><h3><a name="pdf-utf8.len"><code>utf8.len (s [, i])</code></a></h3>
-Returns the number of UTF-8 characters in string <code>s</code>,
-starting from position <code>i</code>.
-The default for <code>i</code> is 1.
-Returns <b>nil</b> if the sufix of <code>s</code> starting at <code>i</code>
-contains any invalid byte sequence.
+<hr><h3><a name="pdf-utf8.len"><code>utf8.len (s [, i [, j]])</code></a></h3>
+Returns the number of UTF-8 characters in string <code>s</code>
+that start between positions <code>i</code> and @{j} (both inclusive).
+The default for <code>i</code> is 1 and for <code>j</code> is -1.
+If it finds any invalid byte sequence,
+returns <b>nil</b> plus the position of the first invalid byte. 
 
 
 
 
 <p>
 <hr><h3><a name="pdf-utf8.offset"><code>utf8.offset (s, n [, i])</code></a></h3>
-Returns the byte index where the encoding of the
-<code>n</code>-th character of <code>s</code> starts,
-counting from position <code>i</code>.
+Returns the position (in bytes) where the encoding of the
+<code>n</code>-th character of <code>s</code>
+(counting from position <code>i</code>) starts.
 A negative <code>n</code> gets characters before position <code>i</code>.
-The default for <code>i</code> is 1.
-Returns <b>nil</b> if the subject does not have such character.
+The default for <code>i</code> is 1 when <code>n</code> is non-negative
+and <code>#s + 1</code> otherwise,
+so that <code>utf8.offset(s, -n)</code> gets the offset of the
+<code>n</code>-th character from the end of the string.
+If the specified character is not in the subject
+or right after its end,
+the function returns <b>nil</b>.
 
 
 <p>
@@ -8616,7 +8768,7 @@ It provides all its functions inside the table <a name="pdf-table"><code>table</
 
 <p>
 Remember that, whenever an operation needs the length of a table,
-the table should be a proper sequence
+the table must be a proper sequence
 or have a <code>__len</code> metamethod (see <a href="#3.4.7">&sect;3.4.7</a>).
 All functions ignore non-numeric keys
 in tables given as arguments.
@@ -8739,10 +8891,15 @@ By default, <code>i</code> is&nbsp;1 and <code>j</code> is <code>#list</code>.
 <h2>6.7 &ndash; <a name="6.7">Mathematical Functions</a></h2>
 
 <p>
-This library is an interface to the standard C&nbsp;math library.
-It provides all its functions inside the table <a name="pdf-math"><code>math</code></a>.
-Unless stated otherwise,
-all functions in this library operate with and return floats.
+This library provides basic mathematical functions.
+It provides all its functions and constants inside the table <a name="pdf-math"><code>math</code></a>.
+Functions with the annotation "<code>integer/float</code>" give
+integer results for integer arguments
+and float results for float (or mixed) arguments.
+Rounding functions
+(<a href="#pdf-math.ceil"><code>math.ceil</code></a>, <a href="#pdf-math.floor"><code>math.floor</code></a>, and <a href="#pdf-math.modf"><code>math.modf</code></a>)
+return an integer when the result fits in the range of an integer,
+otherwise they return a float.
 
 
 <p>
@@ -8750,7 +8907,7 @@ all functions in this library operate with and return floats.
 
 
 <p>
-Returns the absolute value of <code>x</code>.
+Returns the absolute value of <code>x</code>. (integer/float)
 
 
 
@@ -8776,24 +8933,21 @@ Returns the arc sine of <code>x</code> (in radians).
 
 
 <p>
-<hr><h3><a name="pdf-math.atan"><code>math.atan (x)</code></a></h3>
+<hr><h3><a name="pdf-math.atan"><code>math.atan (y [, x])</code></a></h3>
 
 
 <p>
-Returns the arc tangent of <code>x</code> (in radians).
 
-
-
-
-<p>
-<hr><h3><a name="pdf-math.atan2"><code>math.atan2 (y, x)</code></a></h3>
-
-
-<p>
 Returns the arc tangent of <code>y/x</code> (in radians),
 but uses the signs of both parameters to find the
 quadrant of the result.
 (It also handles correctly the case of <code>x</code> being zero.)
+
+
+<p>
+The default value for <code>x</code> is 1,
+so that the call <code>math.atan(y)</code>
+returns the arc tangent of <code>y</code>.
 
 
 
@@ -8803,7 +8957,7 @@ quadrant of the result.
 
 
 <p>
-Returns the smallest integer larger than or equal to <code>x</code>.
+Returns the smaller integral value larger than or equal to <code>x</code>.
 
 
 
@@ -8819,31 +8973,11 @@ Returns the cosine of <code>x</code> (assumed to be in radians).
 
 
 <p>
-<hr><h3><a name="pdf-math.cosh"><code>math.cosh (x)</code></a></h3>
-
-
-<p>
-Returns the hyperbolic cosine of <code>x</code>.
-
-
-
-
-<p>
 <hr><h3><a name="pdf-math.deg"><code>math.deg (x)</code></a></h3>
 
 
 <p>
-Returns the angle <code>x</code> (given in radians) in degrees.
-
-
-
-
-<p>
-<hr><h3><a name="pdf-math.exp"><code>math.exp (x)</code></a></h3>
-
-
-<p>
-Returns the value <em>e<sup>x</sup></em>.
+Converts the angle <code>x</code> from radians to degrees.
 
 
 
@@ -8853,8 +8987,7 @@ Returns the value <em>e<sup>x</sup></em>.
 
 
 <p>
-Returns a float with the largest
-integral value smaller than or equal to <code>x</code>.
+Returns the largest integral value smaller than or equal to <code>x</code>.
 
 
 
@@ -8865,20 +8998,7 @@ integral value smaller than or equal to <code>x</code>.
 
 <p>
 Returns the remainder of the division of <code>x</code> by <code>y</code>
-that rounds the quotient towards zero.
-
-
-
-
-<p>
-<hr><h3><a name="pdf-math.frexp"><code>math.frexp (x)</code></a></h3>
-
-
-<p>
-Returns <code>m</code> and <code>e</code> such that <em>x = m2<sup>e</sup></em>,
-<code>e</code> is an integer and the absolute value of <code>m</code> is
-in the range <em>[0.5, 1)</em>
-(or zero when <code>x</code> is zero).
+that rounds the quotient towards zero. (integer/float)
 
 
 
@@ -8888,8 +9008,8 @@ in the range <em>[0.5, 1)</em>
 
 
 <p>
-The value <code>HUGE_VAL</code>,
-a value larger than or equal to any other numerical value.
+The float value <code>HUGE_VAL</code>,
+a value larger than any other numerical value.
 
 
 
@@ -8902,16 +9022,6 @@ a value larger than or equal to any other numerical value.
 Returns the largest integer smaller than or equal to <code>x</code>.
 If the value does not fit in an integer,
 returns <b>nil</b>.
-
-
-
-
-<p>
-<hr><h3><a name="pdf-math.ldexp"><code>math.ldexp (m, e)</code></a></h3>
-
-
-<p>
-Returns <em>m2<sup>e</sup></em> (<code>e</code> should be an integer).
 
 
 
@@ -8933,7 +9043,15 @@ The default for <code>base</code> is <em>e</em>
 
 
 <p>
-Returns the maximum value among its arguments.
+Returns the argument with the maximum value,
+according to the Lua operator <code>&lt;</code>. (integer/float)
+
+
+
+
+<p>
+<hr><h3><a name="pdf-math.maxinteger"><code>math.maxinteger</code></a></h3>
+An integer with the maximum value for an integer.
 
 
 
@@ -8943,7 +9061,15 @@ Returns the maximum value among its arguments.
 
 
 <p>
-Returns the minimum value among its arguments.
+Returns the argument with the minimum value,
+according to the Lua operator <code>&lt;</code>. (integer/float)
+
+
+
+
+<p>
+<hr><h3><a name="pdf-math.mininteger"><code>math.mininteger</code></a></h3>
+An integer with the minimum value for an integer.
 
 
 
@@ -8953,8 +9079,8 @@ Returns the minimum value among its arguments.
 
 
 <p>
-Returns two numbers,
-the integral part of <code>x</code> and the fractional part of <code>x</code>.
+Returns the integral part of <code>x</code> and the fractional part of <code>x</code>.
+Its second result is always a float.
 
 
 
@@ -8970,22 +9096,11 @@ The value of <em>&pi;</em>.
 
 
 <p>
-<hr><h3><a name="pdf-math.pow"><code>math.pow (x, y)</code></a></h3>
-
-
-<p>
-Returns <em>x<sup>y</sup></em>.
-(You can also use the expression <code>x^y</code> to compute this value.)
-
-
-
-
-<p>
 <hr><h3><a name="pdf-math.rad"><code>math.rad (x)</code></a></h3>
 
 
 <p>
-Returns the angle <code>x</code> (given in degrees) in radians.
+Converts the angle <code>x</code> from degrees to radians.
 
 
 
@@ -8995,19 +9110,20 @@ Returns the angle <code>x</code> (given in degrees) in radians.
 
 
 <p>
-This function is an interface to the simple
-pseudo-random generator function <code>rand</code> provided by Standard&nbsp;C.
-(No guarantees can be given for its statistical properties.)
+When called without arguments,
+returns a pseudo-random float with uniform distribution
+in the range  <em>[0,1)</em>.  
+When called with two integers <code>m</code> and <code>n</code>,
+<code>math.random</code> returns a pseudo-random integer
+with uniform distribution in the range <em>[m, n]</em>.
+(The interval size must fit in a Lua integer.)
+The call <code>math.random(n)</code> is equivalent to <code>math.random(1,n)</code>.
 
 
 <p>
-When called without arguments,
-returns a uniform pseudo-random float
-in the range <em>[0,1)</em>.  
-When called with two integers <code>m</code> and <code>n</code>,
-<code>math.random</code> returns a uniform pseudo-random
-integer in the range <em>[m, n]</em>.
-The call <code>math.random(n)</code> is equivalent to <code>math.random(1,n)</code>.
+This function is an interface to the underling
+pseudo-random generator function provided by C.
+No guarantees can be given for its statistical properties.
 
 
 
@@ -9035,16 +9151,6 @@ Returns the sine of <code>x</code> (assumed to be in radians).
 
 
 <p>
-<hr><h3><a name="pdf-math.sinh"><code>math.sinh (x)</code></a></h3>
-
-
-<p>
-Returns the hyperbolic sine of <code>x</code>.
-
-
-
-
-<p>
 <hr><h3><a name="pdf-math.sqrt"><code>math.sqrt (x)</code></a></h3>
 
 
@@ -9061,16 +9167,6 @@ Returns the square root of <code>x</code>.
 
 <p>
 Returns the tangent of <code>x</code> (assumed to be in radians).
-
-
-
-
-<p>
-<hr><h3><a name="pdf-math.tanh"><code>math.tanh (x)</code></a></h3>
-
-
-<p>
-Returns the hyperbolic tangent of <code>x</code>.
 
 
 
@@ -9337,7 +9433,7 @@ Returns an iterator function that,
 each time it is called,
 reads the file according to the given formats.
 When no format is given,
-uses "*l" as a default.
+uses "<code>l</code>" as a default.
 As an example, the construction
 
 <pre>
@@ -9376,30 +9472,33 @@ The available formats are
 
 <ul>
 
-<li><b>"<code>*n</code>": </b>
-reads a number and returns it as a float.
-If the input has only a prefix of a valid number
-(e.g., "<code>0x</code>" or "<code>3.4e-</code>"),
-this format can read the entire prefix
-even when returning <b>nil</b>.
+<li><b>"<code>n</code>": </b>
+reads a numeral and returns it as a float or an integer,
+following the lexical conventions of Lua.
+(The numeral may have leading spaces and a sign.)
+This format always reads the longest input sequence that
+is a valid prefix for a number;
+if that prefix does not form a valid number
+(e.g., an empty string, "<code>0x</code>", or "<code>3.4e-</code>"),
+it is discarded and the function returns <b>nil</b>.
 </li>
 
-<li><b>"<code>*i</code>": </b>
+<li><b>"<code>i</code>": </b>
 reads an integral number and returns it as an integer.
 </li>
 
-<li><b>"<code>*a</code>": </b>
+<li><b>"<code>a</code>": </b>
 reads the whole file, starting at the current position.
 On end of file, it returns the empty string.
 </li>
 
-<li><b>"<code>*l</code>": </b>
+<li><b>"<code>l</code>": </b>
 reads the next line skipping the end of line,
 returning <b>nil</b> on end of file.
 This is the default format.
 </li>
 
-<li><b>"<code>*L</code>": </b>
+<li><b>"<code>L</code>": </b>
 reads the next line keeping the end-of-line character (if present),
 returning <b>nil</b> on end of file.
 </li>
@@ -9413,7 +9512,7 @@ or <b>nil</b> on end of file.
 </li>
 
 </ul><p>
-The formats "<code>*l</code>" and "<code>*L</code>" should be used only for text files.
+The formats "<code>l</code>" and "<code>L</code>" should be used only for text files.
 
 
 
@@ -9622,7 +9721,7 @@ When called without a <code>command</code>,
 
 
 <p>
-<hr><h3><a name="pdf-os.exit"><code>os.exit ([code [, close])</code></a></h3>
+<hr><h3><a name="pdf-os.exit"><code>os.exit ([code [, close]])</code></a></h3>
 
 
 <p>
@@ -9800,6 +9899,32 @@ The default is always the current thread.
 
 
 <p>
+<hr><h3><a name="pdf-debug.Csize"><code>debug.Csize (t)</code></a></h3>
+
+
+<p>
+Returns the size of the underlying representation of a given C type,
+according to the following table:
+<table border="1">
+<tr><td>'<code>I</code>'</td><td><code>lua_Integer</code></td></tr>
+<tr><td>'<code>F</code>'</td><td><code>lua_Number</code></td></tr>
+<tr><td>'<code>b</code>'</td><td><code>byte</code></td></tr>
+<tr><td>'<code>d</code>'</td><td><code>double</code></td></tr>
+<tr><td>'<code>f</code>'</td><td><code>float</code></td></tr>
+<tr><td>'<code>h</code>'</td><td><code>short int</code></td></tr>
+<tr><td>'<code>i</code>'</td><td><code>int</code></td></tr>
+<tr><td>'<code>l</code>'</td><td><code>long int</code></td></tr>
+<tr><td>'<code>z</code>'</td><td><code>size_t</code></td></tr>
+</table>
+For all options except '<code>b</code>',
+the size is given in number of bytes;
+for option '<code>b</code>',
+the size is its number of bits.
+
+
+
+
+<p>
 <hr><h3><a name="pdf-debug.debug"><code>debug.debug ()</code></a></h3>
 
 
@@ -9898,7 +10023,7 @@ and raises an error when called with a level out of range.
 
 
 <p>
-Variable names starting with '<code>(</code>' (open parenthesis)
+Variable names starting with '<code>(</code>' (open parenthesis) 
 represent variables with no known names
 (internal variables like loop control variables,
 and variables from chunks saved without debug information).
@@ -9943,7 +10068,7 @@ The function returns <b>nil</b> if there is no upvalue with the given index.
 
 
 <p>
-Variable names starting with '<code>(</code>' (open parenthesis)
+Variable names starting with '<code>(</code>' (open parenthesis) 
 represent variables with no known names
 (variables from chunks saved without debug information).
 
@@ -9958,18 +10083,6 @@ represent variables with no known names
 Returns the Lua value associated to <code>u</code>.
 If <code>u</code> is not a userdata,
 returns <b>nil</b>.
-
-
-
-
-<p>
-<hr><h3><a name="pdf-debug.numbits"><code>debug.numbits (t)</code></a></h3>
-
-
-<p>
-Returns the number of bits in the underlying representation
-of an integer (if <code>t</code> is "<code>i</code>")
-or a float (if  <code>t</code> is "<code>f</code>").
 
 
 
@@ -10169,7 +10282,7 @@ and as <code>lua -</code> otherwise.
 
 <p>
 When called without option <code>-E</code>, 
-the interpreter checks for an environment variable <a name="pdf-LUA_INIT_5_2"><code>LUA_INIT_5_2</code></a>
+the interpreter checks for an environment variable <a name="pdf-LUA_INIT_5_3"><code>LUA_INIT_5_3</code></a>
 (or <a name="pdf-LUA_INIT"><code>LUA_INIT</code></a> if it is not defined)
 before running any argument.
 If the variable content has the format <code>@<em>filename</em></code>,
@@ -10200,37 +10313,46 @@ and finally run the file <code>script.lua</code> with no arguments.
 
 
 <p>
-Before starting to run the script,
-<code>lua</code> collects all arguments in the command line
+Before running any code,
+<code>lua</code> collects all command-line arguments
 in a global table called <code>arg</code>.
-The script name is stored at index 0,
+The script name goes to index 0,
 the first argument after the script name goes to index 1,
 and so on.
 Any arguments before the script name
-(that is, the interpreter name plus the options)
+(that is, the interpreter name plus its options)
 go to negative indices.
 For instance, in the call
 
 <pre>
      $ lua -la b.lua t1 t2
 </pre><p>
-the interpreter first runs the file <code>a.lua</code>,
-then creates a table
+the table is like this:
 
 <pre>
      arg = { [-2] = "lua", [-1] = "-la",
              [0] = "b.lua",
              [1] = "t1", [2] = "t2" }
 </pre><p>
-and finally runs the file <code>b.lua</code>.
-The script is called with <code>arg[1]</code>, <code>arg[2]</code>, ...
-as arguments;
-it can also access these arguments with the vararg expression '<code>...</code>'.
+If there is no script in the call,
+the interpreter name goes to index 0,
+followed by the other arguments.
+For instance, the call
+
+<pre>
+     $ lua -e "print(arg[1])"
+</pre><p>
+will print "<code>-e</code>".
 
 
 <p>
 In interactive mode,
-if you write an incomplete statement,
+Lua repeatedly prompts and waits for a line.
+After reading a line,
+Lua first try to interpret the line as an expression.
+If it succeeds, it prints its value.
+Otherwise, it interprets the line as a statement.
+If you write an incomplete statement,
 the interpreter waits for its completion
 by issuing a different prompt.
 
@@ -10302,6 +10424,12 @@ using a new version.
 
 
 <p>
+Similarly, Lua versions can always change the internal representation
+of precompiled chunks;
+precompiled chunks are never compatible between different Lua versions.
+
+
+<p>
 The standard paths in the official distribution may
 change between versions.
 
@@ -10325,8 +10453,8 @@ You can fix these differences by forcing a number to be a float
 in particular writing constants with an ending <code>.0</code>
 or using <code>x = x + 0.0</code> to convert a variable.
 (This recommendation is only for a quick fix
-for an occasional incompatibility,
-not as a general guideline for good programming.
+for an occasional incompatibility;
+it is not a general guideline for good programming.
 For good programming,
 use floats where you need floats
 and integers where you need integers.)
@@ -10335,7 +10463,22 @@ and integers where you need integers.)
 <p>
 Although not formally an incompatibility,
 the proper differentiation between floats and integers
-can sometimes have a big impact on performance.
+have an impact on performance.
+</li>
+
+<li>
+The conversion of a float to a string now adds a <code>.0</code> suffix
+to the result if it looks like an integer.
+(For instance, the float 2.0 will be printed as <code>2.0</code>,
+not as <code>2</code>.)
+You should always use an explicit format
+when you need a specific format for numbers.
+
+
+<p>
+(Formally this is not an incompatibility,
+because Lua does not specify how numbers are formatted as strings,
+but some programs assumed a specific format.)
 </li>
 
 <li>
@@ -10352,21 +10495,28 @@ The generational mode for the garbage collector was removed.
 <ul>
 
 <li>
-The conversion of a float to a string through <a href="#pdf-tostring"><code>tostring</code></a>
-(which is used by <a href="#pdf-print"><code>print</code></a>) now adds a <code>.0</code> suffix if the
-number has an integral value.
-(For instance, the float 2.0 will be printed as <code>2.0</code>,
-not as <code>2</code>.)
-You should always use an explicit format
-when you need a specific format for numbers.
-</li>
-
-<li>
 The <code>bit32</code> library has been deprecated.
 It is easy to require a compatible external library or,
 better yet, to replace its functions with appropriate bitwise operations.
-(Just keep in mind that <code>bit32</code> operates on 32-bit integers,
+(Keep in mind that <code>bit32</code> operates on 32-bit integers,
 while the bitwise operators in Standard Lua operate on 64-bit integers.)
+</li>
+
+<li>
+Option names in <a href="#pdf-io.read"><code>io.read</code></a> do not have a starting '<code>*</code>' anymore.
+For compatibility, Lua will continue to ignore this character.
+</li>
+
+<li>
+The following functions were deprecated in the mathematical library:
+<code>atan2</code>, <code>cosh</code>, <code>sinh</code>, <code>tanh</code>, <code>pow</code>,
+<code>frexp</code>, and <code>ldexp</code>.
+You can replace <code>math.pow(x,y)</code> with <code>x^y</code>;
+you can replace <code>math.atan2</code> with <code>math.atan</code>,
+which now accepts two parameters;
+you can replace <code>math.ldexp(x,exp)</code> with <code>x * 2.0^exp</code>.
+For the other operations,
+the best choice is to use an external library.
 </li>
 
 </ul>
@@ -10380,7 +10530,15 @@ while the bitwise operators in Standard Lua operate on 64-bit integers.)
 <ul>
 
 <li>
-No changes (yet).
+Continuation functions now receive as parameters what they needed
+to get through <code>lua_getctx</code>,
+so <code>lua_getctx</code> has been removed.
+Adapt your code accordingly.
+</li>
+
+<li>
+Function <a href="#lua_dump"><code>lua_dump</code></a> has an extra parameter, <code>strip</code>.
+Use 0 as the value of this parameter to get the old behavior.
 </li>
 
 </ul>
@@ -10456,11 +10614,12 @@ Here is the complete syntax of Lua in extended BNF.
 
 	fieldsep ::= &lsquo;<b>,</b>&rsquo; | &lsquo;<b>;</b>&rsquo;
 
-	binop ::= &lsquo;<b>+</b>&rsquo; | &lsquo;<b>-</b>&rsquo; | &lsquo;<b>*</b>&rsquo; | &lsquo;<b>/</b>&rsquo; | &lsquo;<b>^</b>&rsquo; | &lsquo;<b>%</b>&rsquo; | &lsquo;<b>..</b>&rsquo; | 
+	binop ::=  &lsquo;<b>+</b>&rsquo; | &lsquo;<b>-</b>&rsquo; | &lsquo;<b>*</b>&rsquo; | &lsquo;<b>/</b>&rsquo; | &lsquo;<b>//</b>&rsquo; | &lsquo;<b>^</b>&rsquo; | &lsquo;<b>%</b>&rsquo; | 
+		 &lsquo;<b>&amp;</b>&rsquo; | &lsquo;<b>~</b>&rsquo; | &lsquo;<b>|</b>&rsquo; | &lsquo;<b>&gt;&gt;</b>&rsquo; | &lsquo;<b>&lt;&lt;</b>&rsquo; | &lsquo;<b>..</b>&rsquo; | 
 		 &lsquo;<b>&lt;</b>&rsquo; | &lsquo;<b>&lt;=</b>&rsquo; | &lsquo;<b>&gt;</b>&rsquo; | &lsquo;<b>&gt;=</b>&rsquo; | &lsquo;<b>==</b>&rsquo; | &lsquo;<b>~=</b>&rsquo; | 
 		 <b>and</b> | <b>or</b>
 
-	unop ::= &lsquo;<b>-</b>&rsquo; | <b>not</b> | &lsquo;<b>#</b>&rsquo;
+	unop ::= &lsquo;<b>-</b>&rsquo; | <b>not</b> | &lsquo;<b>#</b>&rsquo; | &lsquo;<b>~</b>&rsquo;
 
 </pre>
 
@@ -10468,17 +10627,18 @@ Here is the complete syntax of Lua in extended BNF.
 
 
 
-}
+
+
 
 
 
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Fri Mar 21 17:33:56 BRT 2014
+Thu Jun 19 17:13:19 BRT 2014
 </SMALL>
 <!--
-Last change: updated for Lua 5.3.0 (work2)
+Last change: updated for Lua 5.3.0 (work3)
 -->
 
 </body></html>

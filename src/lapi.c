@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.201 2014/03/12 20:57:40 roberto Exp $
+** $Id: lapi.c,v 2.219 2014/06/19 18:27:20 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -94,6 +94,7 @@ LUA_API int lua_checkstack (lua_State *L, int size) {
   int res;
   CallInfo *ci = L->ci;
   lua_lock(L);
+  api_check(L, size >= 0, "negative 'size'");
   if (L->stack_last - L->top > size)  /* stack large enough? */
     res = 1;  /* yes; check is OK */
   else {  /* no; need to grow stack */
@@ -180,26 +181,35 @@ LUA_API void lua_settop (lua_State *L, int idx) {
 }
 
 
-LUA_API void lua_remove (lua_State *L, int idx) {
-  StkId p;
-  lua_lock(L);
-  p = index2addr(L, idx);
-  api_checkstackindex(L, idx, p);
-  while (++p < L->top) setobjs2s(L, p-1, p);
-  L->top--;
-  lua_unlock(L);
+/*
+** Reverse the stack segment from 'from' to 'to'
+** (auxiliar to 'lua_rotate')
+*/
+static void reverse (lua_State *L, StkId from, StkId to) {
+  for (; from < to; from++, to--) {
+    TValue temp;
+    setobj(L, &temp, from);
+    setobjs2s(L, from, to);
+    setobj2s(L, to, &temp);
+  }
 }
 
 
-LUA_API void lua_insert (lua_State *L, int idx) {
-  StkId p;
-  StkId q;
+/*
+** Let x = AB, where A is a prefix of length 'n'. Then,
+** rotate x n == BA. But BA == (A^r . B^r)^r.
+*/
+LUA_API void lua_rotate (lua_State *L, int idx, int n) {
+  StkId p, t, m;
   lua_lock(L);
-  p = index2addr(L, idx);
+  t = L->top - 1;  /* end of stack segment being rotated */
+  p = index2addr(L, idx);  /* start of segment */
   api_checkstackindex(L, idx, p);
-  for (q = L->top; q > p; q--)  /* use L->top as a temporary */
-    setobjs2s(L, q, q - 1);
-  setobjs2s(L, p, L->top);
+  api_check(L, (n >= 0 ? n : -n) <= (t - p + 1), "invalid 'n'");
+  m = (n >= 0 ? t - n : p - n - 1);  /* end of prefix */
+  reverse(L, p, m);  /* reverse the prefix with length 'n' */
+  reverse(L, m + 1, t);  /* reverse the suffix */
+  reverse(L, p, t);  /* reverse the entire segment */
   lua_unlock(L);
 }
 
@@ -332,18 +342,11 @@ LUA_API int lua_compare (lua_State *L, int index1, int index2, int op) {
 }
 
 
-LUA_API int lua_strtonum (lua_State *L, const char *s, size_t len) {
-  lua_Integer i; lua_Number n;
-  if (luaO_str2int(s, len, &i)) {  /* try as an integer */
-    setivalue(L->top, i);
-  }
-  else if (luaO_str2d(s, len, &n)) {  /* else try as a float */
-    setnvalue(L->top, n);
-  }
-  else
-    return 0;  /* conversion failed */
-  api_incr_top(L);
-  return 1;
+LUA_API size_t lua_strtonum (lua_State *L, const char *s) {
+  size_t sz = luaO_str2num(s, L->top);
+  if (sz != 0)
+    api_incr_top(L);
+  return sz;
 }
 
 
@@ -375,12 +378,12 @@ LUA_API lua_Unsigned lua_tounsignedx (lua_State *L, int idx, int *pisnum) {
   int isnum = 0;
   switch (ttype(o)) {
     case LUA_TNUMINT: {
-      res = cast_unsigned(ivalue(o));
+      res = l_castS2U(ivalue(o));
       isnum = 1;
       break;
     }
     case LUA_TNUMFLT: {  /* compute floor(n) % 2^(numbits in an integer) */
-      const lua_Number twop = cast_num(MAX_UINTEGER) + cast_num(1);  /* 2^n */
+      const lua_Number two2n = cast_num(LUA_MAXUNSIGNED) + cast_num(1);
       lua_Number n = fltvalue(o);  /* get value */
       int neg = 0;
       n = l_floor(n);  /* get its floor */
@@ -388,10 +391,10 @@ LUA_API lua_Unsigned lua_tounsignedx (lua_State *L, int idx, int *pisnum) {
         neg = 1;
         n = -n;  /* make 'n' positive, so that 'fmod' is the same as '%' */
       }
-      n = l_mathop(fmod)(n, twop);  /* n = n % 2^(numbits in an integer) */
+      n = l_mathop(fmod)(n, two2n);  /* n = n % 2^(numbits in an integer) */
       if (luai_numisnan(n))   /* not a number? */
         break;  /* not an integer, too */
-      res = cast_unsigned(n);  /* 'n' now must fit in an unsigned */
+      res = cast(lua_Unsigned, n);  /* 'n' now must fit in an unsigned */
       if (neg) res = 0u - res;  /* back to negative, if needed */
       isnum = 1;
       break;
@@ -495,9 +498,7 @@ LUA_API void lua_pushnil (lua_State *L) {
 
 LUA_API void lua_pushnumber (lua_State *L, lua_Number n) {
   lua_lock(L);
-  setnvalue(L->top, n);
-  luai_checknum(L, L->top,
-    luaG_runerror(L, "C API - attempt to push a signaling NaN"));
+  setfltvalue(L->top, n);
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -513,7 +514,7 @@ LUA_API void lua_pushinteger (lua_State *L, lua_Integer n) {
 
 LUA_API void lua_pushunsigned (lua_State *L, lua_Unsigned u) {
   lua_lock(L);
-  setivalue(L->top, cast_integer(u));
+  setivalue(L->top, l_castU2S(u));
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -579,15 +580,15 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
     setfvalue(L->top, fn);
   }
   else {
-    Closure *cl;
+    CClosure *cl;
     api_checknelems(L, n);
     api_check(L, n <= MAXUPVAL, "upvalue index too large");
     luaC_checkGC(L);
     cl = luaF_newCclosure(L, n);
-    cl->c.f = fn;
+    cl->f = fn;
     L->top -= n;
     while (n--) {
-      setobj2n(L, &cl->c.upvalue[n], L->top + n);
+      setobj2n(L, &cl->upvalue[n], L->top + n);
       /* does not need barrier because closure is white */
     }
     setclCvalue(L, L->top, cl);
@@ -741,7 +742,7 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
 }
 
 
-LUA_API void lua_getuservalue (lua_State *L, int idx) {
+LUA_API int lua_getuservalue (lua_State *L, int idx) {
   StkId o;
   lua_lock(L);
   o = index2addr(L, idx);
@@ -749,6 +750,7 @@ LUA_API void lua_getuservalue (lua_State *L, int idx) {
   getuservalue(L, rawuvalue(o), L->top);
   api_incr_top(L);
   lua_unlock(L);
+  return ttnov(L->top - 1);
 }
 
 
@@ -898,17 +900,8 @@ LUA_API void lua_setuservalue (lua_State *L, int idx) {
 	"results from function overflow current stack size")
 
 
-LUA_API int lua_getctx (lua_State *L, int *ctx) {
-  if (L->ci->callstatus & CIST_YIELDED) {
-    if (ctx) *ctx = L->ci->u.c.ctx;
-    return L->ci->u.c.status;
-  }
-  else return LUA_OK;
-}
-
-
 LUA_API void lua_callk (lua_State *L, int nargs, int nresults, int ctx,
-                        lua_CFunction k) {
+                        lua_KFunction k) {
   StkId func;
   lua_lock(L);
   api_check(L, k == NULL || !isLua(L->ci),
@@ -947,7 +940,7 @@ static void f_call (lua_State *L, void *ud) {
 
 
 LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
-                        int ctx, lua_CFunction k) {
+                        int ctx, lua_KFunction k) {
   struct CallS c;
   int status;
   ptrdiff_t func;
@@ -975,11 +968,10 @@ LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
     ci->u.c.ctx = ctx;  /* save context */
     /* save information for error recovery */
     ci->extra = savestack(L, c.func);
-    ci->u.c.old_allowhook = L->allowhook;
     ci->u.c.old_errfunc = L->errfunc;
     L->errfunc = func;
-    /* mark that function may do error recovery */
-    ci->callstatus |= CIST_YPCALL;
+    setoah(ci->callstatus, L->allowhook);  /* save value of 'allowhook' */
+    ci->callstatus |= CIST_YPCALL;  /* function can do error recovery */
     luaD_call(L, c.func, nresults, 1);  /* do the call */
     ci->callstatus &= ~CIST_YPCALL;
     L->errfunc = ci->u.c.old_errfunc;
