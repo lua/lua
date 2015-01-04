@@ -33,7 +33,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.140 2014/12/10 11:58:42 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.141 2014/12/16 16:21:31 roberto Exp $ -->
 
 
 
@@ -143,9 +143,9 @@ Standard Lua uses 64-bit integers and double-precision (64-bit) floats,
 but you can also compile Lua so that it
 uses 32-bit integers and/or single-precision (32-bit) floats.
 The option with 32 bits for both integers and floats 
-(called <em>Small Lua</em>) is particularly attractive
+is particularly attractive
 for small machines and embedded systems.
-(See <code>LUA_INT</code> in file <code>luaconf.h</code>.)
+(See macro <code>LUA_32BITS</code> in file <code>luaconf.h</code>.)
 
 
 <p>
@@ -1903,7 +1903,7 @@ Lua supports the following bitwise operators:
 
 <ul>
 <li><b><code>&amp;</code>: </b>bitwise and</li>
-<li><b><code>|</code>: </b>bitwise or</li>
+<li><b><code>&#124;</code>: </b>bitwise or</li>
 <li><b><code>~</code>: </b>bitwise exclusive or</li>
 <li><b><code>&gt;&gt;</code>: </b>right shift</li>
 <li><b><code>&lt;&lt;</code>: </b>left shift</li>
@@ -3094,7 +3094,7 @@ The value of <code>op</code> must be one of the following constants:
 <li><b><a name="pdf-LUA_OPUNM"><code>LUA_OPUNM</code></a>: </b> performs mathematical negation (unary <code>-</code>)</li>
 <li><b><a name="pdf-LUA_OPBNOT"><code>LUA_OPBNOT</code></a>: </b> performs bitwise negation (<code>~</code>)</li>
 <li><b><a name="pdf-LUA_OPBAND"><code>LUA_OPBAND</code></a>: </b> performs bitwise and (<code>&amp;</code>)</li>
-<li><b><a name="pdf-LUA_OPBOR"><code>LUA_OPBOR</code></a>|   performs bitwise or (<code>: </b></code>)</li>
+<li><b><a name="pdf-LUA_OPBOR"><code>LUA_OPBOR</code></a>: </b> performs bitwise or (<code>|</code>)</li>
 <li><b><a name="pdf-LUA_OPBXOR"><code>LUA_OPBXOR</code></a>: </b> performs bitwise exclusive or (<code>~</code>)</li>
 <li><b><a name="pdf-LUA_OPSHL"><code>LUA_OPSHL</code></a>: </b> performs left shift (<code>&lt;&lt;</code>)</li>
 <li><b><a name="pdf-LUA_OPSHR"><code>LUA_OPSHR</code></a>: </b> performs right shift (<code>&gt;&gt;</code>)</li>
@@ -7219,9 +7219,9 @@ so that the construction
 <pre>
      for i,v in ipairs(t) do <em>body</em> end
 </pre><p>
-will iterate over the pairs
+will iterate over the key&ndash;value pairs
 (<code>1,t[1]</code>), (<code>2,t[2]</code>), ...,
-up to the first integer key absent from the table.
+up to the first nil value.
 
 
 
@@ -10588,7 +10588,7 @@ The <code>bit32</code> library has been deprecated.
 It is easy to require a compatible external library or,
 better yet, to replace its functions with appropriate bitwise operations.
 (Keep in mind that <code>bit32</code> operates on 32-bit integers,
-while the bitwise operators in Standard Lua operate on 64-bit integers.)
+while the bitwise operators in standard Lua operate on 64-bit integers.)
 </li>
 
 <li>
@@ -10768,7 +10768,7 @@ and LiteralString, see <a href="#3.1">&sect;3.1</a>.)
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Wed Dec 10 15:49:17 BRST 2014
+Tue Dec 16 14:45:50 BRST 2014
 </SMALL>
 <!--
 Last change: revised for Lua 5.3.0 (final)

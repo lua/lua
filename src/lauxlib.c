@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.277 2014/12/10 11:31:32 roberto Exp $
+** $Id: lauxlib.c,v 1.279 2014/12/14 18:32:26 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -66,11 +66,20 @@ static int findfield (lua_State *L, int objidx, int level) {
 }
 
 
+/*
+** Search for a name for a function in all loaded modules
+** (registry._LOADED).
+*/
 static int pushglobalfuncname (lua_State *L, lua_Debug *ar) {
   int top = lua_gettop(L);
   lua_getinfo(L, "f", ar);  /* push function */
-  lua_pushglobaltable(L);
+  lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
   if (findfield(L, top + 1, 2)) {
+    const char *name = lua_tostring(L, -1);
+    if (strncmp(name, "_G.", 3) == 0) {  /* name start with '_G.'? */
+      lua_pushstring(L, name + 3);  /* push name without prefix */
+      lua_remove(L, -2);  /* remove original name */
+    }
     lua_copy(L, -1, top + 1);  /* move name to proper place */
     lua_pop(L, 2);  /* remove pushed values */
     return 1;
