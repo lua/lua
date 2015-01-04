@@ -31,12 +31,12 @@ tt, kbd, code {
 <HR>
 <H1>
 <A HREF="http://www.lua.org/"><IMG SRC="logo.gif" ALT="Lua" BORDER=0></A>
-Welcome to Lua 5.3 (work3)
+Welcome to Lua 5.3 (alpha)
 </H1>
 
 <P>
 <IMG SRC="alert.png" ALIGN="absbottom">
-<EM>All details may change in the final version.</EM>
+<EM>Some details may change in the final version.</EM>
 
 <P>
 <A HREF="#about">about</A>
@@ -114,7 +114,7 @@ Here are the details.
 <OL>
 <LI>
 Open a terminal window and move to
-the top-level directory, which is named <TT>lua-5.3.0-work3</TT>.
+the top-level directory, which is named <TT>lua-5.3.0-alpha</TT>.
 The <TT>Makefile</TT> there controls both the build process and the installation process.
 <P>
 <LI>
@@ -275,36 +275,38 @@ lists the
 <LI> better support for small architectures ("Small Lua" with 32-bit numbers)
 <LI> bitwise operators
 <LI> basic utf-8 library
+
 <LI> utf-8 escapes in literal strings
-<LI> functions for packing/unpacking numbers
-<LI> userdata can have any Lua value as uservalue
 <LI> strip option in <CODE>lua_dump</CODE>/<CODE>string.dump</CODE>
 </UL>
 
 Here are the other changes introduced in Lua 5.3:
 <H3>Language</H3>
 <UL>
-<LI> 
+<LI> userdata can have any Lua value as uservalue
+<LI> integer division
+<LI> more flexible rules for some metamethods
 </UL>
 
 <H3>Libraries</H3>
 <UL>
-<LI> 
+<LI> functions for packing/unpacking numbers
+<LI> strip option in <CODE>string.dump</CODE>
+<LI> table library respects metamethods
+<LI> new function <CODE>table.copy</CODE>
+<LI> new function <CODE>debug.Csize</CODE>
 </UL>
 
 <H3>C API</H3>
 <UL>
-<LI> 
-</UL>
-
-<H3>Implementation</H3>
-<UL>
-<LI> 
+<LI>  new functions: <CODE>lua_rotate</CODE>, <CODE>lua_isyieldable</CODE>, <CODE>lua_strtonum</CODE>
+<LI> <CODE>lua_gettable</CODE> and similar functions return type of resulted value
 </UL>
 
 <H3>Lua standalone interpreter</H3>
 <UL>
-<LI> Can be used as calculator; no need to prefix with '='
+<LI> can be used as calculator; no need to prefix with '='
+<LI> <CODE>arg</CODE> table available to all code
 </UL>
 
 <H2><A NAME="license">License</A></H2>
@@ -354,10 +356,10 @@ THE SOFTWARE.
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Wed Jun 11 22:54:18 BRT 2014
+Thu Jul 31 15:23:46 BRT 2014
 </SMALL>
 <!--
-Last change: updated for Lua 5.3.0 (work3)
+Last change: updated for Lua 5.3.0 (alpha)
 -->
 
 </BODY>

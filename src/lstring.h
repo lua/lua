@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.54 2014/03/19 18:51:42 roberto Exp $
+** $Id: lstring.h,v 1.56 2014/07/18 14:46:47 roberto Exp $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -12,9 +12,11 @@
 #include "lstate.h"
 
 
-#define sizestring(s)	(sizeof(union TString)+((s)->len+1)*sizeof(char))
+#define sizelstring(l)  (sizeof(union UTString) + ((l) + 1) * sizeof(char))
+#define sizestring(s)	sizelstring((s)->len)
 
-#define sizeudata(u)	(sizeof(union Udata)+(u)->len)
+#define sizeludata(l)	(sizeof(union UUdata) + (l))
+#define sizeudata(u)	sizeludata((u)->len)
 
 #define luaS_newliteral(L, s)	(luaS_newlstr(L, "" s, \
                                  (sizeof(s)/sizeof(char))-1))
@@ -23,13 +25,13 @@
 /*
 ** test whether a string is a reserved word
 */
-#define isreserved(s)	((s)->tsv.tt == LUA_TSHRSTR && (s)->tsv.extra > 0)
+#define isreserved(s)	((s)->tt == LUA_TSHRSTR && (s)->extra > 0)
 
 
 /*
 ** equality for short strings, which are always internalized
 */
-#define eqshrstr(a,b)	check_exp((a)->tsv.tt == LUA_TSHRSTR, (a) == (b))
+#define eqshrstr(a,b)	check_exp((a)->tt == LUA_TSHRSTR, (a) == (b))
 
 
 LUAI_FUNC unsigned int luaS_hash (const char *str, size_t l, unsigned int seed);

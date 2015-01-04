@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.97 2013/12/09 14:21:10 roberto Exp $
+** $Id: ldebug.c,v 2.100 2014/07/30 14:00:14 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -271,7 +271,7 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
   if (*what == '>') {
     ci = NULL;
     func = L->top - 1;
-    api_check(L, ttisfunction(func), "function expected");
+    api_check(ttisfunction(func), "function expected");
     what++;  /* skip the '>' */
     L->top--;  /* pop function */
   }
@@ -526,26 +526,27 @@ l_noret luaG_typeerror (lua_State *L, const TValue *o, const char *op) {
 
 
 l_noret luaG_concaterror (lua_State *L, const TValue *p1, const TValue *p2) {
-  if (ttisstring(p1) || ttisnumber(p1)) p1 = p2;
-  lua_assert(!ttisstring(p1) && !ttisnumber(p1));
+  if (ttisstring(p1) || cvt2str(p1)) p1 = p2;
   luaG_typeerror(L, p1, "concatenate");
 }
 
 
 l_noret luaG_aritherror (lua_State *L, const TValue *p1, const TValue *p2) {
   lua_Number temp;
-  if (!tonumber(p1, &temp))
-    p2 = p1;  /* first operand is wrong */
+  if (!tonumber(p1, &temp))  /* first operand is wrong? */
+    p2 = p1;  /* now second is wrong */
   luaG_typeerror(L, p2, "perform arithmetic on");
 }
 
 
+/*
+** Error when both values are convertible to numbers, but not to integers
+*/
 l_noret luaG_tointerror (lua_State *L, const TValue *p1, const TValue *p2) {
   lua_Integer temp;
   if (!tointeger(p1, &temp))
     p2 = p1;
-  luaG_runerror(L, "attempt to convert an out of range float%s to an integer",
-                   varinfo(L, p2));
+  luaG_runerror(L, "number%s has no integer representation", varinfo(L, p2));
 }
 
 

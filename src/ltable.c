@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.90 2014/06/18 22:59:29 roberto Exp $
+** $Id: ltable.c,v 2.93 2014/07/29 16:22:24 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -52,7 +52,7 @@
 
 #define hashpow2(t,n)		(gnode(t, lmod((n), sizenode(t))))
 
-#define hashstr(t,str)		hashpow2(t, (str)->tsv.hash)
+#define hashstr(t,str)		hashpow2(t, (str)->hash)
 #define hashboolean(t,p)	hashpow2(t, p)
 #define hashint(t,i)		hashpow2(t, i)
 
@@ -64,7 +64,7 @@
 #define hashmod(t,n)	(gnode(t, ((n) % ((sizenode(t)-1)|1))))
 
 
-#define hashpointer(t,p)	hashmod(t, IntPoint(p))
+#define hashpointer(t,p)	hashmod(t, point2int(p))
 
 
 #define dummynode		(&dummynode_)
@@ -116,14 +116,14 @@ static Node *mainposition (const Table *t, const TValue *key) {
     case LUA_TNUMFLT:
       return hashfloat(t, fltvalue(key));
     case LUA_TSHRSTR:
-      return hashstr(t, rawtsvalue(key));
+      return hashstr(t, tsvalue(key));
     case LUA_TLNGSTR: {
-      TString *s = rawtsvalue(key);
-      if (s->tsv.extra == 0) {  /* no hash? */
-        s->tsv.hash = luaS_hash(getstr(s), s->tsv.len, s->tsv.hash);
-        s->tsv.extra = 1;  /* now it has its hash */
+      TString *s = tsvalue(key);
+      if (s->extra == 0) {  /* no hash? */
+        s->hash = luaS_hash(getstr(s), s->len, s->hash);
+        s->extra = 1;  /* now it has its hash */
       }
-      return hashstr(t, rawtsvalue(key));
+      return hashstr(t, tsvalue(key));
     }
     case LUA_TBOOLEAN:
       return hashboolean(t, bvalue(key));
@@ -309,7 +309,7 @@ static void setnodevector (lua_State *L, Table *t, int size) {
     for (i=0; i<size; i++) {
       Node *n = gnode(t, i);
       gnext(n) = 0;
-      setnilvalue(gkey(n));
+      setnilvalue(wgkey(n));
       setnilvalue(gval(n));
     }
   }
@@ -466,7 +466,7 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
       mp = f;
     }
   }
-  setobj2t(L, gkey(mp), key);
+  setkey(L, &mp->i_key, key);
   luaC_barrierback(L, t, key);
   lua_assert(ttisnil(gval(mp)));
   return gval(mp);
@@ -501,9 +501,10 @@ const TValue *luaH_getint (Table *t, lua_Integer key) {
 */
 const TValue *luaH_getstr (Table *t, TString *key) {
   Node *n = hashstr(t, key);
-  lua_assert(key->tsv.tt == LUA_TSHRSTR);
+  lua_assert(key->tt == LUA_TSHRSTR);
   for (;;) {  /* check whether `key' is somewhere in the chain */
-    if (ttisshrstring(gkey(n)) && eqshrstr(rawtsvalue(gkey(n)), key))
+    const TValue *k = gkey(n);
+    if (ttisshrstring(k) && eqshrstr(tsvalue(k), key))
       return gval(n);  /* that's it */
     else {
       int nx = gnext(n);
@@ -520,7 +521,7 @@ const TValue *luaH_getstr (Table *t, TString *key) {
 */
 const TValue *luaH_get (Table *t, const TValue *key) {
   switch (ttype(key)) {
-    case LUA_TSHRSTR: return luaH_getstr(t, rawtsvalue(key));
+    case LUA_TSHRSTR: return luaH_getstr(t, tsvalue(key));
     case LUA_TNUMINT: return luaH_getint(t, ivalue(key));
     case LUA_TNIL: return luaO_nilobject;
     case LUA_TNUMFLT: {

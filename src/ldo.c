@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.123 2014/06/19 18:27:20 roberto Exp $
+** $Id: ldo.c,v 2.126 2014/07/17 13:53:37 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -516,7 +516,7 @@ static l_noret resume_error (lua_State *L, const char *msg, StkId firstArg) {
 /*
 ** Do the work for 'lua_resume' in protected mode. Most of the work
 ** depends on the status of the coroutine: initial state, suspended
-** inside a hook, or regulary suspended (optionally with a continuation
+** inside a hook, or regularly suspended (optionally with a continuation
 ** function), plus erroneous cases: non-suspended coroutine or dead
 ** coroutine.
 */
@@ -593,7 +593,8 @@ LUA_API int lua_isyieldable (lua_State *L) {
 }
 
 
-LUA_API int lua_yieldk (lua_State *L, int nresults, int ctx, lua_KFunction k) {
+LUA_API int lua_yieldk (lua_State *L, int nresults, lua_Ctx ctx,
+                        lua_KFunction k) {
   CallInfo *ci = L->ci;
   luai_userstateyield(L, nresults);
   lua_lock(L);
@@ -607,7 +608,7 @@ LUA_API int lua_yieldk (lua_State *L, int nresults, int ctx, lua_KFunction k) {
   L->status = LUA_YIELD;
   ci->extra = savestack(L, ci->func);  /* save current 'func' */
   if (isLua(ci)) {  /* inside a hook? */
-    api_check(L, k == NULL, "hooks cannot continue after yielding");
+    api_check(k == NULL, "hooks cannot continue after yielding");
   }
   else {
     if ((ci->u.c.k = k) != NULL)  /* is there a continuation? */

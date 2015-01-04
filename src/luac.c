@@ -203,7 +203,7 @@ int main(int argc, char* argv[])
 }
 
 /*
-** $Id: print.c,v 1.73 2014/06/12 02:41:25 lhf Exp $
+** $Id: print.c,v 1.74 2014/07/21 01:41:45 lhf Exp $
 ** print bytecodes
 ** See Copyright Notice in lua.h
 */
@@ -223,7 +223,7 @@ int main(int argc, char* argv[])
 static void PrintString(const TString* ts)
 {
  const char* s=getstr(ts);
- size_t i,n=ts->tsv.len;
+ size_t i,n=ts->len;
  printf("%c",'"');
  for (i=0; i<n; i++)
  {
@@ -266,7 +266,7 @@ static void PrintConstant(const Proto* f, int i)
 	printf(LUA_INTEGER_FMT,ivalue(o));
 	break;
   case LUA_TSHRSTR: case LUA_TLNGSTR:
-	PrintString(rawtsvalue(o));
+	PrintString(tsvalue(o));
 	break;
   default:				/* cannot happen */
 	printf("? type=%d",ttype(o));

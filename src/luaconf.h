@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.207 2014/06/10 19:21:20 roberto Exp $
+** $Id: luaconf.h,v 1.212 2014/07/24 19:33:29 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -211,6 +211,14 @@
 
 
 /*
+@@ LUA_EXTRASPACE defines the size of a raw memory area associated with
+** a Lua state with very fast access.
+** CHANGE it if you need a different size.
+*/
+#define LUA_EXTRASPACE		(sizeof(void *))
+
+
+/*
 @@ LUA_QL describes how error messages quote program elements.
 ** CHANGE it if you want a different appearance.
 */
@@ -254,6 +262,22 @@
 #define LUAI_MAXSHORTLEN        40
 
 
+/*
+@@ LUA_CTXT is the type of the context ('ctx') for continuation functions.
+@@ It must be a numerical type; Lua will use 'intptr_t' if available.
+*/
+#if defined (LUA_USE_C99)
+#include <stdint.h>
+#if defined (INTPTR_MAX)  /* even in C99 this type is optional */
+#define LUA_CTXT	intptr_t
+#endif
+#endif
+
+#if !defined(LUA_CTXT)
+/* default definition (the nearest thing to 'intptr_t' in C89) */
+#define LUA_CTXT	ptrdiff_t
+#endif
+
 
 /*
 ** {==================================================================
@@ -279,6 +303,17 @@
 @@ LUA_COMPAT_BITLIB controls the presence of library 'bit32'.
 */
 #define LUA_COMPAT_BITLIB
+
+/*
+@@ LUA_COMPAT_IPAIRS controls the effectivness of the __ipairs metamethod.
+*/
+#define LUA_COMPAT_IPAIRS
+
+/*
+@@ LUA_COMPAT_APIUNSIGNED controls the presence of macros for
+** manipulating unsigned integers (lua_pushunsigned, lua_tounsigned, etc.)
+*/
+#define LUA_COMPAT_APIUNSIGNED
 
 
 /*
@@ -569,7 +604,6 @@
 @@ LUA_INTEGER_FMT is the format for writing integers.
 @@ LUA_MAXINTEGER is the maximum value for a LUA_INTEGER.
 @@ LUA_MININTEGER is the minimum value for a LUA_INTEGER.
-@@ LUA_MAXUNSIGNED is the maximum value for a LUA_UNSIGNED.
 @@ lua_integer2str converts an integer to a string.
 */
 
@@ -595,7 +629,6 @@
 #define LUA_INTEGER		int
 #define LUA_INTEGER_FRMLEN	""
 
-#define LUA_MAXUNSIGNED		UINT_MAX
 #define LUA_MAXINTEGER		INT_MAX
 #define LUA_MININTEGER		INT_MIN
 
@@ -604,7 +637,6 @@
 #define LUA_INTEGER		long
 #define LUA_INTEGER_FRMLEN	"l"
 
-#define LUA_MAXUNSIGNED		ULONG_MAX
 #define LUA_MAXINTEGER		LONG_MAX
 #define LUA_MININTEGER		LONG_MIN
 
@@ -615,7 +647,6 @@
 #define LUA_INTEGER		__int64
 #define LUA_INTEGER_FRMLEN	"I64"
 
-#define LUA_MAXUNSIGNED		_UI64_MAX
 #define LUA_MAXINTEGER		_I64_MAX
 #define LUA_MININTEGER		_I64_MIN
 
@@ -624,7 +655,6 @@
 #define LUA_INTEGER		long long
 #define LUA_INTEGER_FRMLEN	"ll"
 
-#define LUA_MAXUNSIGNED		ULLONG_MAX
 #define LUA_MAXINTEGER		LLONG_MAX
 #define LUA_MININTEGER		LLONG_MIN
 
@@ -639,7 +669,6 @@
 #define LUA_INTEGER		short int
 #define LUA_INTEGER_FRMLEN	""
 
-#define LUA_MAXUNSIGNED		((LUA_UNSIGNED)USHRT_MAX)
 #define LUA_MAXINTEGER		SHRT_MAX
 #define LUA_MININTEGER		SHRT_MIN
 

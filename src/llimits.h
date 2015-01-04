@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.116 2014/04/15 16:32:49 roberto Exp $
+** $Id: llimits.h,v 1.120 2014/07/18 18:29:12 roberto Exp $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -28,36 +28,37 @@ typedef unsigned char lu_byte;
 
 
 /* maximum value for size_t */
-#define MAX_SIZET	((size_t)(~(size_t)0)-2)
+#define MAX_SIZET	((size_t)(~(size_t)0))
 
 /* maximum size visible for Lua (must be representable in a lua_Integer */
 #define MAX_SIZE	(sizeof(size_t) < sizeof(lua_Integer) ? MAX_SIZET \
-                          : (size_t)(LUA_MAXINTEGER)-2)
+                          : (size_t)(LUA_MAXINTEGER))
 
 
-#define MAX_LUMEM	((lu_mem)(~(lu_mem)0)-2)
+#define MAX_LUMEM	((lu_mem)(~(lu_mem)0))
 
-#define MAX_LMEM	((l_mem) ((MAX_LUMEM >> 1) - 2))
+#define MAX_LMEM	((l_mem)(MAX_LUMEM >> 1))
 
 
-#define MAX_INT (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
+#define MAX_INT		INT_MAX  /* maximum value of an int */
 
 
 /*
-** conversion of pointer to integer
+** conversion of pointer to integer:
 ** this is for hashing only; there is no problem if the integer
 ** cannot hold the whole pointer value
 */
-#define IntPoint(p)  ((unsigned int)(lu_mem)(p))
+#define point2int(p)	((unsigned int)((lu_mem)(p) & UINT_MAX))
 
 
 
 /* type to ensure maximum alignment */
-#if !defined(LUAI_USER_ALIGNMENT_T)
-#define LUAI_USER_ALIGNMENT_T	union { double u; void *s; long l; }
+#if defined(LUAI_USER_ALIGNMENT_T)
+typedef LUAI_USER_ALIGNMENT_T L_Umaxalign;
+#else
+typedef union { double u; void *s; lua_Integer i; long l; } L_Umaxalign;
 #endif
 
-typedef LUAI_USER_ALIGNMENT_T L_Umaxalign;
 
 
 /* types of 'usual argument conversions' for lua_Number and lua_Integer */
@@ -79,18 +80,15 @@ typedef LUAI_UACINT l_uacInt;
 /*
 ** assertion for checking API calls
 */
-#if !defined(luai_apicheck)
-
 #if defined(LUA_USE_APICHECK)
 #include <assert.h>
-#define luai_apicheck(L,e)	assert(e)
+#define luai_apicheck(e)	assert(e)
 #else
-#define luai_apicheck(L,e)	lua_assert(e)
+#define luai_apicheck(e)	lua_assert(e)
 #endif
 
-#endif
 
-#define api_check(l,e,msg)	luai_apicheck(l,(e) && msg)
+#define api_check(e,msg)	luai_apicheck((e) && msg)
 
 
 #if !defined(UNUSED)
