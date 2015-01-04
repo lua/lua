@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.235 2003/04/07 14:36:08 roberto Exp $
+** $Id: lapi.c,v 1.235a 2003/04/07 14:36:08 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -879,13 +879,13 @@ static const char *aux_upvalue (lua_State *L, int funcindex, int n,
   if (!ttisfunction(fi)) return NULL;
   f = clvalue(fi);
   if (f->c.isC) {
-    if (n > f->c.nupvalues) return NULL;
+    if (!(1 <= n && n <= f->c.nupvalues)) return NULL;
     *val = &f->c.upvalue[n-1];
     return "";
   }
   else {
     Proto *p = f->l.p;
-    if (n > p->sizeupvalues) return NULL;
+    if (!(1 <= n && n <= p->sizeupvalues)) return NULL;
     *val = f->l.upvals[n-1]->v;
     return getstr(p->upvalues[n-1]);
   }

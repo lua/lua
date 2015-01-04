@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.130b 2003/04/03 13:35:34 roberto Exp $
+** $Id: lbaselib.c,v 1.130c 2003/04/03 13:35:34 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -173,6 +173,7 @@ static int luaB_rawequal (lua_State *L) {
 static int luaB_rawget (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   luaL_checkany(L, 2);
+  lua_settop(L, 2);
   lua_rawget(L, 1);
   return 1;
 }
@@ -181,6 +182,7 @@ static int luaB_rawset (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   luaL_checkany(L, 2);
   luaL_checkany(L, 3);
+  lua_settop(L, 3);
   lua_rawset(L, 1);
   return 1;
 }

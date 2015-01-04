@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.h,v 1.21 2003/03/18 12:50:04 roberto Exp $
+** $Id: lfunc.h,v 1.21a 2003/03/18 12:50:04 roberto Exp $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -9,6 +9,13 @@
 
 
 #include "lobject.h"
+
+
+#define sizeCclosure(n)	(cast(int, sizeof(CClosure)) + \
+                         cast(int, sizeof(TObject)*((n)-1)))
+
+#define sizeLclosure(n)	(cast(int, sizeof(LClosure)) + \
+                         cast(int, sizeof(TObject *)*((n)-1)))
 
 
 Proto *luaF_newproto (lua_State *L);

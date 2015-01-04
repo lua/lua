@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.39a 2003/03/19 21:16:12 roberto Exp $
+** $Id: liolib.c,v 2.39b 2003/03/19 21:16:12 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,12 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
+
+
+typedef struct FileHandle {
+  FILE *f;
+  int ispipe;
+} FileHandle;
 
 
 
@@ -86,17 +92,17 @@ static int pushresult (lua_State *L, int i, const char *filename) {
 }
 
 
-static FILE **topfile (lua_State *L, int findex) {
-  FILE **f = (FILE **)luaL_checkudata(L, findex, FILEHANDLE);
-  if (f == NULL) luaL_argerror(L, findex, "bad file");
-  return f;
+static FileHandle *topfile (lua_State *L, int findex) {
+  FileHandle *fh = (FileHandle *)luaL_checkudata(L, findex, FILEHANDLE);
+  if (fh == NULL) luaL_argerror(L, findex, "bad file");
+  return fh;
 }
 
 
 static int io_type (lua_State *L) {
-  FILE **f = (FILE **)luaL_checkudata(L, 1, FILEHANDLE);
-  if (f == NULL) lua_pushnil(L);
-  else if (*f == NULL)
+  FileHandle *fh = (FileHandle *)luaL_checkudata(L, 1, FILEHANDLE);
+  if (fh == NULL) lua_pushnil(L);
+  else if (fh->f == NULL)
     lua_pushliteral(L, "closed file");
   else
     lua_pushliteral(L, "file");
@@ -104,26 +110,31 @@ static int io_type (lua_State *L) {
 }
 
 
-static FILE *tofile (lua_State *L, int findex) {
-  FILE **f = topfile(L, findex);
-  if (*f == NULL)
+#define tofile(L,i)	(tofileh(L,i)->f)
+
+static FileHandle *tofileh (lua_State *L, int findex) {
+  FileHandle *fh = topfile(L, findex);
+  if (fh->f == NULL)
     luaL_error(L, "attempt to use a closed file");
-  return *f;
+  return fh;
 }
 
 
+
+#define newfile(L)	(&(newfileh(L)->f))
 
 /*
 ** When creating file handles, always creates a `closed' file handle
 ** before opening the actual file; so, if there is a memory error, the
 ** file is not left opened.
 */
-static FILE **newfile (lua_State *L) {
-  FILE **pf = (FILE **)lua_newuserdata(L, sizeof(FILE *));
-  *pf = NULL;  /* file handle is currently `closed' */
+static FileHandle *newfileh (lua_State *L) {
+  FileHandle *fh = (FileHandle *)lua_newuserdata(L, sizeof(FileHandle));
+  fh->f = NULL;  /* file handle is currently `closed' */
+  fh->ispipe = 0;
   luaL_getmetatable(L, FILEHANDLE);
   lua_setmetatable(L, -2);
-  return pf;
+  return fh;
 }
 
 
@@ -145,13 +156,13 @@ static void registerfile (lua_State *L, FILE *f, const char *name,
 
 
 static int aux_close (lua_State *L) {
-  FILE *f = tofile(L, 1);
+  FileHandle *fh = tofileh(L, 1);
+  FILE *f = fh->f;
   if (f == stdin || f == stdout || f == stderr)
     return 0;  /* file cannot be closed */
   else {
-    int ok = (pclose(f) != -1) || (fclose(f) == 0);
-    if (ok)
-      *(FILE **)lua_touserdata(L, 1) = NULL;  /* mark file as closed */
+    int ok = fh->ispipe ? (pclose(f) != -1) : (fclose(f) == 0);
+    fh->f = NULL;  /* mark file as closed */
     return ok;
   }
 }
@@ -167,8 +178,8 @@ static int io_close (lua_State *L) {
 
 
 static int io_gc (lua_State *L) {
-  FILE **f = topfile(L, 1);
-  if (*f != NULL)  /* ignore closed files */
+  FileHandle *fh = topfile(L, 1);
+  if (fh->f != NULL)  /* ignore closed files */
     aux_close(L);
   return 0;
 }
@@ -176,8 +187,8 @@ static int io_gc (lua_State *L) {
 
 static int io_tostring (lua_State *L) {
   char buff[128];
-  FILE **f = topfile(L, 1);
-  if (*f == NULL)
+  FileHandle *fh = topfile(L, 1);
+  if (fh->f == NULL)
     strcpy(buff, "closed");
   else
     sprintf(buff, "%p", lua_touserdata(L, 1));
@@ -202,9 +213,10 @@ static int io_popen (lua_State *L) {
 #else
   const char *filename = luaL_checkstring(L, 1);
   const char *mode = luaL_optstring(L, 2, "r");
-  FILE **pf = newfile(L);
-  *pf = popen(filename, mode);
-  return (*pf == NULL) ? pushresult(L, 0, filename) : 1;
+  FileHandle *fh = newfileh(L);
+  fh->f = popen(filename, mode);
+  fh->ispipe = 1;
+  return (fh->f == NULL) ? pushresult(L, 0, filename) : 1;
 #endif
 }
 
