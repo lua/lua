@@ -19,7 +19,7 @@ Lua 5.2 Reference Manual
 by Roberto Ierusalimschy, Luiz Henrique de Figueiredo, Waldemar Celes
 <p>
 <small>
-Copyright &copy; 2011&ndash;2012 Lua.org, PUC-Rio.
+Copyright &copy; 2011&ndash;2013 Lua.org, PUC-Rio.
 Freely available under the terms of the
 <a href="http://www.lua.org/license.html">Lua license</a>.
 </small>
@@ -33,7 +33,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.99 2012/06/08 15:30:20 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.103 2013/03/14 18:51:56 roberto Exp $ -->
 
 
 
@@ -424,7 +424,6 @@ This should be read as
 <pre>
      rawget(getmetatable(obj) or {}, event)
 </pre><p>
-
 This means that the access to a metamethod does not invoke other metamethods,
 and access to objects with no metatables does not fail
 (it simply results in <b>nil</b>).
@@ -915,7 +914,7 @@ its finalizer will never be called twice.
 
 <p>
 When you close a state (see <a href="#lua_close"><code>lua_close</code></a>),
-Lua calls the finalizers of all objects marked for collection,
+Lua calls the finalizers of all objects marked for finalization,
 following the reverse order that they were marked.
 If any finalizer marks new objects for collection during that phase,
 these new objects will not be finalized.
@@ -1255,8 +1254,7 @@ is converted to a simple newline.
 
 
 <p>
-When parsing a from a string source,
-any byte in a literal string not
+Any byte in a literal string not
 explicitly affected by the previous rules represents itself.
 However, Lua opens files for parsing in text mode,
 and the system file functions may have problems with
@@ -1410,6 +1408,35 @@ or write two semicolons in sequence:
 </pre>
 
 <p>
+Function calls and assignments
+can start with an open parenthesis.
+This possibility leads to an ambiguity in Lua's grammar.
+Consider the following fragment:
+
+<pre>
+     a = b + c
+     (print or io.write)('done')
+</pre><p>
+The grammar could see it in two ways:
+
+<pre>
+     a = b + c(print or io.write)('done')
+     
+     a = b + c; (print or io.write)('done')
+</pre><p>
+The current parser always sees such constructions
+in the first way,
+interpreting the open parenthesis
+as the start of the arguments to a call.
+To avoid this ambiguity,
+it is a good practice to always precede with a semicolon
+statements that start with a parenthesis:
+
+<pre>
+     ;(print or io.write)('done')
+</pre>
+
+<p>
 A block can be explicitly delimited to produce a single statement:
 
 <pre>
@@ -1428,7 +1455,7 @@ of another block (see <a href="#3.3.4">&sect;3.3.4</a>).
 <h3>3.3.2 &ndash; <a name="3.3.2">Chunks</a></h3>
 
 <p>
-The unit of execution of Lua is called a <em>chunk</em>.
+The unit of compilation of Lua is called a <em>chunk</em>.
 Syntactically,
 a chunk is simply a block:
 
@@ -1859,7 +1886,8 @@ then no adjustment is made
 (unless the expression is enclosed in parentheses).
 In all other contexts,
 Lua adjusts the result list to one element,
-discarding all values except the first one.
+either discarding all values except the first one
+or adding a single <b>nil</b> if there are no values.
 
 
 <p>
@@ -2559,32 +2587,35 @@ works only with <em>valid indices</em> or <em>acceptable indices</em>.
 
 <p>
 A <em>valid index</em> is an index that refers to a
-valid position within the stack, that is,
-it lies between&nbsp;1 and the stack top
+real position within the stack, that is,
+its position lies between&nbsp;1 and the stack top
 (<code>1 &le; abs(index) &le; top</code>).
 
-Usually, functions that need a specific stack position
-(e.g., <a href="#lua_remove"><code>lua_remove</code></a>) require valid indices.
+Usually, functions that can modify the value at an index
+require valid indices.
+
+
+<p>
+Unless otherwise noted,
+any function that accepts valid indices also accepts <em>pseudo-indices</em>,
+which represent some Lua values that are accessible to C&nbsp;code
+but which are not in the stack.
+Pseudo-indices are used to access the registry
+and the upvalues of a C&nbsp;function (see <a href="#4.4">&sect;4.4</a>).
 
 
 <p>
 Functions that do not need a specific stack position,
 but only a value in the stack (e.g., query functions),
 can be called with acceptable indices.
-An <em>acceptable index</em> refers to a position within
-the space allocated for the stack,
+An <em>acceptable index</em> can be any valid index,
+including the pseudo-indices,
+but it also can be any positive index after the stack top
+within the space allocated for the stack,
 that is, indices up to the stack size.
-More formally, we define an acceptable index
-as follows:
-
-<pre>
-     (index &lt; 0 &amp;&amp; abs(index) &lt;= top) ||
-     (index &gt; 0 &amp;&amp; index &lt;= stack size)
-</pre><p>
 (Note that 0 is never an acceptable index.)
-When a function is called,
-its stack size is <code>top + LUA_MINSTACK</code>.
-You can change its stack size through function <a href="#lua_checkstack"><code>lua_checkstack</code></a>.
+Except when noted otherwise,
+functions in the API work with acceptable indices.
 
 
 <p>
@@ -2598,16 +2629,8 @@ that is, without the need to check whether 3 is a valid index.
 <p>
 For functions that can be called with acceptable indices,
 any non-valid index is treated as if it
-contains a value of a virtual type <a name="pdf-LUA_TNONE"><code>LUA_TNONE</code></a>.
-
-
-<p>
-Unless otherwise noted,
-any function that accepts valid indices also accepts <em>pseudo-indices</em>,
-which represent some Lua values that are accessible to C&nbsp;code
-but which are not in the stack.
-Pseudo-indices are used to access the registry
-and the upvalues of a C&nbsp;function (see <a href="#4.4">&sect;4.4</a>).
+contains a value of a virtual type <a name="pdf-LUA_TNONE"><code>LUA_TNONE</code></a>,
+which behaves like a nil value.
 
 
 
@@ -2628,13 +2651,13 @@ accessible to the function whenever it is called.
 Whenever a C&nbsp;function is called,
 its upvalues are located at specific pseudo-indices.
 These pseudo-indices are produced by the macro
-<a name="lua_upvalueindex"><code>lua_upvalueindex</code></a>.
+<a href="#lua_upvalueindex"><code>lua_upvalueindex</code></a>.
 The first value associated with a function is at position
 <code>lua_upvalueindex(1)</code>, and so on.
 Any access to <code>lua_upvalueindex(<em>n</em>)</code>,
 where <em>n</em> is greater than the number of upvalues of the
 current function (but not greater than 256),
-produces an acceptable (but invalid) index.
+produces an acceptable but invalid index.
 
 
 
@@ -2647,7 +2670,8 @@ Lua provides a <em>registry</em>,
 a predefined table that can be used by any C&nbsp;code to
 store whatever Lua values it needs to store.
 The registry table is always located at pseudo-index
-<a name="pdf-LUA_REGISTRYINDEX"><code>LUA_REGISTRYINDEX</code></a>.
+<a name="pdf-LUA_REGISTRYINDEX"><code>LUA_REGISTRYINDEX</code></a>,
+which is a valid index.
 Any C&nbsp;library can store data into this table,
 but it should take care to choose keys
 that are different from those used
@@ -2692,8 +2716,8 @@ the global environment.
 
 <p>
 Internally, Lua uses the C <code>longjmp</code> facility to handle errors.
-(You can also choose to use exceptions if you use C++;
-see file <code>luaconf.h</code>.)
+(You can also choose to use exceptions if you compile Lua as C++;
+search for <code>LUAI_THROW</code> in the source code.)
 When Lua faces any error
 (such as a memory allocation error, type errors, syntax errors,
 and runtime errors)
@@ -3136,8 +3160,8 @@ might need to close states as soon as they are not needed.
 
 <p>
 Compares two Lua values.
-Returns 1 if the value at acceptable index <code>index1</code> satisfies <code>op</code>
-when compared with the value at acceptable index <code>index2</code>,
+Returns 1 if the value at index <code>index1</code> satisfies <code>op</code>
+when compared with the value at index <code>index2</code>,
 following the semantics of the corresponding Lua operator
 (that is, it may call metamethods).
 Otherwise returns&nbsp;0.
@@ -3180,7 +3204,7 @@ Concatenation is performed following the usual semantics of Lua
 <pre>void lua_copy (lua_State *L, int fromidx, int toidx);</pre>
 
 <p>
-Moves the element at the valid index <code>fromidx</code>
+Moves the element at index <code>fromidx</code>
 into the valid index <code>toidx</code>
 without shifting any element
 (therefore replacing the value at that position).
@@ -3390,7 +3414,7 @@ as in the case of a yield.
 
 <p>
 Pushes onto the stack the value <code>t[k]</code>,
-where <code>t</code> is the value at the given valid index.
+where <code>t</code> is the value at the given index.
 As in Lua, this function may trigger a metamethod
 for the "index" event (see <a href="#2.4">&sect;2.4</a>).
 
@@ -3414,8 +3438,7 @@ Pushes onto the stack the value of the global <code>name</code>.
 <pre>int lua_getmetatable (lua_State *L, int index);</pre>
 
 <p>
-Pushes onto the stack the metatable of the value at the given
-acceptable index.
+Pushes onto the stack the metatable of the value at the given index.
 If the value does not have a metatable,
 the function returns&nbsp;0 and pushes nothing on the stack.
 
@@ -3429,7 +3452,7 @@ the function returns&nbsp;0 and pushes nothing on the stack.
 
 <p>
 Pushes onto the stack the value <code>t[k]</code>,
-where <code>t</code> is the value at the given valid index
+where <code>t</code> is the value at the given index
 and <code>k</code> is the value at the top of the stack.
 
 
@@ -3477,7 +3500,7 @@ This Lua value must be a table or <b>nil</b>.
 <p>
 Moves the top element into the given valid index,
 shifting up the elements above this index to open space.
-Cannot be called with a pseudo-index,
+This function cannot be called with a pseudo-index,
 because a pseudo-index is not an actual stack position.
 
 
@@ -3505,7 +3528,7 @@ which is usually the largest signed integral type the machine handles
 <pre>int lua_isboolean (lua_State *L, int index);</pre>
 
 <p>
-Returns 1 if the value at the given acceptable index is a boolean,
+Returns 1 if the value at the given index is a boolean,
 and 0&nbsp;otherwise.
 
 
@@ -3517,7 +3540,7 @@ and 0&nbsp;otherwise.
 <pre>int lua_iscfunction (lua_State *L, int index);</pre>
 
 <p>
-Returns 1 if the value at the given acceptable index is a C&nbsp;function,
+Returns 1 if the value at the given index is a C&nbsp;function,
 and 0&nbsp;otherwise.
 
 
@@ -3529,7 +3552,7 @@ and 0&nbsp;otherwise.
 <pre>int lua_isfunction (lua_State *L, int index);</pre>
 
 <p>
-Returns 1 if the value at the given acceptable index is a function
+Returns 1 if the value at the given index is a function
 (either C or Lua), and 0&nbsp;otherwise.
 
 
@@ -3541,7 +3564,7 @@ Returns 1 if the value at the given acceptable index is a function
 <pre>int lua_islightuserdata (lua_State *L, int index);</pre>
 
 <p>
-Returns 1 if the value at the given acceptable index is a light userdata,
+Returns 1 if the value at the given index is a light userdata,
 and 0&nbsp;otherwise.
 
 
@@ -3553,7 +3576,7 @@ and 0&nbsp;otherwise.
 <pre>int lua_isnil (lua_State *L, int index);</pre>
 
 <p>
-Returns 1 if the value at the given acceptable index is <b>nil</b>,
+Returns 1 if the value at the given index is <b>nil</b>,
 and 0&nbsp;otherwise.
 
 
@@ -3565,8 +3588,7 @@ and 0&nbsp;otherwise.
 <pre>int lua_isnone (lua_State *L, int index);</pre>
 
 <p>
-Returns 1 if the given acceptable index is not valid
-(that is, it refers to an element outside the current stack),
+Returns 1 if the given index is not valid,
 and 0&nbsp;otherwise.
 
 
@@ -3578,8 +3600,7 @@ and 0&nbsp;otherwise.
 <pre>int lua_isnoneornil (lua_State *L, int index);</pre>
 
 <p>
-Returns 1 if the given acceptable index is not valid
-(that is, it refers to an element outside the current stack)
+Returns 1 if the given index is not valid
 or if the value at this index is <b>nil</b>,
 and 0&nbsp;otherwise.
 
@@ -3592,7 +3613,7 @@ and 0&nbsp;otherwise.
 <pre>int lua_isnumber (lua_State *L, int index);</pre>
 
 <p>
-Returns 1 if the value at the given acceptable index is a number
+Returns 1 if the value at the given index is a number
 or a string convertible to a number,
 and 0&nbsp;otherwise.
 
@@ -3605,7 +3626,7 @@ and 0&nbsp;otherwise.
 <pre>int lua_isstring (lua_State *L, int index);</pre>
 
 <p>
-Returns 1 if the value at the given acceptable index is a string
+Returns 1 if the value at the given index is a string
 or a number (which is always convertible to a string),
 and 0&nbsp;otherwise.
 
@@ -3618,7 +3639,7 @@ and 0&nbsp;otherwise.
 <pre>int lua_istable (lua_State *L, int index);</pre>
 
 <p>
-Returns 1 if the value at the given acceptable index is a table,
+Returns 1 if the value at the given index is a table,
 and 0&nbsp;otherwise.
 
 
@@ -3630,7 +3651,7 @@ and 0&nbsp;otherwise.
 <pre>int lua_isthread (lua_State *L, int index);</pre>
 
 <p>
-Returns 1 if the value at the given acceptable index is a thread,
+Returns 1 if the value at the given index is a thread,
 and 0&nbsp;otherwise.
 
 
@@ -3642,7 +3663,7 @@ and 0&nbsp;otherwise.
 <pre>int lua_isuserdata (lua_State *L, int index);</pre>
 
 <p>
-Returns 1 if the value at the given acceptable index is a userdata
+Returns 1 if the value at the given index is a userdata
 (either full or light), and 0&nbsp;otherwise.
 
 
@@ -3654,7 +3675,7 @@ Returns 1 if the value at the given acceptable index is a userdata
 <pre>void lua_len (lua_State *L, int index);</pre>
 
 <p>
-Returns the "length" of the value at the given acceptable index;
+Returns the "length" of the value at the given index;
 it is equivalent to the '<code>#</code>' operator in Lua (see <a href="#3.4.6">&sect;3.4.6</a>).
 The result is pushed on the stack.
 
@@ -3716,6 +3737,12 @@ and loads it accordingly (see program <code>luac</code>).
 The string <code>mode</code> works as in function <a href="#pdf-load"><code>load</code></a>,
 with the addition that
 a <code>NULL</code> value is equivalent to the string "<code>bt</code>".
+
+
+<p>
+<code>lua_load</code> uses the stack internally,
+so the reader function should always leave the stack
+unmodified when returning.
 
 
 <p>
@@ -4038,7 +4065,7 @@ Note that <code>f</code> is used twice.
 <p>
 Pushes onto the stack a formatted string
 and returns a pointer to this string.
-It is similar to the C&nbsp;function <code>sprintf</code>,
+It is similar to the ANSI&nbsp;C function <code>sprintf</code>,
 but has some important differences:
 
 <ul>
@@ -4062,6 +4089,17 @@ The conversion specifiers can only be
 </li>
 
 </ul>
+
+
+
+
+<hr><h3><a name="lua_pushglobaltable"><code>lua_pushglobaltable</code></a></h3><p>
+<span class="apii">[-0, +1, &ndash;]</span>
+<pre>void lua_pushglobaltable (lua_State *L);</pre>
+
+<p>
+Pushes the global environment onto the stack.
+
 
 
 
@@ -4189,12 +4227,23 @@ Returns 1 if this thread is the main thread of its state.
 
 
 
+<hr><h3><a name="lua_pushunsigned"><code>lua_pushunsigned</code></a></h3><p>
+<span class="apii">[-0, +1, &ndash;]</span>
+<pre>void lua_pushunsigned (lua_State *L, lua_Unsigned n);</pre>
+
+<p>
+Pushes a number with value <code>n</code> onto the stack.
+
+
+
+
+
 <hr><h3><a name="lua_pushvalue"><code>lua_pushvalue</code></a></h3><p>
 <span class="apii">[-0, +1, &ndash;]</span>
 <pre>void lua_pushvalue (lua_State *L, int index);</pre>
 
 <p>
-Pushes a copy of the element at the given valid index
+Pushes a copy of the element at the given index
 onto the stack.
 
 
@@ -4220,7 +4269,7 @@ instead of a variable number of arguments.
 <pre>int lua_rawequal (lua_State *L, int index1, int index2);</pre>
 
 <p>
-Returns 1 if the two values in acceptable indices <code>index1</code> and
+Returns 1 if the two values in indices <code>index1</code> and
 <code>index2</code> are primitively equal
 (that is, without calling metamethods).
 Otherwise returns&nbsp;0.
@@ -4248,7 +4297,7 @@ Similar to <a href="#lua_gettable"><code>lua_gettable</code></a>, but does a raw
 
 <p>
 Pushes onto the stack the value <code>t[n]</code>,
-where <code>t</code> is the table at the given valid index.
+where <code>t</code> is the table at the given index.
 The access is raw;
 that is, it does not invoke metamethods.
 
@@ -4262,7 +4311,7 @@ that is, it does not invoke metamethods.
 
 <p>
 Pushes onto the stack the value <code>t[k]</code>,
-where <code>t</code> is the table at the given valid index and
+where <code>t</code> is the table at the given index and
 <code>k</code> is the pointer <code>p</code> represented as a light userdata.
 The access is raw;
 that is, it does not invoke metamethods.
@@ -4276,7 +4325,7 @@ that is, it does not invoke metamethods.
 <pre>size_t lua_rawlen (lua_State *L, int index);</pre>
 
 <p>
-Returns the raw "length" of the value at the given acceptable index:
+Returns the raw "length" of the value at the given index:
 for strings, this is the string length;
 for tables, this is the result of the length operator ('<code>#</code>')
 with no metamethods;
@@ -4306,7 +4355,7 @@ Similar to <a href="#lua_settable"><code>lua_settable</code></a>, but does a raw
 
 <p>
 Does the equivalent of <code>t[n] = v</code>,
-where <code>t</code> is the table at the given valid index
+where <code>t</code> is the table at the given index
 and <code>v</code> is the value at the top of the stack.
 
 
@@ -4325,7 +4374,7 @@ that is, it does not invoke metamethods.
 
 <p>
 Does the equivalent of <code>t[k] = v</code>,
-where <code>t</code> is the table at the given valid index,
+where <code>t</code> is the table at the given index,
 <code>k</code> is the pointer <code>p</code> represented as a light userdata,
 and <code>v</code> is the value at the top of the stack.
 
@@ -4384,7 +4433,7 @@ It is defined as a macro:
 <p>
 Removes the element at the given valid index,
 shifting down the elements above this index to fill the gap.
-Cannot be called with a pseudo-index,
+This function cannot be called with a pseudo-index,
 because a pseudo-index is not an actual stack position.
 
 
@@ -4396,9 +4445,9 @@ because a pseudo-index is not an actual stack position.
 <pre>void lua_replace (lua_State *L, int index);</pre>
 
 <p>
-Moves the top element into the given position
+Moves the top element into the given valid index
 without shifting any element
-(therefore replacing the value at the given position),
+(therefore replacing the value at the given index),
 and then pops the top element.
 
 
@@ -4436,7 +4485,9 @@ The error message is on the top of the stack.
 
 
 <p>
-To resume a coroutine, you put on its stack only the values to
+To resume a coroutine,
+you remove any results from the last <a href="#lua_yield"><code>lua_yield</code></a>,
+put on its stack only the values to
 be passed as results from <code>yield</code>,
 and then call <a href="#lua_resume"><code>lua_resume</code></a>.
 
@@ -4468,7 +4519,7 @@ with user data <code>ud</code>.
 
 <p>
 Does the equivalent to <code>t[k] = v</code>,
-where <code>t</code> is the value at the given valid index
+where <code>t</code> is the value at the given index
 and <code>v</code> is the value at the top of the stack.
 
 
@@ -4499,8 +4550,7 @@ sets it as the new value of global <code>name</code>.
 
 <p>
 Pops a table from the stack and
-sets it as the new metatable for the value at the given
-acceptable index.
+sets it as the new metatable for the value at the given index.
 
 
 
@@ -4512,7 +4562,7 @@ acceptable index.
 
 <p>
 Does the equivalent to <code>t[k] = v</code>,
-where <code>t</code> is the value at the given valid index,
+where <code>t</code> is the value at the given index,
 <code>v</code> is the value at the top of the stack,
 and <code>k</code> is the value just below the top.
 
@@ -4531,7 +4581,7 @@ for the "newindex" event (see <a href="#2.4">&sect;2.4</a>).
 <pre>void lua_settop (lua_State *L, int index);</pre>
 
 <p>
-Accepts any acceptable index, or&nbsp;0,
+Accepts any index, or&nbsp;0,
 and sets the stack top to this index.
 If the new top is larger than the old one,
 then the new elements are filled with <b>nil</b>.
@@ -4603,13 +4653,12 @@ You can resume threads with status <a href="#pdf-LUA_OK"><code>LUA_OK</code></a>
 <pre>int lua_toboolean (lua_State *L, int index);</pre>
 
 <p>
-Converts the Lua value at the given acceptable index to a C&nbsp;boolean
+Converts the Lua value at the given index to a C&nbsp;boolean
 value (0&nbsp;or&nbsp;1).
 Like all tests in Lua,
 <a href="#lua_toboolean"><code>lua_toboolean</code></a> returns true for any Lua value
 different from <b>false</b> and <b>nil</b>;
 otherwise it returns false.
-It also returns false when called with a non-valid index.
 (If you want to accept only actual boolean values,
 use <a href="#lua_isboolean"><code>lua_isboolean</code></a> to test the value's type.)
 
@@ -4622,7 +4671,7 @@ use <a href="#lua_isboolean"><code>lua_isboolean</code></a> to test the value's 
 <pre>lua_CFunction lua_tocfunction (lua_State *L, int index);</pre>
 
 <p>
-Converts a value at the given acceptable index to a C&nbsp;function.
+Converts a value at the given index to a C&nbsp;function.
 That value must be a C&nbsp;function;
 otherwise, returns <code>NULL</code>.
 
@@ -4646,7 +4695,7 @@ Equivalent to <a href="#lua_tointegerx"><code>lua_tointegerx</code></a> with <co
 <pre>lua_Integer lua_tointegerx (lua_State *L, int index, int *isnum);</pre>
 
 <p>
-Converts the Lua value at the given acceptable index
+Converts the Lua value at the given index
 to the signed integral type <a href="#lua_Integer"><code>lua_Integer</code></a>.
 The Lua value must be a number or a string convertible to a number
 (see <a href="#3.4.2">&sect;3.4.2</a>);
@@ -4672,7 +4721,7 @@ indicates whether the operation succeeded.
 <pre>const char *lua_tolstring (lua_State *L, int index, size_t *len);</pre>
 
 <p>
-Converts the Lua value at the given acceptable index to a C&nbsp;string.
+Converts the Lua value at the given index to a C&nbsp;string.
 If <code>len</code> is not <code>NULL</code>,
 it also sets <code>*len</code> with the string length.
 The Lua value must be a string or a number;
@@ -4714,7 +4763,7 @@ Equivalent to <a href="#lua_tonumberx"><code>lua_tonumberx</code></a> with <code
 <pre>lua_Number lua_tonumberx (lua_State *L, int index, int *isnum);</pre>
 
 <p>
-Converts the Lua value at the given acceptable index
+Converts the Lua value at the given index
 to the C&nbsp;type <a href="#lua_Number"><code>lua_Number</code></a> (see <a href="#lua_Number"><code>lua_Number</code></a>).
 The Lua value must be a number or a string convertible to a number
 (see <a href="#3.4.2">&sect;3.4.2</a>);
@@ -4735,7 +4784,7 @@ indicates whether the operation succeeded.
 <pre>const void *lua_topointer (lua_State *L, int index);</pre>
 
 <p>
-Converts the value at the given acceptable index to a generic
+Converts the value at the given index to a generic
 C&nbsp;pointer (<code>void*</code>).
 The value can be a userdata, a table, a thread, or a function;
 otherwise, <code>lua_topointer</code> returns <code>NULL</code>.
@@ -4766,7 +4815,7 @@ Equivalent to <a href="#lua_tolstring"><code>lua_tolstring</code></a> with <code
 <pre>lua_State *lua_tothread (lua_State *L, int index);</pre>
 
 <p>
-Converts the value at the given acceptable index to a Lua thread
+Converts the value at the given index to a Lua thread
 (represented as <code>lua_State*</code>).
 This value must be a thread;
 otherwise, the function returns <code>NULL</code>.
@@ -4791,7 +4840,7 @@ Equivalent to <a href="#lua_tounsignedx"><code>lua_tounsignedx</code></a> with <
 <pre>lua_Unsigned lua_tounsignedx (lua_State *L, int index, int *isnum);</pre>
 
 <p>
-Converts the Lua value at the given acceptable index
+Converts the Lua value at the given index
 to the unsigned integral type <a href="#lua_Unsigned"><code>lua_Unsigned</code></a>.
 The Lua value must be a number or a string convertible to a number
 (see <a href="#3.4.2">&sect;3.4.2</a>);
@@ -4820,7 +4869,7 @@ indicates whether the operation succeeded.
 <pre>void *lua_touserdata (lua_State *L, int index);</pre>
 
 <p>
-If the value at the given acceptable index is a full userdata,
+If the value at the given index is a full userdata,
 returns its block address.
 If the value is a light userdata,
 returns its pointer.
@@ -4835,8 +4884,8 @@ Otherwise, returns <code>NULL</code>.
 <pre>int lua_type (lua_State *L, int index);</pre>
 
 <p>
-Returns the type of the value in the given acceptable index,
-or <code>LUA_TNONE</code> for a non-valid index.
+Returns the type of the value in the given valid index,
+or <code>LUA_TNONE</code> for a non-valid (but acceptable) index.
 The types returned by <a href="#lua_type"><code>lua_type</code></a> are coded by the following constants
 defined in <code>lua.h</code>:
 <a name="pdf-LUA_TNIL"><code>LUA_TNIL</code></a>,
@@ -4877,6 +4926,18 @@ It must have at least 32 bits.
 <p>
 By default it is an <code>unsigned int</code> or an <code>unsigned long</code>,
 whichever can hold 32-bit values.
+
+
+
+
+
+<hr><h3><a name="lua_upvalueindex"><code>lua_upvalueindex</code></a></h3><p>
+<span class="apii">[-0, +0, &ndash;]</span>
+<pre>int lua_upvalueindex (int i);</pre>
+
+<p>
+Returns the pseudo-index that represents the <code>i</code>-th upvalue of
+the running function (see <a href="#4.4">&sect;4.4</a>).
 
 
 
@@ -6095,7 +6156,7 @@ in the registry (see <a href="#luaL_newmetatable"><code>luaL_newmetatable</code>
 
 <p>
 Ensures that the value <code>t[fname]</code>,
-where <code>t</code> is the value at the valid index <code>idx</code>,
+where <code>t</code> is the value at index <code>idx</code>,
 is a table,
 and pushes that table onto the stack.
 Returns true if it finds a previous table there
@@ -6127,7 +6188,7 @@ Pushes the resulting string on the stack and returns it.
 <pre>int luaL_len (lua_State *L, int index);</pre>
 
 <p>
-Returns the "length" of the value at the given acceptable index
+Returns the "length" of the value at the given index
 as a number;
 it is equivalent to the '<code>#</code>' operator in Lua (see <a href="#3.4.6">&sect;3.4.6</a>).
 Raises an error if the result of the operation is not a number.
@@ -6242,7 +6303,7 @@ it does not run it.
 
 <hr><h3><a name="luaL_newlib"><code>luaL_newlib</code></a></h3><p>
 <span class="apii">[-0, +1, <em>e</em>]</span>
-<pre>int luaL_newlib (lua_State *L, const luaL_Reg *l);</pre>
+<pre>void luaL_newlib (lua_State *L, const luaL_Reg *l);</pre>
 
 <p>
 Creates a new table and registers there
@@ -6258,7 +6319,7 @@ It is implemented as the following macro:
 
 <hr><h3><a name="luaL_newlibtable"><code>luaL_newlibtable</code></a></h3><p>
 <span class="apii">[-0, +1, <em>e</em>]</span>
-<pre>int luaL_newlibtable (lua_State *L, const luaL_Reg l[]);</pre>
+<pre>void luaL_newlibtable (lua_State *L, const luaL_Reg l[]);</pre>
 
 <p>
 Creates a new table with a size optimized
@@ -6622,7 +6683,7 @@ it returns <code>NULL</code> instead of throwing an error.
 <pre>const char *luaL_tolstring (lua_State *L, int idx, size_t *len);</pre>
 
 <p>
-Converts any Lua value at the given acceptable index to a C&nbsp;string
+Converts any Lua value at the given index to a C&nbsp;string
 in a reasonable format.
 The resulting string is pushed onto the stack and also
 returned by the function.
@@ -6986,11 +7047,14 @@ otherwise, returns <b>nil</b> plus the error message.
 
 <p>
 If the resulting function has upvalues,
-the first upvalue is set to the value of the
-global environment or to <code>env</code>,
-if that parameter is given.
-When loading main chunks,
-the first upvalue will be the <code>_ENV</code> variable (see <a href="#2.2">&sect;2.2</a>).
+the first upvalue is set to the value of <code>env</code>,
+if that parameter is given,
+or to the value of the global environment.
+(When you load a main chunk,
+the resulting function will always have exactly one upvalue,
+the <code>_ENV</code> variable (see <a href="#2.2">&sect;2.2</a>).
+When you load a binary chunk created from a function (see <a href="#pdf-string.dump"><code>string.dump</code></a>),
+the resulting function can have arbitrary upvalues.)
 
 
 <p>
@@ -7510,7 +7574,6 @@ or a default path defined in <code>luaconf.h</code>.
 
 
 <p>
-
 <hr><h3><a name="pdf-package.loaded"><code>package.loaded</code></a></h3>
 
 
@@ -7546,7 +7609,8 @@ available to other dynamically linked libraries.
 Otherwise,
 it looks for a function <code>funcname</code> inside the library
 and returns this function as a C&nbsp;function.
-(So, <code>funcname</code> must follow the prototype <a href="#lua_CFunction"><code>lua_CFunction</code></a>).
+So, <code>funcname</code> must follow the <a href="#lua_CFunction"><code>lua_CFunction</code></a> prototype
+(see <a href="#lua_CFunction"><code>lua_CFunction</code></a>).
 
 
 <p>
@@ -7842,7 +7906,7 @@ after the two indices.
 <p>
 Returns a formatted version of its variable number of arguments
 following the description given in its first argument (which must be a string).
-The format string follows the same rules as the C&nbsp;function <code>sprintf</code>.
+The format string follows the same rules as the ANSI&nbsp;C function <code>sprintf</code>.
 The only differences are that the options/modifiers
 <code>*</code>, <code>h</code>, <code>L</code>, <code>l</code>, <code>n</code>,
 and <code>p</code> are not supported
@@ -8306,7 +8370,7 @@ all table accesses (get/set) performed by these functions are raw.
 
 <p>
 Given a list where all elements are strings or numbers,
-returns <code>list[i]..sep..list[i+1] &middot;&middot;&middot; sep..list[j]</code>.
+returns the string <code>list[i]..sep..list[i+1] &middot;&middot;&middot; sep..list[j]</code>.
 The default value for <code>sep</code> is the empty string,
 the default for <code>i</code> is 1,
 and the default for <code>j</code> is <code>#list</code>.
@@ -8348,10 +8412,17 @@ Note that the resulting table may not be a sequence.
 
 <p>
 Removes from <code>list</code> the element at position <code>pos</code>,
-shifting down the elements
+returning the value of the removed element.
+When <code>pos</code> is an integer between 1 and <code>#list</code>,
+it shifts down the elements
 <code>list[pos+1], list[pos+2], &middot;&middot;&middot;, list[#list]</code>
-and erasing element <code>list[#list]</code>.
-Returns the value of the removed element.
+and erases element <code>list[#list]</code>;
+The index <code>pos</code> can also be 0 when <code>#list</code> is 0,
+or <code>#list + 1</code>;
+in those cases, the function erases the element <code>list[pos]</code>.
+
+
+<p>
 The default value for <code>pos</code> is <code>#list</code>,
 so that a call <code>table.remove(t)</code> removes the last element
 of list <code>t</code>.
@@ -8990,6 +9061,11 @@ all I/O functions return <b>nil</b> on failure
 (plus an error message as a second result and
 a system-dependent error code as a third result)
 and some value different from <b>nil</b> on success.
+On non-Posix systems,
+the computation of the error message and error code
+in case of errors
+may be not thread safe,
+because they rely on the global C variable <code>errno</code>.
 
 
 <p>
@@ -9410,7 +9486,7 @@ if the information is not available.
 <p>
 If <code>format</code> is not "<code>*t</code>",
 then <code>date</code> returns the date as a string,
-formatted according to the same rules as the C&nbsp;function <code>strftime</code>.
+formatted according to the same rules as the ANSI&nbsp;C function <code>strftime</code>.
 
 
 <p>
@@ -9421,8 +9497,9 @@ the host system and on the current locale
 
 
 <p>
-On some systems,
-this function may be not thread safe.
+On non-Posix systems,
+this function may be not thread safe
+because of its reliance on C&nbsp;function <code>gmtime</code> and C&nbsp;function <code>localtime</code>.
 
 
 
@@ -9444,7 +9521,7 @@ this value is exactly <code>t2</code><em>-</em><code>t1</code>.
 
 
 <p>
-This function is equivalent to the C&nbsp;function <code>system</code>.
+This function is equivalent to the ANSI&nbsp;C function <code>system</code>.
 It passes <code>command</code> to be executed by an operating system shell.
 Its first result is <b>true</b>
 if the command terminated successfully,
@@ -9479,7 +9556,7 @@ When called without a <code>command</code>,
 
 
 <p>
-Calls the C&nbsp;function <code>exit</code> to terminate the host program.
+Calls the ANSI&nbsp;C function <code>exit</code> to terminate the host program.
 If <code>code</code> is <b>true</b>,
 the returned status is <code>EXIT_SUCCESS</code>;
 if <code>code</code> is <b>false</b>,
@@ -9558,6 +9635,11 @@ the current locale is set to the standard C locale.
 When called with <b>nil</b> as the first argument,
 this function only returns the name of the current locale
 for the given category.
+
+
+<p>
+This function may be not thread safe
+because of its reliance on C&nbsp;function <code>setlocale</code>.
 
 
 
@@ -9746,7 +9828,7 @@ and raises an error when called with a level out of range.
 
 
 <p>
-Variable names starting with '<code>(</code>' (open parentheses)
+Variable names starting with '<code>(</code>' (open parenthesis)
 represent internal variables
 (loop control variables, temporaries, varargs, and C&nbsp;function locals).
 
@@ -10415,10 +10497,10 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Fri Jun  8 16:13:40 BRT 2012
+Thu Mar 21 12:58:59 BRT 2013
 </SMALL>
 <!--
-Last change: revised for Lua 5.2.1
+Last change: revised for Lua 5.2.2
 -->
 
 </body></html>

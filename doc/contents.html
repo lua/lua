@@ -23,7 +23,7 @@ Lua 5.2 Reference Manual
 <P>
 The reference manual is the official definition of the Lua language.
 For a complete introduction to Lua programming, see the book
-<A HREF="http://www.lua.org/docs.html#books">Programming in Lua</A>.
+<A HREF="http://www.lua.org/pil/">Programming in Lua</A>.
 
 <P>
 <A HREF="manual.html">start</A>
@@ -33,7 +33,7 @@ For a complete introduction to Lua programming, see the book
 <A HREF="#index">index</A>
 <HR>
 <SMALL>
-Copyright &copy; 2011&ndash;2012 Lua.org, PUC-Rio.
+Copyright &copy; 2011&ndash;2013 Lua.org, PUC-Rio.
 Freely available under the terms of the
 <A HREF="http://www.lua.org/license.html">Lua license</A>.
 </SMALL>
@@ -149,8 +149,8 @@ Freely available under the terms of the
 <A HREF="manual.html#pdf-error">error</A><BR>
 <A HREF="manual.html#pdf-getmetatable">getmetatable</A><BR>
 <A HREF="manual.html#pdf-ipairs">ipairs</A><BR>
-<A HREF="manual.html#pdf-loadfile">loadfile</A><BR>
 <A HREF="manual.html#pdf-load">load</A><BR>
+<A HREF="manual.html#pdf-loadfile">loadfile</A><BR>
 <A HREF="manual.html#pdf-next">next</A><BR>
 <A HREF="manual.html#pdf-pairs">pairs</A><BR>
 <A HREF="manual.html#pdf-pcall">pcall</A><BR>
@@ -385,6 +385,7 @@ Freely available under the terms of the
 <A HREF="manual.html#lua_pushcclosure">lua_pushcclosure</A><BR>
 <A HREF="manual.html#lua_pushcfunction">lua_pushcfunction</A><BR>
 <A HREF="manual.html#lua_pushfstring">lua_pushfstring</A><BR>
+<A HREF="manual.html#lua_pushglobaltable">lua_pushglobaltable</A><BR>
 <A HREF="manual.html#lua_pushinteger">lua_pushinteger</A><BR>
 <A HREF="manual.html#lua_pushlightuserdata">lua_pushlightuserdata</A><BR>
 <A HREF="manual.html#lua_pushliteral">lua_pushliteral</A><BR>
@@ -393,15 +394,16 @@ Freely available under the terms of the
 <A HREF="manual.html#lua_pushnumber">lua_pushnumber</A><BR>
 <A HREF="manual.html#lua_pushstring">lua_pushstring</A><BR>
 <A HREF="manual.html#lua_pushthread">lua_pushthread</A><BR>
+<A HREF="manual.html#lua_pushunsigned">lua_pushunsigned</A><BR>
 <A HREF="manual.html#lua_pushvalue">lua_pushvalue</A><BR>
 <A HREF="manual.html#lua_pushvfstring">lua_pushvfstring</A><BR>
 <A HREF="manual.html#lua_rawequal">lua_rawequal</A><BR>
 <A HREF="manual.html#lua_rawget">lua_rawget</A><BR>
 <A HREF="manual.html#lua_rawgeti">lua_rawgeti</A><BR>
+<A HREF="manual.html#lua_rawgetp">lua_rawgetp</A><BR>
 <A HREF="manual.html#lua_rawlen">lua_rawlen</A><BR>
 <A HREF="manual.html#lua_rawset">lua_rawset</A><BR>
 <A HREF="manual.html#lua_rawseti">lua_rawseti</A><BR>
-<A HREF="manual.html#lua_rawgetp">lua_rawgetp</A><BR>
 <A HREF="manual.html#lua_rawsetp">lua_rawsetp</A><BR>
 <A HREF="manual.html#lua_register">lua_register</A><BR>
 <A HREF="manual.html#lua_remove">lua_remove</A><BR>
@@ -460,8 +462,8 @@ Freely available under the terms of the
 <A HREF="manual.html#luaL_buffinitsize">luaL_buffinitsize</A><BR>
 <A HREF="manual.html#luaL_callmeta">luaL_callmeta</A><BR>
 <A HREF="manual.html#luaL_checkany">luaL_checkany</A><BR>
-<A HREF="manual.html#luaL_checkinteger">luaL_checkinteger</A><BR>
 <A HREF="manual.html#luaL_checkint">luaL_checkint</A><BR>
+<A HREF="manual.html#luaL_checkinteger">luaL_checkinteger</A><BR>
 <A HREF="manual.html#luaL_checklong">luaL_checklong</A><BR>
 <A HREF="manual.html#luaL_checklstring">luaL_checklstring</A><BR>
 <A HREF="manual.html#luaL_checknumber">luaL_checknumber</A><BR>
@@ -492,8 +494,8 @@ Freely available under the terms of the
 <A HREF="manual.html#luaL_newmetatable">luaL_newmetatable</A><BR>
 <A HREF="manual.html#luaL_newstate">luaL_newstate</A><BR>
 <A HREF="manual.html#luaL_openlibs">luaL_openlibs</A><BR>
-<A HREF="manual.html#luaL_optinteger">luaL_optinteger</A><BR>
 <A HREF="manual.html#luaL_optint">luaL_optint</A><BR>
+<A HREF="manual.html#luaL_optinteger">luaL_optinteger</A><BR>
 <A HREF="manual.html#luaL_optlong">luaL_optlong</A><BR>
 <A HREF="manual.html#luaL_optlstring">luaL_optlstring</A><BR>
 <A HREF="manual.html#luaL_optnumber">luaL_optnumber</A><BR>
@@ -521,10 +523,10 @@ Freely available under the terms of the
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Sat May 26 08:52:25 BRT 2012
+Tue Mar 12 11:22:18 BRT 2013
 </SMALL>
 <!--
-Last change: revised for Lua 5.2.1
+Last change: revised for Lua 5.2.2
 -->
 
 </BODY>
