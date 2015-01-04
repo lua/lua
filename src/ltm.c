@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.20 2013/05/06 17:19:11 roberto Exp $
+** $Id: ltm.c,v 2.25 2013/12/30 20:47:58 roberto Exp $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -28,7 +28,7 @@ LUAI_DDEF const char *const luaT_typenames_[LUA_TOTALTAGS] = {
   "no value",
   "nil", "boolean", udatatypename, "number",
   "string", "table", "function", udatatypename, "thread",
-  "proto", "upval"  /* these last two cases are used for tests only */
+  "proto" /* this last case is used for tests only */
 };
 
 
@@ -36,14 +36,16 @@ void luaT_init (lua_State *L) {
   static const char *const luaT_eventname[] = {  /* ORDER TM */
     "__index", "__newindex",
     "__gc", "__mode", "__len", "__eq",
-    "__add", "__sub", "__mul", "__div", "__idiv", "__mod",
-    "__pow", "__unm", "__lt", "__le",
+    "__add", "__sub", "__mul", "__mod", "__pow",
+    "__div", "__idiv",
+    "__band", "__bor", "__bxor", "__shl", "__shr",
+    "__unm", "__bnot", "__lt", "__le",
     "__concat", "__call"
   };
   int i;
   for (i=0; i<TM_N; i++) {
     G(L)->tmname[i] = luaS_new(L, luaT_eventname[i]);
-    luaS_fix(G(L)->tmname[i]);  /* never collect these names */
+    luaC_fix(L, obj2gco(G(L)->tmname[i]));  /* never collect these names */
   }
 }
 
@@ -110,12 +112,17 @@ int luaT_callbinTM (lua_State *L, const TValue *p1, const TValue *p2,
 void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
                     StkId res, TMS event) {
   if (!luaT_callbinTM(L, p1, p2, res, event)) {
-    if (event == TM_CONCAT)
-      luaG_concaterror(L, p1, p2);
-    else if (event == TM_IDIV && ttisnumber(p1) && ttisnumber(p2))
-      luaG_tointerror(L, p1, p2);
-    else
-      luaG_aritherror(L, p1, p2);
+    switch (event) {
+      case TM_CONCAT:
+        luaG_concaterror(L, p1, p2);
+      case TM_IDIV: case TM_BAND: case TM_BOR: case TM_BXOR:
+      case TM_SHL: case TM_SHR: case TM_BNOT:
+        if (ttisnumber(p1) && ttisnumber(p2))
+          luaG_tointerror(L, p1, p2);
+        /* else go through */
+      default:
+        luaG_aritherror(L, p1, p2);
+    }
   }
 }
 

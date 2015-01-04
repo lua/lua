@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.108 2013/06/19 14:27:00 roberto Exp $
+** $Id: llimits.h,v 1.111 2014/03/07 16:19:00 roberto Exp $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -43,10 +43,12 @@ typedef unsigned char lu_byte;
 #define MAX_INT (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
 
 
-/* minimum and maximum values for lua_Integer */
-#define MAX_INTEGER	((lua_Integer)(~(lua_Unsigned)0 >> 1))
-#define MIN_INTEGER	(~MAX_INTEGER)
+/* maximum value for a lua_Unsigned */
+#define MAX_UINTEGER	(~(lua_Unsigned)0)
 
+/* minimum and maximum values for lua_Integer */
+#define MAX_INTEGER	((lua_Integer)(MAX_UINTEGER >> 1))
+#define MIN_INTEGER	(~MAX_INTEGER)
 
 /*
 ** conversion of pointer to integer
@@ -104,6 +106,7 @@ typedef LUAI_UACNUMBER l_uacNumber;
 
 #define cast(t, exp)	((t)(exp))
 
+#define cast_void(i)	cast(void, (i))
 #define cast_byte(i)	cast(lu_byte, (i))
 #define cast_num(i)	cast(lua_Number, (i))
 #define cast_int(i)	cast(int, (i))
@@ -155,7 +158,7 @@ typedef lu_int32 Instruction;
 
 /* minimum size for the string table (must be power of 2) */
 #if !defined(MINSTRTABSIZE)
-#define MINSTRTABSIZE	32
+#define MINSTRTABSIZE	64	/* minimum size for "predefined" strings */
 #endif
 
 

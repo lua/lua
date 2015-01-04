@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.182 2013/06/20 15:06:51 roberto Exp $
+** $Id: lstrlib.c,v 1.189 2014/03/21 14:26:44 roberto Exp $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -116,7 +116,7 @@ static int str_rep (lua_State *L) {
   lua_Integer n = luaL_checkinteger(L, 2);
   const char *sep = luaL_optlstring(L, 3, "", &lsep);
   if (n <= 0) lua_pushliteral(L, "");
-  else if (l + lsep < l || l + lsep >= MAXSIZE / n)  /* may overflow? */
+  else if (l + lsep < l || l + lsep > MAXSIZE / n)  /* may overflow? */
     return luaL_error(L, "resulting string too large");
   else {
     size_t totallen = n * l + (n - 1) * lsep;
@@ -124,8 +124,9 @@ static int str_rep (lua_State *L) {
     char *p = luaL_buffinitsize(L, &b, totallen);
     while (n-- > 1) {  /* first n-1 copies (followed by separator) */
       memcpy(p, s, l * sizeof(char)); p += l;
-      if (lsep > 0) {  /* avoid empty 'memcpy' (may be expensive) */
-        memcpy(p, sep, lsep * sizeof(char)); p += lsep;
+      if (lsep > 0) {  /* empty 'memcpy' is not that cheap */
+        memcpy(p, sep, lsep * sizeof(char));
+        p += lsep;
       }
     }
     memcpy(p, s, l * sizeof(char));  /* last copy (not followed by separator) */
@@ -178,10 +179,11 @@ static int writer (lua_State *L, const void *b, size_t size, void *B) {
 
 static int str_dump (lua_State *L) {
   luaL_Buffer b;
+  int strip = lua_toboolean(L, 2);
   luaL_checktype(L, 1, LUA_TFUNCTION);
   lua_settop(L, 1);
   luaL_buffinit(L,&b);
-  if (lua_dump(L, writer, &b) != 0)
+  if (lua_dump(L, writer, &b, strip) != 0)
     return luaL_error(L, "unable to dump given function");
   luaL_pushresult(&b);
   return 1;
@@ -938,6 +940,217 @@ static int str_format (lua_State *L) {
 /* }====================================================== */
 
 
+/*
+** {======================================================
+** PACK/UNPACK
+** =======================================================
+*/
+
+/* maximum size for the binary representation of an integer */
+#define MAXINTSIZE	8
+
+
+/* number of bits in a character */
+#define NB	CHAR_BIT
+
+/* mask for one character (NB ones) */
+#define MC	(((lua_Integer)1 << NB) - 1)
+
+/* mask for one character without sign ((NB - 1) ones) */
+#define SM	(((lua_Integer)1 << (NB - 1)) - 1)
+
+
+#define SZINT	((int)sizeof(lua_Integer))
+
+
+static union {
+  int dummy;
+  char little;  /* true iff machine is little endian */
+} const nativeendian = {1};
+
+
+static int getendian (lua_State *L, int arg) {
+  const char *endian = luaL_optstring(L, arg,
+                             (nativeendian.little ? "l" : "b"));
+  if (*endian == 'n')  /* native? */
+    return nativeendian.little;
+  luaL_argcheck(L, *endian == 'l' || *endian == 'b', arg,
+                   "endianess must be 'l'/'b'/'n'");
+  return (*endian == 'l');
+}
+
+
+static int getintsize (lua_State *L, int arg) {
+  int size = luaL_optint(L, arg, 0);
+  if (size == 0) size = SZINT;
+  luaL_argcheck(L, 1 <= size && size <= MAXINTSIZE, arg,
+                   "integer size out of valid range");
+  return size;
+}
+
+
+static int packint (char *buff, lua_Integer n, int littleendian, int size) {
+  int i;
+  if (littleendian) {
+    for (i = 0; i < size - 1; i++) {
+      buff[i] = (n & MC);
+      n >>= NB;
+    }
+  }
+  else {
+    for (i = size - 1; i > 0; i--) {
+      buff[i] = (n & MC);
+      n >>= NB;
+    }
+  }
+  buff[i] = (n & MC);  /* last byte */
+  /* test for overflow: OK if there are only zeros left in higher bytes,
+     or if there are only ones left and packed number is negative (signal
+     bit, the higher bit in last byte, is one) */
+  return ((n & ~MC) == 0 || (n | SM) == ~(lua_Integer)0);
+}
+
+
+static int packint_l (lua_State *L) {
+  char buff[MAXINTSIZE];
+  lua_Integer n = luaL_checkinteger(L, 1);
+  int size = getintsize(L, 2);
+  int endian = getendian(L, 3);
+  if (packint(buff, n, endian, size))
+    lua_pushlstring(L, buff, size);
+  else
+    luaL_error(L, "integer does not fit into given size (%d)", size);
+  return 1;
+}
+
+
+/* mask to check higher-order byte in a Lua integer */
+#define HIGHERBYTE	(MC << (NB * (SZINT - 1)))
+
+/* mask to check higher-order byte + signal bit of next (lower) byte */
+#define HIGHERBYTE1	(HIGHERBYTE | (HIGHERBYTE >> 1))
+
+static int unpackint (const char *buff, lua_Integer *res,
+                      int littleendian, int size) {
+  lua_Integer n = 0;
+  int i;
+  for (i = 0; i < size; i++) {
+    if (i >= SZINT) {  /* will throw away a byte? */
+      /* check for overflow: it is OK to throw away leading zeros for a
+         positive number, leading ones for a negative number, and a
+         leading zero byte to allow unsigned integers with a 1 in
+         its "signal bit" */
+      if (!((n & HIGHERBYTE1) == 0 ||  /* zeros for positive number */
+          (n & HIGHERBYTE1) == HIGHERBYTE1 ||  /* ones for negative number */
+          ((n & HIGHERBYTE) == 0 && i == size - 1)))  /* leading zero */
+        return 0;  /* overflow */
+    }
+    n <<= NB;
+    n |= (lua_Integer)(unsigned char)buff[littleendian ? size - 1 - i : i];
+  }
+  if (size < SZINT) {  /* need sign extension? */
+    lua_Integer mask = (~(lua_Integer)0) << (size*NB - 1);
+    if (n & mask)  /* negative value? */
+      n |= mask;  /* signal extension */
+  }
+  *res = n;
+  return 1;
+}
+
+
+static int unpackint_l (lua_State *L) {
+  lua_Integer res;
+  size_t len;
+  const char *s = luaL_checklstring(L, 1, &len);
+  lua_Integer pos = posrelat(luaL_optinteger(L, 2, 1), len);
+  int size = getintsize(L, 3);
+  int endian = getendian(L, 4);
+  luaL_argcheck(L, 1 <= pos && (size_t)pos + size - 1 <= len, 1,
+                   "string too short");
+  if(unpackint(s + pos - 1, &res, endian, size))
+    lua_pushinteger(L, res);
+  else
+    luaL_error(L, "result does not fit into a Lua integer");
+  return 1;
+}
+
+
+static void correctendianess (lua_State *L, char *b, int size, int endianarg) {
+  int endian = getendian(L, endianarg);
+  if (endian != nativeendian.little) {  /* not native endianess? */
+    int i = 0;
+    while (i < --size) {
+      char temp = b[i];
+      b[i++] = b[size];
+      b[size] = temp;
+    }
+  }
+}
+
+
+static int getfloatsize (lua_State *L, int arg) {
+  const char *size = luaL_optstring(L, arg, "n");
+  if (*size == 'n') return sizeof(lua_Number);
+  luaL_argcheck(L, *size == 'd' || *size == 'f', arg,
+                   "size must be 'f'/'d'/'n'");
+  return (*size == 'd' ? sizeof(double) : sizeof(float));
+}
+
+
+static int packfloat_l (lua_State *L) {
+  float f;  double d;
+  char *pn;  /* pointer to number */
+  lua_Number n = luaL_checknumber(L, 1);
+  int size = getfloatsize(L, 2);
+  if (size == sizeof(lua_Number))
+    pn = (char*)&n;
+  else if (size == sizeof(float)) {
+    f = (float)n;
+    pn = (char*)&f;
+  }  
+  else {  /* native lua_Number may be neither float nor double */
+    lua_assert(size == sizeof(double));
+    d = (double)n;
+    pn = (char*)&d;
+  }
+  correctendianess(L, pn, size, 3);
+  lua_pushlstring(L, pn, size);
+  return 1;
+}
+
+
+static int unpackfloat_l (lua_State *L) {
+  lua_Number res;
+  size_t len;
+  const char *s = luaL_checklstring(L, 1, &len);
+  lua_Integer pos = posrelat(luaL_optinteger(L, 2, 1), len);
+  int size = getfloatsize(L, 3);
+  luaL_argcheck(L, 1 <= pos && (size_t)pos + size - 1 <= len, 1,
+                   "string too short");
+  if (size == sizeof(lua_Number)) {
+    memcpy(&res, s + pos - 1, size); 
+    correctendianess(L, (char*)&res, size, 4);
+  }
+  else if (size == sizeof(float)) {
+    float f;
+    memcpy(&f, s + pos - 1, size); 
+    correctendianess(L, (char*)&f, size, 4);
+    res = (lua_Number)f;
+  }  
+  else {  /* native lua_Number may be neither float nor double */
+    double d;
+    lua_assert(size == sizeof(double));
+    memcpy(&d, s + pos - 1, size); 
+    correctendianess(L, (char*)&d, size, 4);
+    res = (lua_Number)d;
+  }
+  lua_pushnumber(L, res);
+  return 1;
+}
+
+/* }====================================================== */
+
+
 static const luaL_Reg strlib[] = {
   {"byte", str_byte},
   {"char", str_char},
@@ -953,6 +1166,10 @@ static const luaL_Reg strlib[] = {
   {"reverse", str_reverse},
   {"sub", str_sub},
   {"upper", str_upper},
+  {"packfloat", packfloat_l},
+  {"packint", packint_l},
+  {"unpackfloat", unpackfloat_l},
+  {"unpackint", unpackint_l},
   {NULL, NULL}
 };
 

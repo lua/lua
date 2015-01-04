@@ -9,6 +9,7 @@ blockquote, .display {
 	border: solid #a0a0a0 2px ;
 	padding: 1em ;
 	margin: 0px ;
+	border-radius: 8px ;
 }
 
 .display {
@@ -30,8 +31,12 @@ tt, kbd, code {
 <HR>
 <H1>
 <A HREF="http://www.lua.org/"><IMG SRC="logo.gif" ALT="Lua" BORDER=0></A>
-Welcome to Lua 5.3 (work1)
+Welcome to Lua 5.3 (work2)
 </H1>
+
+<P>
+<IMG SRC="alert.png" ALIGN="absbottom">
+<EM>All details may change in the final version.</EM>
 
 <P>
 <A HREF="#about">about</A>
@@ -232,7 +237,7 @@ lapi.c lcode.c lctype.c ldebug.c ldo.c ldump.c lfunc.c lgc.c llex.c
 lmem.c lobject.c lopcodes.c lparser.c lstate.c lstring.c ltable.c
 ltm.c lundump.c lvm.c lzio.c
 lauxlib.c lbaselib.c lbitlib.c lcorolib.c ldblib.c liolib.c
-lmathlib.c loslib.c lstrlib.c ltablib.c loadlib.c linit.c
+lmathlib.c loslib.c lstrlib.c ltablib.c lutf8lib.c loadlib.c linit.c
 <DT>
 interpreter:
 <DD>
@@ -258,7 +263,7 @@ compiler:
   As mentioned above, you may edit <TT>src/luaconf.h</TT> to customize
   some features before building Lua.
 
-<H2><A NAME="changes">Changes since Lua 5.1</A></H2>
+<H2><A NAME="changes">Changes since Lua 5.2</A></H2>
 
 <P>
 Here are the main changes introduced in Lua 5.3.
@@ -269,90 +274,40 @@ lists the
 
 <H3>Main changes</H3>
 <UL>
-<LI> yieldable pcall and metamethods
-<LI> new lexical scheme for globals
-<LI> ephemeron tables
-<LI> new library for bitwise operations
-<LI> light C functions
-<LI> emergency garbage collector
-<LI> <CODE>goto</CODE> statement
-<LI> finalizers for tables
+<LI> support for integers (64-bit by default)
+<LI> better support for small architectures ("Small Lua" with 32-bit numbers)
+<LI> bitwise operators
+<LI> basic utf-8 library
+<LI> utf-8 escapes in literal strings
+<LI> functions for packing/unpacking numbers
+<LI> userdata can have any Lua value as uservalue
+<LI> strip option in <CODE>lua_dump</CODE>/<CODE>string.dump</CODE>
 </UL>
 
 Here are the other changes introduced in Lua 5.3:
 <H3>Language</H3>
 <UL>
-<LI> no more fenv for threads or functions
-<LI> tables honor the <CODE>__len</CODE> metamethod
-<LI> hex and <CODE>\z</CODE> escapes in strings
-<LI> support for hexadecimal floats
-<LI> order metamethods work for different types
-<LI> no more verification of opcode consistency
-<LI> hook event "tail return" replaced by "tail call"
-<LI> empty statement
-<LI> <CODE>break</CODE> statement may appear in the middle of a block
+<LI> 
 </UL>
 
 <H3>Libraries</H3>
 <UL>
-<LI> arguments for function called through <CODE>xpcall</CODE>
-<LI> optional 'mode' argument to load and loadfile (to control binary x text)
-<LI> optional 'env' argument to load and loadfile (environment for loaded chunk)
-<LI> <CODE>loadlib</CODE> may load libraries with global names (RTLD_GLOBAL)
-<LI> new function <CODE>package.searchpath</CODE>
-<LI> modules receive their paths when loaded
-<LI> optional base in <CODE>math.log</CODE>
-<LI> optional separator in <CODE>string.rep</CODE>
-<LI> <CODE>file:write</CODE> returns <CODE>file</CODE>
-<LI> closing a pipe returns exit status
-<LI> <CODE>os.exit</CODE> may close state
-<LI> new metamethods <CODE>__pairs</CODE> and <CODE>__ipairs</CODE>
-<LI> new option 'isrunning' for <CODE>collectgarbage</CODE> and <CODE>lua_gc</CODE>
-<LI> frontier patterns
-<LI> <CODE>\0</CODE> in patterns
-<LI> new option <CODE>*L</CODE> for <CODE>io.read</CODE>
-<LI> options for <CODE>io.lines</CODE>
-<LI> <CODE>debug.getlocal</CODE> can access function varargs
+<LI> 
 </UL>
 
 <H3>C API</H3>
 <UL>
-<LI> main thread predefined in the registry
-<LI> new functions
-<CODE>lua_absindex</CODE>,
-<CODE>lua_arith</CODE>,
-<CODE>lua_compare</CODE>,
-<CODE>lua_copy</CODE>,
-<CODE>lua_len</CODE>,
-<CODE>lua_rawgetp</CODE>,
-<CODE>lua_rawsetp</CODE>,
-<CODE>lua_upvalueid</CODE>,
-<CODE>lua_upvaluejoin</CODE>,
-<CODE>lua_version</CODE>.
-<LI> new functions
-<CODE>luaL_checkversion</CODE>,
-<CODE>luaL_setmetatable</CODE>,
-<CODE>luaL_testudata</CODE>,
-<CODE>luaL_tolstring</CODE>.
-<LI> <CODE>lua_pushstring</CODE> and <CODE>pushlstring</CODE> return string
-<LI> <CODE>nparams</CODE> and <CODE>isvararg</CODE> available in debug API
-<LI> new <CODE>lua_Unsigned</CODE>
+<LI> 
 </UL>
 
 <H3>Implementation</H3>
 <UL>
-<LI> max constants per function raised to 2<SUP>26</SUP>
-<LI> generational mode for garbage collection (experimental)
-<LI> NaN trick (experimental)
-<LI> internal (immutable) version of ctypes
-<LI> simpler implementation for string buffers
-<LI> parser uses much less C-stack space (no more auto arrays)
+<LI> 
 </UL>
 
 <H3>Lua standalone interpreter</H3>
 <UL>
-<LI> new <CODE>-E</CODE> option to avoid environment variables
-<LI> handling of non-string error messages
+<LI> Can be used as calculator; no need to prefix with '='
 </UL>
 
 <H2><A NAME="license">License</A></H2>
@@ -374,7 +329,7 @@ For details, see
 <A HREF="http://www.lua.org/license.html">this</A>.
 
 <BLOCKQUOTE STYLE="padding-bottom: 0em">
-Copyright &copy; 1994&ndash;2013 Lua.org, PUC-Rio.
+Copyright &copy; 1994&ndash;2014 Lua.org, PUC-Rio.
 
 <P>
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -402,10 +357,10 @@ THE SOFTWARE.
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Mon Jun  3 23:13:40 BRT 2013
+Fri Mar 21 17:33:08 BRT 2014
 </SMALL>
 <!--
-Last change: revised for Lua 5.3.0
+Last change: updated for Lua 5.3.0 (work2)
 -->
 
 </BODY>

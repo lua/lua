@@ -1,2 +1,2 @@
-#define nvalue(x) 0
+#define nvalue(x) ((lua_Number)0)
 #define ttypenv(x) ttnov(x)
