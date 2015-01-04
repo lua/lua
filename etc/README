@@ -1,54 +1,36 @@
 This directory contains some useful files and code.
 Unlike the code in ../src, everything here is in the public domain.
 
-bin2c.c
-	This program converts files to byte arrays that are automatically run
-	with lua_dobuffer. This allows C programs to include all necessary Lua
-	code, even in precompiled form. Even if the code is included in source
-	form, bin2c is useful because it avoids the hassle of having to quote
-	special characters in C strings.
-	Example of usage: Run bin2c file1 file2 ... > init.h. Then, in your
-	C program, just do #include "init.h" anywhere in the *body* of a
-	function. This will be equivalent to calling
-		lua_dofile(L,"file1"); lua_dofile(L,"file2"); ...
-	Note that the Lua state is called "L". If you use a different name,
-	say "mystate", just #define L mystate before you #include "init.h".
+If any of the makes fail, you're probably not using the same libraries
+used to build Lua. Set MYLIBS in Makefile accordingly.
 
-compat.lua
-	A compatibility module for Lua 4.0 functions.
+all.c
+	Full Lua interpreter in a single file.
+	Do "make one" for a demo.
 
-doall.lua
-	Emulate the command line behaviour of Lua 4.0
+lua.hpp
+	Lua header files for C++ using 'extern "C"'.
 
 lua.ico
-	A Lua icon for Windows.
+	A Lua icon for Windows (and web sites: save as favicon.ico).
 	Drawn by hand by Markus Gritsch <gritsch@iue.tuwien.ac.at>.
 
-lua.magic
-	Data for teaching file(1) about Lua precompiled chunks.
+lua.pc
+	pkg-config data for Lua
 
-lua.xpm
-	The same icon as lua.ico, but in XPM format.
-	It was converted with ImageMagick by Andy Tai <andy@exp.com>.
-
-luser_number.h
-	Number type configuration for Lua core.
-
-luser_tests.h
-	Self-test configuration for Lua core.
+luavs.bat
+	Script to build Lua under "Visual Studio .NET Command Prompt".
 
 min.c
 	A minimal Lua interpreter.
 	Good for learning and for starting your own.
+	Do "make min" for a demo.
 
 noparser.c
 	Linking with noparser.o avoids loading the parsing modules in lualib.a.
-	Do "make luab" to build a sample Lua intepreter that does not parse
-	Lua programs, only loads precompiled programs.
+	Do "make noparser" for a demo.
 
-saconfig.c
-	Configuration for Lua interpreter.
+strict.lua
+	Traps uses of undeclared global variables.
+	Do "make strict" for a demo.
 
-trace.c
-	A simple execution tracer.
-	An example of how to use the debug hooks in C.

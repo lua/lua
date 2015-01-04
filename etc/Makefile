@@ -1,42 +1,44 @@
 # makefile for Lua etc
 
-LUA= ..
+TOP= ..
+LIB= $(TOP)/src
+INC= $(TOP)/src
+BIN= $(TOP)/src
+SRC= $(TOP)/src
+TST= $(TOP)/test
 
-include $(LUA)/config
+CC= gcc
+CFLAGS= -O2 -Wall -I$(INC) $(MYCFLAGS)
+MYCFLAGS= 
+MYLDFLAGS= -Wl,-E
+MYLIBS= -lm
+#MYLIBS= -lm -Wl,-E -ldl -lreadline -lhistory -lncurses
+RM= rm -f
 
-LIBLUA=$(LIB)/liblua.a
-ALL= bin2c min trace noparser luab
+default:
+	@echo 'Please choose a target: min noparser one strict clean'
 
-all:
-	@echo 'choose a target:' $(ALL)
+min:	min.c
+	$(CC) $(CFLAGS) $@.c -L$(LIB) -llua $(MYLIBS)
+	echo 'print"Hello there!"' | ./a.out
 
-bin2c:	bin2c.c
-	$(CC) $(CFLAGS) -o $@ $@.c
+noparser: noparser.o
+	$(CC) noparser.o $(SRC)/lua.o -L$(LIB) -llua $(MYLIBS)
+	$(BIN)/luac $(TST)/hello.lua
+	-./a.out luac.out
+	-./a.out -e'a=1'
 
-min:	min.c $(LIBLUA)
-	$(CC) $(CFLAGS) -o $@ $@.c -L$(LIB) -llua
+one:
+	$(CC) $(CFLAGS) all.c $(MYLIBS)
+	./a.out $(TST)/hello.lua
 
-trace:	trace.c $(LIBLUA)
-	$(CC) -g $(CFLAGS) -o $@ $@.c -L$(LIB) -llua -llualib $(EXTRA_LIBS)
-
-noparser: noparser.c
-	$(CC) $(CFLAGS) -I$(LUA)/src -o $@.o -c $@.c
-
-luab:	noparser $(LIBLUA)
-	cc -o $@ noparser.o $(LUA)/src/lua/lua.o -L$(LIB) -llua -llualib $(EXTRA_LIBS)
-	$(BIN)/luac $(LUA)/test/hello.lua
-	$@ luac.out
-	-$@ -e'a=1'
-
-flat:
-	cd ..; mkdir flat; mv include/*.h src/*.[ch] src/*/*.[ch] flat
-
-$(LIBLUA):
-	cd ../src; $(MAKE)
+strict:
+	-$(BIN)/lua -e 'print(a);b=2'
+	-$(BIN)/lua -lstrict -e 'print(a)'
+	-$(BIN)/lua -e 'function f() b=2 end f()'
+	-$(BIN)/lua -lstrict -e 'function f() b=2 end f()'
 
 clean:
-	rm -f $(ALL) a.out core *.o luac.out
+	$(RM) a.out core core.* *.o luac.out
 
-luser_tests.h: RCS/ltests.h,v
-	co -q -M ltests.h
-	mv -f ltests.h $@
+.PHONY:	default min noparser one strict clean

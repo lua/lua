@@ -1,4 +1,6 @@
-This is Lua 5.0.
+README for Lua 5.1
+
+See INSTALL for installation instructions.
 See HISTORY for a summary of changes since the last released version.
 
 * What is Lua?
@@ -17,9 +19,7 @@ See HISTORY for a summary of changes since the last released version.
   ------------
   Lua is freely available for both academic and commercial purposes.
   See COPYRIGHT and http://www.lua.org/license.html for details.
-  Lua can be downloaded from its official site http://www.lua.org/ and
-  several other sites aroung the world. For a complete list of mirror sites,
-  see http://www.lua.org/mirrors.html .
+  Lua can be downloaded at http://www.lua.org/download.html .
 
 * Installation
   ------------
@@ -27,18 +27,11 @@ See HISTORY for a summary of changes since the last released version.
   platforms that have an ANSI C compiler. Under Unix, simply typing "make"
   should work. See INSTALL for detailed instructions.
 
-* Contacting the authors
-  ----------------------
-  Send your comments, questions, and bug reports to lua@tecgraf.puc-rio.br.
-  For more information about the authors, see http://www.lua.org/authors.html .
-  For reporting bugs, try also the mailing list: lua-l@tecgraf.puc-rio.br.
-  For more information about this list, including instructions on how to
-  subscribe and access the archives, see http://www.lua.org/lua-l.html .
-
 * Origin
   ------
-  Lua is developed at Tecgraf, the Computer Graphics Technology Group
-  of PUC-Rio (the Pontifical Catholic University of Rio de Janeiro in Brazil).
-  Tecgraf is a laboratory of the Department of Computer Science.
+  Lua is developed at Lua.org, a laboratory of the Department of Computer
+  Science of PUC-Rio (the Pontifical Catholic University of Rio de Janeiro
+  in Brazil).
+  For more information about the authors, see http://www.lua.org/authors.html .
 
 (end of README)

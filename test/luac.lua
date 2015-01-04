@@ -3,5 +3,5 @@
 
 assert(arg[1]~=nil and arg[2]==nil,"usage: lua luac.lua file.lua")
 f=assert(io.open("luac.out","wb"))
-f:write(string.dump(assert(loadfile(arg[1]))))
-io.close(f)
+assert(f:write(string.dump(assert(loadfile(arg[1])))))
+assert(f:close())

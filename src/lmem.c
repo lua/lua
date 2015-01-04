@@ -1,13 +1,14 @@
 /*
-** $Id: lmem.c,v 1.61 2002/12/04 17:38:31 roberto Exp $
+** $Id: lmem.c,v 1.70 2005/12/26 13:35:47 roberto Exp $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
 
 
-#include <stdlib.h>
+#include <stddef.h>
 
 #define lmem_c
+#define LUA_CORE
 
 #include "lua.h"
 
@@ -20,72 +21,66 @@
 
 
 /*
-** definition for realloc function. It must assure that l_realloc(NULL,
-** 0, x) allocates a new block (ANSI C assures that). (`os' is the old
-** block size; some allocators may use that.)
+** About the realloc function:
+** void * frealloc (void *ud, void *ptr, size_t osize, size_t nsize);
+** (`osize' is the old size, `nsize' is the new size)
+**
+** Lua ensures that (ptr == NULL) iff (osize == 0).
+**
+** * frealloc(ud, NULL, 0, x) creates a new block of size `x'
+**
+** * frealloc(ud, p, x, 0) frees the block `p'
+** (in this specific case, frealloc must return NULL).
+** particularly, frealloc(ud, NULL, 0, 0) does nothing
+** (which is equivalent to free(NULL) in ANSI C)
+**
+** frealloc returns NULL if it cannot create or reallocate the area
+** (any reallocation to an equal or smaller size cannot fail!)
 */
-#ifndef l_realloc
-#define l_realloc(b,os,s)	realloc(b,s)
-#endif
 
-/*
-** definition for free function. (`os' is the old block size; some
-** allocators may use that.)
-*/
-#ifndef l_free
-#define l_free(b,os)	free(b)
-#endif
 
 
 #define MINSIZEARRAY	4
 
 
-void *luaM_growaux (lua_State *L, void *block, int *size, int size_elems,
-                    int limit, const char *errormsg) {
+void *luaM_growaux_ (lua_State *L, void *block, int *size, size_t size_elems,
+                     int limit, const char *errormsg) {
   void *newblock;
-  int newsize = (*size)*2;
-  if (newsize < MINSIZEARRAY)
-    newsize = MINSIZEARRAY;  /* minimum size */
-  else if (*size >= limit/2) {  /* cannot double it? */
-    if (*size < limit - MINSIZEARRAY)  /* try something smaller... */
-      newsize = limit;  /* still have at least MINSIZEARRAY free places */
-    else luaG_runerror(L, errormsg);
+  int newsize;
+  if (*size >= limit/2) {  /* cannot double it? */
+    if (*size >= limit)  /* cannot grow even a little? */
+      luaG_runerror(L, errormsg);
+    newsize = limit;  /* still have at least one free place */
   }
-  newblock = luaM_realloc(L, block,
-                          cast(lu_mem, *size)*cast(lu_mem, size_elems),
-                          cast(lu_mem, newsize)*cast(lu_mem, size_elems));
+  else {
+    newsize = (*size)*2;
+    if (newsize < MINSIZEARRAY)
+      newsize = MINSIZEARRAY;  /* minimum size */
+  }
+  newblock = luaM_reallocv(L, block, *size, newsize, size_elems);
   *size = newsize;  /* update only when everything else is OK */
   return newblock;
 }
 
 
+void *luaM_toobig (lua_State *L) {
+  luaG_runerror(L, "memory allocation error: block too big");
+  return NULL;  /* to avoid warnings */
+}
+
+
+
 /*
 ** generic allocation routine.
 */
-void *luaM_realloc (lua_State *L, void *block, lu_mem oldsize, lu_mem size) {
-  lua_assert((oldsize == 0) == (block == NULL));
-  if (size == 0) {
-    if (block != NULL) {
-      l_free(block, oldsize);
-      block = NULL;
-    }
-    else return NULL;  /* avoid `nblocks' computations when oldsize==size==0 */
-  }
-  else if (size >= MAX_SIZET)
-    luaG_runerror(L, "memory allocation error: block too big");
-  else {
-    block = l_realloc(block, oldsize, size);
-    if (block == NULL) {
-      if (L)
-        luaD_throw(L, LUA_ERRMEM);
-      else return NULL;  /* error before creating state! */
-    }
-  }
-  if (L) {
-    lua_assert(G(L) != NULL && G(L)->nblocks > 0);
-    G(L)->nblocks -= oldsize;
-    G(L)->nblocks += size;
-  }
+void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
+  global_State *g = G(L);
+  lua_assert((osize == 0) == (block == NULL));
+  block = (*g->frealloc)(g->ud, block, osize, nsize);
+  if (block == NULL && nsize > 0)
+    luaD_throw(L, LUA_ERRMEM);
+  lua_assert((nsize == 0) == (block == NULL));
+  g->totalbytes = (g->totalbytes - osize) + nsize;
   return block;
 }
 

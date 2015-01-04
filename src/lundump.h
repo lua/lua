@@ -1,6 +1,6 @@
 /*
-** $Id: lundump.h,v 1.30 2003/04/07 20:34:20 lhf Exp $
-** load pre-compiled Lua chunks
+** $Id: lundump.h,v 1.40 2005/11/11 14:03:13 lhf Exp $
+** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
 
@@ -11,24 +11,26 @@
 #include "lzio.h"
 
 /* load one chunk; from lundump.c */
-Proto* luaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff);
+LUAI_FUNC Proto* luaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name);
 
-/* find byte order; from lundump.c */
-int luaU_endianness (void);
+/* make header; from lundump.c */
+LUAI_FUNC void luaU_header (char* h);
 
 /* dump one chunk; from ldump.c */
-void luaU_dump (lua_State* L, const Proto* Main, lua_Chunkwriter w, void* data);
+LUAI_FUNC int luaU_dump (lua_State* L, const Proto* f, lua_Writer w, void* data, int strip);
 
+#ifdef luac_c
 /* print one chunk; from print.c */
-void luaU_print (const Proto* Main);
+LUAI_FUNC void luaU_print (const Proto* f, int full);
+#endif
 
-/* definitions for headers of binary files */
-#define	LUA_SIGNATURE	"\033Lua"	/* binary files start with "<esc>Lua" */
-#define	VERSION		0x50		/* last format change was in 5.0 */
-#define	VERSION0	0x50		/* last major  change was in 5.0 */
+/* for header of binary files -- this is Lua 5.1 */
+#define LUAC_VERSION		0x51
 
-/* a multiple of PI for testing native format */
-/* multiplying by 1E7 gives non-trivial integer values */
-#define	TEST_NUMBER	((lua_Number)3.14159265358979323846E7)
+/* for header of binary files -- this is the official format */
+#define LUAC_FORMAT		0
+
+/* size of header of binary files */
+#define LUAC_HEADERSIZE		12
 
 #endif

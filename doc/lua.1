@@ -1,5 +1,5 @@
-.\" lua.man,v 1.8 2003/04/02 00:05:20 lhf Exp
-.TH LUA 1 "2003/04/02 00:05:20"
+.\" $Id: lua.man,v 1.11 2006/01/06 16:03:34 lhf Exp $
+.TH LUA 1 "$Date: 2006/01/06 16:03:34 $"
 .SH NAME
 lua \- Lua interpreter
 .SH SYNOPSIS
@@ -45,9 +45,9 @@ The arguments in
 .B arg
 start at 0,
 which contains the string
-.RI ` script '.
+.RI ' script '.
 The index of the last argument is stored in
-.BR "arg.n" .
+.BR arg.n .
 The arguments given in the command line before
 .IR script ,
 including the name of the interpreter,
@@ -63,17 +63,17 @@ if it is defined.
 If the value of
 .B LUA_INIT
 is of the form
-.RI `@ filename ',
+.RI '@ filename ',
 then
 .I filename
 is executed.
 Otherwise, the string is assumed to be a Lua statement and is executed.
 .LP
 Options start with
-.B \-
+.B '\-'
 and are described below.
 You can use
-.B "\--"
+.B "'\--'"
 to signal the end of options.
 .LP
 If no arguments are given,
@@ -96,11 +96,11 @@ a syntax error is found.
 So, one way to interrupt the reading of an incomplete statement is
 to force a syntax error:
 adding a
-.B `;' 
+.B ';' 
 in the middle of a statement is a sure way of forcing a syntax error
 (except inside multiline strings and comments; these must be closed explicitly).
 If a line starts with
-.BR `=' ,
+.BR '=' ,
 then
 .B lua
 displays the values of all the expressions in the remainder of the
@@ -115,11 +115,10 @@ So,
 to change the prompts,
 set the corresponding variable to a string of your choice.
 You can do that after calling the interpreter
-or on the command line with
-.BR "_PROMPT" "=\'lua: \'" ,
-for example.
-(Note the need for quotes, because the string contains a space.)
-The default prompts are ``> '' and ``>> ''.
+or on the command line
+(but in this case you have to be careful with quotes
+if the prompt string contains a space; otherwise you may confuse the shell.)
+The default prompts are "> " and ">> ".
 .SH OPTIONS
 .TP
 .B \-
@@ -141,14 +140,12 @@ enter interactive mode after
 .I script
 is executed.
 .TP
-.BI \-l " file"
+.BI \-l " name"
 call
-.BI require( file )
+.BI require(' name ')
 before executing
-.IR script.
-Typically used to load libraries
-(hence the letter
-.IR l ).
+.IR script .
+Typically used to load libraries.
 .TP
 .B \-v
 show version information.
@@ -163,5 +160,4 @@ R. Ierusalimschy,
 L. H. de Figueiredo,
 and
 W. Celes
-(lua@tecgraf.puc-rio.br)
 .\" EOF

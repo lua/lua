@@ -7,7 +7,7 @@ function generatefib (n)
       coroutine.yield(a)
       a, b = b, a+b
     end
-  end, n)
+  end)
 end
 
 for i in generatefib(1000) do print(i) end

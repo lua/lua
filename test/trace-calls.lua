@@ -1,9 +1,9 @@
 -- trace calls
--- example: lua -ltrace-calls.lua bisect.lua
+-- example: lua -ltrace-calls bisect.lua
 
 local level=0
 
-function hook(event)
+local function hook(event)
  local t=debug.getinfo(3)
  io.write(level," >>> ",string.rep(" ",level))
  if t~=nil and t.currentline>=0 then io.write(t.short_src,":",t.currentline," ") end

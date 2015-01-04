@@ -1,14 +1,15 @@
-<!-- lua.man,v 1.8 2003/04/02 00:05:20 lhf Exp -->
+<!-- $Id: lua.man,v 1.11 2006/01/06 16:03:34 lhf Exp $ -->
 <HTML>
 <HEAD>
 <TITLE>LUA man page</TITLE>
+<LINK REL="stylesheet" TYPE="text/css" HREF="lua.css">
 </HEAD>
 
 <BODY BGCOLOR="#FFFFFF">
 
-<H1>NAME</H1>
+<H2>NAME</H2>
 lua - Lua interpreter
-<H1>SYNOPSIS</H1>
+<H2>SYNOPSIS</H2>
 <B>lua</B>
 [
 <I>options</I>
@@ -19,7 +20,7 @@ lua - Lua interpreter
 <I>args</I>
 ]
 ]
-<H1>DESCRIPTION</H1>
+<H2>DESCRIPTION</H2>
 <B>lua</B>
 is the stand-alone Lua interpreter.
 It loads and executes Lua programs,
@@ -51,9 +52,9 @@ The arguments in
 <B>arg</B>
 start at 0,
 which contains the string
-`<I>script</I>'.
+'<I>script</I>'.
 The index of the last argument is stored in
-<B>"arg.n"</B>.
+<B>arg.n</B>.
 The arguments given in the command line before
 <I>script</I>,
 including the name of the interpreter,
@@ -69,17 +70,17 @@ if it is defined.
 If the value of
 <B>LUA_INIT</B>
 is of the form
-`@<I>filename</I>',
+'@<I>filename</I>',
 then
 <I>filename</I>
 is executed.
 Otherwise, the string is assumed to be a Lua statement and is executed.
 <P>
 Options start with
-<B>-</B>
+<B>'-'</B>
 and are described below.
 You can use
-<B>"--"</B>
+<B>'--'</B>
 to signal the end of options.
 <P>
 If no arguments are given,
@@ -102,11 +103,11 @@ a syntax error is found.
 So, one way to interrupt the reading of an incomplete statement is
 to force a syntax error:
 adding a
-<B>`;' </B>
+<B>';'</B>
 in the middle of a statement is a sure way of forcing a syntax error
 (except inside multiline strings and comments; these must be closed explicitly).
 If a line starts with
-<B>`='</B>,
+<B>'='</B>,
 then
 <B>lua</B>
 displays the values of all the expressions in the remainder of the
@@ -121,12 +122,11 @@ So,
 to change the prompts,
 set the corresponding variable to a string of your choice.
 You can do that after calling the interpreter
-or on the command line with
-<B>"_PROMPT" "=\'lua: \'"</B>,
-for example.
-(Note the need for quotes, because the string contains a space.)
-The default prompts are ``&gt; '' and ``&gt;&gt; ''.
-<H1>OPTIONS</H1>
+or on the command line
+(but in this case you have to be careful with quotes
+if the prompt string contains a space; otherwise you may confuse the shell.)
+The default prompts are "&gt; " and "&gt;&gt; ".
+<H2>OPTIONS</H2>
 <P>
 <B>-</B>
 load and execute the standard input as a file,
@@ -134,7 +134,7 @@ that is,
 not interactively,
 even when the standard input is a terminal.
 <P>
-<B>-e "</B><I>stat"</I>
+<B>-e </B><I>stat</I>
 execute statement
 <I>stat</I>.
 You need to quote
@@ -147,29 +147,26 @@ enter interactive mode after
 <I>script</I>
 is executed.
 <P>
-<B>-l "</B><I>file"</I>
+<B>-l </B><I>name</I>
 call
-<B>require( file</B><I>)</I>
+<B>require</B>('<I>name</I>')
 before executing
-<I></I>script.
-Typically used to load libraries
-(hence the letter
-<I>l</I>).
+<I>script</I>.
+Typically used to load libraries.
 <P>
 <B>-v</B>
 show version information.
-<H1>SEE ALSO</H1>
+<H2>SEE ALSO</H2>
 <B>luac</B>(1)
 <BR>
 <A HREF="http://www.lua.org/">http://www.lua.org/</A>
-<H1>DIAGNOSTICS</H1>
+<H2>DIAGNOSTICS</H2>
 Error messages should be self explanatory.
-<H1>AUTHORS</H1>
+<H2>AUTHORS</H2>
 R. Ierusalimschy,
 L. H. de Figueiredo,
 and
 W. Celes
-(<A HREF="mailto:lua-NO-SPAM-THANKS@tecgraf.puc-rio.br">lua AT tecgraf.puc-rio.br</A>)
 <!-- EOF -->
 </BODY>
 </HTML>

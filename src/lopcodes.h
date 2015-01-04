@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.102 2002/08/21 18:56:09 roberto Exp $
+** $Id: lopcodes.h,v 1.124 2005/12/02 18:42:08 roberto Exp $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -41,18 +41,19 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 
 #define SIZE_OP		6
 
-#define POS_C		SIZE_OP
+#define POS_OP		0
+#define POS_A		(POS_OP + SIZE_OP)
+#define POS_C		(POS_A + SIZE_A)
 #define POS_B		(POS_C + SIZE_C)
 #define POS_Bx		POS_C
-#define POS_A		(POS_B + SIZE_B)
 
 
 /*
 ** limits for opcode arguments.
 ** we use (signed) int to manipulate most arguments,
-** so they must fit in BITS_INT-1 bits (-1 for sign)
+** so they must fit in LUAI_BITSINT-1 bits (-1 for sign)
 */
-#if SIZE_Bx < BITS_INT-1
+#if SIZE_Bx < LUAI_BITSINT-1
 #define MAXARG_Bx        ((1<<SIZE_Bx)-1)
 #define MAXARG_sBx        (MAXARG_Bx>>1)         /* `sBx' is signed */
 #else
@@ -76,10 +77,11 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 ** the following macros help to manipulate instructions
 */
 
-#define GET_OPCODE(i)	(cast(OpCode, (i)&MASK1(SIZE_OP,0)))
-#define SET_OPCODE(i,o)	((i) = (((i)&MASK0(SIZE_OP,0)) | cast(Instruction, o)))
+#define GET_OPCODE(i)	(cast(OpCode, ((i)>>POS_OP) & MASK1(SIZE_OP,0)))
+#define SET_OPCODE(i,o)	((i) = (((i)&MASK0(SIZE_OP,POS_OP)) | \
+		((cast(Instruction, o)<<POS_OP)&MASK1(SIZE_OP,POS_OP))))
 
-#define GETARG_A(i)	(cast(int, (i)>>POS_A))
+#define GETARG_A(i)	(cast(int, ((i)>>POS_A) & MASK1(SIZE_A,0)))
 #define SETARG_A(i,u)	((i) = (((i)&MASK0(SIZE_A,POS_A)) | \
 		((cast(Instruction, u)<<POS_A)&MASK1(SIZE_A,POS_A))))
 
@@ -99,16 +101,33 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 #define SETARG_sBx(i,b)	SETARG_Bx((i),cast(unsigned int, (b)+MAXARG_sBx))
 
 
-#define CREATE_ABC(o,a,b,c)	(cast(Instruction, o) \
+#define CREATE_ABC(o,a,b,c)	((cast(Instruction, o)<<POS_OP) \
 			| (cast(Instruction, a)<<POS_A) \
 			| (cast(Instruction, b)<<POS_B) \
 			| (cast(Instruction, c)<<POS_C))
 
-#define CREATE_ABx(o,a,bc)	(cast(Instruction, o) \
+#define CREATE_ABx(o,a,bc)	((cast(Instruction, o)<<POS_OP) \
 			| (cast(Instruction, a)<<POS_A) \
 			| (cast(Instruction, bc)<<POS_Bx))
 
 
+/*
+** Macros to operate RK indices
+*/
+
+/* this bit 1 means constant (0 means register) */
+#define BITRK		(1 << (SIZE_B - 1))
+
+/* test whether value is a constant */
+#define ISK(x)		((x) & BITRK)
+
+/* gets the index of the constant */
+#define INDEXK(r)	((int)(r) & ~BITRK)
+
+#define MAXINDEXRK	(BITRK - 1)
+
+/* code a constant index as a RK value */
+#define RKASK(x)	((x) | BITRK)
 
 
 /*
@@ -120,7 +139,7 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 /*
 ** R(x) - register
 ** Kst(x) - constant (in constant table)
-** RK(x) == if x < MAXSTACK then R(x) else Kst(x-MAXSTACK)
+** RK(x) == if ISK(x) then Kst(INDEXK(x)) else R(x)
 */
 
 
@@ -134,7 +153,7 @@ name		args	description
 ------------------------------------------------------------------------*/
 OP_MOVE,/*	A B	R(A) := R(B)					*/
 OP_LOADK,/*	A Bx	R(A) := Kst(Bx)					*/
-OP_LOADBOOL,/*	A B C	R(A) := (Bool)B; if (C) PC++			*/
+OP_LOADBOOL,/*	A B C	R(A) := (Bool)B; if (C) pc++			*/
 OP_LOADNIL,/*	A B	R(A) := ... := R(B) := nil			*/
 OP_GETUPVAL,/*	A B	R(A) := UpValue[B]				*/
 
@@ -153,86 +172,97 @@ OP_ADD,/*	A B C	R(A) := RK(B) + RK(C)				*/
 OP_SUB,/*	A B C	R(A) := RK(B) - RK(C)				*/
 OP_MUL,/*	A B C	R(A) := RK(B) * RK(C)				*/
 OP_DIV,/*	A B C	R(A) := RK(B) / RK(C)				*/
+OP_MOD,/*	A B C	R(A) := RK(B) % RK(C)				*/
 OP_POW,/*	A B C	R(A) := RK(B) ^ RK(C)				*/
 OP_UNM,/*	A B	R(A) := -R(B)					*/
 OP_NOT,/*	A B	R(A) := not R(B)				*/
+OP_LEN,/*	A B	R(A) := length of R(B)				*/
 
 OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
 
-OP_JMP,/*	sBx	PC += sBx					*/
+OP_JMP,/*	sBx	pc+=sBx					*/
 
 OP_EQ,/*	A B C	if ((RK(B) == RK(C)) ~= A) then pc++		*/
 OP_LT,/*	A B C	if ((RK(B) <  RK(C)) ~= A) then pc++  		*/
 OP_LE,/*	A B C	if ((RK(B) <= RK(C)) ~= A) then pc++  		*/
 
-OP_TEST,/*	A B C	if (R(B) <=> C) then R(A) := R(B) else pc++	*/ 
+OP_TEST,/*	A C	if not (R(A) <=> C) then pc++			*/ 
+OP_TESTSET,/*	A B C	if (R(B) <=> C) then R(A) := R(B) else pc++	*/ 
 
 OP_CALL,/*	A B C	R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1)) */
 OP_TAILCALL,/*	A B C	return R(A)(R(A+1), ... ,R(A+B-1))		*/
 OP_RETURN,/*	A B	return R(A), ... ,R(A+B-2)	(see note)	*/
 
-OP_FORLOOP,/*	A sBx	R(A)+=R(A+2); if R(A) <?= R(A+1) then PC+= sBx	*/
+OP_FORLOOP,/*	A sBx	R(A)+=R(A+2);
+			if R(A) <?= R(A+1) then { pc+=sBx; R(A+3)=R(A) }*/
+OP_FORPREP,/*	A sBx	R(A)-=R(A+2); pc+=sBx				*/
 
-OP_TFORLOOP,/*	A C	R(A+2), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2)); 
-                        if R(A+2) ~= nil then pc++			*/
-OP_TFORPREP,/*	A sBx	if type(R(A)) == table then R(A+1):=R(A), R(A):=next;
-			PC += sBx					*/
-
-OP_SETLIST,/*	A Bx	R(A)[Bx-Bx%FPF+i] := R(A+i), 1 <= i <= Bx%FPF+1	*/
-OP_SETLISTO,/*	A Bx							*/
+OP_TFORLOOP,/*	A C	R(A+3), ... ,R(A+3+C) := R(A)(R(A+1), R(A+2)); 
+                        if R(A+3) ~= nil then { pc++; R(A+2)=R(A+3); }	*/ 
+OP_SETLIST,/*	A B C	R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B	*/
 
 OP_CLOSE,/*	A 	close all variables in the stack up to (>=) R(A)*/
-OP_CLOSURE/*	A Bx	R(A) := closure(KPROTO[Bx], R(A), ... ,R(A+n))	*/
+OP_CLOSURE,/*	A Bx	R(A) := closure(KPROTO[Bx], R(A), ... ,R(A+n))	*/
+
+OP_VARARG/*	A B	R(A), R(A+1), ..., R(A+B-1) = vararg		*/
 } OpCode;
 
 
-#define NUM_OPCODES	(cast(int, OP_CLOSURE+1))
+#define NUM_OPCODES	(cast(int, OP_VARARG) + 1)
 
 
 
 /*===========================================================================
   Notes:
-  (1) In OP_CALL, if (B == 0) then B = top. C is the number of returns - 1,
+  (*) In OP_CALL, if (B == 0) then B = top. C is the number of returns - 1,
       and can be 0: OP_CALL then sets `top' to last_result+1, so
       next open instruction (OP_CALL, OP_RETURN, OP_SETLIST) may use `top'.
 
-  (2) In OP_RETURN, if (B == 0) then return up to `top'
+  (*) In OP_VARARG, if (B == 0) then use actual number of varargs and
+      set top (like in OP_CALL with C == 0).
 
-  (3) For comparisons, B specifies what conditions the test should accept.
+  (*) In OP_RETURN, if (B == 0) then return up to `top'
 
-  (4) All `skips' (pc++) assume that next instruction is a jump
+  (*) In OP_SETLIST, if (B == 0) then B = `top';
+      if (C == 0) then next `instruction' is real C
+
+  (*) For comparisons, A specifies what condition the test should accept
+      (true or false).
+
+  (*) All `skips' (pc++) assume that next instruction is a jump
 ===========================================================================*/
 
 
 /*
-** masks for instruction properties
+** masks for instruction properties. The format is:
+** bits 0-1: op mode
+** bits 2-3: C arg mode
+** bits 4-5: B arg mode
+** bit 6: instruction set register A
+** bit 7: operator is a test
 */  
-enum OpModeMask {
-  OpModeBreg = 2,       /* B is a register */
-  OpModeBrk,		/* B is a register/constant */
-  OpModeCrk,           /* C is a register/constant */
-  OpModesetA,           /* instruction set register A */
-  OpModeK,              /* Bx is a constant */
-  OpModeT		/* operator is a test */
-  
+
+enum OpArgMask {
+  OpArgN,  /* argument is not used */
+  OpArgU,  /* argument is used */
+  OpArgR,  /* argument is a register or a jump offset */
+  OpArgK   /* argument is a constant or register/constant */
 };
 
+LUAI_DATA const lu_byte luaP_opmodes[NUM_OPCODES];
 
-extern const lu_byte luaP_opmodes[NUM_OPCODES];
+#define getOpMode(m)	(cast(enum OpMode, luaP_opmodes[m] & 3))
+#define getBMode(m)	(cast(enum OpArgMask, (luaP_opmodes[m] >> 4) & 3))
+#define getCMode(m)	(cast(enum OpArgMask, (luaP_opmodes[m] >> 2) & 3))
+#define testAMode(m)	(luaP_opmodes[m] & (1 << 6))
+#define testTMode(m)	(luaP_opmodes[m] & (1 << 7))
 
-#define getOpMode(m)            (cast(enum OpMode, luaP_opmodes[m] & 3))
-#define testOpMode(m, b)        (luaP_opmodes[m] & (1 << (b)))
 
-
-#ifdef LUA_OPNAMES
-extern const char *const luaP_opnames[];  /* opcode names */
-#endif
-
+LUAI_DATA const char *const luaP_opnames[NUM_OPCODES+1];  /* opcode names */
 
 
 /* number of list items to accumulate before a SETLIST instruction */
-/* (must be a power of 2) */
-#define LFIELDS_PER_FLUSH	32
+#define LFIELDS_PER_FLUSH	50
 
 
 #endif

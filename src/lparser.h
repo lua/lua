@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.47 2003/02/11 10:46:24 roberto Exp $
+** $Id: lparser.h,v 1.56 2005/10/03 14:02:40 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -23,6 +23,7 @@ typedef enum {
   VTRUE,
   VFALSE,
   VK,		/* info = index of constant in `k' */
+  VKNUM,	/* nval = numerical value */
   VLOCAL,	/* info = local register */
   VUPVAL,       /* info = index of upvalue in `upvalues' */
   VGLOBAL,	/* info = index of table; aux = index of global name in `k' */
@@ -30,15 +31,25 @@ typedef enum {
   VJMP,		/* info = instruction pc */
   VRELOCABLE,	/* info = instruction pc */
   VNONRELOC,	/* info = result register */
-  VCALL		/* info = result register */
+  VCALL,	/* info = instruction pc */
+  VVARARG	/* info = instruction pc */
 } expkind;
 
 typedef struct expdesc {
   expkind k;
-  int info, aux;
+  union {
+    struct { int info, aux; } s;
+    lua_Number nval;
+  } u;
   int t;  /* patch list of `exit when true' */
   int f;  /* patch list of `exit when false' */
 } expdesc;
+
+
+typedef struct upvaldesc {
+  lu_byte k;
+  lu_byte info;
+} upvaldesc;
 
 
 struct BlockCnt;  /* defined in lparser.c */
@@ -58,14 +69,15 @@ typedef struct FuncState {
   int freereg;  /* first free register */
   int nk;  /* number of elements in `k' */
   int np;  /* number of elements in `p' */
-  int nlocvars;  /* number of elements in `locvars' */
-  int nactvar;  /* number of active local variables */
-  expdesc upvalues[MAXUPVALUES];  /* upvalues */
-  int actvar[MAXVARS];  /* declared-variable stack */
+  short nlocvars;  /* number of elements in `locvars' */
+  lu_byte nactvar;  /* number of active local variables */
+  upvaldesc upvalues[LUAI_MAXUPVALUES];  /* upvalues */
+  unsigned short actvar[LUAI_MAXVARS];  /* declared-variable stack */
 } FuncState;
 
 
-Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff);
+LUAI_FUNC Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
+                                            const char *name);
 
 
 #endif

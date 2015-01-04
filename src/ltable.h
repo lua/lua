@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.h,v 1.44 2003/03/18 12:50:04 roberto Exp $
+** $Id: ltable.h,v 2.10 2006/01/10 13:13:06 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -11,21 +11,30 @@
 
 
 #define gnode(t,i)	(&(t)->node[i])
-#define gkey(n)		(&(n)->i_key)
+#define gkey(n)		(&(n)->i_key.nk)
 #define gval(n)		(&(n)->i_val)
+#define gnext(n)	((n)->i_key.nk.next)
+
+#define key2tval(n)	(&(n)->i_key.tvk)
 
 
-const TObject *luaH_getnum (Table *t, int key);
-TObject *luaH_setnum (lua_State *L, Table *t, int key);
-const TObject *luaH_getstr (Table *t, TString *key);
-const TObject *luaH_get (Table *t, const TObject *key);
-TObject *luaH_set (lua_State *L, Table *t, const TObject *key);
-Table *luaH_new (lua_State *L, int narray, int lnhash);
-void luaH_free (lua_State *L, Table *t);
-int luaH_next (lua_State *L, Table *t, StkId key);
+LUAI_FUNC const TValue *luaH_getnum (Table *t, int key);
+LUAI_FUNC TValue *luaH_setnum (lua_State *L, Table *t, int key);
+LUAI_FUNC const TValue *luaH_getstr (Table *t, TString *key);
+LUAI_FUNC TValue *luaH_setstr (lua_State *L, Table *t, TString *key);
+LUAI_FUNC const TValue *luaH_get (Table *t, const TValue *key);
+LUAI_FUNC TValue *luaH_set (lua_State *L, Table *t, const TValue *key);
+LUAI_FUNC Table *luaH_new (lua_State *L, int narray, int lnhash);
+LUAI_FUNC void luaH_resizearray (lua_State *L, Table *t, int nasize);
+LUAI_FUNC void luaH_free (lua_State *L, Table *t);
+LUAI_FUNC int luaH_next (lua_State *L, Table *t, StkId key);
+LUAI_FUNC int luaH_getn (Table *t);
 
-/* exported only for debugging */
-Node *luaH_mainposition (const Table *t, const TObject *key);
+
+#if defined(LUA_DEBUG)
+LUAI_FUNC Node *luaH_mainposition (const Table *t, const TValue *key);
+LUAI_FUNC int luaH_isdummy (Node *n);
+#endif
 
 
 #endif
