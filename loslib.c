@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.53 2014/12/10 15:42:42 roberto Exp roberto $
+** $Id: loslib.c,v 1.54 2014/12/26 14:46:07 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -287,7 +287,7 @@ static int os_time (lua_State *L) {
     t = mktime(&ts);
   }
   if (t != (time_t)(l_timet)t)
-    luaL_error(L, "time result cannot be represented in this Lua instalation");
+    luaL_error(L, "time result cannot be represented in this Lua installation");
   else if (t == (time_t)(-1))
     lua_pushnil(L);
   else
