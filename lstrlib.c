@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.220 2014/12/11 13:40:40 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.221 2014/12/11 14:03:07 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -797,8 +797,15 @@ static int str_gsub (lua_State *L) {
 ** =======================================================
 */
 
-/* maximum size of each formatted item (> len(format('%99.99f', -1e308))) */
-#define MAX_ITEM	512
+/*
+** Maximum size of each formatted item. This maximum size is produced
+** by format('%.99f', minfloat), and is equal to 99 + 2 ('-' and '.') +
+** number of decimal digits to represent minfloat (which is ~308 for
+** a double and ~4932 for long double).
+*/
+#define MAX_ITEM  \
+  (sizeof(lua_Number) <= 4 ? 150 : sizeof(lua_Number) <= 8 ? 450 : 5050)
+
 
 /* valid flags in a format specification */
 #define FLAGS	"-+ #0"
@@ -921,13 +928,12 @@ static int str_format (lua_State *L) {
             /* no precision and string is too long to be formatted;
                keep original string */
             luaL_addvalue(&b);
-            break;
           }
           else {
             nb = sprintf(buff, form, s);
             lua_pop(L, 1);  /* remove result from 'luaL_tolstring' */
-            break;
           }
+          break;
         }
         default: {  /* also treat cases 'pnLlh' */
           return luaL_error(L, "invalid option '%%%c' to 'format'",
