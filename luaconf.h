@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.237 2014/12/26 14:44:44 roberto Exp roberto $
+** $Id: luaconf.h,v 1.238 2014/12/29 13:27:55 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -702,9 +702,16 @@
 
 /*
 @@ LUAL_BUFFERSIZE is the buffer size used by the lauxlib buffer system.
-** CHANGE it if it uses too much C-stack space.
+** CHANGE it if it uses too much C-stack space. (For long double,
+** 'string.format("%.99f", 1e4932)' needs ~5030 bytes, so a
+** smaller buffer would force a memory allocation for each call to
+** 'string.format'.)
 */
-#define LUAL_BUFFERSIZE	((int)(0x80 * sizeof(void*) * sizeof(lua_Integer)))
+#if defined(LUA_REAL_LONGDOUBLE)
+#define LUAL_BUFFERSIZE		8192
+#else
+#define LUAL_BUFFERSIZE		(256 * (int)sizeof(lua_Integer))
+#endif
 
 /* }================================================================== */
 
