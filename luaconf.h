@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.238 2014/12/29 13:27:55 roberto Exp roberto $
+** $Id: luaconf.h,v 1.239 2015/01/13 17:24:22 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -670,9 +670,6 @@
 #else
 #define LUAI_MAXSTACK		15000
 #endif
-
-/* reserve some space for error handling */
-#define LUAI_FIRSTPSEUDOIDX	(-LUAI_MAXSTACK - 1000)
 
 
 /*

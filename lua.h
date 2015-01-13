@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.324 2014/12/08 15:12:07 roberto Exp roberto $
+** $Id: lua.h,v 1.325 2014/12/26 17:24:27 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -35,9 +35,11 @@
 
 
 /*
-** pseudo-indices
+** Pseudo-indices
+** (-LUAI_MAXSTACK is the minimum valid index; we keep some free empty
+** space after that to help overflow detection)
 */
-#define LUA_REGISTRYINDEX	LUAI_FIRSTPSEUDOIDX
+#define LUA_REGISTRYINDEX	(-LUAI_MAXSTACK - 1000)
 #define lua_upvalueindex(i)	(LUA_REGISTRYINDEX - (i))
 
 
