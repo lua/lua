@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.h,v 2.13 2014/02/18 13:39:37 roberto Exp roberto $
+** $Id: lfunc.h,v 2.14 2014/06/19 18:27:20 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -20,6 +20,13 @@
 
 /* test whether thread is in 'twups' list */
 #define isintwups(L)	(L->twups != L)
+
+
+/*
+** maximum number of upvalues in a closure (both C and Lua). (Value
+** must fit in a VM register.)
+*/
+#define MAXUPVAL	255
 
 
 /*
