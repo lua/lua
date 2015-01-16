@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.126 2015/01/13 15:49:11 roberto Exp roberto $
+** $Id: llimits.h,v 1.127 2015/01/16 13:26:55 roberto Exp roberto $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -166,9 +166,14 @@ typedef unsigned long Instruction;
 
 
 
-/* minimum size for the string table (must be power of 2) */
+/*
+** Initial size for the string table (must be power of 2).
+** The Lua core alone registers ~50 strings (reserved words +
+** metaevent keys + a few others). Libraries would typically add
+** a few dozens more.
+*/
 #if !defined(MINSTRTABSIZE)
-#define MINSTRTABSIZE	64	/* minimum size for "predefined" strings */
+#define MINSTRTABSIZE	128
 #endif
 
 
