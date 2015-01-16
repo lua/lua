@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.125 2014/12/19 13:30:23 roberto Exp roberto $
+** $Id: llimits.h,v 1.126 2015/01/13 15:49:11 roberto Exp roberto $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -99,11 +99,13 @@ typedef LUAI_UACINT l_uacInt;
 #define api_check(e,msg)	luai_apicheck((e) && msg)
 
 
+/* macro to avoid warnings about unused variables */
 #if !defined(UNUSED)
-#define UNUSED(x)	((void)(x))	/* to avoid warnings */
+#define UNUSED(x)	((void)(x))
 #endif
 
 
+/* type casts (a macro highlights casts in the code) */
 #define cast(t, exp)	((t)(exp))
 
 #define cast_void(i)	cast(void, (i))
@@ -176,11 +178,19 @@ typedef unsigned long Instruction;
 #endif
 
 
+/*
+** macros that are executed whenether program enters the Lua core
+** ('lua_lock') and leaves the core ('lua_unlock')
+*/
 #if !defined(lua_lock)
 #define lua_lock(L)	((void) 0)
 #define lua_unlock(L)	((void) 0)
 #endif
 
+/*
+** macro executed during Lua functions at points where the
+** function can yield.
+*/
 #if !defined(luai_threadyield)
 #define luai_threadyield(L)	{lua_unlock(L); lua_lock(L);}
 #endif
