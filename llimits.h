@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.127 2015/01/16 13:26:55 roberto Exp roberto $
+** $Id: llimits.h,v 1.128 2015/01/16 15:41:03 roberto Exp roberto $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -164,6 +164,16 @@ typedef unsigned long Instruction;
 #endif
 
 
+
+/*
+** Maximum length for short strings, that is, strings that are
+** internalized. (Cannot be smaller than reserved words or tags for
+** metamethods, as these strings must be internalized;
+** #("function") = 8, #("__newindex") = 10.)
+*/
+#if !defined(LUAI_MAXSHORTLEN)
+#define LUAI_MAXSHORTLEN	40
+#endif
 
 
 /*
