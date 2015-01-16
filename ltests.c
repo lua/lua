@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.200 2014/12/10 11:30:51 roberto Exp roberto $
+** $Id: ltests.c,v 2.201 2014/12/18 12:13:42 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -724,7 +724,7 @@ static int string_query (lua_State *L) {
   else if (s < tb->size) {
     TString *ts;
     int n = 0;
-    for (ts = tb->hash[s]; ts != NULL; ts = ts->hnext) {
+    for (ts = tb->hash[s]; ts != NULL; ts = ts->u.hnext) {
       setsvalue2s(L, L->top, ts);
       api_incr_top(L);
       n++;

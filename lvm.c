@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.231 2014/12/19 13:36:32 roberto Exp roberto $
+** $Id: lvm.c,v 2.232 2014/12/27 20:30:38 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -73,7 +73,7 @@ int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
     return 1;
   }
   else if (cvt2num(obj) &&  /* string convertible to number? */
-            luaO_str2num(svalue(obj), &v) == tsvalue(obj)->len + 1) {
+            luaO_str2num(svalue(obj), &v) == vslen(obj) + 1) {
     *n = nvalue(&v);  /* convert result of 'luaO_str2num' to a float */
     return 1;
   }
@@ -106,7 +106,7 @@ static int tointeger_aux (const TValue *obj, lua_Integer *p, int mode) {
     return 1;
   }
   else if (cvt2num(obj) &&
-            luaO_str2num(svalue(obj), &v) == tsvalue(obj)->len + 1) {
+            luaO_str2num(svalue(obj), &v) == vslen(obj) + 1) {
     obj = &v;
     goto again;  /* convert result from 'luaO_str2num' to an integer */
   }
@@ -239,9 +239,9 @@ void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
 */
 static int l_strcmp (const TString *ls, const TString *rs) {
   const char *l = getstr(ls);
-  size_t ll = ls->len;
+  size_t ll = tsslen(ls);
   const char *r = getstr(rs);
-  size_t lr = rs->len;
+  size_t lr = tsslen(rs);
   for (;;) {  /* for each segment */
     int temp = strcoll(l, r);
     if (temp != 0)  /* not equal? */
@@ -354,6 +354,8 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
 #define tostring(L,o)  \
 	(ttisstring(o) || (cvt2str(o) && (luaO_tostring(L, o), 1)))
 
+#define isemptystr(o)	(ttisshrstring(o) && tsvalue(o)->shrlen == 0)
+
 /*
 ** Main operation for concatenation: concat 'total' values in the stack,
 ** from 'L->top - total' up to 'L->top - 1'.
@@ -365,19 +367,19 @@ void luaV_concat (lua_State *L, int total) {
     int n = 2;  /* number of elements handled in this pass (at least 2) */
     if (!(ttisstring(top-2) || cvt2str(top-2)) || !tostring(L, top-1))
       luaT_trybinTM(L, top-2, top-1, top-2, TM_CONCAT);
-    else if (tsvalue(top-1)->len == 0)  /* second operand is empty? */
+    else if (isemptystr(top - 1))  /* second operand is empty? */
       cast_void(tostring(L, top - 2));  /* result is first operand */
-    else if (ttisstring(top-2) && tsvalue(top-2)->len == 0) {
+    else if (isemptystr(top - 2)) {  /* first operand is an empty string? */
       setobjs2s(L, top - 2, top - 1);  /* result is second op. */
     }
     else {
       /* at least two non-empty string values; get as many as possible */
-      size_t tl = tsvalue(top-1)->len;
+      size_t tl = vslen(top - 1);
       char *buffer;
       int i;
       /* collect total length */
       for (i = 1; i < total && tostring(L, top-i-1); i++) {
-        size_t l = tsvalue(top-i-1)->len;
+        size_t l = vslen(top - i - 1);
         if (l >= (MAX_SIZE/sizeof(char)) - tl)
           luaG_runerror(L, "string length overflow");
         tl += l;
@@ -386,7 +388,7 @@ void luaV_concat (lua_State *L, int total) {
       tl = 0;
       n = i;
       do {  /* copy all strings to buffer */
-        size_t l = tsvalue(top-i)->len;
+        size_t l = vslen(top - i);
         memcpy(buffer+tl, svalue(top-i), l * sizeof(char));
         tl += l;
       } while (--i > 0);
@@ -403,7 +405,7 @@ void luaV_concat (lua_State *L, int total) {
 */
 void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
   const TValue *tm;
-  switch (ttnov(rb)) {
+  switch (ttype(rb)) {
     case LUA_TTABLE: {
       Table *h = hvalue(rb);
       tm = fasttm(L, h->metatable, TM_LEN);
@@ -411,8 +413,12 @@ void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
       setivalue(ra, luaH_getn(h));  /* else primitive len */
       return;
     }
-    case LUA_TSTRING: {
-      setivalue(ra, tsvalue(rb)->len);
+    case LUA_TSHRSTR: {
+      setivalue(ra, tsvalue(rb)->shrlen);
+      return;
+    }
+    case LUA_TLNGSTR: {
+      setivalue(ra, tsvalue(rb)->u.lnglen);
       return;
     }
     default: {  /* try metamethod */

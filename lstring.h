@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.54 2014/03/19 18:51:42 roberto Exp roberto $
+** $Id: lstring.h,v 1.56 2014/07/18 14:46:47 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -13,7 +13,6 @@
 
 
 #define sizelstring(l)  (sizeof(union UTString) + ((l) + 1) * sizeof(char))
-#define sizestring(s)	sizelstring((s)->len)
 
 #define sizeludata(l)	(sizeof(union UUdata) + (l))
 #define sizeudata(u)	sizeludata((u)->len)

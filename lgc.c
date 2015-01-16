@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.200 2014/11/02 19:19:04 roberto Exp roberto $
+** $Id: lgc.c,v 2.201 2014/12/20 13:58:15 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -226,10 +226,14 @@ static void reallymarkobject (global_State *g, GCObject *o) {
  reentry:
   white2gray(o);
   switch (o->tt) {
-    case LUA_TSHRSTR:
+    case LUA_TSHRSTR: {
+      gray2black(o);
+      g->GCmemtrav += sizelstring(gco2ts(o)->shrlen);
+      break;
+    }
     case LUA_TLNGSTR: {
       gray2black(o);
-      g->GCmemtrav += sizestring(gco2ts(o));
+      g->GCmemtrav += sizelstring(gco2ts(o)->u.lnglen);
       break;
     }
     case LUA_TUSERDATA: {
@@ -689,9 +693,10 @@ static void freeobj (lua_State *L, GCObject *o) {
     case LUA_TUSERDATA: luaM_freemem(L, o, sizeudata(gco2u(o))); break;
     case LUA_TSHRSTR:
       luaS_remove(L, gco2ts(o));  /* remove it from hash table */
-      /* go through */
+      luaM_freemem(L, o, sizelstring(gco2ts(o)->shrlen));
+      break;
     case LUA_TLNGSTR: {
-      luaM_freemem(L, o, sizestring(gco2ts(o)));
+      luaM_freemem(L, o, sizelstring(gco2ts(o)->u.lnglen));
       break;
     }
     default: lua_assert(0);

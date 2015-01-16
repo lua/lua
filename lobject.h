@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.105 2014/12/19 13:36:32 roberto Exp roberto $
+** $Id: lobject.h,v 2.106 2015/01/05 13:52:37 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -303,9 +303,12 @@ typedef TValue *StkId;  /* index to stack elements */
 typedef struct TString {
   CommonHeader;
   lu_byte extra;  /* reserved words for short strings; "has hash" for longs */
+  lu_byte shrlen;  /* length for short strings */
   unsigned int hash;
-  size_t len;  /* number of characters in string */
-  struct TString *hnext;  /* linked list for hash table */
+  union {
+    size_t lnglen;  /* length for long strings */
+    struct TString *hnext;  /* linked list for hash table */
+  } u;
 } TString;
 
 
@@ -328,6 +331,12 @@ typedef union UTString {
 
 /* get the actual string (array of bytes) from a Lua value */
 #define svalue(o)       getstr(tsvalue(o))
+
+/* get string length from 'TString *s' */
+#define tsslen(s)	((s)->tt == LUA_TSHRSTR ? (s)->shrlen : (s)->u.lnglen)
+
+/* get string length from 'TValue *o' */
+#define vslen(o)	tsslen(tsvalue(o))
 
 
 /*
