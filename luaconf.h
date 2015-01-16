@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.240 2015/01/13 19:50:30 roberto Exp roberto $
+** $Id: luaconf.h,v 1.241 2015/01/16 17:15:52 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -698,7 +698,8 @@
 #if defined(LUA_REAL_LONGDOUBLE)
 #define LUAL_BUFFERSIZE		8192
 #else
-#define LUAL_BUFFERSIZE		(256 * (int)sizeof(lua_Integer))
+#define LUAL_BUFFERSIZE   ((int)(0x80 * sizeof(void*) * sizeof(lua_Integer)))
+
 #endif
 
 /* }================================================================== */
