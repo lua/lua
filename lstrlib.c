@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.223 2015/02/04 12:52:57 roberto Exp $
+** $Id: lstrlib.c,v 1.222 2015/01/13 17:18:25 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -892,9 +892,8 @@ static int lua_number2strx (lua_State *L, char *buff, const char *fmt,
 
 /*
 ** maximum size of each format specification (such as "%-099.99d")
-** (+2 for length modifiers; +10 accounts for %99.99x plus margin of error)
 */
-#define MAX_FORMAT	(sizeof(FLAGS) + 2 + 10)
+#define MAX_FORMAT	32
 
 
 static void addquoted (lua_State *L, luaL_Buffer *b, int arg) {
