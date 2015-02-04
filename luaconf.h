@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.241 2015/01/16 17:15:52 roberto Exp roberto $
+** $Id: luaconf.h,v 1.242 2015/01/16 17:26:56 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -598,7 +598,7 @@
 
 /*
 @@ lua_strx2number converts an hexadecimal numeric string to a number.
-** In C99, 'strtod' does both conversions. Otherwise, you can
+** In C99, 'strtod' does that conversion. Otherwise, you can
 ** leave 'lua_strx2number' undefined and Lua will provide its own
 ** implementation.
 */
@@ -608,12 +608,13 @@
 
 
 /*
-@@ LUA_USE_AFORMAT allows '%a'/'%A' specifiers in 'string.format'
-** Enable it if the C function 'printf' supports these specifiers.
-** (C99 demands it and Windows also supports it.)
+@@ lua_number2strx converts a float to an hexadecimal numeric string. 
+** In C99, 'sprintf' (with format specifiers '%a'/'%A') does that.
+** Otherwise, you can leave 'lua_number2strx' undefined and Lua will
+** provide its own implementation.
 */
-#if !defined(LUA_USE_C89) || defined(LUA_USE_WINDOWS)
-#define LUA_USE_AFORMAT
+#if !defined(LUA_USE_C89)
+#define lua_number2strx(L,b,f,n)	sprintf(b,f,n)
 #endif
 
 
@@ -699,7 +700,6 @@
 #define LUAL_BUFFERSIZE		8192
 #else
 #define LUAL_BUFFERSIZE   ((int)(0x80 * sizeof(void*) * sizeof(lua_Integer)))
-
 #endif
 
 /* }================================================================== */

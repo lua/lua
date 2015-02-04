@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.221 2014/12/11 14:03:07 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.223 2015/02/04 12:52:57 roberto Exp $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -797,6 +797,86 @@ static int str_gsub (lua_State *L) {
 ** =======================================================
 */
 
+#if !defined(lua_number2strx)	/* { */
+
+/*
+** Hexadecimal floating-point formatter
+*/
+
+#include <math.h>
+
+#define SIZELENMOD	(sizeof(LUA_NUMBER_FRMLEN)/sizeof(char))
+
+
+/*
+** Number of bits that goes into the first digit. It can be any value
+** between 1 and 4; the following definition tries to align the number
+** to nibble boundaries. The default is 1 bit, that aligns double
+** (1+52-bit mantissa) and quad precision (1+112-bit mantissa). For
+** float (24-bit mantissa) and 80-bit long double (64-bit mantissa), 4
+** does the alignment.
+*/
+#define L_NBFD	((sizeof(lua_Number) == 4 || sizeof(lua_Number) == 12) ? 4 : 1)
+
+
+/*
+** Add integer part of 'x' to buffer and return new 'x'
+*/
+static lua_Number adddigit (char *buff, int n, lua_Number x) {
+  double dd = l_mathop(floor)(x);  /* get integer part from 'x' */
+  int d = (int)dd;
+  buff[n] = (d < 10 ? d + '0' : d - 10 + 'a');  /* add to buffer */
+  return x - dd;  /* return what is left */
+}
+
+
+static int num2straux (char *buff, lua_Number x) {
+  if (x != x || x == HUGE_VAL || x == -HUGE_VAL)  /* inf or NaN? */
+    return sprintf(buff, LUA_NUMBER_FMT, x);  /* equal to '%g' */
+  else if (x == 0) {  /* can be -0... */
+    sprintf(buff, LUA_NUMBER_FMT, x);
+    strcpy(buff + (buff[0] == '-' ? 1 : 0), "0x0p+0");
+    return strlen(buff);
+  }
+  else {
+    int e;
+    lua_Number m = l_mathop(frexp)(x, &e);  /* 'x' fraction and exponent */
+    int n = 0;  /* character count */
+    if (m < 0) {  /* is number negative? */
+      buff[n++] = '-';  /* add signal */
+      m = -m;  /* make it positive */
+    }
+    buff[n++] = '0'; buff[n++] = 'x';  /* add "0x" */
+    m = adddigit(buff, n++, m * (1 << L_NBFD));  /* add first digit */
+    e -= L_NBFD;  /* this digit goes before the radix point */
+    if (m > 0) {  /* more digits? */
+      buff[n++] = '.';  /* add radix point */
+      do {  /* add as many digits as needed */
+        m = adddigit(buff, n++, m * 16);
+      } while (m > 0);
+    }
+    n += sprintf(buff + n, "p%+d", e);  /* add exponent */
+    return n;
+  }
+}
+
+
+static int lua_number2strx (lua_State *L, char *buff, const char *fmt,
+                            lua_Number x) {
+  int n = num2straux(buff, x);
+  if (fmt[SIZELENMOD] == 'A') {
+    int i;
+    for (i = 0; i < n; i++)
+      buff[i] = toupper(uchar(buff[i]));
+  }
+  else if (fmt[SIZELENMOD] != 'a')
+    luaL_error(L, "modifiers for format '%%a'/'%%A' not implemented");
+  return n;
+}
+
+#endif				/* } */
+
+
 /*
 ** Maximum size of each formatted item. This maximum size is produced
 ** by format('%.99f', minfloat), and is equal to 99 + 2 ('-' and '.') +
@@ -908,9 +988,10 @@ static int str_format (lua_State *L) {
           nb = sprintf(buff, form, n);
           break;
         }
-#if defined(LUA_USE_AFORMAT)
         case 'a': case 'A':
-#endif
+          addlenmod(form, LUA_NUMBER_FRMLEN);
+          nb = lua_number2strx(L, buff, form, luaL_checknumber(L, arg));
+          break;
         case 'e': case 'E': case 'f':
         case 'g': case 'G': {
           addlenmod(form, LUA_NUMBER_FRMLEN);
