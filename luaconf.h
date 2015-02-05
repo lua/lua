@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.243 2015/02/04 12:52:57 roberto Exp roberto $
+** $Id: luaconf.h,v 1.244 2015/02/05 16:53:34 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -465,46 +465,6 @@
    (n) < -(LUA_NUMBER)(LUA_MININTEGER) && \
       (*(p) = (LUA_INTEGER)(n), 1))
 
-
-/*
-@@ The luai_num* macros define the primitive operations over numbers.
-** They should work for any size of floating numbers.
-*/
-
-/* the following operations need the math library */
-#if defined(lobject_c) || defined(lvm_c)
-#include <math.h>
-
-/* floor division (defined as 'floor(a/b)') */
-#define luai_numidiv(L,a,b)	((void)L, l_mathop(floor)(luai_numdiv(L,a,b)))
-
-/*
-** module: defined as 'a - floor(a/b)*b'; the previous definition gives
-** NaN when 'b' is huge, but the result should be 'a'. 'fmod' gives the
-** result of 'a - trunc(a/b)*b', and therefore must be corrected when
-** 'trunc(a/b) ~= floor(a/b)'. That happens when the division has a
-** non-integer negative result, which is equivalent to the test below
-*/
-#define luai_nummod(L,a,b,m)  \
-  { (m) = l_mathop(fmod)(a,b); if ((m)*(b) < 0) (m) += (b); }
-
-/* exponentiation */
-#define luai_numpow(L,a,b)	((void)L, l_mathop(pow)(a,b))
-
-#endif
-
-/* these are quite standard operations */
-#if defined(LUA_CORE)
-#define luai_numadd(L,a,b)	((a)+(b))
-#define luai_numsub(L,a,b)	((a)-(b))
-#define luai_nummul(L,a,b)	((a)*(b))
-#define luai_numdiv(L,a,b)	((a)/(b))
-#define luai_numunm(L,a)	(-(a))
-#define luai_numeq(a,b)		((a)==(b))
-#define luai_numlt(a,b)		((a)<(b))
-#define luai_numle(a,b)		((a)<=(b))
-#define luai_numisnan(a)	(!luai_numeq((a), (a)))
-#endif
 
 
 /*

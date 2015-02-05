@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.100 2014/11/21 12:15:57 roberto Exp roberto $
+** $Id: lobject.c,v 2.101 2014/12/26 14:43:45 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -10,6 +10,7 @@
 #include "lprefix.h"
 
 
+#include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -173,8 +174,6 @@ static int isneg (const char **s) {
 ** ===================================================================
 */
 #if !defined(lua_strx2number)
-
-#include <math.h>
 
 /* maximum number of significant digits to read (to avoid overflows
    even with single floats) */

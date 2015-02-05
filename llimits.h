@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.128 2015/01/16 15:41:03 roberto Exp roberto $
+** $Id: llimits.h,v 1.129 2015/01/16 17:15:52 roberto Exp roberto $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -239,6 +239,53 @@ typedef unsigned long Instruction;
 #if !defined(luai_userstateyield)
 #define luai_userstateyield(L,n)	((void)L)
 #endif
+
+
+
+/*
+** The luai_num* macros define the primitive operations over numbers.
+*/
+
+/* floor division (defined as 'floor(a/b)') */
+#if !defined(luai_numidiv)
+#define luai_numidiv(L,a,b)     ((void)L, l_mathop(floor)(luai_numdiv(L,a,b)))
+#endif
+
+/* float division */
+#if !defined(luai_numdiv)
+#define luai_numdiv(L,a,b)      ((a)/(b))
+#endif
+
+/*
+** module: defined as 'a - floor(a/b)*b'; the previous definition gives
+** NaN when 'b' is huge, but the result should be 'a'. 'fmod' gives the
+** result of 'a - trunc(a/b)*b', and therefore must be corrected when
+** 'trunc(a/b) ~= floor(a/b)'. That happens when the division has a
+** non-integer negative result, which is equivalent to the test below
+*/
+#if !defined(luai_nummod)
+#define luai_nummod(L,a,b,m)  \
+  { (m) = l_mathop(fmod)(a,b); if ((m)*(b) < 0) (m) += (b); }
+#endif
+
+/* exponentiation */
+#if !defined(luai_numpow)
+#define luai_numpow(L,a,b)      ((void)L, l_mathop(pow)(a,b))
+#endif
+
+/* the others are quite standard operations */
+#if !defined(luai_numadd)
+#define luai_numadd(L,a,b)      ((a)+(b))
+#define luai_numsub(L,a,b)      ((a)-(b))
+#define luai_nummul(L,a,b)      ((a)*(b))
+#define luai_numunm(L,a)        (-(a))
+#define luai_numeq(a,b)         ((a)==(b))
+#define luai_numlt(a,b)         ((a)<(b))
+#define luai_numle(a,b)         ((a)<=(b))
+#define luai_numisnan(a)        (!luai_numeq((a), (a)))
+#endif
+
+
 
 
 
