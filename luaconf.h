@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.242 2015/01/16 17:26:56 roberto Exp roberto $
+** $Id: luaconf.h,v 1.243 2015/02/04 12:52:57 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -648,6 +648,24 @@
 #define LUA_KCONTEXT	intptr_t
 #endif
 #endif
+
+/* }================================================================== */
+
+
+/*
+** {==================================================================
+** Language Variations
+** =====================================================================
+*/
+
+/*
+@@ LUA_NOCVTN2S/LUA_NOCVTS2N control how Lua performs some
+** coercions. Define LUA_NOCVTN2S to turn off automatic coercion from
+** numbers to strings. Define LUA_NOCVTS2N to turn off automatic
+** coercion from strings to numbers.
+*/
+/* #define LUA_NOCVTN2S */
+/* #define LUA_NOCVTS2N */
 
 /* }================================================================== */
 
