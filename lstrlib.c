@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.222 2015/01/13 17:18:25 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.224 2015/02/04 12:54:31 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -835,7 +835,7 @@ static int num2straux (char *buff, lua_Number x) {
     return sprintf(buff, LUA_NUMBER_FMT, x);  /* equal to '%g' */
   else if (x == 0) {  /* can be -0... */
     sprintf(buff, LUA_NUMBER_FMT, x);
-    strcpy(buff + (buff[0] == '-' ? 1 : 0), "0x0p+0");
+    strcat(buff, "x0p+0");  /* reuses '0/-0' from 'sprintf'... */
     return strlen(buff);
   }
   else {
