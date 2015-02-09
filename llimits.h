@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.129 2015/01/16 17:15:52 roberto Exp roberto $
+** $Id: llimits.h,v 1.130 2015/02/05 17:15:33 roberto Exp roberto $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -248,7 +248,7 @@ typedef unsigned long Instruction;
 
 /* floor division (defined as 'floor(a/b)') */
 #if !defined(luai_numidiv)
-#define luai_numidiv(L,a,b)     ((void)L, l_mathop(floor)(luai_numdiv(L,a,b)))
+#define luai_numidiv(L,a,b)     ((void)L, l_floor(luai_numdiv(L,a,b)))
 #endif
 
 /* float division */
