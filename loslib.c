@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.54 2014/12/26 14:46:07 roberto Exp roberto $
+** $Id: loslib.c,v 1.55 2015/01/12 19:32:32 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -297,8 +297,9 @@ static int os_time (lua_State *L) {
 
 
 static int os_difftime (lua_State *L) {
-  double res = difftime((l_checktime(L, 1)), (l_checktime(L, 2)));
-  lua_pushnumber(L, (lua_Number)res);
+  time_t t1 = l_checktime(L, 1);
+  time_t t2 = l_checktime(L, 2);
+  lua_pushnumber(L, (lua_Number)difftime(t1, t2));
   return 1;
 }
 
