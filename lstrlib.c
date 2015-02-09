@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.224 2015/02/04 12:54:31 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.225 2015/02/05 17:50:24 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -823,7 +823,7 @@ static int str_gsub (lua_State *L) {
 ** Add integer part of 'x' to buffer and return new 'x'
 */
 static lua_Number adddigit (char *buff, int n, lua_Number x) {
-  double dd = l_mathop(floor)(x);  /* get integer part from 'x' */
+  lua_Number dd = l_mathop(floor)(x);  /* get integer part from 'x' */
   int d = (int)dd;
   buff[n] = (d < 10 ? d + '0' : d - 10 + 'a');  /* add to buffer */
   return x - dd;  /* return what is left */
