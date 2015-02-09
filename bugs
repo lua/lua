@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.132 2014/05/07 16:57:27 roberto Exp roberto $
-+** $Id: bugs,v 1.132 2014/05/07 16:57:27 roberto Exp roberto $
+-** $Id: bugs,v 1.133 2014/09/01 16:56:01 roberto Exp roberto $
++** $Id: bugs,v 1.133 2014/09/01 16:56:01 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -3245,6 +3245,30 @@ patch = [[
      linktable(h, &g->ephemeron);  /* have to propagate again */
    else if (hasclears)  /* does table have white keys? */
      linktable(h, &g->allweak);  /* may have to clean white keys */
+]]
+}
+
+Bug{
+what = [[Chunk with too many lines can seg. fault]],
+report = [[Roberto, 2014/11/14]],
+since = [[5.1 (at least)]],
+fix = nil,
+example = [[
+-- the cause of the bug is the use of an unitialized variable, so
+-- it cannot be reproduced reliably
+local s = string.rep("\n", 2^24)
+print(load(function () return s end))
+]],
+patch = [[
+--- llex.c	2013/08/30 15:49:41	2.63.1.2
++++ llex.c	2015/02/09 17:05:31
+@@ -153,5 +153,5 @@
+     next(ls);  /* skip `\n\r' or `\r\n' */
+   if (++ls->linenumber >= MAX_INT)
+-    luaX_syntaxerror(ls, "chunk has too many lines");
++    lexerror(ls, "chunk has too many lines", 0);
+ }
+ 
 ]]
 }
 
