@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.244 2014/12/26 14:43:45 roberto Exp roberto $
+** $Id: lapi.c,v 2.245 2015/01/16 16:54:37 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -124,7 +124,8 @@ LUA_API void lua_xmove (lua_State *from, lua_State *to, int n) {
   api_check(to->ci->top - to->top >= n, "not enough elements to move");
   from->top -= n;
   for (i = 0; i < n; i++) {
-    setobj2s(to, to->top++, from->top + i);
+    setobj2s(to, to->top, from->top + i);
+    api_incr_top(to);
   }
   lua_unlock(to);
 }
@@ -305,7 +306,7 @@ LUA_API void lua_arith (lua_State *L, int op) {
   else {  /* for unary operations, add fake 2nd operand */
     api_checknelems(L, 1);
     setobjs2s(L, L->top, L->top - 1);
-    L->top++;
+    api_incr_top(L);
   }
   /* first operand at top - 2, second at top - 1; result go to top - 2 */
   luaO_arith(L, op, L->top - 2, L->top - 1, L->top - 2);
@@ -585,7 +586,8 @@ LUA_API int lua_getglobal (lua_State *L, const char *name) {
   const TValue *gt;  /* global table */
   lua_lock(L);
   gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
-  setsvalue2s(L, L->top++, luaS_new(L, name));
+  setsvalue2s(L, L->top, luaS_new(L, name));
+  api_incr_top(L);
   luaV_gettable(L, gt, L->top - 1, L->top - 1);
   lua_unlock(L);
   return ttnov(L->top - 1);
@@ -726,7 +728,8 @@ LUA_API void lua_setglobal (lua_State *L, const char *name) {
   lua_lock(L);
   api_checknelems(L, 1);
   gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
-  setsvalue2s(L, L->top++, luaS_new(L, name));
+  setsvalue2s(L, L->top, luaS_new(L, name));
+  api_incr_top(L);
   luaV_settable(L, gt, L->top - 1, L->top - 2);
   L->top -= 2;  /* pop value and key */
   lua_unlock(L);
@@ -749,7 +752,8 @@ LUA_API void lua_setfield (lua_State *L, int idx, const char *k) {
   lua_lock(L);
   api_checknelems(L, 1);
   t = index2addr(L, idx);
-  setsvalue2s(L, L->top++, luaS_new(L, k));
+  setsvalue2s(L, L->top, luaS_new(L, k));
+  api_incr_top(L);
   luaV_settable(L, t, L->top - 1, L->top - 2);
   L->top -= 2;  /* pop value and key */
   lua_unlock(L);
@@ -761,7 +765,8 @@ LUA_API void lua_seti (lua_State *L, int idx, lua_Integer n) {
   lua_lock(L);
   api_checknelems(L, 1);
   t = index2addr(L, idx);
-  setivalue(L->top++, n);
+  setivalue(L->top, n);
+  api_incr_top(L);
   luaV_settable(L, t, L->top - 1, L->top - 2);
   L->top -= 2;  /* pop value and key */
   lua_unlock(L);
