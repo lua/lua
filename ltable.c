@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.100 2015/01/05 13:52:37 roberto Exp roberto $
+** $Id: ltable.c,v 2.101 2015/01/16 16:54:37 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -96,16 +96,29 @@ static int numisinteger (lua_Number x, lua_Integer *p) {
 
 
 /*
-** hash for floating-point numbers
+** Hash for floating-point numbers.
+** The main computation should be just
+**     n = frepx(n, &i); hash = (n * INT_MAX) + i
+** but there are some numerical subtleties.
+** In a two-complement representation, INT_MAX does not has an exact
+** representation as a float, but INT_MIN does; because the absolute
+** value of 'frexp' is smaller than 1 (unless 'n' is inf/NaN), the
+** absolute value of the product 'frexp * -INT_MIN' is smaller or equal
+** to INT_MAX. Next, the use of 'unsigned int' avoids overflows when
+** adding 'i'; the use of '~u' (instead of '-u') avoids problems with
+** INT_MIN.
 */
 static Node *hashfloat (const Table *t, lua_Number n) {
   int i;
-  n = l_mathop(frexp)(n, &i) * cast_num(INT_MAX - DBL_MAX_EXP);
-  i += cast_int(n);
-  if (i < 0) {
-    if (cast(unsigned int, i) == 0u - i)  /* use unsigned to avoid overflows */
-      i = 0;  /* handle INT_MIN */
-    i = -i;  /* must be a positive value */
+  lua_Integer ni;
+  n = l_mathop(frexp)(n, &i) * -cast_num(INT_MIN);
+  if (!lua_numbertointeger(n, &ni)) {  /* is 'n' inf/-inf/NaN? */
+    lua_assert(luai_numisnan(n) || l_mathop(fabs)(n) == HUGE_VAL);
+    i = 0;
+  }
+  else {  /* normal case */
+    unsigned int u = cast(unsigned int, i) + cast(unsigned int, ni);
+    i = (u <= cast(unsigned int, INT_MAX) ? u : ~u);
   }
   return hashmod(t, i);
 }
