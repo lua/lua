@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.124 2015/01/05 13:51:39 roberto Exp roberto $
+** $Id: loadlib.c,v 1.125 2015/01/13 13:18:04 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -14,6 +14,7 @@
 #include "lprefix.h"
 
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
