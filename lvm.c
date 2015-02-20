@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.233 2015/01/16 16:54:37 roberto Exp roberto $
+** $Id: lvm.c,v 2.234 2015/02/05 17:15:33 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -29,16 +29,6 @@
 #include "ltable.h"
 #include "ltm.h"
 #include "lvm.h"
-
-
-/*
-** You can define LUA_FLOORN2I if you want to convert floats to integers
-** by flooring them (instead of raising an error if they are not
-** integral values)
-*/
-#if !defined(LUA_FLOORN2I)
-#define LUA_FLOORN2I		0
-#endif
 
 
 /* limit for table tag-method chains (to avoid loops) */
@@ -89,7 +79,7 @@ int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
 ** mode == 1: takes the floor of the number
 ** mode == 2: takes the ceil of the number
 */
-static int tointeger_aux (const TValue *obj, lua_Integer *p, int mode) {
+int luaV_tointeger (const TValue *obj, lua_Integer *p, int mode) {
   TValue v;
  again:
   if (ttisfloat(obj)) {
@@ -116,14 +106,6 @@ static int tointeger_aux (const TValue *obj, lua_Integer *p, int mode) {
 
 
 /*
-** try to convert a value to an integer
-*/
-int luaV_tointeger_ (const TValue *obj, lua_Integer *p) {
-  return tointeger_aux(obj, p, LUA_FLOORN2I);
-}
-
-
-/*
 ** Try to convert a 'for' limit to an integer, preserving the
 ** semantics of the loop.
 ** (The following explanation assumes a non-negative step; it is valid
@@ -141,7 +123,7 @@ int luaV_tointeger_ (const TValue *obj, lua_Integer *p) {
 static int forlimit (const TValue *obj, lua_Integer *p, lua_Integer step,
                      int *stopnow) {
   *stopnow = 0;  /* usually, let loops run */
-  if (!tointeger_aux(obj, p, (step < 0 ? 2 : 1))) {  /* not fit in integer? */
+  if (!luaV_tointeger(obj, p, (step < 0 ? 2 : 1))) {  /* not fit in integer? */
     lua_Number n;  /* try to convert to float */
     if (!tonumber(obj, &n)) /* cannot convert to float? */
       return 0;  /* not a number */

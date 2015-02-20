@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.103 2015/02/16 13:15:00 roberto Exp roberto $
+** $Id: ltable.c,v 2.104 2015/02/20 14:05:01 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -81,17 +81,6 @@ static const Node dummynode_ = {
   {NILCONSTANT},  /* value */
   {{NILCONSTANT, 0}}  /* key */
 };
-
-
-/*
-** Checks whether a float has a value representable as a lua_Integer
-** (and does the conversion if so)
-*/
-static int numisinteger (lua_Number x, lua_Integer *p) {
-  if ((x) == l_floor(x))  /* integral value? */
-    return lua_numbertointeger(x, p);  /* try as an integer */
-  else return 0;
-}
 
 
 /*
@@ -455,14 +444,13 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
   TValue aux;
   if (ttisnil(key)) luaG_runerror(L, "table index is nil");
   else if (ttisfloat(key)) {
-    lua_Number n = fltvalue(key);
     lua_Integer k;
-    if (luai_numisnan(n))
-      luaG_runerror(L, "table index is NaN");
-    if (numisinteger(n, &k)) {  /* index is int? */
+    if (luaV_tointeger(key, &k, 0)) {  /* index is int? */
       setivalue(&aux, k);
       key = &aux;  /* insert it as an integer */
     }
+    else if (luai_numisnan(fltvalue(key)))
+      luaG_runerror(L, "table index is NaN");
   }
   mp = mainposition(t, key);
   if (!ttisnil(gval(mp)) || isdummy(mp)) {  /* main position is taken? */
@@ -556,7 +544,7 @@ const TValue *luaH_get (Table *t, const TValue *key) {
     case LUA_TNIL: return luaO_nilobject;
     case LUA_TNUMFLT: {
       lua_Integer k;
-      if (numisinteger(fltvalue(key), &k)) /* index is int? */
+      if (luaV_tointeger(key, &k, 0)) /* index is int? */
         return luaH_getint(t, k);  /* use specialized version */
       /* else go through */
     }
