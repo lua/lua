@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.133 2014/09/01 16:56:01 roberto Exp roberto $
-+** $Id: bugs,v 1.133 2014/09/01 16:56:01 roberto Exp roberto $
+-** $Id: bugs,v 1.134 2015/02/09 17:57:45 roberto Exp roberto $
++** $Id: bugs,v 1.134 2015/02/09 17:57:45 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -3273,6 +3273,94 @@ patch = [[
 }
 
 
+-----------------------------------------------------------------
+-- Lua 5.3.0
+
+Bug{
+what = [['string.format("%f")' can cause a buffer overflow
+(only when 'lua_Number' is long double!)]],
+report = [[Roberto, 2015/01/13]],
+since = [[5.3]],
+fix = nil,
+example = [[string.format("%.99f", 1e4000)    -- when floats are long double]],
+patch = [[
+]]
+}
+
+Bug{
+what = [['debug.getlocal' on a coroutine suspended in a hook
+can crash the interpreter]],
+report = [[云风, 2015/02/11]],
+since = [[5.2]],
+fix = nil,
+example = [[see http://lua-users.org/lists/lua-l/2015-02/msg00146.html]],
+patch = [[
+--- ldebug.c	2015/01/02 12:52:22	2.110
++++ ldebug.c	2015/02/13 16:03:23
+@@ -1,4 +1,4 @@
+ /*
+-** $Id: ldebug.c,v 2.110 2015/01/02 12:52:22 roberto Exp $
++** $Id: ldebug.c,v 2.111 2015/02/13 16:01:17 roberto Exp $
+ ** Debug Interface
+ ** See Copyright Notice in lua.h
+@@ -49,4 +49,14 @@
+ 
+ 
++static void swapextra (lua_State *L) {
++  if (L->status == LUA_YIELD) {
++    CallInfo *ci = L->ci;  /* get function that yielded */
++    StkId temp = ci->func;  /* exchange its 'func' and 'extra' values */
++    ci->func = restorestack(L, ci->extra);
++    ci->extra = savestack(L, temp);
++  }
++}
++
++
+ /*
+ ** this function can be called asynchronous (e.g. during a signal)
+@@ -145,4 +155,5 @@
+   const char *name;
+   lua_lock(L);
++  swapextra(L);
+   if (ar == NULL) {  /* information about non-active function? */
+     if (!isLfunction(L->top - 1))  /* not a Lua function? */
+@@ -159,4 +170,5 @@
+     }
+   }
++  swapextra(L);
+   lua_unlock(L);
+   return name;
+@@ -166,10 +178,13 @@
+ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
+   StkId pos = 0;  /* to avoid warnings */
+-  const char *name = findlocal(L, ar->i_ci, n, &pos);
++  const char *name;
+   lua_lock(L);
++  swapextra(L);
++  name = findlocal(L, ar->i_ci, n, &pos);
+   if (name) {
+     setobjs2s(L, pos, L->top - 1);
+     L->top--;  /* pop value */
+   }
++  swapextra(L);
+   lua_unlock(L);
+   return name;
+@@ -271,4 +286,5 @@
+   StkId func;
+   lua_lock(L);
++  swapextra(L);
+   if (*what == '>') {
+     ci = NULL;
+@@ -289,4 +305,5 @@
+     api_incr_top(L);
+   }
++  swapextra(L);
+   if (strchr(what, 'L'))
+     collectvalidlines(L, cl);
+]]
+}
+
+
 --[=[
 Bug{
 what = [[ ]],
@@ -3284,3 +3372,5 @@ patch = [[
 ]]
 }
 ]=]
+
+
