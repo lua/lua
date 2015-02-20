@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.102 2015/02/13 13:05:34 roberto Exp roberto $
+** $Id: ltable.c,v 2.103 2015/02/16 13:15:00 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -97,7 +97,7 @@ static int numisinteger (lua_Number x, lua_Integer *p) {
 /*
 ** Hash for floating-point numbers.
 ** The main computation should be just
-**     n = frepx(n, &i); hash = (n * INT_MAX) + i
+**     n = frepx(n, &i); return (n * INT_MAX) + i
 ** but there are some numerical subtleties.
 ** In a two-complement representation, INT_MAX does not has an exact
 ** representation as a float, but INT_MIN does; because the absolute
@@ -107,21 +107,21 @@ static int numisinteger (lua_Number x, lua_Integer *p) {
 ** adding 'i'; the use of '~u' (instead of '-u') avoids problems with
 ** INT_MIN.
 */
-static Node *hashfloat (const Table *t, lua_Number n) {
+#if !defined(l_hashfloat)
+static int l_hashfloat (lua_Number n) {
   int i;
   lua_Integer ni;
   n = l_mathop(frexp)(n, &i) * -cast_num(INT_MIN);
   if (!lua_numbertointeger(n, &ni)) {  /* is 'n' inf/-inf/NaN? */
     lua_assert(luai_numisnan(n) || l_mathop(fabs)(n) == HUGE_VAL);
-    i = 0;
+    return 0;
   }
   else {  /* normal case */
     unsigned int u = cast(unsigned int, i) + cast(unsigned int, ni);
-    i = (u <= cast(unsigned int, INT_MAX) ? u : ~u);
+    return cast_int(u <= cast(unsigned int, INT_MAX) ? u : ~u);
   }
-  return hashmod(t, i);
 }
-
+#endif
 
 
 /*
@@ -133,7 +133,7 @@ static Node *mainposition (const Table *t, const TValue *key) {
     case LUA_TNUMINT:
       return hashint(t, ivalue(key));
     case LUA_TNUMFLT:
-      return hashfloat(t, fltvalue(key));
+      return hashmod(t, l_hashfloat(fltvalue(key)));
     case LUA_TSHRSTR:
       return hashstr(t, tsvalue(key));
     case LUA_TLNGSTR: {
