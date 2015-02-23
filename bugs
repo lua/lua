@@ -1878,13 +1878,6 @@ for i=1,25 do print(i); crash(i) end
 patch = [[
 --- lundump.c   2008/04/04 16:00:45     2.7.1.3
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
-@@ -1,5 +1,5 @@
- /*
--** $Id: bugs,v 1.134 2015/02/09 17:57:45 roberto Exp roberto $
-+** $Id: bugs,v 1.134 2015/02/09 17:57:45 roberto Exp roberto $
- ** load precompiled Lua chunks
- ** See Copyright Notice in lua.h
- */
 @@ -161,7 +161,9 @@
  
  static Proto* LoadFunction(LoadState* S, TString* p)
@@ -3220,6 +3213,26 @@ example = [[
 (segfaults on some platforms with some compiler options)
 ]],
 patch = [[
+--- ltablib.c	2013/04/12 18:48:47	1.65.1.1
++++ ltablib.c	2014/05/07 16:32:55	1.65.1.2
+@@ -134,13 +135,14 @@
+ 
+ 
+ static int unpack (lua_State *L) {
+-  int i, e, n;
++  int i, e;
++  unsigned int n;
+   luaL_checktype(L, 1, LUA_TTABLE);
+   i = luaL_optint(L, 2, 1);
+   e = luaL_opt(L, luaL_checkint, 3, luaL_len(L, 1));
+   if (i > e) return 0;  /* empty range */
+-  n = e - i + 1;  /* number of elements */
+-  if (n <= 0 || !lua_checkstack(L, n))  /* n <= 0 means arith. overflow */
++  n = (unsigned int)e - (unsigned int)i;  /* number of elements minus 1 */
++  if (n > (INT_MAX - 10) || !lua_checkstack(L, ++n))
+     return luaL_error(L, "too many results to unpack");
+   lua_rawgeti(L, 1, i);  /* push arg[i] (avoiding overflow problems) */
+   while (i++ < e)  /* push arg[i + 1...e] */
 ]]
 }
 
@@ -3284,6 +3297,14 @@ since = [[5.3]],
 fix = nil,
 example = [[string.format("%.99f", 1e4000)    -- when floats are long double]],
 patch = [[
+--- lstrlib.c	2014/12/11 14:03:07	1.221
++++ lstrlib.c	2015/02/23 19:01:42
+@@ -800,3 +800,4 @@
+ /* maximum size of each formatted item (> len(format('%99.99f', -1e308))) */
+-#define MAX_ITEM	512
++#define MAX_ITEM  \
++  (sizeof(lua_Number) <= 4 ? 150 : sizeof(lua_Number) <= 8 ? 450 : 5050)
+ 
 ]]
 }
 
@@ -3297,12 +3318,6 @@ example = [[see http://lua-users.org/lists/lua-l/2015-02/msg00146.html]],
 patch = [[
 --- ldebug.c	2015/01/02 12:52:22	2.110
 +++ ldebug.c	2015/02/13 16:03:23
-@@ -1,4 +1,4 @@
- /*
--** $Id: ldebug.c,v 2.110 2015/01/02 12:52:22 roberto Exp $
-+** $Id: ldebug.c,v 2.111 2015/02/13 16:01:17 roberto Exp $
- ** Debug Interface
- ** See Copyright Notice in lua.h
 @@ -49,4 +49,14 @@
  
  
