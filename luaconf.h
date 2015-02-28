@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.244 2015/02/05 16:53:34 roberto Exp roberto $
+** $Id: luaconf.h,v 1.245 2015/02/05 17:15:33 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -300,19 +300,14 @@
 */
 #define LUA_COMPAT_APIINTCASTS
 
-
-/*
-@@ LUA_COMPAT_FLOATSTRING makes Lua format integral floats without a
-@@ a float mark ('.0').
-** This macro is not on by default even in compatibility mode,
-** because this is not really an incompatibility.
-*/
-/* #define LUA_COMPAT_FLOATSTRING */
-
 #endif				/* } */
 
 
 #if defined(LUA_COMPAT_5_1)	/* { */
+
+/* Incompatibilities from 5.2 -> 5.3 */
+#define LUA_COMPAT_MATHLIB
+#define LUA_COMPAT_APIINTCASTS
 
 /*
 @@ LUA_COMPAT_UNPACK controls the presence of global 'unpack'.
@@ -372,6 +367,15 @@
 #define LUA_COMPAT_MODULE
 
 #endif				/* } */
+
+
+/*
+@@ LUA_COMPAT_FLOATSTRING makes Lua format integral floats without a
+@@ a float mark ('.0').
+** This macro is not on by default even in compatibility mode,
+** because this is not really an incompatibility.
+*/
+/* #define LUA_COMPAT_FLOATSTRING */
 
 /* }================================================================== */
 
