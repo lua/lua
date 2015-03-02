@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.245 2015/02/05 17:15:33 roberto Exp roberto $
+** $Id: luaconf.h,v 1.246 2015/02/28 19:22:31 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -96,10 +96,8 @@
 
 
 /*
-@@ LUA_INT_INT / LUA_INT_LONG / LUA_INT_LONGLONG defines the type for
-** Lua integers.
-@@ LUA_REAL_FLOAT / LUA_REAL_DOUBLE / LUA_REAL_LONGDOUBLE defines
-** the type for Lua floats.
+@@ LUA_INT_TYPE defines the type for Lua integers.
+@@ LUA_REAL_TYPE defines the type for Lua floats.
 ** Lua should work fine with any mix of these options (if supported
 ** by your C compiler). The usual configurations are 64-bit integers
 ** and 'double' (the default), 32-bit integers and 'float' (for
@@ -107,30 +105,40 @@
 ** compliant with C99, which may not have support for 'long long').
 */
 
+/* predefined options for LUA_INT_TYPE */
+#define LUA_INT_INT		1
+#define LUA_INT_LONG		2
+#define LUA_INT_LONGLONG	3
+
+/* predefined options for LUA_REAL_TYPE */
+#define LUA_REAL_FLOAT		1
+#define LUA_REAL_DOUBLE		2
+#define LUA_REAL_LONGDOUBLE	3
+
 #if defined(LUA_32BITS)		/* { */
 /*
 ** 32-bit integers and 'float'
 */
 #if LUAI_BITSINT >= 32  /* use 'int' if big enough */
-#define LUA_INT_INT
+#define LUA_INT_TYPE	LUA_INT_INT
 #else  /* otherwise use 'long' */
-#define LUA_INT_LONG
+#define LUA_INT_TYPE	LUA_INT_LONG
 #endif
-#define LUA_REAL_FLOAT
+#define LUA_REAL_TYPE	LUA_REAL_FLOAT
 
 #elif defined(LUA_C89_NUMBERS)	/* }{ */
 /*
 ** largest types available for C89 ('long' and 'double')
 */
-#define LUA_INT_LONG
-#define LUA_REAL_DOUBLE
+#define LUA_INT_TYPE	LUA_INT_LONG
+#define LUA_REAL_TYPE	LUA_REAL_DOUBLE
 
 #else				/* }{ */
 /*
 ** default configuration for 64-bit Lua ('long long' and 'double')
 */
-#define LUA_INT_LONGLONG
-#define LUA_REAL_DOUBLE
+#define LUA_INT_TYPE	LUA_INT_LONGLONG
+#define LUA_REAL_TYPE	LUA_REAL_DOUBLE
 
 #endif								/* } */
 
@@ -155,7 +163,7 @@
 ** non-conventional directories.
 */
 #define LUA_VDIR	LUA_VERSION_MAJOR "." LUA_VERSION_MINOR
-#if defined(_WIN32) 	/* { */
+#if defined(_WIN32)	/* { */
 /*
 ** In Windows, any exclamation mark ('!') in the path is replaced by the
 ** path of the directory of the executable file of the current process.
@@ -404,7 +412,7 @@
 @@ lua_str2number converts a decimal numeric string to a number.
 */
 
-#if defined(LUA_REAL_FLOAT)		/* { single float */
+#if LUA_REAL_TYPE == LUA_REAL_FLOAT		/* { single float */
 
 #define LUA_NUMBER	float
 
@@ -418,7 +426,7 @@
 #define lua_str2number(s,p)	strtof((s), (p))
 
 
-#elif defined(LUA_REAL_LONGDOUBLE)	/* }{ long double */
+#elif LUA_REAL_TYPE == LUA_REAL_LONGDOUBLE	/* }{ long double */
 
 #define LUA_NUMBER	long double
 
@@ -431,7 +439,7 @@
 
 #define lua_str2number(s,p)	strtold((s), (p))
 
-#elif defined(LUA_REAL_DOUBLE)		/* }{ double */
+#elif LUA_REAL_TYPE == LUA_REAL_DOUBLE		/* }{ double */
 
 #define LUA_NUMBER	double
 
@@ -444,7 +452,7 @@
 
 #define lua_str2number(s,p)	strtod((s), (p))
 
-#else					/* }{ */
+#else						/* }{ */
 
 #error "numeric real type not defined"
 
@@ -502,7 +510,7 @@
 
 /* now the variable definitions */
 
-#if defined(LUA_INT_INT)		/* { int */
+#if LUA_INT_TYPE == LUA_INT_INT		/* { int */
 
 #define LUA_INTEGER		int
 #define LUA_INTEGER_FRMLEN	""
@@ -510,7 +518,7 @@
 #define LUA_MAXINTEGER		INT_MAX
 #define LUA_MININTEGER		INT_MIN
 
-#elif defined(LUA_INT_LONG)	/* }{ long */
+#elif LUA_INT_TYPE == LUA_INT_LONG	/* }{ long */
 
 #define LUA_INTEGER		long
 #define LUA_INTEGER_FRMLEN	"l"
@@ -518,7 +526,7 @@
 #define LUA_MAXINTEGER		LONG_MAX
 #define LUA_MININTEGER		LONG_MIN
 
-#elif defined(LUA_INT_LONGLONG)	/* }{ long long */
+#elif LUA_INT_TYPE == LUA_INT_LONGLONG	/* }{ long long */
 
 #if defined(LLONG_MAX)		/* { */
 /* use ISO C99 stuff */
