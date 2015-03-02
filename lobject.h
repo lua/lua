@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.106 2015/01/05 13:52:37 roberto Exp roberto $
+** $Id: lobject.h,v 2.107 2015/01/16 16:54:37 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -190,8 +190,14 @@ typedef struct lua_TValue TValue;
 #define setfltvalue(obj,x) \
   { TValue *io=(obj); val_(io).n=(x); settt_(io, LUA_TNUMFLT); }
 
+#define chgfltvalue(obj,x) \
+  { TValue *io=(obj); lua_assert(ttisfloat(io)); val_(io).n=(x); }
+
 #define setivalue(obj,x) \
   { TValue *io=(obj); val_(io).i=(x); settt_(io, LUA_TNUMINT); }
+
+#define chgivalue(obj,x) \
+  { TValue *io=(obj); lua_assert(ttisinteger(io)); val_(io).i=(x); }
 
 #define setnilvalue(obj) settt_(obj, LUA_TNIL)
 

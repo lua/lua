@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.234 2015/02/05 17:15:33 roberto Exp roberto $
+** $Id: lvm.c,v 2.235 2015/02/20 14:27:53 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1040,7 +1040,7 @@ void luaV_execute (lua_State *L) {
           lua_Integer limit = ivalue(ra + 1);
           if ((0 < step) ? (idx <= limit) : (limit <= idx)) {
             ci->u.l.savedpc += GETARG_sBx(i);  /* jump back */
-            setivalue(ra, idx);  /* update internal index... */
+            chgivalue(ra, idx);  /* update internal index... */
             setivalue(ra + 3, idx);  /* ...and external index */
           }
         }
@@ -1051,7 +1051,7 @@ void luaV_execute (lua_State *L) {
           if (luai_numlt(0, step) ? luai_numle(idx, limit)
                                   : luai_numle(limit, idx)) {
             ci->u.l.savedpc += GETARG_sBx(i);  /* jump back */
-            setfltvalue(ra, idx);  /* update internal index... */
+            chgfltvalue(ra, idx);  /* update internal index... */
             setfltvalue(ra + 3, idx);  /* ...and external index */
           }
         }
