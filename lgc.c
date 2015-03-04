@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.202 2015/01/16 16:54:37 roberto Exp roberto $
+** $Id: lgc.c,v 2.203 2015/03/04 13:31:21 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -83,8 +83,13 @@
 #define markvalue(g,o) { checkconsistency(o); \
   if (valiswhite(o)) reallymarkobject(g,gcvalue(o)); }
 
-#define markobject(g,t) \
-  { if ((t) && iswhite(t)) reallymarkobject(g, obj2gco(t)); }
+#define markobject(g,t)	{ if (iswhite(t)) reallymarkobject(g, obj2gco(t)); }
+
+/*
+** mark an object that can be NULL (either because it is really optional,
+** or it was stripped as debug info, or inside an uncompleted structure)
+*/
+#define markobjectN(g,t)	{ if (t) markobject(g,t); }
 
 static void reallymarkobject (global_State *g, GCObject *o);
 
@@ -238,7 +243,7 @@ static void reallymarkobject (global_State *g, GCObject *o) {
     }
     case LUA_TUSERDATA: {
       TValue uvalue;
-      markobject(g, gco2u(o)->metatable);  /* mark its metatable */
+      markobjectN(g, gco2u(o)->metatable);  /* mark its metatable */
       gray2black(o);
       g->GCmemtrav += sizeudata(gco2u(o));
       getuservalue(g->mainthread, gco2u(o), &uvalue);
@@ -279,7 +284,7 @@ static void reallymarkobject (global_State *g, GCObject *o) {
 static void markmt (global_State *g) {
   int i;
   for (i=0; i < LUA_NUMTAGS; i++)
-    markobject(g, g->mt[i]);
+    markobjectN(g, g->mt[i]);
 }
 
 
@@ -441,7 +446,7 @@ static void traversestrongtable (global_State *g, Table *h) {
 static lu_mem traversetable (global_State *g, Table *h) {
   const char *weakkey, *weakvalue;
   const TValue *mode = gfasttm(g, h->metatable, TM_MODE);
-  markobject(g, h->metatable);
+  markobjectN(g, h->metatable);
   if (mode && ttisstring(mode) &&  /* is there a weak mode? */
       ((weakkey = strchr(svalue(mode), 'k')),
        (weakvalue = strchr(svalue(mode), 'v')),
@@ -461,19 +466,24 @@ static lu_mem traversetable (global_State *g, Table *h) {
 }
 
 
+/*
+** Traverse a prototype. (While a prototype is being build, its
+** arrays can be larger than needed; the extra slots are filled with
+** NULL, so the use of 'markobjectN')
+*/
 static int traverseproto (global_State *g, Proto *f) {
   int i;
   if (f->cache && iswhite(f->cache))
     f->cache = NULL;  /* allow cache to be collected */
-  markobject(g, f->source);
+  markobjectN(g, f->source);
   for (i = 0; i < f->sizek; i++)  /* mark literals */
     markvalue(g, &f->k[i]);
   for (i = 0; i < f->sizeupvalues; i++)  /* mark upvalue names */
-    markobject(g, f->upvalues[i].name);
+    markobjectN(g, f->upvalues[i].name);
   for (i = 0; i < f->sizep; i++)  /* mark nested protos */
-    markobject(g, f->p[i]);
+    markobjectN(g, f->p[i]);
   for (i = 0; i < f->sizelocvars; i++)  /* mark local-variable names */
-    markobject(g, f->locvars[i].varname);
+    markobjectN(g, f->locvars[i].varname);
   return sizeof(Proto) + sizeof(Instruction) * f->sizecode +
                          sizeof(Proto *) * f->sizep +
                          sizeof(TValue) * f->sizek +
@@ -498,7 +508,7 @@ static lu_mem traverseCclosure (global_State *g, CClosure *cl) {
 */
 static lu_mem traverseLclosure (global_State *g, LClosure *cl) {
   int i;
-  markobject(g, cl->p);  /* mark its prototype */
+  markobjectN(g, cl->p);  /* mark its prototype */
   for (i = 0; i < cl->nupvalues; i++) {  /* mark its upvalues */
     UpVal *uv = cl->upvals[i];
     if (uv != NULL) {
