@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.131 2015/02/09 15:41:56 roberto Exp roberto $
+** $Id: llimits.h,v 1.132 2015/03/03 19:53:13 roberto Exp roberto $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -184,6 +184,14 @@ typedef unsigned long Instruction;
 */
 #if !defined(MINSTRTABSIZE)
 #define MINSTRTABSIZE	128
+#endif
+
+
+/*
+** Size of cache for strings in the API (better be a prime)
+*/
+#if !defined(STRCACHE_SIZE)
+#define STRCACHE_SIZE		127
 #endif
 
 

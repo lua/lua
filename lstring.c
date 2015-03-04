@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.45 2014/11/02 19:19:04 roberto Exp roberto $
+** $Id: lstring.c,v 2.46 2015/01/16 16:54:37 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -21,6 +21,8 @@
 #include "lstate.h"
 #include "lstring.h"
 
+
+#define MEMERRMSG       "not enough memory"
 
 
 /*
@@ -82,6 +84,21 @@ void luaS_resize (lua_State *L, int newsize) {
     luaM_reallocvector(L, tb->hash, tb->size, newsize, TString *);
   }
   tb->size = newsize;
+}
+
+
+/*
+** Initialize the string table and the string cache
+*/
+void luaS_init (lua_State *L) {
+  global_State *g = G(L);
+  int i;
+  luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
+  /* pre-create memory-error message */
+  g->memerrmsg = luaS_newliteral(L, MEMERRMSG);
+  luaC_fix(L, obj2gco(g->memerrmsg));  /* it should never be collected */
+  for (i = 0; i < STRCACHE_SIZE; i++)
+    g->strcache[i] = g->memerrmsg;  /* fill cache with valid strings */
 }
 
 
@@ -163,10 +180,21 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
 
 
 /*
-** new zero-terminated string
+** Create or reuse a zero-terminated string, first checking in the
+** cache (using the string address as a key). The cache can contain
+** only zero-terminated strings, so it is safe to use 'strcmp' to
+** check hits.
 */
 TString *luaS_new (lua_State *L, const char *str) {
-  return luaS_newlstr(L, str, strlen(str));
+  unsigned int i = point2uint(str) % STRCACHE_SIZE;  /* hash */
+  TString **p = &G(L)->strcache[i];
+  if (strcmp(str, getstr(*p)) == 0)  /* hit? */
+    return *p;  /* that it is */
+  else {  /* normal route */
+    TString *s = luaS_newlstr(L, str, strlen(str));
+    *p = s;
+    return s;
+  }
 }
 
 

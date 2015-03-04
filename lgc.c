@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.201 2014/12/20 13:58:15 roberto Exp roberto $
+** $Id: lgc.c,v 2.202 2015/01/16 16:54:37 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -967,6 +967,19 @@ void luaC_freeallobjects (lua_State *L) {
 }
 
 
+/*
+** Clear API string cache. (Entries cannot be empty, so fill them with
+** a non-collectable string.)
+*/
+static void clearapihash (global_State *g) {
+  int i;
+  for (i = 0; i < STRCACHE_SIZE; i++) {
+    if (iswhite(g->strcache[i]))  /* will entry be collected? */
+      g->strcache[i] = g->memerrmsg;  /* replace it with something fixed */
+  }
+}
+
+
 static l_mem atomic (lua_State *L) {
   global_State *g = G(L);
   l_mem work;
@@ -1007,6 +1020,7 @@ static l_mem atomic (lua_State *L) {
   /* clear values from resurrected weak tables */
   clearvalues(g, g->weak, origweak);
   clearvalues(g, g->allweak, origall);
+  clearapihash(g);
   g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */
   work += g->GCmemtrav;  /* complete counting */
   return work;  /* estimate of memory marked by 'atomic' */
