@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.246 2015/02/28 19:22:31 roberto Exp roberto $
+** $Id: luaconf.h,v 1.247 2015/03/02 16:59:01 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -638,6 +638,16 @@
 */
 /* #define LUA_NOCVTN2S */
 /* #define LUA_NOCVTS2N */
+
+
+/*
+@@ LUA_USE_APICHECK turns on several consistency checks on the C API.
+** Define it as a help when debugging C code.
+*/
+#if defined(LUA_USE_APICHECK)
+#include <assert.h>
+#define luai_apicheck(l,e)	assert(e)
+#endif
 
 /* }================================================================== */
 

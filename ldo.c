@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.134 2014/11/10 17:42:04 roberto Exp roberto $
+** $Id: ldo.c,v 2.135 2014/11/11 17:13:39 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -619,7 +619,7 @@ LUA_API int lua_yieldk (lua_State *L, int nresults, lua_KContext ctx,
   L->status = LUA_YIELD;
   ci->extra = savestack(L, ci->func);  /* save current 'func' */
   if (isLua(ci)) {  /* inside a hook? */
-    api_check(k == NULL, "hooks cannot continue after yielding");
+    api_check(L, k == NULL, "hooks cannot continue after yielding");
   }
   else {
     if ((ci->u.c.k = k) != NULL)  /* is there a continuation? */

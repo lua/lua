@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.110 2015/01/02 12:52:22 roberto Exp roberto $
+** $Id: ldebug.c,v 2.111 2015/02/13 16:01:17 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -295,7 +295,7 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
   if (*what == '>') {
     ci = NULL;
     func = L->top - 1;
-    api_check(ttisfunction(func), "function expected");
+    api_check(L, ttisfunction(func), "function expected");
     what++;  /* skip the '>' */
     L->top--;  /* pop function */
   }
