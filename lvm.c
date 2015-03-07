@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.235 2015/02/20 14:27:53 roberto Exp roberto $
+** $Id: lvm.c,v 2.236 2015/03/02 16:04:52 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -127,7 +127,7 @@ static int forlimit (const TValue *obj, lua_Integer *p, lua_Integer step,
     lua_Number n;  /* try to convert to float */
     if (!tonumber(obj, &n)) /* cannot convert to float? */
       return 0;  /* not a number */
-    if (n > 0) {  /* if true, float is larger than max integer */
+    if (luai_numlt(0, n)) {  /* if true, float is larger than max integer */
       *p = LUA_MAXINTEGER;
       if (step < 0) *stopnow = 1;
     }
