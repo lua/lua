@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.221 2014/11/02 19:33:33 roberto Exp roberto $
+** $Id: lua.c,v 1.222 2014/11/11 19:41:27 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -80,9 +80,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #define lua_readline(L,b,p)	((void)L, ((b)=readline(p)) != NULL)
-#define lua_saveline(L,idx) \
-        if (lua_rawlen(L,idx) > 0)  /* non-empty line? */ \
-          add_history(lua_tostring(L, idx));  /* add it to history */
+#define lua_saveline(L,line)	((void)L, add_history(line))
 #define lua_freeline(L,b)	((void)L, free(b))
 
 #else				/* }{ */
@@ -90,7 +88,7 @@
 #define lua_readline(L,b,p) \
         ((void)L, fputs(p, stdout), fflush(stdout),  /* show prompt */ \
         fgets(b, LUA_MAXINPUT, stdin) != NULL)  /* get line */
-#define lua_saveline(L,idx)	{ (void)L; (void)idx; }
+#define lua_saveline(L,line)	{ (void)L; (void)line; }
 #define lua_freeline(L,b)	{ (void)L; (void)b; }
 
 #endif				/* } */
@@ -336,8 +334,12 @@ static int addreturn (lua_State *L) {
   lua_pushvalue(L, -2);  /* duplicate line */
   lua_concat(L, 2);  /* new line is "return ..." */
   line = lua_tolstring(L, -1, &len);
-  if ((status = luaL_loadbuffer(L, line, len, "=stdin")) == LUA_OK)
+  if ((status = luaL_loadbuffer(L, line, len, "=stdin")) == LUA_OK) {
     lua_remove(L, -3);  /* remove original line */
+    line += sizeof("return")/sizeof(char);  /* remove 'return' for history */
+    if (line[0] != '\0')  /* non empty? */
+      lua_saveline(L, line);  /* keep history */
+  }
   else
     lua_pop(L, 2);  /* remove result from 'luaL_loadbuffer' and new line */
   return status;
@@ -352,8 +354,10 @@ static int multiline (lua_State *L) {
     size_t len;
     const char *line = lua_tolstring(L, 1, &len);  /* get what it has */
     int status = luaL_loadbuffer(L, line, len, "=stdin");  /* try it */
-    if (!incomplete(L, status) || !pushline(L, 0))
+    if (!incomplete(L, status) || !pushline(L, 0)) {
+      lua_saveline(L, line);  /* keep history */
       return status;  /* cannot or should not try to add continuation line */
+    }
     lua_pushliteral(L, "\n");  /* add newline... */
     lua_insert(L, -2);  /* ...between the two lines */
     lua_concat(L, 3);  /* join them */
@@ -374,7 +378,6 @@ static int loadline (lua_State *L) {
     return -1;  /* no input */
   if ((status = addreturn(L)) != LUA_OK)  /* 'return ...' did not work? */
     status = multiline(L);  /* try as command, maybe with continuation lines */
-  lua_saveline(L, 1);  /* keep history */
   lua_remove(L, 1);  /* remove line from the stack */
   lua_assert(lua_gettop(L) == 1);
   return status;
