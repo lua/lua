@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.222 2014/11/11 19:41:27 roberto Exp roberto $
+** $Id: lua.c,v 1.223 2015/03/09 21:57:05 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -313,11 +313,11 @@ static int pushline (lua_State *L, int firstline) {
   lua_pop(L, 1);  /* remove prompt */
   l = strlen(b);
   if (l > 0 && b[l-1] == '\n')  /* line ends with newline? */
-    b[l-1] = '\0';  /* remove it */
+    b[--l] = '\0';  /* remove it */
   if (firstline && b[0] == '=')  /* for compatibility with 5.2, ... */
     lua_pushfstring(L, "return %s", b + 1);  /* change '=' to 'return' */
   else
-    lua_pushstring(L, b);
+    lua_pushlstring(L, b, l);
   lua_freeline(L, b);
   return 1;
 }
