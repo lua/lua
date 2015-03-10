@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.325 2014/12/26 17:24:27 roberto Exp roberto $
+** $Id: lua.h,v 1.326 2015/01/13 19:50:30 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -358,8 +358,7 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 #define lua_isnone(L,n)		(lua_type(L, (n)) == LUA_TNONE)
 #define lua_isnoneornil(L, n)	(lua_type(L, (n)) <= 0)
 
-#define lua_pushliteral(L, s)	\
-	lua_pushlstring(L, "" s, (sizeof(s)/sizeof(char))-1)
+#define lua_pushliteral(L, s)	lua_pushstring(L, "" s)
 
 #define lua_pushglobaltable(L)  \
 	lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_GLOBALS)
