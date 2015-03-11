@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.201 2014/12/18 12:13:42 roberto Exp roberto $
+** $Id: ltests.c,v 2.202 2015/01/16 16:54:37 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -291,7 +291,7 @@ static int lua_checkpc (lua_State *L, CallInfo *ci) {
   else {
     Proto *p;
     if (L->status != LUA_YIELD || ci != L->ci)
-      p = ci_func(ci)->p;
+      p = clLvalue(ci->func)->p;
     else  /* real 'func' was saved in 'extra' field */
       p = clLvalue(restorestack(L, ci->extra))->p;
     return p->code <= ci->u.l.savedpc &&

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.111 2015/02/13 16:01:17 roberto Exp roberto $
+** $Id: ldebug.c,v 2.112 2015/03/06 19:49:50 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -32,6 +32,10 @@
 
 
 #define noLuaClosure(f)		((f) == NULL || (f)->c.tt == LUA_TCCL)
+
+
+/* Active Lua function (given call info) */
+#define ci_func(ci)		(clLvalue((ci)->func))
 
 
 static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name);
