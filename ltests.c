@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.202 2015/01/16 16:54:37 roberto Exp roberto $
+** $Id: ltests.c,v 2.203 2015/03/11 16:10:41 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -289,11 +289,11 @@ static void checkLclosure (global_State *g, LClosure *cl) {
 static int lua_checkpc (lua_State *L, CallInfo *ci) {
   if (!isLua(ci)) return 1;
   else {
-    Proto *p;
-    if (L->status != LUA_YIELD || ci != L->ci)
-      p = clLvalue(ci->func)->p;
-    else  /* real 'func' was saved in 'extra' field */
-      p = clLvalue(restorestack(L, ci->extra))->p;
+    /* if function yielded (inside a hook), real 'func' is in 'extra' field */
+    StkId f = (L->status != LUA_YIELD || ci != L->ci)
+              ? ci->func
+              : restorestack(L, ci->extra);
+    Proto *p = clLvalue(f)->p;
     return p->code <= ci->u.l.savedpc &&
            ci->u.l.savedpc <= p->code + p->sizecode;
   }
