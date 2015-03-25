@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.46 2015/01/16 16:54:37 roberto Exp roberto $
+** $Id: lstring.c,v 2.47 2015/03/04 13:31:21 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -84,6 +84,19 @@ void luaS_resize (lua_State *L, int newsize) {
     luaM_reallocvector(L, tb->hash, tb->size, newsize, TString *);
   }
   tb->size = newsize;
+}
+
+
+/*
+** Clear API string cache. (Entries cannot be empty, so fill them with
+** a non-collectable string.)
+*/
+void luaS_clearcache (global_State *g) {
+  int i;
+  for (i = 0; i < STRCACHE_SIZE; i++) {
+    if (iswhite(g->strcache[i]))  /* will entry be collected? */
+      g->strcache[i] = g->memerrmsg;  /* replace it with something fixed */
+  }
 }
 
 
