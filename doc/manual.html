@@ -33,7 +33,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.143 2015/01/02 13:07:38 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.146 2015/01/06 11:23:01 roberto Exp $ -->
 
 
 
@@ -429,7 +429,7 @@ You can emulate how Lua queries a metamethod for an object <code>obj</code>
 with the following code:
 
 <pre>
-     rawget(getmetatable(obj) or {}, event_name)
+     rawget(getmetatable(obj) or {}, "__" .. event_name)
 </pre>
 
 <p>
@@ -761,12 +761,12 @@ When a marked object becomes garbage,
 it is not collected immediately by the garbage collector.
 Instead, Lua puts it in a list.
 After the collection,
-Lua goes through that list:
+Lua goes through that list.
 For each object in the list,
-it checks the object's <code>__gc</code> metamethod;
-if it is a function,
-Lua calls it with the object as its single argument.
-If the metamethod is not a function,
+it checks the object's <code>__gc</code> metamethod:
+If it is a function,
+Lua calls it with the object as its single argument;
+if the metamethod is not a function,
 Lua simply ignores it.
 
 
@@ -2218,6 +2218,11 @@ is equivalent to
 </pre>
 
 <p>
+The order of the assignments in a constructor is undefined.
+(This order would be relevant only when there are repeated keys.)
+
+
+<p>
 If the last field in the list has the form <code>exp</code>
 and the expression is a function call or a vararg expression,
 then all values returned by this expression enter the list consecutively
@@ -2785,7 +2790,7 @@ never returning
 <p>
 The panic function runs as if it were a message handler (see <a href="#2.3">&sect;2.3</a>);
 in particular, the error message is at the top of the stack.
-However, there is no guarantees about stack space.
+However, there is no guarantee about stack space.
 To push anything on the stack,
 the panic function must first check the available space (see <a href="#4.2">&sect;4.2</a>).
 
@@ -2861,7 +2866,7 @@ As an illustration, consider the following function:
      }
 </pre><p>
 Now we want to allow
-the Lua code being ran by <a href="#lua_pcall"><code>lua_pcall</code></a> to yield.
+the Lua code being run by <a href="#lua_pcall"><code>lua_pcall</code></a> to yield.
 First, we can rewrite our function like here:
 
 <pre>
@@ -2880,7 +2885,7 @@ the new function <code>k</code> is a
 which should do all the work that the original function
 was doing after calling <a href="#lua_pcall"><code>lua_pcall</code></a>.
 Now, we must inform Lua that it must call <code>k</code> if the Lua code
-begin running by <a href="#lua_pcall"><code>lua_pcall</code></a> gets interrupted in some way
+being executed by <a href="#lua_pcall"><code>lua_pcall</code></a> gets interrupted in some way
 (errors or yielding),
 so we rewrite the code as here,
 replacing <a href="#lua_pcall"><code>lua_pcall</code></a> by <a href="#lua_pcallk"><code>lua_pcallk</code></a>:
@@ -4179,7 +4184,7 @@ error while running a <code>__gc</code> metamethod.
 <pre>int lua_pcallk (lua_State *L,
                 int nargs,
                 int nresults,
-                int errfunc,
+                int msgh,
                 lua_KContext ctx,
                 lua_KFunction k);</pre>
 
@@ -10774,7 +10779,7 @@ and LiteralString, see <a href="#3.1">&sect;3.1</a>.)
 <HR>
 <SMALL CLASS="footer">
 Last update:
-Fri Jan  2 11:29:40 BRST 2015
+Tue Jan  6 10:10:50 BRST 2015
 </SMALL>
 <!--
 Last change: revised for Lua 5.3.0 (final)
