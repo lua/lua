@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.101 2014/12/26 14:43:45 roberto Exp roberto $
+** $Id: lobject.c,v 2.102 2015/02/05 17:15:33 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -150,13 +150,13 @@ void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
   }
   /* could not perform raw operation; try metamethod */
   lua_assert(L != NULL);  /* should not fail when folding (compile time) */
-  luaT_trybinTM(L, p1, p2, res, cast(TMS, op - LUA_OPADD + TM_ADD));
+  luaT_trybinTM(L, p1, p2, res, cast(TMS, (op - LUA_OPADD) + TM_ADD));
 }
 
 
 int luaO_hexavalue (int c) {
   if (lisdigit(c)) return c - '0';
-  else return ltolower(c) - 'a' + 10;
+  else return (ltolower(c) - 'a') + 10;
 }
 
 
@@ -243,7 +243,7 @@ static const char *l_str2d (const char *s, lua_Number *result) {
     *result = lua_strx2number(s, &endptr);
   else
     *result = lua_str2number(s, &endptr);
-  if (endptr == s) return 0;  /* nothing recognized */
+  if (endptr == s) return NULL;  /* nothing recognized */
   while (lisspace(cast_uchar(*endptr))) endptr++;
   return (*endptr == '\0' ? endptr : NULL);  /* OK if no trailing characters */
 }
@@ -289,7 +289,7 @@ size_t luaO_str2num (const char *s, TValue *o) {
   }
   else
     return 0;  /* conversion failed */
-  return (e - s + 1);  /* success; return string size */
+  return (e - s) + 1;  /* success; return string size */
 }
 
 

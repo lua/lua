@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.89 2014/11/14 16:06:09 roberto Exp roberto $
+** $Id: llex.c,v 2.90 2015/03/03 18:17:04 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -283,8 +283,9 @@ static int read_numeral (LexState *ls, SemInfo *seminfo) {
 
 
 /*
-** skip a sequence '[=*[' or ']=*]' and return its number of '='s or
-** -1 if sequence is malformed
+** skip a sequence '[=*[' or ']=*]'; if sequence is wellformed, return
+** its number of '='s; otherwise, return a negative number (-1 iff there
+** are no '='s after initial bracket)
 */
 static int skip_sep (LexState *ls) {
   int count = 0;
@@ -501,8 +502,9 @@ static int llex (LexState *ls, SemInfo *seminfo) {
           read_long_string(ls, seminfo, sep);
           return TK_STRING;
         }
-        else if (sep == -1) return '[';
-        else lexerror(ls, "invalid long string delimiter", TK_STRING);
+        else if (sep != -1)  /* '[=...' missing second bracket */
+          lexerror(ls, "invalid long string delimiter", TK_STRING);
+        return '[';
       }
       case '=': {
         next(ls);

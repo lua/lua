@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.98 2014/12/19 13:36:32 roberto Exp roberto $
+** $Id: lcode.c,v 2.99 2014/12/29 16:49:25 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -573,8 +573,8 @@ int luaK_exp2RK (FuncState *fs, expdesc *e) {
     case VKFLT: {
       e->u.info = luaK_numberK(fs, e->u.nval);
       e->k = VK;
-      /* go through */
     }
+    /* FALLTHROUGH */
     case VK: {
      vk:
       if (e->u.info <= MAXINDEXRK)  /* constant fits in 'argC'? */
@@ -793,7 +793,7 @@ static int constfolding (FuncState *fs, int op, expdesc *e1, expdesc *e2) {
 static void codeexpval (FuncState *fs, OpCode op,
                         expdesc *e1, expdesc *e2, int line) {
   lua_assert(op >= OP_ADD);
-  if (op <= OP_BNOT && constfolding(fs, op - OP_ADD + LUA_OPADD, e1, e2))
+  if (op <= OP_BNOT && constfolding(fs, (op - OP_ADD) + LUA_OPADD, e1, e2))
     return;  /* result has been folded */
   else {
     int o1, o2;
@@ -920,11 +920,11 @@ void luaK_posfix (FuncState *fs, BinOpr op,
       break;
     }
     case OPR_EQ: case OPR_LT: case OPR_LE: {
-      codecomp(fs, cast(OpCode, op - OPR_EQ + OP_EQ), 1, e1, e2);
+      codecomp(fs, cast(OpCode, (op - OPR_EQ) + OP_EQ), 1, e1, e2);
       break;
     }
     case OPR_NE: case OPR_GT: case OPR_GE: {
-      codecomp(fs, cast(OpCode, op - OPR_NE + OP_EQ), 0, e1, e2);
+      codecomp(fs, cast(OpCode, (op - OPR_NE) + OP_EQ), 0, e1, e2);
       break;
     }
     default: lua_assert(0);

@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.225 2015/02/05 17:50:24 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.226 2015/02/09 18:05:46 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -70,7 +70,7 @@ static int str_sub (lua_State *L) {
   if (start < 1) start = 1;
   if (end > (lua_Integer)l) end = l;
   if (start <= end)
-    lua_pushlstring(L, s + start - 1, (size_t)(end - start + 1));
+    lua_pushlstring(L, s + start - 1, (size_t)(end - start) + 1);
   else lua_pushliteral(L, "");
   return 1;
 }
@@ -149,9 +149,9 @@ static int str_byte (lua_State *L) {
   if (posi < 1) posi = 1;
   if (pose > (lua_Integer)l) pose = l;
   if (posi > pose) return 0;  /* empty interval; return no values */
-  n = (int)(pose -  posi + 1);
-  if (posi + n <= pose)  /* arithmetic overflow? */
+  if (pose - posi >= INT_MAX)  /* arithmetic overflow? */
     return luaL_error(L, "string slice too long");
+  n = (int)(pose -  posi) + 1;
   luaL_checkstack(L, n, "string slice too long");
   for (i=0; i<n; i++)
     lua_pushinteger(L, uchar(s[posi+i-1]));
@@ -499,7 +499,7 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
             }
             case '+':  /* 1 or more repetitions */
               s++;  /* 1 match already done */
-              /* go through */
+              /* FALLTHROUGH */
             case '*':  /* 0 or more repetitions */
               s = max_expand(ms, s, p, ep);
               break;
@@ -554,7 +554,7 @@ static void push_onecapture (MatchState *ms, int i, const char *s,
     ptrdiff_t l = ms->capture[i].len;
     if (l == CAP_UNFINISHED) luaL_error(ms->L, "unfinished capture");
     if (l == CAP_POSITION)
-      lua_pushinteger(ms->L, ms->capture[i].init - ms->src_init + 1);
+      lua_pushinteger(ms->L, (ms->capture[i].init - ms->src_init) + 1);
     else
       lua_pushlstring(ms->L, ms->capture[i].init, l);
   }
@@ -598,8 +598,8 @@ static int str_find_aux (lua_State *L, int find) {
     /* do a plain search */
     const char *s2 = lmemfind(s + init - 1, ls - (size_t)init + 1, p, lp);
     if (s2) {
-      lua_pushinteger(L, s2 - s + 1);
-      lua_pushinteger(L, s2 - s + lp);
+      lua_pushinteger(L, (s2 - s) + 1);
+      lua_pushinteger(L, (s2 - s) + lp);
       return 2;
     }
   }
@@ -621,7 +621,7 @@ static int str_find_aux (lua_State *L, int find) {
       lua_assert(ms.matchdepth == MAXCCALLS);
       if ((res=match(&ms, s1, p)) != NULL) {
         if (find) {
-          lua_pushinteger(L, s1 - s + 1);  /* start */
+          lua_pushinteger(L, (s1 - s) + 1);  /* start */
           lua_pushinteger(L, res - s);   /* end */
           return push_captures(&ms, NULL, 0) + 2;
         }
@@ -935,8 +935,8 @@ static const char *scanformat (lua_State *L, const char *strfrmt, char *form) {
   if (isdigit(uchar(*p)))
     luaL_error(L, "invalid format (width or precision too long)");
   *(form++) = '%';
-  memcpy(form, strfrmt, (p - strfrmt + 1) * sizeof(char));
-  form += p - strfrmt + 1;
+  memcpy(form, strfrmt, ((p - strfrmt) + 1) * sizeof(char));
+  form += (p - strfrmt) + 1;
   *form = '\0';
   return p;
 }
@@ -1335,7 +1335,7 @@ static int str_pack (lua_State *L) {
         totalsize += len + 1;
         break;
       }
-      case Kpadding: luaL_addchar(&b, LUA_PACKPADBYTE);  /* go through */
+      case Kpadding: luaL_addchar(&b, LUA_PACKPADBYTE);  /* FALLTHROUGH */
       case Kpaddalign: case Knop:
         arg--;  /* undo increment */
         break;
