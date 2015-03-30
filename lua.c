@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.223 2015/03/09 21:57:05 roberto Exp roberto $
+** $Id: lua.c,v 1.224 2015/03/10 14:15:06 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -485,14 +485,14 @@ static int collectargs (char **argv, int *first) {
         args |= has_E;
         break;
       case 'i':
-        args |= has_i;  /* goes through  (-i implies -v) */
+        args |= has_i;  /* (-i implies -v) *//* FALLTHROUGH */ 
       case 'v':
         if (argv[i][2] != '\0')  /* extra characters after 1st? */
           return has_error;  /* invalid option */
         args |= has_v;
         break;
       case 'e':
-        args |= has_e;  /* go through */
+        args |= has_e;  /* FALLTHROUGH */
       case 'l':  /* both options need an argument */
         if (argv[i][2] == '\0') {  /* no concatenated argument? */
           i++;  /* try next 'argv' */
@@ -516,17 +516,16 @@ static int collectargs (char **argv, int *first) {
 static int runargs (lua_State *L, char **argv, int n) {
   int i;
   for (i = 1; i < n; i++) {
-    int status;
     int option = argv[i][1];
     lua_assert(argv[i][0] == '-');  /* already checked */
     if (option == 'e' || option == 'l') {
+      int status;
       const char *extra = argv[i] + 2;  /* both options need an argument */
       if (*extra == '\0') extra = argv[++i];
       lua_assert(extra != NULL);
-      if (option == 'e')
-        status = dostring(L, extra, "=(command line)");
-      else
-        status = dolibrary(L, extra);
+      status = (option == 'e')
+               ? dostring(L, extra, "=(command line)")
+               : dolibrary(L, extra);
       if (status != LUA_OK) return 0;
     }
   }
