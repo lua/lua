@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.247 2015/03/02 16:59:01 roberto Exp roberto $
+** $Id: luaconf.h,v 1.248 2015/03/06 19:49:50 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -97,7 +97,7 @@
 
 /*
 @@ LUA_INT_TYPE defines the type for Lua integers.
-@@ LUA_REAL_TYPE defines the type for Lua floats.
+@@ LUA_FLOAT_TYPE defines the type for Lua floats.
 ** Lua should work fine with any mix of these options (if supported
 ** by your C compiler). The usual configurations are 64-bit integers
 ** and 'double' (the default), 32-bit integers and 'float' (for
@@ -110,10 +110,10 @@
 #define LUA_INT_LONG		2
 #define LUA_INT_LONGLONG	3
 
-/* predefined options for LUA_REAL_TYPE */
-#define LUA_REAL_FLOAT		1
-#define LUA_REAL_DOUBLE		2
-#define LUA_REAL_LONGDOUBLE	3
+/* predefined options for LUA_FLOAT_TYPE */
+#define LUA_FLOAT_FLOAT		1
+#define LUA_FLOAT_DOUBLE	2
+#define LUA_FLOAT_LONGDOUBLE	3
 
 #if defined(LUA_32BITS)		/* { */
 /*
@@ -124,22 +124,27 @@
 #else  /* otherwise use 'long' */
 #define LUA_INT_TYPE	LUA_INT_LONG
 #endif
-#define LUA_REAL_TYPE	LUA_REAL_FLOAT
+#define LUA_FLOAT_TYPE	LUA_FLOAT_FLOAT
 
 #elif defined(LUA_C89_NUMBERS)	/* }{ */
 /*
 ** largest types available for C89 ('long' and 'double')
 */
 #define LUA_INT_TYPE	LUA_INT_LONG
-#define LUA_REAL_TYPE	LUA_REAL_DOUBLE
+#define LUA_FLOAT_TYPE	LUA_FLOAT_DOUBLE
 
-#else				/* }{ */
+#endif				/* } */
+
+
 /*
 ** default configuration for 64-bit Lua ('long long' and 'double')
 */
+#if !defined(LUA_INT_TYPE)
 #define LUA_INT_TYPE	LUA_INT_LONGLONG
-#define LUA_REAL_TYPE	LUA_REAL_DOUBLE
+#endif
 
+#if !defined(LUA_FLOAT_TYPE)
+#define LUA_FLOAT_TYPE	LUA_FLOAT_DOUBLE
 #endif								/* } */
 
 /* }================================================================== */
@@ -392,7 +397,7 @@
 /*
 ** {==================================================================
 ** Configuration for Numbers.
-** Change these definitions if no predefined LUA_REAL_* / LUA_INT_*
+** Change these definitions if no predefined LUA_FLOAT_* / LUA_INT_*
 ** satisfy your needs.
 ** ===================================================================
 */
@@ -412,7 +417,7 @@
 @@ lua_str2number converts a decimal numeric string to a number.
 */
 
-#if LUA_REAL_TYPE == LUA_REAL_FLOAT		/* { single float */
+#if LUA_FLOAT_TYPE == LUA_FLOAT_FLOAT		/* { single float */
 
 #define LUA_NUMBER	float
 
@@ -426,7 +431,7 @@
 #define lua_str2number(s,p)	strtof((s), (p))
 
 
-#elif LUA_REAL_TYPE == LUA_REAL_LONGDOUBLE	/* }{ long double */
+#elif LUA_FLOAT_TYPE == LUA_FLOAT_LONGDOUBLE	/* }{ long double */
 
 #define LUA_NUMBER	long double
 
@@ -439,7 +444,7 @@
 
 #define lua_str2number(s,p)	strtold((s), (p))
 
-#elif LUA_REAL_TYPE == LUA_REAL_DOUBLE		/* }{ double */
+#elif LUA_FLOAT_TYPE == LUA_FLOAT_DOUBLE	/* }{ double */
 
 #define LUA_NUMBER	double
 
@@ -454,7 +459,7 @@
 
 #else						/* }{ */
 
-#error "numeric real type not defined"
+#error "numeric float type not defined"
 
 #endif					/* } */
 
@@ -696,7 +701,7 @@
 ** smaller buffer would force a memory allocation for each call to
 ** 'string.format'.)
 */
-#if defined(LUA_REAL_LONGDOUBLE)
+#if defined(LUA_FLOAT_LONGDOUBLE)
 #define LUAL_BUFFERSIZE		8192
 #else
 #define LUAL_BUFFERSIZE   ((int)(0x80 * sizeof(void*) * sizeof(lua_Integer)))
