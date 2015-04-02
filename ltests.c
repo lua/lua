@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.203 2015/03/11 16:10:41 roberto Exp roberto $
+** $Id: ltests.c,v 2.204 2015/03/13 16:24:50 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -916,6 +916,13 @@ static int int2fb_aux (lua_State *L) {
 }
 
 
+static int log2_aux (lua_State *L) {
+  unsigned int x = (unsigned int)luaL_checkinteger(L, 1);
+  lua_pushinteger(L, luaO_ceillog2(x));
+  return 1;
+}
+
+
 struct Aux { jmp_buf jb; const char *paniccode; lua_State *L; };
 
 /*
@@ -1508,6 +1515,7 @@ static const struct luaL_Reg tests_funcs[] = {
   {"getref", getref},
   {"hash", hash_query},
   {"int2fb", int2fb_aux},
+  {"log2", log2_aux},
   {"limits", get_limits},
   {"listcode", listcode},
   {"listk", listk},
