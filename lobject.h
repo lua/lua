@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.108 2015/03/02 16:04:52 roberto Exp roberto $
+** $Id: lobject.h,v 2.109 2015/03/14 17:58:57 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -34,8 +34,6 @@
 ** bits 4-5: variant bits
 ** bit 6: whether value is collectable
 */
-
-#define VARBITS		(3 << 4)
 
 
 /*
