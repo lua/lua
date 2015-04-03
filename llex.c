@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.90 2015/03/03 18:17:04 roberto Exp roberto $
+** $Id: llex.c,v 2.91 2015/03/28 19:14:47 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -221,11 +221,6 @@ static void buffreplace (LexState *ls, char from, char to) {
 }
 
 
-#if !defined(l_getlocaledecpoint)
-#define l_getlocaledecpoint()	(localeconv()->decimal_point[0])
-#endif
-
-
 #define buff2num(b,o)	(luaO_str2num(luaZ_buffer(b), o) != 0)
 
 /*
@@ -234,7 +229,7 @@ static void buffreplace (LexState *ls, char from, char to) {
 */
 static void trydecpoint (LexState *ls, TValue *o) {
   char old = ls->decpoint;
-  ls->decpoint = l_getlocaledecpoint();
+  ls->decpoint = lua_getlocaledecpoint();
   buffreplace(ls, old, ls->decpoint);  /* try new decimal separator */
   if (!buff2num(ls->buff, o)) {
     /* format error with correct decimal point: no more options */

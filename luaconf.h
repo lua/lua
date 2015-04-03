@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.248 2015/03/06 19:49:50 roberto Exp roberto $
+** $Id: luaconf.h,v 1.249 2015/03/31 12:00:07 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -569,7 +569,7 @@
 
 /*
 ** {==================================================================
-** Dependencies with C99
+** Dependencies with C99 and other C details
 ** ===================================================================
 */
 
@@ -624,6 +624,16 @@
 #undef LUA_KCONTEXT
 #define LUA_KCONTEXT	intptr_t
 #endif
+#endif
+
+
+/*
+@@ lua_getlocaledecpoint gets the locale "radix character" (decimal point).
+** Change that if you do not want to use C locales. (Code using this
+** macro must include header 'locale.h'.)
+*/
+#if !defined(lua_getlocaledecpoint)
+#define lua_getlocaledecpoint()		(localeconv()->decimal_point[0])
 #endif
 
 /* }================================================================== */

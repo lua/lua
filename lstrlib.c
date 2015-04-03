@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.226 2015/02/09 18:05:46 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.227 2015/03/28 19:14:47 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -803,6 +803,7 @@ static int str_gsub (lua_State *L) {
 ** Hexadecimal floating-point formatter
 */
 
+#include <locale.h>
 #include <math.h>
 
 #define SIZELENMOD	(sizeof(LUA_NUMBER_FRMLEN)/sizeof(char))
@@ -850,7 +851,7 @@ static int num2straux (char *buff, lua_Number x) {
     m = adddigit(buff, n++, m * (1 << L_NBFD));  /* add first digit */
     e -= L_NBFD;  /* this digit goes before the radix point */
     if (m > 0) {  /* more digits? */
-      buff[n++] = '.';  /* add radix point */
+      buff[n++] = lua_getlocaledecpoint();  /* add radix point */
       do {  /* add as many digits as needed */
         m = adddigit(buff, n++, m * 16);
       } while (m > 0);
