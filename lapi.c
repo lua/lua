@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.247 2015/03/06 19:49:50 roberto Exp roberto $
+** $Id: lapi.c,v 2.248 2015/03/28 19:14:47 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -434,9 +434,8 @@ LUA_API const void *lua_topointer (lua_State *L, int idx) {
     case LUA_TCCL: return clCvalue(o);
     case LUA_TLCF: return cast(void *, cast(size_t, fvalue(o)));
     case LUA_TTHREAD: return thvalue(o);
-    case LUA_TUSERDATA:
-    case LUA_TLIGHTUSERDATA:
-      return lua_touserdata(L, idx);
+    case LUA_TUSERDATA: return getudatamem(uvalue(o));
+    case LUA_TLIGHTUSERDATA: return pvalue(o);
     default: return NULL;
   }
 }
@@ -485,20 +484,19 @@ LUA_API const char *lua_pushlstring (lua_State *L, const char *s, size_t len) {
 
 
 LUA_API const char *lua_pushstring (lua_State *L, const char *s) {
-  if (s == NULL) {
-    lua_pushnil(L);
-    return NULL;
-  }
+  lua_lock(L);
+  if (s == NULL)
+    setnilvalue(L->top);
   else {
     TString *ts;
-    lua_lock(L);
     luaC_checkGC(L);
     ts = luaS_new(L, s);
     setsvalue2s(L, L->top, ts);
-    api_incr_top(L);
-    lua_unlock(L);
-    return getstr(ts);
+    s = getstr(ts);  /* internal copy's address */
   }
+  api_incr_top(L);
+  lua_unlock(L);
+  return s;
 }
 
 
