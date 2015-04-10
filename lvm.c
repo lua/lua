@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.237 2015/03/07 19:30:16 roberto Exp roberto $
+** $Id: lvm.c,v 2.238 2015/03/30 15:45:01 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -262,7 +262,12 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
 
 
 /*
-** Main operation less than or equal to; return 'l <= r'.
+** Main operation less than or equal to; return 'l <= r'. If it needs
+** a metamethod and there is no '__le', try '__lt', based on
+** l <= r iff !(r < l) (assuming a total order). If the metamethod
+** yields during this substitution, the continuation has to know
+** about it (to negate the result of r<l); bit CIST_LEQ in the call
+** status keeps that information.
 */
 int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
   int res;
@@ -273,11 +278,16 @@ int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
     return luai_numle(nl, nr);
   else if (ttisstring(l) && ttisstring(r))  /* both are strings? */
     return l_strcmp(tsvalue(l), tsvalue(r)) <= 0;
-  else if ((res = luaT_callorderTM(L, l, r, TM_LE)) >= 0)  /* first try 'le' */
+  else if ((res = luaT_callorderTM(L, l, r, TM_LE)) >= 0)  /* try 'le' */
     return res;
-  else if ((res = luaT_callorderTM(L, r, l, TM_LT)) < 0)  /* else try 'lt' */
-    luaG_ordererror(L, l, r);
-  return !res;
+  else {  /* try 'lt': */
+    L->ci->callstatus |= CIST_LEQ;  /* mark it is doing 'lt' for 'le' */
+    res = luaT_callorderTM(L, r, l, TM_LT);
+    L->ci->callstatus ^= CIST_LEQ;  /* clear mark */
+    if (res < 0)
+      luaG_ordererror(L, l, r);
+    return !res;  /* result is negated */
+  }
 }
 
 
@@ -542,11 +552,11 @@ void luaV_finishOp (lua_State *L) {
     case OP_LE: case OP_LT: case OP_EQ: {
       int res = !l_isfalse(L->top - 1);
       L->top--;
-      /* metamethod should not be called when operand is K */
-      lua_assert(!ISK(GETARG_B(inst)));
-      if (op == OP_LE &&  /* "<=" using "<" instead? */
-          ttisnil(luaT_gettmbyobj(L, base + GETARG_B(inst), TM_LE)))
-        res = !res;  /* invert result */
+      if (ci->callstatus & CIST_LEQ) {  /* "<=" using "<" instead? */
+        lua_assert(op == OP_LE);
+        ci->callstatus ^= CIST_LEQ;  /* clear mark */
+        res = !res;  /* negate result */
+      }
       lua_assert(GET_OPCODE(*ci->u.l.savedpc) == OP_JMP);
       if (res != GETARG_A(inst))  /* condition failed? */
         ci->u.l.savedpc++;  /* skip jump instruction */

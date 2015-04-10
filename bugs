@@ -3376,6 +3376,73 @@ patch = [[
 }
 
 
+Bug{
+what = [[suspended '__le' metamethod can give wrong result]],
+report = [[Eric Zhong, 2015/04/07]],
+since = [[5.2]],
+fix = nil,
+
+example = [[
+mt = {__le = function (a,b) coroutine.yield("yield"); return a.x <= b.x end}
+t1 = setmetatable({x=1}, mt)
+t2 = {x=2}
+co = coroutine.wrap(function (a,b) return t2 <= t1 end)
+co()
+print(co())   --> true  (should be false)
+]],
+
+patch = [[
+--- lstate.h    2015/03/04 13:31:21     2.120
++++ lstate.h    2015/04/08 16:30:40
+@@ -94,6 +94,7 @@
+ #define CIST_YPCALL    (1<<4)  /* call is a yieldable protected call */
+ #define CIST_TAIL      (1<<5)  /* call was tail called */
+ #define CIST_HOOKYIELD (1<<6)  /* last hook called yielded */
++#define CIST_LEQ       (1<<7)  /* using __lt for __le */
+
+ #define isLua(ci)      ((ci)->callstatus & CIST_LUA)
+
+
+--- lvm.c       2015/03/30 15:45:01     2.238
++++ lvm.c       2015/04/09 15:30:13
+@@ -275,9 +275,14 @@
+     return l_strcmp(tsvalue(l), tsvalue(r)) <= 0;
+   else if ((res = luaT_callorderTM(L, l, r, TM_LE)) >= 0)  /* first try 'le' */
+     return res;
+-  else if ((res = luaT_callorderTM(L, r, l, TM_LT)) < 0)  /* else try 'lt' */
+-    luaG_ordererror(L, l, r);
+-  return !res;
++  else {  /* try 'lt': */
++    L->ci->callstatus |= CIST_LEQ;  /* mark it is doing 'lt' for 'le' */
++    res = luaT_callorderTM(L, r, l, TM_LT);
++    L->ci->callstatus ^= CIST_LEQ;  /* clear mark */
++    if (res < 0)
++      luaG_ordererror(L, l, r);
++    return !res;  /* result is negated */
++  }
+ }
+
+@@ -542,11 +547,11 @@
+     case OP_LE: case OP_LT: case OP_EQ: {
+       int res = !l_isfalse(L->top - 1);
+       L->top--;
+-      /* metamethod should not be called when operand is K */
+-      lua_assert(!ISK(GETARG_B(inst)));
+-      if (op == OP_LE &&  /* "<=" using "<" instead? */
+-          ttisnil(luaT_gettmbyobj(L, base + GETARG_B(inst), TM_LE)))
+-        res = !res;  /* invert result */
++      if (ci->callstatus & CIST_LEQ) {  /* "<=" using "<" instead? */
++        lua_assert(op == OP_LE);
++        ci->callstatus ^= CIST_LEQ;  /* clear mark */
++        res = !res;  /* negate result */
++      }
+       lua_assert(GET_OPCODE(*ci->u.l.savedpc) == OP_JMP);
+       if (res != GETARG_A(inst))  /* condition failed? */
+         ci->u.l.savedpc++;  /* skip jump instruction */
+]]
+}
+
+
 --[=[
 Bug{
 what = [[ ]],

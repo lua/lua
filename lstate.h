@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.119 2014/10/30 18:53:28 roberto Exp roberto $
+** $Id: lstate.h,v 2.120 2015/03/04 13:31:21 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -94,6 +94,7 @@ typedef struct CallInfo {
 #define CIST_YPCALL	(1<<4)	/* call is a yieldable protected call */
 #define CIST_TAIL	(1<<5)	/* call was tail called */
 #define CIST_HOOKYIELD	(1<<6)	/* last hook called yielded */
+#define CIST_LEQ	(1<<7)  /* using __lt for __le */
 
 #define isLua(ci)	((ci)->callstatus & CIST_LUA)
 
