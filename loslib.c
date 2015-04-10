@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.55 2015/01/12 19:32:32 roberto Exp roberto $
+** $Id: loslib.c,v 1.56 2015/02/09 17:41:54 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -22,10 +22,12 @@
 #include "lualib.h"
 
 
-#if !defined(LUA_STRFTIMEOPTIONS)	/* { */
 /*
+** {==================================================================
 ** list of valid conversion specifiers for the 'strftime' function
+** ===================================================================
 */
+#if !defined(LUA_STRFTIMEOPTIONS)	/* { */
 
 #if defined(LUA_USE_C89)
 #define LUA_STRFTIMEOPTIONS	{ "aAbBcdHIjmMpSUwWxXyYz%", "" }
@@ -37,8 +39,14 @@
 #endif
 
 #endif					/* } */
+/* }================================================================== */
 
 
+/*
+** {==================================================================
+** Configuration for time-related stuff
+** ===================================================================
+*/
 
 #if !defined(l_time_t)		/* { */
 /*
@@ -51,12 +59,38 @@
 #endif				/* } */
 
 
-
-#if !defined(lua_tmpnam)	/* { */
+#if !defined(l_gmtime)		/* { */
 /*
-** By default, Lua uses tmpnam except when POSIX is available, where it
-** uses mkstemp.
+** By default, Lua uses gmtime/localtime, except when POSIX is available,
+** where it uses gmtime_r/localtime_r
 */
+
+#if defined(LUA_USE_POSIX)	/* { */
+
+#define l_gmtime(t,r)		gmtime_r(t,r)
+#define l_localtime(t,r)	localtime_r(t,r)
+
+#else				/* }{ */
+
+/* ISO C definitions */
+#define l_gmtime(t,r)		((void)(r)->tm_sec, gmtime(t))
+#define l_localtime(t,r)  	((void)(r)->tm_sec, localtime(t))
+
+#endif				/* } */
+
+#endif				/* } */
+
+/* }================================================================== */
+
+
+/*
+** {==================================================================
+** Configuration for 'tmpnam':
+** By default, Lua uses tmpnam except when POSIX is available, where
+** it uses mkstemp.
+** ===================================================================
+*/
+#if !defined(lua_tmpnam)	/* { */
 
 #if defined(LUA_USE_POSIX)	/* { */
 
@@ -83,29 +117,8 @@
 #endif				/* } */
 
 #endif				/* } */
+/* }================================================================== */
 
-
-
-#if !defined(l_gmtime)		/* { */
-/*
-** By default, Lua uses gmtime/localtime, except when POSIX is available,
-** where it uses gmtime_r/localtime_r
-*/
-
-#if defined(LUA_USE_POSIX)	/* { */
-
-#define l_gmtime(t,r)		gmtime_r(t,r)
-#define l_localtime(t,r)	localtime_r(t,r)
-
-#else				/* }{ */
-
-/* ISO C definitions */
-#define l_gmtime(t,r)		((void)(r)->tm_sec, gmtime(t))
-#define l_localtime(t,r)  	((void)(r)->tm_sec, localtime(t))
-
-#endif				/* } */
-
-#endif				/* } */
 
 
 
