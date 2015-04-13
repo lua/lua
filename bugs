@@ -3392,20 +3392,19 @@ print(co())   --> true  (should be false)
 ]],
 
 patch = [[
---- lstate.h    2015/03/04 13:31:21     2.120
-+++ lstate.h    2015/04/08 16:30:40
+--- lstate.h	2014/10/30 18:53:28	2.119
++++ lstate.h	2015/04/13 15:58:40
 @@ -94,6 +94,7 @@
- #define CIST_YPCALL    (1<<4)  /* call is a yieldable protected call */
- #define CIST_TAIL      (1<<5)  /* call was tail called */
- #define CIST_HOOKYIELD (1<<6)  /* last hook called yielded */
-+#define CIST_LEQ       (1<<7)  /* using __lt for __le */
-
- #define isLua(ci)      ((ci)->callstatus & CIST_LUA)
-
-
---- lvm.c       2015/03/30 15:45:01     2.238
-+++ lvm.c       2015/04/09 15:30:13
-@@ -275,9 +275,14 @@
+ #define CIST_YPCALL	(1<<4)	/* call is a yieldable protected call */
+ #define CIST_TAIL	(1<<5)	/* call was tail called */
+ #define CIST_HOOKYIELD	(1<<6)	/* last hook called yielded */
++#define CIST_LEQ	(1<<7)  /* using __lt for __le */
+ 
+ #define isLua(ci)	((ci)->callstatus & CIST_LUA)
+ 
+--- lvm.c	2014/12/27 20:30:38	2.232
++++ lvm.c	2015/04/13 15:51:30
+@@ -292,9 +292,14 @@
      return l_strcmp(tsvalue(l), tsvalue(r)) <= 0;
    else if ((res = luaT_callorderTM(L, l, r, TM_LE)) >= 0)  /* first try 'le' */
      return res;
@@ -3421,8 +3420,9 @@ patch = [[
 +    return !res;  /* result is negated */
 +  }
  }
-
-@@ -542,11 +547,11 @@
+ 
+ 
+@@ -553,11 +558,11 @@
      case OP_LE: case OP_LT: case OP_EQ: {
        int res = !l_isfalse(L->top - 1);
        L->top--;
