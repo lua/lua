@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.238 2015/03/30 15:45:01 roberto Exp roberto $
+** $Id: lvm.c,v 2.239 2015/04/10 17:56:25 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -301,10 +301,8 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
     if (ttnov(t1) != ttnov(t2) || ttnov(t1) != LUA_TNUMBER)
       return 0;  /* only numbers can be equal with different variants */
     else {  /* two numbers with different variants */
-      lua_Number n1, n2;  /* compare them as floats */
-      lua_assert(ttisnumber(t1) && ttisnumber(t2));
-      cast_void(tofloat(t1, &n1)); cast_void(tofloat(t2, &n2));
-      return luai_numeq(n1, n2);
+      lua_Integer i1, i2;  /* compare them as integers */
+      return (tointeger(t1, &i1) && tointeger(t2, &i2) && i1 == i2);
     }
   }
   /* values have same type and same variant */
