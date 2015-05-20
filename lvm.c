@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.240 2015/04/29 18:27:16 roberto Exp roberto $
+** $Id: lvm.c,v 2.241 2015/05/20 16:22:55 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -286,27 +286,43 @@ static int LEintfloat (lua_Integer i, lua_Number f, int neg) {
 
 
 /*
-** Return 'l < r', for numbers. 'neg' means result will be negated
-** (that is, comparison is based on r <= l  <-->  not (l < r)).
-** In that case, comparisons with NaN must result in false after
-** being negated (so negate again the comparison).
+** Return 'l < r', for numbers.
 */
-static int LTnum (const TValue *l, const TValue *r, int neg) {
+static int LTnum (const TValue *l, const TValue *r) {
   if (ttisinteger(l)) {
     lua_Integer li = ivalue(l);
     if (ttisinteger(r))
       return li < ivalue(r);  /* both are integers */
     else  /* 'l' is int and 'r' is float */
-      return LTintfloat(li, fltvalue(r), neg);  /* l < r ? */
+      return LTintfloat(li, fltvalue(r), 0);  /* l < r ? */
   }
   else {
     lua_Number lf = fltvalue(l);  /* 'l' must be float */
-    if (ttisfloat(r)) {  /* both are float */
-      lua_Number rf = fltvalue(r);
-      return (neg ? !luai_numle(rf, lf) : luai_numlt(lf, rf));
-    }
+    if (ttisfloat(r))
+      return luai_numlt(lf, fltvalue(r));  /* both are float */
     else  /* 'r' is int and 'l' is float */
-      return !LEintfloat(ivalue(r), lf, !neg);  /* not (r <= l) ? */
+      return !LEintfloat(ivalue(r), lf, 1);  /* not (r <= l) ? */
+  }
+}
+
+
+/*
+** Return 'l <= r', for numbers.
+*/
+static int LEnum (const TValue *l, const TValue *r) {
+  if (ttisinteger(l)) {
+    lua_Integer li = ivalue(l);
+    if (ttisinteger(r))
+      return li <= ivalue(r);  /* both are integers */
+    else  /* 'l' is int and 'r' is float */
+      return LEintfloat(li, fltvalue(r), 0);  /* l <= r ? */
+  }
+  else {
+    lua_Number lf = fltvalue(l);  /* 'l' must be float */
+    if (ttisfloat(r))
+      return luai_numle(lf, fltvalue(r));  /* both are float */
+    else  /* 'r' is int and 'l' is float */
+      return !LTintfloat(ivalue(r), lf, 1);  /* not (r < l) ? */
   }
 }
 
@@ -317,7 +333,7 @@ static int LTnum (const TValue *l, const TValue *r, int neg) {
 int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
   int res;
   if (ttisnumber(l) && ttisnumber(r))  /* both operands are numbers? */
-    return LTnum(l, r, 0);
+    return LTnum(l, r);
   else if (ttisstring(l) && ttisstring(r))  /* both are strings? */
     return l_strcmp(tsvalue(l), tsvalue(r)) < 0;
   else if ((res = luaT_callorderTM(L, l, r, TM_LT)) < 0)  /* no metamethod? */
@@ -337,7 +353,7 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
 int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
   int res;
   if (ttisnumber(l) && ttisnumber(r))  /* both operands are numbers? */
-    return !LTnum(r, l, 1);
+    return LEnum(l, r);
   else if (ttisstring(l) && ttisstring(r))  /* both are strings? */
     return l_strcmp(tsvalue(l), tsvalue(r)) <= 0;
   else if ((res = luaT_callorderTM(L, l, r, TM_LE)) >= 0)  /* try 'le' */
