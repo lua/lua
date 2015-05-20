@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.227 2015/03/28 19:14:47 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.228 2015/04/03 18:41:57 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -11,6 +11,7 @@
 
 
 #include <ctype.h>
+#include <float.h>
 #include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -812,12 +813,10 @@ static int str_gsub (lua_State *L) {
 /*
 ** Number of bits that goes into the first digit. It can be any value
 ** between 1 and 4; the following definition tries to align the number
-** to nibble boundaries. The default is 1 bit, that aligns double
-** (1+52-bit mantissa) and quad precision (1+112-bit mantissa). For
-** float (24-bit mantissa) and 80-bit long double (64-bit mantissa), 4
-** does the alignment.
+** to nibble boundaries by making what is left after that first digit a
+** multiple of 4.
 */
-#define L_NBFD	((sizeof(lua_Number) == 4 || sizeof(lua_Number) == 12) ? 4 : 1)
+#define L_NBFD		((l_mathlim(MANT_DIG) - 1)%4 + 1)
 
 
 /*
@@ -881,11 +880,9 @@ static int lua_number2strx (lua_State *L, char *buff, const char *fmt,
 /*
 ** Maximum size of each formatted item. This maximum size is produced
 ** by format('%.99f', minfloat), and is equal to 99 + 2 ('-' and '.') +
-** number of decimal digits to represent minfloat (which is ~308 for
-** a double and ~4932 for long double).
+** number of decimal digits to represent minfloat.
 */
-#define MAX_ITEM  \
-  (sizeof(lua_Number) <= 4 ? 150 : sizeof(lua_Number) <= 8 ? 450 : 5050)
+#define MAX_ITEM	(120 + l_mathlim(MAX_10_EXP))
 
 
 /* valid flags in a format specification */

@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.249 2015/03/31 12:00:07 roberto Exp roberto $
+** $Id: luaconf.h,v 1.250 2015/04/03 18:41:57 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -404,22 +404,22 @@
 
 /*
 @@ LUA_NUMBER is the floating-point type used by Lua.
-**
 @@ LUAI_UACNUMBER is the result of an 'usual argument conversion'
 @@ over a floating number.
-**
+@@ l_mathlim(x) corrects limit name 'x' to the proper float type
+** by prefixing it with one of FLT/DBL/LDBL.
 @@ LUA_NUMBER_FRMLEN is the length modifier for writing floats.
 @@ LUA_NUMBER_FMT is the format for writing floats.
 @@ lua_number2str converts a float to a string.
-**
 @@ l_mathop allows the addition of an 'l' or 'f' to all math operations.
-**
 @@ lua_str2number converts a decimal numeric string to a number.
 */
 
 #if LUA_FLOAT_TYPE == LUA_FLOAT_FLOAT		/* { single float */
 
 #define LUA_NUMBER	float
+
+#define l_mathlim(n)		(FLT_##n)
 
 #define LUAI_UACNUMBER	double
 
@@ -435,6 +435,8 @@
 
 #define LUA_NUMBER	long double
 
+#define l_mathlim(n)		(LDBL_##n)
+
 #define LUAI_UACNUMBER	long double
 
 #define LUA_NUMBER_FRMLEN	"L"
@@ -447,6 +449,8 @@
 #elif LUA_FLOAT_TYPE == LUA_FLOAT_DOUBLE	/* }{ double */
 
 #define LUA_NUMBER	double
+
+#define l_mathlim(n)		(DBL_##n)
 
 #define LUAI_UACNUMBER	double
 
@@ -620,7 +624,7 @@
 #if !defined(LUA_USE_C89) && defined(__STDC_VERSION__) && \
     __STDC_VERSION__ >= 199901L
 #include <stdint.h>
-#if defined (INTPTR_MAX)  /* even in C99 this type is optional */
+#if defined(INTPTR_MAX)  /* even in C99 this type is optional */
 #undef LUA_KCONTEXT
 #define LUA_KCONTEXT	intptr_t
 #endif
