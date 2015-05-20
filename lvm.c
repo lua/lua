@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.239 2015/04/10 17:56:25 roberto Exp roberto $
+** $Id: lvm.c,v 2.240 2015/04/29 18:27:16 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -35,22 +35,6 @@
 #define MAXTAGLOOP	2000
 
 
-/*
-** Similar to 'tonumber', but does not attempt to convert strings and
-** ensure correct precision (no extra bits). Used in comparisons.
-*/
-static int tofloat (const TValue *obj, lua_Number *n) {
-  if (ttisfloat(obj)) *n = fltvalue(obj);
-  else if (ttisinteger(obj)) {
-    volatile lua_Number x = cast_num(ivalue(obj));  /* avoid extra precision */
-    *n = x;
-  }
-  else {
-    *n = 0;  /* to avoid warnings */
-    return 0;
-  }
-  return 1;
-}
 
 
 /*
@@ -244,15 +228,96 @@ static int l_strcmp (const TString *ls, const TString *rs) {
 
 
 /*
+** Check whether integer 'i' is less than float 'f'. 'neg' true means
+** result will be later negated: NaN still must result in false after
+** inversion. The comparison is based on the equivalence:
+**    i < f   <-->   i < ceil(f)
+** When 'f' is non-positive, 'ceil' is not necessary, because the
+** standard C truncation (when converting a float to an integer) does
+** the job.
+** 
+*/
+static int LTintfloat (lua_Integer i, lua_Number f, int neg) {
+  if (f > 0) {
+    f = l_mathop(ceil)(f);
+    if (f >= -cast_num(LUA_MININTEGER))  /* -minint == maxint + 1 */
+      return 1;  /* f >= maxint + 1; larger than all integers */
+    else {  /* 0 < f < (maxint + 1) */
+      /* as f now has integral value, f <= maxint; cast is safe */
+      return (i < cast(lua_Integer, f));  
+    }
+  }
+  else if (f > cast_num(LUA_MININTEGER)) {  /* minint < f <= 0? */
+    return (i < cast(lua_Integer, f));  /* cast computes 'ceil' */
+  }
+  else if (luai_numisnan(f))
+    return neg;  /* i < NaN: final result must be false */
+  else  /* f <= minint */
+    return 0;  /* 'f' cannot be larger than any int */
+}
+
+
+/*
+** Check whether integer 'i' is less than or equal to float 'f'.
+** 'neg' is like in previous function. The comparison is based on the
+** equivalence:
+**    i <= f   <-->   i <= floor(f)
+** When f is non-negative, 'floor' is not necessary (C truncation does
+** the job).
+*/
+static int LEintfloat (lua_Integer i, lua_Number f, int neg) {
+  if (f >= 0) {
+    if (f >= -cast_num(LUA_MININTEGER))  /* f >= (maxint + 1)? */
+      return 1;  /* 'f' larger than all integers */
+    else {  /* 0 <= f < (maxint + 1) */
+      /* truncation ensures that resulting value is <= maxint */
+      return (i <= cast(lua_Integer, f));
+    }
+  }
+  else if (f >= cast_num(LUA_MININTEGER)) {  /* minint <= f < 0? */
+    /* f >= minint   -->   floor(f) >= minint */
+    return (i <= cast(lua_Integer, l_floor(f)));
+  }
+  else if (luai_numisnan(f))
+    return neg;  /* i <= NaN: final result must be false */
+  else  /* f < minint */
+    return 0;  /* 'f' is smaller than any int */
+}
+
+
+/*
+** Return 'l < r', for numbers. 'neg' means result will be negated
+** (that is, comparison is based on r <= l  <-->  not (l < r)).
+** In that case, comparisons with NaN must result in false after
+** being negated (so negate again the comparison).
+*/
+static int LTnum (const TValue *l, const TValue *r, int neg) {
+  if (ttisinteger(l)) {
+    lua_Integer li = ivalue(l);
+    if (ttisinteger(r))
+      return li < ivalue(r);  /* both are integers */
+    else  /* 'l' is int and 'r' is float */
+      return LTintfloat(li, fltvalue(r), neg);  /* l < r ? */
+  }
+  else {
+    lua_Number lf = fltvalue(l);  /* 'l' must be float */
+    if (ttisfloat(r)) {  /* both are float */
+      lua_Number rf = fltvalue(r);
+      return (neg ? !luai_numle(rf, lf) : luai_numlt(lf, rf));
+    }
+    else  /* 'r' is int and 'l' is float */
+      return !LEintfloat(ivalue(r), lf, !neg);  /* not (r <= l) ? */
+  }
+}
+
+
+/*
 ** Main operation less than; return 'l < r'.
 */
 int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
   int res;
-  lua_Number nl, nr;
-  if (ttisinteger(l) && ttisinteger(r))  /* both operands are integers? */
-    return (ivalue(l) < ivalue(r));
-  else if (tofloat(l, &nl) && tofloat(r, &nr))  /* both are numbers? */
-    return luai_numlt(nl, nr);
+  if (ttisnumber(l) && ttisnumber(r))  /* both operands are numbers? */
+    return LTnum(l, r, 0);
   else if (ttisstring(l) && ttisstring(r))  /* both are strings? */
     return l_strcmp(tsvalue(l), tsvalue(r)) < 0;
   else if ((res = luaT_callorderTM(L, l, r, TM_LT)) < 0)  /* no metamethod? */
@@ -271,11 +336,8 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
 */
 int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
   int res;
-  lua_Number nl, nr;
-  if (ttisinteger(l) && ttisinteger(r))  /* both operands are integers? */
-    return (ivalue(l) <= ivalue(r));
-  else if (tofloat(l, &nl) && tofloat(r, &nr))  /* both are numbers? */
-    return luai_numle(nl, nr);
+  if (ttisnumber(l) && ttisnumber(r))  /* both operands are numbers? */
+    return !LTnum(r, l, 1);
   else if (ttisstring(l) && ttisstring(r))  /* both are strings? */
     return l_strcmp(tsvalue(l), tsvalue(r)) <= 0;
   else if ((res = luaT_callorderTM(L, l, r, TM_LE)) >= 0)  /* try 'le' */
@@ -604,7 +666,7 @@ void luaV_finishOp (lua_State *L) {
 ** some macros for common tasks in 'luaV_execute'
 */
 
-#if !defined luai_runtimecheck
+#if !defined(luai_runtimecheck)
 #define luai_runtimecheck(L, c)		/* void */
 #endif
 
