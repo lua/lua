@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.108 2015/03/30 19:51:00 roberto Exp roberto $
+** $Id: ltable.c,v 2.109 2015/04/02 21:09:51 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,6 @@
 ** Hence even when the load factor reaches 100%, performance remains good.
 */
 
-#include <float.h>
 #include <math.h>
 #include <limits.h>
 
