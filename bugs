@@ -3443,6 +3443,19 @@ patch = [[
 }
 
 
+Bug{
+what = [[return hook may not see correct values for
+ active local variables when function returns]],
+report = [[Philipp Janda/Peng Yi, 2015/05/19]],
+since = [[5.0]],
+fix = nil,
+example = [[
+see messasge http://lua-users.org/lists/lua-l/2015-05/msg00376.html]],
+patch = [[
+]]
+}
+
+
 --[=[
 Bug{
 what = [[ ]],
