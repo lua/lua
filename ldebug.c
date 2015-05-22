@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.113 2015/03/11 16:10:41 roberto Exp roberto $
+** $Id: ldebug.c,v 2.114 2015/03/28 19:14:47 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -599,19 +599,16 @@ l_noret luaG_ordererror (lua_State *L, const TValue *p1, const TValue *p2) {
 }
 
 
-static void addinfo (lua_State *L, const char *msg) {
-  CallInfo *ci = L->ci;
-  if (isLua(ci)) {  /* is Lua code? */
-    char buff[LUA_IDSIZE];  /* add file:line information */
-    int line = currentline(ci);
-    TString *src = ci_func(ci)->p->source;
-    if (src)
-      luaO_chunkid(buff, getstr(src), LUA_IDSIZE);
-    else {  /* no source available; use "?" instead */
-      buff[0] = '?'; buff[1] = '\0';
-    }
-    luaO_pushfstring(L, "%s:%d: %s", buff, line, msg);
+/* add src:line information to 'msg' */
+const char *luaG_addinfo (lua_State *L, const char *msg, TString *src,
+                                        int line) {
+  char buff[LUA_IDSIZE];
+  if (src)
+    luaO_chunkid(buff, getstr(src), LUA_IDSIZE);
+  else {  /* no source available; use "?" instead */
+    buff[0] = '?'; buff[1] = '\0';
   }
+  return luaO_pushfstring(L, "%s:%d: %s", buff, line, msg);
 }
 
 
@@ -628,10 +625,14 @@ l_noret luaG_errormsg (lua_State *L) {
 
 
 l_noret luaG_runerror (lua_State *L, const char *fmt, ...) {
+  CallInfo *ci = L->ci;
+  const char *msg;
   va_list argp;
   va_start(argp, fmt);
-  addinfo(L, luaO_pushvfstring(L, fmt, argp));
+  msg = luaO_pushvfstring(L, fmt, argp);  /* format message */
   va_end(argp);
+  if (isLua(ci))  /* if Lua function, add source:line information */
+    luaG_addinfo(L, msg, ci_func(ci)->p->source, currentline(ci));
   luaG_errormsg(L);
 }
 

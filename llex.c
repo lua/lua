@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.91 2015/03/28 19:14:47 roberto Exp roberto $
+** $Id: llex.c,v 2.92 2015/04/03 18:41:57 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -16,6 +16,7 @@
 #include "lua.h"
 
 #include "lctype.h"
+#include "ldebug.h"
 #include "ldo.h"
 #include "lgc.h"
 #include "llex.h"
@@ -106,9 +107,7 @@ static const char *txtToken (LexState *ls, int token) {
 
 
 static l_noret lexerror (LexState *ls, const char *msg, int token) {
-  char buff[LUA_IDSIZE];
-  luaO_chunkid(buff, getstr(ls->source), LUA_IDSIZE);
-  msg = luaO_pushfstring(ls->L, "%s:%d: %s", buff, ls->linenumber, msg);
+  msg = luaG_addinfo(ls->L, msg, ls->source, ls->linenumber);
   if (token)
     luaO_pushfstring(ls->L, "%s near %s", msg, txtToken(ls, token));
   luaD_throw(ls->L, LUA_ERRSYNTAX);
