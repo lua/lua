@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.136 2015/03/06 19:49:50 roberto Exp roberto $
+** $Id: ldo.c,v 2.137 2015/03/30 16:05:23 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -337,7 +337,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       n = (*f)(L);  /* do the actual call */
       lua_lock(L);
       api_checknelems(L, n);
-      luaD_poscall(L, L->top - n);
+      luaD_poscall(L, L->top - n, n);
       return 1;
     }
     case LUA_TLCL: {  /* Lua function: prepare its call */
@@ -379,7 +379,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
 }
 
 
-int luaD_poscall (lua_State *L, StkId firstResult) {
+int luaD_poscall (lua_State *L, StkId firstResult, int nres) {
   StkId res;
   int wanted, i;
   CallInfo *ci = L->ci;
@@ -395,7 +395,7 @@ int luaD_poscall (lua_State *L, StkId firstResult) {
   wanted = ci->nresults;
   L->ci = ci->previous;  /* back to caller */
   /* move results to correct place */
-  for (i = wanted; i != 0 && firstResult < L->top; i--)
+  for (i = wanted; i != 0 && nres-- > 0; i--)
     setobjs2s(L, res++, firstResult++);
   while (i-- > 0)
     setnilvalue(res++);
@@ -449,7 +449,7 @@ static void finishCcall (lua_State *L, int status) {
   lua_lock(L);
   api_checknelems(L, n);
   /* finish 'luaD_precall' */
-  luaD_poscall(L, L->top - n);
+  luaD_poscall(L, L->top - n, n);
 }
 
 
@@ -533,7 +533,8 @@ static l_noret resume_error (lua_State *L, const char *msg, StkId firstArg) {
 */
 static void resume (lua_State *L, void *ud) {
   int nCcalls = L->nCcalls;
-  StkId firstArg = cast(StkId, ud);
+  int n = *(cast(int*, ud));  /* number of arguments */
+  StkId firstArg = L->top - n;  /* first argument */
   CallInfo *ci = L->ci;
   if (nCcalls >= LUAI_MAXCCALLS)
     resume_error(L, "C stack overflow", firstArg);
@@ -553,14 +554,13 @@ static void resume (lua_State *L, void *ud) {
       luaV_execute(L);  /* just continue running Lua code */
     else {  /* 'common' yield */
       if (ci->u.c.k != NULL) {  /* does it have a continuation function? */
-        int n;
         lua_unlock(L);
         n = (*ci->u.c.k)(L, LUA_YIELD, ci->u.c.ctx); /* call continuation */
         lua_lock(L);
         api_checknelems(L, n);
         firstArg = L->top - n;  /* yield results come from continuation */
       }
-      luaD_poscall(L, firstArg);  /* finish 'luaD_precall' */
+      luaD_poscall(L, firstArg, n);  /* finish 'luaD_precall' */
     }
     unroll(L, NULL);  /* run continuation */
   }
@@ -576,7 +576,7 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs) {
   L->nCcalls = (from) ? from->nCcalls + 1 : 1;
   L->nny = 0;  /* allow yields */
   api_checknelems(L, (L->status == LUA_OK) ? nargs + 1 : nargs);
-  status = luaD_rawrunprotected(L, resume, L->top - nargs);
+  status = luaD_rawrunprotected(L, resume, &nargs);
   if (status == -1)  /* error calling 'lua_resume'? */
     status = LUA_ERRRUN;
   else {  /* continue running after recoverable errors */
