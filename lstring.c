@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.47 2015/03/04 13:31:21 roberto Exp roberto $
+** $Id: lstring.c,v 2.48 2015/03/25 13:42:19 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -94,8 +94,8 @@ void luaS_resize (lua_State *L, int newsize) {
 void luaS_clearcache (global_State *g) {
   int i;
   for (i = 0; i < STRCACHE_SIZE; i++) {
-    if (iswhite(g->strcache[i]))  /* will entry be collected? */
-      g->strcache[i] = g->memerrmsg;  /* replace it with something fixed */
+    if (iswhite(g->strcache[i][0]))  /* will entry be collected? */
+      g->strcache[i][0] = g->memerrmsg;  /* replace it with something fixed */
   }
 }
 
@@ -110,8 +110,8 @@ void luaS_init (lua_State *L) {
   /* pre-create memory-error message */
   g->memerrmsg = luaS_newliteral(L, MEMERRMSG);
   luaC_fix(L, obj2gco(g->memerrmsg));  /* it should never be collected */
-  for (i = 0; i < STRCACHE_SIZE; i++)
-    g->strcache[i] = g->memerrmsg;  /* fill cache with valid strings */
+  for (i = 0; i < STRCACHE_SIZE; i++)  /* fill cache with valid strings */
+    g->strcache[i][0] = g->memerrmsg;
 }
 
 
@@ -200,12 +200,12 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
 */
 TString *luaS_new (lua_State *L, const char *str) {
   unsigned int i = point2uint(str) % STRCACHE_SIZE;  /* hash */
-  TString **p = &G(L)->strcache[i];
-  if (strcmp(str, getstr(*p)) == 0)  /* hit? */
-    return *p;  /* that it is */
+  TString **p = G(L)->strcache[i];
+  if (strcmp(str, getstr(p[0])) == 0)  /* hit? */
+    return p[0];  /* that it is */
   else {  /* normal route */
     TString *s = luaS_newlstr(L, str, strlen(str));
-    *p = s;
+    p[0] = s;
     return s;
   }
 }
