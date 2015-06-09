@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.243 2015/05/22 17:48:19 roberto Exp roberto $
+** $Id: lvm.c,v 2.244 2015/06/02 19:11:24 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -262,17 +262,18 @@ static int l_strcmp (const TString *ls, const TString *rs) {
 ** is trivial. Otherwise, compare them as integers. (When 'i' has no
 ** float representation, either 'f' is "far away" from 'i' or 'f' has
 ** no precision left for a fractional part; either way, how 'f' is
-** truncated is irrelevant.)
+** truncated is irrelevant.) When 'f' is NaN, comparisons must result
+** in false.
 */
 static int LTintfloat (lua_Integer i, lua_Number f) {
 #if defined(l_intfitsf)
   if (!l_intfitsf(i)) {
     if (f >= -cast_num(LUA_MININTEGER))  /* -minint == maxint + 1 */
       return 1;  /* f >= maxint + 1 > i */
-    else if (f <= cast_num(LUA_MININTEGER))  /* f <= minint */
-      return 0;  /* f <= minint <= i  -->  not(i < f) */
-    else  /* minint < f <= maxint */
+    else if (f > cast_num(LUA_MININTEGER))  /* minint < f <= maxint ? */
       return (i < cast(lua_Integer, f));  /* compare them as integers */
+    else  /* f <= minint <= i (or 'f' is NaN)  -->  not(i < f) */
+      return 0;
   }
 #endif
   return luai_numlt(cast_num(i), f);  /* compare them as floats */
@@ -288,10 +289,10 @@ static int LEintfloat (lua_Integer i, lua_Number f) {
   if (!l_intfitsf(i)) {
     if (f >= -cast_num(LUA_MININTEGER))  /* -minint == maxint + 1 */
       return 1;  /* f >= maxint + 1 > i */
-    else if (f < cast_num(LUA_MININTEGER))  /* f < minint */
-      return 0;  /* f < minint <= i -->  not(i <= f) */
-    else  /* minint <= f <= maxint */
+    else if (f >= cast_num(LUA_MININTEGER))  /* minint <= f <= maxint ? */
       return (i <= cast(lua_Integer, f));  /* compare them as integers */
+    else  /* f < minint <= i (or 'f' is NaN)  -->  not(i <= f) */
+      return 0;
   }
 #endif
   return luai_numle(cast_num(i), f);  /* compare them as floats */
@@ -387,7 +388,7 @@ int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
 
 
 /*
-** Main operation for equality of Lua values; return 't1 == t2'. 
+** Main operation for equality of Lua values; return 't1 == t2'.
 ** L == NULL means raw equality (no metamethods)
 */
 int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
@@ -540,7 +541,7 @@ lua_Integer luaV_div (lua_State *L, lua_Integer m, lua_Integer n) {
 
 
 /*
-** Integer modulus; return 'm % n'. (Assume that C '%' with 
+** Integer modulus; return 'm % n'. (Assume that C '%' with
 ** negative operands follows C99 behavior. See previous comment
 ** about luaV_div.)
 */
@@ -835,7 +836,7 @@ void luaV_execute (lua_State *L) {
         Protect(luaV_gettable(L, rb, RKC(i), ra));
         vmbreak;
       }
-      vmcase(OP_ADD) { 
+      vmcase(OP_ADD) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
