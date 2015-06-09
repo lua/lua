@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.109 2015/03/14 17:58:57 roberto Exp roberto $
+** $Id: lobject.h,v 2.110 2015/04/02 21:10:53 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -374,13 +374,13 @@ typedef union UUdata {
 
 #define setuservalue(L,u,o) \
 	{ const TValue *io=(o); Udata *iu = (u); \
-	  iu->user_ = io->value_; iu->ttuv_ = io->tt_; \
+	  iu->user_ = io->value_; iu->ttuv_ = rttype(io); \
 	  checkliveness(G(L),io); }
 
 
 #define getuservalue(L,u,o) \
 	{ TValue *io=(o); const Udata *iu = (u); \
-	  io->value_ = iu->user_; io->tt_ = iu->ttuv_; \
+	  io->value_ = iu->user_; settt_(io, iu->ttuv_); \
 	  checkliveness(G(L),io); }
 
 
