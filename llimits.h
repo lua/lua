@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.133 2015/03/04 13:31:21 roberto Exp roberto $
+** $Id: llimits.h,v 1.134 2015/03/06 19:49:50 roberto Exp roberto $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -261,11 +261,11 @@ typedef unsigned long Instruction;
 #endif
 
 /*
-** module: defined as 'a - floor(a/b)*b'; the previous definition gives
-** NaN when 'b' is huge, but the result should be 'a'. 'fmod' gives the
-** result of 'a - trunc(a/b)*b', and therefore must be corrected when
-** 'trunc(a/b) ~= floor(a/b)'. That happens when the division has a
-** non-integer negative result, which is equivalent to the test below
+** modulo: defined as 'a - floor(a/b)*b'; this definition gives NaN when
+** 'b' is huge, but the result should be 'a'. 'fmod' gives the result of
+** 'a - trunc(a/b)*b', and therefore must be corrected when 'trunc(a/b)
+** ~= floor(a/b)'. That happens when the division has a non-integer
+** negative result, which is equivalent to the test below.
 */
 #if !defined(luai_nummod)
 #define luai_nummod(L,a,b,m)  \
