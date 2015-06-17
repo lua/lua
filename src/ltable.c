@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.110 2015/05/20 16:22:30 roberto Exp $
+** $Id: ltable.c,v 2.111 2015/06/09 14:21:13 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -551,8 +551,8 @@ const TValue *luaH_get (Table *t, const TValue *key) {
       lua_Integer k;
       if (luaV_tointeger(key, &k, 0)) /* index is int? */
         return luaH_getint(t, k);  /* use specialized version */
-      /* else *//* FALLTHROUGH */
-    }
+      /* else... */
+    }  /* FALLTHROUGH */
     default: {
       Node *n = mainposition(t, key);
       for (;;) {  /* check whether 'key' is somewhere in the chain */

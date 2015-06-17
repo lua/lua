@@ -35,7 +35,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.149 2015/06/02 19:27:17 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.151 2015/06/10 21:08:57 roberto Exp $ -->
 
 
 
@@ -188,7 +188,7 @@ even those that do not support threads natively.
 The type <em>table</em> implements associative arrays,
 that is, arrays that can be indexed not only with numbers,
 but with any Lua value except <b>nil</b> and NaN.
-(<em>Not a Number</em> is a special numerical value used to represent
+(<em>Not a Number</em> is a special value used to represent
 undefined or unrepresentable numerical results, such as <code>0/0</code>.)
 Tables can be <em>heterogeneous</em>;
 that is, they can contain values of all types (except <b>nil</b>).
@@ -210,7 +210,7 @@ There are several convenient ways to create tables in Lua
 
 <p>
 We use the term <em>sequence</em> to denote a table where
-the set of all positive numerical keys is equal to {1..<em>n</em>}
+the set of all positive numeric keys is equal to {1..<em>n</em>}
 for some non-negative integer <em>n</em>,
 which is called the length of the sequence (see <a href="#3.4.7">&sect;3.4.7</a>).
 
@@ -375,7 +375,7 @@ that defines the behavior of the original value
 under certain special operations.
 You can change several aspects of the behavior
 of operations over a value by setting specific fields in its metatable.
-For instance, when a non-numerical value is the operand of an addition,
+For instance, when a non-numeric value is the operand of an addition,
 Lua checks for a function in the field "<code>__add</code>" of the value's metatable.
 If it finds one,
 Lua calls this function to perform the addition.
@@ -1116,7 +1116,7 @@ into the string contents.
 Strings in Lua can contain any 8-bit value, including embedded zeros,
 which can be specified as '<code>\0</code>'.
 More generally,
-we can specify any byte in a literal string by its numerical value.
+we can specify any byte in a literal string by its numeric value.
 This can be done
 with the escape sequence <code>\x<em>XX</em></code>,
 where <em>XX</em> is a sequence of exactly two hexadecimal digits,
@@ -1191,7 +1191,7 @@ the five literal strings below denote the same string:
 </pre>
 
 <p>
-A <em>numerical constant</em> (or <em>numeral</em>)
+A <em>numeric constant</em> (or <em>numeral</em>)
 can be written with an optional fractional part
 and an optional decimal exponent,
 marked by a letter '<code>e</code>' or '<code>E</code>'.
@@ -1200,7 +1200,7 @@ which start with <code>0x</code> or <code>0X</code>.
 Hexadecimal constants also accept an optional fractional part
 plus an optional binary exponent,
 marked by a letter '<code>p</code>' or '<code>P</code>'.
-A numerical constant with a fractional dot or an exponent 
+A numeric constant with a fractional dot or an exponent 
 denotes a float;
 otherwise it denotes an integer.
 Examples of valid integer constants are
@@ -2134,7 +2134,7 @@ Unless a <code>__len</code> metamethod is given,
 the length of a table <code>t</code> is only defined if the
 table is a <em>sequence</em>,
 that is,
-the set of its positive numerical keys is equal to <em>{1..n}</em>
+the set of its positive numeric keys is equal to <em>{1..n}</em>
 for some non-negative integer <em>n</em>.
 In that case, <em>n</em> is its length.
 Note that a table like
@@ -2145,8 +2145,8 @@ Note that a table like
 is not a sequence, because it has the key <code>4</code>
 but does not have the key <code>3</code>.
 (So, there is no <em>n</em> such that the set <em>{1..n}</em> is equal
-to the set of positive numerical keys of that table.)
-Note, however, that non-numerical keys do not interfere
+to the set of positive numeric keys of that table.)
+Note, however, that non-numeric keys do not interfere
 with whether a table is a sequence.
 
 
@@ -3225,7 +3225,7 @@ many results.
 
 <p>
 As an example, the following function receives a variable number
-of numerical arguments and returns their average and their sum:
+of numeric arguments and returns their average and their sum:
 
 <pre>
      static int foo (lua_State *L) {
@@ -3384,8 +3384,9 @@ to write them.
 
 <p>
 If <code>strip</code> is true,
-the binary representation is created without debug information
-about the function.
+the binary representation may not include all debug information
+about the function,
+to save space.
 
 
 <p>
@@ -3851,7 +3852,7 @@ and 0&nbsp;otherwise.
 
 <p>
 The type for continuation-function contexts.
-It must be a numerical type.
+It must be a numeric type.
 This type is defined as <code>intptr_t</code>
 when <code>intptr_t</code> is available,
 so that it can store pointers too.
@@ -7335,7 +7336,7 @@ you can use <code>next(t)</code> to check whether a table is empty.
 
 <p>
 The order in which the indices are enumerated is not specified,
-<em>even for numerical indices</em>.
+<em>even for numeric indices</em>.
 (To traverse a table in numerical order,
 use a numerical <b>for</b>.)
 
@@ -7580,7 +7581,7 @@ except that it sets a new message handler <code>msgh</code>.
 <h2>6.2 &ndash; <a name="6.2">Coroutine Manipulation</a></h2>
 
 <p>
-This library comprise the operations to manipulate coroutines,
+This library comprises the operations to manipulate coroutines,
 which come inside the table <a name="pdf-coroutine"><code>coroutine</code></a>.
 See <a href="#2.6">&sect;2.6</a> for a general description of coroutines.
 
@@ -8074,7 +8075,7 @@ The string library assumes one-byte character encodings.
 
 <p>
 <hr><h3><a name="pdf-string.byte"><code>string.byte (s [, i [, j]])</code></a></h3>
-Returns the internal numerical codes of the characters <code>s[i]</code>,
+Returns the internal numeric codes of the characters <code>s[i]</code>,
 <code>s[i+1]</code>, ..., <code>s[j]</code>.
 The default value for <code>i</code> is&nbsp;1;
 the default value for <code>j</code> is&nbsp;<code>i</code>.
@@ -8083,7 +8084,7 @@ following the same rules of function <a href="#pdf-string.sub"><code>string.sub<
 
 
 <p>
-Numerical codes are not necessarily portable across platforms.
+Numeric codes are not necessarily portable across platforms.
 
 
 
@@ -8092,12 +8093,12 @@ Numerical codes are not necessarily portable across platforms.
 <hr><h3><a name="pdf-string.char"><code>string.char (&middot;&middot;&middot;)</code></a></h3>
 Receives zero or more integers.
 Returns a string with length equal to the number of arguments,
-in which each character has the internal numerical code equal
+in which each character has the internal numeric code equal
 to its corresponding argument.
 
 
 <p>
-Numerical codes are not necessarily portable across platforms.
+Numeric codes are not necessarily portable across platforms.
 
 
 
@@ -8113,9 +8114,9 @@ of the given function,
 so that a later <a href="#pdf-load"><code>load</code></a> on this string returns
 a copy of the function (but with new upvalues).
 If <code>strip</code> is a true value,
-the binary representation is created without debug information
-about the function
-(local variable names, lines, etc.).
+the binary representation may not include all debug information
+about the function,
+to save space.
 
 
 <p>
@@ -8139,7 +8140,7 @@ Looks for the first match of
 If it finds a match, then <code>find</code> returns the indices of&nbsp;<code>s</code>
 where this occurrence starts and ends;
 otherwise, it returns <b>nil</b>.
-A third, optional numerical argument <code>init</code> specifies
+A third, optional numeric argument <code>init</code> specifies
 where to start the search;
 its default value is&nbsp;1 and can be negative.
 A value of <b>true</b> as a fourth, optional argument <code>plain</code>
@@ -8350,7 +8351,7 @@ the captures from the pattern;
 otherwise it returns <b>nil</b>.
 If <code>pattern</code> specifies no captures,
 then the whole match is returned.
-A third, optional numerical argument <code>init</code> specifies
+A third, optional numeric argument <code>init</code> specifies
 where to start the search;
 its default value is&nbsp;1 and can be negative.
 
@@ -8505,7 +8506,7 @@ represents the character <em>x</em> itself.
 represents the character <em>x</em>.
 This is the standard way to escape the magic characters.
 Any non-alphanumeric character
-(including all punctuations, even the non-magical)
+(including all punctuation characters, even the non-magical)
 can be preceded by a '<code>%</code>'
 when used to represent itself in a pattern.
 </li>
@@ -8865,7 +8866,7 @@ It provides all its functions inside the table <a name="pdf-table"><code>table</
 Remember that, whenever an operation needs the length of a table,
 the table must be a proper sequence
 or have a <code>__len</code> metamethod (see <a href="#3.4.7">&sect;3.4.7</a>).
-All functions ignore non-numerical keys
+All functions ignore non-numeric keys
 in the tables given as arguments.
 
 
@@ -9126,7 +9127,7 @@ that rounds the quotient towards zero. (integer/float)
 
 <p>
 The float value <code>HUGE_VAL</code>,
-a value larger than any other numerical value.
+a value larger than any other numeric value.
 
 
 
@@ -9608,14 +9609,10 @@ reads a numeral and returns it as a float or an integer,
 following the lexical conventions of Lua.
 (The numeral may have leading spaces and a sign.)
 This format always reads the longest input sequence that
-is a valid prefix for a number;
-if that prefix does not form a valid number
+is a valid prefix for a numeral;
+if that prefix does not form a valid numeral
 (e.g., an empty string, "<code>0x</code>", or "<code>3.4e-</code>"),
 it is discarded and the function returns <b>nil</b>.
-</li>
-
-<li><b>"<code>i</code>": </b>
-reads an integral number and returns it as an integer.
 </li>
 
 <li><b>"<code>a</code>": </b>
@@ -10535,7 +10532,7 @@ all these compatibility options will be removed in the future.
 <p>
 Lua versions can always change the C API in ways that
 do not imply source-code changes in a program,
-such as the numerical values for constants
+such as the numeric values for constants
 or the implementation of functions as macros.
 Therefore,
 you should not assume that binaries are compatible between
@@ -10800,7 +10797,7 @@ and LiteralString, see <a href="#3.1">&sect;3.1</a>.)
 
 <P CLASS="footer">
 Last update:
-Wed Jun  3 08:27:47 BRT 2015
+Wed Jun 10 18:31:15 BRT 2015
 </P>
 <!--
 Last change: revised for Lua 5.3.1
