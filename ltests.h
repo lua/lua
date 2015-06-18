@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.46 2014/12/19 13:33:06 roberto Exp roberto $
+** $Id: ltests.h,v 2.47 2014/12/26 14:44:44 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -35,6 +35,15 @@
 
 /* to avoid warnings, and to make sure value is really unused */
 #define UNUSED(x)       (x=0, (void)(x))
+
+
+/* test for sizes in 'l_sprintf' (make sure whole buffer is available) */
+#undef l_sprintf
+#if !defined(LUA_USE_C89)
+#define l_sprintf(s,sz,f,i)	(memset(s,0xAB,sz), snprintf(s,sz,f,i))
+#else
+#define l_sprintf(s,sz,f,i)	(memset(s,0xAB,sz), sprintf(s,f,i))
+#endif
 
 
 /* memory-allocator control variables */
