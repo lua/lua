@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.250 2015/04/03 18:41:57 roberto Exp roberto $
+** $Id: luaconf.h,v 1.251 2015/05/20 17:39:23 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -145,7 +145,7 @@
 
 #if !defined(LUA_FLOAT_TYPE)
 #define LUA_FLOAT_TYPE	LUA_FLOAT_DOUBLE
-#endif								/* } */
+#endif
 
 /* }================================================================== */
 
@@ -470,7 +470,7 @@
 
 #define l_floor(x)		(l_mathop(floor)(x))
 
-#define lua_number2str(s,n)	sprintf((s), LUA_NUMBER_FMT, (n))
+#define lua_number2str(s,sz,n)	l_sprintf((s), sz, LUA_NUMBER_FMT, (n))
 
 
 /*
@@ -506,7 +506,7 @@
 /* The following definitions are good for most cases here */
 
 #define LUA_INTEGER_FMT		"%" LUA_INTEGER_FRMLEN "d"
-#define lua_integer2str(s,n)	sprintf((s), LUA_INTEGER_FMT, (n))
+#define lua_integer2str(s,sz,n)	l_sprintf((s), sz, LUA_INTEGER_FMT, (n))
 
 #define LUAI_UACINT		LUA_INTEGER
 
@@ -578,13 +578,24 @@
 */
 
 /*
+@@ l_sprintf is equivalent to 'snprintf' or 'sprintf' in C89.
+** (All uses in Lua have only one format item.)
+*/
+#if !defined(LUA_USE_C89)
+#define l_sprintf(s,sz,f,i)	snprintf(s,sz,f,i)
+#else
+#define l_sprintf(s,sz,f,i)	sprintf(s,f,i)
+#endif
+
+
+/*
 @@ lua_strx2number converts an hexadecimal numeric string to a number.
 ** In C99, 'strtod' does that conversion. Otherwise, you can
 ** leave 'lua_strx2number' undefined and Lua will provide its own
 ** implementation.
 */
 #if !defined(LUA_USE_C89)
-#define lua_strx2number(s,p)	lua_str2number(s,p)
+#define lua_strx2number(s,p)		lua_str2number(s,p)
 #endif
 
 
@@ -595,7 +606,7 @@
 ** provide its own implementation.
 */
 #if !defined(LUA_USE_C89)
-#define lua_number2strx(L,b,f,n)	sprintf(b,f,n)
+#define lua_number2strx(L,b,sz,f,n)	l_sprintf(b,sz,f,n)
 #endif
 
 

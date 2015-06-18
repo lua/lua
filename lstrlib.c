@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.228 2015/04/03 18:41:57 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.229 2015/05/20 17:39:23 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -830,12 +830,12 @@ static lua_Number adddigit (char *buff, int n, lua_Number x) {
 }
 
 
-static int num2straux (char *buff, lua_Number x) {
+static int num2straux (char *buff, size_t sz, lua_Number x) {
   if (x != x || x == HUGE_VAL || x == -HUGE_VAL)  /* inf or NaN? */
-    return sprintf(buff, LUA_NUMBER_FMT, x);  /* equal to '%g' */
+    return l_sprintf(buff, sz, LUA_NUMBER_FMT, x);  /* equal to '%g' */
   else if (x == 0) {  /* can be -0... */
-    sprintf(buff, LUA_NUMBER_FMT, x);
-    strcat(buff, "x0p+0");  /* reuses '0/-0' from 'sprintf'... */
+    l_sprintf(buff, sz, LUA_NUMBER_FMT, x);  /* create "0" or "-0" */
+    strcat(buff, "x0p+0");  /* add exponent to that */
     return strlen(buff);
   }
   else {
@@ -855,15 +855,16 @@ static int num2straux (char *buff, lua_Number x) {
         m = adddigit(buff, n++, m * 16);
       } while (m > 0);
     }
-    n += sprintf(buff + n, "p%+d", e);  /* add exponent */
+    n += l_sprintf(buff + n, sz - n, "p%+d", e);  /* add exponent */
+    lua_assert((size_t)n < sz);
     return n;
   }
 }
 
 
-static int lua_number2strx (lua_State *L, char *buff, const char *fmt,
-                            lua_Number x) {
-  int n = num2straux(buff, x);
+static int lua_number2strx (lua_State *L, char *buff, size_t sz,
+                            const char *fmt, lua_Number x) {
+  int n = num2straux(buff, sz, x);
   if (fmt[SIZELENMOD] == 'A') {
     int i;
     for (i = 0; i < n; i++)
@@ -906,9 +907,9 @@ static void addquoted (lua_State *L, luaL_Buffer *b, int arg) {
     else if (*s == '\0' || iscntrl(uchar(*s))) {
       char buff[10];
       if (!isdigit(uchar(*(s+1))))
-        sprintf(buff, "\\%d", (int)uchar(*s));
+        l_sprintf(buff, sizeof(buff), "\\%d", (int)uchar(*s));
       else
-        sprintf(buff, "\\%03d", (int)uchar(*s));
+        l_sprintf(buff, sizeof(buff), "\\%03d", (int)uchar(*s));
       luaL_addstring(b, buff);
     }
     else
@@ -975,24 +976,25 @@ static int str_format (lua_State *L) {
       strfrmt = scanformat(L, strfrmt, form);
       switch (*strfrmt++) {
         case 'c': {
-          nb = sprintf(buff, form, (int)luaL_checkinteger(L, arg));
+          nb = l_sprintf(buff, MAX_ITEM, form, (int)luaL_checkinteger(L, arg));
           break;
         }
         case 'd': case 'i':
         case 'o': case 'u': case 'x': case 'X': {
           lua_Integer n = luaL_checkinteger(L, arg);
           addlenmod(form, LUA_INTEGER_FRMLEN);
-          nb = sprintf(buff, form, n);
+          nb = l_sprintf(buff, MAX_ITEM, form, n);
           break;
         }
         case 'a': case 'A':
           addlenmod(form, LUA_NUMBER_FRMLEN);
-          nb = lua_number2strx(L, buff, form, luaL_checknumber(L, arg));
+          nb = lua_number2strx(L, buff, MAX_ITEM, form,
+                                  luaL_checknumber(L, arg));
           break;
         case 'e': case 'E': case 'f':
         case 'g': case 'G': {
           addlenmod(form, LUA_NUMBER_FRMLEN);
-          nb = sprintf(buff, form, luaL_checknumber(L, arg));
+          nb = l_sprintf(buff, MAX_ITEM, form, luaL_checknumber(L, arg));
           break;
         }
         case 'q': {
@@ -1008,7 +1010,7 @@ static int str_format (lua_State *L) {
             luaL_addvalue(&b);
           }
           else {
-            nb = sprintf(buff, form, s);
+            nb = l_sprintf(buff, MAX_ITEM, form, s);
             lua_pop(L, 1);  /* remove result from 'luaL_tolstring' */
           }
           break;
