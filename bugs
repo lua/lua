@@ -2964,8 +2964,10 @@ patch = [[
 +  return sizeof(lua_State) + sizeof(TValue) * th->stacksize +
 +         sizeof(CallInfo) * n;
  }
+]]
 }
 
+-- [[]]
 Bug{
 what = [[Wrong assert when reporting concatenation errors
 (manifests only when Lua is compiled in debug mode)]],
