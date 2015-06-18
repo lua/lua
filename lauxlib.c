@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.279 2014/12/14 18:32:26 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.280 2015/02/03 17:38:24 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -289,7 +289,7 @@ LUALIB_API int luaL_newmetatable (lua_State *L, const char *tname) {
   if (luaL_getmetatable(L, tname) != LUA_TNIL)  /* name already in use? */
     return 0;  /* leave previous value on top, but return 0 */
   lua_pop(L, 1);
-  lua_newtable(L);  /* create metatable */
+  lua_createtable(L, 0, 2);  /* create metatable */
   lua_pushstring(L, tname);
   lua_setfield(L, -2, "__name");  /* metatable.__name = tname */
   lua_pushvalue(L, -1);
@@ -435,6 +435,47 @@ LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int arg,
 ** =======================================================
 */
 
+/* userdata to box arbitrary data */
+typedef struct UBox {
+  void *box;
+  size_t bsize;
+} UBox;
+
+
+static void *resizebox (lua_State *L, int idx, size_t newsize) {
+  void *ud;
+  lua_Alloc allocf = lua_getallocf(L, &ud);
+  UBox *box = (UBox *)lua_touserdata(L, idx);
+  void *temp = allocf(ud, box->box, box->bsize, newsize);
+  if (temp == NULL && newsize > 0) {  /* allocation error? */
+    resizebox(L, idx, 0);  /* free buffer */
+    luaL_error(L, "not enough memory for buffer allocation");
+  }
+  box->box = temp;
+  box->bsize = newsize;
+  return temp;
+}
+
+
+static int boxgc (lua_State *L) {
+  resizebox(L, 1, 0);
+  return 0;
+}
+
+
+static void *newbox (lua_State *L, size_t newsize) {
+  UBox *box = (UBox *)lua_newuserdata(L, sizeof(UBox));
+  box->box = NULL;
+  box->bsize = 0;
+  if (luaL_newmetatable(L, "LUABOX")) {  /* creating metatable? */
+    lua_pushcfunction(L, boxgc);
+    lua_setfield(L, -2, "__gc");  /* metatalbe.__gc = boxgc */
+  }
+  lua_setmetatable(L, -2);
+  return resizebox(L, -1, newsize);
+}
+
+
 /*
 ** check whether buffer is using a userdata on the stack as a temporary
 ** buffer
@@ -455,11 +496,12 @@ LUALIB_API char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz) {
     if (newsize < B->n || newsize - B->n < sz)
       luaL_error(L, "buffer too large");
     /* create larger buffer */
-    newbuff = (char *)lua_newuserdata(L, newsize * sizeof(char));
-    /* move content to new buffer */
-    memcpy(newbuff, B->b, B->n * sizeof(char));
     if (buffonstack(B))
-      lua_remove(L, -2);  /* remove old buffer */
+      newbuff = (char *)resizebox(L, -1, newsize);
+    else {  /* no buffer yet */
+      newbuff = (char *)newbox(L, newsize);
+      memcpy(newbuff, B->b, B->n * sizeof(char));  /* copy original content */
+    }
     B->b = newbuff;
     B->size = newsize;
   }
@@ -482,8 +524,10 @@ LUALIB_API void luaL_addstring (luaL_Buffer *B, const char *s) {
 LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
   lua_State *L = B->L;
   lua_pushlstring(L, B->b, B->n);
-  if (buffonstack(B))
-    lua_remove(L, -2);  /* remove old buffer */
+  if (buffonstack(B)) {
+    resizebox(L, -2, 0);  /* delete old buffer */
+    lua_remove(L, -2);  /* remove its header from the stack */
+  }
 }
 
 
