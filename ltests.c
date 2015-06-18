@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.204 2015/03/13 16:24:50 roberto Exp roberto $
+** $Id: ltests.c,v 2.205 2015/04/02 21:10:21 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1350,7 +1350,7 @@ static struct X { int x; } x;
     else if EQ("tostring") {
       const char *s = lua_tostring(L1, getindex);
       const char *s1 = lua_pushstring(L1, s);
-      lua_assert((s == NULL && s1 == NULL) || strcmp(s, s1) == 0);
+      lua_longassert((s == NULL && s1 == NULL) || strcmp(s, s1) == 0);
     }
     else if EQ("type") {
       lua_pushstring(L1, luaL_typename(L1, getnum));
