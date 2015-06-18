@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.48 2015/03/25 13:42:19 roberto Exp roberto $
+** $Id: lstring.c,v 2.49 2015/06/01 16:34:37 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -183,7 +183,7 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
     return internshrstr(L, str, l);
   else {
     TString *ts;
-    if (l + 1 > (MAX_SIZE - sizeof(TString))/sizeof(char))
+    if (l >= (MAX_SIZE - sizeof(TString))/sizeof(char))
       luaM_toobig(L);
     ts = createstrobj(L, str, l, LUA_TLNGSTR, G(L)->seed);
     ts->u.lnglen = l;
