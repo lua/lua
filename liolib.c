@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.143 2015/03/06 19:09:08 roberto Exp roberto $
+** $Id: liolib.c,v 2.144 2015/04/03 18:41:57 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -483,7 +483,7 @@ static void read_all (lua_State *L, FILE *f) {
   luaL_Buffer b;
   luaL_buffinit(L, &b);
   do {  /* read file in chunks of LUAL_BUFFERSIZE bytes */
-    char *p = luaL_prepbuffsize(&b, LUAL_BUFFERSIZE);
+    char *p = luaL_prepbuffer(&b);
     nr = fread(p, sizeof(char), LUAL_BUFFERSIZE, f);
     luaL_addsize(&b, nr);
   } while (nr == LUAL_BUFFERSIZE);
