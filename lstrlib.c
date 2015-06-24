@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.229 2015/05/20 17:39:23 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.230 2015/06/18 14:26:05 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -830,7 +830,7 @@ static lua_Number adddigit (char *buff, int n, lua_Number x) {
 }
 
 
-static int num2straux (char *buff, size_t sz, lua_Number x) {
+static int num2straux (char *buff, int sz, lua_Number x) {
   if (x != x || x == HUGE_VAL || x == -HUGE_VAL)  /* inf or NaN? */
     return l_sprintf(buff, sz, LUA_NUMBER_FMT, x);  /* equal to '%g' */
   else if (x == 0) {  /* can be -0... */
@@ -856,13 +856,13 @@ static int num2straux (char *buff, size_t sz, lua_Number x) {
       } while (m > 0);
     }
     n += l_sprintf(buff + n, sz - n, "p%+d", e);  /* add exponent */
-    lua_assert((size_t)n < sz);
+    lua_assert(n < sz);
     return n;
   }
 }
 
 
-static int lua_number2strx (lua_State *L, char *buff, size_t sz,
+static int lua_number2strx (lua_State *L, char *buff, int sz,
                             const char *fmt, lua_Number x) {
   int n = num2straux(buff, sz, x);
   if (fmt[SIZELENMOD] == 'A') {
@@ -880,10 +880,12 @@ static int lua_number2strx (lua_State *L, char *buff, size_t sz,
 
 /*
 ** Maximum size of each formatted item. This maximum size is produced
-** by format('%.99f', minfloat), and is equal to 99 + 2 ('-' and '.') +
-** number of decimal digits to represent minfloat.
+** by format('%.99f', -maxfloat), and is equal to 99 + 3 ('-', '.',
+** and '\0') + number of decimal digits to represent maxfloat (which
+** is maximum exponent + 1). (99+3+1 then rounded to 120 for "extra
+** expenses", such as locale-dependent stuff)
 */
-#define MAX_ITEM	(120 + l_mathlim(MAX_10_EXP))
+#define MAX_ITEM        (120 + l_mathlim(MAX_10_EXP))
 
 
 /* valid flags in a format specification */
@@ -1020,6 +1022,7 @@ static int str_format (lua_State *L) {
                                *(strfrmt - 1));
         }
       }
+      lua_assert(nb < MAX_ITEM);
       luaL_addsize(&b, nb);
     }
   }
