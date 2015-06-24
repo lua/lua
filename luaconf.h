@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.251 2015/05/20 17:39:23 roberto Exp roberto $
+** $Id: luaconf.h,v 1.252 2015/06/18 14:26:05 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -584,7 +584,7 @@
 #if !defined(LUA_USE_C89)
 #define l_sprintf(s,sz,f,i)	snprintf(s,sz,f,i)
 #else
-#define l_sprintf(s,sz,f,i)	sprintf(s,f,i)
+#define l_sprintf(s,sz,f,i)	((void)(sz), sprintf(s,f,i))
 #endif
 
 
