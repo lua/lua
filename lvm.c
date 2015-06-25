@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.244 2015/06/02 19:11:24 roberto Exp roberto $
+** $Id: lvm.c,v 2.245 2015/06/09 15:53:35 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1125,7 +1125,7 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_RETURN) {
         int b = GETARG_B(i);
         if (cl->p->sizep > 0) luaF_close(L, base);
-        b = luaD_poscall(L, ra, (b != 0 ? b - 1 : L->top - ra));
+        b = luaD_poscall(L, ra, (b != 0 ? b - 1 : cast_int(L->top - ra)));
         if (!(ci->callstatus & CIST_REENTRY))  /* 'ci' still the called one */
           return;  /* external invocation: return */
         else {  /* invocation via reentry: continue execution */
