@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.309 2014/12/10 12:26:42 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.310 2015/03/28 19:14:47 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -198,12 +198,10 @@ static int luaB_collectgarbage (lua_State *L) {
 }
 
 
-/*
-** This function has all type names as upvalues, to maximize performance.
-*/
 static int luaB_type (lua_State *L) {
-  luaL_checkany(L, 1);
-  lua_pushvalue(L, lua_upvalueindex(lua_type(L, 1) + 1));
+  int t = lua_type(L, 1);
+  luaL_argcheck(L, t != LUA_TNONE, 1, "value expected");
+  lua_pushstring(L, lua_typename(L, t));
   return 1;
 }
 
@@ -490,9 +488,9 @@ static const luaL_Reg base_funcs[] = {
   {"setmetatable", luaB_setmetatable},
   {"tonumber", luaB_tonumber},
   {"tostring", luaB_tostring},
+  {"type", luaB_type},
   {"xpcall", luaB_xpcall},
   /* placeholders */
-  {"type", NULL},
   {"_G", NULL},
   {"_VERSION", NULL},
   {NULL, NULL}
@@ -500,7 +498,6 @@ static const luaL_Reg base_funcs[] = {
 
 
 LUAMOD_API int luaopen_base (lua_State *L) {
-  int i;
   /* open lib into global table */
   lua_pushglobaltable(L);
   luaL_setfuncs(L, base_funcs, 0);
@@ -510,11 +507,6 @@ LUAMOD_API int luaopen_base (lua_State *L) {
   /* set global _VERSION */
   lua_pushliteral(L, LUA_VERSION);
   lua_setfield(L, -2, "_VERSION");
-  /* set function 'type' with proper upvalues */
-  for (i = 0; i < LUA_NUMTAGS; i++)  /* push all type names as upvalues */
-    lua_pushstring(L, lua_typename(L, i));
-  lua_pushcclosure(L, luaB_type, LUA_NUMTAGS);
-  lua_setfield(L, -2, "type");
   return 1;
 }
 
