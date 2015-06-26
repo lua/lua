@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.104 2015/04/11 18:30:08 roberto Exp roberto $
+** $Id: lobject.c,v 2.105 2015/06/18 14:26:05 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -55,9 +55,7 @@ int luaO_int2fb (unsigned int x) {
 
 /* converts back */
 int luaO_fb2int (int x) {
-  int e = (x >> 3) & 0x1f;
-  if (e == 0) return x;
-  else return ((x & 7) + 8) << (e - 1);
+  return (x < 8) ? x : ((x & 7) + 8) << ((x >> 3) - 1);
 }
 
 
