@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.114 2014/12/27 20:32:26 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.115 2015/03/12 14:04:04 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -273,7 +273,7 @@ static int math_random (lua_State *L) {
 
 static int math_randomseed (lua_State *L) {
   l_srand((unsigned int)(lua_Integer)luaL_checknumber(L, 1));
-  (void)rand(); /* discard first value to avoid undesirable correlations */
+  (void)l_rand(); /* discard first value to avoid undesirable correlations */
   return 0;
 }
 
