@@ -8,15 +8,14 @@
 CWARNSCPP= \
 	-pedantic \
 	-Wextra \
-	-Waggregate-return \
 	-Wshadow \
 	-Wsign-compare \
 	-Wundef \
 	-Wwrite-strings \
 	-Wredundant-decls \
 	-Wdisabled-optimization \
-	-Wstrict-aliasing \
 	# the next warnings generate to much noise, so they are disabled
+	# -Wdouble-promotion \
 	# -Wconversion  -Wno-sign-conversion \
 	# -Wsign-conversion \
 	# -Wconversion \
@@ -32,7 +31,7 @@ CWARNSC= -Wdeclaration-after-statement \
 	-Wstrict-prototypes \
 	-Wc++-compat \
 	-Wold-style-definition \
-	-Wold-style-declaration \
+
 
 CWARNS= $(CWARNSCPP) $(CWARNSC)
 
@@ -54,7 +53,7 @@ MYLDFLAGS= $(LOCAL) -Wl,-E
 MYLIBS= -ldl -lreadline -lhistory -lncurses
 
 
-CC= gcc
+CC= clang
 CFLAGS= -Wall -O2 $(MYCFLAGS)
 # CC= ~lhf/sunstudio12/bin/cc
 # CFLAGS= -xO5 -v -Xc -native -xstrconst
