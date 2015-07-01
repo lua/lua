@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.205 2015/04/02 21:10:21 roberto Exp roberto $
+** $Id: ltests.c,v 2.206 2015/06/18 14:25:26 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -911,7 +911,7 @@ static int doremote (lua_State *L) {
 static int int2fb_aux (lua_State *L) {
   int b = luaO_int2fb((unsigned int)luaL_checkinteger(L, 1));
   lua_pushinteger(L, b);
-  lua_pushinteger(L, luaO_fb2int(b));
+  lua_pushinteger(L, (unsigned int)luaO_fb2int(b));
   return 2;
 }
 
