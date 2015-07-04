@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.121 2015/04/10 17:56:25 roberto Exp roberto $
+** $Id: lstate.h,v 2.122 2015/06/01 16:34:37 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -109,7 +109,7 @@ typedef struct CallInfo {
 typedef struct global_State {
   lua_Alloc frealloc;  /* function to reallocate memory */
   void *ud;         /* auxiliary data to 'frealloc' */
-  lu_mem totalbytes;  /* number of bytes currently allocated - GCdebt */
+  l_mem totalbytes;  /* number of bytes currently allocated - GCdebt */
   l_mem GCdebt;  /* bytes allocated not yet compensated by the collector */
   lu_mem GCmemtrav;  /* memory traversed by the GC */
   lu_mem GCestimate;  /* an estimate of the non-garbage memory in use */
@@ -212,7 +212,7 @@ union GCUnion {
 
 
 /* actual number of total bytes allocated */
-#define gettotalbytes(g)	((g)->totalbytes + (g)->GCdebt)
+#define gettotalbytes(g)	cast(lu_mem, (g)->totalbytes + (g)->GCdebt)
 
 LUAI_FUNC void luaE_setdebt (global_State *g, l_mem debt);
 LUAI_FUNC void luaE_freethread (lua_State *L, lua_State *L1);
