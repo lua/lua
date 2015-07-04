@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.245 2015/06/09 15:53:35 roberto Exp roberto $
+** $Id: lvm.c,v 2.246 2015/06/25 14:00:01 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1139,7 +1139,7 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_FORLOOP) {
         if (ttisinteger(ra)) {  /* integer loop? */
           lua_Integer step = ivalue(ra + 2);
-          lua_Integer idx = ivalue(ra) + step; /* increment index */
+          lua_Integer idx = intop(+, ivalue(ra), step); /* increment index */
           lua_Integer limit = ivalue(ra + 1);
           if ((0 < step) ? (idx <= limit) : (limit <= idx)) {
             ci->u.l.savedpc += GETARG_sBx(i);  /* jump back */
@@ -1171,7 +1171,7 @@ void luaV_execute (lua_State *L) {
           /* all values are integer */
           lua_Integer initv = (stopnow ? 0 : ivalue(init));
           setivalue(plimit, ilimit);
-          setivalue(init, initv - ivalue(pstep));
+          setivalue(init, intop(-, initv, ivalue(pstep)));
         }
         else {  /* try making all values floats */
           lua_Number ninit; lua_Number nlimit; lua_Number nstep;
