@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.111 2015/06/09 14:21:13 roberto Exp roberto $
+** $Id: ltable.c,v 2.112 2015/07/01 17:46:55 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -501,7 +501,7 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
 */
 const TValue *luaH_getint (Table *t, lua_Integer key) {
   /* (1 <= key && key <= t->sizearray) */
-  if (l_castS2U(key - 1) < t->sizearray)
+  if (l_castS2U(key) - 1 < t->sizearray)
     return &t->array[key - 1];
   else {
     Node *n = hashint(t, key);
