@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.57 2015/04/10 17:41:04 roberto Exp roberto $
+** $Id: loslib.c,v 1.58 2015/07/04 16:35:14 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -253,6 +253,10 @@ static const char *checkoption (lua_State *L, const char *conv, char *buff) {
 }
 
 
+/* maximum size for an individual 'strftime' item */
+#define SIZETIMEFMT	250
+
+
 static int os_date (lua_State *L) {
   const char *s = luaL_optstring(L, 1, "%c");
   time_t t = luaL_opt(L, l_checktime, 2, time(NULL));
@@ -283,14 +287,14 @@ static int os_date (lua_State *L) {
     cc[0] = '%';
     luaL_buffinit(L, &b);
     while (*s) {
-      if (*s != '%')  /* no conversion specifier? */
+      if (*s != '%')  /* not a conversion specifier? */
         luaL_addchar(&b, *s++);
       else {
         size_t reslen;
-        char buff[200];  /* should be big enough for any conversion result */
+        char *buff = luaL_prepbuffsize(&b, SIZETIMEFMT);
         s = checkoption(L, s + 1, cc);
-        reslen = strftime(buff, sizeof(buff), cc, stm);
-        luaL_addlstring(&b, buff, reslen);
+        reslen = strftime(buff, SIZETIMEFMT, cc, stm);
+        luaL_addsize(&b, reslen);
       }
     }
     luaL_pushresult(&b);
