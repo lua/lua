@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.144 2015/04/03 18:41:57 roberto Exp roberto $
+** $Id: liolib.c,v 2.145 2015/06/21 13:50:29 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -176,7 +176,7 @@ static FILE *tofile (lua_State *L) {
 /*
 ** When creating file handles, always creates a 'closed' file handle
 ** before opening the actual file; so, if there is a memory error, the
-** file is not left opened.
+** handle is in a consistent state.
 */
 static LStream *newprefile (lua_State *L) {
   LStream *p = (LStream *)lua_newuserdata(L, sizeof(LStream));
