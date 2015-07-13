@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.204 2015/03/04 13:51:55 roberto Exp roberto $
+** $Id: lgc.c,v 2.205 2015/03/25 13:42:19 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -1114,9 +1114,12 @@ void luaC_runtilstate (lua_State *L, int statesmask) {
 static l_mem getdebt (global_State *g) {
   l_mem debt = g->GCdebt;
   int stepmul = g->gcstepmul;
-  debt = (debt / STEPMULADJ) + 1;
-  debt = (debt < MAX_LMEM / stepmul) ? debt * stepmul : MAX_LMEM;
-  return debt;
+  if (debt <= 0) return 0;  /* minimal debt */
+  else {
+    debt = (debt / STEPMULADJ) + 1;
+    debt = (debt < MAX_LMEM / stepmul) ? debt * stepmul : MAX_LMEM;
+    return debt;
+  }
 }
 
 /*

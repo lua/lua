@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.127 2014/11/02 19:33:33 roberto Exp roberto $
+** $Id: lstate.c,v 2.128 2015/03/04 13:31:21 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -93,10 +93,14 @@ static unsigned int makeseed (lua_State *L) {
 
 /*
 ** set GCdebt to a new value keeping the value (totalbytes + GCdebt)
-** invariant
+** invariant (and avoiding underflows in 'totalbytes')
 */
 void luaE_setdebt (global_State *g, l_mem debt) {
-  g->totalbytes -= (debt - g->GCdebt);
+  l_mem tb = gettotalbytes(g);
+  lua_assert(tb > 0);
+  if (debt < tb - MAX_LMEM)
+    debt = tb - MAX_LMEM;  /* will make 'totalbytes == MAX_LMEM' */
+  g->totalbytes = tb - debt;
   g->GCdebt = debt;
 }
 
