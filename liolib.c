@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.145 2015/06/21 13:50:29 roberto Exp roberto $
+** $Id: liolib.c,v 2.146 2015/07/07 17:03:34 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -318,8 +318,15 @@ static int io_output (lua_State *L) {
 static int io_readline (lua_State *L);
 
 
+/*
+** maximum number of arguments to 'f:lines'/'io.lines' (it + 3 must fit
+** in the limit for upvalues of a closure)
+*/
+#define MAXARGLINE	250
+
 static void aux_lines (lua_State *L, int toclose) {
   int n = lua_gettop(L) - 1;  /* number of arguments to read */
+  luaL_argcheck(L, n <= MAXARGLINE, MAXARGLINE + 2, "too many arguments");
   lua_pushinteger(L, n);  /* number of arguments to read */
   lua_pushboolean(L, toclose);  /* close/not close file when finished */
   lua_rotate(L, 2, 2);  /* move 'n' and 'toclose' to their positions */
