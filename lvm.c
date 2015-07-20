@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.246 2015/06/25 14:00:01 roberto Exp roberto $
+** $Id: lvm.c,v 2.247 2015/07/04 16:31:03 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -153,30 +153,28 @@ static int forlimit (const TValue *obj, lua_Integer *p, lua_Integer step,
 
 
 /*
-** Main function for table access (invoking metamethods if needed).
-** Compute 'val = t[key]'
+** Complete a table access: if 't' is a table, 'tm' has its metamethod;
+** otherwise, 'tm' is NULL.
 */
-void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val) {
+void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
+                      const TValue *tm) {
   int loop;  /* counter to avoid infinite loops */
+  lua_assert(tm != NULL || !ttistable(t));
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
-    const TValue *tm;
-    if (ttistable(t)) {  /* 't' is a table? */
-      Table *h = hvalue(t);
-      const TValue *res = luaH_get(h, key); /* do a primitive get */
-      if (!ttisnil(res) ||  /* result is not nil? */
-          (tm = fasttm(L, h->metatable, TM_INDEX)) == NULL) { /* or no TM? */
-        setobj2s(L, val, res);  /* result is the raw get */
-        return;
-      }
-      /* else will try metamethod */
+    if (tm == NULL) {  /* no metamethod (from a table)? */
+      if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_INDEX)))
+        luaG_typeerror(L, t, "index");  /* no metamethod */
     }
-    else if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_INDEX)))
-      luaG_typeerror(L, t, "index");  /* no metamethod */
     if (ttisfunction(tm)) {  /* metamethod is a function */
-      luaT_callTM(L, tm, t, key, val, 1);
+      luaT_callTM(L, tm, t, key, val, 1);  /* call it */
       return;
     }
     t = tm;  /* else repeat access over 'tm' */
+    if (luaV_fastget(L,t,key,tm,luaH_get)) {  /* try fast track */
+      setobj2s(L, val, tm);  /* done */
+      return;
+    }
+    /* else repeat */
   }
   luaG_runerror(L, "gettable chain too long; possible loop");
 }

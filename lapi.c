@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.249 2015/04/06 12:23:48 roberto Exp roberto $
+** $Id: lapi.c,v 2.250 2015/06/18 14:19:52 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -579,16 +579,27 @@ LUA_API int lua_pushthread (lua_State *L) {
 */
 
 
-LUA_API int lua_getglobal (lua_State *L, const char *name) {
-  Table *reg = hvalue(&G(L)->l_registry);
-  const TValue *gt;  /* global table */
-  lua_lock(L);
-  gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
-  setsvalue2s(L, L->top, luaS_new(L, name));
-  api_incr_top(L);
-  luaV_gettable(L, gt, L->top - 1, L->top - 1);
+static int auxgetstr (lua_State *L, const TValue *t, const char *k) {
+  const TValue *aux;
+  TString *str = luaS_new(L, k);
+  if (luaV_fastget(L, t, str, aux, luaH_getstr)) {
+    setobj2s(L, L->top, aux);
+    api_incr_top(L);
+  }
+  else {
+    setsvalue2s(L, L->top, str);
+    api_incr_top(L);
+    luaV_finishget(L, t, L->top - 1, L->top - 1, aux);
+  }
   lua_unlock(L);
   return ttnov(L->top - 1);
+}
+
+
+LUA_API int lua_getglobal (lua_State *L, const char *name) {
+  Table *reg = hvalue(&G(L)->l_registry);
+  lua_lock(L);
+  return auxgetstr(L, luaH_getint(reg, LUA_RIDX_GLOBALS), name);
 }
 
 
@@ -603,24 +614,25 @@ LUA_API int lua_gettable (lua_State *L, int idx) {
 
 
 LUA_API int lua_getfield (lua_State *L, int idx, const char *k) {
-  StkId t;
   lua_lock(L);
-  t = index2addr(L, idx);
-  setsvalue2s(L, L->top, luaS_new(L, k));
-  api_incr_top(L);
-  luaV_gettable(L, t, L->top - 1, L->top - 1);
-  lua_unlock(L);
-  return ttnov(L->top - 1);
+  return auxgetstr(L, index2addr(L, idx), k);
 }
 
 
 LUA_API int lua_geti (lua_State *L, int idx, lua_Integer n) {
   StkId t;
+  const TValue *aux;
   lua_lock(L);
   t = index2addr(L, idx);
-  setivalue(L->top, n);
-  api_incr_top(L);
-  luaV_gettable(L, t, L->top - 1, L->top - 1);
+  if (luaV_fastget(L, t, n, aux, luaH_getint)) {
+    setobj2s(L, L->top, aux);
+    api_incr_top(L);
+  }
+  else {
+    setivalue(L->top, n);
+    api_incr_top(L);
+    luaV_finishget(L, t, L->top - 1, L->top - 1, aux);
+  }
   lua_unlock(L);
   return ttnov(L->top - 1);
 }
