@@ -3458,7 +3458,6 @@ patch = [[
 }
 
 
---[=[
 Bug{
 what = [['io.lines' does not check maximum number of options]],
 report = [[Patrick Donnell, 2015/07/10]],
@@ -3490,7 +3489,6 @@ patch = [[
    lua_rotate(L, 2, 2);  /* move 'n' and 'toclose' to their positions */
 ]]
 }
-]=]
 
 
 --[=[
