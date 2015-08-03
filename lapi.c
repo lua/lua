@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.250 2015/06/18 14:19:52 roberto Exp roberto $
+** $Id: lapi.c,v 2.251 2015/07/20 18:24:50 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -731,18 +731,28 @@ LUA_API int lua_getuservalue (lua_State *L, int idx) {
 ** set functions (stack -> Lua)
 */
 
+static void auxsetstr (lua_State *L, const TValue *t, const char *k) {
+  const TValue *aux;
+  TString *str = luaS_new(L, k);
+  api_checknelems(L, 1);
+  if (luaV_fastset(L, t, str, aux, luaH_getstr, L->top)) {
+    setobj2t(L, cast(TValue *, aux), L->top - 1);
+    L->top--;  /* pop value */
+  }
+  else {
+    setsvalue2s(L, L->top, str);
+    api_incr_top(L);
+    luaV_finishset(L, t, L->top - 1, L->top - 2, aux);
+    L->top -= 2;  /* pop value and key */
+  }
+  lua_unlock(L);
+}
+
 
 LUA_API void lua_setglobal (lua_State *L, const char *name) {
   Table *reg = hvalue(&G(L)->l_registry);
-  const TValue *gt;  /* global table */
   lua_lock(L);
-  api_checknelems(L, 1);
-  gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
-  setsvalue2s(L, L->top, luaS_new(L, name));
-  api_incr_top(L);
-  luaV_settable(L, gt, L->top - 1, L->top - 2);
-  L->top -= 2;  /* pop value and key */
-  lua_unlock(L);
+  auxsetstr(L, luaH_getint(reg, LUA_RIDX_GLOBALS), name);
 }
 
 
@@ -758,27 +768,27 @@ LUA_API void lua_settable (lua_State *L, int idx) {
 
 
 LUA_API void lua_setfield (lua_State *L, int idx, const char *k) {
-  StkId t;
   lua_lock(L);
-  api_checknelems(L, 1);
-  t = index2addr(L, idx);
-  setsvalue2s(L, L->top, luaS_new(L, k));
-  api_incr_top(L);
-  luaV_settable(L, t, L->top - 1, L->top - 2);
-  L->top -= 2;  /* pop value and key */
-  lua_unlock(L);
+  auxsetstr(L, index2addr(L, idx), k);
 }
 
 
 LUA_API void lua_seti (lua_State *L, int idx, lua_Integer n) {
   StkId t;
+  const TValue *aux;
   lua_lock(L);
   api_checknelems(L, 1);
   t = index2addr(L, idx);
-  setivalue(L->top, n);
-  api_incr_top(L);
-  luaV_settable(L, t, L->top - 1, L->top - 2);
-  L->top -= 2;  /* pop value and key */
+  if (luaV_fastset(L, t, n, aux, luaH_getint, L->top - 1)) {
+    setobj2t(L, cast(TValue *, aux), L->top - 1);
+    L->top--;  /* pop value */
+  }
+  else {
+    setivalue(L->top, n);
+    api_incr_top(L);
+    luaV_finishset(L, t, L->top - 1, L->top - 2, aux);
+    L->top -= 2;  /* pop value and key */
+  }
   lua_unlock(L);
 }
 

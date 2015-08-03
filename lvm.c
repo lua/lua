@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.247 2015/07/04 16:31:03 roberto Exp roberto $
+** $Id: lvm.c,v 2.248 2015/07/20 18:24:50 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -184,40 +184,43 @@ void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
 ** Main function for table assignment (invoking metamethods if needed).
 ** Compute 't[key] = val'
 */
-void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
+void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
+                     StkId val, const TValue *oldval) {
   int loop;  /* counter to avoid infinite loops */
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
     const TValue *tm;
-    if (ttistable(t)) {  /* 't' is a table? */
-      Table *h = hvalue(t);
-      TValue *oldval = cast(TValue *, luaH_get(h, key));
-      /* if previous value is not nil, there must be a previous entry
-         in the table; a metamethod has no relevance */
-      if (!ttisnil(oldval) ||
-         /* previous value is nil; must check the metamethod */
-         ((tm = fasttm(L, h->metatable, TM_NEWINDEX)) == NULL &&
+    if (oldval != NULL) {
+      lua_assert(ttistable(t) && ttisnil(oldval));
+      /* must check the metamethod */
+      if ((tm = fasttm(L, hvalue(t)->metatable, TM_NEWINDEX)) == NULL &&
          /* no metamethod; is there a previous entry in the table? */
          (oldval != luaO_nilobject ||
          /* no previous entry; must create one. (The next test is
             always true; we only need the assignment.) */
-         (oldval = luaH_newkey(L, h, key), 1)))) {
+         (oldval = luaH_newkey(L, hvalue(t), key), 1))) {
         /* no metamethod and (now) there is an entry with given key */
-        setobj2t(L, oldval, val);  /* assign new value to that entry */
-        invalidateTMcache(h);
-        luaC_barrierback(L, h, val);
+        setobj2t(L, cast(TValue *, oldval), val);
+        invalidateTMcache(hvalue(t));
+        luaC_barrierback(L, hvalue(t), val);
         return;
       }
       /* else will try the metamethod */
     }
-    else  /* not a table; check metamethod */
+    else {  /* not a table; check metamethod */
       if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_NEWINDEX)))
         luaG_typeerror(L, t, "index");
+    }
     /* try the metamethod */
     if (ttisfunction(tm)) {
       luaT_callTM(L, tm, t, key, val, 0);
       return;
     }
     t = tm;  /* else repeat assignment over 'tm' */
+    if (luaV_fastset(L, t, key, oldval, luaH_get, val)) {
+      setobj2t(L, cast(TValue *, oldval), val);
+      return;
+    }
+    /* else loop */
   }
   luaG_runerror(L, "settable chain too long; possible loop");
 }

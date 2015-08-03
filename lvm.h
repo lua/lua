@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 2.35 2015/02/20 14:27:53 roberto Exp roberto $
+** $Id: lvm.h,v 2.36 2015/07/20 18:24:50 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -70,6 +70,21 @@
   else luaV_finishget(L,t,k,v,aux); }
 
 
+#define luaV_fastset(L,t,k,aux,f,v) \
+  (!ttistable(t) \
+   ? (aux = NULL, 0) \
+   : (aux = f(hvalue(t), k), \
+     ttisnil(aux) ? 0 \
+     : (invalidateTMcache(hvalue(t)), \
+        luaC_barrierback(L, hvalue(t), v), 1)))
+
+#define luaV_settable(L,t,k,v) { const TValue *aux; \
+  if (luaV_fastset(L,t,k,aux,luaH_get,v)) \
+  { setobj2t(L, cast(TValue *,aux), v); } \
+  else luaV_finishset(L,t,k,v,aux); }
+  
+
+
 LUAI_FUNC int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2);
 LUAI_FUNC int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r);
 LUAI_FUNC int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r);
@@ -77,8 +92,8 @@ LUAI_FUNC int luaV_tonumber_ (const TValue *obj, lua_Number *n);
 LUAI_FUNC int luaV_tointeger (const TValue *obj, lua_Integer *p, int mode);
 LUAI_FUNC void luaV_finishget (lua_State *L, const TValue *t, TValue *key,
                                StkId val, const TValue *tm);
-LUAI_FUNC void luaV_settable (lua_State *L, const TValue *t, TValue *key,
-                                            StkId val);
+LUAI_FUNC void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
+                               StkId val, const TValue *oldval);
 LUAI_FUNC void luaV_finishOp (lua_State *L);
 LUAI_FUNC void luaV_execute (lua_State *L);
 LUAI_FUNC void luaV_concat (lua_State *L, int total);
