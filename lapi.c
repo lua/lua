@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.251 2015/07/20 18:24:50 roberto Exp roberto $
+** $Id: lapi.c,v 2.252 2015/08/03 19:50:49 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -736,6 +736,7 @@ static void auxsetstr (lua_State *L, const TValue *t, const char *k) {
   TString *str = luaS_new(L, k);
   api_checknelems(L, 1);
   if (luaV_fastset(L, t, str, aux, luaH_getstr, L->top)) {
+    invalidateTMcache(hvalue(t));
     setobj2t(L, cast(TValue *, aux), L->top - 1);
     L->top--;  /* pop value */
   }

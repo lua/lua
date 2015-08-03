@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.248 2015/07/20 18:24:50 roberto Exp roberto $
+** $Id: lvm.c,v 2.249 2015/08/03 19:50:49 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -217,6 +217,7 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
     }
     t = tm;  /* else repeat assignment over 'tm' */
     if (luaV_fastset(L, t, key, oldval, luaH_get, val)) {
+      invalidateTMcache(hvalue(t));
       setobj2t(L, cast(TValue *, oldval), val);
       return;
     }

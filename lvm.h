@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 2.36 2015/07/20 18:24:50 roberto Exp roberto $
+** $Id: lvm.h,v 2.37 2015/08/03 19:50:49 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -75,12 +75,11 @@
    ? (aux = NULL, 0) \
    : (aux = f(hvalue(t), k), \
      ttisnil(aux) ? 0 \
-     : (invalidateTMcache(hvalue(t)), \
-        luaC_barrierback(L, hvalue(t), v), 1)))
+     : (luaC_barrierback(L, hvalue(t), v), 1)))
 
 #define luaV_settable(L,t,k,v) { const TValue *aux; \
   if (luaV_fastset(L,t,k,aux,luaH_get,v)) \
-  { setobj2t(L, cast(TValue *,aux), v); } \
+  { invalidateTMcache(hvalue(t)); setobj2t(L, cast(TValue *,aux), v); } \
   else luaV_finishset(L,t,k,v,aux); }
   
 
