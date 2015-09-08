@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.110 2015/04/02 21:10:53 roberto Exp roberto $
+** $Id: lobject.h,v 2.111 2015/06/09 14:21:42 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -19,8 +19,8 @@
 /*
 ** Extra tags for non-values
 */
-#define LUA_TPROTO	LUA_NUMTAGS
-#define LUA_TDEADKEY	(LUA_NUMTAGS+1)
+#define LUA_TPROTO	LUA_NUMTAGS		/* function prototypes */
+#define LUA_TDEADKEY	(LUA_NUMTAGS+1)		/* removed keys in tables */
 
 /*
 ** number of all possible tags (including LUA_TNONE but excluding DEADKEY)
@@ -88,22 +88,32 @@ struct GCObject {
 
 
 
-/*
-** Union of all Lua values
-*/
-typedef union Value Value;
-
-
-
 
 /*
 ** Tagged Values. This is the basic representation of values in Lua,
 ** an actual value plus a tag with its type.
 */
 
+/*
+** Union of all Lua values
+*/
+typedef union Value {
+  GCObject *gc;    /* collectable objects */
+  void *p;         /* light userdata */
+  int b;           /* booleans */
+  lua_CFunction f; /* light C functions */
+  lua_Integer i;   /* integer numbers */
+  lua_Number n;    /* float numbers */
+} Value;
+
+
 #define TValuefields	Value value_; int tt_
 
-typedef struct lua_TValue TValue;
+
+typedef struct lua_TValue {
+  TValuefields;
+} TValue;
+
 
 
 /* macro defining a nil value */
@@ -280,21 +290,6 @@ typedef struct lua_TValue TValue;
 */
 
 
-union Value {
-  GCObject *gc;    /* collectable objects */
-  void *p;         /* light userdata */
-  int b;           /* booleans */
-  lua_CFunction f; /* light C functions */
-  lua_Integer i;   /* integer numbers */
-  lua_Number n;    /* float numbers */
-};
-
-
-struct lua_TValue {
-  TValuefields;
-};
-
-
 typedef TValue *StkId;  /* index to stack elements */
 
 
@@ -419,8 +414,8 @@ typedef struct Proto {
   int sizelineinfo;
   int sizep;  /* size of 'p' */
   int sizelocvars;
-  int linedefined;
-  int lastlinedefined;
+  int linedefined;  /* debug information  */
+  int lastlinedefined;  /* debug information  */
   TValue *k;  /* constants used by the function */
   Instruction *code;  /* opcodes */
   struct Proto **p;  /* functions defined inside the function */
