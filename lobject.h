@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.111 2015/06/09 14:21:42 roberto Exp roberto $
+** $Id: lobject.h,v 2.112 2015/09/08 15:49:25 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -187,9 +187,9 @@ typedef struct lua_TValue {
 /* Macros for internal tests */
 #define righttt(obj)		(ttype(obj) == gcvalue(obj)->tt)
 
-#define checkliveness(g,obj) \
+#define checkliveness(L,obj) \
 	lua_longassert(!iscollectable(obj) || \
-			(righttt(obj) && !isdead(g,gcvalue(obj))))
+			(righttt(obj) && !isdead(G(L),gcvalue(obj))))
 
 
 /* Macros to set values */
@@ -225,32 +225,32 @@ typedef struct lua_TValue {
 #define setsvalue(L,obj,x) \
   { TValue *io = (obj); TString *x_ = (x); \
     val_(io).gc = obj2gco(x_); settt_(io, ctb(x_->tt)); \
-    checkliveness(G(L),io); }
+    checkliveness(L,io); }
 
 #define setuvalue(L,obj,x) \
   { TValue *io = (obj); Udata *x_ = (x); \
     val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TUSERDATA)); \
-    checkliveness(G(L),io); }
+    checkliveness(L,io); }
 
 #define setthvalue(L,obj,x) \
   { TValue *io = (obj); lua_State *x_ = (x); \
     val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TTHREAD)); \
-    checkliveness(G(L),io); }
+    checkliveness(L,io); }
 
 #define setclLvalue(L,obj,x) \
   { TValue *io = (obj); LClosure *x_ = (x); \
     val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TLCL)); \
-    checkliveness(G(L),io); }
+    checkliveness(L,io); }
 
 #define setclCvalue(L,obj,x) \
   { TValue *io = (obj); CClosure *x_ = (x); \
     val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TCCL)); \
-    checkliveness(G(L),io); }
+    checkliveness(L,io); }
 
 #define sethvalue(L,obj,x) \
   { TValue *io = (obj); Table *x_ = (x); \
     val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TTABLE)); \
-    checkliveness(G(L),io); }
+    checkliveness(L,io); }
 
 #define setdeadvalue(obj)	settt_(obj, LUA_TDEADKEY)
 
@@ -258,7 +258,7 @@ typedef struct lua_TValue {
 
 #define setobj(L,obj1,obj2) \
 	{ TValue *io1=(obj1); *io1 = *(obj2); \
-	  (void)L; checkliveness(G(L),io1); }
+	  (void)L; checkliveness(L,io1); }
 
 
 /*
@@ -274,11 +274,12 @@ typedef struct lua_TValue {
 #define setptvalue2s	setptvalue
 /* from table to same table */
 #define setobjt2t	setobj
-/* to table */
-#define setobj2t	setobj
 /* to new object */
 #define setobj2n	setobj
 #define setsvalue2n	setsvalue
+
+/* to table (define it as an expression to be used in macros) */
+#define setobj2t(L,o1,o2)  ((void)L, *(o1)=*(o2), checkliveness(L,(o1)))
 
 
 
@@ -370,13 +371,13 @@ typedef union UUdata {
 #define setuservalue(L,u,o) \
 	{ const TValue *io=(o); Udata *iu = (u); \
 	  iu->user_ = io->value_; iu->ttuv_ = rttype(io); \
-	  checkliveness(G(L),io); }
+	  checkliveness(L,io); }
 
 
 #define getuservalue(L,u,o) \
 	{ TValue *io=(o); const Udata *iu = (u); \
 	  io->value_ = iu->user_; settt_(io, iu->ttuv_); \
-	  checkliveness(G(L),io); }
+	  checkliveness(L,io); }
 
 
 /*
@@ -484,7 +485,7 @@ typedef union TKey {
 #define setnodekey(L,key,obj) \
 	{ TKey *k_=(key); const TValue *io_=(obj); \
 	  k_->nk.value_ = io_->value_; k_->nk.tt_ = io_->tt_; \
-	  (void)L; checkliveness(G(L),io_); }
+	  (void)L; checkliveness(L,io_); }
 
 
 typedef struct Node {
