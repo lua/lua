@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.49 2015/06/01 16:34:37 roberto Exp roberto $
+** $Id: lstring.c,v 2.50 2015/06/18 14:20:32 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -119,8 +119,7 @@ void luaS_init (lua_State *L) {
 /*
 ** creates a new string object
 */
-static TString *createstrobj (lua_State *L, const char *str, size_t l,
-                              int tag, unsigned int h) {
+static TString *createstrobj (lua_State *L, size_t l, int tag, unsigned int h) {
   TString *ts;
   GCObject *o;
   size_t totalsize;  /* total size of TString object */
@@ -129,8 +128,14 @@ static TString *createstrobj (lua_State *L, const char *str, size_t l,
   ts = gco2ts(o);
   ts->hash = h;
   ts->extra = 0;
-  memcpy(getaddrstr(ts), str, l * sizeof(char));
   getaddrstr(ts)[l] = '\0';  /* ending 0 */
+  return ts;
+}
+
+
+TString *luaS_createlngstrobj (lua_State *L, size_t l) {
+  TString *ts = createstrobj(L, l, LUA_TLNGSTR, G(L)->seed);
+  ts->u.lnglen = l;
   return ts;
 }
 
@@ -166,7 +171,8 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
     luaS_resize(L, g->strt.size * 2);
     list = &g->strt.hash[lmod(h, g->strt.size)];  /* recompute with new size */
   }
-  ts = createstrobj(L, str, l, LUA_TSHRSTR, h);
+  ts = createstrobj(L, l, LUA_TSHRSTR, h);
+  memcpy(getaddrstr(ts), str, l * sizeof(char));
   ts->shrlen = cast_byte(l);
   ts->u.hnext = *list;
   *list = ts;
@@ -185,8 +191,8 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
     TString *ts;
     if (l >= (MAX_SIZE - sizeof(TString))/sizeof(char))
       luaM_toobig(L);
-    ts = createstrobj(L, str, l, LUA_TLNGSTR, G(L)->seed);
-    ts->u.lnglen = l;
+    ts = luaS_createlngstrobj(L, l);
+    memcpy(getaddrstr(ts), str, l * sizeof(char));
     return ts;
   }
 }

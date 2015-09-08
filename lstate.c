@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.128 2015/03/04 13:31:21 roberto Exp roberto $
+** $Id: lstate.c,v 2.129 2015/07/13 13:30:03 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -241,7 +241,6 @@ static void close_state (lua_State *L) {
   if (g->version)  /* closing a fully built state? */
     luai_userstateclose(L);
   luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size);
-  luaZ_freebuffer(L, &g->buff);
   freestack(L);
   lua_assert(gettotalbytes(g) == sizeof(LG));
   (*g->frealloc)(g->ud, fromstate(L), sizeof(LG), 0);  /* free main block */
@@ -310,7 +309,6 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->strt.size = g->strt.nuse = 0;
   g->strt.hash = NULL;
   setnilvalue(&g->l_registry);
-  luaZ_initbuffer(L, &g->buff);
   g->panic = NULL;
   g->version = NULL;
   g->gcstate = GCSpause;

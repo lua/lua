@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.58 2015/03/04 13:31:21 roberto Exp roberto $
+** $Id: lstring.h,v 1.59 2015/03/25 13:42:19 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -42,6 +42,7 @@ LUAI_FUNC void luaS_remove (lua_State *L, TString *ts);
 LUAI_FUNC Udata *luaS_newudata (lua_State *L, size_t s);
 LUAI_FUNC TString *luaS_newlstr (lua_State *L, const char *str, size_t l);
 LUAI_FUNC TString *luaS_new (lua_State *L, const char *str);
+LUAI_FUNC TString *luaS_createlngstrobj (lua_State *L, size_t l);
 
 
 #endif

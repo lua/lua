@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.138 2015/05/22 17:48:19 roberto Exp roberto $
+** $Id: ldo.c,v 2.139 2015/06/18 14:19:52 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -684,7 +684,7 @@ static void f_parser (lua_State *L, void *ud) {
   int c = zgetc(p->z);  /* read first character */
   if (c == LUA_SIGNATURE[0]) {
     checkmode(L, p->mode, "binary");
-    cl = luaU_undump(L, p->z, &p->buff, p->name);
+    cl = luaU_undump(L, p->z, p->name);
   }
   else {
     checkmode(L, p->mode, "text");

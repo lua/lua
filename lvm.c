@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.249 2015/08/03 19:50:49 roberto Exp roberto $
+** $Id: lvm.c,v 2.250 2015/08/03 20:40:26 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -445,6 +445,17 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
 
 #define isemptystr(o)	(ttisshrstring(o) && tsvalue(o)->shrlen == 0)
 
+/* copy strings in stack from top - n up to top - 1 to buffer */
+static void copy2buff (StkId top, int n, char *buff) {
+  size_t tl = 0;  /* size already copied */
+  do {
+    size_t l = vslen(top - n);  /* length of string being copied */
+    memcpy(buff + tl, svalue(top - n), l * sizeof(char));
+    tl += l;
+  } while (--n > 0);
+}
+
+
 /*
 ** Main operation for concatenation: concat 'total' values in the stack,
 ** from 'L->top - total' up to 'L->top - 1'.
@@ -464,24 +475,24 @@ void luaV_concat (lua_State *L, int total) {
     else {
       /* at least two non-empty string values; get as many as possible */
       size_t tl = vslen(top - 1);
-      char *buffer;
-      int i;
-      /* collect total length */
-      for (i = 1; i < total && tostring(L, top-i-1); i++) {
-        size_t l = vslen(top - i - 1);
+      TString *ts;
+      /* collect total length and number of strings */
+      for (n = 1; n < total && tostring(L, top - n - 1); n++) {
+        size_t l = vslen(top - n - 1);
         if (l >= (MAX_SIZE/sizeof(char)) - tl)
           luaG_runerror(L, "string length overflow");
         tl += l;
       }
-      buffer = luaZ_openspace(L, &G(L)->buff, tl);
-      tl = 0;
-      n = i;
-      do {  /* copy all strings to buffer */
-        size_t l = vslen(top - i);
-        memcpy(buffer+tl, svalue(top-i), l * sizeof(char));
-        tl += l;
-      } while (--i > 0);
-      setsvalue2s(L, top-n, luaS_newlstr(L, buffer, tl));  /* create result */
+      if (tl <= LUAI_MAXSHORTLEN) {  /* is result a short string? */
+        char buff[LUAI_MAXSHORTLEN];
+        copy2buff(top, n, buff);  /* copy strings to buffer */
+        ts = luaS_newlstr(L, buff, tl);
+      }
+      else {  /* long string; copy strings directly to final result */
+        ts = luaS_createlngstrobj(L, tl);
+        copy2buff(top, n, getaddrstr(ts));
+      }
+      setsvalue2s(L, top - n, ts);  /* create result */
     }
     total -= n-1;  /* got 'n' strings to create 1 new */
     L->top -= n-1;  /* popped 'n' strings and pushed one */

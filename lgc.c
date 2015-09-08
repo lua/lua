@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.205 2015/03/25 13:42:19 roberto Exp roberto $
+** $Id: lgc.c,v 2.206 2015/07/13 13:30:03 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -769,12 +769,11 @@ static GCObject **sweeptolive (lua_State *L, GCObject **p, int *n) {
 */
 
 /*
-** If possible, free concatenation buffer and shrink string table
+** If possible, shrink string table
 */
 static void checkSizes (lua_State *L, global_State *g) {
   if (g->gckind != KGC_EMERGENCY) {
     l_mem olddebt = g->GCdebt;
-    luaZ_freebuffer(L, &g->buff);  /* free concatenation buffer */
     if (g->strt.nuse < g->strt.size / 4)  /* string table too big? */
       luaS_resize(L, g->strt.size / 2);  /* shrink it a little */
     g->GCestimate += g->GCdebt - olddebt;  /* update estimate */
