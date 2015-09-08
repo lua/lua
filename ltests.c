@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.206 2015/06/18 14:25:26 roberto Exp roberto $
+** $Id: ltests.c,v 2.207 2015/07/01 17:47:12 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -313,7 +313,7 @@ static void checkstack (global_State *g, lua_State *L1) {
   }
   if (L1->stack) {  /* complete thread? */
     for (o = L1->stack; o < L1->stack_last + EXTRA_STACK; o++)
-      checkliveness(g, o);  /* entire stack must have valid values */
+      checkliveness(L1, o);  /* entire stack must have valid values */
   }
   else lua_assert(L1->stacksize == 0);
 }
