@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 2.37 2015/08/03 19:50:49 roberto Exp roberto $
+** $Id: lvm.h,v 2.38 2015/08/03 20:40:26 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -70,17 +70,27 @@
   else luaV_finishget(L,t,k,v,aux); }
 
 
-#define luaV_fastset(L,t,k,aux,f,v) \
+/*
+** Fast track for set table. If 't' is a table and 't[k]' is not nil,
+** call GC barrier, do a raw 't[k]=v', and return true; otherwise,
+** return false with 'slot' equal to NULL (if 't' is not a table) or
+** 'nil'. (This is needed by 'luaV_finishget'.) Note that, if the macro
+** returns true, there is no need to 'invalidateTMcache', because the
+** call is not creating a new entry.
+*/
+#define luaV_fastset(L,t,k,slot,f,v) \
   (!ttistable(t) \
-   ? (aux = NULL, 0) \
-   : (aux = f(hvalue(t), k), \
-     ttisnil(aux) ? 0 \
-     : (luaC_barrierback(L, hvalue(t), v), 1)))
+   ? (slot = NULL, 0) \
+   : (slot = f(hvalue(t), k), \
+     ttisnil(slot) ? 0 \
+     : (luaC_barrierback(L, hvalue(t), v), \
+        setobj2t(L, cast(TValue *,slot), v), \
+        1)))
 
-#define luaV_settable(L,t,k,v) { const TValue *aux; \
-  if (luaV_fastset(L,t,k,aux,luaH_get,v)) \
-  { invalidateTMcache(hvalue(t)); setobj2t(L, cast(TValue *,aux), v); } \
-  else luaV_finishset(L,t,k,v,aux); }
+
+#define luaV_settable(L,t,k,v) { const TValue *slot; \
+  if (!luaV_fastset(L,t,k,slot,luaH_get,v)) \
+    luaV_finishset(L,t,k,v,slot); }
   
 
 

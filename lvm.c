@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.250 2015/08/03 20:40:26 roberto Exp roberto $
+** $Id: lvm.c,v 2.251 2015/09/08 15:41:05 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -216,11 +216,8 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
       return;
     }
     t = tm;  /* else repeat assignment over 'tm' */
-    if (luaV_fastset(L, t, key, oldval, luaH_get, val)) {
-      invalidateTMcache(hvalue(t));
-      setobj2t(L, cast(TValue *, oldval), val);
-      return;
-    }
+    if (luaV_fastset(L, t, key, oldval, luaH_get, val))
+      return;  /* done */
     /* else loop */
   }
   luaG_runerror(L, "settable chain too long; possible loop");
