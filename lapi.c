@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.253 2015/08/03 20:40:26 roberto Exp roberto $
+** $Id: lapi.c,v 2.254 2015/08/25 18:50:37 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -736,28 +736,28 @@ LUA_API int lua_getuservalue (lua_State *L, int idx) {
 ** set functions (stack -> Lua)
 */
 
+/*
+** t[k] = value at the top of the stack (where 'k' is a string)
+*/
 static void auxsetstr (lua_State *L, const TValue *t, const char *k) {
   const TValue *aux;
   TString *str = luaS_new(L, k);
   api_checknelems(L, 1);
-  if (luaV_fastset(L, t, str, aux, luaH_getstr, L->top)) {
-    invalidateTMcache(hvalue(t));
-    setobj2t(L, cast(TValue *, aux), L->top - 1);
+  if (luaV_fastset(L, t, str, aux, luaH_getstr, L->top - 1))
     L->top--;  /* pop value */
-  }
   else {
-    setsvalue2s(L, L->top, str);
+    setsvalue2s(L, L->top, str);  /* push 'str' (to make it a TValue) */
     api_incr_top(L);
     luaV_finishset(L, t, L->top - 1, L->top - 2, aux);
     L->top -= 2;  /* pop value and key */
   }
-  lua_unlock(L);
+  lua_unlock(L);  /* lock done by caller */
 }
 
 
 LUA_API void lua_setglobal (lua_State *L, const char *name) {
   Table *reg = hvalue(&G(L)->l_registry);
-  lua_lock(L);
+  lua_lock(L);  /* unlock done in 'auxsetstr' */
   auxsetstr(L, luaH_getint(reg, LUA_RIDX_GLOBALS), name);
 }
 
@@ -774,7 +774,7 @@ LUA_API void lua_settable (lua_State *L, int idx) {
 
 
 LUA_API void lua_setfield (lua_State *L, int idx, const char *k) {
-  lua_lock(L);
+  lua_lock(L);  /* unlock done in 'auxsetstr' */
   auxsetstr(L, index2addr(L, idx), k);
 }
 
@@ -785,10 +785,8 @@ LUA_API void lua_seti (lua_State *L, int idx, lua_Integer n) {
   lua_lock(L);
   api_checknelems(L, 1);
   t = index2addr(L, idx);
-  if (luaV_fastset(L, t, n, aux, luaH_getint, L->top - 1)) {
-    setobj2t(L, cast(TValue *, aux), L->top - 1);
+  if (luaV_fastset(L, t, n, aux, luaH_getint, L->top - 1))
     L->top--;  /* pop value */
-  }
   else {
     setivalue(L->top, n);
     api_incr_top(L);
@@ -801,15 +799,15 @@ LUA_API void lua_seti (lua_State *L, int idx, lua_Integer n) {
 
 LUA_API void lua_rawset (lua_State *L, int idx) {
   StkId o;
-  Table *t;
+  TValue *slot;
   lua_lock(L);
   api_checknelems(L, 2);
   o = index2addr(L, idx);
   api_check(L, ttistable(o), "table expected");
-  t = hvalue(o);
-  setobj2t(L, luaH_set(L, t, L->top-2), L->top-1);
-  invalidateTMcache(t);
-  luaC_barrierback(L, t, L->top-1);
+  slot = luaH_set(L, hvalue(o), L->top - 2);
+  setobj2t(L, slot, L->top - 1);
+  invalidateTMcache(hvalue(o));
+  luaC_barrierback(L, hvalue(o), L->top-1);
   L->top -= 2;
   lua_unlock(L);
 }
@@ -817,14 +815,12 @@ LUA_API void lua_rawset (lua_State *L, int idx) {
 
 LUA_API void lua_rawseti (lua_State *L, int idx, lua_Integer n) {
   StkId o;
-  Table *t;
   lua_lock(L);
   api_checknelems(L, 1);
   o = index2addr(L, idx);
   api_check(L, ttistable(o), "table expected");
-  t = hvalue(o);
-  luaH_setint(L, t, n, L->top - 1);
-  luaC_barrierback(L, t, L->top-1);
+  luaH_setint(L, hvalue(o), n, L->top - 1);
+  luaC_barrierback(L, hvalue(o), L->top-1);
   L->top--;
   lua_unlock(L);
 }
@@ -832,16 +828,15 @@ LUA_API void lua_rawseti (lua_State *L, int idx, lua_Integer n) {
 
 LUA_API void lua_rawsetp (lua_State *L, int idx, const void *p) {
   StkId o;
-  Table *t;
-  TValue k;
+  TValue k, *slot;
   lua_lock(L);
   api_checknelems(L, 1);
   o = index2addr(L, idx);
   api_check(L, ttistable(o), "table expected");
-  t = hvalue(o);
   setpvalue(&k, cast(void *, p));
-  setobj2t(L, luaH_set(L, t, &k), L->top - 1);
-  luaC_barrierback(L, t, L->top - 1);
+  slot = luaH_set(L, hvalue(o), &k);
+  setobj2t(L, slot, L->top - 1);
+  luaC_barrierback(L, hvalue(o), L->top - 1);
   L->top--;
   lua_unlock(L);
 }
