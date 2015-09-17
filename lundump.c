@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.41 2014/11/02 19:19:04 roberto Exp roberto $
+** $Id: lundump.c,v 2.42 2015/09/08 15:41:05 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -98,7 +98,7 @@ static TString *LoadString (LoadState *S) {
   }
   else {  /* long string */
     TString *ts = luaS_createlngstrobj(S->L, size);
-    LoadVector(S, getaddrstr(ts), size);  /* load directly in final place */
+    LoadVector(S, getstr(ts), size);  /* load directly in final place */
     return ts;
   }
 }

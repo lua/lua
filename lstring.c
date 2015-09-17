@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.50 2015/06/18 14:20:32 roberto Exp roberto $
+** $Id: lstring.c,v 2.51 2015/09/08 15:41:05 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -128,7 +128,7 @@ static TString *createstrobj (lua_State *L, size_t l, int tag, unsigned int h) {
   ts = gco2ts(o);
   ts->hash = h;
   ts->extra = 0;
-  getaddrstr(ts)[l] = '\0';  /* ending 0 */
+  getstr(ts)[l] = '\0';  /* ending 0 */
   return ts;
 }
 
@@ -172,7 +172,7 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
     list = &g->strt.hash[lmod(h, g->strt.size)];  /* recompute with new size */
   }
   ts = createstrobj(L, l, LUA_TSHRSTR, h);
-  memcpy(getaddrstr(ts), str, l * sizeof(char));
+  memcpy(getstr(ts), str, l * sizeof(char));
   ts->shrlen = cast_byte(l);
   ts->u.hnext = *list;
   *list = ts;
@@ -192,7 +192,7 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
     if (l >= (MAX_SIZE - sizeof(TString))/sizeof(char))
       luaM_toobig(L);
     ts = luaS_createlngstrobj(L, l);
-    memcpy(getaddrstr(ts), str, l * sizeof(char));
+    memcpy(getstr(ts), str, l * sizeof(char));
     return ts;
   }
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.251 2015/09/08 15:41:05 roberto Exp roberto $
+** $Id: lvm.c,v 2.252 2015/09/09 13:44:07 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -487,7 +487,7 @@ void luaV_concat (lua_State *L, int total) {
       }
       else {  /* long string; copy strings directly to final result */
         ts = luaS_createlngstrobj(L, tl);
-        copy2buff(top, n, getaddrstr(ts));
+        copy2buff(top, n, getstr(ts));
       }
       setsvalue2s(L, top - n, ts);  /* create result */
     }

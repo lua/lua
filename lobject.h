@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.112 2015/09/08 15:49:25 roberto Exp roberto $
+** $Id: lobject.h,v 2.113 2015/09/08 16:54:52 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -325,9 +325,9 @@ typedef union UTString {
 ** Get the actual string (array of bytes) from a 'TString'.
 ** (Access to 'extra' ensures that value is really a 'TString'.)
 */
-#define getaddrstr(ts)	(cast(char *, (ts)) + sizeof(UTString))
 #define getstr(ts)  \
-  check_exp(sizeof((ts)->extra), cast(const char*, getaddrstr(ts)))
+  check_exp(sizeof((ts)->extra), cast(char *, (ts)) + sizeof(UTString))
+
 
 /* get the actual string (array of bytes) from a Lua value */
 #define svalue(o)       getstr(tsvalue(o))
