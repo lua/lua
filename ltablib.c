@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.81 2015/07/04 16:31:42 roberto Exp roberto $
+** $Id: ltablib.c,v 1.82 2015/09/09 15:42:30 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -118,6 +118,12 @@ static int tremove (lua_State *L) {
 }
 
 
+/*
+** Copy elements (1[f], ..., 1[e]) into (tt[t], tt[t+1], ...). Whenever
+** possible, copy in increasing order, which is better for rehashing.
+** "possible" means destination after original range, or smaller
+** than origin, or copying to another table.
+*/
 static int tmove (lua_State *L) {
   lua_Integer f = luaL_checkinteger(L, 2);
   lua_Integer e = luaL_checkinteger(L, 3);
@@ -132,14 +138,14 @@ static int tmove (lua_State *L) {
     n = e - f + 1;  /* number of elements to move */
     luaL_argcheck(L, t <= LUA_MAXINTEGER - n + 1, 4,
                   "destination wrap around");
-    if (t > f) {
-      for (i = n - 1; i >= 0; i--) {
+    if (t > e || t <= f || tt != 1) {
+      for (i = 0; i < n; i++) {
         lua_geti(L, 1, f + i);
         lua_seti(L, tt, t + i);
       }
     }
     else {
-      for (i = 0; i < n; i++) {
+      for (i = n - 1; i >= 0; i--) {
         lua_geti(L, 1, f + i);
         lua_seti(L, tt, t + i);
       }
