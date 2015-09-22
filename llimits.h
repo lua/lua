@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.136 2015/07/15 15:57:13 roberto Exp roberto $
+** $Id: llimits.h,v 1.137 2015/09/08 16:53:56 roberto Exp roberto $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -190,10 +190,13 @@ typedef unsigned long Instruction;
 
 
 /*
-** Size of cache for strings in the API (better be a prime)
+** Size of cache for strings in the API. 'N' is the number of
+** sets (better be a prime) and "M" is the size of each set (M == 1
+** makes a direct cache.)
 */
-#if !defined(STRCACHE_SIZE)
-#define STRCACHE_SIZE		127
+#if !defined(STRCACHE_N)
+#define STRCACHE_N		63
+#define STRCACHE_M		2
 #endif
 
 

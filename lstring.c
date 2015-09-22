@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.51 2015/09/08 15:41:05 roberto Exp roberto $
+** $Id: lstring.c,v 2.52 2015/09/17 15:51:05 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -92,11 +92,12 @@ void luaS_resize (lua_State *L, int newsize) {
 ** a non-collectable string.)
 */
 void luaS_clearcache (global_State *g) {
-  int i;
-  for (i = 0; i < STRCACHE_SIZE; i++) {
-    if (iswhite(g->strcache[i][0]))  /* will entry be collected? */
-      g->strcache[i][0] = g->memerrmsg;  /* replace it with something fixed */
-  }
+  int i, j;
+  for (i = 0; i < STRCACHE_N; i++)
+    for (j = 0; j < STRCACHE_M; j++) {
+    if (iswhite(g->strcache[i][j]))  /* will entry be collected? */
+      g->strcache[i][j] = g->memerrmsg;  /* replace it with something fixed */
+    }
 }
 
 
@@ -105,13 +106,14 @@ void luaS_clearcache (global_State *g) {
 */
 void luaS_init (lua_State *L) {
   global_State *g = G(L);
-  int i;
+  int i, j;
   luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
   /* pre-create memory-error message */
   g->memerrmsg = luaS_newliteral(L, MEMERRMSG);
   luaC_fix(L, obj2gco(g->memerrmsg));  /* it should never be collected */
-  for (i = 0; i < STRCACHE_SIZE; i++)  /* fill cache with valid strings */
-    g->strcache[i][0] = g->memerrmsg;
+  for (i = 0; i < STRCACHE_N; i++)  /* fill cache with valid strings */
+    for (j = 0; j < STRCACHE_M; j++)
+      g->strcache[i][j] = g->memerrmsg;
 }
 
 
@@ -205,15 +207,19 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
 ** check hits.
 */
 TString *luaS_new (lua_State *L, const char *str) {
-  unsigned int i = point2uint(str) % STRCACHE_SIZE;  /* hash */
+  unsigned int i = point2uint(str) % STRCACHE_N;  /* hash */
+  int j;
   TString **p = G(L)->strcache[i];
-  if (strcmp(str, getstr(p[0])) == 0)  /* hit? */
-    return p[0];  /* that it is */
-  else {  /* normal route */
-    TString *s = luaS_newlstr(L, str, strlen(str));
-    p[0] = s;
-    return s;
+  for (j = 0; j < STRCACHE_M; j++) {
+    if (strcmp(str, getstr(p[j])) == 0)  /* hit? */
+      return p[j];  /* that is it */
   }
+  /* normal route */
+  for (j = STRCACHE_M - 1; j > 0; j--)
+    p[j] = p[j - 1];  /* move out last element */
+  /* new element is first in the list */
+  p[0] = luaS_newlstr(L, str, strlen(str));
+  return p[0];
 }
 
 

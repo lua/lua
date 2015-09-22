@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.47 2014/12/26 14:44:44 roberto Exp roberto $
+** $Id: ltests.h,v 2.48 2015/06/18 14:27:44 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -117,6 +117,10 @@ LUA_API void *debug_realloc (void *ud, void *block,
 
 #undef LUAI_USER_ALIGNMENT_T
 #define LUAI_USER_ALIGNMENT_T   union { char b[sizeof(void*) * 8]; }
+
+
+#define STRCACHE_N	23
+#define STRCACHE_M	5
 
 #endif
 
