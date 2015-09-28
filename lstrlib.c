@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.232 2015/07/20 16:30:22 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.233 2015/09/26 18:45:03 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -677,24 +677,26 @@ static int str_match (lua_State *L) {
 }
 
 
+/* state for 'gmatch' */
+typedef struct GMatchState {
+  const char *src;  /* current position */
+  const char *p;  /* pattern */
+  MatchState ms;  /* match state */
+} GMatchState;
+
+
 static int gmatch_aux (lua_State *L) {
-  MatchState ms;
-  size_t ls, lp;
-  const char *s = lua_tolstring(L, lua_upvalueindex(1), &ls);
-  const char *p = lua_tolstring(L, lua_upvalueindex(2), &lp);
+  GMatchState *gm = (GMatchState *)lua_touserdata(L, lua_upvalueindex(3));
   const char *src;
-  prepstate(&ms, L, s, ls, p, lp);
-  for (src = s + (size_t)lua_tointeger(L, lua_upvalueindex(3));
-       src <= ms.src_end;
-       src++) {
+  for (src = gm->src; src <= gm->ms.src_end; src++) {
     const char *e;
-    reprepstate(&ms);
-    if ((e = match(&ms, src, p)) != NULL) {
-      lua_Integer newstart = e-s;
-      if (e == src) newstart++;  /* empty match? go at least one position */
-      lua_pushinteger(L, newstart);
-      lua_replace(L, lua_upvalueindex(3));
-      return push_captures(&ms, src, e);
+    reprepstate(&gm->ms);
+    if ((e = match(&gm->ms, src, gm->p)) != NULL) {
+      if (e == src)  /* empty match? */
+        gm->src =src + 1;  /* go at least one position */
+      else
+        gm->src = e;
+      return push_captures(&gm->ms, src, e);
     }
   }
   return 0;  /* not found */
@@ -702,10 +704,14 @@ static int gmatch_aux (lua_State *L) {
 
 
 static int gmatch (lua_State *L) {
-  luaL_checkstring(L, 1);
-  luaL_checkstring(L, 2);
-  lua_settop(L, 2);
-  lua_pushinteger(L, 0);
+  size_t ls, lp;
+  const char *s = luaL_checklstring(L, 1, &ls);
+  const char *p = luaL_checklstring(L, 2, &lp);
+  GMatchState *gm;
+  lua_settop(L, 2);  /* keep them on closure to avoid being collected */
+  gm = (GMatchState *)lua_newuserdata(L, sizeof(GMatchState));
+  prepstate(&gm->ms, L, s, ls, p, lp);
+  gm->src = s; gm->p = p;
   lua_pushcclosure(L, gmatch_aux, 3);
   return 1;
 }
