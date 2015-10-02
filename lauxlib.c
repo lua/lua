@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.280 2015/02/03 17:38:24 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.281 2015/06/18 14:23:14 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -33,8 +33,8 @@
 */
 
 
-#define LEVELS1	12	/* size of the first part of the stack */
-#define LEVELS2	10	/* size of the second part of the stack */
+#define LEVELS1	10	/* size of the first part of the stack */
+#define LEVELS2	11	/* size of the second part of the stack */
 
 
 
@@ -107,7 +107,7 @@ static void pushfuncname (lua_State *L, lua_Debug *ar) {
 }
 
 
-static int countlevels (lua_State *L) {
+static int lastlevel (lua_State *L) {
   lua_Debug ar;
   int li = 1, le = 1;
   /* find an upper bound */
@@ -126,14 +126,16 @@ LUALIB_API void luaL_traceback (lua_State *L, lua_State *L1,
                                 const char *msg, int level) {
   lua_Debug ar;
   int top = lua_gettop(L);
-  int numlevels = countlevels(L1);
-  int mark = (numlevels > LEVELS1 + LEVELS2) ? LEVELS1 : 0;
-  if (msg) lua_pushfstring(L, "%s\n", msg);
+  int last = lastlevel(L1);
+  int n1 = (last - level > LEVELS1 + LEVELS2) ? LEVELS1 : -1;
+  if (msg)
+    lua_pushfstring(L, "%s\n", msg);
+  luaL_checkstack(L, 10, NULL);
   lua_pushliteral(L, "stack traceback:");
   while (lua_getstack(L1, level++, &ar)) {
-    if (level == mark) {  /* too many levels? */
+    if (n1-- == 0) {  /* too many levels? */
       lua_pushliteral(L, "\n\t...");  /* add a '...' */
-      level = numlevels - LEVELS2;  /* and skip to last ones */
+      level = last - LEVELS2 + 1;  /* and skip to last ones */
     }
     else {
       lua_getinfo(L1, "Slnt", &ar);
