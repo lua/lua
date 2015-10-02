@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.115 2015/03/12 14:04:04 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.116 2015/06/26 19:30:32 roberto Exp $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -39,7 +39,7 @@
 static int math_abs (lua_State *L) {
   if (lua_isinteger(L, 1)) {
     lua_Integer n = lua_tointeger(L, 1);
-    if (n < 0) n = (lua_Integer)(0u - n);
+    if (n < 0) n = (lua_Integer)(0u - (lua_Unsigned)n);
     lua_pushinteger(L, n);
   }
   else
