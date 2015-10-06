@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.137 2015/09/08 16:53:56 roberto Exp roberto $
+** $Id: llimits.h,v 1.138 2015/09/22 14:18:24 roberto Exp roberto $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -195,7 +195,7 @@ typedef unsigned long Instruction;
 ** makes a direct cache.)
 */
 #if !defined(STRCACHE_N)
-#define STRCACHE_N		63
+#define STRCACHE_N		53
 #define STRCACHE_M		2
 #endif
 
