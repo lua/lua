@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.254 2015/08/25 18:50:37 roberto Exp roberto $
+** $Id: lapi.c,v 2.255 2015/09/09 13:45:50 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -472,15 +472,15 @@ LUA_API void lua_pushinteger (lua_State *L, lua_Integer n) {
 
 
 /*
-** Pushes on the stack a string with given length. Even when 'len' == 0,
-** 's' cannot be NULL due to later use of 'memcmp' and 'memcpy'.
+** Pushes on the stack a string with given length. Avoid using 's' when
+** 'len' == 0 (as 's' can be NULL in that case), due to later use of
+** 'memcmp' and 'memcpy'.
 */
 LUA_API const char *lua_pushlstring (lua_State *L, const char *s, size_t len) {
   TString *ts;
   lua_lock(L);
   luaC_checkGC(L);
-  api_check(L, s != NULL, "pointer cannot be NULL");
-  ts = luaS_newlstr(L, s, len);
+  ts = (len == 0) ? luaS_new(L, "") : luaS_newlstr(L, s, len);
   setsvalue2s(L, L->top, ts);
   api_incr_top(L);
   lua_unlock(L);
