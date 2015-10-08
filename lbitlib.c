@@ -1,5 +1,5 @@
 /*
-** $Id: lbitlib.c,v 1.27 2014/10/01 11:54:56 roberto Exp roberto $
+** $Id: lbitlib.c,v 1.28 2014/11/02 19:19:04 roberto Exp roberto $
 ** Standard library for bitwise operations
 ** See Copyright Notice in lua.h
 */
@@ -186,11 +186,10 @@ static int b_extract (lua_State *L) {
 static int b_replace (lua_State *L) {
   int w;
   lua_Unsigned r = trim(luaL_checkunsigned(L, 1));
-  lua_Unsigned v = luaL_checkunsigned(L, 2);
+  lua_Unsigned v = trim(luaL_checkunsigned(L, 2));
   int f = fieldargs(L, 3, &w);
-  int m = mask(w);
-  v &= m;  /* erase bits outside given width */
-  r = (r & ~(m << f)) | (v << f);
+  lua_Unsigned m = mask(w);
+  r = (r & ~(m << f)) | ((v & m) << f);
   lua_pushunsigned(L, r);
   return 1;
 }
