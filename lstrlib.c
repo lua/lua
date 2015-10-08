@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.233 2015/09/26 18:45:03 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.234 2015/09/28 18:05:01 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -1390,7 +1390,7 @@ static int str_packsize (lua_State *L) {
       case Kstring:  /* strings with length count */
       case Kzstr:    /* zero-terminated string */
         luaL_argerror(L, 1, "variable-length format");
-        break;
+        /* call never return, but to avoid warnings: *//* FALLTHROUGH */
       default:  break;
     }
   }
