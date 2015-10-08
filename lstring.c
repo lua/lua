@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.52 2015/09/17 15:51:05 roberto Exp roberto $
+** $Id: lstring.c,v 2.53 2015/09/22 14:18:24 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -160,6 +160,7 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
   global_State *g = G(L);
   unsigned int h = luaS_hash(str, l, g->seed);
   TString **list = &g->strt.hash[lmod(h, g->strt.size)];
+  lua_assert(str != NULL);  /* otherwise 'memcmp'/'memcpy' are undefined */
   for (ts = *list; ts != NULL; ts = ts->u.hnext) {
     if (l == ts->shrlen &&
         (memcmp(str, getstr(ts), l * sizeof(char)) == 0)) {
