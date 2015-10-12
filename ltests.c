@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.207 2015/07/01 17:47:12 roberto Exp roberto $
+** $Id: ltests.c,v 2.208 2015/09/08 16:55:43 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -998,6 +998,11 @@ static int getnum_aux (lua_State *L, lua_State *L1, const char **pc) {
   if (**pc == '.') {
     res = cast_int(lua_tointeger(L1, -1));
     lua_pop(L1, 1);
+    (*pc)++;
+    return res;
+  }
+  else if (**pc == '*') {
+    res = lua_gettop(L1);
     (*pc)++;
     return res;
   }
