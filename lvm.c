@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.253 2015/09/17 15:51:05 roberto Exp roberto $
+** $Id: lvm.c,v 2.254 2015/10/20 17:41:35 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -733,10 +733,9 @@ void luaV_finishOp (lua_State *L) {
 #define Protect(x)	{ {x;}; base = ci->u.l.base; }
 
 #define checkGC(L,c)  \
-  Protect( luaC_condGC(L,{L->top = (c);  /* limit of live values */ \
-                          luaC_step(L); \
-                          L->top = ci->top;})  /* restore top */ \
-           luai_threadyield(L); )
+	{ luaC_condGC(L, L->top = (c),  /* limit of live values */ \
+                         Protect(L->top = ci->top));  /* restore top */ \
+           luai_threadyield(L); }
 
 
 #define vmdispatch(o)	switch(o)
