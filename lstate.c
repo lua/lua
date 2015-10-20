@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.129 2015/07/13 13:30:03 roberto Exp roberto $
+** $Id: lstate.c,v 2.130 2015/09/08 15:41:05 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -76,7 +76,7 @@ typedef struct LG {
 */
 #define addbuff(b,p,e) \
   { size_t t = cast(size_t, e); \
-    memcpy(buff + p, &t, sizeof(t)); p += sizeof(t); }
+    memcpy(b + p, &t, sizeof(t)); p += sizeof(t); }
 
 static unsigned int makeseed (lua_State *L) {
   char buff[4 * sizeof(size_t)];
