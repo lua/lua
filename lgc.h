@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.87 2015/08/03 19:40:42 roberto Exp roberto $
+** $Id: lgc.h,v 2.88 2015/10/20 17:56:21 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -101,9 +101,16 @@
 #define luaC_white(g)	cast(lu_byte, (g)->currentwhite & WHITEBITS)
 
 
+/*
+** Does one step of collection when debt becomes positive. 'pre'/'pos'
+** allows some adjustments to be done only when needed. macro
+** 'condchangemem' is used only for heavy tests (forcing a full
+** GC cycle on every opportunity)
+*/
 #define luaC_condGC(L,pre,pos) \
 	{if (G(L)->GCdebt > 0) { pre; luaC_step(L); pos;}; condchangemem(L);}
 
+/* more often than not, 'pre'/'pos' are empty */
 #define luaC_checkGC(L)		luaC_condGC(L,,)
 
 
