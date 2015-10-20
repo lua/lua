@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.252 2015/09/09 13:44:07 roberto Exp roberto $
+** $Id: lvm.c,v 2.253 2015/09/17 15:51:05 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -710,21 +710,14 @@ void luaV_finishOp (lua_State *L) {
 ** some macros for common tasks in 'luaV_execute'
 */
 
-#if !defined(luai_runtimecheck)
-#define luai_runtimecheck(L, c)		/* void */
-#endif
-
 
 #define RA(i)	(base+GETARG_A(i))
-/* to be used after possible stack reallocation */
 #define RB(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgR, base+GETARG_B(i))
 #define RC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgR, base+GETARG_C(i))
 #define RKB(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgK, \
 	ISK(GETARG_B(i)) ? k+INDEXK(GETARG_B(i)) : base+GETARG_B(i))
 #define RKC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgK, \
 	ISK(GETARG_C(i)) ? k+INDEXK(GETARG_C(i)) : base+GETARG_C(i))
-#define KBx(i)  \
-  (k + (GETARG_Bx(i) != 0 ? GETARG_Bx(i) - 1 : GETARG_Ax(*ci->u.l.savedpc++)))
 
 
 /* execute a jump instruction */
@@ -750,6 +743,23 @@ void luaV_finishOp (lua_State *L) {
 #define vmcase(l)	case l:
 #define vmbreak		break
 
+
+/*
+** copy of 'luaV_gettable', but protecting call to potential metamethod
+** (which can reallocate the stack)
+*/
+#define gettableProtected(L,t,k,v)  { const TValue *aux; \
+  if (luaV_fastget(L,t,k,aux,luaH_get)) { setobj2s(L, v, aux); } \
+  else Protect(luaV_finishget(L,t,k,v,aux)); }
+
+
+/* same for 'luaV_settable' */
+#define settableProtected(L,t,k,v) { const TValue *slot; \
+  if (!luaV_fastset(L,t,k,slot,luaH_get,v)) \
+    Protect(luaV_finishset(L,t,k,v,slot)); }
+
+
+
 void luaV_execute (lua_State *L) {
   CallInfo *ci = L->ci;
   LClosure *cl;
@@ -757,9 +767,9 @@ void luaV_execute (lua_State *L) {
   StkId base;
  newframe:  /* reentry point when frame changes (call/return) */
   lua_assert(ci == L->ci);
-  cl = clLvalue(ci->func);
-  k = cl->p->k;
-  base = ci->u.l.base;
+  cl = clLvalue(ci->func);  /* local reference to function's closure */
+  k = cl->p->k;  /* local reference to function's constant table */
+  base = ci->u.l.base;  /* local copy of function's base */
   /* main loop of interpreter */
   for (;;) {
     Instruction i = *(ci->u.l.savedpc++);
@@ -807,17 +817,22 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_GETTABUP) {
-        int b = GETARG_B(i);
-        Protect(luaV_gettable(L, cl->upvals[b]->v, RKC(i), ra));
+        TValue *upval = cl->upvals[GETARG_B(i)]->v;
+        TValue *rc = RKC(i);
+        gettableProtected(L, upval, rc, ra);
         vmbreak;
       }
       vmcase(OP_GETTABLE) {
-        Protect(luaV_gettable(L, RB(i), RKC(i), ra));
+        StkId rb = RB(i);
+        TValue *rc = RKC(i);
+        gettableProtected(L, rb, rc, ra);
         vmbreak;
       }
       vmcase(OP_SETTABUP) {
-        int a = GETARG_A(i);
-        Protect(luaV_settable(L, cl->upvals[a]->v, RKB(i), RKC(i)));
+        TValue *upval = cl->upvals[GETARG_A(i)]->v;
+        TValue *rb = RKB(i);
+        TValue *rc = RKC(i);
+        settableProtected(L, upval, rb, rc);
         vmbreak;
       }
       vmcase(OP_SETUPVAL) {
@@ -827,7 +842,9 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_SETTABLE) {
-        Protect(luaV_settable(L, ra, RKB(i), RKC(i)));
+        TValue *rb = RKB(i);
+        TValue *rc = RKC(i);
+        settableProtected(L, ra, rb, rc);
         vmbreak;
       }
       vmcase(OP_NEWTABLE) {
@@ -842,8 +859,9 @@ void luaV_execute (lua_State *L) {
       }
       vmcase(OP_SELF) {
         StkId rb = RB(i);
-        setobjs2s(L, ra+1, rb);
-        Protect(luaV_gettable(L, rb, RKC(i), ra));
+        TValue *rc = RKC(i);
+        setobjs2s(L, ra + 1, rb);
+        gettableProtected(L, rb, rc, ra);
         vmbreak;
       }
       vmcase(OP_ADD) {
@@ -1229,7 +1247,6 @@ void luaV_execute (lua_State *L) {
           lua_assert(GET_OPCODE(*ci->u.l.savedpc) == OP_EXTRAARG);
           c = GETARG_Ax(*ci->u.l.savedpc++);
         }
-        luai_runtimecheck(L, ttistable(ra));
         h = hvalue(ra);
         last = ((c-1)*LFIELDS_PER_FLUSH) + n;
         if (last > h->sizearray)  /* needs more space? */
