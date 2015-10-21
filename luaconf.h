@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.252 2015/06/18 14:26:05 roberto Exp roberto $
+** $Id: luaconf.h,v 1.253 2015/06/24 18:23:57 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -412,8 +412,32 @@
 @@ LUA_NUMBER_FMT is the format for writing floats.
 @@ lua_number2str converts a float to a string.
 @@ l_mathop allows the addition of an 'l' or 'f' to all math operations.
+@@ l_floor takes the floor of a float.
 @@ lua_str2number converts a decimal numeric string to a number.
 */
+
+
+/* The following definitions are good for most cases here */
+
+#define l_floor(x)		(l_mathop(floor)(x))
+
+#define lua_number2str(s,sz,n)	l_sprintf((s), sz, LUA_NUMBER_FMT, (n))
+
+/*
+@@ lua_numbertointeger converts a float number to an integer, or
+** returns 0 if float is not within the range of a lua_Integer.
+** (The range comparisons are tricky because of rounding. The tests
+** here assume a two-complement representation, where MININTEGER always
+** has an exact representation as a float; MAXINTEGER may not have one,
+** and therefore its conversion to float may have an ill-defined value.)
+*/
+#define lua_numbertointeger(n,p) \
+  ((n) >= (LUA_NUMBER)(LUA_MININTEGER) && \
+   (n) < -(LUA_NUMBER)(LUA_MININTEGER) && \
+      (*(p) = (LUA_INTEGER)(n), 1))
+
+
+/* now the variable definitions */
 
 #if LUA_FLOAT_TYPE == LUA_FLOAT_FLOAT		/* { single float */
 
@@ -468,25 +492,6 @@
 #endif					/* } */
 
 
-#define l_floor(x)		(l_mathop(floor)(x))
-
-#define lua_number2str(s,sz,n)	l_sprintf((s), sz, LUA_NUMBER_FMT, (n))
-
-
-/*
-@@ lua_numbertointeger converts a float number to an integer, or
-** returns 0 if float is not within the range of a lua_Integer.
-** (The range comparisons are tricky because of rounding. The tests
-** here assume a two-complement representation, where MININTEGER always
-** has an exact representation as a float; MAXINTEGER may not have one,
-** and therefore its conversion to float may have an ill-defined value.)
-*/
-#define lua_numbertointeger(n,p) \
-  ((n) >= (LUA_NUMBER)(LUA_MININTEGER) && \
-   (n) < -(LUA_NUMBER)(LUA_MININTEGER) && \
-      (*(p) = (LUA_INTEGER)(n), 1))
-
-
 
 /*
 @@ LUA_INTEGER is the integer type used by Lua.
@@ -537,6 +542,7 @@
 
 #elif LUA_INT_TYPE == LUA_INT_LONGLONG	/* }{ long long */
 
+/* use presence of macro LLONG_MAX as proxy for C99 compliance */
 #if defined(LLONG_MAX)		/* { */
 /* use ISO C99 stuff */
 
