@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.138 2015/09/22 14:18:24 roberto Exp roberto $
+** $Id: llimits.h,v 1.139 2015/10/06 14:29:49 roberto Exp roberto $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -306,17 +306,18 @@ typedef unsigned long Instruction;
 ** macro to control inclusion of some hard tests on stack reallocation
 */
 #if !defined(HARDSTACKTESTS)
-#define condmovestack(L)	((void)0)
+#define condmovestack(L,pre,pos)	((void)0)
 #else
 /* realloc stack keeping its size */
-#define condmovestack(L)	luaD_reallocstack((L), (L)->stacksize)
+#define condmovestack(L,pre,pos)  \
+	{ int sz_ = (L)->stacksize; pre; luaD_reallocstack((L), sz_); pos; }
 #endif
 
 #if !defined(HARDMEMTESTS)
-#define condchangemem(L)	condmovestack(L)
+#define condchangemem(L,pre,pos)	((void)0)
 #else
-#define condchangemem(L)  \
-	((void)(!(G(L)->gcrunning) || (luaC_fullgc(L, 0), 1)))
+#define condchangemem(L,pre,pos)  \
+	{ if (G(L)->gcrunning) { pre; luaC_fullgc(L, 0); pos; } }
 #endif
 
 #endif

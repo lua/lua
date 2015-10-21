@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 2.21 2014/10/25 11:50:46 roberto Exp roberto $
+** $Id: ldo.h,v 2.22 2015/05/22 17:48:19 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -13,8 +13,19 @@
 #include "lzio.h"
 
 
-#define luaD_checkstack(L,n)	if (L->stack_last - L->top <= (n)) \
-				    luaD_growstack(L, n); else condmovestack(L);
+/*
+** Macro to check stack size and grow stack if needed.  Parameters
+** 'pre'/'pos' allow the macro to preserve a pointer into the
+** stack across realalocations, doing the work only when needed.
+** 'condmovestack' is used in heavy tests to force a stack reallocation
+** at every check.
+*/
+#define luaD_checkstackaux(L,n,pre,pos)  \
+	if (L->stack_last - L->top <= (n)) \
+	  { pre; luaD_growstack(L, n); pos; } else { condmovestack(L,pre,pos); }
+
+/* In general, 'pre'/'pos' are empty (nothing to save) */
+#define luaD_checkstack(L,n)	luaD_checkstackaux(L,n,,)
 
 
 #define incr_top(L) {L->top++; luaD_checkstack(L,0);}

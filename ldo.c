@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.139 2015/06/18 14:19:52 roberto Exp roberto $
+** $Id: ldo.c,v 2.140 2015/09/08 15:41:05 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -221,11 +221,11 @@ void luaD_shrinkstack (lua_State *L) {
     luaE_freeCI(L);  /* free all CIs (list grew because of an error) */
   else
     luaE_shrinkCI(L);  /* shrink list */
-  if (inuse > LUAI_MAXSTACK ||  /* still handling stack overflow? */
-      goodsize >= L->stacksize)  /* would grow instead of shrink? */
-    condmovestack(L);  /* don't change stack (change only for debugging) */
-  else
+  if (inuse <= LUAI_MAXSTACK &&  /* not handling stack overflow? */
+      goodsize < L->stacksize)  /* trying to shrink? */
     luaD_reallocstack(L, goodsize);  /* shrink it */
+  else
+    condmovestack(L,,);  /* don't change stack (change only for debugging) */
 }
 
 
@@ -308,6 +308,13 @@ static void tryfuncTM (lua_State *L, StkId func) {
 #define next_ci(L) (L->ci = (L->ci->next ? L->ci->next : luaE_extendCI(L)))
 
 
+/* macro to check stack size, preserving 'p' */
+#define checkstackp(L,n,p)  \
+  luaD_checkstackaux(L, n, \
+    ptrdiff_t t__ = savestack(L, p);  /* save 'p' */ \
+    luaC_checkGC(L),  /* stack grow uses memory */ \
+    p = restorestack(L, t__))  /* 'pos' part: restore 'p' */
+
 /*
 ** returns true if function has been executed (C function)
 */
@@ -315,19 +322,17 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
   lua_CFunction f;
   CallInfo *ci;
   int n;  /* number of arguments (Lua) or returns (C) */
-  ptrdiff_t funcr = savestack(L, func);
   switch (ttype(func)) {
-    case LUA_TLCF:  /* light C function */
-      f = fvalue(func);
-      goto Cfunc;
     case LUA_TCCL: {  /* C closure */
       f = clCvalue(func)->f;
+      goto Cfunc;
+    case LUA_TLCF:  /* light C function */
+      f = fvalue(func);
      Cfunc:
-      luaC_checkGC(L);  /* stack grow uses memory */
-      luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
+      checkstackp(L, LUA_MINSTACK, func);  /* ensure minimum stack size */
       ci = next_ci(L);  /* now 'enter' new function */
       ci->nresults = nresults;
-      ci->func = restorestack(L, funcr);
+      ci->func = func;
       ci->top = L->top + LUA_MINSTACK;
       lua_assert(ci->top <= L->stack_last);
       ci->callstatus = 0;
@@ -344,15 +349,13 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       StkId base;
       Proto *p = clLvalue(func)->p;
       n = cast_int(L->top - func) - 1;  /* number of real arguments */
-      luaC_checkGC(L);  /* stack grow uses memory */
-      luaD_checkstack(L, p->maxstacksize);
+      checkstackp(L, p->maxstacksize, func);
       for (; n < p->numparams; n++)
         setnilvalue(L->top++);  /* complete missing arguments */
-      if (!p->is_vararg) {
-        func = restorestack(L, funcr);
+      if (!p->is_vararg)
         base = func + 1;
-      }
       else {
+        ptrdiff_t funcr = savestack(L, func);
         base = adjust_varargs(L, p, n);
         func = restorestack(L, funcr);  /* previous call can change stack */
       }
@@ -370,8 +373,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       return 0;
     }
     default: {  /* not a function */
-      luaD_checkstack(L, 1);  /* ensure space for metamethod */
-      func = restorestack(L, funcr);  /* previous call may change stack */
+      checkstackp(L, 1, func);  /* ensure space for metamethod */
       tryfuncTM(L, func);  /* try to get '__call' metamethod */
       return luaD_precall(L, func, nresults);  /* now it must be a function */
     }
