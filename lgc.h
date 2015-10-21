@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.88 2015/10/20 17:56:21 roberto Exp roberto $
+** $Id: lgc.h,v 2.89 2015/10/20 18:00:19 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -108,7 +108,8 @@
 ** GC cycle on every opportunity)
 */
 #define luaC_condGC(L,pre,pos) \
-	{if (G(L)->GCdebt > 0) { pre; luaC_step(L); pos;}; condchangemem(L);}
+	{ if (G(L)->GCdebt > 0) { pre; luaC_step(L); pos;}; \
+	  condchangemem(L,pre,pos); }
 
 /* more often than not, 'pre'/'pos' are empty */
 #define luaC_checkGC(L)		luaC_condGC(L,,)
