@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.254 2015/10/20 17:41:35 roberto Exp roberto $
+** $Id: lvm.c,v 2.255 2015/10/20 17:56:21 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -773,10 +773,8 @@ void luaV_execute (lua_State *L) {
   for (;;) {
     Instruction i = *(ci->u.l.savedpc++);
     StkId ra;
-    if ((L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT)) &&
-        (--L->hookcount == 0 || L->hookmask & LUA_MASKLINE)) {
+    if (L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT))
       Protect(luaG_traceexec(L));
-    }
     /* WARNING: several calls may realloc the stack and invalidate 'ra' */
     ra = RA(i);
     lua_assert(base == ci->u.l.base);
@@ -1109,8 +1107,9 @@ void luaV_execute (lua_State *L) {
         int nresults = GETARG_C(i) - 1;
         if (b != 0) L->top = ra+b;  /* else previous instruction set top */
         if (luaD_precall(L, ra, nresults)) {  /* C function? */
-          if (nresults >= 0) L->top = ci->top;  /* adjust results */
-          base = ci->u.l.base;
+          if (nresults >= 0)
+            L->top = ci->top;  /* adjust results */
+          Protect();  /* update 'base' */
         }
         else {  /* Lua function */
           ci = L->ci;
@@ -1123,8 +1122,9 @@ void luaV_execute (lua_State *L) {
         int b = GETARG_B(i);
         if (b != 0) L->top = ra+b;  /* else previous instruction set top */
         lua_assert(GETARG_C(i) - 1 == LUA_MULTRET);
-        if (luaD_precall(L, ra, LUA_MULTRET))  /* C function? */
-          base = ci->u.l.base;
+        if (luaD_precall(L, ra, LUA_MULTRET)) {  /* C function? */
+          Protect();  /* update 'base' */
+        }
         else {
           /* tail call: put called frame (n) in place of caller one (o) */
           CallInfo *nci = L->ci;  /* called frame */
