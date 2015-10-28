@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.140 2015/09/08 15:41:05 roberto Exp roberto $
+** $Id: ldo.c,v 2.141 2015/10/21 18:40:47 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -321,14 +321,14 @@ static void tryfuncTM (lua_State *L, StkId func) {
 int luaD_precall (lua_State *L, StkId func, int nresults) {
   lua_CFunction f;
   CallInfo *ci;
-  int n;  /* number of arguments (Lua) or returns (C) */
   switch (ttype(func)) {
-    case LUA_TCCL: {  /* C closure */
+    case LUA_TCCL:  /* C closure */
       f = clCvalue(func)->f;
       goto Cfunc;
     case LUA_TLCF:  /* light C function */
       f = fvalue(func);
-     Cfunc:
+     Cfunc: {
+      int n;  /* number of returns */
       checkstackp(L, LUA_MINSTACK, func);  /* ensure minimum stack size */
       ci = next_ci(L);  /* now 'enter' new function */
       ci->nresults = nresults;
@@ -348,7 +348,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     case LUA_TLCL: {  /* Lua function: prepare its call */
       StkId base;
       Proto *p = clLvalue(func)->p;
-      n = cast_int(L->top - func) - 1;  /* number of real arguments */
+      int n = cast_int(L->top - func) - 1;  /* number of real arguments */
       checkstackp(L, p->maxstacksize, func);
       for (; n < p->numparams; n++)
         setnilvalue(L->top++);  /* complete missing arguments */
