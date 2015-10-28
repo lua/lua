@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.141 2015/10/21 18:40:47 roberto Exp roberto $
+** $Id: ldo.c,v 2.142 2015/10/28 12:06:45 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -315,8 +315,13 @@ static void tryfuncTM (lua_State *L, StkId func) {
     luaC_checkGC(L),  /* stack grow uses memory */ \
     p = restorestack(L, t__))  /* 'pos' part: restore 'p' */
 
+
 /*
-** returns true if function has been executed (C function)
+** Prepares a function call: checks the stack, creates a new CallInfo
+** entry, fills in the relevant information, calls hook if needed.
+** If function is a C function, does the call, too. (Otherwise, leave
+** the execution ('luaV_execute') to the caller, to allow stackless
+** calls.) Returns true iff function has been executed (C function).
 */
 int luaD_precall (lua_State *L, StkId func, int nresults) {
   lua_CFunction f;
@@ -381,6 +386,11 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
 }
 
 
+/*
+** Finishes a function call: calls hook if necessary, removes CallInfo,
+** moves corrent number of results to proper place; returns 0 iff call
+** wanted multiple (variable number of) results.
+*/
 int luaD_poscall (lua_State *L, StkId firstResult, int nres) {
   StkId res;
   int wanted, i;
