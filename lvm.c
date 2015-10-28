@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.255 2015/10/20 17:56:21 roberto Exp roberto $
+** $Id: lvm.c,v 2.256 2015/10/22 14:40:47 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -855,10 +855,15 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_SELF) {
+        const TValue *aux;
         StkId rb = RB(i);
         TValue *rc = RKC(i);
+        TString *key = tsvalue(rc);  /* key must be a string */
         setobjs2s(L, ra + 1, rb);
-        gettableProtected(L, rb, rc, ra);
+        if (luaV_fastget(L, rb, key, aux, luaH_getstr)) {
+          setobj2s(L, ra, aux);
+        }
+        else Protect(luaV_finishget(L, rb, rc, ra, aux));
         vmbreak;
       }
       vmcase(OP_ADD) {
@@ -1060,7 +1065,7 @@ void luaV_execute (lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         Protect(
-          if (cast_int(luaV_equalobj(L, rb, rc)) != GETARG_A(i))
+          if (luaV_equalobj(L, rb, rc) != GETARG_A(i))
             ci->u.l.savedpc++;
           else
             donextjump(ci);
