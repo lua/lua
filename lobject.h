@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.113 2015/09/08 16:54:52 roberto Exp roberto $
+** $Id: lobject.h,v 2.114 2015/09/17 15:51:05 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -407,7 +407,7 @@ typedef struct LocVar {
 typedef struct Proto {
   CommonHeader;
   lu_byte numparams;  /* number of fixed parameters */
-  lu_byte is_vararg;
+  lu_byte is_vararg;  /* 2: declared vararg; 1: uses vararg */
   lu_byte maxstacksize;  /* number of registers needed by this function */
   int sizeupvalues;  /* size of 'upvalues' */
   int sizek;  /* size of 'k' */
