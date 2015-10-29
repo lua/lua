@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.310 2015/03/28 19:14:47 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.311 2015/06/26 19:25:45 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -86,8 +86,8 @@ static int luaB_tonumber (lua_State *L) {
     const char *s;
     lua_Integer n = 0;  /* to avoid warnings */
     lua_Integer base = luaL_checkinteger(L, 2);
-    luaL_checktype(L, 1, LUA_TSTRING);  /* before 'luaL_checklstring'! */
-    s = luaL_checklstring(L, 1, &l);
+    luaL_checktype(L, 1, LUA_TSTRING);  /* no numbers as strings */
+    s = lua_tolstring(L, 1, &l);
     luaL_argcheck(L, 2 <= base && base <= 36, 2, "base out of range");
     if (b_str2int(s, (int)base, &n) == s + l) {
       lua_pushinteger(L, n);
@@ -241,18 +241,7 @@ static int luaB_pairs (lua_State *L) {
 
 
 /*
-** Traversal function for 'ipairs' for raw tables
-*/
-static int ipairsaux_raw (lua_State *L) {
-  lua_Integer i = luaL_checkinteger(L, 2) + 1;
-  luaL_checktype(L, 1, LUA_TTABLE);
-  lua_pushinteger(L, i);
-  return (lua_rawgeti(L, 1, i) == LUA_TNIL) ? 1 : 2;
-}
-
-
-/*
-** Traversal function for 'ipairs' for tables with metamethods
+** Traversal function for 'ipairs'
 */
 static int ipairsaux (lua_State *L) {
   lua_Integer i = luaL_checkinteger(L, 2) + 1;
@@ -267,13 +256,11 @@ static int ipairsaux (lua_State *L) {
 ** that can affect the traversal.
 */
 static int luaB_ipairs (lua_State *L) {
-  lua_CFunction iter = (luaL_getmetafield(L, 1, "__index") != LUA_TNIL)
-                       ? ipairsaux : ipairsaux_raw;
 #if defined(LUA_COMPAT_IPAIRS)
-  return pairsmeta(L, "__ipairs", 1, iter);
+  return pairsmeta(L, "__ipairs", 1, ipairsaux);
 #else
   luaL_checkany(L, 1);
-  lua_pushcfunction(L, iter);  /* iteration function */
+  lua_pushcfunction(L, ipairsaux);  /* iteration function */
   lua_pushvalue(L, 1);  /* state */
   lua_pushinteger(L, 0);  /* initial value */
   return 3;
