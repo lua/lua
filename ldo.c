@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.146 2015/11/02 14:06:01 roberto Exp roberto $
+** $Id: ldo.c,v 2.147 2015/11/02 16:09:30 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -434,23 +434,42 @@ int luaD_poscall (lua_State *L, StkId firstResult, int nres) {
 
 
 /*
+** Check appropriate error for stack overflow ("regular" overflow or
+** overflow while handling stack overflow). If 'nCalls' is larger than
+** LUAI_MAXCCALLS (which means it is handling a "regular" overflow) but
+** smaller than 9/8 of LUAI_MAXCCALLS, does not report an error (to
+** allow overflow handling to work)
+*/
+static void stackerror (lua_State *L) {
+  if (L->nCcalls == LUAI_MAXCCALLS)
+    luaG_runerror(L, "C stack overflow");
+  else if (L->nCcalls >= (LUAI_MAXCCALLS + (LUAI_MAXCCALLS>>3)))
+    luaD_throw(L, LUA_ERRERR);  /* error while handing stack error */
+}
+
+
+/*
 ** Call a function (C or Lua). The function to be called is at *func.
 ** The arguments are on the stack, right after the function.
 ** When returns, all the results are on the stack, starting at the original
 ** function position.
 */
-void luaD_call (lua_State *L, StkId func, int nResults, int allowyield) {
-  if (++L->nCcalls >= LUAI_MAXCCALLS) {
-    if (L->nCcalls == LUAI_MAXCCALLS)
-      luaG_runerror(L, "C stack overflow");
-    else if (L->nCcalls >= (LUAI_MAXCCALLS + (LUAI_MAXCCALLS>>3)))
-      luaD_throw(L, LUA_ERRERR);  /* error while handing stack error */
-  }
-  if (!allowyield) L->nny++;
+void luaD_call (lua_State *L, StkId func, int nResults) {
+  if (++L->nCcalls >= LUAI_MAXCCALLS)
+    stackerror(L);
   if (!luaD_precall(L, func, nResults))  /* is a Lua function? */
     luaV_execute(L);  /* call it */
-  if (!allowyield) L->nny--;
   L->nCcalls--;
+}
+
+
+/*
+** Similar to 'luaD_call', but does not allow yields during the call
+*/
+void luaD_callnoyield (lua_State *L, StkId func, int nResults) {
+  L->nny++;
+  luaD_call(L, func, nResults);
+  L->nny--;
 }
 
 
