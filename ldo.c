@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.144 2015/10/28 17:28:40 roberto Exp roberto $
+** $Id: ldo.c,v 2.145 2015/11/02 11:48:59 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -273,15 +273,15 @@ static StkId adjust_varargs (lua_State *L, Proto *p, int actual) {
   int i;
   int nfixargs = p->numparams;
   StkId base, fixed;
-  lua_assert(actual >= nfixargs);
   /* move fixed parameters to final position */
-  luaD_checkstack(L, p->maxstacksize);  /* check again for new 'base' */
   fixed = L->top - actual;  /* first fixed argument */
   base = L->top;  /* final position of first argument */
-  for (i=0; i<nfixargs; i++) {
+  for (i = 0; i < nfixargs && i < actual; i++) {
     setobjs2s(L, L->top++, fixed + i);
-    setnilvalue(fixed + i);
+    setnilvalue(fixed + i);  /* erase original copy (for GC) */
   }
+  for (; i < nfixargs; i++)
+    setnilvalue(L->top++);  /* complete missing arguments */
   return base;
 }
 
@@ -354,25 +354,23 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       StkId base;
       Proto *p = clLvalue(func)->p;
       int n = cast_int(L->top - func) - 1;  /* number of real arguments */
-      checkstackp(L, p->maxstacksize, func);
-      for (; n < p->numparams; n++)
-        setnilvalue(L->top++);  /* complete missing arguments */
-      if (p->is_vararg != 1)  /* do not use vararg? */
+      int fsize = p->maxstacksize;  /* frame size */
+      checkstackp(L, fsize, func);
+      if (p->is_vararg != 1) {  /* do not use vararg? */
+        for (; n < p->numparams; n++)
+          setnilvalue(L->top++);  /* complete missing arguments */
         base = func + 1;
-      else {
-        ptrdiff_t funcr = savestack(L, func);
-        base = adjust_varargs(L, p, n);
-        func = restorestack(L, funcr);  /* previous call can change stack */
       }
+      else
+        base = adjust_varargs(L, p, n);
       ci = next_ci(L);  /* now 'enter' new function */
       ci->nresults = nresults;
       ci->func = func;
       ci->u.l.base = base;
-      ci->top = base + p->maxstacksize;
+      L->top = ci->top = base + fsize;
       lua_assert(ci->top <= L->stack_last);
       ci->u.l.savedpc = p->code;  /* starting point */
       ci->callstatus = CIST_LUA;
-      L->top = ci->top;
       if (L->hookmask & LUA_MASKCALL)
         callhook(L, ci);
       return 0;
