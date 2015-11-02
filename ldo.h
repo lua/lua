@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 2.23 2015/10/21 18:40:47 roberto Exp roberto $
+** $Id: ldo.h,v 2.24 2015/11/02 16:09:30 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -40,8 +40,8 @@ LUAI_FUNC int luaD_protectedparser (lua_State *L, ZIO *z, const char *name,
                                                   const char *mode);
 LUAI_FUNC void luaD_hook (lua_State *L, int event, int line);
 LUAI_FUNC int luaD_precall (lua_State *L, StkId func, int nresults);
-LUAI_FUNC void luaD_call (lua_State *L, StkId func, int nResults,
-                                        int allowyield);
+LUAI_FUNC void luaD_call (lua_State *L, StkId func, int nResults);
+LUAI_FUNC void luaD_callnoyield (lua_State *L, StkId func, int nResults);
 LUAI_FUNC int luaD_pcall (lua_State *L, Pfunc func, void *u,
                                         ptrdiff_t oldtop, ptrdiff_t ef);
 LUAI_FUNC int luaD_poscall (lua_State *L, StkId firstResult, int nres);

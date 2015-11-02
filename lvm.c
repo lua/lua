@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.258 2015/11/02 11:43:17 roberto Exp roberto $
+** $Id: lvm.c,v 2.259 2015/11/02 14:06:01 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1226,7 +1226,7 @@ void luaV_execute (lua_State *L) {
         setobjs2s(L, cb+1, ra+1);
         setobjs2s(L, cb, ra);
         L->top = cb + 3;  /* func. + 2 args (state and index) */
-        Protect(luaD_call(L, cb, GETARG_C(i), 1));
+        Protect(luaD_call(L, cb, GETARG_C(i)));
         L->top = ci->top;
         i = *(ci->u.l.savedpc++);  /* go to next instruction */
         ra = RA(i);

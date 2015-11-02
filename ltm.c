@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.33 2014/11/21 12:15:57 roberto Exp roberto $
+** $Id: ltm.c,v 2.34 2015/03/30 15:42:27 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -86,13 +86,18 @@ const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
 void luaT_callTM (lua_State *L, const TValue *f, const TValue *p1,
                   const TValue *p2, TValue *p3, int hasres) {
   ptrdiff_t result = savestack(L, p3);
-  setobj2s(L, L->top++, f);  /* push function (assume EXTRA_STACK) */
-  setobj2s(L, L->top++, p1);  /* 1st argument */
-  setobj2s(L, L->top++, p2);  /* 2nd argument */
+  StkId func = L->top;
+  setobj2s(L, func, f);  /* push function (assume EXTRA_STACK) */
+  setobj2s(L, func + 1, p1);  /* 1st argument */
+  setobj2s(L, func + 2, p2);  /* 2nd argument */
+  L->top += 3;
   if (!hasres)  /* no result? 'p3' is third argument */
     setobj2s(L, L->top++, p3);  /* 3rd argument */
   /* metamethod may yield only when called from Lua code */
-  luaD_call(L, L->top - (4 - hasres), hasres, isLua(L->ci));
+  if (isLua(L->ci))
+    luaD_call(L, func, hasres);
+  else
+    luaD_callnoyield(L, func, hasres);
   if (hasres) {  /* if has result, move it to its place */
     p3 = restorestack(L, result);
     setobjs2s(L, p3, --L->top);
