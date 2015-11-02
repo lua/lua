@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.143 2015/10/28 12:25:36 roberto Exp roberto $
+** $Id: ldo.c,v 2.144 2015/10/28 17:28:40 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -406,12 +406,18 @@ int luaD_poscall (lua_State *L, StkId firstResult, int nres) {
   res = ci->func;  /* res == final position of 1st result */
   wanted = ci->nresults;
   L->ci = ci->previous;  /* back to caller */
-  /* move results to correct place */
-  for (i = wanted; i != 0 && nres-- > 0; i--)
-    setobjs2s(L, res++, firstResult++);
-  while (i-- > 0)
-    setnilvalue(res++);
-  L->top = res;
+  /* comparison is 'unsigned' to make 'LUA_MULTRET' fails test */
+  if ((unsigned int)wanted <= (unsigned int)nres) {  /* enough results? */
+    for (i = 0; i < wanted; i++)  /* move wanted results to correct place */
+      setobjs2s(L, res + i, firstResult + i);
+  }
+  else {  /* not enough results (or multret); use all of them plus nils */
+    for (i = 0; i < nres; i++)  /* move all results to correct place */
+      setobjs2s(L, res + i, firstResult + i);
+    for (; i < wanted; i++)  /* complete wanted number of results */
+      setnilvalue(res + i);
+  }
+  L->top = res + i;  /* top points after the last result */
   return (wanted - LUA_MULTRET);  /* 0 iff wanted == LUA_MULTRET */
 }
 
