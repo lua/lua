@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.256 2015/10/22 14:40:47 roberto Exp roberto $
+** $Id: lvm.c,v 2.257 2015/10/28 14:50:09 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -764,6 +764,7 @@ void luaV_execute (lua_State *L) {
   LClosure *cl;
   TValue *k;
   StkId base;
+  ci->callstatus |= CIST_FRESH;  /* fresh invocation of 'luaV_execute" */
  newframe:  /* reentry point when frame changes (call/return) */
   lua_assert(ci == L->ci);
   cl = clLvalue(ci->func);  /* local reference to function's closure */
@@ -1118,7 +1119,6 @@ void luaV_execute (lua_State *L) {
         }
         else {  /* Lua function */
           ci = L->ci;
-          ci->callstatus |= CIST_REENTRY;
           goto newframe;  /* restart luaV_execute over new Lua function */
         }
         vmbreak;
@@ -1158,7 +1158,7 @@ void luaV_execute (lua_State *L) {
         int b = GETARG_B(i);
         if (cl->p->sizep > 0) luaF_close(L, base);
         b = luaD_poscall(L, ra, (b != 0 ? b - 1 : cast_int(L->top - ra)));
-        if (!(ci->callstatus & CIST_REENTRY))  /* 'ci' still the called one */
+        if (ci->callstatus & CIST_FRESH)  /* local 'ci' still from callee */
           return;  /* external invocation: return */
         else {  /* invocation via reentry: continue execution */
           ci = L->ci;
