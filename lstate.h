@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.125 2015/09/22 14:18:24 roberto Exp roberto $
+** $Id: lstate.h,v 2.126 2015/11/02 11:43:17 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -78,6 +78,7 @@ typedef struct CallInfo {
     } c;
   } u;
   ptrdiff_t extra;
+  unsigned short n;  /* ordinal number in call list */
   short nresults;  /* expected number of results from this function */
   lu_byte callstatus;
 } CallInfo;
@@ -149,6 +150,7 @@ typedef struct global_State {
 */
 struct lua_State {
   CommonHeader;
+  unsigned short nci;  /* number of items in 'ci' list */
   lu_byte status;
   StkId top;  /* first free slot in the stack */
   global_State *l_G;

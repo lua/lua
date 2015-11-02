@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.130 2015/09/08 15:41:05 roberto Exp roberto $
+** $Id: lstate.c,v 2.131 2015/10/20 13:11:05 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -111,6 +111,7 @@ CallInfo *luaE_extendCI (lua_State *L) {
   L->ci->next = ci;
   ci->previous = L->ci;
   ci->next = NULL;
+  ci->n = ++L->nci;
   return ci;
 }
 
@@ -126,6 +127,7 @@ void luaE_freeCI (lua_State *L) {
     next = ci->next;
     luaM_free(L, ci);
   }
+  L->nci = L->ci->n;
 }
 
 
@@ -134,14 +136,17 @@ void luaE_freeCI (lua_State *L) {
 */
 void luaE_shrinkCI (lua_State *L) {
   CallInfo *ci = L->ci;
-  while (ci->next != NULL) {  /* while there is 'next' */
-    CallInfo *next2 = ci->next->next;  /* next's next */
-    if (next2 == NULL) break;
-    luaM_free(L, ci->next);  /* remove next */
-    ci->next = next2;  /* remove 'next' from the list */
-    next2->previous = ci;
-    ci = next2;
+  CallInfo *next;
+  int n = (L->nci - ci->n + 1)/2;  /* number of entries to be preserved */
+  for (; n > 0; n--)
+    ci = ci->next;  /* skip items to be preserved */
+  lua_assert(n == 0);
+  while ((next = ci->next) != NULL) {  /* remove all other items */
+    ci->next = next->next;
+    luaM_free(L, next);  /* remove item */
+    n++;  /* count number of removed items */
   }
+  L->nci -= n;
 }
 
 
@@ -156,6 +161,7 @@ static void stack_init (lua_State *L1, lua_State *L) {
   L1->stack_last = L1->stack + L1->stacksize - EXTRA_STACK;
   /* initialize first ci */
   ci = &L1->base_ci;
+  ci->n = 0;
   ci->next = ci->previous = NULL;
   ci->callstatus = 0;
   ci->func = L1->top;
@@ -170,6 +176,7 @@ static void freestack (lua_State *L) {
     return;  /* stack not completely built yet */
   L->ci = &L->base_ci;  /* free the entire 'ci' list */
   luaE_freeCI(L);
+  lua_assert(L->nci == 0);
   luaM_freearray(L, L->stack, L->stacksize);  /* free stack array */
 }
 
@@ -218,6 +225,7 @@ static void preinit_thread (lua_State *L, global_State *g) {
   G(L) = g;
   L->stack = NULL;
   L->ci = NULL;
+  L->nci = 0;
   L->stacksize = 0;
   L->twups = L;  /* thread has no upvalues */
   L->errorJmp = NULL;
