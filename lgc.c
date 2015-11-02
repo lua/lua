@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.206 2015/07/13 13:30:03 roberto Exp roberto $
+** $Id: lgc.c,v 2.207 2015/09/08 15:41:05 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -542,7 +542,8 @@ static lu_mem traversethread (global_State *g, lua_State *th) {
   }
   else if (g->gckind != KGC_EMERGENCY)
     luaD_shrinkstack(th); /* do not change stack in emergency cycle */
-  return (sizeof(lua_State) + sizeof(TValue) * th->stacksize);
+  return (sizeof(lua_State) + sizeof(TValue) * th->stacksize +
+          sizeof(CallInfo) * th->nci);
 }
 
 
