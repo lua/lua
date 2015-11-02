@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.147 2014/12/27 20:31:43 roberto Exp roberto $
+** $Id: lparser.c,v 2.148 2015/10/28 17:28:40 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1627,10 +1627,10 @@ LClosure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
   FuncState funcstate;
   LClosure *cl = luaF_newLclosure(L, 1);  /* create main closure */
   setclLvalue(L, L->top, cl);  /* anchor it (to avoid being collected) */
-  incr_top(L);
+  luaD_inctop(L);
   lexstate.h = luaH_new(L);  /* create table for scanner */
   sethvalue(L, L->top, lexstate.h);  /* anchor it */
-  incr_top(L);
+  luaD_inctop(L);
   funcstate.f = cl->p = luaF_newproto(L);
   funcstate.f->source = luaS_new(L, name);  /* create and anchor TString */
   lua_assert(iswhite(funcstate.f));  /* do not need barrier here */

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.145 2015/11/02 11:48:59 roberto Exp roberto $
+** $Id: ldo.c,v 2.146 2015/11/02 14:06:01 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -150,6 +150,11 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 /* }====================================================== */
 
 
+/*
+** {==================================================================
+** Stack reallocation
+** ===================================================================
+*/
 static void correctstack (lua_State *L, TValue *oldstack) {
   CallInfo *ci;
   UpVal *up;
@@ -227,6 +232,14 @@ void luaD_shrinkstack (lua_State *L) {
   else
     condmovestack(L,,);  /* don't change stack (change only for debugging) */
 }
+
+
+void luaD_inctop (lua_State *L) {
+  luaD_checkstack(L, 1);
+  L->top++;
+}
+
+/* }================================================================== */
 
 
 void luaD_hook (lua_State *L, int event, int line) {

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.106 2015/06/26 19:32:07 roberto Exp roberto $
+** $Id: lobject.c,v 2.107 2015/11/02 14:02:35 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -347,7 +347,7 @@ void luaO_tostring (lua_State *L, StkId obj) {
 
 static void pushstr (lua_State *L, const char *str, size_t l) {
   setsvalue2s(L, L->top, luaS_newlstr(L, str, l));
-  incr_top(L);
+  luaD_inctop(L);
 }
 
 
@@ -385,7 +385,7 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
       case 'f': {
         setfltvalue(L->top, cast_num(va_arg(argp, l_uacNumber)));
       top2str:
-        incr_top(L);
+        luaD_inctop(L);
         luaO_tostring(L, L->top - 1);
         break;
       }

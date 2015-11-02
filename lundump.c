@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.42 2015/09/08 15:41:05 roberto Exp roberto $
+** $Id: lundump.c,v 2.43 2015/09/17 15:51:05 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -269,7 +269,7 @@ LClosure *luaU_undump(lua_State *L, ZIO *Z, const char *name) {
   checkHeader(&S);
   cl = luaF_newLclosure(L, LoadByte(&S));
   setclLvalue(L, L->top, cl);
-  incr_top(L);
+  luaD_inctop(L);
   cl->p = luaF_newproto(L);
   LoadFunction(&S, cl->p, NULL);
   lua_assert(cl->nupvalues == cl->p->sizeupvalues);
