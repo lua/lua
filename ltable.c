@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.112 2015/07/01 17:46:55 roberto Exp roberto $
+** $Id: ltable.c,v 2.113 2015/07/04 16:32:34 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -124,14 +124,8 @@ static Node *mainposition (const Table *t, const TValue *key) {
       return hashmod(t, l_hashfloat(fltvalue(key)));
     case LUA_TSHRSTR:
       return hashstr(t, tsvalue(key));
-    case LUA_TLNGSTR: {
-      TString *s = tsvalue(key);
-      if (s->extra == 0) {  /* no hash? */
-        s->hash = luaS_hash(getstr(s), s->u.lnglen, s->hash);
-        s->extra = 1;  /* now it has its hash */
-      }
-      return hashstr(t, tsvalue(key));
-    }
+    case LUA_TLNGSTR:
+      return hashpow2(t, luaS_hashlongstr(tsvalue(key)));
     case LUA_TBOOLEAN:
       return hashboolean(t, bvalue(key));
     case LUA_TLIGHTUSERDATA:
@@ -522,7 +516,7 @@ const TValue *luaH_getint (Table *t, lua_Integer key) {
 /*
 ** search function for short strings
 */
-const TValue *luaH_getstr (Table *t, TString *key) {
+const TValue *luaH_getshortstr (Table *t, TString *key) {
   Node *n = hashstr(t, key);
   lua_assert(key->tt == LUA_TSHRSTR);
   for (;;) {  /* check whether 'key' is somewhere in the chain */
@@ -531,11 +525,35 @@ const TValue *luaH_getstr (Table *t, TString *key) {
       return gval(n);  /* that's it */
     else {
       int nx = gnext(n);
-      if (nx == 0) break;
+      if (nx == 0)
+        return luaO_nilobject;  /* not found */
       n += nx;
     }
-  };
-  return luaO_nilobject;
+  }
+}
+
+
+static const TValue *getlngstr (Table *t, TString *key) {
+  Node *n = hashpow2(t, luaS_hashlongstr(key));
+  for (;;) {  /* check whether 'key' is somewhere in the chain */
+    const TValue *k = gkey(n);
+    if (ttislngstring(k) && luaS_eqlngstr(tsvalue(k), key))
+      return gval(n);  /* that's it */
+    else {
+      int nx = gnext(n);
+      if (nx == 0)
+        return luaO_nilobject;  /* not found */
+      n += nx;
+    }
+  }
+}
+
+
+const TValue *luaH_getstr (Table *t, TString *key) {
+  if (key->tt == LUA_TSHRSTR)
+    return luaH_getshortstr(t, key);
+  else
+    return getlngstr(t, key);
 }
 
 
@@ -544,7 +562,8 @@ const TValue *luaH_getstr (Table *t, TString *key) {
 */
 const TValue *luaH_get (Table *t, const TValue *key) {
   switch (ttype(key)) {
-    case LUA_TSHRSTR: return luaH_getstr(t, tsvalue(key));
+    case LUA_TSHRSTR: return luaH_getshortstr(t, tsvalue(key));
+    case LUA_TLNGSTR: return getlngstr(t, tsvalue(key));
     case LUA_TNUMINT: return luaH_getint(t, ivalue(key));
     case LUA_TNIL: return luaO_nilobject;
     case LUA_TNUMFLT: {
@@ -560,11 +579,11 @@ const TValue *luaH_get (Table *t, const TValue *key) {
           return gval(n);  /* that's it */
         else {
           int nx = gnext(n);
-          if (nx == 0) break;
+          if (nx == 0)
+            return luaO_nilobject;  /* not found */
           n += nx;
         }
       };
-      return luaO_nilobject;
     }
   }
 }
