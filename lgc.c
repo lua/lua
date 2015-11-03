@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.208 2015/11/02 16:19:29 roberto Exp roberto $
+** $Id: lgc.c,v 2.209 2015/11/02 18:48:07 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -114,8 +114,13 @@ static void reallymarkobject (global_State *g, GCObject *o);
 
 
 /*
-** if key is not marked, mark its entry as dead (therefore removing it
-** from the table)
+** If key is not marked, mark its entry as dead. This allows key to be
+** collected, but keeps its entry in the table.  A dead node is needed
+** when Lua looks up for a key (it may be part of a chain) and when
+** traversing a weak table (key might be removed from the table during
+** traversal). Other places never manipulate dead keys, because its
+** associated nil value is enough to signal that the entry is logically
+** empty.
 */
 static void removeentry (Node *n) {
   lua_assert(ttisnil(gval(n)));
