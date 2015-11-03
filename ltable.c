@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.114 2015/11/03 15:47:30 roberto Exp roberto $
+** $Id: ltable.c,v 2.115 2015/11/03 18:10:44 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -508,7 +508,7 @@ const TValue *luaH_getint (Table *t, lua_Integer key) {
         if (nx == 0) break;
         n += nx;
       }
-    };
+    }
     return luaO_nilobject;
   }
 }
@@ -534,11 +534,14 @@ const TValue *luaH_getshortstr (Table *t, TString *key) {
 }
 
 
-static const TValue *getlngstr (Table *t, TString *key) {
-  Node *n = hashpow2(t, luaS_hashlongstr(key));
+/*
+** "Generic" get version. (Not that generic: not valid for integers,
+** which may be in array part, nor for floats with integral values.)
+*/
+static const TValue *getgeneric (Table *t, const TValue *key) {
+  Node *n = mainposition(t, key);
   for (;;) {  /* check whether 'key' is somewhere in the chain */
-    const TValue *k = gkey(n);
-    if (ttislngstring(k) && luaS_eqlngstr(tsvalue(k), key))
+    if (luaV_rawequalobj(gkey(n), key))
       return gval(n);  /* that's it */
     else {
       int nx = gnext(n);
@@ -553,8 +556,11 @@ static const TValue *getlngstr (Table *t, TString *key) {
 const TValue *luaH_getstr (Table *t, TString *key) {
   if (key->tt == LUA_TSHRSTR)
     return luaH_getshortstr(t, key);
-  else
-    return getlngstr(t, key);
+  else {  /* for long strings, use generic case */
+    TValue ko;
+    setsvalue(cast(lua_State *, NULL), &ko, key);
+    return getgeneric(t, &ko);
+  }
 }
 
 
@@ -564,7 +570,6 @@ const TValue *luaH_getstr (Table *t, TString *key) {
 const TValue *luaH_get (Table *t, const TValue *key) {
   switch (ttype(key)) {
     case LUA_TSHRSTR: return luaH_getshortstr(t, tsvalue(key));
-    case LUA_TLNGSTR: return getlngstr(t, tsvalue(key));
     case LUA_TNUMINT: return luaH_getint(t, ivalue(key));
     case LUA_TNIL: return luaO_nilobject;
     case LUA_TNUMFLT: {
@@ -573,19 +578,8 @@ const TValue *luaH_get (Table *t, const TValue *key) {
         return luaH_getint(t, k);  /* use specialized version */
       /* else... */
     }  /* FALLTHROUGH */
-    default: {
-      Node *n = mainposition(t, key);
-      for (;;) {  /* check whether 'key' is somewhere in the chain */
-        if (luaV_rawequalobj(gkey(n), key))
-          return gval(n);  /* that's it */
-        else {
-          int nx = gnext(n);
-          if (nx == 0)
-            return luaO_nilobject;  /* not found */
-          n += nx;
-        }
-      };
-    }
+    default:
+      return getgeneric(t, key);
   }
 }
 
