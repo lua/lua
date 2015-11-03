@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.53 2015/09/22 14:18:24 roberto Exp roberto $
+** $Id: lstring.c,v 2.54 2015/10/08 15:53:31 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -53,6 +53,16 @@ unsigned int luaS_hash (const char *str, size_t l, unsigned int seed) {
   for (l1 = l; l1 >= step; l1 -= step)
     h = h ^ ((h<<5) + (h>>2) + cast_byte(str[l1 - 1]));
   return h;
+}
+
+
+unsigned int luaS_hashlongstr (TString *ts) {
+  lua_assert(ts->tt == LUA_TLNGSTR);
+  if (ts->extra == 0) {  /* no hash? */
+    ts->hash = luaS_hash(getstr(ts), ts->u.lnglen, ts->hash);
+    ts->extra = 1;  /* now it has its hash */
+  }
+  return ts->hash;
 }
 
 
