@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.259 2015/11/02 14:06:01 roberto Exp roberto $
+** $Id: lvm.c,v 2.260 2015/11/02 18:48:07 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1115,7 +1115,7 @@ void luaV_execute (lua_State *L) {
         if (luaD_precall(L, ra, nresults)) {  /* C function? */
           if (nresults >= 0)
             L->top = ci->top;  /* adjust results */
-          Protect();  /* update 'base' */
+          Protect((void)0);  /* update 'base' */
         }
         else {  /* Lua function */
           ci = L->ci;
@@ -1128,7 +1128,7 @@ void luaV_execute (lua_State *L) {
         if (b != 0) L->top = ra+b;  /* else previous instruction set top */
         lua_assert(GETARG_C(i) - 1 == LUA_MULTRET);
         if (luaD_precall(L, ra, LUA_MULTRET)) {  /* C function? */
-          Protect();  /* update 'base' */
+          Protect((void)0);  /* update 'base' */
         }
         else {
           /* tail call: put called frame (n) in place of caller one (o) */
