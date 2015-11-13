@@ -3458,6 +3458,10 @@ patch = [[
 }
 
 
+
+-----------------------------------------------------------------
+-- Lua 5.3.1
+
 Bug{
 what = [['io.lines' does not check maximum number of options]],
 report = [[Patrick Donnell, 2015/07/10]],
