@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.147 2015/11/02 16:09:30 roberto Exp roberto $
+** $Id: ldo.c,v 2.148 2015/11/02 18:48:49 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -360,7 +360,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       n = (*f)(L);  /* do the actual call */
       lua_lock(L);
       api_checknelems(L, n);
-      luaD_poscall(L, L->top - n, n);
+      luaD_poscall(L, ci, L->top - n, n);
       return 1;
     }
     case LUA_TLCL: {  /* Lua function: prepare its call */
@@ -398,14 +398,56 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
 
 
 /*
+** Given 'nres' results at 'firstResult', move 'wanted' of them to 'res'.
+** Handle most typical cases (zero results for commands, one result for
+** expressions, multiple results for tail calls/single parameters)
+** separated.
+*/
+static int moveresults (lua_State *L, const TValue *firstResult, StkId res,
+                                      int nres, int wanted) {
+  switch (wanted) {  /* handle typical cases separately */
+    case 0: break;  /* nothing to move */
+    case 1: {  /* one result needed */
+      if (nres == 0)   /* no results? */
+        firstResult = luaO_nilobject;  /* ajdust with nil */
+      setobjs2s(L, res, firstResult);  /* move it to proper place */
+      break;
+    }
+    case LUA_MULTRET: {
+      int i;
+      for (i = 0; i < nres; i++)  /* move all results to correct place */
+        setobjs2s(L, res + i, firstResult + i);
+      L->top = res + nres;
+      return 0;  /* wanted == LUA_MULTRET */
+    }
+    default: {
+      int i;
+      if (wanted <= nres) {  /* enough results? */
+        for (i = 0; i < wanted; i++)  /* move wanted results to correct place */
+          setobjs2s(L, res + i, firstResult + i);
+      }
+      else {  /* not enough results; use all of them plus nils */
+        for (i = 0; i < nres; i++)  /* move all results to correct place */
+          setobjs2s(L, res + i, firstResult + i);
+        for (; i < wanted; i++)  /* complete wanted number of results */
+          setnilvalue(res + i);
+      }
+      break;
+    }
+  }
+  L->top = res + wanted;  /* top points after the last result */
+  return 1;
+}
+
+
+/*
 ** Finishes a function call: calls hook if necessary, removes CallInfo,
 ** moves corrent number of results to proper place; returns 0 iff call
 ** wanted multiple (variable number of) results.
 */
-int luaD_poscall (lua_State *L, StkId firstResult, int nres) {
+int luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres) {
   StkId res;
-  int wanted, i;
-  CallInfo *ci = L->ci;
+  int wanted = ci->nresults;
   if (L->hookmask & (LUA_MASKRET | LUA_MASKLINE)) {
     if (L->hookmask & LUA_MASKRET) {
       ptrdiff_t fr = savestack(L, firstResult);  /* hook may change stack */
@@ -415,21 +457,9 @@ int luaD_poscall (lua_State *L, StkId firstResult, int nres) {
     L->oldpc = ci->previous->u.l.savedpc;  /* 'oldpc' for caller function */
   }
   res = ci->func;  /* res == final position of 1st result */
-  wanted = ci->nresults;
   L->ci = ci->previous;  /* back to caller */
-  /* comparison is 'unsigned' to make 'LUA_MULTRET' fails test */
-  if ((unsigned int)wanted <= (unsigned int)nres) {  /* enough results? */
-    for (i = 0; i < wanted; i++)  /* move wanted results to correct place */
-      setobjs2s(L, res + i, firstResult + i);
-  }
-  else {  /* not enough results (or multret); use all of them plus nils */
-    for (i = 0; i < nres; i++)  /* move all results to correct place */
-      setobjs2s(L, res + i, firstResult + i);
-    for (; i < wanted; i++)  /* complete wanted number of results */
-      setnilvalue(res + i);
-  }
-  L->top = res + i;  /* top points after the last result */
-  return (wanted - LUA_MULTRET);  /* 0 iff wanted == LUA_MULTRET */
+  /* move results to proper place */
+  return moveresults(L, firstResult, res, nres, wanted);
 }
 
 
@@ -497,7 +527,7 @@ static void finishCcall (lua_State *L, int status) {
   lua_lock(L);
   api_checknelems(L, n);
   /* finish 'luaD_precall' */
-  luaD_poscall(L, L->top - n, n);
+  luaD_poscall(L, ci, L->top - n, n);
 }
 
 
@@ -608,7 +638,7 @@ static void resume (lua_State *L, void *ud) {
         api_checknelems(L, n);
         firstArg = L->top - n;  /* yield results come from continuation */
       }
-      luaD_poscall(L, firstArg, n);  /* finish 'luaD_precall' */
+      luaD_poscall(L, ci, firstArg, n);  /* finish 'luaD_precall' */
     }
     unroll(L, NULL);  /* run continuation */
   }
