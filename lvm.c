@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.261 2015/11/12 18:08:58 roberto Exp roberto $
+** $Id: lvm.c,v 2.262 2015/11/13 13:24:26 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -723,7 +723,7 @@ void luaV_finishOp (lua_State *L) {
 /* execute a jump instruction */
 #define dojump(ci,i,e) \
   { int a = GETARG_A(i); \
-    if (a > 0) luaF_close(L, ci->u.l.base + a - 1); \
+    if (a != 0) luaF_close(L, ci->u.l.base + a - 1); \
     ci->u.l.savedpc += GETARG_sBx(i) + e; }
 
 /* for test instructions, execute the jump instruction that follows it */
