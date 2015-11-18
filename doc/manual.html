@@ -35,7 +35,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.151 2015/06/10 21:08:57 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.152 2015/11/13 15:12:33 roberto Exp $ -->
 
 
 
@@ -398,7 +398,7 @@ You can replace the metatable of tables
 using the <a href="#pdf-setmetatable"><code>setmetatable</code></a> function.
 You cannot change the metatable of other types from Lua code
 (except by using the debug library (<a href="#6.10">&sect;6.10</a>));
-you must use the C&nbsp;API for that.
+you should use the C&nbsp;API for that.
 
 
 <p>
@@ -589,7 +589,7 @@ The result of the call is always converted to a boolean.
 the <code>&lt;=</code> (less equal) operation.
 
 Unlike other operations,
-The less-equal operation can use two different events.
+the less-equal operation can use two different events.
 First, Lua looks for the "<code>__le</code>" metamethod in both operands,
 like in the "lt" operation.
 If it cannot find such a metamethod,
@@ -1051,7 +1051,8 @@ except as delimiters between names and keywords.
 (also called <em>identifiers</em>)
 in Lua can be any string of letters,
 digits, and underscores,
-not beginning with a digit.
+not beginning with a digit and
+not being a reserved word.
 Identifiers are used to name variables, table fields, and labels.
 
 
@@ -2706,7 +2707,9 @@ The first upvalue associated with a function is at index
 <code>lua_upvalueindex(1)</code>, and so on.
 Any access to <code>lua_upvalueindex(<em>n</em>)</code>,
 where <em>n</em> is greater than the number of upvalues of the
-current function (but not greater than 256),
+current function
+(but not greater than 256,
+which is one plus the maximum number of upvalues in a closure),
 produces an acceptable but invalid index.
 
 
@@ -2971,6 +2974,7 @@ by looking only at its arguments
 The third field, <code>x</code>,
 tells whether the function may raise errors:
 '<code>-</code>' means the function never raises any error;
+'<code>m</code>' means the function may raise memory errors;
 '<code>e</code>' means the function may raise errors;
 '<code>v</code>' means the function may raise an error on purpose.
 
@@ -3143,7 +3147,8 @@ The function results are pushed onto the stack when the function returns.
 The number of results is adjusted to <code>nresults</code>,
 unless <code>nresults</code> is <a name="pdf-LUA_MULTRET"><code>LUA_MULTRET</code></a>.
 In this case, all results from the function are pushed.
-Lua takes care that the returned values fit into the stack space.
+Lua takes care that the returned values fit into the stack space,
+but it does not ensure any extra space in the stack.
 The function results are pushed onto the stack in direct order
 (the first result is pushed first),
 so that after the call the last result is on the top of the stack.
@@ -3253,14 +3258,15 @@ of numeric arguments and returns their average and their sum:
 <pre>int lua_checkstack (lua_State *L, int n);</pre>
 
 <p>
-Ensures that the stack has space for at least <code>n</code> extra slots.
+Ensures that the stack has space for at least <code>n</code> extra slots
+(that is, that you can safely push up to <code>n</code> values into it).
 It returns false if it cannot fulfill the request,
 either because it would cause the stack
 to be larger than a fixed maximum size
 (typically at least several thousand elements) or
 because it cannot allocate memory for the extra space.
 This function never shrinks the stack;
-if the stack is already larger than the new size,
+if the stack already has space for the extra slots,
 it is left unchanged.
 
 
@@ -3345,7 +3351,7 @@ Values at other positions are not affected.
 
 
 <hr><h3><a name="lua_createtable"><code>lua_createtable</code></a></h3><p>
-<span class="apii">[-0, +1, <em>e</em>]</span>
+<span class="apii">[-0, +1, <em>m</em>]</span>
 <pre>void lua_createtable (lua_State *L, int narr, int nrec);</pre>
 
 <p>
@@ -3364,7 +3370,7 @@ Otherwise you can use the function <a href="#lua_newtable"><code>lua_newtable</c
 
 
 <hr><h3><a name="lua_dump"><code>lua_dump</code></a></h3><p>
-<span class="apii">[-0, +0, <em>e</em>]</span>
+<span class="apii">[-0, +0, &ndash;]</span>
 <pre>int lua_dump (lua_State *L,
                         lua_Writer writer,
                         void *data,
@@ -3978,7 +3984,7 @@ passes to the allocator in every call.
 
 
 <hr><h3><a name="lua_newtable"><code>lua_newtable</code></a></h3><p>
-<span class="apii">[-0, +1, <em>e</em>]</span>
+<span class="apii">[-0, +1, <em>m</em>]</span>
 <pre>void lua_newtable (lua_State *L);</pre>
 
 <p>
@@ -3990,7 +3996,7 @@ It is equivalent to <code>lua_createtable(L, 0, 0)</code>.
 
 
 <hr><h3><a name="lua_newthread"><code>lua_newthread</code></a></h3><p>
-<span class="apii">[-0, +1, <em>e</em>]</span>
+<span class="apii">[-0, +1, <em>m</em>]</span>
 <pre>lua_State *lua_newthread (lua_State *L);</pre>
 
 <p>
@@ -4011,7 +4017,7 @@ like any Lua object.
 
 
 <hr><h3><a name="lua_newuserdata"><code>lua_newuserdata</code></a></h3><p>
-<span class="apii">[-0, +1, <em>e</em>]</span>
+<span class="apii">[-0, +1, <em>m</em>]</span>
 <pre>void *lua_newuserdata (lua_State *L, size_t size);</pre>
 
 <p>
@@ -4221,7 +4227,7 @@ Pushes a boolean value with value <code>b</code> onto the stack.
 
 
 <hr><h3><a name="lua_pushcclosure"><code>lua_pushcclosure</code></a></h3><p>
-<span class="apii">[-n, +1, <em>e</em>]</span>
+<span class="apii">[-n, +1, <em>m</em>]</span>
 <pre>void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n);</pre>
 
 <p>
@@ -4278,7 +4284,7 @@ and return its results (see <a href="#lua_CFunction"><code>lua_CFunction</code><
 
 
 <hr><h3><a name="lua_pushfstring"><code>lua_pushfstring</code></a></h3><p>
-<span class="apii">[-0, +1, <em>e</em>]</span>
+<span class="apii">[-0, +1, <em>m</em>]</span>
 <pre>const char *lua_pushfstring (lua_State *L, const char *fmt, ...);</pre>
 
 <p>
@@ -4358,7 +4364,7 @@ light userdata with the same C&nbsp;address.
 
 
 <hr><h3><a name="lua_pushliteral"><code>lua_pushliteral</code></a></h3><p>
-<span class="apii">[-0, +1, <em>e</em>]</span>
+<span class="apii">[-0, +1, <em>m</em>]</span>
 <pre>const char *lua_pushliteral (lua_State *L, const char *s);</pre>
 
 <p>
@@ -4370,7 +4376,7 @@ but should be used only when <code>s</code> is a literal string.
 
 
 <hr><h3><a name="lua_pushlstring"><code>lua_pushlstring</code></a></h3><p>
-<span class="apii">[-0, +1, <em>e</em>]</span>
+<span class="apii">[-0, +1, <em>m</em>]</span>
 <pre>const char *lua_pushlstring (lua_State *L, const char *s, size_t len);</pre>
 
 <p>
@@ -4413,7 +4419,7 @@ Pushes a float with value <code>n</code> onto the stack.
 
 
 <hr><h3><a name="lua_pushstring"><code>lua_pushstring</code></a></h3><p>
-<span class="apii">[-0, +1, <em>e</em>]</span>
+<span class="apii">[-0, +1, <em>m</em>]</span>
 <pre>const char *lua_pushstring (lua_State *L, const char *s);</pre>
 
 <p>
@@ -4460,7 +4466,7 @@ onto the stack.
 
 
 <hr><h3><a name="lua_pushvfstring"><code>lua_pushvfstring</code></a></h3><p>
-<span class="apii">[-0, +1, <em>e</em>]</span>
+<span class="apii">[-0, +1, <em>m</em>]</span>
 <pre>const char *lua_pushvfstring (lua_State *L,
                               const char *fmt,
                               va_list argp);</pre>
@@ -4555,7 +4561,7 @@ for other values, it is&nbsp;0.
 
 
 <hr><h3><a name="lua_rawset"><code>lua_rawset</code></a></h3><p>
-<span class="apii">[-2, +0, <em>e</em>]</span>
+<span class="apii">[-2, +0, <em>m</em>]</span>
 <pre>void lua_rawset (lua_State *L, int index);</pre>
 
 <p>
@@ -4567,7 +4573,7 @@ Similar to <a href="#lua_settable"><code>lua_settable</code></a>, but does a raw
 
 
 <hr><h3><a name="lua_rawseti"><code>lua_rawseti</code></a></h3><p>
-<span class="apii">[-1, +0, <em>e</em>]</span>
+<span class="apii">[-1, +0, <em>m</em>]</span>
 <pre>void lua_rawseti (lua_State *L, int index, lua_Integer i);</pre>
 
 <p>
@@ -4586,7 +4592,7 @@ that is, it does not invoke metamethods.
 
 
 <hr><h3><a name="lua_rawsetp"><code>lua_rawsetp</code></a></h3><p>
-<span class="apii">[-1, +0, <em>e</em>]</span>
+<span class="apii">[-1, +0, <em>m</em>]</span>
 <pre>void lua_rawsetp (lua_State *L, int index, const void *p);</pre>
 
 <p>
@@ -4989,13 +4995,13 @@ indicates whether the operation succeeded.
 
 
 <hr><h3><a name="lua_tolstring"><code>lua_tolstring</code></a></h3><p>
-<span class="apii">[-0, +0, <em>e</em>]</span>
+<span class="apii">[-0, +0, <em>m</em>]</span>
 <pre>const char *lua_tolstring (lua_State *L, int index, size_t *len);</pre>
 
 <p>
 Converts the Lua value at the given index to a C&nbsp;string.
 If <code>len</code> is not <code>NULL</code>,
-it also sets <code>*len</code> with the string length.
+it sets <code>*len</code> with the string length.
 The Lua value must be a string or a number;
 otherwise, the function returns <code>NULL</code>.
 If the value is a number,
@@ -5006,7 +5012,7 @@ when <code>lua_tolstring</code> is applied to keys during a table traversal.)
 
 
 <p>
-<code>lua_tolstring</code> returns a fully aligned pointer
+<code>lua_tolstring</code> returns a pointer
 to a string inside the Lua state.
 This string always has a zero ('<code>\0</code>')
 after its last character (as in&nbsp;C),
@@ -5075,7 +5081,7 @@ Typically this function is used only for hashing and debug information.
 
 
 <hr><h3><a name="lua_tostring"><code>lua_tostring</code></a></h3><p>
-<span class="apii">[-0, +0, <em>e</em>]</span>
+<span class="apii">[-0, +0, <em>m</em>]</span>
 <pre>const char *lua_tostring (lua_State *L, int index);</pre>
 
 <p>
@@ -5884,7 +5890,7 @@ in alphabetical order.
 
 
 <hr><h3><a name="luaL_addchar"><code>luaL_addchar</code></a></h3><p>
-<span class="apii">[-?, +?, <em>e</em>]</span>
+<span class="apii">[-?, +?, <em>m</em>]</span>
 <pre>void luaL_addchar (luaL_Buffer *B, char c);</pre>
 
 <p>
@@ -5896,7 +5902,7 @@ Adds the byte <code>c</code> to the buffer <code>B</code>
 
 
 <hr><h3><a name="luaL_addlstring"><code>luaL_addlstring</code></a></h3><p>
-<span class="apii">[-?, +?, <em>e</em>]</span>
+<span class="apii">[-?, +?, <em>m</em>]</span>
 <pre>void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l);</pre>
 
 <p>
@@ -5910,7 +5916,7 @@ The string can contain embedded zeros.
 
 
 <hr><h3><a name="luaL_addsize"><code>luaL_addsize</code></a></h3><p>
-<span class="apii">[-?, +?, <em>e</em>]</span>
+<span class="apii">[-?, +?, &ndash;]</span>
 <pre>void luaL_addsize (luaL_Buffer *B, size_t n);</pre>
 
 <p>
@@ -5923,7 +5929,7 @@ buffer area (see <a href="#luaL_prepbuffer"><code>luaL_prepbuffer</code></a>).
 
 
 <hr><h3><a name="luaL_addstring"><code>luaL_addstring</code></a></h3><p>
-<span class="apii">[-?, +?, <em>e</em>]</span>
+<span class="apii">[-?, +?, <em>m</em>]</span>
 <pre>void luaL_addstring (luaL_Buffer *B, const char *s);</pre>
 
 <p>
@@ -5936,7 +5942,7 @@ to the buffer <code>B</code>
 
 
 <hr><h3><a name="luaL_addvalue"><code>luaL_addvalue</code></a></h3><p>
-<span class="apii">[-1, +?, <em>e</em>]</span>
+<span class="apii">[-1, +?, <em>m</em>]</span>
 <pre>void luaL_addvalue (luaL_Buffer *B);</pre>
 
 <p>
@@ -6074,7 +6080,7 @@ the buffer must be declared as a variable
 
 
 <hr><h3><a name="luaL_buffinitsize"><code>luaL_buffinitsize</code></a></h3><p>
-<span class="apii">[-?, +?, <em>e</em>]</span>
+<span class="apii">[-?, +?, <em>m</em>]</span>
 <pre>char *luaL_buffinitsize (lua_State *L, luaL_Buffer *B, size_t sz);</pre>
 
 <p>
@@ -6325,7 +6331,7 @@ as <code>return luaL_error(<em>args</em>)</code>.
 
 
 <hr><h3><a name="luaL_execresult"><code>luaL_execresult</code></a></h3><p>
-<span class="apii">[-0, +3, <em>e</em>]</span>
+<span class="apii">[-0, +3, <em>m</em>]</span>
 <pre>int luaL_execresult (lua_State *L, int stat);</pre>
 
 <p>
@@ -6338,7 +6344,7 @@ process-related functions in the standard library
 
 
 <hr><h3><a name="luaL_fileresult"><code>luaL_fileresult</code></a></h3><p>
-<span class="apii">[-0, +(1|3), <em>e</em>]</span>
+<span class="apii">[-0, +(1|3), <em>m</em>]</span>
 <pre>int luaL_fileresult (lua_State *L, int stat, const char *fname);</pre>
 
 <p>
@@ -6351,7 +6357,7 @@ file-related functions in the standard library
 
 
 <hr><h3><a name="luaL_getmetafield"><code>luaL_getmetafield</code></a></h3><p>
-<span class="apii">[-0, +(0|1), <em>e</em>]</span>
+<span class="apii">[-0, +(0|1), <em>m</em>]</span>
 <pre>int luaL_getmetafield (lua_State *L, int obj, const char *e);</pre>
 
 <p>
@@ -6366,7 +6372,7 @@ pushes nothing and returns <code>LUA_TNIL</code>.
 
 
 <hr><h3><a name="luaL_getmetatable"><code>luaL_getmetatable</code></a></h3><p>
-<span class="apii">[-0, +1, &ndash;]</span>
+<span class="apii">[-0, +1, <em>m</em>]</span>
 <pre>int luaL_getmetatable (lua_State *L, const char *tname);</pre>
 
 <p>
@@ -6396,7 +6402,7 @@ and false if it creates a new table.
 
 
 <hr><h3><a name="luaL_gsub"><code>luaL_gsub</code></a></h3><p>
-<span class="apii">[-0, +1, <em>e</em>]</span>
+<span class="apii">[-0, +1, <em>m</em>]</span>
 <pre>const char *luaL_gsub (lua_State *L,
                        const char *s,
                        const char *p,
@@ -6531,7 +6537,7 @@ it does not run it.
 
 
 <hr><h3><a name="luaL_newlib"><code>luaL_newlib</code></a></h3><p>
-<span class="apii">[-0, +1, <em>e</em>]</span>
+<span class="apii">[-0, +1, <em>m</em>]</span>
 <pre>void luaL_newlib (lua_State *L, const luaL_Reg l[]);</pre>
 
 <p>
@@ -6553,7 +6559,7 @@ not a pointer to it.
 
 
 <hr><h3><a name="luaL_newlibtable"><code>luaL_newlibtable</code></a></h3><p>
-<span class="apii">[-0, +1, <em>e</em>]</span>
+<span class="apii">[-0, +1, <em>m</em>]</span>
 <pre>void luaL_newlibtable (lua_State *L, const luaL_Reg l[]);</pre>
 
 <p>
@@ -6574,7 +6580,7 @@ not a pointer to it.
 
 
 <hr><h3><a name="luaL_newmetatable"><code>luaL_newmetatable</code></a></h3><p>
-<span class="apii">[-0, +1, <em>e</em>]</span>
+<span class="apii">[-0, +1, <em>m</em>]</span>
 <pre>int luaL_newmetatable (lua_State *L, const char *tname);</pre>
 
 <p>
@@ -6664,6 +6670,9 @@ Otherwise, raises an error.
 <p>
 If <code>l</code> is not <code>NULL</code>,
 fills the position <code>*l</code> with the result's length.
+If the result is <code>NULL</code>
+(only possible when returning <code>d</code> and <code>d == NULL</code>),
+its length is considered zero.
 
 
 
@@ -6702,7 +6711,7 @@ Otherwise, raises an error.
 
 
 <hr><h3><a name="luaL_prepbuffer"><code>luaL_prepbuffer</code></a></h3><p>
-<span class="apii">[-?, +?, <em>e</em>]</span>
+<span class="apii">[-?, +?, <em>m</em>]</span>
 <pre>char *luaL_prepbuffer (luaL_Buffer *B);</pre>
 
 <p>
@@ -6714,7 +6723,7 @@ with the predefined size <a name="pdf-LUAL_BUFFERSIZE"><code>LUAL_BUFFERSIZE</co
 
 
 <hr><h3><a name="luaL_prepbuffsize"><code>luaL_prepbuffsize</code></a></h3><p>
-<span class="apii">[-?, +?, <em>e</em>]</span>
+<span class="apii">[-?, +?, <em>m</em>]</span>
 <pre>char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz);</pre>
 
 <p>
@@ -6730,7 +6739,7 @@ it to the buffer.
 
 
 <hr><h3><a name="luaL_pushresult"><code>luaL_pushresult</code></a></h3><p>
-<span class="apii">[-?, +1, <em>e</em>]</span>
+<span class="apii">[-?, +1, <em>m</em>]</span>
 <pre>void luaL_pushresult (luaL_Buffer *B);</pre>
 
 <p>
@@ -6742,7 +6751,7 @@ the top of the stack.
 
 
 <hr><h3><a name="luaL_pushresultsize"><code>luaL_pushresultsize</code></a></h3><p>
-<span class="apii">[-?, +1, <em>e</em>]</span>
+<span class="apii">[-?, +1, <em>m</em>]</span>
 <pre>void luaL_pushresultsize (luaL_Buffer *B, size_t sz);</pre>
 
 <p>
@@ -6753,7 +6762,7 @@ Equivalent to the sequence <a href="#luaL_addsize"><code>luaL_addsize</code></a>
 
 
 <hr><h3><a name="luaL_ref"><code>luaL_ref</code></a></h3><p>
-<span class="apii">[-1, +0, <em>e</em>]</span>
+<span class="apii">[-1, +0, <em>m</em>]</span>
 <pre>int luaL_ref (lua_State *L, int t);</pre>
 
 <p>
@@ -6824,7 +6833,7 @@ Leaves a copy of the module on the stack.
 
 
 <hr><h3><a name="luaL_setfuncs"><code>luaL_setfuncs</code></a></h3><p>
-<span class="apii">[-nup, +0, <em>e</em>]</span>
+<span class="apii">[-nup, +0, <em>m</em>]</span>
 <pre>void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup);</pre>
 
 <p>
@@ -6888,7 +6897,7 @@ this function receives the file handle as its sole argument and
 must return either <b>true</b> (in case of success)
 or <b>nil</b> plus an error message (in case of error).
 Once Lua calls this field,
-the field value is changed to <code>NULL</code>
+it changes the field value to <code>NULL</code>
 to signal that the handle is closed.
 
 
@@ -6896,7 +6905,7 @@ to signal that the handle is closed.
 
 
 <hr><h3><a name="luaL_testudata"><code>luaL_testudata</code></a></h3><p>
-<span class="apii">[-0, +0, <em>e</em>]</span>
+<span class="apii">[-0, +0, <em>m</em>]</span>
 <pre>void *luaL_testudata (lua_State *L, int arg, const char *tname);</pre>
 
 <p>
@@ -6932,7 +6941,7 @@ and uses the result of the call as its result.
 
 
 <hr><h3><a name="luaL_traceback"><code>luaL_traceback</code></a></h3><p>
-<span class="apii">[-0, +1, <em>e</em>]</span>
+<span class="apii">[-0, +1, <em>m</em>]</span>
 <pre>void luaL_traceback (lua_State *L, lua_State *L1, const char *msg,
                      int level);</pre>
 
@@ -6979,7 +6988,7 @@ If <code>ref</code> is <a href="#pdf-LUA_NOREF"><code>LUA_NOREF</code></a> or <a
 
 
 <hr><h3><a name="luaL_where"><code>luaL_where</code></a></h3><p>
-<span class="apii">[-0, +1, <em>e</em>]</span>
+<span class="apii">[-0, +1, <em>m</em>]</span>
 <pre>void luaL_where (lua_State *L, int lvl);</pre>
 
 <p>
@@ -7476,7 +7485,8 @@ and <code>select</code> returns the total number of extra arguments it received.
 
 <p>
 Sets the metatable for the given table.
-(You cannot change the metatable of other types from Lua, only from&nbsp;C.)
+(To change the metatable of other types from Lua code,
+you must use the debug library (<a href="#6.10">&sect;6.10</a>).)
 If <code>metatable</code> is <b>nil</b>,
 removes the metatable of the given table.
 If the original metatable has a <code>"__metatable"</code> field,
@@ -7557,8 +7567,11 @@ and "<code>userdata</code>".
 
 <p>
 <hr><h3><a name="pdf-_VERSION"><code>_VERSION</code></a></h3>
+
+
+<p>
 A global variable (not a function) that
-holds a string containing the current interpreter version.
+holds a string containing the running Lua version.
 The current value of this variable is "<code>Lua 5.3</code>".
 
 
@@ -8392,6 +8405,11 @@ The default value for <code>sep</code> is the empty string
 Returns the empty string if <code>n</code> is not positive.
 
 
+<p>
+(Note that it is very easy to exhaust the memory of your machine
+with a single call to this function.)
+
+
 
 
 <p>
@@ -8963,14 +8981,23 @@ If <code>comp</code> is given,
 then it must be a function that receives two list elements
 and returns true when the first element must come
 before the second in the final order
-(so that <code>not comp(list[i+1],list[i])</code> will be true after the sort).
+(so that, after the sort,
+<code>i &lt; j</code> implies <code>not comp(list[j],list[i])</code>).
 If <code>comp</code> is not given,
 then the standard Lua operator <code>&lt;</code> is used instead.
 
 
 <p>
+Note that the <code>comp</code> function must define
+a strict partial order over the elements in the list;
+that is, it must be asymmetric and transitive.
+Otherwise, no valid sort may be possible.
+
+
+<p>
 The sort algorithm is not stable;
-that is, elements considered equal by the given order
+that is, elements not comparable by the given order
+(e.g., equal elements)
 may have their relative positions changed by the sort.
 
 
@@ -9222,14 +9249,13 @@ in the range  <em>[0,1)</em>.
 When called with two integers <code>m</code> and <code>n</code>,
 <code>math.random</code> returns a pseudo-random integer
 with uniform distribution in the range <em>[m, n]</em>.
-(The value <em>m-n</em> cannot be negative and must fit in a Lua integer.)
+(The value <em>n-m</em> cannot be negative and must fit in a Lua integer.)
 The call <code>math.random(n)</code> is equivalent to <code>math.random(1,n)</code>.
 
 
 <p>
 This function is an interface to the underling
 pseudo-random generator function provided by C.
-No guarantees can be given for its statistical properties.
 
 
 
@@ -9397,7 +9423,7 @@ instead of returning an error code.
 
 
 <p>
-<hr><h3><a name="pdf-io.lines"><code>io.lines ([filename &middot;&middot;&middot;])</code></a></h3>
+<hr><h3><a name="pdf-io.lines"><code>io.lines ([filename, &middot;&middot;&middot;])</code></a></h3>
 
 
 <p>
@@ -9771,7 +9797,7 @@ then the date is formatted in Coordinated Universal Time.
 After this optional character,
 if <code>format</code> is the string "<code>*t</code>",
 then <code>date</code> returns a table with the following fields:
-<code>year</code> (four digits), <code>month</code> (1&ndash;12), <code>day</code> (1&ndash;31),
+<code>year</code>, <code>month</code> (1&ndash;12), <code>day</code> (1&ndash;31),
 <code>hour</code> (0&ndash;23), <code>min</code> (0&ndash;59), <code>sec</code> (0&ndash;61),
 <code>wday</code> (weekday, Sunday is&nbsp;1),
 <code>yday</code> (day of the year),
@@ -9789,8 +9815,8 @@ formatted according to the same rules as the ISO&nbsp;C function <code>strftime<
 <p>
 When called without arguments,
 <code>date</code> returns a reasonable date and time representation that depends on
-the host system and on the current locale
-(that is, <code>os.date()</code> is equivalent to <code>os.date("%c")</code>).
+the host system and on the current locale.
+(More specifically, <code>os.date()</code> is equivalent to <code>os.date("%c")</code>.)
 
 
 <p>
@@ -10797,10 +10823,10 @@ and LiteralString, see <a href="#3.1">&sect;3.1</a>.)
 
 <P CLASS="footer">
 Last update:
-Wed Jun 10 18:31:15 BRT 2015
+Wed Nov 18 17:07:02 BRST 2015
 </P>
 <!--
-Last change: revised for Lua 5.3.1
+Last change: revised for Lua 5.3.2
 -->
 
 </body></html>

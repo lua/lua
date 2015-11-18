@@ -131,3 +131,29 @@ table.columns td {
 p.logos a:link:hover, p.logos a:visited:hover {
 	background-color: inherit ;
 }
+
+table.book {
+	border: none ;
+	border-spacing: 0 ;
+	border-collapse: collapse ;
+}
+
+table.book td {
+	padding: 0 ;
+	vertical-align: top ;
+}
+
+table.book td.cover {
+	padding-right: 1em ;
+}
+
+table.book img {
+	border: solid #000080 1px ;
+}
+
+table.book span {
+	font-size: small ;
+	text-align: left ;
+	display: block ;
+	margin-top: 0.25em ;
+}

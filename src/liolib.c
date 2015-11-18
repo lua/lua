@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.144 2015/04/03 18:41:57 roberto Exp $
+** $Id: liolib.c,v 2.147 2015/07/15 14:40:28 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -176,7 +176,7 @@ static FILE *tofile (lua_State *L) {
 /*
 ** When creating file handles, always creates a 'closed' file handle
 ** before opening the actual file; so, if there is a memory error, the
-** file is not left opened.
+** handle is in a consistent state.
 */
 static LStream *newprefile (lua_State *L) {
   LStream *p = (LStream *)lua_newuserdata(L, sizeof(LStream));
@@ -318,8 +318,15 @@ static int io_output (lua_State *L) {
 static int io_readline (lua_State *L);
 
 
+/*
+** maximum number of arguments to 'f:lines'/'io.lines' (it + 3 must fit
+** in the limit for upvalues of a closure)
+*/
+#define MAXARGLINE	250
+
 static void aux_lines (lua_State *L, int toclose) {
   int n = lua_gettop(L) - 1;  /* number of arguments to read */
+  luaL_argcheck(L, n <= MAXARGLINE, MAXARGLINE + 2, "too many arguments");
   lua_pushinteger(L, n);  /* number of arguments to read */
   lua_pushboolean(L, toclose);  /* close/not close file when finished */
   lua_rotate(L, 2, 2);  /* move 'n' and 'toclose' to their positions */
@@ -483,7 +490,7 @@ static void read_all (lua_State *L, FILE *f) {
   luaL_Buffer b;
   luaL_buffinit(L, &b);
   do {  /* read file in chunks of LUAL_BUFFERSIZE bytes */
-    char *p = luaL_prepbuffsize(&b, LUAL_BUFFERSIZE);
+    char *p = luaL_prepbuffer(&b);
     nr = fread(p, sizeof(char), LUAL_BUFFERSIZE, f);
     luaL_addsize(&b, nr);
   } while (nr == LUAL_BUFFERSIZE);
