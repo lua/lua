@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.282 2015/10/02 15:46:49 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.283 2015/10/06 16:10:22 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -471,7 +471,7 @@ static void *newbox (lua_State *L, size_t newsize) {
   box->bsize = 0;
   if (luaL_newmetatable(L, "LUABOX")) {  /* creating metatable? */
     lua_pushcfunction(L, boxgc);
-    lua_setfield(L, -2, "__gc");  /* metatalbe.__gc = boxgc */
+    lua_setfield(L, -2, "__gc");  /* metatable.__gc = boxgc */
   }
   lua_setmetatable(L, -2);
   return resizebox(L, -1, newsize);
@@ -653,7 +653,7 @@ static int errfile (lua_State *L, const char *what, int fnameindex) {
 
 
 static int skipBOM (LoadF *lf) {
-  const char *p = "\xEF\xBB\xBF";  /* Utf8 BOM mark */
+  const char *p = "\xEF\xBB\xBF";  /* UTF-8 BOM mark */
   int c;
   lf->n = 0;
   do {

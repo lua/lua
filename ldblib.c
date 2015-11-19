@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.148 2015/01/02 12:52:22 roberto Exp roberto $
+** $Id: ldblib.c,v 1.149 2015/02/19 17:06:21 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -29,7 +29,7 @@ static const int HOOKKEY = 0;
 
 /*
 ** If L1 != L, L1 can be in any state, and therefore there is no
-** garanties about its stack space; any push in L1 must be
+** garantees about its stack space; any push in L1 must be
 ** checked.
 */
 static void checkstack (lua_State *L, lua_State *L1, int n) {

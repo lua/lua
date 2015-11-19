@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.58 2015/07/04 16:35:14 roberto Exp roberto $
+** $Id: loslib.c,v 1.59 2015/07/06 15:16:51 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -215,7 +215,7 @@ static int getfield (lua_State *L, const char *key, int d, int delta) {
   if (!isnum) {  /* field is not a number? */
     if (t != LUA_TNIL)  /* some other value? */
       return luaL_error(L, "field '%s' not an integer", key);
-    else if (d < 0)  /* abssent field; no default? */
+    else if (d < 0)  /* absent field; no default? */
       return luaL_error(L, "field '%s' missing in date table", key);
     res = d;
   }

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.262 2015/11/13 13:24:26 roberto Exp roberto $
+** $Id: lvm.c,v 2.263 2015/11/17 16:00:28 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1051,7 +1051,7 @@ void luaV_execute (lua_State *L) {
         StkId rb;
         L->top = base + c + 1;  /* mark the end of concat operands */
         Protect(luaV_concat(L, c - b + 1));
-        ra = RA(i);  /* 'luav_concat' may invoke TMs and move the stack */
+        ra = RA(i);  /* 'luaV_concat' may invoke TMs and move the stack */
         rb = base + b;
         setobjs2s(L, ra, rb);
         checkGC(L, (ra >= rb ? ra + 1 : rb));

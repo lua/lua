@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.148 2015/11/02 18:48:49 roberto Exp roberto $
+** $Id: ldo.c,v 2.149 2015/11/13 13:24:26 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -409,7 +409,7 @@ static int moveresults (lua_State *L, const TValue *firstResult, StkId res,
     case 0: break;  /* nothing to move */
     case 1: {  /* one result needed */
       if (nres == 0)   /* no results? */
-        firstResult = luaO_nilobject;  /* ajdust with nil */
+        firstResult = luaO_nilobject;  /* adjust with nil */
       setobjs2s(L, res, firstResult);  /* move it to proper place */
       break;
     }
@@ -442,7 +442,7 @@ static int moveresults (lua_State *L, const TValue *firstResult, StkId res,
 
 /*
 ** Finishes a function call: calls hook if necessary, removes CallInfo,
-** moves corrent number of results to proper place; returns 0 iff call
+** moves current number of results to proper place; returns 0 iff call
 ** wanted multiple (variable number of) results.
 */
 int luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres) {
