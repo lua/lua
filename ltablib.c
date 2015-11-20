@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.84 2015/11/06 16:07:14 roberto Exp roberto $
+** $Id: ltablib.c,v 1.85 2015/11/12 18:07:25 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -12,7 +12,6 @@
 
 #include <limits.h>
 #include <stddef.h>
-#include <time.h>
 
 #include "lua.h"
 
@@ -24,10 +23,10 @@
 ** Operations that an object must define to mimic a table
 ** (some functions only need some of them)
 */
-#define TAB_R	1
-#define TAB_W	2
-#define TAB_L	4
-#define TAB_RW	(TAB_R | TAB_W)
+#define TAB_R	1			/* read */
+#define TAB_W	2			/* write */
+#define TAB_L	4			/* length */
+#define TAB_RW	(TAB_R | TAB_W)		/* read/write */
 
 
 #define aux_getn(L,n,w)	(checktab(L, n, (w) | TAB_L), luaL_len(L, n))
@@ -51,7 +50,7 @@ static void checktab (lua_State *L, int arg, int what) {
         (!(what & TAB_W) || checkfield(L, "__newindex", ++n)) &&
         (!(what & TAB_L) || checkfield(L, "__len", ++n))) {
       lua_pop(L, n);  /* pop metatable and tested metamethods */
-}
+    }
     else
       luaL_argerror(L, arg, "table expected");  /* force an error */
   }
@@ -295,8 +294,12 @@ static int partition (lua_State *L, int lo, int up) {
 
 /*
 ** Choose a "random" pivot in the middle part of the interval [lo, up].
-** Use 'time' and 'clock' as sources of "randomness".
+** (If you don't want/need this "randomness", (lo+up)/2 is an excelent
+** choice.)
 */
+#if !defined(l_sortpivot)
+/* Use 'time' and 'clock' as sources of "randomness" */
+#include <time.h>
 static int choosePivot (int lo, int up) {
   unsigned int t = (unsigned int)(unsigned long)time(NULL);  /* time */
   unsigned int c = (unsigned int)(unsigned long)clock();  /* clock */
@@ -306,11 +309,14 @@ static int choosePivot (int lo, int up) {
   return (int)p;
 }
 
+#define l_sortpivot(lo,up)	choosePivot(lo,up)
+#endif
+
 
 static void auxsort (lua_State *L, int lo, int up) {
   while (lo < up) {  /* loop for tail recursion */
-    int p;
-    /* sort elements 'lo', '(lo + up)/2' and 'up' */
+    int p;  /* Pivot index */
+    /* sort elements 'lo', 'p', and 'up' */
     lua_geti(L, 1, lo);
     lua_geti(L, 1, up);
     if (sort_comp(L, -1, -2))  /* a[up] < a[lo]? */
@@ -322,7 +328,7 @@ static void auxsort (lua_State *L, int lo, int up) {
     if (up - lo < 100)  /* small interval? */
       p = (lo + up)/2;  /* middle element is a good pivot */
     else  /* for larger intervals, it is worth a random pivot */
-      p = choosePivot(lo, up);
+      p = l_sortpivot(lo, up);
     lua_geti(L, 1, p);
     lua_geti(L, 1, lo);
     if (sort_comp(L, -2, -1))  /* a[p] < a[lo]? */
