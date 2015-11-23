@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.146 2015/07/07 17:03:34 roberto Exp roberto $
+** $Id: liolib.c,v 2.147 2015/07/15 14:40:28 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -23,18 +23,24 @@
 #include "lualib.h"
 
 
-#if !defined(l_checkmode)
+
 
 /*
-** Check whether 'mode' matches '[rwa]%+?b?'.
 ** Change this macro to accept other modes for 'fopen' besides
 ** the standard ones.
 */
+#if !defined(l_checkmode)
+
+/* accepted extensions to 'mode' in 'fopen' */
+#if !defined(L_MODEEXT)
+#define L_MODEEXT	"b"
+#endif
+
+/* Check whether 'mode' matches '[rwa]%+?[L_MODEEXT]*' */
 #define l_checkmode(mode) \
 	(*mode != '\0' && strchr("rwa", *(mode++)) != NULL &&	\
-	(*mode != '+' || ++mode) &&  /* skip if char is '+' */	\
-	(*mode != 'b' || ++mode) &&  /* skip if char is 'b' */	\
-	(*mode == '\0'))
+	(*mode != '+' || (++mode, 1)) &&  /* skip if char is '+' */	\
+	(strspn(mode, L_MODEEXT) == strlen(mode)))
 
 #endif
 
@@ -469,7 +475,7 @@ static int read_line (lua_State *L, FILE *f, int chop) {
   int c = '\0';
   luaL_buffinit(L, &b);
   while (c != EOF && c != '\n') {  /* repeat until end of line */
-    char *buff = luaL_prepbuffer(&b);  /* pre-allocate buffer */
+    char *buff = luaL_prepbuffer(&b);  /* preallocate buffer */
     int i = 0;
     l_lockfile(f);  /* no memory errors can happen inside the lock */
     while (i < LUAL_BUFFERSIZE && (c = l_getc(f)) != EOF && c != '\n')
