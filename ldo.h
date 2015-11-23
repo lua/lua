@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 2.26 2015/11/13 13:24:26 roberto Exp roberto $
+** $Id: ldo.h,v 2.27 2015/11/19 19:16:22 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -16,7 +16,7 @@
 /*
 ** Macro to check stack size and grow stack if needed.  Parameters
 ** 'pre'/'pos' allow the macro to preserve a pointer into the
-** stack across realocations, doing the work only when needed.
+** stack across reallocations, doing the work only when needed.
 ** 'condmovestack' is used in heavy tests to force a stack reallocation
 ** at every check.
 */
