@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.236 2015/10/28 17:56:51 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.237 2015/10/29 15:11:41 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -1031,6 +1031,7 @@ static int str_format (lua_State *L) {
         case 's': {
           size_t l;
           const char *s = luaL_tolstring(L, arg, &l);
+          luaL_argcheck(L, l == strlen(s), arg, "string cannot contain zeros");
           if (!strchr(form, '.') && l >= 100) {
             /* no precision and string is too long to be formatted;
                keep original string */
