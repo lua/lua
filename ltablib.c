@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.85 2015/11/12 18:07:25 roberto Exp roberto $
+** $Id: ltablib.c,v 1.86 2015/11/20 12:30:20 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -167,11 +167,10 @@ static void addfield (lua_State *L, luaL_Buffer *b, lua_Integer i) {
 
 static int tconcat (lua_State *L) {
   luaL_Buffer b;
-  size_t lsep;
-  lua_Integer i;
   lua_Integer last = aux_getn(L, 1, TAB_R);
+  size_t lsep;
   const char *sep = luaL_optlstring(L, 2, "", &lsep);
-  i = luaL_optinteger(L, 3, 1);
+  lua_Integer i = luaL_optinteger(L, 3, 1);
   last = luaL_opt(L, luaL_checkinteger, 4, last);
   luaL_buffinit(L, &b);
   for (; i < last; i++) {
@@ -205,10 +204,9 @@ static int pack (lua_State *L) {
 
 
 static int unpack (lua_State *L) {
-  lua_Integer i, e;
   lua_Unsigned n;
-  i = luaL_optinteger(L, 2, 1);
-  e = luaL_opt(L, luaL_checkinteger, 3, luaL_len(L, 1));
+  lua_Integer i = luaL_optinteger(L, 2, 1);
+  lua_Integer e = luaL_opt(L, luaL_checkinteger, 3, luaL_len(L, 1));
   if (i > e) return 0;  /* empty range */
   n = (lua_Unsigned)e - i;  /* number of elements minus 1 (avoid overflows) */
   if (n >= (unsigned int)INT_MAX  || !lua_checkstack(L, (int)(++n)))
