@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.87 2015/11/23 11:09:27 roberto Exp roberto $
+** $Id: ltablib.c,v 1.86 2015/11/20 12:30:20 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -12,6 +12,7 @@
 
 #include <limits.h>
 #include <stddef.h>
+#include <string.h>
 
 #include "lua.h"
 
@@ -298,14 +299,22 @@ static unsigned int partition (lua_State *L, unsigned int lo,
 */
 #if !defined(l_sortpivot)
 /* Use 'time' and 'clock' as sources of "randomness" */
-
 #include <time.h>
 
+#define szi		(sizeof(unsigned int))
+#define sof(e)		(sizeof(e)/szi)
+
 static unsigned int choosePivot (unsigned int lo, unsigned int up) {
-  unsigned int t = (unsigned int)(unsigned long)time(NULL);  /* time */
-  unsigned int c = (unsigned int)(unsigned long)clock();  /* clock */
+  clock_t c = clock();
+  time_t t = time(NULL);
+  unsigned int buff[sof(c) + sof(t)];
   unsigned int r4 = (unsigned int)(up - lo) / 4u;  /* range/4 */
-  unsigned int p = (c + t) % (r4 * 2) + (lo + r4);
+  unsigned int p, i, h = 0;
+  memcpy(buff, &c, sof(c) * szi);
+  memcpy(buff + sof(c), &t, sof(t) * szi);
+  for (i = 0; i < sof(buff); i++)
+    h += buff[i];
+  p = h % (r4 * 2) + (lo + r4);
   lua_assert(lo + r4 <= p && p <= up - r4);
   return p;
 }
