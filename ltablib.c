@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.86 2015/11/20 12:30:20 roberto Exp roberto $
+** $Id: ltablib.c,v 1.89 2015/11/24 16:54:32 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -231,24 +231,68 @@ static int unpack (lua_State *L) {
 ** =======================================================
 */
 
+
+/*
+** Produce a "random" 'unsigned int' to randomize pivot choice. This
+** macro is used only when 'sort' detects a big imbalance in the result
+** of a partition. (If you don't want/need this "randomness", ~0 is a
+** good choice.)
+*/
+#if !defined(l_randomizePivot)		/* { */
+
+#include <time.h>
+
+/* size of 'e' measured in number of 'unsigned int's */
+#define sof(e)		(sizeof(e) / sizeof(unsigned int))
+
+/*
+** Use 'time' and 'clock' as sources of "randomness". Because we don't
+** know the types 'clock_t' and 'time_t', we cannot cast them to
+** anything without risking overflows. A safe way to use their values
+** is to copy them to an array of a known type and use the array values.
+*/
+static unsigned int l_randomizePivot (void) {
+  clock_t c = clock();
+  time_t t = time(NULL);
+  unsigned int buff[sof(c) + sof(t)];
+  unsigned int i, rnd = 0;
+  memcpy(buff, &c, sof(c) * sizeof(unsigned int));
+  memcpy(buff + sof(c), &t, sof(t) * sizeof(unsigned int));
+  for (i = 0; i < sof(buff); i++)
+    rnd += buff[i];
+  return rnd;
+}
+
+#endif					/* } */
+
+
+/* arrays larger than 'RANLIMIT' may use randomized pivots */
+#define RANLIMIT	100u
+
+
 static void set2 (lua_State *L, unsigned int i, unsigned int j) {
   lua_seti(L, 1, i);
   lua_seti(L, 1, j);
 }
 
+
+/*
+** Return true iff value at stack index 'a' is less than the value at
+** index 'b' (according to the order of the sort).
+*/
 static int sort_comp (lua_State *L, int a, int b) {
-  if (!lua_isnil(L, 2)) {  /* function? */
+  if (lua_isnil(L, 2))  /* no function? */
+    return lua_compare(L, a, b, LUA_OPLT);  /* a < b */
+  else {  /* function */
     int res;
-    lua_pushvalue(L, 2);
+    lua_pushvalue(L, 2);    /* push function */
     lua_pushvalue(L, a-1);  /* -1 to compensate function */
     lua_pushvalue(L, b-2);  /* -2 to compensate function and 'a' */
-    lua_call(L, 2, 1);
-    res = lua_toboolean(L, -1);
-    lua_pop(L, 1);
+    lua_call(L, 2, 1);      /* call function */
+    res = lua_toboolean(L, -1);  /* get result */
+    lua_pop(L, 1);          /* pop result */
     return res;
   }
-  else  /* a < b? */
-    return lua_compare(L, a, b, LUA_OPLT);
 }
 
 
@@ -293,39 +337,26 @@ static unsigned int partition (lua_State *L, unsigned int lo,
 
 
 /*
-** Choose a "random" pivot in the middle part of the interval [lo, up].
-** (If you don't want/need this "randomness", (lo+up)/2 is an excellent
-** choice.)
+** Choose an element in the middle (2nd-3th quarters) of [lo,up]
+** "randomized" by 'rnd'
 */
-#if !defined(l_sortpivot)
-/* Use 'time' and 'clock' as sources of "randomness" */
-#include <time.h>
-
-#define szi		(sizeof(unsigned int))
-#define sof(e)		(sizeof(e)/szi)
-
-static unsigned int choosePivot (unsigned int lo, unsigned int up) {
-  clock_t c = clock();
-  time_t t = time(NULL);
-  unsigned int buff[sof(c) + sof(t)];
+static unsigned int choosePivot (unsigned int lo, unsigned int up,
+                                 unsigned int rnd) {
   unsigned int r4 = (unsigned int)(up - lo) / 4u;  /* range/4 */
-  unsigned int p, i, h = 0;
-  memcpy(buff, &c, sof(c) * szi);
-  memcpy(buff + sof(c), &t, sof(t) * szi);
-  for (i = 0; i < sof(buff); i++)
-    h += buff[i];
-  p = h % (r4 * 2) + (lo + r4);
+  unsigned int p = rnd % (r4 * 2) + (lo + r4);
   lua_assert(lo + r4 <= p && p <= up - r4);
   return p;
 }
 
-#define l_sortpivot(lo,up)	choosePivot(lo,up)
-#endif
 
-
-static void auxsort (lua_State *L, unsigned int lo, unsigned int up) {
+/*
+** QuickSort algorithm (recursive function)
+*/
+static void auxsort (lua_State *L, unsigned int lo, unsigned int up,
+                                   unsigned int rnd) {
   while (lo < up) {  /* loop for tail recursion */
     unsigned int p;  /* Pivot index */
+    unsigned int n;  /* to be used later */
     /* sort elements 'lo', 'p', and 'up' */
     lua_geti(L, 1, lo);
     lua_geti(L, 1, up);
@@ -335,10 +366,10 @@ static void auxsort (lua_State *L, unsigned int lo, unsigned int up) {
       lua_pop(L, 2);  /* remove both values */
     if (up - lo == 1)  /* only 2 elements? */
       return;  /* already sorted */
-    if (up - lo < 100u)  /* small interval? */
+    if (up - lo < RANLIMIT || rnd == 0)  /* small interval or no randomize? */
       p = (lo + up)/2;  /* middle element is a good pivot */
     else  /* for larger intervals, it is worth a random pivot */
-      p = l_sortpivot(lo, up);
+      p = choosePivot(lo, up, rnd);
     lua_geti(L, 1, p);
     lua_geti(L, 1, lo);
     if (sort_comp(L, -2, -1))  /* a[p] < a[lo]? */
@@ -360,14 +391,18 @@ static void auxsort (lua_State *L, unsigned int lo, unsigned int up) {
     p = partition(L, lo, up);
     /* a[lo .. p - 1] <= a[p] == P <= a[p + 1 .. up] */
     if (p - lo < up - p) {  /* lower interval is smaller? */
-      auxsort(L, lo, p - 1);  /* call recursively for lower interval */
+      auxsort(L, lo, p - 1, rnd);  /* call recursively for lower interval */
+      n = p - lo;  /* size of smaller interval */
       lo = p + 1;  /* tail call for [p + 1 .. up] (upper interval) */
     }
     else {
-      auxsort(L, p + 1, up);  /* call recursively for upper interval */
+      auxsort(L, p + 1, up, rnd);  /* call recursively for upper interval */
+      n = up - p;  /* size of smaller interval */
       up = p - 1;  /* tail call for [lo .. p - 1]  (lower interval) */
     }
-  }  /* tail call auxsort(L, lo, up) */
+    if ((up - lo) / 128u > n) /* partition too imbalanced? */
+      rnd = l_randomizePivot();  /* try a new randomization */
+  }  /* tail call auxsort(L, lo, up, rnd) */
 }
 
 
@@ -379,7 +414,7 @@ static int sort (lua_State *L) {
     if (!lua_isnoneornil(L, 2))  /* is there a 2nd argument? */
       luaL_checktype(L, 2, LUA_TFUNCTION);  /* must be a function */
     lua_settop(L, 2);  /* make sure there are two arguments */
-    auxsort(L, 1, (unsigned int)n);
+    auxsort(L, 1, (unsigned int)n, 0u);
   }
   return 0;
 }
