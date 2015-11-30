@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.85 2015/11/12 18:07:25 roberto Exp $
+** $Id: ltablib.c,v 1.90 2015/11/25 12:48:57 roberto Exp $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -12,7 +12,7 @@
 
 #include <limits.h>
 #include <stddef.h>
-#include <time.h>
+#include <string.h>
 
 #include "lua.h"
 
@@ -24,10 +24,10 @@
 ** Operations that an object must define to mimic a table
 ** (some functions only need some of them)
 */
-#define TAB_R	1
-#define TAB_W	2
-#define TAB_L	4
-#define TAB_RW	(TAB_R | TAB_W)
+#define TAB_R	1			/* read */
+#define TAB_W	2			/* write */
+#define TAB_L	4			/* length */
+#define TAB_RW	(TAB_R | TAB_W)		/* read/write */
 
 
 #define aux_getn(L,n,w)	(checktab(L, n, (w) | TAB_L), luaL_len(L, n))
@@ -51,7 +51,7 @@ static void checktab (lua_State *L, int arg, int what) {
         (!(what & TAB_W) || checkfield(L, "__newindex", ++n)) &&
         (!(what & TAB_L) || checkfield(L, "__len", ++n))) {
       lua_pop(L, n);  /* pop metatable and tested metamethods */
-}
+    }
     else
       luaL_argerror(L, arg, "table expected");  /* force an error */
   }
@@ -168,11 +168,10 @@ static void addfield (lua_State *L, luaL_Buffer *b, lua_Integer i) {
 
 static int tconcat (lua_State *L) {
   luaL_Buffer b;
-  size_t lsep;
-  lua_Integer i;
   lua_Integer last = aux_getn(L, 1, TAB_R);
+  size_t lsep;
   const char *sep = luaL_optlstring(L, 2, "", &lsep);
-  i = luaL_optinteger(L, 3, 1);
+  lua_Integer i = luaL_optinteger(L, 3, 1);
   last = luaL_opt(L, luaL_checkinteger, 4, last);
   luaL_buffinit(L, &b);
   for (; i < last; i++) {
@@ -206,10 +205,9 @@ static int pack (lua_State *L) {
 
 
 static int unpack (lua_State *L) {
-  lua_Integer i, e;
   lua_Unsigned n;
-  i = luaL_optinteger(L, 2, 1);
-  e = luaL_opt(L, luaL_checkinteger, 3, luaL_len(L, 1));
+  lua_Integer i = luaL_optinteger(L, 2, 1);
+  lua_Integer e = luaL_opt(L, luaL_checkinteger, 3, luaL_len(L, 1));
   if (i > e) return 0;  /* empty range */
   n = (lua_Unsigned)e - i;  /* number of elements minus 1 (avoid overflows) */
   if (n >= (unsigned int)INT_MAX  || !lua_checkstack(L, (int)(++n)))
@@ -233,24 +231,68 @@ static int unpack (lua_State *L) {
 ** =======================================================
 */
 
-static void set2 (lua_State *L, int i, int j) {
+
+/*
+** Produce a "random" 'unsigned int' to randomize pivot choice. This
+** macro is used only when 'sort' detects a big imbalance in the result
+** of a partition. (If you don't want/need this "randomness", ~0 is a
+** good choice.)
+*/
+#if !defined(l_randomizePivot)		/* { */
+
+#include <time.h>
+
+/* size of 'e' measured in number of 'unsigned int's */
+#define sof(e)		(sizeof(e) / sizeof(unsigned int))
+
+/*
+** Use 'time' and 'clock' as sources of "randomness". Because we don't
+** know the types 'clock_t' and 'time_t', we cannot cast them to
+** anything without risking overflows. A safe way to use their values
+** is to copy them to an array of a known type and use the array values.
+*/
+static unsigned int l_randomizePivot (void) {
+  clock_t c = clock();
+  time_t t = time(NULL);
+  unsigned int buff[sof(c) + sof(t)];
+  unsigned int i, rnd = 0;
+  memcpy(buff, &c, sof(c) * sizeof(unsigned int));
+  memcpy(buff + sof(c), &t, sof(t) * sizeof(unsigned int));
+  for (i = 0; i < sof(buff); i++)
+    rnd += buff[i];
+  return rnd;
+}
+
+#endif					/* } */
+
+
+/* arrays larger than 'RANLIMIT' may use randomized pivots */
+#define RANLIMIT	100u
+
+
+static void set2 (lua_State *L, unsigned int i, unsigned int j) {
   lua_seti(L, 1, i);
   lua_seti(L, 1, j);
 }
 
+
+/*
+** Return true iff value at stack index 'a' is less than the value at
+** index 'b' (according to the order of the sort).
+*/
 static int sort_comp (lua_State *L, int a, int b) {
-  if (!lua_isnil(L, 2)) {  /* function? */
+  if (lua_isnil(L, 2))  /* no function? */
+    return lua_compare(L, a, b, LUA_OPLT);  /* a < b */
+  else {  /* function */
     int res;
-    lua_pushvalue(L, 2);
+    lua_pushvalue(L, 2);    /* push function */
     lua_pushvalue(L, a-1);  /* -1 to compensate function */
     lua_pushvalue(L, b-2);  /* -2 to compensate function and 'a' */
-    lua_call(L, 2, 1);
-    res = lua_toboolean(L, -1);
-    lua_pop(L, 1);
+    lua_call(L, 2, 1);      /* call function */
+    res = lua_toboolean(L, -1);  /* get result */
+    lua_pop(L, 1);          /* pop result */
     return res;
   }
-  else  /* a < b? */
-    return lua_compare(L, a, b, LUA_OPLT);
 }
 
 
@@ -261,9 +303,10 @@ static int sort_comp (lua_State *L, int a, int b) {
 ** Pos-condition: a[lo .. i - 1] <= a[i] == P <= a[i + 1 .. up]
 ** returns 'i'.
 */
-static int partition (lua_State *L, int lo, int up) {
-  int i = lo;  /* will be incremented before first use */
-  int j = up - 1;  /* will be decremented before first use */
+static unsigned int partition (lua_State *L, unsigned int lo,
+                                             unsigned int up) {
+  unsigned int i = lo;  /* will be incremented before first use */
+  unsigned int j = up - 1;  /* will be decremented before first use */
   /* loop invariant: a[lo .. i] <= P <= a[j .. up] */
   for (;;) {
     /* next loop: repeat ++i while a[i] < P */
@@ -294,23 +337,27 @@ static int partition (lua_State *L, int lo, int up) {
 
 
 /*
-** Choose a "random" pivot in the middle part of the interval [lo, up].
-** Use 'time' and 'clock' as sources of "randomness".
+** Choose an element in the middle (2nd-3th quarters) of [lo,up]
+** "randomized" by 'rnd'
 */
-static int choosePivot (int lo, int up) {
-  unsigned int t = (unsigned int)(unsigned long)time(NULL);  /* time */
-  unsigned int c = (unsigned int)(unsigned long)clock();  /* clock */
+static unsigned int choosePivot (unsigned int lo, unsigned int up,
+                                 unsigned int rnd) {
   unsigned int r4 = (unsigned int)(up - lo) / 4u;  /* range/4 */
-  unsigned int p = (c + t) % (r4 * 2) + (lo + r4);
+  unsigned int p = rnd % (r4 * 2) + (lo + r4);
   lua_assert(lo + r4 <= p && p <= up - r4);
-  return (int)p;
+  return p;
 }
 
 
-static void auxsort (lua_State *L, int lo, int up) {
+/*
+** QuickSort algorithm (recursive function)
+*/
+static void auxsort (lua_State *L, unsigned int lo, unsigned int up,
+                                   unsigned int rnd) {
   while (lo < up) {  /* loop for tail recursion */
-    int p;
-    /* sort elements 'lo', '(lo + up)/2' and 'up' */
+    unsigned int p;  /* Pivot index */
+    unsigned int n;  /* to be used later */
+    /* sort elements 'lo', 'p', and 'up' */
     lua_geti(L, 1, lo);
     lua_geti(L, 1, up);
     if (sort_comp(L, -1, -2))  /* a[up] < a[lo]? */
@@ -319,10 +366,10 @@ static void auxsort (lua_State *L, int lo, int up) {
       lua_pop(L, 2);  /* remove both values */
     if (up - lo == 1)  /* only 2 elements? */
       return;  /* already sorted */
-    if (up - lo < 100)  /* small interval? */
+    if (up - lo < RANLIMIT || rnd == 0)  /* small interval or no randomize? */
       p = (lo + up)/2;  /* middle element is a good pivot */
     else  /* for larger intervals, it is worth a random pivot */
-      p = choosePivot(lo, up);
+      p = choosePivot(lo, up, rnd);
     lua_geti(L, 1, p);
     lua_geti(L, 1, lo);
     if (sort_comp(L, -2, -1))  /* a[p] < a[lo]? */
@@ -344,24 +391,31 @@ static void auxsort (lua_State *L, int lo, int up) {
     p = partition(L, lo, up);
     /* a[lo .. p - 1] <= a[p] == P <= a[p + 1 .. up] */
     if (p - lo < up - p) {  /* lower interval is smaller? */
-      auxsort(L, lo, p - 1);  /* call recursively for lower interval */
+      auxsort(L, lo, p - 1, rnd);  /* call recursively for lower interval */
+      n = p - lo;  /* size of smaller interval */
       lo = p + 1;  /* tail call for [p + 1 .. up] (upper interval) */
     }
     else {
-      auxsort(L, p + 1, up);  /* call recursively for upper interval */
+      auxsort(L, p + 1, up, rnd);  /* call recursively for upper interval */
+      n = up - p;  /* size of smaller interval */
       up = p - 1;  /* tail call for [lo .. p - 1]  (lower interval) */
     }
-  }  /* tail call auxsort(L, lo, up) */
+    if ((up - lo) / 128u > n) /* partition too imbalanced? */
+      rnd = l_randomizePivot();  /* try a new randomization */
+  }  /* tail call auxsort(L, lo, up, rnd) */
 }
 
 
 static int sort (lua_State *L) {
-  int n = (int)aux_getn(L, 1, TAB_RW);
-  luaL_checkstack(L, 50, "");  /* assume array is smaller than 2^50 */
-  if (!lua_isnoneornil(L, 2))  /* is there a 2nd argument? */
-    luaL_checktype(L, 2, LUA_TFUNCTION);
-  lua_settop(L, 2);  /* make sure there are two arguments */
-  auxsort(L, 1, n);
+  lua_Integer n = aux_getn(L, 1, TAB_RW);
+  if (n > 1) {  /* non-trivial interval? */
+    luaL_argcheck(L, n < INT_MAX, 1, "array too big");
+    luaL_checkstack(L, 40, "");  /* assume array is smaller than 2^40 */
+    if (!lua_isnoneornil(L, 2))  /* is there a 2nd argument? */
+      luaL_checktype(L, 2, LUA_TFUNCTION);  /* must be a function */
+    lua_settop(L, 2);  /* make sure there are two arguments */
+    auxsort(L, 1, (unsigned int)n, 0u);
+  }
   return 0;
 }
 

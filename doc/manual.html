@@ -35,7 +35,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.152 2015/11/13 15:12:33 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.153 2015/11/25 16:57:42 roberto Exp $ -->
 
 
 
@@ -3361,7 +3361,7 @@ will have as a sequence;
 parameter <code>nrec</code> is a hint for how many other elements
 the table will have.
 Lua may use these hints to preallocate memory for the new table.
-This pre-allocation is useful for performance when you know in advance
+This preallocation is useful for performance when you know in advance
 how many elements the table will have.
 Otherwise you can use the function <a href="#lua_newtable"><code>lua_newtable</code></a>.
 
@@ -8207,9 +8207,11 @@ Options <code>c</code>, <code>d</code>,
 <code>i</code>, <code>o</code>, <code>u</code>, <code>X</code>, and <code>x</code>
 expect an integer.
 Option <code>q</code> expects a string.
-Option <code>s</code> expects a string without embedded zeros;
+Option <code>s</code> expects a string;
 if its argument is not a string,
 it is converted to one following the same rules of <a href="#pdf-tostring"><code>tostring</code></a>.
+If the option has any modifier (flags, width, length),
+the string argument should not contain embedded zeros.
 
 
 <p>
@@ -10823,7 +10825,7 @@ and LiteralString, see <a href="#3.1">&sect;3.1</a>.)
 
 <P CLASS="footer">
 Last update:
-Wed Nov 18 17:07:02 BRST 2015
+Wed Nov 25 15:19:10 BRST 2015
 </P>
 <!--
 Last change: revised for Lua 5.3.2

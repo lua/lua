@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.102 2015/10/26 14:27:47 roberto Exp $
+** $Id: lcode.c,v 2.103 2015/11/19 19:16:22 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -816,7 +816,7 @@ static void codeexpval (FuncState *fs, OpCode op,
       freeexp(fs, e1);
     }
     e1->u.info = luaK_codeABC(fs, op, 0, o1, o2);  /* generate opcode */
-    e1->k = VRELOCABLE;  /* all those operations are relocable */
+    e1->k = VRELOCABLE;  /* all those operations are relocatable */
     luaK_fixline(fs, line);
   }
 }

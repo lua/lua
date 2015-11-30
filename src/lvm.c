@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.263 2015/11/17 16:00:28 roberto Exp $
+** $Id: lvm.c,v 2.265 2015/11/23 11:30:45 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1051,7 +1051,7 @@ void luaV_execute (lua_State *L) {
         StkId rb;
         L->top = base + c + 1;  /* mark the end of concat operands */
         Protect(luaV_concat(L, c - b + 1));
-        ra = RA(i);  /* 'luav_concat' may invoke TMs and move the stack */
+        ra = RA(i);  /* 'luaV_concat' may invoke TMs and move the stack */
         rb = base + b;
         setobjs2s(L, ra, rb);
         checkGC(L, (ra >= rb ? ra + 1 : rb));
@@ -1254,7 +1254,7 @@ void luaV_execute (lua_State *L) {
         h = hvalue(ra);
         last = ((c-1)*LFIELDS_PER_FLUSH) + n;
         if (last > h->sizearray)  /* needs more space? */
-          luaH_resizearray(L, h, last);  /* pre-allocate it at once */
+          luaH_resizearray(L, h, last);  /* preallocate it at once */
         for (; n > 0; n--) {
           TValue *val = ra+n;
           luaH_setint(L, h, last--, val);

@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.140 2015/10/21 18:40:47 roberto Exp $
+** $Id: llimits.h,v 1.141 2015/11/19 19:16:22 roberto Exp $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -207,7 +207,7 @@ typedef unsigned long Instruction;
 
 
 /*
-** macros that are executed whenether program enters the Lua core
+** macros that are executed whenever program enters the Lua core
 ** ('lua_lock') and leaves the core ('lua_unlock')
 */
 #if !defined(lua_lock)

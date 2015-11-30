@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.116 2015/11/03 18:35:21 roberto Exp $
+** $Id: ltable.c,v 2.117 2015/11/19 19:16:22 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -85,7 +85,7 @@ static const Node dummynode_ = {
 /*
 ** Hash for floating-point numbers.
 ** The main computation should be just
-**     n = frepx(n, &i); return (n * INT_MAX) + i
+**     n = frexp(n, &i); return (n * INT_MAX) + i
 ** but there are some numerical subtleties.
 ** In a two-complement representation, INT_MAX does not has an exact
 ** representation as a float, but INT_MIN does; because the absolute
