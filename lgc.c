@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.209 2015/11/02 18:48:07 roberto Exp roberto $
+** $Id: lgc.c,v 2.210 2015/11/03 18:10:44 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -856,10 +856,10 @@ static int runafewfinalizers (lua_State *L) {
 /*
 ** call all pending finalizers
 */
-static void callallpendingfinalizers (lua_State *L, int propagateerrors) {
+static void callallpendingfinalizers (lua_State *L) {
   global_State *g = G(L);
   while (g->tobefnz)
-    GCTM(L, propagateerrors);
+    GCTM(L, 0);
 }
 
 
@@ -971,7 +971,7 @@ void luaC_freeallobjects (lua_State *L) {
   global_State *g = G(L);
   separatetobefnz(g, 1);  /* separate all objects with finalizers */
   lua_assert(g->finobj == NULL);
-  callallpendingfinalizers(L, 0);
+  callallpendingfinalizers(L);
   lua_assert(g->tobefnz == NULL);
   g->currentwhite = WHITEBITS; /* this "white" makes all objects look dead */
   g->gckind = KGC_NORMAL;
