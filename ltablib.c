@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.89 2015/11/24 16:54:32 roberto Exp roberto $
+** $Id: ltablib.c,v 1.90 2015/11/25 12:48:57 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -232,6 +232,10 @@ static int unpack (lua_State *L) {
 */
 
 
+/* type for array indices */
+typedef unsigned int IdxT;
+
+
 /*
 ** Produce a "random" 'unsigned int' to randomize pivot choice. This
 ** macro is used only when 'sort' detects a big imbalance in the result
@@ -270,7 +274,7 @@ static unsigned int l_randomizePivot (void) {
 #define RANLIMIT	100u
 
 
-static void set2 (lua_State *L, unsigned int i, unsigned int j) {
+static void set2 (lua_State *L, IdxT i, IdxT j) {
   lua_seti(L, 1, i);
   lua_seti(L, 1, j);
 }
@@ -303,10 +307,9 @@ static int sort_comp (lua_State *L, int a, int b) {
 ** Pos-condition: a[lo .. i - 1] <= a[i] == P <= a[i + 1 .. up]
 ** returns 'i'.
 */
-static unsigned int partition (lua_State *L, unsigned int lo,
-                                             unsigned int up) {
-  unsigned int i = lo;  /* will be incremented before first use */
-  unsigned int j = up - 1;  /* will be decremented before first use */
+static IdxT partition (lua_State *L, IdxT lo, IdxT up) {
+  IdxT i = lo;  /* will be incremented before first use */
+  IdxT j = up - 1;  /* will be decremented before first use */
   /* loop invariant: a[lo .. i] <= P <= a[j .. up] */
   for (;;) {
     /* next loop: repeat ++i while a[i] < P */
@@ -340,10 +343,9 @@ static unsigned int partition (lua_State *L, unsigned int lo,
 ** Choose an element in the middle (2nd-3th quarters) of [lo,up]
 ** "randomized" by 'rnd'
 */
-static unsigned int choosePivot (unsigned int lo, unsigned int up,
-                                 unsigned int rnd) {
-  unsigned int r4 = (unsigned int)(up - lo) / 4u;  /* range/4 */
-  unsigned int p = rnd % (r4 * 2) + (lo + r4);
+static IdxT choosePivot (IdxT lo, IdxT up, unsigned int rnd) {
+  IdxT r4 = (up - lo) / 4;  /* range/4 */
+  IdxT p = rnd % (r4 * 2) + (lo + r4);
   lua_assert(lo + r4 <= p && p <= up - r4);
   return p;
 }
@@ -352,11 +354,11 @@ static unsigned int choosePivot (unsigned int lo, unsigned int up,
 /*
 ** QuickSort algorithm (recursive function)
 */
-static void auxsort (lua_State *L, unsigned int lo, unsigned int up,
+static void auxsort (lua_State *L, IdxT lo, IdxT up,
                                    unsigned int rnd) {
   while (lo < up) {  /* loop for tail recursion */
-    unsigned int p;  /* Pivot index */
-    unsigned int n;  /* to be used later */
+    IdxT p;  /* Pivot index */
+    IdxT n;  /* to be used later */
     /* sort elements 'lo', 'p', and 'up' */
     lua_geti(L, 1, lo);
     lua_geti(L, 1, up);
@@ -400,7 +402,7 @@ static void auxsort (lua_State *L, unsigned int lo, unsigned int up,
       n = up - p;  /* size of smaller interval */
       up = p - 1;  /* tail call for [lo .. p - 1]  (lower interval) */
     }
-    if ((up - lo) / 128u > n) /* partition too imbalanced? */
+    if ((up - lo) / 128 > n) /* partition too imbalanced? */
       rnd = l_randomizePivot();  /* try a new randomization */
   }  /* tail call auxsort(L, lo, up, rnd) */
 }
@@ -410,11 +412,10 @@ static int sort (lua_State *L) {
   lua_Integer n = aux_getn(L, 1, TAB_RW);
   if (n > 1) {  /* non-trivial interval? */
     luaL_argcheck(L, n < INT_MAX, 1, "array too big");
-    luaL_checkstack(L, 40, "");  /* assume array is smaller than 2^40 */
     if (!lua_isnoneornil(L, 2))  /* is there a 2nd argument? */
       luaL_checktype(L, 2, LUA_TFUNCTION);  /* must be a function */
     lua_settop(L, 2);  /* make sure there are two arguments */
-    auxsort(L, 1, (unsigned int)n, 0u);
+    auxsort(L, 1, (IdxT)n, 0);
   }
   return 0;
 }
