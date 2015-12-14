@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.107 2015/11/02 14:02:35 roberto Exp roberto $
+** $Id: lobject.c,v 2.108 2015/11/02 16:09:30 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -351,8 +351,10 @@ static void pushstr (lua_State *L, const char *str, size_t l) {
 }
 
 
-/* this function handles only '%d', '%c', '%f', '%p', and '%s' 
-   conventional formats, plus Lua-specific '%I' and '%U' */
+/*
+** this function handles only '%d', '%c', '%f', '%p', and '%s' 
+   conventional formats, plus Lua-specific '%I' and '%U'
+*/
 const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
   int n = 0;
   for (;;) {
@@ -360,13 +362,13 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
     if (e == NULL) break;
     pushstr(L, fmt, e - fmt);
     switch (*(e+1)) {
-      case 's': {
+      case 's': {  /* zero-terminated string */
         const char *s = va_arg(argp, char *);
         if (s == NULL) s = "(null)";
         pushstr(L, s, strlen(s));
         break;
       }
-      case 'c': {
+      case 'c': {  /* an 'int' as a character */
         char buff = cast(char, va_arg(argp, int));
         if (lisprint(cast_uchar(buff)))
           pushstr(L, &buff, 1);
@@ -374,28 +376,28 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
           luaO_pushfstring(L, "<\\%d>", cast_uchar(buff));
         break;
       }
-      case 'd': {
+      case 'd': {  /* an 'int' */
         setivalue(L->top, va_arg(argp, int));
         goto top2str;
       }
-      case 'I': {
+      case 'I': {  /* a 'lua_Integer' */
         setivalue(L->top, cast(lua_Integer, va_arg(argp, l_uacInt)));
         goto top2str;
       }
-      case 'f': {
+      case 'f': {  /* a 'lua_Number' */
         setfltvalue(L->top, cast_num(va_arg(argp, l_uacNumber)));
-      top2str:
+      top2str:  /* convert the top element to a string */
         luaD_inctop(L);
         luaO_tostring(L, L->top - 1);
         break;
       }
-      case 'p': {
+      case 'p': {  /* a pointer */
         char buff[4*sizeof(void *) + 8]; /* should be enough space for a '%p' */
         int l = l_sprintf(buff, sizeof(buff), "%p", va_arg(argp, void *));
         pushstr(L, buff, l);
         break;
       }
-      case 'U': {
+      case 'U': {  /* an 'int' as a UTF-8 sequence */
         char buff[UTF8BUFFSZ];
         int l = luaO_utf8esc(buff, cast(long, va_arg(argp, long)));
         pushstr(L, buff + UTF8BUFFSZ - l, l);
