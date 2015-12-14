@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.283 2015/10/06 16:10:22 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.284 2015/11/19 19:16:22 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -198,6 +198,10 @@ static void tag_error (lua_State *L, int arg, int tag) {
 }
 
 
+/*
+** The use of 'lua_pushfstring' ensures this function does not
+** need reserved stack space when called.
+*/
 LUALIB_API void luaL_where (lua_State *L, int level) {
   lua_Debug ar;
   if (lua_getstack(L, level, &ar)) {  /* check function at level */
@@ -207,10 +211,14 @@ LUALIB_API void luaL_where (lua_State *L, int level) {
       return;
     }
   }
-  lua_pushliteral(L, "");  /* else, no information available... */
+  lua_pushfstring(L, "");  /* else, no information available... */
 }
 
 
+/*
+** Again, the use of 'lua_pushvfstring' ensures this function does
+** not need reserved stack space when called.
+*/
 LUALIB_API int luaL_error (lua_State *L, const char *fmt, ...) {
   va_list argp;
   va_start(argp, fmt);
@@ -349,9 +357,17 @@ LUALIB_API int luaL_checkoption (lua_State *L, int arg, const char *def,
 }
 
 
+/*
+** Ensures the stack has at least 'space' extra slots, raising
+** an error if it cannot fulfill the request. It adds some
+** extra space so that, next time it is called (this function
+** is typically called inside a loop), it has space to format
+** the error message. (In case of an error without this extra
+** space, Lua will generate the same 'stack overflow' error,
+** but without 'msg'.)
+*/
 LUALIB_API void luaL_checkstack (lua_State *L, int space, const char *msg) {
-  /* keep some extra space to run error routines, if needed */
-  const int extra = LUA_MINSTACK;
+  const int extra = 5;  /* extra space to run error routines */
   if (!lua_checkstack(L, space + extra)) {
     if (msg)
       luaL_error(L, "stack overflow (%s)", msg);
@@ -678,7 +694,7 @@ static int skipcomment (LoadF *lf, int *cp) {
   if (c == '#') {  /* first line is a comment (Unix exec. file)? */
     do {  /* skip first line */
       c = getc(lf->f);
-    } while (c != EOF && c != '\n') ;
+    } while (c != EOF && c != '\n');
     *cp = getc(lf->f);  /* skip end-of-line, if present */
     return 1;  /* there was a comment */
   }
