@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.116 2015/10/22 14:40:47 roberto Exp roberto $
+** $Id: ldebug.c,v 2.117 2015/11/02 18:48:07 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -69,7 +69,13 @@ static void swapextra (lua_State *L) {
 
 
 /*
-** this function can be called asynchronous (e.g. during a signal)
+** This function can be called asynchronous (e.g. during a signal).
+** Fields 'oldpc', 'basehookcount', and 'hookcount' (set by
+** 'resethookcount') are for debug only, and it is no problem if they
+** get arbitrary values (causes at most one wrong hook call). 'hookmask'
+** is an atomic value. We assume that pointers are atomic too (e.g., gcc
+** ensures that for all platforms where it runs). Moreover, 'hook' is
+** always checked before being called (see 'luaD_hook').
 */
 LUA_API void lua_sethook (lua_State *L, lua_Hook func, int mask, int count) {
   if (func == NULL || mask == 0) {  /* turn off hooks? */
