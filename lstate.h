@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.128 2015/11/13 12:16:51 roberto Exp roberto $
+** $Id: lstate.h,v 2.129 2015/12/14 11:54:49 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -171,7 +171,7 @@ struct lua_State {
   struct lua_State *twups;  /* list of threads with open upvalues */
   struct lua_longjmp *errorJmp;  /* current error recover point */
   CallInfo base_ci;  /* CallInfo for first level (C calling Lua) */
-  lua_Hook hook;
+  volatile lua_Hook hook;
   ptrdiff_t errfunc;  /* current error handling function (stack index) */
   int stacksize;
   int basehookcount;
