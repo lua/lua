@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.73 2014/06/19 18:27:20 roberto Exp roberto $
+** $Id: lparser.h,v 1.74 2014/10/25 11:50:46 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -13,25 +13,35 @@
 
 
 /*
-** Expression descriptor
+** Expression descriptor.
+** Code generation for expressions can be delayed to allow
+** optimizations; An 'expdesc' structure describes a
+** potentially-delayed expression.
 */
 
+/* kinds of expressions */
 typedef enum {
-  VVOID,	/* no value */
-  VNIL,
-  VTRUE,
-  VFALSE,
-  VK,		/* info = index of constant in 'k' */
-  VKFLT,	/* nval = numerical float value */
-  VKINT,	/* nval = numerical integer value */
-  VNONRELOC,	/* info = result register */
-  VLOCAL,	/* info = local register */
-  VUPVAL,       /* info = index of upvalue in 'upvalues' */
-  VINDEXED,	/* t = table register/upvalue; idx = index R/K */
-  VJMP,		/* info = instruction pc */
-  VRELOCABLE,	/* info = instruction pc */
-  VCALL,	/* info = instruction pc */
-  VVARARG	/* info = instruction pc */
+  VVOID,  /* expression has no value */
+  VNIL,  /* constant nil */
+  VTRUE,  /* constant true */
+  VFALSE,  /* constant false */
+  VK,  /* constant in 'k'; info = index of constant in 'k' */
+  VKFLT,  /* floating constant; nval = numerical float value */
+  VKINT,  /* integer constant; nval = numerical integer value */
+  VNONRELOC,  /* expression has its value in a fixed register;
+                 info = result register */
+  VLOCAL,  /* local variable; info = local register */
+  VUPVAL,  /* upvalue; info = index of upvalue in 'upvalues' */
+  VINDEXED,  /* indexed expression;
+                ind.vt = whether 't' is register or upvalue;
+                ind.t = table register or upvalue;
+                ind.idx = index as R/K */
+  VJMP,  /* expression is a test/comparison;
+            info = pc of corresponding jump instruction */
+  VRELOCABLE,  /* expression can put result in any register;
+                  info = instruction pc */
+  VCALL,  /* expression is a function call; info = instruction pc */
+  VVARARG  /* vararg expression; info = instruction pc */
 } expkind;
 
 
