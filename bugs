@@ -3465,7 +3465,7 @@ patch = [[
 Bug{
 what = [['io.lines' does not check maximum number of options]],
 report = [[Patrick Donnell, 2015/07/10]],
-since = [[3.0]],
+since = [[5.3.0]],
 fix = nil,
 example = [[
 -- can segfault in some machines
@@ -3491,6 +3491,53 @@ patch = [[
    lua_pushinteger(L, n);  /* number of arguments to read */
    lua_pushboolean(L, toclose);  /* close/not close file when finished */
    lua_rotate(L, 2, 2);  /* move 'n' and 'toclose' to their positions */
+]]
+}
+
+
+-----------------------------------------------------------------
+-- Lua 5.3.2
+
+Bug{
+what = [[Metatable may access its own dealocated field when
+it has a self reference in __newindex]],
+report = [[actboy168@gmail.com, 2016/01/01]],
+since = [[5.3.2]],
+fix = nil,
+example = [[
+local mt = {}
+mt.__newindex = mt
+local t = setmetatable({}, mt)
+t[1] = 1     -- will segfault on some machines
+]],
+patch = [[
+--- lvm.c	2015/11/23 11:30:45	2.265
++++ lvm.c	2016/01/01 14:34:12
+@@ -190,18 +190,19 @@
+   for (loop = 0; loop < MAXTAGLOOP; loop++) {
+     const TValue *tm;
+     if (oldval != NULL) {
+-      lua_assert(ttistable(t) && ttisnil(oldval));
++      Table *h = hvalue(t);  /* save 't' table */
++      lua_assert(ttisnil(oldval));
+       /* must check the metamethod */
+-      if ((tm = fasttm(L, hvalue(t)->metatable, TM_NEWINDEX)) == NULL &&
++      if ((tm = fasttm(L, h->metatable, TM_NEWINDEX)) == NULL &&
+          /* no metamethod; is there a previous entry in the table? */
+          (oldval != luaO_nilobject ||
+          /* no previous entry; must create one. (The next test is
+             always true; we only need the assignment.) */
+-         (oldval = luaH_newkey(L, hvalue(t), key), 1))) {
++         (oldval = luaH_newkey(L, h, key), 1))) {
+         /* no metamethod and (now) there is an entry with given key */
+         setobj2t(L, cast(TValue *, oldval), val);
+-        invalidateTMcache(hvalue(t));
+-        luaC_barrierback(L, hvalue(t), val);
++        invalidateTMcache(h);
++        luaC_barrierback(L, h, val);
+         return;
+       }
+       /* else will try the metamethod */
 ]]
 }
 
