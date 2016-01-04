@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.264 2015/11/19 19:16:22 roberto Exp roberto $
+** $Id: lvm.c,v 2.265 2015/11/23 11:30:45 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -153,7 +153,7 @@ static int forlimit (const TValue *obj, lua_Integer *p, lua_Integer step,
 
 
 /*
-** Complete a table access: if 't' is a table, 'tm' has its metamethod;
+** Finish a table access: if 't' is a table, 'tm' has its metamethod;
 ** otherwise, 'tm' is NULL.
 */
 void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
@@ -176,32 +176,33 @@ void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
     }
     /* else repeat */
   }
-  luaG_runerror(L, "gettable chain too long; possible loop");
+  luaG_runerror(L, "'__index' chain too long; possible loop");
 }
 
 
 /*
-** Main function for table assignment (invoking metamethods if needed).
-** Compute 't[key] = val'
+** Finish a table assignment 't[key] = val'.
+** If 'oldval' is NULL, 't' is not a table.  Otherwise, 'oldval' points
+** to the entry 't[key]', or to 'luaO_nilobject' if there is no such
+** entry.  (The value at 'oldval' must be nil, otherwise 'luaV_fastset'
+** would have done the job.)
 */
 void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
                      StkId val, const TValue *oldval) {
   int loop;  /* counter to avoid infinite loops */
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
-    const TValue *tm;
-    if (oldval != NULL) {
-      lua_assert(ttistable(t) && ttisnil(oldval));
-      /* must check the metamethod */
-      if ((tm = fasttm(L, hvalue(t)->metatable, TM_NEWINDEX)) == NULL &&
-         /* no metamethod; is there a previous entry in the table? */
-         (oldval != luaO_nilobject ||
-         /* no previous entry; must create one. (The next test is
-            always true; we only need the assignment.) */
-         (oldval = luaH_newkey(L, hvalue(t), key), 1))) {
+    const TValue *tm;  /* '__newindex' metamethod */
+    if (oldval != NULL) {  /* is 't' a table? */
+      Table *h = hvalue(t);  /* save 't' table */
+      lua_assert(ttisnil(oldval));  /* old value must be nil */
+      tm = fasttm(L, h->metatable, TM_NEWINDEX);  /* get metamethod */
+      if (tm == NULL) {  /* no metamethod? */
+        if (oldval == luaO_nilobject)  /* no previous entry? */
+          oldval = luaH_newkey(L, h, key);  /* create one */
         /* no metamethod and (now) there is an entry with given key */
-        setobj2t(L, cast(TValue *, oldval), val);
-        invalidateTMcache(hvalue(t));
-        luaC_barrierback(L, hvalue(t), val);
+        setobj2t(L, cast(TValue *, oldval), val);  /* set its new value */
+        invalidateTMcache(h);
+        luaC_barrierback(L, h, val);
         return;
       }
       /* else will try the metamethod */
@@ -220,7 +221,7 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
       return;  /* done */
     /* else loop */
   }
-  luaG_runerror(L, "settable chain too long; possible loop");
+  luaG_runerror(L, "'__newindex' chain too long; possible loop");
 }
 
 
@@ -744,8 +745,8 @@ void luaV_finishOp (lua_State *L) {
 
 
 /*
-** copy of 'luaV_gettable', but protecting call to potential metamethod
-** (which can reallocate the stack)
+** copy of 'luaV_gettable', but protecting the call to potential
+** metamethod (which can reallocate the stack)
 */
 #define gettableProtected(L,t,k,v)  { const TValue *aux; \
   if (luaV_fastget(L,t,k,aux,luaH_get)) { setobj2s(L, v, aux); } \
