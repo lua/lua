@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.106 2015/12/18 13:53:36 roberto Exp roberto $
+** $Id: lcode.c,v 2.107 2016/01/04 13:40:57 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -514,11 +514,12 @@ static int nilK (FuncState *fs) {
 */
 void luaK_setreturns (FuncState *fs, expdesc *e, int nresults) {
   if (e->k == VCALL) {  /* expression is an open function call? */
-    SETARG_C(getcode(fs, e), nresults+1);
+    SETARG_C(getinstruction(fs, e), nresults + 1);
   }
   else if (e->k == VVARARG) {
-    SETARG_B(getcode(fs, e), nresults+1);
-    SETARG_A(getcode(fs, e), fs->freereg);
+    Instruction *pc = &getinstruction(fs, e);
+    SETARG_B(*pc, nresults + 1);
+    SETARG_A(*pc, fs->freereg);
     luaK_reserveregs(fs, 1);
   }
   else lua_assert(nresults == LUA_MULTRET);
@@ -537,12 +538,13 @@ void luaK_setreturns (FuncState *fs, expdesc *e, int nresults) {
 */
 void luaK_setoneret (FuncState *fs, expdesc *e) {
   if (e->k == VCALL) {  /* expression is an open function call? */
-    lua_assert(GETARG_C(getcode(fs, e)) == 2);  /* already returns 1 value */
+    /* already returns 1 value */
+    lua_assert(GETARG_C(getinstruction(fs, e)) == 2);
     e->k = VNONRELOC;  /* result has fixed position */
-    e->u.info = GETARG_A(getcode(fs, e));
+    e->u.info = GETARG_A(getinstruction(fs, e));
   }
   else if (e->k == VVARARG) {
-    SETARG_B(getcode(fs, e), 2);
+    SETARG_B(getinstruction(fs, e), 2);
     e->k = VRELOCABLE;  /* can relocate its simple result */
   }
 }
@@ -614,7 +616,7 @@ static void discharge2reg (FuncState *fs, expdesc *e, int reg) {
       break;
     }
     case VRELOCABLE: {
-      Instruction *pc = &getcode(fs, e);
+      Instruction *pc = &getinstruction(fs, e);
       SETARG_A(*pc, reg);  /* instruction will put result in 'reg' */
       break;
     }
@@ -836,7 +838,7 @@ static void negatecondition (FuncState *fs, expdesc *e) {
 */
 static int jumponcond (FuncState *fs, expdesc *e, int cond) {
   if (e->k == VRELOCABLE) {
-    Instruction ie = getcode(fs, e);
+    Instruction ie = getinstruction(fs, e);
     if (GET_OPCODE(ie) == OP_NOT) {
       fs->pc--;  /* remove previous OP_NOT */
       return condjump(fs, OP_TEST, GETARG_B(ie), 0, !cond);
@@ -1134,10 +1136,11 @@ void luaK_posfix (FuncState *fs, BinOpr op,
     }
     case OPR_CONCAT: {
       luaK_exp2val(fs, e2);
-      if (e2->k == VRELOCABLE && GET_OPCODE(getcode(fs, e2)) == OP_CONCAT) {
-        lua_assert(e1->u.info == GETARG_B(getcode(fs, e2))-1);
+      if (e2->k == VRELOCABLE &&
+          GET_OPCODE(getinstruction(fs, e2)) == OP_CONCAT) {
+        lua_assert(e1->u.info == GETARG_B(getinstruction(fs, e2))-1);
         freeexp(fs, e1);
-        SETARG_B(getcode(fs, e2), e1->u.info);
+        SETARG_B(getinstruction(fs, e2), e1->u.info);
         e1->k = VRELOCABLE; e1->u.info = e2->u.info;
       }
       else {
