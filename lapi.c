@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.256 2015/10/06 16:10:22 roberto Exp roberto $
+** $Id: lapi.c,v 2.257 2015/11/02 18:48:07 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -585,16 +585,16 @@ LUA_API int lua_pushthread (lua_State *L) {
 
 
 static int auxgetstr (lua_State *L, const TValue *t, const char *k) {
-  const TValue *aux;
+  const TValue *slot;
   TString *str = luaS_new(L, k);
-  if (luaV_fastget(L, t, str, aux, luaH_getstr)) {
-    setobj2s(L, L->top, aux);
+  if (luaV_fastget(L, t, str, slot, luaH_getstr)) {
+    setobj2s(L, L->top, slot);
     api_incr_top(L);
   }
   else {
     setsvalue2s(L, L->top, str);
     api_incr_top(L);
-    luaV_finishget(L, t, L->top - 1, L->top - 1, aux);
+    luaV_finishget(L, t, L->top - 1, L->top - 1, slot);
   }
   lua_unlock(L);
   return ttnov(L->top - 1);
@@ -626,17 +626,17 @@ LUA_API int lua_getfield (lua_State *L, int idx, const char *k) {
 
 LUA_API int lua_geti (lua_State *L, int idx, lua_Integer n) {
   StkId t;
-  const TValue *aux;
+  const TValue *slot;
   lua_lock(L);
   t = index2addr(L, idx);
-  if (luaV_fastget(L, t, n, aux, luaH_getint)) {
-    setobj2s(L, L->top, aux);
+  if (luaV_fastget(L, t, n, slot, luaH_getint)) {
+    setobj2s(L, L->top, slot);
     api_incr_top(L);
   }
   else {
     setivalue(L->top, n);
     api_incr_top(L);
-    luaV_finishget(L, t, L->top - 1, L->top - 1, aux);
+    luaV_finishget(L, t, L->top - 1, L->top - 1, slot);
   }
   lua_unlock(L);
   return ttnov(L->top - 1);
@@ -740,15 +740,15 @@ LUA_API int lua_getuservalue (lua_State *L, int idx) {
 ** t[k] = value at the top of the stack (where 'k' is a string)
 */
 static void auxsetstr (lua_State *L, const TValue *t, const char *k) {
-  const TValue *aux;
+  const TValue *slot;
   TString *str = luaS_new(L, k);
   api_checknelems(L, 1);
-  if (luaV_fastset(L, t, str, aux, luaH_getstr, L->top - 1))
+  if (luaV_fastset(L, t, str, slot, luaH_getstr, L->top - 1))
     L->top--;  /* pop value */
   else {
     setsvalue2s(L, L->top, str);  /* push 'str' (to make it a TValue) */
     api_incr_top(L);
-    luaV_finishset(L, t, L->top - 1, L->top - 2, aux);
+    luaV_finishset(L, t, L->top - 1, L->top - 2, slot);
     L->top -= 2;  /* pop value and key */
   }
   lua_unlock(L);  /* lock done by caller */
@@ -781,16 +781,16 @@ LUA_API void lua_setfield (lua_State *L, int idx, const char *k) {
 
 LUA_API void lua_seti (lua_State *L, int idx, lua_Integer n) {
   StkId t;
-  const TValue *aux;
+  const TValue *slot;
   lua_lock(L);
   api_checknelems(L, 1);
   t = index2addr(L, idx);
-  if (luaV_fastset(L, t, n, aux, luaH_getint, L->top - 1))
+  if (luaV_fastset(L, t, n, slot, luaH_getint, L->top - 1))
     L->top--;  /* pop value */
   else {
     setivalue(L->top, n);
     api_incr_top(L);
-    luaV_finishset(L, t, L->top - 1, L->top - 2, aux);
+    luaV_finishset(L, t, L->top - 1, L->top - 2, slot);
     L->top -= 2;  /* pop value and key */
   }
   lua_unlock(L);
