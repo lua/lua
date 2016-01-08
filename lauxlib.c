@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.284 2015/11/19 19:16:22 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.285 2015/12/14 11:59:27 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -17,7 +17,8 @@
 #include <string.h>
 
 
-/* This file uses only the official API of Lua.
+/*
+** This file uses only the official API of Lua.
 ** Any function declared here could be written as an application function.
 */
 
@@ -217,7 +218,8 @@ LUALIB_API void luaL_where (lua_State *L, int level) {
 
 /*
 ** Again, the use of 'lua_pushvfstring' ensures this function does
-** not need reserved stack space when called.
+** not need reserved stack space when called. (At worst, it generates
+** an error with "stack overflow" instead of the given message.)
 */
 LUALIB_API int luaL_error (lua_State *L, const char *fmt, ...) {
   va_list argp;
@@ -358,17 +360,14 @@ LUALIB_API int luaL_checkoption (lua_State *L, int arg, const char *def,
 
 
 /*
-** Ensures the stack has at least 'space' extra slots, raising
-** an error if it cannot fulfill the request. It adds some
-** extra space so that, next time it is called (this function
-** is typically called inside a loop), it has space to format
-** the error message. (In case of an error without this extra
-** space, Lua will generate the same 'stack overflow' error,
+** Ensures the stack has at least 'space' extra slots, raising an error
+** if it cannot fulfill the request. (The error handling needs a few
+** extra slots to format the error message. In case of an error without
+** this extra space, Lua will generate the same 'stack overflow' error,
 ** but without 'msg'.)
 */
 LUALIB_API void luaL_checkstack (lua_State *L, int space, const char *msg) {
-  const int extra = 5;  /* extra space to run error routines */
-  if (!lua_checkstack(L, space + extra)) {
+  if (!lua_checkstack(L, space)) {
     if (msg)
       luaL_error(L, "stack overflow (%s)", msg);
     else
