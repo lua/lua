@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.266 2016/01/04 16:44:50 roberto Exp roberto $
+** $Id: lvm.c,v 2.267 2016/01/05 16:07:21 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -752,6 +752,16 @@ void luaV_finishOp (lua_State *L) {
            luai_threadyield(L); }
 
 
+/* fetch an instruction and prepare its execution */
+#define vmfetch()	{ \
+  i = *(ci->u.l.savedpc++); \
+  if (L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT)) \
+    Protect(luaG_traceexec(L)); \
+  ra = RA(i); /* WARNING: any stack reallocation invalidates 'ra' */ \
+  lua_assert(base == ci->u.l.base); \
+  lua_assert(base <= L->top && L->top < L->stack + L->stacksize); \
+}
+
 #define vmdispatch(o)	switch(o)
 #define vmcase(l)	case l:
 #define vmbreak		break
@@ -786,14 +796,9 @@ void luaV_execute (lua_State *L) {
   base = ci->u.l.base;  /* local copy of function's base */
   /* main loop of interpreter */
   for (;;) {
-    Instruction i = *(ci->u.l.savedpc++);
+    Instruction i;
     StkId ra;
-    if (L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT))
-      Protect(luaG_traceexec(L));
-    /* WARNING: several calls may realloc the stack and invalidate 'ra' */
-    ra = RA(i);
-    lua_assert(base == ci->u.l.base);
-    lua_assert(base <= L->top && L->top < L->stack + L->stacksize);
+    vmfetch();
     vmdispatch (GET_OPCODE(i)) {
       vmcase(OP_MOVE) {
         setobjs2s(L, ra, RB(i));
