@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.60 2015/11/19 19:16:22 roberto Exp roberto $
+** $Id: loslib.c,v 1.60 2015/11/19 19:16:22 roberto Exp $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -24,18 +24,32 @@
 
 /*
 ** {==================================================================
-** list of valid conversion specifiers for the 'strftime' function
+** List of valid conversion specifiers for the 'strftime' function;
+** each option ends with a '|'.
 ** ===================================================================
 */
 #if !defined(LUA_STRFTIMEOPTIONS)	/* { */
 
-#if defined(LUA_USE_C89)
-#define LUA_STRFTIMEOPTIONS	{ "aAbBcdHIjmMpSUwWxXyYz%", "" }
+/* options for ANSI C 89 */
+#define L_STRFTIMEC89 \
+	"a|A|b|B|c|d|H|I|j|m|M|p|S|U|w|W|x|X|y|Y|Z|%|"
+
+/* options for ISO C 99 and POSIX */
+#define L_STRFTIMEC99 \
+	L_STRFTIMEC89 "C|D|e|F|g|G|h|n|r|R|t|T|u|V|z|" \
+	"Ec|EC|Ex|EX|Ey|EY|" \
+	"Od|Oe|OH|OI|Om|OM|OS|Ou|OU|OV|Ow|OW|Oy|"
+
+/* options for Windows */
+#define L_STRFTIMEWIN \
+	L_STRFTIMEC89 "z|#c|#x|#d|#H|#I|#j|#m|#M|#S|#U|#w|#W|#y|#Y|"
+
+#if defined(LUA_USE_WINDOWS)
+#define LUA_STRFTIMEOPTIONS	L_STRFTIMEWIN
+#elif defined(LUA_USE_C89)
+#define LUA_STRFTIMEOPTIONS	L_STRFTIMEC89
 #else  /* C99 specification */
-#define LUA_STRFTIMEOPTIONS \
-	{ "aAbBcCdDeFgGhHIjmMnprRStTuUVwWxXyYzZ%", "", \
-	  "E", "cCxXyY",  \
-	  "O", "deHImMSuUVwWy" }
+#define LUA_STRFTIMEOPTIONS	L_STRFTIMEC99
 #endif
 
 #endif					/* } */
@@ -230,22 +244,17 @@ static int getfield (lua_State *L, const char *key, int d, int delta) {
 
 
 static const char *checkoption (lua_State *L, const char *conv, char *buff) {
-  static const char *const options[] = LUA_STRFTIMEOPTIONS;
-  unsigned int i;
-  for (i = 0; i < sizeof(options)/sizeof(options[0]); i += 2) {
-    if (*conv != '\0' && strchr(options[i], *conv) != NULL) {
-      buff[1] = *conv;
-      if (*options[i + 1] == '\0') {  /* one-char conversion specifier? */
-        buff[2] = '\0';  /* end buffer */
-        return conv + 1;
-      }
-      else if (*(conv + 1) != '\0' &&
-               strchr(options[i + 1], *(conv + 1)) != NULL) {
-        buff[2] = *(conv + 1);  /* valid two-char conversion specifier */
-        buff[3] = '\0';  /* end buffer */
-        return conv + 2;
-      }
+  const char *option = LUA_STRFTIMEOPTIONS;
+  const char *opend;
+  while ((opend = strchr(option, '|')) != NULL) {  /* for each option */
+    ptrdiff_t oplen = opend - option;  /* get its length */
+    if (memcmp(conv, option, oplen) == 0) {  /* match? */
+      memcpy(buff, conv, oplen);  /* copy option to buffer */
+      buff[oplen] = '\0';
+      return conv + oplen;  /* return next item */
     }
+    else
+      option += oplen + 1;  /* step to next option */
   }
   luaL_argerror(L, 1,
     lua_pushfstring(L, "invalid conversion specifier '%%%s'", conv));
@@ -282,7 +291,7 @@ static int os_date (lua_State *L) {
     setboolfield(L, "isdst", stm->tm_isdst);
   }
   else {
-    char cc[4];
+    char cc[4];  /* buffer for individual conversion specifiers */
     luaL_Buffer b;
     cc[0] = '%';
     luaL_buffinit(L, &b);
@@ -292,7 +301,7 @@ static int os_date (lua_State *L) {
       else {
         size_t reslen;
         char *buff = luaL_prepbuffsize(&b, SIZETIMEFMT);
-        s = checkoption(L, s + 1, cc);
+        s = checkoption(L, s + 1, cc + 1);  /* copy specifier to 'cc' */
         reslen = strftime(buff, SIZETIMEFMT, cc, stm);
         luaL_addsize(&b, reslen);
       }
