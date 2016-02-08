@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.90 2015/11/25 12:48:57 roberto Exp roberto $
+** $Id: ltablib.c,v 1.91 2015/12/14 11:57:38 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -53,7 +53,7 @@ static void checktab (lua_State *L, int arg, int what) {
       lua_pop(L, n);  /* pop metatable and tested metamethods */
     }
     else
-      luaL_argerror(L, arg, "table expected");  /* force an error */
+      luaL_checktype(L, arg, LUA_TTABLE);  /* force an error */
   }
 }
 
@@ -172,7 +172,7 @@ static int tconcat (lua_State *L) {
   size_t lsep;
   const char *sep = luaL_optlstring(L, 2, "", &lsep);
   lua_Integer i = luaL_optinteger(L, 3, 1);
-  last = luaL_opt(L, luaL_checkinteger, 4, last);
+  last = luaL_optinteger(L, 4, last);
   luaL_buffinit(L, &b);
   for (; i < last; i++) {
     addfield(L, &b, i);
