@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.60 2015/11/19 19:16:22 roberto Exp $
+** $Id: loslib.c,v 1.62 2016/02/08 14:42:46 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -25,24 +25,21 @@
 /*
 ** {==================================================================
 ** List of valid conversion specifiers for the 'strftime' function;
-** each option ends with a '|'.
+** options are grouped by length; group of length 2 start with '||'.
 ** ===================================================================
 */
 #if !defined(LUA_STRFTIMEOPTIONS)	/* { */
 
 /* options for ANSI C 89 */
-#define L_STRFTIMEC89 \
-	"a|A|b|B|c|d|H|I|j|m|M|p|S|U|w|W|x|X|y|Y|Z|%|"
+#define L_STRFTIMEC89		"aAbBcdHIjmMpSUwWxXyYZ%"
 
 /* options for ISO C 99 and POSIX */
-#define L_STRFTIMEC99 \
-	L_STRFTIMEC89 "C|D|e|F|g|G|h|n|r|R|t|T|u|V|z|" \
-	"Ec|EC|Ex|EX|Ey|EY|" \
-	"Od|Oe|OH|OI|Om|OM|OS|Ou|OU|OV|Ow|OW|Oy|"
+#define L_STRFTIMEC99 "aAbBcCdDeFgGhHIjmMnprRStTuUVwWxXyYzZ%" \
+	"||" "EcECExEXEyEY" "OdOeOHOIOmOMOSOuOUOVOwOWOy"
 
 /* options for Windows */
-#define L_STRFTIMEWIN \
-	L_STRFTIMEC89 "z|#c|#x|#d|#H|#I|#j|#m|#M|#S|#U|#w|#W|#y|#Y|"
+#define L_STRFTIMEWIN "aAbBcdHIjmMpSUwWxXyYzZ%" \
+	"||" "#c#x#d#H#I#j#m#M#S#U#w#W#y#Y"
 
 #if defined(LUA_USE_WINDOWS)
 #define LUA_STRFTIMEOPTIONS	L_STRFTIMEWIN
@@ -244,17 +241,16 @@ static int getfield (lua_State *L, const char *key, int d, int delta) {
 
 
 static const char *checkoption (lua_State *L, const char *conv, char *buff) {
-  const char *option = LUA_STRFTIMEOPTIONS;
-  const char *opend;
-  while ((opend = strchr(option, '|')) != NULL) {  /* for each option */
-    ptrdiff_t oplen = opend - option;  /* get its length */
-    if (memcmp(conv, option, oplen) == 0) {  /* match? */
-      memcpy(buff, conv, oplen);  /* copy option to buffer */
+  const char *option;
+  int oplen = 1;
+  for (option = LUA_STRFTIMEOPTIONS; *option != '\0'; option += oplen) {
+    if (*option == '|')  /* next block? */
+      oplen++;  /* next length */
+    else if (memcmp(conv, option, oplen) == 0) {  /* match? */
+      memcpy(buff, conv, oplen);  /* copy valid option to buffer */
       buff[oplen] = '\0';
       return conv + oplen;  /* return next item */
     }
-    else
-      option += oplen + 1;  /* step to next option */
   }
   luaL_argerror(L, 1,
     lua_pushfstring(L, "invalid conversion specifier '%%%s'", conv));
