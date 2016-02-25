@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.91 2015/12/14 11:57:38 roberto Exp roberto $
+** $Id: ltablib.c,v 1.92 2016/02/08 12:55:19 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -139,7 +139,7 @@ static int tmove (lua_State *L) {
     n = e - f + 1;  /* number of elements to move */
     luaL_argcheck(L, t <= LUA_MAXINTEGER - n + 1, 4,
                   "destination wrap around");
-    if (t > e || t <= f || tt != 1) {
+    if (t > e || t <= f || (tt != 1 && !lua_compare(L, 1, tt, LUA_OPEQ))) {
       for (i = 0; i < n; i++) {
         lua_geti(L, 1, f + i);
         lua_seti(L, tt, t + i);
@@ -152,7 +152,7 @@ static int tmove (lua_State *L) {
       }
     }
   }
-  lua_pushvalue(L, tt);  /* return "to table" */
+  lua_pushvalue(L, tt);  /* return destination table */
   return 1;
 }
 
