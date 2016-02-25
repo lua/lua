@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.238 2015/11/23 11:31:21 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.239 2015/11/25 16:28:17 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -931,7 +931,7 @@ static void addquoted (lua_State *L, luaL_Buffer *b, int arg) {
       luaL_addchar(b, '\\');
       luaL_addchar(b, *s);
     }
-    else if (*s == '\0' || iscntrl(uchar(*s))) {
+    else if (iscntrl(uchar(*s))) {
       char buff[10];
       if (!isdigit(uchar(*(s+1))))
         l_sprintf(buff, sizeof(buff), "\\%d", (int)uchar(*s));
