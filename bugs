@@ -3542,6 +3542,39 @@ patch = [[
 }
 
 
+Bug{
+what = [[label between local definitions can mix-up their initializations]],
+report = [[Karel Tuma, 2016/03/01]],
+since = [[5.2]],
+fix = nil,
+example = [[
+do
+  local k = 0
+  local x
+  ::foo::
+  local y       -- should be reset to nil after goto, but it is not
+  assert(not y)
+  y = true
+  k = k + 1
+  if k < 2 then goto foo end
+end
+]],
+patch = [[
+--- lparser.c	2015/11/02 16:09:30	2.149
++++ lparser.c	2016/03/03 12:03:37
+@@ -1226,7 +1226,7 @@
+   checkrepeated(fs, ll, label);  /* check for repeated labels */
+   checknext(ls, TK_DBCOLON);  /* skip double colon */
+   /* create new entry for this label */
+-  l = newlabelentry(ls, ll, label, line, fs->pc);
++  l = newlabelentry(ls, ll, label, line, luaK_getlabel(fs));
+   skipnoopstat(ls);  /* skip other no-op statements */
+   if (block_follow(ls, 0)) {  /* label is last no-op statement in the block? */
+     /* assume that locals are already out of scope */
+]]
+}
+
+
 --[=[
 Bug{
 what = [[ ]],
