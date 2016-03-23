@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.239 2015/11/25 16:28:17 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.240 2016/02/25 19:42:55 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -688,14 +688,13 @@ typedef struct GMatchState {
 static int gmatch_aux (lua_State *L) {
   GMatchState *gm = (GMatchState *)lua_touserdata(L, lua_upvalueindex(3));
   const char *src;
+  gm->ms.L = L;
   for (src = gm->src; src <= gm->ms.src_end; src++) {
     const char *e;
     reprepstate(&gm->ms);
     if ((e = match(&gm->ms, src, gm->p)) != NULL) {
-      if (e == src)  /* empty match? */
-        gm->src =src + 1;  /* go at least one position */
-      else
-        gm->src = e;
+      /* in empty matches, advance at least one position */
+      gm->src = (e == src) ? src + 1 : e;
       return push_captures(&gm->ms, src, e);
     }
   }

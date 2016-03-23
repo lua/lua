@@ -3575,6 +3575,33 @@ patch = [[
 }
 
 
+Bug{
+what = [['gmatch' iterator fails when called from a coroutine different
+from the one that created it]],
+report = [[Nagaev Boris, 2016/03/18]],
+since = [[5.3.2]],
+fix = nil,
+example = [[
+local f = string.gmatch("1 2 3 4 5", "%d+")
+print(f())     --> 1
+co = coroutine.wrap(f)
+print(co())    --> ??? (should be 2)
+]],
+patch = [[
+--- lstrlib.c	2016/02/25 19:42:55	1.240
++++ lstrlib.c	2016/03/21 17:27:07
+@@ -688,14 +688,13 @@
+ static int gmatch_aux (lua_State *L) {
+   GMatchState *gm = (GMatchState *)lua_touserdata(L, lua_upvalueindex(3));
+   const char *src;
++  gm->ms.L = L;
+   for (src = gm->src; src <= gm->ms.src_end; src++) {
+     const char *e;
+     reprepstate(&gm->ms);
+]]
+}
+
+
 --[=[
 Bug{
 what = [[ ]],
