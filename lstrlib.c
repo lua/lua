@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.240 2016/02/25 19:42:55 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.241 2016/03/23 17:12:17 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -777,12 +777,12 @@ static void add_value (MatchState *ms, luaL_Buffer *b, const char *s,
 
 static int str_gsub (lua_State *L) {
   size_t srcl, lp;
-  const char *src = luaL_checklstring(L, 1, &srcl);
-  const char *p = luaL_checklstring(L, 2, &lp);
-  int tr = lua_type(L, 3);
-  lua_Integer max_s = luaL_optinteger(L, 4, srcl + 1);
+  const char *src = luaL_checklstring(L, 1, &srcl);  /* subject */
+  const char *p = luaL_checklstring(L, 2, &lp);  /* pattern */
+  int tr = lua_type(L, 3);  /* replacement type */
+  lua_Integer max_s = luaL_optinteger(L, 4, srcl + 1);  /* max replacements */
   int anchor = (*p == '^');
-  lua_Integer n = 0;
+  lua_Integer n = 0;  /* replacement count */
   MatchState ms;
   luaL_Buffer b;
   luaL_argcheck(L, tr == LUA_TNUMBER || tr == LUA_TSTRING ||
@@ -795,16 +795,16 @@ static int str_gsub (lua_State *L) {
   prepstate(&ms, L, src, srcl, p, lp);
   while (n < max_s) {
     const char *e;
-    reprepstate(&ms);
-    if ((e = match(&ms, src, p)) != NULL) {
+    reprepstate(&ms);  /* (re)prepare state for new match */
+    if ((e = match(&ms, src, p)) != NULL) {  /* match? */
       n++;
-      add_value(&ms, &b, src, e, tr);
+      add_value(&ms, &b, src, e, tr);  /* add replacement to buffer */
     }
-    if (e && e>src) /* non empty match? */
+    if (e && e>src)  /* non empty match? */
       src = e;  /* skip it */
-    else if (src < ms.src_end)
+    else if (src < ms.src_end)  /* otherwise, skip one character */
       luaL_addchar(&b, *src++);
-    else break;
+    else break;  /* end of subject */
     if (anchor) break;
   }
   luaL_addlstring(&b, src, ms.src_end-src);
