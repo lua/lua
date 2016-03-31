@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.241 2016/03/23 17:12:17 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.242 2016/03/23 18:08:26 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -681,6 +681,7 @@ static int str_match (lua_State *L) {
 typedef struct GMatchState {
   const char *src;  /* current position */
   const char *p;  /* pattern */
+  const char *lastmatch;  /* end of last match */
   MatchState ms;  /* match state */
 } GMatchState;
 
@@ -692,9 +693,8 @@ static int gmatch_aux (lua_State *L) {
   for (src = gm->src; src <= gm->ms.src_end; src++) {
     const char *e;
     reprepstate(&gm->ms);
-    if ((e = match(&gm->ms, src, gm->p)) != NULL) {
-      /* in empty matches, advance at least one position */
-      gm->src = (e == src) ? src + 1 : e;
+    if ((e = match(&gm->ms, src, gm->p)) != NULL && e != gm->lastmatch) {
+      gm->src = gm->lastmatch = e;
       return push_captures(&gm->ms, src, e);
     }
   }
@@ -710,7 +710,7 @@ static int gmatch (lua_State *L) {
   lua_settop(L, 2);  /* keep them on closure to avoid being collected */
   gm = (GMatchState *)lua_newuserdata(L, sizeof(GMatchState));
   prepstate(&gm->ms, L, s, ls, p, lp);
-  gm->src = s; gm->p = p;
+  gm->src = s; gm->p = p; gm->lastmatch = NULL;
   lua_pushcclosure(L, gmatch_aux, 3);
   return 1;
 }
@@ -779,6 +779,7 @@ static int str_gsub (lua_State *L) {
   size_t srcl, lp;
   const char *src = luaL_checklstring(L, 1, &srcl);  /* subject */
   const char *p = luaL_checklstring(L, 2, &lp);  /* pattern */
+  const char *lastmatch = NULL;  /* end of last match */
   int tr = lua_type(L, 3);  /* replacement type */
   lua_Integer max_s = luaL_optinteger(L, 4, srcl + 1);  /* max replacements */
   int anchor = (*p == '^');
@@ -796,12 +797,11 @@ static int str_gsub (lua_State *L) {
   while (n < max_s) {
     const char *e;
     reprepstate(&ms);  /* (re)prepare state for new match */
-    if ((e = match(&ms, src, p)) != NULL) {  /* match? */
+    if ((e = match(&ms, src, p)) != NULL && e != lastmatch) {  /* match? */
       n++;
       add_value(&ms, &b, src, e, tr);  /* add replacement to buffer */
+      src = lastmatch = e;
     }
-    if (e && e>src)  /* non empty match? */
-      src = e;  /* skip it */
     else if (src < ms.src_end)  /* otherwise, skip one character */
       luaL_addchar(&b, *src++);
     else break;  /* end of subject */
