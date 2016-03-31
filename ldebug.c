@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.118 2015/12/16 16:40:07 roberto Exp roberto $
+** $Id: ldebug.c,v 2.119 2016/02/26 19:20:15 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -69,7 +69,7 @@ static void swapextra (lua_State *L) {
 
 
 /*
-** This function can be called asynchronous (e.g. during a signal).
+** This function can be called asynchronously (e.g. during a signal).
 ** Fields 'oldpc', 'basehookcount', and 'hookcount' (set by
 ** 'resethookcount') are for debug only, and it is no problem if they
 ** get arbitrary values (causes at most one wrong hook call). 'hookmask'
