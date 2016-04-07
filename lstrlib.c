@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.242 2016/03/23 18:08:26 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.243 2016/03/31 19:07:42 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -1069,8 +1069,8 @@ static int str_format (lua_State *L) {
 
 
 /* value used for padding */
-#if !defined(LUA_PACKPADBYTE)
-#define LUA_PACKPADBYTE		0x00
+#if !defined(LUAL_PACKPADBYTE)
+#define LUAL_PACKPADBYTE		0x00
 #endif
 
 /* maximum size for the binary representation of an integer */
@@ -1307,7 +1307,7 @@ static int str_pack (lua_State *L) {
     KOption opt = getdetails(&h, totalsize, &fmt, &size, &ntoalign);
     totalsize += ntoalign + size;
     while (ntoalign-- > 0)
-     luaL_addchar(&b, LUA_PACKPADBYTE);  /* fill alignment */
+     luaL_addchar(&b, LUAL_PACKPADBYTE);  /* fill alignment */
     arg++;
     switch (opt) {
       case Kint: {  /* signed integers */
@@ -1347,7 +1347,7 @@ static int str_pack (lua_State *L) {
         else {  /* string smaller than needed */
           luaL_addlstring(&b, s, len);  /* add it all */
           while (len++ < (size_t)size)  /* pad extra space */
-            luaL_addchar(&b, LUA_PACKPADBYTE);
+            luaL_addchar(&b, LUAL_PACKPADBYTE);
         }
         break;
       }
@@ -1371,7 +1371,7 @@ static int str_pack (lua_State *L) {
         totalsize += len + 1;
         break;
       }
-      case Kpadding: luaL_addchar(&b, LUA_PACKPADBYTE);  /* FALLTHROUGH */
+      case Kpadding: luaL_addchar(&b, LUAL_PACKPADBYTE);  /* FALLTHROUGH */
       case Kpaddalign: case Knop:
         arg--;  /* undo increment */
         break;
