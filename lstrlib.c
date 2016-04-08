@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.243 2016/03/31 19:07:42 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.244 2016/04/07 15:40:07 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -921,11 +921,9 @@ static int lua_number2strx (lua_State *L, char *buff, int sz,
 #define MAX_FORMAT	32
 
 
-static void addquoted (lua_State *L, luaL_Buffer *b, int arg) {
-  size_t l;
-  const char *s = luaL_checklstring(L, arg, &l);
+static void addquoted (luaL_Buffer *b, const char *s, size_t len) {
   luaL_addchar(b, '"');
-  while (l--) {
+  while (len--) {
     if (*s == '"' || *s == '\\' || *s == '\n') {
       luaL_addchar(b, '\\');
       luaL_addchar(b, *s);
@@ -944,6 +942,38 @@ static void addquoted (lua_State *L, luaL_Buffer *b, int arg) {
   }
   luaL_addchar(b, '"');
 }
+
+
+static void addliteral (lua_State *L, luaL_Buffer *b, int arg) {
+  switch (lua_type(L, arg)) {
+    case LUA_TSTRING: {
+      size_t len;
+      const char *s = lua_tolstring(L, arg, &len);
+      addquoted(b, s, len);
+      break;
+    }
+    case LUA_TNUMBER: {
+      if (!lua_isinteger(L, arg)) {  /* write floats as hexa ('%a') */
+        char *buff = luaL_prepbuffsize(b, MAX_ITEM);
+        lua_Number n = lua_tonumber(L, arg);
+        int nb = lua_number2strx(L, buff, MAX_ITEM,
+                                    "%" LUA_NUMBER_FRMLEN "a", n);
+        luaL_addsize(b, nb);
+        break;
+      }
+      /* else integers; write in "native" format *//* FALLTHROUGH */
+    }
+    case LUA_TNIL: case LUA_TBOOLEAN: {
+      luaL_tolstring(L, arg, NULL);
+      luaL_addvalue(b);
+      break;
+    }
+    default: {
+      luaL_argerror(L, arg, "value has no literal form");
+    }
+  }
+}
+
 
 static const char *scanformat (lua_State *L, const char *strfrmt, char *form) {
   const char *p = strfrmt;
@@ -1024,7 +1054,7 @@ static int str_format (lua_State *L) {
           break;
         }
         case 'q': {
-          addquoted(L, &b, arg);
+          addliteral(L, &b, arg);
           break;
         }
         case 's': {
