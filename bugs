@@ -3588,9 +3588,9 @@ co = coroutine.wrap(f)
 print(co())    --> ??? (should be 2)
 ]],
 patch = [[
---- lstrlib.c	2016/02/25 19:42:55	1.240
-+++ lstrlib.c	2016/03/21 17:27:07
-@@ -688,14 +688,13 @@
+--- lstrlib.c	2015/11/25 16:28:17	1.239
++++ lstrlib.c	2016/04/11 15:29:41
+@@ -688,6 +688,7 @@
  static int gmatch_aux (lua_State *L) {
    GMatchState *gm = (GMatchState *)lua_touserdata(L, lua_upvalueindex(3));
    const char *src;
