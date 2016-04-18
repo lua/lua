@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.62 2016/02/08 14:42:46 roberto Exp roberto $
+** $Id: loslib.c,v 1.63 2016/02/09 12:16:11 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -206,6 +206,23 @@ static void setboolfield (lua_State *L, const char *key, int value) {
   lua_setfield(L, -2, key);
 }
 
+
+/*
+** Set all fields from structure 'tm' in the table on top of the stack
+*/
+static void setallfields (lua_State *L, struct tm *stm) {
+  setfield(L, "sec", stm->tm_sec);
+  setfield(L, "min", stm->tm_min);
+  setfield(L, "hour", stm->tm_hour);
+  setfield(L, "day", stm->tm_mday);
+  setfield(L, "month", stm->tm_mon + 1);
+  setfield(L, "year", stm->tm_year + 1900);
+  setfield(L, "wday", stm->tm_wday + 1);
+  setfield(L, "yday", stm->tm_yday + 1);
+  setboolfield(L, "isdst", stm->tm_isdst);
+}
+
+
 static int getboolfield (lua_State *L, const char *key) {
   int res;
   res = (lua_getfield(L, -1, key) == LUA_TNIL) ? -1 : lua_toboolean(L, -1);
@@ -276,15 +293,7 @@ static int os_date (lua_State *L) {
     luaL_error(L, "time result cannot be represented in this installation");
   if (strcmp(s, "*t") == 0) {
     lua_createtable(L, 0, 9);  /* 9 = number of fields */
-    setfield(L, "sec", stm->tm_sec);
-    setfield(L, "min", stm->tm_min);
-    setfield(L, "hour", stm->tm_hour);
-    setfield(L, "day", stm->tm_mday);
-    setfield(L, "month", stm->tm_mon+1);
-    setfield(L, "year", stm->tm_year+1900);
-    setfield(L, "wday", stm->tm_wday+1);
-    setfield(L, "yday", stm->tm_yday+1);
-    setboolfield(L, "isdst", stm->tm_isdst);
+    setallfields(L, stm);
   }
   else {
     char cc[4];  /* buffer for individual conversion specifiers */
@@ -324,6 +333,7 @@ static int os_time (lua_State *L) {
     ts.tm_year = getfield(L, "year", -1, 1900);
     ts.tm_isdst = getboolfield(L, "isdst");
     t = mktime(&ts);
+    setallfields(L, &ts);  /* update fields with normalized values */
   }
   if (t != (time_t)(l_timet)t || t == (time_t)(-1))
     luaL_error(L, "time result cannot be represented in this installation");
