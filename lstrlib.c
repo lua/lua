@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.245 2016/04/08 21:15:02 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.246 2016/04/19 12:34:08 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -215,10 +215,8 @@ typedef struct MatchState {
   const char *src_end;  /* end ('\0') of source string */
   const char *p_end;  /* end ('\0') of pattern */
   lua_State *L;
-  lua_Unsigned nrep;  /* limit to avoid non-linear complexity */
   int matchdepth;  /* control for recursive depth (to avoid C stack overflow) */
   unsigned char level;  /* total number of captures (finished or unfinished) */
-  unsigned char usedlimit;  /* true if real limit for 'nrep' was used */
   struct {
     const char *init;
     ptrdiff_t len;
@@ -233,16 +231,6 @@ static const char *match (MatchState *ms, const char *s, const char *p);
 /* maximum recursion depth for 'match' */
 #if !defined(MAXCCALLS)
 #define MAXCCALLS	200
-#endif
-
-
-/*
-** Maximum number of operators handled in a match before consulting
-** 'string.pattlimit'. (This lower limit is only to avoid wasting time
-** consulting 'string.pattlimit' in simple matches.)
-*/
-#if !defined(PREPATTLIMIT)
-#define PREPATTLIMIT	200
 #endif
 
 
@@ -422,27 +410,6 @@ static const char *end_capture (MatchState *ms, const char *s,
 }
 
 
-static void checklimit (MatchState *ms) {
-  lua_State *L = ms->L;
-  lua_assert(ms->nrep == 0);
-  if (!ms->usedlimit) {  /* have not used 'string.pattlimit' yet? */
-    int top = lua_gettop(L);
-    if (lua_getglobal(L, "string") == LUA_TTABLE &&
-        lua_getfield(L, -1, "pattlimit") != LUA_TNIL) {  /* is it defined? */
-      lua_Unsigned limit = (lua_Unsigned)lua_tointeger(L, -1);  /* get it */
-      if (limit > PREPATTLIMIT)  /* discount cycles already used */
-        ms->nrep = limit - PREPATTLIMIT;
-      ms->usedlimit = 1;  /* do not use 'pattlimit' again */
-    }
-    else  /* no limit defined; set no limit */
-      ms->nrep = ~(lua_Unsigned)0;
-    lua_settop(L, top);  /* pop 'string' table and (maybe) 'pattlimit' */
-  }
-  if (ms->nrep == 0)
-    luaL_error(L, "pattern too complex");
-}
-
-
 static const char *match_capture (MatchState *ms, const char *s, int l) {
   size_t len;
   l = check_capture(ms, l);
@@ -524,8 +491,6 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
             s = NULL;  /* fail */
         }
         else {  /* matched once */
-          if (--ms->nrep == 0)
-            checklimit(ms);
           switch (*ep) {  /* handle optional suffix */
             case '?': {  /* optional */
               const char *res;
@@ -629,8 +594,6 @@ static void prepstate (MatchState *ms, lua_State *L,
   ms->src_init = s;
   ms->src_end = s + ls;
   ms->p_end = p + lp;
-  ms->nrep = PREPATTLIMIT;
-  ms->usedlimit = 0;
 }
 
 
