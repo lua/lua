@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.246 2016/04/19 12:34:08 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.247 2016/04/22 16:36:30 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -13,6 +13,7 @@
 #include <ctype.h>
 #include <float.h>
 #include <limits.h>
+#include <locale.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -812,7 +813,6 @@ static int str_gsub (lua_State *L) {
 ** Hexadecimal floating-point formatter
 */
 
-#include <locale.h>
 #include <math.h>
 
 #define SIZELENMOD	(sizeof(LUA_NUMBER_FRMLEN)/sizeof(char))
@@ -927,6 +927,24 @@ static void addquoted (luaL_Buffer *b, const char *s, size_t len) {
 }
 
 
+/*
+** Convert a Lua number to a string in floating-point hexadecimal
+** format. Ensures the resulting string uses a dot as the radix
+** character.
+*/
+static void addliteralnum (lua_State *L, luaL_Buffer *b, lua_Number n) {
+  char *buff = luaL_prepbuffsize(b, MAX_ITEM);
+  int nb = lua_number2strx(L, buff, MAX_ITEM,
+                              "%" LUA_NUMBER_FRMLEN "a", n);
+  if (memchr(buff, '.', nb) == NULL) {  /* no dot? */
+    char point = lua_getlocaledecpoint();  /* try locale point */
+    char *ppoint = memchr(buff, point, nb);
+    if (ppoint) *ppoint = '.';  /* change it to a dot */
+  }
+  luaL_addsize(b, nb);
+}
+
+
 static void addliteral (lua_State *L, luaL_Buffer *b, int arg) {
   switch (lua_type(L, arg)) {
     case LUA_TSTRING: {
@@ -937,11 +955,7 @@ static void addliteral (lua_State *L, luaL_Buffer *b, int arg) {
     }
     case LUA_TNUMBER: {
       if (!lua_isinteger(L, arg)) {  /* write floats as hexa ('%a') */
-        char *buff = luaL_prepbuffsize(b, MAX_ITEM);
-        lua_Number n = lua_tonumber(L, arg);
-        int nb = lua_number2strx(L, buff, MAX_ITEM,
-                                    "%" LUA_NUMBER_FRMLEN "a", n);
-        luaL_addsize(b, nb);
+        addliteralnum(L, b, lua_tonumber(L, arg));
         break;
       }
       /* else integers; write in "native" format *//* FALLTHROUGH */
