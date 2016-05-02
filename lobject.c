@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.108 2015/11/02 16:09:30 roberto Exp roberto $
+** $Id: lobject.c,v 2.109 2015/12/14 11:53:27 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -243,17 +243,53 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
 /* }====================================================== */
 
 
-static const char *l_str2d (const char *s, lua_Number *result) {
+/* maximum length of a numeral */
+#if !defined (L_MAXLENNUM)
+#define L_MAXLENNUM	200
+#endif
+
+static const char *l_str2dloc (const char *s, lua_Number *result, int mode) {
   char *endptr;
-  if (strpbrk(s, "nN"))  /* reject 'inf' and 'nan' */
+  *result = (mode == 'x') ? lua_strx2number(s, &endptr)  /* try to convert */
+                          : lua_str2number(s, &endptr);
+  if (endptr == s) return NULL;  /* nothing recognized? */
+  while (lisspace(cast_uchar(*endptr))) endptr++;  /* skip trailing spaces */
+  return (*endptr == '\0') ? endptr : NULL;  /* OK if no trailing characters */
+}
+
+
+/*
+** Convert string 's' to a Lua number (put in 'result'). Return NULL
+** on fail or the address of the ending '\0' on success.
+** 'pmode' points to (and 'mode' contains) special things in the string:
+** - 'x'/'X' means an hexadecimal numeral
+** - 'n'/'N' means 'inf' or 'nan' (which should be rejected)
+** - '.' just optimizes the search for the common case (nothing special)
+** This function accepts both the current locale or a dot as the radix
+** mark. If the convertion fails, it may mean number has a dot but
+** locale accepts something else. In that case, the code copies 's'
+** to a buffer (because 's' is read-only), changes the dot to the
+** current locale radix mark, and tries to convert again.
+*/
+static const char *l_str2d (const char *s, lua_Number *result) {
+  const char *endptr;
+  const char *pmode = strpbrk(s, ".xXnN");
+  int mode = pmode ? ltolower(cast_uchar(*pmode)) : 0;
+  if (mode == 'n')  /* reject 'inf' and 'nan' */
     return NULL;
-  else if (strpbrk(s, "xX"))  /* hex? */
-    *result = lua_strx2number(s, &endptr);
-  else
-    *result = lua_str2number(s, &endptr);
-  if (endptr == s) return NULL;  /* nothing recognized */
-  while (lisspace(cast_uchar(*endptr))) endptr++;
-  return (*endptr == '\0' ? endptr : NULL);  /* OK if no trailing characters */
+  endptr = l_str2dloc(s, result, mode);  /* try to convert */
+  if (endptr == NULL) {  /* failed? may be a different locale */
+    char buff[L_MAXLENNUM + 1];
+    char *pdot = strchr(s, '.');
+    if (strlen(s) > L_MAXLENNUM || pdot == NULL)
+      return NULL;  /* string too long or no dot; fail */
+    strcpy(buff, s);  /* copy string to buffer */
+    buff[pdot - s] = lua_getlocaledecpoint();  /* correct decimal point */
+    endptr = l_str2dloc(buff, result, mode);  /* try again */
+    if (endptr != NULL)
+      endptr = s + (endptr - buff);  /* make relative to 's' */
+  }
+  return endptr;
 }
 
 
