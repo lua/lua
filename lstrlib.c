@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.247 2016/04/22 16:36:30 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.248 2016/05/02 13:58:01 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -958,8 +958,8 @@ static void addliteral (lua_State *L, luaL_Buffer *b, int arg) {
         addliteralnum(L, b, lua_tonumber(L, arg));
         break;
       }
-      /* else integers; write in "native" format *//* FALLTHROUGH */
-    }
+      /* else integers; write in "native" format */
+    } /* FALLTHROUGH */
     case LUA_TNIL: case LUA_TBOOLEAN: {
       luaL_tolstring(L, arg, NULL);
       luaL_addvalue(b);

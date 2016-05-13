@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.107 2016/01/04 13:40:57 roberto Exp roberto $
+** $Id: lcode.c,v 2.108 2016/01/05 16:22:37 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -1065,7 +1065,7 @@ void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
     case OPR_MINUS: case OPR_BNOT:
       if (constfolding(fs, op + LUA_OPUNM, e, &ef))
         break;
-      /* else go through */
+      /* FALLTHROUGH */
     case OPR_LEN:
       codeunexpval(fs, cast(OpCode, op + OP_UNM), e, line);
       break;
