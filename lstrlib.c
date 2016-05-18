@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.248 2016/05/02 13:58:01 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.249 2016/05/13 19:09:46 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -1369,13 +1369,11 @@ static int str_pack (lua_State *L) {
       case Kchar: {  /* fixed-size string */
         size_t len;
         const char *s = luaL_checklstring(L, arg, &len);
-        if ((size_t)size <= len)  /* string larger than (or equal to) needed? */
-          luaL_addlstring(&b, s, size);  /* truncate string to asked size */
-        else {  /* string smaller than needed */
-          luaL_addlstring(&b, s, len);  /* add it all */
-          while (len++ < (size_t)size)  /* pad extra space */
-            luaL_addchar(&b, LUAL_PACKPADBYTE);
-        }
+        luaL_argcheck(L, len <= (size_t)size, arg,
+                         "string longer than given size");
+        luaL_addlstring(&b, s, len);  /* add string */
+        while (len++ < (size_t)size)  /* pad extra space */
+          luaL_addchar(&b, LUAL_PACKPADBYTE);
         break;
       }
       case Kstring: {  /* strings with length count */
