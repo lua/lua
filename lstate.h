@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.129 2015/12/14 11:54:49 roberto Exp roberto $
+** $Id: lstate.h,v 2.130 2015/12/16 16:39:38 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -88,7 +88,7 @@ typedef struct CallInfo {
   } u;
   ptrdiff_t extra;
   short nresults;  /* expected number of results from this function */
-  lu_byte callstatus;
+  unsigned short callstatus;
 } CallInfo;
 
 
