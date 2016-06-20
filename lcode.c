@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.108 2016/01/05 16:22:37 roberto Exp roberto $
+** $Id: lcode.c,v 2.109 2016/05/13 19:09:21 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -40,7 +40,7 @@
 ** If expression is a numeric constant, fills 'v' with its value
 ** and returns 1. Otherwise, returns 0.
 */
-static int tonumeral(expdesc *e, TValue *v) {
+static int tonumeral(const expdesc *e, TValue *v) {
   if (hasjumps(e))
     return 0;  /* not a numeral */
   switch (e->k) {
@@ -975,7 +975,8 @@ static int validop (int op, TValue *v1, TValue *v2) {
 ** Try to "constant-fold" an operation; return 1 iff successful.
 ** (In this case, 'e1' has the final result.)
 */
-static int constfolding (FuncState *fs, int op, expdesc *e1, expdesc *e2) {
+static int constfolding (FuncState *fs, int op, expdesc *e1,
+                                                const expdesc *e2) {
   TValue v1, v2, res;
   if (!tonumeral(e1, &v1) || !tonumeral(e2, &v2) || !validop(op, &v1, &v2))
     return 0;  /* non-numeric operands or not safe to fold */
@@ -1060,9 +1061,9 @@ static void codecomp (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
 ** Aplly prefix operation 'op' to expression 'e'.
 */
 void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
-  static expdesc ef = {VKINT, {0}, NO_JUMP, NO_JUMP};  /* fake 2nd operand */
+  static const expdesc ef = {VKINT, {0}, NO_JUMP, NO_JUMP};
   switch (op) {
-    case OPR_MINUS: case OPR_BNOT:
+    case OPR_MINUS: case OPR_BNOT:  /* use 'ef' as fake 2nd operand */
       if (constfolding(fs, op + LUA_OPUNM, e, &ef))
         break;
       /* FALLTHROUGH */
