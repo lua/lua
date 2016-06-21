@@ -3602,6 +3602,45 @@ patch = [[
 }
 
 
+Bug{
+what = [[expression list with four or more expressions in
+a 'for' loop can crash the interpreter]],
+report = [[Marco Schöpl, 2016/06/17]],
+since = [[5.2]],
+fix = nil,
+example = [[
+-- the next loop will probably crash the interpreter
+repeat until load "for _ in _,_,_,_ do local function _() end"
+]],
+patch = [[
+--- lparser.c	2016/05/13 19:10:16	2.153
++++ lparser.c	2016/06/17 19:52:48
+@@ -323,6 +323,8 @@
+       luaK_nil(fs, reg, extra);
+     }
+   }
++  if (nexps > nvars)
++    ls->fs->freereg -= nexps - nvars;  /* remove extra values */
+ }
+ 
+ 
+@@ -1160,11 +1162,8 @@
+     int nexps;
+     checknext(ls, '=');
+     nexps = explist(ls, &e);
+-    if (nexps != nvars) {
++    if (nexps != nvars)
+       adjust_assign(ls, nvars, nexps, &e);
+-      if (nexps > nvars)
+-        ls->fs->freereg -= nexps - nvars;  /* remove extra values */
+-    }
+     else {
+       luaK_setoneret(ls->fs, &e);  /* close last expression */
+       luaK_storevar(ls->fs, &lh->v, &e);
+]]
+}
+
+
 --[=[
 Bug{
 what = [[ ]],
