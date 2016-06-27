@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.250 2016/05/18 18:19:51 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.251 2016/05/20 14:13:21 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -933,7 +933,7 @@ static void addquoted (luaL_Buffer *b, const char *s, size_t len) {
 static void checkdp (char *buff, int nb) {
   if (memchr(buff, '.', nb) == NULL) {  /* no dot? */
     char point = lua_getlocaledecpoint();  /* try locale point */
-    char *ppoint = memchr(buff, point, nb);
+    char *ppoint = (char *)memchr(buff, point, nb);
     if (ppoint) *ppoint = '.';  /* change it to a dot */
   }
 }
