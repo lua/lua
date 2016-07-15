@@ -3641,6 +3641,29 @@ patch = [[
 }
 
 
+Bug{
+what = [[Checking a format for 'os.date' may read pass the format string]],
+report = [[Nagaev Boris, 2016/07/10]],
+since = [[5.3.3]],
+fix = nil,
+example = [[
+This bug does not seem to happen with regular compilers.
+It needs an "interceptor" 'memcmp' function that continues
+reading memory after a difference is found.]],
+patch = [[
+2c2
+< ** $Id: loslib.c,v 1.64 2016/04/18 13:06:55 roberto Exp roberto $
+---
+> ** $Id: loslib.c,v 1.64 2016/04/18 13:06:55 roberto Exp $
+263c263,264
+<   for (option = LUA_STRFTIMEOPTIONS; *option != '\0'; option += oplen) {
+---
+>   int convlen = (int)strlen(conv);
+>   for (option = LUA_STRFTIMEOPTIONS; *option != '\0' && oplen <= convlen; option += oplen) {
+]]
+}
+
+
 --[=[
 Bug{
 what = [[ ]],
