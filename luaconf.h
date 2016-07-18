@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.254 2015/10/21 18:17:40 roberto Exp roberto $
+** $Id: luaconf.h,v 1.255 2016/05/01 20:06:09 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -157,6 +157,18 @@
 ** Configuration for Paths.
 ** ===================================================================
 */
+
+/*
+** LUA_PATH_SEP is the character that separates templates in a path.
+** LUA_PATH_MARK is the string that marks the substitution points in a
+** template.
+** LUA_EXEC_DIR in a Windows path is replaced by the executable's
+** directory.
+*/
+#define LUA_PATH_SEP            ";"
+#define LUA_PATH_MARK           "?"
+#define LUA_EXEC_DIR            "!"
+
 
 /*
 @@ LUA_PATH_DEFAULT is the default path that Lua uses to look for
