@@ -3652,14 +3652,38 @@ It needs an "interceptor" 'memcmp' function that continues
 reading memory after a difference is found.]],
 patch = [[
 2c2
-< ** $Id: loslib.c,v 1.64 2016/04/18 13:06:55 roberto Exp roberto $
+< ** $Id: bugs,v 1.149 2016/07/15 17:24:09 roberto Exp roberto $
 ---
-> ** $Id: loslib.c,v 1.64 2016/04/18 13:06:55 roberto Exp $
+> ** $Id: bugs,v 1.149 2016/07/15 17:24:09 roberto Exp roberto $
 263c263,264
 <   for (option = LUA_STRFTIMEOPTIONS; *option != '\0'; option += oplen) {
 ---
 >   int convlen = (int)strlen(conv);
 >   for (option = LUA_STRFTIMEOPTIONS; *option != '\0' && oplen <= convlen; option += oplen) {
+]]
+}
+
+
+Bug{
+what = [[Lua can generate wrong code in functions with too many constants]],
+report = [[Marco Schöpl, 2016/07/17]],
+since = [[5.3.3]],
+fix = nil,
+example = [[See http://lua-users.org/lists/lua-l/2016-07/msg00303.html]],
+patch = [[
+--- lcode.c     2016/06/20 19:12:46     2.110
++++ lcode.c     2016/07/18 15:43:41
+@@ -1018,8 +1018,8 @@
+ */
+ static void codebinexpval (FuncState *fs, OpCode op,
+                            expdesc *e1, expdesc *e2, int line) {
+-  int rk1 = luaK_exp2RK(fs, e1);  /* both operands are "RK" */
+-  int rk2 = luaK_exp2RK(fs, e2);
++  int rk2 = luaK_exp2RK(fs, e2);  /* both operands are "RK" */
++  int rk1 = luaK_exp2RK(fs, e1);
+   freeexps(fs, e1, e2);
+   e1->u.info = luaK_codeABC(fs, op, 0, rk1, rk2);  /* generate opcode */
+   e1->k = VRELOCABLE;  /* all those operations are relocatable */
 ]]
 }
 
