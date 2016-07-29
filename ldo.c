@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.150 2015/11/19 19:16:22 roberto Exp roberto $
+** $Id: ldo.c,v 2.151 2015/12/16 16:40:07 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -595,15 +595,16 @@ static int recover (lua_State *L, int status) {
 
 
 /*
-** signal an error in the call to 'resume', not in the execution of the
-** coroutine itself. (Such errors should not be handled by any coroutine
-** error handler and should not kill the coroutine.)
+** Signal an error in the call to 'lua_resume', not in the execution
+** of the coroutine itself. (Such errors should not be handled by any
+** coroutine error handler and should not kill the coroutine.)
 */
-static l_noret resume_error (lua_State *L, const char *msg, StkId firstArg) {
-  L->top = firstArg;  /* remove args from the stack */
+static int resume_error (lua_State *L, const char *msg, int narg) {
+  L->top -= narg;  /* remove args from the stack */
   setsvalue2s(L, L->top, luaS_new(L, msg));  /* push error message */
   api_incr_top(L);
-  luaD_throw(L, -1);  /* jump back to 'lua_resume' */
+  lua_unlock(L);
+  return LUA_ERRRUN;
 }
 
 
@@ -619,18 +620,12 @@ static void resume (lua_State *L, void *ud) {
   int n = *(cast(int*, ud));  /* number of arguments */
   StkId firstArg = L->top - n;  /* first argument */
   CallInfo *ci = L->ci;
-  if (nCcalls >= LUAI_MAXCCALLS)
-    resume_error(L, "C stack overflow", firstArg);
-  if (L->status == LUA_OK) {  /* may be starting a coroutine */
-    if (ci != &L->base_ci)  /* not in base level? */
-      resume_error(L, "cannot resume non-suspended coroutine", firstArg);
-    /* coroutine is in base level; start running it */
+  if (L->status == LUA_OK) {  /* starting a coroutine? */
     if (!luaD_precall(L, firstArg - 1, LUA_MULTRET))  /* Lua function? */
       luaV_execute(L);  /* call it */
   }
-  else if (L->status != LUA_YIELD)
-    resume_error(L, "cannot resume dead coroutine", firstArg);
   else {  /* resuming from previous yield */
+    lua_assert(L->status == LUA_YIELD);
     L->status = LUA_OK;  /* mark that it is running (again) */
     ci->func = restorestack(L, ci->extra);
     if (isLua(ci))  /* yielded inside a hook? */
@@ -655,8 +650,16 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs) {
   int status;
   unsigned short oldnny = L->nny;  /* save "number of non-yieldable" calls */
   lua_lock(L);
-  luai_userstateresume(L, nargs);
+  if (L->status == LUA_OK) {  /* may be starting a coroutine */
+    if (L->ci != &L->base_ci)  /* not in base level? */
+      return resume_error(L, "cannot resume non-suspended coroutine", nargs);
+  }
+  else if (L->status != LUA_YIELD)
+    return resume_error(L, "cannot resume dead coroutine", nargs);
   L->nCcalls = (from) ? from->nCcalls + 1 : 1;
+  if (L->nCcalls >= LUAI_MAXCCALLS)
+    return resume_error(L, "C stack overflow", nargs);
+  luai_userstateresume(L, nargs);
   L->nny = 0;  /* allow yields */
   api_checknelems(L, (L->status == LUA_OK) ? nargs + 1 : nargs);
   status = luaD_rawrunprotected(L, resume, &nargs);
