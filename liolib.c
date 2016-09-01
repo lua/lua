@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.148 2015/11/23 11:36:11 roberto Exp roberto $
+** $Id: liolib.c,v 2.149 2016/05/02 14:03:19 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -37,10 +37,11 @@
 #endif
 
 /* Check whether 'mode' matches '[rwa]%+?[L_MODEEXT]*' */
-#define l_checkmode(mode) \
-	(*mode != '\0' && strchr("rwa", *(mode++)) != NULL &&	\
-	(*mode != '+' || (++mode, 1)) &&  /* skip if char is '+' */	\
-	(strspn(mode, L_MODEEXT) == strlen(mode)))
+static int l_checkmode (const char *mode) {
+  return (*mode != '\0' && strchr("rwa", *(mode++)) != NULL &&
+         (*mode != '+' || (++mode, 1)) &&  /* skip if char is '+' */
+         (strspn(mode, L_MODEEXT) == strlen(mode)));  /* check extensions */
+}
 
 #endif
 
