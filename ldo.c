@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.152 2016/07/29 17:12:44 roberto Exp roberto $
+** $Id: ldo.c,v 2.153 2016/08/01 19:51:24 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -211,9 +211,9 @@ static int stackinuse (lua_State *L) {
   CallInfo *ci;
   StkId lim = L->top;
   for (ci = L->ci; ci != NULL; ci = ci->previous) {
-    lua_assert(ci->top <= L->stack_last);
     if (lim < ci->top) lim = ci->top;
   }
+  lua_assert(lim <= L->stack_last);
   return cast_int(lim - L->stack) + 1;  /* part of stack in use */
 }
 
@@ -520,19 +520,17 @@ static void finishCcall (lua_State *L, int status) {
   /* error status can only happen in a protected call */
   lua_assert((ci->callstatus & CIST_YPCALL) || status == LUA_YIELD);
   if (ci->callstatus & CIST_YPCALL) {  /* was inside a pcall? */
-    ci->callstatus &= ~CIST_YPCALL;  /* finish 'lua_pcall' */
-    L->errfunc = ci->u.c.old_errfunc;
+    ci->callstatus &= ~CIST_YPCALL;  /* continuation is also inside it */
+    L->errfunc = ci->u.c.old_errfunc;  /* with the same error function */
   }
   /* finish 'lua_callk'/'lua_pcall'; CIST_YPCALL and 'errfunc' already
      handled */
   adjustresults(L, ci->nresults);
-  /* call continuation function */
   lua_unlock(L);
-  n = (*ci->u.c.k)(L, status, ci->u.c.ctx);
+  n = (*ci->u.c.k)(L, status, ci->u.c.ctx);  /* call continuation function */
   lua_lock(L);
   api_checknelems(L, n);
-  /* finish 'luaD_precall' */
-  luaD_poscall(L, ci, L->top - n, n);
+  luaD_poscall(L, ci, L->top - n, n);  /* finish 'luaD_precall' */
 }
 
 
@@ -616,7 +614,6 @@ static int resume_error (lua_State *L, const char *msg, int narg) {
 ** coroutine.
 */
 static void resume (lua_State *L, void *ud) {
-  int nCcalls = L->nCcalls;
   int n = *(cast(int*, ud));  /* number of arguments */
   StkId firstArg = L->top - n;  /* first argument */
   CallInfo *ci = L->ci;
@@ -642,7 +639,6 @@ static void resume (lua_State *L, void *ud) {
     }
     unroll(L, NULL);  /* run continuation */
   }
-  lua_assert(nCcalls == L->nCcalls);
 }
 
 
