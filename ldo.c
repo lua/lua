@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.153 2016/08/01 19:51:24 roberto Exp roberto $
+** $Id: ldo.c,v 2.155 2016/09/08 16:36:26 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -232,8 +232,8 @@ void luaD_shrinkstack (lua_State *L) {
   if (inuse <= (LUAI_MAXSTACK - EXTRA_STACK) &&
       goodsize < L->stacksize)
     luaD_reallocstack(L, goodsize);
-  else
-    condmovestack(L,,);  /* don't change stack (change only for debugging) */
+  else  /* don't change stack */
+    condmovestack(L,{},{});  /* (change only for debugging) */
 }
 
 
