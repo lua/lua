@@ -3602,6 +3602,10 @@ patch = [[
 }
 
 
+-----------------------------------------------------------------
+-- Lua 5.3.3
+
+
 Bug{
 what = [[expression list with four or more expressions in
 a 'for' loop can crash the interpreter]],
@@ -3652,9 +3656,9 @@ It needs an "interceptor" 'memcmp' function that continues
 reading memory after a difference is found.]],
 patch = [[
 2c2
-< ** $Id: bugs,v 1.149 2016/07/15 17:24:09 roberto Exp roberto $
+< ** $Id: bugs,v 1.150 2016/07/19 17:10:45 roberto Exp roberto $
 ---
-> ** $Id: bugs,v 1.149 2016/07/15 17:24:09 roberto Exp roberto $
+> ** $Id: bugs,v 1.150 2016/07/19 17:10:45 roberto Exp roberto $
 263c263,264
 <   for (option = LUA_STRFTIMEOPTIONS; *option != '\0'; option += oplen) {
 ---
@@ -3686,6 +3690,28 @@ patch = [[
    e1->k = VRELOCABLE;  /* all those operations are relocatable */
 ]]
 }
+
+
+Bug{
+what = [[When a coroutine tries to resume a non-suspended coroutine,
+it can do some mess (and break C assertions) before detecting the error]],
+report = [[Marco Schöpl, 2016/07/20]],
+since = [[ ]],
+fix = nil,
+example = [[
+-- with C assertions on
+A = coroutine.running()
+B = coroutine.create(function() coroutine.resume(A) end)
+coroutine.resume(B)
+
+-- or
+A = coroutine.wrap(function() pcall(A, _) end)
+A()
+]],
+patch = [[
+]]
+}
+]=]
 
 
 --[=[
