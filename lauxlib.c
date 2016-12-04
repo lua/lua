@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.285 2015/12/14 11:59:27 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.286 2016/01/08 15:33:09 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -809,7 +809,11 @@ LUALIB_API lua_Integer luaL_len (lua_State *L, int idx) {
 
 
 LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len) {
-  if (!luaL_callmeta(L, idx, "__tostring")) {  /* no metafield? */
+  if (luaL_callmeta(L, idx, "__tostring")) {  /* metafield? */
+    if (!lua_isstring(L, -1))
+      luaL_error(L, "'__tostring' must return a string");
+  }
+  else {
     switch (lua_type(L, idx)) {
       case LUA_TNUMBER: {
         if (lua_isinteger(L, idx))
@@ -827,10 +831,15 @@ LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len) {
       case LUA_TNIL:
         lua_pushliteral(L, "nil");
         break;
-      default:
-        lua_pushfstring(L, "%s: %p", luaL_typename(L, idx),
-                                            lua_topointer(L, idx));
+      default: {
+        int tt = luaL_getmetafield(L, idx, "__name");  /* try name */
+        const char *kind = (tt == LUA_TSTRING) ? lua_tostring(L, -1) :
+                                                 luaL_typename(L, idx);
+        lua_pushfstring(L, "%s: %p", kind, lua_topointer(L, idx));
+        if (tt != LUA_TNIL)
+          lua_remove(L, -2);  /* remove '__name' */
         break;
+      }
     }
   }
   return lua_tolstring(L, -1, len);
