@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.209 2015/10/12 16:38:19 roberto Exp roberto $
+** $Id: ltests.c,v 2.210 2016/11/07 12:38:35 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -869,7 +869,7 @@ static int loadlib (lua_State *L) {
   luaL_requiref(L1, "package", NULL, 1);  /* seg. fault if it reloads */
   /* ...but should return the same module */
   lua_assert(lua_compare(L1, -1, -2, LUA_OPEQ));
-  luaL_getsubtable(L1, LUA_REGISTRYINDEX, "_PRELOAD");
+  luaL_getsubtable(L1, LUA_REGISTRYINDEX, LUA_PRELOAD_TABLE);
   for (i = 0; libs[i].name; i++) {
     lua_pushcfunction(L1, libs[i].func);
     lua_setfield(L1, -2, libs[i].name);

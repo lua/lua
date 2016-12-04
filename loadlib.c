@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.127 2015/11/23 11:30:45 roberto Exp roberto $
+** $Id: loadlib.c,v 1.128 2016/07/18 17:55:59 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -471,7 +471,7 @@ static int searcher_Croot (lua_State *L) {
 
 static int searcher_preload (lua_State *L) {
   const char *name = luaL_checkstring(L, 1);
-  lua_getfield(L, LUA_REGISTRYINDEX, "_PRELOAD");
+  lua_getfield(L, LUA_REGISTRYINDEX, LUA_PRELOAD_TABLE);
   if (lua_getfield(L, -1, name) == LUA_TNIL)  /* not found? */
     lua_pushfstring(L, "\n\tno field package.preload['%s']", name);
   return 1;
@@ -508,9 +508,9 @@ static void findloader (lua_State *L, const char *name) {
 
 static int ll_require (lua_State *L) {
   const char *name = luaL_checkstring(L, 1);
-  lua_settop(L, 1);  /* _LOADED table will be at index 2 */
-  lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
-  lua_getfield(L, 2, name);  /* _LOADED[name] */
+  lua_settop(L, 1);  /* LOADED table will be at index 2 */
+  lua_getfield(L, LUA_REGISTRYINDEX, LUA_LOADED_TABLE);
+  lua_getfield(L, 2, name);  /* LOADED[name] */
   if (lua_toboolean(L, -1))  /* is it there? */
     return 1;  /* package is already loaded */
   /* else must load package */
@@ -520,11 +520,11 @@ static int ll_require (lua_State *L) {
   lua_insert(L, -2);  /* name is 1st argument (before search data) */
   lua_call(L, 2, 1);  /* run loader to load module */
   if (!lua_isnil(L, -1))  /* non-nil return? */
-    lua_setfield(L, 2, name);  /* _LOADED[name] = returned value */
+    lua_setfield(L, 2, name);  /* LOADED[name] = returned value */
   if (lua_getfield(L, 2, name) == LUA_TNIL) {   /* module set no value? */
     lua_pushboolean(L, 1);  /* use true as result */
     lua_pushvalue(L, -1);  /* extra copy to be returned */
-    lua_setfield(L, 2, name);  /* _LOADED[name] = true */
+    lua_setfield(L, 2, name);  /* LOADED[name] = true */
   }
   return 1;
 }
@@ -689,10 +689,10 @@ LUAMOD_API int luaopen_package (lua_State *L) {
                      LUA_EXEC_DIR "\n" LUA_IGMARK "\n");
   lua_setfield(L, -2, "config");
   /* set field 'loaded' */
-  luaL_getsubtable(L, LUA_REGISTRYINDEX, "_LOADED");
+  luaL_getsubtable(L, LUA_REGISTRYINDEX, LUA_LOADED_TABLE);
   lua_setfield(L, -2, "loaded");
   /* set field 'preload' */
-  luaL_getsubtable(L, LUA_REGISTRYINDEX, "_PRELOAD");
+  luaL_getsubtable(L, LUA_REGISTRYINDEX, LUA_PRELOAD_TABLE);
   lua_setfield(L, -2, "preload");
   lua_pushglobaltable(L);
   lua_pushvalue(L, -2);  /* set 'package' as upvalue for next lib */

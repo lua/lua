@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.128 2014/10/29 16:11:17 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.129 2015/11/23 11:29:43 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,14 @@
 
 /* extra error code for 'luaL_load' */
 #define LUA_ERRFILE     (LUA_ERRERR+1)
+
+
+/* key, in the registry, for table of loaded modules */
+#define LUA_LOADED_TABLE	"_LOADED"
+
+
+/* key, in the registry, for table of preloaded loaders */
+#define LUA_PRELOAD_TABLE	"_PRELOAD"
 
 
 typedef struct luaL_Reg {
