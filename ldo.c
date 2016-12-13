@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.155 2016/09/08 16:36:26 roberto Exp roberto $
+** $Id: ldo.c,v 2.156 2016/09/20 16:37:45 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -325,6 +325,72 @@ static void tryfuncTM (lua_State *L, StkId func) {
 }
 
 
+/*
+** Given 'nres' results at 'firstResult', move 'wanted' of them to 'res'.
+** Handle most typical cases (zero results for commands, one result for
+** expressions, multiple results for tail calls/single parameters)
+** separated.
+*/
+static int moveresults (lua_State *L, const TValue *firstResult, StkId res,
+                                      int nres, int wanted) {
+  switch (wanted) {  /* handle typical cases separately */
+    case 0: break;  /* nothing to move */
+    case 1: {  /* one result needed */
+      if (nres == 0)   /* no results? */
+        firstResult = luaO_nilobject;  /* adjust with nil */
+      setobjs2s(L, res, firstResult);  /* move it to proper place */
+      break;
+    }
+    case LUA_MULTRET: {
+      int i;
+      for (i = 0; i < nres; i++)  /* move all results to correct place */
+        setobjs2s(L, res + i, firstResult + i);
+      L->top = res + nres;
+      return 0;  /* wanted == LUA_MULTRET */
+    }
+    default: {
+      int i;
+      if (wanted <= nres) {  /* enough results? */
+        for (i = 0; i < wanted; i++)  /* move wanted results to correct place */
+          setobjs2s(L, res + i, firstResult + i);
+      }
+      else {  /* not enough results; use all of them plus nils */
+        for (i = 0; i < nres; i++)  /* move all results to correct place */
+          setobjs2s(L, res + i, firstResult + i);
+        for (; i < wanted; i++)  /* complete wanted number of results */
+          setnilvalue(res + i);
+      }
+      break;
+    }
+  }
+  L->top = res + wanted;  /* top points after the last result */
+  return 1;
+}
+
+
+/*
+** Finishes a function call: calls hook if necessary, removes CallInfo,
+** moves current number of results to proper place; returns 0 iff call
+** wanted multiple (variable number of) results.
+*/
+int luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres) {
+  StkId res;
+  int wanted = ci->nresults;
+  if (L->hookmask & (LUA_MASKRET | LUA_MASKLINE)) {
+    if (L->hookmask & LUA_MASKRET) {
+      ptrdiff_t fr = savestack(L, firstResult);  /* hook may change stack */
+      luaD_hook(L, LUA_HOOKRET, -1);
+      firstResult = restorestack(L, fr);
+    }
+    L->oldpc = ci->previous->u.l.savedpc;  /* 'oldpc' for caller function */
+  }
+  res = ci->func;  /* res == final position of 1st result */
+  L->ci = ci->previous;  /* back to caller */
+  /* move results to proper place */
+  return moveresults(L, firstResult, res, nres, wanted);
+}
+
+
 
 #define next_ci(L) (L->ci = (L->ci->next ? L->ci->next : luaE_extendCI(L)))
 
@@ -402,72 +468,6 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       return luaD_precall(L, func, nresults);  /* now it must be a function */
     }
   }
-}
-
-
-/*
-** Given 'nres' results at 'firstResult', move 'wanted' of them to 'res'.
-** Handle most typical cases (zero results for commands, one result for
-** expressions, multiple results for tail calls/single parameters)
-** separated.
-*/
-static int moveresults (lua_State *L, const TValue *firstResult, StkId res,
-                                      int nres, int wanted) {
-  switch (wanted) {  /* handle typical cases separately */
-    case 0: break;  /* nothing to move */
-    case 1: {  /* one result needed */
-      if (nres == 0)   /* no results? */
-        firstResult = luaO_nilobject;  /* adjust with nil */
-      setobjs2s(L, res, firstResult);  /* move it to proper place */
-      break;
-    }
-    case LUA_MULTRET: {
-      int i;
-      for (i = 0; i < nres; i++)  /* move all results to correct place */
-        setobjs2s(L, res + i, firstResult + i);
-      L->top = res + nres;
-      return 0;  /* wanted == LUA_MULTRET */
-    }
-    default: {
-      int i;
-      if (wanted <= nres) {  /* enough results? */
-        for (i = 0; i < wanted; i++)  /* move wanted results to correct place */
-          setobjs2s(L, res + i, firstResult + i);
-      }
-      else {  /* not enough results; use all of them plus nils */
-        for (i = 0; i < nres; i++)  /* move all results to correct place */
-          setobjs2s(L, res + i, firstResult + i);
-        for (; i < wanted; i++)  /* complete wanted number of results */
-          setnilvalue(res + i);
-      }
-      break;
-    }
-  }
-  L->top = res + wanted;  /* top points after the last result */
-  return 1;
-}
-
-
-/*
-** Finishes a function call: calls hook if necessary, removes CallInfo,
-** moves current number of results to proper place; returns 0 iff call
-** wanted multiple (variable number of) results.
-*/
-int luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres) {
-  StkId res;
-  int wanted = ci->nresults;
-  if (L->hookmask & (LUA_MASKRET | LUA_MASKLINE)) {
-    if (L->hookmask & LUA_MASKRET) {
-      ptrdiff_t fr = savestack(L, firstResult);  /* hook may change stack */
-      luaD_hook(L, LUA_HOOKRET, -1);
-      firstResult = restorestack(L, fr);
-    }
-    L->oldpc = ci->previous->u.l.savedpc;  /* 'oldpc' for caller function */
-  }
-  res = ci->func;  /* res == final position of 1st result */
-  L->ci = ci->previous;  /* back to caller */
-  /* move results to proper place */
-  return moveresults(L, firstResult, res, nres, wanted);
 }
 
 
