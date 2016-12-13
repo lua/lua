@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.226 2015/08/14 19:11:20 roberto Exp roberto $
+** $Id: lua.c,v 1.227 2016/07/18 17:55:59 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -20,6 +20,9 @@
 #include "lualib.h"
 
 
+#define LUA_VERSUFFIX          "_" LUA_VERSION_MAJOR "_" LUA_VERSION_MINOR
+
+
 #if !defined(LUA_PROMPT)
 #define LUA_PROMPT		"> "
 #define LUA_PROMPT2		">> "
@@ -37,8 +40,7 @@
 #define LUA_INIT_VAR		"LUA_INIT"
 #endif
 
-#define LUA_INITVARVERSION  \
-	LUA_INIT_VAR "_" LUA_VERSION_MAJOR "_" LUA_VERSION_MINOR
+#define LUA_INITVARVERSION	LUA_INIT_VAR LUA_VERSUFFIX
 
 
 /*
@@ -550,10 +552,8 @@ static int runargs (lua_State *L, char **argv, int n) {
 #define LUA_CPATH_VAR   "LUA_CPATH"
 #endif
 
-#define LUA_PATHSUFFIX          "_" LUA_VERSION_MAJOR "_" LUA_VERSION_MINOR
-
-#define LUA_PATHVARVERSION              LUA_PATH_VAR LUA_PATHSUFFIX
-#define LUA_CPATHVARVERSION             LUA_CPATH_VAR LUA_PATHSUFFIX
+#define LUA_PATHVARVERSION              LUA_PATH_VAR LUA_VERSUFFIX
+#define LUA_CPATHVARVERSION             LUA_CPATH_VAR LUA_VERSUFFIX
 
 
 #define AUXMARK         "\1"	/* auxiliary mark */
