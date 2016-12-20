@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.116 2015/06/26 19:30:32 roberto Exp $
+** $Id: lmathlib.c,v 1.117 2015/10/02 15:39:23 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -184,10 +184,13 @@ static int math_log (lua_State *L) {
   else {
     lua_Number base = luaL_checknumber(L, 2);
 #if !defined(LUA_USE_C89)
-    if (base == 2.0) res = l_mathop(log2)(x); else
+    if (base == l_mathop(2.0))
+      res = l_mathop(log2)(x); else
 #endif
-    if (base == 10.0) res = l_mathop(log10)(x);
-    else res = l_mathop(log)(x)/l_mathop(log)(base);
+    if (base == l_mathop(10.0))
+      res = l_mathop(log10)(x);
+    else
+      res = l_mathop(log)(x)/l_mathop(log)(base);
   }
   lua_pushnumber(L, res);
   return 1;
