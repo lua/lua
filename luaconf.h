@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.257 2016/08/22 17:21:12 roberto Exp roberto $
+** $Id: luaconf.h,v 1.258 2016/12/20 18:37:00 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -621,7 +621,7 @@
 
 
 /*
-@@ lua_number2strx converts a float to an hexadecimal numeric string. 
+@@ lua_number2strx converts a float to an hexadecimal numeric string.
 ** In C99, 'sprintf' (with format specifiers '%a'/'%A') does that.
 ** Otherwise, you can leave 'lua_number2strx' undefined and Lua will
 ** provide its own implementation.

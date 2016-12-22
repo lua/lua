@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.110 2016/06/20 19:12:46 roberto Exp roberto $
+** $Id: lcode.c,v 2.111 2016/07/19 17:12:07 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -86,7 +86,7 @@ void luaK_nil (FuncState *fs, int from, int n) {
 /*
 ** Gets the destination address of a jump instruction. Used to traverse
 ** a list of jumps.
-*/ 
+*/
 static int getjump (FuncState *fs, int pc) {
   int offset = GETARG_sBx(fs->f->code[pc]);
   if (offset == NO_JUMP)  /* point to itself represents end of list */
@@ -754,7 +754,7 @@ void luaK_exp2val (FuncState *fs, expdesc *e) {
 ** (that is, it is either in a register or in 'k' with an index
 ** in the range of R/K indices).
 ** Returns R/K index.
-*/  
+*/
 int luaK_exp2RK (FuncState *fs, expdesc *e) {
   luaK_exp2val(fs, e);
   switch (e->k) {  /* move constants to 'k' */

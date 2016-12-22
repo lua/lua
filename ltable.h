@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.h,v 2.21 2015/11/03 15:47:30 roberto Exp roberto $
+** $Id: ltable.h,v 2.22 2016/11/07 12:38:35 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -15,7 +15,7 @@
 #define gnext(n)	((n)->i_key.nk.next)
 
 
-/* 'const' to avoid wrong writings that can mess up field 'next' */ 
+/* 'const' to avoid wrong writings that can mess up field 'next' */
 #define gkey(n)		cast(const TValue*, (&(n)->i_key.tvk))
 
 /*
