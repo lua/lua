@@ -12,6 +12,9 @@
 #include <stdarg.h>
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "luaconf.h"
 
@@ -482,5 +485,8 @@ struct lua_Debug {
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ******************************************************************************/
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif
