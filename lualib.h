@@ -1,5 +1,5 @@
 /*
-** $Id: lualib.h,v 1.43 2011/12/08 12:11:37 roberto Exp roberto $
+** $Id: lualib.h,v 1.44 2014/02/06 17:32:33 roberto Exp roberto $
 ** Lua standard libraries
 ** See Copyright Notice in lua.h
 */
@@ -10,6 +10,9 @@
 
 #include "lua.h"
 
+
+/* version suffix for environment variable names */
+#define LUA_VERSUFFIX          "_" LUA_VERSION_MAJOR "_" LUA_VERSION_MINOR
 
 
 LUAMOD_API int (luaopen_base) (lua_State *L);
