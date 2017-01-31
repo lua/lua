@@ -14,12 +14,14 @@ CWARNSCPP= \
 	-Wwrite-strings \
 	-Wredundant-decls \
 	-Wdisabled-optimization \
-	# the next warnings generate to much noise, so they are disabled
-	# -Wdouble-promotion \
+	-Waggregate-return \
+	-Wdouble-promotion \
+	#-Wno-aggressive-loop-optimizations   # not accepted by clang \
+	#-Wlogical-op   # not accepted by clang \
+	# the next warnings generate too much noise, so they are disabled
 	# -Wconversion  -Wno-sign-conversion \
 	# -Wsign-conversion \
 	# -Wconversion \
-	# -Wlogical-op \
 	# -Wstrict-overflow=2 \
 	# -Wformat=2 \
 	# -Wcast-qual \
@@ -33,7 +35,7 @@ CWARNSC= -Wdeclaration-after-statement \
 	-Wold-style-definition \
 
 
-CWARNS= $(CWARNSCPP) $(CWARNSC)
+CWARNS= $(CWARNSCPP)  $(CWARNSC)
 
 
 # -DEXTERNMEMCHECK -DHARDSTACKTESTS -DHARDMEMTESTS -DTRACEMEM='"tempmem"'
@@ -42,9 +44,10 @@ CWARNS= $(CWARNSCPP) $(CWARNSC)
 # -DLUA_USE_CTYPE -DLUA_USE_APICHECK
 # (in clang, '-ftrapv' for runtime checks of integer overflows)
 # -fsanitize=undefined -ftrapv
-# TESTS= -DLUA_USER_H='"ltests.h"'
+TESTS= -DLUA_USER_H='"ltests.h"'
 
 # -mtune=native -fomit-frame-pointer
+# -fno-stack-protector
 LOCAL = $(TESTS) $(CWARNS) -g
 
 
@@ -52,10 +55,10 @@ LOCAL = $(TESTS) $(CWARNS) -g
 # enable Linux goodies
 MYCFLAGS= $(LOCAL) -std=c99 -DLUA_USE_LINUX -DLUA_COMPAT_5_2
 MYLDFLAGS= $(LOCAL) -Wl,-E
-MYLIBS= -ldl -lreadline -lhistory -lncurses
+MYLIBS= -ldl -lreadline
 
 
-CC= clang-3.6
+CC= clang-3.8
 CFLAGS= -Wall -O2 $(MYCFLAGS)
 AR= ar rcu
 RANLIB= ranlib
