@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.258 2016/01/05 16:07:21 roberto Exp roberto $
+** $Id: lapi.c,v 2.259 2016/02/29 14:27:14 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1095,6 +1095,14 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
     }
     case LUA_GCISRUNNING: {
       res = g->gcrunning;
+      break;
+    }
+    case LUA_GCGEN: {
+      luaC_changemode(L, KGC_GEN);
+      break;
+    }
+    case LUA_GCINC: {
+      luaC_changemode(L, KGC_NORMAL);
       break;
     }
     default: res = -1;  /* invalid option */

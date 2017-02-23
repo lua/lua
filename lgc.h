@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.90 2015/10/21 18:15:15 roberto Exp roberto $
+** $Id: lgc.h,v 2.91 2015/12/21 13:02:14 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -79,7 +79,8 @@
 #define WHITE1BIT	1  /* object is white (type 1) */
 #define BLACKBIT	2  /* object is black */
 #define FINALIZEDBIT	3  /* object has been marked for finalization */
-/* bit 7 is currently used by tests (luaL_checkmemory) */
+#define OLDBIT		4  /* object is old (gen. mode) */
+#define TESTGRAYBIT	7  /* used by tests (luaL_checkmemory) */
 
 #define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)
 
@@ -88,11 +89,12 @@
 #define isblack(x)      testbit((x)->marked, BLACKBIT)
 #define isgray(x)  /* neither white nor black */  \
 	(!testbits((x)->marked, WHITEBITS | bitmask(BLACKBIT)))
+#define isold(x)	testbit((x)->marked, OLDBIT)
 
 #define tofinalize(x)	testbit((x)->marked, FINALIZEDBIT)
 
 #define otherwhite(g)	((g)->currentwhite ^ WHITEBITS)
-#define isdeadm(ow,m)	(!(((m) ^ WHITEBITS) & (ow)))
+#define isdeadm(ow,m)	((m) & (ow))
 #define isdead(g,v)	isdeadm(otherwhite(g), (v)->marked)
 
 #define changewhite(x)	((x)->marked ^= WHITEBITS)
@@ -142,6 +144,7 @@ LUAI_FUNC void luaC_barrierback_ (lua_State *L, Table *o);
 LUAI_FUNC void luaC_upvalbarrier_ (lua_State *L, UpVal *uv);
 LUAI_FUNC void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt);
 LUAI_FUNC void luaC_upvdeccount (lua_State *L, UpVal *uv);
+LUAI_FUNC void luaC_changemode (lua_State *L, int newmode);
 
 
 #endif

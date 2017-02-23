@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.210 2016/11/07 12:38:35 roberto Exp roberto $
+** $Id: ltests.c,v 2.211 2016/12/04 20:17:24 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -195,9 +195,13 @@ static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
 
 
 static void printobj (global_State *g, GCObject *o) {
-  printf("||%s(%p)-%c(%02X)||",
+  printf("||%s(%p)-%c%c(%02X)||",
            ttypename(novariant(o->tt)), (void *)o,
-           isdead(g,o)?'d':isblack(o)?'b':iswhite(o)?'w':'g', o->marked);
+           isdead(g,o) ? 'd' : isblack(o) ? 'b' : iswhite(o) ? 'w' : 'g',
+           testbit(o->marked, OLDBIT) ? 'o' : 'n',
+           o->marked);
+  if (o->tt == LUA_TSHRSTR || o->tt == LUA_TLNGSTR)
+    printf(" '%s'", getstr(gco2ts(o)));
 }
 
 
@@ -363,8 +367,6 @@ static void checkobject (global_State *g, GCObject *o, int maybedead) {
   }
 }
 
-
-#define TESTGRAYBIT		7
 
 static void checkgraylist (global_State *g, GCObject *o) {
   ((void)g);  /* better to keep it available if we need to print an object */

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.133 2016/12/22 13:08:50 roberto Exp roberto $
+** $Id: lstate.h,v 2.134 2017/02/15 18:52:13 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -70,7 +70,8 @@ struct lua_longjmp;  /* defined in ldo.c */
 
 /* kinds of Garbage Collection */
 #define KGC_NORMAL	0
-#define KGC_EMERGENCY	1	/* gc was forced by an allocation failure */
+#define KGC_GEN		1	/* generational gc */
+#define KGC_EMERGENCY	2	/* gc was forced by an allocation failure */
 
 
 typedef struct stringtable {
@@ -158,6 +159,9 @@ typedef struct global_State {
   GCObject *allweak;  /* list of all-weak tables */
   GCObject *tobefnz;  /* list of userdata to be GC */
   GCObject *fixedgc;  /* list of objects not to be collected */
+  /* fields for generational collector */
+  GCObject *old;  /* start of old objects */
+  GCObject *survival;  /* start of objects that survived one GC cycle */
   struct lua_State *twups;  /* list of threads with open upvalues */
   unsigned int gcfinnum;  /* number of finalizers to call in each GC step */
   int gcpause;  /* size of pause between successive GCs */
