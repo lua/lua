@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.64 2016/04/18 13:06:55 roberto Exp $
+** $Id: loslib.c,v 1.65 2016/07/18 17:58:58 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -293,7 +293,8 @@ static int os_date (lua_State *L) {
   else
     stm = l_localtime(&t, &tmr);
   if (stm == NULL)  /* invalid date? */
-    luaL_error(L, "time result cannot be represented in this installation");
+    return luaL_error(L,
+                 "time result cannot be represented in this installation");
   if (strcmp(s, "*t") == 0) {
     lua_createtable(L, 0, 9);  /* 9 = number of fields */
     setallfields(L, stm);
@@ -340,7 +341,8 @@ static int os_time (lua_State *L) {
     setallfields(L, &ts);  /* update fields with normalized values */
   }
   if (t != (time_t)(l_timet)t || t == (time_t)(-1))
-    luaL_error(L, "time result cannot be represented in this installation");
+    return luaL_error(L,
+                  "time result cannot be represented in this installation");
   l_pushtime(L, t);
   return 1;
 }
