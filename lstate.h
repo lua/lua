@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.134 2017/02/15 18:52:13 roberto Exp roberto $
+** $Id: lstate.h,v 2.135 2017/02/23 21:07:34 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -160,8 +160,12 @@ typedef struct global_State {
   GCObject *tobefnz;  /* list of userdata to be GC */
   GCObject *fixedgc;  /* list of objects not to be collected */
   /* fields for generational collector */
-  GCObject *old;  /* start of old objects */
   GCObject *survival;  /* start of objects that survived one GC cycle */
+  GCObject *old;  /* start of old objects */
+  GCObject *reallyold;  /* old objects with more than one cycle */
+  GCObject *finobjsur;  /* list of survival objects with finalizers */
+  GCObject *finobjold;  /* list of old objects with finalizers */
+  GCObject *finobjrold;  /* list of really old objects with finalizers */
   struct lua_State *twups;  /* list of threads with open upvalues */
   unsigned int gcfinnum;  /* number of finalizers to call in each GC step */
   int gcpause;  /* size of pause between successive GCs */

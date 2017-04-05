@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.91 2015/12/21 13:02:14 roberto Exp roberto $
+** $Id: lgc.h,v 2.92 2017/02/23 21:07:34 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -37,13 +37,14 @@
 ** Possible states of the Garbage Collector
 */
 #define GCSpropagate	0
-#define GCSatomic	1
-#define GCSswpallgc	2
-#define GCSswpfinobj	3
-#define GCSswptobefnz	4
-#define GCSswpend	5
-#define GCScallfin	6
-#define GCSpause	7
+#define GCSenteratomic	1
+#define GCSatomic	2
+#define GCSswpallgc	3
+#define GCSswpfinobj	4
+#define GCSswptobefnz	5
+#define GCSswpend	6
+#define GCScallfin	7
+#define GCSpause	8
 
 
 #define issweepphase(g)  \
@@ -74,13 +75,16 @@
 #define testbit(x,b)		testbits(x, bitmask(b))
 
 
-/* Layout for bit use in 'marked' field: */
-#define WHITE0BIT	0  /* object is white (type 0) */
-#define WHITE1BIT	1  /* object is white (type 1) */
-#define BLACKBIT	2  /* object is black */
-#define FINALIZEDBIT	3  /* object has been marked for finalization */
-#define OLDBIT		4  /* object is old (gen. mode) */
+/*
+** Layout for bit use in 'marked' field. First three bits are
+** used for object "age" in generational mode.
+*/
+#define WHITE0BIT	3  /* object is white (type 0) */
+#define WHITE1BIT	4  /* object is white (type 1) */
+#define BLACKBIT	5  /* object is black */
+#define FINALIZEDBIT	6  /* object has been marked for finalization */
 #define TESTGRAYBIT	7  /* used by tests (luaL_checkmemory) */
+
 
 #define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)
 
@@ -89,7 +93,6 @@
 #define isblack(x)      testbit((x)->marked, BLACKBIT)
 #define isgray(x)  /* neither white nor black */  \
 	(!testbits((x)->marked, WHITEBITS | bitmask(BLACKBIT)))
-#define isold(x)	testbit((x)->marked, OLDBIT)
 
 #define tofinalize(x)	testbit((x)->marked, FINALIZEDBIT)
 
@@ -101,6 +104,27 @@
 #define gray2black(x)	l_setbit((x)->marked, BLACKBIT)
 
 #define luaC_white(g)	cast(lu_byte, (g)->currentwhite & WHITEBITS)
+
+
+/* object age in generational mode */
+#define G_NEW		0	/* created in current cycle */
+#define G_SURVIVAL	1	/* created in previous cycle */
+#define G_OLD1		2	/* first full cycle as old */
+#define G_OLD0		3	/* marked old by frw. barrier in this cycle */
+#define G_OLD		4	/* really old object (not to be visited) */
+#define G_TOUCHED1	5	/* old object touched this cycle */
+#define G_TOUCHED2	6	/* old object touched in previous cycle */
+
+#define AGEBITS		7  /* all age bits (111) */
+
+#define getage(o)	((o)->marked & AGEBITS)
+#define setage(o,a)  ((o)->marked = cast_byte(((o)->marked & (~AGEBITS)) | a))
+#define isold(o)	(getage(o) > G_SURVIVAL)
+
+#define changeage(o,f,t)  \
+	check_exp(getage(o) == (f), (o)->marked ^= ((f)^(t)))
+
+#define ongraylist(o)	(isgray(o) || getage(o) == G_TOUCHED2)
 
 
 /*
