@@ -186,13 +186,11 @@ void luaC_barrierback_ (lua_State *L, Table *t) {
 ** closures pointing to it. So, we assume that the object being assigned
 ** must be marked.
 */
-void luaC_upvalbarrier_ (lua_State *L, UpVal *uv) {
+void luaC_upvalbarrier_ (lua_State *L, GCObject *o) {
   global_State *g = G(L);
-  GCObject *o = gcvalue(uv->v);
-  if (keepinvariant(g)) {
+  if (keepinvariant(g) && !isold(o)) {
     markobject(g, o);
-    if (!isold(o))
-      setage(o, G_OLD0);
+    setage(o, G_OLD0);
   }
 }
 

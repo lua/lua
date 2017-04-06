@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.259 2016/02/29 14:27:14 roberto Exp roberto $
+** $Id: lapi.c,v 2.260 2017/02/23 21:07:34 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1004,7 +1004,7 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
       const TValue *gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
       /* set global table as 1st upvalue of 'f' (may be LUA_ENV) */
       setobj(L, f->upvals[0]->v, gt);
-      luaC_upvalbarrier(L, f->upvals[0]);
+      luaC_upvalbarrier(L, f->upvals[0], gt);
     }
   }
   lua_unlock(L);
@@ -1253,8 +1253,8 @@ LUA_API const char *lua_setupvalue (lua_State *L, int funcindex, int n) {
   if (name) {
     L->top--;
     setobj(L, val, L->top);
-    if (owner) { luaC_barrier(L, owner, L->top); }
-    else if (uv) { luaC_upvalbarrier(L, uv); }
+    if (owner) { luaC_barrier(L, owner, val); }
+    else if (uv) { luaC_upvalbarrier(L, uv, val); }
   }
   lua_unlock(L);
   return name;
@@ -1300,7 +1300,7 @@ LUA_API void lua_upvaluejoin (lua_State *L, int fidx1, int n1,
   *up1 = *up2;
   (*up1)->refcount++;
   if (upisopen(*up1)) (*up1)->u.open.touched = 1;
-  luaC_upvalbarrier(L, *up1);
+  luaC_upvalbarrier(L, *up1, (*up1)->v);
 }
 
 

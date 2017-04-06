@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.44 2014/10/25 11:50:46 roberto Exp roberto $
+** $Id: lfunc.c,v 2.45 2014/11/02 19:19:04 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -88,9 +88,10 @@ void luaF_close (lua_State *L, StkId level) {
     if (uv->refcount == 0)  /* no references? */
       luaM_free(L, uv);  /* free upvalue */
     else {
-      setobj(L, &uv->u.value, uv->v);  /* move value to upvalue slot */
-      uv->v = &uv->u.value;  /* now current value lives here */
-      luaC_upvalbarrier(L, uv);
+      TValue *slot = &uv->u.value;  /* new position for value */
+      setobj(L, slot, uv->v);  /* move value to upvalue slot */
+      uv->v = slot;  /* now current value lives here */
+      luaC_upvalbarrier(L, uv, slot);
     }
   }
 }

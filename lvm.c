@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.267 2016/01/05 16:07:21 roberto Exp roberto $
+** $Id: lvm.c,v 2.268 2016/02/05 19:59:14 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -855,7 +855,7 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_SETUPVAL) {
         UpVal *uv = cl->upvals[GETARG_B(i)];
         setobj(L, uv->v, ra);
-        luaC_upvalbarrier(L, uv);
+        luaC_upvalbarrier(L, uv, ra);
         vmbreak;
       }
       vmcase(OP_SETTABLE) {
