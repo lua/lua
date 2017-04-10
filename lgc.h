@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.92 2017/02/23 21:07:34 roberto Exp roberto $
+** $Id: lgc.h,v 2.94 2017/04/06 13:08:56 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -109,8 +109,8 @@
 /* object age in generational mode */
 #define G_NEW		0	/* created in current cycle */
 #define G_SURVIVAL	1	/* created in previous cycle */
-#define G_OLD1		2	/* first full cycle as old */
-#define G_OLD0		3	/* marked old by frw. barrier in this cycle */
+#define G_OLD0		2	/* marked old by frw. barrier in this cycle */
+#define G_OLD1		3	/* first full cycle as old */
 #define G_OLD		4	/* really old object (not to be visited) */
 #define G_TOUCHED1	5	/* old object touched this cycle */
 #define G_TOUCHED2	6	/* old object touched in previous cycle */
