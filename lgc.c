@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.219 2017/04/10 13:33:04 roberto Exp roberto $
+** $Id: lgc.c,v 2.220 2017/04/11 18:41:09 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -1200,8 +1200,6 @@ static void entergen (lua_State *L, global_State *g) {
 
   sweep2old(L, &g->tobefnz);
 
-  setage(g->mainthread, G_OLD);
-
   finishgencycle(L, g);
   g->gckind = KGC_GEN;
 }
@@ -1213,7 +1211,6 @@ static void entergen (lua_State *L, global_State *g) {
 ** and go to pause state.
 */
 static void enterinc (global_State *g) {
-  makewhite(g, g->mainthread);
   whitelist(g, g->allgc);
   g->reallyold = g->old = g->survival = NULL;
   whitelist(g, g->finobj);
@@ -1305,8 +1302,8 @@ static void entersweep (lua_State *L) {
 }
 
 
-static void deletealllist (lua_State *L, GCObject *p) {
-  while (p) {
+static void deletealllist (lua_State *L, GCObject *p, GCObject *limit) {
+  while (p != limit) {
     GCObject *next = p->next;
     freeobj(L, p);
     p = next;
@@ -1320,9 +1317,9 @@ void luaC_freeallobjects (lua_State *L) {
   separatetobefnz(g, 1);  /* separate all objects with finalizers */
   lua_assert(g->finobj == NULL);
   callallpendingfinalizers(L);
-  deletealllist(L, g->finobj);
-  deletealllist(L, g->allgc);
-  deletealllist(L, g->fixedgc);  /* collect fixed objects */
+  deletealllist(L, g->allgc, g->mainthread);
+  deletealllist(L, g->finobj, NULL);
+  deletealllist(L, g->fixedgc, NULL);  /* collect fixed objects */
   lua_assert(g->strt.nuse == 0);
 }
 
@@ -1427,7 +1424,6 @@ static lu_mem singlestep (lua_State *L) {
       return sweepstep(L, g, GCSswpend, NULL);
     }
     case GCSswpend: {  /* finish sweeps */
-      makewhite(g, g->mainthread);  /* sweep main thread */
       checkSizes(L, g);
       g->gcstate = GCScallfin;
       return 0;

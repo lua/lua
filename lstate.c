@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.134 2017/02/23 21:07:34 roberto Exp roberto $
+** $Id: lstate.c,v 2.135 2017/04/05 16:50:51 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -300,11 +300,12 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   if (l == NULL) return NULL;
   L = &l->l.l;
   g = &l->g;
-  L->next = NULL;
   L->tt = LUA_TTHREAD;
   g->currentwhite = bitmask(WHITE0BIT);
   L->marked = luaC_white(g);
   preinit_thread(L, g);
+  g->allgc = obj2gco(L);  /* by now, only object is the main thread */
+  L->next = NULL;
   g->frealloc = f;
   g->ud = ud;
   g->mainthread = L;
@@ -318,7 +319,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->version = NULL;
   g->gcstate = GCSpause;
   g->gckind = KGC_NORMAL;
-  g->allgc = g->finobj = g->tobefnz = g->fixedgc = NULL;
+  g->finobj = g->tobefnz = g->fixedgc = NULL;
   g->survival = g->old = g->reallyold = NULL;
   g->finobjsur = g->finobjold = g->finobjrold = NULL;
   g->sweepgc = NULL;
