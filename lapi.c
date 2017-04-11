@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.260 2017/02/23 21:07:34 roberto Exp roberto $
+** $Id: lapi.c,v 2.261 2017/04/06 13:08:56 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1004,7 +1004,7 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
       const TValue *gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
       /* set global table as 1st upvalue of 'f' (may be LUA_ENV) */
       setobj(L, f->upvals[0]->v, gt);
-      luaC_upvalbarrier(L, f->upvals[0], gt);
+      luaC_barrier(L, f->upvals[0], gt);
     }
   }
   lua_unlock(L);
@@ -1202,13 +1202,13 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
 
 
 static const char *aux_upvalue (StkId fi, int n, TValue **val,
-                                CClosure **owner, UpVal **uv) {
+                                GCObject **owner) {
   switch (ttype(fi)) {
     case LUA_TCCL: {  /* C closure */
       CClosure *f = clCvalue(fi);
       if (!(1 <= n && n <= f->nupvalues)) return NULL;
       *val = &f->upvalue[n-1];
-      if (owner) *owner = f;
+      if (owner) *owner = obj2gco(f);
       return "";
     }
     case LUA_TLCL: {  /* Lua closure */
@@ -1217,7 +1217,7 @@ static const char *aux_upvalue (StkId fi, int n, TValue **val,
       Proto *p = f->p;
       if (!(1 <= n && n <= p->sizeupvalues)) return NULL;
       *val = f->upvals[n-1]->v;
-      if (uv) *uv = f->upvals[n - 1];
+      if (owner) *owner = obj2gco(f->upvals[n - 1]);
       name = p->upvalues[n-1].name;
       return (name == NULL) ? "(*no name)" : getstr(name);
     }
@@ -1230,7 +1230,7 @@ LUA_API const char *lua_getupvalue (lua_State *L, int funcindex, int n) {
   const char *name;
   TValue *val = NULL;  /* to avoid warnings */
   lua_lock(L);
-  name = aux_upvalue(index2addr(L, funcindex), n, &val, NULL, NULL);
+  name = aux_upvalue(index2addr(L, funcindex), n, &val, NULL);
   if (name) {
     setobj2s(L, L->top, val);
     api_incr_top(L);
@@ -1243,18 +1243,16 @@ LUA_API const char *lua_getupvalue (lua_State *L, int funcindex, int n) {
 LUA_API const char *lua_setupvalue (lua_State *L, int funcindex, int n) {
   const char *name;
   TValue *val = NULL;  /* to avoid warnings */
-  CClosure *owner = NULL;
-  UpVal *uv = NULL;
+  GCObject *owner = NULL;  /* to avoid warnings */
   StkId fi;
   lua_lock(L);
   fi = index2addr(L, funcindex);
   api_checknelems(L, 1);
-  name = aux_upvalue(fi, n, &val, &owner, &uv);
+  name = aux_upvalue(fi, n, &val, &owner);
   if (name) {
     L->top--;
     setobj(L, val, L->top);
-    if (owner) { luaC_barrier(L, owner, val); }
-    else if (uv) { luaC_upvalbarrier(L, uv, val); }
+    luaC_barrier(L, owner, val);
   }
   lua_unlock(L);
   return name;
@@ -1296,11 +1294,8 @@ LUA_API void lua_upvaluejoin (lua_State *L, int fidx1, int n1,
   LClosure *f1;
   UpVal **up1 = getupvalref(L, fidx1, n1, &f1);
   UpVal **up2 = getupvalref(L, fidx2, n2, NULL);
-  luaC_upvdeccount(L, *up1);
   *up1 = *up2;
-  (*up1)->refcount++;
-  if (upisopen(*up1)) (*up1)->u.open.touched = 1;
-  luaC_upvalbarrier(L, *up1, (*up1)->v);
+  luaC_objbarrier(L, f1, *up1);
 }
 
 

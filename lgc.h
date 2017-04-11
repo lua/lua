@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.94 2017/04/06 13:08:56 roberto Exp roberto $
+** $Id: lgc.h,v 2.95 2017/04/10 13:33:04 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -124,8 +124,6 @@
 #define changeage(o,f,t)  \
 	check_exp(getage(o) == (f), (o)->marked ^= ((f)^(t)))
 
-#define ongraylist(o)	(isgray(o) || getage(o) == G_TOUCHED2)
-
 
 /*
 ** Does one step of collection when debt becomes positive. 'pre'/'pos'
@@ -153,10 +151,6 @@
 	(isblack(p) && iswhite(o)) ? \
 	luaC_barrier_(L,obj2gco(p),obj2gco(o)) : cast_void(0))
 
-#define luaC_upvalbarrier(L,uv,x) ( \
-	(iscollectable(x) && !upisopen(uv)) ? \
-         luaC_upvalbarrier_(L,gcvalue(x)) : cast_void(0))
-
 LUAI_FUNC void luaC_fix (lua_State *L, GCObject *o);
 LUAI_FUNC void luaC_freeallobjects (lua_State *L);
 LUAI_FUNC void luaC_step (lua_State *L);
@@ -165,9 +159,7 @@ LUAI_FUNC void luaC_fullgc (lua_State *L, int isemergency);
 LUAI_FUNC GCObject *luaC_newobj (lua_State *L, int tt, size_t sz);
 LUAI_FUNC void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v);
 LUAI_FUNC void luaC_barrierback_ (lua_State *L, Table *o);
-LUAI_FUNC void luaC_upvalbarrier_ (lua_State *L, GCObject *o);
 LUAI_FUNC void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt);
-LUAI_FUNC void luaC_upvdeccount (lua_State *L, UpVal *uv);
 LUAI_FUNC void luaC_changemode (lua_State *L, int newmode);
 
 

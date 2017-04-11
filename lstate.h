@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.135 2017/02/23 21:07:34 roberto Exp $
+** $Id: lstate.h,v 2.136 2017/04/05 16:50:51 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -224,6 +224,7 @@ union GCUnion {
   struct Table h;
   struct Proto p;
   struct lua_State th;  /* thread */
+  struct UpVal upv;
 };
 
 
@@ -240,6 +241,7 @@ union GCUnion {
 #define gco2t(o)  check_exp((o)->tt == LUA_TTABLE, &((cast_u(o))->h))
 #define gco2p(o)  check_exp((o)->tt == LUA_TPROTO, &((cast_u(o))->p))
 #define gco2th(o)  check_exp((o)->tt == LUA_TTHREAD, &((cast_u(o))->th))
+#define gco2upv(o)  check_exp((o)->tt == LUA_TUPVAL, &((cast_u(o))->upv))
 
 
 /* macro to convert a Lua object into a GCObject */

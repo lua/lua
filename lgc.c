@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.218 2017/04/06 13:08:56 roberto Exp roberto $
+** $Id: lgc.c,v 2.219 2017/04/10 13:33:04 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -179,25 +179,11 @@ void luaC_barrierback_ (lua_State *L, Table *t) {
 }
 
 
-/*
-** barrier for assignments to closed upvalues. Because upvalues are
-** shared among closures, it is impossible to know the color of all
-** closures pointing to it. So, we assume that the object being assigned
-** must be marked.
-*/
-void luaC_upvalbarrier_ (lua_State *L, GCObject *o) {
-  global_State *g = G(L);
-  if (keepinvariant(g) && !isold(o)) {
-    markobject(g, o);
-    setage(o, G_OLD0);
-  }
-}
-
-
 void luaC_fix (lua_State *L, GCObject *o) {
   global_State *g = G(L);
   lua_assert(g->allgc == o);  /* object must be 1st in 'allgc' list! */
   white2gray(o);  /* they will be gray forever */
+  setage(o, G_OLD);  /* and old forever */
   g->allgc = o->next;  /* remove object from 'allgc' list */
   o->next = g->fixedgc;  /* link it to 'fixedgc' list */
   g->fixedgc = o;
@@ -230,10 +216,11 @@ GCObject *luaC_newobj (lua_State *L, int tt, size_t sz) {
 
 
 /*
-** mark an object. Userdata, strings, and closed upvalues are visited
+** Mark an object. Userdata, strings, and closed upvalues are visited
 ** and turned black here. Other objects are marked gray and added
 ** to appropriate list to be visited (and turned black) later. (Open
-** upvalues are already linked in 'headuv' list.)
+** upvalues are already linked in 'headuv' list. They are kept gray
+** to avoid barriers, as their values will be revisited by the thread.)
 */
 static void reallymarkobject (global_State *g, GCObject *o) {
  reentry:
@@ -259,6 +246,14 @@ static void reallymarkobject (global_State *g, GCObject *o) {
         o = gcvalue(&uvalue);
         goto reentry;
       }
+      break;
+    }
+    case LUA_TUPVAL: {
+      UpVal *uv = gco2upv(o);
+      g->GCmemtrav += sizeof(UpVal);
+      if (!upisopen(uv))  /* open upvalues are kept gray */
+        gray2black(o);
+      markvalue(g, uv->v);  /* mark its content */
       break;
     }
     case LUA_TLCL: {
@@ -324,10 +319,8 @@ static void remarkupvals (global_State *g) {
       *p = thread->twups;  /* remove thread from the list */
       thread->twups = thread;  /* mark that it is out of list */
       for (uv = thread->openupval; uv != NULL; uv = uv->u.open.next) {
-        if (uv->u.open.touched) {
-          markvalue(g, uv->v);  /* remark upvalue's value */
-          uv->u.open.touched = 0;
-        }
+        if (!iswhite(uv))  /* upvalue already visited? */
+          markvalue(g, uv->v);  /* mark its value */
       }
     }
   }
@@ -516,22 +509,15 @@ static lu_mem traverseCclosure (global_State *g, CClosure *cl) {
 }
 
 /*
-** open upvalues point to values in a thread, so those values should
-** be marked when the thread is traversed except in the atomic phase
-** (because then the value cannot be changed by the thread and the
-** thread may not be traversed again)
+** Traverse a Lua closure, marking its prototype and its upvalues.
+** (Both can be NULL while closure is being created.)
 */
 static lu_mem traverseLclosure (global_State *g, LClosure *cl) {
   int i;
   markobjectN(g, cl->p);  /* mark its prototype */
   for (i = 0; i < cl->nupvalues; i++) {  /* visit its upvalues */
     UpVal *uv = cl->upvals[i];
-    if (uv != NULL) {  /* can be NULL while closure is being built */
-      if (upisopen(uv) && g->gcstate != GCSatomic)
-        uv->u.open.touched = 1;  /* can be marked in 'remarkupvals' */
-      else
-        markvalue(g, uv->v);
-    }
+    markobjectN(g, uv);  /* mark upvalue */
   }
   return sizeLclosure(cl->nupvalues);
 }
@@ -569,7 +555,6 @@ static lu_mem traversethread (global_State *g, lua_State *th) {
 static void propagatemark (global_State *g) {
   lu_mem size;
   GCObject *o = g->gray;
-  lua_assert(ongraylist(o));
   gray2black(o);
   switch (o->tt) {
     case LUA_TTABLE: {
@@ -683,26 +668,10 @@ static void clearvalues (global_State *g, GCObject *l, GCObject *f) {
 }
 
 
-/*
-** Decrement the reference count of an upvalue. If it goes to zero and
-** upvalue is closed, delete it.
-*/
-void luaC_upvdeccount (lua_State *L, UpVal *uv) {
-  lua_assert(uv->refcount > 0);
-  uv->refcount--;
-  if (uv->refcount == 0 && !upisopen(uv))
-    luaM_free(L, uv);
-}
-
-
-static void freeLclosure (lua_State *L, LClosure *cl) {
-  int i;
-  for (i = 0; i < cl->nupvalues; i++) {
-    UpVal *uv = cl->upvals[i];
-    if (uv)
-      luaC_upvdeccount(L, uv);
-  }
-  luaM_freemem(L, cl, sizeLclosure(cl->nupvalues));
+static void freeupval (lua_State *L, UpVal *uv) {
+  if (upisopen(uv))
+    luaF_unlinkupval(uv);
+  luaM_free(L, uv);
 }
 
 
@@ -711,8 +680,11 @@ static void freeobj (lua_State *L, GCObject *o) {
     case LUA_TPROTO:
       luaF_freeproto(L, gco2p(o));
       break;
+    case LUA_TUPVAL:
+      freeupval(L, gco2upv(o));
+      break;
     case LUA_TLCL:
-      freeLclosure(L, gco2lcl(o));
+      luaM_freemem(L, o, sizeLclosure(gco2lcl(o)->nupvalues));
       break;
     case LUA_TCCL:
       luaM_freemem(L, o, sizeCclosure(gco2ccl(o)->nupvalues));
@@ -1144,14 +1116,14 @@ static void correctgraylists (global_State *g) {
 
 
 /*
-** Mark 'old1' objects when starting a new young collection. ('old1'
-** tables are always black, threads are always gray.)
+** Mark 'old1' objects when starting a new young collection. (Threads
+** and open upvalues are always gray, and do not need to be marked.
+** All other old objects are black.)
 */
 static void markold (global_State *g, GCObject *from, GCObject *to) {
   GCObject *p;
   for (p = from; p != to; p = p->next) {
     if (getage(p) == G_OLD1) {
-      lua_assert((p->tt == LUA_TTHREAD) ? isgray(p) : isblack(p));
       if (isblack(p)) {
         black2gray(p);  /* should be '2white', but gray works too */
         reallymarkobject(g, p);
@@ -1228,6 +1200,8 @@ static void entergen (lua_State *L, global_State *g) {
 
   sweep2old(L, &g->tobefnz);
 
+  setage(g->mainthread, G_OLD);
+
   finishgencycle(L, g);
   g->gckind = KGC_GEN;
 }
@@ -1282,6 +1256,7 @@ static void genstep (lua_State *L, global_State *g) {
   youngcollection(L, g);
   mem = gettotalbytes(g);
   luaE_setdebt(g, -((mem / 100) * 20));
+lua_checkmemory(L);
 }
 
 
