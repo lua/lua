@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.220 2017/04/11 18:41:09 roberto Exp roberto $
+** $Id: lgc.c,v 2.221 2017/04/11 19:00:27 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -425,6 +425,8 @@ static int traverseephemeron (global_State *g, Table *h) {
     linkgclist(h, g->allweak);  /* may have to clean white keys */
   else if (g->gckind == KGC_GEN)
     linkgclist(h, g->grayagain);  /* keep it in some list */
+  else
+    gray2black(h);
   return marked;
 }
 
@@ -939,16 +941,6 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 /* mask to erase all color bits, not changing gen-related stuff */
 #define maskgencolors	(~(bitmask(BLACKBIT) | WHITEBITS))
 
-#if 0
-static int count (GCObject *p, GCObject *limit) {
-  int res = 0;
-  for (; p != NULL && p != limit; p = p->next) {
-    res++;
-  }
-  return res;
-}
-#endif
-
 
 /*
 ** Sweep a list of objects, deleting dead ones and turning
@@ -1015,42 +1007,6 @@ static void whitelist (global_State *g, GCObject *p) {
   int white = luaC_white(g);
   for (; p != NULL; p = p->next)
     p->marked = cast_byte((p->marked & maskcolors) | white);
-}
-
-static void printgray (GCObject *o) {
-  printf("gray:  ");
-  while (o) {
-    printf("%p %d %02x  ", (void*)o, o->tt, o->marked);
-    switch (o->tt) {
-      case LUA_TTABLE: {
-        Table *h = gco2t(o);
-        o = h->gclist;
-        break;
-      }
-      case LUA_TLCL: {
-        LClosure *cl = gco2lcl(o);
-        o = cl->gclist;
-        break;
-      }
-      case LUA_TCCL: {
-        CClosure *cl = gco2ccl(o);
-        o = cl->gclist;
-        break;
-      }
-      case LUA_TTHREAD: {
-        lua_State *th = gco2th(o);
-        o = th->gclist;
-        break;
-      }
-      case LUA_TPROTO: {
-        Proto *p = gco2p(o);
-        o = p->gclist;
-        break;
-      }
-      default: lua_assert(0); return;
-    }
-  }
-  printf("\n");
 }
 
 
@@ -1317,7 +1273,7 @@ void luaC_freeallobjects (lua_State *L) {
   separatetobefnz(g, 1);  /* separate all objects with finalizers */
   lua_assert(g->finobj == NULL);
   callallpendingfinalizers(L);
-  deletealllist(L, g->allgc, g->mainthread);
+  deletealllist(L, g->allgc, obj2gco(g->mainthread));
   deletealllist(L, g->finobj, NULL);
   deletealllist(L, g->fixedgc, NULL);  /* collect fixed objects */
   lua_assert(g->strt.nuse == 0);
