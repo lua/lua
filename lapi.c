@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.261 2017/04/06 13:08:56 roberto Exp roberto $
+** $Id: lapi.c,v 2.262 2017/04/11 18:41:09 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1098,6 +1098,10 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       break;
     }
     case LUA_GCGEN: {
+      lu_byte aux = data & 0xff;
+      g->genminormul = (aux == 0) ? 20 : aux;
+      aux = (data >> 8) & 0xff;
+      g->genmajormul = (aux == 0) ? 100 : aux;
       luaC_changemode(L, KGC_GEN);
       break;
     }
