@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.212 2017/02/23 21:07:34 roberto Exp roberto $
+** $Id: ltests.c,v 2.213 2017/04/18 19:42:12 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -189,10 +189,11 @@ void *debug_realloc (void *ud, void *b, size_t oldsize, size_t size) {
 /*
 ** Check GC invariants. For incremental mode, a black object cannot
 ** point to a white one. For generational mode, really old objects
-** cannot point to young objects. (Threads and open upvalues, despite
-** being marked "really old", continue to be visited in all collections,
-** and therefore can point to new objects. They, and only they, are
-** old but gray.)
+** cannot point to young objects. Both old1 and touched2 objects
+** cannot point to new objects (but can point to survivals).
+** (Threads and open upvalues, despite being marked "really old",
+** continue to be visited in all collections, and therefore can point to
+** new objects. They, and only they, are old but gray.)
 */
 static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
   if (isdead(g,t)) return 0;
@@ -200,8 +201,14 @@ static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
     return 1;  /* no invariants */
   else if (g->gckind == KGC_NORMAL)
     return !(isblack(f) && iswhite(t));  /* basic incremental invariant */
-  else
-    return !((getage(f) == G_OLD && isblack(f)) && !isold(t));
+  else {  /* generational mode */
+    if ((getage(f) == G_OLD && isblack(f)) && !isold(t))
+      return 0;
+    if (((getage(f) == G_OLD1 || getage(f) == G_TOUCHED2) && isblack(f)) &&
+          getage(t) == G_NEW)
+      return 0;
+    return 1;
+  }
 }
 
 
@@ -377,6 +384,17 @@ static void checkrefs (global_State *g, GCObject *o) {
 }
 
 
+/*
+** Check consistency of an object:
+** - Dead objects can only happen in the 'allgc' list during a sweep
+** phase (controled by the caller through 'maybedead').
+** - During pause, all objects must be white.
+** - In generational mode:
+**   * objects must be old enough for their lists ('listage').
+**   * old objects cannot be white.
+**   * old objects must be black, except for 'touched1', 'old0',
+** threads, and open upvalues.
+*/
 static void checkobject (global_State *g, GCObject *o, int maybedead,
                          int listage) {
   if (isdead(g, o))
@@ -389,6 +407,7 @@ static void checkobject (global_State *g, GCObject *o, int maybedead,
       if (isold(o)) {
         lua_assert(isblack(o) ||
         getage(o) == G_TOUCHED1 ||
+        getage(o) == G_OLD0 ||
         o->tt == LUA_TTHREAD ||
         (o->tt == LUA_TUPVAL && upisopen(gco2upv(o))));
       }
@@ -442,9 +461,9 @@ static void checkgray (global_State *g, GCObject *o) {
 
 
 static void checklist (global_State *g, int maybedead, int tof,
-  GCObject *new, GCObject *survival, GCObject *old, GCObject *reallyold) {
+  GCObject *newl, GCObject *survival, GCObject *old, GCObject *reallyold) {
   GCObject *o;
-  for (o = new; o != survival; o = o->next) {
+  for (o = newl; o != survival; o = o->next) {
     checkobject(g, o, maybedead, G_NEW);
     lua_assert(!tof == !tofinalize(o));
   }
@@ -668,20 +687,31 @@ static int gc_color (lua_State *L) {
   TValue *o;
   luaL_checkany(L, 1);
   o = obj_at(L, 1);
-  if (!iscollectable(o)) {
+  if (!iscollectable(o))
     lua_pushstring(L, "no collectable");
-    return 1;
-  }
   else {
-    static const char *gennames[] = {"new", "survival", "old0", "old1",
-                                     "old", "touched1", "touched2"};
     GCObject *obj = gcvalue(o);
     lua_pushstring(L, isdead(G(L), obj) ? "dead" :
                       iswhite(obj) ? "white" :
                       isblack(obj) ? "black" : "grey");
-    lua_pushstring(L, gennames[getage(obj)]);
-    return 2;
   }
+  return 1;
+}
+
+
+static int gc_age (lua_State *L) {
+  TValue *o;
+  luaL_checkany(L, 1);
+  o = obj_at(L, 1);
+  if (!iscollectable(o))
+    lua_pushstring(L, "no collectable");
+  else {
+    static const char *gennames[] = {"new", "survival", "old0", "old1",
+                                     "old", "touched1", "touched2"};
+    GCObject *obj = gcvalue(o);
+    lua_pushstring(L, gennames[getage(obj)]);
+  }
+  return 1;
 }
 
 
@@ -1587,6 +1617,7 @@ static const struct luaL_Reg tests_funcs[] = {
   {"doonnewstack", doonnewstack},
   {"doremote", doremote},
   {"gccolor", gc_color},
+  {"gcage", gc_age},
   {"gcstate", gc_state},
   {"pobj", gc_printobj},
   {"getref", getref},
