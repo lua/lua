@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.148 2014/10/25 11:50:46 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.149 2016/07/19 17:12:21 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -170,6 +170,7 @@ name		args	description
 ------------------------------------------------------------------------*/
 OP_MOVE,/*	A B	R(A) := R(B)					*/
 OP_LOADK,/*	A Bx	R(A) := Kst(Bx)					*/
+OP_LOADI,/*	A sBx	R(A) := sBx					*/
 OP_LOADKX,/*	A 	R(A) := Kst(extra arg)				*/
 OP_LOADBOOL,/*	A B C	R(A) := (Bool)B; if (C) pc++			*/
 OP_LOADNIL,/*	A B	R(A), R(A+1), ..., R(A+B) := nil		*/

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.111 2016/07/19 17:12:07 roberto Exp roberto $
+** $Id: lcode.c,v 2.112 2016/12/22 13:08:50 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -343,7 +343,7 @@ static int codeextraarg (FuncState *fs, int a) {
 ** (if constant index 'k' fits in 18 bits) or an 'OP_LOADKX'
 ** instruction with "extra argument".
 */
-int luaK_codek (FuncState *fs, int reg, int k) {
+static int luaK_codek (FuncState *fs, int reg, int k) {
   if (k <= MAXARG_Bx)
     return luaK_codeABx(fs, OP_LOADK, reg, k);
   else {
@@ -468,7 +468,7 @@ int luaK_stringK (FuncState *fs, TString *s) {
 ** same value; conversion to 'void*' is used only for hashing, so there
 ** are no "precision" problems.
 */
-int luaK_intK (FuncState *fs, lua_Integer n) {
+static int luaK_intK (FuncState *fs, lua_Integer n) {
   TValue k, o;
   setpvalue(&k, cast(void*, cast(size_t, n)));
   setivalue(&o, n);
@@ -504,6 +504,14 @@ static int nilK (FuncState *fs) {
   /* cannot use nil as key; instead use table itself to represent nil */
   sethvalue(fs->ls->L, &k, fs->ls->h);
   return addk(fs, &k, &v);
+}
+
+
+void luaK_int (FuncState *fs, int reg, lua_Integer i) {
+  if (-MAXARG_sBx <= i && i <= MAXARG_sBx)
+    luaK_codeAsBx(fs, OP_LOADI, reg, cast_int(i));
+  else
+    luaK_codek(fs, reg, luaK_intK(fs, i));
 }
 
 
@@ -612,7 +620,7 @@ static void discharge2reg (FuncState *fs, expdesc *e, int reg) {
       break;
     }
     case VKINT: {
-      luaK_codek(fs, reg, luaK_intK(fs, e->u.ival));
+      luaK_int(fs, reg, e->u.ival);
       break;
     }
     case VRELOCABLE: {

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.154 2016/06/22 15:48:25 roberto Exp roberto $
+** $Id: lparser.c,v 2.155 2016/08/01 19:51:24 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1329,7 +1329,7 @@ static void fornum (LexState *ls, TString *varname, int line) {
   if (testnext(ls, ','))
     exp1(ls);  /* optional step */
   else {  /* default step = 1 */
-    luaK_codek(fs, fs->freereg, luaK_intK(fs, 1));
+    luaK_int(fs, fs->freereg, 1);
     luaK_reserveregs(fs, 1);
   }
   forbody(ls, base, line, 1, 1);
