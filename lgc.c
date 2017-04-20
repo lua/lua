@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.222 2017/04/12 18:01:40 roberto Exp roberto $
+** $Id: lgc.c,v 2.223 2017/04/19 17:02:50 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -1207,17 +1207,18 @@ static void fullgen (lua_State *L, global_State *g) {
 */
 static void genstep (lua_State *L, global_State *g) {
   lu_mem majorbase = g->GCestimate;
-lua_checkmemory(L);
-  if (gettotalbytes(g) > (majorbase / 100) * (100 + g->genmajormul))
+//lua_checkmemory(L);
+  if (gettotalbytes(g) > (majorbase / 100) * (100 + g->genmajormul)) {
     fullgen(L, g);
+  }
   else {
     lu_mem mem;
     youngcollection(L, g);
     mem = gettotalbytes(g);
     luaE_setdebt(g, -((mem / 100) * g->genminormul));
-    g->GCestimate = mem;
+    g->GCestimate = majorbase;  /* preserve base value */
   }
-lua_checkmemory(L);
+//lua_checkmemory(L);
 }
 
 
