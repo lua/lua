@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.149 2016/07/19 17:12:21 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.150 2017/04/20 19:53:55 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -254,6 +254,8 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
   'instruction' is EXTRAARG(real C).
 
   (*) In OP_LOADKX, the next 'instruction' is always EXTRAARG.
+
+  (*) In OP_GETTABUP, OP_SETTABUP, and OP_SELF, the index must be a string.
 
   (*) For comparisons, A specifies what condition the test should accept
   (true or false).

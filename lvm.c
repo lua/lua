@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.270 2017/04/11 18:41:09 roberto Exp roberto $
+** $Id: lvm.c,v 2.271 2017/04/20 19:53:55 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -838,9 +838,14 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_GETTABUP) {
+        const TValue *slot;
         TValue *upval = cl->upvals[GETARG_B(i)]->v;
         TValue *rc = RKC(i);
-        gettableProtected(L, upval, rc, ra);
+        TString *key = tsvalue(rc);  /* key must be a string */
+        if (luaV_fastget(L, upval, key, slot, luaH_getstr)) {
+          setobj2s(L, ra, slot);
+        }
+        else Protect(luaV_finishget(L, upval, rc, ra, slot));
         vmbreak;
       }
       vmcase(OP_GETTABLE) {
@@ -850,10 +855,13 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_SETTABUP) {
+        const TValue *slot;
         TValue *upval = cl->upvals[GETARG_A(i)]->v;
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
-        settableProtected(L, upval, rb, rc);
+        TString *key = tsvalue(rb);  /* key must be a string */
+        if (!luaV_fastset(L, upval, key, slot, luaH_getstr, rc))
+          Protect(luaV_finishset(L, upval, rb, rc, slot));
         vmbreak;
       }
       vmcase(OP_SETUPVAL) {
@@ -879,15 +887,15 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_SELF) {
-        const TValue *aux;
+        const TValue *slot;
         StkId rb = RB(i);
         TValue *rc = RKC(i);
         TString *key = tsvalue(rc);  /* key must be a string */
         setobjs2s(L, ra + 1, rb);
-        if (luaV_fastget(L, rb, key, aux, luaH_getstr)) {
-          setobj2s(L, ra, aux);
+        if (luaV_fastget(L, rb, key, slot, luaH_getstr)) {
+          setobj2s(L, ra, slot);
         }
-        else Protect(luaV_finishget(L, rb, rc, ra, aux));
+        else Protect(luaV_finishget(L, rb, rc, ra, slot));
         vmbreak;
       }
       vmcase(OP_ADD) {

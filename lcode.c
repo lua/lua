@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.112 2016/12/22 13:08:50 roberto Exp roberto $
+** $Id: lcode.c,v 2.113 2017/04/20 19:53:55 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -948,11 +948,21 @@ static void codenot (FuncState *fs, expdesc *e) {
 
 
 /*
+** Check whether expression 'e' is a literal string
+*/
+static int isKstr (FuncState *fs, expdesc *e) {
+  return (e->k == VK && ttisstring(&fs->f->k[e->u.info]));
+}
+
+
+/*
 ** Create expression 't[k]'. 't' must have its final result already in a
-** register or upvalue.
+** register or upvalue. Upvalues can only be indexed by literal strings.
 */
 void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
   lua_assert(!hasjumps(t) && (vkisinreg(t->k) || t->k == VUPVAL));
+  if (t->k == VUPVAL && !isKstr(fs, k))  /* upvalue indexed by non string? */
+    luaK_exp2anyreg(fs, t);  /* put it in a register */
   t->u.ind.t = t->u.info;  /* register or upvalue index */
   t->u.ind.idx = luaK_exp2RK(fs, k);  /* R/K index for key */
   t->u.ind.vt = (t->k == VUPVAL) ? VUPVAL : VLOCAL;
