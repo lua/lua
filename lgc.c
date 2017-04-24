@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.224 2017/04/20 18:24:33 roberto Exp roberto $
+** $Id: lgc.c,v 2.225 2017/04/24 16:59:26 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -1202,13 +1202,18 @@ static void fullgen (lua_State *L, global_State *g) {
 
 
 /*
-** Does a generational "step". For now that means a young
-** collection. (We still has to implement the full control.)
+** Does a generational "step". If memory grows 'genmajormul'% larger
+** than last major collection (kept in 'g->GCestimate'), does a major
+** collection. Otherwise, does a minor collection and set debt to make
+** another collection when memory grows 'genminormul'% larger.
+** 'GCdebt <= 0' means an explicity call to GC step with "size" zero;
+** in that case, always do a minor collection.
 */
 static void genstep (lua_State *L, global_State *g) {
   lu_mem majorbase = g->GCestimate;
 //lua_checkmemory(L);
-  if (gettotalbytes(g) > (majorbase / 100) * (100 + g->genmajormul)) {
+  if (g->GCdebt > 0 &&
+      gettotalbytes(g) > (majorbase / 100) * (100 + g->genmajormul)) {
     fullgen(L, g);
   }
   else {
