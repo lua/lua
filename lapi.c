@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.263 2017/04/19 17:02:50 roberto Exp roberto $
+** $Id: lapi.c,v 2.264 2017/04/20 18:22:44 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1111,7 +1111,7 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       break;
     }
     case LUA_GCINC: {
-      luaC_changemode(L, KGC_NORMAL);
+      luaC_changemode(L, KGC_INC);
       break;
     }
     default: res = -1;  /* invalid option */

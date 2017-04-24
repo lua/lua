@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.137 2017/04/11 18:41:09 roberto Exp roberto $
+** $Id: lstate.h,v 2.138 2017/04/19 17:02:50 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -69,9 +69,8 @@ struct lua_longjmp;  /* defined in ldo.c */
 
 
 /* kinds of Garbage Collection */
-#define KGC_NORMAL	0
+#define KGC_INC		0	/* incremental gc */
 #define KGC_GEN		1	/* generational gc */
-#define KGC_EMERGENCY	2	/* gc was forced by an allocation failure */
 
 
 typedef struct stringtable {
@@ -151,6 +150,7 @@ typedef struct global_State {
   lu_byte genminormul;  /* control for minor generational collections */
   lu_byte genmajormul;  /* control for major generational collections */
   lu_byte gcrunning;  /* true if GC is running */
+  lu_byte gcemergency;  /* true if this is an emergency collection */
   GCObject *allgc;  /* list of all collectable objects */
   GCObject **sweepgc;  /* current position of sweep in list */
   GCObject *finobj;  /* list of collectable objects with finalizers */

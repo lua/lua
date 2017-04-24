@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.213 2017/04/18 19:42:12 roberto Exp roberto $
+** $Id: ltests.c,v 2.214 2017/04/19 18:46:47 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -199,7 +199,7 @@ static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
   if (isdead(g,t)) return 0;
   if (issweepphase(g))
     return 1;  /* no invariants */
-  else if (g->gckind == KGC_NORMAL)
+  else if (g->gckind == KGC_INC)
     return !(isblack(f) && iswhite(t));  /* basic incremental invariant */
   else {  /* generational mode */
     if ((getage(f) == G_OLD && isblack(f)) && !isold(t))

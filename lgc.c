@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.223 2017/04/19 17:02:50 roberto Exp roberto $
+** $Id: lgc.c,v 2.224 2017/04/20 18:24:33 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -543,7 +543,7 @@ static lu_mem traversethread (global_State *g, lua_State *th) {
       g->twups = th;
     }
   }
-  else if (g->gckind != KGC_EMERGENCY)
+  else if (!g->gcemergency)
     luaD_shrinkstack(th); /* do not change stack in emergency cycle */
   return (sizeof(lua_State) + sizeof(TValue) * th->stacksize +
           sizeof(CallInfo) * th->nci);
@@ -767,7 +767,7 @@ static GCObject **sweeptolive (lua_State *L, GCObject **p) {
 ** If possible, shrink string table
 */
 static void checkSizes (lua_State *L, global_State *g) {
-  if (g->gckind != KGC_EMERGENCY) {
+  if (!g->gcemergency) {
     l_mem olddebt = g->GCdebt;
     if (g->strt.nuse < g->strt.size / 4)  /* string table too big? */
       luaS_resize(L, g->strt.size / 2);  /* shrink it a little */
@@ -1174,7 +1174,7 @@ static void enterinc (global_State *g) {
   g->finobjrold = g->finobjold = g->finobjsur = NULL;
   lua_assert(g->tobefnz == NULL);  /* no need to sweep */
   g->gcstate = GCSpause;
-  g->gckind = KGC_NORMAL;
+  g->gckind = KGC_INC;
 }
 
 
@@ -1278,7 +1278,7 @@ static void deletealllist (lua_State *L, GCObject *p, GCObject *limit) {
 
 void luaC_freeallobjects (lua_State *L) {
   global_State *g = G(L);
-  luaC_changemode(L, KGC_NORMAL);
+  luaC_changemode(L, KGC_INC);
   separatetobefnz(g, 1);  /* separate all objects with finalizers */
   lua_assert(g->finobj == NULL);
   callallpendingfinalizers(L);
@@ -1394,7 +1394,7 @@ static lu_mem singlestep (lua_State *L) {
       return 0;
     }
     case GCScallfin: {  /* call remaining finalizers */
-      if (g->tobefnz && g->gckind != KGC_EMERGENCY) {
+      if (g->tobefnz && !g->gcemergency) {
         int n = runafewfinalizers(L);
         return (n * GCFINALIZECOST);
       }
@@ -1459,7 +1459,7 @@ void luaC_step (lua_State *L) {
   global_State *g = G(L);
   if (!g->gcrunning)  /* not running? */
     luaE_setdebt(g, -GCSTEPSIZE * 10);  /* avoid being called too often */
-  else if (g->gckind == KGC_NORMAL)
+  else if (g->gckind == KGC_INC)
     incstep(L, g);
   else
     genstep(L, g);
@@ -1490,14 +1490,13 @@ static void fullinc (lua_State *L, global_State *g) {
 
 void luaC_fullgc (lua_State *L, int isemergency) {
   global_State *g = G(L);
-  int gckind = g->gckind;
-  if (isemergency)
-    g->gckind = KGC_EMERGENCY;  /* set flag */
-  if (gckind == KGC_NORMAL)
+  lua_assert(!g->gcemergency);
+  g->gcemergency = isemergency;  /* set flag */
+  if (g->gckind == KGC_INC)
     fullinc(L, g);
   else
     fullgen(L, g);
-  g->gckind = gckind;
+  g->gcemergency = 0;
 }
 
 /* }====================================================== */
