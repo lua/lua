@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.117 2016/08/01 19:51:24 roberto Exp roberto $
+** $Id: lobject.h,v 2.118 2017/04/11 18:41:09 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -317,7 +317,7 @@ typedef struct TString {
 ** Ensures that address after this type is always fully aligned.
 */
 typedef union UTString {
-  L_Umaxalign dummy;  /* ensures maximum alignment for strings */
+  LUAI_MAXALIGN;  /* ensures maximum alignment for strings */
   TString tsv;
 } UTString;
 
@@ -357,7 +357,7 @@ typedef struct Udata {
 ** Ensures that address after this type is always fully aligned.
 */
 typedef union UUdata {
-  L_Umaxalign dummy;  /* ensures maximum alignment for 'local' udata */
+  LUAI_MAXALIGN;  /* ensures maximum alignment for 'local' udata */
   Udata uv;
 } UUdata;
 

@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.259 2016/12/22 13:08:50 roberto Exp roberto $
+** $Id: luaconf.h,v 1.260 2017/04/19 16:34:35 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -760,6 +760,12 @@
 #else
 #define LUAL_BUFFERSIZE   ((int)(0x80 * sizeof(void*) * sizeof(lua_Integer)))
 #endif
+
+/*
+@@ LUAI_MAXALIGN defines fields that, when used in a union, ensure
+** "maximum" alignment for the other items in that union.
+*/
+#define LUAI_MAXALIGN  lua_Number n; double u; void *s; lua_Integer i; long l
 
 /* }================================================================== */
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.130 2016/12/04 20:17:24 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.131 2016/12/06 14:54:31 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -150,7 +150,10 @@ typedef struct luaL_Buffer {
   size_t size;  /* buffer size */
   size_t n;  /* number of characters in buffer */
   lua_State *L;
-  char initb[LUAL_BUFFERSIZE];  /* initial buffer */
+  union {
+    LUAI_MAXALIGN;  /* ensure maximum alignment for buffer */
+    char b[LUAL_BUFFERSIZE];  /* initial buffer */
+  } init;
 } luaL_Buffer;
 
 

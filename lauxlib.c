@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.288 2016/12/04 20:17:24 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.289 2016/12/20 18:37:00 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -496,7 +496,7 @@ static void *newbox (lua_State *L, size_t newsize) {
 ** check whether buffer is using a userdata on the stack as a temporary
 ** buffer
 */
-#define buffonstack(B)	((B)->b != (B)->initb)
+#define buffonstack(B)	((B)->b != (B)->init.b)
 
 
 /*
@@ -568,7 +568,7 @@ LUALIB_API void luaL_addvalue (luaL_Buffer *B) {
 
 LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
   B->L = L;
-  B->b = B->initb;
+  B->b = B->init.b;
   B->n = 0;
   B->size = LUAL_BUFFERSIZE;
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.140 2015/10/21 18:40:47 roberto Exp roberto $
+** $Id: llimits.h,v 1.141 2015/11/19 19:16:22 roberto Exp roberto $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -57,21 +57,6 @@ typedef unsigned char lu_byte;
 ** cannot hold the whole pointer value
 */
 #define point2uint(p)	((unsigned int)((size_t)(p) & UINT_MAX))
-
-
-
-/* type to ensure maximum alignment */
-#if defined(LUAI_USER_ALIGNMENT_T)
-typedef LUAI_USER_ALIGNMENT_T L_Umaxalign;
-#else
-typedef union {
-  lua_Number n;
-  double u;
-  void *s;
-  lua_Integer i;
-  long l;
-} L_Umaxalign;
-#endif
 
 
 

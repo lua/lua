@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.214 2017/04/19 18:46:47 roberto Exp roberto $
+** $Id: ltests.c,v 2.215 2017/04/24 16:59:26 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -81,7 +81,7 @@ static int tpanic (lua_State *L) {
 #define MARK		0x55  /* 01010101 (a nice pattern) */
 
 typedef union Header {
-  L_Umaxalign a;  /* ensures maximum alignment for Header */
+  LUAI_MAXALIGN;
   struct {
     size_t size;
     int type;
