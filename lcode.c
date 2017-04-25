@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.113 2017/04/20 19:53:55 roberto Exp roberto $
+** $Id: lcode.c,v 2.114 2017/04/24 20:26:39 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -392,6 +392,21 @@ static void freereg (FuncState *fs, int reg) {
 
 
 /*
+** Free two registers in proper order
+*/
+static void freeregs (FuncState *fs, int r1, int r2) {
+  if (r1 > r2) {
+    freereg(fs, r1);
+    freereg(fs, r2);
+  }
+  else {
+    freereg(fs, r2);
+    freereg(fs, r1);
+  }
+}
+
+
+/*
 ** Free register used by expression 'e' (if any)
 */
 static void freeexp (FuncState *fs, expdesc *e) {
@@ -407,14 +422,7 @@ static void freeexp (FuncState *fs, expdesc *e) {
 static void freeexps (FuncState *fs, expdesc *e1, expdesc *e2) {
   int r1 = (e1->k == VNONRELOC) ? e1->u.info : -1;
   int r2 = (e2->k == VNONRELOC) ? e2->u.info : -1;
-  if (r1 > r2) {
-    freereg(fs, r1);
-    freereg(fs, r2);
-  }
-  else {
-    freereg(fs, r2);
-    freereg(fs, r1);
-  }
+  freeregs(fs, r1, r2);
 }
 
 
@@ -574,13 +582,13 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
     }
     case VINDEXED: {
       OpCode op;
-      freereg(fs, e->u.ind.idx);
       if (e->u.ind.vt == VLOCAL) {  /* is 't' in a register? */
-        freereg(fs, e->u.ind.t);
+        freeregs(fs, e->u.ind.t, e->u.ind.idx);
         op = OP_GETTABLE;
       }
       else {
         lua_assert(e->u.ind.vt == VUPVAL);
+        freereg(fs, e->u.ind.idx);
         op = OP_GETTABUP;  /* 't' is in an upvalue */
       }
       e->u.info = luaK_codeABC(fs, op, 0, e->u.ind.t, e->u.ind.idx);
