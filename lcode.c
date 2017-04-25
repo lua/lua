@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.114 2017/04/24 20:26:39 roberto Exp roberto $
+** $Id: lcode.c,v 2.115 2017/04/25 18:28:25 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -516,7 +516,7 @@ static int nilK (FuncState *fs) {
 
 
 void luaK_int (FuncState *fs, int reg, lua_Integer i) {
-  if (-MAXARG_sBx <= i && i <= MAXARG_sBx)
+  if (l_castS2U(i) + MAXARG_sBx <= l_castS2U(MAXARG_Bx))
     luaK_codeAsBx(fs, OP_LOADI, reg, cast_int(i));
   else
     luaK_codek(fs, reg, luaK_intK(fs, i));
