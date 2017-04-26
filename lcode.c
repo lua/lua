@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.115 2017/04/25 18:28:25 roberto Exp roberto $
+** $Id: lcode.c,v 2.116 2017/04/25 20:01:14 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -964,6 +964,16 @@ static int isKstr (FuncState *fs, expdesc *e) {
 
 
 /*
+** Check whether expression 'e' is a literal integer in
+** proper range
+*/
+static int isKint (expdesc *e) {
+  return (e->k == VKINT && !hasjumps(e) &&
+          l_castS2U(e->u.ival) <= l_castS2U(MAXARG_C));
+}
+
+
+/*
 ** Create expression 't[k]'. 't' must have its final result already in a
 ** register or upvalue. Upvalues can only be indexed by literal strings.
 */
@@ -1047,10 +1057,24 @@ static void codeunexpval (FuncState *fs, OpCode op, expdesc *e, int line) {
 */
 static void codebinexpval (FuncState *fs, OpCode op,
                            expdesc *e1, expdesc *e2, int line) {
-  int rk2 = luaK_exp2RK(fs, e2);  /* both operands are "RK" */
-  int rk1 = luaK_exp2RK(fs, e1);
+  int v1, v2;
+  if (op == OP_ADD && (isKint(e1) || isKint(e2))) {
+    if (isKint(e2)) {
+      v2 = cast_int(e2->u.ival);
+      v1 = luaK_exp2anyreg(fs, e1);
+    }
+    else {  /* exchange operands to make 2nd one a constant */
+      v2 = cast_int(e1->u.ival);
+      v1 = luaK_exp2anyreg(fs, e2) | BITRK;  /* K bit signal the exchange */
+    }
+    op = OP_ADDI;
+  }
+  else {
+    v2 = luaK_exp2RK(fs, e2);  /* both operands are "RK" */
+    v1 = luaK_exp2RK(fs, e1);
+  }
   freeexps(fs, e1, e2);
-  e1->u.info = luaK_codeABC(fs, op, 0, rk1, rk2);  /* generate opcode */
+  e1->u.info = luaK_codeABC(fs, op, 0, v1, v2);  /* generate opcode */
   e1->k = VRELOCABLE;  /* all those operations are relocatable */
   luaK_fixline(fs, line);
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.150 2017/04/20 19:53:55 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.151 2017/04/24 20:26:39 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -90,7 +90,7 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 #define SET_OPCODE(i,o)	((i) = (((i)&MASK0(SIZE_OP,POS_OP)) | \
 		((cast(Instruction, o)<<POS_OP)&MASK1(SIZE_OP,POS_OP))))
 
-#define getarg(i,pos,size)	(cast(int, ((i)>>pos) & MASK1(size,0)))
+#define getarg(i,pos,size)	(cast(int, ((i)>>(pos)) & MASK1(size,0)))
 #define setarg(i,v,pos,size)	((i) = (((i)&MASK0(size,pos)) | \
                 ((cast(Instruction, v)<<pos)&MASK1(size,pos))))
 
@@ -99,6 +99,9 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 
 #define GETARG_B(i)	getarg(i, POS_B, SIZE_B)
 #define SETARG_B(i,v)	setarg(i, v, POS_B, SIZE_B)
+
+#define GETARG_Br(i)	getarg(i, POS_B, SIZE_B - 1)
+#define GETARG_Bk(i)	getarg(i, (POS_B + SIZE_B - 1), 1)
 
 #define GETARG_C(i)	getarg(i, POS_C, SIZE_C)
 #define SETARG_C(i,v)	setarg(i, v, POS_C, SIZE_C)
@@ -187,6 +190,7 @@ OP_NEWTABLE,/*	A B C	R(A) := {} (size = B,C)				*/
 
 OP_SELF,/*	A B C	R(A+1) := R(B); R(A) := R(B)[RK(C)]		*/
 
+OP_ADDI,/*	A B C	R(A) := R(B) + C				*/
 OP_ADD,/*	A B C	R(A) := RK(B) + RK(C)				*/
 OP_SUB,/*	A B C	R(A) := RK(B) - RK(C)				*/
 OP_MUL,/*	A B C	R(A) := RK(B) * RK(C)				*/

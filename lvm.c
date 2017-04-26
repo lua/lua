@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.271 2017/04/20 19:53:55 roberto Exp roberto $
+** $Id: lvm.c,v 2.272 2017/04/24 20:26:39 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -725,10 +725,10 @@ void luaV_finishOp (lua_State *L) {
 
 
 #define RA(i)	(base+GETARG_A(i))
-#define RB(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgR, base+GETARG_B(i))
+#define RB(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgR, base+GETARG_Br(i))
 #define RC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgR, base+GETARG_C(i))
 #define RKB(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgK, \
-	ISK(GETARG_B(i)) ? k+INDEXK(GETARG_B(i)) : base+GETARG_B(i))
+	(GETARG_Bk(i)) ? k+GETARG_Br(i) : base+GETARG_Br(i))
 #define RKC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgK, \
 	ISK(GETARG_C(i)) ? k+INDEXK(GETARG_C(i)) : base+GETARG_C(i))
 
@@ -896,6 +896,27 @@ void luaV_execute (lua_State *L) {
           setobj2s(L, ra, slot);
         }
         else Protect(luaV_finishget(L, rb, rc, ra, slot));
+        vmbreak;
+      }
+      vmcase(OP_ADDI) {
+        TValue *rb = RB(i);
+        int ic = GETARG_C(i);
+        lua_Number nb;
+        if (ttisinteger(rb)) {
+          setivalue(ra, intop(+, ivalue(rb), ic));
+        }
+        else if (tonumber(rb, &nb)) {
+          setfltvalue(ra, luai_numadd(L, nb, cast_num(ic)));
+        }
+        else {
+          TValue aux; TValue *rc;
+          setivalue(&aux, ic);
+          if (GETARG_Bk(i)) {  /* arguments were exchanged? */
+            rc = rb; rb = &aux;  /* correct them */
+          }
+          else rc = &aux;
+          Protect(luaT_trybinTM(L, rb, rc, ra, TM_ADD));
+        }
         vmbreak;
       }
       vmcase(OP_ADD) {

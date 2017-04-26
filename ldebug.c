@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.120 2016/03/31 19:01:21 roberto Exp roberto $
+** $Id: ldebug.c,v 2.121 2016/10/19 12:32:10 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -512,6 +512,9 @@ static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
       break;
     case OP_SETTABUP: case OP_SETTABLE:
       tm = TM_NEWINDEX;
+      break;
+    case OP_ADDI:
+      tm =  TM_ADD;
       break;
     case OP_ADD: case OP_SUB: case OP_MUL: case OP_MOD:
     case OP_POW: case OP_DIV: case OP_IDIV: case OP_BAND:

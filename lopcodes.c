@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.55 2015/01/05 13:48:33 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.56 2017/04/20 19:53:55 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -32,6 +32,7 @@ LUAI_DDEF const char *const luaP_opnames[NUM_OPCODES+1] = {
   "SETTABLE",
   "NEWTABLE",
   "SELF",
+  "ADDI",
   "ADD",
   "SUB",
   "MUL",
@@ -88,6 +89,7 @@ LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 0, OpArgK, OpArgK, iABC)		/* OP_SETTABLE */
  ,opmode(0, 1, OpArgU, OpArgU, iABC)		/* OP_NEWTABLE */
  ,opmode(0, 1, OpArgR, OpArgK, iABC)		/* OP_SELF */
+ ,opmode(0, 1, OpArgR, OpArgU, iABC)		/* OP_ADDI */
  ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_ADD */
  ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_SUB */
  ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_MUL */
