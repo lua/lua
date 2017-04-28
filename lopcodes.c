@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.56 2017/04/20 19:53:55 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.57 2017/04/26 17:46:52 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -25,11 +25,15 @@ LUAI_DDEF const char *const luaP_opnames[NUM_OPCODES+1] = {
   "LOADBOOL",
   "LOADNIL",
   "GETUPVAL",
+  "SETUPVAL",
   "GETTABUP",
   "GETTABLE",
+  "GETI",
+  "GETFIELD",
   "SETTABUP",
-  "SETUPVAL",
   "SETTABLE",
+  "SETI",
+  "SETFIELD",
   "NEWTABLE",
   "SELF",
   "ADDI",
@@ -82,11 +86,15 @@ LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 1, OpArgU, OpArgU, iABC)		/* OP_LOADBOOL */
  ,opmode(0, 1, OpArgU, OpArgN, iABC)		/* OP_LOADNIL */
  ,opmode(0, 1, OpArgU, OpArgN, iABC)		/* OP_GETUPVAL */
- ,opmode(0, 1, OpArgU, OpArgK, iABC)		/* OP_GETTABUP */
- ,opmode(0, 1, OpArgR, OpArgK, iABC)		/* OP_GETTABLE */
- ,opmode(0, 0, OpArgK, OpArgK, iABC)		/* OP_SETTABUP */
  ,opmode(0, 0, OpArgU, OpArgN, iABC)		/* OP_SETUPVAL */
- ,opmode(0, 0, OpArgK, OpArgK, iABC)		/* OP_SETTABLE */
+ ,opmode(0, 1, OpArgU, OpArgK, iABC)		/* OP_GETTABUP */
+ ,opmode(0, 1, OpArgR, OpArgR, iABC)		/* OP_GETTABLE */
+ ,opmode(0, 1, OpArgR, OpArgU, iABC)		/* OP_GETI */
+ ,opmode(0, 1, OpArgR, OpArgK, iABC)		/* OP_GETFIELD */
+ ,opmode(0, 0, OpArgK, OpArgK, iABC)		/* OP_SETTABUP */
+ ,opmode(0, 0, OpArgR, OpArgK, iABC)		/* OP_SETTABLE */
+ ,opmode(0, 0, OpArgU, OpArgK, iABC)		/* OP_SETI */
+ ,opmode(0, 0, OpArgK, OpArgK, iABC)		/* OP_SETFIELD */
  ,opmode(0, 1, OpArgU, OpArgU, iABC)		/* OP_NEWTABLE */
  ,opmode(0, 1, OpArgR, OpArgK, iABC)		/* OP_SELF */
  ,opmode(0, 1, OpArgR, OpArgU, iABC)		/* OP_ADDI */

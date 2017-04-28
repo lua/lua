@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.155 2016/08/01 19:51:24 roberto Exp roberto $
+** $Id: lparser.c,v 2.156 2017/04/20 19:53:55 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -647,8 +647,7 @@ static void recfield (LexState *ls, struct ConsControl *cc) {
   /* recfield -> (NAME | '['exp1']') = exp1 */
   FuncState *fs = ls->fs;
   int reg = ls->fs->freereg;
-  expdesc key, val;
-  int rkkey;
+  expdesc tab, key, val;
   if (ls->t.token == TK_NAME) {
     checklimit(fs, cc->nh, MAX_INT, "items in a constructor");
     checkname(ls, &key);
@@ -657,9 +656,10 @@ static void recfield (LexState *ls, struct ConsControl *cc) {
     yindex(ls, &key);
   cc->nh++;
   checknext(ls, '=');
-  rkkey = luaK_exp2RK(fs, &key);
+  tab = *cc->t;
+  luaK_indexed(fs, &tab, &key);
   expr(ls, &val);
-  luaK_codeABC(fs, OP_SETTABLE, cc->t->u.info, rkkey, luaK_exp2RK(fs, &val));
+  luaK_storevar(fs, &tab, &val);
   fs->freereg = reg;  /* free registers */
 }
 
@@ -1121,17 +1121,25 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
   int extra = fs->freereg;  /* eventual position to save local variable */
   int conflict = 0;
   for (; lh; lh = lh->prev) {  /* check all previous assignments */
-    if (lh->v.k == VINDEXED) {  /* assigning to a table? */
-      /* table is the upvalue/local being assigned now? */
-      if (lh->v.u.ind.vt == v->k && lh->v.u.ind.t == v->u.info) {
-        conflict = 1;
-        lh->v.u.ind.vt = VLOCAL;
-        lh->v.u.ind.t = extra;  /* previous assignment will use safe copy */
+    if (vkisindexed(lh->v.k)) {  /* assignment to table field? */
+      if (lh->v.k == VINDEXUP) {  /* is table an upvalue? */
+        if (v->k == VUPVAL && lh->v.u.ind.t == v->u.info) {
+          conflict = 1;  /* table is the upvalue being assigned now */
+          lh->v.k = VINDEXSTR;
+          lh->v.u.ind.t = extra;  /* assignment will use safe copy */
+        }
       }
-      /* index is the local being assigned? (index cannot be upvalue) */
-      if (v->k == VLOCAL && lh->v.u.ind.idx == v->u.info) {
-        conflict = 1;
-        lh->v.u.ind.idx = extra;  /* previous assignment will use safe copy */
+      else {  /* table is a register */
+        if (v->k == VLOCAL && lh->v.u.ind.t == v->u.info) {
+          conflict = 1;  /* table is the local being assigned now */
+          lh->v.u.ind.t = extra;  /* assignment will use safe copy */
+        }
+        /* is index the local being assigned? */
+        if (lh->v.k == VINDEXED && v->k == VLOCAL &&
+            lh->v.u.ind.idx == v->u.info) {
+          conflict = 1;
+          lh->v.u.ind.idx = extra;  /* previous assignment will use safe copy */
+        }
       }
     }
   }
@@ -1151,7 +1159,7 @@ static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
     struct LHS_assign nv;
     nv.prev = lh;
     suffixedexp(ls, &nv.v);
-    if (nv.v.k != VINDEXED)
+    if (!vkisindexed(nv.v.k))
       check_conflict(ls, lh, &nv.v);
     checklimit(ls->fs, nvars + ls->L->nCcalls, LUAI_MAXCCALLS,
                     "C levels");

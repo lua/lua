@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.116 2017/04/25 20:01:14 roberto Exp roberto $
+** $Id: lcode.c,v 2.117 2017/04/26 17:46:52 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -580,18 +580,26 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
       e->k = VRELOCABLE;
       break;
     }
+    case VINDEXUP: {
+      e->u.info = luaK_codeABC(fs, OP_GETTABUP, 0, e->u.ind.t, e->u.ind.idx);
+      e->k = VRELOCABLE;
+      break;
+    }
+    case VINDEXI: {
+      freereg(fs, e->u.ind.t);
+      e->u.info = luaK_codeABC(fs, OP_GETI, 0, e->u.ind.t, e->u.ind.idx);
+      e->k = VRELOCABLE;
+      break;
+    }
+    case VINDEXSTR: {
+      freereg(fs, e->u.ind.t);
+      e->u.info = luaK_codeABC(fs, OP_GETFIELD, 0, e->u.ind.t, e->u.ind.idx);
+      e->k = VRELOCABLE;
+      break;
+    }
     case VINDEXED: {
-      OpCode op;
-      if (e->u.ind.vt == VLOCAL) {  /* is 't' in a register? */
-        freeregs(fs, e->u.ind.t, e->u.ind.idx);
-        op = OP_GETTABLE;
-      }
-      else {
-        lua_assert(e->u.ind.vt == VUPVAL);
-        freereg(fs, e->u.ind.idx);
-        op = OP_GETTABUP;  /* 't' is in an upvalue */
-      }
-      e->u.info = luaK_codeABC(fs, op, 0, e->u.ind.t, e->u.ind.idx);
+      freeregs(fs, e->u.ind.t, e->u.ind.idx);
+      e->u.info = luaK_codeABC(fs, OP_GETTABLE, 0, e->u.ind.t, e->u.ind.idx);
       e->k = VRELOCABLE;
       break;
     }
@@ -807,10 +815,24 @@ void luaK_storevar (FuncState *fs, expdesc *var, expdesc *ex) {
       luaK_codeABC(fs, OP_SETUPVAL, e, var->u.info, 0);
       break;
     }
-    case VINDEXED: {
-      OpCode op = (var->u.ind.vt == VLOCAL) ? OP_SETTABLE : OP_SETTABUP;
+    case VINDEXUP: {
       int e = luaK_exp2RK(fs, ex);
-      luaK_codeABC(fs, op, var->u.ind.t, var->u.ind.idx, e);
+      luaK_codeABC(fs, OP_SETTABUP, var->u.ind.t, var->u.ind.idx, e);
+      break;
+    }
+    case VINDEXI: {
+      int e = luaK_exp2RK(fs, ex);
+      luaK_codeABC(fs, OP_SETI, var->u.ind.t, var->u.ind.idx, e);
+      break;
+    }
+    case VINDEXSTR: {
+      int e = luaK_exp2RK(fs, ex);
+      luaK_codeABC(fs, OP_SETFIELD, var->u.ind.t, var->u.ind.idx, e);
+      break;
+    }
+    case VINDEXED: {
+      int e = luaK_exp2RK(fs, ex);
+      luaK_codeABC(fs, OP_SETTABLE, var->u.ind.t, var->u.ind.idx, e);
       break;
     }
     default: lua_assert(0);  /* invalid var kind to store */
@@ -959,7 +981,8 @@ static void codenot (FuncState *fs, expdesc *e) {
 ** Check whether expression 'e' is a literal string
 */
 static int isKstr (FuncState *fs, expdesc *e) {
-  return (e->k == VK && ttisstring(&fs->f->k[e->u.info]));
+  return (e->k == VK && !hasjumps(e) && e->u.info <= MAXARG_C &&
+          ttisstring(&fs->f->k[e->u.info]));
 }
 
 
@@ -976,15 +999,30 @@ static int isKint (expdesc *e) {
 /*
 ** Create expression 't[k]'. 't' must have its final result already in a
 ** register or upvalue. Upvalues can only be indexed by literal strings.
+** Keys can be literal strings in the constant table or arbitrary
+** values in registers.
 */
 void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
   lua_assert(!hasjumps(t) && (vkisinreg(t->k) || t->k == VUPVAL));
   if (t->k == VUPVAL && !isKstr(fs, k))  /* upvalue indexed by non string? */
     luaK_exp2anyreg(fs, t);  /* put it in a register */
   t->u.ind.t = t->u.info;  /* register or upvalue index */
-  t->u.ind.idx = luaK_exp2RK(fs, k);  /* R/K index for key */
-  t->u.ind.vt = (t->k == VUPVAL) ? VUPVAL : VLOCAL;
-  t->k = VINDEXED;
+  if (t->k == VUPVAL) {
+    t->u.ind.idx = k->u.info;  /* literal string */
+    t->k = VINDEXUP;
+  }
+  else if (isKstr(fs, k)) {
+    t->u.ind.idx = k->u.info;  /* literal string */
+    t->k = VINDEXSTR;
+  }
+  else if (isKint(k)) {
+    t->u.ind.idx = k->u.ival;  /* integer constant */
+    t->k = VINDEXI;
+  }
+  else {
+    t->u.ind.idx = luaK_exp2anyreg(fs, k);  /* register */
+    t->k = VINDEXED;
+  }
 }
 
 

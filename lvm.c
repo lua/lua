@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.272 2017/04/24 20:26:39 roberto Exp roberto $
+** $Id: lvm.c,v 2.273 2017/04/26 17:46:52 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -658,11 +658,13 @@ void luaV_finishOp (lua_State *L) {
   Instruction inst = *(ci->u.l.savedpc - 1);  /* interrupted instruction */
   OpCode op = GET_OPCODE(inst);
   switch (op) {  /* finish its execution */
-    case OP_ADD: case OP_SUB: case OP_MUL: case OP_DIV: case OP_IDIV:
+    case OP_ADDI: case OP_ADD: case OP_SUB:
+    case OP_MUL: case OP_DIV: case OP_IDIV:
     case OP_BAND: case OP_BOR: case OP_BXOR: case OP_SHL: case OP_SHR:
     case OP_MOD: case OP_POW:
     case OP_UNM: case OP_BNOT: case OP_LEN:
-    case OP_GETTABUP: case OP_GETTABLE: case OP_SELF: {
+    case OP_GETTABUP: case OP_GETTABLE: case OP_GETI:
+    case OP_GETFIELD: case OP_SELF: {
       setobjs2s(L, base + GETARG_A(inst), --L->top);
       break;
     }
@@ -704,6 +706,7 @@ void luaV_finishOp (lua_State *L) {
       break;
     }
     case OP_TAILCALL: case OP_SETTABUP: case OP_SETTABLE:
+    case OP_SETI: case OP_SETFIELD:
       break;
     default: lua_assert(0);
   }
@@ -726,7 +729,9 @@ void luaV_finishOp (lua_State *L) {
 
 #define RA(i)	(base+GETARG_A(i))
 #define RB(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgR, base+GETARG_Br(i))
+#define KB(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgK, k+GETARG_B(i))
 #define RC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgR, base+GETARG_C(i))
+#define KC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgK, k+GETARG_C(i))
 #define RKB(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgK, \
 	(GETARG_Bk(i)) ? k+GETARG_Br(i) : base+GETARG_Br(i))
 #define RKC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgK, \
@@ -837,10 +842,16 @@ void luaV_execute (lua_State *L) {
         setobj2s(L, ra, cl->upvals[b]->v);
         vmbreak;
       }
+      vmcase(OP_SETUPVAL) {
+        UpVal *uv = cl->upvals[GETARG_B(i)];
+        setobj(L, uv->v, ra);
+        luaC_barrier(L, uv, ra);
+        vmbreak;
+      }
       vmcase(OP_GETTABUP) {
         const TValue *slot;
         TValue *upval = cl->upvals[GETARG_B(i)]->v;
-        TValue *rc = RKC(i);
+        TValue *rc = KC(i);
         TString *key = tsvalue(rc);  /* key must be a string */
         if (luaV_fastget(L, upval, key, slot, luaH_getstr)) {
           setobj2s(L, ra, slot);
@@ -850,30 +861,69 @@ void luaV_execute (lua_State *L) {
       }
       vmcase(OP_GETTABLE) {
         StkId rb = RB(i);
-        TValue *rc = RKC(i);
+        TValue *rc = RC(i);
         gettableProtected(L, rb, rc, ra);
+        vmbreak;
+      }
+      vmcase(OP_GETI) {
+        const TValue *slot;
+        StkId rb = RB(i);
+        int c = GETARG_C(i);
+        if (luaV_fastget(L, rb, c, slot, luaH_getint)) {
+          setobj2s(L, ra, slot);
+        }
+        else {
+          TValue key;
+          setivalue(&key, c);
+          Protect(luaV_finishget(L, rb, &key, ra, slot));
+        }
+        vmbreak;
+      }
+      vmcase(OP_GETFIELD) {
+        const TValue *slot;
+        StkId rb = RB(i);
+        TValue *rc = KC(i);
+        TString *key = tsvalue(rc);  /* key must be a string */
+        if (luaV_fastget(L, rb, key, slot, luaH_getstr)) {
+          setobj2s(L, ra, slot);
+        }
+        else Protect(luaV_finishget(L, rb, rc, ra, slot));
         vmbreak;
       }
       vmcase(OP_SETTABUP) {
         const TValue *slot;
         TValue *upval = cl->upvals[GETARG_A(i)]->v;
-        TValue *rb = RKB(i);
+        TValue *rb = KB(i);
         TValue *rc = RKC(i);
         TString *key = tsvalue(rb);  /* key must be a string */
         if (!luaV_fastset(L, upval, key, slot, luaH_getstr, rc))
           Protect(luaV_finishset(L, upval, rb, rc, slot));
         vmbreak;
       }
-      vmcase(OP_SETUPVAL) {
-        UpVal *uv = cl->upvals[GETARG_B(i)];
-        setobj(L, uv->v, ra);
-        luaC_barrier(L, uv, ra);
-        vmbreak;
-      }
       vmcase(OP_SETTABLE) {
-        TValue *rb = RKB(i);
+        TValue *rb = RB(i);
         TValue *rc = RKC(i);
         settableProtected(L, ra, rb, rc);
+        vmbreak;
+      }
+      vmcase(OP_SETI) {
+        const TValue *slot;
+        int c = GETARG_B(i);
+        TValue *rc = RKC(i);
+        if (!luaV_fastset(L, ra, c, slot, luaH_getint, rc)) {
+          TValue key;
+          setivalue(&key, c);
+          Protect(luaV_finishset(L, ra, &key, rc, slot));
+        }
+        vmbreak;
+      }
+      vmcase(OP_SETFIELD) {
+        const TValue *slot;
+        TValue *rb = KB(i);
+        TValue *rc = RKC(i);
+        TString *key = tsvalue(rb);  /* key must be a string */
+        if (!luaV_fastset(L, ra, key, slot, luaH_getstr, rc))
+          Protect(luaV_finishset(L, ra, rb, rc, slot));
         vmbreak;
       }
       vmcase(OP_NEWTABLE) {

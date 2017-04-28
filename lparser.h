@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.75 2015/12/17 15:44:50 roberto Exp roberto $
+** $Id: lparser.h,v 1.76 2015/12/30 18:16:13 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -36,9 +36,17 @@ typedef enum {
   VLOCAL,  /* local variable; info = local register */
   VUPVAL,  /* upvalue variable; info = index of upvalue in 'upvalues' */
   VINDEXED,  /* indexed variable;
-                ind.vt = whether 't' is register or upvalue;
-                ind.t = table register or upvalue;
-                ind.idx = key's R/K index */
+                ind.t = table register;
+                ind.idx = key's R index */
+  VINDEXUP,  /* indexed upvalue;
+                ind.t = table upvalue;
+                ind.idx = key's K index */
+  VINDEXI, /* indexed variable with constant integer;
+                ind.t = table register;
+                ind.idx = key's value */
+  VINDEXSTR, /* indexed variable with literal string;
+                ind.t = table register;
+                ind.idx = key's K index */
   VJMP,  /* expression is a test/comparison;
             info = pc of corresponding jump instruction */
   VRELOCABLE,  /* expression can put result in any register;
@@ -48,7 +56,8 @@ typedef enum {
 } expkind;
 
 
-#define vkisvar(k)	(VLOCAL <= (k) && (k) <= VINDEXED)
+#define vkisvar(k)	(VLOCAL <= (k) && (k) <= VINDEXSTR)
+#define vkisindexed(k)	(VINDEXED <= (k) && (k) <= VINDEXSTR)
 #define vkisinreg(k)	((k) == VNONRELOC || (k) == VLOCAL)
 
 typedef struct expdesc {
@@ -57,10 +66,9 @@ typedef struct expdesc {
     lua_Integer ival;    /* for VKINT */
     lua_Number nval;  /* for VKFLT */
     int info;  /* for generic use */
-    struct {  /* for indexed variables (VINDEXED) */
-      short idx;  /* index (R/K) */
+    struct {  /* for indexed variables */
+      short idx;  /* index (R or "long" K) */
       lu_byte t;  /* table (register or upvalue) */
-      lu_byte vt;  /* whether 't' is register (VLOCAL) or upvalue (VUPVAL) */
     } ind;
   } u;
   int t;  /* patch list of 'exit when true' */

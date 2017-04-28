@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.121 2016/10/19 12:32:10 roberto Exp roberto $
+** $Id: ldebug.c,v 2.122 2017/04/26 17:46:52 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -350,26 +350,34 @@ static const char *getobjname (Proto *p, int lastpc, int reg,
 
 
 /*
-** find a "name" for the RK value 'c'
+** Find a "name" for the constant 'c'.
 */
-static void kname (Proto *p, int pc, int c, const char **name) {
-  if (ISK(c)) {  /* is 'c' a constant? */
-    TValue *kvalue = &p->k[INDEXK(c)];
-    if (ttisstring(kvalue)) {  /* literal constant? */
-      *name = svalue(kvalue);  /* it is its own name */
-      return;
-    }
-    /* else no reasonable name found */
-  }
-  else {  /* 'c' is a register */
-    const char *what = getobjname(p, pc, c, name); /* search for 'c' */
-    if (what && *what == 'c') {  /* found a constant name? */
-      return;  /* 'name' already filled */
-    }
-    /* else no reasonable name found */
-  }
-  *name = "?";  /* no reasonable name found */
+static void kname (Proto *p, int c, const char **name) {
+  TValue *kvalue = &p->k[INDEXK(c)];
+  *name = (ttisstring(kvalue)) ? svalue(kvalue) : "?";
 }
+
+
+/*
+** Find a "name" for the register 'c'.
+*/
+static void rname (Proto *p, int pc, int c, const char **name) {
+  const char *what = getobjname(p, pc, c, name); /* search for 'c' */
+  if (!(what && *what == 'c'))  /* did not find a constant name? */
+    *name = "?";
+}
+
+
+/*
+** Find a "name" for the R/K index 'c'.
+*/
+static void rkname (Proto *p, int pc, int c, const char **name) {
+  if (ISK(c))  /* is 'c' a constant? */
+    kname(p, INDEXK(c), name);
+  else  /* 'c' is a register */
+    rname(p, pc, c, name);
+}
+
 
 
 static int filterpc (int pc, int jmptarget) {
@@ -428,8 +436,22 @@ static int findsetreg (Proto *p, int lastpc, int reg) {
 }
 
 
-static const char *getobjname (Proto *p, int lastpc, int reg,
-                               const char **name) {
+/*
+** Check whether table being indexed by instruction 'i' is the
+** environment '_ENV'
+*/
+static const char *gxf (Proto *p, int pc, Instruction i, int isup) {
+  int t = GETARG_B(i);  /* table index */
+  const char *name;  /* name of indexed variable */
+  if (isup)  /* is an upvalue? */
+    name = upvalname(p, t);
+  else
+    getobjname(p, pc, t, &name);
+  return (name && strcmp(name, LUA_ENV) == 0) ? "global" : "field";
+}
+
+
+ const char *getobjname (Proto *p, int lastpc, int reg, const char **name) {
   int pc;
   *name = luaF_getlocalname(p, reg + 1, lastpc);
   if (*name)  /* is a local? */
@@ -446,15 +468,24 @@ static const char *getobjname (Proto *p, int lastpc, int reg,
           return getobjname(p, pc, b, name);  /* get name for 'b' */
         break;
       }
-      case OP_GETTABUP:
+      case OP_GETTABUP: {
+        int k = GETARG_C(i);  /* key index */
+        kname(p, k, name);
+        return gxf(p, pc, i, 1);
+      }
       case OP_GETTABLE: {
         int k = GETARG_C(i);  /* key index */
-        int t = GETARG_B(i);  /* table index */
-        const char *vn = (op == OP_GETTABLE)  /* name of indexed variable */
-                         ? luaF_getlocalname(p, t + 1, pc)
-                         : upvalname(p, t);
-        kname(p, pc, k, name);
-        return (vn && strcmp(vn, LUA_ENV) == 0) ? "global" : "field";
+        rname(p, pc, k, name);
+        return gxf(p, pc, i, 0);
+      }
+      case OP_GETI: {
+        *name = "integer index";
+        return "field";
+      }
+      case OP_GETFIELD: {
+        int k = GETARG_C(i);  /* key index */
+        kname(p, k, name);
+        return gxf(p, pc, i, 0);
       }
       case OP_GETUPVAL: {
         *name = upvalname(p, GETARG_B(i));
@@ -472,7 +503,7 @@ static const char *getobjname (Proto *p, int lastpc, int reg,
       }
       case OP_SELF: {
         int k = GETARG_C(i);  /* key index */
-        kname(p, pc, k, name);
+        rkname(p, pc, k, name);
         return "method";
       }
       default: break;  /* go through to return NULL */
@@ -508,9 +539,10 @@ static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
     }
     /* other instructions can do calls through metamethods */
     case OP_SELF: case OP_GETTABUP: case OP_GETTABLE:
+    case OP_GETI: case OP_GETFIELD:
       tm = TM_INDEX;
       break;
-    case OP_SETTABUP: case OP_SETTABLE:
+    case OP_SETTABUP: case OP_SETTABLE: case OP_SETI: case OP_SETFIELD:
       tm = TM_NEWINDEX;
       break;
     case OP_ADDI:

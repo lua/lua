@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.151 2017/04/24 20:26:39 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.152 2017/04/26 17:46:52 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -178,17 +178,21 @@ OP_LOADKX,/*	A 	R(A) := Kst(extra arg)				*/
 OP_LOADBOOL,/*	A B C	R(A) := (Bool)B; if (C) pc++			*/
 OP_LOADNIL,/*	A B	R(A), R(A+1), ..., R(A+B) := nil		*/
 OP_GETUPVAL,/*	A B	R(A) := UpValue[B]				*/
-
-OP_GETTABUP,/*	A B C	R(A) := UpValue[B][RK(C)]			*/
-OP_GETTABLE,/*	A B C	R(A) := R(B)[RK(C)]				*/
-
-OP_SETTABUP,/*	A B C	UpValue[A][RK(B)] := RK(C)			*/
 OP_SETUPVAL,/*	A B	UpValue[B] := R(A)				*/
-OP_SETTABLE,/*	A B C	R(A)[RK(B)] := RK(C)				*/
+
+OP_GETTABUP,/*	A B C	R(A) := UpValue[B][K(C):string]			*/
+OP_GETTABLE,/*	A B C	R(A) := R(B)[R(C)]				*/
+OP_GETI,/*	A B C	R(A) := R(B)[C]					*/
+OP_GETFIELD,/*	A B C	R(A) := R(B)[Kst(C):string]			*/
+
+OP_SETTABUP,/*	A B C	UpValue[A][K(B):string] := RK(C)		*/
+OP_SETTABLE,/*	A B C	R(A)[R(B)] := RK(C)				*/
+OP_SETI,/*	A B C	R(A)[B] := RK(C)				*/
+OP_SETFIELD,/*	A B C	R(A)[K(B):string] := RK(C)			*/
 
 OP_NEWTABLE,/*	A B C	R(A) := {} (size = B,C)				*/
 
-OP_SELF,/*	A B C	R(A+1) := R(B); R(A) := R(B)[RK(C)]		*/
+OP_SELF,/*	A B C	R(A+1) := R(B); R(A) := R(B)[RK(C):string]	*/
 
 OP_ADDI,/*	A B C	R(A) := R(B) + C				*/
 OP_ADD,/*	A B C	R(A) := RK(B) + RK(C)				*/
@@ -258,8 +262,6 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
   'instruction' is EXTRAARG(real C).
 
   (*) In OP_LOADKX, the next 'instruction' is always EXTRAARG.
-
-  (*) In OP_GETTABUP, OP_SETTABUP, and OP_SELF, the index must be a string.
 
   (*) For comparisons, A specifies what condition the test should accept
   (true or false).
