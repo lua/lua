@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.122 2017/04/26 17:46:52 roberto Exp roberto $
+** $Id: ldebug.c,v 2.123 2017/04/28 20:57:45 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -398,39 +398,37 @@ static int findsetreg (Proto *p, int lastpc, int reg) {
     Instruction i = p->code[pc];
     OpCode op = GET_OPCODE(i);
     int a = GETARG_A(i);
+    int change;  /* true if current instruction changed 'reg' */
     switch (op) {
-      case OP_LOADNIL: {
+      case OP_LOADNIL: {  /* set registers from 'a' to 'a+b' */
         int b = GETARG_B(i);
-        if (a <= reg && reg <= a + b)  /* set registers from 'a' to 'a+b' */
-          setreg = filterpc(pc, jmptarget);
+        change = (a <= reg && reg <= a + b);
         break;
       }
-      case OP_TFORCALL: {
-        if (reg >= a + 2)  /* affect all regs above its base */
-          setreg = filterpc(pc, jmptarget);
+      case OP_TFORCALL: {  /* affect all regs above its base */
+        change = (reg >= a + 2);
         break;
       }
       case OP_CALL:
-      case OP_TAILCALL: {
-        if (reg >= a)  /* affect all registers above base */
-          setreg = filterpc(pc, jmptarget);
+      case OP_TAILCALL: {  /* affect all registers above base */
+        change = (reg >= a);
         break;
       }
-      case OP_JMP: {
+      case OP_JMP: {  /* doesn't change registers, but changes 'jmptarget' */
         int b = GETARG_sBx(i);
         int dest = pc + 1 + b;
-        /* jump is forward and do not skip 'lastpc'? */
-        if (pc < dest && dest <= lastpc) {
-          if (dest > jmptarget)
-            jmptarget = dest;  /* update 'jmptarget' */
-        }
+        /* jump does not skip 'lastpc' and is larger than current one? */
+        if (dest <= lastpc && dest > jmptarget)
+          jmptarget = dest;  /* update 'jmptarget' */
+        change = 0;
         break;
       }
-      default:
-        if (testAMode(op) && reg == a)  /* any instruction that set A */
-          setreg = filterpc(pc, jmptarget);
+      default:  /* any instruction that sets A */
+        change = (testAMode(op) && reg == a);
         break;
     }
+    if (change)
+      setreg = filterpc(pc, jmptarget);
   }
   return setreg;
 }
