@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.273 2017/04/26 17:46:52 roberto Exp roberto $
+** $Id: lvm.c,v 2.274 2017/04/28 20:57:45 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -618,6 +618,7 @@ static LClosure *getcached (Proto *p, UpVal **encup, StkId base) {
       if (c->upvals[i]->v != v)
         return NULL;  /* wrong upvalue; cannot reuse closure */
     }
+    p->cachemiss = 0;  /* got a hit */
   }
   return c;  /* return cached closure (or NULL if no cached closure) */
 }
@@ -644,8 +645,13 @@ static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
       ncl->upvals[i] = encup[uv[i].idx];
     /* new closure is white, so we do not need a barrier here */
   }
-  if (!isblack(p))  /* cache will not break GC invariant? */
-    p->cache = ncl;  /* save it on cache for reuse */
+  if (p->cachemiss >= 10)  /* too many missings? */
+    p->cache = NULL;  /* give up cache */
+  else {
+    if (!isblack(p))  /* cache will not break GC invariant? */
+      p->cache = ncl;  /* save it on cache for reuse */
+    p->cachemiss++;
+  }
 }
 
 

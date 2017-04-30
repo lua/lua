@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.225 2017/04/24 16:59:26 roberto Exp $
+** $Id: lgc.c,v 2.226 2017/04/24 17:52:18 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -485,6 +485,7 @@ static int traverseproto (global_State *g, Proto *f) {
   int i;
   if (f->cache && iswhite(f->cache))
     f->cache = NULL;  /* allow cache to be collected */
+  f->cachemiss = 0;  /* restart counting */
   markobjectN(g, f->source);
   for (i = 0; i < f->sizek; i++)  /* mark literals */
     markvalue(g, &f->k[i]);

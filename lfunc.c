@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.46 2017/04/06 13:08:56 roberto Exp roberto $
+** $Id: lfunc.c,v 2.47 2017/04/11 18:41:09 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -115,6 +115,7 @@ Proto *luaF_newproto (lua_State *L) {
   f->sizep = 0;
   f->code = NULL;
   f->cache = NULL;
+  f->cachemiss = 0;
   f->sizecode = 0;
   f->lineinfo = NULL;
   f->sizelineinfo = 0;

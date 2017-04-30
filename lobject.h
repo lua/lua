@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.118 2017/04/11 18:41:09 roberto Exp roberto $
+** $Id: lobject.h,v 2.119 2017/04/24 18:06:12 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -410,6 +410,7 @@ typedef struct Proto {
   lu_byte numparams;  /* number of fixed parameters */
   lu_byte is_vararg;
   lu_byte maxstacksize;  /* number of registers needed by this function */
+  lu_byte cachemiss;  /* count for successive misses for 'cache' field */
   int sizeupvalues;  /* size of 'upvalues' */
   int sizek;  /* size of 'k' */
   int sizecode;
