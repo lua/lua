@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.138 2017/04/19 17:02:50 roberto Exp roberto $
+** $Id: lstate.h,v 2.139 2017/04/24 16:59:26 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -43,7 +43,8 @@
 ** 'weak': tables with weak values to be cleared;
 ** 'ephemeron': ephemeron tables with white->white entries;
 ** 'allweak': tables with weak keys and/or weak values to be cleared.
-** The last three lists are used only during the atomic phase.
+** There is also a list 'protogray' for prototypes that need to have
+** their caches cleared.
 
 */
 
@@ -159,6 +160,7 @@ typedef struct global_State {
   GCObject *weak;  /* list of tables with weak values */
   GCObject *ephemeron;  /* list of ephemeron tables (weak keys) */
   GCObject *allweak;  /* list of all-weak tables */
+  GCObject *protogray;  /* list of prototypes with "new" caches */
   GCObject *tobefnz;  /* list of userdata to be GC */
   GCObject *fixedgc;  /* list of objects not to be collected */
   /* fields for generational collector */

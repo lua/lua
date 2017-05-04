@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.95 2017/04/10 13:33:04 roberto Exp roberto $
+** $Id: lgc.h,v 2.96 2017/04/11 18:41:09 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -151,6 +151,9 @@
 	(isblack(p) && iswhite(o)) ? \
 	luaC_barrier_(L,obj2gco(p),obj2gco(o)) : cast_void(0))
 
+#define luaC_protobarrier(L,p,o) \
+	(isblack(p) ? luaC_protobarrier_(L,p) : cast_void(0))
+
 LUAI_FUNC void luaC_fix (lua_State *L, GCObject *o);
 LUAI_FUNC void luaC_freeallobjects (lua_State *L);
 LUAI_FUNC void luaC_step (lua_State *L);
@@ -159,6 +162,7 @@ LUAI_FUNC void luaC_fullgc (lua_State *L, int isemergency);
 LUAI_FUNC GCObject *luaC_newobj (lua_State *L, int tt, size_t sz);
 LUAI_FUNC void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v);
 LUAI_FUNC void luaC_barrierback_ (lua_State *L, Table *o);
+LUAI_FUNC void luaC_protobarrier_ (lua_State *L, Proto *p);
 LUAI_FUNC void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt);
 LUAI_FUNC void luaC_changemode (lua_State *L, int newmode);
 

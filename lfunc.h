@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.h,v 2.15 2015/01/13 15:49:11 roberto Exp roberto $
+** $Id: lfunc.h,v 2.16 2017/04/11 18:41:09 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -30,6 +30,13 @@
 
 
 #define upisopen(up)	((up)->v != &(up)->u.value)
+
+
+/*
+** maximum number of misses before giving up the cache of closures
+** in prototypes
+*/
+#define MAXMISS		10
 
 
 LUAI_FUNC Proto *luaF_newproto (lua_State *L);

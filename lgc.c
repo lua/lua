@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.226 2017/04/24 17:52:18 roberto Exp roberto $
+** $Id: lgc.c,v 2.227 2017/04/30 20:43:26 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -179,6 +179,26 @@ void luaC_barrierback_ (lua_State *L, Table *t) {
 }
 
 
+/*
+** Barrier for prototype's cache of closures.  For an 'old1'
+** object, making it gray stops it from being visited by 'markold',
+** so it is linked in the 'grayagain' list to ensure it will be
+** visited. Otherwise, it goes to 'protogray', as only its 'cache' field
+** needs to be revisited.  (A prototype to be in this barrier must be
+** already finished, so its other fields cannot change and do not need
+** to be revisited.)
+*/
+LUAI_FUNC void luaC_protobarrier_ (lua_State *L, Proto *p) {
+  global_State *g = G(L);
+  lua_assert(g->gckind != KGC_GEN || isold(p));
+  if (getage(p) == G_OLD1)  /* still need to be visited? */
+    linkgclist(p, g->grayagain);  /* link it in 'grayagain' */
+  else 
+    linkgclist(p, g->protogray);  /* link it in 'protogray' */
+  black2gray(p);  /* make prototype gray (to avoid other barriers) */
+}
+
+
 void luaC_fix (lua_State *L, GCObject *o) {
   global_State *g = G(L);
   lua_assert(g->allgc == o);  /* object must be 1st in 'allgc' list! */
@@ -332,7 +352,7 @@ static void remarkupvals (global_State *g) {
 */
 static void restartcollection (global_State *g) {
   g->gray = g->grayagain = NULL;
-  g->weak = g->allweak = g->ephemeron = NULL;
+  g->weak = g->allweak = g->ephemeron = g->protogray = NULL;
   markobject(g, g->mainthread);
   markvalue(g, &g->l_registry);
   markmt(g);
@@ -477,15 +497,39 @@ static lu_mem traversetable (global_State *g, Table *h) {
 
 
 /*
+** Check the cache of a prototype, to keep invariants. If the
+** cache is white, clear it. (A cache should not prevent the
+** collection of its reference.) Otherwise, if in generational
+** mode, check the generational invariant. If the cache is old,
+** everything is ok. If the prototype is 'old0', everything
+** is ok too. (It will naturally be visited again.) If the
+** prototype is older than 'old0', then its cache (whith is new)
+** must be visited again in the next collection, so the prototype
+** goes to the 'protogray' list. (If the prototype has a cache,
+** it is already immutable and does not need other barriers;
+** then, it can become gray without problems for its other fields.)
+*/
+static void checkprotocache (global_State *g, Proto *p) {
+  if (p->cache) {
+    if (iswhite(p->cache))
+      p->cache = NULL;  /* allow cache to be collected */
+    else if (g->gckind == KGC_GEN && !isold(p->cache) && getage(p) >= G_OLD1) {
+      linkgclist(p, g->protogray);  /* link it in 'protogray' */
+      black2gray(p);  /* make prototype gray */
+    }
+  }
+  p->cachemiss = 0;  /* restart counting */
+}
+
+
+/*
 ** Traverse a prototype. (While a prototype is being build, its
 ** arrays can be larger than needed; the extra slots are filled with
 ** NULL, so the use of 'markobjectN')
 */
 static int traverseproto (global_State *g, Proto *f) {
   int i;
-  if (f->cache && iswhite(f->cache))
-    f->cache = NULL;  /* allow cache to be collected */
-  f->cachemiss = 0;  /* restart counting */
+  checkprotocache(g, f);
   markobjectN(g, f->source);
   for (i = 0; i < f->sizek; i++)  /* mark literals */
     markvalue(g, &f->k[i]);
@@ -628,6 +672,19 @@ static void convergeephemerons (global_State *g) {
 ** Sweep Functions
 ** =======================================================
 */
+
+static void clearprotolist (global_State *g) {
+  GCObject *p = g->protogray;
+  g->protogray = NULL;
+  while (p != NULL) {
+    Proto *pp = gco2p(p);
+    GCObject *next = pp->gclist;
+    lua_assert(isgray(pp) && (pp->cache != NULL || pp->cachemiss >= MAXMISS));
+    gray2black(pp);
+    checkprotocache(g, pp);
+    p = next;
+  }
+}
 
 
 /*
@@ -1073,14 +1130,15 @@ static void correctgraylists (global_State *g) {
 
 
 /*
-** Mark 'old1' objects when starting a new young collection. (Threads
-** and open upvalues are always gray, and do not need to be marked.
-** All other old objects are black.)
+** Mark 'old1' objects when starting a new young collection.
+** Gray objects are already in some gray list, and so will be visited
+** in the atomic step.
 */
 static void markold (global_State *g, GCObject *from, GCObject *to) {
   GCObject *p;
   for (p = from; p != to; p = p->next) {
     if (getage(p) == G_OLD1) {
+      lua_assert(!iswhite(p));
       if (isblack(p)) {
         black2gray(p);  /* should be '2white', but gray works too */
         reallymarkobject(g, p);
@@ -1337,6 +1395,7 @@ static l_mem atomic (lua_State *L) {
   clearvalues(g, g->weak, origweak);
   clearvalues(g, g->allweak, origall);
   luaS_clearcache(g);
+  clearprotolist(g);
   g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */
   lua_assert(g->gray == NULL);
   work += g->GCmemtrav;  /* complete counting */

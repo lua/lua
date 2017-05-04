@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.215 2017/04/24 16:59:26 roberto Exp roberto $
+** $Id: ltests.c,v 2.216 2017/04/24 18:06:12 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -409,6 +409,8 @@ static void checkobject (global_State *g, GCObject *o, int maybedead,
         getage(o) == G_TOUCHED1 ||
         getage(o) == G_OLD0 ||
         o->tt == LUA_TTHREAD ||
+        (o->tt == LUA_TPROTO &&
+            (gco2p(o)->cache != NULL || gco2p(o)->cachemiss >= MAXMISS)) ||
         (o->tt == LUA_TUPVAL && upisopen(gco2upv(o))));
       }
     }
@@ -446,6 +448,7 @@ static void markgrays (global_State *g) {
   checkgraylist(g, g->weak);
   checkgraylist(g, g->ephemeron);
   checkgraylist(g, g->allweak);
+  checkgraylist(g, g->protogray);
 }
 
 
