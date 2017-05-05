@@ -3656,9 +3656,9 @@ It needs an "interceptor" 'memcmp' function that continues
 reading memory after a difference is found.]],
 patch = [[
 2c2
-< ** $Id: bugs,v 1.150 2016/07/19 17:10:45 roberto Exp roberto $
+< ** $Id: bugs,v 1.151 2016/10/19 12:34:27 roberto Exp roberto $
 ---
-> ** $Id: bugs,v 1.150 2016/07/19 17:10:45 roberto Exp roberto $
+> ** $Id: bugs,v 1.151 2016/10/19 12:34:27 roberto Exp roberto $
 263c263,264
 <   for (option = LUA_STRFTIMEOPTIONS; *option != '\0'; option += oplen) {
 ---
@@ -3712,6 +3712,38 @@ patch = [[
 ]]
 }
 ]=]
+
+
+Bug{
+what = [[Wrong code for a goto followed by a label inside an 'if']],
+report = [[云风, 2017/04/13]],
+since = [[5.2]],
+fix = nil,
+example = [[
+-- should print 32323232..., but prints only '3'
+if true then
+  goto LBL
+  ::loop::
+  print(2)
+  ::LBL::
+  print(3)
+  goto loop
+end
+]],
+patch = [[
+--- lparser.c	2017/04/19 17:20:42	2.155.1.1
++++ lparser.c	2017/04/29 18:11:40	2.155.1.2
+@@ -1392,7 +1392,7 @@
+     luaK_goiffalse(ls->fs, &v);  /* will jump to label if condition is true */
+     enterblock(fs, &bl, 0);  /* must enter block before 'goto' */
+     gotostat(ls, v.t);  /* handle goto/break */
+-    skipnoopstat(ls);  /* skip other no-op statements */
++    while (testnext(ls, ';')) {}  /* skip colons */
+     if (block_follow(ls, 0)) {  /* 'goto' is the entire block? */
+       leaveblock(fs);
+       return;  /* and that is it */
+]]
+}
 
 
 --[=[
