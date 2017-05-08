@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.276 2017/05/04 13:32:01 roberto Exp roberto $
+** $Id: lvm.c,v 2.277 2017/05/05 17:16:11 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -737,9 +737,9 @@ void luaV_finishOp (lua_State *L) {
 #define RC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgR, base+GETARG_C(i))
 #define KC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgK, k+GETARG_C(i))
 #define RKB(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgK, \
-	(GETARG_Bk(i)) ? k+GETARG_Br(i) : base+GETARG_Br(i))
+	(GETARG_Bk(i)) ? k + GETARG_Br(i) : base + GETARG_Br(i))
 #define RKC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgK, \
-	ISK(GETARG_C(i)) ? k+INDEXK(GETARG_C(i)) : base+GETARG_C(i))
+	(GETARG_Ck(i)) ? k + GETARG_Cr(i) : base + GETARG_Cr(i))
 
 
 
