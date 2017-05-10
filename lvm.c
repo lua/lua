@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.277 2017/05/05 17:16:11 roberto Exp roberto $
+** $Id: lvm.c,v 2.278 2017/05/08 16:08:01 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -118,10 +118,9 @@ int luaV_tointeger (const TValue *obj, lua_Integer *p, int mode) {
 
 
 /*
-** Try to convert a 'for' limit to an integer, preserving the
-** semantics of the loop.
-** (The following explanation assumes a non-negative step; it is valid
-** for negative steps mutatis mutandis.)
+** Try to convert a 'for' limit to an integer, preserving the semantics
+** of the loop.  (The following explanation assumes a non-negative step;
+** it is valid for negative steps mutatis mutandis.)
 ** If the limit can be converted to an integer, rounding down, that is
 ** it.
 ** Otherwise, check whether the limit can be converted to a number.  If
@@ -807,6 +806,19 @@ void luaV_finishOp (lua_State *L) {
     Protect(luaV_finishset(L,t,k,v,slot)); }
 
 
+/*
+** Predicate for integer fast track in GET/SETTABLE.
+** (Strings are usually constant and therefore coded with
+** GET/SETFIELD). Check that index is an integer, "table" is
+** a table, index is in the array part, and value is not nil
+** (otherwise it will need metamethods). Use 'n' and 't' for
+** for caching the integer and table values.
+*/
+#define fastintindex(tbl,idx,t,n)  \
+        (ttisinteger(idx) && ttistable(tbl) && \
+            (n = l_castS2U(ivalue(idx)) - 1u, t = hvalue(tbl), \
+             n < t->sizearray) && !ttisnil(&t->array[n]))
+
 
 void luaV_execute (lua_State *L) {
   CallInfo *ci = L->ci;
@@ -889,7 +901,12 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_GETTABLE) {
         StkId rb = RB(i);
         TValue *rc = RC(i);
-        gettableProtected(L, rb, rc, ra);
+        Table *t; lua_Unsigned n;
+        if (fastintindex(rb, rc, t, n)) {
+          setobj2s(L, ra, &t->array[n]);
+        }
+        else
+          gettableProtected(L, rb, rc, ra);
         vmbreak;
       }
       vmcase(OP_GETI) {
@@ -930,7 +947,12 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_SETTABLE) {
         TValue *rb = RB(i);
         TValue *rc = RKC(i);
-        settableProtected(L, ra, rb, rc);
+        Table *t; lua_Unsigned n;
+        if (fastintindex(ra, rb, t, n)) {
+          setobj2t(L, &t->array[n], rc);
+        }
+        else
+          settableProtected(L, ra, rb, rc);
         vmbreak;
       }
       vmcase(OP_SETI) {
@@ -1205,21 +1227,33 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_LT) {
-        Protect(
-          if (luaV_lessthan(L, RKB(i), RKC(i)) != GETARG_A(i))
-            pc++;
-          else
-            donextjump(ci);
+        TValue *rb = RKB(i);
+        TValue *rc = RKC(i);
+        int res;
+        if (ttisinteger(rb) && ttisinteger(rc))
+          res = (ivalue(rb) < ivalue(rc));
+        else Protect(
+          res = luaV_lessthan(L, rb, rc);
         )
+        if (res != GETARG_A(i))
+          pc++;
+        else
+          donextjump(ci);
         vmbreak;
       }
       vmcase(OP_LE) {
-        Protect(
-          if (luaV_lessequal(L, RKB(i), RKC(i)) != GETARG_A(i))
-            pc++;
-          else
-            donextjump(ci);
+        TValue *rb = RKB(i);
+        TValue *rc = RKC(i);
+        int res;
+        if (ttisinteger(rb) && ttisinteger(rc))
+          res = (ivalue(rb) <= ivalue(rc));
+        else Protect(
+          res = luaV_lessequal(L, rb, rc);
         )
+        if (res != GETARG_A(i))
+          pc++;
+        else
+          donextjump(ci);
         vmbreak;
       }
       vmcase(OP_TEST) {
