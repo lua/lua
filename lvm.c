@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.278 2017/05/08 16:08:01 roberto Exp roberto $
+** $Id: lvm.c,v 2.279 2017/05/10 17:32:19 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -182,7 +182,7 @@ void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
       return;
     }
     t = tm;  /* else try to access 'tm[key]' */
-    if (luaV_fastget(L,t,key,slot,luaH_get)) {  /* fast track? */
+    if (luaV_fastget(L, t, key, slot, luaH_get)) {  /* fast track? */
       setobj2s(L, val, slot);  /* done */
       return;
     }
@@ -196,7 +196,7 @@ void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
 ** Finish a table assignment 't[key] = val'.
 ** If 'slot' is NULL, 't' is not a table.  Otherwise, 'slot' points
 ** to the entry 't[key]', or to 'luaO_nilobject' if there is no such
-** entry.  (The value at 'slot' must be nil, otherwise 'luaV_fastset'
+** entry.  (The value at 'slot' must be nil, otherwise 'luaV_fastget'
 ** would have done the job.)
 */
 void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
@@ -229,9 +229,11 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
       return;
     }
     t = tm;  /* else repeat assignment over 'tm' */
-    if (luaV_fastset(L, t, key, slot, luaH_get, val))
+    if (luaV_fastget(L, t, key, slot, luaH_get)) {
+      luaV_finishfastset(L, t, slot, val);
       return;  /* done */
-    /* else loop */
+    }
+    /* else 'return luaV_finishset(L, t, key, val, slot)' (loop) */
   }
   luaG_runerror(L, "'__newindex' chain too long; possible loop");
 }
@@ -791,35 +793,6 @@ void luaV_finishOp (lua_State *L) {
 #define vmbreak		break
 
 
-/*
-** copy of 'luaV_gettable', but protecting the call to potential
-** metamethod (which can reallocate the stack)
-*/
-#define gettableProtected(L,t,k,v)  { const TValue *slot; \
-  if (luaV_fastget(L,t,k,slot,luaH_get)) { setobj2s(L, v, slot); } \
-  else Protect(luaV_finishget(L,t,k,v,slot)); }
-
-
-/* same for 'luaV_settable' */
-#define settableProtected(L,t,k,v) { const TValue *slot; \
-  if (!luaV_fastset(L,t,k,slot,luaH_get,v)) \
-    Protect(luaV_finishset(L,t,k,v,slot)); }
-
-
-/*
-** Predicate for integer fast track in GET/SETTABLE.
-** (Strings are usually constant and therefore coded with
-** GET/SETFIELD). Check that index is an integer, "table" is
-** a table, index is in the array part, and value is not nil
-** (otherwise it will need metamethods). Use 'n' and 't' for
-** for caching the integer and table values.
-*/
-#define fastintindex(tbl,idx,t,n)  \
-        (ttisinteger(idx) && ttistable(tbl) && \
-            (n = l_castS2U(ivalue(idx)) - 1u, t = hvalue(tbl), \
-             n < t->sizearray) && !ttisnil(&t->array[n]))
-
-
 void luaV_execute (lua_State *L) {
   CallInfo *ci = L->ci;
   LClosure *cl;
@@ -899,21 +872,24 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_GETTABLE) {
+        const TValue *slot;
         StkId rb = RB(i);
         TValue *rc = RC(i);
-        Table *t; lua_Unsigned n;
-        if (fastintindex(rb, rc, t, n)) {
-          setobj2s(L, ra, &t->array[n]);
+        lua_Unsigned n;
+        if (ttisinteger(rc)  /* fast track for integers? */
+            ? (n = ivalue(rc), luaV_fastgeti(L, rb, n, slot))
+            : luaV_fastget(L, rb, rc, slot, luaH_get)) {
+          setobj2s(L, ra, slot);
         }
         else
-          gettableProtected(L, rb, rc, ra);
+          Protect(luaV_finishget(L, rb, rc, ra, slot));
         vmbreak;
       }
       vmcase(OP_GETI) {
         const TValue *slot;
         StkId rb = RB(i);
         int c = GETARG_C(i);
-        if (luaV_fastget(L, rb, c, slot, luaH_getint)) {
+        if (luaV_fastgeti(L, rb, c, slot)) {
           setobj2s(L, ra, slot);
         }
         else {
@@ -940,26 +916,32 @@ void luaV_execute (lua_State *L) {
         TValue *rb = KB(i);
         TValue *rc = RKC(i);
         TString *key = tsvalue(rb);  /* key must be a string */
-        if (!luaV_fastset(L, upval, key, slot, luaH_getstr, rc))
+        if (luaV_fastget(L, upval, key, slot, luaH_getstr))
+          luaV_finishfastset(L, upval, slot, rc);
+        else
           Protect(luaV_finishset(L, upval, rb, rc, slot));
         vmbreak;
       }
       vmcase(OP_SETTABLE) {
-        TValue *rb = RB(i);
-        TValue *rc = RKC(i);
-        Table *t; lua_Unsigned n;
-        if (fastintindex(ra, rb, t, n)) {
-          setobj2t(L, &t->array[n], rc);
-        }
+        const TValue *slot;
+        TValue *rb = RB(i);  /* key (table is in 'ra') */
+        TValue *rc = RKC(i);  /* value */
+        lua_Unsigned n;
+        if (ttisinteger(rb)  /* fast track for integers? */
+            ? (n = ivalue(rb), luaV_fastgeti(L, ra, n, slot))
+            : luaV_fastget(L, ra, rb, slot, luaH_get))
+          luaV_finishfastset(L, ra, slot, rc);
         else
-          settableProtected(L, ra, rb, rc);
+          Protect(luaV_finishset(L, ra, rb, rc, slot));
         vmbreak;
       }
       vmcase(OP_SETI) {
         const TValue *slot;
         int c = GETARG_B(i);
         TValue *rc = RKC(i);
-        if (!luaV_fastset(L, ra, c, slot, luaH_getint, rc)) {
+        if (luaV_fastgeti(L, ra, c, slot))
+          luaV_finishfastset(L, ra, slot, rc);
+        else {
           TValue key;
           setivalue(&key, c);
           Protect(luaV_finishset(L, ra, &key, rc, slot));
@@ -971,7 +953,9 @@ void luaV_execute (lua_State *L) {
         TValue *rb = KB(i);
         TValue *rc = RKC(i);
         TString *key = tsvalue(rb);  /* key must be a string */
-        if (!luaV_fastset(L, ra, key, slot, luaH_getstr, rc))
+        if (luaV_fastget(L, ra, key, slot, luaH_getstr))
+          luaV_finishfastset(L, ra, slot, rc);
+        else
           Protect(luaV_finishset(L, ra, rb, rc, slot));
         vmbreak;
       }
@@ -1427,8 +1411,9 @@ void luaV_execute (lua_State *L) {
         if (last > h->sizearray)  /* needs more space? */
           luaH_resizearray(L, h, last);  /* preallocate it at once */
         for (; n > 0; n--) {
-          TValue *val = ra+n;
-          luaH_setint(L, h, last--, val);
+          TValue *val = ra + n;
+          setobj2t(L, &h->array[last - 1], val);
+          last--;
           luaC_barrierback(L, h, val);
         }
         L->top = ci->top;  /* correct top (in case of previous open call) */
