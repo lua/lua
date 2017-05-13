@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.157 2017/04/28 20:57:45 roberto Exp roberto $
+** $Id: lparser.c,v 2.158 2017/04/29 18:09:17 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -766,7 +766,12 @@ static void parlist (LexState *ls) {
         }
         case TK_DOTS: {  /* param -> '...' */
           luaX_next(ls);
+          if (testnext(ls, '='))
+            new_localvar(ls, str_checkname(ls));
+          else
+            new_localvarliteral(ls, "_ARG");
           f->is_vararg = 1;  /* declared vararg */
+          nparams++;
           break;
         }
         default: luaX_syntaxerror(ls, "<name> or '...' expected");
@@ -1622,6 +1627,10 @@ static void mainfunc (LexState *ls, FuncState *fs) {
   expdesc v;
   open_func(ls, fs, &bl);
   fs->f->is_vararg = 1;  /* main function is always declared vararg */
+  fs->f->numparams = 1;
+  new_localvarliteral(ls, "_ARG");
+  adjustlocalvars(ls, 1);
+  luaK_reserveregs(fs, 1);  /* reserve register for vararg */
   init_exp(&v, VLOCAL, 0);  /* create and... */
   newupvalue(fs, ls->envn, &v);  /* ...set environment upvalue */
   luaX_next(ls);  /* read first token */

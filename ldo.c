@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.156 2016/09/20 16:37:45 roberto Exp roberto $
+** $Id: ldo.c,v 2.157 2016/12/13 15:52:21 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -290,23 +290,6 @@ static void callhook (lua_State *L, CallInfo *ci) {
 }
 
 
-static StkId adjust_varargs (lua_State *L, Proto *p, int actual) {
-  int i;
-  int nfixargs = p->numparams;
-  StkId base, fixed;
-  /* move fixed parameters to final position */
-  fixed = L->top - actual;  /* first fixed argument */
-  base = L->top;  /* final position of first argument */
-  for (i = 0; i < nfixargs && i < actual; i++) {
-    setobjs2s(L, L->top++, fixed + i);
-    setnilvalue(fixed + i);  /* erase original copy (for GC) */
-  }
-  for (; i < nfixargs; i++)
-    setnilvalue(L->top++);  /* complete missing arguments */
-  return base;
-}
-
-
 /*
 ** Check whether __call metafield of 'func' is a function. If so, put
 ** it in stack below original 'func' so that 'luaD_precall' can call
@@ -395,14 +378,6 @@ int luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres) {
 #define next_ci(L) (L->ci = (L->ci->next ? L->ci->next : luaE_extendCI(L)))
 
 
-/* macro to check stack size, preserving 'p' */
-#define checkstackp(L,n,p)  \
-  luaD_checkstackaux(L, n, \
-    ptrdiff_t t__ = savestack(L, p);  /* save 'p' */ \
-    luaC_checkGC(L),  /* stack grow uses memory */ \
-    p = restorestack(L, t__))  /* 'pos' part: restore 'p' */
-
-
 /*
 ** Prepares a function call: checks the stack, creates a new CallInfo
 ** entry, fills in the relevant information, calls hook if needed.
@@ -438,23 +413,19 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       return 1;
     }
     case LUA_TLCL: {  /* Lua function: prepare its call */
-      StkId base;
       Proto *p = clLvalue(func)->p;
       int n = cast_int(L->top - func) - 1;  /* number of real arguments */
       int fsize = p->maxstacksize;  /* frame size */
       checkstackp(L, fsize, func);
+      for (; n < p->numparams - p->is_vararg; n++)
+        setnilvalue(L->top++);  /* complete missing arguments */
       if (p->is_vararg)
-        base = adjust_varargs(L, p, n);
-      else {  /* non vararg function */
-        for (; n < p->numparams; n++)
-          setnilvalue(L->top++);  /* complete missing arguments */
-        base = func + 1;
-      }
+        luaT_adjustvarargs(L, p, n);
       ci = next_ci(L);  /* now 'enter' new function */
       ci->nresults = nresults;
       ci->func = func;
-      ci->u.l.base = base;
-      L->top = ci->top = base + fsize;
+      ci->u.l.base = func + 1;
+      L->top = ci->top = func + 1 + fsize;
       lua_assert(ci->top <= L->stack_last);
       ci->u.l.savedpc = p->code;  /* starting point */
       ci->callstatus = CIST_LUA;

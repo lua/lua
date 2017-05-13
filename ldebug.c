@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.123 2017/04/28 20:57:45 roberto Exp roberto $
+** $Id: ldebug.c,v 2.124 2017/04/29 15:28:38 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -131,28 +131,13 @@ static const char *upvalname (Proto *p, int uv) {
 }
 
 
-static const char *findvararg (CallInfo *ci, int n, StkId *pos) {
-  int nparams = clLvalue(ci->func)->p->numparams;
-  if (n >= cast_int(ci->u.l.base - ci->func) - nparams)
-    return NULL;  /* no such vararg */
-  else {
-    *pos = ci->func + nparams + n;
-    return "(*vararg)";  /* generic name for any vararg */
-  }
-}
-
-
 static const char *findlocal (lua_State *L, CallInfo *ci, int n,
                               StkId *pos) {
   const char *name = NULL;
   StkId base;
   if (isLua(ci)) {
-    if (n < 0)  /* access to vararg values? */
-      return findvararg(ci, -n, pos);
-    else {
-      base = ci->u.l.base;
-      name = luaF_getlocalname(ci_func(ci)->p, n, currentpc(ci));
-    }
+    base = ci->u.l.base;
+    name = luaF_getlocalname(ci_func(ci)->p, n, currentpc(ci));
   }
   else
     base = ci->func + 1;

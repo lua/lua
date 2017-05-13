@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 2.28 2015/11/23 11:29:43 roberto Exp roberto $
+** $Id: ldo.h,v 2.29 2015/12/21 13:02:14 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -31,6 +31,14 @@
 
 #define savestack(L,p)		((char *)(p) - (char *)L->stack)
 #define restorestack(L,n)	((TValue *)((char *)L->stack + (n)))
+
+
+/* macro to check stack size, preserving 'p' */
+#define checkstackp(L,n,p)  \
+  luaD_checkstackaux(L, n, \
+    ptrdiff_t t__ = savestack(L, p);  /* save 'p' */ \
+    luaC_checkGC(L),  /* stack grow uses memory */ \
+    p = restorestack(L, t__))  /* 'pos' part: restore 'p' */
 
 
 /* type of protected functions, to be ran by 'runprotected' */

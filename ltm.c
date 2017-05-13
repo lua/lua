@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.39 2017/04/11 18:41:09 roberto Exp roberto $
+** $Id: ltm.c,v 2.40 2017/05/08 15:57:23 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -163,3 +163,41 @@ int luaT_callorderTM (lua_State *L, const TValue *p1, const TValue *p2,
     return !l_isfalse(L->top);
 }
 
+
+void luaT_adjustvarargs (lua_State *L, Proto *p, int actual) {
+  int i;
+  Table *vtab;
+  TValue nname;
+  int nfixparams = p->numparams - 1;  /* number of fixed parameters */
+  actual -= nfixparams;  /* number of extra arguments */
+  vtab = luaH_new(L);  /* create vararg table */
+  sethvalue(L, L->top, vtab);  /* anchor it for resizing */
+  L->top++;  /* space ensured by caller */
+  luaH_resize(L, vtab, actual, 1);
+  for (i = 0; i < actual; i++)  /* put extra arguments into vararg table */
+    setobj2n(L, &vtab->array[i], L->top - actual + i - 1);
+  setsvalue(L, &nname, luaS_newliteral(L, "n"));  /* get field 'n' */
+  setivalue(luaH_set(L, vtab, &nname), actual);  /* store counter there */
+  L->top -= actual;  /* remove extra elements from the stack */
+  sethvalue(L, L->top - 1, vtab);  /* move table to new top */
+}
+
+
+void luaT_getvarargs (lua_State *L, StkId t, StkId where, int wanted) {
+  if (!ttistable(t))
+    luaG_runerror(L, "'vararg' parameter is not a table");
+  else {
+    int i;
+    Table *h = hvalue(t);
+    if (wanted < 0) {  /* get all? */
+      const TValue *ns = luaH_getstr(h, luaS_newliteral(L, "n"));
+      int n = (ttisinteger(ns)) ? ivalue(ns) : 0;
+      wanted = n;
+      checkstackp(L, n, where);
+      L->top = where + n;
+    }
+    for (i = 0; i < wanted; i++)  /* get what is available */
+      setobj2s(L, where + i, luaH_getint(h, i + 1));
+    return;
+  }
+}
