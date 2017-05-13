@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.280 2017/05/11 18:57:46 roberto Exp roberto $
+** $Id: lvm.c,v 2.281 2017/05/13 12:57:20 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -659,7 +659,7 @@ static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
 */
 void luaV_finishOp (lua_State *L) {
   CallInfo *ci = L->ci;
-  StkId base = ci->u.l.base;
+  StkId base = ci->func + 1;
   Instruction inst = *(ci->u.l.savedpc - 1);  /* interrupted instruction */
   OpCode op = GET_OPCODE(inst);
   switch (op) {  /* finish its execution */
@@ -696,7 +696,7 @@ void luaV_finishOp (lua_State *L) {
         luaV_concat(L, total);  /* concat them (may yield again) */
       }
       /* move final result to final position */
-      setobj2s(L, ci->u.l.base + GETARG_A(inst), L->top - 1);
+      setobj2s(L, ci->func + 1 + GETARG_A(inst), L->top - 1);
       L->top = ci->top;  /* restore top */
       break;
     }
@@ -753,7 +753,7 @@ void luaV_finishOp (lua_State *L) {
 */
 #define dojump(ci,i,e) \
   { int a = GETARG_A(i); \
-    if (a != 0) luaF_close(L, ci->u.l.base + a - 1); \
+    if (a != 0) luaF_close(L, ci->func + a); \
     pc += GETARG_sBx(i) + e; updatemask(L); }
 
 
@@ -772,7 +772,7 @@ void luaV_finishOp (lua_State *L) {
 ** stack, and change the hooks.
 */
 #define Protect(code)  \
-  { savepc(L); {code;}; base = ci->u.l.base; updatemask(L); }
+  { savepc(L); {code;}; base = ci->func + 1; updatemask(L); }
 
 
 #define checkGC(L,c)  \
@@ -797,7 +797,7 @@ void luaV_execute (lua_State *L) {
   CallInfo *ci = L->ci;
   LClosure *cl;
   TValue *k;
-  StkId base;  /* local copy of 'ci->u.l.base' */
+  StkId base;  /* local copy of 'ci->func + 1' */
   int mask;  /* local copy of 'L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT)' */
   const Instruction *pc;  /* local copy of 'ci->u.l.savedpc' */
   ci->callstatus |= CIST_FRESH;  /* fresh invocation of 'luaV_execute" */
@@ -806,14 +806,14 @@ void luaV_execute (lua_State *L) {
   cl = clLvalue(ci->func);  /* local reference to function's closure */
   k = cl->p->k;  /* local reference to function's constant table */
   updatemask(L);
-  base = ci->u.l.base;
+  base = ci->func + 1;
   pc = ci->u.l.savedpc;
   /* main loop of interpreter */
   for (;;) {
     Instruction i;
     StkId ra;
     vmfetch();
-    lua_assert(base == ci->u.l.base);
+    lua_assert(base == ci->func + 1);
     lua_assert(base <= L->top && L->top < L->stack + L->stacksize);
     vmdispatch (GET_OPCODE(i)) {
       vmcase(OP_MOVE) {
@@ -1288,19 +1288,18 @@ void luaV_execute (lua_State *L) {
           StkId nfunc = nci->func;  /* called function */
           StkId ofunc = oci->func;  /* caller function */
           /* last stack slot filled by 'precall' */
-          StkId lim = nci->u.l.base + getproto(nfunc)->numparams;
+          StkId lim = nci->func + 1 + getproto(nfunc)->numparams;
           int aux;
           /* close all upvalues from previous call */
-          if (cl->p->sizep > 0) luaF_close(L, oci->u.l.base);
+          if (cl->p->sizep > 0) luaF_close(L, oci->func + 1);
           /* move new frame into old one */
           for (aux = 0; nfunc + aux < lim; aux++)
             setobjs2s(L, ofunc + aux, nfunc + aux);
-          oci->u.l.base = ofunc + (nci->u.l.base - nfunc);  /* correct base */
           oci->top = L->top = ofunc + (L->top - nfunc);  /* correct top */
           oci->u.l.savedpc = nci->u.l.savedpc;
           oci->callstatus |= CIST_TAIL;  /* function was tail called */
           ci = L->ci = oci;  /* remove new frame */
-          lua_assert(L->top == oci->u.l.base + getproto(ofunc)->maxstacksize);
+          lua_assert(L->top == oci->func + 1 + getproto(ofunc)->maxstacksize);
           goto newframe;  /* restart luaV_execute over new Lua function */
         }
         vmbreak;

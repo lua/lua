@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.139 2017/04/24 16:59:26 roberto Exp roberto $
+** $Id: lstate.h,v 2.140 2017/05/04 13:32:01 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -96,7 +96,6 @@ typedef struct CallInfo {
   struct CallInfo *previous, *next;  /* dynamic call link */
   union {
     struct {  /* only for Lua functions */
-      StkId base;  /* base for this function */
       const Instruction *savedpc;
     } l;
     struct {  /* only for C functions */

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.124 2017/04/29 15:28:38 roberto Exp roberto $
+** $Id: ldebug.c,v 2.125 2017/05/13 13:04:33 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -136,7 +136,7 @@ static const char *findlocal (lua_State *L, CallInfo *ci, int n,
   const char *name = NULL;
   StkId base;
   if (isLua(ci)) {
-    base = ci->u.l.base;
+    base = ci->func + 1;
     name = luaF_getlocalname(ci_func(ci)->p, n, currentpc(ci));
   }
   else
@@ -562,8 +562,9 @@ static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
 ** checks are ISO C and ensure a correct result.
 */
 static int isinstack (CallInfo *ci, const TValue *o) {
-  ptrdiff_t i = o - ci->u.l.base;
-  return (0 <= i && i < (ci->top - ci->u.l.base) && ci->u.l.base + i == o);
+  StkId base = ci->func + 1;
+  ptrdiff_t i = o - base;
+  return (0 <= i && i < (ci->top - base) && base + i == o);
 }
 
 
@@ -594,7 +595,7 @@ static const char *varinfo (lua_State *L, const TValue *o) {
     kind = getupvalname(ci, o, &name);  /* check whether 'o' is an upvalue */
     if (!kind && isinstack(ci, o))  /* no? try a register */
       kind = getobjname(ci_func(ci)->p, currentpc(ci),
-                        cast_int(o - ci->u.l.base), &name);
+                        cast_int(o - (ci->func + 1)), &name);
   }
   return (kind) ? luaO_pushfstring(L, " (%s '%s')", kind, name) : "";
 }

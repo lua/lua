@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.157 2016/12/13 15:52:21 roberto Exp roberto $
+** $Id: ldo.c,v 2.158 2017/05/13 12:57:20 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -164,8 +164,6 @@ static void correctstack (lua_State *L, TValue *oldstack) {
   for (ci = L->ci; ci != NULL; ci = ci->previous) {
     ci->top = (ci->top - oldstack) + L->stack;
     ci->func = (ci->func - oldstack) + L->stack;
-    if (isLua(ci))
-      ci->u.l.base = (ci->u.l.base - oldstack) + L->stack;
   }
 }
 
@@ -424,7 +422,6 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       ci = next_ci(L);  /* now 'enter' new function */
       ci->nresults = nresults;
       ci->func = func;
-      ci->u.l.base = func + 1;
       L->top = ci->top = func + 1 + fsize;
       lua_assert(ci->top <= L->stack_last);
       ci->u.l.savedpc = p->code;  /* starting point */
