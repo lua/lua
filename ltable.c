@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.118 2016/11/07 12:38:35 roberto Exp roberto $
+** $Id: ltable.c,v 2.119 2017/05/09 14:39:46 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -224,12 +224,10 @@ static unsigned int computesizes (unsigned int nums[], unsigned int *pna) {
   unsigned int optimal = 0;  /* optimal size for array part */
   /* loop while keys can fill more than half of total size */
   for (i = 0, twotoi = 1; *pna > twotoi / 2; i++, twotoi *= 2) {
-    if (nums[i] > 0) {
-      a += nums[i];
-      if (a > twotoi/2) {  /* more than half elements present? */
-        optimal = twotoi;  /* optimal size (till now) */
-        na = a;  /* all elements up to 'optimal' will go to array part */
-      }
+    a += nums[i];
+    if (a > twotoi/2) {  /* more than half elements present? */
+      optimal = twotoi;  /* optimal size (till now) */
+      na = a;  /* all elements up to 'optimal' will go to array part */
     }
   }
   lua_assert((optimal == 0 || optimal / 2 < na) && na <= optimal);
@@ -610,23 +608,31 @@ void luaH_setint (lua_State *L, Table *t, lua_Integer key, TValue *value) {
 }
 
 
-static int unbound_search (Table *t, unsigned int j) {
-  unsigned int i = j;  /* i is zero or a present index */
-  j++;
-  /* find 'i' and 'j' such that i is present and j is not */
-  while (!ttisnil(luaH_getint(t, j))) {
-    i = j;
-    if (j > cast(unsigned int, MAX_INT)/2) {  /* overflow? */
-      /* table was built with bad purposes: resort to linear search */
-      i = 1;
-      while (!ttisnil(luaH_getint(t, i))) i++;
-      return i - 1;
-    }
-    j *= 2;
+/*
+** Try to find a boundary in the hash part of table 't'. From the
+** caller, we know that 'i' is zero or present. We need to find an
+** upper bound (an absent index larger than 'i') to do a binary search
+** for a boundary. We try 'max', a number larger than the total number
+** of keys in the table. (Given the size of the array elements, 'max'
+** computation cannot overflow a 'size_t'.)  If 'max' does not fit in a
+** lua_Integer or it is present in the table, we try LUA_MAXINTEGER. If
+** LUA_MAXINTEGER is present, it is a boundary, so we are done. Otherwise,
+** we are left with a 'j' that is within the size of lua_Integers and
+** absent, so can do the binary search.
+*/ 
+static lua_Unsigned hash_search (Table *t, lua_Unsigned i) {
+  lua_Unsigned j;
+  size_t max = (cast(size_t, i) + sizenode(t) + 10) * 2;
+  if (max <= l_castS2U(LUA_MAXINTEGER) && ttisnil(luaH_getint(t, max)))
+    j = max;
+  else {
+    j = LUA_MAXINTEGER;
+    if (!ttisnil(luaH_getint(t, j)))  /* weird case? */
+      return j;  /* well, that is a boundary... */
   }
-  /* now do a binary search between them */
-  while (j - i > 1) {
-    unsigned int m = (i+j)/2;
+  /* now, 'i' is zero or present and 'j' is absent */
+  while (j - i > 1u) {  /* do a binary search between them */
+    size_t m = (i + j) / 2;
     if (ttisnil(luaH_getint(t, m))) j = m;
     else i = m;
   }
@@ -635,25 +641,30 @@ static int unbound_search (Table *t, unsigned int j) {
 
 
 /*
-** Try to find a boundary in table 't'. A 'boundary' is an integer index
-** such that t[i] is non-nil and t[i+1] is nil (and 0 if t[1] is nil).
+** Try to find a boundary in table 't'. (A 'boundary' is an integer index
+** such that t[i] is non-nil and t[i+1] is nil (or 0 if t[1] is nil).)
+** First, try the array part: if there is an array part and its last
+** element is nil, there must be a boundary there; a binary search
+** finds that boundary. Otherwise, if the hash part is empty or does not
+** contain 'j + 1', 'j' is a boundary. Othersize, call 'hash_search'
+** to find a boundary in the hash part.
 */
-int luaH_getn (Table *t) {
+lua_Unsigned luaH_getn (Table *t) {
   unsigned int j = t->sizearray;
   if (j > 0 && ttisnil(&t->array[j - 1])) {
-    /* there is a boundary in the array part: (binary) search for it */
     unsigned int i = 0;
-    while (j - i > 1) {
-      unsigned int m = (i+j)/2;
+    while (j - i > 1u) {  /* binary search */
+      unsigned int m = (i + j) / 2;
       if (ttisnil(&t->array[m - 1])) j = m;
       else i = m;
     }
     return i;
   }
-  /* else must find a boundary in hash part */
-  else if (isdummy(t))  /* hash part is empty? */
-    return j;  /* that is easy... */
-  else return unbound_search(t, j);
+  /* 'j' is zero or present in table */
+  else if (isdummy(t) || ttisnil(luaH_getint(t, l_castU2S(j + 1))))
+    return j;  /* 'j + 1' is absent... */
+  else
+    return hash_search(t, j);
 }
 
 
