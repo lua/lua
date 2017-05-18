@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.265 2017/04/24 16:59:26 roberto Exp roberto $
+** $Id: lapi.c,v 2.266 2017/05/11 18:57:46 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -389,7 +389,7 @@ LUA_API const char *lua_tolstring (lua_State *L, int idx, size_t *len) {
 }
 
 
-LUA_API size_t lua_rawlen (lua_State *L, int idx) {
+LUA_API lua_Unsigned lua_rawlen (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
   switch (ttype(o)) {
     case LUA_TSHRSTR: return tsvalue(o)->shrlen;
