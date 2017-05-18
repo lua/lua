@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.282 2017/05/13 13:54:47 roberto Exp roberto $
+** $Id: lvm.c,v 2.283 2017/05/18 19:34:39 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -865,7 +865,7 @@ void luaV_execute (lua_State *L) {
         TValue *upval = cl->upvals[GETARG_B(i)]->v;
         TValue *rc = KC(i);
         TString *key = tsvalue(rc);  /* key must be a string */
-        if (luaV_fastget(L, upval, key, slot, luaH_getstr)) {
+        if (luaV_fastget(L, upval, key, slot, luaH_getshortstr)) {
           setobj2s(L, ra, slot);
         }
         else Protect(luaV_finishget(L, upval, rc, ra, slot));
@@ -904,7 +904,7 @@ void luaV_execute (lua_State *L) {
         StkId rb = RB(i);
         TValue *rc = KC(i);
         TString *key = tsvalue(rc);  /* key must be a string */
-        if (luaV_fastget(L, rb, key, slot, luaH_getstr)) {
+        if (luaV_fastget(L, rb, key, slot, luaH_getshortstr)) {
           setobj2s(L, ra, slot);
         }
         else Protect(luaV_finishget(L, rb, rc, ra, slot));
@@ -916,7 +916,7 @@ void luaV_execute (lua_State *L) {
         TValue *rb = KB(i);
         TValue *rc = RKC(i);
         TString *key = tsvalue(rb);  /* key must be a string */
-        if (luaV_fastget(L, upval, key, slot, luaH_getstr))
+        if (luaV_fastget(L, upval, key, slot, luaH_getshortstr))
           luaV_finishfastset(L, upval, slot, rc);
         else
           Protect(luaV_finishset(L, upval, rb, rc, slot));
@@ -953,7 +953,7 @@ void luaV_execute (lua_State *L) {
         TValue *rb = KB(i);
         TValue *rc = RKC(i);
         TString *key = tsvalue(rb);  /* key must be a string */
-        if (luaV_fastget(L, ra, key, slot, luaH_getstr))
+        if (luaV_fastget(L, ra, key, slot, luaH_getshortstr))
           luaV_finishfastset(L, ra, slot, rc);
         else
           Protect(luaV_finishset(L, ra, rb, rc, slot));
