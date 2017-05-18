@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.281 2017/05/13 12:57:20 roberto Exp roberto $
+** $Id: lvm.c,v 2.282 2017/05/13 13:54:47 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1260,12 +1260,15 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_CALL) {
         int b = GETARG_B(i);
         int nresults = GETARG_C(i) - 1;
-        if (b != 0) L->top = ra+b;  /* else previous instruction set top */
-        savepc(L);
-        if (luaD_precall(L, ra, nresults)) {  /* C function? */
-          if (nresults >= 0)
-            L->top = ci->top;  /* adjust results */
-          Protect((void)0);  /* update 'base' */
+        int isC;
+        if (b != 0)  /* fixed number of arguments? */
+          L->top = ra + b;  /* top signals number of arguments */
+        /* else previous instruction set top */
+        Protect(isC = luaD_precall(L, ra, nresults));
+        if (isC) {  /* C function? */
+          if (nresults >= 0)  /* fixed number of results? */
+            L->top = ci->top;  /* correct top */
+          /* else leave top for next instruction */
         }
         else {  /* Lua function */
           ci = L->ci;
@@ -1283,8 +1286,8 @@ void luaV_execute (lua_State *L) {
         }
         else {
           /* tail call: put called frame (n) in place of caller one (o) */
-          CallInfo *nci = L->ci;  /* called frame */
-          CallInfo *oci = nci->previous;  /* caller frame */
+          CallInfo *nci = L->ci;  /* called frame (new) */
+          CallInfo *oci = nci->previous;  /* caller frame (old) */
           StkId nfunc = nci->func;  /* called function */
           StkId ofunc = oci->func;  /* caller function */
           /* last stack slot filled by 'precall' */
