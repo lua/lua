@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.254 2016/12/22 13:08:50 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.255 2017/03/14 12:40:44 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -14,6 +14,7 @@
 #include <float.h>
 #include <limits.h>
 #include <locale.h>
+#include <math.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -813,8 +814,6 @@ static int str_gsub (lua_State *L) {
 ** Hexadecimal floating-point formatter
 */
 
-#include <math.h>
-
 #define SIZELENMOD	(sizeof(LUA_NUMBER_FRMLEN)/sizeof(char))
 
 
@@ -929,14 +928,32 @@ static void addquoted (luaL_Buffer *b, const char *s, size_t len) {
 
 
 /*
-** Ensures the 'buff' string uses a dot as the radix character.
+** Serialize a floating-point number in such a way that it can be
+** scanned back by Lua. Use hexadecimal format for "common" numbers
+** (to preserve precision); inf, -inf, and NaN are handled separately.
+** (NaN cannot be expressed as a numeral, so we write '(0/0)' for it.)
 */
-static void checkdp (char *buff, int nb) {
-  if (memchr(buff, '.', nb) == NULL) {  /* no dot? */
-    char point = lua_getlocaledecpoint();  /* try locale point */
-    char *ppoint = (char *)memchr(buff, point, nb);
-    if (ppoint) *ppoint = '.';  /* change it to a dot */
+static int quotefloat (lua_State *L, char *buff, lua_Number n) {
+  const char *s;  /* for the fixed representations */
+  if (n == (lua_Number)HUGE_VAL)  /* inf? */
+    s = "1e9999";
+  else if (n == -(lua_Number)HUGE_VAL)  /* -inf? */
+    s = "-1e9999";
+  else if (n != n)  /* NaN? */
+    s = "(0/0)";
+  else {  /* format number as hexadecimal */
+    int  nb = lua_number2strx(L, buff, MAX_ITEM,
+                                 "%" LUA_NUMBER_FRMLEN "a", n);
+    /* ensures that 'buff' string uses a dot as the radix character */
+    if (memchr(buff, '.', nb) == NULL) {  /* no dot? */
+      char point = lua_getlocaledecpoint();  /* try locale point */
+      char *ppoint = (char *)memchr(buff, point, nb);
+      if (ppoint) *ppoint = '.';  /* change it to a dot */
+    }
+    return nb;
   }
+  /* for the fixed representations */
+  return l_sprintf(buff, MAX_ITEM, "%s", s);
 }
 
 
@@ -951,11 +968,8 @@ static void addliteral (lua_State *L, luaL_Buffer *b, int arg) {
     case LUA_TNUMBER: {
       char *buff = luaL_prepbuffsize(b, MAX_ITEM);
       int nb;
-      if (!lua_isinteger(L, arg)) {  /* float? */
-        lua_Number n = lua_tonumber(L, arg);  /* write as hexa ('%a') */
-        nb = lua_number2strx(L, buff, MAX_ITEM, "%" LUA_NUMBER_FRMLEN "a", n);
-        checkdp(buff, nb);  /* ensure it uses a dot */
-      }
+      if (!lua_isinteger(L, arg))  /* float? */
+        nb = quotefloat(L, buff, lua_tonumber(L, arg));
       else {  /* integers */
         lua_Integer n = lua_tointeger(L, arg);
         const char *format = (n == LUA_MININTEGER)  /* corner case? */
