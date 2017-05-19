@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.119 2017/05/09 14:39:46 roberto Exp roberto $
+** $Id: ltable.c,v 2.120 2017/05/16 19:07:08 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -610,29 +610,35 @@ void luaH_setint (lua_State *L, Table *t, lua_Integer key, TValue *value) {
 
 /*
 ** Try to find a boundary in the hash part of table 't'. From the
-** caller, we know that 'i' is zero or present. We need to find an
-** upper bound (an absent index larger than 'i') to do a binary search
-** for a boundary. We try 'max', a number larger than the total number
-** of keys in the table. (Given the size of the array elements, 'max'
-** computation cannot overflow a 'size_t'.)  If 'max' does not fit in a
-** lua_Integer or it is present in the table, we try LUA_MAXINTEGER. If
-** LUA_MAXINTEGER is present, it is a boundary, so we are done. Otherwise,
-** we are left with a 'j' that is within the size of lua_Integers and
-** absent, so can do the binary search.
+** caller, we know that 'j' is zero or present and that 'j + 1' is
+** present. We want to find a larger key that is absent from the
+** table, so that we can do a binary search between the two keys to
+** find a boundary. We keep doubling 'j' until we get an absent index.
+** If the doubling would overflow, we try LUA_MAXINTEGER. If it is
+** absent, we are ready for the binary search. ('j', being max integer,
+** is larger or equal to 'i', but it cannot be equal because it is
+** absent while 'i' is present; so 'j > i'.) Otherwise, 'j' is a
+** boundary. ('j + 1' cannot be a present integer key because it is
+** not a valid integer in Lua.)
 */ 
-static lua_Unsigned hash_search (Table *t, lua_Unsigned i) {
-  lua_Unsigned j;
-  size_t max = (cast(size_t, i) + sizenode(t) + 10) * 2;
-  if (max <= l_castS2U(LUA_MAXINTEGER) && ttisnil(luaH_getint(t, max)))
-    j = max;
-  else {
-    j = LUA_MAXINTEGER;
-    if (!ttisnil(luaH_getint(t, j)))  /* weird case? */
-      return j;  /* well, that is a boundary... */
-  }
-  /* now, 'i' is zero or present and 'j' is absent */
+static lua_Unsigned hash_search (Table *t, lua_Unsigned j) {
+  lua_Unsigned i;
+  if (j == 0) j++;  /* the caller ensures 'j + 1' is present */
+  do {
+    i = j;  /* 'i' is a present index */
+    if (j <= l_castS2U(LUA_MAXINTEGER) / 2)
+      j *= 2;
+    else {
+      j = LUA_MAXINTEGER;
+      if (ttisnil(luaH_getint(t, j)))  /* t[j] == nil? */
+        break;  /* 'j' now is an absent index */
+      else  /* weird case */
+        return j;  /* well, max integer is a boundary... */
+    }
+  } while (!ttisnil(luaH_getint(t, j)));  /* repeat until t[j] == nil */
+  /* i < j  &&  t[i] !≃ nil  &&  t[j] == nil */
   while (j - i > 1u) {  /* do a binary search between them */
-    size_t m = (i + j) / 2;
+    lua_Unsigned m = (i + j) / 2;
     if (ttisnil(luaH_getint(t, m))) j = m;
     else i = m;
   }
@@ -642,7 +648,8 @@ static lua_Unsigned hash_search (Table *t, lua_Unsigned i) {
 
 /*
 ** Try to find a boundary in table 't'. (A 'boundary' is an integer index
-** such that t[i] is non-nil and t[i+1] is nil (or 0 if t[1] is nil).)
+** such that t[i] is non-nil and t[i+1] is nil, plus 0 if t[1] is nil
+** and 'maxinteger' if t[maxinteger] is not nil.)
 ** First, try the array part: if there is an array part and its last
 ** element is nil, there must be a boundary there; a binary search
 ** finds that boundary. Otherwise, if the hash part is empty or does not
@@ -660,11 +667,12 @@ lua_Unsigned luaH_getn (Table *t) {
     }
     return i;
   }
-  /* 'j' is zero or present in table */
-  else if (isdummy(t) || ttisnil(luaH_getint(t, l_castU2S(j + 1))))
-    return j;  /* 'j + 1' is absent... */
-  else
-    return hash_search(t, j);
+  else {  /* 'j' is zero or present in table */
+    if (isdummy(t) || ttisnil(luaH_getint(t, l_castU2S(j + 1))))
+      return j;  /* 'j + 1' is absent... */
+    else  /* 'j + 1' is also present */
+      return hash_search(t, j);
+  }
 }
 
 
