@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.120 2017/05/16 19:07:08 roberto Exp roberto $
+** $Id: ltable.c,v 2.121 2017/05/19 12:47:00 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -214,7 +214,8 @@ int luaH_next (lua_State *L, Table *t, StkId key) {
 ** "count array" where 'nums[i]' is the number of integers in the table
 ** between 2^(i - 1) + 1 and 2^i. 'pna' enters with the total number of
 ** integer keys in the table and leaves with the number of keys that
-** will go to the array part; return the optimal size.
+** will go to the array part; return the optimal size.  (The condition
+** 'twotoi > 0' in the for loop stops the loop if 'twotoi' overflows.)
 */
 static unsigned int computesizes (unsigned int nums[], unsigned int *pna) {
   int i;
@@ -223,7 +224,9 @@ static unsigned int computesizes (unsigned int nums[], unsigned int *pna) {
   unsigned int na = 0;  /* number of elements to go to array part */
   unsigned int optimal = 0;  /* optimal size for array part */
   /* loop while keys can fill more than half of total size */
-  for (i = 0, twotoi = 1; *pna > twotoi / 2; i++, twotoi *= 2) {
+  for (i = 0, twotoi = 1;
+       twotoi > 0 && *pna > twotoi / 2;
+       i++, twotoi *= 2) {
     a += nums[i];
     if (a > twotoi/2) {  /* more than half elements present? */
       optimal = twotoi;  /* optimal size (till now) */
