@@ -3656,9 +3656,9 @@ It needs an "interceptor" 'memcmp' function that continues
 reading memory after a difference is found.]],
 patch = [[
 2c2
-< ** $Id: bugs,v 1.151 2016/10/19 12:34:27 roberto Exp roberto $
+< ** $Id: bugs,v 1.152 2017/05/05 15:55:36 roberto Exp roberto $
 ---
-> ** $Id: bugs,v 1.151 2016/10/19 12:34:27 roberto Exp roberto $
+> ** $Id: bugs,v 1.152 2017/05/05 15:55:36 roberto Exp roberto $
 263c263,264
 <   for (option = LUA_STRFTIMEOPTIONS; *option != '\0'; option += oplen) {
 ---
@@ -3744,6 +3744,55 @@ patch = [[
        return;  /* and that is it */
 ]]
 }
+
+
+Bug{
+what = [[Lua crashes when building sequences with more than 2^30 elements.]],
+report = [[Viacheslav Usov, 2017/05/11]],
+since = [[ ]],
+fix = nil,
+example = [[
+-- crashes if machine has enough memory
+local t = {}
+for i = 1, 0x7fffffff do
+  t[i] = i
+end
+]],
+patch = [[
+]]
+}
+
+
+Bug{
+what = [[Table length computation overflows for sequences larger than
+2^31 elements.]],
+report = [[Viacheslav Usov, 2017/05/12]],
+since = [[ ]],
+fix = nil,
+example = [[
+-- on a machine with enough memory
+local t = {}
+for i = 1, 2147483681 do
+  t[i] = i
+end
+print(#t)
+]],
+patch = [[
+]]
+}
+
+
+--[=[
+Bug{
+what = [[ ]],
+report = [[ ]],
+since = [[ ]],
+fix = nil,
+example = [[ ]],
+patch = [[
+]]
+}
+]=]
 
 
 --[=[
