@@ -3656,9 +3656,9 @@ It needs an "interceptor" 'memcmp' function that continues
 reading memory after a difference is found.]],
 patch = [[
 2c2
-< ** $Id: bugs,v 1.152 2017/05/05 15:55:36 roberto Exp roberto $
+< ** $Id: bugs,v 1.153 2017/05/19 12:58:40 roberto Exp roberto $
 ---
-> ** $Id: bugs,v 1.152 2017/05/05 15:55:36 roberto Exp roberto $
+> ** $Id: bugs,v 1.153 2017/05/19 12:58:40 roberto Exp roberto $
 263c263,264
 <   for (option = LUA_STRFTIMEOPTIONS; *option != '\0'; option += oplen) {
 ---
@@ -3711,7 +3711,6 @@ A()
 patch = [[
 ]]
 }
-]=]
 
 
 Bug{
