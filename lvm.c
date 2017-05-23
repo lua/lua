@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.283 2017/05/18 19:34:39 roberto Exp roberto $
+** $Id: lvm.c,v 2.284 2017/05/18 19:44:19 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -690,13 +690,13 @@ void luaV_finishOp (lua_State *L) {
       StkId top = L->top - 1;  /* top when 'luaT_trybinTM' was called */
       int b = GETARG_B(inst);      /* first element to concatenate */
       int total = cast_int(top - 1 - (base + b));  /* yet to concatenate */
-      setobj2s(L, top - 2, top);  /* put TM result in proper position */
+      setobjs2s(L, top - 2, top);  /* put TM result in proper position */
       if (total > 1) {  /* are there elements to concat? */
         L->top = top - 1;  /* top is one after last element (at top-2) */
         luaV_concat(L, total);  /* concat them (may yield again) */
       }
       /* move final result to final position */
-      setobj2s(L, ci->func + 1 + GETARG_A(inst), L->top - 1);
+      setobjs2s(L, ci->func + 1 + GETARG_A(inst), L->top - 1);
       L->top = ci->top;  /* restore top */
       break;
     }
