@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.140 2017/05/04 13:32:01 roberto Exp roberto $
+** $Id: lstate.h,v 2.141 2017/05/13 13:54:47 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -139,7 +139,6 @@ typedef struct global_State {
   void *ud;         /* auxiliary data to 'frealloc' */
   l_mem totalbytes;  /* number of bytes currently allocated - GCdebt */
   l_mem GCdebt;  /* bytes allocated not yet compensated by the collector */
-  lu_mem GCmemtrav;  /* memory traversed by the GC */
   lu_mem GCestimate;  /* an estimate of the non-garbage memory in use */
   stringtable strt;  /* hash table for strings */
   TValue l_registry;
@@ -151,6 +150,9 @@ typedef struct global_State {
   lu_byte genmajormul;  /* control for major generational collections */
   lu_byte gcrunning;  /* true if GC is running */
   lu_byte gcemergency;  /* true if this is an emergency collection */
+  lu_byte gcpause;  /* size of pause between successive GCs */
+  lu_byte gcstepmul;  /* GC "speed" */
+  lu_byte gcstepsize;  /* (log2 of) GC granularity */
   GCObject *allgc;  /* list of all collectable objects */
   GCObject **sweepgc;  /* current position of sweep in list */
   GCObject *finobj;  /* list of collectable objects with finalizers */
@@ -170,9 +172,6 @@ typedef struct global_State {
   GCObject *finobjold;  /* list of old objects with finalizers */
   GCObject *finobjrold;  /* list of really old objects with finalizers */
   struct lua_State *twups;  /* list of threads with open upvalues */
-  unsigned int gcfinnum;  /* number of finalizers to call in each GC step */
-  int gcpause;  /* size of pause between successive GCs */
-  int gcstepmul;  /* GC 'granularity' */
   lua_CFunction panic;  /* to be called in unprotected errors */
   struct lua_State *mainthread;
   const lua_Number *version;  /* pointer to version number */

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.314 2016/09/05 19:06:34 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.315 2017/02/23 21:07:34 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -178,19 +178,46 @@ static int luaB_collectgarbage (lua_State *L) {
     LUA_GCCOUNT, LUA_GCSTEP, LUA_GCSETPAUSE, LUA_GCSETSTEPMUL,
     LUA_GCISRUNNING, LUA_GCGEN, LUA_GCINC};
   int o = optsnum[luaL_checkoption(L, 1, "collect", opts)];
-  int ex = (int)luaL_optinteger(L, 2, 0);
-  int res = lua_gc(L, o, ex);
   switch (o) {
     case LUA_GCCOUNT: {
-      int b = lua_gc(L, LUA_GCCOUNTB, 0);
-      lua_pushnumber(L, (lua_Number)res + ((lua_Number)b/1024));
+      int k = lua_gc(L, o);
+      int b = lua_gc(L, LUA_GCCOUNTB);
+      lua_pushnumber(L, (lua_Number)k + ((lua_Number)b/1024));
       return 1;
     }
-    case LUA_GCSTEP: case LUA_GCISRUNNING: {
+    case LUA_GCSTEP: {
+      int step = (int)luaL_optinteger(L, 2, 0);
+      int res = lua_gc(L, o, step);
       lua_pushboolean(L, res);
       return 1;
     }
+    case LUA_GCSETPAUSE:
+    case LUA_GCSETSTEPMUL: {
+      int p = (int)luaL_optinteger(L, 2, 0);
+      int previous = lua_gc(L, o, p);
+      lua_pushinteger(L, previous);
+      return 1;
+    }
+    case LUA_GCISRUNNING: {
+      int res = lua_gc(L, o);
+      lua_pushboolean(L, res);
+      return 1;
+    }
+    case LUA_GCGEN: {
+      int minormul = (int)luaL_optinteger(L, 2, 0);
+      int majormul = (int)luaL_optinteger(L, 3, 0);
+      lua_gc(L, o, minormul, majormul);
+      return 0;
+    }
+    case LUA_GCINC: {
+      int pause = (int)luaL_optinteger(L, 2, 0);
+      int stepmul = (int)luaL_optinteger(L, 3, 0);
+      int stepsize = (int)luaL_optinteger(L, 4, 0);
+      lua_gc(L, o, pause, stepmul, stepsize);
+      return 0;
+    }
     default: {
+      int res = lua_gc(L, o);
       lua_pushinteger(L, res);
       return 1;
     }

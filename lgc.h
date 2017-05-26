@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.96 2017/04/11 18:41:09 roberto Exp roberto $
+** $Id: lgc.h,v 2.97 2017/05/04 13:32:01 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -23,14 +23,6 @@
 ** the collection cycle. These lists have no meaning when the invariant
 ** is not being enforced (e.g., sweep phase).
 */
-
-
-
-/* how much to allocate before next GC step */
-#if !defined(GCSTEPSIZE)
-/* ~100 small strings */
-#define GCSTEPSIZE	(cast_int(100 * sizeof(TString)))
-#endif
 
 
 /*
@@ -123,6 +115,16 @@
 
 #define changeage(o,f,t)  \
 	check_exp(getage(o) == (f), (o)->marked ^= ((f)^(t)))
+
+
+/* Default Values for GC parameters */
+#define LUAI_GENMAJORMUL         100
+#define LUAI_GENMINORMUL         5
+
+#define LUAI_GCPAUSE    100     /* 100% */
+#define LUAI_GCMUL      10
+/* how much to allocate before next GC step (log2) */
+#define LUAI_GCSTEPSIZE 13      /* 8 KB */
 
 
 /*

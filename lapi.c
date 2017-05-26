@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.266 2017/05/11 18:57:46 roberto Exp roberto $
+** $Id: lapi.c,v 2.267 2017/05/18 12:34:58 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1046,17 +1046,12 @@ LUA_API int lua_status (lua_State *L) {
 /*
 ** Garbage-collection function
 */
-
-#if !defined(LUA_GENMAJORMUL)
-#define LUA_GENMAJORMUL		100
-#define LUA_GENMINORMUL		5
-#endif
-
-LUA_API int lua_gc (lua_State *L, int what, int data) {
+LUA_API int lua_gc (lua_State *L, int what, ...) {
+  va_list argp;
   int res = 0;
-  global_State *g;
+  global_State *g = G(L);
   lua_lock(L);
-  g = G(L);
+  va_start(argp, what);
   switch (what) {
     case LUA_GCSTOP: {
       g->gcrunning = 0;
@@ -1081,11 +1076,12 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       break;
     }
     case LUA_GCSTEP: {
+      int data = va_arg(argp, int);
       l_mem debt = 1;  /* =1 to signal that it did an actual step */
       lu_byte oldrunning = g->gcrunning;
       g->gcrunning = 1;  /* allow GC to run */
       if (data == 0) {
-        luaE_setdebt(g, -GCSTEPSIZE);  /* to do a "small" step */
+        luaE_setdebt(g, 0);  /* do a basic step */
         luaC_step(L);
       }
       else {  /* add 'data' to total debt */
@@ -1099,14 +1095,15 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       break;
     }
     case LUA_GCSETPAUSE: {
-      res = g->gcpause;
-      g->gcpause = data;
+      int data = va_arg(argp, int);
+      res = g->gcpause + 100;
+      g->gcpause = (data >= 100) ? data - 100 : 0;
       break;
     }
     case LUA_GCSETSTEPMUL: {
-      res = g->gcstepmul;
-      if (data < 40) data = 40;  /* avoid ridiculous low values (and 0) */
-      g->gcstepmul = data;
+      int data = va_arg(argp, int);
+      res = g->gcstepmul * 10;
+      g->gcstepmul = data / 10;
       break;
     }
     case LUA_GCISRUNNING: {
@@ -1114,19 +1111,26 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       break;
     }
     case LUA_GCGEN: {
-      lu_byte aux = data & 0xff;
-      g->genminormul = (aux == 0) ? LUA_GENMINORMUL : aux;
-      aux = (data >> 8) & 0xff;
-      g->genmajormul = (aux == 0) ? LUA_GENMAJORMUL : aux;
+      int minormul = va_arg(argp, int);
+      int majormul = va_arg(argp, int);
+      g->genminormul = (minormul == 0) ? LUAI_GENMINORMUL : minormul;
+      g->genmajormul = (majormul == 0) ? LUAI_GENMAJORMUL : majormul;
       luaC_changemode(L, KGC_GEN);
       break;
     }
     case LUA_GCINC: {
+      int pause = va_arg(argp, int);
+      int stepmul = va_arg(argp, int);
+      int stepsize = va_arg(argp, int);
+      g->gcpause = (pause == 0) ? LUAI_GCPAUSE : pause;
+      g->gcstepmul = (stepmul == 0) ? LUAI_GCMUL : stepmul;
+      g->gcstepsize = (stepsize == 0) ? LUAI_GCSTEPSIZE : stepsize;
       luaC_changemode(L, KGC_INC);
       break;
     }
     default: res = -1;  /* invalid option */
   }
+  va_end(argp);
   lua_unlock(L);
   return res;
 }
