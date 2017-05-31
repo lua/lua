@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.216 2017/04/24 18:06:12 roberto Exp roberto $
+** $Id: ltests.c,v 2.217 2017/05/04 13:32:01 roberto Exp $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -734,10 +734,12 @@ static int gc_printobj (lua_State *L) {
 
 
 static int gc_state (lua_State *L) {
-  static const char *statenames[] = {"propagate", "atomic", "sweepallgc",
-      "sweepfinobj", "sweeptobefnz", "sweepend", "pause", ""};
-  static const int states[] = {GCSpropagate, GCSenteratomic, GCSswpallgc,
-      GCSswpfinobj, GCSswptobefnz, GCSswpend, GCSpause, -1};
+  static const char *statenames[] = {
+    "propagate", "atomic", "enteratomic", "sweepallgc", "sweepfinobj",
+    "sweeptobefnz", "sweepend", "callfin", "pause", ""};
+  static const int states[] = {
+    GCSpropagate, GCSenteratomic, GCSatomic, GCSswpallgc, GCSswpfinobj,
+    GCSswptobefnz, GCSswpend, GCScallfin, GCSpause, -1};
   int option = states[luaL_checkoption(L, 1, "", statenames)];
   if (option == -1) {
     lua_pushstring(L, statenames[G(L)->gcstate]);
