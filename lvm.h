@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 2.41 2016/12/22 13:08:50 roberto Exp roberto $
+** $Id: lvm.h,v 2.42 2017/05/11 18:57:46 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -79,7 +79,8 @@
 ** 'slot' points to the place to put the value. 
 */
 #define luaV_finishfastset(L,t,slot,v) \
-    (setobj2t(L, cast(TValue *,slot), v), luaC_barrierback(L, hvalue(t), v))
+    { setobj2t(L, cast(TValue *,slot), v); \
+      luaC_barrierback(L, hvalue(t), v); }
 
 
 
