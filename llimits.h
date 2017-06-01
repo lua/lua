@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.141 2015/11/19 19:16:22 roberto Exp roberto $
+** $Id: llimits.h,v 1.142 2017/04/24 18:06:12 roberto Exp roberto $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -49,6 +49,13 @@ typedef unsigned char lu_byte;
 
 
 #define MAX_INT		INT_MAX  /* maximum value of an int */
+
+
+/*
+** floor of the log2 of the maximum signed value for integral type 't'.
+** (That is, maximum 'n' such that '2^n' fits in the given signed type.)
+*/
+#define log2maxs(t)	(sizeof(t) * 8 - 2)
 
 
 /*

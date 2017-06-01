@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.228 2017/05/04 13:32:01 roberto Exp roberto $
+** $Id: lgc.c,v 2.229 2017/05/26 19:14:29 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -1486,7 +1486,9 @@ void luaC_runtilstate (lua_State *L, int statesmask) {
 static void incstep (lua_State *L, global_State *g) {
   int stepmul = (g->gcstepmul | 1);  /* avoid division by 0 */
   l_mem debt = (g->GCdebt / WORK2MEM) * stepmul;
-  l_mem stepsize = cast(l_mem, 1) << g->gcstepsize;
+  l_mem stepsize = (g->gcstepsize <= log2maxs(l_mem))
+                   ? cast(l_mem, 1) << g->gcstepsize
+                   : MAX_LMEM;
   stepsize = -((stepsize / WORK2MEM) * stepmul);
   do {  /* repeat until pause or enough "credit" (negative debt) */
     lu_mem work = singlestep(L);  /* perform one single step */
