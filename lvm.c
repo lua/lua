@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.284 2017/05/18 19:44:19 roberto Exp roberto $
+** $Id: lvm.c,v 2.285 2017/05/23 12:50:11 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -916,8 +916,9 @@ void luaV_execute (lua_State *L) {
         TValue *rb = KB(i);
         TValue *rc = RKC(i);
         TString *key = tsvalue(rb);  /* key must be a string */
-        if (luaV_fastget(L, upval, key, slot, luaH_getshortstr))
+        if (luaV_fastget(L, upval, key, slot, luaH_getshortstr)) {
           luaV_finishfastset(L, upval, slot, rc);
+        }
         else
           Protect(luaV_finishset(L, upval, rb, rc, slot));
         vmbreak;
@@ -929,8 +930,9 @@ void luaV_execute (lua_State *L) {
         lua_Unsigned n;
         if (ttisinteger(rb)  /* fast track for integers? */
             ? (n = ivalue(rb), luaV_fastgeti(L, ra, n, slot))
-            : luaV_fastget(L, ra, rb, slot, luaH_get))
+            : luaV_fastget(L, ra, rb, slot, luaH_get)) {
           luaV_finishfastset(L, ra, slot, rc);
+        }
         else
           Protect(luaV_finishset(L, ra, rb, rc, slot));
         vmbreak;
@@ -939,8 +941,9 @@ void luaV_execute (lua_State *L) {
         const TValue *slot;
         int c = GETARG_B(i);
         TValue *rc = RKC(i);
-        if (luaV_fastgeti(L, ra, c, slot))
+        if (luaV_fastgeti(L, ra, c, slot)) {
           luaV_finishfastset(L, ra, slot, rc);
+        }
         else {
           TValue key;
           setivalue(&key, c);
@@ -953,8 +956,9 @@ void luaV_execute (lua_State *L) {
         TValue *rb = KB(i);
         TValue *rc = RKC(i);
         TString *key = tsvalue(rb);  /* key must be a string */
-        if (luaV_fastget(L, ra, key, slot, luaH_getshortstr))
+        if (luaV_fastget(L, ra, key, slot, luaH_getshortstr)) {
           luaV_finishfastset(L, ra, slot, rc);
+        }
         else
           Protect(luaV_finishset(L, ra, rb, rc, slot));
         vmbreak;

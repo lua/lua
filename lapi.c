@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.267 2017/05/18 12:34:58 roberto Exp roberto $
+** $Id: lapi.c,v 2.268 2017/05/26 19:14:29 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -775,8 +775,9 @@ LUA_API void lua_settable (lua_State *L, int idx) {
   lua_lock(L);
   api_checknelems(L, 2);
   t = index2addr(L, idx);
-  if (luaV_fastget(L, t, L->top - 2, slot, luaH_get))
+  if (luaV_fastget(L, t, L->top - 2, slot, luaH_get)) {
     luaV_finishfastset(L, t, slot, L->top - 1);
+  }
   else
     luaV_finishset(L, t, L->top - 2, L->top - 1, slot);
   L->top -= 2;  /* pop index and value */
@@ -796,8 +797,9 @@ LUA_API void lua_seti (lua_State *L, int idx, lua_Integer n) {
   lua_lock(L);
   api_checknelems(L, 1);
   t = index2addr(L, idx);
-  if (luaV_fastgeti(L, t, n, slot))
+  if (luaV_fastgeti(L, t, n, slot)) {
     luaV_finishfastset(L, t, slot, L->top - 1);
+  }
   else {
     TValue aux;
     setivalue(&aux, n);
