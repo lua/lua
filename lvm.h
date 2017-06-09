@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 2.42 2017/05/11 18:57:46 roberto Exp roberto $
+** $Id: lvm.h,v 2.43 2017/06/01 20:23:27 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -76,7 +76,7 @@
 
 /*
 ** Finish a fast set operation (when fast get succeeds). In that case,
-** 'slot' points to the place to put the value. 
+** 'slot' points to the place to put the value.
 */
 #define luaV_finishfastset(L,t,slot,v) \
     { setobj2t(L, cast(TValue *,slot), v); \
