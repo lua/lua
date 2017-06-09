@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.229 2017/05/26 19:14:29 roberto Exp roberto $
+** $Id: lgc.c,v 2.230 2017/06/01 19:16:34 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -73,7 +73,9 @@
 
 #define valiswhite(x)   (iscollectable(x) && iswhite(gcvalue(x)))
 
-#define checkdeadkey(n)	lua_assert(!ttisdeadkey(gkey(n)) || ttisnil(gval(n)))
+#define keyiswhite(n)   (keyiscollectable(n) && iswhite(gckey(n)))
+
+#define checkdeadkey(n)	lua_assert(!keyisdead(n) || ttisnil(gval(n)))
 
 
 #define checkconsistency(obj)  \
@@ -82,6 +84,8 @@
 
 #define markvalue(g,o) { checkconsistency(o); \
   if (valiswhite(o)) reallymarkobject(g,gcvalue(o)); }
+
+#define markkey(g, n)	{ if keyiswhite(n) reallymarkobject(g,gckey(n)); }
 
 #define markobject(g,t)	{ if (iswhite(t)) reallymarkobject(g, obj2gco(t)); }
 
@@ -125,8 +129,8 @@ static lu_mem atomic (lua_State *L);
 */
 static void removeentry (Node *n) {
   lua_assert(ttisnil(gval(n)));
-  if (valiswhite(gkey(n)))
-    setdeadvalue(wgkey(n));  /* unused and unmarked key; remove it */
+  if (keyiswhite(n))
+    setdeadkey(n);  /* unused and unmarked key; remove it */
 }
 
 
@@ -137,13 +141,13 @@ static void removeentry (Node *n) {
 ** other objects: if really collected, cannot keep them; for objects
 ** being finalized, keep them in keys, but not in values
 */
-static int iscleared (global_State *g, const TValue *o) {
-  if (!iscollectable(o)) return 0;
-  else if (ttisstring(o)) {
-    markobject(g, tsvalue(o));  /* strings are 'values', so are never weak */
+static int iscleared (global_State *g, const GCObject *o) {
+  if (o == NULL) return 0;  /* non-collectable value */
+  else if (novariant(o->tt) == LUA_TSTRING) {
+    markobject(g, o);  /* strings are 'values', so are never weak */
     return 0;
   }
-  else return iswhite(gcvalue(o));
+  else return iswhite(o);
 }
 
 
@@ -391,9 +395,9 @@ static void traverseweakvalue (global_State *g, Table *h) {
     if (ttisnil(gval(n)))  /* entry is empty? */
       removeentry(n);  /* remove it */
     else {
-      lua_assert(!ttisnil(gkey(n)));
-      markvalue(g, gkey(n));  /* mark key */
-      if (!hasclears && iscleared(g, gval(n)))  /* is there a white value? */
+      lua_assert(!keyisnil(n));
+      markkey(g, n);
+      if (!hasclears && iscleared(g, gcvalueN(gval(n))))  /* a white value? */
         hasclears = 1;  /* table will have to be cleared */
     }
   }
@@ -433,7 +437,7 @@ static int traverseephemeron (global_State *g, Table *h) {
     checkdeadkey(n);
     if (ttisnil(gval(n)))  /* entry is empty? */
       removeentry(n);  /* remove it */
-    else if (iscleared(g, gkey(n))) {  /* key is not marked (yet)? */
+    else if (iscleared(g, gckeyN(n))) {  /* key is not marked (yet)? */
       hasclears = 1;  /* table must be cleared */
       if (valiswhite(gval(n)))  /* value not marked yet? */
         hasww = 1;  /* white-white entry */
@@ -468,9 +472,9 @@ static void traversestrongtable (global_State *g, Table *h) {
     if (ttisnil(gval(n)))  /* entry is empty? */
       removeentry(n);  /* remove it */
     else {
-      lua_assert(!ttisnil(gkey(n)));
-      markvalue(g, gkey(n));  /* mark key */
-      markvalue(g, gval(n));  /* mark value */
+      lua_assert(!keyisnil(n));
+      markkey(g, n);
+      markvalue(g, gval(n));
     }
   }
   if (g->gckind == KGC_GEN) {
@@ -691,7 +695,7 @@ static void clearkeys (global_State *g, GCObject *l) {
     Table *h = gco2t(l);
     Node *n, *limit = gnodelast(h);
     for (n = gnode(h, 0); n < limit; n++) {
-      if (!ttisnil(gval(n)) && (iscleared(g, gkey(n)))) {
+      if (!ttisnil(gval(n)) && (iscleared(g, gckeyN(n)))) {
         setnilvalue(gval(n));  /* remove value ... */
         removeentry(n);  /* and remove entry from table */
       }
@@ -711,11 +715,11 @@ static void clearvalues (global_State *g, GCObject *l, GCObject *f) {
     unsigned int i;
     for (i = 0; i < h->sizearray; i++) {
       TValue *o = &h->array[i];
-      if (iscleared(g, o))  /* value was collected? */
+      if (iscleared(g, gcvalueN(o)))  /* value was collected? */
         setnilvalue(o);  /* remove value */
     }
     for (n = gnode(h, 0); n < limit; n++) {
-      if (iscleared(g, gval(n))) {
+      if (iscleared(g, gcvalueN(gval(n)))) {
         setnilvalue(gval(n));  /* remove value ... */
         removeentry(n);  /* and remove entry from table */
       }

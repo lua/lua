@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.121 2017/05/19 12:47:00 roberto Exp roberto $
+** $Id: ltable.c,v 2.122 2017/05/19 12:57:10 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -75,8 +75,8 @@
 #define dummynode		(&dummynode_)
 
 static const Node dummynode_ = {
-  {NILCONSTANT},  /* value */
-  {{NILCONSTANT, 0}}  /* key */
+  {{NULL}, LUA_TNIL,  /* value's value and type */
+   LUA_TNIL, 0, {NULL}}  /* key type, next, and key value */
 };
 
 
@@ -111,43 +111,79 @@ static int l_hashfloat (lua_Number n) {
 
 
 /*
-** returns the 'main' position of an element in a table (that is, the index
-** of its hash value)
+** returns the 'main' position of an element in a table (that is,
+** the index of its hash value). The key comes broken (tag in 'ktt'
+** and value in 'vkl') so that we can call it on keys inserted into
+** nodes.
 */
-static Node *mainposition (const Table *t, const TValue *key) {
-  switch (ttype(key)) {
+static Node *mainposition (const Table *t, int ktt, const Value *kvl) {
+  switch (ttyperaw(ktt)) {
     case LUA_TNUMINT:
-      return hashint(t, ivalue(key));
+      return hashint(t, ivalueraw(*kvl));
     case LUA_TNUMFLT:
-      return hashmod(t, l_hashfloat(fltvalue(key)));
+      return hashmod(t, l_hashfloat(fltvalueraw(*kvl)));
     case LUA_TSHRSTR:
-      return hashstr(t, tsvalue(key));
+      return hashstr(t, tsvalueraw(*kvl));
     case LUA_TLNGSTR:
-      return hashpow2(t, luaS_hashlongstr(tsvalue(key)));
+      return hashpow2(t, luaS_hashlongstr(tsvalueraw(*kvl)));
     case LUA_TBOOLEAN:
-      return hashboolean(t, bvalue(key));
+      return hashboolean(t, bvalueraw(*kvl));
     case LUA_TLIGHTUSERDATA:
-      return hashpointer(t, pvalue(key));
+      return hashpointer(t, pvalueraw(*kvl));
     case LUA_TLCF:
-      return hashpointer(t, fvalue(key));
+      return hashpointer(t, fvalueraw(*kvl));
     default:
-      lua_assert(!ttisdeadkey(key));
-      return hashpointer(t, gcvalue(key));
+      return hashpointer(t, gcvalueraw(*kvl));
+  }
+}
+
+
+static Node *mainpositionTV (const Table *t, const TValue *key) {
+  return mainposition(t, rttype(key), valraw(key));
+}
+
+
+/*
+** Check whether key 'k1' is equal to the key in node 'n2'.
+** This equality is raw, so there are no metamethods. Floats
+** with integer values have been normalized, so integers cannot
+** be equal to floats. It is assumed that 'eqshrstr' is simply
+** pointer equality, so that short strings are handled in the
+** default case.
+*/
+static int equalkey (const TValue *k1, const Node *n2) {
+  if (rttype(k1) != keytt(n2))  /* not the same variants? */
+   return 0;  /* cannot be same key */
+  switch (ttype(k1)) {
+    case LUA_TNIL:
+      return 1;
+    case LUA_TNUMINT:
+      return (ivalue(k1) == keyival(n2));
+    case LUA_TNUMFLT:
+      return luai_numeq(fltvalue(k1), fltvalueraw(keyval(n2)));
+    case LUA_TBOOLEAN:
+      return bvalue(k1) == bvalueraw(keyval(n2));
+    case LUA_TLIGHTUSERDATA:
+      return pvalue(k1) == pvalueraw(keyval(n2));
+    case LUA_TLCF:
+      return fvalue(k1) == fvalueraw(keyval(n2));
+    case LUA_TLNGSTR:
+      return luaS_eqlngstr(tsvalue(k1), keystrval(n2));
+    default:
+      return gcvalue(k1) == gcvalueraw(keyval(n2));
   }
 }
 
 
 /*
-** returns the index for 'key' if 'key' is an appropriate key to live in
-** the array part of the table, 0 otherwise.
+** returns the index for 'k' if 'k' is an appropriate key to live in
+** the array part of a table, 0 otherwise.
 */
-static unsigned int arrayindex (const TValue *key) {
-  if (ttisinteger(key)) {
-    lua_Integer k = ivalue(key);
-    if (0 < k && (lua_Unsigned)k <= MAXASIZE)
-      return cast(unsigned int, k);  /* 'key' is an appropriate array index */
-  }
-  return 0;  /* 'key' did not match some condition */
+static unsigned int arrayindex (lua_Integer k) {
+  if (0 < k && l_castS2U(k) <= MAXASIZE)
+    return cast(unsigned int, k);  /* 'key' is an appropriate array index */
+  else
+    return 0;
 }
 
 
@@ -159,17 +195,17 @@ static unsigned int arrayindex (const TValue *key) {
 static unsigned int findindex (lua_State *L, Table *t, StkId key) {
   unsigned int i;
   if (ttisnil(key)) return 0;  /* first iteration */
-  i = arrayindex(key);
+  i = ttisinteger(key) ? arrayindex(ivalue(key)) : 0;
   if (i != 0 && i <= t->sizearray)  /* is 'key' inside array part? */
     return i;  /* yes; that's the index */
   else {
     int nx;
-    Node *n = mainposition(t, key);
+    Node *n = mainpositionTV(t, key);
     for (;;) {  /* check whether 'key' is somewhere in the chain */
       /* key may be dead already, but it is ok to use it in 'next' */
-      if (luaV_rawequalobj(gkey(n), key) ||
-            (ttisdeadkey(gkey(n)) && iscollectable(key) &&
-             deadvalue(gkey(n)) == gcvalue(key))) {
+      if (equalkey(key, n) ||
+             (keyisdead(n) && iscollectable(key) &&
+             deadkey(n) == gcvalue(key))) {
         i = cast_int(n - gnode(t, 0));  /* key index in hash table */
         /* hash elements are numbered after array ones */
         return (i + 1) + t->sizearray;
@@ -194,8 +230,9 @@ int luaH_next (lua_State *L, Table *t, StkId key) {
   }
   for (i -= t->sizearray; cast_int(i) < sizenode(t); i++) {  /* hash part */
     if (!ttisnil(gval(gnode(t, i)))) {  /* a non-nil value? */
-      setobj2s(L, key, gkey(gnode(t, i)));
-      setobj2s(L, key+1, gval(gnode(t, i)));
+      Node *n = gnode(t, i);
+      getnodekey(L, key, n);
+      setobj2s(L, key + 1, gval(n));
       return 1;
     }
   }
@@ -239,7 +276,7 @@ static unsigned int computesizes (unsigned int nums[], unsigned int *pna) {
 }
 
 
-static int countint (const TValue *key, unsigned int *nums) {
+static int countint (lua_Integer key, unsigned int *nums) {
   unsigned int k = arrayindex(key);
   if (k != 0) {  /* is 'key' an appropriate array index? */
     nums[luaO_ceillog2(k)]++;  /* count as such */
@@ -288,7 +325,8 @@ static int numusehash (const Table *t, unsigned int *nums, unsigned int *pna) {
   while (i--) {
     Node *n = &t->node[i];
     if (!ttisnil(gval(n))) {
-      ause += countint(gkey(n), nums);
+      if (keyisinteger(n))
+        ause += countint(keyival(n), nums);
       totaluse++;
     }
   }
@@ -322,7 +360,7 @@ static void setnodevector (lua_State *L, Table *t, unsigned int size) {
     for (i = 0; i < (int)size; i++) {
       Node *n = gnode(t, i);
       gnext(n) = 0;
-      setnilvalue(wgkey(n));
+      setnilkey(n);
       setnilvalue(gval(n));
     }
     t->lsizenode = cast_byte(lsize);
@@ -358,7 +396,8 @@ void luaH_resize (lua_State *L, Table *t, unsigned int nasize,
     if (!ttisnil(gval(old))) {
       /* doesn't need barrier/invalidate cache, as entry was
          already present in the table */
-      setobjt2t(L, luaH_set(L, t, gkey(old)), gval(old));
+      TValue k; getnodekey(L, &k, old);
+      setobjt2t(L, luaH_set(L, t, &k), gval(old));
     }
   }
   if (oldhsize > 0)  /* not the dummy node? */
@@ -385,7 +424,8 @@ static void rehash (lua_State *L, Table *t, const TValue *ek) {
   totaluse = na;  /* all those keys are integer keys */
   totaluse += numusehash(t, nums, &na);  /* count keys in hash part */
   /* count extra key */
-  na += countint(ek, nums);
+  if (ttisinteger(ek))
+    na += countint(ivalue(ek), nums);
   totaluse++;
   /* compute new size for array part */
   asize = computesizes(nums, &na);
@@ -424,7 +464,7 @@ static Node *getfreepos (Table *t) {
   if (!isdummy(t)) {
     while (t->lastfree > t->node) {
       t->lastfree--;
-      if (ttisnil(gkey(t->lastfree)))
+      if (keyisnil(t->lastfree))
         return t->lastfree;
     }
   }
@@ -453,7 +493,7 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
     else if (luai_numisnan(fltvalue(key)))
       luaG_runerror(L, "table index is NaN");
   }
-  mp = mainposition(t, key);
+  mp = mainpositionTV(t, key);
   if (!ttisnil(gval(mp)) || isdummy(t)) {  /* main position is taken? */
     Node *othern;
     Node *f = getfreepos(t);  /* get a free place */
@@ -463,7 +503,7 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
       return luaH_set(L, t, key);  /* insert key into grown table */
     }
     lua_assert(!isdummy(t));
-    othern = mainposition(t, gkey(mp));
+    othern = mainposition(t, keytt(mp), &keyval(mp));
     if (othern != mp) {  /* is colliding node out of its main position? */
       /* yes; move colliding node into free position */
       while (othern + gnext(othern) != mp)  /* find previous */
@@ -485,7 +525,7 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
       mp = f;
     }
   }
-  setnodekey(L, &mp->i_key, key);
+  setnodekey(L, mp, key);
   luaC_barrierback(L, t, key);
   lua_assert(ttisnil(gval(mp)));
   return gval(mp);
@@ -502,7 +542,7 @@ const TValue *luaH_getint (Table *t, lua_Integer key) {
   else {
     Node *n = hashint(t, key);
     for (;;) {  /* check whether 'key' is somewhere in the chain */
-      if (ttisinteger(gkey(n)) && ivalue(gkey(n)) == key)
+      if (keyisinteger(n) && keyival(n) == key)
         return gval(n);  /* that's it */
       else {
         int nx = gnext(n);
@@ -522,8 +562,7 @@ const TValue *luaH_getshortstr (Table *t, TString *key) {
   Node *n = hashstr(t, key);
   lua_assert(key->tt == LUA_TSHRSTR);
   for (;;) {  /* check whether 'key' is somewhere in the chain */
-    const TValue *k = gkey(n);
-    if (ttisshrstring(k) && eqshrstr(tsvalue(k), key))
+    if (keyisshrstr(n) && eqshrstr(keystrval(n), key))
       return gval(n);  /* that's it */
     else {
       int nx = gnext(n);
@@ -540,9 +579,9 @@ const TValue *luaH_getshortstr (Table *t, TString *key) {
 ** which may be in array part, nor for floats with integral values.)
 */
 static const TValue *getgeneric (Table *t, const TValue *key) {
-  Node *n = mainposition(t, key);
+  Node *n = mainpositionTV(t, key);
   for (;;) {  /* check whether 'key' is somewhere in the chain */
-    if (luaV_rawequalobj(gkey(n), key))
+    if (equalkey(key, n))
       return gval(n);  /* that's it */
     else {
       int nx = gnext(n);
@@ -683,7 +722,7 @@ lua_Unsigned luaH_getn (Table *t) {
 #if defined(LUA_DEBUG)
 
 Node *luaH_mainposition (const Table *t, const TValue *key) {
-  return mainposition(t, key);
+  return mainpositionTV(t, key);
 }
 
 int luaH_isdummy (const Table *t) { return isdummy(t); }
