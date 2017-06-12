@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.122 2017/05/19 12:57:10 roberto Exp roberto $
+** $Id: ltable.c,v 2.123 2017/06/09 16:48:44 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -176,6 +176,25 @@ static int equalkey (const TValue *k1, const Node *n2) {
 
 
 /*
+** "Generic" get version. (Not that generic: not valid for integers,
+** which may be in array part, nor for floats with integral values.)
+*/
+static const TValue *getgeneric (Table *t, const TValue *key) {
+  Node *n = mainpositionTV(t, key);
+  for (;;) {  /* check whether 'key' is somewhere in the chain */
+    if (equalkey(key, n))
+      return gval(n);  /* that's it */
+    else {
+      int nx = gnext(n);
+      if (nx == 0)
+        return luaO_nilobject;  /* not found */
+      n += nx;
+    }
+  }
+}
+
+
+/*
 ** returns the index for 'k' if 'k' is an appropriate key to live in
 ** the array part of a table, 0 otherwise.
 */
@@ -199,22 +218,12 @@ static unsigned int findindex (lua_State *L, Table *t, StkId key) {
   if (i != 0 && i <= t->sizearray)  /* is 'key' inside array part? */
     return i;  /* yes; that's the index */
   else {
-    int nx;
-    Node *n = mainpositionTV(t, key);
-    for (;;) {  /* check whether 'key' is somewhere in the chain */
-      /* key may be dead already, but it is ok to use it in 'next' */
-      if (equalkey(key, n) ||
-             (keyisdead(n) && iscollectable(key) &&
-             deadkey(n) == gcvalue(key))) {
-        i = cast_int(n - gnode(t, 0));  /* key index in hash table */
-        /* hash elements are numbered after array ones */
-        return (i + 1) + t->sizearray;
-      }
-      nx = gnext(n);
-      if (nx == 0)
-        luaG_runerror(L, "invalid key to 'next'");  /* key not found */
-      else n += nx;
-    }
+    const TValue *n = getgeneric(t, key);
+    if (n == luaO_nilobject)
+      luaG_runerror(L, "invalid key to 'next'");  /* key not found */
+    i = cast_int(nodefromval(n) - gnode(t, 0));  /* key index in hash table */
+    /* hash elements are numbered after array ones */
+    return (i + 1) + t->sizearray;
   }
 }
 
@@ -574,25 +583,6 @@ const TValue *luaH_getshortstr (Table *t, TString *key) {
 }
 
 
-/*
-** "Generic" get version. (Not that generic: not valid for integers,
-** which may be in array part, nor for floats with integral values.)
-*/
-static const TValue *getgeneric (Table *t, const TValue *key) {
-  Node *n = mainpositionTV(t, key);
-  for (;;) {  /* check whether 'key' is somewhere in the chain */
-    if (equalkey(key, n))
-      return gval(n);  /* that's it */
-    else {
-      int nx = gnext(n);
-      if (nx == 0)
-        return luaO_nilobject;  /* not found */
-      n += nx;
-    }
-  }
-}
-
-
 const TValue *luaH_getstr (Table *t, TString *key) {
   if (key->tt == LUA_TSHRSTR)
     return luaH_getshortstr(t, key);
@@ -662,7 +652,7 @@ void luaH_setint (lua_State *L, Table *t, lua_Integer key, TValue *value) {
 ** absent while 'i' is present; so 'j > i'.) Otherwise, 'j' is a
 ** boundary. ('j + 1' cannot be a present integer key because it is
 ** not a valid integer in Lua.)
-*/ 
+*/
 static lua_Unsigned hash_search (Table *t, lua_Unsigned j) {
   lua_Unsigned i;
   if (j == 0) j++;  /* the caller ensures 'j + 1' is present */

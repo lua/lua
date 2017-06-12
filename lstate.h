@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.141 2017/05/13 13:54:47 roberto Exp roberto $
+** $Id: lstate.h,v 2.142 2017/05/26 19:14:29 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -247,8 +247,7 @@ union GCUnion {
 
 
 /* macro to convert a Lua object into a GCObject */
-#define obj2gco(v) \
-	check_exp(novariant((v)->tt) < LUA_TDEADKEY, (&(cast_u(v)->gc)))
+#define obj2gco(v)	(&(cast_u(v)->gc))
 
 
 /* actual number of total bytes allocated */

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.230 2017/06/01 19:16:34 roberto Exp roberto $
+** $Id: lgc.c,v 2.231 2017/06/09 16:48:44 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -75,8 +75,6 @@
 
 #define keyiswhite(n)   (keyiscollectable(n) && iswhite(gckey(n)))
 
-#define checkdeadkey(n)	lua_assert(!keyisdead(n) || ttisnil(gval(n)))
-
 
 #define checkconsistency(obj)  \
   lua_longassert(!iscollectable(obj) || righttt(obj))
@@ -119,13 +117,11 @@ static lu_mem atomic (lua_State *L);
 
 
 /*
-** If key is not marked, mark its entry as dead. This allows key to be
-** collected, but keeps its entry in the table.  A dead node is needed
-** when Lua looks up for a key (it may be part of a chain) and when
-** traversing a weak table (key might be removed from the table during
-** traversal). Other places never manipulate dead keys, because its
-** associated nil value is enough to signal that the entry is logically
-** empty.
+** If key is not marked, mark its entry as dead. This allows the
+** collection of the key, but keeps its entry in the table (its removal
+** could break a chain). Other places never manipulate dead keys,
+** because its associated nil value is enough to signal that the entry
+** is logically empty.
 */
 static void removeentry (Node *n) {
   lua_assert(ttisnil(gval(n)));
@@ -203,7 +199,7 @@ LUAI_FUNC void luaC_protobarrier_ (lua_State *L, Proto *p) {
   lua_assert(g->gckind != KGC_GEN || isold(p));
   if (getage(p) == G_OLD1)  /* still need to be visited? */
     linkgclist(p, g->grayagain);  /* link it in 'grayagain' */
-  else 
+  else
     linkgclist(p, g->protogray);  /* link it in 'protogray' */
   black2gray(p);  /* make prototype gray (to avoid other barriers) */
 }
@@ -391,7 +387,6 @@ static void traverseweakvalue (global_State *g, Table *h) {
      worth traversing it now just to check) */
   int hasclears = (h->sizearray > 0);
   for (n = gnode(h, 0); n < limit; n++) {  /* traverse hash part */
-    checkdeadkey(n);
     if (ttisnil(gval(n)))  /* entry is empty? */
       removeentry(n);  /* remove it */
     else {
@@ -434,7 +429,6 @@ static int traverseephemeron (global_State *g, Table *h) {
   }
   /* traverse hash part */
   for (n = gnode(h, 0); n < limit; n++) {
-    checkdeadkey(n);
     if (ttisnil(gval(n)))  /* entry is empty? */
       removeentry(n);  /* remove it */
     else if (iscleared(g, gckeyN(n))) {  /* key is not marked (yet)? */
@@ -468,7 +462,6 @@ static void traversestrongtable (global_State *g, Table *h) {
   for (i = 0; i < h->sizearray; i++)  /* traverse array part */
     markvalue(g, &h->array[i]);
   for (n = gnode(h, 0); n < limit; n++) {  /* traverse hash part */
-    checkdeadkey(n);
     if (ttisnil(gval(n)))  /* entry is empty? */
       removeentry(n);  /* remove it */
     else {

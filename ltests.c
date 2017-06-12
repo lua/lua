@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.218 2017/05/31 18:54:58 roberto Exp roberto $
+** $Id: ltests.c,v 2.219 2017/06/09 16:48:44 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -449,7 +449,6 @@ static void markgrays (global_State *g) {
   checkgraylist(g, g->grayagain);
   checkgraylist(g, g->weak);
   checkgraylist(g, g->ephemeron);
-  checkgraylist(g, g->allweak);
   checkgraylist(g, g->protogray);
 }
 

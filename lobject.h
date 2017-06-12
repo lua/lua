@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.121 2017/06/01 20:24:05 roberto Exp roberto $
+** $Id: lobject.h,v 2.122 2017/06/09 16:48:44 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -21,10 +21,9 @@
 */
 #define LUA_TUPVAL	LUA_NUMTAGS  /* upvalues */
 #define LUA_TPROTO	(LUA_NUMTAGS+1)  /* function prototypes */
-#define LUA_TDEADKEY	(LUA_NUMTAGS+2)  /* removed keys in tables */
 
 /*
-** number of all possible tags (including LUA_TNONE but excluding DEADKEY)
+** number of all possible tags (including LUA_TNONE)
 */
 #define LUA_TOTALTAGS	(LUA_TPROTO + 2)
 
@@ -559,19 +558,22 @@ typedef struct Table {
 #define keyisshrstr(node)	(keytt(node) == ctb(LUA_TSHRSTR))
 #define keystrval(node)		(gco2ts(keyval(node).gc))
 
-#define keyisdead(node)		(keytt(node) == LUA_TDEADKEY)
-
 #define setnilkey(node)		(keytt(node) = LUA_TNIL)
-#define setdeadkey(node)	(keytt(node) = LUA_TDEADKEY)
-
-/* a dead value may get the 'gc' field, but cannot access its contents */
-#define deadkey(n)  \
-  check_exp(keytt(n) == LUA_TDEADKEY, cast(void *, keyval(n).gc))
 
 #define keyiscollectable(n)	(keytt(n) & BIT_ISCOLLECTABLE)
 
 #define gckey(n)	(keyval(n).gc)
 #define gckeyN(n)	(keyiscollectable(n) ? gckey(n) : NULL)
+
+
+/*
+** Use a "nil table" to mark dead keys in a table. Those keys serve
+** only to keep space for removed entries, which may still be part of
+** chains. Note that the 'keytt' does not have the BIT_ISCOLLECTABLE
+** set, so these values are considered not collectable and are different
+** from any valid value.
+*/
+#define setdeadkey(n)	(keytt(n) = LUA_TTABLE, gckey(n) = NULL)
 
 
 
