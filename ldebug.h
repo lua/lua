@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.h,v 2.13 2015/03/11 16:10:41 roberto Exp roberto $
+** $Id: ldebug.h,v 2.14 2015/05/22 17:45:56 roberto Exp roberto $
 ** Auxiliary functions from Debug Interface module
 ** See Copyright Notice in lua.h
 */
@@ -13,11 +13,15 @@
 
 #define pcRel(pc, p)	(cast(int, (pc) - (p)->code) - 1)
 
-#define getfuncline(f,pc)	(((f)->lineinfo) ? (f)->lineinfo[pc] : -1)
-
 #define resethookcount(L)	(L->hookcount = L->basehookcount)
 
+/*
+** mark for entries in 'lineinfo' array that has absolute information in
+** 'abslineinfo' array
+*/
+#define ABSLINEINFO	(-0x80)
 
+LUAI_FUNC int luaG_getfuncline (Proto *f, int pc);
 LUAI_FUNC l_noret luaG_typeerror (lua_State *L, const TValue *o,
                                                 const char *opname);
 LUAI_FUNC l_noret luaG_concaterror (lua_State *L, const TValue *p1,

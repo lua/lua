@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.118 2017/04/28 20:57:45 roberto Exp roberto $
+** $Id: lcode.c,v 2.119 2017/05/18 19:44:19 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -10,6 +10,7 @@
 #include "lprefix.h"
 
 
+#include <limits.h>
 #include <math.h>
 #include <stdlib.h>
 
@@ -285,6 +286,33 @@ void luaK_patchclose (FuncState *fs, int list, int level) {
   }
 }
 
+#if !defined(MAXIWTHABS)
+#define MAXIWTHABS	120
+#endif
+
+/*
+** Save line info for a new instruction. If difference from last line
+** does not fit in a byte, of after that many instructions, save a new
+** absolute line info; (in that case, the special value 'ABSLINEINFO'
+** in 'lineinfo' signals the existence of this absolute information.)
+** Otherwise, store the difference from last line in 'lineinfo'.
+*/
+static void savelineinfo (FuncState *fs, Proto *f, int pc, int line) {
+  int linedif = line - fs->previousline;
+  if (abs(linedif) >= 0x80 || fs->iwthabs++ > MAXIWTHABS) {
+    luaM_growvector(fs->ls->L, f->abslineinfo, fs->nabslineinfo,
+                    f->sizeabslineinfo, AbsLineInfo, MAX_INT, "lines");
+    f->abslineinfo[fs->nabslineinfo].pc = pc;
+    f->abslineinfo[fs->nabslineinfo++].line = line;
+    linedif = ABSLINEINFO;  /* signal there is absolute information */
+    fs->iwthabs = 0;  /* restart counter */
+  }
+  luaM_growvector(fs->ls->L, f->lineinfo, pc, f->sizelineinfo, ls_byte,
+                  MAX_INT, "opcodes");
+  f->lineinfo[pc] = linedif;
+  fs->previousline = line;  /* last line saved */
+}
+
 
 /*
 ** Emit instruction 'i', checking for array sizes and saving also its
@@ -297,10 +325,7 @@ static int luaK_code (FuncState *fs, Instruction i) {
   luaM_growvector(fs->ls->L, f->code, fs->pc, f->sizecode, Instruction,
                   MAX_INT, "opcodes");
   f->code[fs->pc] = i;
-  /* save corresponding line information */
-  luaM_growvector(fs->ls->L, f->lineinfo, fs->pc, f->sizelineinfo, int,
-                  MAX_INT, "opcodes");
-  f->lineinfo[fs->pc] = fs->ls->lastline;
+  savelineinfo(fs, f, fs->pc, fs->ls->lastline);
   return fs->pc++;
 }
 
@@ -1260,10 +1285,23 @@ void luaK_posfix (FuncState *fs, BinOpr op,
 
 
 /*
-** Change line information associated with current position.
+** Change line information associated with current position. If that
+** information is absolute, just change it and correct 'previousline'.
+** Otherwise, restore 'previousline' to its value before saving the
+** current position and than saves the line information again, with the
+** new line.
 */
 void luaK_fixline (FuncState *fs, int line) {
-  fs->f->lineinfo[fs->pc - 1] = line;
+  Proto *f = fs->f;
+  if (f->lineinfo[fs->pc - 1] == ABSLINEINFO) {
+    lua_assert(f->abslineinfo[fs->nabslineinfo - 1].pc == fs->pc - 1);
+    f->abslineinfo[fs->nabslineinfo - 1].line = line;
+    fs->previousline = line;
+  }
+  else {
+    fs->previousline -= f->lineinfo[fs->pc - 1];  /* undo previous info. */
+    savelineinfo(fs, f, fs->pc - 1, line);  /* redo it */ 
+  }
 }
 
 

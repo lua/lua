@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.43 2015/09/17 15:51:05 roberto Exp roberto $
+** $Id: lundump.c,v 2.44 2015/11/02 16:09:30 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -180,9 +180,16 @@ static void LoadUpvalues (LoadState *S, Proto *f) {
 static void LoadDebug (LoadState *S, Proto *f) {
   int i, n;
   n = LoadInt(S);
-  f->lineinfo = luaM_newvector(S->L, n, int);
+  f->lineinfo = luaM_newvector(S->L, n, ls_byte);
   f->sizelineinfo = n;
   LoadVector(S, f->lineinfo, n);
+  n = LoadInt(S);
+  f->abslineinfo = luaM_newvector(S->L, n, AbsLineInfo);
+  f->sizeabslineinfo = n;
+  for (i = 0; i < n; i++) {
+    f->abslineinfo[i].pc = LoadInt(S);
+    f->abslineinfo[i].line = LoadInt(S);
+  }
   n = LoadInt(S);
   f->locvars = luaM_newvector(S->L, n, LocVar);
   f->sizelocvars = n;

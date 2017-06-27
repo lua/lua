@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.158 2017/04/29 18:09:17 roberto Exp roberto $
+** $Id: lparser.c,v 2.159 2017/05/13 12:57:20 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -527,22 +527,24 @@ static void codeclosure (LexState *ls, expdesc *v) {
 
 
 static void open_func (LexState *ls, FuncState *fs, BlockCnt *bl) {
-  Proto *f;
+  Proto *f = fs->f;
   fs->prev = ls->fs;  /* linked list of funcstates */
   fs->ls = ls;
   ls->fs = fs;
   fs->pc = 0;
+  fs->previousline = f->linedefined;
+  fs->iwthabs = 0;
   fs->lasttarget = 0;
   fs->jpc = NO_JUMP;
   fs->freereg = 0;
   fs->nk = 0;
+  fs->nabslineinfo = 0;
   fs->np = 0;
   fs->nups = 0;
   fs->nlocvars = 0;
   fs->nactvar = 0;
   fs->firstlocal = ls->dyd->actvar.n;
   fs->bl = NULL;
-  f = fs->f;
   f->source = ls->source;
   f->maxstacksize = 2;  /* registers 0/1 are always valid */
   enterblock(fs, bl, 0);
@@ -557,8 +559,11 @@ static void close_func (LexState *ls) {
   leaveblock(fs);
   luaM_reallocvector(L, f->code, f->sizecode, fs->pc, Instruction);
   f->sizecode = fs->pc;
-  luaM_reallocvector(L, f->lineinfo, f->sizelineinfo, fs->pc, int);
+  luaM_reallocvector(L, f->lineinfo, f->sizelineinfo, fs->pc, ls_byte);
   f->sizelineinfo = fs->pc;
+  luaM_reallocvector(L, f->abslineinfo, f->sizeabslineinfo,
+                        fs->nabslineinfo, AbsLineInfo);
+  f->sizeabslineinfo = fs->nabslineinfo;
   luaM_reallocvector(L, f->k, f->sizek, fs->nk, TValue);
   f->sizek = fs->nk;
   luaM_reallocvector(L, f->p, f->sizep, fs->np, Proto *);

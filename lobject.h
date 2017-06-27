@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.122 2017/06/09 16:48:44 roberto Exp roberto $
+** $Id: lobject.h,v 2.123 2017/06/12 14:21:44 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -418,6 +418,21 @@ typedef struct LocVar {
 
 
 /*
+** Associates the absolute line source for a given instruction ('pc').
+** The array 'lineinfo' gives, for each instruction, the difference in
+** lines from the previous instruction. When that difference does not
+** fit into a byte, Lua saves the absolute line for that instruction.
+** (Lua also saves the absolute line periodically, to speed up the
+** computation of a line number: we can use binary search in the
+** absolute-line array, but we must traverse the 'lineinfo' array
+** linearly to compute a line.)
+*/
+typedef struct AbsLineInfo {
+  int pc;
+  int line;
+} AbsLineInfo;
+
+/*
 ** Function Prototypes
 */
 typedef struct Proto {
@@ -432,15 +447,17 @@ typedef struct Proto {
   int sizelineinfo;
   int sizep;  /* size of 'p' */
   int sizelocvars;
+  int sizeabslineinfo;  /* size of 'abslineinfo' */
   int linedefined;  /* debug information  */
   int lastlinedefined;  /* debug information  */
   TValue *k;  /* constants used by the function */
+  struct LClosure *cache;  /* last-created closure with this prototype */
   Instruction *code;  /* opcodes */
   struct Proto **p;  /* functions defined inside the function */
-  int *lineinfo;  /* map from opcodes to source lines (debug information) */
-  LocVar *locvars;  /* information about local variables (debug information) */
   Upvaldesc *upvalues;  /* upvalue information */
-  struct LClosure *cache;  /* last-created closure with this prototype */
+  ls_byte *lineinfo;  /* information about source lines (debug information) */
+  AbsLineInfo *abslineinfo;  /* idem */
+  LocVar *locvars;  /* information about local variables (debug information) */
   TString  *source;  /* used for debug information */
   GCObject *gclist;
 } Proto;

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.125 2017/05/13 13:04:33 roberto Exp roberto $
+** $Id: ldebug.c,v 2.126 2017/05/13 13:54:47 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -48,8 +48,61 @@ static int currentpc (CallInfo *ci) {
 }
 
 
+/*
+** Get a "base line" to find the line corresponding to an instruction.
+** For that, search the array of absolute line info for the largest saved
+** instruction smaller or equal to the wanted instrution. A special
+** case is when there is no absolute info or the instruction is before
+** the first absolute one.
+*/
+static int getbaseline (Proto *f, int pc, int *basepc) {
+  if (f->sizeabslineinfo == 0 || pc < f->abslineinfo[0].pc) {
+    *basepc = -1;  /* start from the beginning */
+    return f->linedefined;
+  }
+  else {
+    unsigned int i;
+    if (pc >= f->abslineinfo[f->sizeabslineinfo - 1].pc)
+      i = f->sizeabslineinfo - 1;  /* instruction is after last saved one */
+    else {  /* binary search */
+      unsigned int j = f->sizeabslineinfo - 1;  /* pc < anchorlines[j] */
+      i = 0;  /* abslineinfo[i] <= pc */
+      while (i < j - 1) {
+        unsigned int m = (j + i) / 2;
+        if (pc >= f->abslineinfo[m].pc)
+          i = m;
+        else
+          j = m;
+      }
+    }
+    *basepc = f->abslineinfo[i].pc;
+    return f->abslineinfo[i].line;
+  }
+}
+
+
+/*
+** Get the line corresponding to instruction 'pc' in function 'f';
+** first gets a base line and from there does the increments until
+** the desired instruction.
+*/
+int luaG_getfuncline (Proto *f, int pc) {
+  if (f->lineinfo == NULL)  /* no debug information? */
+    return -1;
+  else {
+    int basepc;
+    int baseline = getbaseline(f, pc, &basepc);
+    while (basepc++ < pc) {  /* walk until given instruction */
+      lua_assert(f->lineinfo[basepc] != ABSLINEINFO);
+      baseline += f->lineinfo[basepc];  /* correct line */
+    }
+    return baseline;
+  }
+}
+
+
 static int currentline (CallInfo *ci) {
-  return getfuncline(ci_func(ci)->p, currentpc(ci));
+  return luaG_getfuncline(ci_func(ci)->p, currentpc(ci));
 }
 
 
@@ -211,6 +264,14 @@ static void funcinfo (lua_Debug *ar, Closure *cl) {
 }
 
 
+static int nextline (Proto *p, int currentline, int pc) {
+  if (p->lineinfo[pc] != ABSLINEINFO)
+    return currentline + p->lineinfo[pc];
+  else
+    return luaG_getfuncline(p, pc);
+}
+
+
 static void collectvalidlines (lua_State *L, Closure *f) {
   if (noLuaClosure(f)) {
     setnilvalue(L->top);
@@ -219,13 +280,16 @@ static void collectvalidlines (lua_State *L, Closure *f) {
   else {
     int i;
     TValue v;
-    int *lineinfo = f->l.p->lineinfo;
+    Proto *p = f->l.p;
+    int currentline = p->linedefined;
     Table *t = luaH_new(L);  /* new table to store active lines */
     sethvalue(L, L->top, t);  /* push it on stack */
     api_incr_top(L);
     setbvalue(&v, 1);  /* boolean 'true' to be the value of all indices */
-    for (i = 0; i < f->l.p->sizelineinfo; i++)  /* for all lines with code */
-      luaH_setint(L, t, lineinfo[i], &v);  /* table[line] = true */
+    for (i = 0; i < p->sizelineinfo; i++) {  /* for all lines with code */
+      currentline = nextline(p, currentline, i);
+      luaH_setint(L, t, currentline, &v);  /* table[line] = true */
+    }
   }
 }
 
@@ -681,6 +745,19 @@ l_noret luaG_runerror (lua_State *L, const char *fmt, ...) {
 }
 
 
+/*
+** Check whether new instruction 'newpc' is in a different line from
+** previous instruction 'oldpc'.
+*/
+static int changedline (Proto *p, int oldpc, int newpc) {
+  while (oldpc++ < newpc) {
+    if (p->lineinfo[oldpc] != 0)
+      return (luaG_getfuncline(p, oldpc - 1) != luaG_getfuncline(p, newpc));
+  }
+  return 0;  /* no line changes in the way */
+}
+
+
 void luaG_traceexec (lua_State *L) {
   CallInfo *ci = L->ci;
   lu_byte mask = L->hookmask;
@@ -698,11 +775,12 @@ void luaG_traceexec (lua_State *L) {
   if (mask & LUA_MASKLINE) {
     Proto *p = ci_func(ci)->p;
     int npc = pcRel(ci->u.l.savedpc, p);
-    int newline = getfuncline(p, npc);
     if (npc == 0 ||  /* call linehook when enter a new function, */
         ci->u.l.savedpc <= L->oldpc ||  /* when jump back (loop), or when */
-        newline != getfuncline(p, pcRel(L->oldpc, p)))  /* enter a new line */
+        changedline(p, pcRel(L->oldpc, p), npc)) {  /* enter new line */
+      int newline = luaG_getfuncline(p, npc);  /* new line */
       luaD_hook(L, LUA_HOOKLINE, newline);  /* call line hook */
+    }
   }
   L->oldpc = ci->u.l.savedpc;
   if (L->status == LUA_YIELD) {  /* did hook yield? */

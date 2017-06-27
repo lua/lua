@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.76 2015/12/30 18:16:13 roberto Exp roberto $
+** $Id: lparser.h,v 1.77 2017/04/28 20:57:45 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -123,14 +123,17 @@ typedef struct FuncState {
   struct BlockCnt *bl;  /* chain of current blocks */
   int pc;  /* next position to code (equivalent to 'ncode') */
   int lasttarget;   /* 'label' of last 'jump label' */
+  int previousline;  /* last line that was saved in 'lineinfo' */
   int jpc;  /* list of pending jumps to 'pc' */
   int nk;  /* number of elements in 'k' */
   int np;  /* number of elements in 'p' */
+  int nabslineinfo;  /* number of elements in 'abslineinfo' */
   int firstlocal;  /* index of first local var (in Dyndata array) */
   short nlocvars;  /* number of elements in 'f->locvars' */
   lu_byte nactvar;  /* number of active local variables */
   lu_byte nups;  /* number of upvalues */
   lu_byte freereg;  /* first free register */
+  lu_byte iwthabs;  /* instructions issued since last absolute line info */
 } FuncState;
 
 

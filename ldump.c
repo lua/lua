@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 2.36 2015/03/30 15:43:51 roberto Exp roberto $
+** $Id: ldump.c,v 2.37 2015/10/08 15:53:49 roberto Exp roberto $
 ** save precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -149,6 +149,12 @@ static void DumpDebug (const Proto *f, DumpState *D) {
   n = (D->strip) ? 0 : f->sizelineinfo;
   DumpInt(n, D);
   DumpVector(f->lineinfo, n, D);
+  n = (D->strip) ? 0 : f->sizeabslineinfo;
+  DumpInt(n, D);
+  for (i = 0; i < n; i++) {
+    DumpInt(f->abslineinfo[i].pc, D);
+    DumpInt(f->abslineinfo[i].line, D);
+  }
   n = (D->strip) ? 0 : f->sizelocvars;
   DumpInt(n, D);
   for (i = 0; i < n; i++) {
