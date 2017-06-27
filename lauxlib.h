@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.131 2016/12/06 14:54:31 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.132 2017/04/24 18:06:12 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -13,6 +13,10 @@
 #include <stdio.h>
 
 #include "lua.h"
+
+
+/* global table */
+#define	LUA_GNAME	"_G"
 
 
 

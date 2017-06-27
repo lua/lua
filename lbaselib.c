@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.315 2017/02/23 21:07:34 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.316 2017/05/26 19:14:29 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -504,7 +504,7 @@ static const luaL_Reg base_funcs[] = {
   {"type", luaB_type},
   {"xpcall", luaB_xpcall},
   /* placeholders */
-  {"_G", NULL},
+  {LUA_GNAME, NULL},
   {"_VERSION", NULL},
   {NULL, NULL}
 };
@@ -516,7 +516,7 @@ LUAMOD_API int luaopen_base (lua_State *L) {
   luaL_setfuncs(L, base_funcs, 0);
   /* set global _G */
   lua_pushvalue(L, -1);
-  lua_setfield(L, -2, "_G");
+  lua_setfield(L, -2, LUA_GNAME);
   /* set global _VERSION */
   lua_pushliteral(L, LUA_VERSION);
   lua_setfield(L, -2, "_VERSION");

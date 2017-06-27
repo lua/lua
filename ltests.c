@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.220 2017/06/12 14:21:44 roberto Exp roberto $
+** $Id: ltests.c,v 2.221 2017/06/27 11:35:31 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -960,7 +960,7 @@ static lua_State *getstate (lua_State *L) {
 
 static int loadlib (lua_State *L) {
   static const luaL_Reg libs[] = {
-    {"_G", luaopen_base},
+    {LUA_GNAME, luaopen_base},
     {"coroutine", luaopen_coroutine},
     {"debug", luaopen_debug},
     {"io", luaopen_io},
