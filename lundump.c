@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.44 2015/11/02 16:09:30 roberto Exp roberto $
+** $Id: lundump.c,v 2.45 2017/06/27 11:35:31 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -58,16 +58,26 @@ static void LoadBlock (LoadState *S, void *b, size_t size) {
 
 
 static lu_byte LoadByte (LoadState *S) {
-  lu_byte x;
-  LoadVar(S, x);
+  int b = zgetc(S->Z);
+  if (b == EOZ)
+    error(S, "truncated");
+  return cast_byte(b);
+}
+
+
+static size_t LoadSize (LoadState *S) {
+  size_t x = 0;
+  int b;
+  do {
+    b = LoadByte(S);
+    x = (x << 7) | (b & 0x7f);
+  } while ((b & 0x80) == 0);
   return x;
 }
 
 
 static int LoadInt (LoadState *S) {
-  int x;
-  LoadVar(S, x);
-  return x;
+  return cast_int(LoadSize(S));
 }
 
 
@@ -86,9 +96,7 @@ static lua_Integer LoadInteger (LoadState *S) {
 
 
 static TString *LoadString (LoadState *S) {
-  size_t size = LoadByte(S);
-  if (size == 0xFF)
-    LoadVar(S, size);
+  size_t size = LoadSize(S);
   if (size == 0)
     return NULL;
   else if (--size <= LUAI_MAXSHORTLEN) {  /* short string? */

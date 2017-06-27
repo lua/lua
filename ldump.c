@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 2.37 2015/10/08 15:53:49 roberto Exp roberto $
+** $Id: ldump.c,v 2.38 2017/06/27 11:35:31 roberto Exp roberto $
 ** save precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -55,8 +55,23 @@ static void DumpByte (int y, DumpState *D) {
 }
 
 
+/* DumpInt Buff Size */
+#define DIBS    ((sizeof(size_t) * 8 / 7) + 1)
+
+static void DumpSize (size_t x, DumpState *D) {
+  lu_byte buff[DIBS];
+  int n = 0;
+  do {
+    buff[DIBS - (++n)] = x & 0x7f;  /* fill buffer in reverse order */
+    x >>= 7;
+  } while (x != 0);
+  buff[DIBS - 1] |= 0x80;  /* mark last byte */
+  DumpVector(buff + DIBS - n, n, D);
+}
+
+
 static void DumpInt (int x, DumpState *D) {
-  DumpVar(x, D);
+  DumpSize(x, D);
 }
 
 
@@ -72,17 +87,12 @@ static void DumpInteger (lua_Integer x, DumpState *D) {
 
 static void DumpString (const TString *s, DumpState *D) {
   if (s == NULL)
-    DumpByte(0, D);
+    DumpSize(0, D);
   else {
-    size_t size = tsslen(s) + 1;  /* include trailing '\0' */
+    size_t size = tsslen(s);
     const char *str = getstr(s);
-    if (size < 0xFF)
-      DumpByte(cast_int(size), D);
-    else {
-      DumpByte(0xFF, D);
-      DumpVar(size, D);
-    }
-    DumpVector(str, size - 1, D);  /* no need to save '\0' */
+    DumpSize(size + 1, D);
+    DumpVector(str, size, D);
   }
 }
 
