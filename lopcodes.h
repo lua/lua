@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.153 2017/04/28 20:57:45 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.154 2017/05/08 16:08:01 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -240,7 +240,7 @@ OP_SETLIST,/*	A B C	R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B	*/
 
 OP_CLOSURE,/*	A Bx	R(A) := closure(KPROTO[Bx])			*/
 
-OP_VARARG,/*	A B	R(A), R(A+1), ..., R(A+B-2) = vararg		*/
+OP_VARARG,/*	A B C	R(A), R(A+1), ..., R(A+B-2) = vararg(C)		*/
 
 OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
 } OpCode;
@@ -257,7 +257,7 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
   OP_SETLIST) may use 'top'.
 
   (*) In OP_VARARG, if (B == 0) then use actual number of varargs and
-  set top (like in OP_CALL with C == 0).
+  set top (like in OP_CALL with C == 0). C is the vararg parameter.
 
   (*) In OP_RETURN, if (B == 0) then return up to 'top'.
 
