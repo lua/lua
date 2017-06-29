@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 2.23 2017/05/08 15:57:23 roberto Exp roberto $
+** $Id: ltm.h,v 2.24 2017/05/13 12:57:20 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -63,14 +63,16 @@ LUAI_FUNC const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o,
 LUAI_FUNC void luaT_init (lua_State *L);
 
 LUAI_FUNC void luaT_callTM (lua_State *L, const TValue *f, const TValue *p1,
-                            const TValue *p2, TValue *p3, int hasres);
+                            const TValue *p2, const TValue *p3);
+LUAI_FUNC void luaT_callTMres (lua_State *L, const TValue *f,
+                            const TValue *p1, const TValue *p2, StkId p3);
 LUAI_FUNC void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
                               StkId res, TMS event);
 LUAI_FUNC int luaT_callorderTM (lua_State *L, const TValue *p1,
                                 const TValue *p2, TMS event);
 
 LUAI_FUNC void luaT_adjustvarargs (lua_State *L, Proto *p, int actual);
-LUAI_FUNC void luaT_getvarargs (lua_State *L, StkId t, StkId where,
+LUAI_FUNC void luaT_getvarargs (lua_State *L, TValue *t, StkId where,
                                 int wanted);
 
 

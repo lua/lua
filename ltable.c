@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.123 2017/06/09 16:48:44 roberto Exp roberto $
+** $Id: ltable.c,v 2.124 2017/06/12 14:21:44 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -211,7 +211,7 @@ static unsigned int arrayindex (lua_Integer k) {
 ** elements in the array part, then elements in the hash part. The
 ** beginning of a traversal is signaled by 0.
 */
-static unsigned int findindex (lua_State *L, Table *t, StkId key) {
+static unsigned int findindex (lua_State *L, Table *t, TValue *key) {
   unsigned int i;
   if (ttisnil(key)) return 0;  /* first iteration */
   i = ttisinteger(key) ? arrayindex(ivalue(key)) : 0;
@@ -229,18 +229,18 @@ static unsigned int findindex (lua_State *L, Table *t, StkId key) {
 
 
 int luaH_next (lua_State *L, Table *t, StkId key) {
-  unsigned int i = findindex(L, t, key);  /* find original element */
+  unsigned int i = findindex(L, t, s2v(key));  /* find original element */
   for (; i < t->sizearray; i++) {  /* try first array part */
     if (!ttisnil(&t->array[i])) {  /* a non-nil value? */
-      setivalue(key, i + 1);
-      setobj2s(L, key+1, &t->array[i]);
+      setivalue(s2v(key), i + 1);
+      setobj2s(L, key + 1, &t->array[i]);
       return 1;
     }
   }
   for (i -= t->sizearray; cast_int(i) < sizenode(t); i++) {  /* hash part */
     if (!ttisnil(gval(gnode(t, i)))) {  /* a non-nil value? */
       Node *n = gnode(t, i);
-      getnodekey(L, key, n);
+      getnodekey(L, s2v(key), n);
       setobj2s(L, key + 1, gval(n));
       return 1;
     }

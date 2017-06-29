@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 2.29 2015/12/21 13:02:14 roberto Exp roberto $
+** $Id: ldo.h,v 2.30 2017/05/13 12:57:20 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -30,7 +30,7 @@
 
 
 #define savestack(L,p)		((char *)(p) - (char *)L->stack)
-#define restorestack(L,n)	((TValue *)((char *)L->stack + (n)))
+#define restorestack(L,n)	((StkId)((char *)L->stack + (n)))
 
 
 /* macro to check stack size, preserving 'p' */

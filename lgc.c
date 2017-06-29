@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.231 2017/06/09 16:48:44 roberto Exp roberto $
+** $Id: lgc.c,v 2.232 2017/06/12 14:21:44 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -575,11 +575,11 @@ static int traversethread (global_State *g, lua_State *th) {
   lua_assert(g->gcstate == GCSatomic ||
              th->openupval == NULL || isintwups(th));
   for (; o < th->top; o++)  /* mark live elements in the stack */
-    markvalue(g, o);
+    markvalue(g, s2v(o));
   if (g->gcstate == GCSatomic) {  /* final traversal? */
     StkId lim = th->stack + th->stacksize;  /* real end of stack */
     for (; o < lim; o++)  /* clear not-marked stack slice */
-      setnilvalue(o);
+      setnilvalue(s2v(o));
     /* 'remarkupvals' may have removed thread from 'twups' list */
     if (!isintwups(th) && th->openupval != NULL) {
       th->twups = g->twups;  /* link it back to the list */
@@ -872,8 +872,8 @@ static void GCTM (lua_State *L, int propagateerrors) {
     g->gcrunning = running;  /* restore state */
     if (status != LUA_OK && propagateerrors) {  /* error while running __gc? */
       if (status == LUA_ERRRUN) {  /* is there an error object? */
-        const char *msg = (ttisstring(L->top - 1))
-                            ? svalue(L->top - 1)
+        const char *msg = (ttisstring(s2v(L->top - 1)))
+                            ? svalue(s2v(L->top - 1))
                             : "no message";
         luaO_pushfstring(L, "error in __gc metamethod (%s)", msg);
         status = LUA_ERRGCMM;  /* error in __gc metamethod */

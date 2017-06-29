@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.221 2017/06/27 11:35:31 roberto Exp roberto $
+** $Id: ltests.c,v 2.222 2017/06/27 18:32:49 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -46,7 +46,7 @@ void *l_Trick = 0;
 int islocked = 0;
 
 
-#define obj_at(L,k)	(L->ci->func + (k))
+#define obj_at(L,k)	s2v(L->ci->func + (k))
 
 
 static int runC (lua_State *L, lua_State *L1, const char *pc);
@@ -316,7 +316,7 @@ static int lua_checkpc (lua_State *L, CallInfo *ci) {
     StkId f = (L->status != LUA_YIELD || ci != L->ci)
               ? ci->func
               : restorestack(L, ci->extra);
-    Proto *p = clLvalue(f)->p;
+    Proto *p = clLvalue(s2v(f))->p;
     return p->code <= ci->u.l.savedpc &&
            ci->u.l.savedpc <= p->code + p->sizecode;
   }
@@ -336,7 +336,7 @@ static void checkstack (global_State *g, lua_State *L1) {
   }
   if (L1->stack) {  /* complete thread? */
     for (o = L1->stack; o < L1->stack_last + EXTRA_STACK; o++)
-      checkliveness(L1, o);  /* entire stack must have valid values */
+      checkliveness(L1, s2v(o));  /* entire stack must have valid values */
   }
   else lua_assert(L1->stacksize == 0);
 }

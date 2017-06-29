@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.h,v 2.16 2017/04/11 18:41:09 roberto Exp roberto $
+** $Id: lfunc.h,v 2.17 2017/05/04 13:32:01 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -30,6 +30,9 @@
 
 
 #define upisopen(up)	((up)->v != &(up)->u.value)
+
+
+#define uplevel(up)	check_exp(upisopen(up), cast(StkId, (up)->v))
 
 
 /*

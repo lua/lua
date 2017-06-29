@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.123 2017/06/12 14:21:44 roberto Exp roberto $
+** $Id: lobject.h,v 2.124 2017/06/27 11:35:31 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -110,7 +110,7 @@ typedef union Value {
 #define TValuefields	Value value_; lu_byte tt_
 
 
-typedef struct lua_TValue {
+typedef struct TValue {
   TValuefields;
 } TValue;
 
@@ -282,13 +282,15 @@ typedef struct lua_TValue {
 ** different types of assignments, according to destination
 */
 
-/* from stack to (same) stack */
-#define setobjs2s	setobj
+/* from stack to stack */
+#define setobjs2s(L,o1,o2)	setobj(L,s2v(o1),s2v(o2))
 /* to stack (not from same stack) */
-#define setobj2s	setobj
-#define setsvalue2s	setsvalue
-#define sethvalue2s	sethvalue
-#define setptvalue2s	setptvalue
+#define setobj2s(L,o1,o2)	setobj(L,s2v(o1),o2)
+#define setsvalue2s(L,o,s)	setsvalue(L,s2v(o),s)
+#define sethvalue2s(L,o,h)	sethvalue(L,s2v(o),h)
+#define setthvalue2s(L,o,t)	setthvalue(L,s2v(o),t)
+#define setptvalue2s(L,o,p)	setptvalue(L,s2v(o),p)
+#define setclLvalue2s(L,o,cl)	setclLvalue(L,s2v(o),cl)
 /* from table to same table */
 #define setobjt2t	setobj
 /* to new object */
@@ -307,8 +309,15 @@ typedef struct lua_TValue {
 */
 
 
-typedef TValue *StkId;  /* index to stack elements */
+typedef union StackValue {
+  TValue val;
+} StackValue;
 
+
+typedef StackValue *StkId;  /* index to stack elements */
+
+/* convert a 'StackValue' to a 'TValue' */
+#define s2v(o)	(&(o)->val)
 
 
 
@@ -620,11 +629,13 @@ LUAI_FUNC int luaO_int2fb (unsigned int x);
 LUAI_FUNC int luaO_fb2int (int x);
 LUAI_FUNC int luaO_utf8esc (char *buff, unsigned long x);
 LUAI_FUNC int luaO_ceillog2 (unsigned int x);
+LUAI_FUNC int luaO_rawarith (lua_State *L, int op, const TValue *p1,
+                             const TValue *p2, TValue *res);
 LUAI_FUNC void luaO_arith (lua_State *L, int op, const TValue *p1,
-                           const TValue *p2, TValue *res);
+                           const TValue *p2, StkId res);
 LUAI_FUNC size_t luaO_str2num (const char *s, TValue *o);
 LUAI_FUNC int luaO_hexavalue (int c);
-LUAI_FUNC void luaO_tostring (lua_State *L, StkId obj);
+LUAI_FUNC void luaO_tostring (lua_State *L, TValue *obj);
 LUAI_FUNC const char *luaO_pushvfstring (lua_State *L, const char *fmt,
                                                        va_list argp);
 LUAI_FUNC const char *luaO_pushfstring (lua_State *L, const char *fmt, ...);

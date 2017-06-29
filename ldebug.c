@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.126 2017/05/13 13:54:47 roberto Exp roberto $
+** $Id: ldebug.c,v 2.127 2017/06/27 11:35:31 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,7 @@
 
 
 /* Active Lua function (given call info) */
-#define ci_func(ci)		(clLvalue((ci)->func))
+#define ci_func(ci)		(clLvalue(s2v((ci)->func)))
 
 
 static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
@@ -211,16 +211,16 @@ LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
   lua_lock(L);
   swapextra(L);
   if (ar == NULL) {  /* information about non-active function? */
-    if (!isLfunction(L->top - 1))  /* not a Lua function? */
+    if (!isLfunction(s2v(L->top - 1)))  /* not a Lua function? */
       name = NULL;
     else  /* consider live variables at function start (parameters) */
-      name = luaF_getlocalname(clLvalue(L->top - 1)->p, n, 0);
+      name = luaF_getlocalname(clLvalue(s2v(L->top - 1))->p, n, 0);
   }
   else {  /* active function; get information through 'ar' */
     StkId pos = NULL;  /* to avoid warnings */
     name = findlocal(L, ar->i_ci, n, &pos);
     if (name) {
-      setobj2s(L, L->top, pos);
+      setobjs2s(L, L->top, pos);
       api_incr_top(L);
     }
   }
@@ -274,7 +274,7 @@ static int nextline (Proto *p, int currentline, int pc) {
 
 static void collectvalidlines (lua_State *L, Closure *f) {
   if (noLuaClosure(f)) {
-    setnilvalue(L->top);
+    setnilvalue(s2v(L->top));
     api_incr_top(L);
   }
   else {
@@ -283,7 +283,7 @@ static void collectvalidlines (lua_State *L, Closure *f) {
     Proto *p = f->l.p;
     int currentline = p->linedefined;
     Table *t = luaH_new(L);  /* new table to store active lines */
-    sethvalue(L, L->top, t);  /* push it on stack */
+    sethvalue2s(L, L->top, t);  /* push it on stack */
     api_incr_top(L);
     setbvalue(&v, 1);  /* boolean 'true' to be the value of all indices */
     for (i = 0; i < p->sizelineinfo; i++) {  /* for all lines with code */
@@ -359,25 +359,25 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
   int status;
   Closure *cl;
   CallInfo *ci;
-  StkId func;
+  TValue *func;
   lua_lock(L);
   swapextra(L);
   if (*what == '>') {
     ci = NULL;
-    func = L->top - 1;
+    func = s2v(L->top - 1);
     api_check(L, ttisfunction(func), "function expected");
     what++;  /* skip the '>' */
     L->top--;  /* pop function */
   }
   else {
     ci = ar->i_ci;
-    func = ci->func;
-    lua_assert(ttisfunction(ci->func));
+    func = s2v(ci->func);
+    lua_assert(ttisfunction(func));
   }
   cl = ttisclosure(func) ? clvalue(func) : NULL;
   status = auxgetinfo(L, what, ar, cl, ci);
   if (strchr(what, 'f')) {
-    setobjs2s(L, L->top, func);
+    setobj2s(L, L->top, func);
     api_incr_top(L);
   }
   swapextra(L);  /* correct before option 'L', which can raise a mem. error */
@@ -627,8 +627,8 @@ static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
 */
 static int isinstack (CallInfo *ci, const TValue *o) {
   StkId base = ci->func + 1;
-  ptrdiff_t i = o - base;
-  return (0 <= i && i < (ci->top - base) && base + i == o);
+  ptrdiff_t i = cast(StkId, o) - base;
+  return (0 <= i && i < (ci->top - base) && s2v(base + i) == o);
 }
 
 
@@ -659,7 +659,7 @@ static const char *varinfo (lua_State *L, const TValue *o) {
     kind = getupvalname(ci, o, &name);  /* check whether 'o' is an upvalue */
     if (!kind && isinstack(ci, o))  /* no? try a register */
       kind = getobjname(ci_func(ci)->p, currentpc(ci),
-                        cast_int(o - (ci->func + 1)), &name);
+                        cast_int(cast(StkId, o) - (ci->func + 1)), &name);
   }
   return (kind) ? luaO_pushfstring(L, " (%s '%s')", kind, name) : "";
 }

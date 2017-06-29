@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.49 2017/05/24 18:54:54 roberto Exp roberto $
+** $Id: lfunc.c,v 2.50 2017/06/27 11:35:31 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -61,9 +61,8 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
   UpVal *p;
   UpVal *uv;
   lua_assert(isintwups(L) || L->openupval == NULL);
-  while ((p = *pp) != NULL && p->v >= level) {
-    lua_assert(upisopen(p));
-    if (p->v == level && !isdead(G(L), p))  /* corresponding upvalue? */
+  while ((p = *pp) != NULL && uplevel(p) >= level) {
+    if (uplevel(p) == level && !isdead(G(L), p))  /* corresponding upvalue? */
       return p;  /* return it */
     pp = &p->u.open.next;
   }
@@ -75,7 +74,7 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
   if (p)
     p->u.open.previous = &uv->u.open.next;
   *pp = uv;
-  uv->v = level;  /* current value lives in the stack */
+  uv->v = s2v(level);  /* current value lives in the stack */
   if (!isintwups(L)) {  /* thread not in list of threads with upvalues? */
     L->twups = G(L)->twups;  /* link it to the list */
     G(L)->twups = L;
@@ -94,7 +93,8 @@ void luaF_unlinkupval (UpVal *uv) {
 
 void luaF_close (lua_State *L, StkId level) {
   UpVal *uv;
-  while (L->openupval != NULL && (uv = L->openupval)->v >= level) {
+  while (L->openupval != NULL &&
+        (uv = L->openupval, uplevel(uv) >= level)) {
     TValue *slot = &uv->u.value;  /* new position for value */
     luaF_unlinkupval(uv);
     setobj(L, slot, uv->v);  /* move value to upvalue slot */
