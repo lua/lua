@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 2.44 2017/06/09 19:16:41 roberto Exp roberto $
+** $Id: lvm.h,v 2.45 2017/06/29 15:06:44 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -37,11 +37,21 @@
 #endif
 
 
+/* convert an object to a float (including string coercion) */
 #define tonumber(o,n) \
 	(ttisfloat(o) ? (*(n) = fltvalue(o), 1) : luaV_tonumber_(o,n))
 
+
+/* convert an object to a float (without string coercion) */
+#define tonumberns(o,n) \
+	(ttisfloat(o) ? ((n) = fltvalue(o), 1) : \
+	(ttisinteger(o) ? ((n) = cast_num(ivalue(o)), 1) : 0))
+
+
+/* convert an object to an integer (including string coercion) */
 #define tointeger(o,i) \
     (ttisinteger(o) ? (*(i) = ivalue(o), 1) : luaV_tointeger(o,i,LUA_FLOORN2I))
+
 
 #define intop(op,v1,v2) l_castU2S(l_castS2U(v1) op l_castS2U(v2))
 

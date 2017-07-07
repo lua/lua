@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.255 2017/03/14 12:40:44 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.256 2017/05/19 16:29:40 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -200,6 +200,88 @@ static int str_dump (lua_State *L) {
 }
 
 
+
+/*
+** {======================================================
+** METAMETHODS
+** =======================================================
+*/
+
+static int tonum (lua_State *L, int arg) {
+  if (lua_type(L, arg) == LUA_TNUMBER) {  /* already a number? */
+    lua_pushvalue(L, arg);
+    return 1;
+  }
+  else {  /* check whether it is a numerical string */
+    size_t len;
+    const char *s = lua_tolstring(L, arg, &len);
+    return (s != NULL && lua_stringtonumber(L, s) == len + 1);
+  }
+}
+
+
+static int arith (lua_State *L, int op, const char *mtname) {
+  if (tonum(L, 1) && tonum(L, 2))
+    lua_arith(L, op);  /* result will be on the top */
+  else {
+    lua_settop(L, 2);  /* back to the original arguments */
+    if (lua_type(L, 2) == LUA_TSTRING || !luaL_getmetafield(L, 2, mtname))
+      return luaL_error(L, "attempt to %s a '%s' with a '%s'", mtname + 2,
+                           luaL_typename(L, -2), luaL_typename(L, -1));
+    lua_insert(L, -3);  /* put metamethod before arguments */
+    lua_call(L, 2, 1);  /* call metamethod */
+  }
+  return 1;
+}
+
+
+static int arith_add (lua_State *L) {
+  return arith(L, LUA_OPADD, "__add");
+}
+
+static int arith_sub (lua_State *L) {
+  return arith(L, LUA_OPSUB, "__sub");
+}
+
+static int arith_mul (lua_State *L) {
+  return arith(L, LUA_OPMUL, "__mul");
+}
+
+static int arith_mod (lua_State *L) {
+  return arith(L, LUA_OPMOD, "__mod");
+}
+
+static int arith_pow (lua_State *L) {
+  return arith(L, LUA_OPPOW, "__pow");
+}
+
+static int arith_div (lua_State *L) {
+  return arith(L, LUA_OPDIV, "__div");
+}
+
+static int arith_idiv (lua_State *L) {
+  return arith(L, LUA_OPIDIV, "__idiv");
+}
+
+static int arith_unm (lua_State *L) {
+  return arith(L, LUA_OPUNM, "__unm");
+}
+
+
+static const luaL_Reg stringmetamethods[] = {
+  {"__add", arith_add},
+  {"__sub", arith_sub},
+  {"__mul", arith_mul},
+  {"__mod", arith_mod},
+  {"__pow", arith_pow},
+  {"__div", arith_div},
+  {"__idiv", arith_idiv},
+  {"__unm", arith_unm},
+  {"__index", NULL},  /* placeholder */
+  {NULL, NULL}
+};
+
+/* }====================================================== */
 
 /*
 ** {======================================================
@@ -1576,7 +1658,9 @@ static const luaL_Reg strlib[] = {
 
 
 static void createmetatable (lua_State *L) {
-  lua_createtable(L, 0, 1);  /* table to be metatable for strings */
+  /* table to be metatable for strings */
+  luaL_newlibtable(L, stringmetamethods);
+  luaL_setfuncs(L, stringmetamethods, 0);
   lua_pushliteral(L, "");  /* dummy string */
   lua_pushvalue(L, -2);  /* copy table */
   lua_setmetatable(L, -2);  /* set table as metatable for strings */
