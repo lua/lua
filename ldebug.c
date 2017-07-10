@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.128 2017/06/29 15:06:44 roberto Exp roberto $
+** $Id: ldebug.c,v 2.129 2017/07/07 16:34:32 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -735,6 +735,7 @@ l_noret luaG_runerror (lua_State *L, const char *fmt, ...) {
   CallInfo *ci = L->ci;
   const char *msg;
   va_list argp;
+  luaC_checkGC(L);  /* error message uses memory */
   va_start(argp, fmt);
   msg = luaO_pushvfstring(L, fmt, argp);  /* format message */
   va_end(argp);
