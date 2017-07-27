@@ -2899,6 +2899,30 @@ patch = [[
 ]]
 }
 
+Bug{
+what = [[Lua does not check memory use when creating error messages]],
+report = [[John Dunn, 2012/09/24]],
+since = [[5.2.0]],
+fix = nil,
+example = [[
+local code = "function test()\n  bob.joe.larry = 23\n end"
+
+load(code)()
+
+-- memory will grow steadly 
+for i = 1, math.huge do
+  pcall(test)
+  if i % 100000 == 0 then
+    io.write(collectgarbage'count'*1024, "\n")
+  end
+end
+]],
+patch = [[
+]]
+}
+
+
+
 
 
 -----------------------------------------------------------------
@@ -3656,9 +3680,9 @@ It needs an "interceptor" 'memcmp' function that continues
 reading memory after a difference is found.]],
 patch = [[
 2c2
-< ** $Id: bugs,v 1.153 2017/05/19 12:58:40 roberto Exp roberto $
+< ** $Id: bugs,v 1.154 2017/05/22 12:55:16 roberto Exp roberto $
 ---
-> ** $Id: bugs,v 1.153 2017/05/19 12:58:40 roberto Exp roberto $
+> ** $Id: bugs,v 1.154 2017/05/22 12:55:16 roberto Exp roberto $
 263c263,264
 <   for (option = LUA_STRFTIMEOPTIONS; *option != '\0'; option += oplen) {
 ---
@@ -3780,18 +3804,39 @@ patch = [[
 ]]
 }
 
-
---[=[
 Bug{
-what = [[ ]],
-report = [[ ]],
-since = [[ ]],
+what = [[Lua does not check GC when creating error messages]],
+report = [[Viacheslav Usov, 2017/07/06]],
+since = [[5.3.2]],
 fix = nil,
-example = [[ ]],
+example = [[
+function test()  
+  bob.joe.larry = 23
+end
+
+-- memory will grow steadly 
+for i = 1, math.huge do
+  pcall(test)
+  if i % 100000 == 0 then
+    io.write(collectgarbage'count'*1024, "\n")
+  end
+end
+]],
 patch = [[
+--- ldebug.c	2017/04/19 17:20:42	2.121.1.1
++++ ldebug.c	2017/07/10 17:08:39
+@@ -653,6 +653,7 @@
+   CallInfo *ci = L->ci;
+   const char *msg;
+   va_list argp;
++  luaC_checkGC(L);  /* error message uses memory */
+   va_start(argp, fmt);
+   msg = luaO_pushvfstring(L, fmt, argp);  /* format message */
+   va_end(argp);
 ]]
 }
-]=]
+
+
 
 
 --[=[
