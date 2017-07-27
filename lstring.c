@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.55 2015/11/03 15:36:01 roberto Exp roberto $
+** $Id: lstring.c,v 2.56 2015/11/23 11:32:51 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -20,9 +20,6 @@
 #include "lobject.h"
 #include "lstate.h"
 #include "lstring.h"
-
-
-#define MEMERRMSG       "not enough memory"
 
 
 /*
@@ -105,7 +102,7 @@ void luaS_clearcache (global_State *g) {
   for (i = 0; i < STRCACHE_N; i++)
     for (j = 0; j < STRCACHE_M; j++) {
     if (iswhite(g->strcache[i][j]))  /* will entry be collected? */
-      g->strcache[i][j] = g->memerrmsg;  /* replace it with something fixed */
+      g->strcache[i][j] = g->nfield;  /* replace it with something fixed */
     }
 }
 
@@ -116,13 +113,16 @@ void luaS_clearcache (global_State *g) {
 void luaS_init (lua_State *L) {
   global_State *g = G(L);
   int i, j;
+  TString *memerrmsg;
   luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
   /* pre-create memory-error message */
-  g->memerrmsg = luaS_newliteral(L, MEMERRMSG);
-  luaC_fix(L, obj2gco(g->memerrmsg));  /* it should never be collected */
+  memerrmsg = luaS_newliteral(L, MEMERRMSG);
+  luaC_fix(L, obj2gco(memerrmsg));  /* it should never be collected */
+  g->nfield = luaS_newliteral(L, "n");  /* pre-create "n" field name */
+  luaC_fix(L, obj2gco(g->nfield));  /* it also should never be collected */
   for (i = 0; i < STRCACHE_N; i++)  /* fill cache with valid strings */
     for (j = 0; j < STRCACHE_M; j++)
-      g->strcache[i][j] = g->memerrmsg;
+      g->strcache[i][j] = g->nfield;
 }
 
 

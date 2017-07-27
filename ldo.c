@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.160 2017/05/23 12:50:11 roberto Exp roberto $
+** $Id: ldo.c,v 2.161 2017/06/29 15:06:44 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -91,7 +91,8 @@ struct lua_longjmp {
 static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
   switch (errcode) {
     case LUA_ERRMEM: {  /* memory error? */
-      setsvalue2s(L, oldtop, G(L)->memerrmsg); /* reuse preregistered msg. */
+      TString *memerrmsg = luaS_newliteral(L, MEMERRMSG);
+      setsvalue2s(L, oldtop, memerrmsg); /* reuse preregistered msg. */
       break;
     }
     case LUA_ERRERR: {

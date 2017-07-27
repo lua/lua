@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.41 2017/05/13 12:57:20 roberto Exp roberto $
+** $Id: ltm.c,v 2.42 2017/06/29 15:06:44 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -188,7 +188,7 @@ void luaT_adjustvarargs (lua_State *L, Proto *p, int actual) {
   luaH_resize(L, vtab, actual, 1);
   for (i = 0; i < actual; i++)  /* put extra arguments into vararg table */
     setobj2n(L, &vtab->array[i], s2v(L->top - actual + i - 1));
-  setsvalue(L, &nname, luaS_newliteral(L, "n"));  /* get field 'n' */
+  setsvalue(L, &nname, G(L)->nfield);  /* get field 'n' */
   setivalue(luaH_set(L, vtab, &nname), actual);  /* store counter there */
   L->top -= actual;  /* remove extra elements from the stack */
   sethvalue2s(L, L->top - 1, vtab);  /* move table to new top */
@@ -202,7 +202,7 @@ void luaT_getvarargs (lua_State *L, TValue *t, StkId where, int wanted) {
     int i;
     Table *h = hvalue(t);
     if (wanted < 0) {  /* get all? */
-      const TValue *ns = luaH_getstr(h, luaS_newliteral(L, "n"));
+      const TValue *ns = luaH_getstr(h, G(L)->nfield);
       int n = (ttisinteger(ns)) ? ivalue(ns) : 0;
       wanted = n;
       checkstackp(L, n, where);

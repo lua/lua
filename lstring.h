@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.60 2015/09/08 15:41:05 roberto Exp roberto $
+** $Id: lstring.h,v 1.61 2015/11/03 15:36:01 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -10,6 +10,13 @@
 #include "lgc.h"
 #include "lobject.h"
 #include "lstate.h"
+
+
+/*
+** Memory-allocation error message must be preallocated (it cannot
+** be created after memory is exausted)
+*/
+#define MEMERRMSG       "not enough memory"
 
 
 #define sizelstring(l)  (sizeof(union UTString) + ((l) + 1) * sizeof(char))
