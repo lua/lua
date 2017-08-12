@@ -3680,9 +3680,9 @@ It needs an "interceptor" 'memcmp' function that continues
 reading memory after a difference is found.]],
 patch = [[
 2c2
-< ** $Id: bugs,v 1.154 2017/05/22 12:55:16 roberto Exp roberto $
+< ** $Id: bugs,v 1.155 2017/07/27 13:55:38 roberto Exp roberto $
 ---
-> ** $Id: bugs,v 1.154 2017/05/22 12:55:16 roberto Exp roberto $
+> ** $Id: bugs,v 1.155 2017/07/27 13:55:38 roberto Exp roberto $
 263c263,264
 <   for (option = LUA_STRFTIMEOPTIONS; *option != '\0'; option += oplen) {
 ---
@@ -3761,7 +3761,7 @@ patch = [[
      enterblock(fs, &bl, 0);  /* must enter block before 'goto' */
      gotostat(ls, v.t);  /* handle goto/break */
 -    skipnoopstat(ls);  /* skip other no-op statements */
-+    while (testnext(ls, ';')) {}  /* skip colons */
++    while (testnext(ls, ';')) {}  /* skip semicolons */
      if (block_follow(ls, 0)) {  /* 'goto' is the entire block? */
        leaveblock(fs);
        return;  /* and that is it */
