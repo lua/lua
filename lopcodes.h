@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.154 2017/05/08 16:08:01 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.155 2017/06/29 15:38:41 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -229,12 +229,12 @@ OP_CALL,/*	A B C	R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1)) */
 OP_TAILCALL,/*	A B C	return R(A)(R(A+1), ... ,R(A+B-1))		*/
 OP_RETURN,/*	A B	return R(A), ... ,R(A+B-2)	(see note)	*/
 
-OP_FORLOOP,/*	A sBx	R(A)+=R(A+2);
-			if R(A) <?= R(A+1) then { pc+=sBx; R(A+3)=R(A) }*/
-OP_FORPREP,/*	A sBx	R(A)-=R(A+2); pc+=sBx				*/
+OP_FORLOOP,/*	A Bx	R(A)+=R(A+2);
+			if R(A) <?= R(A+1) then { pc-=Bx; R(A+3)=R(A) }*/
+OP_FORPREP,/*	A Bx	R(A)-=R(A+2); pc+=Bx				*/
 
 OP_TFORCALL,/*	A C	R(A+3), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2));	*/
-OP_TFORLOOP,/*	A sBx	if R(A+1) ~= nil then { R(A)=R(A+1); pc += sBx }*/
+OP_TFORLOOP,/*	A Bx	if R(A+1) ~= nil then { R(A)=R(A+1); pc -= Bx }*/
 
 OP_SETLIST,/*	A B C	R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B	*/
 

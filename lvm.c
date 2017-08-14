@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.289 2017/06/29 15:38:41 roberto Exp roberto $
+** $Id: lvm.c,v 2.290 2017/07/07 16:34:32 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1335,7 +1335,7 @@ void luaV_execute (lua_State *L) {
           lua_Integer idx = intop(+, ivalue(s2v(ra)), step); /* increment index */
           lua_Integer limit = ivalue(s2v(ra + 1));
           if ((0 < step) ? (idx <= limit) : (limit <= idx)) {
-            pc += GETARG_sBx(i);  /* jump back */
+            pc -= GETARG_Bx(i);  /* jump back */
             chgivalue(s2v(ra), idx);  /* update internal index... */
             setivalue(s2v(ra + 3), idx);  /* ...and external index */
           }
@@ -1347,7 +1347,7 @@ void luaV_execute (lua_State *L) {
           idx = luai_numadd(L, idx, step);  /* inc. index */
           if (luai_numlt(0, step) ? luai_numle(idx, limit)
                                   : luai_numle(limit, idx)) {
-            pc += GETARG_sBx(i);  /* jump back */
+            pc -= GETARG_Bx(i);  /* jump back */
             chgfltvalue(s2v(ra), idx);  /* update internal index... */
             setfltvalue(s2v(ra + 3), idx);  /* ...and external index */
           }
@@ -1381,7 +1381,7 @@ void luaV_execute (lua_State *L) {
             luaG_runerror(L, "'for' initial value must be a number");
           setfltvalue(init, luai_numsub(L, ninit, nstep));
         }
-        pc += GETARG_sBx(i);
+        pc += GETARG_Bx(i);
         vmbreak;
       }
       vmcase(OP_TFORCALL) {
@@ -1401,7 +1401,7 @@ void luaV_execute (lua_State *L) {
         l_tforloop:
         if (!ttisnil(s2v(ra + 1))) {  /* continue loop? */
           setobjs2s(L, ra, ra + 1);  /* save control variable */
-          pc += GETARG_sBx(i);  /* jump back */
+          pc -= GETARG_Bx(i);  /* jump back */
         }
         vmbreak;
       }

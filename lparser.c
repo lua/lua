@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.162 2017/06/29 15:38:41 roberto Exp roberto $
+** $Id: lparser.c,v 2.163 2017/08/12 13:12:21 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1307,6 +1307,22 @@ static int exp1 (LexState *ls) {
 }
 
 
+/*
+** Fix for instruction at position 'pc' to jump to 'dest'.
+** (Jump addresses are relative in Lua). 'back' true means
+** a back jump.
+*/
+static void fixforjump (FuncState *fs, int pc, int dest, int back) {
+  Instruction *jmp = &fs->f->code[pc];
+  int offset = dest - (pc + 1);
+  if (back)
+    offset = -offset;
+  if (offset > MAXARG_Bx)
+    luaX_syntaxerror(fs->ls, "control structure too long");
+  SETARG_Bx(*jmp, offset);
+}
+
+
 static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
   /* forbody -> DO block */
   BlockCnt bl;
@@ -1314,21 +1330,23 @@ static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
   int prep, endfor;
   adjustlocalvars(ls, 3);  /* control variables */
   checknext(ls, TK_DO);
-  prep = isnum ? luaK_codeAsBx(fs, OP_FORPREP, base, NO_JUMP) : luaK_jump(fs);
+  prep = isnum ? luaK_codeABx(fs, OP_FORPREP, base, 0) : luaK_jump(fs);
   enterblock(fs, &bl, 0);  /* scope for declared variables */
   adjustlocalvars(ls, nvars);
   luaK_reserveregs(fs, nvars);
   block(ls);
   leaveblock(fs);  /* end of scope for declared variables */
-  luaK_patchtohere(fs, prep);
-  if (isnum)  /* numeric for? */
-    endfor = luaK_codeAsBx(fs, OP_FORLOOP, base, NO_JUMP);
+  if (isnum) {  /* numeric for? */
+    fixforjump(fs, prep, luaK_getlabel(fs), 0);
+    endfor = luaK_codeABx(fs, OP_FORLOOP, base, 0);
+  }
   else {  /* generic for */
+    luaK_patchtohere(fs, prep);
     luaK_codeABC(fs, OP_TFORCALL, base, 0, nvars);
     luaK_fixline(fs, line);
     endfor = luaK_codeAsBx(fs, OP_TFORLOOP, base + 2, NO_JUMP);
   }
-  luaK_patchlist(fs, endfor, prep + 1);
+  fixforjump(fs, endfor, prep + 1, 1);
   luaK_fixline(fs, line);
 }
 
