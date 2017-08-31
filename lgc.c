@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.232 2017/06/12 14:21:44 roberto Exp roberto $
+** $Id: lgc.c,v 2.233 2017/06/29 15:06:44 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -117,7 +117,8 @@ static lu_mem atomic (lua_State *L);
 
 
 /*
-** If key is not marked, mark its entry as dead. This allows the
+** Clear keys for empty entries in tables. If entry is empty
+** and its key is not marked, mark its entry as dead. This allows the
 ** collection of the key, but keeps its entry in the table (its removal
 ** could break a chain). Other places never manipulate dead keys,
 ** because its associated nil value is enough to signal that the entry
@@ -688,10 +689,10 @@ static void clearkeys (global_State *g, GCObject *l) {
     Table *h = gco2t(l);
     Node *n, *limit = gnodelast(h);
     for (n = gnode(h, 0); n < limit; n++) {
-      if (!ttisnil(gval(n)) && (iscleared(g, gckeyN(n)))) {
-        setnilvalue(gval(n));  /* remove value ... */
-        removeentry(n);  /* and remove entry from table */
-      }
+      if (!ttisnil(gval(n)) && (iscleared(g, gckeyN(n))))  /* unmarked key? */
+        setnilvalue(gval(n));  /* clear value */
+      if (ttisnil(gval(n)))  /* is entry empty? */
+        removeentry(n);  /* remove it from table */
     }
   }
 }
@@ -712,10 +713,10 @@ static void clearvalues (global_State *g, GCObject *l, GCObject *f) {
         setnilvalue(o);  /* remove value */
     }
     for (n = gnode(h, 0); n < limit; n++) {
-      if (iscleared(g, gcvalueN(gval(n)))) {
-        setnilvalue(gval(n));  /* remove value ... */
-        removeentry(n);  /* and remove entry from table */
-      }
+      if (iscleared(g, gcvalueN(gval(n))))  /* unmarked value? */
+        setnilvalue(gval(n));  /* clear value */
+      if (ttisnil(gval(n)))  /* is entry empty? */
+        removeentry(n);  /* remove it from table */
     }
   }
 }

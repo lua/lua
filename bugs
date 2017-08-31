@@ -3680,9 +3680,9 @@ It needs an "interceptor" 'memcmp' function that continues
 reading memory after a difference is found.]],
 patch = [[
 2c2
-< ** $Id: bugs,v 1.155 2017/07/27 13:55:38 roberto Exp roberto $
+< ** $Id: bugs,v 1.156 2017/08/12 13:12:42 roberto Exp roberto $
 ---
-> ** $Id: bugs,v 1.155 2017/07/27 13:55:38 roberto Exp roberto $
+> ** $Id: bugs,v 1.156 2017/08/12 13:12:42 roberto Exp roberto $
 263c263,264
 <   for (option = LUA_STRFTIMEOPTIONS; *option != '\0'; option += oplen) {
 ---
@@ -3833,6 +3833,40 @@ patch = [[
    va_start(argp, fmt);
    msg = luaO_pushvfstring(L, fmt, argp);  /* format message */
    va_end(argp);
+]]
+}
+
+
+Bug{
+what = [[dead keys with nil values can stay in weak tables]],
+report = [[云风 Cloud Wu, 2017/08/15]],
+since = [[5.2]],
+fix = nil,
+example = [[
+-- The following chunk, under a memory checker like valgrind, 
+-- produces a memory access violation.
+
+local a = setmetatable({}, {__mode = 'kv'})
+
+a['ABCDEFGHIJKLMNOPQRSTUVWXYZ' .. 'abcdefghijklmnopqrstuvwxyz'] = {}
+a[next(a)] = nil
+collectgarbage()
+print(a['BCDEFGHIJKLMNOPQRSTUVWXYZ' .. 'abcdefghijklmnopqrstuvwxyz'])
+]],
+patch = [[
+--- lgc.c	2016/12/22 13:08:50	2.215
++++ lgc.c	2017/08/31 16:08:23
+@@ -643,8 +643,9 @@
+     for (n = gnode(h, 0); n < limit; n++) {
+       if (!ttisnil(gval(n)) && (iscleared(g, gkey(n)))) {
+         setnilvalue(gval(n));  /* remove value ... */
+-        removeentry(n);  /* and remove entry from table */
+       }
++      if (ttisnil(gval(n)))  /* is entry empty? */
++        removeentry(n);  /* remove entry from table */
+     }
+   }
+ }
 ]]
 }
 
