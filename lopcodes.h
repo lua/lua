@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.155 2017/06/29 15:38:41 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.156 2017/08/14 18:33:14 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -217,7 +217,8 @@ OP_LEN,/*	A B	R(A) := length of R(B)				*/
 
 OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
 
-OP_JMP,/*	A sBx	pc+=sBx; if (A) close all upvalues >= R(A - 1)	*/
+OP_CLOSE,/*	A	close all upvalues >= R(A)			*/
+OP_JMP,/*	sBx	pc+=sBx						*/
 OP_EQ,/*	A B C	if ((RK(B) == RK(C)) ~= A) then pc++		*/
 OP_LT,/*	A B C	if ((RK(B) <  RK(C)) ~= A) then pc++		*/
 OP_LE,/*	A B C	if ((RK(B) <= RK(C)) ~= A) then pc++		*/

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.64 2016/01/05 16:22:37 roberto Exp roberto $
+** $Id: lcode.h,v 1.65 2017/04/20 19:53:55 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -73,8 +73,10 @@ LUAI_FUNC void luaK_setoneret (FuncState *fs, expdesc *e);
 LUAI_FUNC int luaK_jump (FuncState *fs);
 LUAI_FUNC void luaK_ret (FuncState *fs, int first, int nret);
 LUAI_FUNC void luaK_patchlist (FuncState *fs, int list, int target);
+void luaK_patchgoto (FuncState *fs, int list, int target, int hasclose);
 LUAI_FUNC void luaK_patchtohere (FuncState *fs, int list);
-LUAI_FUNC void luaK_patchclose (FuncState *fs, int list, int level);
+LUAI_FUNC void luaK_patchclose (FuncState *fs, int list);
+LUAI_FUNC int luaK_needclose (FuncState *fs, int list);
 LUAI_FUNC void luaK_concat (FuncState *fs, int *l1, int l2);
 LUAI_FUNC int luaK_getlabel (FuncState *fs);
 LUAI_FUNC void luaK_prefix (FuncState *fs, UnOpr op, expdesc *v, int line);
