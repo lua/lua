@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.156 2017/08/14 18:33:14 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.157 2017/09/13 19:50:08 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -175,8 +175,8 @@ typedef enum {
 name		args	description
 ------------------------------------------------------------------------*/
 OP_MOVE,/*	A B	R(A) := R(B)					*/
-OP_LOADK,/*	A Bx	R(A) := Kst(Bx)					*/
 OP_LOADI,/*	A sBx	R(A) := sBx					*/
+OP_LOADK,/*	A Bx	R(A) := Kst(Bx)					*/
 OP_LOADKX,/*	A 	R(A) := Kst(extra arg)				*/
 OP_LOADBOOL,/*	A B C	R(A) := (Bool)B; if (C) pc++			*/
 OP_LOADNIL,/*	A B	R(A), R(A+1), ..., R(A+B) := nil		*/
