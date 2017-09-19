@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.121 2017/06/29 15:06:44 roberto Exp roberto $
+** $Id: lcode.c,v 2.122 2017/09/13 19:50:08 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -579,6 +579,18 @@ void luaK_int (FuncState *fs, int reg, lua_Integer i) {
 }
 
 
+static void luaK_float (FuncState *fs, int reg, lua_Number f) {
+  TValue v;
+  lua_Integer fi;
+  setfltvalue(&v, f);
+  if (luaV_tointeger(&v, &fi, 0) &&
+      l_castS2U(fi) + MAXARG_sBx <= l_castS2U(MAXARG_Bx))
+    luaK_codeAsBx(fs, OP_LOADF, reg, cast_int(fi));
+  else
+    luaK_codek(fs, reg, luaK_numberK(fs, f));
+}
+
+
 /*
 ** Fix an expression to return the number of results 'nresults'.
 ** Either 'e' is a multi-ret expression (function call or vararg)
@@ -688,7 +700,7 @@ static void discharge2reg (FuncState *fs, expdesc *e, int reg) {
       break;
     }
     case VKFLT: {
-      luaK_codek(fs, reg, luaK_numberK(fs, e->u.nval));
+      luaK_float(fs, reg, e->u.nval);
       break;
     }
     case VKINT: {

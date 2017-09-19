@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.61 2017/09/13 19:50:08 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.62 2017/09/15 14:19:06 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -20,6 +20,7 @@
 LUAI_DDEF const char *const luaP_opnames[NUM_OPCODES+1] = {
   "MOVE",
   "LOADI",
+  "LOADF",
   "LOADK",
   "LOADKX",
   "LOADBOOL",
@@ -82,6 +83,7 @@ LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
 /*       T  A    B       C     mode		   opcode	*/
   opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_MOVE */
  ,opmode(0, 1, OpArgU, OpArgN, iAsBx)		/* OP_LOADI */
+ ,opmode(0, 1, OpArgU, OpArgN, iAsBx)		/* OP_LOADF */
  ,opmode(0, 1, OpArgK, OpArgN, iABx)		/* OP_LOADK */
  ,opmode(0, 1, OpArgN, OpArgN, iABx)		/* OP_LOADKX */
  ,opmode(0, 1, OpArgU, OpArgU, iABC)		/* OP_LOADBOOL */

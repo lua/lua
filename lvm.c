@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.291 2017/08/14 18:33:14 roberto Exp roberto $
+** $Id: lvm.c,v 2.292 2017/09/13 19:50:08 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -827,6 +827,11 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_LOADI) {
         lua_Integer b = GETARG_sBx(i);
         setivalue(s2v(ra), b);
+        vmbreak;
+      }
+      vmcase(OP_LOADF) {
+        int b = GETARG_sBx(i);
+        setfltvalue(s2v(ra), cast_num(b));
         vmbreak;
       }
       vmcase(OP_LOADKX) {
