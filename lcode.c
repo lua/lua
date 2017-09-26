@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.122 2017/09/13 19:50:08 roberto Exp roberto $
+** $Id: lcode.c,v 2.123 2017/09/19 18:38:14 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -1263,10 +1263,12 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
       /* else keep numeral, which may be folded with 2nd operand */
       break;
     }
-    default: {
+    case OPR_EQ: case OPR_LT: case OPR_LE:
+    case OPR_NE: case OPR_GT: case OPR_GE: {
       luaK_exp2RK(fs, v);
       break;
     }
+    default: lua_assert(0);
   }
 }
 
