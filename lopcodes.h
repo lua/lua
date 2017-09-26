@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.159 2017/09/18 16:07:54 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.160 2017/09/19 18:38:14 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -198,18 +198,18 @@ OP_NEWTABLE,/*	A B C	R(A) := {} (size = B,C)				*/
 OP_SELF,/*	A B C	R(A+1) := R(B); R(A) := R(B)[RK(C):string]	*/
 
 OP_ADDI,/*	A B C	R(A) := R(B) + C				*/
-OP_ADD,/*	A B C	R(A) := RK(B) + RK(C)				*/
-OP_SUB,/*	A B C	R(A) := RK(B) - RK(C)				*/
-OP_MUL,/*	A B C	R(A) := RK(B) * RK(C)				*/
-OP_MOD,/*	A B C	R(A) := RK(B) % RK(C)				*/
-OP_POW,/*	A B C	R(A) := RK(B) ^ RK(C)				*/
-OP_DIV,/*	A B C	R(A) := RK(B) / RK(C)				*/
-OP_IDIV,/*	A B C	R(A) := RK(B) // RK(C)				*/
-OP_BAND,/*	A B C	R(A) := RK(B) & RK(C)				*/
-OP_BOR,/*	A B C	R(A) := RK(B) | RK(C)				*/
-OP_BXOR,/*	A B C	R(A) := RK(B) ~ RK(C)				*/
-OP_SHL,/*	A B C	R(A) := RK(B) << RK(C)				*/
-OP_SHR,/*	A B C	R(A) := RK(B) >> RK(C)				*/
+OP_ADD,/*	A B C	R(A) := R(B) + R(C)				*/
+OP_SUB,/*	A B C	R(A) := R(B) - R(C)				*/
+OP_MUL,/*	A B C	R(A) := R(B) * R(C)				*/
+OP_MOD,/*	A B C	R(A) := R(B) % R(C)				*/
+OP_POW,/*	A B C	R(A) := R(B) ^ R(C)				*/
+OP_DIV,/*	A B C	R(A) := R(B) / R(C)				*/
+OP_IDIV,/*	A B C	R(A) := R(B) // R(C)				*/
+OP_BAND,/*	A B C	R(A) := R(B) & R(C)				*/
+OP_BOR,/*	A B C	R(A) := R(B) | R(C)				*/
+OP_BXOR,/*	A B C	R(A) := R(B) ~ R(C)				*/
+OP_SHL,/*	A B C	R(A) := R(B) << R(C)				*/
+OP_SHR,/*	A B C	R(A) := R(B) >> R(C)				*/
 OP_UNM,/*	A B	R(A) := -R(B)					*/
 OP_BNOT,/*	A B	R(A) := ~R(B)					*/
 OP_NOT,/*	A B	R(A) := not R(B)				*/
@@ -219,9 +219,9 @@ OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
 
 OP_CLOSE,/*	A	close all upvalues >= R(A)			*/
 OP_JMP,/*	sBx	pc+=sBx						*/
-OP_EQ,/*	A B C	if ((RK(B) == RK(C)) ~= A) then pc++		*/
-OP_LT,/*	A B C	if ((RK(B) <  RK(C)) ~= A) then pc++		*/
-OP_LE,/*	A B C	if ((RK(B) <= RK(C)) ~= A) then pc++		*/
+OP_EQ,/*	A B C	if ((R(B) == R(C)) ~= A) then pc++		*/
+OP_LT,/*	A B C	if ((R(B) <  R(C)) ~= A) then pc++		*/
+OP_LE,/*	A B C	if ((R(B) <= R(C)) ~= A) then pc++		*/
 
 OP_TEST,/*	A C	if not (R(A) <=> C) then pc++			*/
 OP_TESTSET,/*	A B C	if (R(B) <=> C) then R(A) := R(B) else pc++	*/

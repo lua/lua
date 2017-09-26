@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.292 2017/09/13 19:50:08 roberto Exp roberto $
+** $Id: lvm.c,v 2.293 2017/09/19 18:38:14 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -739,8 +739,6 @@ void luaV_finishOp (lua_State *L) {
 #define RC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgR, base+GETARG_C(i))
 #define vRC(i)	s2v(RC(i))
 #define KC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgK, k+GETARG_C(i))
-#define RKB(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgK, \
-	(GETARG_Bk(i)) ? k + GETARG_Br(i) : s2v(base + GETARG_Br(i)))
 #define RKC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgK, \
 	(GETARG_Ck(i)) ? k + GETARG_Cr(i) : s2v(base + GETARG_Cr(i)))
 
@@ -1013,8 +1011,8 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_ADD) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+        TValue *rb = vRB(i);
+        TValue *rc = vRC(i);
         lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
@@ -1027,8 +1025,8 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_SUB) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+        TValue *rb = vRB(i);
+        TValue *rc = vRC(i);
         lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
@@ -1041,8 +1039,8 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_MUL) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+        TValue *rb = vRB(i);
+        TValue *rc = vRC(i);
         lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
@@ -1055,8 +1053,8 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_DIV) {  /* float division (always with floats) */
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+        TValue *rb = vRB(i);
+        TValue *rc = vRC(i);
         lua_Number nb; lua_Number nc;
         if (tonumberns(rb, nb) && tonumberns(rc, nc)) {
           setfltvalue(s2v(ra), luai_numdiv(L, nb, nc));
@@ -1065,8 +1063,8 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_BAND) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+        TValue *rb = vRB(i);
+        TValue *rc = vRC(i);
         lua_Integer ib; lua_Integer ic;
         if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
           setivalue(s2v(ra), intop(&, ib, ic));
@@ -1075,8 +1073,8 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_BOR) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+        TValue *rb = vRB(i);
+        TValue *rc = vRC(i);
         lua_Integer ib; lua_Integer ic;
         if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
           setivalue(s2v(ra), intop(|, ib, ic));
@@ -1085,8 +1083,8 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_BXOR) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+        TValue *rb = vRB(i);
+        TValue *rc = vRC(i);
         lua_Integer ib; lua_Integer ic;
         if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
           setivalue(s2v(ra), intop(^, ib, ic));
@@ -1095,8 +1093,8 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_SHL) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+        TValue *rb = vRB(i);
+        TValue *rc = vRC(i);
         lua_Integer ib; lua_Integer ic;
         if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
           setivalue(s2v(ra), luaV_shiftl(ib, ic));
@@ -1105,8 +1103,8 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_SHR) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+        TValue *rb = vRB(i);
+        TValue *rc = vRC(i);
         lua_Integer ib; lua_Integer ic;
         if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
           setivalue(s2v(ra), luaV_shiftl(ib, -ic));
@@ -1115,8 +1113,8 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_MOD) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+        TValue *rb = vRB(i);
+        TValue *rc = vRC(i);
         lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
@@ -1131,8 +1129,8 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_IDIV) {  /* floor division */
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+        TValue *rb = vRB(i);
+        TValue *rc = vRC(i);
         lua_Number nb; lua_Number nc;
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
@@ -1145,8 +1143,8 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_POW) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+        TValue *rb = vRB(i);
+        TValue *rc = vRC(i);
         lua_Number nb; lua_Number nc;
         if (tonumberns(rb, nb) && tonumberns(rc, nc)) {
           setfltvalue(s2v(ra), luai_numpow(L, nb, nc));
@@ -1212,8 +1210,8 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_EQ) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+        TValue *rb = vRB(i);
+        TValue *rc = vRC(i);
         Protect(
           if (luaV_equalobj(L, rb, rc) != GETARG_A(i))
             pc++;
@@ -1223,8 +1221,8 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_LT) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+        TValue *rb = vRB(i);
+        TValue *rc = vRC(i);
         int res;
         if (ttisinteger(rb) && ttisinteger(rc))
           res = (ivalue(rb) < ivalue(rc));
@@ -1238,8 +1236,8 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_LE) {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
+        TValue *rb = vRB(i);
+        TValue *rc = vRC(i);
         int res;
         if (ttisinteger(rb) && ttisinteger(rc))
           res = (ivalue(rb) <= ivalue(rc));
