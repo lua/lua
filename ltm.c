@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.42 2017/06/29 15:06:44 roberto Exp roberto $
+** $Id: ltm.c,v 2.43 2017/07/27 13:50:16 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -164,6 +164,18 @@ void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
         luaG_opinterror(L, p1, p2, "perform arithmetic on");
     }
   }
+}
+
+
+void luaT_trybiniTM (lua_State *L, const TValue *p1, int i2,
+                                   int inv, StkId res, TMS event) {
+  TValue aux; TValue *p2;
+  setivalue(&aux, i2);
+  if (inv) {  /* arguments were exchanged? */
+    p2 = p1; p1 = &aux;  /* correct them */
+  }
+  else p2 = &aux;
+  luaT_trybinTM(L, p1, p2, res, event);
 }
 
 
