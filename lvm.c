@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.294 2017/09/26 18:14:45 roberto Exp roberto $
+** $Id: lvm.c,v 2.295 2017/09/27 18:59:08 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -733,14 +733,13 @@ void luaV_finishOp (lua_State *L) {
 
 
 #define RA(i)	(base+GETARG_A(i))
-#define RB(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgR, base+GETARG_Br(i))
+#define RB(i)	(base+GETARG_Br(i))
 #define vRB(i)	s2v(RB(i))
-#define KB(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgK, k+GETARG_B(i))
-#define RC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgR, base+GETARG_C(i))
+#define KB(i)	(k+GETARG_B(i))
+#define RC(i)	(base+GETARG_C(i))
 #define vRC(i)	s2v(RC(i))
-#define KC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgK, k+GETARG_C(i))
-#define RKC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgK, \
-	(GETARG_Ck(i)) ? k + GETARG_Cr(i) : s2v(base + GETARG_Cr(i)))
+#define KC(i)	(k+GETARG_C(i))
+#define RKC(i)	((GETARG_Ck(i)) ? k + GETARG_Cr(i) : s2v(base + GETARG_Cr(i)))
 
 
 
@@ -834,8 +833,7 @@ void luaV_execute (lua_State *L) {
       }
       vmcase(OP_LOADKX) {
         TValue *rb;
-        lua_assert(GET_OPCODE(*pc) == OP_EXTRAARG);
-        rb = k + GETARG_Ax(*pc++);
+        rb = k + GETARG_Ax(*pc); pc++;
         setobj2s(L, ra, rb);
         vmbreak;
       }
@@ -1409,8 +1407,7 @@ void luaV_execute (lua_State *L) {
         Table *h;
         if (n == 0) n = cast_int(L->top - ra) - 1;
         if (c == 0) {
-          lua_assert(GET_OPCODE(*pc) == OP_EXTRAARG);
-          c = GETARG_Ax(*pc++);
+          c = GETARG_Ax(*pc); pc++;
         }
         h = hvalue(s2v(ra));
         last = ((c-1)*LFIELDS_PER_FLUSH) + n;

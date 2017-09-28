@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.124 2017/09/26 17:10:49 roberto Exp roberto $
+** $Id: lcode.c,v 2.125 2017/09/26 18:14:45 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -367,8 +367,6 @@ static int luaK_code (FuncState *fs, Instruction i) {
 */
 int luaK_codeABC (FuncState *fs, OpCode o, int a, int b, int c) {
   lua_assert(getOpMode(o) == iABC);
-  lua_assert(getBMode(o) != OpArgN || b == 0);
-  lua_assert(getCMode(o) != OpArgN || c == 0);
   lua_assert(a <= MAXARG_A && b <= MAXARG_B && c <= MAXARG_C);
   return luaK_code(fs, CREATE_ABC(o, a, b, c));
 }
@@ -378,10 +376,20 @@ int luaK_codeABC (FuncState *fs, OpCode o, int a, int b, int c) {
 ** Format and emit an 'iABx' instruction.
 */
 int luaK_codeABx (FuncState *fs, OpCode o, int a, unsigned int bc) {
-  lua_assert(getOpMode(o) == iABx || getOpMode(o) == iAsBx);
-  lua_assert(getCMode(o) == OpArgN);
+  lua_assert(getOpMode(o) == iABx);
   lua_assert(a <= MAXARG_A && bc <= MAXARG_Bx);
   return luaK_code(fs, CREATE_ABx(o, a, bc));
+}
+
+
+/*
+** Format and emit an 'iAsBx' instruction.
+*/
+int luaK_codeAsBx (FuncState *fs, OpCode o, int a, int bc) {
+  unsigned int b = bc + MAXARG_sBx;
+  lua_assert(getOpMode(o) == iAsBx);
+  lua_assert(a <= MAXARG_A && b <= MAXARG_Bx);
+  return luaK_code(fs, CREATE_ABx(o, a, b));
 }
 
 

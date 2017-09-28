@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.160 2017/09/19 18:38:14 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.161 2017/09/26 18:14:45 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -89,6 +89,9 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 #define SET_OPCODE(i,o)	((i) = (((i)&MASK0(SIZE_OP,POS_OP)) | \
 		((cast(Instruction, o)<<POS_OP)&MASK1(SIZE_OP,POS_OP))))
 
+#define checkopm(i,m)	(getOpMode(GET_OPCODE(i)) == m)
+
+
 #define getarg(i,pos,size)	(cast(int, ((i)>>(pos)) & MASK1(size,0)))
 #define setarg(i,v,pos,size)	((i) = (((i)&MASK0(size,pos)) | \
                 ((cast(Instruction, v)<<pos)&MASK1(size,pos))))
@@ -96,25 +99,28 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 #define GETARG_A(i)	getarg(i, POS_A, SIZE_A)
 #define SETARG_A(i,v)	setarg(i, v, POS_A, SIZE_A)
 
-#define GETARG_B(i)	getarg(i, POS_B, SIZE_B)
+#define GETARG_B(i)	check_exp(checkopm(i, iABC), getarg(i, POS_B, SIZE_B))
 #define SETARG_B(i,v)	setarg(i, v, POS_B, SIZE_B)
 
-#define GETARG_Br(i)	getarg(i, POS_B, SIZE_B - 1)
+#define GETARG_Br(i)  \
+	check_exp(checkopm(i, iABC), getarg(i, POS_B, SIZE_B - 1))
 #define GETARG_Bk(i)	getarg(i, (POS_B + SIZE_B - 1), 1)
 
-#define GETARG_C(i)	getarg(i, POS_C, SIZE_C)
+#define GETARG_C(i)	check_exp(checkopm(i, iABC), getarg(i, POS_C, SIZE_C))
 #define SETARG_C(i,v)	setarg(i, v, POS_C, SIZE_C)
 
-#define GETARG_Cr(i)	getarg(i, POS_C, SIZE_C - 1)
+#define GETARG_Cr(i)  \
+	check_exp(checkopm(i, iABC), getarg(i, POS_C, SIZE_C - 1))
 #define GETARG_Ck(i)	getarg(i, (POS_C + SIZE_C - 1), 1)
 
-#define GETARG_Bx(i)	getarg(i, POS_Bx, SIZE_Bx)
+#define GETARG_Bx(i)	check_exp(checkopm(i, iABx), getarg(i, POS_Bx, SIZE_Bx))
 #define SETARG_Bx(i,v)	setarg(i, v, POS_Bx, SIZE_Bx)
 
-#define GETARG_Ax(i)	getarg(i, POS_Ax, SIZE_Ax)
+#define GETARG_Ax(i)	check_exp(checkopm(i, iAx), getarg(i, POS_Ax, SIZE_Ax))
 #define SETARG_Ax(i,v)	setarg(i, v, POS_Ax, SIZE_Ax)
 
-#define GETARG_sBx(i)	(GETARG_Bx(i)-MAXARG_sBx)
+#define GETARG_sBx(i)  \
+	check_exp(checkopm(i, iAsBx), getarg(i, POS_Bx, SIZE_Bx) - MAXARG_sBx)
 #define SETARG_sBx(i,b)	SETARG_Bx((i),cast(unsigned int, (b)+MAXARG_sBx))
 
 
@@ -160,8 +166,8 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 
 /*
 ** R(x) - register
-** Kst(x) - constant (in constant table)
-** RK(x) == if ISK(x) then Kst(INDEXK(x)) else R(x)
+** K(x) - constant (in constant table)
+** RK(x) == if ISK(x) then K(INDEXK(x)) else R(x)
 */
 
 
@@ -176,8 +182,8 @@ name		args	description
 OP_MOVE,/*	A B	R(A) := R(B)					*/
 OP_LOADI,/*	A sBx	R(A) := sBx					*/
 OP_LOADF,/*	A sBx	R(A) := (lua_Number)sBx				*/
-OP_LOADK,/*	A Bx	R(A) := Kst(Bx)					*/
-OP_LOADKX,/*	A 	R(A) := Kst(extra arg)				*/
+OP_LOADK,/*	A Bx	R(A) := K(Bx)					*/
+OP_LOADKX,/*	A 	R(A) := K(extra arg)				*/
 OP_LOADBOOL,/*	A B C	R(A) := (Bool)B; if (C) pc++			*/
 OP_LOADNIL,/*	A B	R(A), R(A+1), ..., R(A+B) := nil		*/
 OP_GETUPVAL,/*	A B	R(A) := UpValue[B]				*/
@@ -186,7 +192,7 @@ OP_SETUPVAL,/*	A B	UpValue[B] := R(A)				*/
 OP_GETTABUP,/*	A B C	R(A) := UpValue[B][K(C):string]			*/
 OP_GETTABLE,/*	A B C	R(A) := R(B)[R(C)]				*/
 OP_GETI,/*	A B C	R(A) := R(B)[C]					*/
-OP_GETFIELD,/*	A B C	R(A) := R(B)[Kst(C):string]			*/
+OP_GETFIELD,/*	A B C	R(A) := R(B)[K(C):string]			*/
 
 OP_SETTABUP,/*	A B C	UpValue[A][K(B):string] := RK(C)		*/
 OP_SETTABLE,/*	A B C	R(A)[R(B)] := RK(C)				*/
@@ -277,27 +283,18 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
 
 /*
 ** masks for instruction properties. The format is:
-** bits 0-1: op mode
-** bits 2-3: C arg mode
-** bits 4-5: B arg mode
-** bit 6: instruction set register A
-** bit 7: operator is a test (next instruction must be a jump)
+** bits 0-2: op mode
+** bit 3: instruction set register A
+** bit 4: operator is a test (next instruction must be a jump)
 */
-
-enum OpArgMask {
-  OpArgN,  /* argument is not used */
-  OpArgU,  /* argument is used */
-  OpArgR,  /* argument is a register or a jump offset */
-  OpArgK   /* argument is a constant or register/constant */
-};
 
 LUAI_DDEC const lu_byte luaP_opmodes[NUM_OPCODES];
 
-#define getOpMode(m)	(cast(enum OpMode, luaP_opmodes[m] & 3))
-#define getBMode(m)	(cast(enum OpArgMask, (luaP_opmodes[m] >> 4) & 3))
-#define getCMode(m)	(cast(enum OpArgMask, (luaP_opmodes[m] >> 2) & 3))
-#define testAMode(m)	(luaP_opmodes[m] & (1 << 6))
-#define testTMode(m)	(luaP_opmodes[m] & (1 << 7))
+#define getOpMode(m)	(cast(enum OpMode, luaP_opmodes[m] & 7))
+#define testAMode(m)	(luaP_opmodes[m] & (1 << 3))
+#define testTMode(m)	(luaP_opmodes[m] & (1 << 4))
+
+#define opmode(t,a,m) (((t)<<4) | ((a)<<3) | (m))
 
 
 LUAI_DDEC const char *const luaP_opnames[NUM_OPCODES+1];  /* opcode names */

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.164 2017/08/14 18:33:14 roberto Exp roberto $
+** $Id: lparser.c,v 2.165 2017/09/13 19:50:08 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1373,7 +1373,7 @@ static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
     luaK_patchtohere(fs, prep);
     luaK_codeABC(fs, OP_TFORCALL, base, 0, nvars);
     luaK_fixline(fs, line);
-    endfor = luaK_codeAsBx(fs, OP_TFORLOOP, base + 2, NO_JUMP);
+    endfor = luaK_codeABx(fs, OP_TFORLOOP, base + 2, 0);
   }
   fixforjump(fs, endfor, prep + 1, 1);
   luaK_fixline(fs, line);
