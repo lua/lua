@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.295 2017/09/27 18:59:08 roberto Exp roberto $
+** $Id: lvm.c,v 2.296 2017/09/28 16:53:29 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -733,7 +733,7 @@ void luaV_finishOp (lua_State *L) {
 
 
 #define RA(i)	(base+GETARG_A(i))
-#define RB(i)	(base+GETARG_Br(i))
+#define RB(i)	(base+GETARG_B(i))
 #define vRB(i)	s2v(RB(i))
 #define KB(i)	(k+GETARG_B(i))
 #define RC(i)	(base+GETARG_C(i))
@@ -989,7 +989,7 @@ void luaV_execute (lua_State *L) {
       }
       vmcase(OP_ADDI) {
         TValue *rb = vRB(i);
-        int ic = GETARG_C(i);
+        int ic = GETARG_Cr(i);
         lua_Number nb;
         if (ttisinteger(rb)) {
           setivalue(s2v(ra), intop(+, ivalue(rb), ic));
@@ -998,7 +998,7 @@ void luaV_execute (lua_State *L) {
           setfltvalue(s2v(ra), luai_numadd(L, nb, cast_num(ic)));
         }
         else
-          Protect(luaT_trybiniTM(L, rb, ic, GETARG_Bk(i), ra, TM_ADD));
+          Protect(luaT_trybiniTM(L, rb, ic, GETARG_Ck(i), ra, TM_ADD));
         vmbreak;
       }
       vmcase(OP_ADD) {

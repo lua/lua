@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.161 2017/09/26 18:14:45 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.162 2017/09/28 16:53:29 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -73,6 +73,7 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 #define MAXARG_A        ((1<<SIZE_A)-1)
 #define MAXARG_B        ((1<<SIZE_B)-1)
 #define MAXARG_C        ((1<<SIZE_C)-1)
+#define MAXARG_Cr        ((1<<(SIZE_C - 1))-1)
 
 
 /* creates a mask with 'n' 1 bits at position 'p' */
@@ -101,10 +102,6 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 
 #define GETARG_B(i)	check_exp(checkopm(i, iABC), getarg(i, POS_B, SIZE_B))
 #define SETARG_B(i,v)	setarg(i, v, POS_B, SIZE_B)
-
-#define GETARG_Br(i)  \
-	check_exp(checkopm(i, iABC), getarg(i, POS_B, SIZE_B - 1))
-#define GETARG_Bk(i)	getarg(i, (POS_B + SIZE_B - 1), 1)
 
 #define GETARG_C(i)	check_exp(checkopm(i, iABC), getarg(i, POS_C, SIZE_C))
 #define SETARG_C(i,v)	setarg(i, v, POS_C, SIZE_C)
@@ -142,7 +139,7 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 */
 
 /* this bit 1 means constant (0 means register) */
-#define BITRK		(1 << (SIZE_B - 1))
+#define BITRK		(1 << (SIZE_C - 1))
 
 /* test whether value is a constant */
 #define ISK(x)		((x) & BITRK)
