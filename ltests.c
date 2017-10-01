@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.222 2017/06/27 18:32:49 roberto Exp roberto $
+** $Id: ltests.c,v 2.223 2017/06/29 15:06:44 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -592,6 +592,22 @@ static int listcode (lua_State *L) {
     lua_settable(L, -3);
   }
   return 1;
+}
+
+
+static int printcode (lua_State *L) {
+  int pc;
+  Proto *p;
+  luaL_argcheck(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
+                 1, "Lua function expected");
+  p = getproto(obj_at(L, 1));
+  printf("maxstack: %d\n", p->maxstacksize);
+  printf("numparams: %d\n", p->numparams);
+  for (pc=0; pc<p->sizecode; pc++) {
+    char buff[100];
+    printf("%d\t%s\n", pc + 1, buildop(p, pc, buff));
+  }
+  return 0;
 }
 
 
@@ -1634,6 +1650,7 @@ static const struct luaL_Reg tests_funcs[] = {
   {"log2", log2_aux},
   {"limits", get_limits},
   {"listcode", listcode},
+  {"printcode", printcode},
   {"listk", listk},
   {"listlocals", listlocals},
   {"loadlib", loadlib},
