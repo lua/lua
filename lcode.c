@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.126 2017/09/28 16:53:29 roberto Exp roberto $
+** $Id: lcode.c,v 2.127 2017/10/01 19:13:43 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -1057,7 +1057,7 @@ static void codenot (FuncState *fs, expdesc *e) {
 ** Check whether expression 'e' is a small literal string
 */
 static int isKstr (FuncState *fs, expdesc *e) {
-  return (e->k == VK && !hasjumps(e) && e->u.info <= MAXARG_C &&
+  return (e->k == VK && !hasjumps(e) && e->u.info <= MAXARG_B &&
           ttisshrstring(&fs->f->k[e->u.info]));
 }
 
