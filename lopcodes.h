@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.162 2017/09/28 16:53:29 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.163 2017/10/01 19:13:43 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -12,15 +12,15 @@
 
 /*===========================================================================
   We assume that instructions are unsigned 32-bit integers.
-  All instructions have an opcode in the first 6 bits.
+  All instructions have an opcode in the first 7 bits.
   Instructions can have the following formats:
 
         3 3 2 2 2 2 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0
         1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-iABC    |       C(9)    | |       B(9)    | |     A(8)    | |   Op(6) |
-iABx    |              Bx(18)             | |     A(8)    | |   Op(6) |
-iAsBx   |             sBx (signed)(18)    | |     A(8)    | |   Op(6) |
-iAx     |                         Ax(26)                  | |   Op(6) |
+iABC    |       C(9)    | |     B(8)    | |     A(8)    | |   Op(7)   |
+iABx    |            Bx(17)             | |     A(8)    | |   Op(7)   |
+iAsBx   |           sBx (signed)(17)    | |     A(8)    | |   Op(7)   |
+iAx     |                       Ax(25)                  | |   Op(7)   |
 
   A signed argument is represented in excess K: the represented value is
   the written unsigned value minus K, where K is half the maximum for the
@@ -35,12 +35,12 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 ** size and position of opcode arguments.
 */
 #define SIZE_C		9
-#define SIZE_B		9
+#define SIZE_B		8
 #define SIZE_Bx		(SIZE_C + SIZE_B)
 #define SIZE_A		8
 #define SIZE_Ax		(SIZE_C + SIZE_B + SIZE_A)
 
-#define SIZE_OP		6
+#define SIZE_OP		7
 
 #define POS_OP		0
 #define POS_A		(POS_OP + SIZE_OP)
