@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.130 2017/07/10 17:35:12 roberto Exp roberto $
+** $Id: ldebug.c,v 2.131 2017/10/04 15:49:24 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -402,7 +402,7 @@ static const char *getobjname (Proto *p, int lastpc, int reg,
 ** Find a "name" for the constant 'c'.
 */
 static void kname (Proto *p, int c, const char **name) {
-  TValue *kvalue = &p->k[INDEXK(c)];
+  TValue *kvalue = &p->k[c];
   *name = (ttisstring(kvalue)) ? svalue(kvalue) : "?";
 }
 
@@ -418,15 +418,15 @@ static void rname (Proto *p, int pc, int c, const char **name) {
 
 
 /*
-** Find a "name" for the R/K index 'c'.
+** Find a "name" for a 'C' value in an RK instruction.
 */
-static void rkname (Proto *p, int pc, int c, const char **name) {
-  if (ISK(c))  /* is 'c' a constant? */
-    kname(p, INDEXK(c), name);
+static void rkname (Proto *p, int pc, Instruction i, const char **name) {
+  int c = GETARG_C(i);  /* key index */
+  if (GETARG_k(i))  /* is 'c' a constant? */
+    kname(p, c, name);
   else  /* 'c' is a register */
     rname(p, pc, c, name);
 }
-
 
 
 static int filterpc (int pc, int jmptarget) {
@@ -549,8 +549,7 @@ static const char *gxf (Proto *p, int pc, Instruction i, int isup) {
         break;
       }
       case OP_SELF: {
-        int k = GETARG_C(i);  /* key index */
-        rkname(p, pc, k, name);
+        rkname(p, pc, i, name);
         return "method";
       }
       default: break;  /* go through to return NULL */

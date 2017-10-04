@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.164 2017/10/02 22:51:32 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.165 2017/10/04 15:49:24 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -17,7 +17,7 @@
 
         3 3 2 2 2 2 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0
         1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-iABC    |       C(9)    | |     B(8)    | |     A(8)    | |   Op(7)   |
+iABC    |k|     C(8)    | |     B(8)    | |     A(8)    | |   Op(7)   |
 iABx    |            Bx(17)             | |     A(8)    | |   Op(7)   |
 iAsBx   |           sBx (signed)(17)    | |     A(8)    | |   Op(7)   |
 iAx     |                       Ax(25)                  | |   Op(7)   |
@@ -34,19 +34,21 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 /*
 ** size and position of opcode arguments.
 */
-#define SIZE_C		9
+#define SIZE_C		8
+#define SIZE_Cx		(SIZE_C + 1)
 #define SIZE_B		8
-#define SIZE_Bx		(SIZE_C + SIZE_B)
+#define SIZE_Bx		(SIZE_Cx + SIZE_B)
 #define SIZE_A		8
-#define SIZE_Ax		(SIZE_C + SIZE_B + SIZE_A)
+#define SIZE_Ax		(SIZE_Cx + SIZE_B + SIZE_A)
 
 #define SIZE_OP		7
 
 #define POS_OP		0
 #define POS_A		(POS_OP + SIZE_OP)
-#define POS_C		(POS_A + SIZE_A)
-#define POS_B		(POS_C + SIZE_C)
-#define POS_Bx		POS_C
+#define POS_B		(POS_A + SIZE_A)
+#define POS_C		(POS_B + SIZE_B)
+#define POS_k		(POS_C + SIZE_C)
+#define POS_Bx		POS_B
 #define POS_Ax		POS_A
 
 
@@ -70,10 +72,11 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 #endif
 
 
-#define MAXARG_A        ((1<<SIZE_A)-1)
-#define MAXARG_B        ((1<<SIZE_B)-1)
-#define MAXARG_C        ((1<<SIZE_C)-1)
-#define MAXARG_Cr        ((1<<(SIZE_C - 1))-1)
+#define MAXARG_A	((1<<SIZE_A)-1)
+#define MAXARG_B	((1<<SIZE_B)-1)
+#define MAXARG_C	((1<<SIZE_C)-1)
+#define MAXARG_sC	(MAXARG_C >> 1)
+#define MAXARG_Cx	((1<<(SIZE_C + 1))-1)
 
 
 /* creates a mask with 'n' 1 bits at position 'p' */
@@ -104,11 +107,10 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 #define SETARG_B(i,v)	setarg(i, v, POS_B, SIZE_B)
 
 #define GETARG_C(i)	check_exp(checkopm(i, iABC), getarg(i, POS_C, SIZE_C))
+#define GETARG_sC(i)	(GETARG_C(i) - MAXARG_sC)
 #define SETARG_C(i,v)	setarg(i, v, POS_C, SIZE_C)
 
-#define GETARG_Cr(i)  \
-	check_exp(checkopm(i, iABC), getarg(i, POS_C, SIZE_C - 1))
-#define GETARG_Ck(i)	getarg(i, (POS_C + SIZE_C - 1), 1)
+#define GETARG_k(i)	(cast(int, ((i) & (1 << POS_k))))
 
 #define GETARG_Bx(i)	check_exp(checkopm(i, iABx), getarg(i, POS_Bx, SIZE_Bx))
 #define SETARG_Bx(i,v)	setarg(i, v, POS_Bx, SIZE_Bx)
@@ -121,10 +123,11 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 #define SETARG_sBx(i,b)	SETARG_Bx((i),cast(unsigned int, (b)+MAXARG_sBx))
 
 
-#define CREATE_ABC(o,a,b,c)	((cast(Instruction, o)<<POS_OP) \
+#define CREATE_ABCk(o,a,b,c,k)	((cast(Instruction, o)<<POS_OP) \
 			| (cast(Instruction, a)<<POS_A) \
 			| (cast(Instruction, b)<<POS_B) \
-			| (cast(Instruction, c)<<POS_C))
+			| (cast(Instruction, c)<<POS_C)) \
+			| (cast(Instruction, k)<<POS_k)
 
 #define CREATE_ABx(o,a,bc)	((cast(Instruction, o)<<POS_OP) \
 			| (cast(Instruction, a)<<POS_A) \
@@ -134,25 +137,9 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 			| (cast(Instruction, a)<<POS_Ax))
 
 
-/*
-** Macros to operate RK indices
-*/
-
-/* this bit 1 means constant (0 means register) */
-#define BITRK		(1 << (SIZE_C - 1))
-
-/* test whether value is a constant */
-#define ISK(x)		((x) & BITRK)
-
-/* gets the index of the constant */
-#define INDEXK(r)	((int)(r) & ~BITRK)
-
 #if !defined(MAXINDEXRK)  /* (for debugging only) */
-#define MAXINDEXRK	(BITRK - 1)
+#define MAXINDEXRK	MAXARG_B
 #endif
-
-/* code a constant index as a RK value */
-#define RKASK(x)	((x) | BITRK)
 
 
 /*
@@ -164,7 +151,7 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 /*
 ** R(x) - register
 ** K(x) - constant (in constant table)
-** RK(x) == if ISK(x) then K(INDEXK(x)) else R(x)
+** RK(x) == if k(i) then K(x) else R(x)
 */
 
 
@@ -200,13 +187,13 @@ OP_NEWTABLE,/*	A B C	R(A) := {} (size = B,C)				*/
 
 OP_SELF,/*	A B C	R(A+1) := R(B); R(A) := R(B)[RK(C):string]	*/
 
-OP_ADDI,/*	A B C	R(A) := R(B) + C				*/
-OP_SUBI,/*	A B C	R(A) := R(B) - C				*/
-OP_MULI,/*	A B C	R(A) := R(B) * C				*/
-OP_MODI,/*	A B C	R(A) := R(B) % C				*/
-OP_POWI,/*	A B C	R(A) := R(B) ^ C				*/
-OP_DIVI,/*	A B C	R(A) := R(B) / C				*/
-OP_IDIVI,/*	A B C	R(A) := R(B) // C				*/
+OP_ADDI,/*	A B sC	R(A) := R(B) + C				*/
+OP_SUBI,/*	A B sC	R(A) := R(B) - C				*/
+OP_MULI,/*	A B sC	R(A) := R(B) * C				*/
+OP_MODI,/*	A B sC	R(A) := R(B) % C				*/
+OP_POWI,/*	A B sC	R(A) := R(B) ^ C				*/
+OP_DIVI,/*	A B sC	R(A) := R(B) / C				*/
+OP_IDIVI,/*	A B sC	R(A) := R(B) // C				*/
 
 OP_ADD,/*	A B C	R(A) := R(B) + R(C)				*/
 OP_SUB,/*	A B C	R(A) := R(B) - R(C)				*/

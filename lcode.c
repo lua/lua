@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.128 2017/10/02 22:50:57 roberto Exp roberto $
+** $Id: lcode.c,v 2.129 2017/10/04 15:49:24 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -202,7 +202,7 @@ static int patchtestreg (FuncState *fs, int node, int reg) {
   else {
      /* no register to put value or register already has the value;
         change instruction to simple test */
-    *i = CREATE_ABC(OP_TEST, GETARG_B(*i), 0, GETARG_C(*i));
+    *i = CREATE_ABCk(OP_TEST, GETARG_B(*i), 0, GETARG_C(*i), 0);
   }
   return 1;
 }
@@ -365,11 +365,16 @@ static int luaK_code (FuncState *fs, Instruction i) {
 ** Format and emit an 'iABC' instruction. (Assertions check consistency
 ** of parameters versus opcode.)
 */
-int luaK_codeABC (FuncState *fs, OpCode o, int a, int b, int c) {
+int luaK_codeABCk (FuncState *fs, OpCode o, int a, int b, int c, int k) {
   lua_assert(getOpMode(o) == iABC);
-  lua_assert(a <= MAXARG_A && b <= MAXARG_B && c <= MAXARG_C);
-  return luaK_code(fs, CREATE_ABC(o, a, b, c));
+  lua_assert(a <= MAXARG_A && b <= MAXARG_B &&
+             c <= MAXARG_C && (k & ~1) == 0);
+  return luaK_code(fs, CREATE_ABCk(o, a, b, c, k));
 }
+
+
+#define codeABsC(fs,o,a,b,c,k)	luaK_codeABCk(fs,o,a,b,((c) + MAXARG_sC),k)
+
 
 
 /*
@@ -448,7 +453,7 @@ void luaK_reserveregs (FuncState *fs, int n) {
 )
 */
 static void freereg (FuncState *fs, int reg) {
-  if (!ISK(reg) && reg >= fs->nactvar) {
+  if (reg >= fs->nactvar) {
     fs->freereg--;
     lua_assert(reg == fs->freereg);
   }
@@ -853,7 +858,7 @@ void luaK_exp2val (FuncState *fs, expdesc *e) {
 ** Ensures final expression result is in a valid R/K index
 ** (that is, it is either in a register or in 'k' with an index
 ** in the range of R/K indices).
-** Returns R/K index.
+** Returns 1 if expression is K, 0 otherwise.
 */
 int luaK_exp2RK (FuncState *fs, expdesc *e) {
   luaK_exp2val(fs, e);
@@ -867,12 +872,20 @@ int luaK_exp2RK (FuncState *fs, expdesc *e) {
      vk:
       e->k = VK;
       if (e->u.info <= MAXINDEXRK)  /* constant fits in 'argC'? */
-        return RKASK(e->u.info);
+        return 1;
       else break;
     default: break;
   }
   /* not a constant in the right range: put it in a register */
-  return luaK_exp2anyreg(fs, e);
+  luaK_exp2anyreg(fs, e);
+  return 0;
+}
+
+
+static void codeABRK (FuncState *fs, OpCode o, int a, int b,
+                      expdesc *ec) {
+  int k = luaK_exp2RK(fs, ec);
+  luaK_codeABCk(fs, o, a, b, ec->u.info, k);
 }
 
 
@@ -892,23 +905,19 @@ void luaK_storevar (FuncState *fs, expdesc *var, expdesc *ex) {
       break;
     }
     case VINDEXUP: {
-      int e = luaK_exp2RK(fs, ex);
-      luaK_codeABC(fs, OP_SETTABUP, var->u.ind.t, var->u.ind.idx, e);
+      codeABRK(fs, OP_SETTABUP, var->u.ind.t, var->u.ind.idx, ex);
       break;
     }
     case VINDEXI: {
-      int e = luaK_exp2RK(fs, ex);
-      luaK_codeABC(fs, OP_SETI, var->u.ind.t, var->u.ind.idx, e);
+      codeABRK(fs, OP_SETI, var->u.ind.t, var->u.ind.idx, ex);
       break;
     }
     case VINDEXSTR: {
-      int e = luaK_exp2RK(fs, ex);
-      luaK_codeABC(fs, OP_SETFIELD, var->u.ind.t, var->u.ind.idx, e);
+      codeABRK(fs, OP_SETFIELD, var->u.ind.t, var->u.ind.idx, ex);
       break;
     }
     case VINDEXED: {
-      int e = luaK_exp2RK(fs, ex);
-      luaK_codeABC(fs, OP_SETTABLE, var->u.ind.t, var->u.ind.idx, e);
+      codeABRK(fs, OP_SETTABLE, var->u.ind.t, var->u.ind.idx, ex);
       break;
     }
     default: lua_assert(0);  /* invalid var kind to store */
@@ -928,7 +937,7 @@ void luaK_self (FuncState *fs, expdesc *e, expdesc *key) {
   e->u.info = fs->freereg;  /* base register for op_self */
   e->k = VNONRELOC;  /* self expression has a fixed register */
   luaK_reserveregs(fs, 2);  /* function and 'self' produced by op_self */
-  luaK_codeABC(fs, OP_SELF, e->u.info, ereg, luaK_exp2RK(fs, key));
+  codeABRK(fs, OP_SELF, e->u.info, ereg, key);
   freeexp(fs, key);
 }
 
@@ -1064,11 +1073,21 @@ static int isKstr (FuncState *fs, expdesc *e) {
 
 /*
 ** Check whether expression 'e' is a literal integer in
-** proper range
+** proper range to fit in register C
 */
-static int isKint (expdesc *e) {
+static int isCint (expdesc *e) {
   return (e->k == VKINT && !hasjumps(e) &&
-          l_castS2U(e->u.ival) <= l_castS2U(MAXARG_Cr));
+          l_castS2U(e->u.ival) <= l_castS2U(MAXARG_C));
+}
+
+
+/*
+** Check whether expression 'e' is a literal integer in
+** proper range to fit in register sC
+*/
+static int isSCint (expdesc *e) {
+  return (e->k == VKINT && !hasjumps(e) &&
+          l_castS2U(e->u.ival + MAXARG_sC) <= l_castS2U(MAXARG_C));
 }
 
 
@@ -1091,7 +1110,7 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
     t->u.ind.idx = k->u.info;  /* literal string */
     t->k = VINDEXSTR;
   }
-  else if (isKint(k)) {
+  else if (isCint(k)) {
     t->u.ind.idx = k->u.ival;  /* integer constant */
     t->k = VINDEXI;
   }
@@ -1187,16 +1206,14 @@ static void codebinexpval (FuncState *fs, OpCode op,
 */
 static void codearith (FuncState *fs, OpCode op,
                        expdesc *e1, expdesc *e2, int flip, int line) {
-  if (!isKint(e2))
+  if (!isSCint(e2))
     codebinexpval(fs, op, e1, e2, line);  /* use standard operators */
   else {  /* use immediate operators */
     int v2 = cast_int(e2->u.ival);  /* immediate operand */
     int v1 = luaK_exp2anyreg(fs, e1);
-    if (flip)
-      v2 |= BITRK;  /* signal that operands were flipped */
     op = cast(OpCode, op - OP_ADD + OP_ADDI);
     freeexp(fs, e1);
-    e1->u.info = luaK_codeABC(fs, op, 0, v1, v2);  /* generate opcode */
+    e1->u.info = codeABsC(fs, op, 0, v1, v2, flip);  /* generate opcode */
     e1->k = VRELOCABLE;  /* all those operations are relocatable */
     luaK_fixline(fs, line);
   }
@@ -1210,7 +1227,7 @@ static void codearith (FuncState *fs, OpCode op,
 static void codecommutative (FuncState *fs, OpCode op,
                              expdesc *e1, expdesc *e2, int line) {
   int flip = 0;
-  if (isKint(e1)) {
+  if (isSCint(e1)) {
     expdesc temp = *e1; *e1 = *e2; *e2 = temp;  /* swap 'e1' and 'e2' */
     flip = 1;
   }
@@ -1223,8 +1240,7 @@ static void codecommutative (FuncState *fs, OpCode op,
 ** 'e1' was already put in register by 'luaK_infix'.
 */
 static void codecomp (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
-  int rk1 = (e1->k == VK) ? RKASK(e1->u.info)
-                          : check_exp(e1->k == VNONRELOC, e1->u.info);
+  int rk1 = check_exp(e1->k == VNONRELOC, e1->u.info);
   int rk2 = luaK_exp2anyreg(fs, e2);
   freeexps(fs, e1, e2);
   switch (opr) {
