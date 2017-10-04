@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.296 2017/09/28 16:53:29 roberto Exp roberto $
+** $Id: lvm.c,v 2.297 2017/10/01 19:13:43 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -663,7 +663,10 @@ void luaV_finishOp (lua_State *L) {
   Instruction inst = *(ci->u.l.savedpc - 1);  /* interrupted instruction */
   OpCode op = GET_OPCODE(inst);
   switch (op) {  /* finish its execution */
-    case OP_ADDI: case OP_ADD: case OP_SUB:
+    case OP_ADDI: case OP_SUBI:
+    case OP_MULI: case OP_DIVI: case OP_IDIVI:
+    case OP_MODI: case OP_POWI:
+    case OP_ADD: case OP_SUB:
     case OP_MUL: case OP_DIV: case OP_IDIV:
     case OP_BAND: case OP_BOR: case OP_BXOR: case OP_SHL: case OP_SHR:
     case OP_MOD: case OP_POW:
@@ -999,6 +1002,90 @@ void luaV_execute (lua_State *L) {
         }
         else
           Protect(luaT_trybiniTM(L, rb, ic, GETARG_Ck(i), ra, TM_ADD));
+        vmbreak;
+      }
+      vmcase(OP_SUBI) {
+        TValue *rb = vRB(i);
+        int ic = GETARG_Cr(i);
+        lua_Number nb;
+        if (ttisinteger(rb)) {
+          setivalue(s2v(ra), intop(-, ivalue(rb), ic));
+        }
+        else if (tonumberns(rb, nb)) {
+          setfltvalue(s2v(ra), luai_numsub(L, nb, cast_num(ic)));
+        }
+        else
+          Protect(luaT_trybiniTM(L, rb, ic, 0, ra, TM_SUB));
+        vmbreak;
+      }
+      vmcase(OP_MULI) {
+        TValue *rb = vRB(i);
+        int ic = GETARG_Cr(i);
+        lua_Number nb;
+        if (ttisinteger(rb)) {
+          setivalue(s2v(ra), intop(*, ivalue(rb), ic));
+        }
+        else if (tonumberns(rb, nb)) {
+          setfltvalue(s2v(ra), luai_nummul(L, nb, cast_num(ic)));
+        }
+        else
+          Protect(luaT_trybiniTM(L, rb, ic, GETARG_Ck(i), ra, TM_MUL));
+        vmbreak;
+      }
+      vmcase(OP_MODI) {
+        TValue *rb = vRB(i);
+        int ic = GETARG_Cr(i);
+        lua_Number nb;
+        if (ttisinteger(rb)) {
+          setivalue(s2v(ra), luaV_mod(L, ivalue(rb), ic));
+        }
+        else if (tonumberns(rb, nb)) {
+          lua_Number m;
+          lua_Number nc = cast_num(ic);
+          luai_nummod(L, nb, nc, m);
+          setfltvalue(s2v(ra), m);
+        }
+        else
+          Protect(luaT_trybiniTM(L, rb, ic, 0, ra, TM_MOD));
+        vmbreak;
+      }
+      vmcase(OP_POWI) {
+        TValue *rb = vRB(i);
+        int ic = GETARG_Cr(i);
+        lua_Number nb;
+        if (tonumberns(rb, nb)) {
+          lua_Number nc = cast_num(ic);
+          setfltvalue(s2v(ra), luai_numpow(L, nb, nc));
+        }
+        else
+          Protect(luaT_trybiniTM(L, rb, ic, 0, ra, TM_POW));
+        vmbreak;
+      }
+      vmcase(OP_DIVI) {
+        TValue *rb = vRB(i);
+        int ic = GETARG_Cr(i);
+        lua_Number nb;
+        if (tonumberns(rb, nb)) {
+          lua_Number nc = cast_num(ic);
+          setfltvalue(s2v(ra), luai_numdiv(L, nb, nc));
+        }
+        else
+          Protect(luaT_trybiniTM(L, rb, ic, 0, ra, TM_DIV));
+        vmbreak;
+      }
+      vmcase(OP_IDIVI) {
+        TValue *rb = vRB(i);
+        int ic = GETARG_Cr(i);
+        lua_Number nb;
+        if (ttisinteger(rb)) {
+          setivalue(s2v(ra), luaV_div(L, ivalue(rb), ic));
+        }
+        else if (tonumberns(rb, nb)) {
+          lua_Number nc = cast_num(ic);
+          setfltvalue(s2v(ra), luai_numdiv(L, nb, nc));
+        }
+        else
+          Protect(luaT_trybiniTM(L, rb, ic, 0, ra, TM_IDIV));
         vmbreak;
       }
       vmcase(OP_ADD) {

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.127 2017/10/01 19:13:43 roberto Exp roberto $
+** $Id: lcode.c,v 2.128 2017/10/02 22:50:57 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -1171,26 +1171,50 @@ static void codeunexpval (FuncState *fs, OpCode op, expdesc *e, int line) {
 */
 static void codebinexpval (FuncState *fs, OpCode op,
                            expdesc *e1, expdesc *e2, int line) {
-  int v1, v2;
-  if (op == OP_ADD && (isKint(e1) || isKint(e2))) {
-    if (isKint(e2)) {
-      v2 = cast_int(e2->u.ival);
-      v1 = luaK_exp2anyreg(fs, e1);
-    }
-    else {  /* exchange operands to make 2nd one a constant */
-      v2 = cast_int(e1->u.ival) | BITRK;  /* K bit signal the exchange */
-      v1 = luaK_exp2anyreg(fs, e2);
-    }
-    op = OP_ADDI;
-  }
-  else {
-    v2 = luaK_exp2anyreg(fs, e2);  /* both operands are in registers */
-    v1 = luaK_exp2anyreg(fs, e1);
-  }
+  int v2 = luaK_exp2anyreg(fs, e2);  /* both operands are in registers */
+  int v1 = luaK_exp2anyreg(fs, e1);
   freeexps(fs, e1, e2);
   e1->u.info = luaK_codeABC(fs, op, 0, v1, v2);  /* generate opcode */
   e1->k = VRELOCABLE;  /* all those operations are relocatable */
   luaK_fixline(fs, line);
+}
+
+
+/*
+** Code arithmetic operators ('+', '-', ...). If second operand is a
+** constant in the proper range, use variant opcodes with immediate
+** operands.
+*/
+static void codearith (FuncState *fs, OpCode op,
+                       expdesc *e1, expdesc *e2, int flip, int line) {
+  if (!isKint(e2))
+    codebinexpval(fs, op, e1, e2, line);  /* use standard operators */
+  else {  /* use immediate operators */
+    int v2 = cast_int(e2->u.ival);  /* immediate operand */
+    int v1 = luaK_exp2anyreg(fs, e1);
+    if (flip)
+      v2 |= BITRK;  /* signal that operands were flipped */
+    op = cast(OpCode, op - OP_ADD + OP_ADDI);
+    freeexp(fs, e1);
+    e1->u.info = luaK_codeABC(fs, op, 0, v1, v2);  /* generate opcode */
+    e1->k = VRELOCABLE;  /* all those operations are relocatable */
+    luaK_fixline(fs, line);
+  }
+}
+
+
+/*
+** Code commutative operators ('+', '*'). If first operand is a
+** constant, change order of operands to use immediate operator.
+*/
+static void codecommutative (FuncState *fs, OpCode op,
+                             expdesc *e1, expdesc *e2, int line) {
+  int flip = 0;
+  if (isKint(e1)) {
+    expdesc temp = *e1; *e1 = *e2; *e2 = temp;  /* swap 'e1' and 'e2' */
+    flip = 1;
+  }
+  codearith(fs, op, e1, e2, flip, line);
 }
 
 
@@ -1318,8 +1342,17 @@ void luaK_posfix (FuncState *fs, BinOpr op,
       }
       break;
     }
-    case OPR_ADD: case OPR_SUB: case OPR_MUL: case OPR_DIV:
-    case OPR_IDIV: case OPR_MOD: case OPR_POW:
+    case OPR_ADD: case OPR_MUL: {
+      if (!constfolding(fs, op + LUA_OPADD, e1, e2))
+        codecommutative(fs, cast(OpCode, op + OP_ADD), e1, e2, line);
+      break;
+    }
+    case OPR_SUB: case OPR_DIV:
+    case OPR_IDIV: case OPR_MOD: case OPR_POW: {
+      if (!constfolding(fs, op + LUA_OPADD, e1, e2))
+        codearith(fs, cast(OpCode, op + OP_ADD), e1, e2, 0, line);
+      break;
+    }
     case OPR_BAND: case OPR_BOR: case OPR_BXOR:
     case OPR_SHL: case OPR_SHR: {
       if (!constfolding(fs, op + LUA_OPADD, e1, e2))

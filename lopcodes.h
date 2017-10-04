@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.163 2017/10/01 19:13:43 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.164 2017/10/02 22:51:32 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -201,6 +201,13 @@ OP_NEWTABLE,/*	A B C	R(A) := {} (size = B,C)				*/
 OP_SELF,/*	A B C	R(A+1) := R(B); R(A) := R(B)[RK(C):string]	*/
 
 OP_ADDI,/*	A B C	R(A) := R(B) + C				*/
+OP_SUBI,/*	A B C	R(A) := R(B) - C				*/
+OP_MULI,/*	A B C	R(A) := R(B) * C				*/
+OP_MODI,/*	A B C	R(A) := R(B) % C				*/
+OP_POWI,/*	A B C	R(A) := R(B) ^ C				*/
+OP_DIVI,/*	A B C	R(A) := R(B) / C				*/
+OP_IDIVI,/*	A B C	R(A) := R(B) // C				*/
+
 OP_ADD,/*	A B C	R(A) := R(B) + R(C)				*/
 OP_SUB,/*	A B C	R(A) := R(B) - R(C)				*/
 OP_MUL,/*	A B C	R(A) := R(B) * R(C)				*/
