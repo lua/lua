@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.165 2017/09/13 19:50:08 roberto Exp roberto $
+** $Id: lparser.c,v 2.166 2017/09/28 16:53:29 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1564,8 +1564,9 @@ static void exprstat (LexState *ls) {
     assignment(ls, &v, 1);
   }
   else {  /* stat -> func */
+    Instruction *inst = &getinstruction(fs, &v.v);
     check_condition(ls, v.v.k == VCALL, "syntax error");
-    SETARG_C(getinstruction(fs, &v.v), 1);  /* call statement uses no results */
+    SETARG_C(*inst, 1);  /* call statement uses no results */
   }
 }
 
