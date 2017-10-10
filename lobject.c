@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.116 2017/06/29 15:06:44 roberto Exp roberto $
+** $Id: lobject.c,v 2.117 2017/07/07 16:34:32 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -135,7 +135,7 @@ int luaO_rawarith (lua_State *L, int op, const TValue *p1, const TValue *p2,
     }
     case LUA_OPDIV: case LUA_OPPOW: {  /* operate only on floats */
       lua_Number n1; lua_Number n2;
-      if (tonumber(p1, &n1) && tonumber(p2, &n2)) {
+      if (tonumberns(p1, n1) && tonumberns(p2, n2)) {
         setfltvalue(res, numarith(L, op, n1, n2));
         return 1;
       }
