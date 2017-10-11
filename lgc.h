@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.97 2017/05/04 13:32:01 roberto Exp roberto $
+** $Id: lgc.h,v 2.98 2017/05/26 19:14:29 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -119,10 +119,20 @@
 
 /* Default Values for GC parameters */
 #define LUAI_GENMAJORMUL         100
-#define LUAI_GENMINORMUL         5
+#define LUAI_GENMINORMUL         12
 
-#define LUAI_GCPAUSE    100     /* 100% */
-#define LUAI_GCMUL      10
+/* wait memory to double before starting new cycle */
+#define LUAI_GCPAUSE    200     /* 200% */
+
+/*
+** gc parameters are stored divided by 4 to allow a maximum value larger
+** than 1000 in an 'lu_byte'.
+*/
+#define getgcparam(p)	((p) * 4)
+#define setgcparam(p,v)	((p) = (v) / 4)
+
+#define LUAI_GCMUL      100
+
 /* how much to allocate before next GC step (log2) */
 #define LUAI_GCSTEPSIZE 13      /* 8 KB */
 

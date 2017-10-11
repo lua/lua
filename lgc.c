@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.233 2017/06/29 15:06:44 roberto Exp roberto $
+** $Id: lgc.c,v 2.234 2017/08/31 16:06:51 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -47,9 +47,9 @@
 
 /*
 ** The equivalent, in bytes, of one unit of "work" (visiting a slot,
-** sweeping an object, etc.) * 10 (for scaling)
+** sweeping an object, etc.)
 */
-#define WORK2MEM	(sizeof(TValue) * 10)
+#define WORK2MEM	sizeof(TValue)
 
 
 /*
@@ -1256,14 +1256,14 @@ static void fullgen (lua_State *L, global_State *g) {
 ** than last major collection (kept in 'g->GCestimate'), does a major
 ** collection. Otherwise, does a minor collection and set debt to make
 ** another collection when memory grows 'genminormul'% larger.
-** 'GCdebt <= 0' means an explicity call to GC step with "size" zero;
+** 'GCdebt <= 0' means an explicit call to GC step with "size" zero;
 ** in that case, always do a minor collection.
 */
 static void genstep (lua_State *L, global_State *g) {
   lu_mem majorbase = g->GCestimate;
-//lua_checkmemory(L);
+  int majormul = getgcparam(g->genmajormul);
   if (g->GCdebt > 0 &&
-      gettotalbytes(g) > (majorbase / 100) * (100 + g->genmajormul)) {
+      gettotalbytes(g) > (majorbase / 100) * (100 + majormul)) {
     fullgen(L, g);
   }
   else {
@@ -1273,7 +1273,6 @@ static void genstep (lua_State *L, global_State *g) {
     luaE_setdebt(g, -((mem / 100) * g->genminormul));
     g->GCestimate = majorbase;  /* preserve base value */
   }
-//lua_checkmemory(L);
 }
 
 /* }====================================================== */
@@ -1288,13 +1287,13 @@ static void genstep (lua_State *L, global_State *g) {
 
 /*
 ** Set the "time" to wait before starting a new GC cycle; cycle will
-** start when memory use hits the threshold of ('estimate' * gcpause /
+** start when memory use hits the threshold of ('estimate' * pause /
 ** PAUSEADJ). (Division by 'estimate' should be OK: it cannot be zero,
 ** because Lua cannot even start with less than PAUSEADJ bytes).
 */
 static void setpause (global_State *g) {
   l_mem threshold, debt;
-  int pause = g->gcpause + 100;
+  int pause = getgcparam(g->gcpause);
   l_mem estimate = g->GCestimate / PAUSEADJ;  /* adjust 'estimate' */
   lua_assert(estimate > 0);
   threshold = (pause < MAX_LMEM / estimate)  /* overflow? */
@@ -1482,16 +1481,15 @@ void luaC_runtilstate (lua_State *L, int statesmask) {
 ** controls when next step will be performed.
 */
 static void incstep (lua_State *L, global_State *g) {
-  int stepmul = (g->gcstepmul | 1);  /* avoid division by 0 */
+  int stepmul = (getgcparam(g->gcstepmul) | 1);  /* avoid division by 0 */
   l_mem debt = (g->GCdebt / WORK2MEM) * stepmul;
   l_mem stepsize = (g->gcstepsize <= log2maxs(l_mem))
-                   ? cast(l_mem, 1) << g->gcstepsize
-                   : MAX_LMEM;
-  stepsize = -((stepsize / WORK2MEM) * stepmul);
+                 ? ((cast(l_mem, 1) << g->gcstepsize) / WORK2MEM) * stepmul
+                 : MAX_LMEM;  /* overflow; keep maximum value */
   do {  /* repeat until pause or enough "credit" (negative debt) */
     lu_mem work = singlestep(L);  /* perform one single step */
     debt -= work;
-  } while (debt > stepsize && g->gcstate != GCSpause);
+  } while (debt > -stepsize && g->gcstate != GCSpause);
   if (g->gcstate == GCSpause)
     setpause(g);  /* pause until next cycle */
   else {

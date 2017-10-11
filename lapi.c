@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.269 2017/06/01 20:22:33 roberto Exp roberto $
+** $Id: lapi.c,v 2.270 2017/06/29 15:06:44 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1114,14 +1114,14 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
     }
     case LUA_GCSETPAUSE: {
       int data = va_arg(argp, int);
-      res = g->gcpause + 100;
-      g->gcpause = (data >= 100) ? data - 100 : 0;
+      res = getgcparam(g->gcpause);
+      setgcparam(g->gcpause, data);
       break;
     }
     case LUA_GCSETSTEPMUL: {
       int data = va_arg(argp, int);
-      res = g->gcstepmul * 10;
-      g->gcstepmul = data / 10;
+      res = getgcparam(g->gcstepmul);
+      setgcparam(g->gcstepmul, data);
       break;
     }
     case LUA_GCISRUNNING: {
@@ -1131,8 +1131,10 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
     case LUA_GCGEN: {
       int minormul = va_arg(argp, int);
       int majormul = va_arg(argp, int);
-      g->genminormul = (minormul == 0) ? LUAI_GENMINORMUL : minormul;
-      g->genmajormul = (majormul == 0) ? LUAI_GENMAJORMUL : majormul;
+      if (minormul != 0)
+        g->genminormul = minormul;
+      if (majormul != 0)
+        setgcparam(g->genmajormul, majormul);
       luaC_changemode(L, KGC_GEN);
       break;
     }
@@ -1140,9 +1142,12 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       int pause = va_arg(argp, int);
       int stepmul = va_arg(argp, int);
       int stepsize = va_arg(argp, int);
-      g->gcpause = (pause == 0) ? LUAI_GCPAUSE : pause;
-      g->gcstepmul = (stepmul == 0) ? LUAI_GCMUL : stepmul;
-      g->gcstepsize = (stepsize == 0) ? LUAI_GCSTEPSIZE : stepsize;
+      if (pause != 0)
+        setgcparam(g->gcpause, pause);
+      if (stepmul != 0)
+        setgcparam(g->gcstepmul, stepmul);
+      if (stepsize != 0)
+        g->gcstepsize = stepsize;
       luaC_changemode(L, KGC_INC);
       break;
     }
