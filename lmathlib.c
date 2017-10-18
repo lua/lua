@@ -4,6 +4,10 @@
 ** See Copyright Notice in lua.h
 */
 
+/*
+ * Tarptaeya modified mathematical library for lua
+ */
+
 #define lmathlib_c
 #define LUA_LIB
 
@@ -37,6 +41,8 @@
 
 
 static int math_abs (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n == 1, 1, "math.abs takes exactly one parameter");
   if (lua_isinteger(L, 1)) {
     lua_Integer n = lua_tointeger(L, 1);
     if (n < 0) n = (lua_Integer)(0u - (lua_Unsigned)n);
@@ -48,31 +54,43 @@ static int math_abs (lua_State *L) {
 }
 
 static int math_sin (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n == 1, 1, "math.sin takes exactly one parameter");
   lua_pushnumber(L, l_mathop(sin)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_cos (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n == 1, 1, "math.cos takes exactly one parameter");
   lua_pushnumber(L, l_mathop(cos)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_tan (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n == 1, 1, "math.tan takes exactly one parameter");
   lua_pushnumber(L, l_mathop(tan)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_asin (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n == 1, 1, "math.asin takes exactly one parameter");
   lua_pushnumber(L, l_mathop(asin)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_acos (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n == 1, 1, "math.acos takes exactly one parameter");
   lua_pushnumber(L, l_mathop(acos)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_atan (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, 2 >= n >= 1, 1, "math.exp takes either one or two parameter(s)");
   lua_Number y = luaL_checknumber(L, 1);
   lua_Number x = luaL_optnumber(L, 2, 1);
   lua_pushnumber(L, l_mathop(atan2)(y, x));
@@ -81,6 +99,7 @@ static int math_atan (lua_State *L) {
 
 
 static int math_toint (lua_State *L) {
+  // TODO radix to convert to integer
   int valid;
   lua_Integer n = lua_tointegerx(L, 1, &valid);
   if (valid)
@@ -103,6 +122,8 @@ static void pushnumint (lua_State *L, lua_Number d) {
 
 
 static int math_floor (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n == 1, 1, "math.floor takes exactly one parameter");
   if (lua_isinteger(L, 1))
     lua_settop(L, 1);  /* integer is its own floor */
   else {
@@ -114,6 +135,8 @@ static int math_floor (lua_State *L) {
 
 
 static int math_ceil (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n == 1, 1, "math.ceil takes exactly one parameter");
   if (lua_isinteger(L, 1))
     lua_settop(L, 1);  /* integer is its own ceil */
   else {
@@ -125,6 +148,8 @@ static int math_ceil (lua_State *L) {
 
 
 static int math_fmod (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n == 2, 1, "math.exp takes exactly two parameters");
   if (lua_isinteger(L, 1) && lua_isinteger(L, 2)) {
     lua_Integer d = lua_tointeger(L, 2);
     if ((lua_Unsigned)d + 1u <= 1u) {  /* special cases: -1 or 0 */
@@ -147,6 +172,8 @@ static int math_fmod (lua_State *L) {
 ** 'double'.
 */
 static int math_modf (lua_State *L) {
+  int n_ = lua_gettop(L);
+  luaL_argcheck(L, n_ == 1, 1, "math.modf takes exactly two parameter");
   if (lua_isinteger(L ,1)) {
     lua_settop(L, 1);  /* number is its own integer part */
     lua_pushnumber(L, 0);  /* no fractional part */
@@ -164,12 +191,16 @@ static int math_modf (lua_State *L) {
 
 
 static int math_sqrt (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n == 1, 1, "math.sqrt takes exactly one parameter");
   lua_pushnumber(L, l_mathop(sqrt)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 
 static int math_ult (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n == 1, 1, "math.ult takes exactly two parameters");
   lua_Integer a = luaL_checkinteger(L, 1);
   lua_Integer b = luaL_checkinteger(L, 2);
   lua_pushboolean(L, (lua_Unsigned)a < (lua_Unsigned)b);
@@ -177,6 +208,8 @@ static int math_ult (lua_State *L) {
 }
 
 static int math_log (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, 2 >= n >= 1, 1, "math.log takes either one or two parameters");
   lua_Number x = luaL_checknumber(L, 1);
   lua_Number res;
   if (lua_isnoneornil(L, 2))
@@ -197,16 +230,22 @@ static int math_log (lua_State *L) {
 }
 
 static int math_exp (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n == 1, 1, "math.exp takes exactly one parameter");
   lua_pushnumber(L, l_mathop(exp)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_deg (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n == 1, 1, "math.deg takes exactly one parameter");
   lua_pushnumber(L, luaL_checknumber(L, 1) * (l_mathop(180.0) / PI));
   return 1;
 }
 
 static int math_rad (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n == 1, 1, "math.rad takes exactly one parameter");
   lua_pushnumber(L, luaL_checknumber(L, 1) * (PI / l_mathop(180.0)));
   return 1;
 }
@@ -304,21 +343,30 @@ static int math_type (lua_State *L) {
 #if defined(LUA_COMPAT_MATHLIB)
 
 static int math_cosh (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n == 1, 1, "math.cosh takes exactly one parameter");
   lua_pushnumber(L, l_mathop(cosh)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_sinh (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n == 1, 1, "math.sinh takes exactly one parameter");
   lua_pushnumber(L, l_mathop(sinh)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_tanh (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n == 1, 1, "math.tan takes exactly one parameter");
   lua_pushnumber(L, l_mathop(tanh)(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_pow (lua_State *L) {
+  // TODO : power like in python pow
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n == 2, 1, "math.pow takes exactly one parameter");
   lua_Number x = luaL_checknumber(L, 1);
   lua_Number y = luaL_checknumber(L, 2);
   lua_pushnumber(L, l_mathop(pow)(x, y));
@@ -333,6 +381,8 @@ static int math_frexp (lua_State *L) {
 }
 
 static int math_ldexp (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n == 2, 1, "math.ldexp takes exactly one parameter");
   lua_Number x = luaL_checknumber(L, 1);
   int ep = (int)luaL_checkinteger(L, 2);
   lua_pushnumber(L, l_mathop(ldexp)(x, ep));
@@ -340,6 +390,8 @@ static int math_ldexp (lua_State *L) {
 }
 
 static int math_log10 (lua_State *L) {
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n == 1, 1, "math.log10 takes exactly one parameter");
   lua_pushnumber(L, l_mathop(log10)(luaL_checknumber(L, 1)));
   return 1;
 }
