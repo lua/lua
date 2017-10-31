@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.298 2017/10/04 15:49:24 roberto Exp roberto $
+** $Id: lvm.c,v 2.299 2017/10/04 21:56:32 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1390,6 +1390,7 @@ void luaV_execute (lua_State *L) {
           oci->u.l.savedpc = nci->u.l.savedpc;
           oci->callstatus |= CIST_TAIL;  /* function was tail called */
           ci = L->ci = oci;  /* remove new frame */
+          L->func = ofunc;
           lua_assert(L->top ==
                      oci->func + 1 + getproto(s2v(ofunc))->maxstacksize);
           goto newframe;  /* restart luaV_execute over new Lua function */

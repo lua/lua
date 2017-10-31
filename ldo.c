@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.161 2017/06/29 15:06:44 roberto Exp roberto $
+** $Id: ldo.c,v 2.162 2017/07/27 13:50:16 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -160,6 +160,7 @@ static void correctstack (lua_State *L, StkId oldstack) {
   CallInfo *ci;
   UpVal *up;
   L->top = (L->top - oldstack) + L->stack;
+  L->func = (L->func - oldstack) + L->stack;
   for (up = L->openupval; up != NULL; up = up->u.open.next)
     up->v = s2v((uplevel(up) - oldstack) + L->stack);
   for (ci = L->ci; ci != NULL; ci = ci->previous) {
@@ -369,6 +370,8 @@ int luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres) {
   }
   res = ci->func;  /* res == final position of 1st result */
   L->ci = ci->previous;  /* back to caller */
+  L->func -= L->func->stkci.previous;
+  lua_assert(L->func == L->ci->func);
   /* move results to proper place */
   return moveresults(L, firstResult, res, nres, wanted);
 }
@@ -400,7 +403,8 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       checkstackp(L, LUA_MINSTACK, func);  /* ensure minimum stack size */
       ci = next_ci(L);  /* now 'enter' new function */
       ci->nresults = nresults;
-      ci->func = func;
+      func->stkci.previous = func - L->func;
+      L->func = ci->func = func;
       ci->top = L->top + LUA_MINSTACK;
       lua_assert(ci->top <= L->stack_last);
       ci->callstatus = 0;
@@ -424,7 +428,8 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
         luaT_adjustvarargs(L, p, n);
       ci = next_ci(L);  /* now 'enter' new function */
       ci->nresults = nresults;
-      ci->func = func;
+      func->stkci.previous = func - L->func;
+      L->func = ci->func = func;
       L->top = ci->top = func + 1 + fsize;
       lua_assert(ci->top <= L->stack_last);
       ci->u.l.savedpc = p->code;  /* starting point */
@@ -558,6 +563,7 @@ static int recover (lua_State *L, int status) {
   luaF_close(L, oldtop);
   seterrorobj(L, status, oldtop);
   L->ci = ci;
+  L->func = ci->func;
   L->allowhook = getoah(ci->callstatus);  /* restore original 'allowhook' */
   L->nny = 0;  /* should be zero to be yieldable */
   luaD_shrinkstack(L);
@@ -693,6 +699,7 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
                 ptrdiff_t old_top, ptrdiff_t ef) {
   int status;
   CallInfo *old_ci = L->ci;
+  ptrdiff_t oldfunc = savestack(L, L->func);
   lu_byte old_allowhooks = L->allowhook;
   unsigned short old_nny = L->nny;
   ptrdiff_t old_errfunc = L->errfunc;
@@ -703,6 +710,7 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
     luaF_close(L, oldtop);  /* close possible pending closures */
     seterrorobj(L, status, oldtop);
     L->ci = old_ci;
+    L->func = restorestack(L, oldfunc);
     L->allowhook = old_allowhooks;
     L->nny = old_nny;
     luaD_shrinkstack(L);

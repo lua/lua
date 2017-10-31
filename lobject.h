@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.124 2017/06/27 11:35:31 roberto Exp roberto $
+** $Id: lobject.h,v 2.125 2017/06/29 15:06:44 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -311,6 +311,10 @@ typedef struct TValue {
 
 typedef union StackValue {
   TValue val;
+  struct {
+    TValuefields;
+    unsigned short previous;  /* difference to previous 'func' */
+  } stkci;
 } StackValue;
 
 
