@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.234 2017/08/31 16:06:51 roberto Exp roberto $
+** $Id: lgc.c,v 2.235 2017/10/11 12:38:45 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -1503,12 +1503,12 @@ static void incstep (lua_State *L, global_State *g) {
 */
 void luaC_step (lua_State *L) {
   global_State *g = G(L);
-  if (!g->gcrunning)  /* not running? */
-    luaE_setdebt(g, -MAX_LMEM);  /* avoid being called without need */
-  else if (g->gckind == KGC_INC)
-    incstep(L, g);
-  else
-    genstep(L, g);
+  if (g->gcrunning) {  /* running? */
+    if (g->gckind == KGC_INC)
+      incstep(L, g);
+    else
+      genstep(L, g);
+  }
 }
 
 
