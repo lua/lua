@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.131 2017/10/04 15:49:24 roberto Exp roberto $
+** $Id: ldebug.c,v 2.132 2017/10/04 21:56:32 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -627,10 +627,10 @@ static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
 ** not ISO C, but it should not crash a program; the subsequent
 ** checks are ISO C and ensure a correct result.
 */
-static int isinstack (CallInfo *ci, const TValue *o) {
-  StkId base = ci->func + 1;
+static int isinstack (lua_State *L, const TValue *o) {
+  StkId base = L->stack;
   ptrdiff_t i = cast(StkId, o) - base;
-  return (0 <= i && i < (ci->top - base) && s2v(base + i) == o);
+  return (0 <= i && i < (L->top - base) && s2v(base + i) == o);
 }
 
 
@@ -659,7 +659,7 @@ static const char *varinfo (lua_State *L, const TValue *o) {
   const char *kind = NULL;
   if (isLua(ci)) {
     kind = getupvalname(ci, o, &name);  /* check whether 'o' is an upvalue */
-    if (!kind && isinstack(ci, o))  /* no? try a register */
+    if (!kind && isinstack(L, o))  /* no? try a register */
       kind = getobjname(ci_func(ci)->p, currentpc(ci),
                         cast_int(cast(StkId, o) - (ci->func + 1)), &name);
   }
