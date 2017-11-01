@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.162 2017/07/27 13:50:16 roberto Exp roberto $
+** $Id: ldo.c,v 2.163 2017/10/31 17:54:35 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -368,7 +368,7 @@ int luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres) {
     }
     L->oldpc = ci->previous->u.l.savedpc;  /* 'oldpc' for caller function */
   }
-  res = ci->func;  /* res == final position of 1st result */
+  res = L->func;  /* res == final position of 1st result */
   L->ci = ci->previous;  /* back to caller */
   L->func -= L->func->stkci.previous;
   lua_assert(L->func == L->ci->func);
@@ -604,7 +604,7 @@ static void resume (lua_State *L, void *ud) {
   else {  /* resuming from previous yield */
     lua_assert(L->status == LUA_YIELD);
     L->status = LUA_OK;  /* mark that it is running (again) */
-    ci->func = restorestack(L, ci->extra);
+    L->func = ci->func = restorestack(L, ci->extra);
     if (isLua(ci))  /* yielded inside a hook? */
       luaV_execute(L);  /* just continue running Lua code */
     else {  /* 'common' yield */
@@ -679,14 +679,14 @@ LUA_API int lua_yieldk (lua_State *L, int nresults, lua_KContext ctx,
       luaG_runerror(L, "attempt to yield from outside a coroutine");
   }
   L->status = LUA_YIELD;
-  ci->extra = savestack(L, ci->func);  /* save current 'func' */
+  ci->extra = savestack(L, L->func);  /* save current 'func' */
   if (isLua(ci)) {  /* inside a hook? */
     api_check(L, k == NULL, "hooks cannot continue after yielding");
   }
   else {
     if ((ci->u.c.k = k) != NULL)  /* is there a continuation? */
       ci->u.c.ctx = ctx;  /* save context */
-    ci->func = L->top - nresults - 1;  /* protect stack below results */
+    L->func = ci->func = L->top - nresults - 1;  /* protect stack below results */
     luaD_throw(L, LUA_YIELD);
   }
   lua_assert(ci->callstatus & CIST_HOOKED);  /* must be inside a hook */

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.132 2017/10/04 21:56:32 roberto Exp roberto $
+** $Id: ldebug.c,v 2.133 2017/10/31 17:14:02 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -116,7 +116,7 @@ static void swapextra (lua_State *L) {
   if (L->status == LUA_YIELD) {
     CallInfo *ci = L->ci;  /* get function that yielded */
     StkId temp = ci->func;  /* exchange its 'func' and 'extra' values */
-    ci->func = restorestack(L, ci->extra);
+    L->func = ci->func = restorestack(L, ci->extra);
     ci->extra = savestack(L, temp);
   }
 }
@@ -661,7 +661,7 @@ static const char *varinfo (lua_State *L, const TValue *o) {
     kind = getupvalname(ci, o, &name);  /* check whether 'o' is an upvalue */
     if (!kind && isinstack(L, o))  /* no? try a register */
       kind = getobjname(ci_func(ci)->p, currentpc(ci),
-                        cast_int(cast(StkId, o) - (ci->func + 1)), &name);
+                        cast_int(cast(StkId, o) - (L->func + 1)), &name);
   }
   return (kind) ? luaO_pushfstring(L, " (%s '%s')", kind, name) : "";
 }
@@ -790,7 +790,7 @@ void luaG_traceexec (lua_State *L) {
       L->hookcount = 1;  /* undo decrement to zero */
     ci->u.l.savedpc--;  /* undo increment (resume will increment it again) */
     ci->callstatus |= CIST_HOOKYIELD;  /* mark that it yielded */
-    ci->func = L->top - 1;  /* protect stack below results */
+    L->func = ci->func = L->top - 1;  /* protect stack below results */
     luaD_throw(L, LUA_YIELD);
   }
 }

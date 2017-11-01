@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.270 2017/06/29 15:06:44 roberto Exp roberto $
+** $Id: lapi.c,v 2.271 2017/10/11 12:38:45 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -60,13 +60,13 @@ const char lua_ident[] =
 static TValue *index2value (lua_State *L, int idx) {
   CallInfo *ci = L->ci;
   if (idx > 0) {
-    StkId o = ci->func + idx;
-    api_check(L, idx <= ci->top - (ci->func + 1), "unacceptable index");
+    StkId o = L->func + idx;
+    api_check(L, idx <= ci->top - (L->func + 1), "unacceptable index");
     if (o >= L->top) return NONVALIDVALUE;
     else return s2v(o);
   }
   else if (!ispseudo(idx)) {  /* negative index */
-    api_check(L, idx != 0 && -idx <= L->top - (ci->func + 1), "invalid index");
+    api_check(L, idx != 0 && -idx <= L->top - (L->func + 1), "invalid index");
     return s2v(L->top + idx);
   }
   else if (idx == LUA_REGISTRYINDEX)
@@ -74,10 +74,10 @@ static TValue *index2value (lua_State *L, int idx) {
   else {  /* upvalues */
     idx = LUA_REGISTRYINDEX - idx;
     api_check(L, idx <= MAXUPVAL + 1, "upvalue index too large");
-    if (ttislcf(s2v(ci->func)))  /* light C function? */
+    if (ttislcf(s2v(L->func)))  /* light C function? */
       return NONVALIDVALUE;  /* it has no upvalues */
     else {
-      CClosure *func = clCvalue(s2v(ci->func));
+      CClosure *func = clCvalue(s2v(L->func));
       return (idx <= func->nupvalues) ? &func->upvalue[idx-1] : NONVALIDVALUE;
     }
   }
@@ -85,14 +85,13 @@ static TValue *index2value (lua_State *L, int idx) {
 
 
 static StkId index2stack (lua_State *L, int idx) {
-  CallInfo *ci = L->ci;
   if (idx > 0) {
-    StkId o = ci->func + idx;
+    StkId o = L->func + idx;
     api_check(L, o < L->top, "unacceptable index");
     return o;
   }
   else {    /* non-positive index */
-    api_check(L, idx != 0 && -idx <= L->top - (ci->func + 1), "invalid index");
+    api_check(L, idx != 0 && -idx <= L->top - (L->func + 1), "invalid index");
     api_check(L, !ispseudo(idx), "invalid index");
     return L->top + idx;
   }
@@ -175,17 +174,17 @@ LUA_API const lua_Number *lua_version (lua_State *L) {
 LUA_API int lua_absindex (lua_State *L, int idx) {
   return (idx > 0 || ispseudo(idx))
          ? idx
-         : cast_int(L->top - L->ci->func) + idx;
+         : cast_int(L->top - L->func) + idx;
 }
 
 
 LUA_API int lua_gettop (lua_State *L) {
-  return cast_int(L->top - (L->ci->func + 1));
+  return cast_int(L->top - (L->func + 1));
 }
 
 
 LUA_API void lua_settop (lua_State *L, int idx) {
-  StkId func = L->ci->func;
+  StkId func = L->func;
   lua_lock(L);
   if (idx >= 0) {
     api_check(L, idx <= L->stack_last - (func + 1), "new top too large");
@@ -243,7 +242,7 @@ LUA_API void lua_copy (lua_State *L, int fromidx, int toidx) {
   api_checkvalidindex(L, to);
   setobj(L, to, fr);
   if (isupvalue(toidx))  /* function upvalue? */
-    luaC_barrier(L, clCvalue(s2v(L->ci->func)), fr);
+    luaC_barrier(L, clCvalue(s2v(L->func)), fr);
   /* LUA_REGISTRYINDEX does not need gc barrier
      (collector revisits it before finishing collection) */
   lua_unlock(L);
