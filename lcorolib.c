@@ -1,5 +1,5 @@
 /*
-** $Id: lcorolib.c,v 1.9 2014/11/02 19:19:04 roberto Exp roberto $
+** $Id: lcorolib.c,v 1.10 2016/04/11 19:19:55 roberto Exp roberto $
 ** Coroutine Library
 ** See Copyright Notice in lua.h
 */
@@ -26,7 +26,7 @@ static lua_State *getco (lua_State *L) {
 
 
 static int auxresume (lua_State *L, lua_State *co, int narg) {
-  int status;
+  int status, nres;
   if (!lua_checkstack(co, narg)) {
     lua_pushliteral(L, "too many arguments to resume");
     return -1;  /* error flag */
@@ -36,9 +36,8 @@ static int auxresume (lua_State *L, lua_State *co, int narg) {
     return -1;  /* error flag */
   }
   lua_xmove(L, co, narg);
-  status = lua_resume(co, L, narg);
+  status = lua_resume(co, L, narg, &nres);
   if (status == LUA_OK || status == LUA_YIELD) {
-    int nres = lua_gettop(co);
     if (!lua_checkstack(L, nres + 1)) {
       lua_pop(co, nres);  /* remove results anyway */
       lua_pushliteral(L, "too many results to resume");

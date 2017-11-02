@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.144 2017/07/27 13:50:16 roberto Exp roberto $
+** $Id: lstate.h,v 2.145 2017/10/31 17:54:35 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -83,12 +83,6 @@ typedef struct stringtable {
 
 /*
 ** Information about a call.
-** When a thread yields, 'func' is adjusted to pretend that the
-** top function has only the yielded values in its stack; in that
-** case, the actual 'func' value is saved in field 'extra'.
-** When a function calls another with a continuation, 'extra' keeps
-** the function index so that, in case of errors, the continuation
-** function can be called with the correct top.
 */
 typedef struct CallInfo {
   StkId func;  /* function index in the stack */
@@ -104,7 +98,10 @@ typedef struct CallInfo {
       lua_KContext ctx;  /* context info. in case of yields */
     } c;
   } u;
-  ptrdiff_t extra;
+  union {
+    ptrdiff_t funcidx;  /* called-function index */
+    int nyield;  /* number of values yielded */
+  } u2;
   short nresults;  /* expected number of results from this function */
   unsigned short callstatus;
 } CallInfo;

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.225 2017/10/04 21:56:32 roberto Exp roberto $
+** $Id: ltests.c,v 2.226 2017/11/01 18:20:48 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -309,13 +309,10 @@ static void checkLclosure (global_State *g, LClosure *cl) {
 }
 
 
-static int lua_checkpc (lua_State *L, CallInfo *ci) {
+static int lua_checkpc (CallInfo *ci) {
   if (!isLua(ci)) return 1;
   else {
-    /* if function yielded (inside a hook), real 'func' is in 'extra' field */
-    StkId f = (L->status != LUA_YIELD || ci != L->ci)
-              ? ci->func
-              : restorestack(L, ci->extra);
+    StkId f = ci->func;
     Proto *p = clLvalue(s2v(f))->p;
     return p->code <= ci->u.l.savedpc &&
            ci->u.l.savedpc <= p->code + p->sizecode;
@@ -332,7 +329,7 @@ static void checkstack (global_State *g, lua_State *L1) {
     lua_assert(upisopen(uv));  /* must be open */
   for (ci = L1->ci; ci != NULL; ci = ci->previous) {
     lua_assert(ci->top <= L1->stack_last);
-    lua_assert(lua_checkpc(L1, ci));
+    lua_assert(lua_checkpc(ci));
   }
   if (L1->stack) {  /* complete thread? */
     for (o = L1->stack; o < L1->stack_last + EXTRA_STACK; o++)
@@ -1411,7 +1408,8 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     }
     else if EQ("resume") {
       int i = getindex;
-      status = lua_resume(lua_tothread(L1, i), L, getnum);
+      int nres;
+      status = lua_resume(lua_tothread(L1, i), L, getnum, &nres);
     }
     else if EQ("return") {
       int n = getnum;
@@ -1616,10 +1614,10 @@ static int sethook (lua_State *L) {
 
 
 static int coresume (lua_State *L) {
-  int status;
+  int status, nres;
   lua_State *co = lua_tothread(L, 1);
   luaL_argcheck(L, co, 1, "coroutine expected");
-  status = lua_resume(co, L, 0);
+  status = lua_resume(co, L, 0, &nres);
   if (status != LUA_OK && status != LUA_YIELD) {
     lua_pushboolean(L, 0);
     lua_insert(L, -2);

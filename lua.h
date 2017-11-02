@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.335 2017/05/26 19:14:29 roberto Exp roberto $
+** $Id: lua.h,v 1.336 2017/07/27 13:36:54 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -288,7 +288,8 @@ LUA_API int (lua_dump) (lua_State *L, lua_Writer writer, void *data, int strip);
 */
 LUA_API int  (lua_yieldk)     (lua_State *L, int nresults, lua_KContext ctx,
                                lua_KFunction k);
-LUA_API int  (lua_resume)     (lua_State *L, lua_State *from, int narg);
+LUA_API int  (lua_resume)     (lua_State *L, lua_State *from, int narg,
+                               int *nres);
 LUA_API int  (lua_status)     (lua_State *L);
 LUA_API int (lua_isyieldable) (lua_State *L);
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.271 2017/10/11 12:38:45 roberto Exp roberto $
+** $Id: lapi.c,v 2.272 2017/11/01 18:20:48 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -58,10 +58,9 @@ const char lua_ident[] =
 
 
 static TValue *index2value (lua_State *L, int idx) {
-  CallInfo *ci = L->ci;
   if (idx > 0) {
     StkId o = L->func + idx;
-    api_check(L, idx <= ci->top - (L->func + 1), "unacceptable index");
+    api_check(L, idx <= L->ci->top - (L->func + 1), "unacceptable index");
     if (o >= L->top) return NONVALIDVALUE;
     else return s2v(o);
   }
@@ -1000,7 +999,7 @@ LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
     ci->u.c.k = k;  /* save continuation */
     ci->u.c.ctx = ctx;  /* save context */
     /* save information for error recovery */
-    ci->extra = savestack(L, c.func);
+    ci->u2.funcidx = savestack(L, c.func);
     ci->u.c.old_errfunc = L->errfunc;
     L->errfunc = func;
     setoah(ci->callstatus, L->allowhook);  /* save value of 'allowhook' */

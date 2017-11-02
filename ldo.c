@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.163 2017/10/31 17:54:35 roberto Exp roberto $
+** $Id: ldo.c,v 2.164 2017/11/01 18:20:48 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -559,7 +559,7 @@ static int recover (lua_State *L, int status) {
   CallInfo *ci = findpcall(L);
   if (ci == NULL) return 0;  /* no recovery point */
   /* "finish" luaD_pcall */
-  oldtop = restorestack(L, ci->extra);
+  oldtop = restorestack(L, ci->u2.funcidx);
   luaF_close(L, oldtop);
   seterrorobj(L, status, oldtop);
   L->ci = ci;
@@ -604,7 +604,6 @@ static void resume (lua_State *L, void *ud) {
   else {  /* resuming from previous yield */
     lua_assert(L->status == LUA_YIELD);
     L->status = LUA_OK;  /* mark that it is running (again) */
-    L->func = ci->func = restorestack(L, ci->extra);
     if (isLua(ci))  /* yielded inside a hook? */
       luaV_execute(L);  /* just continue running Lua code */
     else {  /* 'common' yield */
@@ -622,7 +621,8 @@ static void resume (lua_State *L, void *ud) {
 }
 
 
-LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs) {
+LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
+                                      int *nresults) {
   int status;
   unsigned short oldnny = L->nny;  /* save "number of non-yieldable" calls */
   lua_lock(L);
@@ -653,6 +653,8 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs) {
     }
     else lua_assert(status == L->status);  /* normal end or yield */
   }
+  *nresults = (status == LUA_YIELD) ? L->ci->u2.nyield
+                                    : L->top - (L->func + 1);
   L->nny = oldnny;  /* restore 'nny' */
   L->nCcalls--;
   lua_assert(L->nCcalls == ((from) ? from->nCcalls : 0));
@@ -679,14 +681,14 @@ LUA_API int lua_yieldk (lua_State *L, int nresults, lua_KContext ctx,
       luaG_runerror(L, "attempt to yield from outside a coroutine");
   }
   L->status = LUA_YIELD;
-  ci->extra = savestack(L, L->func);  /* save current 'func' */
   if (isLua(ci)) {  /* inside a hook? */
     api_check(L, k == NULL, "hooks cannot continue after yielding");
+    ci->u2.nyield = 0;  /* no results */
   }
   else {
     if ((ci->u.c.k = k) != NULL)  /* is there a continuation? */
       ci->u.c.ctx = ctx;  /* save context */
-    L->func = ci->func = L->top - nresults - 1;  /* protect stack below results */
+    ci->u2.nyield = nresults;  /* save number of results */
     luaD_throw(L, LUA_YIELD);
   }
   lua_assert(ci->callstatus & CIST_HOOKED);  /* must be inside a hook */
