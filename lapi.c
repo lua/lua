@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.273 2017/11/02 11:28:56 roberto Exp roberto $
+** $Id: lapi.c,v 2.274 2017/11/03 12:12:30 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -948,8 +948,8 @@ LUA_API void lua_callk (lua_State *L, int nargs, int nresults,
   checkresults(L, nargs, nresults);
   func = L->top - (nargs+1);
   if (k != NULL && L->nny == 0) {  /* need to prepare continuation? */
-    L->ci->u.c.k = k;  /* save continuation */
-    L->ci->u.c.ctx = ctx;  /* save context */
+    L->func->stkci.u.c.k = k;  /* save continuation */
+    L->func->stkci.u.c.ctx = ctx;  /* save context */
     luaD_call(L, func, nresults);  /* do the call */
   }
   else  /* no continuation or no yieldable */
@@ -999,19 +999,19 @@ LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
     status = luaD_pcall(L, f_call, &c, savestack(L, c.func), efunc);
   }
   else {  /* prepare continuation (call is already protected by 'resume') */
-    CallInfo *ci = L->ci;
     StkId func = L->func;
-    ci->u.c.k = k;  /* save continuation */
-    ci->u.c.ctx = ctx;  /* save context */
+    func->stkci.u.c.k = k;  /* save continuation */
+    func->stkci.u.c.ctx = ctx;  /* save context */
     /* save information for error recovery */
-    ci->u2.funcidx = savestack(L, c.func);
-    ci->u.c.old_errfunc = L->errfunc;
+    func->stkci.u2.funcidx = c.func - func;
+    func->stkci.u.c.old_errfunc = L->errfunc;
     L->errfunc = efunc;
     setoah(callstatus(func), L->allowhook);  /* save value of 'allowhook' */
     callstatus(func) |= CIST_YPCALL;  /* function can do error recovery */
     luaD_call(L, c.func, nresults);  /* do the call */
+    func = L->func;  /* previous call can reallocate stack */
     callstatus(func) &= ~CIST_YPCALL;
-    L->errfunc = ci->u.c.old_errfunc;
+    L->errfunc = func->stkci.u.c.old_errfunc;
     status = LUA_OK;  /* if it is here, there were no errors */
   }
   adjustresults(L, nresults);

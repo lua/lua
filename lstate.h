@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.146 2017/11/02 11:28:56 roberto Exp roberto $
+** $Id: lstate.h,v 2.147 2017/11/03 12:12:30 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -87,20 +87,6 @@ typedef struct stringtable {
 typedef struct CallInfo {
   StkId func;  /* function index in the stack */
   struct CallInfo *previous, *next;  /* dynamic call link */
-  union {
-    struct {  /* only for Lua functions */
-      const Instruction *savedpc;
-    } l;
-    struct {  /* only for C functions */
-      lua_KFunction k;  /* continuation in case of yields */
-      ptrdiff_t old_errfunc;
-      lua_KContext ctx;  /* context info. in case of yields */
-    } c;
-  } u;
-  union {
-    ptrdiff_t funcidx;  /* called-function index */
-    int nyield;  /* number of values yielded */
-  } u2;
 } CallInfo;
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.126 2017/10/31 17:54:35 roberto Exp roberto $
+** $Id: lobject.h,v 2.127 2017/11/03 12:12:30 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -314,9 +314,23 @@ typedef union StackValue {
   struct {
     TValuefields;
     lu_byte callstatus_;
-    unsigned short previous;  /* difference to previous 'func' */
     short nresults;  /* expected number of results from this function */
+    unsigned short previous;  /* difference to previous 'func' */
     unsigned short framesize;  /* stack space available for this function */
+    union {
+      unsigned short funcidx;  /* called-function index */
+      unsigned short nyield;  /* number of values yielded */
+    } u2;
+    union {
+      struct {  /* only for Lua functions */
+        const Instruction *savedpc;
+      } l;
+      struct {  /* only for C functions */
+        lua_KFunction k;  /* continuation in case of yields */
+        ptrdiff_t old_errfunc;
+        lua_KContext ctx;  /* context info. in case of yields */
+      } c;
+    } u;
   } stkci;
 } StackValue;
 

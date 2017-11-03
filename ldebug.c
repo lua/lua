@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.135 2017/11/02 11:28:56 roberto Exp roberto $
+** $Id: ldebug.c,v 2.136 2017/11/03 12:12:30 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -44,7 +44,7 @@ static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
 
 static int currentpc (CallInfo *ci) {
   lua_assert(isLua(ci->func));
-  return pcRel(ci->u.l.savedpc, ci_func(ci)->p);
+  return pcRel(ci->func->stkci.u.l.savedpc, ci_func(ci)->p);
 }
 
 
@@ -121,7 +121,7 @@ LUA_API void lua_sethook (lua_State *L, lua_Hook func, int mask, int count) {
     func = NULL;
   }
   if (isLua(L->func))
-    L->oldpc = L->ci->u.l.savedpc;
+    L->oldpc = L->func->stkci.u.l.savedpc;
   L->hook = func;
   L->basehookcount = count;
   resethookcount(L);
@@ -755,19 +755,21 @@ void luaG_traceexec (lua_State *L) {
     luaD_hook(L, LUA_HOOKCOUNT, -1);  /* call count hook */
   if (mask & LUA_MASKLINE) {
     Proto *p = ci_func(ci)->p;
-    int npc = pcRel(ci->u.l.savedpc, p);
+    int npc = pcRel(func->stkci.u.l.savedpc, p);
     if (npc == 0 ||  /* call linehook when enter a new function, */
-        ci->u.l.savedpc <= L->oldpc ||  /* when jump back (loop), or when */
-        changedline(p, pcRel(L->oldpc, p), npc)) {  /* enter new line */
+        func->stkci.u.l.savedpc <= L->oldpc ||  /* when jump back (loop), */
+        changedline(p, pcRel(L->oldpc, p), npc)) {  /* when enter new line */
       int newline = luaG_getfuncline(p, npc);  /* new line */
       luaD_hook(L, LUA_HOOKLINE, newline);  /* call line hook */
     }
   }
-  L->oldpc = ci->u.l.savedpc;
+  func = L->func;  /* previous calls can reallocate stack */
+  L->oldpc = func->stkci.u.l.savedpc;
   if (L->status == LUA_YIELD) {  /* did hook yield? */
     if (counthook)
       L->hookcount = 1;  /* undo decrement to zero */
-    ci->u.l.savedpc--;  /* undo increment (resume will increment it again) */
+    /* undo increment (resume will increment it again) */
+    func->stkci.u.l.savedpc--;
     callstatus(func) |= CIST_HOOKYIELD;  /* mark that it yielded */
     luaD_throw(L, LUA_YIELD);
   }
