@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.302 2017/11/03 12:12:30 roberto Exp roberto $
+** $Id: lvm.c,v 2.303 2017/11/03 17:22:54 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -754,11 +754,11 @@ void luaV_finishOp (lua_State *L) {
 ** Execute a jump instruction. The 'updatemask' allows signals to stop
 ** tight loops. (Without it, the local copy of 'mask' could never change.)
 */
-#define dojump(ci,i,e)	{ pc += GETARG_sBx(i) + e; updatemask(L); }
+#define dojump(i,e)	{ pc += GETARG_sBx(i) + e; updatemask(L); }
 
 
 /* for test instructions, execute the jump instruction that follows it */
-#define donextjump(ci)	{ i = *pc; dojump(ci, i, 1); }
+#define donextjump()	{ i = *pc; dojump(i, 1); }
 
 /*
 ** Whenever code can raise errors (including memory errors), the global
@@ -1286,7 +1286,7 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_JMP) {
-        dojump(ci, i, 0);
+        dojump(i, 0);
         vmbreak;
       }
       vmcase(OP_EQ) {
@@ -1296,7 +1296,7 @@ void luaV_execute (lua_State *L) {
           if (luaV_equalobj(L, rb, rc) != GETARG_A(i))
             pc++;
           else
-            donextjump(ci);
+            donextjump();
         )
         vmbreak;
       }
@@ -1312,7 +1312,7 @@ void luaV_execute (lua_State *L) {
         if (res != GETARG_A(i))
           pc++;
         else
-          donextjump(ci);
+          donextjump();
         vmbreak;
       }
       vmcase(OP_LE) {
@@ -1327,14 +1327,14 @@ void luaV_execute (lua_State *L) {
         if (res != GETARG_A(i))
           pc++;
         else
-          donextjump(ci);
+          donextjump();
         vmbreak;
       }
       vmcase(OP_TEST) {
         if (GETARG_C(i) ? l_isfalse(s2v(ra)) : !l_isfalse(s2v(ra)))
             pc++;
           else
-          donextjump(ci);
+          donextjump();
         vmbreak;
       }
       vmcase(OP_TESTSET) {
@@ -1343,7 +1343,7 @@ void luaV_execute (lua_State *L) {
           pc++;
         else {
           setobj2s(L, ra, rb);
-          donextjump(ci);
+          donextjump();
         }
         vmbreak;
       }
@@ -1377,9 +1377,7 @@ void luaV_execute (lua_State *L) {
         }
         else {
           /* tail call: put called frame (n) in place of caller one (o) */
-          CallInfo *nci = L->ci;  /* called frame (new) */
-          CallInfo *oci = nci->previous;  /* caller frame (old) */
-          StkId nfunc = nci->func;  /* called function */
+          StkId nfunc = L->func;  /* called function */
           StkId ofunc = nfunc - nfunc->stkci.previous;  /* caller function */
           /* last stack slot filled by 'precall' */
           StkId lim = nfunc + 1 + getproto(s2v(nfunc))->numparams;
@@ -1393,7 +1391,7 @@ void luaV_execute (lua_State *L) {
           L->top = functop(ofunc);  /* correct top */
           ofunc->stkci.u.l.savedpc = nfunc->stkci.u.l.savedpc;
           callstatus(ofunc) |= CIST_TAIL;  /* function was tail called */
-          ci = L->ci = oci;  /* remove new frame */
+          ci = L->ci = L->ci->previous;  /* remove new frame */
           base = ofunc + 1;
           L->func = ofunc;
           lua_assert(L->top == base + getproto(s2v(ofunc))->maxstacksize);
