@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.235 2017/10/11 12:38:45 roberto Exp roberto $
+** $Id: lgc.c,v 2.236 2017/10/31 15:29:28 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -866,9 +866,9 @@ static void GCTM (lua_State *L, int propagateerrors) {
     setobj2s(L, L->top, tm);  /* push finalizer... */
     setobj2s(L, L->top + 1, &v);  /* ... and its argument */
     L->top += 2;  /* and (next line) call the finalizer */
-    L->ci->callstatus |= CIST_FIN;  /* will run a finalizer */
+    callstatus(L->func) |= CIST_FIN;  /* will run a finalizer */
     status = luaD_pcall(L, dothecall, NULL, savestack(L, L->top - 2), 0);
-    L->ci->callstatus &= ~CIST_FIN;  /* not running a finalizer anymore */
+    callstatus(L->func) &= ~CIST_FIN;  /* not running a finalizer anymore */
     L->allowhook = oldah;  /* restore hooks */
     g->gcrunning = running;  /* restore state */
     if (status != LUA_OK && propagateerrors) {  /* error while running __gc? */

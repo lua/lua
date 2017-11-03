@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.h,v 2.9 2015/03/06 19:49:50 roberto Exp roberto $
+** $Id: lapi.h,v 2.10 2017/11/01 18:20:48 roberto Exp roberto $
 ** Auxiliary functions from Lua API
 ** See Copyright Notice in lua.h
 */
@@ -11,11 +11,12 @@
 #include "llimits.h"
 #include "lstate.h"
 
-#define api_incr_top(L)   {L->top++; api_check(L, L->top <= L->ci->top, \
+#define api_incr_top(L)   {L->top++; api_check(L, L->top <= functop(L->func), \
 				"stack overflow");}
 
 #define adjustresults(L,nres) \
-    { if ((nres) == LUA_MULTRET && L->ci->top < L->top) L->ci->top = L->top; }
+    { if ((nres) == LUA_MULTRET && functop(L->func) < L->top) \
+      setfunctop(L->func, L->top); }
 
 #define api_checknelems(L,n)	api_check(L, (n) < (L->top - L->func), \
 				  "not enough elements in the stack")

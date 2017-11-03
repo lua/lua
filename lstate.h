@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.145 2017/10/31 17:54:35 roberto Exp roberto $
+** $Id: lstate.h,v 2.146 2017/11/02 11:28:56 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -86,7 +86,6 @@ typedef struct stringtable {
 */
 typedef struct CallInfo {
   StkId func;  /* function index in the stack */
-  StkId	top;  /* top for this function */
   struct CallInfo *previous, *next;  /* dynamic call link */
   union {
     struct {  /* only for Lua functions */
@@ -102,8 +101,6 @@ typedef struct CallInfo {
     ptrdiff_t funcidx;  /* called-function index */
     int nyield;  /* number of values yielded */
   } u2;
-  short nresults;  /* expected number of results from this function */
-  unsigned short callstatus;
 } CallInfo;
 
 
@@ -111,17 +108,16 @@ typedef struct CallInfo {
 ** Bits in CallInfo status
 */
 #define CIST_OAH	(1<<0)	/* original value of 'allowhook' */
-#define CIST_LUA	(1<<1)	/* call is running a Lua function */
-#define CIST_HOOKED	(1<<2)	/* call is running a debug hook */
-#define CIST_FRESH	(1<<3)	/* call is running on a fresh invocation
+#define CIST_HOOKED	(1<<1)	/* call is running a debug hook */
+#define CIST_FRESH	(1<<2)	/* call is running on a fresh invocation
                                    of luaV_execute */
-#define CIST_YPCALL	(1<<4)	/* call is a yieldable protected call */
-#define CIST_TAIL	(1<<5)	/* call was tail called */
-#define CIST_HOOKYIELD	(1<<6)	/* last hook called yielded */
-#define CIST_LEQ	(1<<7)  /* using __lt for __le */
-#define CIST_FIN	(1<<8)  /* call is running a finalizer */
+#define CIST_YPCALL	(1<<3)	/* call is a yieldable protected call */
+#define CIST_TAIL	(1<<4)	/* call was tail called */
+#define CIST_HOOKYIELD	(1<<5)	/* last hook called yielded */
+#define CIST_LEQ	(1<<6)  /* using __lt for __le */
+#define CIST_FIN	(1<<7)  /* call is running a finalizer */
 
-#define isLua(ci)	((ci)->callstatus & CIST_LUA)
+#define isLua(func)	isLfunction(s2v(func))
 
 /* assume that CIST_OAH has offset 0 and that 'v' is strictly 0/1 */
 #define setoah(st,v)	((st) = ((st) & ~CIST_OAH) | (v))

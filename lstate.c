@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.142 2017/10/11 12:38:45 roberto Exp roberto $
+** $Id: lstate.c,v 2.143 2017/10/31 17:54:35 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -152,12 +152,12 @@ static void stack_init (lua_State *L1, lua_State *L) {
   /* initialize first ci */
   ci = &L1->base_ci;
   ci->next = ci->previous = NULL;
-  ci->callstatus = 0;
   L1->func = ci->func = L1->top;
   L1->func->stkci.previous = 0;  /* end of linked list */
+  L1->func->stkci.framesize = LUA_MINSTACK + 1;
+  callstatus(L1->func) = 0;
   setnilvalue(s2v(L1->top));  /* 'function' entry for this 'ci' */
   L1->top++;
-  ci->top = L1->top + LUA_MINSTACK;
   L1->ci = ci;
 }
 

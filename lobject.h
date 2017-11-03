@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.125 2017/06/29 15:06:44 roberto Exp roberto $
+** $Id: lobject.h,v 2.126 2017/10/31 17:54:35 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -313,9 +313,20 @@ typedef union StackValue {
   TValue val;
   struct {
     TValuefields;
+    lu_byte callstatus_;
     unsigned short previous;  /* difference to previous 'func' */
+    short nresults;  /* expected number of results from this function */
+    unsigned short framesize;  /* stack space available for this function */
   } stkci;
 } StackValue;
+
+#define callstatus(ar)	((ar)->stkci.callstatus_)
+
+/* top of a function (first element after its frame) */
+#define functop(func)	((func) + (func)->stkci.framesize)
+
+/* set top of a function to a specific value */
+#define setfunctop(func,v)	((func)->stkci.framesize = (v) - (func))
 
 
 typedef StackValue *StkId;  /* index to stack elements */

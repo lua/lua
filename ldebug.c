@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.134 2017/11/01 18:20:48 roberto Exp roberto $
+** $Id: ldebug.c,v 2.135 2017/11/02 11:28:56 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -43,7 +43,7 @@ static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
 
 
 static int currentpc (CallInfo *ci) {
-  lua_assert(isLua(ci));
+  lua_assert(isLua(ci->func));
   return pcRel(ci->u.l.savedpc, ci_func(ci)->p);
 }
 
@@ -120,7 +120,7 @@ LUA_API void lua_sethook (lua_State *L, lua_Hook func, int mask, int count) {
     mask = 0;
     func = NULL;
   }
-  if (isLua(L->ci))
+  if (isLua(L->func))
     L->oldpc = L->ci->u.l.savedpc;
   L->hook = func;
   L->basehookcount = count;
@@ -172,7 +172,7 @@ static const char *findlocal (lua_State *L, CallInfo *ci, int n,
                               StkId *pos) {
   const char *name = NULL;
   StkId base;
-  if (isLua(ci)) {
+  if (isLua(ci->func)) {
     base = ci->func + 1;
     name = luaF_getlocalname(ci_func(ci)->p, n, currentpc(ci));
   }
@@ -277,12 +277,12 @@ static void collectvalidlines (lua_State *L, Closure *f) {
 static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
   if (ci == NULL)  /* no 'ci'? */
     return NULL;  /* no info */
-  else if (ci->callstatus & CIST_FIN) {  /* is this a finalizer? */
+  else if (callstatus(ci->func) & CIST_FIN) {  /* is this a finalizer? */
     *name = "__gc";
     return "metamethod";  /* report it as such */
   }
   /* calling function is a known Lua function? */
-  else if (!(ci->callstatus & CIST_TAIL) && isLua(ci->previous))
+  else if (!(callstatus(ci->func) & CIST_TAIL) && isLua(ci->previous->func))
     return funcnamefromcode(L, ci->previous, name);
   else return NULL;  /* no way to find a name */
 }
@@ -298,7 +298,7 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
         break;
       }
       case 'l': {
-        ar->currentline = (ci && isLua(ci)) ? currentline(ci) : -1;
+        ar->currentline = (ci && isLua(ci->func)) ? currentline(ci) : -1;
         break;
       }
       case 'u': {
@@ -314,7 +314,7 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
         break;
       }
       case 't': {
-        ar->istailcall = (ci) ? ci->callstatus & CIST_TAIL : 0;
+        ar->istailcall = (ci) ? callstatus(ci->func) & CIST_TAIL : 0;
         break;
       }
       case 'n': {
@@ -549,7 +549,7 @@ static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
   Proto *p = ci_func(ci)->p;  /* calling function */
   int pc = currentpc(ci);  /* calling instruction index */
   Instruction i = p->code[pc];  /* calling instruction */
-  if (ci->callstatus & CIST_HOOKED) {  /* was it called inside a hook? */
+  if (callstatus(ci->func) & CIST_HOOKED) {  /* was it called inside a hook? */
     *name = "?";
     return "hook";
   }
@@ -635,7 +635,7 @@ static const char *varinfo (lua_State *L, const TValue *o) {
   const char *name = NULL;  /* to avoid warnings */
   CallInfo *ci = L->ci;
   const char *kind = NULL;
-  if (isLua(ci)) {
+  if (isLua(L->func)) {
     kind = getupvalname(ci, o, &name);  /* check whether 'o' is an upvalue */
     if (!kind && isinstack(L, o))  /* no? try a register */
       kind = getobjname(ci_func(ci)->p, currentpc(ci),
@@ -719,7 +719,7 @@ l_noret luaG_runerror (lua_State *L, const char *fmt, ...) {
   va_start(argp, fmt);
   msg = luaO_pushvfstring(L, fmt, argp);  /* format message */
   va_end(argp);
-  if (isLua(ci))  /* if Lua function, add source:line information */
+  if (isLua(L->func))  /* if Lua function, add source:line information */
     luaG_addinfo(L, msg, ci_func(ci)->p->source, currentline(ci));
   luaG_errormsg(L);
 }
@@ -740,14 +740,15 @@ static int changedline (Proto *p, int oldpc, int newpc) {
 
 void luaG_traceexec (lua_State *L) {
   CallInfo *ci = L->ci;
+  StkId func = L->func;
   lu_byte mask = L->hookmask;
   int counthook = (--L->hookcount == 0 && (mask & LUA_MASKCOUNT));
   if (counthook)
     resethookcount(L);  /* reset count */
   else if (!(mask & LUA_MASKLINE))
     return;  /* no line hook and count != 0; nothing to be done */
-  if (ci->callstatus & CIST_HOOKYIELD) {  /* called hook last time? */
-    ci->callstatus &= ~CIST_HOOKYIELD;  /* erase mark */
+  if (callstatus(func) & CIST_HOOKYIELD) {  /* called hook last time? */
+    callstatus(func) &= ~CIST_HOOKYIELD;  /* erase mark */
     return;  /* do not call hook again (VM yielded, so it did not move) */
   }
   if (counthook)
@@ -767,7 +768,7 @@ void luaG_traceexec (lua_State *L) {
     if (counthook)
       L->hookcount = 1;  /* undo decrement to zero */
     ci->u.l.savedpc--;  /* undo increment (resume will increment it again) */
-    ci->callstatus |= CIST_HOOKYIELD;  /* mark that it yielded */
+    callstatus(func) |= CIST_HOOKYIELD;  /* mark that it yielded */
     luaD_throw(L, LUA_YIELD);
   }
 }
