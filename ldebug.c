@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.137 2017/11/03 17:22:54 roberto Exp roberto $
+** $Id: ldebug.c,v 2.138 2017/11/03 19:33:22 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -146,14 +146,17 @@ LUA_API int lua_gethookcount (lua_State *L) {
 
 LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
   int status;
-  CallInfo *ci;
+  StkId func;
   if (level < 0) return 0;  /* invalid (negative) level */
   lua_lock(L);
-  for (ci = L->ci; level > 0 && ci != &L->base_ci; ci = ci->previous)
+  for (func = L->func;
+       level > 0 && func->stkci.previous != 0;
+       func -= func->stkci.previous)
     level--;
-  if (level == 0 && ci != &L->base_ci) {  /* level found? */
+  if (level == 0 && func->stkci.previous != 0) {  /* level found? */
     status = 1;
-    ar->i_ci = ci;
+    ar->i_actf = func - L->stack;
+    ar->i_actL = L;
   }
   else status = 0;  /* no such level */
   lua_unlock(L);
@@ -181,9 +184,10 @@ static StkId findcalled (lua_State *L, StkId caller) {
 }
 
 
-static const char *findlocal (lua_State *L, StkId stkf, int n,
-                              StkId *pos) {
+static const char *findlocal (lua_State *L, const lua_Debug *ar,
+                                            int n, StkId *pos) {
   const char *name = NULL;
+  StkId stkf = ar->i_actL->stack + ar->i_actf;
   if (isLua(stkf)) {
     name = luaF_getlocalname(ci_func(stkf)->p, n, currentpc(stkf));
   }
@@ -210,7 +214,7 @@ LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
   }
   else {  /* active function; get information through 'ar' */
     StkId pos = NULL;  /* to avoid warnings */
-    name = findlocal(L, ar->i_ci->func, n, &pos);
+    name = findlocal(L, ar, n, &pos);
     if (name) {
       setobjs2s(L, L->top, pos);
       api_incr_top(L);
@@ -225,7 +229,7 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
   StkId pos = NULL;  /* to avoid warnings */
   const char *name;
   lua_lock(L);
-  name = findlocal(L, ar->i_ci->func, n, &pos);
+  name = findlocal(L, ar, n, &pos);
   if (name) {
     setobjs2s(L, pos, L->top - 1);
     L->top--;  /* pop value */
@@ -361,7 +365,7 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
     L->top--;  /* pop function */
   }
   else {
-    stkf = ar->i_ci->func;
+    stkf = ar->i_actL->stack + ar->i_actf;
     func = s2v(stkf);
     lua_assert(ttisfunction(func));
   }

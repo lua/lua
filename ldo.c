@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.166 2017/11/03 12:12:30 roberto Exp roberto $
+** $Id: ldo.c,v 2.167 2017/11/03 17:22:54 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -253,14 +253,14 @@ void luaD_inctop (lua_State *L) {
 void luaD_hook (lua_State *L, int event, int line) {
   lua_Hook hook = L->hook;
   if (hook && L->allowhook) {  /* make sure there is a hook */
-    CallInfo *ci = L->ci;
     ptrdiff_t top = savestack(L, L->top);
     int origframesize = L->func->stkci.framesize;
     int tmpframesize;  /* frame size to run hook */
     lua_Debug ar;
     ar.event = event;
     ar.currentline = line;
-    ar.i_ci = ci;
+    ar.i_actf = L->func - L->stack;
+    ar.i_actL = L;
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
     tmpframesize = L->top - L->func + LUA_MINSTACK;
     if (tmpframesize > origframesize)  /* need to grow frame? */

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.336 2017/07/27 13:36:54 roberto Exp roberto $
+** $Id: lua.h,v 1.337 2017/11/02 11:28:56 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -456,7 +456,8 @@ struct lua_Debug {
   char istailcall;	/* (t) */
   char short_src[LUA_IDSIZE]; /* (S) */
   /* private part */
-  struct CallInfo *i_ci;  /* active function */
+  int i_actf;  /* active function */
+  lua_State *i_actL;  /* where active function is active */
 };
 
 /* }====================================================================== */
