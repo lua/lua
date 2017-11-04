@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.303 2017/11/03 17:22:54 roberto Exp roberto $
+** $Id: lvm.c,v 2.304 2017/11/03 19:33:22 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -796,7 +796,6 @@ void luaV_finishOp (lua_State *L) {
 
 
 void luaV_execute (lua_State *L) {
-  CallInfo *ci = L->ci;
   LClosure *cl;
   TValue *k;
   StkId base = L->func + 1;  /* local copy of 'L->func + 1' */
@@ -804,7 +803,6 @@ void luaV_execute (lua_State *L) {
   const Instruction *pc;  /* local copy of 'basepc(base)' */
   callstatus(base - 1) |= CIST_FRESH;  /* fresh invocation of 'luaV_execute" */
  newframe:  /* reentry point when frame changes (call/return) */
-  lua_assert(ci == L->ci);
   cl = clLvalue(s2v(L->func));  /* local reference to function's closure */
   k = cl->p->k;  /* local reference to function's constant table */
   updatemask(L);
@@ -1361,7 +1359,6 @@ void luaV_execute (lua_State *L) {
           /* else leave top for next instruction */
         }
         else {  /* Lua function */
-          ci = L->ci;
           base = L->func + 1;
           goto newframe;  /* restart luaV_execute over new Lua function */
         }
@@ -1391,7 +1388,6 @@ void luaV_execute (lua_State *L) {
           L->top = functop(ofunc);  /* correct top */
           ofunc->stkci.u.l.savedpc = nfunc->stkci.u.l.savedpc;
           callstatus(ofunc) |= CIST_TAIL;  /* function was tail called */
-          ci = L->ci = L->ci->previous;  /* remove new frame */
           base = ofunc + 1;
           L->func = ofunc;
           lua_assert(L->top == base + getproto(s2v(ofunc))->maxstacksize);
@@ -1403,11 +1399,10 @@ void luaV_execute (lua_State *L) {
         int b = GETARG_B(i);
         if (cl->p->sizep > 0) luaF_close(L, base);
         savepc(base);
-        b = luaD_poscall(L, ci, ra, (b != 0 ? b - 1 : cast_int(L->top - ra)));
+        b = luaD_poscall(L, ra, (b != 0 ? b - 1 : cast_int(L->top - ra)));
         if (callstatus(base - 1) & CIST_FRESH)  /* local 'base' still from callee */
           return;  /* external invocation: return */
         else {  /* invocation via reentry: continue execution */
-          ci = L->ci;
           base = L->func + 1;
           if (b) L->top = functop(base - 1);
           lua_assert(isLua(base - 1));

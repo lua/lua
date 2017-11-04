@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.147 2017/11/03 12:12:30 roberto Exp roberto $
+** $Id: lstate.h,v 2.148 2017/11/03 17:22:54 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -80,14 +80,6 @@ typedef struct stringtable {
   int size;
 } stringtable;
 
-
-/*
-** Information about a call.
-*/
-typedef struct CallInfo {
-  StkId func;  /* function index in the stack */
-  struct CallInfo *previous, *next;  /* dynamic call link */
-} CallInfo;
 
 
 /*
@@ -170,7 +162,6 @@ struct lua_State {
   lu_byte status;
   StkId top;  /* first free slot in the stack */
   global_State *l_G;
-  CallInfo *ci;  /* call info for current function */
   StkId func;  /* current function */
   const Instruction *oldpc;  /* last pc traced */
   StkId stack_last;  /* last free slot in the stack */
@@ -179,7 +170,6 @@ struct lua_State {
   GCObject *gclist;
   struct lua_State *twups;  /* list of threads with open upvalues */
   struct lua_longjmp *errorJmp;  /* current error recover point */
-  CallInfo base_ci;  /* CallInfo for first level (C calling Lua) */
   volatile lua_Hook hook;
   ptrdiff_t errfunc;  /* current error handling function (stack index) */
   int stacksize;
@@ -235,9 +225,6 @@ union GCUnion {
 
 LUAI_FUNC void luaE_setdebt (global_State *g, l_mem debt);
 LUAI_FUNC void luaE_freethread (lua_State *L, lua_State *L1);
-LUAI_FUNC CallInfo *luaE_extendCI (lua_State *L);
-LUAI_FUNC void luaE_freeCI (lua_State *L);
-LUAI_FUNC void luaE_shrinkCI (lua_State *L);
 
 
 #endif
