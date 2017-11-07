@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.301 2017/11/01 18:20:48 roberto Exp $
+** $Id: lvm.c,v 2.306 2017/11/07 13:25:26 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -753,7 +753,7 @@ void luaV_finishOp (lua_State *L) {
 ** Execute a jump instruction. The 'updatemask' allows signals to stop
 ** tight loops. (Without it, the local copy of 'mask' could never change.)
 */
-#define dojump(ci,i,e)	{ pc += GETARG_sBx(i) + e; updatemask(L); }
+#define dojump(ci,i,e)	{ pc += GETARG_sJ(i) + e; updatemask(L); }
 
 
 /* for test instructions, execute the jump instruction that follows it */

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.135 2017/11/02 11:28:56 roberto Exp $
+** $Id: ldebug.c,v 2.140 2017/11/07 13:25:26 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -442,7 +442,7 @@ static int findsetreg (Proto *p, int lastpc, int reg) {
         break;
       }
       case OP_JMP: {  /* doesn't change registers, but changes 'jmptarget' */
-        int b = GETARG_sBx(i);
+        int b = GETARG_sJ(i);
         int dest = pc + 1 + b;
         /* jump does not skip 'lastpc' and is larger than current one? */
         if (dest <= lastpc && dest > jmptarget)

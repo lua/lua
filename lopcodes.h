@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.165 2017/10/04 15:49:24 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.166 2017/10/04 21:56:32 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -21,6 +21,7 @@ iABC    |k|     C(8)    | |     B(8)    | |     A(8)    | |   Op(7)   |
 iABx    |            Bx(17)             | |     A(8)    | |   Op(7)   |
 iAsBx   |           sBx (signed)(17)    | |     A(8)    | |   Op(7)   |
 iAx     |                       Ax(25)                  | |   Op(7)   |
+iksJ    |k|                     sJ(24)                  | |   Op(7)   |
 
   A signed argument is represented in excess K: the represented value is
   the written unsigned value minus K, where K is half the maximum for the
@@ -28,7 +29,7 @@ iAx     |                       Ax(25)                  | |   Op(7)   |
 ===========================================================================*/
 
 
-enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
+enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 
 
 /*
@@ -40,6 +41,8 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 #define SIZE_Bx		(SIZE_Cx + SIZE_B)
 #define SIZE_A		8
 #define SIZE_Ax		(SIZE_Cx + SIZE_B + SIZE_A)
+#define SIZE_sJ		(SIZE_C + SIZE_B + SIZE_A)
+
 
 #define SIZE_OP		7
 
@@ -50,6 +53,7 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 #define POS_k		(POS_C + SIZE_C)
 #define POS_Bx		POS_B
 #define POS_Ax		POS_A
+#define POS_sJ		POS_A
 
 
 /*
@@ -69,6 +73,12 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 #define MAXARG_Ax	((1<<SIZE_Ax)-1)
 #else
 #define MAXARG_Ax	MAX_INT
+#endif
+
+#if SIZE_sJ < LUAI_BITSINT-1
+#define MAXARG_sJ	((1 << (SIZE_sJ - 1)) - 1)
+#else
+#define MAXARG_sJ	MAX_INT
 #endif
 
 
@@ -111,6 +121,7 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 #define SETARG_C(i,v)	setarg(i, v, POS_C, SIZE_C)
 
 #define GETARG_k(i)	(cast(int, ((i) & (1 << POS_k))))
+#define SETARG_k(i,v)	setarg(i, v, POS_k, 1)
 
 #define GETARG_Bx(i)	check_exp(checkopm(i, iABx), getarg(i, POS_Bx, SIZE_Bx))
 #define SETARG_Bx(i,v)	setarg(i, v, POS_Bx, SIZE_Bx)
@@ -122,12 +133,17 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 	check_exp(checkopm(i, iAsBx), getarg(i, POS_Bx, SIZE_Bx) - MAXARG_sBx)
 #define SETARG_sBx(i,b)	SETARG_Bx((i),cast(unsigned int, (b)+MAXARG_sBx))
 
+#define GETARG_sJ(i)  \
+	check_exp(checkopm(i, isJ), getarg(i, POS_sJ, SIZE_sJ) - MAXARG_sJ)
+#define SETARG_sJ(i,j) \
+	setarg(i, cast(unsigned int, (j)+MAXARG_sJ), POS_sJ, SIZE_sJ)
+
 
 #define CREATE_ABCk(o,a,b,c,k)	((cast(Instruction, o)<<POS_OP) \
 			| (cast(Instruction, a)<<POS_A) \
 			| (cast(Instruction, b)<<POS_B) \
-			| (cast(Instruction, c)<<POS_C)) \
-			| (cast(Instruction, k)<<POS_k)
+			| (cast(Instruction, c)<<POS_C) \
+			| (cast(Instruction, k)<<POS_k))
 
 #define CREATE_ABx(o,a,bc)	((cast(Instruction, o)<<POS_OP) \
 			| (cast(Instruction, a)<<POS_A) \
@@ -135,6 +151,10 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 
 #define CREATE_Ax(o,a)		((cast(Instruction, o)<<POS_OP) \
 			| (cast(Instruction, a)<<POS_Ax))
+
+#define CREATE_sJ(o,j,k)	((cast(Instruction, o) << POS_OP) \
+			| (cast(Instruction, j) << POS_sJ) \
+			| (cast(Instruction, k) << POS_k))
 
 
 #if !defined(MAXINDEXRK)  /* (for debugging only) */
@@ -215,7 +235,7 @@ OP_LEN,/*	A B	R(A) := length of R(B)				*/
 OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
 
 OP_CLOSE,/*	A	close all upvalues >= R(A)			*/
-OP_JMP,/*	sBx	pc+=sBx						*/
+OP_JMP,/*	k sJ	pc += sJ  (k is used in code generation)	*/
 OP_EQ,/*	A B C	if ((R(B) == R(C)) ~= A) then pc++		*/
 OP_LT,/*	A B C	if ((R(B) <  R(C)) ~= A) then pc++		*/
 OP_LE,/*	A B C	if ((R(B) <= R(C)) ~= A) then pc++		*/

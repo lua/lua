@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.227 2017/11/02 11:28:56 roberto Exp $
+** $Id: ltests.c,v 2.230 2017/11/07 13:25:26 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -543,13 +543,19 @@ static char *buildop (Proto *p, int pc, char *buff) {
               GETARG_k(i) ? " (k)" : "");
       break;
     case iABx:
-      sprintf(buff+strlen(buff), "%-12s%4d %4d", name, GETARG_A(i), GETARG_Bx(i));
+      sprintf(buff+strlen(buff), "%-12s%4d %4d", name, GETARG_A(i),
+                                                       GETARG_Bx(i));
       break;
     case iAsBx:
-      sprintf(buff+strlen(buff), "%-12s%4d %4d", name, GETARG_A(i), GETARG_sBx(i));
+      sprintf(buff+strlen(buff), "%-12s%4d %4d", name, GETARG_A(i),
+                                                       GETARG_sBx(i));
       break;
     case iAx:
       sprintf(buff+strlen(buff), "%-12s%4d", name, GETARG_Ax(i));
+      break;
+    case isJ:
+      sprintf(buff+strlen(buff), "%-12s%4d (%1d)", name, GETARG_sJ(i),
+                                                         !!GETARG_k(i));
       break;
   }
   return buff;

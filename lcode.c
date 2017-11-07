@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.129 2017/10/04 15:49:24 roberto Exp roberto $
+** $Id: lcode.c,v 2.130 2017/10/04 21:56:32 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -35,6 +35,9 @@
 
 
 #define hasjumps(e)	((e)->t != (e)->f)
+
+
+static int codesJ (FuncState *fs, OpCode o, int sj, int k);
 
 
 /*
@@ -89,7 +92,7 @@ void luaK_nil (FuncState *fs, int from, int n) {
 ** a list of jumps.
 */
 static int getjump (FuncState *fs, int pc) {
-  int offset = GETARG_sBx(fs->f->code[pc]);
+  int offset = GETARG_sJ(fs->f->code[pc]);
   if (offset == NO_JUMP)  /* point to itself represents end of list */
     return NO_JUMP;  /* end of list */
   else
@@ -105,9 +108,10 @@ static void fixjump (FuncState *fs, int pc, int dest) {
   Instruction *jmp = &fs->f->code[pc];
   int offset = dest - (pc + 1);
   lua_assert(dest != NO_JUMP);
-  if (abs(offset) > MAXARG_sBx)
+  if (abs(offset) > MAXARG_sJ)
     luaX_syntaxerror(fs->ls, "control structure too long");
-  SETARG_sBx(*jmp, offset);
+  lua_assert(GET_OPCODE(*jmp) == OP_JMP);
+  SETARG_sJ(*jmp, offset);
 }
 
 
@@ -138,7 +142,7 @@ int luaK_jump (FuncState *fs) {
   int jpc = fs->jpc;  /* save list of jumps to here */
   int j;
   fs->jpc = NO_JUMP;  /* no more jumps to here */
-  j = luaK_codeAsBx(fs, OP_JMP, 0, NO_JUMP);
+  j = codesJ(fs, OP_JMP, NO_JUMP, 0);
   luaK_concat(fs, &j, jpc);  /* keep them on hold */
   return j;
 }
@@ -286,16 +290,16 @@ int luaK_needclose (FuncState *fs, int list) {
 /*
 ** Correct a jump list to jump to 'target'. If 'hasclose' is true,
 ** 'target' contains an OP_CLOSE instruction (see first assert).
-** Only jumps with the A arg true need that close; other jumps
+** Only jumps with the 'k' arg true need that close; other jumps
 ** avoid it jumping to the next instruction.
 */
 void luaK_patchgoto (FuncState *fs, int list, int target, int hasclose) {
   lua_assert(!hasclose || GET_OPCODE(fs->f->code[target]) == OP_CLOSE);
   while (list != NO_JUMP) {
     int next = getjump(fs, list);
-    lua_assert(!GETARG_A(fs->f->code[list]) || hasclose);
+    lua_assert(!GETARG_k(fs->f->code[list]) || hasclose);
     patchtestreg(fs, list, NO_REG);  /* do not generate values */
-    if (!hasclose || GETARG_A(fs->f->code[list]))
+    if (!hasclose || GETARG_k(fs->f->code[list]))
       fixjump(fs, list, target);
     else  /* there is a CLOSE instruction but jump does not need it */
       fixjump(fs, list, target + 1);  /* avoid CLOSE instruction */
@@ -305,14 +309,14 @@ void luaK_patchgoto (FuncState *fs, int list, int target, int hasclose) {
 
 
 /*
-** Mark (using the A arg) all jumps in 'list' to close upvalues. Mark
+** Mark (using the 'k' arg) all jumps in 'list' to close upvalues. Mark
 ** will instruct 'luaK_patchgoto' to make these jumps go to OP_CLOSE
 ** instructions.
 */
 void luaK_patchclose (FuncState *fs, int list) {
   for (; list != NO_JUMP; list = getjump(fs, list)) {
     lua_assert(GET_OPCODE(fs->f->code[list]) == OP_JMP);
-    SETARG_A(fs->f->code[list], 1);
+    SETARG_k(fs->f->code[list], 1);
   }
 }
 
@@ -395,6 +399,17 @@ int luaK_codeAsBx (FuncState *fs, OpCode o, int a, int bc) {
   lua_assert(getOpMode(o) == iAsBx);
   lua_assert(a <= MAXARG_A && b <= MAXARG_Bx);
   return luaK_code(fs, CREATE_ABx(o, a, b));
+}
+
+
+/*
+** Format and emit an 'isJ' instruction.
+*/
+static int codesJ (FuncState *fs, OpCode o, int sj, int k) {
+  unsigned int j = sj + MAXARG_sJ;
+  lua_assert(getOpMode(o) == isJ);
+  lua_assert(j <= MAXARG_sJ && (k & ~1) == 0);
+  return luaK_code(fs, CREATE_sJ(o, j, k));
 }
 
 
