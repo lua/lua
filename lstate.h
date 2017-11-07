@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.148 2017/11/03 17:22:54 roberto Exp roberto $
+** $Id: lstate.h,v 2.146 2017/11/02 11:28:56 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -81,21 +81,47 @@ typedef struct stringtable {
 } stringtable;
 
 
+/*
+** Information about a call.
+*/
+typedef struct CallInfo {
+  StkId func;  /* function index in the stack */
+  StkId	top;  /* top for this function */
+  struct CallInfo *previous, *next;  /* dynamic call link */
+  union {
+    struct {  /* only for Lua functions */
+      const Instruction *savedpc;
+    } l;
+    struct {  /* only for C functions */
+      lua_KFunction k;  /* continuation in case of yields */
+      ptrdiff_t old_errfunc;
+      lua_KContext ctx;  /* context info. in case of yields */
+    } c;
+  } u;
+  union {
+    int funcidx;  /* called-function index */
+    int nyield;  /* number of values yielded */
+  } u2;
+  short nresults;  /* expected number of results from this function */
+  unsigned short callstatus;
+} CallInfo;
+
 
 /*
 ** Bits in CallInfo status
 */
 #define CIST_OAH	(1<<0)	/* original value of 'allowhook' */
-#define CIST_HOOKED	(1<<1)	/* call is running a debug hook */
-#define CIST_FRESH	(1<<2)	/* call is running on a fresh invocation
+#define CIST_LUA	(1<<1)	/* call is running a Lua function */
+#define CIST_HOOKED	(1<<2)	/* call is running a debug hook */
+#define CIST_FRESH	(1<<3)	/* call is running on a fresh invocation
                                    of luaV_execute */
-#define CIST_YPCALL	(1<<3)	/* call is a yieldable protected call */
-#define CIST_TAIL	(1<<4)	/* call was tail called */
-#define CIST_HOOKYIELD	(1<<5)	/* last hook called yielded */
-#define CIST_LEQ	(1<<6)  /* using __lt for __le */
-#define CIST_FIN	(1<<7)  /* call is running a finalizer */
+#define CIST_YPCALL	(1<<4)	/* call is a yieldable protected call */
+#define CIST_TAIL	(1<<5)	/* call was tail called */
+#define CIST_HOOKYIELD	(1<<6)	/* last hook called yielded */
+#define CIST_LEQ	(1<<7)  /* using __lt for __le */
+#define CIST_FIN	(1<<8)  /* call is running a finalizer */
 
-#define isLua(func)	isLfunction(s2v(func))
+#define isLua(ci)	((ci)->callstatus & CIST_LUA)
 
 /* assume that CIST_OAH has offset 0 and that 'v' is strictly 0/1 */
 #define setoah(st,v)	((st) = ((st) & ~CIST_OAH) | (v))
@@ -162,7 +188,7 @@ struct lua_State {
   lu_byte status;
   StkId top;  /* first free slot in the stack */
   global_State *l_G;
-  StkId func;  /* current function */
+  CallInfo *ci;  /* call info for current function */
   const Instruction *oldpc;  /* last pc traced */
   StkId stack_last;  /* last free slot in the stack */
   StkId stack;  /* stack base */
@@ -170,6 +196,7 @@ struct lua_State {
   GCObject *gclist;
   struct lua_State *twups;  /* list of threads with open upvalues */
   struct lua_longjmp *errorJmp;  /* current error recover point */
+  CallInfo base_ci;  /* CallInfo for first level (C calling Lua) */
   volatile lua_Hook hook;
   ptrdiff_t errfunc;  /* current error handling function (stack index) */
   int stacksize;
@@ -225,6 +252,9 @@ union GCUnion {
 
 LUAI_FUNC void luaE_setdebt (global_State *g, l_mem debt);
 LUAI_FUNC void luaE_freethread (lua_State *L, lua_State *L1);
+LUAI_FUNC CallInfo *luaE_extendCI (lua_State *L);
+LUAI_FUNC void luaE_freeCI (lua_State *L);
+LUAI_FUNC void luaE_shrinkCI (lua_State *L);
 
 
 #endif

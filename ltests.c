@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.228 2017/11/03 12:12:30 roberto Exp roberto $
+** $Id: ltests.c,v 2.227 2017/11/02 11:28:56 roberto Exp $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -46,7 +46,7 @@ void *l_Trick = 0;
 int islocked = 0;
 
 
-#define obj_at(L,k)	s2v(L->func + (k))
+#define obj_at(L,k)	s2v(L->ci->func + (k))
 
 
 static int runC (lua_State *L, lua_State *L1, const char *pc);
@@ -309,27 +309,28 @@ static void checkLclosure (global_State *g, LClosure *cl) {
 }
 
 
-static int lua_checkpc (StkId func) {
-  if (!isLua(func)) return 1;
+static int lua_checkpc (CallInfo *ci) {
+  if (!isLua(ci)) return 1;
   else {
-    Proto *p = clLvalue(s2v(func))->p;
-    return p->code <= func->stkci.u.l.savedpc &&
-           func->stkci.u.l.savedpc <= p->code + p->sizecode;
+    StkId f = ci->func;
+    Proto *p = clLvalue(s2v(f))->p;
+    return p->code <= ci->u.l.savedpc &&
+           ci->u.l.savedpc <= p->code + p->sizecode;
   }
 }
 
 
 static void checkstack (global_State *g, lua_State *L1) {
   StkId o;
+  CallInfo *ci;
   UpVal *uv;
   lua_assert(!isdead(g, L1));
   for (uv = L1->openupval; uv != NULL; uv = uv->u.open.next)
     lua_assert(upisopen(uv));  /* must be open */
-  for (o = L1->func; o->stkci.previous != 0; o -= o->stkci.previous) {
-    lua_assert(functop(o) <= L1->stack_last);
-    lua_assert(lua_checkpc(o));
+  for (ci = L1->ci; ci != NULL; ci = ci->previous) {
+    lua_assert(ci->top <= L1->stack_last);
+    lua_assert(lua_checkpc(ci));
   }
-  lua_assert(o == L1->stack);
   if (L1->stack) {  /* complete thread? */
     for (o = L1->stack; o < L1->stack_last + EXTRA_STACK; o++)
       checkliveness(L1, s2v(o));  /* entire stack must have valid values */

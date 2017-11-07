@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.144 2017/11/03 12:12:30 roberto Exp roberto $
+** $Id: lstate.c,v 2.143 2017/10/31 17:54:35 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -97,8 +97,51 @@ void luaE_setdebt (global_State *g, l_mem debt) {
 }
 
 
+CallInfo *luaE_extendCI (lua_State *L) {
+  CallInfo *ci = luaM_new(L, CallInfo);
+  lua_assert(L->ci->next == NULL);
+  L->ci->next = ci;
+  ci->previous = L->ci;
+  ci->next = NULL;
+  L->nci++;
+  return ci;
+}
+
+
+/*
+** free all CallInfo structures not in use by a thread
+*/
+void luaE_freeCI (lua_State *L) {
+  CallInfo *ci = L->ci;
+  CallInfo *next = ci->next;
+  ci->next = NULL;
+  while ((ci = next) != NULL) {
+    next = ci->next;
+    luaM_free(L, ci);
+    L->nci--;
+  }
+}
+
+
+/*
+** free half of the CallInfo structures not in use by a thread
+*/
+void luaE_shrinkCI (lua_State *L) {
+  CallInfo *ci = L->ci;
+  CallInfo *next2;  /* next's next */
+  /* while there are two nexts */
+  while (ci->next != NULL && (next2 = ci->next->next) != NULL) {
+    luaM_free(L, ci->next);  /* free next */
+    L->nci--;
+    ci->next = next2;  /* remove 'next' from the list */
+    next2->previous = ci;
+    ci = next2;  /* keep next's next */
+  }
+}
+
+
 static void stack_init (lua_State *L1, lua_State *L) {
-  int i;
+  int i; CallInfo *ci;
   /* initialize stack array */
   L1->stack = luaM_newvector(L, BASIC_STACK_SIZE, StackValue);
   L1->stacksize = BASIC_STACK_SIZE;
@@ -106,19 +149,23 @@ static void stack_init (lua_State *L1, lua_State *L) {
     setnilvalue(s2v(L1->stack + i));  /* erase new stack */
   L1->top = L1->stack;
   L1->stack_last = L1->stack + L1->stacksize - EXTRA_STACK;
-  /* initialize first 'function' */
-  L1->func = L1->stack;
-  L1->func->stkci.previous = 0;  /* end of linked list */
-  L1->func->stkci.framesize = LUA_MINSTACK + 1;
-  callstatus(L1->func) = 0;
+  /* initialize first ci */
+  ci = &L1->base_ci;
+  ci->next = ci->previous = NULL;
+  ci->callstatus = 0;
+  ci->func = L1->top;
   setnilvalue(s2v(L1->top));  /* 'function' entry for this 'ci' */
   L1->top++;
+  ci->top = L1->top + LUA_MINSTACK;
+  L1->ci = ci;
 }
 
 
 static void freestack (lua_State *L) {
   if (L->stack == NULL)
     return;  /* stack not completely built yet */
+  L->ci = &L->base_ci;  /* free the entire 'ci' list */
+  luaE_freeCI(L);
   lua_assert(L->nci == 0);
   luaM_freearray(L, L->stack, L->stacksize);  /* free stack array */
 }
@@ -168,7 +215,7 @@ static void f_luaopen (lua_State *L, void *ud) {
 static void preinit_thread (lua_State *L, global_State *g) {
   G(L) = g;
   L->stack = NULL;
-  L->func = NULL;
+  L->ci = NULL;
   L->nci = 0;
   L->stacksize = 0;
   L->twups = L;  /* thread has no upvalues */

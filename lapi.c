@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.274 2017/11/03 12:12:30 roberto Exp roberto $
+** $Id: lapi.c,v 2.273 2017/11/02 11:28:56 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -10,7 +10,6 @@
 #include "lprefix.h"
 
 
-#include <limits.h>
 #include <stdarg.h>
 #include <string.h>
 
@@ -59,14 +58,15 @@ const char lua_ident[] =
 
 
 static TValue *index2value (lua_State *L, int idx) {
+  CallInfo *ci = L->ci;
   if (idx > 0) {
-    StkId o = L->func + idx;
-    api_check(L, idx < L->func->stkci.framesize, "unacceptable index");
+    StkId o = ci->func + idx;
+    api_check(L, idx <= L->ci->top - (ci->func + 1), "unacceptable index");
     if (o >= L->top) return NONVALIDVALUE;
     else return s2v(o);
   }
   else if (!ispseudo(idx)) {  /* negative index */
-    api_check(L, idx != 0 && -idx < L->func->stkci.framesize, "invalid index");
+    api_check(L, idx != 0 && -idx <= L->top - (ci->func + 1), "invalid index");
     return s2v(L->top + idx);
   }
   else if (idx == LUA_REGISTRYINDEX)
@@ -74,10 +74,10 @@ static TValue *index2value (lua_State *L, int idx) {
   else {  /* upvalues */
     idx = LUA_REGISTRYINDEX - idx;
     api_check(L, idx <= MAXUPVAL + 1, "upvalue index too large");
-    if (ttislcf(s2v(L->func)))  /* light C function? */
+    if (ttislcf(s2v(ci->func)))  /* light C function? */
       return NONVALIDVALUE;  /* it has no upvalues */
     else {
-      CClosure *func = clCvalue(s2v(L->func));
+      CClosure *func = clCvalue(s2v(ci->func));
       return (idx <= func->nupvalues) ? &func->upvalue[idx-1] : NONVALIDVALUE;
     }
   }
@@ -85,13 +85,14 @@ static TValue *index2value (lua_State *L, int idx) {
 
 
 static StkId index2stack (lua_State *L, int idx) {
+  CallInfo *ci = L->ci;
   if (idx > 0) {
-    StkId o = L->func + idx;
+    StkId o = ci->func + idx;
     api_check(L, o < L->top, "unacceptable index");
     return o;
   }
   else {    /* non-positive index */
-    api_check(L, idx != 0 && -idx <= L->top - (L->func + 1), "invalid index");
+    api_check(L, idx != 0 && -idx <= L->top - (ci->func + 1), "invalid index");
     api_check(L, !ispseudo(idx), "invalid index");
     return L->top + idx;
   }
@@ -110,12 +111,10 @@ static void growstack (lua_State *L, void *ud) {
 
 LUA_API int lua_checkstack (lua_State *L, int n) {
   int res;
-  int frameuse = L->top - L->func;
+  CallInfo *ci = L->ci;
   lua_lock(L);
   api_check(L, n >= 0, "negative 'n'");
-  if (n >= USHRT_MAX - frameuse)
-    res = 0;  /* frame size overflow */
-  else if (L->stack_last - L->top > n)  /* stack large enough? */
+  if (L->stack_last - L->top > n)  /* stack large enough? */
     res = 1;  /* yes; check is OK */
   else {  /* no; need to grow stack */
     int inuse = cast_int(L->top - L->stack) + EXTRA_STACK;
@@ -124,8 +123,8 @@ LUA_API int lua_checkstack (lua_State *L, int n) {
     else  /* try to grow stack */
       res = (luaD_rawrunprotected(L, &growstack, &n) == LUA_OK);
   }
-  if (res && L->func->stkci.framesize < frameuse + n)
-    L->func->stkci.framesize = frameuse + n;  /* adjust frame size */
+  if (res && ci->top < L->top + n)
+    ci->top = L->top + n;  /* adjust frame top */
   lua_unlock(L);
   return res;
 }
@@ -137,7 +136,7 @@ LUA_API void lua_xmove (lua_State *from, lua_State *to, int n) {
   lua_lock(to);
   api_checknelems(from, n);
   api_check(from, G(from) == G(to), "moving among independent states");
-  api_check(from, functop(to->func) - to->top >= n, "stack overflow");
+  api_check(from, to->ci->top - to->top >= n, "stack overflow");
   from->top -= n;
   for (i = 0; i < n; i++) {
     setobjs2s(to, to->top, from->top + i);
@@ -176,17 +175,17 @@ LUA_API const lua_Number *lua_version (lua_State *L) {
 LUA_API int lua_absindex (lua_State *L, int idx) {
   return (idx > 0 || ispseudo(idx))
          ? idx
-         : cast_int(L->top - L->func) + idx;
+         : cast_int(L->top - L->ci->func) + idx;
 }
 
 
 LUA_API int lua_gettop (lua_State *L) {
-  return cast_int(L->top - (L->func + 1));
+  return cast_int(L->top - (L->ci->func + 1));
 }
 
 
 LUA_API void lua_settop (lua_State *L, int idx) {
-  StkId func = L->func;
+  StkId func = L->ci->func;
   lua_lock(L);
   if (idx >= 0) {
     api_check(L, idx <= L->stack_last - (func + 1), "new top too large");
@@ -244,7 +243,7 @@ LUA_API void lua_copy (lua_State *L, int fromidx, int toidx) {
   api_checkvalidindex(L, to);
   setobj(L, to, fr);
   if (isupvalue(toidx))  /* function upvalue? */
-    luaC_barrier(L, clCvalue(s2v(L->func)), fr);
+    luaC_barrier(L, clCvalue(s2v(L->ci->func)), fr);
   /* LUA_REGISTRYINDEX does not need gc barrier
      (collector revisits it before finishing collection) */
   lua_unlock(L);
@@ -932,24 +931,23 @@ LUA_API void lua_setuservalue (lua_State *L, int idx) {
 
 
 #define checkresults(L,na,nr) \
-     api_check(L, (nr) == LUA_MULTRET || \
-                  (functop(L->func) - L->top >= (nr) - (na)), \
-	"results from function overflow current frame size")
+     api_check(L, (nr) == LUA_MULTRET || (L->ci->top - L->top >= (nr) - (na)), \
+	"results from function overflow current stack size")
 
 
 LUA_API void lua_callk (lua_State *L, int nargs, int nresults,
                         lua_KContext ctx, lua_KFunction k) {
   StkId func;
   lua_lock(L);
-  api_check(L, k == NULL || !isLua(L->func),
+  api_check(L, k == NULL || !isLua(L->ci),
     "cannot use continuations inside hooks");
   api_checknelems(L, nargs+1);
   api_check(L, L->status == LUA_OK, "cannot do calls on non-normal thread");
   checkresults(L, nargs, nresults);
   func = L->top - (nargs+1);
   if (k != NULL && L->nny == 0) {  /* need to prepare continuation? */
-    L->func->stkci.u.c.k = k;  /* save continuation */
-    L->func->stkci.u.c.ctx = ctx;  /* save context */
+    L->ci->u.c.k = k;  /* save continuation */
+    L->ci->u.c.ctx = ctx;  /* save context */
     luaD_call(L, func, nresults);  /* do the call */
   }
   else  /* no continuation or no yieldable */
@@ -980,38 +978,37 @@ LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
                         lua_KContext ctx, lua_KFunction k) {
   struct CallS c;
   int status;
-  ptrdiff_t efunc;
+  ptrdiff_t func;
   lua_lock(L);
-  api_check(L, k == NULL || !isLua(L->func),
+  api_check(L, k == NULL || !isLua(L->ci),
     "cannot use continuations inside hooks");
   api_checknelems(L, nargs+1);
   api_check(L, L->status == LUA_OK, "cannot do calls on non-normal thread");
   checkresults(L, nargs, nresults);
   if (errfunc == 0)
-    efunc = 0;
+    func = 0;
   else {
     StkId o = index2stack(L, errfunc);
-    efunc = savestack(L, o);
+    func = savestack(L, o);
   }
   c.func = L->top - (nargs+1);  /* function to be called */
   if (k == NULL || L->nny > 0) {  /* no continuation or no yieldable? */
     c.nresults = nresults;  /* do a 'conventional' protected call */
-    status = luaD_pcall(L, f_call, &c, savestack(L, c.func), efunc);
+    status = luaD_pcall(L, f_call, &c, savestack(L, c.func), func);
   }
   else {  /* prepare continuation (call is already protected by 'resume') */
-    StkId func = L->func;
-    func->stkci.u.c.k = k;  /* save continuation */
-    func->stkci.u.c.ctx = ctx;  /* save context */
+    CallInfo *ci = L->ci;
+    ci->u.c.k = k;  /* save continuation */
+    ci->u.c.ctx = ctx;  /* save context */
     /* save information for error recovery */
-    func->stkci.u2.funcidx = c.func - func;
-    func->stkci.u.c.old_errfunc = L->errfunc;
-    L->errfunc = efunc;
-    setoah(callstatus(func), L->allowhook);  /* save value of 'allowhook' */
-    callstatus(func) |= CIST_YPCALL;  /* function can do error recovery */
+    ci->u2.funcidx = savestack(L, c.func);
+    ci->u.c.old_errfunc = L->errfunc;
+    L->errfunc = func;
+    setoah(ci->callstatus, L->allowhook);  /* save value of 'allowhook' */
+    ci->callstatus |= CIST_YPCALL;  /* function can do error recovery */
     luaD_call(L, c.func, nresults);  /* do the call */
-    func = L->func;  /* previous call can reallocate stack */
-    callstatus(func) &= ~CIST_YPCALL;
-    L->errfunc = func->stkci.u.c.old_errfunc;
+    ci->callstatus &= ~CIST_YPCALL;
+    L->errfunc = ci->u.c.old_errfunc;
     status = LUA_OK;  /* if it is here, there were no errors */
   }
   adjustresults(L, nresults);

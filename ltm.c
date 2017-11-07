@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.45 2017/10/04 15:49:05 roberto Exp roberto $
+** $Id: ltm.c,v 2.45 2017/10/04 15:49:05 roberto Exp $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -108,7 +108,7 @@ void luaT_callTM (lua_State *L, const TValue *f, const TValue *p1,
   setobj2s(L, func + 3, p3);  /* 3rd argument */
   L->top += 4;
   /* metamethod may yield only when called from Lua code */
-  if (isLua(L->func))
+  if (isLua(L->ci))
     luaD_call(L, func, 0);
   else
     luaD_callnoyield(L, func, 0);
@@ -124,7 +124,7 @@ void luaT_callTMres (lua_State *L, const TValue *f, const TValue *p1,
   setobj2s(L, func + 2, p2);  /* 2nd argument */
   L->top += 3;
   /* metamethod may yield only when called from Lua code */
-  if (isLua(L->func))
+  if (isLua(L->ci))
     luaD_call(L, func, 1);
   else
     luaD_callnoyield(L, func, 1);
