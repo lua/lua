@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.307 2017/11/07 17:20:42 roberto Exp roberto $
+** $Id: lvm.c,v 2.308 2017/11/08 14:50:23 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -780,8 +780,7 @@ void luaV_finishOp (lua_State *L) {
 ** Protect code that, in general, can raise errors, reallocate the
 ** stack, and change the hooks.
 */
-#define Protect(code)  \
-  { savepc(L); {code;}; base = ci->func + 1; updatemask(L); }
+#define Protect(exp)  (savepc(L), (exp), base = ci->func + 1, updatemask(L))
 
 
 #define checkGC(L,c)  \
@@ -881,7 +880,8 @@ void luaV_execute (lua_State *L) {
         if (luaV_fastget(L, upval, key, slot, luaH_getshortstr)) {
           setobj2s(L, ra, slot);
         }
-        else Protect(luaV_finishget(L, upval, rc, ra, slot));
+        else
+          Protect(luaV_finishget(L, upval, rc, ra, slot));
         vmbreak;
       }
       vmcase(OP_GETTABLE) {
@@ -920,7 +920,8 @@ void luaV_execute (lua_State *L) {
         if (luaV_fastget(L, rb, key, slot, luaH_getshortstr)) {
           setobj2s(L, ra, slot);
         }
-        else Protect(luaV_finishget(L, rb, rc, ra, slot));
+        else
+          Protect(luaV_finishget(L, rb, rc, ra, slot));
         vmbreak;
       }
       vmcase(OP_SETTABUP) {
@@ -997,7 +998,8 @@ void luaV_execute (lua_State *L) {
         if (luaV_fastget(L, rb, key, slot, luaH_getstr)) {
           setobj2s(L, ra, slot);
         }
-        else Protect(luaV_finishget(L, rb, rc, ra, slot));
+        else
+          Protect(luaV_finishget(L, rb, rc, ra, slot));
         vmbreak;
       }
       vmcase(OP_ADDI) {
@@ -1109,7 +1111,8 @@ void luaV_execute (lua_State *L) {
         else if (tonumberns(rb, nb) && tonumberns(rc, nc)) {
           setfltvalue(s2v(ra), luai_numadd(L, nb, nc));
         }
-        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_ADD)); }
+        else
+          Protect(luaT_trybinTM(L, rb, rc, ra, TM_ADD));
         vmbreak;
       }
       vmcase(OP_SUB) {
@@ -1123,7 +1126,8 @@ void luaV_execute (lua_State *L) {
         else if (tonumberns(rb, nb) && tonumberns(rc, nc)) {
           setfltvalue(s2v(ra), luai_numsub(L, nb, nc));
         }
-        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_SUB)); }
+        else
+          Protect(luaT_trybinTM(L, rb, rc, ra, TM_SUB));
         vmbreak;
       }
       vmcase(OP_MUL) {
@@ -1137,7 +1141,8 @@ void luaV_execute (lua_State *L) {
         else if (tonumberns(rb, nb) && tonumberns(rc, nc)) {
           setfltvalue(s2v(ra), luai_nummul(L, nb, nc));
         }
-        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_MUL)); }
+        else
+          Protect(luaT_trybinTM(L, rb, rc, ra, TM_MUL));
         vmbreak;
       }
       vmcase(OP_DIV) {  /* float division (always with floats) */
@@ -1147,7 +1152,8 @@ void luaV_execute (lua_State *L) {
         if (tonumberns(rb, nb) && tonumberns(rc, nc)) {
           setfltvalue(s2v(ra), luai_numdiv(L, nb, nc));
         }
-        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_DIV)); }
+        else
+          Protect(luaT_trybinTM(L, rb, rc, ra, TM_DIV));
         vmbreak;
       }
       vmcase(OP_BAND) {
@@ -1157,7 +1163,8 @@ void luaV_execute (lua_State *L) {
         if (tointegerns(rb, &ib) && tointegerns(rc, &ic)) {
           setivalue(s2v(ra), intop(&, ib, ic));
         }
-        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_BAND)); }
+        else
+          Protect(luaT_trybinTM(L, rb, rc, ra, TM_BAND));
         vmbreak;
       }
       vmcase(OP_BOR) {
@@ -1167,7 +1174,8 @@ void luaV_execute (lua_State *L) {
         if (tointegerns(rb, &ib) && tointegerns(rc, &ic)) {
           setivalue(s2v(ra), intop(|, ib, ic));
         }
-        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_BOR)); }
+        else
+          Protect(luaT_trybinTM(L, rb, rc, ra, TM_BOR));
         vmbreak;
       }
       vmcase(OP_BXOR) {
@@ -1177,7 +1185,8 @@ void luaV_execute (lua_State *L) {
         if (tointegerns(rb, &ib) && tointegerns(rc, &ic)) {
           setivalue(s2v(ra), intop(^, ib, ic));
         }
-        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_BXOR)); }
+        else
+          Protect(luaT_trybinTM(L, rb, rc, ra, TM_BXOR));
         vmbreak;
       }
       vmcase(OP_SHL) {
@@ -1187,7 +1196,8 @@ void luaV_execute (lua_State *L) {
         if (tointegerns(rb, &ib) && tointegerns(rc, &ic)) {
           setivalue(s2v(ra), luaV_shiftl(ib, ic));
         }
-        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_SHL)); }
+        else
+          Protect(luaT_trybinTM(L, rb, rc, ra, TM_SHL));
         vmbreak;
       }
       vmcase(OP_SHR) {
@@ -1197,7 +1207,8 @@ void luaV_execute (lua_State *L) {
         if (tointegerns(rb, &ib) && tointegerns(rc, &ic)) {
           setivalue(s2v(ra), luaV_shiftl(ib, -ic));
         }
-        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_SHR)); }
+        else
+          Protect(luaT_trybinTM(L, rb, rc, ra, TM_SHR));
         vmbreak;
       }
       vmcase(OP_MOD) {
@@ -1213,7 +1224,8 @@ void luaV_execute (lua_State *L) {
           luai_nummod(L, nb, nc, m);
           setfltvalue(s2v(ra), m);
         }
-        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_MOD)); }
+        else
+          Protect(luaT_trybinTM(L, rb, rc, ra, TM_MOD));
         vmbreak;
       }
       vmcase(OP_IDIV) {  /* floor division */
@@ -1227,7 +1239,8 @@ void luaV_execute (lua_State *L) {
         else if (tonumberns(rb, nb) && tonumberns(rc, nc)) {
           setfltvalue(s2v(ra), luai_numidiv(L, nb, nc));
         }
-        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_IDIV)); }
+        else
+          Protect(luaT_trybinTM(L, rb, rc, ra, TM_IDIV));
         vmbreak;
       }
       vmcase(OP_POW) {
@@ -1237,7 +1250,8 @@ void luaV_execute (lua_State *L) {
         if (tonumberns(rb, nb) && tonumberns(rc, nc)) {
           setfltvalue(s2v(ra), luai_numpow(L, nb, nc));
         }
-        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_POW)); }
+        else
+          Protect(luaT_trybinTM(L, rb, rc, ra, TM_POW));
         vmbreak;
       }
       vmcase(OP_UNM) {
@@ -1250,9 +1264,8 @@ void luaV_execute (lua_State *L) {
         else if (tonumberns(rb, nb)) {
           setfltvalue(s2v(ra), luai_numunm(L, nb));
         }
-        else {
+        else
           Protect(luaT_trybinTM(L, rb, rb, ra, TM_UNM));
-        }
         vmbreak;
       }
       vmcase(OP_BNOT) {
@@ -1261,9 +1274,8 @@ void luaV_execute (lua_State *L) {
         if (tointegerns(rb, &ib)) {
           setivalue(s2v(ra), intop(^, ~l_castS2U(0), ib));
         }
-        else {
+        else
           Protect(luaT_trybinTM(L, rb, rb, ra, TM_BNOT));
-        }
         vmbreak;
       }
       vmcase(OP_NOT) {
@@ -1300,12 +1312,12 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_EQ) {
         TValue *rb = vRB(i);
         TValue *rc = vRC(i);
-        Protect(
-          if (luaV_equalobj(L, rb, rc) != GETARG_A(i))
-            pc++;
-          else
-            donextjump(ci);
-        )
+        int res;
+        Protect(res = luaV_equalobj(L, rb, rc));
+        if (res != GETARG_A(i))
+          pc++;
+        else
+          donextjump(ci);
         vmbreak;
       }
       vmcase(OP_LT) {
@@ -1314,9 +1326,8 @@ void luaV_execute (lua_State *L) {
         int res;
         if (ttisinteger(rb) && ttisinteger(rc))
           res = (ivalue(rb) < ivalue(rc));
-        else Protect(
-          res = luaV_lessthan(L, rb, rc);
-        )
+        else
+          Protect(res = luaV_lessthan(L, rb, rc));
         if (res != GETARG_A(i))
           pc++;
         else
@@ -1329,9 +1340,8 @@ void luaV_execute (lua_State *L) {
         int res;
         if (ttisinteger(rb) && ttisinteger(rc))
           res = (ivalue(rb) <= ivalue(rc));
-        else Protect(
-          res = luaV_lessequal(L, rb, rc);
-        )
+        else
+          Protect(res = luaV_lessequal(L, rb, rc));
         if (res != GETARG_A(i))
           pc++;
         else
@@ -1379,9 +1389,8 @@ void luaV_execute (lua_State *L) {
         if (b != 0) L->top = ra+b;  /* else previous instruction set top */
         lua_assert(GETARG_C(i) - 1 == LUA_MULTRET);
         savepc(L);
-        if (luaD_precall(L, ra, LUA_MULTRET)) {  /* C function? */
+        if (luaD_precall(L, ra, LUA_MULTRET))  /* C function? */
           Protect((void)0);  /* update 'base' */
-        }
         else {
           /* tail call: put called frame (n) in place of caller one (o) */
           CallInfo *nci = L->ci;  /* called frame (new) */
