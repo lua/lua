@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.140 2017/11/07 13:25:26 roberto Exp roberto $
+** $Id: ldebug.c,v 2.141 2017/11/07 17:20:42 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -670,7 +670,7 @@ l_noret luaG_opinterror (lua_State *L, const TValue *p1,
 */
 l_noret luaG_tointerror (lua_State *L, const TValue *p1, const TValue *p2) {
   lua_Integer temp;
-  if (!tointeger(p1, &temp))
+  if (!tointegerns(p1, &temp))
     p2 = p1;
   luaG_runerror(L, "number%s has no integer representation", varinfo(L, p2));
 }

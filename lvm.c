@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.306 2017/11/07 13:25:26 roberto Exp roberto $
+** $Id: lvm.c,v 2.307 2017/11/07 17:20:42 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -74,7 +74,7 @@ int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
     *n = cast_num(ivalue(obj));
     return 1;
   }
-  else if (cvt2num(obj) &&  /* string convertible to number? */
+  else if (cvt2num(obj) &&  /* string coercible to number? */
             luaO_str2num(svalue(obj), &v) == vslen(obj) + 1) {
     *n = nvalue(&v);  /* convert result of 'luaO_str2num' to a float */
     return 1;
@@ -85,15 +85,15 @@ int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
 
 
 /*
-** try to convert a value to an integer, rounding according to 'mode':
+** try to convert a float to an integer, rounding according to 'mode':
 ** mode == 0: accepts only integral values
 ** mode == 1: takes the floor of the number
 ** mode == 2: takes the ceil of the number
 */
-int luaV_tointeger (const TValue *obj, lua_Integer *p, int mode) {
-  TValue v;
- again:
-  if (ttisfloat(obj)) {
+int luaV_flttointeger (const TValue *obj, lua_Integer *p, int mode) {
+  if (!ttisfloat(obj))
+    return 0;
+  else {
     lua_Number n = fltvalue(obj);
     lua_Number f = l_floor(n);
     if (n != f) {  /* not an integral value? */
@@ -103,16 +103,23 @@ int luaV_tointeger (const TValue *obj, lua_Integer *p, int mode) {
     }
     return lua_numbertointeger(f, p);
   }
-  else if (ttisinteger(obj)) {
+}
+
+
+/*
+** try to convert a value to an integer. ("Fast track" is handled
+** by macro 'tointeger'.)
+*/
+int luaV_tointeger (const TValue *obj, lua_Integer *p, int mode) {
+  TValue v;
+  if (cvt2num(obj) && luaO_str2num(svalue(obj), &v) == vslen(obj) + 1)
+    obj = &v;  /* change string to its corresponding number */
+  if (ttisinteger(obj)) {
     *p = ivalue(obj);
     return 1;
   }
-  else if (cvt2num(obj) &&
-            luaO_str2num(svalue(obj), &v) == vslen(obj) + 1) {
-    obj = &v;
-    goto again;  /* convert result from 'luaO_str2num' to an integer */
-  }
-  return 0;  /* conversion failed */
+  else
+    return luaV_flttointeger(obj, p, mode);
 }
 
 
@@ -120,9 +127,9 @@ int luaV_tointeger (const TValue *obj, lua_Integer *p, int mode) {
 ** Try to convert a 'for' limit to an integer, preserving the semantics
 ** of the loop.  (The following explanation assumes a non-negative step;
 ** it is valid for negative steps mutatis mutandis.)
-** If the limit can be converted to an integer, rounding down, that is
-** it.
-** Otherwise, check whether the limit can be converted to a number.  If
+** If the limit is an integer or can be converted to an integer,
+** rounding down, that is it.
+** Otherwise, check whether the limit can be converted to a float.  If
 ** the number is too large, it is OK to set the limit as LUA_MAXINTEGER,
 ** which means no limit.  If the number is too negative, the loop
 ** should not run, because any initial integer value is larger than the
@@ -133,7 +140,10 @@ int luaV_tointeger (const TValue *obj, lua_Integer *p, int mode) {
 static int forlimit (const TValue *obj, lua_Integer *p, lua_Integer step,
                      int *stopnow) {
   *stopnow = 0;  /* usually, let loops run */
-  if (!luaV_tointeger(obj, p, (step < 0 ? 2 : 1))) {  /* not fit in integer? */
+  if (ttisinteger(obj))
+    *p = ivalue(obj);
+  else if (!luaV_tointeger(obj, p, (step < 0 ? 2 : 1))) {
+    /* not coercible to in integer */
     lua_Number n;  /* try to convert to float */
     if (!tonumber(obj, &n)) /* cannot convert to float? */
       return 0;  /* not a number */
@@ -411,7 +421,7 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
       return 0;  /* only numbers can be equal with different variants */
     else {  /* two numbers with different variants */
       lua_Integer i1, i2;  /* compare them as integers */
-      return (tointeger(t1, &i1) && tointeger(t2, &i2) && i1 == i2);
+      return (tointegerns(t1, &i1) && tointegerns(t2, &i2) && i1 == i2);
     }
   }
   /* values have same type and same variant */
@@ -1144,7 +1154,7 @@ void luaV_execute (lua_State *L) {
         TValue *rb = vRB(i);
         TValue *rc = vRC(i);
         lua_Integer ib; lua_Integer ic;
-        if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
+        if (tointegerns(rb, &ib) && tointegerns(rc, &ic)) {
           setivalue(s2v(ra), intop(&, ib, ic));
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_BAND)); }
@@ -1154,7 +1164,7 @@ void luaV_execute (lua_State *L) {
         TValue *rb = vRB(i);
         TValue *rc = vRC(i);
         lua_Integer ib; lua_Integer ic;
-        if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
+        if (tointegerns(rb, &ib) && tointegerns(rc, &ic)) {
           setivalue(s2v(ra), intop(|, ib, ic));
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_BOR)); }
@@ -1164,7 +1174,7 @@ void luaV_execute (lua_State *L) {
         TValue *rb = vRB(i);
         TValue *rc = vRC(i);
         lua_Integer ib; lua_Integer ic;
-        if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
+        if (tointegerns(rb, &ib) && tointegerns(rc, &ic)) {
           setivalue(s2v(ra), intop(^, ib, ic));
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_BXOR)); }
@@ -1174,7 +1184,7 @@ void luaV_execute (lua_State *L) {
         TValue *rb = vRB(i);
         TValue *rc = vRC(i);
         lua_Integer ib; lua_Integer ic;
-        if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
+        if (tointegerns(rb, &ib) && tointegerns(rc, &ic)) {
           setivalue(s2v(ra), luaV_shiftl(ib, ic));
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_SHL)); }
@@ -1184,7 +1194,7 @@ void luaV_execute (lua_State *L) {
         TValue *rb = vRB(i);
         TValue *rc = vRC(i);
         lua_Integer ib; lua_Integer ic;
-        if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
+        if (tointegerns(rb, &ib) && tointegerns(rc, &ic)) {
           setivalue(s2v(ra), luaV_shiftl(ib, -ic));
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_SHR)); }
@@ -1248,7 +1258,7 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_BNOT) {
         TValue *rb = vRB(i);
         lua_Integer ib;
-        if (tointeger(rb, &ib)) {
+        if (tointegerns(rb, &ib)) {
           setivalue(s2v(ra), intop(^, ~l_castS2U(0), ib));
         }
         else {
