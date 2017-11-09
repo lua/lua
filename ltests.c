@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.230 2017/11/07 13:25:26 roberto Exp roberto $
+** $Id: ltests.c,v 2.231 2017/11/07 17:20:42 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -41,9 +41,6 @@
 
 
 void *l_Trick = 0;
-
-
-int islocked = 0;
 
 
 #define obj_at(L,k)	s2v(L->ci->func + (k))
