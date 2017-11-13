@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.143 2017/10/31 17:54:35 roberto Exp $
+** $Id: lstate.c,v 2.146 2017/11/07 13:25:26 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -103,6 +103,7 @@ CallInfo *luaE_extendCI (lua_State *L) {
   L->ci->next = ci;
   ci->previous = L->ci;
   ci->next = NULL;
+  ci->u.l.trap = 0;
   L->nci++;
   return ci;
 }

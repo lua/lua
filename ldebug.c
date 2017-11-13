@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.142 2017/11/08 14:50:23 roberto Exp roberto $
+** $Id: ldebug.c,v 2.143 2017/11/13 12:20:51 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -107,7 +107,24 @@ static int currentline (CallInfo *ci) {
 
 
 /*
-** This function can be called asynchronously (e.g. during a signal).
+** This function can be called asynchronously (e.g. during a signal),
+** under "reasonable" assumptions. A new 'ci' is completely linked
+** in the list before it becomes part of the "active" list, and
+** we assume that pointers are atomic (see comment in next function).
+** (If we traverse one more item, there is no problem. If we traverse
+** one less item, the worst that can happen is that the signal will
+** not interrupt the script.)
+*/
+static void settraps (CallInfo *ci) {
+  for (; ci != NULL; ci = ci->previous)
+    if (isLua(ci))
+      ci->u.l.trap = 1;
+}
+
+
+/*
+** This function can be called asynchronously (e.g. during a signal),
+** under "reasonable" assumptions.
 ** Fields 'oldpc', 'basehookcount', and 'hookcount' (set by
 ** 'resethookcount') are for debug only, and it is no problem if they
 ** get arbitrary values (causes at most one wrong hook call). 'hookmask'
@@ -126,6 +143,8 @@ LUA_API void lua_sethook (lua_State *L, lua_Hook func, int mask, int count) {
   L->basehookcount = count;
   resethookcount(L);
   L->hookmask = cast_byte(mask);
+  if (mask & (LUA_MASKLINE | LUA_MASKCOUNT))
+    settraps(L->ci);  /* to trace inside 'luaV_execute' */
 }
 
 

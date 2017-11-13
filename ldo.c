@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.170 2017/11/07 13:25:26 roberto Exp roberto $
+** $Id: ldo.c,v 2.171 2017/11/13 12:26:30 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -159,12 +159,16 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 static void correctstack (lua_State *L, StkId oldstack) {
   CallInfo *ci;
   UpVal *up;
+  if (L->stack == oldstack)
+    return;  /* stack address did not change */
   L->top = (L->top - oldstack) + L->stack;
   for (up = L->openupval; up != NULL; up = up->u.open.next)
     up->v = s2v((uplevel(up) - oldstack) + L->stack);
   for (ci = L->ci; ci != NULL; ci = ci->previous) {
     ci->top = (ci->top - oldstack) + L->stack;
     ci->func = (ci->func - oldstack) + L->stack;
+    if (isLua(ci))
+      ci->u.l.trap = 1;  /* signal to update 'trap' in 'luaV_execute' */
   }
 }
 
@@ -277,13 +281,18 @@ void luaD_hook (lua_State *L, int event, int line) {
 
 
 static void callhook (lua_State *L, CallInfo *ci) {
-  int hook = LUA_HOOKCALL;
+  int hook;
+  ci->u.l.trap = 1;
+  if (!(L->hookmask & LUA_MASKCALL))
+    return;  /* some other hook */
   ci->u.l.savedpc++;  /* hooks assume 'pc' is already incremented */
   if (isLua(ci->previous) &&
       GET_OPCODE(*(ci->previous->u.l.savedpc - 1)) == OP_TAILCALL) {
     ci->callstatus |= CIST_TAIL;
     hook = LUA_HOOKTAILCALL;
   }
+  else
+    hook = LUA_HOOKCALL;
   luaD_hook(L, hook, -1);
   ci->u.l.savedpc--;  /* correct 'pc' */
 }
@@ -430,7 +439,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       lua_assert(ci->top <= L->stack_last);
       ci->u.l.savedpc = p->code;  /* starting point */
       ci->callstatus = CIST_LUA;
-      if (L->hookmask & LUA_MASKCALL)
+      if (L->hookmask)
         callhook(L, ci);
       return 0;
     }

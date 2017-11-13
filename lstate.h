@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.146 2017/11/02 11:28:56 roberto Exp $
+** $Id: lstate.h,v 2.150 2017/11/07 13:25:26 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -91,6 +91,7 @@ typedef struct CallInfo {
   union {
     struct {  /* only for Lua functions */
       const Instruction *savedpc;
+      l_signalT trap;
     } l;
     struct {  /* only for C functions */
       lua_KFunction k;  /* continuation in case of yields */

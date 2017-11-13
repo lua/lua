@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.308 2017/11/08 14:50:23 roberto Exp roberto $
+** $Id: lvm.c,v 2.309 2017/11/08 19:01:02 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -756,14 +756,16 @@ void luaV_finishOp (lua_State *L) {
 
 
 
-#define updatemask(L)  (mask = L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT))
+#define updatetrap(ci)  (trap = ci->u.l.trap)
+
+#define updatebase(ci)	(base = ci->func + 1)
 
 
 /*
-** Execute a jump instruction. The 'updatemask' allows signals to stop
-** tight loops. (Without it, the local copy of 'mask' could never change.)
+** Execute a jump instruction. The 'updatetrap' allows signals to stop
+** tight loops. (Without it, the local copy of 'trap' could never change.)
 */
-#define dojump(ci,i,e)	{ pc += GETARG_sJ(i) + e; updatemask(L); }
+#define dojump(ci,i,e)	{ pc += GETARG_sJ(i) + e; updatetrap(ci); }
 
 
 /* for test instructions, execute the jump instruction that follows it */
@@ -780,19 +782,24 @@ void luaV_finishOp (lua_State *L) {
 ** Protect code that, in general, can raise errors, reallocate the
 ** stack, and change the hooks.
 */
-#define Protect(exp)  (savepc(L), (exp), base = ci->func + 1, updatemask(L))
+#define Protect(exp)  (savepc(L), (exp), updatetrap(ci))
 
 
 #define checkGC(L,c)  \
 	{ luaC_condGC(L, L->top = (c),  /* limit of live values */ \
-                         Protect(L->top = ci->top));  /* restore top */ \
+                   (L->top = ci->top, updatetrap(ci)));  /* restore top */ \
            luai_threadyield(L); }
 
 
 /* fetch an instruction and prepare its execution */
 #define vmfetch()	{ \
   i = *(pc++); \
-  if (mask) Protect(luaG_traceexec(L)); \
+  if (trap) { \
+    if (!(L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT))) \
+      trap = ci->u.l.trap = 0;  /* no need to stop again */ \
+    else { savepc(L); luaG_traceexec(L); } \
+    updatebase(ci);  /* the trap may be just for that */ \
+  } \
   ra = RA(i); /* WARNING: any stack reallocation invalidates 'ra' */ \
 }
 
@@ -802,19 +809,19 @@ void luaV_finishOp (lua_State *L) {
 
 
 void luaV_execute (lua_State *L) {
-  CallInfo *ci = L->ci;
+  CallInfo *ci = L->ci;  /* local copy of 'L->ci' */
   LClosure *cl;
   TValue *k;
   StkId base;  /* local copy of 'ci->func + 1' */
-  int mask;  /* local copy of 'L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT)' */
+  int trap;
   const Instruction *pc;  /* local copy of 'ci->u.l.savedpc' */
   ci->callstatus |= CIST_FRESH;  /* fresh invocation of 'luaV_execute" */
  newframe:  /* reentry point when frame changes (call/return) */
   lua_assert(ci == L->ci);
   cl = clLvalue(s2v(ci->func));  /* local reference to function's closure */
   k = cl->p->k;  /* local reference to function's constant table */
-  updatemask(L);
-  base = ci->func + 1;
+  updatetrap(ci);
+  updatebase(ci);
   pc = ci->u.l.savedpc;
   /* main loop of interpreter */
   for (;;) {
@@ -1294,7 +1301,10 @@ void luaV_execute (lua_State *L) {
         StkId rb;
         L->top = base + c + 1;  /* mark the end of concat operands */
         Protect(luaV_concat(L, c - b + 1));
-        ra = RA(i);  /* 'luaV_concat' may invoke TMs and move the stack */
+        if (trap) {  /* 'luaV_concat' may move the stack */
+          updatebase(ci);
+          ra = RA(i);
+        }
         rb = base + b;
         setobjs2s(L, ra, rb);
         checkGC(L, (ra >= rb ? ra + 1 : rb));
@@ -1390,7 +1400,7 @@ void luaV_execute (lua_State *L) {
         lua_assert(GETARG_C(i) - 1 == LUA_MULTRET);
         savepc(L);
         if (luaD_precall(L, ra, LUA_MULTRET))  /* C function? */
-          Protect((void)0);  /* update 'base' */
+          updatetrap(ci);
         else {
           /* tail call: put called frame (n) in place of caller one (o) */
           CallInfo *nci = L->ci;  /* called frame (new) */
@@ -1416,7 +1426,8 @@ void luaV_execute (lua_State *L) {
       }
       vmcase(OP_RETURN) {
         int b = GETARG_B(i);
-        if (cl->p->sizep > 0) luaF_close(L, base);
+        if (cl->p->sizep > 0)
+          luaF_close(L, base);
         savepc(L);
         b = luaD_poscall(L, ci, ra, (b != 0 ? b - 1 : cast_int(L->top - ra)));
         if (ci->callstatus & CIST_FRESH)  /* local 'ci' still from callee */
@@ -1452,7 +1463,7 @@ void luaV_execute (lua_State *L) {
             setfltvalue(s2v(ra + 3), idx);  /* ...and external index */
           }
         }
-        updatemask(L);
+        updatetrap(ci);
         vmbreak;
       }
       vmcase(OP_FORPREP) {
@@ -1492,8 +1503,10 @@ void luaV_execute (lua_State *L) {
         L->top = cb + 3;  /* func. + 2 args (state and index) */
         Protect(luaD_call(L, cb, GETARG_C(i)));
         L->top = ci->top;
+        if (trap)  /* keep 'base' correct for next instruction */
+          updatebase(ci);
         i = *(pc++);  /* go to next instruction */
-        ra = RA(i);
+        ra = RA(i);  /* get its 'ra' */
         lua_assert(GET_OPCODE(i) == OP_TFORLOOP);
         goto l_tforloop;
       }
