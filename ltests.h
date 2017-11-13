@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.50 2016/07/19 17:13:00 roberto Exp roberto $
+** $Id: ltests.h,v 2.51 2017/06/27 11:35:31 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,7 @@
 #define ltests_h
 
 
+#include <stdio.h>
 #include <stdlib.h>
 
 /* test Lua with no compatibility code */
