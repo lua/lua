@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.141 2017/11/07 17:20:42 roberto Exp roberto $
+** $Id: ldebug.c,v 2.142 2017/11/08 14:50:23 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -754,15 +754,16 @@ void luaG_traceexec (lua_State *L) {
     luaD_hook(L, LUA_HOOKCOUNT, -1);  /* call count hook */
   if (mask & LUA_MASKLINE) {
     Proto *p = ci_func(ci)->p;
-    int npc = pcRel(ci->u.l.savedpc, p);
-    if (npc == 0 ||  /* call linehook when enter a new function, */
-        ci->u.l.savedpc <= L->oldpc ||  /* when jump back (loop), or when */
-        changedline(p, pcRel(L->oldpc, p), npc)) {  /* enter new line */
-      int newline = luaG_getfuncline(p, npc);  /* new line */
+    const Instruction *npc = ci->u.l.savedpc;
+    int npci = pcRel(npc, p);
+    if (npci == 0 ||  /* call linehook when enter a new function, */
+        npc <= L->oldpc ||  /* when jump back (loop), or when */
+        changedline(p, pcRel(L->oldpc, p), npci)) {  /* enter new line */
+      int newline = luaG_getfuncline(p, npci);  /* new line */
       luaD_hook(L, LUA_HOOKLINE, newline);  /* call line hook */
     }
+    L->oldpc = npc;
   }
-  L->oldpc = ci->u.l.savedpc;
   if (L->status == LUA_YIELD) {  /* did hook yield? */
     if (counthook)
       L->hookcount = 1;  /* undo decrement to zero */
