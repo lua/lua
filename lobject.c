@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.118 2017/10/10 20:05:40 roberto Exp roberto $
+** $Id: lobject.c,v 2.119 2017/11/08 14:50:23 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -206,7 +206,7 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
   int hasdot = 0;  /* true after seen a dot */
   *endptr = cast(char *, s);  /* nothing is valid yet */
   while (lisspace(cast_uchar(*s))) s++;  /* skip initial spaces */
-  neg = isneg(&s);  /* check signal */
+  neg = isneg(&s);  /* check sign */
   if (!(*s == '0' && (*(s + 1) == 'x' || *(s + 1) == 'X')))  /* check '0x' */
     return 0.0;  /* invalid format (no '0x') */
   for (s += 2; ; s++) {  /* skip '0x' and read numeral */
@@ -230,9 +230,9 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
   e *= 4;  /* each digit multiplies/divides value by 2^4 */
   if (*s == 'p' || *s == 'P') {  /* exponent part? */
     int exp1 = 0;  /* exponent value */
-    int neg1;  /* exponent signal */
+    int neg1;  /* exponent sign */
     s++;  /* skip 'p' */
-    neg1 = isneg(&s);  /* signal */
+    neg1 = isneg(&s);  /* sign */
     if (!lisdigit(cast_uchar(*s)))
       return 0.0;  /* invalid; must have at least one digit */
     while (lisdigit(cast_uchar(*s)))  /* read exponent */

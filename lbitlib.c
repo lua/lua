@@ -1,5 +1,5 @@
 /*
-** $Id: lbitlib.c,v 1.29 2015/10/08 15:55:35 roberto Exp roberto $
+** $Id: lbitlib.c,v 1.30 2015/11/11 19:08:09 roberto Exp roberto $
 ** Standard library for bitwise operations
 ** See Copyright Notice in lua.h
 */
@@ -131,7 +131,7 @@ static int b_arshift (lua_State *L) {
   else {  /* arithmetic shift for 'negative' number */
     if (i >= LUA_NBITS) r = ALLONES;
     else
-      r = trim((r >> i) | ~(trim(~(lua_Unsigned)0) >> i));  /* add signal bit */
+      r = trim((r >> i) | ~(trim(~(lua_Unsigned)0) >> i));  /* add sign bit */
     pushunsigned(L, r);
     return 1;
   }

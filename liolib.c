@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.151 2016/12/20 18:37:00 roberto Exp roberto $
+** $Id: liolib.c,v 2.152 2017/02/09 14:50:05 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -447,7 +447,7 @@ static int read_number (lua_State *L, FILE *f) {
   decp[1] = '.';  /* always accept a dot */
   l_lockfile(rn.f);
   do { rn.c = l_getc(rn.f); } while (isspace(rn.c));  /* skip spaces */
-  test2(&rn, "-+");  /* optional signal */
+  test2(&rn, "-+");  /* optional sign */
   if (test2(&rn, "00")) {
     if (test2(&rn, "xX")) hex = 1;  /* numeral is hexadecimal */
     else count = 1;  /* count initial '0' as a valid digit */
@@ -456,7 +456,7 @@ static int read_number (lua_State *L, FILE *f) {
   if (test2(&rn, decp))  /* decimal point? */
     count += readdigits(&rn, hex);  /* fractional part */
   if (count > 0 && test2(&rn, (hex ? "pP" : "eE"))) {  /* exponent mark? */
-    test2(&rn, "-+");  /* exponent signal */
+    test2(&rn, "-+");  /* exponent sign */
     readdigits(&rn, 0);  /* exponent digits */
   }
   ungetc(rn.c, rn.f);  /* unread look-ahead char */

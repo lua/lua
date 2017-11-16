@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.257 2017/07/07 16:34:32 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.258 2017/11/08 14:50:23 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -994,7 +994,7 @@ static int num2straux (char *buff, int sz, lua_Number x) {
     lua_Number m = l_mathop(frexp)(x, &e);  /* 'x' fraction and exponent */
     int n = 0;  /* character count */
     if (m < 0) {  /* is number negative? */
-      buff[n++] = '-';  /* add signal */
+      buff[n++] = '-';  /* add sign */
       m = -m;  /* make it positive */
     }
     buff[n++] = '0'; buff[n++] = 'x';  /* add "0x" */

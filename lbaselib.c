@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.316 2017/05/26 19:14:29 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.317 2017/06/27 18:32:49 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -49,7 +49,7 @@ static const char *b_str2int (const char *s, int base, lua_Integer *pn) {
   lua_Unsigned n = 0;
   int neg = 0;
   s += strspn(s, SPACECHARS);  /* skip initial spaces */
-  if (*s == '-') { s++; neg = 1; }  /* handle signal */
+  if (*s == '-') { s++; neg = 1; }  /* handle sign */
   else if (*s == '+') s++;
   if (!isalnum((unsigned char)*s))  /* no digit? */
     return NULL;
