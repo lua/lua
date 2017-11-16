@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.131 2017/11/07 17:20:42 roberto Exp roberto $
+** $Id: lcode.c,v 2.132 2017/11/08 14:50:23 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -1251,10 +1251,10 @@ static void codecommutative (FuncState *fs, OpCode op,
 
 
 /*
-** Emit code for comparisons.
+** Emit code for order comparisons.
 ** 'e1' was already put in register by 'luaK_infix'.
 */
-static void codecomp (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
+static void codeorder (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
   int rk1 = check_exp(e1->k == VNONRELOC, e1->u.info);
   int rk2 = luaK_exp2anyreg(fs, e2);
   freeexps(fs, e1, e2);
@@ -1275,6 +1275,30 @@ static void codecomp (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
       break;
     }
   }
+  e1->k = VJMP;
+}
+
+
+/*
+** Emit code for equality comparisons ('==', '~=').
+** 'e1' was already put as RK by 'luaK_infix'.
+*/
+static void codeeq (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
+  int r1, rk2;
+  OpCode op = OP_EQK;  /* will try first to use a constant */
+  if (e1->k == VK) {  /* 1st expression is constant? */
+    rk2 = e1->u.info;  /* constant index */
+    r1 = luaK_exp2anyreg(fs, e2);  /* 2nd expression must be in register */
+  }
+  else {
+    lua_assert(e1->k == VNONRELOC);  /* 1st expression is in a register */
+    r1 = e1->u.info;
+    if (!luaK_exp2RK(fs, e2))  /* 2nd expression is not constant? */
+      op = OP_EQ;  /* will compare two registers */
+    rk2 = e2->u.info;  /* constant/register index */
+  }
+  freeexps(fs, e1, e2);
+  e1->u.info = condjump(fs, op, (opr == OPR_EQ), r1, rk2);
   e1->k = VJMP;
 }
 
@@ -1321,12 +1345,17 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
     case OPR_MOD: case OPR_POW:
     case OPR_BAND: case OPR_BOR: case OPR_BXOR:
     case OPR_SHL: case OPR_SHR: {
-      if (tonumeral(v, NULL))
-        break;  /* keep numeral, which may be folded with 2nd operand */
-      /* else *//* FALLTHROUGH */
+      if (!tonumeral(v, NULL))
+        luaK_exp2anyreg(fs, v);
+      /* else keep numeral, which may be folded with 2nd operand */
+      break;
     }
-    case OPR_EQ: case OPR_LT: case OPR_LE:
-    case OPR_NE: case OPR_GT: case OPR_GE: {
+    case OPR_EQ: case OPR_NE: {
+      luaK_exp2RK(fs, v);
+      break;
+    }
+    case OPR_LT: case OPR_LE:
+    case OPR_GT: case OPR_GE: {
       luaK_exp2anyreg(fs, v);
       break;
     }
@@ -1390,9 +1419,13 @@ void luaK_posfix (FuncState *fs, BinOpr op,
         codebinexpval(fs, cast(OpCode, op + OP_ADD), e1, e2, line);
       break;
     }
-    case OPR_EQ: case OPR_LT: case OPR_LE:
-    case OPR_NE: case OPR_GT: case OPR_GE: {
-      codecomp(fs, op, e1, e2);
+    case OPR_EQ: case OPR_NE: {
+      codeeq(fs, op, e1, e2);
+      break;
+    }
+    case OPR_LT: case OPR_LE:
+    case OPR_GT: case OPR_GE: {
+      codeorder(fs, op, e1, e2);
       break;
     }
     default: lua_assert(0);
