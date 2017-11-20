@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.310 2017/11/13 15:36:52 roberto Exp roberto $
+** $Id: lvm.c,v 2.311 2017/11/16 12:59:14 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -326,6 +326,7 @@ static int LEintfloat (lua_Integer i, lua_Number f) {
 ** Return 'l < r', for numbers.
 */
 static int LTnum (const TValue *l, const TValue *r) {
+  lua_assert(ttisnumber(l) && ttisnumber(r));
   if (ttisinteger(l)) {
     lua_Integer li = ivalue(l);
     if (ttisinteger(r))
@@ -349,6 +350,7 @@ static int LTnum (const TValue *l, const TValue *r) {
 ** Return 'l <= r', for numbers.
 */
 static int LEnum (const TValue *l, const TValue *r) {
+  lua_assert(ttisnumber(l) && ttisnumber(r));
   if (ttisinteger(l)) {
     lua_Integer li = ivalue(l);
     if (ttisinteger(r))
@@ -369,13 +371,12 @@ static int LEnum (const TValue *l, const TValue *r) {
 
 
 /*
-** Main operation less than; return 'l < r'.
+** return 'l < r' for non-numbers.
 */
-int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
+static int lessthanothers (lua_State *L, const TValue *l, const TValue *r) {
   int res;
-  if (ttisnumber(l) && ttisnumber(r))  /* both operands are numbers? */
-    return LTnum(l, r);
-  else if (ttisstring(l) && ttisstring(r))  /* both are strings? */
+  lua_assert(!ttisnumber(l) || !ttisnumber(r));
+  if (ttisstring(l) && ttisstring(r))  /* both are strings? */
     return l_strcmp(tsvalue(l), tsvalue(r)) < 0;
   else if ((res = luaT_callorderTM(L, l, r, TM_LT)) < 0)  /* no metamethod? */
     luaG_ordererror(L, l, r);  /* error */
@@ -384,18 +385,27 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
 
 
 /*
-** Main operation less than or equal to; return 'l <= r'. If it needs
-** a metamethod and there is no '__le', try '__lt', based on
-** l <= r iff !(r < l) (assuming a total order). If the metamethod
-** yields during this substitution, the continuation has to know
-** about it (to negate the result of r<l); bit CIST_LEQ in the call
-** status keeps that information.
+** Main operation less than; return 'l < r'.
 */
-int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
-  int res;
+int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
   if (ttisnumber(l) && ttisnumber(r))  /* both operands are numbers? */
-    return LEnum(l, r);
-  else if (ttisstring(l) && ttisstring(r))  /* both are strings? */
+    return LTnum(l, r);
+  else return lessthanothers(L, l, r);
+}
+
+
+/*
+** return 'l <= r' for non-numbers.
+** If it needs a metamethod and there is no '__le', try '__lt', based
+** on l <= r iff !(r < l) (assuming a total order). If the metamethod
+** yields during this substitution, the continuation has to know about
+** it (to negate the result of r<l); bit CIST_LEQ in the call status
+** keeps that information.
+*/
+static int lessequalothers (lua_State *L, const TValue *l, const TValue *r) {
+  int res;
+  lua_assert(!ttisnumber(l) || !ttisnumber(r));
+  if (ttisstring(l) && ttisstring(r))  /* both are strings? */
     return l_strcmp(tsvalue(l), tsvalue(r)) <= 0;
   else if ((res = luaT_callorderTM(L, l, r, TM_LE)) >= 0)  /* try 'le' */
     return res;
@@ -407,6 +417,16 @@ int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
       luaG_ordererror(L, l, r);
     return !res;  /* result is negated */
   }
+}
+
+
+/*
+** Main operation less than or equal to; return 'l <= r'.
+*/
+int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
+  if (ttisnumber(l) && ttisnumber(r))  /* both operands are numbers? */
+    return LEnum(l, r);
+  else return lessequalothers(L, l, r);
 }
 
 
@@ -1336,8 +1356,10 @@ void luaV_execute (lua_State *L) {
         int res;
         if (ttisinteger(rb) && ttisinteger(rc))
           res = (ivalue(rb) < ivalue(rc));
+        else if (ttisnumber(rb) && ttisnumber(rc))
+          res = LTnum(rb, rc);
         else
-          Protect(res = luaV_lessthan(L, rb, rc));
+          Protect(res = lessthanothers(L, rb, rc));
         if (res != GETARG_A(i))
           pc++;
         else
@@ -1350,8 +1372,10 @@ void luaV_execute (lua_State *L) {
         int res;
         if (ttisinteger(rb) && ttisinteger(rc))
           res = (ivalue(rb) <= ivalue(rc));
+        else if (ttisnumber(rb) && ttisnumber(rc))
+          res = LEnum(rb, rc);
         else
-          Protect(res = luaV_lessequal(L, rb, rc));
+          Protect(res = lessequalothers(L, rb, rc));
         if (res != GETARG_A(i))
           pc++;
         else
