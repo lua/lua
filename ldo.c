@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.171 2017/11/13 12:26:30 roberto Exp roberto $
+** $Id: ldo.c,v 2.172 2017/11/13 15:36:52 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -280,14 +280,13 @@ void luaD_hook (lua_State *L, int event, int line) {
 }
 
 
-static void callhook (lua_State *L, CallInfo *ci) {
+static void callhook (lua_State *L, CallInfo *ci, int istail) {
   int hook;
   ci->u.l.trap = 1;
   if (!(L->hookmask & LUA_MASKCALL))
     return;  /* some other hook */
   ci->u.l.savedpc++;  /* hooks assume 'pc' is already incremented */
-  if (isLua(ci->previous) &&
-      GET_OPCODE(*(ci->previous->u.l.savedpc - 1)) == OP_TAILCALL) {
+  if (istail) {
     ci->callstatus |= CIST_TAIL;
     hook = LUA_HOOKTAILCALL;
   }
@@ -303,16 +302,18 @@ static void callhook (lua_State *L, CallInfo *ci) {
 ** it in stack below original 'func' so that 'luaD_precall' can call
 ** it. Raise an error if __call metafield is not a function.
 */
-static void tryfuncTM (lua_State *L, StkId func) {
+StkId luaD_tryfuncTM (lua_State *L, StkId func) {
   const TValue *tm = luaT_gettmbyobj(L, s2v(func), TM_CALL);
   StkId p;
   if (!ttisfunction(tm))
     luaG_typeerror(L, s2v(func), "call");
   /* Open a hole inside the stack at 'func' */
+  checkstackp(L, 1, func);  /* ensure space for metamethod */
   for (p = L->top; p > func; p--)
     setobjs2s(L, p, p-1);
-  L->top++;  /* slot ensured by caller */
-  setobj2s(L, func, tm);  /* tag method is the new function to be called */
+  L->top++;
+  setobj2s(L, func, tm);  /* metamethod is the new function to be called */
+  return func;
 }
 
 
@@ -389,6 +390,33 @@ int luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres) {
 
 
 /*
+** Prepare a function for a tail call, building its call info on top
+** of the current call info. 'n' is the number of arguments plus 1
+** (so that it includes the function itself).
+*/
+void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int n) {
+  Proto *p = clLvalue(s2v(func))->p;
+  int fsize = p->maxstacksize;  /* frame size */
+  int i;
+  for (i = 0; i < n; i++)  /* move down function and arguments */
+    setobjs2s(L, ci->func + i, func + i);
+  checkstackp(L, fsize, func);
+  for (; i < p->numparams - p->is_vararg; i++)
+    setnilvalue(s2v(ci->func + i));  /* complete missing parameters */
+  if (p->is_vararg) {
+    L->top -= (func - ci->func);  /* move down top */
+    luaT_adjustvarargs(L, p, n - 1);
+  }
+  L->top = ci->top = ci->func + 1 + fsize;  /* top for new function */
+  lua_assert(ci->top <= L->stack_last);
+  ci->u.l.savedpc = p->code;  /* starting point */
+  ci->callstatus |= CIST_TAIL;
+  if (L->hookmask)
+    callhook(L, ci, 1);
+}
+
+
+/*
 ** Prepares a function call: checks the stack, creates a new CallInfo
 ** entry, fills in the relevant information, calls hook if needed.
 ** If function is a C function, does the call, too. (Otherwise, leave
@@ -440,12 +468,11 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       ci->u.l.savedpc = p->code;  /* starting point */
       ci->callstatus = CIST_LUA;
       if (L->hookmask)
-        callhook(L, ci);
+        callhook(L, ci, 0);
       return 0;
     }
     default: {  /* not a function */
-      checkstackp(L, 1, func);  /* ensure space for metamethod */
-      tryfuncTM(L, func);  /* try to get '__call' metamethod */
+      func = luaD_tryfuncTM(L, func);  /* try to get '__call' metamethod */
       return luaD_precall(L, func, nresults);  /* now it must be a function */
     }
   }

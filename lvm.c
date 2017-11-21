@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.311 2017/11/16 12:59:14 roberto Exp roberto $
+** $Id: lvm.c,v 2.312 2017/11/20 12:57:39 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1429,31 +1429,23 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_TAILCALL) {
-        int b = GETARG_B(i);
-        if (b != 0) L->top = ra+b;  /* else previous instruction set top */
+        int b = GETARG_B(i);  /* number of arguments + 1 (function) */
+        if (b != 0)
+          L->top = ra + b;
+        else  /* previous instruction set top */
+          b = L->top - ra;
         lua_assert(GETARG_C(i) - 1 == LUA_MULTRET);
-        savepc(L);
-        if (luaD_precall(L, ra, LUA_MULTRET))  /* C function? */
-          updatetrap(ci);
-        else {
-          /* tail call: put called frame (n) in place of caller one (o) */
-          CallInfo *nci = L->ci;  /* called frame (new) */
-          CallInfo *oci = nci->previous;  /* caller frame (old) */
-          StkId nfunc = nci->func;  /* called function */
-          StkId ofunc = oci->func;  /* caller function */
-          /* last stack slot filled by 'precall' */
-          StkId lim = nfunc + 1 + getproto(s2v(nfunc))->numparams;
-          int aux;
-          /* close all upvalues from previous call */
-          if (cl->p->sizep > 0) luaF_close(L, ofunc + 1);
-          /* move new frame into old one */
-          for (aux = 0; nfunc + aux < lim; aux++)
-            setobjs2s(L, ofunc + aux, nfunc + aux);
-          oci->top = L->top = ofunc + (L->top - nfunc);  /* correct top */
-          oci->u.l.savedpc = nci->u.l.savedpc;
-          oci->callstatus |= CIST_TAIL;  /* function was tail called */
-          ci = L->ci = oci;  /* remove new frame */
-          lua_assert(L->top == ofunc + 1 + getproto(s2v(ofunc))->maxstacksize);
+        if (!ttisfunction(s2v(ra))) {  /* not a function? */
+          /* try to get '__call' metamethod */
+          Protect(ra = luaD_tryfuncTM(L, ra));
+          b++;  /* there is now one extra argument */
+        }
+        if (!ttisLclosure(s2v(ra)))  /* C function? */
+          Protect(luaD_precall(L, ra, LUA_MULTRET));  /* call it */
+        else {  /* tail call */
+          if (cl->p->sizep > 0) /* close upvalues from previous call */
+            luaF_close(L, ci->func + 1);
+          luaD_pretailcall(L, ci, ra, b);  /* prepare call frame */
           goto newframe;  /* restart luaV_execute over new Lua function */
         }
         vmbreak;
