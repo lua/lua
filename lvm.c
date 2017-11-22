@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.312 2017/11/20 12:57:39 roberto Exp roberto $
+** $Id: lvm.c,v 2.313 2017/11/21 14:17:35 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1387,6 +1387,17 @@ void luaV_execute (lua_State *L) {
         TValue *rc = KC(i);
         /* basic types do not use '__eq'; we can use raw equality */
         if (luaV_equalobj(NULL, rb, rc) != GETARG_A(i))
+          pc++;
+        else
+          donextjump(ci);
+        vmbreak;
+      }
+      vmcase(OP_EQI) {
+        TValue *rb = vRB(i);
+        int ic = GETARG_sC(i);
+        if ((ttisinteger(rb) ? (ivalue(rb) == ic)
+            :ttisfloat(rb) ? luai_numeq(fltvalue(rb), cast_num(ic))
+            : 0) != GETARG_A(i))
           pc++;
         else
           donextjump(ci);

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.132 2017/11/08 14:50:23 roberto Exp roberto $
+** $Id: lcode.c,v 2.133 2017/11/16 12:59:14 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -607,12 +607,17 @@ void luaK_int (FuncState *fs, int reg, lua_Integer i) {
 }
 
 
-static void luaK_float (FuncState *fs, int reg, lua_Number f) {
+static int floatI (lua_Number f, lua_Integer *fi) {
   TValue v;
-  lua_Integer fi;
   setfltvalue(&v, f);
-  if (luaV_flttointeger(&v, &fi, 0) &&
-      l_castS2U(fi) + MAXARG_sBx <= l_castS2U(MAXARG_Bx))
+  return (luaV_flttointeger(&v, fi, 0) &&
+      l_castS2U(*fi) + MAXARG_sBx <= l_castS2U(MAXARG_Bx));
+}
+
+
+static void luaK_float (FuncState *fs, int reg, lua_Number f) {
+  lua_Integer fi;
+  if (floatI(f, &fi))
     luaK_codeAsBx(fs, OP_LOADF, reg, cast_int(fi));
   else
     luaK_codek(fs, reg, luaK_numberK(fs, f));
@@ -1107,6 +1112,20 @@ static int isSCint (expdesc *e) {
 
 
 /*
+** Check whether expression 'e' is a literal integer or float in
+** proper range to fit in register sC
+*/
+static int isSCnumber (expdesc *e, lua_Integer *i) {
+  if (e->k == VKINT)
+    *i = e->u.ival;
+  else if (!(e->k == VKFLT && floatI(e->u.nval, i)))
+    return 0;  /* not a number */
+  *i += MAXARG_sC;
+  return (!hasjumps(e) && l_castS2U(*i) <= l_castS2U(MAXARG_C));
+}
+
+
+/*
 ** Create expression 't[k]'. 't' must have its final result already in a
 ** register or upvalue. Upvalues can only be indexed by literal strings.
 ** Keys can be literal strings in the constant table or arbitrary
@@ -1235,6 +1254,11 @@ static void codearith (FuncState *fs, OpCode op,
 }
 
 
+static void swapexps (expdesc *e1, expdesc *e2) {
+  expdesc temp = *e1; *e1 = *e2; *e2 = temp;  /* swap 'e1' and 'e2' */
+}
+
+
 /*
 ** Code commutative operators ('+', '*'). If first operand is a
 ** constant, change order of operands to use immediate operator.
@@ -1243,7 +1267,7 @@ static void codecommutative (FuncState *fs, OpCode op,
                              expdesc *e1, expdesc *e2, int line) {
   int flip = 0;
   if (isSCint(e1)) {
-    expdesc temp = *e1; *e1 = *e2; *e2 = temp;  /* swap 'e1' and 'e2' */
+    swapexps(e1, e2);
     flip = 1;
   }
   codearith(fs, op, e1, e2, flip, line);
@@ -1259,10 +1283,6 @@ static void codeorder (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
   int rk2 = luaK_exp2anyreg(fs, e2);
   freeexps(fs, e1, e2);
   switch (opr) {
-    case OPR_NE: {  /* '(a ~= b)' ==> 'not (a == b)' */
-      e1->u.info = condjump(fs, OP_EQ, 0, rk1, rk2);
-      break;
-    }
     case OPR_GT: case OPR_GE: {
       /* '(a > b)' ==> '(b < a)';  '(a >= b)' ==> '(b <= a)' */
       OpCode op = cast(OpCode, (opr - OPR_NE) + OP_EQ);
@@ -1284,21 +1304,28 @@ static void codeorder (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
 ** 'e1' was already put as RK by 'luaK_infix'.
 */
 static void codeeq (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
-  int r1, rk2;
-  OpCode op = OP_EQK;  /* will try first to use a constant */
-  if (e1->k == VK) {  /* 1st expression is constant? */
-    rk2 = e1->u.info;  /* constant index */
-    r1 = luaK_exp2anyreg(fs, e2);  /* 2nd expression must be in register */
+  int r1, r2;
+  lua_Integer im;
+  OpCode op;
+  if (e1->k != VNONRELOC) {
+    lua_assert(e1->k == VK || e1->k == VKINT || e1->k == VKFLT);
+    swapexps(e1, e2);
+  }
+  r1 = luaK_exp2anyreg(fs, e1);  /* 1nd expression must be in register */
+  if (isSCnumber(e2, &im)) {
+    op = OP_EQI;
+    r2 = cast_int(im);  /* immediate operand */
+  }
+  else if (luaK_exp2RK(fs, e2)) {  /* 1st expression is constant? */
+    op = OP_EQK;
+    r2 = e2->u.info;  /* constant index */
   }
   else {
-    lua_assert(e1->k == VNONRELOC);  /* 1st expression is in a register */
-    r1 = e1->u.info;
-    if (!luaK_exp2RK(fs, e2))  /* 2nd expression is not constant? */
-      op = OP_EQ;  /* will compare two registers */
-    rk2 = e2->u.info;  /* constant/register index */
+    op = OP_EQ;  /* will compare two registers */
+    r2 = luaK_exp2anyreg(fs, e2);
   }
   freeexps(fs, e1, e2);
-  e1->u.info = condjump(fs, op, (opr == OPR_EQ), r1, rk2);
+  e1->u.info = condjump(fs, op, (opr == OPR_EQ), r1, r2);
   e1->k = VJMP;
 }
 
@@ -1351,7 +1378,9 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
       break;
     }
     case OPR_EQ: case OPR_NE: {
-      luaK_exp2RK(fs, v);
+      if (!tonumeral(v, NULL))
+        luaK_exp2RK(fs, v);
+      /* else keep numeral, which may be an immediate operand */
       break;
     }
     case OPR_LT: case OPR_LE:
