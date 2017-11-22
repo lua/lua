@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.133 2017/11/16 12:59:14 roberto Exp roberto $
+** $Id: lcode.c,v 2.134 2017/11/22 18:41:20 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -969,7 +969,7 @@ static void negatecondition (FuncState *fs, expdesc *e) {
   Instruction *pc = getjumpcontrol(fs, e->u.info);
   lua_assert(testTMode(GET_OPCODE(*pc)) && GET_OPCODE(*pc) != OP_TESTSET &&
                                            GET_OPCODE(*pc) != OP_TEST);
-  SETARG_A(*pc, !(GETARG_A(*pc)));
+  SETARG_B(*pc, !(GETARG_B(*pc)));
 }
 
 
@@ -1286,12 +1286,12 @@ static void codeorder (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
     case OPR_GT: case OPR_GE: {
       /* '(a > b)' ==> '(b < a)';  '(a >= b)' ==> '(b <= a)' */
       OpCode op = cast(OpCode, (opr - OPR_NE) + OP_EQ);
-      e1->u.info = condjump(fs, op, 1, rk2, rk1);  /* invert operands */
+      e1->u.info = condjump(fs, op, rk2, 1, rk1);  /* invert operands */
       break;
     }
     default: {  /* '==', '<', '<=' use their own opcodes */
       OpCode op = cast(OpCode, (opr - OPR_EQ) + OP_EQ);
-      e1->u.info = condjump(fs, op, 1, rk1, rk2);
+      e1->u.info = condjump(fs, op, rk1, 1, rk2);
       break;
     }
   }
@@ -1325,7 +1325,7 @@ static void codeeq (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
     r2 = luaK_exp2anyreg(fs, e2);
   }
   freeexps(fs, e1, e2);
-  e1->u.info = condjump(fs, op, (opr == OPR_EQ), r1, r2);
+  e1->u.info = condjump(fs, op, r1, (opr == OPR_EQ), r2);
   e1->k = VJMP;
 }
 

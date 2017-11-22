@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.168 2017/11/16 12:59:14 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.169 2017/11/22 18:41:20 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -236,12 +236,12 @@ OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
 
 OP_CLOSE,/*	A	close all upvalues >= R(A)			*/
 OP_JMP,/*	k sJ	pc += sJ  (k is used in code generation)	*/
-OP_EQ,/*	A B C	if ((R(B) == R(C)) ~= A) then pc++		*/
-OP_LT,/*	A B C	if ((R(B) <  R(C)) ~= A) then pc++		*/
-OP_LE,/*	A B C	if ((R(B) <= R(C)) ~= A) then pc++		*/
+OP_EQ,/*	A B C	if ((R(A) == R(C)) ~= B) then pc++		*/
+OP_LT,/*	A B C	if ((R(A) <  R(C)) ~= B) then pc++		*/
+OP_LE,/*	A B C	if ((R(A) <= R(C)) ~= B) then pc++		*/
 
-OP_EQK,/*	A B C	if ((R(B) == K(C)) ~= A) then pc++		*/
-OP_EQI,/*	A B C	if ((R(B) == C) ~= A) then pc++			*/
+OP_EQK,/*	A B C	if ((R(A) == K(C)) ~= B) then pc++		*/
+OP_EQI,/*	A B C	if ((R(A) == C) ~= B) then pc++			*/
 
 OP_TEST,/*	A C	if not (R(A) <=> C) then pc++			*/
 OP_TESTSET,/*	A B C	if (R(B) <=> C) then R(A) := R(B) else pc++	*/

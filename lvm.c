@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.313 2017/11/21 14:17:35 roberto Exp $
+** $Id: lvm.c,v 2.314 2017/11/22 18:41:20 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -715,7 +715,7 @@ void luaV_finishOp (lua_State *L) {
         res = !res;  /* negate result */
       }
       lua_assert(GET_OPCODE(*ci->u.l.savedpc) == OP_JMP);
-      if (res != GETARG_A(inst))  /* condition failed? */
+      if (res != GETARG_B(inst))  /* condition failed? */
         ci->u.l.savedpc++;  /* skip jump instruction */
       break;
     }
@@ -1340,64 +1340,59 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_EQ) {
-        TValue *rb = vRB(i);
         TValue *rc = vRC(i);
         int res;
-        Protect(res = luaV_equalobj(L, rb, rc));
-        if (res != GETARG_A(i))
+        Protect(res = luaV_equalobj(L, s2v(ra), rc));
+        if (res != GETARG_B(i))
           pc++;
         else
           donextjump(ci);
         vmbreak;
       }
       vmcase(OP_LT) {
-        TValue *rb = vRB(i);
         TValue *rc = vRC(i);
         int res;
-        if (ttisinteger(rb) && ttisinteger(rc))
-          res = (ivalue(rb) < ivalue(rc));
-        else if (ttisnumber(rb) && ttisnumber(rc))
-          res = LTnum(rb, rc);
+        if (ttisinteger(s2v(ra)) && ttisinteger(rc))
+          res = (ivalue(s2v(ra)) < ivalue(rc));
+        else if (ttisnumber(s2v(ra)) && ttisnumber(rc))
+          res = LTnum(s2v(ra), rc);
         else
-          Protect(res = lessthanothers(L, rb, rc));
-        if (res != GETARG_A(i))
+          Protect(res = lessthanothers(L, s2v(ra), rc));
+        if (res != GETARG_B(i))
           pc++;
         else
           donextjump(ci);
         vmbreak;
       }
       vmcase(OP_LE) {
-        TValue *rb = vRB(i);
         TValue *rc = vRC(i);
         int res;
-        if (ttisinteger(rb) && ttisinteger(rc))
-          res = (ivalue(rb) <= ivalue(rc));
-        else if (ttisnumber(rb) && ttisnumber(rc))
-          res = LEnum(rb, rc);
+        if (ttisinteger(s2v(ra)) && ttisinteger(rc))
+          res = (ivalue(s2v(ra)) <= ivalue(rc));
+        else if (ttisnumber(s2v(ra)) && ttisnumber(rc))
+          res = LEnum(s2v(ra), rc);
         else
-          Protect(res = lessequalothers(L, rb, rc));
-        if (res != GETARG_A(i))
+          Protect(res = lessequalothers(L, s2v(ra), rc));
+        if (res != GETARG_B(i))
           pc++;
         else
           donextjump(ci);
         vmbreak;
       }
       vmcase(OP_EQK) {
-        TValue *rb = vRB(i);
         TValue *rc = KC(i);
         /* basic types do not use '__eq'; we can use raw equality */
-        if (luaV_equalobj(NULL, rb, rc) != GETARG_A(i))
+        if (luaV_equalobj(NULL, s2v(ra), rc) != GETARG_B(i))
           pc++;
         else
           donextjump(ci);
         vmbreak;
       }
       vmcase(OP_EQI) {
-        TValue *rb = vRB(i);
         int ic = GETARG_sC(i);
-        if ((ttisinteger(rb) ? (ivalue(rb) == ic)
-            :ttisfloat(rb) ? luai_numeq(fltvalue(rb), cast_num(ic))
-            : 0) != GETARG_A(i))
+        if ((ttisinteger(s2v(ra)) ? (ivalue(s2v(ra)) == ic)
+            :ttisfloat(s2v(ra)) ? luai_numeq(fltvalue(s2v(ra)), cast_num(ic))
+            : 0) != GETARG_B(i))
           pc++;
         else
           donextjump(ci);
