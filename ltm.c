@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.47 2017/11/07 13:25:26 roberto Exp roberto $
+** $Id: ltm.c,v 2.48 2017/11/08 14:50:23 roberto Exp $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -180,10 +180,19 @@ void luaT_trybiniTM (lua_State *L, const TValue *p1, int i2,
 
 int luaT_callorderTM (lua_State *L, const TValue *p1, const TValue *p2,
                       TMS event) {
-  if (!callbinTM(L, p1, p2, L->top, event))
-    return -1;  /* no metamethod */
-  else
+  if (callbinTM(L, p1, p2, L->top, event))  /* try original event */
     return !l_isfalse(s2v(L->top));
+  else if (event == TM_LE) {
+      /* try '!(p2 < p1)' for '(p1 <= p2)' */
+      L->ci->callstatus |= CIST_LEQ;  /* mark it is doing 'lt' for 'le' */
+      if (callbinTM(L, p2, p1, L->top, TM_LT)) {
+        L->ci->callstatus ^= CIST_LEQ;  /* clear mark */
+        return l_isfalse(s2v(L->top));
+      }
+      /* else error will remove this 'ci'; no need to clear mark */
+  }
+  luaG_ordererror(L, p1, p2);  /* no metamethod found */
+  return 0;  /* to avoid warnings */
 }
 
 
