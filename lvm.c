@@ -1,8 +1,8 @@
 /*
 <<<<<<< lvm.c
-** $Id: lvm.c,v 2.313 2017/11/21 14:17:35 roberto Exp roberto $
+** $Id: lvm.c,v 2.316 2017/11/23 16:41:16 roberto Exp roberto $
 =======
-** $Id: lvm.c,v 2.315 2017/11/22 19:15:44 roberto Exp $
+** $Id: lvm.c,v 2.316 2017/11/23 16:41:16 roberto Exp roberto $
 >>>>>>> 2.315
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
@@ -378,13 +378,11 @@ static int LEnum (const TValue *l, const TValue *r) {
 ** return 'l < r' for non-numbers.
 */
 static int lessthanothers (lua_State *L, const TValue *l, const TValue *r) {
-  int res;
   lua_assert(!ttisnumber(l) || !ttisnumber(r));
   if (ttisstring(l) && ttisstring(r))  /* both are strings? */
     return l_strcmp(tsvalue(l), tsvalue(r)) < 0;
-  else if ((res = luaT_callorderTM(L, l, r, TM_LT)) < 0)  /* no metamethod? */
-    luaG_ordererror(L, l, r);  /* error */
-  return res;
+  else
+    return luaT_callorderTM(L, l, r, TM_LT);
 }
 
 
@@ -407,20 +405,11 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
 ** keeps that information.
 */
 static int lessequalothers (lua_State *L, const TValue *l, const TValue *r) {
-  int res;
   lua_assert(!ttisnumber(l) || !ttisnumber(r));
   if (ttisstring(l) && ttisstring(r))  /* both are strings? */
     return l_strcmp(tsvalue(l), tsvalue(r)) <= 0;
-  else if ((res = luaT_callorderTM(L, l, r, TM_LE)) >= 0)  /* try 'le' */
-    return res;
-  else {  /* try 'lt': */
-    L->ci->callstatus |= CIST_LEQ;  /* mark it is doing 'lt' for 'le' */
-    res = luaT_callorderTM(L, r, l, TM_LT);
-    L->ci->callstatus ^= CIST_LEQ;  /* clear mark */
-    if (res < 0)
-      luaG_ordererror(L, l, r);
-    return !res;  /* result is negated */
-  }
+  else
+    return luaT_callorderTM(L, l, r, TM_LE);
 }
 
 
