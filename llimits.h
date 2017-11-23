@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.143 2017/06/01 19:16:34 roberto Exp roberto $
+** $Id: llimits.h,v 1.144 2017/06/27 11:35:01 roberto Exp roberto $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -140,10 +140,11 @@ typedef LUAI_UACINT l_uacInt;
 
 /*
 ** maximum depth for nested C calls and syntactical nested non-terminals
-** in a program. (Value must fit in an unsigned short int.)
+** in a program. (Value must fit in an unsigned short int. It must also
+** be compatible with the size of the C stack.)
 */
 #if !defined(LUAI_MAXCCALLS)
-#define LUAI_MAXCCALLS		200
+#define LUAI_MAXCCALLS		1000
 #endif
 
 

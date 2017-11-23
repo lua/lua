@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.150 2017/11/07 13:25:26 roberto Exp roberto $
+** $Id: lstate.h,v 2.151 2017/11/13 15:36:52 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -104,7 +104,7 @@ typedef struct CallInfo {
     int nyield;  /* number of values yielded */
   } u2;
   short nresults;  /* expected number of results from this function */
-  unsigned short callstatus;
+  lu_byte callstatus;
 } CallInfo;
 
 
@@ -114,13 +114,11 @@ typedef struct CallInfo {
 #define CIST_OAH	(1<<0)	/* original value of 'allowhook' */
 #define CIST_LUA	(1<<1)	/* call is running a Lua function */
 #define CIST_HOOKED	(1<<2)	/* call is running a debug hook */
-#define CIST_FRESH	(1<<3)	/* call is running on a fresh invocation
-                                   of luaV_execute */
-#define CIST_YPCALL	(1<<4)	/* call is a yieldable protected call */
-#define CIST_TAIL	(1<<5)	/* call was tail called */
-#define CIST_HOOKYIELD	(1<<6)	/* last hook called yielded */
-#define CIST_LEQ	(1<<7)  /* using __lt for __le */
-#define CIST_FIN	(1<<8)  /* call is running a finalizer */
+#define CIST_YPCALL	(1<<3)	/* call is a yieldable protected call */
+#define CIST_TAIL	(1<<4)	/* call was tail called */
+#define CIST_HOOKYIELD	(1<<5)	/* last hook called yielded */
+#define CIST_LEQ	(1<<6)  /* using __lt for __le */
+#define CIST_FIN	(1<<7)  /* call is running a finalizer */
 
 #define isLua(ci)	((ci)->callstatus & CIST_LUA)
 
@@ -256,6 +254,7 @@ LUAI_FUNC void luaE_freethread (lua_State *L, lua_State *L1);
 LUAI_FUNC CallInfo *luaE_extendCI (lua_State *L);
 LUAI_FUNC void luaE_freeCI (lua_State *L);
 LUAI_FUNC void luaE_shrinkCI (lua_State *L);
+LUAI_FUNC void luaE_incCcalls (lua_State *L);
 
 
 #endif

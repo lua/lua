@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.143 2017/11/13 12:20:51 roberto Exp roberto $
+** $Id: ldebug.c,v 2.144 2017/11/13 15:36:52 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -724,6 +724,7 @@ l_noret luaG_errormsg (lua_State *L) {
     setobjs2s(L, L->top, L->top - 1);  /* move argument */
     setobjs2s(L, L->top - 1, errfunc);  /* push function */
     L->top++;  /* assume EXTRA_STACK */
+    luaE_incCcalls(L);
     luaD_callnoyield(L, L->top - 2, 1);  /* call it */
   }
   luaD_throw(L, LUA_ERRRUN);

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.51 2017/06/27 11:35:31 roberto Exp roberto $
+** $Id: ltests.h,v 2.52 2017/11/13 12:19:35 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -33,6 +33,10 @@
 #include <assert.h>
 #define lua_assert(c)           assert(c)
 
+
+/* compiled with -O0, Lua uses a lot of C stack space... */
+#undef LUAI_MAXCCALLS
+#define LUAI_MAXCCALLS	300
 
 /* to avoid warnings, and to make sure value is really unused */
 #define UNUSED(x)       (x=0, (void)(x))
