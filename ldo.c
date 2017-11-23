@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.173 2017/11/21 14:17:35 roberto Exp roberto $
+** $Id: ldo.c,v 2.174 2017/11/23 16:35:54 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -297,6 +297,14 @@ static void callhook (lua_State *L, CallInfo *ci, int istail) {
 }
 
 
+static void rethook (lua_State *L, CallInfo *ci) {
+  if (L->hookmask & LUA_MASKRET)  /* is return hook on? */
+    luaD_hook(L, LUA_HOOKRET, -1);  /* call it */
+  if (isLua(ci->previous))
+    L->oldpc = ci->previous->u.l.savedpc;  /* update 'oldpc' */
+}
+
+
 /*
 ** Check whether __call metafield of 'func' is a function. If so, put
 ** it in stack below original 'func' so that 'luaD_call' can call
@@ -323,8 +331,8 @@ StkId luaD_tryfuncTM (lua_State *L, StkId func) {
 ** expressions, multiple results for tail calls/single parameters)
 ** separated.
 */
-static int moveresults (lua_State *L, StkId firstResult, StkId res,
-                                      int nres, int wanted) {
+static void moveresults (lua_State *L, StkId firstResult, StkId res,
+                                       int nres, int wanted) {
   switch (wanted) {  /* handle typical cases separately */
     case 0: break;  /* nothing to move */
     case 1: {  /* one result needed */
@@ -339,7 +347,7 @@ static int moveresults (lua_State *L, StkId firstResult, StkId res,
       for (i = 0; i < nres; i++)  /* move all results to correct place */
         setobjs2s(L, res + i, firstResult + i);
       L->top = res + nres;
-      return 0;  /* wanted == LUA_MULTRET */
+      return;
     }
     default: {
       int i;
@@ -357,7 +365,6 @@ static int moveresults (lua_State *L, StkId firstResult, StkId res,
     }
   }
   L->top = res + wanted;  /* top points after the last result */
-  return 1;
 }
 
 
@@ -366,22 +373,15 @@ static int moveresults (lua_State *L, StkId firstResult, StkId res,
 ** moves current number of results to proper place; returns 0 iff call
 ** wanted multiple (variable number of) results.
 */
-int luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres) {
-  StkId res;
-  int wanted = ci->nresults;
-  if (L->hookmask & (LUA_MASKRET | LUA_MASKLINE)) {
-    if (L->hookmask & LUA_MASKRET) {
-      ptrdiff_t fr = savestack(L, firstResult);  /* hook may change stack */
-      luaD_hook(L, LUA_HOOKRET, -1);
-      firstResult = restorestack(L, fr);
-    }
-    if (isLua(ci->previous))
-      L->oldpc = ci->previous->u.l.savedpc;
+void luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres) {
+  if (L->hookmask) {
+    ptrdiff_t fr = savestack(L, firstResult);  /* hook may change stack */
+    rethook(L, ci);
+    firstResult = restorestack(L, fr);
   }
-  res = ci->func;  /* res == final position of 1st result */
   L->ci = ci->previous;  /* back to caller */
   /* move results to proper place */
-  return moveresults(L, firstResult, res, nres, wanted);
+  moveresults(L, firstResult, ci->func, nres, ci->nresults);
 }
 
 
