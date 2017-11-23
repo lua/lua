@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.273 2017/11/02 11:28:56 roberto Exp $
+** $Id: lapi.c,v 2.276 2017/11/07 13:25:26 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -205,7 +205,7 @@ LUA_API void lua_settop (lua_State *L, int idx) {
 ** Reverse the stack segment from 'from' to 'to'
 ** (auxiliary to 'lua_rotate')
 ** Note that we move(copy) only the value inside the stack.
-** (We do not move addicional fields that may exist.)
+** (We do not move additional fields that may exist.)
 */
 static void reverse (lua_State *L, StkId from, StkId to) {
   for (; from < to; from++, to--) {

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.144 2017/11/13 15:36:52 roberto Exp roberto $
+** $Id: ldebug.c,v 2.145 2017/11/23 16:35:54 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -51,7 +51,7 @@ static int currentpc (CallInfo *ci) {
 /*
 ** Get a "base line" to find the line corresponding to an instruction.
 ** For that, search the array of absolute line info for the largest saved
-** instruction smaller or equal to the wanted instrution. A special
+** instruction smaller or equal to the wanted instruction. A special
 ** case is when there is no absolute info or the instruction is before
 ** the first absolute one.
 */

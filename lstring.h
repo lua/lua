@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.61 2015/11/03 15:36:01 roberto Exp roberto $
+** $Id: lstring.h,v 1.62 2017/07/27 13:50:16 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -14,7 +14,7 @@
 
 /*
 ** Memory-allocation error message must be preallocated (it cannot
-** be created after memory is exausted)
+** be created after memory is exhausted)
 */
 #define MEMERRMSG       "not enough memory"
 

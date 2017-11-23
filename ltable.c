@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.125 2017/06/29 15:06:44 roberto Exp roberto $
+** $Id: ltable.c,v 2.126 2017/11/08 14:50:23 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -685,7 +685,7 @@ static lua_Unsigned hash_search (Table *t, lua_Unsigned j) {
 ** First, try the array part: if there is an array part and its last
 ** element is nil, there must be a boundary there; a binary search
 ** finds that boundary. Otherwise, if the hash part is empty or does not
-** contain 'j + 1', 'j' is a boundary. Othersize, call 'hash_search'
+** contain 'j + 1', 'j' is a boundary. Otherwize, call 'hash_search'
 ** to find a boundary in the hash part.
 */
 lua_Unsigned luaH_getn (Table *t) {
