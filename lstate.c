@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.146 2017/11/07 13:25:26 roberto Exp roberto $
+** $Id: lstate.c,v 2.147 2017/11/13 15:36:52 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -97,8 +97,28 @@ void luaE_setdebt (global_State *g, l_mem debt) {
 }
 
 
+/*
+** Increment count of "C calls" and check for overflows. In case of
+** a stack overflow, check appropriate error ("regular" overflow or
+** overflow while handling stack overflow). If 'nCalls' is larger than
+** LUAI_MAXCCALLS (which means it is handling a "regular" overflow) but
+** smaller than 9/8 of LUAI_MAXCCALLS, does not report an error (to
+** allow overflow handling to work)
+*/
+void luaE_incCcalls (lua_State *L) {
+  if (++L->nCcalls >= LUAI_MAXCCALLS) {
+    if (L->nCcalls == LUAI_MAXCCALLS)
+      luaG_runerror(L, "C stack overflow");
+    else if (L->nCcalls >= (LUAI_MAXCCALLS + (LUAI_MAXCCALLS>>3)))
+      luaD_throw(L, LUA_ERRERR);  /* error while handing stack error */
+  }
+}
+
+
 CallInfo *luaE_extendCI (lua_State *L) {
-  CallInfo *ci = luaM_new(L, CallInfo);
+  CallInfo *ci;
+  luaE_incCcalls(L);
+  ci = luaM_new(L, CallInfo);
   lua_assert(L->ci->next == NULL);
   L->ci->next = ci;
   ci->previous = L->ci;
@@ -116,11 +136,13 @@ void luaE_freeCI (lua_State *L) {
   CallInfo *ci = L->ci;
   CallInfo *next = ci->next;
   ci->next = NULL;
+  L->nCcalls -= L->nci;  /* to subtract removed elements from 'nCcalls' */
   while ((ci = next) != NULL) {
     next = ci->next;
     luaM_free(L, ci);
     L->nci--;
   }
+  L->nCcalls += L->nci;  /* to subtract removed elements from 'nCcalls' */
 }
 
 
@@ -130,6 +152,7 @@ void luaE_freeCI (lua_State *L) {
 void luaE_shrinkCI (lua_State *L) {
   CallInfo *ci = L->ci;
   CallInfo *next2;  /* next's next */
+  L->nCcalls -= L->nci;  /* to subtract removed elements from 'nCcalls' */
   /* while there are two nexts */
   while (ci->next != NULL && (next2 = ci->next->next) != NULL) {
     luaM_free(L, ci->next);  /* free next */
@@ -138,6 +161,7 @@ void luaE_shrinkCI (lua_State *L) {
     next2->previous = ci;
     ci = next2;  /* keep next's next */
   }
+  L->nCcalls += L->nci;  /* to subtract removed elements from 'nCcalls' */
 }
 
 

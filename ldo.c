@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.172 2017/11/13 15:36:52 roberto Exp roberto $
+** $Id: ldo.c,v 2.173 2017/11/21 14:17:35 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -135,7 +135,7 @@ l_noret luaD_throw (lua_State *L, int errcode) {
 
 
 int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
-  unsigned short oldnCcalls = L->nCcalls;
+  unsigned short oldnCcalls = L->nCcalls - L->nci;
   struct lua_longjmp lj;
   lj.status = LUA_OK;
   lj.previous = L->errorJmp;  /* chain new error handler */
@@ -144,7 +144,7 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
     (*f)(L, ud);
   );
   L->errorJmp = lj.previous;  /* restore old error handler */
-  L->nCcalls = oldnCcalls;
+  L->nCcalls = oldnCcalls + L->nci;
   return lj.status;
 }
 
@@ -299,7 +299,7 @@ static void callhook (lua_State *L, CallInfo *ci, int istail) {
 
 /*
 ** Check whether __call metafield of 'func' is a function. If so, put
-** it in stack below original 'func' so that 'luaD_precall' can call
+** it in stack below original 'func' so that 'luaD_call' can call
 ** it. Raise an error if __call metafield is not a function.
 */
 StkId luaD_tryfuncTM (lua_State *L, StkId func) {
@@ -417,13 +417,12 @@ void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int n) {
 
 
 /*
-** Prepares a function call: checks the stack, creates a new CallInfo
-** entry, fills in the relevant information, calls hook if needed.
-** If function is a C function, does the call, too. (Otherwise, leave
-** the execution ('luaV_execute') to the caller, to allow stackless
-** calls.) Returns true iff function has been executed (C function).
+** Call a function (C or Lua). The function to be called is at *func.
+** The arguments are on the stack, right after the function.
+** When returns, all the results are on the stack, starting at the original
+** function position.
 */
-int luaD_precall (lua_State *L, StkId func, int nresults) {
+void luaD_call (lua_State *L, StkId func, int nresults) {
   lua_CFunction f;
   TValue *funcv = s2v(func);
   CallInfo *ci;
@@ -449,7 +448,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       lua_lock(L);
       api_checknelems(L, n);
       luaD_poscall(L, ci, L->top - n, n);
-      return 1;
+      break;
     }
     case LUA_TLCL: {  /* Lua function: prepare its call */
       Proto *p = clLvalue(funcv)->p;
@@ -469,43 +468,15 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       ci->callstatus = CIST_LUA;
       if (L->hookmask)
         callhook(L, ci, 0);
-      return 0;
+      luaV_execute(L);  /* run the function */
+      break;
     }
     default: {  /* not a function */
       func = luaD_tryfuncTM(L, func);  /* try to get '__call' metamethod */
-      return luaD_precall(L, func, nresults);  /* now it must be a function */
+      luaD_call(L, func, nresults);  /* now it must be a function */
+      break;
     }
   }
-}
-
-
-/*
-** Check appropriate error for stack overflow ("regular" overflow or
-** overflow while handling stack overflow). If 'nCalls' is larger than
-** LUAI_MAXCCALLS (which means it is handling a "regular" overflow) but
-** smaller than 9/8 of LUAI_MAXCCALLS, does not report an error (to
-** allow overflow handling to work)
-*/
-static void stackerror (lua_State *L) {
-  if (L->nCcalls == LUAI_MAXCCALLS)
-    luaG_runerror(L, "C stack overflow");
-  else if (L->nCcalls >= (LUAI_MAXCCALLS + (LUAI_MAXCCALLS>>3)))
-    luaD_throw(L, LUA_ERRERR);  /* error while handing stack error */
-}
-
-
-/*
-** Call a function (C or Lua). The function to be called is at *func.
-** The arguments are on the stack, right after the function.
-** When returns, all the results are on the stack, starting at the original
-** function position.
-*/
-void luaD_call (lua_State *L, StkId func, int nResults) {
-  if (++L->nCcalls >= LUAI_MAXCCALLS)
-    stackerror(L);
-  if (!luaD_precall(L, func, nResults))  /* is a Lua function? */
-    luaV_execute(L);  /* call it */
-  L->nCcalls--;
 }
 
 
@@ -541,7 +512,7 @@ static void finishCcall (lua_State *L, int status) {
   n = (*ci->u.c.k)(L, status, ci->u.c.ctx);  /* call continuation function */
   lua_lock(L);
   api_checknelems(L, n);
-  luaD_poscall(L, ci, L->top - n, n);  /* finish 'luaD_precall' */
+  luaD_poscall(L, ci, L->top - n, n);  /* finish 'luaD_call' */
 }
 
 
@@ -629,8 +600,7 @@ static void resume (lua_State *L, void *ud) {
   StkId firstArg = L->top - n;  /* first argument */
   CallInfo *ci = L->ci;
   if (L->status == LUA_OK) {  /* starting a coroutine? */
-    if (!luaD_precall(L, firstArg - 1, LUA_MULTRET))  /* Lua function? */
-      luaV_execute(L);  /* call it */
+    luaD_call(L, firstArg - 1, LUA_MULTRET);
   }
   else {  /* resuming from previous yield */
     lua_assert(L->status == LUA_YIELD);
@@ -645,7 +615,7 @@ static void resume (lua_State *L, void *ud) {
         api_checknelems(L, n);
         firstArg = L->top - n;  /* yield results come from continuation */
       }
-      luaD_poscall(L, ci, firstArg, n);  /* finish 'luaD_precall' */
+      luaD_poscall(L, ci, firstArg, n);  /* finish 'luaD_call' */
     }
     unroll(L, NULL);  /* run continuation */
   }
@@ -688,7 +658,7 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
                                     : L->top - (L->ci->func + 1);
   L->nny = oldnny;  /* restore 'nny' */
   L->nCcalls--;
-  lua_assert(L->nCcalls == ((from) ? from->nCcalls : 0));
+  // lua_assert(L->nCcalls == ((from) ? from->nCcalls : 0));
   lua_unlock(L);
   return status;
 }

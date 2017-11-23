@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.166 2017/09/28 16:53:29 roberto Exp roberto $
+** $Id: lparser.c,v 2.167 2017/10/04 21:53:03 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -330,11 +330,7 @@ static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
 }
 
 
-static void enterlevel (LexState *ls) {
-  lua_State *L = ls->L;
-  ++L->nCcalls;
-  checklimit(ls->fs, L->nCcalls, LUAI_MAXCCALLS, "C levels");
-}
+#define enterlevel(ls)	luaE_incCcalls((ls)->L)
 
 
 #define leavelevel(ls)	((ls)->L->nCcalls--)
@@ -1188,9 +1184,9 @@ static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
     suffixedexp(ls, &nv.v);
     if (!vkisindexed(nv.v.k))
       check_conflict(ls, lh, &nv.v);
-    checklimit(ls->fs, nvars + ls->L->nCcalls, LUAI_MAXCCALLS,
-                    "C levels");
+    luaE_incCcalls(ls->L);  /* control recursion depth */
     assignment(ls, &nv, nvars+1);
+    ls->L->nCcalls--;
   }
   else {  /* assignment -> '=' explist */
     int nexps;

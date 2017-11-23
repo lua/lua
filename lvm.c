@@ -1,5 +1,9 @@
 /*
-** $Id: lvm.c,v 2.314 2017/11/22 18:41:20 roberto Exp roberto $
+<<<<<<< lvm.c
+** $Id: lvm.c,v 2.313 2017/11/21 14:17:35 roberto Exp roberto $
+=======
+** $Id: lvm.c,v 2.315 2017/11/22 19:15:44 roberto Exp $
+>>>>>>> 2.315
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -829,20 +833,12 @@ void luaV_finishOp (lua_State *L) {
 
 
 void luaV_execute (lua_State *L) {
-  CallInfo *ci = L->ci;  /* local copy of 'L->ci' */
-  LClosure *cl;
-  TValue *k;
-  StkId base;  /* local copy of 'ci->func + 1' */
-  int trap;
-  const Instruction *pc;  /* local copy of 'ci->u.l.savedpc' */
-  ci->callstatus |= CIST_FRESH;  /* fresh invocation of 'luaV_execute" */
- newframe:  /* reentry point when frame changes (call/return) */
-  lua_assert(ci == L->ci);
-  cl = clLvalue(s2v(ci->func));  /* local reference to function's closure */
-  k = cl->p->k;  /* local reference to function's constant table */
-  updatetrap(ci);
-  updatebase(ci);
-  pc = ci->u.l.savedpc;
+  CallInfo *ci = L->ci;
+  LClosure *cl = clLvalue(s2v(ci->func));
+  TValue *k = cl->p->k;
+  StkId base = ci->func + 1;
+  int trap = ci->u.l.trap;
+  const Instruction *pc = ci->u.l.savedpc;
   /* main loop of interpreter */
   for (;;) {
     Instruction i;
@@ -1418,20 +1414,13 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_CALL) {
         int b = GETARG_B(i);
         int nresults = GETARG_C(i) - 1;
-        int isC;
         if (b != 0)  /* fixed number of arguments? */
           L->top = ra + b;  /* top signals number of arguments */
         /* else previous instruction set top */
-        Protect(isC = luaD_precall(L, ra, nresults));
-        if (isC) {  /* C function? */
-          if (nresults >= 0)  /* fixed number of results? */
-            L->top = ci->top;  /* correct top */
-          /* else leave top for next instruction */
-        }
-        else {  /* Lua function */
-          ci = L->ci;
-          goto newframe;  /* restart luaV_execute over new Lua function */
-        }
+        Protect(luaD_call(L, ra, nresults));
+        if (nresults >= 0)  /* fixed number of results? */
+          L->top = ci->top;  /* correct top */
+        /* else leave top for next instruction */
         vmbreak;
       }
       vmcase(OP_TAILCALL) {
@@ -1447,12 +1436,15 @@ void luaV_execute (lua_State *L) {
           b++;  /* there is now one extra argument */
         }
         if (!ttisLclosure(s2v(ra)))  /* C function? */
-          Protect(luaD_precall(L, ra, LUA_MULTRET));  /* call it */
+          Protect(luaD_call(L, ra, LUA_MULTRET));  /* call it */
         else {  /* tail call */
           if (cl->p->sizep > 0) /* close upvalues from previous call */
             luaF_close(L, ci->func + 1);
           luaD_pretailcall(L, ci, ra, b);  /* prepare call frame */
-          goto newframe;  /* restart luaV_execute over new Lua function */
+          cl = clLvalue(s2v(ci->func));
+          k = cl->p->k;
+          updatebase(ci);
+          pc = ci->u.l.savedpc;
         }
         vmbreak;
       }
@@ -1461,16 +1453,8 @@ void luaV_execute (lua_State *L) {
         if (cl->p->sizep > 0)
           luaF_close(L, base);
         savepc(L);
-        b = luaD_poscall(L, ci, ra, (b != 0 ? b - 1 : cast_int(L->top - ra)));
-        if (ci->callstatus & CIST_FRESH)  /* local 'ci' still from callee */
-          return;  /* external invocation: return */
-        else {  /* invocation via reentry: continue execution */
-          ci = L->ci;
-          if (b) L->top = ci->top;
-          lua_assert(isLua(ci));
-          lua_assert(GET_OPCODE(*((ci)->u.l.savedpc - 1)) == OP_CALL);
-          goto newframe;  /* restart luaV_execute over new Lua function */
-        }
+        luaD_poscall(L, ci, ra, (b != 0 ? b - 1 : cast_int(L->top - ra)));
+        return;  /* external invocation: return */
       }
       vmcase(OP_FORLOOP) {
         if (ttisinteger(s2v(ra))) {  /* integer loop? */
