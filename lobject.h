@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.125 2017/06/29 15:06:44 roberto Exp $
+** $Id: lobject.h,v 2.130 2017/11/07 13:25:26 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -529,7 +529,7 @@ typedef union Closure {
 
 /*
 ** Nodes for Hash tables. A pack of two TValue's (key-value pairs)
-** plus a 'next' field to link colliding entries. The distribuition
+** plus a 'next' field to link colliding entries. The distribution
 ** of the key's fields ('key_tt' and 'key_val') not forming a proper
 ** 'TValue' allows for a smaller size for 'Node' both in 4-byte
 ** and 8-byte alignments.

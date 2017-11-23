@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.236 2017/10/31 15:29:28 roberto Exp $
+** $Id: lgc.c,v 2.238 2017/11/07 13:25:26 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -507,7 +507,7 @@ static lu_mem traversetable (global_State *g, Table *h) {
 ** mode, check the generational invariant. If the cache is old,
 ** everything is ok. If the prototype is 'old0', everything
 ** is ok too. (It will naturally be visited again.) If the
-** prototype is older than 'old0', then its cache (whith is new)
+** prototype is older than 'old0', then its cache (which is new)
 ** must be visited again in the next collection, so the prototype
 ** goes to the 'protogray' list. (If the prototype has a cache,
 ** it is already immutable and does not need other barriers;
@@ -1195,7 +1195,7 @@ static void entergen (lua_State *L, global_State *g) {
   luaC_runtilstate(L, bitmask(GCSpause));  /* prepare to start a new cycle */
   luaC_runtilstate(L, bitmask(GCSpropagate));  /* start new cycle */
   atomic(L);
-  /* sweep all ellements making them old */
+  /* sweep all elements making them old */
   sweep2old(L, &g->allgc);
   /* everything alive now is old */
   g->reallyold = g->old = g->survival = g->allgc;

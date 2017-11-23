@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.134 2017/11/22 18:41:20 roberto Exp roberto $
+** $Id: lcode.c,v 2.135 2017/11/22 19:15:44 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -1331,7 +1331,7 @@ static void codeeq (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
 
 
 /*
-** Aplly prefix operation 'op' to expression 'e'.
+** Apply prefix operation 'op' to expression 'e'.
 */
 void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
   static const expdesc ef = {VKINT, {0}, NO_JUMP, NO_JUMP};

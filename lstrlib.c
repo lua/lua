@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.258 2017/11/08 14:50:23 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.259 2017/11/16 13:19:06 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -1117,7 +1117,7 @@ static void addliteral (lua_State *L, luaL_Buffer *b, int arg) {
       else {  /* integers */
         lua_Integer n = lua_tointeger(L, arg);
         const char *format = (n == LUA_MININTEGER)  /* corner case? */
-                           ? "0x%" LUA_INTEGER_FRMLEN "x"  /* use hexa */
+                           ? "0x%" LUA_INTEGER_FRMLEN "x"  /* use hex */
                            : LUA_INTEGER_FMT;  /* else use default format */
         nb = l_sprintf(buff, MAX_ITEM, format, (LUAI_UACINT)n);
       }
