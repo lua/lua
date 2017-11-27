@@ -1,9 +1,5 @@
 /*
-<<<<<<< lvm.c
-** $Id: lvm.c,v 2.316 2017/11/23 16:41:16 roberto Exp roberto $
-=======
-** $Id: lvm.c,v 2.316 2017/11/23 16:41:16 roberto Exp roberto $
->>>>>>> 2.315
+** $Id: lvm.c,v 2.317 2017/11/23 19:18:10 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -699,16 +695,21 @@ void luaV_finishOp (lua_State *L) {
       setobjs2s(L, base + GETARG_A(inst), --L->top);
       break;
     }
-    case OP_LE: case OP_LT: case OP_EQ: {
+    case OP_LT: case OP_LE:
+    case OP_LTI: case OP_LEI:
+    case OP_EQ: {  /* note that 'OP_EQI'/'OP_EQK' cannot yield */
       int res = !l_isfalse(s2v(L->top - 1));
       L->top--;
       if (ci->callstatus & CIST_LEQ) {  /* "<=" using "<" instead? */
-        lua_assert(op == OP_LE);
+        lua_assert(op == OP_LE ||
+                  (op == OP_LEI && !(GETARG_B(inst) & 2)) ||
+                  (op == OP_LTI && GETARG_B(inst) & 2));
         ci->callstatus ^= CIST_LEQ;  /* clear mark */
         res = !res;  /* negate result */
       }
       lua_assert(GET_OPCODE(*ci->u.l.savedpc) == OP_JMP);
-      if (res != GETARG_B(inst))  /* condition failed? */
+      if (GETARG_B(inst) & 2) res = !res;
+      if (res != (GETARG_B(inst) & 1))  /* condition failed? */
         ci->u.l.savedpc++;  /* skip jump instruction */
       break;
     }
@@ -1378,6 +1379,42 @@ void luaV_execute (lua_State *L) {
         if ((ttisinteger(s2v(ra)) ? (ivalue(s2v(ra)) == ic)
             :ttisfloat(s2v(ra)) ? luai_numeq(fltvalue(s2v(ra)), cast_num(ic))
             : 0) != GETARG_B(i))
+          pc++;
+        else
+          donextjump(ci);
+        vmbreak;
+      }
+      vmcase(OP_LTI) {
+        int res;
+        int ic = GETARG_sC(i);
+        if (ttisinteger(s2v(ra)))
+          res = (ivalue(s2v(ra)) < ic);
+        else if (ttisfloat(s2v(ra))) {
+          lua_Number f = fltvalue(s2v(ra));
+          res = (!luai_numisnan(f)) ? luai_numlt(f, cast_num(ic))
+                                    : GETARG_B(i) >> 1;  /* NaN? */
+        }
+        else
+          Protect(res = luaT_callorderiTM(L, s2v(ra), ic, GETARG_B(i) >> 1, TM_LT));
+        if (res != (GETARG_B(i) & 1))
+          pc++;
+        else
+          donextjump(ci);
+        vmbreak;
+      }
+      vmcase(OP_LEI) {
+        int res;
+        int ic = GETARG_sC(i);
+        if (ttisinteger(s2v(ra)))
+          res = (ivalue(s2v(ra)) <= ic);
+        else if (ttisfloat(s2v(ra))) {
+          lua_Number f = fltvalue(s2v(ra));
+          res = (!luai_numisnan(f)) ? luai_numle(f, cast_num(ic))
+                                    : GETARG_B(i) >> 1;  /* NaN? */
+        }
+        else
+          Protect(res = luaT_callorderiTM(L, s2v(ra), ic, GETARG_B(i) >> 1, TM_LE));
+        if (res != (GETARG_B(i) & 1))
           pc++;
         else
           donextjump(ci);
