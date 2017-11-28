@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.170 2017/11/22 19:15:44 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.171 2017/11/27 17:44:31 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -114,13 +114,15 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 #define SETARG_A(i,v)	setarg(i, v, POS_A, SIZE_A)
 
 #define GETARG_B(i)	check_exp(checkopm(i, iABC), getarg(i, POS_B, SIZE_B))
+#define GETARG_sB(i)	(GETARG_B(i) - MAXARG_sC)
 #define SETARG_B(i,v)	setarg(i, v, POS_B, SIZE_B)
 
 #define GETARG_C(i)	check_exp(checkopm(i, iABC), getarg(i, POS_C, SIZE_C))
 #define GETARG_sC(i)	(GETARG_C(i) - MAXARG_sC)
 #define SETARG_C(i,v)	setarg(i, v, POS_C, SIZE_C)
 
-#define GETARG_k(i)	(cast(int, ((i) & (1 << POS_k))))
+#define TESTARG_k(i)	(cast(int, ((i) & (1 << POS_k))))
+#define GETARG_k(i)	getarg(i, POS_k, 1)
 #define SETARG_k(i,v)	setarg(i, v, POS_k, 1)
 
 #define GETARG_Bx(i)	check_exp(checkopm(i, iABx), getarg(i, POS_Bx, SIZE_Bx))
@@ -236,17 +238,17 @@ OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
 
 OP_CLOSE,/*	A	close all upvalues >= R(A)			*/
 OP_JMP,/*	k sJ	pc += sJ  (k is used in code generation)	*/
-OP_EQ,/*	A B C	if ((R(A) == R(C)) ~= B) then pc++		*/
-OP_LT,/*	A B C	if ((R(A) <  R(C)) ~= B) then pc++		*/
-OP_LE,/*	A B C	if ((R(A) <= R(C)) ~= B) then pc++		*/
+OP_EQ,/*	A B	if ((R(A) == R(B)) ~= k) then pc++		*/
+OP_LT,/*	A B	if ((R(A) <  R(B)) ~= k) then pc++		*/
+OP_LE,/*	A B	if ((R(A) <= R(B)) ~= k) then pc++		*/
 
-OP_EQK,/*	A B C	if ((R(A) == K(C)) ~= B) then pc++		*/
-OP_EQI,/*	A B C	if ((R(A) == C) ~= B) then pc++			*/
-OP_LTI,/*	A B C	if ((R(A) < C) ~= B) then pc++			*/
-OP_LEI,/*	A B C	if ((R(A) <= C) ~= B) then pc++			*/
+OP_EQK,/*	A B	if ((R(A) == K(B)) ~= k) then pc++		*/
+OP_EQI,/*	A sB	if ((R(A) == sB) ~= k) then pc++		*/
+OP_LTI,/*	A sB	if ((R(A) < sB) ~= k) then pc++			*/
+OP_LEI,/*	A sB	if ((R(A) <= sB) ~= k) then pc++		*/
 
-OP_TEST,/*	A C	if not (R(A) <=> C) then pc++			*/
-OP_TESTSET,/*	A B C	if (R(B) <=> C) then R(A) := R(B) else pc++	*/
+OP_TEST,/*	A 	if (not R(A) == k) then pc++			*/
+OP_TESTSET,/*	A B	if (not R(B) == k) then R(A) := R(B) else pc++	*/
 
 OP_CALL,/*	A B C	R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1)) */
 OP_TAILCALL,/*	A B C	return R(A)(R(A+1), ... ,R(A+B-1))		*/
@@ -289,8 +291,12 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
 
   (*) In OP_LOADKX, the next 'instruction' is always EXTRAARG.
 
-  (*) For comparisons, A specifies what condition the test should accept
+  (*) For comparisons, k specifies what condition the test should accept
   (true or false).
+
+  (*) For OP_LTI/OP_LEI, C indicates that the transformations
+  (A<B) => (!(B<=A)) or (A<=B) => (!(B<A)) were used to put the
+  constant operator on the right side.
 
   (*) All 'skips' (pc++) assume that next instruction is a jump.
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.135 2017/11/22 19:15:44 roberto Exp roberto $
+** $Id: lcode.c,v 2.136 2017/11/23 19:29:04 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -160,8 +160,8 @@ void luaK_ret (FuncState *fs, int first, int nret) {
 ** Code a "conditional jump", that is, a test or comparison opcode
 ** followed by a jump. Return jump position.
 */
-static int condjump (FuncState *fs, OpCode op, int A, int B, int C) {
-  luaK_codeABC(fs, op, A, B, C);
+static int condjump (FuncState *fs, OpCode op, int A, int B, int C, int k) {
+  luaK_codeABCk(fs, op, A, B, C, k);
   return luaK_jump(fs);
 }
 
@@ -206,7 +206,7 @@ static int patchtestreg (FuncState *fs, int node, int reg) {
   else {
      /* no register to put value or register already has the value;
         change instruction to simple test */
-    *i = CREATE_ABCk(OP_TEST, GETARG_B(*i), 0, GETARG_C(*i), 0);
+    *i = CREATE_ABCk(OP_TEST, GETARG_B(*i), 0, 0, GETARG_k(*i));
   }
   return 1;
 }
@@ -969,7 +969,7 @@ static void negatecondition (FuncState *fs, expdesc *e) {
   Instruction *pc = getjumpcontrol(fs, e->u.info);
   lua_assert(testTMode(GET_OPCODE(*pc)) && GET_OPCODE(*pc) != OP_TESTSET &&
                                            GET_OPCODE(*pc) != OP_TEST);
-  SETARG_B(*pc, !(GETARG_B(*pc)));
+  SETARG_k(*pc, (GETARG_k(*pc) ^ 1));
 }
 
 
@@ -984,13 +984,13 @@ static int jumponcond (FuncState *fs, expdesc *e, int cond) {
     Instruction ie = getinstruction(fs, e);
     if (GET_OPCODE(ie) == OP_NOT) {
       fs->pc--;  /* remove previous OP_NOT */
-      return condjump(fs, OP_TEST, GETARG_B(ie), 0, !cond);
+      return condjump(fs, OP_TEST, GETARG_B(ie), 0, 0, !cond);
     }
     /* else go through */
   }
   discharge2anyreg(fs, e);
   freeexp(fs, e);
-  return condjump(fs, OP_TESTSET, NO_REG, e->u.info, cond);
+  return condjump(fs, OP_TESTSET, NO_REG, e->u.info, 0, cond);
 }
 
 
@@ -1276,25 +1276,37 @@ static void codecommutative (FuncState *fs, OpCode op,
 
 /*
 ** Emit code for order comparisons.
-** 'e1' was already put in register by 'luaK_infix'.
+** When the first operand is an integral value in the proper range,
+** change (A < B) to (!(B <= A)) and (A <= B) to (!(B < A)) so that
+** it can use an immediate operand. In this case, C indicates this
+** change, for cases that cannot assume a total order (NaN and 
+** metamethods).
 */
-static void codeorder (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
-  int rk1 = check_exp(e1->k == VNONRELOC, e1->u.info);
-  int rk2 = luaK_exp2anyreg(fs, e2);
-  freeexps(fs, e1, e2);
-  switch (opr) {
-    case OPR_GT: case OPR_GE: {
-      /* '(a > b)' ==> '(b < a)';  '(a >= b)' ==> '(b <= a)' */
-      OpCode op = cast(OpCode, (opr - OPR_NE) + OP_EQ);
-      e1->u.info = condjump(fs, op, rk2, 1, rk1);  /* invert operands */
-      break;
-    }
-    default: {  /* '==', '<', '<=' use their own opcodes */
-      OpCode op = cast(OpCode, (opr - OPR_EQ) + OP_EQ);
-      e1->u.info = condjump(fs, op, rk1, 1, rk2);
-      break;
-    }
+static void codeorder (FuncState *fs, OpCode op, expdesc *e1, expdesc *e2) {
+  int r1, r2;
+  int cond = 1;
+  int C = 0;
+  lua_Integer im;
+  if (isSCnumber(e2, &im)) {
+    /* use immediate operand */
+    r1 = luaK_exp2anyreg(fs, e1);
+    r2 = cast_int(im);
+    op = cast(OpCode, (op - OP_LT) + OP_LTI);
   }
+  else if (isSCnumber(e1, &im)) {
+    /* transform (A < B) to (!(B <= A)) and (A <= B) to (!(B < A)) */
+    r1 = luaK_exp2anyreg(fs, e2);
+    r2 = cast_int(im);
+    op = (op == OP_LT) ? OP_LEI : OP_LTI;
+    cond = 0;  /* negate original test */
+    C = 1;  /* indication that it used the transformations */
+  }
+  else {  /* regular case, compare two registers */
+    r1 = luaK_exp2anyreg(fs, e1);
+    r2 = luaK_exp2anyreg(fs, e2);
+  }
+  freeexps(fs, e1, e2);
+  e1->u.info = condjump(fs, op, r1, r2, C, cond);
   e1->k = VJMP;
 }
 
@@ -1325,7 +1337,7 @@ static void codeeq (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
     r2 = luaK_exp2anyreg(fs, e2);
   }
   freeexps(fs, e1, e2);
-  e1->u.info = condjump(fs, op, r1, (opr == OPR_EQ), r2);
+  e1->u.info = condjump(fs, op, r1, r2, 0, (opr == OPR_EQ));
   e1->k = VJMP;
 }
 
@@ -1385,7 +1397,10 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
     }
     case OPR_LT: case OPR_LE:
     case OPR_GT: case OPR_GE: {
-      luaK_exp2anyreg(fs, v);
+      lua_Integer dummy;
+      if (!isSCnumber(v, &dummy))
+        luaK_exp2RK(fs, v);
+      /* else keep numeral, which may be an immediate operand */
       break;
     }
     default: lua_assert(0);
@@ -1399,9 +1414,9 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
 ** concatenation is right associative), merge second CONCAT into first
 ** one.
 */
-void luaK_posfix (FuncState *fs, BinOpr op,
+void luaK_posfix (FuncState *fs, BinOpr opr,
                   expdesc *e1, expdesc *e2, int line) {
-  switch (op) {
+  switch (opr) {
     case OPR_AND: {
       lua_assert(e1->t == NO_JUMP);  /* list closed by 'luK_infix' */
       luaK_dischargevars(fs, e2);
@@ -1432,28 +1447,35 @@ void luaK_posfix (FuncState *fs, BinOpr op,
       break;
     }
     case OPR_ADD: case OPR_MUL: {
-      if (!constfolding(fs, op + LUA_OPADD, e1, e2))
-        codecommutative(fs, cast(OpCode, op + OP_ADD), e1, e2, line);
+      if (!constfolding(fs, opr + LUA_OPADD, e1, e2))
+        codecommutative(fs, cast(OpCode, opr + OP_ADD), e1, e2, line);
       break;
     }
     case OPR_SUB: case OPR_DIV:
     case OPR_IDIV: case OPR_MOD: case OPR_POW: {
-      if (!constfolding(fs, op + LUA_OPADD, e1, e2))
-        codearith(fs, cast(OpCode, op + OP_ADD), e1, e2, 0, line);
+      if (!constfolding(fs, opr + LUA_OPADD, e1, e2))
+        codearith(fs, cast(OpCode, opr + OP_ADD), e1, e2, 0, line);
       break;
     }
     case OPR_BAND: case OPR_BOR: case OPR_BXOR:
     case OPR_SHL: case OPR_SHR: {
-      if (!constfolding(fs, op + LUA_OPADD, e1, e2))
-        codebinexpval(fs, cast(OpCode, op + OP_ADD), e1, e2, line);
+      if (!constfolding(fs, opr + LUA_OPADD, e1, e2))
+        codebinexpval(fs, cast(OpCode, opr + OP_ADD), e1, e2, line);
       break;
     }
     case OPR_EQ: case OPR_NE: {
-      codeeq(fs, op, e1, e2);
+      codeeq(fs, opr, e1, e2);
       break;
     }
-    case OPR_LT: case OPR_LE:
+    case OPR_LT: case OPR_LE: {
+      OpCode op = cast(OpCode, (opr - OPR_EQ) + OP_EQ);
+      codeorder(fs, op, e1, e2);
+      break;
+    }
     case OPR_GT: case OPR_GE: {
+      /* '(a > b)' <=> '(b < a)';  '(a >= b)' <=> '(b <= a)' */
+      OpCode op = cast(OpCode, (opr - OPR_NE) + OP_EQ);
+      swapexps(e1, e2);
       codeorder(fs, op, e1, e2);
       break;
     }

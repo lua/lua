@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.317 2017/11/23 19:18:10 roberto Exp roberto $
+** $Id: lvm.c,v 2.318 2017/11/27 17:44:31 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -702,14 +702,14 @@ void luaV_finishOp (lua_State *L) {
       L->top--;
       if (ci->callstatus & CIST_LEQ) {  /* "<=" using "<" instead? */
         lua_assert(op == OP_LE ||
-                  (op == OP_LEI && !(GETARG_B(inst) & 2)) ||
-                  (op == OP_LTI && GETARG_B(inst) & 2));
+                  (op == OP_LTI && GETARG_C(inst)) ||
+                  (op == OP_LEI && !GETARG_C(inst)));
         ci->callstatus ^= CIST_LEQ;  /* clear mark */
         res = !res;  /* negate result */
       }
       lua_assert(GET_OPCODE(*ci->u.l.savedpc) == OP_JMP);
-      if (GETARG_B(inst) & 2) res = !res;
-      if (res != (GETARG_B(inst) & 1))  /* condition failed? */
+      if (GETARG_C(inst)) res = !res;
+      if (res != GETARG_k(inst))  /* condition failed? */
         ci->u.l.savedpc++;  /* skip jump instruction */
       break;
     }
@@ -766,7 +766,7 @@ void luaV_finishOp (lua_State *L) {
 #define RC(i)	(base+GETARG_C(i))
 #define vRC(i)	s2v(RC(i))
 #define KC(i)	(k+GETARG_C(i))
-#define RKC(i)	((GETARG_k(i)) ? k + GETARG_C(i) : s2v(base + GETARG_C(i)))
+#define RKC(i)	((TESTARG_k(i)) ? k + GETARG_C(i) : s2v(base + GETARG_C(i)))
 
 
 
@@ -1326,59 +1326,59 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_EQ) {
-        TValue *rc = vRC(i);
+        TValue *rb = vRB(i);
         int res;
-        Protect(res = luaV_equalobj(L, s2v(ra), rc));
-        if (res != GETARG_B(i))
+        Protect(res = luaV_equalobj(L, s2v(ra), rb));
+        if (res != GETARG_k(i))
           pc++;
         else
           donextjump(ci);
         vmbreak;
       }
       vmcase(OP_LT) {
-        TValue *rc = vRC(i);
+        TValue *rb = vRB(i);
         int res;
-        if (ttisinteger(s2v(ra)) && ttisinteger(rc))
-          res = (ivalue(s2v(ra)) < ivalue(rc));
-        else if (ttisnumber(s2v(ra)) && ttisnumber(rc))
-          res = LTnum(s2v(ra), rc);
+        if (ttisinteger(s2v(ra)) && ttisinteger(rb))
+          res = (ivalue(s2v(ra)) < ivalue(rb));
+        else if (ttisnumber(s2v(ra)) && ttisnumber(rb))
+          res = LTnum(s2v(ra), rb);
         else
-          Protect(res = lessthanothers(L, s2v(ra), rc));
-        if (res != GETARG_B(i))
+          Protect(res = lessthanothers(L, s2v(ra), rb));
+        if (res != GETARG_k(i))
           pc++;
         else
           donextjump(ci);
         vmbreak;
       }
       vmcase(OP_LE) {
-        TValue *rc = vRC(i);
+        TValue *rb = vRB(i);
         int res;
-        if (ttisinteger(s2v(ra)) && ttisinteger(rc))
-          res = (ivalue(s2v(ra)) <= ivalue(rc));
-        else if (ttisnumber(s2v(ra)) && ttisnumber(rc))
-          res = LEnum(s2v(ra), rc);
+        if (ttisinteger(s2v(ra)) && ttisinteger(rb))
+          res = (ivalue(s2v(ra)) <= ivalue(rb));
+        else if (ttisnumber(s2v(ra)) && ttisnumber(rb))
+          res = LEnum(s2v(ra), rb);
         else
-          Protect(res = lessequalothers(L, s2v(ra), rc));
-        if (res != GETARG_B(i))
+          Protect(res = lessequalothers(L, s2v(ra), rb));
+        if (res != GETARG_k(i))
           pc++;
         else
           donextjump(ci);
         vmbreak;
       }
       vmcase(OP_EQK) {
-        TValue *rc = KC(i);
+        TValue *rb = KB(i);
         /* basic types do not use '__eq'; we can use raw equality */
-        if (luaV_equalobj(NULL, s2v(ra), rc) != GETARG_B(i))
+        if (luaV_equalobj(NULL, s2v(ra), rb) != GETARG_k(i))
           pc++;
         else
           donextjump(ci);
         vmbreak;
       }
       vmcase(OP_EQI) {
-        int ic = GETARG_sC(i);
-        if ((ttisinteger(s2v(ra)) ? (ivalue(s2v(ra)) == ic)
-            :ttisfloat(s2v(ra)) ? luai_numeq(fltvalue(s2v(ra)), cast_num(ic))
-            : 0) != GETARG_B(i))
+        int im = GETARG_sB(i);
+        if ((ttisinteger(s2v(ra)) ? (ivalue(s2v(ra)) == im)
+            :ttisfloat(s2v(ra)) ? luai_numeq(fltvalue(s2v(ra)), cast_num(im))
+            : 0) != GETARG_k(i))
           pc++;
         else
           donextjump(ci);
@@ -1386,17 +1386,17 @@ void luaV_execute (lua_State *L) {
       }
       vmcase(OP_LTI) {
         int res;
-        int ic = GETARG_sC(i);
+        int im = GETARG_sB(i);
         if (ttisinteger(s2v(ra)))
-          res = (ivalue(s2v(ra)) < ic);
+          res = (ivalue(s2v(ra)) < im);
         else if (ttisfloat(s2v(ra))) {
           lua_Number f = fltvalue(s2v(ra));
-          res = (!luai_numisnan(f)) ? luai_numlt(f, cast_num(ic))
-                                    : GETARG_B(i) >> 1;  /* NaN? */
+          res = (!luai_numisnan(f)) ? luai_numlt(f, cast_num(im))
+                                    : GETARG_C(i);  /* NaN? */
         }
         else
-          Protect(res = luaT_callorderiTM(L, s2v(ra), ic, GETARG_B(i) >> 1, TM_LT));
-        if (res != (GETARG_B(i) & 1))
+          Protect(res = luaT_callorderiTM(L, s2v(ra), im, GETARG_C(i), TM_LT));
+        if (res != GETARG_k(i))
           pc++;
         else
           donextjump(ci);
@@ -1404,32 +1404,32 @@ void luaV_execute (lua_State *L) {
       }
       vmcase(OP_LEI) {
         int res;
-        int ic = GETARG_sC(i);
+        int im = GETARG_sB(i);
         if (ttisinteger(s2v(ra)))
-          res = (ivalue(s2v(ra)) <= ic);
+          res = (ivalue(s2v(ra)) <= im);
         else if (ttisfloat(s2v(ra))) {
           lua_Number f = fltvalue(s2v(ra));
-          res = (!luai_numisnan(f)) ? luai_numle(f, cast_num(ic))
-                                    : GETARG_B(i) >> 1;  /* NaN? */
+          res = (!luai_numisnan(f)) ? luai_numle(f, cast_num(im))
+                                    : GETARG_C(i);  /* NaN? */
         }
         else
-          Protect(res = luaT_callorderiTM(L, s2v(ra), ic, GETARG_B(i) >> 1, TM_LE));
-        if (res != (GETARG_B(i) & 1))
+          Protect(res = luaT_callorderiTM(L, s2v(ra), im, GETARG_C(i), TM_LE));
+        if (res != GETARG_k(i))
           pc++;
         else
           donextjump(ci);
         vmbreak;
       }
       vmcase(OP_TEST) {
-        if (GETARG_C(i) ? l_isfalse(s2v(ra)) : !l_isfalse(s2v(ra)))
+        if (l_isfalse(s2v(ra)) == GETARG_k(i))
             pc++;
           else
-          donextjump(ci);
+            donextjump(ci);
         vmbreak;
       }
       vmcase(OP_TESTSET) {
         TValue *rb = vRB(i);
-        if (GETARG_C(i) ? l_isfalse(rb) : !l_isfalse(rb))
+        if (l_isfalse(rb) == GETARG_k(i))
           pc++;
         else {
           setobj2s(L, ra, rb);
