@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.136 2017/11/23 19:29:04 roberto Exp roberto $
+** $Id: lcode.c,v 2.137 2017/11/28 12:58:18 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -1399,7 +1399,7 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
     case OPR_GT: case OPR_GE: {
       lua_Integer dummy;
       if (!isSCnumber(v, &dummy))
-        luaK_exp2RK(fs, v);
+        luaK_exp2anyreg(fs, v);
       /* else keep numeral, which may be an immediate operand */
       break;
     }
