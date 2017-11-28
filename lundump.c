@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.46 2017/06/27 14:21:12 roberto Exp roberto $
+** $Id: lundump.c,v 2.47 2017/06/29 15:06:44 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -134,24 +134,23 @@ static void LoadConstants (LoadState *S, Proto *f) {
     TValue *o = &f->k[i];
     int t = LoadByte(S);
     switch (t) {
-    case LUA_TNIL:
-      setnilvalue(o);
-      break;
-    case LUA_TBOOLEAN:
-      setbvalue(o, LoadByte(S));
-      break;
-    case LUA_TNUMFLT:
-      setfltvalue(o, LoadNumber(S));
-      break;
-    case LUA_TNUMINT:
-      setivalue(o, LoadInteger(S));
-      break;
-    case LUA_TSHRSTR:
-    case LUA_TLNGSTR:
-      setsvalue2n(S->L, o, LoadString(S));
-      break;
-    default:
-      lua_assert(0);
+      case LUA_TNIL:
+        setnilvalue(o);
+        break;
+      case LUA_TBOOLEAN:
+        setbvalue(o, LoadByte(S));
+        break;
+      case LUA_TNUMFLT:
+        setfltvalue(o, LoadNumber(S));
+        break;
+      case LUA_TNUMINT:
+        setivalue(o, LoadInteger(S));
+        break;
+      case LUA_TSHRSTR:
+      case LUA_TLNGSTR:
+        setsvalue2n(S->L, o, LoadString(S));
+        break;
+      default: lua_assert(0);
     }
   }
 }

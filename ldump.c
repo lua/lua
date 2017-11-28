@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 2.38 2017/06/27 11:35:31 roberto Exp roberto $
+** $Id: ldump.c,v 2.39 2017/06/27 14:21:12 roberto Exp roberto $
 ** save precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -113,23 +113,22 @@ static void DumpConstants (const Proto *f, DumpState *D) {
     const TValue *o = &f->k[i];
     DumpByte(ttype(o), D);
     switch (ttype(o)) {
-    case LUA_TNIL:
-      break;
-    case LUA_TBOOLEAN:
-      DumpByte(bvalue(o), D);
-      break;
-    case LUA_TNUMFLT:
-      DumpNumber(fltvalue(o), D);
-      break;
-    case LUA_TNUMINT:
-      DumpInteger(ivalue(o), D);
-      break;
-    case LUA_TSHRSTR:
-    case LUA_TLNGSTR:
-      DumpString(tsvalue(o), D);
-      break;
-    default:
-      lua_assert(0);
+      case LUA_TNIL:
+        break;
+      case LUA_TBOOLEAN:
+        DumpByte(bvalue(o), D);
+        break;
+      case LUA_TNUMFLT:
+        DumpNumber(fltvalue(o), D);
+        break;
+      case LUA_TNUMINT:
+        DumpInteger(ivalue(o), D);
+        break;
+      case LUA_TSHRSTR:
+      case LUA_TLNGSTR:
+        DumpString(tsvalue(o), D);
+        break;
+      default: lua_assert(0);
     }
   }
 }
