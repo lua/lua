@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.319 2017/11/28 12:58:18 roberto Exp roberto $
+** $Id: lvm.c,v 2.320 2017/11/28 14:51:00 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -823,8 +823,7 @@ void luaV_finishOp (lua_State *L) {
 #define vmbreak		break
 
 
-void luaV_execute (lua_State *L) {
-  CallInfo *ci = L->ci;
+void luaV_execute (lua_State *L, CallInfo *ci) {
   LClosure *cl = clLvalue(s2v(ci->func));
   TValue *k = cl->p->k;
   StkId base = ci->func + 1;
