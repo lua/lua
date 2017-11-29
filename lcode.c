@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.137 2017/11/28 12:58:18 roberto Exp roberto $
+** $Id: lcode.c,v 2.138 2017/11/28 15:26:15 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -152,7 +152,17 @@ int luaK_jump (FuncState *fs) {
 ** Code a 'return' instruction
 */
 void luaK_ret (FuncState *fs, int first, int nret) {
-  luaK_codeABC(fs, OP_RETURN, first, nret+1, 0);
+  switch (nret) {
+    case 0:
+      luaK_codeABC(fs, OP_RETURN0, 0, 0, 0);
+      break;
+    case 1:
+      luaK_codeABC(fs, OP_RETURN1, first, 0, 0);
+      break;
+    default:
+      luaK_codeABC(fs, OP_RETURN, first, nret + 1, 0);
+      break;
+  }
 }
 
 

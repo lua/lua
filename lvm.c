@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.320 2017/11/28 14:51:00 roberto Exp roberto $
+** $Id: lvm.c,v 2.321 2017/11/29 13:02:17 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -798,6 +798,11 @@ void luaV_finishOp (lua_State *L) {
 */
 #define Protect(exp)  (savepc(L), (exp), updatetrap(ci))
 
+/*
+** Protect code that will return.
+*/
+#define halfProtect(exp)  (savepc(L), (exp))
+
 
 #define checkGC(L,c)  \
 	{ luaC_condGC(L, L->top = (c),  /* limit of live values */ \
@@ -824,11 +829,16 @@ void luaV_finishOp (lua_State *L) {
 
 
 void luaV_execute (lua_State *L, CallInfo *ci) {
-  LClosure *cl = clLvalue(s2v(ci->func));
-  TValue *k = cl->p->k;
-  StkId base = ci->func + 1;
+  LClosure *cl;
+  TValue *k;
+  StkId base;
+  const Instruction *pc;
   int trap = ci->u.l.trap;
-  const Instruction *pc = ci->u.l.savedpc;
+ tailcall:
+  cl = clLvalue(s2v(ci->func));
+  k = cl->p->k;
+  base = ci->func + 1;
+  pc = ci->u.l.savedpc;
   /* main loop of interpreter */
   for (;;) {
     int cond;  /* flag for conditional jumps */
@@ -1438,16 +1448,15 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           vra = s2v(ra);
           b++;  /* there is now one extra argument */
         }
-        if (!ttisLclosure(vra))  /* C function? */
+        if (!ttisLclosure(vra)) {  /* C function? */
           Protect(luaD_call(L, ra, LUA_MULTRET));  /* call it */
+          /* next instruction will do the return */
+        }
         else {  /* tail call */
           if (cl->p->sizep > 0) /* close upvalues from previous call */
             luaF_close(L, ci->func + 1);
           luaD_pretailcall(L, ci, ra, b);  /* prepare call frame */
-          cl = clLvalue(s2v(ci->func));
-          k = cl->p->k;
-          updatebase(ci);
-          pc = ci->u.l.savedpc;
+          goto tailcall;
         }
         vmbreak;
       }
@@ -1455,9 +1464,43 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         int b = GETARG_B(i);
         if (cl->p->sizep > 0)
           luaF_close(L, base);
-        savepc(L);
-        luaD_poscall(L, ci, ra, (b != 0 ? b - 1 : cast_int(L->top - ra)));
-        return;  /* external invocation: return */
+        halfProtect(
+          luaD_poscall(L, ci, ra, (b != 0 ? b - 1 : cast_int(L->top - ra)))
+        );
+        return;
+      }
+      vmcase(OP_RETURN0) {
+        if (cl->p->sizep > 0)
+          luaF_close(L, base);
+        if (L->hookmask)
+          halfProtect(luaD_poscall(L, ci, ra, 0));  /* no hurry... */
+        else {
+          int nres = ci->nresults;
+          L->ci = ci->previous;  /* back to caller */
+          L->top = base - 1;
+          while (nres-- > 0)
+            setnilvalue(s2v(L->top++));  /* all results are nil */
+        }
+        return;
+      }
+      vmcase(OP_RETURN1) {
+        if (cl->p->sizep > 0)
+          luaF_close(L, base);
+        if (L->hookmask)
+          halfProtect(luaD_poscall(L, ci, ra, 1));  /* no hurry... */
+        else {
+          int nres = ci->nresults;
+          L->ci = ci->previous;  /* back to caller */
+          if (nres == 0)
+            L->top = base - 1;  /* asked for no results */
+          else {
+            setobjs2s(L, base - 1, ra);  /* at least this result */
+            L->top = base;
+            while (--nres > 0)  /* complete missing results */
+              setnilvalue(s2v(L->top++));
+          }
+        }
+        return;
       }
       vmcase(OP_FORLOOP) {
         if (ttisinteger(vra)) {  /* integer loop? */
