@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.174 2017/11/23 16:35:54 roberto Exp roberto $
+** $Id: ldo.c,v 2.175 2017/11/23 18:29:41 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -468,7 +468,7 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
       ci->callstatus = CIST_LUA;
       if (L->hookmask)
         callhook(L, ci, 0);
-      luaV_execute(L);  /* run the function */
+      luaV_execute(L, ci);  /* run the function */
       break;
     }
     default: {  /* not a function */
@@ -525,14 +525,15 @@ static void finishCcall (lua_State *L, int status) {
 ** status is LUA_YIELD).
 */
 static void unroll (lua_State *L, void *ud) {
+  CallInfo *ci;
   if (ud != NULL)  /* error status? */
     finishCcall(L, *(int *)ud);  /* finish 'lua_pcallk' callee */
-  while (L->ci != &L->base_ci) {  /* something in the stack */
-    if (!isLua(L->ci))  /* C function? */
+  while ((ci = L->ci) != &L->base_ci) {  /* something in the stack */
+    if (!isLua(ci))  /* C function? */
       finishCcall(L, LUA_YIELD);  /* complete its execution */
     else {  /* Lua function */
       luaV_finishOp(L);  /* finish interrupted instruction */
-      luaV_execute(L);  /* execute down to higher C 'boundary' */
+      luaV_execute(L, ci);  /* execute down to higher C 'boundary' */
     }
   }
 }
@@ -606,7 +607,7 @@ static void resume (lua_State *L, void *ud) {
     lua_assert(L->status == LUA_YIELD);
     L->status = LUA_OK;  /* mark that it is running (again) */
     if (isLua(ci))  /* yielded inside a hook? */
-      luaV_execute(L);  /* just continue running Lua code */
+      luaV_execute(L, ci);  /* just continue running Lua code */
     else {  /* 'common' yield */
       if (ci->u.c.k != NULL) {  /* does it have a continuation function? */
         lua_unlock(L);
