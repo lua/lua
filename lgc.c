@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.238 2017/11/07 13:25:26 roberto Exp roberto $
+** $Id: lgc.c,v 2.239 2017/11/23 19:29:04 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -1270,7 +1270,7 @@ static void genstep (lua_State *L, global_State *g) {
     lu_mem mem;
     youngcollection(L, g);
     mem = gettotalbytes(g);
-    luaE_setdebt(g, -((mem / 100) * g->genminormul));
+    luaE_setdebt(g, -(cast(l_mem, (mem / 100)) * g->genminormul));
     g->GCestimate = majorbase;  /* preserve base value */
   }
 }

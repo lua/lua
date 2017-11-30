@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.140 2017/11/30 13:17:06 roberto Exp roberto $
+** $Id: lcode.c,v 2.140 2017/11/30 13:29:18 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -1128,7 +1128,7 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
     t->k = VINDEXSTR;
   }
   else if (isCint(k)) {
-    t->u.ind.idx = k->u.ival;  /* integer constant */
+    t->u.ind.idx = cast_int(k->u.ival);  /* integer constant in proper range */
     t->k = VINDEXI;
   }
   else {
