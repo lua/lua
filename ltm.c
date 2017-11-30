@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.49 2017/11/23 19:18:10 roberto Exp roberto $
+** $Id: ltm.c,v 2.50 2017/11/27 17:44:31 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -237,7 +237,7 @@ void luaT_getvarargs (lua_State *L, TValue *t, StkId where, int wanted) {
     Table *h = hvalue(t);
     if (wanted < 0) {  /* get all? */
       const TValue *ns = luaH_getstr(h, G(L)->nfield);
-      int n = (ttisinteger(ns)) ? ivalue(ns) : 0;
+      int n = (ttisinteger(ns)) ? cast_int(ivalue(ns)) : 0;
       wanted = n;
       checkstackp(L, n, where);
       L->top = where + n;
