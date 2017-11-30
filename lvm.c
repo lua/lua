@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.321 2017/11/29 13:02:17 roberto Exp roberto $
+** $Id: lvm.c,v 2.322 2017/11/29 16:57:36 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1453,7 +1453,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           /* next instruction will do the return */
         }
         else {  /* tail call */
-          if (cl->p->sizep > 0) /* close upvalues from previous call */
+          if (TESTARG_k(i))  /* close upvalues from previous call */
             luaF_close(L, ci->func + 1);
           luaD_pretailcall(L, ci, ra, b);  /* prepare call frame */
           goto tailcall;
@@ -1462,7 +1462,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_RETURN) {
         int b = GETARG_B(i);
-        if (cl->p->sizep > 0)
+        if (TESTARG_k(i))
           luaF_close(L, base);
         halfProtect(
           luaD_poscall(L, ci, ra, (b != 0 ? b - 1 : cast_int(L->top - ra)))
@@ -1470,7 +1470,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         return;
       }
       vmcase(OP_RETURN0) {
-        if (cl->p->sizep > 0)
+        if (TESTARG_k(i))
           luaF_close(L, base);
         if (L->hookmask)
           halfProtect(luaD_poscall(L, ci, ra, 0));  /* no hurry... */
@@ -1484,7 +1484,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         return;
       }
       vmcase(OP_RETURN1) {
-        if (cl->p->sizep > 0)
+        if (TESTARG_k(i))
           luaF_close(L, base);
         if (L->hookmask)
           halfProtect(luaD_poscall(L, ci, ra, 1));  /* no hurry... */

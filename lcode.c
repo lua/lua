@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.138 2017/11/28 15:26:15 roberto Exp roberto $
+** $Id: lcode.c,v 2.140 2017/11/30 13:17:06 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -134,17 +134,10 @@ void luaK_concat (FuncState *fs, int *l1, int l2) {
 
 /*
 ** Create a jump instruction and return its position, so its destination
-** can be fixed later (with 'fixjump'). If there are jumps to
-** this position (kept in 'jpc'), link them all together so that
-** 'patchlistaux' will fix all them directly to the final destination.
+** can be fixed later (with 'fixjump').
 */
 int luaK_jump (FuncState *fs) {
-  int jpc = fs->jpc;  /* save list of jumps to here */
-  int j;
-  fs->jpc = NO_JUMP;  /* no more jumps to here */
-  j = codesJ(fs, OP_JMP, NO_JUMP, 0);
-  luaK_concat(fs, &j, jpc);  /* keep them on hold */
-  return j;
+  return codesJ(fs, OP_JMP, NO_JUMP, 0);
 }
 
 
@@ -250,38 +243,19 @@ static void patchlistaux (FuncState *fs, int list, int vtarget, int reg,
 
 
 /*
-** Ensure all pending jumps to current position are fixed (jumping
-** to current position with no values) and reset list of pending
-** jumps
-*/
-static void dischargejpc (FuncState *fs) {
-  patchlistaux(fs, fs->jpc, fs->pc, NO_REG, fs->pc);
-  fs->jpc = NO_JUMP;
-}
-
-
-/*
-** Add elements in 'list' to list of pending jumps to "here"
-** (current position)
-*/
-void luaK_patchtohere (FuncState *fs, int list) {
-  luaK_getlabel(fs);  /* mark "here" as a jump target */
-  luaK_concat(fs, &fs->jpc, list);
-}
-
-
-/*
 ** Path all jumps in 'list' to jump to 'target'.
 ** (The assert means that we cannot fix a jump to a forward address
 ** because we only know addresses once code is generated.)
 */
 void luaK_patchlist (FuncState *fs, int list, int target) {
-  if (target == fs->pc)  /* 'target' is current position? */
-    luaK_patchtohere(fs, list);  /* add list to pending jumps */
-  else {
-    lua_assert(target < fs->pc);
-    patchlistaux(fs, list, target, NO_REG, target);
-  }
+  lua_assert(target <= fs->pc);
+  patchlistaux(fs, list, target, NO_REG, target);
+}
+
+
+void luaK_patchtohere (FuncState *fs, int list) {
+  int hr = luaK_getlabel(fs);  /* mark "here" as a jump target */
+  luaK_patchlist(fs, list, hr);
 }
 
 
@@ -365,7 +339,6 @@ static void savelineinfo (FuncState *fs, Proto *f, int pc, int line) {
 */
 static int luaK_code (FuncState *fs, Instruction i) {
   Proto *f = fs->f;
-  dischargejpc(fs);  /* 'pc' will change */
   /* put new instruction in code array */
   luaM_growvector(fs->ls->L, f->code, fs->pc, f->sizecode, Instruction,
                   MAX_INT, "opcodes");
@@ -1537,3 +1510,45 @@ void luaK_setlist (FuncState *fs, int base, int nelems, int tostore) {
   fs->freereg = base + 1;  /* free registers with list values */
 }
 
+
+/*
+** return the final target of a jump (skipping jumps to jumps)
+*/
+static int finaltarget (Instruction *code, int i) {
+  int count;
+  for (count = 0; count < 100; count++) {  /* avoid infinite loops */
+    Instruction pc = code[i];
+    if (GET_OPCODE(pc) != OP_JMP)
+      break;
+     else
+       i += GETARG_sJ(pc) + 1;
+  }
+  return i;
+}
+
+
+/*
+** Do a final pass over the code of a function, doing small peephole
+** optimizations and adjustments.
+*/
+void luaK_finish (FuncState *fs) {
+  int i;
+  Proto *p = fs->f;
+  for (i = 0; i < fs->pc; i++) {
+    Instruction *pc = &p->code[i];
+    switch (GET_OPCODE(*pc)) {
+      case OP_RETURN: case OP_RETURN0: case OP_RETURN1:
+      case OP_TAILCALL: {
+        if (p->sizep > 0)
+          SETARG_k(*pc, 1);  /* signal that they must close upvalues */
+        break;
+      }
+      case OP_JMP: {
+        int target = finaltarget(p->code, i);
+        fixjump(fs, i, target);
+        break;
+      }
+      default: break;
+    }
+  }
+}
