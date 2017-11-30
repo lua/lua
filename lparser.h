@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.77 2017/04/28 20:57:45 roberto Exp roberto $
+** $Id: lparser.h,v 1.78 2017/06/27 11:35:31 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -124,7 +124,6 @@ typedef struct FuncState {
   int pc;  /* next position to code (equivalent to 'ncode') */
   int lasttarget;   /* 'label' of last 'jump label' */
   int previousline;  /* last line that was saved in 'lineinfo' */
-  int jpc;  /* list of pending jumps to 'pc' */
   int nk;  /* number of elements in 'k' */
   int np;  /* number of elements in 'p' */
   int nabslineinfo;  /* number of elements in 'abslineinfo' */

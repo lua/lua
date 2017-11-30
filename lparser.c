@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.167 2017/10/04 21:53:03 roberto Exp roberto $
+** $Id: lparser.c,v 2.168 2017/11/23 16:35:54 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -547,7 +547,6 @@ static void open_func (LexState *ls, FuncState *fs, BlockCnt *bl) {
   fs->previousline = f->linedefined;
   fs->iwthabs = 0;
   fs->lasttarget = 0;
-  fs->jpc = NO_JUMP;
   fs->freereg = 0;
   fs->nk = 0;
   fs->nabslineinfo = 0;
@@ -569,6 +568,7 @@ static void close_func (LexState *ls) {
   Proto *f = fs->f;
   luaK_ret(fs, 0, 0);  /* final return */
   leaveblock(fs);
+  luaK_finish(fs);
   luaM_reallocvector(L, f->code, f->sizecode, fs->pc, Instruction);
   f->sizecode = fs->pc;
   luaM_reallocvector(L, f->lineinfo, f->sizelineinfo, fs->pc, ls_byte);
