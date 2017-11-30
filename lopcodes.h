@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.173 2017/11/29 16:57:36 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.174 2017/11/30 12:03:00 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -289,8 +289,8 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
 
   (*) In OP_RETURN, if (B == 0) then return up to 'top'.
 
-  (*) In OP_SETLIST, if (B == 0) then B = 'top'; if (C == 0) then next
-  'instruction' is EXTRAARG(real C).
+  (*) In OP_SETLIST, if (B == 0) then real B = 'top'; if (C == 0) then
+  next 'instruction' is EXTRAARG(real C).
 
   (*) In OP_LOADKX, the next 'instruction' is always EXTRAARG.
 
@@ -298,10 +298,15 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
   (true or false).
 
   (*) For OP_LTI/OP_LEI, C indicates that the transformations
-  (A<B) => (!(B<=A)) or (A<=B) => (!(B<A)) were used to put the
-  constant operator on the right side.
+  (A<B) => (!(B<=A)) or (A<=B) => (!(B<A)) were used to put the constant
+  operator on the right side. (Non-total orders with NaN or metamethods
+  use this indication to correct their behavior.)
 
   (*) All 'skips' (pc++) assume that next instruction is a jump.
+
+  (*) In instructions ending a function (OP_RETURN*, OP_TAILCALL), k
+  specifies that the function builds upvalues, which may need to be
+  closed.
 
 ===========================================================================*/
 
