@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.172 2017/11/28 12:58:18 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.173 2017/11/29 16:57:36 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -258,11 +258,11 @@ OP_RETURN0,/*	  	return 						*/
 OP_RETURN1,/*	A 	return R(A)					*/
 
 OP_FORLOOP,/*	A Bx	R(A)+=R(A+2);
-			if R(A) <?= R(A+1) then { pc-=Bx; R(A+3)=R(A) }*/
+			if R(A) <?= R(A+1) then { pc-=Bx; R(A+3)=R(A) }	*/
 OP_FORPREP,/*	A Bx	R(A)-=R(A+2); pc+=Bx				*/
 
 OP_TFORCALL,/*	A C	R(A+3), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2));	*/
-OP_TFORLOOP,/*	A Bx	if R(A+1) ~= nil then { R(A)=R(A+1); pc -= Bx }*/
+OP_TFORLOOP,/*	A Bx	if R(A+1) ~= nil then { R(A)=R(A+1); pc -= Bx }	*/
 
 OP_SETLIST,/*	A B C	R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B	*/
 
