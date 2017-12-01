@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.56 2015/11/23 11:32:51 roberto Exp roberto $
+** $Id: lstring.c,v 2.57 2017/07/27 13:50:16 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -63,32 +63,26 @@ unsigned int luaS_hashlongstr (TString *ts) {
 
 
 /*
-** resizes the string table
+** Resizes the string table.
 */
 void luaS_resize (lua_State *L, int newsize) {
   int i;
+  TString **newhash = luaM_newvector(L, newsize, TString *);
   stringtable *tb = &G(L)->strt;
-  if (newsize > tb->size) {  /* grow table if needed */
-    luaM_reallocvector(L, tb->hash, tb->size, newsize, TString *);
-    for (i = tb->size; i < newsize; i++)
-      tb->hash[i] = NULL;
-  }
-  for (i = 0; i < tb->size; i++) {  /* rehash */
+  for (i = 0; i < newsize; i++)  /* initialize new hash array */
+    newhash[i] = NULL;
+  for (i = 0; i < tb->size; i++) {  /* rehash all elements into new array */
     TString *p = tb->hash[i];
-    tb->hash[i] = NULL;
-    while (p) {  /* for each node in the list */
+    while (p) {  /* for each string in the list */
       TString *hnext = p->u.hnext;  /* save next */
       unsigned int h = lmod(p->hash, newsize);  /* new position */
-      p->u.hnext = tb->hash[h];  /* chain it */
-      tb->hash[h] = p;
+      p->u.hnext = newhash[h];  /* chain it into new array */
+      newhash[h] = p;
       p = hnext;
     }
   }
-  if (newsize < tb->size) {  /* shrink table if needed */
-    /* vanishing slice should be empty */
-    lua_assert(tb->hash[newsize] == NULL && tb->hash[tb->size - 1] == NULL);
-    luaM_reallocvector(L, tb->hash, tb->size, newsize, TString *);
-  }
+  luaM_freearray(L, tb->hash, tb->size);  /* free old array */
+  tb->hash = newhash;
   tb->size = newsize;
 }
 
