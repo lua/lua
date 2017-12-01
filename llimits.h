@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.144 2017/06/27 11:35:01 roberto Exp roberto $
+** $Id: llimits.h,v 1.145 2017/11/23 16:35:54 roberto Exp roberto $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -144,7 +144,7 @@ typedef LUAI_UACINT l_uacInt;
 ** be compatible with the size of the C stack.)
 */
 #if !defined(LUAI_MAXCCALLS)
-#define LUAI_MAXCCALLS		1000
+#define LUAI_MAXCCALLS		2200
 #endif
 
 
