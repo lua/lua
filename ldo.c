@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.175 2017/11/23 18:29:41 roberto Exp roberto $
+** $Id: ldo.c,v 2.176 2017/11/29 13:02:17 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -346,8 +346,8 @@ static void moveresults (lua_State *L, StkId firstResult, StkId res,
       int i;
       for (i = 0; i < nres; i++)  /* move all results to correct place */
         setobjs2s(L, res + i, firstResult + i);
-      L->top = res + nres;
-      return;
+      wanted = nres;  /* it wanted what it had */
+      break;
     }
     default: {
       int i;
