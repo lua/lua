@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.140 2017/11/30 13:29:18 roberto Exp roberto $
+** $Id: lcode.c,v 2.141 2017/11/30 15:37:16 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -1217,6 +1217,20 @@ static void codebinexpval (FuncState *fs, OpCode op,
 
 
 /*
+** Code binary operators ('+', '-', ...) with immediate operands.
+*/
+static void codebini (FuncState *fs, OpCode op,
+                       expdesc *e1, expdesc *e2, int k, int line) {
+  int v2 = cast_int(e2->u.ival);  /* immediate operand */
+  int v1 = luaK_exp2anyreg(fs, e1);
+  freeexp(fs, e1);
+  e1->u.info = codeABsC(fs, op, 0, v1, v2, k);  /* generate opcode */
+  e1->k = VRELOCABLE;  /* all those operations are relocatable */
+  luaK_fixline(fs, line);
+}
+
+
+/*
 ** Code arithmetic operators ('+', '-', ...). If second operand is a
 ** constant in the proper range, use variant opcodes with immediate
 ** operands.
@@ -1225,15 +1239,8 @@ static void codearith (FuncState *fs, OpCode op,
                        expdesc *e1, expdesc *e2, int flip, int line) {
   if (!isSCint(e2))
     codebinexpval(fs, op, e1, e2, line);  /* use standard operators */
-  else {  /* use immediate operators */
-    int v2 = cast_int(e2->u.ival);  /* immediate operand */
-    int v1 = luaK_exp2anyreg(fs, e1);
-    op = cast(OpCode, op - OP_ADD + OP_ADDI);
-    freeexp(fs, e1);
-    e1->u.info = codeABsC(fs, op, 0, v1, v2, flip);  /* generate opcode */
-    e1->k = VRELOCABLE;  /* all those operations are relocatable */
-    luaK_fixline(fs, line);
-  }
+  else  /* use immediate operators */
+    codebini(fs, cast(OpCode, op - OP_ADD + OP_ADDI), e1, e2, flip, line);
 }
 
 
@@ -1258,11 +1265,30 @@ static void codecommutative (FuncState *fs, OpCode op,
 
 
 /*
+** Code shift operators. If second operand is constant, use immediate
+** operand (negating it if shift is in the other direction).
+*/
+static void codeshift (FuncState *fs, OpCode op,
+                       expdesc *e1, expdesc *e2, int line) {
+  if (isSCint(e2)) {
+    int changedir = 0;
+    if (op == OP_SHL) {
+      changedir = 1;
+      e2->u.ival = -(e2->u.ival);
+    }
+    codebini(fs, OP_SHRI, e1, e2, changedir, line);
+  }
+  else
+    codebinexpval(fs, op, e1, e2, line);
+}
+
+
+/*
 ** Emit code for order comparisons.
 ** When the first operand is an integral value in the proper range,
 ** change (A < B) to (!(B <= A)) and (A <= B) to (!(B < A)) so that
 ** it can use an immediate operand. In this case, C indicates this
-** change, for cases that cannot assume a total order (NaN and 
+** change, for cases that cannot assume a total order (NaN and
 ** metamethods).
 */
 static void codeorder (FuncState *fs, OpCode op, expdesc *e1, expdesc *e2) {
@@ -1440,10 +1466,25 @@ void luaK_posfix (FuncState *fs, BinOpr opr,
         codearith(fs, cast(OpCode, opr + OP_ADD), e1, e2, 0, line);
       break;
     }
-    case OPR_BAND: case OPR_BOR: case OPR_BXOR:
-    case OPR_SHL: case OPR_SHR: {
+    case OPR_BAND: case OPR_BOR: case OPR_BXOR: {
       if (!constfolding(fs, opr + LUA_OPADD, e1, e2))
         codebinexpval(fs, cast(OpCode, opr + OP_ADD), e1, e2, line);
+      break;
+    }
+    case OPR_SHL: {
+      if (!constfolding(fs, LUA_OPSHL, e1, e2)) {
+        if (isSCint(e1)) {
+          swapexps(e1, e2);
+          codebini(fs, OP_SHLI, e1, e2, 1, line);
+        }
+        else
+          codeshift(fs, OP_SHL, e1, e2, line);
+      }
+      break;
+    }
+    case OPR_SHR: {
+      if (!constfolding(fs, LUA_OPSHR, e1, e2))
+        codeshift(fs, OP_SHR, e1, e2, line);
       break;
     }
     case OPR_EQ: case OPR_NE: {
@@ -1483,7 +1524,7 @@ void luaK_fixline (FuncState *fs, int line) {
   }
   else {
     fs->previousline -= f->lineinfo[fs->pc - 1];  /* undo previous info. */
-    savelineinfo(fs, f, fs->pc - 1, line);  /* redo it */ 
+    savelineinfo(fs, f, fs->pc - 1, line);  /* redo it */
   }
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.322 2017/11/29 16:57:36 roberto Exp roberto $
+** $Id: lvm.c,v 2.323 2017/11/30 13:29:18 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -687,7 +687,8 @@ void luaV_finishOp (lua_State *L) {
     case OP_MODI: case OP_POWI:
     case OP_ADD: case OP_SUB:
     case OP_MUL: case OP_DIV: case OP_IDIV:
-    case OP_BAND: case OP_BOR: case OP_BXOR: case OP_SHL: case OP_SHR:
+    case OP_BAND: case OP_BOR: case OP_BXOR:
+    case OP_SHRI: case OP_SHL: case OP_SHR:
     case OP_MOD: case OP_POW:
     case OP_UNM: case OP_BNOT: case OP_LEN:
     case OP_GETTABUP: case OP_GETTABLE: case OP_GETI:
@@ -1212,6 +1213,33 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         }
         else
           Protect(luaT_trybinTM(L, rb, rc, ra, TM_BXOR));
+        vmbreak;
+      }
+      vmcase(OP_SHRI) {
+        TValue *rb = vRB(i);
+        int ic = GETARG_sC(i);
+        lua_Integer ib;
+        if (tointegerns(rb, &ib)) {
+          setivalue(vra, luaV_shiftl(ib, -ic));
+        }
+        else {
+          TMS ev = TM_SHR;
+          if (TESTARG_k(i)) {
+            ic = -ic;  ev = TM_SHL;
+          }
+          Protect(luaT_trybiniTM(L, rb, ic, 0, ra, ev));
+        }
+        vmbreak;
+      }
+      vmcase(OP_SHLI) {
+        TValue *rb = vRB(i);
+        int ic = GETARG_sC(i);
+        lua_Integer ib;
+        if (tointegerns(rb, &ib)) {
+          setivalue(vra, luaV_shiftl(ic, ib));
+        }
+        else
+          Protect(luaT_trybiniTM(L, rb, ic, 1, ra, TM_SHL));
         vmbreak;
       }
       vmcase(OP_SHL) {
