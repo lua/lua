@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.174 2017/11/30 12:03:00 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.175 2017/11/30 13:16:43 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -216,6 +216,9 @@ OP_MODI,/*	A B sC	R(A) := R(B) % C				*/
 OP_POWI,/*	A B sC	R(A) := R(B) ^ C				*/
 OP_DIVI,/*	A B sC	R(A) := R(B) / C				*/
 OP_IDIVI,/*	A B sC	R(A) := R(B) // C				*/
+
+OP_SHRI,/*	A B C	R(A) := R(B) >> C				*/
+OP_SHLI,/*	A B C	R(A) := C << R(B)				*/
 
 OP_ADD,/*	A B C	R(A) := R(B) + R(C)				*/
 OP_SUB,/*	A B C	R(A) := R(B) - R(C)				*/
