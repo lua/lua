@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.276 2017/11/07 13:25:26 roberto Exp roberto $
+** $Id: lapi.c,v 2.277 2017/11/23 19:29:04 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -550,6 +550,7 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   lua_lock(L);
   if (n == 0) {
     setfvalue(s2v(L->top), fn);
+    api_incr_top(L);
   }
   else {
     CClosure *cl;
@@ -563,9 +564,9 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
       /* does not need barrier because closure is white */
     }
     setclCvalue(L, s2v(L->top), cl);
+    api_incr_top(L);
+    luaC_checkGC(L);
   }
-  api_incr_top(L);
-  luaC_checkGC(L);
   lua_unlock(L);
 }
 
