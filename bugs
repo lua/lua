@@ -3680,9 +3680,9 @@ It needs an "interceptor" 'memcmp' function that continues
 reading memory after a difference is found.]],
 patch = [[
 2c2
-< ** $Id: bugs,v 1.156 2017/08/12 13:12:42 roberto Exp roberto $
+< ** $Id: bugs,v 1.157 2017/08/31 16:14:41 roberto Exp roberto $
 ---
-> ** $Id: bugs,v 1.156 2017/08/12 13:12:42 roberto Exp roberto $
+> ** $Id: bugs,v 1.157 2017/08/31 16:14:41 roberto Exp roberto $
 263c263,264
 <   for (option = LUA_STRFTIMEOPTIONS; *option != '\0'; option += oplen) {
 ---
@@ -3866,6 +3866,39 @@ patch = [[
 +        removeentry(n);  /* remove entry from table */
      }
    }
+ }
+]]
+}
+
+
+Bug{
+what = [['lua_pushcclosure' should not call the garbage collector when
+'n' is zero.]],
+report = [[Andrew Gierth, 2017/12/05]],
+since = [[5.3.3]],
+fix = nil,
+example = [[ ]],
+patch = [[
+--- lapi.c	2017/04/19 17:13:00	2.259.1.1
++++ lapi.c	2017/12/06 18:14:45
+@@ -533,6 +533,7 @@
+   lua_lock(L);
+   if (n == 0) {
+     setfvalue(L->top, fn);
++    api_incr_top(L);
+   }
+   else {
+     CClosure *cl;
+@@ -546,9 +547,9 @@
+       /* does not need barrier because closure is white */
+     }
+     setclCvalue(L, L->top, cl);
++    api_incr_top(L);
++    luaC_checkGC(L);
+   }
+-  api_incr_top(L);
+-  luaC_checkGC(L);
+   lua_unlock(L);
  }
 ]]
 }
