@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.168 2017/11/23 16:35:54 roberto Exp roberto $
+** $Id: lparser.c,v 2.169 2017/11/30 13:29:18 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -569,21 +569,14 @@ static void close_func (LexState *ls) {
   luaK_ret(fs, 0, 0);  /* final return */
   leaveblock(fs);
   luaK_finish(fs);
-  luaM_reallocvector(L, f->code, f->sizecode, fs->pc, Instruction);
-  f->sizecode = fs->pc;
-  luaM_reallocvector(L, f->lineinfo, f->sizelineinfo, fs->pc, ls_byte);
-  f->sizelineinfo = fs->pc;
-  luaM_reallocvector(L, f->abslineinfo, f->sizeabslineinfo,
-                        fs->nabslineinfo, AbsLineInfo);
-  f->sizeabslineinfo = fs->nabslineinfo;
-  luaM_reallocvector(L, f->k, f->sizek, fs->nk, TValue);
-  f->sizek = fs->nk;
-  luaM_reallocvector(L, f->p, f->sizep, fs->np, Proto *);
-  f->sizep = fs->np;
-  luaM_reallocvector(L, f->locvars, f->sizelocvars, fs->nlocvars, LocVar);
-  f->sizelocvars = fs->nlocvars;
-  luaM_reallocvector(L, f->upvalues, f->sizeupvalues, fs->nups, Upvaldesc);
-  f->sizeupvalues = fs->nups;
+  luaM_shrinkvector(L, f->code, f->sizecode, fs->pc, Instruction);
+  luaM_shrinkvector(L, f->lineinfo, f->sizelineinfo, fs->pc, ls_byte);
+  luaM_shrinkvector(L, f->abslineinfo, f->sizeabslineinfo,
+                       fs->nabslineinfo, AbsLineInfo);
+  luaM_shrinkvector(L, f->k, f->sizek, fs->nk, TValue);
+  luaM_shrinkvector(L, f->p, f->sizep, fs->np, Proto *);
+  luaM_shrinkvector(L, f->locvars, f->sizelocvars, fs->nlocvars, LocVar);
+  luaM_shrinkvector(L, f->upvalues, f->sizeupvalues, fs->nups, Upvaldesc);
   lua_assert(fs->bl == NULL);
   ls->fs = fs->prev;
   luaC_checkGC(L);
