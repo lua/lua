@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.57 2017/07/27 13:50:16 roberto Exp roberto $
+** $Id: lstring.c,v 2.58 2017/12/01 16:40:29 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -29,6 +29,13 @@
 #if !defined(LUAI_HASHLIMIT)
 #define LUAI_HASHLIMIT		5
 #endif
+
+
+
+/*
+** Maximum size for string table.
+*/
+#define MAXSTRTB	cast_int(luaM_limitN(MAX_INT, TString*))
 
 
 /*
@@ -173,7 +180,8 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
       return ts;
     }
   }
-  if (g->strt.nuse >= g->strt.size && g->strt.size <= MAX_INT/2) {
+  if (g->strt.nuse >= g->strt.size &&
+      g->strt.size <= MAXSTRTB / 2) {
     luaS_resize(L, g->strt.size * 2);
     list = &g->strt.hash[lmod(h, g->strt.size)];  /* recompute with new size */
   }

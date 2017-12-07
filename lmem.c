@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.91 2015/03/06 19:45:54 roberto Exp roberto $
+** $Id: lmem.c,v 1.92 2017/12/06 18:36:31 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -53,24 +53,26 @@
 #define MINSIZEARRAY	4
 
 
-void *luaM_growaux_ (lua_State *L, void *block, int nelems, int *size,
+void *luaM_growaux_ (lua_State *L, void *block, int nelems, int *psize,
                      int size_elems, int limit, const char *what) {
   void *newblock;
-  int newsize;
-  if (nelems + 1 <= *size)  /* does one extra element still fit? */
+  int size = *psize;
+  if (nelems + 1 <= size)  /* does one extra element still fit? */
     return block;  /* nothing to be done */
-  if (*size >= limit/2) {  /* cannot double it? */
-    if (*size >= limit)  /* cannot grow even a little? */
+  if (size >= limit / 2) {  /* cannot double it? */
+    if (size >= limit)  /* cannot grow even a little? */
       luaG_runerror(L, "too many %s (limit is %d)", what, limit);
-    newsize = limit;  /* still have at least one free place */
+    size = limit;  /* still have at least one free place */
   }
   else {
-    newsize = (*size)*2;
-    if (newsize < MINSIZEARRAY)
-      newsize = MINSIZEARRAY;  /* minimum size */
+    size *= 2;
+    if (size < MINSIZEARRAY)
+      size = MINSIZEARRAY;  /* minimum size */
   }
-  newblock = luaM_reallocv(L, block, *size, newsize, size_elems);
-  *size = newsize;  /* update only when everything else is OK */
+  /* 'limit' ensures that multiplication will not overflow */
+  newblock = luaM_realloc(L, block, cast(size_t, *psize) * size_elems,
+                                    cast(size_t, size) * size_elems);
+  *psize = size;  /* update only when everything else is OK */
   return newblock;
 }
 
@@ -113,7 +115,7 @@ void luaM_free_ (lua_State *L, void *block, size_t osize) {
 /*
 ** generic allocation routine.
 */
-void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
+void *luaM_realloc (lua_State *L, void *block, size_t osize, size_t nsize) {
   void *newblock;
   global_State *g = G(L);
   lua_assert((osize == 0) == (block == NULL));
