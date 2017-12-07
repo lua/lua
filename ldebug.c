@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.145 2017/11/23 16:35:54 roberto Exp roberto $
+** $Id: ldebug.c,v 2.146 2017/11/23 19:29:04 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -606,12 +606,16 @@ static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
     case OP_LEN: tm = TM_LEN; break;
     case OP_CONCAT: tm = TM_CONCAT; break;
     case OP_EQ: tm = TM_EQ; break;
-    case OP_LT: tm = TM_LT; break;
-    case OP_LE: tm = TM_LE; break;
+    case OP_LT: case OP_LE: case OP_LTI: case OP_LEI:
+      *name = "order";  /* '<=' can call '__lt', etc. */
+      return "metamethod";
+    case OP_SHRI: case OP_SHLI:
+      *name = "shift";
+      return "metamethod";
     default:
       return NULL;  /* cannot find a reasonable name */
   }
-  *name = getstr(G(L)->tmname[tm]);
+  *name = getstr(G(L)->tmname[tm]) + 2;
   return "metamethod";
 }
 
