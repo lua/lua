@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.126 2017/11/08 14:50:23 roberto Exp roberto $
+** $Id: ltable.c,v 2.127 2017/11/23 19:29:04 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -40,19 +40,32 @@
 
 
 /*
-** Maximum size of array part (MAXASIZE) is 2^MAXABITS. MAXABITS is
-** the largest integer such that MAXASIZE fits in an unsigned int.
+** MAXABITS is the largest integer such that MAXASIZE fits in an
+** unsigned int.
 */
 #define MAXABITS	cast_int(sizeof(int) * CHAR_BIT - 1)
-#define MAXASIZE	(1u << MAXABITS)
+
 
 /*
-** Maximum size of hash part is 2^MAXHBITS. MAXHBITS is the largest
-** integer such that 2^MAXHBITS fits in a signed int. (Note that the
-** maximum number of elements in a table, 2^MAXABITS + 2^MAXHBITS, still
-** fits comfortably in an unsigned int.)
+** MAXASIZE is the maximum size of the array part. It is the minimum
+** between 2^MAXABITS and the maximum size such that, measured in bytes,
+** it fits in a 'size_t'.
+*/
+#define MAXASIZE	luaM_limitN(1u << MAXABITS, TValue)
+
+/*
+** MAXHBITS is the largest integer such that 2^MAXHBITS fits in a
+** signed int.
 */
 #define MAXHBITS	(MAXABITS - 1)
+
+
+/*
+** MAXHSIZE is the maximum size of the hash part. It is the minimum
+** between 2^MAXHBITS and the maximum size such that, measured in bytes,
+** it fits in a 'size_t'.
+*/
+#define MAXHSIZE	luaM_limitN(1u << MAXHBITS, Node)
 
 
 #define hashpow2(t,n)		(gnode(t, lmod((n), sizenode(t))))
@@ -353,6 +366,13 @@ static void setarrayvector (lua_State *L, Table *t, unsigned int size) {
 }
 
 
+/*
+** Creates an array for the hash part of a table with the given
+** size, or reuses the dummy node if size is zero.
+** The computation for size overflow is in two steps: the first
+** comparison ensures that the shift in the second one does not
+** overflow.
+*/
 static void setnodevector (lua_State *L, Table *t, unsigned int size) {
   if (size == 0) {  /* no elements to hash part? */
     t->node = cast(Node *, dummynode);  /* use common 'dummynode' */
@@ -362,7 +382,7 @@ static void setnodevector (lua_State *L, Table *t, unsigned int size) {
   else {
     int i;
     int lsize = luaO_ceillog2(size);
-    if (lsize > MAXHBITS)
+    if (lsize > MAXHBITS || (1u << lsize) > MAXHSIZE)
       luaG_runerror(L, "table overflow");
     size = twoto(lsize);
     t->node = luaM_newvector(L, size, Node);

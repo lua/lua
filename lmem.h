@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.43 2014/12/19 17:26:14 roberto Exp roberto $
+** $Id: lmem.h,v 1.44 2017/12/06 18:36:31 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -31,36 +31,40 @@
 #define luaM_checksize(L,n,e)  \
 	(luaM_testsize(n,e) ? luaM_toobig(L) : cast_void(0))
 
+
 /*
-** This macro reallocs a vector 'b' from 'on' to 'n' elements, where
-** each element has size 'e'. In case of arithmetic overflow of the
-** product 'n'*'e', it raises an error (calling 'luaM_toobig').
+** Computes the minimum between 'n' and 'MAX_SIZET/sizeof(t)', so that
+** the result is not larger than 'n' and cannot overflow a 'size_t'
+** when multiplied by the size of type 't'. (Assumes that 'n' is an
+** 'int' or 'unsigned int' and that 'int' is not larger than 'size_t'.)
 */
-#define luaM_reallocv(L,b,on,n,e) \
-  (luaM_checksize(L,n,e), \
-   luaM_realloc_(L, (b), cast(size_t, on)*(e), cast(size_t, n)*(e)))
+#define luaM_limitN(n,t)  \
+  ((cast(size_t, n) > MAX_SIZET/sizeof(t)) ? (MAX_SIZET/sizeof(t)) : (n))
 
 /*
 ** Arrays of chars do not need any test
 */
 #define luaM_reallocvchar(L,b,on,n)  \
-    cast(char *, luaM_realloc_(L, (b), (on)*sizeof(char), (n)*sizeof(char)))
+    cast(char *, luaM_realloc(L, (b), (on)*sizeof(char), (n)*sizeof(char)))
 
 #define luaM_freemem(L, b, s)	luaM_free_(L, (b), (s))
 #define luaM_free(L, b)		luaM_free_(L, (b), sizeof(*(b)))
 #define luaM_freearray(L, b, n)   luaM_free_(L, (b), (n)*sizeof(*(b)))
 
-#define luaM_new(L,t)		cast(t *, luaM_malloc(L, sizeof(t), 0))
-#define luaM_newvector(L,n,t) \
-  (luaM_checksize(L,n,sizeof(t)), cast(t *, luaM_malloc(L, (n)*sizeof(t), 0)))
+#define luaM_new(L,t)		cast(t*, luaM_malloc(L, sizeof(t), 0))
+#define luaM_newvector(L,n,t)	cast(t*, luaM_malloc(L, (n)*sizeof(t), 0))
+#define luaM_newvectorchecked(L,n,t) \
+  (luaM_checksize(L,n,sizeof(t)), luaM_newvector(L,n,t))
 
 #define luaM_newobject(L,tag,s)	luaM_malloc(L, (s), tag)
 
 #define luaM_growvector(L,v,nelems,size,t,limit,e) \
-	((v)=cast(t *, luaM_growaux_(L,v,nelems,&(size),sizeof(t),limit,e)))
+	((v)=cast(t *, luaM_growaux_(L,v,nelems,&(size),sizeof(t), \
+                         luaM_limitN(limit,t),e)))
 
 #define luaM_reallocvector(L, v,oldn,n,t) \
-   ((v)=cast(t *, luaM_reallocv(L, v, oldn, n, sizeof(t))))
+   ((v)=cast(t *, luaM_realloc(L, v, cast(size_t, oldn) * sizeof(t), \
+                                     cast(size_t, n) * sizeof(t))))
 
 #define luaM_shrinkvector(L,v,size,fs,t) \
    ((v)=cast(t *, luaM_shrinkvector_(L, v, &(size), fs, sizeof(t))))
@@ -68,7 +72,7 @@
 LUAI_FUNC l_noret luaM_toobig (lua_State *L);
 
 /* not to be called directly */
-LUAI_FUNC void *luaM_realloc_ (lua_State *L, void *block, size_t oldsize,
+LUAI_FUNC void *luaM_realloc (lua_State *L, void *block, size_t oldsize,
                                                           size_t size);
 LUAI_FUNC void luaM_free_ (lua_State *L, void *block, size_t osize);
 LUAI_FUNC void *luaM_growaux_ (lua_State *L, void *block, int nelems,

@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.47 2017/06/29 15:06:44 roberto Exp roberto $
+** $Id: lundump.c,v 2.48 2017/11/28 11:19:07 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -114,7 +114,7 @@ static TString *LoadString (LoadState *S) {
 
 static void LoadCode (LoadState *S, Proto *f) {
   int n = LoadInt(S);
-  f->code = luaM_newvector(S->L, n, Instruction);
+  f->code = luaM_newvectorchecked(S->L, n, Instruction);
   f->sizecode = n;
   LoadVector(S, f->code, n);
 }
@@ -126,7 +126,7 @@ static void LoadFunction(LoadState *S, Proto *f, TString *psource);
 static void LoadConstants (LoadState *S, Proto *f) {
   int i;
   int n = LoadInt(S);
-  f->k = luaM_newvector(S->L, n, TValue);
+  f->k = luaM_newvectorchecked(S->L, n, TValue);
   f->sizek = n;
   for (i = 0; i < n; i++)
     setnilvalue(&f->k[i]);
@@ -159,7 +159,7 @@ static void LoadConstants (LoadState *S, Proto *f) {
 static void LoadProtos (LoadState *S, Proto *f) {
   int i;
   int n = LoadInt(S);
-  f->p = luaM_newvector(S->L, n, Proto *);
+  f->p = luaM_newvectorchecked(S->L, n, Proto *);
   f->sizep = n;
   for (i = 0; i < n; i++)
     f->p[i] = NULL;
@@ -173,7 +173,7 @@ static void LoadProtos (LoadState *S, Proto *f) {
 static void LoadUpvalues (LoadState *S, Proto *f) {
   int i, n;
   n = LoadInt(S);
-  f->upvalues = luaM_newvector(S->L, n, Upvaldesc);
+  f->upvalues = luaM_newvectorchecked(S->L, n, Upvaldesc);
   f->sizeupvalues = n;
   for (i = 0; i < n; i++)
     f->upvalues[i].name = NULL;
@@ -187,18 +187,18 @@ static void LoadUpvalues (LoadState *S, Proto *f) {
 static void LoadDebug (LoadState *S, Proto *f) {
   int i, n;
   n = LoadInt(S);
-  f->lineinfo = luaM_newvector(S->L, n, ls_byte);
+  f->lineinfo = luaM_newvectorchecked(S->L, n, ls_byte);
   f->sizelineinfo = n;
   LoadVector(S, f->lineinfo, n);
   n = LoadInt(S);
-  f->abslineinfo = luaM_newvector(S->L, n, AbsLineInfo);
+  f->abslineinfo = luaM_newvectorchecked(S->L, n, AbsLineInfo);
   f->sizeabslineinfo = n;
   for (i = 0; i < n; i++) {
     f->abslineinfo[i].pc = LoadInt(S);
     f->abslineinfo[i].line = LoadInt(S);
   }
   n = LoadInt(S);
-  f->locvars = luaM_newvector(S->L, n, LocVar);
+  f->locvars = luaM_newvectorchecked(S->L, n, LocVar);
   f->sizelocvars = n;
   for (i = 0; i < n; i++)
     f->locvars[i].varname = NULL;
