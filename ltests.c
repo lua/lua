@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.232 2017/11/09 13:31:29 roberto Exp roberto $
+** $Id: ltests.c,v 2.233 2017/11/23 15:38:42 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -102,7 +102,7 @@ typedef union Header {
 
 
 Memcontrol l_memcontrol =
-  {0L, 0L, 0L, 0L, {0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L}};
+  {0L, 0L, 0L, 0L, (~0L), {0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L}};
 
 
 static void freeblock (Memcontrol *mc, Header *block) {
@@ -141,7 +141,12 @@ void *debug_realloc (void *ud, void *b, size_t oldsize, size_t size) {
     freeblock(mc, block);
     return NULL;
   }
-  else if (size > oldsize && mc->total+size-oldsize > mc->memlimit)
+  if (mc->countlimit != ~0UL && size > oldsize) {  /* count limit in use? */
+    if (mc->countlimit == 0)
+      return NULL;  /* fake a memory allocation error */
+    mc->countlimit--;
+  }
+  if (size > oldsize && mc->total+size-oldsize > mc->memlimit)
     return NULL;  /* fake a memory allocation error */
   else {
     Header *newblock;
@@ -694,6 +699,15 @@ static int mem_query (lua_State *L) {
   }
 }
 
+
+static int alloc_count (lua_State *L) {
+  if (lua_isnone(L, 1))
+    l_memcontrol.countlimit = ~0L;
+  else
+    l_memcontrol.countlimit = luaL_checkinteger(L, 1);
+  return 0;
+}
+  
 
 static int settrick (lua_State *L) {
   if (ttisnil(obj_at(L, 1)))
@@ -1673,6 +1687,7 @@ static const struct luaL_Reg tests_funcs[] = {
   {"testC", testC},
   {"makeCfunc", makeCfunc},
   {"totalmem", mem_query},
+  {"alloccount", alloc_count},
   {"trick", settrick},
   {"udataval", udataval},
   {"unref", unref},
