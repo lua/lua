@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.260 2017/04/19 16:34:35 roberto Exp roberto $
+** $Id: luaconf.h,v 1.261 2017/04/24 18:06:12 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -724,6 +724,7 @@
 ** CHANGE it if you need a different limit. This limit is arbitrary;
 ** its only purpose is to stop Lua from consuming unlimited stack
 ** space (and to reserve some numbers for pseudo-indices).
+** (It must fit into max(size_t)/32.)
 */
 #if LUAI_BITSINT >= 32
 #define LUAI_MAXSTACK		1000000
