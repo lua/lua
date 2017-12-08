@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.92 2017/12/06 18:36:31 roberto Exp roberto $
+** $Id: lmem.c,v 1.93 2017/12/07 18:59:52 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -69,9 +69,12 @@ void *luaM_growaux_ (lua_State *L, void *block, int nelems, int *psize,
     if (size < MINSIZEARRAY)
       size = MINSIZEARRAY;  /* minimum size */
   }
+  lua_assert(nelems + 1 <= size && size <= limit);
   /* 'limit' ensures that multiplication will not overflow */
-  newblock = luaM_realloc(L, block, cast(size_t, *psize) * size_elems,
-                                    cast(size_t, size) * size_elems);
+  newblock = luaM_realloc_(L, block, cast(size_t, *psize) * size_elems,
+                                     cast(size_t, size) * size_elems);
+  if (newblock == NULL)
+    luaM_error(L);
   *psize = size;  /* update only when everything else is OK */
   return newblock;
 }
@@ -115,20 +118,20 @@ void luaM_free_ (lua_State *L, void *block, size_t osize) {
 /*
 ** generic allocation routine.
 */
-void *luaM_realloc (lua_State *L, void *block, size_t osize, size_t nsize) {
+void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
   void *newblock;
   global_State *g = G(L);
   lua_assert((osize == 0) == (block == NULL));
   hardtest(L, osize, nsize);
   newblock = (*g->frealloc)(g->ud, block, osize, nsize);
   if (newblock == NULL && nsize > 0) {
-    lua_assert(nsize > osize);  /* cannot fail when shrinking a block */
-    if (g->version) {  /* is state fully built? */
+    /* Is state fully built? Not shrinking a block? */
+    if (g->version && nsize > osize) {
       luaC_fullgc(L, 1);  /* try to free some memory... */
       newblock = (*g->frealloc)(g->ud, block, osize, nsize);  /* try again */
     }
     if (newblock == NULL)
-      luaD_throw(L, LUA_ERRMEM);
+      return NULL;
   }
   lua_assert((nsize == 0) == (newblock == NULL));
   g->GCdebt = (g->GCdebt + nsize) - osize;
@@ -136,7 +139,16 @@ void *luaM_realloc (lua_State *L, void *block, size_t osize, size_t nsize) {
 }
 
 
-void *luaM_malloc (lua_State *L, size_t size, int tag) {
+void *luaM_saferealloc_ (lua_State *L, void *block, size_t osize,
+                                                    size_t nsize) {
+  void *newblock = luaM_realloc_(L, block, osize, nsize);
+  if (newblock == NULL && nsize > 0)  /* allocation failed? */
+    luaM_error(L);
+  return newblock;
+}
+
+
+void *luaM_malloc_ (lua_State *L, size_t size, int tag) {
   hardtest(L, 0, size);
   if (size == 0)
     return NULL;  /* that's all */
@@ -149,7 +161,7 @@ void *luaM_malloc (lua_State *L, size_t size, int tag) {
         newblock = (*g->frealloc)(g->ud, NULL, tag, size);  /* try again */
       }
       if (newblock == NULL)
-        luaD_throw(L, LUA_ERRMEM);
+        luaM_error(L);
     }
     g->GCdebt += size;
     return newblock;

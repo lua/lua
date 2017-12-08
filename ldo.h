@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 2.35 2017/11/23 16:35:54 roberto Exp roberto $
+** $Id: ldo.h,v 2.36 2017/11/23 18:29:41 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -22,7 +22,8 @@
 */
 #define luaD_checkstackaux(L,n,pre,pos)  \
 	if (L->stack_last - L->top <= (n)) \
-	  { pre; luaD_growstack(L, n); pos; } else { condmovestack(L,pre,pos); }
+	  { pre; luaD_growstack(L, n, 1); pos; } \
+        else { condmovestack(L,pre,pos); }
 
 /* In general, 'pre'/'pos' are empty (nothing to save) */
 #define luaD_checkstack(L,n)	luaD_checkstackaux(L,n,(void)0,(void)0)
@@ -55,8 +56,8 @@ LUAI_FUNC int luaD_pcall (lua_State *L, Pfunc func, void *u,
                                         ptrdiff_t oldtop, ptrdiff_t ef);
 LUAI_FUNC void luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult,
                                           int nres);
-LUAI_FUNC void luaD_reallocstack (lua_State *L, int newsize);
-LUAI_FUNC void luaD_growstack (lua_State *L, int n);
+LUAI_FUNC int luaD_reallocstack (lua_State *L, int newsize, int safe);
+LUAI_FUNC int luaD_growstack (lua_State *L, int n, int safe);
 LUAI_FUNC void luaD_shrinkstack (lua_State *L);
 LUAI_FUNC void luaD_inctop (lua_State *L);
 
