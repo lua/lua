@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.277 2017/11/23 19:29:04 roberto Exp roberto $
+** $Id: lapi.c,v 2.278 2017/12/06 18:08:03 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -99,16 +99,6 @@ static StkId index2stack (lua_State *L, int idx) {
 }
 
 
-/*
-** to be called by 'lua_checkstack' in protected mode, to grow stack
-** capturing memory errors
-*/
-static void growstack (lua_State *L, void *ud) {
-  int size = *(int *)ud;
-  luaD_growstack(L, size);
-}
-
-
 LUA_API int lua_checkstack (lua_State *L, int n) {
   int res;
   CallInfo *ci = L->ci;
@@ -121,7 +111,7 @@ LUA_API int lua_checkstack (lua_State *L, int n) {
     if (inuse > LUAI_MAXSTACK - n)  /* can grow without overflow? */
       res = 0;  /* no */
     else  /* try to grow stack */
-      res = (luaD_rawrunprotected(L, &growstack, &n) == LUA_OK);
+      res = luaD_growstack(L, n, 0);
   }
   if (res && ci->top < L->top + n)
     ci->top = L->top + n;  /* adjust frame top */

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.127 2017/11/23 19:29:04 roberto Exp roberto $
+** $Id: ltable.c,v 2.128 2017/12/07 18:59:52 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -357,15 +357,6 @@ static int numusehash (const Table *t, unsigned int *nums, unsigned int *pna) {
 }
 
 
-static void setarrayvector (lua_State *L, Table *t, unsigned int size) {
-  unsigned int i;
-  luaM_reallocvector(L, t->array, t->sizearray, size, TValue);
-  for (i=t->sizearray; i<size; i++)
-     setnilvalue(&t->array[i]);
-  t->sizearray = size;
-}
-
-
 /*
 ** Creates an array for the hash part of a table with the given
 ** size, or reuses the dummy node if size is zero.
@@ -398,39 +389,79 @@ static void setnodevector (lua_State *L, Table *t, unsigned int size) {
 }
 
 
-void luaH_resize (lua_State *L, Table *t, unsigned int nasize,
-                                          unsigned int nhsize) {
-  unsigned int i;
+/*
+** (Re)insert all elements from list 'nodes' into table 't'.
+*/
+static void reinsert(lua_State *L, Node *nodes, int nsize, Table *t) {
   int j;
-  unsigned int oldasize = t->sizearray;
-  int oldhsize = allocsizenode(t);
-  Node *nold = t->node;  /* save old hash ... */
-  if (nasize > oldasize)  /* array part must grow? */
-    setarrayvector(L, t, nasize);
-  /* create new hash part with appropriate size */
-  setnodevector(L, t, nhsize);
-  if (nasize < oldasize) {  /* array part must shrink? */
-    t->sizearray = nasize;
-    /* re-insert elements from vanishing slice */
-    for (i=nasize; i<oldasize; i++) {
-      if (!ttisnil(&t->array[i]))
-        luaH_setint(L, t, i + 1, &t->array[i]);
-    }
-    /* shrink array */
-    luaM_reallocvector(L, t->array, oldasize, nasize, TValue);
-  }
-  /* re-insert elements from hash part */
-  for (j = oldhsize - 1; j >= 0; j--) {
-    Node *old = nold + j;
+  for (j = nsize - 1; j >= 0; j--) {
+    Node *old = nodes + j;
     if (!ttisnil(gval(old))) {
       /* doesn't need barrier/invalidate cache, as entry was
          already present in the table */
-      TValue k; getnodekey(L, &k, old);
+      TValue k;
+      getnodekey(L, &k, old);
       setobjt2t(L, luaH_set(L, t, &k), gval(old));
     }
   }
+}
+
+
+/*
+** Resize table 't' for the new given sizes. Both allocations
+** (for the hash part and for the array part) can fail, which
+** creates some subtleties. If the first allocation, for the hash
+** part, fails, an error is raised and that is it. Otherwise,
+** copy the elements in the shrinking part of the array (if it
+** is shrinking) into the new hash. Then it reallocates the array part.
+** If that fails, it frees the new hash part and restores the old hash
+** part (to restore the original state of the table), and then raises
+** the allocation error. Otherwise, initialize the new part of the
+** array (if any) with nils and reinsert the elements in the old
+** hash back into the new parts of the table.
+*/
+void luaH_resize (lua_State *L, Table *t, unsigned int newasize,
+                                          unsigned int nhsize) {
+  unsigned int i;
+  Node *oldnode = t->node;  /* save old hash ... */
+  Node *oldlastfree = t->lastfree;
+  int oldlsizenode = t->lsizenode;
+  int oldhsize = allocsizenode(t);
+  unsigned int oldasize = t->sizearray;
+  TValue *newarray;
+  /* create new hash part with appropriate size */
+  setnodevector(L, t, nhsize);
+  if (newasize < oldasize) {  /* will array shrink? */
+    /* re-insert into the hash the elements from vanishing slice */
+    t->sizearray = newasize;  /* pretend array has new size */
+    for (i = newasize; i < oldasize; i++) {
+      if (!ttisnil(&t->array[i]))
+        luaH_setint(L, t, i + 1, &t->array[i]);
+    }
+    t->sizearray = oldasize;  /* restore current size */
+  }
+  /* allocate new array */
+  newarray = luaM_reallocvector(L, t->array, oldasize, newasize, TValue);
+  if (newarray == NULL && newasize > 0) {  /* allocation failed? */
+    if (nhsize > 0)  /* not the dummy node? */
+      luaM_freearray(L, t->node, allocsizenode(t)); /* release new hash part */
+    t->node = oldnode;  /* restore original hash part */
+    t->lastfree = oldlastfree;
+    t->lsizenode = oldlsizenode;
+    lua_assert(!isdummy(t) == (t->node != dummynode));
+    luaM_error(L);  /* error with array unchanged */
+  }
+  /* allocation ok; initialize new part of the array */
+  t->array = newarray;
+  t->sizearray = newasize;
+  for (i = oldasize; i < newasize; i++)
+     setnilvalue(&t->array[i]);
+  /* re-insert elements from old hash part into new parts */
+  reinsert(L, oldnode, oldhsize, t);
+  /* free old hash */
   if (oldhsize > 0)  /* not the dummy node? */
-    luaM_freearray(L, nold, cast(size_t, oldhsize)); /* free old hash */
+    luaM_freearray(L, oldnode, cast(size_t, oldhsize));
+  lua_assert(!isdummy(t) == (t->node != dummynode));
 }
 
 

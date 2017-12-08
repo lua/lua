@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.44 2017/12/06 18:36:31 roberto Exp roberto $
+** $Id: lmem.h,v 1.45 2017/12/07 18:59:52 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -12,6 +12,9 @@
 
 #include "llimits.h"
 #include "lua.h"
+
+
+#define luaM_error(L)	luaD_throw(L, LUA_ERRMEM)
 
 
 /*
@@ -45,26 +48,26 @@
 ** Arrays of chars do not need any test
 */
 #define luaM_reallocvchar(L,b,on,n)  \
-    cast(char *, luaM_realloc(L, (b), (on)*sizeof(char), (n)*sizeof(char)))
+  cast(char *, luaM_saferealloc_(L, (b), (on)*sizeof(char), (n)*sizeof(char)))
 
 #define luaM_freemem(L, b, s)	luaM_free_(L, (b), (s))
 #define luaM_free(L, b)		luaM_free_(L, (b), sizeof(*(b)))
 #define luaM_freearray(L, b, n)   luaM_free_(L, (b), (n)*sizeof(*(b)))
 
-#define luaM_new(L,t)		cast(t*, luaM_malloc(L, sizeof(t), 0))
-#define luaM_newvector(L,n,t)	cast(t*, luaM_malloc(L, (n)*sizeof(t), 0))
+#define luaM_new(L,t)		cast(t*, luaM_malloc_(L, sizeof(t), 0))
+#define luaM_newvector(L,n,t)	cast(t*, luaM_malloc_(L, (n)*sizeof(t), 0))
 #define luaM_newvectorchecked(L,n,t) \
   (luaM_checksize(L,n,sizeof(t)), luaM_newvector(L,n,t))
 
-#define luaM_newobject(L,tag,s)	luaM_malloc(L, (s), tag)
+#define luaM_newobject(L,tag,s)	luaM_malloc_(L, (s), tag)
 
 #define luaM_growvector(L,v,nelems,size,t,limit,e) \
 	((v)=cast(t *, luaM_growaux_(L,v,nelems,&(size),sizeof(t), \
                          luaM_limitN(limit,t),e)))
 
 #define luaM_reallocvector(L, v,oldn,n,t) \
-   ((v)=cast(t *, luaM_realloc(L, v, cast(size_t, oldn) * sizeof(t), \
-                                     cast(size_t, n) * sizeof(t))))
+   (cast(t *, luaM_realloc_(L, v, cast(size_t, oldn) * sizeof(t), \
+                                  cast(size_t, n) * sizeof(t))))
 
 #define luaM_shrinkvector(L,v,size,fs,t) \
    ((v)=cast(t *, luaM_shrinkvector_(L, v, &(size), fs, sizeof(t))))
@@ -72,15 +75,17 @@
 LUAI_FUNC l_noret luaM_toobig (lua_State *L);
 
 /* not to be called directly */
-LUAI_FUNC void *luaM_realloc (lua_State *L, void *block, size_t oldsize,
+LUAI_FUNC void *luaM_realloc_ (lua_State *L, void *block, size_t oldsize,
                                                           size_t size);
+LUAI_FUNC void *luaM_saferealloc_ (lua_State *L, void *block, size_t oldsize,
+                                                              size_t size);
 LUAI_FUNC void luaM_free_ (lua_State *L, void *block, size_t osize);
 LUAI_FUNC void *luaM_growaux_ (lua_State *L, void *block, int nelems,
                                int *size, int size_elem, int limit,
                                const char *what);
 LUAI_FUNC void *luaM_shrinkvector_ (lua_State *L, void *block, int *nelem,
                                     int final_n, int size_elem);
-LUAI_FUNC void *luaM_malloc (lua_State *L, size_t size, int tag);
+LUAI_FUNC void *luaM_malloc_ (lua_State *L, size_t size, int tag);
 
 #endif
 

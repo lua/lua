@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.58 2017/12/01 16:40:29 roberto Exp roberto $
+** $Id: lstring.c,v 2.59 2017/12/07 18:59:52 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -70,12 +70,15 @@ unsigned int luaS_hashlongstr (TString *ts) {
 
 
 /*
-** Resizes the string table.
+** Resize the string table. If allocation fails, keep the current size.
+** (This can degrade performance, but any size should work correctly.)
 */
 void luaS_resize (lua_State *L, int newsize) {
   int i;
   TString **newhash = luaM_newvector(L, newsize, TString *);
   stringtable *tb = &G(L)->strt;
+  if (newhash == NULL)  /* allocation failed? */
+    return;  /* leave hash as it is */
   for (i = 0; i < newsize; i++)  /* initialize new hash array */
     newhash[i] = NULL;
   for (i = 0; i < tb->size; i++) {  /* rehash all elements into new array */
