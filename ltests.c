@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.233 2017/11/23 15:38:42 roberto Exp roberto $
+** $Id: ltests.c,v 2.234 2017/12/07 18:51:39 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1255,6 +1255,10 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
         msg = NULL;  /* to test 'luaL_checkstack' with no message */
       luaL_checkstack(L1, sz, msg);
     }
+    else if EQ("rawcheckstack") {
+      int sz = getnum;
+      lua_pushboolean(L1, lua_checkstack(L1, sz));
+    }
     else if EQ("compare") {
       const char *opt = getstring;  /* EQ, LT, or LE */
       int op = (opt[0] == 'E') ? LUA_OPEQ
@@ -1434,8 +1438,17 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       int n = getnum;
       if (L1 != L) {
         int i;
-        for (i = 0; i < n; i++)
-          lua_pushstring(L, lua_tostring(L1, -(n - i)));
+        for (i = 0; i < n; i++) {
+          int idx = -(n - i);
+          switch (lua_type(L1, idx)) {
+            case LUA_TBOOLEAN:
+              lua_pushboolean(L, lua_toboolean(L1, idx));
+              break;
+            default:
+              lua_pushstring(L, lua_tostring(L1, idx));
+              break;
+          }
+        }
       }
       return n;
     }
