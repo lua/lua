@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.145 2017/11/23 16:35:54 roberto Exp roberto $
+** $Id: llimits.h,v 1.146 2017/12/01 15:08:14 roberto Exp roberto $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -304,7 +304,7 @@ typedef unsigned long Instruction;
 #else
 /* realloc stack keeping its size */
 #define condmovestack(L,pre,pos)  \
-	{ int sz_ = (L)->stacksize; pre; luaD_reallocstack((L), sz_); pos; }
+  { int sz_ = (L)->stacksize; pre; luaD_reallocstack((L), sz_, 0); pos; }
 #endif
 
 #if !defined(HARDMEMTESTS)
