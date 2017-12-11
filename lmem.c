@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.93 2017/12/07 18:59:52 roberto Exp roberto $
+** $Id: lmem.c,v 1.94 2017/12/08 17:28:25 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -89,7 +89,7 @@ void *luaM_shrinkvector_ (lua_State *L, void *block, int *size,
   lua_assert(newsize <= oldsize);
   newblock = (*g->frealloc)(g->ud, block, oldsize, newsize);
   if (newblock == NULL && final_n > 0)  /* allocation failed? */
-    return block;  /* keep old block */
+    luaM_error(L);
   else {
     g->GCdebt += newsize - oldsize;
     *size = final_n;
