@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.234 2017/12/07 18:51:39 roberto Exp roberto $
+** $Id: ltests.c,v 2.235 2017/12/08 15:19:13 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -141,7 +141,7 @@ void *debug_realloc (void *ud, void *b, size_t oldsize, size_t size) {
     freeblock(mc, block);
     return NULL;
   }
-  if (mc->countlimit != ~0UL && size > oldsize) {  /* count limit in use? */
+  if (mc->countlimit != ~0UL && size > 0) {  /* count limit in use? */
     if (mc->countlimit == 0)
       return NULL;  /* fake a memory allocation error */
     mc->countlimit--;
@@ -1001,6 +1001,7 @@ static int loadlib (lua_State *L) {
     {"math", luaopen_math},
     {"string", luaopen_string},
     {"table", luaopen_table},
+    {"T", luaB_opentests},
     {NULL, NULL}
   };
   lua_State *L1 = getstate(L);
