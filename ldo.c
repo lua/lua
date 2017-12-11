@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.177 2017/12/01 15:44:51 roberto Exp roberto $
+** $Id: ldo.c,v 2.178 2017/12/08 17:28:25 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -177,14 +177,15 @@ static void correctstack (lua_State *L, StkId oldstack, StkId newstack) {
 #define ERRORSTACKSIZE	(LUAI_MAXSTACK + 200)
 
 
-int luaD_reallocstack (lua_State *L, int newsize, int safe) {
+int luaD_reallocstack (lua_State *L, int newsize, int raiseerror) {
   int lim = L->stacksize;
   StkId newstack = luaM_reallocvector(L, L->stack, lim, newsize, StackValue);
   lua_assert(newsize <= LUAI_MAXSTACK || newsize == ERRORSTACKSIZE);
   lua_assert(L->stack_last - L->stack == L->stacksize - EXTRA_STACK);
   if (newstack == NULL) {  /* reallocation failed? */
-    if (safe) luaM_error(L);
-    else return 0;  /* no-safe mode: signal the error */
+    if (raiseerror)
+      luaM_error(L);
+    else return 0;  /* do not raise an error */
   }
   for (; lim < newsize; lim++)
     setnilvalue(s2v(newstack + lim)); /* erase new segment */
@@ -196,21 +197,33 @@ int luaD_reallocstack (lua_State *L, int newsize, int safe) {
 }
 
 
-int luaD_growstack (lua_State *L, int n, int safe) {
+/*
+** Try to grow the stack by at least 'n' elements. when 'raiseerror'
+** is true, raises any error; otherwise, return 0 in case of errors.
+*/
+int luaD_growstack (lua_State *L, int n, int raiseerror) {
   int size = L->stacksize;
-  int newsize = 2 * size;
-  if (size > LUAI_MAXSTACK)  /* error after extra size? */
-    luaD_throw(L, LUA_ERRERR);
+  int newsize = 2 * size;  /* tentative new size */
+  if (size > LUAI_MAXSTACK) {  /* need more space after extra size? */
+    if (raiseerror)
+      luaD_throw(L, LUA_ERRERR);  /* error inside message handler */
+    else return 0;
+  }
   else {
     int needed = cast_int(L->top - L->stack) + n + EXTRA_STACK;
-    if (newsize > LUAI_MAXSTACK) newsize = LUAI_MAXSTACK;
-    if (newsize < needed) newsize = needed;
+    if (newsize > LUAI_MAXSTACK)  /* cannot cross the limit */
+      newsize = LUAI_MAXSTACK;
+    if (newsize < needed)  /* but must respect what was asked for */
+      newsize = needed;
     if (newsize > LUAI_MAXSTACK) {  /* stack overflow? */
-      luaD_reallocstack(L, ERRORSTACKSIZE, 1);
-      luaG_runerror(L, "stack overflow");
+      /* add extra size to be able to handle the error message */
+      luaD_reallocstack(L, ERRORSTACKSIZE, raiseerror);
+      if (raiseerror)
+        luaG_runerror(L, "stack overflow");
+      else return 0;
     }
-  }  /* else */
-  return luaD_reallocstack(L, newsize, safe);
+  }  /* else no errors */
+  return luaD_reallocstack(L, newsize, raiseerror);
 }
 
 

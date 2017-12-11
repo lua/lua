@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 2.36 2017/11/23 18:29:41 roberto Exp roberto $
+** $Id: ldo.h,v 2.37 2017/12/08 17:28:25 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -56,8 +56,8 @@ LUAI_FUNC int luaD_pcall (lua_State *L, Pfunc func, void *u,
                                         ptrdiff_t oldtop, ptrdiff_t ef);
 LUAI_FUNC void luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult,
                                           int nres);
-LUAI_FUNC int luaD_reallocstack (lua_State *L, int newsize, int safe);
-LUAI_FUNC int luaD_growstack (lua_State *L, int n, int safe);
+LUAI_FUNC int luaD_reallocstack (lua_State *L, int newsize, int raiseerror);
+LUAI_FUNC int luaD_growstack (lua_State *L, int n, int raiseerror);
 LUAI_FUNC void luaD_shrinkstack (lua_State *L);
 LUAI_FUNC void luaD_inctop (lua_State *L);
 
