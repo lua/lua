@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.59 2017/12/07 18:59:52 roberto Exp roberto $
+** $Id: lstring.c,v 2.60 2017/12/08 17:28:25 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -69,31 +69,47 @@ unsigned int luaS_hashlongstr (TString *ts) {
 }
 
 
-/*
-** Resize the string table. If allocation fails, keep the current size.
-** (This can degrade performance, but any size should work correctly.)
-*/
-void luaS_resize (lua_State *L, int newsize) {
+static void rehash (TString **vect, int osize, int nsize) {
   int i;
-  TString **newhash = luaM_newvector(L, newsize, TString *);
-  stringtable *tb = &G(L)->strt;
-  if (newhash == NULL)  /* allocation failed? */
-    return;  /* leave hash as it is */
-  for (i = 0; i < newsize; i++)  /* initialize new hash array */
-    newhash[i] = NULL;
-  for (i = 0; i < tb->size; i++) {  /* rehash all elements into new array */
-    TString *p = tb->hash[i];
+  for (i = osize; i < nsize; i++)  /* clear new elements */
+    vect[i] = NULL;
+  for (i = 0; i < osize; i++) {  /* rehash old part of the array */
+    TString *p = vect[i];
+    vect[i] = NULL;
     while (p) {  /* for each string in the list */
       TString *hnext = p->u.hnext;  /* save next */
-      unsigned int h = lmod(p->hash, newsize);  /* new position */
-      p->u.hnext = newhash[h];  /* chain it into new array */
-      newhash[h] = p;
+      unsigned int h = lmod(p->hash, nsize);  /* new position */
+      p->u.hnext = vect[h];  /* chain it into array */
+      vect[h] = p;
       p = hnext;
     }
   }
-  luaM_freearray(L, tb->hash, tb->size);  /* free old array */
-  tb->hash = newhash;
-  tb->size = newsize;
+}
+
+
+/*
+** Resize the string table. If allocation fails, keep the current size.
+** (This can degrade performance, but any non-zero size should work
+** correctly.)
+*/
+void luaS_resize (lua_State *L, int nsize) {
+  stringtable *tb = &G(L)->strt;
+  int osize = tb->size;
+  TString **newvect;
+  if (nsize < osize)  /* shrinking table? */
+    rehash(tb->hash, osize, nsize);  /* remove elements from shrinking part */
+  newvect = luaM_reallocvector(L, tb->hash, osize, nsize, TString*);
+  if (newvect == NULL) {  /* reallocation failed? */
+    if (nsize < osize)  /* was it shrinking table? */
+      rehash(tb->hash, nsize, osize);  /* restore to original size */
+    /* leave table as it was */
+  }
+  else {  /* allocation succeeded */
+    tb->hash = newvect;
+    tb->size = nsize;
+    if (nsize > osize)
+      rehash(newvect, osize, nsize);  /* rehash for new size */
+  }
 }
 
 
@@ -118,7 +134,10 @@ void luaS_init (lua_State *L) {
   global_State *g = G(L);
   int i, j;
   TString *memerrmsg;
-  luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
+  stringtable *tb = &G(L)->strt;
+  tb->hash = luaM_newvector(L, MINSTRTABSIZE, TString*);
+  rehash(tb->hash, 0, MINSTRTABSIZE);  /* clear array */
+  tb->size = MINSTRTABSIZE;
   /* pre-create memory-error message */
   memerrmsg = luaS_newliteral(L, MEMERRMSG);
   luaC_fix(L, obj2gco(memerrmsg));  /* it should never be collected */
@@ -165,35 +184,46 @@ void luaS_remove (lua_State *L, TString *ts) {
 }
 
 
+static void growstrtab (lua_State *L, stringtable *tb) {
+  if (tb->nuse == MAX_INT) {  /* too many strings? */
+    luaC_fullgc(L, 1);  /* try to free some... */
+    if (tb->nuse == MAX_INT)  /* still too many? */
+      luaM_error(L);  /* cannot even create a message... */
+  }
+  if (tb->size <= MAXSTRTB / 2)  /* can grow string table? */
+    luaS_resize(L, tb->size * 2);
+}
+
+
 /*
-** checks whether short string exists and reuses it or creates a new one
+** Checks whether short string exists and reuses it or creates a new one.
 */
 static TString *internshrstr (lua_State *L, const char *str, size_t l) {
   TString *ts;
   global_State *g = G(L);
+  stringtable *tb = &g->strt;
   unsigned int h = luaS_hash(str, l, g->seed);
-  TString **list = &g->strt.hash[lmod(h, g->strt.size)];
+  TString **list = &tb->hash[lmod(h, tb->size)];
   lua_assert(str != NULL);  /* otherwise 'memcmp'/'memcpy' are undefined */
   for (ts = *list; ts != NULL; ts = ts->u.hnext) {
-    if (l == ts->shrlen &&
-        (memcmp(str, getstr(ts), l * sizeof(char)) == 0)) {
+    if (l == ts->shrlen && (memcmp(str, getstr(ts), l * sizeof(char)) == 0)) {
       /* found! */
       if (isdead(g, ts))  /* dead (but not collected yet)? */
         changewhite(ts);  /* resurrect it */
       return ts;
     }
   }
-  if (g->strt.nuse >= g->strt.size &&
-      g->strt.size <= MAXSTRTB / 2) {
-    luaS_resize(L, g->strt.size * 2);
-    list = &g->strt.hash[lmod(h, g->strt.size)];  /* recompute with new size */
+  /* else must create a new string */
+  if (tb->nuse >= tb->size) {  /* need to grow string table? */
+    growstrtab(L, tb);
+    list = &tb->hash[lmod(h, tb->size)];  /* rehash with new size */
   }
   ts = createstrobj(L, l, LUA_TSHRSTR, h);
   memcpy(getstr(ts), str, l * sizeof(char));
   ts->shrlen = cast_byte(l);
   ts->u.hnext = *list;
   *list = ts;
-  g->strt.nuse++;
+  tb->nuse++;
   return ts;
 }
 
