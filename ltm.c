@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.50 2017/11/27 17:44:31 roberto Exp roberto $
+** $Id: ltm.c,v 2.51 2017/11/30 15:37:16 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -166,15 +166,20 @@ void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
 }
 
 
+void luaT_trybinassocTM (lua_State *L, const TValue *p1, const TValue *p2,
+                                       StkId res, int inv, TMS event) {
+  if (inv)
+    luaT_trybinTM(L, p2, p1, res, event);
+  else
+    luaT_trybinTM(L, p1, p2, res, event);
+}
+
+
 void luaT_trybiniTM (lua_State *L, const TValue *p1, int i2,
                                    int inv, StkId res, TMS event) {
-  TValue aux; const TValue *p2;
+  TValue aux;
   setivalue(&aux, i2);
-  if (inv) {  /* arguments were exchanged? */
-    p2 = p1; p1 = &aux;  /* correct them */
-  }
-  else p2 = &aux;
-  luaT_trybinTM(L, p1, p2, res, event);
+  luaT_trybinassocTM(L, p1, &aux, res, inv, event);
 }
 
 
