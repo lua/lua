@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.323 2017/11/30 13:29:18 roberto Exp roberto $
+** $Id: lvm.c,v 2.324 2017/12/04 17:41:30 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -687,6 +687,7 @@ void luaV_finishOp (lua_State *L) {
     case OP_MODI: case OP_POWI:
     case OP_ADD: case OP_SUB:
     case OP_MUL: case OP_DIV: case OP_IDIV:
+    case OP_BANDK: case OP_BORK: case OP_BXORK:
     case OP_BAND: case OP_BOR: case OP_BXOR:
     case OP_SHRI: case OP_SHL: case OP_SHR:
     case OP_MOD: case OP_POW:
@@ -1180,6 +1181,39 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         }
         else
           Protect(luaT_trybinTM(L, rb, rc, ra, TM_DIV));
+        vmbreak;
+      }
+      vmcase(OP_BANDK) {
+        TValue *p1 = vRB(i);
+        TValue *p2 = KC(i);
+        lua_Integer i1;
+        if (tointegerns(p1, &i1)) {
+          setivalue(vra, intop(&, i1, ivalue(p2)));
+        }
+        else
+          Protect(luaT_trybinassocTM(L, p1, p2, ra, TESTARG_k(i), TM_BAND));
+        vmbreak;
+      }
+      vmcase(OP_BORK) {
+        TValue *p1 = vRB(i);
+        TValue *p2 = KC(i);
+        lua_Integer i1;
+        if (tointegerns(p1, &i1)) {
+          setivalue(vra, intop(|, i1, ivalue(p2)));
+        }
+        else
+          Protect(luaT_trybinassocTM(L, p1, p2, ra, TESTARG_k(i), TM_BOR));
+        vmbreak;
+      }
+      vmcase(OP_BXORK) {
+        TValue *p1 = vRB(i);
+        TValue *p2 = KC(i);
+        lua_Integer i1;
+        if (tointegerns(p1, &i1)) {
+          setivalue(vra, intop(^, i1, ivalue(p2)));
+        }
+        else
+          Protect(luaT_trybinassocTM(L, p1, p2, ra, TESTARG_k(i), TM_BXOR));
         vmbreak;
       }
       vmcase(OP_BAND) {

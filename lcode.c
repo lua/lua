@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.141 2017/11/30 15:37:16 roberto Exp roberto $
+** $Id: lcode.c,v 2.142 2017/12/04 17:41:30 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -1196,6 +1196,15 @@ static void codeunexpval (FuncState *fs, OpCode op, expdesc *e, int line) {
 }
 
 
+static void finishbinexpval (FuncState *fs, expdesc *e1, expdesc *e2,
+                             int pc, int line) {
+  freeexps(fs, e1, e2);
+  e1->u.info = pc;
+  e1->k = VRELOCABLE;  /* all those operations are relocatable */
+  luaK_fixline(fs, line);
+}
+
+
 /*
 ** Emit code for binary expressions that "produce values"
 ** (everything but logical operators 'and'/'or' and comparison
@@ -1209,10 +1218,8 @@ static void codebinexpval (FuncState *fs, OpCode op,
                            expdesc *e1, expdesc *e2, int line) {
   int v2 = luaK_exp2anyreg(fs, e2);  /* both operands are in registers */
   int v1 = luaK_exp2anyreg(fs, e1);
-  freeexps(fs, e1, e2);
-  e1->u.info = luaK_codeABC(fs, op, 0, v1, v2);  /* generate opcode */
-  e1->k = VRELOCABLE;  /* all those operations are relocatable */
-  luaK_fixline(fs, line);
+  int pc = luaK_codeABC(fs, op, 0, v1, v2);  /* generate opcode */
+  finishbinexpval(fs, e1, e2, pc, line);
 }
 
 
@@ -1223,10 +1230,8 @@ static void codebini (FuncState *fs, OpCode op,
                        expdesc *e1, expdesc *e2, int k, int line) {
   int v2 = cast_int(e2->u.ival);  /* immediate operand */
   int v1 = luaK_exp2anyreg(fs, e1);
-  freeexp(fs, e1);
-  e1->u.info = codeABsC(fs, op, 0, v1, v2, k);  /* generate opcode */
-  e1->k = VRELOCABLE;  /* all those operations are relocatable */
-  luaK_fixline(fs, line);
+  int pc = codeABsC(fs, op, 0, v1, v2, k);  /* generate opcode */
+  finishbinexpval(fs, e1, e2, pc, line);
 }
 
 
@@ -1261,6 +1266,33 @@ static void codecommutative (FuncState *fs, OpCode op,
     flip = 1;
   }
   codearith(fs, op, e1, e2, flip, line);
+}
+
+
+/*
+** Code bitwise operations; they are all associative, so the function
+** tries to put an integer constant as the 2nd operand (a K operand).
+*/
+static void codebitwise (FuncState *fs, BinOpr opr,
+                         expdesc *e1, expdesc *e2, int line) {
+  int inv = 0;
+  int v1, v2, pc;
+  OpCode op;
+  if (e1->k == VKINT && luaK_exp2RK(fs, e1)) {
+    swapexps(e1, e2);  /* 'e2' will be the constant operand */
+    inv = 1;
+  }
+  else if (!(e2->k == VKINT && luaK_exp2RK(fs, e2))) {  /* no constants? */
+    op = cast(OpCode, opr - OPR_BAND + OP_BAND);
+    codebinexpval(fs, op, e1, e2, line);  /* all-register opcodes */
+    return;
+  }
+  v1 = luaK_exp2anyreg(fs, e1);
+  v2 = e2->u.info;  /* index in K array */
+  op = cast(OpCode, opr - OPR_BAND + OP_BANDK);
+  lua_assert(ttisinteger(&fs->f->k[v2]));
+  pc = luaK_codeABCk(fs, op, 0, v1, v2, inv);
+  finishbinexpval(fs, e1, e2, pc, line);
 }
 
 
@@ -1468,7 +1500,7 @@ void luaK_posfix (FuncState *fs, BinOpr opr,
     }
     case OPR_BAND: case OPR_BOR: case OPR_BXOR: {
       if (!constfolding(fs, opr + LUA_OPADD, e1, e2))
-        codebinexpval(fs, cast(OpCode, opr + OP_ADD), e1, e2, line);
+        codebitwise(fs, opr, e1, e2, line);
       break;
     }
     case OPR_SHL: {

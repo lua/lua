@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.71 2017/11/29 16:57:36 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.72 2017/12/04 17:41:30 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -44,6 +44,9 @@ LUAI_DDEF const char *const luaP_opnames[NUM_OPCODES+1] = {
   "POWI",
   "DIVI",
   "IDIVI",
+  "BANDK",
+  "BORK",
+  "BXORK",
   "SHRI",
   "SHLI",
   "ADD",
@@ -119,6 +122,9 @@ LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 1, iABC)		/* OP_POWI */
  ,opmode(0, 1, iABC)		/* OP_DIVI */
  ,opmode(0, 1, iABC)		/* OP_IDIVI */
+ ,opmode(0, 1, iABC)		/* OP_BANDK */
+ ,opmode(0, 1, iABC)		/* OP_BORK */
+ ,opmode(0, 1, iABC)		/* OP_BXORK */
  ,opmode(0, 1, iABC)		/* OP_SHRI */
  ,opmode(0, 1, iABC)		/* OP_SHLI */
  ,opmode(0, 1, iABC)		/* OP_ADD */

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.146 2017/11/23 19:29:04 roberto Exp roberto $
+** $Id: ldebug.c,v 2.147 2017/12/07 15:44:10 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -589,7 +589,8 @@ static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
       tm = TM_NEWINDEX;
       break;
     case OP_ADDI: case OP_SUBI: case OP_MULI: case OP_MODI:
-    case OP_POWI: case OP_DIVI: case OP_IDIVI: {
+    case OP_POWI: case OP_DIVI: case OP_IDIVI:
+    case OP_BANDK: case OP_BORK: case OP_BXORK: {
       int offset = GET_OPCODE(i) - OP_ADDI;  /* ORDER OP */
       tm = cast(TMS, offset + TM_ADD);  /* ORDER TM */
       break;
