@@ -3680,9 +3680,9 @@ It needs an "interceptor" 'memcmp' function that continues
 reading memory after a difference is found.]],
 patch = [[
 2c2
-< ** $Id: bugs,v 1.157 2017/08/31 16:14:41 roberto Exp roberto $
+< ** $Id: bugs,v 1.158 2017/12/06 18:20:28 roberto Exp roberto $
 ---
-> ** $Id: bugs,v 1.157 2017/08/31 16:14:41 roberto Exp roberto $
+> ** $Id: bugs,v 1.158 2017/12/06 18:20:28 roberto Exp roberto $
 263c263,264
 <   for (option = LUA_STRFTIMEOPTIONS; *option != '\0'; option += oplen) {
 ---
@@ -3900,6 +3900,31 @@ patch = [[
 -  luaC_checkGC(L);
    lua_unlock(L);
  }
+]]
+}
+
+
+Bug{
+what = [[memory-allocation error when resizing a table can leave it
+in an inconsistent state.]],
+report = [[Roberto, 2017/12/08]],
+since = [[5.0]],
+fix = nil,
+example = [[
+local a = {x = 1, y = 1, z = 1}
+a[1] = 10   -- goes to the hash part (which has 4 slots)
+print(a[1])   --> 10
+
+-- assume that the 2nd memory allocation from now fails
+pcall(rawset, a, 2, 20)   -- forces a rehash
+
+-- a[1] now exists both in the array part (because the array part
+-- grew) and in the hash part (because the allocation of the hash
+-- part failed, keeping it as it was).
+-- This makes the following traversal goes forever...
+for k,v in pairs(a) do print(k,v) end
+]],
+patch = [[
 ]]
 }
 
