@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.129 2016/12/04 20:17:24 roberto Exp roberto $
+** $Id: loadlib.c,v 1.130 2017/01/12 17:14:26 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -437,9 +437,9 @@ static const char *searchpath (lua_State *L, const char *name,
                                              const char *sep,
                                              const char *dirsep) {
   luaL_Buffer msg;  /* to build error message */
-  luaL_buffinit(L, &msg);
   if (*sep != '\0')  /* non-empty separator? */
     name = luaL_gsub(L, name, sep, dirsep);  /* replace it by 'dirsep' */
+  luaL_buffinit(L, &msg);
   while ((path = pushnexttemplate(L, path)) != NULL) {
     const char *filename = luaL_gsub(L, lua_tostring(L, -1),
                                      LUA_PATH_MARK, name);
@@ -569,10 +569,10 @@ static int searcher_preload (lua_State *L) {
 static void findloader (lua_State *L, const char *name) {
   int i;
   luaL_Buffer msg;  /* to build error message */
-  luaL_buffinit(L, &msg);
   /* push 'package.searchers' to index 3 in the stack */
   if (lua_getfield(L, lua_upvalueindex(1), "searchers") != LUA_TTABLE)
     luaL_error(L, "'package.searchers' must be a table");
+  luaL_buffinit(L, &msg);
   /*  iterate over available searchers to find a loader */
   for (i = 1; ; i++) {
     if (lua_rawgeti(L, 3, i) == LUA_TNIL) {  /* no more searchers? */
