@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.142 2017/12/04 17:41:30 roberto Exp roberto $
+** $Id: lcode.c,v 2.143 2017/12/13 18:32:09 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -632,7 +632,7 @@ void luaK_setreturns (FuncState *fs, expdesc *e, int nresults) {
 ** vararg), it already returns one result, so nothing needs to be done.
 ** Function calls become VNONRELOC expressions (as its result comes
 ** fixed in the base register of the call), while vararg expressions
-** become VRELOCABLE (as OP_VARARG puts its results where it wants).
+** become VRELOC (as OP_VARARG puts its results where it wants).
 ** (Calls are created returning one result, so that does not need
 ** to be fixed.)
 */
@@ -645,7 +645,7 @@ void luaK_setoneret (FuncState *fs, expdesc *e) {
   }
   else if (e->k == VVARARG) {
     SETARG_B(getinstruction(fs, e), 2);
-    e->k = VRELOCABLE;  /* can relocate its simple result */
+    e->k = VRELOC;  /* can relocate its simple result */
   }
 }
 
@@ -661,30 +661,30 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
     }
     case VUPVAL: {  /* move value to some (pending) register */
       e->u.info = luaK_codeABC(fs, OP_GETUPVAL, 0, e->u.info, 0);
-      e->k = VRELOCABLE;
+      e->k = VRELOC;
       break;
     }
     case VINDEXUP: {
       e->u.info = luaK_codeABC(fs, OP_GETTABUP, 0, e->u.ind.t, e->u.ind.idx);
-      e->k = VRELOCABLE;
+      e->k = VRELOC;
       break;
     }
     case VINDEXI: {
       freereg(fs, e->u.ind.t);
       e->u.info = luaK_codeABC(fs, OP_GETI, 0, e->u.ind.t, e->u.ind.idx);
-      e->k = VRELOCABLE;
+      e->k = VRELOC;
       break;
     }
     case VINDEXSTR: {
       freereg(fs, e->u.ind.t);
       e->u.info = luaK_codeABC(fs, OP_GETFIELD, 0, e->u.ind.t, e->u.ind.idx);
-      e->k = VRELOCABLE;
+      e->k = VRELOC;
       break;
     }
     case VINDEXED: {
       freeregs(fs, e->u.ind.t, e->u.ind.idx);
       e->u.info = luaK_codeABC(fs, OP_GETTABLE, 0, e->u.ind.t, e->u.ind.idx);
-      e->k = VRELOCABLE;
+      e->k = VRELOC;
       break;
     }
     case VVARARG: case VCALL: {
@@ -723,7 +723,7 @@ static void discharge2reg (FuncState *fs, expdesc *e, int reg) {
       luaK_int(fs, reg, e->u.ival);
       break;
     }
-    case VRELOCABLE: {
+    case VRELOC: {
       Instruction *pc = &getinstruction(fs, e);
       SETARG_A(*pc, reg);  /* instruction will put result in 'reg' */
       break;
@@ -963,7 +963,7 @@ static void negatecondition (FuncState *fs, expdesc *e) {
 ** and removing the 'not'.
 */
 static int jumponcond (FuncState *fs, expdesc *e, int cond) {
-  if (e->k == VRELOCABLE) {
+  if (e->k == VRELOC) {
     Instruction ie = getinstruction(fs, e);
     if (GET_OPCODE(ie) == OP_NOT) {
       fs->pc--;  /* remove previous OP_NOT */
@@ -1048,12 +1048,12 @@ static void codenot (FuncState *fs, expdesc *e) {
       negatecondition(fs, e);
       break;
     }
-    case VRELOCABLE:
+    case VRELOC:
     case VNONRELOC: {
       discharge2anyreg(fs, e);
       freeexp(fs, e);
       e->u.info = luaK_codeABC(fs, OP_NOT, 0, e->u.info, 0);
-      e->k = VRELOCABLE;
+      e->k = VRELOC;
       break;
     }
     default: lua_assert(0);  /* cannot happen */
@@ -1191,7 +1191,7 @@ static void codeunexpval (FuncState *fs, OpCode op, expdesc *e, int line) {
   int r = luaK_exp2anyreg(fs, e);  /* opcodes operate only on registers */
   freeexp(fs, e);
   e->u.info = luaK_codeABC(fs, op, 0, r, 0);  /* generate opcode */
-  e->k = VRELOCABLE;  /* all those operations are relocatable */
+  e->k = VRELOC;  /* all those operations are relocatable */
   luaK_fixline(fs, line);
 }
 
@@ -1200,7 +1200,7 @@ static void finishbinexpval (FuncState *fs, expdesc *e1, expdesc *e2,
                              int pc, int line) {
   freeexps(fs, e1, e2);
   e1->u.info = pc;
-  e1->k = VRELOCABLE;  /* all those operations are relocatable */
+  e1->k = VRELOC;  /* all those operations are relocatable */
   luaK_fixline(fs, line);
 }
 
@@ -1474,12 +1474,12 @@ void luaK_posfix (FuncState *fs, BinOpr opr,
     }
     case OPR_CONCAT: {
       luaK_exp2val(fs, e2);
-      if (e2->k == VRELOCABLE &&
+      if (e2->k == VRELOC &&
           GET_OPCODE(getinstruction(fs, e2)) == OP_CONCAT) {
         lua_assert(e1->u.info == GETARG_B(getinstruction(fs, e2))-1);
         freeexp(fs, e1);
         SETARG_B(getinstruction(fs, e2), e1->u.info);
-        e1->k = VRELOCABLE; e1->u.info = e2->u.info;
+        e1->k = VRELOC; e1->u.info = e2->u.info;
       }
       else {
         luaK_exp2nextreg(fs, e2);  /* operand must be on the 'stack' */
