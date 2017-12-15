@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.51 2017/11/30 15:37:16 roberto Exp roberto $
+** $Id: ltm.c,v 2.52 2017/12/13 18:32:09 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -219,7 +219,7 @@ void luaT_adjustvarargs (lua_State *L, Proto *p, int actual) {
   int i;
   Table *vtab;
   TValue nname;
-  int nfixparams = p->numparams - 1;  /* number of fixed parameters */
+  int nfixparams = p->numparams;  /* number of fixed parameters */
   actual -= nfixparams;  /* number of extra arguments */
   vtab = luaH_new(L);  /* create vararg table */
   sethvalue2s(L, L->top, vtab);  /* anchor it for resizing */
