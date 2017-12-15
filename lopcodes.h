@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.176 2017/12/04 17:41:30 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.177 2017/12/13 18:32:09 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -121,7 +121,7 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 #define GETARG_sC(i)	(GETARG_C(i) - MAXARG_sC)
 #define SETARG_C(i,v)	setarg(i, v, POS_C, SIZE_C)
 
-#define TESTARG_k(i)	(cast(int, ((i) & (1 << POS_k))))
+#define TESTARG_k(i)	(cast(int, ((i) & (1u << POS_k))))
 #define GETARG_k(i)	getarg(i, POS_k, 1)
 #define SETARG_k(i,v)	setarg(i, v, POS_k, 1)
 
