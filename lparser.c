@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.170 2017/12/06 18:36:31 roberto Exp roberto $
+** $Id: lparser.c,v 2.171 2017/12/14 14:24:02 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -765,7 +765,6 @@ static void parlist (LexState *ls) {
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
   int nparams = 0;
-  f->is_vararg = 0;
   if (ls->t.token != ')') {  /* is 'parlist' not empty? */
     do {
       switch (ls->t.token) {
@@ -789,7 +788,7 @@ static void parlist (LexState *ls) {
     } while (!f->is_vararg && testnext(ls, ','));
   }
   adjustlocalvars(ls, nparams);
-  f->numparams = cast_byte(fs->nactvar);
+  f->numparams = cast_byte(fs->nactvar) - f->is_vararg;
   luaK_reserveregs(fs, fs->nactvar);  /* reserve register for parameters */
 }
 
@@ -975,7 +974,7 @@ static void simpleexp (LexState *ls, expdesc *v) {
     }
     case TK_DOTS: {  /* vararg */
       FuncState *fs = ls->fs;
-      int lastparam = fs->f->numparams - 1;
+      int lastparam = fs->f->numparams;
       check_condition(ls, fs->f->is_vararg,
                       "cannot use '...' outside a vararg function");
       init_exp(v, VVARARG, luaK_codeABC(fs, OP_VARARG, 0, 1, lastparam));
@@ -1676,7 +1675,7 @@ static void mainfunc (LexState *ls, FuncState *fs) {
   expdesc v;
   open_func(ls, fs, &bl);
   fs->f->is_vararg = 1;  /* main function is always declared vararg */
-  fs->f->numparams = 1;
+  fs->f->numparams = 0;
   new_localvarliteral(ls, "_ARG");
   adjustlocalvars(ls, 1);
   luaK_reserveregs(fs, 1);  /* reserve register for vararg */
