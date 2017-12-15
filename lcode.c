@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.143 2017/12/13 18:32:09 roberto Exp roberto $
+** $Id: lcode.c,v 2.144 2017/12/14 14:24:02 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -108,7 +108,7 @@ static void fixjump (FuncState *fs, int pc, int dest) {
   Instruction *jmp = &fs->f->code[pc];
   int offset = dest - (pc + 1);
   lua_assert(dest != NO_JUMP);
-  if (abs(offset) > MAXARG_sJ)
+  if (!(-OFFSET_sJ <= offset && offset <= MAXARG_sJ - OFFSET_sJ))
     luaX_syntaxerror(fs->ls, "control structure too long");
   lua_assert(GET_OPCODE(*jmp) == OP_JMP);
   SETARG_sJ(*jmp, offset);
@@ -360,7 +360,7 @@ int luaK_codeABCk (FuncState *fs, OpCode o, int a, int b, int c, int k) {
 }
 
 
-#define codeABsC(fs,o,a,b,c,k)	luaK_codeABCk(fs,o,a,b,((c) + MAXARG_sC),k)
+#define codeABsC(fs,o,a,b,c,k)	luaK_codeABCk(fs,o,a,b,((c) + OFFSET_sC),k)
 
 
 
@@ -378,7 +378,7 @@ int luaK_codeABx (FuncState *fs, OpCode o, int a, unsigned int bc) {
 ** Format and emit an 'iAsBx' instruction.
 */
 int luaK_codeAsBx (FuncState *fs, OpCode o, int a, int bc) {
-  unsigned int b = bc + MAXARG_sBx;
+  unsigned int b = bc + OFFSET_sBx;
   lua_assert(getOpMode(o) == iAsBx);
   lua_assert(a <= MAXARG_A && b <= MAXARG_Bx);
   return luaK_code(fs, CREATE_ABx(o, a, b));
@@ -389,7 +389,7 @@ int luaK_codeAsBx (FuncState *fs, OpCode o, int a, int bc) {
 ** Format and emit an 'isJ' instruction.
 */
 static int codesJ (FuncState *fs, OpCode o, int sj, int k) {
-  unsigned int j = sj + MAXARG_sJ;
+  unsigned int j = sj + OFFSET_sJ;
   lua_assert(getOpMode(o) == isJ);
   lua_assert(j <= MAXARG_sJ && (k & ~1) == 0);
   return luaK_code(fs, CREATE_sJ(o, j, k));
@@ -582,8 +582,26 @@ static int nilK (FuncState *fs) {
 }
 
 
+/*
+** Check whether 'i' can be stored in an 'sC' operand.
+** Equivalent to (0 <= i + OFFSET_sC && i + OFFSET_sC <= MAXARG_C)
+** but without risk of overflows in the addition.
+*/
+static int fitsC (lua_Integer i) {
+  return (-OFFSET_sC <= i && i <= MAXARG_C - OFFSET_sC);
+}
+
+
+/*
+** Check whether 'i' can be stored in an 'sBx' operand.
+*/
+static int fitsBx (lua_Integer i) {
+  return (-OFFSET_sBx <= i && i <= MAXARG_Bx - OFFSET_sBx);
+}
+
+
 void luaK_int (FuncState *fs, int reg, lua_Integer i) {
-  if (l_castS2U(i) + MAXARG_sBx <= l_castS2U(MAXARG_Bx))
+  if (fitsBx(i))
     luaK_codeAsBx(fs, OP_LOADI, reg, cast_int(i));
   else
     luaK_codek(fs, reg, luaK_intK(fs, i));
@@ -593,8 +611,7 @@ void luaK_int (FuncState *fs, int reg, lua_Integer i) {
 static int floatI (lua_Number f, lua_Integer *fi) {
   TValue v;
   setfltvalue(&v, f);
-  return (luaV_flttointeger(&v, fi, 0) &&
-      l_castS2U(*fi) + MAXARG_sBx <= l_castS2U(MAXARG_Bx));
+  return (luaV_flttointeger(&v, fi, 0) && fitsBx(*fi));
 }
 
 
@@ -1089,8 +1106,7 @@ static int isCint (expdesc *e) {
 ** proper range to fit in register sC
 */
 static int isSCint (expdesc *e) {
-  return (e->k == VKINT && !hasjumps(e) &&
-          l_castS2U(e->u.ival + MAXARG_sC) <= l_castS2U(MAXARG_C));
+  return (e->k == VKINT && !hasjumps(e) && fitsC(e->u.ival));
 }
 
 
@@ -1103,8 +1119,12 @@ static int isSCnumber (expdesc *e, lua_Integer *i) {
     *i = e->u.ival;
   else if (!(e->k == VKFLT && floatI(e->u.nval, i)))
     return 0;  /* not a number */
-  *i += MAXARG_sC;
-  return (!hasjumps(e) && l_castS2U(*i) <= l_castS2U(MAXARG_C));
+  if (!hasjumps(e) && fitsC(*i)) {
+    *i += OFFSET_sC;
+    return 1;
+  }
+  else
+    return 0;
 }
 
 
