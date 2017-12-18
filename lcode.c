@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.144 2017/12/14 14:24:02 roberto Exp roberto $
+** $Id: lcode.c,v 2.145 2017/12/15 18:53:48 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -256,18 +256,6 @@ void luaK_patchlist (FuncState *fs, int list, int target) {
 void luaK_patchtohere (FuncState *fs, int list) {
   int hr = luaK_getlabel(fs);  /* mark "here" as a jump target */
   luaK_patchlist(fs, list, hr);
-}
-
-
-/*
-** Check whether some jump in given list needs a close instruction.
-*/
-int luaK_needclose (FuncState *fs, int list) {
-  for (; list != NO_JUMP; list = getjump(fs, list)) {
-    if (GETARG_A(fs->f->code[list]))  /* needs close? */
-      return 1;
-  }
-  return 0;
 }
 
 
@@ -1090,14 +1078,20 @@ static int isKstr (FuncState *fs, expdesc *e) {
           ttisshrstring(&fs->f->k[e->u.info]));
 }
 
+/*
+** Check whether expression 'e' is a literal integer.
+*/
+int luaK_isKint (expdesc *e) {
+  return (e->k == VKINT && !hasjumps(e));
+}
+
 
 /*
 ** Check whether expression 'e' is a literal integer in
 ** proper range to fit in register C
 */
 static int isCint (expdesc *e) {
-  return (e->k == VKINT && !hasjumps(e) &&
-          l_castS2U(e->u.ival) <= l_castS2U(MAXARG_C));
+  return luaK_isKint(e) && (l_castS2U(e->u.ival) <= l_castS2U(MAXARG_C));
 }
 
 
@@ -1106,7 +1100,7 @@ static int isCint (expdesc *e) {
 ** proper range to fit in register sC
 */
 static int isSCint (expdesc *e) {
-  return (e->k == VKINT && !hasjumps(e) && fitsC(e->u.ival));
+  return luaK_isKint(e) && fitsC(e->u.ival);
 }
 
 
