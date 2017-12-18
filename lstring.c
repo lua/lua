@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.60 2017/12/08 17:28:25 roberto Exp roberto $
+** $Id: lstring.c,v 2.61 2017/12/12 11:52:35 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -69,7 +69,7 @@ unsigned int luaS_hashlongstr (TString *ts) {
 }
 
 
-static void rehash (TString **vect, int osize, int nsize) {
+static void tablerehash (TString **vect, int osize, int nsize) {
   int i;
   for (i = osize; i < nsize; i++)  /* clear new elements */
     vect[i] = NULL;
@@ -97,18 +97,18 @@ void luaS_resize (lua_State *L, int nsize) {
   int osize = tb->size;
   TString **newvect;
   if (nsize < osize)  /* shrinking table? */
-    rehash(tb->hash, osize, nsize);  /* remove elements from shrinking part */
+    tablerehash(tb->hash, osize, nsize);  /* depopulate shrinking part */
   newvect = luaM_reallocvector(L, tb->hash, osize, nsize, TString*);
   if (newvect == NULL) {  /* reallocation failed? */
     if (nsize < osize)  /* was it shrinking table? */
-      rehash(tb->hash, nsize, osize);  /* restore to original size */
+      tablerehash(tb->hash, nsize, osize);  /* restore to original size */
     /* leave table as it was */
   }
   else {  /* allocation succeeded */
     tb->hash = newvect;
     tb->size = nsize;
     if (nsize > osize)
-      rehash(newvect, osize, nsize);  /* rehash for new size */
+      tablerehash(newvect, osize, nsize);  /* rehash for new size */
   }
 }
 
@@ -136,7 +136,7 @@ void luaS_init (lua_State *L) {
   TString *memerrmsg;
   stringtable *tb = &G(L)->strt;
   tb->hash = luaM_newvector(L, MINSTRTABSIZE, TString*);
-  rehash(tb->hash, 0, MINSTRTABSIZE);  /* clear array */
+  tablerehash(tb->hash, 0, MINSTRTABSIZE);  /* clear array */
   tb->size = MINSTRTABSIZE;
   /* pre-create memory-error message */
   memerrmsg = luaS_newliteral(L, MEMERRMSG);
