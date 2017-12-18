@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.172 2017/12/15 13:07:10 roberto Exp roberto $
+** $Id: lparser.c,v 2.173 2017/12/18 12:33:54 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1313,11 +1313,20 @@ static void repeatstat (LexState *ls, int line) {
 }
 
 
-static void exp1 (LexState *ls) {
+/*
+** Read an expression and generate code to put its results in next
+** stack slot. Return true if expression is a constant integer and,
+** if 'i' is not-zero, its value is equal to 'i'.
+**
+*/
+static int exp1 (LexState *ls, int i) {
   expdesc e;
+  int res;
   expr(ls, &e);
+  res = luaK_isKint(&e) && (i == 0 || i == e.u.ival);
   luaK_exp2nextreg(ls->fs, &e);
   lua_assert(e.k == VNONRELOC);
+  return res;
 }
 
 
@@ -1337,28 +1346,36 @@ static void fixforjump (FuncState *fs, int pc, int dest, int back) {
 }
 
 
-static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
+/*
+** Generate code for a 'for' loop. 'kind' can be zero (a common for
+** loop), one (a basic for loop, with integer values and increment of
+** 1), or two (a generic for loop).
+*/
+static void forbody (LexState *ls, int base, int line, int nvars, int kind) {
   /* forbody -> DO block */
   BlockCnt bl;
   FuncState *fs = ls->fs;
   int prep, endfor;
   adjustlocalvars(ls, 3);  /* control variables */
   checknext(ls, TK_DO);
-  prep = isnum ? luaK_codeABx(fs, OP_FORPREP, base, 0) : luaK_jump(fs);
+  prep = (kind == 0) ? luaK_codeABx(fs, OP_FORPREP, base, 0)
+       : (kind == 1) ? luaK_codeABx(fs, OP_FORPREP1, base, 0)
+       : luaK_jump(fs);
   enterblock(fs, &bl, 0);  /* scope for declared variables */
   adjustlocalvars(ls, nvars);
   luaK_reserveregs(fs, nvars);
   block(ls);
   leaveblock(fs);  /* end of scope for declared variables */
-  if (isnum) {  /* numeric for? */
-    fixforjump(fs, prep, luaK_getlabel(fs), 0);
-    endfor = luaK_codeABx(fs, OP_FORLOOP, base, 0);
-  }
-  else {  /* generic for */
+  if (kind == 2) {  /* generic for? */
     luaK_patchtohere(fs, prep);
     luaK_codeABC(fs, OP_TFORCALL, base, 0, nvars);
     luaK_fixline(fs, line);
     endfor = luaK_codeABx(fs, OP_TFORLOOP, base + 2, 0);
+  }
+  else {
+    fixforjump(fs, prep, luaK_getlabel(fs), 0);
+    endfor = (kind == 0) ? luaK_codeABx(fs, OP_FORLOOP, base, 0)
+                         : luaK_codeABx(fs, OP_FORLOOP1, base, 0);
   }
   fixforjump(fs, endfor, prep + 1, 1);
   luaK_fixline(fs, line);
@@ -1369,21 +1386,25 @@ static void fornum (LexState *ls, TString *varname, int line) {
   /* fornum -> NAME = exp,exp[,exp] forbody */
   FuncState *fs = ls->fs;
   int base = fs->freereg;
+  int basicfor = 1;  /* true if it is a "basic" 'for' (integer + 1) */
   new_localvarliteral(ls, "(for index)");
   new_localvarliteral(ls, "(for limit)");
   new_localvarliteral(ls, "(for step)");
   new_localvar(ls, varname);
   checknext(ls, '=');
-  exp1(ls);  /* initial value */
+  if (!exp1(ls, 0))  /* initial value not an integer? */
+    basicfor = 0;  /* not a basic 'for' */
   checknext(ls, ',');
-  exp1(ls);  /* limit */
-  if (testnext(ls, ','))
-    exp1(ls);  /* optional step */
+  exp1(ls, 0);  /* limit */
+  if (testnext(ls, ',')) {
+    if (!exp1(ls, 1))  /* optional step not 1? */
+      basicfor = 0;  /* not a basic 'for' */
+  }
   else {  /* default step = 1 */
     luaK_int(fs, fs->freereg, 1);
     luaK_reserveregs(fs, 1);
   }
-  forbody(ls, base, line, 1, 1);
+  forbody(ls, base, line, 1, basicfor);
 }
 
 
@@ -1408,7 +1429,7 @@ static void forlist (LexState *ls, TString *indexname) {
   line = ls->linenumber;
   adjust_assign(ls, 3, explist(ls, &e), &e);
   luaK_checkstack(fs, 3);  /* extra space to call generator */
-  forbody(ls, base, line, nvars - 3, 0);
+  forbody(ls, base, line, nvars - 3, 2);
 }
 
 
