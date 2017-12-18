@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.53 2017/11/23 16:35:54 roberto Exp roberto $
+** $Id: ltests.h,v 2.54 2017/12/07 18:51:39 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -11,18 +11,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* test Lua with no compatibility code */
-#undef LUA_COMPAT_MATHLIB
-#undef LUA_COMPAT_IPAIRS
-#undef LUA_COMPAT_BITLIB
-#undef LUA_COMPAT_APIINTCASTS
-#undef LUA_COMPAT_FLOATSTRING
-#undef LUA_COMPAT_UNPACK
-#undef LUA_COMPAT_LOADERS
-#undef LUA_COMPAT_LOG10
-#undef LUA_COMPAT_LOADSTRING
-#undef LUA_COMPAT_MAXN
-#undef LUA_COMPAT_MODULE
+/* test Lua with compatibility code */
+#define LUA_COMPAT_MATHLIB
+#define LUA_COMPAT_IPAIRS
+#define LUA_COMPAT_BITLIB
+#define LUA_COMPAT_APIINTCASTS
+#define LUA_COMPAT_FLOATSTRING
+#define LUA_COMPAT_UNPACK
+#define LUA_COMPAT_LOADERS
+#define LUA_COMPAT_LOG10
+#define LUA_COMPAT_LOADSTRING
+#define LUA_COMPAT_MAXN
+#define LUA_COMPAT_MODULE
 
 
 #define LUA_DEBUG
@@ -36,7 +36,7 @@
 
 /* compiled with -O0, Lua uses a lot of C stack space... */
 #undef LUAI_MAXCCALLS
-#define LUAI_MAXCCALLS	300
+#define LUAI_MAXCCALLS	200
 
 /* to avoid warnings, and to make sure value is really unused */
 #define UNUSED(x)       (x=0, (void)(x))
