@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.171 2017/12/14 14:24:02 roberto Exp roberto $
+** $Id: lparser.c,v 2.172 2017/12/15 13:07:10 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -654,7 +654,7 @@ struct ConsControl {
 
 
 static void recfield (LexState *ls, struct ConsControl *cc) {
-  /* recfield -> (NAME | '['exp1']') = exp1 */
+  /* recfield -> (NAME | '['exp']') = exp */
   FuncState *fs = ls->fs;
   int reg = ls->fs->freereg;
   expdesc tab, key, val;
@@ -916,7 +916,7 @@ static void suffixedexp (LexState *ls, expdesc *v) {
         fieldsel(ls, v);
         break;
       }
-      case '[': {  /* '[' exp1 ']' */
+      case '[': {  /* '[' exp ']' */
         expdesc key;
         luaK_exp2anyregup(fs, v);
         yindex(ls, &key);
@@ -1313,14 +1313,11 @@ static void repeatstat (LexState *ls, int line) {
 }
 
 
-static int exp1 (LexState *ls) {
+static void exp1 (LexState *ls) {
   expdesc e;
-  int reg;
   expr(ls, &e);
   luaK_exp2nextreg(ls->fs, &e);
   lua_assert(e.k == VNONRELOC);
-  reg = e.u.info;
-  return reg;
 }
 
 
@@ -1369,7 +1366,7 @@ static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
 
 
 static void fornum (LexState *ls, TString *varname, int line) {
-  /* fornum -> NAME = exp1,exp1[,exp1] forbody */
+  /* fornum -> NAME = exp,exp[,exp] forbody */
   FuncState *fs = ls->fs;
   int base = fs->freereg;
   new_localvarliteral(ls, "(for index)");
