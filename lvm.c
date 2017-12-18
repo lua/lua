@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.324 2017/12/04 17:41:30 roberto Exp roberto $
+** $Id: lvm.c,v 2.326 2017/12/18 17:49:31 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1563,6 +1563,32 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           }
         }
         return;
+      }
+      vmcase(OP_FORLOOP1) {
+        lua_Integer idx = intop(+, ivalue(vra), 1); /* increment index */
+        lua_Integer limit = ivalue(s2v(ra + 1));
+        if (idx <= limit) {
+          pc -= GETARG_Bx(i);  /* jump back */
+          chgivalue(vra, idx);  /* update internal index... */
+          setivalue(s2v(ra + 3), idx);  /* ...and external index */
+        }
+        updatetrap(ci);
+        vmbreak;
+      }
+      vmcase(OP_FORPREP1) {
+        TValue *init = vra;
+        TValue *plimit = s2v(ra + 1);
+        lua_Integer ilimit, initv;
+        int stopnow;
+        if (!forlimit(plimit, &ilimit, 1, &stopnow)) {
+            savepc(L);  /* for the error message */
+            luaG_runerror(L, "'for' limit must be a number");
+        }
+        initv = (stopnow ? 0 : ivalue(init));
+        setivalue(plimit, ilimit);
+        setivalue(init, intop(-, initv, 1));
+        pc += GETARG_Bx(i);
+        vmbreak;
       }
       vmcase(OP_FORLOOP) {
         if (ttisinteger(vra)) {  /* integer loop? */
