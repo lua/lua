@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.180 2017/12/12 11:57:30 roberto Exp roberto $
+** $Id: ldo.c,v 2.181 2017/12/15 13:07:10 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -454,7 +454,7 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
       ci->func = func;
       ci->top = L->top + LUA_MINSTACK;
       lua_assert(ci->top <= L->stack_last);
-      ci->callstatus = 0;
+      ci->callstatus = CIST_C;
       if (L->hookmask & LUA_MASKCALL)
         luaD_hook(L, LUA_HOOKCALL, -1);
       lua_unlock(L);
@@ -479,7 +479,7 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
       L->top = ci->top = func + 1 + fsize;
       lua_assert(ci->top <= L->stack_last);
       ci->u.l.savedpc = p->code;  /* starting point */
-      ci->callstatus = CIST_LUA;
+      ci->callstatus = 0;
       if (L->hookmask)
         callhook(L, ci, 0);
       luaV_execute(L, ci);  /* run the function */
@@ -698,6 +698,7 @@ LUA_API int lua_yieldk (lua_State *L, int nresults, lua_KContext ctx,
   }
   L->status = LUA_YIELD;
   if (isLua(ci)) {  /* inside a hook? */
+    lua_assert(!isLuacode(ci));
     api_check(L, k == NULL, "hooks cannot continue after yielding");
     ci->u2.nyield = 0;  /* no results */
   }

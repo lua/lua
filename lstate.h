@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.151 2017/11/13 15:36:52 roberto Exp roberto $
+** $Id: lstate.h,v 2.152 2017/11/23 16:35:54 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -112,7 +112,7 @@ typedef struct CallInfo {
 ** Bits in CallInfo status
 */
 #define CIST_OAH	(1<<0)	/* original value of 'allowhook' */
-#define CIST_LUA	(1<<1)	/* call is running a Lua function */
+#define CIST_C		(1<<1)	/* call is running a C function */
 #define CIST_HOOKED	(1<<2)	/* call is running a debug hook */
 #define CIST_YPCALL	(1<<3)	/* call is a yieldable protected call */
 #define CIST_TAIL	(1<<4)	/* call was tail called */
@@ -120,7 +120,11 @@ typedef struct CallInfo {
 #define CIST_LEQ	(1<<6)  /* using __lt for __le */
 #define CIST_FIN	(1<<7)  /* call is running a finalizer */
 
-#define isLua(ci)	((ci)->callstatus & CIST_LUA)
+/* active function is a Lua function */
+#define isLua(ci)	(!((ci)->callstatus & CIST_C))
+
+/* call is running Lua code (not a hook) */
+#define isLuacode(ci)	(!((ci)->callstatus & (CIST_C | CIST_HOOKED)))
 
 /* assume that CIST_OAH has offset 0 and that 'v' is strictly 0/1 */
 #define setoah(st,v)	((st) = ((st) & ~CIST_OAH) | (v))
