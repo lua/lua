@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.326 2017/12/18 17:49:31 roberto Exp $
+** $Id: lvm.c,v 2.326 2017/12/18 17:53:50 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1008,7 +1008,6 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         int b = GETARG_B(i);
         int c = GETARG_C(i);
         Table *t;
-        savepc(L);  /* in case of allocation errors */
         t = luaH_new(L);
         sethvalue2s(L, ra, t);
         if (b != 0 || c != 0)
@@ -1679,7 +1678,6 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         }
         h = hvalue(vra);
         last = ((c-1)*LFIELDS_PER_FLUSH) + n;
-        savepc(L);  /* in case of allocation errors */
         if (last > h->sizearray)  /* needs more space? */
           luaH_resizearray(L, h, last);  /* preallocate it at once */
         for (; n > 0; n--) {
