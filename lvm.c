@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.326 2017/12/18 17:53:50 roberto Exp roberto $
+** $Id: lvm.c,v 2.327 2017/12/19 16:18:04 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -464,6 +464,8 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
   }
   if (tm == NULL)  /* no TM? */
     return 0;  /* objects are different */
+  if (isLuacode(L->ci))
+    L->top = L->ci->top;  /* prepare top */
   luaT_callTMres(L, tm, t1, t2, L->top);  /* call TM */
   return !l_isfalse(s2v(L->top));
 }
@@ -726,20 +728,10 @@ void luaV_finishOp (lua_State *L) {
       }
       /* move final result to final position */
       setobjs2s(L, ci->func + 1 + GETARG_A(inst), L->top - 1);
-      L->top = ci->top;  /* restore top */
       break;
     }
-    case OP_TFORCALL: {
-      lua_assert(GET_OPCODE(*ci->u.l.savedpc) == OP_TFORLOOP);
-      L->top = ci->top;  /* correct top */
-      break;
-    }
-    case OP_CALL: {
-      if (GETARG_C(inst) - 1 >= 0)  /* nresults >= 0? */
-        L->top = ci->top;  /* adjust results */
-      break;
-    }
-    case OP_TAILCALL: case OP_SETTABUP: case OP_SETTABLE:
+    case OP_TFORCALL: case OP_CALL: case OP_TAILCALL:
+    case OP_SETTABUP: case OP_SETTABLE:
     case OP_SETI: case OP_SETFIELD:
       break;
     default: lua_assert(0);
@@ -808,7 +800,7 @@ void luaV_finishOp (lua_State *L) {
 
 #define checkGC(L,c)  \
 	{ luaC_condGC(L, L->top = (c),  /* limit of live values */ \
-                   (L->top = ci->top, updatetrap(ci)));  /* restore top */ \
+                         updatetrap(ci)); \
            luai_threadyield(L); }
 
 
@@ -1387,7 +1379,6 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         rb = base + b;
         setobjs2s(L, ra, rb);
         checkGC(L, (ra >= rb ? ra + 1 : rb));
-        L->top = ci->top;  /* restore top */
         vmbreak;
       }
       vmcase(OP_CLOSE) {
@@ -1491,9 +1482,6 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           L->top = ra + b;  /* top signals number of arguments */
         /* else previous instruction set top */
         Protect(luaD_call(L, ra, nresults));
-        if (nresults >= 0)  /* fixed number of results? */
-          L->top = ci->top;  /* correct top */
-        /* else leave top for next instruction */
         vmbreak;
       }
       vmcase(OP_TAILCALL) {
@@ -1651,7 +1639,6 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         setobjs2s(L, cb, ra);
         L->top = cb + 3;  /* func. + 2 args (state and index) */
         Protect(luaD_call(L, cb, GETARG_C(i)));
-        L->top = ci->top;
         if (trap)  /* keep 'base' correct for next instruction */
           updatebase(ci);
         i = *(pc++);  /* go to next instruction */
@@ -1686,7 +1673,6 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           last--;
           luaC_barrierback(L, h, val);
         }
-        L->top = ci->top;  /* correct top (in case of previous open call) */
         vmbreak;
       }
       vmcase(OP_CLOSURE) {

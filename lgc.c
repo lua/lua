@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.241 2017/12/01 17:38:49 roberto Exp roberto $
+** $Id: lgc.c,v 2.242 2017/12/08 17:28:25 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -569,13 +569,23 @@ static int traverseLclosure (global_State *g, LClosure *cl) {
 }
 
 
+/*
+** Traverse a thread, marking the elements in the stack up to its top
+** and cleaning the rest of the stack in the last traversal.
+** That ensures that the entire stack have valid (non-dead) objects.
+** In an emergency collection running Lua code, 'L->top' may not be
+** update. In that case, traverse at least up to 'ci->top'.
+*/
 static int traversethread (global_State *g, lua_State *th) {
   StkId o = th->stack;
+  StkId top = th->top;
   if (o == NULL)
     return 1;  /* stack not completely built yet */
   lua_assert(g->gcstate == GCSatomic ||
              th->openupval == NULL || isintwups(th));
-  for (; o < th->top; o++)  /* mark live elements in the stack */
+  if (g->gcemergency && isLuacode(th->ci) && top < th->ci->top)
+    top = th->ci->top;
+  for (; o < top; o++)  /* mark live elements in the stack */
     markvalue(g, s2v(o));
   if (g->gcstate == GCSatomic) {  /* final traversal? */
     StkId lim = th->stack + th->stacksize;  /* real end of stack */

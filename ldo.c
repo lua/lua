@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.181 2017/12/15 13:07:10 roberto Exp roberto $
+** $Id: ldo.c,v 2.182 2017/12/19 16:40:17 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -299,6 +299,7 @@ static void callhook (lua_State *L, CallInfo *ci, int istail) {
   ci->u.l.trap = 1;
   if (!(L->hookmask & LUA_MASKCALL))
     return;  /* some other hook */
+  L->top = ci->top;  /* prepare top */
   ci->u.l.savedpc++;  /* hooks assume 'pc' is already incremented */
   if (istail) {
     ci->callstatus |= CIST_TAIL;
@@ -312,6 +313,8 @@ static void callhook (lua_State *L, CallInfo *ci, int istail) {
 
 
 static void rethook (lua_State *L, CallInfo *ci) {
+  if (isLuacode(ci))
+    L->top = ci->top;  /* prepare top */
   if (L->hookmask & LUA_MASKRET)  /* is return hook on? */
     luaD_hook(L, LUA_HOOKRET, -1);  /* call it */
   if (isLua(ci->previous))
@@ -421,7 +424,7 @@ void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int n) {
     L->top -= (func - ci->func);  /* move down top */
     luaT_adjustvarargs(L, p, n - 1);
   }
-  L->top = ci->top = ci->func + 1 + fsize;  /* top for new function */
+  ci->top = ci->func + 1 + fsize;  /* top for new function */
   lua_assert(ci->top <= L->stack_last);
   ci->u.l.savedpc = p->code;  /* starting point */
   ci->callstatus |= CIST_TAIL;
@@ -476,7 +479,7 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
       ci = next_ci(L);  /* now 'enter' new function */
       ci->nresults = nresults;
       ci->func = func;
-      L->top = ci->top = func + 1 + fsize;
+      ci->top = func + 1 + fsize;
       lua_assert(ci->top <= L->stack_last);
       ci->u.l.savedpc = p->code;  /* starting point */
       ci->callstatus = 0;
