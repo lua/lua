@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.146 2017/12/18 15:44:44 roberto Exp roberto $
+** $Id: lcode.c,v 2.147 2017/12/22 14:16:46 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -1622,7 +1622,7 @@ void luaK_finish (FuncState *fs) {
   Proto *p = fs->f;
   for (i = 0; i < fs->pc; i++) {
     Instruction *pc = &p->code[i];
-    lua_assert(isOT(*pc) == isIT(*(pc + 1)));
+    lua_assert(i == 0 || isOT(*(pc - 1)) == isIT(*pc));
     switch (GET_OPCODE(*pc)) {
       case OP_RETURN: case OP_RETURN0: case OP_RETURN1:
       case OP_TAILCALL: {
