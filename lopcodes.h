@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.179 2017/12/15 18:53:48 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.180 2017/12/18 17:49:31 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -282,7 +282,7 @@ OP_SETLIST,/*	A B C	R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B	*/
 
 OP_CLOSURE,/*	A Bx	R(A) := closure(KPROTO[Bx])			*/
 
-OP_VARARG,/*	A B C	R(A), R(A+1), ..., R(A+B-2) = vararg(C)		*/
+OP_VARARG,/*	A B C	R(A), R(A+1), ..., R(A+C-2) = vararg(B)		*/
 
 OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
 } OpCode;
@@ -298,8 +298,8 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
   set to last_result+1, so next open instruction (OP_CALL, OP_RETURN,
   OP_SETLIST) may use 'top'.
 
-  (*) In OP_VARARG, if (B == 0) then use actual number of varargs and
-  set top (like in OP_CALL with C == 0). C is the vararg parameter.
+  (*) In OP_VARARG, if (C == 0) then use actual number of varargs and
+  set top (like in OP_CALL with C == 0). B is the vararg parameter.
 
   (*) In OP_RETURN, if (B == 0) then return up to 'top'.
 
@@ -330,6 +330,8 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
 ** bits 0-2: op mode
 ** bit 3: instruction set register A
 ** bit 4: operator is a test (next instruction must be a jump)
+** bit 5: instruction sets 'L->top' for next instruction (when C == 0)
+** bit 6: instruction uses 'L->top' set by previous instruction (when B == 0)
 */
 
 LUAI_DDEC const lu_byte luaP_opmodes[NUM_OPCODES];
@@ -337,8 +339,16 @@ LUAI_DDEC const lu_byte luaP_opmodes[NUM_OPCODES];
 #define getOpMode(m)	(cast(enum OpMode, luaP_opmodes[m] & 7))
 #define testAMode(m)	(luaP_opmodes[m] & (1 << 3))
 #define testTMode(m)	(luaP_opmodes[m] & (1 << 4))
+#define testOTMode(m)	(luaP_opmodes[m] & (1 << 5))
+#define testITMode(m)	(luaP_opmodes[m] & (1 << 6))
 
-#define opmode(t,a,m) (((t)<<4) | ((a)<<3) | (m))
+/* "out top" (set top for next instruction) */
+#define isOT(i)		(testOTMode(GET_OPCODE(i)) && GETARG_C(i) == 0)
+
+/* "in top" (uses top from previous instruction) */
+#define isIT(i)		(testITMode(GET_OPCODE(i)) && GETARG_B(i) == 0)
+
+#define opmode(ot,it,t,a,m) (((ot)<<5) | ((it)<<6) | ((t)<<4) | ((a)<<3) | (m))
 
 
 LUAI_DDEC const char *const luaP_opnames[NUM_OPCODES+1];  /* opcode names */

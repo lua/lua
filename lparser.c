@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.173 2017/12/18 12:33:54 roberto Exp roberto $
+** $Id: lparser.c,v 2.174 2017/12/18 17:49:31 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -977,7 +977,7 @@ static void simpleexp (LexState *ls, expdesc *v) {
       int lastparam = fs->f->numparams;
       check_condition(ls, fs->f->is_vararg,
                       "cannot use '...' outside a vararg function");
-      init_exp(v, VVARARG, luaK_codeABC(fs, OP_VARARG, 0, 1, lastparam));
+      init_exp(v, VVARARG, luaK_codeABC(fs, OP_VARARG, 0, lastparam, 1));
       break;
     }
     case '{': {  /* constructor */
