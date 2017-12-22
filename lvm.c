@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.327 2017/12/19 16:18:04 roberto Exp roberto $
+** $Id: lvm.c,v 2.328 2017/12/20 14:58:05 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1688,9 +1688,9 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_VARARG) {
-        int b = GETARG_B(i) - 1;  /* required results */
-        TValue *vtab = vRC(i);  /* vararg table */
-        Protect(luaT_getvarargs(L, vtab, ra, b));
+        int n = GETARG_C(i) - 1;  /* required results */
+        TValue *vtab = vRB(i);  /* vararg table */
+        Protect(luaT_getvarargs(L, vtab, ra, n));
         vmbreak;
       }
       vmcase(OP_EXTRAARG) {

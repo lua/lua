@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.145 2017/12/15 18:53:48 roberto Exp roberto $
+** $Id: lcode.c,v 2.146 2017/12/18 15:44:44 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -618,12 +618,11 @@ static void luaK_float (FuncState *fs, int reg, lua_Number f) {
 ** or 'nresults' is LUA_MULTRET (as any expression can satisfy that).
 */
 void luaK_setreturns (FuncState *fs, expdesc *e, int nresults) {
-  if (e->k == VCALL) {  /* expression is an open function call? */
-    SETARG_C(getinstruction(fs, e), nresults + 1);
-  }
+  Instruction *pc = &getinstruction(fs, e);
+  if (e->k == VCALL)  /* expression is an open function call? */
+    SETARG_C(*pc, nresults + 1);
   else if (e->k == VVARARG) {
-    Instruction *pc = &getinstruction(fs, e);
-    SETARG_B(*pc, nresults + 1);
+    SETARG_C(*pc, nresults + 1);
     SETARG_A(*pc, fs->freereg);
     luaK_reserveregs(fs, 1);
   }
@@ -649,7 +648,7 @@ void luaK_setoneret (FuncState *fs, expdesc *e) {
     e->u.info = GETARG_A(getinstruction(fs, e));
   }
   else if (e->k == VVARARG) {
-    SETARG_B(getinstruction(fs, e), 2);
+    SETARG_C(getinstruction(fs, e), 2);
     e->k = VRELOC;  /* can relocate its simple result */
   }
 }
@@ -1623,6 +1622,7 @@ void luaK_finish (FuncState *fs) {
   Proto *p = fs->f;
   for (i = 0; i < fs->pc; i++) {
     Instruction *pc = &p->code[i];
+    lua_assert(isOT(*pc) == isIT(*(pc + 1)));
     switch (GET_OPCODE(*pc)) {
       case OP_RETURN: case OP_RETURN0: case OP_RETURN1:
       case OP_TAILCALL: {
