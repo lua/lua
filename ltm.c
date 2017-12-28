@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.54 2017/12/19 16:40:17 roberto Exp roberto $
+** $Id: ltm.c,v 2.55 2017/12/20 14:58:05 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -101,7 +101,7 @@ const char *luaT_objtypename (lua_State *L, const TValue *o) {
 
 void luaT_callTM (lua_State *L, const TValue *f, const TValue *p1,
                   const TValue *p2, const TValue *p3) {
-  StkId func = (isLuacode(L->ci)) ? L->ci->top : L->top;
+  StkId func = L->top;
   setobj2s(L, func, f);  /* push function (assume EXTRA_STACK) */
   setobj2s(L, func + 1, p1);  /* 1st argument */
   setobj2s(L, func + 2, p2);  /* 2nd argument */
@@ -115,8 +115,8 @@ void luaT_callTM (lua_State *L, const TValue *f, const TValue *p1,
 }
 
 
-static void reallycallTMres (lua_State *L, const TValue *f, const TValue *p1,
-                             const TValue *p2, StkId res) {
+void luaT_callTMres (lua_State *L, const TValue *f, const TValue *p1,
+                     const TValue *p2, StkId res) {
   ptrdiff_t result = savestack(L, res);
   StkId func = L->top;
   setobj2s(L, func, f);  /* push function (assume EXTRA_STACK) */
@@ -133,29 +133,19 @@ static void reallycallTMres (lua_State *L, const TValue *f, const TValue *p1,
 }
 
 
-void luaT_callTMres (lua_State *L, const TValue *f, const TValue *p1,
-                     const TValue *p2, StkId res) {
-  if (isLuacode(L->ci))
-    L->top = L->ci->top;  /* prepare top */
-  reallycallTMres(L, f, p1, p2, res);
-}
-
-
 static int callbinTM (lua_State *L, const TValue *p1, const TValue *p2,
                       StkId res, TMS event) {
   const TValue *tm = luaT_gettmbyobj(L, p1, event);  /* try first operand */
   if (ttisnil(tm))
     tm = luaT_gettmbyobj(L, p2, event);  /* try second operand */
   if (ttisnil(tm)) return 0;
-  reallycallTMres(L, tm, p1, p2, res);
+  luaT_callTMres(L, tm, p1, p2, res);
   return 1;
 }
 
 
 void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
                     StkId res, TMS event) {
-  if (event != TM_CONCAT && isLuacode(L->ci))
-    L->top = L->ci->top;  /* prepare top */
   if (!callbinTM(L, p1, p2, res, event)) {
     switch (event) {
       case TM_CONCAT:
@@ -195,8 +185,6 @@ void luaT_trybiniTM (lua_State *L, const TValue *p1, int i2,
 
 int luaT_callorderTM (lua_State *L, const TValue *p1, const TValue *p2,
                       TMS event) {
-  if (isLuacode(L->ci))
-    L->top = L->ci->top;  /* prepare top */
   if (callbinTM(L, p1, p2, L->top, event))  /* try original event */
     return !l_isfalse(s2v(L->top));
   else if (event == TM_LE) {

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.328 2017/12/20 14:58:05 roberto Exp roberto $
+** $Id: lvm.c,v 2.329 2017/12/22 14:16:46 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -464,8 +464,6 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
   }
   if (tm == NULL)  /* no TM? */
     return 0;  /* objects are different */
-  if (isLuacode(L->ci))
-    L->top = L->ci->top;  /* prepare top */
   luaT_callTMres(L, tm, t1, t2, L->top);  /* call TM */
   return !l_isfalse(s2v(L->top));
 }
@@ -780,20 +778,29 @@ void luaV_finishOp (lua_State *L) {
 #define donextjump(ci)	{ i = *pc; dojump(ci, i, 1); }
 
 /*
-** Whenever code can raise errors (including memory errors), the global
-** 'pc' must be correct to report occasional errors.
+** Correct global 'pc'.
 */
 #define savepc(L)	(ci->u.l.savedpc = pc)
+
+
+/*
+** Whenever code can raise errors, the global 'pc' and the global
+** 'top' must be correct to report occasional errors.
+*/
+#define savestate(L,ci)		(savepc(L), L->top = ci->top)
 
 
 /*
 ** Protect code that, in general, can raise errors, reallocate the
 ** stack, and change the hooks.
 */
-#define Protect(exp)  (savepc(L), (exp), updatetrap(ci))
+#define Protect(exp)  (savestate(L,ci), (exp), updatetrap(ci))
+
+/* special version that does not change the top */
+#define ProtectNT(exp)  (savepc(L), (exp), updatetrap(ci))
 
 /*
-** Protect code that will return.
+** Protect code that will finish the loop (returns).
 */
 #define halfProtect(exp)  (savepc(L), (exp))
 
@@ -842,6 +849,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
     vmfetch();
     lua_assert(base == ci->func + 1);
     lua_assert(base <= L->top && L->top < L->stack + L->stacksize);
+    lua_assert(ci->top < L->stack + L->stacksize);
     vmdispatch (GET_OPCODE(i)) {
       vmcase(OP_MOVE) {
         setobjs2s(L, ra, RB(i));
@@ -1000,10 +1008,11 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         int b = GETARG_B(i);
         int c = GETARG_C(i);
         Table *t;
-        t = luaH_new(L);
+        L->top = ci->top;  /* correct top in case of GC */
+        t = luaH_new(L);  /* memory allocation */
         sethvalue2s(L, ra, t);
         if (b != 0 || c != 0)
-          luaH_resize(L, t, luaO_fb2int(b), luaO_fb2int(c));
+          luaH_resize(L, t, luaO_fb2int(b), luaO_fb2int(c));  /* idem */
         checkGC(L, ra + 1);
         vmbreak;
       }
@@ -1371,7 +1380,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         int c = GETARG_C(i);
         StkId rb;
         L->top = base + c + 1;  /* mark the end of concat operands */
-        Protect(luaV_concat(L, c - b + 1));
+        ProtectNT(luaV_concat(L, c - b + 1));
         if (trap) {  /* 'luaV_concat' may move the stack */
           updatebase(ci);
           ra = RA(i);
@@ -1481,7 +1490,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         if (b != 0)  /* fixed number of arguments? */
           L->top = ra + b;  /* top signals number of arguments */
         /* else previous instruction set top */
-        Protect(luaD_call(L, ra, nresults));
+        ProtectNT(luaD_call(L, ra, nresults));
         vmbreak;
       }
       vmcase(OP_TAILCALL) {
@@ -1493,12 +1502,12 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         lua_assert(GETARG_C(i) - 1 == LUA_MULTRET);
         if (!ttisfunction(vra)) {  /* not a function? */
           /* try to get '__call' metamethod */
-          Protect(ra = luaD_tryfuncTM(L, ra));
+          ProtectNT(ra = luaD_tryfuncTM(L, ra));
           vra = s2v(ra);
           b++;  /* there is now one extra argument */
         }
         if (!ttisLclosure(vra)) {  /* C function? */
-          Protect(luaD_call(L, ra, LUA_MULTRET));  /* call it */
+          ProtectNT(luaD_call(L, ra, LUA_MULTRET));  /* call it */
           /* next instruction will do the return */
         }
         else {  /* tail call */
@@ -1568,7 +1577,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         lua_Integer ilimit, initv;
         int stopnow;
         if (!forlimit(plimit, &ilimit, 1, &stopnow)) {
-            savepc(L);  /* for the error message */
+            savestate(L, ci);  /* for the error message */
             luaG_runerror(L, "'for' limit must be a number");
         }
         initv = (stopnow ? 0 : ivalue(init));
@@ -1618,7 +1627,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         }
         else {  /* try making all values floats */
           lua_Number ninit; lua_Number nlimit; lua_Number nstep;
-          savepc(L);  /* in case of errors */
+          savestate(L, ci);  /* in case of errors */
           if (!tonumber(plimit, &nlimit))
             luaG_runerror(L, "'for' limit must be a number");
           setfltvalue(plimit, nlimit);
@@ -1659,7 +1668,10 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         int c = GETARG_C(i);
         unsigned int last;
         Table *h;
-        if (n == 0) n = cast_int(L->top - ra) - 1;
+        if (n == 0)
+          n = cast_int(L->top - ra) - 1;
+        else
+          L->top = ci->top;  /* correct top in case of GC */
         if (c == 0) {
           c = GETARG_Ax(*pc); pc++;
         }
@@ -1679,7 +1691,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         Proto *p = cl->p->p[GETARG_Bx(i)];
         LClosure *ncl = getcached(p, cl->upvals, base);  /* cached closure */
         if (ncl == NULL) {  /* no match? */
-          savepc(L);  /* in case of allocation errors */
+          savestate(L, ci);  /* in case of allocation errors */
           pushclosure(L, p, cl->upvals, base, ra);  /* create a new one */
         }
         else

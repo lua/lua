@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.149 2017/12/15 13:07:10 roberto Exp roberto $
+** $Id: ldebug.c,v 2.150 2017/12/20 14:58:05 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -737,8 +737,6 @@ l_noret luaG_runerror (lua_State *L, const char *fmt, ...) {
   const char *msg;
   va_list argp;
   luaC_checkGC(L);  /* error message uses memory */
-  if (isLuacode(ci))
-    L->top = ci->top;  /* prepare top */
   va_start(argp, fmt);
   msg = luaO_pushvfstring(L, fmt, argp);  /* format message */
   va_end(argp);
@@ -762,7 +760,6 @@ static int changedline (Proto *p, int oldpc, int newpc) {
 
 
 void luaG_traceexec (lua_State *L) {
-  ptrdiff_t oldtop = savestack(L, L->top);
   CallInfo *ci = L->ci;
   lu_byte mask = L->hookmask;
   int counthook = (--L->hookcount == 0 && (mask & LUA_MASKCOUNT));
@@ -774,7 +771,8 @@ void luaG_traceexec (lua_State *L) {
     ci->callstatus &= ~CIST_HOOKYIELD;  /* erase mark */
     return;  /* do not call hook again (VM yielded, so it did not move) */
   }
-  L->top = ci->top;  /* prepare top */
+  if (!isIT(*(ci->u.l.savedpc - 1)))
+    L->top = ci->top;  /* prepare top */
   if (counthook)
     luaD_hook(L, LUA_HOOKCOUNT, -1);  /* call count hook */
   if (mask & LUA_MASKLINE) {
@@ -789,7 +787,6 @@ void luaG_traceexec (lua_State *L) {
     }
     L->oldpc = npc;
   }
-  L->top = restorestack(L, oldtop);
   if (L->status == LUA_YIELD) {  /* did hook yield? */
     if (counthook)
       L->hookcount = 1;  /* undo decrement to zero */
