@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.146 2017/12/01 15:08:14 roberto Exp roberto $
+** $Id: llimits.h,v 1.147 2017/12/11 18:53:53 roberto Exp roberto $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -219,8 +219,7 @@ typedef unsigned long Instruction;
 
 
 /*
-** these macros allow user-specific actions on threads when you defined
-** LUAI_EXTRASPACE and need to do something extra when a thread is
+** these macros allow user-specific actions when a thread is
 ** created/deleted/resumed/yielded.
 */
 #if !defined(luai_userstateopen)
