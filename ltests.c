@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.236 2017/12/11 18:55:31 roberto Exp roberto $
+** $Id: ltests.c,v 2.237 2017/12/15 18:53:48 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1377,13 +1377,17 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("pop") {
       lua_pop(L1, getnum);
     }
-    else if EQ("print") {
+    else if EQ("printstack") {
       int n = getnum;
       if (n != 0) {
         printf("%s\n", luaL_tolstring(L1, n, NULL));
         lua_pop(L1, 1);
       }
       else printstack(L1);
+    }
+    else if EQ("print") {
+      const char *msg = getstring;
+      printf("%s\n", msg);
     }
     else if EQ("pushbool") {
       lua_pushboolean(L1, getnum);
