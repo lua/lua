@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.183 2017/12/20 14:58:05 roberto Exp roberto $
+** $Id: ldo.c,v 2.184 2017/12/28 14:17:09 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -418,8 +418,8 @@ void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int n) {
   for (i = 0; i < n; i++)  /* move down function and arguments */
     setobjs2s(L, ci->func + i, func + i);
   checkstackp(L, fsize, func);
-  for (; i < p->numparams; i++)
-    setnilvalue(s2v(ci->func + i));  /* complete missing parameters */
+  for (; i <= p->numparams; i++)
+    setnilvalue(s2v(ci->func + i));  /* complete missing arguments */
   if (p->is_vararg) {
     L->top -= (func - ci->func);  /* move down top */
     luaT_adjustvarargs(L, p, n - 1);
