@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.128 2017/12/07 18:59:52 roberto Exp roberto $
+** $Id: ltable.c,v 2.129 2017/12/08 17:28:25 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -262,6 +262,12 @@ int luaH_next (lua_State *L, Table *t, StkId key) {
 }
 
 
+static void freehash (lua_State *L, Table *t) {
+  if (!isdummy(t))
+    luaM_freearray(L, t->node, cast(size_t, sizenode(t)));
+}
+
+
 /*
 ** {=============================================================
 ** Rehash
@@ -390,12 +396,13 @@ static void setnodevector (lua_State *L, Table *t, unsigned int size) {
 
 
 /*
-** (Re)insert all elements from list 'nodes' into table 't'.
+** (Re)insert all elements from the hash part of 'ot' into table 't'.
 */
-static void reinsert(lua_State *L, Node *nodes, int nsize, Table *t) {
+static void reinsert (lua_State *L, Table *ot, Table *t) {
   int j;
-  for (j = nsize - 1; j >= 0; j--) {
-    Node *old = nodes + j;
+  int size = sizenode(ot);
+  for (j = 0; j < size; j++) {
+    Node *old = gnode(ot, j);
     if (!ttisnil(gval(old))) {
       /* doesn't need barrier/invalidate cache, as entry was
          already present in the table */
@@ -408,60 +415,68 @@ static void reinsert(lua_State *L, Node *nodes, int nsize, Table *t) {
 
 
 /*
-** Resize table 't' for the new given sizes. Both allocations
-** (for the hash part and for the array part) can fail, which
-** creates some subtleties. If the first allocation, for the hash
-** part, fails, an error is raised and that is it. Otherwise,
-** copy the elements in the shrinking part of the array (if it
-** is shrinking) into the new hash. Then it reallocates the array part.
-** If that fails, it frees the new hash part and restores the old hash
-** part (to restore the original state of the table), and then raises
-** the allocation error. Otherwise, initialize the new part of the
-** array (if any) with nils and reinsert the elements in the old
-** hash back into the new parts of the table.
+** Exchange the hash part of 't1' and 't2'.
+*/
+static void exchangehashpart (Table *t1, Table *t2) {
+  lu_byte lsizenode = t1->lsizenode;
+  Node *node = t1->node;
+  Node *lastfree = t1->lastfree;
+  t1->lsizenode = t2->lsizenode;
+  t1->node = t2->node;
+  t1->lastfree = t2->lastfree;
+  t2->lsizenode = lsizenode;
+  t2->node = node;
+  t2->lastfree = lastfree;
+}
+
+
+/*
+** Resize table 't' for the new given sizes. Both allocations (for
+** the hash part and for the array part) can fail, which creates some
+** subtleties. If the first allocation, for the hash part, fails, an
+** error is raised and that is it. Otherwise, it copies the elements from
+** the shrinking part of the array (if it is shrinking) into the new
+** hash. Then it reallocates the array part.  If that fails, the table
+** is in its original state; the function frees the new hash part and then
+** raises the allocation error. Otherwise, it sets the new hash part
+** into the table, initializes the new part of the array (if any) with
+** nils and reinserts the elements of the old hash back into the new
+** parts of the table.
 */
 void luaH_resize (lua_State *L, Table *t, unsigned int newasize,
                                           unsigned int nhsize) {
   unsigned int i;
-  Node *oldnode = t->node;  /* save old hash ... */
-  Node *oldlastfree = t->lastfree;
-  int oldlsizenode = t->lsizenode;
-  int oldhsize = allocsizenode(t);
+  Table newt;  /* to keep the new hash part */
   unsigned int oldasize = t->sizearray;
   TValue *newarray;
-  /* create new hash part with appropriate size */
-  setnodevector(L, t, nhsize);
+  /* create new hash part with appropriate size into 'newt' */
+  setnodevector(L, &newt, nhsize);
   if (newasize < oldasize) {  /* will array shrink? */
-    /* re-insert into the hash the elements from vanishing slice */
-    t->sizearray = newasize;  /* pretend array has new size */
+    t->sizearray = newasize;  /* pretend array has new size... */
+    exchangehashpart(t, &newt);  /* and new hash */
+    /* re-insert into the new hash the elements from vanishing slice */
     for (i = newasize; i < oldasize; i++) {
       if (!ttisnil(&t->array[i]))
         luaH_setint(L, t, i + 1, &t->array[i]);
     }
-    t->sizearray = oldasize;  /* restore current size */
+    t->sizearray = oldasize;  /* restore current size... */
+    exchangehashpart(t, &newt);  /* and hash (in case of errors) */
   }
   /* allocate new array */
   newarray = luaM_reallocvector(L, t->array, oldasize, newasize, TValue);
   if (newarray == NULL && newasize > 0) {  /* allocation failed? */
-    if (nhsize > 0)  /* not the dummy node? */
-      luaM_freearray(L, t->node, allocsizenode(t)); /* release new hash part */
-    t->node = oldnode;  /* restore original hash part */
-    t->lastfree = oldlastfree;
-    t->lsizenode = oldlsizenode;
-    lua_assert(!isdummy(t) == (t->node != dummynode));
-    luaM_error(L);  /* error with array unchanged */
+    freehash(L, &newt);  /* release new hash part */
+    luaM_error(L);  /* raise error (with array unchanged) */
   }
   /* allocation ok; initialize new part of the array */
-  t->array = newarray;
+  exchangehashpart(t, &newt);  /* 't' has the new hash ('newt' has the old) */
+  t->array = newarray;  /* set new array part */
   t->sizearray = newasize;
-  for (i = oldasize; i < newasize; i++)
+  for (i = oldasize; i < newasize; i++)  /* clear new slice of the array */
      setnilvalue(&t->array[i]);
   /* re-insert elements from old hash part into new parts */
-  reinsert(L, oldnode, oldhsize, t);
-  /* free old hash */
-  if (oldhsize > 0)  /* not the dummy node? */
-    luaM_freearray(L, oldnode, cast(size_t, oldhsize));
-  lua_assert(!isdummy(t) == (t->node != dummynode));
+  reinsert(L, &newt, t);  /* 'newt' now has the old hash */
+  freehash(L, &newt);  /* free old hash part */
 }
 
 
@@ -513,8 +528,7 @@ Table *luaH_new (lua_State *L) {
 
 
 void luaH_free (lua_State *L, Table *t) {
-  if (!isdummy(t))
-    luaM_freearray(L, t->node, cast(size_t, sizenode(t)));
+  freehash(L, t);
   luaM_freearray(L, t->array, t->sizearray);
   luaM_free(L, t);
 }
