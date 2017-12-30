@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.329 2017/12/22 14:16:46 roberto Exp roberto $
+** $Id: lvm.c,v 2.330 2017/12/28 15:42:57 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -674,7 +674,7 @@ static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
 
 
 /*
-** finish execution of an opcode interrupted by an yield
+** finish execution of an opcode interrupted by a yield
 */
 void luaV_finishOp (lua_State *L) {
   CallInfo *ci = L->ci;
