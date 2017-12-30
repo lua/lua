@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.120 2017/11/16 13:19:06 roberto Exp roberto $
+** $Id: lobject.c,v 2.121 2017/11/23 19:29:04 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -193,7 +193,7 @@ static int isneg (const char **s) {
 #define MAXSIGDIG	30
 
 /*
-** convert an hexadecimal numeric string to a number, following
+** convert a hexadecimal numeric string to a number, following
 ** C99 specification for 'strtod'
 */
 static lua_Number lua_strx2number (const char *s, char **endptr) {
@@ -268,7 +268,7 @@ static const char *l_str2dloc (const char *s, lua_Number *result, int mode) {
 ** Convert string 's' to a Lua number (put in 'result'). Return NULL
 ** on fail or the address of the ending '\0' on success.
 ** 'pmode' points to (and 'mode' contains) special things in the string:
-** - 'x'/'X' means an hexadecimal numeral
+** - 'x'/'X' means a hexadecimal numeral
 ** - 'n'/'N' means 'inf' or 'nan' (which should be rejected)
 ** - '.' just optimizes the search for the common case (nothing special)
 ** This function accepts both the current locale or a dot as the radix
