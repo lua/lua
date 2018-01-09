@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.330 2017/12/28 15:42:57 roberto Exp roberto $
+** $Id: lvm.c,v 2.331 2017/12/30 20:46:18 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1401,12 +1401,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       vmcase(OP_EQ) {
         TValue *rb = vRB(i);
         Protect(cond = luaV_equalobj(L, vra, rb));
-      condjump:
-        if (cond != GETARG_k(i))
-          pc++;  /* skip next jump */
-        else
-          donextjump(ci);
-        vmbreak;
+        goto condjump;
       }
       vmcase(OP_LT) {
         TValue *rb = vRB(i);
@@ -1472,7 +1467,12 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_TEST) {
         cond = !l_isfalse(vra);
-        goto condjump;
+       condjump:
+        if (cond != GETARG_k(i))
+          pc++;  /* skip next jump */
+        else
+          donextjump(ci);
+        vmbreak;
       }
       vmcase(OP_TESTSET) {
         TValue *rb = vRB(i);
