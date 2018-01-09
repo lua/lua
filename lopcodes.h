@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.180 2017/12/18 17:49:31 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.182 2018/01/09 11:21:41 roberto Exp $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -17,11 +17,11 @@
 
         3 3 2 2 2 2 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0
         1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-iABC    |k|     C(8)    | |     B(8)    | |     A(8)    | |   Op(7)   |
-iABx    |            Bx(17)             | |     A(8)    | |   Op(7)   |
-iAsBx   |           sBx (signed)(17)    | |     A(8)    | |   Op(7)   |
-iAx     |                       Ax(25)                  | |   Op(7)   |
-iksJ    |k|                     sJ(24)                  | |   Op(7)   |
+iABC         C(8)     |      B(8)     |k|     A(8)      |   Op(7)     |
+iABx               Bx(17)               |     A(8)      |   Op(7)     |
+iAsB              sBx (signed)(17)      |     A(8)      |   Op(7)     |
+iAx                           Ax(25)                    |   Op(7)     |
+isJ                          sJ(24)                   |m|   Op(7)     |
 
   A signed argument is represented in excess K: the represented value is
   the written unsigned value minus K, where K is half the maximum for the
@@ -36,25 +36,27 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 ** size and position of opcode arguments.
 */
 #define SIZE_C		8
-#define SIZE_Cx		(SIZE_C + 1)
 #define SIZE_B		8
-#define SIZE_Bx		(SIZE_Cx + SIZE_B)
+#define SIZE_Bx		(SIZE_C + SIZE_B + 1)
 #define SIZE_A		8
-#define SIZE_Ax		(SIZE_Cx + SIZE_B + SIZE_A)
-#define SIZE_sJ		(SIZE_C + SIZE_B + SIZE_A)
-
+#define SIZE_Ax		(SIZE_Bx + SIZE_A)
+#define SIZE_sJ		(SIZE_Bx + SIZE_A - 1)
 
 #define SIZE_OP		7
 
 #define POS_OP		0
-#define POS_A		(POS_OP + SIZE_OP)
-#define POS_B		(POS_A + SIZE_A)
-#define POS_C		(POS_B + SIZE_B)
-#define POS_k		(POS_C + SIZE_C)
-#define POS_Bx		POS_B
-#define POS_Ax		POS_A
-#define POS_sJ		POS_A
 
+#define POS_A		(POS_OP + SIZE_OP)
+#define POS_k		(POS_A + SIZE_A)
+#define POS_B		(POS_k + 1)
+#define POS_C		(POS_B + SIZE_B)
+
+#define POS_Bx		POS_k
+
+#define POS_Ax		POS_A
+
+#define POS_m		POS_A
+#define POS_sJ		(POS_A + 1)
 
 /*
 ** limits for opcode arguments.
@@ -125,7 +127,7 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 #define SETARG_C(i,v)	setarg(i, v, POS_C, SIZE_C)
 
 #define TESTARG_k(i)	(cast(int, ((i) & (1u << POS_k))))
-#define GETARG_k(i)	getarg(i, POS_k, 1)
+#define GETARG_k(i)	check_exp(checkopm(i, iABC), getarg(i, POS_k, 1))
 #define SETARG_k(i,v)	setarg(i, v, POS_k, 1)
 
 #define GETARG_Bx(i)	check_exp(checkopm(i, iABx), getarg(i, POS_Bx, SIZE_Bx))
@@ -142,6 +144,8 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 	check_exp(checkopm(i, isJ), getarg(i, POS_sJ, SIZE_sJ) - OFFSET_sJ)
 #define SETARG_sJ(i,j) \
 	setarg(i, cast(unsigned int, (j)+OFFSET_sJ), POS_sJ, SIZE_sJ)
+#define GETARG_m(i)	check_exp(checkopm(i, isJ), getarg(i, POS_m, 1))
+#define SETARG_m(i,m)	setarg(i, m, POS_m, 1)
 
 
 #define CREATE_ABCk(o,a,b,c,k)	((cast(Instruction, o)<<POS_OP) \
