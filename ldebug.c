@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.150 2017/12/20 14:58:05 roberto Exp roberto $
+** $Id: ldebug.c,v 2.151 2017/12/28 15:42:57 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -722,10 +722,10 @@ const char *luaG_addinfo (lua_State *L, const char *msg, TString *src,
 l_noret luaG_errormsg (lua_State *L) {
   if (L->errfunc != 0) {  /* is there an error handling function? */
     StkId errfunc = restorestack(L, L->errfunc);
+    lua_assert(ttisfunction(s2v(errfunc)));
     setobjs2s(L, L->top, L->top - 1);  /* move argument */
     setobjs2s(L, L->top - 1, errfunc);  /* push function */
     L->top++;  /* assume EXTRA_STACK */
-    luaE_incCcalls(L);
     luaD_callnoyield(L, L->top - 2, 1);  /* call it */
   }
   luaD_throw(L, LUA_ERRRUN);

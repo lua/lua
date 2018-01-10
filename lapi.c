@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.278 2017/12/06 18:08:03 roberto Exp roberto $
+** $Id: lapi.c,v 2.279 2017/12/08 17:28:25 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -980,6 +980,7 @@ LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
     func = 0;
   else {
     StkId o = index2stack(L, errfunc);
+    api_check(L, ttisfunction(s2v(o)), "error handler must be a function");
     func = savestack(L, o);
   }
   c.func = L->top - (nargs+1);  /* function to be called */
