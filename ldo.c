@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.184 2017/12/28 14:17:09 roberto Exp roberto $
+** $Id: ldo.c,v 2.185 2017/12/29 15:44:51 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -327,18 +327,15 @@ static void rethook (lua_State *L, CallInfo *ci) {
 ** it in stack below original 'func' so that 'luaD_call' can call
 ** it. Raise an error if __call metafield is not a function.
 */
-StkId luaD_tryfuncTM (lua_State *L, StkId func) {
+void luaD_tryfuncTM (lua_State *L, StkId func) {
   const TValue *tm = luaT_gettmbyobj(L, s2v(func), TM_CALL);
   StkId p;
   if (!ttisfunction(tm))
     luaG_typeerror(L, s2v(func), "call");
-  /* Open a hole inside the stack at 'func' */
-  checkstackp(L, 1, func);  /* ensure space for metamethod */
   for (p = L->top; p > func; p--)
     setobjs2s(L, p, p-1);
-  L->top++;
+  L->top++;  /* assume EXTRA_STACK */
   setobj2s(L, func, tm);  /* metamethod is the new function to be called */
-  return func;
 }
 
 
@@ -489,7 +486,7 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
       break;
     }
     default: {  /* not a function */
-      func = luaD_tryfuncTM(L, func);  /* try to get '__call' metamethod */
+      luaD_tryfuncTM(L, func);  /* try to get '__call' metamethod */
       luaD_call(L, func, nresults);  /* now it must be a function */
       break;
     }

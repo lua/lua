@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.331 2017/12/30 20:46:18 roberto Exp roberto $
+** $Id: lvm.c,v 2.332 2018/01/09 14:23:40 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1501,9 +1501,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           b = L->top - ra;
         lua_assert(GETARG_C(i) - 1 == LUA_MULTRET);
         if (!ttisfunction(vra)) {  /* not a function? */
-          /* try to get '__call' metamethod */
-          ProtectNT(ra = luaD_tryfuncTM(L, ra));
-          vra = s2v(ra);
+          ProtectNT(luaD_tryfuncTM(L, ra));  /* try '__call' metamethod */
           b++;  /* there is now one extra argument */
         }
         if (!ttisLclosure(vra)) {  /* C function? */
