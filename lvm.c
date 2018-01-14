@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.332 2018/01/09 14:23:40 roberto Exp roberto $
+** $Id: lvm.c,v 2.333 2018/01/10 19:19:27 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1504,13 +1504,18 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           ProtectNT(luaD_tryfuncTM(L, ra));  /* try '__call' metamethod */
           b++;  /* there is now one extra argument */
         }
+        if (TESTARG_k(i))
+          luaF_close(L, base);  /* close upvalues from current call */
         if (!ttisLclosure(vra)) {  /* C function? */
           ProtectNT(luaD_call(L, ra, LUA_MULTRET));  /* call it */
-          /* next instruction will do the return */
+          if (trap) {
+            updatebase(ci);
+            ra = RA(i);
+          }
+          luaD_poscall(L, ci, ra, cast_int(L->top - ra));
+          return;
         }
-        else {  /* tail call */
-          if (TESTARG_k(i))  /* close upvalues from previous call */
-            luaF_close(L, ci->func + 1);
+        else {  /* Lua tail call */
           luaD_pretailcall(L, ci, ra, b);  /* prepare call frame */
           goto tailcall;
         }
