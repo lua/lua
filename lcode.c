@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.149 2018/01/09 11:21:41 roberto Exp $
+** $Id: lcode.c,v 2.149 2018/01/09 11:24:12 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -656,6 +656,7 @@ void luaK_setoneret (FuncState *fs, expdesc *e) {
 
 /*
 ** Ensure that expression 'e' is not a variable.
+** (Expression still may have jump lists.)
 */
 void luaK_dischargevars (FuncState *fs, expdesc *e) {
   switch (e->k) {
@@ -703,6 +704,7 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
 /*
 ** Ensures expression value is in register 'reg' (and therefore
 ** 'e' will become a non-relocatable expression).
+** (Expression still may have jump lists.)
 */
 static void discharge2reg (FuncState *fs, expdesc *e, int reg) {
   luaK_dischargevars(fs, e);
@@ -749,6 +751,7 @@ static void discharge2reg (FuncState *fs, expdesc *e, int reg) {
 
 /*
 ** Ensures expression value is in any register.
+** (Expression still may have jump lists.)
 */
 static void discharge2anyreg (FuncState *fs, expdesc *e) {
   if (e->k != VNONRELOC) {  /* no fixed register yet? */
@@ -778,8 +781,8 @@ static int need_value (FuncState *fs, int list) {
 
 
 /*
-** Ensures final expression result (including results from its jump
-** lists) is in register 'reg'.
+** Ensures final expression result (which includes results from its
+** jump ** lists) is in register 'reg'.
 ** If expression has jumps, need to patch these jumps either to
 ** its final position or to "load" instructions (for those tests
 ** that do not produce values).
@@ -809,8 +812,7 @@ static void exp2reg (FuncState *fs, expdesc *e, int reg) {
 
 
 /*
-** Ensures final expression result (including results from its jump
-** lists) is in next available register.
+** Ensures final expression result is in next available register.
 */
 void luaK_exp2nextreg (FuncState *fs, expdesc *e) {
   luaK_dischargevars(fs, e);
@@ -821,8 +823,8 @@ void luaK_exp2nextreg (FuncState *fs, expdesc *e) {
 
 
 /*
-** Ensures final expression result (including results from its jump
-** lists) is in some (any) register and return that register.
+** Ensures final expression result is in some (any) register
+** and return that register.
 */
 int luaK_exp2anyreg (FuncState *fs, expdesc *e) {
   luaK_dischargevars(fs, e);
@@ -840,8 +842,8 @@ int luaK_exp2anyreg (FuncState *fs, expdesc *e) {
 
 
 /*
-** Ensures final expression result is either in a register or in an
-** upvalue.
+** Ensures final expression result is either in a register
+** or in an upvalue.
 */
 void luaK_exp2anyregup (FuncState *fs, expdesc *e) {
   if (e->k != VUPVAL || hasjumps(e))
@@ -850,8 +852,8 @@ void luaK_exp2anyregup (FuncState *fs, expdesc *e) {
 
 
 /*
-** Ensures final expression result is either in a register or it is
-** a constant.
+** Ensures final expression result is either in a register
+** or it is a constant.
 */
 void luaK_exp2val (FuncState *fs, expdesc *e) {
   if (hasjumps(e))
