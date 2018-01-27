@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.333 2018/01/10 19:19:27 roberto Exp roberto $
+** $Id: lvm.c,v 2.334 2018/01/14 17:27:50 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -717,15 +717,13 @@ void luaV_finishOp (lua_State *L) {
     }
     case OP_CONCAT: {
       StkId top = L->top - 1;  /* top when 'luaT_trybinTM' was called */
-      int b = GETARG_B(inst);      /* first element to concatenate */
-      int total = cast_int(top - 1 - (base + b));  /* yet to concatenate */
+      int a = GETARG_A(inst);      /* first element to concatenate */
+      int total = cast_int(top - 1 - (base + a));  /* yet to concatenate */
       setobjs2s(L, top - 2, top);  /* put TM result in proper position */
       if (total > 1) {  /* are there elements to concat? */
         L->top = top - 1;  /* top is one after last element (at top-2) */
         luaV_concat(L, total);  /* concat them (may yield again) */
       }
-      /* move final result to final position */
-      setobjs2s(L, ci->func + 1 + GETARG_A(inst), L->top - 1);
       break;
     }
     case OP_TFORCALL: case OP_CALL: case OP_TAILCALL:
@@ -1376,18 +1374,10 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_CONCAT) {
-        int b = GETARG_B(i);
-        int c = GETARG_C(i);
-        StkId rb;
-        L->top = base + c + 1;  /* mark the end of concat operands */
-        ProtectNT(luaV_concat(L, c - b + 1));
-        if (trap) {  /* 'luaV_concat' may move the stack */
-          updatebase(ci);
-          ra = RA(i);
-        }
-        rb = base + b;
-        setobjs2s(L, ra, rb);
-        checkGC(L, (ra >= rb ? ra + 1 : rb));
+        int n = GETARG_B(i);  /* number of elements to concatenate */
+        L->top = ra + n;  /* mark the end of concat operands */
+        ProtectNT(luaV_concat(L, n));
+        checkGC(L, L->top); /* 'luaV_concat' ensures correct top */
         vmbreak;
       }
       vmcase(OP_CLOSE) {

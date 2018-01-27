@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.149 2018/01/09 11:24:12 roberto Exp roberto $
+** $Id: lcode.c,v 2.150 2018/01/18 16:24:31 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -60,27 +60,39 @@ static int tonumeral(const expdesc *e, TValue *v) {
 
 
 /*
+** Return the previous instruction of the current code. If there
+** may be a jump target between the current instruction and the
+** previous one, return an invalid instruction (to avoid wrong
+** optimizations).
+*/
+static Instruction *previousinstruction (FuncState *fs) {
+  static const Instruction invalidinstruction = -1;
+  if (fs->pc > fs->lasttarget)
+    return &fs->f->code[fs->pc - 1];  /* previous instruction */
+  else
+    return cast(Instruction*, &invalidinstruction);
+}
+
+
+/*
 ** Create a OP_LOADNIL instruction, but try to optimize: if the previous
 ** instruction is also OP_LOADNIL and ranges are compatible, adjust
 ** range of previous instruction instead of emitting a new one. (For
 ** instance, 'local a; local b' will generate a single opcode.)
 */
 void luaK_nil (FuncState *fs, int from, int n) {
-  Instruction *previous;
   int l = from + n - 1;  /* last register to set nil */
-  if (fs->pc > fs->lasttarget) {  /* no jumps to current position? */
-    previous = &fs->f->code[fs->pc-1];
-    if (GET_OPCODE(*previous) == OP_LOADNIL) {  /* previous is LOADNIL? */
-      int pfrom = GETARG_A(*previous);  /* get previous range */
-      int pl = pfrom + GETARG_B(*previous);
-      if ((pfrom <= from && from <= pl + 1) ||
-          (from <= pfrom && pfrom <= l + 1)) {  /* can connect both? */
-        if (pfrom < from) from = pfrom;  /* from = min(from, pfrom) */
-        if (pl > l) l = pl;  /* l = max(l, pl) */
-        SETARG_A(*previous, from);
-        SETARG_B(*previous, l - from);
-        return;
-      }
+  Instruction *previous = previousinstruction(fs);
+  if (GET_OPCODE(*previous) == OP_LOADNIL) {  /* previous is LOADNIL? */
+    int pfrom = GETARG_A(*previous);  /* get previous range */
+    int pl = pfrom + GETARG_B(*previous);
+    if ((pfrom <= from && from <= pl + 1) ||
+        (from <= pfrom && pfrom <= l + 1)) {  /* can connect both? */
+      if (pfrom < from) from = pfrom;  /* from = min(from, pfrom) */
+      if (pl > l) l = pl;  /* l = max(l, pl) */
+      SETARG_A(*previous, from);
+      SETARG_B(*previous, l - from);
+      return;
     }  /* else go through */
   }
   luaK_codeABC(fs, OP_LOADNIL, from, n - 1, 0);  /* else no optimization */
@@ -1432,7 +1444,7 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
       break;
     }
     case OPR_CONCAT: {
-      luaK_exp2nextreg(fs, v);  /* operand must be on the 'stack' */
+      luaK_exp2nextreg(fs, v);  /* operand must be on the stack */
       break;
     }
     case OPR_ADD: case OPR_SUB:
@@ -1463,12 +1475,30 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
   }
 }
 
+/*
+** Create code for '(e1 .. e2)'.
+** For '(e1 .. e2.1 .. e2.2)' (which is '(e1 .. (e2.1 .. e2.2))',
+** because concatenation is right associative), merge both CONCATs.
+*/
+static void codeconcat (FuncState *fs, expdesc *e1, expdesc *e2, int line) {
+  Instruction *ie2 = previousinstruction(fs);
+  if (GET_OPCODE(*ie2) == OP_CONCAT) {  /* is 'e2' a concatenation? */
+    int n = GETARG_B(*ie2);  /* # of elements concatenated in 'e2' */
+    lua_assert(e1->u.info + 1 == GETARG_A(*ie2));
+    freeexp(fs, e2);
+    SETARG_A(*ie2, e1->u.info);  /* correct first element ('e1') */
+    SETARG_B(*ie2, n + 1);  /* will concatenate one more element */
+  }
+  else {  /* 'e2' is not a concatenation */
+    luaK_codeABC(fs, OP_CONCAT, e1->u.info, 2, 0);  /* new concat opcode */
+    freeexp(fs, e2);
+    luaK_fixline(fs, line);
+  }
+}
+
 
 /*
 ** Finalize code for binary operation, after reading 2nd operand.
-** For '(a .. b .. c)' (which is '(a .. (b .. c))', because
-** concatenation is right associative), merge second CONCAT into first
-** one.
 */
 void luaK_posfix (FuncState *fs, BinOpr opr,
                   expdesc *e1, expdesc *e2, int line) {
@@ -1487,19 +1517,9 @@ void luaK_posfix (FuncState *fs, BinOpr opr,
       *e1 = *e2;
       break;
     }
-    case OPR_CONCAT: {
-      luaK_exp2val(fs, e2);
-      if (e2->k == VRELOC &&
-          GET_OPCODE(getinstruction(fs, e2)) == OP_CONCAT) {
-        lua_assert(e1->u.info == GETARG_B(getinstruction(fs, e2))-1);
-        freeexp(fs, e1);
-        SETARG_B(getinstruction(fs, e2), e1->u.info);
-        e1->k = VRELOC; e1->u.info = e2->u.info;
-      }
-      else {
-        luaK_exp2nextreg(fs, e2);  /* operand must be on the 'stack' */
-        codebinexpval(fs, OP_CONCAT, e1, e2, line);
-      }
+    case OPR_CONCAT: {  /* e1 .. e2 */
+      luaK_exp2nextreg(fs, e2);
+      codeconcat(fs, e1, e2, line);
       break;
     }
     case OPR_ADD: case OPR_MUL: {
