@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.185 2017/12/29 15:44:51 roberto Exp roberto $
+** $Id: ldo.c,v 2.186 2018/01/10 19:19:27 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -417,14 +417,14 @@ void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int n) {
   checkstackp(L, fsize, func);
   for (; i <= p->numparams; i++)
     setnilvalue(s2v(ci->func + i));  /* complete missing arguments */
-  if (p->is_vararg) {
-    L->top -= (func - ci->func);  /* move down top */
-    luaT_adjustvarargs(L, p, n - 1);
-  }
   ci->top = ci->func + 1 + fsize;  /* top for new function */
   lua_assert(ci->top <= L->stack_last);
   ci->u.l.savedpc = p->code;  /* starting point */
   ci->callstatus |= CIST_TAIL;
+  if (p->is_vararg) {
+    L->top -= (func - ci->func);  /* move down top */
+    luaT_adjustvarargs(L, p, n - 1);
+  }
   if (L->hookmask)
     hookcall(L, ci, 1);
 }
@@ -471,8 +471,6 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
       checkstackp(L, fsize, func);
       for (; n < p->numparams; n++)
         setnilvalue(s2v(L->top++));  /* complete missing arguments */
-      if (p->is_vararg)
-        luaT_adjustvarargs(L, p, n);
       ci = next_ci(L);  /* now 'enter' new function */
       ci->nresults = nresults;
       ci->func = func;
@@ -480,6 +478,8 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
       lua_assert(ci->top <= L->stack_last);
       ci->u.l.savedpc = p->code;  /* starting point */
       ci->callstatus = 0;
+      if (p->is_vararg)
+        luaT_adjustvarargs(L, p, n);  /* may invoke GC */
       if (L->hookmask)
         hookcall(L, ci, 0);
       luaV_execute(L, ci);  /* run the function */

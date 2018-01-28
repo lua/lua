@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.55 2017/12/20 14:58:05 roberto Exp roberto $
+** $Id: ltm.c,v 2.56 2017/12/28 15:42:57 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -16,6 +16,7 @@
 
 #include "ldebug.h"
 #include "ldo.h"
+#include "lgc.h"
 #include "lobject.h"
 #include "lstate.h"
 #include "lstring.h"
@@ -231,6 +232,7 @@ void luaT_adjustvarargs (lua_State *L, Proto *p, int actual) {
   setivalue(luaH_set(L, vtab, &nname), actual);  /* store counter there */
   L->top -= actual;  /* remove extra elements from the stack */
   sethvalue2s(L, L->top - 1, vtab);  /* move table to new top */
+  luaC_checkGC(L);
 }
 
 
