@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.130 2017/11/07 13:25:26 roberto Exp roberto $
+** $Id: lobject.h,v 2.131 2017/11/23 19:29:04 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -446,7 +446,7 @@ typedef struct AbsLineInfo {
 */
 typedef struct Proto {
   CommonHeader;
-  lu_byte numparams;  /* number of fixed parameters */
+  lu_byte numparams;  /* number of fixed (named) parameters */
   lu_byte is_vararg;
   lu_byte maxstacksize;  /* number of registers needed by this function */
   lu_byte cachemiss;  /* count for successive misses for 'cache' field */
