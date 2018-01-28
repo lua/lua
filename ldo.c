@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.186 2018/01/10 19:19:27 roberto Exp roberto $
+** $Id: ldo.c,v 2.187 2018/01/28 12:08:04 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -405,25 +405,27 @@ void luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres) {
 
 /*
 ** Prepare a function for a tail call, building its call info on top
-** of the current call info. 'n' is the number of arguments plus 1
+** of the current call info. 'narg1' is the number of arguments plus 1
 ** (so that it includes the function itself).
 */
-void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int n) {
+void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int narg1) {
   Proto *p = clLvalue(s2v(func))->p;
   int fsize = p->maxstacksize;  /* frame size */
+  int nfixparams = p->numparams;
   int i;
-  for (i = 0; i < n; i++)  /* move down function and arguments */
+  for (i = 0; i < narg1; i++)  /* move down function and arguments */
     setobjs2s(L, ci->func + i, func + i);
   checkstackp(L, fsize, func);
-  for (; i <= p->numparams; i++)
-    setnilvalue(s2v(ci->func + i));  /* complete missing arguments */
-  ci->top = ci->func + 1 + fsize;  /* top for new function */
+  func = ci->func;  /* moved-down function */
+  for (; narg1 <= nfixparams; narg1++)
+    setnilvalue(s2v(func + narg1));  /* complete missing arguments */
+  ci->top = func + 1 + fsize;  /* top for new function */
   lua_assert(ci->top <= L->stack_last);
   ci->u.l.savedpc = p->code;  /* starting point */
   ci->callstatus |= CIST_TAIL;
   if (p->is_vararg) {
-    L->top -= (func - ci->func);  /* move down top */
-    luaT_adjustvarargs(L, p, n - 1);
+    L->top = func + narg1;  /* set top */
+    luaT_adjustvarargs(L, nfixparams, narg1 - 1);
   }
   if (L->hookmask)
     hookcall(L, ci, 1);
@@ -464,12 +466,13 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
       luaD_poscall(L, ci, L->top - n, n);
       break;
     }
-    case LUA_TLCL: {  /* Lua function: prepare its call */
+    case LUA_TLCL: {  /* Lua function */
       Proto *p = clLvalue(funcv)->p;
-      int n = cast_int(L->top - func) - 1;  /* number of real arguments */
+      int narg = cast_int(L->top - func) - 1;  /* number of real arguments */
+      int nfixparams = p->numparams;
       int fsize = p->maxstacksize;  /* frame size */
       checkstackp(L, fsize, func);
-      for (; n < p->numparams; n++)
+      for (; narg < nfixparams; narg++)
         setnilvalue(s2v(L->top++));  /* complete missing arguments */
       ci = next_ci(L);  /* now 'enter' new function */
       ci->nresults = nresults;
@@ -479,7 +482,7 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
       ci->u.l.savedpc = p->code;  /* starting point */
       ci->callstatus = 0;
       if (p->is_vararg)
-        luaT_adjustvarargs(L, p, n);  /* may invoke GC */
+        luaT_adjustvarargs(L, nfixparams, narg);  /* may invoke GC */
       if (L->hookmask)
         hookcall(L, ci, 0);
       luaV_execute(L, ci);  /* run the function */

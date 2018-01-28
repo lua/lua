@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.56 2017/12/28 15:42:57 roberto Exp roberto $
+** $Id: ltm.c,v 2.57 2018/01/28 12:08:04 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -216,21 +216,20 @@ int luaT_callorderiTM (lua_State *L, const TValue *p1, int v2,
 }
 
 
-void luaT_adjustvarargs (lua_State *L, Proto *p, int actual) {
+void luaT_adjustvarargs (lua_State *L, int nfixparams, int actual) {
   int i;
   Table *vtab;
   TValue nname;
-  int nfixparams = p->numparams;  /* number of fixed parameters */
-  actual -= nfixparams;  /* number of extra arguments */
+  int nextra = actual - nfixparams;  /* number of extra arguments */
   vtab = luaH_new(L);  /* create vararg table */
   sethvalue2s(L, L->top, vtab);  /* anchor it for resizing */
   L->top++;  /* space ensured by caller */
-  luaH_resize(L, vtab, actual, 1);
-  for (i = 0; i < actual; i++)  /* put extra arguments into vararg table */
-    setobj2n(L, &vtab->array[i], s2v(L->top - actual + i - 1));
+  luaH_resize(L, vtab, nextra, 1);
+  for (i = 0; i < nextra; i++)  /* put extra arguments into vararg table */
+    setobj2n(L, &vtab->array[i], s2v(L->top - nextra + i - 1));
   setsvalue(L, &nname, G(L)->nfield);  /* get field 'n' */
-  setivalue(luaH_set(L, vtab, &nname), actual);  /* store counter there */
-  L->top -= actual;  /* remove extra elements from the stack */
+  setivalue(luaH_set(L, vtab, &nname), nextra);  /* store counter there */
+  L->top -= nextra;  /* remove extra elements from the stack */
   sethvalue2s(L, L->top - 1, vtab);  /* move table to new top */
   luaC_checkGC(L);
 }
