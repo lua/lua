@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.182 2018/01/09 11:24:12 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.183 2018/01/27 16:56:33 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -111,7 +111,7 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 #define checkopm(i,m)	(getOpMode(GET_OPCODE(i)) == m)
 
 
-#define getarg(i,pos,size)	(cast(int, ((i)>>(pos)) & MASK1(size,0)))
+#define getarg(i,pos,size)	(cast_int(((i)>>(pos)) & MASK1(size,0)))
 #define setarg(i,v,pos,size)	((i) = (((i)&MASK0(size,pos)) | \
                 ((cast(Instruction, v)<<pos)&MASK1(size,pos))))
 
@@ -126,7 +126,7 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 #define GETARG_sC(i)	(GETARG_C(i) - OFFSET_sC)
 #define SETARG_C(i,v)	setarg(i, v, POS_C, SIZE_C)
 
-#define TESTARG_k(i)	(cast(int, ((i) & (1u << POS_k))))
+#define TESTARG_k(i)	(cast_int(((i) & (1u << POS_k))))
 #define GETARG_k(i)	check_exp(checkopm(i, iABC), getarg(i, POS_k, 1))
 #define SETARG_k(i,v)	setarg(i, v, POS_k, 1)
 
@@ -138,12 +138,12 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 
 #define GETARG_sBx(i)  \
 	check_exp(checkopm(i, iAsBx), getarg(i, POS_Bx, SIZE_Bx) - OFFSET_sBx)
-#define SETARG_sBx(i,b)	SETARG_Bx((i),cast(unsigned int, (b)+OFFSET_sBx))
+#define SETARG_sBx(i,b)	SETARG_Bx((i),cast_uint((b)+OFFSET_sBx))
 
 #define GETARG_sJ(i)  \
 	check_exp(checkopm(i, isJ), getarg(i, POS_sJ, SIZE_sJ) - OFFSET_sJ)
 #define SETARG_sJ(i,j) \
-	setarg(i, cast(unsigned int, (j)+OFFSET_sJ), POS_sJ, SIZE_sJ)
+	setarg(i, cast_uint((j)+OFFSET_sJ), POS_sJ, SIZE_sJ)
 #define GETARG_m(i)	check_exp(checkopm(i, isJ), getarg(i, POS_m, 1))
 #define SETARG_m(i,m)	setarg(i, m, POS_m, 1)
 
@@ -292,7 +292,7 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
 } OpCode;
 
 
-#define NUM_OPCODES	(cast(int, OP_EXTRAARG) + 1)
+#define NUM_OPCODES	(cast_int(OP_EXTRAARG) + 1)
 
 
 

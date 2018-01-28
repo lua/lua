@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.h,v 2.14 2015/05/22 17:45:56 roberto Exp roberto $
+** $Id: ldebug.h,v 2.15 2017/06/27 11:35:31 roberto Exp roberto $
 ** Auxiliary functions from Debug Interface module
 ** See Copyright Notice in lua.h
 */
@@ -11,7 +11,7 @@
 #include "lstate.h"
 
 
-#define pcRel(pc, p)	(cast(int, (pc) - (p)->code) - 1)
+#define pcRel(pc, p)	(cast_int((pc) - (p)->code) - 1)
 
 #define resethookcount(L)	(L->hookcount = L->basehookcount)
 

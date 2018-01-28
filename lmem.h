@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.45 2017/12/07 18:59:52 roberto Exp roberto $
+** $Id: lmem.h,v 1.46 2017/12/08 17:28:25 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -29,7 +29,7 @@
 ** avoiding this warning but also this optimization.)
 */
 #define luaM_testsize(n,e)  \
-	(sizeof(n) >= sizeof(size_t) && cast(size_t, (n)) + 1 > MAX_SIZET/(e))
+	(sizeof(n) >= sizeof(size_t) && cast_sizet((n)) + 1 > MAX_SIZET/(e))
 
 #define luaM_checksize(L,n,e)  \
 	(luaM_testsize(n,e) ? luaM_toobig(L) : cast_void(0))
@@ -42,13 +42,15 @@
 ** 'int' or 'unsigned int' and that 'int' is not larger than 'size_t'.)
 */
 #define luaM_limitN(n,t)  \
-  ((cast(size_t, n) > MAX_SIZET/sizeof(t)) ? (MAX_SIZET/sizeof(t)) : (n))
+  ((cast_sizet(n) <= MAX_SIZET/sizeof(t)) ? (n) :  \
+     cast_uint((MAX_SIZET/sizeof(t))))
+
 
 /*
 ** Arrays of chars do not need any test
 */
 #define luaM_reallocvchar(L,b,on,n)  \
-  cast(char *, luaM_saferealloc_(L, (b), (on)*sizeof(char), (n)*sizeof(char)))
+  cast_charp(luaM_saferealloc_(L, (b), (on)*sizeof(char), (n)*sizeof(char)))
 
 #define luaM_freemem(L, b, s)	luaM_free_(L, (b), (s))
 #define luaM_free(L, b)		luaM_free_(L, (b), sizeof(*(b)))
@@ -66,8 +68,8 @@
                          luaM_limitN(limit,t),e)))
 
 #define luaM_reallocvector(L, v,oldn,n,t) \
-   (cast(t *, luaM_realloc_(L, v, cast(size_t, oldn) * sizeof(t), \
-                                  cast(size_t, n) * sizeof(t))))
+   (cast(t *, luaM_realloc_(L, v, cast_sizet(oldn) * sizeof(t), \
+                                  cast_sizet(n) * sizeof(t))))
 
 #define luaM_shrinkvector(L,v,size,fs,t) \
    ((v)=cast(t *, luaM_shrinkvector_(L, v, &(size), fs, sizeof(t))))

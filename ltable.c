@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.129 2017/12/08 17:28:25 roberto Exp roberto $
+** $Id: ltable.c,v 2.130 2017/12/29 15:58:23 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -116,8 +116,8 @@ static int l_hashfloat (lua_Number n) {
     return 0;
   }
   else {  /* normal case */
-    unsigned int u = cast(unsigned int, i) + cast(unsigned int, ni);
-    return cast_int(u <= cast(unsigned int, INT_MAX) ? u : ~u);
+    unsigned int u = cast_uint(i) + cast_uint(ni);
+    return cast_int(u <= cast_uint(INT_MAX) ? u : ~u);
   }
 }
 #endif
@@ -213,7 +213,7 @@ static const TValue *getgeneric (Table *t, const TValue *key) {
 */
 static unsigned int arrayindex (lua_Integer k) {
   if (0 < k && l_castS2U(k) <= MAXASIZE)
-    return cast(unsigned int, k);  /* 'key' is an appropriate array index */
+    return cast_uint(k);  /* 'key' is an appropriate array index */
   else
     return 0;
 }
@@ -264,7 +264,7 @@ int luaH_next (lua_State *L, Table *t, StkId key) {
 
 static void freehash (lua_State *L, Table *t) {
   if (!isdummy(t))
-    luaM_freearray(L, t->node, cast(size_t, sizenode(t)));
+    luaM_freearray(L, t->node, cast_sizet(sizenode(t)));
 }
 
 

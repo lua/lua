@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.239 2018/01/09 11:21:41 roberto Exp $
+** $Id: ltests.c,v 2.239 2018/01/09 11:24:12 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -110,7 +110,7 @@ static void freeblock (Memcontrol *mc, Header *block) {
     size_t size = block->d.size;
     int i;
     for (i = 0; i < MARKSIZE; i++)  /* check marks after block */
-      lua_assert(*(cast(char *, block + 1) + size + i) == MARK);
+      lua_assert(*(cast_charp(block + 1) + size + i) == MARK);
     mc->objcount[block->d.type]--;
     fillmem(block, sizeof(Header) + size + MARKSIZE);  /* erase block */
     free(block);  /* actually free block */
@@ -161,10 +161,10 @@ void *debug_realloc (void *ud, void *b, size_t oldsize, size_t size) {
       freeblock(mc, block);  /* erase (and check) old copy */
     }
     /* initialize new part of the block with something weird */
-    fillmem(cast(char *, newblock + 1) + commonsize, size - commonsize);
+    fillmem(cast_charp(newblock + 1) + commonsize, size - commonsize);
     /* initialize marks after block */
     for (i = 0; i < MARKSIZE; i++)
-      *(cast(char *, newblock + 1) + size + i) = MARK;
+      *(cast_charp(newblock + 1) + size + i) = MARK;
     newblock->d.size = size;
     newblock->d.type = type;
     mc->total += size;
@@ -919,8 +919,8 @@ static int upvalue (lua_State *L) {
 
 
 static int newuserdata (lua_State *L) {
-  size_t size = cast(size_t, luaL_checkinteger(L, 1));
-  char *p = cast(char *, lua_newuserdata(L, size));
+  size_t size = cast_sizet(luaL_checkinteger(L, 1));
+  char *p = cast_charp(lua_newuserdata(L, size));
   while (size--) *p++ = '\0';
   return 1;
 }
@@ -928,7 +928,7 @@ static int newuserdata (lua_State *L) {
 
 static int pushuserdata (lua_State *L) {
   lua_Integer u = luaL_checkinteger(L, 1);
-  lua_pushlightuserdata(L, cast(void *, cast(size_t, u)));
+  lua_pushlightuserdata(L, cast_voidp(cast_sizet(u)));
   return 1;
 }
 
@@ -959,7 +959,7 @@ static int s2d (lua_State *L) {
 
 static int d2s (lua_State *L) {
   double d = luaL_checknumber(L, 1);
-  lua_pushlstring(L, cast(char *, &d), sizeof(d));
+  lua_pushlstring(L, cast_charp(&d), sizeof(d));
   return 1;
 }
 
@@ -1277,7 +1277,7 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     }
     else if EQ("func2num") {
       lua_CFunction func = lua_tocfunction(L1, getindex);
-      lua_pushnumber(L1, cast(size_t, func));
+      lua_pushnumber(L1, cast_sizet(func));
     }
     else if EQ("getfield") {
       int t = getindex;
@@ -1422,11 +1422,11 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     }
     else if EQ("rawgetp") {
       int t = getindex;
-      lua_rawgetp(L1, t, cast(void *, cast(size_t, getnum)));
+      lua_rawgetp(L1, t, cast_voidp(cast_sizet(getnum)));
     }
     else if EQ("rawsetp") {
       int t = getindex;
-      lua_rawsetp(L1, t, cast(void *, cast(size_t, getnum)));
+      lua_rawsetp(L1, t, cast_voidp(cast_sizet(getnum)));
     }
     else if EQ("remove") {
       lua_remove(L1, getnum);
@@ -1511,7 +1511,7 @@ static struct X { int x; } x;
       lua_pushnumber(L1, lua_tonumber(L1, getindex));
     }
     else if EQ("topointer") {
-      lua_pushnumber(L1, cast(size_t, lua_topointer(L1, getindex)));
+      lua_pushnumber(L1, cast_sizet(lua_topointer(L1, getindex)));
     }
     else if EQ("tostring") {
       const char *s = lua_tostring(L1, getindex);
@@ -1725,7 +1725,7 @@ int luaB_opentests (lua_State *L) {
   lua_atpanic(L, &tpanic);
   atexit(checkfinalmem);
   lua_assert(lua_getallocf(L, &ud) == debug_realloc);
-  lua_assert(ud == cast(void *, &l_memcontrol));
+  lua_assert(ud == cast_voidp(&l_memcontrol));
   lua_setallocf(L, lua_getallocf(L, NULL), ud);
   luaL_newlib(L, tests_funcs);
   return 1;

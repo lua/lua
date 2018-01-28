@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.148 2017/11/23 16:35:54 roberto Exp roberto $
+** $Id: lstate.c,v 2.149 2017/12/19 16:40:17 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,7 @@
 */
 #if !defined(luai_makeseed)
 #include <time.h>
-#define luai_makeseed()		cast(unsigned int, time(NULL))
+#define luai_makeseed()		cast_uint(time(NULL))
 #endif
 
 
@@ -67,7 +67,7 @@ typedef struct LG {
 ** Layout Randomization (if present) to increase randomness..
 */
 #define addbuff(b,p,e) \
-  { size_t t = cast(size_t, e); \
+  { size_t t = cast_sizet(e); \
     memcpy(b + p, &t, sizeof(t)); p += sizeof(t); }
 
 static unsigned int makeseed (lua_State *L) {

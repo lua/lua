@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.150 2018/01/18 16:24:31 roberto Exp roberto $
+** $Id: lcode.c,v 2.151 2018/01/27 16:56:33 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -545,7 +545,7 @@ int luaK_stringK (FuncState *fs, TString *s) {
 */
 static int luaK_intK (FuncState *fs, lua_Integer n) {
   TValue k, o;
-  setpvalue(&k, cast(void*, cast(size_t, n)));
+  setpvalue(&k, cast_voidp(cast_sizet(n)));
   setivalue(&o, n);
   return addk(fs, &k, &o);
 }

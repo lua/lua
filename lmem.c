@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.94 2017/12/08 17:28:25 roberto Exp roberto $
+** $Id: lmem.c,v 1.95 2017/12/11 12:27:48 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -71,8 +71,8 @@ void *luaM_growaux_ (lua_State *L, void *block, int nelems, int *psize,
   }
   lua_assert(nelems + 1 <= size && size <= limit);
   /* 'limit' ensures that multiplication will not overflow */
-  newblock = luaM_realloc_(L, block, cast(size_t, *psize) * size_elems,
-                                     cast(size_t, size) * size_elems);
+  newblock = luaM_realloc_(L, block, cast_sizet(*psize) * size_elems,
+                                     cast_sizet(size) * size_elems);
   if (newblock == NULL)
     luaM_error(L);
   *psize = size;  /* update only when everything else is OK */
@@ -84,8 +84,8 @@ void *luaM_shrinkvector_ (lua_State *L, void *block, int *size,
                           int final_n, int size_elem) {
   global_State *g = G(L);
   void *newblock;
-  size_t oldsize = cast(size_t, (*size) * size_elem);
-  size_t newsize = cast(size_t, final_n * size_elem);
+  size_t oldsize = cast_sizet((*size) * size_elem);
+  size_t newsize = cast_sizet(final_n * size_elem);
   lua_assert(newsize <= oldsize);
   newblock = (*g->frealloc)(g->ud, block, oldsize, newsize);
   if (newblock == NULL && final_n > 0)  /* allocation failed? */

@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.61 2017/12/12 11:52:35 roberto Exp roberto $
+** $Id: lstring.c,v 2.62 2017/12/18 13:00:57 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -51,7 +51,7 @@ int luaS_eqlngstr (TString *a, TString *b) {
 
 
 unsigned int luaS_hash (const char *str, size_t l, unsigned int seed) {
-  unsigned int h = seed ^ cast(unsigned int, l);
+  unsigned int h = seed ^ cast_uint(l);
   size_t step = (l >> LUAI_HASHLIMIT) + 1;
   for (; l >= step; l -= step)
     h ^= ((h<<5) + (h>>2) + cast_byte(str[l - 1]));

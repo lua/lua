@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.98 2017/05/26 19:14:29 roberto Exp roberto $
+** $Id: lgc.h,v 2.99 2017/10/11 12:38:45 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -57,7 +57,7 @@
 /*
 ** some useful bit tricks
 */
-#define resetbits(x,m)		((x) &= cast(lu_byte, ~(m)))
+#define resetbits(x,m)		((x) &= cast_byte(~(m)))
 #define setbits(x,m)		((x) |= (m))
 #define testbits(x,m)		((x) & (m))
 #define bitmask(b)		(1<<(b))
@@ -95,7 +95,7 @@
 #define changewhite(x)	((x)->marked ^= WHITEBITS)
 #define gray2black(x)	l_setbit((x)->marked, BLACKBIT)
 
-#define luaC_white(g)	cast(lu_byte, (g)->currentwhite & WHITEBITS)
+#define luaC_white(g)	cast_byte((g)->currentwhite & WHITEBITS)
 
 
 /* object age in generational mode */

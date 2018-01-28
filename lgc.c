@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.243 2017/12/20 14:58:05 roberto Exp roberto $
+** $Id: lgc.c,v 2.244 2017/12/28 15:42:57 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -107,7 +107,7 @@ static lu_mem atomic (lua_State *L);
 /*
 ** one after last element in a hash array
 */
-#define gnodelast(h)	gnode(h, cast(size_t, sizenode(h)))
+#define gnodelast(h)	gnode(h, cast_sizet(sizenode(h)))
 
 
 /*

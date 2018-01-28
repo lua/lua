@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.131 2017/11/23 19:29:04 roberto Exp roberto $
+** $Id: lobject.h,v 2.132 2018/01/28 12:07:53 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -351,7 +351,7 @@ typedef union UTString {
 ** (Access to 'extra' ensures that value is really a 'TString'.)
 */
 #define getstr(ts)  \
-  check_exp(sizeof((ts)->extra), cast(char *, (ts)) + sizeof(UTString))
+  check_exp(sizeof((ts)->extra), cast_charp((ts)) + sizeof(UTString))
 
 
 /* get the actual string (array of bytes) from a Lua value */
@@ -391,7 +391,7 @@ typedef union UUdata {
 ** (Access to 'ttuv_' ensures that value is really a 'Udata'.)
 */
 #define getudatamem(u)  \
-  check_exp(sizeof((u)->ttuv_), (cast(char*, (u)) + sizeof(UUdata)))
+  check_exp(sizeof((u)->ttuv_), (cast_charp(u) + sizeof(UUdata)))
 
 #define setuservalue(L,u,o) \
 	{ const TValue *io=(o); Udata *iu = (u); \
@@ -607,7 +607,7 @@ typedef struct Table {
 ** 'module' operation for hashing (size is always a power of 2)
 */
 #define lmod(s,size) \
-	(check_exp((size&(size-1))==0, (cast(int, (s) & ((size)-1)))))
+	(check_exp((size&(size-1))==0, (cast_int((s) & ((size)-1)))))
 
 
 #define twoto(x)	(1<<(x))

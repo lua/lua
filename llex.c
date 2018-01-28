@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.97 2017/06/09 16:48:44 roberto Exp roberto $
+** $Id: llex.c,v 2.98 2017/06/29 15:06:44 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -63,7 +63,7 @@ static void save (LexState *ls, int c) {
     newsize = luaZ_sizebuffer(b) * 2;
     luaZ_resizebuffer(ls->L, b, newsize);
   }
-  b->buffer[luaZ_bufflen(b)++] = cast(char, c);
+  b->buffer[luaZ_bufflen(b)++] = cast_char(c);
 }
 
 

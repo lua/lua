@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.279 2017/12/08 17:28:25 roberto Exp roberto $
+** $Id: lapi.c,v 2.280 2018/01/10 12:02:35 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -439,7 +439,7 @@ LUA_API const void *lua_topointer (lua_State *L, int idx) {
     case LUA_TTABLE: return hvalue(o);
     case LUA_TLCL: return clLvalue(o);
     case LUA_TCCL: return clCvalue(o);
-    case LUA_TLCF: return cast(void *, cast(size_t, fvalue(o)));
+    case LUA_TLCF: return cast_voidp(cast_sizet(fvalue(o)));
     case LUA_TTHREAD: return thvalue(o);
     case LUA_TUSERDATA: return getudatamem(uvalue(o));
     case LUA_TLIGHTUSERDATA: return pvalue(o);
@@ -685,7 +685,7 @@ LUA_API int lua_rawgetp (lua_State *L, int idx, const void *p) {
   lua_lock(L);
   t = index2value(L, idx);
   api_check(L, ttistable(t), "table expected");
-  setpvalue(&k, cast(void *, p));
+  setpvalue(&k, cast_voidp(p));
   setobj2s(L, L->top, luaH_get(hvalue(t), &k));
   api_incr_top(L);
   lua_unlock(L);
@@ -854,7 +854,7 @@ LUA_API void lua_rawsetp (lua_State *L, int idx, const void *p) {
   api_checknelems(L, 1);
   o = index2value(L, idx);
   api_check(L, ttistable(o), "table expected");
-  setpvalue(&k, cast(void *, p));
+  setpvalue(&k, cast_voidp(p));
   slot = luaH_set(L, hvalue(o), &k);
   setobj2t(L, slot, s2v(L->top - 1));
   luaC_barrierback(L, hvalue(o), s2v(L->top - 1));
