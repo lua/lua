@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.290 2017/04/24 18:06:12 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.291 2017/06/27 18:32:49 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -483,7 +483,7 @@ static void *newbox (lua_State *L, size_t newsize) {
   UBox *box = (UBox *)lua_newuserdata(L, sizeof(UBox));
   box->box = NULL;
   box->bsize = 0;
-  if (luaL_newmetatable(L, "LUABOX")) {  /* creating metatable? */
+  if (luaL_newmetatable(L, "_UBOX*")) {  /* creating metatable? */
     lua_pushcfunction(L, boxgc);
     lua_setfield(L, -2, "__gc");  /* metatable.__gc = boxgc */
   }
