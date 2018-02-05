@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.281 2018/01/28 15:13:26 roberto Exp roberto $
+** $Id: lapi.c,v 2.282 2018/01/29 16:21:35 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -1121,6 +1121,7 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       break;
     }
     case LUA_GCGEN: {
+      int oldmode = g->gckind;
       int minormul = va_arg(argp, int);
       int majormul = va_arg(argp, int);
       if (minormul != 0)
@@ -1128,9 +1129,11 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       if (majormul != 0)
         setgcparam(g->genmajormul, majormul);
       luaC_changemode(L, KGC_GEN);
+      res = (oldmode == KGC_GEN) ? LUA_GCGEN : LUA_GCINC;
       break;
     }
     case LUA_GCINC: {
+      int oldmode = g->gckind;
       int pause = va_arg(argp, int);
       int stepmul = va_arg(argp, int);
       int stepsize = va_arg(argp, int);
@@ -1141,6 +1144,7 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       if (stepsize != 0)
         g->gcstepsize = stepsize;
       luaC_changemode(L, KGC_INC);
+      res = (oldmode == KGC_GEN) ? LUA_GCGEN : LUA_GCINC;
       break;
     }
     default: res = -1;  /* invalid option */

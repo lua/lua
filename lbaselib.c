@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.317 2017/06/27 18:32:49 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.318 2017/11/16 13:19:06 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -170,6 +170,12 @@ static int luaB_rawset (lua_State *L) {
 }
 
 
+static int pushmode (lua_State *L, int oldmode) {
+  lua_pushstring(L, (oldmode == LUA_GCINC) ? "incremental" : "generational");
+  return 1;
+}
+
+
 static int luaB_collectgarbage (lua_State *L) {
   static const char *const opts[] = {"stop", "restart", "collect",
     "count", "step", "setpause", "setstepmul",
@@ -206,15 +212,13 @@ static int luaB_collectgarbage (lua_State *L) {
     case LUA_GCGEN: {
       int minormul = (int)luaL_optinteger(L, 2, 0);
       int majormul = (int)luaL_optinteger(L, 3, 0);
-      lua_gc(L, o, minormul, majormul);
-      return 0;
+      return pushmode(L, lua_gc(L, o, minormul, majormul));
     }
     case LUA_GCINC: {
       int pause = (int)luaL_optinteger(L, 2, 0);
       int stepmul = (int)luaL_optinteger(L, 3, 0);
       int stepsize = (int)luaL_optinteger(L, 4, 0);
-      lua_gc(L, o, pause, stepmul, stepsize);
-      return 0;
+      return pushmode(L, lua_gc(L, o, pause, stepmul, stepsize));
     }
     default: {
       int res = lua_gc(L, o);
