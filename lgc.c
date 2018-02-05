@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.244 2017/12/28 15:42:57 roberto Exp roberto $
+** $Id: lgc.c,v 2.245 2018/01/28 15:13:26 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -860,6 +860,7 @@ static void GCTM (lua_State *L, int propagateerrors) {
   global_State *g = G(L);
   const TValue *tm;
   TValue v;
+  lua_assert(!g->gcemergency);
   setgcovalue(L, &v, udata2finalize(g));
   tm = luaT_gettmbyobj(L, &v, TM_GC);
   if (tm != NULL && ttisfunction(tm)) {  /* is there a finalizer? */
@@ -905,10 +906,10 @@ static int runafewfinalizers (lua_State *L, int n) {
 /*
 ** call all pending finalizers
 */
-static void callallpendingfinalizers (lua_State *L) {
+static void callallpendingfinalizers (lua_State *L, int propagateerrors) {
   global_State *g = G(L);
   while (g->tobefnz)
-    GCTM(L, 0);
+    GCTM(L, propagateerrors);
 }
 
 
@@ -1151,7 +1152,8 @@ static void finishgencycle (lua_State *L, global_State *g) {
   correctgraylists(g);
   checkSizes(L, g);
   g->gcstate = GCSpropagate;  /* skip restart */
-  callallpendingfinalizers(L);
+  if (!g->gcemergency)
+    callallpendingfinalizers(L, 1);
 }
 
 
@@ -1211,9 +1213,9 @@ static void entergen (lua_State *L, global_State *g) {
 
   sweep2old(L, &g->tobefnz);
 
-  finishgencycle(L, g);
   g->gckind = KGC_GEN;
   g->GCestimate = gettotalbytes(g);  /* base for memory control */
+  finishgencycle(L, g);
 }
 
 
@@ -1226,8 +1228,8 @@ static void enterinc (global_State *g) {
   whitelist(g, g->allgc);
   g->reallyold = g->old = g->survival = NULL;
   whitelist(g, g->finobj);
+  whitelist(g, g->tobefnz);
   g->finobjrold = g->finobjold = g->finobjsur = NULL;
-  lua_assert(g->tobefnz == NULL);  /* no need to sweep */
   g->gcstate = GCSpause;
   g->gckind = KGC_INC;
 }
@@ -1347,7 +1349,7 @@ void luaC_freeallobjects (lua_State *L) {
   luaC_changemode(L, KGC_INC);
   separatetobefnz(g, 1);  /* separate all objects with finalizers */
   lua_assert(g->finobj == NULL);
-  callallpendingfinalizers(L);
+  callallpendingfinalizers(L, 0);
   deletelist(L, g->allgc, obj2gco(g->mainthread));
   deletelist(L, g->finobj, NULL);
   deletelist(L, g->fixedgc, NULL);  /* collect fixed objects */
