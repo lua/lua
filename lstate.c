@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.149 2017/12/19 16:40:17 roberto Exp roberto $
+** $Id: lstate.c,v 2.150 2018/01/28 15:13:26 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -227,7 +227,6 @@ static void f_luaopen (lua_State *L, void *ud) {
   luaT_init(L);
   luaX_init(L);
   g->gcrunning = 1;  /* allow gc */
-  g->gcemergency = 0;
   g->version = lua_version(NULL);
   luai_userstateopen(L);
 }
@@ -337,6 +336,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->version = NULL;
   g->gcstate = GCSpause;
   g->gckind = KGC_INC;
+  g->gcemergency = 0;
   g->finobj = g->tobefnz = g->fixedgc = NULL;
   g->survival = g->old = g->reallyold = NULL;
   g->finobjsur = g->finobjold = g->finobjrold = NULL;
