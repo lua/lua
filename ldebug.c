@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.151 2017/12/28 15:42:57 roberto Exp roberto $
+** $Id: ldebug.c,v 2.152 2018/01/10 12:02:35 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -143,7 +143,7 @@ LUA_API void lua_sethook (lua_State *L, lua_Hook func, int mask, int count) {
   L->basehookcount = count;
   resethookcount(L);
   L->hookmask = cast_byte(mask);
-  if (mask & (LUA_MASKLINE | LUA_MASKCOUNT))
+  if (mask)
     settraps(L->ci);  /* to trace inside 'luaV_execute' */
 }
 

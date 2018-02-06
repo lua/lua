@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.188 2018/01/28 13:39:52 roberto Exp roberto $
+** $Id: ldo.c,v 2.189 2018/01/29 16:21:35 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -294,19 +294,21 @@ void luaD_hook (lua_State *L, int event, int line) {
 }
 
 
-static void hookcall (lua_State *L, CallInfo *ci, int istail) {
-  int hook;
-  ci->u.l.trap = 1;
-  if (!(L->hookmask & LUA_MASKCALL))
-    return;  /* some other hook */
+/*
+** Executes a call hook for Lua functions. This function is called
+** whenever 'hookmask' is not zero, so it checks whether call hooks are
+** active. Also, this function can be called when resuming a function,
+** so it checks whether the function is in its first instruction.
+*/
+void luaD_hookcall (lua_State *L, CallInfo *ci) {
+  Proto *p = clLvalue(s2v(ci->func))->p;
+  int hook = (ci->callstatus & CIST_TAIL) ? LUA_HOOKTAILCALL : LUA_HOOKCALL;
+  ci->u.l.trap = 1;  /* there may be other hooks */
+  if (!(L->hookmask & LUA_MASKCALL) ||  /* some other hook? */
+      ci->u.l.savedpc != p->code)  /* not 1st instruction? */
+    return;  /* don't call hook */
   L->top = ci->top;  /* prepare top */
   ci->u.l.savedpc++;  /* hooks assume 'pc' is already incremented */
-  if (istail) {
-    ci->callstatus |= CIST_TAIL;
-    hook = LUA_HOOKTAILCALL;
-  }
-  else
-    hook = LUA_HOOKCALL;
   luaD_hook(L, hook, -1);
   ci->u.l.savedpc--;  /* correct 'pc' */
 }
@@ -427,8 +429,6 @@ void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int narg1) {
     L->top = func + narg1;  /* set top */
     luaT_adjustvarargs(L, nfixparams, narg1 - 1);
   }
-  if (L->hookmask)
-    hookcall(L, ci, 1);
 }
 
 
@@ -483,8 +483,6 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
       ci->callstatus = 0;
       if (p->is_vararg)
         luaT_adjustvarargs(L, nfixparams, narg);  /* may invoke GC */
-      if (L->hookmask)
-        hookcall(L, ci, 0);
       luaV_execute(L, ci);  /* run the function */
       break;
     }

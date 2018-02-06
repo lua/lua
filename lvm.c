@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.335 2018/01/27 16:56:33 roberto Exp roberto $
+** $Id: lvm.c,v 2.336 2018/01/29 16:21:35 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -832,8 +832,11 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
   TValue *k;
   StkId base;
   const Instruction *pc;
-  int trap = ci->u.l.trap;
+  int trap;
  tailcall:
+  trap = L->hookmask;
+  if (trap)
+    luaD_hookcall(L, ci);
   cl = clLvalue(s2v(ci->func));
   k = cl->p->k;
   base = ci->func + 1;
