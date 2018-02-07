@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.189 2018/01/29 16:21:35 roberto Exp roberto $
+** $Id: ldo.c,v 2.190 2018/02/06 19:16:56 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -297,15 +297,11 @@ void luaD_hook (lua_State *L, int event, int line) {
 /*
 ** Executes a call hook for Lua functions. This function is called
 ** whenever 'hookmask' is not zero, so it checks whether call hooks are
-** active. Also, this function can be called when resuming a function,
-** so it checks whether the function is in its first instruction.
+** active.
 */
 void luaD_hookcall (lua_State *L, CallInfo *ci) {
-  Proto *p = clLvalue(s2v(ci->func))->p;
   int hook = (ci->callstatus & CIST_TAIL) ? LUA_HOOKTAILCALL : LUA_HOOKCALL;
-  ci->u.l.trap = 1;  /* there may be other hooks */
-  if (!(L->hookmask & LUA_MASKCALL) ||  /* some other hook? */
-      ci->u.l.savedpc != p->code)  /* not 1st instruction? */
+  if (!(L->hookmask & LUA_MASKCALL))  /* some other hook? */
     return;  /* don't call hook */
   L->top = ci->top;  /* prepare top */
   ci->u.l.savedpc++;  /* hooks assume 'pc' is already incremented */
@@ -417,7 +413,7 @@ void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int narg1) {
   int i;
   for (i = 0; i < narg1; i++)  /* move down function and arguments */
     setobjs2s(L, ci->func + i, func + i);
-  checkstackp(L, fsize, func);
+  luaD_checkstackaux(L, fsize, (void)0, luaC_checkGC(L));
   func = ci->func;  /* moved-down function */
   for (; narg1 <= nfixparams; narg1++)
     setnilvalue(s2v(func + narg1));  /* complete missing arguments */
@@ -425,10 +421,7 @@ void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int narg1) {
   lua_assert(ci->top <= L->stack_last);
   ci->u.l.savedpc = p->code;  /* starting point */
   ci->callstatus |= CIST_TAIL;
-  if (p->is_vararg) {
-    L->top = func + narg1;  /* set top */
-    luaT_adjustvarargs(L, nfixparams, narg1 - 1);
-  }
+  L->top = func + narg1;  /* set top */
 }
 
 
@@ -481,8 +474,6 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
       lua_assert(ci->top <= L->stack_last);
       ci->u.l.savedpc = p->code;  /* starting point */
       ci->callstatus = 0;
-      if (p->is_vararg)
-        luaT_adjustvarargs(L, nfixparams, narg);  /* may invoke GC */
       luaV_execute(L, ci);  /* run the function */
       break;
     }

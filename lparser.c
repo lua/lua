@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.174 2017/12/18 17:49:31 roberto Exp roberto $
+** $Id: lparser.c,v 2.175 2017/12/22 14:16:46 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -759,12 +759,18 @@ static void constructor (LexState *ls, expdesc *t) {
 /* }====================================================================== */
 
 
+static void setvararg (FuncState *fs, int nparams) {
+  fs->f->is_vararg = 1;
+  luaK_codeABC(fs, OP_PREPVARARG, nparams, 0, 0);
+}
+
 
 static void parlist (LexState *ls) {
   /* parlist -> [ param { ',' param } ] */
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
   int nparams = 0;
+  int isvararg = 0;
   if (ls->t.token != ')') {  /* is 'parlist' not empty? */
     do {
       switch (ls->t.token) {
@@ -779,17 +785,21 @@ static void parlist (LexState *ls) {
             new_localvar(ls, str_checkname(ls));
           else
             new_localvarliteral(ls, "_ARG");
-          f->is_vararg = 1;  /* declared vararg */
           nparams++;
+          isvararg = 1;
           break;
         }
         default: luaX_syntaxerror(ls, "<name> or '...' expected");
       }
-    } while (!f->is_vararg && testnext(ls, ','));
+    } while (!isvararg && testnext(ls, ','));
   }
   adjustlocalvars(ls, nparams);
-  f->numparams = cast_byte(fs->nactvar) - f->is_vararg;
-  luaK_reserveregs(fs, fs->nactvar);  /* reserve register for parameters */
+  f->numparams = cast_byte(fs->nactvar);
+  if (isvararg) {
+    f->numparams--;  /* exclude vararg parameter */
+    setvararg(fs, f->numparams);  /* declared vararg */
+  }
+  luaK_reserveregs(fs, fs->nactvar);  /* reserve registers for parameters */
 }
 
 
@@ -1692,7 +1702,7 @@ static void mainfunc (LexState *ls, FuncState *fs) {
   BlockCnt bl;
   expdesc v;
   open_func(ls, fs, &bl);
-  fs->f->is_vararg = 1;  /* main function is always declared vararg */
+  setvararg(fs, 0);  /* main function is always declared vararg */
   fs->f->numparams = 0;
   new_localvarliteral(ls, "_ARG");
   adjustlocalvars(ls, 1);

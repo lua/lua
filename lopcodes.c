@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.74 2017/12/18 17:49:31 roberto Exp $
+** $Id: lopcodes.c,v 1.75 2017/12/22 14:16:46 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -91,6 +91,7 @@ LUAI_DDEF const char *const luaP_opnames[NUM_OPCODES+1] = {
   "SETLIST",
   "CLOSURE",
   "VARARG",
+  "PREPVARARG",
   "EXTRAARG",
   NULL
 };
@@ -171,6 +172,7 @@ LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 1, 0, 0, iABC)		/* OP_SETLIST */
  ,opmode(0, 0, 0, 1, iABx)		/* OP_CLOSURE */
  ,opmode(1, 0, 0, 1, iABC)		/* OP_VARARG */
+ ,opmode(0, 0, 0, 1, iABC)		/* OP_PREPVARARG */
  ,opmode(0, 0, 0, 0, iAx)		/* OP_EXTRAARG */
 };
 

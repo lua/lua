@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.57 2018/01/28 12:08:04 roberto Exp roberto $
+** $Id: ltm.c,v 2.58 2018/01/28 13:39:52 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -216,10 +216,11 @@ int luaT_callorderiTM (lua_State *L, const TValue *p1, int v2,
 }
 
 
-void luaT_adjustvarargs (lua_State *L, int nfixparams, int actual) {
+void luaT_adjustvarargs (lua_State *L, int nfixparams, StkId base) {
   int i;
   Table *vtab;
   TValue nname;
+  int actual = cast_int(L->top - base);  /* number of arguments */
   int nextra = actual - nfixparams;  /* number of extra arguments */
   vtab = luaH_new(L);  /* create vararg table */
   sethvalue2s(L, L->top, vtab);  /* anchor it for resizing */

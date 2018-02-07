@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.336 2018/01/29 16:21:35 roberto Exp roberto $
+** $Id: lvm.c,v 2.337 2018/02/06 19:16:56 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -835,12 +835,17 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
   int trap;
  tailcall:
   trap = L->hookmask;
-  if (trap)
-    luaD_hookcall(L, ci);
   cl = clLvalue(s2v(ci->func));
   k = cl->p->k;
-  base = ci->func + 1;
   pc = ci->u.l.savedpc;
+  if (trap) {
+    if (cl->p->is_vararg)
+      trap = 0;  /* hooks will start with PREPVARARG instruction */
+    else if (pc == cl->p->code)  /* first instruction (not resuming)? */
+      luaD_hookcall(L, ci);
+    ci->u.l.trap = 1;  /* there may be other hooks */
+  }
+  base = ci->func + 1;
   /* main loop of interpreter */
   for (;;) {
     int cond;  /* flag for conditional jumps */
@@ -1699,6 +1704,16 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         int n = GETARG_C(i) - 1;  /* required results */
         TValue *vtab = vRB(i);  /* vararg table */
         Protect(luaT_getvarargs(L, vtab, ra, n));
+        vmbreak;
+      }
+      vmcase(OP_PREPVARARG) {
+        luaT_adjustvarargs(L, GETARG_A(i), base);
+        updatetrap(ci);
+        if (trap) {
+          luaD_hookcall(L, ci);
+          L->oldpc = pc + 1;  /* next opcode will be seen as a new line */
+        }
+        updatebase(ci);
         vmbreak;
       }
       vmcase(OP_EXTRAARG) {

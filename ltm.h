@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 2.28 2017/12/13 18:32:09 roberto Exp roberto $
+** $Id: ltm.h,v 2.29 2018/01/28 13:39:52 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -77,7 +77,7 @@ LUAI_FUNC int luaT_callorderTM (lua_State *L, const TValue *p1,
 LUAI_FUNC int luaT_callorderiTM (lua_State *L, const TValue *p1, int v2,
                                  int inv, TMS event);
 
-LUAI_FUNC void luaT_adjustvarargs (lua_State *L, int nfixparams, int actual);
+LUAI_FUNC void luaT_adjustvarargs (lua_State *L, int nfixparams, StkId base);
 LUAI_FUNC void luaT_getvarargs (lua_State *L, TValue *t, StkId where,
                                 int wanted);
 
