@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.183 2018/01/27 16:56:33 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.184 2018/01/28 15:13:26 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -334,8 +334,8 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
 ** bits 0-2: op mode
 ** bit 3: instruction set register A
 ** bit 4: operator is a test (next instruction must be a jump)
-** bit 5: instruction sets 'L->top' for next instruction (when C == 0)
-** bit 6: instruction uses 'L->top' set by previous instruction (when B == 0)
+** bit 5: instruction uses 'L->top' set by previous instruction (when B == 0)
+** bit 6: instruction sets 'L->top' for next instruction (when C == 0)
 */
 
 LUAI_DDEC const lu_byte luaP_opmodes[NUM_OPCODES];
@@ -343,8 +343,8 @@ LUAI_DDEC const lu_byte luaP_opmodes[NUM_OPCODES];
 #define getOpMode(m)	(cast(enum OpMode, luaP_opmodes[m] & 7))
 #define testAMode(m)	(luaP_opmodes[m] & (1 << 3))
 #define testTMode(m)	(luaP_opmodes[m] & (1 << 4))
-#define testOTMode(m)	(luaP_opmodes[m] & (1 << 5))
-#define testITMode(m)	(luaP_opmodes[m] & (1 << 6))
+#define testITMode(m)	(luaP_opmodes[m] & (1 << 5))
+#define testOTMode(m)	(luaP_opmodes[m] & (1 << 6))
 
 /* "out top" (set top for next instruction) */
 #define isOT(i)		(testOTMode(GET_OPCODE(i)) && GETARG_C(i) == 0)
@@ -352,7 +352,7 @@ LUAI_DDEC const lu_byte luaP_opmodes[NUM_OPCODES];
 /* "in top" (uses top from previous instruction) */
 #define isIT(i)		(testITMode(GET_OPCODE(i)) && GETARG_B(i) == 0)
 
-#define opmode(ot,it,t,a,m) (((ot)<<5) | ((it)<<6) | ((t)<<4) | ((a)<<3) | (m))
+#define opmode(ot,it,t,a,m) (((ot)<<6) | ((it)<<5) | ((t)<<4) | ((a)<<3) | (m))
 
 
 LUAI_DDEC const char *const luaP_opnames[NUM_OPCODES+1];  /* opcode names */
