@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.190 2018/02/06 19:16:56 roberto Exp roberto $
+** $Id: ldo.c,v 2.191 2018/02/07 15:18:04 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -398,7 +398,11 @@ void luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres) {
 
 
 
-#define next_ci(L) (L->ci = (L->ci->next ? L->ci->next : luaE_extendCI(L)))
+#define next_ci(L)	(L->ci->next ? L->ci->next : luaE_extendCI(L))
+
+
+#define checkstackGC(L,fsize)  \
+	luaD_checkstackaux(L, (fsize), (void)0, luaC_checkGC(L))
 
 
 /*
@@ -413,7 +417,7 @@ void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int narg1) {
   int i;
   for (i = 0; i < narg1; i++)  /* move down function and arguments */
     setobjs2s(L, ci->func + i, func + i);
-  luaD_checkstackaux(L, fsize, (void)0, luaC_checkGC(L));
+  checkstackGC(L, fsize);
   func = ci->func;  /* moved-down function */
   for (; narg1 <= nfixparams; narg1++)
     setnilvalue(s2v(func + narg1));  /* complete missing arguments */
@@ -434,7 +438,8 @@ void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int narg1) {
 void luaD_call (lua_State *L, StkId func, int nresults) {
   lua_CFunction f;
   TValue *funcv = s2v(func);
-  CallInfo *ci;
+  CallInfo *ci = next_ci(L);
+  ci->nresults = nresults;
   switch (ttype(funcv)) {
     case LUA_TCCL:  /* C closure */
       f = clCvalue(funcv)->f;
@@ -444,12 +449,11 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
      Cfunc: {
       int n;  /* number of returns */
       checkstackp(L, LUA_MINSTACK, func);  /* ensure minimum stack size */
-      ci = next_ci(L);  /* now 'enter' new function */
-      ci->nresults = nresults;
-      ci->func = func;
-      ci->top = L->top + LUA_MINSTACK;
-      lua_assert(ci->top <= L->stack_last);
       ci->callstatus = CIST_C;
+      ci->top = L->top + LUA_MINSTACK;
+      ci->func = func;
+      lua_assert(ci->top <= L->stack_last);
+      L->ci = ci;  /* now 'enter' new function */
       if (L->hookmask & LUA_MASKCALL)
         luaD_hook(L, LUA_HOOKCALL, -1);
       lua_unlock(L);
@@ -464,16 +468,15 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
       int narg = cast_int(L->top - func) - 1;  /* number of real arguments */
       int nfixparams = p->numparams;
       int fsize = p->maxstacksize;  /* frame size */
+      ci->u.l.savedpc = p->code;  /* starting point */
       checkstackp(L, fsize, func);
       for (; narg < nfixparams; narg++)
         setnilvalue(s2v(L->top++));  /* complete missing arguments */
-      ci = next_ci(L);  /* now 'enter' new function */
-      ci->nresults = nresults;
-      ci->func = func;
-      ci->top = func + 1 + fsize;
-      lua_assert(ci->top <= L->stack_last);
-      ci->u.l.savedpc = p->code;  /* starting point */
       ci->callstatus = 0;
+      ci->top = func + 1 + fsize;
+      ci->func = func;
+      L->ci = ci;  /* now 'enter' new function */
+      lua_assert(ci->top <= L->stack_last);
       luaV_execute(L, ci);  /* run the function */
       break;
     }
