@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.191 2018/02/07 15:18:04 roberto Exp roberto $
+** $Id: ldo.c,v 2.192 2018/02/07 15:55:18 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -310,7 +310,7 @@ void luaD_hookcall (lua_State *L, CallInfo *ci) {
 }
 
 
-static void rethook (lua_State *L, CallInfo *ci) {
+void luaD_rethook (lua_State *L, CallInfo *ci) {
   if (isLuacode(ci))
     L->top = ci->top;  /* prepare top */
   if (L->hookmask & LUA_MASKRET)  /* is return hook on? */
@@ -343,8 +343,8 @@ void luaD_tryfuncTM (lua_State *L, StkId func) {
 ** expressions, multiple results for tail calls/single parameters)
 ** separated.
 */
-static void moveresults (lua_State *L, StkId firstResult, StkId res,
-                                       int nres, int wanted) {
+void luaD_moveresults (lua_State *L, StkId firstResult, StkId res,
+                                     int nres, int wanted) {
   switch (wanted) {  /* handle typical cases separately */
     case 0: break;  /* nothing to move */
     case 1: {  /* one result needed */
@@ -382,27 +382,22 @@ static void moveresults (lua_State *L, StkId firstResult, StkId res,
 
 /*
 ** Finishes a function call: calls hook if necessary, removes CallInfo,
-** moves current number of results to proper place; returns 0 iff call
-** wanted multiple (variable number of) results.
+** moves current number of results to proper place.
 */
 void luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres) {
   if (L->hookmask) {
     ptrdiff_t fr = savestack(L, firstResult);  /* hook may change stack */
-    rethook(L, ci);
+    luaD_rethook(L, ci);
     firstResult = restorestack(L, fr);
   }
   L->ci = ci->previous;  /* back to caller */
   /* move results to proper place */
-  moveresults(L, firstResult, ci->func, nres, ci->nresults);
+  luaD_moveresults(L, firstResult, ci->func, nres, ci->nresults);
 }
 
 
 
-#define next_ci(L)	(L->ci->next ? L->ci->next : luaE_extendCI(L))
-
-
-#define checkstackGC(L,fsize)  \
-	luaD_checkstackaux(L, (fsize), (void)0, luaC_checkGC(L))
+#define next_ci(L)  (L->ci = (L->ci->next ? L->ci->next : luaE_extendCI(L)))
 
 
 /*
@@ -438,8 +433,6 @@ void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int narg1) {
 void luaD_call (lua_State *L, StkId func, int nresults) {
   lua_CFunction f;
   TValue *funcv = s2v(func);
-  CallInfo *ci = next_ci(L);
-  ci->nresults = nresults;
   switch (ttype(funcv)) {
     case LUA_TCCL:  /* C closure */
       f = clCvalue(funcv)->f;
@@ -448,12 +441,14 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
       f = fvalue(funcv);
      Cfunc: {
       int n;  /* number of returns */
+      CallInfo *ci;
       checkstackp(L, LUA_MINSTACK, func);  /* ensure minimum stack size */
+      ci = next_ci(L);
+      ci->nresults = nresults;
       ci->callstatus = CIST_C;
       ci->top = L->top + LUA_MINSTACK;
       ci->func = func;
       lua_assert(ci->top <= L->stack_last);
-      L->ci = ci;  /* now 'enter' new function */
       if (L->hookmask & LUA_MASKCALL)
         luaD_hook(L, LUA_HOOKCALL, -1);
       lua_unlock(L);
@@ -464,18 +459,20 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
       break;
     }
     case LUA_TLCL: {  /* Lua function */
+      CallInfo *ci;
       Proto *p = clLvalue(funcv)->p;
       int narg = cast_int(L->top - func) - 1;  /* number of real arguments */
       int nfixparams = p->numparams;
       int fsize = p->maxstacksize;  /* frame size */
-      ci->u.l.savedpc = p->code;  /* starting point */
       checkstackp(L, fsize, func);
-      for (; narg < nfixparams; narg++)
-        setnilvalue(s2v(L->top++));  /* complete missing arguments */
+      ci = next_ci(L);
+      ci->nresults = nresults;
+      ci->u.l.savedpc = p->code;  /* starting point */
       ci->callstatus = 0;
       ci->top = func + 1 + fsize;
       ci->func = func;
-      L->ci = ci;  /* now 'enter' new function */
+      for (; narg < nfixparams; narg++)
+        setnilvalue(s2v(L->top++));  /* complete missing arguments */
       lua_assert(ci->top <= L->stack_last);
       luaV_execute(L, ci);  /* run the function */
       break;

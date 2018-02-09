@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.58 2018/01/28 13:39:52 roberto Exp roberto $
+** $Id: ltm.c,v 2.59 2018/02/07 15:18:04 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -216,41 +216,32 @@ int luaT_callorderiTM (lua_State *L, const TValue *p1, int v2,
 }
 
 
-void luaT_adjustvarargs (lua_State *L, int nfixparams, StkId base) {
+void luaT_adjustvarargs (lua_State *L, int nfixparams, CallInfo *ci) {
   int i;
-  Table *vtab;
-  TValue nname;
-  int actual = cast_int(L->top - base);  /* number of arguments */
+  int actual = cast_int(L->top - ci->func) - 1;  /* number of arguments */
   int nextra = actual - nfixparams;  /* number of extra arguments */
-  vtab = luaH_new(L);  /* create vararg table */
-  sethvalue2s(L, L->top, vtab);  /* anchor it for resizing */
-  L->top++;  /* space ensured by caller */
-  luaH_resize(L, vtab, nextra, 1);
-  for (i = 0; i < nextra; i++)  /* put extra arguments into vararg table */
-    setobj2n(L, &vtab->array[i], s2v(L->top - nextra + i - 1));
-  setsvalue(L, &nname, G(L)->nfield);  /* get field 'n' */
-  setivalue(luaH_set(L, vtab, &nname), nextra);  /* store counter there */
-  L->top -= nextra;  /* remove extra elements from the stack */
-  sethvalue2s(L, L->top - 1, vtab);  /* move table to new top */
-  luaC_checkGC(L);
+  ci->u.l.nextraargs = nextra;
+  checkstackGC(L, nfixparams + 1);
+  /* copy function and fixed parameters to the top of the stack */
+  for (i = 0; i <= nfixparams; i++) {
+    setobjs2s(L, L->top++, ci->func + i);
+    setnilvalue(s2v(ci->func + i));  /* erase original copy (for GC) */
+  }
+  ci->func += actual + 1;
+  ci->top += actual + 1;
 }
 
 
-void luaT_getvarargs (lua_State *L, TValue *t, StkId where, int wanted) {
-  if (!ttistable(t))
-    luaG_runerror(L, "'vararg' parameter is not a table");
-  else {
-    int i;
-    Table *h = hvalue(t);
-    if (wanted < 0) {  /* get all? */
-      const TValue *ns = luaH_getstr(h, G(L)->nfield);
-      int n = (ttisinteger(ns)) ? cast_int(ivalue(ns)) : 0;
-      wanted = n;
-      checkstackp(L, n, where);
-      L->top = where + n;
-    }
-    for (i = 0; i < wanted; i++)  /* get what is available */
-      setobj2s(L, where + i, luaH_getint(h, i + 1));
-    return;
+void luaT_getvarargs (lua_State *L, CallInfo *ci, StkId where, int wanted) {
+  int i;
+  int nextra = ci->u.l.nextraargs;
+  if (wanted < 0) {
+    wanted = nextra;  /* get all extra arguments available */
+    checkstackp(L, nextra, where);  /* ensure stack space */
+    L->top = where + nextra;  /* next instruction will need top */
   }
+  for (i = 0; i < wanted && i < nextra; i++)
+    setobjs2s(L, where + i, ci->func - nextra + i);
+  for (; i < wanted; i++)   /* complete required results with nil */
+    setnilvalue(s2v(where + i));
 }

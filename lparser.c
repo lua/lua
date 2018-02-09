@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.175 2017/12/22 14:16:46 roberto Exp roberto $
+** $Id: lparser.c,v 2.176 2018/02/07 15:18:04 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -568,6 +568,7 @@ static void close_func (LexState *ls) {
   Proto *f = fs->f;
   luaK_ret(fs, 0, 0);  /* final return */
   leaveblock(fs);
+  lua_assert(fs->bl == NULL);
   luaK_finish(fs);
   luaM_shrinkvector(L, f->code, f->sizecode, fs->pc, Instruction);
   luaM_shrinkvector(L, f->lineinfo, f->sizelineinfo, fs->pc, ls_byte);
@@ -577,7 +578,8 @@ static void close_func (LexState *ls) {
   luaM_shrinkvector(L, f->p, f->sizep, fs->np, Proto *);
   luaM_shrinkvector(L, f->locvars, f->sizelocvars, fs->nlocvars, LocVar);
   luaM_shrinkvector(L, f->upvalues, f->sizeupvalues, fs->nups, Upvaldesc);
-  lua_assert(fs->bl == NULL);
+  if (f->is_vararg)
+    f->maxstacksize++;  /* ensure space to copy the function */
   ls->fs = fs->prev;
   luaC_checkGC(L);
 }
@@ -781,11 +783,6 @@ static void parlist (LexState *ls) {
         }
         case TK_DOTS: {  /* param -> '...' */
           luaX_next(ls);
-          if (testnext(ls, '='))
-            new_localvar(ls, str_checkname(ls));
-          else
-            new_localvarliteral(ls, "_ARG");
-          nparams++;
           isvararg = 1;
           break;
         }
@@ -795,10 +792,8 @@ static void parlist (LexState *ls) {
   }
   adjustlocalvars(ls, nparams);
   f->numparams = cast_byte(fs->nactvar);
-  if (isvararg) {
-    f->numparams--;  /* exclude vararg parameter */
+  if (isvararg)
     setvararg(fs, f->numparams);  /* declared vararg */
-  }
   luaK_reserveregs(fs, fs->nactvar);  /* reserve registers for parameters */
 }
 
@@ -984,10 +979,9 @@ static void simpleexp (LexState *ls, expdesc *v) {
     }
     case TK_DOTS: {  /* vararg */
       FuncState *fs = ls->fs;
-      int lastparam = fs->f->numparams;
       check_condition(ls, fs->f->is_vararg,
                       "cannot use '...' outside a vararg function");
-      init_exp(v, VVARARG, luaK_codeABC(fs, OP_VARARG, 0, lastparam, 1));
+      init_exp(v, VVARARG, luaK_codeABC(fs, OP_VARARG, 0, 0, 1));
       break;
     }
     case '{': {  /* constructor */
@@ -1703,10 +1697,6 @@ static void mainfunc (LexState *ls, FuncState *fs) {
   expdesc v;
   open_func(ls, fs, &bl);
   setvararg(fs, 0);  /* main function is always declared vararg */
-  fs->f->numparams = 0;
-  new_localvarliteral(ls, "_ARG");
-  adjustlocalvars(ls, 1);
-  luaK_reserveregs(fs, 1);  /* reserve register for vararg */
   init_exp(&v, VLOCAL, 0);  /* create and... */
   newupvalue(fs, ls->envn, &v);  /* ...set environment upvalue */
   luaX_next(ls);  /* read first token */

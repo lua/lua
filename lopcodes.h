@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.184 2018/01/28 15:13:26 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.186 2018/02/07 15:18:04 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -268,6 +268,7 @@ OP_CALL,/*	A B C	R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1)) */
 OP_TAILCALL,/*	A B C	return R(A)(R(A+1), ... ,R(A+B-1))		*/
 
 OP_RETURN,/*	A B	return R(A), ... ,R(A+B-2)	(see note)	*/
+OP_RETVARARG,/*	A B	return R(A), ... ,R(A+B-2)	(see note)	*/
 OP_RETURN0,/*	  	return 						*/
 OP_RETURN1,/*	A 	return R(A)					*/
 
@@ -286,7 +287,7 @@ OP_SETLIST,/*	A B C	R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B	*/
 
 OP_CLOSURE,/*	A Bx	R(A) := closure(KPROTO[Bx])			*/
 
-OP_VARARG,/*	A B C	R(A), R(A+1), ..., R(A+C-2) = vararg(B)		*/
+OP_VARARG,/*	A B C  	R(A), R(A+1), ..., R(A+C-2) = vararg		*/
 
 OP_PREPVARARG,/*A 	(adjust vararg parameters)			*/
 
@@ -305,9 +306,10 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
   OP_SETLIST) may use 'top'.
 
   (*) In OP_VARARG, if (C == 0) then use actual number of varargs and
-  set top (like in OP_CALL with C == 0). B is the vararg parameter.
+  set top (like in OP_CALL with C == 0).
 
-  (*) In OP_RETURN, if (B == 0) then return up to 'top'.
+  (*) In OP_RETURN/OP_RETVARARG, if (B == 0) then return up to 'top'.
+  (OP_RETVARARG is the return instruction for vararg functions.)
 
   (*) In OP_SETLIST, if (B == 0) then real B = 'top'; if (C == 0) then
   next 'instruction' is EXTRAARG(real C).

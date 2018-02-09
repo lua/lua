@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.152 2018/01/10 12:02:35 roberto Exp roberto $
+** $Id: ldebug.c,v 2.153 2018/02/06 19:16:56 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -187,12 +187,28 @@ static const char *upvalname (Proto *p, int uv) {
 }
 
 
+static const char *findvararg (CallInfo *ci, int n, StkId *pos) {
+  if (clLvalue(s2v(ci->func))->p->is_vararg) {
+    int nextra = ci->u.l.nextraargs;
+    if (n <= nextra) {
+      *pos = ci->func - nextra + (n - 1);
+      return "(*vararg)";  /* generic name for any vararg */
+    }
+  }
+  return NULL;  /* no such vararg */
+}
+
+
 static const char *findlocal (lua_State *L, CallInfo *ci, int n,
                               StkId *pos) {
   StkId base = ci->func + 1;
-  const char *name = (isLua(ci))
-                     ? luaF_getlocalname(ci_func(ci)->p, n, currentpc(ci))
-                     : NULL;
+  const char *name = NULL;
+  if (isLua(ci)) {
+    if (n < 0)  /* access to vararg values? */
+      return findvararg(ci, -n, pos);
+    else
+      name = luaF_getlocalname(ci_func(ci)->p, n, currentpc(ci));
+  }
   if (name == NULL) {  /* no 'standard' name? */
     StkId limit = (ci == L->ci) ? L->top : ci->next->func;
     if (limit - base >= n && n > 0)  /* is 'n' inside 'ci' stack? */
@@ -324,7 +340,7 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
         }
         else {
           ar->isvararg = f->l.p->is_vararg;
-          ar->nparams = f->l.p->numparams + f->l.p->is_vararg;
+          ar->nparams = f->l.p->numparams;
         }
         break;
       }

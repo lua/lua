@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.337 2018/02/06 19:16:56 roberto Exp roberto $
+** $Id: lvm.c,v 2.338 2018/02/07 15:18:04 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1506,14 +1506,10 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           luaF_close(L, base);  /* close upvalues from current call */
         if (!ttisLclosure(vra)) {  /* C function? */
           ProtectNT(luaD_call(L, ra, LUA_MULTRET));  /* call it */
-          if (trap) {
-            updatebase(ci);
-            ra = RA(i);
-          }
-          luaD_poscall(L, ci, ra, cast_int(L->top - ra));
-          return;
         }
         else {  /* Lua tail call */
+          if (cl->p->is_vararg)
+            ci->func -= cl->p->numparams + ci->u.l.nextraargs + 1;
           luaD_pretailcall(L, ci, ra, b);  /* prepare call frame */
           goto tailcall;
         }
@@ -1521,11 +1517,30 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_RETURN) {
         int b = GETARG_B(i);
+        int n = (b != 0 ? b - 1 : cast_int(L->top - ra));
         if (TESTARG_k(i))
           luaF_close(L, base);
-        halfProtect(
-          luaD_poscall(L, ci, ra, (b != 0 ? b - 1 : cast_int(L->top - ra)))
-        );
+        halfProtect(luaD_poscall(L, ci, ra, n));
+        return;
+      }
+      vmcase(OP_RETVARARG) {
+        int b = GETARG_B(i);
+        int nparams = GETARG_C(i);
+        int nres = (b != 0 ? b - 1 : cast_int(L->top - ra));
+        int delta = ci->u.l.nextraargs + nparams + 2;
+        if (TESTARG_k(i))
+          luaF_close(L, base);
+        savepc(L);
+        /* code similar to 'luaD_poscall', but with a delta */
+        if (L->hookmask) {
+          luaD_rethook(L, ci);
+          if (ci->u.l.trap) {
+            updatebase(ci);
+            ra = RA(i);
+          }
+        }
+        L->ci = ci->previous;  /* back to caller */
+        luaD_moveresults(L, ra, base - delta, nres, ci->nresults);
         return;
       }
       vmcase(OP_RETURN0) {
@@ -1702,12 +1717,11 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_VARARG) {
         int n = GETARG_C(i) - 1;  /* required results */
-        TValue *vtab = vRB(i);  /* vararg table */
-        Protect(luaT_getvarargs(L, vtab, ra, n));
+        ProtectNT(luaT_getvarargs(L, ci, ra, n));
         vmbreak;
       }
       vmcase(OP_PREPVARARG) {
-        luaT_adjustvarargs(L, GETARG_A(i), base);
+        luaT_adjustvarargs(L, GETARG_A(i), ci);
         updatetrap(ci);
         if (trap) {
           luaD_hookcall(L, ci);

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.151 2018/01/27 16:56:33 roberto Exp roberto $
+** $Id: lcode.c,v 2.152 2018/01/28 15:13:26 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -31,7 +31,7 @@
 
 
 /* Maximum number of registers in a Lua function (must fit in 8 bits) */
-#define MAXREGS		255
+#define MAXREGS		254
 
 
 #define hasjumps(e)	((e)->t != (e)->f)
@@ -157,17 +157,17 @@ int luaK_jump (FuncState *fs) {
 ** Code a 'return' instruction
 */
 void luaK_ret (FuncState *fs, int first, int nret) {
-  switch (nret) {
-    case 0:
-      luaK_codeABC(fs, OP_RETURN0, 0, 0, 0);
-      break;
-    case 1:
-      luaK_codeABC(fs, OP_RETURN1, first, 0, 0);
-      break;
-    default:
-      luaK_codeABC(fs, OP_RETURN, first, nret + 1, 0);
-      break;
+  OpCode op;
+  if (fs->f->is_vararg)
+    op = OP_RETVARARG;
+  else {
+    switch (nret) {
+      case 0: op = OP_RETURN0; break;
+      case 1: op = OP_RETURN1; break;
+      default: op = OP_RETURN; break;
+    }
   }
+  luaK_codeABC(fs, op, first, nret + 1, fs->f->numparams);
 }
 
 
@@ -1647,7 +1647,7 @@ void luaK_finish (FuncState *fs) {
     lua_assert(i == 0 || isOT(*(pc - 1)) == isIT(*pc));
     switch (GET_OPCODE(*pc)) {
       case OP_RETURN: case OP_RETURN0: case OP_RETURN1:
-      case OP_TAILCALL: {
+      case OP_RETVARARG: case OP_TAILCALL: {
         if (p->sizep > 0)
           SETARG_k(*pc, 1);  /* signal that they must close upvalues */
         break;
