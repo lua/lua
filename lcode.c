@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.152 2018/01/28 15:13:26 roberto Exp roberto $
+** $Id: lcode.c,v 2.153 2018/02/09 15:16:06 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -158,16 +158,12 @@ int luaK_jump (FuncState *fs) {
 */
 void luaK_ret (FuncState *fs, int first, int nret) {
   OpCode op;
-  if (fs->f->is_vararg)
-    op = OP_RETVARARG;
-  else {
-    switch (nret) {
-      case 0: op = OP_RETURN0; break;
-      case 1: op = OP_RETURN1; break;
-      default: op = OP_RETURN; break;
-    }
+  switch (nret) {
+    case 0: op = OP_RETURN0; break;
+    case 1: op = OP_RETURN1; break;
+    default: op = OP_RETURN; break;
   }
-  luaK_codeABC(fs, op, first, nret + 1, fs->f->numparams);
+  luaK_codeABC(fs, op, first, nret + 1, 0);
 }
 
 
@@ -1646,10 +1642,18 @@ void luaK_finish (FuncState *fs) {
     Instruction *pc = &p->code[i];
     lua_assert(i == 0 || isOT(*(pc - 1)) == isIT(*pc));
     switch (GET_OPCODE(*pc)) {
-      case OP_RETURN: case OP_RETURN0: case OP_RETURN1:
-      case OP_RETVARARG: case OP_TAILCALL: {
-        if (p->sizep > 0)
-          SETARG_k(*pc, 1);  /* signal that they must close upvalues */
+      case OP_RETURN0: case OP_RETURN1: {
+        if (p->sizep == 0 && !p->is_vararg)
+          break;  /* no extra work */
+        /* else use OP_RETURN to do the extra work */
+        SET_OPCODE(*pc, OP_RETURN);
+        /* FALLTHROUGH */
+      }
+      case OP_RETURN: case OP_TAILCALL: {
+        if (p->sizep > 0 || p->is_vararg) {
+          SETARG_C(*pc, p->is_vararg ? p->numparams + 1 : 0);
+          SETARG_k(*pc, 1);  /* signal that there is extra work */
+        }
         break;
       }
       case OP_JMP: {

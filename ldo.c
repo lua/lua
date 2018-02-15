@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.192 2018/02/07 15:55:18 roberto Exp roberto $
+** $Id: ldo.c,v 2.193 2018/02/09 15:16:06 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -310,11 +310,19 @@ void luaD_hookcall (lua_State *L, CallInfo *ci) {
 }
 
 
-void luaD_rethook (lua_State *L, CallInfo *ci) {
-  if (isLuacode(ci))
+static void rethook (lua_State *L, CallInfo *ci) {
+  int delta = 0;
+  if (isLuacode(ci)) {
+    Proto *p = clLvalue(s2v(ci->func))->p;
+    if (p->is_vararg)
+      delta = ci->u.l.nextraargs + p->numparams + 1;
     L->top = ci->top;  /* prepare top */
-  if (L->hookmask & LUA_MASKRET)  /* is return hook on? */
+  }
+  if (L->hookmask & LUA_MASKRET) {  /* is return hook on? */
+    ci->func += delta;  /* if vararg, back to virtual 'func' */
     luaD_hook(L, LUA_HOOKRET, -1);  /* call it */
+    ci->func -= delta;
+  }
   if (isLua(ci->previous))
     L->oldpc = ci->previous->u.l.savedpc;  /* update 'oldpc' */
 }
@@ -343,8 +351,8 @@ void luaD_tryfuncTM (lua_State *L, StkId func) {
 ** expressions, multiple results for tail calls/single parameters)
 ** separated.
 */
-void luaD_moveresults (lua_State *L, StkId firstResult, StkId res,
-                                     int nres, int wanted) {
+static void moveresults (lua_State *L, StkId firstResult, StkId res,
+                                       int nres, int wanted) {
   switch (wanted) {  /* handle typical cases separately */
     case 0: break;  /* nothing to move */
     case 1: {  /* one result needed */
@@ -387,12 +395,12 @@ void luaD_moveresults (lua_State *L, StkId firstResult, StkId res,
 void luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres) {
   if (L->hookmask) {
     ptrdiff_t fr = savestack(L, firstResult);  /* hook may change stack */
-    luaD_rethook(L, ci);
+    rethook(L, ci);
     firstResult = restorestack(L, fr);
   }
   L->ci = ci->previous;  /* back to caller */
   /* move results to proper place */
-  luaD_moveresults(L, firstResult, ci->func, nres, ci->nresults);
+  moveresults(L, firstResult, ci->func, nres, ci->nresults);
 }
 
 

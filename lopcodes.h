@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.186 2018/02/07 15:18:04 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.187 2018/02/09 15:16:06 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -267,8 +267,7 @@ OP_TESTSET,/*	A B	if (not R(B) == k) then R(A) := R(B) else pc++	*/
 OP_CALL,/*	A B C	R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1)) */
 OP_TAILCALL,/*	A B C	return R(A)(R(A+1), ... ,R(A+B-1))		*/
 
-OP_RETURN,/*	A B	return R(A), ... ,R(A+B-2)	(see note)	*/
-OP_RETVARARG,/*	A B	return R(A), ... ,R(A+B-2)	(see note)	*/
+OP_RETURN,/*	A B C	return R(A), ... ,R(A+B-2)	(see note)	*/
 OP_RETURN0,/*	  	return 						*/
 OP_RETURN1,/*	A 	return R(A)					*/
 
@@ -302,14 +301,13 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
 /*===========================================================================
   Notes:
   (*) In OP_CALL, if (B == 0) then B = top. If (C == 0), then 'top' is
-  set to last_result+1, so next open instruction (OP_CALL, OP_RETURN,
+  set to last_result+1, so next open instruction (OP_CALL, OP_RETURN*,
   OP_SETLIST) may use 'top'.
 
   (*) In OP_VARARG, if (C == 0) then use actual number of varargs and
   set top (like in OP_CALL with C == 0).
 
-  (*) In OP_RETURN/OP_RETVARARG, if (B == 0) then return up to 'top'.
-  (OP_RETVARARG is the return instruction for vararg functions.)
+  (*) In OP_RETURN, if (B == 0) then return up to 'top'.
 
   (*) In OP_SETLIST, if (B == 0) then real B = 'top'; if (C == 0) then
   next 'instruction' is EXTRAARG(real C).
@@ -326,9 +324,11 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
 
   (*) All 'skips' (pc++) assume that next instruction is a jump.
 
-  (*) In instructions ending a function (OP_RETURN*, OP_TAILCALL), k
-  specifies that the function builds upvalues, which may need to be
-  closed.
+  (*) In instructions OP_RETURN/OP_TAILCALL, 'k' specifies that the
+  function either builds upvalues, which may need to be closed, or is
+  vararg, which must be corrected before returning. When 'k' is true,
+  C > 0 means the function is vararg and (C - 1) is its number of
+  fixed parameters.
 
 ===========================================================================*/
 
@@ -351,7 +351,9 @@ LUAI_DDEC const lu_byte luaP_opmodes[NUM_OPCODES];
 #define testOTMode(m)	(luaP_opmodes[m] & (1 << 6))
 
 /* "out top" (set top for next instruction) */
-#define isOT(i)		(testOTMode(GET_OPCODE(i)) && GETARG_C(i) == 0)
+#define isOT(i)  \
+	((testOTMode(GET_OPCODE(i)) && GETARG_C(i) == 0) || \
+          GET_OPCODE(i) == OP_TAILCALL)
 
 /* "in top" (uses top from previous instruction) */
 #define isIT(i)		(testITMode(GET_OPCODE(i)) && GETARG_B(i) == 0)

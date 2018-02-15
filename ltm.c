@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.59 2018/02/07 15:18:04 roberto Exp roberto $
+** $Id: ltm.c,v 2.60 2018/02/09 15:16:06 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -222,10 +222,12 @@ void luaT_adjustvarargs (lua_State *L, int nfixparams, CallInfo *ci) {
   int nextra = actual - nfixparams;  /* number of extra arguments */
   ci->u.l.nextraargs = nextra;
   checkstackGC(L, nfixparams + 1);
-  /* copy function and fixed parameters to the top of the stack */
-  for (i = 0; i <= nfixparams; i++) {
+  /* copy function to the top of the stack */
+  setobjs2s(L, L->top++, ci->func);
+  /* move fixed parameters to the top of the stack */
+  for (i = 1; i <= nfixparams; i++) {
     setobjs2s(L, L->top++, ci->func + i);
-    setnilvalue(s2v(ci->func + i));  /* erase original copy (for GC) */
+    setnilvalue(s2v(ci->func + i));  /* erase original parameter (for GC) */
   }
   ci->func += actual + 1;
   ci->top += actual + 1;

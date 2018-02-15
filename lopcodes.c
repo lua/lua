@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.76 2018/02/07 15:18:04 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.77 2018/02/09 15:16:06 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -80,7 +80,6 @@ LUAI_DDEF const char *const luaP_opnames[NUM_OPCODES+1] = {
   "CALL",
   "TAILCALL",
   "RETURN",
-  "RETVARARG",
   "RETURN0",
   "RETURN1",
   "FORLOOP1",
@@ -162,7 +161,6 @@ LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(1, 1, 0, 1, iABC)		/* OP_CALL */
  ,opmode(1, 1, 0, 1, iABC)		/* OP_TAILCALL */
  ,opmode(0, 1, 0, 0, iABC)		/* OP_RETURN */
- ,opmode(0, 1, 0, 0, iABC)		/* OP_RETVARARG */
  ,opmode(0, 0, 0, 0, iABC)		/* OP_RETURN0 */
  ,opmode(0, 0, 0, 0, iABC)		/* OP_RETURN1 */
  ,opmode(0, 0, 0, 1, iABx)		/* OP_FORLOOP1 */

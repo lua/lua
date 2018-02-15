@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.338 2018/02/07 15:18:04 roberto Exp roberto $
+** $Id: lvm.c,v 2.339 2018/02/09 15:16:06 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1493,23 +1493,35 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_TAILCALL) {
         int b = GETARG_B(i);  /* number of arguments + 1 (function) */
+        int delta = 0;  /* virtual 'func' - real 'func' (vararg functions) */
         if (b != 0)
           L->top = ra + b;
         else  /* previous instruction set top */
           b = cast_int(L->top - ra);
-        lua_assert(GETARG_C(i) - 1 == LUA_MULTRET);
+        savepc(ci);
+        if (TESTARG_k(i)) {
+          int nparams1 = GETARG_C(i);
+          if (nparams1)  /* vararg function? */
+            delta = ci->u.l.nextraargs + nparams1;
+          luaF_close(L, base);  /* close upvalues from current call */
+        }
         if (!ttisfunction(vra)) {  /* not a function? */
-          ProtectNT(luaD_tryfuncTM(L, ra));  /* try '__call' metamethod */
+          luaD_tryfuncTM(L, ra);  /* try '__call' metamethod */
           b++;  /* there is now one extra argument */
         }
-        if (TESTARG_k(i))
-          luaF_close(L, base);  /* close upvalues from current call */
         if (!ttisLclosure(vra)) {  /* C function? */
-          ProtectNT(luaD_call(L, ra, LUA_MULTRET));  /* call it */
+          luaD_call(L, ra, LUA_MULTRET);  /* call it */
+          updatetrap(ci);
+          if (trap) {  /* stack may have been relocated */
+            updatebase(ci);
+            ra = RA(i);
+          }
+          ci->func -= delta;
+          luaD_poscall(L, ci, ra, cast_int(L->top - ra));
+          return;
         }
         else {  /* Lua tail call */
-          if (cl->p->is_vararg)
-            ci->func -= cl->p->numparams + ci->u.l.nextraargs + 1;
+          ci->func -= delta;
           luaD_pretailcall(L, ci, ra, b);  /* prepare call frame */
           goto tailcall;
         }
@@ -1518,34 +1530,16 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       vmcase(OP_RETURN) {
         int b = GETARG_B(i);
         int n = (b != 0 ? b - 1 : cast_int(L->top - ra));
-        if (TESTARG_k(i))
-          luaF_close(L, base);
+        if (TESTARG_k(i)) {
+          int nparams1 = GETARG_C(i);
+          if (nparams1)  /* vararg function? */
+            ci->func -= ci->u.l.nextraargs + nparams1;
+          luaF_close(L, base);  /* there may be open upvalues */
+        }
         halfProtect(luaD_poscall(L, ci, ra, n));
         return;
       }
-      vmcase(OP_RETVARARG) {
-        int b = GETARG_B(i);
-        int nparams = GETARG_C(i);
-        int nres = (b != 0 ? b - 1 : cast_int(L->top - ra));
-        int delta = ci->u.l.nextraargs + nparams + 2;
-        if (TESTARG_k(i))
-          luaF_close(L, base);
-        savepc(L);
-        /* code similar to 'luaD_poscall', but with a delta */
-        if (L->hookmask) {
-          luaD_rethook(L, ci);
-          if (ci->u.l.trap) {
-            updatebase(ci);
-            ra = RA(i);
-          }
-        }
-        L->ci = ci->previous;  /* back to caller */
-        luaD_moveresults(L, ra, base - delta, nres, ci->nresults);
-        return;
-      }
       vmcase(OP_RETURN0) {
-        if (TESTARG_k(i))
-          luaF_close(L, base);
         if (L->hookmask)
           halfProtect(luaD_poscall(L, ci, ra, 0));  /* no hurry... */
         else {
@@ -1558,8 +1552,6 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         return;
       }
       vmcase(OP_RETURN1) {
-        if (TESTARG_k(i))
-          luaF_close(L, base);
         if (L->hookmask)
           halfProtect(luaD_poscall(L, ci, ra, 1));  /* no hurry... */
         else {
