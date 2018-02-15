@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.153 2017/12/19 16:40:17 roberto Exp roberto $
+** $Id: lstate.h,v 2.154 2018/02/09 15:16:06 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -176,7 +176,7 @@ typedef struct global_State {
   lua_CFunction panic;  /* to be called in unprotected errors */
   struct lua_State *mainthread;
   const lua_Number *version;  /* pointer to version number */
-  TString *nfield;  /* string "n" (key in vararg tables) */
+  TString *memerrmsg;  /* message for memory-allocation errors */
   TString *tmname[TM_N];  /* array with tag-method names */
   struct Table *mt[LUA_NUMTAGS];  /* metatables for basic types */
   TString *strcache[STRCACHE_N][STRCACHE_M];  /* cache for strings in API */
