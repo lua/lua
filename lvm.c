@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.339 2018/02/09 15:16:06 roberto Exp roberto $
+** $Id: lvm.c,v 2.340 2018/02/15 15:34:29 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1713,13 +1713,13 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_PREPVARARG) {
-        luaT_adjustvarargs(L, GETARG_A(i), ci);
+        luaT_adjustvarargs(L, GETARG_A(i), ci, cl->p);
         updatetrap(ci);
         if (trap) {
           luaD_hookcall(L, ci);
-          L->oldpc = pc + 1;  /* next opcode will be seen as a new line */
+          L->oldpc = pc + 1;  /* next opcode will be seen as a "new" line */
         }
-        updatebase(ci);
+        updatebase(ci);  /* function has new base after adjustment */
         vmbreak;
       }
       vmcase(OP_EXTRAARG) {

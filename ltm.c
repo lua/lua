@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.60 2018/02/09 15:16:06 roberto Exp roberto $
+** $Id: ltm.c,v 2.61 2018/02/15 15:34:29 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -216,12 +216,13 @@ int luaT_callorderiTM (lua_State *L, const TValue *p1, int v2,
 }
 
 
-void luaT_adjustvarargs (lua_State *L, int nfixparams, CallInfo *ci) {
+void luaT_adjustvarargs (lua_State *L, int nfixparams, CallInfo *ci,
+                         Proto *p) {
   int i;
   int actual = cast_int(L->top - ci->func) - 1;  /* number of arguments */
   int nextra = actual - nfixparams;  /* number of extra arguments */
   ci->u.l.nextraargs = nextra;
-  checkstackGC(L, nfixparams + 1);
+  checkstackGC(L, p->maxstacksize + 1);
   /* copy function to the top of the stack */
   setobjs2s(L, L->top++, ci->func);
   /* move fixed parameters to the top of the stack */
@@ -231,6 +232,7 @@ void luaT_adjustvarargs (lua_State *L, int nfixparams, CallInfo *ci) {
   }
   ci->func += actual + 1;
   ci->top += actual + 1;
+  lua_assert(L->top <= ci->top && ci->top <= L->stack_last);
 }
 
 

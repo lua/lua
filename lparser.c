@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.176 2018/02/07 15:18:04 roberto Exp roberto $
+** $Id: lparser.c,v 2.177 2018/02/09 15:16:06 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -578,8 +578,6 @@ static void close_func (LexState *ls) {
   luaM_shrinkvector(L, f->p, f->sizep, fs->np, Proto *);
   luaM_shrinkvector(L, f->locvars, f->sizelocvars, fs->nlocvars, LocVar);
   luaM_shrinkvector(L, f->upvalues, f->sizeupvalues, fs->nups, Upvaldesc);
-  if (f->is_vararg)
-    f->maxstacksize++;  /* ensure space to copy the function */
   ls->fs = fs->prev;
   luaC_checkGC(L);
 }

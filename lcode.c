@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.153 2018/02/09 15:16:06 roberto Exp roberto $
+** $Id: lcode.c,v 2.154 2018/02/15 15:34:29 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -31,7 +31,7 @@
 
 
 /* Maximum number of registers in a Lua function (must fit in 8 bits) */
-#define MAXREGS		254
+#define MAXREGS		255
 
 
 #define hasjumps(e)	((e)->t != (e)->f)
