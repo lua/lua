@@ -267,9 +267,11 @@ void luaD_inctop (lua_State *L) {
 ** called. (Both 'L->hook' and 'L->hookmask', which triggers this
 ** function, can be changed asynchronously by signals.)
 */
-void luaD_hook (lua_State *L, int event, int line) {
+void luaD_hook (lua_State *L, int event, int line,
+                              int fTransfer, int nTransfer) {
   lua_Hook hook = L->hook;
   if (hook && L->allowhook) {  /* make sure there is a hook */
+    int mask = CIST_HOOKED;
     CallInfo *ci = L->ci;
     ptrdiff_t top = savestack(L, L->top);
     ptrdiff_t ci_top = savestack(L, ci->top);
@@ -277,11 +279,16 @@ void luaD_hook (lua_State *L, int event, int line) {
     ar.event = event;
     ar.currentline = line;
     ar.i_ci = ci;
+    if (nTransfer != 0) {
+      mask |= CIST_TRAN;  /* 'ci' has transfer information */
+      ci->u2.transferinfo.fTransfer = fTransfer;
+      ci->u2.transferinfo.nTransfer = nTransfer;
+    }
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
     if (L->top + LUA_MINSTACK > ci->top)
       ci->top = L->top + LUA_MINSTACK;
     L->allowhook = 0;  /* cannot call hooks inside a hook */
-    ci->callstatus |= CIST_HOOKED;
+    ci->callstatus |= mask;
     lua_unlock(L);
     (*hook)(L, &ar);
     lua_lock(L);
@@ -289,7 +296,7 @@ void luaD_hook (lua_State *L, int event, int line) {
     L->allowhook = 1;
     ci->top = restorestack(L, ci_top);
     L->top = restorestack(L, top);
-    ci->callstatus &= ~CIST_HOOKED;
+    ci->callstatus &= ~mask;
   }
 }
 
@@ -301,16 +308,18 @@ void luaD_hook (lua_State *L, int event, int line) {
 */
 void luaD_hookcall (lua_State *L, CallInfo *ci) {
   int hook = (ci->callstatus & CIST_TAIL) ? LUA_HOOKTAILCALL : LUA_HOOKCALL;
+  Proto *p;
   if (!(L->hookmask & LUA_MASKCALL))  /* some other hook? */
     return;  /* don't call hook */
+  p = clLvalue(s2v(ci->func))->p;
   L->top = ci->top;  /* prepare top */
   ci->u.l.savedpc++;  /* hooks assume 'pc' is already incremented */
-  luaD_hook(L, hook, -1);
+  luaD_hook(L, hook, -1, 1, p->numparams);
   ci->u.l.savedpc--;  /* correct 'pc' */
 }
 
 
-static void rethook (lua_State *L, CallInfo *ci) {
+static void rethook (lua_State *L, CallInfo *ci, StkId firstres, int nres) {
   int delta = 0;
   if (isLuacode(ci)) {
     Proto *p = clLvalue(s2v(ci->func))->p;
@@ -320,8 +329,10 @@ static void rethook (lua_State *L, CallInfo *ci) {
       L->top = ci->top;  /* correct top */
   }
   if (L->hookmask & LUA_MASKRET) {  /* is return hook on? */
+    int fTransfer;
     ci->func += delta;  /* if vararg, back to virtual 'func' */
-    luaD_hook(L, LUA_HOOKRET, -1);  /* call it */
+    fTransfer = cast(unsigned short, firstres - ci->func);
+    luaD_hook(L, LUA_HOOKRET, -1, fTransfer, nres);  /* call it */
     ci->func -= delta;
   }
   if (isLua(ci->previous))
@@ -396,7 +407,7 @@ static void moveresults (lua_State *L, StkId firstResult, StkId res,
 void luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres) {
   if (L->hookmask) {
     ptrdiff_t fr = savestack(L, firstResult);  /* hook may change stack */
-    rethook(L, ci);
+    rethook(L, ci, firstResult, nres);
     firstResult = restorestack(L, fr);
   }
   L->ci = ci->previous;  /* back to caller */
@@ -458,8 +469,10 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
       ci->top = L->top + LUA_MINSTACK;
       ci->func = func;
       lua_assert(ci->top <= L->stack_last);
-      if (L->hookmask & LUA_MASKCALL)
-        luaD_hook(L, LUA_HOOKCALL, -1);
+      if (L->hookmask & LUA_MASKCALL) {
+        int narg = cast_int(L->top - func) - 1;
+        luaD_hook(L, LUA_HOOKCALL, -1, 1, narg);
+      }
       lua_unlock(L);
       n = (*f)(L);  /* do the actual call */
       lua_lock(L);

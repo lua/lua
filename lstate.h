@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.154 2018/02/09 15:16:06 roberto Exp roberto $
+** $Id: lstate.h,v 2.155 2018/02/15 18:06:24 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -103,9 +103,13 @@ typedef struct CallInfo {
   union {
     int funcidx;  /* called-function index */
     int nyield;  /* number of values yielded */
+    struct {  /* info about transfered values (for call/return hooks) */
+      unsigned short fTransfer;  /* offset of first value transfered */
+      unsigned short nTransfer;  /* number of values transfered */
+    } transferinfo;
   } u2;
   short nresults;  /* expected number of results from this function */
-  lu_byte callstatus;
+  unsigned short callstatus;
 } CallInfo;
 
 
@@ -120,6 +124,7 @@ typedef struct CallInfo {
 #define CIST_HOOKYIELD	(1<<5)	/* last hook called yielded */
 #define CIST_LEQ	(1<<6)  /* using __lt for __le */
 #define CIST_FIN	(1<<7)  /* call is running a finalizer */
+#define CIST_TRAN	(1<<8)	/* 'ci' has transfer information */
 
 /* active function is a Lua function */
 #define isLua(ci)	(!((ci)->callstatus & CIST_C))

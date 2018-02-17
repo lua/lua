@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.153 2018/02/06 19:16:56 roberto Exp roberto $
+** $Id: ldebug.c,v 2.154 2018/02/09 15:16:06 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -355,6 +355,14 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
           ar->name = NULL;
         }
         break;
+      }
+      case 'r': {
+        if (ci == NULL || !(ci->callstatus & CIST_TRAN))
+          ar->fTransfer = ar->nTransfer = 0;
+        else {
+          ar->fTransfer = ci->u2.transferinfo.fTransfer;
+          ar->nTransfer = ci->u2.transferinfo.nTransfer;
+        }
       }
       case 'L':
       case 'f':  /* handled by lua_getinfo */
@@ -790,7 +798,7 @@ void luaG_traceexec (lua_State *L) {
   if (!isIT(*(ci->u.l.savedpc - 1)))
     L->top = ci->top;  /* prepare top */
   if (counthook)
-    luaD_hook(L, LUA_HOOKCOUNT, -1);  /* call count hook */
+    luaD_hook(L, LUA_HOOKCOUNT, -1, 0, 0);  /* call count hook */
   if (mask & LUA_MASKLINE) {
     Proto *p = ci_func(ci)->p;
     const Instruction *npc = ci->u.l.savedpc;
@@ -799,7 +807,7 @@ void luaG_traceexec (lua_State *L) {
         npc <= L->oldpc ||  /* when jump back (loop), or when */
         changedline(p, pcRel(L->oldpc, p), npci)) {  /* enter new line */
       int newline = luaG_getfuncline(p, npci);  /* new line */
-      luaD_hook(L, LUA_HOOKLINE, newline);  /* call line hook */
+      luaD_hook(L, LUA_HOOKLINE, newline, 0, 0);  /* call line hook */
     }
     L->oldpc = npc;
   }
