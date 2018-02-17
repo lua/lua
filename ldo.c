@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.193 2018/02/09 15:16:06 roberto Exp roberto $
+** $Id: ldo.c,v 2.194 2018/02/15 15:34:29 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -316,7 +316,8 @@ static void rethook (lua_State *L, CallInfo *ci) {
     Proto *p = clLvalue(s2v(ci->func))->p;
     if (p->is_vararg)
       delta = ci->u.l.nextraargs + p->numparams + 1;
-    L->top = ci->top;  /* prepare top */
+    if (L->top < ci->top)
+      L->top = ci->top;  /* correct top */
   }
   if (L->hookmask & LUA_MASKRET) {  /* is return hook on? */
     ci->func += delta;  /* if vararg, back to virtual 'func' */
