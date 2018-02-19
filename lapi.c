@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.282 2018/01/29 16:21:35 roberto Exp roberto $
+** $Id: lapi.c,v 2.283 2018/02/05 17:10:52 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -828,7 +828,7 @@ LUA_API void lua_rawset (lua_State *L, int idx) {
   slot = luaH_set(L, hvalue(o), s2v(L->top - 2));
   setobj2t(L, slot, s2v(L->top - 1));
   invalidateTMcache(hvalue(o));
-  luaC_barrierback(L, hvalue(o), s2v(L->top - 1));
+  luaC_barrierback(L, gcvalue(o), s2v(L->top - 1));
   L->top -= 2;
   lua_unlock(L);
 }
@@ -841,7 +841,7 @@ LUA_API void lua_rawseti (lua_State *L, int idx, lua_Integer n) {
   o = index2value(L, idx);
   api_check(L, ttistable(o), "table expected");
   luaH_setint(L, hvalue(o), n, s2v(L->top - 1));
-  luaC_barrierback(L, hvalue(o), s2v(L->top - 1));
+  luaC_barrierback(L, gcvalue(o), s2v(L->top - 1));
   L->top--;
   lua_unlock(L);
 }
@@ -857,7 +857,7 @@ LUA_API void lua_rawsetp (lua_State *L, int idx, const void *p) {
   setpvalue(&k, cast_voidp(p));
   slot = luaH_set(L, hvalue(o), &k);
   setobj2t(L, slot, s2v(L->top - 1));
-  luaC_barrierback(L, hvalue(o), s2v(L->top - 1));
+  luaC_barrierback(L, gcvalue(o), s2v(L->top - 1));
   L->top--;
   lua_unlock(L);
 }

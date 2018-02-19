@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.130 2017/12/29 15:58:23 roberto Exp roberto $
+** $Id: ltable.c,v 2.131 2018/01/28 15:13:26 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -600,7 +600,7 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
     }
   }
   setnodekey(L, mp, key);
-  luaC_barrierback(L, t, key);
+  luaC_barrierback(L, obj2gco(t), key);
   lua_assert(ttisnil(gval(mp)));
   return gval(mp);
 }

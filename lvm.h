@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 2.47 2017/11/08 14:50:23 roberto Exp roberto $
+** $Id: lvm.h,v 2.48 2017/11/29 13:02:17 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -96,7 +96,7 @@
 */
 #define luaV_finishfastset(L,t,slot,v) \
     { setobj2t(L, cast(TValue *,slot), v); \
-      luaC_barrierback(L, hvalue(t), v); }
+      luaC_barrierback(L, gcvalue(t), v); }
 
 
 

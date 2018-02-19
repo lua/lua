@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.245 2018/01/28 15:13:26 roberto Exp roberto $
+** $Id: lgc.c,v 2.248 2018/02/19 16:02:25 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -110,10 +110,29 @@ static lu_mem atomic (lua_State *L);
 #define gnodelast(h)	gnode(h, cast_sizet(sizenode(h)))
 
 
+static GCObject **getgclist (GCObject *o) {
+  switch (o->tt) {
+    case LUA_TTABLE: return &gco2t(o)->gclist;
+    case LUA_TLCL: return &gco2lcl(o)->gclist;
+    case LUA_TCCL: return &gco2ccl(o)->gclist;
+    case LUA_TTHREAD: return &gco2th(o)->gclist;
+    case LUA_TPROTO: return &gco2p(o)->gclist;
+    default: lua_assert(0); return 0;
+  }
+}
+
+
 /*
-** link collectable object 'o' into list pointed by 'p'
+** Link a collectable object 'o' with a known type into list pointed by 'p'.
 */
 #define linkgclist(o,p)	((o)->gclist = (p), (p) = obj2gco(o))
+
+
+/*
+** Link a generic collectable object 'o' into list pointed by 'p'.
+*/
+#define linkobjgclist(o,p) (*getgclist(o) = (p), (p) = obj2gco(o))
+
 
 
 /*
@@ -175,14 +194,14 @@ void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v) {
 ** barrier that moves collector backward, that is, mark the black object
 ** pointing to a white object as gray again.
 */
-void luaC_barrierback_ (lua_State *L, Table *t) {
+void luaC_barrierback_ (lua_State *L, GCObject *o) {
   global_State *g = G(L);
-  lua_assert(isblack(t) && !isdead(g, t));
-  lua_assert(g->gckind != KGC_GEN || (isold(t) && getage(t) != G_TOUCHED1));
-  if (getage(t) != G_TOUCHED2)  /* not already in gray list? */
-    linkgclist(t, g->grayagain);  /* link it in 'grayagain' */
-  black2gray(t);  /* make table gray (again) */
-  setage(t, G_TOUCHED1);  /* touched in current cycle */
+  lua_assert(isblack(o) && !isdead(g, o));
+  lua_assert(g->gckind != KGC_GEN || (isold(o) && getage(o) != G_TOUCHED1));
+  if (getage(o) != G_TOUCHED2)  /* not already in gray list? */
+    linkobjgclist(o, g->grayagain);  /* link it in 'grayagain' */
+  black2gray(o);  /* make table gray (again) */
+  setage(o, G_TOUCHED1);  /* touched in current cycle */
 }
 
 
@@ -276,24 +295,9 @@ static void reallymarkobject (global_State *g, GCObject *o) {
       markvalue(g, uv->v);  /* mark its content */
       break;
     }
-    case LUA_TLCL: {
-      linkgclist(gco2lcl(o), g->gray);
-      break;
-    }
-    case LUA_TCCL: {
-      linkgclist(gco2ccl(o), g->gray);
-      break;
-    }
-    case LUA_TTABLE: {
-      linkgclist(gco2t(o), g->gray);
-      break;
-    }
-    case LUA_TTHREAD: {
-      linkgclist(gco2th(o), g->gray);
-      break;
-    }
-    case LUA_TPROTO: {
-      linkgclist(gco2p(o), g->gray);
+    case LUA_TLCL: case LUA_TCCL: case LUA_TTABLE:
+    case LUA_TTHREAD: case LUA_TPROTO: {
+      linkobjgclist(o, g->gray);
       break;
     }
     default: lua_assert(0); break;
@@ -605,33 +609,17 @@ static int traversethread (global_State *g, lua_State *th) {
 static lu_mem propagatemark (global_State *g) {
   GCObject *o = g->gray;
   gray2black(o);
+  g->gray = *getgclist(o);  /* remove from 'gray' list */
   switch (o->tt) {
-    case LUA_TTABLE: {
-      Table *h = gco2t(o);
-      g->gray = h->gclist;  /* remove from 'gray' list */
-      return traversetable(g, h);
-    }
-    case LUA_TLCL: {
-      LClosure *cl = gco2lcl(o);
-      g->gray = cl->gclist;  /* remove from 'gray' list */
-      return traverseLclosure(g, cl);
-    }
-    case LUA_TCCL: {
-      CClosure *cl = gco2ccl(o);
-      g->gray = cl->gclist;  /* remove from 'gray' list */
-      return traverseCclosure(g, cl);
-    }
+    case LUA_TTABLE: return traversetable(g, gco2t(o));
+    case LUA_TLCL: return traverseLclosure(g, gco2lcl(o));
+    case LUA_TCCL: return traverseCclosure(g, gco2ccl(o));
+    case LUA_TPROTO: return traverseproto(g, gco2p(o));
     case LUA_TTHREAD: {
       lua_State *th = gco2th(o);
-      g->gray = th->gclist;  /* remove from 'gray' list */
       linkgclist(th, g->grayagain);  /* insert into 'grayagain' list */
       black2gray(o);
       return traversethread(g, th);
-    }
-    case LUA_TPROTO: {
-      Proto *p = gco2p(o);
-      g->gray = p->gclist;  /* remove from 'gray' list */
-      return traverseproto(g, p);
     }
     default: lua_assert(0); return 0;
   }
@@ -1069,8 +1057,8 @@ static void whitelist (global_State *g, GCObject *p) {
 ** Correct a list of gray objects. Because this correction is
 ** done after sweeping, young objects can be white and still
 ** be in the list. They are only removed.
-** For tables, advance 'touched1' to 'touched2'; 'touched2' objects
-** become regular old and are removed from the list.
+** For tables and userdata, advance 'touched1' to 'touched2'; 'touched2'
+** objects become regular old and are removed from the list.
 ** For threads, just remove white ones from the list.
 */
 static GCObject **correctgraylist (GCObject **p) {
@@ -1078,21 +1066,21 @@ static GCObject **correctgraylist (GCObject **p) {
   while ((curr = *p) != NULL) {
     switch (curr->tt) {
       case LUA_TTABLE: {
-        Table *h = gco2t(curr);
-        if (getage(h) == G_TOUCHED1) {  /* touched in this cycle? */
-          lua_assert(isgray(h));
-          gray2black(h);  /* make it black, for next barrier */
-          changeage(h, G_TOUCHED1, G_TOUCHED2);
-          p = &h->gclist;  /* go to next element */
+        GCObject **next = getgclist(curr);
+        if (getage(curr) == G_TOUCHED1) {  /* touched in this cycle? */
+          lua_assert(isgray(curr));
+          gray2black(curr);  /* make it black, for next barrier */
+          changeage(curr, G_TOUCHED1, G_TOUCHED2);
+          p = next;  /* go to next element */
         }
         else {
-          if (!iswhite(h)) {
-            lua_assert(isold(h));
-            if (getage(h) == G_TOUCHED2)
-              changeage(h, G_TOUCHED2, G_OLD);
-            gray2black(h);  /* make it black */
+          if (!iswhite(curr)) {
+            lua_assert(isold(curr));
+            if (getage(curr) == G_TOUCHED2)
+              changeage(curr, G_TOUCHED2, G_OLD);
+            gray2black(curr);  /* make it black */
           }
-          *p = h->gclist;  /* remove 'curr' from gray list */
+          *p = *next;  /* remove 'curr' from gray list */
         }
         break;
       }
