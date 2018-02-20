@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.63 2018/01/28 15:13:26 roberto Exp roberto $
+** $Id: lstring.c,v 2.64 2018/02/15 18:06:24 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -265,16 +265,19 @@ TString *luaS_new (lua_State *L, const char *str) {
 }
 
 
-Udata *luaS_newudata (lua_State *L, size_t s) {
+Udata *luaS_newudata (lua_State *L, size_t s, int nuvalue) {
   Udata *u;
+  int i;
   GCObject *o;
-  if (s > MAX_SIZE - sizeof(Udata))
+  if (s > MAX_SIZE - udatamemoffset(nuvalue))
     luaM_toobig(L);
-  o = luaC_newobj(L, LUA_TUSERDATA, sizeludata(s));
+  o = luaC_newobj(L, LUA_TUSERDATA, sizeudata(nuvalue, s));
   u = gco2u(o);
   u->len = s;
+  u->nuvalue = nuvalue;
   u->metatable = NULL;
-  setuservalue(L, u, luaO_nilobject);
+  for (i = 0; i < nuvalue; i++)
+    setnilvalue(&u->uv[i].uv);
   return u;
 }
 

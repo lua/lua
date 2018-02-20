@@ -113,6 +113,7 @@ static lu_mem atomic (lua_State *L);
 static GCObject **getgclist (GCObject *o) {
   switch (o->tt) {
     case LUA_TTABLE: return &gco2t(o)->gclist;
+    case LUA_TUSERDATA: return &gco2u(o)->gclist;
     case LUA_TLCL: return &gco2lcl(o)->gclist;
     case LUA_TCCL: return &gco2ccl(o)->gclist;
     case LUA_TTHREAD: return &gco2th(o)->gclist;
@@ -269,23 +270,11 @@ GCObject *luaC_newobj (lua_State *L, int tt, size_t sz) {
 ** to avoid barriers, as their values will be revisited by the thread.)
 */
 static void reallymarkobject (global_State *g, GCObject *o) {
- reentry:
   white2gray(o);
   switch (o->tt) {
     case LUA_TSHRSTR:
     case LUA_TLNGSTR: {
       gray2black(o);
-      break;
-    }
-    case LUA_TUSERDATA: {
-      TValue uvalue;
-      markobjectN(g, gco2u(o)->metatable);  /* mark its metatable */
-      gray2black(o);
-      getuservalue(g->mainthread, gco2u(o), &uvalue);
-      if (valiswhite(&uvalue)) {  /* markvalue(g, &uvalue); */
-        o = gcvalue(&uvalue);
-        goto reentry;
-      }
       break;
     }
     case LUA_TUPVAL: {
@@ -296,7 +285,7 @@ static void reallymarkobject (global_State *g, GCObject *o) {
       break;
     }
     case LUA_TLCL: case LUA_TCCL: case LUA_TTABLE:
-    case LUA_TTHREAD: case LUA_TPROTO: {
+    case LUA_TUSERDATA: case LUA_TTHREAD: case LUA_TPROTO: {
       linkobjgclist(o, g->gray);
       break;
     }
@@ -602,6 +591,15 @@ static int traversethread (global_State *g, lua_State *th) {
 }
 
 
+static int traverseudata (global_State *g, Udata *u) {
+  int i;
+  markobjectN(g, u->metatable);  /* mark its metatable */
+  for (i = 0; i < u->nuvalue; i++)
+    markvalue(g, &u->uv[i].uv);
+  return 1 + u->nuvalue;
+}
+
+
 /*
 ** traverse one gray object, turning it to black (except for threads,
 ** which are always gray).
@@ -612,6 +610,7 @@ static lu_mem propagatemark (global_State *g) {
   g->gray = *getgclist(o);  /* remove from 'gray' list */
   switch (o->tt) {
     case LUA_TTABLE: return traversetable(g, gco2t(o));
+    case LUA_TUSERDATA: return traverseudata(g, gco2u(o));
     case LUA_TLCL: return traverseLclosure(g, gco2lcl(o));
     case LUA_TCCL: return traverseCclosure(g, gco2ccl(o));
     case LUA_TPROTO: return traverseproto(g, gco2p(o));
@@ -742,9 +741,11 @@ static void freeobj (lua_State *L, GCObject *o) {
     case LUA_TTHREAD:
       luaE_freethread(L, gco2th(o));
       break;
-    case LUA_TUSERDATA:
-      luaM_freemem(L, o, sizeudata(gco2u(o)));
+    case LUA_TUSERDATA: {
+      Udata *u = gco2u(o);
+      luaM_freemem(L, o, sizeudata(u->nuvalue, u->len));
       break;
+    }
     case LUA_TSHRSTR:
       luaS_remove(L, gco2ts(o));  /* remove it from hash table */
       luaM_freemem(L, o, sizelstring(gco2ts(o)->shrlen));
@@ -1065,7 +1066,7 @@ static GCObject **correctgraylist (GCObject **p) {
   GCObject *curr;
   while ((curr = *p) != NULL) {
     switch (curr->tt) {
-      case LUA_TTABLE: {
+      case LUA_TTABLE: case LUA_TUSERDATA: {
         GCObject **next = getgclist(curr);
         if (getage(curr) == G_TOUCHED1) {  /* touched in this cycle? */
           lua_assert(isgray(curr));

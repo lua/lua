@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.239 2018/01/09 11:24:12 roberto Exp roberto $
+** $Id: ltests.c,v 2.240 2018/01/28 15:13:26 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -265,6 +265,15 @@ static void checktable (global_State *g, Table *h) {
 }
 
 
+static void checkudata (global_State *g, Udata *u) {
+  int i;
+  GCObject *hgc = obj2gco(u);
+  checkobjref(g, hgc, u->metatable);
+  for (i = 0; i < u->nuvalue; i++)
+    checkvalref(g, hgc, &u->uv[i].uv);
+}
+
+
 /*
 ** All marks are conditional because a GC may happen while the
 ** prototype is still being created
@@ -285,7 +294,6 @@ static void checkproto (global_State *g, Proto *f) {
   for (i=0; i<f->sizelocvars; i++)
     checkobjref(g, fgc, f->locvars[i].varname);
 }
-
 
 
 static void checkCclosure (global_State *g, CClosure *cl) {
@@ -344,11 +352,7 @@ static void checkstack (global_State *g, lua_State *L1) {
 static void checkrefs (global_State *g, GCObject *o) {
   switch (o->tt) {
     case LUA_TUSERDATA: {
-      TValue uservalue;
-      Table *mt = gco2u(o)->metatable;
-      checkobjref(g, o, mt);
-      getuservalue(g->mainthread, gco2u(o), &uservalue);
-      checkvalref(g, o, &uservalue);
+      checkudata(g, gco2u(o));
       break;
     }
     case LUA_TUPVAL: {
@@ -728,7 +732,7 @@ static int gc_color (lua_State *L) {
     GCObject *obj = gcvalue(o);
     lua_pushstring(L, isdead(G(L), obj) ? "dead" :
                       iswhite(obj) ? "white" :
-                      isblack(obj) ? "black" : "grey");
+                      isblack(obj) ? "black" : "gray");
   }
   return 1;
 }
@@ -919,8 +923,9 @@ static int upvalue (lua_State *L) {
 
 
 static int newuserdata (lua_State *L) {
-  size_t size = cast_sizet(luaL_checkinteger(L, 1));
-  char *p = cast_charp(lua_newuserdata(L, size));
+  size_t size = cast_sizet(luaL_optinteger(L, 1, 0));
+  int nuv = luaL_optinteger(L, 2, 0);
+  char *p = cast_charp(lua_newuserdatauv(L, size, nuv));
   while (size--) *p++ = '\0';
   return 1;
 }

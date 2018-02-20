@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.339 2017/11/07 13:25:26 roberto Exp roberto $
+** $Id: lua.h,v 1.340 2018/02/17 19:29:29 roberto Exp roberto $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -247,9 +247,9 @@ LUA_API int (lua_rawgeti) (lua_State *L, int idx, lua_Integer n);
 LUA_API int (lua_rawgetp) (lua_State *L, int idx, const void *p);
 
 LUA_API void  (lua_createtable) (lua_State *L, int narr, int nrec);
-LUA_API void *(lua_newuserdata) (lua_State *L, size_t sz);
+LUA_API void *(lua_newuserdatauv) (lua_State *L, size_t sz, int nuvalue);
 LUA_API int   (lua_getmetatable) (lua_State *L, int objindex);
-LUA_API int  (lua_getuservalue) (lua_State *L, int idx);
+LUA_API int  (lua_getiuservalue) (lua_State *L, int idx, int n);
 
 
 /*
@@ -263,7 +263,7 @@ LUA_API void  (lua_rawset) (lua_State *L, int idx);
 LUA_API void  (lua_rawseti) (lua_State *L, int idx, lua_Integer n);
 LUA_API void  (lua_rawsetp) (lua_State *L, int idx, const void *p);
 LUA_API int   (lua_setmetatable) (lua_State *L, int objindex);
-LUA_API void  (lua_setuservalue) (lua_State *L, int idx);
+LUA_API int   (lua_setiuservalue) (lua_State *L, int idx, int n);
 
 
 /*
@@ -380,7 +380,7 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 
 /*
 ** {==============================================================
-** compatibility macros for unsigned conversions
+** compatibility macros
 ** ===============================================================
 */
 #if defined(LUA_COMPAT_APIINTCASTS)
@@ -390,6 +390,11 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 #define lua_tounsigned(L,i)	lua_tounsignedx(L,(i),NULL)
 
 #endif
+
+#define lua_newuserdata(L,s)	lua_newuserdatauv(L,s,1)
+#define lua_getuservalue(L,idx)	lua_getiuservalue(L,idx,1)
+#define lua_setuservalue(L,idx)	lua_setiuservalue(L,idx,1)
+
 /* }============================================================== */
 
 /*

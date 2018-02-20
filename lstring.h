@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.62 2017/07/27 13:50:16 roberto Exp roberto $
+** $Id: lstring.h,v 1.63 2017/11/23 19:29:04 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -20,9 +20,6 @@
 
 
 #define sizelstring(l)  (sizeof(union UTString) + ((l) + 1) * sizeof(char))
-
-#define sizeludata(l)	(sizeof(union UUdata) + (l))
-#define sizeudata(u)	sizeludata((u)->len)
 
 #define luaS_newliteral(L, s)	(luaS_newlstr(L, "" s, \
                                  (sizeof(s)/sizeof(char))-1))
@@ -47,7 +44,7 @@ LUAI_FUNC void luaS_resize (lua_State *L, int newsize);
 LUAI_FUNC void luaS_clearcache (global_State *g);
 LUAI_FUNC void luaS_init (lua_State *L);
 LUAI_FUNC void luaS_remove (lua_State *L, TString *ts);
-LUAI_FUNC Udata *luaS_newudata (lua_State *L, size_t s);
+LUAI_FUNC Udata *luaS_newudata (lua_State *L, size_t s, int nuvalue);
 LUAI_FUNC TString *luaS_newlstr (lua_State *L, const char *str, size_t l);
 LUAI_FUNC TString *luaS_new (lua_State *L, const char *str);
 LUAI_FUNC TString *luaS_createlngstrobj (lua_State *L, size_t l);

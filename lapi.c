@@ -10,6 +10,7 @@
 #include "lprefix.h"
 
 
+#include <limits.h>
 #include <stdarg.h>
 #include <string.h>
 
@@ -733,15 +734,23 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
 }
 
 
-LUA_API int lua_getuservalue (lua_State *L, int idx) {
+LUA_API int lua_getiuservalue (lua_State *L, int idx, int n) {
   TValue *o;
+  int t;
   lua_lock(L);
   o = index2value(L, idx);
   api_check(L, ttisfulluserdata(o), "full userdata expected");
-  getuservalue(L, uvalue(o), s2v(L->top));
+  if (n <= 0 || n > uvalue(o)->nuvalue) {
+    setnilvalue(s2v(L->top));
+    t = LUA_TNONE;
+  }
+  else {
+    setobj2s(L, L->top, &uvalue(o)->uv[n - 1].uv);
+    t = ttnov(s2v(L->top));
+  }
   api_incr_top(L);
   lua_unlock(L);
-  return ttnov(s2v(L->top - 1));
+  return t;
 }
 
 
@@ -903,16 +912,23 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
 }
 
 
-LUA_API void lua_setuservalue (lua_State *L, int idx) {
+LUA_API int lua_setiuservalue (lua_State *L, int idx, int n) {
   TValue *o;
+  int res;
   lua_lock(L);
   api_checknelems(L, 1);
   o = index2value(L, idx);
   api_check(L, ttisfulluserdata(o), "full userdata expected");
-  setuservalue(L, uvalue(o), s2v(L->top - 1));
-  luaC_barrier(L, gcvalue(o), s2v(L->top - 1));
-  L->top--;
+  if (!(0 < n && n <= uvalue(o)->nuvalue))
+    res = 0;
+  else {
+    setobj(L, &uvalue(o)->uv[n - 1].uv, s2v(L->top - 1));
+    luaC_barrierback(L, gcvalue(o), s2v(L->top - 1));
+    L->top--;
+    res = 1;
+  }
   lua_unlock(L);
+  return res;
 }
 
 
@@ -1231,10 +1247,11 @@ LUA_API void lua_setallocf (lua_State *L, lua_Alloc f, void *ud) {
 }
 
 
-LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
+LUA_API void *lua_newuserdatauv (lua_State *L, size_t size, int nuvalue) {
   Udata *u;
   lua_lock(L);
-  u = luaS_newudata(L, size);
+  api_check(L, 0 <= nuvalue && nuvalue < USHRT_MAX, "invalid value");
+  u = luaS_newudata(L, size, nuvalue);
   setuvalue(L, s2v(L->top), u);
   api_incr_top(L);
   luaC_checkGC(L);

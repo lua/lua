@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.132 2018/01/28 12:07:53 roberto Exp roberto $
+** $Id: lobject.h,v 2.133 2018/01/28 15:13:26 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -365,45 +365,51 @@ typedef union UTString {
 
 
 /*
-** Header for userdata; memory area follows the end of this structure
-** (aligned according to 'UUdata'; see next).
+** {==================================================================
+** Userdata
+** ===================================================================
+*/
+
+/* Ensures that addresses after this type are always fully aligned. */
+typedef union UValue {
+  TValue uv;
+  LUAI_MAXALIGN;  /* ensures maximum alignment for udata bytes */
+} UValue;
+
+
+/*
+** Header for userdata; memory area follows the end of this structure.
 */
 typedef struct Udata {
   CommonHeader;
-  lu_byte ttuv_;  /* user value's tag */
-  struct Table *metatable;
+  unsigned short nuvalue;  /* number of user values */
   size_t len;  /* number of bytes */
-  union Value user_;  /* user value */
+  struct Table *metatable;
+  GCObject *gclist;
+  UValue uv[1];  /* user values */
 } Udata;
 
 
-/*
-** Ensures that address after this type is always fully aligned.
-*/
-typedef union UUdata {
-  LUAI_MAXALIGN;  /* ensures maximum alignment for 'local' udata */
-  Udata uv;
-} UUdata;
-
+/* computes the offset of the memory area of a userdata */
+#define udatamemoffset(nuv)  (sizeof(Udata) + (sizeof(UValue) * ((nuv) - 1)))
 
 /*
-**  Get the address of memory block inside 'Udata'.
-** (Access to 'ttuv_' ensures that value is really a 'Udata'.)
+**  Get the address of the memory block inside 'Udata'.
 */
-#define getudatamem(u)  \
-  check_exp(sizeof((u)->ttuv_), (cast_charp(u) + sizeof(UUdata)))
+#define getudatamem(u)	(cast_charp(u) + udatamemoffset((u)->nuvalue))
 
-#define setuservalue(L,u,o) \
-	{ const TValue *io=(o); Udata *iu = (u); \
-	  iu->user_ = io->value_; iu->ttuv_ = rttype(io); \
-	  checkliveness(L,io); }
+/* computes the size of a userdata */
+#define sizeudata(nuv,nb)	(udatamemoffset(nuv) + (nb))
+
+/* }================================================================== */
 
 
-#define getuservalue(L,u,o) \
-	{ TValue *io=(o); const Udata *iu = (u); \
-	  io->value_ = iu->user_; settt_(io, iu->ttuv_); \
-	  checkliveness(L,io); }
 
+/*
+** {==================================================================
+** Prototypes
+** ===================================================================
+*/
 
 /*
 ** Description of an upvalue for function prototypes
@@ -470,6 +476,8 @@ typedef struct Proto {
   TString  *source;  /* used for debug information */
   GCObject *gclist;
 } Proto;
+
+/* }================================================================== */
 
 
 
