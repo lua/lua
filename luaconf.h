@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.262 2017/12/07 18:53:33 roberto Exp roberto $
+** $Id: luaconf.h,v 1.263 2017/12/30 20:46:18 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -437,12 +437,13 @@
 	l_sprintf((s), sz, LUA_NUMBER_FMT, (LUAI_UACNUMBER)(n))
 
 /*
-@@ lua_numbertointeger converts a float number to an integer, or
-** returns 0 if float is not within the range of a lua_Integer.
-** (The range comparisons are tricky because of rounding. The tests
-** here assume a two-complement representation, where MININTEGER always
-** has an exact representation as a float; MAXINTEGER may not have one,
-** and therefore its conversion to float may have an ill-defined value.)
+@@ lua_numbertointeger converts a float number with an integral value
+** to an integer, or returns 0 if float is not within the range of
+** a lua_Integer.  (The range comparisons are tricky because of
+** rounding. The tests here assume a two-complement representation,
+** where MININTEGER always has an exact representation as a float;
+** MAXINTEGER may not have one, and therefore its conversion to float
+** may have an ill-defined value.)
 */
 #define lua_numbertointeger(n,p) \
   ((n) >= (LUA_NUMBER)(LUA_MININTEGER) && \
