@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.259 2017/11/16 13:19:06 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.260 2017/11/23 19:29:04 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -837,7 +837,7 @@ static int gmatch (lua_State *L) {
   const char *p = luaL_checklstring(L, 2, &lp);
   GMatchState *gm;
   lua_settop(L, 2);  /* keep them on closure to avoid being collected */
-  gm = (GMatchState *)lua_newuserdata(L, sizeof(GMatchState));
+  gm = (GMatchState *)lua_newuserdatauv(L, sizeof(GMatchState), 0);
   prepstate(&gm->ms, L, s, ls, p, lp);
   gm->src = s; gm->p = p; gm->lastmatch = NULL;
   lua_pushcclosure(L, gmatch_aux, 3);
