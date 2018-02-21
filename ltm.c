@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.61 2018/02/15 15:34:29 roberto Exp roberto $
+** $Id: ltm.c,v 2.62 2018/02/17 19:20:00 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -208,11 +208,10 @@ int luaT_callorderiTM (lua_State *L, const TValue *p1, int v2,
   setivalue(&aux, v2);
   if (inv) {  /* arguments were exchanged? */
     p2 = p1; p1 = &aux;  /* correct them */
-    event = (event == TM_LE) ? TM_LT : TM_LE;
   }
   else
     p2 = &aux;
-  return (luaT_callorderTM(L, p1, p2, event) != inv);
+  return luaT_callorderTM(L, p1, p2, event);
 }
 
 

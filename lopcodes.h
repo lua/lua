@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.187 2018/02/09 15:16:06 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.188 2018/02/15 15:34:29 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -260,6 +260,8 @@ OP_EQK,/*	A B	if ((R(A) == K(B)) ~= k) then pc++		*/
 OP_EQI,/*	A sB	if ((R(A) == sB) ~= k) then pc++		*/
 OP_LTI,/*	A sB	if ((R(A) < sB) ~= k) then pc++			*/
 OP_LEI,/*	A sB	if ((R(A) <= sB) ~= k) then pc++		*/
+OP_GTI,/*	A sB	if ((R(A) > sB) ~= k) then pc++			*/
+OP_GEI,/*	A sB	if ((R(A) >= sB) ~= k) then pc++		*/
 
 OP_TEST,/*	A 	if (not R(A) == k) then pc++			*/
 OP_TESTSET,/*	A B	if (not R(B) == k) then R(A) := R(B) else pc++	*/
@@ -316,11 +318,6 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
 
   (*) For comparisons, k specifies what condition the test should accept
   (true or false).
-
-  (*) For OP_LTI/OP_LEI, C indicates that the transformations
-  (A<B) => (!(B<=A)) or (A<=B) => (!(B<A)) were used to put the constant
-  operator on the right side. (Non-total orders with NaN or metamethods
-  use this indication to correct their behavior.)
 
   (*) All 'skips' (pc++) assume that next instruction is a jump.
 

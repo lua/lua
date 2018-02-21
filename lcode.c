@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.155 2018/02/17 19:20:00 roberto Exp roberto $
+** $Id: lcode.c,v 2.156 2018/02/21 12:54:26 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -171,8 +171,8 @@ void luaK_ret (FuncState *fs, int first, int nret) {
 ** Code a "conditional jump", that is, a test or comparison opcode
 ** followed by a jump. Return jump position.
 */
-static int condjump (FuncState *fs, OpCode op, int A, int B, int C, int k) {
-  luaK_codeABCk(fs, op, A, B, C, k);
+static int condjump (FuncState *fs, OpCode op, int A, int B, int k) {
+  luaK_codeABCk(fs, op, A, B, 0, k);
   return luaK_jump(fs);
 }
 
@@ -979,13 +979,13 @@ static int jumponcond (FuncState *fs, expdesc *e, int cond) {
     Instruction ie = getinstruction(fs, e);
     if (GET_OPCODE(ie) == OP_NOT) {
       fs->pc--;  /* remove previous OP_NOT */
-      return condjump(fs, OP_TEST, GETARG_B(ie), 0, 0, !cond);
+      return condjump(fs, OP_TEST, GETARG_B(ie), 0, !cond);
     }
     /* else go through */
   }
   discharge2anyreg(fs, e);
   freeexp(fs, e);
-  return condjump(fs, OP_TESTSET, NO_REG, e->u.info, 0, cond);
+  return condjump(fs, OP_TESTSET, NO_REG, e->u.info, cond);
 }
 
 
@@ -1338,16 +1338,12 @@ static void codeshift (FuncState *fs, OpCode op,
 
 /*
 ** Emit code for order comparisons.
-** When the first operand is an integral value in the proper range,
-** change (A < B) to (!(B <= A)) and (A <= B) to (!(B < A)) so that
-** it can use an immediate operand. In this case, C indicates this
-** change, for cases that cannot assume a total order (NaN and
-** metamethods).
+** When the first operand A is an integral value in the proper range,
+** change (A < B) to (B > A) and (A <= B) to (B >= A) so that
+** it can use an immediate operand.
 */
 static void codeorder (FuncState *fs, OpCode op, expdesc *e1, expdesc *e2) {
   int r1, r2;
-  int cond = 1;
-  int C = 0;
   lua_Integer im;
   if (isSCnumber(e2, &im)) {
     /* use immediate operand */
@@ -1356,19 +1352,17 @@ static void codeorder (FuncState *fs, OpCode op, expdesc *e1, expdesc *e2) {
     op = cast(OpCode, (op - OP_LT) + OP_LTI);
   }
   else if (isSCnumber(e1, &im)) {
-    /* transform (A < B) to (!(B <= A)) and (A <= B) to (!(B < A)) */
+    /* transform (A < B) to (B > A) and (A <= B) to (B >= A) */
     r1 = luaK_exp2anyreg(fs, e2);
     r2 = cast_int(im);
-    op = (op == OP_LT) ? OP_LEI : OP_LTI;
-    cond = 0;  /* negate original test */
-    C = 1;  /* indication that it used the transformations */
+    op = (op == OP_LT) ? OP_GTI : OP_GEI;
   }
   else {  /* regular case, compare two registers */
     r1 = luaK_exp2anyreg(fs, e1);
     r2 = luaK_exp2anyreg(fs, e2);
   }
   freeexps(fs, e1, e2);
-  e1->u.info = condjump(fs, op, r1, r2, C, cond);
+  e1->u.info = condjump(fs, op, r1, r2, 1);
   e1->k = VJMP;
 }
 
@@ -1399,7 +1393,7 @@ static void codeeq (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
     r2 = luaK_exp2anyreg(fs, e2);
   }
   freeexps(fs, e1, e2);
-  e1->u.info = condjump(fs, op, r1, r2, 0, (opr == OPR_EQ));
+  e1->u.info = condjump(fs, op, r1, r2, (opr == OPR_EQ));
   e1->k = VJMP;
 }
 

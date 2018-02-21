@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.343 2018/02/21 12:54:26 roberto Exp roberto $
+** $Id: lvm.c,v 2.344 2018/02/21 13:47:03 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -731,18 +731,15 @@ void luaV_finishOp (lua_State *L) {
     }
     case OP_LT: case OP_LE:
     case OP_LTI: case OP_LEI:
+    case OP_GTI: case OP_GEI:
     case OP_EQ: {  /* note that 'OP_EQI'/'OP_EQK' cannot yield */
       int res = !l_isfalse(s2v(L->top - 1));
       L->top--;
       if (ci->callstatus & CIST_LEQ) {  /* "<=" using "<" instead? */
-        lua_assert(op == OP_LE ||
-                  (op == OP_LTI && GETARG_C(inst)) ||
-                  (op == OP_LEI && !GETARG_C(inst)));
         ci->callstatus ^= CIST_LEQ;  /* clear mark */
         res = !res;  /* negate result */
       }
       lua_assert(GET_OPCODE(*ci->u.l.savedpc) == OP_JMP);
-      if (GETARG_C(inst)) res = !res;
       if (res != GETARG_k(inst))  /* condition failed? */
         ci->u.l.savedpc++;  /* skip jump instruction */
       break;
@@ -1473,26 +1470,40 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         int im = GETARG_sB(i);
         if (ttisinteger(vra))
           cond = (ivalue(vra) < im);
-        else if (ttisfloat(vra)) {
-          lua_Number f = fltvalue(vra);
-          cond = (!luai_numisnan(f)) ? luai_numlt(f, cast_num(im))
-                                     : GETARG_C(i);  /* NaN */
-        }
+        else if (ttisfloat(vra))
+          cond = luai_numlt(fltvalue(vra), cast_num(im));
         else
-          Protect(cond = luaT_callorderiTM(L, vra, im, GETARG_C(i), TM_LT));
+          Protect(cond = luaT_callorderiTM(L, vra, im, 0, TM_LT));
         goto condjump;
       }
       vmcase(OP_LEI) {
         int im = GETARG_sB(i);
         if (ttisinteger(vra))
           cond = (ivalue(vra) <= im);
-        else if (ttisfloat(vra)) {
-          lua_Number f = fltvalue(vra);
-          cond = (!luai_numisnan(f)) ? luai_numle(f, cast_num(im))
-                                    : GETARG_C(i);  /* NaN? */
-        }
+        else if (ttisfloat(vra))
+          cond = luai_numle(fltvalue(vra), cast_num(im));
         else
-          Protect(cond = luaT_callorderiTM(L, vra, im, GETARG_C(i), TM_LE));
+          Protect(cond = luaT_callorderiTM(L, vra, im, 0, TM_LE));
+        goto condjump;
+      }
+      vmcase(OP_GTI) {
+        int im = GETARG_sB(i);
+        if (ttisinteger(vra))
+          cond = (im < ivalue(vra));
+        else if (ttisfloat(vra))
+          cond = luai_numlt(cast_num(im), fltvalue(vra));
+        else
+          Protect(cond = luaT_callorderiTM(L, vra, im, 1, TM_LT));
+        goto condjump;
+      }
+      vmcase(OP_GEI) {
+        int im = GETARG_sB(i);
+        if (ttisinteger(vra))
+          cond = (im <= ivalue(vra));
+        else if (ttisfloat(vra))
+          cond = luai_numle(cast_num(im), fltvalue(vra));
+        else
+          Protect(cond = luaT_callorderiTM(L, vra, im, 1, TM_LE));
         goto condjump;
       }
       vmcase(OP_TEST) {
