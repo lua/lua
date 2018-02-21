@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.133 2018/01/28 15:13:26 roberto Exp roberto $
+** $Id: lobject.h,v 2.134 2018/02/20 16:52:50 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -88,12 +88,6 @@ struct GCObject {
 
 
 
-
-/*
-** Tagged Values. This is the basic representation of values in Lua,
-** an actual value plus a tag with its type.
-*/
-
 /*
 ** Union of all Lua values
 */
@@ -107,8 +101,12 @@ typedef union Value {
 } Value;
 
 
-#define TValuefields	Value value_; lu_byte tt_
+/*
+** Tagged Values. This is the basic representation of values in Lua:
+** an actual value plus a tag with its type.
+*/
 
+#define TValuefields	Value value_; lu_byte tt_
 
 typedef struct TValue {
   TValuefields;
@@ -301,14 +299,6 @@ typedef struct TValue {
 
 
 
-
-/*
-** {======================================================
-** types and prototypes
-** =======================================================
-*/
-
-
 typedef union StackValue {
   TValue val;
 } StackValue;
@@ -320,6 +310,12 @@ typedef StackValue *StkId;  /* index to stack elements */
 #define s2v(o)	(&(o)->val)
 
 
+
+/*
+** {==================================================================
+** Strings
+** ===================================================================
+*/
 
 /*
 ** Header for string value; string bytes follow the end of this structure
@@ -363,6 +359,8 @@ typedef union UTString {
 /* get string length from 'TValue *o' */
 #define vslen(o)	tsslen(tsvalue(o))
 
+/* }================================================================== */
+
 
 /*
 ** {==================================================================
@@ -402,7 +400,6 @@ typedef struct Udata {
 #define sizeudata(nuv,nb)	(udatamemoffset(nuv) + (nb))
 
 /* }================================================================== */
-
 
 
 /*
@@ -480,6 +477,11 @@ typedef struct Proto {
 /* }================================================================== */
 
 
+/*
+** {==================================================================
+** Closures
+** ===================================================================
+*/
 
 /*
 ** Upvalues for Lua closures
@@ -529,14 +531,17 @@ typedef union Closure {
 
 #define getproto(o)	(clLvalue(o)->p)
 
+/* }================================================================== */
+
 
 /*
+** {==================================================================
 ** Tables
+** ===================================================================
 */
 
-
 /*
-** Nodes for Hash tables. A pack of two TValue's (key-value pairs)
+** Nodes for Hash tables: A pack of two TValue's (key-value pairs)
 ** plus a 'next' field to link colliding entries. The distribution
 ** of the key's fields ('key_tt' and 'key_val') not forming a proper
 ** 'TValue' allows for a smaller size for 'Node' both in 4-byte
@@ -608,6 +613,8 @@ typedef struct Table {
 ** from any valid value.
 */
 #define setdeadkey(n)	(keytt(n) = LUA_TTABLE, gckey(n) = NULL)
+
+/* }================================================================== */
 
 
 
