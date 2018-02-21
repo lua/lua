@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.154 2018/02/15 15:34:29 roberto Exp roberto $
+** $Id: lcode.c,v 2.155 2018/02/17 19:20:00 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -605,9 +605,7 @@ void luaK_int (FuncState *fs, int reg, lua_Integer i) {
 
 
 static int floatI (lua_Number f, lua_Integer *fi) {
-  TValue v;
-  setfltvalue(&v, f);
-  return (luaV_flttointeger(&v, fi, 0) && fitsBx(*fi));
+  return (luaV_flttointeger(f, fi, 0) && fitsBx(*fi));
 }
 
 

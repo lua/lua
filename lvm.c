@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.341 2018/02/17 19:20:00 roberto Exp roberto $
+** $Id: lvm.c,v 2.342 2018/02/19 20:06:56 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -90,36 +90,42 @@ int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
 ** mode == 1: takes the floor of the number
 ** mode == 2: takes the ceil of the number
 */
-int luaV_flttointeger (const TValue *obj, lua_Integer *p, int mode) {
-  if (!ttisfloat(obj))
-    return 0;
-  else {
-    lua_Number n = fltvalue(obj);
-    lua_Number f = l_floor(n);
-    if (n != f) {  /* not an integral value? */
-      if (mode == 0) return 0;  /* fails if mode demands integral value */
-      else if (mode > 1)  /* needs ceil? */
-        f += 1;  /* convert floor to ceil (remember: n != f) */
-    }
-    return lua_numbertointeger(f, p);
+int luaV_flttointeger (lua_Number n, lua_Integer *p, int mode) {
+  lua_Number f = l_floor(n);
+  if (n != f) {  /* not an integral value? */
+    if (mode == 0) return 0;  /* fails if mode demands integral value */
+    else if (mode > 1)  /* needs ceil? */
+      f += 1;  /* convert floor to ceil (remember: n != f) */
   }
+  return lua_numbertointeger(f, p);
 }
 
 
 /*
-** try to convert a value to an integer. ("Fast track" is handled
-** by macro 'tointeger'.)
+** try to convert a value to an integer, rounding according to 'mode',
+** without string coercion.
+** ("Fast track" handled by macro 'tointegerns'.)
+*/
+int luaV_tointegerns (const TValue *obj, lua_Integer *p, int mode) {
+  if (ttisfloat(obj))
+    return luaV_flttointeger(fltvalue(obj), p, mode);
+  else if (ttisinteger(obj)) {
+    *p = ivalue(obj);
+    return 1;
+  }
+  else
+    return 0;
+}
+
+
+/*
+** try to convert a value to an integer.
 */
 int luaV_tointeger (const TValue *obj, lua_Integer *p, int mode) {
   TValue v;
   if (cvt2num(obj) && luaO_str2num(svalue(obj), &v) == vslen(obj) + 1)
     obj = &v;  /* change string to its corresponding number */
-  if (ttisinteger(obj)) {
-    *p = ivalue(obj);
-    return 1;
-  }
-  else
-    return luaV_flttointeger(obj, p, mode);
+  return luaV_tointegerns(obj, p, mode);
 }
 
 

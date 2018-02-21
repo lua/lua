@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.131 2018/01/28 15:13:26 roberto Exp roberto $
+** $Id: ltable.c,v 2.132 2018/02/19 20:06:56 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -559,12 +559,13 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
   TValue aux;
   if (ttisnil(key)) luaG_runerror(L, "table index is nil");
   else if (ttisfloat(key)) {
+    lua_Number f = fltvalue(key);
     lua_Integer k;
-    if (luaV_flttointeger(key, &k, 0)) {  /* does index fit in an integer? */
+    if (luaV_flttointeger(f, &k, 0)) {  /* does key fit in an integer? */
       setivalue(&aux, k);
       key = &aux;  /* insert it as an integer */
     }
-    else if (luai_numisnan(fltvalue(key)))
+    else if (luai_numisnan(f))
       luaG_runerror(L, "table index is NaN");
   }
   mp = mainpositionTV(t, key);
@@ -669,7 +670,7 @@ const TValue *luaH_get (Table *t, const TValue *key) {
     case LUA_TNIL: return luaO_nilobject;
     case LUA_TNUMFLT: {
       lua_Integer k;
-      if (luaV_flttointeger(key, &k, 0)) /* index is an integral? */
+      if (luaV_flttointeger(fltvalue(key), &k, 0)) /* index is an integral? */
         return luaH_getint(t, k);  /* use specialized version */
       /* else... */
     }  /* FALLTHROUGH */
