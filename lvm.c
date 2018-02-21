@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.344 2018/02/21 13:47:03 roberto Exp roberto $
+** $Id: lvm.c,v 2.345 2018/02/21 15:49:32 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -805,6 +805,14 @@ void luaV_finishOp (lua_State *L) {
 #define donextjump(ci)	{ i = *pc; dojump(ci, i, 1); }
 
 /*
+** do a conditional jump: skip next instruction if 'cond' is not what
+** was expected (parameter 'k'), else do next instruction, which must
+** be a jump.
+*/
+#define docondjump()	if (cond != GETARG_k(i)) pc++; else donextjump(ci);
+
+
+/*
 ** Correct global 'pc'.
 */
 #define savepc(L)	(ci->u.l.savedpc = pc)
@@ -1428,7 +1436,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       vmcase(OP_EQ) {
         TValue *rb = vRB(i);
         Protect(cond = luaV_equalobj(L, vra, rb));
-        goto condjump;
+        docondjump();
+        vmbreak;
       }
       vmcase(OP_LT) {
         TValue *rb = vRB(i);
@@ -1438,7 +1447,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           cond = LTnum(vra, rb);
         else
           Protect(cond = lessthanothers(L, vra, rb));
-        goto condjump;
+        docondjump();
+        vmbreak;
       }
       vmcase(OP_LE) {
         TValue *rb = vRB(i);
@@ -1448,13 +1458,15 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           cond = LEnum(vra, rb);
         else
           Protect(cond = lessequalothers(L, vra, rb));
-        goto condjump;
+        docondjump();
+        vmbreak;
       }
       vmcase(OP_EQK) {
         TValue *rb = KB(i);
         /* basic types do not use '__eq'; we can use raw equality */
         cond = luaV_equalobj(NULL, vra, rb);
-        goto condjump;
+        docondjump();
+        vmbreak;
       }
       vmcase(OP_EQI) {
         int im = GETARG_sB(i);
@@ -1464,7 +1476,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           cond = luai_numeq(fltvalue(vra), cast_num(im));
         else
           cond = 0;  /* other types cannot be equal to a number */
-        goto condjump;
+        docondjump();
+        vmbreak;
       }
       vmcase(OP_LTI) {
         int im = GETARG_sB(i);
@@ -1474,7 +1487,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           cond = luai_numlt(fltvalue(vra), cast_num(im));
         else
           Protect(cond = luaT_callorderiTM(L, vra, im, 0, TM_LT));
-        goto condjump;
+        docondjump();
+        vmbreak;
       }
       vmcase(OP_LEI) {
         int im = GETARG_sB(i);
@@ -1484,7 +1498,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           cond = luai_numle(fltvalue(vra), cast_num(im));
         else
           Protect(cond = luaT_callorderiTM(L, vra, im, 0, TM_LE));
-        goto condjump;
+        docondjump();
+        vmbreak;
       }
       vmcase(OP_GTI) {
         int im = GETARG_sB(i);
@@ -1494,7 +1509,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           cond = luai_numlt(cast_num(im), fltvalue(vra));
         else
           Protect(cond = luaT_callorderiTM(L, vra, im, 1, TM_LT));
-        goto condjump;
+        docondjump();
+        vmbreak;
       }
       vmcase(OP_GEI) {
         int im = GETARG_sB(i);
@@ -1504,15 +1520,12 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           cond = luai_numle(cast_num(im), fltvalue(vra));
         else
           Protect(cond = luaT_callorderiTM(L, vra, im, 1, TM_LE));
-        goto condjump;
+        docondjump();
+        vmbreak;
       }
       vmcase(OP_TEST) {
         cond = !l_isfalse(vra);
-       condjump:
-        if (cond != GETARG_k(i))
-          pc++;  /* skip next jump */
-        else
-          donextjump(ci);
+        docondjump();
         vmbreak;
       }
       vmcase(OP_TESTSET) {
