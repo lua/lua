@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.248 2018/02/19 16:02:25 roberto Exp roberto $
+** $Id: lgc.c,v 2.248 2018/02/20 16:52:50 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -78,6 +78,11 @@
 
 #define checkconsistency(obj)  \
   lua_longassert(!iscollectable(obj) || righttt(obj))
+
+/*
+** Protected access to objects in values
+*/
+#define gcvalueN(o)     (iscollectable(o) ? gcvalue(o) : NULL)
 
 
 #define markvalue(g,o) { checkconsistency(o); \
