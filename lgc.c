@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.248 2018/02/20 16:52:50 roberto Exp roberto $
+** $Id: lgc.c,v 2.250 2018/02/23 13:16:18 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -688,10 +688,10 @@ static void clearbykeys (global_State *g, GCObject *l) {
     Node *limit = gnodelast(h);
     Node *n;
     for (n = gnode(h, 0); n < limit; n++) {
+      if (iscleared(g, gckeyN(n)))  /* unmarked key? */
+        setempty(gval(n));  /* remove entry */
       if (isempty(gval(n)))  /* is entry empty? */
         clearkey(n);  /* clear its key */
-      else if (iscleared(g, gckeyN(n)))  /* unmarked key? */
-        setempty(gval(n));  /* remove entry */
     }
   }
 }
