@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.240 2018/01/28 15:13:26 roberto Exp roberto $
+** $Id: ltests.c,v 2.241 2018/02/20 16:52:50 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -254,7 +254,7 @@ static void checktable (global_State *g, Table *h) {
   for (i = 0; i < h->sizearray; i++)
     checkvalref(g, hgc, &h->array[i]);
   for (n = gnode(h, 0); n < limit; n++) {
-    if (!ttisnil(gval(n))) {
+    if (!isempty(gval(n))) {
       TValue k;
       getnodekey(g->mainthread, &k, n);
       lua_assert(!keyisnil(n));
@@ -842,7 +842,7 @@ static int table_query (lua_State *L) {
   else if ((i -= t->sizearray) < sizenode(t)) {
     TValue k;
     getnodekey(L, &k, gnode(t, i));
-    if (!ttisnil(gval(gnode(t, i))) ||
+    if (!isempty(gval(gnode(t, i))) ||
         ttisnil(&k) ||
         ttisnumber(&k)) {
       pushobject(L, &k);

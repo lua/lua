@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 2.31 2018/02/09 15:16:06 roberto Exp roberto $
+** $Id: ltm.h,v 2.32 2018/02/17 19:20:00 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -44,6 +44,12 @@ typedef enum {
   TM_N		/* number of elements in the enum */
 } TMS;
 
+
+/*
+** Test whether there is no tagmethod.
+** (Because tagmethods use raw accesses, the result may be an "empty" nil.)
+*/
+#define notm(tm)	ttisnilorempty(tm)
 
 
 #define gfasttm(g,et,e) ((et) == NULL ? NULL : \

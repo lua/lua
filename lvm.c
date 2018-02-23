@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.345 2018/02/21 15:49:32 roberto Exp roberto $
+** $Id: lvm.c,v 2.346 2018/02/21 19:43:44 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -168,7 +168,7 @@ static int forlimit (const TValue *obj, lua_Integer *p, lua_Integer step,
 /*
 ** Finish the table access 'val = t[key]'.
 ** if 'slot' is NULL, 't' is not a table; otherwise, 'slot' points to
-** t[k] entry (which must be nil).
+** t[k] entry (which must be empty).
 */
 void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
                       const TValue *slot) {
@@ -178,12 +178,12 @@ void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
     if (slot == NULL) {  /* 't' is not a table? */
       lua_assert(!ttistable(t));
       tm = luaT_gettmbyobj(L, t, TM_INDEX);
-      if (ttisnil(tm))
+      if (notm(tm))
         luaG_typeerror(L, t, "index");  /* no metamethod */
       /* else will try the metamethod */
     }
     else {  /* 't' is a table */
-      lua_assert(ttisnil(slot));
+      lua_assert(isempty(slot));
       tm = fasttm(L, hvalue(t)->metatable, TM_INDEX);  /* table's metamethod */
       if (tm == NULL) {  /* no metamethod? */
         setnilvalue(s2v(val));  /* result is nil */
@@ -209,8 +209,8 @@ void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
 /*
 ** Finish a table assignment 't[key] = val'.
 ** If 'slot' is NULL, 't' is not a table.  Otherwise, 'slot' points
-** to the entry 't[key]', or to 'luaO_nilobject' if there is no such
-** entry.  (The value at 'slot' must be nil, otherwise 'luaV_fastget'
+** to the entry 't[key]', or to 'luaH_emptyobject' if there is no such
+** entry.  (The value at 'slot' must be empty, otherwise 'luaV_fastget'
 ** would have done the job.)
 */
 void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
@@ -220,10 +220,10 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
     const TValue *tm;  /* '__newindex' metamethod */
     if (slot != NULL) {  /* is 't' a table? */
       Table *h = hvalue(t);  /* save 't' table */
-      lua_assert(ttisnil(slot));  /* old value must be nil */
+      lua_assert(isempty(slot));  /* slot must be empty */
       tm = fasttm(L, h->metatable, TM_NEWINDEX);  /* get metamethod */
       if (tm == NULL) {  /* no metamethod? */
-        if (slot == luaO_nilobject)  /* no previous entry? */
+        if (slot == luaH_emptyobject)  /* no previous entry? */
           slot = luaH_newkey(L, h, key);  /* create one */
         /* no metamethod and (now) there is an entry with given key */
         setobj2t(L, cast(TValue *, slot), val);  /* set its new value */
@@ -234,7 +234,8 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
       /* else will try the metamethod */
     }
     else {  /* not a table; check metamethod */
-      if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_NEWINDEX)))
+      tm = luaT_gettmbyobj(L, t, TM_NEWINDEX);
+      if (notm(tm))
         luaG_typeerror(L, t, "index");
     }
     /* try the metamethod */
@@ -586,7 +587,7 @@ void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
     }
     default: {  /* try metamethod */
       tm = luaT_gettmbyobj(L, rb, TM_LEN);
-      if (ttisnil(tm))  /* no metamethod? */
+      if (notm(tm))  /* no metamethod? */
         luaG_typeerror(L, rb, "get length of");
       break;
     }

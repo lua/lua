@@ -145,12 +145,13 @@ static GCObject **getgclist (GCObject *o) {
 ** Clear keys for empty entries in tables. If entry is empty
 ** and its key is not marked, mark its entry as dead. This allows the
 ** collection of the key, but keeps its entry in the table (its removal
-** could break a chain). Other places never manipulate dead keys,
-** because its associated nil value is enough to signal that the entry
-** is logically empty.
+** could break a chain). The main feature of a dead key is that it must
+** be different from any other value, to do not disturb searches. 
+** Other places never manipulate dead keys, because its associated empty
+** value is enough to signal that the entry is logically empty.
 */
-static void removeentry (Node *n) {
-  lua_assert(ttisnil(gval(n)));
+static void clearkey (Node *n) {
+  lua_assert(isempty(gval(n)));
   if (keyiswhite(n))
     setdeadkey(n);  /* unused and unmarked key; remove it */
 }
@@ -386,8 +387,8 @@ static void traverseweakvalue (global_State *g, Table *h) {
      worth traversing it now just to check) */
   int hasclears = (h->sizearray > 0);
   for (n = gnode(h, 0); n < limit; n++) {  /* traverse hash part */
-    if (ttisnil(gval(n)))  /* entry is empty? */
-      removeentry(n);  /* remove it */
+    if (isempty(gval(n)))  /* entry is empty? */
+      clearkey(n);  /* clear its key */
     else {
       lua_assert(!keyisnil(n));
       markkey(g, n);
@@ -428,8 +429,8 @@ static int traverseephemeron (global_State *g, Table *h) {
   }
   /* traverse hash part */
   for (n = gnode(h, 0); n < limit; n++) {
-    if (ttisnil(gval(n)))  /* entry is empty? */
-      removeentry(n);  /* remove it */
+    if (isempty(gval(n)))  /* entry is empty? */
+      clearkey(n);  /* clear its key */
     else if (iscleared(g, gckeyN(n))) {  /* key is not marked (yet)? */
       hasclears = 1;  /* table must be cleared */
       if (valiswhite(gval(n)))  /* value not marked yet? */
@@ -461,8 +462,8 @@ static void traversestrongtable (global_State *g, Table *h) {
   for (i = 0; i < h->sizearray; i++)  /* traverse array part */
     markvalue(g, &h->array[i]);
   for (n = gnode(h, 0); n < limit; n++) {  /* traverse hash part */
-    if (ttisnil(gval(n)))  /* entry is empty? */
-      removeentry(n);  /* remove it */
+    if (isempty(gval(n)))  /* entry is empty? */
+      clearkey(n);  /* clear its key */
     else {
       lua_assert(!keyisnil(n));
       markkey(g, n);
@@ -681,15 +682,16 @@ static void clearprotolist (global_State *g) {
 /*
 ** clear entries with unmarked keys from all weaktables in list 'l'
 */
-static void clearkeys (global_State *g, GCObject *l) {
+static void clearbykeys (global_State *g, GCObject *l) {
   for (; l; l = gco2t(l)->gclist) {
     Table *h = gco2t(l);
-    Node *n, *limit = gnodelast(h);
+    Node *limit = gnodelast(h);
+    Node *n;
     for (n = gnode(h, 0); n < limit; n++) {
-      if (!ttisnil(gval(n)) && (iscleared(g, gckeyN(n))))  /* unmarked key? */
-        setnilvalue(gval(n));  /* clear value */
-      if (ttisnil(gval(n)))  /* is entry empty? */
-        removeentry(n);  /* remove it from table */
+      if (isempty(gval(n)))  /* is entry empty? */
+        clearkey(n);  /* clear its key */
+      else if (iscleared(g, gckeyN(n)))  /* unmarked key? */
+        setempty(gval(n));  /* remove entry */
     }
   }
 }
@@ -699,7 +701,7 @@ static void clearkeys (global_State *g, GCObject *l) {
 ** clear entries with unmarked values from all weaktables in list 'l' up
 ** to element 'f'
 */
-static void clearvalues (global_State *g, GCObject *l, GCObject *f) {
+static void clearbyvalues (global_State *g, GCObject *l, GCObject *f) {
   for (; l != f; l = gco2t(l)->gclist) {
     Table *h = gco2t(l);
     Node *n, *limit = gnodelast(h);
@@ -707,13 +709,13 @@ static void clearvalues (global_State *g, GCObject *l, GCObject *f) {
     for (i = 0; i < h->sizearray; i++) {
       TValue *o = &h->array[i];
       if (iscleared(g, gcvalueN(o)))  /* value was collected? */
-        setnilvalue(o);  /* remove value */
+        setempty(o);  /* remove entry */
     }
     for (n = gnode(h, 0); n < limit; n++) {
       if (iscleared(g, gcvalueN(gval(n))))  /* unmarked value? */
-        setnilvalue(gval(n));  /* clear value */
-      if (ttisnil(gval(n)))  /* is entry empty? */
-        removeentry(n);  /* remove it from table */
+        setempty(gval(n));  /* remove entry */
+      if (isempty(gval(n)))  /* is entry empty? */
+        clearkey(n);  /* clear its key */
     }
   }
 }
@@ -1372,8 +1374,8 @@ static lu_mem atomic (lua_State *L) {
   convergeephemerons(g);
   /* at this point, all strongly accessible objects are marked. */
   /* Clear values from weak tables, before checking finalizers */
-  clearvalues(g, g->weak, NULL);
-  clearvalues(g, g->allweak, NULL);
+  clearbyvalues(g, g->weak, NULL);
+  clearbyvalues(g, g->allweak, NULL);
   origweak = g->weak; origall = g->allweak;
   separatetobefnz(g, 0);  /* separate objects to be finalized */
   work += markbeingfnz(g);  /* mark objects that will be finalized */
@@ -1381,11 +1383,11 @@ static lu_mem atomic (lua_State *L) {
   convergeephemerons(g);
   /* at this point, all resurrected objects are marked. */
   /* remove dead objects from weak tables */
-  clearkeys(g, g->ephemeron);  /* clear keys from all ephemeron tables */
-  clearkeys(g, g->allweak);  /* clear keys from all 'allweak' tables */
+  clearbykeys(g, g->ephemeron);  /* clear keys from all ephemeron tables */
+  clearbykeys(g, g->allweak);  /* clear keys from all 'allweak' tables */
   /* clear values from resurrected weak tables */
-  clearvalues(g, g->weak, origweak);
-  clearvalues(g, g->allweak, origall);
+  clearbyvalues(g, g->weak, origweak);
+  clearbyvalues(g, g->allweak, origall);
   luaS_clearcache(g);
   clearprotolist(g);
   g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */

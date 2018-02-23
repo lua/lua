@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 2.49 2018/02/19 20:06:56 roberto Exp roberto $
+** $Id: lvm.h,v 2.50 2018/02/21 12:54:26 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -64,17 +64,17 @@
 
 
 /*
-** fast track for 'gettable': if 't' is a table and 't[k]' is not nil,
+** fast track for 'gettable': if 't' is a table and 't[k]' is present,
 ** return 1 with 'slot' pointing to 't[k]' (position of final result).
 ** Otherwise, return 0 (meaning it will have to check metamethod)
-** with 'slot' pointing to a nil 't[k]' (if 't' is a table) or NULL
+** with 'slot' pointing to an empty 't[k]' (if 't' is a table) or NULL
 ** (otherwise). 'f' is the raw get function to use.
 */
 #define luaV_fastget(L,t,k,slot,f) \
   (!ttistable(t)  \
    ? (slot = NULL, 0)  /* not a table; 'slot' is NULL and result is 0 */  \
    : (slot = f(hvalue(t), k),  /* else, do raw access */  \
-      !ttisnil(slot)))  /* result not nil? */
+      !isempty(slot)))  /* result not empty? */
 
 
 /*
@@ -86,7 +86,7 @@
    ? (slot = NULL, 0)  /* not a table; 'slot' is NULL and result is 0 */  \
    : (slot = (l_castS2U(k) - 1u < hvalue(t)->sizearray) \
               ? &hvalue(t)->array[k - 1] : luaH_getint(hvalue(t), k), \
-      !ttisnil(slot)))  /* result not nil? */
+      !isempty(slot)))  /* result not empty? */
 
 
 /*

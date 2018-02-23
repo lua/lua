@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.283 2018/02/05 17:10:52 roberto Exp roberto $
+** $Id: lapi.c,v 2.285 2018/02/20 16:52:50 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -657,14 +657,26 @@ LUA_API int lua_geti (lua_State *L, int idx, lua_Integer n) {
 }
 
 
+static int finishrawget (lua_State *L, const TValue *val) {
+  if (isempty(val))  /* avoid copying empty items to the stack */
+    setnilvalue(s2v(L->top));
+  else
+    setobj2s(L, L->top, val);
+  api_incr_top(L);
+  lua_unlock(L);
+  return ttnov(s2v(L->top - 1));
+}
+
+
 LUA_API int lua_rawget (lua_State *L, int idx) {
   TValue *t;
+  const TValue *val;
   lua_lock(L);
   t = index2value(L, idx);
   api_check(L, ttistable(t), "table expected");
-  setobj2s(L, L->top - 1, luaH_get(hvalue(t), s2v(L->top - 1)));
-  lua_unlock(L);
-  return ttnov(s2v(L->top - 1));
+  val = luaH_get(hvalue(t), s2v(L->top - 1));
+  L->top--;  /* remove key */
+  return finishrawget(L, val);
 }
 
 
@@ -673,10 +685,7 @@ LUA_API int lua_rawgeti (lua_State *L, int idx, lua_Integer n) {
   lua_lock(L);
   t = index2value(L, idx);
   api_check(L, ttistable(t), "table expected");
-  setobj2s(L, L->top, luaH_getint(hvalue(t), n));
-  api_incr_top(L);
-  lua_unlock(L);
-  return ttnov(s2v(L->top - 1));
+  return finishrawget(L, luaH_getint(hvalue(t), n));
 }
 
 
@@ -687,10 +696,7 @@ LUA_API int lua_rawgetp (lua_State *L, int idx, const void *p) {
   t = index2value(L, idx);
   api_check(L, ttistable(t), "table expected");
   setpvalue(&k, cast_voidp(p));
-  setobj2s(L, L->top, luaH_get(hvalue(t), &k));
-  api_incr_top(L);
-  lua_unlock(L);
-  return ttnov(s2v(L->top - 1));
+  return finishrawget(L, luaH_get(hvalue(t), &k));
 }
 
 

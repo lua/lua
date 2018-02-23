@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.135 2018/02/21 16:28:12 roberto Exp roberto $
+** $Id: lobject.h,v 2.136 2018/02/22 17:28:10 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -100,7 +100,7 @@ typedef struct TValue {
 #define setobj(L,obj1,obj2) \
 	{ TValue *io1=(obj1); const TValue *io2=(obj2); \
           io1->value_ = io2->value_; io1->tt_ = io2->tt_; \
-	  (void)L; checkliveness(L,io1); }
+	  (void)L; checkliveness(L,io1); lua_assert(!isreallyempty(io1)); }
 
 /*
 ** different types of assignments, according to destination
@@ -147,6 +147,30 @@ typedef StackValue *StkId;  /* index to stack elements */
 
 /* (address of) a fixed nil value */
 #define luaO_nilobject		(&luaO_nilobject_)
+
+
+/*
+** Variant tag, used only in tables to signal an empty slot
+** (which might be different from a slot containing nil)
+*/
+#define LUA_TEMPTY	(LUA_TNIL | (1 << 4))
+
+#define ttisnilorempty(v)	checktype((v), LUA_TNIL)
+/*
+** By default, entries with any kind of nil are considered empty
+*/
+#define isempty(v)		ttisnilorempty(v)
+
+#define isreallyempty(v)	checktag((v), LUA_TEMPTY)
+
+/* macro defining an empty value */
+#define EMPTYCONSTANT	{NULL}, LUA_TEMPTY
+
+
+/* mark an entry as empty */
+#define setempty(v)		settt_(v, LUA_TEMPTY)
+
+
 
 /* }================================================================== */
 
@@ -644,7 +668,7 @@ typedef struct Table {
 
 /*
 ** Use a "nil table" to mark dead keys in a table. Those keys serve
-** only to keep space for removed entries, which may still be part of
+** to keep space for removed entries, which may still be part of
 ** chains. Note that the 'keytt' does not have the BIT_ISCOLLECTABLE
 ** set, so these values are considered not collectable and are different
 ** from any valid value.
