@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.137 2018/02/23 13:13:31 roberto Exp roberto $
+** $Id: lobject.h,v 2.138 2018/02/25 12:48:16 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -267,8 +267,8 @@ typedef struct GCObject {
 */
 
 /* Variant tags for numbers */
-#define LUA_TNUMFLT	(LUA_TNUMBER | (0 << 4))  /* float numbers */
-#define LUA_TNUMINT	(LUA_TNUMBER | (1 << 4))  /* integer numbers */
+#define LUA_TNUMFLT	(LUA_TNUMBER | (1 << 4))  /* float numbers */
+#define LUA_TNUMINT	(LUA_TNUMBER | (2 << 4))  /* integer numbers */
 
 #define ttisnumber(o)		checktype((o), LUA_TNUMBER)
 #define ttisfloat(o)		checktag((o), LUA_TNUMFLT)
@@ -304,8 +304,8 @@ typedef struct GCObject {
 */
 
 /* Variant tags for strings */
-#define LUA_TSHRSTR	(LUA_TSTRING | (0 << 4))  /* short strings */
-#define LUA_TLNGSTR	(LUA_TSTRING | (1 << 4))  /* long strings */
+#define LUA_TSHRSTR	(LUA_TSTRING | (1 << 4))  /* short strings */
+#define LUA_TLNGSTR	(LUA_TSTRING | (2 << 4))  /* long strings */
 
 #define ttisstring(o)		checktype((o), LUA_TSTRING)
 #define ttisshrstring(o)	checktag((o), ctb(LUA_TSHRSTR))
@@ -511,12 +511,12 @@ typedef struct Proto {
 */
 
 /* Variant tags for functions */
-#define LUA_TLCL	(LUA_TFUNCTION | (0 << 4))  /* Lua closure */
-#define LUA_TLCF	(LUA_TFUNCTION | (1 << 4))  /* light C function */
-#define LUA_TCCL	(LUA_TFUNCTION | (2 << 4))  /* C closure */
+#define LUA_TLCL	(LUA_TFUNCTION | (1 << 4))  /* Lua closure */
+#define LUA_TLCF	(LUA_TFUNCTION | (2 << 4))  /* light C function */
+#define LUA_TCCL	(LUA_TFUNCTION | (3 << 4))  /* C closure */
 
 #define ttisfunction(o)		checktype(o, LUA_TFUNCTION)
-#define ttisclosure(o)		((rttype(o) & 0x1F) == LUA_TFUNCTION)
+#define ttisclosure(o)		((rttype(o) & 0x1F) == LUA_TLCL)
 #define ttisLclosure(o)		checktag((o), ctb(LUA_TLCL))
 #define ttislcf(o)		checktag((o), LUA_TLCF)
 #define ttisCclosure(o)		checktag((o), ctb(LUA_TCCL))
