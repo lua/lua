@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.92 2016/02/08 12:55:19 roberto Exp roberto $
+** $Id: ltablib.c,v 1.93 2016/02/25 19:41:54 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -113,8 +113,8 @@ static int tremove (lua_State *L) {
     lua_geti(L, 1, pos + 1);
     lua_seti(L, 1, pos);  /* t[pos] = t[pos + 1] */
   }
-  lua_pushnil(L);
-  lua_seti(L, 1, pos);  /* t[pos] = nil */
+  lua_pushinteger(L, pos);
+  lua_removekey(L, 1);  /* remove entry t[pos] */
   return 1;
 }
 

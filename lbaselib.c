@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.318 2017/11/16 13:19:06 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.319 2018/02/05 17:10:52 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -167,6 +167,24 @@ static int luaB_rawset (lua_State *L) {
   lua_settop(L, 3);
   lua_rawset(L, 1);
   return 1;
+}
+
+
+static int luaB_keyin (lua_State *L) {
+  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_checkany(L, 2);
+  lua_settop(L, 2);
+  lua_pushboolean(L, lua_keyin(L, 1));
+  return 1;
+}
+
+
+static int luaB_removekey (lua_State *L) {
+  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_checkany(L, 2);
+  lua_settop(L, 2);
+  lua_removekey(L, 1);
+  return 0;
 }
 
 
@@ -501,6 +519,8 @@ static const luaL_Reg base_funcs[] = {
   {"rawlen", luaB_rawlen},
   {"rawget", luaB_rawget},
   {"rawset", luaB_rawset},
+  {"keyin", luaB_keyin},
+  {"removekey", luaB_removekey},
   {"select", luaB_select},
   {"setmetatable", luaB_setmetatable},
   {"tonumber", luaB_tonumber},

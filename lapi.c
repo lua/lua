@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.285 2018/02/20 16:52:50 roberto Exp roberto $
+** $Id: lapi.c,v 2.286 2018/02/23 13:13:31 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -668,35 +668,65 @@ static int finishrawget (lua_State *L, const TValue *val) {
 }
 
 
+static Table *gettable (lua_State *L, int idx) {
+  TValue *t = index2value(L, idx);
+  api_check(L, ttistable(t), "table expected");
+  return hvalue(t);
+}
+
+
 LUA_API int lua_rawget (lua_State *L, int idx) {
-  TValue *t;
+  Table *t;
   const TValue *val;
   lua_lock(L);
-  t = index2value(L, idx);
-  api_check(L, ttistable(t), "table expected");
-  val = luaH_get(hvalue(t), s2v(L->top - 1));
+  t = gettable(L, idx);
+  val = luaH_get(t, s2v(L->top - 1));
   L->top--;  /* remove key */
   return finishrawget(L, val);
 }
 
 
 LUA_API int lua_rawgeti (lua_State *L, int idx, lua_Integer n) {
-  TValue *t;
+  Table *t;
   lua_lock(L);
-  t = index2value(L, idx);
-  api_check(L, ttistable(t), "table expected");
-  return finishrawget(L, luaH_getint(hvalue(t), n));
+  t = gettable(L, idx);
+  return finishrawget(L, luaH_getint(t, n));
 }
 
 
 LUA_API int lua_rawgetp (lua_State *L, int idx, const void *p) {
-  TValue *t;
+  Table *t;
   TValue k;
   lua_lock(L);
-  t = index2value(L, idx);
-  api_check(L, ttistable(t), "table expected");
+  t = gettable(L, idx);
   setpvalue(&k, cast_voidp(p));
-  return finishrawget(L, luaH_get(hvalue(t), &k));
+  return finishrawget(L, luaH_get(t, &k));
+}
+
+
+static int auxkeyman (lua_State *L, int idx, int remove) {
+  Table *t;
+  const TValue *val;
+  int res;
+  lua_lock(L);
+  t = gettable(L, idx);
+  val = luaH_get(t, s2v(L->top - 1));
+  L->top--;  /* remove key */
+  res = !isempty(val);
+  if (remove && res)  /* key is present and should be removed? */
+    setempty(cast(TValue*, val));
+  lua_unlock(L);
+  return res;
+}
+
+
+LUA_API void lua_removekey (lua_State *L, int idx) {
+  auxkeyman(L, idx, 1);
+}
+
+
+LUA_API int lua_keyin (lua_State *L, int idx) {
+  return auxkeyman(L, idx, 0);
 }
 
 
@@ -834,45 +864,42 @@ LUA_API void lua_seti (lua_State *L, int idx, lua_Integer n) {
 
 
 LUA_API void lua_rawset (lua_State *L, int idx) {
-  TValue *o;
+  Table *t;
   TValue *slot;
   lua_lock(L);
   api_checknelems(L, 2);
-  o = index2value(L, idx);
-  api_check(L, ttistable(o), "table expected");
-  slot = luaH_set(L, hvalue(o), s2v(L->top - 2));
+  t = gettable(L, idx);
+  slot = luaH_set(L, t, s2v(L->top - 2));
   setobj2t(L, slot, s2v(L->top - 1));
-  invalidateTMcache(hvalue(o));
-  luaC_barrierback(L, gcvalue(o), s2v(L->top - 1));
+  invalidateTMcache(t);
+  luaC_barrierback(L, obj2gco(t), s2v(L->top - 1));
   L->top -= 2;
   lua_unlock(L);
 }
 
 
 LUA_API void lua_rawseti (lua_State *L, int idx, lua_Integer n) {
-  TValue *o;
+  Table *t;
   lua_lock(L);
   api_checknelems(L, 1);
-  o = index2value(L, idx);
-  api_check(L, ttistable(o), "table expected");
-  luaH_setint(L, hvalue(o), n, s2v(L->top - 1));
-  luaC_barrierback(L, gcvalue(o), s2v(L->top - 1));
+  t = gettable(L, idx);
+  luaH_setint(L, t, n, s2v(L->top - 1));
+  luaC_barrierback(L, obj2gco(t), s2v(L->top - 1));
   L->top--;
   lua_unlock(L);
 }
 
 
 LUA_API void lua_rawsetp (lua_State *L, int idx, const void *p) {
-  TValue *o;
+  Table *t;
   TValue k, *slot;
   lua_lock(L);
   api_checknelems(L, 1);
-  o = index2value(L, idx);
-  api_check(L, ttistable(o), "table expected");
+  t = gettable(L, idx);
   setpvalue(&k, cast_voidp(p));
-  slot = luaH_set(L, hvalue(o), &k);
+  slot = luaH_set(L, t, &k);
   setobj2t(L, slot, s2v(L->top - 1));
-  luaC_barrierback(L, gcvalue(o), s2v(L->top - 1));
+  luaC_barrierback(L, obj2gco(t), s2v(L->top - 1));
   L->top--;
   lua_unlock(L);
 }
@@ -1193,12 +1220,11 @@ LUA_API int lua_error (lua_State *L) {
 
 
 LUA_API int lua_next (lua_State *L, int idx) {
-  TValue *t;
+  Table *t;
   int more;
   lua_lock(L);
-  t = index2value(L, idx);
-  api_check(L, ttistable(t), "table expected");
-  more = luaH_next(L, hvalue(t), L->top - 1);
+  t = gettable(L, idx);
+  more = luaH_next(L, t, L->top - 1);
   if (more) {
     api_incr_top(L);
   }
