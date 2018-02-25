@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.h,v 2.18 2017/06/29 15:06:44 roberto Exp roberto $
+** $Id: lfunc.h,v 2.19 2018/01/28 15:13:26 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -11,11 +11,11 @@
 #include "lobject.h"
 
 
-#define sizeCclosure(n)	(cast_int(sizeof(CClosure)) + \
-                         cast_int(sizeof(TValue)*((n)-1)))
+#define sizeCclosure(n)	(cast_int(offsetof(CClosure, upvalue)) + \
+                         cast_int(sizeof(TValue)) * (n))
 
-#define sizeLclosure(n)	(cast_int(sizeof(LClosure)) + \
-                         cast_int(sizeof(TValue *)*((n)-1)))
+#define sizeLclosure(n)	(cast_int(offsetof(LClosure, upvals)) + \
+                         cast_int(sizeof(TValue *)) * (n))
 
 
 /* test whether thread is in 'twups' list */
