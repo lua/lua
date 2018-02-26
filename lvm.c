@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.346 2018/02/21 19:43:44 roberto Exp roberto $
+** $Id: lvm.c,v 2.347 2018/02/23 13:13:31 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -458,8 +458,8 @@ int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
 */
 int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
   const TValue *tm;
-  if (ttype(t1) != ttype(t2)) {  /* not the same variant? */
-    if (ttnov(t1) != ttnov(t2) || ttnov(t1) != LUA_TNUMBER)
+  if (ttypetag(t1) != ttypetag(t2)) {  /* not the same variant? */
+    if (ttype(t1) != ttype(t2) || ttype(t1) != LUA_TNUMBER)
       return 0;  /* only numbers can be equal with different variants */
     else {  /* two numbers with different variants */
       lua_Integer i1, i2;  /* compare them as integers */
@@ -467,7 +467,7 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
     }
   }
   /* values have same type and same variant */
-  switch (ttype(t1)) {
+  switch (ttypetag(t1)) {
     case LUA_TNIL: return 1;
     case LUA_TNUMINT: return (ivalue(t1) == ivalue(t2));
     case LUA_TNUMFLT: return luai_numeq(fltvalue(t1), fltvalue(t2));
@@ -569,7 +569,7 @@ void luaV_concat (lua_State *L, int total) {
 */
 void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
   const TValue *tm;
-  switch (ttype(rb)) {
+  switch (ttypetag(rb)) {
     case LUA_TTABLE: {
       Table *h = hvalue(rb);
       tm = fasttm(L, h->metatable, TM_LEN);

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.139 2018/02/25 12:52:32 roberto Exp roberto $
+** $Id: lobject.h,v 2.140 2018/02/26 13:35:03 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -67,26 +67,26 @@ typedef struct TValue {
 
 
 /* raw type tag of a TValue */
-#define rttype(o)	((o)->tt_)
+#define rawtt(o)	((o)->tt_)
 
 /* tag with no variants (bits 0-3) */
 #define novariant(t)	((t) & 0x0F)
 
 /* type tag of a TValue (bits 0-3 for tags + variant bits 4-5) */
-#define ttyperaw(t)	((t) & 0x3F)
-#define ttype(o)	ttyperaw(rttype(o))
+#define withvariant(t)	((t) & 0x3F)
+#define ttypetag(o)	withvariant(rawtt(o))
 
-/* type tag of a TValue with no variants (bits 0-3) */
-#define ttnov(o)	(novariant(rttype(o)))
+/* type of a TValue */
+#define ttype(o)	(novariant(rawtt(o)))
 
 
 /* Macros to test type */
-#define checktag(o,t)		(rttype(o) == (t))
-#define checktype(o,t)		(ttnov(o) == (t))
+#define checktag(o,t)		(rawtt(o) == (t))
+#define checktype(o,t)		(ttype(o) == (t))
 
 
 /* Macros for internal tests */
-#define righttt(obj)		(ttype(obj) == gcvalue(obj)->tt)
+#define righttt(obj)		(ttypetag(obj) == gcvalue(obj)->tt)
 
 #define checkliveness(L,obj) \
 	lua_longassert(!iscollectable(obj) || \
@@ -244,7 +244,7 @@ typedef struct GCObject {
 /* Bit mark for collectable types */
 #define BIT_ISCOLLECTABLE	(1 << 6)
 
-#define iscollectable(o)	(rttype(o) & BIT_ISCOLLECTABLE)
+#define iscollectable(o)	(rawtt(o) & BIT_ISCOLLECTABLE)
 
 /* mark a tag as collectable */
 #define ctb(t)			((t) | BIT_ISCOLLECTABLE)
@@ -535,7 +535,7 @@ typedef struct Proto {
 #define LUA_TCCL	(LUA_TFUNCTION | (3 << 4))  /* C closure */
 
 #define ttisfunction(o)		checktype(o, LUA_TFUNCTION)
-#define ttisclosure(o)		((rttype(o) & 0x1F) == LUA_TLCL)
+#define ttisclosure(o)		((rawtt(o) & 0x1F) == LUA_TLCL)
 #define ttisLclosure(o)		checktag((o), ctb(LUA_TLCL))
 #define ttislcf(o)		checktag((o), LUA_TLCF)
 #define ttisCclosure(o)		checktag((o), ctb(LUA_TCCL))

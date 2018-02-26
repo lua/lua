@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.63 2018/02/21 15:49:32 roberto Exp roberto $
+** $Id: ltm.c,v 2.64 2018/02/23 13:13:31 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -70,7 +70,7 @@ const TValue *luaT_gettm (Table *events, TMS event, TString *ename) {
 
 const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
   Table *mt;
-  switch (ttnov(o)) {
+  switch (ttype(o)) {
     case LUA_TTABLE:
       mt = hvalue(o)->metatable;
       break;
@@ -78,7 +78,7 @@ const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
       mt = uvalue(o)->metatable;
       break;
     default:
-      mt = G(L)->mt[ttnov(o)];
+      mt = G(L)->mt[ttype(o)];
   }
   return (mt ? luaH_getshortstr(mt, G(L)->tmname[event]) : luaO_nilobject);
 }
@@ -96,7 +96,7 @@ const char *luaT_objtypename (lua_State *L, const TValue *o) {
     if (ttisstring(name))  /* is '__name' a string? */
       return getstr(tsvalue(name));  /* use it as type name */
   }
-  return ttypename(ttnov(o));  /* else use standard type name */
+  return ttypename(ttype(o));  /* else use standard type name */
 }
 
 

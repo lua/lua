@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.156 2018/02/21 12:54:26 roberto Exp roberto $
+** $Id: lcode.c,v 2.157 2018/02/21 15:49:32 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -504,7 +504,7 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
   if (ttisinteger(idx)) {  /* is there an index there? */
     k = cast_int(ivalue(idx));
     /* correct value? (warning: must distinguish floats from integers!) */
-    if (k < fs->nk && ttype(&f->k[k]) == ttype(v) &&
+    if (k < fs->nk && ttypetag(&f->k[k]) == ttypetag(v) &&
                       luaV_rawequalobj(&f->k[k], v))
       return k;  /* reuse index */
   }

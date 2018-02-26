@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.133 2018/02/21 12:54:26 roberto Exp roberto $
+** $Id: ltable.c,v 2.134 2018/02/23 13:13:31 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -133,7 +133,7 @@ static int l_hashfloat (lua_Number n) {
 ** nodes.
 */
 static Node *mainposition (const Table *t, int ktt, const Value *kvl) {
-  switch (ttyperaw(ktt)) {
+  switch (withvariant(ktt)) {
     case LUA_TNUMINT:
       return hashint(t, ivalueraw(*kvl));
     case LUA_TNUMFLT:
@@ -155,7 +155,7 @@ static Node *mainposition (const Table *t, int ktt, const Value *kvl) {
 
 
 static Node *mainpositionTV (const Table *t, const TValue *key) {
-  return mainposition(t, rttype(key), valraw(key));
+  return mainposition(t, rawtt(key), valraw(key));
 }
 
 
@@ -168,9 +168,9 @@ static Node *mainpositionTV (const Table *t, const TValue *key) {
 ** default case.
 */
 static int equalkey (const TValue *k1, const Node *n2) {
-  if (rttype(k1) != keytt(n2))  /* not the same variants? */
+  if (rawtt(k1) != keytt(n2))  /* not the same variants? */
    return 0;  /* cannot be same key */
-  switch (ttype(k1)) {
+  switch (ttypetag(k1)) {
     case LUA_TNIL:
       return 1;
     case LUA_TNUMINT:
@@ -667,7 +667,7 @@ const TValue *luaH_getstr (Table *t, TString *key) {
 ** main search function
 */
 const TValue *luaH_get (Table *t, const TValue *key) {
-  switch (ttype(key)) {
+  switch (ttypetag(key)) {
     case LUA_TSHRSTR: return luaH_getshortstr(t, tsvalue(key));
     case LUA_TNUMINT: return luaH_getint(t, ivalue(key));
     case LUA_TNIL: return luaH_emptyobject;

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.194 2018/02/15 15:34:29 roberto Exp roberto $
+** $Id: ldo.c,v 2.196 2018/02/17 19:29:29 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -453,7 +453,7 @@ void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int narg1) {
 void luaD_call (lua_State *L, StkId func, int nresults) {
   lua_CFunction f;
   TValue *funcv = s2v(func);
-  switch (ttype(funcv)) {
+  switch (ttypetag(funcv)) {
     case LUA_TCCL:  /* C closure */
       f = clCvalue(funcv)->f;
       goto Cfunc;
