@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.138 2018/02/25 12:48:16 roberto Exp roberto $
+** $Id: lobject.h,v 2.139 2018/02/25 12:52:32 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -70,7 +70,7 @@ typedef struct TValue {
 #define rttype(o)	((o)->tt_)
 
 /* tag with no variants (bits 0-3) */
-#define novariant(x)	((x) & 0x0F)
+#define novariant(t)	((t) & 0x0F)
 
 /* type tag of a TValue (bits 0-3 for tags + variant bits 4-5) */
 #define ttyperaw(t)	((t) & 0x3F)
@@ -379,7 +379,7 @@ typedef union UTString {
 */
 
 #define ttislightuserdata(o)	checktag((o), LUA_TLIGHTUSERDATA)
-#define ttisfulluserdata(o)	checktag((o), ctb(LUA_TUSERDATA))
+#define ttisfulluserdata(o)	checktype((o), LUA_TUSERDATA)
 
 #define pvalue(o)	check_exp(ttislightuserdata(o), val_(o).p)
 #define uvalue(o)	check_exp(ttisfulluserdata(o), gco2u(val_(o).gc))
@@ -403,7 +403,8 @@ typedef union UValue {
 
 
 /*
-** Header for userdata; memory area follows the end of this structure.
+** Header for userdata with user values;
+** memory area follows the end of this structure.
 */
 typedef struct Udata {
   CommonHeader;
@@ -415,15 +416,33 @@ typedef struct Udata {
 } Udata;
 
 
-/* computes the offset of the memory area of a userdata */
-#define udatamemoffset(nuv)  (sizeof(Udata) + (sizeof(UValue) * ((nuv) - 1)))
-
 /*
-**  Get the address of the memory block inside 'Udata'.
+** Header for userdata with no user values. These userdata do not need
+** to be gray during GC, and therefore do not need a 'gclist' field.
+** To simplify, the code always use 'Udata' for both kinds of userdata,
+** making sure it never accesses 'gclist' on userdata with no user values.
+** This structure here is used only to compute the correct size for
+** this representation. (The 'bindata' field in its end ensures correct
+** alignment for binary data following this header.)
 */
+typedef struct Udata0 {
+  CommonHeader;
+  unsigned short nuvalue;  /* number of user values */
+  size_t len;  /* number of bytes */
+  struct Table *metatable;
+  union {LUAI_MAXALIGN;} bindata;
+} Udata0;
+
+
+/* compute the offset of the memory area of a userdata */
+#define udatamemoffset(nuv) \
+	((nuv) == 0 ? offsetof(Udata0, bindata)  \
+                    : offsetof(Udata, uv) + (sizeof(UValue) * (nuv)))
+
+/* get the address of the memory block inside 'Udata' */
 #define getudatamem(u)	(cast_charp(u) + udatamemoffset((u)->nuvalue))
 
-/* computes the size of a userdata */
+/* compute the size of a userdata */
 #define sizeudata(nuv,nb)	(udatamemoffset(nuv) + (nb))
 
 /* }================================================================== */

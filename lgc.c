@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.250 2018/02/23 13:16:18 roberto Exp roberto $
+** $Id: lgc.c,v 2.251 2018/02/23 13:21:27 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -118,11 +118,15 @@ static lu_mem atomic (lua_State *L);
 static GCObject **getgclist (GCObject *o) {
   switch (o->tt) {
     case LUA_TTABLE: return &gco2t(o)->gclist;
-    case LUA_TUSERDATA: return &gco2u(o)->gclist;
     case LUA_TLCL: return &gco2lcl(o)->gclist;
     case LUA_TCCL: return &gco2ccl(o)->gclist;
     case LUA_TTHREAD: return &gco2th(o)->gclist;
     case LUA_TPROTO: return &gco2p(o)->gclist;
+    case LUA_TUSERDATA: {
+      Udata *u = gco2u(o);
+      lua_assert(u->nuvalue > 0);
+      return &u->gclist;
+    }
     default: lua_assert(0); return 0;
   }
 }
@@ -290,8 +294,17 @@ static void reallymarkobject (global_State *g, GCObject *o) {
       markvalue(g, uv->v);  /* mark its content */
       break;
     }
+    case LUA_TUSERDATA: {
+      Udata *u = gco2u(o);
+      if (u->nuvalue == 0) {  /* no user values? */
+        markobjectN(g, u->metatable);  /* mark its metatable */
+        gray2black(o);  /* nothing else to mark */
+        break;
+      }
+      /* else *//* FALLTHROUGH */
+    }
     case LUA_TLCL: case LUA_TCCL: case LUA_TTABLE:
-    case LUA_TUSERDATA: case LUA_TTHREAD: case LUA_TPROTO: {
+    case LUA_TTHREAD: case LUA_TPROTO: {
       linkobjgclist(o, g->gray);
       break;
     }
