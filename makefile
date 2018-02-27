@@ -16,12 +16,12 @@ CWARNSCPP= \
 	-Wdisabled-optimization \
 	-Waggregate-return \
 	-Wdouble-promotion \
-	#-Wno-aggressive-loop-optimizations   # not accepted by clang \
-	#-Wlogical-op   # not accepted by clang \
+ 	-Wstrict-aliasing=3   # not accepted by clang \
+ 	-Wno-aggressive-loop-optimizations   # not accepted by clang \
+ 	-Wlogical-op   # not accepted by clang \
 	# the next warnings generate too much noise, so they are disabled
 	# -Wconversion  -Wno-sign-conversion \
 	# -Wsign-conversion \
-	# -Wconversion \
 	# -Wstrict-overflow=2 \
 	# -Wformat=2 \
 	# -Wcast-qual \
@@ -35,7 +35,7 @@ CWARNSC= -Wdeclaration-after-statement \
 	-Wold-style-definition \
 
 
-CWARNS= $(CWARNSCPP)  $(CWARNSC)
+CWARNS= $(CWARNSCPP) $(CWARNSC)
 
 
 # -DEXTERNMEMCHECK -DHARDSTACKTESTS -DHARDMEMTESTS -DTRACEMEM='"tempmem"'
@@ -43,23 +43,24 @@ CWARNS= $(CWARNSCPP)  $(CWARNSC)
 # -pg -malign-double
 # -DLUA_USE_CTYPE -DLUA_USE_APICHECK
 # (in clang, '-ftrapv' for runtime checks of integer overflows)
-# -fsanitize=undefined -ftrapv
-TESTS= -DLUA_USER_H='"ltests.h"'
+# -fsanitize=undefined -ftrapv -fno-inline
+TESTS= -DLUA_USER_H='"ltests.h"' -O0
 
 # -mtune=native -fomit-frame-pointer
 # -fno-stack-protector
-LOCAL = $(TESTS) $(CWARNS) -g
+# -DLUA_NILINTABLE
+LOCAL = $(TESTS) $(CWARNS) -g -DEXTERNMEMCHECK
 
 
 
 # enable Linux goodies
-MYCFLAGS= $(LOCAL) -std=c99 -DLUA_USE_LINUX -DLUA_COMPAT_5_2
+MYCFLAGS= $(LOCAL) -std=c99 -DLUA_USE_LINUX
 MYLDFLAGS= $(LOCAL) -Wl,-E
 MYLIBS= -ldl -lreadline
 
 
-CC= clang-3.8
-CFLAGS= -Wall -O2 $(MYCFLAGS)
+CC= gcc
+CFLAGS= -Wall -O2 $(MYCFLAGS) -Wfatal-errors
 AR= ar rcu
 RANLIB= ranlib
 RM= rm -f
