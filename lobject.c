@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.122 2017/12/30 20:46:18 roberto Exp roberto $
+** $Id: lobject.c,v 2.123 2018/01/28 15:13:26 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -382,12 +382,10 @@ void luaO_tostring (lua_State *L, TValue *obj) {
     len = lua_integer2str(buff, sizeof(buff), ivalue(obj));
   else {
     len = lua_number2str(buff, sizeof(buff), fltvalue(obj));
-#if !defined(LUA_COMPAT_FLOATSTRING)
     if (buff[strspn(buff, "-0123456789")] == '\0') {  /* looks like an int? */
       buff[len++] = lua_getlocaledecpoint();
       buff[len++] = '0';  /* adds '.0' to result */
     }
-#endif
   }
   setsvalue(L, obj, luaS_newlstr(L, buff, len));
 }

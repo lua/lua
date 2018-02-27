@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.54 2017/12/07 18:51:39 roberto Exp roberto $
+** $Id: ltests.h,v 2.55 2017/12/18 13:01:49 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -13,16 +13,6 @@
 
 /* test Lua with compatibility code */
 #define LUA_COMPAT_MATHLIB
-#define LUA_COMPAT_IPAIRS
-#define LUA_COMPAT_BITLIB
-#define LUA_COMPAT_APIINTCASTS
-#define LUA_COMPAT_FLOATSTRING
-#define LUA_COMPAT_UNPACK
-#define LUA_COMPAT_LOADERS
-#define LUA_COMPAT_LOG10
-#define LUA_COMPAT_LOADSTRING
-#define LUA_COMPAT_MAXN
-#define LUA_COMPAT_MODULE
 
 
 #define LUA_DEBUG
