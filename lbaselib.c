@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.319 2018/02/05 17:10:52 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.320 2018/02/25 12:48:16 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -171,8 +171,7 @@ static int luaB_rawset (lua_State *L) {
 
 
 static int luaB_keyin (lua_State *L) {
-  luaL_checktype(L, 1, LUA_TTABLE);
-  luaL_checkany(L, 2);
+  luaL_checkany(L, 2);  /* ensures a first argument too */
   lua_settop(L, 2);
   lua_pushboolean(L, lua_keyin(L, 1));
   return 1;
@@ -180,8 +179,7 @@ static int luaB_keyin (lua_State *L) {
 
 
 static int luaB_removekey (lua_State *L) {
-  luaL_checktype(L, 1, LUA_TTABLE);
-  luaL_checkany(L, 2);
+  luaL_checkany(L, 2);  /* ensures a first argument too */
   lua_settop(L, 2);
   lua_removekey(L, 1);
   return 0;

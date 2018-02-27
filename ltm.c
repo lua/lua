@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.64 2018/02/23 13:13:31 roberto Exp roberto $
+** $Id: ltm.c,v 2.65 2018/02/26 14:16:05 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -38,6 +38,7 @@ LUAI_DDEF const char *const luaT_typenames_[LUA_TOTALTAGS] = {
 void luaT_init (lua_State *L) {
   static const char *const luaT_eventname[] = {  /* ORDER TM */
     "__index", "__newindex",
+    "__undef", "__isdef",
     "__gc", "__mode", "__len", "__eq",
     "__add", "__sub", "__mul", "__mod", "__pow",
     "__div", "__idiv",
@@ -247,4 +248,32 @@ void luaT_getvarargs (lua_State *L, CallInfo *ci, StkId where, int wanted) {
     setobjs2s(L, where + i, ci->func - nextra + i);
   for (; i < wanted; i++)   /* complete required results with nil */
     setnilvalue(s2v(where + i));
+}
+
+
+int luaT_keydef (lua_State *L, TValue *obj, TValue *key, int remove) {
+  const TValue *tm;
+  TMS event = remove ? TM_UNDEF : TM_ISDEF;
+  if (!ttistable(obj)) {  /* not a table? */
+    tm = luaT_gettmbyobj(L, obj, event);  /* get its metamethod */
+    if (notm(tm)) {  /* no metamethod? */
+      const char *msg = remove ? "remove key from" : "check key from";
+      luaG_typeerror(L, obj, msg);  /* error */
+    }
+    /* else will call metamethod 'tm' */
+  }
+  else {  /* 'obj' is a table */
+    Table *t = hvalue(obj);
+    tm = fasttm(L, t->metatable, event);
+    if (tm == NULL) {  /* no metamethod? */
+      const TValue *val = luaH_get(t, key);  /* get entry */
+      int res = !isempty(val);  /* true if entry is not empty */
+      if (remove && res)  /* key is present and should be removed? */
+        setempty(cast(TValue*, val));  /* remove it */
+      return res;
+    }
+    /* else will call metamethod 'tm' */
+  }
+  luaT_callTMres(L, tm, obj, key, L->top);
+  return !l_isfalse(s2v(L->top));
 }

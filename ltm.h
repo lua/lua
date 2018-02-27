@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 2.32 2018/02/17 19:20:00 roberto Exp roberto $
+** $Id: ltm.h,v 2.33 2018/02/23 13:13:31 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -19,6 +19,8 @@
 typedef enum {
   TM_INDEX,
   TM_NEWINDEX,
+  TM_UNDEF,
+  TM_ISDEF,
   TM_GC,
   TM_MODE,
   TM_LEN,
@@ -88,6 +90,8 @@ LUAI_FUNC void luaT_adjustvarargs (lua_State *L, int nfixparams,
                                    struct CallInfo *ci, Proto *p);
 LUAI_FUNC void luaT_getvarargs (lua_State *L, struct CallInfo *ci,
                                               StkId where, int wanted);
+
+LUAI_FUNC int luaT_keydef (lua_State *L, TValue *obj, TValue *key, int remove);
 
 
 #endif

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.287 2018/02/25 12:48:16 roberto Exp roberto $
+** $Id: lapi.c,v 2.288 2018/02/26 14:16:05 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -679,6 +679,7 @@ LUA_API int lua_rawget (lua_State *L, int idx) {
   Table *t;
   const TValue *val;
   lua_lock(L);
+  api_checknelems(L, 1);
   t = gettable(L, idx);
   val = luaH_get(t, s2v(L->top - 1));
   L->top--;  /* remove key */
@@ -704,29 +705,24 @@ LUA_API int lua_rawgetp (lua_State *L, int idx, const void *p) {
 }
 
 
-static int auxkeyman (lua_State *L, int idx, int remove) {
-  Table *t;
-  const TValue *val;
+static int auxkeydef (lua_State *L, int idx, int remove) {
   int res;
   lua_lock(L);
-  t = gettable(L, idx);
-  val = luaH_get(t, s2v(L->top - 1));
+  api_checknelems(L, 1);
+  res = luaT_keydef(L, index2value(L, idx), s2v(L->top - 1), remove);
   L->top--;  /* remove key */
-  res = !isempty(val);
-  if (remove && res)  /* key is present and should be removed? */
-    setempty(cast(TValue*, val));
   lua_unlock(L);
   return res;
 }
 
 
 LUA_API void lua_removekey (lua_State *L, int idx) {
-  auxkeyman(L, idx, 1);
+  auxkeydef(L, idx, 1);
 }
 
 
 LUA_API int lua_keyin (lua_State *L, int idx) {
-  return auxkeyman(L, idx, 0);
+  return auxkeydef(L, idx, 0);
 }
 
 
@@ -1223,6 +1219,7 @@ LUA_API int lua_next (lua_State *L, int idx) {
   Table *t;
   int more;
   lua_lock(L);
+  api_checknelems(L, 1);
   t = gettable(L, idx);
   more = luaH_next(L, t, L->top - 1);
   if (more) {
