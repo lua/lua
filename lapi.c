@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.288 2018/02/26 14:16:05 roberto Exp roberto $
+** $Id: lapi.c,v 2.289 2018/02/27 17:48:28 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -953,9 +953,9 @@ LUA_API int lua_setiuservalue (lua_State *L, int idx, int n) {
   else {
     setobj(L, &uvalue(o)->uv[n - 1].uv, s2v(L->top - 1));
     luaC_barrierback(L, gcvalue(o), s2v(L->top - 1));
-    L->top--;
     res = 1;
   }
+  L->top--;
   lua_unlock(L);
   return res;
 }
