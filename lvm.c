@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.347 2018/02/23 13:13:31 roberto Exp roberto $
+** $Id: lvm.c,v 2.348 2018/02/26 14:16:05 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -29,6 +29,16 @@
 #include "ltable.h"
 #include "ltm.h"
 #include "lvm.h"
+
+
+/*
+** By default, use jump tables in the main interpreter loop on gcc
+** and compatible compilers.
+*/
+#if !defined(LUA_USE_JUMPTABLE)
+#define LUA_USE_JUMPTABLE	defined(__GNUC__)
+#endif
+
 
 
 /* limit for table tag-method chains (to avoid infinite loops) */
@@ -871,6 +881,9 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
   StkId base;
   const Instruction *pc;
   int trap;
+#if LUA_USE_JUMPTABLE
+#include "ljumptab.h"
+#endif
  tailcall:
   trap = L->hookmask;
   cl = clLvalue(s2v(ci->func));
