@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.264 2018/02/20 20:52:50 roberto Exp roberto $
+** $Id: luaconf.h,v 1.265 2018/02/27 18:47:32 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -61,14 +61,12 @@
 #if defined(LUA_USE_LINUX)
 #define LUA_USE_POSIX
 #define LUA_USE_DLOPEN		/* needs an extra library: -ldl */
-#define LUA_USE_READLINE	/* needs some extra libraries */
 #endif
 
 
 #if defined(LUA_USE_MACOSX)
 #define LUA_USE_POSIX
 #define LUA_USE_DLOPEN		/* MacOS does not need -ldl */
-#define LUA_USE_READLINE	/* needs an extra library: -lreadline */
 #endif
 
 
