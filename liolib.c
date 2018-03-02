@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.154 2017/11/16 16:28:36 roberto Exp roberto $
+** $Id: liolib.c,v 2.155 2018/02/21 13:48:44 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -528,44 +528,40 @@ static int read_chars (lua_State *L, FILE *f, size_t n) {
 
 static int g_read (lua_State *L, FILE *f, int first) {
   int nargs = lua_gettop(L) - 1;
-  int nresults, success;
+  int n, success;
   clearerr(f);
   if (nargs == 0) {  /* no arguments? */
     success = read_line(L, f, 1);
-    nresults = 1;
+    n = first + 1;  /* to return 1 result */
   }
   else {
+    /* ensure stack space for all results and for auxlib's buffer */
+    luaL_checkstack(L, nargs+LUA_MINSTACK, "too many arguments");
     success = 1;
-    nresults = 0;
-    for (; nargs-- && success; first++) {
-      luaL_checkstack(L, LUA_MINSTACK, "too many arguments");
-      if (lua_type(L, first) == LUA_TNUMBER) {
-        size_t l = (size_t)luaL_checkinteger(L, first);
+    for (n = first; nargs-- && success; n++) {
+      if (lua_type(L, n) == LUA_TNUMBER) {
+        size_t l = (size_t)luaL_checkinteger(L, n);
         success = (l == 0) ? test_eof(L, f) : read_chars(L, f, l);
-        nresults++;
       }
       else {
-        const char *p = luaL_checkstring(L, first);
+        const char *p = luaL_checkstring(L, n);
         if (*p == '*') p++;  /* skip optional '*' (for compatibility) */
-        for (; success && *p != '\0'; p++) {
-          nresults++;
-          switch (*p) {
-            case 'n':  /* number */
-              success = read_number(L, f);
-              break;
-            case 'l':  /* line */
-              success = read_line(L, f, 1);
-              break;
-            case 'L':  /* line with end-of-line */
-              success = read_line(L, f, 0);
-              break;
-            case 'a':  /* file */
-              read_all(L, f);  /* read entire file */
-              success = 1; /* always success */
-              break;
-            default:
-              return luaL_argerror(L, first, "invalid format");
-          }
+        switch (*p) {
+          case 'n':  /* number */
+            success = read_number(L, f);
+            break;
+          case 'l':  /* line */
+            success = read_line(L, f, 1);
+            break;
+          case 'L':  /* line with end-of-line */
+            success = read_line(L, f, 0);
+            break;
+          case 'a':  /* file */
+            read_all(L, f);  /* read entire file */
+            success = 1; /* always success */
+            break;
+          default:
+            return luaL_argerror(L, n, "invalid format");
         }
       }
     }
@@ -576,7 +572,7 @@ static int g_read (lua_State *L, FILE *f, int first) {
     lua_pop(L, 1);  /* remove last result */
     lua_pushnil(L);  /* push nil instead */
   }
-  return nresults;
+  return n - first;
 }
 
 
