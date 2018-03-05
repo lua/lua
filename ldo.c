@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.196 2018/02/17 19:29:29 roberto Exp roberto $
+** $Id: ldo.c,v 2.197 2018/02/26 14:16:05 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -264,7 +264,7 @@ void luaD_inctop (lua_State *L) {
 
 /*
 ** Call a hook for the given event. Make sure there is a hook to be
-** called. (Both 'L->hook' and 'L->hookmask', which triggers this
+** called. (Both 'L->hook' and 'L->hookmask', which trigger this
 ** function, can be changed asynchronously by signals.)
 */
 void luaD_hook (lua_State *L, int event, int line,
