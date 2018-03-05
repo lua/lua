@@ -6,7 +6,7 @@
 
 # Warnings valid for both C and C++
 CWARNSCPP= \
-	-pedantic \
+	# -pedantic \  /* warns if we use jump tables */
 	-Wextra \
 	-Wshadow \
 	-Wsign-compare \
@@ -14,7 +14,6 @@ CWARNSCPP= \
 	-Wwrite-strings \
 	-Wredundant-decls \
 	-Wdisabled-optimization \
-	-Waggregate-return \
 	-Wdouble-promotion \
  	-Wstrict-aliasing=3   # not accepted by clang \
  	-Wno-aggressive-loop-optimizations   # not accepted by clang \
@@ -191,7 +190,7 @@ lundump.o: lundump.c lprefix.h lua.h luaconf.h ldebug.h lstate.h \
 lutf8lib.o: lutf8lib.c lprefix.h lua.h luaconf.h lauxlib.h lualib.h
 lvm.o: lvm.c lprefix.h lua.h luaconf.h ldebug.h lstate.h lobject.h \
  llimits.h ltm.h lzio.h lmem.h ldo.h lfunc.h lgc.h lopcodes.h lstring.h \
- ltable.h lvm.h
+ ltable.h lvm.h ljumptab.h
 lzio.o: lzio.c lprefix.h lua.h luaconf.h llimits.h lmem.h lstate.h \
  lobject.h ltm.h lzio.h
 
