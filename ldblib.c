@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.152 2018/02/17 19:29:29 roberto Exp roberto $
+** $Id: ldblib.c,v 1.153 2018/02/20 16:52:50 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -64,7 +64,7 @@ static int db_setmetatable (lua_State *L) {
 
 
 static int db_getuservalue (lua_State *L) {
-  int n = luaL_optinteger(L, 2, 1);
+  int n = (int)luaL_optinteger(L, 2, 1);
   if (lua_type(L, 1) != LUA_TUSERDATA)
     lua_pushnil(L);
   else if (lua_getiuservalue(L, 1, n) != LUA_TNONE) {
@@ -76,7 +76,7 @@ static int db_getuservalue (lua_State *L) {
 
 
 static int db_setuservalue (lua_State *L) {
-  int n = luaL_optinteger(L, 3, 1);
+  int n = (int)luaL_optinteger(L, 3, 1);
   luaL_checktype(L, 1, LUA_TUSERDATA);
   luaL_checkany(L, 2);
   lua_settop(L, 2);
