@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.348 2018/02/26 14:16:05 roberto Exp roberto $
+** $Id: lvm.c,v 2.349 2018/03/02 18:59:19 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1550,6 +1550,18 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           setobj2s(L, ra, rb);
           donextjump(ci);
         }
+        vmbreak;
+      }
+      vmcase(OP_UNDEF) {
+        TValue *rb = vRB(i);
+        luaT_keydef(L, vra, rb, 1);
+        vmbreak;
+      }
+      vmcase(OP_ISDEF) {
+        TValue *rb = vRB(i);
+        TValue *rc = vRC(i);
+        int res = luaT_keydef(L, rb, rc, 0);
+        setbvalue(vra, res == GETARG_k(i));
         vmbreak;
       }
       vmcase(OP_CALL) {

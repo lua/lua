@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.69 2017/11/30 13:29:18 roberto Exp roberto $
+** $Id: lcode.h,v 1.70 2017/12/18 15:44:44 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -89,6 +89,8 @@ LUAI_FUNC void luaK_posfix (FuncState *fs, BinOpr op, expdesc *v1,
                             expdesc *v2, int line);
 LUAI_FUNC void luaK_setlist (FuncState *fs, int base, int nelems, int tostore);
 LUAI_FUNC void luaK_finish (FuncState *fs);
+LUAI_FUNC void luaK_codeundef (FuncState *fs, expdesc *e);
+LUAI_FUNC l_noret luaK_semerror (LexState *ls, const char *msg);
 
 
 #endif

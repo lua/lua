@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.157 2018/02/21 15:49:32 roberto Exp roberto $
+** $Id: lcode.c,v 2.158 2018/02/26 14:16:05 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -38,6 +38,14 @@
 
 
 static int codesJ (FuncState *fs, OpCode o, int sj, int k);
+
+
+
+/* semantic error */
+l_noret luaK_semerror (LexState *ls, const char *msg) {
+  ls->t.token = 0;  /* remove "near <token>" from final message */
+  luaX_syntaxerror(ls, msg);
+}
 
 
 /*
@@ -668,6 +676,10 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
   switch (e->k) {
     case VLOCAL: {  /* already in a register */
       e->k = VNONRELOC;  /* becomes a non-relocatable value */
+      break;
+    }
+    case VUNDEF: {  /* not a real expression */
+      luaK_semerror(fs->ls, "'undef' is not a value!!");
       break;
     }
     case VUPVAL: {  /* move value to some (pending) register */
@@ -1398,6 +1410,48 @@ static void codeeq (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
 }
 
 
+static void normalizeindexed (FuncState *fs, expdesc *v) {
+  if (v->k != VINDEXED) {  /* not in proper form? */
+    int key = fs->freereg;  /* register with key value */
+    luaK_reserveregs(fs, 1);
+    switch (v->k) {
+      case VINDEXI:
+        luaK_int(fs, key, v->u.ind.idx);
+        break;
+      case VINDEXSTR:
+        luaK_codek(fs, key, v->u.ind.idx);
+        break;
+      case VINDEXUP:
+        luaK_codek(fs, key, v->u.ind.idx);
+        luaK_codeABC(fs, OP_GETUPVAL, fs->freereg, v->u.ind.t, 0);
+        v->u.ind.t = fs->freereg;
+        luaK_reserveregs(fs, 1);  /* one more register for the upvalue */
+        break;
+      default:
+        luaK_semerror(fs->ls, "'undef' is not a value!!");
+        break;
+    }
+    v->u.ind.idx = key;
+    v->k = VINDEXED;
+  }
+  freeregs(fs, v->u.ind.t, v->u.ind.idx);
+}
+
+
+static void codeisdef (FuncState *fs, int eq, expdesc *v) {
+  normalizeindexed(fs, v);
+  v->u.info = luaK_codeABCk(fs, OP_ISDEF, 0, v->u.ind.t, v->u.ind.idx, eq);
+  v->k = VRELOC;
+}
+
+
+void luaK_codeundef (FuncState *fs, expdesc *v) {
+  normalizeindexed(fs, v);
+  v->u.info = luaK_codeABC(fs, OP_UNDEF, v->u.ind.t, v->u.ind.idx, 0);
+  v->k = VRELOC;
+}
+
+
 /*
 ** Apply prefix operation 'op' to expression 'e'.
 */
@@ -1446,7 +1500,7 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
       break;
     }
     case OPR_EQ: case OPR_NE: {
-      if (!tonumeral(v, NULL))
+      if (!tonumeral(v, NULL) && fs->ls->t.token != TK_UNDEF)
         luaK_exp2RK(fs, v);
       /* else keep numeral, which may be an immediate operand */
       break;
@@ -1543,7 +1597,10 @@ void luaK_posfix (FuncState *fs, BinOpr opr,
       break;
     }
     case OPR_EQ: case OPR_NE: {
-      codeeq(fs, opr, e1, e2);
+      if (e2->k == VUNDEF)
+        codeisdef(fs, opr == OPR_NE, e1);
+      else
+        codeeq(fs, opr, e1, e2);
       break;
     }
     case OPR_LT: case OPR_LE: {

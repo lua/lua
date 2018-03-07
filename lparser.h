@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.79 2017/11/30 13:29:18 roberto Exp roberto $
+** $Id: lparser.h,v 1.80 2017/12/14 14:24:02 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -52,7 +52,8 @@ typedef enum {
   VRELOC,  /* expression can put result in any register;
               info = instruction pc */
   VCALL,  /* expression is a function call; info = instruction pc */
-  VVARARG  /* vararg expression; info = instruction pc */
+  VVARARG,  /* vararg expression; info = instruction pc */
+  VUNDEF  /* the 'undef' "expression" */
 } expkind;
 
 
