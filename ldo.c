@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.197 2018/02/26 14:16:05 roberto Exp roberto $
+** $Id: ldo.c,v 2.198 2018/03/05 14:13:55 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -687,7 +687,6 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
                                     : cast_int(L->top - (L->ci->func + 1));
   L->nny = oldnny;  /* restore 'nny' */
   L->nCcalls--;
-  // lua_assert(L->nCcalls == ((from) ? from->nCcalls : 0));
   lua_unlock(L);
   return status;
 }
