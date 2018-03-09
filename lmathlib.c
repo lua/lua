@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.121 2018/03/09 14:56:25 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.122 2018/03/09 15:05:13 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -10,9 +10,10 @@
 #include "lprefix.h"
 
 
+#include <float.h>
 #include <limits.h>
-#include <stdlib.h>
 #include <math.h>
+#include <stdlib.h>
 
 #include "lua.h"
 
@@ -250,11 +251,17 @@ static int math_type (lua_State *L) {
 ** ===================================================================
 */
 
+/* number of binary digits in the mantissa of a float */
+#define FIGS	l_mathlim(MANT_DIG)
 
-#define twotomin53	(1.0 / 9007199254740992.0)  /* 2^-53 */
+#if FIGS > 64
+/* there are only 64 random bits; use them all */
+#undef FIGS
+#define FIGS	64
+#endif
 
 
-#if defined(LLONG_MAX) && !defined(LUA_DEBUG)		/* { */
+#if !defined(LUA_USE_C89) && defined(LLONG_MAX) && !defined(LUA_DEBUG)  /* { */
 
 /*
 ** Assume long long.
@@ -272,15 +279,17 @@ static I xorshift128plus (I *state) {
   return state[1] + y;
 }
 
+/* must take care to not shift stuff by more than 63 slots */
 
-#define mask53		(~(~0LLU << 53))
+#define maskFIG		(~(~1LLU << (FIGS - 1)))  /* use FIGS bits */
+#define shiftFIG	(l_mathop(0.5) / (1LLU << (FIGS - 1)))  /* 2^(-FIG) */
 
 /*
-** Convert 53 bits from a random integer into a double in the
+** Convert bits from a random integer into a float in the
 ** interval [0,1).
 */
-static double I2d (I x) {
-  return (x & mask53) * twotomin53;
+static lua_Number I2d (I x) {
+  return (lua_Number)(x & maskFIG) * shiftFIG;
 }
 
 /* convert an 'I' to a lua_Unsigned */
@@ -289,10 +298,10 @@ static double I2d (I x) {
 /* convert a lua_Integer to an 'I' */
 #define Int2I(x)	((I)(x))
 
-#else				/* }{ */
+#else  /* no long long   }{ */
 
 /*
-** No long long; Use two 32-bit integers to represent a 64-bit quantity.
+** Use two 32-bit integers to represent a 64-bit quantity.
 */
 
 #if LUAI_BITSINT >= 32
@@ -303,7 +312,8 @@ typedef unsigned long lu_int32;
 
 /* a 64-bit value */
 typedef struct I {
-  lu_int32 x1, x2;
+  lu_int32 h;  /* higher half */
+  lu_int32 l;  /* lower half */
 } I;
 
 
@@ -311,31 +321,31 @@ typedef struct I {
 ** basic operations on 'I' values
 */
 
-static I pack (int x1, int x2) {
+static I pack (int h, int l) {
   I result;
-  result.x1 = x1;
-  result.x2 = x2;
+  result.h = h;
+  result.l = l;
   return result;
 }
 
 /* i ^ (i << n) */
 static I Ixorshl (I i, int n) {
-  return pack(i.x1 ^ ((i.x1 << n) | (i.x2 >> (32 - n))), i.x2 ^ (i.x2 << n));
+  return pack(i.h ^ ((i.h << n) | (i.l >> (32 - n))), i.l ^ (i.l << n));
 }
 
 /* i ^ (i >> n) */
 static I Ixorshr (I i, int n) {
-  return pack(i.x1 ^ (i.x1 >> n), i.x2 ^ ((i.x2 >> n) | (i.x1 << (32 - n))));
+  return pack(i.h ^ (i.h >> n), i.l ^ ((i.l >> n) | (i.h << (32 - n))));
 }
 
 static I Ixor (I i1, I i2) {
-  return pack(i1.x1 ^ i2.x1, i1.x2 ^ i2.x2);
+  return pack(i1.h ^ i2.h, i1.l ^ i2.l);
 }
 
 static I Iadd (I i1, I i2) {
-  I result = pack(i1.x1 + i2.x1, i1.x2 + i2.x2);
-  if (result.x2 < i1.x2)  /* carry? */
-    result.x1++;
+  I result = pack(i1.h + i2.h, i1.l + i2.l);
+  if (result.l < i1.l)  /* carry? */
+    result.h++;
   return result;
 }
 
@@ -355,28 +365,46 @@ static I xorshift128plus (I *state) {
 
 
 /*
-** Converts an 'I' into a double, getting its lower half plus 21
-** (53 - 32) bits from its higher half and joining them into a double.
+** Converts an 'I' into a float.
 */
 
-#define mask32		0xffffffff
-#define mask21		(~(~0U << 21))
+#if FIGS <= 32
 
-#define twoto32		4294967296.0  /* 2^32 */
+/* do not need bits from higher half */
+#define maskHF		0
+#define maskLOW		(~(~1U << (FIGS - 1)))  /* use FIG bits */
+#define shiftFIG	(0.5 / (1U << (FIGS - 1)))  /* 2^(-FIG) */
 
-static double I2d (I x) {
-  return ((x.x1 & mask21) * twoto32 + (x.x2 & mask32)) * twotomin53;
+#else	/* 32 < FIGS <= 64 */
+
+/* must take care to not shift stuff by more than 31 slots */
+
+/* use FIG - 32 bits from higher half */
+#define maskHF		(~(~1U << (FIGS - 33)))
+
+/* use all bits from lower half */
+#define maskLOW		(~0)
+
+/* 2^(-FIG) == (1 / 2^33) / 2^(FIG-33) */
+#define shiftFIG  ((lua_Number)(1.0 / 8589934592.0) / (1U << (FIGS - 33)))
+
+#endif
+
+#define twoto32		l_mathop(4294967296.0)  /* 2^32 */
+
+static lua_Number I2d (I x) {
+  return ((x.h & maskHF) * twoto32 + (x.l & maskLOW)) * shiftFIG;
 }
 
 static lua_Unsigned I2UInt (I x) {
-  return ((lua_Unsigned)x.x1 << 31 << 1) | x.x2;
+  return ((lua_Unsigned)x.h << 31 << 1) | x.l;
 }
 
 static I Int2I (lua_Integer n) {
   return pack(n, n >> 31 >> 1);
 }
 
-#endif				/* } */
+#endif  /* } */
 
 
 /*
@@ -435,7 +463,7 @@ static int math_random (lua_State *L) {
   I rv = xorshift128plus(state->s);  /* next pseudo-random value */
   switch (lua_gettop(L)) {  /* check number of arguments */
     case 0: {  /* no arguments */
-      lua_pushnumber(L, (lua_Number)I2d(rv));  /* float between 0 and 1 */
+      lua_pushnumber(L, I2d(rv));  /* float between 0 and 1 */
       return 1;
     }
     case 1: {  /* only upper limit */
