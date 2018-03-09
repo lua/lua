@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.119 2016/12/22 13:08:50 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.120 2018/03/05 14:07:48 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -273,7 +273,7 @@ static I xorshift128plus (I *state) {
 }
 
 
-#define mask53		(~(~0ll << 53))
+#define mask53		(~(~0LLU << 53))
 
 /*
 ** Convert 53 bits from a random integer into a double in the
@@ -283,8 +283,8 @@ static double I2d (I x) {
   return (x & mask53) * twotomin53;
 }
 
-/* convert an 'I' to a lua_Integer */
-#define I2Int(x)	((lua_Integer)(x))
+/* convert an 'I' to a lua_Unsigned */
+#define I2UInt(x)	((lua_Unsigned)(x))
 
 /* convert a lua_Integer to an 'I' */
 #define Int2I(x)	((I)(x))
@@ -358,7 +358,7 @@ static I xorshift128plus (I *state) {
 */
 
 #define mask32		0xffffffff
-#define mask21		(~(~0 << 21))
+#define mask21		(~(~0U << 21))
 
 #define twoto32		4294967296.0  /* 2^32 */
 
@@ -366,12 +366,12 @@ static double I2d (I x) {
   return ((x.x1 & mask21) * twoto32 + (x.x2 & mask32)) * twotomin53;
 }
 
-static lua_Integer I2Int (I x) {
-  return (((lua_Integer)x.x1 << 31) << 1) | x.x2;
+static lua_Unsigned I2UInt (I x) {
+  return ((lua_Unsigned)x.x1 << 31 << 1) | x.x2;
 }
 
 static I Int2I (lua_Integer n) {
-  return pack(n, (n >> 31) >> 1);
+  return pack(n, n >> 31 >> 1);
 }
 
 #endif				/* } */
@@ -385,9 +385,50 @@ typedef struct {
 } RanState;
 
 
+/*
+** Project the random integer 'ran' into the interval [0, n].
+** Because 'ran' has 2^B possible values, the projection can only
+** be uniform when the size of the interval [0, n] is a power of 2
+** (exact division). With the fairest possible projection (e.g.,
+** '(ran % (n + 1))'), the maximum bias is 1 in 2^B/n.
+** For a "small" 'n', this bias is acceptable. (Here, we accept
+** a maximum bias of 0.0001%.) For a larger 'n', we first
+** compute 'lim', the smallest (2^b - 1) not smaller than 'n',
+** to get a uniform projection into [0,lim]. If the result is
+** inside [0, n], we are done. Otherwise, we try we another
+** 'ran' until we have a result inside the interval.
+*/
+
+#define MAXBIAS		1000000
+
+static lua_Unsigned project (lua_Unsigned ran, lua_Unsigned n,
+                             RanState *state) {
+  if (n < LUA_MAXUNSIGNED / MAXBIAS)
+    return ran % (n + 1);
+  else {
+    /* compute the smallest (2^b - 1) not smaller than 'n' */
+    lua_Unsigned lim = n;
+    lim |= (lim >> 1);
+    lim |= (lim >> 2);
+    lim |= (lim >> 4);
+    lim |= (lim >> 8);
+    lim |= (lim >> 16);
+#if (LUA_MAXINTEGER >> 30 >> 2) > 0
+    lim |= (lim >> 32);  /* integer type has more than 32 bits */
+#endif
+    lua_assert((lim & (lim + 1)) == 0  /* 'lim + 1' is a power of 2 */
+      && lim >= n  /* not smaller than 'n' */
+      && (lim >> 1) < n);  /* it is the smallest one */
+    while ((ran & lim) > n)
+      ran = I2UInt(xorshift128plus(state->s));
+    return ran & lim;
+  }
+}
+
+
 static int math_random (lua_State *L) {
   lua_Integer low, up;
-  double r;
+  lua_Unsigned p;
   RanState *state = (RanState *)lua_touserdata(L, lua_upvalueindex(1));
   I rv = xorshift128plus(state->s);  /* next pseudo-random value */
   switch (lua_gettop(L)) {  /* check number of arguments */
@@ -399,7 +440,7 @@ static int math_random (lua_State *L) {
       low = 1;
       up = luaL_checkinteger(L, 1);
       if (up == 0) {  /* single 0 as argument? */
-        lua_pushinteger(L, I2Int(rv));  /* full random integer */
+        lua_pushinteger(L, I2UInt(rv));  /* full random integer */
         return 1;
       }
       break;
@@ -413,11 +454,9 @@ static int math_random (lua_State *L) {
   }
   /* random integer in the interval [low, up] */
   luaL_argcheck(L, low <= up, 1, "interval is empty");
-  luaL_argcheck(L, low >= 0 || up <= LUA_MAXINTEGER + low, 1,
-                   "interval too large");
-  r = I2d(rv);  /* convert random value to a double */
-  r *= (double)(up - low) + 1.0;  /* scale it */
-  lua_pushinteger(L, (lua_Integer)r + low);
+  /* project random integer into the interval [0, up - low] */
+  p = project(I2UInt(rv), (lua_Unsigned)up - (lua_Unsigned)low, state);
+  lua_pushinteger(L, p + (lua_Unsigned)low);
   return 1;
 }
 
