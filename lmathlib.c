@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.120 2018/03/05 14:07:48 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.121 2018/03/09 14:56:25 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -268,7 +268,7 @@ static I xorshift128plus (I *state) {
   I y = state[1];
   state[0] = y;
   x ^= x << 23;
-  state[1] = x ^ y ^ (x >> 18) ^ (y >> 5);
+  state[1] = (x ^ (x >> 18)) ^ (y ^ (y >> 5));
   return state[1] + y;
 }
 
@@ -318,12 +318,14 @@ static I pack (int x1, int x2) {
   return result;
 }
 
-static I Ishl (I i, int n) {
-  return pack((i.x1 << n) | (i.x2 >> (32 - n)), i.x2 << n);
+/* i ^ (i << n) */
+static I Ixorshl (I i, int n) {
+  return pack(i.x1 ^ ((i.x1 << n) | (i.x2 >> (32 - n))), i.x2 ^ (i.x2 << n));
 }
 
-static I Ishr (I i, int n) {
-  return pack(i.x1 >> n, (i.x2 >> n) | (i.x1 << (32 - n)));
+/* i ^ (i >> n) */
+static I Ixorshr (I i, int n) {
+  return pack(i.x1 ^ (i.x1 >> n), i.x2 ^ ((i.x2 >> n) | (i.x1 << (32 - n))));
 }
 
 static I Ixor (I i1, I i2) {
@@ -345,9 +347,9 @@ static I xorshift128plus (I *state) {
   I x = state[0];
   I y = state[1];
   state[0] = y;
-  x = Ixor(x, Ishl(x, 23));  /* x ^= x << 23; */
-  /* s[1] = x ^ y ^ (x >> 18) ^ (y >> 5); */
-  state[1] = Ixor(Ixor(Ixor(x, y), Ishr(x, 18)), Ishr(y, 5));
+  x = Ixorshl(x, 23);  /* x ^= x << 23; */
+  /* state[1] = (x ^ (x >> 18)) ^ (y ^ (y >> 5)); */
+  state[1] = Ixor(Ixorshr(x, 18), Ixorshr(y, 5));
   return Iadd(state[1], y);  /* return state[1] + y; */
 }
 
