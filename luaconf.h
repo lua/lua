@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.265 2018/02/27 18:47:32 roberto Exp roberto $
+** $Id: luaconf.h,v 1.266 2018/03/02 18:31:51 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -446,6 +446,7 @@
 @@ LUA_INTEGER_FMT is the format for writing integers.
 @@ LUA_MAXINTEGER is the maximum value for a LUA_INTEGER.
 @@ LUA_MININTEGER is the minimum value for a LUA_INTEGER.
+@@ LUA_MAXUNSIGNED is the maximum value for a LUA_UNSIGNED.
 @@ lua_integer2str converts an integer to a string.
 */
 
@@ -464,6 +465,8 @@
 ** can turn a comparison between unsigneds into a signed comparison)
 */
 #define LUA_UNSIGNED		unsigned LUAI_UACINT
+
+#define LUA_MAXUNSIGNED		(~(lua_Unsigned)0)
 
 
 /* now the variable definitions */
