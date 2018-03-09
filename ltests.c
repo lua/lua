@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.241 2018/02/20 16:52:50 roberto Exp roberto $
+** $Id: ltests.c,v 2.242 2018/02/23 13:13:31 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -957,13 +957,13 @@ static int doonnewstack (lua_State *L) {
 
 
 static int s2d (lua_State *L) {
-  lua_pushnumber(L, *cast(const double *, luaL_checkstring(L, 1)));
+  lua_pushnumber(L, cast_num(*cast(const double *, luaL_checkstring(L, 1))));
   return 1;
 }
 
 
 static int d2s (lua_State *L) {
-  double d = luaL_checknumber(L, 1);
+  double d = cast(double, luaL_checknumber(L, 1));
   lua_pushlstring(L, cast_charp(&d), sizeof(d));
   return 1;
 }
