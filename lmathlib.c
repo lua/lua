@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.122 2018/03/09 15:05:13 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.123 2018/03/09 19:23:39 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -373,7 +373,7 @@ static I xorshift128plus (I *state) {
 /* do not need bits from higher half */
 #define maskHF		0
 #define maskLOW		(~(~1U << (FIGS - 1)))  /* use FIG bits */
-#define shiftFIG	(0.5 / (1U << (FIGS - 1)))  /* 2^(-FIG) */
+#define shiftFIG	(l_mathop(0.5) / (1U << (FIGS - 1)))  /* 2^(-FIG) */
 
 #else	/* 32 < FIGS <= 64 */
 
@@ -393,7 +393,9 @@ static I xorshift128plus (I *state) {
 #define twoto32		l_mathop(4294967296.0)  /* 2^32 */
 
 static lua_Number I2d (I x) {
-  return ((x.h & maskHF) * twoto32 + (x.l & maskLOW)) * shiftFIG;
+  lua_Number h = (lua_Number)(x.h & maskHF);
+  lua_Number l = (lua_Number)(x.l & maskLOW);
+  return (h * twoto32 + l) * shiftFIG;
 }
 
 static lua_Unsigned I2UInt (I x) {
