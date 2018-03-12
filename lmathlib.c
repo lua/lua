@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.123 2018/03/09 19:23:39 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.124 2018/03/11 14:48:09 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -321,7 +321,7 @@ typedef struct I {
 ** basic operations on 'I' values
 */
 
-static I pack (int h, int l) {
+static I pack (lu_int32 h, lu_int32 l) {
   I result;
   result.h = h;
   result.l = l;
@@ -368,25 +368,27 @@ static I xorshift128plus (I *state) {
 ** Converts an 'I' into a float.
 */
 
+/* an unsigned 1 with proper type */
+#define UONE		((lu_int32)1)
+
 #if FIGS <= 32
 
-/* do not need bits from higher half */
-#define maskHF		0
-#define maskLOW		(~(~1U << (FIGS - 1)))  /* use FIG bits */
-#define shiftFIG	(l_mathop(0.5) / (1U << (FIGS - 1)))  /* 2^(-FIG) */
+#define maskHF		0  /* do not need bits from higher half */
+#define maskLOW		(~(~UONE << (FIGS - 1)))  /* use FIG bits */
+#define shiftFIG	(l_mathop(0.5) / (UONE << (FIGS - 1)))  /* 2^(-FIG) */
 
 #else	/* 32 < FIGS <= 64 */
 
 /* must take care to not shift stuff by more than 31 slots */
 
 /* use FIG - 32 bits from higher half */
-#define maskHF		(~(~1U << (FIGS - 33)))
+#define maskHF		(~(~UONE << (FIGS - 33)))
 
 /* use all bits from lower half */
-#define maskLOW		(~0)
+#define maskLOW		(~(lu_int32)0)
 
 /* 2^(-FIG) == (1 / 2^33) / 2^(FIG-33) */
-#define shiftFIG  ((lua_Number)(1.0 / 8589934592.0) / (1U << (FIGS - 33)))
+#define shiftFIG  ((lua_Number)(1.0 / 8589934592.0) / (UONE << (FIGS - 33)))
 
 #endif
 
@@ -403,7 +405,8 @@ static lua_Unsigned I2UInt (I x) {
 }
 
 static I Int2I (lua_Integer n) {
-  return pack(n, n >> 31 >> 1);
+  lua_Unsigned un = n;
+  return pack((lu_int32)un, (lu_int32)(un >> 31 >> 1));
 }
 
 #endif  /* } */
