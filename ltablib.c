@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.94 2018/02/25 12:48:16 roberto Exp roberto $
+** $Id: ltablib.c,v 1.95 2018/02/27 18:47:32 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -173,7 +173,7 @@ static int tconcat (lua_State *L) {
 ** =======================================================
 */
 
-static int pack (lua_State *L) {
+static int tpack (lua_State *L) {
   int i;
   int n = lua_gettop(L);  /* number of elements to pack */
   lua_createtable(L, n, 1);  /* create result table */
@@ -186,7 +186,7 @@ static int pack (lua_State *L) {
 }
 
 
-static int unpack (lua_State *L) {
+static int tunpack (lua_State *L) {
   lua_Unsigned n;
   lua_Integer i = luaL_optinteger(L, 2, 1);
   lua_Integer e = luaL_opt(L, luaL_checkinteger, 3, luaL_len(L, 1));
@@ -408,8 +408,8 @@ static int sort (lua_State *L) {
 static const luaL_Reg tab_funcs[] = {
   {"concat", tconcat},
   {"insert", tinsert},
-  {"pack", pack},
-  {"unpack", unpack},
+  {"pack", tpack},
+  {"unpack", tunpack},
   {"remove", tremove},
   {"move", tmove},
   {"sort", sort},

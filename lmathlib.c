@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.124 2018/03/11 14:48:09 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.125 2018/03/12 12:39:03 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -321,7 +321,7 @@ typedef struct I {
 ** basic operations on 'I' values
 */
 
-static I pack (lu_int32 h, lu_int32 l) {
+static I packI (lu_int32 h, lu_int32 l) {
   I result;
   result.h = h;
   result.l = l;
@@ -330,20 +330,20 @@ static I pack (lu_int32 h, lu_int32 l) {
 
 /* i ^ (i << n) */
 static I Ixorshl (I i, int n) {
-  return pack(i.h ^ ((i.h << n) | (i.l >> (32 - n))), i.l ^ (i.l << n));
+  return packI(i.h ^ ((i.h << n) | (i.l >> (32 - n))), i.l ^ (i.l << n));
 }
 
 /* i ^ (i >> n) */
 static I Ixorshr (I i, int n) {
-  return pack(i.h ^ (i.h >> n), i.l ^ ((i.l >> n) | (i.h << (32 - n))));
+  return packI(i.h ^ (i.h >> n), i.l ^ ((i.l >> n) | (i.h << (32 - n))));
 }
 
 static I Ixor (I i1, I i2) {
-  return pack(i1.h ^ i2.h, i1.l ^ i2.l);
+  return packI(i1.h ^ i2.h, i1.l ^ i2.l);
 }
 
 static I Iadd (I i1, I i2) {
-  I result = pack(i1.h + i2.h, i1.l + i2.l);
+  I result = packI(i1.h + i2.h, i1.l + i2.l);
   if (result.l < i1.l)  /* carry? */
     result.h++;
   return result;
@@ -406,7 +406,7 @@ static lua_Unsigned I2UInt (I x) {
 
 static I Int2I (lua_Integer n) {
   lua_Unsigned un = n;
-  return pack((lu_int32)un, (lu_int32)(un >> 31 >> 1));
+  return packI((lu_int32)un, (lu_int32)(un >> 31 >> 1));
 }
 
 #endif  /* } */
