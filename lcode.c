@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.158 2018/02/26 14:16:05 roberto Exp roberto $
+** $Id: lcode.c,v 2.159 2018/03/07 15:55:38 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -1696,8 +1696,7 @@ void luaK_finish (FuncState *fs) {
           break;  /* no extra work */
         /* else use OP_RETURN to do the extra work */
         SET_OPCODE(*pc, OP_RETURN);
-        /* FALLTHROUGH */
-      }
+      }  /* FALLTHROUGH */
       case OP_RETURN: case OP_TAILCALL: {
         if (p->sizep > 0 || p->is_vararg) {
           SETARG_C(*pc, p->is_vararg ? p->numparams + 1 : 0);

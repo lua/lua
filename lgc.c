@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.251 2018/02/23 13:21:27 roberto Exp roberto $
+** $Id: lgc.c,v 2.252 2018/02/26 13:35:03 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -301,8 +301,8 @@ static void reallymarkobject (global_State *g, GCObject *o) {
         gray2black(o);  /* nothing else to mark */
         break;
       }
-      /* else *//* FALLTHROUGH */
-    }
+      /* else... */
+    }  /* FALLTHROUGH */
     case LUA_TLCL: case LUA_TCCL: case LUA_TTABLE:
     case LUA_TTHREAD: case LUA_TPROTO: {
       linkobjgclist(o, g->gray);
