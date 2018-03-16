@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.349 2018/03/02 18:59:19 roberto Exp roberto $
+** $Id: lvm.c,v 2.350 2018/03/07 15:55:38 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -36,7 +36,11 @@
 ** and compatible compilers.
 */
 #if !defined(LUA_USE_JUMPTABLE)
-#define LUA_USE_JUMPTABLE	defined(__GNUC__)
+#if defined(__GNUC__)
+#define LUA_USE_JUMPTABLE	1
+#else
+#define LUA_USE_JUMPTABLE	0
+#endif
 #endif
 
 
@@ -1560,7 +1564,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       vmcase(OP_ISDEF) {
         TValue *rb = vRB(i);
         TValue *rc = vRC(i);
-        int res = luaT_keydef(L, rb, rc, 0);
+        int res;
+        Protect(res = luaT_keydef(L, rb, rc, 0));
         setbvalue(vra, res == GETARG_k(i));
         vmbreak;
       }
