@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.156 2018/02/17 19:29:29 roberto Exp roberto $
+** $Id: lstate.h,v 2.157 2018/02/25 12:43:52 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -104,8 +104,8 @@ typedef struct CallInfo {
     int funcidx;  /* called-function index */
     int nyield;  /* number of values yielded */
     struct {  /* info about transfered values (for call/return hooks) */
-      unsigned short fTransfer;  /* offset of first value transfered */
-      unsigned short nTransfer;  /* number of values transfered */
+      unsigned short ftransfer;  /* offset of first value transfered */
+      unsigned short ntransfer;  /* number of values transfered */
     } transferinfo;
   } u2;
   short nresults;  /* expected number of results from this function */

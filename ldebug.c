@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.154 2018/02/09 15:16:06 roberto Exp roberto $
+** $Id: ldebug.c,v 2.155 2018/02/17 19:29:29 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -358,10 +358,10 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
       }
       case 'r': {
         if (ci == NULL || !(ci->callstatus & CIST_TRAN))
-          ar->fTransfer = ar->nTransfer = 0;
+          ar->ftransfer = ar->ntransfer = 0;
         else {
-          ar->fTransfer = ci->u2.transferinfo.fTransfer;
-          ar->nTransfer = ci->u2.transferinfo.nTransfer;
+          ar->ftransfer = ci->u2.transferinfo.ftransfer;
+          ar->ntransfer = ci->u2.transferinfo.ntransfer;
         }
       }
       case 'L':

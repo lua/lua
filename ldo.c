@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.198 2018/03/05 14:13:55 roberto Exp roberto $
+** $Id: ldo.c,v 2.199 2018/03/07 16:26:01 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -268,7 +268,7 @@ void luaD_inctop (lua_State *L) {
 ** function, can be changed asynchronously by signals.)
 */
 void luaD_hook (lua_State *L, int event, int line,
-                              int fTransfer, int nTransfer) {
+                              int ftransfer, int ntransfer) {
   lua_Hook hook = L->hook;
   if (hook && L->allowhook) {  /* make sure there is a hook */
     int mask = CIST_HOOKED;
@@ -279,10 +279,10 @@ void luaD_hook (lua_State *L, int event, int line,
     ar.event = event;
     ar.currentline = line;
     ar.i_ci = ci;
-    if (nTransfer != 0) {
+    if (ntransfer != 0) {
       mask |= CIST_TRAN;  /* 'ci' has transfer information */
-      ci->u2.transferinfo.fTransfer = fTransfer;
-      ci->u2.transferinfo.nTransfer = nTransfer;
+      ci->u2.transferinfo.ftransfer = ftransfer;
+      ci->u2.transferinfo.ntransfer = ntransfer;
     }
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
     if (L->top + LUA_MINSTACK > ci->top)
@@ -329,10 +329,10 @@ static void rethook (lua_State *L, CallInfo *ci, StkId firstres, int nres) {
       L->top = ci->top;  /* correct top */
   }
   if (L->hookmask & LUA_MASKRET) {  /* is return hook on? */
-    int fTransfer;
+    int ftransfer;
     ci->func += delta;  /* if vararg, back to virtual 'func' */
-    fTransfer = cast(unsigned short, firstres - ci->func);
-    luaD_hook(L, LUA_HOOKRET, -1, fTransfer, nres);  /* call it */
+    ftransfer = cast(unsigned short, firstres - ci->func);
+    luaD_hook(L, LUA_HOOKRET, -1, ftransfer, nres);  /* call it */
     ci->func -= delta;
   }
   if (isLua(ci->previous))

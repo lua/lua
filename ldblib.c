@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.153 2018/02/20 16:52:50 roberto Exp roberto $
+** $Id: ldblib.c,v 1.154 2018/03/05 14:15:04 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -186,8 +186,8 @@ static int db_getinfo (lua_State *L) {
     settabss(L, "namewhat", ar.namewhat);
   }
   if (strchr(options, 'r')) {
-    settabsi(L, "fTransfer", ar.fTransfer);
-    settabsi(L, "nTransfer", ar.nTransfer);
+    settabsi(L, "ftransfer", ar.ftransfer);
+    settabsi(L, "ntransfer", ar.ntransfer);
   }
   if (strchr(options, 't'))
     settabsb(L, "istailcall", ar.istailcall);
