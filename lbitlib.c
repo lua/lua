@@ -4,4 +4,4 @@
 ** See Copyright Notice in lua.h
 */
 
-Deprecated module.
+//Deprecated module.
