@@ -36,7 +36,9 @@
 ** and compatible compilers.
 */
 #if !defined(LUA_USE_JUMPTABLE)
-#define LUA_USE_JUMPTABLE	defined(__GNUC__)
+#if defined(__GNUC__)
+#define LUA_USE_JUMPTABLE
+#endif
 #endif
 
 
