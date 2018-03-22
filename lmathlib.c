@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.125 2018/03/12 12:39:03 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.126 2018/03/16 14:18:18 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -422,27 +422,18 @@ typedef struct {
 
 /*
 ** Project the random integer 'ran' into the interval [0, n].
-** Because 'ran' has 2^B possible values, the projection can only
-** be uniform when the size of the interval [0, n] is a power of 2
-** (exact division). With the fairest possible projection (e.g.,
-** '(ran % (n + 1))'), the maximum bias is 1 in 2^B/n.
-** For a "small" 'n', this bias is acceptable. (Here, we accept
-** a maximum bias of 0.0001%.) For a larger 'n', we first
-** compute 'lim', the smallest (2^b - 1) not smaller than 'n',
-** to get a uniform projection into [0,lim]. If the result is
-** inside [0, n], we are done. Otherwise, we try we another
-** 'ran' until we have a result inside the interval.
+** Because 'ran' has 2^B possible values, the projection can only be
+** uniform when the size of the interval [0, n] is a power of 2 (exact
+** division).  To get a uniform projection into [0,lim], we first
+** compute 'lim', the smallest (2^b - 1) not smaller than 'n'.  If the
+** random number is inside [0, n], we are done. Otherwise, we try with
+** another 'ran' until we have a result inside the interval.
 */
-
-#define MAXBIAS		1000000
-
 static lua_Unsigned project (lua_Unsigned ran, lua_Unsigned n,
                              RanState *state) {
-  if (n < LUA_MAXUNSIGNED / MAXBIAS)
-    return ran % (n + 1);
-  else {
+  lua_Unsigned lim = n;
+  if ((lim & (lim + 1)) > 0) {  /* 'lim + 1' is not a power of 2? */
     /* compute the smallest (2^b - 1) not smaller than 'n' */
-    lua_Unsigned lim = n;
     lim |= (lim >> 1);
     lim |= (lim >> 2);
     lim |= (lim >> 4);
@@ -451,13 +442,13 @@ static lua_Unsigned project (lua_Unsigned ran, lua_Unsigned n,
 #if (LUA_MAXINTEGER >> 30 >> 2) > 0
     lim |= (lim >> 32);  /* integer type has more than 32 bits */
 #endif
-    lua_assert((lim & (lim + 1)) == 0  /* 'lim + 1' is a power of 2 */
-      && lim >= n  /* not smaller than 'n' */
-      && (lim >> 1) < n);  /* it is the smallest one */
-    while ((ran & lim) > n)
-      ran = I2UInt(xorshift128plus(state->s));
-    return ran & lim;
   }
+  lua_assert((lim & (lim + 1)) == 0  /* 'lim + 1' is a power of 2 */
+    && lim >= n  /* not smaller than 'n' */
+    && (lim == 0 || (lim >> 1) < n));  /* it is the smallest one */
+  while ((ran & lim) > n)
+    ran = I2UInt(xorshift128plus(state->s));
+  return ran & lim;
 }
 
 
