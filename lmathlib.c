@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.126 2018/03/16 14:18:18 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.127 2018/03/22 19:54:49 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -281,19 +281,19 @@ static I xorshift128plus (I *state) {
 
 /* must take care to not shift stuff by more than 63 slots */
 
-#define maskFIG		(~(~1LLU << (FIGS - 1)))  /* use FIGS bits */
-#define shiftFIG	(l_mathop(0.5) / (1LLU << (FIGS - 1)))  /* 2^(-FIG) */
+#define shiftI		(64 - FIGS)  /* leave FIGS bits */
+#define shiftF		(l_mathop(0.5) / (1LLU << (FIGS - 1)))  /* 2^(-FIG) */
 
 /*
 ** Convert bits from a random integer into a float in the
 ** interval [0,1).
 */
 static lua_Number I2d (I x) {
-  return (lua_Number)(x & maskFIG) * shiftFIG;
+  return (lua_Number)(x >> shiftI) * shiftF;
 }
 
-/* convert an 'I' to a lua_Unsigned */
-#define I2UInt(x)	((lua_Unsigned)(x))
+/* convert an 'I' to a lua_Unsigned (using higher bits) */
+#define I2UInt(x)	((lua_Unsigned)((x) >> (64 - LUA_UNSIGNEDBITS)))
 
 /* convert a lua_Integer to an 'I' */
 #define Int2I(x)	((I)(x))
@@ -373,40 +373,47 @@ static I xorshift128plus (I *state) {
 
 #if FIGS <= 32
 
-#define maskHF		0  /* do not need bits from higher half */
-#define maskLOW		(~(~UONE << (FIGS - 1)))  /* use FIG bits */
-#define shiftFIG	(l_mathop(0.5) / (UONE << (FIGS - 1)))  /* 2^(-FIG) */
+#define maskLOW		0  /* do not need bits from lower half */
+#define maskHI	(~(~(lu_int32)0 >> (FIGS - 1) >> 1))  /* use FIGS bits */
+#define shiftHI		1  /* no shift */
+#define shiftF		(1 / l_mathop(4294967296.0))  /* 2^(-32) */
 
 #else	/* 32 < FIGS <= 64 */
 
 /* must take care to not shift stuff by more than 31 slots */
 
-/* use FIG - 32 bits from higher half */
-#define maskHF		(~(~UONE << (FIGS - 33)))
+/* use FIGS - 32 bits from lower half */
+#define maskLOW		(~(~(lu_int32)0 >> (FIGS - 33) >> 1))
 
-/* use all bits from lower half */
-#define maskLOW		(~(lu_int32)0)
+/* use all bits from higher half */
+#define maskHI		(~(lu_int32)0)
 
-/* 2^(-FIG) == (1 / 2^33) / 2^(FIG-33) */
-#define shiftFIG  ((lua_Number)(1.0 / 8589934592.0) / (UONE << (FIGS - 33)))
+#define shiftHI		l_mathop(4294967296.0)  /* 2^32 */
+
+/* 2^(-64) */
+#define shiftF		((lua_Number)(1 / (shiftHI * shiftHI)))
 
 #endif
 
-#define twoto32		l_mathop(4294967296.0)  /* 2^32 */
-
 static lua_Number I2d (I x) {
-  lua_Number h = (lua_Number)(x.h & maskHF);
+  lua_Number h = (lua_Number)(x.h & maskHI);
   lua_Number l = (lua_Number)(x.l & maskLOW);
-  return (h * twoto32 + l) * shiftFIG;
+  return (h * shiftHI + l) * shiftF;
 }
 
 static lua_Unsigned I2UInt (I x) {
-  return ((lua_Unsigned)x.h << 31 << 1) | x.l;
+#if (LUA_MAXINTEGER >> 30) <= 1
+/* at most 32 bits; use only high bits */
+  return ((lua_Unsigned)x.h);
+#else
+/* at least 33 bits */
+  return ((lua_Unsigned)x.h << (LUA_UNSIGNEDBITS - 32)) |
+          (lua_Unsigned)x.l >> (64 - LUA_UNSIGNEDBITS);
+#endif
 }
 
-static I Int2I (lua_Integer n) {
-  lua_Unsigned un = n;
-  return packI((lu_int32)un, (lu_int32)(un >> 31 >> 1));
+static I Int2I (lua_Unsigned n) {
+  return packI((lu_int32)(n >> 31 >> 1), (lu_int32)n & ~(lu_int32)0);
 }
 
 #endif  /* } */
@@ -421,34 +428,46 @@ typedef struct {
 
 
 /*
+** Return the higher bit set in 'x' (first bit is 1).
+*/
+static int higherbit (lua_Unsigned x) {
+  /* table of higher bits from 0 to 255 */
+  static const unsigned char hb[256] = {
+    0,1,2,2,3,3,3,3,4,4,4,4,4,4,4,4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
+    6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
+    7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+    7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+    8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
+    8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
+    8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
+    8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8
+  };
+  int l = 0;
+  while (x >= 256) { l += 8; x >>= 8; }
+  return l + hb[x];
+}
+
+
+/*
 ** Project the random integer 'ran' into the interval [0, n].
-** Because 'ran' has 2^B possible values, the projection can only be
-** uniform when the size of the interval [0, n] is a power of 2 (exact
-** division).  To get a uniform projection into [0,lim], we first
-** compute 'lim', the smallest (2^b - 1) not smaller than 'n'.  If the
-** random number is inside [0, n], we are done. Otherwise, we try with
-** another 'ran' until we have a result inside the interval.
+** To get a uniform projection into [0,n], we first compute 'shf', the
+** largest number that we can right-shift 'ran' and still get numbers
+** as larger as 'n'. We then shift 'ran'; if the result is inside [0, n],
+** we are done. Otherwise, we try with another 'ran' until we have a
+** result inside the interval. (We use right shifts to avoid the lowest
+** bits of 'ran', which has poorer distributions.)
 */
 static lua_Unsigned project (lua_Unsigned ran, lua_Unsigned n,
                              RanState *state) {
-  lua_Unsigned lim = n;
-  if ((lim & (lim + 1)) > 0) {  /* 'lim + 1' is not a power of 2? */
-    /* compute the smallest (2^b - 1) not smaller than 'n' */
-    lim |= (lim >> 1);
-    lim |= (lim >> 2);
-    lim |= (lim >> 4);
-    lim |= (lim >> 8);
-    lim |= (lim >> 16);
-#if (LUA_MAXINTEGER >> 30 >> 2) > 0
-    lim |= (lim >> 32);  /* integer type has more than 32 bits */
-#endif
+  if (n == 0) return 0;  /* special case for the unit set */
+  else {
+    int shf = LUA_UNSIGNEDBITS - higherbit(n);
+    lua_assert(~(lua_Unsigned)0 >> shf >= n &&  /* not larger */
+               ~(lua_Unsigned)0 >> shf >> 1 < n);  /* largest */
+    while ((ran >>= shf) > n)
+      ran = I2UInt(xorshift128plus(state->s));
+    return ran;
   }
-  lua_assert((lim & (lim + 1)) == 0  /* 'lim + 1' is a power of 2 */
-    && lim >= n  /* not smaller than 'n' */
-    && (lim == 0 || (lim >> 1) < n));  /* it is the smallest one */
-  while ((ran & lim) > n)
-    ran = I2UInt(xorshift128plus(state->s));
-  return ran & lim;
 }
 
 
@@ -487,12 +506,12 @@ static int math_random (lua_State *L) {
 }
 
 
-static void setseed (I *state, lua_Integer n) {
+static void setseed (I *state, lua_Unsigned n) {
   int i;
   state[0] = Int2I(n);
-  state[1] = Int2I(~n);
+  state[1] = Int2I(0xff);  /* avoid a zero state */
   for (i = 0; i < 16; i++)
-    xorshift128plus(state);  /* discard initial values */
+    xorshift128plus(state);  /* discard initial values to "spread" seed */
 }
 
 
