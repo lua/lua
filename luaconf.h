@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.266 2018/03/02 18:31:51 roberto Exp roberto $
+** $Id: luaconf.h,v 1.267 2018/03/09 14:56:02 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -447,6 +447,7 @@
 @@ LUA_MAXINTEGER is the maximum value for a LUA_INTEGER.
 @@ LUA_MININTEGER is the minimum value for a LUA_INTEGER.
 @@ LUA_MAXUNSIGNED is the maximum value for a LUA_UNSIGNED.
+@@ LUA_UNSIGNEDBITS is the number of bits in a LUA_UNSIGNED.
 @@ lua_integer2str converts an integer to a string.
 */
 
@@ -467,6 +468,8 @@
 #define LUA_UNSIGNED		unsigned LUAI_UACINT
 
 #define LUA_MAXUNSIGNED		(~(lua_Unsigned)0)
+
+#define LUA_UNSIGNEDBITS	(sizeof(LUA_UNSIGNED) * CHAR_BIT)
 
 
 /* now the variable definitions */
