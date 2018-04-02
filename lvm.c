@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.350 2018/03/07 15:55:38 roberto Exp roberto $
+** $Id: lvm.c,v 2.351 2018/03/16 14:21:20 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -50,24 +50,28 @@
 
 
 /*
-** 'l_intfitsf' checks whether a given integer can be converted to a
-** float without rounding. Used in comparisons.
+** 'l_intfitsf' checks whether a given integer is in the range that
+** can be converted to a float without rounding. Used in comparisons.
 */
+
 /* number of bits in the mantissa of a float */
 #define NBM		(l_mathlim(MANT_DIG))
 
 /*
-** Check whether some integers may not fit in a float, that is, whether
-** (maxinteger >> NBM) > 0 (that implies (1 << NBM) <= maxinteger).
-** (The shifts are done in parts to avoid shifting by more than the size
+** Check whether some integers may not fit in a float, testing whether
+** (maxinteger >> NBM) > 0. (That implies (1 << NBM) <= maxinteger.)
+** (The shifts are done in parts, to avoid shifting by more than the size
 ** of an integer. In a worst case, NBM == 113 for long double and
-** sizeof(integer) == 32.)
+** sizeof(long) == 32.)
 */
 #if ((((LUA_MAXINTEGER >> (NBM / 4)) >> (NBM / 4)) >> (NBM / 4)) \
 	>> (NBM - (3 * (NBM / 4))))  >  0
 
-#define l_intfitsf(i)  \
-  (-((lua_Integer)1 << NBM) <= (i) && (i) <= ((lua_Integer)1 << NBM))
+/* limit for integers that fit in a float */
+#define MAXINTFITSF	((lua_Unsigned)1 << NBM)
+
+/* check whether 'i' is in the interval [-MAXINTFITSF, MAXINTFITSF] */
+#define l_intfitsf(i)	((MAXINTFITSF + l_castS2U(i)) <= (2 * MAXINTFITSF))
 
 #else  /* all integers fit in a float precisely */
 
