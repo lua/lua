@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.289 2018/02/27 17:48:28 roberto Exp roberto $
+** $Id: lapi.c,v 2.290 2018/02/27 20:01:55 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -702,27 +702,6 @@ LUA_API int lua_rawgetp (lua_State *L, int idx, const void *p) {
   t = gettable(L, idx);
   setpvalue(&k, cast_voidp(p));
   return finishrawget(L, luaH_get(t, &k));
-}
-
-
-static int auxkeydef (lua_State *L, int idx, int remove) {
-  int res;
-  lua_lock(L);
-  api_checknelems(L, 1);
-  res = luaT_keydef(L, index2value(L, idx), s2v(L->top - 1), remove);
-  L->top--;  /* remove key */
-  lua_unlock(L);
-  return res;
-}
-
-
-LUA_API void lua_removekey (lua_State *L, int idx) {
-  auxkeydef(L, idx, 1);
-}
-
-
-LUA_API int lua_keyin (lua_State *L, int idx) {
-  return auxkeydef(L, idx, 0);
 }
 
 

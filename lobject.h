@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.140 2018/02/26 13:35:03 roberto Exp roberto $
+** $Id: lobject.h,v 2.141 2018/02/26 14:16:05 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -160,15 +160,9 @@ typedef StackValue *StkId;  /* index to stack elements */
 #define isreallyempty(v)	checktag((v), LUA_TEMPTY)
 
 
-#if defined(LUA_NILINTABLE)
-
-#define isempty(v)		isreallyempty(v)
-
-#else /* By default, entries with any kind of nil are considered empty */
-
+/* By default, entries with any kind of nil are considered empty */
 #define isempty(v)		ttisnilorempty(v)
 
-#endif
 
 /* macro defining an empty value */
 #define EMPTYCONSTANT	{NULL}, LUA_TEMPTY

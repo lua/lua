@@ -79,8 +79,6 @@ static void *disptab[] = {
 &&L_OP_GEI,
 &&L_OP_TEST,
 &&L_OP_TESTSET,
-&&L_OP_UNDEF,
-&&L_OP_ISDEF,
 &&L_OP_CALL,
 &&L_OP_TAILCALL,
 &&L_OP_RETURN,

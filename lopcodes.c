@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.79 2018/02/21 15:49:32 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.80 2018/03/07 15:55:38 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -79,8 +79,6 @@ LUAI_DDEF const char *const luaP_opnames[NUM_OPCODES+1] = {
   "GEI",
   "TEST",
   "TESTSET",
-  "UNDEF",
-  "ISDEF",
   "CALL",
   "TAILCALL",
   "RETURN",
@@ -164,8 +162,6 @@ LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 0, 1, 0, iABC)		/* OP_GEI */
  ,opmode(0, 0, 1, 0, iABC)		/* OP_TEST */
  ,opmode(0, 0, 1, 1, iABC)		/* OP_TESTSET */
- ,opmode(0, 0, 0, 0, iABC)		/* OP_UNDEF */
- ,opmode(0, 0, 0, 1, iABC)		/* OP_ISDEF */
  ,opmode(1, 1, 0, 1, iABC)		/* OP_CALL */
  ,opmode(1, 1, 0, 1, iABC)		/* OP_TAILCALL */
  ,opmode(0, 1, 0, 0, iABC)		/* OP_RETURN */
