@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.129 2018/04/04 16:12:53 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.130 2018/04/06 15:41:29 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -277,7 +277,7 @@ typedef unsigned long long Rand64;
 */
 
 /* avoid using extra bits when needed */
-#define trim64(x)	((x) & 0xffffffffffffffff)
+#define trim64(x)	((x) & 0xffffffffffffffffU)
 
 
 /* rotate left 'x' by 'n' bits */
@@ -346,7 +346,7 @@ typedef struct Rand64 {
 */
 
 /* avoid using extra bits when needed */
-#define trim32(x)	((x) & 0xffffffff)
+#define trim32(x)	((x) & 0xffffffffU)
 
 
 /*
