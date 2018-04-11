@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.55 2017/12/18 13:01:49 roberto Exp roberto $
+** $Id: ltests.h,v 2.56 2018/02/27 18:47:32 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -39,6 +39,10 @@
 #else
 #define l_sprintf(s,sz,f,i)	(memset(s,0xAB,sz), sprintf(s,f,i))
 #endif
+
+
+/* get a chance to test code without jump tables */
+#define LUA_USE_JUMPTABLE	0
 
 
 /* memory-allocator control variables */
