@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.80 2018/03/07 15:55:38 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.81 2018/04/04 14:23:41 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -16,6 +16,8 @@
 
 
 /* ORDER OP */
+
+#if defined(LUAI_DEFOPNAMES)
 
 LUAI_DDEF const char *const luaP_opnames[NUM_OPCODES+1] = {
   "MOVE",
@@ -97,6 +99,8 @@ LUAI_DDEF const char *const luaP_opnames[NUM_OPCODES+1] = {
   "EXTRAARG",
   NULL
 };
+
+#endif
 
 
 LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {

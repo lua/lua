@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.56 2018/02/27 18:47:32 roberto Exp roberto $
+** $Id: ltests.h,v 2.57 2018/04/11 16:49:36 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -22,6 +22,10 @@
 #undef NDEBUG
 #include <assert.h>
 #define lua_assert(c)           assert(c)
+
+
+/* include opcode names */
+#define LUAI_DEFOPNAMES
 
 
 /* compiled with -O0, Lua uses a lot of C stack space... */
