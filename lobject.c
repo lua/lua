@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.123 2018/01/28 15:13:26 roberto Exp roberto $
+** $Id: lobject.c,v 2.124 2018/02/27 18:47:32 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -393,7 +393,7 @@ void luaO_tostring (lua_State *L, TValue *obj) {
 
 static void pushstr (lua_State *L, const char *str, size_t l) {
   setsvalue2s(L, L->top, luaS_newlstr(L, str, l));
-  luaD_inctop(L);
+  L->top++;
 }
 
 
@@ -402,11 +402,10 @@ static void pushstr (lua_State *L, const char *str, size_t l) {
    conventional formats, plus Lua-specific '%I' and '%U'
 */
 const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
-  int n = 0;
-  for (;;) {
-    const char *e = strchr(fmt, '%');
-    if (e == NULL) break;
-    pushstr(L, fmt, e - fmt);
+  int n = 0;  /* number of strings in the stack to concatenate */
+  const char *e;  /* points to next conversion specifier */
+  while ((e = strchr(fmt, '%')) != NULL) {
+    pushstr(L, fmt, e - fmt);  /* string up to conversion specifier */
     switch (*(e+1)) {
       case 's': {  /* zero-terminated string */
         const char *s = va_arg(argp, char *);
@@ -433,7 +432,7 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
       case 'f': {  /* a 'lua_Number' */
         setfltvalue(s2v(L->top), cast_num(va_arg(argp, l_uacNumber)));
       top2str:  /* convert the top element to a string */
-        luaD_inctop(L);
+        L->top++;
         luaO_tostring(L, s2v(L->top - 1));
         break;
       }
@@ -460,9 +459,12 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
       }
     }
     n += 2;
-    fmt = e+2;
+    if (L->top + 2 > L->stack_last) {  /* no free stack space? */
+      luaV_concat(L, n);
+      n = 1;
+    }
+    fmt = e + 2;
   }
-  luaD_checkstack(L, 1);
   pushstr(L, fmt, strlen(fmt));
   if (n > 0) luaV_concat(L, n + 1);
   return svalue(s2v(L->top - 1));
