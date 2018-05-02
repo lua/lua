@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.155 2018/02/17 19:29:29 roberto Exp roberto $
+** $Id: ldebug.c,v 2.156 2018/03/16 15:33:34 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -783,17 +783,24 @@ static int changedline (Proto *p, int oldpc, int newpc) {
 }
 
 
-void luaG_traceexec (lua_State *L) {
+int luaG_traceexec (lua_State *L, const Instruction *pc) {
   CallInfo *ci = L->ci;
   lu_byte mask = L->hookmask;
-  int counthook = (--L->hookcount == 0 && (mask & LUA_MASKCOUNT));
+  int counthook;
+  if (!(mask & (LUA_MASKLINE | LUA_MASKCOUNT))) {  /* no hooks? */
+    ci->u.l.trap = 0;  /* don't need to stop again */
+    return 0;  /* turn off 'trap' */
+  }
+  pc++;  /* reference is always next instruction */
+  ci->u.l.savedpc = pc;  /* save 'pc' */
+  counthook = (--L->hookcount == 0 && (mask & LUA_MASKCOUNT));
   if (counthook)
     resethookcount(L);  /* reset count */
   else if (!(mask & LUA_MASKLINE))
-    return;  /* no line hook and count != 0; nothing to be done */
+    return 1;  /* no line hook and count != 0; nothing to be done now */
   if (ci->callstatus & CIST_HOOKYIELD) {  /* called hook last time? */
     ci->callstatus &= ~CIST_HOOKYIELD;  /* erase mark */
-    return;  /* do not call hook again (VM yielded, so it did not move) */
+    return 1;  /* do not call hook again (VM yielded, so it did not move) */
   }
   if (!isIT(*(ci->u.l.savedpc - 1)))
     L->top = ci->top;  /* prepare top */
@@ -801,15 +808,14 @@ void luaG_traceexec (lua_State *L) {
     luaD_hook(L, LUA_HOOKCOUNT, -1, 0, 0);  /* call count hook */
   if (mask & LUA_MASKLINE) {
     Proto *p = ci_func(ci)->p;
-    const Instruction *npc = ci->u.l.savedpc;
-    int npci = pcRel(npc, p);
+    int npci = pcRel(pc, p);
     if (npci == 0 ||  /* call linehook when enter a new function, */
-        npc <= L->oldpc ||  /* when jump back (loop), or when */
+        pc <= L->oldpc ||  /* when jump back (loop), or when */
         changedline(p, pcRel(L->oldpc, p), npci)) {  /* enter new line */
-      int newline = luaG_getfuncline(p, npci);  /* new line */
+      int newline = luaG_getfuncline(p, npci);
       luaD_hook(L, LUA_HOOKLINE, newline, 0, 0);  /* call line hook */
     }
-    L->oldpc = npc;
+    L->oldpc = pc;  /* 'pc' of last call to line hook */
   }
   if (L->status == LUA_YIELD) {  /* did hook yield? */
     if (counthook)
@@ -818,5 +824,6 @@ void luaG_traceexec (lua_State *L) {
     ci->callstatus |= CIST_HOOKYIELD;  /* mark that it yielded */
     luaD_throw(L, LUA_YIELD);
   }
+  return 1;  /* keep 'trap' on */
 }
 
