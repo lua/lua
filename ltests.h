@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.57 2018/04/11 16:49:36 roberto Exp roberto $
+** $Id: ltests.h,v 2.58 2018/04/19 15:42:41 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -47,6 +47,10 @@
 
 /* get a chance to test code without jump tables */
 #define LUA_USE_JUMPTABLE	0
+
+
+/* use 32-bit integers in random generator */
+#define LUA_RAND32
 
 
 /* memory-allocator control variables */

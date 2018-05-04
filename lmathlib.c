@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.130 2018/04/06 15:41:29 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.131 2018/04/06 17:52:42 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -257,27 +257,45 @@ static int math_type (lua_State *L) {
 #endif
 
 
-#if (!defined(LUA_USE_C89) && defined(LLONG_MAX) && !defined(LUA_DEBUG)) \
-    || defined(Rand64)  /* { */
-
 /*
-** Assume long long.
+** LUA_RAND32 forces the use of 32-bit integers in the implementation
+** of the PRN generator (mainly for testing).
 */
+#if !defined(LUA_RAND32) && !defined(Rand64)
 
-#if !defined(Rand64)
-/* a 64-bit value */
-typedef unsigned long long Rand64;
+/* try to find an integer type with at least 64 bits */
+
+#if (LONG_MAX >> 31 >> 31) >= 1
+
+/* 'long' has at least 64 bits */
+#define Rand64		unsigned long
+
+#elif !defined(LUA_USE_C89) && defined(LLONG_MAX)
+
+/* there is a 'long long' type (which must have at least 64 bits) */
+#define Rand64		unsigned long long
+
+#elif (LUA_MAXINTEGER >> 31 >> 31) >= 1
+
+/* 'lua_Integer' has at least 64 bits */
+#define Rand64		LUA_UNSIGNED
+
+#endif
+
 #endif
 
 
+#if defined(Rand64)  /* { */
+
 /*
+** Standard implementation, using 64-bit integers.
 ** If 'Rand64' has more than 64 bits, the extra bits do not interfere
-** with the 64 initial bits, except in a right shift. Otherwise, we just
-** have to make sure we never use them.
+** with the 64 initial bits, except in a right shift. Moreover, the
+** final result has to discard the extra bits.
 */
 
 /* avoid using extra bits when needed */
-#define trim64(x)	((x) & 0xffffffffffffffffU)
+#define trim64(x)	((x) & 0xffffffffffffffffu)
 
 
 /* rotate left 'x' by 'n' bits */
@@ -315,24 +333,23 @@ static lua_Number I2d (Rand64 x) {
 /* convert a 'Rand64' to a 'lua_Unsigned' */
 #define I2UInt(x)	((lua_Unsigned)trim64(x))
 
-/* convert a 'lua_Unsigned' to an 'Rand64' */
+/* convert a 'lua_Unsigned' to a 'Rand64' */
 #define Int2I(x)	((Rand64)(x))
 
 
-#else  /* no long long   }{ */
+#else	/* no 'Rand64'   }{ */
 
-/*
-** Use two 32-bit integers to represent a 64-bit quantity.
-*/
-
-#if LUAI_BITSINT >= 32
+/* get an integer with at least 32 bits */
+#if (INT_MAX >> 30) >= 1
 typedef unsigned int lu_int32;
 #else
 typedef unsigned long lu_int32;
 #endif
 
 
-/* a 64-bit value */
+/*
+** Use two 32-bit integers to represent a 64-bit quantity.
+*/
 typedef struct Rand64 {
   lu_int32 h;  /* higher half */
   lu_int32 l;  /* lower half */
@@ -342,17 +359,18 @@ typedef struct Rand64 {
 /*
 ** If 'lu_int32' has more than 32 bits, the extra bits do not interfere
 ** with the 32 initial bits, except in a right shift and comparisons.
-** Otherwise, we just have to make sure we never use them.
+** Moreover, the final result has to discard the extra bits.
 */
 
 /* avoid using extra bits when needed */
-#define trim32(x)	((x) & 0xffffffffU)
+#define trim32(x)	((x) & 0xffffffffu)
 
 
 /*
 ** basic operations on 'Rand64' values
 */
 
+/* build a new Rand64 value */
 static Rand64 packI (lu_int32 h, lu_int32 l) {
   Rand64 result;
   result.h = h;
@@ -360,16 +378,19 @@ static Rand64 packI (lu_int32 h, lu_int32 l) {
   return result;
 }
 
+/* return i << n */
 static Rand64 Ishl (Rand64 i, int n) {
   lua_assert(n > 0 && n < 32);
   return packI((i.h << n) | (trim32(i.l) >> (32 - n)), i.l << n);
 }
 
+/* i1 ^= i2 */
 static void Ixor (Rand64 *i1, Rand64 i2) {
   i1->h ^= i2.h;
   i1->l ^= i2.l;
 }
 
+/* return i1 + i2 */
 static Rand64 Iadd (Rand64 i1, Rand64 i2) {
   Rand64 result = packI(i1.h + i2.h, i1.l + i2.l);
   if (trim32(result.l) < trim32(i1.l))  /* carry? */
@@ -377,14 +398,17 @@ static Rand64 Iadd (Rand64 i1, Rand64 i2) {
   return result;
 }
 
+/* return i * 5 */
 static Rand64 times5 (Rand64 i) {
   return Iadd(Ishl(i, 2), i);  /* i * 5 == (i << 2) + i */
 }
 
+/* return i * 9 */
 static Rand64 times9 (Rand64 i) {
   return Iadd(Ishl(i, 3), i);  /* i * 9 == (i << 3) + i */
 }
 
+/* return 'i' rotated left 'n' bits */
 static Rand64 rotl (Rand64 i, int n) {
   lua_assert(n > 0 && n < 32);
   return packI((i.h << n) | (trim32(i.l) >> (32 - n)),
@@ -416,7 +440,7 @@ static Rand64 nextrand (Rand64 *state) {
 
 
 /*
-** Converts an 'Rand64' into a float.
+** Converts a 'Rand64' into a float.
 */
 
 /* an unsigned 1 with proper type */
@@ -452,11 +476,12 @@ static lua_Number I2d (Rand64 x) {
 }
 
 
+/* convert a 'Rand64' to a 'lua_Unsigned' */
 static lua_Unsigned I2UInt (Rand64 x) {
-  return ((lua_Unsigned)x.h << 31 << 1) | (lua_Unsigned)trim32(x.l);
+  return ((lua_Unsigned)trim32(x.h) << 31 << 1) | (lua_Unsigned)trim32(x.l);
 }
 
-
+/* convert a 'lua_Unsigned' to a 'Rand64' */
 static Rand64 Int2I (lua_Unsigned n) {
   return packI((lu_int32)(n >> 31 >> 1), (lu_int32)n);
 }
@@ -479,7 +504,7 @@ typedef struct {
 ** division).  To get a uniform projection into [0, n], we first compute
 ** 'lim', the smallest Mersenne number not smaller than 'n'. We then
 ** project 'ran' into the interval [0, lim].  If the result is inside
-** [0, n], we are done. Otherwise, we try with another 'ran' until we
+** [0, n], we are done. Otherwise, we try with another 'ran', until we
 ** have a result inside the interval.
 */
 static lua_Unsigned project (lua_Unsigned ran, lua_Unsigned n,
@@ -492,15 +517,15 @@ static lua_Unsigned project (lua_Unsigned ran, lua_Unsigned n,
     lim |= (lim >> 4);
     lim |= (lim >> 8);
     lim |= (lim >> 16);
-#if (LUA_MAXINTEGER >> 30 >> 2) > 0
+#if (LUA_MAXINTEGER >> 30 >> 1) > 0
     lim |= (lim >> 32);  /* integer type has more than 32 bits */
 #endif
   }
-  lua_assert((lim & (lim + 1)) == 0  /* 'lim + 1' is a power of 2 */
-    && lim >= n  /* not smaller than 'n' */
-    && (lim == 0 || (lim >> 1) < n));  /* it is the smallest one */
-  while ((ran &= lim) > n)
-    ran = I2UInt(nextrand(state->s));
+  lua_assert((lim & (lim + 1)) == 0  /* 'lim + 1' is a power of 2, */
+    && lim >= n  /* not smaller than 'n', */
+    && (lim == 0 || (lim >> 1) < n));  /* and it is the smallest one */
+  while ((ran &= lim) > n)  /* project 'ran' into [0..lim] */
+    ran = I2UInt(nextrand(state->s));  /* not inside [0..n]? try again */
   return ran;
 }
 
