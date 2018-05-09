@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.131 2018/04/06 17:52:42 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.132 2018/05/04 20:01:45 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -304,7 +304,7 @@ static Rand64 rotl (Rand64 x, int n) {
 }
 
 static Rand64 nextrand (Rand64 *state) {
-  Rand64 res = rotl(state[0] * 5, 7) * 9;
+  Rand64 res = rotl(state[1] * 5, 7) * 9;
   Rand64 t = state[1] << 17;
   state[2] ^= state[0];
   state[3] ^= state[1];
@@ -427,7 +427,7 @@ static Rand64 rotl1 (Rand64 i, int n) {
 ** implementation of 'xoshiro256**' algorithm on 'Rand64' values
 */
 static Rand64 nextrand (Rand64 *state) {
-  Rand64 res = times9(rotl(times5(state[0]), 7));
+  Rand64 res = times9(rotl(times5(state[1]), 7));
   Rand64 t = Ishl(state[1], 17);
   Ixor(&state[2], state[0]);
   Ixor(&state[3], state[1]);
