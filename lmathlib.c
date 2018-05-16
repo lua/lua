@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.132 2018/05/04 20:01:45 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.133 2018/05/09 14:54:37 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -14,6 +14,7 @@
 #include <limits.h>
 #include <math.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "lua.h"
 
@@ -304,14 +305,15 @@ static Rand64 rotl (Rand64 x, int n) {
 }
 
 static Rand64 nextrand (Rand64 *state) {
-  Rand64 res = rotl(state[1] * 5, 7) * 9;
-  Rand64 t = state[1] << 17;
-  state[2] ^= state[0];
-  state[3] ^= state[1];
-  state[1] ^= state[2];
-  state[0] ^= state[3];
-  state[2] ^= t;
-  state[3] = rotl(state[3], 45);
+  Rand64 state0 = state[0];
+  Rand64 state1 = state[1];
+  Rand64 state2 = state[2] ^ state0;
+  Rand64 state3 = state[3] ^ state1;
+  Rand64 res = rotl(state1 * 5, 7) * 9;
+  state[0] = state0 ^ state3;
+  state[1] = state1 ^ state2;
+  state[2] = state2 ^ (state1 << 17);
+  state[3] = rotl(state3, 45);
   return res;
 }
 
@@ -591,9 +593,18 @@ static const luaL_Reg randfuncs[] = {
   {NULL, NULL}
 };
 
+
+/*
+** Register the random functions and initialize their state.
+** To give some "randomness" to the initial seed, use the current time
+** and the address of 'L' (in case the machine does address space layout
+** randomization).
+*/
 static void setrandfunc (lua_State *L) {
   RanState *state = (RanState *)lua_newuserdatauv(L, sizeof(RanState), 0);
-  setseed(state->s, 0, 0);
+  lua_Unsigned seed1 = (lua_Unsigned)time(NULL); 
+  lua_Unsigned seed2 = (lua_Unsigned)(size_t)L; 
+  setseed(state->s, seed1, seed2);
   luaL_setfuncs(L, randfuncs, 1);
 }
 
