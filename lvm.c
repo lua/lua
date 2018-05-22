@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.353 2018/04/04 14:23:41 roberto Exp roberto $
+** $Id: lvm.c,v 2.354 2018/05/02 18:17:59 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1591,7 +1591,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
             ra = RA(i);
           }
           ci->func -= delta;
-          luaD_poscall(L, ci, ra, cast_int(L->top - ra));
+          luaD_poscall(L, ci, cast_int(L->top - ra));
           return;
         }
         else {  /* Lua tail call */
@@ -1602,20 +1602,25 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_RETURN) {
-        int b = GETARG_B(i);
-        int n = (b != 0 ? b - 1 : cast_int(L->top - ra));
+        int n = GETARG_B(i) - 1;  /* number of results */
+        if (n < 0)  /* not fixed? */
+          n = cast_int(L->top - ra);  /* get what is available */
+        else
+          L->top = ra + n;  /* set call for 'luaD_poscall' */
         if (TESTARG_k(i)) {
           int nparams1 = GETARG_C(i);
           if (nparams1)  /* vararg function? */
             ci->func -= ci->u.l.nextraargs + nparams1;
           luaF_close(L, base);  /* there may be open upvalues */
         }
-        halfProtect(luaD_poscall(L, ci, ra, n));
+        halfProtect(luaD_poscall(L, ci, n));
         return;
       }
       vmcase(OP_RETURN0) {
-        if (L->hookmask)
-          halfProtect(luaD_poscall(L, ci, ra, 0));  /* no hurry... */
+        if (L->hookmask) {
+          L->top = ra;
+          halfProtect(luaD_poscall(L, ci, 0));  /* no hurry... */
+        }
         else {
           int nres = ci->nresults;
           L->ci = ci->previous;  /* back to caller */
@@ -1626,8 +1631,10 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         return;
       }
       vmcase(OP_RETURN1) {
-        if (L->hookmask)
-          halfProtect(luaD_poscall(L, ci, ra, 1));  /* no hurry... */
+        if (L->hookmask) {
+          L->top = ra + 1;
+          halfProtect(luaD_poscall(L, ci, 1));  /* no hurry... */
+        }
         else {
           int nres = ci->nresults;
           L->ci = ci->previous;  /* back to caller */

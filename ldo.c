@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.199 2018/03/07 16:26:01 roberto Exp roberto $
+** $Id: ldo.c,v 2.200 2018/03/16 15:33:34 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -319,14 +319,15 @@ void luaD_hookcall (lua_State *L, CallInfo *ci) {
 }
 
 
-static void rethook (lua_State *L, CallInfo *ci, StkId firstres, int nres) {
+static StkId rethook (lua_State *L, CallInfo *ci, StkId firstres, int nres) {
+  ptrdiff_t oldtop = savestack(L, L->top);  /* hook may change top */
   int delta = 0;
   if (isLuacode(ci)) {
     Proto *p = clLvalue(s2v(ci->func))->p;
     if (p->is_vararg)
       delta = ci->u.l.nextraargs + p->numparams + 1;
     if (L->top < ci->top)
-      L->top = ci->top;  /* correct top */
+      L->top = ci->top;  /* correct top to run hook */
   }
   if (L->hookmask & LUA_MASKRET) {  /* is return hook on? */
     int ftransfer;
@@ -337,6 +338,7 @@ static void rethook (lua_State *L, CallInfo *ci, StkId firstres, int nres) {
   }
   if (isLua(ci->previous))
     L->oldpc = ci->previous->u.l.savedpc;  /* update 'oldpc' */
+  return restorestack(L, oldtop);
 }
 
 
@@ -363,40 +365,33 @@ void luaD_tryfuncTM (lua_State *L, StkId func) {
 ** expressions, multiple results for tail calls/single parameters)
 ** separated.
 */
-static void moveresults (lua_State *L, StkId firstResult, StkId res,
-                                       int nres, int wanted) {
+static void moveresults (lua_State *L, StkId res, int nres, int wanted) {
   switch (wanted) {  /* handle typical cases separately */
-    case 0: break;  /* nothing to move */
-    case 1: {  /* one result needed */
+    case 0:  /* no values needed */
+      L->top = res;
+      break;
+    case 1:  /* one value needed */
       if (nres == 0)   /* no results? */
         setnilvalue(s2v(res));  /* adjust with nil */
       else
-        setobjs2s(L, res, firstResult);  /* move it to proper place */
+        setobjs2s(L, res, L->top - nres);  /* move it to proper place */
+      L->top = res + 1;
       break;
-    }
-    case LUA_MULTRET: {
+    case LUA_MULTRET:
+      wanted = nres;  /* we want all results */
+      /* FALLTHROUGH */
+    default: {  /* multiple results */
+      StkId firstresult = L->top - nres;  /* index of first result */
       int i;
-      for (i = 0; i < nres; i++)  /* move all results to correct place */
-        setobjs2s(L, res + i, firstResult + i);
-      wanted = nres;  /* it wanted what it had */
-      break;
-    }
-    default: {
-      int i;
-      if (wanted <= nres) {  /* enough results? */
-        for (i = 0; i < wanted; i++)  /* move wanted results to correct place */
-          setobjs2s(L, res + i, firstResult + i);
-      }
-      else {  /* not enough results; use all of them plus nils */
-        for (i = 0; i < nres; i++)  /* move all results to correct place */
-          setobjs2s(L, res + i, firstResult + i);
-        for (; i < wanted; i++)  /* complete wanted number of results */
-          setnilvalue(s2v(res + i));
-      }
+      /* move all results to correct place */
+      for (i = 0; i < nres && i < wanted; i++)
+        setobjs2s(L, res + i, firstresult + i);
+      for (; i < wanted; i++)  /* complete wanted number of results */
+        setnilvalue(s2v(res + i));
+      L->top = res + wanted;  /* top points after the last result */
       break;
     }
   }
-  L->top = res + wanted;  /* top points after the last result */
 }
 
 
@@ -404,15 +399,12 @@ static void moveresults (lua_State *L, StkId firstResult, StkId res,
 ** Finishes a function call: calls hook if necessary, removes CallInfo,
 ** moves current number of results to proper place.
 */
-void luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres) {
-  if (L->hookmask) {
-    ptrdiff_t fr = savestack(L, firstResult);  /* hook may change stack */
-    rethook(L, ci, firstResult, nres);
-    firstResult = restorestack(L, fr);
-  }
+void luaD_poscall (lua_State *L, CallInfo *ci, int nres) {
+  if (L->hookmask)
+    L->top = rethook(L, ci, L->top - nres, nres);
   L->ci = ci->previous;  /* back to caller */
   /* move results to proper place */
-  moveresults(L, firstResult, ci->func, nres, ci->nresults);
+  moveresults(L, ci->func, nres, ci->nresults);
 }
 
 
@@ -477,7 +469,7 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
       n = (*f)(L);  /* do the actual call */
       lua_lock(L);
       api_checknelems(L, n);
-      luaD_poscall(L, ci, L->top - n, n);
+      luaD_poscall(L, ci, n);
       break;
     }
     case LUA_TLCL: {  /* Lua function */
@@ -540,7 +532,7 @@ static void finishCcall (lua_State *L, int status) {
   n = (*ci->u.c.k)(L, status, ci->u.c.ctx);  /* call continuation function */
   lua_lock(L);
   api_checknelems(L, n);
-  luaD_poscall(L, ci, L->top - n, n);  /* finish 'luaD_call' */
+  luaD_poscall(L, ci, n);  /* finish 'luaD_call' */
 }
 
 
@@ -642,9 +634,8 @@ static void resume (lua_State *L, void *ud) {
         n = (*ci->u.c.k)(L, LUA_YIELD, ci->u.c.ctx); /* call continuation */
         lua_lock(L);
         api_checknelems(L, n);
-        firstArg = L->top - n;  /* yield results come from continuation */
       }
-      luaD_poscall(L, ci, firstArg, n);  /* finish 'luaD_call' */
+      luaD_poscall(L, ci, n);  /* finish 'luaD_call' */
     }
     unroll(L, NULL);  /* run continuation */
   }
