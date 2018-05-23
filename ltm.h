@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 2.34 2018/02/27 17:48:28 roberto Exp roberto $
+** $Id: ltm.h,v 2.35 2018/04/04 14:23:41 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -9,7 +9,6 @@
 
 
 #include "lobject.h"
-#include "lstate.h"
 
 
 /*
