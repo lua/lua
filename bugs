@@ -3680,9 +3680,9 @@ It needs an "interceptor" 'memcmp' function that continues
 reading memory after a difference is found.]],
 patch = [[
 2c2
-< ** $Id: bugs,v 1.158 2017/12/06 18:20:28 roberto Exp roberto $
+< ** $Id: bugs,v 1.159 2017/12/13 18:35:03 roberto Exp roberto $
 ---
-> ** $Id: bugs,v 1.158 2017/12/06 18:20:28 roberto Exp roberto $
+> ** $Id: bugs,v 1.159 2017/12/13 18:35:03 roberto Exp roberto $
 263c263,264
 <   for (option = LUA_STRFTIMEOPTIONS; *option != '\0'; option += oplen) {
 ---
@@ -3737,6 +3737,10 @@ patch = [[
 }
 
 
+-----------------------------------------------------------------
+-- Lua 5.3.4
+
+
 Bug{
 what = [[Wrong code for a goto followed by a label inside an 'if']],
 report = [[云风, 2017/04/13]],
@@ -3782,6 +3786,19 @@ for i = 1, 0x7fffffff do
 end
 ]],
 patch = [[
+--- ltable.c	2017/04/19 17:20:42	2.118.1.1
++++ ltable.c	2018/05/24 18:34:38
+@@ -223,7 +223,9 @@
+   unsigned int na = 0;  /* number of elements to go to array part */
+   unsigned int optimal = 0;  /* optimal size for array part */
+   /* loop while keys can fill more than half of total size */
+-  for (i = 0, twotoi = 1; *pna > twotoi / 2; i++, twotoi *= 2) {
++  for (i = 0, twotoi = 1;
++       twotoi > 0 && *pna > twotoi / 2;
++       i++, twotoi *= 2) {
+     if (nums[i] > 0) {
+       a += nums[i];
+       if (a > twotoi/2) {  /* more than half elements present? */
 ]]
 }
 
@@ -3801,8 +3818,40 @@ end
 print(#t)
 ]],
 patch = [[
+--- ltable.h	2017/04/19 17:20:42	2.23.1.1
++++ ltable.h	2018/05/24 19:31:50
+@@ -56,3 +56,3 @@
+ LUAI_FUNC int luaH_next (lua_State *L, Table *t, StkId key);
+-LUAI_FUNC int luaH_getn (Table *t);
++LUAI_FUNC lua_Unsigned luaH_getn (Table *t);
+ 
+--- ltable.c	2018/05/24 19:22:37	2.118.1.2
++++ ltable.c	2018/05/24 19:25:05
+@@ -614,4 +614,4 @@
+ 
+-static int unbound_search (Table *t, unsigned int j) {
+-  unsigned int i = j;  /* i is zero or a present index */
++static lua_Unsigned unbound_search (Table *t, lua_Unsigned j) {
++  lua_Unsigned i = j;  /* i is zero or a present index */
+   j++;
+@@ -620,3 +620,3 @@
+     i = j;
+-    if (j > cast(unsigned int, MAX_INT)/2) {  /* overflow? */
++    if (j > l_castS2U(LUA_MAXINTEGER) / 2) {  /* overflow? */
+       /* table was built with bad purposes: resort to linear search */
+@@ -630,3 +630,3 @@
+   while (j - i > 1) {
+-    unsigned int m = (i+j)/2;
++    lua_Unsigned m = (i+j)/2;
+     if (ttisnil(luaH_getint(t, m))) j = m;
+@@ -642,3 +642,3 @@
+ */
+-int luaH_getn (Table *t) {
++lua_Unsigned luaH_getn (Table *t) {
+   unsigned int j = t->sizearray;
 ]]
 }
+
 
 Bug{
 what = [[Lua does not check GC when creating error messages]],
