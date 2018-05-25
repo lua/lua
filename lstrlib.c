@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.261 2018/02/21 13:48:44 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.262 2018/02/21 17:48:31 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -1522,17 +1522,12 @@ static int str_packsize (lua_State *L) {
   while (*fmt != '\0') {
     int size, ntoalign;
     KOption opt = getdetails(&h, totalsize, &fmt, &size, &ntoalign);
+    luaL_argcheck(L, opt != Kstring && opt != Kzstr, 1,
+                     "variable-length format");
     size += ntoalign;  /* total space used by option */
     luaL_argcheck(L, totalsize <= MAXSIZE - size, 1,
                      "format result too large");
     totalsize += size;
-    switch (opt) {
-      case Kstring:  /* strings with length count */
-      case Kzstr:    /* zero-terminated string */
-        luaL_argerror(L, 1, "variable-length format");
-        /* call never return, but to avoid warnings: *//* FALLTHROUGH */
-      default:  break;
-    }
   }
   lua_pushinteger(L, (lua_Integer)totalsize);
   return 1;
@@ -1585,8 +1580,8 @@ static int str_unpack (lua_State *L) {
   while (*fmt != '\0') {
     int size, ntoalign;
     KOption opt = getdetails(&h, pos, &fmt, &size, &ntoalign);
-    if ((size_t)ntoalign + size > ~pos || pos + ntoalign + size > ld)
-      luaL_argerror(L, 2, "data string too short");
+    luaL_argcheck(L, (size_t)ntoalign + size <= ld - pos, 2,
+                    "data string too short");
     pos += ntoalign;  /* skip alignment */
     /* stack space for item + next position */
     luaL_checkstack(L, 2, "too many results");
@@ -1615,13 +1610,15 @@ static int str_unpack (lua_State *L) {
       }
       case Kstring: {
         size_t len = (size_t)unpackint(L, data + pos, h.islittle, size, 0);
-        luaL_argcheck(L, pos + len + size <= ld, 2, "data string too short");
+        luaL_argcheck(L, len <= ld - pos - size, 2, "data string too short");
         lua_pushlstring(L, data + pos + size, len);
         pos += len;  /* skip string */
         break;
       }
       case Kzstr: {
         size_t len = (int)strlen(data + pos);
+        luaL_argcheck(L, pos + len < ld, 2,
+                         "unfinished string for format 'z'");
         lua_pushlstring(L, data + pos, len);
         pos += len + 1;  /* skip string plus final '\0' */
         break;
