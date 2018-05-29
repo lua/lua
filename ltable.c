@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.134 2018/02/23 13:13:31 roberto Exp roberto $
+** $Id: ltable.c,v 2.135 2018/02/26 14:16:05 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -769,7 +769,7 @@ lua_Unsigned luaH_getn (Table *t) {
     return i;
   }
   else {  /* 'j' is zero or present in table */
-    if (isdummy(t) || isempty(luaH_getint(t, l_castU2S(j + 1))))
+    if (isdummy(t) || isempty(luaH_getint(t, cast(lua_Integer, j + 1))))
       return j;  /* 'j + 1' is absent... */
     else  /* 'j + 1' is also present */
       return hash_search(t, j);
