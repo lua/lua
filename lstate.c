@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.150 2018/01/28 15:13:26 roberto Exp roberto $
+** $Id: lstate.c,v 2.151 2018/02/05 17:11:37 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -30,17 +30,6 @@
 
 
 /*
-** a macro to help the creation of a unique random seed when a state is
-** created; the seed is used to randomize hashes.
-*/
-#if !defined(luai_makeseed)
-#include <time.h>
-#define luai_makeseed()		cast_uint(time(NULL))
-#endif
-
-
-
-/*
 ** thread state + extra space
 */
 typedef struct LX {
@@ -63,16 +52,25 @@ typedef struct LG {
 
 
 /*
-** Compute an initial seed as random as possible. Rely on Address Space
-** Layout Randomization (if present) to increase randomness..
+** A macro to create a "random" seed when a state is created;
+** the seed is used to randomize string hashes.
+*/
+#if !defined(luai_makeseed)
+
+#include <time.h>
+
+/*
+** Compute an initial seed with some level of randomness.
+** Rely on Address Space Layout Randomization (if present) and
+** current time.
 */
 #define addbuff(b,p,e) \
   { size_t t = cast_sizet(e); \
     memcpy(b + p, &t, sizeof(t)); p += sizeof(t); }
 
-static unsigned int makeseed (lua_State *L) {
+static unsigned int luai_makeseed (lua_State *L) {
   char buff[4 * sizeof(size_t)];
-  unsigned int h = luai_makeseed();
+  unsigned int h = cast_uint(time(NULL));
   int p = 0;
   addbuff(buff, p, L);  /* heap variable */
   addbuff(buff, p, &h);  /* local variable */
@@ -81,6 +79,8 @@ static unsigned int makeseed (lua_State *L) {
   lua_assert(p == sizeof(buff));
   return luaS_hash(buff, p, h);
 }
+
+#endif
 
 
 /*
@@ -327,7 +327,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->frealloc = f;
   g->ud = ud;
   g->mainthread = L;
-  g->seed = makeseed(L);
+  g->seed = luai_makeseed(L);
   g->gcrunning = 0;  /* no GC while building state */
   g->strt.size = g->strt.nuse = 0;
   g->strt.hash = NULL;
