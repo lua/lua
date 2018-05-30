@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.95 2017/12/11 12:27:48 roberto Exp roberto $
+** $Id: lmem.c,v 1.96 2018/01/28 15:13:26 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -60,7 +60,7 @@ void *luaM_growaux_ (lua_State *L, void *block, int nelems, int *psize,
   if (nelems + 1 <= size)  /* does one extra element still fit? */
     return block;  /* nothing to be done */
   if (size >= limit / 2) {  /* cannot double it? */
-    if (size >= limit)  /* cannot grow even a little? */
+    if (unlikely(size >= limit))  /* cannot grow even a little? */
       luaG_runerror(L, "too many %s (limit is %d)", what, limit);
     size = limit;  /* still have at least one free place */
   }
@@ -73,7 +73,7 @@ void *luaM_growaux_ (lua_State *L, void *block, int nelems, int *psize,
   /* 'limit' ensures that multiplication will not overflow */
   newblock = luaM_realloc_(L, block, cast_sizet(*psize) * size_elems,
                                      cast_sizet(size) * size_elems);
-  if (newblock == NULL)
+  if (unlikely(newblock == NULL))
     luaM_error(L);
   *psize = size;  /* update only when everything else is OK */
   return newblock;
@@ -88,7 +88,7 @@ void *luaM_shrinkvector_ (lua_State *L, void *block, int *size,
   size_t newsize = cast_sizet(final_n * size_elem);
   lua_assert(newsize <= oldsize);
   newblock = (*g->frealloc)(g->ud, block, oldsize, newsize);
-  if (newblock == NULL && final_n > 0)  /* allocation failed? */
+  if (unlikely(newblock == NULL && final_n > 0))  /* allocation failed? */
     luaM_error(L);
   else {
     g->GCdebt += newsize - oldsize;
@@ -114,6 +114,22 @@ void luaM_free_ (lua_State *L, void *block, size_t osize) {
 }
 
 
+/*
+** In case of allocation fail, this function will call the GC to try
+** to free some memory and then try the allocation again.
+** (It should not be called when shrinking a block, because then the
+** interpreter may be in the middle of a collection step.)
+*/
+static void *tryagain (lua_State *L, void *block,
+                       size_t osize, size_t nsize) {
+  global_State *g = G(L);
+  if (g->version) {  /* is state fully build? */
+    luaC_fullgc(L, 1);  /* try to free some memory... */
+    return (*g->frealloc)(g->ud, block, osize, nsize);  /* try again */
+  }
+  else return NULL;  /* cannot free any memory without a full state */
+}
+
 
 /*
 ** generic allocation routine.
@@ -124,13 +140,10 @@ void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
   lua_assert((osize == 0) == (block == NULL));
   hardtest(L, osize, nsize);
   newblock = (*g->frealloc)(g->ud, block, osize, nsize);
-  if (newblock == NULL && nsize > 0) {
-    /* Is state fully built? Not shrinking a block? */
-    if (g->version && nsize > osize) {
-      luaC_fullgc(L, 1);  /* try to free some memory... */
-      newblock = (*g->frealloc)(g->ud, block, osize, nsize);  /* try again */
-    }
-    if (newblock == NULL)
+  if (unlikely(newblock == NULL && nsize > 0)) {
+    if (nsize > osize)  /* not shrinking a block? */
+      newblock = tryagain(L, block, osize, nsize);
+    if (newblock == NULL)  /* still no memory? */
       return NULL;
   }
   lua_assert((nsize == 0) == (newblock == NULL));
@@ -142,7 +155,7 @@ void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
 void *luaM_saferealloc_ (lua_State *L, void *block, size_t osize,
                                                     size_t nsize) {
   void *newblock = luaM_realloc_(L, block, osize, nsize);
-  if (newblock == NULL && nsize > 0)  /* allocation failed? */
+  if (unlikely(newblock == NULL && nsize > 0))  /* allocation failed? */
     luaM_error(L);
   return newblock;
 }
@@ -155,11 +168,8 @@ void *luaM_malloc_ (lua_State *L, size_t size, int tag) {
   else {
     global_State *g = G(L);
     void *newblock = (*g->frealloc)(g->ud, NULL, tag, size);
-    if (newblock == NULL) {
-      if (g->version) {  /* is state fully built? */
-        luaC_fullgc(L, 1);  /* try to free some memory... */
-        newblock = (*g->frealloc)(g->ud, NULL, tag, size);  /* try again */
-      }
+    if (unlikely(newblock == NULL)) {
+      newblock = tryagain(L, NULL, tag, size);
       if (newblock == NULL)
         luaM_error(L);
     }

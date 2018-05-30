@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.135 2018/02/26 14:16:05 roberto Exp roberto $
+** $Id: ltable.c,v 2.136 2018/05/29 18:01:50 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -235,7 +235,7 @@ static unsigned int findindex (lua_State *L, Table *t, TValue *key) {
     return i;  /* yes; that's the index */
   else {
     const TValue *n = getgeneric(t, key);
-    if (n == luaH_emptyobject)
+    if (unlikely(n == luaH_emptyobject))
       luaG_runerror(L, "invalid key to 'next'");  /* key not found */
     i = cast_int(nodefromval(n) - gnode(t, 0));  /* key index in hash table */
     /* hash elements are numbered after array ones */
@@ -467,7 +467,7 @@ void luaH_resize (lua_State *L, Table *t, unsigned int newasize,
   }
   /* allocate new array */
   newarray = luaM_reallocvector(L, t->array, oldasize, newasize, TValue);
-  if (newarray == NULL && newasize > 0) {  /* allocation failed? */
+  if (unlikely(newarray == NULL && newasize > 0)) {  /* allocation failed? */
     freehash(L, &newt);  /* release new hash part */
     luaM_error(L);  /* raise error (with array unchanged) */
   }
@@ -560,7 +560,8 @@ static Node *getfreepos (Table *t) {
 TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
   Node *mp;
   TValue aux;
-  if (ttisnil(key)) luaG_runerror(L, "table index is nil");
+  if (unlikely(ttisnil(key)))
+    luaG_runerror(L, "table index is nil");
   else if (ttisfloat(key)) {
     lua_Number f = fltvalue(key);
     lua_Integer k;
@@ -568,7 +569,7 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
       setivalue(&aux, k);
       key = &aux;  /* insert it as an integer */
     }
-    else if (luai_numisnan(f))
+    else if (unlikely(luai_numisnan(f)))
       luaG_runerror(L, "table index is NaN");
   }
   mp = mainpositionTV(t, key);

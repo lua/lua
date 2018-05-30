@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.354 2018/05/02 18:17:59 roberto Exp roberto $
+** $Id: lvm.c,v 2.355 2018/05/22 12:02:36 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -196,7 +196,7 @@ void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
     if (slot == NULL) {  /* 't' is not a table? */
       lua_assert(!ttistable(t));
       tm = luaT_gettmbyobj(L, t, TM_INDEX);
-      if (notm(tm))
+      if (unlikely(notm(tm)))
         luaG_typeerror(L, t, "index");  /* no metamethod */
       /* else will try the metamethod */
     }
@@ -253,7 +253,7 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
     }
     else {  /* not a table; check metamethod */
       tm = luaT_gettmbyobj(L, t, TM_NEWINDEX);
-      if (notm(tm))
+      if (unlikely(notm(tm)))
         luaG_typeerror(L, t, "index");
     }
     /* try the metamethod */
@@ -561,7 +561,7 @@ void luaV_concat (lua_State *L, int total) {
       /* collect total length and number of strings */
       for (n = 1; n < total && tostring(L, s2v(top - n - 1)); n++) {
         size_t l = vslen(s2v(top - n - 1));
-        if (l >= (MAX_SIZE/sizeof(char)) - tl)
+        if (unlikely(l >= (MAX_SIZE/sizeof(char)) - tl))
           luaG_runerror(L, "string length overflow");
         tl += l;
       }
@@ -605,7 +605,7 @@ void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
     }
     default: {  /* try metamethod */
       tm = luaT_gettmbyobj(L, rb, TM_LEN);
-      if (notm(tm))  /* no metamethod? */
+      if (unlikely(notm(tm)))  /* no metamethod? */
         luaG_typeerror(L, rb, "get length of");
       break;
     }
@@ -622,7 +622,7 @@ void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
 */
 lua_Integer luaV_div (lua_State *L, lua_Integer m, lua_Integer n) {
   if (l_castS2U(n) + 1u <= 1u) {  /* special cases: -1 or 0 */
-    if (n == 0)
+    if (unlikely(n == 0))
       luaG_runerror(L, "attempt to divide by zero");
     return intop(-, 0, m);   /* n==-1; avoid overflow with 0x80000...//-1 */
   }
@@ -642,7 +642,7 @@ lua_Integer luaV_div (lua_State *L, lua_Integer m, lua_Integer n) {
 */
 lua_Integer luaV_mod (lua_State *L, lua_Integer m, lua_Integer n) {
   if (l_castS2U(n) + 1u <= 1u) {  /* special cases: -1 or 0 */
-    if (n == 0)
+    if (unlikely(n == 0))
       luaG_runerror(L, "attempt to perform 'n%%0'");
     return 0;   /* m % -1 == 0; avoid overflow with 0x80000...%-1 */
   }
@@ -1665,7 +1665,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         TValue *plimit = s2v(ra + 1);
         lua_Integer ilimit, initv;
         int stopnow;
-        if (!forlimit(plimit, &ilimit, 1, &stopnow)) {
+        if (unlikely(!forlimit(plimit, &ilimit, 1, &stopnow))) {
             savestate(L, ci);  /* for the error message */
             luaG_runerror(L, "'for' limit must be a number");
         }
@@ -1717,13 +1717,13 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         else {  /* try making all values floats */
           lua_Number ninit; lua_Number nlimit; lua_Number nstep;
           savestate(L, ci);  /* in case of errors */
-          if (!tonumber(plimit, &nlimit))
+          if (unlikely(!tonumber(plimit, &nlimit)))
             luaG_runerror(L, "'for' limit must be a number");
           setfltvalue(plimit, nlimit);
-          if (!tonumber(pstep, &nstep))
+          if (unlikely(!tonumber(pstep, &nstep)))
             luaG_runerror(L, "'for' step must be a number");
           setfltvalue(pstep, nstep);
-          if (!tonumber(init, &ninit))
+          if (unlikely(!tonumber(init, &ninit)))
             luaG_runerror(L, "'for' initial value must be a number");
           setfltvalue(init, luai_numsub(L, ninit, nstep));
         }

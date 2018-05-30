@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.200 2018/03/16 15:33:34 roberto Exp roberto $
+** $Id: ldo.c,v 2.201 2018/05/22 12:02:36 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -182,7 +182,7 @@ int luaD_reallocstack (lua_State *L, int newsize, int raiseerror) {
   StkId newstack = luaM_reallocvector(L, L->stack, lim, newsize, StackValue);
   lua_assert(newsize <= LUAI_MAXSTACK || newsize == ERRORSTACKSIZE);
   lua_assert(L->stack_last - L->stack == L->stacksize - EXTRA_STACK);
-  if (newstack == NULL) {  /* reallocation failed? */
+  if (unlikely(newstack == NULL)) {  /* reallocation failed? */
     if (raiseerror)
       luaM_error(L);
     else return 0;  /* do not raise an error */
@@ -204,7 +204,7 @@ int luaD_reallocstack (lua_State *L, int newsize, int raiseerror) {
 int luaD_growstack (lua_State *L, int n, int raiseerror) {
   int size = L->stacksize;
   int newsize = 2 * size;  /* tentative new size */
-  if (size > LUAI_MAXSTACK) {  /* need more space after extra size? */
+  if (unlikely(size > LUAI_MAXSTACK)) {  /* need more space after extra size? */
     if (raiseerror)
       luaD_throw(L, LUA_ERRERR);  /* error inside message handler */
     else return 0;
@@ -215,7 +215,7 @@ int luaD_growstack (lua_State *L, int n, int raiseerror) {
       newsize = LUAI_MAXSTACK;
     if (newsize < needed)  /* but must respect what was asked for */
       newsize = needed;
-    if (newsize > LUAI_MAXSTACK) {  /* stack overflow? */
+    if (unlikely(newsize > LUAI_MAXSTACK)) {  /* stack overflow? */
       /* add extra size to be able to handle the error message */
       luaD_reallocstack(L, ERRORSTACKSIZE, raiseerror);
       if (raiseerror)
@@ -350,7 +350,7 @@ static StkId rethook (lua_State *L, CallInfo *ci, StkId firstres, int nres) {
 void luaD_tryfuncTM (lua_State *L, StkId func) {
   const TValue *tm = luaT_gettmbyobj(L, s2v(func), TM_CALL);
   StkId p;
-  if (!ttisfunction(tm))
+  if (unlikely(!ttisfunction(tm)))
     luaG_typeerror(L, s2v(func), "call");
   for (p = L->top; p > func; p--)
     setobjs2s(L, p, p-1);
@@ -660,14 +660,14 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
   L->nny = 0;  /* allow yields */
   api_checknelems(L, (L->status == LUA_OK) ? nargs + 1 : nargs);
   status = luaD_rawrunprotected(L, resume, &nargs);
-  if (status == -1)  /* error calling 'lua_resume'? */
+  if (unlikely(status == -1))  /* error calling 'lua_resume'? */
     status = LUA_ERRRUN;
   else {  /* continue running after recoverable errors */
     while (errorstatus(status) && recover(L, status)) {
       /* unroll continuation */
       status = luaD_rawrunprotected(L, unroll, &status);
     }
-    if (errorstatus(status)) {  /* unrecoverable error? */
+    if (unlikely(errorstatus(status))) {  /* unrecoverable error? */
       L->status = cast_byte(status);  /* mark thread as 'dead' */
       seterrorobj(L, status, L->top);  /* push error message */
       L->ci->top = L->top;
@@ -694,7 +694,7 @@ LUA_API int lua_yieldk (lua_State *L, int nresults, lua_KContext ctx,
   luai_userstateyield(L, nresults);
   lua_lock(L);
   api_checknelems(L, nresults);
-  if (L->nny > 0) {
+  if (unlikely(L->nny > 0)) {
     if (L != G(L)->mainthread)
       luaG_runerror(L, "attempt to yield across a C-call boundary");
     else
@@ -727,7 +727,7 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
   ptrdiff_t old_errfunc = L->errfunc;
   L->errfunc = ef;
   status = luaD_rawrunprotected(L, func, u);
-  if (status != LUA_OK) {  /* an error occurred? */
+  if (unlikely(status != LUA_OK)) {  /* an error occurred? */
     StkId oldtop = restorestack(L, old_top);
     luaF_close(L, oldtop);  /* close possible pending closures */
     seterrorobj(L, status, oldtop);

@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.148 2017/12/28 11:51:00 roberto Exp roberto $
+** $Id: llimits.h,v 1.149 2018/01/28 15:13:26 roberto Exp roberto $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -131,8 +131,26 @@ typedef LUAI_UACINT l_uacInt;
 
 
 /*
+** macros to improve jump prediction (used mainly for error handling)
+*/
+#if !defined(likely)
+
+#if defined(__GNUC__)
+#define likely(x)	(__builtin_expect(((x) != 0), 1))
+#define unlikely(x)	(__builtin_expect(((x) != 0), 0))
+#else
+#define likely(x)	(x)
+#define unlikely(x)	(x)
+#endif
+
+#endif
+
+
+/*
 ** non-return type
 */
+#if !defined(l_noret)
+
 #if defined(__GNUC__)
 #define l_noret		void __attribute__((noreturn))
 #elif defined(_MSC_VER) && _MSC_VER >= 1200
@@ -141,6 +159,7 @@ typedef LUAI_UACINT l_uacInt;
 #define l_noret		void
 #endif
 
+#endif
 
 
 /*
