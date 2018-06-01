@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.290 2018/02/27 20:01:55 roberto Exp roberto $
+** $Id: lapi.c,v 2.291 2018/04/04 14:23:41 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -38,10 +38,12 @@ const char lua_ident[] =
 
 
 /* value at a non-valid index */
-#define NONVALIDVALUE		cast(TValue *, luaO_nilobject)
+
+static const TValue nonvalidvaluep = {NILCONSTANT};
+#define NONVALIDVALUE		cast(TValue *, &nonvalidvaluep)
 
 /* corresponding test */
-#define isvalid(o)	((o) != luaO_nilobject)
+#define isvalid(o)	((o) != &nonvalidvaluep)
 
 /* test for pseudo index */
 #define ispseudo(i)		((i) <= LUA_REGISTRYINDEX)

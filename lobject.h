@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.142 2018/04/04 14:23:41 roberto Exp roberto $
+** $Id: lobject.h,v 2.143 2018/06/01 16:51:34 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -148,10 +148,6 @@ typedef StackValue *StkId;  /* index to stack elements */
 #define NILCONSTANT	{NULL}, LUA_TNIL
 
 #define setnilvalue(obj) settt_(obj, LUA_TNIL)
-
-
-/* (address of) a fixed nil value */
-#define luaO_nilobject		(&luaO_nilobject_)
 
 
 /*
@@ -729,8 +725,6 @@ typedef struct Table {
 #define twoto(x)	(1<<(x))
 #define sizenode(t)	(twoto((t)->lsizenode))
 
-
-LUAI_DDEC const TValue luaO_nilobject_;
 
 /* size of buffer for 'luaO_utf8esc' function */
 #define UTF8BUFFSZ	8
