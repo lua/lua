@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.136 2018/05/29 18:01:50 roberto Exp roberto $
+** $Id: ltable.c,v 2.137 2018/05/30 14:25:52 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -93,7 +93,8 @@ static const Node dummynode_ = {
 };
 
 
-LUAI_DDEF const TValue luaH_emptyobject_ = {EMPTYCONSTANT};
+static const TValue absentkey = {ABSTKEYCONSTANT};
+
 
 
 /*
@@ -203,7 +204,7 @@ static const TValue *getgeneric (Table *t, const TValue *key) {
     else {
       int nx = gnext(n);
       if (nx == 0)
-        return luaH_emptyobject;  /* not found */
+        return &absentkey;  /* not found */
       n += nx;
     }
   }
@@ -235,7 +236,7 @@ static unsigned int findindex (lua_State *L, Table *t, TValue *key) {
     return i;  /* yes; that's the index */
   else {
     const TValue *n = getgeneric(t, key);
-    if (unlikely(n == luaH_emptyobject))
+    if (unlikely(isabstkey(n)))
       luaG_runerror(L, "invalid key to 'next'");  /* key not found */
     i = cast_int(nodefromval(n) - gnode(t, 0));  /* key index in hash table */
     /* hash elements are numbered after array ones */
@@ -629,7 +630,7 @@ const TValue *luaH_getint (Table *t, lua_Integer key) {
         n += nx;
       }
     }
-    return luaH_emptyobject;
+    return &absentkey;
   }
 }
 
@@ -646,7 +647,7 @@ const TValue *luaH_getshortstr (Table *t, TString *key) {
     else {
       int nx = gnext(n);
       if (nx == 0)
-        return luaH_emptyobject;  /* not found */
+        return &absentkey;  /* not found */
       n += nx;
     }
   }
@@ -671,7 +672,7 @@ const TValue *luaH_get (Table *t, const TValue *key) {
   switch (ttypetag(key)) {
     case LUA_TSHRSTR: return luaH_getshortstr(t, tsvalue(key));
     case LUA_TNUMINT: return luaH_getint(t, ivalue(key));
-    case LUA_TNIL: return luaH_emptyobject;
+    case LUA_TNIL: return &absentkey;
     case LUA_TNUMFLT: {
       lua_Integer k;
       if (luaV_flttointeger(fltvalue(key), &k, 0)) /* index is an integral? */
@@ -690,7 +691,7 @@ const TValue *luaH_get (Table *t, const TValue *key) {
 */
 TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
   const TValue *p = luaH_get(t, key);
-  if (p != luaH_emptyobject)
+  if (!isabstkey(p))
     return cast(TValue *, p);
   else return luaH_newkey(L, t, key);
 }
@@ -699,7 +700,7 @@ TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
 void luaH_setint (lua_State *L, Table *t, lua_Integer key, TValue *value) {
   const TValue *p = luaH_getint(t, key);
   TValue *cell;
-  if (p != luaH_emptyobject)
+  if (!isabstkey(p))
     cell = cast(TValue *, p);
   else {
     TValue k;

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.355 2018/05/22 12:02:36 roberto Exp roberto $
+** $Id: lvm.c,v 2.356 2018/05/30 14:25:52 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -227,9 +227,9 @@ void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
 /*
 ** Finish a table assignment 't[key] = val'.
 ** If 'slot' is NULL, 't' is not a table.  Otherwise, 'slot' points
-** to the entry 't[key]', or to 'luaH_emptyobject' if there is no such
-** entry.  (The value at 'slot' must be empty, otherwise 'luaV_fastget'
-** would have done the job.)
+** to the entry 't[key]', or to a value with an absent key if there
+** is no such entry.  (The value at 'slot' must be empty, otherwise
+** 'luaV_fastget' would have done the job.)
 */
 void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
                      TValue *val, const TValue *slot) {
@@ -241,7 +241,7 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
       lua_assert(isempty(slot));  /* slot must be empty */
       tm = fasttm(L, h->metatable, TM_NEWINDEX);  /* get metamethod */
       if (tm == NULL) {  /* no metamethod? */
-        if (slot == luaH_emptyobject)  /* no previous entry? */
+        if (isabstkey(slot))  /* no previous entry? */
           slot = luaH_newkey(L, h, key);  /* create one */
         /* no metamethod and (now) there is an entry with given key */
         setobj2t(L, cast(TValue *, slot), val);  /* set its new value */

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.h,v 2.25 2017/06/09 16:48:44 roberto Exp roberto $
+** $Id: ltable.h,v 2.26 2018/02/23 13:13:31 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -21,8 +21,6 @@
 /* true when 't' is using 'dummynode' as its hash part */
 #define isdummy(t)		((t)->lastfree == NULL)
 
-#define luaH_emptyobject	(&luaH_emptyobject_)
-
 
 /* allocated size for hash nodes */
 #define allocsizenode(t)	(isdummy(t) ? 0 : sizenode(t))
@@ -30,9 +28,6 @@
 
 /* returns the Node, given the value of a table entry */
 #define nodefromval(v) 	cast(Node *, (v))
-
-
-LUAI_DDEC const TValue luaH_emptyobject_;
 
 
 LUAI_FUNC const TValue *luaH_getint (Table *t, lua_Integer key);

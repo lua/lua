@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.141 2018/02/26 14:16:05 roberto Exp roberto $
+** $Id: lobject.h,v 2.142 2018/04/04 14:23:41 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -137,7 +137,12 @@ typedef StackValue *StkId;  /* index to stack elements */
 ** ===================================================================
 */
 
-#define ttisnil(o)		checktag((o), LUA_TNIL)
+/* macro to test for (any kind of) nil */
+#define ttisnil(v)		checktype((v), LUA_TNIL)
+
+/* macro to test for a "pure" nil */
+#define ttisstrictnil(o)	checktag((o), LUA_TNIL)
+
 
 /* macro defining a nil value */
 #define NILCONSTANT	{NULL}, LUA_TNIL
@@ -155,17 +160,32 @@ typedef StackValue *StkId;  /* index to stack elements */
 */
 #define LUA_TEMPTY	(LUA_TNIL | (1 << 4))
 
-#define ttisnilorempty(v)	checktype((v), LUA_TNIL)
-
-#define isreallyempty(v)	checktag((v), LUA_TEMPTY)
-
-
-/* By default, entries with any kind of nil are considered empty */
-#define isempty(v)		ttisnilorempty(v)
+/*
+** Variant used only in the value returned for a key not found in a
+** table (absent key).
+*/
+#define LUA_TABSTKEY	(LUA_TNIL | (2 << 4))
 
 
-/* macro defining an empty value */
-#define EMPTYCONSTANT	{NULL}, LUA_TEMPTY
+#define isabstkey(v)		checktag((v), LUA_TABSTKEY)
+
+
+/*
+** macro to detect non-standard nils (used only in assertions)
+*/
+#define isreallyempty(v)	(ttisnil(v) && !ttisstrictnil(v))
+
+
+/*
+** By default, entries with any kind of nil are considered empty.
+** (In any definition, values associated with absent keys must also
+** be accepted as empty.)
+*/
+#define isempty(v)		ttisnil(v)
+
+
+/* macro defining a value corresponding to an absent key */
+#define ABSTKEYCONSTANT		{NULL}, LUA_TABSTKEY
 
 
 /* mark an entry as empty */
