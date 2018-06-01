@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.48 2017/11/28 11:19:07 roberto Exp roberto $
+** $Id: lundump.c,v 2.49 2017/12/07 18:59:52 roberto Exp roberto $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -36,7 +36,7 @@ typedef struct {
 } LoadState;
 
 
-static l_noret error(LoadState *S, const char *why) {
+static l_noret error (LoadState *S, const char *why) {
   luaO_pushfstring(S->L, "%s: %s precompiled chunk", S->name, why);
   luaD_throw(S->L, LUA_ERRSYNTAX);
 }
@@ -95,7 +95,10 @@ static lua_Integer LoadInteger (LoadState *S) {
 }
 
 
-static TString *LoadString (LoadState *S) {
+/*
+** Load a nullable string
+*/
+static TString *LoadStringN (LoadState *S) {
   size_t size = LoadSize(S);
   if (size == 0)
     return NULL;
@@ -109,6 +112,17 @@ static TString *LoadString (LoadState *S) {
     LoadVector(S, getstr(ts), size);  /* load directly in final place */
     return ts;
   }
+}
+
+
+/*
+** Load a non-nullable string.
+*/
+static TString *LoadString (LoadState *S) {
+  TString *st = LoadStringN(S);
+  if (st == NULL)
+    error(S, "bad format for constant string");
+  return st;
 }
 
 
@@ -203,18 +217,18 @@ static void LoadDebug (LoadState *S, Proto *f) {
   for (i = 0; i < n; i++)
     f->locvars[i].varname = NULL;
   for (i = 0; i < n; i++) {
-    f->locvars[i].varname = LoadString(S);
+    f->locvars[i].varname = LoadStringN(S);
     f->locvars[i].startpc = LoadInt(S);
     f->locvars[i].endpc = LoadInt(S);
   }
   n = LoadInt(S);
   for (i = 0; i < n; i++)
-    f->upvalues[i].name = LoadString(S);
+    f->upvalues[i].name = LoadStringN(S);
 }
 
 
 static void LoadFunction (LoadState *S, Proto *f, TString *psource) {
-  f->source = LoadString(S);
+  f->source = LoadStringN(S);
   if (f->source == NULL)  /* no source in dump? */
     f->source = psource;  /* reuse parent's source */
   f->linedefined = LoadInt(S);
