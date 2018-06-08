@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.190 2018/03/07 15:55:38 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.191 2018/04/04 14:23:41 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -288,7 +288,7 @@ OP_SETLIST,/*	A B C	R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B	*/
 
 OP_CLOSURE,/*	A Bx	R(A) := closure(KPROTO[Bx])			*/
 
-OP_VARARG,/*	A B C  	R(A), R(A+1), ..., R(A+C-2) = vararg		*/
+OP_VARARG,/*	A C  	R(A), R(A+1), ..., R(A+C-2) = vararg		*/
 
 OP_PREPVARARG,/*A 	(adjust vararg parameters)			*/
 
