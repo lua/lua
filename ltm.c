@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.67 2018/04/04 14:23:41 roberto Exp roberto $
+** $Id: ltm.c,v 2.68 2018/06/01 17:40:38 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -217,7 +217,7 @@ int luaT_callorderiTM (lua_State *L, const TValue *p1, int v2,
 
 
 void luaT_adjustvarargs (lua_State *L, int nfixparams, CallInfo *ci,
-                         Proto *p) {
+                         const Proto *p) {
   int i;
   int actual = cast_int(L->top - ci->func) - 1;  /* number of arguments */
   int nextra = actual - nfixparams;  /* number of extra arguments */
