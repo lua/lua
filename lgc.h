@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.102 2018/02/19 13:55:34 roberto Exp roberto $
+** $Id: lgc.h,v 2.102 2018/02/19 20:06:56 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -69,13 +69,14 @@
 
 /*
 ** Layout for bit use in 'marked' field. First three bits are
-** used for object "age" in generational mode.
+** used for object "age" in generational mode. Last bit is free
+** to be used by respective objects.
 */
 #define WHITE0BIT	3  /* object is white (type 0) */
 #define WHITE1BIT	4  /* object is white (type 1) */
 #define BLACKBIT	5  /* object is black */
 #define FINALIZEDBIT	6  /* object has been marked for finalization */
-#define TESTGRAYBIT	7  /* used by tests (luaL_checkmemory) */
+
 
 
 #define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)
