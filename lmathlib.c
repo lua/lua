@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.133 2018/05/09 14:54:37 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.134 2018/05/16 11:27:59 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -279,7 +279,7 @@ static int math_type (lua_State *L) {
 #elif (LUA_MAXINTEGER >> 31 >> 31) >= 1
 
 /* 'lua_Integer' has at least 64 bits */
-#define Rand64		LUA_UNSIGNED
+#define Rand64		lua_Unsigned
 
 #endif
 
@@ -325,8 +325,9 @@ static Rand64 nextrand (Rand64 *state) {
 ** Convert bits from a random integer into a float in the
 ** interval [0,1).
 */
-#define maskFIG		(~(~1LLU << (FIGS - 1)))  /* use FIGS bits */
-#define shiftFIG	(l_mathop(0.5) / (1LLU << (FIGS - 1)))  /* 2^(-FIGS) */
+#define maskFIG		(~(~(Rand64)1 << (FIGS - 1)))  /* use FIGS bits */
+#define shiftFIG  \
+	(l_mathop(0.5) / ((Rand64)1 << (FIGS - 1)))  /* 2^(-FIGS) */
 
 static lua_Number I2d (Rand64 x) {
   return (lua_Number)(x & maskFIG) * shiftFIG;
