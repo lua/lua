@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.149 2018/01/28 15:13:26 roberto Exp roberto $
+** $Id: llimits.h,v 1.150 2018/05/30 14:25:52 roberto Exp roberto $
 ** Limits, basic types, and some other 'installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -57,6 +57,12 @@ typedef signed char ls_byte;
 ** (That is, maximum 'n' such that '2^n' fits in the given signed type.)
 */
 #define log2maxs(t)	(sizeof(t) * 8 - 2)
+
+
+/*
+** test whether an unsigned value is a power of 2 (or zero)
+*/
+#define ispow2(x)	(((x) & ((x) - 1)) == 0)
 
 
 /*
