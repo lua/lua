@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.291 2018/04/04 14:23:41 roberto Exp roberto $
+** $Id: lapi.c,v 2.292 2018/06/01 17:40:38 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -50,14 +50,6 @@ static const TValue nonvalidvaluep = {NILCONSTANT};
 
 /* test for upvalue */
 #define isupvalue(i)		((i) < LUA_REGISTRYINDEX)
-
-/* test for valid but not pseudo index */
-#define isstackindex(i, o)	(isvalid(o) && !ispseudo(i))
-
-#define api_checkvalidindex(l,o)  api_check(l, isvalid(o), "invalid index")
-
-#define api_checkstackindex(l, i, o)  \
-	api_check(l, isstackindex(i, o), "index not in the stack")
 
 
 static TValue *index2value (lua_State *L, int idx) {
@@ -233,7 +225,7 @@ LUA_API void lua_copy (lua_State *L, int fromidx, int toidx) {
   lua_lock(L);
   fr = index2value(L, fromidx);
   to = index2value(L, toidx);
-  api_checkvalidindex(L, to);
+  api_check(l, isvalid(to), "invalid index");
   setobj(L, to, fr);
   if (isupvalue(toidx))  /* function upvalue? */
     luaC_barrier(L, clCvalue(s2v(L->ci->func)), fr);
