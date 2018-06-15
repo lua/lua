@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.143 2018/06/01 16:51:34 roberto Exp roberto $
+** $Id: lobject.h,v 2.144 2018/06/01 17:40:38 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -669,11 +669,24 @@ typedef union Node {
 	  (void)L; checkliveness(L,io_); }
 
 
+/*
+** About 'alimit': if 'isrealasize(t)' is true, then 'alimit' is the
+** real size of 'array'. Otherwise, the real size of 'array' is the
+** smallest power of two not smaller than 'alimit' (or zero iff 'alimit'
+** is zero); 'alimit' is then used as a hint for #t.
+*/
+
+#define BITRAS		(1 << 7)
+#define isrealasize(t)		(!((t)->marked & BITRAS))
+#define setrealasize(t)		((t)->marked &= cast_byte(~BITRAS))
+#define setnorealasize(t)	((t)->marked |= BITRAS)
+
+
 typedef struct Table {
   CommonHeader;
   lu_byte flags;  /* 1<<p means tagmethod(p) is not present */
   lu_byte lsizenode;  /* log2 of size of 'node' array */
-  unsigned int sizearray;  /* size of 'array' array */
+  unsigned int alimit;  /* "limit" of 'array' array */
   TValue *array;  /* array part */
   Node *node;
   Node *lastfree;  /* any free position is before this position */

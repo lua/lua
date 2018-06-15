@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.252 2018/02/26 13:35:03 roberto Exp roberto $
+** $Id: lgc.c,v 2.253 2018/03/16 14:22:09 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -398,7 +398,7 @@ static void traverseweakvalue (global_State *g, Table *h) {
   Node *n, *limit = gnodelast(h);
   /* if there is array part, assume it may have white values (it is not
      worth traversing it now just to check) */
-  int hasclears = (h->sizearray > 0);
+  int hasclears = (h->alimit > 0);
   for (n = gnode(h, 0); n < limit; n++) {  /* traverse hash part */
     if (isempty(gval(n)))  /* entry is empty? */
       clearkey(n);  /* clear its key */
@@ -433,8 +433,9 @@ static int traverseephemeron (global_State *g, Table *h) {
   int hasww = 0;  /* true if table has entry "white-key -> white-value" */
   Node *n, *limit = gnodelast(h);
   unsigned int i;
+  unsigned int asize = luaH_realasize(h);
   /* traverse array part */
-  for (i = 0; i < h->sizearray; i++) {
+  for (i = 0; i < asize; i++) {
     if (valiswhite(&h->array[i])) {
       marked = 1;
       reallymarkobject(g, gcvalue(&h->array[i]));
@@ -472,7 +473,8 @@ static int traverseephemeron (global_State *g, Table *h) {
 static void traversestrongtable (global_State *g, Table *h) {
   Node *n, *limit = gnodelast(h);
   unsigned int i;
-  for (i = 0; i < h->sizearray; i++)  /* traverse array part */
+  unsigned int asize = luaH_realasize(h);
+  for (i = 0; i < asize; i++)  /* traverse array part */
     markvalue(g, &h->array[i]);
   for (n = gnode(h, 0); n < limit; n++) {  /* traverse hash part */
     if (isempty(gval(n)))  /* entry is empty? */
@@ -508,7 +510,7 @@ static lu_mem traversetable (global_State *g, Table *h) {
   }
   else  /* not weak */
     traversestrongtable(g, h);
-  return 1 + h->sizearray + 2 * allocsizenode(h);
+  return 1 + h->alimit + 2 * allocsizenode(h);
 }
 
 
@@ -719,7 +721,8 @@ static void clearbyvalues (global_State *g, GCObject *l, GCObject *f) {
     Table *h = gco2t(l);
     Node *n, *limit = gnodelast(h);
     unsigned int i;
-    for (i = 0; i < h->sizearray; i++) {
+    unsigned int asize = luaH_realasize(h);
+    for (i = 0; i < asize; i++) {
       TValue *o = &h->array[i];
       if (iscleared(g, gcvalueN(o)))  /* value was collected? */
         setempty(o);  /* remove entry */

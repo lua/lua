@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.243 2018/03/09 19:24:45 roberto Exp roberto $
+** $Id: ltests.c,v 2.244 2018/06/11 14:19:50 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -248,10 +248,11 @@ static void checkvalref (global_State *g, GCObject *f, const TValue *t) {
 
 static void checktable (global_State *g, Table *h) {
   unsigned int i;
+  unsigned int asize = luaH_realasize(h);
   Node *n, *limit = gnode(h, sizenode(h));
   GCObject *hgc = obj2gco(h);
   checkobjref(g, hgc, h->metatable);
-  for (i = 0; i < h->sizearray; i++)
+  for (i = 0; i < asize; i++)
     checkvalref(g, hgc, &h->array[i]);
   for (n = gnode(h, 0); n < limit; n++) {
     if (!isempty(gval(n))) {
@@ -810,19 +811,23 @@ static int stacklevel (lua_State *L) {
 static int table_query (lua_State *L) {
   const Table *t;
   int i = cast_int(luaL_optinteger(L, 2, -1));
+  unsigned int asize;
   luaL_checktype(L, 1, LUA_TTABLE);
   t = hvalue(obj_at(L, 1));
+  asize = luaH_realasize(t);
   if (i == -1) {
-    lua_pushinteger(L, t->sizearray);
+    lua_pushinteger(L, asize);
     lua_pushinteger(L, allocsizenode(t));
     lua_pushinteger(L, isdummy(t) ? 0 : t->lastfree - t->node);
+    lua_pushinteger(L, t->alimit);
+    return 4;
   }
-  else if ((unsigned int)i < t->sizearray) {
+  else if ((unsigned int)i < asize) {
     lua_pushinteger(L, i);
     pushobject(L, &t->array[i]);
     lua_pushnil(L);
   }
-  else if ((i -= t->sizearray) < sizenode(t)) {
+  else if ((i -= asize) < sizenode(t)) {
     TValue k;
     getnodekey(L, &k, gnode(t, i));
     if (!isempty(gval(gnode(t, i))) ||
