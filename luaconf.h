@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.267 2018/03/09 14:56:02 roberto Exp roberto $
+** $Id: luaconf.h,v 1.268 2018/04/02 13:58:33 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -699,20 +699,12 @@
 
 /*
 @@ LUAI_MAXALIGN defines fields that, when used in a union, ensure
-** "maximum" alignment for the other items in that union.
+** maximum alignment for the other items in that union.
 */
 #define LUAI_MAXALIGN  lua_Number n; double u; void *s; lua_Integer i; long l
 
 /* }================================================================== */
 
-
-/*
-@@ LUA_QL describes how error messages quote program elements.
-** Lua does not use these macros anymore; they are here for
-** compatibility only.
-*/
-#define LUA_QL(x)	"'" x "'"
-#define LUA_QS		LUA_QL("%s")
 
 
 
