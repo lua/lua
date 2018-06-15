@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.138 2018/06/01 16:51:34 roberto Exp roberto $
+** $Id: ltable.c,v 2.139 2018/06/15 14:14:20 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -681,7 +681,8 @@ const TValue *luaH_getint (Table *t, lua_Integer key) {
   if (l_castS2U(key) - 1u < t->alimit)  /* (1 <= key && key <= t->alimit)? */
     return &t->array[key - 1];
   else if (!limitequalsasize(t) &&  /* key still may be in the array part? */
-           (key == t->alimit + 1 || l_castS2U(key) - 1u < luaH_realasize(t))) {
+           (l_castS2U(key) == t->alimit + 1 ||
+            l_castS2U(key) - 1u < luaH_realasize(t))) {
     t->alimit = cast_uint(key);  /* probably '#t' is here now */
     return &t->array[key - 1];
   }
