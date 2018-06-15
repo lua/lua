@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.68 2018/06/01 17:40:38 roberto Exp roberto $
+** $Id: ltm.c,v 2.69 2018/06/08 19:06:59 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -69,7 +69,6 @@ const TValue *luaT_gettm (Table *events, TMS event, TString *ename) {
 
 
 const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
-  static const TValue nilobject = {NILCONSTANT};
   Table *mt;
   switch (ttype(o)) {
     case LUA_TTABLE:
@@ -81,7 +80,7 @@ const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
     default:
       mt = G(L)->mt[ttype(o)];
   }
-  return (mt ? luaH_getshortstr(mt, G(L)->tmname[event]) : &nilobject);
+  return (mt ? luaH_getshortstr(mt, G(L)->tmname[event]) : &G(L)->nilvalue);
 }
 
 

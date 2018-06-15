@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.292 2018/06/01 17:40:38 roberto Exp roberto $
+** $Id: lapi.c,v 2.293 2018/06/15 17:30:52 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -37,13 +37,10 @@ const char lua_ident[] =
   "$LuaAuthors: " LUA_AUTHORS " $";
 
 
-/* value at a non-valid index */
 
-static const TValue nonvalidvaluep = {NILCONSTANT};
-#define NONVALIDVALUE		cast(TValue *, &nonvalidvaluep)
+/* test for a valid index */
+#define isvalid(L, o)	(!ttisnil(o) || o != &G(L)->nilvalue)
 
-/* corresponding test */
-#define isvalid(o)	((o) != &nonvalidvaluep)
 
 /* test for pseudo index */
 #define ispseudo(i)		((i) <= LUA_REGISTRYINDEX)
@@ -57,7 +54,7 @@ static TValue *index2value (lua_State *L, int idx) {
   if (idx > 0) {
     StkId o = ci->func + idx;
     api_check(L, idx <= L->ci->top - (ci->func + 1), "unacceptable index");
-    if (o >= L->top) return NONVALIDVALUE;
+    if (o >= L->top) return &G(L)->nilvalue;
     else return s2v(o);
   }
   else if (!ispseudo(idx)) {  /* negative index */
@@ -70,10 +67,10 @@ static TValue *index2value (lua_State *L, int idx) {
     idx = LUA_REGISTRYINDEX - idx;
     api_check(L, idx <= MAXUPVAL + 1, "upvalue index too large");
     if (ttislcf(s2v(ci->func)))  /* light C function? */
-      return NONVALIDVALUE;  /* it has no upvalues */
+      return &G(L)->nilvalue;  /* it has no upvalues */
     else {
       CClosure *func = clCvalue(s2v(ci->func));
-      return (idx <= func->nupvalues) ? &func->upvalue[idx-1] : NONVALIDVALUE;
+      return (idx <= func->nupvalues) ? &func->upvalue[idx-1] : &G(L)->nilvalue;
     }
   }
 }
@@ -225,7 +222,7 @@ LUA_API void lua_copy (lua_State *L, int fromidx, int toidx) {
   lua_lock(L);
   fr = index2value(L, fromidx);
   to = index2value(L, toidx);
-  api_check(l, isvalid(to), "invalid index");
+  api_check(l, isvalid(L, to), "invalid index");
   setobj(L, to, fr);
   if (isupvalue(toidx))  /* function upvalue? */
     luaC_barrier(L, clCvalue(s2v(L->ci->func)), fr);
@@ -251,7 +248,7 @@ LUA_API void lua_pushvalue (lua_State *L, int idx) {
 
 LUA_API int lua_type (lua_State *L, int idx) {
   const TValue *o = index2value(L, idx);
-  return (isvalid(o) ? ttype(o) : LUA_TNONE);
+  return (isvalid(L, o) ? ttype(o) : LUA_TNONE);
 }
 
 
@@ -296,7 +293,7 @@ LUA_API int lua_isuserdata (lua_State *L, int idx) {
 LUA_API int lua_rawequal (lua_State *L, int index1, int index2) {
   const TValue *o1 = index2value(L, index1);
   const TValue *o2 = index2value(L, index2);
-  return (isvalid(o1) && isvalid(o2)) ? luaV_rawequalobj(o1, o2) : 0;
+  return (isvalid(L, o1) && isvalid(L, o2)) ? luaV_rawequalobj(o1, o2) : 0;
 }
 
 
@@ -323,7 +320,7 @@ LUA_API int lua_compare (lua_State *L, int index1, int index2, int op) {
   lua_lock(L);  /* may call tag method */
   o1 = index2value(L, index1);
   o2 = index2value(L, index2);
-  if (isvalid(o1) && isvalid(o2)) {
+  if (isvalid(L, o1) && isvalid(L, o2)) {
     switch (op) {
       case LUA_OPEQ: i = luaV_equalobj(L, o1, o2); break;
       case LUA_OPLT: i = luaV_lessthan(L, o1, o2); break;

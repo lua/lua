@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.144 2018/06/01 17:40:38 roberto Exp roberto $
+** $Id: lobject.h,v 2.145 2018/06/15 14:14:20 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -143,9 +143,6 @@ typedef StackValue *StkId;  /* index to stack elements */
 /* macro to test for a "pure" nil */
 #define ttisstrictnil(o)	checktag((o), LUA_TNIL)
 
-
-/* macro defining a nil value */
-#define NILCONSTANT	{NULL}, LUA_TNIL
 
 #define setnilvalue(obj) settt_(obj, LUA_TNIL)
 
