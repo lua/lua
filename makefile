@@ -6,7 +6,6 @@
 
 # Warnings valid for both C and C++
 CWARNSCPP= \
-	# -pedantic \  /* warns if we use jump tables */
 	-Wextra \
 	-Wshadow \
 	-Wsign-compare \
@@ -15,9 +14,11 @@ CWARNSCPP= \
 	-Wredundant-decls \
 	-Wdisabled-optimization \
 	-Wdouble-promotion \
- 	-Wstrict-aliasing=3   # not accepted by clang \
- 	-Wno-aggressive-loop-optimizations   # not accepted by clang \
- 	-Wlogical-op   # not accepted by clang \
+ 	-Wstrict-aliasing=3 \
+ 	-Wno-aggressive-loop-optimizations \
+ 	-Wlogical-op \
+	-Werror \
+	# -pedantic   # warns if we use jump tables \
 	# the next warnings generate too much noise, so they are disabled
 	# -Wconversion  -Wno-sign-conversion \
 	# -Wsign-conversion \
@@ -41,14 +42,12 @@ CWARNS= $(CWARNSCPP) $(CWARNSC)
 # -g -DLUA_USER_H='"ltests.h"'
 # -pg -malign-double
 # -DLUA_USE_CTYPE -DLUA_USE_APICHECK
-# (in clang, '-ftrapv' for runtime checks of integer overflows)
+# ('-ftrapv' for runtime checks of integer overflows)
 # -fsanitize=undefined -ftrapv -fno-inline
 TESTS= -DLUA_USER_H='"ltests.h"' -O0
 
-# -mtune=native -fomit-frame-pointer
-# -fno-stack-protector
-# -DLUA_NILINTABLE
-LOCAL = $(TESTS) $(CWARNS) -g -DEXTERNMEMCHECK
+
+# LOCAL = $(TESTS) $(CWARNS) -g
 
 
 
@@ -59,8 +58,8 @@ MYLIBS= -ldl -lreadline
 
 
 CC= gcc
-CFLAGS= -Wall -O2 $(MYCFLAGS) -Wfatal-errors
-AR= ar rcu
+CFLAGS= -Wall -O2 $(MYCFLAGS) -Wfatal-errors -fno-stack-protector -fno-common
+AR= ar rc
 RANLIB= ranlib
 RM= rm -f
 
