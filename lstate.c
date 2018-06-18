@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.153 2018/06/01 17:40:38 roberto Exp roberto $
+** $Id: lstate.c,v 2.154 2018/06/15 19:31:22 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -215,7 +215,7 @@ static void init_registry (lua_State *L, global_State *g) {
 
 /*
 ** open parts of the state that may cause memory-allocation errors.
-** ('g->version' != NULL flags that the state was completely build)
+** ('ttisnil(&g->nilvalue)'' flags that the state was completely build)
 */
 static void f_luaopen (lua_State *L, void *ud) {
   global_State *g = G(L);
@@ -226,7 +226,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   luaT_init(L);
   luaX_init(L);
   g->gcrunning = 1;  /* allow gc */
-  g->version = lua_version(NULL);
+  setnilvalue(&g->nilvalue);
   luai_userstateopen(L);
 }
 
@@ -260,7 +260,7 @@ static void close_state (lua_State *L) {
   global_State *g = G(L);
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
   luaC_freeallobjects(L);  /* collect all objects */
-  if (g->version)  /* closing a fully built state? */
+  if (ttisnil(&g->nilvalue))  /* closing a fully built state? */
     luai_userstateclose(L);
   luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size);
   freestack(L);
@@ -332,7 +332,6 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->strt.hash = NULL;
   setnilvalue(&g->l_registry);
   g->panic = NULL;
-  g->version = NULL;
   g->gcstate = GCSpause;
   g->gckind = KGC_INC;
   g->gcemergency = 0;
@@ -345,7 +344,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->twups = NULL;
   g->totalbytes = sizeof(LG);
   g->GCdebt = 0;
-  setnilvalue(&g->nilvalue);
+  setivalue(&g->nilvalue, 0);  /* to signal that state is not yet built */
   setgcparam(g->gcpause, LUAI_GCPAUSE);
   setgcparam(g->gcstepmul, LUAI_GCMUL);
   g->gcstepsize = LUAI_GCSTEPSIZE;

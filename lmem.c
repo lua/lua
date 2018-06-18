@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.96 2018/01/28 15:13:26 roberto Exp roberto $
+** $Id: lmem.c,v 1.97 2018/05/30 14:25:52 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -123,7 +123,7 @@ void luaM_free_ (lua_State *L, void *block, size_t osize) {
 static void *tryagain (lua_State *L, void *block,
                        size_t osize, size_t nsize) {
   global_State *g = G(L);
-  if (g->version) {  /* is state fully build? */
+  if (ttisnil(&g->nilvalue)) {  /* is state fully build? */
     luaC_fullgc(L, 1);  /* try to free some memory... */
     return (*g->frealloc)(g->ud, block, osize, nsize);  /* try again */
   }

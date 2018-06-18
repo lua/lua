@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.293 2018/02/21 13:48:44 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.294 2018/02/27 18:47:32 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -950,13 +950,11 @@ LUALIB_API lua_State *luaL_newstate (void) {
 
 
 LUALIB_API void luaL_checkversion_ (lua_State *L, lua_Number ver, size_t sz) {
-  const lua_Number *v = lua_version(L);
+  lua_Number v = lua_version(L);
   if (sz != LUAL_NUMSIZES)  /* check numeric types */
     luaL_error(L, "core and library have incompatible numeric types");
-  if (v != lua_version(NULL))
-    luaL_error(L, "multiple Lua VMs detected");
-  else if (*v != ver)
+  else if (v != ver)
     luaL_error(L, "version mismatch: app. needs %f, Lua core provides %f",
-                  (LUAI_UACNUMBER)ver, (LUAI_UACNUMBER)*v);
+                  (LUAI_UACNUMBER)ver, (LUAI_UACNUMBER)v);
 }
 

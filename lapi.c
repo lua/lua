@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.293 2018/06/15 17:30:52 roberto Exp roberto $
+** $Id: lapi.c,v 2.294 2018/06/15 19:31:22 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -138,10 +138,9 @@ LUA_API lua_CFunction lua_atpanic (lua_State *L, lua_CFunction panicf) {
 }
 
 
-LUA_API const lua_Number *lua_version (lua_State *L) {
-  static const lua_Number version = LUA_VERSION_NUM;
-  if (L == NULL) return &version;
-  else return G(L)->version;
+LUA_API lua_Number lua_version (lua_State *L) {
+  UNUSED(L);
+  return LUA_VERSION_NUM;
 }
 
 
