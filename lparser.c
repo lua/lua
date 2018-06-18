@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.179 2018/03/07 15:55:38 roberto Exp roberto $
+** $Id: lparser.c,v 2.180 2018/04/04 14:23:41 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1709,7 +1709,7 @@ LClosure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
   luaD_inctop(L);
   funcstate.f = cl->p = luaF_newproto(L);
   funcstate.f->source = luaS_new(L, name);  /* create and anchor TString */
-  lua_assert(iswhite(funcstate.f));  /* do not need barrier here */
+  luaC_objbarrier(L, funcstate.f, funcstate.f->source);
   lexstate.buff = buff;
   lexstate.dyd = dyd;
   dyd->actvar.n = dyd->gt.n = dyd->label.n = 0;
