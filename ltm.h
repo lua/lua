@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 2.37 2018/06/01 16:51:34 roberto Exp roberto $
+** $Id: ltm.h,v 2.38 2018/06/08 19:06:59 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -58,7 +58,7 @@ typedef enum {
 
 #define ttypename(x)	luaT_typenames_[(x) + 1]
 
-LUAI_DDEC const char *const luaT_typenames_[LUA_TOTALTAGS];
+LUAI_DDEC(const char *const luaT_typenames_[LUA_TOTALTAGS];)
 
 
 LUAI_FUNC const char *luaT_objtypename (lua_State *L, const TValue *o);

@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.268 2018/04/02 13:58:33 roberto Exp roberto $
+** $Id: luaconf.h,v 1.269 2018/06/15 15:49:28 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -254,16 +254,20 @@
 #endif				/* } */
 
 
-/* more often than not the libs go together with the core */
+/*
+** More often than not the libs go together with the core;
+** Functions from the auxiliary library must be exported,
+** but opening functions do not.
+*/
 #define LUALIB_API	LUA_API
-#define LUAMOD_API	LUALIB_API
+#define LUAMOD_API	LUAI_FUNC
 
 
 /*
 @@ LUAI_FUNC is a mark for all extern functions that are not to be
 ** exported to outside modules.
-@@ LUAI_DDEF and LUAI_DDEC are marks for all extern (const) variables
-** that are not to be exported to outside modules (LUAI_DDEF for
+@@ LUAI_DDEF and LUAI_DDEC are marks for all extern (const) variables,
+** none of which to be exported to outside modules (LUAI_DDEF for
 ** definitions and LUAI_DDEC for declarations).
 ** CHANGE them if you need to mark them in some special way. Elf/gcc
 ** (versions 3.2 and later) mark them as "hidden" to optimize access
@@ -280,7 +284,7 @@
 #define LUAI_FUNC	extern
 #endif				/* } */
 
-#define LUAI_DDEC	LUAI_FUNC
+#define LUAI_DDEC(dec)	LUAI_FUNC dec
 #define LUAI_DDEF	/* empty */
 
 /* }================================================================== */

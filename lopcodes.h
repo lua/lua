@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.191 2018/04/04 14:23:41 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.192 2018/06/08 19:07:27 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -339,7 +339,7 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
 ** bit 6: instruction sets 'L->top' for next instruction (when C == 0)
 */
 
-LUAI_DDEC const lu_byte luaP_opmodes[NUM_OPCODES];
+LUAI_DDEC(const lu_byte luaP_opmodes[NUM_OPCODES];)
 
 #define getOpMode(m)	(cast(enum OpMode, luaP_opmodes[m] & 7))
 #define testAMode(m)	(luaP_opmodes[m] & (1 << 3))
@@ -358,7 +358,7 @@ LUAI_DDEC const lu_byte luaP_opmodes[NUM_OPCODES];
 #define opmode(ot,it,t,a,m) (((ot)<<6) | ((it)<<5) | ((t)<<4) | ((a)<<3) | (m))
 
 
-LUAI_DDEC const char *const luaP_opnames[NUM_OPCODES+1];  /* opcode names */
+LUAI_DDEC(const char *const luaP_opnames[NUM_OPCODES+1];)  /* opcode names */
 
 
 /* number of list items to accumulate before a SETLIST instruction */
