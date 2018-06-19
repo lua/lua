@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.269 2018/06/15 15:49:28 roberto Exp roberto $
+** $Id: luaconf.h,v 1.270 2018/06/18 12:51:05 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -255,12 +255,10 @@
 
 
 /*
-** More often than not the libs go together with the core;
-** Functions from the auxiliary library must be exported,
-** but opening functions do not.
+** More often than not the libs go together with the core.
 */
 #define LUALIB_API	LUA_API
-#define LUAMOD_API	LUAI_FUNC
+#define LUAMOD_API	LUA_API
 
 
 /*
