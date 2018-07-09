@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.81 2018/04/04 14:23:41 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.83 2018/06/26 18:00:55 roberto Exp $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -16,92 +16,6 @@
 
 
 /* ORDER OP */
-
-#if defined(LUAI_DEFOPNAMES)
-
-LUAI_DDEF const char *const luaP_opnames[NUM_OPCODES+1] = {
-  "MOVE",
-  "LOADI",
-  "LOADF",
-  "LOADK",
-  "LOADKX",
-  "LOADBOOL",
-  "LOADNIL",
-  "GETUPVAL",
-  "SETUPVAL",
-  "GETTABUP",
-  "GETTABLE",
-  "GETI",
-  "GETFIELD",
-  "SETTABUP",
-  "SETTABLE",
-  "SETI",
-  "SETFIELD",
-  "NEWTABLE",
-  "SELF",
-  "ADDI",
-  "SUBI",
-  "MULI",
-  "MODI",
-  "POWI",
-  "DIVI",
-  "IDIVI",
-  "BANDK",
-  "BORK",
-  "BXORK",
-  "SHRI",
-  "SHLI",
-  "ADD",
-  "SUB",
-  "MUL",
-  "MOD",
-  "POW",
-  "DIV",
-  "IDIV",
-  "BAND",
-  "BOR",
-  "BXOR",
-  "SHL",
-  "SHR",
-  "UNM",
-  "BNOT",
-  "NOT",
-  "LEN",
-  "CONCAT",
-  "CLOSE",
-  "JMP",
-  "EQ",
-  "LT",
-  "LE",
-  "EQK",
-  "EQI",
-  "LTI",
-  "LEI",
-  "GTI",
-  "GEI",
-  "TEST",
-  "TESTSET",
-  "CALL",
-  "TAILCALL",
-  "RETURN",
-  "RETURN0",
-  "RETURN1",
-  "FORLOOP1",
-  "FORPREP1",
-  "FORLOOP",
-  "FORPREP",
-  "TFORCALL",
-  "TFORLOOP",
-  "SETLIST",
-  "CLOSURE",
-  "VARARG",
-  "PREPVARARG",
-  "EXTRAARG",
-  NULL
-};
-
-#endif
-
 
 LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
 /*       OT IT T  A  mode		   opcode  */

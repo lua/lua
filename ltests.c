@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.244 2018/06/11 14:19:50 roberto Exp roberto $
+** $Id: ltests.c,v 2.246 2018/06/26 18:00:55 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -27,6 +27,7 @@
 #include "lfunc.h"
 #include "lmem.h"
 #include "lopcodes.h"
+#include "lopnames.h"
 #include "lstate.h"
 #include "lstring.h"
 #include "ltable.h"
@@ -523,7 +524,7 @@ int lua_checkmemory (lua_State *L) {
 static char *buildop (Proto *p, int pc, char *buff) {
   Instruction i = p->code[pc];
   OpCode o = GET_OPCODE(i);
-  const char *name = luaP_opnames[o];
+  const char *name = opnames[o];
   int line = luaG_getfuncline(p, pc);
   sprintf(buff, "(%4d) %4d - ", line, pc);
   switch (getOpMode(o)) {
@@ -599,7 +600,7 @@ static int printcode (lua_State *L) {
   printf("numparams: %d\n", p->numparams);
   for (pc=0; pc<p->sizecode; pc++) {
     char buff[100];
-    printf("%d\t%s\n", pc + 1, buildop(p, pc, buff));
+    printf("%s\n", buildop(p, pc, buff));
   }
   return 0;
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.192 2018/06/08 19:07:27 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.194 2018/06/26 18:00:55 roberto Exp $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -356,9 +356,6 @@ LUAI_DDEC(const lu_byte luaP_opmodes[NUM_OPCODES];)
 #define isIT(i)		(testITMode(GET_OPCODE(i)) && GETARG_B(i) == 0)
 
 #define opmode(ot,it,t,a,m) (((ot)<<6) | ((it)<<5) | ((t)<<4) | ((a)<<3) | (m))
-
-
-LUAI_DDEC(const char *const luaP_opnames[NUM_OPCODES+1];)  /* opcode names */
 
 
 /* number of list items to accumulate before a SETLIST instruction */
