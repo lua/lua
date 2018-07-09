@@ -1,0 +1,7 @@
+cd testes
+ulimit -S -s 2000
+if { ../lua all.lua; } then 
+  echo -e "\n\n    final OK!!!!\n\n"
+else
+  echo -e "\n\n    >>>> BUG!!!!\n\n"
+fi
