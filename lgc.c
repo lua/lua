@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.253 2018/03/16 14:22:09 roberto Exp roberto $
+** $Id$
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include <string.h>
+
 
 #include "lua.h"
 
@@ -1004,6 +1005,8 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 ** =======================================================
 */
 
+static void setpause (global_State *g);
+
 
 /* mask to erase all color bits, not changing gen-related stuff */
 #define maskgencolors	(~(bitmask(BLACKBIT) | WHITEBITS))
@@ -1275,21 +1278,35 @@ static void fullgen (lua_State *L, global_State *g) {
 ** than last major collection (kept in 'g->GCestimate'), does a major
 ** collection. Otherwise, does a minor collection and set debt to make
 ** another collection when memory grows 'genminormul'% larger.
+** When it does a major collection, it then checks whether it could
+** reclaim at least ?? memory. If not, it sets a long pause for the
+** next collection. (Therefore, the next collection will be a major
+** one, too.)
 ** 'GCdebt <= 0' means an explicit call to GC step with "size" zero;
 ** in that case, always do a minor collection.
 */
 static void genstep (lua_State *L, global_State *g) {
-  lu_mem majorbase = g->GCestimate;
-  int majormul = getgcparam(g->genmajormul);
-  if (g->GCdebt > 0 &&
-      gettotalbytes(g) > (majorbase / 100) * (100 + majormul)) {
+  lu_mem majorbase = g->GCestimate;  /* memory after last major collection */
+  lu_mem majorinc = (majorbase / 100) * getgcparam(g->genmajormul);
+  lu_mem memnew = gettotalbytes(g);
+  if (g->GCdebt > 0 && memnew > majorbase + majorinc) {
     fullgen(L, g);
+    memnew = gettotalbytes(g);
+    if (memnew < majorbase + (majorinc / 2)) {
+      /* collected at least half of memory growth since last major
+         collection; go back to minor collections */
+      luaE_setdebt(g, -(cast(l_mem, (memnew / 100)) * g->genminormul));
+    }
+    else {
+      /* memory seems to be growing; do a long wait for next (major)
+         collection */
+      setpause(g);
+    }
   }
   else {
-    lu_mem mem;
     youngcollection(L, g);
-    mem = gettotalbytes(g);
-    luaE_setdebt(g, -(cast(l_mem, (mem / 100)) * g->genminormul));
+    memnew = gettotalbytes(g);
+    luaE_setdebt(g, -(cast(l_mem, (memnew / 100)) * g->genminormul));
     g->GCestimate = majorbase;  /* preserve base value */
   }
 }
