@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.131 2017/12/13 12:51:42 roberto Exp roberto $
+** $Id: loadlib.c,v 1.133 2018/07/06 13:38:38 roberto Exp $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -421,14 +421,33 @@ static int readable (const char *filename) {
 }
 
 
-static const char *pushnexttemplate (lua_State *L, const char *path) {
+static const char *pushnextfilename (lua_State *L, const char *path) {
   const char *l;
-  while (*path == *LUA_PATH_SEP) path++;  /* skip separators */
-  if (*path == '\0') return NULL;  /* no more templates */
+  if (*path == *LUA_PATH_SEP)
+    path++;  /* skip separator */
+  if (*path == '\0')
+    return NULL;  /* no more names */
   l = strchr(path, *LUA_PATH_SEP);  /* find next separator */
-  if (l == NULL) l = path + strlen(path);
-  lua_pushlstring(L, path, l - path);  /* template */
-  return l;
+  if (l == NULL)  /* no more separators? */
+    l = path + strlen(path);  /* go until the end */
+  lua_pushlstring(L, path, l - path);  /* file name */
+  return l;  /* rest of the path */
+}
+
+
+/*
+** Given a path such as ";blabla.so;blublu.so", pushes the string
+**
+** 	no file 'blabla.so'
+**	no file 'blublu.so'
+*/
+static void pusherrornotfound (lua_State *L, const char *path) {
+  if (*path == *LUA_PATH_SEP)
+    path++;  /* skip separator */
+  lua_pushstring(L, "\n\tno file '");
+  luaL_gsub(L, path, LUA_PATH_SEP, "'\n\tno file '");
+  lua_pushstring(L, "'");
+  lua_concat(L, 3);
 }
 
 
@@ -436,21 +455,18 @@ static const char *searchpath (lua_State *L, const char *name,
                                              const char *path,
                                              const char *sep,
                                              const char *dirsep) {
-  luaL_Buffer msg;  /* to build error message */
-  if (*sep != '\0')  /* non-empty separator? */
+  /* separator is non-empty and appears in 'name'? */
+  if (*sep != '\0' && strchr(name, *sep) != NULL)
     name = luaL_gsub(L, name, sep, dirsep);  /* replace it by 'dirsep' */
-  luaL_buffinit(L, &msg);
-  while ((path = pushnexttemplate(L, path)) != NULL) {
-    const char *filename = luaL_gsub(L, lua_tostring(L, -1),
-                                     LUA_PATH_MARK, name);
-    lua_remove(L, -2);  /* remove path template */
+  /* replace marks ('?') in 'path' by the file name */
+  path = luaL_gsub(L, path, LUA_PATH_MARK, name);
+  while ((path = pushnextfilename(L, path)) != NULL) {
+    const char *filename = lua_tostring(L, -1);
     if (readable(filename))  /* does file exist and is readable? */
       return filename;  /* return that file name */
-    lua_pushfstring(L, "\n\tno file '%s'", filename);
-    lua_remove(L, -2);  /* remove file name */
-    luaL_addvalue(&msg);  /* concatenate error msg. entry */
+    lua_pop(L, 1);  /* else remove file name */
   }
-  luaL_pushresult(&msg);  /* create error message */
+  pusherrornotfound(L, lua_tostring(L, -1));  /* create error message */
   return NULL;  /* not found */
 }
 
