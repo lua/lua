@@ -1,4 +1,4 @@
--- $Id: math.lua,v 1.86 2018/05/09 14:55:52 roberto Exp $
+-- $Id: math.lua,v 1.86 2018/05/09 14:55:52 roberto Exp roberto $
 -- See Copyright Notice in file all.lua
 
 print("testing numbers and math lib")
@@ -138,6 +138,17 @@ assert(1//0.0 == 1/0)
 assert(-1 // 0.0 == -1/0)
 assert(eqT(3.5 // 1.5, 2.0))
 assert(eqT(3.5 // -1.5, -3.0))
+
+do   -- tests for different kinds of opcodes
+  local x, y 
+  x = 1; assert(x // 0.0 == 1/0)
+  x = 1.0; assert(x // 0 == 1/0)
+  x = 3.5; assert(eqT(x // 1, 3.0))
+  assert(eqT(x // -1, -4.0))
+
+  x = 3.5; y = 1.5; assert(eqT(x // y, 2.0))
+  x = 3.5; y = -1.5; assert(eqT(x // y, -3.0))
+end
 
 assert(maxint // maxint == 1)
 assert(maxint // 1 == maxint)

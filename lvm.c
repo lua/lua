@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.358 2018/06/15 14:14:20 roberto Exp roberto $
+** $Id: lvm.c,v 2.359 2018/06/18 17:58:21 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -1182,7 +1182,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         }
         else if (tonumberns(rb, nb)) {
           lua_Number nc = cast_num(ic);
-          setfltvalue(s2v(ra), luai_numdiv(L, nb, nc));
+          setfltvalue(s2v(ra), luai_numidiv(L, nb, nc));
         }
         else
           Protect(luaT_trybiniTM(L, rb, ic, 0, ra, TM_IDIV));
