@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.175 2018/06/18 19:17:35 roberto Exp $}
+@Ci{$Id: manual.of,v 1.175 2018/06/18 19:17:35 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -925,14 +925,17 @@ at the end of this manual.
 @sect2{lexical| @title{Lexical Conventions}
 
 Lua is a @x{free-form} language.
-It ignores spaces (including new lines) and comments
-between lexical elements (@x{tokens}),
+It ignores spaces and comments between lexical elements (@x{tokens}),
 except as delimiters between @x{names} and @x{keywords}.
+In source code,
+Lua recognizes as spaces the standard ASCII white-space
+characters space, form feed, newline,
+carriage return, horizontal tab, and vertical tab.
 
 @def{Names}
 (also called @def{identifiers})
-in Lua can be any string of letters,
-digits, and underscores,
+in Lua can be any string of Latin letters,
+Arabic-Indic digits, and underscores,
 not beginning with a digit and
 not being a reserved word.
 Identifiers are used to name variables, table fields, and labels.
@@ -2436,7 +2439,7 @@ it can do whatever it wants on that Lua state,
 as it should be already protected.
 However,
 when C code operates on other Lua states
-(e.g., a Lua parameter to the function,
+(e.g., a Lua-state argument to the function,
 a Lua state stored in the registry, or
 the result of @Lid{lua_newthread}),
 it should use them only in API calls that cannot raise errors.
@@ -5376,7 +5379,7 @@ In words, if the argument @id{arg} is nil or absent,
 the macro results in the default @id{dflt}.
 Otherwise, it results in the result of calling @id{func}
 with the state @id{L} and the argument index @id{arg} as
-parameters.
+arguments.
 Note that it evaluates the expression @id{dflt} only if needed.
 
 }
@@ -6408,7 +6411,7 @@ Each entry in this table is a @def{searcher function}.
 When looking for a module,
 @Lid{require} calls each of these searchers in ascending order,
 with the module name (the argument given to @Lid{require}) as its
-sole parameter.
+sole argument.
 The function can return another function (the module @def{loader})
 plus an extra value that will be passed to that loader,
 or a string explaining why it did not find that module
@@ -7355,7 +7358,7 @@ Returns the arc sine of @id{x} (in radians).
 
 @index{atan2}
 Returns the arc tangent of @T{y/x} (in radians),
-but uses the signs of both parameters to find the
+but uses the signs of both arguments to find the
 quadrant of the result.
 (It also handles correctly the case of @id{x} being zero.)
 
@@ -7596,7 +7599,7 @@ When called with a file name, it opens the named file (in text mode),
 and sets its handle as the default input file.
 When called with a file handle,
 it simply sets this file handle as the default input file.
-When called without parameters,
+When called without arguments,
 it returns the current default input file.
 
 In case of errors this function raises the error,
@@ -7743,7 +7746,7 @@ the function returns a string or a number with the characters read,
 or @nil if it cannot read data with the specified format.
 (In this latter case,
 the function does not read subsequent formats.)
-When called without parameters,
+When called without arguments,
 it uses a default format that reads the next line
 (see below).
 
@@ -8166,8 +8169,8 @@ The first parameter or local variable has @N{index 1}, and so on,
 following the order that they are declared in the code,
 counting only the variables that are active
 in the current scope of the function.
-Negative indices refer to vararg parameters;
-@num{-1} is the first vararg parameter.
+Negative indices refer to vararg arguments;
+@num{-1} is the first vararg argument.
 The function returns @nil if there is no variable with the given index,
 and raises an error when called with a level out of range.
 (You can call @Lid{debug.getinfo} to check whether the level is valid.)
@@ -8418,7 +8421,7 @@ $ lua -e "print(arg[1])"
 }
 will print @St{-e}.
 If there is a script,
-the script is called with parameters
+the script is called with arguments
 @T{arg[1]}, @Cdots, @T{arg[#arg]}.
 (Like all chunks in Lua,
 the script is compiled as a vararg function.)
