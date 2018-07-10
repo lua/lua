@@ -239,7 +239,7 @@ checkI(function () return ~~-1024.0 end, -1024)
 checkI(function () return ((100 << 6) << -4) >> 2 end, 100)
 
 -- borders around MAXARG_sBx ((((1 << 17) - 1) >> 1) == 65535)
-local sbx = ((1 << "17") - 1) >> 1   -- avoid folding
+local a = 17; local sbx = ((1 << a) - 1) >> 1   -- avoid folding
 checkI(function () return 65535 end, sbx)
 checkI(function () return -65535 end, -sbx)
 checkI(function () return 65536 end, sbx + 1)
