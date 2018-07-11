@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.159 2018/06/15 19:31:22 roberto Exp roberto $
+** $Id: lstate.h $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -48,6 +48,22 @@
 
 */
 
+
+/*
+
+** About 'nCcalls': each thread in Lua (a lua_State) keeps a count of
+** how many "C calls" it has in the C stack, to avoid C-stack overflow.
+** This count is very rough approximation; it considers only recursive
+** functions inside the interpreter, as non-recursive calls can be
+** considered using a fixed (although unknown) amount of stack space.
+**
+** The proper count also includes the number of CallInfo structures
+** allocated by Lua, as a kind of "potential" calls. So, when Lua
+** calls a function (and "consumes" one CallInfo), it needs neither to
+** increment nor to check 'nCcalls', as its use of C stack is already
+** accounted for.
+
+*/
 
 struct lua_longjmp;  /* defined in ldo.c */
 
@@ -212,7 +228,7 @@ struct lua_State {
   int basehookcount;
   int hookcount;
   unsigned short nny;  /* number of non-yieldable calls in stack */
-  unsigned short nCcalls;  /* number of nested C calls */
+  unsigned short nCcalls;  /* number of nested C calls + 'nny' */
   l_signalT hookmask;
   lu_byte allowhook;
 };

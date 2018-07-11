@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.201 2018/05/22 12:02:36 roberto Exp roberto $
+** $Id: ldo.c $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -137,6 +137,7 @@ l_noret luaD_throw (lua_State *L, int errcode) {
 int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
   unsigned short oldnCcalls = L->nCcalls - L->nci;
   struct lua_longjmp lj;
+  lua_assert(L->nCcalls >= L->nci);
   lj.status = LUA_OK;
   lj.previous = L->errorJmp;  /* chain new error handler */
   L->errorJmp = &lj;
@@ -653,7 +654,10 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
   }
   else if (L->status != LUA_YIELD)
     return resume_error(L, "cannot resume dead coroutine", nargs);
-  L->nCcalls = (from) ? from->nCcalls + 1 : 1;
+  if (from == NULL)
+    L->nCcalls = 1;
+  else  /* correct 'nCcalls' for this thread */
+    L->nCcalls = from->nCcalls - from->nci + L->nci + 1;
   if (L->nCcalls >= LUAI_MAXCCALLS)
     return resume_error(L, "C stack overflow", nargs);
   luai_userstateresume(L, nargs);
@@ -677,7 +681,6 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
   *nresults = (status == LUA_YIELD) ? L->ci->u2.nyield
                                     : cast_int(L->top - (L->ci->func + 1));
   L->nny = oldnny;  /* restore 'nny' */
-  L->nCcalls--;
   lua_unlock(L);
   return status;
 }
