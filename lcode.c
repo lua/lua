@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.160 2018/03/16 14:22:09 roberto Exp roberto $
+** $Id: lcode.c $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -309,9 +309,18 @@ void luaK_patchclose (FuncState *fs, int list) {
 }
 
 
+/*
+** MAXimum number of successive Instructions WiTHout ABSolute line
+** information.
+*/
 #if !defined(MAXIWTHABS)
 #define MAXIWTHABS	120
 #endif
+
+
+/* limit for difference between lines in relative line info. */
+#define LIMLINEDIFF	0x80
+
 
 /*
 ** Save line info for a new instruction. If difference from last line
@@ -320,20 +329,52 @@ void luaK_patchclose (FuncState *fs, int list) {
 ** in 'lineinfo' signals the existence of this absolute information.)
 ** Otherwise, store the difference from last line in 'lineinfo'.
 */
-static void savelineinfo (FuncState *fs, Proto *f, int pc, int line) {
+static void savelineinfo (FuncState *fs, Proto *f, int line) {
   int linedif = line - fs->previousline;
-  if (abs(linedif) >= 0x80 || fs->iwthabs++ > MAXIWTHABS) {
+  int pc = fs->pc - 1;  /* last instruction coded */
+  if (abs(linedif) >= LIMLINEDIFF || fs->iwthabs++ > MAXIWTHABS) {
     luaM_growvector(fs->ls->L, f->abslineinfo, fs->nabslineinfo,
                     f->sizeabslineinfo, AbsLineInfo, MAX_INT, "lines");
     f->abslineinfo[fs->nabslineinfo].pc = pc;
     f->abslineinfo[fs->nabslineinfo++].line = line;
-    linedif = ABSLINEINFO;  /* signal there is absolute information */
+    linedif = ABSLINEINFO;  /* signal that there is absolute information */
     fs->iwthabs = 0;  /* restart counter */
   }
   luaM_growvector(fs->ls->L, f->lineinfo, pc, f->sizelineinfo, ls_byte,
                   MAX_INT, "opcodes");
   f->lineinfo[pc] = linedif;
   fs->previousline = line;  /* last line saved */
+}
+
+
+/*
+** Remove line information from the last instruction.
+** If line information for that instruction is absolute, set 'iwthabs'
+** above its max to force the new (replacing) instruction to have
+** absolute line info, too.
+*/
+static void removelastlineinfo (FuncState *fs) {
+  Proto *f = fs->f;
+  int pc = fs->pc - 1;  /* last instruction coded */
+  if (f->lineinfo[pc] != ABSLINEINFO) {  /* relative line info? */
+    fs->previousline -= f->lineinfo[pc];  /* last line saved */
+    fs->iwthabs--;
+  }
+  else {  /* absolute line information */
+    fs->nabslineinfo--;  /* remove it */
+    lua_assert(f->abslineinfo[fs->nabslineinfo].pc = pc);
+    fs->iwthabs = MAXIWTHABS + 1;  /* force next line info to be absolute */
+  }
+}
+
+
+/*
+** Remove the last instruction created, correcting line information
+** accordingly.
+*/
+static void removelastinstruction (FuncState *fs) {
+  removelastlineinfo(fs);
+  fs->pc--;
 }
 
 
@@ -346,9 +387,9 @@ static int luaK_code (FuncState *fs, Instruction i) {
   /* put new instruction in code array */
   luaM_growvector(fs->ls->L, f->code, fs->pc, f->sizecode, Instruction,
                   MAX_INT, "opcodes");
-  f->code[fs->pc] = i;
-  savelineinfo(fs, f, fs->pc, fs->ls->lastline);
-  return fs->pc++;
+  f->code[fs->pc++] = i;
+  savelineinfo(fs, f, fs->ls->lastline);
+  return fs->pc - 1;  /* index of new instruction */
 }
 
 
@@ -986,7 +1027,7 @@ static int jumponcond (FuncState *fs, expdesc *e, int cond) {
   if (e->k == VRELOC) {
     Instruction ie = getinstruction(fs, e);
     if (GET_OPCODE(ie) == OP_NOT) {
-      fs->pc--;  /* remove previous OP_NOT */
+      removelastinstruction(fs);  /* remove previous OP_NOT */
       return condjump(fs, OP_TEST, GETARG_B(ie), 0, !cond);
     }
     /* else go through */
@@ -1572,23 +1613,12 @@ void luaK_posfix (FuncState *fs, BinOpr opr,
 
 
 /*
-** Change line information associated with current position. If that
-** information is absolute, just change it and correct 'previousline'.
-** Otherwise, restore 'previousline' to its value before saving the
-** current position and than saves the line information again, with the
-** new line.
+** Change line information associated with current position, by removing
+** previous info and adding it again with new line.
 */
 void luaK_fixline (FuncState *fs, int line) {
-  Proto *f = fs->f;
-  if (f->lineinfo[fs->pc - 1] == ABSLINEINFO) {
-    lua_assert(f->abslineinfo[fs->nabslineinfo - 1].pc == fs->pc - 1);
-    f->abslineinfo[fs->nabslineinfo - 1].line = line;
-    fs->previousline = line;
-  }
-  else {
-    fs->previousline -= f->lineinfo[fs->pc - 1];  /* undo previous info. */
-    savelineinfo(fs, f, fs->pc - 1, line);  /* redo it */
-  }
+  removelastlineinfo(fs);
+  savelineinfo(fs, fs->f, line);
 }
 
 

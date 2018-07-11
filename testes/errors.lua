@@ -1,4 +1,4 @@
--- $Id: errors.lua,v 1.97 2017/11/28 15:31:56 roberto Exp $
+-- $Id: errors.lua $
 -- See Copyright Notice in file all.lua
 
 print("testing errors")
@@ -299,7 +299,7 @@ end
 local function lineerror (s, l)
   local err,msg = pcall(load(s))
   local line = string.match(msg, ":(%d+):")
-  assert((line and line+0) == l)
+  assert(tonumber(line) == l)
 end
 
 lineerror("local a\n for i=1,'a' do \n print(i) \n end", 2)
@@ -348,6 +348,23 @@ X=3;lineerror((p), 3)
 X=0;lineerror((p), nil)
 X=1;lineerror((p), 2)
 X=2;lineerror((p), 1)
+
+
+lineerror([[
+local b = false
+if not b then
+  error 'test'
+end]], 3)
+
+lineerror([[
+local b = false
+if not b then
+  if not b then
+    if not b then
+      error 'test'
+    end
+  end
+end]], 5)
 
 
 if not _soft then
