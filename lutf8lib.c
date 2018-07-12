@@ -1,5 +1,5 @@
 /*
-** $Id: lutf8lib.c,v 1.16 2016/12/22 13:08:50 roberto Exp roberto $
+** $Id: lutf8lib.c $
 ** Standard library for UTF-8 manipulation
 ** See Copyright Notice in lua.h
 */
@@ -20,7 +20,18 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
+
 #define MAXUNICODE	0x10FFFF
+
+/*
+** Integer type for decoded UTF-8 values; MAXUNICODE needs 21 bits.
+*/
+#if LUAI_BITSINT >= 21
+typedef	unsigned int utfint;
+#else
+typedef unsigned long utfint;
+#endif
+
 
 #define iscont(p)	((*(p) & 0xC0) == 0x80)
 
@@ -37,11 +48,11 @@ static lua_Integer u_posrelat (lua_Integer pos, size_t len) {
 /*
 ** Decode one UTF-8 sequence, returning NULL if byte sequence is invalid.
 */
-static const char *utf8_decode (const char *o, int *val) {
+static const char *utf8_decode (const char *o, utfint *val) {
   static const unsigned int limits[] = {0xFF, 0x7F, 0x7FF, 0xFFFF};
   const unsigned char *s = (const unsigned char *)o;
   unsigned int c = s[0];
-  unsigned int res = 0;  /* final result */
+  utfint res = 0;  /* final result */
   if (c < 0x80)  /* ascii? */
     res = c;
   else {
@@ -53,7 +64,7 @@ static const char *utf8_decode (const char *o, int *val) {
       res = (res << 6) | (cc & 0x3F);  /* add lower 6 bits from cont. byte */
       c <<= 1;  /* to test next bit */
     }
-    res |= ((c & 0x7F) << (count * 5));  /* add first byte */
+    res |= ((utfint)(c & 0x7F) << (count * 5));  /* add first byte */
     if (count > 3 || res > MAXUNICODE || res <= limits[count])
       return NULL;  /* invalid byte sequence */
     s += count;  /* skip continuation bytes read */
@@ -69,8 +80,8 @@ static const char *utf8_decode (const char *o, int *val) {
 ** that interval
 */
 static int utflen (lua_State *L) {
-  int n = 0;
-  size_t len;
+  lua_Integer n = 0;  /* counter for the number of characters */
+  size_t len;  /* string length in bytes */
   const char *s = luaL_checklstring(L, 1, &len);
   lua_Integer posi = u_posrelat(luaL_optinteger(L, 2, 1), len);
   lua_Integer posj = u_posrelat(luaL_optinteger(L, 3, -1), len);
@@ -109,12 +120,12 @@ static int codepoint (lua_State *L) {
   if (posi > pose) return 0;  /* empty interval; return no values */
   if (pose - posi >= INT_MAX)  /* (lua_Integer -> int) overflow? */
     return luaL_error(L, "string slice too long");
-  n = (int)(pose -  posi) + 1;
+  n = (int)(pose -  posi) + 1;  /* upper bound for number of returns */
   luaL_checkstack(L, n, "string slice too long");
-  n = 0;
-  se = s + pose;
+  n = 0;  /* count the number of returns */
+  se = s + pose;  /* string end */
   for (s += posi - 1; s < se;) {
-    int code;
+    utfint code;
     s = utf8_decode(s, &code);
     if (s == NULL)
       return luaL_error(L, "invalid UTF-8 code");
@@ -211,7 +222,7 @@ static int iter_aux (lua_State *L) {
   if (n >= (lua_Integer)len)
     return 0;  /* no more codepoints */
   else {
-    int code;
+    utfint code;
     const char *next = utf8_decode(s + n, &code);
     if (next == NULL || iscont(next))
       return luaL_error(L, "invalid UTF-8 code");
