@@ -1,7 +1,7 @@
--- $Id: gc.lua,v 1.82 2018/03/12 14:19:36 roberto Exp $
+-- $Id: gc.lua $
 -- See Copyright Notice in file all.lua
 
-print('testing garbage collection')
+print('testing incremental garbage collection')
 
 local debug = require"debug"
 

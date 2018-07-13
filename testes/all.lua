@@ -1,5 +1,5 @@
 #!../lua
--- $Id: all.lua,v 1.100 2018/03/09 14:23:48 roberto Exp $
+-- $Id: all.lua $
 -- See Copyright Notice at the end of this file
 
 
@@ -162,7 +162,7 @@ olddofile('strings.lua')
 olddofile('literals.lua')
 dofile('tpack.lua')
 assert(dofile('attrib.lua') == 27)
-
+dofile('gengc.lua')
 assert(dofile('locals.lua') == 5)
 dofile('constructs.lua')
 dofile('code.lua', true)

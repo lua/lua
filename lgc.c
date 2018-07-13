@@ -1,5 +1,5 @@
 /*
-** $Id$
+** $Id: lgc.c $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -212,7 +212,7 @@ void luaC_barrierback_ (lua_State *L, GCObject *o) {
   lua_assert(g->gckind != KGC_GEN || (isold(o) && getage(o) != G_TOUCHED1));
   if (getage(o) != G_TOUCHED2)  /* not already in gray list? */
     linkobjgclist(o, g->grayagain);  /* link it in 'grayagain' */
-  black2gray(o);  /* make table gray (again) */
+  black2gray(o);  /* make object gray (again) */
   setage(o, G_TOUCHED1);  /* touched in current cycle */
 }
 
@@ -515,6 +515,19 @@ static lu_mem traversetable (global_State *g, Table *h) {
 }
 
 
+static int traverseudata (global_State *g, Udata *u) {
+  int i;
+  markobjectN(g, u->metatable);  /* mark its metatable */
+  for (i = 0; i < u->nuvalue; i++)
+    markvalue(g, &u->uv[i].uv);
+  if (g->gckind == KGC_GEN) {
+    linkgclist(u, g->grayagain);  /* keep it in some gray list */
+    black2gray(u);
+  }
+  return 1 + u->nuvalue;
+}
+
+
 /*
 ** Check the cache of a prototype, to keep invariants. If the
 ** cache is white, clear it. (A cache should not prevent the
@@ -610,15 +623,6 @@ static int traversethread (global_State *g, lua_State *th) {
   else if (!g->gcemergency)
     luaD_shrinkstack(th); /* do not change stack in emergency cycle */
   return 1 + th->stacksize;
-}
-
-
-static int traverseudata (global_State *g, Udata *u) {
-  int i;
-  markobjectN(g, u->metatable);  /* mark its metatable */
-  for (i = 0; i < u->nuvalue; i++)
-    markvalue(g, &u->uv[i].uv);
-  return 1 + u->nuvalue;
 }
 
 
