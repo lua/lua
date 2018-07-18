@@ -181,9 +181,13 @@ static int iscleared (global_State *g, const GCObject *o) {
 
 /*
 ** barrier that moves collector forward, that is, mark the white object
-** being pointed by a black object. (If in sweep phase, clear the black
-** object to white [sweep it] to avoid other barrier calls for this
-** same object.)
+** 'v' being pointed by the black object 'o'. (If in sweep phase, clear
+** the black object to white [sweep it] to avoid other barrier calls for
+** this same object.) In the generational mode, 'v' must also become
+** old, if 'o' is old; however, it cannot be changed directly to OLD,
+** because it may still point to non-old objects. So, it is marked as
+** OLD0. In the next cycle it will become OLD1, and in the next it
+** will finally become OLD (regular old).
 */
 void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v) {
   global_State *g = G(L);
@@ -218,13 +222,14 @@ void luaC_barrierback_ (lua_State *L, GCObject *o) {
 
 
 /*
-** Barrier for prototype's cache of closures.  For an 'old1'
-** object, making it gray stops it from being visited by 'markold',
-** so it is linked in the 'grayagain' list to ensure it will be
-** visited. Otherwise, it goes to 'protogray', as only its 'cache' field
-** needs to be revisited.  (A prototype to be in this barrier must be
-** already finished, so its other fields cannot change and do not need
-** to be revisited.)
+** Barrier for prototype's cache of closures. It turns the prototype
+** back to gray (it was black).  For an 'OLD1' prototype, making it
+** gray stops it from being visited by 'markold', so it is linked in
+** the 'grayagain' list to ensure it will be visited. For other ages,
+** it goes to the 'protogray' list, as only its 'cache' field needs to
+** be revisited.  (A prototype to be in this barrier must be already
+** finished, so its other fields cannot change and do not need to be
+** revisited.)
 */
 LUAI_FUNC void luaC_protobarrier_ (lua_State *L, Proto *p) {
   global_State *g = G(L);
@@ -233,7 +238,7 @@ LUAI_FUNC void luaC_protobarrier_ (lua_State *L, Proto *p) {
     linkgclist(p, g->grayagain);  /* link it in 'grayagain' */
   else
     linkgclist(p, g->protogray);  /* link it in 'protogray' */
-  black2gray(p);  /* make prototype gray (to avoid other barriers) */
+  black2gray(p);  /* make prototype gray */
 }
 
 
@@ -533,9 +538,9 @@ static int traverseudata (global_State *g, Udata *u) {
 ** cache is white, clear it. (A cache should not prevent the
 ** collection of its reference.) Otherwise, if in generational
 ** mode, check the generational invariant. If the cache is old,
-** everything is ok. If the prototype is 'old0', everything
+** everything is ok. If the prototype is 'OLD0', everything
 ** is ok too. (It will naturally be visited again.) If the
-** prototype is older than 'old0', then its cache (which is new)
+** prototype is older than 'OLD0', then its cache (which is new)
 ** must be visited again in the next collection, so the prototype
 ** goes to the 'protogray' list. (If the prototype has a cache,
 ** it is already immutable and does not need other barriers;
@@ -1085,9 +1090,9 @@ static void whitelist (global_State *g, GCObject *p) {
 
 
 /*
-** Correct a list of gray objects. Because this correction is
-** done after sweeping, young objects can be white and still
-** be in the list. They are only removed.
+** Correct a list of gray objects.
+** Because this correction is done after sweeping, young objects might
+** be turned white and still be in the list. They are only removed.
 ** For tables and userdata, advance 'touched1' to 'touched2'; 'touched2'
 ** objects become regular old and are removed from the list.
 ** For threads, just remove white ones from the list.
@@ -1104,13 +1109,14 @@ static GCObject **correctgraylist (GCObject **p) {
           changeage(curr, G_TOUCHED1, G_TOUCHED2);
           p = next;  /* go to next element */
         }
-        else {
-          if (!iswhite(curr)) {
+        else {  /* not touched in this cycle */
+          if (!iswhite(curr)) {  /* not white? */
             lua_assert(isold(curr));
-            if (getage(curr) == G_TOUCHED2)
-              changeage(curr, G_TOUCHED2, G_OLD);
+            if (getage(curr) == G_TOUCHED2)  /* advance from G_TOUCHED2... */
+              changeage(curr, G_TOUCHED2, G_OLD);  /* ... to G_OLD */
             gray2black(curr);  /* make it black */
           }
+          /* else, object is white: just remove it from this list */
           *p = *next;  /* remove 'curr' from gray list */
         }
         break;
@@ -1146,7 +1152,7 @@ static void correctgraylists (global_State *g) {
 
 
 /*
-** Mark 'old1' objects when starting a new young collection.
+** Mark 'OLD1' objects when starting a new young collection.
 ** Gray objects are already in some gray list, and so will be visited
 ** in the atomic step.
 */
@@ -1177,9 +1183,9 @@ static void finishgencycle (lua_State *L, global_State *g) {
 
 
 /*
-** Does a young collection. First, mark 'old1' objects.  (Only survival
-** and "recent old" lists can contain 'old1' objects. New lists cannot
-** contain 'old1' objects, at most 'old0' objects that were already
+** Does a young collection. First, mark 'OLD1' objects.  (Only survival
+** and "recent old" lists can contain 'OLD1' objects. New lists cannot
+** contain 'OLD1' objects, at most 'OLD0' objects that were already
 ** visited when marked old.) Then does the atomic step. Then,
 ** sweep all lists and advance pointers. Finally, finish the collection.
 */
