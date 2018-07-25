@@ -1,4 +1,4 @@
--- $Id: locals.lua,v 1.41 2018/06/19 12:25:39 roberto Exp $
+-- $Id: testes/locals.lua $
 -- See Copyright Notice in file all.lua
 
 print('testing local variables and environments')

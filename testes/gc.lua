@@ -1,4 +1,4 @@
--- $Id: gc.lua $
+-- $Id: testes/gc.lua $
 -- See Copyright Notice in file all.lua
 
 print('testing incremental garbage collection')

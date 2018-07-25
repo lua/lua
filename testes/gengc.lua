@@ -1,4 +1,4 @@
--- $Id: gengc.lua $
+-- $Id: testes/gengc.lua $
 -- See Copyright Notice in file all.lua
 
 print('testing generational garbage collection')

@@ -1,4 +1,4 @@
--- $Id: nextvar.lua,v 1.85 2018/06/19 12:24:19 roberto Exp $
+-- $Id: testes/nextvar.lua $
 -- See Copyright Notice in file all.lua
 
 print('testing tables, next, and for')

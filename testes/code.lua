@@ -1,4 +1,4 @@
--- $Id: code.lua,v 1.55 2018/03/12 14:19:36 roberto Exp $
+-- $Id: testes/code.lua $
 -- See Copyright Notice in file all.lua
 
 if T==nil then

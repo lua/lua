@@ -1,4 +1,4 @@
--- $Id: calls.lua,v 1.66 2018/02/09 16:35:21 roberto Exp $
+-- $Id: testes/calls.lua $
 -- See Copyright Notice in file all.lua
 
 print("testing functions and calls")

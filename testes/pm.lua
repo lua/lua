@@ -1,4 +1,4 @@
--- $Id: pm.lua,v 1.50 2018/03/12 14:19:36 roberto Exp $
+-- $Id: testes/pm.lua $
 -- See Copyright Notice in file all.lua
 
 print('testing pattern matching')

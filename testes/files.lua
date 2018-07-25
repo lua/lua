@@ -1,4 +1,4 @@
--- $Id: files.lua,v 1.101 2018/03/12 13:51:02 roberto Exp $
+-- $Id: testes/files.lua $
 -- See Copyright Notice in file all.lua
 
 local debug = require "debug"

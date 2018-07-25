@@ -1,4 +1,4 @@
--- $Id: bitwise.lua,v 1.27 2018/02/21 17:49:39 roberto Exp $
+-- $Id: testes/bitwise.lua $
 -- See Copyright Notice in file all.lua
 
 print("testing bitwise operations")

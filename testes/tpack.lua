@@ -1,4 +1,4 @@
--- $Id: tpack.lua,v 1.14 2018/06/04 14:26:32 roberto Exp $
+-- $Id: testes/tpack.lua $
 -- See Copyright Notice in file all.lua
 
 local pack = string.pack

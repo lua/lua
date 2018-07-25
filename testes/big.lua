@@ -1,4 +1,4 @@
--- $Id: big.lua,v 1.35 2018/03/09 14:23:48 roberto Exp $
+-- $Id: testes/big.lua $
 -- See Copyright Notice in file all.lua
 
 if _soft then

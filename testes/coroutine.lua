@@ -1,4 +1,4 @@
--- $Id: coroutine.lua,v 1.48 2018/03/12 14:19:36 roberto Exp $
+-- $Id: testes/coroutine.lua $
 -- See Copyright Notice in file all.lua
 
 print "testing coroutines"

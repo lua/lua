@@ -1,4 +1,4 @@
--- $Id: api.lua,v 1.155 2018/03/09 14:23:48 roberto Exp $
+-- $Id: testes/api.lua $
 -- See Copyright Notice in file all.lua
 
 if T==nil then

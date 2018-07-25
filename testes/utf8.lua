@@ -1,4 +1,4 @@
--- $Id: utf8.lua,v 1.12 2016/11/07 13:11:28 roberto Exp $
+-- $Id: testes/utf8.lua $
 -- See Copyright Notice in file all.lua
 
 print "testing UTF-8 library"

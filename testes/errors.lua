@@ -1,4 +1,4 @@
--- $Id: errors.lua $
+-- $Id: testes/errors.lua $
 -- See Copyright Notice in file all.lua
 
 print("testing errors")

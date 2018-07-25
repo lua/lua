@@ -1,4 +1,4 @@
--- $Id: constructs.lua,v 1.43 2018/02/21 17:41:07 roberto Exp $
+-- $Id: testes/constructs.lua $
 -- See Copyright Notice in file all.lua
 
 ;;print "testing syntax";;
