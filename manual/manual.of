@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.175 2018/06/18 19:17:35 roberto Exp roberto $}
+@Ci{$Id: manual.of $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -4567,7 +4567,8 @@ This is the only option that can raise a memory error.
 
 }
 
-This function returns 0 if given an invalid option in @id{what}.
+This function returns 0 to signal an invalid option in @id{what};
+even then the valid options are handled correctly.
 
 }
 
@@ -7488,7 +7489,7 @@ you should call @Lid{math.randomseed} explicitly.
 
 The results from this function have good statistical qualities,
 but they are not cryptographically secure.
-(For instance, there are no garanties that it is hard
+(For instance, there are no guarantees that it is hard
 to predict future results based on the observation of
 some number of previous results.)
 
@@ -7496,8 +7497,9 @@ some number of previous results.)
 
 @LibEntry{math.randomseed (x [, y])|
 
-Sets @id{x} and @id{y} as the @Q{seed}
-for the pseudo-random generator:
+The integer parameters @id{x} and @id{y} are
+concatenated into a 128-bit @Q{seed} that
+is used to reinitialize the pseudo-random generator;
 equal seeds produce equal sequences of numbers.
 The default for @id{y} is zero.
 
