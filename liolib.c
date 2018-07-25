@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.155 2018/02/21 13:48:44 roberto Exp roberto $
+** $Id: liolib.c $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -68,7 +68,7 @@ static int l_checkmode (const char *mode) {
 
 /* ISO C definitions */
 #define l_popen(L,c,m)  \
-	  ((void)((void)c, m), \
+	  ((void)c, (void)m, \
 	  luaL_error(L, "'popen' not supported"), \
 	  (FILE*)0)
 #define l_pclose(L,file)		((void)L, (void)file, -1)
@@ -131,6 +131,51 @@ static int l_checkmode (const char *mode) {
 #endif				/* } */
 
 /* }====================================================== */
+
+
+/*
+** {======================================================
+** 'resourcetryagain'
+** This function uses 'errno' to check whether the last error was
+** related to lack of resources (e.g., not enough memory or too many
+** open files).  If so, the function performs a full garbage collection
+** to try to release resources, and then it returns 1 to signal to
+** the caller that it is worth trying again the failed operation.
+** Otherwise, it returns 0.  Because error codes are not ANSI C, the
+** code must handle any combination of error codes that are defined.
+** =======================================================
+*/
+
+static int resourcetryagain (lua_State *L) {
+
+/* these are the resource-related errors in Linux */
+#if defined(EMFILE) || defined(ENFILE) || defined(ENOMEM)
+
+#if !defined(EMFILE)	/* too many open files in the process */
+#define EMFILE		-1	/* if not defined, use an impossible value */
+#endif
+
+#if !defined(ENFILE)	/* too many open files in the system */
+#define ENFILE		-1
+#endif
+
+#if !defined(ENOMEM)	/* not enough memory */
+#define ENOMEM		-1
+#endif
+
+  if (errno == EMFILE || errno == ENFILE || errno == ENOMEM) {
+    lua_gc(L, LUA_GCCOLLECT);  /* try to release resources with a full GC */
+    return 1;  /* signal to try again the creation */
+  }
+
+#endif
+
+  return 0;  /* else, asume errors are not due to lack of resources */
+
+}
+
+/* }====================================================== */
+
 
 
 #define IO_PREFIX	"_IO_"
@@ -245,9 +290,22 @@ static LStream *newfile (lua_State *L) {
 }
 
 
+/*
+** Equivalent to 'fopen', but if it fails due to a lack of resources
+** (see 'resourcetryagain'), do an "emergency" garbage collection to try
+** to close some files and then tries to open the file again.
+*/
+static FILE *trytoopen (lua_State *L, const char *path, const char *mode) {
+  FILE *f = fopen(path, mode);
+  if (f == NULL && resourcetryagain(L))  /* resource failure? */
+    f = fopen(path, mode);  /* try to open again */
+  return f;
+}
+
+
 static void opencheck (lua_State *L, const char *fname, const char *mode) {
   LStream *p = newfile(L);
-  p->f = fopen(fname, mode);
+  p->f = trytoopen(L, fname, mode);
   if (p->f == NULL)
     luaL_error(L, "cannot open file '%s' (%s)", fname, strerror(errno));
 }
@@ -259,7 +317,7 @@ static int io_open (lua_State *L) {
   LStream *p = newfile(L);
   const char *md = mode;  /* to traverse/check mode */
   luaL_argcheck(L, l_checkmode(md), 2, "invalid mode");
-  p->f = fopen(filename, mode);
+  p->f = trytoopen(L, filename, mode);
   return (p->f == NULL) ? luaL_fileresult(L, 0, filename) : 1;
 }
 
@@ -278,6 +336,8 @@ static int io_popen (lua_State *L) {
   const char *mode = luaL_optstring(L, 2, "r");
   LStream *p = newprefile(L);
   p->f = l_popen(L, filename, mode);
+  if (p->f == NULL && resourcetryagain(L))  /* resource failure? */
+    p->f = l_popen(L, filename, mode);  /* try to open again */
   p->closef = &io_pclose;
   return (p->f == NULL) ? luaL_fileresult(L, 0, filename) : 1;
 }

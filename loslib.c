@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.65 2016/07/18 17:58:58 roberto Exp roberto $
+** $Id: loslib.c $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -10,7 +10,6 @@
 #include "lprefix.h"
 
 
-#include <errno.h>
 #include <locale.h>
 #include <stdlib.h>
 #include <string.h>
