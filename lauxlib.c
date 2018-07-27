@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.294 2018/02/27 18:47:32 roberto Exp roberto $
+** $Id: lauxlib.c $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -285,6 +285,50 @@ LUALIB_API int luaL_execresult (lua_State *L, int stat) {
     lua_pushinteger(L, stat);
     return 3;  /* return true/nil,what,code */
   }
+}
+
+/* }====================================================== */
+
+
+/*
+** {======================================================
+** 'luaL_resourcetryagain'
+** This function uses 'errno' to check whether the last error was
+** related to lack of resources (e.g., not enough memory or too many
+** open files).  If so, the function performs a full garbage collection
+** to try to release resources, and then it returns 1 to signal to
+** the caller that it is worth trying again the failed operation.
+** Otherwise, it returns 0.  Because error codes are not ANSI C, the
+** code must handle any combination of error codes that are defined.
+** =======================================================
+*/
+
+LUALIB_API int luaL_resourcetryagain (lua_State *L) {
+
+/* these are the resource-related errors in Linux */
+#if defined(EMFILE) || defined(ENFILE) || defined(ENOMEM)
+
+#if !defined(EMFILE)	/* too many open files in the process */
+#define EMFILE		-1	/* if not defined, use an impossible value */
+#endif
+
+#if !defined(ENFILE)	/* too many open files in the system */
+#define ENFILE		-1
+#endif
+
+#if !defined(ENOMEM)	/* not enough memory */
+#define ENOMEM		-1
+#endif
+
+  if (errno == EMFILE || errno == ENFILE || errno == ENOMEM) {
+    lua_gc(L, LUA_GCCOLLECT);  /* try to release resources with a full GC */
+    return 1;  /* signal to try again the creation */
+  }
+
+#endif
+
+  return 0;  /* else, asume errors are not due to lack of resources */
+
 }
 
 /* }====================================================== */

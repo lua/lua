@@ -133,50 +133,6 @@ static int l_checkmode (const char *mode) {
 /* }====================================================== */
 
 
-/*
-** {======================================================
-** 'resourcetryagain'
-** This function uses 'errno' to check whether the last error was
-** related to lack of resources (e.g., not enough memory or too many
-** open files).  If so, the function performs a full garbage collection
-** to try to release resources, and then it returns 1 to signal to
-** the caller that it is worth trying again the failed operation.
-** Otherwise, it returns 0.  Because error codes are not ANSI C, the
-** code must handle any combination of error codes that are defined.
-** =======================================================
-*/
-
-static int resourcetryagain (lua_State *L) {
-
-/* these are the resource-related errors in Linux */
-#if defined(EMFILE) || defined(ENFILE) || defined(ENOMEM)
-
-#if !defined(EMFILE)	/* too many open files in the process */
-#define EMFILE		-1	/* if not defined, use an impossible value */
-#endif
-
-#if !defined(ENFILE)	/* too many open files in the system */
-#define ENFILE		-1
-#endif
-
-#if !defined(ENOMEM)	/* not enough memory */
-#define ENOMEM		-1
-#endif
-
-  if (errno == EMFILE || errno == ENFILE || errno == ENOMEM) {
-    lua_gc(L, LUA_GCCOLLECT);  /* try to release resources with a full GC */
-    return 1;  /* signal to try again the creation */
-  }
-
-#endif
-
-  return 0;  /* else, asume errors are not due to lack of resources */
-
-}
-
-/* }====================================================== */
-
-
 
 #define IO_PREFIX	"_IO_"
 #define IOPREF_LEN	(sizeof(IO_PREFIX)/sizeof(char) - 1)
@@ -292,12 +248,12 @@ static LStream *newfile (lua_State *L) {
 
 /*
 ** Equivalent to 'fopen', but if it fails due to a lack of resources
-** (see 'resourcetryagain'), do an "emergency" garbage collection to try
-** to close some files and then tries to open the file again.
+** (see 'luaL_resourcetryagain'), do an "emergency" garbage collection
+** to try to close some files and then tries to open the file again.
 */
 static FILE *trytoopen (lua_State *L, const char *path, const char *mode) {
   FILE *f = fopen(path, mode);
-  if (f == NULL && resourcetryagain(L))  /* resource failure? */
+  if (f == NULL && luaL_resourcetryagain(L))  /* resource failure? */
     f = fopen(path, mode);  /* try to open again */
   return f;
 }
@@ -336,7 +292,7 @@ static int io_popen (lua_State *L) {
   const char *mode = luaL_optstring(L, 2, "r");
   LStream *p = newprefile(L);
   p->f = l_popen(L, filename, mode);
-  if (p->f == NULL && resourcetryagain(L))  /* resource failure? */
+  if (p->f == NULL && luaL_resourcetryagain(L))  /* resource failure? */
     p->f = l_popen(L, filename, mode);  /* try to open again */
   p->closef = &io_pclose;
   return (p->f == NULL) ? luaL_fileresult(L, 0, filename) : 1;
@@ -346,6 +302,8 @@ static int io_popen (lua_State *L) {
 static int io_tmpfile (lua_State *L) {
   LStream *p = newfile(L);
   p->f = tmpfile();
+  if (p->f == NULL && luaL_resourcetryagain(L))  /* resource failure? */
+    p->f = tmpfile();  /* try to open again */
   return (p->f == NULL) ? luaL_fileresult(L, 0, NULL) : 1;
 }
 
