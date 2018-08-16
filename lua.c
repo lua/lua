@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.234 2018/03/06 20:30:17 roberto Exp roberto $
+** $Id: lua.c $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -383,8 +383,7 @@ static int handle_luainit (lua_State *L) {
 
 #include <readline/readline.h>
 #include <readline/history.h>
-#define lua_initreadline(L)  \
-	((void)L, rl_readline_name="lua", rl_inhibit_completion=1)
+#define lua_initreadline(L)	((void)L, rl_readline_name="lua")
 #define lua_readline(L,b,p)	((void)L, ((b)=readline(p)) != NULL)
 #define lua_saveline(L,line)	((void)L, add_history(line))
 #define lua_freeline(L,b)	((void)L, free(b))
