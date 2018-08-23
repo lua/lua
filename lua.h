@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.346 2018/04/04 14:23:41 roberto Exp roberto $
+** $Id: lua.h $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file

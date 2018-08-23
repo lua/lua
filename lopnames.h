@@ -1,5 +1,5 @@
 /*
-** $Id: lopnames.h,v 1.1 2018/06/26 18:00:55 roberto Exp $
+** $Id: lopnames.h $
 ** Opcode names
 ** See Copyright Notice in lua.h
 */

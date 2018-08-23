@@ -1,5 +1,5 @@
 /*
-** $Id: ljumptab.h 2018/07/10 13:40:16 $
+** $Id: ljumptab.h $
 ** Jump Table for the Lua interpreter
 ** See Copyright Notice in lua.h
 */

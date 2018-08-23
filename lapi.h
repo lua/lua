@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.h,v 2.10 2017/11/01 18:20:48 roberto Exp $
+** $Id: lapi.h $
 ** Auxiliary functions from Lua API
 ** See Copyright Notice in lua.h
 */
