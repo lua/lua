@@ -295,7 +295,7 @@
 */
 
 /*
-@@ LUA_COMPAT_5_3 controls other macros for compatibility with Lua 5.2.
+@@ LUA_COMPAT_5_3 controls other macros for compatibility with Lua 5.3.
 ** You can define it to get all options, or change specific options
 ** to fit your specific needs.
 */
@@ -315,6 +315,12 @@
 ** luaL_checkint, luaL_checklong, etc.)
 */
 #define LUA_COMPAT_APIINTCASTS
+
+/*
+@@ LUA_COMPAT_LT_LE controls the emulation of the '__le' metamethod
+** using '__lt'.
+*/
+#define LUA_COMPAT_LT_LE
 
 #endif				/* } */
 

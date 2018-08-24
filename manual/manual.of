@@ -474,17 +474,7 @@ The result of the call is always converted to a boolean.
 
 @item{@idx{__le}|
 the less equal (@T{<=}) operation.
-Unlike other operations,
-the less-equal operation can use two different events.
-First, Lua looks for the @idx{__le} metamethod in both operands,
-like in the less than operation.
-If it cannot find such a metamethod,
-then it will try the @idx{__lt} metamethod,
-assuming that @T{a <= b} is equivalent to @T{not (b < a)}.
-As with the other comparison operators,
-the result is always a boolean.
-(This use of the @idx{__lt} event can be removed in future versions;
-it is also slower than a real @idx{__le} metamethod.)
+Behavior similar to the less than operation.
 }
 
 @item{@idx{__index}|
@@ -1643,7 +1633,8 @@ all operations @emphx{wrap around},
 according to the usual rules of two-complement arithmetic.
 (In other words,
 they return the unique representable integer
-that is equal modulo @M{2@sp{64}} to the mathematical result.)
+that is equal modulo @M{2@sp{n}} to the mathematical result,
+where @M{n} is the number of bits of the integer type.)
 }
 
 @sect3{bitwise| @title{Bitwise Operators}
@@ -8535,6 +8526,12 @@ the new implementation preserves the implicit type of the numeral
 in the string.
 For instance, the result of @T{"1" + "2"} now is an integer,
 not a float.
+}
+
+@item{
+The use of the @idx{__lt} metamethod to emulate @id{__le}
+has been removed.
+When needed, this metamethod must be explicitly defined.
 }
 
 }

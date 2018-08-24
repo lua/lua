@@ -1,4 +1,4 @@
--- $Id: testes/coroutine.lua $
+-- $Id: testes/coroutine.lua 2018-07-25 15:31:04 -0300 $
 -- See Copyright Notice in file all.lua
 
 print "testing coroutines"
@@ -619,10 +619,8 @@ end
 
 assert(run(function () if (a>=b) then return '>=' else return '<' end end,
        {"le", "sub"}) == "<")
--- '<=' using '<'
-mt.__le = nil
 assert(run(function () if (a<=b) then return '<=' else return '>' end end,
-       {"lt"}) == "<=")
+       {"le", "sub"}) == "<=")
 assert(run(function () if (a==b) then return '==' else return '~=' end end,
        {"eq"}) == "~=")
 
@@ -677,7 +675,7 @@ do   -- a few more tests for comparsion operators
       return val(a) < val(b)
     end,
   }
-  local mt2 = { __lt = mt1.__lt }   -- no __le
+  local mt2 = { __lt = mt1.__lt, __le = mt1.__le }
 
   local function run (f)
     local co = coroutine.wrap(f)

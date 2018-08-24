@@ -1,4 +1,4 @@
--- $Id: testes/events.lua $
+-- $Id: testes/events.lua 2018-07-25 15:31:04 -0300 $
 -- See Copyright Notice in file all.lua
 
 print('testing metatables')
@@ -217,6 +217,13 @@ t.__lt = function (a,b,c)
  return a<b, "dummy"
 end
 
+t.__le = function (a,b,c)
+  assert(c == nil)
+  if type(a) == 'table' then a = a.x end
+  if type(b) == 'table' then b = b.x end
+ return a<=b, "dummy"
+end
+
 function Op(x) return setmetatable({x=x}, t) end
 
 local function test ()
@@ -235,15 +242,6 @@ local function test ()
 end
 
 test()
-
-t.__le = function (a,b,c)
-  assert(c == nil)
-  if type(a) == 'table' then a = a.x end
-  if type(b) == 'table' then b = b.x end
- return a<=b, "dummy"
-end
-
-test()  -- retest comparisons, now using both `lt' and `le'
 
 
 -- test `partial order'
@@ -266,14 +264,6 @@ t.__lt = function (a,b)
   return next(b) ~= nil
 end
 
-t.__le = nil
-
-assert(Set{1,2,3} < Set{1,2,3,4})
-assert(not(Set{1,2,3,4} < Set{1,2,3,4}))
-assert((Set{1,2,3,4} <= Set{1,2,3,4}))
-assert((Set{1,2,3,4} >= Set{1,2,3,4}))
-assert((Set{1,3} <= Set{3,5}))   -- wrong!! model needs a `le' method ;-)
-
 t.__le = function (a,b)
   for k in pairs(a) do
     if not b[k] then return false end
@@ -281,9 +271,14 @@ t.__le = function (a,b)
   return true
 end
 
-assert(not (Set{1,3} <= Set{3,5}))   -- now its OK!
+assert(Set{1,2,3} < Set{1,2,3,4})
+assert(not(Set{1,2,3,4} < Set{1,2,3,4}))
+assert((Set{1,2,3,4} <= Set{1,2,3,4}))
+assert((Set{1,2,3,4} >= Set{1,2,3,4}))
+assert(not (Set{1,3} <= Set{3,5}))
 assert(not(Set{1,3} <= Set{3,5}))
 assert(not(Set{1,3} >= Set{3,5}))
+
 
 t.__eq = function (a,b)
   for k in pairs(a) do
@@ -376,6 +371,7 @@ t1 = {};  c = {}; setmetatable(c, t1)
 d = {}
 t1.__eq = function () return true end
 t1.__lt = function () return true end
+t1.__le = function () return false end
 setmetatable(d, t1)
 assert(c == d and c < d and not(d <= c))
 t2 = {}

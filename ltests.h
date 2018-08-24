@@ -13,6 +13,7 @@
 
 /* test Lua with compatibility code */
 #define LUA_COMPAT_MATHLIB
+#define LUA_COMPAT_LT_LE
 
 
 #define LUA_DEBUG

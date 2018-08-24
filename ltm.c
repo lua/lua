@@ -188,6 +188,7 @@ int luaT_callorderTM (lua_State *L, const TValue *p1, const TValue *p2,
                       TMS event) {
   if (callbinTM(L, p1, p2, L->top, event))  /* try original event */
     return !l_isfalse(s2v(L->top));
+#if defined(LUA_COMPAT_LT_LE)
   else if (event == TM_LE) {
       /* try '!(p2 < p1)' for '(p1 <= p2)' */
       L->ci->callstatus |= CIST_LEQ;  /* mark it is doing 'lt' for 'le' */
@@ -197,6 +198,7 @@ int luaT_callorderTM (lua_State *L, const TValue *p1, const TValue *p2,
       }
       /* else error will remove this 'ci'; no need to clear mark */
   }
+#endif
   luaG_ordererror(L, p1, p2);  /* no metamethod found */
   return 0;  /* to avoid warnings */
 }
