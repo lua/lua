@@ -655,6 +655,16 @@ lua_Integer luaV_mod (lua_State *L, lua_Integer m, lua_Integer n) {
 }
 
 
+/*
+** Float modulus
+*/
+lua_Number luaV_modf (lua_State *L, lua_Number m, lua_Number n) {
+  lua_Number r;
+  luai_nummod(L, m, n, r);
+  return r;
+}
+
+
 /* number of bits in an integer */
 #define NBITS	cast_int(sizeof(lua_Integer) * CHAR_BIT)
 
@@ -1142,10 +1152,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           setivalue(s2v(ra), luaV_mod(L, ivalue(rb), ic));
         }
         else if (tonumberns(rb, nb)) {
-          lua_Number m;
           lua_Number nc = cast_num(ic);
-          luai_nummod(L, nb, nc, m);
-          setfltvalue(s2v(ra), m);
+          setfltvalue(s2v(ra), luaV_modf(L, nb, nc));
         }
         else
           Protect(luaT_trybiniTM(L, rb, ic, 0, ra, TM_MOD));
@@ -1370,9 +1378,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           setivalue(s2v(ra), luaV_mod(L, ib, ic));
         }
         else if (tonumberns(rb, nb) && tonumberns(rc, nc)) {
-          lua_Number m;
-          luai_nummod(L, nb, nc, m);
-          setfltvalue(s2v(ra), m);
+          setfltvalue(s2v(ra), luaV_modf(L, nb, nc));
         }
         else
           Protect(luaT_trybinTM(L, rb, rc, ra, TM_MOD));

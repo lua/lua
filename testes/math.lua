@@ -1,4 +1,4 @@
--- $Id: testes/math.lua $
+-- $Id: testes/math.lua 2018-07-25 15:31:04 -0300 $
 -- See Copyright Notice in file all.lua
 
 print("testing numbers and math lib")
@@ -541,8 +541,72 @@ assert(eqT(-4 % 3, 2))
 assert(eqT(4 % -3, -2))
 assert(eqT(-4.0 % 3, 2.0))
 assert(eqT(4 % -3.0, -2.0))
+assert(eqT(4 % -5, -1))
+assert(eqT(4 % -5.0, -1.0))
+assert(eqT(4 % 5, 4))
+assert(eqT(4 % 5.0, 4.0))
+assert(eqT(-4 % -5, -4))
+assert(eqT(-4 % -5.0, -4.0))
+assert(eqT(-4 % 5, 1))
+assert(eqT(-4 % 5.0, 1.0))
+assert(eqT(4.25 % 4, 0.25))
+assert(eqT(10.0 % 2, 0.0))
+assert(eqT(-10.0 % 2, 0.0))
+assert(eqT(-10.0 % -2, 0.0))
 assert(math.pi - math.pi % 1 == 3)
 assert(math.pi - math.pi % 0.001 == 3.141)
+
+do   -- very small numbers
+  local i, j = 0, 20000
+  while i < j do
+    local m = (i + j) // 2
+    if 10^-m > 0 then
+      i = m + 1
+    else
+      j = m
+    end
+  end
+  -- 'i' is the smallest possible ten-exponent
+  local b = 10^-(i - (i // 10))   -- a very small number
+  assert(b > 0 and b * b == 0)
+  local delta = b / 1000
+  assert(eq((2.1 * b) % (2 * b), (0.1 * b), delta))
+  assert(eq((-2.1 * b) % (2 * b), (2 * b) - (0.1 * b), delta))
+  assert(eq((2.1 * b) % (-2 * b), (0.1 * b) - (2 * b), delta))
+  assert(eq((-2.1 * b) % (-2 * b), (-0.1 * b), delta))
+end
+
+
+-- basic consistency between integer modulo and float modulo
+for i = -10, 10 do
+  for j = -10, 10 do
+    if j ~= 0 then
+      assert((i + 0.0) % j == i % j)
+    end
+  end
+end
+
+for i = 0, 10 do
+  for j = -10, 10 do
+    if j ~= 0 then
+      assert((2^i) % j == (1 << i) % j)
+    end
+  end
+end
+
+do    -- precision of module for large numbers
+  local i = 10
+  while (1 << i) > 0 do
+    assert((1 << i) % 3 == i % 2 + 1)
+    i = i + 1
+  end
+
+  i = 10
+  while 2^i < math.huge do
+    assert(2^i % 3 == i % 2 + 1)
+    i = i + 1
+  end
+end
 
 assert(eqT(minint % minint, 0))
 assert(eqT(maxint % maxint, 0))

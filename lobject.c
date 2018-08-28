@@ -106,11 +106,7 @@ static lua_Number numarith (lua_State *L, int op, lua_Number v1,
     case LUA_OPPOW: return luai_numpow(L, v1, v2);
     case LUA_OPIDIV: return luai_numidiv(L, v1, v2);
     case LUA_OPUNM: return luai_numunm(L, v1);
-    case LUA_OPMOD: {
-      lua_Number m;
-      luai_nummod(L, v1, v2, m);
-      return m;
-    }
+    case LUA_OPMOD: return luaV_modf(L, v1, v2);
     default: lua_assert(0); return 0;
   }
 }

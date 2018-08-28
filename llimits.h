@@ -293,15 +293,17 @@ typedef unsigned long Instruction;
 #endif
 
 /*
-** modulo: defined as 'a - floor(a/b)*b'; this definition gives NaN when
-** 'b' is huge, but the result should be 'a'. 'fmod' gives the result of
-** 'a - trunc(a/b)*b', and therefore must be corrected when 'trunc(a/b)
-** ~= floor(a/b)'. That happens when the division has a non-integer
-** negative result, which is equivalent to the test below.
+** modulo: defined as 'a - floor(a/b)*b'; the direct computation
+** using this definition has several problems with rounding errors,
+** so it is better to use 'fmod'. 'fmod' gives the result of
+** 'a - trunc(a/b)*b', and therefore must be corrected when
+** 'trunc(a/b) ~= floor(a/b)'. That happens when the division has a
+** non-integer negative result, which is equivalent to the tests below.
 */
 #if !defined(luai_nummod)
 #define luai_nummod(L,a,b,m)  \
-  { (m) = l_mathop(fmod)(a,b); if ((m)*(b) < 0) (m) += (b); }
+  { (void)L; (m) = l_mathop(fmod)(a,b); \
+    if (((m) > 0) ? (b) < 0 : ((m) < 0 && (b) > 0)) (m) += (b); }
 #endif
 
 /* exponentiation */
