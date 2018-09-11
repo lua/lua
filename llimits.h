@@ -298,7 +298,10 @@ typedef unsigned long Instruction;
 ** so it is better to use 'fmod'. 'fmod' gives the result of
 ** 'a - trunc(a/b)*b', and therefore must be corrected when
 ** 'trunc(a/b) ~= floor(a/b)'. That happens when the division has a
-** non-integer negative result, which is equivalent to the tests below.
+** non-integer negative result: non-integer result is equivalent to
+** a non-zero remainder 'm'; negative result is equivalent to 'a' and
+** 'b' with different signs, or 'm' and 'b' with different signs
+** (as the result 'm' of 'fmod' has the same sign of 'a').
 */
 #if !defined(luai_nummod)
 #define luai_nummod(L,a,b,m)  \

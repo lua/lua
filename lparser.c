@@ -1171,9 +1171,9 @@ static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
     suffixedexp(ls, &nv.v);
     if (!vkisindexed(nv.v.k))
       check_conflict(ls, lh, &nv.v);
-    luaE_incCcalls(ls->L);  /* control recursion depth */
+    enterlevel(ls);  /* control recursion depth */
     assignment(ls, &nv, nvars+1);
-    ls->L->nCcalls--;
+    leavelevel(ls);
   }
   else {  /* assignment -> '=' explist */
     int nexps;
