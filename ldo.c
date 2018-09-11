@@ -611,6 +611,13 @@ static int resume_error (lua_State *L, const char *msg, int narg) {
 
 
 /*
+** "Cost" in the C stack for a coroutine invocation.
+*/
+#if !defined(LUAL_COROCSTK)
+#define LUAL_COROCSTK	3
+#endif
+
+/*
 ** Do the work for 'lua_resume' in protected mode. Most of the work
 ** depends on the status of the coroutine: initial state, suspended
 ** inside a hook, or regularly suspended (optionally with a continuation
@@ -642,7 +649,6 @@ static void resume (lua_State *L, void *ud) {
   }
 }
 
-
 LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
                                       int *nresults) {
   int status;
@@ -657,7 +663,7 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
   if (from == NULL)
     L->nCcalls = 1;
   else  /* correct 'nCcalls' for this thread */
-    L->nCcalls = from->nCcalls - from->nci + L->nci + 1;
+    L->nCcalls = from->nCcalls - from->nci + L->nci + LUAL_COROCSTK;
   if (L->nCcalls >= LUAI_MAXCCALLS)
     return resume_error(L, "C stack overflow", nargs);
   luai_userstateresume(L, nargs);
