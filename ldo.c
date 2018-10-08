@@ -91,8 +91,7 @@ struct lua_longjmp {
 static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
   switch (errcode) {
     case LUA_ERRMEM: {  /* memory error? */
-      TString *memerrmsg = luaS_newliteral(L, MEMERRMSG);
-      setsvalue2s(L, oldtop, memerrmsg); /* reuse preregistered msg. */
+      setsvalue2s(L, oldtop, G(L)->memerrmsg); /* reuse preregistered msg. */
       break;
     }
     case LUA_ERRERR: {

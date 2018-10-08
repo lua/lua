@@ -251,6 +251,7 @@ OP_LEN,/*	A B	R(A) := length of R(B)				*/
 OP_CONCAT,/*	A B  	R(A) := R(A).. ... ..R(A + B - 1)		*/
 
 OP_CLOSE,/*	A	close all upvalues >= R(A)			*/
+OP_TBC,/*	A	mark variable A "to be closed"			*/
 OP_JMP,/*	k sJ	pc += sJ  (k is used in code generation)	*/
 OP_EQ,/*	A B	if ((R(A) == R(B)) ~= k) then pc++		*/
 OP_LT,/*	A B	if ((R(A) <  R(B)) ~= k) then pc++		*/

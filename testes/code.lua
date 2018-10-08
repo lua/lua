@@ -64,8 +64,12 @@ end
 
 
 -- some basic instructions
-check(function ()
+check(function ()   -- function does not create upvalues
   (function () end){f()}
+end, 'CLOSURE', 'NEWTABLE', 'GETTABUP', 'CALL', 'SETLIST', 'CALL', 'RETURN0')
+
+check(function (x)   -- function creates upvalues
+  (function () return x end){f()}
 end, 'CLOSURE', 'NEWTABLE', 'GETTABUP', 'CALL', 'SETLIST', 'CALL', 'RETURN')
 
 

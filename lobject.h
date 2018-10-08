@@ -588,6 +588,10 @@ typedef struct UpVal {
 } UpVal;
 
 
+/* variant for "To Be Closed" upvalues */
+#define LUA_TUPVALTBC	(LUA_TUPVAL | (1 << 4))
+
+
 #define ClosureHeader \
 	CommonHeader; lu_byte nupvalues; GCObject *gclist
 

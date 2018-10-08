@@ -255,6 +255,7 @@ static void markupval (FuncState *fs, int level) {
   while (bl->nactvar > level)
     bl = bl->previous;
   bl->upval = 1;
+  fs->needclose = 1;
 }
 
 
@@ -547,6 +548,7 @@ static void open_func (LexState *ls, FuncState *fs, BlockCnt *bl) {
   fs->nups = 0;
   fs->nlocvars = 0;
   fs->nactvar = 0;
+  fs->needclose = 0;
   fs->firstlocal = ls->dyd->actvar.n;
   fs->bl = NULL;
   f->source = ls->source;
@@ -1509,15 +1511,16 @@ static void localfunc (LexState *ls) {
 }
 
 
-static void localstat (LexState *ls) {
+static void commonlocalstat (LexState *ls, TString *firstvar) {
   /* stat -> LOCAL NAME {',' NAME} ['=' explist] */
-  int nvars = 0;
+  int nvars = 1;
   int nexps;
   expdesc e;
-  do {
+  new_localvar(ls, firstvar);
+  while (testnext(ls, ',')) {
     new_localvar(ls, str_checkname(ls));
     nvars++;
-  } while (testnext(ls, ','));
+  }
   if (testnext(ls, '='))
     nexps = explist(ls, &e);
   else {
@@ -1526,6 +1529,29 @@ static void localstat (LexState *ls) {
   }
   adjust_assign(ls, nvars, nexps, &e);
   adjustlocalvars(ls, nvars);
+}
+
+
+static void scopedlocalstat (LexState *ls) {
+  FuncState *fs = ls->fs;
+  new_localvar(ls, str_checkname(ls));
+  checknext(ls, '=');
+  luaK_codeABC(fs, OP_TBC, fs->nactvar, 0, 0);
+  markupval(fs, fs->nactvar);
+  exp1(ls, 0);
+  adjustlocalvars(ls, 1);
+}
+
+
+static void localstat (LexState *ls) {
+  /* stat -> LOCAL NAME {',' NAME} ['=' explist]
+           | LOCAL SCOPED NAME '=' exp */
+  TString *firstvar = str_checkname(ls);
+  if (ls->t.token == TK_NAME &&
+      eqshrstr(firstvar, luaS_newliteral(ls->L, "scoped")))
+    scopedlocalstat(ls);
+  else
+    commonlocalstat(ls, firstvar);
 }
 
 

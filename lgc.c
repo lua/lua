@@ -293,7 +293,8 @@ static void reallymarkobject (global_State *g, GCObject *o) {
       gray2black(o);
       break;
     }
-    case LUA_TUPVAL: {
+    case LUA_TUPVAL:
+    case LUA_TUPVALTBC: {
       UpVal *uv = gco2upv(o);
       if (!upisopen(uv))  /* open upvalues are kept gray */
         gray2black(o);
@@ -760,6 +761,7 @@ static void freeobj (lua_State *L, GCObject *o) {
       luaF_freeproto(L, gco2p(o));
       break;
     case LUA_TUPVAL:
+    case LUA_TUPVALTBC:
       freeupval(L, gco2upv(o));
       break;
     case LUA_TLCL:

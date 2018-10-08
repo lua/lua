@@ -173,6 +173,15 @@ end
 assert(x==20)
 
 
+-- tests for to-be-closed variables
+do
+  local scoped x = 3
+  local a
+  local scoped y = 5
+  assert(x == 3 and y == 5)
+end
+
+
 print('OK')
 
 return 5,f

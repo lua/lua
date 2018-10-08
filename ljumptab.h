@@ -74,6 +74,7 @@ static void *disptab[] = {
 &&L_OP_LEN,
 &&L_OP_CONCAT,
 &&L_OP_CLOSE,
+&&L_OP_TBC,
 &&L_OP_JMP,
 &&L_OP_EQ,
 &&L_OP_LT,

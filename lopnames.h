@@ -59,6 +59,7 @@ static const char *const opnames[] = {
   "LEN",
   "CONCAT",
   "CLOSE",
+  "TBC",
   "JMP",
   "EQ",
   "LT",

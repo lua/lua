@@ -357,7 +357,8 @@ static void checkrefs (global_State *g, GCObject *o) {
       checkudata(g, gco2u(o));
       break;
     }
-    case LUA_TUPVAL: {
+    case LUA_TUPVAL:
+    case LUA_TUPVALTBC: {
       checkvalref(g, o, gco2upv(o)->v);
       break;
     }
@@ -522,35 +523,37 @@ int lua_checkmemory (lua_State *L) {
 
 
 static char *buildop (Proto *p, int pc, char *buff) {
+  char *obuff = buff;
   Instruction i = p->code[pc];
   OpCode o = GET_OPCODE(i);
   const char *name = opnames[o];
   int line = luaG_getfuncline(p, pc);
   int lineinfo = (p->lineinfo != NULL) ? p->lineinfo[pc] : 0;
-  sprintf(buff, "(%2d - %4d) %4d - ", lineinfo, line, pc);
+  if (lineinfo == ABSLINEINFO)
+    buff += sprintf(buff, "(__");
+  else
+    buff += sprintf(buff, "(%2d", lineinfo);
+  buff += sprintf(buff, " - %4d) %4d - ", line, pc);
   switch (getOpMode(o)) {
     case iABC:
-      sprintf(buff+strlen(buff), "%-12s%4d %4d %4d%s", name,
+      sprintf(buff, "%-12s%4d %4d %4d%s", name,
               GETARG_A(i), GETARG_B(i), GETARG_C(i),
               GETARG_k(i) ? " (k)" : "");
       break;
     case iABx:
-      sprintf(buff+strlen(buff), "%-12s%4d %4d", name, GETARG_A(i),
-                                                       GETARG_Bx(i));
+      sprintf(buff, "%-12s%4d %4d", name, GETARG_A(i), GETARG_Bx(i));
       break;
     case iAsBx:
-      sprintf(buff+strlen(buff), "%-12s%4d %4d", name, GETARG_A(i),
-                                                       GETARG_sBx(i));
+      sprintf(buff, "%-12s%4d %4d", name, GETARG_A(i), GETARG_sBx(i));
       break;
     case iAx:
-      sprintf(buff+strlen(buff), "%-12s%4d", name, GETARG_Ax(i));
+      sprintf(buff, "%-12s%4d", name, GETARG_Ax(i));
       break;
     case isJ:
-      sprintf(buff+strlen(buff), "%-12s%4d (%1d)", name, GETARG_sJ(i),
-                                                         !!GETARG_m(i));
+      sprintf(buff, "%-12s%4d (%1d)", name, GETARG_sJ(i), !!GETARG_m(i));
       break;
   }
-  return buff;
+  return obuff;
 }
 
 
