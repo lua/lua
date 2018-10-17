@@ -609,6 +609,7 @@ static int traverseLclosure (global_State *g, LClosure *cl) {
 ** That ensures that the entire stack have valid (non-dead) objects.
 */
 static int traversethread (global_State *g, lua_State *th) {
+  UpVal *uv;
   StkId o = th->stack;
   if (o == NULL)
     return 1;  /* stack not completely built yet */
@@ -616,6 +617,10 @@ static int traversethread (global_State *g, lua_State *th) {
              th->openupval == NULL || isintwups(th));
   for (; o < th->top; o++)  /* mark live elements in the stack */
     markvalue(g, s2v(o));
+  for (uv = th->openupval; uv != NULL; uv = uv->u.open.next) {
+    if (uv->tt == LUA_TUPVALTBC)  /* to be closed? */
+      markobject(g, uv);  /* cannot be collected */
+  }
   if (g->gcstate == GCSatomic) {  /* final traversal? */
     StkId lim = th->stack + th->stacksize;  /* real end of stack */
     for (; o < lim; o++)  /* clear not-marked stack slice */

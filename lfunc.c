@@ -14,6 +14,7 @@
 
 #include "lua.h"
 
+#include "ldo.h"
 #include "lfunc.h"
 #include "lgc.h"
 #include "lmem.h"
@@ -83,6 +84,40 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
 }
 
 
+static void callclose (lua_State *L, void *ud) {
+  luaD_callnoyield(L, cast(StkId, ud), 0);
+}
+
+
+static int closeupval (lua_State *L, UpVal *uv, StkId level, int status) {
+  StkId func = level + 1;  /* save slot for old error message */
+  if (status != LUA_OK)  /* was there an error? */
+    luaD_seterrorobj(L, status, level);  /* save error message */
+  else
+    setnilvalue(s2v(level));
+  if (ttisfunction(uv->v)) {  /* object to-be-closed is a function? */
+    setobj2s(L, func, uv->v);  /* will call it */
+    setobjs2s(L, func + 1, level);  /* error msg. as argument */
+  }
+  else {  /* try '__close' metamethod */
+    const TValue *tm = luaT_gettmbyobj(L, uv->v, TM_CLOSE);
+    if (ttisnil(tm))
+      return status;  /* no metamethod */
+    setobj2s(L, func, tm);  /* will call metamethod */
+    setobj2s(L, func + 1, uv->v);  /* with 'self' as argument */
+  }
+  L->top = func + 2;  /* add function and argument */
+  if (status == LUA_OK)  /* not in "error mode"? */
+    callclose(L, func);  /* call closing method */
+  else {  /* already inside error handler; cannot raise another error */
+    int newstatus = luaD_pcall(L, callclose, func, savestack(L, level), 0);
+    if (newstatus != LUA_OK)  /* error when closing? */
+      status = newstatus;  /* this will be the new error */
+  }
+  return status;
+}
+
+
 void luaF_unlinkupval (UpVal *uv) {
   lua_assert(upisopen(uv));
   *uv->u.open.previous = uv->u.open.next;
@@ -91,10 +126,10 @@ void luaF_unlinkupval (UpVal *uv) {
 }
 
 
-void luaF_close (lua_State *L, StkId level) {
+int luaF_close (lua_State *L, StkId level, int status) {
   UpVal *uv;
-  while (L->openupval != NULL &&
-        (uv = L->openupval, uplevel(uv) >= level)) {
+  while ((uv = L->openupval) != NULL && uplevel(uv) >= level) {
+    StkId upl = uplevel(uv);
     TValue *slot = &uv->u.value;  /* new position for value */
     luaF_unlinkupval(uv);
     setobj(L, slot, uv->v);  /* move value to upvalue slot */
@@ -102,7 +137,13 @@ void luaF_close (lua_State *L, StkId level) {
     if (!iswhite(uv))
       gray2black(uv);  /* closed upvalues cannot be gray */
     luaC_barrier(L, uv, slot);
+    if (status >= 0 && uv->tt == LUA_TUPVALTBC) {  /* must be closed? */
+      ptrdiff_t levelrel = savestack(L, level);
+      status = closeupval(L, uv, upl, status);  /* may reallocate the stack */
+      level = restorestack(L, levelrel);
+    }
   }
+  return status;
 }
 
 

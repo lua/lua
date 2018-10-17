@@ -1452,13 +1452,12 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_CLOSE) {
-        luaF_close(L, ra);
+        luaF_close(L, ra, LUA_OK);
         vmbreak;
       }
       vmcase(OP_TBC) {
         UpVal *up = luaF_findupval(L, ra);  /* create new upvalue */
         up->tt = LUA_TUPVALTBC;  /* mark it to be closed */
-        setnilvalue(s2v(ra));  /* intialize it with nil */
         vmbreak;
       }
       vmcase(OP_JMP) {
@@ -1591,7 +1590,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           int nparams1 = GETARG_C(i);
           if (nparams1)  /* vararg function? */
             delta = ci->u.l.nextraargs + nparams1;
-          luaF_close(L, base);  /* close upvalues from current call */
+          luaF_close(L, base, LUA_OK);  /* close upvalues from current call */
         }
         if (!ttisfunction(s2v(ra))) {  /* not a function? */
           luaD_tryfuncTM(L, ra);  /* try '__call' metamethod */
@@ -1625,7 +1624,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           int nparams1 = GETARG_C(i);
           if (nparams1)  /* vararg function? */
             ci->func -= ci->u.l.nextraargs + nparams1;
-          luaF_close(L, base);  /* there may be open upvalues */
+          luaF_close(L, base, LUA_OK);  /* there may be open upvalues */
         }
         halfProtect(luaD_poscall(L, ci, n));
         return;

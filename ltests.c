@@ -1208,7 +1208,7 @@ static int getindex_aux (lua_State *L, lua_State *L1, const char **pc) {
 
 static void pushcode (lua_State *L, int code) {
   static const char *const codes[] = {"OK", "YIELD", "ERRRUN",
-                   "ERRSYNTAX", "ERRMEM", "ERRGCMM", "ERRERR"};
+                   "ERRSYNTAX", MEMERRMSG, "ERRGCMM", "ERRERR"};
   lua_pushstring(L, codes[code]);
 }
 

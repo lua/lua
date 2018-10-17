@@ -1536,9 +1536,9 @@ static void scopedlocalstat (LexState *ls) {
   FuncState *fs = ls->fs;
   new_localvar(ls, str_checkname(ls));
   checknext(ls, '=');
+  exp1(ls, 0);
   luaK_codeABC(fs, OP_TBC, fs->nactvar, 0, 0);
   markupval(fs, fs->nactvar);
-  exp1(ls, 0);
   adjustlocalvars(ls, 1);
 }
 

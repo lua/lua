@@ -1,4 +1,4 @@
--- $Id: testes/api.lua $
+-- $Id: testes/api.lua 2018-07-25 15:31:04 -0300 $
 -- See Copyright Notice in file all.lua
 
 if T==nil then
@@ -1024,6 +1024,18 @@ end)
 
 testamem("coroutine creation", function()
            return coroutine.create(print)
+end)
+
+
+-- testing to-be-closed variables
+testamem("to-be-closed variables", function()
+  local flag
+  do
+    local scoped x = function () flag = true end
+    flag = false
+    local x = {}
+  end
+  return flag
 end)
 
 

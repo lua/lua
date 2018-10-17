@@ -173,14 +173,68 @@ end
 assert(x==20)
 
 
--- tests for to-be-closed variables
+print"testing to-be-closed variables"
+
 do
-  local scoped x = 3
-  local a
-  local scoped y = 5
-  assert(x == 3 and y == 5)
+  local a = {}
+  do
+    local scoped x = setmetatable({"x"}, {__close = function (self)
+                                                   a[#a + 1] = self[1] end})
+    local scoped y = function () a[#a + 1] = "y" end
+    a[#a + 1] = "in"
+  end
+  a[#a + 1] = "out"
+  assert(a[1] == "in" and a[2] == "y" and a[3] == "x" and a[4] == "out")
 end
 
+
+do   -- errors in __close
+  local log = {}
+  local function foo (err)
+    local scoped x = function (msg) log[#log + 1] = msg; error(1) end
+    local scoped x1 = function (msg) log[#log + 1] = msg; end
+    local scoped gc = function () collectgarbage() end
+    local scoped y = function (msg) log[#log + 1] = msg; error(2) end
+    local scoped z = function (msg) log[#log + 1] = msg or 10; error(3) end
+    if err then error(4) end
+  end
+  local stat, msg = pcall(foo, false)
+  assert(msg == 1)
+  assert(log[1] == 10 and log[2] == 3 and log[3] == 2 and log[4] == 2
+         and #log == 4)
+
+  log = {}
+  local stat, msg = pcall(foo, true)
+  assert(msg == 1)
+  assert(log[1] == 4 and log[2] == 3 and log[3] == 2 and log[4] == 2
+         and #log == 4)
+end
+
+do
+  -- memory error inside closing function
+  local function foo ()
+    local scoped y = function () io.write(2); T.alloccount() end
+    local scoped x = setmetatable({}, {__close = function ()
+      T.alloccount(0); local x = {}   -- force a memory error
+    end})
+    io.write("1\n")
+    error("a")   -- common error inside the function's body
+  end
+
+  local _, msg = pcall(foo)
+T.alloccount()
+  assert(msg == "not enough memory")
+
+end
+
+
+-- a suspended coroutine should not close its variables when collected
+local co = coroutine.wrap(function()
+  local scoped x = function () os.exit(1) end    -- should not run
+   coroutine.yield()
+end)
+co()
+co = nil
 
 print('OK')
 
