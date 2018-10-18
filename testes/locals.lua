@@ -180,7 +180,7 @@ do
   do
     local scoped x = setmetatable({"x"}, {__close = function (self)
                                                    a[#a + 1] = self[1] end})
-    local scoped y = function () a[#a + 1] = "y" end
+    local scoped y = function (x) assert(x == nil); a[#a + 1] = "y" end
     a[#a + 1] = "in"
   end
   a[#a + 1] = "out"
@@ -210,27 +210,73 @@ do   -- errors in __close
          and #log == 4)
 end
 
-do
+if rawget(_G, "T") then
+  local function stack(n) n = (n == 0) or stack(n - 1); end;
   -- memory error inside closing function
   local function foo ()
-    local scoped y = function () io.write(2); T.alloccount() end
+    local scoped y = function () T.alloccount() end
     local scoped x = setmetatable({}, {__close = function ()
       T.alloccount(0); local x = {}   -- force a memory error
     end})
-    io.write("1\n")
     error("a")   -- common error inside the function's body
   end
 
+  stack(5)    -- ensure a minimal number of CI structures
+
+  -- despite memory error, 'y' will be executed and
+  -- memory limit will be lifted
   local _, msg = pcall(foo)
-T.alloccount()
   assert(msg == "not enough memory")
+
+  local function close (msg)
+    T.alloccount()
+    assert(msg == "not enough memory")
+  end
+
+  -- set a memory limit and return a closing function to remove the limit
+  local function enter (count)
+    stack(10)   -- reserve some stack space
+    T.alloccount(count)
+    return close
+  end
+
+  local function test ()
+    local scoped x = enter(0)   -- set a memory limit
+    -- creation of previous upvalue will raise a memory error
+    os.exit(false)    -- should not run
+  end
+
+  local _, msg = pcall(test)
+  assert(msg == "not enough memory")
+
+  -- now use metamethod for closing
+  close = setmetatable({}, {__close = function ()
+    T.alloccount()
+  end})
+
+  -- repeat test with extra closing upvalues
+  local function test ()
+    local scoped xxx = function (msg)
+      assert(msg == "not enough memory");
+      error(1000)   -- raise another error
+    end
+    local scoped xx = function (msg)
+      assert(msg == "not enough memory");
+    end
+    local scoped x = enter(0)   -- set a memory limit
+    -- creation of previous upvalue will raise a memory error
+    os.exit(false)    -- should not run
+  end
+
+  local _, msg = pcall(test)
+  assert(msg == 1000)
 
 end
 
 
 -- a suspended coroutine should not close its variables when collected
 local co = coroutine.wrap(function()
-  local scoped x = function () os.exit(1) end    -- should not run
+  local scoped x = function () os.exit(false) end    -- should not run
    coroutine.yield()
 end)
 co()

@@ -1456,8 +1456,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_TBC) {
-        UpVal *up = luaF_findupval(L, ra);  /* create new upvalue */
-        up->tt = LUA_TUPVALTBC;  /* mark it to be closed */
+        luaF_newtbcupval(L, ra);  /* create new to-be-closed upvalue */
         vmbreak;
       }
       vmcase(OP_JMP) {
