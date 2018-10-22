@@ -1,4 +1,4 @@
--- $Id: testes/coroutine.lua 2018-07-25 15:31:04 -0300 $
+-- $Id: testes/coroutine.lua $
 -- See Copyright Notice in file all.lua
 
 print "testing coroutines"
