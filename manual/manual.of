@@ -664,7 +664,9 @@ The default value is 20; the maximum value is 200.
 You can set garbage-collector metamethods for tables
 and, using the @N{C API},
 for full userdata @see{metatable}.
-These metamethods are also called @def{finalizers}.
+These metamethods, called @def{finalizers},
+are called when the garbage collector detects that the
+corresponding table or userdata is unreachable.
 Finalizers allow you to coordinate Lua's garbage collection
 with external resource management
 (such as closing files, network or database connections,
@@ -720,6 +722,10 @@ Lua calls the finalizers of all objects marked for finalization,
 following the reverse order that they were marked.
 If any finalizer marks objects for collection during that phase,
 these marks have no effect.
+If any finalizer raises an error during that phase,
+its execution is interrupted but the error is ignored.
+
+Finalizers cannot yield.
 
 }
 
@@ -5911,17 +5917,21 @@ If there are no syntactic errors,
 returns the compiled chunk as a function;
 otherwise, returns @nil plus the error message.
 
-If the resulting function has upvalues,
-the first upvalue is set to the value of @id{env},
-if that parameter is given,
-or to the value of the @x{global environment}.
-Other upvalues are initialized with @nil.
-(When you load a main chunk,
+When you load a main chunk,
 the resulting function will always have exactly one upvalue,
 the @id{_ENV} variable @see{globalenv}.
 However,
 when you load a binary chunk created from a function @seeF{string.dump},
-the resulting function can have an arbitrary number of upvalues.)
+the resulting function can have an arbitrary number of upvalues,
+and there is no guarantee that its first upvalue will be
+the @id{_ENV} variable.
+(A non-main function may not even have an @id{_ENV} upvalue.)
+
+Regardless, if the resulting function has any upvalues,
+its first upvalue is set to the value of @id{env},
+if that parameter is given,
+or to the value of the @x{global environment}.
+Other upvalues are initialized with @nil.
 All upvalues are fresh, that is,
 they are not shared with any other function.
 
