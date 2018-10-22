@@ -274,13 +274,38 @@ if rawget(_G, "T") then
 end
 
 
+-- to-be-closed variables in coroutines
+do
+  -- an error in a coroutine closes variables
+  local x = false
+  local y = false
+  local co = coroutine.create(function ()
+    local scoped xv = function () x = true end
+    do
+      local scoped yv = function () y = true end
+      coroutine.yield(100)   -- yield doesn't close variable
+    end
+    coroutine.yield(200)   -- yield doesn't close variable
+    error(23)              -- error does
+  end)
+
+  local a, b = coroutine.resume(co)
+  assert(a and b == 100 and not x and not y)
+  a, b = coroutine.resume(co)
+  assert(a and b == 200 and not x and y)
+  a, b = coroutine.resume(co)
+  assert(not a and b == 23 and x and y)
+end
+
 -- a suspended coroutine should not close its variables when collected
-local co = coroutine.wrap(function()
+local co
+co = coroutine.wrap(function()
   local scoped x = function () os.exit(false) end    -- should not run
-   coroutine.yield()
+  co = nil
+  coroutine.yield()
 end)
-co()
-co = nil
+co()                 -- start coroutine
+assert(co == nil)    -- eventually it will be collected
 
 print('OK')
 

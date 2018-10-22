@@ -676,12 +676,15 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
       /* unroll continuation */
       status = luaD_rawrunprotected(L, unroll, &status);
     }
-    if (unlikely(errorstatus(status))) {  /* unrecoverable error? */
+    if (likely(!errorstatus(status)))
+      lua_assert(status == L->status);  /* normal end or yield */
+    else {  /* unrecoverable error */
+      status = luaF_close(L, L->stack, status);  /* close all upvalues */
       L->status = cast_byte(status);  /* mark thread as 'dead' */
-      luaD_seterrorobj(L, status, L->top);  /* push error message */
+      luaD_seterrorobj(L, status, L->stack + 1);  /* push error message */
+      L->ci = &L->base_ci;  /* back to the original C level */
       L->ci->top = L->top;
     }
-    else lua_assert(status == L->status);  /* normal end or yield */
   }
   *nresults = (status == LUA_YIELD) ? L->ci->u2.nyield
                                     : cast_int(L->top - (L->ci->func + 1));
