@@ -120,31 +120,45 @@ io.output(io.open(otherfile, "ab"))
 assert(io.write("\n\n\t\t  ", 3450, "\n"));
 io.close()
 
--- test writing/reading numbers
-f = assert(io.open(file, "w"))
-f:write(maxint, '\n')
-f:write(string.format("0X%x\n", maxint))
-f:write("0xABCp-3", '\n')
-f:write(0, '\n')
-f:write(-maxint, '\n')
-f:write(string.format("0x%X\n", -maxint))
-f:write("-0xABCp-3", '\n')
-assert(f:close())
-f = assert(io.open(file, "r"))
-assert(f:read("n") == maxint)
-assert(f:read("n") == maxint)
-assert(f:read("n") == 0xABCp-3)
-assert(f:read("n") == 0)
-assert(f:read("*n") == -maxint)            -- test old format (with '*')
-assert(f:read("n") == -maxint)
-assert(f:read("*n") == -0xABCp-3)            -- test old format (with '*')
-assert(f:close())
+
+do
+  -- closing file by scope
+  local F = nil
+  do
+    local scoped f = assert(io.open(file, "w"))
+    F = f
+  end
+  assert(tostring(F) == "file (closed)")
+end
+assert(os.remove(file))
+
+
+do
+  -- test writing/reading numbers
+  local scoped f = assert(io.open(file, "w"))
+  f:write(maxint, '\n')
+  f:write(string.format("0X%x\n", maxint))
+  f:write("0xABCp-3", '\n')
+  f:write(0, '\n')
+  f:write(-maxint, '\n')
+  f:write(string.format("0x%X\n", -maxint))
+  f:write("-0xABCp-3", '\n')
+  assert(f:close())
+  f = assert(io.open(file, "r"))
+  assert(f:read("n") == maxint)
+  assert(f:read("n") == maxint)
+  assert(f:read("n") == 0xABCp-3)
+  assert(f:read("n") == 0)
+  assert(f:read("*n") == -maxint)            -- test old format (with '*')
+  assert(f:read("n") == -maxint)
+  assert(f:read("*n") == -0xABCp-3)            -- test old format (with '*')
+end
 assert(os.remove(file))
 
 
 -- testing multiple arguments to io.read
 do
-  local f = assert(io.open(file, "w"))
+  local scoped f = assert(io.open(file, "w"))
   f:write[[
 a line
 another line
@@ -171,9 +185,8 @@ three
   -- second item failing
   l1, n1, n2, dummy = f:read("l", "n", "n", "l")
   assert(l1 == "a line" and n1 == nil)
-  assert(f:close())
-  assert(os.remove(file))
 end
+assert(os.remove(file))
 
 
 
