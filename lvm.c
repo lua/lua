@@ -1452,7 +1452,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_CLOSE) {
-        luaF_close(L, ra, LUA_OK);
+        L->top = ra + 1;  /* everything is free after this slot */
+        ProtectNT(luaF_close(L, ra, LUA_OK));
         vmbreak;
       }
       vmcase(OP_TBC) {
@@ -1619,13 +1620,14 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           n = cast_int(L->top - ra);  /* get what is available */
         else
           L->top = ra + n;  /* set call for 'luaD_poscall' */
+        savepc(ci);
         if (TESTARG_k(i)) {
           int nparams1 = GETARG_C(i);
           if (nparams1)  /* vararg function? */
             ci->func -= ci->u.l.nextraargs + nparams1;
           luaF_close(L, base, LUA_OK);  /* there may be open upvalues */
         }
-        halfProtect(luaD_poscall(L, ci, n));
+        luaD_poscall(L, ci, n);
         return;
       }
       vmcase(OP_RETURN0) {

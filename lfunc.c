@@ -98,27 +98,29 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
 
 
 static void callclose (lua_State *L, void *ud) {
-  luaD_callnoyield(L, cast(StkId, ud), 0);
+  UNUSED(ud);
+  luaD_callnoyield(L, L->top - 2, 0);
 }
 
 
 /*
-** Prepare closing method with its argument for object at
-** index 'func' in the stack. Assume there is an error message
-** (or nil) just below the object.
+** Prepare closing method plus its argument for object 'obj' with
+** error message 'err'. (This function assumes EXTRA_STACK.)
 */
-static int prepclosingmethod (lua_State *L, StkId func) {
-  if (ttisfunction(s2v(func))) {  /* object to-be-closed is a function? */
-    setobjs2s(L, func + 1, func - 1);  /* push error msg. as argument */
+static int prepclosingmethod (lua_State *L, TValue *obj, TValue *err) {
+  StkId top = L->top;
+  if (ttisfunction(obj)) {  /* object to-be-closed is a function? */
+    setobj2s(L, top, obj);  /* push function */
+    setobj2s(L, top + 1, err);  /* push error msg. as argument */
   }
   else {  /* try '__close' metamethod */
-    const TValue *tm = luaT_gettmbyobj(L, s2v(func), TM_CLOSE);
+    const TValue *tm = luaT_gettmbyobj(L, obj, TM_CLOSE);
     if (ttisnil(tm))  /* no metamethod? */
       return 0;  /* nothing to call */
-    setobjs2s(L, func + 1, func);  /* 'self' is the argument */
-    setobj2s(L, func, tm);  /* will call metamethod */
+    setobj2s(L, top, tm);  /* will call metamethod... */
+    setobj2s(L, top + 1, obj);  /* with 'self' as the argument */
   }
-  L->top = func + 2;  /* add function and argument */
+  L->top = top + 2;  /* add function and argument */
   return 1;
 }
 
@@ -129,22 +131,24 @@ static int prepclosingmethod (lua_State *L, StkId func) {
 ** will be handled there. Otherwise, a previous error already
 ** activated original protected call, and so the call to the
 ** closing method must be protected here.
+** If status is OK, the call to the closing method will be pushed
+** at the top of the stack. Otherwise, values are pushed after
+** the 'level' of the upvalue being closed, as everything after
+** that won't be used again.
 */
 static int closeupval (lua_State *L, TValue *uv, StkId level, int status) {
-  StkId func = level + 1;  /* save slot for old error message */
-  if (unlikely(status != LUA_OK))  /* was there an error? */
-    luaD_seterrorobj(L, status, level);  /* save error message */
-  else
-    setnilvalue(s2v(level));  /* no error message */
-  setobj2s(L, func, uv);  /* put object on top of error message */
-  if (!prepclosingmethod(L, func))
-    return status;  /* nothing to call */
-  if (likely(status == LUA_OK))  /* not in "error mode"? */
-    callclose(L, func);  /* call closing method */
-  else {  /* already inside error handler; cannot raise another error */
-    int newstatus = luaD_pcall(L, callclose, func, savestack(L, level), 0);
-    if (newstatus != LUA_OK)  /* error when closing? */
-      status = newstatus;  /* this will be the new error */
+  if (likely(status == LUA_OK)) {
+    if (prepclosingmethod(L, uv, &G(L)->nilvalue))  /* something to call? */
+      callclose(L, NULL);  /* call closing method */
+  }
+  else {  /* there was an error */
+    /* save error message and set stack top to 'level + 1' */
+    luaD_seterrorobj(L, status, level);
+    if (prepclosingmethod(L, uv, s2v(level))) {  /* something to call? */
+      int newstatus = luaD_pcall(L, callclose, NULL, savestack(L, level), 0);
+      if (newstatus != LUA_OK)  /* another error when closing? */
+        status = newstatus;  /* this will be the new error */
+    }
   }
   return status;
 }
@@ -169,12 +173,10 @@ static void trynewtbcupval (lua_State *L, void *ud) {
 void luaF_newtbcupval (lua_State *L, StkId level) {
   int status = luaD_rawrunprotected(L, trynewtbcupval, level);
   if (unlikely(status != LUA_OK)) {  /* memory error creating upvalue? */
-    StkId func = level + 1;
     lua_assert(status == LUA_ERRMEM);
-    setobjs2s(L, func, level);  /* open space for error message */
-    luaD_seterrorobj(L, status, level);  /* save error message */
-    if (prepclosingmethod(L, func))
-      callclose(L, func);  /* call closing method */
+    luaD_seterrorobj(L, LUA_ERRMEM, level + 1);  /* save error message */
+    if (prepclosingmethod(L, s2v(level), s2v(level + 1)))
+      callclose(L, NULL);  /* call closing method */
     luaD_throw(L, LUA_ERRMEM);  /* throw memory error */
   }
 }
@@ -201,7 +203,7 @@ int luaF_close (lua_State *L, StkId level, int status) {
     luaC_barrier(L, uv, slot);
     if (status >= 0 && uv->tt == LUA_TUPVALTBC) {  /* must be closed? */
       ptrdiff_t levelrel = savestack(L, level);
-      status = closeupval(L, uv->v, upl, status);  /* may reallocate the stack */
+      status = closeupval(L, uv->v, upl, status);  /* may realloc. the stack */
       level = restorestack(L, levelrel);
     }
   }

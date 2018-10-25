@@ -561,7 +561,7 @@ static void close_func (LexState *ls) {
   lua_State *L = ls->L;
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
-  luaK_ret(fs, 0, 0);  /* final return */
+  luaK_ret(fs, fs->nactvar, 0);  /* final return */
   leaveblock(fs);
   lua_assert(fs->bl == NULL);
   luaK_finish(fs);
@@ -1602,9 +1602,10 @@ static void retstat (LexState *ls) {
   /* stat -> RETURN [explist] [';'] */
   FuncState *fs = ls->fs;
   expdesc e;
-  int first, nret;  /* registers with returned values */
+  int nret;  /* number of values being returned */
+  int first = fs->nactvar;  /* first slot to be returned */
   if (block_follow(ls, 1) || ls->t.token == ';')
-    first = nret = 0;  /* return no values */
+    nret = 0;  /* return no values */
   else {
     nret = explist(ls, &e);  /* optional return values */
     if (hasmultret(e.k)) {
@@ -1613,15 +1614,13 @@ static void retstat (LexState *ls) {
         SET_OPCODE(getinstruction(fs,&e), OP_TAILCALL);
         lua_assert(GETARG_A(getinstruction(fs,&e)) == fs->nactvar);
       }
-      first = fs->nactvar;
       nret = LUA_MULTRET;  /* return all values */
     }
     else {
       if (nret == 1)  /* only one single value? */
-        first = luaK_exp2anyreg(fs, &e);
-      else {
-        luaK_exp2nextreg(fs, &e);  /* values must go to the stack */
-        first = fs->nactvar;  /* return all active values */
+        first = luaK_exp2anyreg(fs, &e);  /* can use original slot */
+      else {  /* values must go to the top of the stack */
+        luaK_exp2nextreg(fs, &e);
         lua_assert(nret == fs->freereg - first);
       }
     }

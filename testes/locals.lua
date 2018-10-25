@@ -175,6 +175,9 @@ assert(x==20)
 
 print"testing to-be-closed variables"
 
+local function stack(n) n = ((n == 0) or stack(n - 1)) end
+
+
 do
   local a = {}
   do
@@ -187,6 +190,57 @@ do
   assert(a[1] == "in" and a[2] == "y" and a[3] == "x" and a[4] == "out")
 end
 
+do
+  local X = false
+
+  local function closescope () stack(10); X = true end
+
+  -- closing functions do not corrupt returning values
+  local function foo (x)
+    local scoped _ = closescope
+    return x, X, 23
+  end
+
+  local a, b, c = foo(1.5)
+  assert(a == 1.5 and b == false and c == 23 and X == true)
+
+  X = false
+  foo = function (x)
+    local scoped _ = closescope
+    local y = 15
+    return y
+  end
+
+  assert(foo() == 15 and X == true)
+
+  X = false
+  foo = function ()
+    local scoped x = closescope
+    return x
+  end
+
+  assert(foo() == closescope and X == true)
+
+end
+
+
+do
+  -- to-be-closed variables must be closed in tail calls
+  local X, Y
+  local function foo ()
+    local scoped _ = function () Y = 10 end
+    assert(X == 20 and Y == nil)
+    return 1,2,3
+  end
+
+  local function bar ()
+    local scoped _ = function () X = 20 end
+    return foo()
+  end
+
+  local a, b, c, d = bar()
+  assert(a == 1 and b == 2 and c == 3 and X == 20 and Y == 10 and d == nil)
+end
 
 do   -- errors in __close
   local log = {}
@@ -211,7 +265,6 @@ do   -- errors in __close
 end
 
 if rawget(_G, "T") then
-  local function stack(n) n = (n == 0) or stack(n - 1); end;
   -- memory error inside closing function
   local function foo ()
     local scoped y = function () T.alloccount() end
