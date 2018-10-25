@@ -967,6 +967,77 @@ T.closestate(L1)
 L1 = nil
 
 print('+')
+-------------------------------------------------------------------------
+-- testing to-be-closed variables
+-------------------------------------------------------------------------
+print"testing to-be-closed variables"
+
+do
+  local openresource = {}
+
+  local function newresource ()
+    local x = setmetatable({10}, {__close = function(y)
+      assert(openresource[#openresource] == y)
+      openresource[#openresource] = nil
+      y[1] = y[1] + 1
+    end})
+    openresource[#openresource + 1] = x
+    return x
+  end
+
+  local a = T.testC([[
+    call 0 1   # create resource
+    tobeclosed  # mark it to be closed
+    return 1
+  ]], newresource)
+  assert(a[1] == 11)
+  assert(#openresource == 0)    -- was closed
+
+  -- repeat the test, but calling function in a 'multret' context
+  local a = {T.testC([[
+    call 0 1   # create resource
+    tobeclosed  # mark it to be closed
+    return 2
+  ]], newresource)}
+  assert(type(a[1]) == "string" and a[2][1] == 11)
+  assert(#openresource == 0)    -- was closed
+
+  -- error
+  local a, b = pcall(T.testC, [[
+    call 0 1   # create resource
+    tobeclosed  # mark it to be closed
+    error       # resource is the error object
+  ]], newresource)
+  assert(a == false and b[1] == 11)
+  assert(#openresource == 0)    -- was closed
+
+  local function check (n)
+    assert(#openresource == n)
+  end
+
+  -- closing resources with 'settop'
+  local a = T.testC([[
+    pushvalue 2
+    call 0 1   # create resource
+    tobeclosed  # mark it to be closed
+    pushvalue 2
+    call 0 1   # create another resource
+    tobeclosed  # mark it to be closed
+    pushvalue 3
+    pushint 2   # there should be two open resources
+    call 1 0
+    pop 1       # pop second resource from the stack
+    pushvalue 3
+    pushint 1   # there should be one open resource
+    call 1 0
+    pop 1       # pop second resource from the stack
+    pushint *
+    return 1    # return stack size
+  ]], newresource, check)
+  assert(a == 3)   -- no extra items left in the stack
+
+end
+
 
 -------------------------------------------------------------------------
 -- testing memory limits

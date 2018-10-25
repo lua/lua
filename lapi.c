@@ -173,15 +173,17 @@ LUA_API void lua_settop (lua_State *L, int idx) {
   StkId func = L->ci->func;
   lua_lock(L);
   if (idx >= 0) {
+    StkId newtop = (func + 1) + idx;
     api_check(L, idx <= L->stack_last - (func + 1), "new top too large");
-    while (L->top < (func + 1) + idx)
+    while (L->top < newtop)
       setnilvalue(s2v(L->top++));
-    L->top = (func + 1) + idx;
+    L->top = newtop;
   }
   else {
     api_check(L, -(idx+1) <= (L->top - (func + 1)), "invalid new top");
     L->top += idx+1;  /* 'subtract' index (index is negative) */
   }
+  luaF_close(L, L->top, LUA_OK);
   lua_unlock(L);
 }
 
@@ -1202,6 +1204,15 @@ LUA_API int lua_next (lua_State *L, int idx) {
     L->top -= 1;  /* remove key */
   lua_unlock(L);
   return more;
+}
+
+
+LUA_API void lua_tobeclosed (lua_State *L) {
+  int nresults = L->ci->nresults;
+  luaF_newtbcupval(L, L->top - 1);  /* create new to-be-closed upvalue */
+  if (!hastocloseCfunc(nresults))  /* function not marked yet? */
+    L->ci->nresults = codeNresults(nresults);  /* mark it */
+  lua_assert(hastocloseCfunc(L->ci->nresults));
 }
 
 

@@ -366,32 +366,38 @@ void luaD_tryfuncTM (lua_State *L, StkId func) {
 ** separated.
 */
 static void moveresults (lua_State *L, StkId res, int nres, int wanted) {
+  StkId firstresult;
+  int i;
   switch (wanted) {  /* handle typical cases separately */
     case 0:  /* no values needed */
       L->top = res;
-      break;
+      return;
     case 1:  /* one value needed */
       if (nres == 0)   /* no results? */
         setnilvalue(s2v(res));  /* adjust with nil */
       else
         setobjs2s(L, res, L->top - nres);  /* move it to proper place */
       L->top = res + 1;
-      break;
+      return;
     case LUA_MULTRET:
       wanted = nres;  /* we want all results */
-      /* FALLTHROUGH */
-    default: {  /* multiple results */
-      StkId firstresult = L->top - nres;  /* index of first result */
-      int i;
-      /* move all results to correct place */
-      for (i = 0; i < nres && i < wanted; i++)
-        setobjs2s(L, res + i, firstresult + i);
-      for (; i < wanted; i++)  /* complete wanted number of results */
-        setnilvalue(s2v(res + i));
-      L->top = res + wanted;  /* top points after the last result */
       break;
-    }
+    default:  /* multiple results (or to-be-closed variables) */
+      if (hastocloseCfunc(wanted)) {
+        luaF_close(L, res, LUA_OK);
+        wanted = codeNresults(wanted);  /* correct value */
+        if (wanted == LUA_MULTRET)
+          wanted = nres;
+      }
+      break;
   }
+  firstresult = L->top - nres;  /* index of first result */
+  /* move all results to correct place */
+  for (i = 0; i < nres && i < wanted; i++)
+    setobjs2s(L, res + i, firstresult + i);
+  for (; i < wanted; i++)  /* complete wanted number of results */
+    setnilvalue(s2v(res + i));
+  L->top = res + wanted;  /* top points after the last result */
 }
 
 
