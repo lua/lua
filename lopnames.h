@@ -81,6 +81,7 @@ static const char *const opnames[] = {
   "FORPREP1",
   "FORLOOP",
   "FORPREP",
+  "TFORPREP",
   "TFORCALL",
   "TFORLOOP",
   "SETLIST",

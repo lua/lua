@@ -1350,30 +1350,26 @@ static void fixforjump (FuncState *fs, int pc, int dest, int back) {
 */
 static void forbody (LexState *ls, int base, int line, int nvars, int kind) {
   /* forbody -> DO block */
+  static OpCode forprep[3] = {OP_FORPREP, OP_FORPREP1, OP_TFORPREP};
+  static OpCode forloop[3] = {OP_FORLOOP, OP_FORLOOP1, OP_TFORLOOP};
   BlockCnt bl;
   FuncState *fs = ls->fs;
   int prep, endfor;
   adjustlocalvars(ls, 3);  /* control variables */
   checknext(ls, TK_DO);
-  prep = (kind == 0) ? luaK_codeABx(fs, OP_FORPREP, base, 0)
-       : (kind == 1) ? luaK_codeABx(fs, OP_FORPREP1, base, 0)
-       : luaK_jump(fs);
+  prep = luaK_codeABx(fs, forprep[kind], base, 0);
   enterblock(fs, &bl, 0);  /* scope for declared variables */
   adjustlocalvars(ls, nvars);
   luaK_reserveregs(fs, nvars);
   block(ls);
   leaveblock(fs);  /* end of scope for declared variables */
+  fixforjump(fs, prep, luaK_getlabel(fs), 0);
   if (kind == 2) {  /* generic for? */
-    luaK_patchtohere(fs, prep);
     luaK_codeABC(fs, OP_TFORCALL, base, 0, nvars);
     luaK_fixline(fs, line);
-    endfor = luaK_codeABx(fs, OP_TFORLOOP, base + 2, 0);
+    base += 2;  /* base for 'OP_TFORLOOP' (skips function and state) */
   }
-  else {
-    fixforjump(fs, prep, luaK_getlabel(fs), 0);
-    endfor = (kind == 0) ? luaK_codeABx(fs, OP_FORLOOP, base, 0)
-                         : luaK_codeABx(fs, OP_FORLOOP1, base, 0);
-  }
+  endfor = luaK_codeABx(fs, forloop[kind], base, 0);
   fixforjump(fs, endfor, prep + 1, 1);
   luaK_fixline(fs, line);
 }

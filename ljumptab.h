@@ -96,6 +96,7 @@ static void *disptab[] = {
 &&L_OP_FORPREP1,
 &&L_OP_FORLOOP,
 &&L_OP_FORPREP,
+&&L_OP_TFORPREP,
 &&L_OP_TFORCALL,
 &&L_OP_TFORLOOP,
 &&L_OP_SETLIST,

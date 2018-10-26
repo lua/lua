@@ -90,6 +90,7 @@ LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 0, 0, 1, iABx)		/* OP_FORPREP1 */
  ,opmode(0, 0, 0, 1, iABx)		/* OP_FORLOOP */
  ,opmode(0, 0, 0, 1, iABx)		/* OP_FORPREP */
+ ,opmode(0, 0, 0, 0, iABx)		/* OP_TFORPREP */
  ,opmode(0, 0, 0, 0, iABC)		/* OP_TFORCALL */
  ,opmode(0, 0, 0, 1, iABx)		/* OP_TFORLOOP */
  ,opmode(0, 1, 0, 0, iABC)		/* OP_SETLIST */

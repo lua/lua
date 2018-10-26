@@ -1744,6 +1744,10 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         pc += GETARG_Bx(i);
         vmbreak;
       }
+      vmcase(OP_TFORPREP) {
+        pc += GETARG_Bx(i);
+        vmbreak;
+      }
       vmcase(OP_TFORCALL) {
         StkId cb = ra + 3;  /* call base */
         setobjs2s(L, cb+2, ra+2);
