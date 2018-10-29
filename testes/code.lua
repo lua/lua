@@ -297,7 +297,7 @@ check(function ()
   b[a], a = c, b
   a, b = c, a
   a = a
-end, 
+end,
   'LOADNIL',
   'MOVE', 'MOVE', 'SETTABLE',
   'MOVE', 'MOVE', 'MOVE', 'SETTABLE',
@@ -329,18 +329,13 @@ checkequal(function (l) local a; return 0 <= a and a <= l end,
            function (l) local a; return not (not(a >= 0) or not(a <= l)) end)
 
 
--- if-goto optimizations
-check(function (a, b, c, d, e)
-        if a == b then goto l1;
-        elseif a == c then goto l2;
-        elseif a == d then goto l2;
-        else if a == e then goto l3;
-             else goto l3
-             end
+-- if-break optimizations
+check(function (a, b)
+        while a do
+          if b then break else a = a + 1 end
         end
-        ::l1:: ::l2:: ::l3:: ::l4:: 
-end, 'EQ', 'JMP', 'EQ', 'JMP', 'EQ', 'JMP', 'EQ', 'JMP', 'JMP',
-'CLOSE', 'CLOSE', 'CLOSE', 'CLOSE', 'RETURN0')
+      end,
+'TEST', 'JMP', 'TEST', 'JMP', 'ADDI', 'JMP', 'RETURN0')
 
 checkequal(
 function (a) while a < 10 do a = a + 1 end end,

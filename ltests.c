@@ -550,7 +550,7 @@ static char *buildop (Proto *p, int pc, char *buff) {
       sprintf(buff, "%-12s%4d", name, GETARG_Ax(i));
       break;
     case isJ:
-      sprintf(buff, "%-12s%4d (%1d)", name, GETARG_sJ(i), !!GETARG_m(i));
+      sprintf(buff, "%-12s%4d", name, GETARG_sJ(i));
       break;
   }
   return obuff;

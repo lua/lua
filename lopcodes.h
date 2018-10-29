@@ -21,7 +21,7 @@ iABC         C(8)     |      B(8)     |k|     A(8)      |   Op(7)     |
 iABx               Bx(17)               |     A(8)      |   Op(7)     |
 iAsB              sBx (signed)(17)      |     A(8)      |   Op(7)     |
 iAx                           Ax(25)                    |   Op(7)     |
-isJ                          sJ(24)                   |m|   Op(7)     |
+isJ                          sJ(25)                     |   Op(7)     |
 
   A signed argument is represented in excess K: the represented value is
   the written unsigned value minus K, where K is half the maximum for the
@@ -40,7 +40,7 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 #define SIZE_Bx		(SIZE_C + SIZE_B + 1)
 #define SIZE_A		8
 #define SIZE_Ax		(SIZE_Bx + SIZE_A)
-#define SIZE_sJ		(SIZE_Bx + SIZE_A - 1)
+#define SIZE_sJ		(SIZE_Bx + SIZE_A)
 
 #define SIZE_OP		7
 
@@ -55,8 +55,7 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 
 #define POS_Ax		POS_A
 
-#define POS_m		POS_A
-#define POS_sJ		(POS_A + 1)
+#define POS_sJ		POS_A
 
 /*
 ** limits for opcode arguments.
@@ -144,8 +143,6 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 	check_exp(checkopm(i, isJ), getarg(i, POS_sJ, SIZE_sJ) - OFFSET_sJ)
 #define SETARG_sJ(i,j) \
 	setarg(i, cast_uint((j)+OFFSET_sJ), POS_sJ, SIZE_sJ)
-#define GETARG_m(i)	check_exp(checkopm(i, isJ), getarg(i, POS_m, 1))
-#define SETARG_m(i,m)	setarg(i, m, POS_m, 1)
 
 
 #define CREATE_ABCk(o,a,b,c,k)	((cast(Instruction, o)<<POS_OP) \

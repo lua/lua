@@ -14,6 +14,7 @@ errmsg([[ do ::l1:: end goto l1; ]], "label 'l1'")
 
 -- repeated label
 errmsg([[ ::l1:: ::l1:: ]], "label 'l1'")
+errmsg([[ ::l1:: do ::l1:: end]], "label 'l1'")
 
 
 -- undefined label
@@ -67,8 +68,6 @@ do
   assert(assert(load(prog))() == 31)
 end
 
--- goto to correct label when nested
-do goto l3; ::l3:: end   -- does not loop jumping to previous label 'l3'
 
 -- ok to jump over local dec. to end of block
 do

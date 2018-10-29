@@ -276,40 +276,6 @@ void luaK_patchtohere (FuncState *fs, int list) {
 
 
 /*
-** Correct a jump list to jump to 'target'. If 'hasclose' is true,
-** 'target' contains an OP_CLOSE instruction (see first assert).
-** Only the jumps with ('m' == true) need that close; other jumps
-** avoid it jumping to the next instruction.
-*/
-void luaK_patchgoto (FuncState *fs, int list, int target, int hasclose) {
-  lua_assert(!hasclose || GET_OPCODE(fs->f->code[target]) == OP_CLOSE);
-  while (list != NO_JUMP) {
-    int next = getjump(fs, list);
-    lua_assert(!GETARG_m(fs->f->code[list]) || hasclose);
-    patchtestreg(fs, list, NO_REG);  /* do not generate values */
-    if (!hasclose || GETARG_m(fs->f->code[list]))
-      fixjump(fs, list, target);
-    else  /* there is a CLOSE instruction but jump does not need it */
-      fixjump(fs, list, target + 1);  /* avoid CLOSE instruction */
-    list = next;
-  }
-}
-
-
-/*
-** Mark (using the 'm' arg) all jumps in 'list' to close upvalues. Mark
-** will instruct 'luaK_patchgoto' to make these jumps go to OP_CLOSE
-** instructions.
-*/
-void luaK_patchclose (FuncState *fs, int list) {
-  for (; list != NO_JUMP; list = getjump(fs, list)) {
-    lua_assert(GET_OPCODE(fs->f->code[list]) == OP_JMP);
-    SETARG_m(fs->f->code[list], 1);
-  }
-}
-
-
-/*
 ** MAXimum number of successive Instructions WiTHout ABSolute line
 ** information.
 */
