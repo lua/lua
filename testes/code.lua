@@ -339,8 +339,26 @@ check(function (a, b)
 
 checkequal(
 function (a) while a < 10 do a = a + 1 end end,
-function (a) while true do if not(a < 10) then break end; a = a + 1; end end
+function (a)
+  ::loop::
+  if not (a < 10) then goto exit end
+  a = a + 1
+  goto loop
+::exit::
+end
 )
+
+checkequal(
+function (a) repeat local x = a + 1; a = x until a > 0 end,
+function (a)
+  ::loop:: do
+    local x = a + 1
+    a = x
+  end
+  if not (a > 0) then goto loop end
+end
+)
+
 
 print 'OK'
 

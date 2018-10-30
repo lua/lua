@@ -249,6 +249,22 @@ assert(testG(2) == "2")
 assert(testG(3) == "3")
 assert(testG(4) == 5)
 assert(testG(5) == 10)
+
+do
+  -- if x back goto out of scope of upvalue
+  local X
+  goto L1
+
+  ::L2:: goto L3
+
+  ::L1:: do
+    local scoped a = function () X = true end
+    assert(X == nil)
+    if a then goto L2 end   -- jumping back out of scope of 'a'
+  end
+
+  ::L3:: assert(X == true)   -- checks that 'a' was correctly closed
+end
 --------------------------------------------------------------------------------
 
 

@@ -113,7 +113,7 @@ static void checknext (LexState *ls, int c) {
 
 
 static void check_match (LexState *ls, int what, int who, int where) {
-  if (!testnext(ls, what)) {
+  if (unlikely(!testnext(ls, what))) {
     if (where == ls->linenumber)
       error_expected(ls, what);
     else {
@@ -350,7 +350,7 @@ static void solvegoto (LexState *ls, int g, Labeldesc *label) {
   Labellist *gl = &ls->dyd->gt;  /* list of goto's */
   Labeldesc *gt = &gl->arr[g];  /* goto to be resolved */
   lua_assert(eqstr(gt->name, label->name));
-  if (gt->nactvar < label->nactvar)  /* enter some scope? */
+  if (unlikely(gt->nactvar < label->nactvar))  /* enter some scope? */
     jumpscopeerror(ls, gt);
   luaK_patchlist(ls->fs, gt->pc, label->pc);
   for (i = g; i < gl->n - 1; i++)  /* remove goto from pending list */
@@ -390,6 +390,11 @@ static int newlabelentry (LexState *ls, Labellist *l, TString *name,
   l->arr[n].pc = pc;
   l->n = n + 1;
   return n;
+}
+
+
+static int newgotoentry (LexState *ls, TString *name, int line, int pc) {
+  return newlabelentry(ls, &ls->dyd->gt, name, line, pc);
 }
 
 
@@ -471,8 +476,15 @@ static void enterblock (FuncState *fs, BlockCnt *bl, lu_byte isloop) {
 ** generates an error for an undefined 'goto'.
 */
 static l_noret undefgoto (LexState *ls, Labeldesc *gt) {
-  const char *msg = "no visible label '%s' for <goto> at line %d";
-  msg = luaO_pushfstring(ls->L, msg, getstr(gt->name), gt->line);
+  const char *msg;
+  if (eqstr(gt->name, luaS_newliteral(ls->L, "break"))) {
+    msg = "break outside loop at line %d";
+    msg = luaO_pushfstring(ls->L, msg, gt->line);
+  }
+  else {
+    msg = "no visible label '%s' for <goto> at line %d";
+    msg = luaO_pushfstring(ls->L, msg, getstr(gt->name), gt->line);
+  }
   luaK_semerror(ls, msg);
 }
 
@@ -1212,7 +1224,7 @@ static void gotostat (LexState *ls) {
   Labeldesc *lb = findlabel(ls, name);
   if (lb == NULL)  /* no label? */
     /* forward jump; will be resolved when the label is declared */
-    newlabelentry(ls, &ls->dyd->gt, name, line, luaK_jump(fs));
+    newgotoentry(ls, name, line, luaK_jump(fs));
   else {  /* found a label */
     /* backward jump; will be resolved here */
     if (fs->nactvar > lb->nactvar)  /* leaving the scope of some variable? */
@@ -1226,15 +1238,10 @@ static void gotostat (LexState *ls) {
 /*
 ** Break statement. Semantically equivalent to "goto break".
 */
-static void breakstat (LexState *ls, int pc) {
-  FuncState *fs = ls->fs;
+static void breakstat (LexState *ls) {
   int line = ls->linenumber;
-  BlockCnt *bl = fs->bl;
   luaX_next(ls);  /* skip break */
-  newlabelentry(ls, &ls->dyd->gt, luaS_newliteral(ls->L, "break"), line, pc);
-  while (bl && !bl->isloop) { bl = bl->previous; }
-  if (!bl)
-    luaX_syntaxerror(ls, "no loop to break");
+  newgotoentry(ls, luaS_newliteral(ls->L, "break"), line, luaK_jump(ls->fs));
 }
 
 
@@ -1243,7 +1250,7 @@ static void breakstat (LexState *ls, int pc) {
 */
 static void checkrepeated (LexState *ls, TString *name) {
   Labeldesc *lb = findlabel(ls, name);
-  if (lb != NULL) {  /* already defined? */
+  if (unlikely(lb != NULL)) {  /* already defined? */
     const char *msg = "label '%s' already defined on line %d";
     msg = luaO_pushfstring(ls->L, msg, getstr(name), lb->line);
     luaK_semerror(ls, msg);  /* error */
@@ -1332,7 +1339,7 @@ static void fixforjump (FuncState *fs, int pc, int dest, int back) {
   int offset = dest - (pc + 1);
   if (back)
     offset = -offset;
-  if (offset > MAXARG_Bx)
+  if (unlikely(offset > MAXARG_Bx))
     luaX_syntaxerror(fs->ls, "control structure too long");
   SETARG_Bx(*jmp, offset);
 }
@@ -1439,28 +1446,67 @@ static void forstat (LexState *ls, int line) {
 }
 
 
+/*
+** Check whether next instruction is a single jump (a 'break', a 'goto'
+** to a forward label, or a 'goto' to a backward label with no variable
+** to close). If so, set the name of the 'label' it is jumping to
+** ("break" for a 'break') or to where it is jumping to ('target') and
+** return true. If not a single jump, leave input unchanged, to be
+** handled as a regular statement.
+*/
+static int issinglejump (LexState *ls, TString **label, int *target) {
+  if (testnext(ls, TK_BREAK)) {  /* a break? */
+    *label = luaS_newliteral(ls->L, "break");
+    return 1;
+  }
+  else if (ls->t.token != TK_GOTO || luaX_lookahead(ls) != TK_NAME)
+    return 0;  /* not a valid goto */
+  else {
+    TString *lname = ls->lookahead.seminfo.ts;  /* label's id */
+    Labeldesc *lb = findlabel(ls, lname);
+    if (lb) {  /* a backward jump? */
+      if (ls->fs->nactvar > lb->nactvar)  /* needs to close variables? */
+        return 0;  /* not a single jump; cannot optimize */
+      *target = lb->pc;
+    }
+    else  /* jump forward */
+      *label = lname;
+    luaX_next(ls);  /* skip goto */
+    luaX_next(ls);  /* skip name */
+    return 1;
+  }
+}
+
+
 static void test_then_block (LexState *ls, int *escapelist) {
   /* test_then_block -> [IF | ELSEIF] cond THEN block */
   BlockCnt bl;
+  int line;
   FuncState *fs = ls->fs;
+  TString *jlb = NULL;
+  int target = NO_JUMP;
   expdesc v;
   int jf;  /* instruction to skip 'then' code (if condition is false) */
   luaX_next(ls);  /* skip IF or ELSEIF */
   expr(ls, &v);  /* read condition */
   checknext(ls, TK_THEN);
-  if (ls->t.token == TK_BREAK) {
+  line = ls->linenumber;
+  if (issinglejump(ls, &jlb, &target)) {  /* 'if x then goto' ? */
     luaK_goiffalse(ls->fs, &v);  /* will jump to label if condition is true */
     enterblock(fs, &bl, 0);  /* must enter block before 'goto' */
-    breakstat(ls, v.t);  /* handle break */
+    if (jlb != NULL)  /* forward jump? */
+      newgotoentry(ls, jlb, line, v.t);  /* will be resolved later */
+    else  /* backward jump */
+      luaK_patchlist(fs, v.t, target);  /* jump directly to 'target' */
     while (testnext(ls, ';')) {}  /* skip semicolons */
-    if (block_follow(ls, 0)) {  /* 'break' is the entire block? */
+    if (block_follow(ls, 0)) {  /* jump is the entire block? */
       leaveblock(fs);
       return;  /* and that is it */
     }
     else  /* must skip over 'then' part if condition is false */
       jf = luaK_jump(fs);
   }
-  else {  /* regular case (not goto/break) */
+  else {  /* regular case (not a jump) */
     luaK_goiftrue(ls->fs, &v);  /* skip over block if condition is false */
     enterblock(fs, &bl, 0);
     jf = v.f;
@@ -1671,7 +1717,7 @@ static void statement (LexState *ls) {
       break;
     }
     case TK_BREAK: {  /* stat -> breakstat */
-      breakstat(ls, luaK_jump(ls->fs));
+      breakstat(ls);
       break;
     }
     case TK_GOTO: {  /* stat -> 'goto' NAME */
