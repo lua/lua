@@ -1681,7 +1681,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         int stopnow;
         if (unlikely(!forlimit(plimit, &ilimit, 1, &stopnow))) {
             savestate(L, ci);  /* for the error message */
-            luaG_runerror(L, "'for' limit must be a number");
+            luaG_forerror(L, plimit, "limit");
         }
         initv = (stopnow ? 0 : ivalue(init));
         setivalue(plimit, ilimit);
@@ -1732,13 +1732,13 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           lua_Number ninit; lua_Number nlimit; lua_Number nstep;
           savestate(L, ci);  /* in case of errors */
           if (unlikely(!tonumber(plimit, &nlimit)))
-            luaG_runerror(L, "'for' limit must be a number");
+            luaG_forerror(L, plimit, "limit");
           setfltvalue(plimit, nlimit);
           if (unlikely(!tonumber(pstep, &nstep)))
-            luaG_runerror(L, "'for' step must be a number");
+            luaG_forerror(L, pstep, "step");
           setfltvalue(pstep, nstep);
           if (unlikely(!tonumber(init, &ninit)))
-            luaG_runerror(L, "'for' initial value must be a number");
+            luaG_forerror(L, init, "initial value");
           setfltvalue(init, luai_numsub(L, ninit, nstep));
         }
         pc += GETARG_Bx(i);

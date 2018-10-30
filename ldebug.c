@@ -696,6 +696,12 @@ l_noret luaG_typeerror (lua_State *L, const TValue *o, const char *op) {
 }
 
 
+l_noret luaG_forerror (lua_State *L, const TValue *o, const char *what) {
+  luaG_runerror(L, "bad 'for' %s (number expected, got %s)",
+                   what, luaT_objtypename(L, o));
+}
+
+
 l_noret luaG_concaterror (lua_State *L, const TValue *p1, const TValue *p2) {
   if (ttisstring(p1) || cvt2str(p1)) p1 = p2;
   luaG_typeerror(L, p1, "concatenate");

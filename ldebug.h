@@ -24,6 +24,8 @@
 LUAI_FUNC int luaG_getfuncline (const Proto *f, int pc);
 LUAI_FUNC l_noret luaG_typeerror (lua_State *L, const TValue *o,
                                                 const char *opname);
+LUAI_FUNC l_noret luaG_forerror (lua_State *L, const TValue *o,
+                                               const char *what);
 LUAI_FUNC l_noret luaG_concaterror (lua_State *L, const TValue *p1,
                                                   const TValue *p2);
 LUAI_FUNC l_noret luaG_opinterror (lua_State *L, const TValue *p1,

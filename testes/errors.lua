@@ -154,6 +154,16 @@ checkmessage("a = 24 // 0", "divide by zero")
 checkmessage("a = 1 % 0", "'n%0'")
 
 
+-- numeric for loops
+checkmessage("for i = {}, 10 do end", "table")
+checkmessage("for i = io.stdin, 10 do end", "FILE")
+checkmessage("for i = {}, 10 do end", "initial value")
+checkmessage("for i = 1, 'x', 10 do end", "string")
+checkmessage("for i = 1, {}, 10 do end", "limit")
+checkmessage("for i = 1, {} do end", "limit")
+checkmessage("for i = 1, 10, print do end", "step")
+checkmessage("for i = 1, 10, print do end", "function")
+
 -- passing light userdata instead of full userdata
 _G.D = debug
 checkmessage([[
