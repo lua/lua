@@ -166,8 +166,6 @@ static int os_tmpname (lua_State *L) {
   char buff[LUA_TMPNAMBUFSIZE];
   int err;
   lua_tmpnam(buff, err);
-  if (err && luaL_resourcetryagain(L))  /* resource failure? */
-    lua_tmpnam(buff, err);  /* try again */
   if (err)
     return luaL_error(L, "unable to generate a unique filename");
   lua_pushstring(L, buff);

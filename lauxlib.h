@@ -77,8 +77,6 @@ LUALIB_API int (luaL_checkoption) (lua_State *L, int arg, const char *def,
 LUALIB_API int (luaL_fileresult) (lua_State *L, int stat, const char *fname);
 LUALIB_API int (luaL_execresult) (lua_State *L, int stat);
 
-LUALIB_API int (luaL_resourcetryagain) (lua_State *L);
-
 
 /* predefined references */
 #define LUA_NOREF       (-2)

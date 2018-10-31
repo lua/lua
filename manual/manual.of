@@ -5535,20 +5535,6 @@ Leaves a copy of the module on the stack.
 
 }
 
-@APIEntry{int luaL_resourcetryagain (lua_State *L);|
-@apii{0,0,m}
-
-Try to release resources in case of errors.
-This function uses @id{errno} to check whether the last error was
-related to lack of resources (e.g., not enough memory or too many
-open files).
-If so, the function performs a full garbage collection
-to try to release resources, and then it returns 1 to signal to
-the caller that it is worth trying again the failed operation.
-Otherwise, it returns 0.
-
-}
-
 @APIEntry{void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup);|
 @apii{nup,0,m}
 

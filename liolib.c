@@ -246,22 +246,9 @@ static LStream *newfile (lua_State *L) {
 }
 
 
-/*
-** Equivalent to 'fopen', but if it fails due to a lack of resources
-** (see 'luaL_resourcetryagain'), do an "emergency" garbage collection
-** to try to close some files and then tries to open the file again.
-*/
-static FILE *trytoopen (lua_State *L, const char *path, const char *mode) {
-  FILE *f = fopen(path, mode);
-  if (f == NULL && luaL_resourcetryagain(L))  /* resource failure? */
-    f = fopen(path, mode);  /* try to open again */
-  return f;
-}
-
-
 static void opencheck (lua_State *L, const char *fname, const char *mode) {
   LStream *p = newfile(L);
-  p->f = trytoopen(L, fname, mode);
+  p->f = fopen(fname, mode);
   if (p->f == NULL)
     luaL_error(L, "cannot open file '%s' (%s)", fname, strerror(errno));
 }
@@ -273,7 +260,7 @@ static int io_open (lua_State *L) {
   LStream *p = newfile(L);
   const char *md = mode;  /* to traverse/check mode */
   luaL_argcheck(L, l_checkmode(md), 2, "invalid mode");
-  p->f = trytoopen(L, filename, mode);
+  p->f = fopen(filename, mode);
   return (p->f == NULL) ? luaL_fileresult(L, 0, filename) : 1;
 }
 
@@ -292,8 +279,6 @@ static int io_popen (lua_State *L) {
   const char *mode = luaL_optstring(L, 2, "r");
   LStream *p = newprefile(L);
   p->f = l_popen(L, filename, mode);
-  if (p->f == NULL && luaL_resourcetryagain(L))  /* resource failure? */
-    p->f = l_popen(L, filename, mode);  /* try to open again */
   p->closef = &io_pclose;
   return (p->f == NULL) ? luaL_fileresult(L, 0, filename) : 1;
 }
@@ -302,8 +287,6 @@ static int io_popen (lua_State *L) {
 static int io_tmpfile (lua_State *L) {
   LStream *p = newfile(L);
   p->f = tmpfile();
-  if (p->f == NULL && luaL_resourcetryagain(L))  /* resource failure? */
-    p->f = tmpfile();  /* try to open again */
   return (p->f == NULL) ? luaL_fileresult(L, 0, NULL) : 1;
 }
 
