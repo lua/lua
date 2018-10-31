@@ -1413,6 +1413,7 @@ static void forlist (LexState *ls, TString *indexname) {
   /* create control variables */
   new_localvarliteral(ls, "(for generator)");
   new_localvarliteral(ls, "(for state)");
+  markupval(fs, fs->nactvar);  /* state may create an upvalue */
   new_localvarliteral(ls, "(for control)");
   /* create declared variables */
   new_localvar(ls, indexname);

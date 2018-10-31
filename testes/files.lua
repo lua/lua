@@ -462,13 +462,13 @@ X
 -                                   y;
 ]]:close()
 _G.X = 1
-assert(not load(io.lines(file)))
+assert(not load((io.lines(file))))
 collectgarbage()   -- to close file in previous iteration
-load(io.lines(file, "L"))()
+load((io.lines(file, "L")))()
 assert(_G.X == 2)
-load(io.lines(file, 1))()
+load((io.lines(file, 1)))()
 assert(_G.X == 4)
-load(io.lines(file, 3))()
+load((io.lines(file, 3)))()
 assert(_G.X == 8)
 
 print('+')

@@ -866,7 +866,8 @@ void luaV_finishOp (lua_State *L) {
 #define ProtectNT(exp)  (savepc(L), (exp), updatetrap(ci))
 
 /*
-** Protect code that will finish the loop (returns).
+** Protect code that will finish the loop (returns) or can only raise
+** errors.
 */
 #define halfProtect(exp)  (savepc(L), (exp))
 
@@ -1457,7 +1458,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_TBC) {
-        luaF_newtbcupval(L, ra);  /* create new to-be-closed upvalue */
+        /* create new to-be-closed upvalue */
+        halfProtect(luaF_newtbcupval(L, ra));
         vmbreak;
       }
       vmcase(OP_JMP) {
@@ -1745,21 +1747,34 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_TFORPREP) {
+        /* is 'state' a function or has a '__close' metamethod? */
+        if (ttisfunction(s2v(ra + 1)) ||
+            !ttisnil(luaT_gettmbyobj(L, s2v(ra + 1), TM_CLOSE))) {
+          /* create to-be-closed upvalue for it */
+          halfProtect(luaF_newtbcupval(L, ra + 1));
+        }
         pc += GETARG_Bx(i);
-        vmbreak;
+        i = *(pc++);  /* go to next instruction */
+        lua_assert(GET_OPCODE(i) == OP_TFORCALL && ra == RA(i));
+        goto l_tforcall;
       }
       vmcase(OP_TFORCALL) {
-        StkId cb = ra + 3;  /* call base */
-        setobjs2s(L, cb+2, ra+2);
-        setobjs2s(L, cb+1, ra+1);
-        setobjs2s(L, cb, ra);
-        L->top = cb + 3;  /* func. + 2 args (state and index) */
-        Protect(luaD_call(L, cb, GETARG_C(i)));
-        if (trap)  /* keep 'base' correct for next instruction */
-          updatebase(ci);
+       l_tforcall:
+        /* 'ra' has the iterator function, 'ra + 1' has the state,
+           and 'ra + 2' has the control variable. The call will use
+           the stack after these values (starting at 'ra + 3')
+        */
+        /* push function, state, and control variable */
+        memcpy(ra + 3, ra, 3 * sizeof(*ra));
+        L->top = ra + 6;
+        Protect(luaD_call(L, ra + 3, GETARG_C(i)));  /* do the call */
+        if (trap) {  /* stack may have changed? */
+          updatebase(ci);  /* keep 'base' correct */
+          ra = RA(i);  /* keep 'ra' correct for next instruction */
+        }
         i = *(pc++);  /* go to next instruction */
-        ra = RA(i);  /* get its 'ra' */
-        lua_assert(GET_OPCODE(i) == OP_TFORLOOP);
+        ra += 2;  /* adjust for next instruction */
+        lua_assert(GET_OPCODE(i) == OP_TFORLOOP && ra == RA(i));
         goto l_tforloop;
       }
       vmcase(OP_TFORLOOP) {

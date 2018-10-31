@@ -354,12 +354,22 @@ static int io_readline (lua_State *L);
 */
 #define MAXARGLINE	250
 
+/*
+** Auxiliar function to create the iteration function for 'lines'.
+** The iteration function is a closure over 'io_readline', with
+** the following upvalues:
+** 1) The file being read (first value in the stack)
+** 2) the number of arguments to read
+** 3) a boolean, true iff file has to be closed when finished ('toclose')
+** *) a variable number of format arguments (rest of the stack)
+*/
 static void aux_lines (lua_State *L, int toclose) {
   int n = lua_gettop(L) - 1;  /* number of arguments to read */
   luaL_argcheck(L, n <= MAXARGLINE, MAXARGLINE + 2, "too many arguments");
+  lua_pushvalue(L, 1);  /* file */
   lua_pushinteger(L, n);  /* number of arguments to read */
   lua_pushboolean(L, toclose);  /* close/not close file when finished */
-  lua_rotate(L, 2, 2);  /* move 'n' and 'toclose' to their positions */
+  lua_rotate(L, 2, 3);  /* move the three values to their positions */
   lua_pushcclosure(L, io_readline, 3 + n);
 }
 
@@ -371,6 +381,11 @@ static int f_lines (lua_State *L) {
 }
 
 
+/*
+** Return an iteration function for 'io.lines'. If file has to be
+** closed, also returns the file itself as a second result (to be
+** closed as the state at the exit of a generic for).
+*/
 static int io_lines (lua_State *L) {
   int toclose;
   if (lua_isnone(L, 1)) lua_pushnil(L);  /* at least one argument */
@@ -386,8 +401,13 @@ static int io_lines (lua_State *L) {
     lua_replace(L, 1);  /* put file at index 1 */
     toclose = 1;  /* close it after iteration */
   }
-  aux_lines(L, toclose);
-  return 1;
+  aux_lines(L, toclose);  /* push iteration function */
+  if (toclose) {
+    lua_pushvalue(L, 1);  /* file will be second result */
+    return 2;
+  }
+  else
+    return 1;
 }
 
 
@@ -453,7 +473,7 @@ static int readdigits (RN *rn, int hex) {
 /*
 ** Read a number: first reads a valid prefix of a numeral into a buffer.
 ** Then it calls 'lua_stringtonumber' to check whether the format is
-** correct and to convert it to a Lua number
+** correct and to convert it to a Lua number.
 */
 static int read_number (lua_State *L, FILE *f) {
   RN rn;
@@ -604,6 +624,9 @@ static int f_read (lua_State *L) {
 }
 
 
+/*
+** Iteration function for 'lines'.
+*/
 static int io_readline (lua_State *L) {
   LStream *p = (LStream *)lua_touserdata(L, lua_upvalueindex(1));
   int i;
@@ -624,8 +647,8 @@ static int io_readline (lua_State *L) {
       return luaL_error(L, "%s", lua_tostring(L, -n + 1));
     }
     if (lua_toboolean(L, lua_upvalueindex(3))) {  /* generator created file? */
-      lua_settop(L, 0);
-      lua_pushvalue(L, lua_upvalueindex(1));
+      lua_settop(L, 0);  /* clear stack */
+      lua_pushvalue(L, lua_upvalueindex(1));  /* push file at index 1 */
       aux_close(L);  /* close it */
     }
     return 0;

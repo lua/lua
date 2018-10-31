@@ -108,7 +108,7 @@ print'+'
 if rawget(_G, "T") then
   -- testing clearing of dead elements from tables
   collectgarbage("stop")   -- stop GC
-  local a = {[{}] = 4, [3] = 0, alo = 1, 
+  local a = {[{}] = 4, [3] = 0, alo = 1,
              a1234567890123456789012345678901234567890 = 10}
 
   local t = T.querytab(a)
@@ -359,6 +359,54 @@ co = coroutine.wrap(function()
 end)
 co()                 -- start coroutine
 assert(co == nil)    -- eventually it will be collected
+
+
+-- to-be-closed variables in generic for loops
+do
+  local numopen = 0
+  local function open (x)
+    numopen = numopen + 1
+    return
+      function ()   -- iteraction function
+        x = x - 1
+        if x > 0 then return x end
+      end,
+      function ()   -- closing function
+        numopen = numopen - 1
+      end
+  end
+
+  local s = 0
+  for i in open(10) do
+     s = s + i
+  end
+  assert(s == 45 and numopen == 0)
+
+  local s = 0
+  for i in open(10) do
+     if i < 5 then break end
+     s = s + i
+  end
+  assert(s == 35 and numopen == 0)
+
+  -- repeat test with '__open' metamethod instead of a function
+  local function open (x)
+    numopen = numopen + 1
+    return
+      function (t)   -- iteraction function
+        t[1] = t[1] - 1
+        if t[1] > 0 then return t[1] end
+      end,
+      setmetatable({x}, {__close = function () numopen = numopen - 1 end})
+  end
+
+  local s = 0
+  for i in open(10) do
+     if (i < 5) then break end
+     s = s + i
+  end
+  assert(s == 35 and numopen == 0)
+end
 
 print('OK')
 
