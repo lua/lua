@@ -221,27 +221,6 @@ void luaC_barrierback_ (lua_State *L, GCObject *o) {
 }
 
 
-/*
-** Barrier for prototype's cache of closures. It turns the prototype
-** back to gray (it was black).  For an 'OLD1' prototype, making it
-** gray stops it from being visited by 'markold', so it is linked in
-** the 'grayagain' list to ensure it will be visited. For other ages,
-** it goes to the 'protogray' list, as only its 'cache' field needs to
-** be revisited.  (A prototype to be in this barrier must be already
-** finished, so its other fields cannot change and do not need to be
-** revisited.)
-*/
-LUAI_FUNC void luaC_protobarrier_ (lua_State *L, Proto *p) {
-  global_State *g = G(L);
-  lua_assert(g->gckind != KGC_GEN || isold(p));
-  if (getage(p) == G_OLD1)  /* still need to be visited? */
-    linkgclist(p, g->grayagain);  /* link it in 'grayagain' */
-  else
-    linkgclist(p, g->protogray);  /* link it in 'protogray' */
-  black2gray(p);  /* make prototype gray */
-}
-
-
 void luaC_fix (lua_State *L, GCObject *o) {
   global_State *g = G(L);
   lua_assert(g->allgc == o);  /* object must be 1st in 'allgc' list! */
@@ -379,7 +358,7 @@ static int remarkupvals (global_State *g) {
 */
 static void restartcollection (global_State *g) {
   g->gray = g->grayagain = NULL;
-  g->weak = g->allweak = g->ephemeron = g->protogray = NULL;
+  g->weak = g->allweak = g->ephemeron = NULL;
   markobject(g, g->mainthread);
   markvalue(g, &g->l_registry);
   markmt(g);
@@ -535,39 +514,12 @@ static int traverseudata (global_State *g, Udata *u) {
 
 
 /*
-** Check the cache of a prototype, to keep invariants. If the
-** cache is white, clear it. (A cache should not prevent the
-** collection of its reference.) Otherwise, if in generational
-** mode, check the generational invariant. If the cache is old,
-** everything is ok. If the prototype is 'OLD0', everything
-** is ok too. (It will naturally be visited again.) If the
-** prototype is older than 'OLD0', then its cache (which is new)
-** must be visited again in the next collection, so the prototype
-** goes to the 'protogray' list. (If the prototype has a cache,
-** it is already immutable and does not need other barriers;
-** then, it can become gray without problems for its other fields.)
-*/
-static void checkprotocache (global_State *g, Proto *p) {
-  if (p->cache) {
-    if (iswhite(p->cache))
-      p->cache = NULL;  /* allow cache to be collected */
-    else if (g->gckind == KGC_GEN && !isold(p->cache) && getage(p) >= G_OLD1) {
-      linkgclist(p, g->protogray);  /* link it in 'protogray' */
-      black2gray(p);  /* make prototype gray */
-    }
-  }
-  p->cachemiss = 0;  /* restart counting */
-}
-
-
-/*
 ** Traverse a prototype. (While a prototype is being build, its
 ** arrays can be larger than needed; the extra slots are filled with
 ** NULL, so the use of 'markobjectN')
 */
 static int traverseproto (global_State *g, Proto *f) {
   int i;
-  checkprotocache(g, f);
   markobjectN(g, f->source);
   for (i = 0; i < f->sizek; i++)  /* mark literals */
     markvalue(g, &f->k[i]);
@@ -695,19 +647,6 @@ static void convergeephemerons (global_State *g) {
 ** Sweep Functions
 ** =======================================================
 */
-
-static void clearprotolist (global_State *g) {
-  GCObject *p = g->protogray;
-  g->protogray = NULL;
-  while (p != NULL) {
-    Proto *pp = gco2p(p);
-    GCObject *next = pp->gclist;
-    lua_assert(isgray(pp) && (pp->cache != NULL || pp->cachemiss >= MAXMISS));
-    gray2black(pp);
-    checkprotocache(g, pp);
-    p = next;
-  }
-}
 
 
 /*
@@ -1439,7 +1378,6 @@ static lu_mem atomic (lua_State *L) {
   clearbyvalues(g, g->weak, origweak);
   clearbyvalues(g, g->allweak, origall);
   luaS_clearcache(g);
-  clearprotolist(g);
   g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */
   lua_assert(g->gray == NULL);
   return work;  /* estimate of slots marked by 'atomic' */

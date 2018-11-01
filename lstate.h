@@ -43,8 +43,6 @@
 ** 'weak': tables with weak values to be cleared;
 ** 'ephemeron': ephemeron tables with white->white entries;
 ** 'allweak': tables with weak keys and/or weak values to be cleared.
-** There is also a list 'protogray' for prototypes that need to have
-** their caches cleared.
 
 */
 
@@ -186,7 +184,6 @@ typedef struct global_State {
   GCObject *weak;  /* list of tables with weak values */
   GCObject *ephemeron;  /* list of ephemeron tables (weak keys) */
   GCObject *allweak;  /* list of all-weak tables */
-  GCObject *protogray;  /* list of prototypes with "new" caches */
   GCObject *tobefnz;  /* list of userdata to be GC */
   GCObject *fixedgc;  /* list of objects not to be collected */
   /* fields for generational collector */

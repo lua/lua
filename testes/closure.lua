@@ -44,18 +44,17 @@ assert(B.g == 19)
 
 -- testing equality
 a = {}
-collectgarbage"stop"
-for i = 1, 5 do  a[i] = function (x) return x + a + _ENV end  end
-collectgarbage"restart"
-assert(a[3] == a[4] and a[4] == a[5])
 
 for i = 1, 5 do  a[i] = function (x) return i + a + _ENV end  end
 assert(a[3] ~= a[4] and a[4] ~= a[5])
 
-local function f()
-  return function (x)  return math.sin(_ENV[x])  end
+do
+  local a = function (x)  return math.sin(_ENV[x])  end
+  local function f()
+    return a
+  end
+  assert(f() == f())
 end
-assert(f() == f())
 
 
 -- testing closures with 'for' control variable

@@ -283,7 +283,6 @@ static void checkudata (global_State *g, Udata *u) {
 static void checkproto (global_State *g, Proto *f) {
   int i;
   GCObject *fgc = obj2gco(f);
-  checkobjref(g, fgc, f->cache);
   checkobjref(g, fgc, f->source);
   for (i=0; i<f->sizek; i++) {
     if (ttisstring(f->k + i))
@@ -417,8 +416,6 @@ static void checkobject (global_State *g, GCObject *o, int maybedead,
         getage(o) == G_TOUCHED1 ||
         getage(o) == G_OLD0 ||
         o->tt == LUA_TTHREAD ||
-        (o->tt == LUA_TPROTO &&
-            (gco2p(o)->cache != NULL || gco2p(o)->cachemiss >= MAXMISS)) ||
         (o->tt == LUA_TUPVAL && upisopen(gco2upv(o))));
       }
     }
@@ -452,7 +449,6 @@ static void checkgrays (global_State *g) {
   checkgraylist(g, g->grayagain);
   checkgraylist(g, g->weak);
   checkgraylist(g, g->ephemeron);
-  checkgraylist(g, g->protogray);
 }
 
 

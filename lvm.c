@@ -684,30 +684,8 @@ lua_Integer luaV_shiftl (lua_Integer x, lua_Integer y) {
 
 
 /*
-** check whether cached closure in prototype 'p' may be reused, that is,
-** whether there is a cached closure with the same upvalues needed by
-** new closure to be created.
-*/
-static LClosure *getcached (Proto *p, UpVal **encup, StkId base) {
-  LClosure *c = p->cache;
-  if (c != NULL) {  /* is there a cached closure? */
-    int nup = p->sizeupvalues;
-    Upvaldesc *uv = p->upvalues;
-    int i;
-    for (i = 0; i < nup; i++) {  /* check whether it has right upvalues */
-      TValue *v = uv[i].instack ? s2v(base + uv[i].idx) : encup[uv[i].idx]->v;
-      if (c->upvals[i]->v != v)
-        return NULL;  /* wrong upvalue; cannot reuse closure */
-    }
-    p->cachemiss = 0;  /* got a hit */
-  }
-  return c;  /* return cached closure (or NULL if no cached closure) */
-}
-
-
-/*
 ** create a new Lua closure, push it in the stack, and initialize
-** its upvalues. ???
+** its upvalues.
 */
 static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
                          StkId ra) {
@@ -723,13 +701,6 @@ static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
     else  /* get upvalue from enclosing function */
       ncl->upvals[i] = encup[uv[i].idx];
     luaC_objbarrier(L, ncl, ncl->upvals[i]);
-  }
-  if (p->cachemiss >= MAXMISS)  /* too many missings? */
-    p->cache = NULL;  /* give up cache */
-  else {
-    p->cache = ncl;  /* save it on cache for reuse */
-    luaC_protobarrier(L, p, ncl);
-    p->cachemiss++;
   }
 }
 
@@ -1811,13 +1782,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_CLOSURE) {
         Proto *p = cl->p->p[GETARG_Bx(i)];
-        LClosure *ncl = getcached(p, cl->upvals, base);  /* cached closure */
-        if (ncl == NULL) {  /* no match? */
-          savestate(L, ci);  /* in case of allocation errors */
-          pushclosure(L, p, cl->upvals, base, ra);  /* create a new one */
-        }
-        else
-          setclLvalue2s(L, ra, ncl);  /* push cashed closure */
+        halfProtect(pushclosure(L, p, cl->upvals, base, ra));
         checkGC(L, ra + 1);
         vmbreak;
       }
