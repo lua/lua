@@ -176,7 +176,7 @@ void luaT_trybinassocTM (lua_State *L, const TValue *p1, const TValue *p2,
 }
 
 
-void luaT_trybiniTM (lua_State *L, const TValue *p1, int i2,
+void luaT_trybiniTM (lua_State *L, const TValue *p1, lua_Integer i2,
                                    int inv, StkId res, TMS event) {
   TValue aux;
   setivalue(&aux, i2);

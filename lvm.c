@@ -620,7 +620,7 @@ void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
 ** 'floor(q) == trunc(q)' when 'q >= 0' or when 'q' is integer,
 ** otherwise 'floor(q) == trunc(q) - 1'.
 */
-lua_Integer luaV_div (lua_State *L, lua_Integer m, lua_Integer n) {
+lua_Integer luaV_idiv (lua_State *L, lua_Integer m, lua_Integer n) {
   if (unlikely(l_castS2U(n) + 1u <= 1u)) {  /* special cases: -1 or 0 */
     if (n == 0)
       luaG_runerror(L, "attempt to divide by zero");
@@ -638,7 +638,7 @@ lua_Integer luaV_div (lua_State *L, lua_Integer m, lua_Integer n) {
 /*
 ** Integer modulus; return 'm % n'. (Assume that C '%' with
 ** negative operands follows C99 behavior. See previous comment
-** about luaV_div.)
+** about luaV_idiv.)
 */
 lua_Integer luaV_mod (lua_State *L, lua_Integer m, lua_Integer n) {
   if (unlikely(l_castS2U(n) + 1u <= 1u)) {  /* special cases: -1 or 0 */
@@ -770,10 +770,125 @@ void luaV_finishOp (lua_State *L) {
 
 /*
 ** {==================================================================
-** Function 'luaV_execute': main interpreter loop
+** Macros for arithmetic/bitwise opcodes in 'luaV_execute'
 ** ===================================================================
 */
 
+
+#define l_addi(L,a,b)	intop(+, a, b)
+#define l_subi(L,a,b)	intop(-, a, b)
+#define l_muli(L,a,b)	intop(*, a, b)
+#define l_band(L,a,b)	intop(&, a, b)
+#define l_bor(L,a,b)	intop(|, a, b)
+#define l_bxor(L,a,b)	intop(^, a, b)
+
+
+/*
+** Auxiliary macro for arithmetic operations over floats and others
+** with immediate operand. 'fop' is the float operation; 'tm' is the
+** corresponding metamethod; 'flip' is true if operands were flipped.
+*/
+#define op_arithfI_aux(L,v1,imm,fop,tm,flip) {  \
+  lua_Number nb;  \
+  if (tonumberns(v1, nb)) {  \
+    setfltvalue(s2v(ra), fop(L, nb, cast_num(imm)));  \
+  }  \
+  else  \
+    Protect(luaT_trybiniTM(L, v1, imm, flip, ra, tm)); }
+
+
+/*
+** Arithmetic operations over floats and others with immediate operand.
+*/
+#define op_arithfI(L,fop,tm) {  \
+  TValue *v1 = vRB(i);  \
+  int imm = GETARG_sC(i);  \
+  op_arithfI_aux(L, v1, imm, fop, tm, 0); }
+
+/*
+** Arithmetic operations with immediate operands. 'iop' is the integer
+** operation.
+*/
+#define op_arithI(L,iop,fop,tm,flip) {  \
+  TValue *v1 = vRB(i);  \
+  int imm = GETARG_sC(i);  \
+  if (ttisinteger(v1)) {  \
+    setivalue(s2v(ra), iop(L, ivalue(v1), imm));  \
+  }  \
+  else op_arithfI_aux(L, v1, imm, fop, tm, flip); }
+
+
+/*
+** Auxiliary function for arithmetic operations over floats and others
+** with two register operands.
+*/
+#define op_arithf_aux(L,v1,v2,fop,tm) {  \
+  lua_Number n1; lua_Number n2;  \
+  if (tonumberns(v1, n1) && tonumberns(v2, n2)) {  \
+    setfltvalue(s2v(ra), fop(L, n1, n2));  \
+  }  \
+  else  \
+    Protect(luaT_trybinTM(L, v1, v2, ra, tm)); }
+
+
+/*
+** Arithmetic operations over floats and others with register operands.
+*/
+#define op_arithf(L,fop,tm) {  \
+  TValue *v1 = vRB(i);  \
+  TValue *v2 = vRC(i);  \
+  op_arithf_aux(L, v1, v2, fop, tm); }
+
+
+/*
+** Arithmetic operations with register operands.
+*/
+#define op_arith(L,iop,fop,tm) {  \
+  TValue *v1 = vRB(i);  \
+  TValue *v2 = vRC(i);  \
+  if (ttisinteger(v1) && ttisinteger(v2)) {  \
+    lua_Integer i1 = ivalue(v1); lua_Integer i2 = ivalue(v2);  \
+    setivalue(s2v(ra), iop(L, i1, i2));  \
+  }  \
+  else op_arithf_aux(L, v1, v2, fop, tm); }
+
+
+/*
+** Bitwise operations with constant operand.
+*/
+#define op_bitwiseK(L,op,tm) {  \
+  TValue *v1 = vRB(i);  \
+  TValue *v2 = KC(i);  \
+  lua_Integer i1;  \
+  lua_Integer i2 = ivalue(v2);  \
+  if (tointegerns(v1, &i1)) {  \
+    setivalue(s2v(ra), op(L, i1, i2));  \
+  }  \
+  else  \
+    Protect(luaT_trybiniTM(L, v1, i2, TESTARG_k(i), ra, tm)); }
+
+
+/*
+** Bitwise operations with register operands.
+*/
+#define op_bitwise(L,op,tm) {  \
+  TValue *v1 = vRB(i);  \
+  TValue *v2 = vRC(i);  \
+  lua_Integer i1; lua_Integer i2;  \
+  if (tointegerns(v1, &i1) && tointegerns(v2, &i2)) {  \
+    setivalue(s2v(ra), op(L, i1, i2));  \
+  }  \
+  else  \
+    Protect(luaT_trybinTM(L, v1, v2, ra, tm)); }
+
+/* }================================================================== */
+
+
+/*
+** {==================================================================
+** Function 'luaV_execute': main interpreter loop
+** ===================================================================
+*/
 
 /*
 ** some macros for common tasks in 'luaV_execute'
@@ -1075,221 +1190,83 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_ADDI) {
-        TValue *rb = vRB(i);
-        int ic = GETARG_sC(i);
-        lua_Number nb;
-        if (ttisinteger(rb)) {
-          setivalue(s2v(ra), intop(+, ivalue(rb), ic));
-        }
-        else if (tonumberns(rb, nb)) {
-          setfltvalue(s2v(ra), luai_numadd(L, nb, cast_num(ic)));
-        }
-        else
-          Protect(luaT_trybiniTM(L, rb, ic, GETARG_k(i), ra, TM_ADD));
+        op_arithI(L, l_addi, luai_numadd, TM_ADD, GETARG_k(i));
         vmbreak;
       }
       vmcase(OP_SUBI) {
-        TValue *rb = vRB(i);
-        int ic = GETARG_sC(i);
-        lua_Number nb;
-        if (ttisinteger(rb)) {
-          setivalue(s2v(ra), intop(-, ivalue(rb), ic));
-        }
-        else if (tonumberns(rb, nb)) {
-          setfltvalue(s2v(ra), luai_numsub(L, nb, cast_num(ic)));
-        }
-        else
-          Protect(luaT_trybiniTM(L, rb, ic, 0, ra, TM_SUB));
+        op_arithI(L, l_subi, luai_numsub, TM_SUB, 0);
         vmbreak;
       }
       vmcase(OP_MULI) {
-        TValue *rb = vRB(i);
-        int ic = GETARG_sC(i);
-        lua_Number nb;
-        if (ttisinteger(rb)) {
-          setivalue(s2v(ra), intop(*, ivalue(rb), ic));
-        }
-        else if (tonumberns(rb, nb)) {
-          setfltvalue(s2v(ra), luai_nummul(L, nb, cast_num(ic)));
-        }
-        else
-          Protect(luaT_trybiniTM(L, rb, ic, GETARG_k(i), ra, TM_MUL));
+        op_arithI(L, l_muli, luai_nummul, TM_MUL, GETARG_k(i));
         vmbreak;
       }
       vmcase(OP_MODI) {
-        TValue *rb = vRB(i);
-        int ic = GETARG_sC(i);
-        lua_Number nb;
-        if (ttisinteger(rb)) {
-          setivalue(s2v(ra), luaV_mod(L, ivalue(rb), ic));
-        }
-        else if (tonumberns(rb, nb)) {
-          lua_Number nc = cast_num(ic);
-          setfltvalue(s2v(ra), luaV_modf(L, nb, nc));
-        }
-        else
-          Protect(luaT_trybiniTM(L, rb, ic, 0, ra, TM_MOD));
+        op_arithI(L, luaV_mod, luaV_modf, TM_MOD, 0);
         vmbreak;
       }
       vmcase(OP_POWI) {
-        TValue *rb = vRB(i);
-        int ic = GETARG_sC(i);
-        lua_Number nb;
-        if (tonumberns(rb, nb)) {
-          lua_Number nc = cast_num(ic);
-          setfltvalue(s2v(ra), luai_numpow(L, nb, nc));
-        }
-        else
-          Protect(luaT_trybiniTM(L, rb, ic, 0, ra, TM_POW));
+        op_arithfI(L, luai_numpow, TM_POW);
         vmbreak;
       }
       vmcase(OP_DIVI) {
-        TValue *rb = vRB(i);
-        int ic = GETARG_sC(i);
-        lua_Number nb;
-        if (tonumberns(rb, nb)) {
-          lua_Number nc = cast_num(ic);
-          setfltvalue(s2v(ra), luai_numdiv(L, nb, nc));
-        }
-        else
-          Protect(luaT_trybiniTM(L, rb, ic, 0, ra, TM_DIV));
+        op_arithfI(L, luai_numdiv, TM_DIV);
         vmbreak;
       }
       vmcase(OP_IDIVI) {
-        TValue *rb = vRB(i);
-        int ic = GETARG_sC(i);
-        lua_Number nb;
-        if (ttisinteger(rb)) {
-          setivalue(s2v(ra), luaV_div(L, ivalue(rb), ic));
-        }
-        else if (tonumberns(rb, nb)) {
-          lua_Number nc = cast_num(ic);
-          setfltvalue(s2v(ra), luai_numidiv(L, nb, nc));
-        }
-        else
-          Protect(luaT_trybiniTM(L, rb, ic, 0, ra, TM_IDIV));
+        op_arithI(L, luaV_idiv, luai_numidiv, TM_IDIV, 0);
         vmbreak;
       }
       vmcase(OP_ADD) {
-        TValue *rb = vRB(i);
-        TValue *rc = vRC(i);
-        lua_Number nb; lua_Number nc;
-        if (ttisinteger(rb) && ttisinteger(rc)) {
-          lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
-          setivalue(s2v(ra), intop(+, ib, ic));
-        }
-        else if (tonumberns(rb, nb) && tonumberns(rc, nc)) {
-          setfltvalue(s2v(ra), luai_numadd(L, nb, nc));
-        }
-        else
-          Protect(luaT_trybinTM(L, rb, rc, ra, TM_ADD));
+        op_arith(L, l_addi, luai_numadd, TM_ADD);
         vmbreak;
       }
       vmcase(OP_SUB) {
-        TValue *rb = vRB(i);
-        TValue *rc = vRC(i);
-        lua_Number nb; lua_Number nc;
-        if (ttisinteger(rb) && ttisinteger(rc)) {
-          lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
-          setivalue(s2v(ra), intop(-, ib, ic));
-        }
-        else if (tonumberns(rb, nb) && tonumberns(rc, nc)) {
-          setfltvalue(s2v(ra), luai_numsub(L, nb, nc));
-        }
-        else
-          Protect(luaT_trybinTM(L, rb, rc, ra, TM_SUB));
+        op_arith(L, l_subi, luai_numsub, TM_SUB);
         vmbreak;
       }
       vmcase(OP_MUL) {
-        TValue *rb = vRB(i);
-        TValue *rc = vRC(i);
-        lua_Number nb; lua_Number nc;
-        if (ttisinteger(rb) && ttisinteger(rc)) {
-          lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
-          setivalue(s2v(ra), intop(*, ib, ic));
-        }
-        else if (tonumberns(rb, nb) && tonumberns(rc, nc)) {
-          setfltvalue(s2v(ra), luai_nummul(L, nb, nc));
-        }
-        else
-          Protect(luaT_trybinTM(L, rb, rc, ra, TM_MUL));
+        op_arith(L, l_muli, luai_nummul, TM_MUL);
+        vmbreak;
+      }
+      vmcase(OP_MOD) {
+        op_arith(L, luaV_mod, luaV_modf, TM_MOD);
+        vmbreak;
+      }
+      vmcase(OP_POW) {
+        op_arithf(L, luai_numpow, TM_POW);
         vmbreak;
       }
       vmcase(OP_DIV) {  /* float division (always with floats) */
-        TValue *rb = vRB(i);
-        TValue *rc = vRC(i);
-        lua_Number nb; lua_Number nc;
-        if (tonumberns(rb, nb) && tonumberns(rc, nc)) {
-          setfltvalue(s2v(ra), luai_numdiv(L, nb, nc));
-        }
-        else
-          Protect(luaT_trybinTM(L, rb, rc, ra, TM_DIV));
+        op_arithf(L, luai_numdiv, TM_DIV);
+        vmbreak;
+      }
+      vmcase(OP_IDIV) {  /* floor division */
+        op_arith(L, luaV_idiv, luai_numidiv, TM_IDIV);
         vmbreak;
       }
       vmcase(OP_BANDK) {
-        TValue *p1 = vRB(i);
-        TValue *p2 = KC(i);
-        lua_Integer i1;
-        if (tointegerns(p1, &i1)) {
-          setivalue(s2v(ra), intop(&, i1, ivalue(p2)));
-        }
-        else
-          Protect(luaT_trybinassocTM(L, p1, p2, ra, TESTARG_k(i), TM_BAND));
+        op_bitwiseK(L, l_band, TM_BAND);
         vmbreak;
       }
       vmcase(OP_BORK) {
-        TValue *p1 = vRB(i);
-        TValue *p2 = KC(i);
-        lua_Integer i1;
-        if (tointegerns(p1, &i1)) {
-          setivalue(s2v(ra), intop(|, i1, ivalue(p2)));
-        }
-        else
-          Protect(luaT_trybinassocTM(L, p1, p2, ra, TESTARG_k(i), TM_BOR));
+        op_bitwiseK(L, l_bor, TM_BOR);
         vmbreak;
       }
       vmcase(OP_BXORK) {
-        TValue *p1 = vRB(i);
-        TValue *p2 = KC(i);
-        lua_Integer i1;
-        if (tointegerns(p1, &i1)) {
-          setivalue(s2v(ra), intop(^, i1, ivalue(p2)));
-        }
-        else
-          Protect(luaT_trybinassocTM(L, p1, p2, ra, TESTARG_k(i), TM_BXOR));
+        op_bitwiseK(L, l_bxor, TM_BXOR);
         vmbreak;
       }
       vmcase(OP_BAND) {
-        TValue *rb = vRB(i);
-        TValue *rc = vRC(i);
-        lua_Integer ib; lua_Integer ic;
-        if (tointegerns(rb, &ib) && tointegerns(rc, &ic)) {
-          setivalue(s2v(ra), intop(&, ib, ic));
-        }
-        else
-          Protect(luaT_trybinTM(L, rb, rc, ra, TM_BAND));
+        op_bitwise(L, l_band, TM_BAND);
         vmbreak;
       }
       vmcase(OP_BOR) {
-        TValue *rb = vRB(i);
-        TValue *rc = vRC(i);
-        lua_Integer ib; lua_Integer ic;
-        if (tointegerns(rb, &ib) && tointegerns(rc, &ic)) {
-          setivalue(s2v(ra), intop(|, ib, ic));
-        }
-        else
-          Protect(luaT_trybinTM(L, rb, rc, ra, TM_BOR));
+        op_bitwise(L, l_bor, TM_BOR);
         vmbreak;
       }
       vmcase(OP_BXOR) {
-        TValue *rb = vRB(i);
-        TValue *rc = vRC(i);
-        lua_Integer ib; lua_Integer ic;
-        if (tointegerns(rb, &ib) && tointegerns(rc, &ic)) {
-          setivalue(s2v(ra), intop(^, ib, ic));
-        }
-        else
-          Protect(luaT_trybinTM(L, rb, rc, ra, TM_BXOR));
+        op_bitwise(L, l_bxor, TM_BXOR);
         vmbreak;
       }
       vmcase(OP_SHRI) {
@@ -1319,17 +1296,6 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           Protect(luaT_trybiniTM(L, rb, ic, 1, ra, TM_SHL));
         vmbreak;
       }
-      vmcase(OP_SHL) {
-        TValue *rb = vRB(i);
-        TValue *rc = vRC(i);
-        lua_Integer ib; lua_Integer ic;
-        if (tointegerns(rb, &ib) && tointegerns(rc, &ic)) {
-          setivalue(s2v(ra), luaV_shiftl(ib, ic));
-        }
-        else
-          Protect(luaT_trybinTM(L, rb, rc, ra, TM_SHL));
-        vmbreak;
-      }
       vmcase(OP_SHR) {
         TValue *rb = vRB(i);
         TValue *rc = vRC(i);
@@ -1341,45 +1307,15 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           Protect(luaT_trybinTM(L, rb, rc, ra, TM_SHR));
         vmbreak;
       }
-      vmcase(OP_MOD) {
+      vmcase(OP_SHL) {
         TValue *rb = vRB(i);
         TValue *rc = vRC(i);
-        lua_Number nb; lua_Number nc;
-        if (ttisinteger(rb) && ttisinteger(rc)) {
-          lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
-          setivalue(s2v(ra), luaV_mod(L, ib, ic));
-        }
-        else if (tonumberns(rb, nb) && tonumberns(rc, nc)) {
-          setfltvalue(s2v(ra), luaV_modf(L, nb, nc));
+        lua_Integer ib; lua_Integer ic;
+        if (tointegerns(rb, &ib) && tointegerns(rc, &ic)) {
+          setivalue(s2v(ra), luaV_shiftl(ib, ic));
         }
         else
-          Protect(luaT_trybinTM(L, rb, rc, ra, TM_MOD));
-        vmbreak;
-      }
-      vmcase(OP_IDIV) {  /* floor division */
-        TValue *rb = vRB(i);
-        TValue *rc = vRC(i);
-        lua_Number nb; lua_Number nc;
-        if (ttisinteger(rb) && ttisinteger(rc)) {
-          lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
-          setivalue(s2v(ra), luaV_div(L, ib, ic));
-        }
-        else if (tonumberns(rb, nb) && tonumberns(rc, nc)) {
-          setfltvalue(s2v(ra), luai_numidiv(L, nb, nc));
-        }
-        else
-          Protect(luaT_trybinTM(L, rb, rc, ra, TM_IDIV));
-        vmbreak;
-      }
-      vmcase(OP_POW) {
-        TValue *rb = vRB(i);
-        TValue *rc = vRC(i);
-        lua_Number nb; lua_Number nc;
-        if (tonumberns(rb, nb) && tonumberns(rc, nc)) {
-          setfltvalue(s2v(ra), luai_numpow(L, nb, nc));
-        }
-        else
-          Protect(luaT_trybinTM(L, rb, rc, ra, TM_POW));
+          Protect(luaT_trybinTM(L, rb, rc, ra, TM_SHL));
         vmbreak;
       }
       vmcase(OP_UNM) {

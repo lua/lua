@@ -83,7 +83,7 @@ static lua_Integer intarith (lua_State *L, int op, lua_Integer v1,
     case LUA_OPSUB:return intop(-, v1, v2);
     case LUA_OPMUL:return intop(*, v1, v2);
     case LUA_OPMOD: return luaV_mod(L, v1, v2);
-    case LUA_OPIDIV: return luaV_div(L, v1, v2);
+    case LUA_OPIDIV: return luaV_idiv(L, v1, v2);
     case LUA_OPBAND: return intop(&, v1, v2);
     case LUA_OPBOR: return intop(|, v1, v2);
     case LUA_OPBXOR: return intop(^, v1, v2);
