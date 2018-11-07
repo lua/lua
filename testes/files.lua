@@ -200,7 +200,7 @@ return x + y * z
 assert(f:close())
 f = coroutine.wrap(dofile)
 assert(f(file) == 10)
-print(f(100, 101) == 20)
+assert(f(100, 101) == 20)
 assert(f(200) == 100 + 200 * 101)
 assert(os.remove(file))
 
@@ -420,6 +420,41 @@ io.output(file); io.write"a = 10 + 34\na = 2*a\na = -a\n":close()
 local t = {}
 assert(load(io.lines(file, "L"), nil, nil, t))()
 assert(t.a == -((10 + 34) * 2))
+
+
+do   -- testing closing file in line iteration
+
+  -- get the to-be-closed variable from a loop
+  local function gettoclose (lv)
+    lv = lv + 1
+    for i = 1, math.maxinteger do
+      local n, v = debug.getlocal(lv, i)
+      if n == "(for toclose)" then
+        return v
+      end
+    end
+  end
+
+  local f
+  for l in io.lines(file) do
+    f = gettoclose(1)
+    assert(io.type(f) == "file")
+    break
+  end
+  assert(io.type(f) == "closed file")
+
+  f = nil
+  local function foo (name)
+    for l in io.lines(name) do
+      f = gettoclose(1)
+      assert(io.type(f) == "file")
+      error(f)   -- exit loop with an error
+    end
+  end
+  local st, msg = pcall(foo, file)
+  assert(st == false and io.type(msg) == "closed file")
+
+end
 
 
 -- test for multipe arguments in 'lines'

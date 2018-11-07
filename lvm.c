@@ -1654,11 +1654,11 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_TFORPREP) {
-        /* is 'state' a function or has a '__close' metamethod? */
-        if (ttisfunction(s2v(ra + 1)) ||
-            !ttisnil(luaT_gettmbyobj(L, s2v(ra + 1), TM_CLOSE))) {
+        /* is 'toclose' a function or has a '__close' metamethod? */
+        if (ttisfunction(s2v(ra + 3)) ||
+            !ttisnil(luaT_gettmbyobj(L, s2v(ra + 3), TM_CLOSE))) {
           /* create to-be-closed upvalue for it */
-          halfProtect(luaF_newtbcupval(L, ra + 1));
+          halfProtect(luaF_newtbcupval(L, ra + 3));
         }
         pc += GETARG_Bx(i);
         i = *(pc++);  /* go to next instruction */
@@ -1668,13 +1668,14 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       vmcase(OP_TFORCALL) {
        l_tforcall:
         /* 'ra' has the iterator function, 'ra + 1' has the state,
-           and 'ra + 2' has the control variable. The call will use
-           the stack after these values (starting at 'ra + 3')
+           'ra + 2' has the control variable, and 'ra + 3' has the
+           to-be-closed variable. The call will use the stack after
+           these values (starting at 'ra + 4')
         */
         /* push function, state, and control variable */
-        memcpy(ra + 3, ra, 3 * sizeof(*ra));
-        L->top = ra + 6;
-        Protect(luaD_call(L, ra + 3, GETARG_C(i)));  /* do the call */
+        memcpy(ra + 4, ra, 3 * sizeof(*ra));
+        L->top = ra + 4 + 3;
+        Protect(luaD_call(L, ra + 4, GETARG_C(i)));  /* do the call */
         if (trap) {  /* stack may have changed? */
           updatebase(ci);  /* keep 'base' correct */
           ra = RA(i);  /* keep 'ra' correct for next instruction */
@@ -1686,8 +1687,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_TFORLOOP) {
         l_tforloop:
-        if (!ttisnil(s2v(ra + 1))) {  /* continue loop? */
-          setobjs2s(L, ra, ra + 1);  /* save control variable */
+        if (!ttisnil(s2v(ra + 2))) {  /* continue loop? */
+          setobjs2s(L, ra, ra + 2);  /* save control variable */
           pc -= GETARG_Bx(i);  /* jump back */
         }
         vmbreak;

@@ -371,6 +371,8 @@ do
         x = x - 1
         if x > 0 then return x end
       end,
+      nil,   -- state
+      nil,   -- control variable
       function ()   -- closing function
         numopen = numopen - 1
       end
@@ -392,12 +394,16 @@ do
   -- repeat test with '__open' metamethod instead of a function
   local function open (x)
     numopen = numopen + 1
+    local state = setmetatable({x},
+                        {__close = function () numopen = numopen - 1 end})
     return
       function (t)   -- iteraction function
         t[1] = t[1] - 1
         if t[1] > 0 then return t[1] end
       end,
-      setmetatable({x}, {__close = function () numopen = numopen - 1 end})
+      state,
+      nil,
+      state    -- to-be-closed
   end
 
   local s = 0

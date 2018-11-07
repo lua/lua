@@ -386,8 +386,10 @@ static int io_lines (lua_State *L) {
   }
   aux_lines(L, toclose);  /* push iteration function */
   if (toclose) {
-    lua_pushvalue(L, 1);  /* file will be second result */
-    return 2;
+    lua_pushnil(L);  /* state */
+    lua_pushnil(L);  /* control */
+    lua_pushvalue(L, 1);  /* file is the to-be-closed variable (4th result) */
+    return 4;
   }
   else
     return 1;

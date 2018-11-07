@@ -165,6 +165,9 @@ static int registerlocalvar (LexState *ls, TString *varname) {
 }
 
 
+/*
+** Create a new local variable with the given 'name'.
+*/
 static void new_localvar (LexState *ls, TString *name) {
   FuncState *fs = ls->fs;
   Dyndata *dyd = ls->dyd;
@@ -176,13 +179,8 @@ static void new_localvar (LexState *ls, TString *name) {
   dyd->actvar.arr[dyd->actvar.n++].idx = cast(short, reg);
 }
 
-
-static void new_localvarliteral_ (LexState *ls, const char *name, size_t sz) {
-  new_localvar(ls, luaX_newstring(ls, name, sz));
-}
-
 #define new_localvarliteral(ls,v) \
-	new_localvarliteral_(ls, "" v, (sizeof(v)/sizeof(char))-1)
+    new_localvar(ls, luaX_newstring(ls, "" v, (sizeof(v)/sizeof(char)) - 1));
 
 
 static LocVar *getlocvar (FuncState *fs, int i) {
@@ -192,6 +190,9 @@ static LocVar *getlocvar (FuncState *fs, int i) {
 }
 
 
+/*
+** Start the scope for the last 'nvars' created variables.
+*/
 static void adjustlocalvars (LexState *ls, int nvars) {
   FuncState *fs = ls->fs;
   fs->nactvar = cast_byte(fs->nactvar + nvars);
@@ -1357,7 +1358,6 @@ static void forbody (LexState *ls, int base, int line, int nvars, int kind) {
   BlockCnt bl;
   FuncState *fs = ls->fs;
   int prep, endfor;
-  adjustlocalvars(ls, 3);  /* control variables */
   checknext(ls, TK_DO);
   prep = luaK_codeABx(fs, forprep[kind], base, 0);
   enterblock(fs, &bl, 0);  /* scope for declared variables */
@@ -1399,6 +1399,7 @@ static void fornum (LexState *ls, TString *varname, int line) {
     luaK_int(fs, fs->freereg, 1);
     luaK_reserveregs(fs, 1);
   }
+  adjustlocalvars(ls, 3);  /* control variables */
   forbody(ls, base, line, 1, basicfor);
 }
 
@@ -1407,7 +1408,7 @@ static void forlist (LexState *ls, TString *indexname) {
   /* forlist -> NAME {,NAME} IN explist forbody */
   FuncState *fs = ls->fs;
   expdesc e;
-  int nvars = 4;  /* gen, state, control, plus at least one declared var */
+  int nvars = 5;  /* gen, state, control, toclose, 'indexname' */
   int line;
   int base = fs->freereg;
   /* create control variables */
@@ -1415,6 +1416,7 @@ static void forlist (LexState *ls, TString *indexname) {
   new_localvarliteral(ls, "(for state)");
   markupval(fs, fs->nactvar);  /* state may create an upvalue */
   new_localvarliteral(ls, "(for control)");
+  new_localvarliteral(ls, "(for toclose)");
   /* create declared variables */
   new_localvar(ls, indexname);
   while (testnext(ls, ',')) {
@@ -1423,9 +1425,10 @@ static void forlist (LexState *ls, TString *indexname) {
   }
   checknext(ls, TK_IN);
   line = ls->linenumber;
-  adjust_assign(ls, 3, explist(ls, &e), &e);
+  adjust_assign(ls, 4, explist(ls, &e), &e);
+  adjustlocalvars(ls, 4);  /* control variables */
   luaK_checkstack(fs, 3);  /* extra space to call generator */
-  forbody(ls, base, line, nvars - 3, 2);
+  forbody(ls, base, line, nvars - 4, 2);
 }
 
 
@@ -1575,9 +1578,9 @@ static void tocloselocalstat (LexState *ls) {
   new_localvar(ls, str_checkname(ls));
   checknext(ls, '=');
   exp1(ls, 0);
-  luaK_codeABC(fs, OP_TBC, fs->nactvar, 0, 0);
   markupval(fs, fs->nactvar);
   adjustlocalvars(ls, 1);
+  luaK_codeABC(fs, OP_TBC, fs->nactvar - 1, 0, 0);
 }
 
 
