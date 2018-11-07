@@ -987,7 +987,7 @@ do
 
   local a = T.testC([[
     call 0 1   # create resource
-    tobeclosed  # mark it to be closed
+    toclose    # mark it to be closed
     return 1
   ]], newresource)
   assert(a[1] == 11)
@@ -996,7 +996,7 @@ do
   -- repeat the test, but calling function in a 'multret' context
   local a = {T.testC([[
     call 0 1   # create resource
-    tobeclosed  # mark it to be closed
+    toclose    # mark it to be closed
     return 2
   ]], newresource)}
   assert(type(a[1]) == "string" and a[2][1] == 11)
@@ -1005,7 +1005,7 @@ do
   -- error
   local a, b = pcall(T.testC, [[
     call 0 1   # create resource
-    tobeclosed  # mark it to be closed
+    toclose    # mark it to be closed
     error       # resource is the error object
   ]], newresource)
   assert(a == false and b[1] == 11)
@@ -1019,10 +1019,10 @@ do
   local a = T.testC([[
     pushvalue 2
     call 0 1   # create resource
-    tobeclosed  # mark it to be closed
+    toclose    # mark it to be closed
     pushvalue 2
     call 0 1   # create another resource
-    tobeclosed  # mark it to be closed
+    toclose    # mark it to be closed
     pushvalue 3
     pushint 2   # there should be two open resources
     call 1 0
@@ -1102,7 +1102,7 @@ end)
 testamem("to-be-closed variables", function()
   local flag
   do
-    local scoped x = function () flag = true end
+    local *toclose x = function () flag = true end
     flag = false
     local x = {}
   end

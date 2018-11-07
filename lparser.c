@@ -1546,16 +1546,15 @@ static void localfunc (LexState *ls) {
 }
 
 
-static void commonlocalstat (LexState *ls, TString *firstvar) {
+static void commonlocalstat (LexState *ls) {
   /* stat -> LOCAL NAME {',' NAME} ['=' explist] */
-  int nvars = 1;
+  int nvars = 0;
   int nexps;
   expdesc e;
-  new_localvar(ls, firstvar);
-  while (testnext(ls, ',')) {
+  do {
     new_localvar(ls, str_checkname(ls));
     nvars++;
-  }
+  } while (testnext(ls, ','));
   if (testnext(ls, '='))
     nexps = explist(ls, &e);
   else {
@@ -1567,8 +1566,12 @@ static void commonlocalstat (LexState *ls, TString *firstvar) {
 }
 
 
-static void scopedlocalstat (LexState *ls) {
+static void tocloselocalstat (LexState *ls) {
   FuncState *fs = ls->fs;
+  TString *attr = str_checkname(ls);
+  if (strcmp(getstr(attr), "toclose") != 0)
+    luaK_semerror(ls,
+      luaO_pushfstring(ls->L, "unknown attribute '%s'", getstr(attr)));
   new_localvar(ls, str_checkname(ls));
   checknext(ls, '=');
   exp1(ls, 0);
@@ -1580,13 +1583,11 @@ static void scopedlocalstat (LexState *ls) {
 
 static void localstat (LexState *ls) {
   /* stat -> LOCAL NAME {',' NAME} ['=' explist]
-           | LOCAL SCOPED NAME '=' exp */
-  TString *firstvar = str_checkname(ls);
-  if (ls->t.token == TK_NAME &&
-      eqshrstr(firstvar, luaS_newliteral(ls->L, "scoped")))
-    scopedlocalstat(ls);
+           | LOCAL *toclose NAME '=' exp */
+  if (testnext(ls, '*'))
+    tocloselocalstat(ls);
   else
-    commonlocalstat(ls, firstvar);
+    commonlocalstat(ls);
 }
 
 

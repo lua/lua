@@ -181,9 +181,9 @@ local function stack(n) n = ((n == 0) or stack(n - 1)) end
 do
   local a = {}
   do
-    local scoped x = setmetatable({"x"}, {__close = function (self)
+    local *toclose x = setmetatable({"x"}, {__close = function (self)
                                                    a[#a + 1] = self[1] end})
-    local scoped y = function (x) assert(x == nil); a[#a + 1] = "y" end
+    local *toclose y = function (x) assert(x == nil); a[#a + 1] = "y" end
     a[#a + 1] = "in"
   end
   a[#a + 1] = "out"
@@ -197,7 +197,7 @@ do
 
   -- closing functions do not corrupt returning values
   local function foo (x)
-    local scoped _ = closescope
+    local *toclose _ = closescope
     return x, X, 23
   end
 
@@ -206,7 +206,7 @@ do
 
   X = false
   foo = function (x)
-    local scoped _ = closescope
+    local *toclose _ = closescope
     local y = 15
     return y
   end
@@ -215,7 +215,7 @@ do
 
   X = false
   foo = function ()
-    local scoped x = closescope
+    local *toclose x = closescope
     return x
   end
 
@@ -228,13 +228,13 @@ do
   -- to-be-closed variables must be closed in tail calls
   local X, Y
   local function foo ()
-    local scoped _ = function () Y = 10 end
+    local *toclose _ = function () Y = 10 end
     assert(X == 20 and Y == nil)
     return 1,2,3
   end
 
   local function bar ()
-    local scoped _ = function () X = 20 end
+    local *toclose _ = function () X = 20 end
     return foo()
   end
 
@@ -245,11 +245,11 @@ end
 do   -- errors in __close
   local log = {}
   local function foo (err)
-    local scoped x = function (msg) log[#log + 1] = msg; error(1) end
-    local scoped x1 = function (msg) log[#log + 1] = msg; end
-    local scoped gc = function () collectgarbage() end
-    local scoped y = function (msg) log[#log + 1] = msg; error(2) end
-    local scoped z = function (msg) log[#log + 1] = msg or 10; error(3) end
+    local *toclose x = function (msg) log[#log + 1] = msg; error(1) end
+    local *toclose x1 = function (msg) log[#log + 1] = msg; end
+    local *toclose gc = function () collectgarbage() end
+    local *toclose y = function (msg) log[#log + 1] = msg; error(2) end
+    local *toclose z = function (msg) log[#log + 1] = msg or 10; error(3) end
     if err then error(4) end
   end
   local stat, msg = pcall(foo, false)
@@ -267,8 +267,8 @@ end
 if rawget(_G, "T") then
   -- memory error inside closing function
   local function foo ()
-    local scoped y = function () T.alloccount() end
-    local scoped x = setmetatable({}, {__close = function ()
+    local *toclose y = function () T.alloccount() end
+    local *toclose x = setmetatable({}, {__close = function ()
       T.alloccount(0); local x = {}   -- force a memory error
     end})
     error("a")   -- common error inside the function's body
@@ -294,7 +294,7 @@ if rawget(_G, "T") then
   end
 
   local function test ()
-    local scoped x = enter(0)   -- set a memory limit
+    local *toclose x = enter(0)   -- set a memory limit
     -- creation of previous upvalue will raise a memory error
     os.exit(false)    -- should not run
   end
@@ -309,14 +309,14 @@ if rawget(_G, "T") then
 
   -- repeat test with extra closing upvalues
   local function test ()
-    local scoped xxx = function (msg)
+    local *toclose xxx = function (msg)
       assert(msg == "not enough memory");
       error(1000)   -- raise another error
     end
-    local scoped xx = function (msg)
+    local *toclose xx = function (msg)
       assert(msg == "not enough memory");
     end
-    local scoped x = enter(0)   -- set a memory limit
+    local *toclose x = enter(0)   -- set a memory limit
     -- creation of previous upvalue will raise a memory error
     os.exit(false)    -- should not run
   end
@@ -333,9 +333,9 @@ do
   local x = false
   local y = false
   local co = coroutine.create(function ()
-    local scoped xv = function () x = true end
+    local *toclose xv = function () x = true end
     do
-      local scoped yv = function () y = true end
+      local *toclose yv = function () y = true end
       coroutine.yield(100)   -- yield doesn't close variable
     end
     coroutine.yield(200)   -- yield doesn't close variable
@@ -353,7 +353,7 @@ end
 -- a suspended coroutine should not close its variables when collected
 local co
 co = coroutine.wrap(function()
-  local scoped x = function () os.exit(false) end    -- should not run
+  local *toclose x = function () os.exit(false) end    -- should not run
   co = nil
   coroutine.yield()
 end)

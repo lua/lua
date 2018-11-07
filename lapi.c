@@ -1207,7 +1207,7 @@ LUA_API int lua_next (lua_State *L, int idx) {
 }
 
 
-LUA_API void lua_tobeclosed (lua_State *L) {
+LUA_API void lua_toclose (lua_State *L) {
   int nresults = L->ci->nresults;
   luaF_newtbcupval(L, L->top - 1);  /* create new to-be-closed upvalue */
   if (!hastocloseCfunc(nresults))  /* function not marked yet? */

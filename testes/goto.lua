@@ -258,7 +258,7 @@ do
   ::L2:: goto L3
 
   ::L1:: do
-    local scoped a = function () X = true end
+    local *toclose a = function () X = true end
     assert(X == nil)
     if a then goto L2 end   -- jumping back out of scope of 'a'
   end
