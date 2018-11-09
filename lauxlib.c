@@ -27,6 +27,12 @@
 #include "lauxlib.h"
 
 
+#if !defined(MAX_SIZET)
+/* maximum value for size_t */
+#define MAX_SIZET	((size_t)(~(size_t)0))
+#endif
+
+
 /*
 ** {======================================================
 ** Traceback
@@ -501,34 +507,56 @@ static void *newbox (lua_State *L, size_t newsize) {
 
 
 /*
-** returns a pointer to a free area with at least 'sz' bytes
+** Compute new size for buffer 'B', enough to accommodate extra 'sz'
+** bytes.
 */
-LUALIB_API char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz) {
-  lua_State *L = B->L;
-  if (B->size - B->n < sz) {  /* not enough space? */
+static size_t newbuffsize (luaL_Buffer *B, size_t sz) {
+  size_t newsize = B->size * 2;  /* double buffer size */
+  if (MAX_SIZET - sz < B->n)  /* overflow in (B->n + sz)? */
+    return luaL_error(B->L, "buffer too large");
+  if (newsize < B->n + sz)  /* double is not big enough? */
+    newsize = B->n + sz;
+  return newsize;
+}
+
+
+/*
+** Returns a pointer to a free area with at least 'sz' bytes in buffer
+** 'B'. 'boxidx' is the position in the stack where the buffer's box is
+** or should be.
+*/
+static char *prepbuffsize (luaL_Buffer *B, size_t sz, int boxidx) {
+  if (B->size - B->n >= sz)  /* enough space? */
+    return B->b + B->n;
+  else {
+    lua_State *L = B->L;
     char *newbuff;
-    size_t newsize = B->size * 2;  /* double buffer size */
-    if (newsize - B->n < sz)  /* not big enough? */
-      newsize = B->n + sz;
-    if (newsize < B->n || newsize - B->n < sz)
-      luaL_error(L, "buffer too large");
+    size_t newsize = newbuffsize(B, sz);
     /* create larger buffer */
-    if (buffonstack(B))
-      newbuff = (char *)resizebox(L, -1, newsize);
-    else {  /* no buffer yet */
-      newbuff = (char *)newbox(L, newsize);
+    if (buffonstack(B))  /* buffer already has a box? */
+      newbuff = (char *)resizebox(L, boxidx, newsize);  /* resize it */
+    else {  /* no box yet */
+      newbuff = (char *)newbox(L, newsize);  /* create a new box */
       memcpy(newbuff, B->b, B->n * sizeof(char));  /* copy original content */
+      lua_insert(L, boxidx);  /* move box to its intended position */
     }
     B->b = newbuff;
     B->size = newsize;
+    return newbuff + B->n;
   }
-  return &B->b[B->n];
+}
+
+/*
+** returns a pointer to a free area with at least 'sz' bytes
+*/
+LUALIB_API char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz) {
+  return prepbuffsize(B, sz, -1);
 }
 
 
 LUALIB_API void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l) {
   if (l > 0) {  /* avoid 'memcpy' when 's' can be NULL */
-    char *b = luaL_prepbuffsize(B, l);
+    char *b = prepbuffsize(B, l, -1);
     memcpy(b, s, l * sizeof(char));
     luaL_addsize(B, l);
   }
@@ -556,14 +584,23 @@ LUALIB_API void luaL_pushresultsize (luaL_Buffer *B, size_t sz) {
 }
 
 
+/*
+** 'luaL_addvalue' is the only function in the Buffer system where the
+** box (if existent) is not on the top of the stack. So, instead of
+** calling 'luaL_addlstring', it replicates the code using -2 as the
+** last argument to 'prepbuffsize', signaling that the box is (or will
+** be) bellow the string being added to the buffer. (Box creation can
+** trigger an emergency GC, so we should not remove the string from the
+** stack before we have the space guaranteed.)
+*/
 LUALIB_API void luaL_addvalue (luaL_Buffer *B) {
   lua_State *L = B->L;
-  size_t l;
-  const char *s = lua_tolstring(L, -1, &l);
-  if (buffonstack(B))
-    lua_insert(L, -2);  /* put value below buffer */
-  luaL_addlstring(B, s, l);
-  lua_remove(L, (buffonstack(B)) ? -2 : -1);  /* remove value */
+  size_t len;
+  const char *s = lua_tolstring(L, -1, &len);
+  char *b = prepbuffsize(B, len, -2);
+  memcpy(b, s, len * sizeof(char));
+  luaL_addsize(B, len);
+  lua_pop(L, 1);  /* pop string */
 }
 
 
@@ -577,7 +614,7 @@ LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
 
 LUALIB_API char *luaL_buffinitsize (lua_State *L, luaL_Buffer *B, size_t sz) {
   luaL_buffinit(L, B);
-  return luaL_prepbuffsize(B, sz);
+  return prepbuffsize(B, sz, -1);
 }
 
 /* }====================================================== */
