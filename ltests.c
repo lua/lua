@@ -1551,7 +1551,7 @@ static struct X { int x; } x;
       return lua_yieldk(L1, nres, i, Cfunck);
     }
     else if EQ("toclose") {
-      lua_toclose(L);
+      lua_toclose(L, getnum);
     }
     else luaL_error(L, "unknown instruction %s", buff);
   }

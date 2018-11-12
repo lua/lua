@@ -985,18 +985,20 @@ do
     return x
   end
 
-  local a = T.testC([[
+  local a, b = T.testC([[
     call 0 1   # create resource
-    toclose    # mark it to be closed
-    return 1
+    pushint 34
+    toclose -2  # mark call result to be closed
+    toclose -1  # mark number to be closed (will be ignored)
+    return 2
   ]], newresource)
-  assert(a[1] == 11)
+  assert(a[1] == 11 and b == 34) 
   assert(#openresource == 0)    -- was closed
 
   -- repeat the test, but calling function in a 'multret' context
   local a = {T.testC([[
     call 0 1   # create resource
-    toclose    # mark it to be closed
+    toclose 2 # mark it to be closed
     return 2
   ]], newresource)}
   assert(type(a[1]) == "string" and a[2][1] == 11)
@@ -1005,7 +1007,7 @@ do
   -- error
   local a, b = pcall(T.testC, [[
     call 0 1   # create resource
-    toclose    # mark it to be closed
+    toclose -1 # mark it to be closed
     error       # resource is the error object
   ]], newresource)
   assert(a == false and b[1] == 11)
@@ -1019,10 +1021,10 @@ do
   local a = T.testC([[
     pushvalue 2
     call 0 1   # create resource
-    toclose    # mark it to be closed
+    toclose -1 # mark it to be closed
     pushvalue 2
     call 0 1   # create another resource
-    toclose    # mark it to be closed
+    toclose -1 # mark it to be closed
     pushvalue 3
     pushint 2   # there should be two open resources
     call 1 0

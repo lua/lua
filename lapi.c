@@ -1207,12 +1207,19 @@ LUA_API int lua_next (lua_State *L, int idx) {
 }
 
 
-LUA_API void lua_toclose (lua_State *L) {
-  int nresults = L->ci->nresults;
-  luaF_newtbcupval(L, L->top - 1);  /* create new to-be-closed upvalue */
+LUA_API void lua_toclose (lua_State *L, int idx) {
+  int nresults;
+  StkId o;
+  lua_lock(L);
+  o = index2stack(L, idx);
+  nresults = L->ci->nresults;
+  api_check(L, L->openupval == NULL || uplevel(L->openupval) < o,
+               "there is an already marked index below");
+  luaF_newtbcupval(L, o);  /* create new to-be-closed upvalue */
   if (!hastocloseCfunc(nresults))  /* function not marked yet? */
     L->ci->nresults = codeNresults(nresults);  /* mark it */
   lua_assert(hastocloseCfunc(L->ci->nresults));
+  lua_unlock(L);
 }
 
 
