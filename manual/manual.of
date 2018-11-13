@@ -1448,7 +1448,9 @@ for @rep{var_1}, @Cdots, @rep{var_n} in @rep{explist} do @rep{block} end
 is equivalent to the code:
 @verbatim{
 do
-  local @rep{f}, @rep{s}, @rep{var} = @rep{explist}
+  local @rep{f}, @rep{s}, @rep{var}
+  local *toclose @rep{tbc} = nil
+  @rep{f}, @rep{s}, @rep{var}, @rep{tbc} = @rep{explist}
   while true do
     local @rep{var_1}, @Cdots, @rep{var_n} = @rep{f}(@rep{s}, @rep{var})
     if @rep{var_1} == nil then break end
@@ -1464,11 +1466,14 @@ Note the following:
 @T{@rep{explist}} is evaluated only once.
 Its results are an @emph{iterator} function,
 a @emph{state},
-and an initial value for the first @emph{iterator variable}.
+an initial value for the first @emph{iterator variable},
+and a to-be-closed variable @see{to-be-closed},
+which can be used to release resources when the loop ends.
 }
 
 @item{
-@T{@rep{f}}, @T{@rep{s}}, and @T{@rep{var}} are invisible variables.
+@T{@rep{f}}, @T{@rep{s}}, @T{@rep{var}}, and @T{@rep{tbc}}
+are invisible variables.
 The names are here for explanatory purposes only.
 }
 
@@ -1512,6 +1517,52 @@ A chunk is also a block @see{chunks},
 and so local variables can be declared in a chunk outside any explicit block.
 
 The visibility rules for local variables are explained in @See{visibility}.
+
+}
+
+@sect3{to-be-closed| @title{To-be-closed Variables}
+
+A local variable can be declared as a @def{to-be-closed} variable,
+with the following syntax:
+@Produc{
+@producname{stat}@producbody{
+  @Rw{local} @bnfter{*} @bnfter{toclose} Name @bnfter{=} exp
+}}
+A to-be-closed variable behaves like a normal local variable,
+except that its value is @emph{closed} whenever the variable
+goes out of scope, including normal block termination,
+exiting its block by @Rw{break}/@Rw{goto}/@Rw{return},
+or exiting by an error.
+If a block ends in a tail call @see{functioncall},
+all variables of the caller function go out of scope
+before the start of the callee function.
+
+To \emph{close} a value has the following meaning here:
+If the value of the variable when it goes out of scope is a function,
+that function is called;
+otherwise, if the value has a @idx{__close} metamethod,
+that metamethod is called;
+otherwise, nothing is done.
+In the function case,
+if the scope is being closed by an error,
+the error object is passed as an argument to the function;
+if there is no error, the function gets @nil.
+In the metamethod case,
+the value itself always is passed as an argument to the metamethod.
+
+If several to-be-closed variables go out of scope at the same event,
+they are closed in the reverse order that they were declared.
+If there is any error while running a closing function,
+that error is handled like an error in the regular code
+where the variable was defined;
+in particular,
+the other pending closing functions will still be called.
+
+If a coroutine yields inside a block and is never resumed again,
+the variables visible at that block will never go out of scope,
+and therefore they will not be closed.
+Similarly, if a script is interrupted by an unprotected error,
+its to-be-closed variables will not be closed.
 
 }
 
@@ -2442,7 +2493,7 @@ the result of @Lid{lua_newthread}),
 it should use them only in API calls that cannot raise errors.
 
 The panic function runs as if it were a @x{message handler} @see{error};
-in particular, the error object is at the top of the stack.
+in particular, the error object is on the top of the stack.
 However, there is no guarantee about stack space.
 To push anything on the stack,
 the panic function must first check the available space @see{stacksize}.
@@ -2593,9 +2644,9 @@ tells whether the function may raise errors:
 @Char{m} means the function may raise out-of-memory errors
 and errors running a finalizer;
 @Char{v} means the function may raise the errors explained in the text;
-@Char{e} means the function may raise any errors
-(because it can run arbitrary Lua code,
-either directly or through metamethods).
+@Char{e} means the function can run arbitrary Lua code,
+either directly or through metamethods,
+and therefore may raise any errors.
 
 
 @APIEntry{int lua_absindex (lua_State *L, int idx);|
@@ -2675,7 +2726,7 @@ that @T{free(NULL)} has no effect and that
 Performs an arithmetic or bitwise operation over the two values
 (or one, in the case of negations)
 at the top of the stack,
-with the value at the top being the second operand,
+with the value on the top being the second operand,
 pops these values, and pushes the result of the operation.
 The function follows the semantics of the corresponding Lua operator
 (that is, it may call metamethods).
@@ -2875,7 +2926,7 @@ The value of @id{op} must be one of the following constants:
 @apii{n,1,e}
 
 Concatenates the @id{n} values at the top of the stack,
-pops them, and leaves the result at the top.
+pops them, and leaves the result on the top.
 If @N{@T{n} is 1}, the result is the single value on the stack
 (that is, the function does nothing);
 if @id{n} is 0, the result is the empty string.
@@ -2942,7 +2993,7 @@ This function does not pop the Lua function from the stack.
 @apii{1,0,v}
 
 Generates a Lua error,
-using the value at the top of the stack as the error object.
+using the value on the top of the stack as the error object.
 This function does a long jump,
 and therefore never returns
 @seeC{luaL_error}.
@@ -3081,7 +3132,7 @@ the function @N{returns 0} and pushes nothing on the stack.
 
 Pushes onto the stack the value @T{t[k]},
 where @id{t} is the value at the given index
-and @id{k} is the value at the top of the stack.
+and @id{k} is the value on the top of the stack.
 
 This function pops the key from the stack,
 pushing the resulting value in its place.
@@ -3798,7 +3849,7 @@ Similar to @Lid{lua_settable}, but does a raw assignment
 
 Does the equivalent of @T{t[i] = v},
 where @id{t} is the table at the given index
-and @id{v} is the value at the top of the stack.
+and @id{v} is the value on the top of the stack.
 
 This function pops the value from the stack.
 The assignment is raw,
@@ -3812,7 +3863,7 @@ that is, it does not invoke the @idx{__newindex} metamethod.
 Does the equivalent of @T{t[p] = v},
 where @id{t} is the table at the given index,
 @id{p} is encoded as a light userdata,
-and @id{v} is the value at the top of the stack.
+and @id{v} is the value on the top of the stack.
 
 This function pops the value from the stack.
 The assignment is raw,
@@ -3939,7 +3990,7 @@ with user data @id{ud}.
 
 Does the equivalent to @T{t[k] = v},
 where @id{t} is the value at the given index
-and @id{v} is the value at the top of the stack.
+and @id{v} is the value on the top of the stack.
 
 This function pops the value from the stack.
 As in Lua, this function may trigger a metamethod
@@ -3960,7 +4011,7 @@ sets it as the new value of global @id{name}.
 
 Does the equivalent to @T{t[n] = v},
 where @id{t} is the value at the given index
-and @id{v} is the value at the top of the stack.
+and @id{v} is the value on the top of the stack.
 
 This function pops the value from the stack.
 As in Lua, this function may trigger a metamethod
@@ -3981,7 +4032,7 @@ sets it as the new metatable for the value at the given index.
 
 Does the equivalent to @T{t[k] = v},
 where @id{t} is the value at the given index,
-@id{v} is the value at the top of the stack,
+@id{v} is the value on the top of the stack,
 and @id{k} is the value just below the top.
 
 This function pops both the key and the value from the stack.
@@ -4079,6 +4130,31 @@ use @Lid{lua_isboolean} to test the value's type.)
 Converts a value at the given index to a @N{C function}.
 That value must be a @N{C function};
 otherwise, returns @id{NULL}.
+
+}
+
+@APIEntry{void lua_toclose (lua_State *L, int index);|
+@apii{0,0,v}
+
+Marks the given index in the stack as a
+to-be-closed @Q{variable} @see{to-be-closed}.
+Like a to-be-closed variable in Lua,
+the value at that index in the stack will be closed
+when it goes out of scope.
+Here, in the context of a C function,
+to go out of scope means that the running function returns (to Lua),
+there is an error,
+or the index is removed from the stack through
+@Lid{lua_settop} or @Lid{lua_pop}.
+An index marked as to-be-closed should not be removed from the stack
+by any other function in the API except @Lid{lua_settop} or @Lid{lua_pop}.
+
+This function should not be called for an index
+that is equal to or below an already marked to-be-closed index.
+
+This function can raise an out-of-memory error.
+In that case, the value in the given index is immediately closed,
+as if it was already marked.
 
 }
 
@@ -4587,7 +4663,7 @@ and names.
 and returns its name.
 
 In the second case, @id{ar} must be @id{NULL} and the function
-to be inspected must be at the top of the stack.
+to be inspected must be on the top of the stack.
 In this case, only parameters of Lua functions are visible
 (as there is no information about what variables are active)
 and no values are pushed onto the stack.
@@ -4720,7 +4796,7 @@ A hook is disabled by setting @id{mask} to zero.
 @apii{0|1,0,-}
 
 Sets the value of a local variable of a given activation record.
-It assigns the value at the top of the stack
+It assigns the value on the top of the stack
 to the variable and returns its name.
 It also pops the value from the stack.
 
@@ -4736,7 +4812,7 @@ Parameters @id{ar} and @id{n} are as in function @Lid{lua_getlocal}.
 @apii{0|1,0,-}
 
 Sets the value of a closure's upvalue.
-It assigns the value at the top of the stack
+It assigns the value on the top of the stack
 to the upvalue and returns its name.
 It also pops the value from the stack.
 
@@ -4861,7 +4937,7 @@ to the buffer @id{B}
 @APIEntry{void luaL_addvalue (luaL_Buffer *B);|
 @apii{1,?,m}
 
-Adds the value at the top of the stack
+Adds the value on the top of the stack
 to the buffer @id{B}
 @seeC{luaL_Buffer}.
 Pops the value.
@@ -5486,7 +5562,7 @@ Equivalent to the sequence @Lid{luaL_addsize}, @Lid{luaL_pushresult}.
 
 Creates and returns a @def{reference},
 in the table at index @id{t},
-for the object at the top of the stack (and pops the object).
+for the object on the top of the stack (and pops the object).
 
 A reference is a unique integer key.
 As long as you do not manually add integer keys into table @id{t},
@@ -5495,7 +5571,7 @@ You can retrieve an object referred by reference @id{r}
 by calling @T{lua_rawgeti(L, t, r)}.
 Function @Lid{luaL_unref} frees a reference and its associated object.
 
-If the object at the top of the stack is @nil,
+If the object on the top of the stack is @nil,
 @Lid{luaL_ref} returns the constant @defid{LUA_REFNIL}.
 The constant @defid{LUA_NOREF} is guaranteed to be different
 from any reference returned by @Lid{luaL_ref}.
@@ -5554,7 +5630,7 @@ These values are popped from the stack after the registration.
 @APIEntry{void luaL_setmetatable (lua_State *L, const char *tname);|
 @apii{0,0,-}
 
-Sets the metatable of the object at the top of the stack
+Sets the metatable of the object on the top of the stack
 as the metatable associated with name @id{tname}
 in the registry @seeC{luaL_newmetatable}.
 
@@ -7571,6 +7647,9 @@ The table @id{io} also provides
 three predefined file handles with their usual meanings from C:
 @defid{io.stdin}, @defid{io.stdout}, and @defid{io.stderr}.
 The I/O library never closes these files.
+The metatable for file handles provides metamethods
+for @idx{__gc} and @idx{__close} that try
+to close the file when called.
 
 Unless otherwise stated,
 all I/O functions return @nil on failure
@@ -7617,6 +7696,13 @@ and returns an iterator function that
 works like @T{file:lines(@Cdots)} over the opened file.
 When the iterator function detects the end of file,
 it returns no values (to finish the loop) and automatically closes the file.
+Besides the iterator function,
+@id{io.lines} returns three other values:
+two @nil values as placeholders,
+plus the created file handle.
+Therefore, when used in a generic @Rw{for} loop,
+the file is closed also if the loop is interrupted by an
+error or a @Rw{break}.
 
 The call @T{io.lines()} (with no file name) is equivalent
 to @T{io.input():lines("l")};
@@ -8543,6 +8629,13 @@ now starts with a somewhat random seed.
 Moreover, it uses a different algorithm.
 }
 
+@item{
+The function @Lid{io.lines} now returns three extra values,
+besides the iterator function.
+You can enclose the call in parentheses if you need to
+discard these extra results.
+}
+
 }
 
 }
@@ -8559,15 +8652,17 @@ replaced by @Lid{lua_newuserdatauv},
 @Lid{lua_setiuservalue}, and @Lid{lua_getiuservalue},
 which have an extra argument.
 
-(For compatibility, the old names still work as macros assuming
-one single user value.)
+For compatibility, the old names still work as macros assuming
+one single user value.
+Note, however, that the call @T{lua_newuserdatauv(L,size,0)}
+produces a smaller userdata.
 }
 
 @item{
 The function @Lid{lua_resume} has an extra parameter.
 This out parameter returns the number of values on
 the top of the stack that were yielded or returned by the coroutine.
-(In older versions,
+(In previous versions,
 those values were the entire stack.)
 }
 
@@ -8626,6 +8721,7 @@ and @bnfNter{LiteralString}, see @See{lexical}.)
 @OrNL	@Rw{function} funcname funcbody
 @OrNL	@Rw{local} @Rw{function} @bnfNter{Name} funcbody
 @OrNL	@Rw{local} namelist @bnfopt{@bnfter{=} explist}
+@OrNL	@Rw{local} @bnfter{*} @bnfter{toclose} Name @bnfter{=} exp
 }
 
 @producname{retstat}@producbody{@Rw{return}
