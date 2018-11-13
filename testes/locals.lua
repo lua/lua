@@ -324,6 +324,38 @@ if rawget(_G, "T") then
   local _, msg = pcall(test)
   assert(msg == 1000)
 
+
+  do    -- testing 'toclose' in C string buffer
+    local s = string.rep("a", 10000)
+    local a = {s, s}
+
+    -- ensure proper initialization (stack space, metatable)
+    table.concat(a)
+    collectgarbage(); collectgarbage()
+
+    local m = T.totalmem()
+
+    -- error in the second buffer allocation
+    T.alloccount(3)
+    assert(not pcall(table.concat, a))
+    T.alloccount()
+    -- first buffer was released by 'toclose'
+    assert(T.totalmem() - m <= 5000)
+
+    -- error in creation of final string
+    T.alloccount(4)
+    assert(not pcall(table.concat, a))
+    T.alloccount()
+    -- second buffer was released by 'toclose'
+    assert(T.totalmem() - m <= 5000)
+
+    -- userdata, upvalue, buffer, buffer, string
+    T.alloccount(5)
+    assert(#table.concat(a) == 20000)
+    T.alloccount()
+
+    print'+'
+  end
 end
 
 

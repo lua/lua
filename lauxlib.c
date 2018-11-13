@@ -470,10 +470,8 @@ static void *resizebox (lua_State *L, int idx, size_t newsize) {
   lua_Alloc allocf = lua_getallocf(L, &ud);
   UBox *box = (UBox *)lua_touserdata(L, idx);
   void *temp = allocf(ud, box->box, box->bsize, newsize);
-  if (temp == NULL && newsize > 0) {  /* allocation error? */
-    resizebox(L, idx, 0);  /* free buffer */
+  if (temp == NULL && newsize > 0)  /* allocation error? */
     luaL_error(L, "not enough memory for buffer allocation");
-  }
   box->box = temp;
   box->bsize = newsize;
   return temp;
@@ -486,16 +484,20 @@ static int boxgc (lua_State *L) {
 }
 
 
-static void *newbox (lua_State *L, size_t newsize) {
+static const luaL_Reg boxmt[] = {  /* box metamethods */
+  {"__gc", boxgc},
+  {"__close", boxgc},
+  {NULL, NULL}
+};
+
+
+static void newbox (lua_State *L) {
   UBox *box = (UBox *)lua_newuserdatauv(L, sizeof(UBox), 0);
   box->box = NULL;
   box->bsize = 0;
-  if (luaL_newmetatable(L, "_UBOX*")) {  /* creating metatable? */
-    lua_pushcfunction(L, boxgc);
-    lua_setfield(L, -2, "__gc");  /* metatable.__gc = boxgc */
-  }
+  if (luaL_newmetatable(L, "_UBOX*"))  /* creating metatable? */
+    luaL_setfuncs(L, boxmt, 0);  /* set its metamethods */
   lua_setmetatable(L, -2);
-  return resizebox(L, -1, newsize);
 }
 
 
@@ -536,9 +538,11 @@ static char *prepbuffsize (luaL_Buffer *B, size_t sz, int boxidx) {
     if (buffonstack(B))  /* buffer already has a box? */
       newbuff = (char *)resizebox(L, boxidx, newsize);  /* resize it */
     else {  /* no box yet */
-      newbuff = (char *)newbox(L, newsize);  /* create a new box */
-      memcpy(newbuff, B->b, B->n * sizeof(char));  /* copy original content */
+      newbox(L);  /* create a new box */
       lua_insert(L, boxidx);  /* move box to its intended position */
+      lua_toclose(L, boxidx);
+      newbuff = (char *)resizebox(L, boxidx, newsize);
+      memcpy(newbuff, B->b, B->n * sizeof(char));  /* copy original content */
     }
     B->b = newbuff;
     B->size = newsize;
