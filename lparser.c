@@ -10,6 +10,7 @@
 #include "lprefix.h"
 
 
+#include <limits.h>
 #include <string.h>
 
 #include "lua.h"
@@ -87,6 +88,9 @@ static void checklimit (FuncState *fs, int v, int l, const char *what) {
 }
 
 
+/*
+** Test whether next token is 'c'; if so, skip it.
+*/
 static int testnext (LexState *ls, int c) {
   if (ls->t.token == c) {
     luaX_next(ls);
@@ -96,12 +100,18 @@ static int testnext (LexState *ls, int c) {
 }
 
 
+/*
+** Check that next token is 'c'.
+*/
 static void check (LexState *ls, int c) {
   if (ls->t.token != c)
     error_expected(ls, c);
 }
 
 
+/*
+** Check that next token is 'c' and skip it.
+*/
 static void checknext (LexState *ls, int c) {
   check(ls, c);
   luaX_next(ls);
@@ -111,11 +121,15 @@ static void checknext (LexState *ls, int c) {
 #define check_condition(ls,c,msg)	{ if (!(c)) luaX_syntaxerror(ls, msg); }
 
 
-
+/*
+** Check that next token is 'what' and skip it. In case of error,
+** raise an error that the expected 'what' should match a 'who'
+** in line 'where' (if that is not the current line).
+*/
 static void check_match (LexState *ls, int what, int who, int where) {
   if (unlikely(!testnext(ls, what))) {
-    if (where == ls->linenumber)
-      error_expected(ls, what);
+    if (where == ls->linenumber)  /* all in the same line? */
+      error_expected(ls, what);  /* do not need a complex message */
     else {
       luaX_syntaxerror(ls, luaO_pushfstring(ls->L,
              "%s expected (to close %s at line %d)",
@@ -146,11 +160,15 @@ static void codestring (LexState *ls, expdesc *e, TString *s) {
 }
 
 
-static void checkname (LexState *ls, expdesc *e) {
+static void codename (LexState *ls, expdesc *e) {
   codestring(ls, e, str_checkname(ls));
 }
 
 
+/*
+** Register a new local variable in the active 'Proto' (for debug
+** information).
+*/
 static int registerlocalvar (LexState *ls, TString *varname) {
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
@@ -183,6 +201,9 @@ static void new_localvar (LexState *ls, TString *name) {
     new_localvar(ls, luaX_newstring(ls, "" v, (sizeof(v)/sizeof(char)) - 1));
 
 
+/*
+** Get the debug-information entry for current variable 'i'.
+*/
 static LocVar *getlocvar (FuncState *fs, int i) {
   int idx = fs->ls->dyd->actvar.arr[fs->firstlocal + i].idx;
   lua_assert(idx < fs->nlocvars);
@@ -192,6 +213,7 @@ static LocVar *getlocvar (FuncState *fs, int i) {
 
 /*
 ** Start the scope for the last 'nvars' created variables.
+** (debug info.)
 */
 static void adjustlocalvars (LexState *ls, int nvars) {
   FuncState *fs = ls->fs;
@@ -202,6 +224,10 @@ static void adjustlocalvars (LexState *ls, int nvars) {
 }
 
 
+/*
+** Close the scope for all variables up to level 'tolevel'.
+** (debug info.)
+*/
 static void removevars (FuncState *fs, int tolevel) {
   fs->ls->dyd->actvar.n -= (fs->nactvar - tolevel);
   while (fs->nactvar > tolevel)
@@ -209,6 +235,10 @@ static void removevars (FuncState *fs, int tolevel) {
 }
 
 
+/*
+** Search the upvalues of the function 'fs' for one
+** with the given 'name'.
+*/
 static int searchupvalue (FuncState *fs, TString *name) {
   int i;
   Upvaldesc *up = fs->f->upvalues;
@@ -235,6 +265,10 @@ static int newupvalue (FuncState *fs, TString *name, expdesc *v) {
 }
 
 
+/*
+** Look for an active local variable with the name 'n' in the
+** function 'fs'.
+*/
 static int searchvar (FuncState *fs, TString *n) {
   int i;
   for (i = cast_int(fs->nactvar) - 1; i >= 0; i--) {
@@ -246,8 +280,8 @@ static int searchvar (FuncState *fs, TString *n) {
 
 
 /*
-  Mark block where variable at given level was defined
-  (to emit close instructions later).
+** Mark block where variable at given level was defined
+** (to emit close instructions later).
 */
 static void markupval (FuncState *fs, int level) {
   BlockCnt *bl = fs->bl;
@@ -259,8 +293,9 @@ static void markupval (FuncState *fs, int level) {
 
 
 /*
-  Find variable with given name 'n'. If it is an upvalue, add this
-  upvalue into all intermediate functions.
+** Find a variable with the given name 'n'. If it is an upvalue, add
+** this upvalue into all intermediate functions. If it is a global, set
+** 'var' as 'void' as a flag.
 */
 static void singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
   if (fs == NULL)  /* no more levels? */
@@ -287,6 +322,10 @@ static void singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
 }
 
 
+/*
+** Find a variable with the given name 'n', handling global variables
+** too.
+*/
 static void singlevar (LexState *ls, expdesc *var) {
   TString *varname = str_checkname(ls);
   FuncState *fs = ls->fs;
@@ -301,25 +340,29 @@ static void singlevar (LexState *ls, expdesc *var) {
 }
 
 
+/*
+** Adjust the number of results from an expression list 'e' with 'nexps'
+** expressions to 'nvars' values.
+*/
 static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
   FuncState *fs = ls->fs;
-  int extra = nvars - nexps;
-  if (hasmultret(e->k)) {
-    extra++;  /* includes call itself */
-    if (extra < 0) extra = 0;
+  int needed = nvars - nexps;  /* extra values needed */
+  if (hasmultret(e->k)) {  /* last expression has multiple returns? */
+    int extra = needed + 1;  /* discount last expression itself */
+    if (extra < 0)
+      extra = 0;
     luaK_setreturns(fs, e, extra);  /* last exp. provides the difference */
-    if (extra > 1) luaK_reserveregs(fs, extra-1);
   }
   else {
-    if (e->k != VVOID) luaK_exp2nextreg(fs, e);  /* close last expression */
-    if (extra > 0) {
-      int reg = fs->freereg;
-      luaK_reserveregs(fs, extra);
-      luaK_nil(fs, reg, extra);
-    }
+    if (e->k != VVOID)  /* at least one expression? */
+      luaK_exp2nextreg(fs, e);  /* close last expression */
+    if (needed > 0)  /* missing values? */
+      luaK_nil(fs, fs->freereg, needed);  /* complete with nils */
   }
-  if (nexps > nvars)
-    ls->fs->freereg -= nexps - nvars;  /* remove extra values */
+  if (needed > 0)
+    luaK_reserveregs(fs, needed);  /* registers for extra values */
+  else  /* adding 'needed' is actually a subtraction */
+    fs->freereg += needed;  /* remove extra values */
 }
 
 
@@ -632,7 +675,7 @@ static void fieldsel (LexState *ls, expdesc *v) {
   expdesc key;
   luaK_exp2anyregup(fs, v);
   luaX_next(ls);  /* skip the dot or colon */
-  checkname(ls, &key);
+  codename(ls, &key);
   luaK_indexed(fs, v, &key);
 }
 
@@ -669,7 +712,7 @@ static void recfield (LexState *ls, struct ConsControl *cc) {
   expdesc tab, key, val;
   if (ls->t.token == TK_NAME) {
     checklimit(fs, cc->nh, MAX_INT, "items in a constructor");
-    checkname(ls, &key);
+    codename(ls, &key);
   }
   else  /* ls->t.token == '[' */
     yindex(ls, &key);
@@ -938,7 +981,7 @@ static void suffixedexp (LexState *ls, expdesc *v) {
       case ':': {  /* ':' NAME funcargs */
         expdesc key;
         luaX_next(ls);
-        checkname(ls, &key);
+        codename(ls, &key);
         luaK_self(fs, v, &key);
         funcargs(ls, v, line);
         break;
@@ -1048,6 +1091,9 @@ static BinOpr getbinopr (int op) {
 }
 
 
+/*
+** Priority table for binary operators.
+*/
 static const struct {
   lu_byte left;  /* left priority for each binary operator */
   lu_byte right; /* right priority */
@@ -1076,9 +1122,9 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
   UnOpr uop;
   enterlevel(ls);
   uop = getunopr(ls->t.token);
-  if (uop != OPR_NOUNOPR) {
+  if (uop != OPR_NOUNOPR) {  /* prefix (unary) operator? */
     int line = ls->linenumber;
-    luaX_next(ls);
+    luaX_next(ls);  /* skip operator */
     subexpr(ls, v, UNARY_PRIORITY);
     luaK_prefix(ls->fs, uop, v, line);
   }
@@ -1089,7 +1135,7 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
     expdesc v2;
     BinOpr nextop;
     int line = ls->linenumber;
-    luaX_next(ls);
+    luaX_next(ls);  /* skip operator */
     luaK_infix(ls->fs, op, v);
     /* read sub-expression with higher priority */
     nextop = subexpr(ls, &v2, priority[op].right);
@@ -1177,21 +1223,27 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
   }
 }
 
-
-static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
+/*
+** Parse and compile a mulitple assignment. The first "variable"
+** (a 'suffixedexp') was already read by the caller.
+**
+** assignment -> suffixedexp restassign
+** restassign -> ',' suffixedexp restassign | '=' explist
+*/
+static void restassign (LexState *ls, struct LHS_assign *lh, int nvars) {
   expdesc e;
   check_condition(ls, vkisvar(lh->v.k), "syntax error");
-  if (testnext(ls, ',')) {  /* assignment -> ',' suffixedexp assignment */
+  if (testnext(ls, ',')) {  /* restassign -> ',' suffixedexp restassign */
     struct LHS_assign nv;
     nv.prev = lh;
     suffixedexp(ls, &nv.v);
     if (!vkisindexed(nv.v.k))
       check_conflict(ls, lh, &nv.v);
     enterlevel(ls);  /* control recursion depth */
-    assignment(ls, &nv, nvars+1);
+    restassign(ls, &nv, nvars+1);
     leavelevel(ls);
   }
-  else {  /* assignment -> '=' explist */
+  else {  /* restassign -> '=' explist */
     int nexps;
     checknext(ls, '=');
     nexps = explist(ls, &e);
@@ -1627,7 +1679,7 @@ static void exprstat (LexState *ls) {
   suffixedexp(ls, &v.v);
   if (ls->t.token == '=' || ls->t.token == ',') { /* stat -> assignment ? */
     v.prev = NULL;
-    assignment(ls, &v, 1);
+    restassign(ls, &v, 1);
   }
   else {  /* stat -> func */
     Instruction *inst = &getinstruction(fs, &v.v);

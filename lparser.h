@@ -78,7 +78,7 @@ typedef struct expdesc {
 
 /* description of active local variable */
 typedef struct Vardesc {
-  short idx;  /* variable index in stack */
+  short idx;  /* index of the variable in the Proto's 'locvars' array */
 } Vardesc;
 
 

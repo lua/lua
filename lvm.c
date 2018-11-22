@@ -583,7 +583,7 @@ void luaV_concat (lua_State *L, int total) {
 
 
 /*
-** Main operation 'ra' = #rb'.
+** Main operation 'ra = #rb'.
 */
 void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
   const TValue *tm;
@@ -757,11 +757,13 @@ void luaV_finishOp (lua_State *L) {
       }
       break;
     }
-    case OP_TFORCALL: case OP_CALL: case OP_TAILCALL:
-    case OP_SETTABUP: case OP_SETTABLE:
-    case OP_SETI: case OP_SETFIELD:
+    default: {
+      /* only these other opcodes can yield */
+      lua_assert(op == OP_TFORCALL || op == OP_CALL ||
+           op == OP_TAILCALL || op == OP_SETTABUP || op == OP_SETTABLE ||
+           op == OP_SETI || op == OP_SETFIELD);
       break;
-    default: lua_assert(0);
+    }
   }
 }
 
