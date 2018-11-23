@@ -610,9 +610,15 @@ static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
       tm = TM_NEWINDEX;
       break;
     case OP_ADDI: case OP_SUBI: case OP_MULI: case OP_MODI:
-    case OP_POWI: case OP_DIVI: case OP_IDIVI:
-    case OP_BANDK: case OP_BORK: case OP_BXORK: {
+    case OP_POWI: case OP_DIVI: case OP_IDIVI: {
       int offset = GET_OPCODE(i) - OP_ADDI;  /* ORDER OP */
+      tm = cast(TMS, offset + TM_ADD);  /* ORDER TM */
+      break;
+    }
+    case OP_ADDK: case OP_SUBK: case OP_MULK: case OP_MODK:
+    case OP_POWK: case OP_DIVK: case OP_IDIVK:
+    case OP_BANDK: case OP_BORK: case OP_BXORK: {
+      int offset = GET_OPCODE(i) - OP_ADDK;  /* ORDER OP */
       tm = cast(TMS, offset + TM_ADD);  /* ORDER TM */
       break;
     }

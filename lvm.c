@@ -856,6 +856,39 @@ void luaV_finishOp (lua_State *L) {
 
 
 /*
+** Arithmetic operations with K operands.
+*/
+#define op_arithK(L,iop,fop,tm,flip) {  \
+  TValue *v1 = vRB(i);  \
+  TValue *v2 = KC(i);  \
+  if (ttisinteger(v1) && ttisinteger(v2)) {  \
+    lua_Integer i1 = ivalue(v1); lua_Integer i2 = ivalue(v2);  \
+    setivalue(s2v(ra), iop(L, i1, i2));  \
+  }  \
+  else { \
+    lua_Number n1; lua_Number n2;  \
+    if (tonumberns(v1, n1) && tonumberns(v2, n2)) {  \
+      setfltvalue(s2v(ra), fop(L, n1, n2));  \
+    }  \
+    else  \
+      Protect(luaT_trybinassocTM(L, v1, v2, ra, flip, tm)); } }
+
+
+/*
+** Arithmetic operations with K operands for floats.
+*/
+#define op_arithfK(L,fop,tm) {  \
+  TValue *v1 = vRB(i);  \
+  TValue *v2 = KC(i);  \
+  lua_Number n1; lua_Number n2;  \
+  if (tonumberns(v1, n1) && tonumberns(v2, n2)) {  \
+    setfltvalue(s2v(ra), fop(L, n1, n2));  \
+  }  \
+  else  \
+    Protect(luaT_trybinTM(L, v1, v2, ra, tm)); }
+
+
+/*
 ** Bitwise operations with constant operand.
 */
 #define op_bitwiseK(L,op,tm) {  \
@@ -1217,6 +1250,34 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_IDIVI) {
         op_arithI(L, luaV_idiv, luai_numidiv, TM_IDIV, 0);
+        vmbreak;
+      }
+      vmcase(OP_ADDK) {
+        op_arithK(L, l_addi, luai_numadd, TM_ADD, GETARG_k(i));
+        vmbreak;
+      }
+      vmcase(OP_SUBK) {
+        op_arithK(L, l_subi, luai_numsub, TM_SUB, 0);
+        vmbreak;
+      }
+      vmcase(OP_MULK) {
+        op_arithK(L, l_muli, luai_nummul, TM_MUL, GETARG_k(i));
+        vmbreak;
+      }
+      vmcase(OP_MODK) {
+        op_arithK(L, luaV_mod, luaV_modf, TM_MOD, 0);
+        vmbreak;
+      }
+      vmcase(OP_POWK) {
+        op_arithfK(L, luai_numpow, TM_POW);
+        vmbreak;
+      }
+      vmcase(OP_DIVK) {
+        op_arithfK(L, luai_numdiv, TM_DIV);
+        vmbreak;
+      }
+      vmcase(OP_IDIVK) {
+        op_arithK(L, luaV_idiv, luai_numidiv, TM_IDIV, 0);
         vmbreak;
       }
       vmcase(OP_ADD) {

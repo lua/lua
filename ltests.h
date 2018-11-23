@@ -119,7 +119,6 @@ LUA_API void *debug_realloc (void *ud, void *block,
 #undef LUAL_BUFFERSIZE
 #define LUAL_BUFFERSIZE		23
 #define MINSTRTABSIZE		2
-#define MAXINDEXRK		1
 #define MAXIWTHABS		3
 
 

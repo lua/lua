@@ -40,6 +40,7 @@ checkKlist(foo, {3.78/4, -3.78/4, -3.79/4})
 
 -- testing opcodes
 
+-- check that 'f' opcodes match '...'
 function check (f, ...)
   local arg = {...}
   local c = T.listcode(f)
@@ -52,9 +53,19 @@ function check (f, ...)
 end
 
 
+-- check that 'f' opcodes match '...' and that 'f(p) == r'.
+function checkR (f, p, r, ...)
+  local r1 = f(p)
+  assert(r == r1 and math.type(r) == math.type(r1))
+  check(f, ...)
+end
+
+
+-- check that 'a' and 'b' has the same opcodes
 function checkequal (a, b)
   a = T.listcode(a)
   b = T.listcode(b)
+  assert(#a == #b)
   for i = 1, #a do
     a[i] = string.gsub(a[i], '%b()', '')   -- remove line number
     b[i] = string.gsub(b[i], '%b()', '')   -- remove line number
@@ -165,65 +176,64 @@ end,
 
 
 -- equalities
-check(function (a) if a == 1 then return 2 end end,
+checkR(function (a) if a == 1 then return 2 end end, 1, 2,
   'EQI', 'JMP', 'LOADI', 'RETURN1')
 
-check(function (a) if -4.0 == a then return 2 end end,
+checkR(function (a) if -4.0 == a then return 2 end end, -4, 2,
   'EQI', 'JMP', 'LOADI', 'RETURN1')
 
-check(function (a) if a == "hi" then return 2 end end,
+checkR(function (a) if a == "hi" then return 2 end end, 10, nil,
   'EQK', 'JMP', 'LOADI', 'RETURN1')
 
-check(function (a) if a == 10000 then return 2 end end,
+checkR(function (a) if a == 10000 then return 2 end end, 1, nil,
   'EQK', 'JMP', 'LOADI', 'RETURN1')   -- number too large
 
-check(function (a) if -10000 == a then return 2 end end,
+checkR(function (a) if -10000 == a then return 2 end end, -10000, 2,
   'EQK', 'JMP', 'LOADI', 'RETURN1')   -- number too large
 
 -- comparisons
 
-check(function (a) if -10 <= a then return 2 end end,
+checkR(function (a) if -10 <= a then return 2 end end, -10, 2,
   'GEI', 'JMP', 'LOADI', 'RETURN1')
 
-check(function (a) if 128.0 > a then return 2 end end,
+checkR(function (a) if 128.0 > a then return 2 end end, 129, nil,
   'LTI', 'JMP', 'LOADI', 'RETURN1')
 
-check(function (a) if -127.0 < a then return 2 end end,
+checkR(function (a) if -127.0 < a then return 2 end end, -127, nil,
   'GTI', 'JMP', 'LOADI', 'RETURN1')
 
-check(function (a) if 10 < a then return 2 end end,
+checkR(function (a) if 10 < a then return 2 end end, 11, 2,
   'GTI', 'JMP', 'LOADI', 'RETURN1')
 
-check(function (a) if 129 < a then return 2 end end,
+checkR(function (a) if 129 < a then return 2 end end, 130, 2,
   'LOADI', 'LT', 'JMP', 'LOADI', 'RETURN1')
 
-check(function (a) if a >= 23.0 then return 2 end end,
+checkR(function (a) if a >= 23.0 then return 2 end end, 25, 2,
   'GEI', 'JMP', 'LOADI', 'RETURN1')
 
-check(function (a) if a >= 23.1 then return 2 end end,
+checkR(function (a) if a >= 23.1 then return 2 end end, 0, nil,
   'LOADK', 'LE', 'JMP', 'LOADI', 'RETURN1')
 
-check(function (a) if a > 2300.0 then return 2 end end,
+checkR(function (a) if a > 2300.0 then return 2 end end, 0, nil,
   'LOADF', 'LT', 'JMP', 'LOADI', 'RETURN1')
 
 
 -- constant folding
 local function checkK (func, val)
   check(func, 'LOADK', 'RETURN1')
-  local k = T.listk(func)
-  assert(#k == 1 and k[1] == val and math.type(k[1]) == math.type(val))
+  checkKlist(func, {val})
   assert(func() == val)
 end
 
 local function checkI (func, val)
   check(func, 'LOADI', 'RETURN1')
-  assert(#T.listk(func) == 0)
+  checkKlist(func, {})
   assert(func() == val)
 end
 
 local function checkF (func, val)
   check(func, 'LOADF', 'RETURN1')
-  assert(#T.listk(func) == 0)
+  checkKlist(func, {})
   assert(func() == val)
 end
 
@@ -258,20 +268,30 @@ checkK(function () return -65536.0 end, -(sbx + 1.0))
 
 
 -- immediate operands
-check(function (x) return x + 1 end, 'ADDI', 'RETURN1')
-check(function (x) return 128 + x end, 'ADDI', 'RETURN1')
-check(function (x) return x * -127 end, 'MULI', 'RETURN1')
-check(function (x) return 20 * x end, 'MULI', 'RETURN1')
-check(function (x) return x ^ -2 end, 'POWI', 'RETURN1')
-check(function (x) return x / 40 end, 'DIVI', 'RETURN1')
-check(function (x) return x // 1 end, 'IDIVI', 'RETURN1')
-check(function (x) return x % (100 - 10) end, 'MODI', 'RETURN1')
-check(function (x) return 1 << x end, 'SHLI', 'RETURN1')
-check(function (x) return x << 2 end, 'SHRI', 'RETURN1')
-check(function (x) return x >> 2 end, 'SHRI', 'RETURN1')
-check(function (x) return x & 1 end, 'BANDK', 'RETURN1')
-check(function (x) return 10 | x end, 'BORK', 'RETURN1')
-check(function (x) return -10 ~ x end, 'BXORK', 'RETURN1')
+checkR(function (x) return x + 1 end, 10, 11, 'ADDI', 'RETURN1')
+checkR(function (x) return 128 + x end, 0.0, 128.0, 'ADDI', 'RETURN1')
+checkR(function (x) return x * -127 end, -1.0, 127.0, 'MULI', 'RETURN1')
+checkR(function (x) return 20 * x end, 2, 40, 'MULI', 'RETURN1')
+checkR(function (x) return x ^ -2 end, 2, 0.25, 'POWI', 'RETURN1')
+checkR(function (x) return x / 40 end, 40, 1.0, 'DIVI', 'RETURN1')
+checkR(function (x) return x // 1 end, 10.0, 10.0, 'IDIVI', 'RETURN1')
+checkR(function (x) return x % (100 - 10) end, 91, 1, 'MODI', 'RETURN1')
+checkR(function (x) return 1 << x end, 3, 8, 'SHLI', 'RETURN1')
+checkR(function (x) return x << 2 end, 10, 40, 'SHRI', 'RETURN1')
+checkR(function (x) return x >> 2 end, 8, 2, 'SHRI', 'RETURN1')
+checkR(function (x) return x & 1 end, 9, 1, 'BANDK', 'RETURN1')
+checkR(function (x) return 10 | x end, 1, 11, 'BORK', 'RETURN1')
+checkR(function (x) return -10 ~ x end, -1, 9, 'BXORK', 'RETURN1')
+
+-- K operands in arithmetic operations
+checkR(function (x) return x + 0.0 end, 1, 1.0, 'ADDK', 'RETURN1')
+--  check(function (x) return 128 + x end, 'ADDK', 'RETURN1')
+checkR(function (x) return x * -10000 end, 2, -20000, 'MULK', 'RETURN1')
+--  check(function (x) return 20 * x end, 'MULK', 'RETURN1')
+checkR(function (x) return x ^ 0.5 end, 4, 2.0, 'POWK', 'RETURN1')
+checkR(function (x) return x / 2.0 end, 4, 2.0, 'DIVK', 'RETURN1')
+checkR(function (x) return x // 10000 end, 10000, 1, 'IDIVK', 'RETURN1')
+checkR(function (x) return x % (100.0 - 10) end, 91, 1.0, 'MODK', 'RETURN1')
 
 -- no foldings (and immediate operands)
 check(function () return -0.0 end, 'LOADF', 'UNM', 'RETURN1')

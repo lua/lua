@@ -221,6 +221,14 @@ OP_POWI,/*	A B sC	R(A) := R(B) ^ C				*/
 OP_DIVI,/*	A B sC	R(A) := R(B) / C				*/
 OP_IDIVI,/*	A B sC	R(A) := R(B) // C				*/
 
+OP_ADDK,/*	A B C	R(A) := R(B) + K(C)				*/
+OP_SUBK,/*	A B C	R(A) := R(B) - K(C)				*/
+OP_MULK,/*	A B C	R(A) := R(B) * K(C)				*/
+OP_MODK,/*	A B C	R(A) := R(B) % K(C)				*/
+OP_POWK,/*	A B C	R(A) := R(B) ^ K(C)				*/
+OP_DIVK,/*	A B C	R(A) := R(B) / K(C)				*/
+OP_IDIVK,/*	A B C	R(A) := R(B) // K(C)				*/
+
 OP_BANDK,/*	A B C	R(A) := R(B) & K(C):integer			*/
 OP_BORK,/*	A B C	R(A) := R(B) | K(C):integer			*/
 OP_BXORK,/*	A B C	R(A) := R(B) ~ K(C):integer			*/
@@ -235,11 +243,13 @@ OP_MOD,/*	A B C	R(A) := R(B) % R(C)				*/
 OP_POW,/*	A B C	R(A) := R(B) ^ R(C)				*/
 OP_DIV,/*	A B C	R(A) := R(B) / R(C)				*/
 OP_IDIV,/*	A B C	R(A) := R(B) // R(C)				*/
+
 OP_BAND,/*	A B C	R(A) := R(B) & R(C)				*/
 OP_BOR,/*	A B C	R(A) := R(B) | R(C)				*/
 OP_BXOR,/*	A B C	R(A) := R(B) ~ R(C)				*/
 OP_SHL,/*	A B C	R(A) := R(B) << R(C)				*/
 OP_SHR,/*	A B C	R(A) := R(B) >> R(C)				*/
+
 OP_UNM,/*	A B	R(A) := -R(B)					*/
 OP_BNOT,/*	A B	R(A) := ~R(B)					*/
 OP_NOT,/*	A B	R(A) := not R(B)				*/

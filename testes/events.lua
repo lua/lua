@@ -144,6 +144,8 @@ t.__bnot = f("bnot")
 -- when the constant table is very small.
 assert(b+5 == b)
 assert(cap[0] == "add" and cap[1] == b and cap[2] == 5 and cap[3]==undef)
+assert(5.2 + b == 5.2)
+assert(cap[0] == "add" and cap[1] == 5.2 and cap[2] == b and cap[3]==undef)
 assert(b+'5' == b)
 assert(cap[0] == "add" and cap[1] == b and cap[2] == '5' and cap[3]==undef)
 assert(5+b == 5)

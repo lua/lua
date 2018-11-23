@@ -794,6 +794,8 @@ assert(a[3] == "index" and a^3 == "pow" and a..a == "concat")
 assert(a/3 == "div" and 3%a == "mod")
 assert(a+3 == "add" and 3-a == "sub" and a*3 == "mul" and
        -a == "unm" and #a == "len" and a&3 == "band")
+assert(a + 30000 == "add" and a - 3.0 == "sub" and a * 3.0 == "mul" and
+       -a == "unm" and #a == "len" and a & 3 == "band")
 assert(a|3 == "bor" and 3~a == "bxor" and a<<3 == "shift" and
        a>>1 == "shift")
 assert (a==b and a.op == "eq")
