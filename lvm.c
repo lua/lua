@@ -946,6 +946,9 @@ void luaV_finishOp (lua_State *L) {
 #define updatebase(ci)	(base = ci->func + 1)
 
 
+#define updatestack(ci) { if (trap) { updatebase(ci); ra = RA(i); } }
+
+
 /*
 ** Execute a jump instruction. The 'updatetrap' allows signals to stop
 ** tight loops. (Without it, the local copy of 'trap' could never change.)
@@ -1557,24 +1560,21 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           L->top = ra + b;
         else  /* previous instruction set top */
           b = cast_int(L->top - ra);
-        savepc(ci);
         if (TESTARG_k(i)) {
           int nparams1 = GETARG_C(i);
           if (nparams1)  /* vararg function? */
             delta = ci->u.l.nextraargs + nparams1;
-          luaF_close(L, base, LUA_OK);  /* close upvalues from current call */
+          /* close upvalues from current call */
+          ProtectNT(luaF_close(L, base, LUA_OK));
+          updatestack(ci);
         }
         if (!ttisfunction(s2v(ra))) {  /* not a function? */
           luaD_tryfuncTM(L, ra);  /* try '__call' metamethod */
           b++;  /* there is now one extra argument */
         }
         if (!ttisLclosure(s2v(ra))) {  /* C function? */
-          luaD_call(L, ra, LUA_MULTRET);  /* call it */
-          updatetrap(ci);
-          if (trap) {  /* stack may have been relocated */
-            updatebase(ci);
-            ra = RA(i);
-          }
+          ProtectNT(luaD_call(L, ra, LUA_MULTRET));  /* call it */
+          updatestack(ci);  /* stack may have been relocated */
           ci->func -= delta;
           luaD_poscall(L, ci, cast_int(L->top - ra));
           return;
@@ -1739,10 +1739,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         memcpy(ra + 4, ra, 3 * sizeof(*ra));
         L->top = ra + 4 + 3;
         Protect(luaD_call(L, ra + 4, GETARG_C(i)));  /* do the call */
-        if (trap) {  /* stack may have changed? */
-          updatebase(ci);  /* keep 'base' correct */
-          ra = RA(i);  /* keep 'ra' correct for next instruction */
-        }
+        updatestack(ci);  /* stack may have changed */
         i = *(pc++);  /* go to next instruction */
         ra += 2;  /* adjust for next instruction */
         lua_assert(GET_OPCODE(i) == OP_TFORLOOP && ra == RA(i));

@@ -16,7 +16,7 @@
 #define vmbreak		vmfetch(); vmdispatch(GET_OPCODE(i));
 
 
-static void *disptab[] = {
+static void *disptab[NUM_OPCODES] = {
 
 #if 0
 ** you can update the following list with this command:

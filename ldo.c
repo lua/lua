@@ -383,8 +383,10 @@ static void moveresults (lua_State *L, StkId res, int nres, int wanted) {
       wanted = nres;  /* we want all results */
       break;
     default:  /* multiple results (or to-be-closed variables) */
-      if (hastocloseCfunc(wanted)) {
-        luaF_close(L, res, LUA_OK);
+      if (hastocloseCfunc(wanted)) {  /* to-be-closed variables? */
+        ptrdiff_t savedres = savestack(L, res);
+        luaF_close(L, res, LUA_OK);  /* may change the stack */
+        res = restorestack(L, savedres);
         wanted = codeNresults(wanted);  /* correct value */
         if (wanted == LUA_MULTRET)
           wanted = nres;
@@ -590,7 +592,8 @@ static int recover (lua_State *L, int status) {
   if (ci == NULL) return 0;  /* no recovery point */
   /* "finish" luaD_pcall */
   oldtop = restorestack(L, ci->u2.funcidx);
-  luaF_close(L, oldtop, status);
+  luaF_close(L, oldtop, status);  /* may change the stack */
+  oldtop = restorestack(L, ci->u2.funcidx);
   luaD_seterrorobj(L, status, oldtop);
   L->ci = ci;
   L->allowhook = getoah(ci->callstatus);  /* restore original 'allowhook' */

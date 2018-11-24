@@ -142,7 +142,7 @@ void *debug_realloc (void *ud, void *b, size_t oldsize, size_t size) {
     freeblock(mc, block);
     return NULL;
   }
-  if (mc->countlimit != ~0UL && size > 0) {  /* count limit in use? */
+  if (mc->countlimit != ~0UL && size != oldsize) {  /* count limit in use? */
     if (mc->countlimit == 0)
       return NULL;  /* fake a memory allocation error */
     mc->countlimit--;
