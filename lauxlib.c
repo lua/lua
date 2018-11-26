@@ -524,8 +524,8 @@ static size_t newbuffsize (luaL_Buffer *B, size_t sz) {
 
 /*
 ** Returns a pointer to a free area with at least 'sz' bytes in buffer
-** 'B'. 'boxidx' is the position in the stack where the buffer's box is
-** or should be.
+** 'B'. 'boxidx' is the relative position in the stack where the
+** buffer's box is or should be.
 */
 static char *prepbuffsize (luaL_Buffer *B, size_t sz, int boxidx) {
   if (B->size - B->n >= sz)  /* enough space? */
@@ -538,8 +538,10 @@ static char *prepbuffsize (luaL_Buffer *B, size_t sz, int boxidx) {
     if (buffonstack(B))  /* buffer already has a box? */
       newbuff = (char *)resizebox(L, boxidx, newsize);  /* resize it */
     else {  /* no box yet */
+      lua_pushnil(L);  /* reserve slot for final result */
       newbox(L);  /* create a new box */
-      lua_insert(L, boxidx);  /* move box to its intended position */
+      /* move box (and slot) to its intended position */
+      lua_rotate(L, boxidx - 1, 2);
       lua_toclose(L, boxidx);
       newbuff = (char *)resizebox(L, boxidx, newsize);
       memcpy(newbuff, B->b, B->n * sizeof(char));  /* copy original content */
@@ -576,8 +578,8 @@ LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
   lua_State *L = B->L;
   lua_pushlstring(L, B->b, B->n);
   if (buffonstack(B)) {
-    resizebox(L, -2, 0);  /* delete old buffer */
-    lua_remove(L, -2);  /* remove its header from the stack */
+    lua_copy(L, -1, -3);  /* move string to reserved slot */
+    lua_pop(L, 2);  /* pop string and box (closing the box) */
   }
 }
 

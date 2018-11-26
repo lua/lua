@@ -242,6 +242,7 @@ do
   assert(a == 1 and b == 2 and c == 3 and X == 20 and Y == 10 and d == nil)
 end
 
+
 do   -- errors in __close
   local log = {}
   local function foo (err)
@@ -264,7 +265,9 @@ do   -- errors in __close
          and #log == 4)
 end
 
+
 if rawget(_G, "T") then
+
   -- memory error inside closing function
   local function foo ()
     local *toclose y = function () T.alloccount() end
@@ -296,7 +299,7 @@ if rawget(_G, "T") then
   local function test ()
     local *toclose x = enter(0)   -- set a memory limit
     -- creation of previous upvalue will raise a memory error
-    os.exit(false)    -- should not run
+    assert(false)    -- should not run
   end
 
   local _, msg = pcall(test)
@@ -326,33 +329,54 @@ if rawget(_G, "T") then
 
 
   do    -- testing 'toclose' in C string buffer
-    local s = string.rep("a", 10000)
+    collectgarbage()
+    local s = string.rep('a', 10000)    -- large string
+    local m = T.totalmem()
+    collectgarbage("stop")
+    s = string.upper(s)    -- allocate buffer + new string (10K each)
+    -- ensure buffer was deallocated
+    assert(T.totalmem() - m <= 11000)
+    collectgarbage("restart")
+  end
+
+  do   -- now some tests for freeing buffer in case of errors
+    local lim = 10000           -- some size larger than the static buffer
+    local extra = 2000          -- some extra memory (for callinfo, etc.)
+
+    local s = string.rep("a", lim)
+
+    -- concat this table needs two buffer resizes (one for each 's') 
     local a = {s, s}
 
-    -- ensure proper initialization (stack space, metatable)
-    table.concat(a)
-    collectgarbage(); collectgarbage()
+    collectgarbage()
 
-    local m = T.totalmem()
+    m = T.totalmem()
+    collectgarbage("stop")
+
+    -- error in the first buffer allocation
+    T. totalmem(m + extra)
+    assert(not pcall(table.concat, a))
+    -- first buffer was not even allocated
+    assert(T.totalmem() - m <= extra)
 
     -- error in the second buffer allocation
-    T.alloccount(3)
+    T. totalmem(m + lim + extra)
     assert(not pcall(table.concat, a))
-    T.alloccount()
     -- first buffer was released by 'toclose'
-    assert(T.totalmem() - m <= 5000)
+    assert(T.totalmem() - m <= extra)
 
     -- error in creation of final string
-    T.alloccount(4)
+    T.totalmem(m + 2 * lim + extra)
     assert(not pcall(table.concat, a))
-    T.alloccount()
     -- second buffer was released by 'toclose'
-    assert(T.totalmem() - m <= 5000)
+    assert(T.totalmem() - m <= extra)
 
-    -- userdata, upvalue, buffer, buffer, string
-    T.alloccount(5)
-    assert(#table.concat(a) == 20000)
-    T.alloccount()
+    -- userdata, upvalue, buffer, buffer, final string
+    T.totalmem(m + 4*lim + extra)
+    assert(#table.concat(a) == 2*lim)
+
+    T.totalmem(0)     -- remove memory limit
+    collectgarbage("restart")
 
     print'+'
   end

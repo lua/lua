@@ -1213,8 +1213,8 @@ LUA_API void lua_toclose (lua_State *L, int idx) {
   lua_lock(L);
   o = index2stack(L, idx);
   nresults = L->ci->nresults;
-  api_check(L, L->openupval == NULL || uplevel(L->openupval) < o,
-               "there is an already marked index below");
+  api_check(L, L->openupval == NULL || uplevel(L->openupval) <= o,
+               "marked index below or equal new one");
   luaF_newtbcupval(L, o);  /* create new to-be-closed upvalue */
   if (!hastocloseCfunc(nresults))  /* function not marked yet? */
     L->ci->nresults = codeNresults(nresults);  /* mark it */
