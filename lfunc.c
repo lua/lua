@@ -14,6 +14,7 @@
 
 #include "lua.h"
 
+#include "ldebug.h"
 #include "ldo.h"
 #include "lfunc.h"
 #include "lgc.h"
@@ -140,6 +141,11 @@ static int closeupval (lua_State *L, TValue *uv, StkId level, int status) {
   if (likely(status == LUA_OK)) {
     if (prepclosingmethod(L, uv, &G(L)->nilvalue))  /* something to call? */
       callclose(L, NULL);  /* call closing method */
+    else if (!ttisnil(uv)) {  /* non-closable non-nil value? */
+      const char *vname = luaG_findlocal(L, L->ci, level - L->ci->func, NULL);
+      if (vname == NULL) vname = "?";
+      luaG_runerror(L, "attempt to close non-closable variable '%s'", vname);
+    }
   }
   else {  /* there was an error */
     /* save error message and set stack top to 'level + 1' */

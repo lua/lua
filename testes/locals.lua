@@ -266,6 +266,27 @@ do   -- errors in __close
 end
 
 
+do
+
+  -- errors due to non-closable values
+  local function foo ()
+    local *toclose x = 34
+  end
+  local stat, msg = pcall(foo)
+  assert(not stat and string.find(msg, "variable 'x'"))
+
+
+  -- with other errors, non-closable values are ignored
+  local function foo ()
+    local *toclose x = 34
+    local *toclose y = function () error(32) end
+  end
+  local stat, msg = pcall(foo)
+  assert(not stat and msg == 32)
+
+end
+
+
 if rawget(_G, "T") then
 
   -- memory error inside closing function

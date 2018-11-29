@@ -1063,11 +1063,16 @@ which start with @T{0x} or @T{0X}.
 Hexadecimal constants also accept an optional fractional part
 plus an optional binary exponent,
 marked by a letter @Char{p} or @Char{P}.
+
 A numeric constant with a radix point or an exponent
 denotes a float;
 otherwise,
-if its value fits in an integer,
-it denotes an integer.
+if its value fits in an integer or it is a hexadecimal constant,
+it denotes an integer;
+otherwise (that is, a decimal integer numeral that overflows),
+it denotes a float.
+(Hexadecimal integer numerals that overflow @emph{wrap around};
+they always denote an integer value.)
 Examples of valid integer constants are
 @verbatim{
 3   345   0xff   0xBEBADA
@@ -1542,7 +1547,8 @@ If the value of the variable when it goes out of scope is a function,
 that function is called;
 otherwise, if the value has a @idx{__close} metamethod,
 that metamethod is called;
-otherwise, nothing is done.
+otherwise, if the value is @nil, nothing is done;
+otherwise, an error is raised.
 In the function case,
 if the scope is being closed by an error,
 the error object is passed as an argument to the function;
@@ -1665,7 +1671,7 @@ If both operands are integers,
 the operation is performed over integers and the result is an integer.
 Otherwise, if both operands are numbers,
 then they are converted to floats,
-the operation is performed following the usual rules
+the operation is performed following the machine's rules
 for floating-point arithmetic
 (usually the @x{IEEE 754} standard),
 and the result is a float.
@@ -4998,7 +5004,7 @@ This call leaves the final string on the top of the stack.
 
 }
 
-If you know beforehand the total size of the resulting string,
+If you know beforehand the maximum size of the resulting string,
 you can use the buffer like this:
 @itemize{
 
@@ -5012,7 +5018,8 @@ size @id{sz} with a call @T{luaL_buffinitsize(L, &b, sz)}.}
 @item{
 Finish by calling @T{luaL_pushresultsize(&b, sz)},
 where @id{sz} is the total size of the resulting string
-copied into that space.
+copied into that space (which may be smaller than or
+equal to the preallocated size).
 }
 
 }
@@ -5028,8 +5035,8 @@ when you call a buffer operation,
 the stack is at the same level
 it was immediately after the previous buffer operation.
 (The only exception to this rule is @Lid{luaL_addvalue}.)
-After calling @Lid{luaL_pushresult} the stack is back to its
-level when the buffer was initialized,
+After calling @Lid{luaL_pushresult},
+the stack is back to its level when the buffer was initialized,
 plus the final string on its top.
 
 }
@@ -7118,7 +7125,7 @@ empty string as a match immediately after another match.
 As an example,
 consider the results of the following code:
 @verbatim{
-> string.gsub("abc", "()a*()", print)
+> string.gsub("abc", "()a*()", print);
 --> 1   2
 --> 3   3
 --> 4   4

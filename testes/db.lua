@@ -214,14 +214,14 @@ local function foo (a, ...)
   local t = table.pack(...)
   for i = 1, t.n do
     local n, v = debug.getlocal(1, -i)
-    assert(n == "(*vararg)" and v == t[i])
+    assert(n == "(vararg)" and v == t[i])
   end
   assert(not debug.getlocal(1, -(t.n + 1)))
   assert(not debug.setlocal(1, -(t.n + 1), 30))
   if t.n > 0 then
     (function (x)
-      assert(debug.setlocal(2, -1, x) == "(*vararg)")
-      assert(debug.setlocal(2, -t.n, x) == "(*vararg)")
+      assert(debug.setlocal(2, -1, x) == "(vararg)")
+      assert(debug.setlocal(2, -t.n, x) == "(vararg)")
      end)(430)
      assert(... == 430)
   end
@@ -328,9 +328,9 @@ assert(a[f] and a[g] and a[assert] and a[debug.getlocal] and not a[print])
 -- tests for manipulating non-registered locals (C and Lua temporaries)
 
 local n, v = debug.getlocal(0, 1)
-assert(v == 0 and n == "(*temporary)")
+assert(v == 0 and n == "(C temporary)")
 local n, v = debug.getlocal(0, 2)
-assert(v == 2 and n == "(*temporary)")
+assert(v == 2 and n == "(C temporary)")
 assert(not debug.getlocal(0, 3))
 assert(not debug.getlocal(0, 0))
 
@@ -607,7 +607,7 @@ co = load[[
 local a = 0
 -- 'A' should be visible to debugger only after its complete definition
 debug.sethook(function (e, l)
-  if l == 3 then a = a + 1; assert(debug.getlocal(2, 1) == "(*temporary)")
+  if l == 3 then a = a + 1; assert(debug.getlocal(2, 1) == "(temporary)")
   elseif l == 4 then a = a + 1; assert(debug.getlocal(2, 1) == "A")
   end
 end, "l")
@@ -875,15 +875,15 @@ local debug = require'debug'
 local a = 12  -- a local variable
 
 local n, v = debug.getlocal(1, 1)
-assert(n == "(*temporary)" and v == debug)   -- unkown name but known value
+assert(n == "(temporary)" and v == debug)   -- unkown name but known value
 n, v = debug.getlocal(1, 2)
-assert(n == "(*temporary)" and v == 12)   -- unkown name but known value
+assert(n == "(temporary)" and v == 12)   -- unkown name but known value
 
 -- a function with an upvalue
 local f = function () local x; return a end
 n, v = debug.getupvalue(f, 1)
-assert(n == "(*no name)" and v == 12)
-assert(debug.setupvalue(f, 1, 13) == "(*no name)")
+assert(n == "(no name)" and v == 12)
+assert(debug.setupvalue(f, 1, 13) == "(no name)")
 assert(a == 13)
 
 local t = debug.getinfo(f)

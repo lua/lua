@@ -1299,7 +1299,7 @@ static const char *aux_upvalue (TValue *fi, int n, TValue **val,
       *val = f->upvals[n-1]->v;
       if (owner) *owner = obj2gco(f->upvals[n - 1]);
       name = p->upvalues[n-1].name;
-      return (name == NULL) ? "(*no name)" : getstr(name);
+      return (name == NULL) ? "(no name)" : getstr(name);
     }
     default: return NULL;  /* not a closure */
   }

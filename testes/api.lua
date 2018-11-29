@@ -366,7 +366,7 @@ do
   -- "argerror" without frames
   assert(T.checkpanic("loadstring 4") ==
       "bad argument #4 (string expected, got no value)")
-  
+
 
   -- memory error
   T.totalmem(T.totalmem()+10000)   -- set low memory limit (+10k)
@@ -987,12 +987,12 @@ do
 
   local a, b = T.testC([[
     call 0 1   # create resource
-    pushint 34
+    pushnil
     toclose -2  # mark call result to be closed
-    toclose -1  # mark number to be closed (will be ignored)
+    toclose -1  # mark nil to be closed (will be ignored)
     return 2
   ]], newresource)
-  assert(a[1] == 11 and b == 34) 
+  assert(a[1] == 11 and b == nil)
   assert(#openresource == 0)    -- was closed
 
   -- repeat the test, but calling function in a 'multret' context
@@ -1005,7 +1005,7 @@ do
   assert(#openresource == 0)    -- was closed
 
   -- error
-  local a, b = pcall(T.testC, [[
+  local a, b = pcall(T.makeCfunc[[
     call 0 1   # create resource
     toclose -1 # mark it to be closed
     error       # resource is the error object
@@ -1037,6 +1037,13 @@ do
     return 1    # return stack size
   ]], newresource, check)
   assert(a == 3)   -- no extra items left in the stack
+
+  -- non-closable value
+  local a, b = pcall(T.makeCfunc[[
+    pushint 32
+    toclose -1
+  ]])
+  assert(not a and string.find(b, "(C temporary)"))
 
 end
 
@@ -1249,9 +1256,9 @@ do   -- closing state with no extra memory
   T.closestate(L)
   T.alloccount()
 end
-  
+
 do   -- garbage collection with no extra memory
-  local L = T.newstate() 
+  local L = T.newstate()
   T.loadlib(L)
   local res = (T.doremote(L, [[
     _ENV = require"_G"

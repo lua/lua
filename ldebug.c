@@ -192,15 +192,14 @@ static const char *findvararg (CallInfo *ci, int n, StkId *pos) {
     int nextra = ci->u.l.nextraargs;
     if (n <= nextra) {
       *pos = ci->func - nextra + (n - 1);
-      return "(*vararg)";  /* generic name for any vararg */
+      return "(vararg)";  /* generic name for any vararg */
     }
   }
   return NULL;  /* no such vararg */
 }
 
 
-static const char *findlocal (lua_State *L, CallInfo *ci, int n,
-                              StkId *pos) {
+const char *luaG_findlocal (lua_State *L, CallInfo *ci, int n, StkId *pos) {
   StkId base = ci->func + 1;
   const char *name = NULL;
   if (isLua(ci)) {
@@ -211,12 +210,15 @@ static const char *findlocal (lua_State *L, CallInfo *ci, int n,
   }
   if (name == NULL) {  /* no 'standard' name? */
     StkId limit = (ci == L->ci) ? L->top : ci->next->func;
-    if (limit - base >= n && n > 0)  /* is 'n' inside 'ci' stack? */
-      name = "(*temporary)";  /* generic name for any valid slot */
+    if (limit - base >= n && n > 0) {  /* is 'n' inside 'ci' stack? */
+      /* generic name for any valid slot */
+      name = isLua(ci) ? "(temporary)" : "(C temporary)";
+    }
     else
       return NULL;  /* no name */
   }
-  *pos = base + (n - 1);
+  if (pos)
+    *pos = base + (n - 1);
   return name;
 }
 
@@ -232,7 +234,7 @@ LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
   }
   else {  /* active function; get information through 'ar' */
     StkId pos = NULL;  /* to avoid warnings */
-    name = findlocal(L, ar->i_ci, n, &pos);
+    name = luaG_findlocal(L, ar->i_ci, n, &pos);
     if (name) {
       setobjs2s(L, L->top, pos);
       api_incr_top(L);
@@ -247,7 +249,7 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
   StkId pos = NULL;  /* to avoid warnings */
   const char *name;
   lua_lock(L);
-  name = findlocal(L, ar->i_ci, n, &pos);
+  name = luaG_findlocal(L, ar->i_ci, n, &pos);
   if (name) {
     setobjs2s(L, pos, L->top - 1);
     L->top--;  /* pop value */

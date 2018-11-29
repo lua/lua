@@ -1427,7 +1427,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_CLOSE) {
         L->top = ra + 1;  /* everything is free after this slot */
-        ProtectNT(luaF_close(L, ra, LUA_OK));
+        Protect(luaF_close(L, ra, LUA_OK));
         vmbreak;
       }
       vmcase(OP_TBC) {
@@ -1717,9 +1717,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_TFORPREP) {
-        /* is 'toclose' a function or has a '__close' metamethod? */
-        if (ttisfunction(s2v(ra + 3)) ||
-            !ttisnil(luaT_gettmbyobj(L, s2v(ra + 3), TM_CLOSE))) {
+        /* is 'toclose' not nil? */
+        if (!ttisnil(s2v(ra + 3))) {
           /* create to-be-closed upvalue for it */
           halfProtect(luaF_newtbcupval(L, ra + 3));
         }
