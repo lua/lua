@@ -1538,9 +1538,6 @@ except that its value is @emph{closed} whenever the variable
 goes out of scope, including normal block termination,
 exiting its block by @Rw{break}/@Rw{goto}/@Rw{return},
 or exiting by an error.
-If a block ends in a tail call @see{functioncall},
-all variables of the caller function go out of scope
-before the start of the callee function.
 
 To \emph{close} a value has the following meaning here:
 If the value of the variable when it goes out of scope is a function,
@@ -2038,8 +2035,8 @@ A call of the form @T{f'@rep{string}'}
 is syntactic sugar for @T{f('@rep{string}')};
 that is, the argument list is a single literal string.
 
-A call of the form @T{return @rep{functioncall}} is called
-a @def{tail call}.
+A call of the form @T{return @rep{functioncall}} not in the
+scope of a to-be-closed variable is called a @def{tail call}.
 Lua implements @def{proper tail calls}
 (or @emph{proper tail recursion}):
 in a tail call,
@@ -2049,13 +2046,15 @@ a program can execute.
 However, a tail call erases any debug information about the
 calling function.
 Note that a tail call only happens with a particular syntax,
-where the @Rw{return} has one single function call as argument;
-this syntax makes the calling function return exactly
-the returns of the called function.
+where the @Rw{return} has one single function call as argument,
+and it is outside the scope of any to-be-closed variable.
+This syntax makes the calling function return exactly
+the returns of the called function,
+without any intervening action.
 So, none of the following examples are tail calls:
 @verbatim{
 return (f(x))        -- results adjusted to 1
-return 2 * f(x)
+return 2 * f(x)      -- result multiplied by 2
 return x, f(x)       -- additional results
 f(x); return         -- results discarded
 return x or f(x)     -- results adjusted to 1

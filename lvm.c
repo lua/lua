@@ -1565,7 +1565,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           if (nparams1)  /* vararg function? */
             delta = ci->u.l.nextraargs + nparams1;
           /* close upvalues from current call */
-          ProtectNT(luaF_close(L, base, LUA_OK));
+          luaF_close(L, base, -1);  /* (no to-be-closed vars. here) */
           updatestack(ci);
         }
         if (!ttisfunction(s2v(ra))) {  /* not a function? */

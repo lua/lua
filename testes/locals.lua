@@ -225,21 +225,24 @@ end
 
 
 do
-  -- to-be-closed variables must be closed in tail calls
+  -- calls cannot be tail in the scope of to-be-closed variables
   local X, Y
   local function foo ()
     local *toclose _ = function () Y = 10 end
-    assert(X == 20 and Y == nil)
+    assert(X == true and Y == nil)    -- 'X' not closed yet
     return 1,2,3
   end
 
   local function bar ()
-    local *toclose _ = function () X = 20 end
-    return foo()
+    local *toclose _ = function () X = false end
+    X = true
+    do
+      return foo()    -- not a tail call!
+    end
   end
 
   local a, b, c, d = bar()
-  assert(a == 1 and b == 2 and c == 3 and X == 20 and Y == 10 and d == nil)
+  assert(a == 1 and b == 2 and c == 3 and X == false and Y == 10 and d == nil)
 end
 
 
