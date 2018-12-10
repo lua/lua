@@ -23,7 +23,9 @@
 
 
 #undef PI
+#undef TAU
 #define PI	(l_mathop(3.141592653589793238462643383279502884))
+#define TAU	(l_mathop(6.283185307179586231995926937088370323))
 
 
 static int math_abs (lua_State *L) {
@@ -701,6 +703,7 @@ static const luaL_Reg mathlib[] = {
   {"random", NULL},
   {"randomseed", NULL},
   {"pi", NULL},
+  {"tau", NULL},
   {"huge", NULL},
   {"maxinteger", NULL},
   {"mininteger", NULL},
@@ -715,6 +718,8 @@ LUAMOD_API int luaopen_math (lua_State *L) {
   luaL_newlib(L, mathlib);
   lua_pushnumber(L, PI);
   lua_setfield(L, -2, "pi");
+  lua_pushnumber(L, TAU);
+  lua_setfield(L, -2, "tau");
   lua_pushnumber(L, (lua_Number)HUGE_VAL);
   lua_setfield(L, -2, "huge");
   lua_pushinteger(L, LUA_MAXINTEGER);
