@@ -20,7 +20,7 @@
 
 static lua_State *getco (lua_State *L) {
   lua_State *co = lua_tothread(L, 1);
-  luaL_argcheck(L, co, 1, "thread expected");
+  luaL_argexpected(L, co, 1, "thread");
   return co;
 }
 

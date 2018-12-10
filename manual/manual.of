@@ -4979,6 +4979,19 @@ This function never returns.
 
 }
 
+@APIEntry{
+void luaL_argexpected (lua_State *L,
+                       int cond,
+                       int arg,
+                       const char *tname);|
+@apii{0,0,v}
+
+Checks whether @id{cond} is true.
+If it is not, raises an error about the type of the argument @id{arg}
+with a standard message @seeF{luaL_typeerror}.
+
+}
+
 @APIEntry{typedef struct luaL_Buffer luaL_Buffer;|
 
 Type for a @def{string buffer}.
@@ -5710,6 +5723,19 @@ If @id{msg} is not @id{NULL} it is appended
 at the beginning of the traceback.
 The @id{level} parameter tells at which level
 to start the traceback.
+
+}
+
+@APIEntry{const char *luaL_typeerror (lua_State *L,
+                                      int arg,
+                                      const char *tname);|
+@apii{0,0,v}
+
+Raises a type error for argument @id{arg}
+of the @N{C function} that called it,
+using a standard message;
+@id{tname} is a @Q{name} for the expected type.
+This function never returns.
 
 }
 

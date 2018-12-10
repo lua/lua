@@ -185,7 +185,7 @@ LUALIB_API int luaL_argerror (lua_State *L, int arg, const char *extramsg) {
 }
 
 
-static int typeerror (lua_State *L, int arg, const char *tname) {
+int luaL_typeerror (lua_State *L, int arg, const char *tname) {
   const char *msg;
   const char *typearg;  /* name for the type of the actual argument */
   if (luaL_getmetafield(L, arg, "__name") == LUA_TSTRING)
@@ -200,7 +200,7 @@ static int typeerror (lua_State *L, int arg, const char *tname) {
 
 
 static void tag_error (lua_State *L, int arg, int tag) {
-  typeerror(L, arg, lua_typename(L, tag));
+  luaL_typeerror(L, arg, lua_typename(L, tag));
 }
 
 
@@ -339,7 +339,7 @@ LUALIB_API void *luaL_testudata (lua_State *L, int ud, const char *tname) {
 
 LUALIB_API void *luaL_checkudata (lua_State *L, int ud, const char *tname) {
   void *p = luaL_testudata(L, ud, tname);
-  if (p == NULL) typeerror(L, ud, tname);
+  luaL_argexpected(L, p != NULL, ud, tname);
   return p;
 }
 

@@ -125,8 +125,7 @@ static int luaB_getmetatable (lua_State *L) {
 static int luaB_setmetatable (lua_State *L) {
   int t = lua_type(L, 2);
   luaL_checktype(L, 1, LUA_TTABLE);
-  luaL_argcheck(L, t == LUA_TNIL || t == LUA_TTABLE, 2,
-                    "nil or table expected");
+  luaL_argexpected(L, t == LUA_TNIL || t == LUA_TTABLE, 2, "nil or table");
   if (luaL_getmetafield(L, 1, "__metatable") != LUA_TNIL)
     return luaL_error(L, "cannot change a protected metatable");
   lua_settop(L, 2);
@@ -145,8 +144,8 @@ static int luaB_rawequal (lua_State *L) {
 
 static int luaB_rawlen (lua_State *L) {
   int t = lua_type(L, 1);
-  luaL_argcheck(L, t == LUA_TTABLE || t == LUA_TSTRING, 1,
-                   "table or string expected");
+  luaL_argexpected(L, t == LUA_TTABLE || t == LUA_TSTRING, 1,
+                      "table or string");
   lua_pushinteger(L, lua_rawlen(L, 1));
   return 1;
 }
