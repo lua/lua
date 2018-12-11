@@ -323,14 +323,18 @@ static Rand64 nextrand (Rand64 *state) {
 
 /*
 ** Convert bits from a random integer into a float in the
-** interval [0,1).
+** interval [0,1), getting the higher FIG bits from the
+** random unsigned integer and converting that to a float.
 */
-#define maskFIG		(~(~(Rand64)1 << (FIGS - 1)))  /* use FIGS bits */
-#define shiftFIG  \
-	(l_mathop(0.5) / ((Rand64)1 << (FIGS - 1)))  /* 2^(-FIGS) */
+
+/* must throw out the extra (64 - FIGS) bits */
+#define shift64_FIG  	(64 - FIGS)
+
+/* to scale to [0, 1), multiply by scaleFIG = 2^(-FIGS) */
+#define scaleFIG	(l_mathop(0.5) / ((Rand64)1 << (FIGS - 1)))
 
 static lua_Number I2d (Rand64 x) {
-  return (lua_Number)(x & maskFIG) * shiftFIG;
+  return (lua_Number)(trim64(x) >> shift64_FIG) * scaleFIG;
 }
 
 /* convert a 'Rand64' to a 'lua_Unsigned' */
@@ -449,34 +453,48 @@ static Rand64 nextrand (Rand64 *state) {
 /* an unsigned 1 with proper type */
 #define UONE		((lu_int32)1)
 
+
 #if FIGS <= 32
 
-#define maskHI		0  /* do not need bits from higher half */
-#define maskLOW		(~(~UONE << (FIGS - 1)))  /* use FIGS bits */
-#define shiftFIG	(l_mathop(0.5) / (UONE << (FIGS - 1)))  /* 2^(-FIGS) */
+/* 2^(-FIGS) */
+#define scaleFIG       (l_mathop(0.5) / (UONE << (FIGS - 1)))
+
+/*
+** get up to 32 bits from higher half, shifting right to
+** throw out the extra bits.
+*/
+static lua_Number I2d (Rand64 x) {
+  lua_Number h = (lua_Number)(trim32(x.h) >> (32 - FIGS));
+  return h * scaleFIG;
+}
 
 #else	/* 32 < FIGS <= 64 */
 
 /* must take care to not shift stuff by more than 31 slots */
 
-/* use FIGS - 32 bits from higher half */
-#define maskHI		(~(~UONE << (FIGS - 33)))
+/* 2^(-FIGS) = 1.0 / 2^30 / 2^3 / 2^(FIGS-33) */
+#define scaleFIG  \
+	((lua_Number)1.0 / (UONE << 30) / 8.0 / (UONE << (FIGS - 33)))
 
-/* use 32 bits from lower half */
-#define maskLOW		(~(~UONE << 31))
+/*
+** use FIGS - 32 bits from lower half, throwing out the other
+** (32 - (FIGS - 32)) = (64 - FIGS) bits
+*/
+#define shiftLOW	(64 - FIGS)
 
-/* 2^(-FIGS) == (1 / 2^33) / 2^(FIGS-33) */
-#define shiftFIG  ((lua_Number)(1.0 / 8589934592.0) / (UONE << (FIGS - 33)))
+/*
+** higher 32 bits go after those (FIGS - 32) bits: shiftHI = 2^(FIGS - 32)
+*/
+#define shiftHI		((lua_Number)(UONE << (FIGS - 33)) * 2.0)
 
-#endif
-
-#define twoto32		l_mathop(4294967296.0)  /* 2^32 */
 
 static lua_Number I2d (Rand64 x) {
-  lua_Number h = (lua_Number)(x.h & maskHI);
-  lua_Number l = (lua_Number)(x.l & maskLOW);
-  return (h * twoto32 + l) * shiftFIG;
+  lua_Number h = (lua_Number)trim32(x.h) * shiftHI;
+  lua_Number l = (lua_Number)(trim32(x.l) >> shiftLOW);
+  return (h + l) * scaleFIG;
 }
+
+#endif
 
 
 /* convert a 'Rand64' to a 'lua_Unsigned' */

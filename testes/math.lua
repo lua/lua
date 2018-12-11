@@ -823,17 +823,19 @@ do
   assert(random(0) == res)
 
   math.randomseed(1007, 0)
-  -- using lower bits to generate random floats; (the '% 2^32' converts
+  -- using higher bits to generate random floats; (the '% 2^32' converts
   -- 32-bit integers to floats as unsigned)
   local res
   if floatbits <= 32 then
-    -- get all bits from the lower half
-    res = (l & ~(~0 << floatbits)) % 2^32
+    -- get all bits from the higher half
+    res = (h >> (32 - floatbits)) % 2^32
   else
-    -- get 32 bits from the lower half and the rest from the higher half
-    res = ((h & ~(~0 << (floatbits - 32))) % 2^32) * 2^32 + (l % 2^32)
+    -- get 32 bits from the higher half and the rest from the lower half
+    res = (h % 2^32) * 2^(floatbits - 32) + ((l >> (64 - floatbits)) % 2^32)
   end
-  assert(random() * 2^floatbits == res)
+  local rand = random()
+  assert(eq(rand, 0x0.7a7040a5a323c9d6, 2^-floatbits))
+  assert(rand * 2^floatbits == res)
 end
 
 math.randomseed(0, os.time())
