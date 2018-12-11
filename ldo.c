@@ -678,22 +678,19 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
   L->nny = 0;  /* allow yields */
   api_checknelems(L, (L->status == LUA_OK) ? nargs + 1 : nargs);
   status = luaD_rawrunprotected(L, resume, &nargs);
-  if (unlikely(status == -1))  /* error calling 'lua_resume'? */
-    status = LUA_ERRRUN;
-  else {  /* continue running after recoverable errors */
-    while (errorstatus(status) && recover(L, status)) {
-      /* unroll continuation */
-      status = luaD_rawrunprotected(L, unroll, &status);
-    }
-    if (likely(!errorstatus(status)))
-      lua_assert(status == L->status);  /* normal end or yield */
-    else {  /* unrecoverable error */
-      status = luaF_close(L, L->stack, status);  /* close all upvalues */
-      L->status = cast_byte(status);  /* mark thread as 'dead' */
-      luaD_seterrorobj(L, status, L->stack + 1);  /* push error message */
-      L->ci = &L->base_ci;  /* back to the original C level */
-      L->ci->top = L->top;
-    }
+   /* continue running after recoverable errors */
+  while (errorstatus(status) && recover(L, status)) {
+    /* unroll continuation */
+    status = luaD_rawrunprotected(L, unroll, &status);
+  }
+  if (likely(!errorstatus(status)))
+    lua_assert(status == L->status);  /* normal end or yield */
+  else {  /* unrecoverable error */
+    status = luaF_close(L, L->stack, status);  /* close all upvalues */
+    L->status = cast_byte(status);  /* mark thread as 'dead' */
+    luaD_seterrorobj(L, status, L->stack + 1);  /* push error message */
+    L->ci = &L->base_ci;  /* back to the original C level */
+    L->ci->top = L->top;
   }
   *nresults = (status == LUA_YIELD) ? L->ci->u2.nyield
                                     : cast_int(L->top - (L->ci->func + 1));

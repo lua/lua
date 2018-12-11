@@ -68,7 +68,6 @@ static const char *b_str2int (const char *s, int base, lua_Integer *pn) {
 
 static int luaB_tonumber (lua_State *L) {
   if (lua_isnoneornil(L, 2)) {  /* standard conversion? */
-    luaL_checkany(L, 1);
     if (lua_type(L, 1) == LUA_TNUMBER) {  /* already a number? */
       lua_settop(L, 1);  /* yes; return it */
       return 1;
@@ -79,6 +78,7 @@ static int luaB_tonumber (lua_State *L) {
       if (s != NULL && lua_stringtonumber(L, s) == l + 1)
         return 1;  /* successful conversion to number */
       /* else not a number */
+      luaL_checkany(L, 1);  /* (but there must be some parameter) */
     }
   }
   else {
