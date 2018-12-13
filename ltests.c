@@ -1366,6 +1366,9 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("newthread") {
       lua_newthread(L1);
     }
+    else if EQ("resetthread") {
+      lua_pushinteger(L1, lua_resetthread(L1));
+    }
     else if EQ("newuserdata") {
       lua_newuserdata(L1, getnum);
     }

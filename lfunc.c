@@ -127,17 +127,18 @@ static int prepclosingmethod (lua_State *L, TValue *obj, TValue *err) {
 
 
 /*
-** Prepare and call a closing method. If status is OK, code is
-** still inside the original protected call, and so any error
-** will be handled there. Otherwise, a previous error already
-** activated original protected call, and so the call to the
-** closing method must be protected here.
+** Prepare and call a closing method. If status is OK, code is still
+** inside the original protected call, and so any error will be handled
+** there. Otherwise, a previous error already activated original
+** protected call, and so the call to the closing method must be
+** protected here. (A status = CLOSEPROTECT behaves like a previous
+** error, to also run the closing method in protected mode).
 ** If status is OK, the call to the closing method will be pushed
 ** at the top of the stack. Otherwise, values are pushed after
 ** the 'level' of the upvalue being closed, as everything after
 ** that won't be used again.
 */
-static int closeupval (lua_State *L, TValue *uv, StkId level, int status) {
+static int callclosemth (lua_State *L, TValue *uv, StkId level, int status) {
   if (likely(status == LUA_OK)) {
     if (prepclosingmethod(L, uv, &G(L)->nilvalue))  /* something to call? */
       callclose(L, NULL);  /* call closing method */
@@ -207,9 +208,10 @@ int luaF_close (lua_State *L, StkId level, int status) {
     if (!iswhite(uv))
       gray2black(uv);  /* closed upvalues cannot be gray */
     luaC_barrier(L, uv, slot);
-    if (status >= 0 && uv->tt == LUA_TUPVALTBC) {  /* must be closed? */
+    if (uv->tt == LUA_TUPVALTBC && status != NOCLOSINGMETH) {
+      /* must run closing method */
       ptrdiff_t levelrel = savestack(L, level);
-      status = closeupval(L, uv->v, upl, status);  /* may realloc. the stack */
+      status = callclosemth(L, uv->v, upl, status);  /* may change the stack */
       level = restorestack(L, levelrel);
     }
   }

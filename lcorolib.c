@@ -107,29 +107,40 @@ static int luaB_yield (lua_State *L) {
 }
 
 
-static int luaB_costatus (lua_State *L) {
-  lua_State *co = getco(L);
-  if (L == co) lua_pushliteral(L, "running");
+#define COS_RUN		0
+#define COS_DEAD	1
+#define COS_YIELD	2
+#define COS_NORM	3
+
+
+static const char *statname[] = {"running", "dead", "suspended", "normal"};
+
+
+static int auxstatus (lua_State *L, lua_State *co) {
+  if (L == co) return COS_RUN;
   else {
     switch (lua_status(co)) {
       case LUA_YIELD:
-        lua_pushliteral(L, "suspended");
-        break;
+        return COS_YIELD;
       case LUA_OK: {
         lua_Debug ar;
-        if (lua_getstack(co, 0, &ar) > 0)  /* does it have frames? */
-          lua_pushliteral(L, "normal");  /* it is running */
+        if (lua_getstack(co, 0, &ar))  /* does it have frames? */
+          return COS_NORM;  /* it is running */
         else if (lua_gettop(co) == 0)
-            lua_pushliteral(L, "dead");
+            return COS_DEAD;
         else
-          lua_pushliteral(L, "suspended");  /* initial state */
-        break;
+          return COS_YIELD;  /* initial state */
       }
       default:  /* some error occurred */
-        lua_pushliteral(L, "dead");
-        break;
+        return COS_DEAD;
     }
   }
+}
+
+
+static int luaB_costatus (lua_State *L) {
+  lua_State *co = getco(L);
+  lua_pushstring(L, statname[auxstatus(L, co)]);
   return 1;
 }
 
@@ -147,6 +158,28 @@ static int luaB_corunning (lua_State *L) {
 }
 
 
+static int luaB_kill (lua_State *L) {
+  lua_State *co = getco(L);
+  int status = auxstatus(L, co);
+  switch (status) {
+    case COS_DEAD: case COS_YIELD: {
+      status = lua_resetthread(co);
+      if (status == LUA_OK) {
+        lua_pushboolean(L, 1);
+        return 1;
+      }
+      else {
+        lua_pushboolean(L, 0);
+        lua_xmove(co, L, 1);  /* copy error message */
+        return 2;
+      }
+    }
+    default:  /* normal or running coroutine */
+      return luaL_error(L, "cannot kill a %s coroutine", statname[status]);
+  }
+}
+
+
 static const luaL_Reg co_funcs[] = {
   {"create", luaB_cocreate},
   {"resume", luaB_coresume},
@@ -155,6 +188,7 @@ static const luaL_Reg co_funcs[] = {
   {"wrap", luaB_cowrap},
   {"yield", luaB_yield},
   {"isyieldable", luaB_yieldable},
+  {"kill", luaB_kill},
   {NULL, NULL}
 };
 

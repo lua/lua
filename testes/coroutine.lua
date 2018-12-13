@@ -119,6 +119,51 @@ end
 assert(#a == 25 and a[#a] == 97)
 x, a = nil
 
+
+-- coroutine kill
+do
+  -- ok to kill a dead coroutine
+  local co = coroutine.create(print)
+  assert(coroutine.resume(co, "testing 'coroutine.kill'"))
+  assert(coroutine.status(co) == "dead")
+  assert(coroutine.kill(co))
+
+  -- cannot kill the running coroutine
+  local st, msg = pcall(coroutine.kill, coroutine.running())
+  assert(not st and string.find(msg, "running"))
+
+  local main = coroutine.running()
+
+  -- cannot kill a "normal" coroutine
+  ;(coroutine.wrap(function ()
+    local st, msg = pcall(coroutine.kill, main)
+    assert(not st and string.find(msg, "normal"))
+  end))()
+
+  -- to-be-closed variables in coroutines
+  local X
+  co = coroutine.create(function ()
+    local *toclose x = function (err) assert(err == nil); X = false end
+    X = true
+    coroutine.yield()
+  end)
+  coroutine.resume(co)
+  assert(X)
+  assert(coroutine.kill(co))
+  assert(not X and coroutine.status(co) == "dead")
+
+  -- error killing a coroutine
+  co = coroutine.create(function()
+    local *toclose x = function (err) assert(err == nil); error(111) end
+    coroutine.yield()
+  end)
+  coroutine.resume(co)
+  local st, msg = coroutine.kill(co)
+  assert(not st and coroutine.status(co) == "dead" and msg == 111)
+
+end
+
+
 -- yielding across C boundaries
 
 co = coroutine.wrap(function()

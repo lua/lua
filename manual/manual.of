@@ -3927,6 +3927,19 @@ and then pops the top element.
 
 }
 
+@APIEntry{int lua_resetthread (lua_State *L);|
+@apii{0,?,-}
+
+Resets a thread, cleaning its call stack and closing all pending
+to-be-closed variables.
+Returns a status code:
+@Lid{LUA_OK} for no errors in closing methods,
+or an error status otherwise.
+In case of error,
+leave the error object on the stack,
+
+}
+
 @APIEntry{int lua_resume (lua_State *L, lua_State *from, int nargs,
                           int *nresults);|
 @apii{?,?,-}
@@ -3948,11 +3961,8 @@ or returned by the body function.
 @Lid{LUA_OK} if the coroutine finishes its execution
 without errors,
 or an error code in case of errors @seeC{lua_pcall}.
-
 In case of errors,
-the stack is not unwound,
-so you can use the debug API over it.
-The error object is on the top of the stack.
+the error object is on the top of the stack.
 
 To resume a coroutine,
 you remove all results from the last @Lid{lua_yield},
@@ -6282,6 +6292,17 @@ Returns true when the running coroutine can yield.
 
 A running coroutine is yieldable if it is not the main thread and
 it is not inside a non-yieldable @N{C function}.
+
+}
+
+@LibEntry{coroutine.kill(co)|
+
+Kills coroutine @id{co},
+closing all its pending to-be-closed variables
+and putting the coroutine in a dead state.
+In case of error closing some variable,
+returns @false plus the error object;
+otherwise returns @true.
 
 }
 
@@ -8646,6 +8667,11 @@ not a float.
 The use of the @idx{__lt} metamethod to emulate @id{__le}
 has been removed.
 When needed, this metamethod must be explicitly defined.
+}
+
+@item{
+When a coroutine finishes with an error,
+its stack is unwound (to run any pending closing methods).
 }
 
 }
