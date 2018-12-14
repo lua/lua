@@ -4017,6 +4017,25 @@ patch = [[
 
 
 
+--[=[
+Bug{
+what = [[Long brackets with a huge number of '=' overflow some
+internal buffer arithmetic]],
+report = [[Marco, 2018/12/12]],
+since = [[5.1]],
+fix = nil,
+example = [[
+local eqs = string.rep("=", 0x3ffffffe)
+local code = "return [" .. eqs .. "[a]" .. eqs .. "]"
+print(#assert(load(code))())
+]],
+patch = [[
+]]
+}
+]=]
+
+
+
 
 --[=[
 Bug{
