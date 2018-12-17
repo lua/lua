@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.258 2016/12/20 18:37:00 roberto Exp roberto $
+** $Id: luaconf.h,v 1.259.1.1 2017/04/19 17:29:57 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -618,6 +618,13 @@
 #if !defined(LUA_USE_C89)
 #define lua_strx2number(s,p)		lua_str2number(s,p)
 #endif
+
+
+/*
+@@ lua_pointer2str converts a pointer to a readable string in a
+** non-specified way.
+*/
+#define lua_pointer2str(buff,sz,p)	l_sprintf(buff,sz,"%p",p)
 
 
 /*

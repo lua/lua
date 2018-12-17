@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.h,v 2.22 2016/11/07 12:38:35 roberto Exp roberto $
+** $Id: ltable.h,v 2.23.1.2 2018/05/24 19:39:05 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -54,7 +54,7 @@ LUAI_FUNC void luaH_resize (lua_State *L, Table *t, unsigned int nasize,
 LUAI_FUNC void luaH_resizearray (lua_State *L, Table *t, unsigned int nasize);
 LUAI_FUNC void luaH_free (lua_State *L, Table *t);
 LUAI_FUNC int luaH_next (lua_State *L, Table *t, StkId key);
-LUAI_FUNC int luaH_getn (Table *t);
+LUAI_FUNC lua_Unsigned luaH_getn (Table *t);
 
 
 #if defined(LUA_DEBUG)

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.229 2016/12/22 13:08:50 roberto Exp roberto $
+** $Id: lua.c,v 1.230.1.1 2017/04/19 17:29:57 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -138,7 +138,7 @@ static void print_usage (const char *badoption) {
   "Available options are:\n"
   "  -e stat  execute string 'stat'\n"
   "  -i       enter interactive mode after executing 'script'\n"
-  "  -l name  require library 'name'\n"
+  "  -l name  require library 'name' into global 'name'\n"
   "  -v       show version information\n"
   "  -E       ignore environment variables\n"
   "  --       stop handling options\n"
