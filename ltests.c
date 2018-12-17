@@ -156,7 +156,8 @@ void *debug_realloc (void *ud, void *b, size_t oldsize, size_t size) {
     size_t realsize = sizeof(Header) + size + MARKSIZE;
     if (realsize < size) return NULL;  /* arithmetic overflow! */
     newblock = cast(Header *, malloc(realsize));  /* alloc a new block */
-    if (newblock == NULL) return NULL;  /* really out of memory? */
+    if (newblock == NULL)
+      return NULL;  /* really out of memory? */
     if (block) {
       memcpy(newblock + 1, block + 1, commonsize);  /* copy old contents */
       freeblock(mc, block);  /* erase (and check) old copy */

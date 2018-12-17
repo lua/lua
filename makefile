@@ -14,10 +14,11 @@ CWARNSCPP= \
 	-Wredundant-decls \
 	-Wdisabled-optimization \
 	-Wdouble-promotion \
- 	-Wstrict-aliasing=3 \
- 	-Wno-aggressive-loop-optimizations \
- 	-Wlogical-op \
-	-Werror \
+	#-Wno-aggressive-loop-optimizations \
+	#-Wlogical-op \
+	#-Wfatal-errors \
+	#-Wstrict-aliasing=3 \
+	# -Werror \
 	# -pedantic   # warns if we use jump tables \
 	# the next warnings generate too much noise, so they are disabled
 	# -Wconversion  -Wno-sign-conversion \
@@ -39,6 +40,7 @@ CWARNS= $(CWARNSCPP) $(CWARNSC)
 
 
 # -DEXTERNMEMCHECK -DHARDSTACKTESTS -DHARDMEMTESTS -DTRACEMEM='"tempmem"'
+# -DMAXINDEXRK=1
 # -g -DLUA_USER_H='"ltests.h"'
 # -pg -malign-double
 # -DLUA_USE_CTYPE -DLUA_USE_APICHECK
@@ -50,7 +52,6 @@ TESTS= -DLUA_USER_H='"ltests.h"' -O0
 # LOCAL = $(TESTS) $(CWARNS) -g
 
 
-
 # enable Linux goodies
 MYCFLAGS= $(LOCAL) -std=c99 -DLUA_USE_LINUX -DLUA_USE_READLINE
 MYLDFLAGS= $(LOCAL) -Wl,-E
@@ -58,7 +59,7 @@ MYLIBS= -ldl -lreadline
 
 
 CC= gcc
-CFLAGS= -Wall -O2 $(MYCFLAGS) -Wfatal-errors -fno-stack-protector -fno-common
+CFLAGS= -Wall -O2 $(MYCFLAGS) -fno-stack-protector -fno-common -march=native
 AR= ar rc
 RANLIB= ranlib
 RM= rm -f
@@ -122,7 +123,7 @@ echo:
 	@echo "MYLIBS = $(MYLIBS)"
 	@echo "DL = $(DL)"
 
-$(ALL_O): makefile
+$(ALL_O): makefile ltests.h
 
 # DO NOT EDIT
 # automatically made with 'gcc -MM l*.c'
@@ -146,8 +147,8 @@ ldo.o: ldo.c lprefix.h lua.h luaconf.h lapi.h llimits.h lstate.h \
  lparser.h lstring.h ltable.h lundump.h lvm.h
 ldump.o: ldump.c lprefix.h lua.h luaconf.h lobject.h llimits.h lstate.h \
  ltm.h lzio.h lmem.h lundump.h
-lfunc.o: lfunc.c lprefix.h lua.h luaconf.h lfunc.h lobject.h llimits.h \
- lgc.h lstate.h ltm.h lzio.h lmem.h
+lfunc.o: lfunc.c lprefix.h lua.h luaconf.h ldebug.h lstate.h lobject.h \
+ llimits.h ltm.h lzio.h lmem.h ldo.h lfunc.h lgc.h
 lgc.o: lgc.c lprefix.h lua.h luaconf.h ldebug.h lstate.h lobject.h \
  llimits.h ltm.h lzio.h lmem.h ldo.h lfunc.h lgc.h lstring.h ltable.h
 linit.o: linit.c lprefix.h lua.h luaconf.h lualib.h lauxlib.h
@@ -178,8 +179,8 @@ ltable.o: ltable.c lprefix.h lua.h luaconf.h ldebug.h lstate.h lobject.h \
 ltablib.o: ltablib.c lprefix.h lua.h luaconf.h lauxlib.h lualib.h
 ltests.o: ltests.c lprefix.h lua.h luaconf.h lapi.h llimits.h lstate.h \
  lobject.h ltm.h lzio.h lmem.h lauxlib.h lcode.h llex.h lopcodes.h \
- lparser.h lctype.h ldebug.h ldo.h lfunc.h lstring.h lgc.h ltable.h \
- lualib.h
+ lparser.h lctype.h ldebug.h ldo.h lfunc.h lopnames.h lstring.h lgc.h \
+ ltable.h lualib.h
 ltm.o: ltm.c lprefix.h lua.h luaconf.h ldebug.h lstate.h lobject.h \
  llimits.h ltm.h lzio.h lmem.h ldo.h lgc.h lstring.h ltable.h lvm.h
 lua.o: lua.c lprefix.h lua.h luaconf.h lauxlib.h lualib.h

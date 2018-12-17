@@ -1027,8 +1027,7 @@ Any kind of end-of-line sequence
 or newline followed by carriage return)
 is converted to a simple newline.
 
-For convenience,
-when the opening long bracket is immediately followed by a newline,
+When the opening long bracket is immediately followed by a newline,
 the newline is not included in the string.
 As an example, in a system using ASCII
 (in which @Char{a} is coded @N{as 97},
@@ -1048,7 +1047,7 @@ alo
 Any byte in a literal string not
 explicitly affected by the previous rules represents itself.
 However, Lua opens files for parsing in text mode,
-and the system file functions may have problems with
+and the system's file functions may have problems with
 some control characters.
 So, it is safer to represent
 non-text data as a quoted literal with
@@ -1782,19 +1781,19 @@ These operators always result in @false or @true.
 Equality (@T{==}) first compares the type of its operands.
 If the types are different, then the result is @false.
 Otherwise, the values of the operands are compared.
-Strings are compared in the obvious way.
+Strings are equal if they have the same content.
 Numbers are equal if they denote the same mathematical value.
 
 Tables, userdata, and threads
 are compared by reference:
 two objects are considered equal only if they are the same object.
 Every time you create a new object
-(a table, userdata, or thread),
+(a table, a userdata, or a thread),
 this new object is different from any previously existing object.
-A closure is always equal to itself.
-Closures with any detectable difference
+A function is always equal to itself.
+Functions with any detectable difference
 (different behavior, different definition) are always different.
-Closures created at different times but with no detectable differences
+Functions created at different times but with no detectable differences
 may be classified as equal or not
 (depending on internal cashing details).
 
@@ -4324,6 +4323,7 @@ The unsigned version of @Lid{lua_Integer}.
 
 Returns the pseudo-index that represents the @id{i}-th upvalue of
 the running function @see{c-closure}.
+@id{i} must be in the range @M{[1,256]}.
 
 }
 
