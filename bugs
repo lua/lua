@@ -2899,6 +2899,30 @@ patch = [[
 ]]
 }
 
+Bug{
+what = [[Lua does not check memory use when creating error messages]],
+report = [[John Dunn, 2012/09/24]],
+since = [[5.2.0]],
+fix = nil,
+example = [[
+local code = "function test()\n  bob.joe.larry = 23\n end"
+
+load(code)()
+
+-- memory will grow steadly 
+for i = 1, math.huge do
+  pcall(test)
+  if i % 100000 == 0 then
+    io.write(collectgarbage'count'*1024, "\n")
+  end
+end
+]],
+patch = [[
+]]
+}
+
+
+
 
 
 -----------------------------------------------------------------
@@ -3656,9 +3680,9 @@ It needs an "interceptor" 'memcmp' function that continues
 reading memory after a difference is found.]],
 patch = [[
 2c2
-< ** $Id: bugs,v 1.150 2016/07/19 17:10:45 roberto Exp roberto $
+< ** $Id: bugs,v 1.160 2018/05/24 20:25:14 roberto Exp roberto $
 ---
-> ** $Id: bugs,v 1.150 2016/07/19 17:10:45 roberto Exp roberto $
+> ** $Id: bugs,v 1.160 2018/05/24 20:25:14 roberto Exp roberto $
 263c263,264
 <   for (option = LUA_STRFTIMEOPTIONS; *option != '\0'; option += oplen) {
 ---
@@ -3711,7 +3735,385 @@ A()
 patch = [[
 ]]
 }
+
+
+-----------------------------------------------------------------
+-- Lua 5.3.4
+
+
+Bug{
+what = [[Wrong code for a goto followed by a label inside an 'if']],
+report = [[云风, 2017/04/13]],
+since = [[5.2]],
+fix = nil,
+example = [[
+-- should print 32323232..., but prints only '3'
+if true then
+  goto LBL
+  ::loop::
+  print(2)
+  ::LBL::
+  print(3)
+  goto loop
+end
+]],
+patch = [[
+--- lparser.c	2017/04/19 17:20:42	2.155.1.1
++++ lparser.c	2017/04/29 18:11:40	2.155.1.2
+@@ -1392,7 +1392,7 @@
+     luaK_goiffalse(ls->fs, &v);  /* will jump to label if condition is true */
+     enterblock(fs, &bl, 0);  /* must enter block before 'goto' */
+     gotostat(ls, v.t);  /* handle goto/break */
+-    skipnoopstat(ls);  /* skip other no-op statements */
++    while (testnext(ls, ';')) {}  /* skip semicolons */
+     if (block_follow(ls, 0)) {  /* 'goto' is the entire block? */
+       leaveblock(fs);
+       return;  /* and that is it */
+]]
+}
+
+
+Bug{
+what = [[Lua crashes when building sequences with more than 2^30 elements.]],
+report = [[Viacheslav Usov, 2017/05/11]],
+since = [[ ]],
+fix = nil,
+example = [[
+-- crashes if machine has enough memory
+local t = {}
+for i = 1, 0x7fffffff do
+  t[i] = i
+end
+]],
+patch = [[
+--- ltable.c	2017/04/19 17:20:42	2.118.1.1
++++ ltable.c	2018/05/24 18:34:38
+@@ -223,7 +223,9 @@
+   unsigned int na = 0;  /* number of elements to go to array part */
+   unsigned int optimal = 0;  /* optimal size for array part */
+   /* loop while keys can fill more than half of total size */
+-  for (i = 0, twotoi = 1; *pna > twotoi / 2; i++, twotoi *= 2) {
++  for (i = 0, twotoi = 1;
++       twotoi > 0 && *pna > twotoi / 2;
++       i++, twotoi *= 2) {
+     if (nums[i] > 0) {
+       a += nums[i];
+       if (a > twotoi/2) {  /* more than half elements present? */
+]]
+}
+
+
+Bug{
+what = [[Table length computation overflows for sequences larger than
+2^31 elements.]],
+report = [[Viacheslav Usov, 2017/05/12]],
+since = [[ ]],
+fix = nil,
+example = [[
+-- on a machine with enough memory
+local t = {}
+for i = 1, 2147483681 do
+  t[i] = i
+end
+print(#t)
+]],
+patch = [[
+--- ltable.h	2017/04/19 17:20:42	2.23.1.1
++++ ltable.h	2018/05/24 19:31:50
+@@ -56,3 +56,3 @@
+ LUAI_FUNC int luaH_next (lua_State *L, Table *t, StkId key);
+-LUAI_FUNC int luaH_getn (Table *t);
++LUAI_FUNC lua_Unsigned luaH_getn (Table *t);
+ 
+--- ltable.c	2018/05/24 19:22:37	2.118.1.2
++++ ltable.c	2018/05/24 19:25:05
+@@ -614,4 +614,4 @@
+ 
+-static int unbound_search (Table *t, unsigned int j) {
+-  unsigned int i = j;  /* i is zero or a present index */
++static lua_Unsigned unbound_search (Table *t, lua_Unsigned j) {
++  lua_Unsigned i = j;  /* i is zero or a present index */
+   j++;
+@@ -620,3 +620,3 @@
+     i = j;
+-    if (j > cast(unsigned int, MAX_INT)/2) {  /* overflow? */
++    if (j > l_castS2U(LUA_MAXINTEGER) / 2) {  /* overflow? */
+       /* table was built with bad purposes: resort to linear search */
+@@ -630,3 +630,3 @@
+   while (j - i > 1) {
+-    unsigned int m = (i+j)/2;
++    lua_Unsigned m = (i+j)/2;
+     if (ttisnil(luaH_getint(t, m))) j = m;
+@@ -642,3 +642,3 @@
+ */
+-int luaH_getn (Table *t) {
++lua_Unsigned luaH_getn (Table *t) {
+   unsigned int j = t->sizearray;
+]]
+}
+
+
+Bug{
+what = [[Lua does not check GC when creating error messages]],
+report = [[Viacheslav Usov, 2017/07/06]],
+since = [[5.3.2]],
+fix = nil,
+example = [[
+function test()  
+  bob.joe.larry = 23
+end
+
+-- memory will grow steadly 
+for i = 1, math.huge do
+  pcall(test)
+  if i % 100000 == 0 then
+    io.write(collectgarbage'count'*1024, "\n")
+  end
+end
+]],
+patch = [[
+--- ldebug.c	2017/04/19 17:20:42	2.121.1.1
++++ ldebug.c	2017/07/10 17:08:39
+@@ -653,6 +653,7 @@
+   CallInfo *ci = L->ci;
+   const char *msg;
+   va_list argp;
++  luaC_checkGC(L);  /* error message uses memory */
+   va_start(argp, fmt);
+   msg = luaO_pushvfstring(L, fmt, argp);  /* format message */
+   va_end(argp);
+]]
+}
+
+
+Bug{
+what = [[dead keys with nil values can stay in weak tables]],
+report = [[云风 Cloud Wu, 2017/08/15]],
+since = [[5.2]],
+fix = nil,
+example = [[
+-- The following chunk, under a memory checker like valgrind, 
+-- produces a memory access violation.
+
+local a = setmetatable({}, {__mode = 'kv'})
+
+a['ABCDEFGHIJKLMNOPQRSTUVWXYZ' .. 'abcdefghijklmnopqrstuvwxyz'] = {}
+a[next(a)] = nil
+collectgarbage()
+print(a['BCDEFGHIJKLMNOPQRSTUVWXYZ' .. 'abcdefghijklmnopqrstuvwxyz'])
+]],
+patch = [[
+--- lgc.c	2016/12/22 13:08:50	2.215
++++ lgc.c	2017/08/31 16:08:23
+@@ -643,8 +643,9 @@
+     for (n = gnode(h, 0); n < limit; n++) {
+       if (!ttisnil(gval(n)) && (iscleared(g, gkey(n)))) {
+         setnilvalue(gval(n));  /* remove value ... */
+-        removeentry(n);  /* and remove entry from table */
+       }
++      if (ttisnil(gval(n)))  /* is entry empty? */
++        removeentry(n);  /* remove entry from table */
+     }
+   }
+ }
+]]
+}
+
+
+Bug{
+what = [['lua_pushcclosure' should not call the garbage collector when
+'n' is zero.]],
+report = [[Andrew Gierth, 2017/12/05]],
+since = [[5.3.3]],
+fix = nil,
+example = [[ ]],
+patch = [[
+--- lapi.c	2017/04/19 17:13:00	2.259.1.1
++++ lapi.c	2017/12/06 18:14:45
+@@ -533,6 +533,7 @@
+   lua_lock(L);
+   if (n == 0) {
+     setfvalue(L->top, fn);
++    api_incr_top(L);
+   }
+   else {
+     CClosure *cl;
+@@ -546,9 +547,9 @@
+       /* does not need barrier because closure is white */
+     }
+     setclCvalue(L, L->top, cl);
++    api_incr_top(L);
++    luaC_checkGC(L);
+   }
+-  api_incr_top(L);
+-  luaC_checkGC(L);
+   lua_unlock(L);
+ }
+]]
+}
+
+
+Bug{
+what = [[memory-allocation error when resizing a table can leave it
+in an inconsistent state.]],
+report = [[Roberto, 2017/12/08]],
+since = [[5.0]],
+fix = nil,
+example = [[
+local a = {x = 1, y = 1, z = 1}
+a[1] = 10   -- goes to the hash part (which has 4 slots)
+print(a[1])   --> 10
+
+-- assume that the 2nd memory allocation from now fails
+pcall(rawset, a, 2, 20)   -- forces a rehash
+
+-- a[1] now exists both in the array part (because the array part
+-- grew) and in the hash part (because the allocation of the hash
+-- part failed, keeping it as it was).
+-- This makes the following traversal goes forever...
+for k,v in pairs(a) do print(k,v) end
+]],
+patch = [[
+--- ltable.c    2018/05/24 19:39:05     2.118.1.3
++++ ltable.c    2018/06/04 16:00:25
+@@ -332,17 +332,34 @@
+ }
+ 
+ 
++typedef struct {
++  Table *t;
++  unsigned int nhsize;
++} AuxsetnodeT;
++
++
++static void auxsetnode (lua_State *L, void *ud) {
++  AuxsetnodeT *asn = cast(AuxsetnodeT *, ud);
++  setnodevector(L, asn->t, asn->nhsize);
++}
++
++
+ void luaH_resize (lua_State *L, Table *t, unsigned int nasize,
+                                           unsigned int nhsize) {
+   unsigned int i;
+   int j;
++  AuxsetnodeT asn;
+   unsigned int oldasize = t->sizearray;
+   int oldhsize = allocsizenode(t);
+   Node *nold = t->node;  /* save old hash ... */
+   if (nasize > oldasize)  /* array part must grow? */
+     setarrayvector(L, t, nasize);
+   /* create new hash part with appropriate size */
+-  setnodevector(L, t, nhsize);
++  asn.t = t; asn.nhsize = nhsize;
++  if (luaD_rawrunprotected(L, auxsetnode, &asn) != LUA_OK) {  /* mem. error? */
++    setarrayvector(L, t, oldasize);  /* array back to its original size */
++    luaD_throw(L, LUA_ERRMEM);  /* rethrow memory error */
++  }
+   if (nasize < oldasize) {  /* array part must shrink? */
+     t->sizearray = nasize;
+     /* re-insert elements from vanishing slice */
+]]
+}
+
+
+
+-----------------------------------------------------------------
+-- Lua 5.3.5
+
+--[=[
+Bug{
+what = [[Long brackets with a huge number of '=' overflow some
+internal buffer arithmetic]],
+report = [[Marco, 2018/12/12]],
+since = [[5.1]],
+fix = nil,
+example = [[
+local eqs = string.rep("=", 0x3ffffffe)
+local code = "return [" .. eqs .. "[a]" .. eqs .. "]"
+print(#assert(load(code))())
+]],
+patch = [[
+--- a/llex.c
++++ b/llex.c
+@@ -244,12 +244,12 @@
+ 
+ 
+ /*
+-** skip a sequence '[=*[' or ']=*]'; if sequence is well formed, return
+-** its number of '='s; otherwise, return a negative number (-1 iff there
+-** are no '='s after initial bracket)
++** reads a sequence '[=*[' or ']=*]', leaving the last bracket.
++** If sequence is well formed, return its number of '='s + 2; otherwise,
++** return 1 if there is no '='s or 0 otherwise (an unfinished '[==...').
+ */
+-static int skip_sep (LexState *ls) {
+-  int count = 0;
++static size_t skip_sep (LexState *ls) {
++  size_t count = 0;
+   int s = ls->current;
+   lua_assert(s == '[' || s == ']');
+   save_and_next(ls);
+@@ -257,11 +257,14 @@
+     save_and_next(ls);
+     count++;
+   }
+-  return (ls->current == s) ? count : (-count) - 1;
++  return (ls->current == s) ? count + 2
++         : (count == 0) ? 1
++         : 0;
++
+ }
+ 
+ 
+-static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
++static void read_long_string (LexState *ls, SemInfo *seminfo, size_t sep) {
+   int line = ls->linenumber;  /* initial line (for error message) */
+   save_and_next(ls);  /* skip 2nd '[' */
+   if (currIsNewline(ls))  /* string starts with a newline? */
+@@ -295,8 +298,8 @@
+     }
+   } endloop:
+   if (seminfo)
+-    seminfo->ts = luaX_newstring(ls, luaZ_buffer(ls->buff) + (2 + sep),
+-                                     luaZ_bufflen(ls->buff) - 2*(2 + sep));
++    seminfo->ts = luaX_newstring(ls, luaZ_buffer(ls->buff) + sep,
++                                     luaZ_bufflen(ls->buff) - 2 * sep);
+ }
+ 
+ 
+@@ -444,9 +447,9 @@
+         /* else is a comment */
+         next(ls);
+         if (ls->current == '[') {  /* long comment? */
+-          int sep = skip_sep(ls);
++          size_t sep = skip_sep(ls);
+           luaZ_resetbuffer(ls->buff);  /* 'skip_sep' may dirty the buffer */
+-          if (sep >= 0) {
++          if (sep >= 2) {
+             read_long_string(ls, NULL, sep);  /* skip long comment */
+             luaZ_resetbuffer(ls->buff);  /* previous call may dirty the buff. */
+             break;
+@@ -458,12 +461,12 @@
+         break;
+       }
+       case '[': {  /* long string or simply '[' */
+-        int sep = skip_sep(ls);
+-        if (sep >= 0) {
++        size_t sep = skip_sep(ls);
++        if (sep >= 2) {
+           read_long_string(ls, seminfo, sep);
+           return TK_STRING;
+         }
+-        else if (sep != -1)  /* '[=...' missing second bracket */
++        else if (sep == 0)  /* '[=...' missing second bracket */
+           lexerror(ls, "invalid long string delimiter", TK_STRING);
+         return '[';
+       }
+]]
+}
 ]=]
+
+
 
 
 --[=[
