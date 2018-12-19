@@ -9,18 +9,19 @@ CFLAGS = -Wall -std=gnu99 -O2 -I$(LUA_DIR) -fPIC -shared
 
 # libraries used by the tests
 all: lib1.so lib11.so lib2.so lib21.so lib2-v2.so
+	touch all
 
-lib1.so: lib1.c
+lib1.so: lib1.c $(LUA_DIR)/luaconf.h $(LUA_DIR)/ltests.h
 	$(CC) $(CFLAGS) -o lib1.so lib1.c
 
-lib11.so: lib11.c
+lib11.so: lib11.c $(LUA_DIR)/luaconf.h $(LUA_DIR)/ltests.h
 	$(CC) $(CFLAGS) -o lib11.so lib11.c
 
-lib2.so: lib2.c
+lib2.so: lib2.c $(LUA_DIR)/luaconf.h $(LUA_DIR)/ltests.h
 	$(CC) $(CFLAGS) -o lib2.so lib2.c
 
-lib21.so: lib21.c
+lib21.so: lib21.c $(LUA_DIR)/luaconf.h $(LUA_DIR)/ltests.h
 	$(CC) $(CFLAGS) -o lib21.so lib21.c
 
 lib2-v2.so: lib2.so
-	mv lib2.so ./lib2-v2.so
+	cp lib2.so ./lib2-v2.so

@@ -90,6 +90,7 @@ ALL_O= $(CORE_O) $(LUA_O) $(LUAC_O) $(AUX_O) $(LIB_O)
 ALL_A= $(CORE_T)
 
 all:	$(ALL_T)
+	touch all
 
 o:	$(ALL_O)
 
