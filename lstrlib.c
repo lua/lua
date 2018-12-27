@@ -1180,8 +1180,7 @@ static int str_format (lua_State *L) {
           break;
         }
         default: {  /* also treat cases 'pnLlh' */
-          return luaL_error(L, "invalid option '%%%c' to 'format'",
-                               *(strfrmt - 1));
+          return luaL_error(L, "invalid conversion '%s' to 'format'", form);
         }
       }
       lua_assert(nb < MAX_ITEM);
