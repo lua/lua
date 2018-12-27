@@ -184,10 +184,12 @@ typedef LUAI_UACINT l_uacInt;
 ** must be an unsigned with (at least) 4 bytes (see details in lopcodes.h)
 */
 #if LUAI_BITSINT >= 32
-typedef unsigned int Instruction;
+typedef unsigned int l_uint32;
 #else
-typedef unsigned long Instruction;
+typedef unsigned long l_uint32;
 #endif
+
+typedef l_uint32 Instruction;
 
 
 

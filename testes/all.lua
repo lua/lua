@@ -172,6 +172,7 @@ if not _G._soft then
   assert(f() == 'b')
   assert(f() == 'a')
 end
+dofile('cstack.lua')
 dofile('nextvar.lua')
 dofile('pm.lua')
 dofile('utf8.lua')

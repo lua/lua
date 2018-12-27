@@ -237,18 +237,6 @@ checkerror("invalid capture index %%0", string.gsub, "alo", "(%0)", "a")
 checkerror("invalid capture index %%1", string.gsub, "alo", "(%1)", "a")
 checkerror("invalid use of '%%'", string.gsub, "alo", ".", "%x")
 
--- bug since 2.5 (C-stack overflow)
-do
-  local function f (size)
-    local s = string.rep("a", size)
-    local p = string.rep(".?", size)
-    return pcall(string.match, s, p)
-  end
-  local r, m = f(80)
-  assert(r and #m == 80)
-  r, m = f(200000)
-  assert(not r and string.find(m, "too complex"))
-end
 
 if not _soft then
   print("big strings")

@@ -15,7 +15,6 @@
 
 
 /*
-
 ** Some notes about garbage-collected objects: All objects in Lua must
 ** be kept somehow accessible until being freed, so all objects always
 ** belong to one (and only one) of these lists, using field 'next' of
@@ -43,25 +42,57 @@
 ** 'weak': tables with weak values to be cleared;
 ** 'ephemeron': ephemeron tables with white->white entries;
 ** 'allweak': tables with weak keys and/or weak values to be cleared.
-
 */
 
 
-/*
 
+/*
 ** About 'nCcalls': each thread in Lua (a lua_State) keeps a count of
-** how many "C calls" it has in the C stack, to avoid C-stack overflow.
+** how many "C calls" it can do in the C stack, to avoid C-stack overflow.
 ** This count is very rough approximation; it considers only recursive
 ** functions inside the interpreter, as non-recursive calls can be
 ** considered using a fixed (although unknown) amount of stack space.
+**
+** The count itself has two parts: the lower part is the count itself;
+** the higher part counts the number of non-yieldable calls in the stack.
+**
+** Because calls to external C functions can use of unkown amount
+** of space (e.g., functions using an auxiliary buffer), calls
+** to these functions add more than one to the count.
 **
 ** The proper count also includes the number of CallInfo structures
 ** allocated by Lua, as a kind of "potential" calls. So, when Lua
 ** calls a function (and "consumes" one CallInfo), it needs neither to
 ** increment nor to check 'nCcalls', as its use of C stack is already
 ** accounted for.
-
 */
+
+/* number of "C stack slots" used by an external C function */
+#define CSTACKCF	10
+
+/* true if this thread does not have non-yieldable calls in the stack */
+#define yieldable(L)		(((L)->nCcalls & 0xffff0000) == 0)
+
+/* real number of C calls */
+#define getCcalls(L)	((L)->nCcalls & 0xffff)
+
+
+/* Increment the number of non-yieldable calls */
+#define incnny(L)	((L)->nCcalls += 0x10000)
+
+/* Decrement the number of non-yieldable calls */
+#define decnny(L)	((L)->nCcalls -= 0x10000)
+
+/* Increment the number of non-yieldable calls and nCcalls */
+#define incXCcalls(L)	((L)->nCcalls += 0x10000 + CSTACKCF)
+
+/* Decrement the number of non-yieldable calls and nCcalls */
+#define decXCcalls(L)	((L)->nCcalls -= 0x10000 + CSTACKCF)
+
+
+
+
+
 
 struct lua_longjmp;  /* defined in ldo.c */
 
@@ -208,8 +239,9 @@ typedef struct global_State {
 */
 struct lua_State {
   CommonHeader;
-  unsigned short nci;  /* number of items in 'ci' list */
   lu_byte status;
+  lu_byte allowhook;
+  unsigned short nci;  /* number of items in 'ci' list */
   StkId top;  /* first free slot in the stack */
   global_State *l_G;
   CallInfo *ci;  /* call info for current function */
@@ -223,13 +255,11 @@ struct lua_State {
   CallInfo base_ci;  /* CallInfo for first level (C calling Lua) */
   volatile lua_Hook hook;
   ptrdiff_t errfunc;  /* current error handling function (stack index) */
+  l_uint32 nCcalls;  /* number of allowed nested C calls - 'nci' */
   int stacksize;
   int basehookcount;
   int hookcount;
-  unsigned short nny;  /* number of non-yieldable calls in stack */
-  unsigned short nCcalls;  /* number of nested C calls + 'nny' */
   l_signalT hookmask;
-  lu_byte allowhook;
 };
 
 
@@ -283,8 +313,10 @@ LUAI_FUNC void luaE_freethread (lua_State *L, lua_State *L1);
 LUAI_FUNC CallInfo *luaE_extendCI (lua_State *L);
 LUAI_FUNC void luaE_freeCI (lua_State *L);
 LUAI_FUNC void luaE_shrinkCI (lua_State *L);
-LUAI_FUNC void luaE_incCcalls (lua_State *L);
+LUAI_FUNC void luaE_enterCcall (lua_State *L);
 
+
+#define luaE_exitCcall(L)	((L)->nCcalls--)
 
 #endif
 

@@ -31,7 +31,7 @@
 
 /* compiled with -O0, Lua uses a lot of C stack space... */
 #undef LUAI_MAXCCALLS
-#define LUAI_MAXCCALLS	200
+#define LUAI_MAXCCALLS	400
 
 /* to avoid warnings, and to make sure value is really unused */
 #define UNUSED(x)       (x=0, (void)(x))

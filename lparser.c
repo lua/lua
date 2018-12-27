@@ -367,10 +367,12 @@ static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
 }
 
 
-#define enterlevel(ls)	luaE_incCcalls((ls)->L)
+/*
+** Macros to limit the maximum recursion depth while parsing
+*/
+#define enterlevel(ls)	luaE_enterCcall((ls)->L)
 
-
-#define leavelevel(ls)	((ls)->L->nCcalls--)
+#define leavelevel(ls)	luaE_exitCcall((ls)->L)
 
 
 /*

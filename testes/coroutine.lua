@@ -107,7 +107,7 @@ function filter (p, g)
   end)
 end
 
-local x = gen(100)
+local x = gen(80)
 local a = {}
 while 1 do
   local n = x()
@@ -116,7 +116,7 @@ while 1 do
   x = filter(n, x)
 end
 
-assert(#a == 25 and a[#a] == 97)
+assert(#a == 22 and a[#a] == 79)
 x, a = nil
 
 
