@@ -365,6 +365,8 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   L->next = NULL;
   g->frealloc = f;
   g->ud = ud;
+  g->warnf = NULL;
+  g->ud_warn = NULL;
   g->mainthread = L;
   g->seed = luai_makeseed(L);
   g->gcrunning = 0;  /* no GC while building state */

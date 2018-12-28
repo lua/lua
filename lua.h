@@ -126,6 +126,13 @@ typedef int (*lua_Writer) (lua_State *L, const void *p, size_t sz, void *ud);
 typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 
 
+/*
+** Type for warning functions
+*/
+typedef void (*lua_WarnFunction) (void **pud, const char *msg);
+
+
+
 
 /*
 ** generic extra include file
@@ -297,6 +304,13 @@ LUA_API int  (lua_status)     (lua_State *L);
 LUA_API int (lua_isyieldable) (lua_State *L);
 
 #define lua_yield(L,n)		lua_yieldk(L, (n), 0, NULL)
+
+
+/*
+** Warning-related functions
+*/
+LUA_API void (lua_setwarnf) (lua_State *L, lua_WarnFunction f, void *ud);
+LUA_API void (lua_warning)  (lua_State *L, const char *msg);
 
 
 /*

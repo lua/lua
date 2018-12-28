@@ -43,6 +43,13 @@ static int luaB_print (lua_State *L) {
 }
 
 
+static int luaB_warn (lua_State *L) {
+  const char *msg = luaL_checkstring(L, 1);
+  lua_warning(L, msg);
+  return 0;
+}
+
+
 #define SPACECHARS	" \f\n\r\t\v"
 
 static const char *b_str2int (const char *s, int base, lua_Integer *pn) {
@@ -482,6 +489,7 @@ static const luaL_Reg base_funcs[] = {
   {"pairs", luaB_pairs},
   {"pcall", luaB_pcall},
   {"print", luaB_print},
+  {"warn", luaB_warn},
   {"rawequal", luaB_rawequal},
   {"rawlen", luaB_rawlen},
   {"rawget", luaB_rawget},

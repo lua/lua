@@ -986,9 +986,35 @@ static int panic (lua_State *L) {
 }
 
 
+/*
+** checks whether 'message' ends with end-of-line
+** (and therefore is the last part of a warning)
+*/
+static int islast (const char *message) {
+  size_t len = strlen(message);
+  return (len > 0 && message[len - 1] == '\n');
+}
+
+
+/*
+** Emit a warning. If '*pud' is NULL, previous message was to be
+** continued by the current one.
+*/
+static void warnf (void **pud, const char *message) {
+  if (*pud == NULL)  /* previous message was not the last? */
+    lua_writestringerror("%s", message);
+  else  /* start a new warning */
+    lua_writestringerror("Lua warning: %s", message);
+  *pud = (islast(message)) ? pud : NULL;
+}
+
+
 LUALIB_API lua_State *luaL_newstate (void) {
   lua_State *L = lua_newstate(l_alloc, NULL);
-  if (L) lua_atpanic(L, &panic);
+  if (L) {
+    lua_atpanic(L, &panic);
+    lua_setwarnf(L, warnf, L);
+  }
   return L;
 }
 

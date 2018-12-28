@@ -1267,6 +1267,24 @@ LUA_API void lua_setallocf (lua_State *L, lua_Alloc f, void *ud) {
 }
 
 
+void lua_setwarnf (lua_State *L, lua_WarnFunction f, void *ud) {
+  lua_lock(L);
+  G(L)->ud_warn = ud;
+  G(L)->warnf = f;
+  lua_unlock(L);
+}
+
+
+void lua_warning (lua_State *L, const char *msg) {
+  lua_WarnFunction wf = G(L)->warnf;
+  lua_lock(L);
+  if (wf != NULL)
+    wf(&G(L)->ud_warn, msg);
+  lua_unlock(L);
+}
+
+
+
 LUA_API void *lua_newuserdatauv (lua_State *L, size_t size, int nuvalue) {
   Udata *u;
   lua_lock(L);

@@ -111,6 +111,20 @@ do   -- testing 'rotate'
   tcheck(t, {10, 20, 30, 40})
 end
 
+
+-- testing warnings
+T.testC([[
+  warning "*This "
+  warning "warning "
+  warning "should be in a"
+  warning " single line
+"
+  warning "*This should be "
+  warning "another warning
+"
+]])
+
+
 -- testing message handlers
 do
   local f = T.makeCfunc[[

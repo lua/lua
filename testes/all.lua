@@ -5,8 +5,8 @@
 
 local version = "Lua 5.4"
 if _VERSION ~= version then
-  io.stderr:write("\nThis test suite is for ", version, ", not for ", _VERSION,
-    "\nExiting tests\n")
+  warn(string.format(
+   "This test suite is for %s, not for %s\nExiting tests\n", version, _VERSION))
   return
 end
 
@@ -190,11 +190,10 @@ assert(dofile('verybig.lua', true) == 10); collectgarbage()
 dofile('files.lua')
 
 if #msgs > 0 then
-  print("\ntests not performed:")
+  warn("*tests not performed:\n  ")
   for i=1,#msgs do
-    print(msgs[i])
+    warn(msgs[i]); warn("\n  ")
   end
-  print()
 end
 
 -- no test module should define 'debug'
@@ -219,6 +218,10 @@ local _G, showmem, print, format, clock, time, difftime, assert, open =
 -- file with time of last performed test
 local fname = T and "time-debug.txt" or "time.txt"
 local lasttime
+
+
+warn("*This is "); warn("an expected"); warn(" warning\n")
+warn("*This is"); warn(" another one\n")
 
 if not usertests then
   -- open file with time of last performed test

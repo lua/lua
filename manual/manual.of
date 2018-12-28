@@ -1795,7 +1795,7 @@ Functions with any detectable difference
 (different behavior, different definition) are always different.
 Functions created at different times but with no detectable differences
 may be classified as equal or not
-(depending on internal cashing details).
+(depending on internal caching details).
 
 You can change the way that Lua compares tables and userdata
 by using the @idx{__eq} metamethod @see{metatable}.
@@ -4033,6 +4033,16 @@ for the @Q{newindex} event @see{metatable}.
 
 }
 
+@APIEntry{int lua_setiuservalue (lua_State *L, int index, int n);|
+@apii{1,0,-}
+
+Pops a value from the stack and sets it as
+the new @id{n}-th user value associated to the
+full userdata at the given index.
+Returns 0 if the userdata does not have that value.
+
+}
+
 @APIEntry{void lua_setmetatable (lua_State *L, int index);|
 @apii{1,0,-}
 
@@ -4066,13 +4076,13 @@ If @id{index} @N{is 0}, then all stack elements are removed.
 
 }
 
-@APIEntry{int lua_setiuservalue (lua_State *L, int index, int n);|
-@apii{1,0,-}
+@APIEntry{void lua_setwarnf (lua_State *L, lua_WarnFunction f, void *ud);|
+@apii{0,0,-}
 
-Pops a value from the stack and sets it as
-the new @id{n}-th user value associated to the
-full userdata at the given index.
-Returns 0 if the userdata does not have that value.
+Sets the @x{warning function} to be used by Lua to emit warnings
+@see{lua_WarnFunction}.
+The @id{ud} parameter initializes the slot @id{pud} passed to
+the warning function.
 
 }
 
@@ -4335,6 +4345,30 @@ Returns the version number of this core.
 }
 
 @APIEntry{
+typedef void (*lua_WarnFunction) (void **pud, const char *msg);|
+
+The type of @x{warning function}s, called by Lua to emit warnings.
+The first parameter is the address of a writable slot,
+constant for a given Lua state and
+initialized by @Lid{lua_setwarnf}.
+The second parameter is the warning message.
+This function should assume that
+a message not ending with an end-of-line will be
+continued by the message in the next call.
+
+}
+
+@APIEntry{
+void lua_warning (lua_State *L, const char *msg);|
+@apii{0,0,-}
+
+Emits a warning with the given message.
+A message not ending with an end-of-line should be
+continued in another call to this function.
+
+}
+
+@APIEntry{
 typedef int (*lua_Writer) (lua_State *L,
                            const void* p,
                            size_t sz,
@@ -4345,7 +4379,7 @@ Every time it produces another piece of chunk,
 @Lid{lua_dump} calls the writer,
 passing along the buffer to be written (@id{p}),
 its size (@id{sz}),
-and the @id{data} parameter supplied to @Lid{lua_dump}.
+and the @id{ud} parameter supplied to @Lid{lua_dump}.
 
 The writer returns an error code:
 @N{0 means} no errors;
@@ -6258,6 +6292,12 @@ and @St{userdata}.
 A global variable (not a function) that
 holds a string containing the running Lua version.
 The current value of this variable is @St{Lua 5.4}.
+
+}
+
+@LibEntry{warn (message)|
+
+Emits a warning with the given message.
 
 }
 

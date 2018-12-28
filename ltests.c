@@ -63,10 +63,36 @@ static void pushobject (lua_State *L, const TValue *o) {
 }
 
 
+static void badexit (void) {
+  /* avoid assertion failures when exiting */
+  l_memcontrol.numblocks = l_memcontrol.total = 0;
+  exit(EXIT_FAILURE);
+}
+
+
 static int tpanic (lua_State *L) {
   fprintf(stderr, "PANIC: unprotected error in call to Lua API (%s)\n",
                    lua_tostring(L, -1));
-  return (exit(EXIT_FAILURE), 0);  /* do not return to Lua */
+  return (badexit(), 0);  /* do not return to Lua */
+}
+
+
+static int islast (const char *message) {
+  size_t len = strlen(message);
+  return (len > 0 && message[len - 1] == '\n');
+}
+
+
+static void warnf (void **pud, const char *msg) {
+  if (*pud == NULL)  /* continuation line? */
+    printf("%s", msg);  /* print it */
+  else if (msg[0] == '*')  /* expected warning? */
+    printf("Expected Lua warning: %s", msg + 1);  /* print without the star */
+  else {  /* a real warning; should not happen during tests */
+    fprintf(stderr, "Warning in test mode (%s), aborting...\n", msg);
+    badexit();
+  }
+  *pud = islast(msg) ? pud : NULL;
 }
 
 
@@ -1405,6 +1431,10 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       const char *msg = getstring;
       printf("%s\n", msg);
     }
+    else if EQ("warning") {
+      const char *msg = getstring;
+      lua_warning(L1, msg);
+    }
     else if EQ("pushbool") {
       lua_pushboolean(L1, getnum);
     }
@@ -1743,6 +1773,7 @@ static void checkfinalmem (void) {
 int luaB_opentests (lua_State *L) {
   void *ud;
   lua_atpanic(L, &tpanic);
+  lua_setwarnf(L, &warnf, L);
   atexit(checkfinalmem);
   lua_assert(lua_getallocf(L, &ud) == debug_realloc);
   lua_assert(ud == cast_voidp(&l_memcontrol));
