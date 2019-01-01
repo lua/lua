@@ -824,7 +824,7 @@ static void dothecall (lua_State *L, void *ud) {
 }
 
 
-static void GCTM (lua_State *L, int propagateerrors) {
+static void GCTM (lua_State *L) {
   global_State *g = G(L);
   const TValue *tm;
   TValue v;
@@ -845,15 +845,13 @@ static void GCTM (lua_State *L, int propagateerrors) {
     L->ci->callstatus &= ~CIST_FIN;  /* not running a finalizer anymore */
     L->allowhook = oldah;  /* restore hooks */
     g->gcrunning = running;  /* restore state */
-    if (status != LUA_OK && propagateerrors) {  /* error while running __gc? */
-      if (status == LUA_ERRRUN) {  /* is there an error object? */
-        const char *msg = (ttisstring(s2v(L->top - 1)))
-                            ? svalue(s2v(L->top - 1))
-                            : "no message";
-        luaO_pushfstring(L, "error in __gc metamethod (%s)", msg);
-        status = LUA_ERRGCMM;  /* error in __gc metamethod */
-      }
-      luaD_throw(L, status);  /* re-throw error */
+    if (status != LUA_OK) {  /* error while running __gc? */
+      const char *msg = (ttisstring(s2v(L->top - 1)))
+                        ? svalue(s2v(L->top - 1))
+                        : "error object is not a string";
+      luaE_warning(L, "error in __gc metamethod (");
+      luaE_warning(L, msg);
+      luaE_warning(L, ")\n");
     }
   }
 }
@@ -866,7 +864,7 @@ static int runafewfinalizers (lua_State *L, int n) {
   global_State *g = G(L);
   int i;
   for (i = 0; i < n && g->tobefnz; i++)
-    GCTM(L, 1);  /* call one finalizer */
+    GCTM(L);  /* call one finalizer */
   return i;
 }
 
@@ -874,10 +872,10 @@ static int runafewfinalizers (lua_State *L, int n) {
 /*
 ** call all pending finalizers
 */
-static void callallpendingfinalizers (lua_State *L, int propagateerrors) {
+static void callallpendingfinalizers (lua_State *L) {
   global_State *g = G(L);
   while (g->tobefnz)
-    GCTM(L, propagateerrors);
+    GCTM(L);
 }
 
 
@@ -1124,7 +1122,7 @@ static void finishgencycle (lua_State *L, global_State *g) {
   checkSizes(L, g);
   g->gcstate = GCSpropagate;  /* skip restart */
   if (!g->gcemergency)
-    callallpendingfinalizers(L, 1);
+    callallpendingfinalizers(L);
 }
 
 
@@ -1334,7 +1332,7 @@ void luaC_freeallobjects (lua_State *L) {
   luaC_changemode(L, KGC_INC);
   separatetobefnz(g, 1);  /* separate all objects with finalizers */
   lua_assert(g->finobj == NULL);
-  callallpendingfinalizers(L, 0);
+  callallpendingfinalizers(L);
   deletelist(L, g->allgc, obj2gco(g->mainthread));
   deletelist(L, g->finobj, NULL);
   deletelist(L, g->fixedgc, NULL);  /* collect fixed objects */

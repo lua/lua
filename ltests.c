@@ -63,7 +63,11 @@ static void pushobject (lua_State *L, const TValue *o) {
 }
 
 
-static void badexit (void) {
+static void badexit (const char *fmt, ...) {
+  va_list argp;
+  va_start(argp, fmt);
+  vfprintf(stderr, fmt, argp);
+  va_end(argp);
   /* avoid assertion failures when exiting */
   l_memcontrol.numblocks = l_memcontrol.total = 0;
   exit(EXIT_FAILURE);
@@ -71,9 +75,9 @@ static void badexit (void) {
 
 
 static int tpanic (lua_State *L) {
-  fprintf(stderr, "PANIC: unprotected error in call to Lua API (%s)\n",
-                   lua_tostring(L, -1));
-  return (badexit(), 0);  /* do not return to Lua */
+  return (badexit("PANIC: unprotected error in call to Lua API (%s)\n",
+                   lua_tostring(L, -1)),
+          0);  /* do not return to Lua */
 }
 
 
@@ -83,16 +87,47 @@ static int islast (const char *message) {
 }
 
 
+/*
+** Warning function for tests. Fist, it concatenates all parts of
+** a warning in buffer 'buff'. Then:
+** messages starting with '#' are shown on standard output (used to
+** test explicit warnings);
+** messages containing '@' are stored in global '_WARN' (used to test
+** errors that generate warnings);
+** other messages abort the tests (they represent real warning conditions;
+** the standard tests should not generate these conditions unexpectedly).
+*/
 static void warnf (void **pud, const char *msg) {
-  if (*pud == NULL)  /* continuation line? */
-    printf("%s", msg);  /* print it */
-  else if (msg[0] == '*')  /* expected warning? */
-    printf("Expected Lua warning: %s", msg + 1);  /* print without the star */
-  else {  /* a real warning; should not happen during tests */
-    fprintf(stderr, "Warning in test mode (%s), aborting...\n", msg);
-    badexit();
+  static char buff[200];  /* should be enough for tests... */
+  static int cont = 0;  /* message to be continued */
+  if (cont) {  /* continuation? */
+    if (strlen(msg) >= sizeof(buff) - strlen(buff))
+      badexit("warnf-buffer overflow");
+    strcat(buff, msg);  /* add new message to current warning */
   }
-  *pud = islast(msg) ? pud : NULL;
+  else {  /* new warning */
+    if (strlen(msg) >= sizeof(buff))
+      badexit("warnf-buffer overflow");
+    strcpy(buff, msg);  /* start a new warning */
+  }
+  if (!islast(msg))  /* message not finished yet? */
+    cont = 1;  /* wait for more */
+  else {  /* handle message */
+    cont = 0;  /* prepare for next message */
+    if (buff[0] == '#')  /* expected warning? */
+      printf("Expected Lua warning: %s", buff);  /* print it */
+    else if (strchr(buff, '@') != NULL) {  /* warning for test purposes? */
+      lua_State *L = cast(lua_State *, *pud);
+      lua_unlock(L);
+      lua_pushstring(L, buff);
+      lua_setglobal(L, "_WARN");  /* assign message to global '_WARN' */
+      lua_lock(L);
+      return;
+    }
+    else {  /* a real warning; should not happen during tests */
+      badexit("Unexpected warning in test mode: %s\naborting...\n", buff);
+    }
+  }
 }
 
 

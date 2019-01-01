@@ -190,11 +190,16 @@ assert(dofile('verybig.lua', true) == 10); collectgarbage()
 dofile('files.lua')
 
 if #msgs > 0 then
-  warn("*tests not performed:\n  ")
+  warn("#tests not performed:\n  ")
   for i=1,#msgs do
     warn(msgs[i]); warn("\n  ")
   end
+  warn("\n")
 end
+
+print("(there should be two warnings now)")
+warn("#This is "); warn("an expected"); warn(" warning\n")
+warn("#This is"); warn(" another one\n")
 
 -- no test module should define 'debug'
 assert(debug == nil)
@@ -218,10 +223,6 @@ local _G, showmem, print, format, clock, time, difftime, assert, open =
 -- file with time of last performed test
 local fname = T and "time-debug.txt" or "time.txt"
 local lasttime
-
-
-warn("*This is "); warn("an expected"); warn(" warning\n")
-warn("*This is"); warn(" another one\n")
 
 if not usertests then
   -- open file with time of last performed test

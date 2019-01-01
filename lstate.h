@@ -316,6 +316,7 @@ LUAI_FUNC CallInfo *luaE_extendCI (lua_State *L);
 LUAI_FUNC void luaE_freeCI (lua_State *L);
 LUAI_FUNC void luaE_shrinkCI (lua_State *L);
 LUAI_FUNC void luaE_enterCcall (lua_State *L);
+LUAI_FUNC void luaE_warning (lua_State *L, const char *msg);
 
 
 #define luaE_exitCcall(L)	((L)->nCcalls--)

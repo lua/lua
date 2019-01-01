@@ -1276,10 +1276,8 @@ void lua_setwarnf (lua_State *L, lua_WarnFunction f, void *ud) {
 
 
 void lua_warning (lua_State *L, const char *msg) {
-  lua_WarnFunction wf = G(L)->warnf;
   lua_lock(L);
-  if (wf != NULL)
-    wf(&G(L)->ud_warn, msg);
+  luaE_warning(L, msg);
   lua_unlock(L);
 }
 

@@ -353,40 +353,36 @@ GC()
 
 
 -- testing errors during GC
-do
-collectgarbage("stop")   -- stop collection
-local u = {}
-local s = {}; setmetatable(s, {__mode = 'k'})
-setmetatable(u, {__gc = function (o)
-  local i = s[o]
-  s[i] = true
-  assert(not s[i - 1])   -- check proper finalization order
-  if i == 8 then error("here") end   -- error during GC
-end})
+if T then
+  collectgarbage("stop")   -- stop collection
+  local u = {}
+  local s = {}; setmetatable(s, {__mode = 'k'})
+  setmetatable(u, {__gc = function (o)
+    local i = s[o]
+    s[i] = true
+    assert(not s[i - 1])   -- check proper finalization order
+    if i == 8 then error("@expected@") end   -- error during GC
+  end})
 
-for i = 6, 10 do
-  local n = setmetatable({}, getmetatable(u))
-  s[n] = i
-end
+  for i = 6, 10 do
+    local n = setmetatable({}, getmetatable(u))
+    s[n] = i
+  end
 
-assert(not pcall(collectgarbage))
-for i = 8, 10 do assert(s[i]) end
+  collectgarbage()
+  assert(string.find(_WARN, "error in __gc metamethod"))
+  assert(string.match(_WARN, "@(.-)@") == "expected")
+  for i = 8, 10 do assert(s[i]) end
 
-for i = 1, 5 do
-  local n = setmetatable({}, getmetatable(u))
-  s[n] = i
-end
+  for i = 1, 5 do
+    local n = setmetatable({}, getmetatable(u))
+    s[n] = i
+  end
 
-collectgarbage()
-for i = 1, 10 do assert(s[i]) end
+  collectgarbage()
+  for i = 1, 10 do assert(s[i]) end
 
-getmetatable(u).__gc = false
-
-
--- __gc errors with non-string messages
-setmetatable({}, {__gc = function () error{} end})
-local a, b = pcall(collectgarbage)
-assert(not a and type(b) == "string" and string.find(b, "error in __gc"))
+  getmetatable(u).__gc = false
 
 end
 print '+'
@@ -478,9 +474,11 @@ end
 
 
 -- errors during collection
-u = setmetatable({}, {__gc = function () error "!!!" end})
-u = nil
-assert(not pcall(collectgarbage))
+if T then
+  u = setmetatable({}, {__gc = function () error "@expected error" end})
+  u = nil
+  collectgarbage()
+end
 
 
 if not _soft then
@@ -645,11 +643,26 @@ do
 end
 
 -- create several objects to raise errors when collected while closing state
-do
-  local mt = {__gc = function (o) return o + 1 end}
-  for i = 1,10 do
+if T then
+  local error, assert, warn, find = error, assert, warn, string.find
+  local n = 0
+  local lastmsg
+  local mt = {__gc = function (o)
+    n = n + 1
+    assert(n == o[1])
+    if n == 1 then
+      _WARN = nil
+    elseif n == 2 then
+      assert(find(_WARN, "@expected warning"))
+      lastmsg = _WARN    -- get message from previous error (first 'o')
+    else
+      assert(lastmsg == _WARN)  -- subsequent error messages are equal
+    end
+    error"@expected warning"
+  end}
+  for i = 10, 1, -1 do
     -- create object and preserve it until the end
-    table.insert(___Glob, setmetatable({}, mt))
+    table.insert(___Glob, setmetatable({i}, mt))
   end
 end
 

@@ -51,8 +51,7 @@
 #define LUA_ERRRUN	2
 #define LUA_ERRSYNTAX	3
 #define LUA_ERRMEM	4
-#define LUA_ERRGCMM	5
-#define LUA_ERRERR	6
+#define LUA_ERRERR	5
 
 
 typedef struct lua_State lua_State;
