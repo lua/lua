@@ -142,8 +142,15 @@ do
 
   -- to-be-closed variables in coroutines
   local X
+
+  local function func2close (f)
+    return setmetatable({}, {__close = f})
+  end
+
   co = coroutine.create(function ()
-    local *toclose x = function (err) assert(err == nil); X = false end
+    local *toclose x = func2close(function (self, err)
+      assert(err == nil); X = false
+    end)
     X = true
     coroutine.yield()
   end)
@@ -154,7 +161,9 @@ do
 
   -- error killing a coroutine
   co = coroutine.create(function()
-    local *toclose x = function (err) assert(err == nil); error(111) end
+    local *toclose x = func2close(function (self, err)
+      assert(err == nil); error(111)
+    end)
     coroutine.yield()
   end)
   coroutine.resume(co)

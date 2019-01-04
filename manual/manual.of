@@ -1536,33 +1536,29 @@ goes out of scope, including normal block termination,
 exiting its block by @Rw{break}/@Rw{goto}/@Rw{return},
 or exiting by an error.
 
-To \emph{close} a value has the following meaning here:
-If the value of the variable when it goes out of scope is a function,
-that function is called;
-otherwise, if the value has a @idx{__close} metamethod,
-that metamethod is called;
-otherwise, if the value is @nil, nothing is done;
-otherwise, an error is raised.
-In the function case,
-if the scope is being closed by an error,
-the error object is passed as an argument to the function;
-if there is no error, the function gets @nil.
-In the metamethod case,
-the value itself always is passed as an argument to the metamethod.
+Here, to \emph{close} a value means
+to call its @idx{__close} metamethod.
+If the value is @nil, it is ignored;
+otherwise,
+if it does not have a @idx{__close} metamethod,
+an error is raised.
+When calling the metamethod,
+the value itself is passed as the first argument
+and the error object (if any) is passed as a second argument;
+if there was no error, the second argument is @nil.
 
 If several to-be-closed variables go out of scope at the same event,
 they are closed in the reverse order that they were declared.
-If there is any error while running a closing function,
+If there is any error while running a closing method,
 that error is handled like an error in the regular code
 where the variable was defined;
 in particular,
-the other pending closing functions will still be called.
+the other pending closing methods will still be called.
 
 If a coroutine yields inside a block and is never resumed again,
 the variables visible at that block will never go out of scope,
 and therefore they will not be closed.
-Similarly, if a script is interrupted by an unprotected error,
-its to-be-closed variables will not be closed.
+(You should use finalizers to handle this case.)
 
 }
 
@@ -3002,7 +2998,7 @@ and therefore never returns
 }
 
 @APIEntry{int lua_gc (lua_State *L, int what, int data);|
-@apii{0,0,v}
+@apii{0,0,-}
 
 Controls the garbage collector.
 
@@ -3055,8 +3051,6 @@ returns a boolean that tells whether the collector is running
 }
 For more details about these options,
 see @Lid{collectgarbage}.
-
-This function may raise errors when calling finalizers.
 
 }
 

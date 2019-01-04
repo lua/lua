@@ -118,6 +118,7 @@ l_noret luaD_throw (lua_State *L, int errcode) {
   }
   else {  /* thread has no error handler */
     global_State *g = G(L);
+    errcode = luaF_close(L, L->stack, errcode);  /* close all upvalues */
     L->status = cast_byte(errcode);  /* mark it as dead */
     if (g->mainthread->errorJmp) {  /* main thread has a handler? */
       setobjs2s(L, g->mainthread->top++, L->top - 1);  /* copy error obj. */

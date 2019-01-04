@@ -100,28 +100,23 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
 
 static void callclose (lua_State *L, void *ud) {
   UNUSED(ud);
-  luaD_callnoyield(L, L->top - 2, 0);
+  luaD_callnoyield(L, L->top - 3, 0);
 }
 
 
 /*
-** Prepare closing method plus its argument for object 'obj' with
+** Prepare closing method plus its arguments for object 'obj' with
 ** error message 'err'. (This function assumes EXTRA_STACK.)
 */
 static int prepclosingmethod (lua_State *L, TValue *obj, TValue *err) {
   StkId top = L->top;
-  if (ttisfunction(obj)) {  /* object to-be-closed is a function? */
-    setobj2s(L, top, obj);  /* push function */
-    setobj2s(L, top + 1, err);  /* push error msg. as argument */
-  }
-  else {  /* try '__close' metamethod */
-    const TValue *tm = luaT_gettmbyobj(L, obj, TM_CLOSE);
-    if (ttisnil(tm))  /* no metamethod? */
-      return 0;  /* nothing to call */
-    setobj2s(L, top, tm);  /* will call metamethod... */
-    setobj2s(L, top + 1, obj);  /* with 'self' as the argument */
-  }
-  L->top = top + 2;  /* add function and argument */
+  const TValue *tm = luaT_gettmbyobj(L, obj, TM_CLOSE);
+  if (ttisnil(tm))  /* no metamethod? */
+    return 0;  /* nothing to call */
+  setobj2s(L, top, tm);  /* will call metamethod... */
+  setobj2s(L, top + 1, obj);  /* with 'self' as the 1st argument */
+  setobj2s(L, top + 2, err);  /* and error msg. as 2nd argument */
+  L->top = top + 3;  /* add function and arguments */
   return 1;
 }
 
@@ -156,6 +151,7 @@ static int callclosemth (lua_State *L, TValue *uv, StkId level, int status) {
       if (newstatus != LUA_OK)  /* another error when closing? */
         status = newstatus;  /* this will be the new error */
     }
+    /* else no metamethod; ignore this case and keep original error */
   }
   return status;
 }

@@ -1201,8 +1201,8 @@ static const char *const delimits = " \t\n,;";
 static void skip (const char **pc) {
   for (;;) {
     if (**pc != '\0' && strchr(delimits, **pc)) (*pc)++;
-    else if (**pc == '#') {
-      while (**pc != '\n' && **pc != '\0') (*pc)++;
+    else if (**pc == '#') {  /* comment? */
+      while (**pc != '\n' && **pc != '\0') (*pc)++;  /* until end-of-line */
     }
     else break;
   }
@@ -1544,18 +1544,22 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     }
     else if EQ("setfield") {
       int t = getindex;
-      lua_setfield(L1, t, getstring);
+      const char *s = getstring;
+      lua_setfield(L1, t, s);
     }
     else if EQ("setglobal") {
-      lua_setglobal(L1, getstring);
+      const char *s = getstring;
+      lua_setglobal(L1, s);
     }
     else if EQ("sethook") {
       int mask = getnum;
       int count = getnum;
-      sethookaux(L1, mask, count, getstring);
+      const char *s = getstring;
+      sethookaux(L1, mask, count, s);
     }
     else if EQ("setmetatable") {
-      lua_setmetatable(L1, getindex);
+      int idx = getindex;
+      lua_setmetatable(L1, idx);
     }
     else if EQ("settable") {
       lua_settable(L1, getindex);
@@ -1620,7 +1624,7 @@ static struct X { int x; } x;
       return lua_yieldk(L1, nres, i, Cfunck);
     }
     else if EQ("toclose") {
-      lua_toclose(L, getnum);
+      lua_toclose(L1, getnum);
     }
     else luaL_error(L, "unknown instruction %s", buff);
   }

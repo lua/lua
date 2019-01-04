@@ -396,6 +396,23 @@ do
     assert(string.find(msg, "stack overflow"))
   end
 
+  -- exit in panic still close to-be-closed variables
+  assert(T.checkpanic([[
+    pushstring "return {__close = function () Y = 'ho'; end}"
+    newtable
+    loadstring -2
+    call 0 1
+    setmetatable -2
+    toclose -1
+    pushstring "hi"
+    error
+  ]],
+  [[
+    getglobal Y
+    concat 2         # concat original error with global Y
+  ]]) == "hiho")
+
+
 end
 
 -- testing deep C stack
@@ -1115,7 +1132,7 @@ end)
 testamem("to-be-closed variables", function()
   local flag
   do
-    local *toclose x = function () flag = true end
+    local *toclose x = setmetatable({}, {__close = function () flag = true end})
     flag = false
     local x = {}
   end
