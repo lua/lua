@@ -83,25 +83,10 @@ it usually represents the absence of a useful value.
 The type @emph{boolean} has two values, @false and @true.
 Both @nil and @false make a condition false;
 any other value makes it true.
-The type @emph{number} represents both
-integer numbers and real (floating-point) numbers.
-The type @emph{string} represents immutable sequences of bytes.
-@index{eight-bit clean}
-Lua is 8-bit clean:
-strings can contain any 8-bit value,
-including @x{embedded zeros} (@Char{\0}).
-Lua is also encoding-agnostic;
-it makes no assumptions about the contents of a string.
 
-The type @emph{number} uses two internal representations,
-or two @x{subtypes},
-one called @def{integer} and the other called @def{float}.
-Lua has explicit rules about when each representation is used,
-but it also converts between them automatically as needed @see{coercion}.
-Therefore,
-the programmer may choose to mostly ignore the difference
-between integers and floats
-or to assume complete control over the representation of each number.
+The type @emph{number} represents both
+integer numbers and real (floating-point) numbers,
+using two @x{subtypes}: @def{integer} and @def{float}.
 Standard Lua uses 64-bit integers and double-precision (64-bit) floats,
 but you can also compile Lua so that it
 uses 32-bit integers and/or single-precision (32-bit) floats.
@@ -109,6 +94,22 @@ The option with 32 bits for both integers and floats
 is particularly attractive
 for small machines and embedded systems.
 (See macro @id{LUA_32BITS} in file @id{luaconf.h}.)
+
+Lua has explicit rules about when each subtype is used,
+but it also converts between them automatically as needed @see{coercion}.
+Therefore,
+the programmer may choose to mostly ignore the difference
+between integers and floats
+or to assume complete control over the representation of each number.
+
+The type @emph{string} represents immutable sequences of bytes.
+@index{eight-bit clean}
+Lua is 8-bit clean:
+strings can contain any 8-bit value,
+including @x{embedded zeros} (@Char{\0}).
+Lua is also encoding-agnostic;
+it makes no assumptions about the contents of a string.
+The length of any string in Lua must fit in a Lua integer.
 
 Lua can call (and manipulate) functions written in Lua and
 functions written in C @see{functioncall}.
@@ -6788,13 +6789,16 @@ the string argument should not contain @x{embedded zeros}.
 
 }
 
-@LibEntry{string.gmatch (s, pattern)|
+@LibEntry{string.gmatch (s, pattern [, init])|
 Returns an iterator function that,
 each time it is called,
 returns the next captures from @id{pattern} @see{pm}
 over the string @id{s}.
 If @id{pattern} specifies no captures,
 then the whole match is produced in each call.
+A third, optional numeric argument @id{init} specifies
+where to start the search;
+its default value @N{is 1} and can be negative.
 
 As an example, the following loop
 will iterate over all the words from string @id{s},

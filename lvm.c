@@ -991,7 +991,8 @@ void luaV_finishOp (lua_State *L) {
 
 /*
 ** Protect code that will finish the loop (returns) or can only raise
-** errors.
+** errors. (That is, it will not return to the interpreter main loop
+** after changing the stack or hooks.)
 */
 #define halfProtect(exp)  (savepc(L), (exp))
 
@@ -1607,7 +1608,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           L->top = ra;
           halfProtect(luaD_poscall(L, ci, 0));  /* no hurry... */
         }
-        else {
+        else {  /* do the 'poscall' here */
           int nres = ci->nresults;
           L->ci = ci->previous;  /* back to caller */
           L->top = base - 1;
@@ -1621,7 +1622,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           L->top = ra + 1;
           halfProtect(luaD_poscall(L, ci, 1));  /* no hurry... */
         }
-        else {
+        else {  /* do the 'poscall' here */
           int nres = ci->nresults;
           L->ci = ci->previous;  /* back to caller */
           if (nres == 0)
@@ -1652,8 +1653,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         lua_Integer ilimit, initv;
         int stopnow;
         if (unlikely(!forlimit(plimit, &ilimit, 1, &stopnow))) {
-            savestate(L, ci);  /* for the error message */
-            luaG_forerror(L, plimit, "limit");
+          savestate(L, ci);  /* for the error message */
+          luaG_forerror(L, plimit, "limit");
         }
         initv = (stopnow ? 0 : ivalue(init));
         setivalue(plimit, ilimit);
@@ -1717,8 +1718,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_TFORPREP) {
-        /* is 'toclose' not nil? */
-        if (!ttisnil(s2v(ra + 3))) {
+        if (!ttisnil(s2v(ra + 3))) {  /* is 'toclose' not nil? */
           /* create to-be-closed upvalue for it */
           halfProtect(luaF_newtbcupval(L, ra + 3));
         }

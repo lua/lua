@@ -297,6 +297,35 @@ for k,v in pairs(t) do assert(k+1 == v+0); a=a+1 end
 assert(a == 3)
 
 
+do   -- init parameter in gmatch
+  local s = 0
+  for k in string.gmatch("10 20 30", "%d+", 3) do
+    s = s + tonumber(k)
+  end
+  assert(s == 50)
+
+  s = 0
+  for k in string.gmatch("11 21 31", "%d+", -4) do
+    s = s + tonumber(k)
+  end
+  assert(s == 32)
+
+  -- there is an empty string at the end of the subject
+  s = 0
+  for k in string.gmatch("11 21 31", "%w*", 9) do
+    s = s + 1
+  end
+  assert(s == 1)
+
+  -- there are no empty strings after the end of the subject
+  s = 0
+  for k in string.gmatch("11 21 31", "%w*", 10) do
+    s = s + 1
+  end
+  assert(s == 0)
+end
+
+
 -- tests for `%f' (`frontiers')
 
 assert(string.gsub("aaa aa a aaa a", "%f[%w]a", "x") == "xaa xa x xaa x")

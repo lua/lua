@@ -94,6 +94,11 @@ assert(string.char(string.byte("\xe4l\0óu", 1, -1)) == "\xe4l\0óu")
 assert(string.char(string.byte("\xe4l\0óu", 1, 0)) == "")
 assert(string.char(string.byte("\xe4l\0óu", -10, 100)) == "\xe4l\0óu")
 
+checkerror("out of range", string.char, 256)
+checkerror("out of range", string.char, -1)
+checkerror("out of range", string.char, math.maxinteger)
+checkerror("out of range", string.char, math.mininteger)
+
 assert(string.upper("ab\0c") == "AB\0C")
 assert(string.lower("\0ABCc%$") == "\0abcc%$")
 assert(string.rep('teste', 0) == '')
