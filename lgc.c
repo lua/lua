@@ -101,6 +101,7 @@
 
 static void reallymarkobject (global_State *g, GCObject *o);
 static lu_mem atomic (lua_State *L);
+static void entersweep (lua_State *L);
 
 
 /*
@@ -1162,15 +1163,7 @@ static void youngcollection (lua_State *L, global_State *g) {
 }
 
 
-/*
-** Enter generational mode. Must go until the end of an atomic cycle
-** to ensure that all threads are in the gray list. Then, turn all
-** objects into old and finishes the collection.
-*/
-static void entergen (lua_State *L, global_State *g) {
-  luaC_runtilstate(L, bitmask(GCSpause));  /* prepare to start a new cycle */
-  luaC_runtilstate(L, bitmask(GCSpropagate));  /* start new cycle */
-  atomic(L);
+static void atomic2gen (lua_State *L, global_State *g) {
   /* sweep all elements making them old */
   sweep2old(L, &g->allgc);
   /* everything alive now is old */
@@ -1183,15 +1176,31 @@ static void entergen (lua_State *L, global_State *g) {
   sweep2old(L, &g->tobefnz);
 
   g->gckind = KGC_GEN;
+  g->lastatomic = 0;
   g->GCestimate = gettotalbytes(g);  /* base for memory control */
   finishgencycle(L, g);
 }
 
 
 /*
+** Enter generational mode. Must go until the end of an atomic cycle
+** to ensure that all threads and weak tables are in the gray lists.
+** Then, turn all objects into old and finishes the collection.
+*/
+static lu_mem entergen (lua_State *L, global_State *g) {
+  lu_mem numobjs;
+  luaC_runtilstate(L, bitmask(GCSpause));  /* prepare to start a new cycle */
+  luaC_runtilstate(L, bitmask(GCSpropagate));  /* start new cycle */
+  numobjs = atomic(L);  /* propagates all and then do the atomic stuff */
+  atomic2gen(L, g);
+  return numobjs;
+}
+
+
+/*
 ** Enter incremental mode. Turn all objects white, make all
 ** intermediate lists point to NULL (to avoid invalid pointers),
-** and go to pause state.
+** and go to the pause state.
 */
 static void enterinc (global_State *g) {
   whitelist(g, g->allgc);
@@ -1201,6 +1210,7 @@ static void enterinc (global_State *g) {
   g->finobjrold = g->finobjold = g->finobjsur = NULL;
   g->gcstate = GCSpause;
   g->gckind = KGC_INC;
+  g->lastatomic = 0;
 }
 
 
@@ -1215,54 +1225,114 @@ void luaC_changemode (lua_State *L, int newmode) {
     else
       enterinc(g);  /* entering incremental mode */
   }
+  g->lastatomic = 0;
 }
 
 
 /*
 ** Does a full collection in generational mode.
 */
-static void fullgen (lua_State *L, global_State *g) {
+static lu_mem fullgen (lua_State *L, global_State *g) {
   enterinc(g);
-  entergen(L, g);
+  return entergen(L, g);
 }
 
 
 /*
-** Does a generational "step". If memory grows 'genmajormul'% larger
-** than last major collection (kept in 'g->GCestimate'), does a major
-** collection. Otherwise, does a minor collection and set debt to make
-** another collection when memory grows 'genminormul'% larger.
-** When it does a major collection, it then checks whether it could
-** reclaim at least ?? memory. If not, it sets a long pause for the
-** next collection. (Therefore, the next collection will be a major
-** one, too.)
+** Set debt for the next minor collection, which will happen when
+** memory grows 'genminormul'%.
+*/
+static void setminordebt (global_State *g) {
+  luaE_setdebt(g, -(cast(l_mem, (gettotalbytes(g) / 100)) * g->genminormul));
+}
+
+
+/*
+** Does a major collection after last collection was a "bad collection".
+**
+** When the program is building a big struture, it allocates lots of
+** memory but generates very little garbage. In those scenarios,
+** the generational mode just wastes time doing small collections, and
+** major collections are frequently what we call a "bad collection", a
+** collection that frees too few objects. To avoid the cost of switching
+** between generational mode and the incremental mode needed for full
+** (major) collections, the collector tries to stay in incremental mode
+** after a bad collection, and to switch back to generational mode only
+** after a "good" collection (one that traverses less than 9/8 objects
+** of the previous one).
+** The collector must choose whether to stay in incremental mode or to
+** switch back to generational mode before sweeping. At this point, it
+** does not know the real memory in use, so it cannot use memory to
+** decide whether to return to generational mode. Instead, it uses the
+** number of objects traversed (returned by 'atomic') as a proxy. The
+** field 'g->lastatomic' keeps this count from the last collection.
+** ('g->lastatomic != 0' also means that the last collection was bad.)
+*/
+static void stepgenfull (lua_State *L, global_State *g) {
+  lu_mem newatomic;  /* count of traversed objects */
+  lu_mem lastatomic = g->lastatomic;  /* count from last collection */
+  if (g->gckind == KGC_GEN)  /* still in generational mode? */
+    enterinc(g);  /* enter incremental mode */
+  luaC_runtilstate(L, bitmask(GCSpropagate));  /* start new cycle */
+  newatomic = atomic(L);  /* mark everybody */
+  if (newatomic < lastatomic + (lastatomic >> 3)) {  /* good collection? */
+    atomic2gen(L, g);  /* return to generational mode */
+    setminordebt(g);
+  }
+  else {  /* another bad collection; stay in incremental mode */
+    g->GCestimate = gettotalbytes(g);  /* first estimate */;
+    entersweep(L);
+    luaC_runtilstate(L, bitmask(GCSpause));  /* finish collection */
+    setpause(g);
+    g->lastatomic = newatomic;
+  }
+}
+
+
+/*
+** Does a generational "step".
+** Usually, this means doing a minor collection and setting the debt to
+** make another collection when memory grows 'genminormul'% larger.
+**
+** However, there are exceptions.  If memory grows 'genmajormul'%
+** larger than it was at the end of the last major collection (kept
+** in 'g->GCestimate'), the function does a major collection. At the
+** end, it checks whether the major collection was able to free a
+** decent amount of memory (at least half the growth in memory since
+** previous major collection). If so, the collector keeps its state,
+** and the next collection will probably be minor again. Otherwise,
+** we have what we call a "bad collection". In that case, set the field
+** 'g->lastatomic' to signal that fact, so that the next collection will
+** go to 'stepgenfull'.
+**
 ** 'GCdebt <= 0' means an explicit call to GC step with "size" zero;
-** in that case, always do a minor collection.
+** in that case, do a minor collection.
 */
 static void genstep (lua_State *L, global_State *g) {
-  lu_mem majorbase = g->GCestimate;  /* memory after last major collection */
-  lu_mem majorinc = (majorbase / 100) * getgcparam(g->genmajormul);
-  lu_mem memnew = gettotalbytes(g);
-  if (g->GCdebt > 0 && memnew > majorbase + majorinc) {
-    fullgen(L, g);
-    memnew = gettotalbytes(g);
-    if (memnew < majorbase + (majorinc / 2)) {
-      /* collected at least half of memory growth since last major
-         collection; go back to minor collections */
-      luaE_setdebt(g, -(cast(l_mem, (memnew / 100)) * g->genminormul));
-    }
-    else {
-      /* memory seems to be growing; do a long wait for next (major)
-         collection */
-      setpause(g);
-    }
-  }
+  if (g->lastatomic != 0)  /* last collection was a bad one? */
+    stepgenfull(L, g);  /* do a full step */
   else {
-    youngcollection(L, g);
-    memnew = gettotalbytes(g);
-    luaE_setdebt(g, -(cast(l_mem, (memnew / 100)) * g->genminormul));
-    g->GCestimate = majorbase;  /* preserve base value */
+    lu_mem majorbase = g->GCestimate;  /* memory after last major collection */
+    lu_mem majorinc = (majorbase / 100) * getgcparam(g->genmajormul);
+    if (g->GCdebt > 0 && gettotalbytes(g) > majorbase + majorinc) {
+      lu_mem numobjs = fullgen(L, g);  /* do a major collection */
+      if (gettotalbytes(g) < majorbase + (majorinc / 2)) {
+        /* collected at least half of memory growth since last major
+           collection; keep doing minor collections */
+        setminordebt(g);
+      }
+      else {  /* bad collection */
+        g->lastatomic = numobjs;  /* signal that last collection was bad */
+        setpause(g);  /* do a long wait for next (major) collection */
+      }
+    }
+    else {  /* regular case; do a minor collection */
+      youngcollection(L, g);
+      setminordebt(g);
+      g->GCestimate = majorbase;  /* preserve base value */
+    }
   }
+  lua_assert(isdecGCmodegen(g));
 }
 
 /* }====================================================== */
@@ -1493,10 +1563,10 @@ static void incstep (lua_State *L, global_State *g) {
 void luaC_step (lua_State *L) {
   global_State *g = G(L);
   if (g->gcrunning) {  /* running? */
-    if (g->gckind == KGC_INC)
-      incstep(L, g);
-    else
+    if(isdecGCmodegen(g))
       genstep(L, g);
+    else
+      incstep(L, g);
   }
 }
 

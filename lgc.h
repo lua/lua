@@ -123,7 +123,7 @@
 #define LUAI_GENMINORMUL         20
 
 /* wait memory to double before starting new cycle */
-#define LUAI_GCPAUSE    200     /* 200% */
+#define LUAI_GCPAUSE    200
 
 /*
 ** some gc parameters are stored divided by 4 to allow a maximum value
@@ -137,6 +137,13 @@
 /* how much to allocate before next GC step (log2) */
 #define LUAI_GCSTEPSIZE 13      /* 8 KB */
 
+
+/*
+** Check whether the declared GC mode is generational. While in
+** generational mode, the collector can go temporarily to incremental
+** mode to improve performance. This is signaled by 'g->lastatomic != 0'.
+*/
+#define isdecGCmodegen(g)	(g->gckind == KGC_GEN || g->lastatomic != 0)
 
 /*
 ** Does one step of collection when debt becomes positive. 'pre'/'pos'

@@ -1141,22 +1141,21 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       break;
     }
     case LUA_GCGEN: {
-      int oldmode = g->gckind;
       int minormul = va_arg(argp, int);
       int majormul = va_arg(argp, int);
+      res = isdecGCmodegen(g) ? LUA_GCGEN : LUA_GCINC;
       if (minormul != 0)
         g->genminormul = minormul;
       if (majormul != 0)
         setgcparam(g->genmajormul, majormul);
       luaC_changemode(L, KGC_GEN);
-      res = (oldmode == KGC_GEN) ? LUA_GCGEN : LUA_GCINC;
       break;
     }
     case LUA_GCINC: {
-      int oldmode = g->gckind;
       int pause = va_arg(argp, int);
       int stepmul = va_arg(argp, int);
       int stepsize = va_arg(argp, int);
+      res = isdecGCmodegen(g) ? LUA_GCGEN : LUA_GCINC;
       if (pause != 0)
         setgcparam(g->gcpause, pause);
       if (stepmul != 0)
@@ -1164,7 +1163,6 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       if (stepsize != 0)
         g->gcstepsize = stepsize;
       luaC_changemode(L, KGC_INC);
-      res = (oldmode == KGC_GEN) ? LUA_GCGEN : LUA_GCINC;
       break;
     }
     default: res = -1;  /* invalid option */

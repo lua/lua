@@ -11,6 +11,12 @@ collectgarbage()
 
 local oldmode = collectgarbage("incremental")
 
+-- changing modes should return previous mode
+assert(collectgarbage("generational") == "incremental")
+assert(collectgarbage("generational") == "generational")
+assert(collectgarbage("incremental") == "generational")
+assert(collectgarbage("incremental") == "incremental")
+
 
 local function gcinfo ()
   return collectgarbage"count" * 1024
