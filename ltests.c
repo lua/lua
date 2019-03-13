@@ -164,7 +164,7 @@ typedef union Header {
 
 
 Memcontrol l_memcontrol =
-  {0L, 0L, 0L, 0L, (~0L), {0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L}};
+  {0UL, 0UL, 0UL, 0UL, (~0UL), {0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL}};
 
 
 static void freeblock (Memcontrol *mc, Header *block) {
@@ -1596,7 +1596,10 @@ static struct X { int x; } x;
       lua_pushnumber(L1, lua_tonumber(L1, getindex));
     }
     else if EQ("topointer") {
-      lua_pushnumber(L1, cast_sizet(lua_topointer(L1, getindex)));
+      lua_pushlightuserdata(L1, cast_voidp(lua_topointer(L1, getindex)));
+    }
+    else if EQ("touserdata") {
+      lua_pushlightuserdata(L1, lua_touserdata(L1, getindex));
     }
     else if EQ("tostring") {
       const char *s = lua_tostring(L1, getindex);

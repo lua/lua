@@ -143,7 +143,7 @@ that is, @x{arrays} that can have as indices not only numbers,
 but any Lua value except @nil and @x{NaN}.
 (@emphx{Not a Number} is a special floating-point value
 used by the @x{IEEE 754} standard to represent
-undefined or unrepresentable numerical results, such as @T{0/0}.)
+undefined numerical results, such as @T{0/0}.)
 Tables can be @emph{heterogeneous};
 that is, they can contain values of all types (except @nil).
 Any key with value @nil is not considered part of the table.
@@ -670,8 +670,8 @@ are called when the garbage collector detects that the
 corresponding table or userdata is unreachable.
 Finalizers allow you to coordinate Lua's garbage collection
 with external resource management
-(such as closing files, network or database connections,
-or freeing your own memory).
+such as closing files, network or database connections,
+or freeing your own memory.
 
 For an object (table or userdata) to be finalized when collected,
 you must @emph{mark} it for finalization.
@@ -1323,11 +1323,12 @@ labels in Lua are considered statements too:
 }
 
 A label is visible in the entire block where it is defined,
-except
-inside nested blocks where a label with the same name is defined and
-inside nested functions.
+except inside nested functions.
 A goto may jump to any visible label as long as it does not
 enter into the scope of a local variable.
+A label should not be declared
+where a label with the same name is visible,
+even if this other label has been declared in an enclosing block.
 
 Labels and empty statements are called @def{void statements},
 as they perform no actions.
@@ -1537,7 +1538,7 @@ goes out of scope, including normal block termination,
 exiting its block by @Rw{break}/@Rw{goto}/@Rw{return},
 or exiting by an error.
 
-Here, to \emph{close} a value means
+Here, to @emph{close} a value means
 to call its @idx{__close} metamethod.
 If the value is @nil, it is ignored;
 otherwise,
@@ -4236,7 +4237,7 @@ indicates whether the operation succeeded.
 
 Converts the value at the given index to a generic
 @N{C pointer} (@T{void*}).
-The value can be a userdata, a table, a thread, or a function;
+The value can be a userdata, a table, a thread, a string, or a function;
 otherwise, @id{lua_topointer} returns @id{NULL}.
 Different objects will give different pointers.
 There is no way to convert the pointer back to its original value.
@@ -6712,8 +6713,10 @@ to save space.
 
 Functions with upvalues have only their number of upvalues saved.
 When (re)loaded,
-those upvalues receive fresh instances containing @nil.
-(You can use the debug library to serialize
+those upvalues receive fresh instances.
+(See the @Lid{load} function for details about
+how these upvalues are initialized.
+You can use the debug library to serialize
 and reload the upvalues of a function
 in a way adequate to your needs.)
 
@@ -6747,12 +6750,12 @@ after the two indices.
 Returns a formatted version of its variable number of arguments
 following the description given in its first argument (which must be a string).
 The format string follows the same rules as the @ANSI{sprintf}.
-The only differences are that the options/modifiers
+The only differences are that the conversion specifiers and modifiers
 @T{*}, @id{h}, @id{L}, @id{l}, @id{n},
 and @id{p} are not supported
-and that there is an extra option, @id{q}.
+and that there is an extra specifier, @id{q}.
 
-The @id{q} option formats booleans, nil, numbers, and strings
+The specifier @id{q} formats booleans, nil, numbers, and strings
 in a way that the result is a valid constant in Lua source code.
 Booleans and nil are written in the obvious way
 (@id{true}, @id{false}, @id{nil}).
@@ -6770,22 +6773,23 @@ may produce the string:
 "a string with \"quotes\" and \
  new line"
 }
+This specifier does not support modifiers (flags, width, length).
 
-Options
+The conversion specifiers
 @id{A}, @id{a}, @id{E}, @id{e}, @id{f},
 @id{G}, and @id{g} all expect a number as argument.
-Options @id{c}, @id{d},
+The specifiers @id{c}, @id{d},
 @id{i}, @id{o}, @id{u}, @id{X}, and @id{x}
 expect an integer.
 When Lua is compiled with a C89 compiler,
-options @id{A} and @id{a} (hexadecimal floats)
-do not support any modifier (flags, width, length).
+the specifiers @id{A} and @id{a} (hexadecimal floats)
+do not support modifiers.
 
-Option @id{s} expects a string;
+The specifier @id{s} expects a string;
 if its argument is not a string,
 it is converted to one following the same rules of @Lid{tostring}.
-If the option has any modifier (flags, width, length),
-the string argument should not contain @x{embedded zeros}.
+If the specifier has any modifier,
+the corresponding string argument should not contain @x{embedded zeros}.
 
 }
 
@@ -8009,8 +8013,8 @@ or there is any input from some special files
 }
 
 }
-For the last two cases, @id{size}
-specifies the size of the buffer, in bytes.
+For the last two cases,
+@id{size} is a hint for the size of the buffer, in bytes.
 The default is an appropriate size.
 
 }
@@ -8696,6 +8700,12 @@ When needed, this metamethod must be explicitly defined.
 @item{
 When a coroutine finishes with an error,
 its stack is unwound (to run any pending closing methods).
+}
+
+@item{
+A label for a @Rw{goto} cannot be declared where a label with the same
+name is visible, even if this other label is declared in an enclosing
+block.
 }
 
 }

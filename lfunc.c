@@ -138,7 +138,8 @@ static int callclosemth (lua_State *L, TValue *uv, StkId level, int status) {
     if (prepclosingmethod(L, uv, &G(L)->nilvalue))  /* something to call? */
       callclose(L, NULL);  /* call closing method */
     else if (!ttisnil(uv)) {  /* non-closable non-nil value? */
-      const char *vname = luaG_findlocal(L, L->ci, level - L->ci->func, NULL);
+      int idx = cast_int(level - L->ci->func);
+      const char *vname = luaG_findlocal(L, L->ci, idx, NULL);
       if (vname == NULL) vname = "?";
       luaG_runerror(L, "attempt to close non-closable variable '%s'", vname);
     }

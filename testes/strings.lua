@@ -199,6 +199,7 @@ end
 
 assert(string.format("\0%s\0", "\0\0\1") == "\0\0\0\1\0")
 checkerror("contains zeros", string.format, "%10s", "\0")
+checkerror("cannot have modifiers", string.format, "%10q", "1")
 
 -- format x tostring
 assert(string.format("%s %s", nil, true) == "nil true")

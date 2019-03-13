@@ -332,6 +332,7 @@ function to (s, x, n)
   return T.testC(string.format("%s %d; return 1", s, n), x)
 end
 
+local null = T.pushuserdata(0)
 local hfunc = string.gmatch("", "")    -- a "heavy C function" (with upvalues)
 assert(debug.getupvalue(hfunc, 1))
 assert(to("tostring", {}) == nil)
@@ -349,13 +350,19 @@ assert(to("tonumber", {}) == 0)
 assert(to("tonumber", "12") == 12)
 assert(to("tonumber", "s2") == 0)
 assert(to("tonumber", 1, 20) == 0)
-assert(to("topointer", 10) == 0)
-assert(to("topointer", true) == 0)
-assert(to("topointer", T.pushuserdata(20)) == 20)
-assert(to("topointer", io.read) ~= 0)           -- light C function
-assert(to("topointer", hfunc) ~= 0)        -- "heavy" C function
-assert(to("topointer", function () end) ~= 0)   -- Lua function
-assert(to("topointer", io.stdin) ~= 0)   -- full userdata
+assert(to("topointer", 10) == null)
+assert(to("topointer", true) == null)
+assert(to("topointer", nil) == null)
+assert(to("topointer", "abc") ~= null)
+assert(to("topointer", string.rep("x", 10)) ==
+       to("topointer", string.rep("x", 10)))    -- short strings
+assert(to("topointer", string.rep("x", 300)) ~=
+       to("topointer", string.rep("x", 300)))    -- long strings
+assert(to("topointer", T.pushuserdata(20)) ~= null)
+assert(to("topointer", io.read) ~= null)           -- light C function
+assert(to("topointer", hfunc) ~= null)        -- "heavy" C function
+assert(to("topointer", function () end) ~= null)   -- Lua function
+assert(to("topointer", io.stdin) ~= null)   -- full userdata
 assert(to("func2num", 20) == 0)
 assert(to("func2num", T.pushuserdata(10)) == 0)
 assert(to("func2num", io.read) ~= 0)     -- light C function
