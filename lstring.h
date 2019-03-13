@@ -19,7 +19,7 @@
 #define MEMERRMSG       "not enough memory"
 
 
-#define sizelstring(l)  (sizeof(union UTString) + ((l) + 1) * sizeof(char))
+#define sizelstring(l)  (sizeof(TString) + ((l) + 1) * sizeof(char))
 
 #define luaS_newliteral(L, s)	(luaS_newlstr(L, "" s, \
                                  (sizeof(s)/sizeof(char))-1))

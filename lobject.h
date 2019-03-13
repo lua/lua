@@ -350,21 +350,13 @@ typedef struct TString {
 } TString;
 
 
-/*
-** Ensures that address after this type is always fully aligned.
-*/
-typedef union UTString {
-  LUAI_MAXALIGN;  /* ensures maximum alignment for strings */
-  TString tsv;
-} UTString;
-
 
 /*
 ** Get the actual string (array of bytes) from a 'TString'.
 ** (Access to 'extra' ensures that value is really a 'TString'.)
 */
 #define getstr(ts)  \
-  check_exp(sizeof((ts)->extra), cast_charp((ts)) + sizeof(UTString))
+  check_exp(sizeof((ts)->extra), cast_charp((ts)) + sizeof(TString))
 
 
 /* get the actual string (array of bytes) from a Lua value */
