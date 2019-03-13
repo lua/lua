@@ -838,7 +838,7 @@ do
   assert(rand * 2^floatbits == res)
 end
 
-math.randomseed(0, os.time())
+math.randomseed()
 
 do   -- test random for floats
   local randbits = math.min(floatbits, 64)   -- at most 64 random bits

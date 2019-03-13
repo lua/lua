@@ -301,7 +301,7 @@ static int math_type (lua_State *L) {
 
 /* rotate left 'x' by 'n' bits */
 static Rand64 rotl (Rand64 x, int n) {
-  return (x << n) | (trim64(x) >> (64 - n)); 
+  return (x << n) | (trim64(x) >> (64 - n));
 }
 
 static Rand64 nextrand (Rand64 *state) {
@@ -597,11 +597,27 @@ static void setseed (Rand64 *state, lua_Unsigned n1, lua_Unsigned n2) {
 }
 
 
+/*
+** Set a "random" seed. To get some randomness, use the current time
+** and the address of 'L' (in case the machine does address space layout
+** randomization).
+*/
+static void randseed (lua_State *L, RanState *state) {
+  lua_Unsigned seed1 = (lua_Unsigned)time(NULL);
+  lua_Unsigned seed2 = (lua_Unsigned)(size_t)L;
+  setseed(state->s, seed1, seed2);
+}
+
+
 static int math_randomseed (lua_State *L) {
   RanState *state = (RanState *)lua_touserdata(L, lua_upvalueindex(1));
-  lua_Integer n1 = luaL_checkinteger(L, 1);
-  lua_Integer n2 = luaL_optinteger(L, 2, 0);
-  setseed(state->s, n1, n2);
+  if (lua_isnone(L, 1))
+    randseed(L, state);
+  else {
+    lua_Integer n1 = luaL_checkinteger(L, 1);
+    lua_Integer n2 = luaL_optinteger(L, 2, 0);
+    setseed(state->s, n1, n2);
+  }
   return 0;
 }
 
@@ -615,15 +631,10 @@ static const luaL_Reg randfuncs[] = {
 
 /*
 ** Register the random functions and initialize their state.
-** To give some "randomness" to the initial seed, use the current time
-** and the address of 'L' (in case the machine does address space layout
-** randomization).
 */
 static void setrandfunc (lua_State *L) {
   RanState *state = (RanState *)lua_newuserdatauv(L, sizeof(RanState), 0);
-  lua_Unsigned seed1 = (lua_Unsigned)time(NULL); 
-  lua_Unsigned seed2 = (lua_Unsigned)(size_t)L; 
-  setseed(state->s, seed1, seed2);
+  randseed(L, state);  /* initialize with a "random" seed */
   luaL_setfuncs(L, randfuncs, 1);
 }
 

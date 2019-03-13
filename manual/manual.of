@@ -7643,14 +7643,10 @@ is equivalent to @T{math.random(1,n)}.
 The call @T{math.random(0)} produces an integer with
 all bits (pseudo)random.
 
-Lua initializes its pseudo-random generator with
-a weak attempt for ``randomness'',
+Lua initializes its pseudo-random generator with the equivalent of
+a call to @Lid{math.randomseed} with no arguments,
 so that @id{math.random} should generate
 different sequences of results each time the program runs.
-To ensure a required level of randomness to the initial state
-(or contrarily, to have a deterministic sequence,
-for instance when debugging a program),
-you should call @Lid{math.randomseed} explicitly.
 
 The results from this function have good statistical qualities,
 but they are not cryptographically secure.
@@ -7660,13 +7656,22 @@ some number of previous results.)
 
 }
 
-@LibEntry{math.randomseed (x [, y])|
+@LibEntry{math.randomseed ([x [, y]])|
 
-The integer parameters @id{x} and @id{y} are
-concatenated into a 128-bit @Q{seed} that
+When called with at least one argument,
+the integer parameters @id{x} and @id{y} are
+concatenated into a 128-bit @emphx{seed} that
 is used to reinitialize the pseudo-random generator;
 equal seeds produce equal sequences of numbers.
 The default for @id{y} is zero.
+
+When called with no arguments,
+Lua generates a seed with
+a weak attempt for randomness.
+To ensure a required level of randomness to the initial state
+(or contrarily, to have a deterministic sequence,
+for instance when debugging a program),
+you should call @Lid{math.randomseed} with explicit arguments.
 
 }
 
