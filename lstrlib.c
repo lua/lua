@@ -1185,6 +1185,11 @@ static int str_format (lua_State *L) {
           nb = l_sprintf(buff, MAX_ITEM, form, (LUAI_UACNUMBER)n);
           break;
         }
+        case 'p': {
+          const void *p = lua_topointer(L, arg);
+          nb = l_sprintf(buff, MAX_ITEM, form, p);
+          break;
+        }
         case 'q': {
           if (form[2] != '\0')  /* modifiers? */
             return luaL_error(L, "specifier '%%q' cannot have modifiers");

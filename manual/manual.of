@@ -6751,8 +6751,7 @@ Returns a formatted version of its variable number of arguments
 following the description given in its first argument (which must be a string).
 The format string follows the same rules as the @ANSI{sprintf}.
 The only differences are that the conversion specifiers and modifiers
-@T{*}, @id{h}, @id{L}, @id{l}, @id{n},
-and @id{p} are not supported
+@T{*}, @id{h}, @id{L}, @id{l}, and @id{n} are not supported
 and that there is an extra specifier, @id{q}.
 
 The specifier @id{q} formats booleans, nil, numbers, and strings
@@ -6790,6 +6789,14 @@ if its argument is not a string,
 it is converted to one following the same rules of @Lid{tostring}.
 If the specifier has any modifier,
 the corresponding string argument should not contain @x{embedded zeros}.
+
+The specifier @id{p} formats the pointer
+returned by @Lid{lua_topointer}.
+That gives a unique string identifier for tables, userdata,
+threads, strings, and functions.
+For other values (numbers, nil, booleans),
+this specifier results in a string representing
+the pointer @id{NULL}.
 
 }
 
@@ -8768,7 +8775,7 @@ address space.)
 }
 
 @item{
-The constant @Lid{LUA_ERRGCMM} was removed.
+The constant @id{LUA_ERRGCMM} was removed.
 Errors in finalizers are never propagated;
 instead, they generate a warning.
 }
