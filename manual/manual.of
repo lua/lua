@@ -4061,7 +4061,7 @@ If @id{index} @N{is 0}, then all stack elements are removed.
 
 Sets the @x{warning function} to be used by Lua to emit warnings
 @see{lua_WarnFunction}.
-The @id{ud} parameter initializes the slot @id{pud} passed to
+The @id{ud} parameter sets the value @id{ud} passed to
 the warning function.
 
 }
@@ -4325,25 +4325,24 @@ Returns the version number of this core.
 }
 
 @APIEntry{
-typedef void (*lua_WarnFunction) (void **pud, const char *msg);|
+typedef void (*lua_WarnFunction) (void *ud, const char *msg, int tocont);|
 
 The type of @x{warning function}s, called by Lua to emit warnings.
-The first parameter is the address of a writable slot,
-constant for a given Lua state and
-initialized by @Lid{lua_setwarnf}.
+The first parameter is an opaque pointer
+set by @Lid{lua_setwarnf}.
 The second parameter is the warning message.
-This function should assume that
-a message not ending with an end-of-line will be
-continued by the message in the next call.
+The third parameter is a boolean that
+indicates whether the message is
+to be continued by the message in the next call.
 
 }
 
 @APIEntry{
-void lua_warning (lua_State *L, const char *msg);|
+void lua_warning (lua_State *L, const char *msg, int tocont);|
 @apii{0,0,-}
 
 Emits a warning with the given message.
-A message not ending with an end-of-line should be
+A message in a call with @id{tocont} true should be
 continued in another call to this function.
 
 }
@@ -6275,11 +6274,12 @@ The current value of this variable is @St{Lua 5.4}.
 
 }
 
-@LibEntry{warn (message)|
+@LibEntry{warn (message [, tocont])|
 
 Emits a warning with the given message.
-Note that messages not ending with an end-of-line
-are assumed to be continued by the message in the next call.
+A message in a call with @id{tocont} true should be
+continued in another call to this function.
+The default for @id{tocont} is false.
 
 }
 

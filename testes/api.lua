@@ -114,13 +114,11 @@ end
 
 -- testing warnings
 T.testC([[
-  warning "#This shold be a"
-  warning " single "
-  warning "warning
-"
-  warning "#This should be "
-  warning "another one
-"
+  warningC "#This shold be a"
+  warningC " single "
+  warning "warning"
+  warningC "#This should be "
+  warning "another one"
 ]])
 
 

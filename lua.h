@@ -128,7 +128,7 @@ typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 /*
 ** Type for warning functions
 */
-typedef void (*lua_WarnFunction) (void **pud, const char *msg);
+typedef void (*lua_WarnFunction) (void *ud, const char *msg, int tocont);
 
 
 
@@ -309,7 +309,7 @@ LUA_API int (lua_isyieldable) (lua_State *L);
 ** Warning-related functions
 */
 LUA_API void (lua_setwarnf) (lua_State *L, lua_WarnFunction f, void *ud);
-LUA_API void (lua_warning)  (lua_State *L, const char *msg);
+LUA_API void (lua_warning)  (lua_State *L, const char *msg, int tocont);
 
 
 /*

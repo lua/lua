@@ -1286,9 +1286,9 @@ void lua_setwarnf (lua_State *L, lua_WarnFunction f, void *ud) {
 }
 
 
-void lua_warning (lua_State *L, const char *msg) {
+void lua_warning (lua_State *L, const char *msg, int tocont) {
   lua_lock(L);
-  luaE_warning(L, msg);
+  luaE_warning(L, msg, tocont);
   lua_unlock(L);
 }
 

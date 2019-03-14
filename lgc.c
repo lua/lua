@@ -832,7 +832,7 @@ static void GCTM (lua_State *L) {
   lua_assert(!g->gcemergency);
   setgcovalue(L, &v, udata2finalize(g));
   tm = luaT_gettmbyobj(L, &v, TM_GC);
-  if (tm != NULL && ttisfunction(tm)) {  /* is there a finalizer? */
+  if (ttisfunction(tm)) {  /* is the finalizer a function? */
     int status;
     lu_byte oldah = L->allowhook;
     int running  = g->gcrunning;
@@ -850,9 +850,9 @@ static void GCTM (lua_State *L) {
       const char *msg = (ttisstring(s2v(L->top - 1)))
                         ? svalue(s2v(L->top - 1))
                         : "error object is not a string";
-      luaE_warning(L, "error in __gc metamethod (");
-      luaE_warning(L, msg);
-      luaE_warning(L, ")\n");
+      luaE_warning(L, "error in __gc metamethod (", 1);
+      luaE_warning(L, msg, 1);
+      luaE_warning(L, ")", 0);
     }
   }
 }

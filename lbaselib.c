@@ -45,7 +45,7 @@ static int luaB_print (lua_State *L) {
 
 static int luaB_warn (lua_State *L) {
   const char *msg = luaL_checkstring(L, 1);
-  lua_warning(L, msg);
+  lua_warning(L, msg, lua_toboolean(L, 2));
   return 0;
 }
 

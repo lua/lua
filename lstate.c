@@ -411,10 +411,10 @@ LUA_API void lua_close (lua_State *L) {
 }
 
 
-void luaE_warning (lua_State *L, const char *msg) {
+void luaE_warning (lua_State *L, const char *msg, int tocont) {
   lua_WarnFunction wf = G(L)->warnf;
   if (wf != NULL)
-    wf(&G(L)->ud_warn, msg);
+    wf(G(L)->ud_warn, msg, tocont);
 }
 
 

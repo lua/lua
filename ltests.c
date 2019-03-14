@@ -63,11 +63,8 @@ static void pushobject (lua_State *L, const TValue *o) {
 }
 
 
-static void badexit (const char *fmt, ...) {
-  va_list argp;
-  va_start(argp, fmt);
-  vfprintf(stderr, fmt, argp);
-  va_end(argp);
+static void badexit (const char *fmt, const char *s) {
+  fprintf(stderr, fmt, s);
   /* avoid assertion failures when exiting */
   l_memcontrol.numblocks = l_memcontrol.total = 0;
   exit(EXIT_FAILURE);
@@ -81,52 +78,35 @@ static int tpanic (lua_State *L) {
 }
 
 
-static int islast (const char *message) {
-  size_t len = strlen(message);
-  return (len > 0 && message[len - 1] == '\n');
-}
-
-
 /*
 ** Warning function for tests. Fist, it concatenates all parts of
 ** a warning in buffer 'buff'. Then:
-** messages starting with '#' are shown on standard output (used to
+** - messages starting with '#' are shown on standard output (used to
 ** test explicit warnings);
-** messages containing '@' are stored in global '_WARN' (used to test
+** - messages containing '@' are stored in global '_WARN' (used to test
 ** errors that generate warnings);
-** other messages abort the tests (they represent real warning conditions;
-** the standard tests should not generate these conditions unexpectedly).
+** - other messages abort the tests (they represent real warning
+** conditions; the standard tests should not generate these conditions
+** unexpectedly).
 */
-static void warnf (void **pud, const char *msg) {
-  static char buff[200];  /* should be enough for tests... */
-  static int cont = 0;  /* message to be continued */
-  if (cont) {  /* continuation? */
-    if (strlen(msg) >= sizeof(buff) - strlen(buff))
-      badexit("warnf-buffer overflow");
-    strcat(buff, msg);  /* add new message to current warning */
-  }
-  else {  /* new warning */
-    if (strlen(msg) >= sizeof(buff))
-      badexit("warnf-buffer overflow");
-    strcpy(buff, msg);  /* start a new warning */
-  }
-  if (!islast(msg))  /* message not finished yet? */
-    cont = 1;  /* wait for more */
-  else {  /* handle message */
-    cont = 0;  /* prepare for next message */
+static void warnf (void *ud, const char *msg, int tocont) {
+  static char buff[200] = "";  /* should be enough for tests... */
+  if (strlen(msg) >= sizeof(buff) - strlen(buff))
+    badexit("%s", "warnf-buffer overflow");
+  strcat(buff, msg);  /* add new message to current warning */
+  if (!tocont) {  /* message finished? */
     if (buff[0] == '#')  /* expected warning? */
-      printf("Expected Lua warning: %s", buff);  /* print it */
+      printf("Expected Lua warning: %s\n", buff);  /* print it */
     else if (strchr(buff, '@') != NULL) {  /* warning for test purposes? */
-      lua_State *L = cast(lua_State *, *pud);
+      lua_State *L = cast(lua_State *, ud);
       lua_unlock(L);
       lua_pushstring(L, buff);
       lua_setglobal(L, "_WARN");  /* assign message to global '_WARN' */
       lua_lock(L);
-      return;
     }
-    else {  /* a real warning; should not happen during tests */
+    else  /* a real warning; should not happen during tests */
       badexit("Unexpected warning in test mode: %s\naborting...\n", buff);
-    }
+    buff[0] = '\0';  /* prepare buffer for next warning */
   }
 }
 
@@ -1466,9 +1446,13 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       const char *msg = getstring;
       printf("%s\n", msg);
     }
+    else if EQ("warningC") {
+      const char *msg = getstring;
+      lua_warning(L1, msg, 1);
+    }
     else if EQ("warning") {
       const char *msg = getstring;
-      lua_warning(L1, msg);
+      lua_warning(L1, msg, 0);
     }
     else if EQ("pushbool") {
       lua_pushboolean(L1, getnum);

@@ -6,7 +6,7 @@
 local version = "Lua 5.4"
 if _VERSION ~= version then
   warn(string.format(
-   "This test suite is for %s, not for %s\nExiting tests\n", version, _VERSION))
+   "This test suite is for %s, not for %s\nExiting tests", version, _VERSION))
   return
 end
 
@@ -190,16 +190,16 @@ assert(dofile('verybig.lua', true) == 10); collectgarbage()
 dofile('files.lua')
 
 if #msgs > 0 then
-  warn("#tests not performed:\n  ")
+  warn("#tests not performed:", true)
   for i=1,#msgs do
-    warn(msgs[i]); warn("\n  ")
+    warn("\n  ", true); warn(msgs[i], true)
   end
   warn("\n")
 end
 
 print("(there should be two warnings now)")
-warn("#This is "); warn("an expected"); warn(" warning\n")
-warn("#This is"); warn(" another one\n")
+warn("#This is ", true); warn("an expected", true); warn(" warning")
+warn("#This is", true); warn(" another one")
 
 -- no test module should define 'debug'
 assert(debug == nil)
