@@ -832,7 +832,7 @@ static void GCTM (lua_State *L) {
   lua_assert(!g->gcemergency);
   setgcovalue(L, &v, udata2finalize(g));
   tm = luaT_gettmbyobj(L, &v, TM_GC);
-  if (ttisfunction(tm)) {  /* is the finalizer a function? */
+  if (!notm(tm)) {  /* is there a finalizer? */
     int status;
     lu_byte oldah = L->allowhook;
     int running  = g->gcrunning;

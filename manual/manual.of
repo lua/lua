@@ -689,10 +689,8 @@ After the collection,
 Lua goes through that list.
 For each object in the list,
 it checks the object's @idx{__gc} metamethod:
-If it is a function,
-Lua calls it with the object as its single argument;
-if the metamethod is not a function,
-Lua simply ignores it.
+If it is present,
+Lua calls it with the object as its single argument.
 
 At the end of each garbage-collection cycle,
 the finalizers for objects are called in
@@ -725,6 +723,9 @@ If any finalizer marks objects for collection during that phase,
 these marks have no effect.
 
 Finalizers cannot yield.
+
+Any error while running a finalizer generates a warning;
+it is not propagated.
 
 }
 
@@ -7279,6 +7280,11 @@ that is,
 with maximum alignment of 1 (no alignment)
 and native endianness.
 
+Native endianness assumes that the whole system is
+either big or little endian.
+The packing functions will not emulate correctly the behavior
+of mixed-endian formats.
+
 Alignment works as follows:
 For each option,
 the format gets extra padding until the data starts
@@ -7287,6 +7293,7 @@ option size and the maximum alignment;
 this minimum must be a power of 2.
 Options @St{c} and @St{z} are not aligned;
 option @St{s} follows the alignment of its starting integer.
+
 
 All padding is filled with zeros by @Lid{string.pack}
 (and ignored by @Lid{string.unpack}).
@@ -8718,6 +8725,14 @@ its stack is unwound (to run any pending closing methods).
 A label for a @Rw{goto} cannot be declared where a label with the same
 name is visible, even if this other label is declared in an enclosing
 block.
+}
+
+@item{
+When finalizing an object,
+Lua does not ignore @idx{__gc} metamethods that are not functions.
+Any value will be called, if present.
+(Non-callable values will generate a warning,
+like any other error when calling a finalizer.)
 }
 
 }
