@@ -56,16 +56,23 @@ assert("abc\z
 assert("\u{0}\u{00000000}\x00\0" == string.char(0, 0, 0, 0))
 
 -- limits for 1-byte sequences
-assert("\u{0}\u{7F}" == "\x00\z\x7F")
+assert("\u{0}\u{7F}" == "\x00\x7F")
 
 -- limits for 2-byte sequences
-assert("\u{80}\u{7FF}" == "\xC2\x80\z\xDF\xBF")
+assert("\u{80}\u{7FF}" == "\xC2\x80\xDF\xBF")
 
 -- limits for 3-byte sequences
-assert("\u{800}\u{FFFF}" ==   "\xE0\xA0\x80\z\xEF\xBF\xBF")
+assert("\u{800}\u{FFFF}" ==   "\xE0\xA0\x80\xEF\xBF\xBF")
 
 -- limits for 4-byte sequences
-assert("\u{10000}\u{10FFFF}" == "\xF0\x90\x80\x80\z\xF4\x8F\xBF\xBF")
+assert("\u{10000}\u{1FFFFF}" == "\xF0\x90\x80\x80\xF7\xBF\xBF\xBF")
+
+-- limits for 5-byte sequences
+assert("\u{200000}\u{3FFFFFF}" == "\xF8\x88\x80\x80\x80\xFB\xBF\xBF\xBF\xBF")
+
+-- limits for 6-byte sequences
+assert("\u{4000000}\u{7FFFFFFF}" ==
+       "\xFC\x84\x80\x80\x80\x80\xFD\xBF\xBF\xBF\xBF\xBF")
 
 
 -- Error in escape sequences
@@ -94,7 +101,7 @@ lexerror([["xyz\300"]], [[\300"]])
 lexerror([["   \256"]], [[\256"]])
 
 -- errors in UTF-8 sequences
-lexerror([["abc\u{110000}"]], [[abc\u{110000]])   -- too large
+lexerror([["abc\u{100000000}"]], [[abc\u{100000000]])   -- too large
 lexerror([["abc\u11r"]], [[abc\u1]])    -- missing '{'
 lexerror([["abc\u"]], [[abc\u"]])    -- missing '{'
 lexerror([["abc\u{11r"]], [[abc\u{11r]])    -- missing '}'

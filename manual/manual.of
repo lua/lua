@@ -1004,6 +1004,8 @@ the escape sequence @T{\u{@rep{XXX}}}
 (note the mandatory enclosing brackets),
 where @rep{XXX} is a sequence of one or more hexadecimal digits
 representing the character code point.
+This code point can be any value smaller than @M{2@sp{31}}.
+(Lua uses the original UTF-8 specification here.)
 
 Literal strings can also be defined using a long format
 enclosed by @def{long brackets}.
@@ -6899,6 +6901,7 @@ x = string.gsub("$name-$version.tar.gz", "%$(%w+)", t)
 }
 
 @LibEntry{string.len (s)|
+
 Receives a string and returns its length.
 The empty string @T{""} has length 0.
 Embedded zeros are counted,
@@ -6907,6 +6910,7 @@ so @T{"a\000bc\000"} has length 5.
 }
 
 @LibEntry{string.lower (s)|
+
 Receives a string and returns a copy of this string with all
 uppercase letters changed to lowercase.
 All other characters are left unchanged.
@@ -6915,6 +6919,7 @@ The definition of what an uppercase letter is depends on the current locale.
 }
 
 @LibEntry{string.match (s, pattern [, init])|
+
 Looks for the first @emph{match} of
 @id{pattern} @see{pm} in the string @id{s}.
 If it finds one, then @id{match} returns
@@ -6946,6 +6951,7 @@ The format string cannot have the variable-length options
 }
 
 @LibEntry{string.rep (s, n [, sep])|
+
 Returns a string that is the concatenation of @id{n} copies of
 the string @id{s} separated by the string @id{sep}.
 The default value for @id{sep} is the empty string
@@ -6958,11 +6964,13 @@ with a single call to this function.)
 }
 
 @LibEntry{string.reverse (s)|
+
 Returns a string that is the string @id{s} reversed.
 
 }
 
 @LibEntry{string.sub (s, i [, j])|
+
 Returns the substring of @id{s} that
 starts at @id{i}  and continues until @id{j};
 @id{i} and @id{j} can be negative.
@@ -6998,6 +7006,7 @@ this function also returns the index of the first unread byte in @id{s}.
 }
 
 @LibEntry{string.upper (s)|
+
 Receives a string and returns a copy of this string with all
 lowercase letters changed to uppercase.
 All other characters are left unchanged.
@@ -7318,8 +7327,24 @@ or one plus the length of the subject string.
 As in the string library,
 negative indices count from the end of the string.
 
+Functions that create byte sequences
+accept all values up to @T{0x7FFFFFFF},
+as defined in the original UTF-8 specification;
+that implies byte sequences of up to six bytes.
+
+Functions that interpret byte sequences only accept
+valid sequences (well formed and not overlong).
+By default, they only accept byte sequences
+that result in valid Unicode code points,
+rejecting values larger than @T{10FFFF} and surrogates.
+A boolean argument @id{nonstrict}, when available,
+lifts these checks,
+so that all values up to @T{0x7FFFFFFF} are accepted.
+(Not well formed and overlong sequences are still rejected.)
+
 
 @LibEntry{utf8.char (@Cdots)|
+
 Receives zero or more integers,
 converts each one to its corresponding UTF-8 byte sequence
 and returns a string with the concatenation of all these sequences.
@@ -7327,14 +7352,15 @@ and returns a string with the concatenation of all these sequences.
 }
 
 @LibEntry{utf8.charpattern|
-The pattern (a string, not a function) @St{[\0-\x7F\xC2-\xF4][\x80-\xBF]*}
+
+The pattern (a string, not a function) @St{[\0-\x7F\xC2-\xFD][\x80-\xBF]*}
 @see{pm},
 which matches exactly one UTF-8 byte sequence,
 assuming that the subject is a valid UTF-8 string.
 
 }
 
-@LibEntry{utf8.codes (s)|
+@LibEntry{utf8.codes (s [, nonstrict])|
 
 Returns values so that the construction
 @verbatim{
@@ -7347,7 +7373,8 @@ It raises an error if it meets any invalid byte sequence.
 
 }
 
-@LibEntry{utf8.codepoint (s [, i [, j]])|
+@LibEntry{utf8.codepoint (s [, i [, j [, nonstrict]]])|
+
 Returns the codepoints (as integers) from all characters in @id{s}
 that start between byte position @id{i} and @id{j} (both included).
 The default for @id{i} is 1 and for @id{j} is @id{i}.
@@ -7355,7 +7382,8 @@ It raises an error if it meets any invalid byte sequence.
 
 }
 
-@LibEntry{utf8.len (s [, i [, j]])|
+@LibEntry{utf8.len (s [, i [, j [, nonstrict]]])|
+
 Returns the number of UTF-8 characters in string @id{s}
 that start between positions @id{i} and @id{j} (both inclusive).
 The default for @id{i} is @num{1} and for @id{j} is @num{-1}.
@@ -7365,6 +7393,7 @@ returns a false value plus the position of the first invalid byte.
 }
 
 @LibEntry{utf8.offset (s, n [, i])|
+
 Returns the position (in bytes) where the encoding of the
 @id{n}-th character of @id{s}
 (counting from position @id{i}) starts.
@@ -8753,6 +8782,12 @@ The function @Lid{io.lines} now returns three extra values,
 besides the iterator function.
 You can enclose the call in parentheses if you need to
 discard these extra results.
+}
+
+@item{
+By default, the decoding functions in the @Lid{utf8} library
+do not accept surrogates as valid code points.
+An extra parameter in these functions makes them more permissive.
 }
 
 }

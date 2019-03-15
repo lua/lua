@@ -335,7 +335,7 @@ static unsigned long readutf8esc (LexState *ls) {
   while ((save_and_next(ls), lisxdigit(ls->current))) {
     i++;
     r = (r << 4) + luaO_hexavalue(ls->current);
-    esccheck(ls, r <= 0x10FFFF, "UTF-8 value too large");
+    esccheck(ls, r <= 0x7FFFFFFFu, "UTF-8 value too large");
   }
   esccheck(ls, ls->current == '}', "missing '}'");
   next(ls);  /* skip '}' */
