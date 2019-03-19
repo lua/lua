@@ -280,10 +280,6 @@ OP_RETURN,/*	A B C	return R(A), ... ,R(A+B-2)	(see note)	*/
 OP_RETURN0,/*	  	return 						*/
 OP_RETURN1,/*	A 	return R(A)					*/
 
-OP_FORLOOP1,/*	A Bx	R(A)++;
-			if R(A) <= R(A+1) then { pc-=Bx; R(A+3)=R(A) }	*/
-OP_FORPREP1,/*	A Bx	R(A)--; pc+=Bx					*/
-
 OP_FORLOOP,/*	A Bx	R(A)+=R(A+2);
 			if R(A) <?= R(A+1) then { pc-=Bx; R(A+3)=R(A) }	*/
 OP_FORPREP,/*	A Bx	R(A)-=R(A+2); pc+=Bx				*/

@@ -1371,18 +1371,14 @@ static void repeatstat (LexState *ls, int line) {
 
 /*
 ** Read an expression and generate code to put its results in next
-** stack slot. Return true if expression is a constant integer and,
-** if 'i' is not-zero, its value is equal to 'i'.
+** stack slot.
 **
 */
-static int exp1 (LexState *ls, int i) {
+static void exp1 (LexState *ls) {
   expdesc e;
-  int res;
   expr(ls, &e);
-  res = luaK_isKint(&e) && (i == 0 || i == e.u.ival);
   luaK_exp2nextreg(ls->fs, &e);
   lua_assert(e.k == VNONRELOC);
-  return res;
 }
 
 
@@ -1403,31 +1399,29 @@ static void fixforjump (FuncState *fs, int pc, int dest, int back) {
 
 
 /*
-** Generate code for a 'for' loop. 'kind' can be zero (a common for
-** loop), one (a basic for loop, with integer values and increment of
-** 1), or two (a generic for loop).
+** Generate code for a 'for' loop.
 */
-static void forbody (LexState *ls, int base, int line, int nvars, int kind) {
+static void forbody (LexState *ls, int base, int line, int nvars, int isgen) {
   /* forbody -> DO block */
-  static OpCode forprep[3] = {OP_FORPREP, OP_FORPREP1, OP_TFORPREP};
-  static OpCode forloop[3] = {OP_FORLOOP, OP_FORLOOP1, OP_TFORLOOP};
+  static OpCode forprep[2] = {OP_FORPREP, OP_TFORPREP};
+  static OpCode forloop[2] = {OP_FORLOOP, OP_TFORLOOP};
   BlockCnt bl;
   FuncState *fs = ls->fs;
   int prep, endfor;
   checknext(ls, TK_DO);
-  prep = luaK_codeABx(fs, forprep[kind], base, 0);
+  prep = luaK_codeABx(fs, forprep[isgen], base, 0);
   enterblock(fs, &bl, 0);  /* scope for declared variables */
   adjustlocalvars(ls, nvars);
   luaK_reserveregs(fs, nvars);
   block(ls);
   leaveblock(fs);  /* end of scope for declared variables */
   fixforjump(fs, prep, luaK_getlabel(fs), 0);
-  if (kind == 2) {  /* generic for? */
+  if (isgen) {  /* generic for? */
     luaK_codeABC(fs, OP_TFORCALL, base, 0, nvars);
     luaK_fixline(fs, line);
     base += 2;  /* base for 'OP_TFORLOOP' (skips function and state) */
   }
-  endfor = luaK_codeABx(fs, forloop[kind], base, 0);
+  endfor = luaK_codeABx(fs, forloop[isgen], base, 0);
   fixforjump(fs, endfor, prep + 1, 1);
   luaK_fixline(fs, line);
 }
@@ -1437,26 +1431,22 @@ static void fornum (LexState *ls, TString *varname, int line) {
   /* fornum -> NAME = exp,exp[,exp] forbody */
   FuncState *fs = ls->fs;
   int base = fs->freereg;
-  int basicfor = 1;  /* true if it is a "basic" 'for' (integer + 1) */
   new_localvarliteral(ls, "(for index)");
   new_localvarliteral(ls, "(for limit)");
   new_localvarliteral(ls, "(for step)");
   new_localvar(ls, varname);
   checknext(ls, '=');
-  if (!exp1(ls, 0))  /* initial value not an integer? */
-    basicfor = 0;  /* not a basic 'for' */
+  exp1(ls);  /* initial value */
   checknext(ls, ',');
-  exp1(ls, 0);  /* limit */
-  if (testnext(ls, ',')) {
-    if (!exp1(ls, 1))  /* optional step not 1? */
-      basicfor = 0;  /* not a basic 'for' */
-  }
+  exp1(ls);  /* limit */
+  if (testnext(ls, ','))
+    exp1(ls);  /* optional step */
   else {  /* default step = 1 */
     luaK_int(fs, fs->freereg, 1);
     luaK_reserveregs(fs, 1);
   }
   adjustlocalvars(ls, 3);  /* control variables */
-  forbody(ls, base, line, 1, basicfor);
+  forbody(ls, base, line, 1, 0);
 }
 
 
@@ -1484,7 +1474,7 @@ static void forlist (LexState *ls, TString *indexname) {
   adjust_assign(ls, 4, explist(ls, &e), &e);
   adjustlocalvars(ls, 4);  /* control variables */
   luaK_checkstack(fs, 3);  /* extra space to call generator */
-  forbody(ls, base, line, nvars - 4, 2);
+  forbody(ls, base, line, nvars - 4, 1);
 }
 
 
@@ -1633,7 +1623,7 @@ static void tocloselocalstat (LexState *ls) {
       luaO_pushfstring(ls->L, "unknown attribute '%s'", getstr(attr)));
   new_localvar(ls, str_checkname(ls));
   checknext(ls, '=');
-  exp1(ls, 0);
+  exp1(ls);
   markupval(fs, fs->nactvar);
   fs->bl->insidetbc = 1;  /* in the scope of a to-be-closed variable */
   adjustlocalvars(ls, 1);

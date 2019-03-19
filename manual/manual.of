@@ -594,7 +594,7 @@ controls how long the collector waits before starting a new cycle.
 The collector starts a new cycle when the use of memory
 hits @M{n%} of the use after the previous collection.
 Larger values make the collector less aggressive.
-Values smaller than 100 mean the collector will not wait to
+Values less than 100 mean the collector will not wait to
 start a new cycle.
 A value of 200 means that the collector waits for the total memory in use
 to double before starting a new cycle.
@@ -608,7 +608,7 @@ how many elements it marks or sweeps for each
 kilobyte of memory allocated.
 Larger values make the collector more aggressive but also increase
 the size of each incremental step.
-You should not use values smaller than 100,
+You should not use values less than 100,
 because they make the collector too slow and
 can result in the collector never finishing a cycle.
 The default value is 100;  the maximum value is 1000.
@@ -1004,7 +1004,7 @@ the escape sequence @T{\u{@rep{XXX}}}
 (note the mandatory enclosing brackets),
 where @rep{XXX} is a sequence of one or more hexadecimal digits
 representing the character code point.
-This code point can be any value smaller than @M{2@sp{31}}.
+This code point can be any value less than @M{2@sp{31}}.
 (Lua uses the original UTF-8 specification here.)
 
 Literal strings can also be defined using a long format
@@ -1370,73 +1370,49 @@ because now @Rw{return} is the last statement in its (inner) block.
 The @Rw{for} statement has two forms:
 one numerical and one generic.
 
+@sect4{@title{The numerical @Rw{for} loop}
+
 The numerical @Rw{for} loop repeats a block of code while a
-control variable runs through an arithmetic progression.
+control variable goes through an arithmetic progression.
 It has the following syntax:
 @Produc{
 @producname{stat}@producbody{@Rw{for} @bnfNter{Name} @bnfter{=}
   exp @bnfter{,} exp @bnfopt{@bnfter{,} exp} @Rw{do} block @Rw{end}}
 }
-The @emph{block} is repeated for @emph{name} starting at the value of
-the first @emph{exp}, until it passes the second @emph{exp} by steps of the
-third @emph{exp}.
-More precisely, a @Rw{for} statement like
-@verbatim{
-for v = @rep{e1}, @rep{e2}, @rep{e3} do @rep{block} end
-}
-is equivalent to the code:
-@verbatim{
-do
-  local @rep{var}, @rep{limit}, @rep{step} = tonumber(@rep{e1}), tonumber(@rep{e2}), tonumber(@rep{e3})
-  if not (@rep{var} and @rep{limit} and @rep{step}) then error() end
-  @rep{var} = @rep{var} - @rep{step}
-  while true do
-    @rep{var} = @rep{var} + @rep{step}
-    if (@rep{step} >= 0 and @rep{var} > @rep{limit}) or (@rep{step} < 0 and @rep{var} < @rep{limit}) then
-      break
-    end
-    local v = @rep{var}
-    @rep{block}
-  end
-end
-}
+The given identifier (@bnfNter{Name}) defines the control variable,
+which is local to the loop body (@emph{block}).
 
-Note the following:
-@itemize{
+The loop starts by evaluating once the three control expressions;
+they must all result in numbers.
+Their values are called respectively
+the @emph{initial value}, the @emph{limit}, and the @emph{step}.
+If the step is absent, it defaults @N{to 1}.
+Then the loop body is repeated with the value of the control variable
+going through an arithmetic progression,
+starting at the initial value,
+with a common difference given by the step,
+until that value passes the limit.
+A negative step makes a decreasing sequence;
+a step equal to zero raises an error.
+If the initial value is already greater than the limit
+(or less than, if the step is negative), the body is not executed.
 
-@item{
-All three control expressions are evaluated only once,
-before the loop starts.
-They must all result in numbers.
-}
+If both the initial value and the step are integers,
+the loop is done with integers;
+in this case, the range of the control variable is limited
+by the range of integers.
+Otherwise, the loop is done with floats.
+(Beware of floating-point accuracy in this case.)
 
-@item{
-@T{@rep{var}}, @T{@rep{limit}}, and @T{@rep{step}} are invisible variables.
-The names shown here are for explanatory purposes only.
-}
-
-@item{
-If the third expression (the step) is absent,
-then a step @N{of 1} is used.
-}
-
-@item{
-You can use @Rw{break} and @Rw{goto} to exit a @Rw{for} loop.
-}
-
-@item{
-The loop variable @T{v} is local to the loop body.
+You should not change the value of the control variable
+during the loop.
 If you need its value after the loop,
 assign it to another variable before exiting the loop.
-}
-
-@item{
-The values in @rep{var}, @rep{limit}, and @rep{step}
-can be integers or floats.
-All operations on them respect the usual rules in Lua.
-}
 
 }
+
+@sect4{@title{The generic @Rw{for} loop}
+
 
 The generic @Rw{for} statement works over functions,
 called @def{iterators}.
@@ -1493,6 +1469,8 @@ The loop variables @T{@rep{var_i}} are local to the loop;
 you cannot use their values after the @Rw{for} ends.
 If you need these values,
 then assign them to other variables before breaking or exiting the loop.
+}
+
 }
 
 }
@@ -1819,7 +1797,7 @@ A comparison @T{a > b} is translated to @T{b < a}
 and @T{a >= b} is translated to @T{b <= a}.
 
 Following the @x{IEEE 754} standard,
-@x{NaN} is considered neither smaller than,
+@x{NaN} is considered neither less than,
 nor equal to, nor greater than any value (including itself).
 
 }
@@ -2171,7 +2149,7 @@ then the function returns with no results.
 @index{multiple return}
 There is a system-dependent limit on the number of values
 that a function may return.
-This limit is guaranteed to be larger than 1000.
+This limit is guaranteed to be greater than 1000.
 
 The @emphx{colon} syntax
 is used for defining @def{methods},
@@ -2367,7 +2345,7 @@ but it also can be any positive index after the stack top
 within the space allocated for the stack,
 that is, indices up to the stack size.
 (Note that 0 is never an acceptable index.)
-Indices to upvalues @see{c-closure} larger than the real number
+Indices to upvalues @see{c-closure} greater than the real number
 of upvalues in the current @N{C function} are also acceptable (but invalid).
 Except when noted otherwise,
 functions in the API work with acceptable indices.
@@ -2879,7 +2857,7 @@ Ensures that the stack has space for at least @id{n} extra slots
 (that is, that you can safely push up to @id{n} values into it).
 It returns false if it cannot fulfill the request,
 either because it would cause the stack
-to be larger than a fixed maximum size
+to be greater than a fixed maximum size
 (typically at least several thousand elements) or
 because it cannot allocate memory for the extra space.
 This function never shrinks the stack;
@@ -4053,7 +4031,7 @@ for the @Q{newindex} event @see{metatable}.
 
 Accepts any index, @N{or 0},
 and sets the stack top to this index.
-If the new top is larger than the old one,
+If the new top is greater than the old one,
 then the new elements are filled with @nil.
 If @id{index} @N{is 0}, then all stack elements are removed.
 
@@ -5056,7 +5034,7 @@ size @id{sz} with a call @T{luaL_buffinitsize(L, &b, sz)}.}
 @item{
 Finish by calling @T{luaL_pushresultsize(&b, sz)},
 where @id{sz} is the total size of the resulting string
-copied into that space (which may be smaller than or
+copied into that space (which may be less than or
 equal to the preallocated size).
 }
 
@@ -7336,7 +7314,7 @@ Functions that interpret byte sequences only accept
 valid sequences (well formed and not overlong).
 By default, they only accept byte sequences
 that result in valid Unicode code points,
-rejecting values larger than @T{10FFFF} and surrogates.
+rejecting values greater than @T{10FFFF} and surrogates.
 A boolean argument @id{nonstrict}, when available,
 lifts these checks,
 so that all values up to @T{0x7FFFFFFF} are accepted.
@@ -7572,7 +7550,7 @@ returns the arc tangent of @id{y}.
 
 @LibEntry{math.ceil (x)|
 
-Returns the smallest integral value larger than or equal to @id{x}.
+Returns the smallest integral value greater than or equal to @id{x}.
 
 }
 
@@ -7597,7 +7575,7 @@ Returns the value @M{e@sp{x}}
 
 @LibEntry{math.floor (x)|
 
-Returns the largest integral value smaller than or equal to @id{x}.
+Returns the largest integral value less than or equal to @id{x}.
 
 }
 
@@ -7611,7 +7589,7 @@ that rounds the quotient towards zero. (integer/float)
 @LibEntry{math.huge|
 
 The float value @idx{HUGE_VAL},
-a value larger than any other numeric value.
+a value greater than any other numeric value.
 
 }
 
@@ -8352,7 +8330,7 @@ of the given thread:
 @N{level 1} is the function that called @id{getinfo}
 (except for tail calls, which do not count on the stack);
 and so on.
-If @id{f} is a number larger than the number of active functions,
+If @id{f} is a number greater than the number of active functions,
 then @id{getinfo} returns @nil.
 
 The returned table can contain all the fields returned by @Lid{lua_getinfo},
@@ -8743,6 +8721,12 @@ not a float.
 The use of the @idx{__lt} metamethod to emulate @id{__le}
 has been removed.
 When needed, this metamethod must be explicitly defined.
+}
+
+@item{
+The semantics of the numerical @Rw{for} loop
+over integers changed in some details.
+In particular, the control variable never wraps around.
 }
 
 @item{

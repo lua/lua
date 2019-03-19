@@ -303,9 +303,9 @@ check(function (x) return x & 2.0 end, 'LOADF', 'BAND', 'RETURN1')
 
 -- basic 'for' loops
 check(function () for i = -10, 10.5 do end end,
-'LOADI', 'LOADK', 'LOADI', 'FORPREP1', 'FORLOOP1', 'RETURN0')
+'LOADI', 'LOADK', 'LOADI', 'FORPREP', 'FORLOOP', 'RETURN0')
 check(function () for i = 0xfffffff, 10.0, 1 do end end,
-'LOADK', 'LOADF', 'LOADI', 'FORPREP1', 'FORLOOP1', 'RETURN0')
+'LOADK', 'LOADF', 'LOADI', 'FORPREP', 'FORLOOP', 'RETURN0')
 
 -- bug in constant folding for 5.1
 check(function () return -nil end, 'LOADNIL', 'UNM', 'RETURN1')
