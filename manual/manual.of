@@ -7315,7 +7315,7 @@ valid sequences (well formed and not overlong).
 By default, they only accept byte sequences
 that result in valid Unicode code points,
 rejecting values greater than @T{10FFFF} and surrogates.
-A boolean argument @id{nonstrict}, when available,
+A boolean argument @id{lax}, when available,
 lifts these checks,
 so that all values up to @T{0x7FFFFFFF} are accepted.
 (Not well formed and overlong sequences are still rejected.)
@@ -7338,7 +7338,7 @@ assuming that the subject is a valid UTF-8 string.
 
 }
 
-@LibEntry{utf8.codes (s [, nonstrict])|
+@LibEntry{utf8.codes (s [, lax])|
 
 Returns values so that the construction
 @verbatim{
@@ -7351,7 +7351,7 @@ It raises an error if it meets any invalid byte sequence.
 
 }
 
-@LibEntry{utf8.codepoint (s [, i [, j [, nonstrict]]])|
+@LibEntry{utf8.codepoint (s [, i [, j [, lax]]])|
 
 Returns the codepoints (as integers) from all characters in @id{s}
 that start between byte position @id{i} and @id{j} (both included).
@@ -7360,7 +7360,7 @@ It raises an error if it meets any invalid byte sequence.
 
 }
 
-@LibEntry{utf8.len (s [, i [, j [, nonstrict]]])|
+@LibEntry{utf8.len (s [, i [, j [, lax]]])|
 
 Returns the number of UTF-8 characters in string @id{s}
 that start between positions @id{i} and @id{j} (both inclusive).

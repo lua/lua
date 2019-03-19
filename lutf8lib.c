@@ -85,7 +85,7 @@ static const char *utf8_decode (const char *s, utfint *val, int strict) {
 
 
 /*
-** utf8len(s [, i [, j [, nonstrict]]]) --> number of characters that
+** utf8len(s [, i [, j [, lax]]]) --> number of characters that
 ** start in the range [i,j], or nil + current position if 's' is not
 ** well formed in that interval
 */
@@ -95,13 +95,13 @@ static int utflen (lua_State *L) {
   const char *s = luaL_checklstring(L, 1, &len);
   lua_Integer posi = u_posrelat(luaL_optinteger(L, 2, 1), len);
   lua_Integer posj = u_posrelat(luaL_optinteger(L, 3, -1), len);
-  int nonstrict = lua_toboolean(L, 4);
+  int lax = lua_toboolean(L, 4);
   luaL_argcheck(L, 1 <= posi && --posi <= (lua_Integer)len, 2,
                    "initial position out of string");
   luaL_argcheck(L, --posj < (lua_Integer)len, 3,
                    "final position out of string");
   while (posi <= posj) {
-    const char *s1 = utf8_decode(s + posi, NULL, !nonstrict);
+    const char *s1 = utf8_decode(s + posi, NULL, !lax);
     if (s1 == NULL) {  /* conversion error? */
       lua_pushnil(L);  /* return nil ... */
       lua_pushinteger(L, posi + 1);  /* ... and current position */
@@ -116,7 +116,7 @@ static int utflen (lua_State *L) {
 
 
 /*
-** codepoint(s, [i, [j [, nonstrict]]]) -> returns codepoints for all
+** codepoint(s, [i, [j [, lax]]]) -> returns codepoints for all
 ** characters that start in the range [i,j]
 */
 static int codepoint (lua_State *L) {
@@ -124,7 +124,7 @@ static int codepoint (lua_State *L) {
   const char *s = luaL_checklstring(L, 1, &len);
   lua_Integer posi = u_posrelat(luaL_optinteger(L, 2, 1), len);
   lua_Integer pose = u_posrelat(luaL_optinteger(L, 3, posi), len);
-  int nonstrict = lua_toboolean(L, 4);
+  int lax = lua_toboolean(L, 4);
   int n;
   const char *se;
   luaL_argcheck(L, posi >= 1, 2, "out of range");
@@ -138,7 +138,7 @@ static int codepoint (lua_State *L) {
   se = s + pose;  /* string end */
   for (s += posi - 1; s < se;) {
     utfint code;
-    s = utf8_decode(s, &code, !nonstrict);
+    s = utf8_decode(s, &code, !lax);
     if (s == NULL)
       return luaL_error(L, "invalid UTF-8 code");
     lua_pushinteger(L, code);
@@ -249,15 +249,15 @@ static int iter_auxstrict (lua_State *L) {
   return iter_aux(L, 1);
 }
 
-static int iter_auxnostrict (lua_State *L) {
+static int iter_auxlax (lua_State *L) {
   return iter_aux(L, 0);
 }
 
 
 static int iter_codes (lua_State *L) {
-  int nonstrict = lua_toboolean(L, 2);
+  int lax = lua_toboolean(L, 2);
   luaL_checkstring(L, 1);
-  lua_pushcfunction(L, nonstrict ? iter_auxnostrict : iter_auxstrict);
+  lua_pushcfunction(L, lax ? iter_auxlax : iter_auxstrict);
   lua_pushvalue(L, 1);
   lua_pushinteger(L, 0);
   return 3;
