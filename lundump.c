@@ -10,6 +10,7 @@
 #include "lprefix.h"
 
 
+#include <limits.h>
 #include <string.h>
 
 #include "lua.h"
@@ -37,7 +38,7 @@ typedef struct {
 
 
 static l_noret error (LoadState *S, const char *why) {
-  luaO_pushfstring(S->L, "%s: %s precompiled chunk", S->name, why);
+  luaO_pushfstring(S->L, "%s: bad binary format (%s)", S->name, why);
   luaD_throw(S->L, LUA_ERRSYNTAX);
 }
 
@@ -50,7 +51,7 @@ static l_noret error (LoadState *S, const char *why) {
 
 static void LoadBlock (LoadState *S, void *b, size_t size) {
   if (luaZ_read(S->Z, b, size) != 0)
-    error(S, "truncated");
+    error(S, "truncated chunk");
 }
 
 
@@ -60,24 +61,32 @@ static void LoadBlock (LoadState *S, void *b, size_t size) {
 static lu_byte LoadByte (LoadState *S) {
   int b = zgetc(S->Z);
   if (b == EOZ)
-    error(S, "truncated");
+    error(S, "truncated chunk");
   return cast_byte(b);
 }
 
 
-static size_t LoadSize (LoadState *S) {
+static size_t LoadUnsigned (LoadState *S, size_t limit) {
   size_t x = 0;
   int b;
+  limit >>= 7;
   do {
     b = LoadByte(S);
+    if (x >= limit)
+      error(S, "integer overflow");
     x = (x << 7) | (b & 0x7f);
   } while ((b & 0x80) == 0);
   return x;
 }
 
 
+static size_t LoadSize (LoadState *S) {
+  return LoadUnsigned(S, ~(size_t)0);
+}
+
+
 static int LoadInt (LoadState *S) {
-  return cast_int(LoadSize(S));
+  return cast_int(LoadUnsigned(S, INT_MAX));
 }
 
 
@@ -255,28 +264,27 @@ static void checkliteral (LoadState *S, const char *s, const char *msg) {
 
 static void fchecksize (LoadState *S, size_t size, const char *tname) {
   if (LoadByte(S) != size)
-    error(S, luaO_pushfstring(S->L, "%s size mismatch in", tname));
+    error(S, luaO_pushfstring(S->L, "%s size mismatch", tname));
 }
 
 
 #define checksize(S,t)	fchecksize(S,sizeof(t),#t)
 
 static void checkHeader (LoadState *S) {
-  checkliteral(S, LUA_SIGNATURE + 1, "not a");  /* 1st char already checked */
-  if (LoadByte(S) != LUAC_VERSION)
-    error(S, "version mismatch in");
+  /* 1st char already checked */
+  checkliteral(S, LUA_SIGNATURE + 1, "not a binary chunk");
+  if (LoadInt(S) != LUAC_VERSION)
+    error(S, "version mismatch");
   if (LoadByte(S) != LUAC_FORMAT)
-    error(S, "format mismatch in");
-  checkliteral(S, LUAC_DATA, "corrupted");
-  checksize(S, int);
-  checksize(S, size_t);
+    error(S, "format mismatch");
+  checkliteral(S, LUAC_DATA, "corrupted chunk");
   checksize(S, Instruction);
   checksize(S, lua_Integer);
   checksize(S, lua_Number);
   if (LoadInteger(S) != LUAC_INT)
-    error(S, "endianness mismatch in");
+    error(S, "integer format mismatch");
   if (LoadNumber(S) != LUAC_NUM)
-    error(S, "float format mismatch in");
+    error(S, "float format mismatch");
 }
 
 
