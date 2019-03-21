@@ -544,6 +544,12 @@ do
   a = 0; for i=1.0, 0.99999, -1 do a=a+1 end; assert(a==1)
 end
 
+do   -- changing the control variable
+  local a
+  a = 0; for i = 1, 10 do a = a + 1; i = "x" end; assert(a == 10)
+  a = 0; for i = 10.0, 1, -1 do a = a + 1; i = "x" end; assert(a == 10)
+end
+
 -- conversion
 a = 0; for i="10","1","-2" do a=a+1 end; assert(a==5)
 

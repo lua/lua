@@ -150,35 +150,36 @@ int luaV_tointeger (const TValue *obj, lua_Integer *p, int mode) {
 ** Try to convert a 'for' limit to an integer, preserving the semantics
 ** of the loop.  (The following explanation assumes a positive step;
 ** it is valid for negative steps mutatis mutandis.)
+** Return true if the loop must not run.
 ** If the limit is an integer or can be converted to an integer,
-** rounding down, that is it.
+** rounding down, that is the limit.
 ** Otherwise, check whether the limit can be converted to a float. If
 ** the float is too large, clip it to LUA_MAXINTEGER.  If the float
 ** is too negative, the loop should not run, because any initial
-** integer value is greater than such limit; so, it sets 'stopnow'.
+** integer value is greater than such limit; so, it returns true to
+** signal that.
 ** (For this latter case, no integer limit would be correct; even a
 ** limit of LUA_MININTEGER would run the loop once for an initial
 ** value equal to LUA_MININTEGER.)
 */
-static int forlimit (const TValue *lim, lua_Integer *p, lua_Integer step,
-                     int *stopnow) {
-  *stopnow = 0;  /* usually, let loops run */
+static int forlimit (lua_State *L, lua_Integer init, const TValue *lim,
+                                   lua_Integer *p, lua_Integer step) {
   if (!luaV_tointeger(lim, p, (step < 0 ? 2 : 1))) {
     /* not coercible to in integer */
     lua_Number flim;  /* try to convert to float */
     if (!tonumber(lim, &flim)) /* cannot convert to float? */
-      return 0;  /* not a number */
-    /* 'flim' is a float out of integer bounds */
+      luaG_forerror(L, lim, "limit");
+    /* else 'flim' is a float out of integer bounds */
     if (luai_numlt(0, flim)) {  /* if it is positive, it is too large */
+      if (step < 0) return 1;  /* initial value must be less than it */
       *p = LUA_MAXINTEGER;  /* truncate */
-      if (step < 0) *stopnow = 1;  /* initial value must be less than it */
     }
     else {  /* it is less than min integer */
+      if (step > 0) return 1;  /* initial value must be greater than it */
       *p = LUA_MININTEGER;  /* truncate */
-      if (step > 0) *stopnow = 1;  /* initial value must be greater than it */
     }
   }
-  return 1;
+  return (step > 0 ? init > *p : init < *p);  /* not to run? */
 }
 
 
@@ -1637,24 +1638,26 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_FORLOOP) {
         if (ttisinteger(s2v(ra + 2))) {  /* integer loop? */
-          lua_Unsigned count = l_castS2U(ivalue(s2v(ra)));
+          lua_Unsigned count = l_castS2U(ivalue(s2v(ra + 1)));
           if (count > 0) {  /* still more iterations? */
             lua_Integer step = ivalue(s2v(ra + 2));
-            lua_Integer idx = ivalue(s2v(ra + 3));
+            lua_Integer idx = ivalue(s2v(ra));  /* internal index */
+            chgivalue(s2v(ra + 1), count - 1);  /* update counter */
             idx = intop(+, idx, step);  /* add step to index */
-            chgivalue(s2v(ra), count - 1);  /* update counter... */
-            setivalue(s2v(ra + 3), idx);  /* ...and index */
+            chgivalue(s2v(ra), idx);  /* update internal index */
+            setivalue(s2v(ra + 3), idx);  /* and control variable */
             pc -= GETARG_Bx(i);  /* jump back */
           }
         }
         else {  /* floating loop */
           lua_Number step = fltvalue(s2v(ra + 2));
           lua_Number limit = fltvalue(s2v(ra + 1));
-          lua_Number idx = fltvalue(s2v(ra + 3));
-          idx = luai_numadd(L, idx, step);  /* inc. index */
+          lua_Number idx = fltvalue(s2v(ra));
+          idx = luai_numadd(L, idx, step);  /* increment index */
           if (luai_numlt(0, step) ? luai_numle(idx, limit)
                                   : luai_numle(limit, idx)) {
-            setfltvalue(s2v(ra + 3), idx);  /* update index */
+            chgfltvalue(s2v(ra), idx);  /* update internal index */
+            setfltvalue(s2v(ra + 3), idx);  /* and control variable */
             pc -= GETARG_Bx(i);  /* jump back */
           }
         }
@@ -1665,56 +1668,52 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         TValue *pinit = s2v(ra);
         TValue *plimit = s2v(ra + 1);
         TValue *pstep = s2v(ra + 2);
-        lua_Integer ilimit;
-        int stopnow;
         savestate(L, ci);  /* in case of errors */
-        if (ttisinteger(pinit) && ttisinteger(pstep) &&
-            forlimit(plimit, &ilimit, ivalue(pstep), &stopnow)) {
-          /* integer loop */
+        if (ttisinteger(pinit) && ttisinteger(pstep)) { /* integer loop? */
           lua_Integer init = ivalue(pinit);
           lua_Integer step = ivalue(pstep);
-          setivalue(s2v(ra + 3), init);  /* control variable */
+          lua_Integer limit;
           if (step == 0)
             luaG_runerror(L, "'for' step is zero");
-          else if (stopnow)
+          setivalue(s2v(ra + 3), init);  /* control variable */
+          if (forlimit(L, init, plimit, &limit, step))
             pc += GETARG_Bx(i) + 1;  /* skip the loop */
-          else if (step > 0) {  /* ascending loop? */
-            if (init > ilimit)
-              pc += GETARG_Bx(i) + 1;  /* skip the loop */
-            else {
-              lua_Unsigned count = l_castS2U(ilimit) - l_castS2U(init);
+          else {  /* prepare loop counter */
+            lua_Unsigned count;
+            if (step > 0) {  /* ascending loop? */
+              count = l_castS2U(limit) - l_castS2U(init);
               if (step != 1)  /* avoid division in the too common case */
                 count /= l_castS2U(step);
-              setivalue(s2v(ra), count);
             }
-          }
-          else {  /* descending loop */
-            if (init < ilimit)
-              pc += GETARG_Bx(i) + 1;  /* skip the loop */
-            else {
-              lua_Unsigned count = l_castS2U(init) - l_castS2U(ilimit);
+            else {  /* step < 0; descending loop */
+              count = l_castS2U(init) - l_castS2U(limit);
               count /= -l_castS2U(step);
-              setivalue(s2v(ra), count);
             }
+            /* store the counter in place of the limit (which won't be
+               needed anymore */
+            setivalue(plimit, l_castU2S(count));
           }
         }
         else {  /* try making all values floats */
-          lua_Number init; lua_Number flimit; lua_Number step;
-          if (unlikely(!tonumber(plimit, &flimit)))
+          lua_Number init; lua_Number limit; lua_Number step;
+          if (unlikely(!tonumber(plimit, &limit)))
             luaG_forerror(L, plimit, "limit");
-          setfltvalue(plimit, flimit);
           if (unlikely(!tonumber(pstep, &step)))
             luaG_forerror(L, pstep, "step");
-          setfltvalue(pstep, step);
           if (unlikely(!tonumber(pinit, &init)))
             luaG_forerror(L, pinit, "initial value");
           if (step == 0)
             luaG_runerror(L, "'for' step is zero");
-          if (luai_numlt(0, step) ? luai_numlt(flimit, init)
-                                   : luai_numlt(init, flimit))
+          if (luai_numlt(0, step) ? luai_numlt(limit, init)
+                                   : luai_numlt(init, limit))
             pc += GETARG_Bx(i) + 1;  /* skip the loop */
-          else
+          else {
+            /* make sure internal values are all float */
+            setfltvalue(plimit, limit);
+            setfltvalue(pstep, step);
+            setfltvalue(s2v(ra), init);  /* internal index */
             setfltvalue(s2v(ra + 3), init);  /* control variable */
+          }
         }
         vmbreak;
       }
