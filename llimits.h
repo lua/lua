@@ -325,6 +325,8 @@ typedef l_uint32 Instruction;
 #define luai_numeq(a,b)         ((a)==(b))
 #define luai_numlt(a,b)         ((a)<(b))
 #define luai_numle(a,b)         ((a)<=(b))
+#define luai_numgt(a,b)         ((a)>(b))
+#define luai_numge(a,b)         ((a)>=(b))
 #define luai_numisnan(a)        (!luai_numeq((a), (a)))
 #endif
 

@@ -162,7 +162,7 @@ test([[for i,v in pairs{'a','b'} do
 end
 ]], {1,2,1,2,1,3})
 
-test([[for i=1,4 do a=1 end]], {1,1,1,1}, true)
+test([[for i=1,4 do a=1 end]], {1,1,1,1})
 
 
 do   -- testing line info/trace with large gaps in source

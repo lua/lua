@@ -205,9 +205,13 @@ int luaT_callorderTM (lua_State *L, const TValue *p1, const TValue *p2,
 
 
 int luaT_callorderiTM (lua_State *L, const TValue *p1, int v2,
-                       int inv, TMS event) {
+                       int inv, int isfloat, TMS event) {
   TValue aux; const TValue *p2;
-  setivalue(&aux, v2);
+  if (isfloat) {
+    setfltvalue(&aux, cast_num(v2));
+  }
+  else
+    setivalue(&aux, v2);
   if (inv) {  /* arguments were exchanged? */
     p2 = p1; p1 = &aux;  /* correct them */
   }

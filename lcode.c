@@ -179,8 +179,8 @@ void luaK_ret (FuncState *fs, int first, int nret) {
 ** Code a "conditional jump", that is, a test or comparison opcode
 ** followed by a jump. Return jump position.
 */
-static int condjump (FuncState *fs, OpCode op, int A, int B, int k) {
-  luaK_codeABCk(fs, op, A, B, 0, k);
+static int condjump (FuncState *fs, OpCode op, int A, int B, int C, int k) {
+  luaK_codeABCk(fs, op, A, B, C, k);
   return luaK_jump(fs);
 }
 
@@ -799,7 +799,7 @@ static int need_value (FuncState *fs, int list) {
 
 /*
 ** Ensures final expression result (which includes results from its
-** jump ** lists) is in register 'reg'.
+** jump lists) is in register 'reg'.
 ** If expression has jumps, need to patch these jumps either to
 ** its final position or to "load" instructions (for those tests
 ** that do not produce values).
@@ -814,8 +814,9 @@ static void exp2reg (FuncState *fs, expdesc *e, int reg) {
     int p_t = NO_JUMP;  /* position of an eventual LOAD true */
     if (need_value(fs, e->t) || need_value(fs, e->f)) {
       int fj = (e->k == VJMP) ? NO_JUMP : luaK_jump(fs);
-      p_f = code_loadbool(fs, reg, 0, 1);
-      p_t = code_loadbool(fs, reg, 1, 0);
+      p_f = code_loadbool(fs, reg, 0, 1);  /* load false and skip next i. */
+      p_t = code_loadbool(fs, reg, 1, 0);  /* load true */
+      /* jump around these booleans if 'e' is not a test */
       luaK_patchtohere(fs, fj);
     }
     final = luaK_getlabel(fs);
@@ -1005,13 +1006,13 @@ static int jumponcond (FuncState *fs, expdesc *e, int cond) {
     Instruction ie = getinstruction(fs, e);
     if (GET_OPCODE(ie) == OP_NOT) {
       removelastinstruction(fs);  /* remove previous OP_NOT */
-      return condjump(fs, OP_TEST, GETARG_B(ie), 0, !cond);
+      return condjump(fs, OP_TEST, GETARG_B(ie), 0, 0, !cond);
     }
     /* else go through */
   }
   discharge2anyreg(fs, e);
   freeexp(fs, e);
-  return condjump(fs, OP_TESTSET, NO_REG, e->u.info, cond);
+  return condjump(fs, OP_TESTSET, NO_REG, e->u.info, 0, cond);
 }
 
 
@@ -1139,13 +1140,15 @@ static int isSCint (expdesc *e) {
 
 /*
 ** Check whether expression 'e' is a literal integer or float in
-** proper range to fit in register sC
+** proper range to fit in a register (sB or sC).
 */
-static int isSCnumber (expdesc *e, lua_Integer *i) {
+static int isSCnumber (expdesc *e, lua_Integer *i, int *isfloat) {
   if (e->k == VKINT)
     *i = e->u.ival;
   else if (!(e->k == VKFLT && floatI(e->u.nval, i)))
     return 0;  /* not a number */
+  else
+    *isfloat = 1;
   if (!hasjumps(e) && fitsC(*i)) {
     *i += OFFSET_sC;
     return 1;
@@ -1372,21 +1375,20 @@ static void codeshift (FuncState *fs, OpCode op,
 
 
 /*
-** Emit code for order comparisons.
-** When the first operand A is an integral value in the proper range,
-** change (A < B) to (B > A) and (A <= B) to (B >= A) so that
-** it can use an immediate operand.
+** Emit code for order comparisons. When using an immediate operand,
+** 'isfloat' tells whether the original value was a float.
 */
 static void codeorder (FuncState *fs, OpCode op, expdesc *e1, expdesc *e2) {
   int r1, r2;
   lua_Integer im;
-  if (isSCnumber(e2, &im)) {
+  int isfloat = 0;
+  if (isSCnumber(e2, &im, &isfloat)) {
     /* use immediate operand */
     r1 = luaK_exp2anyreg(fs, e1);
     r2 = cast_int(im);
     op = cast(OpCode, (op - OP_LT) + OP_LTI);
   }
-  else if (isSCnumber(e1, &im)) {
+  else if (isSCnumber(e1, &im, &isfloat)) {
     /* transform (A < B) to (B > A) and (A <= B) to (B >= A) */
     r1 = luaK_exp2anyreg(fs, e2);
     r2 = cast_int(im);
@@ -1397,7 +1399,7 @@ static void codeorder (FuncState *fs, OpCode op, expdesc *e1, expdesc *e2) {
     r2 = luaK_exp2anyreg(fs, e2);
   }
   freeexps(fs, e1, e2);
-  e1->u.info = condjump(fs, op, r1, r2, 1);
+  e1->u.info = condjump(fs, op, r1, r2, isfloat, 1);
   e1->k = VJMP;
 }
 
@@ -1409,13 +1411,14 @@ static void codeorder (FuncState *fs, OpCode op, expdesc *e1, expdesc *e2) {
 static void codeeq (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
   int r1, r2;
   lua_Integer im;
+  int isfloat = 0;  /* not needed here, but kept for symmetry */
   OpCode op;
   if (e1->k != VNONRELOC) {
     lua_assert(e1->k == VK || e1->k == VKINT || e1->k == VKFLT);
     swapexps(e1, e2);
   }
   r1 = luaK_exp2anyreg(fs, e1);  /* 1nd expression must be in register */
-  if (isSCnumber(e2, &im)) {
+  if (isSCnumber(e2, &im, &isfloat)) {
     op = OP_EQI;
     r2 = cast_int(im);  /* immediate operand */
   }
@@ -1428,7 +1431,7 @@ static void codeeq (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
     r2 = luaK_exp2anyreg(fs, e2);
   }
   freeexps(fs, e1, e2);
-  e1->u.info = condjump(fs, op, r1, r2, (opr == OPR_EQ));
+  e1->u.info = condjump(fs, op, r1, r2, isfloat, (opr == OPR_EQ));
   e1->k = VJMP;
 }
 
@@ -1489,7 +1492,8 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
     case OPR_LT: case OPR_LE:
     case OPR_GT: case OPR_GE: {
       lua_Integer dummy;
-      if (!isSCnumber(v, &dummy))
+      int dummy2;
+      if (!isSCnumber(v, &dummy, &dummy2))
         luaK_exp2anyreg(fs, v);
       /* else keep numeral, which may be an immediate operand */
       break;

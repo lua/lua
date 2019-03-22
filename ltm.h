@@ -82,7 +82,7 @@ LUAI_FUNC void luaT_trybiniTM (lua_State *L, const TValue *p1, lua_Integer i2,
 LUAI_FUNC int luaT_callorderTM (lua_State *L, const TValue *p1,
                                 const TValue *p2, TMS event);
 LUAI_FUNC int luaT_callorderiTM (lua_State *L, const TValue *p1, int v2,
-                                 int inv, TMS event);
+                                 int inv, int isfloat, TMS event);
 
 LUAI_FUNC void luaT_adjustvarargs (lua_State *L, int nfixparams,
                                    struct CallInfo *ci, const Proto *p);

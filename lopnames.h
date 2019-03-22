@@ -92,7 +92,7 @@ static const char *const opnames[] = {
   "SETLIST",
   "CLOSURE",
   "VARARG",
-  "PREPVARARG",
+  "VARARGPREP",
   "EXTRAARG",
   NULL
 };

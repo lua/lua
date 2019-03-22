@@ -107,7 +107,7 @@ static void *disptab[NUM_OPCODES] = {
 &&L_OP_SETLIST,
 &&L_OP_CLOSURE,
 &&L_OP_VARARG,
-&&L_OP_PREPVARARG,
+&&L_OP_VARARGPREP,
 &&L_OP_EXTRAARG
 
 };

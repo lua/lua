@@ -294,7 +294,7 @@ OP_CLOSURE,/*	A Bx	R(A) := closure(KPROTO[Bx])			*/
 
 OP_VARARG,/*	A C  	R(A), R(A+1), ..., R(A+C-2) = vararg		*/
 
-OP_PREPVARARG,/*A 	(adjust vararg parameters)			*/
+OP_VARARGPREP,/*A 	(adjust vararg parameters)			*/
 
 OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
 } OpCode;
@@ -330,6 +330,9 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
   vararg, which must be corrected before returning. When 'k' is true,
   C > 0 means the function is vararg and (C - 1) is its number of
   fixed parameters.
+
+  (*) In comparisons with an immediate operand, C signals whether the
+  original operand was a float.
 
 ===========================================================================*/
 

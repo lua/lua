@@ -772,10 +772,9 @@ void luaV_finishOp (lua_State *L) {
 
 /*
 ** {==================================================================
-** Macros for arithmetic/bitwise opcodes in 'luaV_execute'
+** Macros for arithmetic/bitwise/comparison opcodes in 'luaV_execute'
 ** ===================================================================
 */
-
 
 #define l_addi(L,a,b)	intop(+, a, b)
 #define l_subi(L,a,b)	intop(-, a, b)
@@ -783,6 +782,11 @@ void luaV_finishOp (lua_State *L) {
 #define l_band(L,a,b)	intop(&, a, b)
 #define l_bor(L,a,b)	intop(|, a, b)
 #define l_bxor(L,a,b)	intop(^, a, b)
+
+#define l_lti(a,b)	(a < b)
+#define l_lei(a,b)	(a <= b)
+#define l_gti(a,b)	(a > b)
+#define l_gei(a,b)	(a >= b)
 
 
 /*
@@ -916,6 +920,36 @@ void luaV_finishOp (lua_State *L) {
   else  \
     Protect(luaT_trybinTM(L, v1, v2, ra, tm)); }
 
+
+/*
+** Order operations with register operands.
+*/
+#define op_order(L,opi,opf,other) {  \
+        TValue *rb = vRB(i);  \
+        if (ttisinteger(s2v(ra)) && ttisinteger(rb))  \
+          cond = opi(ivalue(s2v(ra)), ivalue(rb));  \
+        else if (ttisnumber(s2v(ra)) && ttisnumber(rb))  \
+          cond = opf(s2v(ra), rb);  \
+        else  \
+          Protect(cond = other(L, s2v(ra), rb));  \
+        docondjump(); }
+
+
+/*
+** Order operations with immediate operand.
+*/
+#define op_orderI(L,opi,opf,inv,tm) {  \
+        int im = GETARG_sB(i);  \
+        if (ttisinteger(s2v(ra)))  \
+          cond = opi(ivalue(s2v(ra)), im);  \
+        else if (ttisfloat(s2v(ra)))  \
+          cond = opf(fltvalue(s2v(ra)), cast_num(im));  \
+        else {  \
+          int isf = GETARG_C(i);  \
+          Protect(cond = luaT_callorderiTM(L, s2v(ra), im, inv, isf, tm));  \
+        }  \
+        docondjump(); }
+
 /* }================================================================== */
 
 
@@ -1034,7 +1068,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
   pc = ci->u.l.savedpc;
   if (trap) {
     if (cl->p->is_vararg)
-      trap = 0;  /* hooks will start after PREPVARARG instruction */
+      trap = 0;  /* hooks will start after VARARGPREP instruction */
     else if (pc == cl->p->code)  /* first instruction (not resuming)? */
       luaD_hookcall(L, ci);
     ci->u.l.trap = 1;  /* there may be other hooks */
@@ -1447,25 +1481,11 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_LT) {
-        TValue *rb = vRB(i);
-        if (ttisinteger(s2v(ra)) && ttisinteger(rb))
-          cond = (ivalue(s2v(ra)) < ivalue(rb));
-        else if (ttisnumber(s2v(ra)) && ttisnumber(rb))
-          cond = LTnum(s2v(ra), rb);
-        else
-          Protect(cond = lessthanothers(L, s2v(ra), rb));
-        docondjump();
+        op_order(L, l_lti, LTnum, lessthanothers);
         vmbreak;
       }
       vmcase(OP_LE) {
-        TValue *rb = vRB(i);
-        if (ttisinteger(s2v(ra)) && ttisinteger(rb))
-          cond = (ivalue(s2v(ra)) <= ivalue(rb));
-        else if (ttisnumber(s2v(ra)) && ttisnumber(rb))
-          cond = LEnum(s2v(ra), rb);
-        else
-          Protect(cond = lessequalothers(L, s2v(ra), rb));
-        docondjump();
+        op_order(L, l_lei, LEnum, lessequalothers);
         vmbreak;
       }
       vmcase(OP_EQK) {
@@ -1487,47 +1507,19 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_LTI) {
-        int im = GETARG_sB(i);
-        if (ttisinteger(s2v(ra)))
-          cond = (ivalue(s2v(ra)) < im);
-        else if (ttisfloat(s2v(ra)))
-          cond = luai_numlt(fltvalue(s2v(ra)), cast_num(im));
-        else
-          Protect(cond = luaT_callorderiTM(L, s2v(ra), im, 0, TM_LT));
-        docondjump();
+        op_orderI(L, l_lti, luai_numlt, 0, TM_LT);
         vmbreak;
       }
       vmcase(OP_LEI) {
-        int im = GETARG_sB(i);
-        if (ttisinteger(s2v(ra)))
-          cond = (ivalue(s2v(ra)) <= im);
-        else if (ttisfloat(s2v(ra)))
-          cond = luai_numle(fltvalue(s2v(ra)), cast_num(im));
-        else
-          Protect(cond = luaT_callorderiTM(L, s2v(ra), im, 0, TM_LE));
-        docondjump();
+        op_orderI(L, l_lei, luai_numle, 0, TM_LE);
         vmbreak;
       }
       vmcase(OP_GTI) {
-        int im = GETARG_sB(i);
-        if (ttisinteger(s2v(ra)))
-          cond = (im < ivalue(s2v(ra)));
-        else if (ttisfloat(s2v(ra)))
-          cond = luai_numlt(cast_num(im), fltvalue(s2v(ra)));
-        else
-          Protect(cond = luaT_callorderiTM(L, s2v(ra), im, 1, TM_LT));
-        docondjump();
+        op_orderI(L, l_gti, luai_numgt, 1, TM_LT);
         vmbreak;
       }
       vmcase(OP_GEI) {
-        int im = GETARG_sB(i);
-        if (ttisinteger(s2v(ra)))
-          cond = (im <= ivalue(s2v(ra)));
-        else if (ttisfloat(s2v(ra)))
-          cond = luai_numle(cast_num(im), fltvalue(s2v(ra)));
-        else
-          Protect(cond = luaT_callorderiTM(L, s2v(ra), im, 1, TM_LE));
-        docondjump();
+        op_orderI(L, l_gei, luai_numge, 1, TM_LE);
         vmbreak;
       }
       vmcase(OP_TEST) {
@@ -1787,7 +1779,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         Protect(luaT_getvarargs(L, ci, ra, n));
         vmbreak;
       }
-      vmcase(OP_PREPVARARG) {
+      vmcase(OP_VARARGPREP) {
         luaT_adjustvarargs(L, GETARG_A(i), ci, cl->p);
         updatetrap(ci);
         if (trap) {

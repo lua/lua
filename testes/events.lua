@@ -138,64 +138,55 @@ t.__bxor = f("bxor")
 t.__shl = f("shl")
 t.__shr = f("shr")
 t.__bnot = f("bnot")
+t.__lt = f("lt")
+t.__le = f("le")
+
+
+local function checkcap (t)
+  assert(#cap + 1 == #t)
+  for i = 1, #t do
+    assert(cap[i - 1] == t[i])
+    assert(math.type(cap[i - 1]) == math.type(t[i]))
+  end
+end
 
 -- Some tests are done inside small anonymous functions to ensure
 -- that constants go to constant table even in debug compilation,
 -- when the constant table is very small.
-assert(b+5 == b)
-assert(cap[0] == "add" and cap[1] == b and cap[2] == 5 and cap[3]==undef)
-assert(5.2 + b == 5.2)
-assert(cap[0] == "add" and cap[1] == 5.2 and cap[2] == b and cap[3]==undef)
-assert(b+'5' == b)
-assert(cap[0] == "add" and cap[1] == b and cap[2] == '5' and cap[3]==undef)
-assert(5+b == 5)
-assert(cap[0] == "add" and cap[1] == 5 and cap[2] == b and cap[3]==undef)
-assert('5'+b == '5')
-assert(cap[0] == "add" and cap[1] == '5' and cap[2] == b and cap[3]==undef)
-b=b-3; assert(getmetatable(b) == t)
-assert(cap[0] == "sub" and cap[1] == b and cap[2] == 3 and cap[3]==undef)
-assert(5-a == 5)
-assert(cap[0] == "sub" and cap[1] == 5 and cap[2] == a and cap[3]==undef)
-assert('5'-a == '5')
-assert(cap[0] == "sub" and cap[1] == '5' and cap[2] == a and cap[3]==undef)
-assert(a*a == a)
-assert(cap[0] == "mul" and cap[1] == a and cap[2] == a and cap[3]==undef)
-assert(a/0 == a)
-assert(cap[0] == "div" and cap[1] == a and cap[2] == 0 and cap[3]==undef)
-assert(a%2 == a)
-assert(cap[0] == "mod" and cap[1] == a and cap[2] == 2 and cap[3]==undef)
-assert(a // (1/0) == a)
-assert(cap[0] == "idiv" and cap[1] == a and cap[2] == 1/0 and cap[3]==undef)
-;(function () assert(a & "hi" == a) end)()
-assert(cap[0] == "band" and cap[1] == a and cap[2] == "hi" and cap[3]==undef)
-;(function () assert(10 & a  == 10) end)()
-assert(cap[0] == "band" and cap[1] == 10 and cap[2] == a and cap[3]==undef)
-;(function () assert(a | 10  == a) end)()
-assert(cap[0] == "bor" and cap[1] == a and cap[2] == 10 and cap[3]==undef)
-assert(a | "hi" == a)
-assert(cap[0] == "bor" and cap[1] == a and cap[2] == "hi" and cap[3]==undef)
-assert("hi" ~ a == "hi")
-assert(cap[0] == "bxor" and cap[1] == "hi" and cap[2] == a and cap[3]==undef)
-;(function () assert(10 ~ a == 10) end)()
-assert(cap[0] == "bxor" and cap[1] == 10 and cap[2] == a and cap[3]==undef)
-assert(-a == a)
-assert(cap[0] == "unm" and cap[1] == a)
-assert(a^4 == a)
-assert(cap[0] == "pow" and cap[1] == a and cap[2] == 4 and cap[3]==undef)
-assert(a^'4' == a)
-assert(cap[0] == "pow" and cap[1] == a and cap[2] == '4' and cap[3]==undef)
-assert(4^a == 4)
-assert(cap[0] == "pow" and cap[1] == 4 and cap[2] == a and cap[3]==undef)
-assert('4'^a == '4')
-assert(cap[0] == "pow" and cap[1] == '4' and cap[2] == a and cap[3]==undef)
-assert(#a == a)
-assert(cap[0] == "len" and cap[1] == a)
-assert(~a == a)
-assert(cap[0] == "bnot" and cap[1] == a)
-assert(a << 3 == a)
-assert(cap[0] == "shl" and cap[1] == a and cap[2] == 3)
-assert(1.5 >> a == 1.5)
-assert(cap[0] == "shr" and cap[1] == 1.5 and cap[2] == a)
+assert(b+5 == b); checkcap{"add", b, 5}
+assert(5.2 + b == 5.2); checkcap{"add", 5.2, b}
+assert(b+'5' == b); checkcap{"add", b, '5'}
+assert(5+b == 5); checkcap{"add", 5, b}
+assert('5'+b == '5'); checkcap{"add", '5', b}
+b=b-3; assert(getmetatable(b) == t); checkcap{"sub", b, 3}
+assert(5-a == 5); checkcap{"sub", 5, a}
+assert('5'-a == '5'); checkcap{"sub", '5', a}
+assert(a*a == a); checkcap{"mul", a, a}
+assert(a/0 == a); checkcap{"div", a, 0}
+assert(a/0.0 == a); checkcap{"div", a, 0.0}
+assert(a%2 == a); checkcap{"mod", a, 2}
+assert(a // (1/0) == a); checkcap{"idiv", a, 1/0}
+;(function () assert(a & "hi" == a) end)(); checkcap{"band", a, "hi"}
+;(function () assert(10 & a  == 10) end)(); checkcap{"band", 10, a}
+;(function () assert(a | 10  == a) end)(); checkcap{"bor", a, 10}
+assert(a | "hi" == a); checkcap{"bor", a, "hi"}
+assert("hi" ~ a == "hi"); checkcap{"bxor", "hi", a}
+;(function () assert(10 ~ a == 10) end)(); checkcap{"bxor", 10, a}
+assert(-a == a); checkcap{"unm", a, a}
+assert(a^4.0 == a); checkcap{"pow", a, 4.0}
+assert(a^'4' == a); checkcap{"pow", a, '4'}
+assert(4^a == 4); checkcap{"pow", 4, a}
+assert('4'^a == '4'); checkcap{"pow", '4', a}
+assert(#a == a); checkcap{"len", a, a}
+assert(~a == a); checkcap{"bnot", a, a}
+assert(a << 3 == a); checkcap{"shl", a, 3}
+assert(1.5 >> a == 1.5); checkcap{"shr", 1.5, a}
+
+-- for comparsion operators, all results are true
+assert(5.0 > a); checkcap{"lt", a, 5.0}
+assert(a >= 10); checkcap{"le", 10, a}
+assert(a <= -10.0); checkcap{"le", a, -10.0}
+assert(a < -10); checkcap{"lt", a, -10}
 
 
 -- test for rawlen
