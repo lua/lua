@@ -925,6 +925,7 @@ void luaV_finishOp (lua_State *L) {
 ** Order operations with register operands.
 */
 #define op_order(L,opi,opf,other) {  \
+        int cond;  \
         TValue *rb = vRB(i);  \
         if (ttisinteger(s2v(ra)) && ttisinteger(rb))  \
           cond = opi(ivalue(s2v(ra)), ivalue(rb));  \
@@ -939,6 +940,7 @@ void luaV_finishOp (lua_State *L) {
 ** Order operations with immediate operand.
 */
 #define op_orderI(L,opi,opf,inv,tm) {  \
+        int cond;  \
         int im = GETARG_sB(i);  \
         if (ttisinteger(s2v(ra)))  \
           cond = opi(ivalue(s2v(ra)), im);  \
@@ -1076,7 +1078,6 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
   base = ci->func + 1;
   /* main loop of interpreter */
   for (;;) {
-    int cond;  /* flag for conditional jumps */
     Instruction i;  /* instruction being executed */
     StkId ra;  /* instruction's A register */
     vmfetch();
@@ -1475,6 +1476,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_EQ) {
+        int cond;
         TValue *rb = vRB(i);
         Protect(cond = luaV_equalobj(L, s2v(ra), rb));
         docondjump();
@@ -1491,11 +1493,12 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       vmcase(OP_EQK) {
         TValue *rb = KB(i);
         /* basic types do not use '__eq'; we can use raw equality */
-        cond = luaV_equalobj(NULL, s2v(ra), rb);
+        int cond = luaV_equalobj(NULL, s2v(ra), rb);
         docondjump();
         vmbreak;
       }
       vmcase(OP_EQI) {
+        int cond;
         int im = GETARG_sB(i);
         if (ttisinteger(s2v(ra)))
           cond = (ivalue(s2v(ra)) == im);
@@ -1523,7 +1526,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_TEST) {
-        cond = !l_isfalse(s2v(ra));
+        int cond = !l_isfalse(s2v(ra));
         docondjump();
         vmbreak;
       }
@@ -1679,7 +1682,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
             }
             else {  /* step < 0; descending loop */
               count = l_castS2U(init) - l_castS2U(limit);
-              count /= -l_castS2U(step);
+              /* 'step+1' avoids negating 'mininteger' */
+              count /= l_castS2U(-(step + 1)) + 1u;
             }
             /* store the counter in place of the limit (which won't be
                needed anymore */
