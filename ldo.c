@@ -521,7 +521,7 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
 */
 void luaD_callnoyield (lua_State *L, StkId func, int nResults) {
   incXCcalls(L);
-  if (getCcalls(L) >= LUAI_MAXCCALLS)  /* possible stack overflow? */
+  if (getCcalls(L) >= LUAI_MAXCSTACK)  /* possible stack overflow? */
     luaE_freeCI(L);
   luaD_call(L, func, nResults);
   decXCcalls(L);
@@ -673,7 +673,7 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
     L->nCcalls = 1;
   else  /* correct 'nCcalls' for this thread */
     L->nCcalls = getCcalls(from) - from->nci + L->nci + CSTACKCF;
-  if (L->nCcalls >= LUAI_MAXCCALLS)
+  if (L->nCcalls >= LUAI_MAXCSTACK)
     return resume_error(L, "C stack overflow", nargs);
   luai_userstateresume(L, nargs);
   api_checknelems(L, (L->status == LUA_OK) ? nargs + 1 : nargs);

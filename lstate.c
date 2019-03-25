@@ -100,13 +100,13 @@ void luaE_setdebt (global_State *g, l_mem debt) {
 ** Increment count of "C calls" and check for overflows. In case of
 ** a stack overflow, check appropriate error ("regular" overflow or
 ** overflow while handling stack overflow).
-** If 'nCcalls' is larger than LUAI_MAXCCALLS but smaller than
-** LUAI_MAXCCALLS + CSTACKCF (plus 2 to avoid by-one errors), it means
+** If 'nCcalls' is larger than LUAI_MAXCSTACK but smaller than
+** LUAI_MAXCSTACK + CSTACKCF (plus 2 to avoid by-one errors), it means
 ** it has just entered the "overflow zone", so the function raises an
 ** overflow error.
-** If 'nCcalls' is larger than LUAI_MAXCCALLS + CSTACKCF + 2
+** If 'nCcalls' is larger than LUAI_MAXCSTACK + CSTACKCF + 2
 ** (which means it is already handling an overflow) but smaller than
-** 9/8 of LUAI_MAXCCALLS, does not report an error (to allow message
+** 9/8 of LUAI_MAXCSTACK, does not report an error (to allow message
 ** handling to work).
 ** Otherwise, report a stack overflow while handling a stack overflow
 ** (probably caused by a repeating error in the message handling
@@ -115,16 +115,16 @@ void luaE_setdebt (global_State *g, l_mem debt) {
 void luaE_enterCcall (lua_State *L) {
   int ncalls = getCcalls(L);
   L->nCcalls++;
-  if (ncalls >= LUAI_MAXCCALLS) {  /* possible overflow? */
+  if (ncalls >= LUAI_MAXCSTACK) {  /* possible overflow? */
     luaE_freeCI(L);  /* release unused CIs */
     ncalls = getCcalls(L);  /* update call count */
-    if (ncalls >= LUAI_MAXCCALLS) {  /* still overflow? */
-      if (ncalls <= LUAI_MAXCCALLS + CSTACKCF + 2) {
+    if (ncalls >= LUAI_MAXCSTACK) {  /* still overflow? */
+      if (ncalls <= LUAI_MAXCSTACK + CSTACKCF + 2) {
         /* no error before increments; raise the error now */
         L->nCcalls += (CSTACKCF + 4);  /* avoid raising it again */
         luaG_runerror(L, "C stack overflow");
       }
-      else if (ncalls >= (LUAI_MAXCCALLS + (LUAI_MAXCCALLS >> 3)))
+      else if (ncalls >= (LUAI_MAXCSTACK + (LUAI_MAXCSTACK >> 3)))
         luaD_throw(L, LUA_ERRERR);  /* error while handling stack error */
     }
   }

@@ -28,6 +28,21 @@
 */
 
 /*
+@@ LUAI_MAXCSTACK defines the maximum depth for nested calls and
+** also limits the maximum depth of other recursive algorithms in
+** the implementation, such as syntactic analysis. A value too
+** large may allow the interpreter to crash (C-stack overflow).
+** The default value seems ok for regular machines, but may be
+** too high for restricted hardware.
+** The test file 'cstack.lua' may help finding a good limit.
+** (It will crash with a limit too high.)
+*/
+#if !defined(LUAI_MAXCSTACK)
+#define LUAI_MAXCSTACK		2200
+#endif
+
+
+/*
 @@ LUA_32BITS enables Lua with 32-bit integers and 32-bit floats. You
 ** can also define LUA_32BITS in the make file, but changing here you
 ** ensure that all software connected to Lua will be compiled with the

@@ -168,15 +168,6 @@ typedef LUAI_UACINT l_uacInt;
 #endif
 
 
-/*
-** maximum depth for nested C calls and syntactical nested non-terminals
-** in a program. (Value must fit in an unsigned short int. It must also
-** be compatible with the size of the C stack.)
-*/
-#if !defined(LUAI_MAXCCALLS)
-#define LUAI_MAXCCALLS		2200
-#endif
-
 
 
 /*
