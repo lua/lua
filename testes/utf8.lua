@@ -123,6 +123,9 @@ checkerror("continuation byte", utf8.offset, "𦧺", 1, 2)
 checkerror("continuation byte", utf8.offset, "𦧺", 1, 2)
 checkerror("continuation byte", utf8.offset, "\x80", 1)
 
+-- error in indices for len
+checkerror("out of string", utf8.len, "abc", 0, 2)
+checkerror("out of string", utf8.len, "abc", 1, 4)
 
 
 local s = "hello World"

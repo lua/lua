@@ -48,8 +48,8 @@
 
 /*
 ** MAXASIZE is the maximum size of the array part. It is the minimum
-** between 2^MAXABITS and the maximum size such that, measured in bytes,
-** it fits in a 'size_t'.
+** between 2^MAXABITS and the maximum size that, measured in bytes,
+** fits in a 'size_t'.
 */
 #define MAXASIZE	luaM_limitN(1u << MAXABITS, TValue)
 
@@ -269,7 +269,7 @@ static const TValue *getgeneric (Table *t, const TValue *key) {
 ** the array part of a table, 0 otherwise.
 */
 static unsigned int arrayindex (lua_Integer k) {
-  if (0 < k && l_castS2U(k) <= MAXASIZE)
+  if (l_castS2U(k) - 1u < MAXASIZE)  /* 'k' in [1, MAXASIZE]? */
     return cast_uint(k);  /* 'key' is an appropriate array index */
   else
     return 0;
@@ -286,7 +286,7 @@ static unsigned int findindex (lua_State *L, Table *t, TValue *key,
   unsigned int i;
   if (ttisnil(key)) return 0;  /* first iteration */
   i = ttisinteger(key) ? arrayindex(ivalue(key)) : 0;
-  if (i != 0 && i <= asize)  /* is 'key' inside array part? */
+  if (i - 1u < asize)  /* is 'key' inside array part? */
     return i;  /* yes; that's the index */
   else {
     const TValue *n = getgeneric(t, key);
@@ -678,7 +678,7 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
 ** changing the real size of the array).
 */
 const TValue *luaH_getint (Table *t, lua_Integer key) {
-  if (l_castS2U(key) - 1u < t->alimit)  /* (1 <= key && key <= t->alimit)? */
+  if (l_castS2U(key) - 1u < t->alimit)  /* 'key' in [1, t->alimit]? */
     return &t->array[key - 1];
   else if (!limitequalsasize(t) &&  /* key still may be in the array part? */
            (l_castS2U(key) == t->alimit + 1 ||

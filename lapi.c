@@ -936,8 +936,8 @@ LUA_API int lua_setiuservalue (lua_State *L, int idx, int n) {
   api_checknelems(L, 1);
   o = index2value(L, idx);
   api_check(L, ttisfulluserdata(o), "full userdata expected");
-  if (!(0 < n && n <= uvalue(o)->nuvalue))
-    res = 0;
+  if (!(cast_uint(n) - 1u < cast_uint(uvalue(o)->nuvalue)))
+    res = 0;  /* 'n' not in [1, uvalue(o)->nuvalue] */
   else {
     setobj(L, &uvalue(o)->uv[n - 1].uv, s2v(L->top - 1));
     luaC_barrierback(L, gcvalue(o), s2v(L->top - 1));
@@ -1313,7 +1313,8 @@ static const char *aux_upvalue (TValue *fi, int n, TValue **val,
   switch (ttypetag(fi)) {
     case LUA_TCCL: {  /* C closure */
       CClosure *f = clCvalue(fi);
-      if (!(1 <= n && n <= f->nupvalues)) return NULL;
+      if (!(cast_uint(n) - 1u < cast_uint(f->nupvalues)))
+        return NULL;  /* 'n' not in [1, f->nupvalues] */
       *val = &f->upvalue[n-1];
       if (owner) *owner = obj2gco(f);
       return "";
@@ -1322,7 +1323,8 @@ static const char *aux_upvalue (TValue *fi, int n, TValue **val,
       LClosure *f = clLvalue(fi);
       TString *name;
       Proto *p = f->p;
-      if (!(1 <= n && n <= p->sizeupvalues)) return NULL;
+      if (!(cast_uint(n) - 1u  < cast_uint(p->sizeupvalues)))
+        return NULL;  /* 'n' not in [1, p->sizeupvalues] */
       *val = f->upvals[n-1]->v;
       if (owner) *owner = obj2gco(f->upvals[n - 1]);
       name = p->upvalues[n-1].name;
