@@ -357,7 +357,7 @@ co = coroutine.create(co_func)
 coroutine.resume(co)
 coroutine.resume(co)     --> seg. fault
 ]],
-report = [[by Alex Bilyk, 09/05/2003]], 
+report = [[by Alex Bilyk, 09/05/2003]],
 patch = [[
 * ldo.c:
 325,326c325
@@ -399,7 +399,7 @@ what = [[file:close cannot be called without a file. (results in seg fault)]],
 example = [[
 > io.stdin.close()    -- correct call shold be io.stdin:close()
 ]],
-report = [[by Tuomo Valkonen, 27/05/2003]], 
+report = [[by Tuomo Valkonen, 27/05/2003]],
 patch = [[
 * liolib.c:
 161c161
@@ -1641,7 +1641,7 @@ what = [[debug.sethook/gethook may overflow the thread's stack]],
 report = [[Ivko Stanilov, on 2008/01/04]],
 since = [[5.1]],
 example = [[
-a = coroutine.create(function() yield() end) 
+a = coroutine.create(function() yield() end)
 coroutine.resume(a)
 debug.sethook(a)      -- may overflow the stack of 'a'
 ]],
@@ -2707,7 +2707,7 @@ local firsttime = true
 local function foo ()
   if firsttime then
     firsttime = false
-    return "a = 1" 
+    return "a = 1"
   else
     for i = 1, 10 do
       print(debug.getlocal(2, i))
@@ -2896,28 +2896,6 @@ patch = [[
 -  return load_aux(L, status);
 +  return load_aux(L, status, env);
  }
-]]
-}
-
-Bug{
-what = [[Lua does not check memory use when creating error messages]],
-report = [[John Dunn, 2012/09/24]],
-since = [[5.2.0]],
-fix = nil,
-example = [[
-local code = "function test()\n  bob.joe.larry = 23\n end"
-
-load(code)()
-
--- memory will grow steadly 
-for i = 1, math.huge do
-  pcall(test)
-  if i % 100000 == 0 then
-    io.write(collectgarbage'count'*1024, "\n")
-  end
-end
-]],
-patch = [[
 ]]
 }
 
@@ -3859,11 +3837,11 @@ report = [[Viacheslav Usov, 2017/07/06]],
 since = [[5.3.2]],
 fix = nil,
 example = [[
-function test()  
+function test()
   bob.joe.larry = 23
 end
 
--- memory will grow steadly 
+-- memory will grow steadly
 for i = 1, math.huge do
   pcall(test)
   if i % 100000 == 0 then
@@ -3892,7 +3870,7 @@ report = [[云风 Cloud Wu, 2017/08/15]],
 since = [[5.2]],
 fix = nil,
 example = [[
--- The following chunk, under a memory checker like valgrind, 
+-- The following chunk, under a memory checker like valgrind,
 -- produces a memory access violation.
 
 local a = setmetatable({}, {__mode = 'kv'})
@@ -4020,7 +3998,6 @@ patch = [[
 -----------------------------------------------------------------
 -- Lua 5.3.5
 
---[=[
 Bug{
 what = [[Long brackets with a huge number of '=' overflow some
 internal buffer arithmetic]],
@@ -4111,9 +4088,34 @@ patch = [[
        }
 ]]
 }
-]=]
 
 
+Bug{
+what = [[joining an upvalue with itself can cause a use-after-free crash]],
+report = [[Fady Othman, 2019/01/10]],
+since = [[5.3]],
+fix = nil,
+example = [[
+-- the next code may crash the machine
+f=load(function() end)
+interesting={}
+interesting[0]=string.rep("A",512)
+debug.upvaluejoin(f,1,f,1)
+]],
+patch = [[
+--- a/lapi.c
++++ b/lapi.c
+@@ -1289,6 +1289,8 @@ LUA_API void lua_upvaluejoin (lua_State *L, int fidx1, int n1,
+   LClosure *f1;
+   UpVal **up1 = getupvalref(L, fidx1, n1, &f1);
+   UpVal **up2 = getupvalref(L, fidx2, n2, NULL);
++  if (*up1 == *up2)
++    return;
+   luaC_upvdeccount(L, *up1);
+   *up1 = *up2;
+   (*up1)->refcount++;
+]]
+}
 
 
 --[=[
