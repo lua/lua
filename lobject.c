@@ -473,45 +473,42 @@ const char *luaO_pushfstring (lua_State *L, const char *fmt, ...) {
 }
 
 
-/* number of chars of a literal string without the ending \0 */
-#define LL(x)	(sizeof(x)/sizeof(char) - 1)
-
 #define RETS	"..."
 #define PRE	"[string \""
 #define POS	"\"]"
 
 #define addstr(a,b,l)	( memcpy(a,b,(l) * sizeof(char)), a += (l) )
 
-void luaO_chunkid (char *out, const char *source, size_t bufflen) {
-  size_t l = strlen(source);
+void luaO_chunkid (char *out, const char *source, size_t srclen) {
+  size_t bufflen = LUA_IDSIZE;  /* free space in buffer */
   if (*source == '=') {  /* 'literal' source */
-    if (l <= bufflen)  /* small enough? */
-      memcpy(out, source + 1, l * sizeof(char));
+    if (srclen <= bufflen)  /* small enough? */
+      memcpy(out, source + 1, srclen * sizeof(char));
     else {  /* truncate it */
       addstr(out, source + 1, bufflen - 1);
       *out = '\0';
     }
   }
   else if (*source == '@') {  /* file name */
-    if (l <= bufflen)  /* small enough? */
-      memcpy(out, source + 1, l * sizeof(char));
+    if (srclen <= bufflen)  /* small enough? */
+      memcpy(out, source + 1, srclen * sizeof(char));
     else {  /* add '...' before rest of name */
       addstr(out, RETS, LL(RETS));
       bufflen -= LL(RETS);
-      memcpy(out, source + 1 + l - bufflen, bufflen * sizeof(char));
+      memcpy(out, source + 1 + srclen - bufflen, bufflen * sizeof(char));
     }
   }
   else {  /* string; format as [string "source"] */
     const char *nl = strchr(source, '\n');  /* find first new line (if any) */
     addstr(out, PRE, LL(PRE));  /* add prefix */
     bufflen -= LL(PRE RETS POS) + 1;  /* save space for prefix+suffix+'\0' */
-    if (l < bufflen && nl == NULL) {  /* small one-line source? */
-      addstr(out, source, l);  /* keep it */
+    if (srclen < bufflen && nl == NULL) {  /* small one-line source? */
+      addstr(out, source, srclen);  /* keep it */
     }
     else {
-      if (nl != NULL) l = nl - source;  /* stop at first newline */
-      if (l > bufflen) l = bufflen;
-      addstr(out, source, l);
+      if (nl != NULL) srclen = nl - source;  /* stop at first newline */
+      if (srclen > bufflen) srclen = bufflen;
+      addstr(out, source, srclen);
       addstr(out, RETS, LL(RETS));
     }
     memcpy(out, POS, (LL(POS) + 1) * sizeof(char));

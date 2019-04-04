@@ -65,6 +65,10 @@ typedef signed char ls_byte;
 #define ispow2(x)	(((x) & ((x) - 1)) == 0)
 
 
+/* number of chars of a literal string without the ending \0 */
+#define LL(x)   (sizeof(x)/sizeof(char) - 1)
+
+
 /*
 ** conversion of pointer to unsigned integer:
 ** this is for hashing only; there is no problem if the integer

@@ -167,7 +167,8 @@ static int db_getinfo (lua_State *L) {
     return luaL_argerror(L, arg+2, "invalid option");
   lua_newtable(L);  /* table to collect results */
   if (strchr(options, 'S')) {
-    settabss(L, "source", ar.source);
+    lua_pushlstring(L, ar.source, ar.srclen);
+    lua_setfield(L, -2, "source");
     settabss(L, "short_src", ar.short_src);
     settabsi(L, "linedefined", ar.linedefined);
     settabsi(L, "lastlinedefined", ar.lastlinedefined);

@@ -262,18 +262,26 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
 static void funcinfo (lua_Debug *ar, Closure *cl) {
   if (noLuaClosure(cl)) {
     ar->source = "=[C]";
+    ar->srclen = LL("=[C]");
     ar->linedefined = -1;
     ar->lastlinedefined = -1;
     ar->what = "C";
   }
   else {
     const Proto *p = cl->l.p;
-    ar->source = p->source ? getstr(p->source) : "=?";
+    if (p->source) {
+      ar->source = getstr(p->source);
+      ar->srclen = tsslen(p->source);
+    }
+    else {
+      ar->source = "=?";
+      ar->srclen = LL("=?");
+    }
     ar->linedefined = p->linedefined;
     ar->lastlinedefined = p->lastlinedefined;
     ar->what = (ar->linedefined == 0) ? "main" : "Lua";
   }
-  luaO_chunkid(ar->short_src, ar->source, LUA_IDSIZE);
+  luaO_chunkid(ar->short_src, ar->source, ar->srclen);
 }
 
 
@@ -750,7 +758,7 @@ const char *luaG_addinfo (lua_State *L, const char *msg, TString *src,
                                         int line) {
   char buff[LUA_IDSIZE];
   if (src)
-    luaO_chunkid(buff, getstr(src), LUA_IDSIZE);
+    luaO_chunkid(buff, getstr(src), tsslen(src));
   else {  /* no source available; use "?" instead */
     buff[0] = '?'; buff[1] = '\0';
   }
