@@ -1556,20 +1556,22 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           L->top = ra + b;
         else  /* previous instruction set top */
           b = cast_int(L->top - ra);
+        savepc(ci);  /* some calls here can raise errors */
         if (TESTARG_k(i)) {
           int nparams1 = GETARG_C(i);
           if (nparams1)  /* vararg function? */
             delta = ci->u.l.nextraargs + nparams1;
-          /* close upvalues from current call */
-          luaF_close(L, base, LUA_OK);
-          updatestack(ci);
+          /* close upvalues from current call; the compiler ensures
+             that there are no to-be-closed variables here */
+          luaF_close(L, base, NOCLOSINGMETH);
         }
         if (!ttisfunction(s2v(ra))) {  /* not a function? */
           luaD_tryfuncTM(L, ra);  /* try '__call' metamethod */
           b++;  /* there is now one extra argument */
         }
         if (!ttisLclosure(s2v(ra))) {  /* C function? */
-          ProtectNT(luaD_call(L, ra, LUA_MULTRET));  /* call it */
+          luaD_call(L, ra, LUA_MULTRET);  /* call it */
+          updatetrap(ci);
           updatestack(ci);  /* stack may have been relocated */
           ci->func -= delta;
           luaD_poscall(L, ci, cast_int(L->top - ra));

@@ -66,7 +66,7 @@ local function check (s, t, nonstrict)
    assert(utf8.len(s, pi, pi1 - 1, nonstrict) == 1)
    assert(utf8.len(s, pi, -1, nonstrict) == l - i + 1)
    assert(utf8.len(s, pi1, -1, nonstrict) == l - i)
-   assert(utf8.len(s, 1, pi, -1, nonstrict) == i)
+   assert(utf8.len(s, 1, pi, nonstrict) == i)
   end
 
   local i = 0

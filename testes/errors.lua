@@ -99,6 +99,10 @@ assert(not string.find(doit"a={13}; local bbbb=1; a[bbbb](3)", "'bbbb'"))
 checkmessage("a={13}; local bbbb=1; a[bbbb](3)", "number")
 checkmessage("a=(1)..{}", "a table value")
 
+-- tail calls
+checkmessage("local a={}; return a.bbbb(3)", "field 'bbbb'")
+checkmessage("a={}; do local a=1 end; return a:bbbb(3)", "method 'bbbb'")
+
 checkmessage("a = #print", "length of a function value")
 checkmessage("a = #3", "length of a number value")
 
