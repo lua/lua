@@ -777,7 +777,7 @@ local t = os.time()
 D = os.date("*t", t)
 load(os.date([[assert(D.year==%Y and D.month==%m and D.day==%d and
   D.hour==%H and D.min==%M and D.sec==%S and
-  D.wday==%w+1 and D.yday==%j and type(D.isdst) == 'boolean')]], t))()
+  D.wday==%w+1 and D.yday==%j)]], t))()
 
 checkerr("invalid conversion specifier", os.date, "%")
 checkerr("invalid conversion specifier", os.date, "%9")
@@ -827,12 +827,16 @@ end
 D = os.date("!*t", t)
 load(os.date([[!assert(D.year==%Y and D.month==%m and D.day==%d and
   D.hour==%H and D.min==%M and D.sec==%S and
-  D.wday==%w+1 and D.yday==%j and type(D.isdst) == 'boolean')]], t))()
+  D.wday==%w+1 and D.yday==%j)]], t))()
 
 do
   local D = os.date("*t")
   local t = os.time(D)
-  assert(type(D.isdst) == 'boolean')
+  if not D.isdst then
+    print("no daylight saving information")
+  else
+    assert(type(D.isdst) == 'boolean')
+  end
   D.isdst = nil
   local t1 = os.time(D)
   assert(t == t1)   -- if isdst is absent uses correct default
