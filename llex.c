@@ -228,6 +228,8 @@ static int read_numeral (LexState *ls, SemInfo *seminfo) {
       save_and_next(ls);
     else break;
   }
+  if (lislalnum(ls->current))  /* is numeral touching an alpha num? */
+    save_and_next(ls);  /* force an error */
   save(ls, '\0');
   if (luaO_str2num(luaZ_buffer(ls->buff), &obj) == 0)  /* format error? */
     lexerror(ls, "malformed number", TK_FLT);
