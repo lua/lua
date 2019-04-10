@@ -6143,8 +6143,10 @@ In case of any error, @id{pcall} returns @false plus the error object.
 @LibEntry{print (@Cdots)|
 Receives any number of arguments
 and prints their values to @id{stdout},
-using the @Lid{tostring} function to convert each argument to a string.
-@id{print} is not intended for formatted output,
+converting each argument to a string
+following the same rules of @Lid{tostring}.
+
+The function @id{print} is not intended for formatted output,
 but only as a quick way to show a value,
 for instance for debugging.
 For complete control over the output,
@@ -8771,6 +8773,13 @@ like any other error when calling a finalizer.)
 
 @sect2{@title{Incompatibilities in the Libraries}
 @itemize{
+
+@item{
+The function @Lid{print} does not call @Lid{tostring}
+to format its arguments;
+instead, it has this functionality hardwired.
+You should use @id{__tostring} to modify how values are printed.
+}
 
 @item{
 The pseudo-random number generator used by the function @Lid{math.random}
