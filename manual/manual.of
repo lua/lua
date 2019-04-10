@@ -6307,11 +6307,12 @@ an object with type @T{"thread"}.
 
 }
 
-@LibEntry{coroutine.isyieldable ()|
+@LibEntry{coroutine.isyieldable ([co])|
 
-Returns true when the running coroutine can yield.
+Returns true when the coroutine @id{co} can yield.
+The default for @id{co} is the running coroutine.
 
-A running coroutine is yieldable if it is not the main thread and
+A coroutine is yieldable if it is not the main thread and
 it is not inside a non-yieldable @N{C function}.
 
 }

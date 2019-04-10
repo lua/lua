@@ -10,7 +10,7 @@ local f
 local main, ismain = coroutine.running()
 assert(type(main) == "thread" and ismain)
 assert(not coroutine.resume(main))
-assert(not coroutine.isyieldable())
+assert(not coroutine.isyieldable(main) and not coroutine.isyieldable())
 assert(not pcall(coroutine.yield))
 
 
@@ -38,7 +38,7 @@ function foo (a, ...)
   assert(coroutine.resume(f) == false)
   assert(coroutine.status(f) == "running")
   local arg = {...}
-  assert(coroutine.isyieldable())
+  assert(coroutine.isyieldable(x))
   for i=1,#arg do
     _G.x = {coroutine.yield(table.unpack(arg[i]))}
   end
@@ -46,14 +46,17 @@ function foo (a, ...)
 end
 
 f = coroutine.create(foo)
+assert(coroutine.isyieldable(f))
 assert(type(f) == "thread" and coroutine.status(f) == "suspended")
 assert(string.find(tostring(f), "thread"))
 local s,a,b,c,d
 s,a,b,c,d = coroutine.resume(f, {1,2,3}, {}, {1}, {'a', 'b', 'c'})
+assert(coroutine.isyieldable(f))
 assert(s and a == nil and coroutine.status(f) == "suspended")
 s,a,b,c,d = coroutine.resume(f)
 eqtab(_G.x, {})
 assert(s and a == 1 and b == nil)
+assert(coroutine.isyieldable(f))
 s,a,b,c,d = coroutine.resume(f, 1, 2, 3)
 eqtab(_G.x, {1, 2, 3})
 assert(s and a == 'a' and b == 'b' and c == 'c' and d == nil)
