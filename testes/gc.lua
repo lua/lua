@@ -113,7 +113,7 @@ do
   contCreate = 0
   while contCreate <= limit do
     a = contCreate .. "b";
-    a = string.gsub(a, '(%d%d*)', string.upper)
+    a = string.gsub(a, '(%d%d*)', "%1 %1")
     a = "a"
     contCreate = contCreate+1
   end

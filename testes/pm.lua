@@ -387,5 +387,35 @@ assert(string.match("abc\0\0\0", "%\0%\0?") == "\0\0")
 assert(string.find("abc\0\0","\0.") == 4)
 assert(string.find("abcx\0\0abc\0abc","x\0\0abc\0a.") == 4)
 
+
+do   -- test reuse of original string in gsub
+  local s = string.rep("a", 100)
+  local r = string.gsub(s, "b", "c")   -- no match
+  assert(string.format("%p", s) == string.format("%p", r))
+
+  r = string.gsub(s, ".", {x = "y"})   -- no substitutions
+  assert(string.format("%p", s) == string.format("%p", r))
+
+  local count = 0
+  r = string.gsub(s, ".", function (x)
+                            assert(x == "a")
+                            count = count + 1
+                            return nil    -- no substitution
+                          end)
+  r = string.gsub(r, ".", {b = 'x'})   -- "a" is not a key; no subst.
+  assert(count == 100)
+  assert(string.format("%p", s) == string.format("%p", r))
+
+  count = 0
+  r = string.gsub(s, ".", function (x)
+                            assert(x == "a")
+                            count = count + 1
+                            return x    -- substitution...
+                          end)
+  assert(count == 100)
+  -- no reuse in this case
+  assert(r == s and string.format("%p", s) ~= string.format("%p", r))
+end
+
 print('OK')
 
