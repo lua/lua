@@ -709,16 +709,9 @@
 
 /*
 @@ LUAL_BUFFERSIZE is the buffer size used by the lauxlib buffer system.
-** CHANGE it if it uses too much C-stack space. (For long double,
-** 'string.format("%.99f", -1e4932)' needs 5052 bytes, so a
-** smaller buffer would force a memory allocation for each call to
-** 'string.format'.)
 */
-#if LUA_FLOAT_TYPE == LUA_FLOAT_LONGDOUBLE
-#define LUAL_BUFFERSIZE		8192
-#else
 #define LUAL_BUFFERSIZE   ((int)(16 * sizeof(void*) * sizeof(lua_Number)))
-#endif
+
 
 /*
 @@ LUAI_MAXALIGN defines fields that, when used in a union, ensure
