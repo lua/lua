@@ -576,9 +576,14 @@ static int searcher_Croot (lua_State *L) {
 static int searcher_preload (lua_State *L) {
   const char *name = luaL_checkstring(L, 1);
   lua_getfield(L, LUA_REGISTRYINDEX, LUA_PRELOAD_TABLE);
-  if (lua_getfield(L, -1, name) == LUA_TNIL)  /* not found? */
+  if (lua_getfield(L, -1, name) == LUA_TNIL) {  /* not found? */
     lua_pushfstring(L, "\n\tno field package.preload['%s']", name);
-  return 1;
+    return 1;
+  }
+  else {
+    lua_pushliteral(L, ":preload:");
+    return 2;
+  }
 }
 
 
@@ -620,17 +625,23 @@ static int ll_require (lua_State *L) {
   /* else must load package */
   lua_pop(L, 1);  /* remove 'getfield' result */
   findloader(L, name);
-  lua_pushstring(L, name);  /* pass name as argument to module loader */
-  lua_insert(L, -2);  /* name is 1st argument (before search data) */
+  lua_rotate(L, -2, 1);  /* function <-> loader data */
+  lua_pushvalue(L, 1);  /* name is 1st argument to module loader */
+  lua_pushvalue(L, -3);  /* loader data is 2nd argument */
+  /* stack: ...; loader data; loader function; mod. name; loader data */
   lua_call(L, 2, 1);  /* run loader to load module */
+  /* stack: ...; loader data; result from loader */
   if (!lua_isnil(L, -1))  /* non-nil return? */
     lua_setfield(L, 2, name);  /* LOADED[name] = returned value */
+  else
+    lua_pop(L, 1);  /* pop nil */
   if (lua_getfield(L, 2, name) == LUA_TNIL) {   /* module set no value? */
     lua_pushboolean(L, 1);  /* use true as result */
-    lua_pushvalue(L, -1);  /* extra copy to be returned */
+    lua_copy(L, -1, -2);  /* replace loader result */
     lua_setfield(L, 2, name);  /* LOADED[name] = true */
   }
-  return 1;
+  lua_rotate(L, -2, 1);  /* loader data <-> module result  */
+  return 2;  /* return module result and loader data */
 }
 
 /* }====================================================== */

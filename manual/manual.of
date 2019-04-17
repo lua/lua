@@ -6408,11 +6408,15 @@ The function starts by looking into the @Lid{package.loaded} table
 to determine whether @id{modname} is already loaded.
 If it is, then @id{require} returns the value stored
 at @T{package.loaded[modname]}.
+(The absence of a second result in this case
+signals that this call did not have to load the module.)
 Otherwise, it tries to find a @emph{loader} for the module.
 
 To find a loader,
-@id{require} is guided by the @Lid{package.searchers} sequence.
-By changing this sequence,
+@id{require} is guided by the table @Lid{package.searchers}.
+Each item in this table is a search function,
+that searches for the module in a particular way.
+By changing this table,
 we can change how @id{require} looks for a module.
 The following explanation is based on the default configuration
 for @Lid{package.searchers}.
@@ -6429,9 +6433,14 @@ it tries an @emph{all-in-one} loader @seeF{package.searchers}.
 
 Once a loader is found,
 @id{require} calls the loader with two arguments:
-@id{modname} and an extra value dependent on how it got the loader.
-(If the loader came from a file,
-this extra value is the file name.)
+@id{modname} and an extra value,
+a @emph{loader data},
+also returned by the searcher.
+The loader data can be any value useful to the module;
+for the default searchers,
+it indicates where the loader was found.
+(For instance, if the loader came from a file,
+this extra value is the file path.)
 If the loader returns any non-nil value,
 @id{require} assigns the returned value to @T{package.loaded[modname]}.
 If the loader does not return a non-nil value and
@@ -6439,6 +6448,9 @@ has not assigned any value to @T{package.loaded[modname]},
 then @id{require} assigns @Rw{true} to this entry.
 In any case, @id{require} returns the
 final value of @T{package.loaded[modname]}.
+Besides that value, @id{require} also returns as a second result
+the loader data returned by the searcher,
+which indicates how @id{require} found the module.
 
 If there is any error loading or running the module,
 or if it cannot find any loader for the module,
@@ -6558,16 +6570,20 @@ table used by @Lid{require}.
 
 @LibEntry{package.searchers|
 
-A table used by @Lid{require} to control how to load modules.
+A table used by @Lid{require} to control how to find modules.
 
 Each entry in this table is a @def{searcher function}.
 When looking for a module,
 @Lid{require} calls each of these searchers in ascending order,
 with the module name (the argument given to @Lid{require}) as its
 sole argument.
-The function can return another function (the module @def{loader})
-plus an extra value that will be passed to that loader,
-or a string explaining why it did not find that module
+If the searcher finds the module,
+it returns another function, the module @def{loader},
+plus an extra value, a @emph{loader data},
+that will be passed to that loader and
+returned as a second result by @Lid{require}.
+If it cannot find the module,
+it returns a string explaining why
 (or @nil if it has nothing to say).
 
 Lua initializes this table with four searcher functions.
@@ -6617,9 +6633,9 @@ into one single library,
 with each submodule keeping its original open function.
 
 All searchers except the first one (preload) return as the extra value
-the file name where the module was found,
+the file path where the module was found,
 as returned by @Lid{package.searchpath}.
-The first searcher returns no extra value.
+The first searcher always returns the string @St{:preload:}.
 
 }
 

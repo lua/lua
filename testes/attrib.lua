@@ -122,12 +122,13 @@ local oldpath = package.path
 
 package.path = string.gsub("D/?.lua;D/?.lc;D/?;D/??x?;D/L", "D/", DIR)
 
-local try = function (p, n, r)
+local try = function (p, n, r, ext)
   NAME = nil
-  local rr = require(p)
+  local rr, x = require(p)
   assert(NAME == n)
   assert(REQUIRED == p)
   assert(rr == r)
+  assert(ext == x)
 end
 
 a = require"names"
@@ -143,27 +144,27 @@ assert(package.searchpath("C", package.path) == D"C.lua")
 assert(require"C" == 25)
 assert(require"C" == 25)
 AA = nil
-try('B', 'B.lua', true)
+try('B', 'B.lua', true, "libs/B.lua")
 assert(package.loaded.B)
 assert(require"B" == true)
 assert(package.loaded.A)
 assert(require"C" == 25)
 package.loaded.A = nil
-try('B', nil, true)   -- should not reload package
-try('A', 'A.lua', true)
+try('B', nil, true, nil)   -- should not reload package
+try('A', 'A.lua', true, "libs/A.lua")
 package.loaded.A = nil
 os.remove(D'A.lua')
 AA = {}
-try('A', 'A.lc', AA)  -- now must find second option
+try('A', 'A.lc', AA, "libs/A.lc")  -- now must find second option
 assert(package.searchpath("A", package.path) == D"A.lc")
 assert(require("A") == AA)
 AA = false
-try('K', 'L', false)     -- default option
-try('K', 'L', false)     -- default option (should reload it)
+try('K', 'L', false, "libs/L")     -- default option
+try('K', 'L', false, "libs/L")     -- default option (should reload it)
 assert(rawget(_G, "_REQUIREDNAME") == nil)
 
 AA = "x"
-try("X", "XXxX", AA)
+try("X", "XXxX", AA, "libs/XXxX")
 
 
 removefiles(files)
@@ -183,14 +184,16 @@ files = {
 createfiles(files, "_ENV = {}\n", "\nreturn _ENV\n")
 AA = 0
 
-local m = assert(require"P1")
+local m, ext = assert(require"P1")
+assert(ext == "libs/P1/init.lua")
 assert(AA == 0 and m.AA == 10)
 assert(require"P1" == m)
 assert(require"P1" == m)
 
 assert(package.searchpath("P1.xuxu", package.path) == D"P1/xuxu.lua")
-m.xuxu = assert(require"P1.xuxu")
+m.xuxu, ext = assert(require"P1.xuxu")
 assert(AA == 0 and m.xuxu.AA == 20)
+assert(ext == "libs/P1/xuxu.lua")
 assert(require"P1.xuxu" == m.xuxu)
 assert(require"P1.xuxu" == m.xuxu)
 assert(require"P1" == m and m.AA == 10)
@@ -267,15 +270,17 @@ else
 
   -- test C modules with prefixes in names
   package.cpath = DC"?"
-  local lib2 = require"lib2-v2"
+  local lib2, ext = require"lib2-v2"
+  assert(string.find(ext, "libs/lib2-v2", 1, true))
   -- check correct access to global environment and correct
   -- parameters
   assert(_ENV.x == "lib2-v2" and _ENV.y == DC"lib2-v2")
   assert(lib2.id("x") == "x")
 
   -- test C submodules
-  local fs = require"lib1.sub"
+  local fs, ext = require"lib1.sub"
   assert(_ENV.x == "lib1.sub" and _ENV.y == DC"lib1")
+  assert(string.find(ext, "libs/lib1", 1, true))
   assert(fs.id(45) == 45)
 end
 
@@ -293,10 +298,10 @@ do
     return _ENV
   end
 
-  local pl = require"pl"
+  local pl, ext = require"pl"
   assert(require"pl" == pl)
   assert(pl.xuxu(10) == 30)
-  assert(pl[1] == "pl" and pl[2] == nil)
+  assert(pl[1] == "pl" and pl[2] == ":preload:" and ext == ":preload:")
 
   package = p
   assert(type(package.path) == "string")
