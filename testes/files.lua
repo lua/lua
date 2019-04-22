@@ -832,7 +832,7 @@ load(os.date([[!assert(D.year==%Y and D.month==%m and D.day==%d and
 do
   local D = os.date("*t")
   local t = os.time(D)
-  if not D.isdst then
+  if D.isdst == nil then
     print("no daylight saving information")
   else
     assert(type(D.isdst) == 'boolean')
