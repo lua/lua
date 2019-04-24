@@ -19,6 +19,8 @@
 #define	LUA_GNAME	"_G"
 
 
+typedef struct luaL_Buffer luaL_Buffer;
+
 
 /* extra error code for 'luaL_loadfilex' */
 #define LUA_ERRFILE     (LUA_ERRERR+1)
@@ -99,8 +101,10 @@ LUALIB_API lua_State *(luaL_newstate) (void);
 
 LUALIB_API lua_Integer (luaL_len) (lua_State *L, int idx);
 
-LUALIB_API const char *(luaL_gsub) (lua_State *L, const char *s, const char *p,
-                                                  const char *r);
+LUALIB_API void luaL_addgsub (luaL_Buffer *b, const char *s,
+                                     const char *p, const char *r);
+LUALIB_API const char *(luaL_gsub) (lua_State *L, const char *s,
+                                    const char *p, const char *r);
 
 LUALIB_API void (luaL_setfuncs) (lua_State *L, const luaL_Reg *l, int nup);
 
@@ -155,7 +159,7 @@ LUALIB_API void (luaL_requiref) (lua_State *L, const char *modname,
 ** =======================================================
 */
 
-typedef struct luaL_Buffer {
+struct luaL_Buffer {
   char *b;  /* buffer address */
   size_t size;  /* buffer size */
   size_t n;  /* number of characters in buffer */
@@ -164,7 +168,11 @@ typedef struct luaL_Buffer {
     LUAI_MAXALIGN;  /* ensure maximum alignment for buffer */
     char b[LUAL_BUFFERSIZE];  /* initial buffer */
   } init;
-} luaL_Buffer;
+};
+
+
+#define luaL_bufflen(bf)	((bf)->n)
+#define luaL_buffaddr(bf)	((bf)->b)
 
 
 #define luaL_addchar(B,c) \

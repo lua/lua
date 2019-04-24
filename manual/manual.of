@@ -591,7 +591,7 @@ controls how long the collector waits before starting a new cycle.
 The collector starts a new cycle when the use of memory
 hits @M{n%} of the use after the previous collection.
 Larger values make the collector less aggressive.
-Values less than 100 mean the collector will not wait to
+Values equal to or less than 100 mean the collector will not wait to
 start a new cycle.
 A value of 200 means that the collector waits for the total memory in use
 to double before starting a new cycle.
@@ -4928,6 +4928,18 @@ Adds the byte @id{c} to the buffer @id{B}
 
 }
 
+@APIEntry{
+const void luaL_addgsub (luaL_Buffer *B, const char *s,
+                         const char *p, const char *r);|
+@apii{0,0,m}
+
+Adds a copy of the string @id{s} to the buffer @id{B},
+replacing any occurrence of the string @id{p}
+with the string @id{r}.
+@seeC{luaL_Buffer}.
+
+}
+
 @APIEntry{void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l);|
 @apii{?,?,m}
 
@@ -5070,12 +5082,29 @@ plus the final string on its top.
 
 }
 
+@APIEntry{char *luaL_buffaddr (luaL_Buffer *B);|
+@apii{0,0,-}
+
+Returns the address of the current contents of buffer @id{B}.
+Note that any addition to the buffer may invalidate this address.
+@seeC{luaL_Buffer}.
+
+}
+
 @APIEntry{void luaL_buffinit (lua_State *L, luaL_Buffer *B);|
 @apii{0,0,-}
 
 Initializes a buffer @id{B}.
 This function does not allocate any space;
 the buffer must be declared as a variable
+@seeC{luaL_Buffer}.
+
+}
+
+@APIEntry{size_t luaL_bufflen (luaL_Buffer *B);|
+@apii{0,0,-}
+
+Returns the length of the current contents of buffer @id{B}.
 @seeC{luaL_Buffer}.
 
 }
@@ -5935,6 +5964,7 @@ This option can be followed by three numbers:
 the garbage-collector pause,
 the step multiplier,
 and the step size.
+A zero means to not change that value.
 }
 
 @item{@St{generational}|
@@ -5942,6 +5972,7 @@ Change the collector mode to generational.
 This option can be followed by two numbers:
 the garbage-collector minor multiplier
 and the major multiplier.
+A zero means to not change that value.
 }
 
 @item{@St{isrunning}|
@@ -6552,7 +6583,7 @@ the value of the environment variable @defid{LUA_PATH_5_4} or
 the environment variable @defid{LUA_PATH} or
 with a default path defined in @id{luaconf.h},
 if those environment variables are not defined.
-Any @St{;;} in the value of the environment variable
+A @St{;;} in the value of the environment variable
 is replaced by the default path.
 
 }
