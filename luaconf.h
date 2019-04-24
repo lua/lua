@@ -579,13 +579,6 @@
 
 
 /*
-@@ lua_pointer2str converts a pointer to a readable string in a
-** non-specified way.
-*/
-#define lua_pointer2str(buff,sz,p)	l_sprintf(buff,sz,"%p",p)
-
-
-/*
 @@ lua_number2strx converts a float to a hexadecimal numeric string.
 ** In C99, 'sprintf' (with format specifiers '%a'/'%A') does that.
 ** Otherwise, you can leave 'lua_number2strx' undefined and Lua will

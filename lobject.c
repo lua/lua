@@ -364,23 +364,42 @@ int luaO_utf8esc (char *buff, unsigned long x) {
 
 
 /*
-** Convert a number object to a string
+** Convert a number object to a string, adding it to a buffer
 */
-void luaO_tostring (lua_State *L, TValue *obj) {
-  char buff[MAXNUMBER2STR];
+static size_t tostringbuff (TValue *obj, char *buff) {
   size_t len;
   lua_assert(ttisnumber(obj));
   if (ttisinteger(obj))
-    len = lua_integer2str(buff, sizeof(buff), ivalue(obj));
+    len = lua_integer2str(buff, MAXNUMBER2STR, ivalue(obj));
   else {
-    len = lua_number2str(buff, sizeof(buff), fltvalue(obj));
+    len = lua_number2str(buff, MAXNUMBER2STR, fltvalue(obj));
     if (buff[strspn(buff, "-0123456789")] == '\0') {  /* looks like an int? */
       buff[len++] = lua_getlocaledecpoint();
       buff[len++] = '0';  /* adds '.0' to result */
     }
   }
+  return len;
+}
+
+
+/*
+** Convert a number object to a Lua string, replacing the value at 'obj'
+*/
+void luaO_tostring (lua_State *L, TValue *obj) {
+  char buff[MAXNUMBER2STR];
+  size_t len = tostringbuff(obj, buff);
   setsvalue(L, obj, luaS_newlstr(L, buff, len));
 }
+
+
+/* size for buffer used by 'luaO_pushvfstring' */
+#define BUFVFS		400
+
+/* buffer used by 'luaO_pushvfstring' */
+typedef struct BuffFS {
+  int blen;  /* length of partial string in 'buff' */
+  char buff[BUFVFS];  /* holds last part of the result */
+} BuffFS;
 
 
 static void pushstr (lua_State *L, const char *str, size_t l) {
@@ -390,59 +409,109 @@ static void pushstr (lua_State *L, const char *str, size_t l) {
 
 
 /*
+** empty the buffer into the stack
+*/
+static void clearbuff (lua_State *L, BuffFS *buff) {
+  pushstr(L, buff->buff, buff->blen);  /* push buffer */
+  buff->blen = 0;  /* buffer now is empty */
+}
+
+
+/*
+** Add 'str' to the buffer. It buffer has no enough space,
+** empty the buffer. If string is still larger than the buffer,
+** push the string directly to the stack. Return number of items
+** pushed.
+*/
+static int addstr2buff (lua_State *L, BuffFS *buff, const char *str,
+                                                    size_t slen) {
+  int pushed = 0;  /* number of items pushed to the stack */
+  lua_assert(buff->blen <= BUFVFS);
+  if (slen > BUFVFS - cast_sizet(buff->blen)) {  /* string does not fit? */
+    clearbuff(L, buff);
+    pushed = 1;
+    if (slen >= BUFVFS) {  /* string still does not fit into buffer? */
+      pushstr(L, str, slen);  /* push string */
+      return 2;
+    }
+  }
+  memcpy(buff->buff + buff->blen, str, slen);  /* add string to buffer */
+  buff->blen += slen;
+  return pushed;
+}
+
+
+/*
+** Add a number to the buffer; return number of strings pushed into
+** the stack. (At most one, to free buffer space.)
+*/
+static int addnum2buff (lua_State *L, BuffFS *buff, TValue *num) {
+  char numbuff[MAXNUMBER2STR];
+  size_t len = tostringbuff(num, numbuff);  /* format number into 'numbuff' */
+  return addstr2buff(L, buff, numbuff, len);
+}
+
+
+/*
 ** this function handles only '%d', '%c', '%f', '%p', and '%s'
    conventional formats, plus Lua-specific '%I' and '%U'
 */
 const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
-  int n = 0;  /* number of strings in the stack to concatenate */
-  const char *e;  /* points to next conversion specifier */
+  BuffFS buff;  /* holds last part of the result */
+  int pushed = 0;  /* number of strings in the stack to concatenate */
+  const char *e;  /* points to next '%' */
+  buff.blen = 0;
   while ((e = strchr(fmt, '%')) != NULL) {
-    pushstr(L, fmt, e - fmt);  /* string up to conversion specifier */
-    switch (*(e+1)) {
+    pushed += addstr2buff(L, &buff, fmt, e - fmt);  /* add 'fmt' up to '%' */
+    switch (*(e + 1)) {  /* conversion specifier */
       case 's': {  /* zero-terminated string */
         const char *s = va_arg(argp, char *);
         if (s == NULL) s = "(null)";
-        pushstr(L, s, strlen(s));
+        pushed += addstr2buff(L, &buff, s, strlen(s));
         break;
       }
       case 'c': {  /* an 'int' as a character */
-        char buff = cast_char(va_arg(argp, int));
-        if (lisprint(cast_uchar(buff)))
-          pushstr(L, &buff, 1);
-        else  /* non-printable character; print its code */
-          luaO_pushfstring(L, "<\\%d>", cast_uchar(buff));
+        /* if non-printable character, print its code */
+        char bf[10];
+        int c = va_arg(argp, int);
+        int l = (lisprint(c)) ? l_sprintf(bf, sizeof(bf), "%c", c)
+                              : l_sprintf(bf, sizeof(bf), "<\\%u>", c);
+        pushed += addstr2buff(L, &buff, bf, l);
         break;
       }
       case 'd': {  /* an 'int' */
-        setivalue(s2v(L->top), va_arg(argp, int));
-        goto top2str;
+        TValue num;
+        setivalue(&num, va_arg(argp, int));
+        pushed += addnum2buff(L, &buff, &num);
+        break;
       }
       case 'I': {  /* a 'lua_Integer' */
-        setivalue(s2v(L->top), cast(lua_Integer, va_arg(argp, l_uacInt)));
-        goto top2str;
+        TValue num;
+        setivalue(&num, cast(lua_Integer, va_arg(argp, l_uacInt)));
+        pushed += addnum2buff(L, &buff, &num);
+        break;
       }
       case 'f': {  /* a 'lua_Number' */
-        setfltvalue(s2v(L->top), cast_num(va_arg(argp, l_uacNumber)));
-      top2str:  /* convert the top element to a string */
-        L->top++;
-        luaO_tostring(L, s2v(L->top - 1));
+        TValue num;
+        setfltvalue(&num, cast_num(va_arg(argp, l_uacNumber)));
+        pushed += addnum2buff(L, &buff, &num);
         break;
       }
       case 'p': {  /* a pointer */
-        char buff[4*sizeof(void *) + 8]; /* should be enough space for a '%p' */
+        char bf[3 * sizeof(void*) + 8]; /* should be enough space for '%p' */
         void *p = va_arg(argp, void *);
-        int l = lua_pointer2str(buff, sizeof(buff), p);
-        pushstr(L, buff, l);
+        int l = l_sprintf(bf, sizeof(bf), "%p", p);
+        pushed += addstr2buff(L, &buff, bf, l);
         break;
       }
       case 'U': {  /* a 'long' as a UTF-8 sequence */
-        char buff[UTF8BUFFSZ];
-        int l = luaO_utf8esc(buff, va_arg(argp, long));
-        pushstr(L, buff + UTF8BUFFSZ - l, l);
+        char bf[UTF8BUFFSZ];
+        int l = luaO_utf8esc(bf, va_arg(argp, long));
+        pushed += addstr2buff(L, &buff, bf + UTF8BUFFSZ - l, l);
         break;
       }
       case '%': {
-        pushstr(L, "%", 1);
+        pushed += addstr2buff(L, &buff, "%", 1);
         break;
       }
       default: {
@@ -450,15 +519,16 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
                          *(e + 1));
       }
     }
-    n += 2;
-    if (L->top + 2 > L->stack_last) {  /* no free stack space? */
-      luaV_concat(L, n);
-      n = 1;
+    if (pushed > 1 && L->top + 2 > L->stack_last) {  /* no free stack space? */
+      luaV_concat(L, pushed);  /* join all partial results into one */
+      pushed = 1;
     }
-    fmt = e + 2;
+    fmt = e + 2;  /* skip '%' and the specifier */
   }
-  pushstr(L, fmt, strlen(fmt));
-  if (n > 0) luaV_concat(L, n + 1);
+  pushed += addstr2buff(L, &buff, fmt, strlen(fmt));  /* rest of 'fmt' */
+  clearbuff(L, &buff);  /* empty buffer into the stack */
+  if (pushed > 0)
+    luaV_concat(L, pushed + 1);  /* join all partial results */
   return svalue(s2v(L->top - 1));
 }
 

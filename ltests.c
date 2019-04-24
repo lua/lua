@@ -1481,6 +1481,15 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("pushvalue") {
       lua_pushvalue(L1, getindex);
     }
+    else if EQ("pushfstringI") {
+      lua_pushfstring(L1, lua_tostring(L, -2), (int)lua_tointeger(L, -1));
+    }
+    else if EQ("pushfstringS") {
+      lua_pushfstring(L1, lua_tostring(L, -2), lua_tostring(L, -1));
+    }
+    else if EQ("pushfstringP") {
+      lua_pushfstring(L1, lua_tostring(L, -2), lua_topointer(L, -1));
+    }
     else if EQ("rawgeti") {
       int t = getindex;
       lua_rawgeti(L1, t, getnum);
