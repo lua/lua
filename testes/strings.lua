@@ -458,6 +458,9 @@ else
 
   str = string.rep("a", blen - 1) .. "%p" .. string.rep("cd", blen)
   testpfs("P", str, {})
+
+  str = string.rep("%%", 3 * blen) .. "%p" .. string.rep("%%", 2 * blen)
+  testpfs("P", str, {})
 end
 
 
