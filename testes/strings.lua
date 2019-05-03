@@ -453,8 +453,7 @@ else
 
   str = "abc %c def"
   testpfs("I", str, string.byte("A"))
-  -- non-printable character
-  assert(callpfs("I", str, 255) == "abc <\\255> def")
+  testpfs("I", str, 255)
 
   str = string.rep("a", blen - 1) .. "%p" .. string.rep("cd", blen)
   testpfs("P", str, {})

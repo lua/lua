@@ -392,11 +392,20 @@ void luaO_tostring (lua_State *L, TValue *obj) {
 }
 
 
+
+
+/*
+** {==================================================================
+** 'luaO_pushvfstring'
+** ===================================================================
+*/
+
 /* size for buffer space used by 'luaO_pushvfstring' */
 #define BUFVFS		400
 
 /* buffer used by 'luaO_pushvfstring' */
 typedef struct BuffFS {
+  lua_State *L;
   int pushed;  /* number of string pieces already on the stack */
   int blen;  /* length of partial string in 'space' */
   char space[BUFVFS];  /* holds last part of the result */
@@ -407,7 +416,8 @@ typedef struct BuffFS {
 ** Push given string to the stack, as part of the buffer. If the stack
 ** is almost full, join all partial strings in the stack into one.
 */
-static void pushstr (lua_State *L, BuffFS *buff, const char *str, size_t l) {
+static void pushstr (BuffFS *buff, const char *str, size_t l) {
+  lua_State *L = buff->L;
   setsvalue2s(L, L->top, luaS_newlstr(L, str, l));
   L->top++;
   buff->pushed++;
@@ -421,8 +431,8 @@ static void pushstr (lua_State *L, BuffFS *buff, const char *str, size_t l) {
 /*
 ** empty the buffer space into the stack
 */
-static void clearbuff (lua_State *L, BuffFS *buff) {
-  pushstr(L, buff, buff->space, buff->blen);  /* push buffer contents */
+static void clearbuff (BuffFS *buff) {
+  pushstr(buff, buff->space, buff->blen);  /* push buffer contents */
   buff->blen = 0;  /* space now is empty */
 }
 
@@ -431,10 +441,10 @@ static void clearbuff (lua_State *L, BuffFS *buff) {
 ** Get a space of size 'sz' in the buffer. If buffer has not enough
 ** space, empty it. 'sz' must fit in an empty space.
 */
-static char *getbuff (lua_State *L, BuffFS *buff, size_t sz) {
+static char *getbuff (BuffFS *buff, size_t sz) {
   lua_assert(buff->blen <= BUFVFS); lua_assert(sz <= BUFVFS);
   if (sz > BUFVFS - cast_sizet(buff->blen))  /* string does not fit? */
-    clearbuff(L, buff);
+    clearbuff(buff);
   return buff->space + buff->blen;
 }
 
@@ -446,16 +456,15 @@ static char *getbuff (lua_State *L, BuffFS *buff, size_t sz) {
 ** Add 'str' to the buffer. If string is larger than the buffer space,
 ** push the string directly to the stack.
 */
-static void addstr2buff (lua_State *L, BuffFS *buff, const char *str,
-                                                     size_t slen) {
+static void addstr2buff (BuffFS *buff, const char *str, size_t slen) {
   if (slen <= BUFVFS) {  /* does string fit into buffer? */
-    char *bf = getbuff(L, buff, slen);
+    char *bf = getbuff(buff, slen);
     memcpy(bf, str, slen);  /* add string to buffer */
     addsize(buff, slen);
   }
   else {  /* string larger than buffer */
-    clearbuff(L, buff);  /* string comes after buffer's content */
-    pushstr(L, buff, str, slen);  /* push string */
+    clearbuff(buff);  /* string comes after buffer's content */
+    pushstr(buff, str, slen);  /* push string */
   }
 }
 
@@ -463,8 +472,8 @@ static void addstr2buff (lua_State *L, BuffFS *buff, const char *str,
 /*
 ** Add a number to the buffer.
 */
-static void addnum2buff (lua_State *L, BuffFS *buff, TValue *num) {
-  char *numbuff = getbuff(L, buff, MAXNUMBER2STR);
+static void addnum2buff (BuffFS *buff, TValue *num) {
+  char *numbuff = getbuff(buff, MAXNUMBER2STR);
   size_t len = tostringbuff(num, numbuff);  /* format number into 'numbuff' */
   addsize(buff, len);
 }
@@ -478,58 +487,55 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
   BuffFS buff;  /* holds last part of the result */
   const char *e;  /* points to next '%' */
   buff.pushed = buff.blen = 0;
+  buff.L = L;
   while ((e = strchr(fmt, '%')) != NULL) {
-    addstr2buff(L, &buff, fmt, e - fmt);  /* add 'fmt' up to '%' */
+    addstr2buff(&buff, fmt, e - fmt);  /* add 'fmt' up to '%' */
     switch (*(e + 1)) {  /* conversion specifier */
       case 's': {  /* zero-terminated string */
         const char *s = va_arg(argp, char *);
         if (s == NULL) s = "(null)";
-        addstr2buff(L, &buff, s, strlen(s));
+        addstr2buff(&buff, s, strlen(s));
         break;
       }
       case 'c': {  /* an 'int' as a character */
-        /* if non-printable character, print its code */
-        char *bf = getbuff(L, &buff, 10);
-        int c = va_arg(argp, int);
-        int len = (lisprint(c)) ? l_sprintf(bf, 10, "%c", c)
-                                : l_sprintf(bf, 10, "<\\%u>", c);
-        addsize(&buff, len);
+        char c = cast_uchar(va_arg(argp, int));
+        addstr2buff(&buff, &c, sizeof(char));
         break;
       }
       case 'd': {  /* an 'int' */
         TValue num;
         setivalue(&num, va_arg(argp, int));
-        addnum2buff(L, &buff, &num);
+        addnum2buff(&buff, &num);
         break;
       }
       case 'I': {  /* a 'lua_Integer' */
         TValue num;
         setivalue(&num, cast(lua_Integer, va_arg(argp, l_uacInt)));
-        addnum2buff(L, &buff, &num);
+        addnum2buff(&buff, &num);
         break;
       }
       case 'f': {  /* a 'lua_Number' */
         TValue num;
         setfltvalue(&num, cast_num(va_arg(argp, l_uacNumber)));
-        addnum2buff(L, &buff, &num);
+        addnum2buff(&buff, &num);
         break;
       }
       case 'p': {  /* a pointer */
         const int sz = 3 * sizeof(void*) + 8; /* enough space for '%p' */
-        char *bf = getbuff(L, &buff, sz);
+        char *bf = getbuff(&buff, sz);
         void *p = va_arg(argp, void *);
-        int len = l_sprintf(bf, sz, "%p", p);
+        int len = lua_pointer2str(bf, sz, p);
         addsize(&buff, len);
         break;
       }
       case 'U': {  /* a 'long' as a UTF-8 sequence */
         char bf[UTF8BUFFSZ];
         int len = luaO_utf8esc(bf, va_arg(argp, long));
-        addstr2buff(L, &buff, bf + UTF8BUFFSZ - len, len);
+        addstr2buff(&buff, bf + UTF8BUFFSZ - len, len);
         break;
       }
       case '%': {
-        addstr2buff(L, &buff, "%", 1);
+        addstr2buff(&buff, "%", 1);
         break;
       }
       default: {
@@ -539,8 +545,8 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
     }
     fmt = e + 2;  /* skip '%' and the specifier */
   }
-  addstr2buff(L, &buff, fmt, strlen(fmt));  /* rest of 'fmt' */
-  clearbuff(L, &buff);  /* empty buffer into the stack */
+  addstr2buff(&buff, fmt, strlen(fmt));  /* rest of 'fmt' */
+  clearbuff(&buff);  /* empty buffer into the stack */
   if (buff.pushed > 1)
     luaV_concat(L, buff.pushed);  /* join all partial results */
   return svalue(s2v(L->top - 1));
@@ -555,6 +561,8 @@ const char *luaO_pushfstring (lua_State *L, const char *fmt, ...) {
   va_end(argp);
   return msg;
 }
+
+/* }================================================================== */
 
 
 #define RETS	"..."
