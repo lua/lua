@@ -39,7 +39,7 @@ typedef signed char ls_byte;
 /* maximum value for size_t */
 #define MAX_SIZET	((size_t)(~(size_t)0))
 
-/* maximum size visible for Lua (must be representable in a lua_Integer */
+/* maximum size visible for Lua (must be representable in a lua_Integer) */
 #define MAX_SIZE	(sizeof(size_t) < sizeof(lua_Integer) ? MAX_SIZET \
                           : (size_t)(LUA_MAXINTEGER))
 

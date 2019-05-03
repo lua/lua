@@ -142,12 +142,18 @@ do
   prepfile("print(package.path, package.cpath)")
   RUN('env LUA_INIT="error(10)" LUA_PATH=xxx LUA_CPATH=xxx lua -E %s > %s',
        prog, out)
+  local output = getoutput()
+  defaultpath = string.match(output, "^(.-)\t")
+  defaultCpath = string.match(output, "\t(.-)$")
+
+  -- running with an empty environment
+  RUN('env -i lua %s > %s', prog, out)
   local out = getoutput()
-  defaultpath = string.match(out, "^(.-)\t")
-  defaultCpath = string.match(out, "\t(.-)$")
+  assert(defaultpath == string.match(output, "^(.-)\t"))
+  assert(defaultCpath == string.match(output, "\t(.-)$"))
 end
 
--- paths did not changed
+-- paths did not change
 assert(not string.find(defaultpath, "xxx") and
        string.find(defaultpath, "lua") and
        not string.find(defaultCpath, "xxx") and
@@ -160,15 +166,20 @@ local function convert (p)
   RUN('env LUA_PATH="%s" lua %s > %s', p, prog, out)
   local expected = getoutput()
   expected = string.sub(expected, 1, -2)   -- cut final end of line
-  assert(string.gsub(p, ";;", ";"..defaultpath..";") == expected)
+  if string.find(p, ";;") then
+    p = string.gsub(p, ";;", ";"..defaultpath..";")
+    p = string.gsub(p, "^;", "")   -- remove ';' at the beginning
+    p = string.gsub(p, ";$", "")   -- remove ';' at the end
+  end
+  assert(p == expected)
 end
 
 convert(";")
 convert(";;")
-convert(";;;")
-convert(";;;;")
-convert(";;;;;")
-convert(";;a;;;bc")
+convert("a;;b")
+convert(";;b")
+convert("a;;")
+convert("a;b;;c")
 
 
 -- test -l over multiple libraries
