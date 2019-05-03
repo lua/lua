@@ -275,7 +275,7 @@ else
   -- check correct access to global environment and correct
   -- parameters
   assert(_ENV.x == "lib2-v2" and _ENV.y == DC"lib2-v2")
-  assert(lib2.id("x") == "x")
+  assert(lib2.id("x") == true)   -- a different "id" implementation
 
   -- test C submodules
   local fs, ext = require"lib1.sub"

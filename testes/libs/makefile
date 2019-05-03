@@ -23,5 +23,5 @@ lib2.so: lib2.c $(LUA_DIR)/luaconf.h $(LUA_DIR)/ltests.h
 lib21.so: lib21.c $(LUA_DIR)/luaconf.h $(LUA_DIR)/ltests.h
 	$(CC) $(CFLAGS) -o lib21.so lib21.c
 
-lib2-v2.so: lib2.so
-	cp lib2.so ./lib2-v2.so
+lib2-v2.so: lib21.c $(LUA_DIR)/luaconf.h $(LUA_DIR)/ltests.h
+	$(CC) $(CFLAGS) -o lib2-v2.so lib22.c
