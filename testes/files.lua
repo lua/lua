@@ -125,7 +125,7 @@ do
   -- closing file by scope
   local F = nil
   do
-    local *toclose f = assert(io.open(file, "w"))
+    local <toclose> f = assert(io.open(file, "w"))
     F = f
   end
   assert(tostring(F) == "file (closed)")
@@ -135,7 +135,7 @@ assert(os.remove(file))
 
 do
   -- test writing/reading numbers
-  local *toclose f = assert(io.open(file, "w"))
+  local <toclose> f = assert(io.open(file, "w"))
   f:write(maxint, '\n')
   f:write(string.format("0X%x\n", maxint))
   f:write("0xABCp-3", '\n')
@@ -158,7 +158,7 @@ assert(os.remove(file))
 
 -- testing multiple arguments to io.read
 do
-  local *toclose f = assert(io.open(file, "w"))
+  local <toclose> f = assert(io.open(file, "w"))
   f:write[[
 a line
 another line

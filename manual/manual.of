@@ -1509,7 +1509,7 @@ A local variable can be declared as a @def{to-be-closed} variable,
 with the following syntax:
 @Produc{
 @producname{stat}@producbody{
-  @Rw{local} @bnfter{*} @bnfter{toclose} Name @bnfter{=} exp
+  @Rw{local} @bnfter{<} @bnfter{toclose} @bnfter{>} Name @bnfter{=} exp
 }}
 A to-be-closed variable behaves like a normal local variable,
 except that its value is @emph{closed} whenever the variable
@@ -8949,7 +8949,7 @@ and @bnfNter{LiteralString}, see @See{lexical}.)
 @OrNL	@Rw{function} funcname funcbody
 @OrNL	@Rw{local} @Rw{function} @bnfNter{Name} funcbody
 @OrNL	@Rw{local} namelist @bnfopt{@bnfter{=} explist}
-@OrNL	@Rw{local} @bnfter{*} @bnfter{toclose} Name @bnfter{=} exp
+@OrNL	@Rw{local} @bnfter{<} @bnfter{toclose} @bnfter{>} Name @bnfter{=} exp
 }
 
 @producname{retstat}@producbody{@Rw{return}

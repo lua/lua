@@ -1621,6 +1621,7 @@ static void tocloselocalstat (LexState *ls) {
   if (strcmp(getstr(attr), "toclose") != 0)
     luaK_semerror(ls,
       luaO_pushfstring(ls->L, "unknown attribute '%s'", getstr(attr)));
+  testnext(ls, '>');
   new_localvar(ls, str_checkname(ls));
   checknext(ls, '=');
   exp1(ls);
@@ -1634,7 +1635,7 @@ static void tocloselocalstat (LexState *ls) {
 static void localstat (LexState *ls) {
   /* stat -> LOCAL NAME {',' NAME} ['=' explist]
            | LOCAL *toclose NAME '=' exp */
-  if (testnext(ls, '*'))
+  if (testnext(ls, '<'))
     tocloselocalstat(ls);
   else
     commonlocalstat(ls);

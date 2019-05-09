@@ -320,11 +320,11 @@ NoRun("", "lua %s", prog)   -- no message
 
 -- to-be-closed variables in main chunk
 prepfile[[
-  local *toclose x = function (err)
+  local <toclose> x = function (err)
     assert(err == 120)
     print("Ok")
   end
-  local *toclose e1 = function () error(120) end
+  local <toclose> e1 = function () error(120) end
   os.exit(true, true)
 ]]
 RUN('lua %s > %s', prog, out)
