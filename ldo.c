@@ -666,6 +666,8 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
   if (L->status == LUA_OK) {  /* may be starting a coroutine */
     if (L->ci != &L->base_ci)  /* not in base level? */
       return resume_error(L, "cannot resume non-suspended coroutine", nargs);
+    else if (L->top - (L->ci->func + 1) == nargs)  /* no function? */
+      return resume_error(L, "cannot resume dead coroutine", nargs);
   }
   else if (L->status != LUA_YIELD)
     return resume_error(L, "cannot resume dead coroutine", nargs);
