@@ -25,6 +25,10 @@ static lua_State *getco (lua_State *L) {
 }
 
 
+/*
+** Resumes a coroutine. Returns the number of results for non-error
+** cases or -1 for errors.
+*/
 static int auxresume (lua_State *L, lua_State *co, int narg) {
   int status, nres;
   if (!lua_checkstack(co, narg)) {
@@ -74,8 +78,14 @@ static int luaB_auxwrap (lua_State *L) {
   lua_State *co = lua_tothread(L, lua_upvalueindex(1));
   int r = auxresume(L, co, lua_gettop(L));
   if (r < 0) {
+    int stat = lua_status(co);
+    if (stat != LUA_OK && stat != LUA_YIELD) {
+      stat = lua_resetthread(co);  /* close variables in case of errors */
+      if (stat != LUA_OK)  /* error closing variables? */
+        lua_xmove(co, L, 1);  /* get new error object */
+    }
     if (lua_type(L, -1) == LUA_TSTRING) {  /* error object is a string? */
-      luaL_where(L, 1);  /* add extra info */
+      luaL_where(L, 1);  /* add extra info, if available */
       lua_insert(L, -2);
       lua_concat(L, 2);
     }

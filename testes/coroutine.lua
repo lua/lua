@@ -346,9 +346,13 @@ do
   local st, res = coroutine.resume(B)
   assert(st == true and res == false)
 
-  A = coroutine.wrap(function() return pcall(A, 1) end)
+  local X = false
+  A = coroutine.wrap(function()
+    local *toclose _ = setmetatable({}, {__close = function () X = true end})
+    return pcall(A, 1)
+  end)
   st, res = A()
-  assert(not st and string.find(res, "non%-suspended"))
+  assert(not st and string.find(res, "non%-suspended") and X == true)
 end
 
 

@@ -734,18 +734,24 @@ a, b = coroutine.resume(co, 100)
 assert(a and b == 30)
 
 
--- check traceback of suspended coroutines
+-- check traceback of suspended (or dead with error) coroutines
 
-function f(i) coroutine.yield(i == 0); f(i - 1) end
+function f(i)
+  if i == 0 then error(i)
+  else coroutine.yield(); f(i-1)
+  end
+end
+
 
 co = coroutine.create(function (x) f(x) end)
 a, b = coroutine.resume(co, 3)
 t = {"'coroutine.yield'", "'f'", "in function <"}
-repeat
+while coroutine.status(co) == "suspended" do
   checktraceback(co, t)
   a, b = coroutine.resume(co)
   table.insert(t, 2, "'f'")   -- one more recursive call to 'f'
-until b
+end
+t[1] = "'error'"
 checktraceback(co, t)
 
 

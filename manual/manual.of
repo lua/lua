@@ -286,7 +286,7 @@ Lua also offers a system of @emph{warnings} @seeF{warn}.
 Unlike errors, warnings do not interfere
 in any way with program execution.
 They typically only generate a message to the user,
-although this behavior can be adapted from C @see{lua_setwarnf}.
+although this behavior can be adapted from C @seeC{lua_setwarnf}.
 
 }
 
@@ -835,6 +835,9 @@ In case of normal termination,
 plus any values returned by the coroutine main function.
 In case of errors, @Lid{coroutine.resume} returns @false
 plus the error object.
+In this case, the coroutine does not unwind its stack,
+so that it is possible to inspect it after the error
+with the debug API.
 
 A coroutine yields by calling @Lid{coroutine.yield}.
 When a coroutine yields,
@@ -858,8 +861,10 @@ go as extra arguments to @Lid{coroutine.resume}.
 @Lid{coroutine.wrap} returns all the values returned by @Lid{coroutine.resume},
 except the first one (the boolean error code).
 Unlike @Lid{coroutine.resume},
-@Lid{coroutine.wrap} does not catch errors;
-any error is propagated to the caller.
+the function created by @Lid{coroutine.wrap}
+propagates any error to the caller.
+In this case,
+the function also kills the coroutine @seeF{coroutine.kill}.
 
 As an example of how coroutines work,
 consider the following code:
@@ -1534,8 +1539,15 @@ the other pending closing methods will still be called.
 If a coroutine yields inside a block and is never resumed again,
 the variables visible at that block will never go out of scope,
 and therefore they will not be closed.
-(You should use finalizers to handle this case,
-or else call @Lid{coroutine.kill} to close the variables.)
+Similarly, if a coroutine ends with an error,
+it does not unwind its stack,
+so it does not close any variable.
+You should either use finalizers
+or call @Lid{coroutine.kill} to close the variables in these cases.
+However, note that if the coroutine was created
+through @Lid{coroutine.wrap},
+then its corresponding function will close all variables
+in case of errors.
 
 }
 
@@ -6406,11 +6418,12 @@ or if it has stopped with an error.
 Creates a new coroutine, with body @id{f};
 @id{f} must be a function.
 Returns a function that resumes the coroutine each time it is called.
-Any arguments passed to the function behave as the
+Any arguments passed to this function behave as the
 extra arguments to @id{resume}.
-Returns the same values returned by @id{resume},
+The function returns the same values returned by @id{resume},
 except the first boolean.
-In case of error, propagates the error.
+In case of error,
+the function kills the coroutine and propagates the error.
 
 }
 
@@ -6667,6 +6680,10 @@ All searchers except the first one (preload) return as the extra value
 the file path where the module was found,
 as returned by @Lid{package.searchpath}.
 The first searcher always returns the string @St{:preload:}.
+
+Searchers should raise no errors and have no side effects in Lua.
+(They may have side effects in C,
+for instance by linking the application with a library.)
 
 }
 

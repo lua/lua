@@ -417,12 +417,13 @@ if rawget(_G, "T") then
 end
 
 
--- to-be-closed variables in coroutines
+print "to-be-closed variables in coroutines"
+
 do
-  -- an error in a coroutine closes variables
+  -- an error in a wrapped coroutine closes variables
   local x = false
   local y = false
-  local co = coroutine.create(function ()
+  local co = coroutine.wrap(function ()
     local *toclose xv = func2close(function () x = true end)
     do
       local *toclose yv = func2close(function () y = true end)
@@ -432,13 +433,30 @@ do
     error(23)              -- error does
   end)
 
-  local a, b = coroutine.resume(co)
-  assert(a and b == 100 and not x and not y)
-  a, b = coroutine.resume(co)
-  assert(a and b == 200 and not x and y)
-  a, b = coroutine.resume(co)
+  local b = co()
+  assert(b == 100 and not x and not y)
+  b = co()
+  assert(b == 200 and not x and y)
+  local a, b = pcall(co)
   assert(not a and b == 23 and x and y)
 end
+
+
+do
+  -- error in a wrapped coroutine raising errors when closing a variable
+  local x = false
+  local co = coroutine.wrap(function ()
+    local *toclose xv = func2close(function () error("XXX") end)
+      coroutine.yield(100)
+      error(200)
+  end)
+  assert(co() == 100)
+  local st, msg = pcall(co)
+print(msg)
+  -- should get last error raised
+  assert(not st and string.find(msg, "%w+%.%w+:%d+: XXX"))
+end
+
 
 -- a suspended coroutine should not close its variables when collected
 local co
@@ -449,6 +467,7 @@ co = coroutine.wrap(function()
 end)
 co()                 -- start coroutine
 assert(co == nil)    -- eventually it will be collected
+collectgarbage()
 
 
 -- to-be-closed variables in generic for loops
