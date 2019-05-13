@@ -51,9 +51,8 @@ static int runC (lua_State *L, lua_State *L1, const char *pc);
 
 
 static void setnameval (lua_State *L, const char *name, int val) {
-  lua_pushstring(L, name);
   lua_pushinteger(L, val);
-  lua_settable(L, -3);
+  lua_setfield(L, -2, name);
 }
 
 
@@ -710,12 +709,11 @@ static void printstack (lua_State *L) {
 
 
 static int get_limits (lua_State *L) {
-  lua_createtable(L, 0, 5);
-  setnameval(L, "BITS_INT", LUAI_BITSINT);
+  lua_createtable(L, 0, 6);
+  setnameval(L, "IS32INT", LUAI_IS32INT);
   setnameval(L, "MAXARG_Ax", MAXARG_Ax);
   setnameval(L, "MAXARG_Bx", MAXARG_Bx);
   setnameval(L, "OFFSET_sBx", OFFSET_sBx);
-  setnameval(L, "BITS_INT", LUAI_BITSINT);
   setnameval(L, "LFPF", LFIELDS_PER_FLUSH);
   setnameval(L, "NUM_OPCODES", NUM_OPCODES);
   return 1;

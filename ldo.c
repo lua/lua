@@ -669,7 +669,7 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
     else if (L->top - (L->ci->func + 1) == nargs)  /* no function? */
       return resume_error(L, "cannot resume dead coroutine", nargs);
   }
-  else if (L->status != LUA_YIELD)
+  else if (L->status != LUA_YIELD)  /* ended with errors? */
     return resume_error(L, "cannot resume dead coroutine", nargs);
   if (from == NULL)
     L->nCcalls = 1;
