@@ -28,7 +28,7 @@
 /*
 ** Integer type for decoded UTF-8 values; MAXUTF needs 31 bits.
 */
-#if LUAI_BITSINT >= 31
+#if ((UINT_MAX >> 15) >> 15) >= 1
 typedef	unsigned int utfint;
 #else
 typedef unsigned long utfint;

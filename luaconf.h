@@ -14,6 +14,16 @@
 
 /*
 ** ===================================================================
+** General Configuration File for Lua
+**
+** Some definitions here can be changed externally, through the
+** compiler (e.g., with '-D' options). Those are protected by
+** '#if !defined' guards. However, several other definitions should
+** be changed directly here, either because they affect the Lua
+** ABI (by making the changes here, you ensure that all software
+** connected to Lua, such as C libraries, will be compiled with the
+** same configuration); or because they are seldom changed.
+**
 ** Search for "@@" to find all configurable definitions.
 ** ===================================================================
 */
@@ -22,8 +32,7 @@
 /*
 ** {====================================================================
 ** System Configuration: macros to adapt (if needed) Lua to some
-** particular platform, for instance compiling it with 32-bit numbers or
-** restricting it to C89.
+** particular platform, for instance restricting it to C89.
 ** =====================================================================
 */
 
@@ -40,15 +49,6 @@
 #if !defined(LUAI_MAXCSTACK)
 #define LUAI_MAXCSTACK		2200
 #endif
-
-
-/*
-@@ LUA_32BITS enables Lua with 32-bit integers and 32-bit floats. You
-** can also define LUA_32BITS in the make file, but changing here you
-** ensure that all software connected to Lua will be compiled with the
-** same configuration.
-*/
-/* #define LUA_32BITS */
 
 
 /*
@@ -86,6 +86,28 @@
 
 
 /*
+@@ LUAI_IS32INT is true iff 'int' has (at least) 32 bits.
+** (the use of two shifts avoids undefined shifts)
+*/
+#define LUAI_IS32INT	(((UINT_MAX >> 15) >> 15) >= 3)
+
+/* }================================================================== */
+
+
+
+/*
+** {==================================================================
+** Configuration for Number types.
+** ===================================================================
+*/
+
+/*
+@@ LUA_32BITS enables Lua with 32-bit integers and 32-bit floats.
+*/
+/* #define LUA_32BITS */
+
+
+/*
 @@ LUA_C89_NUMBERS ensures that Lua uses the largest types available for
 ** C89 ('long' and 'double'); Windows always has '__int64', so it does
 ** not need to use this case.
@@ -95,24 +117,11 @@
 #endif
 
 
-
-/*
-@@ LUAI_BITSINT defines the (minimum) number of bits in an 'int'.
-*/
-/* avoid undefined shifts */
-#if ((INT_MAX >> 15) >> 15) >= 1
-#define LUAI_BITSINT	32
-#else
-/* 'int' always must have at least 16 bits */
-#define LUAI_BITSINT	16
-#endif
-
-
 /*
 @@ LUA_INT_TYPE defines the type for Lua integers.
 @@ LUA_FLOAT_TYPE defines the type for Lua floats.
-** Lua should work fine with any mix of these options (if supported
-** by your C compiler). The usual configurations are 64-bit integers
+** Lua should work fine with any mix of these options supported
+** by your C compiler. The usual configurations are 64-bit integers
 ** and 'double' (the default), 32-bit integers and 'float' (for
 ** restricted platforms), and 'long'/'double' (for C compilers not
 ** compliant with C99, which may not have support for 'long long').
@@ -132,7 +141,7 @@
 /*
 ** 32-bit integers and 'float'
 */
-#if LUAI_BITSINT >= 32  /* use 'int' if big enough */
+#if LUAI_IS32INT  /* use 'int' if big enough */
 #define LUA_INT_TYPE	LUA_INT_INT
 #else  /* otherwise use 'long' */
 #define LUA_INT_TYPE	LUA_INT_LONG
@@ -164,7 +173,6 @@
 
 
 
-
 /*
 ** {==================================================================
 ** Configuration for Paths.
@@ -192,6 +200,7 @@
 ** hierarchy or if you want to install your libraries in
 ** non-conventional directories.
 */
+
 #define LUA_VDIR	LUA_VERSION_MAJOR "." LUA_VERSION_MINOR
 #if defined(_WIN32)	/* { */
 /*
@@ -201,27 +210,40 @@
 #define LUA_LDIR	"!\\lua\\"
 #define LUA_CDIR	"!\\"
 #define LUA_SHRDIR	"!\\..\\share\\lua\\" LUA_VDIR "\\"
+
+#if !defined(LUA_PATH_DEFAULT)
 #define LUA_PATH_DEFAULT  \
 		LUA_LDIR"?.lua;"  LUA_LDIR"?\\init.lua;" \
 		LUA_CDIR"?.lua;"  LUA_CDIR"?\\init.lua;" \
 		LUA_SHRDIR"?.lua;" LUA_SHRDIR"?\\init.lua;" \
 		".\\?.lua;" ".\\?\\init.lua"
+#endif
+
+#if !defined(LUA_CPATH_DEFAULT)
 #define LUA_CPATH_DEFAULT \
 		LUA_CDIR"?.dll;" \
 		LUA_CDIR"..\\lib\\lua\\" LUA_VDIR "\\?.dll;" \
 		LUA_CDIR"loadall.dll;" ".\\?.dll"
+#endif
 
 #else			/* }{ */
 
 #define LUA_ROOT	"/usr/local/"
 #define LUA_LDIR	LUA_ROOT "share/lua/" LUA_VDIR "/"
 #define LUA_CDIR	LUA_ROOT "lib/lua/" LUA_VDIR "/"
+
+#if !defined(LUA_PATH_DEFAULT)
 #define LUA_PATH_DEFAULT  \
 		LUA_LDIR"?.lua;"  LUA_LDIR"?/init.lua;" \
 		LUA_CDIR"?.lua;"  LUA_CDIR"?/init.lua;" \
 		"./?.lua;" "./?/init.lua"
+#endif
+
+#if !defined(LUA_CPATH_DEFAULT)
 #define LUA_CPATH_DEFAULT \
 		LUA_CDIR"?.so;" LUA_CDIR"loadall.so;" "./?.so"
+#endif
+
 #endif			/* } */
 
 
@@ -230,10 +252,14 @@
 ** CHANGE it if your machine does not use "/" as the directory separator
 ** and is not Windows. (On Windows Lua automatically uses "\".)
 */
+#if !defined(LUA_DIRSEP)
+
 #if defined(_WIN32)
 #define LUA_DIRSEP	"\\"
 #else
 #define LUA_DIRSEP	"/"
+#endif
+
 #endif
 
 /* }================================================================== */
@@ -632,7 +658,7 @@
 /*
 @@ lua_getlocaledecpoint gets the locale "radix character" (decimal point).
 ** Change that if you do not want to use C locales. (Code using this
-** macro must include header 'locale.h'.)
+** macro must include the header 'locale.h'.)
 */
 #if !defined(lua_getlocaledecpoint)
 #define lua_getlocaledecpoint()		(localeconv()->decimal_point[0])
@@ -673,7 +699,7 @@
 ** {==================================================================
 ** Macros that affect the API and must be stable (that is, must be the
 ** same when you compile Lua and when you compile code that links to
-** Lua). You probably do not want/need to change them.
+** Lua).
 ** =====================================================================
 */
 
@@ -684,7 +710,7 @@
 ** space (and to reserve some numbers for pseudo-indices).
 ** (It must fit into max(size_t)/32.)
 */
-#if LUAI_BITSINT >= 32
+#if LUAI_IS32INT
 #define LUAI_MAXSTACK		1000000
 #else
 #define LUAI_MAXSTACK		15000

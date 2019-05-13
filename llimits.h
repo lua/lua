@@ -14,6 +14,11 @@
 
 #include "lua.h"
 
+
+/* minimum number of bits in an integer */
+#define LUAI_BITSINT	(LUAI_IS32INT ? 32 : 16)
+
+
 /*
 ** 'lu_mem' and 'l_mem' are unsigned/signed integers big enough to count
 ** the total memory used by Lua (in bytes). Usually, 'size_t' and
@@ -22,7 +27,7 @@
 #if defined(LUAI_MEM)		/* { external definitions? */
 typedef LUAI_UMEM lu_mem;
 typedef LUAI_MEM l_mem;
-#elif LUAI_BITSINT >= 32	/* }{ */
+#elif LUAI_IS32INT	/* }{ */
 typedef size_t lu_mem;
 typedef ptrdiff_t l_mem;
 #else  /* 16-bit ints */	/* }{ */
@@ -172,13 +177,11 @@ typedef LUAI_UACINT l_uacInt;
 #endif
 
 
-
-
 /*
 ** type for virtual-machine instructions;
 ** must be an unsigned with (at least) 4 bytes (see details in lopcodes.h)
 */
-#if LUAI_BITSINT >= 32
+#if LUAI_IS32INT
 typedef unsigned int l_uint32;
 #else
 typedef unsigned long l_uint32;
