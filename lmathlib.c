@@ -266,7 +266,7 @@ static int math_type (lua_State *L) {
 
 /* try to find an integer type with at least 64 bits */
 
-#if (LONG_MAX >> 31 >> 31) >= 1
+#if (ULONG_MAX >> 31 >> 31) >= 3
 
 /* 'long' has at least 64 bits */
 #define Rand64		unsigned long
@@ -276,7 +276,7 @@ static int math_type (lua_State *L) {
 /* there is a 'long long' type (which must have at least 64 bits) */
 #define Rand64		unsigned long long
 
-#elif (LUA_MAXINTEGER >> 31 >> 31) >= 1
+#elif (LUA_MAXINTEGER >> 30 >> 30) >= 7
 
 /* 'lua_Integer' has at least 64 bits */
 #define Rand64		lua_Unsigned
@@ -347,7 +347,7 @@ static lua_Number I2d (Rand64 x) {
 #else	/* no 'Rand64'   }{ */
 
 /* get an integer with at least 32 bits */
-#if (INT_MAX >> 30) >= 1
+#if LUAI_IS32INT
 typedef unsigned int lu_int32;
 #else
 typedef unsigned long lu_int32;
@@ -538,7 +538,7 @@ static lua_Unsigned project (lua_Unsigned ran, lua_Unsigned n,
     lim |= (lim >> 4);
     lim |= (lim >> 8);
     lim |= (lim >> 16);
-#if (LUA_MAXINTEGER >> 30 >> 1) > 0
+#if (LUA_MAXINTEGER >> 30) >= 3
     lim |= (lim >> 32);  /* integer type has more than 32 bits */
 #endif
   }

@@ -57,12 +57,18 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 
 #define POS_sJ		POS_A
 
+
 /*
 ** limits for opcode arguments.
-** we use (signed) int to manipulate most arguments,
-** so they must fit in LUAI_BITSINT-1 bits (-1 for sign)
+** we use (signed) 'int' to manipulate most arguments,
+** so they must fit in ints.
 */
-#if SIZE_Bx < LUAI_BITSINT-1
+
+/* Check whether type 'int' has at least 'b' bits ('b' < 32) */
+#define L_INTHASBITS(b)		((UINT_MAX >> ((b) - 1)) >= 1)
+
+
+#if L_INTHASBITS(SIZE_Bx)
 #define MAXARG_Bx	((1<<SIZE_Bx)-1)
 #else
 #define MAXARG_Bx	MAX_INT
@@ -71,13 +77,13 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 #define OFFSET_sBx	(MAXARG_Bx>>1)         /* 'sBx' is signed */
 
 
-#if SIZE_Ax < LUAI_BITSINT-1
+#if L_INTHASBITS(SIZE_Ax)
 #define MAXARG_Ax	((1<<SIZE_Ax)-1)
 #else
 #define MAXARG_Ax	MAX_INT
 #endif
 
-#if SIZE_sJ < LUAI_BITSINT-1
+#if L_INTHASBITS(SIZE_sJ)
 #define MAXARG_sJ	((1 << SIZE_sJ) - 1)
 #else
 #define MAXARG_sJ	MAX_INT

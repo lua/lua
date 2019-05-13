@@ -15,10 +15,6 @@
 #include "lua.h"
 
 
-/* minimum number of bits in an integer */
-#define LUAI_BITSINT	(LUAI_IS32INT ? 32 : 16)
-
-
 /*
 ** 'lu_mem' and 'l_mem' are unsigned/signed integers big enough to count
 ** the total memory used by Lua (in bytes). Usually, 'size_t' and

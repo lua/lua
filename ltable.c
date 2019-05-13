@@ -214,8 +214,8 @@ LUAI_FUNC unsigned int luaH_realasize (const Table *t) {
     size |= (size >> 4);
     size |= (size >> 8);
     size |= (size >> 16);
-#if (INT_MAX >> 30 >> 1) > 0
-    size |= (size >> 32);  /* int has more than 32 bits */
+#if (UINT_MAX >> 30) > 3
+    size |= (size >> 32);  /* unsigned int has more than 32 bits */
 #endif
     size++;
     lua_assert(ispow2(size) && size/2 < t->alimit && t->alimit < size);

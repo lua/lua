@@ -87,9 +87,8 @@
 
 /*
 @@ LUAI_IS32INT is true iff 'int' has (at least) 32 bits.
-** (the use of two shifts avoids undefined shifts)
 */
-#define LUAI_IS32INT	(((UINT_MAX >> 15) >> 15) >= 3)
+#define LUAI_IS32INT	((UINT_MAX >> 30) >= 3)
 
 /* }================================================================== */
 
