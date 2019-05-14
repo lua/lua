@@ -515,7 +515,6 @@
 */
 #define LUA_UNSIGNED		unsigned LUAI_UACINT
 
-#define LUA_MAXUNSIGNED		(~(lua_Unsigned)0)
 
 #define LUA_UNSIGNEDBITS	(sizeof(LUA_UNSIGNED) * CHAR_BIT)
 
@@ -530,6 +529,8 @@
 #define LUA_MAXINTEGER		INT_MAX
 #define LUA_MININTEGER		INT_MIN
 
+#define LUA_MAXUNSIGNED		UINT_MAX
+
 #elif LUA_INT_TYPE == LUA_INT_LONG	/* }{ long */
 
 #define LUA_INTEGER		long
@@ -537,6 +538,8 @@
 
 #define LUA_MAXINTEGER		LONG_MAX
 #define LUA_MININTEGER		LONG_MIN
+
+#define LUA_MAXUNSIGNED		ULONG_MAX
 
 #elif LUA_INT_TYPE == LUA_INT_LONGLONG	/* }{ long long */
 
@@ -550,6 +553,8 @@
 #define LUA_MAXINTEGER		LLONG_MAX
 #define LUA_MININTEGER		LLONG_MIN
 
+#define LUA_MAXUNSIGNED		ULLONG_MAX
+
 #elif defined(LUA_USE_WINDOWS) /* }{ */
 /* in Windows, can use specific Windows types */
 
@@ -558,6 +563,8 @@
 
 #define LUA_MAXINTEGER		_I64_MAX
 #define LUA_MININTEGER		_I64_MIN
+
+#define LUA_MAXUNSIGNED		_UI64_MAX
 
 #else				/* }{ */
 

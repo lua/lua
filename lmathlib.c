@@ -276,7 +276,7 @@ static int math_type (lua_State *L) {
 /* there is a 'long long' type (which must have at least 64 bits) */
 #define Rand64		unsigned long long
 
-#elif (LUA_MAXINTEGER >> 30 >> 30) >= 7
+#elif (LUA_MAXUNSIGNED >> 31 >> 31) >= 3
 
 /* 'lua_Integer' has at least 64 bits */
 #define Rand64		lua_Unsigned
@@ -538,7 +538,7 @@ static lua_Unsigned project (lua_Unsigned ran, lua_Unsigned n,
     lim |= (lim >> 4);
     lim |= (lim >> 8);
     lim |= (lim >> 16);
-#if (LUA_MAXINTEGER >> 30) >= 3
+#if (LUA_MAXUNSIGNED >> 31) >= 3
     lim |= (lim >> 32);  /* integer type has more than 32 bits */
 #endif
   }
