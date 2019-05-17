@@ -3,10 +3,10 @@
 
 print("testing numbers and math lib")
 
-local minint = math.mininteger
-local maxint = math.maxinteger
+local <const> minint = math.mininteger
+local <const> maxint = math.maxinteger
 
-local intbits = math.floor(math.log(maxint, 2) + 0.5) + 1
+local <const> intbits = math.floor(math.log(maxint, 2) + 0.5) + 1
 assert((1 << intbits) == 0)
 
 assert(minint == 1 << (intbits - 1))

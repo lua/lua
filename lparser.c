@@ -156,6 +156,13 @@ static void init_exp (expdesc *e, expkind k, int i) {
 }
 
 
+static void init_var (expdesc *e, expkind k, int i) {
+  e->f = e->t = NO_JUMP;
+  e->k = k;
+  e->u.var.idx = i;
+}
+
+
 static void codestring (LexState *ls, expdesc *e, TString *s) {
   init_exp(e, VK, luaK_stringK(ls->fs, s));
 }
@@ -187,28 +194,79 @@ static int registerlocalvar (LexState *ls, TString *varname) {
 /*
 ** Create a new local variable with the given 'name'.
 */
-static void new_localvar (LexState *ls, TString *name) {
+static Vardesc *new_localvar (LexState *ls, TString *name) {
   FuncState *fs = ls->fs;
   Dyndata *dyd = ls->dyd;
+  Vardesc *var;
   int reg = registerlocalvar(ls, name);
   checklimit(fs, dyd->actvar.n + 1 - fs->firstlocal,
                   MAXVARS, "local variables");
   luaM_growvector(ls->L, dyd->actvar.arr, dyd->actvar.n + 1,
                   dyd->actvar.size, Vardesc, MAX_INT, "local variables");
-  dyd->actvar.arr[dyd->actvar.n++].idx = cast(short, reg);
+  var = &dyd->actvar.arr[dyd->actvar.n++];
+  var->idx = cast(short, reg);
+  var->name = name;
+  var->ro = 0;
+  return var;
 }
 
 #define new_localvarliteral(ls,v) \
     new_localvar(ls, luaX_newstring(ls, "" v, (sizeof(v)/sizeof(char)) - 1));
 
 
+
+/*
+** Return the "variable description" (Vardesc) of a given
+** variable
+*/
+static Vardesc *getlocalvardesc (FuncState *fs, int i) {
+  return &fs->ls->dyd->actvar.arr[fs->firstlocal + i];
+}
+
 /*
 ** Get the debug-information entry for current variable 'i'.
 */
 static LocVar *getlocvar (FuncState *fs, int i) {
-  int idx = fs->ls->dyd->actvar.arr[fs->firstlocal + i].idx;
+  int idx = getlocalvardesc(fs, i)->idx;
   lua_assert(idx < fs->nlocvars);
   return &fs->f->locvars[idx];
+}
+
+
+/*
+** Return the "variable description" (Vardesc) of a given
+** variable or upvalue
+*/
+static Vardesc *getvardesc (FuncState *fs, expdesc *e) {
+  if (e->k == VLOCAL)
+    return getlocalvardesc(fs, e->u.var.idx);
+  else if (e->k != VUPVAL)
+    return NULL;  /* not a local variable */
+  else {  /* upvalue: must go up all levels up to the original local */
+    int idx = e->u.var.idx;
+    for (;;) {
+      Upvaldesc *up = &fs->f->upvalues[idx];
+      fs = fs->prev;  /* must look at the previous level */
+      idx = up->idx;  /* at this index */
+      if (fs == NULL) {  /* no more levels? (can happen only with _ENV) */
+        lua_assert(strcmp(getstr(up->name), LUA_ENV) == 0);
+        return NULL;
+      }
+      else if (up->instack)  /* got to the original level? */
+        return getlocalvardesc(fs, idx);
+      /* else repeat for previous level */
+    }
+  }
+}
+
+
+static void check_readonly (LexState *ls, expdesc *e) {
+  Vardesc *vardesc = getvardesc(ls->fs, e);
+  if (vardesc && vardesc->ro) {  /* is variable local and const? */
+    const char *msg = luaO_pushfstring(ls->L,
+       "assignment to const variable '%s'", getstr(vardesc->name));
+    luaK_semerror(ls, msg);  /* error */
+  }
 }
 
 
@@ -259,7 +317,7 @@ static int newupvalue (FuncState *fs, TString *name, expdesc *v) {
   while (oldsize < f->sizeupvalues)
     f->upvalues[oldsize++].name = NULL;
   f->upvalues[fs->nups].instack = (v->k == VLOCAL);
-  f->upvalues[fs->nups].idx = cast_byte(v->u.info);
+  f->upvalues[fs->nups].idx = cast_byte(v->u.var.idx);
   f->upvalues[fs->nups].name = name;
   luaC_objbarrier(fs->ls->L, f, name);
   return fs->nups++;
@@ -304,7 +362,7 @@ static void singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
   else {
     int v = searchvar(fs, n);  /* look up locals at current level */
     if (v >= 0) {  /* found? */
-      init_exp(var, VLOCAL, v);  /* variable is local */
+      init_var(var, VLOCAL, v);  /* variable is local */
       if (!base)
         markupval(fs, v);  /* local will be used as an upval */
     }
@@ -317,7 +375,7 @@ static void singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
         /* else was LOCAL or UPVAL */
         idx  = newupvalue(fs, n, var);  /* will be a new upvalue */
       }
-      init_exp(var, VUPVAL, idx);  /* new or old upvalue */
+      init_var(var, VUPVAL, idx);  /* new or old upvalue */
     }
   }
 }
@@ -1199,20 +1257,20 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
   for (; lh; lh = lh->prev) {  /* check all previous assignments */
     if (vkisindexed(lh->v.k)) {  /* assignment to table field? */
       if (lh->v.k == VINDEXUP) {  /* is table an upvalue? */
-        if (v->k == VUPVAL && lh->v.u.ind.t == v->u.info) {
+        if (v->k == VUPVAL && lh->v.u.ind.t == v->u.var.idx) {
           conflict = 1;  /* table is the upvalue being assigned now */
           lh->v.k = VINDEXSTR;
           lh->v.u.ind.t = extra;  /* assignment will use safe copy */
         }
       }
       else {  /* table is a register */
-        if (v->k == VLOCAL && lh->v.u.ind.t == v->u.info) {
+        if (v->k == VLOCAL && lh->v.u.ind.t == v->u.var.idx) {
           conflict = 1;  /* table is the local being assigned now */
           lh->v.u.ind.t = extra;  /* assignment will use safe copy */
         }
         /* is index the local being assigned? */
         if (lh->v.k == VINDEXED && v->k == VLOCAL &&
-            lh->v.u.ind.idx == v->u.info) {
+            lh->v.u.ind.idx == v->u.var.idx) {
           conflict = 1;
           lh->v.u.ind.idx = extra;  /* previous assignment will use safe copy */
         }
@@ -1222,7 +1280,7 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
   if (conflict) {
     /* copy upvalue/local value to a temporary (in position 'extra') */
     OpCode op = (v->k == VLOCAL) ? OP_MOVE : OP_GETUPVAL;
-    luaK_codeABC(fs, op, extra, v->u.info, 0);
+    luaK_codeABC(fs, op, extra, v->u.var.idx, 0);
     luaK_reserveregs(fs, 1);
   }
 }
@@ -1237,6 +1295,7 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
 static void restassign (LexState *ls, struct LHS_assign *lh, int nvars) {
   expdesc e;
   check_condition(ls, vkisvar(lh->v.k), "syntax error");
+  check_readonly(ls, &lh->v);
   if (testnext(ls, ',')) {  /* restassign -> ',' suffixedexp restassign */
     struct LHS_assign nv;
     nv.prev = lh;
@@ -1615,20 +1674,30 @@ static void commonlocalstat (LexState *ls) {
 }
 
 
-static void tocloselocalstat (LexState *ls) {
+static void tocloselocalstat (LexState *ls, Vardesc *var) {
   FuncState *fs = ls->fs;
-  TString *attr = str_checkname(ls);
-  if (strcmp(getstr(attr), "toclose") != 0)
-    luaK_semerror(ls,
-      luaO_pushfstring(ls->L, "unknown attribute '%s'", getstr(attr)));
-  testnext(ls, '>');
-  new_localvar(ls, str_checkname(ls));
-  checknext(ls, '=');
-  exp1(ls);
+  var->ro = 1;  /* to-be-closed variables are always read-only */
   markupval(fs, fs->nactvar);
   fs->bl->insidetbc = 1;  /* in the scope of a to-be-closed variable */
-  adjustlocalvars(ls, 1);
   luaK_codeABC(fs, OP_TBC, fs->nactvar - 1, 0, 0);
+}
+
+
+static void attriblocalstat (LexState *ls) {
+  Vardesc *var;
+  TString *attr = str_checkname(ls);
+  testnext(ls, '>');
+  var = new_localvar(ls, str_checkname(ls));
+  checknext(ls, '=');
+  exp1(ls);
+  adjustlocalvars(ls, 1);
+  if (strcmp(getstr(attr), "const") == 0)
+    var->ro = 1;  /* set variable as read-only */
+  else if (strcmp(getstr(attr), "toclose") == 0)
+    tocloselocalstat(ls, var);
+  else
+    luaK_semerror(ls,
+      luaO_pushfstring(ls->L, "unknown attribute '%s'", getstr(attr)));
 }
 
 
@@ -1636,7 +1705,7 @@ static void localstat (LexState *ls) {
   /* stat -> LOCAL NAME {',' NAME} ['=' explist]
            | LOCAL *toclose NAME '=' exp */
   if (testnext(ls, '<'))
-    tocloselocalstat(ls);
+    attriblocalstat(ls);
   else
     commonlocalstat(ls);
 }
@@ -1801,7 +1870,7 @@ static void mainfunc (LexState *ls, FuncState *fs) {
   expdesc v;
   open_func(ls, fs, &bl);
   setvararg(fs, 0);  /* main function is always declared vararg */
-  init_exp(&v, VLOCAL, 0);  /* create and... */
+  init_var(&v, VLOCAL, 0);  /* create and... */
   newupvalue(fs, ls->envn, &v);  /* ...set environment upvalue */
   luaX_next(ls);  /* read first token */
   statlist(ls);  /* parse main body */

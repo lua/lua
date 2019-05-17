@@ -1488,13 +1488,24 @@ Function calls are explained in @See{functioncall}.
 
 @sect3{localvar| @title{Local Declarations}
 @x{Local variables} can be declared anywhere inside a block.
-The declaration can include an initial assignment:
+The declaration can include an initialization:
 @Produc{
 @producname{stat}@producbody{@Rw{local} namelist @bnfopt{@bnfter{=} explist}}
-}
+@producname{stat}@producbody{
+    @Rw{local} @bnfter{<} Name @bnfter{>} Name @bnfter{=} exp
+}}
 If present, an initial assignment has the same semantics
 of a multiple assignment @see{assignment}.
 Otherwise, all variables are initialized with @nil.
+The second syntax declares a local with a given attribute,
+which is the name between the angle brackets.
+In this case, there must be an initialization.
+There are two possible attributes:
+@id{const}, which declares a @x{constant variable},
+that is, a variable that cannot be assigned to
+after its initialization;
+and @id{toclose}, wich declares a to-be-closed variable @see{to-be-closed}.
+
 
 A chunk is also a block @see{chunks},
 and so local variables can be declared in a chunk outside any explicit block.
@@ -1506,12 +1517,12 @@ The visibility rules for local variables are explained in @See{visibility}.
 @sect3{to-be-closed| @title{To-be-closed Variables}
 
 A local variable can be declared as a @def{to-be-closed} variable,
-with the following syntax:
+using the identifier @id{toclose} as its attribute:
 @Produc{
 @producname{stat}@producbody{
-  @Rw{local} @bnfter{<} @bnfter{toclose} @bnfter{>} Name @bnfter{=} exp
+  @Rw{local} @bnfter{<} @id{toclose} @bnfter{>} Name @bnfter{=} exp
 }}
-A to-be-closed variable behaves like a normal local variable,
+A to-be-closed variable behaves like a constant local variable,
 except that its value is @emph{closed} whenever the variable
 goes out of scope, including normal block termination,
 exiting its block by @Rw{break}/@Rw{goto}/@Rw{return},
@@ -7603,7 +7614,7 @@ or a float otherwise.
 
 @LibEntry{math.abs (x)|
 
-Returns the absolute value of @id{x}. (integer/float)
+Returns the maximum value between @id{x} and @id{-x}. (integer/float)
 
 }
 
@@ -8042,7 +8053,8 @@ following the lexical conventions of Lua.
 This format always reads the longest input sequence that
 is a valid prefix for a numeral;
 if that prefix does not form a valid numeral
-(e.g., an empty string, @St{0x}, or @St{3.4e-}),
+(e.g., an empty string, @St{0x}, or @St{3.4e-})
+or it is too long (more than 200 characters),
 it is discarded and the format returns @nil.
 }
 
@@ -8949,7 +8961,7 @@ and @bnfNter{LiteralString}, see @See{lexical}.)
 @OrNL	@Rw{function} funcname funcbody
 @OrNL	@Rw{local} @Rw{function} @bnfNter{Name} funcbody
 @OrNL	@Rw{local} namelist @bnfopt{@bnfter{=} explist}
-@OrNL	@Rw{local} @bnfter{<} @bnfter{toclose} @bnfter{>} Name @bnfter{=} exp
+@OrNL	@Rw{local} @bnfter{<} Name @bnfter{>} Name @bnfter{=} exp
 }
 
 @producname{retstat}@producbody{@Rw{return}

@@ -33,8 +33,8 @@ typedef enum {
   VKINT,  /* integer constant; nval = numerical integer value */
   VNONRELOC,  /* expression has its value in a fixed register;
                  info = result register */
-  VLOCAL,  /* local variable; info = local register */
-  VUPVAL,  /* upvalue variable; info = index of upvalue in 'upvalues' */
+  VLOCAL,  /* local variable; var.idx = local register */
+  VUPVAL,  /* upvalue variable; var.idx = index of upvalue in 'upvalues' */
   VINDEXED,  /* indexed variable;
                 ind.t = table register;
                 ind.idx = key's R index */
@@ -58,7 +58,7 @@ typedef enum {
 
 #define vkisvar(k)	(VLOCAL <= (k) && (k) <= VINDEXSTR)
 #define vkisindexed(k)	(VINDEXED <= (k) && (k) <= VINDEXSTR)
-#define vkisinreg(k)	((k) == VNONRELOC || (k) == VLOCAL)
+
 
 typedef struct expdesc {
   expkind k;
@@ -70,15 +70,20 @@ typedef struct expdesc {
       short idx;  /* index (R or "long" K) */
       lu_byte t;  /* table (register or upvalue) */
     } ind;
+    struct {  /* for local variables and upvalues */
+      lu_byte idx;  /* index of the variable */
+    } var;
   } u;
   int t;  /* patch list of 'exit when true' */
   int f;  /* patch list of 'exit when false' */
 } expdesc;
 
 
-/* description of active local variable */
+/* description of an active local variable */
 typedef struct Vardesc {
+  TString *name;
   short idx;  /* index of the variable in the Proto's 'locvars' array */
+  lu_byte ro;  /* true if variable is 'const' */
 } Vardesc;
 
 

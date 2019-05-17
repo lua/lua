@@ -678,11 +678,12 @@ void luaK_setoneret (FuncState *fs, expdesc *e) {
 void luaK_dischargevars (FuncState *fs, expdesc *e) {
   switch (e->k) {
     case VLOCAL: {  /* already in a register */
+      e->u.info = e->u.var.idx;
       e->k = VNONRELOC;  /* becomes a non-relocatable value */
       break;
     }
     case VUPVAL: {  /* move value to some (pending) register */
-      e->u.info = luaK_codeABC(fs, OP_GETUPVAL, 0, e->u.info, 0);
+      e->u.info = luaK_codeABC(fs, OP_GETUPVAL, 0, e->u.var.idx, 0);
       e->k = VRELOC;
       break;
     }
@@ -938,12 +939,12 @@ void luaK_storevar (FuncState *fs, expdesc *var, expdesc *ex) {
   switch (var->k) {
     case VLOCAL: {
       freeexp(fs, ex);
-      exp2reg(fs, ex, var->u.info);  /* compute 'ex' into proper place */
+      exp2reg(fs, ex, var->u.var.idx);  /* compute 'ex' into proper place */
       return;
     }
     case VUPVAL: {
       int e = luaK_exp2anyreg(fs, ex);
-      luaK_codeABC(fs, OP_SETUPVAL, e, var->u.info, 0);
+      luaK_codeABC(fs, OP_SETUPVAL, e, var->u.var.idx, 0);
       break;
     }
     case VINDEXUP: {
@@ -1165,25 +1166,30 @@ static int isSCnumber (expdesc *e, lua_Integer *i, int *isfloat) {
 ** values in registers.
 */
 void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
-  lua_assert(!hasjumps(t) && (vkisinreg(t->k) || t->k == VUPVAL));
+  lua_assert(!hasjumps(t) &&
+             (t->k == VLOCAL || t->k == VNONRELOC || t->k == VUPVAL));
   if (t->k == VUPVAL && !isKstr(fs, k))  /* upvalue indexed by non string? */
     luaK_exp2anyreg(fs, t);  /* put it in a register */
-  t->u.ind.t = t->u.info;  /* register or upvalue index */
   if (t->k == VUPVAL) {
+    t->u.ind.t = t->u.var.idx;  /* upvalue index */
     t->u.ind.idx = k->u.info;  /* literal string */
     t->k = VINDEXUP;
   }
-  else if (isKstr(fs, k)) {
-    t->u.ind.idx = k->u.info;  /* literal string */
-    t->k = VINDEXSTR;
-  }
-  else if (isCint(k)) {
-    t->u.ind.idx = cast_int(k->u.ival);  /* integer constant in proper range */
-    t->k = VINDEXI;
-  }
   else {
-    t->u.ind.idx = luaK_exp2anyreg(fs, k);  /* register */
-    t->k = VINDEXED;
+    /* register index of the table */
+    t->u.ind.t = (t->k == VLOCAL) ? t->u.var.idx: t->u.info;
+    if (isKstr(fs, k)) {
+      t->u.ind.idx = k->u.info;  /* literal string */
+      t->k = VINDEXSTR;
+    }
+    else if (isCint(k)) {
+      t->u.ind.idx = cast_int(k->u.ival);  /* int. constant in proper range */
+      t->k = VINDEXI;
+    }
+    else {
+      t->u.ind.idx = luaK_exp2anyreg(fs, k);  /* register */
+      t->k = VINDEXED;
+    }
   }
 }
 
