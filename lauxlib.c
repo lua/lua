@@ -46,8 +46,8 @@
 
 
 /*
-** search for 'objidx' in table at index -1.
-** return 1 + string at top if find a good name.
+** Search for 'objidx' in table at index -1. ('objidx' must be an
+** absolute index.) Return 1 + string at top if it found a good name.
 */
 static int findfield (lua_State *L, int objidx, int level) {
   if (level == 0 || !lua_istable(L, -1))
@@ -60,10 +60,10 @@ static int findfield (lua_State *L, int objidx, int level) {
         return 1;
       }
       else if (findfield(L, objidx, level - 1)) {  /* try recursively */
-        lua_remove(L, -2);  /* remove table (but keep name) */
-        lua_pushliteral(L, ".");
-        lua_insert(L, -2);  /* place '.' between the two names */
-        lua_concat(L, 3);
+        /* stack: lib_name, lib_table, field_name (top) */
+        lua_pushliteral(L, ".");  /* place '.' between the two names */
+        lua_replace(L, -3);  /* (in the slot ocupied by table) */
+        lua_concat(L, 3);  /* lib_name.field_name */
         return 1;
       }
     }
@@ -86,8 +86,8 @@ static int pushglobalfuncname (lua_State *L, lua_Debug *ar) {
       lua_pushstring(L, name + 3);  /* push name without prefix */
       lua_remove(L, -2);  /* remove original name */
     }
-    lua_copy(L, -1, top + 1);  /* move name to proper place */
-    lua_pop(L, 2);  /* remove pushed values */
+    lua_copy(L, -1, top + 1);  /* copy name to proper place */
+    lua_settop(L, top + 1);  /* remove table "loaded" an name copy */
     return 1;
   }
   else {
@@ -130,32 +130,37 @@ static int lastlevel (lua_State *L) {
 
 LUALIB_API void luaL_traceback (lua_State *L, lua_State *L1,
                                 const char *msg, int level) {
+  luaL_Buffer b;
   lua_Debug ar;
-  int top = lua_gettop(L);
   int last = lastlevel(L1);
-  int n1 = (last - level > LEVELS1 + LEVELS2) ? LEVELS1 : -1;
-  if (msg)
-    lua_pushfstring(L, "%s\n", msg);
-  luaL_checkstack(L, 10, NULL);
-  lua_pushliteral(L, "stack traceback:");
+  int limit2show = (last - level > LEVELS1 + LEVELS2) ? LEVELS1 : -1;
+  luaL_buffinit(L, &b);
+  if (msg) {
+    luaL_addstring(&b, msg);
+    luaL_addchar(&b, '\n');
+  }
+  luaL_addstring(&b, "stack traceback:");
   while (lua_getstack(L1, level++, &ar)) {
-    if (n1-- == 0) {  /* too many levels? */
-      lua_pushliteral(L, "\n\t...");  /* add a '...' */
-      level = last - LEVELS2 + 1;  /* and skip to last ones */
+    if (limit2show-- == 0) {  /* too many levels? */
+      int n = last - level - LEVELS2 + 1;  /* number of levels to skip */
+      lua_pushfstring(L, "\n\t...\t(skipping %d levels)", n);
+      luaL_addvalue(&b);  /* add warning about skip */
+      level += n;  /* and skip to last levels */
     }
     else {
       lua_getinfo(L1, "Slnt", &ar);
-      lua_pushfstring(L, "\n\t%s:", ar.short_src);
-      if (ar.currentline > 0)
-        lua_pushfstring(L, "%d:", ar.currentline);
-      lua_pushliteral(L, " in ");
+      if (ar.currentline <= 0)
+        lua_pushfstring(L, "\n\t%s: in ", ar.short_src);
+      else
+        lua_pushfstring(L, "\n\t%s:%d: in ", ar.short_src, ar.currentline);
+      luaL_addvalue(&b);
       pushfuncname(L, &ar);
+      luaL_addvalue(&b);
       if (ar.istailcall)
-        lua_pushliteral(L, "\n\t(...tail calls...)");
-      lua_concat(L, lua_gettop(L) - top);
+        luaL_addstring(&b, "\n\t(...tail calls...)");
     }
   }
-  lua_concat(L, lua_gettop(L) - top);
+  luaL_pushresult(&b);
 }
 
 /* }====================================================== */
