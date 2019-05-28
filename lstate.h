@@ -26,6 +26,22 @@
 ** 'fixedgc': all objects that are not to be collected (currently
 ** only small strings, such as reserved words).
 **
+** For the generational collector, some of these lists have marks for
+** generations. Each mark points to the first element in the list for
+** that particular generation; that generation goes until the next mark.
+**
+** 'allgc' -> 'survival': new objects;
+** 'survival' -> 'old': objects that survived one collection;
+** 'old' -> 'reallyold': objects that became old in last collection;
+** 'reallyold' -> NULL: objects old for more than one cycle.
+**
+** 'finobj' -> 'finobjsur': new objects marked for finalization;
+** 'finobjsur' -> 'finobjold': survived   """";
+** 'finobjold' -> 'finobjrold': just old  """";
+** 'finobjrold' -> NULL: really old       """".
+*/
+
+/*
 ** Moreover, there is another set of lists that control gray objects.
 ** These lists are linked by fields 'gclist'. (All objects that
 ** can become gray have such a field. The field is not the same

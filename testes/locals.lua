@@ -452,7 +452,6 @@ do
   end)
   assert(co() == 100)
   local st, msg = pcall(co)
-print(msg)
   -- should get last error raised
   assert(not st and string.find(msg, "%w+%.%w+:%d+: XXX"))
 end

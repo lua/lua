@@ -215,7 +215,7 @@ do   -- testing constants
   checkload(prog, "unknown attribute 'XXX'")
 
   checkload([[local <const> xxx = 20; xxx = 10]],
-             ":1: assignment to const variable 'xxx'")
+             ":1: attempt to assign to const variable 'xxx'")
 
   checkload([[
     local xx;
@@ -225,12 +225,12 @@ do   -- testing constants
       local abc = xx + yyy + xxx;
       return function () return function () xxx = yyy end end
     end
-  ]], ":6: assignment to const variable 'xxx'")
+  ]], ":6: attempt to assign to const variable 'xxx'")
 
   checkload([[
     local <toclose> x = nil
     x = io.open()
-  ]], ":2: assignment to const variable 'x'")
+  ]], ":2: attempt to assign to const variable 'x'")
 end
 
 f = [[

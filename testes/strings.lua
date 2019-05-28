@@ -3,7 +3,8 @@
 
 print('testing strings and string library')
 
-local maxi, mini = math.maxinteger, math.mininteger
+local <const> maxi = math.maxinteger
+local <const> mini = math.mininteger
 
 
 local function checkerror (msg, f, ...)

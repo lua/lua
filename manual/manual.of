@@ -8774,10 +8774,18 @@ is a more portable solution.
 
 Here we list the incompatibilities that you may find when moving a program
 from @N{Lua 5.3} to @N{Lua 5.4}.
+
 You can avoid some incompatibilities by compiling Lua with
 appropriate options (see file @id{luaconf.h}).
 However,
 all these compatibility options will be removed in the future.
+More often than not,
+compatibility issues arise when these compatibility options
+are removed.
+So, whenever you have the chance,
+you should try to test your code with a version of Lua compiled
+with all compatibility options turned off.
+That will ease transitions to newer versions of Lua.
 
 Lua versions can always change the C API in ways that
 do not imply source-code changes in a program,
@@ -8823,11 +8831,6 @@ When needed, this metamethod must be explicitly defined.
 The semantics of the numerical @Rw{for} loop
 over integers changed in some details.
 In particular, the control variable never wraps around.
-}
-
-@item{
-When a coroutine finishes with an error,
-its stack is unwound (to run any pending closing methods).
 }
 
 @item{

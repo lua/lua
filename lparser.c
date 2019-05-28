@@ -264,7 +264,7 @@ static void check_readonly (LexState *ls, expdesc *e) {
   Vardesc *vardesc = getvardesc(ls->fs, e);
   if (vardesc && vardesc->ro) {  /* is variable local and const? */
     const char *msg = luaO_pushfstring(ls->L,
-       "assignment to const variable '%s'", getstr(vardesc->name));
+       "attempt to assign to const variable '%s'", getstr(vardesc->name));
     luaK_semerror(ls, msg);  /* error */
   }
 }

@@ -419,9 +419,9 @@ typedef struct BuffFS {
 static void pushstr (BuffFS *buff, const char *str, size_t l) {
   lua_State *L = buff->L;
   setsvalue2s(L, L->top, luaS_newlstr(L, str, l));
-  L->top++;
+  L->top++;  /* may use one extra slot */
   buff->pushed++;
-  if (buff->pushed > 1 && L->top + 2 > L->stack_last) {
+  if (buff->pushed > 1 && L->top + 1 >= L->stack_last) {
     luaV_concat(L, buff->pushed);  /* join all partial results into one */
     buff->pushed = 1;
   }
