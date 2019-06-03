@@ -123,23 +123,23 @@ assert(#a == 22 and a[#a] == 79)
 x, a = nil
 
 
--- coroutine kill
+-- coroutine closing
 do
-  -- ok to kill a dead coroutine
+  -- ok to close a dead coroutine
   local co = coroutine.create(print)
-  assert(coroutine.resume(co, "testing 'coroutine.kill'"))
+  assert(coroutine.resume(co, "testing 'coroutine.close'"))
   assert(coroutine.status(co) == "dead")
-  assert(coroutine.kill(co))
+  assert(coroutine.close(co))
 
-  -- cannot kill the running coroutine
-  local st, msg = pcall(coroutine.kill, coroutine.running())
+  -- cannot close the running coroutine
+  local st, msg = pcall(coroutine.close, coroutine.running())
   assert(not st and string.find(msg, "running"))
 
   local main = coroutine.running()
 
-  -- cannot kill a "normal" coroutine
+  -- cannot close a "normal" coroutine
   ;(coroutine.wrap(function ()
-    local st, msg = pcall(coroutine.kill, main)
+    local st, msg = pcall(coroutine.close, main)
     assert(not st and string.find(msg, "normal"))
   end))()
 
@@ -159,10 +159,10 @@ do
   end)
   coroutine.resume(co)
   assert(X)
-  assert(coroutine.kill(co))
+  assert(coroutine.close(co))
   assert(not X and coroutine.status(co) == "dead")
 
-  -- error killing a coroutine
+  -- error closing a coroutine
   co = coroutine.create(function()
     local <toclose> x = func2close(function (self, err)
       assert(err == nil); error(111)
@@ -170,7 +170,7 @@ do
     coroutine.yield()
   end)
   coroutine.resume(co)
-  local st, msg = coroutine.kill(co)
+  local st, msg = coroutine.close(co)
   assert(not st and coroutine.status(co) == "dead" and msg == 111)
 
 end

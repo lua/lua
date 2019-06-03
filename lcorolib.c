@@ -165,7 +165,7 @@ static int luaB_corunning (lua_State *L) {
 }
 
 
-static int luaB_kill (lua_State *L) {
+static int luaB_close (lua_State *L) {
   lua_State *co = getco(L);
   int status = auxstatus(L, co);
   switch (status) {
@@ -182,7 +182,7 @@ static int luaB_kill (lua_State *L) {
       }
     }
     default:  /* normal or running coroutine */
-      return luaL_error(L, "cannot kill a %s coroutine", statname[status]);
+      return luaL_error(L, "cannot close a %s coroutine", statname[status]);
   }
 }
 
@@ -195,7 +195,7 @@ static const luaL_Reg co_funcs[] = {
   {"wrap", luaB_cowrap},
   {"yield", luaB_yield},
   {"isyieldable", luaB_yieldable},
-  {"kill", luaB_kill},
+  {"close", luaB_close},
   {NULL, NULL}
 };
 

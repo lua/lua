@@ -864,7 +864,7 @@ Unlike @Lid{coroutine.resume},
 the function created by @Lid{coroutine.wrap}
 propagates any error to the caller.
 In this case,
-the function also kills the coroutine @seeF{coroutine.kill}.
+the function also closes the coroutine @seeF{coroutine.close}.
 
 As an example of how coroutines work,
 consider the following code:
@@ -1554,7 +1554,7 @@ Similarly, if a coroutine ends with an error,
 it does not unwind its stack,
 so it does not close any variable.
 You should either use finalizers
-or call @Lid{coroutine.kill} to close the variables in these cases.
+or call @Lid{coroutine.close} to close the variables in these cases.
 However, note that if the coroutine was created
 through @Lid{coroutine.wrap},
 then its corresponding function will close all variables
@@ -6351,6 +6351,18 @@ which come inside the table @defid{coroutine}.
 See @See{coroutine} for a general description of coroutines.
 
 
+@LibEntry{coroutine.close (co)|
+
+Closes coroutine @id{co},
+that is,
+closes all its pending to-be-closed variables
+and puts the coroutine in a dead state.
+In case of error closing some variable,
+returns @false plus the error object;
+otherwise returns @true.
+
+}
+
 @LibEntry{coroutine.create (f)|
 
 Creates a new coroutine, with body @id{f}.
@@ -6367,17 +6379,6 @@ The default for @id{co} is the running coroutine.
 
 A coroutine is yieldable if it is not the main thread and
 it is not inside a non-yieldable @N{C function}.
-
-}
-
-@LibEntry{coroutine.kill (co)|
-
-Kills coroutine @id{co},
-closing all its pending to-be-closed variables
-and putting the coroutine in a dead state.
-In case of error closing some variable,
-returns @false plus the error object;
-otherwise returns @true.
 
 }
 
@@ -6433,7 +6434,7 @@ extra arguments to @id{resume}.
 The function returns the same values returned by @id{resume},
 except the first boolean.
 In case of error,
-the function kills the coroutine and propagates the error.
+the function closes the coroutine and propagates the error.
 
 }
 
