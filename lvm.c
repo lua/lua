@@ -1593,9 +1593,9 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         savepc(ci);
         if (TESTARG_k(i)) {
           int nparams1 = GETARG_C(i);
+          luaF_close(L, base, LUA_OK);  /* there may be open upvalues */
           if (nparams1)  /* vararg function? */
             ci->func -= ci->u.l.nextraargs + nparams1;
-          luaF_close(L, base, LUA_OK);  /* there may be open upvalues */
         }
         luaD_poscall(L, ci, n);
         return;

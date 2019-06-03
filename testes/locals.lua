@@ -276,6 +276,15 @@ do   -- errors in __close
   assert(msg == 1)
   assert(log[1] == 4 and log[2] == 3 and log[3] == 2 and log[4] == 2
          and #log == 4)
+
+  -- error in toclose in vararg function
+  function foo (...)
+    local <toclose> x123 = 10
+  end
+
+  local st, msg = pcall(foo)
+  assert(string.find(msg, "'x123'"))
+
 end
 
 
