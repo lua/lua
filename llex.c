@@ -29,7 +29,7 @@
 
 
 
-#define next(ls) (ls->current = zgetc(ls->z))
+#define next(ls)	(ls->current = zgetc(ls->z))
 
 
 
@@ -337,7 +337,7 @@ static unsigned long readutf8esc (LexState *ls) {
   save_and_next(ls);  /* skip 'u' */
   esccheck(ls, ls->current == '{', "missing '{'");
   r = gethexa(ls);  /* must have at least one digit */
-  while ((save_and_next(ls), lisxdigit(ls->current))) {
+  while (cast_void(save_and_next(ls)), lisxdigit(ls->current)) {
     i++;
     esccheck(ls, r <= (0x7FFFFFFFu >> 4), "UTF-8 value too large");
     r = (r << 4) + luaO_hexavalue(ls->current);

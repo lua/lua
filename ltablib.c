@@ -306,7 +306,7 @@ static IdxT partition (lua_State *L, IdxT lo, IdxT up) {
     }
     /* after the loop, a[i] >= P and a[lo .. i - 1] < P */
     /* next loop: repeat --j while P < a[j] */
-    while (lua_geti(L, 1, --j), sort_comp(L, -3, -1)) {
+    while ((void)lua_geti(L, 1, --j), sort_comp(L, -3, -1)) {
       if (j < i)  /* j < i  but  a[j] > P ?? */
         luaL_error(L, "invalid order function for sorting");
       lua_pop(L, 1);  /* remove a[j] */

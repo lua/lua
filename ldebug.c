@@ -373,6 +373,7 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
           ar->ftransfer = ci->u2.transferinfo.ftransfer;
           ar->ntransfer = ci->u2.transferinfo.ntransfer;
         }
+        break;
       }
       case 'L':
       case 'f':  /* handled by lua_getinfo */
@@ -525,8 +526,8 @@ static const char *gxf (const Proto *p, int pc, Instruction i, int isup) {
 }
 
 
- const char *getobjname (const Proto *p, int lastpc, int reg,
-                         const char **name) {
+static const char *getobjname (const Proto *p, int lastpc, int reg,
+                               const char **name) {
   int pc;
   *name = luaF_getlocalname(p, reg + 1, lastpc);
   if (*name)  /* is a local? */

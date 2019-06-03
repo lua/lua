@@ -1504,7 +1504,7 @@ There are two possible attributes:
 @id{const}, which declares a @x{constant variable},
 that is, a variable that cannot be assigned to
 after its initialization;
-and @id{toclose}, wich declares a to-be-closed variable @see{to-be-closed}.
+and @id{toclose}, which declares a to-be-closed variable @see{to-be-closed}.
 
 
 A chunk is also a block @see{chunks},
@@ -1549,7 +1549,7 @@ the other pending closing methods will still be called.
 
 If a coroutine yields inside a block and is never resumed again,
 the variables visible at that block will never go out of scope,
-and therefore they will not be closed.
+and therefore they will never be closed.
 Similarly, if a coroutine ends with an error,
 it does not unwind its stack,
 so it does not close any variable.
@@ -3432,7 +3432,6 @@ The new thread returned by this function shares with the original thread
 its global environment,
 but has an independent execution stack.
 
-There is no explicit function to close or to destroy a thread.
 Threads are subject to garbage collection,
 like any Lua object.
 

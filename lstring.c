@@ -121,8 +121,8 @@ void luaS_clearcache (global_State *g) {
   int i, j;
   for (i = 0; i < STRCACHE_N; i++)
     for (j = 0; j < STRCACHE_M; j++) {
-    if (iswhite(g->strcache[i][j]))  /* will entry be collected? */
-      g->strcache[i][j] = g->memerrmsg;  /* replace it with something fixed */
+      if (iswhite(g->strcache[i][j]))  /* will entry be collected? */
+        g->strcache[i][j] = g->memerrmsg;  /* replace it with something fixed */
     }
 }
 

@@ -366,8 +366,8 @@ int luaO_utf8esc (char *buff, unsigned long x) {
 /*
 ** Convert a number object to a string, adding it to a buffer
 */
-static size_t tostringbuff (TValue *obj, char *buff) {
-  size_t len;
+static int tostringbuff (TValue *obj, char *buff) {
+  int len;
   lua_assert(ttisnumber(obj));
   if (ttisinteger(obj))
     len = lua_integer2str(buff, MAXNUMBER2STR, ivalue(obj));
@@ -387,7 +387,7 @@ static size_t tostringbuff (TValue *obj, char *buff) {
 */
 void luaO_tostring (lua_State *L, TValue *obj) {
   char buff[MAXNUMBER2STR];
-  size_t len = tostringbuff(obj, buff);
+  int len = tostringbuff(obj, buff);
   setsvalue(L, obj, luaS_newlstr(L, buff, len));
 }
 
@@ -439,11 +439,11 @@ static void clearbuff (BuffFS *buff) {
 
 /*
 ** Get a space of size 'sz' in the buffer. If buffer has not enough
-** space, empty it. 'sz' must fit in an empty space.
+** space, empty it. 'sz' must fit in an empty buffer.
 */
-static char *getbuff (BuffFS *buff, size_t sz) {
+static char *getbuff (BuffFS *buff, int sz) {
   lua_assert(buff->blen <= BUFVFS); lua_assert(sz <= BUFVFS);
-  if (sz > BUFVFS - cast_sizet(buff->blen))  /* string does not fit? */
+  if (sz > BUFVFS - buff->blen)  /* not enough space? */
     clearbuff(buff);
   return buff->space + buff->blen;
 }
@@ -458,9 +458,9 @@ static char *getbuff (BuffFS *buff, size_t sz) {
 */
 static void addstr2buff (BuffFS *buff, const char *str, size_t slen) {
   if (slen <= BUFVFS) {  /* does string fit into buffer? */
-    char *bf = getbuff(buff, slen);
+    char *bf = getbuff(buff, cast_int(slen));
     memcpy(bf, str, slen);  /* add string to buffer */
-    addsize(buff, slen);
+    addsize(buff, cast_int(slen));
   }
   else {  /* string larger than buffer */
     clearbuff(buff);  /* string comes after buffer's content */
@@ -474,7 +474,7 @@ static void addstr2buff (BuffFS *buff, const char *str, size_t slen) {
 */
 static void addnum2buff (BuffFS *buff, TValue *num) {
   char *numbuff = getbuff(buff, MAXNUMBER2STR);
-  size_t len = tostringbuff(num, numbuff);  /* format number into 'numbuff' */
+  int len = tostringbuff(num, numbuff);  /* format number into 'numbuff' */
   addsize(buff, len);
 }
 
