@@ -5,8 +5,8 @@
 
 local version = "Lua 5.4"
 if _VERSION ~= version then
-  warn(string.format(
-   "This test suite is for %s, not for %s\nExiting tests", version, _VERSION))
+  warn("This test suite is for ", version,
+        ", not for ", _VERSION, "\nExiting tests")
   return
 end
 
@@ -190,16 +190,13 @@ assert(dofile('verybig.lua', true) == 10); collectgarbage()
 dofile('files.lua')
 
 if #msgs > 0 then
-  warn("#tests not performed:", true)
-  for i=1,#msgs do
-    warn("\n  ", true); warn(msgs[i], true)
-  end
-  warn("\n")
+  local m = table.concat(msgs, "\n  ")
+  warn("#tests not performed:\n  ", m, "\n")
 end
 
 print("(there should be two warnings now)")
-warn("#This is ", true); warn("an expected", true); warn(" warning")
-warn("#This is", true); warn(" another one")
+warn("#This is ", "an expected", " warning")
+warn("#This is", " another one")
 
 -- no test module should define 'debug'
 assert(debug == nil)
@@ -216,9 +213,10 @@ _G.showmem = showmem
 
 end   --)
 
-local _G, showmem, print, format, clock, time, difftime, assert, open =
+local _G, showmem, print, format, clock, time, difftime,
+      assert, open, warn =
       _G, showmem, print, string.format, os.clock, os.time, os.difftime,
-      assert, io.open
+      assert, io.open, warn
 
 -- file with time of last performed test
 local fname = T and "time-debug.txt" or "time.txt"
@@ -262,7 +260,7 @@ if not usertests then
   local diff = (clocktime - lasttime) / lasttime
   local tolerance = 0.05    -- 5%
   if (diff >= tolerance or diff <= -tolerance) then
-    print(format("WARNING: time difference from previous test: %+.1f%%",
+    warn(format("#time difference from previous test: %+.1f%%",
                   diff * 100))
   end
   assert(open(fname, "w")):write(clocktime):close()

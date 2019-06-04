@@ -347,10 +347,26 @@ NoRun("syntax error", "lua -e a")
 NoRun("'-l' needs argument", "lua -l")
 
 
-if T then   -- auxiliary library?
+if T then   -- test library?
   print("testing 'not enough memory' to create a state")
   NoRun("not enough memory", "env MEMLIMIT=100 lua")
+
+  -- testing 'warn'
+  warn("@123", "456", "789")
+  assert(_WARN == "@123456789")
 end
+
+do
+  -- 'warn' must get at least one argument
+  local st, msg = pcall(warn)
+  assert(string.find(msg, "string expected"))
+
+  -- 'warn' does not leave unfinished warning in case of errors
+  -- (message would appear in next warning)
+  st, msg = pcall(warn, "SHOULD NOT APPEAR", {})
+  assert(string.find(msg, "string expected"))
+end
+
 print('+')
 
 print('testing Ctrl C')

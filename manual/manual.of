@@ -6326,12 +6326,10 @@ The current value of this variable is @St{Lua 5.4}.
 
 }
 
-@LibEntry{warn (message [, tocont])|
+@LibEntry{warn (msg1, @Cdots)|
 
-Emits a warning with the given message.
-A message in a call with @id{tocont} true should be
-continued in another call to this function.
-The default for @id{tocont} is false.
+Emits a warning with a message composed by the concatenation
+of all its arguments (which should be strings).
 
 }
 
