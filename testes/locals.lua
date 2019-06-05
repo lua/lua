@@ -267,14 +267,14 @@ do   -- errors in __close
     if err then error(4) end
   end
   local stat, msg = pcall(foo, false)
-  assert(msg == 1)
-  assert(log[1] == 10 and log[2] == 3 and log[3] == 2 and log[4] == 2
+  assert(msg == 3)
+  assert(log[1] == 10 and log[2] == 3 and log[3] == 3 and log[4] == 3
          and #log == 4)
 
   log = {}
   local stat, msg = pcall(foo, true)
-  assert(msg == 1)
-  assert(log[1] == 4 and log[2] == 3 and log[3] == 2 and log[4] == 2
+  assert(msg == 4)
+  assert(log[1] == 4 and log[2] == 4 and log[3] == 4 and log[4] == 4
          and #log == 4)
 
   -- error in toclose in vararg function
@@ -317,7 +317,7 @@ if rawget(_G, "T") then
     local <toclose> x = setmetatable({}, {__close = function ()
       T.alloccount(0); local x = {}   -- force a memory error
     end})
-    error("a")   -- common error inside the function's body
+    error(1000)   -- common error inside the function's body
   end
 
   stack(5)    -- ensure a minimal number of CI structures
@@ -325,7 +325,7 @@ if rawget(_G, "T") then
   -- despite memory error, 'y' will be executed and
   -- memory limit will be lifted
   local _, msg = pcall(foo)
-  assert(msg == "not enough memory")
+  assert(msg == 1000)
 
   local close = func2close(function (self, msg)
     T.alloccount()
@@ -368,8 +368,7 @@ if rawget(_G, "T") then
   end
 
   local _, msg = pcall(test)
-  assert(msg == 1000)
-
+  assert(msg == "not enough memory")   -- reported error is the first one
 
   do    -- testing 'toclose' in C string buffer
     collectgarbage()
@@ -453,15 +452,27 @@ end
 
 do
   -- error in a wrapped coroutine raising errors when closing a variable
-  local x = false
+  local x = 0
   local co = coroutine.wrap(function ()
-    local <toclose> xv = func2close(function () error("XXX") end)
+    local <toclose> xx = func2close(function () x = x + 1; error("YYY") end)
+    local <toclose> xv = func2close(function () x = x + 1; error("XXX") end)
       coroutine.yield(100)
       error(200)
   end)
-  assert(co() == 100)
-  local st, msg = pcall(co)
-  -- should get last error raised
+  assert(co() == 100); assert(x == 0)
+  local st, msg = pcall(co); assert(x == 2)
+  assert(not st and msg == 200)   -- should get first error raised
+
+  x = 0
+  co = coroutine.wrap(function ()
+    local <toclose> xx = func2close(function () x = x + 1; error("YYY") end)
+    local <toclose> xv = func2close(function () x = x + 1; error("XXX") end)
+      coroutine.yield(100)
+      return 200
+  end)
+  assert(co() == 100); assert(x == 0)
+  local st, msg = pcall(co); assert(x == 2)
+  -- should get first error raised
   assert(not st and string.find(msg, "%w+%.%w+:%d+: XXX"))
 end
 

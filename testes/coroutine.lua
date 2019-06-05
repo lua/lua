@@ -163,15 +163,23 @@ do
   assert(not X and coroutine.status(co) == "dead")
 
   -- error closing a coroutine
+  local x = 0
   co = coroutine.create(function()
+    local <toclose> y = func2close(function (self,err)
+      if (err ~= 111) then os.exit(false) end   -- should not happen
+      x = 200
+      error(200)
+    end)
     local <toclose> x = func2close(function (self, err)
       assert(err == nil); error(111)
     end)
     coroutine.yield()
   end)
   coroutine.resume(co)
+  assert(x == 0)
   local st, msg = coroutine.close(co)
-  assert(not st and coroutine.status(co) == "dead" and msg == 111)
+  assert(st == false and coroutine.status(co) == "dead" and msg == 111)
+  assert(x == 200)
 
 end
 

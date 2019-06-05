@@ -144,13 +144,16 @@ static int callclosemth (lua_State *L, TValue *uv, StkId level, int status) {
       luaG_runerror(L, "attempt to close non-closable variable '%s'", vname);
     }
   }
-  else {  /* there was an error */
+  else {  /* must close the object in protected mode */
+    ptrdiff_t oldtop = savestack(L, level + 1);
     /* save error message and set stack top to 'level + 1' */
     luaD_seterrorobj(L, status, level);
     if (prepclosingmethod(L, uv, s2v(level))) {  /* something to call? */
-      int newstatus = luaD_pcall(L, callclose, NULL, savestack(L, level), 0);
-      if (newstatus != LUA_OK)  /* another error when closing? */
+      int newstatus = luaD_pcall(L, callclose, NULL, oldtop, 0);
+      if (newstatus != LUA_OK && status == CLOSEPROTECT)  /* first error? */
         status = newstatus;  /* this will be the new error */
+      else  /* leave original error (or nil) on top */
+        L->top = restorestack(L, oldtop);
     }
     /* else no metamethod; ignore this case and keep original error */
   }

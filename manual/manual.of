@@ -1541,11 +1541,17 @@ if there was no error, the second argument is @nil.
 
 If several to-be-closed variables go out of scope at the same event,
 they are closed in the reverse order that they were declared.
+
 If there is any error while running a closing method,
 that error is handled like an error in the regular code
 where the variable was defined;
 in particular,
 the other pending closing methods will still be called.
+After an error,
+other errors in closing methods
+interrupt the respective method,
+but are otherwise ignored;
+the error reported is the original one.
 
 If a coroutine yields inside a block and is never resumed again,
 the variables visible at that block will never go out of scope,
@@ -1553,11 +1559,12 @@ and therefore they will never be closed.
 Similarly, if a coroutine ends with an error,
 it does not unwind its stack,
 so it does not close any variable.
-You should either use finalizers
-or call @Lid{coroutine.close} to close the variables in these cases.
-However, note that if the coroutine was created
+In both cases,
+you should either use finalizers
+or call @Lid{coroutine.close} to close the variables.
+However, if the coroutine was created
 through @Lid{coroutine.wrap},
-then its corresponding function will close all variables
+then its corresponding function will close the coroutine
 in case of errors.
 
 }
@@ -3932,7 +3939,7 @@ Returns a status code:
 @Lid{LUA_OK} for no errors in closing methods,
 or an error status otherwise.
 In case of error,
-leave the error object on the stack,
+leaves the error object on the top of the stack,
 
 }
 
@@ -6355,6 +6362,7 @@ Closes coroutine @id{co},
 that is,
 closes all its pending to-be-closed variables
 and puts the coroutine in a dead state.
+The given coroutine must be dead or suspended.
 In case of error closing some variable,
 returns @false plus the error object;
 otherwise returns @true.
@@ -6412,7 +6420,8 @@ true when the running coroutine is the main one.
 
 Returns the status of the coroutine @id{co}, as a string:
 @T{"running"},
-if the coroutine is running (that is, it called @id{status});
+if the coroutine is running
+(that is, it is the one that called @id{status});
 @T{"suspended"}, if the coroutine is suspended in a call to @id{yield},
 or if it has not started running yet;
 @T{"normal"} if the coroutine is active but not running
