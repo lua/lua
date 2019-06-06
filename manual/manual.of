@@ -575,7 +575,7 @@ or @Lid{collectgarbage} in Lua.
 You can also use these functions to control
 the collector directly (e.g., to stop and restart it).
 
-@sect3{@title{Incremental Garbage Collection}
+@sect3{incmode| @title{Incremental Garbage Collection}
 
 In incremental mode,
 each GC cycle performs a mark-and-sweep collection in small steps
@@ -624,7 +624,7 @@ which means steps of approximately @N{8 Kbytes}.
 
 }
 
-@sect3{@title{Generational Garbage Collection}
+@sect3{genmode| @title{Generational Garbage Collection}
 
 In generational mode,
 the collector does frequent @emph{minor} collections,
@@ -633,17 +633,7 @@ If after a minor collection the use of memory is still above a limit,
 the collector does a @emph{major} collection,
 which traverses all objects.
 The generational mode uses two parameters:
-the @def{major multiplier} and the @def{the minor multiplier}.
-
-The major multiplier controls the frequency of major collections.
-For a major multiplier @M{x},
-a new major collection will be done when memory
-grows @M{x%} larger than the memory in use after the previous major
-collection.
-For instance, for a multiplier of 100,
-the collector will do a major collection when the use of memory
-gets larger than twice the use after the previous collection.
-The default value is 100; the maximum value is 1000.
+the @def{minor multiplier} and the @def{the major multiplier}.
 
 The minor multiplier controls the frequency of minor collections.
 For a minor multiplier @M{x},
@@ -654,6 +644,16 @@ For instance, for a multiplier of 20,
 the collector will do a minor collection when the use of memory
 gets 20% larger than the use after the previous major collection.
 The default value is 20; the maximum value is 200.
+
+The major multiplier controls the frequency of major collections.
+For a major multiplier @M{x},
+a new major collection will be done when memory
+grows @M{x%} larger than the memory in use after the previous major
+collection.
+For instance, for a multiplier of 100,
+the collector will do a major collection when the use of memory
+gets larger than twice the use after the previous collection.
+The default value is 100; the maximum value is 1000.
 
 }
 
@@ -3022,55 +3022,58 @@ and therefore never returns
 
 }
 
-@APIEntry{int lua_gc (lua_State *L, int what, int data);|
+@APIEntry{int lua_gc (lua_State *L, int what, ...);|
 @apii{0,0,-}
 
 Controls the garbage collector.
 
 This function performs several tasks,
-according to the value of the parameter @id{what}:
+according to the value of the parameter @id{what}.
+For options that need extra arguments,
+they are listed after the option.
 @description{
 
+@item{@id{LUA_GCCOLLECT}|
+Performs a full garbage-collection cycle.
+}
+
 @item{@id{LUA_GCSTOP}|
-stops the garbage collector.
+Stops the garbage collector.
 }
 
 @item{@id{LUA_GCRESTART}|
-restarts the garbage collector.
-}
-
-@item{@id{LUA_GCCOLLECT}|
-performs a full garbage-collection cycle.
+Restarts the garbage collector.
 }
 
 @item{@id{LUA_GCCOUNT}|
-returns the current amount of memory (in Kbytes) in use by Lua.
+Returns the current amount of memory (in Kbytes) in use by Lua.
 }
 
 @item{@id{LUA_GCCOUNTB}|
-returns the remainder of dividing the current amount of bytes of
+Returns the remainder of dividing the current amount of bytes of
 memory in use by Lua by 1024.
 }
 
-@item{@id{LUA_GCSTEP}|
-performs an incremental step of garbage collection.
-}
-
-@item{@id{LUA_GCSETPAUSE}|
-sets @id{data} as the new value
-for the @emph{pause} of the collector @see{GC}
-and returns the previous value of the pause.
-}
-
-@item{@id{LUA_GCSETSTEPMUL}|
-sets @id{data} as the new value for the @emph{step multiplier} of
-the collector @see{GC}
-and returns the previous value of the step multiplier.
+@item{@id{LUA_GCSTEP} @T{(int stepsize)}|
+Performs an incremental step of garbage collection,
+corresponding to the allocation of @id{stepsize} Kbytes.
 }
 
 @item{@id{LUA_GCISRUNNING}|
-returns a boolean that tells whether the collector is running
+Returns a boolean that tells whether the collector is running
 (i.e., not stopped).
+}
+
+@item{@id{LUA_GCINC} (int pause, int stepmul, stepsize)|
+Changes the collector to incremental mode
+with the given parameters @see{incmode}.
+Returns the previous mode (@id{LUA_GCGEN} or @id{LUA_GCINC}).
+}
+
+@item{@id{LUA_GCGEN} (int minormul, int majormul)|
+Changes the collector to generational mode
+with the given parameters @see{genmode}.
+Returns the previous mode (@id{LUA_GCGEN} or @id{LUA_GCINC}).
 }
 
 }
@@ -5949,42 +5952,41 @@ It performs different functions according to its first argument, @id{opt}:
 @description{
 
 @item{@St{collect}|
-performs a full garbage-collection cycle.
+Performs a full garbage-collection cycle.
 This is the default option.
 }
 
 @item{@St{stop}|
-stops automatic execution of the garbage collector.
+Stops automatic execution of the garbage collector.
 The collector will run only when explicitly invoked,
 until a call to restart it.
 }
 
 @item{@St{restart}|
-restarts automatic execution of the garbage collector.
+Restarts automatic execution of the garbage collector.
 }
 
 @item{@St{count}|
-returns the total memory in use by Lua in Kbytes.
+Returns the total memory in use by Lua in Kbytes.
 The value has a fractional part,
 so that it multiplied by 1024
 gives the exact number of bytes in use by Lua.
 }
 
 @item{@St{step}|
-performs a garbage-collection step.
+Performs a garbage-collection step.
 The step @Q{size} is controlled by @id{arg}.
 With a zero value,
 the collector will perform one basic (indivisible) step.
 For non-zero values,
 the collector will perform as if that amount of memory
-(in KBytes) had been allocated by Lua.
+(in Kbytes) had been allocated by Lua.
 Returns @true if the step finished a collection cycle.
 }
 
-@item{@St{setpause}|
-sets @id{arg} as the new value for the @emph{pause} of
-the collector @see{GC}.
-Returns the previous value for @emph{pause}.
+@item{@St{isrunning}|
+Returns a boolean that tells whether the collector is running
+(i.e., not stopped).
 }
 
 @item{@St{incremental}|
@@ -5992,7 +5994,7 @@ Change the collector mode to incremental.
 This option can be followed by three numbers:
 the garbage-collector pause,
 the step multiplier,
-and the step size.
+and the step size @see{incmode}.
 A zero means to not change that value.
 }
 
@@ -6000,13 +6002,8 @@ A zero means to not change that value.
 Change the collector mode to generational.
 This option can be followed by two numbers:
 the garbage-collector minor multiplier
-and the major multiplier.
+and the major multiplier @see{genmode}.
 A zero means to not change that value.
-}
-
-@item{@St{isrunning}|
-returns a boolean that tells whether the collector is running
-(i.e., not stopped).
 }
 
 }
@@ -8880,6 +8877,12 @@ do not accept surrogates as valid code points.
 An extra parameter in these functions makes them more permissive.
 }
 
+@item{
+The options @St{setpause} and @St{setstepmul}
+of the function @Lid{collectgarbage} are deprecated.
+You should use the new option @St{incremental} to set them.
+}
+
 }
 
 }
@@ -8923,6 +8926,12 @@ address space.
 The constant @id{LUA_ERRGCMM} was removed.
 Errors in finalizers are never propagated;
 instead, they generate a warning.
+}
+
+@item{
+The options @idx{LUA_GCSETPAUSE} and @idx{LUA_GCSETSTEPMUL}
+of the function @Lid{lua_gc} are deprecated.
+You should use the new option @id{LUA_GCINC} to set them.
 }
 
 }
