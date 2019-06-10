@@ -1553,9 +1553,11 @@ interrupt the respective method,
 but are otherwise ignored;
 the error reported is the original one.
 
-If a coroutine yields inside a block and is never resumed again,
-the variables visible at that block will never go out of scope,
+If a coroutine yields and is never resumed again,
+some variables may never go out of scope,
 and therefore they will never be closed.
+(These variables are the ones created inside the coroutine
+and in scope at the point where the coroutine yielded.)
 Similarly, if a coroutine ends with an error,
 it does not unwind its stack,
 so it does not close any variable.
@@ -2245,9 +2247,9 @@ Consider the following example:
 @verbatim{
 a = {}
 local x = 20
-for i=1,10 do
+for i = 1, 10 do
   local y = 0
-  a[i] = function () y=y+1; return x+y end
+  a[i] = function () y = y + 1; return x + y end
 end
 }
 The loop creates ten closures
@@ -6815,7 +6817,6 @@ A value of @true as a fourth, optional argument @id{plain}
 turns off the pattern matching facilities,
 so the function does a plain @Q{find substring} operation,
 with no characters in @id{pattern} being considered magic.
-Note that if @id{plain} is given, then @id{init} must be given as well.
 
 If the pattern has captures,
 then in a successful match
