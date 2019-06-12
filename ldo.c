@@ -139,9 +139,8 @@ l_noret luaD_throw (lua_State *L, int errcode) {
 
 
 int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
-  l_uint32 oldnCcalls = L->nCcalls - L->nci;
+  l_uint32 oldnCcalls = L->nCcalls + L->nci;
   struct lua_longjmp lj;
-  lua_assert(L->nCcalls >= L->nci);
   lj.status = LUA_OK;
   lj.previous = L->errorJmp;  /* chain new error handler */
   L->errorJmp = &lj;
@@ -149,7 +148,7 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
     (*f)(L, ud);
   );
   L->errorJmp = lj.previous;  /* restore old error handler */
-  L->nCcalls = oldnCcalls + L->nci;
+  L->nCcalls = oldnCcalls - L->nci;
   return lj.status;
 }
 
@@ -521,7 +520,7 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
 */
 void luaD_callnoyield (lua_State *L, StkId func, int nResults) {
   incXCcalls(L);
-  if (getCcalls(L) >= LUAI_MAXCSTACK)  /* possible stack overflow? */
+  if (getCcalls(L) <= CSTACKERR)  /* possible stack overflow? */
     luaE_freeCI(L);
   luaD_call(L, func, nResults);
   decXCcalls(L);
@@ -672,10 +671,10 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
   else if (L->status != LUA_YIELD)  /* ended with errors? */
     return resume_error(L, "cannot resume dead coroutine", nargs);
   if (from == NULL)
-    L->nCcalls = 1;
+    L->nCcalls = LUAI_MAXCSTACK;
   else  /* correct 'nCcalls' for this thread */
-    L->nCcalls = getCcalls(from) - from->nci + L->nci + CSTACKCF;
-  if (L->nCcalls >= LUAI_MAXCSTACK)
+    L->nCcalls = getCcalls(from) + from->nci - L->nci - CSTACKCF;
+  if (L->nCcalls <= CSTACKERR)
     return resume_error(L, "C stack overflow", nargs);
   luai_userstateresume(L, nargs);
   api_checknelems(L, (L->status == LUA_OK) ? nargs + 1 : nargs);

@@ -95,6 +95,8 @@ local function F (m)
   end
 end
 
+local Cstacklevel
+
 local showmem
 if not T then
   local max = 0
@@ -104,6 +106,7 @@ if not T then
     print(format("    ---- total memory: %s, max memory: %s ----\n",
           F(m), F(max)))
   end
+  Cstacklevel = function () return 0 end   -- no info about stack level
 else
   showmem = function ()
     T.checkmemory()
@@ -117,8 +120,15 @@ else
                  T.totalmem"string", T.totalmem"table", T.totalmem"function",
                  T.totalmem"userdata", T.totalmem"thread"))
   end
+
+  Cstacklevel = function ()
+    local _, _, ncalls, nci = T.stacklevel()
+    return ncalls  + nci   -- number of free slots in the C stack
+  end
 end
 
+
+local Cstack = Cstacklevel()
 
 --
 -- redefine dofile to run files through dump/undump
@@ -210,6 +220,10 @@ debug.sethook(function (a) assert(type(a) == 'string') end, "cr")
 
 -- to survive outside block
 _G.showmem = showmem
+
+
+assert(Cstack == Cstacklevel(),
+  "should be at the same C-stack level it was when started the tests")
 
 end   --)
 

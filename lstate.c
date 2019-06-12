@@ -97,35 +97,34 @@ void luaE_setdebt (global_State *g, l_mem debt) {
 
 
 /*
-** Increment count of "C calls" and check for overflows. In case of
+** Decrement count of "C calls" and check for overflows. In case of
 ** a stack overflow, check appropriate error ("regular" overflow or
-** overflow while handling stack overflow).
-** If 'nCcalls' is larger than LUAI_MAXCSTACK but smaller than
-** LUAI_MAXCSTACK + CSTACKCF (plus 2 to avoid by-one errors), it means
-** it has just entered the "overflow zone", so the function raises an
-** overflow error.
-** If 'nCcalls' is larger than LUAI_MAXCSTACK + CSTACKCF + 2
-** (which means it is already handling an overflow) but smaller than
-** 9/8 of LUAI_MAXCSTACK, does not report an error (to allow message
-** handling to work).
-** Otherwise, report a stack overflow while handling a stack overflow
-** (probably caused by a repeating error in the message handling
-** function).
+** overflow while handling stack overflow).  If 'nCcalls' is smaller
+** than CSTACKERR but larger than CSTACKMARK, it means it has just
+** entered the "overflow zone", so the function raises an overflow
+** error.  If 'nCcalls' is smaller than CSTACKMARK (which means it is
+** already handling an overflow) but larger than CSTACKERRMARK, does
+** not report an error (to allow message handling to work). Otherwise,
+** report a stack overflow while handling a stack overflow (probably
+** caused by a repeating error in the message handling function).
 */
+
 void luaE_enterCcall (lua_State *L) {
   int ncalls = getCcalls(L);
-  L->nCcalls++;
-  if (ncalls >= LUAI_MAXCSTACK) {  /* possible overflow? */
+  L->nCcalls--;
+  if (ncalls <= CSTACKERR) {  /* possible overflow? */
     luaE_freeCI(L);  /* release unused CIs */
     ncalls = getCcalls(L);  /* update call count */
-    if (ncalls >= LUAI_MAXCSTACK) {  /* still overflow? */
-      if (ncalls <= LUAI_MAXCSTACK + CSTACKCF + 2) {
-        /* no error before increments; raise the error now */
-        L->nCcalls += (CSTACKCF + 4);  /* avoid raising it again */
-        luaG_runerror(L, "C stack overflow");
-      }
-      else if (ncalls >= (LUAI_MAXCSTACK + (LUAI_MAXCSTACK >> 3)))
+    if (ncalls <= CSTACKERR) {  /* still overflow? */
+      if (ncalls <= CSTACKERRMARK)  /* below error-handling zone? */
         luaD_throw(L, LUA_ERRERR);  /* error while handling stack error */
+      else if (ncalls >= CSTACKMARK) {
+        /* not in error-handling zone; raise the error now */
+        L->nCcalls = (CSTACKMARK - 1);  /* enter error-handling zone */
+        luaG_runerror(L, "C stack overflow1");
+      }
+      /* else stack is in the error-handling zone;
+         allow message handler to work */
     }
   }
 }
@@ -153,13 +152,13 @@ void luaE_freeCI (lua_State *L) {
   CallInfo *ci = L->ci;
   CallInfo *next = ci->next;
   ci->next = NULL;
-  L->nCcalls -= L->nci;  /* subtract removed elements from 'nCcalls' */
+  L->nCcalls += L->nci;  /* add removed elements back to 'nCcalls' */
   while ((ci = next) != NULL) {
     next = ci->next;
     luaM_free(L, ci);
     L->nci--;
   }
-  L->nCcalls += L->nci;  /* adjust result */
+  L->nCcalls -= L->nci;  /* adjust result */
 }
 
 
@@ -169,7 +168,7 @@ void luaE_freeCI (lua_State *L) {
 void luaE_shrinkCI (lua_State *L) {
   CallInfo *ci = L->ci;
   CallInfo *next2;  /* next's next */
-  L->nCcalls -= L->nci;  /* subtract removed elements from 'nCcalls' */
+  L->nCcalls += L->nci;  /* add removed elements back to 'nCcalls' */
   /* while there are two nexts */
   while (ci->next != NULL && (next2 = ci->next->next) != NULL) {
     luaM_free(L, ci->next);  /* free next */
@@ -178,7 +177,7 @@ void luaE_shrinkCI (lua_State *L) {
     next2->previous = ci;
     ci = next2;  /* keep next's next */
   }
-  L->nCcalls += L->nci;  /* adjust result */
+  L->nCcalls -= L->nci;  /* adjust result */
 }
 
 
@@ -264,7 +263,7 @@ static void preinit_thread (lua_State *L, global_State *g) {
   L->stacksize = 0;
   L->twups = L;  /* thread has no upvalues */
   L->errorJmp = NULL;
-  L->nCcalls = 0;
+  L->nCcalls = LUAI_MAXCSTACK + CSTACKERR;
   L->hook = NULL;
   L->hookmask = 0;
   L->basehookcount = 0;

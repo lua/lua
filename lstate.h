@@ -64,27 +64,44 @@
 
 /*
 ** About 'nCcalls': each thread in Lua (a lua_State) keeps a count of
-** how many "C calls" it can do in the C stack, to avoid C-stack overflow.
-** This count is very rough approximation; it considers only recursive
-** functions inside the interpreter, as non-recursive calls can be
-** considered using a fixed (although unknown) amount of stack space.
+** how many "C calls" it still can do in the C stack, to avoid C-stack
+** overflow.  This count is very rough approximation; it considers only
+** recursive functions inside the interpreter, as non-recursive calls
+** can be considered using a fixed (although unknown) amount of stack
+** space.
 **
-** The count itself has two parts: the lower part is the count itself;
-** the higher part counts the number of non-yieldable calls in the stack.
+** The count has two parts: the lower part is the count itself; the
+** higher part counts the number of non-yieldable calls in the stack.
+** (They are together so that we can change both with one instruction.)
 **
 ** Because calls to external C functions can use of unkown amount
 ** of space (e.g., functions using an auxiliary buffer), calls
-** to these functions add more than one to the count.
+** to these functions add more than one to the count (see CSTACKCF).
 **
-** The proper count also includes the number of CallInfo structures
-** allocated by Lua, as a kind of "potential" calls. So, when Lua
-** calls a function (and "consumes" one CallInfo), it needs neither to
-** increment nor to check 'nCcalls', as its use of C stack is already
-** accounted for.
+** The proper count excludes the number of CallInfo structures allocated
+** by Lua, as a kind of "potential" calls. So, when Lua calls a function
+** (and "consumes" one CallInfo), it needs neither to decrement nor to
+** check 'nCcalls', as its use of C stack is already accounted for.
 */
 
 /* number of "C stack slots" used by an external C function */
 #define CSTACKCF	10
+
+
+/*
+** The C-stack size is sliced in the following zones:
+** - larger than CSTACKERR: normal stack;
+** - [CSTACKMARK, CSTACKERR]: buffer zone to signal a stack overflow;
+** - [CSTACKCF, CSTACKERRMARK]: error-handling zone;
+** - below CSTACKERRMARK: buffer zone to signal overflow during overflow;
+** (Because the counter can be decremented CSTACKCF at once, we need
+** the so called "buffer zones", with at least that size, to properly
+** detect a change from one zone to the next.)
+*/
+#define CSTACKERR	(8 * CSTACKCF)
+#define CSTACKMARK	(CSTACKERR - (CSTACKCF + 2))
+#define CSTACKERRMARK	(CSTACKCF + 2)
+
 
 /* true if this thread does not have non-yieldable calls in the stack */
 #define yieldable(L)		(((L)->nCcalls & 0xffff0000) == 0)
@@ -99,11 +116,11 @@
 /* Decrement the number of non-yieldable calls */
 #define decnny(L)	((L)->nCcalls -= 0x10000)
 
-/* Increment the number of non-yieldable calls and nCcalls */
-#define incXCcalls(L)	((L)->nCcalls += 0x10000 + CSTACKCF)
+/* Increment the number of non-yieldable calls and decrement nCcalls */
+#define incXCcalls(L)	((L)->nCcalls += 0x10000 - CSTACKCF)
 
-/* Decrement the number of non-yieldable calls and nCcalls */
-#define decXCcalls(L)	((L)->nCcalls -= 0x10000 + CSTACKCF)
+/* Decrement the number of non-yieldable calls and increment nCcalls */
+#define decXCcalls(L)	((L)->nCcalls -= 0x10000 - CSTACKCF)
 
 
 
@@ -336,7 +353,7 @@ LUAI_FUNC void luaE_enterCcall (lua_State *L);
 LUAI_FUNC void luaE_warning (lua_State *L, const char *msg, int tocont);
 
 
-#define luaE_exitCcall(L)	((L)->nCcalls--)
+#define luaE_exitCcall(L)	((L)->nCcalls++)
 
 #endif
 
