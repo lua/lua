@@ -1,7 +1,13 @@
 -- $Id: testes/cstack.lua $
 -- See Copyright Notice in file all.lua
 
+local debug = require "debug"
+
 print"testing C-stack overflow detection"
+
+local origlimit = debug.setCstacklimit(400)
+print("current stack limit: " .. origlimit)
+debug.setCstacklimit(origlimit)
 
 -- Segmentation faults in these tests probably result from a C-stack
 -- overflow. To avoid these errors, recompile Lua with a smaller
@@ -78,5 +84,47 @@ do  print("testing stack-overflow in recursive 'gsub'")
   checkerror("stack overflow", foo)
   print("\tfinal count: ", count)
 end
+
+
+do  print("testing changes in C-stack limit")
+
+  assert(not debug.setCstacklimit(0))        -- limit too small
+  assert(not debug.setCstacklimit(50000))    -- limit too large
+  local co = coroutine.wrap (function ()
+               return debug.setCstacklimit(400)
+             end)
+  assert(co() == false)         -- cannot change C stack inside coroutine
+
+  local n
+  local function foo () n = n + 1; foo () end
+
+  local function check ()
+    n = 0
+    pcall(foo)
+    return n
+  end
+
+  assert(debug.setCstacklimit(400) == origlimit)
+  local lim400 = check()
+  -- a very low limit (given that the several calls to arive here)
+  local lowlimit = 38
+  assert(debug.setCstacklimit(lowlimit) == 400)
+  assert(check() < lowlimit - 30)
+  assert(debug.setCstacklimit(600) == lowlimit)
+  local lim600 = check()
+  assert(lim600 == lim400 + 200)
+
+
+  -- 'setCstacklimit' works inside protected calls. (The new stack
+  -- limit is kept when 'pcall' returns.)
+  assert(pcall(function ()
+    assert(debug.setCstacklimit(400) == 600)
+    assert(check() <= lim400)
+  end))
+
+  assert(check() == lim400)
+  assert(debug.setCstacklimit(origlimit) == 400)   -- restore original limit
+end
+
 
 print'OK'

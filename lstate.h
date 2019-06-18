@@ -103,6 +103,10 @@
 #define CSTACKERRMARK	(CSTACKCF + 2)
 
 
+/* initial limit for the C-stack of threads */
+#define CSTACKTHREAD	(2 * CSTACKERR)
+
+
 /* true if this thread does not have non-yieldable calls in the stack */
 #define yieldable(L)		(((L)->nCcalls & 0xffff0000) == 0)
 
@@ -267,6 +271,7 @@ typedef struct global_State {
   TString *strcache[STRCACHE_N][STRCACHE_M];  /* cache for strings in API */
   lua_WarnFunction warnf;  /* warning function */
   void *ud_warn;         /* auxiliary data to 'warnf' */
+  unsigned int Cstacklimit;  /* current limit for the C stack */
 } global_State;
 
 

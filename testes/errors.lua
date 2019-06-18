@@ -523,9 +523,13 @@ end
 
 -- testing syntax limits
 
-local function testrep (init, rep, close, repc)
+local function testrep (init, rep, close, repc, finalresult)
   local s = init .. string.rep(rep, 100) .. close .. string.rep(repc, 100)
-  assert(load(s))   -- 100 levels is OK
+  local res, msg = load(s)
+  assert(res)   -- 100 levels is OK
+  if (finalresult) then
+    assert(res() == finalresult)
+  end
   s = init .. string.rep(rep, 10000)
   local res, msg = load(s)   -- 10000 levels not ok
   assert(not res and (string.find(msg, "too many registers") or
@@ -534,14 +538,14 @@ end
 
 testrep("local a; a", ",a", "= 1", ",1")    -- multiple assignment
 testrep("local a; a=", "{", "0", "}")
-testrep("local a; a=", "(", "2", ")")
-testrep("local a; ", "a(", "2", ")")
+testrep("return ", "(", "2", ")", 2)
+testrep("local function a (x) return x end; return ", "a(", "2.2", ")", 2.2)
 testrep("", "do ", "", " end")
 testrep("", "while a do ", "", " end")
 testrep("local a; ", "if a then else ", "", " end")
 testrep("", "function foo () ", "", " end")
-testrep("local a; a=", "a..", "a", "")
-testrep("local a; a=", "a^", "a", "")
+testrep("local a = ''; return ", "a..", "'a'", "", "a")
+testrep("local a = 1; return ", "a^", "a", "", 1)
 
 checkmessage("a = f(x" .. string.rep(",x", 260) .. ")", "too many registers")
 

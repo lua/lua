@@ -437,6 +437,17 @@ static int db_traceback (lua_State *L) {
 }
 
 
+static int db_setCstacklimit (lua_State *L) {
+  int limit = (int)luaL_checkinteger(L, 1);
+  int res = lua_setCstacklimit(L, limit);
+  if (res == 0)
+    lua_pushboolean(L, 0);
+  else
+    lua_pushinteger(L, res);
+  return 1;
+}
+
+
 static const luaL_Reg dblib[] = {
   {"debug", db_debug},
   {"getuservalue", db_getuservalue},
@@ -454,6 +465,7 @@ static const luaL_Reg dblib[] = {
   {"setmetatable", db_setmetatable},
   {"setupvalue", db_setupvalue},
   {"traceback", db_traceback},
+  {"setCstacklimit", db_setCstacklimit},
   {NULL, NULL}
 };
 

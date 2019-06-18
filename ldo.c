@@ -139,7 +139,8 @@ l_noret luaD_throw (lua_State *L, int errcode) {
 
 
 int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
-  l_uint32 oldnCcalls = L->nCcalls + L->nci;
+  global_State *g = G(L);
+  l_uint32 oldnCcalls = g->Cstacklimit - (L->nCcalls + L->nci);
   struct lua_longjmp lj;
   lj.status = LUA_OK;
   lj.previous = L->errorJmp;  /* chain new error handler */
@@ -148,7 +149,7 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
     (*f)(L, ud);
   );
   L->errorJmp = lj.previous;  /* restore old error handler */
-  L->nCcalls = oldnCcalls - L->nci;
+  L->nCcalls = g->Cstacklimit - oldnCcalls - L->nci;
   return lj.status;
 }
 
@@ -671,7 +672,7 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
   else if (L->status != LUA_YIELD)  /* ended with errors? */
     return resume_error(L, "cannot resume dead coroutine", nargs);
   if (from == NULL)
-    L->nCcalls = LUAI_MAXCSTACK;
+    L->nCcalls = CSTACKTHREAD;
   else  /* correct 'nCcalls' for this thread */
     L->nCcalls = getCcalls(from) + from->nci - L->nci - CSTACKCF;
   if (L->nCcalls <= CSTACKERR)

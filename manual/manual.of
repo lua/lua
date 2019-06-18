@@ -4803,6 +4803,20 @@ calling @Lid{lua_yield} with @id{nresults} equal to zero
 
 }
 
+@APIEntry{int (lua_setCstacklimit) (lua_State *L, unsigned int limit);|
+@apii{0,0,-}
+
+Sets a new limit for the C stack.
+This limit controls how deeply nested calls can go in Lua,
+with the intent of avoiding a stack overflow.
+Returns the old limit in case of success,
+or zero in case of error.
+For more details about this function,
+see @Lid{debug.setCstacklimit},
+its equivalent in the standard library.
+
+}
+
 @APIEntry{void lua_sethook (lua_State *L, lua_Hook f, int mask, int count);|
 @apii{0,0,-}
 
@@ -8513,6 +8527,34 @@ represent variables with no known names
 Returns the @id{n}-th user value associated
 to the userdata @id{u} plus a boolean,
 @false if the userdata does not have that value.
+
+}
+
+@LibEntry{debug.setCstacklimit (limit)|
+
+Sets a new limit for the C stack.
+This limit controls how deeply nested calls can go in Lua,
+with the intent of avoiding a stack overflow.
+A limit too small restricts recursive calls pointlessly;
+a limit too large exposes the interpreter to stack-overflow crashes.
+Unfortunately, there is no way to know a priori
+the maximum safe limit for a platform.
+
+Each call made from Lua code counts one unit.
+Other operations (e.g., calls made from C to Lua or resuming a coroutine)
+may have a higher cost.
+
+This function has the following restrictions:
+@description{
+@item{It can only be called from the main coroutine (thread);}
+@item{It cannot be called while handling a stack-overflow error;}
+@item{@id{limit} must be less than 40000;}
+@item{@id{limit} cannot be less than the amount of C stack in use.}
+}
+In case of success,
+this function returns the old limit.
+In case of error,
+it returns @false.
 
 }
 
