@@ -797,7 +797,8 @@ void luaV_finishOp (lua_State *L) {
 #define op_arithfI_aux(L,v1,imm,fop,tm,flip) {  \
   lua_Number nb;  \
   if (tonumberns(v1, nb)) {  \
-    setfltvalue(s2v(ra), fop(L, nb, cast_num(imm)));  \
+    lua_Number fimm = cast_num(imm);  \
+    setfltvalue(s2v(ra), fop(L, nb, fimm));  \
   }  \
   else  \
     Protect(luaT_trybiniTM(L, v1, imm, flip, ra, tm)); }
@@ -819,7 +820,8 @@ void luaV_finishOp (lua_State *L) {
   TValue *v1 = vRB(i);  \
   int imm = GETARG_sC(i);  \
   if (ttisinteger(v1)) {  \
-    setivalue(s2v(ra), iop(L, ivalue(v1), imm));  \
+    lua_Integer iv1 = ivalue(v1);  \
+    setivalue(s2v(ra), iop(L, iv1, imm));  \
   }  \
   else op_arithfI_aux(L, v1, imm, fop, tm, flip); }
 
@@ -927,8 +929,11 @@ void luaV_finishOp (lua_State *L) {
 #define op_order(L,opi,opf,other) {  \
         int cond;  \
         TValue *rb = vRB(i);  \
-        if (ttisinteger(s2v(ra)) && ttisinteger(rb))  \
-          cond = opi(ivalue(s2v(ra)), ivalue(rb));  \
+        if (ttisinteger(s2v(ra)) && ttisinteger(rb)) {  \
+          lua_Integer ia = ivalue(s2v(ra));  \
+          lua_Integer ib = ivalue(rb);  \
+          cond = opi(ia, ib);  \
+        }  \
         else if (ttisnumber(s2v(ra)) && ttisnumber(rb))  \
           cond = opf(s2v(ra), rb);  \
         else  \
@@ -944,8 +949,11 @@ void luaV_finishOp (lua_State *L) {
         int im = GETARG_sB(i);  \
         if (ttisinteger(s2v(ra)))  \
           cond = opi(ivalue(s2v(ra)), im);  \
-        else if (ttisfloat(s2v(ra)))  \
-          cond = opf(fltvalue(s2v(ra)), cast_num(im));  \
+        else if (ttisfloat(s2v(ra))) {  \
+          lua_Number fa = fltvalue(s2v(ra));  \
+          lua_Number fim = cast_num(im);  \
+          cond = opf(fa, fim);  \
+        }  \
         else {  \
           int isf = GETARG_C(i);  \
           Protect(cond = luaT_callorderiTM(L, s2v(ra), im, inv, isf, tm));  \
