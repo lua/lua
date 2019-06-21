@@ -205,7 +205,6 @@ static Vardesc *new_localvar (LexState *ls, TString *name) {
                   dyd->actvar.size, Vardesc, MAX_INT, "local variables");
   var = &dyd->actvar.arr[dyd->actvar.n++];
   var->idx = cast(short, reg);
-  var->name = name;
   var->ro = 0;
   return var;
 }
@@ -235,25 +234,25 @@ static LocVar *getlocvar (FuncState *fs, int i) {
 
 /*
 ** Return the "variable description" (Vardesc) of a given
-** variable or upvalue
+** local variable and update 'fs' to point to the function
+** where that variable was defined. Return NULL if expression
+** is neither a local variable nor an upvalue.
 */
-static Vardesc *getvardesc (FuncState *fs, expdesc *e) {
+static Vardesc *getvardesc (FuncState **fs, expdesc *e) {
   if (e->k == VLOCAL)
-    return getlocalvardesc(fs, e->u.var.idx);
+    return getlocalvardesc(*fs, e->u.var.idx);
   else if (e->k != VUPVAL)
     return NULL;  /* not a local variable */
   else {  /* upvalue: must go up all levels up to the original local */
     int idx = e->u.var.idx;
     for (;;) {
-      Upvaldesc *up = &fs->f->upvalues[idx];
-      fs = fs->prev;  /* must look at the previous level */
+      Upvaldesc *up = &(*fs)->f->upvalues[idx];
+      *fs = (*fs)->prev;  /* must look at the previous level */
       idx = up->idx;  /* at this index */
-      if (fs == NULL) {  /* no more levels? (can happen only with _ENV) */
-        lua_assert(strcmp(getstr(up->name), LUA_ENV) == 0);
+      if (*fs == NULL)  /* no more levels? (can happen only with _ENV) */
         return NULL;
-      }
       else if (up->instack)  /* got to the original level? */
-        return getlocalvardesc(fs, idx);
+        return getlocalvardesc(*fs, idx);
       /* else repeat for previous level */
     }
   }
@@ -261,10 +260,12 @@ static Vardesc *getvardesc (FuncState *fs, expdesc *e) {
 
 
 static void check_readonly (LexState *ls, expdesc *e) {
-  Vardesc *vardesc = getvardesc(ls->fs, e);
+  FuncState *fs = ls->fs;
+  Vardesc *vardesc = getvardesc(&fs, e);
   if (vardesc && vardesc->ro) {  /* is variable local and const? */
     const char *msg = luaO_pushfstring(ls->L,
-       "attempt to assign to const variable '%s'", getstr(vardesc->name));
+       "attempt to assign to const variable '%s'",
+       getstr(fs->f->locvars[vardesc->idx].varname));
     luaK_semerror(ls, msg);  /* error */
   }
 }
