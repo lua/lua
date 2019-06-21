@@ -517,27 +517,15 @@ do
   end
   assert(s == 35 and numopen == 0)
 
-  -- repeat test with '__open' metamethod instead of a function
-  local function open (x)
-    numopen = numopen + 1
-    local state = setmetatable({x},
-                        {__close = function () numopen = numopen - 1 end})
-    return
-      function (t)   -- iteraction function
-        t[1] = t[1] - 1
-        if t[1] > 0 then return t[1] end
-      end,
-      state,
-      nil,
-      state    -- to-be-closed
-  end
-
   local s = 0
   for i in open(10) do
-     if (i < 5) then break end
-     s = s + i
+    for j in open(10) do
+       if i + j < 5 then goto endloop end
+       s = s + i
+    end
   end
-  assert(s == 35 and numopen == 0)
+  ::endloop::
+  assert(s == 375 and numopen == 0)
 end
 
 print('OK')

@@ -426,6 +426,10 @@ else
   while A==0 or B==0 do    -- A ~= 0 when 'x' finishes (similar for 'B','y')
     if A==0 then turn = "A"; assert(T.resume(x)) end
     if B==0 then turn = "B"; assert(T.resume(y)) end
+
+    -- check that traceback works correctly after yields inside hooks
+    debug.traceback(x)
+    debug.traceback(y)
   end
 
   assert(B // A == 7)    -- fact(7) // fact(6)
