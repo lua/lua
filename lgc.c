@@ -838,21 +838,21 @@ static void GCTM (lua_State *L) {
     int running  = g->gcrunning;
     L->allowhook = 0;  /* stop debug hooks during GC metamethod */
     g->gcrunning = 0;  /* avoid GC steps */
-    setobj2s(L, L->top, tm);  /* push finalizer... */
-    setobj2s(L, L->top + 1, &v);  /* ... and its argument */
-    L->top += 2;  /* and (next line) call the finalizer */
+    setobj2s(L, L->top++, tm);  /* push finalizer... */
+    setobj2s(L, L->top++, &v);  /* ... and its argument */
     L->ci->callstatus |= CIST_FIN;  /* will run a finalizer */
     status = luaD_pcall(L, dothecall, NULL, savestack(L, L->top - 2), 0);
     L->ci->callstatus &= ~CIST_FIN;  /* not running a finalizer anymore */
     L->allowhook = oldah;  /* restore hooks */
     g->gcrunning = running;  /* restore state */
-    if (status != LUA_OK) {  /* error while running __gc? */
+    if (unlikely(status != LUA_OK)) {  /* error while running __gc? */
       const char *msg = (ttisstring(s2v(L->top - 1)))
                         ? svalue(s2v(L->top - 1))
                         : "error object is not a string";
       luaE_warning(L, "error in __gc metamethod (", 1);
       luaE_warning(L, msg, 1);
       luaE_warning(L, ")", 0);
+      L->top--;  /* pops error object */
     }
   }
 }
