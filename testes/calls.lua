@@ -151,6 +151,23 @@ end
 print('+')
 
 
+do  -- testing chains of '__call'
+  local N = 20
+  local u = table.pack
+  for i = 1, N do
+    u = setmetatable({i}, {__call = u})
+  end
+
+  local Res = u("a", "b", "c")
+
+  assert(Res.n == N + 3)
+  for i = 1, N do
+    assert(Res[i][1] == i)
+  end
+  assert(Res[N + 1] == "a" and Res[N + 2] == "b" and Res[N + 3] == "c")
+end
+
+
 a = nil
 (function (x) a=x end)(23)
 assert(a == 23 and (function (x) return x*2 end)(20) == 40)

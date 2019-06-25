@@ -348,18 +348,18 @@ static StkId rethook (lua_State *L, CallInfo *ci, StkId firstres, int nres) {
 
 
 /*
-** Check whether __call metafield of 'func' is a function. If so, put
-** it in stack below original 'func' so that 'luaD_call' can call
-** it. Raise an error if __call metafield is not a function.
+** Check whether 'func' has a '__call' metafield. If so, put it in the
+** stack, below original 'func', so that 'luaD_call' can call it. Raise
+** an error if there is no '__call' metafield.
 */
 void luaD_tryfuncTM (lua_State *L, StkId func) {
   const TValue *tm = luaT_gettmbyobj(L, s2v(func), TM_CALL);
   StkId p;
-  if (unlikely(!ttisfunction(tm)))
-    luaG_typeerror(L, s2v(func), "call");
-  for (p = L->top; p > func; p--)
+  if (unlikely(ttisnil(tm)))
+    luaG_typeerror(L, s2v(func), "call");  /* nothing to call */
+  for (p = L->top; p > func; p--)  /* open space for metamethod */
     setobjs2s(L, p, p-1);
-  L->top++;  /* assume EXTRA_STACK */
+  L->top++;  /* stack space pre-allocated by the caller */
   setobj2s(L, func, tm);  /* metamethod is the new function to be called */
 }
 
@@ -457,13 +457,13 @@ void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int narg1) {
 */
 void luaD_call (lua_State *L, StkId func, int nresults) {
   lua_CFunction f;
-  TValue *funcv = s2v(func);
-  switch (ttypetag(funcv)) {
+ retry:
+  switch (ttypetag(s2v(func))) {
     case LUA_TCCL:  /* C closure */
-      f = clCvalue(funcv)->f;
+      f = clCvalue(s2v(func))->f;
       goto Cfunc;
     case LUA_TLCF:  /* light C function */
-      f = fvalue(funcv);
+      f = fvalue(s2v(func));
      Cfunc: {
       int n;  /* number of returns */
       CallInfo *ci;
@@ -487,7 +487,7 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
     }
     case LUA_TLCL: {  /* Lua function */
       CallInfo *ci;
-      Proto *p = clLvalue(funcv)->p;
+      Proto *p = clLvalue(s2v(func))->p;
       int narg = cast_int(L->top - func) - 1;  /* number of real arguments */
       int nfixparams = p->numparams;
       int fsize = p->maxstacksize;  /* frame size */
@@ -505,9 +505,9 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
       break;
     }
     default: {  /* not a function */
+      checkstackp(L, 1, func);  /* space for metamethod */
       luaD_tryfuncTM(L, func);  /* try to get '__call' metamethod */
-      luaD_call(L, func, nresults);  /* now it must be a function */
-      break;
+      goto retry;  /* try again with metamethod */
     }
   }
 }
