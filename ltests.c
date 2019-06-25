@@ -1488,6 +1488,10 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("pushfstringP") {
       lua_pushfstring(L1, lua_tostring(L, -2), lua_topointer(L, -1));
     }
+    else if EQ("rawget") {
+      int t = getindex;
+      lua_rawget(L1, t);
+    }
     else if EQ("rawgeti") {
       int t = getindex;
       lua_rawgeti(L1, t, getnum);
@@ -1495,6 +1499,14 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("rawgetp") {
       int t = getindex;
       lua_rawgetp(L1, t, cast_voidp(cast_sizet(getnum)));
+    }
+    else if EQ("rawset") {
+      int t = getindex;
+      lua_rawset(L1, t);
+    }
+    else if EQ("rawseti") {
+      int t = getindex;
+      lua_rawseti(L1, t, getnum);
     }
     else if EQ("rawsetp") {
       int t = getindex;
@@ -1537,6 +1549,10 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       int t = getindex;
       const char *s = getstring;
       lua_setfield(L1, t, s);
+    }
+    else if EQ("seti") {
+      int t = getindex;
+      lua_seti(L1, t, getnum);
     }
     else if EQ("setglobal") {
       const char *s = getstring;

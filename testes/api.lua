@@ -498,7 +498,53 @@ do   -- getp/setp
   local a = {}
   T.testC("rawsetp 2 1", a, 20)
   assert(a[T.pushuserdata(1)] == 20)
-  assert(T.testC("rawgetp 2 1; return 1", a) == 20)
+  assert(T.testC("rawgetp -1 1; return 1", a) == 20)
+end
+
+
+do  -- using the table itself as index
+  local a = {}
+  a[a] = 10
+  local prog = "gettable -1; return *"
+  local res = {T.testC(prog, a)}
+  assert(#res == 2 and res[1] == prog and res[2] == 10)
+
+  local prog = "settable -2; return *"
+  local res = {T.testC(prog, a, 20)}
+  assert(a[a] == 20)
+  assert(#res == 1 and res[1] == prog)
+
+  -- raw
+  a[a] = 10
+  local prog = "rawget -1; return *"
+  local res = {T.testC(prog, a)}
+  assert(#res == 2 and res[1] == prog and res[2] == 10)
+
+  local prog = "rawset -2; return *"
+  local res = {T.testC(prog, a, 20)}
+  assert(a[a] == 20)
+  assert(#res == 1 and res[1] == prog)
+
+  -- using the table as the value to set
+  local prog = "rawset -1; return *"
+  local res = {T.testC(prog, 30, a)}
+  assert(a[30] == a)
+  assert(#res == 1 and res[1] == prog)
+
+  local prog = "settable -1; return *"
+  local res = {T.testC(prog, 40, a)}
+  assert(a[40] == a)
+  assert(#res == 1 and res[1] == prog)
+
+  local prog = "rawseti -1 100; return *"
+  local res = {T.testC(prog, a)}
+  assert(a[100] == a)
+  assert(#res == 1 and res[1] == prog)
+
+  local prog = "seti -1 200; return *"
+  local res = {T.testC(prog, a)}
+  assert(a[200] == a)
+  assert(#res == 1 and res[1] == prog)
 end
 
 a = {x=0, y=12}
