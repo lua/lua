@@ -388,7 +388,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   preinit_thread(L, g);
   g->allgc = obj2gco(L);  /* by now, only object is the main thread */
   L->next = NULL;
-  g->Cstacklimit = L->nCcalls = LUAI_MAXCSTACK;
+  g->Cstacklimit = L->nCcalls = LUAI_MAXCSTACK + CSTACKERR;
   g->frealloc = f;
   g->ud = ud;
   g->warnf = NULL;
