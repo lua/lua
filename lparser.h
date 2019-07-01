@@ -81,6 +81,7 @@ typedef struct expdesc {
 
 /* description of an active local variable */
 typedef struct Vardesc {
+  TValue val;  /* constant value (if variable is 'const') */
   short idx;  /* index of the variable in the Proto's 'locvars' array */
   lu_byte ro;  /* true if variable is 'const' */
 } Vardesc;
@@ -143,6 +144,7 @@ typedef struct FuncState {
 } FuncState;
 
 
+LUAI_FUNC Vardesc *luaY_getvardesc (FuncState **fs, const expdesc *e);
 LUAI_FUNC LClosure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
                                  Dyndata *dyd, const char *name, int firstchar);
 

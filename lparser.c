@@ -206,6 +206,7 @@ static Vardesc *new_localvar (LexState *ls, TString *name) {
   var = &dyd->actvar.arr[dyd->actvar.n++];
   var->idx = cast(short, reg);
   var->ro = 0;
+  setnilvalue(&var->val);
   return var;
 }
 
@@ -238,7 +239,7 @@ static LocVar *getlocvar (FuncState *fs, int i) {
 ** where that variable was defined. Return NULL if expression
 ** is neither a local variable nor an upvalue.
 */
-static Vardesc *getvardesc (FuncState **fs, expdesc *e) {
+Vardesc *luaY_getvardesc (FuncState **fs, const expdesc *e) {
   if (e->k == VLOCAL)
     return getlocalvardesc(*fs, e->u.var.idx);
   else if (e->k != VUPVAL)
@@ -261,7 +262,7 @@ static Vardesc *getvardesc (FuncState **fs, expdesc *e) {
 
 static void check_readonly (LexState *ls, expdesc *e) {
   FuncState *fs = ls->fs;
-  Vardesc *vardesc = getvardesc(&fs, e);
+  Vardesc *vardesc = luaY_getvardesc(&fs, e);
   if (vardesc && vardesc->ro) {  /* is variable local and const? */
     const char *msg = luaO_pushfstring(ls->L,
        "attempt to assign to const variable '%s'",
@@ -1678,20 +1679,13 @@ static void commonlocalstat (LexState *ls) {
 static void tocloselocalstat (LexState *ls, Vardesc *var) {
   FuncState *fs = ls->fs;
   var->ro = 1;  /* to-be-closed variables are always read-only */
-  markupval(fs, fs->nactvar);
+  markupval(fs, fs->nactvar + 1);
   fs->bl->insidetbc = 1;  /* in the scope of a to-be-closed variable */
-  luaK_codeABC(fs, OP_TBC, fs->nactvar - 1, 0, 0);
+  luaK_codeABC(fs, OP_TBC, fs->nactvar, 0, 0);
 }
 
 
-static void attriblocalstat (LexState *ls) {
-  Vardesc *var;
-  TString *attr = str_checkname(ls);
-  testnext(ls, '>');
-  var = new_localvar(ls, str_checkname(ls));
-  checknext(ls, '=');
-  exp1(ls);
-  adjustlocalvars(ls, 1);
+static void checkattrib (LexState *ls, TString *attr, Vardesc *var) {
   if (strcmp(getstr(attr), "const") == 0)
     var->ro = 1;  /* set variable as read-only */
   else if (strcmp(getstr(attr), "toclose") == 0)
@@ -1699,6 +1693,22 @@ static void attriblocalstat (LexState *ls) {
   else
     luaK_semerror(ls,
       luaO_pushfstring(ls->L, "unknown attribute '%s'", getstr(attr)));
+}
+
+
+static void attriblocalstat (LexState *ls) {
+  FuncState *fs = ls->fs;
+  Vardesc *var;
+  expdesc e;
+  TString *attr = str_checkname(ls);
+  testnext(ls, '>');
+  var = new_localvar(ls, str_checkname(ls));
+  checknext(ls, '=');
+  expr(ls, &e);
+  checkattrib(ls, attr, var);
+  luaK_tonumeral(fs, &e, &var->val);
+  luaK_exp2nextreg(fs, &e);
+  adjustlocalvars(ls, 1);
 }
 
 

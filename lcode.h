@@ -51,6 +51,7 @@ typedef enum UnOpr { OPR_MINUS, OPR_BNOT, OPR_NOT, OPR_LEN, OPR_NOUNOPR } UnOpr;
 
 #define luaK_jumpto(fs,t)	luaK_patchlist(fs, luaK_jump(fs), t)
 
+LUAI_FUNC int luaK_tonumeral (FuncState *fs, const expdesc *e, TValue *v);
 LUAI_FUNC int luaK_codeABx (FuncState *fs, OpCode o, int A, unsigned int Bx);
 LUAI_FUNC int luaK_codeAsBx (FuncState *fs, OpCode o, int A, int Bx);
 LUAI_FUNC int luaK_codeABCk (FuncState *fs, OpCode o, int A,
