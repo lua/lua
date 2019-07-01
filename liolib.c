@@ -742,14 +742,23 @@ static const luaL_Reg iolib[] = {
 /*
 ** methods for file handles
 */
-static const luaL_Reg flib[] = {
-  {"close", f_close},
-  {"flush", f_flush},
-  {"lines", f_lines},
+static const luaL_Reg meth[] = {
   {"read", f_read},
-  {"seek", f_seek},
-  {"setvbuf", f_setvbuf},
   {"write", f_write},
+  {"lines", f_lines},
+  {"flush", f_flush},
+  {"seek", f_seek},
+  {"close", f_close},
+  {"setvbuf", f_setvbuf},
+  {NULL, NULL}
+};
+
+
+/*
+** metamethods for file handles
+*/
+static const luaL_Reg metameth[] = {
+  {"__index", NULL},  /* place holder */
   {"__gc", f_gc},
   {"__close", f_gc},
   {"__tostring", f_tostring},
@@ -758,11 +767,12 @@ static const luaL_Reg flib[] = {
 
 
 static void createmeta (lua_State *L) {
-  luaL_newmetatable(L, LUA_FILEHANDLE);  /* create metatable for file handles */
-  lua_pushvalue(L, -1);  /* push metatable */
-  lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
-  luaL_setfuncs(L, flib, 0);  /* add file methods to new metatable */
-  lua_pop(L, 1);  /* pop new metatable */
+  luaL_newmetatable(L, LUA_FILEHANDLE);  /* metatable for file handles */
+  luaL_setfuncs(L, metameth, 0);  /* add metamethods to new metatable */
+  luaL_newlibtable(L, meth);  /* create method table */
+  luaL_setfuncs(L, meth, 0);  /* add file methods to method table */
+  lua_setfield(L, -2, "__index");  /* metatable.__index = method table */
+  lua_pop(L, 1);  /* pop metatable */
 }
 
 
