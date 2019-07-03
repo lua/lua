@@ -1399,23 +1399,30 @@ they must all result in numbers.
 Their values are called respectively
 the @emph{initial value}, the @emph{limit}, and the @emph{step}.
 If the step is absent, it defaults @N{to 1}.
-Then the loop body is repeated with the value of the control variable
+
+If both the initial value and the step are integers,
+the loop is done with integers;
+note that the limit may not be an integer.
+Otherwise, the loop is done with floats.
+(Beware of floating-point accuracy in this case.)
+
+After that initialization,
+the loop body is repeated with the value of the control variable
 going through an arithmetic progression,
 starting at the initial value,
-with a common difference given by the step,
-until that value passes the limit.
+with a common difference given by the step.
 A negative step makes a decreasing sequence;
 a step equal to zero raises an error.
+The loop continues while the value is less than
+or equal to the limit
+(greater than or equal to for a negative step).
 If the initial value is already greater than the limit
 (or less than, if the step is negative),
 the body is not executed.
 
-If both the initial value and the step are integers,
-the loop is done with integers;
-in this case, the range of the control variable is clipped
-by the range of integers.
-Otherwise, the loop is done with floats.
-(Beware of floating-point accuracy in this case.)
+For integer loops,
+the control variable never wraps around;
+instead, the loop ends in case of an overflow.
 
 You should not change the value of the control variable
 during the loop.
@@ -1490,22 +1497,25 @@ Function calls are explained in @See{functioncall}.
 @x{Local variables} can be declared anywhere inside a block.
 The declaration can include an initialization:
 @Produc{
-@producname{stat}@producbody{@Rw{local} namelist @bnfopt{@bnfter{=} explist}}
-@producname{stat}@producbody{
-    @Rw{local} @bnfter{<} Name @bnfter{>} Name @bnfter{=} exp
-}}
+@producname{stat}@producbody{@Rw{local} attnamelist @bnfopt{@bnfter{=} explist}}
+@producname{attnamelist}@producbody{
+  attrib @bnfNter{Name} @bnfrep{@bnfter{,} attrib @bnfNter{Name}}}
+}
 If present, an initial assignment has the same semantics
 of a multiple assignment @see{assignment}.
 Otherwise, all variables are initialized with @nil.
-The second syntax declares a local with a given attribute,
-which is the name between the angle brackets.
-In this case, there must be an initialization.
+
+Each variable name may be preceded by an attribute
+(a name between angle brackets):
+@Produc{
+@producname{attrib}@producbody{@bnfopt{@bnfter{<} @bnfNter{Name} @bnfter{>}}}
+}
 There are two possible attributes:
 @id{const}, which declares a @x{constant variable},
 that is, a variable that cannot be assigned to
 after its initialization;
 and @id{toclose}, which declares a to-be-closed variable @see{to-be-closed}.
-
+A list of variables can contain at most one to-be-closed variable.
 
 A chunk is also a block @see{chunks},
 and so local variables can be declared in a chunk outside any explicit block.
@@ -1516,12 +1526,6 @@ The visibility rules for local variables are explained in @See{visibility}.
 
 @sect3{to-be-closed| @title{To-be-closed Variables}
 
-A local variable can be declared as a @def{to-be-closed} variable,
-using the identifier @id{toclose} as its attribute:
-@Produc{
-@producname{stat}@producbody{
-  @Rw{local} @bnfter{<} @id{toclose} @bnfter{>} Name @bnfter{=} exp
-}}
 A to-be-closed variable behaves like a constant local variable,
 except that its value is @emph{closed} whenever the variable
 goes out of scope, including normal block termination,
@@ -8215,7 +8219,7 @@ then @id{date} returns the date as a string,
 formatted according to the same rules as the @ANSI{strftime}.
 
 If @id{format} is absent, it defaults to @St{%c},
-which gives a reasonable date and time representation
+which gives a human-readable date and time representation
 using the current locale.
 
 On non-POSIX systems,
@@ -9022,9 +9026,13 @@ and @bnfNter{LiteralString}, see @See{lexical}.)
 @OrNL   @Rw{for} namelist @Rw{in} explist @Rw{do} block @Rw{end}
 @OrNL	@Rw{function} funcname funcbody
 @OrNL	@Rw{local} @Rw{function} @bnfNter{Name} funcbody
-@OrNL	@Rw{local} namelist @bnfopt{@bnfter{=} explist}
-@OrNL	@Rw{local} @bnfter{<} Name @bnfter{>} Name @bnfter{=} exp
+@OrNL	@Rw{local} attnamelist @bnfopt{@bnfter{=} explist}
 }
+
+@producname{attnamelist}@producbody{
+  attrib @bnfNter{Name} @bnfrep{@bnfter{,} attrib @bnfNter{Name}}}
+
+@producname{attrib}@producbody{@bnfopt{@bnfter{<} @bnfNter{Name} @bnfter{>}}}
 
 @producname{retstat}@producbody{@Rw{return}
                                    @bnfopt{explist} @bnfopt{@bnfter{;}}}

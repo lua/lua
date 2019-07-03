@@ -173,12 +173,32 @@ end
 assert(x==20)
 
 
+do   -- constants
+  local <const> a, b, <const> c = 10, 20, 30
+  b = a + c + b    -- 'b' is not constant
+  assert(a == 10 and b == 60 and c == 30)
+  local function checkro (code, name)
+    local st, msg = load(code)
+    local gab = string.format("attempt to assign to const variable '%s'", name)
+    assert(not st and string.find(msg, gab))
+  end
+  checkro("local x, <const> y, z = 10, 20, 30; x = 11; y = 12", "y")
+  checkro("local <const> x, y, <const> z = 10, 20, 30; x = 11", "x")
+  checkro("local <const> x, y, <const> z = 10, 20, 30; y = 10; z = 11", "z")
+end
+
+
 print"testing to-be-closed variables"
 
 local function stack(n) n = ((n == 0) or stack(n - 1)) end
 
-local function func2close (f)
-  return setmetatable({}, {__close = f})
+local function func2close (f, x, y)
+  local obj = setmetatable({}, {__close = f})
+  if x then
+    return x, obj, y
+  else
+    return obj
+  end
 end
 
 
@@ -187,10 +207,11 @@ do
   do
     local <toclose> x = setmetatable({"x"}, {__close = function (self)
                                                    a[#a + 1] = self[1] end})
-    local <toclose> y = func2close(function (self, err)
-                         assert(err == nil); a[#a + 1] = "y"
-                       end)
+    local w, <toclose> y, z = func2close(function (self, err)
+                                assert(err == nil); a[#a + 1] = "y"
+                              end, 10, 20)
     a[#a + 1] = "in"
+    assert(w == 10 and z == 20)
   end
   a[#a + 1] = "out"
   assert(a[1] == "in" and a[2] == "y" and a[3] == "x" and a[4] == "out")
@@ -199,7 +220,8 @@ end
 do
   local X = false
 
-  local closescope = func2close(function () stack(10); X = true end)
+  local x, closescope = func2close(function () stack(10); X = true end, 100)
+  assert(x == 100);  x = 101;   -- 'x' is not read-only
 
   -- closing functions do not corrupt returning values
   local function foo (x)

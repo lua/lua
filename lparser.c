@@ -1656,13 +1656,50 @@ static void localfunc (LexState *ls) {
 }
 
 
-static void commonlocalstat (LexState *ls) {
-  /* stat -> LOCAL NAME {',' NAME} ['=' explist] */
+static int getlocalattribute (LexState *ls) {
+  /* ATTRIB -> ['<' Name '>'] */
+  if (testnext(ls, '<')) {
+    const char *attr = getstr(str_checkname(ls));
+    checknext(ls, '>');
+    if (strcmp(attr, "const") == 0)
+      return 1;  /* read-only variable */
+    else if (strcmp(attr, "toclose") == 0)
+      return 2;  /* to-be-closed variable */
+    else
+      luaK_semerror(ls,
+        luaO_pushfstring(ls->L, "unknown attribute '%s'", attr));
+  }
+  return 0;
+}
+
+
+static void checktoclose (LexState *ls, int toclose) {
+  if (toclose != -1) {  /* is there a to-be-closed variable? */
+    FuncState *fs = ls->fs;
+    markupval(fs, fs->nactvar + toclose + 1);
+    fs->bl->insidetbc = 1;  /* in the scope of a to-be-closed variable */
+    luaK_codeABC(fs, OP_TBC, fs->nactvar + toclose, 0, 0);
+  }
+}
+
+
+static void localstat (LexState *ls) {
+  /* stat -> LOCAL ATTRIB NAME {',' ATTRIB NAME} ['=' explist] */
+  int toclose = -1;  /* index of to-be-closed variable (if any) */
   int nvars = 0;
   int nexps;
   expdesc e;
   do {
-    new_localvar(ls, str_checkname(ls));
+    int kind = getlocalattribute(ls);
+    Vardesc *var = new_localvar(ls, str_checkname(ls));
+    if (kind != 0) {  /* is there an attribute? */
+      var->ro = 1;  /* all attributes make variable read-only */
+      if (kind == 2) {  /* to-be-closed? */
+        if (toclose != -1)  /* one already present? */
+          luaK_semerror(ls, "multiple to-be-closed variables in local list");
+        toclose = nvars;
+      }
+    }
     nvars++;
   } while (testnext(ls, ','));
   if (testnext(ls, '='))
@@ -1672,53 +1709,8 @@ static void commonlocalstat (LexState *ls) {
     nexps = 0;
   }
   adjust_assign(ls, nvars, nexps, &e);
+  checktoclose(ls, toclose);
   adjustlocalvars(ls, nvars);
-}
-
-
-static void tocloselocalstat (LexState *ls, Vardesc *var) {
-  FuncState *fs = ls->fs;
-  var->ro = 1;  /* to-be-closed variables are always read-only */
-  markupval(fs, fs->nactvar + 1);
-  fs->bl->insidetbc = 1;  /* in the scope of a to-be-closed variable */
-  luaK_codeABC(fs, OP_TBC, fs->nactvar, 0, 0);
-}
-
-
-static void checkattrib (LexState *ls, TString *attr, Vardesc *var) {
-  if (strcmp(getstr(attr), "const") == 0)
-    var->ro = 1;  /* set variable as read-only */
-  else if (strcmp(getstr(attr), "toclose") == 0)
-    tocloselocalstat(ls, var);
-  else
-    luaK_semerror(ls,
-      luaO_pushfstring(ls->L, "unknown attribute '%s'", getstr(attr)));
-}
-
-
-static void attriblocalstat (LexState *ls) {
-  FuncState *fs = ls->fs;
-  Vardesc *var;
-  expdesc e;
-  TString *attr = str_checkname(ls);
-  testnext(ls, '>');
-  var = new_localvar(ls, str_checkname(ls));
-  checknext(ls, '=');
-  expr(ls, &e);
-  checkattrib(ls, attr, var);
-  luaK_tonumeral(fs, &e, &var->val);
-  luaK_exp2nextreg(fs, &e);
-  adjustlocalvars(ls, 1);
-}
-
-
-static void localstat (LexState *ls) {
-  /* stat -> LOCAL NAME {',' NAME} ['=' explist]
-           | LOCAL *toclose NAME '=' exp */
-  if (testnext(ls, '<'))
-    attriblocalstat(ls);
-  else
-    commonlocalstat(ls);
 }
 
 
