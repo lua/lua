@@ -1250,7 +1250,7 @@ static void setminordebt (global_State *g) {
 /*
 ** Does a major collection after last collection was a "bad collection".
 **
-** When the program is building a big struture, it allocates lots of
+** When the program is building a big structure, it allocates lots of
 ** memory but generates very little garbage. In those scenarios,
 ** the generational mode just wastes time doing small collections, and
 ** major collections are frequently what we call a "bad collection", a

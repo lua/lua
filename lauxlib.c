@@ -62,7 +62,7 @@ static int findfield (lua_State *L, int objidx, int level) {
       else if (findfield(L, objidx, level - 1)) {  /* try recursively */
         /* stack: lib_name, lib_table, field_name (top) */
         lua_pushliteral(L, ".");  /* place '.' between the two names */
-        lua_replace(L, -3);  /* (in the slot ocupied by table) */
+        lua_replace(L, -3);  /* (in the slot occupied by table) */
         lua_concat(L, 3);  /* lib_name.field_name */
         return 1;
       }

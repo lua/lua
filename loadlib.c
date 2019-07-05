@@ -308,7 +308,7 @@ static void setpath (lua_State *L, const char *fieldname,
       luaL_addchar(&b, *LUA_PATH_SEP);
     }
     luaL_addstring(&b, dft);  /* add default */
-    if (dftmark < path + len - 2) {  /* is there a sufix after ';;'? */
+    if (dftmark < path + len - 2) {  /* is there a suffix after ';;'? */
       luaL_addchar(&b, *LUA_PATH_SEP);
       luaL_addlstring(&b, dftmark + 2, (path + len - 2) - dftmark);
     }

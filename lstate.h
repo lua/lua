@@ -74,7 +74,7 @@
 ** higher part counts the number of non-yieldable calls in the stack.
 ** (They are together so that we can change both with one instruction.)
 **
-** Because calls to external C functions can use of unkown amount
+** Because calls to external C functions can use an unknown amount
 ** of space (e.g., functions using an auxiliary buffer), calls
 ** to these functions add more than one to the count (see CSTACKCF).
 **
@@ -185,9 +185,9 @@ typedef struct CallInfo {
   union {
     int funcidx;  /* called-function index */
     int nyield;  /* number of values yielded */
-    struct {  /* info about transfered values (for call/return hooks) */
-      unsigned short ftransfer;  /* offset of first value transfered */
-      unsigned short ntransfer;  /* number of values transfered */
+    struct {  /* info about transferred values (for call/return hooks) */
+      unsigned short ftransfer;  /* offset of first value transferred */
+      unsigned short ntransfer;  /* number of values transferred */
     } transferinfo;
   } u2;
   short nresults;  /* expected number of results from this function */

@@ -338,7 +338,7 @@ static int io_readline (lua_State *L);
 #define MAXARGLINE	250
 
 /*
-** Auxiliar function to create the iteration function for 'lines'.
+** Auxiliary function to create the iteration function for 'lines'.
 ** The iteration function is a closure over 'io_readline', with
 ** the following upvalues:
 ** 1) The file being read (first value in the stack)

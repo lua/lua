@@ -286,9 +286,9 @@ OP_RETURN,/*	A B C	return R(A), ... ,R(A+B-2)	(see note)	*/
 OP_RETURN0,/*	  	return 						*/
 OP_RETURN1,/*	A 	return R(A)					*/
 
-OP_FORLOOP,/*	A Bx	R(A)+=R(A+2);
-			if R(A) <?= R(A+1) then { pc-=Bx; R(A+3)=R(A) }	*/
-OP_FORPREP,/*	A Bx	R(A)-=R(A+2); pc+=Bx				*/
+OP_FORLOOP,/*	A Bx	update counters; if loop continues then pc-=Bx; */
+OP_FORPREP,/*	A Bx	<check values and prepare counters>;
+                        if not to run then pc+=Bx+1;			*/
 
 OP_TFORPREP,/*	A Bx	create upvalue for R(A + 3); pc+=Bx		*/
 OP_TFORCALL,/*	A C	R(A+4), ... ,R(A+3+C) := R(A)(R(A+1), R(A+2));	*/

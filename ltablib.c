@@ -338,7 +338,7 @@ static IdxT choosePivot (IdxT lo, IdxT up, unsigned int rnd) {
 
 
 /*
-** QuickSort algorithm (recursive function)
+** Quicksort algorithm (recursive function)
 */
 static void auxsort (lua_State *L, IdxT lo, IdxT up,
                                    unsigned int rnd) {
