@@ -156,13 +156,6 @@ static void init_exp (expdesc *e, expkind k, int i) {
 }
 
 
-static void init_var (expdesc *e, expkind k, int i) {
-  e->f = e->t = NO_JUMP;
-  e->k = k;
-  e->u.var.idx = i;
-}
-
-
 static void codestring (LexState *ls, expdesc *e, TString *s) {
   init_exp(e, VK, luaK_stringK(ls->fs, s));
 }
@@ -177,16 +170,15 @@ static void codename (LexState *ls, expdesc *e) {
 ** Register a new local variable in the active 'Proto' (for debug
 ** information).
 */
-static int registerlocalvar (LexState *ls, TString *varname) {
-  FuncState *fs = ls->fs;
+static int registerlocalvar (lua_State *L, FuncState *fs, TString *varname) {
   Proto *f = fs->f;
   int oldsize = f->sizelocvars;
-  luaM_growvector(ls->L, f->locvars, fs->nlocvars, f->sizelocvars,
+  luaM_growvector(L, f->locvars, fs->nlocvars, f->sizelocvars,
                   LocVar, SHRT_MAX, "local variables");
   while (oldsize < f->sizelocvars)
     f->locvars[oldsize++].varname = NULL;
   f->locvars[fs->nlocvars].varname = varname;
-  luaC_objbarrier(ls->L, f, varname);
+  luaC_objbarrier(L, f, varname);
   return fs->nlocvars++;
 }
 
@@ -195,18 +187,19 @@ static int registerlocalvar (LexState *ls, TString *varname) {
 ** Create a new local variable with the given 'name'.
 */
 static Vardesc *new_localvar (LexState *ls, TString *name) {
+  lua_State *L = ls->L;
   FuncState *fs = ls->fs;
   Dyndata *dyd = ls->dyd;
   Vardesc *var;
-  int reg = registerlocalvar(ls, name);
+  int reg = registerlocalvar(L, fs, name);
   checklimit(fs, dyd->actvar.n + 1 - fs->firstlocal,
                   MAXVARS, "local variables");
-  luaM_growvector(ls->L, dyd->actvar.arr, dyd->actvar.n + 1,
-                  dyd->actvar.size, Vardesc, MAX_INT, "local variables");
+  luaM_growvector(L, dyd->actvar.arr, dyd->actvar.n + 1,
+                  dyd->actvar.size, Vardesc, USHRT_MAX, "local variables");
   var = &dyd->actvar.arr[dyd->actvar.n++];
-  var->idx = cast(short, reg);
+  var->pidx = cast(short, reg);
   var->ro = 0;
-  setnilvalue(&var->val);
+  setnilvalue(var);
   return var;
 }
 
@@ -223,50 +216,47 @@ static Vardesc *getlocalvardesc (FuncState *fs, int i) {
   return &fs->ls->dyd->actvar.arr[fs->firstlocal + i];
 }
 
+
 /*
 ** Get the debug-information entry for current variable 'i'.
 */
-static LocVar *getlocvar (FuncState *fs, int i) {
-  int idx = getlocalvardesc(fs, i)->idx;
+static LocVar *localdebuginfo (FuncState *fs, int i) {
+  int idx = getlocalvardesc(fs, i)->pidx;
   lua_assert(idx < fs->nlocvars);
   return &fs->f->locvars[idx];
 }
 
 
-/*
-** Return the "variable description" (Vardesc) of a given
-** local variable and update 'fs' to point to the function
-** where that variable was defined. Return NULL if expression
-** is neither a local variable nor an upvalue.
-*/
-Vardesc *luaY_getvardesc (FuncState **fs, const expdesc *e) {
-  if (e->k == VLOCAL)
-    return getlocalvardesc(*fs, e->u.var.idx);
-  else if (e->k != VUPVAL)
-    return NULL;  /* not a local variable */
-  else {  /* upvalue: must go up all levels up to the original local */
-    int idx = e->u.var.idx;
-    for (;;) {
-      Upvaldesc *up = &(*fs)->f->upvalues[idx];
-      *fs = (*fs)->prev;  /* must look at the previous level */
-      idx = up->idx;  /* at this index */
-      if (*fs == NULL)  /* no more levels? (can happen only with _ENV) */
-        return NULL;
-      else if (up->instack)  /* got to the original level? */
-        return getlocalvardesc(*fs, idx);
-      /* else repeat for previous level */
-    }
-  }
+static void init_var (FuncState *fs, expdesc *e, int i) {
+  e->f = e->t = NO_JUMP;
+  e->k = VLOCAL;
+  e->u.var.vidx = i;
+  e->u.var.sidx = getlocalvardesc(fs, i)->sidx;
 }
 
 
 static void check_readonly (LexState *ls, expdesc *e) {
   FuncState *fs = ls->fs;
-  Vardesc *vardesc = luaY_getvardesc(&fs, e);
-  if (vardesc && vardesc->ro) {  /* is variable local and const? */
+  TString *varname = NULL;  /* to be set if variable is const */
+  switch (e->k) {
+    case VLOCAL: {
+      Vardesc *vardesc = getlocalvardesc(fs, e->u.var.vidx);
+      if (vardesc->ro)
+        varname = fs->f->locvars[vardesc->pidx].varname;
+      break;
+    }
+    case VUPVAL: {
+      Upvaldesc *up = &fs->f->upvalues[e->u.info];
+      if (up->ro)
+        varname = up->name;
+      break;
+    }
+    default:
+      return;  /* other cases cannot be read-only */
+  }
+  if (varname) {
     const char *msg = luaO_pushfstring(ls->L,
-       "attempt to assign to const variable '%s'",
-       getstr(fs->f->locvars[vardesc->idx].varname));
+       "attempt to assign to const variable '%s'", getstr(varname));
     luaK_semerror(ls, msg);  /* error */
   }
 }
@@ -274,13 +264,15 @@ static void check_readonly (LexState *ls, expdesc *e) {
 
 /*
 ** Start the scope for the last 'nvars' created variables.
-** (debug info.)
 */
 static void adjustlocalvars (LexState *ls, int nvars) {
   FuncState *fs = ls->fs;
-  fs->nactvar = cast_byte(fs->nactvar + nvars);
-  for (; nvars; nvars--) {
-    getlocvar(fs, fs->nactvar - nvars)->startpc = fs->pc;
+  int i;
+  for (i = 0; i < nvars; i++) {
+    int varidx = fs->nactvar++;
+    Vardesc *var = getlocalvardesc(fs, varidx);
+    var->sidx = varidx;
+    fs->f->locvars[var->pidx].startpc = fs->pc;
   }
 }
 
@@ -292,7 +284,7 @@ static void adjustlocalvars (LexState *ls, int nvars) {
 static void removevars (FuncState *fs, int tolevel) {
   fs->ls->dyd->actvar.n -= (fs->nactvar - tolevel);
   while (fs->nactvar > tolevel)
-    getlocvar(fs, --fs->nactvar)->endpc = fs->pc;
+    localdebuginfo(fs, --fs->nactvar)->endpc = fs->pc;
 }
 
 
@@ -310,7 +302,7 @@ static int searchupvalue (FuncState *fs, TString *name) {
 }
 
 
-static int newupvalue (FuncState *fs, TString *name, expdesc *v) {
+static Upvaldesc *allocupvalue (FuncState *fs) {
   Proto *f = fs->f;
   int oldsize = f->sizeupvalues;
   checklimit(fs, fs->nups + 1, MAXUPVAL, "upvalues");
@@ -318,11 +310,28 @@ static int newupvalue (FuncState *fs, TString *name, expdesc *v) {
                   Upvaldesc, MAXUPVAL, "upvalues");
   while (oldsize < f->sizeupvalues)
     f->upvalues[oldsize++].name = NULL;
-  f->upvalues[fs->nups].instack = (v->k == VLOCAL);
-  f->upvalues[fs->nups].idx = cast_byte(v->u.var.idx);
-  f->upvalues[fs->nups].name = name;
-  luaC_objbarrier(fs->ls->L, f, name);
-  return fs->nups++;
+  return &f->upvalues[fs->nups++];
+}
+
+
+static int newupvalue (FuncState *fs, TString *name, expdesc *v) {
+  Upvaldesc *up = allocupvalue(fs);
+  FuncState *prev = fs->prev;
+  if (v->k == VLOCAL) {
+    up->instack = 1;
+    up->idx = v->u.var.sidx;
+    up->ro = getlocalvardesc(prev, v->u.var.vidx)->ro;
+    lua_assert(eqstr(name, localdebuginfo(prev, v->u.var.vidx)->varname));
+  }
+  else {
+    up->instack = 0;
+    up->idx = cast_byte(v->u.info);
+    up->ro = prev->f->upvalues[v->u.info].ro;
+    lua_assert(eqstr(name, prev->f->upvalues[v->u.info].name));
+  }
+  up->name = name;
+  luaC_objbarrier(fs->ls->L, fs->f, name);
+  return fs->nups - 1;
 }
 
 
@@ -333,7 +342,7 @@ static int newupvalue (FuncState *fs, TString *name, expdesc *v) {
 static int searchvar (FuncState *fs, TString *n) {
   int i;
   for (i = cast_int(fs->nactvar) - 1; i >= 0; i--) {
-    if (eqstr(n, getlocvar(fs, i)->varname))
+    if (eqstr(n, localdebuginfo(fs, i)->varname))
       return i;
   }
   return -1;  /* not found */
@@ -364,9 +373,9 @@ static void singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
   else {
     int v = searchvar(fs, n);  /* look up locals at current level */
     if (v >= 0) {  /* found? */
-      init_var(var, VLOCAL, v);  /* variable is local */
+      init_var(fs, var, v);  /* variable is local */
       if (!base)
-        markupval(fs, v);  /* local will be used as an upval */
+        markupval(fs, var->u.var.sidx);  /* local will be used as an upval */
     }
     else {  /* not found as local at current level; try upvalues */
       int idx = searchupvalue(fs, n);  /* try existing upvalues */
@@ -377,7 +386,7 @@ static void singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
         /* else was LOCAL or UPVAL */
         idx  = newupvalue(fs, n, var);  /* will be a new upvalue */
       }
-      init_var(var, VUPVAL, idx);  /* new or old upvalue */
+      init_exp(var, VUPVAL, idx);  /* new or old upvalue */
     }
   }
 }
@@ -440,7 +449,7 @@ static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
 ** local variable.
 */
 static l_noret jumpscopeerror (LexState *ls, Labeldesc *gt) {
-  const char *varname = getstr(getlocvar(ls->fs, gt->nactvar)->varname);
+  const char *varname = getstr(localdebuginfo(ls->fs, gt->nactvar)->varname);
   const char *msg = "<goto %s> at line %d jumps into the scope of local '%s'";
   msg = luaO_pushfstring(ls->L, msg, getstr(gt->name), gt->line, varname);
   luaK_semerror(ls, msg);  /* raise the error */
@@ -1259,20 +1268,20 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
   for (; lh; lh = lh->prev) {  /* check all previous assignments */
     if (vkisindexed(lh->v.k)) {  /* assignment to table field? */
       if (lh->v.k == VINDEXUP) {  /* is table an upvalue? */
-        if (v->k == VUPVAL && lh->v.u.ind.t == v->u.var.idx) {
+        if (v->k == VUPVAL && lh->v.u.ind.t == v->u.info) {
           conflict = 1;  /* table is the upvalue being assigned now */
           lh->v.k = VINDEXSTR;
           lh->v.u.ind.t = extra;  /* assignment will use safe copy */
         }
       }
       else {  /* table is a register */
-        if (v->k == VLOCAL && lh->v.u.ind.t == v->u.var.idx) {
+        if (v->k == VLOCAL && lh->v.u.ind.t == v->u.var.sidx) {
           conflict = 1;  /* table is the local being assigned now */
           lh->v.u.ind.t = extra;  /* assignment will use safe copy */
         }
         /* is index the local being assigned? */
         if (lh->v.k == VINDEXED && v->k == VLOCAL &&
-            lh->v.u.ind.idx == v->u.var.idx) {
+            lh->v.u.ind.idx == v->u.var.sidx) {
           conflict = 1;
           lh->v.u.ind.idx = extra;  /* previous assignment will use safe copy */
         }
@@ -1281,14 +1290,16 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
   }
   if (conflict) {
     /* copy upvalue/local value to a temporary (in position 'extra') */
-    OpCode op = (v->k == VLOCAL) ? OP_MOVE : OP_GETUPVAL;
-    luaK_codeABC(fs, op, extra, v->u.var.idx, 0);
+    if (v->k == VLOCAL)
+      luaK_codeABC(fs, OP_MOVE, extra, v->u.var.sidx, 0);
+    else
+      luaK_codeABC(fs, OP_GETUPVAL, extra, v->u.info, 0);
     luaK_reserveregs(fs, 1);
   }
 }
 
 /*
-** Parse and compile a mulitple assignment. The first "variable"
+** Parse and compile a multiple assignment. The first "variable"
 ** (a 'suffixedexp') was already read by the caller.
 **
 ** assignment -> suffixedexp restassign
@@ -1652,7 +1663,7 @@ static void localfunc (LexState *ls) {
   adjustlocalvars(ls, 1);  /* enter its scope */
   body(ls, &b, 0, ls->linenumber);  /* function created in next register */
   /* debug information will only see the variable after this point! */
-  getlocvar(fs, b.u.info)->startpc = fs->pc;
+  localdebuginfo(fs, b.u.info)->startpc = fs->pc;
 }
 
 
@@ -1870,11 +1881,14 @@ static void statement (LexState *ls) {
 */
 static void mainfunc (LexState *ls, FuncState *fs) {
   BlockCnt bl;
-  expdesc v;
+  Upvaldesc *env;
   open_func(ls, fs, &bl);
   setvararg(fs, 0);  /* main function is always declared vararg */
-  init_var(&v, VLOCAL, 0);  /* create and... */
-  newupvalue(fs, ls->envn, &v);  /* ...set environment upvalue */
+  env = allocupvalue(fs);  /* ...set environment upvalue */
+  env->instack = 1;
+  env->idx = 0;
+  env->ro = 0;
+  env->name = ls->envn;
   luaX_next(ls);  /* read first token */
   statlist(ls);  /* parse main body */
   check(ls, TK_EOS);

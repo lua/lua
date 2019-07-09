@@ -177,14 +177,24 @@ do   -- constants
   local <const> a, b, <const> c = 10, 20, 30
   b = a + c + b    -- 'b' is not constant
   assert(a == 10 and b == 60 and c == 30)
-  local function checkro (code, name)
+  local function checkro (name, code)
     local st, msg = load(code)
     local gab = string.format("attempt to assign to const variable '%s'", name)
     assert(not st and string.find(msg, gab))
   end
-  checkro("local x, <const> y, z = 10, 20, 30; x = 11; y = 12", "y")
-  checkro("local <const> x, y, <const> z = 10, 20, 30; x = 11", "x")
-  checkro("local <const> x, y, <const> z = 10, 20, 30; y = 10; z = 11", "z")
+  checkro("y", "local x, <const> y, z = 10, 20, 30; x = 11; y = 12")
+  checkro("x", "local <const> x, y, <const> z = 10, 20, 30; x = 11")
+  checkro("z", "local <const> x, y, <const> z = 10, 20, 30; y = 10; z = 11")
+
+  checkro("z", [[
+    local a, <const> z, b = 10;
+    function foo() a = 20; z = 32; end
+  ]])
+
+  checkro("var1", [[
+    local a, <const> var1 = 10;
+    function foo() a = 20; z = function () var1 = 12; end  end
+  ]])
 end
 
 

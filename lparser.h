@@ -33,8 +33,9 @@ typedef enum {
   VKINT,  /* integer constant; nval = numerical integer value */
   VNONRELOC,  /* expression has its value in a fixed register;
                  info = result register */
-  VLOCAL,  /* local variable; var.idx = local register */
-  VUPVAL,  /* upvalue variable; var.idx = index of upvalue in 'upvalues' */
+  VLOCAL,  /* local variable; var.ridx = local register;
+              var.vidx = index in 'actvar.arr'  */
+  VUPVAL,  /* upvalue variable; info = index of upvalue in 'upvalues' */
   VINDEXED,  /* indexed variable;
                 ind.t = table register;
                 ind.idx = key's R index */
@@ -70,8 +71,9 @@ typedef struct expdesc {
       short idx;  /* index (R or "long" K) */
       lu_byte t;  /* table (register or upvalue) */
     } ind;
-    struct {  /* for local variables and upvalues */
-      lu_byte idx;  /* index of the variable */
+    struct {  /* for local variables */
+      lu_byte sidx;  /* index in the stack */
+      unsigned short vidx;  /* index in 'actvar.arr'  */
     } var;
   } u;
   int t;  /* patch list of 'exit when true' */
@@ -81,9 +83,10 @@ typedef struct expdesc {
 
 /* description of an active local variable */
 typedef struct Vardesc {
-  TValue val;  /* constant value (if variable is 'const') */
-  short idx;  /* index of the variable in the Proto's 'locvars' array */
+  TValuefields;  /* constant value (if variable is 'const') */
   lu_byte ro;  /* true if variable is 'const' */
+  lu_byte sidx;  /* index of the variable in the stack */
+  short pidx;  /* index of the variable in the Proto's 'locvars' array */
 } Vardesc;
 
 
@@ -144,7 +147,6 @@ typedef struct FuncState {
 } FuncState;
 
 
-LUAI_FUNC Vardesc *luaY_getvardesc (FuncState **fs, const expdesc *e);
 LUAI_FUNC LClosure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
                                  Dyndata *dyd, const char *name, int firstchar);
 

@@ -460,6 +460,7 @@ typedef struct Upvaldesc {
   TString *name;  /* upvalue name (for debug information) */
   lu_byte instack;  /* whether it is in stack (register) */
   lu_byte idx;  /* index of upvalue (in stack or in outer function's list) */
+  lu_byte ro;  /* true if upvalue is read-only (const) */
 } Upvaldesc;
 
 

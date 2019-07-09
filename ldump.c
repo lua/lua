@@ -149,6 +149,7 @@ static void DumpUpvalues (const Proto *f, DumpState *D) {
   for (i = 0; i < n; i++) {
     DumpByte(f->upvalues[i].instack, D);
     DumpByte(f->upvalues[i].idx, D);
+    DumpByte(f->upvalues[i].ro, D);
   }
 }
 
