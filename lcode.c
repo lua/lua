@@ -458,7 +458,7 @@ void luaK_reserveregs (FuncState *fs, int n) {
 )
 */
 static void freereg (FuncState *fs, int reg) {
-  if (reg >= fs->nactvar) {
+  if (reg >= luaY_nvarstack(fs)) {
     fs->freereg--;
     lua_assert(reg == fs->freereg);
   }
@@ -850,7 +850,7 @@ int luaK_exp2anyreg (FuncState *fs, expdesc *e) {
   if (e->k == VNONRELOC) {  /* expression already has a register? */
     if (!hasjumps(e))  /* no jumps? */
       return e->u.info;  /* result is already in a register */
-    if (e->u.info >= fs->nactvar) {  /* reg. is not a local? */
+    if (e->u.info >= luaY_nvarstack(fs)) {  /* reg. is not a local? */
       exp2reg(fs, e, e->u.info);  /* put final result in it */
       return e->u.info;
     }

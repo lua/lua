@@ -83,11 +83,16 @@ typedef struct expdesc {
 
 /* description of an active local variable */
 typedef struct Vardesc {
-  TValuefields;  /* constant value (if variable is 'const') */
+  TValuefields;  /* constant value (if it is a compile-time constant) */
   lu_byte ro;  /* true if variable is 'const' */
   lu_byte sidx;  /* index of the variable in the stack */
   short pidx;  /* index of the variable in the Proto's 'locvars' array */
+  TString *name;  /* variable name */
 } Vardesc;
+
+
+/* check whether Vardesc is in the stack (not a compile-time constant) */
+#define vdinstack(vd)	(ttisnil(vd))
 
 
 /* description of pending goto statements and label statements */
@@ -95,7 +100,7 @@ typedef struct Labeldesc {
   TString *name;  /* label identifier */
   int pc;  /* position in code */
   int line;  /* line where it appeared */
-  lu_byte nactvar;  /* local level where it appears in current block */
+  lu_byte nactvar;  /* number of active variables in that position */
   lu_byte close;  /* goto that escapes upvalues */
 } Labeldesc;
 
@@ -138,7 +143,7 @@ typedef struct FuncState {
   int nabslineinfo;  /* number of elements in 'abslineinfo' */
   int firstlocal;  /* index of first local var (in Dyndata array) */
   int firstlabel;  /* index of first label (in 'dyd->label->arr') */
-  short nlocvars;  /* number of elements in 'f->locvars' */
+  short ndebugvars;  /* number of elements in 'f->locvars' */
   lu_byte nactvar;  /* number of active local variables */
   lu_byte nups;  /* number of upvalues */
   lu_byte freereg;  /* first free register */
@@ -147,6 +152,7 @@ typedef struct FuncState {
 } FuncState;
 
 
+LUAI_FUNC int luaY_nvarstack (FuncState *fs);
 LUAI_FUNC LClosure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
                                  Dyndata *dyd, const char *name, int firstchar);
 
