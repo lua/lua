@@ -1746,14 +1746,13 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         Protect(luaD_call(L, ra + 4, GETARG_C(i)));  /* do the call */
         updatestack(ci);  /* stack may have changed */
         i = *(pc++);  /* go to next instruction */
-        ra += 2;  /* adjust for next instruction */
         lua_assert(GET_OPCODE(i) == OP_TFORLOOP && ra == RA(i));
         goto l_tforloop;
       }
       vmcase(OP_TFORLOOP) {
         l_tforloop:
-        if (!ttisnil(s2v(ra + 2))) {  /* continue loop? */
-          setobjs2s(L, ra, ra + 2);  /* save control variable */
+        if (!ttisnil(s2v(ra + 4))) {  /* continue loop? */
+          setobjs2s(L, ra + 2, ra + 4);  /* save control variable */
           pc -= GETARG_Bx(i);  /* jump back */
         }
         vmbreak;

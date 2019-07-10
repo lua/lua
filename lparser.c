@@ -1527,7 +1527,6 @@ static void forbody (LexState *ls, int base, int line, int nvars, int isgen) {
   if (isgen) {  /* generic for? */
     luaK_codeABC(fs, OP_TFORCALL, base, 0, nvars);
     luaK_fixline(fs, line);
-    base += 2;  /* base for 'OP_TFORLOOP' (skips function and state) */
   }
   endfor = luaK_codeABx(fs, forloop[isgen], base, 0);
   fixforjump(fs, endfor, prep + 1, 1);
@@ -1539,9 +1538,9 @@ static void fornum (LexState *ls, TString *varname, int line) {
   /* fornum -> NAME = exp,exp[,exp] forbody */
   FuncState *fs = ls->fs;
   int base = fs->freereg;
-  new_localvarliteral(ls, "(for index)");
-  new_localvarliteral(ls, "(for limit)");
-  new_localvarliteral(ls, "(for step)");
+  new_localvarliteral(ls, "(for state)");
+  new_localvarliteral(ls, "(for state)");
+  new_localvarliteral(ls, "(for state)");
   new_localvar(ls, varname);
   checknext(ls, '=');
   exp1(ls);  /* initial value */
@@ -1566,10 +1565,10 @@ static void forlist (LexState *ls, TString *indexname) {
   int line;
   int base = fs->freereg;
   /* create control variables */
-  new_localvarliteral(ls, "(for generator)");
   new_localvarliteral(ls, "(for state)");
-  new_localvarliteral(ls, "(for control)");
-  new_localvarliteral(ls, "(for toclose)");
+  new_localvarliteral(ls, "(for state)");
+  new_localvarliteral(ls, "(for state)");
+  new_localvarliteral(ls, "(for state)");
   /* create declared variables */
   new_localvar(ls, indexname);
   while (testnext(ls, ',')) {
