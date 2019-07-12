@@ -49,31 +49,11 @@ if not T then
 else --[
 -- testing table sizes
 
-local function log2 (x) return math.log(x, 2) end
 
 local function mp2 (n)   -- minimum power of 2 >= n
-  local mp = 2^math.ceil(log2(n))
+  local mp = 2^math.ceil(math.log(n, 2))
   assert(n == 0 or (mp/2 < n and n <= mp))
   return mp
-end
-
-local function fb (n)
-  local r, nn = T.int2fb(n)
-  assert(r < 256)
-  return nn
-end
-
--- test fb function
-for a = 1, 10000 do   -- all numbers up to 10^4
-  local n = fb(a)
-  assert(a <= n and n <= a*1.125)
-end
-local a = 1024   -- plus a few up to 2 ^30
-local lim = 2^30
-while a < lim do
-  local n = fb(a)
-  assert(a <= n and n <= a*1.125)
-  a = math.ceil(a*1.3)
 end
 
 
@@ -95,24 +75,30 @@ end
 
 
 -- testing constructor sizes
-local lim = 40
-local s = 'return {'
-for i=1,lim do
-  s = s..i..','
-  local s = s
-  for k=0,lim do
-    local t = load(s..'}', '')()
-    assert(#t == i)
-    check(t, fb(i), mp2(k))
-    s = string.format('%sa%d=%d,', s, k, k)
+local sizes = {0, 1, 2, 3, 4, 5, 7, 8, 9, 15, 16, 17,
+  30, 31, 32, 33, 34, 500, 1000}
+
+for _, sa in ipairs(sizes) do    -- 'sa' is size of the array part
+  local arr = {"return {"}
+  -- array part
+  for i = 1, sa do arr[1 + i] = "1," end
+  for _, sh in ipairs(sizes) do    -- 'sh' is size of the hash part
+    for j = 1, sh do   -- hash part
+      arr[1 + sa + j] = string.format('k%x=%d,', j, j)
+    end
+    arr[1 + sa + sh + 1] = "}"
+    local prog = table.concat(arr)
+    local t = assert(load(prog))()
+    assert(#t == sa)
+    check(t, sa, mp2(sh))
   end
 end
 
 
 -- tests with unknown number of elements
 local a = {}
-for i=1,lim do a[i] = i end   -- build auxiliary table
-for k=0,lim do
+for i=1,sizes[#sizes] do a[i] = i end   -- build auxiliary table
+for k in ipairs(sizes) do
   local a = {table.unpack(a,1,k)}
   assert(#a == k)
   check(a, k, 0)

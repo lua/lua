@@ -1103,14 +1103,6 @@ static int doremote (lua_State *L) {
 }
 
 
-static int int2fb_aux (lua_State *L) {
-  int b = luaO_int2fb((unsigned int)luaL_checkinteger(L, 1));
-  lua_pushinteger(L, b);
-  lua_pushinteger(L, (unsigned int)luaO_fb2int(b));
-  return 2;
-}
-
-
 static int log2_aux (lua_State *L) {
   unsigned int x = (unsigned int)luaL_checkinteger(L, 1);
   lua_pushinteger(L, luaO_ceillog2(x));
@@ -1780,7 +1772,6 @@ static const struct luaL_Reg tests_funcs[] = {
   {"pobj", gc_printobj},
   {"getref", getref},
   {"hash", hash_query},
-  {"int2fb", int2fb_aux},
   {"log2", log2_aux},
   {"limits", get_limits},
   {"listcode", listcode},

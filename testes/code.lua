@@ -93,11 +93,13 @@ end
 -- some basic instructions
 check(function ()   -- function does not create upvalues
   (function () end){f()}
-end, 'CLOSURE', 'NEWTABLE', 'GETTABUP', 'CALL', 'SETLIST', 'CALL', 'RETURN0')
+end, 'CLOSURE', 'NEWTABLE', 'EXTRAARG', 'GETTABUP', 'CALL',
+     'SETLIST', 'CALL', 'RETURN0')
 
 check(function (x)   -- function creates upvalues
   (function () return x end){f()}
-end, 'CLOSURE', 'NEWTABLE', 'GETTABUP', 'CALL', 'SETLIST', 'CALL', 'RETURN')
+end, 'CLOSURE', 'NEWTABLE', 'EXTRAARG', 'GETTABUP', 'CALL',
+     'SETLIST', 'CALL', 'RETURN')
 
 
 -- sequence of LOADNILs

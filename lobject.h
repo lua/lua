@@ -734,8 +734,6 @@ typedef struct Table {
 /* size of buffer for 'luaO_utf8esc' function */
 #define UTF8BUFFSZ	8
 
-LUAI_FUNC int luaO_int2fb (unsigned int x);
-LUAI_FUNC int luaO_fb2int (int x);
 LUAI_FUNC int luaO_utf8esc (char *buff, unsigned long x);
 LUAI_FUNC int luaO_ceillog2 (unsigned int x);
 LUAI_FUNC int luaO_rawarith (lua_State *L, int op, const TValue *p1,

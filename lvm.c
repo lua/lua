@@ -1250,11 +1250,15 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         int b = GETARG_B(i);
         int c = GETARG_C(i);
         Table *t;
+        c = (c == 0) ? 0 : 1 << (c - 1);  /* size is 2^c */
+        if (b >= LIMTABSZ)
+          b += LFIELDS_PER_FLUSH * GETARG_Ax(*pc) - LIMTABSZ;
+        pc++;  /* skip extra argument */
         L->top = ci->top;  /* correct top in case of GC */
         t = luaH_new(L);  /* memory allocation */
         sethvalue2s(L, ra, t);
         if (b != 0 || c != 0)
-          luaH_resize(L, t, luaO_fb2int(b), luaO_fb2int(c));  /* idem */
+          luaH_resize(L, t, b, c);  /* idem */
         checkGC(L, ra + 1);
         vmbreak;
       }

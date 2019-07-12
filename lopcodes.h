@@ -324,7 +324,8 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
   (*) In OP_SETLIST, if (B == 0) then real B = 'top'; if (C == 0) then
   next 'instruction' is EXTRAARG(real C).
 
-  (*) In OP_LOADKX, the next 'instruction' is always EXTRAARG.
+  (*) In OP_LOADKX and OP_NEWTABLE, the next 'instruction' is always
+  EXTRAARG.
 
   (*) For comparisons, k specifies what condition the test should accept
   (true or false).
@@ -374,5 +375,12 @@ LUAI_DDEC(const lu_byte luaP_opmodes[NUM_OPCODES];)
 /* number of list items to accumulate before a SETLIST instruction */
 #define LFIELDS_PER_FLUSH	50
 
+
+/*
+** In OP_NEWTABLE, array sizes smaller than LIMTABSZ are represented
+** directly in R(B). Otherwise, array size is given by
+**        (R(B) - LIMTABSZ) + EXTRAARG * LFIELDS_PER_FLUSH
+*/
+#define LIMTABSZ	(MAXARG_B - LFIELDS_PER_FLUSH)
 
 #endif

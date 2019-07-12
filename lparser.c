@@ -811,16 +811,16 @@ static void yindex (LexState *ls, expdesc *v) {
 */
 
 
-struct ConsControl {
+typedef struct ConsControl {
   expdesc v;  /* last list item read */
   expdesc *t;  /* table descriptor */
   int nh;  /* total number of 'record' elements */
   int na;  /* total number of array elements */
   int tostore;  /* number of array elements pending to be stored */
-};
+} ConsControl;
 
 
-static void recfield (LexState *ls, struct ConsControl *cc) {
+static void recfield (LexState *ls, ConsControl *cc) {
   /* recfield -> (NAME | '['exp']') = exp */
   FuncState *fs = ls->fs;
   int reg = ls->fs->freereg;
@@ -841,7 +841,7 @@ static void recfield (LexState *ls, struct ConsControl *cc) {
 }
 
 
-static void closelistfield (FuncState *fs, struct ConsControl *cc) {
+static void closelistfield (FuncState *fs, ConsControl *cc) {
   if (cc->v.k == VVOID) return;  /* there is no list item */
   luaK_exp2nextreg(fs, &cc->v);
   cc->v.k = VVOID;
@@ -852,7 +852,7 @@ static void closelistfield (FuncState *fs, struct ConsControl *cc) {
 }
 
 
-static void lastlistfield (FuncState *fs, struct ConsControl *cc) {
+static void lastlistfield (FuncState *fs, ConsControl *cc) {
   if (cc->tostore == 0) return;
   if (hasmultret(cc->v.k)) {
     luaK_setmultret(fs, &cc->v);
@@ -867,16 +867,15 @@ static void lastlistfield (FuncState *fs, struct ConsControl *cc) {
 }
 
 
-static void listfield (LexState *ls, struct ConsControl *cc) {
+static void listfield (LexState *ls, ConsControl *cc) {
   /* listfield -> exp */
   expr(ls, &cc->v);
-  checklimit(ls->fs, cc->na, MAX_INT, "items in a constructor");
   cc->na++;
   cc->tostore++;
 }
 
 
-static void field (LexState *ls, struct ConsControl *cc) {
+static void field (LexState *ls, ConsControl *cc) {
   /* field -> listfield | recfield */
   switch(ls->t.token) {
     case TK_NAME: {  /* may be 'listfield' or 'recfield' */
@@ -898,13 +897,30 @@ static void field (LexState *ls, struct ConsControl *cc) {
 }
 
 
+static void settablesize (FuncState *fs, ConsControl *cc, int pc) {
+  Instruction *inst = &fs->f->code[pc];
+  int rc = (cc->nh == 0) ? 0 : luaO_ceillog2(cc->nh) + 1;
+  int rb = cc->na;
+  int extra = 0;
+  if (rb >= LIMTABSZ) {
+    extra = rb / LFIELDS_PER_FLUSH;
+    rb = rb % LFIELDS_PER_FLUSH + LIMTABSZ;
+    checklimit(fs, extra, MAXARG_Ax, "items in a constructor");
+  }
+  SETARG_C(*inst, rc);  /* set initial table size */
+  SETARG_B(*inst, rb); /* set initial array size */
+  SETARG_Ax(*(inst + 1), extra);
+}
+
+
 static void constructor (LexState *ls, expdesc *t) {
   /* constructor -> '{' [ field { sep field } [sep] ] '}'
      sep -> ',' | ';' */
   FuncState *fs = ls->fs;
   int line = ls->linenumber;
   int pc = luaK_codeABC(fs, OP_NEWTABLE, 0, 0, 0);
-  struct ConsControl cc;
+  ConsControl cc;
+  luaK_codeextraarg(fs, 0);
   cc.na = cc.nh = cc.tostore = 0;
   cc.t = t;
   init_exp(t, VRELOC, pc);
@@ -919,8 +935,7 @@ static void constructor (LexState *ls, expdesc *t) {
   } while (testnext(ls, ',') || testnext(ls, ';'));
   check_match(ls, '}', '{', line);
   lastlistfield(fs, &cc);
-  SETARG_B(fs->f->code[pc], luaO_int2fb(cc.na)); /* set initial array size */
-  SETARG_C(fs->f->code[pc], luaO_int2fb(cc.nh));  /* set initial table size */
+  settablesize(fs, &cc, pc);
 }
 
 /* }====================================================================== */

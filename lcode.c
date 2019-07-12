@@ -430,7 +430,7 @@ static int codesJ (FuncState *fs, OpCode o, int sj, int k) {
 /*
 ** Emit an "extra argument" instruction (format 'iAx')
 */
-static int codeextraarg (FuncState *fs, int a) {
+int luaK_codeextraarg (FuncState *fs, int a) {
   lua_assert(a <= MAXARG_Ax);
   return luaK_code(fs, CREATE_Ax(OP_EXTRAARG, a));
 }
@@ -446,7 +446,7 @@ static int luaK_codek (FuncState *fs, int reg, int k) {
     return luaK_codeABx(fs, OP_LOADK, reg, k);
   else {
     int p = luaK_codeABx(fs, OP_LOADKX, reg, 0);
-    codeextraarg(fs, k);
+    luaK_codeextraarg(fs, k);
     return p;
   }
 }
@@ -1687,7 +1687,7 @@ void luaK_setlist (FuncState *fs, int base, int nelems, int tostore) {
     luaK_codeABC(fs, OP_SETLIST, base, b, c);
   else if (c <= MAXARG_Ax) {
     luaK_codeABC(fs, OP_SETLIST, base, b, 0);
-    codeextraarg(fs, c);
+    luaK_codeextraarg(fs, c);
   }
   else
     luaX_syntaxerror(fs->ls, "constructor too long");
