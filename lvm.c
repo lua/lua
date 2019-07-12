@@ -1097,11 +1097,6 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         setobjs2s(L, ra, RB(i));
         vmbreak;
       }
-      vmcase(OP_LOADK) {
-        TValue *rb = k + GETARG_Bx(i);
-        setobj2s(L, ra, rb);
-        vmbreak;
-      }
       vmcase(OP_LOADI) {
         lua_Integer b = GETARG_sBx(i);
         setivalue(s2v(ra), b);
@@ -1110,6 +1105,11 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       vmcase(OP_LOADF) {
         int b = GETARG_sBx(i);
         setfltvalue(s2v(ra), cast_num(b));
+        vmbreak;
+      }
+      vmcase(OP_LOADK) {
+        TValue *rb = k + GETARG_Bx(i);
+        setobj2s(L, ra, rb);
         vmbreak;
       }
       vmcase(OP_LOADKX) {
@@ -1331,6 +1331,45 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         op_arithK(L, luaV_idiv, luai_numidiv, TM_IDIV, 0);
         vmbreak;
       }
+      vmcase(OP_BANDK) {
+        op_bitwiseK(L, l_band, TM_BAND);
+        vmbreak;
+      }
+      vmcase(OP_BORK) {
+        op_bitwiseK(L, l_bor, TM_BOR);
+        vmbreak;
+      }
+      vmcase(OP_BXORK) {
+        op_bitwiseK(L, l_bxor, TM_BXOR);
+        vmbreak;
+      }
+      vmcase(OP_SHRI) {
+        TValue *rb = vRB(i);
+        int ic = GETARG_sC(i);
+        lua_Integer ib;
+        if (tointegerns(rb, &ib)) {
+          setivalue(s2v(ra), luaV_shiftl(ib, -ic));
+        }
+        else {
+          TMS ev = TM_SHR;
+          if (TESTARG_k(i)) {
+            ic = -ic;  ev = TM_SHL;
+          }
+          Protect(luaT_trybiniTM(L, rb, ic, 0, ra, ev));
+        }
+        vmbreak;
+      }
+      vmcase(OP_SHLI) {
+        TValue *rb = vRB(i);
+        int ic = GETARG_sC(i);
+        lua_Integer ib;
+        if (tointegerns(rb, &ib)) {
+          setivalue(s2v(ra), luaV_shiftl(ic, ib));
+        }
+        else
+          Protect(luaT_trybiniTM(L, rb, ic, 1, ra, TM_SHL));
+        vmbreak;
+      }
       vmcase(OP_ADD) {
         op_arith(L, l_addi, luai_numadd, TM_ADD);
         vmbreak;
@@ -1359,18 +1398,6 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         op_arith(L, luaV_idiv, luai_numidiv, TM_IDIV);
         vmbreak;
       }
-      vmcase(OP_BANDK) {
-        op_bitwiseK(L, l_band, TM_BAND);
-        vmbreak;
-      }
-      vmcase(OP_BORK) {
-        op_bitwiseK(L, l_bor, TM_BOR);
-        vmbreak;
-      }
-      vmcase(OP_BXORK) {
-        op_bitwiseK(L, l_bxor, TM_BXOR);
-        vmbreak;
-      }
       vmcase(OP_BAND) {
         op_bitwise(L, l_band, TM_BAND);
         vmbreak;
@@ -1381,33 +1408,6 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_BXOR) {
         op_bitwise(L, l_bxor, TM_BXOR);
-        vmbreak;
-      }
-      vmcase(OP_SHRI) {
-        TValue *rb = vRB(i);
-        int ic = GETARG_sC(i);
-        lua_Integer ib;
-        if (tointegerns(rb, &ib)) {
-          setivalue(s2v(ra), luaV_shiftl(ib, -ic));
-        }
-        else {
-          TMS ev = TM_SHR;
-          if (TESTARG_k(i)) {
-            ic = -ic;  ev = TM_SHL;
-          }
-          Protect(luaT_trybiniTM(L, rb, ic, 0, ra, ev));
-        }
-        vmbreak;
-      }
-      vmcase(OP_SHLI) {
-        TValue *rb = vRB(i);
-        int ic = GETARG_sC(i);
-        lua_Integer ib;
-        if (tointegerns(rb, &ib)) {
-          setivalue(s2v(ra), luaV_shiftl(ic, ib));
-        }
-        else
-          Protect(luaT_trybiniTM(L, rb, ic, 1, ra, TM_SHL));
         vmbreak;
       }
       vmcase(OP_SHR) {
