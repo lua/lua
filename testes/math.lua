@@ -270,7 +270,7 @@ else
 end
 
 do
-  local NaN = 0/0
+  local <const> NaN = 0/0
   assert(not (NaN < 0))
   assert(not (NaN > minint))
   assert(not (NaN <= -9))
@@ -767,7 +767,8 @@ assert(a == '10' and b == '20')
 
 do
   print("testing -0 and NaN")
-  local mz, z = -0.0, 0.0
+  local <const> mz = -0.0
+  local <const> z = 0.0
   assert(mz == z)
   assert(1/mz < 0 and 0 < 1/z)
   local a = {[mz] = 1}
@@ -775,17 +776,18 @@ do
   a[z] = 2
   assert(a[z] == 2 and a[mz] == 2)
   local inf = math.huge * 2 + 1
-  mz, z = -1/inf, 1/inf
+  local <const> mz = -1/inf
+  local <const> z = 1/inf
   assert(mz == z)
   assert(1/mz < 0 and 0 < 1/z)
-  local NaN = inf - inf
+  local <const> NaN = inf - inf
   assert(NaN ~= NaN)
   assert(not (NaN < NaN))
   assert(not (NaN <= NaN))
   assert(not (NaN > NaN))
   assert(not (NaN >= NaN))
   assert(not (0 < NaN) and not (NaN < 0))
-  local NaN1 = 0/0
+  local <const> NaN1 = 0/0
   assert(NaN ~= NaN1 and not (NaN <= NaN1) and not (NaN1 <= NaN))
   local a = {}
   assert(not pcall(rawset, a, NaN, 1))
@@ -814,8 +816,8 @@ end
 -- the first call after seed 1007 should return 0x7a7040a5a323c9d6
 do
   -- all computations assume at most 32-bit integers
-  local h = 0x7a7040a5   -- higher half
-  local l = 0xa323c9d6   -- lower half
+  local <const> h = 0x7a7040a5   -- higher half
+  local <const> l = 0xa323c9d6   -- lower half
 
   math.randomseed(1007)
   -- get the low 'intbits' of the 64-bit expected result

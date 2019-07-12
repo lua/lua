@@ -170,15 +170,16 @@ static void codename (LexState *ls, expdesc *e) {
 ** Register a new local variable in the active 'Proto' (for debug
 ** information).
 */
-static int registerlocalvar (lua_State *L, FuncState *fs, TString *varname) {
+static int registerlocalvar (LexState *ls, FuncState *fs, TString *varname) {
   Proto *f = fs->f;
   int oldsize = f->sizelocvars;
-  luaM_growvector(L, f->locvars, fs->ndebugvars, f->sizelocvars,
+  luaM_growvector(ls->L, f->locvars, fs->ndebugvars, f->sizelocvars,
                   LocVar, SHRT_MAX, "local variables");
   while (oldsize < f->sizelocvars)
     f->locvars[oldsize++].varname = NULL;
   f->locvars[fs->ndebugvars].varname = varname;
-  luaC_objbarrier(L, f, varname);
+  f->locvars[fs->ndebugvars].startpc = fs->pc;
+  luaC_objbarrier(ls->L, f, varname);
   return fs->ndebugvars++;
 }
 
@@ -191,16 +192,13 @@ static Vardesc *new_localvar (LexState *ls, TString *name) {
   FuncState *fs = ls->fs;
   Dyndata *dyd = ls->dyd;
   Vardesc *var;
-  int reg = registerlocalvar(L, fs, name);
   checklimit(fs, dyd->actvar.n + 1 - fs->firstlocal,
                  MAXVARS, "local variables");
   luaM_growvector(L, dyd->actvar.arr, dyd->actvar.n + 1,
                   dyd->actvar.size, Vardesc, USHRT_MAX, "local variables");
   var = &dyd->actvar.arr[dyd->actvar.n++];
-  var->pidx = cast(short, reg);
-  var->ro = 0;
-  var->name = name;
-  setnilvalue(var);
+  var->vd.kind = VDKREG;  /* default is a regular variable */
+  var->vd.name = name;
   return var;
 }
 
@@ -225,8 +223,8 @@ static Vardesc *getlocalvardesc (FuncState *fs, int i) {
 static int stacklevel (FuncState *fs, int nvar) {
   while (nvar > 0) {
     Vardesc *vd = getlocalvardesc(fs, nvar - 1);
-    if (vdinstack(vd))  /* is in the stack? */
-      return vd->sidx + 1;
+    if (vd->vd.kind != RDKCTC)  /* is in the stack? */
+      return vd->vd.sidx + 1;
     else
       nvar--;  /* try previous variable */
   }
@@ -247,10 +245,10 @@ int luaY_nvarstack (FuncState *fs) {
 */
 static LocVar *localdebuginfo (FuncState *fs, int i) {
   Vardesc *vd = getlocalvardesc(fs, i);
-  if (!vdinstack(vd))
+  if (vd->vd.kind == RDKCTC)
     return NULL;  /* no debug info. for constants */
   else {
-    int idx = vd->pidx;
+    int idx = vd->vd.pidx;
     lua_assert(idx < fs->ndebugvars);
     return &fs->f->locvars[idx];
   }
@@ -261,7 +259,7 @@ static void init_var (FuncState *fs, expdesc *e, int i) {
   e->f = e->t = NO_JUMP;
   e->k = VLOCAL;
   e->u.var.vidx = i;
-  e->u.var.sidx = getlocalvardesc(fs, i)->sidx;
+  e->u.var.sidx = getlocalvardesc(fs, i)->vd.sidx;
 }
 
 
@@ -269,15 +267,19 @@ static void check_readonly (LexState *ls, expdesc *e) {
   FuncState *fs = ls->fs;
   TString *varname = NULL;  /* to be set if variable is const */
   switch (e->k) {
+    case VCONST: {
+      varname = ls->dyd->actvar.arr[e->u.info].vd.name;
+      break;
+    }
     case VLOCAL: {
       Vardesc *vardesc = getlocalvardesc(fs, e->u.var.vidx);
-      if (vardesc->ro)
-        varname = vardesc->name;
+      if (vardesc->vd.kind != VDKREG)  /* not a regular variable? */
+        varname = vardesc->vd.name;
       break;
     }
     case VUPVAL: {
       Upvaldesc *up = &fs->f->upvalues[e->u.info];
-      if (up->ro)
+      if (up->kind != VDKREG)
         varname = up->name;
       break;
     }
@@ -302,8 +304,8 @@ static void adjustlocalvars (LexState *ls, int nvars) {
   for (i = 0; i < nvars; i++) {
     int varidx = fs->nactvar++;
     Vardesc *var = getlocalvardesc(fs, varidx);
-    var->sidx = stklevel++;
-    fs->f->locvars[var->pidx].startpc = fs->pc;
+    var->vd.sidx = stklevel++;
+    var->vd.pidx = registerlocalvar(ls, fs, var->vd.name);
   }
 }
 
@@ -354,13 +356,13 @@ static int newupvalue (FuncState *fs, TString *name, expdesc *v) {
   if (v->k == VLOCAL) {
     up->instack = 1;
     up->idx = v->u.var.sidx;
-    up->ro = getlocalvardesc(prev, v->u.var.vidx)->ro;
-    lua_assert(eqstr(name, getlocalvardesc(prev, v->u.var.vidx)->name));
+    up->kind = getlocalvardesc(prev, v->u.var.vidx)->vd.kind;
+    lua_assert(eqstr(name, getlocalvardesc(prev, v->u.var.vidx)->vd.name));
   }
   else {
     up->instack = 0;
     up->idx = cast_byte(v->u.info);
-    up->ro = prev->f->upvalues[v->u.info].ro;
+    up->kind = prev->f->upvalues[v->u.info].kind;
     lua_assert(eqstr(name, prev->f->upvalues[v->u.info].name));
   }
   up->name = name;
@@ -373,11 +375,17 @@ static int newupvalue (FuncState *fs, TString *name, expdesc *v) {
 ** Look for an active local variable with the name 'n' in the
 ** function 'fs'.
 */
-static int searchvar (FuncState *fs, TString *n) {
+static int searchvar (FuncState *fs, TString *n, expdesc *var) {
   int i;
   for (i = cast_int(fs->nactvar) - 1; i >= 0; i--) {
-    if (eqstr(n, getlocalvardesc(fs, i)->name))
-      return i;
+    Vardesc *vd = getlocalvardesc(fs, i);
+    if (eqstr(n, vd->vd.name)) {  /* found? */
+      if (vd->vd.kind == RDKCTC)  /* compile-time constant? */
+        init_exp(var, VCONST, fs->firstlocal + i);
+      else  /* real variable */
+        init_var(fs, var, i);
+      return var->k;
+    }
   }
   return -1;  /* not found */
 }
@@ -405,20 +413,19 @@ static void singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
   if (fs == NULL)  /* no more levels? */
     init_exp(var, VVOID, 0);  /* default is global */
   else {
-    int v = searchvar(fs, n);  /* look up locals at current level */
+    int v = searchvar(fs, n, var);  /* look up locals at current level */
     if (v >= 0) {  /* found? */
-      init_var(fs, var, v);  /* variable is local */
-      if (!base)
+      if (v == VLOCAL && !base)
         markupval(fs, var->u.var.vidx);  /* local will be used as an upval */
     }
     else {  /* not found as local at current level; try upvalues */
       int idx = searchupvalue(fs, n);  /* try existing upvalues */
       if (idx < 0) {  /* not found? */
         singlevaraux(fs->prev, n, var, 0);  /* try upper levels */
-        if (var->k == VVOID)  /* not found? */
-          return;  /* it is a global */
-        /* else was LOCAL or UPVAL */
-        idx  = newupvalue(fs, n, var);  /* will be a new upvalue */
+        if (var->k == VLOCAL || var->k == VUPVAL)  /* local or upvalue? */
+          idx  = newupvalue(fs, n, var);  /* will be a new upvalue */
+        else  /* it is a global or a constant */
+          return;  /* don't need to do anything at this level */
       }
       init_exp(var, VUPVAL, idx);  /* new or old upvalue */
     }
@@ -483,7 +490,7 @@ static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
 ** local variable.
 */
 static l_noret jumpscopeerror (LexState *ls, Labeldesc *gt) {
-  const char *varname = getstr(getlocalvardesc(ls->fs, gt->nactvar)->name);
+  const char *varname = getstr(getlocalvardesc(ls->fs, gt->nactvar)->vd.name);
   const char *msg = "<goto %s> at line %d jumps into the scope of local '%s'";
   msg = luaO_pushfstring(ls->L, msg, getstr(gt->name), gt->line, varname);
   luaK_semerror(ls, msg);  /* raise the error */
@@ -1710,21 +1717,20 @@ static int getlocalattribute (LexState *ls) {
     const char *attr = getstr(str_checkname(ls));
     checknext(ls, '>');
     if (strcmp(attr, "const") == 0)
-      return 1;  /* read-only variable */
+      return RDKCONST;  /* read-only variable */
     else if (strcmp(attr, "toclose") == 0)
-      return 2;  /* to-be-closed variable */
+      return RDKTOCLOSE;  /* to-be-closed variable */
     else
       luaK_semerror(ls,
         luaO_pushfstring(ls->L, "unknown attribute '%s'", attr));
   }
-  return 0;
+  return VDKREG;
 }
 
 
-static void checktoclose (LexState *ls, int toclose) {
-  if (toclose != -1) {  /* is there a to-be-closed variable? */
+static void checktoclose (LexState *ls, int level) {
+  if (level != -1) {  /* is there a to-be-closed variable? */
     FuncState *fs = ls->fs;
-    int level = luaY_nvarstack(fs) + toclose;
     markupval(fs, level + 1);
     fs->bl->insidetbc = 1;  /* in the scope of a to-be-closed variable */
     luaK_codeABC(fs, OP_TBC, level, 0, 0);
@@ -1734,20 +1740,20 @@ static void checktoclose (LexState *ls, int toclose) {
 
 static void localstat (LexState *ls) {
   /* stat -> LOCAL ATTRIB NAME {',' ATTRIB NAME} ['=' explist] */
+  FuncState *fs = ls->fs;
   int toclose = -1;  /* index of to-be-closed variable (if any) */
+  Vardesc *var;  /* last variable */
   int nvars = 0;
   int nexps;
   expdesc e;
   do {
     int kind = getlocalattribute(ls);
-    Vardesc *var = new_localvar(ls, str_checkname(ls));
-    if (kind != 0) {  /* is there an attribute? */
-      var->ro = 1;  /* all attributes make variable read-only */
-      if (kind == 2) {  /* to-be-closed? */
-        if (toclose != -1)  /* one already present? */
-          luaK_semerror(ls, "multiple to-be-closed variables in local list");
-        toclose = nvars;
-      }
+    var = new_localvar(ls, str_checkname(ls));
+    var->vd.kind = kind;
+    if (kind == RDKTOCLOSE) {  /* to-be-closed? */
+      if (toclose != -1)  /* one already present? */
+        luaK_semerror(ls, "multiple to-be-closed variables in local list");
+      toclose = luaY_nvarstack(fs) + nvars;
     }
     nvars++;
   } while (testnext(ls, ','));
@@ -1757,9 +1763,18 @@ static void localstat (LexState *ls) {
     e.k = VVOID;
     nexps = 0;
   }
-  adjust_assign(ls, nvars, nexps, &e);
+  if (nvars == nexps &&  /* no adjustments? */
+      var->vd.kind == RDKCONST &&  /* last variable is const? */
+      luaK_exp2const(fs, &e, &var->k)) {  /* compile-time constant? */
+    var->vd.kind = RDKCTC;  /* variable is a compile-time constant */
+    adjustlocalvars(ls, nvars - 1);  /* exclude last variable */
+    fs->nactvar++;  /* but count it */
+  }
+  else {
+    adjust_assign(ls, nvars, nexps, &e);
+    adjustlocalvars(ls, nvars);
+  }
   checktoclose(ls, toclose);
-  adjustlocalvars(ls, nvars);
 }
 
 
@@ -1925,7 +1940,7 @@ static void mainfunc (LexState *ls, FuncState *fs) {
   env = allocupvalue(fs);  /* ...set environment upvalue */
   env->instack = 1;
   env->idx = 0;
-  env->ro = 0;
+  env->kind = VDKREG;
   env->name = ls->envn;
   luaX_next(ls);  /* read first token */
   statlist(ls);  /* parse main body */

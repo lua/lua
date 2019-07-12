@@ -223,7 +223,7 @@ In Lua, the global variable @Lid{_G} is initialized with this same value.
 so changing its value will affect only your own code.)
 
 When Lua loads a chunk,
-the default value for its @id{_ENV} upvalue
+the default value for its @id{_ENV} variable
 is the global environment @seeF{load}.
 Therefore, by default,
 free names in Lua code refer to entries in the global environment
@@ -233,7 +233,7 @@ and some functions there operate on that environment.
 You can use @Lid{load} (or @Lid{loadfile})
 to load a chunk with a different environment.
 (In C, you have to load the chunk and then change the value
-of its first upvalue.)
+of its first upvalue; see @See{lua_setupvalue}.)
 
 }
 
@@ -1224,7 +1224,7 @@ As such, chunks can define local variables,
 receive arguments, and return values.
 Moreover, such anonymous function is compiled as in the
 scope of an external local variable called @id{_ENV} @see{globalenv}.
-The resulting function always has @id{_ENV} as its only upvalue,
+The resulting function always has @id{_ENV} as its only external variable,
 even if it does not use that variable.
 
 A chunk can be stored in a file or in a string inside the host program.
@@ -2241,8 +2241,8 @@ and so the second @id{x} refers to the outside variable.
 Because of the @x{lexical scoping} rules,
 local variables can be freely accessed by functions
 defined inside their scope.
-A local variable used by an inner function is called
-an @def{upvalue}, or @emphx{external local variable},
+A local variable used by an inner function is called an @def{upvalue}
+(or @emphx{external local variable}, or simply @emphx{external variable})
 inside the inner function.
 
 Notice that each execution of a @Rw{local} statement
@@ -4765,11 +4765,7 @@ and returns its name.
 Returns @id{NULL} (and pushes nothing)
 when the index @id{n} is greater than the number of upvalues.
 
-For @N{C functions}, this function uses the empty string @T{""}
-as a name for all upvalues.
-(For Lua functions,
-upvalues are the external local variables that the function uses,
-and that are consequently included in its closure.)
+See @Lid{debug.getupvalue} for more information about upvalues.
 
 }
 
@@ -8485,6 +8481,8 @@ The first parameter or local variable has @N{index 1}, and so on,
 following the order that they are declared in the code,
 counting only the variables that are active
 in the current scope of the function.
+Compile-time constants may not appear in this listing,
+if they were optimized away by the compiler.
 Negative indices refer to vararg arguments;
 @num{-1} is the first vararg argument.
 The function returns @nil if there is no variable with the given index,
@@ -8520,8 +8518,15 @@ This function returns the name and the value of the upvalue
 with index @id{up} of the function @id{f}.
 The function returns @nil if there is no upvalue with the given index.
 
-Variable names starting with @Char{(} (open parenthesis) @C{)}
-represent variables with no known names
+(For Lua functions,
+upvalues are the external local variables that the function uses,
+and that are consequently included in its closure.)
+
+For @N{C functions}, this function uses the empty string @T{""}
+as a name for all upvalues.
+
+Variable name @Char{?} (interrogation mark)
+represents variables with no known names
 (variables from chunks saved without debug information).
 
 }
@@ -8625,6 +8630,8 @@ with index @id{up} of the function @id{f}.
 The function returns @nil if there is no upvalue
 with the given index.
 Otherwise, it returns the name of the upvalue.
+
+See @Lid{debug.getupvalue} for more information about upvalues.
 
 }
 

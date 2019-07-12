@@ -287,7 +287,7 @@ a,b = F(nil)==nil; assert(a == true and b == nil)
 ------------------------------------------------------------------
 
 -- sometimes will be 0, sometimes will not...
-_ENV.GLOB1 = math.floor(os.time()) % 2
+_ENV.GLOB1 = math.random(0, 1)
 
 -- basic expressions with their respective values
 local basiccases = {
@@ -297,6 +297,26 @@ local basiccases = {
   {"10", 10},
   {"(0==_ENV.GLOB1)", 0 == _ENV.GLOB1},
 }
+
+local prog
+
+if _ENV.GLOB1 == 0 then
+  basiccases[2][1] = "F"   -- constant false
+
+  prog = [[
+    local <const> F = false
+    if %s then IX = true end
+    return %s
+]]
+else
+  basiccases[4][1] = "k10"   -- constant 10
+
+  prog = [[
+    local <const> k10 = 10
+    if %s then IX = true end
+    return %s
+  ]]
+end
 
 print('testing short-circuit optimizations (' .. _ENV.GLOB1 .. ')')
 
@@ -336,8 +356,6 @@ local level = _soft and 3 or 4
 cases[1] = basiccases
 for i = 2, level do cases[i] = createcases(i) end
 print("+")
-
-local prog = [[if %s then IX = true end; return %s]]
 
 local i = 0
 for n = 1, level do

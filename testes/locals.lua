@@ -324,7 +324,7 @@ do
 
   -- errors due to non-closable values
   local function foo ()
-    local <toclose> x = 34
+    local <toclose> x = {}
   end
   local stat, msg = pcall(foo)
   assert(not stat and string.find(msg, "variable 'x'"))

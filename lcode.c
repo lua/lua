@@ -68,6 +68,30 @@ static int tonumeral (const expdesc *e, TValue *v) {
 
 
 /*
+** If expression is a constant, fills 'v' with its value
+** and returns 1. Otherwise, returns 0.
+*/
+int luaK_exp2const (FuncState *fs, const expdesc *e, TValue *v) {
+  if (hasjumps(e))
+    return 0;  /* not a constant */
+  switch (e->k) {
+    case VFALSE: case VTRUE:
+      setbvalue(v, e->k == VTRUE);
+      return 1;
+    case VNIL:
+      setnilvalue(v);
+      return 1;
+    case VK: {
+      TValue *k = &fs->f->k[e->u.info];
+      setobj(fs->ls->L, v, k);
+      return 1;
+    }
+    default: return tonumeral(e, v);
+  }
+}
+
+
+/*
 ** Return the previous instruction of the current code. If there
 ** may be a jump target between the current instruction and the
 ** previous one, return an invalid instruction (to avoid wrong
@@ -630,6 +654,31 @@ static void luaK_float (FuncState *fs, int reg, lua_Number f) {
 
 
 /*
+** Convert a constant in 'v' into an expression description 'e'
+*/
+static void const2exp (FuncState *fs, TValue *v, expdesc *e) {
+  switch (ttypetag(v)) {
+    case LUA_TNUMINT:
+      e->k = VKINT; e->u.ival = ivalue(v);
+      break;
+    case LUA_TNUMFLT:
+      e->k = VKFLT; e->u.nval = fltvalue(v);
+      break;
+    case LUA_TBOOLEAN:
+      e->k = bvalue(v) ? VTRUE : VFALSE;
+      break;
+    case LUA_TNIL:
+      e->k = VNIL;
+      break;
+    case LUA_TSHRSTR:  case LUA_TLNGSTR:
+      e->k = VK; e->u.info = luaK_stringK(fs, tsvalue(v));
+      break;
+    default: lua_assert(0);
+  }
+}
+
+
+/*
 ** Fix an expression to return the number of results 'nresults'.
 ** Either 'e' is a multi-ret expression (function call or vararg)
 ** or 'nresults' is LUA_MULTRET (as any expression can satisfy that).
@@ -677,6 +726,11 @@ void luaK_setoneret (FuncState *fs, expdesc *e) {
 */
 void luaK_dischargevars (FuncState *fs, expdesc *e) {
   switch (e->k) {
+    case VCONST: {
+      TValue *val = &fs->ls->dyd->actvar.arr[e->u.info].k;
+      const2exp(fs, val, e);
+      break;
+    }
     case VLOCAL: {  /* already in a register */
       e->u.info = e->u.var.sidx;
       e->k = VNONRELOC;  /* becomes a non-relocatable value */
@@ -1074,7 +1128,6 @@ void luaK_goiffalse (FuncState *fs, expdesc *e) {
 ** Code 'not e', doing constant folding.
 */
 static void codenot (FuncState *fs, expdesc *e) {
-  luaK_dischargevars(fs, e);
   switch (e->k) {
     case VNIL: case VFALSE: {
       e->k = VTRUE;  /* true == not nil == not false */
@@ -1447,6 +1500,7 @@ static void codeeq (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
 */
 void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
   static const expdesc ef = {VKINT, {0}, NO_JUMP, NO_JUMP};
+  luaK_dischargevars(fs, e);
   switch (op) {
     case OPR_MINUS: case OPR_BNOT:  /* use 'ef' as fake 2nd operand */
       if (constfolding(fs, op + LUA_OPUNM, e, &ef))

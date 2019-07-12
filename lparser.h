@@ -34,8 +34,9 @@ typedef enum {
   VNONRELOC,  /* expression has its value in a fixed register;
                  info = result register */
   VLOCAL,  /* local variable; var.ridx = local register;
-              var.vidx = index in 'actvar.arr'  */
+              var.vidx = relative index in 'actvar.arr'  */
   VUPVAL,  /* upvalue variable; info = index of upvalue in 'upvalues' */
+  VCONST,  /* compile-time constant; info = absolute index in 'actvar.arr'  */
   VINDEXED,  /* indexed variable;
                 ind.t = table register;
                 ind.idx = key's R index */
@@ -81,18 +82,24 @@ typedef struct expdesc {
 } expdesc;
 
 
+/* kinds of variables */
+#define VDKREG		0   /* regular */
+#define RDKCONST	1   /* constant */
+#define RDKTOCLOSE	2   /* to-be-closed */
+#define RDKCTC		3   /* compile-time constant */
+
 /* description of an active local variable */
-typedef struct Vardesc {
-  TValuefields;  /* constant value (if it is a compile-time constant) */
-  lu_byte ro;  /* true if variable is 'const' */
-  lu_byte sidx;  /* index of the variable in the stack */
-  short pidx;  /* index of the variable in the Proto's 'locvars' array */
-  TString *name;  /* variable name */
+typedef union Vardesc {
+  struct {
+    TValuefields;  /* constant value (if it is a compile-time constant) */
+    lu_byte kind;
+    lu_byte sidx;  /* index of the variable in the stack */
+    short pidx;  /* index of the variable in the Proto's 'locvars' array */
+    TString *name;  /* variable name */
+  } vd;
+  TValue k;  /* constant value (if any) */
 } Vardesc;
 
-
-/* check whether Vardesc is in the stack (not a compile-time constant) */
-#define vdinstack(vd)	(ttisnil(vd))
 
 
 /* description of pending goto statements and label statements */
