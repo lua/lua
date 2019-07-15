@@ -815,7 +815,7 @@ typedef struct ConsControl {
   expdesc v;  /* last list item read */
   expdesc *t;  /* table descriptor */
   int nh;  /* total number of 'record' elements */
-  int na;  /* total number of array elements */
+  int na;  /* number of array elements already stored */
   int tostore;  /* number of array elements pending to be stored */
 } ConsControl;
 
@@ -847,6 +847,7 @@ static void closelistfield (FuncState *fs, ConsControl *cc) {
   cc->v.k = VVOID;
   if (cc->tostore == LFIELDS_PER_FLUSH) {
     luaK_setlist(fs, cc->t->u.info, cc->na, cc->tostore);  /* flush */
+    cc->na += cc->tostore;
     cc->tostore = 0;  /* no more items pending */
   }
 }
@@ -864,13 +865,13 @@ static void lastlistfield (FuncState *fs, ConsControl *cc) {
       luaK_exp2nextreg(fs, &cc->v);
     luaK_setlist(fs, cc->t->u.info, cc->na, cc->tostore);
   }
+  cc->na += cc->tostore;
 }
 
 
 static void listfield (LexState *ls, ConsControl *cc) {
   /* listfield -> exp */
   expr(ls, &cc->v);
-  cc->na++;
   cc->tostore++;
 }
 
@@ -897,22 +898,6 @@ static void field (LexState *ls, ConsControl *cc) {
 }
 
 
-static void settablesize (FuncState *fs, ConsControl *cc, int pc) {
-  Instruction *inst = &fs->f->code[pc];
-  int rc = (cc->nh == 0) ? 0 : luaO_ceillog2(cc->nh) + 1;
-  int rb = cc->na;
-  int extra = 0;
-  if (rb >= LIMTABSZ) {
-    extra = rb / LFIELDS_PER_FLUSH;
-    rb = rb % LFIELDS_PER_FLUSH + LIMTABSZ;
-    checklimit(fs, extra, MAXARG_Ax, "items in a constructor");
-  }
-  SETARG_C(*inst, rc);  /* set initial table size */
-  SETARG_B(*inst, rb); /* set initial array size */
-  SETARG_Ax(*(inst + 1), extra);
-}
-
-
 static void constructor (LexState *ls, expdesc *t) {
   /* constructor -> '{' [ field { sep field } [sep] ] '}'
      sep -> ',' | ';' */
@@ -920,12 +905,12 @@ static void constructor (LexState *ls, expdesc *t) {
   int line = ls->linenumber;
   int pc = luaK_codeABC(fs, OP_NEWTABLE, 0, 0, 0);
   ConsControl cc;
-  luaK_codeextraarg(fs, 0);
+  luaK_code(fs, 0);  /* space for extra arg. */
   cc.na = cc.nh = cc.tostore = 0;
   cc.t = t;
-  init_exp(t, VRELOC, pc);
+  init_exp(t, VNONRELOC, fs->freereg);  /* table will be at stack top */
+  luaK_reserveregs(fs, 1);
   init_exp(&cc.v, VVOID, 0);  /* no value (yet) */
-  luaK_exp2nextreg(ls->fs, t);  /* fix it at stack top */
   checknext(ls, '{');
   do {
     lua_assert(cc.v.k == VVOID || cc.tostore > 0);
@@ -935,7 +920,7 @@ static void constructor (LexState *ls, expdesc *t) {
   } while (testnext(ls, ',') || testnext(ls, ';'));
   check_match(ls, '}', '{', line);
   lastlistfield(fs, &cc);
-  settablesize(fs, &cc, pc);
+  luaK_settablesize(fs, pc, t->u.info, cc.na, cc.nh);
 }
 
 /* }====================================================================== */

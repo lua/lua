@@ -80,15 +80,23 @@ local sizes = {0, 1, 2, 3, 4, 5, 7, 8, 9, 15, 16, 17,
 
 for _, sa in ipairs(sizes) do    -- 'sa' is size of the array part
   local arr = {"return {"}
-  -- array part
-  for i = 1, sa do arr[1 + i] = "1," end
+  for i = 1, sa do arr[1 + i] = "1," end    -- build array part
   for _, sh in ipairs(sizes) do    -- 'sh' is size of the hash part
-    for j = 1, sh do   -- hash part
+    for j = 1, sh do   -- build hash part
       arr[1 + sa + j] = string.format('k%x=%d,', j, j)
     end
     arr[1 + sa + sh + 1] = "}"
     local prog = table.concat(arr)
-    local t = assert(load(prog))()
+    local f = assert(load(prog))
+    f()    -- call once to ensure stack space
+    -- make sure table is not resized after being created
+    if sa == 0 or sh == 0 then
+      T.alloccount(2);  -- header + array or hash part
+    else
+      T.alloccount(3);  -- header + array part + hash part
+    end
+    local t = f()
+    T.alloccount();
     assert(#t == sa)
     check(t, sa, mp2(sh))
   end
@@ -99,12 +107,12 @@ end
 local a = {}
 for i=1,sizes[#sizes] do a[i] = i end   -- build auxiliary table
 for k in ipairs(sizes) do
-  local a = {table.unpack(a,1,k)}
-  assert(#a == k)
-  check(a, k, 0)
-  a = {1,2,3,table.unpack(a,1,k)}
-  check(a, k+3, 0)
-  assert(#a == k + 3)
+  local t = {table.unpack(a,1,k)}
+  assert(#t == k)
+  check(t, k, 0)
+  t = {1,2,3,table.unpack(a,1,k)}
+  check(t, k+3, 0)
+  assert(#t == k + 3)
 end
 
 

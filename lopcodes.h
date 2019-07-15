@@ -214,7 +214,7 @@ OP_SETTABLE,/*	A B C	R(A)[R(B)] := RK(C)				*/
 OP_SETI,/*	A B C	R(A)[B] := RK(C)				*/
 OP_SETFIELD,/*	A B C	R(A)[K(B):string] := RK(C)			*/
 
-OP_NEWTABLE,/*	A B C	R(A) := {} (size = B,C)				*/
+OP_NEWTABLE,/*	A B C	R(A) := {}					*/
 
 OP_SELF,/*	A B C	R(A+1) := R(B); R(A) := R(B)[RK(C):string]	*/
 
@@ -321,11 +321,16 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
 
   (*) In OP_RETURN, if (B == 0) then return up to 'top'.
 
-  (*) In OP_SETLIST, if (B == 0) then real B = 'top'; if (C == 0) then
-  next 'instruction' is EXTRAARG(real C).
-
-  (*) In OP_LOADKX and OP_NEWTABLE, the next 'instruction' is always
+  (*) In OP_LOADKX and OP_NEWTABLE, the next instruction is always
   EXTRAARG.
+
+  (*) In OP_SETLIST, if (B == 0) then real B = 'top'; if k, then
+  real C = EXTRAARG _ C (the bits of EXTRAARG concatenated with the
+  bits of C).
+
+  (*) In OP_NEWTABLE, B is log2 of the hash size (which is always a
+  power of 2) plus 1, or zero for size zero. If not k, the array size
+  is C. Otherwise, the array size is EXTRAARG _ C.
 
   (*) For comparisons, k specifies what condition the test should accept
   (true or false).
@@ -374,13 +379,5 @@ LUAI_DDEC(const lu_byte luaP_opmodes[NUM_OPCODES];)
 
 /* number of list items to accumulate before a SETLIST instruction */
 #define LFIELDS_PER_FLUSH	50
-
-
-/*
-** In OP_NEWTABLE, array sizes smaller than LIMTABSZ are represented
-** directly in R(B). Otherwise, array size is given by
-**        (R(B) - LIMTABSZ) + EXTRAARG * LFIELDS_PER_FLUSH
-*/
-#define LIMTABSZ	(MAXARG_B - LFIELDS_PER_FLUSH)
 
 #endif

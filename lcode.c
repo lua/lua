@@ -372,7 +372,7 @@ static void removelastinstruction (FuncState *fs) {
 ** Emit instruction 'i', checking for array sizes and saving also its
 ** line information. Return 'i' position.
 */
-static int luaK_code (FuncState *fs, Instruction i) {
+int luaK_code (FuncState *fs, Instruction i) {
   Proto *f = fs->f;
   /* put new instruction in code array */
   luaM_growvector(fs->ls->L, f->code, fs->pc, f->sizecode, Instruction,
@@ -430,7 +430,7 @@ static int codesJ (FuncState *fs, OpCode o, int sj, int k) {
 /*
 ** Emit an "extra argument" instruction (format 'iAx')
 */
-int luaK_codeextraarg (FuncState *fs, int a) {
+static int codeextraarg (FuncState *fs, int a) {
   lua_assert(a <= MAXARG_Ax);
   return luaK_code(fs, CREATE_Ax(OP_EXTRAARG, a));
 }
@@ -446,7 +446,7 @@ static int luaK_codek (FuncState *fs, int reg, int k) {
     return luaK_codeABx(fs, OP_LOADK, reg, k);
   else {
     int p = luaK_codeABx(fs, OP_LOADKX, reg, 0);
-    luaK_codeextraarg(fs, k);
+    codeextraarg(fs, k);
     return p;
   }
 }
@@ -1672,6 +1672,22 @@ void luaK_fixline (FuncState *fs, int line) {
 }
 
 
+void luaK_settablesize (FuncState *fs, int pc, int ra, int rc, int rb) {
+  Instruction *inst = &fs->f->code[pc];
+  int extra = 0;
+  int k = 0;
+  if (rb != 0)
+    rb = luaO_ceillog2(rb) + 1;  /* hash size */
+  if (rc > MAXARG_C) {  /* does it need the extra argument? */
+    extra = rc / (MAXARG_C + 1);
+    rc %= (MAXARG_C + 1);
+    k = 1;
+  }
+  *inst = CREATE_ABCk(OP_NEWTABLE, ra, rb, rc, k);
+  *(inst + 1) = CREATE_Ax(OP_EXTRAARG, extra);
+}
+
+
 /*
 ** Emit a SETLIST instruction.
 ** 'base' is register that keeps table;
@@ -1680,17 +1696,17 @@ void luaK_fixline (FuncState *fs, int line) {
 ** table (or LUA_MULTRET to add up to stack top).
 */
 void luaK_setlist (FuncState *fs, int base, int nelems, int tostore) {
-  int c =  (nelems - 1)/LFIELDS_PER_FLUSH + 1;
-  int b = (tostore == LUA_MULTRET) ? 0 : tostore;
   lua_assert(tostore != 0 && tostore <= LFIELDS_PER_FLUSH);
-  if (c <= MAXARG_C)
-    luaK_codeABC(fs, OP_SETLIST, base, b, c);
-  else if (c <= MAXARG_Ax) {
-    luaK_codeABC(fs, OP_SETLIST, base, b, 0);
-    luaK_codeextraarg(fs, c);
+  if (tostore == LUA_MULTRET)
+    tostore = 0;
+  if (nelems <= MAXARG_C)
+    luaK_codeABC(fs, OP_SETLIST, base, tostore, nelems);
+  else {
+    int extra = nelems / (MAXARG_C + 1);
+    nelems %= (MAXARG_C + 1);
+    luaK_codeABCk(fs, OP_SETLIST, base, tostore, nelems, 1);
+    codeextraarg(fs, extra);
   }
-  else
-    luaX_syntaxerror(fs->ls, "constructor too long");
   fs->freereg = base + 1;  /* free registers with list values */
 }
 

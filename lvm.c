@@ -1247,18 +1247,19 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_NEWTABLE) {
-        int b = GETARG_B(i);
-        int c = GETARG_C(i);
+        int b = GETARG_B(i);  /* log2(hash size) + 1 */
+        int c = GETARG_C(i);  /* array size */
         Table *t;
-        c = (c == 0) ? 0 : 1 << (c - 1);  /* size is 2^c */
-        if (b >= LIMTABSZ)
-          b += LFIELDS_PER_FLUSH * GETARG_Ax(*pc) - LIMTABSZ;
+        if (b > 0)
+          b = 1 << (b - 1);  /* size is 2^(b - 1) */
+        if (TESTARG_k(i))
+          c += GETARG_Ax(*pc) * (MAXARG_C + 1);
         pc++;  /* skip extra argument */
         L->top = ci->top;  /* correct top in case of GC */
         t = luaH_new(L);  /* memory allocation */
         sethvalue2s(L, ra, t);
         if (b != 0 || c != 0)
-          luaH_resize(L, t, b, c);  /* idem */
+          luaH_resize(L, t, c, b);  /* idem */
         checkGC(L, ra + 1);
         vmbreak;
       }
@@ -1763,18 +1764,17 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_SETLIST) {
         int n = GETARG_B(i);
-        int c = GETARG_C(i);
-        unsigned int last;
-        Table *h;
+        unsigned int last = GETARG_C(i);
+        Table *h = hvalue(s2v(ra));
         if (n == 0)
-          n = cast_int(L->top - ra) - 1;
+          n = cast_int(L->top - ra) - 1;  /* get up to the top */
         else
           L->top = ci->top;  /* correct top in case of GC */
-        if (c == 0) {
-          c = GETARG_Ax(*pc); pc++;
+        last += n;
+        if (TESTARG_k(i)) {
+          last += GETARG_Ax(*pc) * (MAXARG_C + 1);
+          pc++;
         }
-        h = hvalue(s2v(ra));
-        last = ((c-1)*LFIELDS_PER_FLUSH) + n;
         if (last > luaH_realasize(h))  /* needs more space? */
           luaH_resizearray(L, h, last);  /* preallocate it at once */
         for (; n > 0; n--) {
