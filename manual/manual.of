@@ -1548,14 +1548,15 @@ they are closed in the reverse order that they were declared.
 
 If there is any error while running a closing method,
 that error is handled like an error in the regular code
-where the variable was defined;
-in particular,
-the other pending closing methods will still be called.
+where the variable was defined.
+However, Lua may call the method one more time.
+
 After an error,
-other errors in closing methods
+the other pending closing methods will still be called.
+Errors in these methods
 interrupt the respective method,
 but are otherwise ignored;
-the error reported is the original one.
+the error reported is only the original one.
 
 If a coroutine yields and is never resumed again,
 some variables may never go out of scope,

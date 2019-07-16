@@ -133,7 +133,8 @@ static int prepclosingmethod (lua_State *L, TValue *obj, TValue *err) {
 ** the 'level' of the upvalue being closed, as everything after
 ** that won't be used again.
 */
-static int callclosemth (lua_State *L, TValue *uv, StkId level, int status) {
+static int callclosemth (lua_State *L, StkId level, int status) {
+  TValue *uv = s2v(level);  /* value being closed */
   if (likely(status == LUA_OK)) {
     if (prepclosingmethod(L, uv, &G(L)->nilvalue))  /* something to call? */
       callclose(L, NULL);  /* call closing method */
@@ -145,9 +146,10 @@ static int callclosemth (lua_State *L, TValue *uv, StkId level, int status) {
     }
   }
   else {  /* must close the object in protected mode */
-    ptrdiff_t oldtop = savestack(L, level + 1);
-    /* save error message and set stack top to 'level + 1' */
-    luaD_seterrorobj(L, status, level);
+    ptrdiff_t oldtop;
+    level++;  /* space for error message */
+    oldtop = savestack(L, level + 1);  /* top will be after that */
+    luaD_seterrorobj(L, status, level);  /* set error message */
     if (prepclosingmethod(L, uv, s2v(level))) {  /* something to call? */
       int newstatus = luaD_pcall(L, callclose, NULL, oldtop, 0);
       if (newstatus != LUA_OK && status == CLOSEPROTECT)  /* first error? */
@@ -203,18 +205,18 @@ int luaF_close (lua_State *L, StkId level, int status) {
     StkId upl = uplevel(uv);
     TValue *slot = &uv->u.value;  /* new position for value */
     lua_assert(upl < L->top);
+    if (uv->tt == LUA_TUPVALTBC && status != NOCLOSINGMETH) {
+      /* must run closing method */
+      ptrdiff_t levelrel = savestack(L, level);
+      status = callclosemth(L, upl, status);  /* may change the stack */
+      level = restorestack(L, levelrel);
+    }
     luaF_unlinkupval(uv);
     setobj(L, slot, uv->v);  /* move value to upvalue slot */
     uv->v = slot;  /* now current value lives here */
     if (!iswhite(uv))
       gray2black(uv);  /* closed upvalues cannot be gray */
     luaC_barrier(L, uv, slot);
-    if (uv->tt == LUA_TUPVALTBC && status != NOCLOSINGMETH) {
-      /* must run closing method */
-      ptrdiff_t levelrel = savestack(L, level);
-      status = callclosemth(L, uv->v, upl, status);  /* may change the stack */
-      level = restorestack(L, levelrel);
-    }
   }
   return status;
 }

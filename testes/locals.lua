@@ -295,18 +295,23 @@ do   -- errors in __close
     local <toclose> y =
       func2close(function (self, msg) log[#log + 1] = msg; error(2) end)
     local <toclose> z =
-      func2close(function (self, msg) log[#log + 1] = msg or 10; error(3) end)
+      func2close(function (self, msg)
+        log[#log + 1] = (msg or 10) + 1;
+        error(3)
+      end)
     if err then error(4) end
   end
   local stat, msg = pcall(foo, false)
   assert(msg == 3)
-  assert(log[1] == 10 and log[2] == 3 and log[3] == 3 and log[4] == 3
-         and #log == 4)
+  -- 'z' close is called twice
+  assert(log[1] == 11 and log[2] == 4 and log[3] == 3 and log[4] == 3
+         and log[5] == 3 and #log == 5)
 
   log = {}
   local stat, msg = pcall(foo, true)
   assert(msg == 4)
-  assert(log[1] == 4 and log[2] == 4 and log[3] == 4 and log[4] == 4
+  -- 'z' close is called once
+  assert(log[1] == 5 and log[2] == 4 and log[3] == 4 and log[4] == 4
          and #log == 4)
 
   -- error in toclose in vararg function
@@ -495,15 +500,17 @@ do
   local st, msg = pcall(co); assert(x == 2)
   assert(not st and msg == 200)   -- should get first error raised
 
-  x = 0
+  local x = 0
+  local y = 0
   co = coroutine.wrap(function ()
-    local <toclose> xx = func2close(function () x = x + 1; error("YYY") end)
+    local <toclose> xx = func2close(function () y = y + 1; error("YYY") end)
     local <toclose> xv = func2close(function () x = x + 1; error("XXX") end)
       coroutine.yield(100)
       return 200
   end)
   assert(co() == 100); assert(x == 0)
-  local st, msg = pcall(co); assert(x == 2)
+  local st, msg = pcall(co)
+  assert(x == 2 and y == 1)   -- first close is called twice
   -- should get first error raised
   assert(not st and string.find(msg, "%w+%.%w+:%d+: XXX"))
 end
