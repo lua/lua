@@ -1601,15 +1601,17 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         int n = GETARG_B(i) - 1;  /* number of results */
         if (n < 0)  /* not fixed? */
           n = cast_int(L->top - ra);  /* get what is available */
-        else
-          L->top = ra + n;  /* set call for 'luaD_poscall' */
         savepc(ci);
         if (TESTARG_k(i)) {
           int nparams1 = GETARG_C(i);
+          if (L->top < ci->top)
+            L->top = ci->top;
           luaF_close(L, base, LUA_OK);  /* there may be open upvalues */
+          updatestack(ci);
           if (nparams1)  /* vararg function? */
             ci->func -= ci->u.l.nextraargs + nparams1;
         }
+        L->top = ra + n;  /* set call for 'luaD_poscall' */
         luaD_poscall(L, ci, n);
         return;
       }

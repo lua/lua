@@ -202,6 +202,7 @@ int luaF_close (lua_State *L, StkId level, int status) {
   while ((uv = L->openupval) != NULL && uplevel(uv) >= level) {
     StkId upl = uplevel(uv);
     TValue *slot = &uv->u.value;  /* new position for value */
+    lua_assert(upl < L->top);
     luaF_unlinkupval(uv);
     setobj(L, slot, uv->v);  /* move value to upvalue slot */
     uv->v = slot;  /* now current value lives here */
