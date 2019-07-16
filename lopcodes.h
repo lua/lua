@@ -338,10 +338,9 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
   (*) All 'skips' (pc++) assume that next instruction is a jump.
 
   (*) In instructions OP_RETURN/OP_TAILCALL, 'k' specifies that the
-  function either builds upvalues, which may need to be closed, or is
-  vararg, which must be corrected before returning. When 'k' is true,
-  C > 0 means the function is vararg and (C - 1) is its number of
-  fixed parameters.
+  function builds upvalues, which may need to be closed. C > 0 means
+  the function is vararg, so that its 'func' must be corrected before
+  returning; in this case, (C - 1) is its number of fixed parameters.
 
   (*) In comparisons with an immediate operand, C signals whether the
   original operand was a float.

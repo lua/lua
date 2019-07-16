@@ -1564,16 +1564,15 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_TAILCALL) {
         int b = GETARG_B(i);  /* number of arguments + 1 (function) */
-        int delta = 0;  /* virtual 'func' - real 'func' (vararg functions) */
+        int nparams1 = GETARG_C(i);
+        /* delat is virtual 'func' - real 'func' (vararg functions) */
+        int delta = (nparams1) ? ci->u.l.nextraargs + nparams1 : 0;
         if (b != 0)
           L->top = ra + b;
         else  /* previous instruction set top */
           b = cast_int(L->top - ra);
         savepc(ci);  /* some calls here can raise errors */
         if (TESTARG_k(i)) {
-          int nparams1 = GETARG_C(i);
-          if (nparams1)  /* vararg function? */
-            delta = ci->u.l.nextraargs + nparams1;
           /* close upvalues from current call; the compiler ensures
              that there are no to-be-closed variables here */
           luaF_close(L, base, NOCLOSINGMETH);
@@ -1599,18 +1598,18 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_RETURN) {
         int n = GETARG_B(i) - 1;  /* number of results */
+        int nparams1 = GETARG_C(i);
         if (n < 0)  /* not fixed? */
           n = cast_int(L->top - ra);  /* get what is available */
         savepc(ci);
         if (TESTARG_k(i)) {
-          int nparams1 = GETARG_C(i);
           if (L->top < ci->top)
             L->top = ci->top;
           luaF_close(L, base, LUA_OK);  /* there may be open upvalues */
           updatestack(ci);
-          if (nparams1)  /* vararg function? */
-            ci->func -= ci->u.l.nextraargs + nparams1;
         }
+        if (nparams1)  /* vararg function? */
+          ci->func -= ci->u.l.nextraargs + nparams1;
         L->top = ra + n;  /* set call for 'luaD_poscall' */
         luaD_poscall(L, ci, n);
         return;

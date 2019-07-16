@@ -1745,10 +1745,10 @@ void luaK_finish (FuncState *fs) {
         SET_OPCODE(*pc, OP_RETURN);
       }  /* FALLTHROUGH */
       case OP_RETURN: case OP_TAILCALL: {
-        if (fs->needclose || p->is_vararg) {
-          SETARG_C(*pc, p->is_vararg ? p->numparams + 1 : 0);
-          SETARG_k(*pc, 1);  /* signal that there is extra work */
-        }
+        if (fs->needclose)
+          SETARG_k(*pc, 1);  /* signal that it needs to close */
+        if (p->is_vararg)
+          SETARG_C(*pc, p->numparams + 1);  /* signal that it is vararg */
         break;
       }
       case OP_JMP: {
