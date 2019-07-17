@@ -170,12 +170,13 @@ LUA_API int lua_gettop (lua_State *L) {
 
 
 LUA_API void lua_settop (lua_State *L, int idx) {
-  StkId func = L->ci->func;
-  int diff;  /* difference for new top */
+  CallInfo *ci = L->ci;
+  StkId func = ci->func;
+  ptrdiff_t diff;  /* difference for new top */
   lua_lock(L);
   if (idx >= 0) {
-    api_check(L, idx <= L->ci->top - (func + 1), "new top too large");
-    diff = (func + 1) + idx - L->top;
+    api_check(L, idx <= ci->top - (func + 1), "new top too large");
+    diff = ((func + 1) + idx) - L->top;
     for (; diff > 0; diff--)
       setnilvalue(s2v(L->top++));  /* clear new slots */
   }
@@ -183,7 +184,8 @@ LUA_API void lua_settop (lua_State *L, int idx) {
     api_check(L, -(idx+1) <= (L->top - (func + 1)), "invalid new top");
     diff = idx + 1;  /* will "subtract" index (as it is negative) */
   }
-  luaF_close(L, L->top + diff, LUA_OK);
+  if (diff < 0 && hastocloseCfunc(ci->nresults))
+    luaF_close(L, L->top + diff, LUA_OK);
   L->top += diff;  /* correct top only after closing any upvalue */
   lua_unlock(L);
 }
