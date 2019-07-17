@@ -156,13 +156,15 @@ static void init_exp (expdesc *e, expkind k, int i) {
 }
 
 
-static void codestring (LexState *ls, expdesc *e, TString *s) {
-  init_exp(e, VK, luaK_stringK(ls->fs, s));
+static void codestring (expdesc *e, TString *s) {
+  e->f = e->t = NO_JUMP;
+  e->k = VKSTR;
+  e->u.strval = s;
 }
 
 
 static void codename (LexState *ls, expdesc *e) {
-  codestring(ls, e, str_checkname(ls));
+  codestring(e, str_checkname(ls));
 }
 
 
@@ -445,7 +447,7 @@ static void singlevar (LexState *ls, expdesc *var) {
     expdesc key;
     singlevaraux(fs, ls->envn, var, 1);  /* get environment variable */
     lua_assert(var->k != VVOID);  /* this one must exist */
-    codestring(ls, &key, varname);  /* key is variable name */
+    codestring(&key, varname);  /* key is variable name */
     luaK_indexed(fs, var, &key);  /* env[varname] */
   }
 }
@@ -1019,7 +1021,7 @@ static void funcargs (LexState *ls, expdesc *f, int line) {
       break;
     }
     case TK_STRING: {  /* funcargs -> STRING */
-      codestring(ls, &args, ls->t.seminfo.ts);
+      codestring(&args, ls->t.seminfo.ts);
       luaX_next(ls);  /* must use 'seminfo' before 'next' */
       break;
     }
@@ -1127,7 +1129,7 @@ static void simpleexp (LexState *ls, expdesc *v) {
       break;
     }
     case TK_STRING: {
-      codestring(ls, v, ls->t.seminfo.ts);
+      codestring(v, ls->t.seminfo.ts);
       break;
     }
     case TK_NIL: {

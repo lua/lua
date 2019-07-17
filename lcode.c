@@ -81,9 +81,8 @@ int luaK_exp2const (FuncState *fs, const expdesc *e, TValue *v) {
     case VNIL:
       setnilvalue(v);
       return 1;
-    case VK: {
-      TValue *k = &fs->f->k[e->u.info];
-      setobj(fs->ls->L, v, k);
+    case VKSTR: {
+      setsvalue(fs->ls->L, v, e->u.strval);
       return 1;
     }
     default: return tonumeral(e, v);
@@ -561,7 +560,7 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
 /*
 ** Add a string to list of constants and return its index.
 */
-int luaK_stringK (FuncState *fs, TString *s) {
+static int stringK (FuncState *fs, TString *s) {
   TValue o;
   setsvalue(fs->ls->L, &o, s);
   return addk(fs, &o, &o);  /* use string itself as key */
@@ -656,7 +655,7 @@ static void luaK_float (FuncState *fs, int reg, lua_Number f) {
 /*
 ** Convert a constant in 'v' into an expression description 'e'
 */
-static void const2exp (FuncState *fs, TValue *v, expdesc *e) {
+static void const2exp (TValue *v, expdesc *e) {
   switch (ttypetag(v)) {
     case LUA_TNUMINT:
       e->k = VKINT; e->u.ival = ivalue(v);
@@ -671,7 +670,7 @@ static void const2exp (FuncState *fs, TValue *v, expdesc *e) {
       e->k = VNIL;
       break;
     case LUA_TSHRSTR:  case LUA_TLNGSTR:
-      e->k = VK; e->u.info = luaK_stringK(fs, tsvalue(v));
+      e->k = VKSTR; e->u.strval = tsvalue(v);
       break;
     default: lua_assert(0);
   }
@@ -693,6 +692,16 @@ void luaK_setreturns (FuncState *fs, expdesc *e, int nresults) {
     luaK_reserveregs(fs, 1);
   }
   else lua_assert(nresults == LUA_MULTRET);
+}
+
+
+/*
+** Convert a VKSTR to a VK
+*/
+static void str2K (FuncState *fs, expdesc *e) {
+  lua_assert(e->k == VKSTR);
+  e->u.info = stringK(fs, e->u.strval);
+  e->k = VK;
 }
 
 
@@ -728,7 +737,7 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
   switch (e->k) {
     case VCONST: {
       TValue *val = &fs->ls->dyd->actvar.arr[e->u.info].k;
-      const2exp(fs, val, e);
+      const2exp(val, e);
       break;
     }
     case VLOCAL: {  /* already in a register */
@@ -789,6 +798,9 @@ static void discharge2reg (FuncState *fs, expdesc *e, int reg) {
       luaK_codeABC(fs, OP_LOADBOOL, reg, e->k == VTRUE, 0);
       break;
     }
+    case VKSTR: {
+      str2K(fs, e);
+    }  /* FALLTHROUGH */
     case VK: {
       luaK_codek(fs, reg, e->u.info);
       break;
@@ -949,6 +961,7 @@ static int luaK_exp2K (FuncState *fs, expdesc *e) {
       case VNIL: info = nilK(fs); break;
       case VKINT: info = luaK_intK(fs, e->u.ival); break;
       case VKFLT: info = luaK_numberK(fs, e->u.nval); break;
+      case VKSTR: info = stringK(fs, e->u.strval); break;
       case VK: info = e->u.info; break;
       default: return 0;  /* not a constant */
     }
@@ -1083,7 +1096,7 @@ void luaK_goiftrue (FuncState *fs, expdesc *e) {
       pc = e->u.info;  /* save jump position */
       break;
     }
-    case VK: case VKFLT: case VKINT: case VTRUE: {
+    case VK: case VKFLT: case VKINT: case VKSTR: case VTRUE: {
       pc = NO_JUMP;  /* always true; do nothing */
       break;
     }
@@ -1133,7 +1146,7 @@ static void codenot (FuncState *fs, expdesc *e) {
       e->k = VTRUE;  /* true == not nil == not false */
       break;
     }
-    case VK: case VKFLT: case VKINT: case VTRUE: {
+    case VK: case VKFLT: case VKINT: case VKSTR: case VTRUE: {
       e->k = VFALSE;  /* false == not "x" == not 0.5 == not 1 == not true */
       break;
     }
@@ -1219,9 +1232,11 @@ static int isSCnumber (expdesc *e, lua_Integer *i, int *isfloat) {
 ** values in registers.
 */
 void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
+  if (k->k == VKSTR)
+    str2K(fs, k);
   lua_assert(!hasjumps(t) &&
              (t->k == VLOCAL || t->k == VNONRELOC || t->k == VUPVAL));
-  if (t->k == VUPVAL && !isKstr(fs, k))  /* upvalue indexed by non string? */
+  if (t->k == VUPVAL && !isKstr(fs, k))  /* upvalue indexed by non 'Kstr'? */
     luaK_exp2anyreg(fs, t);  /* put it in a register */
   if (t->k == VUPVAL) {
     t->u.ind.t = t->u.info;  /* upvalue index */

@@ -409,5 +409,22 @@ checkequal(function () return 6 and true or nil end,
            function () return k6 and kTrue or kNil end)
 
 
+do   -- string constants
+  local function f1 ()
+    local <const> k = "00000000000000000000000000000000000000000000000000"
+    return function ()
+             return function () return k end
+           end
+  end
+
+  local f2 = f1()
+  local f3 = f2()
+  assert(f3() == string.rep("0", 50))
+  checkK(f3, f3())
+  -- string is not needed by other functions
+  assert(T.listk(f1)[1] == nil)
+  assert(T.listk(f2)[1] == nil)
+end
+
 print 'OK'
 
