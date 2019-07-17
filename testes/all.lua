@@ -37,8 +37,6 @@ end
 -- tests should require debug when needed
 debug = nil
 
-require"bwcoercion"
-
 
 if usertests then
   T = nil    -- no "internal" tests for user tests
@@ -46,13 +44,20 @@ else
   T = rawget(_G, "T")  -- avoid problems with 'strict' module
 end
 
-math.randomseed(0)
 
 --[=[
   example of a long [comment],
   [[spanning several [lines]]]
 
 ]=]
+
+print("\n\tStarting Tests")
+
+do
+  -- set random seed
+  local random_x, random_y = math.randomseed()
+  print(string.format("random seeds: %d, %d", random_x, random_y))
+end
 
 print("current path:\n****" .. package.path .. "****\n")
 

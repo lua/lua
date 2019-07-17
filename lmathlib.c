@@ -605,20 +605,24 @@ static void setseed (Rand64 *state, lua_Unsigned n1, lua_Unsigned n2) {
 static void randseed (lua_State *L, RanState *state) {
   lua_Unsigned seed1 = (lua_Unsigned)time(NULL);
   lua_Unsigned seed2 = (lua_Unsigned)(size_t)L;
+  lua_pushinteger(L, seed1);
+  lua_pushinteger(L, seed2);
   setseed(state->s, seed1, seed2);
 }
 
 
 static int math_randomseed (lua_State *L) {
   RanState *state = (RanState *)lua_touserdata(L, lua_upvalueindex(1));
-  if (lua_isnone(L, 1))
+  if (lua_isnone(L, 1)) {
     randseed(L, state);
+    return 2;  /* return seeds */
+  }
   else {
     lua_Integer n1 = luaL_checkinteger(L, 1);
     lua_Integer n2 = luaL_optinteger(L, 2, 0);
     setseed(state->s, n1, n2);
+    return 0;
   }
-  return 0;
 }
 
 
@@ -635,6 +639,7 @@ static const luaL_Reg randfuncs[] = {
 static void setrandfunc (lua_State *L) {
   RanState *state = (RanState *)lua_newuserdatauv(L, sizeof(RanState), 0);
   randseed(L, state);  /* initialize with a "random" seed */
+  lua_pop(L, 2);  /* remove pushed seeds */
   luaL_setfuncs(L, randfuncs, 1);
 }
 

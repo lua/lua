@@ -815,7 +815,7 @@ end
 -- low-level!! For the current implementation of random in Lua,
 -- the first call after seed 1007 should return 0x7a7040a5a323c9d6
 do
-  -- all computations assume at most 32-bit integers
+  -- all computations should work with 32-bit integers
   local <const> h = 0x7a7040a5   -- higher half
   local <const> l = 0xa323c9d6   -- lower half
 
@@ -840,7 +840,14 @@ do
   assert(rand * 2^floatbits == res)
 end
 
-math.randomseed()
+do
+  -- testing return of 'randomseed'
+  local <const> x, <const> y = math.randomseed()
+  local res = math.random(0)
+  math.randomseed(x, y)    -- should repeat the state
+  assert(math.random(0) == res)
+  -- keep the random seed for following tests
+end
 
 do   -- test random for floats
   local randbits = math.min(floatbits, 64)   -- at most 64 random bits

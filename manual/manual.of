@@ -7798,6 +7798,9 @@ The default for @id{y} is zero.
 When called with no arguments,
 Lua generates a seed with
 a weak attempt for randomness.
+In this case,
+the call returns the two seed components that were used.
+
 To ensure a required level of randomness to the initial state
 (or contrarily, to have a deterministic sequence,
 for instance when debugging a program),
