@@ -68,6 +68,15 @@ static int tonumeral (const expdesc *e, TValue *v) {
 
 
 /*
+** Get the constant value from a constant expression
+*/
+static TValue *const2val (FuncState *fs, const expdesc *e) {
+  lua_assert(e->k == VCONST);
+  return &fs->ls->dyd->actvar.arr[e->u.info].k;
+}
+
+
+/*
 ** If expression is a constant, fills 'v' with its value
 ** and returns 1. Otherwise, returns 0.
 */
@@ -83,6 +92,10 @@ int luaK_exp2const (FuncState *fs, const expdesc *e, TValue *v) {
       return 1;
     case VKSTR: {
       setsvalue(fs->ls->L, v, e->u.strval);
+      return 1;
+    }
+    case VCONST: {
+      setobj(fs->ls->L, v, const2val(fs, e));
       return 1;
     }
     default: return tonumeral(e, v);
@@ -730,14 +743,13 @@ void luaK_setoneret (FuncState *fs, expdesc *e) {
 
 
 /*
-** Ensure that expression 'e' is not a variable.
+** Ensure that expression 'e' is not a variable (nor a constant).
 ** (Expression still may have jump lists.)
 */
 void luaK_dischargevars (FuncState *fs, expdesc *e) {
   switch (e->k) {
     case VCONST: {
-      TValue *val = &fs->ls->dyd->actvar.arr[e->u.info].k;
-      const2exp(val, e);
+      const2exp(const2val(fs, e), e);
       break;
     }
     case VLOCAL: {  /* already in a register */

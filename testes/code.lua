@@ -8,7 +8,8 @@ end
 print "testing code generation and optimizations"
 
 -- to test constant propagation
-local <const> k0 = 0
+local <const> k0aux = 0
+local <const> k0 = k0aux
 local <const> k1 = 1
 local <const> k3 = 3
 local <const> k6 = k3 + (k3 << k0)
@@ -410,8 +411,9 @@ checkequal(function () return 6 and true or nil end,
 
 
 do   -- string constants
+  local <const> k0 = "00000000000000000000000000000000000000000000000000"
   local function f1 ()
-    local <const> k = "00000000000000000000000000000000000000000000000000"
+    local <const> k = k0
     return function ()
              return function () return k end
            end
@@ -419,8 +421,8 @@ do   -- string constants
 
   local f2 = f1()
   local f3 = f2()
-  assert(f3() == string.rep("0", 50))
-  checkK(f3, f3())
+  assert(f3() == k0)
+  checkK(f3, k0)
   -- string is not needed by other functions
   assert(T.listk(f1)[1] == nil)
   assert(T.listk(f2)[1] == nil)
