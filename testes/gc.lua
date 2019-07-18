@@ -99,35 +99,28 @@ local function GC()  GC1(); GC2() end
 do
   print("creating many objects")
 
-  local contCreate = 0
-
   local limit = 5000
 
-  while contCreate <= limit do
+  for i = 1, limit do
     local a = {}; a = nil
-    contCreate = contCreate+1
   end
 
   local a = "a"
 
-  contCreate = 0
-  while contCreate <= limit do
-    a = contCreate .. "b";
+  for i = 1, limit do
+    a = i .. "b";
     a = string.gsub(a, '(%d%d*)', "%1 %1")
     a = "a"
-    contCreate = contCreate+1
   end
 
 
-  contCreate = 0
 
   a = {}
 
   function a:test ()
-    while contCreate <= limit do
-      load(string.format("function temp(a) return 'a%d' end", contCreate), "")()
-      assert(temp() == string.format('a%d', contCreate))
-      contCreate = contCreate+1
+    for i = 1, limit do
+      load(string.format("function temp(a) return 'a%d' end", i), "")()
+      assert(temp() == string.format('a%d', i))
     end
   end
 
@@ -166,9 +159,8 @@ print('long strings')
 x = "01234567890123456789012345678901234567890123456789012345678901234567890123456789"
 assert(string.len(x)==80)
 s = ''
-n = 0
 k = math.min(300, (math.maxinteger // 80) // 2)
-while n < k do s = s..x; n=n+1; j=tostring(n)  end
+for n = 1, k do s = s..x; j=tostring(n)  end
 assert(string.len(s) == k*80)
 s = string.sub(s, 1, 10000)
 s, i = string.gsub(s, '(%d%d%d%d)', '')

@@ -89,8 +89,8 @@ typedef struct TValue {
 #define righttt(obj)		(ttypetag(obj) == gcvalue(obj)->tt)
 
 #define checkliveness(L,obj) \
-	lua_longassert(!iscollectable(obj) || \
-		(righttt(obj) && (L == NULL || !isdead(G(L),gcvalue(obj)))))
+	((void)L, lua_longassert(!iscollectable(obj) || \
+		(righttt(obj) && (L == NULL || !isdead(G(L),gcvalue(obj))))))
 
 
 /* Macros to set values */
@@ -100,7 +100,7 @@ typedef struct TValue {
 #define setobj(L,obj1,obj2) \
 	{ TValue *io1=(obj1); const TValue *io2=(obj2); \
           io1->value_ = io2->value_; io1->tt_ = io2->tt_; \
-	  (void)L; checkliveness(L,io1); lua_assert(!isreallyempty(io1)); }
+	  checkliveness(L,io1); lua_assert(!isreallyempty(io1)); }
 
 /*
 ** different types of assignments, according to destination
@@ -651,14 +651,14 @@ typedef union Node {
 #define setnodekey(L,node,obj) \
 	{ Node *n_=(node); const TValue *io_=(obj); \
 	  n_->u.key_val = io_->value_; n_->u.key_tt = io_->tt_; \
-	  (void)L; checkliveness(L,io_); }
+	  checkliveness(L,io_); }
 
 
 /* copy a value from a key */
 #define getnodekey(L,obj,node) \
 	{ TValue *io_=(obj); const Node *n_=(node); \
 	  io_->value_ = n_->u.key_val; io_->tt_ = n_->u.key_tt; \
-	  (void)L; checkliveness(L,io_); }
+	  checkliveness(L,io_); }
 
 
 /*
