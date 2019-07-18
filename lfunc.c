@@ -202,13 +202,12 @@ void luaF_unlinkupval (UpVal *uv) {
 int luaF_close (lua_State *L, StkId level, int status) {
   UpVal *uv;
   while ((uv = L->openupval) != NULL && uplevel(uv) >= level) {
-    StkId upl = uplevel(uv);
     TValue *slot = &uv->u.value;  /* new position for value */
-    lua_assert(upl < L->top);
+    lua_assert(uplevel(uv) < L->top);
     if (uv->tt == LUA_TUPVALTBC && status != NOCLOSINGMETH) {
-      /* must run closing method */
+      /* must run closing method, which may change the stack */
       ptrdiff_t levelrel = savestack(L, level);
-      status = callclosemth(L, upl, status);  /* may change the stack */
+      status = callclosemth(L, uplevel(uv), status);
       level = restorestack(L, levelrel);
     }
     luaF_unlinkupval(uv);

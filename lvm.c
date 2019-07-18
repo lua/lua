@@ -1574,8 +1574,10 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         savepc(ci);  /* some calls here can raise errors */
         if (TESTARG_k(i)) {
           /* close upvalues from current call; the compiler ensures
-             that there are no to-be-closed variables here */
+             that there are no to-be-closed variables here, so this
+             call cannot change the stack */
           luaF_close(L, base, NOCLOSINGMETH);
+          lua_assert(base == ci->func + 1);
         }
         if (!ttisfunction(s2v(ra))) {  /* not a function? */
           luaD_tryfuncTM(L, ra);  /* try '__call' metamethod */
@@ -1602,10 +1604,11 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         if (n < 0)  /* not fixed? */
           n = cast_int(L->top - ra);  /* get what is available */
         savepc(ci);
-        if (TESTARG_k(i)) {
+        if (TESTARG_k(i)) {  /* may there be open upvalues? */
           if (L->top < ci->top)
             L->top = ci->top;
-          luaF_close(L, base, LUA_OK);  /* there may be open upvalues */
+          luaF_close(L, base, LUA_OK);
+          updatetrap(ci);
           updatestack(ci);
         }
         if (nparams1)  /* vararg function? */
