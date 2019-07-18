@@ -23,11 +23,22 @@
 
 
 #if defined(HARDMEMTESTS)
-#define hardtest(L,os,s)  /* force a GC whenever possible */ \
-  if ((s) > (os) && (G(L))->gcrunning) luaC_fullgc(L, 1);
+/*
+** First allocation will fail whenever not building initial state
+** and not shrinking a block. (This fail will trigger 'tryagain' and
+** a full GC cycle at every alocation.)
+*/
+static void *firsttry (global_State *g, void *block, size_t os, size_t ns) {
+  if (ttisnil(&g->nilvalue) && ns > os)
+    return NULL;  /* fail */
+  else  /* normal allocation */
+    return (*g->frealloc)(g->ud, block, os, ns);
+}
 #else
-#define hardtest(L,os,s)  ((void)0)
+#define firsttry(g,block,os,ns)    ((*g->frealloc)(g->ud, block, os, ns))
 #endif
+
+
 
 
 
@@ -138,8 +149,7 @@ void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
   void *newblock;
   global_State *g = G(L);
   lua_assert((osize == 0) == (block == NULL));
-  hardtest(L, osize, nsize);
-  newblock = (*g->frealloc)(g->ud, block, osize, nsize);
+  newblock = firsttry(g, block, osize, nsize);
   if (unlikely(newblock == NULL && nsize > 0)) {
     if (nsize > osize)  /* not shrinking a block? */
       newblock = tryagain(L, block, osize, nsize);
@@ -162,12 +172,11 @@ void *luaM_saferealloc_ (lua_State *L, void *block, size_t osize,
 
 
 void *luaM_malloc_ (lua_State *L, size_t size, int tag) {
-  hardtest(L, 0, size);
   if (size == 0)
     return NULL;  /* that's all */
   else {
     global_State *g = G(L);
-    void *newblock = (*g->frealloc)(g->ud, NULL, tag, size);
+    void *newblock = firsttry(g, NULL, tag, size);
     if (unlikely(newblock == NULL)) {
       newblock = tryagain(L, NULL, tag, size);
       if (newblock == NULL)

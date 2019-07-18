@@ -1038,7 +1038,10 @@ void luaV_finishOp (lua_State *L) {
 ** errors. (That is, it will not return to the interpreter main loop
 ** after changing the stack or hooks.)
 */
-#define halfProtect(exp)  (savepc(L), (exp))
+#define halfProtect(exp)  (savestate(L,ci), (exp))
+
+/* idem, but without changing the stack */
+#define halfProtectNT(exp)  (savepc(L), (exp))
 
 
 #define checkGC(L,c)  \
@@ -1620,7 +1623,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       vmcase(OP_RETURN0) {
         if (L->hookmask) {
           L->top = ra;
-          halfProtect(luaD_poscall(L, ci, 0));  /* no hurry... */
+          halfProtectNT(luaD_poscall(L, ci, 0));  /* no hurry... */
         }
         else {  /* do the 'poscall' here */
           int nres = ci->nresults;
@@ -1634,7 +1637,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       vmcase(OP_RETURN1) {
         if (L->hookmask) {
           L->top = ra + 1;
-          halfProtect(luaD_poscall(L, ci, 1));  /* no hurry... */
+          halfProtectNT(luaD_poscall(L, ci, 1));  /* no hurry... */
         }
         else {  /* do the 'poscall' here */
           int nres = ci->nresults;

@@ -354,8 +354,11 @@ assert(to("topointer", nil) == null)
 assert(to("topointer", "abc") ~= null)
 assert(to("topointer", string.rep("x", 10)) ==
        to("topointer", string.rep("x", 10)))    -- short strings
-assert(to("topointer", string.rep("x", 300)) ~=
-       to("topointer", string.rep("x", 300)))    -- long strings
+do    -- long strings
+  local s1 = string.rep("x", 300)
+  local s2 = string.rep("x", 300)
+  assert(to("topointer", s1) ~= to("topointer", s2))
+end
 assert(to("topointer", T.pushuserdata(20)) ~= null)
 assert(to("topointer", io.read) ~= null)           -- light C function
 assert(to("topointer", hfunc) ~= null)        -- "heavy" C function

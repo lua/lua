@@ -163,11 +163,16 @@ do  -- tests for '%p' format
   assert(string.format("%p", 4) == null)
   assert(string.format("%p", print) ~= null)
   assert(string.format("%p", coroutine.running()) ~= null)
-  assert(string.format("%p", {}) ~= string.format("%p", {}))
+  do
+    local t1 = {}; local t2 = {}
+    assert(string.format("%p", t1) ~= string.format("%p", t2))
+  end
   assert(string.format("%p", string.rep("a", 10)) ==
          string.format("%p", string.rep("a", 10)))     -- short strings
-  assert(string.format("%p", string.rep("a", 300)) ~=
-         string.format("%p", string.rep("a", 300)))     -- long strings
+  do     -- long strings
+    local s1 = string.rep("a", 300); local s2 = string.rep("a", 300)
+    assert(string.format("%p", s1) ~= string.format("%p", s2))
+  end
   assert(#string.format("%90p", {}) == 90)
 end
 
