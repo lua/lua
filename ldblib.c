@@ -21,10 +21,10 @@
 
 
 /*
-** The hook table at registry[&HOOKKEY] maps threads to their current
-** hook function. (We only need the unique address of 'HOOKKEY'.)
+** The hook table at registry[HOOKKEY] maps threads to their current
+** hook function.
 */
-static const int HOOKKEY = 0;
+static const char* HOOKKEY = "_HOOKKEY";
 
 
 /*
@@ -314,7 +314,7 @@ static int db_upvaluejoin (lua_State *L) {
 static void hookf (lua_State *L, lua_Debug *ar) {
   static const char *const hooknames[] =
     {"call", "return", "line", "count", "tail call"};
-  lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY);
+  lua_getfield(L, LUA_REGISTRYINDEX, HOOKKEY);
   lua_pushthread(L);
   if (lua_rawget(L, -2) == LUA_TFUNCTION) {  /* is there a hook function? */
     lua_pushstring(L, hooknames[(int)ar->event]);  /* push event name */
@@ -367,14 +367,12 @@ static int db_sethook (lua_State *L) {
     count = (int)luaL_optinteger(L, arg + 3, 0);
     func = hookf; mask = makemask(smask, count);
   }
-  if (lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY) == LUA_TNIL) {
-    lua_createtable(L, 0, 2);  /* create a hook table */
-    lua_pushvalue(L, -1);
-    lua_rawsetp(L, LUA_REGISTRYINDEX, &HOOKKEY);  /* set it in position */
+  if (!luaL_getsubtable(L, LUA_REGISTRYINDEX, HOOKKEY)) {
+    /* table just created; initialize it */
     lua_pushstring(L, "k");
     lua_setfield(L, -2, "__mode");  /** hooktable.__mode = "k" */
     lua_pushvalue(L, -1);
-    lua_setmetatable(L, -2);  /* setmetatable(hooktable) = hooktable */
+    lua_setmetatable(L, -2);  /* metatable(hooktable) = hooktable */
   }
   checkstack(L, L1, 1);
   lua_pushthread(L1); lua_xmove(L1, L, 1);  /* key (thread) */
@@ -396,7 +394,7 @@ static int db_gethook (lua_State *L) {
   else if (hook != hookf)  /* external hook? */
     lua_pushliteral(L, "external hook");
   else {  /* hook table must exist */
-    lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY);
+    lua_getfield(L, LUA_REGISTRYINDEX, HOOKKEY);
     checkstack(L, L1, 1);
     lua_pushthread(L1); lua_xmove(L1, L, 1);
     lua_rawget(L, -2);   /* 1st result = hooktable[L1] */

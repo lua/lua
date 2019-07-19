@@ -255,6 +255,10 @@ do   -- test hook presence in debug info
 end
 
 
+-- hook table has weak keys
+assert(getmetatable(debug.getregistry()._HOOKKEY).__mode == 'k')
+
+
 a = {}; L = nil
 local glob = 1
 local oldglob = glob
