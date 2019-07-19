@@ -842,9 +842,11 @@ end
 
 do
   -- testing return of 'randomseed'
-  local <const> x, <const> y = math.randomseed()
+  local x, y = math.randomseed()
   local res = math.random(0)
-  math.randomseed(x, y)    -- should repeat the state
+  x, y = math.randomseed(x, y)    -- should repeat the state
+  assert(math.random(0) == res)
+  math.randomseed(x, y)    -- again should repeat the state
   assert(math.random(0) == res)
   -- keep the random seed for following tests
 end
