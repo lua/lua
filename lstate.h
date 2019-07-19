@@ -335,8 +335,7 @@ union GCUnion {
 #define gco2t(o)  check_exp((o)->tt == LUA_TTABLE, &((cast_u(o))->h))
 #define gco2p(o)  check_exp((o)->tt == LUA_TPROTO, &((cast_u(o))->p))
 #define gco2th(o)  check_exp((o)->tt == LUA_TTHREAD, &((cast_u(o))->th))
-#define gco2upv(o)  \
-	check_exp(novariant((o)->tt) == LUA_TUPVAL, &((cast_u(o))->upv))
+#define gco2upv(o)	check_exp((o)->tt == LUA_TUPVAL, &((cast_u(o))->upv))
 
 
 /*

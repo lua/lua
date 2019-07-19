@@ -568,6 +568,7 @@ typedef struct Proto {
 */
 typedef struct UpVal {
   CommonHeader;
+  lu_byte tbc;  /* true if it represents a to-be-closed variable */
   TValue *v;  /* points to stack or to its own value */
   union {
     struct {  /* (when open) */
@@ -578,9 +579,6 @@ typedef struct UpVal {
   } u;
 } UpVal;
 
-
-/* variant for "To Be Closed" upvalues */
-#define LUA_TUPVALTBC	(LUA_TUPVAL | (1 << 4))
 
 
 #define ClosureHeader \

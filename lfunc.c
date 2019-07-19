@@ -59,14 +59,15 @@ void luaF_initupvals (lua_State *L, LClosure *cl) {
 
 
 /*
-** Create a new upvalue with the given tag at the given level,
-** and link it to the list of open upvalues of 'L' after entry 'prev'.
+** Create a new upvalue at the given level, and link it to the list of
+** open upvalues of 'L' after entry 'prev'.
 **/
-static UpVal *newupval (lua_State *L, int tag, StkId level, UpVal **prev) {
-  GCObject *o = luaC_newobj(L, tag, sizeof(UpVal));
+static UpVal *newupval (lua_State *L, int tbc, StkId level, UpVal **prev) {
+  GCObject *o = luaC_newobj(L, LUA_TUPVAL, sizeof(UpVal));
   UpVal *uv = gco2upv(o);
   UpVal *next = *prev;
   uv->v = s2v(level);  /* current value lives in the stack */
+  uv->tbc = tbc;
   uv->u.open.next = next;  /* link it to list of open upvalues */
   uv->u.open.previous = prev;
   if (next)
@@ -94,7 +95,7 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
     pp = &p->u.open.next;
   }
   /* not found: create a new upvalue after 'pp' */
-  return newupval(L, LUA_TUPVAL, level, pp);
+  return newupval(L, 0, level, pp);
 }
 
 
@@ -170,7 +171,7 @@ static int callclosemth (lua_State *L, StkId level, int status) {
 static void trynewtbcupval (lua_State *L, void *ud) {
   StkId level = cast(StkId, ud);
   lua_assert(L->openupval == NULL || uplevel(L->openupval) < level);
-  newupval(L, LUA_TUPVALTBC, level, &L->openupval);
+  newupval(L, 1, level, &L->openupval);
 }
 
 
@@ -204,7 +205,7 @@ int luaF_close (lua_State *L, StkId level, int status) {
   while ((uv = L->openupval) != NULL && uplevel(uv) >= level) {
     TValue *slot = &uv->u.value;  /* new position for value */
     lua_assert(uplevel(uv) < L->top);
-    if (uv->tt == LUA_TUPVALTBC && status != NOCLOSINGMETH) {
+    if (uv->tbc && status != NOCLOSINGMETH) {
       /* must run closing method, which may change the stack */
       ptrdiff_t levelrel = savestack(L, level);
       status = callclosemth(L, uplevel(uv), status);

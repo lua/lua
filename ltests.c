@@ -397,8 +397,7 @@ static void checkrefs (global_State *g, GCObject *o) {
       checkudata(g, gco2u(o));
       break;
     }
-    case LUA_TUPVAL:
-    case LUA_TUPVALTBC: {
+    case LUA_TUPVAL: {
       checkvalref(g, o, gco2upv(o)->v);
       break;
     }

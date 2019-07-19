@@ -273,8 +273,7 @@ static void reallymarkobject (global_State *g, GCObject *o) {
       gray2black(o);
       break;
     }
-    case LUA_TUPVAL:
-    case LUA_TUPVALTBC: {
+    case LUA_TUPVAL: {
       UpVal *uv = gco2upv(o);
       if (!upisopen(uv))  /* open upvalues are kept gray */
         gray2black(o);
@@ -571,7 +570,7 @@ static int traversethread (global_State *g, lua_State *th) {
   for (; o < th->top; o++)  /* mark live elements in the stack */
     markvalue(g, s2v(o));
   for (uv = th->openupval; uv != NULL; uv = uv->u.open.next) {
-    if (uv->tt == LUA_TUPVALTBC)  /* to be closed? */
+    if (uv->tbc)  /* to be closed? */
       markobject(g, uv);  /* cannot be collected */
   }
   if (g->gcstate == GCSatomic) {  /* final traversal? */
@@ -706,7 +705,6 @@ static void freeobj (lua_State *L, GCObject *o) {
       luaF_freeproto(L, gco2p(o));
       break;
     case LUA_TUPVAL:
-    case LUA_TUPVALTBC:
       freeupval(L, gco2upv(o));
       break;
     case LUA_TLCL:
