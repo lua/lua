@@ -44,23 +44,35 @@ static void *firsttry (global_State *g, void *block, size_t os, size_t ns) {
 
 /*
 ** About the realloc function:
-** void * frealloc (void *ud, void *ptr, size_t osize, size_t nsize);
+** void *frealloc (void *ud, void *ptr, size_t osize, size_t nsize);
 ** ('osize' is the old size, 'nsize' is the new size)
 **
-** * frealloc(ud, NULL, x, s) creates a new block of size 's' (no
-** matter 'x').
+** - frealloc(ud, p, x, 0) frees the block 'p' and returns NULL.
+** Particularly, frealloc(ud, NULL, 0, 0) does nothing,
+** which is equivalent to free(NULL) in ISO C.
 **
-** * frealloc(ud, p, x, 0) frees the block 'p'
-** (in this specific case, frealloc must return NULL);
-** particularly, frealloc(ud, NULL, 0, 0) does nothing
-** (which is equivalent to free(NULL) in ISO C)
+** - frealloc(ud, NULL, x, s) creates a new block of size 's'
+** (no matter 'x'). Returns NULL if it cannot create the new block.
 **
-** frealloc returns NULL if it cannot create or reallocate the area
-** (any reallocation to an equal or smaller size cannot fail!)
+** - otherwise, frealloc(ud, b, x, y) reallocates the block 'b' from
+** size 'x' to size 'y'. Returns NULL if it cannot reallocate the
+** block to the new size.
 */
 
 
 
+
+/*
+** {==================================================================
+** Functions to allocate/deallocate arrays for the Parser
+** ===================================================================
+*/
+
+/*
+** Minimum size for arrays during parsing, to avoid overhead of
+** reallocating to size 1, then 2, and then 4. All these arrays
+** will be reallocated to exact sizes or erased when parsing ends.
+*/
 #define MINSIZEARRAY	4
 
 
@@ -82,31 +94,31 @@ void *luaM_growaux_ (lua_State *L, void *block, int nelems, int *psize,
   }
   lua_assert(nelems + 1 <= size && size <= limit);
   /* 'limit' ensures that multiplication will not overflow */
-  newblock = luaM_realloc_(L, block, cast_sizet(*psize) * size_elems,
-                                     cast_sizet(size) * size_elems);
-  if (unlikely(newblock == NULL))
-    luaM_error(L);
+  newblock = luaM_saferealloc_(L, block, cast_sizet(*psize) * size_elems,
+                                         cast_sizet(size) * size_elems);
   *psize = size;  /* update only when everything else is OK */
   return newblock;
 }
 
 
+/*
+** In prototypes, the size of the array is also its number of
+** elements (to save memory). So, if it cannot shrink an array
+** to its number of elements, the only option is to raise an
+** error.
+*/
 void *luaM_shrinkvector_ (lua_State *L, void *block, int *size,
                           int final_n, int size_elem) {
-  global_State *g = G(L);
   void *newblock;
   size_t oldsize = cast_sizet((*size) * size_elem);
   size_t newsize = cast_sizet(final_n * size_elem);
   lua_assert(newsize <= oldsize);
-  newblock = (*g->frealloc)(g->ud, block, oldsize, newsize);
-  if (unlikely(newblock == NULL && final_n > 0))  /* allocation failed? */
-    luaM_error(L);
-  else {
-    g->GCdebt += newsize - oldsize;
-    *size = final_n;
-    return newblock;
-  }
+  newblock = luaM_saferealloc_(L, block, oldsize, newsize);
+  *size = final_n;
+  return newblock;
 }
+
+/* }================================================================== */
 
 
 l_noret luaM_toobig (lua_State *L) {
@@ -143,7 +155,9 @@ static void *tryagain (lua_State *L, void *block,
 
 
 /*
-** generic allocation routine.
+** Generic allocation routine.
+** If allocation fails while shrinking a block, do not try again; the
+** GC shrinks some blocks and it is not reentrant.
 */
 void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
   void *newblock;
@@ -154,7 +168,7 @@ void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
     if (nsize > osize)  /* not shrinking a block? */
       newblock = tryagain(L, block, osize, nsize);
     if (newblock == NULL)  /* still no memory? */
-      return NULL;
+      return NULL;  /* do not update 'GCdebt' */
   }
   lua_assert((nsize == 0) == (newblock == NULL));
   g->GCdebt = (g->GCdebt + nsize) - osize;
