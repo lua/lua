@@ -83,21 +83,20 @@ static UpVal *newupval (lua_State *L, int tbc, StkId level, UpVal **prev) {
 
 /*
 ** Find and reuse, or create if it does not exist, an upvalue
-** at the given level and set it to the given slot.
+** at the given level.
 */
-void luaF_setupval (lua_State *L, StkId level, UpVal **slot) {
+UpVal *luaF_findupval (lua_State *L, StkId level) {
   UpVal **pp = &L->openupval;
   UpVal *p;
   lua_assert(isintwups(L) || L->openupval == NULL);
   while ((p = *pp) != NULL && uplevel(p) >= level) {  /* search for it */
-    *slot = p;
-    if (uplevel(p) == level && !isdead(G(L), p))  /* corresponding upvalue? */
-      return;  /* found it */
+    lua_assert(!isdead(G(L), p));
+    if (uplevel(p) == level)  /* corresponding upvalue? */
+      return p;  /* return it */
     pp = &p->u.open.next;
   }
-  /* not found: create a new upvalue after 'pp' (which is
-    anchored in 'slot', in case of an emergency collection) */
-  *slot = newupval(L, 0, level, pp);
+  /* not found: create a new upvalue after 'pp' */
+  return newupval(L, 0, level, pp);
 }
 
 
