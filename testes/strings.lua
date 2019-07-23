@@ -255,6 +255,12 @@ do    -- longest number that can be formatted
   local s = string.format('%.99f', -(10^i))
   assert(string.len(s) >= i + 101)
   assert(tonumber(s) == -(10^i))
+
+  -- limit for floats
+  assert(10^38 < math.huge)
+  local s = string.format('%.99f', -(10^38))
+  assert(string.len(s) >= 38 + 101)
+  assert(tonumber(s) == -(10^38))
 end
 
 

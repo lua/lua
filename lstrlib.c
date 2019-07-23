@@ -1227,16 +1227,14 @@ static int str_format (lua_State *L) {
           nb = lua_number2strx(L, buff, maxitem, form,
                                   luaL_checknumber(L, arg));
           break;
-        case 'e': case 'E': case 'f':
-        case 'g': case 'G': {
+        case 'f':
+          maxitem = MAX_ITEMF;  /* extra space for '%f' */
+          buff = luaL_prepbuffsize(&b, maxitem);
+          /* FALLTHROUGH */
+        case 'e': case 'E': case 'g': case 'G': {
           lua_Number n = luaL_checknumber(L, arg);
-          if (*(strfrmt - 1) == 'f' && l_mathop(fabs)(n) >= 1e100) {
-            /* 'n' needs more than 99 digits */
-            maxitem = MAX_ITEMF;  /* extra space for '%f' */
-            buff = luaL_prepbuffsize(&b, maxitem);
-          }
           addlenmod(form, LUA_NUMBER_FRMLEN);
-          nb = l_sprintf(buff, maxitem, form, (LUAI_UACNUMBER)n);
+          nb = snprintf(buff, maxitem, form, (LUAI_UACNUMBER)n);
           break;
         }
         case 'p': {
