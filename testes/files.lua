@@ -775,11 +775,24 @@ assert(os.date(string.rep("%d", 1000), t) ==
        string.rep(os.date("%d", t), 1000))
 assert(os.date(string.rep("%", 200)) == string.rep("%", 100))
 
-local t = os.time()
-D = os.date("*t", t)
-load(os.date([[assert(D.year==%Y and D.month==%m and D.day==%d and
-  D.hour==%H and D.min==%M and D.sec==%S and
-  D.wday==%w+1 and D.yday==%j)]], t))()
+local function checkDateTable (t)
+  _G.D = os.date("*t", t)
+  assert(os.time(D) == t)
+  load(os.date([[assert(D.year==%Y and D.month==%m and D.day==%d and
+    D.hour==%H and D.min==%M and D.sec==%S and
+    D.wday==%w+1 and D.yday==%j)]], t))()
+  _G.D = nil
+end
+
+checkDateTable(os.time())
+if not _port then
+  -- assume that time_t can represent these values
+  checkDateTable(0)
+  checkDateTable(1)
+  checkDateTable(1000)
+  checkDateTable(0x7fffffff)
+  checkDateTable(0x80000000)
+end
 
 checkerr("invalid conversion specifier", os.date, "%")
 checkerr("invalid conversion specifier", os.date, "%9")
@@ -793,11 +806,24 @@ checkerr("not an integer", os.time, {year=1000, month=1, day=1, hour=1.5})
 
 checkerr("missing", os.time, {hour = 12})   -- missing date
 
+
+if string.packsize("i") == 4 then   -- 4-byte ints
+  checkerr("field 'year' is out-of-bound", os.time,
+              {year = -(1 << 31) + 1899, month = 1, day = 1})
+end
+
 if not _port then
   -- test Posix-specific modifiers
   assert(type(os.date("%Ex")) == 'string')
   assert(type(os.date("%Oy")) == 'string')
 
+  -- test large dates (assume at least 4-byte ints and time_t)
+  local t0 = os.time{year = 1970, month = 1, day = 0}
+  local t1 = os.time{year = 1970, month = 1, day = 0, sec = (1 << 31) - 1}
+  assert(t1 - t0 == (1 << 31) - 1)
+  t0 = os.time{year = 1970, month = 1, day = 1}
+  t1 = os.time{year = 1970, month = 1, day = 1, sec = -(1 << 31)}
+  assert(t1 - t0 == -(1 << 31))
 
   -- test out-of-range dates (at least for Unix)
   if maxint >= 2^62 then  -- cannot do these tests in Small Lua
@@ -812,24 +838,36 @@ if not _port then
         -- time_t has 8 bytes; an int year cannot represent a huge time
         print("  8-byte time_t")
         checkerr("cannot be represented", os.date, "%Y", 2^60)
-        -- it should have no problems with year 4000
-        assert(tonumber(os.time{year=4000, month=1, day=1}))
+
+        -- this is the maximum year
+        assert(tonumber(os.time
+          {year=(1 << 31) + 1899, month=12, day=31, hour=23, min=59, sec=59}))
+
+        -- this is too much
+        checkerr("represented", os.time,
+          {year=(1 << 31) + 1899, month=12, day=31, hour=23, min=59, sec=60})
       end
+
+      -- internal 'int' fields cannot hold these values
+      checkerr("field 'day' is out-of-bound", os.time,
+                  {year = 0, month = 1, day = 2^32})
+
+      checkerr("field 'month' is out-of-bound", os.time,
+                  {year = 0, month = -((1 << 31) + 1), day = 1})
+
+      checkerr("field 'year' is out-of-bound", os.time,
+                  {year = (1 << 31) + 1900, month = 1, day = 1})
+
     else    -- 8-byte ints
       -- assume time_t has 8 bytes too
       print("  8-byte time_t")
       assert(tonumber(os.date("%Y", 2^60)))
+
       -- but still cannot represent a huge year
       checkerr("cannot be represented", os.time, {year=2^60, month=1, day=1})
     end
   end
 end
-
-
-D = os.date("!*t", t)
-load(os.date([[!assert(D.year==%Y and D.month==%m and D.day==%d and
-  D.hour==%H and D.min==%M and D.sec==%S and
-  D.wday==%w+1 and D.yday==%j)]], t))()
 
 do
   local D = os.date("*t")
@@ -844,6 +882,7 @@ do
   assert(t == t1)   -- if isdst is absent uses correct default
 end
 
+local D = os.date("*t")
 t = os.time(D)
 D.year = D.year-1;
 local t1 = os.time(D)
