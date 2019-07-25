@@ -694,9 +694,10 @@ static Proto *addprototype (LexState *ls) {
 
 /*
 ** codes instruction to create new closure in parent function.
-** The OP_CLOSURE instruction must use the last available register,
+** The OP_CLOSURE instruction uses the last available register,
 ** so that, if it invokes the GC, the GC knows which registers
 ** are in use at that time.
+
 */
 static void codeclosure (LexState *ls, expdesc *v) {
   FuncState *fs = ls->fs->prev;

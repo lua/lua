@@ -671,7 +671,8 @@ collectgarbage()
 
 local function f (n, p)
   local t = {}; for i=1,p do t[i] = i*10 end
-  return function (_,n)
+  return function (_, n, ...)
+           assert(select("#", ...) == 0)  -- no extra arguments
            if n > 0 then
              n = n-1
              return n, table.unpack(t)

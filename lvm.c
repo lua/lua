@@ -1258,7 +1258,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         if (TESTARG_k(i))
           c += GETARG_Ax(*pc) * (MAXARG_C + 1);
         pc++;  /* skip extra argument */
-        L->top = ci->top;  /* correct top in case of GC */
+        L->top = ra + 1;  /* correct top in case of emergency GC */
         t = luaH_new(L);  /* memory allocation */
         sethvalue2s(L, ra, t);
         if (b != 0 || c != 0)
@@ -1478,7 +1478,6 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_CLOSE) {
-        L->top = ra + 1;  /* everything is free after this slot */
         Protect(luaF_close(L, ra, LUA_OK));
         vmbreak;
       }
@@ -1755,7 +1754,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         /* push function, state, and control variable */
         memcpy(ra + 4, ra, 3 * sizeof(*ra));
         L->top = ra + 4 + 3;
-        Protect(luaD_call(L, ra + 4, GETARG_C(i)));  /* do the call */
+        ProtectNT(luaD_call(L, ra + 4, GETARG_C(i)));  /* do the call */
         updatestack(ci);  /* stack may have changed */
         i = *(pc++);  /* go to next instruction */
         lua_assert(GET_OPCODE(i) == OP_TFORLOOP && ra == RA(i));
@@ -1776,7 +1775,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         if (n == 0)
           n = cast_int(L->top - ra) - 1;  /* get up to the top */
         else
-          L->top = ci->top;  /* correct top in case of GC */
+          L->top = ci->top;  /* correct top in case of emergency GC */
         last += n;
         if (TESTARG_k(i)) {
           last += GETARG_Ax(*pc) * (MAXARG_C + 1);
