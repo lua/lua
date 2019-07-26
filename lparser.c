@@ -187,9 +187,10 @@ static int registerlocalvar (LexState *ls, FuncState *fs, TString *varname) {
 
 
 /*
-** Create a new local variable with the given 'name'.
+** Create a new local variable with the given 'name'. Return its index
+** in the function.
 */
-static Vardesc *new_localvar (LexState *ls, TString *name) {
+static int new_localvar (LexState *ls, TString *name, int kind) {
   lua_State *L = ls->L;
   FuncState *fs = ls->fs;
   Dyndata *dyd = ls->dyd;
@@ -199,13 +200,14 @@ static Vardesc *new_localvar (LexState *ls, TString *name) {
   luaM_growvector(L, dyd->actvar.arr, dyd->actvar.n + 1,
                   dyd->actvar.size, Vardesc, USHRT_MAX, "local variables");
   var = &dyd->actvar.arr[dyd->actvar.n++];
-  var->vd.kind = VDKREG;  /* default is a regular variable */
+  var->vd.kind = kind;
   var->vd.name = name;
-  return var;
+  return dyd->actvar.n - 1 - fs->firstlocal;
 }
 
 #define new_localvarliteral(ls,v) \
-    new_localvar(ls, luaX_newstring(ls, "" v, (sizeof(v)/sizeof(char)) - 1));
+    new_localvar(ls,  \
+      luaX_newstring(ls, "" v, (sizeof(v)/sizeof(char)) - 1), VDKREG);
 
 
 
@@ -945,7 +947,7 @@ static void parlist (LexState *ls) {
     do {
       switch (ls->t.token) {
         case TK_NAME: {  /* param -> NAME */
-          new_localvar(ls, str_checkname(ls));
+          new_localvar(ls, str_checkname(ls), VDKREG);
           nparams++;
           break;
         }
@@ -1551,7 +1553,7 @@ static void fornum (LexState *ls, TString *varname, int line) {
   new_localvarliteral(ls, "(for state)");
   new_localvarliteral(ls, "(for state)");
   new_localvarliteral(ls, "(for state)");
-  new_localvar(ls, varname);
+  new_localvar(ls, varname, VDKREG);
   checknext(ls, '=');
   exp1(ls);  /* initial value */
   checknext(ls, ',');
@@ -1580,9 +1582,9 @@ static void forlist (LexState *ls, TString *indexname) {
   new_localvarliteral(ls, "(for state)");
   new_localvarliteral(ls, "(for state)");
   /* create declared variables */
-  new_localvar(ls, indexname);
+  new_localvar(ls, indexname, VDKREG);
   while (testnext(ls, ',')) {
-    new_localvar(ls, str_checkname(ls));
+    new_localvar(ls, str_checkname(ls), VDKREG);
     nvars++;
   }
   checknext(ls, TK_IN);
@@ -1706,7 +1708,7 @@ static void localfunc (LexState *ls) {
   expdesc b;
   FuncState *fs = ls->fs;
   int fvar = fs->nactvar;  /* function's variable index */
-  new_localvar(ls, str_checkname(ls));  /* new local variable */
+  new_localvar(ls, str_checkname(ls), VDKREG);  /* new local variable */
   adjustlocalvars(ls, 1);  /* enter its scope */
   body(ls, &b, 0, ls->linenumber);  /* function created in next register */
   /* debug information will only see the variable after this point! */
@@ -1746,13 +1748,13 @@ static void localstat (LexState *ls) {
   FuncState *fs = ls->fs;
   int toclose = -1;  /* index of to-be-closed variable (if any) */
   Vardesc *var;  /* last variable */
+  int ivar;  /* index of last variable */
   int nvars = 0;
   int nexps;
   expdesc e;
   do {
     int kind = getlocalattribute(ls);
-    var = new_localvar(ls, str_checkname(ls));
-    var->vd.kind = kind;
+    ivar = new_localvar(ls, str_checkname(ls), kind);
     if (kind == RDKTOCLOSE) {  /* to-be-closed? */
       if (toclose != -1)  /* one already present? */
         luaK_semerror(ls, "multiple to-be-closed variables in local list");
@@ -1766,6 +1768,7 @@ static void localstat (LexState *ls) {
     e.k = VVOID;
     nexps = 0;
   }
+  var = getlocalvardesc(fs, ivar);  /* get last variable */
   if (nvars == nexps &&  /* no adjustments? */
       var->vd.kind == RDKCONST &&  /* last variable is const? */
       luaK_exp2const(fs, &e, &var->k)) {  /* compile-time constant? */
