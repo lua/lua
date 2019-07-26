@@ -217,9 +217,16 @@ t.__le = function (a,b,c)
  return a<=b, "dummy"
 end
 
+t.__eq = function (a,b,c)
+  assert(c == nil)
+  if type(a) == 'table' then a = a.x end
+  if type(b) == 'table' then b = b.x end
+ return a == b, "dummy"
+end
+
 function Op(x) return setmetatable({x=x}, t) end
 
-local function test ()
+local function test (a, b, c)
   assert(not(Op(1)<Op(1)) and (Op(1)<Op(2)) and not(Op(2)<Op(1)))
   assert(not(1 < Op(1)) and (Op(1) < 2) and not(2 < Op(1)))
   assert(not(Op('a')<Op('a')) and (Op('a')<Op('b')) and not(Op('b')<Op('a')))
@@ -232,9 +239,13 @@ local function test ()
   assert((1 >= Op(1)) and not(1 >= Op(2)) and (Op(2) >= 1))
   assert((Op('a')>=Op('a')) and not(Op('a')>=Op('b')) and (Op('b')>=Op('a')))
   assert(('a' >= Op('a')) and not(Op('a') >= 'b') and (Op('b') >= Op('a')))
+  assert(Op(1) == Op(1) and Op(1) ~= Op(2))
+  assert(Op('a') == Op('a') and Op('a') ~= Op('b'))
+  assert(a == a and a ~= b)
+  assert(Op(3) == c)
 end
 
-test()
+test(Op(1), Op(2), Op(3))
 
 
 -- test `partial order'

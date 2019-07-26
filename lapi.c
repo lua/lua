@@ -329,12 +329,14 @@ LUA_API int lua_compare (lua_State *L, int index1, int index2, int op) {
   o1 = index2value(L, index1);
   o2 = index2value(L, index2);
   if (isvalid(L, o1) && isvalid(L, o2)) {
+    ptrdiff_t top = savestack(L, L->top);
     switch (op) {
       case LUA_OPEQ: i = luaV_equalobj(L, o1, o2); break;
       case LUA_OPLT: i = luaV_lessthan(L, o1, o2); break;
       case LUA_OPLE: i = luaV_lessequal(L, o1, o2); break;
       default: api_check(L, 0, "invalid option");
     }
+    L->top = restorestack(L, top);
   }
   lua_unlock(L);
   return i;

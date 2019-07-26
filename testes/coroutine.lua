@@ -809,7 +809,7 @@ assert(run(function ()
 -- tests for coroutine API
 if T==nil then
   (Message or print)('\n >>> testC not active: skipping coroutine API tests <<<\n')
-  return
+  print "OK"; return
 end
 
 print('testing coroutine API')

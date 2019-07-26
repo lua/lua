@@ -515,8 +515,11 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
   }
   if (tm == NULL)  /* no TM? */
     return 0;  /* objects are different */
-  luaT_callTMres(L, tm, t1, t2, L->top);  /* call TM */
-  return !l_isfalse(s2v(L->top));
+  else {
+    L->top = L->ci->top;
+    luaT_callTMres(L, tm, t1, t2, L->top);  /* call TM */
+    return !l_isfalse(s2v(L->top));
+  }
 }
 
 
@@ -548,7 +551,7 @@ void luaV_concat (lua_State *L, int total) {
     int n = 2;  /* number of elements handled in this pass (at least 2) */
     if (!(ttisstring(s2v(top - 2)) || cvt2str(s2v(top - 2))) ||
         !tostring(L, s2v(top - 1)))
-      luaT_trybinTM(L, s2v(top - 2), s2v(top - 1), top - 2, TM_CONCAT);
+      luaT_tryconcatTM(L);
     else if (isemptystr(s2v(top - 1)))  /* second operand is empty? */
       cast_void(tostring(L, s2v(top - 2)));  /* result is first operand */
     else if (isemptystr(s2v(top - 2))) {  /* first operand is empty string? */
@@ -747,7 +750,7 @@ void luaV_finishOp (lua_State *L) {
       break;
     }
     case OP_CONCAT: {
-      StkId top = L->top - 1;  /* top when 'luaT_trybinTM' was called */
+      StkId top = L->top - 1;  /* top when 'luaT_tryconcatTM' was called */
       int a = GETARG_A(inst);      /* first element to concatenate */
       int total = cast_int(top - 1 - (base + a));  /* yet to concatenate */
       setobjs2s(L, top - 2, top);  /* put TM result in proper position */
@@ -801,7 +804,7 @@ void luaV_finishOp (lua_State *L) {
     setfltvalue(s2v(ra), fop(L, nb, fimm));  \
   }  \
   else  \
-    Protect(luaT_trybiniTM(L, v1, imm, flip, ra, tm)); }
+    ProtectNT(luaT_trybiniTM(L, v1, imm, flip, ra, tm)); }
 
 
 /*
@@ -836,7 +839,7 @@ void luaV_finishOp (lua_State *L) {
     setfltvalue(s2v(ra), fop(L, n1, n2));  \
   }  \
   else  \
-    Protect(luaT_trybinTM(L, v1, v2, ra, tm)); }
+    ProtectNT(luaT_trybinTM(L, v1, v2, ra, tm)); }
 
 
 /*
@@ -877,7 +880,7 @@ void luaV_finishOp (lua_State *L) {
       setfltvalue(s2v(ra), fop(L, n1, n2));  \
     }  \
     else  \
-      Protect(luaT_trybinassocTM(L, v1, v2, ra, flip, tm)); } }
+      ProtectNT(luaT_trybinassocTM(L, v1, v2, ra, flip, tm)); } }
 
 
 /*
@@ -891,7 +894,7 @@ void luaV_finishOp (lua_State *L) {
     setfltvalue(s2v(ra), fop(L, n1, n2));  \
   }  \
   else  \
-    Protect(luaT_trybinTM(L, v1, v2, ra, tm)); }
+    ProtectNT(luaT_trybinTM(L, v1, v2, ra, tm)); }
 
 
 /*
@@ -906,7 +909,7 @@ void luaV_finishOp (lua_State *L) {
     setivalue(s2v(ra), op(L, i1, i2));  \
   }  \
   else  \
-    Protect(luaT_trybiniTM(L, v1, i2, TESTARG_k(i), ra, tm)); }
+    ProtectNT(luaT_trybiniTM(L, v1, i2, TESTARG_k(i), ra, tm)); }
 
 
 /*
@@ -920,7 +923,7 @@ void luaV_finishOp (lua_State *L) {
     setivalue(s2v(ra), op(L, i1, i2));  \
   }  \
   else  \
-    Protect(luaT_trybinTM(L, v1, v2, ra, tm)); }
+    ProtectNT(luaT_trybinTM(L, v1, v2, ra, tm)); }
 
 
 /*
@@ -937,7 +940,7 @@ void luaV_finishOp (lua_State *L) {
         else if (ttisnumber(s2v(ra)) && ttisnumber(rb))  \
           cond = opf(s2v(ra), rb);  \
         else  \
-          Protect(cond = other(L, s2v(ra), rb));  \
+          ProtectNT(cond = other(L, s2v(ra), rb));  \
         docondjump(); }
 
 
@@ -956,7 +959,7 @@ void luaV_finishOp (lua_State *L) {
         }  \
         else {  \
           int isf = GETARG_C(i);  \
-          Protect(cond = luaT_callorderiTM(L, s2v(ra), im, inv, isf, tm));  \
+          ProtectNT(cond = luaT_callorderiTM(L, s2v(ra), im, inv, isf, tm));  \
         }  \
         docondjump(); }
 
@@ -1094,7 +1097,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
     vmfetch();
     lua_assert(base == ci->func + 1);
     lua_assert(base <= L->top && L->top < L->stack + L->stacksize);
-    lua_assert(ci->top < L->stack + L->stacksize);
+    /* invalidate top for instructions not expecting it */
+    lua_assert(isIT(i) || (L->top = base));
     vmdispatch (GET_OPCODE(i)) {
       vmcase(OP_MOVE) {
         setobjs2s(L, ra, RB(i));
@@ -1359,7 +1363,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           if (TESTARG_k(i)) {
             ic = -ic;  ev = TM_SHL;
           }
-          Protect(luaT_trybiniTM(L, rb, ic, 0, ra, ev));
+          ProtectNT(luaT_trybiniTM(L, rb, ic, 0, ra, ev));
         }
         vmbreak;
       }
@@ -1371,7 +1375,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           setivalue(s2v(ra), luaV_shiftl(ic, ib));
         }
         else
-          Protect(luaT_trybiniTM(L, rb, ic, 1, ra, TM_SHL));
+          ProtectNT(luaT_trybiniTM(L, rb, ic, 1, ra, TM_SHL));
         vmbreak;
       }
       vmcase(OP_ADD) {
@@ -1422,7 +1426,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           setivalue(s2v(ra), luaV_shiftl(ib, -ic));
         }
         else
-          Protect(luaT_trybinTM(L, rb, rc, ra, TM_SHR));
+          ProtectNT(luaT_trybinTM(L, rb, rc, ra, TM_SHR));
         vmbreak;
       }
       vmcase(OP_SHL) {
@@ -1433,7 +1437,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           setivalue(s2v(ra), luaV_shiftl(ib, ic));
         }
         else
-          Protect(luaT_trybinTM(L, rb, rc, ra, TM_SHL));
+          ProtectNT(luaT_trybinTM(L, rb, rc, ra, TM_SHL));
         vmbreak;
       }
       vmcase(OP_UNM) {
@@ -1447,7 +1451,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           setfltvalue(s2v(ra), luai_numunm(L, nb));
         }
         else
-          Protect(luaT_trybinTM(L, rb, rb, ra, TM_UNM));
+          ProtectNT(luaT_trybinTM(L, rb, rb, ra, TM_UNM));
         vmbreak;
       }
       vmcase(OP_BNOT) {
@@ -1457,7 +1461,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           setivalue(s2v(ra), intop(^, ~l_castS2U(0), ib));
         }
         else
-          Protect(luaT_trybinTM(L, rb, rb, ra, TM_BNOT));
+          ProtectNT(luaT_trybinTM(L, rb, rb, ra, TM_BNOT));
         vmbreak;
       }
       vmcase(OP_NOT) {
@@ -1493,7 +1497,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       vmcase(OP_EQ) {
         int cond;
         TValue *rb = vRB(i);
-        Protect(cond = luaV_equalobj(L, s2v(ra), rb));
+        ProtectNT(cond = luaV_equalobj(L, s2v(ra), rb));
         docondjump();
         vmbreak;
       }
