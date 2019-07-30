@@ -43,6 +43,8 @@ local function getoutput ()
 end
 
 local function checkprogout (s)
+  -- expected result must end with new line
+  assert(string.sub(s, -1) == "\n")
   local t = getoutput()
   for line in string.gmatch(s, ".-\n") do
     assert(string.find(t, line, 1, true))
@@ -292,7 +294,7 @@ debug = require"debug"
 print(debug.getinfo(1).currentline)
 ]]
 RUN('lua %s > %s', prog, out)
-checkprogout('3')
+checkprogout('3\n')
 
 -- close Lua with an open file
 prepfile(string.format([[io.output(%q); io.write('alo')]], out))
@@ -320,15 +322,16 @@ NoRun("", "lua %s", prog)   -- no message
 
 -- to-be-closed variables in main chunk
 prepfile[[
-  local x <close> = function (err)
-    assert(err == 120)
-    print("Ok")
-  end
-  local e1 <close> = function () error(120) end
+  local x <close> = setmetatable({},
+        {__close = function (self, err)
+                     assert(err == nil)
+                     print("Ok")
+                   end})
+  local e1 <close> = setmetatable({}, {__close = function () print(120) end})
   os.exit(true, true)
 ]]
 RUN('lua %s > %s', prog, out)
-checkprogout("Ok")
+checkprogout("120\nOk\n")
 
 
 -- remove temporary files
