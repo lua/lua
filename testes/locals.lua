@@ -174,7 +174,7 @@ assert(x==20)
 
 
 do   -- constants
-  local <const> a, b, <const> c = 10, 20, 30
+  local a<const>, b, c<const> = 10, 20, 30
   b = a + c + b    -- 'b' is not constant
   assert(a == 10 and b == 60 and c == 30)
   local function checkro (name, code)
@@ -182,17 +182,17 @@ do   -- constants
     local gab = string.format("attempt to assign to const variable '%s'", name)
     assert(not st and string.find(msg, gab))
   end
-  checkro("y", "local x, <const> y, z = 10, 20, 30; x = 11; y = 12")
-  checkro("x", "local <const> x, y, <const> z = 10, 20, 30; x = 11")
-  checkro("z", "local <const> x, y, <const> z = 10, 20, 30; y = 10; z = 11")
+  checkro("y", "local x, y <const>, z = 10, 20, 30; x = 11; y = 12")
+  checkro("x", "local x <const>, y, z <const> = 10, 20, 30; x = 11")
+  checkro("z", "local x <const>, y, z <const> = 10, 20, 30; y = 10; z = 11")
 
   checkro("z", [[
-    local a, <const> z, b = 10;
+    local a, z <const>, b = 10;
     function foo() a = 20; z = 32; end
   ]])
 
   checkro("var1", [[
-    local a, <const> var1 = 10;
+    local a, var1 <const> = 10;
     function foo() a = 20; z = function () var1 = 12; end  end
   ]])
 end
@@ -215,9 +215,9 @@ end
 do
   local a = {}
   do
-    local <toclose> x = setmetatable({"x"}, {__close = function (self)
+    local x <close> = setmetatable({"x"}, {__close = function (self)
                                                    a[#a + 1] = self[1] end})
-    local w, <toclose> y, z = func2close(function (self, err)
+    local w, y <close>, z = func2close(function (self, err)
                                 assert(err == nil); a[#a + 1] = "y"
                               end, 10, 20)
     a[#a + 1] = "in"
@@ -235,7 +235,7 @@ do
 
   -- closing functions do not corrupt returning values
   local function foo (x)
-    local <toclose> _ = closescope
+    local _ <close> = closescope
     return x, X, 23
   end
 
@@ -244,7 +244,7 @@ do
 
   X = false
   foo = function (x)
-    local <toclose> _ = closescope
+    local  _<close> = closescope
     local y = 15
     return y
   end
@@ -253,7 +253,7 @@ do
 
   X = false
   foo = function ()
-    local <toclose> x = closescope
+    local x <close> = closescope
     return x
   end
 
@@ -266,13 +266,13 @@ do
   -- calls cannot be tail in the scope of to-be-closed variables
   local X, Y
   local function foo ()
-    local <toclose> _ = func2close(function () Y = 10 end)
+    local _ <close> = func2close(function () Y = 10 end)
     assert(X == true and Y == nil)    -- 'X' not closed yet
     return 1,2,3
   end
 
   local function bar ()
-    local <toclose> _ = func2close(function () X = false end)
+    local _ <close> = func2close(function () X = false end)
     X = true
     do
       return foo()    -- not a tail call!
@@ -287,14 +287,14 @@ end
 do   -- errors in __close
   local log = {}
   local function foo (err)
-    local <toclose> x =
+    local x <close> =
        func2close(function (self, msg) log[#log + 1] = msg; error(1) end)
-    local <toclose> x1 =
+    local x1 <close> =
        func2close(function (self, msg) log[#log + 1] = msg; end)
-    local <toclose> gc = func2close(function () collectgarbage() end)
-    local <toclose> y =
+    local gc <close> = func2close(function () collectgarbage() end)
+    local y <close> =
       func2close(function (self, msg) log[#log + 1] = msg; error(2) end)
-    local <toclose> z =
+    local z <close> =
       func2close(function (self, msg)
         log[#log + 1] = (msg or 10) + 1;
         error(3)
@@ -316,7 +316,7 @@ do   -- errors in __close
 
   -- error in toclose in vararg function
   function foo (...)
-    local <toclose> x123 = 10
+    local x123 <close> = 10
   end
 
   local st, msg = pcall(foo)
@@ -329,7 +329,7 @@ do
 
   -- errors due to non-closable values
   local function foo ()
-    local <toclose> x = {}
+    local x <close> = {}
   end
   local stat, msg = pcall(foo)
   assert(not stat and string.find(msg, "variable 'x'"))
@@ -337,8 +337,8 @@ do
 
   -- with other errors, non-closable values are ignored
   local function foo ()
-    local <toclose> x = 34
-    local <toclose> y = func2close(function () error(32) end)
+    local x <close> = 34
+    local y <close> = func2close(function () error(32) end)
   end
   local stat, msg = pcall(foo)
   assert(not stat and msg == 32)
@@ -350,8 +350,8 @@ if rawget(_G, "T") then
 
   -- memory error inside closing function
   local function foo ()
-    local <toclose> y = func2close(function () T.alloccount() end)
-    local <toclose> x = setmetatable({}, {__close = function ()
+    local y <close> = func2close(function () T.alloccount() end)
+    local x <close> = setmetatable({}, {__close = function ()
       T.alloccount(0); local x = {}   -- force a memory error
     end})
     error(1000)   -- common error inside the function's body
@@ -377,7 +377,7 @@ if rawget(_G, "T") then
   end
 
   local function test ()
-    local <toclose> x = enter(0)   -- set a memory limit
+    local x <close> = enter(0)   -- set a memory limit
     -- creation of previous upvalue will raise a memory error
     assert(false)    -- should not run
   end
@@ -392,14 +392,14 @@ if rawget(_G, "T") then
 
   -- repeat test with extra closing upvalues
   local function test ()
-    local <toclose> xxx = func2close(function (self, msg)
+    local xxx <close> = func2close(function (self, msg)
       assert(msg == "not enough memory");
       error(1000)   -- raise another error
     end)
-    local <toclose> xx = func2close(function (self, msg)
+    local xx <close> = func2close(function (self, msg)
       assert(msg == "not enough memory");
     end)
-    local <toclose> x = enter(0)   -- set a memory limit
+    local x <close> = enter(0)   -- set a memory limit
     -- creation of previous upvalue will raise a memory error
     os.exit(false)    -- should not run
   end
@@ -469,9 +469,9 @@ do
   local x = false
   local y = false
   local co = coroutine.wrap(function ()
-    local <toclose> xv = func2close(function () x = true end)
+    local xv <close> = func2close(function () x = true end)
     do
-      local <toclose> yv = func2close(function () y = true end)
+      local yv <close> = func2close(function () y = true end)
       coroutine.yield(100)   -- yield doesn't close variable
     end
     coroutine.yield(200)   -- yield doesn't close variable
@@ -491,8 +491,8 @@ do
   -- error in a wrapped coroutine raising errors when closing a variable
   local x = 0
   local co = coroutine.wrap(function ()
-    local <toclose> xx = func2close(function () x = x + 1; error("YYY") end)
-    local <toclose> xv = func2close(function () x = x + 1; error("XXX") end)
+    local xx <close> = func2close(function () x = x + 1; error("YYY") end)
+    local xv <close> = func2close(function () x = x + 1; error("XXX") end)
       coroutine.yield(100)
       error(200)
   end)
@@ -503,8 +503,8 @@ do
   local x = 0
   local y = 0
   co = coroutine.wrap(function ()
-    local <toclose> xx = func2close(function () y = y + 1; error("YYY") end)
-    local <toclose> xv = func2close(function () x = x + 1; error("XXX") end)
+    local xx <close> = func2close(function () y = y + 1; error("YYY") end)
+    local xv <close> = func2close(function () x = x + 1; error("XXX") end)
       coroutine.yield(100)
       return 200
   end)
@@ -519,7 +519,7 @@ end
 -- a suspended coroutine should not close its variables when collected
 local co
 co = coroutine.wrap(function()
-  local <toclose> x = function () os.exit(false) end    -- should not run
+  local x <close> = function () os.exit(false) end    -- should not run
   co = nil
   coroutine.yield()
 end)

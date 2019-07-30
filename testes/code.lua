@@ -8,22 +8,22 @@ end
 print "testing code generation and optimizations"
 
 -- to test constant propagation
-local <const> k0aux = 0
-local <const> k0 = k0aux
-local <const> k1 = 1
-local <const> k3 = 3
-local <const> k6 = k3 + (k3 << k0)
-local <const> kFF0 = 0xFF0
-local <const> k3_78 = 3.78
-local <const> x, <const> k3_78_4 = 10, k3_78 / 4
+local k0aux <const> = 0
+local k0 <const> = k0aux
+local k1 <const> = 1
+local k3 <const> = 3
+local k6 <const> = k3 + (k3 << k0)
+local kFF0 <const> = 0xFF0
+local k3_78 <const> = 3.78
+local x, k3_78_4 <const> = 10, k3_78 / 4
 assert(x == 10)
 
-local <const> kx = "x"
+local kx <const> = "x"
 
-local <const> kTrue = true
-local <const> kFalse = false
+local kTrue <const> = true
+local kFalse <const> = false
 
-local <const> kNil = nil
+local kNil <const> = nil
 
 -- this code gave an error for the code checker
 do
@@ -105,7 +105,7 @@ end, 'CLOSURE', 'NEWTABLE', 'EXTRAARG', 'GETTABUP', 'CALL',
 
 -- sequence of LOADNILs
 check(function ()
-  local <const> kNil = nil
+  local kNil <const> = nil
   local a,b,c
   local d; local e;
   local f,g,h;
@@ -173,7 +173,7 @@ end,
 
 -- "get/set table" with numeric indices
 check(function (a)
-  local <const> k255 = 255
+  local k255 <const> = 255
   a[1] = a[100]
   a[k255] = a[256]
   a[256] = 5
@@ -276,14 +276,14 @@ checkI(function () return ((100 << k6) << -4) >> 2 end, 100)
 
 -- borders around MAXARG_sBx ((((1 << 17) - 1) >> 1) == 65535)
 local a = 17; local sbx = ((1 << a) - 1) >> 1   -- avoid folding
-local <const> border = 65535
+local border <const> = 65535
 checkI(function () return border end, sbx)
 checkI(function () return -border end, -sbx)
 checkI(function () return border + 1 end, sbx + 1)
 checkK(function () return border + 2 end, sbx + 2)
 checkK(function () return -(border + 1) end, -(sbx + 1))
 
-local <const> border = 65535.0
+local border <const> = 65535.0
 checkF(function () return border end, sbx + 0.0)
 checkF(function () return -border end, -sbx + 0.0)
 checkF(function () return border + 1 end, (sbx + 1.0))
@@ -411,9 +411,9 @@ checkequal(function () return 6 and true or nil end,
 
 
 do   -- string constants
-  local <const> k0 = "00000000000000000000000000000000000000000000000000"
+  local k0 <const> = "00000000000000000000000000000000000000000000000000"
   local function f1 ()
-    local <const> k = k0
+    local k <const> = k0
     return function ()
              return function () return k end
            end

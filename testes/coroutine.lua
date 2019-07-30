@@ -151,7 +151,7 @@ do
   end
 
   co = coroutine.create(function ()
-    local <toclose> x = func2close(function (self, err)
+    local x <close> = func2close(function (self, err)
       assert(err == nil); X = false
     end)
     X = true
@@ -165,12 +165,12 @@ do
   -- error closing a coroutine
   local x = 0
   co = coroutine.create(function()
-    local <toclose> y = func2close(function (self,err)
+    local y <close> = func2close(function (self,err)
       if (err ~= 111) then os.exit(false) end   -- should not happen
       x = 200
       error(200)
     end)
-    local <toclose> x = func2close(function (self, err)
+    local x <close> = func2close(function (self, err)
       assert(err == nil); error(111)
     end)
     coroutine.yield()
@@ -356,7 +356,7 @@ do
 
   local X = false
   A = coroutine.wrap(function()
-    local <toclose> _ = setmetatable({}, {__close = function () X = true end})
+    local _ <close> = setmetatable({}, {__close = function () X = true end})
     return pcall(A, 1)
   end)
   st, res = A()

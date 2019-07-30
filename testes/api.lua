@@ -1203,7 +1203,7 @@ end)
 testamem("to-be-closed variables", function()
   local flag
   do
-    local <toclose> x =
+    local x <close> =
               setmetatable({}, {__close = function () flag = true end})
     flag = false
     local x = {}

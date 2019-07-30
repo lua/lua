@@ -125,7 +125,7 @@ do
   -- closing file by scope
   local F = nil
   do
-    local <toclose> f = assert(io.open(file, "w"))
+    local f <close> = assert(io.open(file, "w"))
     F = f
   end
   assert(tostring(F) == "file (closed)")
@@ -135,7 +135,7 @@ assert(os.remove(file))
 
 do
   -- test writing/reading numbers
-  local <toclose> f = assert(io.open(file, "w"))
+  local f <close> = assert(io.open(file, "w"))
   f:write(maxint, '\n')
   f:write(string.format("0X%x\n", maxint))
   f:write("0xABCp-3", '\n')
@@ -144,7 +144,7 @@ do
   f:write(string.format("0x%X\n", -maxint))
   f:write("-0xABCp-3", '\n')
   assert(f:close())
-  local <toclose> f = assert(io.open(file, "r"))
+  local f <close> = assert(io.open(file, "r"))
   assert(f:read("n") == maxint)
   assert(f:read("n") == maxint)
   assert(f:read("n") == 0xABCp-3)
@@ -158,7 +158,7 @@ assert(os.remove(file))
 
 -- testing multiple arguments to io.read
 do
-  local <toclose> f = assert(io.open(file, "w"))
+  local f <close> = assert(io.open(file, "w"))
   f:write[[
 a line
 another line
@@ -170,18 +170,18 @@ three
 ]]
   local l1, l2, l3, l4, n1, n2, c, dummy
   assert(f:close())
-  local <toclose> f = assert(io.open(file, "r"))
+  local f <close> = assert(io.open(file, "r"))
   l1, l2, n1, n2, dummy = f:read("l", "L", "n", "n")
   assert(l1 == "a line" and l2 == "another line\n" and
          n1 == 1234 and n2 == 3.45 and dummy == nil)
   assert(f:close())
-  local <toclose> f = assert(io.open(file, "r"))
+  local f <close> = assert(io.open(file, "r"))
   l1, l2, n1, n2, c, l3, l4, dummy = f:read(7, "l", "n", "n", 1, "l", "l")
   assert(l1 == "a line\n" and l2 == "another line" and c == '\n' and
          n1 == 1234 and n2 == 3.45 and l3 == "one" and l4 == "two"
          and dummy == nil)
   assert(f:close())
-  local <toclose> f = assert(io.open(file, "r"))
+  local f <close> = assert(io.open(file, "r"))
   -- second item failing
   l1, n1, n2, dummy = f:read("l", "n", "n", "l")
   assert(l1 == "a line" and n1 == nil)

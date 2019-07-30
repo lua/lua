@@ -3,10 +3,10 @@
 
 print("testing numbers and math lib")
 
-local <const> minint = math.mininteger
-local <const> maxint = math.maxinteger
+local minint <const> = math.mininteger
+local maxint <const> = math.maxinteger
 
-local <const> intbits = math.floor(math.log(maxint, 2) + 0.5) + 1
+local intbits <const> = math.floor(math.log(maxint, 2) + 0.5) + 1
 assert((1 << intbits) == 0)
 
 assert(minint == 1 << (intbits - 1))
@@ -270,7 +270,7 @@ else
 end
 
 do
-  local <const> NaN = 0/0
+  local NaN <const> = 0/0
   assert(not (NaN < 0))
   assert(not (NaN > minint))
   assert(not (NaN <= -9))
@@ -767,8 +767,8 @@ assert(a == '10' and b == '20')
 
 do
   print("testing -0 and NaN")
-  local <const> mz = -0.0
-  local <const> z = 0.0
+  local mz <const> = -0.0
+  local z <const> = 0.0
   assert(mz == z)
   assert(1/mz < 0 and 0 < 1/z)
   local a = {[mz] = 1}
@@ -776,18 +776,18 @@ do
   a[z] = 2
   assert(a[z] == 2 and a[mz] == 2)
   local inf = math.huge * 2 + 1
-  local <const> mz = -1/inf
-  local <const> z = 1/inf
+  local mz <const> = -1/inf
+  local z <const> = 1/inf
   assert(mz == z)
   assert(1/mz < 0 and 0 < 1/z)
-  local <const> NaN = inf - inf
+  local NaN <const> = inf - inf
   assert(NaN ~= NaN)
   assert(not (NaN < NaN))
   assert(not (NaN <= NaN))
   assert(not (NaN > NaN))
   assert(not (NaN >= NaN))
   assert(not (0 < NaN) and not (NaN < 0))
-  local <const> NaN1 = 0/0
+  local NaN1 <const> = 0/0
   assert(NaN ~= NaN1 and not (NaN <= NaN1) and not (NaN1 <= NaN))
   local a = {}
   assert(not pcall(rawset, a, NaN, 1))
@@ -816,8 +816,8 @@ end
 -- the first call after seed 1007 should return 0x7a7040a5a323c9d6
 do
   -- all computations should work with 32-bit integers
-  local <const> h = 0x7a7040a5   -- higher half
-  local <const> l = 0xa323c9d6   -- lower half
+  local h <const> = 0x7a7040a5   -- higher half
+  local l <const> = 0xa323c9d6   -- lower half
 
   math.randomseed(1007)
   -- get the low 'intbits' of the 64-bit expected result

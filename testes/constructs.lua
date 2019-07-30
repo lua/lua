@@ -211,15 +211,15 @@ assert(a==1 and b==nil)
 print'+';
 
 do   -- testing constants
-  local <const> prog = [[local <XXX> x = 10]]
+  local prog <const> = [[local x <XXX> = 10]]
   checkload(prog, "unknown attribute 'XXX'")
 
-  checkload([[local <const> xxx = 20; xxx = 10]],
+  checkload([[local xxx <const> = 20; xxx = 10]],
              ":1: attempt to assign to const variable 'xxx'")
 
   checkload([[
     local xx;
-    local <const> xxx = 20;
+    local xxx <const> = 20;
     local yyy;
     local function foo ()
       local abc = xx + yyy + xxx;
@@ -228,7 +228,7 @@ do   -- testing constants
   ]], ":6: attempt to assign to const variable 'xxx'")
 
   checkload([[
-    local <toclose> x = nil
+    local x <close> = nil
     x = io.open()
   ]], ":2: attempt to assign to const variable 'x'")
 end
@@ -304,7 +304,7 @@ if _ENV.GLOB1 == 0 then
   basiccases[2][1] = "F"   -- constant false
 
   prog = [[
-    local <const> F = false
+    local F <const> = false
     if %s then IX = true end
     return %s
 ]]
@@ -312,7 +312,7 @@ else
   basiccases[4][1] = "k10"   -- constant 10
 
   prog = [[
-    local <const> k10 = 10
+    local k10 <const> = 10
     if %s then IX = true end
     return %s
   ]]
@@ -322,12 +322,12 @@ print('testing short-circuit optimizations (' .. _ENV.GLOB1 .. ')')
 
 
 -- operators with their respective values
-local <const> binops = {
+local binops <const> = {
   {" and ", function (a,b) if not a then return a else return b end end},
   {" or ", function (a,b) if a then return a else return b end end},
 }
 
-local <const> cases = {}
+local cases <const> = {}
 
 -- creates all combinations of '(cases[i] op cases[n-i])' plus
 -- 'not(cases[i] op cases[n-i])' (syntax + value)
