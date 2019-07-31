@@ -7926,8 +7926,8 @@ instead of returning an error code.
 Opens the given file name in read mode
 and returns an iterator function that
 works like @T{file:lines(@Cdots)} over the opened file.
-When the iterator function detects the end of file,
-it returns no values (to finish the loop) and automatically closes the file.
+When the iterator function fails to read any value,
+it automatically closes the file.
 Besides the iterator function,
 @id{io.lines} returns three other values:
 two @nil values as placeholders,
@@ -7941,7 +7941,8 @@ to @T{io.input():lines("l")};
 that is, it iterates over the lines of the default input file.
 In this case, the iterator does not close the file when the loop ends.
 
-In case of errors this function raises the error,
+In case of errors opening the file,
+this function raises the error,
 instead of returning an error code.
 
 }
@@ -8052,9 +8053,6 @@ will iterate over all characters of the file,
 starting at the current position.
 Unlike @Lid{io.lines}, this function does not close the file
 when the loop ends.
-
-In case of errors this function raises the error,
-instead of returning an error code.
 
 }
 
