@@ -651,6 +651,9 @@ static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
     case OP_SHRI: case OP_SHLI:
       *name = "shift";
       return "metamethod";
+    case OP_CLOSE: case OP_RETURN:
+      *name = "close";
+      return "metamethod";
     default:
       return NULL;  /* cannot find a reasonable name */
   }

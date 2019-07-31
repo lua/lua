@@ -316,14 +316,27 @@ do   -- errors in __close
   assert(log[1] == 5 and log[2] == 4 and log[3] == 4 and log[4] == 4
          and #log == 4)
 
-  -- error in toclose in vararg function
-  function foo (...)
-    local x123 <close> = 10
+  -- error leaving a block
+  local function foo (...)
+    do
+      local x1 <close> = func2close(function () error("Y") end)
+      local x123 <close> = func2close(function () error("X") end)
+    end
   end
 
-  local st, msg = pcall(foo)
-  assert(string.find(msg, "'x123'"))
+  local st, msg = xpcall(foo, debug.traceback)
+  assert(string.match(msg, "^[^ ]* X"))
+  assert(string.find(msg, "in metamethod 'close'"))
 
+  -- error in toclose in vararg function
+  local function foo (...)
+    local x123 <close> = func2close(function () error("X") end)
+  end
+
+  local st, msg = xpcall(foo, debug.traceback)
+  assert(string.match(msg, "^[^ ]* X"))
+
+  assert(string.find(msg, "in metamethod 'close'"))
 end
 
 
