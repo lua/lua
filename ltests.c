@@ -1572,6 +1572,9 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("error") {
       lua_error(L1);
     }
+    else if EQ("abort") {
+      abort();
+    }
     else if EQ("throw") {
 #if defined(__cplusplus)
 static struct X { int x; } x;

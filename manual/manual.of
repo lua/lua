@@ -1534,14 +1534,16 @@ or exiting by an error.
 
 Here, to @emph{close} a value means
 to call its @idx{__close} metamethod.
-If the value is @nil, it is ignored;
-otherwise,
-if it does not have a @idx{__close} metamethod,
-an error is raised.
 When calling the metamethod,
 the value itself is passed as the first argument
-and the error object (if any) is passed as a second argument;
+and the error object that caused the exit (if any)
+is passed as a second argument;
 if there was no error, the second argument is @nil.
+
+The value assigned to a to-be-closed variable
+must have a @idx{__close} metamethod
+or be a false value.
+(@nil and @false are ignored as to-be-closed values.)
 
 If several to-be-closed variables go out of scope at the same event,
 they are closed in the reverse order that they were declared.
@@ -2917,8 +2919,9 @@ it is left unchanged.
 @APIEntry{void lua_close (lua_State *L);|
 @apii{0,0,-}
 
-Destroys all objects in the given Lua state
-(calling the corresponding garbage-collection metamethods, if any)
+Close all active to-be-closed variables in the main thread,
+release all objects in the given Lua state
+(calling the corresponding garbage-collection metamethods, if any),
 and frees all dynamic memory used by this state.
 
 On several platforms, you may not need to call this function,
@@ -4186,7 +4189,7 @@ An index marked as to-be-closed should not be removed from the stack
 by any other function in the API except @Lid{lua_settop} or @Lid{lua_pop}.
 
 This function should not be called for an index
-that is equal to or below an already marked to-be-closed index.
+that is equal to or below an active to-be-closed index.
 
 This function can raise an out-of-memory error.
 In that case, the value in the given index is immediately closed,

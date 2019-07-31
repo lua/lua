@@ -124,11 +124,23 @@ static int prepclosingmethod (lua_State *L, TValue *obj, TValue *err) {
 
 
 /*
+** Raise an error with message 'msg', inserting the name of the
+** local variable at position 'level' in the stack.
+*/
+static void varerror (lua_State *L, StkId level, const char *msg) {
+  int idx = cast_int(level - L->ci->func);
+  const char *vname = luaG_findlocal(L, L->ci, idx, NULL);
+  if (vname == NULL) vname = "?";
+  luaG_runerror(L, msg, vname);
+}
+
+
+/*
 ** Prepare and call a closing method. If status is OK, code is still
 ** inside the original protected call, and so any error will be handled
-** there. Otherwise, a previous error already activated original
+** there. Otherwise, a previous error already activated the original
 ** protected call, and so the call to the closing method must be
-** protected here. (A status = CLOSEPROTECT behaves like a previous
+** protected here. (A status == CLOSEPROTECT behaves like a previous
 ** error, to also run the closing method in protected mode).
 ** If status is OK, the call to the closing method will be pushed
 ** at the top of the stack. Otherwise, values are pushed after
@@ -140,12 +152,8 @@ static int callclosemth (lua_State *L, StkId level, int status) {
   if (likely(status == LUA_OK)) {
     if (prepclosingmethod(L, uv, &G(L)->nilvalue))  /* something to call? */
       callclose(L, NULL);  /* call closing method */
-    else if (!ttisnil(uv)) {  /* non-closable non-nil value? */
-      int idx = cast_int(level - L->ci->func);
-      const char *vname = luaG_findlocal(L, L->ci, idx, NULL);
-      if (vname == NULL) vname = "?";
-      luaG_runerror(L, "attempt to close non-closable variable '%s'", vname);
-    }
+    else if (!l_isfalse(uv))  /* non-closable non-false value? */
+      varerror(L, level, "attempt to close non-closable variable '%s'");
   }
   else {  /* must close the object in protected mode */
     ptrdiff_t oldtop;
@@ -170,9 +178,7 @@ static int callclosemth (lua_State *L, StkId level, int status) {
 ** (can raise a memory-allocation error)
 */
 static void trynewtbcupval (lua_State *L, void *ud) {
-  StkId level = cast(StkId, ud);
-  lua_assert(L->openupval == NULL || uplevel(L->openupval) < level);
-  newupval(L, 1, level, &L->openupval);
+  newupval(L, 1, cast(StkId, ud), &L->openupval);
 }
 
 
@@ -182,13 +188,22 @@ static void trynewtbcupval (lua_State *L, void *ud) {
 ** as there is no upvalue to call it later.
 */
 void luaF_newtbcupval (lua_State *L, StkId level) {
-  int status = luaD_rawrunprotected(L, trynewtbcupval, level);
-  if (unlikely(status != LUA_OK)) {  /* memory error creating upvalue? */
-    lua_assert(status == LUA_ERRMEM);
-    luaD_seterrorobj(L, LUA_ERRMEM, level + 1);  /* save error message */
-    if (prepclosingmethod(L, s2v(level), s2v(level + 1)))
+  TValue *obj = s2v(level);
+  lua_assert(L->openupval == NULL || uplevel(L->openupval) < level);
+  if (!l_isfalse(obj)) {  /* false doesn't need to be closed */
+    int status;
+    const TValue *tm = luaT_gettmbyobj(L, obj, TM_CLOSE);
+    if (ttisnil(tm))  /* no metamethod? */
+      varerror(L, level, "variable '%s' got a non-closable value");
+    status = luaD_rawrunprotected(L, trynewtbcupval, level);
+    if (unlikely(status != LUA_OK)) {  /* memory error creating upvalue? */
+      lua_assert(status == LUA_ERRMEM);
+      luaD_seterrorobj(L, LUA_ERRMEM, level + 1);  /* save error message */
+      /* next call must succeed, as object is closable */
+      prepclosingmethod(L, s2v(level), s2v(level + 1));
       callclose(L, NULL);  /* call closing method */
-    luaD_throw(L, LUA_ERRMEM);  /* throw memory error */
+      luaD_throw(L, LUA_ERRMEM);  /* throw memory error */
+    }
   }
 }
 

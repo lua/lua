@@ -1739,10 +1739,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_TFORPREP) {
-        if (!ttisnil(s2v(ra + 3))) {  /* is 'toclose' not nil? */
-          /* create to-be-closed upvalue for it */
-          halfProtect(luaF_newtbcupval(L, ra + 3));
-        }
+        /* create to-be-closed upvalue (if needed) */
+        halfProtect(luaF_newtbcupval(L, ra + 3));
         pc += GETARG_Bx(i);
         i = *(pc++);  /* go to next instruction */
         lua_assert(GET_OPCODE(i) == OP_TFORCALL && ra == RA(i));

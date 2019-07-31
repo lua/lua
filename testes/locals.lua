@@ -215,11 +215,13 @@ end
 do
   local a = {}
   do
+    local b <close> = false   -- not to be closed
     local x <close> = setmetatable({"x"}, {__close = function (self)
                                                    a[#a + 1] = self[1] end})
     local w, y <close>, z = func2close(function (self, err)
                                 assert(err == nil); a[#a + 1] = "y"
                               end, 10, 20)
+    local c <close> = nil  -- not to be closed
     a[#a + 1] = "in"
     assert(w == 10 and z == 20)
   end
@@ -325,24 +327,22 @@ do   -- errors in __close
 end
 
 
-do
-
-  -- errors due to non-closable values
+do   -- errors due to non-closable values
   local function foo ()
     local x <close> = {}
+    os.exit(false)    -- should not run
   end
   local stat, msg = pcall(foo)
-  assert(not stat and string.find(msg, "variable 'x'"))
+  assert(not stat and
+    string.find(msg, "variable 'x' got a non%-closable value"))
 
-
-  -- with other errors, non-closable values are ignored
   local function foo ()
-    local x <close> = 34
-    local y <close> = func2close(function () error(32) end)
+    local xyz <close> = setmetatable({}, {__close = print})
+    getmetatable(xyz).__close = nil   -- remove metamethod
   end
   local stat, msg = pcall(foo)
-  assert(not stat and msg == 32)
-
+  assert(not stat and
+    string.find(msg, "attempt to close non%-closable variable 'xyz'"))
 end
 
 
@@ -519,7 +519,8 @@ end
 -- a suspended coroutine should not close its variables when collected
 local co
 co = coroutine.wrap(function()
-  local x <close> = function () os.exit(false) end    -- should not run
+  -- should not run
+  local x <close> = func2close(function () os.exit(false) end)
   co = nil
   coroutine.yield()
 end)

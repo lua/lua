@@ -1096,7 +1096,7 @@ do
   assert(type(a[1]) == "string" and a[2][1] == 11)
   assert(#openresource == 0)    -- was closed
 
-  -- error
+  -- closing by error
   local a, b = pcall(T.makeCfunc[[
     call 0 1   # create resource
     toclose -1 # mark it to be closed
@@ -1104,6 +1104,15 @@ do
   ]], newresource)
   assert(a == false and b[1] == 11)
   assert(#openresource == 0)    -- was closed
+
+  -- non-closable value
+  local a, b = pcall(T.makeCfunc[[
+    newtable   # create non-closable object
+    toclose -1 # mark it to be closed (shoud raise an error)
+    abort  # will not be executed
+  ]])
+  assert(a == false and
+    string.find(b, "non%-closable value"))
 
   local function check (n)
     assert(#openresource == n)
