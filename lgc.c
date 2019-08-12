@@ -413,13 +413,13 @@ static void traverseweakvalue (global_State *g, Table *h) {
 ** (in the atomic phase). In generational mode, it (like all visited
 ** tables) must be kept in some gray list for post-processing.
 */
-static int traverseephemeron (global_State *g, Table *h) {
+static int traverseephemeron (global_State *g, Table *h, int inv) {
   int marked = 0;  /* true if an object is marked in this traversal */
   int hasclears = 0;  /* true if table has white keys */
   int hasww = 0;  /* true if table has entry "white-key -> white-value" */
-  Node *n, *limit = gnodelast(h);
   unsigned int i;
   unsigned int asize = luaH_realasize(h);
+  unsigned int nsize = sizenode(h);
   /* traverse array part */
   for (i = 0; i < asize; i++) {
     if (valiswhite(&h->array[i])) {
@@ -427,8 +427,10 @@ static int traverseephemeron (global_State *g, Table *h) {
       reallymarkobject(g, gcvalue(&h->array[i]));
     }
   }
-  /* traverse hash part */
-  for (n = gnode(h, 0); n < limit; n++) {
+  /* traverse hash part; if 'inv', traverse descending
+     (see 'convergeephemerons') */
+  for (i = 0; i < nsize; i++) {
+    Node *n = inv ? gnode(h, nsize - 1 - i) : gnode(h, i);
     if (isempty(gval(n)))  /* entry is empty? */
       clearkey(n);  /* clear its key */
     else if (iscleared(g, gckeyN(n))) {  /* key is not marked (yet)? */
@@ -490,7 +492,7 @@ static lu_mem traversetable (global_State *g, Table *h) {
     if (!weakkey)  /* strong keys? */
       traverseweakvalue(g, h);
     else if (!weakvalue)  /* strong values? */
-      traverseephemeron(g, h);
+      traverseephemeron(g, h, 0);
     else  /* all weak */
       linkgclist(h, g->allweak);  /* nothing to traverse now */
   }
@@ -620,21 +622,30 @@ static lu_mem propagateall (global_State *g) {
 }
 
 
+/*
+** Traverse all ephemeron tables propagating marks from keys to values.
+** Repeat until it converges, that is, nothing new is marked. 'dir'
+** inverts the direction of the traversals, trying to speed up
+** convergence on chains in the same table.
+**
+*/
 static void convergeephemerons (global_State *g) {
   int changed;
+  int dir = 0;
   do {
     GCObject *w;
     GCObject *next = g->ephemeron;  /* get ephemeron list */
     g->ephemeron = NULL;  /* tables may return to this list when traversed */
     changed = 0;
-    while ((w = next) != NULL) {
-      next = gco2t(w)->gclist;
-      if (traverseephemeron(g, gco2t(w))) {  /* traverse marked some value? */
+    while ((w = next) != NULL) {  /* for each ephemeron table */
+      next = gco2t(w)->gclist;  /* list is rebuilt during loop */
+      if (traverseephemeron(g, gco2t(w), dir)) {  /* marked some value? */
         propagateall(g);  /* propagate changes */
         changed = 1;  /* will have to revisit all ephemeron tables */
       }
     }
-  } while (changed);
+    dir = !dir;  /* invert direction next time */
+  } while (changed);  /* repeat until no more changes */
 }
 
 /* }====================================================== */
