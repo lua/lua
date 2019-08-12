@@ -8142,30 +8142,22 @@ end of the file, and returns its size.
 
 @LibEntry{file:setvbuf (mode [, size])|
 
-Sets the buffering mode for an output file.
+Sets the buffering mode for a file.
 There are three available modes:
 @description{
-
-@item{@St{no}|
-no buffering; the result of any output operation appears immediately.
-}
-
-@item{@St{full}|
-full buffering; output operation is performed only
-when the buffer is full or when
-you explicitly @T{flush} the file @seeF{io.flush}.
-}
-
-@item{@St{line}|
-line buffering; output is buffered until a newline is output
-or there is any input from some special files
-(such as a terminal device).
+@item{@St{no}| no buffering.}
+@item{@St{full}| full buffering.}
+@item{@St{line}| line buffering.}
 }
 
 }
 For the last two cases,
 @id{size} is a hint for the size of the buffer, in bytes.
 The default is an appropriate size.
+
+The specific behavior of each mode is non portable;
+check the underlying @ANSI{setvbuf} in your platform for
+more details.
 
 }
 
