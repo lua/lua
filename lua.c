@@ -73,6 +73,7 @@ static void print_usage (const char *badoption) {
   "  -l name  require library 'name' into global 'name'\n"
   "  -v       show version information\n"
   "  -E       ignore environment variables\n"
+  "  -q       turn warnings off\n"
   "  --       stop handling options\n"
   "  -        stop handling options and execute stdin\n"
   ,
@@ -259,14 +260,18 @@ static int collectargs (char **argv, int *first) {
       case '\0':  /* '-' */
         return args;  /* script "name" is '-' */
       case 'E':
-        if (argv[i][2] != '\0')  /* extra characters after 1st? */
+        if (argv[i][2] != '\0')  /* extra characters? */
           return has_error;  /* invalid option */
         args |= has_E;
+        break;
+      case 'q':
+        if (argv[i][2] != '\0')  /* extra characters? */
+          return has_error;  /* invalid option */
         break;
       case 'i':
         args |= has_i;  /* (-i implies -v) *//* FALLTHROUGH */
       case 'v':
-        if (argv[i][2] != '\0')  /* extra characters after 1st? */
+        if (argv[i][2] != '\0')  /* extra characters? */
           return has_error;  /* invalid option */
         args |= has_v;
         break;
@@ -289,7 +294,8 @@ static int collectargs (char **argv, int *first) {
 
 
 /*
-** Processes options 'e' and 'l', which involve running Lua code.
+** Processes options 'e' and 'l', which involve running Lua code, and
+** 'q', which also affects the state.
 ** Returns 0 if some code raises an error.
 */
 static int runargs (lua_State *L, char **argv, int n) {
@@ -297,15 +303,21 @@ static int runargs (lua_State *L, char **argv, int n) {
   for (i = 1; i < n; i++) {
     int option = argv[i][1];
     lua_assert(argv[i][0] == '-');  /* already checked */
-    if (option == 'e' || option == 'l') {
-      int status;
-      const char *extra = argv[i] + 2;  /* both options need an argument */
-      if (*extra == '\0') extra = argv[++i];
-      lua_assert(extra != NULL);
-      status = (option == 'e')
-               ? dostring(L, extra, "=(command line)")
-               : dolibrary(L, extra);
-      if (status != LUA_OK) return 0;
+    switch (option) {
+      case 'e':  case 'l': {
+        int status;
+        const char *extra = argv[i] + 2;  /* both options need an argument */
+        if (*extra == '\0') extra = argv[++i];
+        lua_assert(extra != NULL);
+        status = (option == 'e')
+                 ? dostring(L, extra, "=(command line)")
+                 : dolibrary(L, extra);
+        if (status != LUA_OK) return 0;
+        break;
+      }
+      case 'q':
+        lua_warning(L, "@off", 0);  /* no warnings */
+        break;
     }
   }
   return 1;

@@ -209,6 +209,10 @@ if #msgs > 0 then
   warn("#tests not performed:\n  ", m, "\n")
 end
 
+warn("@off")
+warn("******** THIS WARNING SHOULD NOT APPEAR **********")
+warn("******** THIS WARNING ALSO SHOULD NOT APPEAR **********")
+warn("@on")
 print("(there should be two warnings now)")
 warn("#This is ", "an expected", " warning")
 warn("#This is", " another one")

@@ -79,32 +79,62 @@ static int tpanic (lua_State *L) {
 
 /*
 ** Warning function for tests. Fist, it concatenates all parts of
-** a warning in buffer 'buff'. Then:
-** - messages starting with '#' are shown on standard output (used to
-** test explicit warnings);
-** - messages containing '@' are stored in global '_WARN' (used to test
-** errors that generate warnings);
+** a warning in buffer 'buff'. Then, it has three modes:
+** - 0.normal: messages starting with '#' are shown on standard output;
 ** - other messages abort the tests (they represent real warning
 ** conditions; the standard tests should not generate these conditions
-** unexpectedly).
+** unexpectedly);
+** - 1.allow: all messages are shown;
+** - 2.store: all warnings go to the global '_WARN';
 */
 static void warnf (void *ud, const char *msg, int tocont) {
   static char buff[200] = "";  /* should be enough for tests... */
+  static int onoff = 1;
+  static int mode = 0;  /* start in normal mode */
+  static int lasttocont = 0;
+  if (!lasttocont && !tocont && *msg == '@') {  /* control message? */
+    if (buff[0] != '\0')
+      badexit("Control warning during warning: %s\naborting...\n", msg);
+    if (strcmp(msg + 1, "off") == 0)
+      onoff = 0;
+    else if (strcmp(msg + 1, "on") == 0)
+      onoff = 1;
+    else if (strcmp(msg + 1, "normal") == 0)
+      mode = 0;
+    else if (strcmp(msg + 1, "allow") == 0)
+      mode = 1;
+    else if (strcmp(msg + 1, "store") == 0)
+      mode = 2;
+    else
+      badexit("Invalid control warning in test mode: %s\naborting...\n", msg);
+    return;
+  }
+  lasttocont = tocont;
   if (strlen(msg) >= sizeof(buff) - strlen(buff))
     badexit("%s", "warnf-buffer overflow");
   strcat(buff, msg);  /* add new message to current warning */
   if (!tocont) {  /* message finished? */
-    if (buff[0] == '#')  /* expected warning? */
-      printf("Expected Lua warning: %s\n", buff);  /* print it */
-    else if (strchr(buff, '@') != NULL) {  /* warning for test purposes? */
-      lua_State *L = cast(lua_State *, ud);
-      lua_unlock(L);
-      lua_pushstring(L, buff);
-      lua_setglobal(L, "_WARN");  /* assign message to global '_WARN' */
-      lua_lock(L);
+    switch (mode) {
+      case 0: {  /* normal */
+        if (buff[0] != '#' && onoff)  /* unexpected warning? */
+          badexit("Unexpected warning in test mode: %s\naborting...\n", buff);
+        /* else */ /* FALLTHROUGH */
+      }
+      case 1: {  /* allow */
+        if (onoff)
+          fprintf(stderr, "Lua warning: %s\n", buff);  /* print warning */
+        break;
+      }
+      case 2: {  /* store */
+        lua_State *L = cast(lua_State *, ud);
+        lua_unlock(L);
+        lua_pushstring(L, buff);
+        lua_setglobal(L, "_WARN");  /* assign message to global '_WARN' */
+        lua_lock(L);
+        buff[0] = '\0';  /* prepare buffer for next warning */
+        break;
+      }
     }
-    else  /* a real warning; should not happen during tests */
-      badexit("Unexpected warning in test mode: %s\naborting...\n", buff);
     buff[0] = '\0';  /* prepare buffer for next warning */
   }
 }

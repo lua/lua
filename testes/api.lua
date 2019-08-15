@@ -977,6 +977,7 @@ assert(t[7] == nil)
 
 -------------------------------------------------------------------------
 do   -- testing errors during GC
+  warn("@off")
   collectgarbage("stop")
   local a = {}
   for i=1,20 do
@@ -994,6 +995,7 @@ do   -- testing errors during GC
   collectgarbage()
   assert(A == 10)  -- number of normal collections
   collectgarbage("restart")
+  warn("@on")
 end
 -------------------------------------------------------------------------
 -- test for userdata vals

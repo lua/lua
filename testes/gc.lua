@@ -369,6 +369,7 @@ if T then
     s[n] = i
   end
 
+  warn("@store")
   collectgarbage()
   assert(string.find(_WARN, "error in __gc metamethod"))
   assert(string.match(_WARN, "@(.-)@") == "expected")
@@ -383,6 +384,7 @@ if T then
   for i = 1, 10 do assert(s[i]) end
 
   getmetatable(u).__gc = nil
+  warn("@normal")
 
 end
 print '+'
@@ -475,9 +477,11 @@ end
 
 -- errors during collection
 if T then
+  warn("@store")
   u = setmetatable({}, {__gc = function () error "@expected error" end})
   u = nil
   collectgarbage()
+  warn("@normal")
 end
 
 
@@ -645,7 +649,7 @@ end
 
 -- create several objects to raise errors when collected while closing state
 if T then
-  local error, assert, find = error, assert, string.find
+  local error, assert, find, warn = error, assert, string.find, warn
   local n = 0
   local lastmsg
   local mt = {__gc = function (o)
@@ -659,7 +663,9 @@ if T then
     else
       assert(lastmsg == _WARN)  -- subsequent error messages are equal
     end
+    warn("@store")
     error"@expected warning"
+    warn("@normal")
   end}
   for i = 10, 1, -1 do
     -- create object and preserve it until the end

@@ -1002,29 +1002,43 @@ static int panic (lua_State *L) {
 
 
 /*
-** Emit a warning. '*previoustocont' signals whether previous message
-** was to be continued by the current one.
+** Emit a warning. '*warnstate' means:
+** 0 - warning system is off;
+** 1 - ready to start a new message;
+** 2 - previous message is to be continued.
 */
 static void warnf (void *ud, const char *message, int tocont) {
-  int *previoustocont = (int *)ud;
-  if (!*previoustocont)  /* previous message was the last? */
+  int *warnstate = (int *)ud;
+  if (*warnstate != 2 && !tocont && *message == '@') {  /* control message? */
+    if (strcmp(message + 1, "off") == 0)
+      *warnstate = 0;
+    else if (strcmp(message + 1, "on") == 0)
+      *warnstate = 1;
+    return;
+  }
+  else if (*warnstate == 0)  /* warnings off? */
+    return;
+  if (*warnstate == 1)  /* previous message was the last? */
     lua_writestringerror("%s", "Lua warning: ");  /* start a new warning */
   lua_writestringerror("%s", message);  /* write message */
-  if (!tocont)  /* is this the last part? */
+  if (tocont)  /* not the last part? */
+    *warnstate = 2;  /* to be continued */
+  else {  /* last part */
     lua_writestringerror("%s", "\n");  /* finish message with end-of-line */
-  *previoustocont = tocont;
+    *warnstate = 1;  /* ready to start a new message */
+  }
 }
 
 
 LUALIB_API lua_State *luaL_newstate (void) {
   lua_State *L = lua_newstate(l_alloc, NULL);
   if (L) {
-    int *previoustocont;  /* space for warning state */
+    int *warnstate;  /* space for warning state */
     lua_atpanic(L, &panic);
-    previoustocont = (int *)lua_newuserdatauv(L, sizeof(int), 0);
+    warnstate = (int *)lua_newuserdatauv(L, sizeof(int), 0);
     luaL_ref(L, LUA_REGISTRYINDEX);  /* make sure it won't be collected */
-    *previoustocont = 0;  /* next message starts a new warning */
-    lua_setwarnf(L, warnf, previoustocont);
+    *warnstate = 1;  /* next message starts a new warning */
+    lua_setwarnf(L, warnf, warnstate);
   }
   return L;
 }

@@ -48,9 +48,9 @@ static int luaB_warn (lua_State *L) {
   luaL_checkstring(L, 1);  /* at least one argument */
   for (i = 2; i <= n; i++)
     luaL_checkstring(L, i);  /* make sure all arguments are strings */
-  for (i = 1; i <= n; i++)  /* compose warning */
+  for (i = 1; i < n; i++)  /* compose warning */
     lua_warning(L, lua_tostring(L, i), 1);
-  lua_warning(L, "", 0);  /* close warning */
+  lua_warning(L, lua_tostring(L, n), 0);  /* close warning */
   return 0;
 }
 

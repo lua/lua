@@ -221,6 +221,28 @@ assert(string.find(getoutput(), "error calling 'print'"))
 RUN('echo "io.stderr:write(1000)\ncont" | lua -e "require\'debug\'.debug()" 2> %s', out)
 checkout("lua_debug> 1000lua_debug> ")
 
+-- test warnings
+RUN('echo "io.stderr:write(1); warn[[XXX]]" | lua -q 2> %s', out)
+checkout("1")
+
+prepfile[[
+warn("@allow")               -- unknown control, ignored
+warn("@off", "XXX", "@off")  -- these are not control messages
+warn("@off")                 -- this one is
+warn("@on", "YYY", "@on")    -- not control, but warn is off
+warn("@off")                 -- keep it off
+warn("@on")                  -- restart warnings
+warn("", "@on")              -- again, no control, real warning
+warn("@on")                  -- keep it "started"
+warn("Z", "Z", "Z")          -- common warning
+]]
+RUN('lua %s 2> %s', prog, out)
+checkout[[
+Lua warning: @offXXX@off
+Lua warning: @on
+Lua warning: ZZZ
+]]
+
 -- test many arguments
 prepfile[[print(({...})[30])]]
 RUN('lua %s %s > %s', prog, string.rep(" a", 30), out)
@@ -355,8 +377,15 @@ if T then   -- test library?
   NoRun("not enough memory", "env MEMLIMIT=100 lua")
 
   -- testing 'warn'
+  warn("@store")
   warn("@123", "456", "789")
   assert(_WARN == "@123456789")
+
+  warn("zip", "", " ", "zap")
+  assert(_WARN == "zip zap")
+  warn("ZIP", "", " ", "ZAP")
+  assert(_WARN == "ZIP ZAP")
+  warn("@normal")
 end
 
 do

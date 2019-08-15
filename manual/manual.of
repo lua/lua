@@ -4370,6 +4370,8 @@ The third parameter is a boolean that
 indicates whether the message is
 to be continued by the message in the next call.
 
+See @Lid{warn} for more details about warnings.
+
 }
 
 @APIEntry{
@@ -4379,6 +4381,8 @@ void lua_warning (lua_State *L, const char *msg, int tocont);|
 Emits a warning with the given message.
 A message in a call with @id{tocont} true should be
 continued in another call to this function.
+
+See @Lid{warn} for more details about warnings.
 
 }
 
@@ -6355,6 +6359,16 @@ The current value of this variable is @St{Lua 5.4}.
 Emits a warning with a message composed by the concatenation
 of all its arguments (which should be strings).
 
+By convention,
+a one-piece message starting with @Char{@At}
+is intended to be a @emph{control message},
+which is a message to the warning system itself.
+In particular, the standard warning function in Lua
+recognizes the control messages @St{@At{}off},
+to stop the emission of warnings,
+and @St{@At{}on}, to (re)start the emission;
+it ignores unknown control messages.
+
 }
 
 @LibEntry{xpcall (f, msgh [, arg1, @Cdots])|
@@ -7293,7 +7307,7 @@ stored as the first capture, and therefore has @N{number 1};
 the character matching @St{.} is captured with @N{number 2},
 and the part matching @St{%s*} has @N{number 3}.
 
-As a special case, the empty capture @T{()} captures
+As a special case, the capture @T{()} captures
 the current string position (a number).
 For instance, if we apply the pattern @T{"()aa()"} on the
 string @T{"flaaap"}, there will be two captures: @N{3 and 5}.
@@ -7858,7 +7872,6 @@ they are compared as @x{unsigned integers}.
 
 }
 
-
 @sect2{iolib| @title{Input and Output Facilities}
 
 The I/O library provides two different styles for file manipulation.
@@ -8150,7 +8163,6 @@ There are three available modes:
 @item{@St{line}| line buffering.}
 }
 
-}
 For the last two cases,
 @id{size} is a hint for the size of the buffer, in bytes.
 The default is an appropriate size.
@@ -8708,6 +8720,7 @@ The options are:
 @item{@T{-i}| enters interactive mode after running @rep{script};}
 @item{@T{-v}| prints version information;}
 @item{@T{-E}| ignores environment variables;}
+@item{@T{-q}| turn warnings off;}
 @item{@T{--}| stops handling options;}
 @item{@T{-}| executes @id{stdin} as a file and stops handling options.}
 }
@@ -8733,12 +8746,13 @@ setting the values of
 @Lid{package.path} and @Lid{package.cpath}
 with the default paths defined in @id{luaconf.h}.
 
-All options are handled in order, except @T{-i} and @T{-E}.
+The options @T{-e}, @T{-l}, and @T{-q} are handled in
+the order they appear.
 For instance, an invocation like
 @verbatim{
-$ lua -e'a=1' -e 'print(a)' script.lua
+$ lua -e 'a=1' -llib1 script.lua
 }
-will first set @id{a} to 1, then print the value of @id{a},
+will first set @id{a} to 1, then require the library @id{lib1},
 and finally run the file @id{script.lua} with no arguments.
 (Here @T{$} is the shell prompt. Your prompt may be different.)
 
@@ -8798,7 +8812,8 @@ has a metamethod @idx{__tostring},
 the interpreter calls this metamethod to produce the final message.
 Otherwise, the interpreter converts the error object to a string
 and adds a stack traceback to it.
-Warnings are simply printed in the standard error output.
+When warnings are on,
+they are simply printed in the standard error output.
 
 When finishing normally,
 the interpreter closes its main Lua state
