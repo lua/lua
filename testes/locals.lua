@@ -286,57 +286,149 @@ do
 end
 
 
-do   -- errors in __close
-  local log = {}
-  local function foo (err)
+-- auxiliary functions for testing warnings in '__close'
+local function prepwarn ()
+  warn("@off")      -- do not show (lots of) warnings
+  if not T then
+    _WARN = "OFF"    -- signal that warnings are not being captured
+  else
+    warn("@store")    -- to test the warnings
+  end
+end
+
+
+local function endwarn ()
+  assert(T or _WARN == "OFF")
+  warn("@on")          -- back to normal
+  warn("@normal")
+  _WARN = nil
+end
+
+
+local function checkwarn (msg)
+  assert(_WARN == "OFF" or string.find(_WARN, msg))
+end
+
+
+do print("testing errors in __close")
+
+  prepwarn()
+
+  -- original error is in __close
+  local function foo ()
+
     local x <close> =
-       func2close(function (self, msg) log[#log + 1] = msg; error(1) end)
+      func2close(function (self, msg)
+        assert(string.find(msg, "@z"))
+        error("@x")
+      end)
+
     local x1 <close> =
-       func2close(function (self, msg) log[#log + 1] = msg; end)
+      func2close(function (self, msg)
+        checkwarn("@y")
+        assert(string.find(msg, "@z"))
+      end)
+
     local gc <close> = func2close(function () collectgarbage() end)
+
     local y <close> =
-      func2close(function (self, msg) log[#log + 1] = msg; error(2) end)
+      func2close(function (self, msg)
+        assert(string.find(msg, "@z"))  -- error in 'z'
+        error("@y")
+      end)
+
+    local first = true
+    local z <close> =
+      -- 'z' close is called twice
+      func2close(function (self, msg)
+        if first then
+          assert(msg == nil)
+          first = false
+        else
+         assert(string.find(msg, "@z"))   -- own error
+        end
+        error("@z")
+      end)
+
+    return 200
+  end
+
+  local stat, msg = pcall(foo, false)
+  assert(string.find(msg, "@z"))
+  checkwarn("@x")
+
+
+  -- original error not in __close
+  local function foo ()
+
+    local x <close> =
+      func2close(function (self, msg)
+        assert(msg == 4)
+      end)
+
+    local x1 <close> =
+      func2close(function (self, msg)
+        checkwarn("@y")
+        assert(msg == 4)
+        error("@x1")
+      end)
+
+    local gc <close> = func2close(function () collectgarbage() end)
+
+    local y <close> =
+      func2close(function (self, msg)
+         assert(msg == 4)   -- error in body
+        error("@y")
+      end)
+
+    local first = true
     local z <close> =
       func2close(function (self, msg)
-        log[#log + 1] = (msg or 10) + 1;
-        error(3)
+        checkwarn("@z")
+        -- 'z' close is called once
+        assert(first and msg == 4)
+        first = false
+        error("@z")
       end)
-    if err then error(4) end
-  end
-  local stat, msg = pcall(foo, false)
-  assert(msg == 3)
-  -- 'z' close is called twice
-  assert(log[1] == 11 and log[2] == 4 and log[3] == 3 and log[4] == 3
-         and log[5] == 3 and #log == 5)
 
-  log = {}
+    error(4)    -- original error
+  end
+
   local stat, msg = pcall(foo, true)
   assert(msg == 4)
-  -- 'z' close is called once
-  assert(log[1] == 5 and log[2] == 4 and log[3] == 4 and log[4] == 4
-         and #log == 4)
+  checkwarn("@x1")   -- last error
 
   -- error leaving a block
   local function foo (...)
     do
-      local x1 <close> = func2close(function () error("Y") end)
-      local x123 <close> = func2close(function () error("X") end)
+      local x1 <close> =
+        func2close(function ()
+          checkwarn("@X")
+          error("@Y")
+        end)
+
+      local x123 <close> =
+        func2close(function ()
+          error("@X")
+        end)
     end
+    os.exit(false)    -- should not run
   end
 
   local st, msg = xpcall(foo, debug.traceback)
-  assert(string.match(msg, "^[^ ]* X"))
+  assert(string.match(msg, "^[^ ]* @X"))
   assert(string.find(msg, "in metamethod 'close'"))
 
   -- error in toclose in vararg function
   local function foo (...)
-    local x123 <close> = func2close(function () error("X") end)
+    local x123 <close> = func2close(function () error("@X") end)
   end
 
   local st, msg = xpcall(foo, debug.traceback)
-  assert(string.match(msg, "^[^ ]* X"))
+  assert(string.match(msg, "^[^ ]* @X"))
 
   assert(string.find(msg, "in metamethod 'close'"))
+  endwarn()
 end
 
 
@@ -360,6 +452,8 @@ end
 
 
 if rawget(_G, "T") then
+
+  warn("@off")
 
   -- memory error inside closing function
   local function foo ()
@@ -437,7 +531,7 @@ if rawget(_G, "T") then
 
     local s = string.rep("a", lim)
 
-    -- concat this table needs two buffer resizes (one for each 's') 
+    -- concat this table needs two buffer resizes (one for each 's')
     local a = {s, s}
 
     collectgarbage()
@@ -472,6 +566,8 @@ if rawget(_G, "T") then
 
     print'+'
   end
+
+  warn("@on")
 end
 
 
@@ -501,17 +597,20 @@ end
 
 
 do
+  prepwarn()
+
   -- error in a wrapped coroutine raising errors when closing a variable
   local x = 0
   local co = coroutine.wrap(function ()
-    local xx <close> = func2close(function () x = x + 1; error("YYY") end)
-    local xv <close> = func2close(function () x = x + 1; error("XXX") end)
+    local xx <close> = func2close(function () x = x + 1; error("@YYY") end)
+    local xv <close> = func2close(function () x = x + 1; error("@XXX") end)
       coroutine.yield(100)
       error(200)
   end)
   assert(co() == 100); assert(x == 0)
   local st, msg = pcall(co); assert(x == 2)
   assert(not st and msg == 200)   -- should get first error raised
+  checkwarn("@YYY")
 
   local x = 0
   local y = 0
@@ -526,6 +625,9 @@ do
   assert(x == 2 and y == 1)   -- first close is called twice
   -- should get first error raised
   assert(not st and string.find(msg, "%w+%.%w+:%d+: XXX"))
+  checkwarn("YYY")
+
+  endwarn()
 end
 
 

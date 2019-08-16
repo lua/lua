@@ -1556,7 +1556,7 @@ However, Lua may call the method one more time.
 After an error,
 the other pending closing methods will still be called.
 Errors in these methods
-interrupt the respective method,
+interrupt the respective method and generate a warning,
 but are otherwise ignored;
 the error reported is only the original one.
 

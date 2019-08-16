@@ -1010,9 +1010,9 @@ static int panic (lua_State *L) {
 static void warnf (void *ud, const char *message, int tocont) {
   int *warnstate = (int *)ud;
   if (*warnstate != 2 && !tocont && *message == '@') {  /* control message? */
-    if (strcmp(message + 1, "off") == 0)
+    if (strcmp(message, "@off") == 0)
       *warnstate = 0;
-    else if (strcmp(message + 1, "on") == 0)
+    else if (strcmp(message, "@on") == 0)
       *warnstate = 1;
     return;
   }

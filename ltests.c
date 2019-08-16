@@ -95,15 +95,15 @@ static void warnf (void *ud, const char *msg, int tocont) {
   if (!lasttocont && !tocont && *msg == '@') {  /* control message? */
     if (buff[0] != '\0')
       badexit("Control warning during warning: %s\naborting...\n", msg);
-    if (strcmp(msg + 1, "off") == 0)
+    if (strcmp(msg, "@off") == 0)
       onoff = 0;
-    else if (strcmp(msg + 1, "on") == 0)
+    else if (strcmp(msg, "@on") == 0)
       onoff = 1;
-    else if (strcmp(msg + 1, "normal") == 0)
+    else if (strcmp(msg, "@normal") == 0)
       mode = 0;
-    else if (strcmp(msg + 1, "allow") == 0)
+    else if (strcmp(msg, "@allow") == 0)
       mode = 1;
-    else if (strcmp(msg + 1, "store") == 0)
+    else if (strcmp(msg, "@store") == 0)
       mode = 2;
     else
       badexit("Invalid control warning in test mode: %s\naborting...\n", msg);

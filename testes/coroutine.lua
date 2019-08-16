@@ -168,7 +168,7 @@ do
     local y <close> = func2close(function (self,err)
       if (err ~= 111) then os.exit(false) end   -- should not happen
       x = 200
-      error(200)
+      error("200")
     end)
     local x <close> = func2close(function (self, err)
       assert(err == nil); error(111)
@@ -177,7 +177,10 @@ do
   end)
   coroutine.resume(co)
   assert(x == 0)
+  _WARN = nil; warn("@off"); warn("@store")
   local st, msg = coroutine.close(co)
+  warn("@on"); warn("@normal")
+  assert(_WARN == nil or string.find(_WARN, "200"))
   assert(st == false and coroutine.status(co) == "dead" and msg == 111)
   assert(x == 200)
 
