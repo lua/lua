@@ -18,7 +18,7 @@ end
 
 local function doit (s)
   local f, msg = load(s)
-  if f == nil then return msg end
+  if not f then return msg end
   local cond, msg = pcall(f)
   return (not cond) and msg
 end
@@ -312,8 +312,8 @@ end
 
 local function lineerror (s, l)
   local err,msg = pcall(load(s))
-  local line = string.match(msg, ":(%d+):")
-  assert(tonumber(line) == l)
+  local line = tonumber(string.match(msg, ":(%d+):"))
+  assert(line == l or (not line and not l))
 end
 
 lineerror("local a\n for i=1,'a' do \n print(i) \n end", 2)
@@ -359,7 +359,7 @@ local p = [[
 g()
 ]]
 X=3;lineerror((p), 3)
-X=0;lineerror((p), nil)
+X=0;lineerror((p), false)
 X=1;lineerror((p), 2)
 X=2;lineerror((p), 1)
 
@@ -510,7 +510,7 @@ checksyntax("a\1a = 1", "", "<\\1>", 1)
 checksyntax("\255a = 1", "", "<\\255>", 1)
 
 doit('I = load("a=9+"); a=3')
-assert(a==3 and I == nil)
+assert(a==3 and not I)
 print('+')
 
 lim = 1000

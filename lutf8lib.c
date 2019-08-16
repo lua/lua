@@ -103,7 +103,7 @@ static int utflen (lua_State *L) {
   while (posi <= posj) {
     const char *s1 = utf8_decode(s + posi, NULL, !lax);
     if (s1 == NULL) {  /* conversion error? */
-      lua_pushnil(L);  /* return nil ... */
+      luaL_pushfail(L);  /* return fail ... */
       lua_pushinteger(L, posi + 1);  /* ... and current position */
       return 2;
     }
@@ -216,7 +216,7 @@ static int byteoffset (lua_State *L) {
   if (n == 0)  /* did it find given character? */
     lua_pushinteger(L, posi + 1);
   else  /* no such character */
-    lua_pushnil(L);
+    luaL_pushfail(L);
   return 1;
 }
 

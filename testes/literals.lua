@@ -281,7 +281,7 @@ if os.setlocale("pt_BR") or os.setlocale("ptb") then
 
   assert(" 0x.1 " + " 0x,1" + "-0X.1\t" == 0x0.1)
 
-  assert(tonumber"inf" == nil and tonumber"NAN" == nil)
+  assert(not tonumber"inf" and not tonumber"NAN")
 
   assert(assert(load(string.format("return %q", 4.51)))() == 4.51)
 

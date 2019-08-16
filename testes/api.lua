@@ -698,7 +698,7 @@ for k, v in ipairs(t) do
   assert(v1 == v and p)
 end
 
-assert(debug.getuservalue(4) == nil)
+assert(not debug.getuservalue(4))
 
 debug.setuservalue(b, function () return 10 end, 10)
 collectgarbage()   -- function should not be collected

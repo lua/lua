@@ -30,8 +30,8 @@ local function checksyntax (s, t)
   assert(assert(load(ts))() == s)
 end
 
-assert(utf8.offset("alo", 5) == nil)
-assert(utf8.offset("alo", -4) == nil)
+assert(not utf8.offset("alo", 5))
+assert(not utf8.offset("alo", -4))
 
 -- 'check' makes several tests over the validity of string 's'.
 -- 't' is the list of codepoints of 's'.

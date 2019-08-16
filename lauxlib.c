@@ -249,7 +249,7 @@ LUALIB_API int luaL_fileresult (lua_State *L, int stat, const char *fname) {
     return 1;
   }
   else {
-    lua_pushnil(L);
+    luaL_pushfail(L);
     if (fname)
       lua_pushfstring(L, "%s: %s", fname, strerror(en));
     else
@@ -291,10 +291,10 @@ LUALIB_API int luaL_execresult (lua_State *L, int stat) {
     if (*what == 'e' && stat == 0)  /* successful termination? */
       lua_pushboolean(L, 1);
     else
-      lua_pushnil(L);
+      luaL_pushfail(L);
     lua_pushstring(L, what);
     lua_pushinteger(L, stat);
-    return 3;  /* return true/nil,what,code */
+    return 3;  /* return true/fail,what,code */
   }
 }
 

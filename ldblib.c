@@ -65,7 +65,7 @@ static int db_setmetatable (lua_State *L) {
 static int db_getuservalue (lua_State *L) {
   int n = (int)luaL_optinteger(L, 2, 1);
   if (lua_type(L, 1) != LUA_TUSERDATA)
-    lua_pushnil(L);
+    luaL_pushfail(L);
   else if (lua_getiuservalue(L, 1, n) != LUA_TNONE) {
     lua_pushboolean(L, 1);
     return 2;
@@ -80,7 +80,7 @@ static int db_setuservalue (lua_State *L) {
   luaL_checkany(L, 2);
   lua_settop(L, 2);
   if (!lua_setiuservalue(L, 1, n))
-    lua_pushnil(L);
+    luaL_pushfail(L);
   return 1;
 }
 
@@ -159,7 +159,7 @@ static int db_getinfo (lua_State *L) {
   }
   else {  /* stack level */
     if (!lua_getstack(L1, (int)luaL_checkinteger(L, arg + 1), &ar)) {
-      lua_pushnil(L);  /* level out of range */
+      luaL_pushfail(L);  /* level out of range */
       return 1;
     }
   }
@@ -223,7 +223,7 @@ static int db_getlocal (lua_State *L) {
       return 2;
     }
     else {
-      lua_pushnil(L);  /* no name (nor value) */
+      luaL_pushfail(L);  /* no name (nor value) */
       return 1;
     }
   }
@@ -389,8 +389,10 @@ static int db_gethook (lua_State *L) {
   char buff[5];
   int mask = lua_gethookmask(L1);
   lua_Hook hook = lua_gethook(L1);
-  if (hook == NULL)  /* no hook? */
-    lua_pushnil(L);
+  if (hook == NULL) {  /* no hook? */
+    luaL_pushfail(L);
+    return 1;
+  }
   else if (hook != hookf)  /* external hook? */
     lua_pushliteral(L, "external hook");
   else {  /* hook table must exist */

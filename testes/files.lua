@@ -184,7 +184,7 @@ three
   local f <close> = assert(io.open(file, "r"))
   -- second item failing
   l1, n1, n2, dummy = f:read("l", "n", "n", "l")
-  assert(l1 == "a line" and n1 == nil)
+  assert(l1 == "a line" and not n1)
 end
 assert(os.remove(file))
 
@@ -228,7 +228,7 @@ assert(f:read("n") == 0Xdeadbeefdeadbeef); assert(f:read(2) == "x\n")
 assert(f:read("n") == 0x1.13aP3); assert(f:read(1) == "e")
 
 do   -- attempt to read too long number
-  assert(f:read("n") == nil)  -- fails
+  assert(not f:read("n"))  -- fails
   local s = f:read("L")   -- read rest of line
   assert(string.find(s, "^00*\n$"))  -- lots of 0's left
 end
@@ -314,13 +314,13 @@ assert(io.read() == "fourth_line")
 assert(io.read() == "")  -- empty line
 assert(io.read('n') == 3450)
 assert(io.read(1) == '\n')
-assert(io.read(0) == nil)  -- end of file
-assert(io.read(1) == nil)  -- end of file
-assert(io.read(30000) == nil)  -- end of file
+assert(not io.read(0))  -- end of file
+assert(not io.read(1))  -- end of file
+assert(not io.read(30000))  -- end of file
 assert(({io.read(1)})[2] == undef)
-assert(io.read() == nil)  -- end of file
+assert(not io.read())  -- end of file
 assert(({io.read()})[2] == undef)
-assert(io.read('n') == nil)  -- end of file
+assert(not io.read('n'))  -- end of file
 assert(({io.read('n')})[2] == undef)
 assert(io.read('a') == '')  -- end of file (OK for 'a')
 assert(io.read('a') == '')  -- end of file (OK for 'a')
@@ -356,7 +356,7 @@ assert(io.read(string.len(t)) == t)
 assert(io.read(1) == ' ')
 assert(io.read(0))
 assert(io.read('a') == ';end of file\n')
-assert(io.read(0) == nil)
+assert(not io.read(0))
 assert(io.close(io.input()))
 
 
@@ -364,7 +364,7 @@ assert(io.close(io.input()))
 do
   local function ismsg (m)
     -- error message is not a code number
-    return (type(m) == "string" and tonumber(m) == nil)
+    return (type(m) == "string" and not tonumber(m))
   end
 
   -- read
@@ -393,7 +393,7 @@ assert(io.read"L" == "\n")
 assert(io.read"L" == "\n")
 assert(io.read"L" == "line\n")
 assert(io.read"L" == "other")
-assert(io.read"L" == nil)
+assert(not io.read"L")
 io.input():close()
 
 local f = assert(io.open(file))
@@ -462,7 +462,7 @@ end
 -- test for multipe arguments in 'lines'
 io.output(file); io.write"0123456789\n":close()
 for a,b in io.lines(file, 1, 1) do
-  if a == "\n" then assert(b == nil)
+  if a == "\n" then assert(not b)
   else assert(tonumber(a) == tonumber(b) - 1)
   end
 end
@@ -473,13 +473,13 @@ end
 
 for a,b,c in io.lines(file, "a", 0, 1) do
   if a == "" then break end
-  assert(a == "0123456789\n" and b == nil and c == nil)
+  assert(a == "0123456789\n" and not b and not c)
 end
 collectgarbage()   -- to close file in previous iteration
 
 io.output(file); io.write"00\n10\n20\n30\n40\n":close()
 for a, b in io.lines(file, "n", "n") do
-  if a == 40 then assert(b == nil)
+  if a == 40 then assert(not b)
   else assert(a == b - 10)
   end
 end
@@ -654,7 +654,7 @@ and the rest of the file
 io.input(file)
 local _,a,b,c,d,e,h,__ = io.read(1, 'n', 'n', 'l', 'l', 'l', 'a', 10)
 assert(io.close(io.input()))
-assert(_ == ' ' and __ == nil)
+assert(_ == ' ' and not __)
 assert(type(a) == 'number' and a==123.4 and b==-56e-2)
 assert(d=='second line' and e=='third line')
 assert(h==[[
@@ -706,7 +706,7 @@ if not _soft then
   io.input():seek('set', 0)
   y = io.read()  -- huge line
   assert(x == y..'\n'..io.read())
-  assert(io.read() == nil)
+  assert(not io.read())
   io.close(io.input())
   assert(os.remove(file))
   x = nil; y = nil

@@ -351,12 +351,12 @@ assert(g(0,0) == 30)
  
 
 debug.sethook(nil);
-assert(debug.gethook() == nil)
+assert(not debug.gethook())
 
 
 -- minimal tests for setuservalue/getuservalue
 do
-  assert(debug.setuservalue(io.stdin, 10) == nil)
+  assert(not debug.setuservalue(io.stdin, 10))
   local a, b = debug.getuservalue(io.stdin, 10)
   assert(a == nil and not b)
 end
@@ -414,7 +414,7 @@ end, "c")
 a:f(1,2,3,4,5)
 assert(X.self == a and X.a == 1   and X.b == 2 and X.c == nil)
 assert(XX == 12)
-assert(debug.gethook() == nil)
+assert(not debug.gethook())
 
 
 -- testing access to local variables in return hook (bug in 5.2)

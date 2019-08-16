@@ -77,7 +77,7 @@ static int math_toint (lua_State *L) {
     lua_pushinteger(L, n);
   else {
     luaL_checkany(L, 1);
-    lua_pushnil(L);  /* value is not convertible to integer */
+    luaL_pushfail(L);  /* value is not convertible to integer */
   }
   return 1;
 }
@@ -235,7 +235,7 @@ static int math_type (lua_State *L) {
     lua_pushstring(L, (lua_isinteger(L, 1)) ? "integer" : "float");
   else {
     luaL_checkany(L, 1);
-    lua_pushnil(L);
+    luaL_pushfail(L);
   }
   return 1;
 }

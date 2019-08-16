@@ -408,10 +408,10 @@ static int ll_loadlib (lua_State *L) {
   if (stat == 0)  /* no errors? */
     return 1;  /* return the loaded function */
   else {  /* error; error message is on stack top */
-    lua_pushnil(L);
+    luaL_pushfail(L);
     lua_insert(L, -2);
     lua_pushstring(L, (stat == ERRLIB) ?  LIB_FAIL : "init");
-    return 3;  /* return nil, error message, and where */
+    return 3;  /* return fail, error message, and where */
   }
 }
 
@@ -505,9 +505,9 @@ static int ll_searchpath (lua_State *L) {
                                 luaL_optstring(L, 4, LUA_DIRSEP));
   if (f != NULL) return 1;
   else {  /* error message is on top of the stack */
-    lua_pushnil(L);
+    luaL_pushfail(L);
     lua_insert(L, -2);
-    return 2;  /* return nil + error message */
+    return 2;  /* return fail + error message */
   }
 }
 

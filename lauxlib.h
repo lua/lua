@@ -153,6 +153,10 @@ LUALIB_API void (luaL_requiref) (lua_State *L, const char *modname,
 #define luaL_loadbuffer(L,s,sz,n)	luaL_loadbufferx(L,s,sz,n,NULL)
 
 
+/* push the value used to represent failure/error */
+#define luaL_pushfail(L)	lua_pushnil(L)
+
+
 /*
 ** {======================================================
 ** Generic Buffer manipulation

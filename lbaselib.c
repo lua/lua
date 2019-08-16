@@ -106,7 +106,7 @@ static int luaB_tonumber (lua_State *L) {
       return 1;
     }  /* else not a number */
   }  /* else not a number */
-  lua_pushnil(L);  /* not a number */
+  luaL_pushfail(L);  /* not a number */
   return 1;
 }
 
@@ -308,9 +308,9 @@ static int load_aux (lua_State *L, int status, int envidx) {
     return 1;
   }
   else {  /* error (message is on top of the stack) */
-    lua_pushnil(L);
+    luaL_pushfail(L);
     lua_insert(L, -2);  /* put before error message */
-    return 2;  /* return nil plus error message */
+    return 2;  /* return fail plus error message */
   }
 }
 

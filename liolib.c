@@ -153,7 +153,7 @@ static int io_type (lua_State *L) {
   luaL_checkany(L, 1);
   p = (LStream *)luaL_testudata(L, 1, LUA_FILEHANDLE);
   if (p == NULL)
-    lua_pushnil(L);  /* not a file */
+    luaL_pushfail(L);  /* not a file */
   else if (isclosed(p))
     lua_pushliteral(L, "closed file");
   else
@@ -593,7 +593,7 @@ static int g_read (lua_State *L, FILE *f, int first) {
     return luaL_fileresult(L, 0, NULL);
   if (!success) {
     lua_pop(L, 1);  /* remove last result */
-    lua_pushnil(L);  /* push nil instead */
+    luaL_pushfail(L);  /* push nil instead */
   }
   return n - first;
 }
@@ -624,9 +624,9 @@ static int io_readline (lua_State *L) {
     lua_pushvalue(L, lua_upvalueindex(3 + i));
   n = g_read(L, p->f, 2);  /* 'n' is number of results */
   lua_assert(n > 0);  /* should return at least a nil */
-  if (!lua_isnil(L, -n))  /* read at least one value? */
+  if (lua_toboolean(L, -n))  /* read at least one value? */
     return n;  /* return them */
-  else {  /* first result is nil: EOF or error */
+  else {  /* first result is false: EOF or error */
     if (n > 1) {  /* is there error information? */
       /* 2nd result is error message */
       return luaL_error(L, "%s", lua_tostring(L, -n + 1));
@@ -782,7 +782,7 @@ static void createmeta (lua_State *L) {
 static int io_noclose (lua_State *L) {
   LStream *p = tolstream(L);
   p->closef = &io_noclose;  /* keep file opened */
-  lua_pushnil(L);
+  luaL_pushfail(L);
   lua_pushliteral(L, "cannot close standard file");
   return 2;
 }

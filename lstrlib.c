@@ -744,7 +744,7 @@ static int str_find_aux (lua_State *L, int find) {
   const char *p = luaL_checklstring(L, 2, &lp);
   size_t init = posrelatI(luaL_optinteger(L, 3, 1), ls) - 1;
   if (init > ls) {  /* start after string's end? */
-    lua_pushnil(L);  /* cannot find anything */
+    luaL_pushfail(L);  /* cannot find anything */
     return 1;
   }
   /* explicit request or no special characters? */
@@ -779,7 +779,7 @@ static int str_find_aux (lua_State *L, int find) {
       }
     } while (s1++ < ms.src_end && !anchor);
   }
-  lua_pushnil(L);  /* not found */
+  luaL_pushfail(L);  /* not found */
   return 1;
 }
 

@@ -4058,11 +4058,14 @@ Returns 0 if the userdata does not have that value.
 
 }
 
-@APIEntry{void lua_setmetatable (lua_State *L, int index);|
+@APIEntry{int lua_setmetatable (lua_State *L, int index);|
 @apii{1,0,-}
 
 Pops a table from the stack and
 sets it as the new metatable for the value at the given index.
+
+(For historical reasons, this function returns an @id{int},
+which now is always 1.)
 
 }
 
@@ -5782,7 +5785,7 @@ that will be called to close the stream
 when the handle is closed or collected;
 this function receives the file handle as its sole argument and
 must return either @true, in case of success,
-or @nil plus an error message, in case of error.
+or a false value plus an error message, in case of error.
 Once Lua calls this field,
 it changes the field value to @id{NULL}
 to signal that the handle is closed.
@@ -5903,6 +5906,14 @@ these library functions do not adjust its number of arguments
 to its expected parameters.
 For instance, a function documented as @T{foo(arg)}
 should not be called without an argument.
+
+The notation @fail means a return value representing
+some kind of failure or the absence of a better value to return.
+Currently, @fail is equal to @nil,
+but that may change in future versions.
+The recommendation is to test the success of these functions
+with @T{(not status)}, instead of @T{(status == nil)}.
+
 
 Currently, Lua has the following standard libraries:
 @itemize{
@@ -6108,8 +6119,8 @@ with previous results.
 A return of an empty string, @nil, or no value signals the end of the chunk.
 
 If there are no syntactic errors,
-returns the compiled chunk as a function;
-otherwise, returns @nil plus the error message.
+@id{load} returns the compiled chunk as a function;
+otherwise, it returns @fail plus the error message.
 
 When you load a main chunk,
 the resulting function will always have exactly one upvalue,
@@ -6301,7 +6312,7 @@ When called with no @id{base},
 If the argument is already a number or
 a string convertible to a number,
 then @id{tonumber} returns this number;
-otherwise, it returns @nil.
+otherwise, it returns @fail.
 
 The conversion of strings can result in integers or floats,
 according to the lexical conventions of Lua @see{lexical}.
@@ -6315,7 +6326,7 @@ In bases @N{above 10}, the letter @Char{A} (in either upper or lower case)
 @N{represents 10}, @Char{B} @N{represents 11}, and so forth,
 with @Char{Z} representing 35.
 If the string @id{e} is not a valid numeral in the given base,
-the function returns @nil.
+the function returns @fail.
 
 }
 
@@ -6762,7 +6773,7 @@ will try to open the files
 
 Returns the resulting name of the first file that it can
 open in read mode (after closing the file),
-or @nil plus an error message if none succeeds.
+or @fail plus an error message if none succeeds.
 (This error message lists all file names it tried to open.)
 
 }
@@ -6841,7 +6852,7 @@ Looks for the first match of
 @id{pattern} @see{pm} in the string @id{s}.
 If it finds a match, then @id{find} returns the indices @N{of @T{s}}
 where this occurrence starts and ends;
-otherwise, it returns @nil.
+otherwise, it returns @fail.
 A third, optional numeric argument @id{init} specifies
 where to start the search;
 its default value @N{is 1} and can be negative.
@@ -7034,7 +7045,7 @@ Looks for the first @emph{match} of
 the @id{pattern} @see{pm} in the string @id{s}.
 If it finds one, then @id{match} returns
 the captures from the pattern;
-otherwise it returns @nil.
+otherwise it returns @fail.
 If @id{pattern} specifies no captures,
 then the whole match is returned.
 A third, optional numeric argument @id{init} specifies
@@ -7499,7 +7510,7 @@ Returns the number of UTF-8 characters in string @id{s}
 that start between positions @id{i} and @id{j} (both inclusive).
 The default for @id{i} is @num{1} and for @id{j} is @num{-1}.
 If it finds any invalid byte sequence,
-returns a false value plus the position of the first invalid byte.
+returns @fail plus the position of the first invalid byte.
 
 }
 
@@ -7515,7 +7526,7 @@ so that @T{utf8.offset(s, -n)} gets the offset of the
 @id{n}-th character from the end of the string.
 If the specified character is neither in the subject
 nor right after its end,
-the function returns @nil.
+the function returns @fail.
 
 As a special case,
 when @id{n} is 0 the function returns the start of the encoding
@@ -7850,7 +7861,7 @@ Returns the tangent of @id{x} (assumed to be in radians).
 
 If the value @id{x} is convertible to an integer,
 returns that integer.
-Otherwise, returns @nil.
+Otherwise, returns @fail.
 
 }
 
@@ -7858,7 +7869,7 @@ Otherwise, returns @nil.
 
 Returns @St{integer} if @id{x} is an integer,
 @St{float} if it is a float,
-or @nil if @id{x} is not a number.
+or @fail if @id{x} is not a number.
 
 }
 
@@ -7897,10 +7908,10 @@ three predefined file handles with their usual meanings from C:
 The I/O library never closes these files.
 
 Unless otherwise stated,
-all I/O functions return @nil on failure,
+all I/O functions return @fail on failure,
 plus an error message as a second result and
 a system-dependent error code as a third result,
-and some value different from @nil on success.
+and some non-false value on success.
 On non-POSIX systems,
 the computation of the error message and error code
 in case of errors
@@ -8021,7 +8032,7 @@ and it is automatically removed when the program ends.
 Checks whether @id{obj} is a valid file handle.
 Returns the string @T{"file"} if @id{obj} is an open file handle,
 @T{"closed file"} if @id{obj} is a closed file handle,
-or @nil if @id{obj} is not a file handle.
+or @fail if @id{obj} is not a file handle.
 
 }
 
@@ -8075,7 +8086,7 @@ Reads the file @id{file},
 according to the given formats, which specify what to read.
 For each format,
 the function returns a string or a number with the characters read,
-or @nil if it cannot read data with the specified format.
+or @fail if it cannot read data with the specified format.
 (In this latter case,
 the function does not read subsequent formats.)
 When called without arguments,
@@ -8094,31 +8105,32 @@ is a valid prefix for a numeral;
 if that prefix does not form a valid numeral
 (e.g., an empty string, @St{0x}, or @St{3.4e-})
 or it is too long (more than 200 characters),
-it is discarded and the format returns @nil.
+it is discarded and the format returns @fail.
 }
 
 @item{@St{a}|
 reads the whole file, starting at the current position.
-On end of file, it returns the empty string.
+On end of file, it returns the empty string;
+this format never fails.
 }
 
 @item{@St{l}|
 reads the next line skipping the end of line,
-returning @nil on end of file.
+returning @fail on end of file.
 This is the default format.
 }
 
 @item{@St{L}|
 reads the next line keeping the end-of-line character (if present),
-returning @nil on end of file.
+returning @fail on end of file.
 }
 
 @item{@emph{number}|
 reads a string with up to this number of bytes,
-returning @nil on end of file.
+returning @fail on end of file.
 If @id{number} is zero,
 it reads nothing and returns an empty string,
-or @nil on end of file.
+or @fail on end of file.
 }
 
 }
@@ -8139,7 +8151,7 @@ specified by the string @id{whence}, as follows:
 }
 In case of success, @id{seek} returns the final file position,
 measured in bytes from the beginning of the file.
-If @id{seek} fails, it returns @nil,
+If @id{seek} fails, it returns @fail,
 plus a string describing the error.
 
 The default value for @id{whence} is @T{"cur"},
@@ -8179,7 +8191,6 @@ Writes the value of each of its arguments to @id{file}.
 The arguments must be strings or numbers.
 
 In case of success, this function returns @id{file}.
-Otherwise it returns @nil plus a string describing the error.
 
 }
 
@@ -8251,7 +8262,7 @@ This function is equivalent to the @ANSI{system}.
 It passes @id{command} to be executed by an operating system shell.
 Its first result is @true
 if the command terminated successfully,
-or @nil otherwise.
+or @fail otherwise.
 After this first result
 the function returns a string plus a number,
 as follows:
@@ -8293,7 +8304,7 @@ closes the Lua state before exiting.
 @LibEntry{os.getenv (varname)|
 
 Returns the value of the process environment variable @id{varname},
-or @nil if the variable is not defined.
+or @fail if the variable is not defined.
 
 }
 
@@ -8301,7 +8312,7 @@ or @nil if the variable is not defined.
 
 Deletes the file (or empty directory, on @x{POSIX} systems)
 with the given name.
-If this function fails, it returns @nil,
+If this function fails, it returns @fail
 plus a string describing the error and the error code.
 Otherwise, it returns true.
 
@@ -8310,7 +8321,7 @@ Otherwise, it returns true.
 @LibEntry{os.rename (oldname, newname)|
 
 Renames the file or directory named @id{oldname} to @id{newname}.
-If this function fails, it returns @nil,
+If this function fails, it returns @fail,
 plus a string describing the error and the error code.
 Otherwise, it returns true.
 
@@ -8325,7 +8336,7 @@ Sets the current locale of the program.
 @T{"monetary"}, @T{"numeric"}, or @T{"time"};
 the default category is @T{"all"}.
 The function returns the name of the new locale,
-or @nil if the request cannot be honored.
+or @fail if the request cannot be honored.
 
 If @id{locale} is the empty string,
 the current locale is set to an implementation-defined native locale.
@@ -8444,6 +8455,8 @@ the current hook function, the current hook mask,
 and the current hook count,
 as set by the @Lid{debug.sethook} function.
 
+Returns @fail if there is no active hook.
+
 }
 
 @LibEntry{debug.getinfo ([thread,] f [, what])|
@@ -8458,7 +8471,7 @@ of the given thread:
 (except for tail calls, which do not count on the stack);
 and so on.
 If @id{f} is a number greater than the number of active functions,
-then @id{getinfo} returns @nil.
+then @id{getinfo} returns @fail.
 
 The returned table can contain all the fields returned by @Lid{lua_getinfo},
 with the string @id{what} describing which fields to fill in.
@@ -8496,7 +8509,8 @@ Compile-time constants may not appear in this listing,
 if they were optimized away by the compiler.
 Negative indices refer to vararg arguments;
 @num{-1} is the first vararg argument.
-The function returns @nil if there is no variable with the given index,
+The function returns @fail
+if there is no variable with the given index,
 and raises an error when called with a level out of range.
 (You can call @Lid{debug.getinfo} to check whether the level is valid.)
 
@@ -8527,7 +8541,8 @@ Returns the registry table @see{registry}.
 
 This function returns the name and the value of the upvalue
 with index @id{up} of the function @id{f}.
-The function returns @nil if there is no upvalue with the given index.
+The function returns @fail
+if there is no upvalue with the given index.
 
 (For Lua functions,
 upvalues are the external local variables that the function uses,
@@ -8615,7 +8630,7 @@ and @N{level 1} is the hook function.)
 
 This function assigns the value @id{value} to the local variable
 with index @id{local} of the function at level @id{level} of the stack.
-The function returns @nil if there is no local
+The function returns @fail if there is no local
 variable with the given index,
 and raises an error when called with a @id{level} out of range.
 (You can call @id{getinfo} to check whether the level is valid.)
@@ -8638,7 +8653,7 @@ Returns @id{value}.
 
 This function assigns the value @id{value} to the upvalue
 with index @id{up} of the function @id{f}.
-The function returns @nil if there is no upvalue
+The function returns @fail if there is no upvalue
 with the given index.
 Otherwise, it returns the name of the upvalue.
 
@@ -8653,7 +8668,7 @@ the @id{n}-th user value associated to the given @id{udata}.
 @id{udata} must be a full userdata.
 
 Returns @id{udata},
-or @nil if the userdata does not have that value.
+or @fail if the userdata does not have that value.
 
 }
 
