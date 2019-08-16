@@ -1499,13 +1499,13 @@ The declaration can include an initialization:
 @Produc{
 @producname{stat}@producbody{@Rw{local} attnamelist @bnfopt{@bnfter{=} explist}}
 @producname{attnamelist}@producbody{
-  attrib @bnfNter{Name} @bnfrep{@bnfter{,} attrib @bnfNter{Name}}}
+  @bnfNter{Name} attrib @bnfrep{@bnfter{,} @bnfNter{Name} attrib}}
 }
 If present, an initial assignment has the same semantics
 of a multiple assignment @see{assignment}.
 Otherwise, all variables are initialized with @nil.
 
-Each variable name may be preceded by an attribute
+Each variable name may be postfixed by an attribute
 (a name between angle brackets):
 @Produc{
 @producname{attrib}@producbody{@bnfopt{@bnfter{<} @bnfNter{Name} @bnfter{>}}}
@@ -1514,7 +1514,7 @@ There are two possible attributes:
 @id{const}, which declares a @x{constant variable},
 that is, a variable that cannot be assigned to
 after its initialization;
-and @id{toclose}, which declares a to-be-closed variable @see{to-be-closed}.
+and @id{close}, which declares a to-be-closed variable @see{to-be-closed}.
 A list of variables can contain at most one to-be-closed variable.
 
 A chunk is also a block @see{chunks},
@@ -1569,7 +1569,7 @@ Similarly, if a coroutine ends with an error,
 it does not unwind its stack,
 so it does not close any variable.
 In both cases,
-you should either use finalizers
+you can either use finalizers
 or call @Lid{coroutine.close} to close the variables.
 However, if the coroutine was created
 through @Lid{coroutine.wrap},
@@ -9066,7 +9066,7 @@ and @bnfNter{LiteralString}, see @See{lexical}.)
 }
 
 @producname{attnamelist}@producbody{
-  attrib @bnfNter{Name} @bnfrep{@bnfter{,} attrib @bnfNter{Name}}}
+  @bnfNter{Name} attrib @bnfrep{@bnfter{,} @bnfNter{Name} attrib}}
 
 @producname{attrib}@producbody{@bnfopt{@bnfter{<} @bnfNter{Name} @bnfter{>}}}
 
