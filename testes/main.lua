@@ -379,12 +379,12 @@ if T then   -- test library?
   -- testing 'warn'
   warn("@store")
   warn("@123", "456", "789")
-  assert(_WARN == "@123456789")
+  assert(_WARN == "@123456789"); _WARN = nil
 
   warn("zip", "", " ", "zap")
-  assert(_WARN == "zip zap")
+  assert(_WARN == "zip zap"); _WARN = nil
   warn("ZIP", "", " ", "ZAP")
-  assert(_WARN == "ZIP ZAP")
+  assert(_WARN == "ZIP ZAP"); _WARN = nil
   warn("@normal")
 end
 

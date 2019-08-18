@@ -288,9 +288,8 @@ end
 
 -- auxiliary functions for testing warnings in '__close'
 local function prepwarn ()
-  warn("@off")      -- do not show (lots of) warnings
-  if not T then
-    _WARN = "OFF"    -- signal that warnings are not being captured
+  if not T then   -- no test library?
+    warn("@off")      -- do not show (lots of) warnings
   else
     warn("@store")    -- to test the warnings
   end
@@ -298,15 +297,20 @@ end
 
 
 local function endwarn ()
-  assert(T or _WARN == "OFF")
-  warn("@on")          -- back to normal
-  warn("@normal")
-  _WARN = nil
+  if not T then
+    warn("@on")          -- back to normal
+  else
+    assert(_WARN == nil)
+    warn("@normal")
+  end
 end
 
 
 local function checkwarn (msg)
-  assert(_WARN == "OFF" or string.find(_WARN, msg))
+  if T then
+    assert(string.find(_WARN, msg))
+    _WARN = nil    -- reset variable to check next warning
+  end
 end
 
 
@@ -333,7 +337,8 @@ do print("testing errors in __close")
 
     local y <close> =
       func2close(function (self, msg)
-        assert(string.find(msg, "@z"))  -- error in 'z'
+        assert(string.find(msg, "@z"))  -- first error in 'z'
+        checkwarn("@z")   -- second error in 'z' generated a warning
         error("@y")
       end)
 
@@ -377,14 +382,14 @@ do print("testing errors in __close")
 
     local y <close> =
       func2close(function (self, msg)
-         assert(msg == 4)   -- error in body
+        assert(msg == 4)   -- error in body
+        checkwarn("@z")
         error("@y")
       end)
 
     local first = true
     local z <close> =
       func2close(function (self, msg)
-        checkwarn("@z")
         -- 'z' close is called once
         assert(first and msg == 4)
         first = false
@@ -418,16 +423,18 @@ do print("testing errors in __close")
   local st, msg = xpcall(foo, debug.traceback)
   assert(string.match(msg, "^[^ ]* @X"))
   assert(string.find(msg, "in metamethod 'close'"))
+  checkwarn("@Y")
 
   -- error in toclose in vararg function
   local function foo (...)
-    local x123 <close> = func2close(function () error("@X") end)
+    local x123 <close> = func2close(function () error("@x123") end)
   end
 
   local st, msg = xpcall(foo, debug.traceback)
-  assert(string.match(msg, "^[^ ]* @X"))
-
+  assert(string.match(msg, "^[^ ]* @x123"))
   assert(string.find(msg, "in metamethod 'close'"))
+  checkwarn("@x123")   -- from second call to close 'x123'
+
   endwarn()
 end
 

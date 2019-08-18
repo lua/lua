@@ -372,7 +372,7 @@ if T then
   warn("@store")
   collectgarbage()
   assert(string.find(_WARN, "error in __gc metamethod"))
-  assert(string.match(_WARN, "@(.-)@") == "expected")
+  assert(string.match(_WARN, "@(.-)@") == "expected"); _WARN = nil
   for i = 8, 10 do assert(s[i]) end
 
   for i = 1, 5 do
@@ -481,6 +481,7 @@ if T then
   u = setmetatable({}, {__gc = function () error "@expected error" end})
   u = nil
   collectgarbage()
+  assert(string.find(_WARN, "@expected error")); _WARN = nil
   warn("@normal")
 end
 
@@ -663,9 +664,8 @@ if T then
     else
       assert(lastmsg == _WARN)  -- subsequent error messages are equal
     end
-    warn("@store")
+    warn("@store"); _WARN = nil
     error"@expected warning"
-    warn("@normal")
   end}
   for i = 10, 1, -1 do
     -- create object and preserve it until the end

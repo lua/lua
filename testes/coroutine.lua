@@ -177,10 +177,15 @@ do
   end)
   coroutine.resume(co)
   assert(x == 0)
-  _WARN = nil; warn("@off"); warn("@store")
+  -- with test library, use 'store' mode to check warnings
+  warn(not T and "@off" or "@store")
   local st, msg = coroutine.close(co)
-  warn("@on"); warn("@normal")
-  assert(_WARN == nil or string.find(_WARN, "200"))
+  if not T then
+    warn("@on")
+  else   -- test library
+    assert(string.find(_WARN, "200")); _WARN = nil
+    warn("@normal")
+  end
   assert(st == false and coroutine.status(co) == "dead" and msg == 111)
   assert(x == 200)
 

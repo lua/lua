@@ -62,8 +62,10 @@ static void pushobject (lua_State *L, const TValue *o) {
 }
 
 
-static void badexit (const char *fmt, const char *s) {
-  fprintf(stderr, fmt, s);
+static void badexit (const char *fmt, const char *s1, const char *s2) {
+  fprintf(stderr, fmt, s1);
+  if (s2)
+    fprintf(stderr, "extra info: %s\n", s2);
   /* avoid assertion failures when exiting */
   l_memcontrol.numblocks = l_memcontrol.total = 0;
   exit(EXIT_FAILURE);
@@ -72,7 +74,7 @@ static void badexit (const char *fmt, const char *s) {
 
 static int tpanic (lua_State *L) {
   return (badexit("PANIC: unprotected error in call to Lua API (%s)\n",
-                   lua_tostring(L, -1)),
+                   lua_tostring(L, -1), NULL),
           0);  /* do not return to Lua */
 }
 
@@ -88,13 +90,14 @@ static int tpanic (lua_State *L) {
 ** - 2.store: all warnings go to the global '_WARN';
 */
 static void warnf (void *ud, const char *msg, int tocont) {
+  lua_State *L = cast(lua_State *, ud);
   static char buff[200] = "";  /* should be enough for tests... */
   static int onoff = 1;
   static int mode = 0;  /* start in normal mode */
   static int lasttocont = 0;
   if (!lasttocont && !tocont && *msg == '@') {  /* control message? */
     if (buff[0] != '\0')
-      badexit("Control warning during warning: %s\naborting...\n", msg);
+      badexit("Control warning during warning: %s\naborting...\n", msg, buff);
     if (strcmp(msg, "@off") == 0)
       onoff = 0;
     else if (strcmp(msg, "@on") == 0)
@@ -106,18 +109,28 @@ static void warnf (void *ud, const char *msg, int tocont) {
     else if (strcmp(msg, "@store") == 0)
       mode = 2;
     else
-      badexit("Invalid control warning in test mode: %s\naborting...\n", msg);
+      badexit("Invalid control warning in test mode: %s\naborting...\n",
+              msg, NULL);
     return;
   }
   lasttocont = tocont;
   if (strlen(msg) >= sizeof(buff) - strlen(buff))
-    badexit("%s", "warnf-buffer overflow");
+    badexit("warnf-buffer overflow (%s)\n", msg, buff);
   strcat(buff, msg);  /* add new message to current warning */
   if (!tocont) {  /* message finished? */
+    lua_unlock(L);
+    if (lua_getglobal(L, "_WARN") == LUA_TNIL)
+      lua_pop(L, 1);  /* ok, no previous unexpected warning */
+    else {
+      badexit("Unhandled warning in store mode: %s\naborting...\n",
+              lua_tostring(L, -1), buff);
+    }
+    lua_lock(L);
     switch (mode) {
       case 0: {  /* normal */
         if (buff[0] != '#' && onoff)  /* unexpected warning? */
-          badexit("Unexpected warning in test mode: %s\naborting...\n", buff);
+          badexit("Unexpected warning in test mode: %s\naborting...\n",
+                  buff, NULL);
         /* else */ /* FALLTHROUGH */
       }
       case 1: {  /* allow */
@@ -126,7 +139,6 @@ static void warnf (void *ud, const char *msg, int tocont) {
         break;
       }
       case 2: {  /* store */
-        lua_State *L = cast(lua_State *, ud);
         lua_unlock(L);
         lua_pushstring(L, buff);
         lua_setglobal(L, "_WARN");  /* assign message to global '_WARN' */
