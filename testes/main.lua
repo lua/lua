@@ -243,6 +243,17 @@ Lua warning: @on
 Lua warning: ZZZ
 ]]
 
+prepfile[[
+warn("@allow")
+-- create two objects to be finalized when closing state
+-- the errors in the finalizers must generate warnings
+u1 = setmetatable({}, {__gc = function () error("XYZ") end})
+u2 = setmetatable({}, {__gc = function () error("ZYX") end})
+]]
+RUN('lua %s 2> %s', prog, out)
+checkprogout("ZYX)\nXYZ)\n")
+
+
 -- test many arguments
 prepfile[[print(({...})[30])]]
 RUN('lua %s %s > %s', prog, string.rep(" a", 30), out)
