@@ -369,7 +369,7 @@ if T then
     s[n] = i
   end
 
-  warn("@store")
+  warn("@on"); warn("@store")
   collectgarbage()
   assert(string.find(_WARN, "error in __gc metamethod"))
   assert(string.match(_WARN, "@(.-)@") == "expected"); _WARN = nil

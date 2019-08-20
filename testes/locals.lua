@@ -313,6 +313,7 @@ local function checkwarn (msg)
   end
 end
 
+warn("@on")
 
 do print("testing errors in __close")
 

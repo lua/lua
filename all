@@ -2,7 +2,7 @@ make -s -j
 cd testes/libs; make -s
 cd ..     # back to directory 'testes'
 ulimit -S -s 2000
-if { ../lua all.lua; } then 
+if { ../lua -W all.lua; } then
   echo -e "\n\n    final OK!!!!\n\n"
 else
   echo -e "\n\n    >>>> BUG!!!!\n\n"

@@ -92,7 +92,7 @@ static int tpanic (lua_State *L) {
 static void warnf (void *ud, const char *msg, int tocont) {
   lua_State *L = cast(lua_State *, ud);
   static char buff[200] = "";  /* should be enough for tests... */
-  static int onoff = 1;
+  static int onoff = 0;
   static int mode = 0;  /* start in normal mode */
   static int lasttocont = 0;
   if (!lasttocont && !tocont && *msg == '@') {  /* control message? */

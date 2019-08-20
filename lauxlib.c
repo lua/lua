@@ -1037,7 +1037,7 @@ LUALIB_API lua_State *luaL_newstate (void) {
     lua_atpanic(L, &panic);
     warnstate = (int *)lua_newuserdatauv(L, sizeof(int), 0);
     luaL_ref(L, LUA_REGISTRYINDEX);  /* make sure it won't be collected */
-    *warnstate = 1;  /* next message starts a new warning */
+    *warnstate = 0;  /* default is warnings off */
     lua_setwarnf(L, warnf, warnstate);
   }
   return L;

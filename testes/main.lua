@@ -221,8 +221,11 @@ assert(string.find(getoutput(), "error calling 'print'"))
 RUN('echo "io.stderr:write(1000)\ncont" | lua -e "require\'debug\'.debug()" 2> %s', out)
 checkout("lua_debug> 1000lua_debug> ")
 
--- test warnings
-RUN('echo "io.stderr:write(1); warn[[XXX]]" | lua -q 2> %s', out)
+
+print("testing warnings")
+
+-- no warnings by default
+RUN('echo "io.stderr:write(1); warn[[XXX]]" | lua 2> %s', out)
 checkout("1")
 
 prepfile[[
@@ -236,7 +239,7 @@ warn("", "@on")              -- again, no control, real warning
 warn("@on")                  -- keep it "started"
 warn("Z", "Z", "Z")          -- common warning
 ]]
-RUN('lua %s 2> %s', prog, out)
+RUN('lua -W %s 2> %s', prog, out)
 checkout[[
 Lua warning: @offXXX@off
 Lua warning: @on
@@ -250,7 +253,7 @@ warn("@allow")
 u1 = setmetatable({}, {__gc = function () error("XYZ") end})
 u2 = setmetatable({}, {__gc = function () error("ZYX") end})
 ]]
-RUN('lua %s 2> %s', prog, out)
+RUN('lua -W %s 2> %s', prog, out)
 checkprogout("ZYX)\nXYZ)\n")
 
 

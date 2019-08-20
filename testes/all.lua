@@ -5,8 +5,8 @@
 
 local version = "Lua 5.4"
 if _VERSION ~= version then
-  warn("This test suite is for ", version,
-        ", not for ", _VERSION, "\nExiting tests")
+  io.stderr:write("This test suite is for ", version,
+                  ", not for ", _VERSION, "\nExiting tests")
   return
 end
 
@@ -210,6 +210,7 @@ if #msgs > 0 then
 end
 
 print("(there should be two warnings now)")
+warn("@on")
 warn("#This is ", "an expected", " warning")
 warn("@off")
 warn("******** THIS WARNING SHOULD NOT APPEAR **********")

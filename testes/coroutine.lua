@@ -163,6 +163,7 @@ do
   assert(not X and coroutine.status(co) == "dead")
 
   -- error closing a coroutine
+  warn("@on")
   local x = 0
   co = coroutine.create(function()
     local y <close> = func2close(function (self,err)

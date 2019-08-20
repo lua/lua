@@ -8735,7 +8735,7 @@ The options are:
 @item{@T{-i}| enters interactive mode after running @rep{script};}
 @item{@T{-v}| prints version information;}
 @item{@T{-E}| ignores environment variables;}
-@item{@T{-q}| turn warnings off;}
+@item{@T{-W}| turn warnings on;}
 @item{@T{--}| stops handling options;}
 @item{@T{-}| executes @id{stdin} as a file and stops handling options.}
 }
@@ -8761,7 +8761,7 @@ setting the values of
 @Lid{package.path} and @Lid{package.cpath}
 with the default paths defined in @id{luaconf.h}.
 
-The options @T{-e}, @T{-l}, and @T{-q} are handled in
+The options @T{-e}, @T{-l}, and @T{-W} are handled in
 the order they appear.
 For instance, an invocation like
 @verbatim{
