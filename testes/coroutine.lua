@@ -724,6 +724,17 @@ assert(run(function () return a / b end, {"div"}) == 10/12)
 assert(run(function () return a % b end, {"mod"}) == 10)
 assert(run(function () return a // b end, {"idiv"}) == 0)
 
+-- repeat tests with larger constants (to use 'K' opcodes)
+local a1000 = new(1000)
+
+assert(run(function () return a1000 + 1000 end, {"add"}) == 2000)
+assert(run(function () return a1000 - 25000 end, {"sub"}) == -24000)
+assert(run(function () return 2000 * a end, {"mul"}) == 20000)
+assert(run(function () return a1000 / 1000 end, {"div"}) == 1)
+assert(run(function () return a1000 % 600 end, {"mod"}) == 400)
+assert(run(function () return a1000 // 500 end, {"idiv"}) == 2)
+
+
 
 assert(run(function () return a % b end, {"mod"}) == 10)
 
