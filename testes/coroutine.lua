@@ -751,7 +751,7 @@ assert(run(function () return a >> 2 end, {"shr"}) == 10 >> 2)
 assert(run(function () return 1 >> a end, {"shr"}) == 1 >> 10)
 assert(run(function () return a << 2 end, {"shl"}) == 10 << 2)
 assert(run(function () return 1 << a end, {"shl"}) == 1 << 10)
-assert(run(function () return a ~ 2 end, {"bxor"}) == 10 ~ 2)
+assert(run(function () return 2 ~ a end, {"bxor"}) == 2 ~ 10)
 
 
 assert(run(function () return a..b end, {"concat"}) == "1012")

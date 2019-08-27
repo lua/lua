@@ -717,18 +717,11 @@ void luaV_finishOp (lua_State *L) {
   Instruction inst = *(ci->u.l.savedpc - 1);  /* interrupted instruction */
   OpCode op = GET_OPCODE(inst);
   switch (op) {  /* finish its execution */
-    case OP_ADDI: case OP_SUBI:
-    case OP_MULI: case OP_DIVI: case OP_IDIVI:
-    case OP_MODI: case OP_POWI:
-    case OP_ADDK: case OP_SUBK:
-    case OP_MULK: case OP_DIVK: case OP_IDIVK:
-    case OP_MODK: case OP_POWK:
-    case OP_ADD: case OP_SUB:
-    case OP_MUL: case OP_DIV: case OP_IDIV:
-    case OP_BANDK: case OP_BORK: case OP_BXORK:
-    case OP_BAND: case OP_BOR: case OP_BXOR:
+    case OP_MMBIN: case OP_MMBINI: case OP_MMBINK: {
+      setobjs2s(L, base + GETARG_A(*(ci->u.l.savedpc - 2)), --L->top);
+      break;
+    }
     case OP_SHLI: case OP_SHRI: case OP_SHL: case OP_SHR:
-    case OP_MOD: case OP_POW:
     case OP_UNM: case OP_BNOT: case OP_LEN:
     case OP_GETTABUP: case OP_GETTABLE: case OP_GETI:
     case OP_GETFIELD: case OP_SELF: {
@@ -804,10 +797,8 @@ void luaV_finishOp (lua_State *L) {
   lua_Number nb;  \
   if (tonumberns(v1, nb)) {  \
     lua_Number fimm = cast_num(imm);  \
-    setfltvalue(s2v(ra), fop(L, nb, fimm));  \
-  }  \
-  else  \
-    ProtectNT(luaT_trybiniTM(L, v1, imm, flip, ra, tm)); }
+    pc++; setfltvalue(s2v(ra), fop(L, nb, fimm));  \
+  }}
 
 
 /*
@@ -827,7 +818,7 @@ void luaV_finishOp (lua_State *L) {
   int imm = GETARG_sC(i);  \
   if (ttisinteger(v1)) {  \
     lua_Integer iv1 = ivalue(v1);  \
-    setivalue(s2v(ra), iop(L, iv1, imm));  \
+    pc++; setivalue(s2v(ra), iop(L, iv1, imm));  \
   }  \
   else op_arithfI_aux(L, v1, imm, fop, tm, flip); }
 
@@ -839,10 +830,8 @@ void luaV_finishOp (lua_State *L) {
 #define op_arithf_aux(L,v1,v2,fop,tm) {  \
   lua_Number n1; lua_Number n2;  \
   if (tonumberns(v1, n1) && tonumberns(v2, n2)) {  \
-    setfltvalue(s2v(ra), fop(L, n1, n2));  \
-  }  \
-  else  \
-    ProtectNT(luaT_trybinTM(L, v1, v2, ra, tm)); }
+    pc++; setfltvalue(s2v(ra), fop(L, n1, n2));  \
+  }}
 
 
 /*
@@ -862,7 +851,7 @@ void luaV_finishOp (lua_State *L) {
   TValue *v2 = vRC(i);  \
   if (ttisinteger(v1) && ttisinteger(v2)) {  \
     lua_Integer i1 = ivalue(v1); lua_Integer i2 = ivalue(v2);  \
-    setivalue(s2v(ra), iop(L, i1, i2));  \
+    pc++; setivalue(s2v(ra), iop(L, i1, i2));  \
   }  \
   else op_arithf_aux(L, v1, v2, fop, tm); }
 
@@ -875,15 +864,13 @@ void luaV_finishOp (lua_State *L) {
   TValue *v2 = KC(i);  \
   if (ttisinteger(v1) && ttisinteger(v2)) {  \
     lua_Integer i1 = ivalue(v1); lua_Integer i2 = ivalue(v2);  \
-    setivalue(s2v(ra), iop(L, i1, i2));  \
+    pc++; setivalue(s2v(ra), iop(L, i1, i2));  \
   }  \
   else { \
     lua_Number n1; lua_Number n2;  \
     if (tonumberns(v1, n1) && tonumberns(v2, n2)) {  \
-      setfltvalue(s2v(ra), fop(L, n1, n2));  \
-    }  \
-    else  \
-      ProtectNT(luaT_trybinassocTM(L, v1, v2, ra, flip, tm)); } }
+      pc++; setfltvalue(s2v(ra), fop(L, n1, n2));  \
+    }}}
 
 
 /*
@@ -894,10 +881,8 @@ void luaV_finishOp (lua_State *L) {
   TValue *v2 = KC(i);  \
   lua_Number n1; lua_Number n2;  \
   if (tonumberns(v1, n1) && tonumberns(v2, n2)) {  \
-    setfltvalue(s2v(ra), fop(L, n1, n2));  \
-  }  \
-  else  \
-    ProtectNT(luaT_trybinTM(L, v1, v2, ra, tm)); }
+    pc++; setfltvalue(s2v(ra), fop(L, n1, n2));  \
+  }}
 
 
 /*
@@ -909,10 +894,8 @@ void luaV_finishOp (lua_State *L) {
   lua_Integer i1;  \
   lua_Integer i2 = ivalue(v2);  \
   if (tointegerns(v1, &i1)) {  \
-    setivalue(s2v(ra), op(L, i1, i2));  \
-  }  \
-  else  \
-    ProtectNT(luaT_trybiniTM(L, v1, i2, TESTARG_k(i), ra, tm)); }
+    pc++; setivalue(s2v(ra), op(L, i1, i2));  \
+  }}
 
 
 /*
@@ -923,10 +906,8 @@ void luaV_finishOp (lua_State *L) {
   TValue *v2 = vRC(i);  \
   lua_Integer i1; lua_Integer i2;  \
   if (tointegerns(v1, &i1) && tointegerns(v2, &i2)) {  \
-    setivalue(s2v(ra), op(L, i1, i2));  \
-  }  \
-  else  \
-    ProtectNT(luaT_trybinTM(L, v1, v2, ra, tm)); }
+    pc++; setivalue(s2v(ra), op(L, i1, i2));  \
+  }}
 
 
 /*
@@ -1443,6 +1424,33 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           ProtectNT(luaT_trybinTM(L, rb, rc, ra, TM_SHL));
         vmbreak;
       }
+      vmcase(OP_MMBIN) {
+        Instruction pi = *(pc - 2);  /* original arith. expression */
+        TValue *rb = vRB(i);
+        TMS tm = (TMS)GETARG_C(i);
+        StkId result = RA(pi);
+        lua_assert(OP_ADD <= GET_OPCODE(pi) && GET_OPCODE(pi) <= OP_SHR);
+        ProtectNT(luaT_trybinTM(L, s2v(ra), rb, result, tm));
+        vmbreak;
+      }
+      vmcase(OP_MMBINI) {
+        Instruction pi = *(pc - 2);  /* original arith. expression */
+        int imm = GETARG_sB(i);
+        TMS tm = (TMS)GETARG_C(i);
+        int flip = GETARG_k(i);
+        StkId result = RA(pi);
+        ProtectNT(luaT_trybiniTM(L, s2v(ra), imm, flip, result, tm));
+        vmbreak;
+      }
+      vmcase(OP_MMBINK) {
+        Instruction pi = *(pc - 2);  /* original arith. expression */
+        TValue *imm = KB(i);
+        TMS tm = (TMS)GETARG_C(i);
+        int flip = GETARG_k(i);
+        StkId result = RA(pi);
+        ProtectNT(luaT_trybinassocTM(L, s2v(ra), imm, flip, result, tm));
+        vmbreak;
+      }
       vmcase(OP_UNM) {
         TValue *rb = vRB(i);
         lua_Number nb;
@@ -1826,4 +1834,3 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
 }
 
 /* }================================================================== */
-

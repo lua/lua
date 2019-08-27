@@ -173,7 +173,7 @@ void luaT_tryconcatTM (lua_State *L) {
 
 
 void luaT_trybinassocTM (lua_State *L, const TValue *p1, const TValue *p2,
-                                       StkId res, int flip, TMS event) {
+                                       int flip, StkId res, TMS event) {
   if (flip)
     luaT_trybinTM(L, p2, p1, res, event);
   else
@@ -185,7 +185,7 @@ void luaT_trybiniTM (lua_State *L, const TValue *p1, lua_Integer i2,
                                    int flip, StkId res, TMS event) {
   TValue aux;
   setivalue(&aux, i2);
-  luaT_trybinassocTM(L, p1, &aux, res, flip, event);
+  luaT_trybinassocTM(L, p1, &aux, flip, res, event);
 }
 
 

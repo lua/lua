@@ -255,6 +255,10 @@ OP_BXOR,/*	A B C	R(A) := R(B) ~ R(C)				*/
 OP_SHL,/*	A B C	R(A) := R(B) << R(C)				*/
 OP_SHR,/*	A B C	R(A) := R(B) >> R(C)				*/
 
+OP_MMBIN,/*	A B C	call B metamethod for previous bin. operation	*/
+OP_MMBINI,/*	A B C	call B metamethod for previous binI. operation	*/
+OP_MMBINK,/*	A B C	call B metamethod for previous binK. operation	*/
+
 OP_UNM,/*	A B	R(A) := -R(B)					*/
 OP_BNOT,/*	A B	R(A) := ~R(B)					*/
 OP_NOT,/*	A B	R(A) := not R(B)				*/

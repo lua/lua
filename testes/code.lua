@@ -156,9 +156,9 @@ check(function ()
   c.x, a[b] = -((a + d/b - a[b]) ^ a.x), b
 end,
   'LOADNIL',
-  'MUL',
-  'DIV', 'ADD', 'GETTABLE', 'SUB', 'GETFIELD', 'POW',
-    'UNM', 'SETTABLE', 'SETFIELD', 'RETURN0')
+  'MUL', 'MMBIN',
+  'DIV', 'MMBIN', 'ADD', 'MMBIN', 'GETTABLE', 'SUB', 'MMBIN',
+  'GETFIELD', 'POW', 'MMBIN', 'UNM', 'SETTABLE', 'SETFIELD', 'RETURN0')
 
 
 -- direct access to constants
@@ -188,7 +188,7 @@ check(function ()
   b = a/a
   b = 5-4
 end,
-  'LOADNIL', 'SUB', 'DIV', 'LOADI', 'RETURN0')
+  'LOADNIL', 'SUB', 'MMBIN', 'DIV', 'MMBIN', 'LOADI', 'RETURN0')
 
 check(function ()
   local a,b
@@ -292,38 +292,45 @@ checkK(function () return -(border + 1) end, -(sbx + 1.0))
 
 
 -- immediate operands
-checkR(function (x) return x + k1 end, 10, 11, 'ADDI', 'RETURN1')
-checkR(function (x) return 128 + x end, 0.0, 128.0, 'ADDI', 'RETURN1')
-checkR(function (x) return x * -127 end, -1.0, 127.0, 'MULI', 'RETURN1')
-checkR(function (x) return 20 * x end, 2, 40, 'MULI', 'RETURN1')
-checkR(function (x) return x ^ -2 end, 2, 0.25, 'POWI', 'RETURN1')
-checkR(function (x) return x / 40 end, 40, 1.0, 'DIVI', 'RETURN1')
-checkR(function (x) return x // 1 end, 10.0, 10.0, 'IDIVI', 'RETURN1')
-checkR(function (x) return x % (100 - 10) end, 91, 1, 'MODI', 'RETURN1')
+checkR(function (x) return x + k1 end, 10, 11, 'ADDI', 'MMBINI', 'RETURN1')
+checkR(function (x) return 128 + x end, 0.0, 128.0,
+         'ADDI', 'MMBINI', 'RETURN1')
+checkR(function (x) return x * -127 end, -1.0, 127.0,
+         'MULI', 'MMBINI', 'RETURN1')
+checkR(function (x) return 20 * x end, 2, 40, 'MULI', 'MMBINI', 'RETURN1')
+checkR(function (x) return x ^ -2 end, 2, 0.25, 'POWI', 'MMBINI', 'RETURN1')
+checkR(function (x) return x / 40 end, 40, 1.0, 'DIVI', 'MMBINI', 'RETURN1')
+checkR(function (x) return x // 1 end, 10.0, 10.0,
+         'IDIVI', 'MMBINI', 'RETURN1')
+checkR(function (x) return x % (100 - 10) end, 91, 1,
+         'MODI', 'MMBINI', 'RETURN1')
 checkR(function (x) return k1 << x end, 3, 8, 'SHLI', 'RETURN1')
 checkR(function (x) return x << 2 end, 10, 40, 'SHRI', 'RETURN1')
 checkR(function (x) return x >> 2 end, 8, 2, 'SHRI', 'RETURN1')
-checkR(function (x) return x & 1 end, 9, 1, 'BANDK', 'RETURN1')
-checkR(function (x) return 10 | x end, 1, 11, 'BORK', 'RETURN1')
-checkR(function (x) return -10 ~ x end, -1, 9, 'BXORK', 'RETURN1')
+checkR(function (x) return x & 1 end, 9, 1, 'BANDK', 'MMBINK', 'RETURN1')
+checkR(function (x) return 10 | x end, 1, 11, 'BORK', 'MMBINK', 'RETURN1')
+checkR(function (x) return -10 ~ x end, -1, 9, 'BXORK', 'MMBINK', 'RETURN1')
 
 -- K operands in arithmetic operations
-checkR(function (x) return x + 0.0 end, 1, 1.0, 'ADDK', 'RETURN1')
---  check(function (x) return 128 + x end, 'ADDK', 'RETURN1')
-checkR(function (x) return x * -10000 end, 2, -20000, 'MULK', 'RETURN1')
---  check(function (x) return 20 * x end, 'MULK', 'RETURN1')
-checkR(function (x) return x ^ 0.5 end, 4, 2.0, 'POWK', 'RETURN1')
-checkR(function (x) return x / 2.0 end, 4, 2.0, 'DIVK', 'RETURN1')
-checkR(function (x) return x // 10000 end, 10000, 1, 'IDIVK', 'RETURN1')
-checkR(function (x) return x % (100.0 - 10) end, 91, 1.0, 'MODK', 'RETURN1')
+checkR(function (x) return x + 0.0 end, 1, 1.0, 'ADDK', 'MMBINK', 'RETURN1')
+--  check(function (x) return 128 + x end, 'ADDK', 'MMBINK', 'RETURN1')
+checkR(function (x) return x * -10000 end, 2, -20000,
+         'MULK', 'MMBINK', 'RETURN1')
+--  check(function (x) return 20 * x end, 'MULK', 'MMBINK', 'RETURN1')
+checkR(function (x) return x ^ 0.5 end, 4, 2.0, 'POWK', 'MMBINK', 'RETURN1')
+checkR(function (x) return x / 2.0 end, 4, 2.0, 'DIVK', 'MMBINK', 'RETURN1')
+checkR(function (x) return x // 10000 end, 10000, 1,
+         'IDIVK', 'MMBINK', 'RETURN1')
+checkR(function (x) return x % (100.0 - 10) end, 91, 1.0,
+         'MODK', 'MMBINK', 'RETURN1')
 
 -- no foldings (and immediate operands)
 check(function () return -0.0 end, 'LOADF', 'UNM', 'RETURN1')
-check(function () return k3/0 end, 'LOADI', 'DIVI', 'RETURN1')
-check(function () return 0%0 end, 'LOADI', 'MODI', 'RETURN1')
-check(function () return -4//0 end, 'LOADI', 'IDIVI', 'RETURN1')
+check(function () return k3/0 end, 'LOADI', 'DIVI', 'MMBINI', 'RETURN1')
+check(function () return 0%0 end, 'LOADI', 'MODI', 'MMBINI', 'RETURN1')
+check(function () return -4//0 end, 'LOADI', 'IDIVI', 'MMBINI', 'RETURN1')
 check(function (x) return x >> 2.0 end, 'LOADF', 'SHR', 'RETURN1')
-check(function (x) return x & 2.0 end, 'LOADF', 'BAND', 'RETURN1')
+check(function (x) return x & 2.0 end, 'LOADF', 'BAND', 'MMBIN', 'RETURN1')
 
 -- basic 'for' loops
 check(function () for i = -10, 10.5 do end end,
@@ -379,7 +386,7 @@ check(function (a, b)
           if b then break else a = a + 1 end
         end
       end,
-'TEST', 'JMP', 'TEST', 'JMP', 'ADDI', 'JMP', 'RETURN0')
+'TEST', 'JMP', 'TEST', 'JMP', 'ADDI', 'MMBINI', 'JMP', 'RETURN0')
 
 checkequal(
 function (a) while a < 10 do a = a + 1 end end,
