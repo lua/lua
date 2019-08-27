@@ -727,7 +727,7 @@ void luaV_finishOp (lua_State *L) {
     case OP_MUL: case OP_DIV: case OP_IDIV:
     case OP_BANDK: case OP_BORK: case OP_BXORK:
     case OP_BAND: case OP_BOR: case OP_BXOR:
-    case OP_SHRI: case OP_SHL: case OP_SHR:
+    case OP_SHLI: case OP_SHRI: case OP_SHL: case OP_SHR:
     case OP_MOD: case OP_POW:
     case OP_UNM: case OP_BNOT: case OP_LEN:
     case OP_GETTABUP: case OP_GETTABLE: case OP_GETI:
