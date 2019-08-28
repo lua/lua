@@ -628,11 +628,6 @@ static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
       tm = cast(TMS, GETARG_C(i));
       break;
     }
-    case OP_SHL: case OP_SHR: {
-      int offset = GET_OPCODE(i) - OP_ADD;  /* ORDER OP */
-      tm = cast(TMS, offset + TM_ADD);  /* ORDER TM */
-      break;
-    }
     case OP_UNM: tm = TM_UNM; break;
     case OP_BNOT: tm = TM_BNOT; break;
     case OP_LEN: tm = TM_LEN; break;
@@ -640,9 +635,6 @@ static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
     case OP_EQ: tm = TM_EQ; break;
     case OP_LT: case OP_LE: case OP_LTI: case OP_LEI:
       *name = "order";  /* '<=' can call '__lt', etc. */
-      return "metamethod";
-    case OP_SHRI: case OP_SHLI:
-      *name = "shift";
       return "metamethod";
     case OP_CLOSE: case OP_RETURN:
       *name = "close";

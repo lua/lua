@@ -1339,18 +1339,22 @@ static void codeunexpval (FuncState *fs, OpCode op, expdesc *e, int line) {
 ** Expression to produce final result will be encoded in 'e1'.
 */
 static void finishbinexpval (FuncState *fs, expdesc *e1, expdesc *e2,
-                             OpCode op, int v2, int k, int line,
+                             OpCode op, int v2, int flip, int line,
                              OpCode mmop, TMS event) {
   int v1 = luaK_exp2anyreg(fs, e1);
-  int pc = luaK_codeABCk(fs, op, 0, v1, v2, k);
+  int pc = luaK_codeABCk(fs, op, 0, v1, v2, flip);
   freeexps(fs, e1, e2);
   e1->u.info = pc;
   e1->k = VRELOC;  /* all those operations are relocatable */
   luaK_fixline(fs, line);
-if (event != TM_SHL && event != TM_SHR) {
-  luaK_codeABCk(fs, mmop, v1, v2, event, k);  /* to call metamethod */
+  if (op == OP_SHRI && flip) {
+    /* For the metamethod, undo the "changedir" did by 'codeshift' */
+    event = TM_SHL;
+    v2 = -(v2 - OFFSET_sC) + OFFSET_sC;
+    flip = 0;
+  }
+  luaK_codeABCk(fs, mmop, v1, v2, event, flip);  /* to call metamethod */
   luaK_fixline(fs, line);
-}
 }
 
 
@@ -1371,10 +1375,10 @@ static void codebinexpval (FuncState *fs, OpCode op,
 ** Code binary operators ('+', '-', ...) with immediate operands.
 */
 static void codebini (FuncState *fs, OpCode op,
-                       expdesc *e1, expdesc *e2, int k, int line,
+                       expdesc *e1, expdesc *e2, int flip, int line,
                        TMS event) {
   int v2 = cast_int(e2->u.ival) + OFFSET_sC;  /* immediate operand */
-  finishbinexpval(fs, e1, e2, op, v2, k, line, OP_MMBINI, event);
+  finishbinexpval(fs, e1, e2, op, v2, flip, line, OP_MMBINI, event);
 }
 
 
@@ -1429,12 +1433,12 @@ static void codecommutative (FuncState *fs, BinOpr op,
 */
 static void codebitwise (FuncState *fs, BinOpr opr,
                          expdesc *e1, expdesc *e2, int line) {
-  int inv = 0;
+  int flip = 0;
   int v2;
   OpCode op;
   if (e1->k == VKINT && luaK_exp2RK(fs, e1)) {
     swapexps(e1, e2);  /* 'e2' will be the constant operand */
-    inv = 1;
+    flip = 1;
   }
   else if (!(e2->k == VKINT && luaK_exp2RK(fs, e2))) {  /* no constants? */
     op = cast(OpCode, opr + OP_ADD);
@@ -1444,7 +1448,7 @@ static void codebitwise (FuncState *fs, BinOpr opr,
   v2 = e2->u.info;  /* index in K array */
   op = cast(OpCode, opr + OP_ADDK);
   lua_assert(ttisinteger(&fs->f->k[v2]));
-  finishbinexpval(fs, e1, e2, op, v2, inv, line, OP_MMBINK,
+  finishbinexpval(fs, e1, e2, op, v2, flip, line, OP_MMBINK,
                   cast(TMS, opr + TM_ADD));
 }
 
@@ -1461,7 +1465,7 @@ static void codeshift (FuncState *fs, OpCode op,
       changedir = 1;
       e2->u.ival = -(e2->u.ival);
     }
-    codebini(fs, OP_SHRI, e1, e2, changedir, line, TM_SHL);
+    codebini(fs, OP_SHRI, e1, e2, changedir, line, TM_SHR);
   }
   else
     codebinexpval(fs, op, e1, e2, line);

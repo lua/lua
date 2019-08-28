@@ -304,9 +304,9 @@ checkR(function (x) return x // 1 end, 10.0, 10.0,
          'IDIVI', 'MMBINI', 'RETURN1')
 checkR(function (x) return x % (100 - 10) end, 91, 1,
          'MODI', 'MMBINI', 'RETURN1')
-checkR(function (x) return k1 << x end, 3, 8, 'SHLI', 'RETURN1')
-checkR(function (x) return x << 2 end, 10, 40, 'SHRI', 'RETURN1')
-checkR(function (x) return x >> 2 end, 8, 2, 'SHRI', 'RETURN1')
+checkR(function (x) return k1 << x end, 3, 8, 'SHLI', 'MMBINI', 'RETURN1')
+checkR(function (x) return x << 2 end, 10, 40, 'SHRI', 'MMBINI', 'RETURN1')
+checkR(function (x) return x >> 2 end, 8, 2, 'SHRI', 'MMBINI', 'RETURN1')
 checkR(function (x) return x & 1 end, 9, 1, 'BANDK', 'MMBINK', 'RETURN1')
 checkR(function (x) return 10 | x end, 1, 11, 'BORK', 'MMBINK', 'RETURN1')
 checkR(function (x) return -10 ~ x end, -1, 9, 'BXORK', 'MMBINK', 'RETURN1')
@@ -329,7 +329,7 @@ check(function () return -0.0 end, 'LOADF', 'UNM', 'RETURN1')
 check(function () return k3/0 end, 'LOADI', 'DIVI', 'MMBINI', 'RETURN1')
 check(function () return 0%0 end, 'LOADI', 'MODI', 'MMBINI', 'RETURN1')
 check(function () return -4//0 end, 'LOADI', 'IDIVI', 'MMBINI', 'RETURN1')
-check(function (x) return x >> 2.0 end, 'LOADF', 'SHR', 'RETURN1')
+check(function (x) return x >> 2.0 end, 'LOADF', 'SHR', 'MMBIN', 'RETURN1')
 check(function (x) return x & 2.0 end, 'LOADF', 'BAND', 'MMBIN', 'RETURN1')
 
 -- basic 'for' loops
