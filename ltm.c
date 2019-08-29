@@ -147,7 +147,6 @@ static int callbinTM (lua_State *L, const TValue *p1, const TValue *p2,
 
 void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
                     StkId res, TMS event) {
-  L->top = L->ci->top;
   if (!callbinTM(L, p1, p2, res, event)) {
     switch (event) {
       case TM_BAND: case TM_BOR: case TM_BXOR:
@@ -191,7 +190,6 @@ void luaT_trybiniTM (lua_State *L, const TValue *p1, lua_Integer i2,
 
 int luaT_callorderTM (lua_State *L, const TValue *p1, const TValue *p2,
                       TMS event) {
-  L->top = L->ci->top;
   if (callbinTM(L, p1, p2, L->top, event))  /* try original event */
     return !l_isfalse(s2v(L->top));
 #if defined(LUA_COMPAT_LT_LE)

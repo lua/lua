@@ -516,7 +516,6 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
   if (tm == NULL)  /* no TM? */
     return 0;  /* objects are different */
   else {
-    L->top = L->ci->top;
     luaT_callTMres(L, tm, t1, t2, L->top);  /* call TM */
     return !l_isfalse(s2v(L->top));
   }
@@ -925,7 +924,7 @@ void luaV_finishOp (lua_State *L) {
         else if (ttisnumber(s2v(ra)) && ttisnumber(rb))  \
           cond = opf(s2v(ra), rb);  \
         else  \
-          ProtectNT(cond = other(L, s2v(ra), rb));  \
+          Protect(cond = other(L, s2v(ra), rb));  \
         docondjump(); }
 
 
@@ -944,7 +943,7 @@ void luaV_finishOp (lua_State *L) {
         }  \
         else {  \
           int isf = GETARG_C(i);  \
-          ProtectNT(cond = luaT_callorderiTM(L, s2v(ra), im, inv, isf, tm));  \
+          Protect(cond = luaT_callorderiTM(L, s2v(ra), im, inv, isf, tm));  \
         }  \
         docondjump(); }
 
@@ -989,7 +988,7 @@ void luaV_finishOp (lua_State *L) {
 
 
 /* for test instructions, execute the jump instruction that follows it */
-#define donextjump(ci)	{ i = *pc; dojump(ci, i, 1); }
+#define donextjump(ci)	{ Instruction ni = *pc; dojump(ci, ni, 1); }
 
 /*
 ** do a conditional jump: skip next instruction if 'cond' is not what
@@ -1408,7 +1407,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         TMS tm = (TMS)GETARG_C(i);
         StkId result = RA(pi);
         lua_assert(OP_ADD <= GET_OPCODE(pi) && GET_OPCODE(pi) <= OP_SHR);
-        ProtectNT(luaT_trybinTM(L, s2v(ra), rb, result, tm));
+        Protect(luaT_trybinTM(L, s2v(ra), rb, result, tm));
         vmbreak;
       }
       vmcase(OP_MMBINI) {
@@ -1417,7 +1416,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         TMS tm = (TMS)GETARG_C(i);
         int flip = GETARG_k(i);
         StkId result = RA(pi);
-        ProtectNT(luaT_trybiniTM(L, s2v(ra), imm, flip, result, tm));
+        Protect(luaT_trybiniTM(L, s2v(ra), imm, flip, result, tm));
         vmbreak;
       }
       vmcase(OP_MMBINK) {
@@ -1426,7 +1425,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         TMS tm = (TMS)GETARG_C(i);
         int flip = GETARG_k(i);
         StkId result = RA(pi);
-        ProtectNT(luaT_trybinassocTM(L, s2v(ra), imm, flip, result, tm));
+        Protect(luaT_trybinassocTM(L, s2v(ra), imm, flip, result, tm));
         vmbreak;
       }
       vmcase(OP_UNM) {
@@ -1440,7 +1439,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           setfltvalue(s2v(ra), luai_numunm(L, nb));
         }
         else
-          ProtectNT(luaT_trybinTM(L, rb, rb, ra, TM_UNM));
+          Protect(luaT_trybinTM(L, rb, rb, ra, TM_UNM));
         vmbreak;
       }
       vmcase(OP_BNOT) {
@@ -1450,7 +1449,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           setivalue(s2v(ra), intop(^, ~l_castS2U(0), ib));
         }
         else
-          ProtectNT(luaT_trybinTM(L, rb, rb, ra, TM_BNOT));
+          Protect(luaT_trybinTM(L, rb, rb, ra, TM_BNOT));
         vmbreak;
       }
       vmcase(OP_NOT) {
@@ -1486,7 +1485,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       vmcase(OP_EQ) {
         int cond;
         TValue *rb = vRB(i);
-        ProtectNT(cond = luaV_equalobj(L, s2v(ra), rb));
+        Protect(cond = luaV_equalobj(L, s2v(ra), rb));
         docondjump();
         vmbreak;
       }
