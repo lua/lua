@@ -296,14 +296,14 @@ checkR(function (x) return x + k1 end, 10, 11, 'ADDI', 'MMBINI', 'RETURN1')
 checkR(function (x) return 128 + x end, 0.0, 128.0,
          'ADDI', 'MMBINI', 'RETURN1')
 checkR(function (x) return x * -127 end, -1.0, 127.0,
-         'MULI', 'MMBINI', 'RETURN1')
-checkR(function (x) return 20 * x end, 2, 40, 'MULI', 'MMBINI', 'RETURN1')
-checkR(function (x) return x ^ -2 end, 2, 0.25, 'POWI', 'MMBINI', 'RETURN1')
-checkR(function (x) return x / 40 end, 40, 1.0, 'DIVI', 'MMBINI', 'RETURN1')
+         'MULK', 'MMBINK', 'RETURN1')
+checkR(function (x) return 20 * x end, 2, 40, 'MULK', 'MMBINK', 'RETURN1')
+checkR(function (x) return x ^ -2 end, 2, 0.25, 'POWK', 'MMBINK', 'RETURN1')
+checkR(function (x) return x / 40 end, 40, 1.0, 'DIVK', 'MMBINK', 'RETURN1')
 checkR(function (x) return x // 1 end, 10.0, 10.0,
-         'IDIVI', 'MMBINI', 'RETURN1')
+         'IDIVK', 'MMBINK', 'RETURN1')
 checkR(function (x) return x % (100 - 10) end, 91, 1,
-         'MODI', 'MMBINI', 'RETURN1')
+         'MODK', 'MMBINK', 'RETURN1')
 checkR(function (x) return k1 << x end, 3, 8, 'SHLI', 'MMBINI', 'RETURN1')
 checkR(function (x) return x << 2 end, 10, 40, 'SHRI', 'MMBINI', 'RETURN1')
 checkR(function (x) return x >> 2 end, 8, 2, 'SHRI', 'MMBINI', 'RETURN1')
@@ -326,9 +326,9 @@ checkR(function (x) return x % (100.0 - 10) end, 91, 1.0,
 
 -- no foldings (and immediate operands)
 check(function () return -0.0 end, 'LOADF', 'UNM', 'RETURN1')
-check(function () return k3/0 end, 'LOADI', 'DIVI', 'MMBINI', 'RETURN1')
-check(function () return 0%0 end, 'LOADI', 'MODI', 'MMBINI', 'RETURN1')
-check(function () return -4//0 end, 'LOADI', 'IDIVI', 'MMBINI', 'RETURN1')
+check(function () return k3/0 end, 'LOADI', 'DIVK', 'MMBINK', 'RETURN1')
+check(function () return 0%0 end, 'LOADI', 'MODK', 'MMBINK', 'RETURN1')
+check(function () return -4//0 end, 'LOADI', 'IDIVK', 'MMBINK', 'RETURN1')
 check(function (x) return x >> 2.0 end, 'LOADF', 'SHR', 'MMBIN', 'RETURN1')
 check(function (x) return x & 2.0 end, 'LOADF', 'BAND', 'MMBIN', 'RETURN1')
 

@@ -1342,7 +1342,7 @@ static void finishbinexpval (FuncState *fs, expdesc *e1, expdesc *e2,
                              OpCode op, int v2, int flip, int line,
                              OpCode mmop, TMS event) {
   int v1 = luaK_exp2anyreg(fs, e1);
-  int pc = luaK_codeABCk(fs, op, 0, v1, v2, flip);
+  int pc = luaK_codeABCk(fs, op, 0, v1, v2, 0);
   freeexps(fs, e1, e2);
   e1->u.info = pc;
   e1->k = VRELOC;  /* all those operations are relocatable */
@@ -1372,7 +1372,7 @@ static void codebinexpval (FuncState *fs, OpCode op,
 
 
 /*
-** Code binary operators ('+', '-', ...) with immediate operands.
+** Code binary operators with immediate operands.
 */
 static void codebini (FuncState *fs, OpCode op,
                        expdesc *e1, expdesc *e2, int flip, int line,
@@ -1389,15 +1389,12 @@ static void swapexps (expdesc *e1, expdesc *e2) {
 
 /*
 ** Code arithmetic operators ('+', '-', ...). If second operand is a
-** constant in the proper range, use variant opcodes with immediate
-** operands or K operands.
+** constant in the proper range, use variant opcodes with K operands.
 */
 static void codearith (FuncState *fs, BinOpr opr,
                        expdesc *e1, expdesc *e2, int flip, int line) {
   TMS event = cast(TMS, opr + TM_ADD);
-  if (isSCint(e2))  /* immediate operand? */
-    codebini(fs, cast(OpCode, opr + OP_ADDI), e1, e2, flip, line, event);
-  else if (tonumeral(e2, NULL) && luaK_exp2K(fs, e2)) {  /* K operand? */
+  if (tonumeral(e2, NULL) && luaK_exp2K(fs, e2)) {  /* K operand? */
     int v2 = e2->u.info;  /* K index */
     OpCode op = cast(OpCode, opr + OP_ADDK);
     finishbinexpval(fs, e1, e2, op, v2, flip, line, OP_MMBINK, event);
@@ -1423,7 +1420,10 @@ static void codecommutative (FuncState *fs, BinOpr op,
     swapexps(e1, e2);  /* change order */
     flip = 1;
   }
-  codearith(fs, op, e1, e2, flip, line);
+  if (op == OPR_ADD && isSCint(e2))  /* immediate operand? */
+    codebini(fs, cast(OpCode, OP_ADDI), e1, e2, flip, line, TM_ADD);
+  else
+    codearith(fs, op, e1, e2, flip, line);
 }
 
 

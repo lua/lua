@@ -1271,30 +1271,6 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         op_arithI(L, l_addi, luai_numadd, TM_ADD, GETARG_k(i));
         vmbreak;
       }
-      vmcase(OP_SUBI) {
-        op_arithI(L, l_subi, luai_numsub, TM_SUB, 0);
-        vmbreak;
-      }
-      vmcase(OP_MULI) {
-        op_arithI(L, l_muli, luai_nummul, TM_MUL, GETARG_k(i));
-        vmbreak;
-      }
-      vmcase(OP_MODI) {
-        op_arithI(L, luaV_mod, luaV_modf, TM_MOD, 0);
-        vmbreak;
-      }
-      vmcase(OP_POWI) {
-        op_arithfI(L, luai_numpow, TM_POW);
-        vmbreak;
-      }
-      vmcase(OP_DIVI) {
-        op_arithfI(L, luai_numdiv, TM_DIV);
-        vmbreak;
-      }
-      vmcase(OP_IDIVI) {
-        op_arithI(L, luaV_idiv, luai_numidiv, TM_IDIV, 0);
-        vmbreak;
-      }
       vmcase(OP_ADDK) {
         op_arithK(L, l_addi, luai_numadd, GETARG_k(i));
         vmbreak;

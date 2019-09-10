@@ -219,12 +219,6 @@ OP_NEWTABLE,/*	A B C	R(A) := {}					*/
 OP_SELF,/*	A B C	R(A+1) := R(B); R(A) := R(B)[RK(C):string]	*/
 
 OP_ADDI,/*	A B sC	R(A) := R(B) + C				*/
-OP_SUBI,/*	A B sC	R(A) := R(B) - C				*/
-OP_MULI,/*	A B sC	R(A) := R(B) * C				*/
-OP_MODI,/*	A B sC	R(A) := R(B) % C				*/
-OP_POWI,/*	A B sC	R(A) := R(B) ^ C				*/
-OP_DIVI,/*	A B sC	R(A) := R(B) / C				*/
-OP_IDIVI,/*	A B sC	R(A) := R(B) // C				*/
 
 OP_ADDK,/*	A B C	R(A) := R(B) + K(C)				*/
 OP_SUBK,/*	A B C	R(A) := R(B) - K(C)				*/
