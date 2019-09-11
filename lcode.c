@@ -1630,6 +1630,8 @@ static void codeconcat (FuncState *fs, expdesc *e1, expdesc *e2, int line) {
 void luaK_posfix (FuncState *fs, BinOpr opr,
                   expdesc *e1, expdesc *e2, int line) {
   luaK_dischargevars(fs, e2);
+  if (foldbinop(opr) && constfolding(fs, opr + LUA_OPADD, e1, e2))
+    return;  /* done by folding */
   switch (opr) {
     case OPR_AND: {
       lua_assert(e1->t == NO_JUMP);  /* list closed by 'luaK_infix' */
@@ -1649,35 +1651,29 @@ void luaK_posfix (FuncState *fs, BinOpr opr,
       break;
     }
     case OPR_ADD: case OPR_MUL: {
-      if (!constfolding(fs, opr + LUA_OPADD, e1, e2))
-        codecommutative(fs, opr, e1, e2, line);
+      codecommutative(fs, opr, e1, e2, line);
       break;
     }
     case OPR_SUB: case OPR_DIV:
     case OPR_IDIV: case OPR_MOD: case OPR_POW: {
-      if (!constfolding(fs, opr + LUA_OPADD, e1, e2))
-        codearith(fs, opr, e1, e2, 0, line);
+      codearith(fs, opr, e1, e2, 0, line);
       break;
     }
     case OPR_BAND: case OPR_BOR: case OPR_BXOR: {
-      if (!constfolding(fs, opr + LUA_OPADD, e1, e2))
-        codebitwise(fs, opr, e1, e2, line);
+      codebitwise(fs, opr, e1, e2, line);
       break;
     }
     case OPR_SHL: {
-      if (!constfolding(fs, LUA_OPSHL, e1, e2)) {
-        if (isSCint(e1)) {
-          swapexps(e1, e2);
-          codebini(fs, OP_SHLI, e1, e2, 1, line, TM_SHL);
-        }
-        else
-          codeshift(fs, OP_SHL, e1, e2, line);
+      if (isSCint(e1)) {
+        swapexps(e1, e2);
+        codebini(fs, OP_SHLI, e1, e2, 1, line, TM_SHL);
       }
+      else
+        codeshift(fs, OP_SHL, e1, e2, line);
       break;
     }
     case OPR_SHR: {
-      if (!constfolding(fs, LUA_OPSHR, e1, e2))
-        codeshift(fs, OP_SHR, e1, e2, line);
+      codeshift(fs, OP_SHR, e1, e2, line);
       break;
     }
     case OPR_EQ: case OPR_NE: {
