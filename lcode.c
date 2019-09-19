@@ -627,7 +627,7 @@ static int nilK (FuncState *fs) {
 
 /*
 ** Check whether 'i' can be stored in an 'sC' operand.
-** Equivalent to (0 <= i + OFFSET_sC && i + OFFSET_sC <= MAXARG_C)
+** Equivalent to (0 <= int2sC(i) && int2sC(i) <= MAXARG_C)
 ** but without risk of overflows in the addition.
 */
 static int fitsC (lua_Integer i) {
@@ -651,14 +651,9 @@ void luaK_int (FuncState *fs, int reg, lua_Integer i) {
 }
 
 
-static int floatI (lua_Number f, lua_Integer *fi) {
-  return (luaV_flttointeger(f, fi, 0) && fitsBx(*fi));
-}
-
-
 static void luaK_float (FuncState *fs, int reg, lua_Number f) {
   lua_Integer fi;
-  if (floatI(f, &fi))
+  if (luaV_flttointeger(f, &fi, 0) && fitsBx(fi))
     luaK_codeAsBx(fs, OP_LOADF, reg, cast_int(fi));
   else
     luaK_codek(fs, reg, luaK_numberK(fs, f));
@@ -1221,15 +1216,16 @@ static int isSCint (expdesc *e) {
 ** Check whether expression 'e' is a literal integer or float in
 ** proper range to fit in a register (sB or sC).
 */
-static int isSCnumber (expdesc *e, lua_Integer *i, int *isfloat) {
+static int isSCnumber (expdesc *e, int *pi, int *isfloat) {
+  lua_Integer i;
   if (e->k == VKINT)
-    *i = e->u.ival;
-  else if (!(e->k == VKFLT && floatI(e->u.nval, i)))
-    return 0;  /* not a number */
-  else
+    i = e->u.ival;
+  else if (e->k == VKFLT && luaV_flttointeger(e->u.nval, &i, 0))
     *isfloat = 1;
-  if (!hasjumps(e) && fitsC(*i)) {
-    *i += OFFSET_sC;
+  else
+    return 0;  /* not a number */
+  if (!hasjumps(e) && fitsC(i)) {
+    *pi = int2sC(cast_int(i));
     return 1;
   }
   else
@@ -1347,12 +1343,6 @@ static void finishbinexpval (FuncState *fs, expdesc *e1, expdesc *e2,
   e1->u.info = pc;
   e1->k = VRELOC;  /* all those operations are relocatable */
   luaK_fixline(fs, line);
-  if (op == OP_SHRI && flip) {
-    /* For the metamethod, undo the "changedir" did by 'codeshift' */
-    event = TM_SHL;
-    v2 = -(v2 - OFFSET_sC) + OFFSET_sC;
-    flip = 0;
-  }
   luaK_codeABCk(fs, mmop, v1, v2, event, flip);  /* to call metamethod */
   luaK_fixline(fs, line);
 }
@@ -1377,7 +1367,8 @@ static void codebinexpval (FuncState *fs, OpCode op,
 static void codebini (FuncState *fs, OpCode op,
                        expdesc *e1, expdesc *e2, int flip, int line,
                        TMS event) {
-  int v2 = cast_int(e2->u.ival) + OFFSET_sC;  /* immediate operand */
+  int v2 = int2sC(cast_int(e2->u.ival));  /* immediate operand */
+  lua_assert(e2->k == VKINT);
   finishbinexpval(fs, e1, e2, op, v2, flip, line, OP_MMBINI, event);
 }
 
@@ -1460,12 +1451,14 @@ static void codebitwise (FuncState *fs, BinOpr opr,
 static void codeshift (FuncState *fs, OpCode op,
                        expdesc *e1, expdesc *e2, int line) {
   if (isSCint(e2)) {
-    int changedir = 0;
-    if (op == OP_SHL) {
-      changedir = 1;
-      e2->u.ival = -(e2->u.ival);
+    if (op == OP_SHR)
+      codebini(fs, OP_SHRI, e1, e2, 0, line, TM_SHR);
+    else {
+      int offset = cast_int(e2->u.ival);
+      finishbinexpval(fs, e1, e2, OP_SHRI, int2sC(offset),
+                      0, line, OP_MMBINI, TM_SHL);
+      SETARG_C(fs->f->code[fs->pc - 2], int2sC(-offset));
     }
-    codebini(fs, OP_SHRI, e1, e2, changedir, line, TM_SHR);
   }
   else
     codebinexpval(fs, op, e1, e2, line);
@@ -1478,18 +1471,18 @@ static void codeshift (FuncState *fs, OpCode op,
 */
 static void codeorder (FuncState *fs, OpCode op, expdesc *e1, expdesc *e2) {
   int r1, r2;
-  lua_Integer im;
+  int im;
   int isfloat = 0;
   if (isSCnumber(e2, &im, &isfloat)) {
     /* use immediate operand */
     r1 = luaK_exp2anyreg(fs, e1);
-    r2 = cast_int(im);
+    r2 = im;
     op = cast(OpCode, (op - OP_LT) + OP_LTI);
   }
   else if (isSCnumber(e1, &im, &isfloat)) {
     /* transform (A < B) to (B > A) and (A <= B) to (B >= A) */
     r1 = luaK_exp2anyreg(fs, e2);
-    r2 = cast_int(im);
+    r2 = im;
     op = (op == OP_LT) ? OP_GTI : OP_GEI;
   }
   else {  /* regular case, compare two registers */
@@ -1508,7 +1501,7 @@ static void codeorder (FuncState *fs, OpCode op, expdesc *e1, expdesc *e2) {
 */
 static void codeeq (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
   int r1, r2;
-  lua_Integer im;
+  int im;
   int isfloat = 0;  /* not needed here, but kept for symmetry */
   OpCode op;
   if (e1->k != VNONRELOC) {
@@ -1518,7 +1511,7 @@ static void codeeq (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
   r1 = luaK_exp2anyreg(fs, e1);  /* 1nd expression must be in register */
   if (isSCnumber(e2, &im, &isfloat)) {
     op = OP_EQI;
-    r2 = cast_int(im);  /* immediate operand */
+    r2 = im;  /* immediate operand */
   }
   else if (luaK_exp2RK(fs, e2)) {  /* 1st expression is constant? */
     op = OP_EQK;
@@ -1591,8 +1584,7 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
     }
     case OPR_LT: case OPR_LE:
     case OPR_GT: case OPR_GE: {
-      lua_Integer dummy;
-      int dummy2;
+      int dummy, dummy2;
       if (!isSCnumber(v, &dummy, &dummy2))
         luaK_exp2anyreg(fs, v);
       /* else keep numeral, which may be an immediate operand */
