@@ -6,6 +6,7 @@
 
 # Warnings valid for both C and C++
 CWARNSCPP= \
+	-fmax-errors=5 \
 	-Wextra \
 	-Wshadow \
 	-Wsign-compare \
@@ -14,14 +15,13 @@ CWARNSCPP= \
 	-Wredundant-decls \
 	-Wdisabled-optimization \
 	-Wdouble-promotion \
-	#-Wno-aggressive-loop-optimizations \
-	#-Wlogical-op \
-	#-Wfatal-errors \
-	#-Wstrict-aliasing=3 \
+	-Wlogical-op \
+	-Wno-aggressive-loop-optimizations \
+        # the next warnings might be useful sometimes,
+	# but usually they generate too much noise
 	# -Werror \
 	# -pedantic   # warns if we use jump tables \
-	# the next warnings generate too much noise, so they are disabled
-	# -Wconversion  -Wno-sign-conversion \
+	# -Wconversion  \
 	# -Wsign-conversion \
 	# -Wstrict-overflow=2 \
 	# -Wformat=2 \
@@ -46,10 +46,10 @@ CWARNS= $(CWARNSCPP) $(CWARNSC)
 # -DLUA_USE_CTYPE -DLUA_USE_APICHECK
 # ('-ftrapv' for runtime checks of integer overflows)
 # -fsanitize=undefined -ftrapv -fno-inline
-TESTS= -DLUA_USER_H='"ltests.h"' -O0
+# TESTS= -DLUA_USER_H='"ltests.h"' -O0 -g
 
 
-# LOCAL = $(TESTS) $(CWARNS) -g
+LOCAL = $(TESTS) $(CWARNS)
 
 
 # enable Linux goodies
