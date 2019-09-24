@@ -293,6 +293,7 @@ checkK(function () return -(border + 1) end, -(sbx + 1.0))
 
 -- immediate operands
 checkR(function (x) return x + k1 end, 10, 11, 'ADDI', 'MMBINI', 'RETURN1')
+checkR(function (x) return x - 127 end, 10, -117, 'ADDI', 'MMBINI', 'RETURN1')
 checkR(function (x) return 128 + x end, 0.0, 128.0,
          'ADDI', 'MMBINI', 'RETURN1')
 checkR(function (x) return x * -127 end, -1.0, 127.0,

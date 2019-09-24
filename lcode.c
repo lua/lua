@@ -1213,6 +1213,15 @@ static int isSCint (expdesc *e) {
 
 
 /*
+** Check whether expression 'e' and its negation are literal integers
+** in proper range to fit in register sC
+*/
+static int isSCintN (expdesc *e) {
+  return luaK_isKint(e) && fitsC(e->u.ival) && fitsC(-e->u.ival);
+}
+
+
+/*
 ** Check whether expression 'e' is a literal integer or float in
 ** proper range to fit in a register (sB or sC).
 */
@@ -1373,6 +1382,18 @@ static void codebini (FuncState *fs, OpCode op,
 }
 
 
+/* Code binary operators negating the immediate operand for the
+** opcode. For the metamethod, 'v2' must keep its original value.
+*/
+static void finishbinexpneg (FuncState *fs, expdesc *e1, expdesc *e2,
+                             OpCode op, int line, TMS event) {
+  int v2 = cast_int(e2->u.ival);
+  finishbinexpval(fs, e1, e2, op, int2sC(-v2), 0, line, OP_MMBINI, event);
+  /* correct metamethod argument */
+  SETARG_B(fs->f->code[fs->pc - 1], int2sC(v2));
+}
+
+
 static void swapexps (expdesc *e1, expdesc *e2) {
   expdesc temp = *e1; *e1 = *e2; *e2 = temp;  /* swap 'e1' and 'e2' */
 }
@@ -1441,27 +1462,6 @@ static void codebitwise (FuncState *fs, BinOpr opr,
   lua_assert(ttisinteger(&fs->f->k[v2]));
   finishbinexpval(fs, e1, e2, op, v2, flip, line, OP_MMBINK,
                   cast(TMS, opr + TM_ADD));
-}
-
-
-/*
-** Code shift operators. If second operand is constant, use immediate
-** operand (negating it if shift is in the other direction).
-*/
-static void codeshift (FuncState *fs, OpCode op,
-                       expdesc *e1, expdesc *e2, int line) {
-  if (isSCint(e2)) {
-    if (op == OP_SHR)
-      codebini(fs, OP_SHRI, e1, e2, 0, line, TM_SHR);
-    else {
-      int offset = cast_int(e2->u.ival);
-      finishbinexpval(fs, e1, e2, OP_SHRI, int2sC(offset),
-                      0, line, OP_MMBINI, TM_SHL);
-      SETARG_C(fs->f->code[fs->pc - 2], int2sC(-offset));
-    }
-  }
-  else
-    codebinexpval(fs, op, e1, e2, line);
 }
 
 
@@ -1646,8 +1646,15 @@ void luaK_posfix (FuncState *fs, BinOpr opr,
       codecommutative(fs, opr, e1, e2, line);
       break;
     }
-    case OPR_SUB: case OPR_DIV:
-    case OPR_IDIV: case OPR_MOD: case OPR_POW: {
+    case OPR_SUB: {
+      if (isSCintN(e2)) {  /* subtracting a small integer constant? */
+        /* code it as (r1 + -I) */
+        finishbinexpneg(fs, e1, e2, OP_ADDI, line, TM_SUB);
+        break;
+      }
+      /* ELSE *//* FALLTHROUGH */
+    }
+    case OPR_DIV: case OPR_IDIV: case OPR_MOD: case OPR_POW: {
       codearith(fs, opr, e1, e2, 0, line);
       break;
     }
@@ -1658,14 +1665,21 @@ void luaK_posfix (FuncState *fs, BinOpr opr,
     case OPR_SHL: {
       if (isSCint(e1)) {
         swapexps(e1, e2);
-        codebini(fs, OP_SHLI, e1, e2, 1, line, TM_SHL);
+        codebini(fs, OP_SHLI, e1, e2, 1, line, TM_SHL);  /* I << r2 */
       }
-      else
-        codeshift(fs, OP_SHL, e1, e2, line);
+      else if (isSCintN(e2)) {  /* shifting by a small integer constant? */
+        /* code it as (r1 >> -I) */
+        finishbinexpneg(fs, e1, e2, OP_SHRI, line, TM_SHL);
+      }
+      else  /* regular case (two registers) */
+       codebinexpval(fs, OP_SHL, e1, e2, line);
       break;
     }
     case OPR_SHR: {
-      codeshift(fs, OP_SHR, e1, e2, line);
+      if (isSCintN(e2))
+        codebini(fs, OP_SHRI, e1, e2, 0, line, TM_SHR);  /* r1 >> I */
+      else  /* regular case (two registers) */
+        codebinexpval(fs, OP_SHR, e1, e2, line);
       break;
     }
     case OPR_EQ: case OPR_NE: {

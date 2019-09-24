@@ -60,9 +60,9 @@ assert("1234.0" << "5.0" == 1234 * 32)
 assert("0xffff.0" ~ "0xAAAA" == 0x5555)
 assert(~"0x0.000p4" == -1)
 
-assert("7" .. 3 << 1 == 146)
-assert(10 >> 1 .. "9" == 0)
-assert(10 | 1 .. "9" == 27)
+assert(("7" .. 3) << 1 == 146)
+assert(0xffffffff >> (1 .. "9") == 0x1fff)
+assert(10 | (1 .. "9") == 27)
 
 do
   local st, msg = pcall(function () return 4 & "a" end)

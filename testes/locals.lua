@@ -82,7 +82,7 @@ assert(c.a == nil)
 f()
 assert(c.a == 3)
 
--- old test for limits for special instructions (now just a generic test)
+-- old test for limits for special instructions
 do
   local i = 2
   local p = 4    -- p == 2^i
