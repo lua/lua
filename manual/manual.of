@@ -4814,7 +4814,7 @@ calling @Lid{lua_yield} with @id{nresults} equal to zero
 
 }
 
-@APIEntry{int (lua_setCstacklimit) (lua_State *L, unsigned int limit);|
+@APIEntry{int (lua_setcstacklimit) (lua_State *L, unsigned int limit);|
 @apii{0,0,-}
 
 Sets a new limit for the C stack.
@@ -4823,7 +4823,7 @@ with the intent of avoiding a stack overflow.
 Returns the old limit in case of success,
 or zero in case of error.
 For more details about this function,
-see @Lid{debug.setCstacklimit},
+see @Lid{debug.setcstacklimit},
 its equivalent in the standard library.
 
 }
@@ -8565,7 +8565,7 @@ to the userdata @id{u} plus a boolean,
 
 }
 
-@LibEntry{debug.setCstacklimit (limit)|
+@LibEntry{debug.setcstacklimit (limit)|
 
 Sets a new limit for the C stack.
 This limit controls how deeply nested calls can go in Lua,
@@ -8586,10 +8586,10 @@ This function has the following restrictions:
 @item{@id{limit} must be less than 40000;}
 @item{@id{limit} cannot be less than the amount of C stack in use.}
 }
-In case of success,
-this function returns the old limit.
-In case of error,
+If a call does not respect some restriction,
 it returns @false.
+Otherwise,
+the call returns the old limit.
 
 }
 

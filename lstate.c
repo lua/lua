@@ -96,7 +96,7 @@ void luaE_setdebt (global_State *g, l_mem debt) {
 }
 
 
-LUA_API int lua_setCstacklimit (lua_State *L, unsigned int limit) {
+LUA_API int lua_setcstacklimit (lua_State *L, unsigned int limit) {
   global_State *g = G(L);
   int ccalls;
   luaE_freeCI(L);  /* release unused CIs */

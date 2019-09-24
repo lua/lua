@@ -8,7 +8,7 @@ print"If this test craches, see its file ('cstack.lua')"
 
 -- Segmentation faults in these tests probably result from a C-stack
 -- overflow. To avoid these errors, you can use the function
--- 'debug.setCstacklimit' to set a smaller limit for the use of
+-- 'debug.setcstacklimit' to set a smaller limit for the use of
 -- C stack by Lua. After finding a reliable limit, you might want
 -- to recompile Lua with this limit as the value for
 -- the constant 'LUAI_MAXCCALLS', which defines the default limit.
@@ -19,12 +19,12 @@ print"If this test craches, see its file ('cstack.lua')"
 -- higher than 2_000.
 
 
-local origlimit = debug.setCstacklimit(400)
+local origlimit = debug.setcstacklimit(400)
 print("default stack limit: " .. origlimit)
 
 -- change this value for different limits for this test suite
 local currentlimit = origlimit
-debug.setCstacklimit(currentlimit)
+debug.setcstacklimit(currentlimit)
 print("current stack limit: " .. currentlimit)
 
 
@@ -102,10 +102,10 @@ end
 
 do  print("testing changes in C-stack limit")
 
-  assert(not debug.setCstacklimit(0))        -- limit too small
-  assert(not debug.setCstacklimit(50000))    -- limit too large
+  assert(not debug.setcstacklimit(0))        -- limit too small
+  assert(not debug.setcstacklimit(50000))    -- limit too large
   local co = coroutine.wrap (function ()
-               return debug.setCstacklimit(400)
+               return debug.setcstacklimit(400)
              end)
   assert(co() == false)         -- cannot change C stack inside coroutine
 
@@ -118,26 +118,26 @@ do  print("testing changes in C-stack limit")
     return n
   end
 
-  assert(debug.setCstacklimit(400) == currentlimit)
+  assert(debug.setcstacklimit(400) == currentlimit)
   local lim400 = check()
   -- a very low limit (given that the several calls to arive here)
   local lowlimit = 38
-  assert(debug.setCstacklimit(lowlimit) == 400)
+  assert(debug.setcstacklimit(lowlimit) == 400)
   assert(check() < lowlimit - 30)
-  assert(debug.setCstacklimit(600) == lowlimit)
+  assert(debug.setcstacklimit(600) == lowlimit)
   local lim600 = check()
   assert(lim600 == lim400 + 200)
 
 
-  -- 'setCstacklimit' works inside protected calls. (The new stack
+  -- 'setcstacklimit' works inside protected calls. (The new stack
   -- limit is kept when 'pcall' returns.)
   assert(pcall(function ()
-    assert(debug.setCstacklimit(400) == 600)
+    assert(debug.setcstacklimit(400) == 600)
     assert(check() <= lim400)
   end))
 
   assert(check() == lim400)
-  assert(debug.setCstacklimit(origlimit) == 400)   -- restore original limit
+  assert(debug.setcstacklimit(origlimit) == 400)   -- restore original limit
 end
 
 
