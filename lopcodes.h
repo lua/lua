@@ -221,7 +221,7 @@ OP_NEWTABLE,/*	A B C	R(A) := {}					*/
 
 OP_SELF,/*	A B C	R(A+1) := R(B); R(A) := R(B)[RK(C):string]	*/
 
-OP_ADDI,/*	A B sC	R(A) := R(B) + C				*/
+OP_ADDI,/*	A B sC	R(A) := R(B) + sC				*/
 
 OP_ADDK,/*	A B C	R(A) := R(B) + K(C)				*/
 OP_SUBK,/*	A B C	R(A) := R(B) - K(C)				*/
@@ -235,8 +235,8 @@ OP_BANDK,/*	A B C	R(A) := R(B) & K(C):integer			*/
 OP_BORK,/*	A B C	R(A) := R(B) | K(C):integer			*/
 OP_BXORK,/*	A B C	R(A) := R(B) ~ K(C):integer			*/
 
-OP_SHRI,/*	A B sC	R(A) := R(B) >> C				*/
-OP_SHLI,/*	A B sC	R(A) := C << R(B)				*/
+OP_SHRI,/*	A B sC	R(A) := R(B) >> sC				*/
+OP_SHLI,/*	A B sC	R(A) := sC << R(B)				*/
 
 OP_ADD,/*	A B C	R(A) := R(B) + R(C)				*/
 OP_SUB,/*	A B C	R(A) := R(B) - R(C)				*/
@@ -253,7 +253,7 @@ OP_SHL,/*	A B C	R(A) := R(B) << R(C)				*/
 OP_SHR,/*	A B C	R(A) := R(B) >> R(C)				*/
 
 OP_MMBIN,/*	A B C	call C metamethod over R(A) and R(B)		*/
-OP_MMBINI,/*	A B C	call C metamethod over R(A) and B		*/
+OP_MMBINI,/*	A sB C	call C metamethod over R(A) and sB		*/
 OP_MMBINK,/*	A B C	call C metamethod over R(A) and K(B)		*/
 
 OP_UNM,/*	A B	R(A) := -R(B)					*/

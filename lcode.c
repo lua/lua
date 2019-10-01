@@ -359,12 +359,12 @@ static void removelastlineinfo (FuncState *fs) {
   Proto *f = fs->f;
   int pc = fs->pc - 1;  /* last instruction coded */
   if (f->lineinfo[pc] != ABSLINEINFO) {  /* relative line info? */
-    fs->previousline -= f->lineinfo[pc];  /* last line saved */
-    fs->iwthabs--;
+    fs->previousline -= f->lineinfo[pc];  /* correct last line saved */
+    fs->iwthabs--;  /* undo previous increment */
   }
   else {  /* absolute line information */
+    lua_assert(f->abslineinfo[fs->nabslineinfo - 1].pc == pc);
     fs->nabslineinfo--;  /* remove it */
-    lua_assert(f->abslineinfo[fs->nabslineinfo].pc = pc);
     fs->iwthabs = MAXIWTHABS + 1;  /* force next line info to be absolute */
   }
 }
@@ -626,12 +626,12 @@ static int nilK (FuncState *fs) {
 
 
 /*
-** Check whether 'i' can be stored in an 'sC' operand.
-** Equivalent to (0 <= int2sC(i) && int2sC(i) <= MAXARG_C)
-** but without risk of overflows in the addition.
+** Check whether 'i' can be stored in an 'sC' operand. Equivalent to
+** (0 <= int2sC(i) && int2sC(i) <= MAXARG_C) but without risk of
+** overflows in the hidden addition inside 'int2sC'.
 */
 static int fitsC (lua_Integer i) {
-  return (-OFFSET_sC <= i && i <= MAXARG_C - OFFSET_sC);
+  return (l_castS2U(i) + OFFSET_sC <= cast_uint(MAXARG_C));
 }
 
 
@@ -1213,15 +1213,6 @@ static int isSCint (expdesc *e) {
 
 
 /*
-** Check whether expression 'e' and its negation are literal integers
-** in proper range to fit in register sC
-*/
-static int isSCintN (expdesc *e) {
-  return luaK_isKint(e) && fitsC(e->u.ival) && fitsC(-e->u.ival);
-}
-
-
-/*
 ** Check whether expression 'e' is a literal integer or float in
 ** proper range to fit in a register (sB or sC).
 */
@@ -1382,15 +1373,25 @@ static void codebini (FuncState *fs, OpCode op,
 }
 
 
-/* Code binary operators negating the immediate operand for the
-** opcode. For the metamethod, 'v2' must keep its original value.
+/* Try to code a binary operator negating its second operand.
+** For the metamethod, 2nd operand must keep its original value.
 */
-static void finishbinexpneg (FuncState *fs, expdesc *e1, expdesc *e2,
+static int finishbinexpneg (FuncState *fs, expdesc *e1, expdesc *e2,
                              OpCode op, int line, TMS event) {
-  int v2 = cast_int(e2->u.ival);
-  finishbinexpval(fs, e1, e2, op, int2sC(-v2), 0, line, OP_MMBINI, event);
-  /* correct metamethod argument */
-  SETARG_B(fs->f->code[fs->pc - 1], int2sC(v2));
+  if (!luaK_isKint(e2))
+    return 0;  /* not an integer constant */
+  else {
+    lua_Integer i2 = e2->u.ival;
+    if (!(fitsC(i2) && fitsC(-i2)))
+      return 0;  /* not in the proper range */
+    else {  /* operating a small integer constant */
+      int v2 = cast_int(i2);
+      finishbinexpval(fs, e1, e2, op, int2sC(-v2), 0, line, OP_MMBINI, event);
+      /* correct metamethod argument */
+      SETARG_B(fs->f->code[fs->pc - 1], int2sC(v2));
+      return 1;  /* successfully coded */
+    }
+  }
 }
 
 
@@ -1647,11 +1648,8 @@ void luaK_posfix (FuncState *fs, BinOpr opr,
       break;
     }
     case OPR_SUB: {
-      if (isSCintN(e2)) {  /* subtracting a small integer constant? */
-        /* code it as (r1 + -I) */
-        finishbinexpneg(fs, e1, e2, OP_ADDI, line, TM_SUB);
-        break;
-      }
+      if (finishbinexpneg(fs, e1, e2, OP_ADDI, line, TM_SUB))
+        break; /* coded as (r1 + -I) */
       /* ELSE *//* FALLTHROUGH */
     }
     case OPR_DIV: case OPR_IDIV: case OPR_MOD: case OPR_POW: {
@@ -1667,16 +1665,15 @@ void luaK_posfix (FuncState *fs, BinOpr opr,
         swapexps(e1, e2);
         codebini(fs, OP_SHLI, e1, e2, 1, line, TM_SHL);  /* I << r2 */
       }
-      else if (isSCintN(e2)) {  /* shifting by a small integer constant? */
-        /* code it as (r1 >> -I) */
-        finishbinexpneg(fs, e1, e2, OP_SHRI, line, TM_SHL);
+      else if (finishbinexpneg(fs, e1, e2, OP_SHRI, line, TM_SHL)) {
+        /* coded as (r1 >> -I) */;
       }
       else  /* regular case (two registers) */
        codebinexpval(fs, OP_SHL, e1, e2, line);
       break;
     }
     case OPR_SHR: {
-      if (isSCintN(e2))
+      if (isSCint(e2))
         codebini(fs, OP_SHRI, e1, e2, 0, line, TM_SHR);  /* r1 >> I */
       else  /* regular case (two registers) */
         codebinexpval(fs, OP_SHR, e1, e2, line);

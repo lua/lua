@@ -833,39 +833,41 @@ static unsigned int binsearch (const TValue *array, unsigned int i,
 ** and 'maxinteger' if t[maxinteger] is present.)
 ** (In the next explanation, we use Lua indices, that is, with base 1.
 ** The code itself uses base 0 when indexing the array part of the table.)
-** The code starts with 'limit', a position in the array part that may
-** be a boundary.
+** The code starts with 'limit = t->alimit', a position in the array
+** part that may be a boundary.
+**
 ** (1) If 't[limit]' is empty, there must be a boundary before it.
-** As a common case (e.g., after 't[#t]=nil'), check whether 'hint-1'
+** As a common case (e.g., after 't[#t]=nil'), check whether 'limit-1'
 ** is present. If so, it is a boundary. Otherwise, do a binary search
 ** between 0 and limit to find a boundary. In both cases, try to
-** use this boundary as the new 'limit', as a hint for the next call.
+** use this boundary as the new 'alimit', as a hint for the next call.
+**
 ** (2) If 't[limit]' is not empty and the array has more elements
 ** after 'limit', try to find a boundary there. Again, try first
 ** the special case (which should be quite frequent) where 'limit+1'
 ** is empty, so that 'limit' is a boundary. Otherwise, check the
-** last element of the array part (set it as a new limit). If it is empty,
-** there must be a boundary between the old limit (present) and the new
-** limit (absent), which is found with a binary search. (This boundary
-** always can be a new limit.)
+** last element of the array part. If it is empty, there must be a
+** boundary between the old limit (present) and the last element
+** (absent), which is found with a binary search. (This boundary always
+** can be a new limit.)
+**
 ** (3) The last case is when there are no elements in the array part
 ** (limit == 0) or its last element (the new limit) is present.
-** In this case, must check the hash part. If there is no hash part,
-** the boundary is 0. Otherwise, if 'limit+1' is absent, 'limit' is
-** a boundary. Finally, if 'limit+1' is present, call 'hash_search'
-** to find a boundary in the hash part of the table. (In those
-** cases, the boundary is not inside the array part, and therefore
-** cannot be used as a new limit.)
+** In this case, must check the hash part. If there is no hash part
+** or 'limit+1' is absent, 'limit' is a boundary.  Otherwise, call
+** 'hash_search' to find a boundary in the hash part of the table.
+** (In those cases, the boundary is not inside the array part, and
+** therefore cannot be used as a new limit.)
 */
 lua_Unsigned luaH_getn (Table *t) {
   unsigned int limit = t->alimit;
-  if (limit > 0 && isempty(&t->array[limit - 1])) {
-    /* (1) there must be a boundary before 'limit' */
+  if (limit > 0 && isempty(&t->array[limit - 1])) {  /* (1)? */
+    /* there must be a boundary before 'limit' */
     if (limit >= 2 && !isempty(&t->array[limit - 2])) {
       /* 'limit - 1' is a boundary; can it be a new limit? */
       if (ispow2realasize(t) && !ispow2(limit - 1)) {
         t->alimit = limit - 1;
-        setnorealasize(t);
+        setnorealasize(t);  /* now 'alimit' is not the real size */
       }
       return limit - 1;
     }
@@ -880,8 +882,8 @@ lua_Unsigned luaH_getn (Table *t) {
     }
   }
   /* 'limit' is zero or present in table */
-  if (!limitequalsasize(t)) {
-    /* (2) 'limit' > 0 and array has more elements after 'limit' */
+  if (!limitequalsasize(t)) {  /* (2)? */
+    /* 'limit' > 0 and array has more elements after 'limit' */
     if (isempty(&t->array[limit]))  /* 'limit + 1' is empty? */
       return limit;  /* this is the boundary */
     /* else, try last element in the array */
@@ -899,7 +901,7 @@ lua_Unsigned luaH_getn (Table *t) {
   lua_assert(limit == luaH_realasize(t) &&
              (limit == 0 || !isempty(&t->array[limit - 1])));
   if (isdummy(t) || isempty(luaH_getint(t, cast(lua_Integer, limit + 1))))
-    return limit;  /* 'limit + 1' is absent... */
+    return limit;  /* 'limit + 1' is absent */
   else  /* 'limit + 1' is also present */
     return hash_search(t, limit);
 }
@@ -907,6 +909,8 @@ lua_Unsigned luaH_getn (Table *t) {
 
 
 #if defined(LUA_DEBUG)
+
+/* export these functions for the test library */
 
 Node *luaH_mainposition (const Table *t, const TValue *key) {
   return mainpositionTV(t, key);
