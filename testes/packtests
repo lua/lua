@@ -1,4 +1,4 @@
-NAME="lua-5.4.0-alpha-tests"
+NAME=$1"-tests"
 
 ln -s . $NAME
 ln -s .. ltests
@@ -48,5 +48,7 @@ $NAME/ltests/ltests.c
 
 \rm -I $NAME
 \rm -I ltests
+
+echo ${NAME}.tar.gz" created"
 
 
