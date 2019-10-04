@@ -1650,8 +1650,8 @@ void luaK_posfix (FuncState *fs, BinOpr opr,
     case OPR_SUB: {
       if (finishbinexpneg(fs, e1, e2, OP_ADDI, line, TM_SUB))
         break; /* coded as (r1 + -I) */
-      /* ELSE *//* FALLTHROUGH */
-    }
+      /* ELSE */
+    }  /* FALLTHROUGH */
     case OPR_DIV: case OPR_IDIV: case OPR_MOD: case OPR_POW: {
       codearith(fs, opr, e1, e2, 0, line);
       break;

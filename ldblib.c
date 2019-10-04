@@ -24,7 +24,7 @@
 ** The hook table at registry[HOOKKEY] maps threads to their current
 ** hook function.
 */
-static const char* HOOKKEY = "_HOOKKEY";
+static const char *const HOOKKEY = "_HOOKKEY";
 
 
 /*

@@ -59,7 +59,7 @@
 ** key for table in the registry that keeps handles
 ** for all loaded C libraries
 */
-static const char *CLIBS = "_CLIBS";
+static const char *const CLIBS = "_CLIBS";
 
 #define LIB_FAIL	"open"
 

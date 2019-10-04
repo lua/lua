@@ -998,7 +998,7 @@ static void sweep2old (lua_State *L, GCObject **p) {
 */
 static GCObject **sweepgen (lua_State *L, global_State *g, GCObject **p,
                             GCObject *limit) {
-  static lu_byte nextage[] = {
+  static const lu_byte nextage[] = {
     G_SURVIVAL,  /* from G_NEW */
     G_OLD1,      /* from G_SURVIVAL */
     G_OLD1,      /* from G_OLD0 */

@@ -1523,8 +1523,8 @@ static void fixforjump (FuncState *fs, int pc, int dest, int back) {
 */
 static void forbody (LexState *ls, int base, int line, int nvars, int isgen) {
   /* forbody -> DO block */
-  static OpCode forprep[2] = {OP_FORPREP, OP_TFORPREP};
-  static OpCode forloop[2] = {OP_FORLOOP, OP_TFORLOOP};
+  static const OpCode forprep[2] = {OP_FORPREP, OP_TFORPREP};
+  static const OpCode forloop[2] = {OP_FORLOOP, OP_TFORLOOP};
   BlockCnt bl;
   FuncState *fs = ls->fs;
   int prep, endfor;
