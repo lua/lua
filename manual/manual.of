@@ -295,9 +295,9 @@ although this behavior can be adapted from C @seeC{lua_setwarnf}.
 Every value in Lua can have a @emph{metatable}.
 This @def{metatable} is an ordinary Lua table
 that defines the behavior of the original value
-under certain special operations.
+under certain events.
 You can change several aspects of the behavior
-of operations over a value by setting specific fields in its metatable.
+of a value by setting specific fields in its metatable.
 For instance, when a non-numeric value is the operand of an addition,
 Lua checks for a function in the field @St{__add} of the value's metatable.
 If it finds one,
@@ -306,7 +306,7 @@ Lua calls this function to perform the addition.
 The key for each event in a metatable is a string
 with the event name prefixed by two underscores;
 the corresponding values are called @def{metamethods}.
-In the previous example, the key is @St{__add}
+In the previous example, the key is the string @St{__add}
 and the metamethod is the function that performs the addition.
 Unless stated otherwise,
 metamethods should be function values.
@@ -328,22 +328,10 @@ one for all strings, etc.
 By default, a value has no metatable,
 but the string library sets a metatable for the string type @see{strlib}.
 
-A metatable controls how an object behaves in
-arithmetic operations, bitwise operations,
-order comparisons, concatenation, length operation, calls, and indexing.
-A metatable also can define a function to be called
-when a userdata or a table is @link{GC|garbage collected}.
-
-For the unary operators (negation, length, and bitwise NOT),
-the metamethod is computed and called with a dummy second operand,
-equal to the first one.
-This extra operand is only to simplify Lua's internals
-(by making these operators behave like a binary operation)
-and may be removed in future versions.
-(For most uses this extra operand is irrelevant.)
-
-A detailed list of events controlled by metatables is given next.
-Each operation is identified by its corresponding key.
+A detailed list of operations controlled by metatables is given next.
+Each event is identified by its corresponding key.
+By convention, all metatable keys used by Lua are composed by
+two underscores followed by lowercase Latin letters.
 
 @description{
 
@@ -351,16 +339,16 @@ Each operation is identified by its corresponding key.
 the addition (@T{+}) operation.
 If any operand for an addition is not a number,
 Lua will try to call a metamethod.
-First, Lua will check the first operand (even if it is valid).
-If that operand does not define a metamethod for @idx{__add},
+It starts by checking the first operand (even if it is a number);
+if that operand does not define a metamethod for @idx{__add},
 then Lua will check the second operand.
 If Lua can find a metamethod,
 it calls the metamethod with the two operands as arguments,
 and the result of the call
 (adjusted to one value)
 is the result of the operation.
-Otherwise,
-it raises an error.
+Otherwise, if no metamethod is found,
+Lua raises an error.
 }
 
 @item{@idx{__sub}|
@@ -467,7 +455,7 @@ the less than (@T{<}) operation.
 Behavior similar to the addition operation,
 except that Lua will try a metamethod only when the values
 being compared are neither both numbers nor both strings.
-The result of the call is always converted to a boolean.
+Moreover, the result of the call is always converted to a boolean.
 }
 
 @item{@idx{__le}|
@@ -512,9 +500,9 @@ and therefore can trigger another metamethod.
 
 Whenever there is a @idx{__newindex} metamethod,
 Lua does not perform the primitive assignment.
-(If necessary,
+If needed,
 the metamethod itself can call @Lid{rawset}
-to do the assignment.)
+to do the assignment.
 }
 
 @item{@idx{__call}|
@@ -526,16 +514,29 @@ If present,
 the metamethod is called with @id{func} as its first argument,
 followed by the arguments of the original call (@id{args}).
 All results of the call
-are the result of the operation.
+are the results of the operation.
 This is the only metamethod that allows multiple results.
 }
 
 }
 
-It is a good practice to add all needed metamethods to a table
-before setting it as a metatable of some object.
-In particular, the @idx{__gc} metamethod works only when this order
-is followed @see{finalizers}.
+In addition to the previous list,
+the interpreter also respects the following keys in metatables:
+@idx{__gc} @see{finalizers},
+@idx{__close} @see{to-be-closed},
+@idx{__mode} @see{weak-table},
+and @idx{__name}.
+(The entry @idx{__name},
+when it contains a string,
+is used by some error-reporting functions to build error messages.)
+
+For the unary operators (negation, length, and bitwise NOT),
+the metamethod is computed and called with a dummy second operand,
+equal to the first one.
+This extra operand is only to simplify Lua's internals
+(by making these operators behave like a binary operation)
+and may be removed in future versions.
+For most uses this extra operand is irrelevant.
 
 Because metatables are regular tables,
 they can contain arbitrary fields,
@@ -543,6 +544,13 @@ not only the event names defined above.
 Some functions in the standard library
 (e.g., @Lid{tostring})
 use other fields in metatables for their own purposes.
+
+It is a good practice to add all needed metamethods to a table
+before setting it as a metatable of some object.
+In particular, the @idx{__gc} metamethod works only when this order
+is followed @see{finalizers}.
+It is also a good practice to set the metatable of an object
+right after its creation.
 
 }
 
@@ -1012,7 +1020,7 @@ it must be expressed using exactly three digits.)
 The @x{UTF-8} encoding of a @x{Unicode} character
 can be inserted in a literal string with
 the escape sequence @T{\u{@rep{XXX}}}
-(with mandatory enclosing brackets),
+(with mandatory enclosing braces),
 where @rep{XXX} is a sequence of one or more hexadecimal digits
 representing the character code point.
 This code point can be any value less than @M{2@sp{31}}.
@@ -5536,7 +5544,6 @@ creates a new table to be used as a metatable for userdata,
 adds to this new table the pair @T{__name = tname},
 adds to the registry the pair @T{[tname] = new table},
 and returns 1.
-(The entry @idx{__name} is used by some error-reporting functions.)
 
 In both cases,
 the function pushes onto the stack the final value associated
@@ -5911,7 +5918,7 @@ The notation @fail means a return value representing
 some kind of failure or the absence of a better value to return.
 Currently, @fail is equal to @nil,
 but that may change in future versions.
-The recommendation is to test the success of these functions
+The recommendation is to always test the success of these functions
 with @T{(not status)}, instead of @T{(status == nil)}.
 
 
@@ -8587,7 +8594,7 @@ This function has the following restrictions:
 @item{@id{limit} cannot be less than the amount of C stack in use.}
 }
 If a call does not respect some restriction,
-it returns @false.
+it returns a falsy value.
 Otherwise,
 the call returns the old limit.
 
