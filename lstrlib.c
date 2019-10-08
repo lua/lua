@@ -233,6 +233,17 @@ static int str_dump (lua_State *L) {
 ** =======================================================
 */
 
+#if defined(LUA_NOCVTS2N)	/* { */
+
+/* no coercion from strings to numbers */
+
+static const luaL_Reg stringmetamethods[] = {
+  {"__index", NULL},  /* placeholder */
+  {NULL, NULL}
+};
+
+#else		/* }{ */
+
 static int tonum (lua_State *L, int arg) {
   if (lua_type(L, arg) == LUA_TNUMBER) {  /* already a number? */
     lua_pushvalue(L, arg);
@@ -310,6 +321,8 @@ static const luaL_Reg stringmetamethods[] = {
   {"__index", NULL},  /* placeholder */
   {NULL, NULL}
 };
+
+#endif		/* } */
 
 /* }====================================================== */
 
