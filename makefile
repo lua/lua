@@ -106,6 +106,16 @@ $(LUA_T): $(LUA_O) $(CORE_T)
 $(LUAC_T): $(LUAC_O) $(CORE_T)
 	$(CC) -o $@ $(MYLDFLAGS) $(LUAC_O) $(CORE_T) $(LIBS) $(MYLIBS)
 
+llex.o:
+	$(CC) $(CFLAGS) -Os -c llex.c
+
+lparser.o:
+	$(CC) $(CFLAGS) -Os -c lparser.c
+
+lcode.o:
+	$(CC) $(CFLAGS) -Os -c lcode.c
+
+
 clean:
 	$(RM) $(ALL_T) $(ALL_O)
 
