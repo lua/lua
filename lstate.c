@@ -286,7 +286,6 @@ static void preinit_thread (lua_State *L, global_State *g) {
   L->stacksize = 0;
   L->twups = L;  /* thread has no upvalues */
   L->errorJmp = NULL;
-  L->nCcalls = CSTACKTHREAD;
   L->hook = NULL;
   L->hookmask = 0;
   L->basehookcount = 0;
@@ -327,6 +326,7 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   setthvalue2s(L, L->top, L1);
   api_incr_top(L);
   preinit_thread(L1, g);
+  L1->nCcalls = getCcalls(L);
   L1->hookmask = L->hookmask;
   L1->basehookcount = L->basehookcount;
   L1->hook = L->hook;
