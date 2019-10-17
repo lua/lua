@@ -1071,7 +1071,10 @@ static int lua_number2strx (lua_State *L, char *buff, int sz,
 
 
 /* valid flags in a format specification */
-#define FLAGS	"-+ #0"
+#if !defined(L_FMTFLAGS)
+#define L_FMTFLAGS	"-+ #0"
+#endif
+
 
 /*
 ** maximum size of each format specification (such as "%-099.99d")
@@ -1169,8 +1172,8 @@ static void addliteral (lua_State *L, luaL_Buffer *b, int arg) {
 
 static const char *scanformat (lua_State *L, const char *strfrmt, char *form) {
   const char *p = strfrmt;
-  while (*p != '\0' && strchr(FLAGS, *p) != NULL) p++;  /* skip flags */
-  if ((size_t)(p - strfrmt) >= sizeof(FLAGS)/sizeof(char))
+  while (*p != '\0' && strchr(L_FMTFLAGS, *p) != NULL) p++;  /* skip flags */
+  if ((size_t)(p - strfrmt) >= sizeof(L_FMTFLAGS)/sizeof(char))
     luaL_error(L, "invalid format (repeated flags)");
   if (isdigit(uchar(*p))) p++;  /* skip width */
   if (isdigit(uchar(*p))) p++;  /* (2 digits at most) */
