@@ -216,7 +216,7 @@ typedef StackValue *StkId;
 
 #define bvalueraw(v)	((v).b)
 
-#define l_isfalse(o)	(ttisnil(o) || (ttisboolean(o) && bvalue(o) == 0))
+#define l_isfalse(o)	(ttisboolean(o) ? bvalue(o) == 0 : ttisnil(o))
 
 #define setbvalue(obj,x) \
   { TValue *io=(obj); val_(io).b=(x); settt_(io, LUA_TBOOLEAN); }
