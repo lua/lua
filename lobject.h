@@ -17,10 +17,11 @@
 
 
 /*
-** Extra tags for non-values
+** Extra tags for collectable non-values
 */
 #define LUA_TUPVAL	LUA_NUMTAGS  /* upvalues */
 #define LUA_TPROTO	(LUA_NUMTAGS+1)  /* function prototypes */
+
 
 /*
 ** number of all possible tags (including LUA_TNONE)
@@ -30,7 +31,7 @@
 
 /*
 ** tags for Tagged Values have the following use of bits:
-** bits 0-3: actual tag (a LUA_T* value)
+** bits 0-3: actual tag (a LUA_T* constant)
 ** bits 4-5: variant bits
 ** bit 6: whether value is collectable
 */
@@ -86,24 +87,35 @@ typedef struct TValue {
 
 
 /* Macros for internal tests */
+
+/* collectable object has the same tag as the original value */
 #define righttt(obj)		(ttypetag(obj) == gcvalue(obj)->tt)
 
+/*
+** Any value being manipulated by the program either is non
+** collectable, or the collectable object has the right tag
+** and it is not dead.
+*/
 #define checkliveness(L,obj) \
 	((void)L, lua_longassert(!iscollectable(obj) || \
 		(righttt(obj) && (L == NULL || !isdead(G(L),gcvalue(obj))))))
 
 
 /* Macros to set values */
+
+/* set a value's tag */
 #define settt_(o,t)	((o)->tt_=(t))
 
 
+/* main macro to copy values (from 'obj1' to 'obj2') */
 #define setobj(L,obj1,obj2) \
 	{ TValue *io1=(obj1); const TValue *io2=(obj2); \
-          io1->value_ = io2->value_; io1->tt_ = io2->tt_; \
-	  checkliveness(L,io1); lua_assert(!isreallyempty(io1)); }
+          io1->value_ = io2->value_; settt_(io1, io2->tt_); \
+	  checkliveness(L,io1); lua_assert(!isnonstrictnil(io1)); }
 
 /*
-** different types of assignments, according to destination
+** Different types of assignments, according to source and destination.
+** (They are mostly equal now, but may be different in the future.)
 */
 
 /* from stack to stack */
@@ -118,13 +130,16 @@ typedef struct TValue {
 #define setobj2t	setobj
 
 
-
+/*
+** Entries in the Lua stack
+*/
 typedef union StackValue {
   TValue val;
 } StackValue;
 
 
-typedef StackValue *StkId;  /* index to stack elements */
+/* index to stack elements */
+typedef StackValue *StkId;
 
 /* convert a 'StackValue' to a 'TValue' */
 #define s2v(o)	(&(o)->val)
@@ -166,7 +181,7 @@ typedef StackValue *StkId;  /* index to stack elements */
 /*
 ** macro to detect non-standard nils (used only in assertions)
 */
-#define isreallyempty(v)	(ttisnil(v) && !ttisstrictnil(v))
+#define isnonstrictnil(v)	(ttisnil(v) && !ttisstrictnil(v))
 
 
 /*

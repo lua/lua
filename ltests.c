@@ -80,7 +80,7 @@ static int tpanic (lua_State *L) {
 
 
 /*
-** Warning function for tests. Fist, it concatenates all parts of
+** Warning function for tests. First, it concatenates all parts of
 ** a warning in buffer 'buff'. Then, it has three modes:
 ** - 0.normal: messages starting with '#' are shown on standard output;
 ** - other messages abort the tests (they represent real warning

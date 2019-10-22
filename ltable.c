@@ -155,6 +155,9 @@ static Node *mainposition (const Table *t, int ktt, const Value *kvl) {
 }
 
 
+/*
+** Returns the main position of an element given as a 'TValue'
+*/
 static Node *mainpositionTV (const Table *t, const TValue *key) {
   return mainposition(t, rawtt(key), valraw(key));
 }
