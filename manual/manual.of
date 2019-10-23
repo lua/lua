@@ -5005,10 +5005,9 @@ const void luaL_addgsub (luaL_Buffer *B, const char *s,
                          const char *p, const char *r);|
 @apii{0,0,m}
 
-Adds a copy of the string @id{s} to the buffer @id{B},
+Adds a copy of the string @id{s} to the buffer @id{B} @seeC{luaL_Buffer},
 replacing any occurrence of the string @id{p}
 with the string @id{r}.
-@seeC{luaL_Buffer}.
 
 }
 
@@ -5025,7 +5024,7 @@ The string can contain @x{embedded zeros}.
 @APIEntry{void luaL_addsize (luaL_Buffer *B, size_t n);|
 @apii{?,?,-}
 
-Adds to the buffer @id{B} @seeC{luaL_Buffer}
+Adds to the buffer @id{B}
 a string of length @id{n} previously copied to the
 buffer area @seeC{luaL_prepbuffer}.
 
@@ -5157,26 +5156,26 @@ plus the final string on its top.
 @APIEntry{char *luaL_buffaddr (luaL_Buffer *B);|
 @apii{0,0,-}
 
-Returns the address of the current contents of buffer @id{B}.
-Note that any addition to the buffer may invalidate this address.
+Returns the address of the current contents of buffer @id{B}
 @seeC{luaL_Buffer}.
+Note that any addition to the buffer may invalidate this address.
 
 }
 
 @APIEntry{void luaL_buffinit (lua_State *L, luaL_Buffer *B);|
 @apii{0,0,-}
 
-Initializes a buffer @id{B}.
-This function does not allocate any space;
-the buffer must be declared as a variable
+Initializes a buffer @id{B}
 @seeC{luaL_Buffer}.
+This function does not allocate any space;
+the buffer must be declared as a variable.
 
 }
 
 @APIEntry{size_t luaL_bufflen (luaL_Buffer *B);|
 @apii{0,0,-}
 
-Returns the length of the current contents of buffer @id{B}.
+Returns the length of the current contents of buffer @id{B}
 @seeC{luaL_Buffer}.
 
 }
@@ -5186,6 +5185,15 @@ Returns the length of the current contents of buffer @id{B}.
 
 Equivalent to the sequence
 @Lid{luaL_buffinit}, @Lid{luaL_prepbuffsize}.
+
+}
+
+@APIEntry{void luaL_buffsub (luaL_Buffer *B, int n);|
+@apii{0,0,-}
+
+Removes @id{n} bytes from the the buffer @id{B}
+@seeC{luaL_Buffer}.
+The buffer must have at least that many bytes.
 
 }
 

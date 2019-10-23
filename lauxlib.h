@@ -185,6 +185,8 @@ struct luaL_Buffer {
 
 #define luaL_addsize(B,s)	((B)->n += (s))
 
+#define luaL_buffsub(B,s)	((B)->n -= (s))
+
 LUALIB_API void (luaL_buffinit) (lua_State *L, luaL_Buffer *B);
 LUALIB_API char *(luaL_prepbuffsize) (luaL_Buffer *B, size_t sz);
 LUALIB_API void (luaL_addlstring) (luaL_Buffer *B, const char *s, size_t l);
