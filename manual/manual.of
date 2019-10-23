@@ -82,7 +82,8 @@ whose main property is to be different from any other value;
 it often represents the absence of a useful value.
 The type @emph{boolean} has two values, @false and @true.
 Both @nil and @false make a condition false;
-any other value makes it true.
+they are collectively called @def{false values}.
+Any other value makes a condition true.
 
 The type @emph{number} represents both
 integer numbers and real (floating-point) numbers,
@@ -278,9 +279,9 @@ so, an error inside the message handler
 will call the message handler again.
 If this loop goes on for too long,
 Lua breaks it and returns an appropriate message.
-(The message handler is called only for regular runtime errors.
+The message handler is called only for regular runtime errors.
 It is not called for memory-allocation errors
-nor for errors while running finalizers.)
+nor for errors while running finalizers or other message handlers.
 
 Lua also offers a system of @emph{warnings} @seeF{warn}.
 Unlike errors, warnings do not interfere
@@ -467,7 +468,7 @@ Behavior similar to the less than operation.
 The indexing access operation @T{table[key]}.
 This event happens when @id{table} is not a table or
 when @id{key} is not present in @id{table}.
-The metamethod is looked up in @id{table}.
+The metamethod is looked up in the metatable of @id{table}.
 
 Despite the name,
 the metamethod for this event can be either a function or a table.
@@ -528,7 +529,7 @@ the interpreter also respects the following keys in metatables:
 and @idx{__name}.
 (The entry @idx{__name},
 when it contains a string,
-is used by some error-reporting functions to build error messages.)
+may be used by @Lid{tostring} and in error messages.)
 
 For the unary operators (negation, length, and bitwise NOT),
 the metamethod is computed and called with a dummy second operand,
@@ -638,7 +639,7 @@ In generational mode,
 the collector does frequent @emph{minor} collections,
 which traverses only objects recently created.
 If after a minor collection the use of memory is still above a limit,
-the collector does a @emph{major} collection,
+the collector does a stop-the-world @emph{major} collection,
 which traverses all objects.
 The generational mode uses two parameters:
 the @def{minor multiplier} and the @def{the major multiplier}.
@@ -943,7 +944,7 @@ Lua is a @x{free-form} language.
 It ignores spaces and comments between lexical elements (@x{tokens}),
 except as delimiters between two tokens.
 In source code,
-Lua recognizes as spaces the standard ASCII white-space
+Lua recognizes as spaces the standard ASCII whitespace
 characters space, form feed, newline,
 carriage return, horizontal tab, and vertical tab.
 
@@ -998,7 +999,7 @@ and @Char{\'} (apostrophe [single quote]).
 A backslash followed by a line break
 results in a newline in the string.
 The escape sequence @Char{\z} skips the following span
-of white-space characters,
+of whitespace characters,
 including line breaks;
 it is particularly useful to break and indent a long literal string
 into multiple lines without adding the newlines and spaces
@@ -1769,7 +1770,7 @@ Otherwise, the conversion fails.
 Several places in Lua coerce strings to numbers when necessary.
 A string is converted to an integer or a float
 following its syntax and the rules of the Lua lexer.
-(The string may have also leading and trailing spaces and a sign.)
+(The string may have also leading and trailing whitespaces and a sign.)
 All conversions from strings to numbers
 accept both a dot and the current locale mark
 as the radix character.
@@ -2182,7 +2183,7 @@ function r() return 1,2,3 end
 Then, we have the following mapping from arguments to parameters and
 to the vararg expression:
 @verbatim{
-CALL            PARAMETERS
+CALL             PARAMETERS
 
 f(3)             a=3, b=nil
 f(3, 4)          a=3, b=4
@@ -2802,9 +2803,13 @@ Sets a new panic function and returns the old one @see{C-error}.
 @apii{nargs+1,nresults,e}
 
 Calls a function.
+Like regular Lua calls,
+@id{lua_call} respects the @idx{__call} metamethod.
+So, here the word @Q{function}
+means any callable value.
 
 To do a call you must use the following protocol:
-first, the value to be called is pushed onto the stack;
+first, the function to be called is pushed onto the stack;
 then, the arguments to the call are pushed
 in direct order;
 that is, the first argument is pushed first.
@@ -2812,7 +2817,7 @@ Finally you call @Lid{lua_call};
 @id{nargs} is the number of arguments that you pushed onto the stack.
 When the function returns,
 all arguments and the function value are popped
-and the function results are pushed onto the stack.
+and the call results are pushed onto the stack.
 The number of results is adjusted to @id{nresults},
 unless @id{nresults} is @defid{LUA_MULTRET}.
 In this case, all results from the function are pushed;
@@ -2824,8 +2829,6 @@ so that after the call the last result is on the top of the stack.
 
 Any error while calling and running the function is propagated upwards
 (with a @id{longjmp}).
-Like regular Lua calls,
-this function respects the @idx{__call} metamethod.
 
 The following example shows how the host program can do the
 equivalent to this Lua code:
@@ -3971,7 +3974,8 @@ leaves the error object on the top of the stack,
 Starts and resumes a coroutine in the given thread @id{L}.
 
 To start a coroutine,
-you push onto the thread stack the main function plus any arguments;
+you push the main function plus any arguments
+onto the empty stack of the thread.
 then you call @Lid{lua_resume},
 with @id{nargs} being the number of arguments.
 This call returns when the coroutine suspends or finishes its execution.
@@ -3988,8 +3992,9 @@ or an error code in case of errors @seeC{lua_pcall}.
 In case of errors,
 the error object is on the top of the stack.
 
-To resume a coroutine, you clear its stack,
-push only the values to be passed as results from @id{yield},
+To resume a coroutine,
+you remove the @id{*nresults} yielded values from its stack,
+push the values to be passed as results from @id{yield},
 and then call @Lid{lua_resume}.
 
 The parameter @id{from} represents the coroutine that is resuming @id{L}.
@@ -4152,7 +4157,7 @@ and returns the total size of the string,
 that is, its length plus one.
 The conversion can result in an integer or a float,
 according to the lexical conventions of Lua @see{lexical}.
-The string may have leading and trailing spaces and a sign.
+The string may have leading and trailing whitespaces and a sign.
 If the string is not a valid numeral,
 returns 0 and pushes nothing.
 (Note that the result can be used as a boolean,
@@ -5791,7 +5796,7 @@ The field @id{closef} points to a Lua function
 that will be called to close the stream
 when the handle is closed or collected;
 this function receives the file handle as its sole argument and
-must return either @true, in case of success,
+must return either a true value, in case of success,
 or a false value plus an error message, in case of error.
 Once Lua calls this field,
 it changes the field value to @id{NULL}
@@ -5914,12 +5919,12 @@ to its expected parameters.
 For instance, a function documented as @T{foo(arg)}
 should not be called without an argument.
 
-The notation @fail means a return value representing
-some kind of failure or the absence of a better value to return.
-Currently, @fail is equal to @nil,
+The notation @fail means a false value representing
+some kind of failure.
+(Currently, @fail is equal to @nil,
 but that may change in future versions.
 The recommendation is to always test the success of these functions
-with @T{(not status)}, instead of @T{(status == nil)}.
+with @T{(not status)}, instead of @T{(status == nil)}.)
 
 
 Currently, Lua has the following standard libraries:
@@ -6338,19 +6343,25 @@ the function returns @fail.
 }
 
 @LibEntry{tostring (v)|
+
 Receives a value of any type and
 converts it to a string in a human-readable format.
-(For complete control of how numbers are converted,
-use @Lid{string.format}.)
 
 If the metatable of @id{v} has a @idx{__tostring} field,
 then @id{tostring} calls the corresponding value
 with @id{v} as argument,
 and uses the result of the call as its result.
+Otherwise, if the metatable of @id{v} has a @idx{__name} field
+with a string value,
+@id{tostring} may use that string in its final result.
+
+For complete control of how numbers are converted,
+use @Lid{string.format}.
 
 }
 
 @LibEntry{type (v)|
+
 Returns the type of its only argument, coded as a string.
 The possible results of this function are
 @St{nil} (a string, not the value @nil),
@@ -6599,7 +6610,8 @@ Default is @Char{-}.}
 
 @LibEntry{package.cpath|
 
-The path used by @Lid{require} to search for a @N{C loader}.
+A string with the path used by @Lid{require}
+to search for a @N{C loader}.
 
 Lua initializes the @N{C path} @Lid{package.cpath} in the same way
 it initializes the Lua path @Lid{package.path},
@@ -6656,7 +6668,8 @@ plus other Unix systems that support the @id{dlfcn} standard).
 
 @LibEntry{package.path|
 
-The path used by @Lid{require} to search for a Lua loader.
+A string with the path used by @Lid{require}
+to search for a Lua loader.
 
 At start-up, Lua initializes this variable with
 the value of the environment variable @defid{LUA_PATH_5_4} or
@@ -7397,7 +7410,7 @@ coded as an unsigned integer with @id{n} bytes
 @item{@T{X@rep{op}}|an empty item that aligns
 according to option @id{op}
 (which is otherwise ignored)}
-@item{@Char{ }|(empty space) ignored}
+@item{@Char{ }|(space) ignored}
 }
 (A @St{[@rep{n}]} means an optional integral numeral.)
 Except for padding, spaces, and configurations
@@ -8106,7 +8119,7 @@ The available formats are
 @item{@St{n}|
 reads a numeral and returns it as a float or an integer,
 following the lexical conventions of Lua.
-(The numeral may have leading spaces and a sign.)
+(The numeral may have leading whitespaces and a sign.)
 This format always reads the longest input sequence that
 is a valid prefix for a numeral;
 if that prefix does not form a valid numeral
@@ -8594,7 +8607,7 @@ This function has the following restrictions:
 @item{@id{limit} cannot be less than the amount of C stack in use.}
 }
 If a call does not respect some restriction,
-it returns a falsy value.
+it returns a false value.
 Otherwise,
 the call returns the old limit.
 
@@ -8736,15 +8749,15 @@ lua [options] [script [args]]
 }
 The options are:
 @description{
-@item{@T{-e @rep{stat}}| executes string @rep{stat};}
-@item{@T{-l @rep{mod}}| @Q{requires} @rep{mod} and assigns the
+@item{@T{-e @rep{stat}}| execute string @rep{stat};}
+@item{@T{-i}| enter interactive mode after running @rep{script};}
+@item{@T{-l @rep{mod}}| @Q{require} @rep{mod} and assign the
   result to global @rep{mod};}
-@item{@T{-i}| enters interactive mode after running @rep{script};}
-@item{@T{-v}| prints version information;}
-@item{@T{-E}| ignores environment variables;}
+@item{@T{-v}| print version information;}
+@item{@T{-E}| ignore environment variables;}
 @item{@T{-W}| turn warnings on;}
-@item{@T{--}| stops handling options;}
-@item{@T{-}| executes @id{stdin} as a file and stops handling options.}
+@item{@T{--}| stop handling options;}
+@item{@T{-}| execute @id{stdin} as a file and stop handling options.}
 }
 After handling its options, @id{lua} runs the given @emph{script}.
 When called without arguments,
@@ -8761,12 +8774,10 @@ then @id{lua} executes the file.
 Otherwise, @id{lua} executes the string itself.
 
 When called with the option @T{-E},
-besides ignoring @id{LUA_INIT},
-Lua also ignores
-the values of @id{LUA_PATH} and @id{LUA_CPATH},
-setting the values of
-@Lid{package.path} and @Lid{package.cpath}
-with the default paths defined in @id{luaconf.h}.
+Lua does not consult any environment variables.
+In particular,
+the values of @Lid{package.path} and @Lid{package.cpath}
+are set with the default paths defined in @id{luaconf.h}.
 
 The options @T{-e}, @T{-l}, and @T{-W} are handled in
 the order they appear.
