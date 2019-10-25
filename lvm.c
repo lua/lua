@@ -1561,12 +1561,9 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           luaD_poscall(L, ci, cast_int(L->top - ra));
           return;
         }
-        else {  /* Lua tail call */
-          ci->func -= delta;
-          luaD_pretailcall(L, ci, ra, b);  /* prepare call frame */
-          goto tailcall;
-        }
-        vmbreak;
+        ci->func -= delta;
+        luaD_pretailcall(L, ci, ra, b);  /* prepare call frame */
+        goto tailcall;
       }
       vmcase(OP_RETURN) {
         int n = GETARG_B(i) - 1;  /* number of results */

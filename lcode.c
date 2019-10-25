@@ -110,7 +110,7 @@ int luaK_exp2const (FuncState *fs, const expdesc *e, TValue *v) {
 ** optimizations).
 */
 static Instruction *previousinstruction (FuncState *fs) {
-  static const Instruction invalidinstruction = -1;
+  static const Instruction invalidinstruction = ~(Instruction)0;
   if (fs->pc > fs->lasttarget)
     return &fs->f->code[fs->pc - 1];  /* previous instruction */
   else
