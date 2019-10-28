@@ -107,7 +107,9 @@ end
 deep(10)
 deep(180)
 
--- testing tail calls
+
+print"testing tail calls"
+
 function deep (n) if n>0 then return deep(n-1) else return 101 end end
 assert(deep(30000) == 101)
 a = {}
@@ -146,6 +148,27 @@ do   -- tail calls x varargs
 
   a, b, c = foo1(10, 20, 30)
   assert(X == 10 and Y == 20 and #A == 1 and A[1] == 30)
+end
+
+
+
+do   -- tail calls x chain of __call
+  local n = 10000   -- depth
+
+  local function foo ()
+    if n == 0 then return 1023
+    else n = n - 1; return foo()
+    end
+  end
+
+  -- build a chain of __call metamethods ending in function 'foo'
+  for i = 1, 100 do
+    foo = setmetatable({}, {__call = foo})
+  end
+
+  -- call the first one as a tail call in a new coroutine
+  -- (to ensure stack is not preallocated)
+  assert(coroutine.wrap(function() return foo() end)() == 1023)
 end
 
 print('+')
