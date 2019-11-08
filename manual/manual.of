@@ -306,11 +306,14 @@ Lua calls this function to perform the addition.
 
 The key for each event in a metatable is a string
 with the event name prefixed by two underscores;
-the corresponding values are called @def{metamethods}.
+the corresponding value is called a @def{metavalue}.
+For most events, the metavalue must be a function,
+which is then called a @def{metamethod}.
 In the previous example, the key is the string @St{__add}
 and the metamethod is the function that performs the addition.
 Unless stated otherwise,
-metamethods should be function values.
+a metamethod may in fact be any @x{callable value},
+which is either a function or a value with a @id{__call} metamethod.
 
 You can query the metatable of any value
 using the @Lid{getmetatable} function.
@@ -468,19 +471,19 @@ Behavior similar to the less than operation.
 The indexing access operation @T{table[key]}.
 This event happens when @id{table} is not a table or
 when @id{key} is not present in @id{table}.
-The metamethod is looked up in the metatable of @id{table}.
+The metavalue is looked up in the metatable of @id{table}.
 
-Despite the name,
-the metamethod for this event can be either a function or a table.
+The metavalue for this event can be either a function, a table,
+or any value with an @id{__index} metavalue.
 If it is a function,
 it is called with @id{table} and @id{key} as arguments,
 and the result of the call
 (adjusted to one value)
 is the result of the operation.
-If it is a table,
-the final result is the result of indexing this table with @id{key}.
+Otherwise,
+the final result is the result of indexing this metavalue with @id{key}.
 This indexing is regular, not raw,
-and therefore can trigger another metamethod.
+and therefore can trigger another @id{__index} metavalue.
 }
 
 @item{@idx{__newindex}|
@@ -488,18 +491,20 @@ The indexing assignment @T{table[key] = value}.
 Like the index event,
 this event happens when @id{table} is not a table or
 when @id{key} is not present in @id{table}.
-The metamethod is looked up in @id{table}.
+The metavalue is looked up in the metatable of @id{table}.
 
 Like with indexing,
-the metamethod for this event can be either a function or a table.
+the metavalue for this event can be either a function, a table,
+or any value with an @id{__newindex} metavalue.
 If it is a function,
 it is called with @id{table}, @id{key}, and @id{value} as arguments.
-If it is a table,
-Lua does an indexing assignment to this table with the same key and value.
+Otherwise,
+Lua repeats the indexing assignment over this metavalue
+with the same key and value.
 This assignment is regular, not raw,
-and therefore can trigger another metamethod.
+and therefore can trigger another @id{__newindex} metavalue.
 
-Whenever there is a @idx{__newindex} metamethod,
+Whenever a @idx{__newindex} metavalue is invoked,
 Lua does not perform the primitive assignment.
 If needed,
 the metamethod itself can call @Lid{rawset}
@@ -760,7 +765,7 @@ In any case, if either the key or the value is collected,
 the whole pair is removed from the table.
 The weakness of a table is controlled by the
 @idx{__mode} field of its metatable.
-This field, if present, must be one of the following strings:
+This metavalue, if present, must be one of the following strings:
 @St{k}, for a table with weak keys;
 @St{v}, for a table with weak values;
 or @St{kv}, for a table with both weak keys and values.
@@ -3836,7 +3841,7 @@ Similar to @Lid{lua_gettable}, but does a raw access
 Pushes onto the stack the value @T{t[n]},
 where @id{t} is the table at the given index.
 The access is raw,
-that is, it does not invoke the @idx{__index} metamethod.
+that is, it does not use the @idx{__index} metavalue.
 
 Returns the type of the pushed value.
 
@@ -3849,7 +3854,7 @@ Pushes onto the stack the value @T{t[k]},
 where @id{t} is the table at the given index and
 @id{k} is the pointer @id{p} represented as a light userdata.
 The access is raw;
-that is, it does not invoke the @idx{__index} metamethod.
+that is, it does not use the @idx{__index} metavalue.
 
 Returns the type of the pushed value.
 
@@ -3885,7 +3890,7 @@ and @id{v} is the value on the top of the stack.
 
 This function pops the value from the stack.
 The assignment is raw,
-that is, it does not invoke the @idx{__newindex} metamethod.
+that is, it does not use the @idx{__newindex} metavalue.
 
 }
 
@@ -3899,7 +3904,7 @@ and @id{v} is the value on the top of the stack.
 
 This function pops the value from the stack.
 The assignment is raw,
-that is, it does not invoke @idx{__newindex} metamethod.
+that is, it does not use the @idx{__newindex} metavalue.
 
 }
 
@@ -6275,7 +6280,7 @@ Returns a boolean.
 
 @LibEntry{rawget (table, index)|
 Gets the real value of @T{table[index]},
-without invoking the @idx{__index} metamethod.
+without using the @idx{__index} metavalue.
 @id{table} must be a table;
 @id{index} may be any value.
 
@@ -6291,7 +6296,7 @@ Returns an integer.
 
 @LibEntry{rawset (table, index, value)|
 Sets the real value of @T{table[index]} to @id{value},
-without invoking the @idx{__newindex} metamethod.
+without using the @idx{__newindex} metavalue.
 @id{table} must be a table,
 @id{index} any value different from @nil and @x{NaN},
 and @id{value} any Lua value.
