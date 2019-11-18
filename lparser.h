@@ -35,7 +35,7 @@ typedef enum {
              (string is fixed by the lexer) */
   VNONRELOC,  /* expression has its value in a fixed register;
                  info = result register */
-  VLOCAL,  /* local variable; var.ridx = local register;
+  VLOCAL,  /* local variable; var.sidx = stack index (local register);
               var.vidx = relative index in 'actvar.arr'  */
   VUPVAL,  /* upvalue variable; info = index of upvalue in 'upvalues' */
   VCONST,  /* compile-time constant; info = absolute index in 'actvar.arr'  */

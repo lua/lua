@@ -24,20 +24,20 @@
 
 
 
-CClosure *luaF_newCclosure (lua_State *L, int n) {
-  GCObject *o = luaC_newobj(L, LUA_TCCL, sizeCclosure(n));
+CClosure *luaF_newCclosure (lua_State *L, int nupvals) {
+  GCObject *o = luaC_newobj(L, LUA_TCCL, sizeCclosure(nupvals));
   CClosure *c = gco2ccl(o);
-  c->nupvalues = cast_byte(n);
+  c->nupvalues = cast_byte(nupvals);
   return c;
 }
 
 
-LClosure *luaF_newLclosure (lua_State *L, int n) {
-  GCObject *o = luaC_newobj(L, LUA_TLCL, sizeLclosure(n));
+LClosure *luaF_newLclosure (lua_State *L, int nupvals) {
+  GCObject *o = luaC_newobj(L, LUA_TLCL, sizeLclosure(nupvals));
   LClosure *c = gco2lcl(o);
   c->p = NULL;
-  c->nupvalues = cast_byte(n);
-  while (n--) c->upvals[n] = NULL;
+  c->nupvalues = cast_byte(nupvals);
+  while (nupvals--) c->upvals[nupvals] = NULL;
   return c;
 }
 

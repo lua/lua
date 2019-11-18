@@ -8237,7 +8237,8 @@ This library is implemented through table @defid{os}.
 @LibEntry{os.clock ()|
 
 Returns an approximation of the amount in seconds of CPU time
-used by the program.
+used by the program,
+as returned by the underlying @ANSI{clock}.
 
 }
 
@@ -8336,7 +8337,7 @@ closes the Lua state before exiting.
 
 @LibEntry{os.getenv (varname)|
 
-Returns the value of the process environment variable @id{varname},
+Returns the value of the process environment variable @id{varname}
 or @fail if the variable is not defined.
 
 }

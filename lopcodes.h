@@ -19,7 +19,7 @@
         1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
 iABC         C(8)     |      B(8)     |k|     A(8)      |   Op(7)     |
 iABx               Bx(17)               |     A(8)      |   Op(7)     |
-iAsB              sBx (signed)(17)      |     A(8)      |   Op(7)     |
+iAsBx             sBx (signed)(17)      |     A(8)      |   Op(7)     |
 iAx                           Ax(25)                    |   Op(7)     |
 isJ                          sJ(25)                     |   Op(7)     |
 
@@ -133,7 +133,7 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 #define GETARG_sC(i)	sC2int(GETARG_C(i))
 #define SETARG_C(i,v)	setarg(i, v, POS_C, SIZE_C)
 
-#define TESTARG_k(i)	(cast_int(((i) & (1u << POS_k))))
+#define TESTARG_k(i)	check_exp(checkopm(i, iABC), (cast_int(((i) & (1u << POS_k)))))
 #define GETARG_k(i)	check_exp(checkopm(i, iABC), getarg(i, POS_k, 1))
 #define SETARG_k(i,v)	setarg(i, v, POS_k, 1)
 

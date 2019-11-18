@@ -1082,7 +1082,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
     lua_assert(base == ci->func + 1);
     lua_assert(base <= L->top && L->top < L->stack + L->stacksize);
     /* invalidate top for instructions not expecting it */
-    lua_assert(isIT(i) || (L->top = base));
+    lua_assert(isIT(i) || (cast_void(L->top = base), 1));
     vmdispatch (GET_OPCODE(i)) {
       vmcase(OP_MOVE) {
         setobjs2s(L, ra, RB(i));
