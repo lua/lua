@@ -249,7 +249,7 @@ static int math_type (lua_State *L) {
 */
 
 /* number of binary digits in the mantissa of a float */
-#define FIGS	l_mathlim(MANT_DIG)
+#define FIGS	l_floatatt(MANT_DIG)
 
 #if FIGS > 64
 /* there are only 64 random bits; use them all */

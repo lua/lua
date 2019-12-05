@@ -55,7 +55,7 @@
 */
 
 /* number of bits in the mantissa of a float */
-#define NBM		(l_mathlim(MANT_DIG))
+#define NBM		(l_floatatt(MANT_DIG))
 
 /*
 ** Check whether some integers may not fit in a float, testing whether
