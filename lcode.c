@@ -653,7 +653,7 @@ void luaK_int (FuncState *fs, int reg, lua_Integer i) {
 
 static void luaK_float (FuncState *fs, int reg, lua_Number f) {
   lua_Integer fi;
-  if (luaV_flttointeger(f, &fi, 0) && fitsBx(fi))
+  if (luaV_flttointeger(f, &fi, F2Ieq) && fitsBx(fi))
     luaK_codeAsBx(fs, OP_LOADF, reg, cast_int(fi));
   else
     luaK_codek(fs, reg, luaK_numberK(fs, f));
@@ -1220,7 +1220,7 @@ static int isSCnumber (expdesc *e, int *pi, int *isfloat) {
   lua_Integer i;
   if (e->k == VKINT)
     i = e->u.ival;
-  else if (e->k == VKFLT && luaV_flttointeger(e->u.nval, &i, 0))
+  else if (e->k == VKFLT && luaV_flttointeger(e->u.nval, &i, F2Ieq))
     *isfloat = 1;
   else
     return 0;  /* not a number */

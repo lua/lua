@@ -116,16 +116,13 @@ int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
 
 
 /*
-** try to convert a float to an integer, rounding according to 'mode':
-** mode == 0: accepts only integral values
-** mode == 1: takes the floor of the number
-** mode == 2: takes the ceil of the number
+** try to convert a float to an integer, rounding according to 'mode'.
 */
-int luaV_flttointeger (lua_Number n, lua_Integer *p, int mode) {
+int luaV_flttointeger (lua_Number n, lua_Integer *p, F2Imod mode) {
   lua_Number f = l_floor(n);
   if (n != f) {  /* not an integral value? */
-    if (mode == 0) return 0;  /* fails if mode demands integral value */
-    else if (mode == 2)  /* needs ceil? */
+    if (mode == F2Ieq) return 0;  /* fails if mode demands integral value */
+    else if (mode == F2Iceil)  /* needs ceil? */
       f += 1;  /* convert floor to ceil (remember: n != f) */
   }
   return lua_numbertointeger(f, p);
@@ -137,7 +134,7 @@ int luaV_flttointeger (lua_Number n, lua_Integer *p, int mode) {
 ** without string coercion.
 ** ("Fast track" handled by macro 'tointegerns'.)
 */
-int luaV_tointegerns (const TValue *obj, lua_Integer *p, int mode) {
+int luaV_tointegerns (const TValue *obj, lua_Integer *p, F2Imod mode) {
   if (ttisfloat(obj))
     return luaV_flttointeger(fltvalue(obj), p, mode);
   else if (ttisinteger(obj)) {
@@ -152,7 +149,7 @@ int luaV_tointegerns (const TValue *obj, lua_Integer *p, int mode) {
 /*
 ** try to convert a value to an integer.
 */
-int luaV_tointeger (const TValue *obj, lua_Integer *p, int mode) {
+int luaV_tointeger (const TValue *obj, lua_Integer *p, F2Imod mode) {
   TValue v;
   if (l_strton(obj, &v))  /* does 'obj' point to a numerical string? */
     obj = &v;  /* change it to point to its corresponding number */
@@ -178,7 +175,7 @@ int luaV_tointeger (const TValue *obj, lua_Integer *p, int mode) {
 */
 static int forlimit (lua_State *L, lua_Integer init, const TValue *lim,
                                    lua_Integer *p, lua_Integer step) {
-  if (!luaV_tointeger(lim, p, (step < 0 ? 2 : 1))) {
+  if (!luaV_tointeger(lim, p, (step < 0 ? F2Iceil : F2Ifloor))) {
     /* not coercible to in integer */
     lua_Number flim;  /* try to convert to float */
     if (!tonumber(lim, &flim)) /* cannot convert to float? */
@@ -417,7 +414,7 @@ static int LTintfloat (lua_Integer i, lua_Number f) {
     return luai_numlt(cast_num(i), f);  /* compare them as floats */
   else {  /* i < f <=> i < ceil(f) */
     lua_Integer fi;
-    if (luaV_flttointeger(f, &fi, 2))  /* fi = ceil(f) */
+    if (luaV_flttointeger(f, &fi, F2Iceil))  /* fi = ceil(f) */
       return i < fi;   /* compare them as integers */
     else  /* 'f' is either greater or less than all integers */
       return f > 0;  /* greater? */
@@ -434,7 +431,7 @@ static int LEintfloat (lua_Integer i, lua_Number f) {
     return luai_numle(cast_num(i), f);  /* compare them as floats */
   else {  /* i <= f <=> i <= floor(f) */
     lua_Integer fi;
-    if (luaV_flttointeger(f, &fi, 1))  /* fi = floor(f) */
+    if (luaV_flttointeger(f, &fi, F2Ifloor))  /* fi = floor(f) */
       return i <= fi;   /* compare them as integers */
     else  /* 'f' is either greater or less than all integers */
       return f > 0;  /* greater? */
@@ -451,7 +448,7 @@ static int LTfloatint (lua_Number f, lua_Integer i) {
     return luai_numlt(f, cast_num(i));  /* compare them as floats */
   else {  /* f < i <=> floor(f) < i */
     lua_Integer fi;
-    if (luaV_flttointeger(f, &fi, 1))  /* fi = floor(f) */
+    if (luaV_flttointeger(f, &fi, F2Ifloor))  /* fi = floor(f) */
       return fi < i;   /* compare them as integers */
     else  /* 'f' is either greater or less than all integers */
       return f < 0;  /* less? */
@@ -468,7 +465,7 @@ static int LEfloatint (lua_Number f, lua_Integer i) {
     return luai_numle(f, cast_num(i));  /* compare them as floats */
   else {  /* f <= i <=> ceil(f) <= i */
     lua_Integer fi;
-    if (luaV_flttointeger(f, &fi, 2))  /* fi = ceil(f) */
+    if (luaV_flttointeger(f, &fi, F2Iceil))  /* fi = ceil(f) */
       return fi <= i;   /* compare them as integers */
     else  /* 'f' is either greater or less than all integers */
       return f < 0;  /* less? */

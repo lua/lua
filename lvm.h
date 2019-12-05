@@ -33,8 +33,18 @@
 ** integral values)
 */
 #if !defined(LUA_FLOORN2I)
-#define LUA_FLOORN2I		0
+#define LUA_FLOORN2I		F2Ieq
 #endif
+
+
+/*
+** Rounding modes for float->integer coercion
+ */
+typedef enum {
+  F2Ieq,  /* no rounding; accepts only integral values */
+  F2Ifloor,  /* takes the floor of the number */
+  F2Iceil,  /* takes the ceil of the number */
+} F2Imod;
 
 
 /* convert an object to a float (including string coercion) */
@@ -104,9 +114,10 @@ LUAI_FUNC int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2);
 LUAI_FUNC int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r);
 LUAI_FUNC int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r);
 LUAI_FUNC int luaV_tonumber_ (const TValue *obj, lua_Number *n);
-LUAI_FUNC int luaV_tointeger (const TValue *obj, lua_Integer *p, int mode);
-LUAI_FUNC int luaV_tointegerns (const TValue *obj, lua_Integer *p, int mode);
-LUAI_FUNC int luaV_flttointeger (lua_Number n, lua_Integer *p, int mode);
+LUAI_FUNC int luaV_tointeger (const TValue *obj, lua_Integer *p, F2Imod mode);
+LUAI_FUNC int luaV_tointegerns (const TValue *obj, lua_Integer *p,
+                                F2Imod mode);
+LUAI_FUNC int luaV_flttointeger (lua_Number n, lua_Integer *p, F2Imod mode);
 LUAI_FUNC void luaV_finishget (lua_State *L, const TValue *t, TValue *key,
                                StkId val, const TValue *slot);
 LUAI_FUNC void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
