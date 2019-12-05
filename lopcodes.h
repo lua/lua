@@ -217,7 +217,7 @@ OP_SETTABLE,/*	A B C	R[A][R[B]] := RK(C)				*/
 OP_SETI,/*	A B C	R[A][B] := RK(C)				*/
 OP_SETFIELD,/*	A B C	R[A][K[B]:string] := RK(C)			*/
 
-OP_NEWTABLE,/*	A B C	R[A] := {}					*/
+OP_NEWTABLE,/*	A B C k	R[A] := {}					*/
 
 OP_SELF,/*	A B C	R[A+1] := R[B]; R[A] := R[B][RK(C):string]	*/
 
@@ -253,8 +253,8 @@ OP_SHL,/*	A B C	R[A] := R[B] << R[C]				*/
 OP_SHR,/*	A B C	R[A] := R[B] >> R[C]				*/
 
 OP_MMBIN,/*	A B C	call C metamethod over R[A] and R[B]		*/
-OP_MMBINI,/*	A sB C	call C metamethod over R[A] and sB		*/
-OP_MMBINK,/*	A B C	call C metamethod over R[A] and K[B]		*/
+OP_MMBINI,/*	A sB C k	call C metamethod over R[A] and sB	*/
+OP_MMBINK,/*	A B C k		call C metamethod over R[A] and K[B]	*/
 
 OP_UNM,/*	A B	R[A] := -R[B]					*/
 OP_BNOT,/*	A B	R[A] := ~R[B]					*/
@@ -266,24 +266,24 @@ OP_CONCAT,/*	A B  	R[A] := R[A].. ... ..R[A + B - 1]		*/
 OP_CLOSE,/*	A	close all upvalues >= R[A]			*/
 OP_TBC,/*	A	mark variable A "to be closed"			*/
 OP_JMP,/*	sJ	pc += sJ  					*/
-OP_EQ,/*	A B	if ((R[A] == R[B]) ~= k) then pc++		*/
-OP_LT,/*	A B	if ((R[A] <  R[B]) ~= k) then pc++		*/
-OP_LE,/*	A B	if ((R[A] <= R[B]) ~= k) then pc++		*/
+OP_EQ,/*	A B k	if ((R[A] == R[B]) ~= k) then pc++		*/
+OP_LT,/*	A B k	if ((R[A] <  R[B]) ~= k) then pc++		*/
+OP_LE,/*	A B k	if ((R[A] <= R[B]) ~= k) then pc++		*/
 
-OP_EQK,/*	A B	if ((R[A] == K[B]) ~= k) then pc++		*/
-OP_EQI,/*	A sB	if ((R[A] == sB) ~= k) then pc++		*/
-OP_LTI,/*	A sB	if ((R[A] < sB) ~= k) then pc++			*/
-OP_LEI,/*	A sB	if ((R[A] <= sB) ~= k) then pc++		*/
-OP_GTI,/*	A sB	if ((R[A] > sB) ~= k) then pc++			*/
-OP_GEI,/*	A sB	if ((R[A] >= sB) ~= k) then pc++		*/
+OP_EQK,/*	A B k	if ((R[A] == K[B]) ~= k) then pc++		*/
+OP_EQI,/*	A sB k	if ((R[A] == sB) ~= k) then pc++		*/
+OP_LTI,/*	A sB k	if ((R[A] < sB) ~= k) then pc++			*/
+OP_LEI,/*	A sB k	if ((R[A] <= sB) ~= k) then pc++		*/
+OP_GTI,/*	A sB k	if ((R[A] > sB) ~= k) then pc++			*/
+OP_GEI,/*	A sB k	if ((R[A] >= sB) ~= k) then pc++		*/
 
-OP_TEST,/*	A 	if (not R[A] == k) then pc++			*/
-OP_TESTSET,/*	A B	if (not R[B] == k) then pc++ else R[A] := R[B]	*/
+OP_TEST,/*	A k 	if (not R[A] == k) then pc++			*/
+OP_TESTSET,/*	A B k	if (not R[B] == k) then pc++ else R[A] := R[B]	*/
 
 OP_CALL,/*	A B C	R[A], ... ,R[A+C-2] := R[A](R[A+1], ... ,R[A+B-1]) */
-OP_TAILCALL,/*	A B C	return R[A](R[A+1], ... ,R[A+B-1])		*/
+OP_TAILCALL,/*	A B C k	return R[A](R[A+1], ... ,R[A+B-1])		*/
 
-OP_RETURN,/*	A B C	return R[A], ... ,R[A+B-2]	(see note)	*/
+OP_RETURN,/*	A B C k	return R[A], ... ,R[A+B-2]	(see note)	*/
 OP_RETURN0,/*	  	return 						*/
 OP_RETURN1,/*	A 	return R[A]					*/
 
@@ -295,7 +295,7 @@ OP_TFORPREP,/*	A Bx	create upvalue for R[A + 3]; pc+=Bx		*/
 OP_TFORCALL,/*	A C	R[A+4], ... ,R[A+3+C] := R[A](R[A+1], R[A+2]);	*/
 OP_TFORLOOP,/*	A Bx	if R[A+2] ~= nil then { R[A]=R[A+2]; pc -= Bx }	*/
 
-OP_SETLIST,/*	A B C	R[A][(C-1)*FPF+i] := R[A+i], 1 <= i <= B	*/
+OP_SETLIST,/*	A B C k	R[A][(C-1)*FPF+i] := R[A+i], 1 <= i <= B	*/
 
 OP_CLOSURE,/*	A Bx	R[A] := closure(KPROTO[Bx])			*/
 
@@ -323,7 +323,7 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
   (*) In OP_RETURN, if (B == 0) then return up to 'top'.
 
   (*) In OP_LOADKX and OP_NEWTABLE, the next instruction is always
-  EXTRAARG.
+  OP_EXTRAARG.
 
   (*) In OP_SETLIST, if (B == 0) then real B = 'top'; if k, then
   real C = EXTRAARG _ C (the bits of EXTRAARG concatenated with the
@@ -336,6 +336,9 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
   (*) For comparisons, k specifies what condition the test should accept
   (true or false).
 
+  (*) In OP_MMBINI/OP_MMBINK, k means the arguments were flipped
+   (the constant is the first operand).
+
   (*) All 'skips' (pc++) assume that next instruction is a jump.
 
   (*) In instructions OP_RETURN/OP_TAILCALL, 'k' specifies that the
@@ -344,7 +347,8 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
   returning; in this case, (C - 1) is its number of fixed parameters.
 
   (*) In comparisons with an immediate operand, C signals whether the
-  original operand was a float.
+  original operand was a float. (It must be corrected in case of
+  metamethods.)
 
 ===========================================================================*/
 

@@ -890,9 +890,9 @@ void luaV_finishOp (lua_State *L) {
 /*
 ** Auxiliary macro for arithmetic operations over floats and others
 ** with immediate operand. 'fop' is the float operation; 'tm' is the
-** corresponding metamethod; 'flip' is true if operands were flipped.
+** corresponding metamethod.
 */
-#define op_arithfI_aux(L,v1,imm,fop,tm,flip) {  \
+#define op_arithfI_aux(L,v1,imm,fop,tm) {  \
   lua_Number nb;  \
   if (tonumberns(v1, nb)) {  \
     lua_Number fimm = cast_num(imm);  \
@@ -912,14 +912,14 @@ void luaV_finishOp (lua_State *L) {
 ** Arithmetic operations with immediate operands. 'iop' is the integer
 ** operation.
 */
-#define op_arithI(L,iop,fop,tm,flip) {  \
+#define op_arithI(L,iop,fop,tm) {  \
   TValue *v1 = vRB(i);  \
   int imm = GETARG_sC(i);  \
   if (ttisinteger(v1)) {  \
     lua_Integer iv1 = ivalue(v1);  \
     pc++; setivalue(s2v(ra), iop(L, iv1, imm));  \
   }  \
-  else op_arithfI_aux(L, v1, imm, fop, tm, flip); }
+  else op_arithfI_aux(L, v1, imm, fop, tm); }
 
 
 /*
@@ -958,7 +958,7 @@ void luaV_finishOp (lua_State *L) {
 /*
 ** Arithmetic operations with K operands.
 */
-#define op_arithK(L,iop,fop,flip) {  \
+#define op_arithK(L,iop,fop) {  \
   TValue *v1 = vRB(i);  \
   TValue *v2 = KC(i);  \
   if (ttisinteger(v1) && ttisinteger(v2)) {  \
@@ -1367,23 +1367,23 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_ADDI) {
-        op_arithI(L, l_addi, luai_numadd, TM_ADD, GETARG_k(i));
+        op_arithI(L, l_addi, luai_numadd, TM_ADD);
         vmbreak;
       }
       vmcase(OP_ADDK) {
-        op_arithK(L, l_addi, luai_numadd, GETARG_k(i));
+        op_arithK(L, l_addi, luai_numadd);
         vmbreak;
       }
       vmcase(OP_SUBK) {
-        op_arithK(L, l_subi, luai_numsub, 0);
+        op_arithK(L, l_subi, luai_numsub);
         vmbreak;
       }
       vmcase(OP_MULK) {
-        op_arithK(L, l_muli, luai_nummul, GETARG_k(i));
+        op_arithK(L, l_muli, luai_nummul);
         vmbreak;
       }
       vmcase(OP_MODK) {
-        op_arithK(L, luaV_mod, luaV_modf, 0);
+        op_arithK(L, luaV_mod, luaV_modf);
         vmbreak;
       }
       vmcase(OP_POWK) {
@@ -1395,7 +1395,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_IDIVK) {
-        op_arithK(L, luaV_idiv, luai_numidiv, 0);
+        op_arithK(L, luaV_idiv, luai_numidiv);
         vmbreak;
       }
       vmcase(OP_BANDK) {
