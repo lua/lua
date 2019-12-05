@@ -1406,10 +1406,9 @@ It has the following syntax:
   exp @bnfter{,} exp @bnfopt{@bnfter{,} exp} @Rw{do} block @Rw{end}}
 }
 The given identifier (@bnfNter{Name}) defines the control variable,
-which is local to the loop body (@emph{block}).
+which is a new variable local to the loop body (@emph{block}).
 
-The loop starts by evaluating once the three control expressions;
-they must all result in numbers.
+The loop starts by evaluating once the three control expressions.
 Their values are called respectively
 the @emph{initial value}, the @emph{limit}, and the @emph{step}.
 If the step is absent, it defaults @N{to 1}.
@@ -1417,8 +1416,9 @@ If the step is absent, it defaults @N{to 1}.
 If both the initial value and the step are integers,
 the loop is done with integers;
 note that the limit may not be an integer.
-Otherwise, the loop is done with floats.
-(Beware of floating-point accuracy in this case.)
+Otherwise, the three values are converted to
+floats and the loop is done with floats.
+Beware of floating-point accuracy in this case.
 
 After that initialization,
 the loop body is repeated with the value of the control variable
@@ -1773,9 +1773,24 @@ If it does, that representation is the result.
 Otherwise, the conversion fails.
 
 Several places in Lua coerce strings to numbers when necessary.
+In particular,
+the string library sets metamethods that try to coerce
+strings to numbers in all arithmetic operations.
+If the conversion fails,
+the library calls the metamethod of the other operand
+(if present) or it raises an error.
+Note that bitwise operators do not do this coercion.
+
+Nonetheless, it is always a good practice not to rely on these
+implicit coercions, as they are not always applied;
+in particular, @T{"1"==1} is false and @T{"1"<1} raises an error
+@see{rel-ops}.
+These coercions exist mainly for compatibility and may be removed
+in future versions of the language.
+
 A string is converted to an integer or a float
 following its syntax and the rules of the Lua lexer.
-(The string may have also leading and trailing whitespaces and a sign.)
+The string may have also leading and trailing whitespaces and a sign.
 All conversions from strings to numbers
 accept both a dot and the current locale mark
 as the radix character.
@@ -1783,14 +1798,8 @@ as the radix character.
 If the string is not a valid numeral,
 the conversion fails.
 If necessary, the result of this first step is then converted
-to the required number subtype following the previous rules
+to a specific number subtype following the previous rules
 for conversions between floats and integers.
-
-The string library uses metamethods that try to coerce
-strings to numbers in all arithmetic operations.
-If the conversion fails,
-the library calls the metamethod of the other operand
-(if present) or it raises an error.
 
 The conversion from numbers to strings uses a
 non-specified human-readable format.
@@ -7687,8 +7696,8 @@ This library provides basic mathematical functions.
 It provides all its functions and constants inside the table @defid{math}.
 Functions with the annotation @St{integer/float} give
 integer results for integer arguments
-and float results for float (or mixed) arguments.
-the rounding functions
+and float results for non-integer arguments.
+The rounding functions
 @Lid{math.ceil}, @Lid{math.floor}, and @Lid{math.modf}
 return an integer when the result fits in the range of an integer,
 or a float otherwise.
@@ -7843,7 +7852,7 @@ The results from this function have good statistical qualities,
 but they are not cryptographically secure.
 (For instance, there are no guarantees that it is hard
 to predict future results based on the observation of
-some number of previous results.)
+some previous results.)
 
 }
 
