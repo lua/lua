@@ -885,38 +885,21 @@ void luaV_finishOp (lua_State *L) {
 
 
 /*
-** Auxiliary macro for arithmetic operations over floats and others
-** with immediate operand. 'fop' is the float operation; 'tm' is the
-** corresponding metamethod.
-*/
-#define op_arithfI_aux(L,v1,imm,fop,tm) {  \
-  lua_Number nb;  \
-  if (tonumberns(v1, nb)) {  \
-    lua_Number fimm = cast_num(imm);  \
-    pc++; setfltvalue(s2v(ra), fop(L, nb, fimm));  \
-  }}
-
-
-/*
-** Arithmetic operations over floats and others with immediate operand.
-*/
-#define op_arithfI(L,fop,tm) {  \
-  TValue *v1 = vRB(i);  \
-  int imm = GETARG_sC(i);  \
-  op_arithfI_aux(L, v1, imm, fop, tm, 0); }
-
-/*
 ** Arithmetic operations with immediate operands. 'iop' is the integer
-** operation.
+** operation, 'fop' is the float operation.
 */
-#define op_arithI(L,iop,fop,tm) {  \
+#define op_arithI(L,iop,fop) {  \
   TValue *v1 = vRB(i);  \
   int imm = GETARG_sC(i);  \
   if (ttisinteger(v1)) {  \
     lua_Integer iv1 = ivalue(v1);  \
     pc++; setivalue(s2v(ra), iop(L, iv1, imm));  \
   }  \
-  else op_arithfI_aux(L, v1, imm, fop, tm); }
+  else if (ttisfloat(v1)) {  \
+    lua_Number nb = fltvalue(v1);  \
+    lua_Number fimm = cast_num(imm);  \
+    pc++; setfltvalue(s2v(ra), fop(L, nb, fimm)); \
+  }}
 
 
 /*
@@ -940,11 +923,18 @@ void luaV_finishOp (lua_State *L) {
 
 
 /*
-** Arithmetic operations with register operands.
+** Arithmetic operations with K operands for floats.
 */
-#define op_arith(L,iop,fop) {  \
+#define op_arithfK(L,fop) {  \
   TValue *v1 = vRB(i);  \
-  TValue *v2 = vRC(i);  \
+  TValue *v2 = KC(i);  \
+  op_arithf_aux(L, v1, v2, fop); }
+
+
+/*
+** Arithmetic operations over integers and floats.
+*/
+#define op_arith_aux(L,v1,v2,iop,fop) {  \
   if (ttisinteger(v1) && ttisinteger(v2)) {  \
     lua_Integer i1 = ivalue(v1); lua_Integer i2 = ivalue(v2);  \
     pc++; setivalue(s2v(ra), iop(L, i1, i2));  \
@@ -953,32 +943,21 @@ void luaV_finishOp (lua_State *L) {
 
 
 /*
+** Arithmetic operations with register operands.
+*/
+#define op_arith(L,iop,fop) {  \
+  TValue *v1 = vRB(i);  \
+  TValue *v2 = vRC(i);  \
+  op_arith_aux(L, v1, v2, iop, fop); }
+
+
+/*
 ** Arithmetic operations with K operands.
 */
 #define op_arithK(L,iop,fop) {  \
   TValue *v1 = vRB(i);  \
   TValue *v2 = KC(i);  \
-  if (ttisinteger(v1) && ttisinteger(v2)) {  \
-    lua_Integer i1 = ivalue(v1); lua_Integer i2 = ivalue(v2);  \
-    pc++; setivalue(s2v(ra), iop(L, i1, i2));  \
-  }  \
-  else { \
-    lua_Number n1; lua_Number n2;  \
-    if (tonumberns(v1, n1) && tonumberns(v2, n2)) {  \
-      pc++; setfltvalue(s2v(ra), fop(L, n1, n2));  \
-    }}}
-
-
-/*
-** Arithmetic operations with K operands for floats.
-*/
-#define op_arithfK(L,fop) {  \
-  TValue *v1 = vRB(i);  \
-  TValue *v2 = KC(i);  \
-  lua_Number n1; lua_Number n2;  \
-  if (tonumberns(v1, n1) && tonumberns(v2, n2)) {  \
-    pc++; setfltvalue(s2v(ra), fop(L, n1, n2));  \
-  }}
+  op_arith_aux(L, v1, v2, iop, fop); }
 
 
 /*
@@ -1025,7 +1004,8 @@ void luaV_finishOp (lua_State *L) {
 
 
 /*
-** Order operations with immediate operand.
+** Order operations with immediate operand. (Immediate operand is
+** always small enough to have an exact representation as a float.)
 */
 #define op_orderI(L,opi,opf,inv,tm) {  \
         int cond;  \
@@ -1364,7 +1344,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_ADDI) {
-        op_arithI(L, l_addi, luai_numadd, TM_ADD);
+        op_arithI(L, l_addi, luai_numadd);
         vmbreak;
       }
       vmcase(OP_ADDK) {
