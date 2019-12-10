@@ -541,11 +541,6 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
 
 /*
 ** return 'l <= r' for non-numbers.
-** If it needs a metamethod and there is no '__le', try '__lt', based
-** on l <= r iff !(r < l) (assuming a total order). If the metamethod
-** yields during this substitution, the continuation has to know about
-** it (to negate the result of r<l); bit CIST_LEQ in the call status
-** keeps that information.
 */
 static int lessequalothers (lua_State *L, const TValue *l, const TValue *r) {
   lua_assert(!ttisnumber(l) || !ttisnumber(r));
@@ -986,7 +981,9 @@ void luaV_finishOp (lua_State *L) {
 
 
 /*
-** Order operations with register operands.
+** Order operations with register operands. 'opf' actually works
+** for all numbers, but the fast track improves performance for
+** integers.
 */
 #define op_order(L,opi,opf,other) {  \
         int cond;  \
