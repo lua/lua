@@ -99,7 +99,7 @@ typedef LUAI_UACINT l_uacInt;
 ** assertion for checking API calls
 */
 #if !defined(luai_apicheck)
-#define luai_apicheck(l,e)	lua_assert(e)
+#define luai_apicheck(l,e)	((void)l, lua_assert(e))
 #endif
 
 #define api_check(l,e,msg)	luai_apicheck(l,(e) && msg)
