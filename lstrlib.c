@@ -1271,6 +1271,8 @@ static int str_format (lua_State *L) {
         }
         case 'p': {
           const void *p = lua_topointer(L, arg);
+          if (p == NULL)
+            p = "(null)";  /* NULL not a valid parameter in ISO C 'printf' */
           nb = l_sprintf(buff, maxitem, form, p);
           break;
         }
