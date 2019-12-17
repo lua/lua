@@ -516,9 +516,11 @@ print"+"
 
 do   -- getp/setp
   local a = {}
-  T.testC("rawsetp 2 1", a, 20)
+  local a1 = T.testC("rawsetp 2 1; return 1", a, 20)
+  assert(a == a1)
   assert(a[T.pushuserdata(1)] == 20)
-  assert(T.testC("rawgetp -1 1; return 1", a) == 20)
+  local a1, res = T.testC("rawgetp -1 1; return 2", a)
+  assert(a == a1 and res == 20)
 end
 
 

@@ -848,18 +848,30 @@ LUA_API void lua_seti (lua_State *L, int idx, lua_Integer n) {
 }
 
 
-LUA_API void lua_rawset (lua_State *L, int idx) {
+static void aux_rawset (lua_State *L, int idx, TValue *key, int n) {
   Table *t;
   TValue *slot;
   lua_lock(L);
-  api_checknelems(L, 2);
+  api_checknelems(L, n);
   t = gettable(L, idx);
-  slot = luaH_set(L, t, s2v(L->top - 2));
+  slot = luaH_set(L, t, key);
   setobj2t(L, slot, s2v(L->top - 1));
+  L->top -= n;
   invalidateTMcache(t);
   luaC_barrierback(L, obj2gco(t), s2v(L->top - 1));
-  L->top -= 2;
   lua_unlock(L);
+}
+
+
+LUA_API void lua_rawset (lua_State *L, int idx) {
+  aux_rawset(L, idx, s2v(L->top - 2), 2);
+}
+
+
+LUA_API void lua_rawsetp (lua_State *L, int idx, const void *p) {
+  TValue k;
+  setpvalue(&k, cast_voidp(p));
+  aux_rawset(L, idx, &k, 1);
 }
 
 
@@ -869,21 +881,6 @@ LUA_API void lua_rawseti (lua_State *L, int idx, lua_Integer n) {
   api_checknelems(L, 1);
   t = gettable(L, idx);
   luaH_setint(L, t, n, s2v(L->top - 1));
-  luaC_barrierback(L, obj2gco(t), s2v(L->top - 1));
-  L->top--;
-  lua_unlock(L);
-}
-
-
-LUA_API void lua_rawsetp (lua_State *L, int idx, const void *p) {
-  Table *t;
-  TValue k, *slot;
-  lua_lock(L);
-  api_checknelems(L, 1);
-  t = gettable(L, idx);
-  setpvalue(&k, cast_voidp(p));
-  slot = luaH_set(L, t, &k);
-  setobj2t(L, slot, s2v(L->top - 1));
   luaC_barrierback(L, obj2gco(t), s2v(L->top - 1));
   L->top--;
   lua_unlock(L);
