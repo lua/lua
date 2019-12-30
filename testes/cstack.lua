@@ -4,7 +4,7 @@
 local debug = require "debug"
 
 print"testing C-stack overflow detection"
-print"If this test craches, see its file ('cstack.lua')"
+print"If this test crashes, see its file ('cstack.lua')"
 
 -- Segmentation faults in these tests probably result from a C-stack
 -- overflow. To avoid these errors, you can use the function
@@ -19,10 +19,13 @@ print"If this test craches, see its file ('cstack.lua')"
 -- higher than 2_000.
 
 
+-- get and print original limit
 local origlimit = debug.setcstacklimit(400)
 print("default stack limit: " .. origlimit)
 
--- change this value for different limits for this test suite
+-- Do the tests using the original limit. Or else you may want to change
+-- 'currentlimit' to lower values to avoid a seg. fault or to higher
+-- values to check whether they are reliable.
 local currentlimit = origlimit
 debug.setcstacklimit(currentlimit)
 print("current stack limit: " .. currentlimit)
@@ -33,12 +36,14 @@ local function checkerror (msg, f, ...)
   assert(not s and string.find(err, msg))
 end
 
+-- auxiliary function to keep 'count' on the screen even if the program
+-- crashes.
 local count
 local back = string.rep("\b", 8)
 local function progress ()
   count = count + 1
   local n = string.format("%-8d", count)
-  io.stderr:write(back, n)
+  io.stderr:write(back, n)   -- erase previous value and write new one
 end
 
 
@@ -46,7 +51,7 @@ do    print("testing simple recursion:")
   count = 0
   local function foo ()
     progress()
-    foo()
+    foo()   -- do recursive calls until a stack error (or crash)
   end
   checkerror("stack overflow", foo)
   print("\tfinal count: ", count)
@@ -118,9 +123,11 @@ do  print("testing changes in C-stack limit")
     return n
   end
 
+  -- set limit to 400
   assert(debug.setcstacklimit(400) == currentlimit)
   local lim400 = check()
-  -- a very low limit (given that the several calls to arive here)
+  -- set a very low limit (given that there are already several active
+  -- calls to arrive here)
   local lowlimit = 38
   assert(debug.setcstacklimit(lowlimit) == 400)
   assert(check() < lowlimit - 30)

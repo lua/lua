@@ -26,7 +26,7 @@
 /*
 ** First allocation will fail whenever not building initial state
 ** and not shrinking a block. (This fail will trigger 'tryagain' and
-** a full GC cycle at every alocation.)
+** a full GC cycle at every allocation.)
 */
 static void *firsttry (global_State *g, void *block, size_t os, size_t ns) {
   if (ttisnil(&g->nilvalue) && ns > os)

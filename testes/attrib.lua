@@ -28,7 +28,7 @@ do
   local path = table.concat(t, ";")
   -- use that path in a search
   local s, err = package.searchpath("xuxu", path)
-  -- search fails; check that message has an occurence of
+  -- search fails; check that message has an occurrence of
   -- '??????????' with ? replaced by xuxu and at least 'max' lines
   assert(not s and
          string.find(err, string.rep("xuxu", 10)) and

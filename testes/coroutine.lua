@@ -763,7 +763,7 @@ assert(run(function() return "a" .. "b" .. a .. "c" .. c .. b .. "x" end,
        {"concat", "concat", "concat"}) == "ab10chello12x")
 
 
-do   -- a few more tests for comparsion operators
+do   -- a few more tests for comparison operators
   local mt1 = {
     __le = function (a,b)
       coroutine.yield(10)

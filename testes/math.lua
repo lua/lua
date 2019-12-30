@@ -758,7 +758,7 @@ do    -- testing max/min
   assert(eqT(math.min(maxint, maxint - 1), maxint - 1))
   assert(eqT(math.min(maxint - 2, maxint, maxint - 1), maxint - 2))
 end
--- testing implicit convertions
+-- testing implicit conversions
 
 local a,b = '10', '20'
 assert(a*b == 200 and a+b == 30 and a-b == -10 and a/b == 0.5 and -b == -20)

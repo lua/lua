@@ -165,7 +165,7 @@ static int callclosemth (lua_State *L, StkId level, int status) {
       if (newstatus != LUA_OK && status == CLOSEPROTECT)  /* first error? */
         status = newstatus;  /* this will be the new error */
       else {
-        if (newstatus != LUA_OK)  /* supressed error? */
+        if (newstatus != LUA_OK)  /* suppressed error? */
           luaE_warnerror(L, "__close metamethod");
         /* leave original error (or nil) on top */
         L->top = restorestack(L, oldtop);

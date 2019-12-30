@@ -476,7 +476,7 @@ static void checkrefs (global_State *g, GCObject *o) {
 /*
 ** Check consistency of an object:
 ** - Dead objects can only happen in the 'allgc' list during a sweep
-** phase (controled by the caller through 'maybedead').
+** phase (controlled by the caller through 'maybedead').
 ** - During pause, all objects must be white.
 ** - In generational mode:
 **   * objects must be old enough for their lists ('listage').
@@ -783,7 +783,7 @@ static int mem_query (lua_State *L) {
         return 1;
       }
     }
-    return luaL_error(L, "unkown type '%s'", t);
+    return luaL_error(L, "unknown type '%s'", t);
   }
 }
 

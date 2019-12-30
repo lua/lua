@@ -19,7 +19,7 @@
 
 /*
 ** If a call returns too many multiple returns, the callee may not have
-** stack space to accomodate all results. In this case, this macro
+** stack space to accommodate all results. In this case, this macro
 ** increases its stack space ('L->ci->top').
 */
 #define adjustresults(L,nres) \

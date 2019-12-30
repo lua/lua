@@ -182,7 +182,7 @@ assert(~a == a); checkcap{"bnot", a, a}
 assert(a << 3 == a); checkcap{"shl", a, 3}
 assert(1.5 >> a == 1.5); checkcap{"shr", 1.5, a}
 
--- for comparsion operators, all results are true
+-- for comparison operators, all results are true
 assert(5.0 > a); checkcap{"lt", a, 5.0}
 assert(a >= 10); checkcap{"le", 10, a}
 assert(a <= -10.0); checkcap{"le", a, -10.0}

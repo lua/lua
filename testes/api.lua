@@ -805,7 +805,7 @@ F = function (x)
   if A ~= nil then
     assert(type(A) == "userdata")
     assert(T.udataval(A) == B)
-    debug.getmetatable(A)    -- just acess it
+    debug.getmetatable(A)    -- just access it
   end
   A = x   -- ressucita userdata
   B = udval
@@ -1112,7 +1112,7 @@ do
   -- non-closable value
   local a, b = pcall(T.makeCfunc[[
     newtable   # create non-closable object
-    toclose -1 # mark it to be closed (shoud raise an error)
+    toclose -1 # mark it to be closed (should raise an error)
     abort  # will not be executed
   ]])
   assert(a == false and
