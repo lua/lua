@@ -856,9 +856,9 @@ static void aux_rawset (lua_State *L, int idx, TValue *key, int n) {
   t = gettable(L, idx);
   slot = luaH_set(L, t, key);
   setobj2t(L, slot, s2v(L->top - 1));
-  L->top -= n;
   invalidateTMcache(t);
   luaC_barrierback(L, obj2gco(t), s2v(L->top - 1));
+  L->top -= n;
   lua_unlock(L);
 }
 
