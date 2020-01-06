@@ -36,6 +36,9 @@
 ** bit 6: whether value is collectable
 */
 
+/* add variant bits to a type */
+#define makevariant(t,v)	((t) | ((v) << 4))
+
 
 
 /*
@@ -165,13 +168,13 @@ typedef StackValue *StkId;
 ** Variant tag, used only in tables to signal an empty slot
 ** (which might be different from a slot containing nil)
 */
-#define LUA_TEMPTY	(LUA_TNIL | (1 << 4))
+#define LUA_TEMPTY	makevariant(LUA_TNIL, 1)
 
 /*
 ** Variant used only in the value returned for a key not found in a
 ** table (absent key).
 */
-#define LUA_TABSTKEY	(LUA_TNIL | (2 << 4))
+#define LUA_TABSTKEY	makevariant(LUA_TNIL, 2)
 
 
 #define isabstkey(v)		checktag((v), LUA_TABSTKEY)
@@ -210,8 +213,8 @@ typedef StackValue *StkId;
 */
 
 
-#define LUA_TFALSE	(LUA_TBOOLEAN | (1 << 4))
-#define LUA_TTRUE	(LUA_TBOOLEAN | (2 << 4))
+#define LUA_TFALSE	makevariant(LUA_TBOOLEAN, 1)
+#define LUA_TTRUE	makevariant(LUA_TBOOLEAN, 2)
 
 #define ttisboolean(o)		checktype((o), LUA_TBOOLEAN)
 #define ttisfalse(o)		checktag((o), LUA_TFALSE)
@@ -292,8 +295,8 @@ typedef struct GCObject {
 */
 
 /* Variant tags for numbers */
-#define LUA_TNUMFLT	(LUA_TNUMBER | (1 << 4))  /* float numbers */
-#define LUA_TNUMINT	(LUA_TNUMBER | (2 << 4))  /* integer numbers */
+#define LUA_TNUMINT	makevariant(LUA_TNUMBER, 1)  /* integer numbers */
+#define LUA_TNUMFLT	makevariant(LUA_TNUMBER, 2)  /* float numbers */
 
 #define ttisnumber(o)		checktype((o), LUA_TNUMBER)
 #define ttisfloat(o)		checktag((o), LUA_TNUMFLT)
@@ -329,8 +332,8 @@ typedef struct GCObject {
 */
 
 /* Variant tags for strings */
-#define LUA_TSHRSTR	(LUA_TSTRING | (1 << 4))  /* short strings */
-#define LUA_TLNGSTR	(LUA_TSTRING | (2 << 4))  /* long strings */
+#define LUA_TSHRSTR	makevariant(LUA_TSTRING, 1)  /* short strings */
+#define LUA_TLNGSTR	makevariant(LUA_TSTRING, 2)  /* long strings */
 
 #define ttisstring(o)		checktype((o), LUA_TSTRING)
 #define ttisshrstring(o)	checktag((o), ctb(LUA_TSHRSTR))
@@ -546,9 +549,9 @@ typedef struct Proto {
 */
 
 /* Variant tags for functions */
-#define LUA_TLCL	(LUA_TFUNCTION | (1 << 4))  /* Lua closure */
-#define LUA_TLCF	(LUA_TFUNCTION | (2 << 4))  /* light C function */
-#define LUA_TCCL	(LUA_TFUNCTION | (3 << 4))  /* C closure */
+#define LUA_TLCL	makevariant(LUA_TFUNCTION, 1)  /* Lua closure */
+#define LUA_TLCF	makevariant(LUA_TFUNCTION, 2)  /* light C function */
+#define LUA_TCCL	makevariant(LUA_TFUNCTION, 3)  /* C closure */
 
 #define ttisfunction(o)		checktype(o, LUA_TFUNCTION)
 #define ttisclosure(o)		((rawtt(o) & 0x1F) == LUA_TLCL)
