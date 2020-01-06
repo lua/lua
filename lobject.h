@@ -44,7 +44,6 @@
 typedef union Value {
   struct GCObject *gc;    /* collectable objects */
   void *p;         /* light userdata */
-  int b;           /* booleans */
   lua_CFunction f; /* light C functions */
   lua_Integer i;   /* integer numbers */
   lua_Number n;    /* float numbers */
@@ -210,16 +209,20 @@ typedef StackValue *StkId;
 ** ===================================================================
 */
 
-#define ttisboolean(o)		checktag((o), LUA_TBOOLEAN)
 
-#define bvalue(o)	check_exp(ttisboolean(o), val_(o).b)
+#define LUA_TFALSE	(LUA_TBOOLEAN | (1 << 4))
+#define LUA_TTRUE	(LUA_TBOOLEAN | (2 << 4))
 
-#define bvalueraw(v)	((v).b)
+#define ttisboolean(o)		checktype((o), LUA_TBOOLEAN)
+#define ttisfalse(o)		checktag((o), LUA_TFALSE)
+#define ttistrue(o)		checktag((o), LUA_TTRUE)
 
-#define l_isfalse(o)	(ttisboolean(o) ? bvalue(o) == 0 : ttisnil(o))
 
-#define setbvalue(obj,x) \
-  { TValue *io=(obj); val_(io).b=(x); settt_(io, LUA_TBOOLEAN); }
+#define l_isfalse(o)	(ttisfalse(o) || ttisnil(o))
+
+
+#define setbfvalue(obj)		settt_(obj, LUA_TFALSE)
+#define setbtvalue(obj)		settt_(obj, LUA_TTRUE)
 
 /* }================================================================== */
 

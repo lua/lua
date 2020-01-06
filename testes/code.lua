@@ -144,10 +144,10 @@ check(function (a,b,c,d) return a..b..c..d end,
   'MOVE', 'MOVE', 'MOVE', 'MOVE', 'CONCAT', 'RETURN1')
 
 -- not
-check(function () return not not nil end, 'LOADBOOL', 'RETURN1')
-check(function () return not not kFalse end, 'LOADBOOL', 'RETURN1')
-check(function () return not not true end, 'LOADBOOL', 'RETURN1')
-check(function () return not not k3 end, 'LOADBOOL', 'RETURN1')
+check(function () return not not nil end, 'LOADFALSE', 'RETURN1')
+check(function () return not not kFalse end, 'LOADFALSE', 'RETURN1')
+check(function () return not not true end, 'LOADTRUE', 'RETURN1')
+check(function () return not not k3 end, 'LOADTRUE', 'RETURN1')
 
 -- direct access to locals
 check(function ()
@@ -194,7 +194,7 @@ check(function ()
   local a,b
   a[kTrue] = false
 end,
-  'LOADNIL', 'LOADBOOL', 'SETTABLE', 'RETURN0')
+  'LOADNIL', 'LOADTRUE', 'SETTABLE', 'RETURN0')
 
 
 -- equalities

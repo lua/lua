@@ -577,10 +577,9 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
   }
   /* values have same type and same variant */
   switch (ttypetag(t1)) {
-    case LUA_TNIL: return 1;
+    case LUA_TNIL: case LUA_TFALSE: case LUA_TTRUE: return 1;
     case LUA_TNUMINT: return (ivalue(t1) == ivalue(t2));
     case LUA_TNUMFLT: return luai_numeq(fltvalue(t1), fltvalue(t2));
-    case LUA_TBOOLEAN: return bvalue(t1) == bvalue(t2);  /* true must be 1! */
     case LUA_TLIGHTUSERDATA: return pvalue(t1) == pvalue(t2);
     case LUA_TLCF: return fvalue(t1) == fvalue(t2);
     case LUA_TSHRSTR: return eqshrstr(tsvalue(t1), tsvalue(t2));
@@ -1182,9 +1181,13 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         setobj2s(L, ra, rb);
         vmbreak;
       }
-      vmcase(OP_LOADBOOL) {
-        setbvalue(s2v(ra), GETARG_B(i));
-        if (GETARG_C(i)) pc++;  /* skip next instruction (if C) */
+      vmcase(OP_LOADFALSE) {
+        setbfvalue(s2v(ra));
+        if (GETARG_B(i)) pc++;  /* if B, skip next instruction */
+        vmbreak;
+      }
+      vmcase(OP_LOADTRUE) {
+        setbtvalue(s2v(ra));
         vmbreak;
       }
       vmcase(OP_LOADNIL) {
@@ -1503,8 +1506,10 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_NOT) {
         TValue *rb = vRB(i);
-        int nrb = l_isfalse(rb);  /* next assignment may change this value */
-        setbvalue(s2v(ra), nrb);
+        if (l_isfalse(rb))
+          setbtvalue(s2v(ra));
+        else
+          setbfvalue(s2v(ra));
         vmbreak;
       }
       vmcase(OP_LEN) {

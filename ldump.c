@@ -113,10 +113,7 @@ static void DumpConstants (const Proto *f, DumpState *D) {
     const TValue *o = &f->k[i];
     DumpByte(ttypetag(o), D);
     switch (ttypetag(o)) {
-      case LUA_TNIL:
-        break;
-      case LUA_TBOOLEAN:
-        DumpByte(bvalue(o), D);
+      case LUA_TNIL: case LUA_TFALSE: case LUA_TTRUE:
         break;
       case LUA_TNUMFLT:
         DumpNumber(fltvalue(o), D);

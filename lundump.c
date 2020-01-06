@@ -160,8 +160,11 @@ static void LoadConstants (LoadState *S, Proto *f) {
       case LUA_TNIL:
         setnilvalue(o);
         break;
-      case LUA_TBOOLEAN:
-        setbvalue(o, LoadByte(S));
+      case LUA_TFALSE:
+        setbfvalue(o);
+        break;
+      case LUA_TTRUE:
+        setbtvalue(o);
         break;
       case LUA_TNUMFLT:
         setfltvalue(o, LoadNumber(S));

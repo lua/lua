@@ -306,7 +306,7 @@ static void collectvalidlines (lua_State *L, Closure *f) {
     Table *t = luaH_new(L);  /* new table to store active lines */
     sethvalue2s(L, L->top, t);  /* push it on stack */
     api_incr_top(L);
-    setbvalue(&v, 1);  /* boolean 'true' to be the value of all indices */
+    setbtvalue(&v);  /* boolean 'true' to be the value of all indices */
     for (i = 0; i < p->sizelineinfo; i++) {  /* for all lines with code */
       currentline = nextline(p, currentline, i);
       luaH_setint(L, t, currentline, &v);  /* table[line] = true */
