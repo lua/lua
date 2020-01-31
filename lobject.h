@@ -155,13 +155,13 @@ typedef StackValue *StkId;
 */
 
 /* Standard nil */
-#define LUA_VNIL	makevariant(LUA_TNIL, 1)
+#define LUA_VNIL	makevariant(LUA_TNIL, 0)
 
 /* Empty slot (which might be different from a slot containing nil) */
-#define LUA_VEMPTY	makevariant(LUA_TNIL, 2)
+#define LUA_VEMPTY	makevariant(LUA_TNIL, 1)
 
 /* Value returned for a key not found in a table (absent key) */
-#define LUA_VABSTKEY	makevariant(LUA_TNIL, 3)
+#define LUA_VABSTKEY	makevariant(LUA_TNIL, 2)
 
 
 /* macro to test for (any kind of) nil */
@@ -211,8 +211,8 @@ typedef StackValue *StkId;
 */
 
 
-#define LUA_VFALSE	makevariant(LUA_TBOOLEAN, 1)
-#define LUA_VTRUE	makevariant(LUA_TBOOLEAN, 2)
+#define LUA_VFALSE	makevariant(LUA_TBOOLEAN, 0)
+#define LUA_VTRUE	makevariant(LUA_TBOOLEAN, 1)
 
 #define ttisboolean(o)		checktype((o), LUA_TBOOLEAN)
 #define ttisfalse(o)		checktag((o), LUA_VFALSE)
@@ -234,7 +234,7 @@ typedef StackValue *StkId;
 ** ===================================================================
 */
 
-#define LUA_VTHREAD		makevariant(LUA_TTHREAD, 1)
+#define LUA_VTHREAD		makevariant(LUA_TTHREAD, 0)
 
 #define ttisthread(o)		checktag((o), ctb(LUA_VTHREAD))
 
@@ -295,8 +295,8 @@ typedef struct GCObject {
 */
 
 /* Variant tags for numbers */
-#define LUA_VNUMINT	makevariant(LUA_TNUMBER, 1)  /* integer numbers */
-#define LUA_VNUMFLT	makevariant(LUA_TNUMBER, 2)  /* float numbers */
+#define LUA_VNUMINT	makevariant(LUA_TNUMBER, 0)  /* integer numbers */
+#define LUA_VNUMFLT	makevariant(LUA_TNUMBER, 1)  /* float numbers */
 
 #define ttisnumber(o)		checktype((o), LUA_TNUMBER)
 #define ttisfloat(o)		checktag((o), LUA_VNUMFLT)
@@ -332,8 +332,8 @@ typedef struct GCObject {
 */
 
 /* Variant tags for strings */
-#define LUA_VSHRSTR	makevariant(LUA_TSTRING, 1)  /* short strings */
-#define LUA_VLNGSTR	makevariant(LUA_TSTRING, 2)  /* long strings */
+#define LUA_VSHRSTR	makevariant(LUA_TSTRING, 0)  /* short strings */
+#define LUA_VLNGSTR	makevariant(LUA_TSTRING, 1)  /* long strings */
 
 #define ttisstring(o)		checktype((o), LUA_TSTRING)
 #define ttisshrstring(o)	checktag((o), ctb(LUA_VSHRSTR))
@@ -403,8 +403,9 @@ typedef struct TString {
 ** Light userdata should be a variant of userdata, but for compatibility
 ** reasons they are also different types.
 */
-#define LUA_VLIGHTUSERDATA	makevariant(LUA_TLIGHTUSERDATA, 1)
-#define LUA_VUSERDATA		makevariant(LUA_TUSERDATA, 1)
+#define LUA_VLIGHTUSERDATA	makevariant(LUA_TLIGHTUSERDATA, 0)
+
+#define LUA_VUSERDATA		makevariant(LUA_TUSERDATA, 0)
 
 #define ttislightuserdata(o)	checktag((o), LUA_VLIGHTUSERDATA)
 #define ttisfulluserdata(o)	checktag((o), ctb(LUA_VUSERDATA))
@@ -482,7 +483,7 @@ typedef struct Udata0 {
 ** ===================================================================
 */
 
-#define LUA_VPROTO	makevariant(LUA_TPROTO, 1)
+#define LUA_VPROTO	makevariant(LUA_TPROTO, 0)
 
 
 /*
@@ -559,13 +560,13 @@ typedef struct Proto {
 ** ===================================================================
 */
 
-#define LUA_VUPVAL	makevariant(LUA_TUPVAL, 1)
+#define LUA_VUPVAL	makevariant(LUA_TUPVAL, 0)
 
 
 /* Variant tags for functions */
-#define LUA_VLCL	makevariant(LUA_TFUNCTION, 1)  /* Lua closure */
-#define LUA_VLCF	makevariant(LUA_TFUNCTION, 2)  /* light C function */
-#define LUA_VCCL	makevariant(LUA_TFUNCTION, 3)  /* C closure */
+#define LUA_VLCL	makevariant(LUA_TFUNCTION, 0)  /* Lua closure */
+#define LUA_VLCF	makevariant(LUA_TFUNCTION, 1)  /* light C function */
+#define LUA_VCCL	makevariant(LUA_TFUNCTION, 2)  /* C closure */
 
 #define ttisfunction(o)		checktype(o, LUA_TFUNCTION)
 #define ttisclosure(o)		((rawtt(o) & 0x1F) == LUA_VLCL)
@@ -650,7 +651,7 @@ typedef union Closure {
 ** ===================================================================
 */
 
-#define LUA_VTABLE	makevariant(LUA_TTABLE, 1)
+#define LUA_VTABLE	makevariant(LUA_TTABLE, 0)
 
 #define ttistable(o)		checktag((o), ctb(LUA_VTABLE))
 
