@@ -157,23 +157,23 @@ static void LoadConstants (LoadState *S, Proto *f) {
     TValue *o = &f->k[i];
     int t = LoadByte(S);
     switch (t) {
-      case LUA_TNIL:
+      case LUA_VNIL:
         setnilvalue(o);
         break;
-      case LUA_TFALSE:
+      case LUA_VFALSE:
         setbfvalue(o);
         break;
-      case LUA_TTRUE:
+      case LUA_VTRUE:
         setbtvalue(o);
         break;
-      case LUA_TNUMFLT:
+      case LUA_VNUMFLT:
         setfltvalue(o, LoadNumber(S));
         break;
-      case LUA_TNUMINT:
+      case LUA_VNUMINT:
         setivalue(o, LoadInteger(S));
         break;
-      case LUA_TSHRSTR:
-      case LUA_TLNGSTR:
+      case LUA_VSHRSTR:
+      case LUA_VLNGSTR:
         setsvalue2n(S->L, o, LoadString(S));
         break;
       default: lua_assert(0);

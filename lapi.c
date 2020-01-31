@@ -262,7 +262,7 @@ LUA_API int lua_type (lua_State *L, int idx) {
 
 LUA_API const char *lua_typename (lua_State *L, int t) {
   UNUSED(L);
-  api_check(L, LUA_TNONE <= t && t < LUA_NUMTAGS, "invalid tag");
+  api_check(L, LUA_TNONE <= t && t < LUA_NUMTYPES, "invalid type");
   return ttypename(t);
 }
 
@@ -397,10 +397,10 @@ LUA_API const char *lua_tolstring (lua_State *L, int idx, size_t *len) {
 LUA_API lua_Unsigned lua_rawlen (lua_State *L, int idx) {
   const TValue *o = index2value(L, idx);
   switch (ttypetag(o)) {
-    case LUA_TSHRSTR: return tsvalue(o)->shrlen;
-    case LUA_TLNGSTR: return tsvalue(o)->u.lnglen;
-    case LUA_TUSERDATA: return uvalue(o)->len;
-    case LUA_TTABLE: return luaH_getn(hvalue(o));
+    case LUA_VSHRSTR: return tsvalue(o)->shrlen;
+    case LUA_VLNGSTR: return tsvalue(o)->u.lnglen;
+    case LUA_VUSERDATA: return uvalue(o)->len;
+    case LUA_VTABLE: return luaH_getn(hvalue(o));
     default: return 0;
   }
 }
@@ -446,8 +446,8 @@ LUA_API lua_State *lua_tothread (lua_State *L, int idx) {
 LUA_API const void *lua_topointer (lua_State *L, int idx) {
   const TValue *o = index2value(L, idx);
   switch (ttypetag(o)) {
-    case LUA_TLCF: return cast_voidp(cast_sizet(fvalue(o)));
-    case LUA_TUSERDATA: case LUA_TLIGHTUSERDATA:
+    case LUA_VLCF: return cast_voidp(cast_sizet(fvalue(o)));
+    case LUA_VUSERDATA: case LUA_VLIGHTUSERDATA:
       return touserdata(o);
     default: {
       if (iscollectable(o))
@@ -1312,7 +1312,7 @@ LUA_API void *lua_newuserdatauv (lua_State *L, size_t size, int nuvalue) {
 static const char *aux_upvalue (TValue *fi, int n, TValue **val,
                                 GCObject **owner) {
   switch (ttypetag(fi)) {
-    case LUA_TCCL: {  /* C closure */
+    case LUA_VCCL: {  /* C closure */
       CClosure *f = clCvalue(fi);
       if (!(cast_uint(n) - 1u < cast_uint(f->nupvalues)))
         return NULL;  /* 'n' not in [1, f->nupvalues] */
@@ -1320,7 +1320,7 @@ static const char *aux_upvalue (TValue *fi, int n, TValue **val,
       if (owner) *owner = obj2gco(f);
       return "";
     }
-    case LUA_TLCL: {  /* Lua closure */
+    case LUA_VLCL: {  /* Lua closure */
       LClosure *f = clLvalue(fi);
       TString *name;
       Proto *p = f->p;
@@ -1383,10 +1383,10 @@ static UpVal **getupvalref (lua_State *L, int fidx, int n, LClosure **pf) {
 LUA_API void *lua_upvalueid (lua_State *L, int fidx, int n) {
   TValue *fi = index2value(L, fidx);
   switch (ttypetag(fi)) {
-    case LUA_TLCL: {  /* lua closure */
+    case LUA_VLCL: {  /* lua closure */
       return *getupvalref(L, fidx, n, NULL);
     }
-    case LUA_TCCL: {  /* C closure */
+    case LUA_VCCL: {  /* C closure */
       CClosure *f = clCvalue(fi);
       api_check(L, 1 <= n && n <= f->nupvalues, "invalid upvalue index");
       return &f->upvalue[n - 1];

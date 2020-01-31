@@ -31,7 +31,7 @@
 
 
 
-#define noLuaClosure(f)		((f) == NULL || (f)->c.tt == LUA_TCCL)
+#define noLuaClosure(f)		((f) == NULL || (f)->c.tt == LUA_VCCL)
 
 
 /* Active Lua function (given call info) */

@@ -61,7 +61,7 @@ typedef struct Memcontrol {
   unsigned long maxmem;
   unsigned long memlimit;
   unsigned long countlimit;
-  unsigned long objcount[LUA_NUMTAGS];
+  unsigned long objcount[LUA_NUMTYPES];
 } Memcontrol;
 
 LUA_API Memcontrol l_memcontrol;

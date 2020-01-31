@@ -318,7 +318,7 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   /* create new thread */
   L1 = &cast(LX *, luaM_newobject(L, LUA_TTHREAD, sizeof(LX)))->l;
   L1->marked = luaC_white(g);
-  L1->tt = LUA_TTHREAD;
+  L1->tt = LUA_VTHREAD;
   /* link it on list 'allgc' */
   L1->next = g->allgc;
   g->allgc = obj2gco(L1);
@@ -382,7 +382,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   if (l == NULL) return NULL;
   L = &l->l.l;
   g = &l->g;
-  L->tt = LUA_TTHREAD;
+  L->tt = LUA_VTHREAD;
   g->currentwhite = bitmask(WHITE0BIT);
   L->marked = luaC_white(g);
   preinit_thread(L, g);

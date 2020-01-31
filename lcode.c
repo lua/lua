@@ -678,22 +678,22 @@ static void luaK_float (FuncState *fs, int reg, lua_Number f) {
 */
 static void const2exp (TValue *v, expdesc *e) {
   switch (ttypetag(v)) {
-    case LUA_TNUMINT:
+    case LUA_VNUMINT:
       e->k = VKINT; e->u.ival = ivalue(v);
       break;
-    case LUA_TNUMFLT:
+    case LUA_VNUMFLT:
       e->k = VKFLT; e->u.nval = fltvalue(v);
       break;
-    case LUA_TFALSE:
+    case LUA_VFALSE:
       e->k = VFALSE;
       break;
-    case LUA_TTRUE:
+    case LUA_VTRUE:
       e->k = VTRUE;
       break;
-    case LUA_TNIL:
+    case LUA_VNIL:
       e->k = VNIL;
       break;
-    case LUA_TSHRSTR:  case LUA_TLNGSTR:
+    case LUA_VSHRSTR:  case LUA_VLNGSTR:
       e->k = VKSTR; e->u.strval = tsvalue(v);
       break;
     default: lua_assert(0);

@@ -303,7 +303,7 @@ static void printobj (global_State *g, GCObject *o) {
            ttypename(novariant(o->tt)), (void *)o,
            isdead(g,o) ? 'd' : isblack(o) ? 'b' : iswhite(o) ? 'w' : 'g',
            "ns01oTt"[getage(o)], o->marked);
-  if (o->tt == LUA_TSHRSTR || o->tt == LUA_TLNGSTR)
+  if (o->tt == LUA_VSHRSTR || o->tt == LUA_VLNGSTR)
     printf(" '%s'", getstr(gco2ts(o)));
 }
 
@@ -435,36 +435,36 @@ static void checkstack (global_State *g, lua_State *L1) {
 
 static void checkrefs (global_State *g, GCObject *o) {
   switch (o->tt) {
-    case LUA_TUSERDATA: {
+    case LUA_VUSERDATA: {
       checkudata(g, gco2u(o));
       break;
     }
-    case LUA_TUPVAL: {
+    case LUA_VUPVAL: {
       checkvalref(g, o, gco2upv(o)->v);
       break;
     }
-    case LUA_TTABLE: {
+    case LUA_VTABLE: {
       checktable(g, gco2t(o));
       break;
     }
-    case LUA_TTHREAD: {
+    case LUA_VTHREAD: {
       checkstack(g, gco2th(o));
       break;
     }
-    case LUA_TLCL: {
+    case LUA_VLCL: {
       checkLclosure(g, gco2lcl(o));
       break;
     }
-    case LUA_TCCL: {
+    case LUA_VCCL: {
       checkCclosure(g, gco2ccl(o));
       break;
     }
-    case LUA_TPROTO: {
+    case LUA_VPROTO: {
       checkproto(g, gco2p(o));
       break;
     }
-    case LUA_TSHRSTR:
-    case LUA_TLNGSTR: {
+    case LUA_VSHRSTR:
+    case LUA_VLNGSTR: {
       lua_assert(!isgray(o));  /* strings are never gray */
       break;
     }
@@ -497,8 +497,8 @@ static void checkobject (global_State *g, GCObject *o, int maybedead,
         lua_assert(isblack(o) ||
         getage(o) == G_TOUCHED1 ||
         getage(o) == G_OLD0 ||
-        o->tt == LUA_TTHREAD ||
-        (o->tt == LUA_TUPVAL && upisopen(gco2upv(o))));
+        o->tt == LUA_VTHREAD ||
+        (o->tt == LUA_VUPVAL && upisopen(gco2upv(o))));
       }
     }
     checkrefs(g, o);
@@ -511,11 +511,11 @@ static void checkgraylist (global_State *g, GCObject *o) {
   while (o) {
     lua_assert(isgray(o) || getage(o) == G_TOUCHED2);
     switch (o->tt) {
-      case LUA_TTABLE: o = gco2t(o)->gclist; break;
-      case LUA_TLCL: o = gco2lcl(o)->gclist; break;
-      case LUA_TCCL: o = gco2ccl(o)->gclist; break;
-      case LUA_TTHREAD: o = gco2th(o)->gclist; break;
-      case LUA_TPROTO: o = gco2p(o)->gclist; break;
+      case LUA_VTABLE: o = gco2t(o)->gclist; break;
+      case LUA_VLCL: o = gco2lcl(o)->gclist; break;
+      case LUA_VCCL: o = gco2ccl(o)->gclist; break;
+      case LUA_VTHREAD: o = gco2th(o)->gclist; break;
+      case LUA_VPROTO: o = gco2p(o)->gclist; break;
       default: lua_assert(0);  /* other objects cannot be in a gray list */
     }
   }
@@ -570,7 +570,7 @@ int lua_checkmemory (lua_State *L) {
 
   /* check 'fixedgc' list */
   for (o = g->fixedgc; o != NULL; o = o->next) {
-    lua_assert(o->tt == LUA_TSHRSTR && isgray(o) && getage(o) == G_OLD);
+    lua_assert(o->tt == LUA_VSHRSTR && isgray(o) && getage(o) == G_OLD);
   }
 
   /* check 'allgc' list */
@@ -584,7 +584,7 @@ int lua_checkmemory (lua_State *L) {
   for (o = g->tobefnz; o != NULL; o = o->next) {
     checkobject(g, o, 0, G_NEW);
     lua_assert(tofinalize(o));
-    lua_assert(o->tt == LUA_TUSERDATA || o->tt == LUA_TTABLE);
+    lua_assert(o->tt == LUA_VUSERDATA || o->tt == LUA_VTABLE);
   }
   return 0;
 }

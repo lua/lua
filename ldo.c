@@ -459,10 +459,10 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
   lua_CFunction f;
  retry:
   switch (ttypetag(s2v(func))) {
-    case LUA_TCCL:  /* C closure */
+    case LUA_VCCL:  /* C closure */
       f = clCvalue(s2v(func))->f;
       goto Cfunc;
-    case LUA_TLCF:  /* light C function */
+    case LUA_VLCF:  /* light C function */
       f = fvalue(s2v(func));
      Cfunc: {
       int n;  /* number of returns */
@@ -485,7 +485,7 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
       luaD_poscall(L, ci, n);
       break;
     }
-    case LUA_TLCL: {  /* Lua function */
+    case LUA_VLCL: {  /* Lua function */
       CallInfo *ci;
       Proto *p = clLvalue(s2v(func))->p;
       int narg = cast_int(L->top - func) - 1;  /* number of real arguments */

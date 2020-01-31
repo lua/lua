@@ -327,15 +327,15 @@ union GCUnion {
 /* macros to convert a GCObject into a specific value */
 #define gco2ts(o)  \
 	check_exp(novariant((o)->tt) == LUA_TSTRING, &((cast_u(o))->ts))
-#define gco2u(o)  check_exp((o)->tt == LUA_TUSERDATA, &((cast_u(o))->u))
-#define gco2lcl(o)  check_exp((o)->tt == LUA_TLCL, &((cast_u(o))->cl.l))
-#define gco2ccl(o)  check_exp((o)->tt == LUA_TCCL, &((cast_u(o))->cl.c))
+#define gco2u(o)  check_exp((o)->tt == LUA_VUSERDATA, &((cast_u(o))->u))
+#define gco2lcl(o)  check_exp((o)->tt == LUA_VLCL, &((cast_u(o))->cl.l))
+#define gco2ccl(o)  check_exp((o)->tt == LUA_VCCL, &((cast_u(o))->cl.c))
 #define gco2cl(o)  \
 	check_exp(novariant((o)->tt) == LUA_TFUNCTION, &((cast_u(o))->cl))
-#define gco2t(o)  check_exp((o)->tt == LUA_TTABLE, &((cast_u(o))->h))
-#define gco2p(o)  check_exp((o)->tt == LUA_TPROTO, &((cast_u(o))->p))
-#define gco2th(o)  check_exp((o)->tt == LUA_TTHREAD, &((cast_u(o))->th))
-#define gco2upv(o)	check_exp((o)->tt == LUA_TUPVAL, &((cast_u(o))->upv))
+#define gco2t(o)  check_exp((o)->tt == LUA_VTABLE, &((cast_u(o))->h))
+#define gco2p(o)  check_exp((o)->tt == LUA_VPROTO, &((cast_u(o))->p))
+#define gco2th(o)  check_exp((o)->tt == LUA_VTHREAD, &((cast_u(o))->th))
+#define gco2upv(o)	check_exp((o)->tt == LUA_VUPVAL, &((cast_u(o))->upv))
 
 
 /*

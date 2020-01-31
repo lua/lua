@@ -111,21 +111,21 @@ static void DumpConstants (const Proto *f, DumpState *D) {
   DumpInt(n, D);
   for (i = 0; i < n; i++) {
     const TValue *o = &f->k[i];
-    DumpByte(ttypetag(o), D);
-    switch (ttypetag(o)) {
-      case LUA_TNIL: case LUA_TFALSE: case LUA_TTRUE:
-        break;
-      case LUA_TNUMFLT:
+    int tt = ttypetag(o);
+    DumpByte(tt, D);
+    switch (tt) {
+      case LUA_VNUMFLT:
         DumpNumber(fltvalue(o), D);
         break;
-      case LUA_TNUMINT:
+      case LUA_VNUMINT:
         DumpInteger(ivalue(o), D);
         break;
-      case LUA_TSHRSTR:
-      case LUA_TLNGSTR:
+      case LUA_VSHRSTR:
+      case LUA_VLNGSTR:
         DumpString(tsvalue(o), D);
         break;
-      default: lua_assert(0);
+      default:
+        lua_assert(tt == LUA_VNIL || tt == LUA_VFALSE || tt == LUA_VTRUE);
     }
   }
 }
