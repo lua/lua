@@ -16,6 +16,7 @@ static const char *const opnames[] = {
   "LOADK",
   "LOADKX",
   "LOADFALSE",
+  "LFALSESKIP",
   "LOADTRUE",
   "LOADNIL",
   "GETUPVAL",

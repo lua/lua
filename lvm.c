@@ -1183,7 +1183,11 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_LOADFALSE) {
         setbfvalue(s2v(ra));
-        if (GETARG_B(i)) pc++;  /* if B, skip next instruction */
+        vmbreak;
+      }
+      vmcase(OP_LFALSESKIP) {
+        setbfvalue(s2v(ra));
+        pc++;  /* skip next instruction */
         vmbreak;
       }
       vmcase(OP_LOADTRUE) {
