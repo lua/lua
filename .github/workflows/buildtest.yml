@@ -1,0 +1,17 @@
+name: Lua Build and Test
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install readline
+      run: sudo apt-get install libreadline-dev
+    - name: make
+      run: make
+    - name: test
+      run: ./all
