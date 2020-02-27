@@ -419,17 +419,19 @@ static void checkstack (global_State *g, lua_State *L1) {
   CallInfo *ci;
   UpVal *uv;
   lua_assert(!isdead(g, L1));
+  if (L1->stack == NULL) {  /* incomplete thread? */
+    lua_assert(L1->stacksize == 0 && L1->openupval == NULL &&
+               L1->ci == NULL);
+    return;
+  }
   for (uv = L1->openupval; uv != NULL; uv = uv->u.open.next)
     lua_assert(upisopen(uv));  /* must be open */
   for (ci = L1->ci; ci != NULL; ci = ci->previous) {
     lua_assert(ci->top <= L1->stack_last);
     lua_assert(lua_checkpc(ci));
   }
-  if (L1->stack) {  /* complete thread? */
-    for (o = L1->stack; o < L1->stack_last + EXTRA_STACK; o++)
-      checkliveness(L1, s2v(o));  /* entire stack must have valid values */
-  }
-  else lua_assert(L1->stacksize == 0);
+  for (o = L1->stack; o < L1->stack_last + EXTRA_STACK; o++)
+    checkliveness(L1, s2v(o));  /* entire stack must have valid values */
 }
 
 

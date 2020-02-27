@@ -649,6 +649,11 @@ t = debug.getinfo(1)   -- main
 assert(t.isvararg == true and t.nparams == 0 and t.nups == 1 and
        debug.getupvalue(t.func, 1) == "_ENV")
 
+t = debug.getinfo(math.sin)   -- C function
+assert(t.isvararg == true and t.nparams == 0 and t.nups == 0)
+
+t = debug.getinfo(string.gmatch("abc", "a"))   -- C closure
+assert(t.isvararg == true and t.nparams == 0 and t.nups > 0)
 
 
 

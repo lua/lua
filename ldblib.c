@@ -202,8 +202,6 @@ static int db_getinfo (lua_State *L) {
 static int db_getlocal (lua_State *L) {
   int arg;
   lua_State *L1 = getthread(L, &arg);
-  lua_Debug ar;
-  const char *name;
   int nvar = (int)luaL_checkinteger(L, arg + 2);  /* local-variable index */
   if (lua_isfunction(L, arg + 1)) {  /* function argument? */
     lua_pushvalue(L, arg + 1);  /* push function */
@@ -211,6 +209,8 @@ static int db_getlocal (lua_State *L) {
     return 1;  /* return only name (there is no value) */
   }
   else {  /* stack-level argument */
+    lua_Debug ar;
+    const char *name;
     int level = (int)luaL_checkinteger(L, arg + 1);
     if (!lua_getstack(L1, level, &ar))  /* out of range? */
       return luaL_argerror(L, arg+1, "level out of range");

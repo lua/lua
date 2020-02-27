@@ -76,7 +76,7 @@ end
 
 -- testing constructor sizes
 local sizes = {0, 1, 2, 3, 4, 5, 7, 8, 9, 15, 16, 17,
-  30, 31, 32, 33, 34, 500, 1000}
+  30, 31, 32, 33, 34, 254, 255, 256, 500, 1000}
 
 for _, sa in ipairs(sizes) do    -- 'sa' is size of the array part
   local arr = {"return {"}

@@ -101,7 +101,7 @@ int luaG_getfuncline (const Proto *f, int pc) {
 }
 
 
-static int currentline (CallInfo *ci) {
+static int getcurrentline (CallInfo *ci) {
   return luaG_getfuncline(ci_func(ci)->p, currentpc(ci));
 }
 
@@ -339,7 +339,7 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
         break;
       }
       case 'l': {
-        ar->currentline = (ci && isLua(ci)) ? currentline(ci) : -1;
+        ar->currentline = (ci && isLua(ci)) ? getcurrentline(ci) : -1;
         break;
       }
       case 'u': {
@@ -775,7 +775,7 @@ l_noret luaG_runerror (lua_State *L, const char *fmt, ...) {
   msg = luaO_pushvfstring(L, fmt, argp);  /* format message */
   va_end(argp);
   if (isLua(ci))  /* if Lua function, add source:line information */
-    luaG_addinfo(L, msg, ci_func(ci)->p->source, currentline(ci));
+    luaG_addinfo(L, msg, ci_func(ci)->p->source, getcurrentline(ci));
   luaG_errormsg(L);
 }
 

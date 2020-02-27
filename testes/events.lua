@@ -325,6 +325,7 @@ else
   assert(u1 == u3 and u3 == u1 and u1 ~= u2)
   assert(u2 == u1 and u2 == u3 and u3 == u2)
   assert(u2 ~= {})   -- different types cannot be equal
+  assert(rawequal(u1, u1) and not rawequal(u1, u3))
 
   local mirror = {}
   debug.setmetatable(u3, {__index = mirror, __newindex = mirror})

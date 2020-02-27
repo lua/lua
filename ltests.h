@@ -25,9 +25,6 @@
 #define lua_assert(c)           assert(c)
 
 
-/* include opcode names */
-#define LUAI_DEFOPNAMES
-
 
 /* compiled with -O0, Lua uses a lot of C stack space... */
 #undef LUAI_MAXCSTACK

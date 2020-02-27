@@ -980,11 +980,11 @@ void luaV_finishOp (lua_State *L) {
 
 
 /*
-** Order operations with register operands. 'opf' actually works
+** Order operations with register operands. 'opn' actually works
 ** for all numbers, but the fast track improves performance for
 ** integers.
 */
-#define op_order(L,opi,opf,other) {  \
+#define op_order(L,opi,opn,other) {  \
         int cond;  \
         TValue *rb = vRB(i);  \
         if (ttisinteger(s2v(ra)) && ttisinteger(rb)) {  \
@@ -993,7 +993,7 @@ void luaV_finishOp (lua_State *L) {
           cond = opi(ia, ib);  \
         }  \
         else if (ttisnumber(s2v(ra)) && ttisnumber(rb))  \
-          cond = opf(s2v(ra), rb);  \
+          cond = opn(s2v(ra), rb);  \
         else  \
           Protect(cond = other(L, s2v(ra), rb));  \
         docondjump(); }
@@ -1323,8 +1323,9 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         Table *t;
         if (b > 0)
           b = 1 << (b - 1);  /* size is 2^(b - 1) */
-        if (TESTARG_k(i))
-          c += GETARG_Ax(*pc) * (MAXARG_C + 1);
+        lua_assert((!TESTARG_k(i)) == (GETARG_Ax(*pc) == 0));
+        if (TESTARG_k(i))  /* non-zero extra argument? */
+          c += GETARG_Ax(*pc) * (MAXARG_C + 1);  /* add it to size */
         pc++;  /* skip extra argument */
         L->top = ra + 1;  /* correct top in case of emergency GC */
         t = luaH_new(L);  /* memory allocation */
@@ -1558,7 +1559,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       vmcase(OP_EQK) {
         TValue *rb = KB(i);
         /* basic types do not use '__eq'; we can use raw equality */
-        int cond = luaV_equalobj(NULL, s2v(ra), rb);
+        int cond = luaV_rawequalobj(s2v(ra), rb);
         docondjump();
         vmbreak;
       }

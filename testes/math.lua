@@ -960,7 +960,10 @@ do
   aux(-10,0)
   aux(1, 6)
   aux(1, 2)
+  aux(1, 13)
+  aux(1, 31)
   aux(1, 32)
+  aux(1, 33)
   aux(-10, 10)
   aux(-10,-10)   -- unit set
   aux(minint, minint)   -- unit set
@@ -998,6 +1001,7 @@ do
   end
   aux(0, maxint)
   aux(1, maxint)
+  aux(3, maxint // 3)
   aux(minint, -1)
   aux(minint // 2, maxint // 2)
   aux(minint, maxint)

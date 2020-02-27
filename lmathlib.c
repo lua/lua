@@ -522,16 +522,18 @@ typedef struct {
 ** Project the random integer 'ran' into the interval [0, n].
 ** Because 'ran' has 2^B possible values, the projection can only be
 ** uniform when the size of the interval is a power of 2 (exact
-** division).  To get a uniform projection into [0, n], we first compute
-** 'lim', the smallest Mersenne number not smaller than 'n'. We then
-** project 'ran' into the interval [0, lim].  If the result is inside
-** [0, n], we are done. Otherwise, we try with another 'ran', until we
-** have a result inside the interval.
+** division). Otherwise, to get a uniform projection into [0, n], we
+** first compute 'lim', the smallest Mersenne number not smaller than
+** 'n'. We then project 'ran' into the interval [0, lim].  If the result
+** is inside [0, n], we are done. Otherwise, we try with another 'ran',
+** until we have a result inside the interval.
 */
 static lua_Unsigned project (lua_Unsigned ran, lua_Unsigned n,
                              RanState *state) {
-  lua_Unsigned lim = n;
-  if ((lim & (lim + 1)) > 0) {  /* 'lim + 1' is not a power of 2? */
+  if ((n & (n + 1)) == 0)  /* is 'n + 1' a power of 2? */
+    return ran & n;  /* no bias */
+  else {
+    lua_Unsigned lim = n;
     /* compute the smallest (2^b - 1) not smaller than 'n' */
     lim |= (lim >> 1);
     lim |= (lim >> 2);
@@ -541,13 +543,13 @@ static lua_Unsigned project (lua_Unsigned ran, lua_Unsigned n,
 #if (LUA_MAXUNSIGNED >> 31) >= 3
     lim |= (lim >> 32);  /* integer type has more than 32 bits */
 #endif
+    lua_assert((lim & (lim + 1)) == 0  /* 'lim + 1' is a power of 2, */
+      && lim >= n  /* not smaller than 'n', */
+      && (lim >> 1) < n);  /* and it is the smallest one */
+    while ((ran &= lim) > n)  /* project 'ran' into [0..lim] */
+      ran = I2UInt(nextrand(state->s));  /* not inside [0..n]? try again */
+    return ran;
   }
-  lua_assert((lim & (lim + 1)) == 0  /* 'lim + 1' is a power of 2, */
-    && lim >= n  /* not smaller than 'n', */
-    && (lim == 0 || (lim >> 1) < n));  /* and it is the smallest one */
-  while ((ran &= lim) > n)  /* project 'ran' into [0..lim] */
-    ran = I2UInt(nextrand(state->s));  /* not inside [0..n]? try again */
-  return ran;
 }
 
 
