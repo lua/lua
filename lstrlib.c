@@ -1266,7 +1266,7 @@ static int str_format (lua_State *L) {
         case 'e': case 'E': case 'g': case 'G': {
           lua_Number n = luaL_checknumber(L, arg);
           addlenmod(form, LUA_NUMBER_FRMLEN);
-          nb = snprintf(buff, maxitem, form, (LUAI_UACNUMBER)n);
+          nb = l_sprintf(buff, maxitem, form, (LUAI_UACNUMBER)n);
           break;
         }
         case 'p': {
