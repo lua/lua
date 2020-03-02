@@ -1014,7 +1014,8 @@ static void funcargs (LexState *ls, expdesc *f, int line) {
         args.k = VVOID;
       else {
         explist(ls, &args);
-        luaK_setmultret(fs, &args);
+        if (hasmultret(args.k))
+          luaK_setmultret(fs, &args);
       }
       check_match(ls, ')', '(', line);
       break;

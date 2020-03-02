@@ -703,19 +703,18 @@ static void const2exp (TValue *v, expdesc *e) {
 
 /*
 ** Fix an expression to return the number of results 'nresults'.
-** Either 'e' is a multi-ret expression (function call or vararg)
-** or 'nresults' is LUA_MULTRET (as any expression can satisfy that).
+** 'e' must be a multi-ret expression (function call or vararg).
 */
 void luaK_setreturns (FuncState *fs, expdesc *e, int nresults) {
   Instruction *pc = &getinstruction(fs, e);
   if (e->k == VCALL)  /* expression is an open function call? */
     SETARG_C(*pc, nresults + 1);
-  else if (e->k == VVARARG) {
+  else {
+    lua_assert(e->k == VVARARG);
     SETARG_C(*pc, nresults + 1);
     SETARG_A(*pc, fs->freereg);
     luaK_reserveregs(fs, 1);
   }
-  else lua_assert(nresults == LUA_MULTRET);
 }
 
 
