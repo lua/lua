@@ -131,8 +131,7 @@ static void warnf (void *ud, const char *msg, int tocont) {
         if (buff[0] != '#' && onoff)  /* unexpected warning? */
           badexit("Unexpected warning in test mode: %s\naborting...\n",
                   buff, NULL);
-        /* else */ /* FALLTHROUGH */
-      }
+      }  /* FALLTHROUGH */
       case 1: {  /* allow */
         if (onoff)
           fprintf(stderr, "Lua warning: %s\n", buff);  /* print warning */
