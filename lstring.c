@@ -23,7 +23,7 @@
 
 
 /*
-** Lua will use at most ~(2^LUAI_HASHLIMIT) bytes from a string to
+** Lua will use at most ~(2^LUAI_HASHLIMIT) bytes from a long string to
 ** compute its hash
 */
 #if !defined(LUAI_HASHLIMIT)
@@ -50,9 +50,9 @@ int luaS_eqlngstr (TString *a, TString *b) {
 }
 
 
-unsigned int luaS_hash (const char *str, size_t l, unsigned int seed) {
+unsigned int luaS_hash (const char *str, size_t l, unsigned int seed,
+                        size_t step) {
   unsigned int h = seed ^ cast_uint(l);
-  size_t step = (l >> LUAI_HASHLIMIT) + 1;
   for (; l >= step; l -= step)
     h ^= ((h<<5) + (h>>2) + cast_byte(str[l - 1]));
   return h;
@@ -62,7 +62,9 @@ unsigned int luaS_hash (const char *str, size_t l, unsigned int seed) {
 unsigned int luaS_hashlongstr (TString *ts) {
   lua_assert(ts->tt == LUA_VLNGSTR);
   if (ts->extra == 0) {  /* no hash? */
-    ts->hash = luaS_hash(getstr(ts), ts->u.lnglen, ts->hash);
+    size_t len = ts->u.lnglen;
+    size_t step = (len >> LUAI_HASHLIMIT) + 1;
+    ts->hash = luaS_hash(getstr(ts), len, ts->hash, step);
     ts->extra = 1;  /* now it has its hash */
   }
   return ts->hash;
@@ -199,7 +201,7 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
   TString *ts;
   global_State *g = G(L);
   stringtable *tb = &g->strt;
-  unsigned int h = luaS_hash(str, l, g->seed);
+  unsigned int h = luaS_hash(str, l, g->seed, 1);
   TString **list = &tb->hash[lmod(h, tb->size)];
   lua_assert(str != NULL);  /* otherwise 'memcmp'/'memcpy' are undefined */
   for (ts = *list; ts != NULL; ts = ts->u.hnext) {
