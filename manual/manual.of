@@ -96,6 +96,14 @@ is particularly attractive
 for small machines and embedded systems.
 (See macro @id{LUA_32BITS} in file @id{luaconf.h}.)
 
+Unless stated otherwise,
+any overflow when manipulating integer values @def{wrap around},
+according to the usual rules of two-complement arithmetic.
+(In other words,
+the actual result is the unique representable integer
+that is equal modulo @M{2@sp{n}} to the mathematical result,
+where @M{n} is the number of bits of the integer type.)
+
 Lua has explicit rules about when each subtype is used,
 but it also converts between them automatically as needed @see{coercion}.
 Therefore,
@@ -1098,8 +1106,11 @@ if its value fits in an integer or it is a hexadecimal constant,
 it denotes an integer;
 otherwise (that is, a decimal integer numeral that overflows),
 it denotes a float.
-(Hexadecimal integer numerals that overflow @emph{wrap around};
-they always denote an integer value.)
+Hexadecimal numerals with neither a radix point nor an exponent
+always denote an integer value;
+if the value overflows, it @emph{wraps around}
+to fit into a valid integer.
+
 Examples of valid integer constants are
 @verbatim{
 3   345   0xff   0xBEBADA
@@ -1712,12 +1723,7 @@ Modulo is defined as the remainder of a division
 that rounds the quotient towards minus infinity (floor division).
 
 In case of overflows in integer arithmetic,
-all operations @emphx{wrap around},
-according to the usual rules of two-complement arithmetic.
-(In other words,
-they return the unique representable integer
-that is equal modulo @M{2@sp{n}} to the mathematical result,
-where @M{n} is the number of bits of the integer type.)
+all operations @emphx{wrap around}.
 }
 
 @sect3{bitwise| @title{Bitwise Operators}
@@ -2364,9 +2370,8 @@ and
 (that is, the element at @N{the top})
 and index @M{-n} represents the first element.
 
-}
 
-@sect2{stacksize| @title{Stack Size}
+@sect3{stacksize| @title{Stack Size}
 
 When you interact with the Lua API,
 you are responsible for ensuring consistency.
@@ -2391,7 +2396,7 @@ you should use @Lid{lua_checkstack}.
 
 }
 
-@sect2{@title{Valid and Acceptable Indices}
+@sect3{@title{Valid and Acceptable Indices}
 
 Any function in the API that receives stack indices
 works only with @emphx{valid indices} or @emphx{acceptable indices}.
@@ -2430,6 +2435,8 @@ For functions that can be called with acceptable indices,
 any non-valid index is treated as if it
 contains a value of a virtual type @defid{LUA_TNONE},
 which behaves like a nil value.
+
+}
 
 }
 
@@ -2551,6 +2558,33 @@ in particular, the error object is on the top of the stack.
 However, there is no guarantee about stack space.
 To push anything on the stack,
 the panic function must first check the available space @see{stacksize}.
+
+
+@sect3{statuscodes|@title{Status Codes}
+
+Several functions that report errors in the API use the following
+status codes to indicate different kinds of errors or other conditions:
+@description{
+
+@item{@defid{LUA_OK} (0)| no errors.}
+
+@item{@defid{LUA_ERRRUN}| a runtime error.}
+
+@item{@defid{LUA_ERRMEM}|
+@x{memory allocation error}.
+For such errors, Lua does not call the @x{message handler}.
+}
+
+@item{@defid{LUA_ERRERR}| error while running the @x{message handler}.}
+
+@item{@defid{LUA_ERRSYNTAX}| syntax error during precompilation.}
+
+@item{@defid{LUA_YIELD}| the thread (coroutine) yields.}
+
+}
+These constants are defined in the header file @id{lua.h}.
+
+}
 
 }
 
@@ -3407,19 +3441,6 @@ If there are no errors,
 function on top of the stack.
 Otherwise, it pushes an error message.
 
-The return values of @id{lua_load} are:
-@description{
-
-@item{@Lid{LUA_OK}| no errors;}
-
-@item{@defid{LUA_ERRSYNTAX}|
-syntax error during precompilation;}
-
-@item{@Lid{LUA_ERRMEM}|
-@x{memory allocation (out-of-memory) error};}
-
-}
-
 The @id{lua_load} function uses a user-supplied @id{reader} function
 to read the chunk @seeC{lua_Reader}.
 The @id{data} argument is an opaque value passed to the reader function.
@@ -3436,6 +3457,11 @@ a @id{NULL} value is equivalent to the string @St{bt}.
 @id{lua_load} uses the stack internally,
 so the reader function must always leave the stack
 unmodified when returning.
+
+@id{lua_load} can return
+@Lid{LUA_OK}, @Lid{LUA_ERRSYNTAX}, or @Lid{LUA_ERRMEM}.
+The function may also return other values corresponding to
+errors raised by the read function @see{statuscodes}.
 
 If the resulting function has upvalues,
 its first upvalue is set to the value of the @x{global environment}
@@ -3590,25 +3616,8 @@ information to the error object, such as a stack traceback.
 Such information cannot be gathered after the return of @Lid{lua_pcall},
 since by then the stack has unwound.
 
-The @Lid{lua_pcall} function returns one of the following constants
-(defined in @id{lua.h}):
-@description{
-
-@item{@defid{LUA_OK} (0)|
-success.}
-
-@item{@defid{LUA_ERRRUN}|
-a runtime error.
-}
-
-@item{@defid{LUA_ERRMEM}|
-@x{memory allocation error}.
-For such errors, Lua does not call the @x{message handler}.
-}
-
-@item{@defid{LUA_ERRERR}|
-error while running the @x{message handler}.
-}
+The @Lid{lua_pcall} function returns one of the following status codes:
+@Lid{LUA_OK}, @Lid{LUA_ERRRUN}, @Lid{LUA_ERRMEM}, or @Lid{LUA_ERRERR}.
 
 }
 
@@ -3624,7 +3633,7 @@ int lua_pcallk (lua_State *L,
 @apii{nargs + 1,nresults|1,-}
 
 This function behaves exactly like @Lid{lua_pcall},
-but allows the called function to yield @see{continuations}.
+except that it allows the called function to yield @see{continuations}.
 
 }
 
@@ -4002,7 +4011,7 @@ or returned by the body function.
 @Lid{LUA_YIELD} if the coroutine yields,
 @Lid{LUA_OK} if the coroutine finishes its execution
 without errors,
-or an error code in case of errors @seeC{lua_pcall}.
+or an error code in case of errors @see{statuscodes}.
 In case of errors,
 the error object is on the top of the stack.
 
@@ -4153,7 +4162,7 @@ Returns the status of the thread @id{L}.
 The status can be @Lid{LUA_OK} for a normal thread,
 an error code if the thread finished the execution
 of a @Lid{lua_resume} with an error,
-or @defid{LUA_YIELD} if the thread is suspended.
+or @Lid{LUA_YIELD} if the thread is suspended.
 
 You can call functions only in threads with status @Lid{LUA_OK}.
 You can resume threads with status @Lid{LUA_OK}
@@ -6263,6 +6272,7 @@ which is true if the call succeeds without errors.
 In such case, @id{pcall} also returns all results from the call,
 after this first result.
 In case of any error, @id{pcall} returns @false plus the error object.
+Note that errors caught by @id{pcall} do not call a message handler.
 
 }
 
@@ -8947,6 +8957,14 @@ the new implementation preserves the implicit type of the numeral
 in the string.
 For instance, the result of @T{"1" + "2"} now is an integer,
 not a float.
+}
+
+@item{
+Literal decimal integer constants that overflow are read as floats,
+instead of wrapping around.
+You can use hexadecimal notation for such constants if you
+want the old bevhavior
+(reading them as integers with wrap around).
 }
 
 @item{
