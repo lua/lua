@@ -152,7 +152,7 @@ static GCObject **getgclist (GCObject *o) {
 ** and its key is not marked, mark its entry as dead. This allows the
 ** collection of the key, but keeps its entry in the table (its removal
 ** could break a chain). The main feature of a dead key is that it must
-** be different from any other value, to do not disturb searches. 
+** be different from any other value, to do not disturb searches.
 ** Other places never manipulate dead keys, because its associated empty
 ** value is enough to signal that the entry is logically empty.
 */

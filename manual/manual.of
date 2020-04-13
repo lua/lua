@@ -59,7 +59,11 @@ see Roberto's book, @emphx{Programming in Lua}.
 @C{-------------------------------------------------------------------------}
 @sect1{basic| @title{Basic Concepts}
 
+@simplesect{
+
 This section describes the basic concepts of the language.
+
+}
 
 @sect2{TypesSec| @title{Values and Types}
 
@@ -570,6 +574,8 @@ right after its creation.
 
 @sect2{GC| @title{Garbage Collection}
 
+@simplesect{
+
 Lua performs automatic memory management.
 This means that
 you do not have to worry about allocating memory for new objects
@@ -596,6 +602,8 @@ You can change the GC mode and parameters by calling
 or @Lid{collectgarbage} in Lua.
 You can also use these functions to control
 the collector directly (e.g., to stop and restart it).
+
+}
 
 @sect3{incmode| @title{Incremental Garbage Collection}
 
@@ -934,6 +942,8 @@ and @Lid{lua_yield}.
 @C{-------------------------------------------------------------------------}
 @sect1{language| @title{The Language}
 
+@simplesect{
+
 This section describes the lexis, the syntax, and the semantics of Lua.
 In other words,
 this section describes
@@ -950,6 +960,8 @@ keywords are shown like @rw{kword},
 and other terminal symbols are shown like @bnfter{=}.
 The complete syntax of Lua can be found in @refsec{BNF}
 at the end of this manual.
+
+}
 
 @sect2{lexical| @title{Lexical Conventions}
 
@@ -1175,11 +1187,15 @@ the variable @id{_ENV} itself is never global @see{globalenv}.
 
 @sect2{stats| @title{Statements}
 
+@simplesect{
+
 Lua supports an almost conventional set of @x{statements},
 similar to those in other conventional languages.
 This set includes
 blocks, assignments, control structures, function calls,
 and variable declarations.
+
+}
 
 @sect3{@title{Blocks}
 
@@ -1607,6 +1623,8 @@ in case of errors.
 
 @sect2{expressions| @title{Expressions}
 
+@simplesect{
+
 The basic expressions in Lua are the following:
 @Produc{
 @producname{exp}@producbody{prefixexp}
@@ -1681,6 +1699,7 @@ even if @id{f} returns several values.
 (The value of @T{(f(x,y,z))} is the first value returned by @id{f}
 or @nil if @id{f} does not return any values.)
 
+}
 
 
 @sect3{arith| @title{Arithmetic Operators}
@@ -2301,6 +2320,8 @@ while all of them share the same @id{x}.
 @C{-------------------------------------------------------------------------}
 @sect1{API| @title{The Application Program Interface}
 
+@simplesect{
+
 @index{C API}
 This section describes the @N{C API} for Lua, that is,
 the set of @N{C functions} available to the host program to communicate
@@ -2337,8 +2358,12 @@ every function in the library, except to @Lid{lua_newstate},
 which creates a Lua state from scratch and returns a pointer
 to the @emph{main thread} in the new state.
 
+}
+
 
 @sect2{@title{The Stack}
+
+@simplesect{
 
 Lua uses a @emph{virtual stack} to pass values to and from C.
 Each element in this stack represents a Lua value
@@ -2370,6 +2395,7 @@ and
 (that is, the element at @N{the top})
 and index @M{-n} represents the first element.
 
+}
 
 @sect3{stacksize| @title{Stack Size}
 
@@ -2511,6 +2537,8 @@ the @x{global environment}.
 
 @sect2{C-error|@title{Error Handling in C}
 
+@simplesect{
+
 Internally, Lua uses the C @id{longjmp} facility to handle errors.
 (Lua will use exceptions if you compile it as C++;
 search for @id{LUAI_THROW} in the source code for details.)
@@ -2558,6 +2586,8 @@ in particular, the error object is on the top of the stack.
 However, there is no guarantee about stack space.
 To push anything on the stack,
 the panic function must first check the available space @see{stacksize}.
+
+}
 
 
 @sect3{statuscodes|@title{Status Codes}
@@ -3618,8 +3648,6 @@ since by then the stack has unwound.
 
 The @Lid{lua_pcall} function returns one of the following status codes:
 @Lid{LUA_OK}, @Lid{LUA_ERRRUN}, @Lid{LUA_ERRMEM}, or @Lid{LUA_ERRERR}.
-
-}
 
 }
 
@@ -4975,6 +5003,8 @@ refer to the @id{n2}-th upvalue of the Lua closure at index @id{funcindex2}.
 @C{-------------------------------------------------------------------------}
 @sect1{@title{The Auxiliary Library}
 
+@simplesect{
+
 @index{lauxlib.h}
 The @def{auxiliary library} provides several convenient functions
 to interface C with Lua.
@@ -5008,6 +5038,9 @@ you should not use these functions for other stack values.
 
 Functions called @id{luaL_check*}
 always raise an error if the check is not satisfied.
+
+}
+
 
 @sect2{@title{Functions and Types}
 
@@ -5933,6 +5966,8 @@ This function is used to build a prefix for error messages.
 @C{-------------------------------------------------------------------------}
 @sect1{libraries| @title{The Standard Libraries}
 
+@simplesect{
+
 The standard Lua libraries provide useful functions
 that are implemented @N{in C} through the @N{C API}.
 Some of these functions provide essential services to the language
@@ -6003,6 +6038,9 @@ the host program can open them individually by using
 @defid{luaopen_os} (for the operating system library),
 and @defid{luaopen_debug} (for the debug library).
 These functions are declared in @defid{lualib.h}.
+
+}
+
 
 @sect2{predefined| @title{Basic Functions}
 
@@ -6834,6 +6872,8 @@ or @fail plus an error message if none succeeds.
 
 @sect2{strlib| @title{String Manipulation}
 
+@simplesect{
+
 This library provides generic functions for string manipulation,
 such as finding and extracting substrings, and pattern matching.
 When indexing a string in Lua, the first character is at @N{position 1}
@@ -7187,8 +7227,12 @@ The definition of what a lowercase letter is depends on the current locale.
 
 }
 
+}
+
 
 @sect3{pm| @title{Patterns}
+
+@simplesect{
 
 Patterns in Lua are described by regular strings,
 which are interpreted as patterns by the pattern-matching functions
@@ -7198,6 +7242,8 @@ which are interpreted as patterns by the pattern-matching functions
 and @Lid{string.match}.
 This section describes the syntax and the meaning
 (that is, what they match) of these strings.
+
+}
 
 @sect4{@title{Character Class:}
 A @def{character class} is used to represent a set of characters.
@@ -8910,6 +8956,8 @@ is a more portable solution.
 
 @sect1{incompat| @title{Incompatibilities with the Previous Version}
 
+@simplesect{
+
 Here we list the incompatibilities that you may find when moving a program
 from @N{Lua 5.3} to @N{Lua 5.4}.
 
@@ -8941,6 +8989,8 @@ precompiled chunks are not compatible between different Lua versions.
 
 The standard paths in the official distribution may
 change between versions.
+
+}
 
 @sect2{@title{Incompatibilities in the Language}
 @itemize{

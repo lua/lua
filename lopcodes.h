@@ -195,7 +195,7 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 
 typedef enum {
 /*----------------------------------------------------------------------
-name		args	description
+  name		args	description
 ------------------------------------------------------------------------*/
 OP_MOVE,/*	A B	R[A] := R[B]					*/
 OP_LOADI,/*	A sBx	R[A] := sBx					*/

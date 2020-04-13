@@ -16,7 +16,7 @@
 
 
 /* global table */
-#define	LUA_GNAME	"_G"
+#define LUA_GNAME	"_G"
 
 
 typedef struct luaL_Buffer luaL_Buffer;

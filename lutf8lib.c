@@ -29,7 +29,7 @@
 ** Integer type for decoded UTF-8 values; MAXUTF needs 31 bits.
 */
 #if (UINT_MAX >> 30) >= 1
-typedef	unsigned int utfint;
+typedef unsigned int utfint;
 #else
 typedef unsigned long utfint;
 #endif
