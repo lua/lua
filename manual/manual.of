@@ -9013,7 +9013,7 @@ not a float.
 Literal decimal integer constants that overflow are read as floats,
 instead of wrapping around.
 You can use hexadecimal notation for such constants if you
-want the old bevhavior
+want the old behavior
 (reading them as integers with wrap around).
 }
 

@@ -269,8 +269,6 @@ static lua_CFunction lsys_sym (lua_State *L, void *lib, const char *sym) {
 #endif
 
 
-#define AUXMARK         "\1"	/* auxiliary mark */
-
 
 /*
 ** return registry.LUA_NOENV as a boolean
