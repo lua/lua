@@ -118,18 +118,22 @@ LUA_API void *debug_realloc (void *ud, void *block,
 #define MINSTRTABSIZE		2
 #define MAXIWTHABS		3
 
+#define STRCACHE_N	23
+#define STRCACHE_M	5
+
+#undef LUAI_USER_ALIGNMENT_T
+#define LUAI_USER_ALIGNMENT_T   union { char b[sizeof(void*) * 8]; }
+
 
 /* make stack-overflow tests run faster */
 #undef LUAI_MAXSTACK
 #define LUAI_MAXSTACK   50000
 
 
-#undef LUAI_USER_ALIGNMENT_T
-#define LUAI_USER_ALIGNMENT_T   union { char b[sizeof(void*) * 8]; }
+/* force Lua to use its own implementations */
+#undef lua_strx2number
+#undef lua_number2strx
 
-
-#define STRCACHE_N	23
-#define STRCACHE_M	5
 
 #endif
 
