@@ -20,13 +20,14 @@ print"If this test crashes, see its file ('cstack.lua')"
 
 
 -- get and print original limit
-local origlimit = debug.setcstacklimit(400)
+local origlimit <const> = debug.setcstacklimit(400)
 print("default stack limit: " .. origlimit)
+
 
 -- Do the tests using the original limit. Or else you may want to change
 -- 'currentlimit' to lower values to avoid a seg. fault or to higher
 -- values to check whether they are reliable.
-local currentlimit = origlimit
+local currentlimit <const> =  origlimit
 debug.setcstacklimit(currentlimit)
 print("current stack limit: " .. currentlimit)
 
@@ -107,12 +108,16 @@ end
 
 do  print("testing changes in C-stack limit")
 
+  -- Just an alternative limit, different from the current one
+  -- (smaller to avoid stack overflows)
+  local alterlimit <const> = currentlimit * 8 // 10
+
   assert(not debug.setcstacklimit(0))        -- limit too small
   assert(not debug.setcstacklimit(50000))    -- limit too large
   local co = coroutine.wrap (function ()
-               return debug.setcstacklimit(400)
+               return debug.setcstacklimit(alterlimit)
              end)
-  assert(co() == false)         -- cannot change C stack inside coroutine
+  assert(not co())         -- cannot change C stack inside coroutine
 
   local n
   local function foo () n = n + 1; foo () end
@@ -123,28 +128,32 @@ do  print("testing changes in C-stack limit")
     return n
   end
 
-  -- set limit to 400
-  assert(debug.setcstacklimit(400) == currentlimit)
-  local lim400 = check()
+  -- set limit to 'alterlimit'
+  assert(debug.setcstacklimit(alterlimit) == currentlimit)
+  local limalter <const> = check()
   -- set a very low limit (given that there are already several active
   -- calls to arrive here)
-  local lowlimit = 38
-  assert(debug.setcstacklimit(lowlimit) == 400)
-  assert(check() < lowlimit - 30)
-  assert(debug.setcstacklimit(600) == lowlimit)
-  local lim600 = check()
-  assert(lim600 == lim400 + 200)
+  local lowlimit <const> = 38
+  assert(debug.setcstacklimit(lowlimit) == alterlimit)
+  -- usable limit is much lower, due to active calls
+  local actuallow = check()
+  assert(actuallow < lowlimit - 30)
+  -- now, add 'lowlimit' extra slots, which should all be available
+  assert(debug.setcstacklimit(lowlimit + lowlimit) == lowlimit)
+  local lim2 <const> = check()
+  assert(lim2 == actuallow + lowlimit)
 
 
   -- 'setcstacklimit' works inside protected calls. (The new stack
   -- limit is kept when 'pcall' returns.)
   assert(pcall(function ()
-    assert(debug.setcstacklimit(400) == 600)
-    assert(check() <= lim400)
+    assert(debug.setcstacklimit(alterlimit) == lowlimit * 2)
+    assert(check() <= limalter)
   end))
 
-  assert(check() == lim400)
-  assert(debug.setcstacklimit(origlimit) == 400)   -- restore original limit
+  assert(check() == limalter)
+  -- restore original limit
+  assert(debug.setcstacklimit(origlimit) == alterlimit)
 end
 
 
