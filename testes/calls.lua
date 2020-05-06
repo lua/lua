@@ -422,9 +422,9 @@ assert((function (a) return a end)() == nil)
 
 print("testing binary chunks")
 do
-  local header = string.pack("c4BBBc6BBBj",
+  local header = string.pack("c4BBc6BBBj",
     "\27Lua",                                  -- signature
-    (504 >> 7) & 0x7f, (504 & 0x7f) | 0x80,    -- version 5.4 (504)
+    0x54,                                      -- version 5.4 (0x54)
     0,                                         -- format
     "\x19\x93\r\n\x1a\n",                      -- data
     4,                                         -- size of instruction
