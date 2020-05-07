@@ -87,7 +87,7 @@ static int pushglobalfuncname (lua_State *L, lua_Debug *ar) {
       lua_remove(L, -2);  /* remove original name */
     }
     lua_copy(L, -1, top + 1);  /* copy name to proper place */
-    lua_settop(L, top + 1);  /* remove table "loaded" an name copy */
+    lua_settop(L, top + 1);  /* remove table "loaded" and name copy */
     return 1;
   }
   else {
