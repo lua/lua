@@ -115,17 +115,17 @@ do
 end
 
 -- error in initial position for offset
-checkerror("position out of range", utf8.offset, "abc", 1, 5)
-checkerror("position out of range", utf8.offset, "abc", 1, -4)
-checkerror("position out of range", utf8.offset, "", 1, 2)
-checkerror("position out of range", utf8.offset, "", 1, -1)
+checkerror("position out of bounds", utf8.offset, "abc", 1, 5)
+checkerror("position out of bounds", utf8.offset, "abc", 1, -4)
+checkerror("position out of bounds", utf8.offset, "", 1, 2)
+checkerror("position out of bounds", utf8.offset, "", 1, -1)
 checkerror("continuation byte", utf8.offset, "𦧺", 1, 2)
 checkerror("continuation byte", utf8.offset, "𦧺", 1, 2)
 checkerror("continuation byte", utf8.offset, "\x80", 1)
 
 -- error in indices for len
-checkerror("out of string", utf8.len, "abc", 0, 2)
-checkerror("out of string", utf8.len, "abc", 1, 4)
+checkerror("out of bounds", utf8.len, "abc", 0, 2)
+checkerror("out of bounds", utf8.len, "abc", 1, 4)
 
 
 local s = "hello World"
@@ -140,11 +140,11 @@ do
   local t = {utf8.codepoint(s,1,#s - 1)}
   assert(#t == 3 and t[1] == 225 and t[2] == 233 and t[3] == 237)
   checkerror("invalid UTF%-8 code", utf8.codepoint, s, 1, #s)
-  checkerror("out of range", utf8.codepoint, s, #s + 1)
+  checkerror("out of bounds", utf8.codepoint, s, #s + 1)
   t = {utf8.codepoint(s, 4, 3)}
   assert(#t == 0)
-  checkerror("out of range", utf8.codepoint, s, -(#s + 1), 1)
-  checkerror("out of range", utf8.codepoint, s, 1, #s + 1)
+  checkerror("out of bounds", utf8.codepoint, s, -(#s + 1), 1)
+  checkerror("out of bounds", utf8.codepoint, s, 1, #s + 1)
   -- surrogates
   assert(utf8.codepoint("\u{D7FF}") == 0xD800 - 1)
   assert(utf8.codepoint("\u{E000}") == 0xDFFF + 1)
