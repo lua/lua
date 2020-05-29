@@ -252,33 +252,47 @@ of its first upvalue; see @See{lua_setupvalue}.)
 
 @sect2{error| @title{Error Handling}
 
+Several operations in Lua can @emph{raise} an error.
+An error interrupts the normal flow of the program,
+which can continue by @emph{catching} the error.
+
+Lua code can explicitly raise an error by calling the
+@Lid{error} function.
+(This function never returns.)
+
+To catch errors in Lua,
+you can do a @def{protected call},
+using @Lid{pcall} (or @Lid{xpcall}).
+The function @Lid{pcall} calls a given function in @def{protected mode}.
+Any error while running the function stops its execution,
+and control returns immediately to @id{pcall},
+which returns a status code.
+
 Because Lua is an embedded extension language,
-all Lua actions start from @N{C code} in the host program
-calling a function from the Lua library.
+Lua code starts running by a call
+from @N{C code} in the host program.
 (When you use Lua standalone,
 the @id{lua} application is the host program.)
-Whenever an error occurs during
+Usually, this call is protected;
+so, when an otherwise unprotected error occurs during
 the compilation or execution of a Lua chunk,
 control returns to the host,
-which can take appropriate measures
-(such as printing an error message).
-
-Lua code can explicitly generate an error by calling the
-@Lid{error} function.
-If you need to catch errors in Lua,
-you can use @Lid{pcall} or @Lid{xpcall}
-to call a given function in @emphx{protected mode}.
+which can take appropriate measures,
+such as printing an error message.
 
 Whenever there is an error,
-an @def{error object} (also called an @def{error message})
+an @def{error object}
 is propagated with information about the error.
 Lua itself only generates errors whose error object is a string,
 but programs may generate errors with
 any value as the error object.
 It is up to the Lua program or its host to handle such error objects.
+For historical reasons,
+an error object is often called an @def{error message},
+even though it does not have to be a string.
 
 
-When you use @Lid{xpcall} or @Lid{lua_pcall},
+When you use @Lid{xpcall} (or @Lid{lua_pcall}, in C)
 you may give a @def{message handler}
 to be called in case of errors.
 This function is called with the original error object
@@ -581,10 +595,29 @@ This means that
 you do not have to worry about allocating memory for new objects
 or freeing it when the objects are no longer needed.
 Lua manages memory automatically by running
-a @def{garbage collector} to collect all @emph{dead objects}
-(that is, objects that are no longer accessible from Lua).
+a @def{garbage collector} to collect all @emph{dead} objects.
 All memory used by Lua is subject to automatic management:
 strings, tables, userdata, functions, threads, internal structures, etc.
+
+An object is considered @def{dead}
+as soon as the collector can be sure the object
+will not be accessed again in the normal execution of the program.
+(@Q{Normal execution} here excludes finalizers,
+which can resurrect dead objects @see{finalizers},
+and excludes also operations using the debug library.)
+Note that the time when the collector can be sure that an object
+is dead may not coincide with the programmer's expectations.
+The only guarantees are that Lua will not collect an object
+that may still be accessed in the normal execution of the program,
+and it will eventually collect an object
+that is inaccessible from Lua.
+(Here,
+@emph{inaccessible from Lua} means that neither a variable nor
+another live object refer to the object.)
+Because Lua has no knowledge about @N{C code},
+it never collects objects accessible through the registry @see{registry},
+which includes the global environment @see{globalenv}.
+
 
 The garbage collector (GC) in Lua can work in two modes:
 incremental and generational.
@@ -694,7 +727,7 @@ and, using the @N{C API},
 for full userdata @see{metatable}.
 These metamethods, called @def{finalizers},
 are called when the garbage collector detects that the
-corresponding table or userdata is unreachable.
+corresponding table or userdata is dead.
 Finalizers allow you to coordinate Lua's garbage collection
 with external resource management such as closing files,
 network or database connections,
@@ -709,7 +742,7 @@ Note that if you set a metatable without a @idx{__gc} field
 and later create that field in the metatable,
 the object will not be marked for finalization.
 
-When a marked object becomes unreachable,
+When a marked object becomes dead,
 it is not collected immediately by the garbage collector.
 Instead, Lua puts it in a list.
 After the collection,
@@ -738,10 +771,10 @@ However, if the finalizer stores the object in some global place
 then the resurrection is permanent.
 Moreover, if the finalizer marks a finalizing object for finalization again,
 its finalizer will be called again in the next cycle where the
-object is unreachable.
+object is dead.
 In any case,
 the object memory is freed only in a GC cycle where
-the object is unreachable and not marked for finalization.
+the object is dead and not marked for finalization.
 
 When you close a state @seeF{lua_close},
 Lua calls the finalizers of all objects marked for finalization,
@@ -2611,6 +2644,9 @@ For such errors, Lua does not call the @x{message handler}.
 
 @item{@defid{LUA_YIELD}| the thread (coroutine) yields.}
 
+@item{@defid{LUA_ERRFILE}| a file-related error;
+e.g., it cannot open or read the file.}
+
 }
 These constants are defined in the header file @id{lua.h}.
 
@@ -3113,7 +3149,7 @@ This function does not pop the Lua function from the stack.
 @APIEntry{int lua_error (lua_State *L);|
 @apii{1,0,v}
 
-Generates a Lua error,
+Raises a Lua error,
 using the value on the top of the stack as the error object.
 This function does a long jump,
 and therefore never returns
@@ -4125,8 +4161,9 @@ Returns 0 if the userdata does not have that value.
 @APIEntry{int lua_setmetatable (lua_State *L, int index);|
 @apii{1,0,-}
 
-Pops a table from the stack and
-sets it as the new metatable for the value at the given index.
+Pops a table or @nil from the stack and
+sets that value as the new metatable for the value at the given index.
+(@nil means no metatable.)
 
 (For historical reasons, this function returns an @id{int},
 which now is always 1.)
@@ -4596,7 +4633,7 @@ If @T{source} starts with a @Char{@At},
 it means that the function was defined in a file where
 the file name follows the @Char{@At}.
 If @T{source} starts with a @Char{=},
-the remainder of its contents describe the source in a user-dependent manner.
+the remainder of its contents describes the source in a user-dependent manner.
 Otherwise,
 the function was defined in a string where
 @T{source} is that string.
@@ -5212,7 +5249,7 @@ plus the final string on its top.
 @APIEntry{char *luaL_buffaddr (luaL_Buffer *B);|
 @apii{0,0,-}
 
-Returns the address of the current contents of buffer @id{B}
+Returns the address of the current content of buffer @id{B}
 @seeC{luaL_Buffer}.
 Note that any addition to the buffer may invalidate this address.
 
@@ -5231,7 +5268,7 @@ the buffer must be declared as a variable.
 @APIEntry{size_t luaL_bufflen (luaL_Buffer *B);|
 @apii{0,0,-}
 
-Returns the length of the current contents of buffer @id{B}
+Returns the length of the current content of buffer @id{B}
 @seeC{luaL_Buffer}.
 
 }
@@ -5384,8 +5421,8 @@ It is defined as the following macro:
 @verbatim{
 (luaL_loadfile(L, filename) || lua_pcall(L, 0, LUA_MULTRET, 0))
 }
-It returns false if there are no errors
-or true in case of errors.
+It returns @Lid{LUA_OK} if there are no errors,
+or an error code in case of errors @see{statuscodes}.
 
 }
 
@@ -5397,8 +5434,8 @@ It is defined as the following macro:
 @verbatim{
 (luaL_loadstring(L, str) || lua_pcall(L, 0, LUA_MULTRET, 0))
 }
-It returns false if there are no errors
-or true in case of errors.
+It returns @Lid{LUA_OK} if there are no errors,
+or an error code in case of errors @see{statuscodes}.
 
 }
 
@@ -5548,10 +5585,8 @@ The first line in the file is ignored if it starts with a @T{#}.
 
 The string @id{mode} works as in the function @Lid{lua_load}.
 
-This function returns the same results as @Lid{lua_load},
-but it has an extra error code @defid{LUA_ERRFILE}
-for file-related errors
-(e.g., it cannot open or read the file).
+This function returns the same results as @Lid{lua_load}
+or @Lid{LUA_ERRFILE} for file-related errors.
 
 As @Lid{lua_load}, this function only loads the chunk;
 it does not run it.
@@ -5739,6 +5774,13 @@ where you can copy a string to be added to buffer @id{B}
 After copying the string into this space you must call
 @Lid{luaL_addsize} with the size of the string to actually add
 it to the buffer.
+
+}
+
+@APIEntry{void luaL_pushfail (lua_State *L);|
+@apii{0,1,-}
+
+Pushes the @fail value onto the stack.
 
 }
 
@@ -6052,7 +6094,7 @@ implementations for some of its facilities.
 
 @LibEntry{assert (v [, message])|
 
-Calls @Lid{error} if
+Raises an error if
 the value of its argument @id{v} is false (i.e., @nil or @false);
 otherwise, returns all its arguments.
 In case of error,
@@ -6129,9 +6171,9 @@ and some of these options.
 }
 
 @LibEntry{dofile ([filename])|
-Opens the named file and executes its contents as a Lua chunk.
+Opens the named file and executes its content as a Lua chunk.
 When called without arguments,
-@id{dofile} executes the contents of the standard input (@id{stdin}).
+@id{dofile} executes the content of the standard input (@id{stdin}).
 Returns all values returned by the chunk.
 In case of errors, @id{dofile} propagates the error
 to its caller.
@@ -6140,8 +6182,7 @@ to its caller.
 }
 
 @LibEntry{error (message [, level])|
-Terminates the last protected function called
-and returns @id{message} as the error object.
+Raises an error @see{error} with @{message} as the error object.
 This function never returns.
 
 Usually, @id{error} adds some information about the error position
@@ -6301,7 +6342,7 @@ the table during its traversal.
 @LibEntry{pcall (f [, arg1, @Cdots])|
 
 Calls the function @id{f} with
-the given arguments in @def{protected mode}.
+the given arguments in @emphx{protected mode}.
 This means that any error @N{inside @T{f}} is not propagated;
 instead, @id{pcall} catches the error
 and returns a status code.
@@ -7899,16 +7940,16 @@ is equivalent to @T{math.random(1,n)}.
 The call @T{math.random(0)} produces an integer with
 all bits (pseudo)random.
 
+This function uses the @idx{xoshiro256**} algorithm to produce
+pseudo-random 64-bit integers,
+which are the results of calls with @N{argument 0}.
+Other results (ranges and floats)
+are unbiased extracted from these integers.
+
 Lua initializes its pseudo-random generator with the equivalent of
 a call to @Lid{math.randomseed} with no arguments,
 so that @id{math.random} should generate
 different sequences of results each time the program runs.
-
-The results from this function have good statistical qualities,
-but they are not cryptographically secure.
-(For instance, there are no guarantees that it is hard
-to predict future results based on the observation of
-some previous results.)
 
 }
 
