@@ -73,8 +73,10 @@ static void badexit (const char *fmt, const char *s1, const char *s2) {
 
 
 static int tpanic (lua_State *L) {
+  const char *msg = lua_tostring(L, -1);
+  if (msg == NULL) msg = "error object is not a string";
   return (badexit("PANIC: unprotected error in call to Lua API (%s)\n",
-                   lua_tostring(L, -1), NULL),
+                   msg, NULL),
           0);  /* do not return to Lua */
 }
 
