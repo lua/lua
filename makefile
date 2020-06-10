@@ -1,6 +1,5 @@
-# makefile for building Lua
-# see INSTALL for installation instructions
-# see ../Makefile and luaconf.h for further customization
+# Developer's makefile for building Lua
+# see luaconf.h for further customization
 
 # == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
 

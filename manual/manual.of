@@ -5780,7 +5780,7 @@ it to the buffer.
 @APIEntry{void luaL_pushfail (lua_State *L);|
 @apii{0,1,-}
 
-Pushes the @fail value onto the stack.
+Pushes the @fail value onto the stack @see{libraries}.
 
 }
 
