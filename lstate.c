@@ -186,20 +186,26 @@ void luaE_freeCI (lua_State *L) {
 
 
 /*
-** free half of the CallInfo structures not in use by a thread
+** free half of the CallInfo structures not in use by a thread,
+** keeping the first one.
 */
 void luaE_shrinkCI (lua_State *L) {
-  CallInfo *ci = L->ci;
+  CallInfo *ci = L->ci->next;  /* first free CallInfo */
   CallInfo *next;
-  CallInfo *next2;  /* next's next */
+  if (ci == NULL)
+    return;  /* no extra elements */
   L->nCcalls += L->nci;  /* add removed elements back to 'nCcalls' */
-  /* while there are two nexts */
-  while ((next = ci->next) != NULL && (next2 = next->next) != NULL) {
+  while ((next = ci->next) != NULL) {  /* two extra elements? */
+    CallInfo *next2 = next->next;  /* next's next */
     ci->next = next2;  /* remove next from the list */
-    next2->previous = ci;
-    luaM_free(L, next);  /* free next */
     L->nci--;
-    ci = next2;  /* keep next's next */
+    luaM_free(L, next);  /* free next */
+    if (next2 == NULL)
+      break;  /* no more elements */
+    else {
+      next2->previous = ci;
+      ci = next2;  /* continue */
+    }
   }
   L->nCcalls -= L->nci;  /* adjust result */
 }
