@@ -519,6 +519,10 @@ static void checkgraylist (global_State *g, GCObject *o) {
       case LUA_VCCL: o = gco2ccl(o)->gclist; break;
       case LUA_VTHREAD: o = gco2th(o)->gclist; break;
       case LUA_VPROTO: o = gco2p(o)->gclist; break;
+      case LUA_VUSERDATA:
+        lua_assert(gco2u(o)->nuvalue > 0);
+        o = gco2u(o)->gclist;
+        break;
       default: lua_assert(0);  /* other objects cannot be in a gray list */
     }
   }
