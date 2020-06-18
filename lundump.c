@@ -26,7 +26,7 @@
 
 
 #if !defined(luai_verifycode)
-#define luai_verifycode(L,b,f)  /* empty */
+#define luai_verifycode(L,f)  /* empty */
 #endif
 
 
@@ -317,7 +317,7 @@ LClosure *luaU_undump(lua_State *L, ZIO *Z, const char *name) {
   luaC_objbarrier(L, cl, cl->p);
   loadFunction(&S, cl->p, NULL);
   lua_assert(cl->nupvalues == cl->p->sizeupvalues);
-  luai_verifycode(L, buff, cl->p);
+  luai_verifycode(L, cl->p);
   return cl;
 }
 

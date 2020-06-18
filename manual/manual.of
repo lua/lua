@@ -9116,6 +9116,17 @@ of the function @Lid{collectgarbage} are deprecated.
 You should use the new option @St{incremental} to set them.
 }
 
+@item{
+The function @Lid{io.lines} now returns four values,
+instead of just one.
+That can be a problem when it is used as the sole
+argument to another function that has optional parameters,
+such as in @T{load(io.lines(filename, "L"))}.
+To fix that issue,
+you can wrap the call into parentheses,
+to adjust its number of results to one.
+}
+
 }
 
 }
