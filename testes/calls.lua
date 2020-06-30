@@ -422,20 +422,30 @@ assert((function (a) return a end)() == nil)
 
 print("testing binary chunks")
 do
-  local header = string.pack("c4BBc6BBBj",
+  local header = string.pack("c4BBc6BBB",
     "\27Lua",                                  -- signature
     0x54,                                      -- version 5.4 (0x54)
     0,                                         -- format
     "\x19\x93\r\n\x1a\n",                      -- data
     4,                                         -- size of instruction
     string.packsize("j"),                      -- sizeof(lua integer)
-    string.packsize("n"),                      -- sizeof(lua number)
-    0x5678                                     -- LUAC_INT
-    -- LUAC_NUM may not have a unique binary representation (padding...)
+    string.packsize("n")                       -- sizeof(lua number)
   )
-  local c = string.dump(function () local a = 1; local b = 3; return a+b*3 end)
+  local c = string.dump(function ()
+    local a = 1; local b = 3;
+    local f = function () return a + b + _ENV.c; end    -- upvalues
+    local s1 = "a constant"
+    local s2 = "another constant"
+    return a + b * 3
+  end)
 
+  assert(assert(load(c))() == 10)
+
+  -- check header
   assert(string.sub(c, 1, #header) == header)
+  -- check LUAC_INT and LUAC_NUM
+  local ci, cn = string.unpack("jn", c, #header + 1)
+  assert(ci == 0x5678 and cn == 370.5)
 
   -- corrupted header
   for i = 1, #header do
@@ -451,7 +461,6 @@ do
     local st, msg = load(string.sub(c, 1, i))
     assert(not st and string.find(msg, "truncated"))
   end
-  assert(assert(load(c))() == 10)
 end
 
 print('OK')

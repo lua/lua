@@ -563,6 +563,7 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
     while (n--) {
       setobj2n(L, &cl->upvalue[n], s2v(L->top + n));
       /* does not need barrier because closure is white */
+      lua_assert(iswhite(cl));
     }
     setclCvalue(L, s2v(L->top), cl);
     api_incr_top(L);
