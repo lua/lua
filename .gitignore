@@ -1,0 +1,12 @@
+.gitattributes
+
+*.so
+*.o
+*.a
+
+manual/manual.html
+
+testes/time.txt
+testes/time-debug.txt
+
+testes/libs/all
