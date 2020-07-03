@@ -1239,14 +1239,12 @@ LUA_API void lua_toclose (lua_State *L, int idx) {
 LUA_API void lua_concat (lua_State *L, int n) {
   lua_lock(L);
   api_checknelems(L, n);
-  if (n >= 2) {
+  if (n > 0)
     luaV_concat(L, n);
-  }
-  else if (n == 0) {  /* push empty string */
-    setsvalue2s(L, L->top, luaS_newlstr(L, "", 0));
+  else {  /* nothing to concatenate */
+    setsvalue2s(L, L->top, luaS_newlstr(L, "", 0));  /* push empty string */
     api_incr_top(L);
   }
-  /* else n == 1; nothing to do */
   luaC_checkGC(L);
   lua_unlock(L);
 }

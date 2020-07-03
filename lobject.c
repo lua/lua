@@ -402,10 +402,8 @@ static void pushstr (BuffFS *buff, const char *str, size_t l) {
   setsvalue2s(L, L->top, luaS_newlstr(L, str, l));
   L->top++;  /* may use one extra slot */
   buff->pushed++;
-  if (buff->pushed > 1) {
-    luaV_concat(L, buff->pushed);  /* join partial results into one */
-    buff->pushed = 1;
-  }
+  luaV_concat(L, buff->pushed);  /* join partial results into one */
+  buff->pushed = 1;
 }
 
 

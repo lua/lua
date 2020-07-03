@@ -634,7 +634,8 @@ static void copy2buff (StkId top, int n, char *buff) {
 ** from 'L->top - total' up to 'L->top - 1'.
 */
 void luaV_concat (lua_State *L, int total) {
-  lua_assert(total >= 2);
+  if (total == 1)
+    return;  /* "all" values already concatenated */
   do {
     StkId top = L->top;
     int n = 2;  /* number of elements handled in this pass (at least 2) */
@@ -840,10 +841,8 @@ void luaV_finishOp (lua_State *L) {
       int a = GETARG_A(inst);      /* first element to concatenate */
       int total = cast_int(top - 1 - (base + a));  /* yet to concatenate */
       setobjs2s(L, top - 2, top);  /* put TM result in proper position */
-      if (total > 1) {  /* are there elements to concat? */
-        L->top = top - 1;  /* top is one after last element (at top-2) */
-        luaV_concat(L, total);  /* concat them (may yield again) */
-      }
+      L->top = top - 1;  /* top is one after last element (at top-2) */
+      luaV_concat(L, total);  /* concat them (may yield again) */
       break;
     }
     default: {
