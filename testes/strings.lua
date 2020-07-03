@@ -438,7 +438,7 @@ else
 
   -- formats %U, %f, %I already tested elsewhere
 
-  local blen = 400    -- internal buffer length in 'luaO_pushfstring'
+  local blen = 200    -- internal buffer length in 'luaO_pushfstring'
 
   local function callpfs (op, fmt, n)
     local x = {T.testC("pushfstring" .. op .. "; return *", fmt, n)}

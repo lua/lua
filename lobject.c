@@ -215,7 +215,7 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
 /* }====================================================== */
 
 
-/* maximum length of a numeral */
+/* maximum length of a numeral to be converted to a number */
 #if !defined (L_MAXLENNUM)
 #define L_MAXLENNUM	200
 #endif
@@ -333,8 +333,15 @@ int luaO_utf8esc (char *buff, unsigned long x) {
 }
 
 
-/* maximum length of the conversion of a number to a string */
-#define MAXNUMBER2STR	50
+/*
+** Maximum length of the conversion of a number to a string. Must be
+** enough to accommodate both LUA_INTEGER_FMT and LUA_NUMBER_FMT.
+** (For a long long int, this is 19 digits plus a sign and a final '\0',
+** adding to 21. For a long double, it can go to a sign, 33 digits,
+** the dot, an exponent letter, an exponent sign, 5 exponent digits,
+** and a final '\0', adding to 43.)
+*/
+#define MAXNUMBER2STR	44
 
 
 /*
@@ -375,7 +382,7 @@ void luaO_tostring (lua_State *L, TValue *obj) {
 */
 
 /* size for buffer space used by 'luaO_pushvfstring' */
-#define BUFVFS		400
+#define BUFVFS		200
 
 /* buffer used by 'luaO_pushvfstring' */
 typedef struct BuffFS {
@@ -387,16 +394,16 @@ typedef struct BuffFS {
 
 
 /*
-** Push given string to the stack, as part of the buffer. If the stack
-** is almost full, join all partial strings in the stack into one.
+** Push given string to the stack, as part of the buffer, and
+** join the partial strings in the stack into one.
 */
 static void pushstr (BuffFS *buff, const char *str, size_t l) {
   lua_State *L = buff->L;
   setsvalue2s(L, L->top, luaS_newlstr(L, str, l));
   L->top++;  /* may use one extra slot */
   buff->pushed++;
-  if (buff->pushed > 1 && L->top + 1 >= L->stack_last) {
-    luaV_concat(L, buff->pushed);  /* join all partial results into one */
+  if (buff->pushed > 1) {
+    luaV_concat(L, buff->pushed);  /* join partial results into one */
     buff->pushed = 1;
   }
 }
@@ -521,8 +528,7 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
   }
   addstr2buff(&buff, fmt, strlen(fmt));  /* rest of 'fmt' */
   clearbuff(&buff);  /* empty buffer into the stack */
-  if (buff.pushed > 1)
-    luaV_concat(L, buff.pushed);  /* join all partial results */
+  lua_assert(buff.pushed == 1);
   return svalue(s2v(L->top - 1));
 }
 
