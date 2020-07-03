@@ -220,32 +220,37 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
 #define L_MAXLENNUM	200
 #endif
 
+/*
+** Convert string 's' to a Lua number (put in 'result'). Return NULL on
+** fail or the address of the ending '\0' on success. ('mode' == 'x')
+** means a hexadecimal numeral.
+*/
 static const char *l_str2dloc (const char *s, lua_Number *result, int mode) {
   char *endptr;
   *result = (mode == 'x') ? lua_strx2number(s, &endptr)  /* try to convert */
                           : lua_str2number(s, &endptr);
   if (endptr == s) return NULL;  /* nothing recognized? */
   while (lisspace(cast_uchar(*endptr))) endptr++;  /* skip trailing spaces */
-  return (*endptr == '\0') ? endptr : NULL;  /* OK if no trailing characters */
+  return (*endptr == '\0') ? endptr : NULL;  /* OK iff no trailing chars */
 }
 
 
 /*
-** Convert string 's' to a Lua number (put in 'result'). Return NULL
-** on fail or the address of the ending '\0' on success.
-** 'pmode' points to (and 'mode' contains) special things in the string:
-** - 'x'/'X' means a hexadecimal numeral
-** - 'n'/'N' means 'inf' or 'nan' (which should be rejected)
-** - '.' just optimizes the search for the common case (nothing special)
+** Convert string 's' to a Lua number (put in 'result') handling the
+** current locale.
 ** This function accepts both the current locale or a dot as the radix
 ** mark. If the conversion fails, it may mean number has a dot but
 ** locale accepts something else. In that case, the code copies 's'
 ** to a buffer (because 's' is read-only), changes the dot to the
 ** current locale radix mark, and tries to convert again.
+** The variable 'mode' checks for special characters in the string:
+** - 'n' means 'inf' or 'nan' (which should be rejected)
+** - 'x' means a hexadecimal numeral
+** - '.' just optimizes the search for the common case (no special chars)
 */
 static const char *l_str2d (const char *s, lua_Number *result) {
   const char *endptr;
-  const char *pmode = strpbrk(s, ".xXnN");
+  const char *pmode = strpbrk(s, ".xXnN");  /* look for special chars */
   int mode = pmode ? ltolower(cast_uchar(*pmode)) : 0;
   if (mode == 'n')  /* reject 'inf' and 'nan' */
     return NULL;
