@@ -337,7 +337,7 @@ local function endwarn ()
   if not T then
     warn("@on")          -- back to normal
   else
-    assert(_WARN == nil)
+    assert(_WARN == false)
     warn("@normal")
   end
 end
@@ -346,7 +346,7 @@ end
 local function checkwarn (msg)
   if T then
     assert(string.find(_WARN, msg))
-    _WARN = nil    -- reset variable to check next warning
+    _WARN = false    -- reset variable to check next warning
   end
 end
 

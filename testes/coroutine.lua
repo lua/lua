@@ -184,7 +184,7 @@ do
   if not T then
     warn("@on")
   else   -- test library
-    assert(string.find(_WARN, "200")); _WARN = nil
+    assert(string.find(_WARN, "200")); _WARN = false
     warn("@normal")
   end
   assert(st == false and coroutine.status(co) == "dead" and msg == 111)
