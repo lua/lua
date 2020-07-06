@@ -11,6 +11,9 @@ local debug = require "debug"
 local pack = table.pack
 
 
+-- standard error message for memory errors
+local MEMERRMSG = "not enough memory"
+
 function tcheck (t1, t2)
   assert(t1.n == (t2.n or #t2) + 1)
   for i = 2, t1.n do assert(t1[i] == t2[i - 1]) end
@@ -408,7 +411,7 @@ do
 
   -- memory error
   T.totalmem(T.totalmem()+10000)   -- set low memory limit (+10k)
-  assert(T.checkpanic("newuserdata 20000") == "not enough memory")
+  assert(T.checkpanic("newuserdata 20000") == MEMERRMSG)
   T.totalmem(0)          -- restore high limit
 
   -- stack error
@@ -1153,40 +1156,74 @@ do
 end
 
 
--------------------------------------------------------------------------
--- testing memory limits
--------------------------------------------------------------------------
+--[[
+** {==================================================================
+** Testing memory limits
+** ===================================================================
+--]]
+
 print("memory-allocation errors")
 
 checkerr("block too big", T.newuserdata, math.maxinteger)
 collectgarbage()
 local f = load"local a={}; for i=1,100000 do a[i]=i end"
 T.alloccount(10)
-checkerr("not enough memory", f)
+checkerr(MEMERRMSG, f)
 T.alloccount()          -- remove limit
+
+
+-- test memory errors; increase limit for maximum memory by steps,
+-- o that we get memory errors in all allocations of a given
+-- task, until there is enough memory to complete the task without
+-- errors.
+function testbytes (s, f)
+  collectgarbage()
+  local M = T.totalmem()
+  local oldM = M
+  local a,b = nil
+  while true do
+    collectgarbage(); collectgarbage()
+    T.totalmem(M)
+    a, b = T.testC("pcall 0 1 0; pushstatus; return 2", f)
+    T.totalmem(0)  -- remove limit
+    if a and b == "OK" then break end       -- stop when no more errors
+    if b ~= "OK" and b ~= MEMERRMSG then    -- not a memory error?
+      error(a, 0)   -- propagate it
+    end
+    M = M + 7   -- increase memory limit
+  end
+  print(string.format("minimum memory for %s: %d bytes", s, M - oldM))
+  return a
+end
 
 -- test memory errors; increase limit for number of allocations one
 -- by one, so that we get memory errors in all allocations of a given
 -- task, until there is enough allocations to complete the task without
 -- errors.
 
-function testamem (s, f)
-  collectgarbage(); collectgarbage()
+function testalloc (s, f)
+  collectgarbage()
   local M = 0
   local a,b = nil
   while true do
+    collectgarbage(); collectgarbage()
     T.alloccount(M)
-    a, b = pcall(f)
+    a, b = T.testC("pcall 0 1 0; pushstatus; return 2", f)
     T.alloccount()  -- remove limit
-    if a and b then break end       -- stop when no more errors
-    if not a and not    -- `real' error?
-      (string.find(b, "memory") or string.find(b, "overflow")) then
-      error(b, 0)   -- propagate it
+    if a and b == "OK" then break end       -- stop when no more errors
+    if b ~= "OK" and b ~= MEMERRMSG then    -- not a memory error?
+      error(a, 0)   -- propagate it
     end
     M = M + 1   -- increase allocation limit
   end
-  print(string.format("limit for %s: %d allocations", s, M))
-  return b
+  print(string.format("minimum allocations for %s: %d allocations", s, M))
+  return a
+end
+
+
+local function testamem (s, f)
+  testalloc(s, f)
+  return testbytes(s, f)
 end
 
 
@@ -1196,8 +1233,11 @@ assert(b == 10)
 
 -- testing memory errors when creating a new state
 
-b = testamem("state creation", T.newstate)
-T.closestate(b);  -- close new state
+testamem("state creation", function ()
+  local st = T.newstate()
+  if st then T.closestate(st) end   -- close new state
+  return st
+end)
 
 testamem("empty-table creation", function ()
   return {}
@@ -1344,6 +1384,9 @@ testamem("growing stack", function ()
   end
   return foo(100)
 end)
+
+-- }==================================================================
+
 
 do   -- testing failing in 'lua_checkstack'
   local res = T.testC([[rawcheckstack 500000; return 1]])
