@@ -145,7 +145,6 @@ static void warnf (void *ud, const char *msg, int tocont) {
         lua_pushstring(L, buff);
         lua_setglobal(L, "_WARN");  /* assign message to global '_WARN' */
         lua_lock(L);
-        buff[0] = '\0';  /* prepare buffer for next warning */
         break;
       }
     }
@@ -749,11 +748,12 @@ static int listlocals (lua_State *L) {
 static void printstack (lua_State *L) {
   int i;
   int n = lua_gettop(L);
+  printf("stack: >>\n");
   for (i = 1; i <= n; i++) {
     printf("%3d: %s\n", i, luaL_tolstring(L, i, NULL));
     lua_pop(L, 1);
   }
-  printf("\n");
+  printf("<<\n");
 }
 
 
@@ -1677,6 +1677,9 @@ static struct X { int x; } x;
       int n = getnum;
       if (n == 0) n = lua_gettop(fs);
       lua_xmove(fs, ts, n);
+    }
+    else if EQ("isyieldable") {
+      lua_pushboolean(L1, lua_isyieldable(lua_tothread(L1, getindex)));
     }
     else if EQ("yield") {
       return lua_yield(L1, getnum);
