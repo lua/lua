@@ -97,8 +97,9 @@ static StkId index2stack (lua_State *L, int idx) {
 
 LUA_API int lua_checkstack (lua_State *L, int n) {
   int res;
-  CallInfo *ci = L->ci;
+  CallInfo *ci;
   lua_lock(L);
+  ci = L->ci;
   api_check(L, n >= 0, "negative 'n'");
   if (L->stack_last - L->top > n)  /* stack large enough? */
     res = 1;  /* yes; check is OK */
@@ -170,10 +171,12 @@ LUA_API int lua_gettop (lua_State *L) {
 
 
 LUA_API void lua_settop (lua_State *L, int idx) {
-  CallInfo *ci = L->ci;
-  StkId func = ci->func;
+  CallInfo *ci;
+  StkId func;
   ptrdiff_t diff;  /* difference for new top */
   lua_lock(L);
+  ci = L->ci;
+  func = ci->func;
   if (idx >= 0) {
     api_check(L, idx <= ci->top - (func + 1), "new top too large");
     diff = ((func + 1) + idx) - L->top;
@@ -376,20 +379,22 @@ LUA_API int lua_toboolean (lua_State *L, int idx) {
 
 
 LUA_API const char *lua_tolstring (lua_State *L, int idx, size_t *len) {
-  TValue *o = index2value(L, idx);
+  TValue *o;
+  lua_lock(L);
+  o = index2value(L, idx);
   if (!ttisstring(o)) {
     if (!cvt2str(o)) {  /* not convertible? */
       if (len != NULL) *len = 0;
+      lua_unlock(L);
       return NULL;
     }
-    lua_lock(L);  /* 'luaO_tostring' may create a new string */
     luaO_tostring(L, o);
     luaC_checkGC(L);
     o = index2value(L, idx);  /* previous call may reallocate the stack */
-    lua_unlock(L);
   }
   if (len != NULL)
     *len = vslen(o);
+  lua_unlock(L);
   return svalue(o);
 }
 
@@ -625,8 +630,9 @@ static int auxgetstr (lua_State *L, const TValue *t, const char *k) {
 
 
 LUA_API int lua_getglobal (lua_State *L, const char *name) {
-  Table *reg = hvalue(&G(L)->l_registry);
+  Table *reg;
   lua_lock(L);
+  reg = hvalue(&G(L)->l_registry);
   return auxgetstr(L, luaH_getint(reg, LUA_RIDX_GLOBALS), name);
 }
 
@@ -805,8 +811,9 @@ static void auxsetstr (lua_State *L, const TValue *t, const char *k) {
 
 
 LUA_API void lua_setglobal (lua_State *L, const char *name) {
-  Table *reg = hvalue(&G(L)->l_registry);
+  Table *reg;
   lua_lock(L);  /* unlock done in 'auxsetstr' */
+  reg = hvalue(&G(L)->l_registry);
   auxsetstr(L, luaH_getint(reg, LUA_RIDX_GLOBALS), name);
 }
 
@@ -1094,8 +1101,9 @@ LUA_API int lua_status (lua_State *L) {
 LUA_API int lua_gc (lua_State *L, int what, ...) {
   va_list argp;
   int res = 0;
-  global_State *g = G(L);
+  global_State *g;
   lua_lock(L);
+  g = G(L);
   va_start(argp, what);
   switch (what) {
     case LUA_GCSTOP: {

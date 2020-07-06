@@ -705,9 +705,10 @@ LUA_API int lua_isyieldable (lua_State *L) {
 
 LUA_API int lua_yieldk (lua_State *L, int nresults, lua_KContext ctx,
                         lua_KFunction k) {
-  CallInfo *ci = L->ci;
+  CallInfo *ci;
   luai_userstateyield(L, nresults);
   lua_lock(L);
+  ci = L->ci;
   api_checknelems(L, nresults);
   if (unlikely(!yieldable(L))) {
     if (L != G(L)->mainthread)
