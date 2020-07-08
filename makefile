@@ -40,7 +40,9 @@ CWARNS= $(CWARNSCPP) $(CWARNSC)
 # Some useful compiler options for internal tests:
 # -DHARDSTACKTESTS forces a reallocation of the stack at every point where
 # the stack can be reallocated.
-# -DHARDMEMTESTS forces an emergency collection at every single allocation.
+# -DHARDMEMTESTS forces a full collection at all points where the collector
+# can run.
+# -DEMERGENCYGCTESTS forces an emergency collection at every single allocation.
 # -DEXTERNMEMCHECK removes internal consistency checking of blocks being
 # deallocated (useful when an external tool like valgrind does the check).
 # -DMAXINDEXRK=k limits range of constants in RK instruction operands.
