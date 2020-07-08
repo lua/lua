@@ -20,9 +20,7 @@
 
 
 /* turn on assertions */
-#undef NDEBUG
-#include <assert.h>
-#define lua_assert(c)           assert(c)
+#define LUAI_ASSERT
 
 
 

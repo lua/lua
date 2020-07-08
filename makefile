@@ -38,6 +38,7 @@ CWARNSC= -Wdeclaration-after-statement \
 CWARNS= $(CWARNSCPP) $(CWARNSC)
 
 # Some useful compiler options for internal tests:
+# -DLUAI_ASSERT turns on all assertions inside Lua.
 # -DHARDSTACKTESTS forces a reallocation of the stack at every point where
 # the stack can be reallocated.
 # -DHARDMEMTESTS forces a full collection at all points where the collector
