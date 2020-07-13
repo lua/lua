@@ -105,6 +105,22 @@ do  print("testing stack-overflow in recursive 'gsub'")
   print("\tfinal count: ", count)
 end
 
+do   -- bug in 5.4.0
+  print("testing limits in coroutines inside deep calls")
+  count = 0
+  local lim = 1000
+  local function stack (n)
+    progress()
+    if n > 0 then return stack(n - 1) + 1
+    else coroutine.wrap(function ()
+           stack(lim)
+         end)()
+    end
+  end
+
+  print(xpcall(stack, function () return "ok" end, lim))
+end
+
 
 do  print("testing changes in C-stack limit")
 

@@ -674,7 +674,7 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
   if (from == NULL)
     L->nCcalls = CSTACKTHREAD;
   else  /* correct 'nCcalls' for this thread */
-    L->nCcalls = getCcalls(from) + from->nci - L->nci - CSTACKCF;
+    L->nCcalls = getCcalls(from) - L->nci - CSTACKCF;
   if (L->nCcalls <= CSTACKERR)
     return resume_error(L, "C stack overflow", nargs);
   luai_userstateresume(L, nargs);
