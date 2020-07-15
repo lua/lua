@@ -721,6 +721,21 @@ if not _port then
     progname = '"' .. arg[i + 1] .. '"'
   end
   print("testing popen/pclose and execute")
+  -- invalid mode for popen
+  checkerr("invalid mode", io.popen, "cat", "")
+  checkerr("invalid mode", io.popen, "cat", "r+")
+  checkerr("invalid mode", io.popen, "cat", "rw")
+  do  -- basic tests for popen
+    local file = os.tmpname()
+    local f = assert(io.popen("cat - > " .. file, "w"))
+    f:write("a line")
+    assert(f:close())
+    local f = assert(io.popen("cat - < " .. file, "r"))
+    assert(f:read("a") == "a line")
+    assert(f:close())
+    assert(os.remove(file))
+  end
+
   local tests = {
     -- command,   what,  code
     {"ls > /dev/null", "ok"},
