@@ -515,14 +515,13 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
 
 /*
 ** Similar to 'luaD_call', but does not allow yields during the call.
-** If there is a stack overflow, freeing all CI structures will
-** force the subsequent call to invoke 'luaE_extendCI', which then
-** will raise any errors.
 */
 void luaD_callnoyield (lua_State *L, StkId func, int nResults) {
   incXCcalls(L);
-  if (getCcalls(L) <= CSTACKERR)  /* possible stack overflow? */
-    luaE_freeCI(L);
+  if (getCcalls(L) <= CSTACKERR) {  /* possible C stack overflow? */
+    luaE_exitCcall(L);  /* to compensate decrement in next call */
+    luaE_enterCcall(L);  /* check properly */
+  }
   luaD_call(L, func, nResults);
   decXCcalls(L);
 }
