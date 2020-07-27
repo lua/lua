@@ -884,7 +884,7 @@ end
 
 
 print("testing debug functions on chunk without debug info")
-prog = [[-- program to be loaded without debug information
+prog = [[-- program to be loaded without debug information (strip)
 local debug = require'debug'
 local a = 12  -- a local variable
 
@@ -926,6 +926,23 @@ return a
 local f = assert(load(string.dump(load(prog), true)))
 
 assert(f() == 13)
+
+do   -- bug in 5.4.0: line hooks in stripped code
+  local function foo ()
+    local a = 1
+    local b = 2
+    return b
+  end
+
+  local s = load(string.dump(foo, true))
+  local line = true
+  debug.sethook(function (e, l)
+    assert(e == "line")
+    line = l
+  end, "l")
+  assert(s() == 2); debug.sethook(nil)
+  assert(line == nil)  -- hook called withoug debug info for 1st instruction
+end
 
 do   -- tests for 'source' in binary dumps
   local prog = [[
