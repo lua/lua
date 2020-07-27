@@ -309,6 +309,10 @@ static void printobj (global_State *g, GCObject *o) {
 }
 
 
+void lua_printobj (lua_State *L, struct GCObject *o) {
+  printobj(G(L), o);
+}
+
 static int testobjref (global_State *g, GCObject *f, GCObject *t) {
   int r1 = testobjref1(g, f, t);
   if (!r1) {

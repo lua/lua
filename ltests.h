@@ -72,7 +72,13 @@ extern void *l_Trick;
 /*
 ** Function to traverse and check all memory used by Lua
 */
-int lua_checkmemory (lua_State *L);
+LUAI_FUNC int lua_checkmemory (lua_State *L);
+
+/*
+** Function to print an object GC-friendly
+*/
+struct GCObject;
+LUAI_FUNC void lua_printobj (lua_State *L, struct GCObject *o);
 
 
 /* test for lock/unlock */
