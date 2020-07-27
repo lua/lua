@@ -60,13 +60,16 @@
 #define PAUSEADJ		100
 
 
-/* mask to erase all color bits (plus gen. related stuff) */
-#define maskcolors	(~(bitmask(BLACKBIT) | WHITEBITS | AGEBITS))
+/* mask to erase all color bits */
+#define maskcolors	(~(bitmask(BLACKBIT) | WHITEBITS))
+
+/* mask to erase all GC bits */
+#define maskgcbits      (maskcolors & ~AGEBITS)
 
 
-/* macro to erase all color bits then sets only the current white bit */
+/* macro to erase all color bits then set only the current white bit */
 #define makewhite(g,x)	\
- (x->marked = cast_byte((x->marked & maskcolors) | luaC_white(g)))
+  (x->marked = cast_byte((x->marked & maskcolors) | luaC_white(g)))
 
 #define white2gray(x)	resetbits(x->marked, WHITEBITS)
 #define black2gray(x)	resetbit(x->marked, BLACKBIT)
@@ -218,11 +221,12 @@ void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v) {
 void luaC_barrierback_ (lua_State *L, GCObject *o) {
   global_State *g = G(L);
   lua_assert(isblack(o) && !isdead(g, o));
-  lua_assert(g->gckind != KGC_GEN || (isold(o) && getage(o) != G_TOUCHED1));
+  lua_assert((g->gckind == KGC_GEN) == (isold(o) && getage(o) != G_TOUCHED1));
   if (getage(o) != G_TOUCHED2)  /* not already in gray list? */
     linkobjgclist(o, g->grayagain);  /* link it in 'grayagain' */
   black2gray(o);  /* make object gray (again) */
-  setage(o, G_TOUCHED1);  /* touched in current cycle */
+  if (isold(o))  /* generational mode? */
+    setage(o, G_TOUCHED1);  /* touched in current cycle */
 }
 
 
@@ -341,7 +345,7 @@ static lu_mem markbeingfnz (global_State *g) {
 static int remarkupvals (global_State *g) {
   lua_State *thread;
   lua_State **p = &g->twups;
-  int work = 0;
+  int work = 0;  /* estimate of how much work was done here */
   while ((thread = *p) != NULL) {
     work++;
     lua_assert(!isblack(thread));  /* threads are never black */
@@ -777,7 +781,7 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, int countin,
       freeobj(L, curr);  /* erase 'curr' */
     }
     else {  /* change mark to 'white' */
-      curr->marked = cast_byte((marked & maskcolors) | white);
+      curr->marked = cast_byte((marked & maskgcbits) | white);
       p = &curr->next;  /* go to next element */
     }
   }
@@ -976,10 +980,6 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 static void setpause (global_State *g);
 
 
-/* mask to erase all color bits, not changing gen-related stuff */
-#define maskgencolors	(~(bitmask(BLACKBIT) | WHITEBITS))
-
-
 /*
 ** Sweep a list of objects, deleting dead ones and turning
 ** the non dead to old (without changing their colors).
@@ -1030,9 +1030,12 @@ static GCObject **sweepgen (lua_State *L, global_State *g, GCObject **p,
       freeobj(L, curr);  /* erase 'curr' */
     }
     else {  /* correct mark and age */
-      if (getage(curr) == G_NEW)
-        curr->marked = cast_byte((curr->marked & maskgencolors) | white);
-      setage(curr, nextage[getage(curr)]);
+      if (getage(curr) == G_NEW) {  /* new objects go back to white */
+        int marked = curr->marked & maskgcbits;  /* erase GC bits */
+        curr->marked = cast_byte(marked | G_SURVIVAL | white);
+      }
+      else  /* all other objects will be old, and so keep their color */
+        setage(curr, nextage[getage(curr)]);
       p = &curr->next;  /* go to next element */
     }
   }
@@ -1042,12 +1045,13 @@ static GCObject **sweepgen (lua_State *L, global_State *g, GCObject **p,
 
 /*
 ** Traverse a list making all its elements white and clearing their
-** age.
+** age. In incremental mode, all objects are 'new' all the time,
+** except for fixed strings (which are always old).
 */
 static void whitelist (global_State *g, GCObject *p) {
   int white = luaC_white(g);
   for (; p != NULL; p = p->next)
-    p->marked = cast_byte((p->marked & maskcolors) | white);
+    p->marked = cast_byte((p->marked & maskgcbits) | white);
 }
 
 
