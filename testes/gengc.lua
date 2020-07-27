@@ -57,10 +57,36 @@ do   -- bug in 5.4.0
   local obj = {}     -- create a new object
   collectgarbage("step", 0)   -- make it a survival
   assert(not T or T.gcage(obj) == "survival")
-  setmetatable(obj, {__gc = gcf, x = "ok"})   -- create its metatable
+  setmetatable(obj, {__gc = gcf, x = "+"})   -- create its metatable
   assert(not T or T.gcage(getmetatable(obj)) == "new")
   obj = nil   -- clear object
   collectgarbage("step", 0)   -- will call obj's finalizer
+end
+
+
+do   -- another bug in 5.4.0
+  local old = {10}
+  collectgarbage()   -- make 'old' old
+  local co = coroutine.create(
+    function ()
+      local x = nil
+      local f = function ()
+                  return x[1]
+                end
+      x = coroutine.yield(f)
+      coroutine.yield()
+    end
+  )
+  local _, f = coroutine.resume(co)   -- create closure over 'x' in coroutine
+  collectgarbage("step", 0)   -- make upvalue a survival
+  old[1] = {"hello"}    -- 'old' go to grayagain as 'touched1'
+  coroutine.resume(co, {123})     -- its value will be new
+  co = nil
+  collectgarbage("step", 0)   -- hit the barrier
+  assert(f() == 123 and old[1][1] == "hello")
+  collectgarbage("step", 0)   -- run the collector once more
+  -- make sure old[1] was not collected
+  assert(f() == 123 and old[1][1] == "hello")
 end
 
 
