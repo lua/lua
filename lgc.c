@@ -1131,7 +1131,7 @@ static void correctgraylists (global_State *g) {
 
 
 /*
-** Mark 'OLD1' objects when starting a new young collection.
+** Mark black 'OLD1' objects when starting a new young collection.
 ** Gray objects are already in some gray list, and so will be visited
 ** in the atomic step.
 */
@@ -1140,6 +1140,7 @@ static void markold (global_State *g, GCObject *from, GCObject *to) {
   for (p = from; p != to; p = p->next) {
     if (getage(p) == G_OLD1) {
       lua_assert(!iswhite(p));
+      changeage(p, G_OLD1, G_OLD);  /* now they are old */
       if (isblack(p)) {
         black2gray(p);  /* should be '2white', but gray works too */
         reallymarkobject(g, p);
@@ -1176,16 +1177,16 @@ static void youngcollection (lua_State *L, global_State *g) {
   /* sweep nursery and get a pointer to its last live element */
   g->gcstate = GCSswpallgc;
   psurvival = sweepgen(L, g, &g->allgc, g->survival);
-  /* sweep 'survival' and 'old' */
-  sweepgen(L, g, psurvival, g->reallyold);
+  /* sweep 'survival' */
+  sweepgen(L, g, psurvival, g->old);
   g->reallyold = g->old;
   g->old = *psurvival;  /* 'survival' survivals are old now */
   g->survival = g->allgc;  /* all news are survivals */
 
   /* repeat for 'finobj' lists */
   psurvival = sweepgen(L, g, &g->finobj, g->finobjsur);
-  /* sweep 'survival' and 'old' */
-  sweepgen(L, g, psurvival, g->finobjrold);
+  /* sweep 'survival' */
+  sweepgen(L, g, psurvival, g->finobjold);
   g->finobjrold = g->finobjold;
   g->finobjold = *psurvival;  /* 'survival' survivals are old now */
   g->finobjsur = g->finobj;  /* all news are survivals */
