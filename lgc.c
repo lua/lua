@@ -932,15 +932,15 @@ static GCObject **findlast (GCObject **p) {
 /*
 ** Move all unreachable objects (or 'all' objects) that need
 ** finalization from list 'finobj' to list 'tobefnz' (to be finalized).
-** (Note that objects after 'finobjold' cannot be white, so they
-** don't need to be traversed. In incremental mode, 'finobjold' is NULL,
+** (Note that objects after 'finobjold1' cannot be white, so they
+** don't need to be traversed. In incremental mode, 'finobjold1' is NULL,
 ** so the whole list is traversed.)
 */
 static void separatetobefnz (global_State *g, int all) {
   GCObject *curr;
   GCObject **p = &g->finobj;
   GCObject **lastnext = findlast(&g->tobefnz);
-  while ((curr = *p) != g->finobjold) {  /* traverse all finalizable objects */
+  while ((curr = *p) != g->finobjold1) {  /* traverse all finalizable objects */
     lua_assert(tofinalize(curr));
     if (!(iswhite(curr) || all))  /* not being collected? */
       p = &curr->next;  /* don't bother with it */
@@ -975,8 +975,8 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
     else {  /* correct pointers into 'allgc' list, if needed */
       if (o == g->survival)
         g->survival = o->next;
-      if (o == g->old)
-        g->old = o->next;
+      if (o == g->old1)
+        g->old1 = o->next;
       if (o == g->reallyold)
         g->reallyold = o->next;
     }
@@ -1178,17 +1178,17 @@ static void youngcollection (lua_State *L, global_State *g) {
   g->gcstate = GCSswpallgc;
   psurvival = sweepgen(L, g, &g->allgc, g->survival);
   /* sweep 'survival' */
-  sweepgen(L, g, psurvival, g->old);
-  g->reallyold = g->old;
-  g->old = *psurvival;  /* 'survival' survivals are old now */
+  sweepgen(L, g, psurvival, g->old1);
+  g->reallyold = g->old1;
+  g->old1 = *psurvival;  /* 'survival' survivals are old now */
   g->survival = g->allgc;  /* all news are survivals */
 
   /* repeat for 'finobj' lists */
   psurvival = sweepgen(L, g, &g->finobj, g->finobjsur);
   /* sweep 'survival' */
-  sweepgen(L, g, psurvival, g->finobjold);
-  g->finobjrold = g->finobjold;
-  g->finobjold = *psurvival;  /* 'survival' survivals are old now */
+  sweepgen(L, g, psurvival, g->finobjold1);
+  g->finobjrold = g->finobjold1;
+  g->finobjold1 = *psurvival;  /* 'survival' survivals are old now */
   g->finobjsur = g->finobj;  /* all news are survivals */
 
   sweepgen(L, g, &g->tobefnz, NULL);
@@ -1202,11 +1202,11 @@ static void atomic2gen (lua_State *L, global_State *g) {
   g->gcstate = GCSswpallgc;
   sweep2old(L, &g->allgc);
   /* everything alive now is old */
-  g->reallyold = g->old = g->survival = g->allgc;
+  g->reallyold = g->old1 = g->survival = g->allgc;
 
   /* repeat for 'finobj' lists */
   sweep2old(L, &g->finobj);
-  g->finobjrold = g->finobjold = g->finobjsur = g->finobj;
+  g->finobjrold = g->finobjold1 = g->finobjsur = g->finobj;
 
   sweep2old(L, &g->tobefnz);
 
@@ -1239,10 +1239,10 @@ static lu_mem entergen (lua_State *L, global_State *g) {
 */
 static void enterinc (global_State *g) {
   whitelist(g, g->allgc);
-  g->reallyold = g->old = g->survival = NULL;
+  g->reallyold = g->old1 = g->survival = NULL;
   whitelist(g, g->finobj);
   whitelist(g, g->tobefnz);
-  g->finobjrold = g->finobjold = g->finobjsur = NULL;
+  g->finobjrold = g->finobjold1 = g->finobjsur = NULL;
   g->gcstate = GCSpause;
   g->gckind = KGC_INC;
   g->lastatomic = 0;

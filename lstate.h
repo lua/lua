@@ -32,13 +32,20 @@
 **
 ** 'allgc' -> 'survival': new objects;
 ** 'survival' -> 'old': objects that survived one collection;
-** 'old' -> 'reallyold': objects that became old in last collection;
+** 'old1' -> 'reallyold': objects that became old in last collection;
 ** 'reallyold' -> NULL: objects old for more than one cycle.
 **
 ** 'finobj' -> 'finobjsur': new objects marked for finalization;
-** 'finobjsur' -> 'finobjold': survived   """";
-** 'finobjold' -> 'finobjrold': just old  """";
+** 'finobjsur' -> 'finobjold1': survived   """";
+** 'finobjold1' -> 'finobjrold': just old  """";
 ** 'finobjrold' -> NULL: really old       """".
+**
+** All lists can contain elements older than their main ages, due
+** to 'luaC_checkfinalizer' and 'udata2finalize', which move
+** objects between the normal lists and the "marked for finalization"
+** lists. Moreover, barriers can age young objects in young lists as
+** OLD0, which then become OLD1. However, a list never contains
+** elements younger than their main ages.
 */
 
 /*
@@ -257,10 +264,10 @@ typedef struct global_State {
   GCObject *fixedgc;  /* list of objects not to be collected */
   /* fields for generational collector */
   GCObject *survival;  /* start of objects that survived one GC cycle */
-  GCObject *old;  /* start of old objects */
-  GCObject *reallyold;  /* old objects with more than one cycle */
+  GCObject *old1;  /* start of old1 objects */
+  GCObject *reallyold;  /* objects more than one cycle old ("really old") */
   GCObject *finobjsur;  /* list of survival objects with finalizers */
-  GCObject *finobjold;  /* list of old objects with finalizers */
+  GCObject *finobjold1;  /* list of old1 objects with finalizers */
   GCObject *finobjrold;  /* list of really old objects with finalizers */
   struct lua_State *twups;  /* list of threads with open upvalues */
   lua_CFunction panic;  /* to be called in unprotected errors */

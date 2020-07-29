@@ -586,10 +586,10 @@ int lua_checkmemory (lua_State *L) {
 
   /* check 'allgc' list */
   maybedead = (GCSatomic < g->gcstate && g->gcstate <= GCSswpallgc);
-  checklist(g, maybedead, 0, g->allgc, g->survival, g->old, g->reallyold);
+  checklist(g, maybedead, 0, g->allgc, g->survival, g->old1, g->reallyold);
 
   /* check 'finobj' list */
-  checklist(g, 0, 1, g->finobj, g->finobjsur, g->finobjold, g->finobjrold);
+  checklist(g, 0, 1, g->finobj, g->finobjsur, g->finobjold1, g->finobjrold);
 
   /* check 'tobefnz' list */
   for (o = g->tobefnz; o != NULL; o = o->next) {
