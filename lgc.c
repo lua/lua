@@ -859,6 +859,8 @@ static GCObject *udata2finalize (global_State *g) {
   resetbit(o->marked, FINALIZEDBIT);  /* object is "normal" again */
   if (issweepphase(g))
     makewhite(g, o);  /* "sweep" object */
+  else if (getage(o) == G_OLD1)
+    g->firstold1 = o;  /* it is the first OLD1 object in the list */
   return o;
 }
 
@@ -957,6 +959,27 @@ static void separatetobefnz (global_State *g, int all) {
 
 
 /*
+** If pointer 'p' points to 'o', move it to the next element.
+*/
+static void checkpointer (GCObject **p, GCObject *o) {
+  if (o == *p)
+    *p = o->next;
+}
+
+
+/*
+** Correct pointers to objects inside 'allgc' list when
+** object 'o' is being removed from the list.
+*/
+static void correctpointers (global_State *g, GCObject *o) {
+  checkpointer(&g->survival, o);
+  checkpointer(&g->old1, o);
+  checkpointer(&g->reallyold, o);
+  checkpointer(&g->firstold1, o);
+}
+
+
+/*
 ** if object 'o' has a finalizer, remove it from 'allgc' list (must
 ** search the list to find it) and link it in 'finobj' list.
 */
@@ -972,14 +995,8 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
       if (g->sweepgc == &o->next)  /* should not remove 'sweepgc' object */
         g->sweepgc = sweeptolive(L, g->sweepgc);  /* change 'sweepgc' */
     }
-    else {  /* correct pointers into 'allgc' list, if needed */
-      if (o == g->survival)
-        g->survival = o->next;
-      if (o == g->old1)
-        g->old1 = o->next;
-      if (o == g->reallyold)
-        g->reallyold = o->next;
-    }
+    else
+      correctpointers(g, o);
     /* search for pointer pointing to 'o' */
     for (p = &g->allgc; *p != o; p = &(*p)->next) { /* empty */ }
     *p = o->next;  /* remove 'o' from 'allgc' list */
@@ -1033,7 +1050,7 @@ static void sweep2old (lua_State *L, GCObject **p) {
 ** will also remove objects turned white here from any gray list.
 */
 static GCObject **sweepgen (lua_State *L, global_State *g, GCObject **p,
-                            GCObject *limit) {
+                            GCObject *limit, GCObject **pfirstold1) {
   static const lu_byte nextage[] = {
     G_SURVIVAL,  /* from G_NEW */
     G_OLD1,      /* from G_SURVIVAL */
@@ -1056,8 +1073,11 @@ static GCObject **sweepgen (lua_State *L, global_State *g, GCObject **p,
         int marked = curr->marked & maskgcbits;  /* erase GC bits */
         curr->marked = cast_byte(marked | G_SURVIVAL | white);
       }
-      else  /* all other objects will be old, and so keep their color */
+      else {  /* all other objects will be old, and so keep their color */
         setage(curr, nextage[getage(curr)]);
+        if (getage(curr) == G_OLD1 && *pfirstold1 == NULL)
+          *pfirstold1 = curr;  /* first OLD1 object in the list */
+      }
       p = &curr->next;  /* go to next element */
     }
   }
@@ -1169,30 +1189,34 @@ static void finishgencycle (lua_State *L, global_State *g) {
 */
 static void youngcollection (lua_State *L, global_State *g) {
   GCObject **psurvival;  /* to point to first non-dead survival object */
+  GCObject *dummy;  /* dummy out parameter to 'sweepgen' */
   lua_assert(g->gcstate == GCSpropagate);
-  markold(g, g->allgc, g->reallyold);
+  if (g->firstold1) {  /* are there OLD1 objects? */
+    markold(g, g->firstold1, g->reallyold);  /* mark them */
+    g->firstold1 = NULL;  /* no more OLD1 objects (for now) */
+  }
   markold(g, g->finobj, g->finobjrold);
   atomic(L);
 
   /* sweep nursery and get a pointer to its last live element */
   g->gcstate = GCSswpallgc;
-  psurvival = sweepgen(L, g, &g->allgc, g->survival);
+  psurvival = sweepgen(L, g, &g->allgc, g->survival, &g->firstold1);
   /* sweep 'survival' */
-  sweepgen(L, g, psurvival, g->old1);
+  sweepgen(L, g, psurvival, g->old1, &g->firstold1);
   g->reallyold = g->old1;
   g->old1 = *psurvival;  /* 'survival' survivals are old now */
   g->survival = g->allgc;  /* all news are survivals */
 
   /* repeat for 'finobj' lists */
-  psurvival = sweepgen(L, g, &g->finobj, g->finobjsur);
+  dummy = NULL;  /* no 'firstold1' optimization for 'finobj' lists */
+  psurvival = sweepgen(L, g, &g->finobj, g->finobjsur, &dummy);
   /* sweep 'survival' */
-  sweepgen(L, g, psurvival, g->finobjold1);
+  sweepgen(L, g, psurvival, g->finobjold1, &dummy);
   g->finobjrold = g->finobjold1;
   g->finobjold1 = *psurvival;  /* 'survival' survivals are old now */
   g->finobjsur = g->finobj;  /* all news are survivals */
 
-  sweepgen(L, g, &g->tobefnz, NULL);
-
+  sweepgen(L, g, &g->tobefnz, NULL, &dummy);
   finishgencycle(L, g);
 }
 
@@ -1203,6 +1227,7 @@ static void atomic2gen (lua_State *L, global_State *g) {
   sweep2old(L, &g->allgc);
   /* everything alive now is old */
   g->reallyold = g->old1 = g->survival = g->allgc;
+  g->firstold1 = NULL;  /* there are no OLD1 objects anywhere */
 
   /* repeat for 'finobj' lists */
   sweep2old(L, &g->finobj);

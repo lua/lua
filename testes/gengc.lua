@@ -37,6 +37,22 @@ do
 end
 
 
+do
+  -- ensure that 'firstold1' is corrected when object is removed from
+  -- the 'allgc' list
+  local function foo () end
+  local old = {10}
+  collectgarbage()    -- make 'old' old
+  assert(not T or T.gcage(old) == "old")
+  setmetatable(old, {})    -- new table becomes OLD0 (barrier)
+  assert(not T or T.gcage(getmetatable(old)) == "old0")
+  collectgarbage("step", 0)   -- new table becomes OLD1 and firstold1
+  assert(not T or T.gcage(getmetatable(old)) == "old1")
+  setmetatable(getmetatable(old), {__gc = foo})  -- get it out of allgc list
+  collectgarbage("step", 0)   -- should not seg. fault
+end
+
+
 do   -- bug in 5.4.0
 -- When an object aged OLD1 is finalized, it is moved from the list
 -- 'finobj' to the *beginning* of the list 'allgc', but that part of the
