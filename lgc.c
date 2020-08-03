@@ -348,8 +348,7 @@ static int remarkupvals (global_State *g) {
   int work = 0;  /* estimate of how much work was done here */
   while ((thread = *p) != NULL) {
     work++;
-    lua_assert(!isblack(thread));  /* threads are never black */
-    if (isgray(thread) && thread->openupval != NULL)
+    if (!iswhite(thread) && thread->openupval != NULL)
       p = &thread->twups;  /* keep marked thread with upvalues in the list */
     else {  /* thread is not marked or without upvalues */
       UpVal *uv;
@@ -600,12 +599,23 @@ static int traverseLclosure (global_State *g, LClosure *cl) {
 
 /*
 ** Traverse a thread, marking the elements in the stack up to its top
-** and cleaning the rest of the stack in the final traversal.
-** That ensures that the entire stack have valid (non-dead) objects.
+** and cleaning the rest of the stack in the final traversal. That
+** ensures that the entire stack have valid (non-dead) objects.
+** Threads have no barriers. In gen. mode, old threads must be visited
+** at every cycle, because they might point to young objects.  In inc.
+** mode, the thread can still be modified before the end of the cycle,
+** and therefore it must be visited again in the atomic phase. To ensure
+** these visits, threads must return to a gray list if they are not new
+** (which can only happen in generational mode) or if the traverse is in
+** the propagate phase (which can only happen in incremental mode).
 */
 static int traversethread (global_State *g, lua_State *th) {
   UpVal *uv;
   StkId o = th->stack;
+  if (isold(th) || g->gcstate == GCSpropagate) {
+    linkgclist(th, g->grayagain);  /* insert into 'grayagain' list */
+    black2gray(th);
+  }
   if (o == NULL)
     return 1;  /* stack not completely built yet */
   lua_assert(g->gcstate == GCSatomic ||
@@ -644,12 +654,7 @@ static lu_mem propagatemark (global_State *g) {
     case LUA_VLCL: return traverseLclosure(g, gco2lcl(o));
     case LUA_VCCL: return traverseCclosure(g, gco2ccl(o));
     case LUA_VPROTO: return traverseproto(g, gco2p(o));
-    case LUA_VTHREAD: {
-      lua_State *th = gco2th(o);
-      linkgclist(th, g->grayagain);  /* insert into 'grayagain' list */
-      black2gray(o);
-      return traversethread(g, th);
-    }
+    case LUA_VTHREAD: return traversethread(g, gco2th(o));
     default: lua_assert(0); return 0;
   }
 }
@@ -1028,7 +1033,6 @@ static void setpause (global_State *g);
 ** objects and turns the non dead to old. All non-dead threads---which
 ** are now old---must be in a gray list.  Everything else is not in a
 ** gray list.
-**
 */
 static void sweep2old (lua_State *L, GCObject **p) {
   GCObject *curr;
@@ -1139,10 +1143,16 @@ static GCObject **correctgraylist (GCObject **p) {
       goto remain;  /* keep non-white threads on the list */
     }
     else {  /* everything else is removed */
-      lua_assert(isold(curr));  /* young objects should be white */
-      if (getage(curr) == G_TOUCHED2)  /* advance from G_TOUCHED2... */
-        changeage(curr, G_TOUCHED2, G_OLD);  /* ... to G_OLD */
-      gray2black(curr);  /* make object black */
+      lua_assert(isold(curr));  /* young objects should be white here */
+      if (getage(curr) == G_TOUCHED2) {  /* advance from TOUCHED2... */
+        changeage(curr, G_TOUCHED2, G_OLD);  /* ... to OLD */
+        lua_assert(isblack(curr));  /* TOUCHED2 objects are always black */
+      }
+      else {
+        /* everything else in a gray list should be gray */
+        lua_assert(isgray(curr));
+        gray2black(curr);  /* make object black (to be removed) */
+      }
       goto remove;
     }
     remove: *p = *next; continue;
@@ -1207,11 +1217,12 @@ static void youngcollection (lua_State *L, global_State *g) {
   GCObject **psurvival;  /* to point to first non-dead survival object */
   GCObject *dummy;  /* dummy out parameter to 'sweepgen' */
   lua_assert(g->gcstate == GCSpropagate);
-  if (g->firstold1) {  /* are there OLD1 objects? */
+  if (g->firstold1) {  /* are there regular OLD1 objects? */
     markold(g, g->firstold1, g->reallyold);  /* mark them */
     g->firstold1 = NULL;  /* no more OLD1 objects (for now) */
   }
   markold(g, g->finobj, g->finobjrold);
+  markold(g, g->tobefnz, NULL);
   atomic(L);
 
   /* sweep nursery and get a pointer to its last live element */
@@ -1268,8 +1279,8 @@ static void atomic2gen (lua_State *L, global_State *g) {
 /*
 ** Enter generational mode. Must go until the end of an atomic cycle
 ** to ensure that all objects are correctly marked and weak tables
-** are cleared.
-** Then, turn all objects into old and finishes the collection.
+** are cleared. Then, turn all objects into old and finishes the
+** collection.
 */
 static lu_mem entergen (lua_State *L, global_State *g) {
   lu_mem numobjs;
