@@ -80,16 +80,13 @@
 #define keyiswhite(n)   (keyiscollectable(n) && iswhite(gckey(n)))
 
 
-#define checkconsistency(obj)  \
-  lua_longassert(!iscollectable(obj) || righttt(obj))
-
 /*
 ** Protected access to objects in values
 */
 #define gcvalueN(o)     (iscollectable(o) ? gcvalue(o) : NULL)
 
 
-#define markvalue(g,o) { checkconsistency(o); \
+#define markvalue(g,o) { checkliveness(g->mainthread,o); \
   if (valiswhite(o)) reallymarkobject(g,gcvalue(o)); }
 
 #define markkey(g, n)	{ if keyiswhite(n) reallymarkobject(g,gckey(n)); }
