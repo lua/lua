@@ -368,12 +368,17 @@ static int remarkupvals (global_State *g) {
 }
 
 
+static void cleargraylists (global_State *g) {
+  g->gray = g->grayagain = NULL;
+  g->weak = g->allweak = g->ephemeron = NULL;
+}
+
+
 /*
 ** mark root set and reset all gray lists, to start a new collection
 */
 static void restartcollection (global_State *g) {
-  g->gray = g->grayagain = NULL;
-  g->weak = g->allweak = g->ephemeron = NULL;
+  cleargraylists(g);
   markobject(g, g->mainthread);
   markvalue(g, &g->l_registry);
   markmt(g);
@@ -1019,19 +1024,30 @@ static void setpause (global_State *g);
 
 
 /*
-** Sweep a list of objects, deleting dead ones and turning
-** the non dead to old (without changing their colors).
+** Sweep a list of objects to enter generational mode.  Deletes dead
+** objects and turns the non dead to old. All non-dead threads---which
+** are now old---must be in a gray list.  Everything else is not in a
+** gray list.
+**
 */
 static void sweep2old (lua_State *L, GCObject **p) {
   GCObject *curr;
+  global_State *g = G(L);
   while ((curr = *p) != NULL) {
     if (iswhite(curr)) {  /* is 'curr' dead? */
-      lua_assert(isdead(G(L), curr));
+      lua_assert(isdead(g, curr));
       *p = curr->next;  /* remove 'curr' from list */
       freeobj(L, curr);  /* erase 'curr' */
     }
     else {  /* all surviving objects become old */
       setage(curr, G_OLD);
+      if (curr->tt == LUA_VTHREAD) {  /* threads must be watched */
+        lua_State *th = gco2th(curr);
+        linkgclist(th, g->grayagain);  /* insert into 'grayagain' list */
+        black2gray(th);  /* OK if already gray */
+      }
+      else  /* everything else is black */
+        gray2black(curr);  /* OK if already black */
       p = &curr->next;  /* go to next element */
     }
   }
@@ -1221,7 +1237,14 @@ static void youngcollection (lua_State *L, global_State *g) {
 }
 
 
+/*
+** Clears all gray lists, sweeps objects, and prepare sublists to enter
+** generational mode. The sweeps remove dead objects and turn all
+** surviving objects to old. Threads go back to 'grayagain'; everything
+** else is turned black (not in any gray list).
+*/
 static void atomic2gen (lua_State *L, global_State *g) {
+  cleargraylists(g);
   /* sweep all elements making them old */
   g->gcstate = GCSswpallgc;
   sweep2old(L, &g->allgc);
@@ -1244,7 +1267,8 @@ static void atomic2gen (lua_State *L, global_State *g) {
 
 /*
 ** Enter generational mode. Must go until the end of an atomic cycle
-** to ensure that all threads and weak tables are in the gray lists.
+** to ensure that all objects are correctly marked and weak tables
+** are cleared.
 ** Then, turn all objects into old and finishes the collection.
 */
 static lu_mem entergen (lua_State *L, global_State *g) {

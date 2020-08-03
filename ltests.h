@@ -51,6 +51,7 @@
 
 /* memory-allocator control variables */
 typedef struct Memcontrol {
+  int failnext;
   unsigned long numblocks;
   unsigned long total;
   unsigned long maxmem;
