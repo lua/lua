@@ -267,21 +267,22 @@ GCObject *luaC_newobj (lua_State *L, int tt, size_t sz) {
 ** Mark an object. Userdata, strings, and closed upvalues are visited
 ** and turned black here. Other objects are marked gray and added
 ** to appropriate list to be visited (and turned black) later. (Open
-** upvalues are already linked in 'headuv' list. They are kept gray
-** to avoid barriers, as their values will be revisited by the thread.)
+** upvalues are already indirectly linked through the 'twups' list. They
+** are kept gray to avoid barriers, as their values will be revisited by
+** the thread or by 'remarkupvals'.)
 */
 static void reallymarkobject (global_State *g, GCObject *o) {
   white2gray(o);
   switch (o->tt) {
     case LUA_VSHRSTR:
     case LUA_VLNGSTR: {
-      gray2black(o);
+      gray2black(o);  /* nothing to visit */
       break;
     }
     case LUA_VUPVAL: {
       UpVal *uv = gco2upv(o);
       if (!upisopen(uv))  /* open upvalues are kept gray */
-        gray2black(o);
+        gray2black(o);  /* closed upvalues are visited here */
       markvalue(g, uv->v);  /* mark its content */
       break;
     }
@@ -296,7 +297,7 @@ static void reallymarkobject (global_State *g, GCObject *o) {
     }  /* FALLTHROUGH */
     case LUA_VLCL: case LUA_VCCL: case LUA_VTABLE:
     case LUA_VTHREAD: case LUA_VPROTO: {
-      linkobjgclist(o, g->gray);
+      linkobjgclist(o, g->gray);  /* to be visited later */
       break;
     }
     default: lua_assert(0); break;
@@ -355,8 +356,10 @@ static int remarkupvals (global_State *g) {
       for (uv = thread->openupval; uv != NULL; uv = uv->u.open.next) {
         lua_assert(getage(uv) <= getage(thread));
         work++;
-        if (!iswhite(uv))  /* upvalue already visited? */
+        if (!iswhite(uv)) {  /* upvalue already visited? */
+          lua_assert(upisopen(uv) && isgray(uv));
           markvalue(g, uv->v);  /* mark its value */
+        }
       }
     }
   }
@@ -1028,8 +1031,8 @@ static void setpause (global_State *g);
 /*
 ** Sweep a list of objects to enter generational mode.  Deletes dead
 ** objects and turns the non dead to old. All non-dead threads---which
-** are now old---must be in a gray list.  Everything else is not in a
-** gray list.
+** are now old---must be in a gray list. Everything else is not in a
+** gray list. Open upvalues are also kept gray.
 */
 static void sweep2old (lua_State *L, GCObject **p) {
   GCObject *curr;
@@ -1047,6 +1050,8 @@ static void sweep2old (lua_State *L, GCObject **p) {
         linkgclist(th, g->grayagain);  /* insert into 'grayagain' list */
         black2gray(th);  /* OK if already gray */
       }
+      else if (curr->tt == LUA_VUPVAL && upisopen(gco2upv(curr)))
+        black2gray(curr);  /* open upvalues are always gray */
       else  /* everything else is black */
         gray2black(curr);  /* OK if already black */
       p = &curr->next;  /* go to next element */
