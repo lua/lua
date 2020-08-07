@@ -69,12 +69,15 @@
 
 /*
 ** Layout for bit use in 'marked' field. First three bits are
-** used for object "age" in generational mode.
+** used for object "age" in generational mode. Last bit is used
+** by tests.
 */
 #define WHITE0BIT	3  /* object is white (type 0) */
 #define WHITE1BIT	4  /* object is white (type 1) */
 #define BLACKBIT	5  /* object is black */
 #define FINALIZEDBIT	6  /* object has been marked for finalization */
+
+#define TESTBIT		7
 
 
 

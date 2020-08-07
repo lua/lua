@@ -88,6 +88,7 @@ for _, sa in ipairs(sizes) do    -- 'sa' is size of the array part
     arr[1 + sa + sh + 1] = "}"
     local prog = table.concat(arr)
     local f = assert(load(prog))
+    collectgarbage("stop")
     f()    -- call once to ensure stack space
     -- make sure table is not resized after being created
     if sa == 0 or sh == 0 then
@@ -97,6 +98,7 @@ for _, sa in ipairs(sizes) do    -- 'sa' is size of the array part
     end
     local t = f()
     T.alloccount();
+    collectgarbage("restart")
     assert(#t == sa)
     check(t, sa, mp2(sh))
   end

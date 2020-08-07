@@ -522,7 +522,11 @@ static lu_mem checkgraylist (global_State *g, GCObject *o) {
   int total = 0;  /* count number of elements in the list */
   ((void)g);  /* better to keep it available if we need to print an object */
   while (o) {
-    lua_assert(isgray(o) || getage(o) == G_TOUCHED2);
+    lua_assert(!!isgray(o) ^ (getage(o) == G_TOUCHED2));
+    //lua_assert(isgray(o) || getage(o) == G_TOUCHED2);
+    lua_assert(!testbit(o->marked, TESTBIT));
+    if (keepinvariant(g))
+      l_setbit(o->marked, TESTBIT);  /* mark that object is in a gray list */
     total++;
     switch (o->tt) {
       case LUA_VTABLE: o = gco2t(o)->gclist; break;
@@ -556,9 +560,27 @@ static lu_mem checkgrays (global_State *g) {
 }
 
 
-/* Increment 't' if 'o' should be in a gray list */
-#define incifingray(o,t)  \
-  if (isgray(o) || getage(o) == G_TOUCHED2) (t)++
+/*
+** Check whether 'o' should be in a gray list. If so, increment
+** 'count' and check its TESTBIT. (It must have been previously set by
+** 'checkgraylist'.)
+*/
+static void incifingray (global_State *g, GCObject *o, lu_mem *count) {
+  if (!keepinvariant(g))
+    return;  /* gray lists not being kept in these phases */
+  if (o->tt == LUA_VUPVAL) {
+    /* only open upvalues can be gray */
+    lua_assert(!isgray(o) || upisopen(gco2upv(o)));
+    return;  /* upvalues are never in gray lists */
+  }
+  /* these are the ones that must be in gray lists */
+  if (isgray(o) || getage(o) == G_TOUCHED2) {
+    (*count)++;
+    lua_assert(testbit(o->marked, TESTBIT));
+    resetbit(o->marked, TESTBIT);  /* prepare for next cycle */
+  }
+}
+
 
 static lu_mem checklist (global_State *g, int maybedead, int tof,
   GCObject *newl, GCObject *survival, GCObject *old, GCObject *reallyold) {
@@ -566,22 +588,22 @@ static lu_mem checklist (global_State *g, int maybedead, int tof,
   lu_mem total = 0;  /* number of object that should be in  gray lists */
   for (o = newl; o != survival; o = o->next) {
     checkobject(g, o, maybedead, G_NEW);
-    incifingray(o, total);
+    incifingray(g, o, &total);
     lua_assert(!tof == !tofinalize(o));
   }
   for (o = survival; o != old; o = o->next) {
     checkobject(g, o, 0, G_SURVIVAL);
-    incifingray(o, total);
+    incifingray(g, o, &total);
     lua_assert(!tof == !tofinalize(o));
   }
   for (o = old; o != reallyold; o = o->next) {
     checkobject(g, o, 0, G_OLD1);
-    incifingray(o, total);
+    incifingray(g, o, &total);
     lua_assert(!tof == !tofinalize(o));
   }
   for (o = reallyold; o != NULL; o = o->next) {
     checkobject(g, o, 0, G_OLD);
-    incifingray(o, total);
+    incifingray(g, o, &total);
     lua_assert(!tof == !tofinalize(o));
   }
   return total;
@@ -619,7 +641,7 @@ int lua_checkmemory (lua_State *L) {
   /* check 'tobefnz' list */
   for (o = g->tobefnz; o != NULL; o = o->next) {
     checkobject(g, o, 0, G_NEW);
-    incifingray(o, totalshould);
+    incifingray(g, o, &totalshould);
     lua_assert(tofinalize(o));
     lua_assert(o->tt == LUA_VUSERDATA || o->tt == LUA_VTABLE);
   }
