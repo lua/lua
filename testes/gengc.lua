@@ -106,6 +106,23 @@ do   -- another bug in 5.4.0
 end
 
 
+do   -- bug introduced in commit 9cf3299fa
+  local t = setmetatable({}, {__mode = "kv"})   -- all-weak table
+  collectgarbage()   -- full collection
+  assert(not T or T.gcage(t) == "old")
+  t[1] = {10}
+  assert(not T or (T.gcage(t) == "touched1" and T.gccolor(t) == "gray"))
+  collectgarbage("step", 0)   -- minor collection
+  assert(not T or (T.gcage(t) == "touched2" and T.gccolor(t) == "black"))
+  collectgarbage("step", 0)   -- minor collection
+  assert(not T or T.gcage(t) == "old")   -- t should be black, but it was gray
+  t[1] = {10}      -- no barrier here, so t was still old
+  collectgarbage("step", 0)   -- minor collection
+  -- t, being old, is ignored by the collection, so it is not cleared
+  assert(t[1] == nil)   -- fails with the bug
+end
+
+
 if T == nil then
   (Message or print)('\n >>> testC not active: \z
                              skipping some generational tests <<<\n')

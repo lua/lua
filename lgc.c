@@ -1146,15 +1146,9 @@ static GCObject **correctgraylist (GCObject **p) {
     }
     else {  /* everything else is removed */
       lua_assert(isold(curr));  /* young objects should be white here */
-      if (getage(curr) == G_TOUCHED2) {  /* advance from TOUCHED2... */
+      if (getage(curr) == G_TOUCHED2)  /* advance from TOUCHED2... */
         changeage(curr, G_TOUCHED2, G_OLD);  /* ... to OLD */
-        lua_assert(isblack(curr));  /* TOUCHED2 objects are always black */
-      }
-      else {
-        /* everything else in a gray list should be gray */
-        lua_assert(isgray(curr));
-        gray2black(curr);  /* make object black (to be removed) */
-      }
+      gray2black(curr);  /* make object black (to be removed) */
       goto remove;
     }
     remove: *p = *next; continue;
