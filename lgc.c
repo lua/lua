@@ -60,19 +60,19 @@
 #define PAUSEADJ		100
 
 
-/* mask to erase all color bits */
-#define maskcolors	(~(bitmask(BLACKBIT) | WHITEBITS))
+/* mask with all color bits */
+#define maskcolors	(bitmask(BLACKBIT) | WHITEBITS)
 
-/* mask to erase all GC bits */
-#define maskgcbits      (maskcolors & ~AGEBITS)
+/* mask with all GC bits */
+#define maskgcbits      (maskcolors | AGEBITS)
 
 
 /* macro to erase all color bits then set only the current white bit */
 #define makewhite(g,x)	\
-  (x->marked = cast_byte((x->marked & maskcolors) | luaC_white(g)))
+  (x->marked = cast_byte((x->marked & ~maskcolors) | luaC_white(g)))
 
-#define white2gray(x)	resetbits(x->marked, WHITEBITS)
-#define black2gray(x)	resetbit(x->marked, BLACKBIT)
+/* make an object gray (neither white nor black) */
+#define set2gray(x)	resetbits(x->marked, maskcolors)
 
 
 #define valiswhite(x)   (iscollectable(x) && iswhite(gcvalue(x)))
@@ -221,7 +221,7 @@ void luaC_barrierback_ (lua_State *L, GCObject *o) {
   lua_assert((g->gckind == KGC_GEN) == (isold(o) && getage(o) != G_TOUCHED1));
   if (getage(o) != G_TOUCHED2)  /* not already in gray list? */
     linkobjgclist(o, g->grayagain);  /* link it in 'grayagain' */
-  black2gray(o);  /* make object gray (again) */
+  set2gray(o);  /* make object gray (again) */
   if (isold(o))  /* generational mode? */
     setage(o, G_TOUCHED1);  /* touched in current cycle */
 }
@@ -230,7 +230,7 @@ void luaC_barrierback_ (lua_State *L, GCObject *o) {
 void luaC_fix (lua_State *L, GCObject *o) {
   global_State *g = G(L);
   lua_assert(g->allgc == o);  /* object must be 1st in 'allgc' list! */
-  white2gray(o);  /* they will be gray forever */
+  set2gray(o);  /* they will be gray forever */
   setage(o, G_OLD);  /* and old forever */
   g->allgc = o->next;  /* remove object from 'allgc' list */
   o->next = g->fixedgc;  /* link it to 'fixedgc' list */
@@ -272,17 +272,17 @@ GCObject *luaC_newobj (lua_State *L, int tt, size_t sz) {
 ** the thread or by 'remarkupvals'.)
 */
 static void reallymarkobject (global_State *g, GCObject *o) {
-  white2gray(o);
+  set2gray(o);
   switch (o->tt) {
     case LUA_VSHRSTR:
     case LUA_VLNGSTR: {
-      gray2black(o);  /* nothing to visit */
+      nw2black(o);  /* nothing to visit */
       break;
     }
     case LUA_VUPVAL: {
       UpVal *uv = gco2upv(o);
       if (!upisopen(uv))  /* open upvalues are kept gray */
-        gray2black(o);  /* closed upvalues are visited here */
+        nw2black(o);  /* closed upvalues are visited here */
       markvalue(g, uv->v);  /* mark its content */
       break;
     }
@@ -290,7 +290,7 @@ static void reallymarkobject (global_State *g, GCObject *o) {
       Udata *u = gco2u(o);
       if (u->nuvalue == 0) {  /* no user values? */
         markobjectN(g, u->metatable);  /* mark its metatable */
-        gray2black(o);  /* nothing else to mark */
+        nw2black(o);  /* nothing else to mark */
         break;
       }
       /* else... */
@@ -412,7 +412,7 @@ static void genlink_ (global_State *g, GCObject *o, GCObject **pnext) {
   if (getage(o) == G_TOUCHED1) {  /* touched in this cycle? */
     *pnext = g->grayagain;  /* link it back in 'grayagain' */
     g->grayagain = o;
-    black2gray(o);
+    set2gray(o);
   }  /* everything else do not need to be linked back */
   else if (getage(o) == G_TOUCHED2)
     changeage(o, G_TOUCHED2, G_OLD);  /* advance age */
@@ -497,7 +497,7 @@ static int traverseephemeron (global_State *g, Table *h, int inv) {
   else if (hasclears)  /* table has white keys? */
     linkgclist(h, g->allweak);  /* may have to clean white keys */
   else {
-    gray2black(h);  /* 'genlink' expects black objects */
+    nw2black(h);  /* 'genlink' expects black objects */
     genlink(g, h);  /* check whether collector still needs to see it */
   }
   return marked;
@@ -531,7 +531,7 @@ static lu_mem traversetable (global_State *g, Table *h) {
       (cast_void(weakkey = strchr(svalue(mode), 'k')),
        cast_void(weakvalue = strchr(svalue(mode), 'v')),
        (weakkey || weakvalue))) {  /* is really weak? */
-    black2gray(h);  /* turn it back to gray, as it probably goes to a list */
+    set2gray(h);  /* turn it back to gray, as it probably goes to a list */
     if (!weakkey)  /* strong keys? */
       traverseweakvalue(g, h);
     else if (!weakvalue)  /* strong values? */
@@ -614,7 +614,7 @@ static int traversethread (global_State *g, lua_State *th) {
   StkId o = th->stack;
   if (isold(th) || g->gcstate == GCSpropagate) {
     linkgclist(th, g->grayagain);  /* insert into 'grayagain' list */
-    black2gray(th);
+    set2gray(th);
   }
   if (o == NULL)
     return 1;  /* stack not completely built yet */
@@ -646,7 +646,7 @@ static int traversethread (global_State *g, lua_State *th) {
 */
 static lu_mem propagatemark (global_State *g) {
   GCObject *o = g->gray;
-  gray2black(o);
+  nw2black(o);
   g->gray = *getgclist(o);  /* remove from 'gray' list */
   switch (o->tt) {
     case LUA_VTABLE: return traversetable(g, gco2t(o));
@@ -812,7 +812,7 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, int countin,
       freeobj(L, curr);  /* erase 'curr' */
     }
     else {  /* change mark to 'white' */
-      curr->marked = cast_byte((marked & maskgcbits) | white);
+      curr->marked = cast_byte((marked & ~maskgcbits) | white);
       p = &curr->next;  /* go to next element */
     }
   }
@@ -1048,12 +1048,12 @@ static void sweep2old (lua_State *L, GCObject **p) {
       if (curr->tt == LUA_VTHREAD) {  /* threads must be watched */
         lua_State *th = gco2th(curr);
         linkgclist(th, g->grayagain);  /* insert into 'grayagain' list */
-        black2gray(th);  /* OK if already gray */
+        set2gray(th);
       }
       else if (curr->tt == LUA_VUPVAL && upisopen(gco2upv(curr)))
-        black2gray(curr);  /* open upvalues are always gray */
+        set2gray(curr);  /* open upvalues are always gray */
       else  /* everything else is black */
-        gray2black(curr);  /* OK if already black */
+        nw2black(curr);
       p = &curr->next;  /* go to next element */
     }
   }
@@ -1092,7 +1092,7 @@ static GCObject **sweepgen (lua_State *L, global_State *g, GCObject **p,
     }
     else {  /* correct mark and age */
       if (getage(curr) == G_NEW) {  /* new objects go back to white */
-        int marked = curr->marked & maskgcbits;  /* erase GC bits */
+        int marked = curr->marked & ~maskgcbits;  /* erase GC bits */
         curr->marked = cast_byte(marked | G_SURVIVAL | white);
       }
       else {  /* all other objects will be old, and so keep their color */
@@ -1115,7 +1115,7 @@ static GCObject **sweepgen (lua_State *L, global_State *g, GCObject **p,
 static void whitelist (global_State *g, GCObject *p) {
   int white = luaC_white(g);
   for (; p != NULL; p = p->next)
-    p->marked = cast_byte((p->marked & maskgcbits) | white);
+    p->marked = cast_byte((p->marked & ~maskgcbits) | white);
 }
 
 
@@ -1136,7 +1136,7 @@ static GCObject **correctgraylist (GCObject **p) {
       goto remove;  /* remove all white objects */
     else if (getage(curr) == G_TOUCHED1) {  /* touched in this cycle? */
       lua_assert(isgray(curr));
-      gray2black(curr);  /* make it black, for next barrier */
+      nw2black(curr);  /* make it black, for next barrier */
       changeage(curr, G_TOUCHED1, G_TOUCHED2);
       goto remain;  /* keep it in the list and go to next element */
     }
@@ -1148,7 +1148,7 @@ static GCObject **correctgraylist (GCObject **p) {
       lua_assert(isold(curr));  /* young objects should be white here */
       if (getage(curr) == G_TOUCHED2)  /* advance from TOUCHED2... */
         changeage(curr, G_TOUCHED2, G_OLD);  /* ... to OLD */
-      gray2black(curr);  /* make object black (to be removed) */
+      nw2black(curr);  /* make object black (to be removed) */
       goto remove;
     }
     remove: *p = *next; continue;
@@ -1184,7 +1184,7 @@ static void markold (global_State *g, GCObject *from, GCObject *to) {
       lua_assert(!iswhite(p));
       changeage(p, G_OLD1, G_OLD);  /* now they are old */
       if (isblack(p)) {
-        black2gray(p);  /* should be '2white', but gray works too */
+        set2gray(p);  /* should be '2white', but gray works too */
         reallymarkobject(g, p);
       }
     }
