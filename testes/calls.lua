@@ -317,6 +317,16 @@ f = load(string.dump(function () return 1 end), nil, "b", {})
 assert(type(f) == "function" and f() == 1)
 
 
+do   -- another bug (in 5.4.0)
+  -- loading a binary long string interrupted by GC cycles
+  local f = string.dump(function ()
+    return '01234567890123456789012345678901234567890123456789'
+  end)
+  f = load(read1(f))
+  assert(f() == '01234567890123456789012345678901234567890123456789')
+end
+
+
 x = string.dump(load("x = 1; return x"))
 a = assert(load(read1(x), nil, "b"))
 assert(a() == 1 and _G.x == 1)
@@ -358,8 +368,12 @@ x = [[
    end
   end
 ]]
+a = assert(load(read1(x), "read", "t"))
+assert(a()(2)(3)(10) == 15)
 
-a = assert(load(read1(x)))
+-- repeat the test loading a binary chunk
+x = string.dump(a)
+a = assert(load(read1(x), "read", "b"))
 assert(a()(2)(3)(10) == 15)
 
 
