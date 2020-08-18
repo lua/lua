@@ -86,6 +86,7 @@ static lua_Integer LoadInteger (LoadState *S) {
 
 
 static TString *LoadString (LoadState *S, Proto *p) {
+  lua_State *L = S->L;
   size_t size = LoadByte(S);
   TString *ts;
   if (size == 0xFF)
@@ -95,13 +96,16 @@ static TString *LoadString (LoadState *S, Proto *p) {
   else if (--size <= LUAI_MAXSHORTLEN) {  /* short string? */
     char buff[LUAI_MAXSHORTLEN];
     LoadVector(S, buff, size);
-    ts = luaS_newlstr(S->L, buff, size);
+    ts = luaS_newlstr(L, buff, size);
   }
   else {  /* long string */
-    ts = luaS_createlngstrobj(S->L, size);
+    ts = luaS_createlngstrobj(L, size);
+    setsvalue2s(L, L->top, ts);  /* anchor it ('loadVector' can GC) */
+    luaD_inctop(L);
     LoadVector(S, getstr(ts), size);  /* load directly in final place */
+    L->top--;  /* pop string */
   }
-  luaC_objbarrier(S->L, p, ts);
+  luaC_objbarrier(L, p, ts);
   return ts;
 }
 
