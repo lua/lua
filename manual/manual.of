@@ -2450,7 +2450,7 @@ When you call a Lua function
 without a fixed number of results @seeF{lua_call},
 Lua ensures that the stack has enough space for all results,
 but it does not ensure any extra space.
-So, before pushing anything in the stack after such a call
+So, before pushing anything on the stack after such a call
 you should use @Lid{lua_checkstack}.
 
 }
@@ -2494,6 +2494,39 @@ For functions that can be called with acceptable indices,
 any non-valid index is treated as if it
 contains a value of a virtual type @defid{LUA_TNONE},
 which behaves like a nil value.
+
+}
+
+@sect3{constchar|@title{Pointers to strings}
+
+Several functions in the API return pointers (@T{const char*})
+to Lua strings in the stack.
+(See @Lid{lua_pushfstring}, @Lid{lua_pushlstring},
+@Lid{lua_pushstring}, and @Lid{lua_tolstring}.
+See also @Lid{luaL_checklstring}, @Lid{luaL_checkstring},
+and @Lid{luaL_tolstring} in the auxiliary library.)
+
+In general,
+Lua's garbage collection can free or move internal memory
+and then invalidate pointers to internal strings.
+To allow a safe use of these pointers,
+The API guarantees that any pointer to a string in a stack index
+is valid while the value at that index is neither modified nor popped.
+When the index is a pseudo-index (referring to an upvalue),
+the pointer is valid while the corresponding call is active and
+the corresponding upvalue is not modified.
+
+Some functions in the debug interface
+also return pointers to strings,
+namely @Lid{lua_getlocal}, @Lid{lua_getupvalue},
+@Lid{lua_setlocal}, and @Lid{lua_setupvalue}.
+For these functions, the pointer is guaranteed to
+be valid while the caller function is active and
+the given closure (if one was given) is in the stack.
+
+Except for these guarantees,
+the garbage collector is free to invalidate
+any pointer to internal strings.
 
 }
 
@@ -2791,7 +2824,7 @@ depending on the situation;
 an interrogation mark @Char{?} means that
 we cannot know how many elements the function pops/pushes
 by looking only at its arguments.
-(For instance, they may depend on what is on the stack.)
+(For instance, they may depend on what is in the stack.)
 The third field, @T{x},
 tells whether the function may raise errors:
 @Char{-} means the function never raises any error;
@@ -3584,6 +3617,10 @@ plus an associated block of raw memory with @id{size} bytes.
 @Lid{lua_setiuservalue} and @Lid{lua_getiuservalue}.)
 
 The function returns the address of the block of memory.
+Lua ensures that this address is valid as long as
+the corresponding userdata is alive @see{GC}.
+Moreover, if the userdata is marked for finalization @see{finalizers},
+its address is valid at least until the call to its finalizer.
 
 }
 
@@ -3764,7 +3801,7 @@ This function is equivalent to @Lid{lua_pushcclosure} with no upvalues.
 @apii{0,1,v}
 
 Pushes onto the stack a formatted string
-and returns a pointer to this string.
+and returns a pointer to this string @see{constchar}.
 It is similar to the @ANSI{sprintf},
 but has two important differences.
 First,
@@ -3838,7 +3875,7 @@ the function returns.
 The string can contain any binary data,
 including @x{embedded zeros}.
 
-Returns a pointer to the internal copy of the string.
+Returns a pointer to the internal copy of the string @see{constchar}.
 
 }
 
@@ -3865,7 +3902,7 @@ Lua will make or reuse an internal copy of the given string,
 so the memory at @id{s} can be freed or reused immediately after
 the function returns.
 
-Returns a pointer to the internal copy of the string.
+Returns a pointer to the internal copy of the string @see{constchar}.
 
 If @id{s} is @id{NULL}, pushes @nil and returns @id{NULL}.
 
@@ -4277,7 +4314,7 @@ otherwise, returns @id{NULL}.
 }
 
 @APIEntry{void lua_toclose (lua_State *L, int index);|
-@apii{0,0,v}
+@apii{0,0,m}
 
 Marks the given index in the stack as a
 to-be-closed @Q{variable} @see{to-be-closed}.
@@ -4295,9 +4332,15 @@ by any other function in the API except @Lid{lua_settop} or @Lid{lua_pop}.
 This function should not be called for an index
 that is equal to or below an active to-be-closed index.
 
-This function can raise an out-of-memory error.
-In that case, the value in the given index is immediately closed,
+In the case of an out-of-memory error,
+the value in the given index is immediately closed,
 as if it was already marked.
+
+Note that, both in case of errors and of a regular return,
+by the time the @idx{__close} metamethod runs,
+the @N{C stack} was already unwound,
+so that any automatic C variable declared in the calling function
+will be out of scope.
 
 }
 
@@ -4338,14 +4381,10 @@ then @id{lua_tolstring} also
 when @id{lua_tolstring} is applied to keys during a table traversal.)
 
 @id{lua_tolstring} returns a pointer
-to a string inside the Lua state.
+to a string inside the Lua state @see{constchar}.
 This string always has a zero (@Char{\0})
 after its last character (as @N{in C}),
 but can contain other zeros in its body.
-
-Because Lua has garbage collection,
-there is no guarantee that the pointer returned by @id{lua_tolstring}
-will be valid after the corresponding Lua value is removed from the stack.
 
 }
 
@@ -4708,7 +4747,7 @@ true if the function is a vararg function
 }
 
 @item{@id{ftransfer}|
-the index on the stack of the first value being @Q{transferred},
+the index in the stack of the first value being @Q{transferred},
 that is, parameters in a call or return values in a return.
 (The other values are in consecutive indices.)
 Using this index, you can access and modify these values
@@ -4860,7 +4899,7 @@ an identification of the @emph{activation record}
 of the function executing at a given level.
 @N{Level 0} is the current running function,
 whereas level @M{n+1} is the function that has called level @M{n}
-(except for tail calls, which do not count on the stack).
+(except for tail calls, which do not count in the stack).
 When called with a level greater than the stack depth,
 @Lid{lua_getstack} returns 0;
 otherwise it returns 1.
@@ -4947,8 +4986,7 @@ For each event, the hook is called as explained below:
 @description{
 
 @item{The call hook| is called when the interpreter calls a function.
-The hook is called just after Lua enters the new function,
-before the function gets its arguments.
+The hook is called just after Lua enters the new function.
 }
 
 @item{The return hook| is called when the interpreter returns from a function.
@@ -5038,7 +5076,7 @@ refer to the @id{n2}-th upvalue of the Lua closure at index @id{funcindex2}.
 
 
 @C{-------------------------------------------------------------------------}
-@sect1{@title{The Auxiliary Library}
+@sect1{auxlib|@title{The Auxiliary Library}
 
 @simplesect{
 
@@ -5925,7 +5963,7 @@ it returns @id{NULL} instead of raising an error.
 Converts any Lua value at the given index to a @N{C string}
 in a reasonable format.
 The resulting string is pushed onto the stack and also
-returned by the function.
+returned by the function @see{constchar}.
 If @id{len} is not @id{NULL},
 the function also sets @T{*len} with the string length.
 
@@ -8608,7 +8646,7 @@ which means the function running at level @id{f} of the call stack
 of the given thread:
 @N{level 0} is the current function (@id{getinfo} itself);
 @N{level 1} is the function that called @id{getinfo}
-(except for tail calls, which do not count on the stack);
+(except for tail calls, which do not count in the stack);
 and so on.
 If @id{f} is a number greater than the number of active functions,
 then @id{getinfo} returns @fail.
