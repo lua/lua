@@ -6813,6 +6813,16 @@ As such, it is only available on some platforms
 (Windows, Linux, Mac OS X, Solaris, BSD,
 plus other Unix systems that support the @id{dlfcn} standard).
 
+This function is inherently insecure,
+as it allows Lua to call any function in any readable dynamic
+library in the system.
+(Lua calls any function assuming the function
+has a proper prototype and respects a proper protocol
+@see{lua_CFunction}.
+Therefore,
+calling an arbitrary function in an arbitrary dynamic library
+more often than not results in an access violation.)
+
 }
 
 @LibEntry{package.path|
