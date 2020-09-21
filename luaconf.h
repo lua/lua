@@ -36,8 +36,8 @@
 ** =====================================================================
 */
 
-/*
-@@ LUAI_MAXCSTACK defines the maximum depth for nested calls and
+/* >>> move back to llimits.h
+@@ LUAI_MAXCCALLS defines the maximum depth for nested calls and
 ** also limits the maximum depth of other recursive algorithms in
 ** the implementation, such as syntactic analysis. A value too
 ** large may allow the interpreter to crash (C-stack overflow).
@@ -46,8 +46,8 @@
 ** The test file 'cstack.lua' may help finding a good limit.
 ** (It will crash with a limit too high.)
 */
-#if !defined(LUAI_MAXCSTACK)
-#define LUAI_MAXCSTACK		2000
+#if !defined(LUAI_MAXCCALLS)
+#define LUAI_MAXCCALLS		200
 #endif
 
 

@@ -23,11 +23,6 @@
 #define LUAI_ASSERT
 
 
-
-/* compiled with -O0, Lua uses a lot of C stack space... */
-#undef LUAI_MAXCSTACK
-#define LUAI_MAXCSTACK		400
-
 /* to avoid warnings, and to make sure value is really unused */
 #define UNUSED(x)       (x=0, (void)(x))
 

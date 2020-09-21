@@ -1,6 +1,8 @@
 -- $Id: testes/cstack.lua $
 -- See Copyright Notice in file all.lua
 
+do return end
+
 local debug = require "debug"
 
 print"testing C-stack overflow detection"

@@ -530,10 +530,9 @@ local function testrep (init, rep, close, repc, finalresult)
   if (finalresult) then
     assert(res() == finalresult)
   end
-  s = init .. string.rep(rep, 10000)
-  local res, msg = load(s)   -- 10000 levels not ok
-  assert(not res and (string.find(msg, "too many registers") or
-                      string.find(msg, "stack overflow")))
+  s = init .. string.rep(rep, 500)
+  local res, msg = load(s)   -- 500 levels not ok
+  assert(not res and string.find(msg, "too many"))
 end
 
 testrep("local a; a", ",a", "= 1", ",1")    -- multiple assignment

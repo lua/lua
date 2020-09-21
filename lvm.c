@@ -229,7 +229,7 @@ static int forprep (lua_State *L, StkId ra) {
         count /= l_castS2U(-(step + 1)) + 1u;
       }
       /* store the counter in place of the limit (which won't be
-         needed anymore */
+         needed anymore) */
       setivalue(plimit, l_castU2S(count));
     }
   }
@@ -1124,6 +1124,7 @@ void luaV_finishOp (lua_State *L) {
 
 
 void luaV_execute (lua_State *L, CallInfo *ci) {
+  const CallInfo *origci = ci;
   LClosure *cl;
   TValue *k;
   StkId base;
@@ -1611,7 +1612,13 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         if (b != 0)  /* fixed number of arguments? */
           L->top = ra + b;  /* top signals number of arguments */
         /* else previous instruction set top */
-        ProtectNT(luaD_call(L, ra, nresults));
+        savepc(L);  /* in case of errors */
+        if (luaD_precall(L, ra, nresults))
+          updatetrap(ci);  /* C call; nothing else to be done */
+        else {  /* Lua call: run function in this same invocation */
+          ci = L->ci;
+          goto tailcall;
+        }
         vmbreak;
       }
       vmcase(OP_TAILCALL) {
@@ -1637,12 +1644,12 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           checkstackGCp(L, 1, ra);
         }
         if (!ttisLclosure(s2v(ra))) {  /* C function? */
-          luaD_call(L, ra, LUA_MULTRET);  /* call it */
+          luaD_precall(L, ra, LUA_MULTRET);  /* call it */
           updatetrap(ci);
           updatestack(ci);  /* stack may have been relocated */
           ci->func -= delta;
           luaD_poscall(L, ci, cast_int(L->top - ra));
-          return;
+          goto ret;
         }
         ci->func -= delta;
         luaD_pretailcall(L, ci, ra, b);  /* prepare call frame */
@@ -1665,7 +1672,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           ci->func -= ci->u.l.nextraargs + nparams1;
         L->top = ra + n;  /* set call for 'luaD_poscall' */
         luaD_poscall(L, ci, n);
-        return;
+        goto ret;
       }
       vmcase(OP_RETURN0) {
         if (L->hookmask) {
@@ -1679,7 +1686,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           while (nres-- > 0)
             setnilvalue(s2v(L->top++));  /* all results are nil */
         }
-        return;
+        goto ret;
       }
       vmcase(OP_RETURN1) {
         if (L->hookmask) {
@@ -1698,7 +1705,13 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
               setnilvalue(s2v(L->top++));
           }
         }
-        return;
+       ret:
+        if (ci == origci)
+          return;
+        else {
+          ci = ci->previous;
+          goto tailcall;
+        }
       }
       vmcase(OP_FORLOOP) {
         if (ttisinteger(s2v(ra + 2))) {  /* integer loop? */

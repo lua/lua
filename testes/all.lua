@@ -127,8 +127,8 @@ else
   end
 
   Cstacklevel = function ()
-    local _, _, ncalls, nci = T.stacklevel()
-    return ncalls  + nci   -- number of free slots in the C stack
+    local _, _, ncalls = T.stacklevel()
+    return ncalls    -- number of C calls
   end
 end
 

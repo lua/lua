@@ -139,8 +139,7 @@ l_noret luaD_throw (lua_State *L, int errcode) {
 
 
 int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
-  global_State *g = G(L);
-  l_uint32 oldnCcalls = g->Cstacklimit - (L->nCcalls + L->nci);
+  l_uint32 oldnCcalls = L->nCcalls;
   struct lua_longjmp lj;
   lj.status = LUA_OK;
   lj.previous = L->errorJmp;  /* chain new error handler */
@@ -149,7 +148,7 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
     (*f)(L, ud);
   );
   L->errorJmp = lj.previous;  /* restore old error handler */
-  L->nCcalls = g->Cstacklimit - oldnCcalls - L->nci;
+  L->nCcalls = oldnCcalls;
   return lj.status;
 }
 
@@ -348,7 +347,7 @@ static StkId rethook (lua_State *L, CallInfo *ci, StkId firstres, int nres) {
 
 /*
 ** Check whether 'func' has a '__call' metafield. If so, put it in the
-** stack, below original 'func', so that 'luaD_call' can call it. Raise
+** stack, below original 'func', so that 'luaD_precall' can call it. Raise
 ** an error if there is no '__call' metafield.
 */
 void luaD_tryfuncTM (lua_State *L, StkId func) {
@@ -454,7 +453,7 @@ void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int narg1) {
 ** When returns, all the results are on the stack, starting at the original
 ** function position.
 */
-void luaD_call (lua_State *L, StkId func, int nresults) {
+int luaD_precall (lua_State *L, StkId func, int nresults) {
   lua_CFunction f;
  retry:
   switch (ttypetag(s2v(func))) {
@@ -482,7 +481,7 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
       lua_lock(L);
       api_checknelems(L, n);
       luaD_poscall(L, ci, n);
-      break;
+      return 1;
     }
     case LUA_VLCL: {  /* Lua function */
       CallInfo *ci;
@@ -501,8 +500,7 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
       for (; narg < nfixparams; narg++)
         setnilvalue(s2v(L->top++));  /* complete missing arguments */
       lua_assert(ci->top <= L->stack_last);
-      luaV_execute(L, ci);  /* run the function */
-      break;
+      return 0;
     }
     default: {  /* not a function */
       checkstackGCp(L, 1, func);  /* space for metamethod */
@@ -513,17 +511,32 @@ void luaD_call (lua_State *L, StkId func, int nresults) {
 }
 
 
+static void stackerror (lua_State *L) {
+  if (getCcalls(L) == LUAI_MAXCCALLS)
+    luaG_runerror(L, "C stack overflow");
+  else if (getCcalls(L) >= (LUAI_MAXCCALLS + (LUAI_MAXCCALLS>>3)))
+    luaD_throw(L, LUA_ERRERR);  /* error while handing stack error */
+}
+
+
+void luaD_call (lua_State *L, StkId func, int nResults) {
+  L->nCcalls++;
+  if (getCcalls(L) >= LUAI_MAXCCALLS)
+    stackerror(L);
+  if (!luaD_precall(L, func, nResults))  /* is a Lua function? */
+    luaV_execute(L, L->ci);  /* call it */
+  L->nCcalls--;
+}
+
+
+
 /*
 ** Similar to 'luaD_call', but does not allow yields during the call.
 */
 void luaD_callnoyield (lua_State *L, StkId func, int nResults) {
-  incXCcalls(L);
-  if (getCcalls(L) <= CSTACKERR) {  /* possible C stack overflow? */
-    luaE_exitCcall(L);  /* to compensate decrement in next call */
-    luaE_enterCcall(L);  /* check properly */
-  }
+  incnny(L);
   luaD_call(L, func, nResults);
-  decXCcalls(L);
+  decnny(L);
 }
 
 
@@ -638,7 +651,8 @@ static void resume (lua_State *L, void *ud) {
   StkId firstArg = L->top - n;  /* first argument */
   CallInfo *ci = L->ci;
   if (L->status == LUA_OK) {  /* starting a coroutine? */
-    luaD_call(L, firstArg - 1, LUA_MULTRET);
+    if (!luaD_precall(L, firstArg - 1, LUA_MULTRET))  /* Lua function? */
+      luaV_execute(L, L->ci);  /* call it */
   }
   else {  /* resuming from previous yield */
     lua_assert(L->status == LUA_YIELD);
@@ -670,11 +684,8 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
   }
   else if (L->status != LUA_YIELD)  /* ended with errors? */
     return resume_error(L, "cannot resume dead coroutine", nargs);
-  if (from == NULL)
-    L->nCcalls = CSTACKTHREAD;
-  else  /* correct 'nCcalls' for this thread */
-    L->nCcalls = getCcalls(from) - L->nci - CSTACKCF;
-  if (L->nCcalls <= CSTACKERR)
+  L->nCcalls = (from) ? getCcalls(from) + 1 : 1;
+  if (getCcalls(L) >= LUAI_MAXCCALLS)
     return resume_error(L, "C stack overflow", nargs);
   luai_userstateresume(L, nargs);
   api_checknelems(L, (L->status == LUA_OK) ? nargs + 1 : nargs);

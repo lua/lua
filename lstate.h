@@ -144,12 +144,6 @@
 /* Decrement the number of non-yieldable calls */
 #define decnny(L)	((L)->nCcalls -= 0x10000)
 
-/* Increment the number of non-yieldable calls and decrement nCcalls */
-#define incXCcalls(L)	((L)->nCcalls += 0x10000 - CSTACKCF)
-
-/* Decrement the number of non-yieldable calls and increment nCcalls */
-#define decXCcalls(L)	((L)->nCcalls -= 0x10000 - CSTACKCF)
-
 
 
 
@@ -389,7 +383,6 @@ LUAI_FUNC void luaE_freethread (lua_State *L, lua_State *L1);
 LUAI_FUNC CallInfo *luaE_extendCI (lua_State *L);
 LUAI_FUNC void luaE_freeCI (lua_State *L);
 LUAI_FUNC void luaE_shrinkCI (lua_State *L);
-LUAI_FUNC void luaE_enterCcall (lua_State *L);
 LUAI_FUNC void luaE_warning (lua_State *L, const char *msg, int tocont);
 LUAI_FUNC void luaE_warnerror (lua_State *L, const char *where);
 
