@@ -448,10 +448,11 @@ void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int narg1) {
 
 
 /*
-** Call a function (C or Lua). The function to be called is at *func.
-** The arguments are on the stack, right after the function.
-** When returns, all the results are on the stack, starting at the original
-** function position.
+** Prepares the call to a function (C or Lua). For C functions, also do
+** the call.  The function to be called is at '*func'.  The arguments are
+** on the stack, right after the function.  Returns true if the call was
+** made (it was a C function).  When returns true, all the results are
+** on the stack, starting at the original function position.
 */
 int luaD_precall (lua_State *L, StkId func, int nresults) {
   lua_CFunction f;
@@ -511,32 +512,34 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
 }
 
 
-static void stackerror (lua_State *L) {
-  if (getCcalls(L) == LUAI_MAXCCALLS)
-    luaG_runerror(L, "C stack overflow");
-  else if (getCcalls(L) >= (LUAI_MAXCCALLS + (LUAI_MAXCCALLS>>3)))
-    luaD_throw(L, LUA_ERRERR);  /* error while handing stack error */
-}
-
-
-void luaD_call (lua_State *L, StkId func, int nResults) {
-  L->nCcalls++;
+/*
+** Call a function (C or Lua). 'inc' can be 1 (increment number
+** of recursive invocations in the C stack) or nyci (the same plus
+** increment number of non-yieldable calls).
+*/
+static void docall (lua_State *L, StkId func, int nResults, int inc) {
+  L->nCcalls += inc;
   if (getCcalls(L) >= LUAI_MAXCCALLS)
-    stackerror(L);
+    luaE_checkcstack(L);
   if (!luaD_precall(L, func, nResults))  /* is a Lua function? */
     luaV_execute(L, L->ci);  /* call it */
-  L->nCcalls--;
+  L->nCcalls -= inc;
 }
 
+
+/*
+** External interface for 'docall'
+*/
+void luaD_call (lua_State *L, StkId func, int nResults) {
+  return docall(L, func, nResults, 1);
+}
 
 
 /*
 ** Similar to 'luaD_call', but does not allow yields during the call.
 */
 void luaD_callnoyield (lua_State *L, StkId func, int nResults) {
-  incnny(L);
-  luaD_call(L, func, nResults);
-  decnny(L);
+  return docall(L, func, nResults, nyci);
 }
 
 
@@ -650,13 +653,12 @@ static void resume (lua_State *L, void *ud) {
   int n = *(cast(int*, ud));  /* number of arguments */
   StkId firstArg = L->top - n;  /* first argument */
   CallInfo *ci = L->ci;
-  if (L->status == LUA_OK) {  /* starting a coroutine? */
-    if (!luaD_precall(L, firstArg - 1, LUA_MULTRET))  /* Lua function? */
-      luaV_execute(L, L->ci);  /* call it */
-  }
+  if (L->status == LUA_OK)  /* starting a coroutine? */
+    docall(L, firstArg - 1, LUA_MULTRET, 1);  /* just call its body */
   else {  /* resuming from previous yield */
     lua_assert(L->status == LUA_YIELD);
     L->status = LUA_OK;  /* mark that it is running (again) */
+    luaE_incCstack(L);  /* control the C stack */
     if (isLua(ci))  /* yielded inside a hook? */
       luaV_execute(L, ci);  /* just continue running Lua code */
     else {  /* 'common' yield */
@@ -684,9 +686,7 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
   }
   else if (L->status != LUA_YIELD)  /* ended with errors? */
     return resume_error(L, "cannot resume dead coroutine", nargs);
-  L->nCcalls = (from) ? getCcalls(from) + 1 : 1;
-  if (getCcalls(L) >= LUAI_MAXCCALLS)
-    return resume_error(L, "C stack overflow", nargs);
+  L->nCcalls = (from) ? getCcalls(from) : 0;
   luai_userstateresume(L, nargs);
   api_checknelems(L, (L->status == LUA_OK) ? nargs + 1 : nargs);
   status = luaD_rawrunprotected(L, resume, &nargs);

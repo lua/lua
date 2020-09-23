@@ -532,7 +532,8 @@ local function testrep (init, rep, close, repc, finalresult)
   end
   s = init .. string.rep(rep, 500)
   local res, msg = load(s)   -- 500 levels not ok
-  assert(not res and string.find(msg, "too many"))
+  assert(not res and (string.find(msg, "too many") or
+                      string.find(msg, "overflow")))
 end
 
 testrep("local a; a", ",a", "= 1", ",1")    -- multiple assignment

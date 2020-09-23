@@ -97,25 +97,8 @@ void luaE_setdebt (global_State *g, l_mem debt) {
 
 
 LUA_API int lua_setcstacklimit (lua_State *L, unsigned int limit) {
-  global_State *g = G(L);
-  int ccalls;
-  luaE_freeCI(L);  /* release unused CIs */
-  ccalls = getCcalls(L);
-  if (limit >= 40000)
-    return 0;  /* out of bounds */
-  limit += CSTACKERR;
-  if (L != g-> mainthread)
-    return 0;  /* only main thread can change the C stack */
-  else if (ccalls <= CSTACKERR)
-    return 0;  /* handling overflow */
-  else {
-    int diff = limit - g->Cstacklimit;
-    if (ccalls + diff <= CSTACKERR)
-      return 0;  /* new limit would cause an overflow */
-    g->Cstacklimit = limit;  /* set new limit */
-    L->nCcalls += diff;  /* correct 'nCcalls' */
-    return limit - diff - CSTACKERR;  /* success; return previous limit */
-  }
+  UNUSED(L); UNUSED(limit);
+  return LUAI_MAXCCALLS;  /* warning?? */
 }
 
 
@@ -169,6 +152,28 @@ void luaE_shrinkCI (lua_State *L) {
       ci = next2;  /* continue */
     }
   }
+}
+
+
+/*
+** Called when 'getCcalls(L)' larger or equal to LUAI_MAXCCALLS.
+** If equal, raises an overflow error. If value is larger than
+** LUAI_MAXCCALLS (which means it is handling an overflow) but
+** not much larger, does not report an error (to allow overflow
+** handling to work).
+*/
+void luaE_checkcstack (lua_State *L) {
+  if (getCcalls(L) == LUAI_MAXCCALLS)
+    luaG_runerror(L, "C stack overflow");
+  else if (getCcalls(L) >= (LUAI_MAXCCALLS / 10 * 11))
+    luaD_throw(L, LUA_ERRERR);  /* error while handing stack error */
+}
+
+
+LUAI_FUNC void luaE_incCstack (lua_State *L) {
+  L->nCcalls++;
+  if (getCcalls(L) >= LUAI_MAXCCALLS)
+    luaE_checkcstack(L);
 }
 
 
@@ -357,7 +362,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   preinit_thread(L, g);
   g->allgc = obj2gco(L);  /* by now, only object is the main thread */
   L->next = NULL;
-  g->Cstacklimit = L->nCcalls = 0;
+  L->nCcalls = 0;
   incnny(L);  /* main thread is always non yieldable */
   g->frealloc = f;
   g->ud = ud;

@@ -1124,7 +1124,7 @@ void luaV_finishOp (lua_State *L) {
 
 
 void luaV_execute (lua_State *L, CallInfo *ci) {
-  const CallInfo *origci = ci;
+  CallInfo * const origci = ci;
   LClosure *cl;
   TValue *k;
   StkId base;
@@ -1624,7 +1624,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       vmcase(OP_TAILCALL) {
         int b = GETARG_B(i);  /* number of arguments + 1 (function) */
         int nparams1 = GETARG_C(i);
-        /* delat is virtual 'func' - real 'func' (vararg functions) */
+        /* delta is virtual 'func' - real 'func' (vararg functions) */
         int delta = (nparams1) ? ci->u.l.nextraargs + nparams1 : 0;
         if (b != 0)
           L->top = ra + b;
@@ -1648,7 +1648,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           updatetrap(ci);
           updatestack(ci);  /* stack may have been relocated */
           ci->func -= delta;
-          luaD_poscall(L, ci, cast_int(L->top - ra));
+          luaD_poscall(L, ci, cast_int(L->top - ra));  /* finish caller */
           goto ret;
         }
         ci->func -= delta;

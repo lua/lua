@@ -2436,8 +2436,16 @@ When you interact with the Lua API,
 you are responsible for ensuring consistency.
 In particular,
 @emph{you are responsible for controlling stack overflow}.
-You can use the function @Lid{lua_checkstack}
-to ensure that the stack has enough space for pushing new elements.
+When you call any API function,
+you must ensure the stack has enough room to accommodate the results.
+
+There is one exception to the above rule:
+When you call a Lua function
+without a fixed number of results @seeF{lua_call},
+Lua ensures that the stack has enough space for all results.
+However, it does not ensure any extra space.
+So, before pushing anything on the stack after such a call
+you should use @Lid{lua_checkstack}.
 
 Whenever Lua calls C,
 it ensures that the stack has space for
@@ -2446,13 +2454,9 @@ that is, you can safely push up to @id{LUA_MINSTACK} values into it.
 @id{LUA_MINSTACK} is defined as 20,
 so that usually you do not have to worry about stack space
 unless your code has loops pushing elements onto the stack.
-
-When you call a Lua function
-without a fixed number of results @seeF{lua_call},
-Lua ensures that the stack has enough space for all results,
-but it does not ensure any extra space.
-So, before pushing anything on the stack after such a call
-you should use @Lid{lua_checkstack}.
+Whenever necessary,
+you can use the function @Lid{lua_checkstack}
+to ensure that the stack has enough space for pushing new elements.
 
 }
 
@@ -2695,7 +2699,7 @@ Therefore, if a @N{C function} @id{foo} calls an API function
 and this API function yields
 (directly or indirectly by calling another function that yields),
 Lua cannot return to @id{foo} any more,
-because the @id{longjmp} removes its frame from the C stack.
+because the @id{longjmp} removes its frame from the @N{C stack}.
 
 To avoid this kind of problem,
 Lua raises an error whenever it tries to yield across an API call,
@@ -2719,7 +2723,7 @@ After the thread resumes,
 it eventually will finish running the callee function.
 However,
 the callee function cannot return to the original function,
-because its frame in the C stack was destroyed by the yield.
+because its frame in the @N{C stack} was destroyed by the yield.
 Instead, Lua calls a @def{continuation function},
 which was given as an argument to the callee function.
 As the name implies,
@@ -2841,7 +2845,7 @@ and therefore may raise any errors.
 
 Converts the @x{acceptable index} @id{idx}
 into an equivalent @x{absolute index}
-(that is, one that does not depend on the stack top).
+(that is, one that does not depend on the stack size).
 
 }
 
@@ -4340,7 +4344,7 @@ as if it was already marked.
 Note that, both in case of errors and of a regular return,
 by the time the @idx{__close} metamethod runs,
 the @N{C stack} was already unwound,
-so that any automatic C variable declared in the calling function
+so that any automatic @N{C variable} declared in the calling function
 will be out of scope.
 
 }
@@ -4952,20 +4956,6 @@ Only count and line events can yield;
 to yield, a hook function must finish its execution
 calling @Lid{lua_yield} with @id{nresults} equal to zero
 (that is, with no values).
-
-}
-
-@APIEntry{int (lua_setcstacklimit) (lua_State *L, unsigned int limit);|
-@apii{0,0,-}
-
-Sets a new limit for the C stack.
-This limit controls how deeply nested calls can go in Lua,
-with the intent of avoiding a stack overflow.
-Returns the old limit in case of success,
-or zero in case of error.
-For more details about this function,
-see @Lid{debug.setcstacklimit},
-its equivalent in the standard library.
 
 }
 
@@ -8753,34 +8743,6 @@ represents variables with no known names
 Returns the @id{n}-th user value associated
 to the userdata @id{u} plus a boolean,
 @false if the userdata does not have that value.
-
-}
-
-@LibEntry{debug.setcstacklimit (limit)|
-
-Sets a new limit for the C stack.
-This limit controls how deeply nested calls can go in Lua,
-with the intent of avoiding a stack overflow.
-A limit too small restricts recursive calls pointlessly;
-a limit too large exposes the interpreter to stack-overflow crashes.
-Unfortunately, there is no way to know a priori
-the maximum safe limit for a platform.
-
-Each call made from Lua code counts one unit.
-Other operations (e.g., calls made from C to Lua or resuming a coroutine)
-may have a higher cost.
-
-This function has the following restrictions:
-@description{
-@item{It can only be called from the main coroutine (thread);}
-@item{It cannot be called while handling a stack-overflow error;}
-@item{@id{limit} must be less than 40000;}
-@item{@id{limit} cannot be less than the amount of C stack in use.}
-}
-If a call does not respect some restriction,
-it returns a false value.
-Otherwise,
-the call returns the old limit.
 
 }
 

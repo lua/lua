@@ -440,10 +440,7 @@ static int db_traceback (lua_State *L) {
 static int db_setcstacklimit (lua_State *L) {
   int limit = (int)luaL_checkinteger(L, 1);
   int res = lua_setcstacklimit(L, limit);
-  if (res == 0)
-    lua_pushboolean(L, 0);
-  else
-    lua_pushinteger(L, res);
+  lua_pushinteger(L, res);
   return 1;
 }
 
