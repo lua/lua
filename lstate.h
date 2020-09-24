@@ -183,14 +183,15 @@ typedef struct CallInfo {
 */
 #define CIST_OAH	(1<<0)	/* original value of 'allowhook' */
 #define CIST_C		(1<<1)	/* call is running a C function */
-#define CIST_HOOKED	(1<<2)	/* call is running a debug hook */
-#define CIST_YPCALL	(1<<3)	/* call is a yieldable protected call */
-#define CIST_TAIL	(1<<4)	/* call was tail called */
-#define CIST_HOOKYIELD	(1<<5)	/* last hook called yielded */
-#define CIST_FIN	(1<<6)  /* call is running a finalizer */
-#define CIST_TRAN	(1<<7)	/* 'ci' has transfer information */
+#define CIST_FRESH	(1<<2)  /* call is on a fresh "luaV_execute" frame */
+#define CIST_HOOKED	(1<<3)	/* call is running a debug hook */
+#define CIST_YPCALL	(1<<4)	/* call is a yieldable protected call */
+#define CIST_TAIL	(1<<5)	/* call was tail called */
+#define CIST_HOOKYIELD	(1<<6)	/* last hook called yielded */
+#define CIST_FIN	(1<<7)  /* call is running a finalizer */
+#define CIST_TRAN	(1<<8)	/* 'ci' has transfer information */
 #if defined(LUA_COMPAT_LT_LE)
-#define CIST_LEQ	(1<<8)  /* using __lt for __le */
+#define CIST_LEQ	(1<<9)  /* using __lt for __le */
 #endif
 
 /* active function is a Lua function */

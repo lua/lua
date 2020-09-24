@@ -1124,7 +1124,6 @@ void luaV_finishOp (lua_State *L) {
 
 
 void luaV_execute (lua_State *L, CallInfo *ci) {
-  CallInfo * const origci = ci;
   LClosure *cl;
   TValue *k;
   StkId base;
@@ -1133,7 +1132,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
 #if LUA_USE_JUMPTABLE
 #include "ljumptab.h"
 #endif
- tailcall:
+ execute:
   trap = L->hookmask;
   cl = clLvalue(s2v(ci->func));
   k = cl->p->k;
@@ -1607,17 +1606,19 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_CALL) {
+        CallInfo *newci;
         int b = GETARG_B(i);
         int nresults = GETARG_C(i) - 1;
         if (b != 0)  /* fixed number of arguments? */
           L->top = ra + b;  /* top signals number of arguments */
         /* else previous instruction set top */
         savepc(L);  /* in case of errors */
-        if (luaD_precall(L, ra, nresults))
+        if ((newci = luaD_precall(L, ra, nresults)) == NULL)
           updatetrap(ci);  /* C call; nothing else to be done */
         else {  /* Lua call: run function in this same invocation */
-          ci = L->ci;
-          goto tailcall;
+          ci = newci;
+          ci->callstatus = 0;  /* call re-uses 'luaV_execute' */
+          goto execute;
         }
         vmbreak;
       }
@@ -1647,13 +1648,13 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           luaD_precall(L, ra, LUA_MULTRET);  /* call it */
           updatetrap(ci);
           updatestack(ci);  /* stack may have been relocated */
-          ci->func -= delta;
+          ci->func -= delta;  /* restore 'func' (if vararg) */
           luaD_poscall(L, ci, cast_int(L->top - ra));  /* finish caller */
-          goto ret;
+          goto ret;  /* caller returns after the tail call */
         }
-        ci->func -= delta;
+        ci->func -= delta;  /* restore 'func' (if vararg) */
         luaD_pretailcall(L, ci, ra, b);  /* prepare call frame */
-        goto tailcall;
+        goto execute;  /* execute the callee */
       }
       vmcase(OP_RETURN) {
         int n = GETARG_B(i) - 1;  /* number of results */
@@ -1706,11 +1707,11 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           }
         }
        ret:
-        if (ci == origci)
-          return;
+        if (ci->callstatus & CIST_FRESH)
+          return;  /* end this frame */
         else {
           ci = ci->previous;
-          goto tailcall;
+          goto execute;  /* continue running caller in this frame */
         }
       }
       vmcase(OP_FORLOOP) {

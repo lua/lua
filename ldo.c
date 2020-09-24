@@ -449,12 +449,13 @@ void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int narg1) {
 
 /*
 ** Prepares the call to a function (C or Lua). For C functions, also do
-** the call.  The function to be called is at '*func'.  The arguments are
-** on the stack, right after the function.  Returns true if the call was
-** made (it was a C function).  When returns true, all the results are
-** on the stack, starting at the original function position.
+** the call. The function to be called is at '*func'.  The arguments
+** are on the stack, right after the function.  Returns the CallInfo
+** to be executed, if it was a Lua function. Otherwise (a C function)
+** returns NULL, with all the results on the stack, starting at the
+** original function position.
 */
-int luaD_precall (lua_State *L, StkId func, int nresults) {
+CallInfo *luaD_precall (lua_State *L, StkId func, int nresults) {
   lua_CFunction f;
  retry:
   switch (ttypetag(s2v(func))) {
@@ -482,7 +483,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       lua_lock(L);
       api_checknelems(L, n);
       luaD_poscall(L, ci, n);
-      return 1;
+      return NULL;
     }
     case LUA_VLCL: {  /* Lua function */
       CallInfo *ci;
@@ -494,14 +495,13 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       L->ci = ci = next_ci(L);
       ci->nresults = nresults;
       ci->u.l.savedpc = p->code;  /* starting point */
-      ci->callstatus = 0;
       ci->top = func + 1 + fsize;
       ci->func = func;
       L->ci = ci;
       for (; narg < nfixparams; narg++)
         setnilvalue(s2v(L->top++));  /* complete missing arguments */
       lua_assert(ci->top <= L->stack_last);
-      return 0;
+      return ci;
     }
     default: {  /* not a function */
       checkstackGCp(L, 1, func);  /* space for metamethod */
@@ -518,11 +518,14 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
 ** increment number of non-yieldable calls).
 */
 static void docall (lua_State *L, StkId func, int nResults, int inc) {
+  CallInfo *ci;
   L->nCcalls += inc;
-  if (getCcalls(L) >= LUAI_MAXCCALLS)
+  if (unlikely(getCcalls(L) >= LUAI_MAXCCALLS))
     luaE_checkcstack(L);
-  if (!luaD_precall(L, func, nResults))  /* is a Lua function? */
-    luaV_execute(L, L->ci);  /* call it */
+  if ((ci = luaD_precall(L, func, nResults)) != NULL) {  /* Lua function? */
+    ci->callstatus = CIST_FRESH;  /* mark that it is a "fresh" execute */
+    luaV_execute(L, ci);  /* call it */
+  }
   L->nCcalls -= inc;
 }
 
