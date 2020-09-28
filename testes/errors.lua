@@ -386,25 +386,33 @@ if not _soft then
   collectgarbage()
   print"testing stack overflow"
   C = 0
-  local l = debug.getinfo(1, "l").currentline; function y () C=C+1; y() end
+  -- get line where stack overflow will happen
+  local l = debug.getinfo(1, "l").currentline + 1
+  local function auxy () C=C+1; auxy() end     -- produce a stack overflow
+  function y ()
+    collectgarbage("stop")   -- avoid running finalizers without stack space
+    auxy()
+    collectgarbage("restart")
+  end
 
   local function checkstackmessage (m)
+    print("(expected stack overflow after " .. C .. " calls)")
+    C = 0    -- prepare next count
     return (string.find(m, "stack overflow"))
   end
   -- repeated stack overflows (to check stack recovery)
   assert(checkstackmessage(doit('y()')))
-  print('+')
   assert(checkstackmessage(doit('y()')))
-  print('+')
   assert(checkstackmessage(doit('y()')))
-  print('+')
 
 
   -- error lines in stack overflow
-  C = 0
   local l1
   local function g(x)
-    l1 = debug.getinfo(x, "l").currentline; y()
+    l1 = debug.getinfo(x, "l").currentline + 2
+    collectgarbage("stop")   -- avoid running finalizers without stack space
+    auxy()
+    collectgarbage("restart")
   end
   local _, stackmsg = xpcall(g, debug.traceback, 1)
   print('+')
