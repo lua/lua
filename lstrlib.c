@@ -1738,7 +1738,7 @@ static int str_unpack (lua_State *L) {
         break;
       }
       case Kzstr: {
-        size_t len = (int)strlen(data + pos);
+        size_t len = strlen(data + pos);
         luaL_argcheck(L, pos + len < ld, 2,
                          "unfinished string for format 'z'");
         lua_pushlstring(L, data + pos, len);
