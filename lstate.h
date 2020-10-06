@@ -127,11 +127,19 @@ struct lua_longjmp;  /* defined in ldo.c */
 #endif
 
 
-/* extra stack space to handle TM calls and some other extras */
+/*
+** Extra stack space to handle TM calls and some other extras. This
+** space is not included in 'stack_last'. It is used only to avoid stack
+** checks, either because the element will be promptly popped or because
+** there will be a stack check soon after the push. Function frames
+** never use this extra space, so it does not need to be kept clean.
+*/
 #define EXTRA_STACK   5
 
 
 #define BASIC_STACK_SIZE        (2*LUA_MINSTACK)
+
+#define stacksize(th)	cast_int((th)->stack_last - (th)->stack)
 
 
 /* kinds of Garbage Collection */
@@ -270,7 +278,7 @@ struct lua_State {
   StkId top;  /* first free slot in the stack */
   global_State *l_G;
   CallInfo *ci;  /* call info for current function */
-  StkId stack_last;  /* last free slot in the stack */
+  StkId stack_last;  /* end of stack (last element + 1) */
   StkId stack;  /* stack base */
   UpVal *openupval;  /* list of open upvalues in this stack */
   GCObject *gclist;
@@ -281,7 +289,6 @@ struct lua_State {
   ptrdiff_t errfunc;  /* current error handling function (stack index) */
   l_uint32 nCcalls;  /* number of nested (non-yieldable | C)  calls */
   int oldpc;  /* last pc traced */
-  int stacksize;
   int basehookcount;
   int hookcount;
   volatile l_signalT hookmask;

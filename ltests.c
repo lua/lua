@@ -430,17 +430,17 @@ static void checkstack (global_State *g, lua_State *L1) {
   UpVal *uv;
   lua_assert(!isdead(g, L1));
   if (L1->stack == NULL) {  /* incomplete thread? */
-    lua_assert(L1->stacksize == 0 && L1->openupval == NULL &&
-               L1->ci == NULL);
+    lua_assert(L1->openupval == NULL && L1->ci == NULL);
     return;
   }
   for (uv = L1->openupval; uv != NULL; uv = uv->u.open.next)
     lua_assert(upisopen(uv));  /* must be open */
+  lua_assert(L1->top <= L1->stack_last);
   for (ci = L1->ci; ci != NULL; ci = ci->previous) {
     lua_assert(ci->top <= L1->stack_last);
     lua_assert(lua_checkpc(ci));
   }
-  for (o = L1->stack; o < L1->stack_last + EXTRA_STACK; o++)
+  for (o = L1->stack; o < L1->stack_last; o++)
     checkliveness(L1, s2v(o));  /* entire stack must have valid values */
 }
 
@@ -969,7 +969,7 @@ static int hash_query (lua_State *L) {
 static int stacklevel (lua_State *L) {
   unsigned long a = 0;
   lua_pushinteger(L, (L->top - L->stack));
-  lua_pushinteger(L, (L->stack_last - L->stack));
+  lua_pushinteger(L, stacksize(L));
   lua_pushinteger(L, L->nCcalls);
   lua_pushinteger(L, L->nci);
   lua_pushinteger(L, (unsigned long)&a);

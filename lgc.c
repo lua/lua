@@ -633,8 +633,7 @@ static int traversethread (global_State *g, lua_State *th) {
   for (uv = th->openupval; uv != NULL; uv = uv->u.open.next)
     markobject(g, uv);  /* open upvalues cannot be collected */
   if (g->gcstate == GCSatomic) {  /* final traversal? */
-    StkId lim = th->stack + th->stacksize;  /* real end of stack */
-    for (; o < lim; o++)  /* clear not-marked stack slice */
+    for (; o < th->stack_last; o++)  /* clear not-marked stack slice */
       setnilvalue(s2v(o));
     /* 'remarkupvals' may have removed thread from 'twups' list */
     if (!isintwups(th) && th->openupval != NULL) {
@@ -644,7 +643,7 @@ static int traversethread (global_State *g, lua_State *th) {
   }
   else if (!g->gcemergency)
     luaD_shrinkstack(th); /* do not change stack in emergency cycle */
-  return 1 + th->stacksize;
+  return 1 + stacksize(th);
 }
 
 

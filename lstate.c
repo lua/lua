@@ -180,12 +180,11 @@ LUAI_FUNC void luaE_incCstack (lua_State *L) {
 static void stack_init (lua_State *L1, lua_State *L) {
   int i; CallInfo *ci;
   /* initialize stack array */
-  L1->stack = luaM_newvector(L, BASIC_STACK_SIZE, StackValue);
-  L1->stacksize = BASIC_STACK_SIZE;
+  L1->stack = luaM_newvector(L, BASIC_STACK_SIZE + EXTRA_STACK, StackValue);
   for (i = 0; i < BASIC_STACK_SIZE; i++)
     setnilvalue(s2v(L1->stack + i));  /* erase new stack */
   L1->top = L1->stack;
-  L1->stack_last = L1->stack + L1->stacksize - EXTRA_STACK;
+  L1->stack_last = L1->stack + BASIC_STACK_SIZE;
   /* initialize first ci */
   ci = &L1->base_ci;
   ci->next = ci->previous = NULL;
@@ -206,7 +205,7 @@ static void freestack (lua_State *L) {
   L->ci = &L->base_ci;  /* free the entire 'ci' list */
   luaE_freeCI(L);
   lua_assert(L->nci == 0);
-  luaM_freearray(L, L->stack, L->stacksize);  /* free stack array */
+  luaM_freearray(L, L->stack, stacksize(L) + EXTRA_STACK);  /* free stack */
 }
 
 
@@ -256,7 +255,6 @@ static void preinit_thread (lua_State *L, global_State *g) {
   L->stack = NULL;
   L->ci = NULL;
   L->nci = 0;
-  L->stacksize = 0;
   L->twups = L;  /* thread has no upvalues */
   L->errorJmp = NULL;
   L->hook = NULL;
