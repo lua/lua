@@ -207,50 +207,72 @@ int luaD_reallocstack (lua_State *L, int newsize, int raiseerror) {
 */
 int luaD_growstack (lua_State *L, int n, int raiseerror) {
   int size = L->stacksize;
-  int newsize = 2 * size;  /* tentative new size */
-  if (unlikely(size > LUAI_MAXSTACK)) {  /* need more space after extra size? */
+  if (unlikely(size > LUAI_MAXSTACK)) {
+    /* if stack is larger than maximum, thread is already using the
+       extra space reserved for errors, that is, thread is handling
+       a stack error; cannot grow further than that. */
+    lua_assert(L->stacksize == ERRORSTACKSIZE);
     if (raiseerror)
       luaD_throw(L, LUA_ERRERR);  /* error inside message handler */
-    else return 0;
+    return 0;  /* if not 'raiseerror', just signal it */
   }
   else {
+    int newsize = 2 * size;  /* tentative new size */
     int needed = cast_int(L->top - L->stack) + n + EXTRA_STACK;
     if (newsize > LUAI_MAXSTACK)  /* cannot cross the limit */
       newsize = LUAI_MAXSTACK;
     if (newsize < needed)  /* but must respect what was asked for */
       newsize = needed;
-    if (unlikely(newsize > LUAI_MAXSTACK)) {  /* stack overflow? */
+    if (likely(newsize <= LUAI_MAXSTACK))
+      return luaD_reallocstack(L, newsize, raiseerror);
+    else {  /* stack overflow */
       /* add extra size to be able to handle the error message */
       luaD_reallocstack(L, ERRORSTACKSIZE, raiseerror);
       if (raiseerror)
         luaG_runerror(L, "stack overflow");
-      else return 0;
+      return 0;
     }
-  }  /* else no errors */
-  return luaD_reallocstack(L, newsize, raiseerror);
+  }
 }
 
 
 static int stackinuse (lua_State *L) {
   CallInfo *ci;
+  int res;
   StkId lim = L->top;
   for (ci = L->ci; ci != NULL; ci = ci->previous) {
     if (lim < ci->top) lim = ci->top;
   }
   lua_assert(lim <= L->stack_last);
-  return cast_int(lim - L->stack) + 1;  /* part of stack in use */
+  res = cast_int(lim - L->stack) + 1;  /* part of stack in use */
+  if (res < LUA_MINSTACK)
+    res = LUA_MINSTACK;  /* ensure a minimum size */
+  return res;
 }
 
 
+/*
+** If stack size is more than 3 times the current use, reduce that size
+** to twice the current use. (So, the final stack size is at most 2/3 the
+** previous size, and half of its entries are empty.)
+** As a particular case, if stack was handling a stack overflow and now
+** it is not, 'max' (limited by LUAI_MAXSTACK) will be smaller than
+** 'stacksize' (equal to ERRORSTACKSIZE in this case), and so the stack
+** will be reduced to a "regular" size.
+*/
 void luaD_shrinkstack (lua_State *L) {
   int inuse = stackinuse(L);
-  int goodsize = inuse + BASIC_STACK_SIZE;
-  if (goodsize > LUAI_MAXSTACK)
-    goodsize = LUAI_MAXSTACK;  /* respect stack limit */
+  int nsize = inuse * 2;  /* proposed new size */
+  int max = inuse * 3;  /* maximum "reasonable" size */
+  if (max > LUAI_MAXSTACK) {
+    max = LUAI_MAXSTACK;  /* respect stack limit */
+    if (nsize > LUAI_MAXSTACK)
+      nsize = LUAI_MAXSTACK;
+  }
   /* if thread is currently not handling a stack overflow and its
-     good size is smaller than current size, shrink its stack */
-  if (inuse <= (LUAI_MAXSTACK - EXTRA_STACK) && goodsize < L->stacksize)
-    luaD_reallocstack(L, goodsize, 0);  /* ok if that fails */
+     size is larger than maximum "reasonable" size, shrink it */
+  if (inuse <= (LUAI_MAXSTACK - EXTRA_STACK) && L->stacksize > max)
+    luaD_reallocstack(L, nsize, 0);  /* ok if that fails */
   else  /* don't change stack */
     condmovestack(L,{},{});  /* (change only for debugging) */
   luaE_shrinkCI(L);  /* shrink CI list */
@@ -625,7 +647,7 @@ static int recover (lua_State *L, int status) {
   luaD_seterrorobj(L, status, oldtop);
   L->ci = ci;
   L->allowhook = getoah(ci->callstatus);  /* restore original 'allowhook' */
-  luaD_shrinkstack(L);
+  luaD_shrinkstack(L);   /* restore stack size in case of overflow */
   L->errfunc = ci->u.c.old_errfunc;
   return 1;  /* continue running the coroutine */
 }
@@ -768,7 +790,7 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
     status = luaF_close(L, oldtop, status);
     oldtop = restorestack(L, old_top);  /* previous call may change stack */
     luaD_seterrorobj(L, status, oldtop);
-    luaD_shrinkstack(L);
+    luaD_shrinkstack(L);   /* restore stack size in case of overflow */
   }
   L->errfunc = old_errfunc;
   return status;

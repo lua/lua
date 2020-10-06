@@ -2,7 +2,7 @@
 -- See Copyright Notice in file all.lua
 
 
-print"testing C-stack overflow detection"
+print"testing stack overflow detection"
 
 -- Segmentation faults in these tests probably result from a C-stack
 -- overflow. To avoid these errors, you should set a smaller limit for
@@ -96,6 +96,54 @@ do
   f()
   assert(not pcall(f))
   print("final count: ", count)
+end
+
+
+if T then
+  print("testing stack recovery")
+  local N = 0      -- trace number of calls
+  local LIM = -1   -- will store N just before stack overflow
+
+  -- trace stack size; after stack overflow, it should be
+  -- the maximum allowed stack size.
+  local stack1
+  local dummy
+
+  local function err(msg)
+    assert(string.find(msg, "stack overflow"))
+    local _, stacknow = T.stacklevel()
+    assert(stacknow == stack1 + 200)
+  end
+
+  -- When LIM==-1, the 'if' is not executed, so this function only
+  -- counts and stores the stack limits up to overflow.  Then, LIM
+  -- becomes N, and then the 'if' code is run when the stack is
+  -- full. Then, there is a stack overflow inside 'xpcall', after which
+  -- the stack must have been restored back to its maximum normal size.
+  local function f()
+    dummy, stack1 = T.stacklevel()
+    if N == LIM then
+      xpcall(f, err)
+      local _, stacknow = T.stacklevel()
+      assert(stacknow == stack1)
+      return
+    end
+    N = N + 1
+    f()
+  end
+
+  local topB, sizeB   -- top and size Before overflow
+  local topA, sizeA   -- top and size After overflow
+  topB, sizeB = T.stacklevel()
+  xpcall(f, err)
+  topA, sizeA = T.stacklevel()
+  -- sizes should be comparable
+  assert(topA == topB and sizeA < sizeB * 2)
+  print(string.format("maximum stack size: %d", stack1))
+  LIM = N      -- will stop recursion at maximum level
+  N = 0        -- to count again
+  f()
+  print"+"
 end
 
 print'OK'
