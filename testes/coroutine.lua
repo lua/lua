@@ -124,6 +124,11 @@ x, a = nil
 
 
 -- coroutine closing
+
+local function func2close (f)
+  return setmetatable({}, {__close = f})
+end
+
 do
   -- ok to close a dead coroutine
   local co = coroutine.create(print)
@@ -145,10 +150,6 @@ do
 
   -- to-be-closed variables in coroutines
   local X
-
-  local function func2close (f)
-    return setmetatable({}, {__close = f})
-  end
 
   co = coroutine.create(function ()
     local x <close> = func2close(function (self, err)
@@ -190,6 +191,23 @@ do
   assert(st == false and coroutine.status(co) == "dead" and msg == 111)
   assert(x == 200)
 
+end
+
+do
+  -- <close> versus pcall in coroutines
+  local X = false
+  local Y = false
+  function foo ()
+    local x <close> = func2close(function (self, err)
+      Y = debug.getinfo(2)
+      X = err
+    end)
+    error(43)
+  end
+  co = coroutine.create(function () return pcall(foo) end)
+  local st1, st2, err = coroutine.resume(co)
+  assert(st1 and not st2 and err == 43)
+  assert(X == 43 and Y.name == "pcall")
 end
 
 
