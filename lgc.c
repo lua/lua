@@ -301,7 +301,7 @@ static void reallymarkobject (global_State *g, GCObject *o) {
       if (upisopen(uv))
         set2gray(uv);  /* open upvalues are kept gray */
       else
-        set2black(o);  /* closed upvalues are visited here */
+        set2black(uv);  /* closed upvalues are visited here */
       markvalue(g, uv->v);  /* mark its content */
       break;
     }
@@ -309,7 +309,7 @@ static void reallymarkobject (global_State *g, GCObject *o) {
       Udata *u = gco2u(o);
       if (u->nuvalue == 0) {  /* no user values? */
         markobjectN(g, u->metatable);  /* mark its metatable */
-        set2black(o);  /* nothing else to mark */
+        set2black(u);  /* nothing else to mark */
         break;
       }
       /* else... */
@@ -770,12 +770,16 @@ static void freeobj (lua_State *L, GCObject *o) {
     case LUA_VUPVAL:
       freeupval(L, gco2upv(o));
       break;
-    case LUA_VLCL:
-      luaM_freemem(L, o, sizeLclosure(gco2lcl(o)->nupvalues));
+    case LUA_VLCL: {
+      LClosure *cl = gco2lcl(o);
+      luaM_freemem(L, cl, sizeLclosure(cl->nupvalues));
       break;
-    case LUA_VCCL:
-      luaM_freemem(L, o, sizeCclosure(gco2ccl(o)->nupvalues));
+    }
+    case LUA_VCCL: {
+      CClosure *cl = gco2ccl(o);
+      luaM_freemem(L, cl, sizeCclosure(cl->nupvalues));
       break;
+    }
     case LUA_VTABLE:
       luaH_free(L, gco2t(o));
       break;
@@ -787,13 +791,17 @@ static void freeobj (lua_State *L, GCObject *o) {
       luaM_freemem(L, o, sizeudata(u->nuvalue, u->len));
       break;
     }
-    case LUA_VSHRSTR:
-      luaS_remove(L, gco2ts(o));  /* remove it from hash table */
-      luaM_freemem(L, o, sizelstring(gco2ts(o)->shrlen));
+    case LUA_VSHRSTR: {
+      TString *ts = gco2ts(o);
+      luaS_remove(L, ts);  /* remove it from hash table */
+      luaM_freemem(L, ts, sizelstring(ts->shrlen));
       break;
-    case LUA_VLNGSTR:
-      luaM_freemem(L, o, sizelstring(gco2ts(o)->u.lnglen));
+    }
+    case LUA_VLNGSTR: {
+      TString *ts = gco2ts(o);
+      luaM_freemem(L, ts, sizelstring(ts->u.lnglen));
       break;
+    }
     default: lua_assert(0);
   }
 }

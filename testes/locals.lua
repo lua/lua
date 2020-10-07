@@ -246,6 +246,11 @@ do
 
   X = false
   foo = function (x)
+    local _<close> = func2close(function ()
+      -- without errors, enclosing function should be still active when
+      -- __close is called
+      assert(debug.getinfo(2).name == "foo")
+    end)
     local  _<close> = closescope
     local y = 15
     return y
@@ -343,6 +348,18 @@ local function endwarn ()
 end
 
 
+-- errors inside __close can generate a warning instead of an
+-- error. This new 'assert' force them to appear.
+local function assert(cond, msg)
+  if not cond then
+    local line = debug.getinfo(2).currentline or "?"
+    msg = string.format("assertion failed! line %d (%s)\n", line, msg or "")
+    io.stderr:write(msg)
+    os.exit(1)
+  end
+end
+
+
 local function checkwarn (msg)
   if T then
     assert(string.find(_WARN, msg))
@@ -406,11 +423,15 @@ do print("testing errors in __close")
 
     local x <close> =
       func2close(function (self, msg)
+        -- after error, 'foo' was discarded, so caller now
+        -- must be 'pcall'
+        assert(debug.getinfo(2).name == "pcall")
         assert(msg == 4)
       end)
 
     local x1 <close> =
       func2close(function (self, msg)
+        assert(debug.getinfo(2).name == "pcall")
         checkwarn("@y")
         assert(msg == 4)
         error("@x1")
@@ -420,6 +441,7 @@ do print("testing errors in __close")
 
     local y <close> =
       func2close(function (self, msg)
+        assert(debug.getinfo(2).name == "pcall")
         assert(msg == 4)   -- error in body
         checkwarn("@z")
         error("@y")
@@ -428,6 +450,7 @@ do print("testing errors in __close")
     local first = true
     local z <close> =
       func2close(function (self, msg)
+        assert(debug.getinfo(2).name == "pcall")
         -- 'z' close is called once
         assert(first and msg == 4)
         first = false
