@@ -523,7 +523,6 @@ static lu_mem checkgraylist (global_State *g, GCObject *o) {
   ((void)g);  /* better to keep it available if we need to print an object */
   while (o) {
     lua_assert(!!isgray(o) ^ (getage(o) == G_TOUCHED2));
-    //lua_assert(isgray(o) || getage(o) == G_TOUCHED2);
     lua_assert(!testbit(o->marked, TESTBIT));
     if (keepinvariant(g))
       l_setbit(o->marked, TESTBIT);  /* mark that object is in a gray list */

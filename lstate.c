@@ -76,7 +76,7 @@ static unsigned int luai_makeseed (lua_State *L) {
   addbuff(buff, p, &h);  /* local variable */
   addbuff(buff, p, &lua_newstate);  /* public function */
   lua_assert(p == sizeof(buff));
-  return luaS_hash(buff, p, h, 1);
+  return luaS_hash(buff, p, h);
 }
 
 #endif
