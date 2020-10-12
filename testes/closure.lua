@@ -242,7 +242,7 @@ end
 
 assert(debug.upvalueid(foo1, 1))
 assert(debug.upvalueid(foo1, 2))
-assert(not pcall(debug.upvalueid, foo1, 3))
+assert(not debug.upvalueid(foo1, 3))
 assert(debug.upvalueid(foo1, 1) == debug.upvalueid(foo2, 2))
 assert(debug.upvalueid(foo1, 2) == debug.upvalueid(foo2, 1))
 assert(debug.upvalueid(foo3, 1))
