@@ -161,18 +161,17 @@ static void linkgclist_ (GCObject *o, GCObject **pnext, GCObject **list) {
 
 
 /*
-** Clear keys for empty entries in tables. If entry is empty
-** and its key is not marked, mark its entry as dead. This allows the
-** collection of the key, but keeps its entry in the table (its removal
-** could break a chain). The main feature of a dead key is that it must
-** be different from any other value, to do not disturb searches.
-** Other places never manipulate dead keys, because its associated empty
-** value is enough to signal that the entry is logically empty.
+** Clear keys for empty entries in tables. If entry is empty, mark its
+** entry as dead. This allows the collection of the key, but keeps its
+** entry in the table: its removal could break a chain and could break
+** a table traversal.  Other places never manipulate dead keys, because
+** its associated empty value is enough to signal that the entry is
+** logically empty.
 */
 static void clearkey (Node *n) {
   lua_assert(isempty(gval(n)));
-  if (keyiswhite(n))
-    setdeadkey(n);  /* unused and unmarked key; remove it */
+  if (keyiscollectable(n))
+    setdeadkey(n);  /* unused key; remove it */
 }
 
 
