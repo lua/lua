@@ -119,6 +119,16 @@ else
 end
 ]], {2,3,4,7})
 
+test([[
+local function foo()
+end
+foo()
+A = 1
+A = 2
+A = 3
+]], {2, 3, 2, 4, 5, 6})
+
+
 test([[--
 if nil then
   a=1
