@@ -287,6 +287,33 @@ RUN([[lua "-e_PROMPT='%s'" -i < %s > %s]], prompt, prog, out)
 local t = getoutput()
 assert(string.find(t, prompt .. ".*" .. prompt .. ".*" .. prompt))
 
+-- using the prompt default
+prepfile[[ --
+a = 2
+]]
+RUN([[lua -i < %s > %s]], prog, out)
+local t = getoutput()
+prompt = "> "    -- the default
+assert(string.find(t, prompt .. ".*" .. prompt .. ".*" .. prompt))
+
+
+-- non-string prompt
+prompt =
+  "local C = 0;\z
+   _PROMPT=setmetatable({},{__tostring = function () \z
+     C = C + 1; return C end})"
+prepfile[[ --
+a = 2
+]]
+RUN([[lua -e "%s" -i < %s > %s]], prompt, prog, out)
+local t = getoutput()
+assert(string.find(t, [[
+1 --
+2a = 2
+3
+]], 1, true))
+
+
 -- test for error objects
 prepfile[[
 debug = require "debug"
