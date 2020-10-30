@@ -2516,7 +2516,8 @@ Lua's garbage collection can free or move internal memory
 and then invalidate pointers to internal strings.
 To allow a safe use of these pointers,
 The API guarantees that any pointer to a string in a stack index
-is valid while the value at that index is neither modified nor popped.
+is valid while the string value at that index is not removed from the stack.
+(It can be moved to another index, though.)
 When the index is a pseudo-index (referring to an upvalue),
 the pointer is valid while the corresponding call is active and
 the corresponding upvalue is not modified.
@@ -3744,9 +3745,12 @@ except that it allows the called function to yield @see{continuations}.
 }
 
 @APIEntry{void lua_pop (lua_State *L, int n);|
-@apii{n,0,-}
+@apii{n,0,e}
 
 Pops @id{n} elements from the stack.
+
+This function can run arbitrary code when removing an index
+marked as to-be-closed from the stack.
 
 }
 
@@ -4227,13 +4231,16 @@ for the @Q{newindex} event @see{metatable}.
 }
 
 @APIEntry{void lua_settop (lua_State *L, int index);|
-@apii{?,?,-}
+@apii{?,?,e}
 
 Accepts any index, @N{or 0},
 and sets the stack top to this index.
 If the new top is greater than the old one,
 then the new elements are filled with @nil.
 If @id{index} @N{is 0}, then all stack elements are removed.
+
+This function can run arbitrary code when removing an index
+marked as to-be-closed from the stack.
 
 }
 
