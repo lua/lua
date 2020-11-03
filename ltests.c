@@ -863,7 +863,7 @@ static int alloc_failnext (lua_State *L) {
   l_memcontrol.failnext = 1;
   return 0;
 }
-  
+
 
 static int settrick (lua_State *L) {
   if (ttisnil(obj_at(L, 1)))
