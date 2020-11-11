@@ -392,28 +392,6 @@ check(function (a, b)
       end,
 'TEST', 'JMP', 'TEST', 'JMP', 'ADDI', 'MMBINI', 'JMP', 'RETURN0')
 
-checkequal(
-function (a) while a < 10 do a = a + 1 end end,
-function (a)
-  ::loop::
-  if not (a < 10) then goto exit end
-  a = a + 1
-  goto loop
-::exit::
-end
-)
-
-checkequal(
-function (a) repeat local x = a + 1; a = x until a > 0 end,
-function (a)
-  ::loop:: do
-    local x = a + 1
-    a = x
-  end
-  if not (a > 0) then goto loop end
-end
-)
-
 checkequal(function () return 6 or true or nil end,
            function () return k6 or kTrue or kNil end)
 
