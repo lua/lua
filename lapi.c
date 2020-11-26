@@ -629,11 +629,21 @@ static int auxgetstr (lua_State *L, const TValue *t, const char *k) {
 }
 
 
+/*
+** Get the global table in the registry. Since all predefined
+** indices in the registry were inserted right when the registry
+** was created and never removed, they must always be in the array
+** part of the registry.
+*/
+#define getGtable(L)  \
+	(&hvalue(&G(L)->l_registry)->array[LUA_RIDX_GLOBALS - 1])
+
+
 LUA_API int lua_getglobal (lua_State *L, const char *name) {
-  Table *reg;
+  const TValue *G;
   lua_lock(L);
-  reg = hvalue(&G(L)->l_registry);
-  return auxgetstr(L, luaH_getint(reg, LUA_RIDX_GLOBALS), name);
+  G = getGtable(L);
+  return auxgetstr(L, G, name);
 }
 
 
@@ -811,10 +821,10 @@ static void auxsetstr (lua_State *L, const TValue *t, const char *k) {
 
 
 LUA_API void lua_setglobal (lua_State *L, const char *name) {
-  Table *reg;
+  const TValue *G;
   lua_lock(L);  /* unlock done in 'auxsetstr' */
-  reg = hvalue(&G(L)->l_registry);
-  auxsetstr(L, luaH_getint(reg, LUA_RIDX_GLOBALS), name);
+  G = getGtable(L);
+  auxsetstr(L, G, name);
 }
 
 
@@ -1063,8 +1073,7 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
     LClosure *f = clLvalue(s2v(L->top - 1));  /* get newly created function */
     if (f->nupvalues >= 1) {  /* does it have an upvalue? */
       /* get global table from registry */
-      Table *reg = hvalue(&G(L)->l_registry);
-      const TValue *gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
+      const TValue *gt = getGtable(L);
       /* set global table as 1st upvalue of 'f' (may be LUA_ENV) */
       setobj(L, f->upvals[0]->v, gt);
       luaC_barrier(L, f->upvals[0], gt);
