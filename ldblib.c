@@ -377,7 +377,7 @@ static int db_sethook (lua_State *L) {
   }
   if (!luaL_getsubtable(L, LUA_REGISTRYINDEX, HOOKKEY)) {
     /* table just created; initialize it */
-    lua_pushstring(L, "k");
+    lua_pushliteral(L, "k");
     lua_setfield(L, -2, "__mode");  /** hooktable.__mode = "k" */
     lua_pushvalue(L, -1);
     lua_setmetatable(L, -2);  /* metatable(hooktable) = hooktable */
@@ -420,7 +420,7 @@ static int db_debug (lua_State *L) {
   for (;;) {
     char buffer[250];
     lua_writestringerror("%s", "lua_debug> ");
-    if (fgets(buffer, sizeof(buffer), stdin) == 0 ||
+    if (fgets(buffer, sizeof(buffer), stdin) == NULL ||
         strcmp(buffer, "cont\n") == 0)
       return 0;
     if (luaL_loadbuffer(L, buffer, strlen(buffer), "=(debug command)") ||

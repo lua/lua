@@ -763,7 +763,7 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
       break;
     }
     case VLOCAL: {  /* already in a register */
-      e->u.info = e->u.var.sidx;
+      e->u.info = e->u.var.ridx;
       e->k = VNONRELOC;  /* becomes a non-relocatable value */
       break;
     }
@@ -1036,7 +1036,7 @@ void luaK_storevar (FuncState *fs, expdesc *var, expdesc *ex) {
   switch (var->k) {
     case VLOCAL: {
       freeexp(fs, ex);
-      exp2reg(fs, ex, var->u.var.sidx);  /* compute 'ex' into proper place */
+      exp2reg(fs, ex, var->u.var.ridx);  /* compute 'ex' into proper place */
       return;
     }
     case VUPVAL: {
@@ -1276,7 +1276,7 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
   }
   else {
     /* register index of the table */
-    t->u.ind.t = (t->k == VLOCAL) ? t->u.var.sidx: t->u.info;
+    t->u.ind.t = (t->k == VLOCAL) ? t->u.var.ridx: t->u.info;
     if (isKstr(fs, k)) {
       t->u.ind.idx = k->u.info;  /* literal string */
       t->k = VINDEXSTR;
