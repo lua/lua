@@ -67,6 +67,27 @@ checksyntax([[
 ]], "'}' expected (to close '{' at line 1)", "<eof>", 3)
 
 
+do   -- testing errors in goto/break
+  local function checksyntax (prog, msg, line)
+    local st, err = load(prog)
+    assert(string.find(err, "line " .. line))
+    assert(string.find(err, msg, 1, true))
+  end
+
+  checksyntax([[
+    ::A:: a = 1
+    ::A::
+  ]], "label 'A' already defined", 1)
+
+  checksyntax([[
+    a = 1
+    goto A
+    do ::A:: end
+  ]], "no visible label 'A'", 2)
+
+end
+
+
 if not T then
   (Message or print)
     ('\n >>> testC not active: skipping memory message test <<<\n')
