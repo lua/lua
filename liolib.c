@@ -52,12 +52,6 @@ static int l_checkmode (const char *mode) {
 ** =======================================================
 */
 
-#if !defined(l_checkmodep)
-/* By default, Lua accepts only "r" or "w" as mode */
-#define l_checkmodep(m)	((m[0] == 'r' || m[0] == 'w') && m[1] == '\0')
-#endif
-
-
 #if !defined(l_popen)		/* { */
 
 #if defined(LUA_USE_POSIX)	/* { */
@@ -69,6 +63,12 @@ static int l_checkmode (const char *mode) {
 
 #define l_popen(L,c,m)		(_popen(c,m))
 #define l_pclose(L,file)	(_pclose(file))
+
+#if !defined(l_checkmodep)
+/* Windows accepts "[rw][bt]?" as valid modes */
+#define l_checkmodep(m)	((m[0] == 'r' || m[0] == 'w') && \
+  (m[1] == '\0' || ((m[1] == 'b' || m[1] == 't') && m[2] == '\0')))
+#endif
 
 #else				/* }{ */
 
@@ -82,6 +82,12 @@ static int l_checkmode (const char *mode) {
 #endif				/* } */
 
 #endif				/* } */
+
+
+#if !defined(l_checkmodep)
+/* By default, Lua accepts only "r" or "w" as valid modes */
+#define l_checkmodep(m)        ((m[0] == 'r' || m[0] == 'w') && m[1] == '\0')
+#endif
 
 /* }====================================================== */
 
