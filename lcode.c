@@ -545,11 +545,14 @@ static void freeexps (FuncState *fs, expdesc *e1, expdesc *e2) {
 ** and try to reuse constants. Because some values should not be used
 ** as keys (nil cannot be a key, integer keys can collapse with float
 ** keys), the caller must provide a useful 'key' for indexing the cache.
+** Note that all functions share the same table, so entering or exiting
+** a function can make some indices wrong.
 */
 static int addk (FuncState *fs, TValue *key, TValue *v) {
+  TValue val;
   lua_State *L = fs->ls->L;
   Proto *f = fs->f;
-  TValue *idx = luaH_set(L, fs->ls->h, key);  /* index scanner table */
+  const TValue *idx = luaH_get(fs->ls->h, key);  /* query scanner table */
   int k, oldsize;
   if (ttisinteger(idx)) {  /* is there an index there? */
     k = cast_int(ivalue(idx));
@@ -563,7 +566,8 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
   k = fs->nk;
   /* numerical value does not need GC barrier;
      table has no metatable, so it does not need to invalidate cache */
-  setivalue(idx, k);
+  setivalue(&val, k);
+  luaH_finishset(L, fs->ls->h, key, idx, &val);
   luaM_growvector(L, f->k, k, f->sizek, TValue, MAXARG_Ax, "constants");
   while (oldsize < f->sizek) setnilvalue(&f->k[oldsize++]);
   setobj(L, &f->k[k], v);

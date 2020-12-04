@@ -485,7 +485,7 @@ static void reinsert (lua_State *L, Table *ot, Table *t) {
          already present in the table */
       TValue k;
       getnodekey(L, &k, old);
-      setobjt2t(L, luaH_set(L, t, &k), gval(old));
+      luaH_set(L, t, &k, gval(old));
     }
   }
 }
@@ -632,7 +632,7 @@ static Node *getfreepos (Table *t) {
 ** put new key in its main position; otherwise (colliding node is in its main
 ** position), new key goes to an empty position.
 */
-TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
+void luaH_newkey (lua_State *L, Table *t, const TValue *key, TValue *value) {
   Node *mp;
   TValue aux;
   if (unlikely(ttisnil(key)))
@@ -654,7 +654,8 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
     if (f == NULL) {  /* cannot find a free place? */
       rehash(L, t, key);  /* grow table */
       /* whatever called 'newkey' takes care of TM cache */
-      return luaH_set(L, t, key);  /* insert key into grown table */
+      luaH_set(L, t, key, value);  /* insert key into grown table */
+      return;
     }
     lua_assert(!isdummy(t));
     othern = mainposition(t, keytt(mp), &keyval(mp));
@@ -682,7 +683,7 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
   setnodekey(L, mp, key);
   luaC_barrierback(L, obj2gco(t), key);
   lua_assert(isempty(gval(mp)));
-  return gval(mp);
+  setobj2t(L, gval(mp), value);
 }
 
 
@@ -770,28 +771,39 @@ const TValue *luaH_get (Table *t, const TValue *key) {
 
 
 /*
+** Finish a raw "set table" operation, where 'slot' is where the value
+** should have been (the result of a previous "get table").
+** Beware: when using this function you probably need to check a GC
+** barrier and invalidate the TM cache.
+*/
+void luaH_finishset (lua_State *L, Table *t, const TValue *key,
+                                   const TValue *slot, TValue *value) {
+  if (isabstkey(slot))
+    luaH_newkey(L, t, key, value);
+  else
+    setobj2t(L, cast(TValue *, slot), value);
+}
+
+
+/*
 ** beware: when using this function you probably need to check a GC
 ** barrier and invalidate the TM cache.
 */
-TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
-  const TValue *p = luaH_get(t, key);
-  if (!isabstkey(p))
-    return cast(TValue *, p);
-  else return luaH_newkey(L, t, key);
+void luaH_set (lua_State *L, Table *t, const TValue *key, TValue *value) {
+  const TValue *slot = luaH_get(t, key);
+  luaH_finishset(L, t, key, slot, value);
 }
 
 
 void luaH_setint (lua_State *L, Table *t, lua_Integer key, TValue *value) {
   const TValue *p = luaH_getint(t, key);
-  TValue *cell;
-  if (!isabstkey(p))
-    cell = cast(TValue *, p);
-  else {
+  if (isabstkey(p)) {
     TValue k;
     setivalue(&k, key);
-    cell = luaH_newkey(L, t, &k);
+    luaH_newkey(L, t, &k, value);
   }
-  setobj2t(L, cell, value);
+  else
+    setobj2t(L, cast(TValue *, p), value);
 }
 
 

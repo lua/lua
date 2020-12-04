@@ -871,12 +871,10 @@ LUA_API void lua_seti (lua_State *L, int idx, lua_Integer n) {
 
 static void aux_rawset (lua_State *L, int idx, TValue *key, int n) {
   Table *t;
-  TValue *slot;
   lua_lock(L);
   api_checknelems(L, n);
   t = gettable(L, idx);
-  slot = luaH_set(L, t, key);
-  setobj2t(L, slot, s2v(L->top - 1));
+  luaH_set(L, t, key, s2v(L->top - 1));
   invalidateTMcache(t);
   luaC_barrierback(L, obj2gco(t), s2v(L->top - 1));
   L->top -= n;
