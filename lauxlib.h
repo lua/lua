@@ -160,11 +160,15 @@ LUALIB_API void (luaL_requiref) (lua_State *L, const char *modname,
 /*
 ** Internal assertions for in-house debugging
 */
+#if !defined(lua_assert)
+
 #if defined LUAI_ASSERT
-#include <assert.h>
-#define lua_assert(c)	assert(c)
+  #include <assert.h>
+  #define lua_assert(c)		assert(c)
 #else
-#define lua_assert(x)	((void)0)
+  #define lua_assert(c)		((void)0)
+#endif
+
 #endif
 
 

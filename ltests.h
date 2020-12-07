@@ -130,6 +130,11 @@ LUA_API void *debug_realloc (void *ud, void *block,
 #define LUAI_MAXSTACK   50000
 
 
+/* test mode uses more stack space */
+#undef LUAI_MAXCCALLS
+#define LUAI_MAXCCALLS	180
+
+
 /* force Lua to use its own implementations */
 #undef lua_strx2number
 #undef lua_number2strx

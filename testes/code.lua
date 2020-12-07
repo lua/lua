@@ -55,6 +55,20 @@ end
 checkKlist(foo, {3.78/4, -3.78/4, -3.79/4})
 
 
+foo = function (f, a)
+        f(100 * 1000)
+        f(100.0 * 1000)
+        f(-100 * 1000)
+        f(-100 * 1000.0)
+        f(100000)
+        f(100000.0)
+        f(-100000)
+        f(-100000.0)
+      end
+
+checkKlist(foo, {100000, 100000.0, -100000, -100000.0})
+
+
 -- testing opcodes
 
 -- check that 'f' opcodes match '...'

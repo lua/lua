@@ -88,6 +88,11 @@ The type @emph{boolean} has two values, @false and @true.
 Both @nil and @false make a condition false;
 they are collectively called @def{false values}.
 Any other value makes a condition true.
+Despite its name,
+@false is frequently used as an alternative to @nil,
+with the key difference that @false behaves
+like a regular value in a table,
+while a @nil in a table represents an absent key.
 
 The type @emph{number} represents both
 integer numbers and real (floating-point) numbers,
