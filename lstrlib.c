@@ -1359,16 +1359,6 @@ struct cD {
 
 
 /*
-** Union for serializing floats
-*/
-typedef union Ftypes {
-  float f;
-  double d;
-  lua_Number n;
-} Ftypes;
-
-
-/*
 ** information to pack/unpack stuff
 */
 typedef struct Header {
@@ -1384,7 +1374,9 @@ typedef struct Header {
 typedef enum KOption {
   Kint,		/* signed integers */
   Kuint,	/* unsigned integers */
-  Kfloat,	/* floating-point numbers */
+  Kfloat,	/* single-precision floating-point numbers */
+  Knumber,	/* Lua "native" floating-point numbers */
+  Kdouble,	/* double-precision floating-point numbers */
   Kchar,	/* fixed-length strings */
   Kstring,	/* strings with prefixed length */
   Kzstr,	/* zero-terminated strings */
@@ -1453,8 +1445,8 @@ static KOption getoption (Header *h, const char **fmt, int *size) {
     case 'J': *size = sizeof(lua_Integer); return Kuint;
     case 'T': *size = sizeof(size_t); return Kuint;
     case 'f': *size = sizeof(float); return Kfloat;
-    case 'd': *size = sizeof(double); return Kfloat;
-    case 'n': *size = sizeof(lua_Number); return Kfloat;
+    case 'n': *size = sizeof(lua_Number); return Knumber;
+    case 'd': *size = sizeof(double); return Kdouble;
     case 'i': *size = getnumlimit(h, fmt, sizeof(int)); return Kint;
     case 'I': *size = getnumlimit(h, fmt, sizeof(int)); return Kuint;
     case 's': *size = getnumlimit(h, fmt, sizeof(size_t)); return Kstring;
@@ -1580,15 +1572,27 @@ static int str_pack (lua_State *L) {
         packint(&b, (lua_Unsigned)n, h.islittle, size, 0);
         break;
       }
-      case Kfloat: {  /* floating-point options */
-        Ftypes u;
-        char *buff = luaL_prepbuffsize(&b, size);
-        lua_Number n = luaL_checknumber(L, arg);  /* get argument */
-        if (size == sizeof(u.f)) u.f = (float)n;  /* copy it into 'u' */
-        else if (size == sizeof(u.d)) u.d = (double)n;
-        else u.n = n;
-        /* move 'u' to final result, correcting endianness if needed */
-        copywithendian(buff, (char *)&u, size, h.islittle);
+      case Kfloat: {  /* C float */
+        float f = (float)luaL_checknumber(L, arg);  /* get argument */
+        char *buff = luaL_prepbuffsize(&b, sizeof(f));
+        /* move 'f' to final result, correcting endianness if needed */
+        copywithendian(buff, (char *)&f, sizeof(f), h.islittle);
+        luaL_addsize(&b, size);
+        break;
+      }
+      case Knumber: {  /* Lua float */
+        lua_Number f = luaL_checknumber(L, arg);  /* get argument */
+        char *buff = luaL_prepbuffsize(&b, sizeof(f));
+        /* move 'f' to final result, correcting endianness if needed */
+        copywithendian(buff, (char *)&f, sizeof(f), h.islittle);
+        luaL_addsize(&b, size);
+        break;
+      }
+      case Kdouble: {  /* C double */
+        double f = (double)luaL_checknumber(L, arg);  /* get argument */
+        char *buff = luaL_prepbuffsize(&b, sizeof(f));
+        /* move 'f' to final result, correcting endianness if needed */
+        copywithendian(buff, (char *)&f, sizeof(f), h.islittle);
         luaL_addsize(&b, size);
         break;
       }
@@ -1714,13 +1718,21 @@ static int str_unpack (lua_State *L) {
         break;
       }
       case Kfloat: {
-        Ftypes u;
-        lua_Number num;
-        copywithendian((char *)&u, data + pos, size, h.islittle);
-        if (size == sizeof(u.f)) num = (lua_Number)u.f;
-        else if (size == sizeof(u.d)) num = (lua_Number)u.d;
-        else num = u.n;
-        lua_pushnumber(L, num);
+        float f;
+        copywithendian((char *)&f, data + pos, sizeof(f), h.islittle);
+        lua_pushnumber(L, (lua_Number)f);
+        break;
+      }
+      case Knumber: {
+        lua_Number f;
+        copywithendian((char *)&f, data + pos, sizeof(f), h.islittle);
+        lua_pushnumber(L, f);
+        break;
+      }
+      case Kdouble: {
+        double f;
+        copywithendian((char *)&f, data + pos, sizeof(f), h.islittle);
+        lua_pushnumber(L, (lua_Number)f);
         break;
       }
       case Kchar: {
