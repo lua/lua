@@ -4098,10 +4098,12 @@ and then pops the top element.
 Resets a thread, cleaning its call stack and closing all pending
 to-be-closed variables.
 Returns a status code:
-@Lid{LUA_OK} for no errors in closing methods,
+@Lid{LUA_OK} for no errors in the thread
+(either the original error that stopped the thread or
+errors in closing methods),
 or an error status otherwise.
 In case of error,
-leaves the error object on the top of the stack,
+leaves the error object on the top of the stack.
 
 }
 
@@ -6577,7 +6579,9 @@ that is,
 closes all its pending to-be-closed variables
 and puts the coroutine in a dead state.
 The given coroutine must be dead or suspended.
-In case of error closing some variable,
+In case of error
+(either the original error that stopped the coroutine or
+errors in closing methods),
 returns @false plus the error object;
 otherwise returns @true.
 

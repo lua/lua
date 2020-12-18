@@ -323,14 +323,16 @@ void luaE_freethread (lua_State *L, lua_State *L1) {
 
 int lua_resetthread (lua_State *L) {
   CallInfo *ci;
-  int status;
+  int status = L->status;
   lua_lock(L);
   L->ci = ci = &L->base_ci;  /* unwind CallInfo list */
   setnilvalue(s2v(L->stack));  /* 'function' entry for basic 'ci' */
   ci->func = L->stack;
   ci->callstatus = CIST_C;
-  status = luaF_close(L, L->stack, CLOSEPROTECT);
-  if (status != CLOSEPROTECT)  /* real errors? */
+  if (status == LUA_OK || status == LUA_YIELD)
+    status = CLOSEPROTECT;  /* run closing methods in protected mode */
+  status = luaF_close(L, L->stack, status);
+  if (status != CLOSEPROTECT)  /* errors? */
     luaD_seterrorobj(L, status, L->stack + 1);
   else {
     status = LUA_OK;

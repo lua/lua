@@ -135,14 +135,18 @@ if T then
   local topB, sizeB   -- top and size Before overflow
   local topA, sizeA   -- top and size After overflow
   topB, sizeB = T.stacklevel()
+  collectgarbage("stop")    -- __gc should not be called with a full stack
   xpcall(f, err)
+  collectgarbage("restart")
   topA, sizeA = T.stacklevel()
   -- sizes should be comparable
   assert(topA == topB and sizeA < sizeB * 2)
   print(string.format("maximum stack size: %d", stack1))
   LIM = N      -- will stop recursion at maximum level
   N = 0        -- to count again
+  collectgarbage("stop")    -- __gc should not be called with a full stack
   f()
+  collectgarbage("restart")
   print"+"
 end
 

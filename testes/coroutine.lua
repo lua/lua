@@ -134,7 +134,8 @@ do
   local co = coroutine.create(print)
   assert(coroutine.resume(co, "testing 'coroutine.close'"))
   assert(coroutine.status(co) == "dead")
-  assert(coroutine.close(co))
+  local st, msg = coroutine.close(co)
+  assert(st and msg == nil)
 
   -- cannot close the running coroutine
   local st, msg = pcall(coroutine.close, coroutine.running())
@@ -150,6 +151,13 @@ do
 
   -- to-be-closed variables in coroutines
   local X
+
+  -- closing a coroutine after an error
+  local co = coroutine.create(error)
+  local st, msg = coroutine.resume(co, 100)
+  assert(not st and msg == 100)
+  st, msg = coroutine.close(co)
+  assert(not st and msg == 100)
 
   co = coroutine.create(function ()
     local x <close> = func2close(function (self, err)

@@ -362,7 +362,7 @@ end
 
 local function checkwarn (msg)
   if T then
-    assert(string.find(_WARN, msg))
+    assert(_WARN and string.find(_WARN, msg))
     _WARN = false    -- reset variable to check next warning
   end
 end
@@ -670,10 +670,13 @@ do
   -- error in a wrapped coroutine raising errors when closing a variable
   local x = 0
   local co = coroutine.wrap(function ()
-    local xx <close> = func2close(function () x = x + 1; error("@YYY") end)
+    local xx <close> = func2close(function ()
+      x = x + 1;
+      checkwarn("@XXX"); error("@YYY")
+    end)
     local xv <close> = func2close(function () x = x + 1; error("@XXX") end)
-      coroutine.yield(100)
-      error(200)
+    coroutine.yield(100)
+    error(200)
   end)
   assert(co() == 100); assert(x == 0)
   local st, msg = pcall(co); assert(x == 2)
@@ -683,10 +686,14 @@ do
   local x = 0
   local y = 0
   co = coroutine.wrap(function ()
-    local xx <close> = func2close(function () y = y + 1; error("YYY") end)
-    local xv <close> = func2close(function () x = x + 1; error("XXX") end)
-      coroutine.yield(100)
-      return 200
+    local xx <close> = func2close(function ()
+      y = y + 1; checkwarn("XXX"); error("YYY")
+    end)
+    local xv <close> = func2close(function ()
+      x = x + 1; error("XXX")
+    end)
+    coroutine.yield(100)
+    return 200
   end)
   assert(co() == 100); assert(x == 0)
   local st, msg = pcall(co)
