@@ -392,21 +392,13 @@ do print("testing errors in __close")
 
     local y <close> =
       func2close(function (self, msg)
-        assert(string.find(msg, "@z"))  -- first error in 'z'
-        checkwarn("@z")   -- second error in 'z' generated a warning
+        assert(string.find(msg, "@z"))  -- error in 'z'
         error("@y")
       end)
 
-    local first = true
     local z <close> =
-      -- 'z' close is called twice
       func2close(function (self, msg)
-        if first then
-          assert(msg == nil)
-          first = false
-        else
-         assert(string.find(msg, "@z"))   -- own error
-        end
+        assert(msg == nil)
         error("@z")
       end)
 
@@ -468,8 +460,8 @@ do print("testing errors in __close")
   local function foo (...)
     do
       local x1 <close> =
-        func2close(function ()
-          checkwarn("@X")
+        func2close(function (self, msg)
+          assert(string.find(msg, "@X"))
           error("@Y")
         end)
 
@@ -494,8 +486,6 @@ do print("testing errors in __close")
   local st, msg = xpcall(foo, debug.traceback)
   assert(string.match(msg, "^[^ ]* @x123"))
   assert(string.find(msg, "in metamethod 'close'"))
-  checkwarn("@x123")   -- from second call to close 'x123'
-
   endwarn()
 end
 
@@ -686,8 +676,10 @@ do
   local x = 0
   local y = 0
   co = coroutine.wrap(function ()
-    local xx <close> = func2close(function ()
-      y = y + 1; checkwarn("XXX"); error("YYY")
+    local xx <close> = func2close(function (_, err)
+      y = y + 1;
+      assert(string.find(err, "XXX"))
+      error("YYY")
     end)
     local xv <close> = func2close(function ()
       x = x + 1; error("XXX")
@@ -697,7 +689,7 @@ do
   end)
   assert(co() == 100); assert(x == 0)
   local st, msg = pcall(co)
-  assert(x == 2 and y == 1)   -- first close is called twice
+  assert(x == 1 and y == 1)
   -- should get first error raised
   assert(not st and string.find(msg, "%w+%.%w+:%d+: XXX"))
   checkwarn("YYY")

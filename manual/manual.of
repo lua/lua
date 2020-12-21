@@ -1630,7 +1630,6 @@ they are closed in the reverse order that they were declared.
 If there is any error while running a closing method,
 that error is handled like an error in the regular code
 where the variable was defined.
-However, Lua may call the method one more time.
 
 After an error,
 the other pending closing methods will still be called.

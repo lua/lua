@@ -220,23 +220,37 @@ void luaF_unlinkupval (UpVal *uv) {
 }
 
 
+/*
+** Close all upvalues up to the given stack level. 'status' indicates
+** how/why the function was called:
+** - LUA_OK: regular code exiting the scope of a variable; may raise
+** an error due to errors in __close metamethods;
+** - CLOSEPROTECT: finishing a thread; run all metamethods in protected
+** mode;
+** - NOCLOSINGMETH: close upvalues without running __close metamethods;
+** - other values: error status from previous errors, to be propagated.
+**
+** Returns the resulting status, either the original status or an error
+** in a closing method.
+*/
 int luaF_close (lua_State *L, StkId level, int status) {
   UpVal *uv;
-  while ((uv = L->openupval) != NULL && uplevel(uv) >= level) {
+  StkId upl;  /* stack index pointed by 'uv' */
+  while ((uv = L->openupval) != NULL && (upl = uplevel(uv)) >= level) {
     TValue *slot = &uv->u.value;  /* new position for value */
     lua_assert(uplevel(uv) < L->top);
-    if (uv->tbc && status != NOCLOSINGMETH) {
-      /* must run closing method, which may change the stack */
-      ptrdiff_t levelrel = savestack(L, level);
-      status = callclosemth(L, uplevel(uv), status);
-      level = restorestack(L, levelrel);
-    }
-    luaF_unlinkupval(uv);
+    luaF_unlinkupval(uv);  /* remove upvalue from 'openupval' list */
     setobj(L, slot, uv->v);  /* move value to upvalue slot */
     uv->v = slot;  /* now current value lives here */
     if (!iswhite(uv)) {  /* neither white nor dead? */
       nw2black(uv);  /* closed upvalues cannot be gray */
       luaC_barrier(L, uv, slot);
+    }
+    if (uv->tbc && status != NOCLOSINGMETH) {
+      /* must run closing method, which may change the stack */
+      ptrdiff_t levelrel = savestack(L, level);
+      status = callclosemth(L, upl, status);
+      level = restorestack(L, levelrel);
     }
   }
   return status;
