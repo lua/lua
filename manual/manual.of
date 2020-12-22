@@ -1630,13 +1630,8 @@ they are closed in the reverse order that they were declared.
 If there is any error while running a closing method,
 that error is handled like an error in the regular code
 where the variable was defined.
-
 After an error,
 the other pending closing methods will still be called.
-Errors in these methods
-interrupt the respective method and generate a warning,
-but are otherwise ignored;
-the error reported is only the original one.
 
 If a coroutine yields and is never resumed again,
 some variables may never go out of scope,

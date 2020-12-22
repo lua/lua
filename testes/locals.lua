@@ -232,7 +232,11 @@ end
 do
   local X = false
 
-  local x, closescope = func2close(function () stack(10); X = true end, 100)
+  local x, closescope = func2close(function (_, msg)
+    stack(10);
+    assert(msg == nil)
+    X = true
+  end, 100)
   assert(x == 100);  x = 101;   -- 'x' is not read-only
 
   -- closing functions do not corrupt returning values
@@ -246,10 +250,11 @@ do
 
   X = false
   foo = function (x)
-    local _<close> = func2close(function ()
+    local _<close> = func2close(function (_, msg)
       -- without errors, enclosing function should be still active when
       -- __close is called
       assert(debug.getinfo(2).name == "foo")
+      assert(msg == nil)
     end)
     local  _<close> = closescope
     local y = 15
@@ -328,64 +333,20 @@ do
 end
 
 
--- auxiliary functions for testing warnings in '__close'
-local function prepwarn ()
-  if not T then   -- no test library?
-    warn("@off")      -- do not show (lots of) warnings
-  else
-    warn("@store")    -- to test the warnings
-  end
-end
-
-
-local function endwarn ()
-  if not T then
-    warn("@on")          -- back to normal
-  else
-    assert(_WARN == false)
-    warn("@normal")
-  end
-end
-
-
--- errors inside __close can generate a warning instead of an
--- error. This new 'assert' force them to appear.
-local function assert(cond, msg)
-  if not cond then
-    local line = debug.getinfo(2).currentline or "?"
-    msg = string.format("assertion failed! line %d (%s)\n", line, msg or "")
-    io.stderr:write(msg)
-    os.exit(1)
-  end
-end
-
-
-local function checkwarn (msg)
-  if T then
-    assert(_WARN and string.find(_WARN, msg))
-    _WARN = false    -- reset variable to check next warning
-  end
-end
-
-warn("@on")
-
 do print("testing errors in __close")
-
-  prepwarn()
 
   -- original error is in __close
   local function foo ()
 
     local x <close> =
       func2close(function (self, msg)
-        assert(string.find(msg, "@z"))
+        assert(string.find(msg, "@y"))
         error("@x")
       end)
 
     local x1 <close> =
       func2close(function (self, msg)
-        checkwarn("@y")
-        assert(string.find(msg, "@z"))
+        assert(string.find(msg, "@y"))
       end)
 
     local gc <close> = func2close(function () collectgarbage() end)
@@ -406,8 +367,7 @@ do print("testing errors in __close")
   end
 
   local stat, msg = pcall(foo, false)
-  assert(string.find(msg, "@z"))
-  checkwarn("@x")
+  assert(string.find(msg, "@x"))
 
 
   -- original error not in __close
@@ -418,14 +378,13 @@ do print("testing errors in __close")
         -- after error, 'foo' was discarded, so caller now
         -- must be 'pcall'
         assert(debug.getinfo(2).name == "pcall")
-        assert(msg == 4)
+        assert(string.find(msg, "@x1"))
       end)
 
     local x1 <close> =
       func2close(function (self, msg)
         assert(debug.getinfo(2).name == "pcall")
-        checkwarn("@y")
-        assert(msg == 4)
+        assert(string.find(msg, "@y"))
         error("@x1")
       end)
 
@@ -434,8 +393,7 @@ do print("testing errors in __close")
     local y <close> =
       func2close(function (self, msg)
         assert(debug.getinfo(2).name == "pcall")
-        assert(msg == 4)   -- error in body
-        checkwarn("@z")
+        assert(string.find(msg, "@z"))
         error("@y")
       end)
 
@@ -453,8 +411,7 @@ do print("testing errors in __close")
   end
 
   local stat, msg = pcall(foo, true)
-  assert(msg == 4)
-  checkwarn("@x1")   -- last error
+  assert(string.find(msg, "@x1"))
 
   -- error leaving a block
   local function foo (...)
@@ -466,7 +423,8 @@ do print("testing errors in __close")
         end)
 
       local x123 <close> =
-        func2close(function ()
+        func2close(function (_, msg)
+          assert(msg == nil)
           error("@X")
         end)
     end
@@ -474,9 +432,7 @@ do print("testing errors in __close")
   end
 
   local st, msg = xpcall(foo, debug.traceback)
-  assert(string.match(msg, "^[^ ]* @X"))
-  assert(string.find(msg, "in metamethod 'close'"))
-  checkwarn("@Y")
+  assert(string.match(msg, "^[^ ]* @Y"))
 
   -- error in toclose in vararg function
   local function foo (...)
@@ -486,7 +442,6 @@ do print("testing errors in __close")
   local st, msg = xpcall(foo, debug.traceback)
   assert(string.match(msg, "^[^ ]* @x123"))
   assert(string.find(msg, "in metamethod 'close'"))
-  endwarn()
 end
 
 
@@ -511,8 +466,6 @@ end
 
 if rawget(_G, "T") then
 
-  warn("@off")
-
   -- memory error inside closing function
   local function foo ()
     local y <close> = func2close(function () T.alloccount() end)
@@ -527,7 +480,7 @@ if rawget(_G, "T") then
   -- despite memory error, 'y' will be executed and
   -- memory limit will be lifted
   local _, msg = pcall(foo)
-  assert(msg == 1000)
+  assert(msg == "not enough memory")
 
   local close = func2close(function (self, msg)
     T.alloccount()
@@ -570,7 +523,7 @@ if rawget(_G, "T") then
   end
 
   local _, msg = pcall(test)
-  assert(msg == "not enough memory")   -- reported error is the first one
+  assert(msg == 1000)
 
   do    -- testing 'toclose' in C string buffer
     collectgarbage()
@@ -625,7 +578,6 @@ if rawget(_G, "T") then
     print'+'
   end
 
-  warn("@on")
 end
 
 
@@ -655,14 +607,14 @@ end
 
 
 do
-  prepwarn()
 
   -- error in a wrapped coroutine raising errors when closing a variable
   local x = 0
   local co = coroutine.wrap(function ()
-    local xx <close> = func2close(function ()
+    local xx <close> = func2close(function (_, msg)
       x = x + 1;
-      checkwarn("@XXX"); error("@YYY")
+      assert(string.find(msg, "@XXX"))
+      error("@YYY")
     end)
     local xv <close> = func2close(function () x = x + 1; error("@XXX") end)
     coroutine.yield(100)
@@ -670,8 +622,7 @@ do
   end)
   assert(co() == 100); assert(x == 0)
   local st, msg = pcall(co); assert(x == 2)
-  assert(not st and msg == 200)   -- should get first error raised
-  checkwarn("@YYY")
+  assert(not st and string.find(msg, "@YYY"))   -- should get error raised
 
   local x = 0
   local y = 0
@@ -691,10 +642,8 @@ do
   local st, msg = pcall(co)
   assert(x == 1 and y == 1)
   -- should get first error raised
-  assert(not st and string.find(msg, "%w+%.%w+:%d+: XXX"))
-  checkwarn("YYY")
+  assert(not st and string.find(msg, "%w+%.%w+:%d+: YYY"))
 
-  endwarn()
 end
 
 

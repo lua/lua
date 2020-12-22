@@ -172,13 +172,12 @@ do
   assert(not X and coroutine.status(co) == "dead")
 
   -- error closing a coroutine
-  warn("@on")
   local x = 0
   co = coroutine.create(function()
     local y <close> = func2close(function (self,err)
-      if (err ~= 111) then os.exit(false) end   -- should not happen
+      assert(err == 111)
       x = 200
-      error("200")
+      error(200)
     end)
     local x <close> = func2close(function (self, err)
       assert(err == nil); error(111)
@@ -187,16 +186,8 @@ do
   end)
   coroutine.resume(co)
   assert(x == 0)
-  -- with test library, use 'store' mode to check warnings
-  warn(not T and "@off" or "@store")
   local st, msg = coroutine.close(co)
-  if not T then
-    warn("@on")
-  else   -- test library
-    assert(string.find(_WARN, "200")); _WARN = false
-    warn("@normal")
-  end
-  assert(st == false and coroutine.status(co) == "dead" and msg == 111)
+  assert(st == false and coroutine.status(co) == "dead" and msg == 200)
   assert(x == 200)
 
 end

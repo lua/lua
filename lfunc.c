@@ -162,14 +162,10 @@ static int callclosemth (lua_State *L, StkId level, int status) {
     luaD_seterrorobj(L, status, level);  /* set error message */
     if (prepclosingmethod(L, uv, s2v(level))) {  /* something to call? */
       int newstatus = luaD_pcall(L, callclose, NULL, oldtop, 0);
-      if (newstatus != LUA_OK && status == CLOSEPROTECT)  /* first error? */
-        status = newstatus;  /* this will be the new error */
-      else {
-        if (newstatus != LUA_OK)  /* suppressed error? */
-          luaE_warnerror(L, "__close metamethod");
-        /* leave original error (or nil) on top */
+      if (newstatus != LUA_OK)  /* new error? */
+        status = newstatus;  /* this will be the error now */
+      else  /* leave original error (or nil) on top */
         L->top = restorestack(L, oldtop);
-      }
     }
     /* else no metamethod; ignore this case and keep original error */
   }
