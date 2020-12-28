@@ -321,11 +321,8 @@ void luaE_freethread (lua_State *L, lua_State *L1) {
 }
 
 
-int lua_resetthread (lua_State *L) {
-  CallInfo *ci;
-  int status = L->status;
-  lua_lock(L);
-  L->ci = ci = &L->base_ci;  /* unwind CallInfo list */
+int luaE_resetthread (lua_State *L, int status) {
+  CallInfo *ci = L->ci = &L->base_ci;  /* unwind CallInfo list */
   setnilvalue(s2v(L->stack));  /* 'function' entry for basic 'ci' */
   ci->func = L->stack;
   ci->callstatus = CIST_C;
@@ -334,12 +331,19 @@ int lua_resetthread (lua_State *L) {
   status = luaD_closeprotected(L, 0, status);
   if (status != LUA_OK)  /* errors? */
     luaD_seterrorobj(L, status, L->stack + 1);
-  else {
-    status = LUA_OK;
+  else
     L->top = L->stack + 1;
-  }
   ci->top = L->top + LUA_MINSTACK;
-  L->status = status;
+  L->status = cast_byte(status);
+  luaD_reallocstack(L, cast_int(ci->top - L->stack), 0);
+  return status;
+}
+
+
+LUA_API int lua_resetthread (lua_State *L) {
+  int status;
+  lua_lock(L);
+  status = luaE_resetthread(L, L->status);
   lua_unlock(L);
   return status;
 }

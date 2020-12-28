@@ -359,6 +359,7 @@ LUAI_FUNC void luaE_checkcstack (lua_State *L);
 LUAI_FUNC void luaE_incCstack (lua_State *L);
 LUAI_FUNC void luaE_warning (lua_State *L, const char *msg, int tocont);
 LUAI_FUNC void luaE_warnerror (lua_State *L, const char *where);
+LUAI_FUNC int luaE_resetthread (lua_State *L, int status);
 
 
 #endif
