@@ -188,7 +188,7 @@ LUA_API void lua_settop (lua_State *L, int idx) {
     diff = idx + 1;  /* will "subtract" index (as it is negative) */
   }
   if (diff < 0 && hastocloseCfunc(ci->nresults))
-    luaF_close(L, L->top + diff, LUA_OK);
+    luaF_close(L, L->top + diff, CLOSEKTOP);
   L->top += diff;  /* correct top only after closing any upvalue */
   lua_unlock(L);
 }

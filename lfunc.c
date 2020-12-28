@@ -100,12 +100,6 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
 }
 
 
-static void callclose (lua_State *L, void *ud) {
-  UNUSED(ud);
-  luaD_callnoyield(L, L->top - 3, 0);
-}
-
-
 /*
 ** Prepare closing method plus its arguments for object 'obj' with
 ** error message 'err'. (This function assumes EXTRA_STACK.)
@@ -136,40 +130,25 @@ static void varerror (lua_State *L, StkId level, const char *msg) {
 
 
 /*
-** Prepare and call a closing method. If status is OK, code is still
-** inside the original protected call, and so any error will be handled
-** there. Otherwise, a previous error already activated the original
-** protected call, and so the call to the closing method must be
-** protected here. (A status == CLOSEPROTECT behaves like a previous
-** error, to also run the closing method in protected mode).
-** If status is OK, the call to the closing method will be pushed
-** at the top of the stack. Otherwise, values are pushed after
-** the 'level' of the upvalue being closed, as everything after
-** that won't be used again.
+** Prepare and call a closing method.
+** If status is CLOSEKTOP, the call to the closing method will be pushed
+** at the top of the stack. Otherwise, values can be pushed right after
+** the 'level' of the upvalue being closed, as everything after that
+** won't be used again.
 */
-static int callclosemth (lua_State *L, StkId level, int status) {
+static void callclosemth (lua_State *L, StkId level, int status) {
   TValue *uv = s2v(level);  /* value being closed */
-  if (likely(status == LUA_OK)) {
-    if (prepclosingmethod(L, uv, &G(L)->nilvalue))  /* something to call? */
-      callclose(L, NULL);  /* call closing method */
-    else if (!l_isfalse(uv))  /* non-closable non-false value? */
-      varerror(L, level, "attempt to close non-closable variable '%s'");
+  TValue *errobj;
+  if (status == CLOSEKTOP)
+    errobj = &G(L)->nilvalue;  /* error object is nil */
+  else {  /* 'luaD_seterrorobj' will set top to level + 2 */
+    errobj = s2v(level + 1);  /* error object goes after 'uv' */
+    luaD_seterrorobj(L, status, level + 1);  /* set error object */
   }
-  else {  /* must close the object in protected mode */
-    ptrdiff_t oldtop;
-    level++;  /* space for error message */
-    oldtop = savestack(L, level + 1);  /* top will be after that */
-    luaD_seterrorobj(L, status, level);  /* set error message */
-    if (prepclosingmethod(L, uv, s2v(level))) {  /* something to call? */
-      int newstatus = luaD_pcall(L, callclose, NULL, oldtop, 0);
-      if (newstatus != LUA_OK)  /* new error? */
-        status = newstatus;  /* this will be the error now */
-      else  /* leave original error (or nil) on top */
-        L->top = restorestack(L, oldtop);
-    }
-    /* else no metamethod; ignore this case and keep original error */
-  }
-  return status;
+  if (prepclosingmethod(L, uv, errobj))  /* something to call? */
+    luaD_callnoyield(L, L->top - 3, 0);  /* call method */
+  else if (!l_isfalse(uv))  /* non-closable non-false value? */
+    varerror(L, level, "attempt to close non-closable variable '%s'");
 }
 
 
@@ -201,7 +180,7 @@ void luaF_newtbcupval (lua_State *L, StkId level) {
       luaD_seterrorobj(L, LUA_ERRMEM, level + 1);  /* save error message */
       /* next call must succeed, as object is closable */
       prepclosingmethod(L, s2v(level), s2v(level + 1));
-      callclose(L, NULL);  /* call closing method */
+      luaD_callnoyield(L, L->top - 3, 0);  /* call method */
       luaD_throw(L, LUA_ERRMEM);  /* throw memory error */
     }
   }
@@ -217,19 +196,11 @@ void luaF_unlinkupval (UpVal *uv) {
 
 
 /*
-** Close all upvalues up to the given stack level. 'status' indicates
-** how/why the function was called:
-** - LUA_OK: regular code exiting the scope of a variable; may raise
-** an error due to errors in __close metamethods;
-** - CLOSEPROTECT: finishing a thread; run all metamethods in protected
-** mode;
-** - NOCLOSINGMETH: close upvalues without running __close metamethods;
-** - other values: error status from previous errors, to be propagated.
-**
-** Returns the resulting status, either the original status or an error
-** in a closing method.
+** Close all upvalues up to the given stack level. A 'status' equal
+** to NOCLOSINGMETH closes upvalues without running any __close
+** metamethods.
 */
-int luaF_close (lua_State *L, StkId level, int status) {
+void luaF_close (lua_State *L, StkId level, int status) {
   UpVal *uv;
   StkId upl;  /* stack index pointed by 'uv' */
   while ((uv = L->openupval) != NULL && (upl = uplevel(uv)) >= level) {
@@ -243,13 +214,11 @@ int luaF_close (lua_State *L, StkId level, int status) {
       luaC_barrier(L, uv, slot);
     }
     if (uv->tbc && status != NOCLOSINGMETH) {
-      /* must run closing method, which may change the stack */
       ptrdiff_t levelrel = savestack(L, level);
-      status = callclosemth(L, upl, status);
+      callclosemth(L, upl, status);  /* may change the stack */
       level = restorestack(L, levelrel);
     }
   }
-  return status;
 }
 
 

@@ -1662,7 +1662,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         if (TESTARG_k(i)) {  /* may there be open upvalues? */
           if (L->top < ci->top)
             L->top = ci->top;
-          luaF_close(L, base, LUA_OK);
+          luaF_close(L, base, CLOSEKTOP);
           updatetrap(ci);
           updatestack(ci);
         }

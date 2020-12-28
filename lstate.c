@@ -268,7 +268,7 @@ static void preinit_thread (lua_State *L, global_State *g) {
 
 static void close_state (lua_State *L) {
   global_State *g = G(L);
-  luaF_close(L, L->stack, CLOSEPROTECT);  /* close all upvalues */
+  luaD_closeprotected(L, 0, LUA_OK);  /* close all upvalues */
   luaC_freeallobjects(L);  /* collect all objects */
   if (ttisnil(&g->nilvalue))  /* closing a fully built state? */
     luai_userstateclose(L);
@@ -329,10 +329,10 @@ int lua_resetthread (lua_State *L) {
   setnilvalue(s2v(L->stack));  /* 'function' entry for basic 'ci' */
   ci->func = L->stack;
   ci->callstatus = CIST_C;
-  if (status == LUA_OK || status == LUA_YIELD)
-    status = CLOSEPROTECT;  /* run closing methods in protected mode */
-  status = luaF_close(L, L->stack, status);
-  if (status != CLOSEPROTECT)  /* errors? */
+  if (status == LUA_YIELD)
+    status = LUA_OK;
+  status = luaD_closeprotected(L, 0, status);
+  if (status != LUA_OK)  /* errors? */
     luaD_seterrorobj(L, status, L->stack + 1);
   else {
     status = LUA_OK;
