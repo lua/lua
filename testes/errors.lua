@@ -24,8 +24,9 @@ local function doit (s)
 end
 
 
-local function checkmessage (prog, msg)
+local function checkmessage (prog, msg, debug)
   local m = doit(prog)
+  if debug then print(m) end
   assert(string.find(m, msg, 1, true))
 end
 
@@ -119,6 +120,17 @@ checkmessage("local a={}; a.bbbb(3)", "field 'bbbb'")
 assert(not string.find(doit"a={13}; local bbbb=1; a[bbbb](3)", "'bbbb'"))
 checkmessage("a={13}; local bbbb=1; a[bbbb](3)", "number")
 checkmessage("a=(1)..{}", "a table value")
+
+-- calls
+checkmessage("local a; a(13)", "local 'a'")
+checkmessage([[
+  local a = setmetatable({}, {__add = 34})
+  a = a + 1
+]], "metamethod 'add'")
+checkmessage([[
+  local a = setmetatable({}, {__lt = {}})
+  a = a > a
+]], "metamethod 'lt'")
 
 -- tail calls
 checkmessage("local a={}; return a.bbbb(3)", "field 'bbbb'")

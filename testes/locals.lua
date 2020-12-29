@@ -459,7 +459,22 @@ do   -- errors due to non-closable values
     getmetatable(xyz).__close = nil   -- remove metamethod
   end
   local stat, msg = pcall(foo)
-  assert(not stat and string.find(msg, "attempt to call a nil value"))
+  assert(not stat and string.find(msg, "metamethod 'close'"))
+
+  local function foo ()
+    local a1 <close> = func2close(function (_, msg)
+      assert(string.find(msg, "number value"))
+      error(12)
+    end)
+    local a2 <close> = setmetatable({}, {__close = print})
+    local a3 <close> = func2close(function (_, msg)
+      assert(msg == nil)
+      error(123)
+    end)
+    getmetatable(a2).__close = 4   -- invalidate metamethod
+  end
+  local stat, msg = pcall(foo)
+  assert(not stat and msg == 12)
 end
 
 

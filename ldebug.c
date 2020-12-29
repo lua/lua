@@ -629,12 +629,10 @@ static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
     case OP_LEN: tm = TM_LEN; break;
     case OP_CONCAT: tm = TM_CONCAT; break;
     case OP_EQ: tm = TM_EQ; break;
-    case OP_LT: case OP_LE: case OP_LTI: case OP_LEI:
-      *name = "order";  /* '<=' can call '__lt', etc. */
-      return "metamethod";
-    case OP_CLOSE: case OP_RETURN:
-      *name = "close";
-      return "metamethod";
+    /* no cases for OP_EQI and OP_EQK, as they don't call metamethods */
+    case OP_LT: case OP_LTI: case OP_GTI: tm = TM_LT; break;
+    case OP_LE: case OP_LEI: case OP_GEI: tm = TM_LE; break;
+    case OP_CLOSE: case OP_RETURN: tm = TM_CLOSE; break;
     default:
       return NULL;  /* cannot find a reasonable name */
   }
@@ -694,6 +692,19 @@ static const char *varinfo (lua_State *L, const TValue *o) {
 l_noret luaG_typeerror (lua_State *L, const TValue *o, const char *op) {
   const char *t = luaT_objtypename(L, o);
   luaG_runerror(L, "attempt to %s a %s value%s", op, t, varinfo(L, o));
+}
+
+
+l_noret luaG_callerror (lua_State *L, const TValue *o) {
+  CallInfo *ci = L->ci;
+  const char *name = NULL;  /* to avoid warnings */
+  const char *what = (isLua(ci)) ? funcnamefromcode(L, ci, &name) : NULL;
+  if (what != NULL) {
+    const char *t = luaT_objtypename(L, o);
+    luaG_runerror(L, "%s '%s' is not callable (a %s value)", what, name, t);
+  }
+  else
+    luaG_typeerror(L, o, "call");
 }
 
 
