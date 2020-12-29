@@ -101,31 +101,32 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
 
 
 /*
-** Prepare closing method plus its arguments for object 'obj' with
-** error message 'err'. (This function assumes EXTRA_STACK.)
+** Call closing method for object 'obj' with error message 'err'.
+** (This function assumes EXTRA_STACK.)
 */
-static int prepclosingmethod (lua_State *L, TValue *obj, TValue *err) {
+static void callclosemethod (lua_State *L, TValue *obj, TValue *err) {
   StkId top = L->top;
   const TValue *tm = luaT_gettmbyobj(L, obj, TM_CLOSE);
-  if (ttisnil(tm))  /* no metamethod? */
-    return 0;  /* nothing to call */
   setobj2s(L, top, tm);  /* will call metamethod... */
   setobj2s(L, top + 1, obj);  /* with 'self' as the 1st argument */
   setobj2s(L, top + 2, err);  /* and error msg. as 2nd argument */
   L->top = top + 3;  /* add function and arguments */
-  return 1;
+  luaD_callnoyield(L, top, 0);  /* call method */
 }
 
 
 /*
-** Raise an error with message 'msg', inserting the name of the
-** local variable at position 'level' in the stack.
+** Check whether 'obj' has a close metamethod and raise an error
+** if not.
 */
-static void varerror (lua_State *L, StkId level, const char *msg) {
-  int idx = cast_int(level - L->ci->func);
-  const char *vname = luaG_findlocal(L, L->ci, idx, NULL);
-  if (vname == NULL) vname = "?";
-  luaG_runerror(L, msg, vname);
+static void checkclosemth (lua_State *L, StkId level, const TValue *obj) {
+  const TValue *tm = luaT_gettmbyobj(L, obj, TM_CLOSE);
+  if (ttisnil(tm)) {  /* no metamethod? */
+    int idx = cast_int(level - L->ci->func);  /* variable index */
+    const char *vname = luaG_findlocal(L, L->ci, idx, NULL);
+    if (vname == NULL) vname = "?";
+    luaG_runerror(L, "variable '%s' got a non-closable value", vname);
+  }
 }
 
 
@@ -136,7 +137,7 @@ static void varerror (lua_State *L, StkId level, const char *msg) {
 ** the 'level' of the upvalue being closed, as everything after that
 ** won't be used again.
 */
-static void callclosemth (lua_State *L, StkId level, int status) {
+static void prepcallclosemth (lua_State *L, StkId level, int status) {
   TValue *uv = s2v(level);  /* value being closed */
   TValue *errobj;
   if (status == CLOSEKTOP)
@@ -145,10 +146,7 @@ static void callclosemth (lua_State *L, StkId level, int status) {
     errobj = s2v(level + 1);  /* error object goes after 'uv' */
     luaD_seterrorobj(L, status, level + 1);  /* set error object */
   }
-  if (prepclosingmethod(L, uv, errobj))  /* something to call? */
-    luaD_callnoyield(L, L->top - 3, 0);  /* call method */
-  else if (!l_isfalse(uv))  /* non-closable non-false value? */
-    varerror(L, level, "attempt to close non-closable variable '%s'");
+  callclosemethod(L, uv, errobj);
 }
 
 
@@ -171,16 +169,12 @@ void luaF_newtbcupval (lua_State *L, StkId level) {
   lua_assert(L->openupval == NULL || uplevel(L->openupval) < level);
   if (!l_isfalse(obj)) {  /* false doesn't need to be closed */
     int status;
-    const TValue *tm = luaT_gettmbyobj(L, obj, TM_CLOSE);
-    if (ttisnil(tm))  /* no metamethod? */
-      varerror(L, level, "variable '%s' got a non-closable value");
+    checkclosemth(L, level, obj);
     status = luaD_rawrunprotected(L, trynewtbcupval, level);
     if (unlikely(status != LUA_OK)) {  /* memory error creating upvalue? */
       lua_assert(status == LUA_ERRMEM);
       luaD_seterrorobj(L, LUA_ERRMEM, level + 1);  /* save error message */
-      /* next call must succeed, as object is closable */
-      prepclosingmethod(L, s2v(level), s2v(level + 1));
-      luaD_callnoyield(L, L->top - 3, 0);  /* call method */
+      callclosemethod(L, s2v(level), s2v(level + 1));
       luaD_throw(L, LUA_ERRMEM);  /* throw memory error */
     }
   }
@@ -215,7 +209,7 @@ void luaF_close (lua_State *L, StkId level, int status) {
     }
     if (uv->tbc && status != NOCLOSINGMETH) {
       ptrdiff_t levelrel = savestack(L, level);
-      callclosemth(L, upl, status);  /* may change the stack */
+      prepcallclosemth(L, upl, status);  /* may change the stack */
       level = restorestack(L, levelrel);
     }
   }
