@@ -647,6 +647,8 @@ void luaH_newkey (lua_State *L, Table *t, const TValue *key, TValue *value) {
     else if (unlikely(luai_numisnan(f)))
       luaG_runerror(L, "table index is NaN");
   }
+  if (ttisnil(value))
+    return;  /* do not insert nil values */
   mp = mainpositionTV(t, key);
   if (!isempty(gval(mp)) || isdummy(t)) {  /* main position is taken? */
     Node *othern;
