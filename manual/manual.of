@@ -3095,6 +3095,18 @@ will probably need to close states as soon as they are not needed.
 
 }
 
+@APIEntry{void lua_closeslot (lua_State *L, int index);|
+@apii{0,0,e}
+
+Close the to-be-closed slot at the given index and set its value to @nil.
+The index must be the last index previously marked to be closed
+@see{lua_toclose} that is still active (that is, not closed yet).
+
+(Exceptionally, this function was introduced in release 5.4.3.
+It is not present in previous 5.4 releases.)
+
+}
+
 @APIEntry{int lua_compare (lua_State *L, int index1, int index2, int op);|
 @apii{0,0,e}
 
@@ -3747,9 +3759,7 @@ except that it allows the called function to yield @see{continuations}.
 @apii{n,0,e}
 
 Pops @id{n} elements from the stack.
-
-This function can run arbitrary code when removing an index
-marked as to-be-closed from the stack.
+It is implemented as a macro over @Lid{lua_settop}.
 
 }
 
@@ -4240,8 +4250,12 @@ If the new top is greater than the old one,
 then the new elements are filled with @nil.
 If @id{index} @N{is 0}, then all stack elements are removed.
 
-This function can run arbitrary code when removing an index
-marked as to-be-closed from the stack.
+For compatibility reasons,
+this function may close slots marked as to-be-closed @see{lua_toclose},
+and therefore it can run arbitrary code.
+You should not rely on this behavior:
+Instead, always close to-be-closed slots explicitly,
+with @Lid{lua_closeslot}, before removing them from the stack.
 
 }
 
@@ -4337,10 +4351,9 @@ when it goes out of scope.
 Here, in the context of a C function,
 to go out of scope means that the running function returns to Lua,
 there is an error,
-or the index is removed from the stack through
-@Lid{lua_settop} or @Lid{lua_pop}.
-An index marked as to-be-closed should not be removed from the stack
-by any other function in the API except @Lid{lua_settop} or @Lid{lua_pop}.
+or there is a call to @Lid{lua_closeslot}.
+An index marked as to-be-closed should neither be removed from the stack
+nor modified before a corresponding call to @Lid{lua_closeslot}.
 
 This function should not be called for an index
 that is equal to or below an active to-be-closed index.
@@ -4353,7 +4366,7 @@ Note that, both in case of errors and of a regular return,
 by the time the @idx{__close} metamethod runs,
 the @N{C stack} was already unwound,
 so that any automatic @N{C variable} declared in the calling function
-will be out of scope.
+(e.g., a buffer) will be out of scope.
 
 }
 

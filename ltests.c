@@ -1766,6 +1766,9 @@ static struct X { int x; } x;
     else if EQ("toclose") {
       lua_toclose(L1, getnum);
     }
+    else if EQ("closeslot") {
+      lua_closeslot(L1, getnum);
+    }
     else luaL_error(L, "unknown instruction %s", buff);
   }
   return 0;

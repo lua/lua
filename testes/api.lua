@@ -507,10 +507,12 @@ function checkerrnopro (code, msg)
 end
 
 if not _soft then
+  collectgarbage("stop")   -- avoid __gc with full stack
   checkerrnopro("pushnum 3; call 0 0", "attempt to call")
   print"testing stack overflow in unprotected thread"
   function f () f() end
   checkerrnopro("getglobal 'f'; call 0 0;", "stack overflow")
+  collectgarbage("restart")
 end
 print"+"
 
@@ -1125,26 +1127,29 @@ do
     assert(#openresource == n)
   end
 
-  -- closing resources with 'settop'
+  -- closing resources with 'closeslot'
+  _ENV.xxx = true
   local a = T.testC([[
-    pushvalue 2
-    call 0 1   # create resource
+    pushvalue 2  # stack: S, NR, CH
+    call 0 1   # create resource; stack: S, NR, CH, R
     toclose -1 # mark it to be closed
-    pushvalue 2
-    call 0 1   # create another resource
+    pushvalue 2  #  stack: S, NR, CH, R, NR
+    call 0 1   # create another resource; stack: S, NR, CH, R, R
     toclose -1 # mark it to be closed
-    pushvalue 3
+    pushvalue 3  # stack: S, NR, CH, R, R, CH
     pushint 2   # there should be two open resources
-    call 1 0
-    pop 1       # pop second resource from the stack
-    pushvalue 3
+    call 1 0  #  stack: S, NR, CH, R, R
+    closeslot -1   # close second resource
+    pushvalue 3  # stack: S, NR, CH, R, R, CH
     pushint 1   # there should be one open resource
-    call 1 0
-    pop 1       # pop second resource from the stack
+    call 1 0  # stack: S, NR, CH, R, R
+    closeslot 4
+    setglobal "xxx"  # previous op. erased the slot
+    pop 1       # pop other resource from the stack
     pushint *
     return 1    # return stack size
   ]], newresource, check)
-  assert(a == 3)   -- no extra items left in the stack
+  assert(a == 3 and _ENV.xxx == nil)   -- no extra items left in the stack
 
   -- non-closable value
   local a, b = pcall(T.makeCfunc[[

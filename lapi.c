@@ -187,9 +187,26 @@ LUA_API void lua_settop (lua_State *L, int idx) {
     api_check(L, -(idx+1) <= (L->top - (func + 1)), "invalid new top");
     diff = idx + 1;  /* will "subtract" index (as it is negative) */
   }
+#if defined(LUA_COMPAT_5_4_0)
   if (diff < 0 && hastocloseCfunc(ci->nresults))
     luaF_close(L, L->top + diff, CLOSEKTOP);
-  L->top += diff;  /* correct top only after closing any upvalue */
+#endif
+  L->top += diff;
+  api_check(L, L->openupval == NULL || uplevel(L->openupval) < L->top,
+               "cannot pop an unclosed slot");
+  lua_unlock(L);
+}
+
+
+LUA_API void lua_closeslot (lua_State *L, int idx) {
+  StkId level;
+  lua_lock(L);
+  level = index2stack(L, idx);
+  api_check(L, hastocloseCfunc(L->ci->nresults) && L->openupval != NULL &&
+               uplevel(L->openupval) == level,
+     "no variable to close at given level");
+  luaF_close(L, level, CLOSEKTOP);
+  setnilvalue(s2v(level));
   lua_unlock(L);
 }
 

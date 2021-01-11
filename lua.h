@@ -347,7 +347,8 @@ LUA_API size_t   (lua_stringtonumber) (lua_State *L, const char *s);
 LUA_API lua_Alloc (lua_getallocf) (lua_State *L, void **ud);
 LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 
-LUA_API void  (lua_toclose) (lua_State *L, int idx);
+LUA_API void (lua_toclose) (lua_State *L, int idx);
+LUA_API void (lua_closeslot) (lua_State *L, int idx);
 
 
 /*
