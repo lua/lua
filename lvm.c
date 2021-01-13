@@ -842,6 +842,10 @@ void luaV_finishOp (lua_State *L) {
       luaV_concat(L, total);  /* concat them (may yield again) */
       break;
     }
+    case OP_CLOSE:  case OP_RETURN: {  /* yielded closing variables */
+      ci->u.l.savedpc--;  /* repeat instruction to close other vars. */
+      break;
+    }
     default: {
       /* only these other opcodes can yield */
       lua_assert(op == OP_TFORCALL || op == OP_CALL ||
@@ -1524,7 +1528,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_CLOSE) {
-        Protect(luaF_close(L, ra, LUA_OK));
+        Protect(luaF_close(L, ra, LUA_OK, 1));
         vmbreak;
       }
       vmcase(OP_TBC) {
@@ -1632,7 +1636,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           /* close upvalues from current call; the compiler ensures
              that there are no to-be-closed variables here, so this
              call cannot change the stack */
-          luaF_close(L, base, NOCLOSINGMETH);
+          luaF_close(L, base, NOCLOSINGMETH, 0);
           lua_assert(base == ci->func + 1);
         }
         while (!ttisfunction(s2v(ra))) {  /* not a function? */
@@ -1662,7 +1666,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         if (TESTARG_k(i)) {  /* may there be open upvalues? */
           if (L->top < ci->top)
             L->top = ci->top;
-          luaF_close(L, base, CLOSEKTOP);
+          luaF_close(L, base, CLOSEKTOP, 1);
           updatetrap(ci);
           updatestack(ci);
         }

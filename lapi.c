@@ -189,7 +189,7 @@ LUA_API void lua_settop (lua_State *L, int idx) {
   }
 #if defined(LUA_COMPAT_5_4_0)
   if (diff < 0 && hastocloseCfunc(ci->nresults))
-    luaF_close(L, L->top + diff, CLOSEKTOP);
+    luaF_close(L, L->top + diff, CLOSEKTOP, 0);
 #endif
   L->top += diff;
   api_check(L, L->openupval == NULL || uplevel(L->openupval) < L->top,
@@ -205,7 +205,7 @@ LUA_API void lua_closeslot (lua_State *L, int idx) {
   api_check(L, hastocloseCfunc(L->ci->nresults) && L->openupval != NULL &&
                uplevel(L->openupval) == level,
      "no variable to close at given level");
-  luaF_close(L, level, CLOSEKTOP);
+  luaF_close(L, level, CLOSEKTOP, 0);
   setnilvalue(s2v(level));
   lua_unlock(L);
 }

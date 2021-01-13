@@ -641,6 +641,94 @@ end
 print "to-be-closed variables in coroutines"
 
 do
+  -- yielding inside closing metamethods
+
+  local function checktable (t1, t2)
+    assert(#t1 == #t2)
+    for i = 1, #t1 do
+      assert(t1[i] == t2[i])
+    end
+  end
+
+  local trace = {}
+  local co = coroutine.wrap(function ()
+
+    trace[#trace + 1] = "nowX"
+
+    -- will be closed after 'y'
+    local x <close> = func2close(function (_, msg)
+      assert(msg == nil)
+      trace[#trace + 1] = "x1"
+      coroutine.yield("x")
+      trace[#trace + 1] = "x2"
+    end)
+
+    return pcall(function ()
+      do   -- 'z' will be closed first
+        local z <close> = func2close(function (_, msg)
+          assert(msg == nil)
+          trace[#trace + 1] = "z1"
+          coroutine.yield("z")
+          trace[#trace + 1] = "z2"
+        end)
+      end
+
+      trace[#trace + 1] = "nowY"
+
+      -- will be closed after 'z'
+      local y <close> = func2close(function(_, msg)
+        assert(msg == nil)
+        trace[#trace + 1] = "y1"
+        coroutine.yield("y")
+        trace[#trace + 1] = "y2"
+      end)
+
+      return 10, 20, 30
+    end)
+  end)
+
+  assert(co() == "z")
+  assert(co() == "y")
+  assert(co() == "x")
+  checktable({co()}, {true, 10, 20, 30})
+  checktable(trace, {"nowX", "z1", "z2", "nowY", "y1", "y2", "x1", "x2"})
+
+end 
+ 
+
+do
+  -- yielding inside closing metamethods after an error:
+  -- not yet implemented; raises an error
+
+  local co = coroutine.wrap(function ()
+
+    local function foo (err)
+
+      local x <close> = func2close(function(_, msg)
+        assert(msg == err)
+        coroutine.yield("x")
+        return 100, 200
+      end)
+
+      if err then error(err) else return 10, 20 end
+    end
+
+    coroutine.yield(pcall(foo, nil))  -- no error
+    return pcall(foo, 10)     -- 'foo' will raise an error
+  end)
+
+  local a, b = co()
+  assert(a == "x" and b == nil)    -- yields inside 'x'; Ok
+
+  local a, b, c = co()
+  assert(a and b == 10 and c == 20)   -- returns from 'pcall(foo, nil)'
+
+  local st, msg = co()    -- error yielding after an error
+  assert(not st and string.find(msg, "attempt to yield"))
+end
+
+
+do
   -- an error in a wrapped coroutine closes variables
   local x = false
   local y = false

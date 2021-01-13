@@ -313,7 +313,7 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
 
 void luaE_freethread (lua_State *L, lua_State *L1) {
   LX *l = fromstate(L1);
-  luaF_close(L1, L1->stack, NOCLOSINGMETH);  /* close all upvalues */
+  luaF_close(L1, L1->stack, NOCLOSINGMETH, 0);  /* close all upvalues */
   lua_assert(L1->openupval == NULL);
   luai_userstatefree(L, L1);
   freestack(L1);

@@ -101,17 +101,21 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
 
 
 /*
-** Call closing method for object 'obj' with error message 'err'.
+** Call closing method for object 'obj' with error message 'err'. The
+** boolean 'yy' controls whether the call is yieldable.
 ** (This function assumes EXTRA_STACK.)
 */
-static void callclosemethod (lua_State *L, TValue *obj, TValue *err) {
+static void callclosemethod (lua_State *L, TValue *obj, TValue *err, int yy) {
   StkId top = L->top;
   const TValue *tm = luaT_gettmbyobj(L, obj, TM_CLOSE);
   setobj2s(L, top, tm);  /* will call metamethod... */
   setobj2s(L, top + 1, obj);  /* with 'self' as the 1st argument */
   setobj2s(L, top + 2, err);  /* and error msg. as 2nd argument */
   L->top = top + 3;  /* add function and arguments */
-  luaD_callnoyield(L, top, 0);  /* call method */
+  if (yy)
+    luaD_call(L, top, 0);
+  else
+    luaD_callnoyield(L, top, 0);
 }
 
 
@@ -137,7 +141,7 @@ static void checkclosemth (lua_State *L, StkId level, const TValue *obj) {
 ** the 'level' of the upvalue being closed, as everything after that
 ** won't be used again.
 */
-static void prepcallclosemth (lua_State *L, StkId level, int status) {
+static void prepcallclosemth (lua_State *L, StkId level, int status, int yy) {
   TValue *uv = s2v(level);  /* value being closed */
   TValue *errobj;
   if (status == CLOSEKTOP)
@@ -146,7 +150,7 @@ static void prepcallclosemth (lua_State *L, StkId level, int status) {
     errobj = s2v(level + 1);  /* error object goes after 'uv' */
     luaD_seterrorobj(L, status, level + 1);  /* set error object */
   }
-  callclosemethod(L, uv, errobj);
+  callclosemethod(L, uv, errobj, yy);
 }
 
 
@@ -174,7 +178,7 @@ void luaF_newtbcupval (lua_State *L, StkId level) {
     if (unlikely(status != LUA_OK)) {  /* memory error creating upvalue? */
       lua_assert(status == LUA_ERRMEM);
       luaD_seterrorobj(L, LUA_ERRMEM, level + 1);  /* save error message */
-      callclosemethod(L, s2v(level), s2v(level + 1));
+      callclosemethod(L, s2v(level), s2v(level + 1), 0);
       luaD_throw(L, LUA_ERRMEM);  /* throw memory error */
     }
   }
@@ -194,7 +198,7 @@ void luaF_unlinkupval (UpVal *uv) {
 ** to NOCLOSINGMETH closes upvalues without running any __close
 ** metamethods.
 */
-void luaF_close (lua_State *L, StkId level, int status) {
+void luaF_close (lua_State *L, StkId level, int status, int yy) {
   UpVal *uv;
   StkId upl;  /* stack index pointed by 'uv' */
   while ((uv = L->openupval) != NULL && (upl = uplevel(uv)) >= level) {
@@ -209,7 +213,7 @@ void luaF_close (lua_State *L, StkId level, int status) {
     }
     if (uv->tbc && status != NOCLOSINGMETH) {
       ptrdiff_t levelrel = savestack(L, level);
-      prepcallclosemth(L, upl, status);  /* may change the stack */
+      prepcallclosemth(L, upl, status, yy);  /* may change the stack */
       level = restorestack(L, levelrel);
     }
   }

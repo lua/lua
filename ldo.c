@@ -406,7 +406,7 @@ static void moveresults (lua_State *L, StkId res, int nres, int wanted) {
     default:  /* multiple results (or to-be-closed variables) */
       if (hastocloseCfunc(wanted)) {  /* to-be-closed variables? */
         ptrdiff_t savedres = savestack(L, res);
-        luaF_close(L, res, CLOSEKTOP);  /* may change the stack */
+        luaF_close(L, res, CLOSEKTOP, 0);  /* may change the stack */
         res = restorestack(L, savedres);
         wanted = codeNresults(wanted);  /* correct value */
         if (wanted == LUA_MULTRET)
@@ -647,7 +647,7 @@ static void recover (lua_State *L, void *ud) {
   /* "finish" luaD_pcall */
   L->ci = ci;
   L->allowhook = getoah(ci->callstatus);  /* restore original 'allowhook' */
-  luaF_close(L, func, status);  /* may change the stack */
+  luaF_close(L, func, status, 0);  /* may change the stack */
   func = restorestack(L, ci->u2.funcidx);
   luaD_seterrorobj(L, status, func);
   luaD_shrinkstack(L);   /* restore stack size in case of overflow */
@@ -803,7 +803,7 @@ struct CloseP {
 */
 static void closepaux (lua_State *L, void *ud) {
   struct CloseP *pcl = cast(struct CloseP *, ud);
-  luaF_close(L, pcl->level, pcl->status);
+  luaF_close(L, pcl->level, pcl->status, 0);
 }
 
 
