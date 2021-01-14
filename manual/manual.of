@@ -7821,19 +7821,19 @@ from @T{list[1]} to @T{list[#list]}.
 If @id{comp} is given,
 then it must be a function that receives two list elements
 and returns true when the first element must come
-before the second in the final order
-(so that, after the sort,
-@T{i < j} implies @T{not comp(list[j],list[i])}).
+before the second in the final order,
+so that, after the sort,
+@T{i <= j} implies @T{not comp(list[j],list[i])}.
 If @id{comp} is not given,
 then the standard Lua operator @T{<} is used instead.
 
-Note that the @id{comp} function must define
-a strict partial order over the elements in the list;
-that is, it must be asymmetric and transitive.
-Otherwise, no valid sort may be possible.
+The @id{comp} function must define a consistent order;
+more formally, the function must define a strict weak order.
+(A weak order is similar to a total order,
+but it can equate different elements for comparison purposes.)
 
 The sort algorithm is not stable:
-elements considered equal by the given order
+Different elements considered equal by the given order
 may have their relative positions changed by the sort.
 
 }
