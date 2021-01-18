@@ -565,25 +565,64 @@ void luaD_callnoyield (lua_State *L, StkId func, int nResults) {
 
 
 /*
-** Completes the execution of an interrupted C function, calling its
-** continuation function.
+** Finish the job of 'lua_pcallk' after it was interrupted by an yield.
+** (The caller, 'finishCcall', does the final call to 'adjustresults'.)
+** The main job is to complete the 'luaD_pcall' called by 'lua_pcallk'.
+** If a '__close' method yields here, eventually control will be back
+** to 'finishCcall' (when that '__close' method finally returns) and
+** 'finishpcallk' will run again and close any still pending '__close'
+** methods. Similarly, if a '__close' method errs, 'precover' calls
+** 'unroll' which calls ''finishCcall' and we are back here again, to
+** close any pending '__close' methods.
+** Note that, up to the call to 'luaF_close', the corresponding
+** 'CallInfo' is not modified, so that this repeated run works like the
+** first one (except that it has at least one less '__close' to do). In
+** particular, field CIST_RECST preserves the error status across these
+** multiple runs, changing only if there is a new error.
 */
-static void finishCcall (lua_State *L, int status) {
-  CallInfo *ci = L->ci;
+static int finishpcallk (lua_State *L,  CallInfo *ci) {
+  int status = getcistrecst(ci);  /* get original status */
+  if (status == LUA_OK)  /* no error? */
+    status = LUA_YIELD;  /* was interrupted by an yield */
+  else {  /* error */
+    StkId func = restorestack(L, ci->u2.funcidx);
+    L->allowhook = getoah(ci->callstatus);  /* restore 'allowhook' */
+    luaF_close(L, func, status, 1);  /* can yield or raise an error */
+    func = restorestack(L, ci->u2.funcidx);  /* stack may be moved */
+    luaD_seterrorobj(L, status, func);
+    luaD_shrinkstack(L);   /* restore stack size in case of overflow */
+    setcistrecst(ci, LUA_OK);  /* clear original status */
+  }
+  ci->callstatus &= ~CIST_YPCALL;
+  L->errfunc = ci->u.c.old_errfunc;
+  /* if it is here, there were errors or yields; unlike 'lua_pcallk',
+     do not change status */
+  return status;
+}
+
+
+/*
+** Completes the execution of a C function interrupted by an yield.
+** The interruption must have happened while the function was
+** executing 'lua_callk' or 'lua_pcallk'. In the second case, the
+** call to 'finishpcallk' finishes the interrupted execution of
+** 'lua_pcallk'. After that, it calls the continuation of the
+** interrupted function and finally it completes the job of the
+** 'luaD_call' that called the function.
+** In the call to 'adjustresults', we do not know the number of
+** results of the function called by 'lua_callk'/'lua_pcallk',
+** so we are conservative and use LUA_MULTRET (always adjust).
+*/
+static void finishCcall (lua_State *L, CallInfo *ci) {
   int n;
+  int status = LUA_YIELD;  /* default if there were no errors */
   /* must have a continuation and must be able to call it */
   lua_assert(ci->u.c.k != NULL && yieldable(L));
-  /* error status can only happen in a protected call */
-  lua_assert((ci->callstatus & CIST_YPCALL) || status == LUA_YIELD);
-  if (ci->callstatus & CIST_YPCALL) {  /* was inside a pcall? */
-    ci->callstatus &= ~CIST_YPCALL;  /* continuation is also inside it */
-    L->errfunc = ci->u.c.old_errfunc;  /* with the same error function */
-  }
-  /* finish 'lua_callk'/'lua_pcall'; CIST_YPCALL and 'errfunc' already
-     handled */
-  adjustresults(L, ci->nresults);
+  if (ci->callstatus & CIST_YPCALL)   /* was inside a 'lua_pcallk'? */
+    status = finishpcallk(L, ci);  /* finish it */
+  adjustresults(L, LUA_MULTRET);  /* finish 'lua_callk' */
   lua_unlock(L);
-  n = (*ci->u.c.k)(L, status, ci->u.c.ctx);  /* call continuation function */
+  n = (*ci->u.c.k)(L, status, ci->u.c.ctx);  /* call continuation */
   lua_lock(L);
   api_checknelems(L, n);
   luaD_poscall(L, ci, n);  /* finish 'luaD_call' */
@@ -600,7 +639,7 @@ static void unroll (lua_State *L, void *ud) {
   UNUSED(ud);
   while ((ci = L->ci) != &L->base_ci) {  /* something in the stack */
     if (!isLua(ci))  /* C function? */
-      finishCcall(L, LUA_YIELD);  /* complete its execution */
+      finishCcall(L, ci);  /* complete its execution */
     else {  /* Lua function */
       luaV_finishOp(L);  /* finish interrupted instruction */
       luaV_execute(L, ci);  /* execute down to higher C 'boundary' */
@@ -620,40 +659,6 @@ static CallInfo *findpcall (lua_State *L) {
       return ci;
   }
   return NULL;  /* no pending pcall */
-}
-
-
-/*
-** Auxiliary structure to call 'recover' in protected mode.
-*/
-struct RecoverS {
-  int status;
-  CallInfo *ci;
-};
-
-
-/*
-** Recovers from an error in a coroutine: completes the execution of the
-** interrupted 'luaD_pcall', completes the interrupted C function which
-** called 'lua_pcallk', and continues running the coroutine. If there is
-** an error in 'luaF_close', this function will be called again and the
-** coroutine will continue from where it left.
-*/
-static void recover (lua_State *L, void *ud) {
-  struct RecoverS *r = cast(struct RecoverS *, ud);
-  int status = r->status;
-  CallInfo *ci = r->ci;  /* recover point */
-  StkId func = restorestack(L, ci->u2.funcidx);
-  /* "finish" luaD_pcall */
-  L->ci = ci;
-  L->allowhook = getoah(ci->callstatus);  /* restore original 'allowhook' */
-  luaF_close(L, func, status, 0);  /* may change the stack */
-  func = restorestack(L, ci->u2.funcidx);
-  luaD_seterrorobj(L, status, func);
-  luaD_shrinkstack(L);   /* restore stack size in case of overflow */
-  L->errfunc = ci->u.c.old_errfunc;
-  finishCcall(L, status);  /* finish 'lua_pcallk' callee */
-  unroll(L, NULL);  /* continue running the coroutine */
 }
 
 
@@ -705,19 +710,21 @@ static void resume (lua_State *L, void *ud) {
 
 
 /*
-** Calls 'recover' in protected mode, repeating while there are
-** recoverable errors, that is, errors inside a protected call. (Any
-** error interrupts 'recover', and this loop protects it again so it
-** can continue.) Stops with a normal end (status == LUA_OK), an yield
+** Unrolls a coroutine in protected mode while there are recoverable
+** errors, that is, errors inside a protected call. (Any error
+** interrupts 'unroll', and this loop protects it again so it can
+** continue.) Stops with a normal end (status == LUA_OK), an yield
 ** (status == LUA_YIELD), or an unprotected error ('findpcall' doesn't
 ** find a recover point).
 */
-static int p_recover (lua_State *L, int status) {
-  struct RecoverS r;
-  r.status = status;
-  while (errorstatus(status) && (r.ci = findpcall(L)) != NULL)
-    r.status = luaD_rawrunprotected(L, recover, &r);
-  return r.status;
+static int precover (lua_State *L, int status) {
+  CallInfo *ci;
+  while (errorstatus(status) && (ci = findpcall(L)) != NULL) {
+    L->ci = ci;  /* go down to recovery functions */
+    setcistrecst(ci, status);  /* status to finish 'pcall' */
+    status = luaD_rawrunprotected(L, unroll, NULL);
+  }
+  return status;
 }
 
 
@@ -738,7 +745,7 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
   api_checknelems(L, (L->status == LUA_OK) ? nargs + 1 : nargs);
   status = luaD_rawrunprotected(L, resume, &nargs);
    /* continue running after recoverable errors */
-  status = p_recover(L, status);
+  status = precover(L, status);
   if (likely(!errorstatus(status)))
     lua_assert(status == L->status);  /* normal end or yield */
   else {  /* unrecoverable error */
