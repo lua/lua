@@ -4358,10 +4358,6 @@ nor modified before a corresponding call to @Lid{lua_closeslot}.
 This function should not be called for an index
 that is equal to or below an active to-be-closed index.
 
-In the case of an out-of-memory error,
-the value in the given index is immediately closed,
-as if it was already marked.
-
 Note that, both in case of errors and of a regular return,
 by the time the @idx{__close} metamethod runs,
 the @N{C stack} was already unwound,

@@ -163,6 +163,7 @@ static void correctstack (lua_State *L, StkId oldstack, StkId newstack) {
   if (oldstack == newstack)
     return;  /* stack address did not change */
   L->top = (L->top - oldstack) + newstack;
+  lua_assert(L->ptbc == NULL);
   for (up = L->openupval; up != NULL; up = up->u.open.next)
     up->v = s2v((uplevel(up) - oldstack) + newstack);
   for (ci = L->ci; ci != NULL; ci = ci->previous) {

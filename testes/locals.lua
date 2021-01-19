@@ -539,15 +539,17 @@ if rawget(_G, "T") then
   local _, msg = pcall(foo)
   assert(msg == "not enough memory")
 
+  local closemsg
   local close = func2close(function (self, msg)
     T.alloccount()
-    assert(msg == "not enough memory")
+    closemsg = msg
   end)
 
   -- set a memory limit and return a closing object to remove the limit
   local function enter (count)
     stack(10)   -- reserve some stack space
     T.alloccount(count)
+    closemsg = nil
     return close
   end
 
@@ -558,12 +560,7 @@ if rawget(_G, "T") then
   end
 
   local _, msg = pcall(test)
-  assert(msg == "not enough memory")
-
-  -- now use metamethod for closing
-  close = setmetatable({}, {__close = function ()
-    T.alloccount()
-  end})
+  assert(msg == "not enough memory" and closemsg == "not enough memory")
 
   -- repeat test with extra closing upvalues
   local function test ()
@@ -580,7 +577,7 @@ if rawget(_G, "T") then
   end
 
   local _, msg = pcall(test)
-  assert(msg == 1000)
+  assert(msg == 1000 and closemsg == "not enough memory")
 
   do    -- testing 'toclose' in C string buffer
     collectgarbage()

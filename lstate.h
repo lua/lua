@@ -308,6 +308,7 @@ struct lua_State {
   int basehookcount;
   int hookcount;
   volatile l_signalT hookmask;
+  StkId ptbc;  /* pending to-be-closed variable */
 };
 
 

@@ -253,6 +253,7 @@ static void preinit_thread (lua_State *L, global_State *g) {
   L->ci = NULL;
   L->nci = 0;
   L->twups = L;  /* thread has no upvalues */
+  L->nCcalls = 0;
   L->errorJmp = NULL;
   L->hook = NULL;
   L->hookmask = 0;
@@ -263,6 +264,7 @@ static void preinit_thread (lua_State *L, global_State *g) {
   L->status = LUA_OK;
   L->errfunc = 0;
   L->oldpc = 0;
+  L->ptbc = NULL;
 }
 
 
@@ -296,7 +298,6 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   setthvalue2s(L, L->top, L1);
   api_incr_top(L);
   preinit_thread(L1, g);
-  L1->nCcalls = 0;
   L1->hookmask = L->hookmask;
   L1->basehookcount = L->basehookcount;
   L1->hook = L->hook;
@@ -363,7 +364,6 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   preinit_thread(L, g);
   g->allgc = obj2gco(L);  /* by now, only object is the main thread */
   L->next = NULL;
-  L->nCcalls = 0;
   incnny(L);  /* main thread is always non yieldable */
   g->frealloc = f;
   g->ud = ud;

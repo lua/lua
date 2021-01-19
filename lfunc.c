@@ -155,32 +155,19 @@ static void prepcallclosemth (lua_State *L, StkId level, int status, int yy) {
 
 
 /*
-** Try to create a to-be-closed upvalue
-** (can raise a memory-allocation error)
-*/
-static void trynewtbcupval (lua_State *L, void *ud) {
-  newupval(L, 1, cast(StkId, ud), &L->openupval);
-}
-
-
-/*
-** Create a to-be-closed upvalue. If there is a memory error
-** when creating the upvalue, the closing method must be called here,
-** as there is no upvalue to call it later.
+** Create a to-be-closed upvalue. If there is a memory allocation error,
+** 'ptbc' keeps the object so it can be closed as soon as possible.
+** (Since memory errors have no handler, that will happen before any
+** stack reallocation.)
 */
 void luaF_newtbcupval (lua_State *L, StkId level) {
   TValue *obj = s2v(level);
   lua_assert(L->openupval == NULL || uplevel(L->openupval) < level);
   if (!l_isfalse(obj)) {  /* false doesn't need to be closed */
-    int status;
     checkclosemth(L, level, obj);
-    status = luaD_rawrunprotected(L, trynewtbcupval, level);
-    if (unlikely(status != LUA_OK)) {  /* memory error creating upvalue? */
-      lua_assert(status == LUA_ERRMEM);
-      luaD_seterrorobj(L, LUA_ERRMEM, level + 1);  /* save error message */
-      callclosemethod(L, s2v(level), s2v(level + 1), 0);
-      luaD_throw(L, LUA_ERRMEM);  /* throw memory error */
-    }
+    L->ptbc = level;  /* in case of allocation error */
+    newupval(L, 1, level, &L->openupval);
+    L->ptbc = NULL;  /* no errors */
   }
 }
 
@@ -196,11 +183,19 @@ void luaF_unlinkupval (UpVal *uv) {
 /*
 ** Close all upvalues up to the given stack level. A 'status' equal
 ** to NOCLOSINGMETH closes upvalues without running any __close
-** metamethods.
+** metamethods. If there is a pending to-be-closed value, close
+** it before anything else.
 */
 void luaF_close (lua_State *L, StkId level, int status, int yy) {
   UpVal *uv;
   StkId upl;  /* stack index pointed by 'uv' */
+  if (unlikely(status == LUA_ERRMEM && L->ptbc != NULL)) {
+    upl = L->ptbc;
+    L->ptbc = NULL;  /* remove from "list" before closing */
+    prepcallclosemth(L, upl, status, yy);
+  }
+  else
+    lua_assert(L->ptbc == NULL);  /* must be empty for other status */
   while ((uv = L->openupval) != NULL && (upl = uplevel(uv)) >= level) {
     TValue *slot = &uv->u.value;  /* new position for value */
     lua_assert(uplevel(uv) < L->top);
