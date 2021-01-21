@@ -341,7 +341,8 @@ void luaD_hookcall (lua_State *L, CallInfo *ci) {
 }
 
 
-static StkId rethook (lua_State *L, CallInfo *ci, StkId firstres, int nres) {
+static void rethook (lua_State *L, CallInfo *ci, int nres) {
+  StkId firstres = L->top - nres;  /* index of first result */
   ptrdiff_t oldtop = savestack(L, L->top);  /* hook may change top */
   int delta = 0;
   if (isLuacode(ci)) {
@@ -360,7 +361,7 @@ static StkId rethook (lua_State *L, CallInfo *ci, StkId firstres, int nres) {
   }
   if (isLua(ci = ci->previous))
     L->oldpc = pcRel(ci->u.l.savedpc, ci_func(ci)->p);  /* update 'oldpc' */
-  return restorestack(L, oldtop);
+  L->top = restorestack(L, oldtop);
 }
 
 
@@ -397,7 +398,7 @@ static void moveresults (lua_State *L, StkId res, int nres, int wanted) {
     case 1:  /* one value needed */
       if (nres == 0)   /* no results? */
         setnilvalue(s2v(res));  /* adjust with nil */
-      else
+      else  /* at least one result */
         setobjs2s(L, res, L->top - nres);  /* move it to proper place */
       L->top = res + 1;
       return;
@@ -412,6 +413,8 @@ static void moveresults (lua_State *L, StkId res, int nres, int wanted) {
         wanted = codeNresults(wanted);  /* correct value */
         if (wanted == LUA_MULTRET)
           wanted = nres;
+        if (L->hookmask)  /* if needed, call hook after '__close's */
+          rethook(L, L->ci, nres);
       }
       break;
   }
@@ -426,15 +429,18 @@ static void moveresults (lua_State *L, StkId res, int nres, int wanted) {
 
 
 /*
-** Finishes a function call: calls hook if necessary, removes CallInfo,
-** moves current number of results to proper place.
+** Finishes a function call: calls hook if necessary, moves current
+** number of results to proper place, and returns to previous call
+** info. If function has to close variables, hook must be called after
+** that.
 */
 void luaD_poscall (lua_State *L, CallInfo *ci, int nres) {
-  if (L->hookmask)
-    L->top = rethook(L, ci, L->top - nres, nres);
-  L->ci = ci->previous;  /* back to caller */
+  int wanted = ci->nresults;
+  if (L->hookmask && !hastocloseCfunc(wanted))
+    rethook(L, ci, nres);
   /* move results to proper place */
-  moveresults(L, ci->func, nres, ci->nresults);
+  moveresults(L, ci->func, nres, wanted);
+  L->ci = ci->previous;  /* back to caller (after closing variables) */
 }
 
 

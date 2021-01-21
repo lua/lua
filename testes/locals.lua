@@ -521,6 +521,14 @@ do   -- tbc inside close methods
 end
 
 
+local function checktable (t1, t2)
+  assert(#t1 == #t2)
+  for i = 1, #t1 do
+    assert(t1[i] == t2[i])
+  end
+end
+
+
 if rawget(_G, "T") then
 
   -- memory error inside closing function
@@ -632,6 +640,68 @@ if rawget(_G, "T") then
     print'+'
   end
 
+
+  do
+    -- '__close' vs. return hooks in C functions
+    local trace = {}
+
+    local function hook (event)
+      trace[#trace + 1] = event .. " " .. (debug.getinfo(2).name or "?")
+    end
+
+    -- create tbc variables to be used by C function
+    local x = func2close(function (_,msg)
+      trace[#trace + 1] = "x"
+    end)
+
+    local y = func2close(function (_,msg)
+      trace[#trace + 1] = "y"
+    end)
+
+    debug.sethook(hook, "r")
+    local t = {T.testC([[
+       toclose 2      # x
+       pushnum 10
+       pushint 20
+       toclose 3      # y
+       return 2
+    ]], x, y)}
+    debug.sethook()
+
+    -- hooks ran before return hook from 'testC'
+    checktable(trace,
+       {"return sethook", "y", "return ?", "x", "return ?", "return testC"})
+    -- results are correct
+    checktable(t, {10, 20})
+  end
+
+end
+
+
+do   -- '__close' vs. return hooks in Lua functions
+  local trace = {}
+
+  local function hook (event)
+    trace[#trace + 1] = event .. " " .. debug.getinfo(2).name
+  end
+
+  local function foo (...)
+    local x <close> = func2close(function (_,msg)
+      trace[#trace + 1] = "x"
+    end)
+
+    local y <close> = func2close(function (_,msg)
+      debug.sethook(hook, "r")
+    end)
+
+    return ...
+  end
+
+  local t = {foo(10,20,30)}
+  debug.sethook()
+  checktable(t, {10, 20, 30})
+  checktable(trace,
+    {"return sethook", "return close", "x", "return close", "return foo"})
 end
 
 
@@ -639,13 +709,6 @@ print "to-be-closed variables in coroutines"
 
 do
   -- yielding inside closing metamethods
-
-  local function checktable (t1, t2)
-    assert(#t1 == #t2)
-    for i = 1, #t1 do
-      assert(t1[i] == t2[i])
-    end
-  end
 
   local trace = {}
   local co = coroutine.wrap(function ()
