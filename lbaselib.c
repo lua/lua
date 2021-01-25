@@ -182,7 +182,8 @@ static int luaB_rawset (lua_State *L) {
 
 
 static int pushmode (lua_State *L, int oldmode) {
-  lua_pushstring(L, (oldmode == LUA_GCINC) ? "incremental" : "generational");
+  lua_pushstring(L, (oldmode == LUA_GCINC) ? "incremental"
+                                           : "generational");
   return 1;
 }
 

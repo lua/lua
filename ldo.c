@@ -295,8 +295,8 @@ void luaD_hook (lua_State *L, int event, int line,
   if (hook && L->allowhook) {  /* make sure there is a hook */
     int mask = CIST_HOOKED;
     CallInfo *ci = L->ci;
-    ptrdiff_t top = savestack(L, L->top);
-    ptrdiff_t ci_top = savestack(L, ci->top);
+    ptrdiff_t top = savestack(L, L->top);  /* preserve original 'top' */
+    ptrdiff_t ci_top = savestack(L, ci->top);  /* idem for 'ci->top' */
     lua_Debug ar;
     ar.event = event;
     ar.currentline = line;
@@ -307,7 +307,7 @@ void luaD_hook (lua_State *L, int event, int line,
       ci->u2.transferinfo.ntransfer = ntransfer;
     }
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
-    if (L->top + LUA_MINSTACK > ci->top)
+    if (ci->top < L->top + LUA_MINSTACK)
       ci->top = L->top + LUA_MINSTACK;
     L->allowhook = 0;  /* cannot call hooks inside a hook */
     ci->callstatus |= mask;
@@ -329,39 +329,44 @@ void luaD_hook (lua_State *L, int event, int line,
 ** active.
 */
 void luaD_hookcall (lua_State *L, CallInfo *ci) {
-  int hook = (ci->callstatus & CIST_TAIL) ? LUA_HOOKTAILCALL : LUA_HOOKCALL;
-  Proto *p;
-  if (!(L->hookmask & LUA_MASKCALL))  /* some other hook? */
-    return;  /* don't call hook */
-  p = clLvalue(s2v(ci->func))->p;
-  L->top = ci->top;  /* prepare top */
-  ci->u.l.savedpc++;  /* hooks assume 'pc' is already incremented */
-  luaD_hook(L, hook, -1, 1, p->numparams);
-  ci->u.l.savedpc--;  /* correct 'pc' */
+  if (L->hookmask & LUA_MASKCALL) {  /* is call hook on? */
+    int event = (ci->callstatus & CIST_TAIL) ? LUA_HOOKTAILCALL
+                                             : LUA_HOOKCALL;
+    Proto *p = ci_func(ci)->p;
+    L->top = ci->top;  /* prepare top */
+    ci->u.l.savedpc++;  /* hooks assume 'pc' is already incremented */
+    luaD_hook(L, event, -1, 1, p->numparams);
+    ci->u.l.savedpc--;  /* correct 'pc' */
+  }
 }
 
 
+/*
+** Executes a call hook for Lua and C functions. This function is called
+** whenever 'hookmask' is not zero, so it checks whether return hooks are
+** active.
+*/
 static void rethook (lua_State *L, CallInfo *ci, int nres) {
-  StkId firstres = L->top - nres;  /* index of first result */
-  ptrdiff_t oldtop = savestack(L, L->top);  /* hook may change top */
-  int delta = 0;
-  if (isLuacode(ci)) {
-    Proto *p = ci_func(ci)->p;
-    if (p->is_vararg)
-      delta = ci->u.l.nextraargs + p->numparams + 1;
+  if (L->hookmask & LUA_MASKRET) {  /* is return hook on? */
+    StkId firstres = L->top - nres;  /* index of first result */
+    ptrdiff_t oldtop = savestack(L, L->top);  /* hook may change top */
+    int delta = 0;  /* correction for vararg functions */
+    int ftransfer;
+    if (isLuacode(ci)) {
+      Proto *p = ci_func(ci)->p;
+      if (p->is_vararg)
+        delta = ci->u.l.nextraargs + p->numparams + 1;
     if (L->top < ci->top)
       L->top = ci->top;  /* correct top to run hook */
-  }
-  if (L->hookmask & LUA_MASKRET) {  /* is return hook on? */
-    int ftransfer;
+    }
     ci->func += delta;  /* if vararg, back to virtual 'func' */
     ftransfer = cast(unsigned short, firstres - ci->func);
     luaD_hook(L, LUA_HOOKRET, -1, ftransfer, nres);  /* call it */
     ci->func -= delta;
+    L->top = restorestack(L, oldtop);
   }
   if (isLua(ci = ci->previous))
     L->oldpc = pcRel(ci->u.l.savedpc, ci_func(ci)->p);  /* update 'oldpc' */
-  L->top = restorestack(L, oldtop);
 }
 
 
@@ -420,7 +425,9 @@ static void moveresults (lua_State *L, StkId res, int nres, int wanted) {
   }
   firstresult = L->top - nres;  /* index of first result */
   /* move all results to correct place */
-  for (i = 0; i < nres && i < wanted; i++)
+  if (nres > wanted)
+    nres = wanted;  /* don't need more than that */
+  for (i = 0; i < nres; i++)
     setobjs2s(L, res + i, firstresult + i);
   for (; i < wanted; i++)  /* complete wanted number of results */
     setnilvalue(s2v(res + i));

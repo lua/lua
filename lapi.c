@@ -74,7 +74,8 @@ static TValue *index2value (lua_State *L, int idx) {
       return &G(L)->nilvalue;  /* it has no upvalues */
     else {
       CClosure *func = clCvalue(s2v(ci->func));
-      return (idx <= func->nupvalues) ? &func->upvalue[idx-1] : &G(L)->nilvalue;
+      return (idx <= func->nupvalues) ? &func->upvalue[idx-1]
+                                      : &G(L)->nilvalue;
     }
   }
 }

@@ -156,6 +156,16 @@ typedef struct stringtable {
 
 /*
 ** Information about a call.
+** About union 'u':
+** - field 'l' is used only for Lua functions;
+** - field 'c' is used only for C functions.
+** About union 'u2':
+** - field 'funcidx' is used only by C functions while doing a
+** protected call;
+** - field 'nyield' is used only while a function is "doing" an
+** yield (from the yield until the next resume);
+** - field 'transferinfo' is used only during call/returnhooks,
+** before the function starts or after it ends.
 */
 typedef struct CallInfo {
   StkId func;  /* function index in the stack */
