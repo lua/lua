@@ -498,6 +498,28 @@ else
 
   assert(B // A == 7)    -- fact(7) // fact(6)
 
+  do   -- hooks vs. multiple values
+    local done
+    local function test (n)
+      done = false
+      return coroutine.wrap(function ()
+        local a = {}
+        for i = 1, n do a[i] = i end
+        -- 'pushint' just to perturb the stack
+        T.sethook("pushint 10; yield 0", "", 1)   -- yield at each op.
+        local a1 = {table.unpack(a)}   -- must keep top between ops.
+        assert(#a1 == n)
+        for i = 1, n do assert(a[i] == i) end
+        done = true
+      end)
+    end
+    -- arguments to the coroutine are just to perturb its stack
+    local co = test(0); while not done do co(30) end
+    co = test(1); while not done do co(20, 10) end
+    co = test(3); while not done do co() end
+    co = test(100); while not done do co() end
+  end
+
   local line = debug.getinfo(1, "l").currentline + 2    -- get line number
   local function foo ()
     local x = 10    --<< this line is 'line'

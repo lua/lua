@@ -306,6 +306,8 @@ void luaD_hook (lua_State *L, int event, int line,
       ci->u2.transferinfo.ftransfer = ftransfer;
       ci->u2.transferinfo.ntransfer = ntransfer;
     }
+    if (isLua(ci) && L->top < ci->top)
+      L->top = ci->top;  /* protect entire activation register */
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
     if (ci->top < L->top + LUA_MINSTACK)
       ci->top = L->top + LUA_MINSTACK;
@@ -333,7 +335,6 @@ void luaD_hookcall (lua_State *L, CallInfo *ci) {
     int event = (ci->callstatus & CIST_TAIL) ? LUA_HOOKTAILCALL
                                              : LUA_HOOKCALL;
     Proto *p = ci_func(ci)->p;
-    L->top = ci->top;  /* prepare top */
     ci->u.l.savedpc++;  /* hooks assume 'pc' is already incremented */
     luaD_hook(L, event, -1, 1, p->numparams);
     ci->u.l.savedpc--;  /* correct 'pc' */
@@ -349,21 +350,17 @@ void luaD_hookcall (lua_State *L, CallInfo *ci) {
 static void rethook (lua_State *L, CallInfo *ci, int nres) {
   if (L->hookmask & LUA_MASKRET) {  /* is return hook on? */
     StkId firstres = L->top - nres;  /* index of first result */
-    ptrdiff_t oldtop = savestack(L, L->top);  /* hook may change top */
     int delta = 0;  /* correction for vararg functions */
     int ftransfer;
-    if (isLuacode(ci)) {
+    if (isLua(ci)) {
       Proto *p = ci_func(ci)->p;
       if (p->is_vararg)
         delta = ci->u.l.nextraargs + p->numparams + 1;
-    if (L->top < ci->top)
-      L->top = ci->top;  /* correct top to run hook */
     }
     ci->func += delta;  /* if vararg, back to virtual 'func' */
     ftransfer = cast(unsigned short, firstres - ci->func);
     luaD_hook(L, LUA_HOOKRET, -1, ftransfer, nres);  /* call it */
     ci->func -= delta;
-    L->top = restorestack(L, oldtop);
   }
   if (isLua(ci = ci->previous))
     L->oldpc = pcRel(ci->u.l.savedpc, ci_func(ci)->p);  /* update 'oldpc' */
@@ -707,8 +704,10 @@ static void resume (lua_State *L, void *ud) {
     lua_assert(L->status == LUA_YIELD);
     L->status = LUA_OK;  /* mark that it is running (again) */
     luaE_incCstack(L);  /* control the C stack */
-    if (isLua(ci))  /* yielded inside a hook? */
+    if (isLua(ci)) {  /* yielded inside a hook? */
+      L->top = firstArg;  /* discard arguments */
       luaV_execute(L, ci);  /* just continue running Lua code */
+    }
     else {  /* 'common' yield */
       if (ci->u.c.k != NULL) {  /* does it have a continuation function? */
         lua_unlock(L);
@@ -793,15 +792,15 @@ LUA_API int lua_yieldk (lua_State *L, int nresults, lua_KContext ctx,
       luaG_runerror(L, "attempt to yield from outside a coroutine");
   }
   L->status = LUA_YIELD;
+  ci->u2.nyield = nresults;  /* save number of results */
   if (isLua(ci)) {  /* inside a hook? */
     lua_assert(!isLuacode(ci));
+    api_check(L, nresults == 0, "hooks cannot yield values");
     api_check(L, k == NULL, "hooks cannot continue after yielding");
-    ci->u2.nyield = 0;  /* no results */
   }
   else {
     if ((ci->u.c.k = k) != NULL)  /* is there a continuation? */
       ci->u.c.ctx = ctx;  /* save context */
-    ci->u2.nyield = nresults;  /* save number of results */
     luaD_throw(L, LUA_YIELD);
   }
   lua_assert(ci->callstatus & CIST_HOOKED);  /* must be inside a hook */
