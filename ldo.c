@@ -331,6 +331,7 @@ void luaD_hook (lua_State *L, int event, int line,
 ** active.
 */
 void luaD_hookcall (lua_State *L, CallInfo *ci) {
+  L->oldpc = 0;  /* set 'oldpc' for new function */
   if (L->hookmask & LUA_MASKCALL) {  /* is call hook on? */
     int event = (ci->callstatus & CIST_TAIL) ? LUA_HOOKTAILCALL
                                              : LUA_HOOKCALL;
@@ -343,9 +344,9 @@ void luaD_hookcall (lua_State *L, CallInfo *ci) {
 
 
 /*
-** Executes a call hook for Lua and C functions. This function is called
-** whenever 'hookmask' is not zero, so it checks whether return hooks are
-** active.
+** Executes a return hook for Lua and C functions and sets/corrects
+** 'oldpc'. (Note that this correction is needed by the line hook, so it
+** is done even when return hooks are off.)
 */
 static void rethook (lua_State *L, CallInfo *ci, int nres) {
   if (L->hookmask & LUA_MASKRET) {  /* is return hook on? */
@@ -363,7 +364,7 @@ static void rethook (lua_State *L, CallInfo *ci, int nres) {
     ci->func -= delta;
   }
   if (isLua(ci = ci->previous))
-    L->oldpc = pcRel(ci->u.l.savedpc, ci_func(ci)->p);  /* update 'oldpc' */
+    L->oldpc = pcRel(ci->u.l.savedpc, ci_func(ci)->p);  /* set 'oldpc' */
 }
 
 

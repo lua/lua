@@ -314,15 +314,6 @@ void luaK_patchtohere (FuncState *fs, int list) {
 }
 
 
-/*
-** MAXimum number of successive Instructions WiTHout ABSolute line
-** information.
-*/
-#if !defined(MAXIWTHABS)
-#define MAXIWTHABS	120
-#endif
-
-
 /* limit for difference between lines in relative line info. */
 #define LIMLINEDIFF	0x80
 

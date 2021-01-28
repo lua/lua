@@ -33,8 +33,6 @@
 
 #define noLuaClosure(f)		((f) == NULL || (f)->c.tt == LUA_VCCL)
 
-/* inverse of 'pcRel' */
-#define invpcRel(pc, p)		((p)->code + (pc) + 1)
 
 static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
                                     const char **name);
@@ -791,16 +789,30 @@ l_noret luaG_runerror (lua_State *L, const char *fmt, ...) {
 
 /*
 ** Check whether new instruction 'newpc' is in a different line from
-** previous instruction 'oldpc'.
+** previous instruction 'oldpc'. More often than not, 'newpc' is only
+** one or a few instructions after 'oldpc' (it must be after, see
+** caller), so try to avoid calling 'luaG_getfuncline'. If they are
+** too far apart, there is a good chance of a ABSLINEINFO in the way,
+** so it goes directly to 'luaG_getfuncline'.
 */
 static int changedline (const Proto *p, int oldpc, int newpc) {
   if (p->lineinfo == NULL)  /* no debug information? */
     return 0;
-  while (oldpc++ < newpc) {
-    if (p->lineinfo[oldpc] != 0)
-      return (luaG_getfuncline(p, oldpc - 1) != luaG_getfuncline(p, newpc));
+  if (newpc - oldpc < MAXIWTHABS / 2) {  /* not too far apart? */
+    int delta = 0;  /* line diference */
+    int pc = oldpc;
+    for (;;) {
+      int lineinfo = p->lineinfo[++pc];
+      if (lineinfo == ABSLINEINFO)
+        break;  /* cannot compute delta; fall through */
+      delta += lineinfo;
+      if (pc == newpc)
+        return (delta != 0);  /* delta computed successfully */
+    }
   }
-  return 0;  /* no line changes between positions */
+  /* either instructions are too far apart or there is an absolute line
+     info in the way; compute line difference explicitly */
+  return (luaG_getfuncline(p, oldpc) != luaG_getfuncline(p, newpc));
 }
 
 
@@ -808,20 +820,19 @@ static int changedline (const Proto *p, int oldpc, int newpc) {
 ** Traces the execution of a Lua function. Called before the execution
 ** of each opcode, when debug is on. 'L->oldpc' stores the last
 ** instruction traced, to detect line changes. When entering a new
-** function, 'npci' will be zero and will test as a new line without
-** the need for 'oldpc'; so, 'oldpc' does not need to be initialized
-** before. Some exceptional conditions may return to a function without
-** updating 'oldpc'. In that case, 'oldpc' may be invalid; if so, it is
-** reset to zero.  (A wrong but valid 'oldpc' at most causes an extra
-** call to a line hook.)
+** function, 'npci' will be zero and will test as a new line whatever
+** the value of 'oldpc'.  Some exceptional conditions may return to
+** a function without setting 'oldpc'. In that case, 'oldpc' may be
+** invalid; if so, use zero as a valid value. (A wrong but valid 'oldpc'
+** at most causes an extra call to a line hook.)
+** This function is not "Protected" when called, so it should correct
+** 'L->top' before calling anything that can run the GC.
 */
 int luaG_traceexec (lua_State *L, const Instruction *pc) {
   CallInfo *ci = L->ci;
   lu_byte mask = L->hookmask;
   const Proto *p = ci_func(ci)->p;
   int counthook;
-  /* 'L->oldpc' may be invalid; reset it in this case */
-  int oldpc = (L->oldpc < p->sizecode) ? L->oldpc : 0;
   if (!(mask & (LUA_MASKLINE | LUA_MASKCOUNT))) {  /* no hooks? */
     ci->u.l.trap = 0;  /* don't need to stop again */
     return 0;  /* turn off 'trap' */
@@ -837,15 +848,16 @@ int luaG_traceexec (lua_State *L, const Instruction *pc) {
     ci->callstatus &= ~CIST_HOOKYIELD;  /* erase mark */
     return 1;  /* do not call hook again (VM yielded, so it did not move) */
   }
-  if (!isIT(*(ci->u.l.savedpc - 1)))
-    L->top = ci->top;  /* prepare top */
+  if (!isIT(*(ci->u.l.savedpc - 1)))  /* top not being used? */
+    L->top = ci->top;  /* correct top */
   if (counthook)
     luaD_hook(L, LUA_HOOKCOUNT, -1, 0, 0);  /* call count hook */
   if (mask & LUA_MASKLINE) {
+    /* 'L->oldpc' may be invalid; use zero in this case */
+    int oldpc = (L->oldpc < p->sizecode) ? L->oldpc : 0;
     int npci = pcRel(pc, p);
-    if (npci == 0 ||  /* call linehook when enter a new function, */
-        pc <= invpcRel(oldpc, p) ||  /* when jump back (loop), or when */
-        changedline(p, oldpc, npci)) {  /* enter new line */
+    if (npci <= oldpc ||  /* call hook when jump back (loop), */
+        changedline(p, oldpc, npci)) {  /* or when enter new line */
       int newline = luaG_getfuncline(p, npci);
       luaD_hook(L, LUA_HOOKLINE, newline, 0, 0);  /* call line hook */
     }
