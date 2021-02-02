@@ -46,10 +46,14 @@ static int currentpc (CallInfo *ci) {
 
 /*
 ** Get a "base line" to find the line corresponding to an instruction.
-** For that, search the array of absolute line info for the largest saved
-** instruction smaller or equal to the wanted instruction. A special
-** case is when there is no absolute info or the instruction is before
-** the first absolute one.
+** Base lines are regularly placed at MAXIWTHABS intervals, so usually
+** an integer division gets the right place. When the source file has
+** large sequences of empty/comment lines, it may need extra entries,
+** so the original estimate needs a correction.
+** The assertion that the estimate is a lower bound for the correct base
+** is valid as long as the debug info has been generated with the same
+** value for MAXIWTHABS or smaller. (Previous releases use a little
+** smaller value.)
 */
 static int getbaseline (const Proto *f, int pc, int *basepc) {
   if (f->sizeabslineinfo == 0 || pc < f->abslineinfo[0].pc) {
@@ -57,20 +61,11 @@ static int getbaseline (const Proto *f, int pc, int *basepc) {
     return f->linedefined;
   }
   else {
-    unsigned int i;
-    if (pc >= f->abslineinfo[f->sizeabslineinfo - 1].pc)
-      i = f->sizeabslineinfo - 1;  /* instruction is after last saved one */
-    else {  /* binary search */
-      unsigned int j = f->sizeabslineinfo - 1;  /* pc < anchorlines[j] */
-      i = 0;  /* abslineinfo[i] <= pc */
-      while (i < j - 1) {
-        unsigned int m = (j + i) / 2;
-        if (pc >= f->abslineinfo[m].pc)
-          i = m;
-        else
-          j = m;
-      }
-    }
+    int i = cast_uint(pc) / MAXIWTHABS - 1;  /* get an estimate */
+    /* estimate must be a lower bond of the correct base */
+    lua_assert(i < f->sizeabslineinfo && f->abslineinfo[i].pc <= pc);
+    while (i + 1 < f->sizeabslineinfo && pc >= f->abslineinfo[i + 1].pc)
+      i++;  /* low estimate; adjust it */
     *basepc = f->abslineinfo[i].pc;
     return f->abslineinfo[i].line;
   }
@@ -303,8 +298,8 @@ static void collectvalidlines (lua_State *L, Closure *f) {
     sethvalue2s(L, L->top, t);  /* push it on stack */
     api_incr_top(L);
     setbtvalue(&v);  /* boolean 'true' to be the value of all indices */
-    for (i = 0; i < p->sizelineinfo; i++) {  /* for all lines with code */
-      currentline = nextline(p, currentline, i);
+    for (i = 0; i < p->sizelineinfo; i++) {  /* for all instructions */
+      currentline = nextline(p, currentline, i);  /* get its line */
       luaH_setint(L, t, currentline, &v);  /* table[line] = true */
     }
   }

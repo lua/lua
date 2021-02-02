@@ -29,10 +29,10 @@
 
 /*
 ** MAXimum number of successive Instructions WiTHout ABSolute line
-** information.
+** information. (A power of two allows fast divisions.)
 */
 #if !defined(MAXIWTHABS)
-#define MAXIWTHABS	120
+#define MAXIWTHABS	128
 #endif
 
 
