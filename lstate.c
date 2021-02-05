@@ -226,8 +226,6 @@ static void init_registry (lua_State *L, global_State *g) {
 
 /*
 ** open parts of the state that may cause memory-allocation errors.
-** ('g->nilvalue' being a nil value flags that the state was completely
-** build.)
 */
 static void f_luaopen (lua_State *L, void *ud) {
   global_State *g = G(L);
@@ -238,7 +236,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   luaT_init(L);
   luaX_init(L);
   g->gcrunning = 1;  /* allow gc */
-  setnilvalue(&g->nilvalue);
+  setnilvalue(&g->nilvalue);  /* now state is complete */
   luai_userstateopen(L);
 }
 
@@ -272,7 +270,7 @@ static void close_state (lua_State *L) {
   global_State *g = G(L);
   luaD_closeprotected(L, 0, LUA_OK);  /* close all upvalues */
   luaC_freeallobjects(L);  /* collect all objects */
-  if (ttisnil(&g->nilvalue))  /* closing a fully built state? */
+  if (completestate(g))  /* closing a fully built state? */
     luai_userstateclose(L);
   luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size);
   freestack(L);

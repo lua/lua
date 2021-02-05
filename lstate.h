@@ -324,6 +324,12 @@ struct lua_State {
 
 #define G(L)	(L->l_G)
 
+/*
+** 'g->nilvalue' being a nil value flags that the state was completely
+** build.
+*/
+#define completestate(g)	ttisnil(&g->nilvalue)
+
 
 /*
 ** Union of all collectable objects (only for conversions)

@@ -29,7 +29,7 @@
 ** a full GC cycle at every allocation.)
 */
 static void *firsttry (global_State *g, void *block, size_t os, size_t ns) {
-  if (ttisnil(&g->nilvalue) && ns > os)
+  if (completestate(g) && ns > os)
     return NULL;  /* fail */
   else  /* normal allocation */
     return (*g->frealloc)(g->ud, block, os, ns);
@@ -146,7 +146,7 @@ void luaM_free_ (lua_State *L, void *block, size_t osize) {
 static void *tryagain (lua_State *L, void *block,
                        size_t osize, size_t nsize) {
   global_State *g = G(L);
-  if (ttisnil(&g->nilvalue)) {  /* is state fully build? */
+  if (completestate(g)) {  /* is state fully build? */
     luaC_fullgc(L, 1);  /* try to free some memory... */
     return (*g->frealloc)(g->ud, block, osize, nsize);  /* try again */
   }
