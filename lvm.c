@@ -1150,6 +1150,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
     Instruction i;  /* instruction being executed */
     StkId ra;  /* instruction's A register */
     vmfetch();
+// low-level line tracing for debugging Lua
+// printf("line: %d\n", luaG_getfuncline(cl->p, pcRel(pc, cl->p)));
     lua_assert(base == ci->func + 1);
     lua_assert(base <= L->top && L->top < L->stack_last);
     /* invalidate top for instructions not expecting it */

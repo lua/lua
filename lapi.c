@@ -207,6 +207,7 @@ LUA_API void lua_closeslot (lua_State *L, int idx) {
                uplevel(L->openupval) == level,
      "no variable to close at given level");
   luaF_close(L, level, CLOSEKTOP, 0);
+  level = index2stack(L, idx);  /* stack may be moved */
   setnilvalue(s2v(level));
   lua_unlock(L);
 }

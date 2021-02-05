@@ -190,9 +190,11 @@ void luaF_close (lua_State *L, StkId level, int status, int yy) {
   UpVal *uv;
   StkId upl;  /* stack index pointed by 'uv' */
   if (unlikely(status == LUA_ERRMEM && L->ptbc != NULL)) {
+    ptrdiff_t levelrel = savestack(L, level);
     upl = L->ptbc;
     L->ptbc = NULL;  /* remove from "list" before closing */
     prepcallclosemth(L, upl, status, yy);
+    level = restorestack(L, levelrel);
   }
   else
     lua_assert(L->ptbc == NULL);  /* must be empty for other status */

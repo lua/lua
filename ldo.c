@@ -412,12 +412,12 @@ static void moveresults (lua_State *L, StkId res, int nres, int wanted) {
       if (hastocloseCfunc(wanted)) {  /* to-be-closed variables? */
         ptrdiff_t savedres = savestack(L, res);
         luaF_close(L, res, CLOSEKTOP, 0);  /* may change the stack */
-        res = restorestack(L, savedres);
         wanted = codeNresults(wanted);  /* correct value */
         if (wanted == LUA_MULTRET)
           wanted = nres;
         if (L->hookmask)  /* if needed, call hook after '__close's */
           rethook(L, L->ci, nres);
+        res = restorestack(L, savedres);  /* close and hook can move stack */
       }
       break;
   }
