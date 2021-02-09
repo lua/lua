@@ -1635,10 +1635,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           b = cast_int(L->top - ra);
         savepc(ci);  /* several calls here can raise errors */
         if (TESTARG_k(i)) {
-          /* close upvalues from current call; the compiler ensures
-             that there are no to-be-closed variables here, so this
-             call cannot change the stack */
-          luaF_close(L, base, NOCLOSINGMETH, 0);
+          luaF_closeupval(L, base);  /* close upvalues from current call */
+          lua_assert(L->tbclist < base);  /* no pending tbc variables */
           lua_assert(base == ci->func + 1);
         }
         while (!ttisfunction(s2v(ra))) {  /* not a function? */

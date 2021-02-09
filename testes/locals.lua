@@ -529,6 +529,40 @@ local function checktable (t1, t2)
 end
 
 
+do    -- test for tbc variable high in the stack
+
+   -- function to force a stack overflow
+  local function overflow (n)
+    overflow(n + 1)
+  end
+
+  -- error handler will create tbc variable handling a stack overflow,
+  -- high in the stack
+  local function errorh (m)
+    assert(string.find(m, "stack overflow"))
+    local x <close> = func2close(function (o) o[1] = 10 end)
+    return x
+  end
+
+  local flag
+  local st, obj
+  -- run test in a coroutine so as not to swell the main stack
+  local co = coroutine.wrap(function ()
+    -- tbc variable down the stack
+    local y <close> = func2close(function (obj, msg)
+      assert(msg == nil)
+      obj[1] = 100
+      flag = obj
+    end)
+    collectgarbage("stop")
+    st, obj = xpcall(overflow, errorh, 0)
+    collectgarbage("restart")
+  end)
+  co()
+  assert(not st and obj[1] == 10 and flag[1] == 100)
+end
+
+
 if rawget(_G, "T") then
 
   -- memory error inside closing function
@@ -563,12 +597,12 @@ if rawget(_G, "T") then
 
   local function test ()
     local x <close> = enter(0)   -- set a memory limit
-    -- creation of previous upvalue will raise a memory error
-    assert(false)    -- should not run
+    local y = {}    -- raise a memory error
   end
 
   local _, msg = pcall(test)
   assert(msg == "not enough memory" and closemsg == "not enough memory")
+
 
   -- repeat test with extra closing upvalues
   local function test ()
@@ -580,8 +614,7 @@ if rawget(_G, "T") then
       assert(msg == "not enough memory");
     end)
     local x <close> = enter(0)   -- set a memory limit
-    -- creation of previous upvalue will raise a memory error
-    os.exit(false)    -- should not run
+    local y = {}   -- raise a memory error
   end
 
   local _, msg = pcall(test)
@@ -607,7 +640,7 @@ if rawget(_G, "T") then
     -- concat this table needs two buffer resizes (one for each 's')
     local a = {s, s}
 
-    collectgarbage()
+    collectgarbage(); collectgarbage()
 
     m = T.totalmem()
     collectgarbage("stop")
@@ -630,7 +663,7 @@ if rawget(_G, "T") then
     -- second buffer was released by 'toclose'
     assert(T.totalmem() - m <= extra)
 
-    -- userdata, upvalue, buffer, buffer, final string
+    -- userdata, buffer, buffer, final string
     T.totalmem(m + 4*lim + extra)
     assert(#table.concat(a) == 2*lim)
 
@@ -753,8 +786,8 @@ do
   checktable({co()}, {true, 10, 20, 30})
   checktable(trace, {"nowX", "z1", "z2", "nowY", "y1", "y2", "x1", "x2"})
 
-end 
- 
+end
+
 
 do
   -- yielding inside closing metamethods after an error

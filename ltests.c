@@ -446,6 +446,7 @@ static void checkstack (global_State *g, lua_State *L1) {
   for (uv = L1->openupval; uv != NULL; uv = uv->u.open.next)
     assert(upisopen(uv));  /* must be open */
   assert(L1->top <= L1->stack_last);
+  assert(L1->tbclist <= L1->top);
   for (ci = L1->ci; ci != NULL; ci = ci->previous) {
     assert(ci->top <= L1->stack_last);
     assert(lua_checkpc(ci));

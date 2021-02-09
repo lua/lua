@@ -307,6 +307,7 @@ struct lua_State {
   StkId stack_last;  /* end of stack (last element + 1) */
   StkId stack;  /* stack base */
   UpVal *openupval;  /* list of open upvalues in this stack */
+  StkId tbclist;  /* list of to-be-closed variables */
   GCObject *gclist;
   struct lua_State *twups;  /* list of threads with open upvalues */
   struct lua_longjmp *errorJmp;  /* current error recover point */
@@ -318,7 +319,6 @@ struct lua_State {
   int basehookcount;
   int hookcount;
   volatile l_signalT hookmask;
-  StkId ptbc;  /* pending to-be-closed variable */
 };
 
 
