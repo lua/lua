@@ -707,7 +707,6 @@ if rawget(_G, "T") then
     -- results are correct
     checktable(t, {10, 20})
   end
-
 end
 
 
@@ -928,6 +927,81 @@ end)
 co()                 -- start coroutine
 assert(co == nil)    -- eventually it will be collected
 collectgarbage()
+
+
+if rawget(_G, "T") then
+  print("to-be-closed variables x coroutines in C")
+  do
+    local token = 0
+    local count = 0
+    local f = T.makeCfunc[[
+      toclose 1
+      toclose 2
+      return .
+    ]]
+
+    local obj = func2close(function (_, msg)
+      count = count + 1
+      token = coroutine.yield(count, token)
+    end)
+
+    local co = coroutine.wrap(f)
+    local ct, res = co(obj, obj, 10, 20, 30, 3)   -- will return 10, 20, 30
+    -- initial token value, after closing 2nd obj
+    assert(ct == 1 and res == 0)
+    -- run until yield when closing 1st obj
+    ct, res = co(100)
+    assert(ct == 2 and res == 100)
+    res = {co(200)}      -- run until end
+    assert(res[1] == 10 and res[2] == 20 and res[3] == 30 and res[4] == nil)
+    assert(token == 200)
+  end
+
+  do
+    local f = T.makeCfunc[[
+      toclose 1
+      return .
+    ]]
+
+    local obj = func2close(function ()
+      local temp
+      local x <close> = func2close(function ()
+        coroutine.yield(temp)
+        return 1,2,3    -- to be ignored
+      end)
+      temp = coroutine.yield("closing obj")
+      return 1,2,3    -- to be ignored
+    end)
+
+    local co = coroutine.wrap(f)
+    local res = co(obj, 10, 30, 1)   -- will return only 30
+    assert(res == "closing obj")
+    res = co("closing x")
+    assert(res == "closing x")
+    res = {co()}
+    assert(res[1] == 30 and res[2] == nil)
+  end
+
+  do
+    -- still cannot yield inside 'closeslot'
+    local f = T.makeCfunc[[
+      toclose 1
+      closeslot 1
+    ]]
+    local obj = func2close(coroutine.yield)
+    local co = coroutine.create(f)
+    local st, msg = coroutine.resume(co, obj)
+    assert(not st and string.find(msg, "attempt to yield across"))
+
+    -- nor outside a coroutine
+    local f = T.makeCfunc[[
+      toclose 1
+    ]]
+    local st, msg = pcall(f, obj)
+    assert(not st and string.find(msg, "attempt to yield from outside"))
+  end
+end
+
 
 
 -- to-be-closed variables in generic for loops

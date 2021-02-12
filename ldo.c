@@ -408,24 +408,27 @@ static void moveresults (lua_State *L, StkId res, int nres, int wanted) {
     case LUA_MULTRET:
       wanted = nres;  /* we want all results */
       break;
-    default:  /* multiple results (or to-be-closed variables) */
+    default:  /* two/more results and/or to-be-closed variables */
       if (hastocloseCfunc(wanted)) {  /* to-be-closed variables? */
         ptrdiff_t savedres = savestack(L, res);
-        luaF_close(L, res, CLOSEKTOP, 0);  /* may change the stack */
-        wanted = codeNresults(wanted);  /* correct value */
-        if (wanted == LUA_MULTRET)
-          wanted = nres;
+        L->ci->callstatus |= CIST_CLSRET;  /* in case of yields */
+        L->ci->u2.nres = nres;
+        luaF_close(L, res, CLOSEKTOP, 1);
+        L->ci->callstatus &= ~CIST_CLSRET;
         if (L->hookmask)  /* if needed, call hook after '__close's */
           rethook(L, L->ci, nres);
         res = restorestack(L, savedres);  /* close and hook can move stack */
+        wanted = decodeNresults(wanted);
+        if (wanted == LUA_MULTRET)
+          wanted = nres;  /* we want all results */
       }
       break;
   }
+  /* generic case */
   firstresult = L->top - nres;  /* index of first result */
-  /* move all results to correct place */
-  if (nres > wanted)
-    nres = wanted;  /* don't need more than that */
-  for (i = 0; i < nres; i++)
+  if (nres > wanted)  /* extra results? */
+    nres = wanted;  /* don't need them */
+  for (i = 0; i < nres; i++)  /* move all results to correct place */
     setobjs2s(L, res + i, firstresult + i);
   for (; i < wanted; i++)  /* complete wanted number of results */
     setnilvalue(s2v(res + i));
@@ -445,6 +448,9 @@ void luaD_poscall (lua_State *L, CallInfo *ci, int nres) {
     rethook(L, ci, nres);
   /* move results to proper place */
   moveresults(L, ci->func, nres, wanted);
+  /* function cannot be in any of these cases when returning */
+  lua_assert(!(ci->callstatus &
+        (CIST_HOOKED | CIST_YPCALL | CIST_FIN | CIST_TRAN | CIST_CLSRET)));
   L->ci = ci->previous;  /* back to caller (after closing variables) */
 }
 
@@ -615,28 +621,36 @@ static int finishpcallk (lua_State *L,  CallInfo *ci) {
 
 /*
 ** Completes the execution of a C function interrupted by an yield.
-** The interruption must have happened while the function was
-** executing 'lua_callk' or 'lua_pcallk'. In the second case, the
-** call to 'finishpcallk' finishes the interrupted execution of
-** 'lua_pcallk'. After that, it calls the continuation of the
-** interrupted function and finally it completes the job of the
-** 'luaD_call' that called the function.
-** In the call to 'adjustresults', we do not know the number of
-** results of the function called by 'lua_callk'/'lua_pcallk',
-** so we are conservative and use LUA_MULTRET (always adjust).
+** The interruption must have happened while the function was either
+** closing its tbc variables in 'moveresults' or executing
+** 'lua_callk'/'lua_pcallk'. In the first case, it just redoes
+** 'luaD_poscall'. In the second case, the call to 'finishpcallk'
+** finishes the interrupted execution of 'lua_pcallk'.  After that, it
+** calls the continuation of the interrupted function and finally it
+** completes the job of the 'luaD_call' that called the function.  In
+** the call to 'adjustresults', we do not know the number of results
+** of the function called by 'lua_callk'/'lua_pcallk', so we are
+** conservative and use LUA_MULTRET (always adjust).
 */
 static void finishCcall (lua_State *L, CallInfo *ci) {
-  int n;
-  int status = LUA_YIELD;  /* default if there were no errors */
-  /* must have a continuation and must be able to call it */
-  lua_assert(ci->u.c.k != NULL && yieldable(L));
-  if (ci->callstatus & CIST_YPCALL)   /* was inside a 'lua_pcallk'? */
-    status = finishpcallk(L, ci);  /* finish it */
-  adjustresults(L, LUA_MULTRET);  /* finish 'lua_callk' */
-  lua_unlock(L);
-  n = (*ci->u.c.k)(L, status, ci->u.c.ctx);  /* call continuation */
-  lua_lock(L);
-  api_checknelems(L, n);
+  int n;  /* actual number of results from C function */
+  if (ci->callstatus & CIST_CLSRET) {  /* was returning? */
+    lua_assert(hastocloseCfunc(ci->nresults));
+    n = ci->u2.nres;  /* just redo 'luaD_poscall' */
+    /* don't need to reset CIST_CLSRET, as it will be set again anyway */
+  }
+  else {
+    int status = LUA_YIELD;  /* default if there were no errors */
+    /* must have a continuation and must be able to call it */
+    lua_assert(ci->u.c.k != NULL && yieldable(L));
+    if (ci->callstatus & CIST_YPCALL)   /* was inside a 'lua_pcallk'? */
+      status = finishpcallk(L, ci);  /* finish it */
+    adjustresults(L, LUA_MULTRET);  /* finish 'lua_callk' */
+    lua_unlock(L);
+    n = (*ci->u.c.k)(L, status, ci->u.c.ctx);  /* call continuation */
+    lua_lock(L);
+    api_checknelems(L, n);
+  }
   luaD_poscall(L, ci, n);  /* finish 'luaD_call' */
 }
 

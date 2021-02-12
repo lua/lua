@@ -164,6 +164,8 @@ typedef struct stringtable {
 ** protected call;
 ** - field 'nyield' is used only while a function is "doing" an
 ** yield (from the yield until the next resume);
+** - field 'nres' is used only while closing tbc variables when
+** returning from a C function;
 ** - field 'transferinfo' is used only during call/returnhooks,
 ** before the function starts or after it ends.
 */
@@ -186,6 +188,7 @@ typedef struct CallInfo {
   union {
     int funcidx;  /* called-function index */
     int nyield;  /* number of values yielded */
+    int nres;  /* number of values returned */
     struct {  /* info about transferred values (for call/return hooks) */
       unsigned short ftransfer;  /* offset of first value transferred */
       unsigned short ntransfer;  /* number of values transferred */
@@ -203,15 +206,16 @@ typedef struct CallInfo {
 #define CIST_C		(1<<1)	/* call is running a C function */
 #define CIST_FRESH	(1<<2)	/* call is on a fresh "luaV_execute" frame */
 #define CIST_HOOKED	(1<<3)	/* call is running a debug hook */
-#define CIST_YPCALL	(1<<4)	/* call is a yieldable protected call */
+#define CIST_YPCALL	(1<<4)	/* doing a yieldable protected call */
 #define CIST_TAIL	(1<<5)	/* call was tail called */
 #define CIST_HOOKYIELD	(1<<6)	/* last hook called yielded */
 #define CIST_FIN	(1<<7)	/* call is running a finalizer */
 #define CIST_TRAN	(1<<8)	/* 'ci' has transfer information */
-/* Bits 9-11 are used for CIST_RECST (see below) */
-#define CIST_RECST	9
+#define CIST_CLSRET	(1<<9)  /* function is closing tbc variables */
+/* Bits 10-12 are used for CIST_RECST (see below) */
+#define CIST_RECST	10
 #if defined(LUA_COMPAT_LT_LE)
-#define CIST_LEQ	(1<<12)  /* using __lt for __le */
+#define CIST_LEQ	(1<<13)  /* using __lt for __le */
 #endif
 
 

@@ -3102,6 +3102,9 @@ Close the to-be-closed slot at the given index and set its value to @nil.
 The index must be the last index previously marked to be closed
 @see{lua_toclose} that is still active (that is, not closed yet).
 
+A @Lid{__close} metamethod cannot yield
+when called through this function.
+
 (Exceptionally, this function was introduced in release 5.4.3.
 It is not present in previous 5.4 releases.)
 
