@@ -31,6 +31,7 @@ end
 
 do
   assert(not pcall(debug.getinfo, print, "X"))   -- invalid option
+  assert(not pcall(debug.getinfo, 0, ">"))   -- invalid option
   assert(not debug.getinfo(1000))   -- out of range level
   assert(not debug.getinfo(-1))     -- out of range level
   local a = debug.getinfo(print)

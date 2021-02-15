@@ -152,6 +152,7 @@ static int db_getinfo (lua_State *L) {
   lua_State *L1 = getthread(L, &arg);
   const char *options = luaL_optstring(L, arg+2, "flnSrtu");
   checkstack(L, L1, 3);
+  luaL_argcheck(L, options[0] != '>', arg + 2, "invalid option '>'");
   if (lua_isfunction(L, arg + 1)) {  /* info about a function? */
     options = lua_pushfstring(L, ">%s", options);  /* add '>' to 'options' */
     lua_pushvalue(L, arg + 1);  /* move function to 'L1' stack */
