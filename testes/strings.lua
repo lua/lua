@@ -361,6 +361,9 @@ assert(load("return 1\n--comment without ending EOL")() == 1)
 
 
 checkerror("table expected", table.concat, 3)
+checkerror("at index " .. maxi, table.concat, {}, " ", maxi, maxi)
+-- '%' escapes following minus signal
+checkerror("at index %" .. mini, table.concat, {}, " ", mini, mini)
 assert(table.concat{} == "")
 assert(table.concat({}, 'x') == "")
 assert(table.concat({'\0', '\0\1', '\0\1\2'}, '.\0.') == "\0.\0.\0\1.\0.\0\1\2")
