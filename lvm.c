@@ -921,7 +921,7 @@ void luaV_finishOp (lua_State *L) {
 */
 #define op_arithfK(L,fop) {  \
   TValue *v1 = vRB(i);  \
-  TValue *v2 = KC(i);  \
+  TValue *v2 = KC(i); lua_assert(ttisnumber(v2));  \
   op_arithf_aux(L, v1, v2, fop); }
 
 
@@ -950,7 +950,7 @@ void luaV_finishOp (lua_State *L) {
 */
 #define op_arithK(L,iop,fop) {  \
   TValue *v1 = vRB(i);  \
-  TValue *v2 = KC(i);  \
+  TValue *v2 = KC(i); lua_assert(ttisnumber(v2));  \
   op_arith_aux(L, v1, v2, iop, fop); }
 
 
