@@ -660,6 +660,26 @@
 #define lua_getlocaledecpoint()		(localeconv()->decimal_point[0])
 #endif
 
+
+/*
+** macros to improve jump prediction, used mostly for error handling
+** and debug facilities.
+*/
+#if (defined(LUA_CORE) || defined(LUA_LIB)) && !defined(l_likely)
+
+#include <stdio.h>
+#if defined(__GNUC__)
+#define l_likely(x)	(__builtin_expect(((x) != 0), 1))
+#define l_unlikely(x)	(__builtin_expect(((x) != 0), 0))
+#else
+#define l_likely(x)	(x)
+#define l_unlikely(x)	(x)
+#endif
+
+#endif
+
+
+
 /* }================================================================== */
 
 
