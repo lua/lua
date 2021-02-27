@@ -160,8 +160,6 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 static void correctstack (lua_State *L, StkId oldstack, StkId newstack) {
   CallInfo *ci;
   UpVal *up;
-  if (oldstack == newstack)
-    return;  /* stack address did not change */
   L->top = (L->top - oldstack) + newstack;
   L->tbclist = (L->tbclist - oldstack) + newstack;
   for (up = L->openupval; up != NULL; up = up->u.open.next)
@@ -179,19 +177,35 @@ static void correctstack (lua_State *L, StkId oldstack, StkId newstack) {
 #define ERRORSTACKSIZE	(LUAI_MAXSTACK + 200)
 
 
+/*
+** Reallocate the stack to a new size, correcting all pointers into
+** it. (There are pointers to a stack from its upvalues, from its list
+** of call infos, plus a few individual pointers.) The reallocation is
+** done in two steps (allocation + free) because the correction must be
+** done while both addresses (the old stack and the new one) are valid.
+** (In ISO C, any pointer use after the pointer has been deallocated is
+** undefined behavior.)
+** In case of allocation error, raise an error or return false according
+** to 'raiseerror'.
+*/
 int luaD_reallocstack (lua_State *L, int newsize, int raiseerror) {
-  int lim = stacksize(L);
-  StkId newstack = luaM_reallocvector(L, L->stack,
-                      lim + EXTRA_STACK, newsize + EXTRA_STACK, StackValue);
+  int oldsize = stacksize(L);
+  int i;
+  StkId newstack = luaM_reallocvector(L, NULL, 0,
+                                      newsize + EXTRA_STACK, StackValue);
   lua_assert(newsize <= LUAI_MAXSTACK || newsize == ERRORSTACKSIZE);
   if (l_unlikely(newstack == NULL)) {  /* reallocation failed? */
     if (raiseerror)
       luaM_error(L);
     else return 0;  /* do not raise an error */
   }
-  for (; lim < newsize; lim++)
-    setnilvalue(s2v(newstack + lim + EXTRA_STACK)); /* erase new segment */
+  /* number of elements to be copied to the new stack */
+  i = ((oldsize <= newsize) ? oldsize : newsize) + EXTRA_STACK;
+  memcpy(newstack, L->stack, i * sizeof(StackValue));
+  for (; i < newsize + EXTRA_STACK; i++)
+    setnilvalue(s2v(newstack + i)); /* erase new segment */
   correctstack(L, L->stack, newstack);
+  luaM_freearray(L, L->stack, oldsize + EXTRA_STACK);
   L->stack = newstack;
   L->stack_last = L->stack + newsize;
   return 1;
