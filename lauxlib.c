@@ -516,6 +516,15 @@ static void newbox (lua_State *L) {
 
 
 /*
+** Whenever buffer is accessed, slot 'idx' must either be a box (which
+** cannot be NULL) or it is a placeholder for the buffer.
+*/
+#define checkbufferlevel(B,idx)  \
+  lua_assert(buffonstack(B) ? lua_touserdata(B->L, idx) != NULL  \
+                            : lua_touserdata(B->L, idx) == (void*)B)
+
+
+/*
 ** Compute new size for buffer 'B', enough to accommodate extra 'sz'
 ** bytes.
 */
@@ -531,10 +540,11 @@ static size_t newbuffsize (luaL_Buffer *B, size_t sz) {
 
 /*
 ** Returns a pointer to a free area with at least 'sz' bytes in buffer
-** 'B'. 'boxidx' is the relative position in the stack where the
-** buffer's box is or should be.
+** 'B'. 'boxidx' is the relative position in the stack where is the
+** buffer's box or its placeholder.
 */
 static char *prepbuffsize (luaL_Buffer *B, size_t sz, int boxidx) {
+  checkbufferlevel(B, boxidx);
   if (B->size - B->n >= sz)  /* enough space? */
     return B->b + B->n;
   else {
@@ -545,6 +555,7 @@ static char *prepbuffsize (luaL_Buffer *B, size_t sz, int boxidx) {
     if (buffonstack(B))  /* buffer already has a box? */
       newbuff = (char *)resizebox(L, boxidx, newsize);  /* resize it */
     else {  /* no box yet */
+      lua_remove(L, boxidx);  /* remove placeholder */
       newbox(L);  /* create a new box */
       lua_insert(L, boxidx);  /* move box to its intended position */
       lua_toclose(L, boxidx);
@@ -581,11 +592,11 @@ LUALIB_API void luaL_addstring (luaL_Buffer *B, const char *s) {
 
 LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
   lua_State *L = B->L;
+  checkbufferlevel(B, -1);
   lua_pushlstring(L, B->b, B->n);
-  if (buffonstack(B)) {
+  if (buffonstack(B))
     lua_closeslot(L, -2);  /* close the box */
-    lua_remove(L, -2);  /* remove box from the stack */
-  }
+  lua_remove(L, -2);  /* remove box or placeholder from the stack */
 }
 
 
@@ -620,6 +631,7 @@ LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
   B->b = B->init.b;
   B->n = 0;
   B->size = LUAL_BUFFERSIZE;
+  lua_pushlightuserdata(L, (void*)B);  /* push placeholder */
 }
 
 
