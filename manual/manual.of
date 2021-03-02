@@ -331,7 +331,7 @@ under certain events.
 You can change several aspects of the behavior
 of a value by setting specific fields in its metatable.
 For instance, when a non-numeric value is the operand of an addition,
-Lua checks for a function in the field @St{__add} of the value's metatable.
+Lua checks for a function in the field @idx{__add} of the value's metatable.
 If it finds one,
 Lua calls this function to perform the addition.
 
@@ -344,7 +344,7 @@ In the previous example, the key is the string @St{__add}
 and the metamethod is the function that performs the addition.
 Unless stated otherwise,
 a metamethod may in fact be any @x{callable value},
-which is either a function or a value with a @id{__call} metamethod.
+which is either a function or a value with a @idx{__call} metamethod.
 
 You can query the metatable of any value
 using the @Lid{getmetatable} function.
@@ -505,7 +505,7 @@ when @id{key} is not present in @id{table}.
 The metavalue is looked up in the metatable of @id{table}.
 
 The metavalue for this event can be either a function, a table,
-or any value with an @id{__index} metavalue.
+or any value with an @idx{__index} metavalue.
 If it is a function,
 it is called with @id{table} and @id{key} as arguments,
 and the result of the call
@@ -514,7 +514,7 @@ is the result of the operation.
 Otherwise,
 the final result is the result of indexing this metavalue with @id{key}.
 This indexing is regular, not raw,
-and therefore can trigger another @id{__index} metavalue.
+and therefore can trigger another @idx{__index} metavalue.
 }
 
 @item{@idx{__newindex}|
@@ -526,14 +526,14 @@ The metavalue is looked up in the metatable of @id{table}.
 
 Like with indexing,
 the metavalue for this event can be either a function, a table,
-or any value with an @id{__newindex} metavalue.
+or any value with an @idx{__newindex} metavalue.
 If it is a function,
 it is called with @id{table}, @id{key}, and @id{value} as arguments.
 Otherwise,
 Lua repeats the indexing assignment over this metavalue
 with the same key and value.
 This assignment is regular, not raw,
-and therefore can trigger another @id{__newindex} metavalue.
+and therefore can trigger another @idx{__newindex} metavalue.
 
 Whenever a @idx{__newindex} metavalue is invoked,
 Lua does not perform the primitive assignment.
@@ -742,7 +742,7 @@ For an object (table or userdata) to be finalized when collected,
 you must @emph{mark} it for finalization.
 @index{mark (for finalization)}
 You mark an object for finalization when you set its metatable
-and the metatable has a field indexed by the string @St{__gc}.
+and the metatable has a @idx{__gc} metamethod.
 Note that if you set a metatable without a @idx{__gc} field
 and later create that field in the metatable,
 the object will not be marked for finalization.
@@ -3102,7 +3102,7 @@ Close the to-be-closed slot at the given index and set its value to @nil.
 The index must be the last index previously marked to be closed
 @see{lua_toclose} that is still active (that is, not closed yet).
 
-A @Lid{__close} metamethod cannot yield
+A @idx{__close} metamethod cannot yield
 when called through this function.
 
 (Exceptionally, this function was introduced in release 5.4.3.
@@ -9094,7 +9094,7 @@ want the old behavior
 }
 
 @item{
-The use of the @idx{__lt} metamethod to emulate @id{__le}
+The use of the @idx{__lt} metamethod to emulate @idx{__le}
 has been removed.
 When needed, this metamethod must be explicitly defined.
 }
@@ -9130,7 +9130,7 @@ like any other error when calling a finalizer.)
 The function @Lid{print} does not call @Lid{tostring}
 to format its arguments;
 instead, it has this functionality hardwired.
-You should use @id{__tostring} to modify how values are printed.
+You should use @idx{__tostring} to modify how values are printed.
 }
 
 @item{
