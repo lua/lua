@@ -420,6 +420,14 @@ if not b then
   end
 end]], 5)
 
+do
+  -- Force a negative estimate for base line. Error in instruction 2
+  -- (after VARARGPREP, GETGLOBAL), with first absolute line information
+  -- (forced by too many lines) in instruction 0.
+  local s = string.format("%s return __A.x", string.rep("\n", 300))
+  lineerror(s, 301)
+end
+
 
 if not _soft then
   -- several tests that exaust the Lua stack
