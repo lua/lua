@@ -298,6 +298,9 @@ assert(string.find(t, prompt .. ".*" .. prompt .. ".*" .. prompt))
 
 
 -- non-string prompt
+--
+-- if readline is linked then termios will echo the input.
+-- otherwise only the numeric prompt is printed.
 prompt =
   "local C = 0;\z
    _PROMPT=setmetatable({},{__tostring = function () \z
@@ -311,7 +314,7 @@ assert(string.find(t, [[
 1 --
 2a = 2
 3
-]], 1, true))
+]], 1, true) or string.find(t, "123", 1, true))
 
 
 -- test for error objects
