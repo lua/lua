@@ -4253,12 +4253,8 @@ If the new top is greater than the old one,
 then the new elements are filled with @nil.
 If @id{index} @N{is 0}, then all stack elements are removed.
 
-For compatibility reasons,
-this function may close slots marked as to-be-closed @see{lua_toclose},
-and therefore it can run arbitrary code.
-You should not rely on this behavior:
-Instead, always close to-be-closed slots explicitly,
-with @Lid{lua_closeslot}, before removing them from the stack.
+This function can run arbitrary code when removing an index
+marked as to-be-closed from the stack.
 
 }
 
@@ -4347,19 +4343,22 @@ otherwise, returns @id{NULL}.
 @apii{0,0,m}
 
 Marks the given index in the stack as a
-to-be-closed @Q{variable} @see{to-be-closed}.
+to-be-closed slot @see{to-be-closed}.
 Like a to-be-closed variable in Lua,
-the value at that index in the stack will be closed
+the value at that slot in the stack will be closed
 when it goes out of scope.
 Here, in the context of a C function,
 to go out of scope means that the running function returns to Lua,
-there is an error,
+or there is an error,
+or the slot is removed from the stack through
+@Lid{lua_settop} or @Lid{lua_pop},
 or there is a call to @Lid{lua_closeslot}.
-An index marked as to-be-closed should neither be removed from the stack
-nor modified before a corresponding call to @Lid{lua_closeslot}.
+A slot marked as to-be-closed should not be removed from the stack
+by any other function in the API except @Lid{lua_settop} or @Lid{lua_pop},
+unless previously deactivated by @Lid{lua_closeslot}.
 
 This function should not be called for an index
-that is equal to or below an active to-be-closed index.
+that is equal to or below an active to-be-closed slot.
 
 Note that, both in case of errors and of a regular return,
 by the time the @idx{__close} metamethod runs,
