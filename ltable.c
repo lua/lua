@@ -84,8 +84,6 @@
 #define hashstr(t,str)		hashpow2(t, (str)->hash)
 #define hashboolean(t,p)	hashpow2(t, p)
 
-#define hashint(t,i)		hashpow2(t, i)
-
 
 #define hashpointer(t,p)	hashmod(t, point2uint(p))
 
@@ -100,6 +98,20 @@ static const Node dummynode_ = {
 
 static const TValue absentkey = {ABSTKEYCONSTANT};
 
+
+/*
+** Hash for integers. To allow a good hash, use the remainder operator
+** ('%'). If integer fits as a non-negative int, compute an int
+** remainder, which is faster. Otherwise, use an unsigned-integer
+** remainder, which uses all bits and ensures a non-negative result.
+*/
+static Node *hashint (const Table *t, lua_Integer i) {
+  lua_Unsigned ui = l_castS2U(i);
+  if (ui <= (unsigned int)INT_MAX)
+    return hashmod(t, cast_int(ui));
+  else
+    return hashmod(t, ui);
+}
 
 
 /*
