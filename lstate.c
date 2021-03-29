@@ -269,7 +269,7 @@ static void preinit_thread (lua_State *L, global_State *g) {
 static void close_state (lua_State *L) {
   global_State *g = G(L);
   if (!completestate(g))  /* closing a partially built state? */
-    luaC_freeallobjects(L);  /* jucst collect its objects */
+    luaC_freeallobjects(L);  /* just collect its objects */
   else {  /* closing a fully built state */
     luaD_closeprotected(L, 1, LUA_OK);  /* close all upvalues */
     luaC_freeallobjects(L);  /* collect all objects */

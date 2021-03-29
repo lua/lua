@@ -147,7 +147,7 @@ static void addfield (lua_State *L, luaL_Buffer *b, lua_Integer i) {
   lua_geti(L, 1, i);
   if (l_unlikely(!lua_isstring(L, -1)))
     luaL_error(L, "invalid value (%s) at index %I in table for 'concat'",
-                  luaL_typename(L, -1), i);
+                  luaL_typename(L, -1), (LUAI_UACINT)i);
   luaL_addvalue(b);
 }
 
