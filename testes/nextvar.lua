@@ -764,4 +764,25 @@ for k,v in ipairs(a) do
 end
 assert(i == a.n)
 
+
+-- testing yield inside __pairs
+do
+  local t = setmetatable({10, 20, 30}, {__pairs = function (t)
+    local inc = coroutine.yield()
+    return function (t, i)
+             if i > 1 then return i - inc, t[i - inc]  else return nil end
+           end, t, #t + 1
+  end})
+
+  local res = {}
+  local co = coroutine.wrap(function ()
+    for i,p in pairs(t) do res[#res + 1] = p end
+  end)
+
+  co()     -- start coroutine
+  co(1)    -- continue after yield
+  assert(res[1] == 30 and res[2] == 20 and res[3] == 10 and #res == 3)
+  
+end
+
 print"OK"
