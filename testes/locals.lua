@@ -335,6 +335,29 @@ do
 end
 
 
+do
+  -- bug in 5.4.3: previous condition (calls cannot be tail in the
+  -- scope of to-be-closed variables) must be valid for tbc variables
+  -- created by 'for' loops.
+
+  local closed = false
+
+  local function foo ()
+    return function () return true end, 0, 0,
+           func2close(function () closed = true end)
+  end
+
+  local function tail() return closed end
+
+  local function foo1 ()
+    for k in foo() do return tail() end
+  end
+
+  assert(foo1() == false)
+  assert(closed == true)
+end
+
+
 do print("testing errors in __close")
 
   -- original error is in __close
