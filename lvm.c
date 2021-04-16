@@ -847,8 +847,17 @@ void luaV_finishOp (lua_State *L) {
       luaV_concat(L, total);  /* concat them (may yield again) */
       break;
     }
-    case OP_CLOSE:  case OP_RETURN: {  /* yielded closing variables */
+    case OP_CLOSE: {  /* yielded closing variables */
       ci->u.l.savedpc--;  /* repeat instruction to close other vars. */
+      break;
+    }
+    case OP_RETURN: {  /* yielded closing variables */
+      StkId ra = base + GETARG_A(inst);
+      /* adjust top to signal correct number of returns, in case the
+         return is "up to top" ('isIT') */
+      L->top = ra + ci->u2.nres;
+      /* repeat instruction to close other vars. and complete the return */
+      ci->u.l.savedpc--;
       break;
     }
     default: {
@@ -1672,6 +1681,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           n = cast_int(L->top - ra);  /* get what is available */
         savepc(ci);
         if (TESTARG_k(i)) {  /* may there be open upvalues? */
+          ci->u2.nres = n;  /* save number of returns */
           if (L->top < ci->top)
             L->top = ci->top;
           luaF_close(L, base, CLOSEKTOP, 1);
