@@ -1352,15 +1352,6 @@ static const union {
 } nativeendian = {1};
 
 
-/* dummy structure to get native alignment requirements */
-struct cD {
-  char c;
-  union { double d; void *p; lua_Integer i; lua_Number n; } u;
-};
-
-#define MAXALIGN	(offsetof(struct cD, u))
-
-
 /*
 ** information to pack/unpack stuff
 */
@@ -1435,6 +1426,8 @@ static void initheader (lua_State *L, Header *h) {
 ** Read and classify next option. 'size' is filled with option's size.
 */
 static KOption getoption (Header *h, const char **fmt, int *size) {
+  /* dummy structure to get native alignment requirements */
+  struct cD { char c; union { LUAI_MAXALIGN; } u; };
   int opt = *((*fmt)++);
   *size = 0;  /* default */
   switch (opt) {
@@ -1465,7 +1458,11 @@ static KOption getoption (Header *h, const char **fmt, int *size) {
     case '<': h->islittle = 1; break;
     case '>': h->islittle = 0; break;
     case '=': h->islittle = nativeendian.little; break;
-    case '!': h->maxalign = getnumlimit(h, fmt, MAXALIGN); break;
+    case '!': {
+      const int maxalign = offsetof(struct cD, u);
+      h->maxalign = getnumlimit(h, fmt, maxalign);
+      break;
+    }
     default: luaL_error(h->L, "invalid format option '%c'", opt);
   }
   return Knop;
