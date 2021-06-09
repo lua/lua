@@ -6365,9 +6365,8 @@ The order in which the indices are enumerated is not specified,
 (To traverse a table in numerical order,
 use a numerical @Rw{for}.)
 
-The behavior of @id{next} is undefined if,
-during the traversal,
-you assign any value to a non-existent field in the table.
+You should not assign any value to a non-existent field in a table
+during its traversal.
 You may however modify existing fields.
 In particular, you may set existing fields to nil.
 
