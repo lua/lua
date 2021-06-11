@@ -474,26 +474,16 @@ void luaD_poscall (lua_State *L, CallInfo *ci, int nres) {
 
 
 /*
-** Prepare a function for a tail call, building its call info on top
-** of the current call info. 'narg1' is the number of arguments plus 1
-** (so that it includes the function itself).
+** In a tail call, move function and parameters to previous call frame.
+** (This is done only when no more errors can occur before entering the
+** new function, to keep debug information always consistent.)
 */
-void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int narg1) {
-  Proto *p = clLvalue(s2v(func))->p;
-  int fsize = p->maxstacksize;  /* frame size */
-  int nfixparams = p->numparams;
+static void moveparams (lua_State *L, StkId prevf, StkId func, int narg) {
   int i;
-  for (i = 0; i < narg1; i++)  /* move down function and arguments */
-    setobjs2s(L, ci->func + i, func + i);
-  checkstackGC(L, fsize);
-  func = ci->func;  /* moved-down function */
-  for (; narg1 <= nfixparams; narg1++)
-    setnilvalue(s2v(func + narg1));  /* complete missing arguments */
-  ci->top = func + 1 + fsize;  /* top for new function */
-  lua_assert(ci->top <= L->stack_last);
-  ci->u.l.savedpc = p->code;  /* starting point */
-  ci->callstatus |= CIST_TAIL;
-  L->top = func + narg1;  /* set top */
+  narg++;  /* function itself will be moved, too */
+  for (i = 0; i < narg; i++)  /* move down function and arguments */
+    setobjs2s(L, prevf + i, func + i);
+  L->top = prevf + narg;  /* correct top */
 }
 
 
@@ -504,8 +494,12 @@ void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int narg1) {
 ** to be executed, if it was a Lua function. Otherwise (a C function)
 ** returns NULL, with all the results on the stack, starting at the
 ** original function position.
+** For regular calls, 'delta1' is 0. For tail calls, 'delta1' is the
+** 'delta' (correction of base for vararg functions) plus 1, so that it
+** cannot be zero. Like 'moveparams', this correction can only be done
+** when no more errors can occur in the call.
 */
-CallInfo *luaD_precall (lua_State *L, StkId func, int nresults) {
+CallInfo *luaD_precall (lua_State *L, StkId func, int nresults, int delta1) {
   lua_CFunction f;
  retry:
   switch (ttypetag(s2v(func))) {
@@ -542,12 +536,18 @@ CallInfo *luaD_precall (lua_State *L, StkId func, int nresults) {
       int nfixparams = p->numparams;
       int fsize = p->maxstacksize;  /* frame size */
       checkstackGCp(L, fsize, func);
-      L->ci = ci = next_ci(L);
-      ci->nresults = nresults;
+      if (delta1) {  /* tail call? */
+        ci = L->ci;  /* reuse stack frame */
+        ci->func -= delta1 - 1;  /* correct 'func' */
+        moveparams(L, ci->func, func, narg);
+      }
+      else {  /* regular call */
+        L->ci = ci = next_ci(L);  /* new frame */
+        ci->func = func;
+        ci->nresults = nresults;
+      }
       ci->u.l.savedpc = p->code;  /* starting point */
       ci->top = func + 1 + fsize;
-      ci->func = func;
-      L->ci = ci;
       for (; narg < nfixparams; narg++)
         setnilvalue(s2v(L->top++));  /* complete missing arguments */
       lua_assert(ci->top <= L->stack_last);
@@ -572,7 +572,7 @@ static void ccall (lua_State *L, StkId func, int nResults, int inc) {
   L->nCcalls += inc;
   if (l_unlikely(getCcalls(L) >= LUAI_MAXCCALLS))
     luaE_checkcstack(L);
-  if ((ci = luaD_precall(L, func, nResults)) != NULL) {  /* Lua function? */
+  if ((ci = luaD_precall(L, func, nResults, 0)) != NULL) {  /* Lua function? */
     ci->callstatus = CIST_FRESH;  /* mark that it is a "fresh" execute */
     luaV_execute(L, ci);  /* call it */
   }
