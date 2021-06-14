@@ -26,7 +26,7 @@ end
 
 local function checkmessage (prog, msg, debug)
   local m = doit(prog)
-  if debug then print(m) end
+  if debug then print(m, msg) end
   assert(string.find(m, msg, 1, true))
 end
 
@@ -289,7 +289,7 @@ end]], "global 'insert'")
 
 checkmessage([[  -- tail call
   return math.sin("a")
-]], "'sin'")
+]], "sin")
 
 checkmessage([[collectgarbage("nooption")]], "invalid option")
 

@@ -478,12 +478,31 @@ void luaD_poscall (lua_State *L, CallInfo *ci, int nres) {
 ** (This is done only when no more errors can occur before entering the
 ** new function, to keep debug information always consistent.)
 */
-static void moveparams (lua_State *L, StkId prevf, StkId func, int narg) {
+static void moveparams (lua_State *L, StkId prevf, StkId func) {
   int i;
-  narg++;  /* function itself will be moved, too */
-  for (i = 0; i < narg; i++)  /* move down function and arguments */
+  for (i = 0; func + i < L->top; i++)  /* move down function and arguments */
     setobjs2s(L, prevf + i, func + i);
-  L->top = prevf + narg;  /* correct top */
+  L->top = prevf + i;  /* correct top */
+}
+
+
+static CallInfo *prepCallInfo (lua_State *L, StkId func, int nresults,
+                                             int delta1, int mask) {
+  CallInfo *ci;
+  if (delta1) {  /* tail call? */
+    ci = L->ci;  /* reuse stack frame */
+    ci->func -= delta1 - 1;  /* correct 'func' */
+
+    ci->callstatus |= mask | CIST_TAIL;
+    moveparams(L, ci->func, func);
+  }
+  else {  /* regular call */
+    ci = L->ci = next_ci(L);  /* new frame */
+    ci->func = func;
+    ci->nresults = nresults;
+    ci->callstatus = mask;
+  }
+  return ci;
 }
 
 
@@ -512,11 +531,8 @@ CallInfo *luaD_precall (lua_State *L, StkId func, int nresults, int delta1) {
       int n;  /* number of returns */
       CallInfo *ci;
       checkstackGCp(L, LUA_MINSTACK, func);  /* ensure minimum stack size */
-      L->ci = ci = next_ci(L);
-      ci->nresults = nresults;
-      ci->callstatus = CIST_C;
+      ci = prepCallInfo(L, func, nresults, delta1, CIST_C);
       ci->top = L->top + LUA_MINSTACK;
-      ci->func = func;
       lua_assert(ci->top <= L->stack_last);
       if (l_unlikely(L->hookmask & LUA_MASKCALL)) {
         int narg = cast_int(L->top - func) - 1;
@@ -536,16 +552,7 @@ CallInfo *luaD_precall (lua_State *L, StkId func, int nresults, int delta1) {
       int nfixparams = p->numparams;
       int fsize = p->maxstacksize;  /* frame size */
       checkstackGCp(L, fsize, func);
-      if (delta1) {  /* tail call? */
-        ci = L->ci;  /* reuse stack frame */
-        ci->func -= delta1 - 1;  /* correct 'func' */
-        moveparams(L, ci->func, func, narg);
-      }
-      else {  /* regular call */
-        L->ci = ci = next_ci(L);  /* new frame */
-        ci->func = func;
-        ci->nresults = nresults;
-      }
+      ci = prepCallInfo(L, func, nresults, delta1, 0);
       ci->u.l.savedpc = p->code;  /* starting point */
       ci->top = func + 1 + fsize;
       for (; narg < nfixparams; narg++)

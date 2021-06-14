@@ -1636,7 +1636,6 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           updatetrap(ci);  /* C call; nothing else to be done */
         else {  /* Lua call: run function in this same C frame */
           ci = newci;
-          ci->callstatus = 0;
           goto startfunc;
         }
         vmbreak;
@@ -1655,16 +1654,10 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           lua_assert(L->tbclist < base);  /* no pending tbc variables */
           lua_assert(base == ci->func + 1);
         }
-        if (luaD_precall(L, ra, LUA_MULTRET, delta + 1)) {  /* Lua function? */
-          ci->callstatus |= CIST_TAIL;
+        if (luaD_precall(L, ra, LUA_MULTRET, delta + 1))  /* Lua function? */
           goto startfunc;  /* execute the callee */
-        }
         else {  /* C function */
           updatetrap(ci);
-          updatestack(ci);  /* stack may have been relocated */
-          ci->func -= delta;  /* restore 'func' (if vararg) */
-          luaD_poscall(L, ci, cast_int(L->top - ra));  /* finish caller */
-          updatetrap(ci);  /* 'luaD_poscall' can change hooks */
           goto ret;  /* caller returns after the tail call */
         }
       }
