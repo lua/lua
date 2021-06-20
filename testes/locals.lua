@@ -187,6 +187,8 @@ do   -- constants
   checkro("y", "local x, y <const>, z = 10, 20, 30; x = 11; y = 12")
   checkro("x", "local x <const>, y, z <const> = 10, 20, 30; x = 11")
   checkro("z", "local x <const>, y, z <const> = 10, 20, 30; y = 10; z = 11")
+  checkro("foo", "local foo <const> = 10; function foo() end")
+  checkro("foo", "local foo <const> = {}; function foo() end")
 
   checkro("z", [[
     local a, z <const>, b = 10;
