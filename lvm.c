@@ -1632,7 +1632,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           L->top = ra + b;  /* top signals number of arguments */
         /* else previous instruction set top */
         savepc(L);  /* in case of errors */
-        if ((newci = luaD_precall(L, ra, nresults, 0)) == NULL)
+        if ((newci = luaD_precall(L, ra, nresults)) == NULL)
           updatetrap(ci);  /* C call; nothing else to be done */
         else {  /* Lua call: run function in this same C frame */
           ci = newci;
@@ -1654,7 +1654,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           lua_assert(L->tbclist < base);  /* no pending tbc variables */
           lua_assert(base == ci->func + 1);
         }
-        if (luaD_precall(L, ra, LUA_MULTRET, delta + 1))  /* Lua function? */
+        if (luaD_precall(L, ra, delta2retdel(delta)))  /* Lua function? */
           goto startfunc;  /* execute the callee */
         else {  /* C function */
           updatetrap(ci);

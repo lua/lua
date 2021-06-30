@@ -486,20 +486,19 @@ static void moveparams (lua_State *L, StkId prevf, StkId func) {
 }
 
 
-static CallInfo *prepCallInfo (lua_State *L, StkId func, int nresults,
-                                             int delta1, int mask) {
+static CallInfo *prepCallInfo (lua_State *L, StkId func, int retdel,
+                                             int mask) {
   CallInfo *ci;
-  if (delta1) {  /* tail call? */
+  if (isdelta(retdel)) {  /* tail call? */
     ci = L->ci;  /* reuse stack frame */
-    ci->func -= delta1 - 1;  /* correct 'func' */
-
+    ci->func -= retdel2delta(retdel);  /* correct 'func' */
     ci->callstatus |= mask | CIST_TAIL;
     moveparams(L, ci->func, func);
   }
   else {  /* regular call */
     ci = L->ci = next_ci(L);  /* new frame */
     ci->func = func;
-    ci->nresults = nresults;
+    ci->nresults = retdel;
     ci->callstatus = mask;
   }
   return ci;
@@ -518,7 +517,7 @@ static CallInfo *prepCallInfo (lua_State *L, StkId func, int nresults,
 ** cannot be zero. Like 'moveparams', this correction can only be done
 ** when no more errors can occur in the call.
 */
-CallInfo *luaD_precall (lua_State *L, StkId func, int nresults, int delta1) {
+CallInfo *luaD_precall (lua_State *L, StkId func, int retdel) {
   lua_CFunction f;
  retry:
   switch (ttypetag(s2v(func))) {
@@ -531,7 +530,7 @@ CallInfo *luaD_precall (lua_State *L, StkId func, int nresults, int delta1) {
       int n;  /* number of returns */
       CallInfo *ci;
       checkstackGCp(L, LUA_MINSTACK, func);  /* ensure minimum stack size */
-      ci = prepCallInfo(L, func, nresults, delta1, CIST_C);
+      ci = prepCallInfo(L, func, retdel, CIST_C);
       ci->top = L->top + LUA_MINSTACK;
       lua_assert(ci->top <= L->stack_last);
       if (l_unlikely(L->hookmask & LUA_MASKCALL)) {
@@ -552,7 +551,7 @@ CallInfo *luaD_precall (lua_State *L, StkId func, int nresults, int delta1) {
       int nfixparams = p->numparams;
       int fsize = p->maxstacksize;  /* frame size */
       checkstackGCp(L, fsize, func);
-      ci = prepCallInfo(L, func, nresults, delta1, 0);
+      ci = prepCallInfo(L, func, retdel, 0);
       ci->u.l.savedpc = p->code;  /* starting point */
       ci->top = func + 1 + fsize;
       for (; narg < nfixparams; narg++)
@@ -579,7 +578,7 @@ static void ccall (lua_State *L, StkId func, int nResults, int inc) {
   L->nCcalls += inc;
   if (l_unlikely(getCcalls(L) >= LUAI_MAXCCALLS))
     luaE_checkcstack(L);
-  if ((ci = luaD_precall(L, func, nResults, 0)) != NULL) {  /* Lua function? */
+  if ((ci = luaD_precall(L, func, nResults)) != NULL) {  /* Lua function? */
     ci->callstatus = CIST_FRESH;  /* mark that it is a "fresh" execute */
     luaV_execute(L, ci);  /* call it */
   }
