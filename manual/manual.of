@@ -5144,7 +5144,7 @@ Adds the byte @id{c} to the buffer @id{B}
 @APIEntry{
 const void luaL_addgsub (luaL_Buffer *B, const char *s,
                          const char *p, const char *r);|
-@apii{0,0,m}
+@apii{?,?,m}
 
 Adds a copy of the string @id{s} to the buffer @id{B} @seeC{luaL_Buffer},
 replacing any occurrence of the string @id{p}
@@ -5181,7 +5181,7 @@ to the buffer @id{B}
 }
 
 @APIEntry{void luaL_addvalue (luaL_Buffer *B);|
-@apii{1,?,m}
+@apii{?,?,m}
 
 Adds the value on the top of the stack
 to the buffer @id{B}
@@ -5304,7 +5304,7 @@ Note that any addition to the buffer may invalidate this address.
 }
 
 @APIEntry{void luaL_buffinit (lua_State *L, luaL_Buffer *B);|
-@apii{0,0,-}
+@apii{0,?,-}
 
 Initializes a buffer @id{B}
 @seeC{luaL_Buffer}.
@@ -5330,7 +5330,7 @@ Equivalent to the sequence
 }
 
 @APIEntry{void luaL_buffsub (luaL_Buffer *B, int n);|
-@apii{0,0,-}
+@apii{?,?,-}
 
 Removes @id{n} bytes from the the buffer @id{B}
 @seeC{luaL_Buffer}.
