@@ -1743,6 +1743,9 @@ static struct X { int x; } x;
       (void)s1;  /* to avoid warnings */
       lua_longassert((s == NULL && s1 == NULL) || strcmp(s, s1) == 0);
     }
+    else if EQ("Ltolstring") {
+      luaL_tolstring(L1, getindex, NULL);
+    }
     else if EQ("type") {
       lua_pushstring(L1, luaL_typename(L1, getnum));
     }
