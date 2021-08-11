@@ -4685,7 +4685,10 @@ information about a function or an activation record.
 @Lid{lua_getstack} fills only the private part
 of this structure, for later use.
 To fill the other fields of @Lid{lua_Debug} with useful information,
-you must call @Lid{lua_getinfo}.
+you must call @Lid{lua_getinfo} with an appropriate parameter.
+(Specifically, to get a field,
+you must add the letter between parentheses in the field's comment
+to the parameter @id{what} of @Lid{lua_getinfo}.)
 
 The fields of @Lid{lua_Debug} have the following meaning:
 @description{
@@ -4838,18 +4841,29 @@ printf("%d\n", ar.linedefined);
 
 Each character in the string @id{what}
 selects some fields of the structure @id{ar} to be filled or
-a value to be pushed on the stack:
+a value to be pushed on the stack.
+(These characters are also documented in the declaration of
+the structure @Lid{lua_Debug},
+between parentheses in the comments following each field.)
 @description{
 
-@item{@Char{n}| fills in the field @id{name} and @id{namewhat};
+@item{@Char{f}|
+pushes onto the stack the function that is
+running at the given level;
+}
+
+@item{@Char{l}| fills in the field @id{currentline};
+}
+
+@item{@Char{n}| fills in the fields @id{name} and @id{namewhat};
+}
+
+@item{@Char{r}| fills in the fields @id{ftransfer} and @id{ntransfer};
 }
 
 @item{@Char{S}|
 fills in the fields @id{source}, @id{short_src},
 @id{linedefined}, @id{lastlinedefined}, and @id{what};
-}
-
-@item{@Char{l}| fills in the field @id{currentline};
 }
 
 @item{@Char{t}| fills in the field @id{istailcall};
@@ -4859,21 +4873,13 @@ fills in the fields @id{source}, @id{short_src},
 @id{nups}, @id{nparams}, and @id{isvararg};
 }
 
-@item{@Char{f}|
-pushes onto the stack the function that is
-running at the given level;
-}
-
 @item{@Char{L}|
-pushes onto the stack a table whose indices are the
-numbers of the lines that are valid on the function.
-(A @emph{valid line} is a line with some associated code,
-that is, a line where you can put a break point.
-Non-valid lines include empty lines and comments.)
-
+pushes onto the stack a table whose indices are
+the lines on the function with some associated code,
+that is, the lines where you can put a break point.
+(Lines with no code include empty lines and comments.)
 If this option is given together with option @Char{f},
 its table is pushed after the function.
-
 This is the only option that can raise a memory error.
 }
 
