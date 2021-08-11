@@ -241,7 +241,7 @@ do   -- named objects (field '__name')
       assert(o == x)
       return "ABC"
     end})
-    a, b, c = T.testC("pushint 10; Ltolstring -2; return 3", x)
+    local a, b, c = T.testC("pushint 10; Ltolstring -2; return 3", x)
     assert(a == x and b == 10 and c == "ABC")
   end
 end
