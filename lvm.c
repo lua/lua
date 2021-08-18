@@ -1657,9 +1657,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           lua_assert(base == ci->func + 1);
         }
         while (!ttisfunction(s2v(ra))) {  /* not a function? */
-          luaD_tryfuncTM(L, ra);  /* try '__call' metamethod */
+          ra = luaD_tryfuncTM(L, ra);  /* try '__call' metamethod */
           b++;  /* there is now one extra argument */
-          checkstackGCp(L, 1, ra);
         }
         if (!ttisLclosure(s2v(ra))) {  /* C function? */
           luaD_precall(L, ra, LUA_MULTRET);  /* call it */
@@ -1670,9 +1669,11 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           updatetrap(ci);  /* 'luaD_poscall' can change hooks */
           goto ret;  /* caller returns after the tail call */
         }
-        ci->func -= delta;  /* restore 'func' (if vararg) */
-        luaD_pretailcall(L, ci, ra, b);  /* prepare call frame */
-        goto startfunc;  /* execute the callee */
+        else {  /* Lua function */
+          ci->func -= delta;  /* restore 'func' (if vararg) */
+          luaD_pretailcall(L, ci, ra, b);  /* prepare call frame */
+          goto startfunc;  /* execute the callee */
+        }
       }
       vmcase(OP_RETURN) {
         int n = GETARG_B(i) - 1;  /* number of results */

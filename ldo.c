@@ -387,15 +387,17 @@ static void rethook (lua_State *L, CallInfo *ci, int nres) {
 ** stack, below original 'func', so that 'luaD_precall' can call it. Raise
 ** an error if there is no '__call' metafield.
 */
-void luaD_tryfuncTM (lua_State *L, StkId func) {
+StkId luaD_tryfuncTM (lua_State *L, StkId func) {
   const TValue *tm = luaT_gettmbyobj(L, s2v(func), TM_CALL);
   StkId p;
+  checkstackGCp(L, 1, func);  /* space for metamethod */
   if (l_unlikely(ttisnil(tm)))
     luaG_callerror(L, s2v(func));  /* nothing to call */
   for (p = L->top; p > func; p--)  /* open space for metamethod */
     setobjs2s(L, p, p-1);
   L->top++;  /* stack space pre-allocated by the caller */
   setobj2s(L, func, tm);  /* metamethod is the new function to be called */
+  return func;
 }
 
 
@@ -558,8 +560,7 @@ CallInfo *luaD_precall (lua_State *L, StkId func, int nresults) {
       return ci;
     }
     default: {  /* not a function */
-      checkstackGCp(L, 1, func);  /* space for metamethod */
-      luaD_tryfuncTM(L, func);  /* try to get '__call' metamethod */
+      func = luaD_tryfuncTM(L, func);  /* try to get '__call' metamethod */
       goto retry;  /* try again with metamethod */
     }
   }
