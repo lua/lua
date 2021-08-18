@@ -49,18 +49,6 @@
 	luaD_checkstackaux(L, (fsize), luaC_checkGC(L), (void)0)
 
 
-/*
-** 'luaD_precall' is used for regular calls, when it needs the
-** number of results, and in tail calls, when it needs the 'delta'
-** (correction of base for vararg functions). The argument 'retdel'
-** codes these two options. A number of results is represented by
-** itself, while a delta is represented by 'delta2retdel(delta)'
-*/
-#define delta2retdel(d) 	(-(d) + LUA_MULTRET - 1)
-#define retdel2delta(d) 	(-(d) + LUA_MULTRET - 1)
-#define isdelta(rd)	((rd) < LUA_MULTRET)
-
-
 /* type of protected functions, to be ran by 'runprotected' */
 typedef void (*Pfunc) (lua_State *L, void *ud);
 
@@ -70,7 +58,8 @@ LUAI_FUNC int luaD_protectedparser (lua_State *L, ZIO *z, const char *name,
 LUAI_FUNC void luaD_hook (lua_State *L, int event, int line,
                                         int fTransfer, int nTransfer);
 LUAI_FUNC void luaD_hookcall (lua_State *L, CallInfo *ci);
-LUAI_FUNC CallInfo *luaD_precall (lua_State *L, StkId func, int retdel);
+LUAI_FUNC void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int n);
+LUAI_FUNC CallInfo *luaD_precall (lua_State *L, StkId func, int nResults);
 LUAI_FUNC void luaD_call (lua_State *L, StkId func, int nResults);
 LUAI_FUNC void luaD_callnoyield (lua_State *L, StkId func, int nResults);
 LUAI_FUNC void luaD_tryfuncTM (lua_State *L, StkId func);

@@ -474,33 +474,36 @@ void luaD_poscall (lua_State *L, CallInfo *ci, int nres) {
 
 
 /*
-** In a tail call, move function and parameters to previous call frame.
-** (This is done only when no more errors can occur before entering the
-** new function, to keep debug information always consistent.)
+** Prepare a function for a tail call, building its call info on top
+** of the current call info. 'narg1' is the number of arguments plus 1
+** (so that it includes the function itself).
 */
-static void moveparams (lua_State *L, StkId prevf, StkId func) {
+void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int narg1) {
+  Proto *p = clLvalue(s2v(func))->p;
+  int fsize = p->maxstacksize;  /* frame size */
+  int nfixparams = p->numparams;
   int i;
-  for (i = 0; func + i < L->top; i++)  /* move down function and arguments */
-    setobjs2s(L, prevf + i, func + i);
-  L->top = prevf + i;  /* correct top */
+  for (i = 0; i < narg1; i++)  /* move down function and arguments */
+    setobjs2s(L, ci->func + i, func + i);
+  checkstackGC(L, fsize);
+  func = ci->func;  /* moved-down function */
+  for (; narg1 <= nfixparams; narg1++)
+    setnilvalue(s2v(func + narg1));  /* complete missing arguments */
+  ci->top = func + 1 + fsize;  /* top for new function */
+  lua_assert(ci->top <= L->stack_last);
+  ci->u.l.savedpc = p->code;  /* starting point */
+  ci->callstatus |= CIST_TAIL;
+  L->top = func + narg1;  /* set top */
 }
 
 
-static CallInfo *prepCallInfo (lua_State *L, StkId func, int retdel,
-                                             int mask) {
-  CallInfo *ci;
-  if (isdelta(retdel)) {  /* tail call? */
-    ci = L->ci;  /* reuse stack frame */
-    ci->func -= retdel2delta(retdel);  /* correct 'func' */
-    ci->callstatus |= mask | CIST_TAIL;
-    moveparams(L, ci->func, func);
-  }
-  else {  /* regular call */
-    ci = L->ci = next_ci(L);  /* new frame */
-    ci->func = func;
-    ci->nresults = retdel;
-    ci->callstatus = mask;
-  }
+static CallInfo *prepCallInfo (lua_State *L, StkId func, int nret,
+                                             int mask, StkId top) {
+  CallInfo *ci = L->ci = next_ci(L);  /* new frame */
+  ci->func = func;
+  ci->nresults = nret;
+  ci->callstatus = mask;
+  ci->top = top;
   return ci;
 }
 
@@ -512,12 +515,8 @@ static CallInfo *prepCallInfo (lua_State *L, StkId func, int retdel,
 ** to be executed, if it was a Lua function. Otherwise (a C function)
 ** returns NULL, with all the results on the stack, starting at the
 ** original function position.
-** For regular calls, 'delta1' is 0. For tail calls, 'delta1' is the
-** 'delta' (correction of base for vararg functions) plus 1, so that it
-** cannot be zero. Like 'moveparams', this correction can only be done
-** when no more errors can occur in the call.
 */
-CallInfo *luaD_precall (lua_State *L, StkId func, int retdel) {
+CallInfo *luaD_precall (lua_State *L, StkId func, int nresults) {
   lua_CFunction f;
  retry:
   switch (ttypetag(s2v(func))) {
@@ -530,8 +529,8 @@ CallInfo *luaD_precall (lua_State *L, StkId func, int retdel) {
       int n;  /* number of returns */
       CallInfo *ci;
       checkstackGCp(L, LUA_MINSTACK, func);  /* ensure minimum stack size */
-      ci = prepCallInfo(L, func, retdel, CIST_C);
-      ci->top = L->top + LUA_MINSTACK;
+      L->ci = ci = prepCallInfo(L, func, nresults, CIST_C,
+                                   L->top + LUA_MINSTACK);
       lua_assert(ci->top <= L->stack_last);
       if (l_unlikely(L->hookmask & LUA_MASKCALL)) {
         int narg = cast_int(L->top - func) - 1;
@@ -551,9 +550,8 @@ CallInfo *luaD_precall (lua_State *L, StkId func, int retdel) {
       int nfixparams = p->numparams;
       int fsize = p->maxstacksize;  /* frame size */
       checkstackGCp(L, fsize, func);
-      ci = prepCallInfo(L, func, retdel, 0);
+      L->ci = ci = prepCallInfo(L, func, nresults, 0, func + 1 + fsize);
       ci->u.l.savedpc = p->code;  /* starting point */
-      ci->top = func + 1 + fsize;
       for (; narg < nfixparams; narg++)
         setnilvalue(s2v(L->top++));  /* complete missing arguments */
       lua_assert(ci->top <= L->stack_last);
