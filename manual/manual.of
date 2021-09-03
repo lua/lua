@@ -7078,8 +7078,10 @@ following the description given in its first argument,
 which must be a string.
 The format string follows the same rules as the @ANSI{sprintf}.
 The only differences are that the conversion specifiers and modifiers
-@T{*}, @id{h}, @id{L}, @id{l}, and @id{n} are not supported
+@id{F}, @id{n}, @T{*}, @id{h}, @id{L}, and @id{l} are not supported
 and that there is an extra specifier, @id{q}.
+Both width and precision, when present,
+are limited to two digits.
 
 The specifier @id{q} formats booleans, nil, numbers, and strings
 in a way that the result is a valid constant in Lua source code.
@@ -7099,7 +7101,7 @@ may produce the string:
 "a string with \"quotes\" and \
  new line"
 }
-This specifier does not support modifiers (flags, width, length).
+This specifier does not support modifiers (flags, width, precision).
 
 The conversion specifiers
 @id{A}, @id{a}, @id{E}, @id{e}, @id{f},
