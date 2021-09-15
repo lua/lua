@@ -14,6 +14,7 @@ CWARNSCPP= \
 	-Wredundant-decls \
 	-Wdisabled-optimization \
 	-Wdouble-promotion \
+	-Wmissing-declarations \
         # the next warnings might be useful sometimes,
 	# but usually they generate too much noise
 	# -Werror \

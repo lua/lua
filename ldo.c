@@ -407,7 +407,7 @@ StkId luaD_tryfuncTM (lua_State *L, StkId func) {
 ** expressions, multiple results for tail calls/single parameters)
 ** separated.
 */
-static void moveresults (lua_State *L, StkId res, int nres, int wanted) {
+l_sinline void moveresults (lua_State *L, StkId res, int nres, int wanted) {
   StkId firstresult;
   int i;
   switch (wanted) {  /* handle typical cases separately */
@@ -499,8 +499,8 @@ void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int narg1) {
 }
 
 
-static CallInfo *prepCallInfo (lua_State *L, StkId func, int nret,
-                                             int mask, StkId top) {
+l_sinline CallInfo *prepCallInfo (lua_State *L, StkId func, int nret,
+                                                int mask, StkId top) {
   CallInfo *ci = L->ci = next_ci(L);  /* new frame */
   ci->func = func;
   ci->nresults = nret;
@@ -572,7 +572,7 @@ CallInfo *luaD_precall (lua_State *L, StkId func, int nresults) {
 ** number of recursive invocations in the C stack) or nyci (the same
 ** plus increment number of non-yieldable calls).
 */
-static void ccall (lua_State *L, StkId func, int nResults, int inc) {
+l_sinline void ccall (lua_State *L, StkId func, int nResults, int inc) {
   CallInfo *ci;
   L->nCcalls += inc;
   if (l_unlikely(getCcalls(L) >= LUAI_MAXCCALLS))
