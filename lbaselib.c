@@ -285,7 +285,8 @@ static int luaB_pairs (lua_State *L) {
 ** Traversal function for 'ipairs'
 */
 static int ipairsaux (lua_State *L) {
-  lua_Integer i = luaL_checkinteger(L, 2) + 1;
+  lua_Integer i = luaL_checkinteger(L, 2);
+  i = luaL_intop(+, i, 1);
   lua_pushinteger(L, i);
   return (lua_geti(L, 1, i) == LUA_TNIL) ? 1 : 2;
 }

@@ -43,6 +43,14 @@ assert(i == 4)
 assert(type(ipairs{}) == 'function' and ipairs{} == ipairs{})
 
 
+do   -- overflow (must wrap-around)
+  local f = ipairs{}
+  local k, v = f({[math.mininteger] = 10}, math.maxinteger)
+  assert(k == math.mininteger and v == 10)
+  k, v = f({[math.mininteger] = 10}, k)
+  assert(k == nil)
+end
+
 if not T then
   (Message or print)
     ('\n >>> testC not active: skipping tests for table sizes <<<\n')
@@ -498,6 +506,15 @@ do   -- testing table library with metamethods
 
 end
 
+
+do   -- testing overflow in table.insert (must wrap-around)
+
+  local t = setmetatable({},
+            {__len = function () return math.maxinteger end})
+  table.insert(t, 20)
+  local k, v = next(t)
+  assert(k == math.mininteger and v == 20)
+end
 
 if not T then
   (Message or print)
