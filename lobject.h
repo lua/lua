@@ -68,7 +68,7 @@ typedef struct TValue {
 
 
 #define val_(o)		((o)->value_)
-#define valraw(o)	(&val_(o))
+#define valraw(o)	(val_(o))
 
 
 /* raw type tag of a TValue */

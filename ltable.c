@@ -150,22 +150,22 @@ static int l_hashfloat (lua_Number n) {
 ** and value in 'vkl') so that we can call it on keys inserted into
 ** nodes.
 */
-static Node *mainposition (const Table *t, int ktt, const Value *kvl) {
+static Node *mainposition (const Table *t, int ktt, const Value kvl) {
   switch (withvariant(ktt)) {
     case LUA_VNUMINT: {
-      lua_Integer key = ivalueraw(*kvl);
+      lua_Integer key = ivalueraw(kvl);
       return hashint(t, key);
     }
     case LUA_VNUMFLT: {
-      lua_Number n = fltvalueraw(*kvl);
+      lua_Number n = fltvalueraw(kvl);
       return hashmod(t, l_hashfloat(n));
     }
     case LUA_VSHRSTR: {
-      TString *ts = tsvalueraw(*kvl);
+      TString *ts = tsvalueraw(kvl);
       return hashstr(t, ts);
     }
     case LUA_VLNGSTR: {
-      TString *ts = tsvalueraw(*kvl);
+      TString *ts = tsvalueraw(kvl);
       return hashpow2(t, luaS_hashlongstr(ts));
     }
     case LUA_VFALSE:
@@ -173,15 +173,15 @@ static Node *mainposition (const Table *t, int ktt, const Value *kvl) {
     case LUA_VTRUE:
       return hashboolean(t, 1);
     case LUA_VLIGHTUSERDATA: {
-      void *p = pvalueraw(*kvl);
+      void *p = pvalueraw(kvl);
       return hashpointer(t, p);
     }
     case LUA_VLCF: {
-      lua_CFunction f = fvalueraw(*kvl);
+      lua_CFunction f = fvalueraw(kvl);
       return hashpointer(t, f);
     }
     default: {
-      GCObject *o = gcvalueraw(*kvl);
+      GCObject *o = gcvalueraw(kvl);
       return hashpointer(t, o);
     }
   }
@@ -691,7 +691,7 @@ void luaH_newkey (lua_State *L, Table *t, const TValue *key, TValue *value) {
       return;
     }
     lua_assert(!isdummy(t));
-    othern = mainposition(t, keytt(mp), &keyval(mp));
+    othern = mainposition(t, keytt(mp), keyval(mp));
     if (othern != mp) {  /* is colliding node out of its main position? */
       /* yes; move colliding node into free position */
       while (othern + gnext(othern) != mp)  /* find previous */
