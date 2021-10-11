@@ -1346,8 +1346,10 @@ then all values returned by that call enter the list of values,
 before the adjustment
 (except when the call is enclosed in parentheses; see @See{expressions}).
 
-The assignment statement first evaluates all its expressions
-and only then the assignments are performed.
+If a variable is both assigned and read
+inside a multiple assignment,
+Lua ensures all reads get the value of the variable
+before the assignment.
 Thus the code
 @verbatim{
 i = 3
@@ -1366,6 +1368,12 @@ and
 x, y, z = y, z, x
 }
 cyclically permutes the values of @id{x}, @id{y}, and @id{z}.
+
+Note that this guarantee covers only accesses
+syntactically inside the assignment statement.
+If a function or a metamethod called during the assignment
+changes the value of a variable,
+Lua gives no guarantees about the order of that access.
 
 An assignment to a global name @T{x = val}
 is equivalent to the assignment

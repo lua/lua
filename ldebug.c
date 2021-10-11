@@ -64,7 +64,7 @@ static int getbaseline (const Proto *f, int pc, int *basepc) {
   }
   else {
     int i = cast_uint(pc) / MAXIWTHABS - 1;  /* get an estimate */
-    /* estimate must be a lower bond of the correct base */
+    /* estimate must be a lower bound of the correct base */
     lua_assert(i < 0 ||
               (i < f->sizeabslineinfo && f->abslineinfo[i].pc <= pc));
     while (i + 1 < f->sizeabslineinfo && pc >= f->abslineinfo[i + 1].pc)

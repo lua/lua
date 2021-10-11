@@ -1109,7 +1109,7 @@ void luaV_finishOp (lua_State *L) {
 #define ProtectNT(exp)  (savepc(L), (exp), updatetrap(ci))
 
 /*
-** Protect code that can only raise errors. (That is, it cannnot change
+** Protect code that can only raise errors. (That is, it cannot change
 ** the stack or hooks.)
 */
 #define halfProtect(exp)  (savestate(L,ci), (exp))

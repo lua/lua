@@ -1217,7 +1217,7 @@ static const char *get2digits (const char *s) {
 
 
 /*
-** Chech whether a conversion specification is valid. When called,
+** Check whether a conversion specification is valid. When called,
 ** first character in 'form' must be '%' and last character must
 ** be a valid conversion specifier. 'flags' are the accepted flags;
 ** 'precision' signals whether to accept a precision.
