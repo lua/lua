@@ -511,6 +511,30 @@ l_sinline CallInfo *prepCallInfo (lua_State *L, StkId func, int nret,
 
 
 /*
+** precall for C functions
+*/
+l_sinline CallInfo *precallC (lua_State *L, StkId func, int nresults,
+                                            lua_CFunction f) {
+  int n;  /* number of returns */
+  CallInfo *ci;
+  checkstackGCp(L, LUA_MINSTACK, func);  /* ensure minimum stack size */
+  L->ci = ci = prepCallInfo(L, func, nresults, CIST_C,
+                               L->top + LUA_MINSTACK);
+  lua_assert(ci->top <= L->stack_last);
+  if (l_unlikely(L->hookmask & LUA_MASKCALL)) {
+    int narg = cast_int(L->top - func) - 1;
+    luaD_hook(L, LUA_HOOKCALL, -1, 1, narg);
+  }
+  lua_unlock(L);
+  n = (*f)(L);  /* do the actual call */
+  lua_lock(L);
+  api_checknelems(L, n);
+  luaD_poscall(L, ci, n);
+  return NULL;
+}
+
+
+/*
 ** Prepares the call to a function (C or Lua). For C functions, also do
 ** the call. The function to be called is at '*func'.  The arguments
 ** are on the stack, right after the function.  Returns the CallInfo
@@ -519,32 +543,11 @@ l_sinline CallInfo *prepCallInfo (lua_State *L, StkId func, int nret,
 ** original function position.
 */
 CallInfo *luaD_precall (lua_State *L, StkId func, int nresults) {
-  lua_CFunction f;
- retry:
   switch (ttypetag(s2v(func))) {
     case LUA_VCCL:  /* C closure */
-      f = clCvalue(s2v(func))->f;
-      goto Cfunc;
+      return precallC(L, func, nresults, clCvalue(s2v(func))->f);
     case LUA_VLCF:  /* light C function */
-      f = fvalue(s2v(func));
-     Cfunc: {
-      int n;  /* number of returns */
-      CallInfo *ci;
-      checkstackGCp(L, LUA_MINSTACK, func);  /* ensure minimum stack size */
-      L->ci = ci = prepCallInfo(L, func, nresults, CIST_C,
-                                   L->top + LUA_MINSTACK);
-      lua_assert(ci->top <= L->stack_last);
-      if (l_unlikely(L->hookmask & LUA_MASKCALL)) {
-        int narg = cast_int(L->top - func) - 1;
-        luaD_hook(L, LUA_HOOKCALL, -1, 1, narg);
-      }
-      lua_unlock(L);
-      n = (*f)(L);  /* do the actual call */
-      lua_lock(L);
-      api_checknelems(L, n);
-      luaD_poscall(L, ci, n);
-      return NULL;
-    }
+      return precallC(L, func, nresults, fvalue(s2v(func)));
     case LUA_VLCL: {  /* Lua function */
       CallInfo *ci;
       Proto *p = clLvalue(s2v(func))->p;
@@ -561,7 +564,7 @@ CallInfo *luaD_precall (lua_State *L, StkId func, int nresults) {
     }
     default: {  /* not a function */
       func = luaD_tryfuncTM(L, func);  /* try to get '__call' metamethod */
-      goto retry;  /* try again with metamethod */
+      return luaD_precall(L, func, nresults); /* try again with metamethod */
     }
   }
 }
