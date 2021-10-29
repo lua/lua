@@ -1643,6 +1643,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_TAILCALL) {
         int b = GETARG_B(i);  /* number of arguments + 1 (function) */
+        int n;  /* number of results when calling a C function */
         int nparams1 = GETARG_C(i);
         /* delta is virtual 'func' - real 'func' (vararg functions) */
         int delta = (nparams1) ? ci->u.l.nextraargs + nparams1 : 0;
@@ -1656,23 +1657,13 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           lua_assert(L->tbclist < base);  /* no pending tbc variables */
           lua_assert(base == ci->func + 1);
         }
-        while (!ttisfunction(s2v(ra))) {  /* not a function? */
-          ra = luaD_tryfuncTM(L, ra);  /* try '__call' metamethod */
-          b++;  /* there is now one extra argument */
-        }
-        if (!ttisLclosure(s2v(ra))) {  /* C function? */
-          luaD_precall(L, ra, LUA_MULTRET);  /* call it */
-          updatetrap(ci);
-          updatestack(ci);  /* stack may have been relocated */
+        if ((n = luaD_pretailcall(L, ci, ra, b, delta)) < 0)  /* Lua function? */
+          goto startfunc;  /* execute the callee */
+        else {  /* C function? */
           ci->func -= delta;  /* restore 'func' (if vararg) */
-          luaD_poscall(L, ci, cast_int(L->top - ra));  /* finish caller */
+          luaD_poscall(L, ci, n);  /* finish caller */
           updatetrap(ci);  /* 'luaD_poscall' can change hooks */
           goto ret;  /* caller returns after the tail call */
-        }
-        else {  /* Lua function */
-          ci->func -= delta;  /* restore 'func' (if vararg) */
-          luaD_pretailcall(L, ci, ra, b);  /* prepare call frame */
-          goto startfunc;  /* execute the callee */
         }
       }
       vmcase(OP_RETURN) {
