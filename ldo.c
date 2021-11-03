@@ -759,11 +759,10 @@ static void resume (lua_State *L, void *ud) {
   StkId firstArg = L->top - n;  /* first argument */
   CallInfo *ci = L->ci;
   if (L->status == LUA_OK)  /* starting a coroutine? */
-    ccall(L, firstArg - 1, LUA_MULTRET, 1);  /* just call its body */
+    ccall(L, firstArg - 1, LUA_MULTRET, 0);  /* just call its body */
   else {  /* resuming from previous yield */
     lua_assert(L->status == LUA_YIELD);
     L->status = LUA_OK;  /* mark that it is running (again) */
-    luaE_incCstack(L);  /* control the C stack */
     if (isLua(ci)) {  /* yielded inside a hook? */
       L->top = firstArg;  /* discard arguments */
       luaV_execute(L, ci);  /* just continue running Lua code */
@@ -814,6 +813,9 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
   else if (L->status != LUA_YIELD)  /* ended with errors? */
     return resume_error(L, "cannot resume dead coroutine", nargs);
   L->nCcalls = (from) ? getCcalls(from) : 0;
+  if (getCcalls(L) >= LUAI_MAXCCALLS)
+    return resume_error(L, "C stack overflow", nargs);
+  L->nCcalls++;
   luai_userstateresume(L, nargs);
   api_checknelems(L, (L->status == LUA_OK) ? nargs + 1 : nargs);
   status = luaD_rawrunprotected(L, resume, &nargs);
