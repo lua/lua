@@ -6247,7 +6247,7 @@ to its caller.
 }
 
 @LibEntry{error (message [, level])|
-Raises an error @see{error} with @{message} as the error object.
+Raises an error @see{error} with @id{message} as the error object.
 This function never returns.
 
 Usually, @id{error} adds some information about the error position
