@@ -225,7 +225,7 @@ do   -- testing active lines
     -- 5th line is empty
   end, {3, 4, 6})
 
-  checkactivelines(function (...) end, {0})
+  checkactivelines(function (a, b, ...) end, {0})
 
   checkactivelines(function (a, b)
   end, {1})

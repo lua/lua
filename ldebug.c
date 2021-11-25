@@ -304,7 +304,7 @@ static void collectvalidlines (lua_State *L, Closure *f) {
     if (!p->is_vararg)  /* regular function? */
       i = 0;  /* consider all instructions */
     else {  /* vararg function */
-      lua_assert(p->code[0] == OP_VARARGPREP);
+      lua_assert(GET_OPCODE(p->code[0]) == OP_VARARGPREP);
       currentline = nextline(p, currentline, 0);
       i = 1;  /* skip first instruction (OP_VARARGPREP) */
     }
