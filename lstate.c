@@ -271,6 +271,7 @@ static void close_state (lua_State *L) {
   if (!completestate(g))  /* closing a partially built state? */
     luaC_freeallobjects(L);  /* just collect its objects */
   else {  /* closing a fully built state */
+    L->ci = &L->base_ci;  /* unwind CallInfo list */
     luaD_closeprotected(L, 1, LUA_OK);  /* close all upvalues */
     luaC_freeallobjects(L);  /* collect all objects */
     luai_userstateclose(L);
