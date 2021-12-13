@@ -676,11 +676,13 @@ end
 -- just to make sure
 assert(collectgarbage'isrunning')
 
-do    -- check that the collector is reentrant in incremental mode
+do    -- check that the collector is not reentrant in incremental mode
+  local res = true
   setmetatable({}, {__gc = function ()
-    collectgarbage()
+    res = collectgarbage()
   end})
   collectgarbage()
+  assert(not res)
 end
 
 

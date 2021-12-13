@@ -236,7 +236,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   luaS_init(L);
   luaT_init(L);
   luaX_init(L);
-  g->gcrunning = 1;  /* allow gc */
+  g->gcstp = 0;  /* allow gc */
   setnilvalue(&g->nilvalue);  /* now state is complete */
   luai_userstateopen(L);
 }
@@ -373,7 +373,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->ud_warn = NULL;
   g->mainthread = L;
   g->seed = luai_makeseed(L);
-  g->gcrunning = 0;  /* no GC while building state */
+  g->gcstp = GCSTPGC;  /* no GC while building state */
   g->strt.size = g->strt.nuse = 0;
   g->strt.hash = NULL;
   setnilvalue(&g->l_registry);

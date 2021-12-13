@@ -787,11 +787,8 @@ following the reverse order that they were marked.
 If any finalizer marks objects for collection during that phase,
 these marks have no effect.
 
-Finalizers cannot yield.
-Except for that, they can do anything,
-such as raise errors, create new objects,
-or even run the garbage collector.
-However, because they can run in unpredictable times,
+Finalizers cannot yield nor run the garbage collector.
+Because they can run in unpredictable times,
 it is good practice to restrict each finalizer
 to the minimum necessary to properly release
 its associated resource.
@@ -3275,6 +3272,8 @@ Returns the previous mode (@id{LUA_GCGEN} or @id{LUA_GCINC}).
 }
 For more details about these options,
 see @Lid{collectgarbage}.
+
+This function should not be called by a finalizer.
 
 }
 
@@ -6232,6 +6231,8 @@ A zero means to not change that value.
 }
 See @See{GC} for more details about garbage collection
 and some of these options.
+
+This function should not be called by a finalizer.
 
 }
 
