@@ -209,7 +209,7 @@ typedef struct CallInfo {
 #define CIST_YPCALL	(1<<4)	/* doing a yieldable protected call */
 #define CIST_TAIL	(1<<5)	/* call was tail called */
 #define CIST_HOOKYIELD	(1<<6)	/* last hook called yielded */
-#define CIST_FIN	(1<<7)	/* call is running a finalizer */
+#define CIST_FIN	(1<<7)	/* function "called" a finalizer */
 #define CIST_TRAN	(1<<8)	/* 'ci' has transfer information */
 #define CIST_CLSRET	(1<<9)  /* function is closing tbc variables */
 /* Bits 10-12 are used for CIST_RECST (see below) */

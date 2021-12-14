@@ -371,7 +371,7 @@ if T then
 
   warn("@on"); warn("@store")
   collectgarbage()
-  assert(string.find(_WARN, "error in __gc metamethod"))
+  assert(string.find(_WARN, "error in __gc"))
   assert(string.match(_WARN, "@(.-)@") == "expected"); _WARN = false
   for i = 8, 10 do assert(s[i]) end
 
