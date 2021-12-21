@@ -1143,7 +1143,7 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
   va_start(argp, what);
   switch (what) {
     case LUA_GCSTOP: {
-      g->gcstp = GCSTPUSR;  /* stopeed by the user */
+      g->gcstp = GCSTPUSR;  /* stopped by the user */
       break;
     }
     case LUA_GCRESTART: {
