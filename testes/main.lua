@@ -261,6 +261,34 @@ u2 = setmetatable({}, {__gc = function () error("ZYX") end})
 RUN('lua -W %s 2> %s', prog, out)
 checkprogout("ZYX)\nXYZ)\n")
 
+-- bug since 5.2: finalizer called when closing a state could
+-- subvert finalization order
+prepfile[[
+-- should be called last
+print("creating 1")
+setmetatable({}, {__gc = function () print(1) end})
+
+print("creating 2")
+setmetatable({}, {__gc = function ()
+  print("2")
+  print("creating 3")
+  -- this finalizer should not be called, as object will be
+  -- created after 'lua_close' has been called
+  setmetatable({}, {__gc = function () print(3) end})
+  print(collectgarbage())    -- cannot call collector here
+  os.exit(0, true)
+end})
+]]
+RUN('lua -W %s > %s', prog, out)
+checkout[[
+creating 1
+creating 2
+2
+creating 3
+nil
+1
+]]
+
 
 -- test many arguments
 prepfile[[print(({...})[30])]]
