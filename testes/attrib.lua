@@ -434,6 +434,16 @@ a.aVeryLongName012345678901234567890123456789012345678901234567890123456789 ==
 10)
 
 
+do
+  -- _ENV constant
+  local function foo ()
+    local _ENV <const> = 11
+    X = "hi"
+  end
+  local st, msg = pcall(foo)
+  assert(not st and string.find(msg, "number"))
+end
+
 
 -- test of large float/integer indices 
 
