@@ -1177,7 +1177,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       printf("line: %d\n", luaG_getfuncline(cl->p, pcRel(pc, cl->p)));
     #endif
     lua_assert(base == ci->func + 1);
-    lua_assert(base <= L->top && L->top < L->stack_last);
+    lua_assert(base <= L->top && L->top <= L->stack_last);
     /* invalidate top for instructions not expecting it */
     lua_assert(isIT(i) || (cast_void(L->top = base), 1));
     vmdispatch (GET_OPCODE(i)) {

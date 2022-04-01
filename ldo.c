@@ -213,7 +213,7 @@ int luaD_reallocstack (lua_State *L, int newsize, int raiseerror) {
 
 
 /*
-** Try to grow the stack by at least 'n' elements. when 'raiseerror'
+** Try to grow the stack by at least 'n' elements. When 'raiseerror'
 ** is true, raises any error; otherwise, return 0 in case of errors.
 */
 int luaD_growstack (lua_State *L, int n, int raiseerror) {
@@ -247,6 +247,10 @@ int luaD_growstack (lua_State *L, int n, int raiseerror) {
 }
 
 
+/*
+** Compute how much of the stack is being used, by computing the
+** maximum top of all call frames in the stack and the current top.
+*/
 static int stackinuse (lua_State *L) {
   CallInfo *ci;
   int res;
@@ -254,7 +258,7 @@ static int stackinuse (lua_State *L) {
   for (ci = L->ci; ci != NULL; ci = ci->previous) {
     if (lim < ci->top) lim = ci->top;
   }
-  lua_assert(lim <= L->stack_last);
+  lua_assert(lim <= L->stack_last + EXTRA_STACK);
   res = cast_int(lim - L->stack) + 1;  /* part of stack in use */
   if (res < LUA_MINSTACK)
     res = LUA_MINSTACK;  /* ensure a minimum size */
