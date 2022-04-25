@@ -1391,7 +1391,10 @@ static void finishbinexpval (FuncState *fs, expdesc *e1, expdesc *e2,
 */
 static void codebinexpval (FuncState *fs, OpCode op,
                            expdesc *e1, expdesc *e2, int line) {
-  int v2 = luaK_exp2anyreg(fs, e2);  /* both operands are in registers */
+  int v2 = luaK_exp2anyreg(fs, e2);  /* make sure 'e2' is in a register */
+  /* 'e1' must be already in a register or it is a constant */
+  lua_assert((VNIL <= e1->k && e1->k <= VKSTR) ||
+             e1->k == VNONRELOC || e1->k == VRELOC);
   lua_assert(OP_ADD <= op && op <= OP_SHR);
   finishbinexpval(fs, e1, e2, op, v2, 0, line, OP_MMBIN,
                   cast(TMS, (op - OP_ADD) + TM_ADD));
@@ -1478,7 +1481,7 @@ static void codecommutative (FuncState *fs, BinOpr op,
 
 
 /*
-** Code bitwise operations; they are all associative, so the function
+** Code bitwise operations; they are all commutative, so the function
 ** tries to put an integer constant as the 2nd operand (a K operand).
 */
 static void codebitwise (FuncState *fs, BinOpr opr,
@@ -1486,11 +1489,11 @@ static void codebitwise (FuncState *fs, BinOpr opr,
   int flip = 0;
   int v2;
   OpCode op;
-  if (e1->k == VKINT && luaK_exp2RK(fs, e1)) {
+  if (e1->k == VKINT && luaK_exp2K(fs, e1)) {
     swapexps(e1, e2);  /* 'e2' will be the constant operand */
     flip = 1;
   }
-  else if (!(e2->k == VKINT && luaK_exp2RK(fs, e2))) {  /* no constants? */
+  else if (!(e2->k == VKINT && luaK_exp2K(fs, e2))) {  /* no constants? */
     op = cast(OpCode, opr + OP_ADD);
     codebinexpval(fs, op, e1, e2, line);  /* all-register opcodes */
     return;
@@ -1551,7 +1554,7 @@ static void codeeq (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
     op = OP_EQI;
     r2 = im;  /* immediate operand */
   }
-  else if (luaK_exp2RK(fs, e2)) {  /* 1st expression is constant? */
+  else if (luaK_exp2RK(fs, e2)) {  /* 2nd expression is constant? */
     op = OP_EQK;
     r2 = e2->u.info;  /* constant index */
   }
@@ -1611,7 +1614,8 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
     case OPR_SHL: case OPR_SHR: {
       if (!tonumeral(v, NULL))
         luaK_exp2anyreg(fs, v);
-      /* else keep numeral, which may be folded with 2nd operand */
+      /* else keep numeral, which may be folded or used as an immediate
+         operand */
       break;
     }
     case OPR_EQ: case OPR_NE: {

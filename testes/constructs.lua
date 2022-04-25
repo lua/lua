@@ -103,6 +103,31 @@ do  -- test old bug (first name could not be an `upvalue')
  local a; function f(x) x={a=1}; x={x=1}; x={G=1} end
 end
 
+
+do   -- bug since 5.4.0
+  -- create code with a table using more than 256 constants
+  local code = {"local x = {"}
+  for i = 1, 257 do
+    code[#code + 1] = i .. ".1,"
+  end
+  code[#code + 1] = "};"
+  code = table.concat(code)
+
+  -- add "ret" to the end of that code and checks that
+  -- it produces the expected value "val"
+  local function check (ret, val)
+    local code = code .. ret
+    code = load(code)
+    assert(code() == val)
+  end
+
+  check("return (1 ~ (2 or 3))", 1 ~ 2)
+  check("return (1 | (2 or 3))", 1 | 2)
+  check("return (1 + (2 or 3))", 1 + 2)
+  check("return (1 << (2 or 3))", 1 << 2)
+end
+
+
 function f (i)
   if type(i) ~= 'number' then return i,'jojo'; end;
   if i > 0 then return i, f(i-1); end;
