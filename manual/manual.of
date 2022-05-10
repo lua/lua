@@ -2521,7 +2521,7 @@ In general,
 Lua's garbage collection can free or move internal memory
 and then invalidate pointers to internal strings.
 To allow a safe use of these pointers,
-The API guarantees that any pointer to a string in a stack index
+the API guarantees that any pointer to a string in a stack index
 is valid while the string value at that index is not removed from the stack.
 (It can be moved to another index, though.)
 When the index is a pseudo-index (referring to an upvalue),
@@ -5349,7 +5349,7 @@ Equivalent to the sequence
 @APIEntry{void luaL_buffsub (luaL_Buffer *B, int n);|
 @apii{?,?,-}
 
-Removes @id{n} bytes from the the buffer @id{B}
+Removes @id{n} bytes from the buffer @id{B}
 @seeC{luaL_Buffer}.
 The buffer must have at least that many bytes.
 
