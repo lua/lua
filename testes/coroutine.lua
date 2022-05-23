@@ -741,20 +741,17 @@ _X()
 
 if not _soft then
   -- bug (stack overflow)
-  local j = 2^9
-  local lim = 1000000    -- (C stack limit; assume 32-bit machine)
-  local t = {lim - 10, lim - 5, lim - 1, lim, lim + 1}
+  local lim = 1000000    -- stack limit; assume 32-bit machine
+  local t = {lim - 10, lim - 5, lim - 1, lim, lim + 1, lim + 5}
   for i = 1, #t do
     local j = t[i]
-    co = coroutine.create(function()
-           local t = {}
-           for i = 1, j do t[i] = i end
-           return table.unpack(t)
+    local co = coroutine.create(function()
+           return table.unpack({}, 1, j)
          end)
     local r, msg = coroutine.resume(co)
-    assert(not r)
+    -- must fail for unpacking larger than stack limit
+    assert(j < lim or not r)
   end
-  co = nil
 end
 
 

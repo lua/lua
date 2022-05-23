@@ -114,13 +114,8 @@ LUA_API int lua_checkstack (lua_State *L, int n) {
   api_check(L, n >= 0, "negative 'n'");
   if (L->stack_last - L->top > n)  /* stack large enough? */
     res = 1;  /* yes; check is OK */
-  else {  /* no; need to grow stack */
-    int inuse = cast_int(L->top - L->stack) + EXTRA_STACK;
-    if (inuse > LUAI_MAXSTACK - n)  /* can grow without overflow? */
-      res = 0;  /* no */
-    else  /* try to grow stack */
-      res = luaD_growstack(L, n, 0);
-  }
+  else  /* need to grow stack */
+    res = luaD_growstack(L, n, 0);
   if (res && ci->top < L->top + n)
     ci->top = L->top + n;  /* adjust frame top */
   lua_unlock(L);
