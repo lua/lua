@@ -592,6 +592,28 @@ end
 
 if rawget(_G, "T") then
 
+  do
+    -- bug in 5.4.3
+    -- 'lua_settop' may use a pointer to stack invalidated by 'luaF_close'
+
+    -- reduce stack size
+    collectgarbage(); collectgarbage(); collectgarbage()
+
+    -- force a stack reallocation
+    local function loop (n)
+      if n < 400 then loop(n + 1) end
+    end
+
+    -- close metamethod will reallocate the stack
+    local o = setmetatable({}, {__close = function () loop(0) end})
+
+    local script = [[toclose 2; settop 1; return 1]]
+
+    assert(T.testC(script, o) == script)
+
+  end
+
+
   -- memory error inside closing function
   local function foo ()
     local y <close> = func2close(function () T.alloccount() end)
