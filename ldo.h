@@ -37,6 +37,13 @@
 
 
 /* macro to check stack size, preserving 'p' */
+#define checkstackp(L,n,p)  \
+  luaD_checkstackaux(L, n, \
+    ptrdiff_t t__ = savestack(L, p),  /* save 'p' */ \
+    p = restorestack(L, t__))  /* 'pos' part: restore 'p' */
+
+
+/* macro to check stack size and GC, preserving 'p' */
 #define checkstackGCp(L,n,p)  \
   luaD_checkstackaux(L, n, \
     ptrdiff_t t__ = savestack(L, p);  /* save 'p' */ \

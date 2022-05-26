@@ -602,12 +602,17 @@ CallInfo *luaD_precall (lua_State *L, StkId func, int nresults) {
 ** Call a function (C or Lua) through C. 'inc' can be 1 (increment
 ** number of recursive invocations in the C stack) or nyci (the same
 ** plus increment number of non-yieldable calls).
+** This function can be called with some use of EXTRA_STACK, so it should
+** check the stack before doing anything else. 'luaD_precall' already
+** does that.
 */
 l_sinline void ccall (lua_State *L, StkId func, int nResults, int inc) {
   CallInfo *ci;
   L->nCcalls += inc;
-  if (l_unlikely(getCcalls(L) >= LUAI_MAXCCALLS))
+  if (l_unlikely(getCcalls(L) >= LUAI_MAXCCALLS)) {
+    checkstackp(L, 0, func);  /* free any use of EXTRA_STACK */
     luaE_checkcstack(L);
+  }
   if ((ci = luaD_precall(L, func, nResults)) != NULL) {  /* Lua function? */
     ci->callstatus = CIST_FRESH;  /* mark that it is a "fresh" execute */
     luaV_execute(L, ci);  /* call it */

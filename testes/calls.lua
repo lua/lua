@@ -151,6 +151,16 @@ do   -- tail calls x varargs
 end
 
 
+do   -- C-stack overflow while handling C-stack overflow
+  local function loop ()
+    assert(pcall(loop))
+  end
+
+  local err, msg = xpcall(loop, loop)
+  assert(not err and string.find(msg, "error"))
+end
+
+
 
 do   -- tail calls x chain of __call
   local n = 10000   -- depth
