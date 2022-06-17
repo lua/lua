@@ -611,7 +611,7 @@ LUALIB_API void luaL_pushresultsize (luaL_Buffer *B, size_t sz) {
 ** box (if existent) is not on the top of the stack. So, instead of
 ** calling 'luaL_addlstring', it replicates the code using -2 as the
 ** last argument to 'prepbuffsize', signaling that the box is (or will
-** be) bellow the string being added to the buffer. (Box creation can
+** be) below the string being added to the buffer. (Box creation can
 ** trigger an emergency GC, so we should not remove the string from the
 ** stack before we have the space guaranteed.)
 */
