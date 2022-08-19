@@ -1333,19 +1333,11 @@ Expressions are discussed in @See{expressions}.
 
 Before the assignment,
 the list of values is @emph{adjusted} to the length of
-the list of variables.@index{adjustment}
-If there are more values than needed,
-the excess values are thrown away.
-If there are fewer values than needed,
-the list is extended with @nil's.
-If the list of expressions ends with a function call,
-then all values returned by that call enter the list of values,
-before the adjustment
-(except when the call is enclosed in parentheses; see @See{expressions}).
+the list of variables @see{multires}.
 
 If a variable is both assigned and read
 inside a multiple assignment,
-Lua ensures all reads get the value of the variable
+Lua ensures that all reads get the value of the variable
 before the assignment.
 Thus the code
 @verbatim{
@@ -1684,8 +1676,9 @@ function calls are explained in @See{functioncall};
 table constructors are explained in @See{tableconstructor}.
 Vararg expressions,
 denoted by three dots (@Char{...}), can only be used when
-directly inside a vararg function;
+directly inside a variadic function;
 they are explained in @See{func-def}.
+
 
 Binary operators comprise arithmetic operators @see{arith},
 bitwise operators @see{bitwise},
@@ -1696,47 +1689,8 @@ the unary bitwise NOT @see{bitwise},
 the unary logical @Rw{not} @see{logic},
 and the unary @def{length operator} @see{len-op}.
 
-Both function calls and vararg expressions can result in multiple values.
-If a function call is used as a statement @see{funcstat},
-then its return list is adjusted to zero elements,
-thus discarding all returned values.
-If an expression is used as the last (or the only) element
-of a list of expressions,
-then no adjustment is made
-(unless the expression is enclosed in parentheses).
-In all other contexts,
-Lua adjusts the result list to one element,
-either discarding all values except the first one
-or adding a single @nil if there are no values.
-
-Here are some examples:
-@verbatim{
-f()                -- adjusted to 0 results
-g(f(), x)          -- f() is adjusted to 1 result
-g(x, f())          -- g gets x plus all results from f()
-a,b,c = f(), x     -- f() is adjusted to 1 result (c gets nil)
-a,b = ...          -- a gets the first vararg argument, b gets
-                   -- the second (both a and b can get nil if there
-                   -- is no corresponding vararg argument)
-
-a,b,c = x, f()     -- f() is adjusted to 2 results
-a,b,c = f()        -- f() is adjusted to 3 results
-return f()         -- returns all results from f()
-return ...         -- returns all received vararg arguments
-return x,y,f()     -- returns x, y, and all results from f()
-{f()}              -- creates a list with all results from f()
-{...}              -- creates a list with all vararg arguments
-{f(), nil}         -- f() is adjusted to 1 result
 }
 
-Any expression enclosed in parentheses always results in only one value.
-Thus,
-@T{(f(x,y,z))} is always a single value,
-even if @id{f} returns several values.
-(The value of @T{(f(x,y,z))} is the first value returned by @id{f}
-or @nil if @id{f} does not return any values.)
-
-}
 
 
 @sect3{arith| @title{Arithmetic Operators}
@@ -1843,8 +1797,9 @@ the library calls the metamethod of the other operand
 (if present) or it raises an error.
 Note that bitwise operators do not do this coercion.
 
-Nonetheless, it is always a good practice not to rely on these
-implicit coercions, as they are not always applied;
+It is always a good practice not to rely on the
+implicit coercions from strings to numbers,
+as they are not always applied;
 in particular, @T{"1"==1} is false and @T{"1"<1} raises an error
 @see{rel-ops}.
 These coercions exist mainly for compatibility and may be removed
@@ -2095,9 +2050,9 @@ The order of the assignments in a constructor is undefined.
 (This order would be relevant only when there are repeated keys.)
 
 If the last field in the list has the form @id{exp}
-and the expression is a function call or a vararg expression,
+and the expression is a multires expression,
 then all values returned by this expression enter the list consecutively
-@see{functioncall}.
+@see{multires}.
 
 The field list can have an optional trailing separator,
 as a convenience for machine-generated code.
@@ -2148,7 +2103,7 @@ A call of the form @T{return @rep{functioncall}} not in the
 scope of a to-be-closed variable is called a @def{tail call}.
 Lua implements @def{proper tail calls}
 (or @def{proper tail recursion}):
-in a tail call,
+In a tail call,
 the called function reuses the stack entry of the calling function.
 Therefore, there is no limit on the number of nested tail calls that
 a program can execute.
@@ -2234,22 +2189,16 @@ initialized with the argument values:
 }
 When a Lua function is called,
 it adjusts its list of @x{arguments} to
-the length of its list of parameters,
-unless the function is a @def{vararg function},
+the length of its list of parameters @see{multires},
+unless the function is a @def{variadic function},
 which is indicated by three dots (@Char{...})
 at the end of its parameter list.
-A vararg function does not adjust its argument list;
+A variadic function does not adjust its argument list;
 instead, it collects all extra arguments and supplies them
 to the function through a @def{vararg expression},
 which is also written as three dots.
 The value of this expression is a list of all actual extra arguments,
-similar to a function with multiple results.
-If a vararg expression is used inside another expression
-or in the middle of a list of expressions,
-then its return list is adjusted to one element.
-If the expression is used as the last element of a list of expressions,
-then no adjustment is made
-(unless that last expression is enclosed in parentheses).
+similar to a function with multiple results @see{multires}.
 
 
 As an example, consider the following definitions:
@@ -2295,6 +2244,99 @@ function t.a.b.c:f (@rep{params}) @rep{body} end
 is syntactic sugar for
 @verbatim{
 t.a.b.c.f = function (self, @rep{params}) @rep{body} end
+}
+
+}
+
+@sect3{multires| @title{Lists of expressions, multiple results,
+and adjustment}
+
+Both function calls and vararg expressions can result in multiple values.
+These expressions are called @def{multires expressions}.
+
+When a multires expression is used as the last element
+of a list of expressions,
+all results from the expression are added to the
+list of values produced by the list of expressions.
+Note that a single expression
+in a place that expects a list of expressions
+is the last expression in that (singleton) list.
+
+These are the places where Lua expects a list of expressions:
+@description{
+
+@item{A @rw{return} statement,
+for instance @T{return e1, e2, e3} @see{control}.}
+
+@item{A table constructor,
+for instance @T{{e1, e2, e3}} @see{tableconstructor}.}
+
+@item{The arguments of a function call,
+for instance @T{foo(e1, e2, e3)} @see{functioncall}.}
+
+@item{A multiple assignment,
+for instance @T{a , b, c = e1, e2, e3} @see{assignment}.}
+
+@item{A local declaration,
+for instance @T{local a , b, c = e1, e2, e3} @see{localvar}.}
+
+@item{The initial values in a generic @rw{for} loop,
+for instance @T{for k in e1, e2, e3 do ... end} @see{for}.}
+
+}
+In the last four cases,
+the list of values from the list of expressions
+must be @emph{adjusted} to a specific length:
+the number of parameters in a call to a non-variadic function
+@see{func-def},
+the number of variables in a multiple assignment or
+a local declaration,
+and exactly four for a generic @rw{for} loop.
+The @def{adjustment} follows these rules:
+If there are more values than needed,
+the extra values are thrown away;
+if there are fewer values than needed,
+the list is extended with @nil's.
+When the list of expressions ends with a multires expression,
+all results from that expression enter the list of values
+before the adjustment.
+
+When a multires expression is used
+in a list of expressions without being the last element,
+or in a place where the syntax expects a single expression,
+Lua adjusts the result list of that expression to one element.
+As a particular case,
+the syntax expects a single expression inside a parenthesized expression;
+therefore, adding parentheses around a multires expression
+forces it to produce exactly one result.
+
+Here are some examples.
+In all cases, when the construction needs
+@Q{the n-th result} and there is no such result,
+it uses a @nil.
+@verbatim{
+print(x, f())      -- prints x and all results from f().
+print(x, (f()))    -- prints x and the first result from f().
+print(f(), x)      -- prints the first result from f() and x.
+print(1 + f())     -- prints 1 added to the first result from f().
+x,y = ...          -- x gets the first vararg argument,
+                   -- y gets the second vararg argument.
+x,y,z = w, f()     -- x gets w, y gets the first result from f(),
+                   -- z gets the second result from f().
+x,y,z = f()        -- x gets the first result from f(),
+                   -- y gets the second result from f(),
+                   -- z gets the third result from f().
+x,y,z = f(), g()   -- x gets the first result from f(),
+                   -- y gets the first result from g(),
+                   -- z gets the second result from g().
+x,y,z = (f())      -- x gets the first result from f(), y and z get nil.
+return f()         -- returns all results from f().
+return ...         -- returns all received vararg arguments.
+return (...)       -- returns the first received vararg argument.
+return x,y,f()     -- returns x, y, and all results from f().
+{f()}              -- creates a list with all results from f().
+{...}              -- creates a list with all vararg arguments.
+{f(), 5}           -- creates a list with the first result from f() and 5.
 }
 
 }
@@ -4780,7 +4822,7 @@ the number of parameters of the function
 }
 
 @item{@id{isvararg}|
-true if the function is a vararg function
+true if the function is a variadic function
 (always true for @N{C functions}).
 }
 
@@ -6017,9 +6059,7 @@ to start the traceback.
 
 }
 
-@APIEntry{const char *luaL_typeerror (lua_State *L,
-                                      int arg,
-                                      const char *tname);|
+@APIEntry{int luaL_typeerror (lua_State *L, int arg, const char *tname);|
 @apii{0,0,v}
 
 Raises a type error for the argument @id{arg}
@@ -6816,6 +6856,8 @@ When you require a module @id{modname} and
 This variable is only a reference to the real table;
 assignments to this variable do not change the
 table used by @Lid{require}.
+The real table is stored in the C registry @see{registry},
+indexed by the key @defid{LUA_LOADED_TABLE}, a string.
 
 }
 
@@ -6883,6 +6925,8 @@ A table to store loaders for specific modules
 This variable is only a reference to the real table;
 assignments to this variable do not change the
 table used by @Lid{require}.
+The real table is stored in the C registry @see{registry},
+indexed by the key @defid{LUA_PRELOAD_TABLE}, a string.
 
 }
 
@@ -7904,9 +7948,9 @@ Returns the arc sine of @id{x} (in radians).
 
 @LibEntry{math.atan (y [, x])|
 
-@index{atan2}
+@index{atan} @index{atan2}
 Returns the arc tangent of @T{y/x} (in radians),
-but uses the signs of both arguments to find the
+using the signs of both arguments to find the
 quadrant of the result.
 It also handles correctly the case of @id{x} being zero.
 
@@ -8997,7 +9041,7 @@ If there is a script,
 the script is called with arguments
 @T{arg[1]}, @Cdots, @T{arg[#arg]}.
 Like all chunks in Lua,
-the script is compiled as a vararg function.
+the script is compiled as a variadic function.
 
 In interactive mode,
 Lua repeatedly prompts and waits for a line.
