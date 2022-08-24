@@ -360,6 +360,26 @@ do
 end
 
 
+do
+  -- bug in 5.4.4: 'break' may generate wrong 'close' instruction when
+  -- leaving a loop block.
+
+  local closed = false
+
+  local o1 = setmetatable({}, {__close=function() closed = true end})
+
+  local function test()
+    for k, v in next, {}, nil, o1 do
+      local function f() return k end   -- create an upvalue
+      break
+    end
+    assert(closed)
+  end
+
+  test()
+end
+
+
 do print("testing errors in __close")
 
   -- original error is in __close
