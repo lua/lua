@@ -1144,7 +1144,9 @@ Lua also accepts @x{hexadecimal constants},
 which start with @T{0x} or @T{0X}.
 Hexadecimal constants also accept an optional fractional part
 plus an optional binary exponent,
-marked by a letter @Char{p} or @Char{P}.
+marked by a letter @Char{p} or @Char{P} and written in decimal.
+(For instance, @T{0x1.fp10} denotes 1984,
+which is @M{0x1f / 16} multiplied by @M{2@sp{10}}.)
 
 A numeric constant with a radix point or an exponent
 denotes a float;
@@ -2291,7 +2293,7 @@ the number of parameters in a call to a non-variadic function
 @see{func-def},
 the number of variables in a multiple assignment or
 a local declaration,
-and exactly four for a generic @rw{for} loop.
+and exactly four values for a generic @rw{for} loop.
 The @def{adjustment} follows these rules:
 If there are more values than needed,
 the extra values are thrown away;
@@ -2310,7 +2312,16 @@ the syntax expects a single expression inside a parenthesized expression;
 therefore, adding parentheses around a multires expression
 forces it to produce exactly one result.
 
-Here are some examples.
+We seldom need to use a vararg expression in a place
+where the syntax expects a single expression.
+(Usually it is simpler to add a regular parameter before
+the variadic part and use that parameter.)
+When there is such a need,
+we recommend assigning the vararg expression
+to a single variable and using that variable
+in its place.
+
+Here are some examples of uses of mutlres expressions.
 In all cases, when the construction needs
 @Q{the n-th result} and there is no such result,
 it uses a @nil.
@@ -2319,6 +2330,7 @@ print(x, f())      -- prints x and all results from f().
 print(x, (f()))    -- prints x and the first result from f().
 print(f(), x)      -- prints the first result from f() and x.
 print(1 + f())     -- prints 1 added to the first result from f().
+local x = ...      -- x gets the first vararg argument.
 x,y = ...          -- x gets the first vararg argument,
                    -- y gets the second vararg argument.
 x,y,z = w, f()     -- x gets w, y gets the first result from f(),
@@ -2331,8 +2343,7 @@ x,y,z = f(), g()   -- x gets the first result from f(),
                    -- z gets the second result from g().
 x,y,z = (f())      -- x gets the first result from f(), y and z get nil.
 return f()         -- returns all results from f().
-return ...         -- returns all received vararg arguments.
-return (...)       -- returns the first received vararg argument.
+return x, ...      -- returns x and all received vararg arguments.
 return x,y,f()     -- returns x, y, and all results from f().
 {f()}              -- creates a list with all results from f().
 {...}              -- creates a list with all vararg arguments.
