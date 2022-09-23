@@ -62,7 +62,7 @@ static lua_Integer intarith (lua_State *L, int op, lua_Integer v1,
     case LUA_OPBOR: return intop(|, v1, v2);
     case LUA_OPBXOR: return intop(^, v1, v2);
     case LUA_OPSHL: return luaV_shiftl(v1, v2);
-    case LUA_OPSHR: return luaV_shiftl(v1, -v2);
+    case LUA_OPSHR: return luaV_shiftr(v1, v2);
     case LUA_OPUNM: return intop(-, 0, v1);
     case LUA_OPBNOT: return intop(^, ~l_castS2U(0), v1);
     default: lua_assert(0); return 0;
