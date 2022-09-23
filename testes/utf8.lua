@@ -97,9 +97,15 @@ do    -- error indication in utf8.len
     assert(not a and b == p)
   end
   check("abc\xE3def", 4)
-  check("汉字\x80", #("汉字") + 1)
   check("\xF4\x9F\xBF", 1)
   check("\xF4\x9F\xBF\xBF", 1)
+  -- spurious continuation bytes
+  check("汉字\x80", #("汉字") + 1)
+  check("\x80hello", 1)
+  check("hel\x80lo", 4)
+  check("汉字\xBF", #("汉字") + 1)
+  check("\xBFhello", 1)
+  check("hel\xBFlo", 4)
 end
 
 -- errors in utf8.codes
@@ -112,12 +118,16 @@ do
   end
   errorcodes("ab\xff")
   errorcodes("\u{110000}")
+  errorcodes("in\x80valid")
+  errorcodes("\xbfinvalid")
+  errorcodes("αλφ\xBFα")
 
   -- calling interation function with invalid arguments
   local f = utf8.codes("")
   assert(f("", 2) == nil)
   assert(f("", -1) == nil)
   assert(f("", math.mininteger) == nil)
+
 end
 
 -- error in initial position for offset
