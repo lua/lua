@@ -825,7 +825,16 @@ checkerr("missing", os.time, {hour = 12})   -- missing date
 if string.packsize("i") == 4 then   -- 4-byte ints
   checkerr("field 'year' is out-of-bound", os.time,
               {year = -(1 << 31) + 1899, month = 1, day = 1})
+
+  checkerr("field 'year' is out-of-bound", os.time,
+              {year = -(1 << 31), month = 1, day = 1})
+
+  if math.maxinteger > 2^31 then   -- larger lua_integer?
+    checkerr("field 'year' is out-of-bound", os.time,
+                {year = (1 << 31) + 1900, month = 1, day = 1})
+  end
 end
+
 
 if not _port then
   -- test Posix-specific modifiers
