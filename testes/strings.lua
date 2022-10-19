@@ -346,12 +346,17 @@ assert(string.format("%013i", -100) == "-000000000100")
 assert(string.format("%2.5d", -100) == "-00100")
 assert(string.format("%.u", 0) == "")
 assert(string.format("%+#014.0f", 100) == "+000000000100.")
-assert(string.format("% 1.0E", 100) == " 1E+02")
 assert(string.format("%-16c", 97) == "a               ")
 assert(string.format("%+.3G", 1.5) == "+1.5")
-assert(string.format("% .1g", 2^10) == " 1e+03")
 assert(string.format("%.0s", "alo")  == "")
 assert(string.format("%.s", "alo")  == "")
+
+-- ISO C89 says that "The exponent always contains at least two digits",
+-- but unlike ISO C99 it does not ensure that it contains "only as many
+-- more digits as necessary".
+assert(string.match(string.format("% 1.0E", 100), "^ 1E%+0+2$"))
+assert(string.match(string.format("% .1g", 2^10), "^ 1e%+0+3$"))
+
 
 -- errors in format
 
