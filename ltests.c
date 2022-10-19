@@ -533,7 +533,7 @@ static void checkobject (global_State *g, GCObject *o, int maybedead,
 
 static lu_mem checkgraylist (global_State *g, GCObject *o) {
   int total = 0;  /* count number of elements in the list */
-  ((void)g);  /* better to keep it available if we need to print an object */
+  cast_void(g);  /* better to keep it if we need to print an object */
   while (o) {
     assert(!!isgray(o) ^ (getage(o) == G_TOUCHED2));
     assert(!testbit(o->marked, TESTBIT));
@@ -1055,7 +1055,7 @@ static int tref (lua_State *L) {
   luaL_checkany(L, 1);
   lua_pushvalue(L, 1);
   lua_pushinteger(L, luaL_ref(L, LUA_REGISTRYINDEX));
-  (void)level;  /* to avoid warnings */
+  cast_void(level);  /* to avoid warnings */
   lua_assert(lua_gettop(L) == level+1);  /* +1 for result */
   return 1;
 }
@@ -1063,7 +1063,7 @@ static int tref (lua_State *L) {
 static int getref (lua_State *L) {
   int level = lua_gettop(L);
   lua_rawgeti(L, LUA_REGISTRYINDEX, luaL_checkinteger(L, 1));
-  (void)level;  /* to avoid warnings */
+  cast_void(level);  /* to avoid warnings */
   lua_assert(lua_gettop(L) == level+1);
   return 1;
 }
@@ -1071,7 +1071,7 @@ static int getref (lua_State *L) {
 static int unref (lua_State *L) {
   int level = lua_gettop(L);
   luaL_unref(L, LUA_REGISTRYINDEX, cast_int(luaL_checkinteger(L, 1)));
-  (void)level;  /* to avoid warnings */
+  cast_void(level);  /* to avoid warnings */
   lua_assert(lua_gettop(L) == level);
   return 0;
 }
@@ -1740,7 +1740,7 @@ static struct X { int x; } x;
     else if EQ("tostring") {
       const char *s = lua_tostring(L1, getindex);
       const char *s1 = lua_pushstring(L1, s);
-      (void)s1;  /* to avoid warnings */
+      cast_void(s1);  /* to avoid warnings */
       lua_longassert((s == NULL && s1 == NULL) || strcmp(s, s1) == 0);
     }
     else if EQ("Ltolstring") {
