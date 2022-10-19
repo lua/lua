@@ -1423,9 +1423,6 @@ A label should not be declared
 where a label with the same name is visible,
 even if this other label has been declared in an enclosing block.
 
-Labels and empty statements are called @def{void statements},
-as they perform no actions.
-
 The @Rw{break} statement terminates the execution of a
 @Rw{while}, @Rw{repeat}, or @Rw{for} loop,
 skipping to the next statement after the loop:
@@ -2361,6 +2358,7 @@ Lua is a lexically scoped language.
 The scope of a local variable begins at the first statement after
 its declaration and lasts until the last non-void statement
 of the innermost block that includes the declaration.
+(@emph{Void statements} are labels and empty statements.)
 Consider the following example:
 @verbatim{
 x = 10                -- global variable
@@ -3165,8 +3163,7 @@ The index must be the last index previously marked to be closed
 A @idx{__close} metamethod cannot yield
 when called through this function.
 
-(Exceptionally, this function was introduced in release 5.4.3.
-It is not present in previous 5.4 releases.)
+(This function was introduced in @N{release 5.4.3}.)
 
 }
 
@@ -3713,7 +3710,7 @@ Pops a key from the stack,
 and pushes a key@En{}value pair from the table at the given index,
 the @Q{next} pair after the given key.
 If there are no more elements in the table,
-then @Lid{lua_next} returns 0 and pushes nothing.
+then @Lid{lua_next} @N{returns 0} and pushes nothing.
 
 A typical table traversal looks like this:
 @verbatim{
@@ -5539,8 +5536,8 @@ It is defined as the following macro:
 @verbatim{
 (luaL_loadfile(L, filename) || lua_pcall(L, 0, LUA_MULTRET, 0))
 }
-It returns @Lid{LUA_OK} if there are no errors,
-or an error code in case of errors @see{statuscodes}.
+It @N{returns 0} (@Lid{LUA_OK}) if there are no errors,
+or 1 in case of errors.
 
 }
 
@@ -5552,8 +5549,8 @@ It is defined as the following macro:
 @verbatim{
 (luaL_loadstring(L, str) || lua_pcall(L, 0, LUA_MULTRET, 0))
 }
-It returns @Lid{LUA_OK} if there are no errors,
-or an error code in case of errors @see{statuscodes}.
+It @N{returns 0} (@Lid{LUA_OK}) if there are no errors,
+or 1 in case of errors.
 
 }
 
@@ -8577,7 +8574,7 @@ the returned status is this number.
 The default value for @id{code} is @true.
 
 If the optional second argument @id{close} is true,
-closes the Lua state before exiting.
+the function closes the Lua state before exiting @seeF{lua_close}.
 
 }
 
@@ -8985,12 +8982,16 @@ The options are:
 @item{@T{-i}| enter interactive mode after running @rep{script};}
 @item{@T{-l @rep{mod}}| @Q{require} @rep{mod} and assign the
   result to global @rep{mod};}
+@item{@T{-l @rep{g=mod}}| @Q{require} @rep{mod} and assign the
+  result to global @rep{g};}
 @item{@T{-v}| print version information;}
 @item{@T{-E}| ignore environment variables;}
 @item{@T{-W}| turn warnings on;}
 @item{@T{--}| stop handling options;}
 @item{@T{-}| execute @id{stdin} as a file and stop handling options.}
 }
+(The form @T{-l @rep{g=mod}} was introduced in @N{release 5.4.4}.)
+
 After handling its options, @id{lua} runs the given @emph{script}.
 When called without arguments,
 @id{lua} behaves as @T{lua -v -i}
