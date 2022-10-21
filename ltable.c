@@ -975,6 +975,4 @@ Node *luaH_mainposition (const Table *t, const TValue *key) {
   return mainpositionTV(t, key);
 }
 
-int luaH_isdummy (const Table *t) { return isdummy(t); }
-
 #endif
