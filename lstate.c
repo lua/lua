@@ -343,9 +343,10 @@ int luaE_resetthread (lua_State *L, int status) {
 }
 
 
-LUA_API int lua_resetthread (lua_State *L) {
+LUA_API int lua_resetthread (lua_State *L, lua_State *from) {
   int status;
   lua_lock(L);
+  L->nCcalls = (from) ? getCcalls(from) : 0;
   status = luaE_resetthread(L, L->status);
   lua_unlock(L);
   return status;

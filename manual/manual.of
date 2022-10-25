@@ -4160,7 +4160,7 @@ and then pops the top element.
 
 }
 
-@APIEntry{int lua_resetthread (lua_State *L);|
+@APIEntry{int lua_resetthread (lua_State *L, lua_State *from);|
 @apii{0,?,-}
 
 Resets a thread, cleaning its call stack and closing all pending
@@ -4172,6 +4172,11 @@ errors in closing methods),
 or an error status otherwise.
 In case of error,
 leaves the error object on the top of the stack.
+
+The parameter @id{from} represents the coroutine that is resetting @id{L}.
+If there is no such coroutine,
+this parameter can be @id{NULL}.
+(This parameter was introduced in @N{release 5.4.5}.)
 
 }
 
