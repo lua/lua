@@ -301,7 +301,7 @@ static void reallymarkobject (global_State *g, GCObject *o) {
         set2gray(uv);  /* open upvalues are kept gray */
       else
         set2black(uv);  /* closed upvalues are visited here */
-      markvalue(g, uv->v);  /* mark its content */
+      markvalue(g, uv->v.p);  /* mark its content */
       break;
     }
     case LUA_VUSERDATA: {
@@ -376,7 +376,7 @@ static int remarkupvals (global_State *g) {
         work++;
         if (!iswhite(uv)) {  /* upvalue already visited? */
           lua_assert(upisopen(uv) && isgray(uv));
-          markvalue(g, uv->v);  /* mark its value */
+          markvalue(g, uv->v.p);  /* mark its value */
         }
       }
     }
@@ -620,19 +620,19 @@ static int traverseLclosure (global_State *g, LClosure *cl) {
 */
 static int traversethread (global_State *g, lua_State *th) {
   UpVal *uv;
-  StkId o = th->stack;
+  StkId o = th->stack.p;
   if (isold(th) || g->gcstate == GCSpropagate)
     linkgclist(th, g->grayagain);  /* insert into 'grayagain' list */
   if (o == NULL)
     return 1;  /* stack not completely built yet */
   lua_assert(g->gcstate == GCSatomic ||
              th->openupval == NULL || isintwups(th));
-  for (; o < th->top; o++)  /* mark live elements in the stack */
+  for (; o < th->top.p; o++)  /* mark live elements in the stack */
     markvalue(g, s2v(o));
   for (uv = th->openupval; uv != NULL; uv = uv->u.open.next)
     markobject(g, uv);  /* open upvalues cannot be collected */
   if (g->gcstate == GCSatomic) {  /* final traversal? */
-    for (; o < th->stack_last + EXTRA_STACK; o++)
+    for (; o < th->stack_last.p + EXTRA_STACK; o++)
       setnilvalue(s2v(o));  /* clear dead stack slice */
     /* 'remarkupvals' may have removed thread from 'twups' list */
     if (!isintwups(th) && th->openupval != NULL) {
@@ -892,7 +892,7 @@ static GCObject *udata2finalize (global_State *g) {
 
 static void dothecall (lua_State *L, void *ud) {
   UNUSED(ud);
-  luaD_callnoyield(L, L->top - 2, 0);
+  luaD_callnoyield(L, L->top.p - 2, 0);
 }
 
 
@@ -909,16 +909,16 @@ static void GCTM (lua_State *L) {
     int oldgcstp  = g->gcstp;
     g->gcstp |= GCSTPGC;  /* avoid GC steps */
     L->allowhook = 0;  /* stop debug hooks during GC metamethod */
-    setobj2s(L, L->top++, tm);  /* push finalizer... */
-    setobj2s(L, L->top++, &v);  /* ... and its argument */
+    setobj2s(L, L->top.p++, tm);  /* push finalizer... */
+    setobj2s(L, L->top.p++, &v);  /* ... and its argument */
     L->ci->callstatus |= CIST_FIN;  /* will run a finalizer */
-    status = luaD_pcall(L, dothecall, NULL, savestack(L, L->top - 2), 0);
+    status = luaD_pcall(L, dothecall, NULL, savestack(L, L->top.p - 2), 0);
     L->ci->callstatus &= ~CIST_FIN;  /* not running a finalizer anymore */
     L->allowhook = oldah;  /* restore hooks */
     g->gcstp = oldgcstp;  /* restore state */
     if (l_unlikely(status != LUA_OK)) {  /* error while running __gc? */
       luaE_warnerror(L, "__gc");
-      L->top--;  /* pops error object */
+      L->top.p--;  /* pops error object */
     }
   }
 }

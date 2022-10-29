@@ -44,7 +44,7 @@
 void *l_Trick = 0;
 
 
-#define obj_at(L,k)	s2v(L->ci->func + (k))
+#define obj_at(L,k)	s2v(L->ci->func.p + (k))
 
 
 static int runC (lua_State *L, lua_State *L1, const char *pc);
@@ -57,7 +57,7 @@ static void setnameval (lua_State *L, const char *name, int val) {
 
 
 static void pushobject (lua_State *L, const TValue *o) {
-  setobj2s(L, L->top, o);
+  setobj2s(L, L->top.p, o);
   api_incr_top(L);
 }
 
@@ -419,7 +419,7 @@ static void checkLclosure (global_State *g, LClosure *cl) {
     if (uv) {
       checkobjrefN(g, clgc, uv);
       if (!upisopen(uv))
-        checkvalref(g, obj2gco(uv), uv->v);
+        checkvalref(g, obj2gco(uv), uv->v.p);
     }
   }
 }
@@ -428,7 +428,7 @@ static void checkLclosure (global_State *g, LClosure *cl) {
 static int lua_checkpc (CallInfo *ci) {
   if (!isLua(ci)) return 1;
   else {
-    StkId f = ci->func;
+    StkId f = ci->func.p;
     Proto *p = clLvalue(s2v(f))->p;
     return p->code <= ci->u.l.savedpc &&
            ci->u.l.savedpc <= p->code + p->sizecode;
@@ -441,19 +441,19 @@ static void checkstack (global_State *g, lua_State *L1) {
   CallInfo *ci;
   UpVal *uv;
   assert(!isdead(g, L1));
-  if (L1->stack == NULL) {  /* incomplete thread? */
+  if (L1->stack.p == NULL) {  /* incomplete thread? */
     assert(L1->openupval == NULL && L1->ci == NULL);
     return;
   }
   for (uv = L1->openupval; uv != NULL; uv = uv->u.open.next)
     assert(upisopen(uv));  /* must be open */
-  assert(L1->top <= L1->stack_last);
-  assert(L1->tbclist <= L1->top);
+  assert(L1->top.p <= L1->stack_last.p);
+  assert(L1->tbclist.p <= L1->top.p);
   for (ci = L1->ci; ci != NULL; ci = ci->previous) {
-    assert(ci->top <= L1->stack_last);
+    assert(ci->top.p <= L1->stack_last.p);
     assert(lua_checkpc(ci));
   }
-  for (o = L1->stack; o < L1->stack_last; o++)
+  for (o = L1->stack.p; o < L1->stack_last.p; o++)
     checkliveness(L1, s2v(o));  /* entire stack must have valid values */
 }
 
@@ -465,7 +465,7 @@ static void checkrefs (global_State *g, GCObject *o) {
       break;
     }
     case LUA_VUPVAL: {
-      checkvalref(g, o, gco2upv(o)->v);
+      checkvalref(g, o, gco2upv(o)->v.p);
       break;
     }
     case LUA_VTABLE: {
@@ -980,7 +980,7 @@ static int hash_query (lua_State *L) {
 
 static int stacklevel (lua_State *L) {
   unsigned long a = 0;
-  lua_pushinteger(L, (L->top - L->stack));
+  lua_pushinteger(L, (L->top.p - L->stack.p));
   lua_pushinteger(L, stacksize(L));
   lua_pushinteger(L, L->nCcalls);
   lua_pushinteger(L, L->nci);
@@ -1040,7 +1040,7 @@ static int string_query (lua_State *L) {
     TString *ts;
     int n = 0;
     for (ts = tb->hash[s]; ts != NULL; ts = ts->u.hnext) {
-      setsvalue2s(L, L->top, ts);
+      setsvalue2s(L, L->top.p, ts);
       api_incr_top(L);
       n++;
     }
