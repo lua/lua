@@ -157,16 +157,38 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 ** Stack reallocation
 ** ===================================================================
 */
-static void correctstack (lua_State *L, StkId oldstack, StkId newstack) {
+
+
+/*
+** Change all pointers to the stack into offsets.
+*/
+static void relstack (lua_State *L) {
   CallInfo *ci;
   UpVal *up;
-  L->top.p = (L->top.p - oldstack) + newstack;
-  L->tbclist.p = (L->tbclist.p - oldstack) + newstack;
+  L->top.offset = savestack(L, L->top.p);
+  L->tbclist.offset = savestack(L, L->tbclist.p);
   for (up = L->openupval; up != NULL; up = up->u.open.next)
-    up->v.p = s2v((uplevel(up) - oldstack) + newstack);
+    up->v.offset = savestack(L, uplevel(up));
   for (ci = L->ci; ci != NULL; ci = ci->previous) {
-    ci->top.p = (ci->top.p - oldstack) + newstack;
-    ci->func.p = (ci->func.p - oldstack) + newstack;
+    ci->top.offset = savestack(L, ci->top.p);
+    ci->func.offset = savestack(L, ci->func.p);
+  }
+}
+
+
+/*
+** Change back all offsets into pointers.
+*/
+static void correctstack (lua_State *L) {
+  CallInfo *ci;
+  UpVal *up;
+  L->top.p = restorestack(L, L->top.offset);
+  L->tbclist.p = restorestack(L, L->tbclist.offset);
+  for (up = L->openupval; up != NULL; up = up->u.open.next)
+    up->v.p = s2v(restorestack(L, up->v.offset));
+  for (ci = L->ci; ci != NULL; ci = ci->previous) {
+    ci->top.p = restorestack(L, ci->top.offset);
+    ci->func.p = restorestack(L, ci->func.offset);
     if (isLua(ci))
       ci->u.l.trap = 1;  /* signal to update 'trap' in 'luaV_execute' */
   }
@@ -177,36 +199,38 @@ static void correctstack (lua_State *L, StkId oldstack, StkId newstack) {
 #define ERRORSTACKSIZE	(LUAI_MAXSTACK + 200)
 
 /*
-** Reallocate the stack to a new size, correcting all pointers into
-** it. (There are pointers to a stack from its upvalues, from its list
-** of call infos, plus a few individual pointers.) The reallocation is
-** done in two steps (allocation + free) because the correction must be
-** done while both addresses (the old stack and the new one) are valid.
-** (In ISO C, any pointer use after the pointer has been deallocated is
-** undefined behavior.)
+** Reallocate the stack to a new size, correcting all pointers into it.
+** In ISO C, any pointer use after the pointer has been deallocated is
+** undefined behavior. So, before the reallocation, all pointers are
+** changed to offsets, and after the reallocation they are changed back
+** to pointers. As during the reallocation the pointers are invalid, the
+** reallocation cannot run emergency collections.
+**
 ** In case of allocation error, raise an error or return false according
 ** to 'raiseerror'.
 */
 int luaD_reallocstack (lua_State *L, int newsize, int raiseerror) {
   int oldsize = stacksize(L);
   int i;
-  StkId newstack = luaM_reallocvector(L, NULL, 0,
-                                      newsize + EXTRA_STACK, StackValue);
+  StkId newstack;
+  int oldgcstop = G(L)->gcstopem;
   lua_assert(newsize <= LUAI_MAXSTACK || newsize == ERRORSTACKSIZE);
+  relstack(L);  /* change pointers to offsets */
+  G(L)->gcstopem = 1;  /* stop emergency collection */
+  newstack = luaM_reallocvector(L, L->stack.p, oldsize + EXTRA_STACK,
+                                   newsize + EXTRA_STACK, StackValue);
+  G(L)->gcstopem = oldgcstop;  /* restore emergency collection */
   if (l_unlikely(newstack == NULL)) {  /* reallocation failed? */
+    correctstack(L);  /* change offsets back to pointers */
     if (raiseerror)
       luaM_error(L);
     else return 0;  /* do not raise an error */
   }
-  /* number of elements to be copied to the new stack */
-  i = ((oldsize <= newsize) ? oldsize : newsize) + EXTRA_STACK;
-  memcpy(newstack, L->stack.p, i * sizeof(StackValue));
-  for (; i < newsize + EXTRA_STACK; i++)
-    setnilvalue(s2v(newstack + i)); /* erase new segment */
-  correctstack(L, L->stack.p, newstack);
-  luaM_freearray(L, L->stack.p, oldsize + EXTRA_STACK);
   L->stack.p = newstack;
+  correctstack(L);  /* change offsets back to pointers */
   L->stack_last.p = L->stack.p + newsize;
+  for (i = oldsize + EXTRA_STACK; i < newsize + EXTRA_STACK; i++)
+    setnilvalue(s2v(newstack + i)); /* erase new segment */
   return 1;
 }
 

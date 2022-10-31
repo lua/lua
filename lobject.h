@@ -158,8 +158,13 @@ typedef union StackValue {
 typedef StackValue *StkId;
 
 
+/*
+** When reallocating the stack, change all pointers to the stack into
+** proper offsets.
+*/
 typedef union {
   StkId p;  /* actual pointer */
+  ptrdiff_t offset;  /* used while the stack is being reallocated */
 } StkIdRel;
 
 
@@ -626,6 +631,7 @@ typedef struct UpVal {
   lu_byte tbc;  /* true if it represents a to-be-closed variable */
   union {
     TValue *p;  /* points to stack or to its own value */
+    ptrdiff_t offset;  /* used while the stack is being reallocated */
   } v;
   union {
     struct {  /* (when open) */
