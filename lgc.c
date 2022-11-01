@@ -252,17 +252,23 @@ void luaC_fix (lua_State *L, GCObject *o) {
 
 
 /*
-** create a new collectable object (with given type and size) and link
-** it to 'allgc' list.
+** create a new collectable object (with given type, size, and offset)
+** and link it to 'allgc' list.
 */
-GCObject *luaC_newobj (lua_State *L, int tt, size_t sz) {
+GCObject *luaC_newobjdt (lua_State *L, int tt, size_t sz, size_t offset) {
   global_State *g = G(L);
-  GCObject *o = cast(GCObject *, luaM_newobject(L, novariant(tt), sz));
+  char *p = cast_charp(luaM_newobject(L, novariant(tt), sz));
+  GCObject *o = cast(GCObject *, p + offset);
   o->marked = luaC_white(g);
   o->tt = tt;
   o->next = g->allgc;
   g->allgc = o;
   return o;
+}
+
+
+GCObject *luaC_newobj (lua_State *L, int tt, size_t sz) {
+  return luaC_newobjdt(L, tt, sz, 0);
 }
 
 /* }====================================================== */

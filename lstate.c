@@ -284,18 +284,14 @@ static void close_state (lua_State *L) {
 
 
 LUA_API lua_State *lua_newthread (lua_State *L) {
-  global_State *g;
+  global_State *g = G(L);
+  GCObject *o;
   lua_State *L1;
   lua_lock(L);
-  g = G(L);
   luaC_checkGC(L);
   /* create new thread */
-  L1 = &cast(LX *, luaM_newobject(L, LUA_TTHREAD, sizeof(LX)))->l;
-  L1->marked = luaC_white(g);
-  L1->tt = LUA_VTHREAD;
-  /* link it on list 'allgc' */
-  L1->next = g->allgc;
-  g->allgc = obj2gco(L1);
+  o = luaC_newobjdt(L, LUA_TTHREAD, sizeof(LX), offsetof(LX, l));
+  L1 = gco2th(o);
   /* anchor it on L stack */
   setthvalue2s(L, L->top.p, L1);
   api_incr_top(L);
