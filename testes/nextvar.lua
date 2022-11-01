@@ -210,9 +210,9 @@ assert(T.querytab(a) == 64)    -- array part has 64 elements
 a[32] = true; a[48] = true;    -- binary search will find these ones
 a[51] = true                   -- binary search will miss this one
 assert(#a == 48)               -- this will set the limit
-assert(select(4, T.querytab(a)) == 48)  -- this is the limit now
+assert(select(3, T.querytab(a)) == 48)  -- this is the limit now
 a[50] = true                   -- this will set a new limit
-assert(select(4, T.querytab(a)) == 50)  -- this is the limit now
+assert(select(3, T.querytab(a)) == 50)  -- this is the limit now
 -- but the size is larger (and still inside the array part)
 assert(#a == 51)
 

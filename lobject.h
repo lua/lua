@@ -744,7 +744,6 @@ typedef struct Table {
   unsigned int alimit;  /* "limit" of 'array' array */
   TValue *array;  /* array part */
   Node *node;
-  Node *lastfree;  /* any free position is before this position */
   struct Table *metatable;
   GCObject *gclist;
 } Table;

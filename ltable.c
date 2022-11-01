@@ -40,6 +40,27 @@
 
 
 /*
+** Only tables with hash parts larget than LIMFORLAST has a 'lastfree'
+** field that optimizes finding a free slot. Smaller tables do a
+** complete search when looking for a free slot.
+*/
+#define LLIMFORLAST    2  /* log2 of LIMTFORLAST */
+#define LIMFORLAST     twoto(LLIMFORLAST)
+
+/*
+** Union to store an int field ensuring that what follows it in
+** memory is properly aligned to store a TValue.
+*/
+typedef union {
+  int lastfree;
+  char padding[offsetof(struct { int i; TValue v; }, v)];
+} Limbox;
+
+#define haslastfree(t)     ((t)->lsizenode > LLIMFORLAST)
+#define getlastfree(t)     (&((cast(Limbox *, (t)->node) - 1)->lastfree))
+
+
+/*
 ** MAXABITS is the largest integer such that MAXASIZE fits in an
 ** unsigned int.
 */
@@ -367,8 +388,15 @@ int luaH_next (lua_State *L, Table *t, StkId key) {
 
 
 static void freehash (lua_State *L, Table *t) {
-  if (!isdummy(t))
-    luaM_freearray(L, t->node, cast_sizet(sizenode(t)));
+  if (!isdummy(t)) {
+    size_t bsize = sizenode(t) * sizeof(Node);  /* 'node' size in bytes */
+    char *arr = cast_charp(t->node);
+    if (haslastfree(t)) {
+      bsize += sizeof(Limbox);
+      arr -= sizeof(Limbox);
+    }
+    luaM_freearray(L, arr, bsize);
+  }
 }
 
 
@@ -479,7 +507,7 @@ static void setnodevector (lua_State *L, Table *t, unsigned int size) {
   if (size == 0) {  /* no elements to hash part? */
     t->node = cast(Node *, dummynode);  /* use common 'dummynode' */
     t->lsizenode = 0;
-    t->lastfree = NULL;  /* signal that it is using dummy node */
+    setdummy(t);  /* signal that it is using dummy node */
   }
   else {
     int i;
@@ -487,15 +515,22 @@ static void setnodevector (lua_State *L, Table *t, unsigned int size) {
     if (lsize > MAXHBITS || (1u << lsize) > MAXHSIZE)
       luaG_runerror(L, "table overflow");
     size = twoto(lsize);
-    t->node = luaM_newvector(L, size, Node);
+    if (lsize <= LLIMFORLAST)  /* no 'lastfree' field? */
+      t->node = luaM_newvector(L, size, Node);
+    else {
+      size_t bsize = size * sizeof(Node) + sizeof(Limbox);
+      char *node = luaM_newblock(L, bsize);
+      t->node = cast(Node *, node + sizeof(Limbox));
+      *getlastfree(t) = size;  /* all positions are free */
+    }
+    t->lsizenode = cast_byte(lsize);
+    setnodummy(t);
     for (i = 0; i < cast_int(size); i++) {
       Node *n = gnode(t, i);
       gnext(n) = 0;
       setnilkey(n);
       setempty(gval(n));
     }
-    t->lsizenode = cast_byte(lsize);
-    t->lastfree = gnode(t, size);  /* all positions are free */
   }
 }
 
@@ -520,18 +555,21 @@ static void reinsert (lua_State *L, Table *ot, Table *t) {
 
 
 /*
-** Exchange the hash part of 't1' and 't2'.
+** Exchange the hash part of 't1' and 't2'. (In 'flags', only the
+** dummy bit must be exchanged: The 'isrealasize' is not related
+** to the hash part, and the metamethod bits do not change during
+** a resize, so the "real" table can keep their values.)
 */
 static void exchangehashpart (Table *t1, Table *t2) {
   lu_byte lsizenode = t1->lsizenode;
   Node *node = t1->node;
-  Node *lastfree = t1->lastfree;
+  int bitdummy1 = t1->flags & BITDUMMY;
   t1->lsizenode = t2->lsizenode;
   t1->node = t2->node;
-  t1->lastfree = t2->lastfree;
+  t1->flags = (t1->flags & NOTBITDUMMY) | (t2->flags & BITDUMMY);
   t2->lsizenode = lsizenode;
   t2->node = node;
-  t2->lastfree = lastfree;
+  t2->flags = (t2->flags & NOTBITDUMMY) | bitdummy1;
 }
 
 
@@ -555,6 +593,7 @@ void luaH_resize (lua_State *L, Table *t, unsigned int newasize,
   unsigned int oldasize = setlimittosize(t);
   TValue *newarray;
   /* create new hash part with appropriate size into 'newt' */
+  newt.flags = 0;
   setnodevector(L, &newt, nhsize);
   if (newasize < oldasize) {  /* will array shrink? */
     t->alimit = newasize;  /* pretend array has new size... */
@@ -641,11 +680,22 @@ void luaH_free (lua_State *L, Table *t) {
 
 
 static Node *getfreepos (Table *t) {
-  if (!isdummy(t)) {
-    while (t->lastfree > t->node) {
-      t->lastfree--;
-      if (keyisnil(t->lastfree))
-        return t->lastfree;
+  if (haslastfree(t)) {  /* does it have 'lastfree' information? */
+    /* look for a spot before 'lastfree', updating 'lastfree' */
+    while (*getlastfree(t) > 0) {
+      Node *free = gnode(t, --(*getlastfree(t)));
+      if (keyisnil(free))
+        return free;
+    }
+  }
+  else {  /* no 'lastfree' information */
+    if (!isdummy(t)) {
+      int i = sizenode(t);
+      while (i--) {  /* do a linear search */
+        Node *free = gnode(t, i);
+        if (keyisnil(free))
+          return free;
+      }
     }
   }
   return NULL;  /* could not find a free place */

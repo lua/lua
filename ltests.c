@@ -999,9 +999,8 @@ static int table_query (lua_State *L) {
   if (i == -1) {
     lua_pushinteger(L, asize);
     lua_pushinteger(L, allocsizenode(t));
-    lua_pushinteger(L, isdummy(t) ? 0 : t->lastfree - t->node);
     lua_pushinteger(L, t->alimit);
-    return 4;
+    return 3;
   }
   else if ((unsigned int)i < asize) {
     lua_pushinteger(L, i);

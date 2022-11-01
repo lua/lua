@@ -23,8 +23,18 @@
 #define invalidateTMcache(t)	((t)->flags &= ~maskflags)
 
 
-/* true when 't' is using 'dummynode' as its hash part */
-#define isdummy(t)		((t)->lastfree == NULL)
+/*
+** Bit BITDUMMY set in 'flags' means the table is using the dummy node
+** for its hash part.
+*/
+
+#define BITDUMMY		(1 << 6)
+#define NOTBITDUMMY		cast_byte(~BITDUMMY)
+#define isdummy(t)		((t)->flags & BITDUMMY)
+
+#define setnodummy(t)		((t)->flags &= NOTBITDUMMY)
+#define setdummy(t)		((t)->flags |= BITDUMMY)
+
 
 
 /* allocated size for hash nodes */
