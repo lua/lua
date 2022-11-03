@@ -259,6 +259,7 @@ GCObject *luaC_newobjdt (lua_State *L, int tt, size_t sz, size_t offset) {
   global_State *g = G(L);
   char *p = cast_charp(luaM_newobject(L, novariant(tt), sz));
   GCObject *o = cast(GCObject *, p + offset);
+  g->totalobjs++;
   o->marked = luaC_white(g);
   o->tt = tt;
   o->next = g->allgc;
@@ -768,6 +769,7 @@ static void freeupval (lua_State *L, UpVal *uv) {
 
 
 static void freeobj (lua_State *L, GCObject *o) {
+  G(L)->totalobjs--;
   switch (o->tt) {
     case LUA_VPROTO:
       luaF_freeproto(L, gco2p(o));
