@@ -975,7 +975,7 @@ LUALIB_API void luaL_requiref (lua_State *L, const char *modname,
                                lua_CFunction openf, int glb) {
   luaL_getsubtable(L, LUA_REGISTRYINDEX, LUA_LOADED_TABLE);
   lua_getfield(L, -1, modname);  /* LOADED[modname] */
-  if (!lua_toboolean(L, -1)) {  /* package not already loaded? */
+  if (lua_isnil(L, -1)) {  /* package not already loaded? */
     lua_pop(L, 1);  /* remove field */
     lua_pushcfunction(L, openf);
     lua_pushstring(L, modname);  /* argument to open function */
