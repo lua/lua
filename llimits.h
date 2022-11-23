@@ -57,7 +57,7 @@ typedef signed char ls_byte;
 ** floor of the log2 of the maximum signed value for integral type 't'.
 ** (That is, maximum 'n' such that '2^n' fits in the given signed type.)
 */
-#define log2maxs(t)	(sizeof(t) * 8 - 2)
+#define log2maxs(t)	cast_int(sizeof(t) * 8 - 2)
 
 
 /*

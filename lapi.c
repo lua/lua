@@ -1154,11 +1154,11 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
     }
     case LUA_GCCOUNT: {
       /* GC values are expressed in Kbytes: #bytes/2^10 */
-      res = cast_int(gettotalbytes(g) >> 10);
+      res = cast_int(g->totalbytes >> 10);
       break;
     }
     case LUA_GCCOUNTB: {
-      res = cast_int(gettotalbytes(g) & 0x3ff);
+      res = cast_int(g->totalbytes & 0x3ff);
       break;
     }
     case LUA_GCSTEP: {
@@ -1171,7 +1171,7 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
         luaC_step(L);
       }
       else {  /* add 'data' to total debt */
-        debt = cast(l_mem, data) * 1024 + g->GCdebt;
+        debt = data + g->GCdebt;
         luaE_setdebt(g, debt);
         luaC_checkGC(L);
       }
@@ -1217,7 +1217,8 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       if (stepmul != 0)
         setgcparam(g->gcstepmul, stepmul);
       if (stepsize != 0)
-        g->gcstepsize = stepsize;
+        g->gcstepsize = (stepsize <= log2maxs(l_mem)) ? stepsize
+                                                      : log2maxs(l_mem);
       luaC_changemode(L, KGC_INC);
       break;
     }

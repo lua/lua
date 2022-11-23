@@ -83,15 +83,15 @@ static unsigned int luai_makeseed (lua_State *L) {
 
 
 /*
-** set GCdebt to a new value keeping the value (totalbytes + GCdebt)
-** invariant (and avoiding underflows in 'totalbytes')
+** set GCdebt to a new value keeping the value (totalobjs + GCdebt)
+** invariant (and avoiding underflows in 'totalobjs')
 */
 void luaE_setdebt (global_State *g, l_mem debt) {
-  l_mem tb = gettotalbytes(g);
+  l_mem tb = gettotalobjs(g);
   lua_assert(tb > 0);
   if (debt < tb - MAX_LMEM)
-    debt = tb - MAX_LMEM;  /* will make 'totalbytes == MAX_LMEM' */
-  g->totalbytes = tb - debt;
+    debt = tb - MAX_LMEM;  /* will make 'totalobjs == MAX_LMEM' */
+  g->totalobjs = tb - debt;
   g->GCdebt = debt;
 }
 
@@ -278,8 +278,8 @@ static void close_state (lua_State *L) {
   }
   luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size);
   freestack(L);
-  lua_assert(gettotalbytes(g) == sizeof(LG));
-  lua_assert(g->totalobjs == 1);
+  lua_assert(g->totalbytes == sizeof(LG));
+  lua_assert(gettotalobjs(g) == 1);
   (*g->frealloc)(g->ud, fromstate(L), sizeof(LG), 0);  /* free main block */
 }
 
@@ -389,6 +389,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->twups = NULL;
   g->totalbytes = sizeof(LG);
   g->totalobjs = 1;
+  g->marked = 0;
   g->GCdebt = 0;
   g->lastatomic = 0;
   setivalue(&g->nilvalue, 0);  /* to signal that state is not yet built */

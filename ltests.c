@@ -1027,6 +1027,16 @@ static int table_query (lua_State *L) {
 }
 
 
+static int query_inc (lua_State *L) {
+  global_State *g = G(L);
+  lua_pushinteger(L, gettotalobjs(g));
+  lua_pushinteger(L, g->GCdebt);
+  lua_pushinteger(L, getgcparam(g->gcpause));
+  lua_pushinteger(L, getgcparam(g->gcstepmul));
+  lua_pushinteger(L, cast(l_mem, 1) << g->gcstepsize);
+  return 5;
+}
+
 static int string_query (lua_State *L) {
   stringtable *tb = &G(L)->strt;
   int s = cast_int(luaL_optinteger(L, 1, 0)) - 1;
@@ -1933,6 +1943,7 @@ static const struct luaL_Reg tests_funcs[] = {
   {"pushuserdata", pushuserdata},
   {"querystr", string_query},
   {"querytab", table_query},
+  {"queryinc", query_inc},
   {"ref", tref},
   {"resume", coresume},
   {"s2d", s2d},

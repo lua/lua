@@ -135,10 +135,10 @@
 #define getgcparam(p)	((p) * 4)
 #define setgcparam(p,v)	((p) = (v) / 4)
 
-#define LUAI_GCMUL      100
+#define LUAI_GCMUL      300
 
-/* how much to allocate before next GC step (log2) */
-#define LUAI_GCSTEPSIZE 13      /* 8 KB */
+/* how many objects to allocate before next GC step (log2) */
+#define LUAI_GCSTEPSIZE 8      /* 256 objects */
 
 
 /*

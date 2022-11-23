@@ -133,7 +133,7 @@ void luaM_free_ (lua_State *L, void *block, size_t osize) {
   global_State *g = G(L);
   lua_assert((osize == 0) == (block == NULL));
   (*g->frealloc)(g->ud, block, osize, 0);
-  g->GCdebt -= osize;
+  g->totalbytes -= osize;
 }
 
 
@@ -167,10 +167,10 @@ void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
   if (l_unlikely(newblock == NULL && nsize > 0)) {
     newblock = tryagain(L, block, osize, nsize);
     if (newblock == NULL)  /* still no memory? */
-      return NULL;  /* do not update 'GCdebt' */
+      return NULL;  /* do not update 'totalbytes' */
   }
   lua_assert((nsize == 0) == (newblock == NULL));
-  g->GCdebt = (g->GCdebt + nsize) - osize;
+  g->totalbytes += nsize - osize;
   return newblock;
 }
 
@@ -195,7 +195,7 @@ void *luaM_malloc_ (lua_State *L, size_t size, int tag) {
       if (newblock == NULL)
         luaM_error(L);
     }
-    g->GCdebt += size;
+    g->totalbytes += size;
     return newblock;
   }
 }
