@@ -86,8 +86,8 @@ static unsigned int luai_makeseed (lua_State *L) {
 ** set GCdebt to a new value keeping the value (totalobjs + GCdebt)
 ** invariant (and avoiding underflows in 'totalobjs')
 */
-void luaE_setdebt (global_State *g, l_mem debt) {
-  l_mem tb = gettotalobjs(g);
+void luaE_setdebt (global_State *g, l_obj debt) {
+  l_obj tb = gettotalobjs(g);
   lua_assert(tb > 0);
   if (debt < tb - MAX_LMEM)
     debt = tb - MAX_LMEM;  /* will make 'totalobjs == MAX_LMEM' */

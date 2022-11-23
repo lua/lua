@@ -93,7 +93,7 @@
 #define markobjectN(g,t)	{ if (t) markobject(g,t); }
 
 static void reallymarkobject (global_State *g, GCObject *o);
-static l_mem atomic (lua_State *L);
+static l_obj atomic (lua_State *L);
 static void entersweep (lua_State *L);
 
 
@@ -335,9 +335,9 @@ static void markmt (global_State *g) {
 /*
 ** mark all objects in list of being-finalized
 */
-static l_mem markbeingfnz (global_State *g) {
+static l_obj markbeingfnz (global_State *g) {
   GCObject *o;
-  l_mem count = 0;
+  l_obj count = 0;
   for (o = g->tobefnz; o != NULL; o = o->next) {
     count++;
     markobject(g, o);
@@ -357,8 +357,8 @@ static l_mem markbeingfnz (global_State *g) {
 ** upvalues, as they have nothing to be checked. (If the thread gets an
 ** upvalue later, it will be linked in the list again.)
 */
-static l_mem remarkupvals (global_State *g) {
-  l_mem work = 0;
+static l_obj remarkupvals (global_State *g) {
+  l_obj work = 0;
   lua_State *thread;
   lua_State **p = &g->twups;
   while ((thread = *p) != NULL) {
@@ -662,8 +662,8 @@ static void propagatemark (global_State *g) {
 }
 
 
-static l_mem propagateall (global_State *g) {
-  l_mem work = 0;
+static l_obj propagateall (global_State *g) {
+  l_obj work = 0;
   while (g->gray) {
     propagatemark(g);
     work++;
@@ -678,9 +678,9 @@ static l_mem propagateall (global_State *g) {
 ** inverts the direction of the traversals, trying to speed up
 ** convergence on chains in the same table.
 */
-static l_mem convergeephemerons (global_State *g) {
+static l_obj convergeephemerons (global_State *g) {
   int changed;
-  l_mem work = 0;
+  l_obj work = 0;
   int dir = 0;
   do {
     GCObject *w;
@@ -715,8 +715,8 @@ static l_mem convergeephemerons (global_State *g) {
 /*
 ** clear entries with unmarked keys from all weaktables in list 'l'
 */
-static l_mem clearbykeys (global_State *g, GCObject *l) {
-  l_mem work = 0;
+static l_obj clearbykeys (global_State *g, GCObject *l) {
+  l_obj work = 0;
   for (; l; l = gco2t(l)->gclist) {
     Table *h = gco2t(l);
     Node *limit = gnodelast(h);
@@ -737,8 +737,8 @@ static l_mem clearbykeys (global_State *g, GCObject *l) {
 ** clear entries with unmarked values from all weaktables in list 'l' up
 ** to element 'f'
 */
-static l_mem clearbyvalues (global_State *g, GCObject *l, GCObject *f) {
-  l_mem work = 0;
+static l_obj clearbyvalues (global_State *g, GCObject *l, GCObject *f) {
+  l_obj work = 0;
   for (; l != f; l = gco2t(l)->gclist) {
     Table *h = gco2t(l);
     Node *n, *limit = gnodelast(h);
@@ -1054,7 +1054,7 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 static void setpause (global_State *g) {
   unsigned int pause = getgcparam(g->gcpause);
   lu_mem threshold = g->marked / 8 * pause / 12;
-  l_mem debt = gettotalobjs(g) - threshold;
+  l_obj debt = gettotalobjs(g) - threshold;
   if (debt > 0) debt = 0;
   luaE_setdebt(g, debt);
 }
@@ -1306,7 +1306,7 @@ static void atomic2gen (lua_State *L, global_State *g) {
 ** total number of objects grows 'genminormul'%.
 */
 static void setminordebt (global_State *g) {
-  luaE_setdebt(g, -(cast(l_mem, (gettotalobjs(g) / 100)) * g->genminormul));
+  luaE_setdebt(g, -(cast(l_obj, (gettotalobjs(g) / 100)) * g->genminormul));
 }
 
 
@@ -1431,8 +1431,8 @@ static void genstep (lua_State *L, global_State *g) {
   if (g->lastatomic != 0)  /* last collection was a bad one? */
     stepgenfull(L, g);  /* do a full step */
   else {
-    l_mem majorbase = g->GCestimate;  /* objects after last major collection */
-    l_mem majorinc = (majorbase / 100) * getgcparam(g->genmajormul);
+    l_obj majorbase = g->GCestimate;  /* objects after last major collection */
+    l_obj majorinc = (majorbase / 100) * getgcparam(g->genmajormul);
     if (g->GCdebt > 0 && gettotalobjs(g) > majorbase + majorinc) {
       g->marked = 0;
       fullgen(L, g);  /* do a major collection */
@@ -1512,8 +1512,8 @@ void luaC_freeallobjects (lua_State *L) {
 }
 
 
-static l_mem atomic (lua_State *L) {
-  l_mem work = 0;
+static l_obj atomic (lua_State *L) {
+  l_obj work = 0;
   global_State *g = G(L);
   GCObject *origweak, *origall;
   GCObject *grayagain = g->grayagain;  /* save original list */
@@ -1558,7 +1558,7 @@ static l_mem atomic (lua_State *L) {
 static void sweepstep (lua_State *L, global_State *g,
                        int nextstate, GCObject **nextlist) {
   if (g->sweepgc) {
-    l_mem olddebt = g->GCdebt;
+    l_obj olddebt = g->GCdebt;
     g->sweepgc = sweeplist(L, g->sweepgc, GCSWEEPMAX);
     g->GCestimate += g->GCdebt - olddebt;  /* update estimate */
   }
@@ -1569,9 +1569,9 @@ static void sweepstep (lua_State *L, global_State *g,
 }
 
 
-static l_mem singlestep (lua_State *L) {
+static l_obj singlestep (lua_State *L) {
   global_State *g = G(L);
-  l_mem work;
+  l_obj work;
   lua_assert(!g->gcstopem);  /* collector is not reentrant */
   g->gcstopem = 1;  /* no emergency collections while collecting */
   switch (g->gcstate) {
@@ -1658,10 +1658,10 @@ void luaC_runtilstate (lua_State *L, int statesmask) {
 */
 static void incstep (lua_State *L, global_State *g) {
   int stepmul = (getgcparam(g->gcstepmul) | 1);  /* avoid division by 0 */
-  l_mem debt = (g->GCdebt / 100) * stepmul;
-  l_mem stepsize = cast(l_mem, 1) << g->gcstepsize;
+  l_obj debt = (g->GCdebt / 100) * stepmul;
+  l_obj stepsize = cast(l_obj, 1) << g->gcstepsize;
   do {  /* repeat until pause or enough "credit" (negative debt) */
-    l_mem work = singlestep(L);  /* perform one single step */
+    l_obj work = singlestep(L);  /* perform one single step */
     debt -= work;
   } while (debt > -stepsize && g->gcstate != GCSpause);
   if (g->gcstate == GCSpause)

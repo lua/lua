@@ -1163,7 +1163,7 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
     }
     case LUA_GCSTEP: {
       int data = va_arg(argp, int);
-      l_mem debt = 1;  /* =1 to signal that it did an actual step */
+      l_obj debt = 1;  /* =1 to signal that it did an actual step */
       lu_byte oldstp = g->gcstp;
       g->gcstp = 0;  /* allow GC to run (GCSTPGC must be zero here) */
       if (data == 0) {
@@ -1217,8 +1217,8 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       if (stepmul != 0)
         setgcparam(g->gcstepmul, stepmul);
       if (stepsize != 0)
-        g->gcstepsize = (stepsize <= log2maxs(l_mem)) ? stepsize
-                                                      : log2maxs(l_mem);
+        g->gcstepsize = (stepsize <= log2maxs(l_obj)) ? stepsize
+                                                      : log2maxs(l_obj);
       luaC_changemode(L, KGC_INC);
       break;
     }

@@ -16,19 +16,21 @@
 
 
 /*
-** 'lu_mem' and 'l_mem' are unsigned/signed integers big enough to count
-** the total memory used by Lua (in bytes). Usually, 'size_t' and
+** 'lu_mem' is an unsigned integer big enough to count the total memory
+** used by Lua (in bytes). 'l_obj' is a signed integer big enough to
+** count the total number of objects used by Lua. (It is negative due
+** to the use of debt in several computations.)  Usually, 'size_t' and
 ** 'ptrdiff_t' should work, but we use 'long' for 16-bit machines.
 */
 #if defined(LUAI_MEM)		/* { external definitions? */
 typedef LUAI_UMEM lu_mem;
-typedef LUAI_MEM l_mem;
+typedef LUAI_MEM l_obj;
 #elif LUAI_IS32INT	/* }{ */
 typedef size_t lu_mem;
-typedef ptrdiff_t l_mem;
+typedef ptrdiff_t l_obj;
 #else  /* 16-bit ints */	/* }{ */
 typedef unsigned long lu_mem;
-typedef long l_mem;
+typedef long l_obj;
 #endif				/* } */
 
 
@@ -47,7 +49,7 @@ typedef signed char ls_byte;
 
 #define MAX_LUMEM	((lu_mem)(~(lu_mem)0))
 
-#define MAX_LMEM	((l_mem)(MAX_LUMEM >> 1))
+#define MAX_LMEM	((l_obj)(MAX_LUMEM >> 1))
 
 
 #define MAX_INT		INT_MAX  /* maximum value of an int */

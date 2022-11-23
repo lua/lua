@@ -531,7 +531,7 @@ static void checkobject (global_State *g, GCObject *o, int maybedead,
 }
 
 
-static lu_mem checkgraylist (global_State *g, GCObject *o) {
+static l_obj checkgraylist (global_State *g, GCObject *o) {
   int total = 0;  /* count number of elements in the list */
   cast_void(g);  /* better to keep it if we need to print an object */
   while (o) {
@@ -560,7 +560,7 @@ static lu_mem checkgraylist (global_State *g, GCObject *o) {
 /*
 ** Check objects in gray lists.
 */
-static lu_mem checkgrays (global_State *g) {
+static l_obj checkgrays (global_State *g) {
   int total = 0;  /* count number of elements in all lists */
   if (!keepinvariant(g)) return total;
   total += checkgraylist(g, g->gray);
@@ -577,7 +577,7 @@ static lu_mem checkgrays (global_State *g) {
 ** 'count' and check its TESTBIT. (It must have been previously set by
 ** 'checkgraylist'.)
 */
-static void incifingray (global_State *g, GCObject *o, lu_mem *count) {
+static void incifingray (global_State *g, GCObject *o, l_obj *count) {
   if (!keepinvariant(g))
     return;  /* gray lists not being kept in these phases */
   if (o->tt == LUA_VUPVAL) {
@@ -594,10 +594,10 @@ static void incifingray (global_State *g, GCObject *o, lu_mem *count) {
 }
 
 
-static lu_mem checklist (global_State *g, int maybedead, int tof,
+static l_obj checklist (global_State *g, int maybedead, int tof,
   GCObject *newl, GCObject *survival, GCObject *old, GCObject *reallyold) {
   GCObject *o;
-  lu_mem total = 0;  /* number of object that should be in  gray lists */
+  l_obj total = 0;  /* number of object that should be in  gray lists */
   for (o = newl; o != survival; o = o->next) {
     checkobject(g, o, maybedead, G_NEW);
     incifingray(g, o, &total);
@@ -626,8 +626,8 @@ int lua_checkmemory (lua_State *L) {
   global_State *g = G(L);
   GCObject *o;
   int maybedead;
-  lu_mem totalin;  /* total of objects that are in gray lists */
-  lu_mem totalshould;  /* total of objects that should be in gray lists */
+  l_obj totalin;  /* total of objects that are in gray lists */
+  l_obj totalshould;  /* total of objects that should be in gray lists */
   if (keepinvariant(g)) {
     assert(!iswhite(g->mainthread));
     assert(!iswhite(gcvalue(&g->l_registry)));
@@ -1033,7 +1033,7 @@ static int query_inc (lua_State *L) {
   lua_pushinteger(L, g->GCdebt);
   lua_pushinteger(L, getgcparam(g->gcpause));
   lua_pushinteger(L, getgcparam(g->gcstepmul));
-  lua_pushinteger(L, cast(l_mem, 1) << g->gcstepsize);
+  lua_pushinteger(L, cast(l_obj, 1) << g->gcstepsize);
   return 5;
 }
 

@@ -249,10 +249,10 @@ typedef struct CallInfo {
 typedef struct global_State {
   lua_Alloc frealloc;  /* function to reallocate memory */
   void *ud;         /* auxiliary data to 'frealloc' */
-  l_mem totalbytes;  /* number of bytes currently allocated */
-  l_mem totalobjs;  /* total number of objects allocated - GCdebt */
-  l_mem GCdebt;  /* bytes allocated not yet compensated by the collector */
-  lu_mem marked;  /* number of objects marked in a GC cycle */
+  lu_mem totalbytes;  /* number of bytes currently allocated */
+  l_obj totalobjs;  /* total number of objects allocated - GCdebt */
+  l_obj GCdebt;  /* bytes allocated not yet compensated by the collector */
+  l_obj marked;  /* number of objects marked in a GC cycle */
   lu_mem GCestimate;  /* an estimate of the non-garbage memory in use */
   lu_mem lastatomic;  /* see function 'genstep' in file 'lgc.c' */
   stringtable strt;  /* hash table for strings */
@@ -391,7 +391,7 @@ union GCUnion {
 #define gettotalobjs(g)	((g)->totalobjs + (g)->GCdebt)
 
 
-LUAI_FUNC void luaE_setdebt (global_State *g, l_mem debt);
+LUAI_FUNC void luaE_setdebt (global_State *g, l_obj debt);
 LUAI_FUNC void luaE_freethread (lua_State *L, lua_State *L1);
 LUAI_FUNC CallInfo *luaE_extendCI (lua_State *L);
 LUAI_FUNC void luaE_freeCI (lua_State *L);
