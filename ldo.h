@@ -44,18 +44,6 @@
     p = restorestack(L, t__))  /* 'pos' part: restore 'p' */
 
 
-/* macro to check stack size and GC, preserving 'p' */
-#define checkstackGCp(L,n,p)  \
-  luaD_checkstackaux(L, n, \
-    ptrdiff_t t__ = savestack(L, p);  /* save 'p' */ \
-    luaC_checkGC(L),  /* stack grow uses memory */ \
-    p = restorestack(L, t__))  /* 'pos' part: restore 'p' */
-
-
-/* macro to check stack size and GC */
-#define checkstackGC(L,fsize)  \
-	luaD_checkstackaux(L, (fsize), luaC_checkGC(L), (void)0)
-
 
 /* type of protected functions, to be ran by 'runprotected' */
 typedef void (*Pfunc) (lua_State *L, void *ud);

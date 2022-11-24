@@ -260,7 +260,7 @@ void luaT_getvarargs (lua_State *L, CallInfo *ci, StkId where, int wanted) {
   int nextra = ci->u.l.nextraargs;
   if (wanted < 0) {
     wanted = nextra;  /* get all extra arguments available */
-    checkstackGCp(L, nextra, where);  /* ensure stack space */
+    checkstackp(L, nextra, where);  /* ensure stack space */
     L->top.p = where + nextra;  /* next instruction will need top */
   }
   for (i = 0; i < wanted && i < nextra; i++)

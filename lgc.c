@@ -1700,8 +1700,9 @@ static void fullinc (lua_State *L, global_State *g) {
   /* finish any pending sweep phase to start a new cycle */
   luaC_runtilstate(L, bitmask(GCSpause));
   luaC_runtilstate(L, bitmask(GCScallfin));  /* run up to finalizers */
-  luaC_runtilstate(L, bitmask(GCSpause));  /* finish collection */
   /* estimate must be correct after a full GC cycle */
+  lua_assert(g->marked == gettotalobjs(g));
+  luaC_runtilstate(L, bitmask(GCSpause));  /* finish collection */
   setpause(g);
 }
 
