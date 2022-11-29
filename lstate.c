@@ -391,7 +391,6 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->totalobjs = 1;
   g->marked = 0;
   g->GCdebt = 0;
-  g->lastatomic = 0;
   setivalue(&g->nilvalue, 0);  /* to signal that state is not yet built */
   setgcparam(g->gcpause, LUAI_GCPAUSE);
   setgcparam(g->gcstepmul, LUAI_GCMUL);

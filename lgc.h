@@ -142,14 +142,6 @@
 
 
 /*
-** Check whether the declared GC mode is generational. While in
-** generational mode, the collector can go temporarily to incremental
-** mode to improve performance. This is signaled by 'g->lastatomic != 0'.
-*/
-#define isdecGCmodegen(g)	(g->gckind == KGC_GEN || g->lastatomic != 0)
-
-
-/*
 ** Control when GC is running:
 */
 #define GCSTPUSR	1  /* bit true when GC stopped by user */

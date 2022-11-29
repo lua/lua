@@ -1199,7 +1199,7 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
     case LUA_GCGEN: {
       int minormul = va_arg(argp, int);
       int majormul = va_arg(argp, int);
-      res = isdecGCmodegen(g) ? LUA_GCGEN : LUA_GCINC;
+      res = (g->gckind == KGC_INC) ? LUA_GCINC : LUA_GCGEN;
       if (minormul != 0)
         g->genminormul = minormul;
       if (majormul != 0)
@@ -1211,7 +1211,7 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       int pause = va_arg(argp, int);
       int stepmul = va_arg(argp, int);
       int stepsize = va_arg(argp, int);
-      res = isdecGCmodegen(g) ? LUA_GCGEN : LUA_GCINC;
+      res = (g->gckind == KGC_INC) ? LUA_GCINC : LUA_GCGEN;
       if (pause != 0)
         setgcparam(g->gcpause, pause);
       if (stepmul != 0)

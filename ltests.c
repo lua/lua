@@ -297,7 +297,7 @@ static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
   if (isdead(g,t)) return 0;
   if (issweepphase(g))
     return 1;  /* no invariants */
-  else if (g->gckind == KGC_INC)
+  else if (g->gckind != KGC_GEN)
     return !(isblack(f) && iswhite(t));  /* basic incremental invariant */
   else {  /* generational mode */
     if ((getage(f) == G_OLD && isblack(f)) && !isold(t))
