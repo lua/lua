@@ -628,7 +628,6 @@ typedef struct Proto {
 */
 typedef struct UpVal {
   CommonHeader;
-  lu_byte tbc;  /* true if it represents a to-be-closed variable */
   union {
     TValue *p;  /* points to stack or to its own value */
     ptrdiff_t offset;  /* used while the stack is being reallocated */
