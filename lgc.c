@@ -1037,7 +1037,7 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 */
 static void setpause (global_State *g) {
   unsigned int pause = getgcparam(g->gcpause);
-  lu_mem threshold = g->marked / 8 * pause / 12;
+  l_obj threshold = g->marked / 8 * pause / 12;
   l_obj debt = gettotalobjs(g) - threshold;
   if (debt > 0) debt = 0;
   luaE_setdebt(g, debt);
@@ -1600,18 +1600,16 @@ void luaC_runtilstate (lua_State *L, int statesmask) {
 ** controls when next step will be performed.
 */
 static void incstep (lua_State *L, global_State *g) {
-  int stepmul = (getgcparam(g->gcstepmul) | 1);  /* avoid division by 0 */
-  l_obj debt = (g->GCdebt / 100) * stepmul;
   l_obj stepsize = cast(l_obj, 1) << g->gcstepsize;
+  l_obj work2do = stepsize * getgcparam(g->gcstepmul) / 100;
   do {  /* repeat until pause or enough "credit" (negative debt) */
     l_obj work = singlestep(L);  /* perform one single step */
-    debt -= work;
-  } while (debt > -stepsize && g->gcstate != GCSpause);
+    work2do -= work;
+  } while (work2do > 0 && g->gcstate != GCSpause);
   if (g->gcstate == GCSpause)
     setpause(g);  /* pause until next cycle */
   else {
-    debt = (debt / stepmul) * 100;  /* apply step multiplier */
-    luaE_setdebt(g, debt);
+    luaE_setdebt(g, -stepsize);
   }
 }
 
