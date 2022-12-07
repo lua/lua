@@ -694,7 +694,7 @@ else
 
   T.testC(state, "settop 0")
 
-  T.loadlib(state)
+  T.loadlib(state, 1 | 2)   -- load _G and 'package'
 
   assert(T.doremote(state, [[
     coroutine = require'coroutine';

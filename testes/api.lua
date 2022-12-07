@@ -1039,10 +1039,12 @@ assert(a == nil and b == 2)   -- 2 == run-time error
 a, b, c = T.doremote(L1, "return a+")
 assert(a == nil and c == 3 and type(b) == "string")   -- 3 == syntax error
 
-T.loadlib(L1)
+T.loadlib(L1, 2)    -- load only 'package'
 a, b, c = T.doremote(L1, [[
   string = require'string'
-  a = require'_G'; assert(a == _G and require("_G") == a)
+  local initialG = _G   -- not loaded yet
+  local a = require'_G'; assert(a == _G and require("_G") == a)
+  assert(initialG == nil and io == nil)   -- now we have 'assert'
   io = require'io'; assert(type(io.read) == "function")
   assert(require("io") == io)
   a = require'table'; assert(type(a.insert) == "function")
@@ -1056,7 +1058,7 @@ T.closestate(L1);
 
 
 L1 = T.newstate()
-T.loadlib(L1)
+T.loadlib(L1, 0)
 T.doremote(L1, "a = {}")
 T.testC(L1, [[getglobal "a"; pushstring "x"; pushint 1;
              settable -3]])
@@ -1436,10 +1438,10 @@ end
 
 do   -- garbage collection with no extra memory
   local L = T.newstate()
-  T.loadlib(L)
+  T.loadlib(L, 1 | 2)   -- load _G and 'package'
   local res = (T.doremote(L, [[
-    _ENV = require"_G"
-    local T = require"T"
+    _ENV = _G
+    assert(string == nil)
     local a = {}
     for i = 1, 1000 do a[i] = 'i' .. i end    -- grow string table
     local stsize, stuse = T.querystr()
