@@ -1031,8 +1031,8 @@ static int query_inc (lua_State *L) {
   global_State *g = G(L);
   lua_pushinteger(L, gettotalobjs(g));
   lua_pushinteger(L, g->GCdebt);
-  lua_pushinteger(L, getgcparam(g->gcpause));
-  lua_pushinteger(L, getgcparam(g->gcstepmul));
+  lua_pushinteger(L, applygcparam(g, gcpause, 100));
+  lua_pushinteger(L, applygcparam(g, gcstepmul, 100));
   lua_pushinteger(L, cast(l_obj, 1) << g->gcstepsize);
   return 5;
 }

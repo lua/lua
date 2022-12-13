@@ -1185,15 +1185,15 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       break;
     }
     case LUA_GCSETPAUSE: {
-      int data = va_arg(argp, int);
-      res = getgcparam(g->gcpause);
-      setgcparam(g->gcpause, data);
+      unsigned int data = va_arg(argp, unsigned int);
+      res = applygcparam(g, gcpause, 100);
+      setgcparam(g, gcpause, data);
       break;
     }
     case LUA_GCSETSTEPMUL: {
-      int data = va_arg(argp, int);
-      res = getgcparam(g->gcstepmul);
-      setgcparam(g->gcstepmul, data);
+      unsigned int data = va_arg(argp, unsigned int);
+      res = applygcparam(g, gcstepmul, 100);
+      setgcparam(g, gcstepmul, data);
       break;
     }
     case LUA_GCISRUNNING: {
@@ -1201,25 +1201,25 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       break;
     }
     case LUA_GCGEN: {
-      int minormul = va_arg(argp, int);
-      int majormul = va_arg(argp, int);
+      unsigned int minormul = va_arg(argp, unsigned int);
+      unsigned int majormul = va_arg(argp, unsigned int);
       res = (g->gckind == KGC_INC) ? LUA_GCINC : LUA_GCGEN;
       if (minormul != 0)
-        g->genminormul = minormul;
+        setgcparam(g, genminormul, minormul);
       if (majormul != 0)
-        setgcparam(g->genmajormul, majormul);
+        setgcparam(g, genmajormul, majormul);
       luaC_changemode(L, KGC_GEN);
       break;
     }
     case LUA_GCINC: {
-      int pause = va_arg(argp, int);
-      int stepmul = va_arg(argp, int);
-      int stepsize = va_arg(argp, int);
+      unsigned int pause = va_arg(argp, unsigned int);
+      unsigned int stepmul = va_arg(argp, unsigned int);
+      unsigned int stepsize = va_arg(argp, unsigned int);
       res = (g->gckind == KGC_INC) ? LUA_GCINC : LUA_GCGEN;
       if (pause != 0)
-        setgcparam(g->gcpause, pause);
+        setgcparam(g, gcpause, pause);
       if (stepmul != 0)
-        setgcparam(g->gcstepmul, stepmul);
+        setgcparam(g, gcstepmul, stepmul);
       if (stepsize != 0)
         g->gcstepsize = (stepsize <= log2maxs(l_obj)) ? stepsize
                                                       : log2maxs(l_obj);

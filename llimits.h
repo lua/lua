@@ -18,7 +18,7 @@
 /*
 ** 'lu_mem' is an unsigned integer big enough to count the total memory
 ** used by Lua (in bytes). 'l_obj' is a signed integer big enough to
-** count the total number of objects used by Lua. (It is negative due
+** count the total number of objects used by Lua. (It is signed due
 ** to the use of debt in several computations.)  Usually, 'size_t' and
 ** 'ptrdiff_t' should work, but we use 'long' for 16-bit machines.
 */

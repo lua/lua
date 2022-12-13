@@ -1030,14 +1030,10 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 /*
 ** Set the "time" to wait before starting a new GC cycle; cycle will
 ** start when number of objects in use hits the threshold of
-** approximately ('marked' * pause / 100). (A direct multiplication
-** by 'pause' may overflow, and a direct division by 100 may undeflow
-** to zero. So, the division is done in two steps. 8 * 12 is near 100
-** and the division by 8 is cheap.)
+** approximately (marked * pause / 100).
 */
 static void setpause (global_State *g) {
-  unsigned int pause = getgcparam(g->gcpause);
-  l_obj threshold = g->marked / 8 * pause / 12;
+  l_obj threshold = applygcparam(g, gcpause, g->marked);
   l_obj debt = gettotalobjs(g) - threshold;
   if (debt > 0) debt = 0;
   luaE_setdebt(g, debt);
@@ -1289,7 +1285,7 @@ static void atomic2gen (lua_State *L, global_State *g) {
 ** total number of objects grows 'genminormul'%.
 */
 static void setminordebt (global_State *g) {
-  luaE_setdebt(g, -(gettotalobjs(g) / 100) * g->genminormul);
+  luaE_setdebt(g, -applygcparam(g, genminormul, gettotalobjs(g)));
 }
 
 
@@ -1387,7 +1383,7 @@ static void genmajorstep (lua_State *L, global_State *g) {
 */
 static void genstep (lua_State *L, global_State *g) {
   l_obj majorbase = g->GClastmajor;  /* count after last major collection */
-  l_obj majorinc = (majorbase / 100) * getgcparam(g->genmajormul);
+  l_obj majorinc = applygcparam(g, genmajormul, majorbase);
   if (g->GCdebt > 0 && gettotalobjs(g) > majorbase + majorinc) {
     /* do a major collection */
     enterinc(g);
@@ -1601,7 +1597,7 @@ void luaC_runtilstate (lua_State *L, int statesmask) {
 */
 static void incstep (lua_State *L, global_State *g) {
   l_obj stepsize = cast(l_obj, 1) << g->gcstepsize;
-  l_obj work2do = stepsize * getgcparam(g->gcstepmul) / 100;
+  l_obj work2do = applygcparam(g, gcstepmul, stepsize);
   do {  /* repeat until pause or enough "credit" (negative debt) */
     l_obj work = singlestep(L);  /* perform one single step */
     work2do -= work;
