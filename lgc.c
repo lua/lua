@@ -242,7 +242,7 @@ GCObject *luaC_newobjdt (lua_State *L, int tt, size_t sz, size_t offset) {
   global_State *g = G(L);
   char *p = cast_charp(luaM_newobject(L, novariant(tt), sz));
   GCObject *o = cast(GCObject *, p + offset);
-  g->GCdebt++;
+  g->GCdebt--;
   o->marked = luaC_white(g);
   o->tt = tt;
   o->next = g->allgc;
@@ -1034,8 +1034,8 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 */
 static void setpause (global_State *g) {
   l_obj threshold = applygcparam(g, gcpause, g->marked);
-  l_obj debt = gettotalobjs(g) - threshold;
-  if (debt > 0) debt = 0;
+  l_obj debt = threshold - gettotalobjs(g);
+  if (debt < 0) debt = 0;
   luaE_setdebt(g, debt);
 }
 
@@ -1285,7 +1285,7 @@ static void atomic2gen (lua_State *L, global_State *g) {
 ** total number of objects grows 'genminormul'%.
 */
 static void setminordebt (global_State *g) {
-  luaE_setdebt(g, -applygcparam(g, genminormul, gettotalobjs(g)));
+  luaE_setdebt(g, applygcparam(g, genminormul, gettotalobjs(g)));
 }
 
 
@@ -1378,13 +1378,13 @@ static void genmajorstep (lua_State *L, global_State *g) {
 ** Does a generational "step".  If the total number of objects grew
 ** more than 'majormul'% since the last major collection, does a
 ** major collection.  Otherwise, does a minor collection.  The test
-** ('GCdebt' > 0) avoids major collections when the step originated from
+** ('GCdebt' != 0) avoids major collections when the step originated from
 ** 'collectgarbage("step")'.
 */
 static void genstep (lua_State *L, global_State *g) {
   l_obj majorbase = g->GClastmajor;  /* count after last major collection */
   l_obj majorinc = applygcparam(g, genmajormul, majorbase);
-  if (g->GCdebt > 0 && gettotalobjs(g) > majorbase + majorinc) {
+  if (g->GCdebt != 0 && gettotalobjs(g) > majorbase + majorinc) {
     /* do a major collection */
     enterinc(g);
     g->gckind = KGC_GENMAJOR;
@@ -1605,7 +1605,7 @@ static void incstep (lua_State *L, global_State *g) {
   if (g->gcstate == GCSpause)
     setpause(g);  /* pause until next cycle */
   else {
-    luaE_setdebt(g, -stepsize);
+    luaE_setdebt(g, stepsize);
   }
 }
 
@@ -1618,7 +1618,7 @@ void luaC_step (lua_State *L) {
   global_State *g = G(L);
   lua_assert(!g->gcemergency);
   if (!gcrunning(g))  /* not running? */
-    luaE_setdebt(g, -2000);
+    luaE_setdebt(g, 2000);
   else {
     switch (g->gckind) {
       case KGC_INC:

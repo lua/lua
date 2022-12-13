@@ -89,9 +89,9 @@ static unsigned int luai_makeseed (lua_State *L) {
 void luaE_setdebt (global_State *g, l_obj debt) {
   l_obj tb = gettotalobjs(g);
   lua_assert(tb > 0);
-  if (debt < tb - MAX_LMEM)
-    debt = tb - MAX_LMEM;  /* will make 'totalobjs == MAX_LMEM' */
-  g->totalobjs = tb - debt;
+  if (debt > MAX_LOBJ - tb)
+    debt = MAX_LOBJ - tb;  /* will make 'totalobjs == MAX_LMEM' */
+  g->totalobjs = tb + debt;
   g->GCdebt = debt;
 }
 

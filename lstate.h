@@ -251,8 +251,8 @@ typedef struct global_State {
   lua_Alloc frealloc;  /* function to reallocate memory */
   void *ud;         /* auxiliary data to 'frealloc' */
   lu_mem totalbytes;  /* number of bytes currently allocated */
-  l_obj totalobjs;  /* total number of objects allocated - GCdebt */
-  l_obj GCdebt;  /* bytes allocated not yet compensated by the collector */
+  l_obj totalobjs;  /* total number of objects allocated + GCdebt */
+  l_obj GCdebt;  /* objects counted but not yet allocated */
   l_obj marked;  /* number of objects marked in a GC cycle */
   l_obj GClastmajor;  /* objects at last major collection */
   stringtable strt;  /* hash table for strings */
@@ -388,7 +388,7 @@ union GCUnion {
 
 
 /* actual number of total objects allocated */
-#define gettotalobjs(g)	((g)->totalobjs + (g)->GCdebt)
+#define gettotalobjs(g)	((g)->totalobjs - (g)->GCdebt)
 
 
 LUAI_FUNC void luaE_setdebt (global_State *g, l_obj debt);

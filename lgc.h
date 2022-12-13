@@ -175,13 +175,13 @@
 
 
 /*
-** Does one step of collection when debt becomes positive. 'pre'/'pos'
+** Does one step of collection when debt becomes zero. 'pre'/'pos'
 ** allows some adjustments to be done only when needed. macro
 ** 'condchangemem' is used only for heavy tests (forcing a full
 ** GC cycle on every opportunity)
 */
 #define luaC_condGC(L,pre,pos) \
-	{ if (G(L)->GCdebt > 0) { pre; luaC_step(L); pos;}; \
+	{ if (G(L)->GCdebt <= 0) { pre; luaC_step(L); pos;}; \
 	  condchangemem(L,pre,pos); }
 
 /* more often than not, 'pre'/'pos' are empty */

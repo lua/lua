@@ -1168,8 +1168,8 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       g->gcstp = 0;  /* allow GC to run (bit GCSTPGC must be zero here) */
       if (todo == 0)
         todo = 1 << g->gcstepsize;  /* standard step size */
-      while (todo + g->GCdebt > 0) {  /* enough to run a step? */
-        todo += g->GCdebt;  /* decrement 'todo' (debt is usually negative) */
+      while (todo >= g->GCdebt) {  /* enough to run a step? */
+        todo -= g->GCdebt;  /* decrement 'todo' */
         luaC_step(L);  /* run one basic step */
         didsomething = 1;
         if (g->gckind == KGC_GEN)  /* minor collections? */
@@ -1177,8 +1177,8 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
         else if (g->gcstate == GCSpause)
           break;  /* don't run more than one cycle */
       }
-      /* add remaining 'todo' to total debt */
-      luaE_setdebt(g, todo + g->GCdebt);
+      /* remove remaining 'todo' from total debt */
+      luaE_setdebt(g, g->GCdebt - todo);
       g->gcstp = oldstp;  /* restore previous state */
       if (didsomething && g->gcstate == GCSpause)  /* end of cycle? */
         res = 1;  /* signal it */
