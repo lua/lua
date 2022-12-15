@@ -14,8 +14,10 @@
 
 #include "lua.h"
 
+#include "lgc.h"
 #include "lobject.h"
 #include "lstate.h"
+#include "ltable.h"
 #include "lundump.h"
 
 
@@ -25,6 +27,8 @@ typedef struct {
   void *data;
   int strip;
   int status;
+  Table *h;  /* table to track saved strings */
+  lua_Integer nstr;  /* counter to number saved strings */
 } DumpState;
 
 
@@ -85,14 +89,33 @@ static void dumpInteger (DumpState *D, lua_Integer x) {
 }
 
 
-static void dumpString (DumpState *D, const TString *s) {
+/*
+** Dump a String. First dump its "size": size==0 means NULL;
+** size==1 is followed by an index and means "reuse saved string with
+** that index"; size>=2 is followed by the string contents with real
+** size==size-2 and means that string, which will be saved with
+** the next available index.
+*/
+static void dumpString (DumpState *D, TString *s) {
   if (s == NULL)
     dumpSize(D, 0);
   else {
-    size_t size = tsslen(s);
-    const char *str = getstr(s);
-    dumpSize(D, size + 1);
-    dumpVector(D, str, size);
+    const TValue *idx = luaH_getstr(D->h, s);
+    if (ttisinteger(idx)) {  /* string already saved? */
+      dumpSize(D, 1);  /* reuse a saved string */
+      dumpInt(D, ivalue(idx));  /* index of saved string */
+    }
+    else {  /* must write and save the string */
+      TValue key, value;  /* to save the string in the hash */
+      size_t size = tsslen(s);
+      dumpSize(D, size + 2);
+      dumpVector(D, getstr(s), size);
+      D->nstr++;  /* one more saved string */
+      setsvalue(D->L, &key, s);  /* the string is the key */
+      setivalue(&value, D->nstr);  /* its index is the value */
+      luaH_finishset(D->L, D->h, &key, idx, &value);  /* h[s] = nstr */
+      /* integer value does not need barrier */
+    }
   }
 }
 
@@ -211,13 +234,15 @@ static void dumpHeader (DumpState *D) {
 ** dump Lua function as precompiled chunk
 */
 int luaU_dump(lua_State *L, const Proto *f, lua_Writer w, void *data,
-              int strip) {
+              int strip, Table *h) {
   DumpState D;
   D.L = L;
   D.writer = w;
   D.data = data;
   D.strip = strip;
   D.status = 0;
+  D.h = h;
+  D.nstr = 0;
   dumpHeader(&D);
   dumpByte(&D, f->sizeupvalues);
   dumpFunction(&D, f, NULL);

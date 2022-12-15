@@ -1107,16 +1107,37 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
 }
 
 
+/*
+** Dump a function, calling 'writer' to write its parts. Because the
+** writer can use the stack in unkown ways, this function should not
+** push things on the stack, but it must anchor an auxiliary table
+** used by 'luaU_dump'. To do so, it creates the table, anchors the
+** function that is on the stack in the table, and substitutes the
+** table for the function in the stack.
+*/
+
 LUA_API int lua_dump (lua_State *L, lua_Writer writer, void *data, int strip) {
   int status;
+  StkId fstk;  /* pointer to function */
   TValue *o;
   lua_lock(L);
   api_checknelems(L, 1);
-  o = s2v(L->top.p - 1);
-  if (isLfunction(o))
-    status = luaU_dump(L, getproto(o), writer, data, strip);
-  else
+  fstk = L->top.p - 1;
+  o = s2v(fstk);
+  if (!isLfunction(o))
     status = 1;
+  else {
+    LClosure *f = clLvalue(o);
+    ptrdiff_t fidx = savestack(L, fstk);  /* function index */
+    Table *h = luaH_new(L);  /* auxiliary table used by 'luaU_dump' */
+    sethvalue2s(L, L->top.p, h);  /* anchor it (luaH_set may call GC) */
+    L->top.p++;  /* (assume extra slot) */
+    luaH_set(L, h, o, o);  /* anchor function into table */
+    setobjs2s(L, fstk, L->top.p - 1);  /* move table over function */
+    L->top.p--;  /* stack back to initial size */
+    status = luaU_dump(L, f->p, writer, data, strip, h);
+    setclLvalue2s(L, restorestack(L, fidx), f);  /* put function back */
+  }
   lua_unlock(L);
   return status;
 }

@@ -239,6 +239,7 @@ static int str_dump (lua_State *L) {
   if (l_unlikely(lua_dump(L, writer, &state, strip) != 0))
     return luaL_error(L, "unable to dump given function");
   luaL_pushresult(&state.B);
+  lua_assert(lua_isfunction(L, 1));  /* lua_dump kept that value */
   return 1;
 }
 

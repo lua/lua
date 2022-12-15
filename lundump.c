@@ -21,6 +21,7 @@
 #include "lmem.h"
 #include "lobject.h"
 #include "lstring.h"
+#include "ltable.h"
 #include "lundump.h"
 #include "lzio.h"
 
@@ -34,6 +35,8 @@ typedef struct {
   lua_State *L;
   ZIO *Z;
   const char *name;
+  Table *h;  /* list for string reuse */
+  lua_Integer nstr;  /* number of strings in the list */
 } LoadState;
 
 
@@ -110,10 +113,16 @@ static lua_Integer loadInteger (LoadState *S) {
 static TString *loadStringN (LoadState *S, Proto *p) {
   lua_State *L = S->L;
   TString *ts;
+  TValue sv;
   size_t size = loadSize(S);
   if (size == 0)  /* no string? */
     return NULL;
-  else if (--size <= LUAI_MAXSHORTLEN) {  /* short string? */
+  else if (size == 1) {  /* previously saved string? */
+    int idx = loadInt(S);  /* get its index */
+    const TValue *stv = luaH_getint(S->h, idx);
+    return tsvalue(stv);
+  }
+  else if (size -= 2, size <= LUAI_MAXSHORTLEN) {  /* short string? */
     char buff[LUAI_MAXSHORTLEN];
     loadVector(S, buff, size);  /* load string into buffer */
     ts = luaS_newlstr(L, buff, size);  /* create string */
@@ -126,6 +135,10 @@ static TString *loadStringN (LoadState *S, Proto *p) {
     L->top.p--;  /* pop string */
   }
   luaC_objbarrier(L, p, ts);
+  S->nstr++;  /* add string to list of saved strings */
+  setsvalue(L, &sv, ts);
+  luaH_setint(L, S->h, S->nstr, &sv);
+  luaC_objbarrierback(L, obj2gco(S->h), ts);
   return ts;
 }
 
@@ -323,11 +336,16 @@ LClosure *luaU_undump(lua_State *L, ZIO *Z, const char *name) {
   cl = luaF_newLclosure(L, loadByte(&S));
   setclLvalue2s(L, L->top.p, cl);
   luaD_inctop(L);
+  S.h = luaH_new(L);  /* create list of saved strings */
+  S.nstr = 0;
+  sethvalue2s(L, L->top.p, S.h);  /* anchor it */
+  luaD_inctop(L);
   cl->p = luaF_newproto(L);
   luaC_objbarrier(L, cl, cl->p);
   loadFunction(&S, cl->p, NULL);
   lua_assert(cl->nupvalues == cl->p->sizeupvalues);
   luai_verifycode(L, cl->p);
+  L->top.p--;  /* pop table */
   return cl;
 }
 
