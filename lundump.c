@@ -162,7 +162,7 @@ static void loadCode (LoadState *S, Proto *f) {
 }
 
 
-static void loadFunction(LoadState *S, Proto *f, TString *psource);
+static void loadFunction(LoadState *S, Proto *f);
 
 
 static void loadConstants (LoadState *S, Proto *f) {
@@ -211,7 +211,7 @@ static void loadProtos (LoadState *S, Proto *f) {
   for (i = 0; i < n; i++) {
     f->p[i] = luaF_newproto(S->L);
     luaC_objbarrier(S->L, f, f->p[i]);
-    loadFunction(S, f->p[i], f->source);
+    loadFunction(S, f->p[i]);
   }
 }
 
@@ -266,10 +266,8 @@ static void loadDebug (LoadState *S, Proto *f) {
 }
 
 
-static void loadFunction (LoadState *S, Proto *f, TString *psource) {
+static void loadFunction (LoadState *S, Proto *f) {
   f->source = loadStringN(S, f);
-  if (f->source == NULL)  /* no source in dump? */
-    f->source = psource;  /* reuse parent's source */
   f->linedefined = loadInt(S);
   f->lastlinedefined = loadInt(S);
   f->numparams = loadByte(S);
@@ -342,7 +340,7 @@ LClosure *luaU_undump(lua_State *L, ZIO *Z, const char *name) {
   luaD_inctop(L);
   cl->p = luaF_newproto(L);
   luaC_objbarrier(L, cl, cl->p);
-  loadFunction(&S, cl->p, NULL);
+  loadFunction(&S, cl->p);
   lua_assert(cl->nupvalues == cl->p->sizeupvalues);
   luai_verifycode(L, cl->p);
   L->top.p--;  /* pop table */
