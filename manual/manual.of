@@ -1586,7 +1586,8 @@ Each variable name may be postfixed by an attribute
 @producname{attrib}@producbody{@bnfopt{@bnfter{<} @bnfNter{Name} @bnfter{>}}}
 }
 There are two possible attributes:
-@id{const}, which declares a @x{constant variable},
+@id{const}, which declares a @emph{constant} or @emph{read-only} variable,
+@index{constant variable}
 that is, a variable that cannot be assigned to
 after its initialization;
 and @id{close}, which declares a to-be-closed variable @see{to-be-closed}.
@@ -9118,7 +9119,7 @@ is a more portable solution.
 @simplesect{
 
 Here we list the incompatibilities that you may find when moving a program
-from @N{Lua 5.3} to @N{Lua 5.4}.
+from @N{Lua 5.4} to @N{Lua 5.5}.
 
 You can avoid some incompatibilities by compiling Lua with
 appropriate options (see file @id{luaconf.h}).
@@ -9155,51 +9156,6 @@ change between versions.
 @itemize{
 
 @item{
-The coercion of strings to numbers in
-arithmetic and bitwise operations
-has been removed from the core language.
-The string library does a similar job
-for arithmetic (but not for bitwise) operations
-using the string metamethods.
-However, unlike in previous versions,
-the new implementation preserves the implicit type of the numeral
-in the string.
-For instance, the result of @T{"1" + "2"} now is an integer,
-not a float.
-}
-
-@item{
-Literal decimal integer constants that overflow are read as floats,
-instead of wrapping around.
-You can use hexadecimal notation for such constants if you
-want the old behavior
-(reading them as integers with wrap around).
-}
-
-@item{
-The use of the @idx{__lt} metamethod to emulate @idx{__le}
-has been removed.
-When needed, this metamethod must be explicitly defined.
-}
-
-@item{
-The semantics of the numerical @Rw{for} loop
-over integers changed in some details.
-In particular, the control variable never wraps around.
-}
-
-@item{
-A label for a @Rw{goto} cannot be declared where a label with the same
-name is visible, even if this other label is declared in an enclosing
-block.
-}
-
-@item{
-When finalizing an object,
-Lua does not ignore @idx{__gc} metamethods that are not functions.
-Any value will be called, if present.
-(Non-callable values will generate a warning,
-like any other error when calling a finalizer.)
 }
 
 }
@@ -9210,39 +9166,6 @@ like any other error when calling a finalizer.)
 @itemize{
 
 @item{
-The function @Lid{print} does not call @Lid{tostring}
-to format its arguments;
-instead, it has this functionality hardwired.
-You should use @idx{__tostring} to modify how values are printed.
-}
-
-@item{
-The pseudo-random number generator used by the function @Lid{math.random}
-now starts with a somewhat random seed.
-Moreover, it uses a different algorithm.
-}
-
-@item{
-By default, the decoding functions in the @Lid{utf8} library
-do not accept surrogates as valid code points.
-An extra parameter in these functions makes them more permissive.
-}
-
-@item{
-The options @St{setpause} and @St{setstepmul}
-of the function @Lid{collectgarbage} are deprecated.
-You should use the new option @St{incremental} to set them.
-}
-
-@item{
-The function @Lid{io.lines} now returns four values,
-instead of just one.
-That can be a problem when it is used as the sole
-argument to another function that has optional parameters,
-such as in @T{load(io.lines(filename, "L"))}.
-To fix that issue,
-you can wrap the call into parentheses,
-to adjust its number of results to one.
 }
 
 }
@@ -9254,46 +9177,6 @@ to adjust its number of results to one.
 @itemize{
 
 @item{
-Full userdata now has an arbitrary number of associated user values.
-Therefore, the functions @id{lua_newuserdata},
-@id{lua_setuservalue}, and @id{lua_getuservalue} were
-replaced by @Lid{lua_newuserdatauv},
-@Lid{lua_setiuservalue}, and @Lid{lua_getiuservalue},
-which have an extra argument.
-
-For compatibility, the old names still work as macros assuming
-one single user value.
-Note, however, that userdata with zero user values
-are more efficient memory-wise.
-}
-
-@item{
-The function @Lid{lua_resume} has an extra parameter.
-This out parameter returns the number of values on
-the top of the stack that were yielded or returned by the coroutine.
-(In previous versions,
-those values were the entire stack.)
-}
-
-@item{
-The function @Lid{lua_version} returns the version number,
-instead of an address of the version number.
-The Lua core should work correctly with libraries using their
-own static copies of the same core,
-so there is no need to check whether they are using the same
-address space.
-}
-
-@item{
-The constant @id{LUA_ERRGCMM} was removed.
-Errors in finalizers are never propagated;
-instead, they generate a warning.
-}
-
-@item{
-The options @idx{LUA_GCSETPAUSE} and @idx{LUA_GCSETSTEPMUL}
-of the function @Lid{lua_gc} are deprecated.
-You should use the new option @id{LUA_GCINC} to set them.
 }
 
 }

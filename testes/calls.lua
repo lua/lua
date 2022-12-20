@@ -448,7 +448,7 @@ print("testing binary chunks")
 do
   local header = string.pack("c4BBc6BBB",
     "\27Lua",                                  -- signature
-    0x54,                                      -- version 5.4 (0x54)
+    0x55,                                      -- version 5.5 (0x55)
     0,                                         -- format
     "\x19\x93\r\n\x1a\n",                      -- data
     4,                                         -- size of instruction
