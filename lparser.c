@@ -187,10 +187,10 @@ static int registerlocalvar (LexState *ls, FuncState *fs, TString *varname) {
 
 
 /*
-** Create a new local variable with the given 'name'. Return its index
-** in the function.
+** Create a new local variable with the given 'name' and given 'kind'.
+** Return its index in the function.
 */
-static int new_localvar (LexState *ls, TString *name) {
+static int new_localvarkind (LexState *ls, TString *name, int kind) {
   lua_State *L = ls->L;
   FuncState *fs = ls->fs;
   Dyndata *dyd = ls->dyd;
@@ -200,9 +200,17 @@ static int new_localvar (LexState *ls, TString *name) {
   luaM_growvector(L, dyd->actvar.arr, dyd->actvar.n + 1,
                   dyd->actvar.size, Vardesc, USHRT_MAX, "local variables");
   var = &dyd->actvar.arr[dyd->actvar.n++];
-  var->vd.kind = VDKREG;  /* default */
+  var->vd.kind = kind;  /* default */
   var->vd.name = name;
   return dyd->actvar.n - 1 - fs->firstlocal;
+}
+
+
+/*
+** Create a new local variable with the given 'name' and regular kind.
+*/
+static int new_localvar (LexState *ls, TString *name) {
+  return new_localvarkind(ls, name, VDKREG);
 }
 
 #define new_localvarliteral(ls,v) \
@@ -1573,7 +1581,7 @@ static void fornum (LexState *ls, TString *varname, int line) {
   new_localvarliteral(ls, "(for state)");
   new_localvarliteral(ls, "(for state)");
   new_localvarliteral(ls, "(for state)");
-  new_localvar(ls, varname);
+  new_localvarkind(ls, varname, RDKCONST);  /* control variable */
   checknext(ls, '=');
   exp1(ls);  /* initial value */
   checknext(ls, ',');
@@ -1601,8 +1609,8 @@ static void forlist (LexState *ls, TString *indexname) {
   new_localvarliteral(ls, "(for state)");
   new_localvarliteral(ls, "(for state)");
   new_localvarliteral(ls, "(for state)");
-  /* create declared variables */
-  new_localvar(ls, indexname);
+  new_localvarkind(ls, indexname, RDKCONST);  /* control variable */
+  /* other declared variables */
   while (testnext(ls, ',')) {
     new_localvar(ls, str_checkname(ls));
     nvars++;
@@ -1728,14 +1736,14 @@ static void localstat (LexState *ls) {
   FuncState *fs = ls->fs;
   int toclose = -1;  /* index of to-be-closed variable (if any) */
   Vardesc *var;  /* last variable */
-  int vidx, kind;  /* index and kind of last variable */
+  int vidx;  /* index of last variable */
   int nvars = 0;
   int nexps;
   expdesc e;
   do {
-    vidx = new_localvar(ls, str_checkname(ls));
-    kind = getlocalattribute(ls);
-    getlocalvardesc(fs, vidx)->vd.kind = kind;
+    TString *vname = str_checkname(ls);
+    int kind = getlocalattribute(ls);
+    vidx = new_localvarkind(ls, vname, kind);
     if (kind == RDKTOCLOSE) {  /* to-be-closed? */
       if (toclose != -1)  /* one already present? */
         luaK_semerror(ls, "multiple to-be-closed variables in local list");

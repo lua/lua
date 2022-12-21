@@ -609,10 +609,12 @@ do
   a = 0; for i=1.0, 0.99999, -1 do a=a+1 end; assert(a==1)
 end
 
-do   -- changing the control variable
-  local a
-  a = 0; for i = 1, 10 do a = a + 1; i = "x" end; assert(a == 10)
-  a = 0; for i = 10.0, 1, -1 do a = a + 1; i = "x" end; assert(a == 10)
+do   -- attempt to change the control variable
+  local st, msg = load "for i = 1, 10 do i = 10 end"
+  assert(not st and string.find(msg, "assign to const variable 'i'"))
+
+  local st, msg = load "for v, k in pairs{} do v = 10 end"
+  assert(not st and string.find(msg, "assign to const variable 'v'"))
 end
 
 -- conversion

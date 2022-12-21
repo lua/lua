@@ -1467,7 +1467,7 @@ It has the following syntax:
   exp @bnfter{,} exp @bnfopt{@bnfter{,} exp} @Rw{do} block @Rw{end}}
 }
 The given identifier (@bnfNter{Name}) defines the control variable,
-which is a new variable local to the loop body (@emph{block}).
+which is a new read-only variable local to the loop body (@emph{block}).
 
 The loop starts by evaluating once the three control expressions.
 Their values are called respectively
@@ -1499,11 +1499,6 @@ For integer loops,
 the control variable never wraps around;
 instead, the loop ends in case of an overflow.
 
-You should not change the value of the control variable
-during the loop.
-If you need its value after the loop,
-assign it to another variable before exiting the loop.
-
 }
 
 @sect4{@title{The generic @Rw{for} loop}
@@ -1526,7 +1521,8 @@ for @rep{var_1}, @Cdots, @rep{var_n} in @rep{explist} do @rep{body} end
 works as follows.
 
 The names @rep{var_i} declare loop variables local to the loop body.
-The first of these variables is the @emph{control variable}.
+The first of these variables is the @emph{control variable},
+which is a read-only variable.
 
 The loop starts by evaluating @rep{explist}
 to produce four values:
@@ -1549,9 +1545,6 @@ The closing value behaves like a
 to-be-closed variable @see{to-be-closed},
 which can be used to release resources when the loop ends.
 Otherwise, it does not interfere with the loop.
-
-You should not change the value of the control variable
-during the loop.
 
 }
 
@@ -9156,6 +9149,9 @@ change between versions.
 @itemize{
 
 @item{
+The control variable in @Rw{for} loops are read only.
+If you need to change it,
+declare a local variable with the same name in the loop body.
 }
 
 }

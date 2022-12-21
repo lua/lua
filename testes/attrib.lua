@@ -236,7 +236,7 @@ package.path = oldpath
 local fname = "file_does_not_exist2"
 local m, err = pcall(require, fname)
 for t in string.gmatch(package.path..";"..package.cpath, "[^;]+") do
-  t = string.gsub(t, "?", fname)
+  local t = string.gsub(t, "?", fname)
   assert(string.find(err, t, 1, true))
 end
 
