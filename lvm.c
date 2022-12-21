@@ -196,12 +196,15 @@ static int forlimit (lua_State *L, lua_Integer init, const TValue *lim,
 
 /*
 ** Prepare a numerical for loop (opcode OP_FORPREP).
+** Before execution, stack is as follows:
+**   ra     : initial value
+**   ra + 1 : limit
+**   ra + 2 : step
 ** Return true to skip the loop. Otherwise,
 ** after preparation, stack will be as follows:
-**   ra : internal index (safe copy of the control variable)
-**   ra + 1 : loop counter (integer loops) or limit (float loops)
-**   ra + 2 : step
-**   ra + 3 : control variable
+**   ra     : loop counter (integer loops) or limit (float loops)
+**   ra + 1 : step
+**   ra + 2 : control variable
 */
 static int forprep (lua_State *L, StkId ra) {
   TValue *pinit = s2v(ra);
@@ -213,7 +216,6 @@ static int forprep (lua_State *L, StkId ra) {
     lua_Integer limit;
     if (step == 0)
       luaG_runerror(L, "'for' step is zero");
-    setivalue(s2v(ra + 3), init);  /* control variable */
     if (forlimit(L, init, plimit, &limit, step))
       return 1;  /* skip the loop */
     else {  /* prepare loop counter */
@@ -228,9 +230,10 @@ static int forprep (lua_State *L, StkId ra) {
         /* 'step+1' avoids negating 'mininteger' */
         count /= l_castS2U(-(step + 1)) + 1u;
       }
-      /* store the counter in place of the limit (which won't be
-         needed anymore) */
-      setivalue(plimit, l_castU2S(count));
+      /* use 'chgivalue' for places that for sure had integers */
+      chgivalue(s2v(ra), l_castU2S(count));  /* change init to count */
+      setivalue(s2v(ra + 1), step);  /* change limit to step */
+      chgivalue(s2v(ra + 2), init);  /* change step to init */
     }
   }
   else {  /* try making all values floats */
@@ -247,11 +250,10 @@ static int forprep (lua_State *L, StkId ra) {
                             : luai_numlt(init, limit))
       return 1;  /* skip the loop */
     else {
-      /* make sure internal values are all floats */
-      setfltvalue(plimit, limit);
-      setfltvalue(pstep, step);
-      setfltvalue(s2v(ra), init);  /* internal index */
-      setfltvalue(s2v(ra + 3), init);  /* control variable */
+      /* make sure all values are floats */
+      setfltvalue(s2v(ra), limit);
+      setfltvalue(s2v(ra + 1), step);
+      setfltvalue(s2v(ra + 2), init);  /* control variable */
     }
   }
   return 0;
@@ -264,14 +266,13 @@ static int forprep (lua_State *L, StkId ra) {
 ** written online with opcode OP_FORLOOP, for performance.)
 */
 static int floatforloop (StkId ra) {
-  lua_Number step = fltvalue(s2v(ra + 2));
-  lua_Number limit = fltvalue(s2v(ra + 1));
-  lua_Number idx = fltvalue(s2v(ra));  /* internal index */
+  lua_Number step = fltvalue(s2v(ra + 1));
+  lua_Number limit = fltvalue(s2v(ra));
+  lua_Number idx = fltvalue(s2v(ra + 2));  /* control variable */
   idx = luai_numadd(L, idx, step);  /* increment index */
   if (luai_numlt(0, step) ? luai_numle(idx, limit)
                           : luai_numle(limit, idx)) {
-    chgfltvalue(s2v(ra), idx);  /* update internal index */
-    setfltvalue(s2v(ra + 3), idx);  /* and control variable */
+    chgfltvalue(s2v(ra + 2), idx);  /* update control variable */
     return 1;  /* jump back */
   }
   else
@@ -1781,15 +1782,14 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_FORLOOP) {
         StkId ra = RA(i);
-        if (ttisinteger(s2v(ra + 2))) {  /* integer loop? */
-          lua_Unsigned count = l_castS2U(ivalue(s2v(ra + 1)));
+        if (ttisinteger(s2v(ra + 1))) {  /* integer loop? */
+          lua_Unsigned count = l_castS2U(ivalue(s2v(ra)));
           if (count > 0) {  /* still more iterations? */
-            lua_Integer step = ivalue(s2v(ra + 2));
-            lua_Integer idx = ivalue(s2v(ra));  /* internal index */
-            chgivalue(s2v(ra + 1), count - 1);  /* update counter */
+            lua_Integer step = ivalue(s2v(ra + 1));
+            lua_Integer idx = ivalue(s2v(ra + 2));  /* control variable */
+            chgivalue(s2v(ra), count - 1);  /* update counter */
             idx = intop(+, idx, step);  /* add step to index */
-            chgivalue(s2v(ra), idx);  /* update internal index */
-            setivalue(s2v(ra + 3), idx);  /* and control variable */
+            chgivalue(s2v(ra + 2), idx);  /* update control variable */
             pc -= GETARG_Bx(i);  /* jump back */
           }
         }
