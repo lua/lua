@@ -427,12 +427,12 @@ do   -- testing closing file in line iteration
   -- get the to-be-closed variable from a loop
   local function gettoclose (lv)
     lv = lv + 1
-    local stvar = 0   -- to-be-closed is 4th state variable in the loop
+    local stvar = 0   -- to-be-closed is 3th state variable in the loop
     for i = 1, 1000 do
       local n, v = debug.getlocal(lv, i)
       if n == "(for state)" then
         stvar = stvar + 1
-        if stvar == 4 then return v end
+        if stvar == 3 then return v end
       end
     end
   end
