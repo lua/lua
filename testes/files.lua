@@ -507,15 +507,17 @@ load((io.lines(file, 1)))()
 assert(_G.X == 4)
 load((io.lines(file, 3)))()
 assert(_G.X == 8)
+_G.X = nil
 
 print('+')
 
 local x1 = "string\n\n\\com \"\"''coisas [[estranhas]] ]]'"
 io.output(file)
-assert(io.write(string.format("x2 = %q\n-- comment without ending EOS", x1)))
+assert(io.write(string.format("X2 = %q\n-- comment without ending EOS", x1)))
 io.close()
 assert(loadfile(file))()
-assert(x1 == x2)
+assert(x1 == _G.X2)
+_G.X2 = nil
 print('+')
 assert(os.remove(file))
 assert(not os.remove(file))
