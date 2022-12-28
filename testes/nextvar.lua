@@ -189,7 +189,7 @@ end
 
 -- size tests for vararg
 lim = 35
-function foo (n, ...)
+local function foo (n, ...)
   local arg = {...}
   check(arg, n, 0)
   assert(select('#', ...) == n)

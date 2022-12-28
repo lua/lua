@@ -339,7 +339,7 @@ prepfile("a = [[b\nc\nd\ne]]\n=a")
 RUN([[lua -e"_PROMPT='' _PROMPT2=''" -i < %s > %s]], prog, out)
 checkprogout("b\nc\nd\ne\n\n")
 
-prompt = "alo"
+local prompt = "alo"
 prepfile[[ --
 a = 2
 ]]
@@ -390,7 +390,7 @@ NoRun("error object is a table value", [[lua %s]], prog)
 
 
 -- chunk broken in many lines
-s = [=[ --
+local s = [=[ --
 function f ( x )
   local a = [[
 xuxu

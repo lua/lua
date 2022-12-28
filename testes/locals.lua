@@ -37,7 +37,7 @@ end
 f = nil
 
 local f
-x = 1
+local x = 1
 
 a = nil
 load('local a = {}')()
@@ -152,7 +152,7 @@ local dummy
 local _ENV = (function (...) return ... end)(_G, dummy)   -- {
 
 do local _ENV = {assert=assert}; assert(true) end
-mt = {_G = _G}
+local mt = {_G = _G}
 local foo,x
 A = false    -- "declare" A
 do local _ENV = mt
@@ -173,6 +173,8 @@ do local _ENV = {assert=assert, A=10};
   assert(A==10 and x==20)
 end
 assert(x==20)
+
+A = nil
 
 
 do   -- constants
@@ -711,7 +713,7 @@ if rawget(_G, "T") then
 
     collectgarbage(); collectgarbage()
 
-    m = T.totalmem()
+    local m = T.totalmem()
     collectgarbage("stop")
 
     -- error in the first buffer allocation
