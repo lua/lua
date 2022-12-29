@@ -9,7 +9,6 @@
 
 #include "lprefix.h"
 
-#include <stdio.h>
 #include <string.h>
 
 
@@ -1377,14 +1376,12 @@ static void genmajorstep (lua_State *L, global_State *g) {
 /*
 ** Does a generational "step".  If the total number of objects grew
 ** more than 'majormul'% since the last major collection, does a
-** major collection.  Otherwise, does a minor collection.  The test
-** ('GCdebt' != 0) avoids major collections when the step originated from
-** 'collectgarbage("step")'.
+** major collection.  Otherwise, does a minor collection.
 */
 static void genstep (lua_State *L, global_State *g) {
   l_obj majorbase = g->GClastmajor;  /* count after last major collection */
   l_obj majorinc = applygcparam(g, genmajormul, majorbase);
-  if (g->GCdebt != 0 && gettotalobjs(g) > majorbase + majorinc) {
+  if (gettotalobjs(g) > majorbase + majorinc && 0) {
     /* do a major collection */
     enterinc(g);
     g->gckind = KGC_GENMAJOR;
