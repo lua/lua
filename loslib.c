@@ -138,21 +138,14 @@
 /* }================================================================== */
 
 
-/*
-** Despite claiming to be ISO, the C library in some Apple platforms
-** does not implement 'system'.
-*/
-#if !defined(l_system) && defined(__APPLE__)	/* { */
-#include "TargetConditionals.h"
-#if TARGET_OS_IOS || TARGET_OS_WATCH || TARGET_OS_TV
-#define l_system(cmd) ((cmd) == NULL ? 0 : -1)
-#endif
-#endif						/* } */
-
 #if !defined(l_system)
+#if defined(LUA_USE_IOS)
+/* Despite claiming to be ISO C, iOS does not implement 'system'. */
+#define l_system(cmd) ((cmd) == NULL ? 0 : -1)
+#else
 #define l_system(cmd)	system(cmd)  /* default definition */
 #endif
-
+#endif
 
 
 static int os_execute (lua_State *L) {
