@@ -342,6 +342,20 @@ do   -- another bug (in 5.4.0)
 end
 
 
+do   -- another bug (since 5.2)
+  -- corrupted binary dump: list of upvalue names is larger than number
+  -- of upvalues, overflowing the array of upvalues.
+  local code =
+   "\x1b\x4c\x75\x61\x54\x00\x19\x93\x0d\x0a\x1a\x0a\x04\x08\x08\x78\x56\z
+    \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x28\x77\x40\x00\x86\x40\z
+    \x74\x65\x6d\x70\x81\x81\x01\x00\x02\x82\x48\x00\x02\x00\xc7\x00\x01\z
+    \x00\x80\x80\x80\x82\x00\x00\x80\x81\x82\x78\x80\x82\x81\x86\x40\x74\z
+    \x65\x6d\x70"
+
+  assert(load(code))   -- segfaults in previous versions
+end
+
+
 x = string.dump(load("x = 1; return x"))
 a = assert(load(read1(x), nil, "b"))
 assert(a() == 1 and _G.x == 1)
