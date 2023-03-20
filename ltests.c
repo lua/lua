@@ -1159,7 +1159,7 @@ static int num2int (lua_State *L) {
 static int newstate (lua_State *L) {
   void *ud;
   lua_Alloc f = lua_getallocf(L, &ud);
-  lua_State *L1 = lua_newstate(f, ud);
+  lua_State *L1 = lua_newstate(f, ud, 0);
   if (L1) {
     lua_atpanic(L1, tpanic);
     lua_pushlightuserdata(L, L1);
@@ -1252,7 +1252,7 @@ static int checkpanic (lua_State *L) {
   lua_Alloc f = lua_getallocf(L, &ud);
   b.paniccode = luaL_optstring(L, 2, "");
   b.L = L;
-  L1 = lua_newstate(f, ud);  /* create new state */
+  L1 = lua_newstate(f, ud, 0);  /* create new state */
   if (L1 == NULL) {  /* error? */
     lua_pushnil(L);
     return 1;

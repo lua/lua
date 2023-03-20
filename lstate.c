@@ -52,37 +52,6 @@ typedef struct LG {
 
 
 /*
-** A macro to create a "random" seed when a state is created;
-** the seed is used to randomize string hashes.
-*/
-#if !defined(luai_makeseed)
-
-#include <time.h>
-
-/*
-** Compute an initial seed with some level of randomness.
-** Rely on Address Space Layout Randomization (if present) and
-** current time.
-*/
-#define addbuff(b,p,e) \
-  { size_t t = cast_sizet(e); \
-    memcpy(b + p, &t, sizeof(t)); p += sizeof(t); }
-
-static unsigned int luai_makeseed (lua_State *L) {
-  char buff[3 * sizeof(size_t)];
-  unsigned int h = cast_uint(time(NULL));
-  int p = 0;
-  addbuff(buff, p, L);  /* heap variable */
-  addbuff(buff, p, &h);  /* local variable */
-  addbuff(buff, p, &lua_newstate);  /* public function */
-  lua_assert(p == sizeof(buff));
-  return luaS_hash(buff, p, h);
-}
-
-#endif
-
-
-/*
 ** set GCdebt to a new value keeping the value (totalobjs + GCdebt)
 ** invariant (and avoiding underflows in 'totalobjs')
 */
@@ -350,7 +319,7 @@ LUA_API int lua_resetthread (lua_State *L, lua_State *from) {
 }
 
 
-LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
+LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud, unsigned int seed) {
   int i;
   lua_State *L;
   global_State *g;
@@ -370,7 +339,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->warnf = NULL;
   g->ud_warn = NULL;
   g->mainthread = L;
-  g->seed = luai_makeseed(L);
+  g->seed = seed;
   g->gcstp = GCSTPGC;  /* no GC while building state */
   g->strt.size = g->strt.nuse = 0;
   g->strt.hash = NULL;

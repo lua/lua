@@ -1091,8 +1091,56 @@ static void warnfon (void *ud, const char *message, int tocont) {
 }
 
 
+
+/*
+** A function to compute an unsigned int with some level of
+** randomness. Rely on Address Space Layout Randomization (if present),
+** current time, and clock.
+*/
+#if !defined(luai_makeseed)
+
+#include <time.h>
+
+
+/*
+** Size of 'e' measured in number of 'unsigned int's. (In the weird
+** case that the division truncates, we just lose some part of the
+** value, no big deal.)
+*/
+#define sof(e)          (sizeof(e) / sizeof(unsigned int))
+
+
+#define addbuff(b,v) \
+	(memcpy(b, &(v), sof(v) * sizeof(unsigned int)), b += sof(v))
+
+
+static unsigned int luai_makeseed (void) {
+  unsigned int buff[sof(void*) + sof(clock_t) + sof(time_t)];
+  unsigned int res;
+  unsigned int *b = buff;
+  clock_t c = clock();
+  time_t t = time(NULL);
+  void *h = buff;
+  addbuff(b, h);  /* local variable's address */
+  addbuff(b, c);  /* clock */
+  addbuff(b, t);  /* time */
+  res = buff[0];
+  for (b = buff + 1; b < buff + sof(buff); b++)
+    res += *b;
+  return res;
+}
+
+#endif
+
+
+LUALIB_API unsigned int luaL_makeseed (lua_State *L) {
+  (void)L;  /* unused */
+  return luai_makeseed();
+}
+
+
 LUALIB_API lua_State *luaL_newstate (void) {
-  lua_State *L = lua_newstate(l_alloc, NULL);
+  lua_State *L = lua_newstate(l_alloc, NULL, luai_makeseed());
   if (l_likely(L)) {
     lua_atpanic(L, &panic);
     lua_setwarnf(L, warnfoff, L);  /* default is warnings off */

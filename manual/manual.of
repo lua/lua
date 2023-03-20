@@ -20,7 +20,7 @@ making it ideal for configuration, scripting,
 and rapid prototyping.
 
 Lua is implemented as a library, written in @emphx{clean C},
-the common subset of @N{Standard C} and C++.
+the common subset of C and C++.
 The Lua distribution includes a host program called @id{lua},
 which uses the Lua library to offer a complete,
 standalone Lua interpreter,
@@ -2957,7 +2957,7 @@ static void *l_alloc (void *ud, void *ptr, size_t osize,
     return realloc(ptr, nsize);
 }
 }
-Note that @N{Standard C} ensures
+Note that @N{ISO C} ensures
 that @T{free(NULL)} has no effect and that
 @T{realloc(NULL,size)} is equivalent to @T{malloc(size)}.
 
@@ -3644,7 +3644,8 @@ Other upvalues are initialized with @nil.
 
 }
 
-@APIEntry{lua_State *lua_newstate (lua_Alloc f, void *ud);|
+@APIEntry{lua_State *lua_newstate (lua_Alloc f, void *ud,
+                                   unsigned int seed);|
 @apii{0,0,-}
 
 Creates a new independent state and returns its main thread.
@@ -3655,6 +3656,8 @@ Lua will do all memory allocation for this state
 through this function @seeF{lua_Alloc}.
 The second argument, @id{ud}, is an opaque pointer that Lua
 passes to the allocator in every call.
+The third argument, @id{seed}, is a seed for the hashing of
+strings when they are used as table keys.
 
 }
 
@@ -5721,6 +5724,16 @@ it does not run it.
 
 }
 
+@APIEntry{unsigned int luaL_makeseed (lua_State *L);|
+@apii{0,0,-}
+
+Returns a value with a weak attempt for randomness.
+(It produces that value based on the current date and time,
+the current processor time, and the address of an internal variable,
+in case the machine has Address Space Layout Randomization.)
+
+}
+
 
 @APIEntry{void luaL_newlib (lua_State *L, const luaL_Reg l[]);|
 @apii{0,1,m}
@@ -6892,7 +6905,7 @@ including if necessary a path and an extension.
 @id{funcname} must be the exact name exported by the @N{C library}
 (which may depend on the @N{C compiler} and linker used).
 
-This function is not supported by @N{Standard C}.
+This function is not supported by @N{ISO C}.
 As such, it is only available on some platforms
 (Windows, Linux, Mac OS X, Solaris, BSD,
 plus other Unix systems that support the @id{dlfcn} standard).
@@ -8093,7 +8106,7 @@ different sequences of results each time the program runs.
 
 When called with at least one argument,
 the integer parameters @id{x} and @id{y} are
-joined into a 128-bit @emphx{seed} that
+joined into a @emphx{seed} that
 is used to reinitialize the pseudo-random generator;
 equal seeds produce equal sequences of numbers.
 The default for @id{y} is zero.
