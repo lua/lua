@@ -607,8 +607,8 @@ static int math_randomseed (lua_State *L) {
   RanState *state = (RanState *)lua_touserdata(L, lua_upvalueindex(1));
   lua_Unsigned n1, n2;
   if (lua_isnone(L, 1)) {
-    n1 = luaL_makeseed(L);
-    n2 = I2UInt(state->s[0]);
+    n1 = luaL_makeseed(L);  /* "random" seed */
+    n2 = I2UInt(nextrand(state->s));  /* in case seed is not that random... */
   }
   else {
     n1 = luaL_checkinteger(L, 1);

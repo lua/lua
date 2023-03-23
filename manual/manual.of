@@ -5728,8 +5728,8 @@ it does not run it.
 @apii{0,0,-}
 
 Returns a value with a weak attempt for randomness.
-(It produces that value based on the current date and time,
-the current processor time, and the address of an internal variable,
+(It produces that value based on the current date and time
+and the address of an internal variable,
 in case the machine has Address Space Layout Randomization.)
 
 }

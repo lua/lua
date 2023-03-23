@@ -1094,8 +1094,8 @@ static void warnfon (void *ud, const char *message, int tocont) {
 
 /*
 ** A function to compute an unsigned int with some level of
-** randomness. Rely on Address Space Layout Randomization (if present),
-** current time, and clock.
+** randomness. Rely on Address Space Layout Randomization (if present)
+** and the current time.
 */
 #if !defined(luai_makeseed)
 
@@ -1115,18 +1115,16 @@ static void warnfon (void *ud, const char *message, int tocont) {
 
 
 static unsigned int luai_makeseed (void) {
-  unsigned int buff[sof(void*) + sof(clock_t) + sof(time_t)];
+  unsigned int buff[sof(void*) + sof(time_t)];
   unsigned int res;
   unsigned int *b = buff;
-  clock_t c = clock();
   time_t t = time(NULL);
   void *h = buff;
   addbuff(b, h);  /* local variable's address */
-  addbuff(b, c);  /* clock */
   addbuff(b, t);  /* time */
   res = buff[0];
   for (b = buff + 1; b < buff + sof(buff); b++)
-    res += *b;
+    res ^= (res >> 3) + (res << 7) + *b;
   return res;
 }
 
