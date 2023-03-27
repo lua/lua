@@ -1352,6 +1352,35 @@ static int constfolding (FuncState *fs, int op, expdesc *e1,
 
 
 /*
+** Convert a BinOpr to an OpCode  (ORDER OPR - ORDER OP)
+*/
+l_sinline OpCode binopr2op (BinOpr opr, BinOpr baser, OpCode base) {
+  lua_assert(baser <= opr &&
+            ((baser == OPR_ADD && opr <= OPR_SHR) ||
+             (baser == OPR_LT && opr <= OPR_LE)));
+  return cast(OpCode, (cast_int(opr) - cast_int(baser)) + cast_int(base));
+}
+
+
+/*
+** Convert a UnOpr to an OpCode  (ORDER OPR - ORDER OP)
+*/
+l_sinline OpCode unopr2op (UnOpr opr) {
+  return cast(OpCode, (cast_int(opr) - cast_int(OPR_MINUS)) +
+                                       cast_int(OP_UNM));
+}
+
+
+/*
+** Convert a BinOpr to a tag method  (ORDER OPR - ORDER TM)
+*/
+l_sinline TMS binopr2TM (BinOpr opr) {
+  lua_assert(OPR_ADD <= opr && opr <= OPR_SHR);
+  return cast(TMS, (cast_int(opr) - cast_int(OPR_ADD)) + cast_int(TM_ADD));
+}
+
+
+/*
 ** Emit code for unary expressions that "produce values"
 ** (everything but 'not').
 ** Expression to produce final result will be encoded in 'e'.
@@ -1391,14 +1420,13 @@ static void finishbinexpval (FuncState *fs, expdesc *e1, expdesc *e2,
 */
 static void codebinexpval (FuncState *fs, BinOpr opr,
                            expdesc *e1, expdesc *e2, int line) {
-  OpCode op = cast(OpCode, opr + OP_ADD);
+  OpCode op = binopr2op(opr, OPR_ADD, OP_ADD);
   int v2 = luaK_exp2anyreg(fs, e2);  /* make sure 'e2' is in a register */
   /* 'e1' must be already in a register or it is a constant */
   lua_assert((VNIL <= e1->k && e1->k <= VKSTR) ||
              e1->k == VNONRELOC || e1->k == VRELOC);
   lua_assert(OP_ADD <= op && op <= OP_SHR);
-  finishbinexpval(fs, e1, e2, op, v2, 0, line, OP_MMBIN,
-                  cast(TMS, opr + TM_ADD));
+  finishbinexpval(fs, e1, e2, op, v2, 0, line, OP_MMBIN, binopr2TM(opr));
 }
 
 
@@ -1419,9 +1447,9 @@ static void codebini (FuncState *fs, OpCode op,
 */
 static void codebinK (FuncState *fs, BinOpr opr,
                       expdesc *e1, expdesc *e2, int flip, int line) {
-  TMS event = cast(TMS, opr + TM_ADD);
+  TMS event = binopr2TM(opr);
   int v2 = e2->u.info;  /* K index */
-  OpCode op = cast(OpCode, opr + OP_ADDK);
+  OpCode op = binopr2op(opr, OPR_ADD, OP_ADDK);
   finishbinexpval(fs, e1, e2, op, v2, flip, line, OP_MMBINK, event);
 }
 
@@ -1527,18 +1555,18 @@ static void codeorder (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
     /* use immediate operand */
     r1 = luaK_exp2anyreg(fs, e1);
     r2 = im;
-    op = cast(OpCode, (opr - OPR_LT) + OP_LTI);
+    op = binopr2op(opr, OPR_LT, OP_LTI);
   }
   else if (isSCnumber(e1, &im, &isfloat)) {
     /* transform (A < B) to (B > A) and (A <= B) to (B >= A) */
     r1 = luaK_exp2anyreg(fs, e2);
     r2 = im;
-    op = cast(OpCode, (opr - OPR_LT) + OP_GTI);
+    op = binopr2op(opr, OPR_LT, OP_GTI);
   }
   else {  /* regular case, compare two registers */
     r1 = luaK_exp2anyreg(fs, e1);
     r2 = luaK_exp2anyreg(fs, e2);
-    op = cast(OpCode, (opr - OPR_EQ) + OP_EQ);
+    op = binopr2op(opr, OPR_LT, OP_LT);
   }
   freeexps(fs, e1, e2);
   e1->u.info = condjump(fs, op, r1, r2, isfloat, 1);
@@ -1590,7 +1618,7 @@ void luaK_prefix (FuncState *fs, UnOpr opr, expdesc *e, int line) {
         break;
       /* else */ /* FALLTHROUGH */
     case OPR_LEN:
-      codeunexpval(fs, cast(OpCode, opr + OP_UNM), e, line);
+      codeunexpval(fs, unopr2op(opr), e, line);
       break;
     case OPR_NOT: codenot(fs, e); break;
     default: lua_assert(0);
@@ -1734,14 +1762,13 @@ void luaK_posfix (FuncState *fs, BinOpr opr,
       codeeq(fs, opr, e1, e2);
       break;
     }
-    case OPR_LT: case OPR_LE: {
-      codeorder(fs, opr, e1, e2);
-      break;
-    }
     case OPR_GT: case OPR_GE: {
       /* '(a > b)' <=> '(b < a)';  '(a >= b)' <=> '(b <= a)' */
       swapexps(e1, e2);
-      codeorder(fs, (opr - OPR_NE) + OPR_EQ, e1, e2);
+      opr = cast(BinOpr, (opr - OPR_GT) + OPR_LT);
+    }  /* FALLTHROUGH */
+    case OPR_LT: case OPR_LE: {
+      codeorder(fs, opr, e1, e2);
       break;
     }
     default: lua_assert(0);
