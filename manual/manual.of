@@ -20,7 +20,7 @@ making it ideal for configuration, scripting,
 and rapid prototyping.
 
 Lua is implemented as a library, written in @emphx{clean C},
-the common subset of @N{Standard C} and C++.
+the common subset of @N{standard C} and C++.
 The Lua distribution includes a host program called @id{lua},
 which uses the Lua library to offer a complete,
 standalone Lua interpreter,
@@ -2963,7 +2963,7 @@ static void *l_alloc (void *ud, void *ptr, size_t osize,
     return realloc(ptr, nsize);
 }
 }
-Note that @N{Standard C} ensures
+Note that @N{ISO C} ensures
 that @T{free(NULL)} has no effect and that
 @T{realloc(NULL,size)} is equivalent to @T{malloc(size)}.
 
@@ -5780,7 +5780,7 @@ with @id{tname} in the registry.
 
 Creates a new Lua state.
 It calls @Lid{lua_newstate} with an
-allocator based on the @N{standard C} allocation functions
+allocator based on the @N{ISO C} allocation functions
 and then sets a warning function and a panic function @see{C-error}
 that print messages to the standard error output.
 
@@ -6898,7 +6898,7 @@ including if necessary a path and an extension.
 @id{funcname} must be the exact name exported by the @N{C library}
 (which may depend on the @N{C compiler} and linker used).
 
-This function is not supported by @N{Standard C}.
+This functionality is not supported by @N{ISO C}.
 As such, it is only available on some platforms
 (Windows, Linux, Mac OS X, Solaris, BSD,
 plus other Unix systems that support the @id{dlfcn} standard).

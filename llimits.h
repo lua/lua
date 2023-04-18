@@ -82,7 +82,7 @@ typedef signed char ls_byte;
 #if defined(UINTPTR_MAX)  /* even in C99 this type is optional */
 #define L_P2I	uintptr_t
 #else  /* no 'intptr'? */
-#define L_P2I	uintmax_t  /* use the largerst available integer */
+#define L_P2I	uintmax_t  /* use the largest available integer */
 #endif
 #else  /* C89 option */
 #define L_P2I	size_t

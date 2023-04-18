@@ -659,7 +659,7 @@ static const char *funcnamefromcall (lua_State *L, CallInfo *ci,
 ** Check whether pointer 'o' points to some value in the stack frame of
 ** the current function and, if so, returns its index.  Because 'o' may
 ** not point to a value in this stack, we cannot compare it with the
-** region boundaries (undefined behaviour in ISO C).
+** region boundaries (undefined behavior in ISO C).
 */
 static int instack (CallInfo *ci, const TValue *o) {
   int pos;
@@ -848,7 +848,7 @@ static int changedline (const Proto *p, int oldpc, int newpc) {
   if (p->lineinfo == NULL)  /* no debug information? */
     return 0;
   if (newpc - oldpc < MAXIWTHABS / 2) {  /* not too far apart? */
-    int delta = 0;  /* line diference */
+    int delta = 0;  /* line difference */
     int pc = oldpc;
     for (;;) {
       int lineinfo = p->lineinfo[++pc];
