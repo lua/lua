@@ -3167,6 +3167,27 @@ when called through this function.
 
 }
 
+@APIEntry{int lua_closethread (lua_State *L, lua_State *from);|
+@apii{0,?,-}
+
+Resets a thread, cleaning its call stack and closing all pending
+to-be-closed variables.
+Returns a status code:
+@Lid{LUA_OK} for no errors in the thread
+(either the original error that stopped the thread or
+errors in closing methods),
+or an error status otherwise.
+In case of error,
+leaves the error object on the top of the stack.
+
+The parameter @id{from} represents the coroutine that is resetting @id{L}.
+If there is no such coroutine,
+this parameter can be @id{NULL}.
+
+(This function was introduced in @N{release 5.4.6}.)
+
+}
+
 @APIEntry{int lua_compare (lua_State *L, int index1, int index2, int op);|
 @apii{0,0,e}
 
@@ -4160,23 +4181,12 @@ and then pops the top element.
 
 }
 
-@APIEntry{int lua_resetthread (lua_State *L, lua_State *from);|
+@APIEntry{int lua_resetthread (lua_State *L);|
 @apii{0,?,-}
 
-Resets a thread, cleaning its call stack and closing all pending
-to-be-closed variables.
-Returns a status code:
-@Lid{LUA_OK} for no errors in the thread
-(either the original error that stopped the thread or
-errors in closing methods),
-or an error status otherwise.
-In case of error,
-leaves the error object on the top of the stack.
-
-The parameter @id{from} represents the coroutine that is resetting @id{L}.
-If there is no such coroutine,
-this parameter can be @id{NULL}.
-(This parameter was introduced in @N{release 5.4.5}.)
+This function is deprecated;
+it is equivalent to @Lid{lua_closethread} with
+@id{from} being @id{NULL}.
 
 }
 
