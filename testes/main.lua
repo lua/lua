@@ -27,17 +27,19 @@ do
 end
 print("progname: "..progname)
 
-local prepfile = function (s, p)
-  p = p or prog
-  io.output(p)
-  io.write(s)
-  assert(io.close())
+
+local prepfile = function (s, mod, p)
+  mod = mod and "wb" or "w"    -- mod true means binary files
+  p = p or prog                -- file to write the program
+  local f = io.open(p, mod)
+  f:write(s)
+  assert(f:close())
 end
 
 local function getoutput ()
-  io.input(out)
-  local t = io.read("a")
-  io.input():close()
+  local f = io.open(out)
+  local t = f:read("a")
+  f:close()
   assert(os.remove(out))
   return t
 end
@@ -65,10 +67,11 @@ local function RUN (p, ...)
   assert(os.execute(s))
 end
 
+
 local function NoRun (msg, p, ...)
   p = string.gsub(p, "lua", '"'..progname..'"', 1)
   local s = string.format(p, ...)
-  s = string.format("%s 2> %s", s, out)  -- will send error to 'out'
+  s = string.format("%s >%s 2>&1", s, out)  -- send output and error to 'out'
   assert(not os.execute(s))
   assert(string.find(getoutput(), msg, 1, true))  -- check error message
 end
@@ -108,17 +111,17 @@ RUN('lua %s > %s', prog, out)
 checkout("3\n")
 
 -- bad BOMs
-prepfile("\xEF")
-NoRun("unexpected symbol", 'lua %s > %s', prog, out)
+prepfile("\xEF", true)
+NoRun("unexpected symbol", 'lua %s', prog)
 
-prepfile("\xEF\xBB")
-NoRun("unexpected symbol", 'lua %s > %s', prog, out)
+prepfile("\xEF\xBB", true)
+NoRun("unexpected symbol", 'lua %s', prog)
 
-prepfile("\xEFprint(3)")
-NoRun("unexpected symbol", 'lua %s > %s', prog, out)
+prepfile("\xEFprint(3)", true)
+NoRun("unexpected symbol", 'lua %s', prog)
 
-prepfile("\xEF\xBBprint(3)")
-NoRun("unexpected symbol", 'lua %s > %s', prog, out)
+prepfile("\xEF\xBBprint(3)", true)
+NoRun("unexpected symbol", 'lua %s', prog)
 
 
 -- test option '-'
@@ -213,7 +216,7 @@ convert("a;b;;c")
 
 -- test -l over multiple libraries
 prepfile("print(1); a=2; return {x=15}")
-prepfile(("print(a); print(_G['%s'].x)"):format(prog), otherprog)
+prepfile(("print(a); print(_G['%s'].x)"):format(prog), false, otherprog)
 RUN('env LUA_PATH="?;;" lua -l %s -l%s -lstring -l io %s > %s', prog, otherprog, otherprog, out)
 checkout("1\n2\n15\n2\n15\n")
 
@@ -237,7 +240,7 @@ RUN('lua "-e " -- %s a b c', prog)   -- "-e " runs an empty command
 
 -- test 'arg' availability in libraries
 prepfile"assert(arg)"
-prepfile("assert(arg)", otherprog)
+prepfile("assert(arg)", false, otherprog)
 RUN('env LUA_PATH="?;;" lua -l%s - < %s', prog, otherprog)
 
 -- test messing up the 'arg' table
@@ -413,7 +416,7 @@ prepfile[[#comment in 1st line without \n at the end]]
 RUN('lua %s', prog)
 
 -- first-line comment with binary file
-prepfile("#comment\n" .. string.dump(load("print(3)")))
+prepfile("#comment\n" .. string.dump(load("print(3)")), true)
 RUN('lua %s > %s', prog, out)
 checkout('3\n')
 

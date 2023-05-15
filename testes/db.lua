@@ -928,7 +928,7 @@ do
     local cl = countlines(rest)
     -- at most 10 lines in first part, 11 in second, plus '...'
     assert(cl <= 10 + 11 + 1)
-    local brk = string.find(rest, "%.%.%.")
+    local brk = string.find(rest, "%.%.%.\t%(skip")
     if brk then   -- does message have '...'?
       local rest1 = string.sub(rest, 1, brk)
       local rest2 = string.sub(rest, brk, #rest)
