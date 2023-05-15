@@ -1215,7 +1215,7 @@ static void codenot (FuncState *fs, expdesc *e) {
 
 
 /*
-** Check whether expression 'e' is a small literal string
+** Check whether expression 'e' is a short literal string
 */
 static int isKstr (FuncState *fs, expdesc *e) {
   return (e->k == VK && !hasjumps(e) && e->u.info <= MAXARG_B &&
@@ -1283,15 +1283,16 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
   if (t->k == VUPVAL && !isKstr(fs, k))  /* upvalue indexed by non 'Kstr'? */
     luaK_exp2anyreg(fs, t);  /* put it in a register */
   if (t->k == VUPVAL) {
+    lua_assert(isKstr(fs, k));
     t->u.ind.t = t->u.info;  /* upvalue index */
-    t->u.ind.idx = k->u.info;  /* literal string */
+    t->u.ind.idx = k->u.info;  /* literal short string */
     t->k = VINDEXUP;
   }
   else {
     /* register index of the table */
     t->u.ind.t = (t->k == VLOCAL) ? t->u.var.ridx: t->u.info;
     if (isKstr(fs, k)) {
-      t->u.ind.idx = k->u.info;  /* literal string */
+      t->u.ind.idx = k->u.info;  /* literal short string */
       t->k = VINDEXSTR;
     }
     else if (isCint(k)) {
