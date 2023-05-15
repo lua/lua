@@ -225,6 +225,13 @@ prepfile("print(str.upper'alo alo', m.max(10, 20))")
 RUN("lua -l 'str=string' '-lm=math' -e 'print(m.sin(0))' %s > %s", prog, out)
 checkout("0.0\nALO ALO\t20\n")
 
+
+-- test module names with version sufix ("libs/lib2-v2")
+RUN("env LUA_CPATH='./libs/?.so' lua -l lib2-v2 -e 'print(lib2.id())' > %s",
+    out)
+checkout("true\n")
+
+
 -- test 'arg' table
 local a = [[
   assert(#arg == 3 and arg[1] == 'a' and
