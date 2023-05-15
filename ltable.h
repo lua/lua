@@ -35,6 +35,27 @@
 #define nodefromval(v)	cast(Node *, (v))
 
 
+/* results from get/set */
+#define HOK		0
+#define HNOTFOUND	1
+#define HNOTATABLE	2
+
+
+/* fast access to components of array values */
+#define getArrTag(t,k)	(&(t)->array[k - 1].tt_)
+#define getArrVal(t,k)	(&(t)->array[k - 1].value_)
+
+#define tagisempty(tag)  (novariant(tag) == LUA_TNIL)
+
+#define arr2val(h,k,tag,res)  \
+  ((res)->tt_ = tag, (res)->value_ = *getArrVal(h,k))
+
+
+LUAI_FUNC int luaH_getshortstr1 (Table *t, TString *key, TValue *res);
+LUAI_FUNC int luaH_getstr1 (Table *t, TString *key, TValue *res);
+LUAI_FUNC int luaH_get1 (Table *t, const TValue *key, TValue *res);
+LUAI_FUNC int luaH_getint1 (Table *t, lua_Integer key, TValue *res);
+
 LUAI_FUNC const TValue *luaH_getint (Table *t, lua_Integer key);
 LUAI_FUNC void luaH_setint (lua_State *L, Table *t, lua_Integer key,
                                                     TValue *value);

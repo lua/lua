@@ -637,16 +637,16 @@ LUA_API int lua_pushthread (lua_State *L) {
 
 
 l_sinline int auxgetstr (lua_State *L, const TValue *t, const char *k) {
-  const TValue *slot;
+  int aux;
   TString *str = luaS_new(L, k);
-  if (luaV_fastget(L, t, str, slot, luaH_getstr)) {
-    setobj2s(L, L->top.p, slot);
+  luaV_fastget1(t, str, s2v(L->top.p), luaH_getstr1, aux);
+  if (aux == HOK) {
     api_incr_top(L);
   }
   else {
     setsvalue2s(L, L->top.p, str);
     api_incr_top(L);
-    luaV_finishget(L, t, s2v(L->top.p - 1), L->top.p - 1, slot);
+    luaV_finishget1(L, t, s2v(L->top.p - 1), L->top.p - 1, aux);
   }
   lua_unlock(L);
   return ttype(s2v(L->top.p - 1));
@@ -672,15 +672,13 @@ LUA_API int lua_getglobal (lua_State *L, const char *name) {
 
 
 LUA_API int lua_gettable (lua_State *L, int idx) {
-  const TValue *slot;
+  int aux;
   TValue *t;
   lua_lock(L);
   t = index2value(L, idx);
-  if (luaV_fastget(L, t, s2v(L->top.p - 1), slot, luaH_get)) {
-    setobj2s(L, L->top.p - 1, slot);
-  }
-  else
-    luaV_finishget(L, t, s2v(L->top.p - 1), L->top.p - 1, slot);
+  luaV_fastget1(t, s2v(L->top.p - 1), s2v(L->top.p - 1), luaH_get1, aux);
+  if (aux != HOK)
+    luaV_finishget1(L, t, s2v(L->top.p - 1), L->top.p - 1, aux);
   lua_unlock(L);
   return ttype(s2v(L->top.p - 1));
 }
@@ -694,16 +692,14 @@ LUA_API int lua_getfield (lua_State *L, int idx, const char *k) {
 
 LUA_API int lua_geti (lua_State *L, int idx, lua_Integer n) {
   TValue *t;
-  const TValue *slot;
+  int aux;
   lua_lock(L);
   t = index2value(L, idx);
-  if (luaV_fastgeti(L, t, n, slot)) {
-    setobj2s(L, L->top.p, slot);
-  }
-  else {
-    TValue aux;
-    setivalue(&aux, n);
-    luaV_finishget(L, t, &aux, L->top.p, slot);
+  luaV_fastgeti1(t, n, s2v(L->top.p), aux);
+  if (aux != HOK) {
+    TValue key;
+    setivalue(&key, n);
+    luaV_finishget1(L, t, &key, L->top.p, aux);
   }
   api_incr_top(L);
   lua_unlock(L);

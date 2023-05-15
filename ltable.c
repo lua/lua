@@ -752,6 +752,21 @@ const TValue *luaH_getint (Table *t, lua_Integer key) {
 }
 
 
+static int finishnodeget (const TValue *val, TValue *res) {
+  if (!ttisnil(val)) {
+    setobj(((lua_State*)NULL), res, val);
+    return HOK;  /* success */
+  }
+  else
+    return HNOTFOUND;  /* could not get value */
+}
+
+
+int luaH_getint1 (Table *t, lua_Integer key, TValue *res) {
+  return finishnodeget(luaH_getint(t, key), res);
+}
+
+
 /*
 ** search function for short strings
 */
@@ -771,6 +786,11 @@ const TValue *luaH_getshortstr (Table *t, TString *key) {
 }
 
 
+int luaH_getshortstr1 (Table *t, TString *key, TValue *res) {
+  return finishnodeget(luaH_getshortstr(t, key), res);
+}
+
+
 const TValue *luaH_getstr (Table *t, TString *key) {
   if (key->tt == LUA_VSHRSTR)
     return luaH_getshortstr(t, key);
@@ -779,6 +799,11 @@ const TValue *luaH_getstr (Table *t, TString *key) {
     setsvalue(cast(lua_State *, NULL), &ko, key);
     return getgeneric(t, &ko, 0);
   }
+}
+
+
+int luaH_getstr1 (Table *t, TString *key, TValue *res) {
+  return finishnodeget(luaH_getstr(t, key), res);
 }
 
 
@@ -799,6 +824,11 @@ const TValue *luaH_get (Table *t, const TValue *key) {
     default:
       return getgeneric(t, key, 0);
   }
+}
+
+
+int luaH_get1 (Table *t, const TValue *key, TValue *res) {
+  return finishnodeget(luaH_get(t, key), res);
 }
 
 

@@ -284,12 +284,12 @@ static int floatforloop (StkId ra) {
 ** if 'slot' is NULL, 't' is not a table; otherwise, 'slot' points to
 ** t[k] entry (which must be empty).
 */
-void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
-                      const TValue *slot) {
+void luaV_finishget1 (lua_State *L, const TValue *t, TValue *key, StkId val,
+                      int aux) {
   int loop;  /* counter to avoid infinite loops */
   const TValue *tm;  /* metamethod */
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
-    if (slot == NULL) {  /* 't' is not a table? */
+    if (aux == HNOTATABLE) {  /* 't' is not a table? */
       lua_assert(!ttistable(t));
       tm = luaT_gettmbyobj(L, t, TM_INDEX);
       if (l_unlikely(notm(tm)))
@@ -297,7 +297,6 @@ void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
       /* else will try the metamethod */
     }
     else {  /* 't' is a table */
-      lua_assert(isempty(slot));
       tm = fasttm(L, hvalue(t)->metatable, TM_INDEX);  /* table's metamethod */
       if (tm == NULL) {  /* no metamethod? */
         setnilvalue(s2v(val));  /* result is nil */
@@ -310,10 +309,9 @@ void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
       return;
     }
     t = tm;  /* else try to access 'tm[key]' */
-    if (luaV_fastget(L, t, key, slot, luaH_get)) {  /* fast track? */
-      setobj2s(L, val, slot);  /* done */
-      return;
-    }
+    luaV_fastget1(t, key, s2v(val), luaH_get1, aux);
+    if (aux == HOK)
+      return;  /* done */
     /* else repeat (tail call 'luaV_finishget') */
   }
   luaG_runerror(L, "'__index' chain too long; possible loop");
@@ -1250,58 +1248,51 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_GETTABUP) {
         StkId ra = RA(i);
-        const TValue *slot;
         TValue *upval = cl->upvals[GETARG_B(i)]->v.p;
         TValue *rc = KC(i);
         TString *key = tsvalue(rc);  /* key must be a string */
-        if (luaV_fastget(L, upval, key, slot, luaH_getshortstr)) {
-          setobj2s(L, ra, slot);
-        }
-        else
-          Protect(luaV_finishget(L, upval, rc, ra, slot));
+        int aux;
+        luaV_fastget1(upval, key, s2v(ra), luaH_getshortstr1, aux);
+        if (aux != HOK)
+          Protect(luaV_finishget1(L, upval, rc, ra, aux));
         vmbreak;
       }
       vmcase(OP_GETTABLE) {
         StkId ra = RA(i);
-        const TValue *slot;
         TValue *rb = vRB(i);
         TValue *rc = vRC(i);
-        lua_Unsigned n;
-        if (ttisinteger(rc)  /* fast track for integers? */
-            ? (cast_void(n = ivalue(rc)), luaV_fastgeti(L, rb, n, slot))
-            : luaV_fastget(L, rb, rc, slot, luaH_get)) {
-          setobj2s(L, ra, slot);
+        int aux;
+        if (ttisinteger(rc)) {  /* fast track for integers? */
+          luaV_fastgeti1(rb, ivalue(rc), s2v(ra), aux);
         }
         else
-          Protect(luaV_finishget(L, rb, rc, ra, slot));
+          luaV_fastget1(rb, rc, s2v(ra), luaH_get1, aux);
+        if (aux != HOK)  /* fast track for integers? */
+          Protect(luaV_finishget1(L, rb, rc, ra, aux));
         vmbreak;
       }
       vmcase(OP_GETI) {
         StkId ra = RA(i);
-        const TValue *slot;
         TValue *rb = vRB(i);
         int c = GETARG_C(i);
-        if (luaV_fastgeti(L, rb, c, slot)) {
-          setobj2s(L, ra, slot);
-        }
-        else {
+        int aux;
+        luaV_fastgeti1(rb, c, s2v(ra), aux);
+        if (aux != HOK) {
           TValue key;
           setivalue(&key, c);
-          Protect(luaV_finishget(L, rb, &key, ra, slot));
+          Protect(luaV_finishget1(L, rb, &key, ra, aux));
         }
         vmbreak;
       }
       vmcase(OP_GETFIELD) {
         StkId ra = RA(i);
-        const TValue *slot;
         TValue *rb = vRB(i);
         TValue *rc = KC(i);
         TString *key = tsvalue(rc);  /* key must be a string */
-        if (luaV_fastget(L, rb, key, slot, luaH_getshortstr)) {
-          setobj2s(L, ra, slot);
-        }
-        else
-          Protect(luaV_finishget(L, rb, rc, ra, slot));
+        int aux;
+        luaV_fastget1(rb, key, s2v(ra), luaH_getshortstr1, aux);
+        if (aux != HOK)
+          Protect(luaV_finishget1(L, rb, rc, ra, aux));
         vmbreak;
       }
       vmcase(OP_SETTABUP) {
@@ -1381,16 +1372,14 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_SELF) {
         StkId ra = RA(i);
-        const TValue *slot;
+        int aux;
         TValue *rb = vRB(i);
         TValue *rc = RKC(i);
         TString *key = tsvalue(rc);  /* key must be a string */
         setobj2s(L, ra + 1, rb);
-        if (luaV_fastget(L, rb, key, slot, luaH_getstr)) {
-          setobj2s(L, ra, slot);
-        }
-        else
-          Protect(luaV_finishget(L, rb, rc, ra, slot));
+        luaV_fastget1(rb, key, s2v(ra), luaH_getstr1, aux);
+        if (aux != HOK)
+          Protect(luaV_finishget1(L, rb, rc, ra, aux));
         vmbreak;
       }
       vmcase(OP_ADDI) {

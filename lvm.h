@@ -89,6 +89,10 @@ typedef enum {
       !isempty(slot)))  /* result not empty? */
 
 
+#define luaV_fastget1(t,k,res,f, aux) \
+  (aux = (!ttistable(t) ? HNOTATABLE : f(hvalue(t), k, res)))
+
+
 /*
 ** Special case of 'luaV_fastget' for integers, inlining the fast case
 ** of 'luaH_getint'.
@@ -99,6 +103,15 @@ typedef enum {
    : (slot = (l_castS2U(k) - 1u < hvalue(t)->alimit) \
               ? &hvalue(t)->array[k - 1] : luaH_getint(hvalue(t), k), \
       !isempty(slot)))  /* result not empty? */
+
+#define luaV_fastgeti1(t,k,val,aux) \
+  if (!ttistable(t)) aux = HNOTATABLE; \
+  else { Table *h = hvalue(t); lua_Unsigned u = l_castS2U(k); \
+    if ((u - 1u < h->alimit)) { \
+      int tag = *getArrTag(h,u); \
+      if (tagisempty(tag)) aux = HNOTFOUND; \
+      else { arr2val(h, u, tag, val); aux = HOK; }} \
+    else { aux = luaH_getint1(h, u, val); }}
 
 
 /*
@@ -125,8 +138,8 @@ LUAI_FUNC int luaV_tointeger (const TValue *obj, lua_Integer *p, F2Imod mode);
 LUAI_FUNC int luaV_tointegerns (const TValue *obj, lua_Integer *p,
                                 F2Imod mode);
 LUAI_FUNC int luaV_flttointeger (lua_Number n, lua_Integer *p, F2Imod mode);
-LUAI_FUNC void luaV_finishget (lua_State *L, const TValue *t, TValue *key,
-                               StkId val, const TValue *slot);
+LUAI_FUNC void luaV_finishget1 (lua_State *L, const TValue *t, TValue *key,
+                                              StkId val, int aux);
 LUAI_FUNC void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
                                TValue *val, const TValue *slot);
 LUAI_FUNC void luaV_finishOp (lua_State *L);
