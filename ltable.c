@@ -719,6 +719,35 @@ void luaH_newkey (lua_State *L, Table *t, const TValue *key, TValue *value) {
 }
 
 
+static const TValue *getintfromarray (Table *t, lua_Integer key) {
+  if (l_castS2U(key) - 1u < t->alimit)  /* 'key' in [1, t->alimit]? */
+    return &t->array[key - 1];
+  else if (!limitequalsasize(t) &&  /* key still may be in the array part? */
+           (l_castS2U(key) == t->alimit + 1 ||
+            l_castS2U(key) - 1u < luaH_realasize(t))) {
+    t->alimit = cast_uint(key);  /* probably '#t' is here now */
+    return &t->array[key - 1];
+  }
+  else return NULL;  /* key is not in the array part */
+}
+
+
+static const TValue *getintfromhash (Table *t, lua_Integer key) {
+  Node *n = hashint(t, key);
+  lua_assert(l_castS2U(key) - 1u >= luaH_realasize(t));
+  for (;;) {  /* check whether 'key' is somewhere in the chain */
+    if (keyisinteger(n) && keyival(n) == key)
+      return gval(n);  /* that's it */
+    else {
+      int nx = gnext(n);
+      if (nx == 0) break;
+      n += nx;
+    }
+  }
+  return &absentkey;
+}
+
+
 /*
 ** Search function for integers. If integer is inside 'alimit', get it
 ** directly from the array part. Otherwise, if 'alimit' is not equal to
@@ -728,27 +757,11 @@ void luaH_newkey (lua_State *L, Table *t, const TValue *key, TValue *value) {
 ** changing the real size of the array).
 */
 const TValue *luaH_getint (Table *t, lua_Integer key) {
-  if (l_castS2U(key) - 1u < t->alimit)  /* 'key' in [1, t->alimit]? */
-    return &t->array[key - 1];
-  else if (!limitequalsasize(t) &&  /* key still may be in the array part? */
-           (l_castS2U(key) == t->alimit + 1 ||
-            l_castS2U(key) - 1u < luaH_realasize(t))) {
-    t->alimit = cast_uint(key);  /* probably '#t' is here now */
-    return &t->array[key - 1];
-  }
-  else {
-    Node *n = hashint(t, key);
-    for (;;) {  /* check whether 'key' is somewhere in the chain */
-      if (keyisinteger(n) && keyival(n) == key)
-        return gval(n);  /* that's it */
-      else {
-        int nx = gnext(n);
-        if (nx == 0) break;
-        n += nx;
-      }
-    }
-    return &absentkey;
-  }
+  const TValue *slot = getintfromarray(t, key);
+  if (slot != NULL)
+    return slot;
+  else
+    return getintfromhash(t, key);
 }
 
 
@@ -832,6 +845,58 @@ int luaH_get1 (Table *t, const TValue *key, TValue *res) {
 }
 
 
+static int finishnodeset (Table *t, const TValue *slot, TValue *val) {
+  if (!ttisnil(slot)) {
+    setobj(((lua_State*)NULL), cast(TValue*, slot), val);
+    return HOK;  /* success */
+  }
+  else if (isabstkey(slot))
+    return HNOTFOUND;  /* no slot with that key */
+  else return (cast(Node*, slot) - t->node) + HFIRSTNODE;  /* node encoded */
+}
+
+
+int luaH_setint1 (Table *t, lua_Integer key, TValue *val) {
+  const TValue *slot = getintfromarray(t, key);
+  if (slot != NULL) {
+    if (!ttisnil(slot)) {
+      setobj(((lua_State*)NULL), cast(TValue*, slot), val);
+      return HOK;  /* success */
+    }
+    else
+      return ~cast_int(key);  /* empty slot in the array part */
+  }
+  else
+    return finishnodeset(t, getintfromhash(t, key), val);
+}
+
+
+int luaH_setshortstr1 (Table *t, TString *key, TValue *val) {
+  return finishnodeset(t, luaH_getshortstr(t, key), val);
+}
+
+
+int luaH_setstr1 (Table *t, TString *key, TValue *val) {
+  return finishnodeset(t, luaH_getstr(t, key), val);
+}
+
+
+int luaH_set1 (Table *t, const TValue *key, TValue *val) {
+  switch (ttypetag(key)) {
+    case LUA_VSHRSTR: return luaH_setshortstr1(t, tsvalue(key), val);
+    case LUA_VNUMINT: return luaH_setint1(t, ivalue(key), val);
+    case LUA_VNIL: return HNOTFOUND;
+    case LUA_VNUMFLT: {
+      lua_Integer k;
+      if (luaV_flttointeger(fltvalue(key), &k, F2Ieq)) /* integral index? */
+        return luaH_setint1(t, k, val);  /* use specialized version */
+      /* else... */
+    }  /* FALLTHROUGH */
+    default:
+      return finishnodeset(t, getgeneric(t, key, 0), val);
+  }
+}
+
 /*
 ** Finish a raw "set table" operation, where 'slot' is where the value
 ** should have been (the result of a previous "get table").
@@ -844,6 +909,21 @@ void luaH_finishset (lua_State *L, Table *t, const TValue *key,
     luaH_newkey(L, t, key, value);
   else
     setobj2t(L, cast(TValue *, slot), value);
+}
+
+
+void luaH_finishset1 (lua_State *L, Table *t, const TValue *key,
+                                    TValue *value, int aux) {
+  if (aux == HNOTFOUND) {
+    luaH_newkey(L, t, key, value);
+  }
+  else if (aux > 0) {  /* regular Node? */
+    setobj2t(L, gval(gnode(t, aux - HFIRSTNODE)), value);
+  }
+  else {  /* array entry */
+    aux = ~aux;  /* real index */
+    val2arr(t, aux, getArrTag(t, aux), value);
+  }
 }
 
 

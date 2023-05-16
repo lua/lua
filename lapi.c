@@ -823,17 +823,18 @@ LUA_API int lua_getiuservalue (lua_State *L, int idx, int n) {
 ** t[k] = value at the top of the stack (where 'k' is a string)
 */
 static void auxsetstr (lua_State *L, const TValue *t, const char *k) {
-  const TValue *slot;
+  int aux;
   TString *str = luaS_new(L, k);
   api_checknelems(L, 1);
-  if (luaV_fastget(L, t, str, slot, luaH_getstr)) {
-    luaV_finishfastset(L, t, slot, s2v(L->top.p - 1));
+  luaV_fastset1(t, str, s2v(L->top.p - 1), aux, luaH_setstr1);
+  if (aux == HOK) {
+    luaV_finishfastset1(L, t, s2v(L->top.p - 1));
     L->top.p--;  /* pop value */
   }
   else {
     setsvalue2s(L, L->top.p, str);  /* push 'str' (to make it a TValue) */
     api_incr_top(L);
-    luaV_finishset(L, t, s2v(L->top.p - 1), s2v(L->top.p - 2), slot);
+    luaV_finishset1(L, t, s2v(L->top.p - 1), s2v(L->top.p - 2), aux);
     L->top.p -= 2;  /* pop value and key */
   }
   lua_unlock(L);  /* lock done by caller */
@@ -850,15 +851,16 @@ LUA_API void lua_setglobal (lua_State *L, const char *name) {
 
 LUA_API void lua_settable (lua_State *L, int idx) {
   TValue *t;
-  const TValue *slot;
+  int aux;
   lua_lock(L);
   api_checknelems(L, 2);
   t = index2value(L, idx);
-  if (luaV_fastget(L, t, s2v(L->top.p - 2), slot, luaH_get)) {
-    luaV_finishfastset(L, t, slot, s2v(L->top.p - 1));
+  luaV_fastset1(t, s2v(L->top.p - 2), s2v(L->top.p - 1), aux, luaH_set1);
+  if (aux == HOK) {
+    luaV_finishfastset1(L, t, s2v(L->top.p - 1));
   }
   else
-    luaV_finishset(L, t, s2v(L->top.p - 2), s2v(L->top.p - 1), slot);
+    luaV_finishset1(L, t, s2v(L->top.p - 2), s2v(L->top.p - 1), aux);
   L->top.p -= 2;  /* pop index and value */
   lua_unlock(L);
 }
@@ -872,17 +874,18 @@ LUA_API void lua_setfield (lua_State *L, int idx, const char *k) {
 
 LUA_API void lua_seti (lua_State *L, int idx, lua_Integer n) {
   TValue *t;
-  const TValue *slot;
+  int aux;
   lua_lock(L);
   api_checknelems(L, 1);
   t = index2value(L, idx);
-  if (luaV_fastgeti(L, t, n, slot)) {
-    luaV_finishfastset(L, t, slot, s2v(L->top.p - 1));
+  luaV_fastseti1(t, n, s2v(L->top.p - 1), aux);
+  if (aux == HOK) {
+    luaV_finishfastset1(L, t, s2v(L->top.p - 1));
   }
   else {
-    TValue aux;
-    setivalue(&aux, n);
-    luaV_finishset(L, t, &aux, s2v(L->top.p - 1), slot);
+    TValue temp;
+    setivalue(&temp, n);
+    luaV_finishset1(L, t, &temp, s2v(L->top.p - 1), aux);
   }
   L->top.p--;  /* pop value */
   lua_unlock(L);

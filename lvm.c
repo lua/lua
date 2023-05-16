@@ -325,17 +325,16 @@ void luaV_finishget1 (lua_State *L, const TValue *t, TValue *key, StkId val,
 ** is no such entry.  (The value at 'slot' must be empty, otherwise
 ** 'luaV_fastget' would have done the job.)
 */
-void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
-                     TValue *val, const TValue *slot) {
+void luaV_finishset1 (lua_State *L, const TValue *t, TValue *key,
+                      TValue *val, int aux) {
   int loop;  /* counter to avoid infinite loops */
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
     const TValue *tm;  /* '__newindex' metamethod */
-    if (slot != NULL) {  /* is 't' a table? */
+    if (aux != HNOTATABLE) {  /* is 't' a table? */
       Table *h = hvalue(t);  /* save 't' table */
-      lua_assert(isempty(slot));  /* slot must be empty */
       tm = fasttm(L, h->metatable, TM_NEWINDEX);  /* get metamethod */
       if (tm == NULL) {  /* no metamethod? */
-        luaH_finishset(L, h, key, slot, val);  /* set new value */
+        luaH_finishset1(L, h, key, val, aux);  /* set new value */
         invalidateTMcache(h);
         luaC_barrierback(L, obj2gco(h), val);
         return;
@@ -353,10 +352,9 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
       return;
     }
     t = tm;  /* else repeat assignment over 'tm' */
-    if (luaV_fastget(L, t, key, slot, luaH_get)) {
-      luaV_finishfastset(L, t, slot, val);
+    luaV_fastset1(t, key, val, aux, luaH_set1);
+    if (aux == HOK)
       return;  /* done */
-    }
     /* else 'return luaV_finishset(L, t, key, val, slot)' (loop) */
   }
   luaG_runerror(L, "'__newindex' chain too long; possible loop");
@@ -1296,59 +1294,61 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_SETTABUP) {
-        const TValue *slot;
+        int aux;
         TValue *upval = cl->upvals[GETARG_A(i)]->v.p;
         TValue *rb = KB(i);
         TValue *rc = RKC(i);
         TString *key = tsvalue(rb);  /* key must be a string */
-        if (luaV_fastget(L, upval, key, slot, luaH_getshortstr)) {
-          luaV_finishfastset(L, upval, slot, rc);
-        }
+        luaV_fastset1(upval, key, rc, aux, luaH_setshortstr1);
+        if (aux == HOK)
+          luaV_finishfastset1(L, upval, rc);
         else
-          Protect(luaV_finishset(L, upval, rb, rc, slot));
+          Protect(luaV_finishset1(L, upval, rb, rc, aux));
         vmbreak;
       }
       vmcase(OP_SETTABLE) {
         StkId ra = RA(i);
-        const TValue *slot;
+        int aux;
         TValue *rb = vRB(i);  /* key (table is in 'ra') */
         TValue *rc = RKC(i);  /* value */
-        lua_Unsigned n;
-        if (ttisinteger(rb)  /* fast track for integers? */
-            ? (cast_void(n = ivalue(rb)), luaV_fastgeti(L, s2v(ra), n, slot))
-            : luaV_fastget(L, s2v(ra), rb, slot, luaH_get)) {
-          luaV_finishfastset(L, s2v(ra), slot, rc);
+        if (ttisinteger(rb)) {  /* fast track for integers? */
+          luaV_fastseti1(s2v(ra), ivalue(rb), rc, aux);
         }
+        else {
+          luaV_fastset1(s2v(ra), rb, rc, aux, luaH_set1);
+        }
+        if (aux == HOK)
+          luaV_finishfastset1(L, s2v(ra), rc);
         else
-          Protect(luaV_finishset(L, s2v(ra), rb, rc, slot));
+          Protect(luaV_finishset1(L, s2v(ra), rb, rc, aux));
         vmbreak;
       }
       vmcase(OP_SETI) {
         StkId ra = RA(i);
-        const TValue *slot;
-        int c = GETARG_B(i);
+        int aux;
+        int b = GETARG_B(i);
         TValue *rc = RKC(i);
-        if (luaV_fastgeti(L, s2v(ra), c, slot)) {
-          luaV_finishfastset(L, s2v(ra), slot, rc);
-        }
+        luaV_fastseti1(s2v(ra), b, rc, aux);
+        if (aux == HOK)
+          luaV_finishfastset1(L, s2v(ra), rc);
         else {
           TValue key;
-          setivalue(&key, c);
-          Protect(luaV_finishset(L, s2v(ra), &key, rc, slot));
+          setivalue(&key, b);
+          Protect(luaV_finishset1(L, s2v(ra), &key, rc, aux));
         }
         vmbreak;
       }
       vmcase(OP_SETFIELD) {
         StkId ra = RA(i);
-        const TValue *slot;
+        int aux;
         TValue *rb = KB(i);
         TValue *rc = RKC(i);
         TString *key = tsvalue(rb);  /* key must be a string */
-        if (luaV_fastget(L, s2v(ra), key, slot, luaH_getshortstr)) {
-          luaV_finishfastset(L, s2v(ra), slot, rc);
-        }
+        luaV_fastset1(s2v(ra), key, rc, aux, luaH_setshortstr1);
+        if (aux == HOK)
+          luaV_finishfastset1(L, s2v(ra), rc);
         else
-          Protect(luaV_finishset(L, s2v(ra), rb, rc, slot));
+          Protect(luaV_finishset1(L, s2v(ra), rb, rc, aux));
         vmbreak;
       }
       vmcase(OP_NEWTABLE) {

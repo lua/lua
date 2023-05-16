@@ -39,6 +39,7 @@
 #define HOK		0
 #define HNOTFOUND	1
 #define HNOTATABLE	2
+#define HFIRSTNODE	3
 
 
 /* fast access to components of array values */
@@ -50,11 +51,19 @@
 #define arr2val(h,k,tag,res)  \
   ((res)->tt_ = tag, (res)->value_ = *getArrVal(h,k))
 
+#define val2arr(h,k,tag,val)  \
+  (*tag = (val)->tt_, *getArrVal(h,k) = (val)->value_)
+
 
 LUAI_FUNC int luaH_getshortstr1 (Table *t, TString *key, TValue *res);
 LUAI_FUNC int luaH_getstr1 (Table *t, TString *key, TValue *res);
 LUAI_FUNC int luaH_get1 (Table *t, const TValue *key, TValue *res);
 LUAI_FUNC int luaH_getint1 (Table *t, lua_Integer key, TValue *res);
+
+LUAI_FUNC int luaH_setint1 (Table *t, lua_Integer key, TValue *val);
+LUAI_FUNC int luaH_setshortstr1 (Table *t, TString *key, TValue *val);
+LUAI_FUNC int luaH_setstr1 (Table *t, TString *key, TValue *val);
+LUAI_FUNC int luaH_set1 (Table *t, const TValue *key, TValue *val);
 
 LUAI_FUNC const TValue *luaH_getint (Table *t, lua_Integer key);
 LUAI_FUNC void luaH_setint (lua_State *L, Table *t, lua_Integer key,
@@ -68,6 +77,8 @@ LUAI_FUNC void luaH_set (lua_State *L, Table *t, const TValue *key,
                                                  TValue *value);
 LUAI_FUNC void luaH_finishset (lua_State *L, Table *t, const TValue *key,
                                        const TValue *slot, TValue *value);
+LUAI_FUNC void luaH_finishset1 (lua_State *L, Table *t, const TValue *key,
+                                              TValue *value, int aux);
 LUAI_FUNC Table *luaH_new (lua_State *L);
 LUAI_FUNC void luaH_resize (lua_State *L, Table *t, unsigned int nasize,
                                                     unsigned int nhsize);
