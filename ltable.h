@@ -35,11 +35,21 @@
 #define nodefromval(v)	cast(Node *, (v))
 
 
-/* results from get/set */
+/* results from get/pset */
 #define HOK		0
 #define HNOTFOUND	1
 #define HNOTATABLE	2
 #define HFIRSTNODE	3
+
+/*
+** Besides these values, pset (pre-set) operations may also return an
+** encoding of where the value should go (usually called 'hres'). That
+** means that there is a slot with that key but with no value. (pset
+** cannot set that value because there might be a metamethod.) If the
+** slot is in the hash part, the encoding is (HFIRSTNODE + hash index);
+** if the slot is in the array part, the encoding is (~array index).
+*/
+
 
 
 /* fast access to components of array values */
@@ -55,29 +65,26 @@
   (*tag = (val)->tt_, *getArrVal(h,k) = (val)->value_)
 
 
-LUAI_FUNC int luaH_getshortstr1 (Table *t, TString *key, TValue *res);
-LUAI_FUNC int luaH_getstr1 (Table *t, TString *key, TValue *res);
-LUAI_FUNC int luaH_get1 (Table *t, const TValue *key, TValue *res);
-LUAI_FUNC int luaH_getint1 (Table *t, lua_Integer key, TValue *res);
+LUAI_FUNC int luaH_getshortstr (Table *t, TString *key, TValue *res);
+LUAI_FUNC int luaH_getstr (Table *t, TString *key, TValue *res);
+LUAI_FUNC int luaH_get (Table *t, const TValue *key, TValue *res);
+LUAI_FUNC int luaH_getint (Table *t, lua_Integer key, TValue *res);
 
-LUAI_FUNC int luaH_setint1 (Table *t, lua_Integer key, TValue *val);
-LUAI_FUNC int luaH_setshortstr1 (Table *t, TString *key, TValue *val);
-LUAI_FUNC int luaH_setstr1 (Table *t, TString *key, TValue *val);
-LUAI_FUNC int luaH_set1 (Table *t, const TValue *key, TValue *val);
+LUAI_FUNC TString *luaH_getstrkey (Table *t, TString *key);
 
-LUAI_FUNC const TValue *luaH_getint (Table *t, lua_Integer key);
+LUAI_FUNC int luaH_psetint (Table *t, lua_Integer key, TValue *val);
+LUAI_FUNC int luaH_psetshortstr (Table *t, TString *key, TValue *val);
+LUAI_FUNC int luaH_psetstr (Table *t, TString *key, TValue *val);
+LUAI_FUNC int luaH_pset (Table *t, const TValue *key, TValue *val);
+
 LUAI_FUNC void luaH_setint (lua_State *L, Table *t, lua_Integer key,
                                                     TValue *value);
-LUAI_FUNC const TValue *luaH_getshortstr (Table *t, TString *key);
-LUAI_FUNC const TValue *luaH_getstr (Table *t, TString *key);
-LUAI_FUNC const TValue *luaH_get (Table *t, const TValue *key);
+LUAI_FUNC const TValue *luaH_Hgetshortstr (Table *t, TString *key);
 LUAI_FUNC void luaH_newkey (lua_State *L, Table *t, const TValue *key,
                                                     TValue *value);
 LUAI_FUNC void luaH_set (lua_State *L, Table *t, const TValue *key,
                                                  TValue *value);
 LUAI_FUNC void luaH_finishset (lua_State *L, Table *t, const TValue *key,
-                                       const TValue *slot, TValue *value);
-LUAI_FUNC void luaH_finishset1 (lua_State *L, Table *t, const TValue *key,
                                               TValue *value, int aux);
 LUAI_FUNC Table *luaH_new (lua_State *L);
 LUAI_FUNC void luaH_resize (lua_State *L, Table *t, unsigned int nasize,

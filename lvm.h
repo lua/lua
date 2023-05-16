@@ -76,20 +76,9 @@ typedef enum {
 
 
 /*
-** fast track for 'gettable': if 't' is a table and 't[k]' is present,
-** return 1 with 'slot' pointing to 't[k]' (position of final result).
-** Otherwise, return 0 (meaning it will have to check metamethod)
-** with 'slot' pointing to an empty 't[k]' (if 't' is a table) or NULL
-** (otherwise). 'f' is the raw get function to use.
+** fast track for 'gettable'
 */
-#define luaV_fastget(L,t,k,slot,f) \
-  (!ttistable(t)  \
-   ? (slot = NULL, 0)  /* not a table; 'slot' is NULL and result is 0 */  \
-   : (slot = f(hvalue(t), k),  /* else, do raw access */  \
-      !isempty(slot)))  /* result not empty? */
-
-
-#define luaV_fastget1(t,k,res,f, aux) \
+#define luaV_fastget(t,k,res,f, aux) \
   (aux = (!ttistable(t) ? HNOTATABLE : f(hvalue(t), k, res)))
 
 
@@ -97,45 +86,33 @@ typedef enum {
 ** Special case of 'luaV_fastget' for integers, inlining the fast case
 ** of 'luaH_getint'.
 */
-#define luaV_fastgeti(L,t,k,slot) \
-  (!ttistable(t)  \
-   ? (slot = NULL, 0)  /* not a table; 'slot' is NULL and result is 0 */  \
-   : (slot = (l_castS2U(k) - 1u < hvalue(t)->alimit) \
-              ? &hvalue(t)->array[k - 1] : luaH_getint(hvalue(t), k), \
-      !isempty(slot)))  /* result not empty? */
-
-#define luaV_fastgeti1(t,k,res,aux) \
+#define luaV_fastgeti(t,k,res,aux) \
   if (!ttistable(t)) aux = HNOTATABLE; \
   else { Table *h = hvalue(t); lua_Unsigned u = l_castS2U(k); \
     if ((u - 1u < h->alimit)) { \
       int tag = *getArrTag(h,u); \
       if (tagisempty(tag)) aux = HNOTFOUND; \
       else { arr2val(h, u, tag, res); aux = HOK; }} \
-    else { aux = luaH_getint1(h, u, res); }}
+    else { aux = luaH_getint(h, u, res); }}
 
 
-#define luaV_fastset1(t,k,val,aux,f) \
+#define luaV_fastset(t,k,val,aux,f) \
   (aux = (!ttistable(t) ? HNOTATABLE : f(hvalue(t), k, val)))
 
-#define luaV_fastseti1(t,k,val,aux) \
+#define luaV_fastseti(t,k,val,aux) \
   if (!ttistable(t)) aux = HNOTATABLE; \
   else { Table *h = hvalue(t); lua_Unsigned u = l_castS2U(k); \
     if ((u - 1u < h->alimit)) { \
       lu_byte *tag = getArrTag(h,u); \
       if (tagisempty(*tag)) aux = ~cast_int(u); \
       else { val2arr(h, u, tag, val); aux = HOK; }} \
-    else { aux = luaH_setint1(h, u, val); }}
+    else { aux = luaH_psetint(h, u, val); }}
 
 
 /*
-** Finish a fast set operation (when fast get succeeds). In that case,
-** 'slot' points to the place to put the value.
+** Finish a fast set operation (when fast set succeeds).
 */
-#define luaV_finishfastset(L,t,slot,v) \
-    { setobj2t(L, cast(TValue *,slot), v); \
-      luaC_barrierback(L, gcvalue(t), v); }
-
-#define luaV_finishfastset1(L,t,v)	luaC_barrierback(L, gcvalue(t), v)
+#define luaV_finishfastset(L,t,v)	luaC_barrierback(L, gcvalue(t), v)
 
 
 /*
@@ -153,10 +130,10 @@ LUAI_FUNC int luaV_tointeger (const TValue *obj, lua_Integer *p, F2Imod mode);
 LUAI_FUNC int luaV_tointegerns (const TValue *obj, lua_Integer *p,
                                 F2Imod mode);
 LUAI_FUNC int luaV_flttointeger (lua_Number n, lua_Integer *p, F2Imod mode);
-LUAI_FUNC void luaV_finishget1 (lua_State *L, const TValue *t, TValue *key,
-                                              StkId val, int aux);
-LUAI_FUNC void luaV_finishset1 (lua_State *L, const TValue *t, TValue *key,
-                                              TValue *val, int aux);
+LUAI_FUNC void luaV_finishget (lua_State *L, const TValue *t, TValue *key,
+                                             StkId val, int aux);
+LUAI_FUNC void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
+                                             TValue *val, int aux);
 LUAI_FUNC void luaV_finishOp (lua_State *L);
 LUAI_FUNC void luaV_execute (lua_State *L, CallInfo *ci);
 LUAI_FUNC void luaV_concat (lua_State *L, int total);

@@ -756,7 +756,7 @@ static const TValue *getintfromhash (Table *t, lua_Integer key) {
 ** one more than the limit (so that it can be incremented without
 ** changing the real size of the array).
 */
-const TValue *luaH_getint (Table *t, lua_Integer key) {
+static const TValue *Hgetint (Table *t, lua_Integer key) {
   const TValue *slot = getintfromarray(t, key);
   if (slot != NULL)
     return slot;
@@ -775,15 +775,15 @@ static int finishnodeget (const TValue *val, TValue *res) {
 }
 
 
-int luaH_getint1 (Table *t, lua_Integer key, TValue *res) {
-  return finishnodeget(luaH_getint(t, key), res);
+int luaH_getint (Table *t, lua_Integer key, TValue *res) {
+  return finishnodeget(Hgetint(t, key), res);
 }
 
 
 /*
 ** search function for short strings
 */
-const TValue *luaH_getshortstr (Table *t, TString *key) {
+const TValue *luaH_Hgetshortstr (Table *t, TString *key) {
   Node *n = hashstr(t, key);
   lua_assert(key->tt == LUA_VSHRSTR);
   for (;;) {  /* check whether 'key' is somewhere in the chain */
@@ -799,14 +799,14 @@ const TValue *luaH_getshortstr (Table *t, TString *key) {
 }
 
 
-int luaH_getshortstr1 (Table *t, TString *key, TValue *res) {
-  return finishnodeget(luaH_getshortstr(t, key), res);
+int luaH_getshortstr (Table *t, TString *key, TValue *res) {
+  return finishnodeget(luaH_Hgetshortstr(t, key), res);
 }
 
 
-const TValue *luaH_getstr (Table *t, TString *key) {
+static const TValue *Hgetstr (Table *t, TString *key) {
   if (key->tt == LUA_VSHRSTR)
-    return luaH_getshortstr(t, key);
+    return luaH_Hgetshortstr(t, key);
   else {  /* for long strings, use generic case */
     TValue ko;
     setsvalue(cast(lua_State *, NULL), &ko, key);
@@ -815,23 +815,32 @@ const TValue *luaH_getstr (Table *t, TString *key) {
 }
 
 
-int luaH_getstr1 (Table *t, TString *key, TValue *res) {
-  return finishnodeget(luaH_getstr(t, key), res);
+int luaH_getstr (Table *t, TString *key, TValue *res) {
+  return finishnodeget(Hgetstr(t, key), res);
+}
+
+
+TString *luaH_getstrkey (Table *t, TString *key) {
+  const TValue *o = Hgetstr(t, key);
+  if (!isabstkey(o))  /* string already present? */
+    return keystrval(nodefromval(o));  /* get saved copy */
+  else
+    return NULL;
 }
 
 
 /*
 ** main search function
 */
-const TValue *luaH_get (Table *t, const TValue *key) {
+static const TValue *Hget (Table *t, const TValue *key) {
   switch (ttypetag(key)) {
-    case LUA_VSHRSTR: return luaH_getshortstr(t, tsvalue(key));
-    case LUA_VNUMINT: return luaH_getint(t, ivalue(key));
+    case LUA_VSHRSTR: return luaH_Hgetshortstr(t, tsvalue(key));
+    case LUA_VNUMINT: return Hgetint(t, ivalue(key));
     case LUA_VNIL: return &absentkey;
     case LUA_VNUMFLT: {
       lua_Integer k;
       if (luaV_flttointeger(fltvalue(key), &k, F2Ieq)) /* integral index? */
-        return luaH_getint(t, k);  /* use specialized version */
+        return Hgetint(t, k);  /* use specialized version */
       /* else... */
     }  /* FALLTHROUGH */
     default:
@@ -840,8 +849,8 @@ const TValue *luaH_get (Table *t, const TValue *key) {
 }
 
 
-int luaH_get1 (Table *t, const TValue *key, TValue *res) {
-  return finishnodeget(luaH_get(t, key), res);
+int luaH_get (Table *t, const TValue *key, TValue *res) {
+  return finishnodeget(Hget(t, key), res);
 }
 
 
@@ -856,7 +865,7 @@ static int finishnodeset (Table *t, const TValue *slot, TValue *val) {
 }
 
 
-int luaH_setint1 (Table *t, lua_Integer key, TValue *val) {
+int luaH_psetint (Table *t, lua_Integer key, TValue *val) {
   const TValue *slot = getintfromarray(t, key);
   if (slot != NULL) {
     if (!ttisnil(slot)) {
@@ -871,25 +880,25 @@ int luaH_setint1 (Table *t, lua_Integer key, TValue *val) {
 }
 
 
-int luaH_setshortstr1 (Table *t, TString *key, TValue *val) {
-  return finishnodeset(t, luaH_getshortstr(t, key), val);
+int luaH_psetshortstr (Table *t, TString *key, TValue *val) {
+  return finishnodeset(t, luaH_Hgetshortstr(t, key), val);
 }
 
 
-int luaH_setstr1 (Table *t, TString *key, TValue *val) {
-  return finishnodeset(t, luaH_getstr(t, key), val);
+int luaH_psetstr (Table *t, TString *key, TValue *val) {
+  return finishnodeset(t, Hgetstr(t, key), val);
 }
 
 
-int luaH_set1 (Table *t, const TValue *key, TValue *val) {
+int luaH_pset (Table *t, const TValue *key, TValue *val) {
   switch (ttypetag(key)) {
-    case LUA_VSHRSTR: return luaH_setshortstr1(t, tsvalue(key), val);
-    case LUA_VNUMINT: return luaH_setint1(t, ivalue(key), val);
+    case LUA_VSHRSTR: return luaH_psetshortstr(t, tsvalue(key), val);
+    case LUA_VNUMINT: return luaH_psetint(t, ivalue(key), val);
     case LUA_VNIL: return HNOTFOUND;
     case LUA_VNUMFLT: {
       lua_Integer k;
       if (luaV_flttointeger(fltvalue(key), &k, F2Ieq)) /* integral index? */
-        return luaH_setint1(t, k, val);  /* use specialized version */
+        return luaH_psetint(t, k, val);  /* use specialized version */
       /* else... */
     }  /* FALLTHROUGH */
     default:
@@ -903,26 +912,20 @@ int luaH_set1 (Table *t, const TValue *key, TValue *val) {
 ** Beware: when using this function you probably need to check a GC
 ** barrier and invalidate the TM cache.
 */
+
+
 void luaH_finishset (lua_State *L, Table *t, const TValue *key,
-                                   const TValue *slot, TValue *value) {
-  if (isabstkey(slot))
-    luaH_newkey(L, t, key, value);
-  else
-    setobj2t(L, cast(TValue *, slot), value);
-}
-
-
-void luaH_finishset1 (lua_State *L, Table *t, const TValue *key,
-                                    TValue *value, int aux) {
-  if (aux == HNOTFOUND) {
+                                    TValue *value, int hres) {
+  lua_assert(hres != HOK);
+  if (hres == HNOTFOUND) {
     luaH_newkey(L, t, key, value);
   }
-  else if (aux > 0) {  /* regular Node? */
-    setobj2t(L, gval(gnode(t, aux - HFIRSTNODE)), value);
+  else if (hres > 0) {  /* regular Node? */
+    setobj2t(L, gval(gnode(t, hres - HFIRSTNODE)), value);
   }
   else {  /* array entry */
-    aux = ~aux;  /* real index */
-    val2arr(t, aux, getArrTag(t, aux), value);
+    hres = ~hres;  /* real index */
+    val2arr(t, hres, getArrTag(t, hres), value);
   }
 }
 
@@ -932,20 +935,19 @@ void luaH_finishset1 (lua_State *L, Table *t, const TValue *key,
 ** barrier and invalidate the TM cache.
 */
 void luaH_set (lua_State *L, Table *t, const TValue *key, TValue *value) {
-  const TValue *slot = luaH_get(t, key);
-  luaH_finishset(L, t, key, slot, value);
+  int hres = luaH_pset(t, key, value);
+  if (hres != HOK)
+    luaH_finishset(L, t, key, value, hres);
 }
 
 
 void luaH_setint (lua_State *L, Table *t, lua_Integer key, TValue *value) {
-  const TValue *p = luaH_getint(t, key);
-  if (isabstkey(p)) {
+  int hres = luaH_psetint(t, key, value);
+  if (hres != HOK) {
     TValue k;
     setivalue(&k, key);
-    luaH_newkey(L, t, &k, value);
+    luaH_finishset(L, t, &k, value, hres);
   }
-  else
-    setobj2t(L, cast(TValue *, p), value);
 }
 
 
@@ -971,16 +973,16 @@ static lua_Unsigned hash_search (Table *t, lua_Unsigned j) {
       j *= 2;
     else {
       j = LUA_MAXINTEGER;
-      if (isempty(luaH_getint(t, j)))  /* t[j] not present? */
+      if (isempty(Hgetint(t, j)))  /* t[j] not present? */
         break;  /* 'j' now is an absent index */
       else  /* weird case */
         return j;  /* well, max integer is a boundary... */
     }
-  } while (!isempty(luaH_getint(t, j)));  /* repeat until an absent t[j] */
+  } while (!isempty(Hgetint(t, j)));  /* repeat until an absent t[j] */
   /* i < j  &&  t[i] present  &&  t[j] absent */
   while (j - i > 1u) {  /* do a binary search between them */
     lua_Unsigned m = (i + j) / 2;
-    if (isempty(luaH_getint(t, m))) j = m;
+    if (isempty(Hgetint(t, m))) j = m;
     else i = m;
   }
   return i;
@@ -1071,7 +1073,7 @@ lua_Unsigned luaH_getn (Table *t) {
   /* (3) 'limit' is the last element and either is zero or present in table */
   lua_assert(limit == luaH_realasize(t) &&
              (limit == 0 || !isempty(&t->array[limit - 1])));
-  if (isdummy(t) || isempty(luaH_getint(t, cast(lua_Integer, limit + 1))))
+  if (isdummy(t) || isempty(Hgetint(t, cast(lua_Integer, limit + 1))))
     return limit;  /* 'limit + 1' is absent */
   else  /* 'limit + 1' is also present */
     return hash_search(t, limit);

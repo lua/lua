@@ -637,16 +637,16 @@ LUA_API int lua_pushthread (lua_State *L) {
 
 
 l_sinline int auxgetstr (lua_State *L, const TValue *t, const char *k) {
-  int aux;
+  int hres;
   TString *str = luaS_new(L, k);
-  luaV_fastget1(t, str, s2v(L->top.p), luaH_getstr1, aux);
-  if (aux == HOK) {
+  luaV_fastget(t, str, s2v(L->top.p), luaH_getstr, hres);
+  if (hres == HOK) {
     api_incr_top(L);
   }
   else {
     setsvalue2s(L, L->top.p, str);
     api_incr_top(L);
-    luaV_finishget1(L, t, s2v(L->top.p - 1), L->top.p - 1, aux);
+    luaV_finishget(L, t, s2v(L->top.p - 1), L->top.p - 1, hres);
   }
   lua_unlock(L);
   return ttype(s2v(L->top.p - 1));
@@ -672,13 +672,13 @@ LUA_API int lua_getglobal (lua_State *L, const char *name) {
 
 
 LUA_API int lua_gettable (lua_State *L, int idx) {
-  int aux;
+  int hres;
   TValue *t;
   lua_lock(L);
   t = index2value(L, idx);
-  luaV_fastget1(t, s2v(L->top.p - 1), s2v(L->top.p - 1), luaH_get1, aux);
-  if (aux != HOK)
-    luaV_finishget1(L, t, s2v(L->top.p - 1), L->top.p - 1, aux);
+  luaV_fastget(t, s2v(L->top.p - 1), s2v(L->top.p - 1), luaH_get, hres);
+  if (hres != HOK)
+    luaV_finishget(L, t, s2v(L->top.p - 1), L->top.p - 1, hres);
   lua_unlock(L);
   return ttype(s2v(L->top.p - 1));
 }
@@ -692,14 +692,14 @@ LUA_API int lua_getfield (lua_State *L, int idx, const char *k) {
 
 LUA_API int lua_geti (lua_State *L, int idx, lua_Integer n) {
   TValue *t;
-  int aux;
+  int hres;
   lua_lock(L);
   t = index2value(L, idx);
-  luaV_fastgeti1(t, n, s2v(L->top.p), aux);
-  if (aux != HOK) {
+  luaV_fastgeti(t, n, s2v(L->top.p), hres);
+  if (hres != HOK) {
     TValue key;
     setivalue(&key, n);
-    luaV_finishget1(L, t, &key, L->top.p, aux);
+    luaV_finishget(L, t, &key, L->top.p, hres);
   }
   api_incr_top(L);
   lua_unlock(L);
@@ -707,11 +707,9 @@ LUA_API int lua_geti (lua_State *L, int idx, lua_Integer n) {
 }
 
 
-l_sinline int finishrawget (lua_State *L, const TValue *val) {
-  if (isempty(val))  /* avoid copying empty items to the stack */
+l_sinline int finishrawget (lua_State *L, int hres) {
+  if (hres != HOK)  /* avoid copying empty items to the stack */
     setnilvalue(s2v(L->top.p));
-  else
-    setobj2s(L, L->top.p, val);
   api_incr_top(L);
   lua_unlock(L);
   return ttype(s2v(L->top.p - 1));
@@ -727,13 +725,13 @@ static Table *gettable (lua_State *L, int idx) {
 
 LUA_API int lua_rawget (lua_State *L, int idx) {
   Table *t;
-  const TValue *val;
+  int hres;
   lua_lock(L);
   api_checknelems(L, 1);
   t = gettable(L, idx);
-  val = luaH_get(t, s2v(L->top.p - 1));
+  hres = luaH_get(t, s2v(L->top.p - 1), s2v(L->top.p - 1));
   L->top.p--;  /* remove key */
-  return finishrawget(L, val);
+  return finishrawget(L, hres);
 }
 
 
@@ -741,7 +739,7 @@ LUA_API int lua_rawgeti (lua_State *L, int idx, lua_Integer n) {
   Table *t;
   lua_lock(L);
   t = gettable(L, idx);
-  return finishrawget(L, luaH_getint(t, n));
+  return finishrawget(L, luaH_getint(t, n, s2v(L->top.p)));
 }
 
 
@@ -751,7 +749,7 @@ LUA_API int lua_rawgetp (lua_State *L, int idx, const void *p) {
   lua_lock(L);
   t = gettable(L, idx);
   setpvalue(&k, cast_voidp(p));
-  return finishrawget(L, luaH_get(t, &k));
+  return finishrawget(L, luaH_get(t, &k, s2v(L->top.p)));
 }
 
 
@@ -823,18 +821,18 @@ LUA_API int lua_getiuservalue (lua_State *L, int idx, int n) {
 ** t[k] = value at the top of the stack (where 'k' is a string)
 */
 static void auxsetstr (lua_State *L, const TValue *t, const char *k) {
-  int aux;
+  int hres;
   TString *str = luaS_new(L, k);
   api_checknelems(L, 1);
-  luaV_fastset1(t, str, s2v(L->top.p - 1), aux, luaH_setstr1);
-  if (aux == HOK) {
-    luaV_finishfastset1(L, t, s2v(L->top.p - 1));
+  luaV_fastset(t, str, s2v(L->top.p - 1), hres, luaH_psetstr);
+  if (hres == HOK) {
+    luaV_finishfastset(L, t, s2v(L->top.p - 1));
     L->top.p--;  /* pop value */
   }
   else {
     setsvalue2s(L, L->top.p, str);  /* push 'str' (to make it a TValue) */
     api_incr_top(L);
-    luaV_finishset1(L, t, s2v(L->top.p - 1), s2v(L->top.p - 2), aux);
+    luaV_finishset(L, t, s2v(L->top.p - 1), s2v(L->top.p - 2), hres);
     L->top.p -= 2;  /* pop value and key */
   }
   lua_unlock(L);  /* lock done by caller */
@@ -851,16 +849,16 @@ LUA_API void lua_setglobal (lua_State *L, const char *name) {
 
 LUA_API void lua_settable (lua_State *L, int idx) {
   TValue *t;
-  int aux;
+  int hres;
   lua_lock(L);
   api_checknelems(L, 2);
   t = index2value(L, idx);
-  luaV_fastset1(t, s2v(L->top.p - 2), s2v(L->top.p - 1), aux, luaH_set1);
-  if (aux == HOK) {
-    luaV_finishfastset1(L, t, s2v(L->top.p - 1));
+  luaV_fastset(t, s2v(L->top.p - 2), s2v(L->top.p - 1), hres, luaH_pset);
+  if (hres == HOK) {
+    luaV_finishfastset(L, t, s2v(L->top.p - 1));
   }
   else
-    luaV_finishset1(L, t, s2v(L->top.p - 2), s2v(L->top.p - 1), aux);
+    luaV_finishset(L, t, s2v(L->top.p - 2), s2v(L->top.p - 1), hres);
   L->top.p -= 2;  /* pop index and value */
   lua_unlock(L);
 }
@@ -874,18 +872,18 @@ LUA_API void lua_setfield (lua_State *L, int idx, const char *k) {
 
 LUA_API void lua_seti (lua_State *L, int idx, lua_Integer n) {
   TValue *t;
-  int aux;
+  int hres;
   lua_lock(L);
   api_checknelems(L, 1);
   t = index2value(L, idx);
-  luaV_fastseti1(t, n, s2v(L->top.p - 1), aux);
-  if (aux == HOK) {
-    luaV_finishfastset1(L, t, s2v(L->top.p - 1));
+  luaV_fastseti(t, n, s2v(L->top.p - 1), hres);
+  if (hres == HOK) {
+    luaV_finishfastset(L, t, s2v(L->top.p - 1));
   }
   else {
     TValue temp;
     setivalue(&temp, n);
-    luaV_finishset1(L, t, &temp, s2v(L->top.p - 1), aux);
+    luaV_finishset(L, t, &temp, s2v(L->top.p - 1), hres);
   }
   L->top.p--;  /* pop value */
   lua_unlock(L);
