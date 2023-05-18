@@ -1409,7 +1409,7 @@ static void stepgenfull (lua_State *L, global_State *g) {
     setminordebt(g);
   }
   else {  /* another bad collection; stay in incremental mode */
-    g->GCestimate = gettotalbytes(g);  /* first estimate */;
+    g->GCestimate = gettotalbytes(g);  /* first estimate */
     entersweep(L);
     luaC_runtilstate(L, bitmask(GCSpause));  /* finish collection */
     setpause(g);
