@@ -1409,7 +1409,7 @@ static void stepgenfull (lua_State *L, global_State *g) {
     setminordebt(g);
   }
   else {  /* another bad collection; stay in incremental mode */
-    g->GCestimate = gettotalbytes(g);  /* first estimate */;
+    g->GCestimate = gettotalbytes(g);  /* first estimate */
     entersweep(L);
     luaC_runtilstate(L, bitmask(GCSpause));  /* finish collection */
     setpause(g);
@@ -1604,7 +1604,7 @@ static lu_mem singlestep (lua_State *L) {
     case GCSenteratomic: {
       work = atomic(L);  /* work is what was traversed by 'atomic' */
       entersweep(L);
-      g->GCestimate = gettotalbytes(g);  /* first estimate */;
+      g->GCestimate = gettotalbytes(g);  /* first estimate */
       break;
     }
     case GCSswpallgc: {  /* sweep "regular" objects */
