@@ -30,23 +30,14 @@
 */
 #if !defined(LUA_STRFTIMEOPTIONS)	/* { */
 
-/* options for ANSI C 89 (only 1-char options) */
-#define L_STRFTIMEC89		"aAbBcdHIjmMpSUwWxXyYZ%"
-
-/* options for ISO C 99 and POSIX */
-#define L_STRFTIMEC99 "aAbBcCdDeFgGhHIjmMnprRStTuUVwWxXyYzZ%" \
-    "||" "EcECExEXEyEY" "OdOeOHOIOmOMOSOuOUOVOwOWOy"  /* two-char options */
-
-/* options for Windows */
-#define L_STRFTIMEWIN "aAbBcdHIjmMpSUwWxXyYzZ%" \
-    "||" "#c#x#d#H#I#j#m#M#S#U#w#W#y#Y"  /* two-char options */
-
 #if defined(LUA_USE_WINDOWS)
-#define LUA_STRFTIMEOPTIONS	L_STRFTIMEWIN
-#elif defined(LUA_USE_C89)
-#define LUA_STRFTIMEOPTIONS	L_STRFTIMEC89
+#define LUA_STRFTIMEOPTIONS  "aAbBcdHIjmMpSUwWxXyYzZ%" \
+    "||" "#c#x#d#H#I#j#m#M#S#U#w#W#y#Y"  /* two-char options */
+#elif defined(LUA_USE_C89)  /* ANSI C 89 (only 1-char options) */
+#define LUA_STRFTIMEOPTIONS  "aAbBcdHIjmMpSUwWxXyYZ%"
 #else  /* C99 specification */
-#define LUA_STRFTIMEOPTIONS	L_STRFTIMEC99
+#define LUA_STRFTIMEOPTIONS  "aAbBcCdDeFgGhHIjmMnprRStTuUVwWxXyYzZ%" \
+    "||" "EcECExEXEyEY" "OdOeOHOIOmOMOSOuOUOVOwOWOy"  /* two-char options */
 #endif
 
 #endif					/* } */

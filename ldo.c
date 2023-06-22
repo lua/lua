@@ -299,17 +299,13 @@ static int stackinuse (lua_State *L) {
 */
 void luaD_shrinkstack (lua_State *L) {
   int inuse = stackinuse(L);
-  int nsize = inuse * 2;  /* proposed new size */
-  int max = inuse * 3;  /* maximum "reasonable" size */
-  if (max > LUAI_MAXSTACK) {
-    max = LUAI_MAXSTACK;  /* respect stack limit */
-    if (nsize > LUAI_MAXSTACK)
-      nsize = LUAI_MAXSTACK;
-  }
+  int max = (inuse > LUAI_MAXSTACK / 3) ? LUAI_MAXSTACK : inuse * 3;
   /* if thread is currently not handling a stack overflow and its
      size is larger than maximum "reasonable" size, shrink it */
-  if (inuse <= LUAI_MAXSTACK && stacksize(L) > max)
+  if (inuse <= LUAI_MAXSTACK && stacksize(L) > max) {
+    int nsize = (inuse > LUAI_MAXSTACK / 2) ? LUAI_MAXSTACK : inuse * 2;
     luaD_reallocstack(L, nsize, 0);  /* ok if that fails */
+  }
   else  /* don't change stack */
     condmovestack(L,{},{});  /* (change only for debugging) */
   luaE_shrinkCI(L);  /* shrink CI list */
@@ -413,7 +409,7 @@ static void rethook (lua_State *L, CallInfo *ci, int nres) {
 ** stack, below original 'func', so that 'luaD_precall' can call it. Raise
 ** an error if there is no '__call' metafield.
 */
-StkId luaD_tryfuncTM (lua_State *L, StkId func) {
+static StkId tryfuncTM (lua_State *L, StkId func) {
   const TValue *tm;
   StkId p;
   checkstackp(L, 1, func);  /* space for metamethod */
@@ -572,7 +568,7 @@ int luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func,
       return -1;
     }
     default: {  /* not a function */
-      func = luaD_tryfuncTM(L, func);  /* try to get '__call' metamethod */
+      func = tryfuncTM(L, func);  /* try to get '__call' metamethod */
       /* return luaD_pretailcall(L, ci, func, narg1 + 1, delta); */
       narg1++;
       goto retry;  /* try again */
@@ -613,7 +609,7 @@ CallInfo *luaD_precall (lua_State *L, StkId func, int nresults) {
       return ci;
     }
     default: {  /* not a function */
-      func = luaD_tryfuncTM(L, func);  /* try to get '__call' metamethod */
+      func = tryfuncTM(L, func);  /* try to get '__call' metamethod */
       /* return luaD_precall(L, func, nresults); */
       goto retry;  /* try again with metamethod */
     }
@@ -629,7 +625,7 @@ CallInfo *luaD_precall (lua_State *L, StkId func, int nresults) {
 ** check the stack before doing anything else. 'luaD_precall' already
 ** does that.
 */
-l_sinline void ccall (lua_State *L, StkId func, int nResults, int inc) {
+l_sinline void ccall (lua_State *L, StkId func, int nResults, l_uint32 inc) {
   CallInfo *ci;
   L->nCcalls += inc;
   if (l_unlikely(getCcalls(L) >= LUAI_MAXCCALLS)) {

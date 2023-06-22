@@ -444,6 +444,14 @@ if not b then
   end
 end]], 5)
 
+
+-- bug in 5.4.0
+lineerror([[
+  local a = 0
+  local b = 1
+  local c = b % a
+]], 3)
+
 do
   -- Force a negative estimate for base line. Error in instruction 2
   -- (after VARARGPREP, GETGLOBAL), with first absolute line information

@@ -367,30 +367,32 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
 
 
 /*
-** Compare two strings 'ls' x 'rs', returning an integer less-equal-
-** -greater than zero if 'ls' is less-equal-greater than 'rs'.
+** Compare two strings 'ts1' x 'ts2', returning an integer less-equal-
+** -greater than zero if 'ts1' is less-equal-greater than 'ts2'.
 ** The code is a little tricky because it allows '\0' in the strings
-** and it uses 'strcoll' (to respect locales) for each segments
-** of the strings.
+** and it uses 'strcoll' (to respect locales) for each segment
+** of the strings. Note that segments can compare equal but still
+** have different lengths.
 */
-static int l_strcmp (const TString *ls, const TString *rs) {
-  const char *l = getstr(ls);
-  size_t ll = tsslen(ls);
-  const char *r = getstr(rs);
-  size_t lr = tsslen(rs);
+static int l_strcmp (const TString *ts1, const TString *ts2) {
+  const char *s1 = getstr(ts1);
+  size_t rl1 = tsslen(ts1);  /* real length */
+  const char *s2 = getstr(ts2);
+  size_t rl2 = tsslen(ts2);
   for (;;) {  /* for each segment */
-    int temp = strcoll(l, r);
+    int temp = strcoll(s1, s2);
     if (temp != 0)  /* not equal? */
       return temp;  /* done */
     else {  /* strings are equal up to a '\0' */
-      size_t len = strlen(l);  /* index of first '\0' in both strings */
-      if (len == lr)  /* 'rs' is finished? */
-        return (len == ll) ? 0 : 1;  /* check 'ls' */
-      else if (len == ll)  /* 'ls' is finished? */
-        return -1;  /* 'ls' is less than 'rs' ('rs' is not finished) */
-      /* both strings longer than 'len'; go on comparing after the '\0' */
-      len++;
-      l += len; ll -= len; r += len; lr -= len;
+      size_t zl1 = strlen(s1);  /* index of first '\0' in 's1' */
+      size_t zl2 = strlen(s2);  /* index of first '\0' in 's2' */
+      if (zl2 == rl2)  /* 's2' is finished? */
+        return (zl1 == rl1) ? 0 : 1;  /* check 's1' */
+      else if (zl1 == rl1)  /* 's1' is finished? */
+        return -1;  /* 's1' is less than 's2' ('s2' is not finished) */
+      /* both strings longer than 'zl'; go on comparing after the '\0' */
+      zl1++; zl2++;
+      s1 += zl1; rl1 -= zl1; s2 += zl2; rl2 -= zl2;
     }
   }
 }
@@ -1254,7 +1256,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         const TValue *slot;
         TValue *upval = cl->upvals[GETARG_B(i)]->v.p;
         TValue *rc = KC(i);
-        TString *key = tsvalue(rc);  /* key must be a string */
+        TString *key = tsvalue(rc);  /* key must be a short string */
         if (luaV_fastget(L, upval, key, slot, luaH_getshortstr)) {
           setobj2s(L, ra, slot);
         }
@@ -1297,7 +1299,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         const TValue *slot;
         TValue *rb = vRB(i);
         TValue *rc = KC(i);
-        TString *key = tsvalue(rc);  /* key must be a string */
+        TString *key = tsvalue(rc);  /* key must be a short string */
         if (luaV_fastget(L, rb, key, slot, luaH_getshortstr)) {
           setobj2s(L, ra, slot);
         }
@@ -1310,7 +1312,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         TValue *upval = cl->upvals[GETARG_A(i)]->v.p;
         TValue *rb = KB(i);
         TValue *rc = RKC(i);
-        TString *key = tsvalue(rb);  /* key must be a string */
+        TString *key = tsvalue(rb);  /* key must be a short string */
         if (luaV_fastget(L, upval, key, slot, luaH_getshortstr)) {
           luaV_finishfastset(L, upval, slot, rc);
         }
@@ -1353,7 +1355,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         const TValue *slot;
         TValue *rb = KB(i);
         TValue *rc = RKC(i);
-        TString *key = tsvalue(rb);  /* key must be a string */
+        TString *key = tsvalue(rb);  /* key must be a short string */
         if (luaV_fastget(L, s2v(ra), key, slot, luaH_getshortstr)) {
           luaV_finishfastset(L, s2v(ra), slot, rc);
         }
@@ -1411,6 +1413,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_MODK) {
+        savestate(L, ci);  /* in case of division by 0 */
         op_arithK(L, luaV_mod, luaV_modf);
         vmbreak;
       }
@@ -1423,6 +1426,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_IDIVK) {
+        savestate(L, ci);  /* in case of division by 0 */
         op_arithK(L, luaV_idiv, luai_numidiv);
         vmbreak;
       }
@@ -1471,6 +1475,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_MOD) {
+        savestate(L, ci);  /* in case of division by 0 */
         op_arith(L, luaV_mod, luaV_modf);
         vmbreak;
       }
@@ -1483,6 +1488,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_IDIV) {  /* floor division */
+        savestate(L, ci);  /* in case of division by 0 */
         op_arith(L, luaV_idiv, luai_numidiv);
         vmbreak;
       }
