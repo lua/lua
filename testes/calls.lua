@@ -342,7 +342,7 @@ do   -- another bug (in 5.4.0)
 end
 
 
-do   -- another bug (since 5.2)
+if not _port then   -- another bug (since 5.2)
   -- corrupted binary dump: list of upvalue names is larger than number
   -- of upvalues, overflowing the array of upvalues.
   local code =
