@@ -21,10 +21,11 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
+#undef E
+#define E (l_mathop(2.7182818284590452353602874713527))
 
 #undef PI
 #define PI	(l_mathop(3.141592653589793238462643383279502884))
-
 
 static int math_abs (lua_State *L) {
   if (lua_isinteger(L, 1)) {
@@ -741,6 +742,7 @@ static const luaL_Reg mathlib[] = {
   {"huge", NULL},
   {"maxinteger", NULL},
   {"mininteger", NULL},
+  {"e", NULL},
   {NULL, NULL}
 };
 
@@ -758,6 +760,8 @@ LUAMOD_API int luaopen_math (lua_State *L) {
   lua_setfield(L, -2, "maxinteger");
   lua_pushinteger(L, LUA_MININTEGER);
   lua_setfield(L, -2, "mininteger");
+  lua_pushnumber(L, E);
+  lua_setfield(L, -2, "e");
   setrandfunc(L);
   return 1;
 }

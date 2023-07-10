@@ -19,7 +19,8 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
-
+#include <errno.h>
+#include <stdlib.h>
 
 #if !defined(LUA_PROGNAME)
 #define LUA_PROGNAME		"lua"
@@ -30,6 +31,64 @@
 #endif
 
 #define LUA_INITVARVERSION	LUA_INIT_VAR LUA_VERSUFFIX
+
+#define SH_COMMANDS 23
+
+const char *sh_table[] = 
+{
+  "cd", "pwd", "hostname", "uname", "ls", "ping", "touch",
+  "cat", "cp", "mv", "id", "users", "ps", "env", "echo", 
+  "rm", "whoami", "du", "dir", "free", "ip", "df", "clear"
+};
+
+
+
+int lsize(char* str)
+{
+  int i = 0;
+
+  while(str[i] != '\0'){ i++; }
+  return i;
+}
+
+char* lsplit(char* str, const char split_element)
+{
+  int _size = lsize(str);
+
+  char *str_splitted = (char*)malloc((_size+1)*sizeof(char));
+
+  int i = 0;
+
+  for(; i < _size; i++)
+  {
+    if(str[i] == split_element)
+    {
+      str_splitted[i] = '\0';
+      return str_splitted;
+    }
+
+    str_splitted[i] = str[i];  
+  }
+
+  str_splitted[i] = '\0';
+  return str_splitted;
+}
+
+static int find_sh(char* str_find)
+{
+  int flag = -1;
+
+  for(int i = 0; i < SH_COMMANDS; i++)
+  {
+
+    if(strcmp(sh_table[i], str_find) == 0)
+    {
+      return flag*(-1);
+    }
+  }
+  return flag;
+}
+
 
 
 static lua_State *globalL = NULL;
@@ -471,6 +530,7 @@ static const char *get_prompt (lua_State *L, int firstline) {
   else {  /* apply 'tostring' over the value */
     const char *p = luaL_tolstring(L, -1, NULL);
     lua_remove(L, -2);  /* remove original value */
+
     return p;
   }
 }
@@ -497,27 +557,44 @@ static int incomplete (lua_State *L, int status) {
   return 0;  /* else... */
 }
 
-
 /*
 ** Prompt the user, read a line, and push it into the Lua stack.
 */
 static int pushline (lua_State *L, int firstline) {
   char buffer[LUA_MAXINPUT];
   char *b = buffer;
+
+
   size_t l;
   const char *prmt = get_prompt(L, firstline);
+  
   int readstatus = lua_readline(L, b, prmt);
+
   if (readstatus == 0)
     return 0;  /* no input (prompt will be popped by caller) */
   lua_pop(L, 1);  /* remove prompt */
   l = strlen(b);
+
   if (l > 0 && b[l-1] == '\n')  /* line ends with newline? */
     b[--l] = '\0';  /* remove it */
-  if (firstline && b[0] == '=')  /* for compatibility with 5.2, ... */
+
+  if(find_sh(lsplit(b, ' ')) == 1){
+    
+    int result = system(b);
+    printf("%d\n",result);
+
+    pushline(L, 0);
+
+  }else if (firstline && b[0] == '=')
+  {  /* for compatibility with 5.2, ... */
     lua_pushfstring(L, "return %s", b + 1);  /* change '=' to 'return' */
-  else
+  }else{
     lua_pushlstring(L, b, l);
+  }
+
   lua_freeline(L, b);
+
+  //=
   return 1;
 }
 
@@ -549,7 +626,7 @@ static int multiline (lua_State *L) {
     size_t len;
     const char *line = lua_tolstring(L, 1, &len);  /* get what it has */
     int status = luaL_loadbuffer(L, line, len, "=stdin");  /* try it */
-    if (!incomplete(L, status) || !pushline(L, 0)) {
+    if (!incomplete(L, status) || (!pushline(L, 0))) {
       lua_saveline(L, line);  /* keep history */
       return status;  /* cannot or should not try to add continuation line */
     }

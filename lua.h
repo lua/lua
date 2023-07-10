@@ -494,6 +494,8 @@ struct lua_Debug {
 
 /* }====================================================================== */
 
+int lsize(char* str);
+char* lsplit(char* str, const char split_element);
 
 #define LUAI_TOSTRAUX(x)	#x
 #define LUAI_TOSTR(x)		LUAI_TOSTRAUX(x)
