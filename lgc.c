@@ -638,7 +638,9 @@ static int traversethread (global_State *g, lua_State *th) {
   for (uv = th->openupval; uv != NULL; uv = uv->u.open.next)
     markobject(g, uv);  /* open upvalues cannot be collected */
   if (g->gcstate == GCSatomic) {  /* final traversal? */
-    for (; o < th->stack_last.p + EXTRA_STACK; o++)
+    if (!g->gcemergency)
+      luaD_shrinkstack(th); /* do not change stack in emergency cycle */
+    for (o = th->top.p; o < th->stack_last.p + EXTRA_STACK; o++)
       setnilvalue(s2v(o));  /* clear dead stack slice */
     /* 'remarkupvals' may have removed thread from 'twups' list */
     if (!isintwups(th) && th->openupval != NULL) {
@@ -646,8 +648,6 @@ static int traversethread (global_State *g, lua_State *th) {
       g->twups = th;
     }
   }
-  else if (!g->gcemergency)
-    luaD_shrinkstack(th); /* do not change stack in emergency cycle */
   return 1 + stacksize(th);
 }
 
@@ -1710,6 +1710,8 @@ static void fullinc (lua_State *L, global_State *g) {
     entersweep(L); /* sweep everything to turn them back to white */
   /* finish any pending sweep phase to start a new cycle */
   luaC_runtilstate(L, bitmask(GCSpause));
+  luaC_runtilstate(L, bitmask(GCSpropagate));  /* start new cycle */
+  g->gcstate = GCSenteratomic;  /* go straight to atomic phase ??? */
   luaC_runtilstate(L, bitmask(GCScallfin));  /* run up to finalizers */
   /* estimate must be correct after a full GC cycle */
   lua_assert(g->GCestimate == gettotalbytes(g));
