@@ -1157,18 +1157,11 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
  startfunc:
   trap = L->hookmask;
  returning:  /* trap already set */
-  cl = clLvalue(s2v(ci->func.p));
+  cl = ci_func(ci);
   k = cl->p->k;
   pc = ci->u.l.savedpc;
-  if (l_unlikely(trap)) {
-    if (pc == cl->p->code) {  /* first instruction (not resuming)? */
-      if (cl->p->is_vararg)
-        trap = 0;  /* hooks will start after VARARGPREP instruction */
-      else  /* check 'call' hook */
-        luaD_hookcall(L, ci);
-    }
-    ci->u.l.trap = 1;  /* assume trap is on, for now */
-  }
+  if (l_unlikely(trap))
+    trap = luaG_tracecall(L);
   base = ci->func.p + 1;
   /* main loop of interpreter */
   for (;;) {

@@ -866,6 +866,28 @@ static int changedline (const Proto *p, int oldpc, int newpc) {
 
 
 /*
+** Traces Lua calls. If code is running the first instruction of a function,
+** and function is not vararg, and it is not coming from an yield,
+** calls 'luaD_hookcall'. (Vararg functions will call 'luaD_hookcall'
+** after adjusting its variable arguments; otherwise, they could call
+** a line/count hook before the call hook. Functions coming from
+** an yield already called 'luaD_hookcall' before yielding.)
+*/
+int luaG_tracecall (lua_State *L) {
+  CallInfo *ci = L->ci;
+  Proto *p = ci_func(ci)->p;
+  ci->u.l.trap = 1;  /* ensure hooks will be checked */
+  if (ci->u.l.savedpc == p->code) {  /* first instruction (not resuming)? */
+    if (p->is_vararg)
+      return 0;  /* hooks will start at VARARGPREP instruction */
+    else if (!(ci->callstatus & CIST_HOOKYIELD))  /* not yieded? */
+      luaD_hookcall(L, ci);  /* check 'call' hook */
+  }
+  return 1;  /* keep 'trap' on */
+}
+
+
+/*
 ** Traces the execution of a Lua function. Called before the execution
 ** of each opcode, when debug is on. 'L->oldpc' stores the last
 ** instruction traced, to detect line changes. When entering a new

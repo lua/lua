@@ -181,7 +181,7 @@ struct CallInfo {
   union {
     struct {  /* only for Lua functions */
       const Instruction *savedpc;
-      volatile l_signalT trap;
+      volatile l_signalT trap;  /* function is tracing lines/counts */
       int nextraargs;  /* # of extra arguments in vararg functions */
     } l;
     struct {  /* only for C functions */
