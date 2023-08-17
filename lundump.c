@@ -122,7 +122,7 @@ static TString *loadStringN (LoadState *S, Proto *p) {
     ts = luaS_createlngstrobj(L, size);  /* create string */
     setsvalue2s(L, L->top.p, ts);  /* anchor it ('loadVector' can GC) */
     luaD_inctop(L);
-    loadVector(S, getstr(ts), size);  /* load directly in final place */
+    loadVector(S, getlngstr(ts), size);  /* load directly in final place */
     L->top.p--;  /* pop string */
   }
   luaC_objbarrier(L, p, ts);
