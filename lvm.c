@@ -91,8 +91,10 @@ static int l_strton (const TValue *obj, TValue *result) {
   lua_assert(obj != result);
   if (!cvt2num(obj))  /* is object not a string? */
     return 0;
-  else
-    return (luaO_str2num(svalue(obj), result) == vslen(obj) + 1);
+  else {
+  TString *st = tsvalue(obj);
+    return (luaO_str2num(getstr(st), result) == tsslen(st) + 1);
+  }
 }
 
 
@@ -627,8 +629,9 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
 static void copy2buff (StkId top, int n, char *buff) {
   size_t tl = 0;  /* size already copied */
   do {
-    size_t l = vslen(s2v(top - n));  /* length of string being copied */
-    memcpy(buff + tl, svalue(s2v(top - n)), l * sizeof(char));
+    TString *st = tsvalue(s2v(top - n));
+    size_t l = tsslen(st);  /* length of string being copied */
+    memcpy(buff + tl, getstr(st), l * sizeof(char));
     tl += l;
   } while (--n > 0);
 }
@@ -654,11 +657,11 @@ void luaV_concat (lua_State *L, int total) {
     }
     else {
       /* at least two non-empty string values; get as many as possible */
-      size_t tl = vslen(s2v(top - 1));
+      size_t tl = tsslen(tsvalue(s2v(top - 1)));
       TString *ts;
       /* collect total length and number of strings */
       for (n = 1; n < total && tostring(L, s2v(top - n - 1)); n++) {
-        size_t l = vslen(s2v(top - n - 1));
+        size_t l = tsslen(tsvalue(s2v(top - n - 1)));
         if (l_unlikely(l >= (MAX_SIZE/sizeof(char)) - tl)) {
           L->top.p = top - total;  /* pop strings to avoid wasting stack */
           luaG_runerror(L, "string length overflow");
@@ -672,7 +675,7 @@ void luaV_concat (lua_State *L, int total) {
       }
       else {  /* long string; copy strings directly to final result */
         ts = luaS_createlngstrobj(L, tl);
-        copy2buff(top, n, getstr(ts));
+        copy2buff(top, n, getlngstr(ts));
       }
       setsvalue2s(L, top - n, ts);  /* create result */
     }
@@ -1158,18 +1161,11 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
  startfunc:
   trap = L->hookmask;
  returning:  /* trap already set */
-  cl = clLvalue(s2v(ci->func.p));
+  cl = ci_func(ci);
   k = cl->p->k;
   pc = ci->u.l.savedpc;
-  if (l_unlikely(trap)) {
-    if (pc == cl->p->code) {  /* first instruction (not resuming)? */
-      if (cl->p->is_vararg)
-        trap = 0;  /* hooks will start after VARARGPREP instruction */
-      else  /* check 'call' hook */
-        luaD_hookcall(L, ci);
-    }
-    ci->u.l.trap = 1;  /* assume trap is on, for now */
-  }
+  if (l_unlikely(trap))
+    trap = luaG_tracecall(L);
   base = ci->func.p + 1;
   /* main loop of interpreter */
   for (;;) {

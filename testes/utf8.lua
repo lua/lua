@@ -1,6 +1,8 @@
 -- $Id: testes/utf8.lua $
 -- See Copyright Notice in file all.lua
 
+-- UTF-8 file
+
 print "testing UTF-8 library"
 
 local utf8 = require'utf8'

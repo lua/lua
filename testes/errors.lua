@@ -392,19 +392,19 @@ lineerror("a\n=\n-\n\nprint\n;", 3)
 
 lineerror([[
 a
-(
+(     -- <<
 23)
-]], 1)
+]], 2)
 
 lineerror([[
 local a = {x = 13}
 a
 .
 x
-(
+(     -- <<
 23
 )
-]], 2)
+]], 5)
 
 lineerror([[
 local a = {x = 13}

@@ -426,7 +426,7 @@ static const char *getobjname (const Proto *p, int lastpc, int reg,
 */
 static void kname (const Proto *p, int c, const char **name) {
   TValue *kvalue = &p->k[c];
-  *name = (ttisstring(kvalue)) ? svalue(kvalue) : "?";
+  *name = (ttisstring(kvalue)) ? getstr(tsvalue(kvalue)) : "?";
 }
 
 
@@ -569,7 +569,7 @@ static const char *getobjname (const Proto *p, int lastpc, int reg,
         int b = (op == OP_LOADK) ? GETARG_Bx(i)
                                  : GETARG_Ax(p->code[pc + 1]);
         if (ttisstring(&p->k[b])) {
-          *name = svalue(&p->k[b]);
+          *name = getstr(tsvalue(&p->k[b]));
           return "constant";
         }
         break;
@@ -627,7 +627,7 @@ static const char *funcnamefromcode (lua_State *L, const Proto *p,
     default:
       return NULL;  /* cannot find a reasonable name */
   }
-  *name = getstr(G(L)->tmname[tm]) + 2;
+  *name = getshrstr(G(L)->tmname[tm]) + 2;
   return "metamethod";
 }
 
@@ -862,6 +862,28 @@ static int changedline (const Proto *p, int oldpc, int newpc) {
   /* either instructions are too far apart or there is an absolute line
      info in the way; compute line difference explicitly */
   return (luaG_getfuncline(p, oldpc) != luaG_getfuncline(p, newpc));
+}
+
+
+/*
+** Traces Lua calls. If code is running the first instruction of a function,
+** and function is not vararg, and it is not coming from an yield,
+** calls 'luaD_hookcall'. (Vararg functions will call 'luaD_hookcall'
+** after adjusting its variable arguments; otherwise, they could call
+** a line/count hook before the call hook. Functions coming from
+** an yield already called 'luaD_hookcall' before yielding.)
+*/
+int luaG_tracecall (lua_State *L) {
+  CallInfo *ci = L->ci;
+  Proto *p = ci_func(ci)->p;
+  ci->u.l.trap = 1;  /* ensure hooks will be checked */
+  if (ci->u.l.savedpc == p->code) {  /* first instruction (not resuming)? */
+    if (p->is_vararg)
+      return 0;  /* hooks will start at VARARGPREP instruction */
+    else if (!(ci->callstatus & CIST_HOOKYIELD))  /* not yieded? */
+      luaD_hookcall(L, ci);  /* check 'call' hook */
+  }
+  return 1;  /* keep 'trap' on */
 }
 
 
