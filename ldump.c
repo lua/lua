@@ -26,6 +26,7 @@ typedef struct {
   lua_State *L;
   lua_Writer writer;
   void *data;
+  lu_mem offset;  /* current position relative to beginning of dump */
   int strip;
   int status;
   Table *h;  /* table to track saved strings */
@@ -47,6 +48,17 @@ static void dumpBlock (DumpState *D, const void *b, size_t size) {
     lua_unlock(D->L);
     D->status = (*D->writer)(D->L, b, size, D->data);
     lua_lock(D->L);
+    D->offset += size;
+  }
+}
+
+
+static void dumpAlign (DumpState *D, int align) {
+  int padding = align - (D->offset % align);
+  if (padding < align) {  /* apd == align means no padding */
+    static lua_Integer paddingContent = 0;
+    dumpBlock(D, &paddingContent, padding);
+    lua_assert(D->offset % align == 0);
   }
 }
 
@@ -126,6 +138,7 @@ static void dumpString (DumpState *D, TString *s) {
 
 static void dumpCode (DumpState *D, const Proto *f) {
   dumpInt(D, f->sizecode);
+  dumpAlign(D, sizeof(f->code[0]));
   dumpVector(D, f->code, f->sizecode);
 }
 
@@ -242,6 +255,7 @@ int luaU_dump(lua_State *L, const Proto *f, lua_Writer w, void *data,
   DumpState D;
   D.L = L;
   D.writer = w;
+  D.offset = 0;
   D.data = data;
   D.strip = strip;
   D.status = 0;

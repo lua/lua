@@ -36,6 +36,7 @@ typedef struct {
   ZIO *Z;
   const char *name;
   Table *h;  /* list for string reuse */
+  lu_mem offset;  /* current position relative to beginning of dump */
   lua_Integer nstr;  /* number of strings in the list */
 } LoadState;
 
@@ -55,6 +56,17 @@ static l_noret error (LoadState *S, const char *why) {
 static void loadBlock (LoadState *S, void *b, size_t size) {
   if (luaZ_read(S->Z, b, size) != 0)
     error(S, "truncated chunk");
+  S->offset += size;
+}
+
+
+static void loadAlign (LoadState *S, int align) {
+  int padding = align - (S->offset % align);
+  if (padding < align) {  /* apd == align means no padding */
+    lua_Integer paddingContent;
+    loadBlock(S, &paddingContent, padding);
+    lua_assert(S->offset % align == 0);
+  }
 }
 
 
@@ -65,6 +77,7 @@ static lu_byte loadByte (LoadState *S) {
   int b = zgetc(S->Z);
   if (b == EOZ)
     error(S, "truncated chunk");
+  S->offset++;
   return cast_byte(b);
 }
 
@@ -158,6 +171,7 @@ static void loadCode (LoadState *S, Proto *f) {
   int n = loadInt(S);
   f->code = luaM_newvectorchecked(S->L, n, Instruction);
   f->sizecode = n;
+  loadAlign(S, sizeof(f->code[0]));
   loadVector(S, f->code, n);
 }
 
@@ -321,7 +335,7 @@ static void checkHeader (LoadState *S) {
 /*
 ** Load precompiled chunk.
 */
-LClosure *luaU_undump(lua_State *L, ZIO *Z, const char *name) {
+LClosure *luaU_undump (lua_State *L, ZIO *Z, const char *name) {
   LoadState S;
   LClosure *cl;
   if (*name == '@' || *name == '=')
@@ -332,6 +346,7 @@ LClosure *luaU_undump(lua_State *L, ZIO *Z, const char *name) {
     S.name = name;
   S.L = L;
   S.Z = Z;
+  S.offset = 1;  /* fist byte was already read */
   checkHeader(&S);
   cl = luaF_newLclosure(L, loadByte(&S));
   setclLvalue2s(L, L->top.p, cl);
