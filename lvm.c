@@ -93,7 +93,9 @@ static int l_strton (const TValue *obj, TValue *result) {
     return 0;
   else {
   TString *st = tsvalue(obj);
-    return (luaO_str2num(getstr(st), result) == tsslen(st) + 1);
+  size_t stlen;
+  const char *s = getlstr(st, stlen);
+  return (luaO_str2num(s, result) == stlen + 1);
   }
 }
 
@@ -377,10 +379,10 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
 ** have different lengths.
 */
 static int l_strcmp (const TString *ts1, const TString *ts2) {
-  const char *s1 = getstr(ts1);
-  size_t rl1 = tsslen(ts1);  /* real length */
-  const char *s2 = getstr(ts2);
-  size_t rl2 = tsslen(ts2);
+  size_t rl1;  /* real length */
+  const char *s1 = getlstr(ts1, rl1);
+  size_t rl2;
+  const char *s2 = getlstr(ts2, rl2);
   for (;;) {  /* for each segment */
     int temp = strcoll(s1, s2);
     if (temp != 0)  /* not equal? */
@@ -630,8 +632,9 @@ static void copy2buff (StkId top, int n, char *buff) {
   size_t tl = 0;  /* size already copied */
   do {
     TString *st = tsvalue(s2v(top - n));
-    size_t l = tsslen(st);  /* length of string being copied */
-    memcpy(buff + tl, getstr(st), l * sizeof(char));
+    size_t l;  /* length of string being copied */
+    const char *s = getlstr(st, l);
+    memcpy(buff + tl, s, l * sizeof(char));
     tl += l;
   } while (--n > 0);
 }

@@ -112,24 +112,25 @@ static void dumpInteger (DumpState *D, lua_Integer x) {
 ** size==size-2 and means that string, which will be saved with
 ** the next available index.
 */
-static void dumpString (DumpState *D, TString *s) {
-  if (s == NULL)
+static void dumpString (DumpState *D, TString *ts) {
+  if (ts == NULL)
     dumpSize(D, 0);
   else {
-    const TValue *idx = luaH_getstr(D->h, s);
+    const TValue *idx = luaH_getstr(D->h, ts);
     if (ttisinteger(idx)) {  /* string already saved? */
       dumpSize(D, 1);  /* reuse a saved string */
       dumpInt(D, ivalue(idx));  /* index of saved string */
     }
     else {  /* must write and save the string */
       TValue key, value;  /* to save the string in the hash */
-      size_t size = tsslen(s);
+      size_t size;
+      const char *s = getlstr(ts, size);
       dumpSize(D, size + 2);
-      dumpVector(D, getstr(s), size);
+      dumpVector(D, s, size);
       D->nstr++;  /* one more saved string */
-      setsvalue(D->L, &key, s);  /* the string is the key */
+      setsvalue(D->L, &key, ts);  /* the string is the key */
       setivalue(&value, D->nstr);  /* its index is the value */
-      luaH_finishset(D->L, D->h, &key, idx, &value);  /* h[s] = nstr */
+      luaH_finishset(D->L, D->h, &key, idx, &value);  /* h[ts] = nstr */
       /* integer value does not need barrier */
     }
   }

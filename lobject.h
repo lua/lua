@@ -392,7 +392,7 @@ typedef struct TString {
     size_t lnglen;  /* length for long strings */
     struct TString *hnext;  /* linked list for hash table */
   } u;
-  char contents[1];
+  char contents[1];  /* string body starts here */
 } TString;
 
 
@@ -401,14 +401,21 @@ typedef struct TString {
 ** Get the actual string (array of bytes) from a 'TString'. (Generic
 ** version and specialized versions for long and short strings.)
 */
-#define getstr(ts)	((ts)->contents)
 #define getlngstr(ts)	check_exp((ts)->shrlen == 0xFF, (ts)->contents)
 #define getshrstr(ts)	check_exp((ts)->shrlen != 0xFF, (ts)->contents)
+#define getstr(ts) 	((ts)->contents)
 
 
 /* get string length from 'TString *s' */
 #define tsslen(s)  \
 	((s)->shrlen != 0xFF ? (s)->shrlen : (s)->u.lnglen)
+
+/*
+** Get string and length */
+#define getlstr(ts, len)  \
+	((ts)->shrlen != 0xFF \
+	? (cast_void(len = (ts)->shrlen), (ts)->contents) \
+	: (cast_void(len = (ts)->u.lnglen), (ts)->contents))
 
 /* }================================================================== */
 
