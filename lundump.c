@@ -287,7 +287,7 @@ static void loadFunction (LoadState *S, Proto *f) {
   f->linedefined = loadInt(S);
   f->lastlinedefined = loadInt(S);
   f->numparams = loadByte(S);
-  f->is_vararg = loadByte(S);
+  f->flag = loadByte(S) & PF_ISVARARG;  /* keep only the meaningful flags */
   f->maxstacksize = loadByte(S);
   loadCode(S, f);
   loadConstants(S, f);

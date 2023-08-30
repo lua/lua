@@ -544,13 +544,20 @@ typedef struct AbsLineInfo {
   int line;
 } AbsLineInfo;
 
+
+/*
+** Flags in Prototypes
+*/
+#define PF_ISVARARG	1
+
+
 /*
 ** Function Prototypes
 */
 typedef struct Proto {
   CommonHeader;
   lu_byte numparams;  /* number of fixed (named) parameters */
-  lu_byte is_vararg;
+  lu_byte flag;
   lu_byte maxstacksize;  /* number of registers needed by this function */
   int sizeupvalues;  /* size of 'upvalues' */
   int sizek;  /* size of 'k' */

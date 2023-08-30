@@ -182,7 +182,7 @@ static const char *upvalname (const Proto *p, int uv) {
 
 
 static const char *findvararg (CallInfo *ci, int n, StkId *pos) {
-  if (clLvalue(s2v(ci->func.p))->p->is_vararg) {
+  if (clLvalue(s2v(ci->func.p))->p->flag & PF_ISVARARG) {
     int nextra = ci->u.l.nextraargs;
     if (n >= -nextra) {  /* 'n' is negative */
       *pos = ci->func.p - nextra - (n + 1);
@@ -301,7 +301,7 @@ static void collectvalidlines (lua_State *L, Closure *f) {
     sethvalue2s(L, L->top.p, t);  /* push it on stack */
     api_incr_top(L);
     setbtvalue(&v);  /* boolean 'true' to be the value of all indices */
-    if (!p->is_vararg)  /* regular function? */
+    if (!(p->flag & PF_ISVARARG))  /* regular function? */
       i = 0;  /* consider all instructions */
     else {  /* vararg function */
       lua_assert(GET_OPCODE(p->code[0]) == OP_VARARGPREP);
@@ -344,7 +344,7 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
           ar->nparams = 0;
         }
         else {
-          ar->isvararg = f->l.p->is_vararg;
+          ar->isvararg = f->l.p->flag & PF_ISVARARG;
           ar->nparams = f->l.p->numparams;
         }
         break;
@@ -878,7 +878,7 @@ int luaG_tracecall (lua_State *L) {
   Proto *p = ci_func(ci)->p;
   ci->u.l.trap = 1;  /* ensure hooks will be checked */
   if (ci->u.l.savedpc == p->code) {  /* first instruction (not resuming)? */
-    if (p->is_vararg)
+    if (p->flag & PF_ISVARARG)
       return 0;  /* hooks will start at VARARGPREP instruction */
     else if (!(ci->callstatus & CIST_HOOKYIELD))  /* not yieded? */
       luaD_hookcall(L, ci);  /* check 'call' hook */
