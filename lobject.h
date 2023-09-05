@@ -556,6 +556,7 @@ typedef struct AbsLineInfo {
 ** Flags in Prototypes
 */
 #define PF_ISVARARG	1
+#define PF_FIXED	2  /* prototype has parts in fixed memory */
 
 
 /*

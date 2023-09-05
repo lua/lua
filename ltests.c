@@ -1513,8 +1513,11 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       luaL_loadfile(L1, luaL_checkstring(L1, getnum));
     }
     else if EQ("loadstring") {
-      const char *s = luaL_checkstring(L1, getnum);
-      luaL_loadstring(L1, s);
+      size_t slen;
+      const char *s = luaL_checklstring(L1, getnum, &slen);
+      const char *name = getstring;
+      const char *mode = getstring;
+      luaL_loadbufferx(L1, s, slen, name, mode);
     }
     else if EQ("newmetatable") {
       lua_pushboolean(L1, luaL_newmetatable(L1, getstring));

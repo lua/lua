@@ -207,8 +207,8 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
     list = &tb->hash[lmod(h, tb->size)];  /* rehash with new size */
   }
   ts = createstrobj(L, l, LUA_VSHRSTR, h);
-  memcpy(getshrstr(ts), str, l * sizeof(char));
   ts->shrlen = cast_byte(l);
+  memcpy(getshrstr(ts), str, l * sizeof(char));
   ts->u.hnext = *list;
   *list = ts;
   tb->nuse++;

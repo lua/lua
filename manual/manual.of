@@ -2730,7 +2730,8 @@ For such errors, Lua does not call the @x{message handler}.
 
 @item{@defid{LUA_ERRERR}| error while running the @x{message handler}.}
 
-@item{@defid{LUA_ERRSYNTAX}| syntax error during precompilation.}
+@item{@defid{LUA_ERRSYNTAX}| syntax error during precompilation
+or format error in a binary chunk.}
 
 @item{@defid{LUA_YIELD}| the thread (coroutine) yields.}
 
@@ -3646,6 +3647,18 @@ and loads it accordingly (see program @idx{luac}).
 The string @id{mode} works as in function @Lid{load},
 with the addition that
 a @id{NULL} value is equivalent to the string @St{bt}.
+Moreover, it may have a @Char{B} instead of a @Char{b},
+meaning a @emphx{fixed buffer} with the binary dump.
+
+A fixed buffer means that the address returned by the reader function
+should contain the chunk until everything created by the chunk has
+been collected.
+(In general, a fixed buffer would keep the chunk
+as its contents until the end of the program,
+for instance with the chunk in ROM.)
+Moreover, for a fixed buffer,
+the reader function should return the entire chunk in the first read.
+(As an example, @Lid{luaL_loadbufferx} does that.)
 
 @id{lua_load} uses the stack internally,
 so the reader function must always leave the stack
@@ -5688,6 +5701,8 @@ This function returns the same results as @Lid{lua_load}.
 @id{name} is the chunk name,
 used for debug information and error messages.
 The string @id{mode} works as in the function @Lid{lua_load}.
+In particular, this function supports mode @Char{B} for
+fixed buffers.
 
 }
 

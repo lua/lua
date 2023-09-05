@@ -407,7 +407,7 @@ do
       concat 3]]) == "hi alo mundo")
 
   -- "argerror" without frames
-  assert(T.checkpanic("loadstring 4") ==
+  assert(T.checkpanic("loadstring 4 name bt") ==
       "bad argument #4 (string expected, got no value)")
 
 
@@ -420,7 +420,7 @@ do
   if not _soft then
     local msg = T.checkpanic[[
       pushstring "function f() f() end"
-      loadstring -1; call 0 0
+      loadstring -1 name t; call 0 0
       getglobal f; call 0 0
     ]]
     assert(string.find(msg, "stack overflow"))
@@ -430,7 +430,7 @@ do
   assert(T.checkpanic([[
     pushstring "return {__close = function () Y = 'ho'; end}"
     newtable
-    loadstring -2
+    loadstring -2 name t
     call 0 1
     setmetatable -2
     toclose -1
@@ -458,6 +458,8 @@ if not _soft then
   print'+'
 end
 
+
+
 local lim = _soft and 500 or 12000
 local prog = {"checkstack " .. (lim * 2 + 100) .. "msg", "newtable"}
 for i = 1,lim do
@@ -481,10 +483,20 @@ for i = 1,lim do assert(t[i] == i*10); t[i] = undef end
 assert(next(t) == nil)
 prog, g, t = nil
 
+do   -- shrink stack
+  local m1, m2 = 0, collectgarbage"count" * 1024
+  while m1 ~= m2 do    -- repeat until stable
+    collectgarbage()
+    m1 = m2
+    m2 = collectgarbage"count" * 1024
+  end
+end
+
+
 -- testing errors
 
 a = T.testC([[
-  loadstring 2; pcall 0 1 0;
+  loadstring 2 name t; pcall 0 1 0;
   pushvalue 3; insert -2; pcall 1 1 0;
   pcall 0 0 0;
   return 1
@@ -498,7 +510,7 @@ local function check3(p, ...)
   assert(#arg == 3)
   assert(string.find(arg[3], p))
 end
-check3(":1:", T.testC("loadstring 2; return *", "x="))
+check3(":1:", T.testC("loadstring 2 name t; return *", "x="))
 check3("%.", T.testC("loadfile 2; return *", "."))
 check3("xxxx", T.testC("loadfile 2; return *", "xxxx"))
 
@@ -508,6 +520,35 @@ local function checkerrnopro (code, msg)
   local stt, err = pcall(T.testC, th, code)   -- run code there
   assert(not stt and string.find(err, msg))
 end
+
+
+do
+  print("testing load of binaries in fixed buffers")
+  local source = {}
+  local N = 1000
+  -- create a somewhat "large" source
+  for i = 1, N do source[i] = "X = X + 1; " end
+  source = table.concat(source)
+  -- give chunk an explicit name to avoid using source as name
+  source = load(source, "name1")
+  -- dump without debug information
+  source = string.dump(source, true)
+  -- each "X=X+1" generates 4 opcodes with 4 bytes each
+  assert(#source > N * 4 * 4)
+  collectgarbage(); collectgarbage()
+  local m1 = collectgarbage"count" * 1024
+  -- load dump using fixed buffer
+  local code = T.testC([[
+    loadstring 2 name B;
+    return 1
+  ]], source)
+  collectgarbage()
+  local m2 = collectgarbage"count" * 1024
+  -- load used fewer than 300 bytes
+  assert(m2 > m1 and m2 - m1 < 300)
+  X = 0; code(); assert(X == N); X = nil
+end
+
 
 if not _soft then
   collectgarbage("stop")   -- avoid __gc with full stack

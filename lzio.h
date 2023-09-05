@@ -48,6 +48,7 @@ LUAI_FUNC void luaZ_init (lua_State *L, ZIO *z, lua_Reader reader,
                                         void *data);
 LUAI_FUNC size_t luaZ_read (ZIO* z, void *b, size_t n);	/* read next n bytes */
 
+LUAI_FUNC const void *luaZ_getaddr (ZIO* z, size_t n);
 
 
 /* --------- Private Part ------------------ */

@@ -38,6 +38,7 @@ typedef struct {
   Table *h;  /* list for string reuse */
   lu_mem offset;  /* current position relative to beginning of dump */
   lua_Integer nstr;  /* number of strings in the list */
+  lu_byte fixed;  /* dump is fixed in memory */
 } LoadState;
 
 
@@ -67,6 +68,16 @@ static void loadAlign (LoadState *S, int align) {
     loadBlock(S, &paddingContent, padding);
     lua_assert(S->offset % align == 0);
   }
+}
+
+
+#define getaddr(S,n,t)	cast(t *, getaddr_(S,n,sizeof(t)))
+
+static const void *getaddr_ (LoadState *S, int n, int sz) {
+  const void *block = luaZ_getaddr(S->Z, n * sz);
+  if (block == NULL)
+    error(S, "truncated fixed buffer");
+  return block;
 }
 
 
@@ -169,10 +180,16 @@ static TString *loadString (LoadState *S, Proto *p) {
 
 static void loadCode (LoadState *S, Proto *f) {
   int n = loadInt(S);
-  f->code = luaM_newvectorchecked(S->L, n, Instruction);
-  f->sizecode = n;
   loadAlign(S, sizeof(f->code[0]));
-  loadVector(S, f->code, n);
+  if (S->fixed) {
+    f->code = getaddr(S, n, Instruction);
+    f->sizecode = n;
+  }
+  else {
+    f->code = luaM_newvectorchecked(S->L, n, Instruction);
+    f->sizecode = n;
+    loadVector(S, f->code, n);
+  }
 }
 
 
@@ -254,9 +271,15 @@ static void loadUpvalues (LoadState *S, Proto *f) {
 static void loadDebug (LoadState *S, Proto *f) {
   int i, n;
   n = loadInt(S);
-  f->lineinfo = luaM_newvectorchecked(S->L, n, ls_byte);
-  f->sizelineinfo = n;
-  loadVector(S, f->lineinfo, n);
+  if (S->fixed) {
+    f->lineinfo = getaddr(S, n, ls_byte);
+    f->sizelineinfo = n;
+  }
+  else {
+    f->lineinfo = luaM_newvectorchecked(S->L, n, ls_byte);
+    f->sizelineinfo = n;
+    loadVector(S, f->lineinfo, n);
+  }
   n = loadInt(S);
   f->abslineinfo = luaM_newvectorchecked(S->L, n, AbsLineInfo);
   f->sizeabslineinfo = n;
@@ -287,7 +310,9 @@ static void loadFunction (LoadState *S, Proto *f) {
   f->linedefined = loadInt(S);
   f->lastlinedefined = loadInt(S);
   f->numparams = loadByte(S);
-  f->flag = loadByte(S) & PF_ISVARARG;  /* keep only the meaningful flags */
+  f->flag = loadByte(S) & PF_ISVARARG;  /* get only the meaningful flags */
+  if (S->fixed)
+    f->flag |= PF_FIXED;  /* signal that code is fixed */
   f->maxstacksize = loadByte(S);
   loadCode(S, f);
   loadConstants(S, f);
@@ -335,7 +360,7 @@ static void checkHeader (LoadState *S) {
 /*
 ** Load precompiled chunk.
 */
-LClosure *luaU_undump (lua_State *L, ZIO *Z, const char *name) {
+LClosure *luaU_undump (lua_State *L, ZIO *Z, const char *name, int fixed) {
   LoadState S;
   LClosure *cl;
   if (*name == '@' || *name == '=')
@@ -346,6 +371,7 @@ LClosure *luaU_undump (lua_State *L, ZIO *Z, const char *name) {
     S.name = name;
   S.L = L;
   S.Z = Z;
+  S.fixed = fixed;
   S.offset = 1;  /* fist byte was already read */
   checkHeader(&S);
   cl = luaF_newLclosure(L, loadByte(&S));
