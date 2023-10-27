@@ -719,16 +719,38 @@ void luaH_newkey (lua_State *L, Table *t, const TValue *key, TValue *value) {
 }
 
 
-static const TValue *getintfromarray (Table *t, lua_Integer key) {
-  if (l_castS2U(key) - 1u < t->alimit)  /* 'key' in [1, t->alimit]? */
-    return &t->array[key - 1];
-  else if (!limitequalsasize(t) &&  /* key still may be in the array part? */
-           (l_castS2U(key) == t->alimit + 1 ||
-            l_castS2U(key) - 1u < luaH_realasize(t))) {
+/*
+** Check whether key is in the array part. If 'alimit' is not the real
+** size of the array, the key still can be in the array part.  In this
+** case, do the "Xmilia trick" to check whether 'key-1' is smaller than
+** the real size.
+** The trick works as follow: let 'p' be an integer such that
+** '2^(p+1) >= alimit > 2^p', or  '2^(p+1) > alimit-1 >= 2^p'.
+** That is, 2^(p+1) is the real size of the array, and 'p' is the highest
+** bit on in 'alimit-1'. What we have to check becomes 'key-1 < 2^(p+1)'.
+** We compute '(key-1) & ~(alimit-1)', which we call 'res'; it will
+** have the 'p' bit cleared. If the key is outside the array, that is,
+** 'key-1 >= 2^(p+1)', then 'res' will have some 1-bit higher than 'p',
+** therefore it will be larger or equal to 'alimit', and the check
+** will fail. If 'key-1 < 2^(p+1)', then 'res' has no 1-bit higher than
+** 'p', and as the bit 'p' itself was cleared, 'res' will be smaller
+** than 2^p, therefore smaller than 'alimit', and the check succeeds.
+** As special cases, when 'alimit' is 0 the condition is trivially false,
+** and when 'alimit' is 1 the condition simplifies to 'key-1 < alimit'.
+** If key is 0 or negative, 'res' will have its higher bit on, so that
+** if cannot be smaller than alimit.
+*/
+static int keyinarray (Table *t, lua_Integer key) {
+  lua_Unsigned alimit = t->alimit;
+  if (l_castS2U(key) - 1u < alimit)  /* 'key' in [1, t->alimit]? */
+    return 1;
+  else if (!isrealasize(t) &&  /* key still may be in the array part? */
+           (((l_castS2U(key) - 1u) & ~(alimit - 1u)) < alimit)) {
     t->alimit = cast_uint(key);  /* probably '#t' is here now */
-    return &t->array[key - 1];
+    return 1;
   }
-  else return NULL;  /* key is not in the array part */
+  else
+    return 0;
 }
 
 
@@ -748,20 +770,16 @@ static const TValue *getintfromhash (Table *t, lua_Integer key) {
 }
 
 
-/*
-** Search function for integers. If integer is inside 'alimit', get it
-** directly from the array part. Otherwise, if 'alimit' is not equal to
-** the real size of the array, key still can be in the array part. In
-** this case, try to avoid a call to 'luaH_realasize' when key is just
-** one more than the limit (so that it can be incremented without
-** changing the real size of the array).
-*/
-static const TValue *Hgetint (Table *t, lua_Integer key) {
-  const TValue *slot = getintfromarray(t, key);
-  if (slot != NULL)
-    return slot;
-  else
-    return getintfromhash(t, key);
+l_sinline int arraykeyisempty (Table *t, lua_Integer key) {
+  int tag = *getArrTag(t, key);
+  return tagisempty(tag);
+}
+
+
+static int hashkeyisempty (Table *t, lua_Integer key) {
+  const TValue *val = getintfromhash(t, key);
+  lua_assert(!keyinarray(t, key));
+  return isempty(val);
 }
 
 
@@ -776,7 +794,17 @@ static int finishnodeget (const TValue *val, TValue *res) {
 
 
 int luaH_getint (Table *t, lua_Integer key, TValue *res) {
-  return finishnodeget(Hgetint(t, key), res);
+  if (keyinarray(t, key)) {
+    int tag = *getArrTag(t, key);
+    if (!tagisempty(tag)) {
+      arr2val(t, key, tag, res);
+      return HOK;  /* success */
+    }
+    else
+      return ~cast_int(key);  /* empty slot in the array part */
+  }
+  else
+    return finishnodeget(getintfromhash(t, key), res);
 }
 
 
@@ -832,25 +860,28 @@ TString *luaH_getstrkey (Table *t, TString *key) {
 /*
 ** main search function
 */
-static const TValue *Hget (Table *t, const TValue *key) {
+int luaH_get (Table *t, const TValue *key, TValue *res) {
+  const TValue *slot; 
   switch (ttypetag(key)) {
-    case LUA_VSHRSTR: return luaH_Hgetshortstr(t, tsvalue(key));
-    case LUA_VNUMINT: return Hgetint(t, ivalue(key));
-    case LUA_VNIL: return &absentkey;
+    case LUA_VSHRSTR:
+      slot = luaH_Hgetshortstr(t, tsvalue(key));
+      break;
+    case LUA_VNUMINT:
+      return luaH_getint(t, ivalue(key), res);
+    case LUA_VNIL:
+      slot = &absentkey;
+      break;
     case LUA_VNUMFLT: {
       lua_Integer k;
       if (luaV_flttointeger(fltvalue(key), &k, F2Ieq)) /* integral index? */
-        return Hgetint(t, k);  /* use specialized version */
+        return luaH_getint(t, k, res);  /* use specialized version */
       /* else... */
     }  /* FALLTHROUGH */
     default:
-      return getgeneric(t, key, 0);
+      slot = getgeneric(t, key, 0);
+      break;
   }
-}
-
-
-int luaH_get (Table *t, const TValue *key, TValue *res) {
-  return finishnodeget(Hget(t, key), res);
+  return finishnodeget(slot, res);
 }
 
 
@@ -866,10 +897,10 @@ static int finishnodeset (Table *t, const TValue *slot, TValue *val) {
 
 
 int luaH_psetint (Table *t, lua_Integer key, TValue *val) {
-  const TValue *slot = getintfromarray(t, key);
-  if (slot != NULL) {
-    if (!ttisnil(slot)) {
-      setobj(((lua_State*)NULL), cast(TValue*, slot), val);
+  if (keyinarray(t, key)) {
+    lu_byte *tag = getArrTag(t, key);
+    if (!tagisempty(*tag)) {
+      val2arr(t, key, tag, val);
       return HOK;  /* success */
     }
     else
@@ -973,27 +1004,26 @@ static lua_Unsigned hash_search (Table *t, lua_Unsigned j) {
       j *= 2;
     else {
       j = LUA_MAXINTEGER;
-      if (isempty(Hgetint(t, j)))  /* t[j] not present? */
+      if (hashkeyisempty(t, j))  /* t[j] not present? */
         break;  /* 'j' now is an absent index */
       else  /* weird case */
         return j;  /* well, max integer is a boundary... */
     }
-  } while (!isempty(Hgetint(t, j)));  /* repeat until an absent t[j] */
+  } while (!hashkeyisempty(t, j));  /* repeat until an absent t[j] */
   /* i < j  &&  t[i] present  &&  t[j] absent */
   while (j - i > 1u) {  /* do a binary search between them */
     lua_Unsigned m = (i + j) / 2;
-    if (isempty(Hgetint(t, m))) j = m;
+    if (hashkeyisempty(t, m)) j = m;
     else i = m;
   }
   return i;
 }
 
 
-static unsigned int binsearch (const TValue *array, unsigned int i,
-                                                    unsigned int j) {
+static unsigned int binsearch (Table *array, unsigned int i, unsigned int j) {
   while (j - i > 1u) {  /* binary search */
     unsigned int m = (i + j) / 2;
-    if (isempty(&array[m - 1])) j = m;
+    if (arraykeyisempty(array, m)) j = m;
     else i = m;
   }
   return i;
@@ -1034,9 +1064,9 @@ static unsigned int binsearch (const TValue *array, unsigned int i,
 */
 lua_Unsigned luaH_getn (Table *t) {
   unsigned int limit = t->alimit;
-  if (limit > 0 && isempty(&t->array[limit - 1])) {  /* (1)? */
+  if (limit > 0 && arraykeyisempty(t, limit)) {  /* (1)? */
     /* there must be a boundary before 'limit' */
-    if (limit >= 2 && !isempty(&t->array[limit - 2])) {
+    if (limit >= 2 && !arraykeyisempty(t, limit - 1)) {
       /* 'limit - 1' is a boundary; can it be a new limit? */
       if (ispow2realasize(t) && !ispow2(limit - 1)) {
         t->alimit = limit - 1;
@@ -1045,7 +1075,7 @@ lua_Unsigned luaH_getn (Table *t) {
       return limit - 1;
     }
     else {  /* must search for a boundary in [0, limit] */
-      unsigned int boundary = binsearch(t->array, 0, limit);
+      unsigned int boundary = binsearch(t, 0, limit);
       /* can this boundary represent the real size of the array? */
       if (ispow2realasize(t) && boundary > luaH_realasize(t) / 2) {
         t->alimit = boundary;  /* use it as the new limit */
@@ -1064,7 +1094,7 @@ lua_Unsigned luaH_getn (Table *t) {
     if (isempty(&t->array[limit - 1])) {  /* empty? */
       /* there must be a boundary in the array after old limit,
          and it must be a valid new limit */
-      unsigned int boundary = binsearch(t->array, t->alimit, limit);
+      unsigned int boundary = binsearch(t, t->alimit, limit);
       t->alimit = boundary;
       return boundary;
     }
@@ -1073,7 +1103,7 @@ lua_Unsigned luaH_getn (Table *t) {
   /* (3) 'limit' is the last element and either is zero or present in table */
   lua_assert(limit == luaH_realasize(t) &&
              (limit == 0 || !isempty(&t->array[limit - 1])));
-  if (isdummy(t) || isempty(Hgetint(t, cast(lua_Integer, limit + 1))))
+  if (isdummy(t) || hashkeyisempty(t, cast(lua_Integer, limit + 1)))
     return limit;  /* 'limit + 1' is absent */
   else  /* 'limit + 1' is also present */
     return hash_search(t, limit);
