@@ -362,8 +362,11 @@ static void checktable (global_State *g, Table *h) {
   Node *n, *limit = gnode(h, sizenode(h));
   GCObject *hgc = obj2gco(h);
   checkobjrefN(g, hgc, h->metatable);
-  for (i = 0; i < asize; i++)
-    checkvalref(g, hgc, &h->array[i]);
+  for (i = 0; i < asize; i++) {
+    TValue aux;
+    arr2obj(h, i + 1, &aux);
+    checkvalref(g, hgc, &aux);
+  }
   for (n = gnode(h, 0); n < limit; n++) {
     if (!isempty(gval(n))) {
       TValue k;
@@ -1005,7 +1008,8 @@ static int table_query (lua_State *L) {
   }
   else if ((unsigned int)i < asize) {
     lua_pushinteger(L, i);
-    pushobject(L, &t->array[i]);
+    arr2obj(t, i + 1, s2v(L->top.p));
+    api_incr_top(L);
     lua_pushnil(L);
   }
   else if ((i -= asize) < sizenode(t)) {

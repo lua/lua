@@ -92,7 +92,7 @@ typedef enum {
     if ((u - 1u < h->alimit)) { \
       int tag = *getArrTag(h,u); \
       if (tagisempty(tag)) aux = HNOTFOUND; \
-      else { arr2val(h, u, tag, res); aux = HOK; }} \
+      else { farr2val(h, u, tag, res); aux = HOK; }} \
     else { aux = luaH_getint(h, u, res); }}
 
 
@@ -105,7 +105,7 @@ typedef enum {
     if ((u - 1u < h->alimit)) { \
       lu_byte *tag = getArrTag(h,u); \
       if (tagisempty(*tag)) aux = ~cast_int(u); \
-      else { val2arr(h, u, tag, val); aux = HOK; }} \
+      else { fval2arr(h, u, tag, val); aux = HOK; }} \
     else { aux = luaH_psetint(h, u, val); }}
 
 

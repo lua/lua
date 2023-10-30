@@ -51,18 +51,31 @@
 */
 
 
+struct ArrayCell {
+  lu_byte tt;
+  Value value;
+};
+
 
 /* fast access to components of array values */
-#define getArrTag(t,k)	(&(t)->array[k - 1].tt_)
-#define getArrVal(t,k)	(&(t)->array[k - 1].value_)
+#define getArrTag(t,k)	(&(t)->array[k - 1].tt)
+#define getArrVal(t,k)	(&(t)->array[k - 1].value)
 
 #define tagisempty(tag)  (novariant(tag) == LUA_TNIL)
 
-#define arr2val(h,k,tag,res)  \
+
+#define farr2val(h,k,tag,res)  \
   ((res)->tt_ = tag, (res)->value_ = *getArrVal(h,k))
 
-#define val2arr(h,k,tag,val)  \
+#define fval2arr(h,k,tag,val)  \
   (*tag = (val)->tt_, *getArrVal(h,k) = (val)->value_)
+
+
+#define obj2arr(h,k,val)  \
+  (*getArrTag(h,k) = (val)->tt_, *getArrVal(h,k) = (val)->value_)
+
+#define arr2obj(h,k,val)  \
+  ((val)->tt_ = *getArrTag(h,k), (val)->value_ = *getArrVal(h,k))
 
 
 LUAI_FUNC int luaH_getshortstr (Table *t, TString *key, TValue *res);

@@ -1845,7 +1845,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           luaH_resizearray(L, h, last);  /* preallocate it at once */
         for (; n > 0; n--) {
           TValue *val = s2v(ra + n);
-          setobj2t(L, &h->array[last - 1], val);
+          obj2arr(h, last, val);
           last--;
           luaC_barrierback(L, obj2gco(h), val);
         }
