@@ -90,7 +90,7 @@ typedef enum {
   if (!ttistable(t)) aux = HNOTATABLE; \
   else { Table *h = hvalue(t); lua_Unsigned u = l_castS2U(k); \
     if ((u - 1u < h->alimit)) { \
-      int tag = *getArrTag(h,u); \
+      int tag = *getArrTag(h,(u)-1u); \
       if (tagisempty(tag)) aux = HNOTFOUND; \
       else { farr2val(h, u, tag, res); aux = HOK; }} \
     else { aux = luaH_getint(h, u, res); }}
@@ -103,7 +103,7 @@ typedef enum {
   if (!ttistable(t)) aux = HNOTATABLE; \
   else { Table *h = hvalue(t); lua_Unsigned u = l_castS2U(k); \
     if ((u - 1u < h->alimit)) { \
-      lu_byte *tag = getArrTag(h,u); \
+      lu_byte *tag = getArrTag(h,(u)-1u); \
       if (tagisempty(*tag)) aux = ~cast_int(u); \
       else { fval2arr(h, u, tag, val); aux = HOK; }} \
     else { aux = luaH_psetint(h, u, val); }}

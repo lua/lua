@@ -350,7 +350,7 @@ int luaH_next (lua_State *L, Table *t, StkId key) {
   unsigned int asize = luaH_realasize(t);
   unsigned int i = findindex(L, t, s2v(key), asize);  /* find original key */
   for (; i < asize; i++) {  /* try first array part */
-    int tag = *getArrTag(t, i + 1);
+    int tag = *getArrTag(t, i);
     if (!tagisempty(tag)) {  /* a non-empty entry? */
       setivalue(s2v(key), i + 1);
       farr2val(t, i + 1, tag, s2v(key + 1));
@@ -458,7 +458,7 @@ static int countint (lua_Integer key, unsigned int *nums) {
 
 
 l_sinline int arraykeyisempty (const Table *t, lua_Integer key) {
-  int tag = *getArrTag(t, key);
+  int tag = *getArrTag(t, key - 1);
   return tagisempty(tag);
 }
 
@@ -509,6 +509,33 @@ static int numusehash (const Table *t, unsigned int *nums, unsigned int *pna) {
   }
   *pna += ause;
   return totaluse;
+}
+
+
+/*
+** Convert an "abstract size" (number of values in an array) to
+** "concrete size" (number of cell elements in the array). Cells
+** do not need to be full; we only must make sure it has the values
+** needed and its 'tag' element. So, we compute the concrete tag index
+** and the concrete value index of the last element, get their maximum
+** and adds 1.
+*/
+static unsigned int concretesize (unsigned int size) {
+  if (size == 0) return 0;
+  else {
+    unsigned int ts = TagIndex(size - 1);
+    unsigned int vs = ValueIndex(size - 1);
+    return ((ts >= vs) ? ts : vs) + 1;
+  }
+}
+
+
+static ArrayCell *resizearray (lua_State *L , Table *t,
+                               unsigned int oldasize,
+                               unsigned int newasize) {
+  oldasize = concretesize(oldasize);
+  newasize = concretesize(newasize);
+  return luaM_reallocvector(L, t->array, oldasize, newasize, ArrayCell);
 }
 
 
@@ -605,7 +632,7 @@ void luaH_resize (lua_State *L, Table *t, unsigned int newasize,
     exchangehashpart(t, &newt);  /* and new hash */
     /* re-insert into the new hash the elements from vanishing slice */
     for (i = newasize; i < oldasize; i++) {
-      int tag = *getArrTag(t, i + 1);
+      int tag = *getArrTag(t, i);
       if (!tagisempty(tag)) {  /* a non-empty entry? */
         TValue aux;
         farr2val(t, i + 1, tag, &aux);
@@ -616,7 +643,7 @@ void luaH_resize (lua_State *L, Table *t, unsigned int newasize,
     exchangehashpart(t, &newt);  /* and hash (in case of errors) */
   }
   /* allocate new array */
-  newarray = luaM_reallocvector(L, t->array, oldasize, newasize, ArrayCell);
+  newarray = resizearray(L, t, oldasize, newasize);
   if (l_unlikely(newarray == NULL && newasize > 0)) {  /* allocation failed? */
     freehash(L, &newt);  /* release new hash part */
     luaM_error(L);  /* raise error (with array unchanged) */
@@ -626,7 +653,7 @@ void luaH_resize (lua_State *L, Table *t, unsigned int newasize,
   t->array = newarray;  /* set new array part */
   t->alimit = newasize;
   for (i = oldasize; i < newasize; i++)  /* clear new slice of the array */
-    *getArrTag(t, i + 1) = LUA_VEMPTY;
+    *getArrTag(t, i) = LUA_VEMPTY;
   /* re-insert elements from old hash part into new parts */
   reinsert(L, &newt, t);  /* 'newt' now has the old hash */
   freehash(L, &newt);  /* free old hash part */
@@ -682,8 +709,9 @@ Table *luaH_new (lua_State *L) {
 
 
 void luaH_free (lua_State *L, Table *t) {
+  unsigned ps = concretesize(luaH_realasize(t));
   freehash(L, t);
-  luaM_freearray(L, t->array, luaH_realasize(t));
+  luaM_freearray(L, t->array, ps);
   luaM_free(L, t);
 }
 
@@ -799,7 +827,7 @@ static int finishnodeget (const TValue *val, TValue *res) {
 
 int luaH_getint (Table *t, lua_Integer key, TValue *res) {
   if (keyinarray(t, key)) {
-    int tag = *getArrTag(t, key);
+    int tag = *getArrTag(t, key - 1);
     if (!tagisempty(tag)) {
       farr2val(t, key, tag, res);
       return HOK;  /* success */
@@ -902,7 +930,7 @@ static int finishnodeset (Table *t, const TValue *slot, TValue *val) {
 
 int luaH_psetint (Table *t, lua_Integer key, TValue *val) {
   if (keyinarray(t, key)) {
-    lu_byte *tag = getArrTag(t, key);
+    lu_byte *tag = getArrTag(t, key - 1);
     if (!tagisempty(*tag)) {
       fval2arr(t, key, tag, val);
       return HOK;  /* success */
@@ -960,7 +988,7 @@ void luaH_finishset (lua_State *L, Table *t, const TValue *key,
   }
   else {  /* array entry */
     hres = ~hres;  /* real index */
-    fval2arr(t, hres, getArrTag(t, hres), value);
+    obj2arr(t, hres, value);
   }
 }
 

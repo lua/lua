@@ -192,6 +192,8 @@ typedef union {
 /* macro to test for (any kind of) nil */
 #define ttisnil(v)		checktype((v), LUA_TNIL)
 
+#define tagisempty(tag)		(novariant(tag) == LUA_TNIL)
+
 
 /* macro to test for a standard nil */
 #define ttisstrictnil(o)	checktag((o), LUA_VNIL)
@@ -736,7 +738,7 @@ typedef union Node {
 #define setnorealasize(t)	((t)->flags |= BITRAS)
 
 
-typedef struct ArrayCell ArrayCell;
+typedef union ArrayCell ArrayCell;
 
 
 typedef struct Table {

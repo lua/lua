@@ -493,7 +493,7 @@ static int traverseephemeron (global_State *g, Table *h, int inv) {
   unsigned int nsize = sizenode(h);
   /* traverse array part */
   for (i = 0; i < asize; i++) {
-    GCObject *o = gcvalarr(h, i + 1);
+    GCObject *o = gcvalarr(h, i);
     if (o != NULL && iswhite(o)) {
       marked = 1;
       reallymarkobject(g, o);
@@ -533,7 +533,7 @@ static void traversestrongtable (global_State *g, Table *h) {
   unsigned int i;
   unsigned int asize = luaH_realasize(h);
   for (i = 0; i < asize; i++) {  /* traverse array part */
-    GCObject *o = gcvalarr(h, i + 1);
+    GCObject *o = gcvalarr(h, i);
     if (o != NULL && iswhite(o))
       reallymarkobject(g, o);
   }
@@ -757,9 +757,9 @@ static void clearbyvalues (global_State *g, GCObject *l, GCObject *f) {
     unsigned int i;
     unsigned int asize = luaH_realasize(h);
     for (i = 0; i < asize; i++) {
-      GCObject *o = gcvalarr(h, i + 1);
+      GCObject *o = gcvalarr(h, i);
       if (iscleared(g, o))  /* value was collected? */
-        *getArrTag(h, i + 1) = LUA_VEMPTY;  /* remove entry */
+        *getArrTag(h, i) = LUA_VEMPTY;  /* remove entry */
     }
     for (n = gnode(h, 0); n < limit; n++) {
       if (iscleared(g, gcvalueN(gval(n))))  /* unmarked value? */

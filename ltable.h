@@ -51,31 +51,68 @@
 */
 
 
-struct ArrayCell {
-  lu_byte tt;
+/*
+** The array part of a table is represented by an array of cells.
+** Each cell is composed of (NM + 1) elements, and each element has the
+** type 'ArrayCell'.  In each cell, only one element has the variant
+** 'tag', while the other NM elements have the variant 'value'. The
+** array in the 'tag' element holds the tags of the other elements in
+** that cell.
+*/
+#define NM      ((unsigned int)sizeof(Value))
+
+union ArrayCell {
+  unsigned char tag[NM];
   Value value;
 };
 
 
-/* fast access to components of array values */
-#define getArrTag(t,k)	(&(t)->array[k - 1].tt)
-#define getArrVal(t,k)	(&(t)->array[k - 1].value)
+/*
+** 'NMTag' defines which cell element has the tags; that could be any
+** value between 0 (tags come before all values) and NM (tags come after
+** all values).
+*/
+#define NMTag     0
 
-#define tagisempty(tag)  (novariant(tag) == LUA_TNIL)
+
+/*
+** Computes the concrete index that holds the tag of abstract index 'i'
+*/
+#define TagIndex(i)     (((i)/NM * (NM + 1u)) + NMTag)
+
+/*
+** Computes the concrete index that holds the value of abstract index 'i'
+*/
+#define ValueIndex(i)   ((i) + (((i) + (NM - NMTag))/NM))
 
 
-#define farr2val(h,k,tag,res)  \
-  ((res)->tt_ = tag, (res)->value_ = *getArrVal(h,k))
+/* Computes the address of the tag for the abstract index 'k' */
+#define getArrTag(t,k)	(&(t)->array[TagIndex(k)].tag[(k)%NM])
 
-#define fval2arr(h,k,tag,val)  \
-  (*tag = (val)->tt_, *getArrVal(h,k) = (val)->value_)
+/* Computes the address of the value for the abstract index 'k' */
+#define getArrVal(t,k)	(&(t)->array[ValueIndex(k)].value)
 
+
+/*
+** Move TValues to/from arrays, using Lua indices
+*/
+#define arr2obj(h,k,val)  \
+  ((val)->tt_ = *getArrTag(h,(k)-1u), (val)->value_ = *getArrVal(h,(k)-1u))
 
 #define obj2arr(h,k,val)  \
-  (*getArrTag(h,k) = (val)->tt_, *getArrVal(h,k) = (val)->value_)
+  (*getArrTag(h,(k)-1u) = (val)->tt_, *getArrVal(h,(k)-1u) = (val)->value_)
 
-#define arr2obj(h,k,val)  \
-  ((val)->tt_ = *getArrTag(h,k), (val)->value_ = *getArrVal(h,k))
+
+/*
+** Often, we need to check the tag of a value before moving it. These
+** macros also move TValues to/from arrays, but receive the precomputed
+** tag value or address as an extra argument.
+*/
+#define farr2val(h,k,tag,res)  \
+  ((res)->tt_ = tag, (res)->value_ = *getArrVal(h,(k)-1u))
+
+#define fval2arr(h,k,tag,val)  \
+  (*tag = (val)->tt_, *getArrVal(h,(k)-1u) = (val)->value_)
 
 
 LUAI_FUNC int luaH_getshortstr (Table *t, TString *key, TValue *res);
