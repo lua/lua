@@ -9026,6 +9026,10 @@ Lua does not consult any environment variables.
 In particular,
 the values of @Lid{package.path} and @Lid{package.cpath}
 are set with the default paths defined in @id{luaconf.h}.
+To signal to the libraries that this option is on,
+the stand-alone interpreter sets the field
+@idx{"LUA_NOENV"} in the registry to a true value.
+Other libraries may consult this field for the same purpose.
 
 The options @T{-e}, @T{-l}, and @T{-W} are handled in
 the order they appear.

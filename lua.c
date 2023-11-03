@@ -210,12 +210,17 @@ static int dostring (lua_State *L, const char *s, const char *name) {
 
 /*
 ** Receives 'globname[=modname]' and runs 'globname = require(modname)'.
+** If there is no explicit modname and globname contains a '-', cut
+** the sufix after '-' (the "version") to make the global name.
 */
 static int dolibrary (lua_State *L, char *globname) {
   int status;
+  char *suffix = NULL;
   char *modname = strchr(globname, '=');
-  if (modname == NULL)  /* no explicit name? */
+  if (modname == NULL) {  /* no explicit name? */
     modname = globname;  /* module name is equal to global name */
+    suffix = strchr(modname, *LUA_IGMARK);  /* look for a suffix mark */
+  }
   else {
     *modname = '\0';  /* global name ends here */
     modname++;  /* module name starts after the '=' */
@@ -223,8 +228,11 @@ static int dolibrary (lua_State *L, char *globname) {
   lua_getglobal(L, "require");
   lua_pushstring(L, modname);
   status = docall(L, 1, 1);  /* call 'require(modname)' */
-  if (status == LUA_OK)
+  if (status == LUA_OK) {
+    if (suffix != NULL)  /* is there a suffix mark? */
+      *suffix = '\0';  /* remove sufix from global name */
     lua_setglobal(L, globname);  /* globname = require(modname) */
+  }
   return report(L, status);
 }
 

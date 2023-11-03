@@ -130,8 +130,6 @@ LUAI_FUNC int luaH_pset (Table *t, const TValue *key, TValue *val);
 LUAI_FUNC void luaH_setint (lua_State *L, Table *t, lua_Integer key,
                                                     TValue *value);
 LUAI_FUNC const TValue *luaH_Hgetshortstr (Table *t, TString *key);
-LUAI_FUNC void luaH_newkey (lua_State *L, Table *t, const TValue *key,
-                                                    TValue *value);
 LUAI_FUNC void luaH_set (lua_State *L, Table *t, const TValue *key,
                                                  TValue *value);
 LUAI_FUNC void luaH_finishset (lua_State *L, Table *t, const TValue *key,

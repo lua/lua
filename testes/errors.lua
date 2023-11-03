@@ -121,6 +121,9 @@ assert(not string.find(doit"aaa={13}; local bbbb=1; aaa[bbbb](3)", "'bbbb'"))
 checkmessage("aaa={13}; local bbbb=1; aaa[bbbb](3)", "number")
 checkmessage("aaa=(1)..{}", "a table value")
 
+-- bug in 5.4.6
+checkmessage("a = {_ENV = {}}; print(a._ENV.x + 1)", "field 'x'")
+
 _G.aaa, _G.bbbb = nil
 
 -- calls
@@ -392,19 +395,19 @@ lineerror("a\n=\n-\n\nprint\n;", 3)
 
 lineerror([[
 a
-(
+(     -- <<
 23)
-]], 1)
+]], 2)
 
 lineerror([[
 local a = {x = 13}
 a
 .
 x
-(
+(     -- <<
 23
 )
-]], 2)
+]], 5)
 
 lineerror([[
 local a = {x = 13}

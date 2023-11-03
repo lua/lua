@@ -252,7 +252,7 @@ LUAI_FUNC unsigned int luaH_realasize (const Table *t) {
     return t->alimit;  /* this is the size */
   else {
     unsigned int size = t->alimit;
-    /* compute the smallest power of 2 not smaller than 'n' */
+    /* compute the smallest power of 2 not smaller than 'size' */
     size |= (size >> 1);
     size |= (size >> 2);
     size |= (size >> 4);
@@ -736,7 +736,8 @@ static Node *getfreepos (Table *t) {
 ** put new key in its main position; otherwise (colliding node is in its main
 ** position), new key goes to an empty position.
 */
-void luaH_newkey (lua_State *L, Table *t, const TValue *key, TValue *value) {
+static void luaH_newkey (lua_State *L, Table *t, const TValue *key,
+                                                 TValue *value) {
   Node *mp;
   TValue aux;
   if (l_unlikely(ttisnil(key)))

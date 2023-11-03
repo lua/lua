@@ -417,40 +417,6 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
 ** =======================================================
 */
 
-static const char *getobjname (const Proto *p, int lastpc, int reg,
-                               const char **name);
-
-
-/*
-** Find a "name" for the constant 'c'.
-*/
-static void kname (const Proto *p, int c, const char **name) {
-  TValue *kvalue = &p->k[c];
-  *name = (ttisstring(kvalue)) ? svalue(kvalue) : "?";
-}
-
-
-/*
-** Find a "name" for the register 'c'.
-*/
-static void rname (const Proto *p, int pc, int c, const char **name) {
-  const char *what = getobjname(p, pc, c, name); /* search for 'c' */
-  if (!(what && *what == 'c'))  /* did not find a constant name? */
-    *name = "?";
-}
-
-
-/*
-** Find a "name" for a 'C' value in an RK instruction.
-*/
-static void rkname (const Proto *p, int pc, Instruction i, const char **name) {
-  int c = GETARG_C(i);  /* key index */
-  if (GETARG_k(i))  /* is 'c' a constant? */
-    kname(p, c, name);
-  else  /* 'c' is a register */
-    rname(p, pc, c, name);
-}
-
 
 static int filterpc (int pc, int jmptarget) {
   if (pc < jmptarget)  /* is code conditional (inside a jump)? */
@@ -509,28 +475,29 @@ static int findsetreg (const Proto *p, int lastpc, int reg) {
 
 
 /*
-** Check whether table being indexed by instruction 'i' is the
-** environment '_ENV'
+** Find a "name" for the constant 'c'.
 */
-static const char *gxf (const Proto *p, int pc, Instruction i, int isup) {
-  int t = GETARG_B(i);  /* table index */
-  const char *name;  /* name of indexed variable */
-  if (isup)  /* is an upvalue? */
-    name = upvalname(p, t);
-  else
-    getobjname(p, pc, t, &name);
-  return (name && strcmp(name, LUA_ENV) == 0) ? "global" : "field";
+static const char *kname (const Proto *p, int index, const char **name) {
+  TValue *kvalue = &p->k[index];
+  if (ttisstring(kvalue)) {
+    *name = getstr(tsvalue(kvalue));
+    return "constant";
+  }
+  else {
+    *name = "?";
+    return NULL;
+  }
 }
 
 
-static const char *getobjname (const Proto *p, int lastpc, int reg,
-                               const char **name) {
-  int pc;
-  *name = luaF_getlocalname(p, reg + 1, lastpc);
+static const char *basicgetobjname (const Proto *p, int *ppc, int reg,
+                                    const char **name) {
+  int pc = *ppc;
+  *name = luaF_getlocalname(p, reg + 1, pc);
   if (*name)  /* is a local? */
     return "local";
   /* else try symbolic execution */
-  pc = findsetreg(p, lastpc, reg);
+  *ppc = pc = findsetreg(p, pc, reg);
   if (pc != -1) {  /* could find instruction? */
     Instruction i = p->code[pc];
     OpCode op = GET_OPCODE(i);
@@ -538,18 +505,80 @@ static const char *getobjname (const Proto *p, int lastpc, int reg,
       case OP_MOVE: {
         int b = GETARG_B(i);  /* move from 'b' to 'a' */
         if (b < GETARG_A(i))
-          return getobjname(p, pc, b, name);  /* get name for 'b' */
+          return basicgetobjname(p, ppc, b, name);  /* get name for 'b' */
         break;
       }
+      case OP_GETUPVAL: {
+        *name = upvalname(p, GETARG_B(i));
+        return "upvalue";
+      }
+      case OP_LOADK: return kname(p, GETARG_Bx(i), name);
+      case OP_LOADKX: return kname(p, GETARG_Ax(p->code[pc + 1]), name);
+      default: break;
+    }
+  }
+  return NULL;  /* could not find reasonable name */
+}
+
+
+/*
+** Find a "name" for the register 'c'.
+*/
+static void rname (const Proto *p, int pc, int c, const char **name) {
+  const char *what = basicgetobjname(p, &pc, c, name); /* search for 'c' */
+  if (!(what && *what == 'c'))  /* did not find a constant name? */
+    *name = "?";
+}
+
+
+/*
+** Find a "name" for a 'C' value in an RK instruction.
+*/
+static void rkname (const Proto *p, int pc, Instruction i, const char **name) {
+  int c = GETARG_C(i);  /* key index */
+  if (GETARG_k(i))  /* is 'c' a constant? */
+    kname(p, c, name);
+  else  /* 'c' is a register */
+    rname(p, pc, c, name);
+}
+
+
+/*
+** Check whether table being indexed by instruction 'i' is the
+** environment '_ENV'
+*/
+static const char *isEnv (const Proto *p, int pc, Instruction i, int isup) {
+  int t = GETARG_B(i);  /* table index */
+  const char *name;  /* name of indexed variable */
+  if (isup)  /* is 't' an upvalue? */
+    name = upvalname(p, t);
+  else  /* 't' is a register */
+    basicgetobjname(p, &pc, t, &name);
+  return (name && strcmp(name, LUA_ENV) == 0) ? "global" : "field";
+}
+
+
+/*
+** Extend 'basicgetobjname' to handle table accesses
+*/
+static const char *getobjname (const Proto *p, int lastpc, int reg,
+                               const char **name) {
+  const char *kind = basicgetobjname(p, &lastpc, reg, name);
+  if (kind != NULL)
+    return kind;
+  else if (lastpc != -1) {  /* could find instruction? */
+    Instruction i = p->code[lastpc];
+    OpCode op = GET_OPCODE(i);
+    switch (op) {
       case OP_GETTABUP: {
         int k = GETARG_C(i);  /* key index */
         kname(p, k, name);
-        return gxf(p, pc, i, 1);
+        return isEnv(p, lastpc, i, 1);
       }
       case OP_GETTABLE: {
         int k = GETARG_C(i);  /* key index */
-        rname(p, pc, k, name);
-        return gxf(p, pc, i, 0);
+        rname(p, lastpc, k, name);
+        return isEnv(p, lastpc, i, 0);
       }
       case OP_GETI: {
         *name = "integer index";
@@ -558,24 +587,10 @@ static const char *getobjname (const Proto *p, int lastpc, int reg,
       case OP_GETFIELD: {
         int k = GETARG_C(i);  /* key index */
         kname(p, k, name);
-        return gxf(p, pc, i, 0);
-      }
-      case OP_GETUPVAL: {
-        *name = upvalname(p, GETARG_B(i));
-        return "upvalue";
-      }
-      case OP_LOADK:
-      case OP_LOADKX: {
-        int b = (op == OP_LOADK) ? GETARG_Bx(i)
-                                 : GETARG_Ax(p->code[pc + 1]);
-        if (ttisstring(&p->k[b])) {
-          *name = svalue(&p->k[b]);
-          return "constant";
-        }
-        break;
+        return isEnv(p, lastpc, i, 0);
       }
       case OP_SELF: {
-        rkname(p, pc, i, name);
+        rkname(p, lastpc, i, name);
         return "method";
       }
       default: break;  /* go through to return NULL */
@@ -627,7 +642,7 @@ static const char *funcnamefromcode (lua_State *L, const Proto *p,
     default:
       return NULL;  /* cannot find a reasonable name */
   }
-  *name = getstr(G(L)->tmname[tm]) + 2;
+  *name = getshrstr(G(L)->tmname[tm]) + 2;
   return "metamethod";
 }
 
@@ -862,6 +877,28 @@ static int changedline (const Proto *p, int oldpc, int newpc) {
   /* either instructions are too far apart or there is an absolute line
      info in the way; compute line difference explicitly */
   return (luaG_getfuncline(p, oldpc) != luaG_getfuncline(p, newpc));
+}
+
+
+/*
+** Traces Lua calls. If code is running the first instruction of a function,
+** and function is not vararg, and it is not coming from an yield,
+** calls 'luaD_hookcall'. (Vararg functions will call 'luaD_hookcall'
+** after adjusting its variable arguments; otherwise, they could call
+** a line/count hook before the call hook. Functions coming from
+** an yield already called 'luaD_hookcall' before yielding.)
+*/
+int luaG_tracecall (lua_State *L) {
+  CallInfo *ci = L->ci;
+  Proto *p = ci_func(ci)->p;
+  ci->u.l.trap = 1;  /* ensure hooks will be checked */
+  if (ci->u.l.savedpc == p->code) {  /* first instruction (not resuming)? */
+    if (p->is_vararg)
+      return 0;  /* hooks will start at VARARGPREP instruction */
+    else if (!(ci->callstatus & CIST_HOOKYIELD))  /* not yieded? */
+      luaD_hookcall(L, ci);  /* check 'call' hook */
+  }
+  return 1;  /* keep 'trap' on */
 }
 
 

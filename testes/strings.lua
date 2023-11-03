@@ -1,6 +1,9 @@
 -- $Id: testes/strings.lua $
 -- See Copyright Notice in file all.lua
 
+-- ISO Latin encoding
+
+
 print('testing strings and string library')
 
 local maxi <const> = math.maxinteger
