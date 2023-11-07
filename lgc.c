@@ -73,6 +73,13 @@
 #define gcvalueN(o)     (iscollectable(o) ? gcvalue(o) : NULL)
 
 
+/*
+** Access to collectable objects in array part of tables
+*/
+#define gcvalarr(t,i)  \
+	((*getArrTag(t,i) & BIT_ISCOLLECTABLE) ? getArrVal(t,i)->gc : NULL)
+
+
 #define markvalue(g,o) { checkliveness(g->mainthread,o); \
   if (valiswhite(o)) reallymarkobject(g,gcvalue(o)); }
 
@@ -477,9 +484,10 @@ static int traverseephemeron (global_State *g, Table *h, int inv) {
   unsigned int nsize = sizenode(h);
   /* traverse array part */
   for (i = 0; i < asize; i++) {
-    if (valiswhite(&h->array[i])) {
+    GCObject *o = gcvalarr(h, i);
+    if (o != NULL && iswhite(o)) {
       marked = 1;
-      reallymarkobject(g, gcvalue(&h->array[i]));
+      reallymarkobject(g, o);
     }
   }
   /* traverse hash part; if 'inv', traverse descending
@@ -515,8 +523,11 @@ static void traversestrongtable (global_State *g, Table *h) {
   Node *n, *limit = gnodelast(h);
   unsigned int i;
   unsigned int asize = luaH_realasize(h);
-  for (i = 0; i < asize; i++)  /* traverse array part */
-    markvalue(g, &h->array[i]);
+  for (i = 0; i < asize; i++) {  /* traverse array part */
+    GCObject *o = gcvalarr(h, i);
+    if (o != NULL && iswhite(o))
+      reallymarkobject(g, o);
+  }
   for (n = gnode(h, 0); n < limit; n++) {  /* traverse hash part */
     if (isempty(gval(n)))  /* entry is empty? */
       clearkey(n);  /* clear its key */
@@ -741,9 +752,9 @@ static l_obj clearbyvalues (global_State *g, GCObject *l, GCObject *f) {
     unsigned int i;
     unsigned int asize = luaH_realasize(h);
     for (i = 0; i < asize; i++) {
-      TValue *o = &h->array[i];
-      if (iscleared(g, gcvalueN(o)))  /* value was collected? */
-        setempty(o);  /* remove entry */
+      GCObject *o = gcvalarr(h, i);
+      if (iscleared(g, o))  /* value was collected? */
+        *getArrTag(h, i) = LUA_VEMPTY;  /* remove entry */
     }
     for (n = gnode(h, 0); n < limit; n++) {
       if (iscleared(g, gcvalueN(gval(n))))  /* unmarked value? */
