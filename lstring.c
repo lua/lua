@@ -140,24 +140,25 @@ void luaS_init (lua_State *L) {
 /*
 ** creates a new string object
 */
-static TString *createstrobj (lua_State *L, size_t l, int tag, unsigned int h) {
+static TString *createstrobj (lua_State *L, size_t totalsize, int tag,
+                              unsigned int h) {
   TString *ts;
   GCObject *o;
-  size_t totalsize;  /* total size of TString object */
-  totalsize = sizelstring(l);
   o = luaC_newobj(L, tag, totalsize);
   ts = gco2ts(o);
   ts->hash = h;
   ts->extra = 0;
-  getstr(ts)[l] = '\0';  /* ending 0 */
   return ts;
 }
 
 
 TString *luaS_createlngstrobj (lua_State *L, size_t l) {
-  TString *ts = createstrobj(L, l, LUA_VLNGSTR, G(L)->seed);
+  size_t totalsize = sizestrlng(l);
+  TString *ts = createstrobj(L, totalsize, LUA_VLNGSTR, G(L)->seed);
   ts->u.lnglen = l;
-  ts->shrlen = 0xFF;  /* signals that it is a long string */
+  ts->shrlen = -1;  /* signals that it is a long string */
+  ts->contents = cast_charp(ts) + sizeof(TString);
+  ts->contents[l] = '\0';  /* ending 0 */
   return ts;
 }
 
@@ -194,7 +195,8 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
   TString **list = &tb->hash[lmod(h, tb->size)];
   lua_assert(str != NULL);  /* otherwise 'memcmp'/'memcpy' are undefined */
   for (ts = *list; ts != NULL; ts = ts->u.hnext) {
-    if (l == ts->shrlen && (memcmp(str, getshrstr(ts), l * sizeof(char)) == 0)) {
+    if (l == cast_uint(ts->shrlen) &&
+        (memcmp(str, getshrstr(ts), l * sizeof(char)) == 0)) {
       /* found! */
       if (isdead(g, ts))  /* dead (but not collected yet)? */
         changewhite(ts);  /* resurrect it */
@@ -206,8 +208,9 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
     growstrtab(L, tb);
     list = &tb->hash[lmod(h, tb->size)];  /* rehash with new size */
   }
-  ts = createstrobj(L, l, LUA_VSHRSTR, h);
+  ts = createstrobj(L, sizestrshr(l), LUA_VSHRSTR, h);
   ts->shrlen = cast_byte(l);
+  getshrstr(ts)[l] = '\0';  /* ending 0 */
   memcpy(getshrstr(ts), str, l * sizeof(char));
   ts->u.hnext = *list;
   *list = ts;

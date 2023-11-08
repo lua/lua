@@ -388,35 +388,38 @@ typedef struct GCObject {
 typedef struct TString {
   CommonHeader;
   lu_byte extra;  /* reserved words for short strings; "has hash" for longs */
-  lu_byte shrlen;  /* length for short strings, 0xFF for long strings */
+  ls_byte shrlen;  /* length for short strings, negative for long strings */
   unsigned int hash;
   union {
     size_t lnglen;  /* length for long strings */
     struct TString *hnext;  /* linked list for hash table */
   } u;
-  char contents[1];  /* string body starts here */
+  char *contents;  /* pointer to content in long strings */
 } TString;
 
+
+#define strisshr(ts)	((ts)->shrlen >= 0)
 
 
 /*
 ** Get the actual string (array of bytes) from a 'TString'. (Generic
 ** version and specialized versions for long and short strings.)
 */
-#define getlngstr(ts)	check_exp((ts)->shrlen == 0xFF, (ts)->contents)
-#define getshrstr(ts)	check_exp((ts)->shrlen != 0xFF, (ts)->contents)
-#define getstr(ts) 	((ts)->contents)
+#define rawgetshrstr(ts)  (cast_charp(&(ts)->contents))
+#define getshrstr(ts)	check_exp(strisshr(ts), rawgetshrstr(ts))
+#define getlngstr(ts)	check_exp(!strisshr(ts), (ts)->contents)
+#define getstr(ts) 	(strisshr(ts) ? rawgetshrstr(ts) : (ts)->contents)
 
 
-/* get string length from 'TString *s' */
-#define tsslen(s)  \
-	((s)->shrlen != 0xFF ? (s)->shrlen : (s)->u.lnglen)
+/* get string length from 'TString *ts' */
+#define tsslen(ts)  \
+	(strisshr(ts) ? cast_uint((ts)->shrlen) : (ts)->u.lnglen)
 
 /*
 ** Get string and length */
 #define getlstr(ts, len)  \
-	((ts)->shrlen != 0xFF \
-	? (cast_void(len = (ts)->shrlen), (ts)->contents) \
+	(strisshr(ts) \
+	? (cast_void(len = (ts)->shrlen), rawgetshrstr(ts)) \
 	: (cast_void(len = (ts)->u.lnglen), (ts)->contents))
 
 /* }================================================================== */

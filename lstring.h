@@ -20,10 +20,18 @@
 
 
 /*
-** Size of a TString: Size of the header plus space for the string
+** Size of a short TString: Size of the header plus space for the string
 ** itself (including final '\0').
 */
-#define sizelstring(l)  (offsetof(TString, contents) + ((l) + 1) * sizeof(char))
+#define sizestrshr(l)  \
+	(offsetof(TString, contents) + ((l) + 1) * sizeof(char))
+
+/*
+** Size of a long TString: Size of the header plus space for the string
+** itself (including final '\0').
+*/
+#define sizestrlng(l)	(sizeof(TString) + ((l) + 1) * sizeof(char))
+
 
 #define luaS_newliteral(L, s)	(luaS_newlstr(L, "" s, \
                                  (sizeof(s)/sizeof(char))-1))

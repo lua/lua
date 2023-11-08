@@ -808,12 +808,12 @@ static void freeobj (lua_State *L, GCObject *o) {
     case LUA_VSHRSTR: {
       TString *ts = gco2ts(o);
       luaS_remove(L, ts);  /* remove it from hash table */
-      luaM_freemem(L, ts, sizelstring(ts->shrlen));
+      luaM_freemem(L, ts, sizestrshr(ts->shrlen));
       break;
     }
     case LUA_VLNGSTR: {
       TString *ts = gco2ts(o);
-      luaM_freemem(L, ts, sizelstring(ts->u.lnglen));
+      luaM_freemem(L, ts, sizestrlng(ts->u.lnglen));
       break;
     }
     default: lua_assert(0);
