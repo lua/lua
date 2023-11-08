@@ -143,8 +143,9 @@ static TString *loadStringN (LoadState *S, Proto *p) {
     return NULL;
   else if (size == 1) {  /* previously saved string? */
     int idx = loadInt(S);  /* get its index */
-    const TValue *stv = luaH_getint(S->h, idx);
-    return tsvalue(stv);
+    TValue stv;
+    luaH_getint(S->h, idx, &stv);
+    return tsvalue(&stv);
   }
   else if (size -= 2, size <= LUAI_MAXSHORTLEN) {  /* short string? */
     char buff[LUAI_MAXSHORTLEN];
