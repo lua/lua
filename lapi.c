@@ -535,6 +535,20 @@ LUA_API const char *lua_pushlstring (lua_State *L, const char *s, size_t len) {
 }
 
 
+LUA_API const char *lua_pushextlstring (lua_State *L,
+	        const char *s, size_t len, lua_Alloc falloc, void *ud) {
+  TString *ts;
+  lua_lock(L);
+  api_check(L, s[len] == '\0', "string not ending with zero");
+  ts = luaS_newextlstr (L, s, len, falloc, ud);
+  setsvalue2s(L, L->top.p, ts);
+  api_incr_top(L);
+  luaC_checkGC(L);
+  lua_unlock(L);
+  return getstr(ts);
+}
+
+
 LUA_API const char *lua_pushstring (lua_State *L, const char *s) {
   lua_lock(L);
   if (s == NULL)

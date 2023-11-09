@@ -1277,6 +1277,37 @@ static int checkpanic (lua_State *L) {
 }
 
 
+static int externKstr (lua_State *L) {
+  size_t len;
+  const char *s = luaL_checklstring(L, 1, &len);
+  lua_pushextlstring(L, s, len, NULL, NULL);
+  return 1;
+}
+
+
+/*
+** Create a buffer with the content of a given string and then
+** create an external string using that buffer. Use the allocation
+** function from Lua to create and free the buffer.
+*/
+static int externstr (lua_State *L) {
+  size_t len;
+  const char *s = luaL_checklstring(L, 1, &len);
+  void *ud;
+  lua_Alloc allocf = lua_getallocf(L, &ud);  /* get allocation function */
+  /* create the buffer */
+  char *buff = cast_charp((*allocf)(ud, NULL, 0, len + 1));
+  if (buff == NULL) {  /* memory error? */
+    lua_pushliteral(L, "not enough memory");
+    lua_error(L);  /* raise a memory error */
+  }
+  /* copy string content to buffer, including ending 0 */
+  memcpy(buff, s, (len + 1) * sizeof(char));
+  /* create external string */
+  lua_pushextlstring(L, buff, len, allocf, ud);
+  return 1;
+}
+
 
 /*
 ** {====================================================================
@@ -1949,6 +1980,8 @@ static const struct luaL_Reg tests_funcs[] = {
   {"udataval", udataval},
   {"unref", unref},
   {"upvalue", upvalue},
+  {"externKstr", externKstr},
+  {"externstr", externstr},
   {NULL, NULL}
 };
 

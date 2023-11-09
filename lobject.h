@@ -382,6 +382,12 @@ typedef struct GCObject {
 #define setsvalue2n	setsvalue
 
 
+/* Kinds of long strings (stored in 'shrlen') */
+#define LSTRREG		-1  /* regular long string */
+#define LSTRFIX		-2  /* fixed external long string */
+#define LSTRMEM		-3  /* external long string with deallocation */
+
+
 /*
 ** Header for a string value.
 */
@@ -395,6 +401,8 @@ typedef struct TString {
     struct TString *hnext;  /* linked list for hash table */
   } u;
   char *contents;  /* pointer to content in long strings */
+  lua_Alloc falloc;  /* deallocation function for external strings */
+  void *ud;  /* user data for external strings */
 } TString;
 
 

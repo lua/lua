@@ -3908,6 +3908,40 @@ This function is equivalent to @Lid{lua_pushcclosure} with no upvalues.
 
 }
 
+@APIEntry{const char *(lua_pushextlstring) (lua_State *L,
+                const char *s, size_t len, lua_Alloc falloc, void *ud);|
+@apii{0,1,m}
+
+Creates an @emphx{external string},
+that is, a string that uses memory not managed by Lua.
+The pointer @id{s} points to the exernal buffer
+holding the string content,
+and @id{len} is the length of the string.
+The string should have a zero at its end,
+that is, the condition @T{s[len] == '\0'} should hold.
+
+If @id{falloc} is different from @id{NULL},
+that function will be called by Lua
+when the external buffer is no longer needed.
+The contents of the buffer should not change before this call.
+The function will be called with the given @id{ud},
+the string @id{s} as the block,
+the length plus one (to account for the ending zero) as the old size,
+and 0 as the new size.
+
+Lua always @x{internalizes} strings with lengths up to 40 characters.
+So, for strings in that range,
+this function will immediately internalize the string
+and call @id{falloc} to free the buffer.
+
+Even when using an external buffer,
+Lua still has to allocate a header for the string.
+In case of a memory-allocation error,
+Lua will call @id{falloc} before raising the error.
+
+}
+
+
 @APIEntry{const char *lua_pushfstring (lua_State *L, const char *fmt, ...);|
 @apii{0,1,v}
 
