@@ -147,17 +147,24 @@ static TString *loadStringN (LoadState *S, Proto *p) {
     luaH_getint(S->h, idx, &stv);
     return tsvalue(&stv);
   }
-  else if (size -= 2, size <= LUAI_MAXSHORTLEN) {  /* short string? */
-    char buff[LUAI_MAXSHORTLEN];
-    loadVector(S, buff, size);  /* load string into buffer */
+  else if ((size -= 2) <= LUAI_MAXSHORTLEN) {  /* short string? */
+    char buff[LUAI_MAXSHORTLEN + 1];  /* extra space for '\0' */
+    loadVector(S, buff, size + 1);  /* load string into buffer */
     ts = luaS_newlstr(L, buff, size);  /* create string */
   }
   else {  /* long string */
-    ts = luaS_createlngstrobj(L, size);  /* create string */
-    setsvalue2s(L, L->top.p, ts);  /* anchor it ('loadVector' can GC) */
-    luaD_inctop(L);
-    loadVector(S, getlngstr(ts), size);  /* load directly in final place */
-    L->top.p--;  /* pop string */
+    if (S->fixed) {  /* for a fixed buffer, use a fixed string */
+      const char *s = getaddr(S, size + 1, char);  /* get content address */
+      ts = luaS_newextlstr(L, s, size, NULL, NULL);
+    }
+    else {  /* create internal copy */
+      ts = luaS_createlngstrobj(L, size);  /* create string */
+      setsvalue2s(L, L->top.p, ts);  /* anchor it ('loadVector' can GC) */
+      luaD_inctop(L);
+      loadVector(S, getlngstr(ts), size);  /* load directly in final place */
+      loadByte(S);  /* skip ending '\0' */
+      L->top.p--;  /* pop string */
+    }
   }
   luaC_objbarrier(L, p, ts);
   S->nstr++;  /* add string to list of saved strings */

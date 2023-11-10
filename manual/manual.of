@@ -3651,8 +3651,10 @@ Moreover, it may have a @Char{B} instead of a @Char{b},
 meaning a @emphx{fixed buffer} with the binary dump.
 
 A fixed buffer means that the address returned by the reader function
-should contain the chunk until everything created by the chunk has
-been collected.
+will contain the chunk until everything created by the chunk has
+been collected;
+therefore, Lua can avoid copying to internal structures
+some parts of the chunk.
 (In general, a fixed buffer would keep the chunk
 as its contents until the end of the program,
 for instance with the chunk in ROM.)

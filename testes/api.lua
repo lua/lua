@@ -528,13 +528,15 @@ do
   local N = 1000
   -- create a somewhat "large" source
   for i = 1, N do source[i] = "X = X + 1; " end
+  -- add a long string to the source
+  source[#source + 1] = string.format("Y = '%s'", string.rep("a", N));
   source = table.concat(source)
   -- give chunk an explicit name to avoid using source as name
   source = load(source, "name1")
   -- dump without debug information
   source = string.dump(source, true)
-  -- each "X=X+1" generates 4 opcodes with 4 bytes each
-  assert(#source > N * 4 * 4)
+  -- each "X=X+1" generates 4 opcodes with 4 bytes each, plus the string
+  assert(#source > N * 4 * 4 + N)
   collectgarbage(); collectgarbage()
   local m1 = collectgarbage"count" * 1024
   -- load dump using fixed buffer
@@ -544,9 +546,11 @@ do
   ]], source)
   collectgarbage()
   local m2 = collectgarbage"count" * 1024
-  -- load used fewer than 300 bytes
-  assert(m2 > m1 and m2 - m1 < 300)
-  X = 0; code(); assert(X == N); X = nil
+  -- load used fewer than 350 bytes. Code alone has more than 3*N bytes,
+  -- and string literal has N bytes. Both were not loaded.
+  assert(m2 > m1 and m2 - m1 < 350)
+  X = 0; code(); assert(X == N and Y == string.rep("a", N))
+  X = nil; Y = nil
 end
 
 
