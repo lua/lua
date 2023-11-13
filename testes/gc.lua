@@ -460,10 +460,7 @@ do   -- tests for string keys in weak tables
   a[string.rep("a", 2^22)] = 25   -- long string key -> number value
   a[string.rep("b", 2^22)] = {}   -- long string key -> colectable value
   a[{}] = 14                     -- colectable key
-  assert(collectgarbage("count") > m + 2^13)    -- 2^13 == 2 * 2^22 in KB
   collectgarbage()
-  assert(collectgarbage("count") >= m + 2^12 and
-        collectgarbage("count") < m + 2^13)    -- one key was collected
   local k, v = next(a)   -- string key with number value preserved
   assert(k == string.rep("a", 2^22) and v == 25)
   assert(next(a, k) == nil)  -- everything else cleared

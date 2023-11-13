@@ -728,14 +728,8 @@ if rawget(_G, "T") then
     -- first buffer was released by 'toclose'
     assert(T.totalmem() - m <= extra)
 
-    -- error in creation of final string
-    T.totalmem(m + 2 * lim + extra)
-    assert(not pcall(table.concat, a))
-    -- second buffer was released by 'toclose'
-    assert(T.totalmem() - m <= extra)
-
-    -- userdata, buffer, buffer, final string
-    T.totalmem(m + 4*lim + extra)
+    -- userdata, buffer, final string
+    T.totalmem(m + 2*lim + extra)
     assert(#table.concat(a) == 2*lim)
 
     T.totalmem(0)     -- remove memory limit

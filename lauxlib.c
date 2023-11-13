@@ -470,18 +470,27 @@ typedef struct UBox {
 } UBox;
 
 
+/* Resize the buffer used by a box. Optimize for the common case of
+** resizing to the old size. (For instance, __gc will resize the box
+** to 0 even after it was closed. 'pushresult' may also resize it to a
+** final size that is equal to the one set when the buffer was created.)
+*/
 static void *resizebox (lua_State *L, int idx, size_t newsize) {
-  void *ud;
-  lua_Alloc allocf = lua_getallocf(L, &ud);
   UBox *box = (UBox *)lua_touserdata(L, idx);
-  void *temp = allocf(ud, box->box, box->bsize, newsize);
-  if (l_unlikely(temp == NULL && newsize > 0)) {  /* allocation error? */
-    lua_pushliteral(L, "not enough memory");
-    lua_error(L);  /* raise a memory error */
+  if (box->bsize == newsize)  /* not changing size? */
+    return box->box;  /* keep the buffer */
+  else {
+    void *ud;
+    lua_Alloc allocf = lua_getallocf(L, &ud);
+    void *temp = allocf(ud, box->box, box->bsize, newsize);
+    if (l_unlikely(temp == NULL && newsize > 0)) {  /* allocation error? */
+      lua_pushliteral(L, "not enough memory");
+      lua_error(L);  /* raise a memory error */
+    }
+    box->box = temp;
+    box->bsize = newsize;
+    return temp;
   }
-  box->box = temp;
-  box->bsize = newsize;
-  return temp;
 }
 
 
@@ -526,15 +535,15 @@ static void newbox (lua_State *L) {
 
 /*
 ** Compute new size for buffer 'B', enough to accommodate extra 'sz'
-** bytes. (The test for "not big enough" also gets the case when the
-** computation of 'newsize' overflows.)
+** bytes plus one for a terminating zero. (The test for "not big enough"
+** also gets the case when the computation of 'newsize' overflows.)
 */
 static size_t newbuffsize (luaL_Buffer *B, size_t sz) {
   size_t newsize = (B->size / 2) * 3;  /* buffer size * 1.5 */
-  if (l_unlikely(MAX_SIZET - sz < B->n))  /* overflow in (B->n + sz)? */
+  if (l_unlikely(MAX_SIZET - sz - 1 < B->n))  /* overflow in (B->n + sz + 1)? */
     return luaL_error(B->L, "buffer too large");
-  if (newsize < B->n + sz)  /* not big enough? */
-    newsize = B->n + sz;
+  if (newsize < B->n + sz + 1)  /* not big enough? */
+    newsize = B->n + sz + 1;
   return newsize;
 }
 
@@ -594,9 +603,22 @@ LUALIB_API void luaL_addstring (luaL_Buffer *B, const char *s) {
 LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
   lua_State *L = B->L;
   checkbufferlevel(B, -1);
-  lua_pushlstring(L, B->b, B->n);
-  if (buffonstack(B))
+  if (!buffonstack(B))  /* using static buffer? */
+    lua_pushlstring(L, B->b, B->n);  /* save result as regular string */
+  else {  /* reuse buffer already allocated */
+    UBox *box = (UBox *)lua_touserdata(L, -1);
+    void *ud;
+    lua_Alloc allocf = lua_getallocf(L, &ud);  /* function to free buffer */
+    size_t len = B->n;  /* final string length */
+    char *s;
+    resizebox(L, -1, len + 1);  /* adjust box size to content size */
+    s = (char*)box->box;  /* final buffer address */
+    s[len] = '\0';  /* add ending zero */
+    /* clear box, as 'lua_pushextlstring' will take control over buffer */
+    box->bsize = 0;  box->box = NULL;
+    lua_pushextlstring(L, s, len, allocf, ud);
     lua_closeslot(L, -2);  /* close the box */
+  }
   lua_remove(L, -2);  /* remove box or placeholder from the stack */
 }
 
