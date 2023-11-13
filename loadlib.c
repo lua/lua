@@ -283,7 +283,8 @@ static int noenv (lua_State *L) {
 
 
 /*
-** Set a path
+** Set a path. (If using the default path, assume it is a string
+** literal in C and create it as an external string.)
 */
 static void setpath (lua_State *L, const char *fieldname,
                                    const char *envname,
@@ -294,7 +295,7 @@ static void setpath (lua_State *L, const char *fieldname,
   if (path == NULL)  /* no versioned environment variable? */
     path = getenv(envname);  /* try unversioned name */
   if (path == NULL || noenv(L))  /* no environment variable? */
-    lua_pushstring(L, dft);  /* use default */
+    lua_pushextlstring(L, dft, strlen(dft), NULL, NULL);  /* use default */
   else if ((dftmark = strstr(path, LUA_PATH_SEP LUA_PATH_SEP)) == NULL)
     lua_pushstring(L, path);  /* nothing to change */
   else {  /* path contains a ";;": insert default path in its place */
