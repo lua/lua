@@ -144,7 +144,7 @@ static void dumpCode (DumpState *D, const Proto *f) {
 }
 
 
-static void dumpFunction(DumpState *D, const Proto *f);
+static void dumpFunction (DumpState *D, const Proto *f);
 
 static void dumpConstants (DumpState *D, const Proto *f) {
   int i;
@@ -218,10 +218,6 @@ static void dumpDebug (DumpState *D, const Proto *f) {
 
 
 static void dumpFunction (DumpState *D, const Proto *f) {
-  if (D->strip)
-    dumpString(D, NULL);  /* no debug info */
-  else
-    dumpString(D, f->source);
   dumpInt(D, f->linedefined);
   dumpInt(D, f->lastlinedefined);
   dumpByte(D, f->numparams);
@@ -231,6 +227,7 @@ static void dumpFunction (DumpState *D, const Proto *f) {
   dumpConstants(D, f);
   dumpUpvalues(D, f);
   dumpProtos(D, f);
+  dumpString(D, D->strip ? NULL : f->source);
   dumpDebug(D, f);
 }
 

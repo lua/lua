@@ -132,57 +132,49 @@ static lua_Integer loadInteger (LoadState *S) {
 
 
 /*
-** Load a nullable string into prototype 'p'.
+** Load a nullable string into slot 'sl' from prototype 'p'. The
+** assignment to the slot and the barrier must be performed before any
+** possible GC activity, to anchor the string. (Both 'loadVector' and
+** 'luaH_setint' can call the GC.)
 */
-static TString *loadStringN (LoadState *S, Proto *p) {
+static void loadString (LoadState *S, Proto *p, TString **sl) {
   lua_State *L = S->L;
   TString *ts;
   TValue sv;
   size_t size = loadSize(S);
-  if (size == 0)  /* no string? */
-    return NULL;
+  if (size == 0) {  /* no string? */
+    *sl = NULL;
+    return;
+  }
   else if (size == 1) {  /* previously saved string? */
     int idx = loadInt(S);  /* get its index */
     TValue stv;
     luaH_getint(S->h, idx, &stv);
-    return tsvalue(&stv);
+    *sl = ts = tsvalue(&stv);
+    luaC_objbarrier(L, p, ts);
+    return;
   }
   else if ((size -= 2) <= LUAI_MAXSHORTLEN) {  /* short string? */
     char buff[LUAI_MAXSHORTLEN + 1];  /* extra space for '\0' */
     loadVector(S, buff, size + 1);  /* load string into buffer */
-    ts = luaS_newlstr(L, buff, size);  /* create string */
+    *sl = ts = luaS_newlstr(L, buff, size);  /* create string */
+    luaC_objbarrier(L, p, ts);
   }
-  else {  /* long string */
-    if (S->fixed) {  /* for a fixed buffer, use a fixed string */
-      const char *s = getaddr(S, size + 1, char);  /* get content address */
-      ts = luaS_newextlstr(L, s, size, NULL, NULL);
-    }
-    else {  /* create internal copy */
-      ts = luaS_createlngstrobj(L, size);  /* create string */
-      setsvalue2s(L, L->top.p, ts);  /* anchor it ('loadVector' can GC) */
-      luaD_inctop(L);
-      loadVector(S, getlngstr(ts), size);  /* load directly in final place */
-      loadByte(S);  /* skip ending '\0' */
-      L->top.p--;  /* pop string */
-    }
+  else if (S->fixed) {  /* for a fixed buffer, use a fixed string */
+    const char *s = getaddr(S, size + 1, char);  /* get content address */
+    *sl = ts = luaS_newextlstr(L, s, size, NULL, NULL);
+    luaC_objbarrier(L, p, ts);
   }
-  luaC_objbarrier(L, p, ts);
+  else {  /* create internal copy */
+    *sl = ts = luaS_createlngstrobj(L, size);  /* create string */
+    luaC_objbarrier(L, p, ts);
+    loadVector(S, getlngstr(ts), size);  /* load directly in final place */
+    loadByte(S);  /* skip ending '\0' */
+  }
   S->nstr++;  /* add string to list of saved strings */
   setsvalue(L, &sv, ts);
   luaH_setint(L, S->h, S->nstr, &sv);
   luaC_objbarrierback(L, obj2gco(S->h), ts);
-  return ts;
-}
-
-
-/*
-** Load a non-nullable string into prototype 'p'.
-*/
-static TString *loadString (LoadState *S, Proto *p) {
-  TString *st = loadStringN(S, p);
-  if (st == NULL)
-    error(S, "bad format for constant string");
-  return st;
 }
 
 
@@ -231,9 +223,15 @@ static void loadConstants (LoadState *S, Proto *f) {
         setivalue(o, loadInteger(S));
         break;
       case LUA_VSHRSTR:
-      case LUA_VLNGSTR:
-        setsvalue2n(S->L, o, loadString(S, f));
+      case LUA_VLNGSTR: {
+        lua_assert(f->source == NULL);
+        loadString(S, f, &f->source);  /* use 'source' to anchor string */
+        if (f->source == NULL)
+          error(S, "bad format for constant string");
+        setsvalue2n(S->L, o, f->source);  /* save it in the right place */
+        f->source = NULL;
         break;
+      }
       default: lua_assert(0);
     }
   }
@@ -301,7 +299,7 @@ static void loadDebug (LoadState *S, Proto *f) {
   for (i = 0; i < n; i++)
     f->locvars[i].varname = NULL;
   for (i = 0; i < n; i++) {
-    f->locvars[i].varname = loadStringN(S, f);
+    loadString(S, f, &f->locvars[i].varname);
     f->locvars[i].startpc = loadInt(S);
     f->locvars[i].endpc = loadInt(S);
   }
@@ -309,12 +307,11 @@ static void loadDebug (LoadState *S, Proto *f) {
   if (n != 0)  /* does it have debug information? */
     n = f->sizeupvalues;  /* must be this many */
   for (i = 0; i < n; i++)
-    f->upvalues[i].name = loadStringN(S, f);
+    loadString(S, f, &f->upvalues[i].name);
 }
 
 
 static void loadFunction (LoadState *S, Proto *f) {
-  f->source = loadStringN(S, f);
   f->linedefined = loadInt(S);
   f->lastlinedefined = loadInt(S);
   f->numparams = loadByte(S);
@@ -326,6 +323,7 @@ static void loadFunction (LoadState *S, Proto *f) {
   loadConstants(S, f);
   loadUpvalues(S, f);
   loadProtos(S, f);
+  loadString(S, f, &f->source);
   loadDebug(S, f);
 }
 
