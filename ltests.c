@@ -1160,6 +1160,12 @@ static int num2int (lua_State *L) {
 }
 
 
+static int makeseed (lua_State *L) {
+  lua_pushinteger(L, luaL_makeseed(L));
+  return 1;
+}
+
+
 static int newstate (lua_State *L) {
   void *ud;
   lua_Alloc f = lua_getallocf(L, &ud);
@@ -1962,6 +1968,7 @@ static const struct luaL_Reg tests_funcs[] = {
   {"newstate", newstate},
   {"newuserdata", newuserdata},
   {"num2int", num2int},
+  {"makeseed", makeseed},
   {"pushuserdata", pushuserdata},
   {"querystr", string_query},
   {"querytab", table_query},

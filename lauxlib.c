@@ -1124,29 +1124,30 @@ static void warnfon (void *ud, const char *message, int tocont) {
 #include <time.h>
 
 
-/*
-** Size of 'e' measured in number of 'unsigned int's. (In the weird
-** case that the division truncates, we just lose some part of the
-** value, no big deal.)
-*/
-#define sof(e)          (sizeof(e) / sizeof(unsigned int))
+/* Size for the buffer, in bytes */
+#define BUFSEEDB	(sizeof(void*) + sizeof(time_t))
+
+/* Size for the buffer in int's, rounded up */
+#define BUFSEED		((BUFSEEDB + sizeof(int) - 1) / sizeof(int))
 
 
-#define addbuff(b,v) \
-	(memcpy(b, &(v), sof(v) * sizeof(unsigned int)), b += sof(v))
+#define addbuff(b,v)	(memcpy(b, &(v), sizeof(v)), b += sizeof(v))
 
 
 static unsigned int luai_makeseed (void) {
-  unsigned int buff[sof(void*) + sof(time_t)];
+  unsigned int buff[BUFSEED];
   unsigned int res;
-  unsigned int *b = buff;
+  unsigned int i;
   time_t t = time(NULL);
   void *h = buff;
+  char *b = (char*)buff;
   addbuff(b, h);  /* local variable's address */
   addbuff(b, t);  /* time */
+  /* fill (rare but possible) remain of the buffer with zeros */
+  memset(b, 0, BUFSEED * sizeof(int) - BUFSEEDB);
   res = buff[0];
-  for (b = buff + 1; b < buff + sof(buff); b++)
-    res ^= (res >> 3) + (res << 7) + *b;
+  for (i = 0; i < BUFSEED; i++)
+    res ^= (res >> 3) + (res << 7) + buff[i];
   return res;
 }
 
