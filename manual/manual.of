@@ -4486,6 +4486,10 @@ This string always has a zero (@Char{\0})
 after its last character (as @N{in C}),
 but can contain other zeros in its body.
 
+This function can raise memory errors only
+when converting a number to a string
+(as then it has to create a new string).
+
 }
 
 @APIEntry{lua_Number lua_tonumber (lua_State *L, int index);|
