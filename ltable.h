@@ -69,44 +69,22 @@
 
 /*
 ** The array part of a table is represented by an array of cells.
-** Each cell is composed of (NM + 1) elements, and each element has the
-** type 'ArrayCell'.  In each cell, only one element has the variant
-** 'tag', while the other NM elements have the variant 'value'. The
-** array in the 'tag' element holds the tags of the other elements in
-** that cell.
+** Each cell is composed of NM tags followed by NM values, so that
+** no space is wasted in padding.
 */
-#define NM      ((unsigned int)sizeof(Value))
+#define NM      cast_uint(sizeof(Value))
 
-union ArrayCell {
-  unsigned char tag[NM];
-  Value value;
+struct ArrayCell {
+  lu_byte tag[NM];
+  Value value[NM];
 };
 
 
-/*
-** 'NMTag' defines which cell element has the tags; that could be any
-** value between 0 (tags come before all values) and NM (tags come after
-** all values).
-*/
-#define NMTag     0
-
-
-/*
-** Computes the concrete index that holds the tag of abstract index 'i'
-*/
-#define TagIndex(i)     (((i)/NM * (NM + 1u)) + NMTag)
-
-/*
-** Computes the concrete index that holds the value of abstract index 'i'
-*/
-#define ValueIndex(i)   ((i) + (((i) + (NM - NMTag))/NM))
-
-
 /* Computes the address of the tag for the abstract index 'k' */
-#define getArrTag(t,k)	(&(t)->array[TagIndex(k)].tag[(k)%NM])
+#define getArrTag(t,k)	(&(t)->array[(k)/NM].tag[(k)%NM])
 
 /* Computes the address of the value for the abstract index 'k' */
-#define getArrVal(t,k)	(&(t)->array[ValueIndex(k)].value)
+#define getArrVal(t,k)	(&(t)->array[(k)/NM].value[(k)%NM])
 
 
 /*

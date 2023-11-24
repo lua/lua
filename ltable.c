@@ -541,29 +541,28 @@ static int numusehash (const Table *t, unsigned int *nums, unsigned int *pna) {
 
 
 /*
-** Convert an "abstract size" (number of values in an array) to
-** "concrete size" (number of cell elements in the array). Cells
-** do not need to be full; we only must make sure it has the values
-** needed and its 'tag' element. So, we compute the concrete tag index
-** and the concrete value index of the last element, get their maximum
-** and adds 1.
+** Convert an "abstract size" (number of slots in an array) to
+** "concrete size" (number of bytes in the array).
+** If the abstract size is not a multiple of NM, the last cell is
+** incomplete, so we don't need to allocate memory for the whole cell.
+** 'extra' computes how many values are not needed in that last cell.
+** It will be zero when 'size' is a multiple of NM, and from there it
+** increases as 'size' decreases, up to (NM - 1).
 */
-static unsigned int concretesize (unsigned int size) {
-  if (size == 0) return 0;
-  else {
-    unsigned int ts = TagIndex(size - 1);
-    unsigned int vs = ValueIndex(size - 1);
-    return ((ts >= vs) ? ts : vs) + 1;
-  }
+static size_t concretesize (unsigned int size) {
+  unsigned int numcells = (size + NM - 1) / NM;   /* (size / NM) rounded up */
+  unsigned int extra = NM - 1 - ((size + NM - 1) % NM);
+  return numcells * sizeof(ArrayCell) - extra * sizeof(Value);
 }
 
 
 static ArrayCell *resizearray (lua_State *L , Table *t,
                                unsigned int oldasize,
                                unsigned int newasize) {
-  oldasize = concretesize(oldasize);
-  newasize = concretesize(newasize);
-  return luaM_reallocvector(L, t->array, oldasize, newasize, ArrayCell);
+  size_t oldasizeb = concretesize(oldasize);
+  size_t newasizeb = concretesize(newasize);
+  void *a = luaM_reallocvector(L, t->array, oldasizeb, newasizeb, lu_byte);
+  return cast(ArrayCell*, a);
 }
 
 
@@ -747,10 +746,19 @@ Table *luaH_new (lua_State *L) {
 }
 
 
+/*
+** Frees a table. The assert ensures the correctness of 'concretesize',
+** checking its result against the address of the last element in the
+** array part of the table, computed abstractly.
+*/
 void luaH_free (lua_State *L, Table *t) {
-  unsigned ps = concretesize(luaH_realasize(t));
+  unsigned int realsize = luaH_realasize(t);
+  size_t sizeb = concretesize(realsize);
+  lua_assert((sizeb == 0 && realsize == 0) ||
+             cast_charp(t->array) + sizeb - sizeof(Value) ==
+             cast_charp(getArrVal(t, realsize - 1)));
   freehash(L, t);
-  luaM_freearray(L, t->array, ps);
+  luaM_freemem(L, t->array, sizeb);
   luaM_free(L, t);
 }
 
@@ -944,7 +952,7 @@ TString *luaH_getstrkey (Table *t, TString *key) {
 ** main search function
 */
 int luaH_get (Table *t, const TValue *key, TValue *res) {
-  const TValue *slot; 
+  const TValue *slot;
   switch (ttypetag(key)) {
     case LUA_VSHRSTR:
       slot = luaH_Hgetshortstr(t, tsvalue(key));
