@@ -2563,8 +2563,8 @@ See also @Lid{luaL_checklstring}, @Lid{luaL_checkstring},
 and @Lid{luaL_tolstring} in the auxiliary library.)
 
 In general,
-Lua's garbage collection can free or move internal memory
-and then invalidate pointers to internal strings.
+Lua's garbage collection can free or move memory
+and then invalidate pointers to strings handled by a Lua state.
 To allow a safe use of these pointers,
 the API guarantees that any pointer to a string in a stack index
 is valid while the string value at that index is not removed from the stack.
@@ -3158,8 +3158,6 @@ The index must be the last index previously marked to be closed
 A @idx{__close} metamethod cannot yield
 when called through this function.
 
-(This function was introduced in @N{release 5.4.3}.)
-
 }
 
 @APIEntry{int lua_closethread (lua_State *L, lua_State *from);|
@@ -3178,8 +3176,6 @@ leaves the error object on the top of the stack.
 The parameter @id{from} represents the coroutine that is resetting @id{L}.
 If there is no such coroutine,
 this parameter can be @id{NULL}.
-
-(This function was introduced in @N{release 5.4.6}.)
 
 }
 
@@ -4227,14 +4223,6 @@ and then pops the top element.
 
 }
 
-@APIEntry{int lua_resetthread (lua_State *L);|
-@apii{0,?,-}
-
-This function is deprecated;
-it is equivalent to @Lid{lua_closethread} with
-@id{from} being @id{NULL}.
-
-}
 
 @APIEntry{int lua_resume (lua_State *L, lua_State *from, int nargs,
                           int *nresults);|
@@ -4516,8 +4504,6 @@ indicates whether the operation succeeded.
 @apii{0,0,m}
 
 Converts the Lua value at the given index to a @N{C string}.
-If @id{len} is not @id{NULL},
-it sets @T{*len} with the string length.
 The Lua value must be a string or a number;
 otherwise, the function returns @id{NULL}.
 If the value is a number,
@@ -4526,11 +4512,15 @@ then @id{lua_tolstring} also
 (This change confuses @Lid{lua_next}
 when @id{lua_tolstring} is applied to keys during a table traversal.)
 
-@id{lua_tolstring} returns a pointer
-to a string inside the Lua state @see{constchar}.
-This string always has a zero (@Char{\0})
-after its last character (as @N{in C}),
+If @id{len} is not @id{NULL},
+the function sets @T{*len} with the string length.
+The returned @N{C string} always has a zero (@Char{\0})
+after its last character,
 but can contain other zeros in its body.
+
+The pointer returned by @id{lua_tolstring}
+may be invalidated by the garbage collector if the
+corresponding Lua value is removed from the stack @see{constchar}.
 
 }
 
@@ -9063,7 +9053,6 @@ The options are:
 @item{@T{--}| stop handling options;}
 @item{@T{-}| execute @id{stdin} as a file and stop handling options.}
 }
-(The form @T{-l @rep{g=mod}} was introduced in @N{release 5.4.4}.)
 
 After handling its options, @id{lua} runs the given @emph{script}.
 When called without arguments,
@@ -9251,6 +9240,9 @@ declare a local variable with the same name in the loop body.
 @itemize{
 
 @item{
+The function @id{lua_resetthread} is deprecated;
+it is equivalent to @Lid{lua_closethread} with
+@id{from} being @id{NULL}.
 }
 
 }
