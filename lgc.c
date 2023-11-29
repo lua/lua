@@ -1121,6 +1121,7 @@ static GCObject **sweepgen (lua_State *L, global_State *g, GCObject **p,
         curr->marked = cast_byte(marked | G_SURVIVAL | white);
       }
       else {  /* all other objects will be old, and so keep their color */
+        lua_assert(getage(curr) != G_OLD1);  /* advanced in 'markold' */
         setage(curr, nextage[getage(curr)]);
         if (getage(curr) == G_OLD1 && *pfirstold1 == NULL)
           *pfirstold1 = curr;  /* first OLD1 object in the list */
@@ -1145,13 +1146,15 @@ static void whitelist (global_State *g, GCObject *p) {
 
 
 /*
-** Correct a list of gray objects. Return pointer to where rest of the
-** list should be linked.
+** Correct a list of gray objects. Return a pointer to the last element
+** left on the list, so that we can link another list to the end of
+** this one.
 ** Because this correction is done after sweeping, young objects might
 ** be turned white and still be in the list. They are only removed.
 ** 'TOUCHED1' objects are advanced to 'TOUCHED2' and remain on the list;
-** Non-white threads also remain on the list; 'TOUCHED2' objects become
-** regular old; they and anything else are removed from the list.
+** Non-white threads also remain on the list. 'TOUCHED2' objects and
+** anything else become regular old, are marked black, and are removed
+** from the list.
 */
 static GCObject **correctgraylist (GCObject **p) {
   GCObject *curr;

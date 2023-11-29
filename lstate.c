@@ -52,8 +52,9 @@ typedef struct LG {
 
 
 /*
-** set GCdebt to a new value keeping the value (totalobjs + GCdebt)
-** invariant (and avoiding underflows in 'totalobjs')
+** set GCdebt to a new value keeping the real number of allocated
+** objects (totalobjs - GCdebt) invariant and avoiding overflows in
+** 'totalobjs'.
 */
 void luaE_setdebt (global_State *g, l_obj debt) {
   l_obj tb = gettotalobjs(g);

@@ -123,6 +123,43 @@
 #define changeage(o,f,t)  \
 	check_exp(getage(o) == (f), (o)->marked ^= ((f)^(t)))
 
+/*
+** In generational mode, objects are created 'new'. After surviving one
+** cycle, they become 'survival'. Both 'new' and 'survival' can point
+** to any other object, as they are traversed at the end of the cycle.
+** We call them both 'young' objects.
+** If a survival object survives another cycle, it becomes 'old1'.
+** 'old1' objects can still point to survival objects (but not to
+** new objects), so they still must be traversed. After another cycle
+** (that, being old, 'old1' objects will "survive" no matter what)
+** finally the 'old1' object becomes really 'old', and then they
+** are no more traversed.
+**
+** To keep its invariants, the generational mode uses the same barriers
+** also used by the incremental mode. If a young object is caught in a
+** foward barrier, it cannot become old immediately, because it can
+** still point to other young objects. Instead, it becomes 'old0',
+** which in the next cycle becomes 'old1'. So, 'old0' objects is
+** old but can point to new and survival objects; 'old1' is old
+** but cannot point to new objects; and 'old' cannot point to any
+** young object.
+**
+** If any old object ('old0', 'old1', 'old') is caught in a back
+** barrier, it becomes 'touched1' and goes into a gray list, to be
+** visited at the end of the cycle.  There it evolves to 'touched2',
+** which can point to survivals but not to new objects. In yet another
+** cycle then it becomes 'old' again.
+**
+** The generational mode must also control the colors of objects,
+** because of the barriers.  While the mutator is running, young objects
+** are kept white. 'old', 'old1', and 'touched2' objects are kept black,
+** as they cannot point to new objects; exceptions are threads and open
+** upvalues, which age to 'old1' and 'old' but are kept gray. 'old0'
+** objects may be gray or black, as in the incremental mode. 'touched1'
+** objects are kept gray, as they must be visited again at the end of
+** the cycle.
+*/
+
 
 /* Default Values for GC parameters */
 
@@ -161,9 +198,10 @@
 ** (value * original parameter / 100).
 **
 ** For most parameters, which are typically larger than 100%, 2^n is
-** 16 (2^4), allowing maximum values up to 1599.  For the minor
-** multiplier, which is typically smaller, 2^n is 64 (2^6) to allow more
-** precision.
+** 16 (2^4), allowing maximum values up to ~1500%, with a granularity
+** of ~6%.  For the minor multiplier, which is typically smaller,
+** 2^n is 64 (2^6) to allow more precision. In that case, the maximum
+** value is ~400%, with a granularity of ~1.5%.
 */
 #define gcparamshift(p)  \
   (offsetof(global_State, p) == offsetof(global_State, genminormul) ? 6 : 4)

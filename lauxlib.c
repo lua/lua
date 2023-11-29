@@ -1139,12 +1139,11 @@ static unsigned int luai_makeseed (void) {
   unsigned int res;
   unsigned int i;
   time_t t = time(NULL);
-  void *h = buff;
   char *b = (char*)buff;
-  addbuff(b, h);  /* local variable's address */
+  addbuff(b, b);  /* local variable's address */
   addbuff(b, t);  /* time */
   /* fill (rare but possible) remain of the buffer with zeros */
-  memset(b, 0, BUFSEED * sizeof(int) - BUFSEEDB);
+  memset(b, 0, sizeof(buff) - BUFSEEDB);
   res = buff[0];
   for (i = 0; i < BUFSEED; i++)
     res ^= (res >> 3) + (res << 7) + buff[i];

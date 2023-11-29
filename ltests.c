@@ -302,8 +302,8 @@ static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
   else {  /* generational mode */
     if ((getage(f) == G_OLD && isblack(f)) && !isold(t))
       return 0;
-    if (((getage(f) == G_OLD1 || getage(f) == G_TOUCHED2) && isblack(f)) &&
-          getage(t) == G_NEW)
+    if ((getage(f) == G_OLD1 || getage(f) == G_TOUCHED2) &&
+         getage(t) == G_NEW)
       return 0;
     return 1;
   }
@@ -510,7 +510,8 @@ static void checkrefs (global_State *g, GCObject *o) {
 **   * objects must be old enough for their lists ('listage').
 **   * old objects cannot be white.
 **   * old objects must be black, except for 'touched1', 'old0',
-** threads, and open upvalues.
+**     threads, and open upvalues.
+**   * 'touched1' objects must be gray.
 */
 static void checkobject (global_State *g, GCObject *o, int maybedead,
                          int listage) {
@@ -520,14 +521,15 @@ static void checkobject (global_State *g, GCObject *o, int maybedead,
     assert(g->gcstate != GCSpause || iswhite(o));
     if (g->gckind == KGC_GEN) {  /* generational mode? */
       assert(getage(o) >= listage);
-      assert(!iswhite(o) || !isold(o));
       if (isold(o)) {
+        assert(!iswhite(o));
         assert(isblack(o) ||
         getage(o) == G_TOUCHED1 ||
         getage(o) == G_OLD0 ||
         o->tt == LUA_VTHREAD ||
         (o->tt == LUA_VUPVAL && upisopen(gco2upv(o))));
       }
+      assert(getage(o) != G_TOUCHED1 || isgray(o));
     }
     checkrefs(g, o);
   }
