@@ -1163,7 +1163,7 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
   va_list argp;
   int res = 0;
   global_State *g = G(L);
-  if (g->gcstp & GCSTPGC)  /* internal stop? */
+  if (g->gcstp & (GCSTPGC | GCSTPCLS))  /* internal stop? */
     return -1;  /* all options are invalid when stopped */
   lua_lock(L);
   va_start(argp, what);
@@ -1174,7 +1174,7 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
     }
     case LUA_GCRESTART: {
       luaE_setdebt(g, 0);
-      g->gcstp = 0;  /* (bit GCSTPGC must be zero here) */
+      g->gcstp = 0;  /* (other bits must be zero here) */
       break;
     }
     case LUA_GCCOLLECT: {
@@ -1194,7 +1194,7 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       int todo = va_arg(argp, int);  /* work to be done */
       int didsomething = 0;
       lu_byte oldstp = g->gcstp;
-      g->gcstp = 0;  /* allow GC to run (bit GCSTPGC must be zero here) */
+      g->gcstp = 0;  /* allow GC to run (other bits must be zero here) */
       if (todo == 0)
         todo = 1 << g->gcstepsize;  /* standard step size */
       while (todo >= g->GCdebt) {  /* enough to run a step? */
@@ -1211,18 +1211,6 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       g->gcstp = oldstp;  /* restore previous state */
       if (didsomething && g->gcstate == GCSpause)  /* end of cycle? */
         res = 1;  /* signal it */
-      break;
-    }
-    case LUA_GCSETPAUSE: {
-      unsigned int data = va_arg(argp, unsigned int);
-      res = applygcparam(g, gcpause, 100);
-      setgcparam(g, gcpause, data);
-      break;
-    }
-    case LUA_GCSETSTEPMUL: {
-      unsigned int data = va_arg(argp, unsigned int);
-      res = applygcparam(g, gcstepmul, 100);
-      setgcparam(g, gcstepmul, data);
       break;
     }
     case LUA_GCISRUNNING: {
