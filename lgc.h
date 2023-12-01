@@ -120,8 +120,6 @@
 #define setage(o,a)  ((o)->marked = cast_byte(((o)->marked & (~AGEBITS)) | a))
 #define isold(o)	(getage(o) > G_SURVIVAL)
 
-#define changeage(o,f,t)  \
-	check_exp(getage(o) == (f), (o)->marked ^= ((f)^(t)))
 
 /*
 ** In generational mode, objects are created 'new'. After surviving one

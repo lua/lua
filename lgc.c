@@ -431,7 +431,7 @@ static void genlink (global_State *g, GCObject *o) {
     linkobjgclist(o, g->grayagain);  /* link it back in 'grayagain' */
   }  /* everything else do not need to be linked back */
   else if (getage(o) == G_TOUCHED2)
-    changeage(o, G_TOUCHED2, G_OLD);  /* advance age */
+    setage(o, G_OLD);  /* advance age */
 }
 
 
@@ -826,9 +826,9 @@ static void freeobj (lua_State *L, GCObject *o) {
 /*
 ** sweep at most 'countin' elements from a list of GCObjects erasing dead
 ** objects, where a dead object is one marked with the old (non current)
-** white; change all non-dead objects back to white, preparing for next
-** collection cycle. Return where to continue the traversal or NULL if
-** list is finished.
+** white; change all non-dead objects back to white (and new), preparing
+** for next collection cycle. Return where to continue the traversal or
+** NULL if list is finished.
 */
 static GCObject **sweeplist (lua_State *L, GCObject **p, int countin) {
   global_State *g = G(L);
@@ -842,8 +842,8 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, int countin) {
       *p = curr->next;  /* remove 'curr' from list */
       freeobj(L, curr);  /* erase 'curr' */
     }
-    else {  /* change mark to 'white' */
-      curr->marked = cast_byte((marked & ~maskgcbits) | white);
+    else {  /* change mark to 'white' and age to 'new' */
+      curr->marked = cast_byte((marked & ~maskgcbits) | white | G_NEW);
       p = &curr->next;  /* go to next element */
     }
   }
@@ -1042,8 +1042,8 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 
 
 /*
-** Set the "time" to wait before starting a new GC cycle; cycle will
-** start when number of objects in use hits the threshold of
+** Set the "time" to wait before starting a new incremental cycle;
+** cycle will start when number of objects in use hits the threshold of
 ** approximately (marked * pause / 100).
 */
 static void setpause (global_State *g) {
@@ -1165,7 +1165,7 @@ static GCObject **correctgraylist (GCObject **p) {
     else if (getage(curr) == G_TOUCHED1) {  /* touched in this cycle? */
       lua_assert(isgray(curr));
       nw2black(curr);  /* make it black, for next barrier */
-      changeage(curr, G_TOUCHED1, G_TOUCHED2);
+      setage(curr, G_TOUCHED2);
       goto remain;  /* keep it in the list and go to next element */
     }
     else if (curr->tt == LUA_VTHREAD) {
@@ -1175,7 +1175,7 @@ static GCObject **correctgraylist (GCObject **p) {
     else {  /* everything else is removed */
       lua_assert(isold(curr));  /* young objects should be white here */
       if (getage(curr) == G_TOUCHED2)  /* advance from TOUCHED2... */
-        changeage(curr, G_TOUCHED2, G_OLD);  /* ... to OLD */
+        setage(curr, G_OLD);  /* ... to OLD */
       nw2black(curr);  /* make object black (to be removed) */
       goto remove;
     }
@@ -1210,7 +1210,7 @@ static void markold (global_State *g, GCObject *from, GCObject *to) {
   for (p = from; p != to; p = p->next) {
     if (getage(p) == G_OLD1) {
       lua_assert(!iswhite(p));
-      changeage(p, G_OLD1, G_OLD);  /* now they are old */
+      setage(p, G_OLD);  /* now they are old */
       if (isblack(p))
         reallymarkobject(g, p);
     }
@@ -1399,7 +1399,7 @@ static void genmajorstep (lua_State *L, global_State *g) {
 static void genstep (lua_State *L, global_State *g) {
   l_obj majorbase = g->GClastmajor;  /* count after last major collection */
   l_obj majorinc = applygcparam(g, genmajormul, majorbase);
-  if (gettotalobjs(g) > majorbase + majorinc && 0) {
+  if (gettotalobjs(g) > majorbase + majorinc) {
     /* do a major collection */
     enterinc(g);
     g->gckind = KGC_GENMAJOR;
