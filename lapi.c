@@ -1191,25 +1191,11 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       break;
     }
     case LUA_GCSTEP: {
-      int todo = va_arg(argp, int);  /* work to be done */
-      int didsomething = 0;
       lu_byte oldstp = g->gcstp;
       g->gcstp = 0;  /* allow GC to run (other bits must be zero here) */
-      if (todo == 0)
-        todo = 1 << g->gcstepsize;  /* standard step size */
-      while (todo >= g->GCdebt) {  /* enough to run a step? */
-        todo -= g->GCdebt;  /* decrement 'todo' */
-        luaC_step(L);  /* run one basic step */
-        didsomething = 1;
-        if (g->gckind == KGC_GEN)  /* minor collections? */
-          todo = 0;  /* doesn't make sense to repeat in this case */
-        else if (g->gcstate == GCSpause)
-          break;  /* don't run more than one cycle */
-      }
-      /* remove remaining 'todo' from total debt */
-      luaE_setdebt(g, g->GCdebt - todo);
+      luaC_step(L);  /* run one basic step */
       g->gcstp = oldstp;  /* restore previous state */
-      if (didsomething && g->gcstate == GCSpause)  /* end of cycle? */
+      if (g->gcstate == GCSpause)  /* end of cycle? */
         res = 1;  /* signal it */
       break;
     }

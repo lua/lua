@@ -33,8 +33,7 @@ do
     for j = 1, #t do
       local m = t[j]
       collectgarbage("incremental", p, m)
-      collectgarbage("step", 0)
-      collectgarbage("step", 10000)
+      collectgarbage("step")
     end
   end
   -- restore original parameters
@@ -166,45 +165,6 @@ do
 
   assert(_G["while"] == 234)
   _G["while"] = nil
-end
-
-
---
--- test the "size" of basic GC steps (whatever they mean...)
---
-do
-print("steps")
-
-  print("steps (2)")
-
-  local function dosteps (siz)
-    collectgarbage()
-    local a = {}
-    for i=1,100 do a[i] = {{}}; local b = {} end
-    local x = gcinfo()
-    local i = 0
-    repeat   -- do steps until it completes a collection cycle
-      i = i+1
-    until collectgarbage("step", siz)
-    assert(gcinfo() < x)
-    return i    -- number of steps
-  end
-
-  collectgarbage"stop"
-
-  if not _port then
-    assert(dosteps(10) < dosteps(2))
-  end
-
-  -- collector should do a full collection with so many steps
-  assert(dosteps(20000) == 1)
-  assert(collectgarbage("step", 20000) == true)
-  assert(collectgarbage("step", 20000) == true)
-
-  assert(not collectgarbage("isrunning"))
-  collectgarbage"restart"
-  assert(collectgarbage("isrunning"))
-
 end
 
 
