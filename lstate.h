@@ -149,8 +149,8 @@ struct lua_longjmp;  /* defined in ldo.c */
 
 /* kinds of Garbage Collection */
 #define KGC_INC		0	/* incremental gc */
-#define KGC_GEN		1	/* generational gc */
-#define KGC_GENMAJOR	2	/* generational in "major" mode */
+#define KGC_GENMINOR	1	/* generational gc in minor (regular) mode */
+#define KGC_GENMAJOR	2	/* generational in major mode */
 
 
 typedef struct stringtable {
@@ -259,7 +259,7 @@ typedef struct global_State {
   l_obj totalobjs;  /* total number of objects allocated + GCdebt */
   l_obj GCdebt;  /* objects counted but not yet allocated */
   l_obj marked;  /* number of objects marked in a GC cycle */
-  l_obj GClastmajor;  /* objects at last major collection */
+  l_obj GCmajorminor;  /* auxiliar counter to control major-minor shifts */
   stringtable strt;  /* hash table for strings */
   TValue l_registry;
   TValue nilvalue;  /* a nil value */

@@ -297,7 +297,7 @@ static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
   if (isdead(g,t)) return 0;
   if (issweepphase(g))
     return 1;  /* no invariants */
-  else if (g->gckind != KGC_GEN)
+  else if (g->gckind != KGC_GENMINOR)
     return !(isblack(f) && iswhite(t));  /* basic incremental invariant */
   else {  /* generational mode */
     if ((getage(f) == G_OLD && isblack(f)) && !isold(t))
@@ -519,7 +519,7 @@ static void checkobject (global_State *g, GCObject *o, int maybedead,
     assert(maybedead);
   else {
     assert(g->gcstate != GCSpause || iswhite(o));
-    if (g->gckind == KGC_GEN) {  /* generational mode? */
+    if (g->gckind == KGC_GENMINOR) {  /* generational mode? */
       assert(getage(o) >= listage);
       if (isold(o)) {
         assert(!iswhite(o));
@@ -953,7 +953,7 @@ static int gc_state (lua_State *L) {
   }
   else {
     global_State *g = G(L);
-    if (G(L)->gckind == KGC_GEN)
+    if (G(L)->gckind != KGC_INC)
       luaL_error(L, "cannot change states in generational mode");
     lua_lock(L);
     if (option < g->gcstate) {  /* must cross 'pause'? */

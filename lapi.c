@@ -1211,7 +1211,7 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
         setgcparam(g, genminormul, minormul);
       if (majormul != 0)
         setgcparam(g, genmajormul, majormul);
-      luaC_changemode(L, KGC_GEN);
+      luaC_changemode(L, KGC_GENMINOR);
       break;
     }
     case LUA_GCINC: {
