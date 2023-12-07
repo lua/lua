@@ -1098,7 +1098,8 @@ static void sweep2old (lua_State *L, GCObject **p) {
 ** will also remove objects turned white here from any gray list.
 */
 static GCObject **sweepgen (lua_State *L, global_State *g, GCObject **p,
-                            GCObject *limit, GCObject **pfirstold1) {
+                            GCObject *limit, GCObject **pfirstold1,
+                            l_obj *paddedold) {
   static const lu_byte nextage[] = {
     G_SURVIVAL,  /* from G_NEW */
     G_OLD1,      /* from G_SURVIVAL */
@@ -1108,6 +1109,7 @@ static GCObject **sweepgen (lua_State *L, global_State *g, GCObject **p,
     G_TOUCHED1,  /* from G_TOUCHED1 (do not change) */
     G_TOUCHED2   /* from G_TOUCHED2 (do not change) */
   };
+  l_obj addedold = 0;
   int white = luaC_white(g);
   GCObject *curr;
   while ((curr = *p) != limit) {
@@ -1125,25 +1127,17 @@ static GCObject **sweepgen (lua_State *L, global_State *g, GCObject **p,
       else {  /* all other objects will be old, and so keep their color */
         lua_assert(age != G_OLD1);  /* advanced in 'markold' */
         setage(curr, nextage[age]);
-        if (getage(curr) == G_OLD1 && *pfirstold1 == NULL)
-          *pfirstold1 = curr;  /* first OLD1 object in the list */
+        if (getage(curr) == G_OLD1) {
+          addedold++;  /* one more object becoming old */
+          if (*pfirstold1 == NULL)
+            *pfirstold1 = curr;  /* first OLD1 object in the list */
+        }
       }
       p = &curr->next;  /* go to next element */
     }
   }
+  *paddedold += addedold;
   return p;
-}
-
-
-/*
-** Traverse a list making all its elements white and clearing their
-** age. In incremental mode, all objects are 'new' all the time,
-** except for fixed strings (which are always old).
-*/
-static void whitelist (global_State *g, GCObject *p) {
-  int white = luaC_white(g);
-  for (; p != NULL; p = p->next)
-    p->marked = cast_byte((p->marked & ~maskgcbits) | white);
 }
 
 
@@ -1205,21 +1199,18 @@ static void correctgraylists (global_State *g) {
 /*
 ** Mark black 'OLD1' objects when starting a new young collection.
 ** Gray objects are already in some gray list, and so will be visited in
-** the atomic step. Returns the number of objects that became old.
+** the atomic step.
 */
-static l_obj markold (global_State *g, GCObject *from, GCObject *to) {
+static void markold (global_State *g, GCObject *from, GCObject *to) {
   GCObject *p;
-  l_obj count = 0;
   for (p = from; p != to; p = p->next) {
     if (getage(p) == G_OLD1) {
       lua_assert(!iswhite(p));
       setage(p, G_OLD);  /* now they are old */
-      count++;  /* one more old object */
       if (isblack(p))
         reallymarkobject(g, p);
     }
   }
-  return count;
 }
 
 
@@ -1236,16 +1227,17 @@ static void finishgencycle (lua_State *L, global_State *g) {
 
 
 /*
-** shifts from the end of an atomic step in a minor collection to
-** major collections.
+** Shifts from a minor collection to major collections. It starts in
+** the "sweep all" state to clear all objects, which are mostly black
+** in generational mode.
 */
-static void atomic2major (lua_State *L, global_State *g) {
+static void minor2inc (lua_State *L, global_State *g, int kind) {
   l_obj stepsize = cast(l_obj, 1) << g->gcstepsize;
   g->GCmajorminor = g->marked;  /* number of live objects */
-  g->gckind = KGC_GENMAJOR;
+  g->gckind = kind;
   g->reallyold = g->old1 = g->survival = NULL;
   g->finobjrold = g->finobjold1 = g->finobjsur = NULL;
-  entersweep(L);  /* continue from atomic as an incremental cycle */
+  entersweep(L);  /* continue as an incremental cycle */
   luaE_setdebt(g, stepsize);
 }
 
@@ -1266,7 +1258,7 @@ static int checkminormajor (lua_State *L, global_State *g, l_obj addedold1) {
   l_obj limit = applygcparam(g, minormajor, g->GCmajorminor);
 //printf("-> major? %ld %ld %ld %ld (%ld)\n", g->marked, limit, step, addedold1, gettotalobjs(g));
   if (addedold1 >= (step >> 1) || g->marked >= limit) {
-    atomic2major(L, g);  /* go to major mode */
+    minor2inc(L, g, KGC_GENMAJOR);  /* go to major mode */
     return 1;
   }
   return 0;  /* stay in minor mode */
@@ -1284,41 +1276,40 @@ static void youngcollection (lua_State *L, global_State *g) {
   GCObject *dummy;  /* dummy out parameter to 'sweepgen' */
   lua_assert(g->gcstate == GCSpropagate);
   if (g->firstold1) {  /* are there regular OLD1 objects? */
-    addedold1 += markold(g, g->firstold1, g->reallyold);  /* mark them */
+    markold(g, g->firstold1, g->reallyold);  /* mark them */
     g->firstold1 = NULL;  /* no more OLD1 objects (for now) */
   }
-  addedold1 += markold(g, g->finobj, g->finobjrold);
-  addedold1 += markold(g, g->tobefnz, NULL);
+  markold(g, g->finobj, g->finobjrold);
+  markold(g, g->tobefnz, NULL);
 
   atomic(L);  /* will lose 'g->marked' */
 
-  /* keep total number of added old1 objects */
-  g->marked = marked + addedold1;
-
-  /* decide whether to shift to major mode */
-  if (checkminormajor(L, g, addedold1))
-    return;  /* nothing else to be done here */
-
   /* sweep nursery and get a pointer to its last live element */
   g->gcstate = GCSswpallgc;
-  psurvival = sweepgen(L, g, &g->allgc, g->survival, &g->firstold1);
+  psurvival = sweepgen(L, g, &g->allgc, g->survival, &g->firstold1, &addedold1);
   /* sweep 'survival' */
-  sweepgen(L, g, psurvival, g->old1, &g->firstold1);
+  sweepgen(L, g, psurvival, g->old1, &g->firstold1, &addedold1);
   g->reallyold = g->old1;
   g->old1 = *psurvival;  /* 'survival' survivals are old now */
   g->survival = g->allgc;  /* all news are survivals */
 
   /* repeat for 'finobj' lists */
   dummy = NULL;  /* no 'firstold1' optimization for 'finobj' lists */
-  psurvival = sweepgen(L, g, &g->finobj, g->finobjsur, &dummy);
+  psurvival = sweepgen(L, g, &g->finobj, g->finobjsur, &dummy, &addedold1);
   /* sweep 'survival' */
-  sweepgen(L, g, psurvival, g->finobjold1, &dummy);
+  sweepgen(L, g, psurvival, g->finobjold1, &dummy, &addedold1);
   g->finobjrold = g->finobjold1;
   g->finobjold1 = *psurvival;  /* 'survival' survivals are old now */
   g->finobjsur = g->finobj;  /* all news are survivals */
 
-  sweepgen(L, g, &g->tobefnz, NULL, &dummy);
-  finishgencycle(L, g);
+  sweepgen(L, g, &g->tobefnz, NULL, &dummy, &addedold1);
+
+  /* keep total number of added old1 objects */
+  g->marked = marked + addedold1;
+
+  /* decide whether to shift to major mode */
+  if (!checkminormajor(L, g, addedold1))
+    finishgencycle(L, g);  /* still in minor mode; finish it */
 }
 
 
@@ -1375,22 +1366,6 @@ static void entergen (lua_State *L, global_State *g) {
 
 
 /*
-** Enter incremental mode. Turn all objects white, make all
-** intermediate lists point to NULL (to avoid invalid pointers),
-** and go to the pause state.
-*/
-static void enterinc (global_State *g) {
-  whitelist(g, g->allgc);
-  whitelist(g, g->finobj);
-  whitelist(g, g->tobefnz);
-  g->reallyold = g->old1 = g->survival = NULL;
-  g->finobjrold = g->finobjold1 = g->finobjsur = NULL;
-  g->gcstate = GCSpause;
-  g->gckind = KGC_INC;
-}
-
-
-/*
 ** Change collector mode to 'newmode'.
 */
 void luaC_changemode (lua_State *L, int newmode) {
@@ -1399,7 +1374,7 @@ void luaC_changemode (lua_State *L, int newmode) {
     g->gckind = KGC_INC;  /* already incremental but in name */
   if (newmode != g->gckind) {  /* does it need to change? */
     if (newmode == KGC_INC)  /* entering incremental mode? */
-      enterinc(g);  /* entering incremental mode */
+      minor2inc(L, g, KGC_INC);  /* entering incremental mode */
     else {
       lua_assert(newmode == KGC_GENMINOR);
       entergen(L, g);
@@ -1412,7 +1387,7 @@ void luaC_changemode (lua_State *L, int newmode) {
 ** Does a full collection in generational mode.
 */
 static void fullgen (lua_State *L, global_State *g) {
-  enterinc(g);
+  minor2inc(L, g, KGC_INC);
   entergen(L, g);
 }
 
