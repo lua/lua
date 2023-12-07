@@ -224,14 +224,15 @@ static int luaB_collectgarbage (lua_State *L) {
       return 1;
     }
     case LUA_GCGEN: {
-      int minormul = (int)luaL_optinteger(L, 2, 0);
-      int majormul = (int)luaL_optinteger(L, 3, 0);
-      return pushmode(L, lua_gc(L, o, minormul, majormul));
+      int minormul = (int)luaL_optinteger(L, 2, -1);
+      int majorminor = (int)luaL_optinteger(L, 3, -1);
+      int minormajor = (int)luaL_optinteger(L, 4, -1);
+      return pushmode(L, lua_gc(L, o, minormul, majorminor, minormajor));
     }
     case LUA_GCINC: {
-      int pause = (int)luaL_optinteger(L, 2, 0);
-      int stepmul = (int)luaL_optinteger(L, 3, 0);
-      int stepsize = (int)luaL_optinteger(L, 4, 0);
+      int pause = (int)luaL_optinteger(L, 2, -1);
+      int stepmul = (int)luaL_optinteger(L, 3, -1);
+      int stepsize = (int)luaL_optinteger(L, 4, -1);
       return pushmode(L, lua_gc(L, o, pause, stepmul, stepsize));
     }
     default: {

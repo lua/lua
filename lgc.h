@@ -161,10 +161,24 @@
 
 /* Default Values for GC parameters */
 
-/* generational */
+/*
+** Minor collections will shift to major ones after LUAI_MINORMAJOR%
+** objects become old.
+*/
+#define LUAI_MINORMAJOR         100
 
-#define LUAI_GENMAJORMUL         100	/* major multiplier */
-#define LUAI_GENMINORMUL         20	/* minor multiplier */
+/*
+** Major collections will shift to minor ones after a collection
+** collects at least LUAI_MAJORMINOR% of the new objects.
+*/
+#define LUAI_MAJORMINOR         80
+
+/*
+** A young (minor) collection will run after creating LUAI_GENMINORMUL%
+** new objects.
+*/
+#define LUAI_GENMINORMUL         20
+
 
 /* incremental */
 
@@ -187,27 +201,17 @@
 
 /*
 ** Macros to set and apply GC parameters. GC parameters are given in
-** percentage points, but are stored as lu_byte. To reduce their
-** values and avoid repeated divisions by 100, these macros store
-** the original parameter multiplied by 2^n and divided by 100.
-** To apply them, the value is divided by 2^n (a shift) and then
-** multiplied by the stored parameter, yielding
-** value / 2^n * (original parameter * 2^n / 100), or approximately
-** (value * original parameter / 100).
-**
-** For most parameters, which are typically larger than 100%, 2^n is
-** 16 (2^4), allowing maximum values up to ~1500%, with a granularity
-** of ~6%.  For the minor multiplier, which is typically smaller,
-** 2^n is 64 (2^6) to allow more precision. In that case, the maximum
-** value is ~400%, with a granularity of ~1.5%.
+** percentage points, but are stored as lu_byte. To avoid repeated
+** divisions by 100, these macros store the original parameter
+** multiplied by 128 and divided by 100.  To apply them, if it first
+** divides the value by 128 it may lose precision; if it first
+** multiplies by the parameter, it may overflow.  So, it first divides
+** by 32, then multiply by the parameter, and then divides the result by
+** 4.
 */
-#define gcparamshift(p)  \
-  (offsetof(global_State, p) == offsetof(global_State, genminormul) ? 6 : 4)
 
-#define setgcparam(g,p,v)  \
-	(g->p = (cast_uint(v) << gcparamshift(p)) / 100u)
-#define applygcparam(g,p,v)	(((v) >> gcparamshift(p)) * g->p)
-
+#define setgcparam(g,p,v)	(g->gcp##p = (cast_uint(v) << 7) / 100u)
+#define applygcparam(g,p,v)	((((v) >> 5) * g->gcp##p) >> 2)
 
 
 /*

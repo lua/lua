@@ -1205,20 +1205,21 @@ static void correctgraylists (global_State *g) {
 /*
 ** Mark black 'OLD1' objects when starting a new young collection.
 ** Gray objects are already in some gray list, and so will be visited in
-** the atomic step. The counter 'GCmajorminor' keeps how many objects to
-** become old before a major collection.
+** the atomic step. Returns the number of objects that became old.
 */
-static void markold (global_State *g, GCObject *from, GCObject *to) {
+static l_obj markold (global_State *g, GCObject *from, GCObject *to) {
   GCObject *p;
+  l_obj count = 0;
   for (p = from; p != to; p = p->next) {
     if (getage(p) == G_OLD1) {
       lua_assert(!iswhite(p));
       setage(p, G_OLD);  /* now they are old */
-      g->GCmajorminor--;  /* one more old object */
+      count++;  /* one more old object */
       if (isblack(p))
         reallymarkobject(g, p);
     }
   }
+  return count;
 }
 
 
@@ -1240,7 +1241,7 @@ static void finishgencycle (lua_State *L, global_State *g) {
 */
 static void atomic2major (lua_State *L, global_State *g) {
   l_obj stepsize = cast(l_obj, 1) << g->gcstepsize;
-  g->GCmajorminor = gettotalobjs(g);
+  g->GCmajorminor = g->marked;  /* number of live objects */
   g->gckind = KGC_GENMAJOR;
   g->reallyold = g->old1 = g->survival = NULL;
   g->finobjrold = g->finobjold1 = g->finobjsur = NULL;
@@ -1250,29 +1251,53 @@ static void atomic2major (lua_State *L, global_State *g) {
 
 
 /*
+** Decide whether to shift to major mode. It tests two conditions:
+** 1) Whether the number of added old objects in this collection is more
+** than half the number of new objects. ("step" is the number of objects
+** created between minor collections. Except for forward barriers, it
+** is the maximum number of objects that can become old in each minor
+** collection.)
+** 2) Whether the accumulated number of added old objects is larger
+** than 'minormajor'% of the number of lived objects after the last
+** major collection. (That percentage is computed in 'limit'.)
+*/
+static int checkminormajor (lua_State *L, global_State *g, l_obj addedold1) {
+  l_obj step = applygcparam(g, genminormul, g->GCmajorminor);
+  l_obj limit = applygcparam(g, minormajor, g->GCmajorminor);
+//printf("-> major? %ld %ld %ld %ld (%ld)\n", g->marked, limit, step, addedold1, gettotalobjs(g));
+  if (addedold1 >= (step >> 1) || g->marked >= limit) {
+    atomic2major(L, g);  /* go to major mode */
+    return 1;
+  }
+  return 0;  /* stay in minor mode */
+}
+
+/*
 ** Does a young collection. First, mark 'OLD1' objects. Then does the
 ** atomic step. Then, check whether to continue in minor mode. If so,
 ** sweep all lists and advance pointers. Finally, finish the collection.
 */
 static void youngcollection (lua_State *L, global_State *g) {
+  l_obj addedold1 = 0;
+  l_obj marked = g->marked;  /* preserve 'g->marked' */
   GCObject **psurvival;  /* to point to first non-dead survival object */
   GCObject *dummy;  /* dummy out parameter to 'sweepgen' */
   lua_assert(g->gcstate == GCSpropagate);
-  g->marked = 0;
   if (g->firstold1) {  /* are there regular OLD1 objects? */
-    markold(g, g->firstold1, g->reallyold);  /* mark them */
+    addedold1 += markold(g, g->firstold1, g->reallyold);  /* mark them */
     g->firstold1 = NULL;  /* no more OLD1 objects (for now) */
   }
-  markold(g, g->finobj, g->finobjrold);
-  markold(g, g->tobefnz, NULL);
+  addedold1 += markold(g, g->finobj, g->finobjrold);
+  addedold1 += markold(g, g->tobefnz, NULL);
 
-  atomic(L);
+  atomic(L);  /* will lose 'g->marked' */
+
+  /* keep total number of added old1 objects */
+  g->marked = marked + addedold1;
 
   /* decide whether to shift to major mode */
-  if (g->GCmajorminor <= 0) {  /* ?? */
-    atomic2major(L, g);  /* go to major mode */
+  if (checkminormajor(L, g, addedold1))
     return;  /* nothing else to be done here */
-  }
 
   /* sweep nursery and get a pointer to its last live element */
   g->gcstate = GCSswpallgc;
@@ -1319,7 +1344,8 @@ static void atomic2gen (lua_State *L, global_State *g) {
   sweep2old(L, &g->tobefnz);
 
   g->gckind = KGC_GENMINOR;
-  g->GCmajorminor = applygcparam(g, genmajormul, g->marked);
+  g->GCmajorminor = g->marked;  /* "base" for number of objects */
+  g->marked = 0;  /* to count the number of added old1 objects */
   finishgencycle(L, g);
 }
 
@@ -1329,7 +1355,7 @@ static void atomic2gen (lua_State *L, global_State *g) {
 ** total number of objects grows 'genminormul'%.
 */
 static void setminordebt (global_State *g) {
-  luaE_setdebt(g, applygcparam(g, genminormul, gettotalobjs(g)));
+  luaE_setdebt(g, applygcparam(g, genminormul, g->GCmajorminor));
 }
 
 
@@ -1369,13 +1395,11 @@ static void enterinc (global_State *g) {
 */
 void luaC_changemode (lua_State *L, int newmode) {
   global_State *g = G(L);
+  if (g->gckind == KGC_GENMAJOR)  /* doing major collections? */
+    g->gckind = KGC_INC;  /* already incremental but in name */
   if (newmode != g->gckind) {  /* does it need to change? */
-    if (newmode == KGC_INC) {  /* entering incremental mode? */
-      if (g->gckind == KGC_GENMAJOR)
-        g->gckind = KGC_INC;  /* already incremental but in name */
-      else
-        enterinc(g);  /* entering incremental mode */
-    }
+    if (newmode == KGC_INC)  /* entering incremental mode? */
+      enterinc(g);  /* entering incremental mode */
     else {
       lua_assert(newmode == KGC_GENMINOR);
       entergen(L, g);
@@ -1396,16 +1420,24 @@ static void fullgen (lua_State *L, global_State *g) {
 /*
 ** After an atomic incremental step from a major collection,
 ** check whether collector could return to minor collections.
+** It checks whether the number of objects 'tobecollected'
+** is greater than 'majorminor'% of the number of objects added
+** since the last collection ('addedobjs').
 */
 static int checkmajorminor (lua_State *L, global_State *g) {
   if (g->gckind == KGC_GENMAJOR) {
-    l_obj numobjs = gettotalobjs(g);  /* current count */
-    if (g->marked < numobjs - (numobjs >> 2)) {  /* ?? */
+    l_obj numobjs = gettotalobjs(g);
+    l_obj addedobjs = numobjs - g->GCmajorminor;
+    l_obj limit = applygcparam(g, majorminor, addedobjs);
+    l_obj tobecollected = numobjs - g->marked;
+//printf("-> minor? %ld %ld %ld\n", tobecollected, limit, numobjs);
+    if (tobecollected > limit) {
       atomic2gen(L, g);  /* return to generational mode */
       setminordebt(g);
       return 0;  /* exit incremental collection */
     }
   }
+  g->GCmajorminor = g->marked;  /* prepare for next collection */
   return 1;  /* stay doing incremental collections */
 }
 
@@ -1634,8 +1666,6 @@ void luaC_step (lua_State *L) {
   if (!gcrunning(g))  /* not running? */
     luaE_setdebt(g, 2000);
   else {
-//printf("> step: %d  %d  %ld %ld -> ", g->gckind, g->gcstate, gettotalobjs(g), g->GCdebt);
-
     switch (g->gckind) {
       case KGC_INC: case KGC_GENMAJOR:
         incstep(L, g);
@@ -1645,7 +1675,6 @@ void luaC_step (lua_State *L) {
         setminordebt(g);
         break;
     }
-//printf("%d  %d  %ld %ld\n", g->gckind, g->gcstate, gettotalobjs(g), g->GCdebt);
   }
 }
 

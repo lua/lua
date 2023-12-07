@@ -621,7 +621,8 @@ that is inaccessible from Lua.
 another live object refer to the object.)
 Because Lua has no knowledge about @N{C code},
 it never collects objects accessible through the registry @see{registry},
-which includes the global environment @see{globalenv}.
+which includes the global environment @see{globalenv} and
+the main thread.
 
 
 The garbage collector (GC) in Lua can work in two modes:
@@ -638,8 +639,8 @@ therefore, optimal settings are also non-portable.
 You can change the GC mode and parameters by calling
 @Lid{lua_gc} @N{in C}
 or @Lid{collectgarbage} in Lua.
-You can also use these functions to control
-the collector directly (e.g., to stop and restart it).
+You can also use these functions to control the collector directly,
+for instance to stop or restart it.
 
 }
 
@@ -656,39 +657,36 @@ and the @def{garbage-collector step size}.
 
 The garbage-collector pause
 controls how long the collector waits before starting a new cycle.
-The collector starts a new cycle when the use of memory
-hits @M{n%} of the use after the previous collection.
+The collector starts a new cycle when the number of objects
+hits @M{n%} of the total after the previous collection.
 Larger values make the collector less aggressive.
 Values equal to or less than 100 mean the collector will not wait to
 start a new cycle.
-A value of 200 means that the collector waits for the total memory in use
-to double before starting a new cycle.
+A value of 200 means that the collector waits for
+the total number of objects to double before starting a new cycle.
 The default value is 200; the maximum value is 1000.
 
 The garbage-collector step multiplier
 controls the speed of the collector relative to
-memory allocation,
+object creation,
 that is,
-how many elements it marks or sweeps for each
-kilobyte of memory allocated.
-Larger values make the collector more aggressive but also increase
-the size of each incremental step.
-You should not use values less than 100,
-because they make the collector too slow and
-can result in the collector never finishing a cycle.
-The default value is 100;  the maximum value is 1000.
+how many objects it marks or sweeps for each object created.
+Larger values make the collector more aggressive.
+Beware that values too small can
+make the collector too slow to ever finish a cycle.
+The default value is 300;  the maximum value is 1000.
 
 The garbage-collector step size controls the
 size of each incremental step,
-specifically how many bytes the interpreter allocates
+specifically how many objects the interpreter creates
 before performing a step.
 This parameter is logarithmic:
-A value of @M{n} means the interpreter will allocate @M{2@sp{n}}
-bytes between steps and perform equivalent work during the step.
+A value of @M{n} means the interpreter will create @M{2@sp{n}}
+objects between steps and perform equivalent work during the step.
 A large value (e.g., 60) makes the collector a stop-the-world
 (non-incremental) collector.
-The default value is 13,
-which means steps of approximately @N{8 Kbytes}.
+The default value is 8,
+which means steps of approximately @N{256 objects}.
 
 }
 
@@ -697,31 +695,44 @@ which means steps of approximately @N{8 Kbytes}.
 In generational mode,
 the collector does frequent @emph{minor} collections,
 which traverses only objects recently created.
-If after a minor collection the use of memory is still above a limit,
-the collector does a stop-the-world @emph{major} collection,
+If after a minor collection the number of objects is above a limit,
+the collector shifts to a @emph{major} collection,
 which traverses all objects.
-The generational mode uses two parameters:
-the @def{minor multiplier} and the @def{the major multiplier}.
+The collector will then stay doing major collections until
+it detects that the program is generating enough garbage to justify
+going back to minor collections.
+
+The generational mode uses three parameters:
+the @def{minor multiplier}, the @def{minor-major multiplier},
+and the @def{major-minor multiplier}.
 
 The minor multiplier controls the frequency of minor collections.
 For a minor multiplier @M{x},
-a new minor collection will be done when memory
-grows @M{x%} larger than the memory in use after the previous major
-collection.
+a new minor collection will be done when the number of objects
+grows @M{x%} larger than the number in use just after the last collection.
 For instance, for a multiplier of 20,
-the collector will do a minor collection when the use of memory
-gets 20% larger than the use after the previous major collection.
-The default value is 20; the maximum value is 200.
+the collector will do a minor collection when the number of objects
+gets 20% larger than the total after the last major collection.
+The default value is 20.
 
-The major multiplier controls the frequency of major collections.
-For a major multiplier @M{x},
-a new major collection will be done when memory
-grows @M{x%} larger than the memory in use after the previous major
-collection.
+The minor-major multiplier controls the shift to major collections.
+For a multiplier @M{x},
+the collector will shift to a major collection
+when the number of old objects grows @M{x%} larger
+than the total after the previous major collection.
 For instance, for a multiplier of 100,
-the collector will do a major collection when the use of memory
-gets larger than twice the use after the previous collection.
-The default value is 100; the maximum value is 1000.
+the collector will do a major collection when the number of old objects
+gets larger than twice the total after the previous major collection.
+The default value is 100.
+
+The major-minor multiplier controls the shift back to minor collections.
+For a multiplier @M{x},
+the collector will shift back to minor collections
+after a major collection collects at least @M{x%} of the allocated objects.
+In particular, for a multiplier of 0,
+the collector will immediately shift back to minor collections
+after doing one cycle of major collections.
+The default value is 20.
 
 }
 
@@ -3311,9 +3322,8 @@ Returns the remainder of dividing the current amount of bytes of
 memory in use by Lua by 1024.
 }
 
-@item{@id{LUA_GCSTEP} @T{(int stepsize)}|
-Performs an incremental step of garbage collection,
-corresponding to the allocation of @id{stepsize} Kbytes.
+@item{@id{LUA_GCSTEP}|
+Performs a step of garbage collection.
 }
 
 @item{@id{LUA_GCISRUNNING}|
@@ -3321,13 +3331,13 @@ Returns a boolean that tells whether the collector is running
 (i.e., not stopped).
 }
 
-@item{@id{LUA_GCINC} (int pause, int stepmul, stepsize)|
+@item{@id{LUA_GCINC} (int pause, int stepmul, int stepsize)|
 Changes the collector to incremental mode
 with the given parameters @see{incmode}.
 Returns the previous mode (@id{LUA_GCGEN} or @id{LUA_GCINC}).
 }
 
-@item{@id{LUA_GCGEN} (int minormul, int majormul)|
+@item{@id{LUA_GCGEN} (int minormul, int minormajor, int majorminor)|
 Changes the collector to generational mode
 with the given parameters @see{genmode}.
 Returns the previous mode (@id{LUA_GCGEN} or @id{LUA_GCINC}).
@@ -6312,13 +6322,14 @@ gives the exact number of bytes in use by Lua.
 
 @item{@St{step}|
 Performs a garbage-collection step.
-The step @Q{size} is controlled by @id{arg}.
-With a zero value,
-the collector will perform one basic (indivisible) step.
-For non-zero values,
-the collector will perform as if that amount of memory
-(in Kbytes) had been allocated by Lua.
-Returns @true if the step finished a collection cycle.
+In incremental mode,
+that step corresponds to the current step size;
+the function returns @true if the step finished a collection cycle.
+In generational mode,
+the step performs a full minor collection or
+a major collection,
+if the collector has scheduled one;
+the function returns @true if the step performed a major collection.
 }
 
 @item{@St{isrunning}|
@@ -6332,15 +6343,15 @@ This option can be followed by three numbers:
 the garbage-collector pause,
 the step multiplier,
 and the step size @see{incmode}.
-A zero means to not change that value.
+A -1 or absent value means to not change that value.
 }
 
 @item{@St{generational}|
 Change the collector mode to generational.
-This option can be followed by two numbers:
-the garbage-collector minor multiplier
-and the major multiplier @see{genmode}.
-A zero means to not change that value.
+This option can be followed by three numbers:
+the garbage-collector minor multiplier,
+the minor-major multiplier, and the major-minor multiplier @see{genmode}.
+A -1 or absent value means to not change that value.
 }
 
 }
@@ -9229,6 +9240,9 @@ declare a local variable with the same name in the loop body.
 @itemize{
 
 @item{
+There were several changes in the parameters
+for the options @St{incremental} and @St{generational}
+of the function @Lid{collectgarbage}.
 }
 
 }
@@ -9243,6 +9257,12 @@ declare a local variable with the same name in the loop body.
 The function @id{lua_resetthread} is deprecated;
 it is equivalent to @Lid{lua_closethread} with
 @id{from} being @id{NULL}.
+}
+
+@item{
+There were several changes in the parameters
+for the options @Lid{LUA_GCINC} and @Lid{LUA_GCGEN}
+of the function @Lid{lua_gc}.
 }
 
 }

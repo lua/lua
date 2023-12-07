@@ -1204,26 +1204,29 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       break;
     }
     case LUA_GCGEN: {
-      unsigned int minormul = va_arg(argp, unsigned int);
-      unsigned int majormul = va_arg(argp, unsigned int);
+      int minormul = va_arg(argp, int);
+      int minormajor = va_arg(argp, int);
+      int majorminor = va_arg(argp, int);
       res = (g->gckind == KGC_INC) ? LUA_GCINC : LUA_GCGEN;
-      if (minormul != 0)
+      if (minormul >= 0)
         setgcparam(g, genminormul, minormul);
-      if (majormul != 0)
-        setgcparam(g, genmajormul, majormul);
+      if (minormajor >= 0)
+        setgcparam(g, minormajor, minormajor);
+      if (majorminor >= 0)
+        setgcparam(g, majorminor, majorminor);
       luaC_changemode(L, KGC_GENMINOR);
       break;
     }
     case LUA_GCINC: {
-      unsigned int pause = va_arg(argp, unsigned int);
-      unsigned int stepmul = va_arg(argp, unsigned int);
-      unsigned int stepsize = va_arg(argp, unsigned int);
+      int pause = va_arg(argp, int);
+      int stepmul = va_arg(argp, int);
+      int stepsize = va_arg(argp, int);
       res = (g->gckind == KGC_INC) ? LUA_GCINC : LUA_GCGEN;
-      if (pause != 0)
+      if (pause >= 0)
         setgcparam(g, gcpause, pause);
-      if (stepmul != 0)
+      if (stepmul >= 0)
         setgcparam(g, gcstepmul, stepmul);
-      if (stepsize != 0)
+      if (stepsize >= 0)
         g->gcstepsize = (stepsize <= log2maxs(l_obj)) ? stepsize
                                                       : log2maxs(l_obj);
       luaC_changemode(L, KGC_INC);
