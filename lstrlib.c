@@ -225,7 +225,12 @@ static int writer (lua_State *L, const void *b, size_t size, void *ud) {
     state->init = 1;
     luaL_buffinit(L, &state->B);
   }
-  luaL_addlstring(&state->B, (const char *)b, size);
+  if (b == NULL) {  /* finishing dump? */
+    luaL_pushresult(&state->B);  /* push result */
+    lua_replace(L, 1);  /* move it to reserved slot */
+  }
+  else
+    luaL_addlstring(&state->B, (const char *)b, size);
   return 0;
 }
 
@@ -233,13 +238,13 @@ static int writer (lua_State *L, const void *b, size_t size, void *ud) {
 static int str_dump (lua_State *L) {
   struct str_Writer state;
   int strip = lua_toboolean(L, 2);
-  luaL_checktype(L, 1, LUA_TFUNCTION);
-  lua_settop(L, 1);  /* ensure function is on the top of the stack */
+  luaL_argcheck(L, lua_type(L, 1) == LUA_TFUNCTION && !lua_iscfunction(L, 1),
+                   1, "Lua function expected");
+  /* ensure function is on the top of the stack and vacate slot 1 */
+  lua_pushvalue(L, 1);
   state.init = 0;
-  if (l_unlikely(lua_dump(L, writer, &state, strip) != 0))
-    return luaL_error(L, "unable to dump given function");
-  luaL_pushresult(&state.B);
-  lua_assert(lua_isfunction(L, 1));  /* lua_dump kept that value */
+  lua_dump(L, writer, &state, strip);
+  lua_settop(L, 1);  /* leave final result on top */
   return 1;
 }
 

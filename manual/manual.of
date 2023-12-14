@@ -3266,6 +3266,13 @@ As it produces parts of the chunk,
 with the given @id{data}
 to write them.
 
+The function @Lid{lua_dump} fully preserves the Lua stack
+through the calls to the writer function,
+except that it may push some values for internal use
+before the first call,
+and it restores the stack size to its original size
+after the last call.
+
 If @id{strip} is true,
 the binary representation may not include all debug information
 about the function,
@@ -3274,8 +3281,6 @@ to save space.
 The value returned is the error code returned by the last
 call to the writer;
 @N{0 means} no errors.
-
-This function does not pop the Lua function from the stack.
 
 }
 
@@ -4687,6 +4692,10 @@ it calls the writer,
 passing along the buffer to be written (@id{p}),
 its size (@id{sz}),
 and the @id{ud} parameter supplied to @Lid{lua_dump}.
+
+After @Lid{lua_dump} writes its last piece,
+it will signal that by calling the writer function one more time,
+with a @id{NULL} buffer (and size 0).
 
 The writer returns an error code:
 @N{0 means} no errors;
@@ -9257,6 +9266,14 @@ of the function @Lid{collectgarbage}.
 The function @id{lua_resetthread} is deprecated;
 it is equivalent to @Lid{lua_closethread} with
 @id{from} being @id{NULL}.
+}
+
+@item{
+The function @Lid{lua_dump} changed the way it keeps the stack
+through the calls to the writer function.
+(That was not specified in previous versions.)
+Also, it calls the writer function one extra time,
+to signal the end of the dump.
 }
 
 @item{

@@ -152,7 +152,7 @@ static void loadString (LoadState *S, Proto *p, TString **sl) {
     luaH_getint(S->h, idx, &stv);
     *sl = ts = tsvalue(&stv);
     luaC_objbarrier(L, p, ts);
-    return;
+    return;  /* do not save it again */
   }
   else if ((size -= 2) <= LUAI_MAXSHORTLEN) {  /* short string? */
     char buff[LUAI_MAXSHORTLEN + 1];  /* extra space for '\0' */
@@ -168,10 +168,10 @@ static void loadString (LoadState *S, Proto *p, TString **sl) {
   else {  /* create internal copy */
     *sl = ts = luaS_createlngstrobj(L, size);  /* create string */
     luaC_objbarrier(L, p, ts);
-    loadVector(S, getlngstr(ts), size);  /* load directly in final place */
-    loadByte(S);  /* skip ending '\0' */
+    loadVector(S, getlngstr(ts), size + 1);  /* load directly in final place */
   }
-  S->nstr++;  /* add string to list of saved strings */
+  /* add string to list of saved strings */
+  S->nstr++;
   setsvalue(L, &sv, ts);
   luaH_setint(L, S->h, S->nstr, &sv);
   luaC_objbarrierback(L, obj2gco(S->h), ts);
