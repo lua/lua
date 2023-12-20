@@ -182,12 +182,14 @@
 
 /* incremental */
 
-/* wait memory to double before starting new cycle */
-#define LUAI_GCPAUSE    200
+/* Number of objects must be LUAI_GCPAUSE% before starting new cycle */
+#define LUAI_GCPAUSE    300
 
-#define LUAI_GCMUL      300	/* step multiplier */
+/* Step multiplier. (Roughly, the collector handles LUAI_GCMUL% objects
+   for each new allocated object.) */
+#define LUAI_GCMUL      200
 
-/* how many objects to allocate before next GC step (log2) */
+/* How many objects to allocate before next GC step (log2) */
 #define LUAI_GCSTEPSIZE 8      /* 256 objects */
 
 
@@ -244,7 +246,7 @@
 LUAI_FUNC void luaC_fix (lua_State *L, GCObject *o);
 LUAI_FUNC void luaC_freeallobjects (lua_State *L);
 LUAI_FUNC void luaC_step (lua_State *L);
-LUAI_FUNC void luaC_runtilstate (lua_State *L, int statesmask);
+LUAI_FUNC void luaC_runtilstate (lua_State *L, int state, int fast);
 LUAI_FUNC void luaC_fullgc (lua_State *L, int isemergency);
 LUAI_FUNC GCObject *luaC_newobj (lua_State *L, int tt, size_t sz);
 LUAI_FUNC GCObject *luaC_newobjdt (lua_State *L, int tt, size_t sz,

@@ -941,10 +941,10 @@ static int gc_printobj (lua_State *L) {
 
 static int gc_state (lua_State *L) {
   static const char *statenames[] = {
-    "propagate", "atomic", "enteratomic", "sweepallgc", "sweepfinobj",
+    "propagate", "atomic", "sweepallgc", "sweepfinobj",
     "sweeptobefnz", "sweepend", "callfin", "pause", ""};
   static const int states[] = {
-    GCSpropagate, GCSenteratomic, GCSatomic, GCSswpallgc, GCSswpfinobj,
+    GCSpropagate, GCSenteratomic, GCSswpallgc, GCSswpfinobj,
     GCSswptobefnz, GCSswpend, GCScallfin, GCSpause, -1};
   int option = states[luaL_checkoption(L, 1, "", statenames)];
   if (option == -1) {
@@ -957,9 +957,9 @@ static int gc_state (lua_State *L) {
       luaL_error(L, "cannot change states in generational mode");
     lua_lock(L);
     if (option < g->gcstate) {  /* must cross 'pause'? */
-      luaC_runtilstate(L, bitmask(GCSpause));  /* run until pause */
+      luaC_runtilstate(L, GCSpause, 1);  /* run until pause */
     }
-    luaC_runtilstate(L, bitmask(option));
+    luaC_runtilstate(L, option, 0);  /* do not skip propagation state */
     lua_assert(G(L)->gcstate == option);
     lua_unlock(L);
     return 0;

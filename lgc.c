@@ -93,6 +93,7 @@
 */
 #define markobjectN(g,t)	{ if (t) markobject(g,t); }
 
+
 static void reallymarkobject (global_State *g, GCObject *o);
 static l_obj atomic (lua_State *L);
 static void entersweep (lua_State *L);
@@ -831,10 +832,10 @@ static void freeobj (lua_State *L, GCObject *o) {
 ** for next collection cycle. Return where to continue the traversal or
 ** NULL if list is finished.
 */
-static GCObject **sweeplist (lua_State *L, GCObject **p, int countin) {
+static GCObject **sweeplist (lua_State *L, GCObject **p, l_obj countin) {
   global_State *g = G(L);
   int ow = otherwhite(g);
-  int i;
+  l_obj i;
   int white = luaC_white(g);  /* current white */
   for (i = 0; *p != NULL && i < countin; i++) {
     GCObject *curr = *p;
@@ -1357,8 +1358,8 @@ static void setminordebt (global_State *g) {
 ** collection.
 */
 static void entergen (lua_State *L, global_State *g) {
-  luaC_runtilstate(L, bitmask(GCSpause));  /* prepare to start a new cycle */
-  luaC_runtilstate(L, bitmask(GCSpropagate));  /* start new cycle */
+  luaC_runtilstate(L, GCSpause, 1);  /* prepare to start a new cycle */
+  luaC_runtilstate(L, GCSpropagate, 1);  /* start new cycle */
   atomic(L);  /* propagates all and then do the atomic stuff */
   atomic2gen(L, g);
   setminordebt(g);  /* set debt assuming next cycle will be minor */
@@ -1515,10 +1516,14 @@ static l_obj atomic (lua_State *L) {
 }
 
 
+/*
+** Do a sweep step. The normal case (not fast) sweeps at most GCSWEEPMAX
+** elements. The fast case sweeps the whole list.
+*/
 static void sweepstep (lua_State *L, global_State *g,
-                       int nextstate, GCObject **nextlist) {
+                       int nextstate, GCObject **nextlist, int fast) {
   if (g->sweepgc)
-    g->sweepgc = sweeplist(L, g->sweepgc, GCSWEEPMAX);
+    g->sweepgc = sweeplist(L, g->sweepgc, fast ? MAX_LOBJ : GCSWEEPMAX);
   else {  /* enter next state */
     g->gcstate = nextstate;
     g->sweepgc = nextlist;
@@ -1526,7 +1531,19 @@ static void sweepstep (lua_State *L, global_State *g,
 }
 
 
-static l_obj singlestep (lua_State *L) {
+/*
+** Performs one incremental "step" in an incremental garbage collection.
+** For indivisible work, a step goes to the next state. When marking
+** (propagating), a step traverses one object. When sweeping, a step
+** sweeps GCSWEEPMAX objects, to avoid a big overhead for sweeping
+** objects one by one. (Sweeping is inexpensive, no matter the
+** object.) When 'fast' is true, 'singlestep' tries to finish a state
+** "as fast as possible". In particular, it skips the propagation
+** phase and leaves all objects to be traversed by the atomic phase:
+** That avoids traversing twice some objects, such as theads and
+** weak tables.
+*/
+static l_obj singlestep (lua_State *L, int fast) {
   global_State *g = G(L);
   l_obj work;
   lua_assert(!g->gcstopem);  /* collector is not reentrant */
@@ -1539,7 +1556,7 @@ static l_obj singlestep (lua_State *L) {
       break;
     }
     case GCSpropagate: {
-      if (g->gray == NULL) {  /* no more gray objects? */
+      if (fast || g->gray == NULL) {
         g->gcstate = GCSenteratomic;  /* finish propagate phase */
         work = 0;
       }
@@ -1556,17 +1573,17 @@ static l_obj singlestep (lua_State *L) {
       break;
     }
     case GCSswpallgc: {  /* sweep "regular" objects */
-      sweepstep(L, g, GCSswpfinobj, &g->finobj);
+      sweepstep(L, g, GCSswpfinobj, &g->finobj, fast);
       work = GCSWEEPMAX;
       break;
     }
     case GCSswpfinobj: {  /* sweep objects with finalizers */
-      sweepstep(L, g, GCSswptobefnz, &g->tobefnz);
+      sweepstep(L, g, GCSswptobefnz, &g->tobefnz, fast);
       work = GCSWEEPMAX;
       break;
     }
     case GCSswptobefnz: {  /* sweep objects to be finalized */
-      sweepstep(L, g, GCSswpend, NULL);
+      sweepstep(L, g, GCSswpend, NULL, fast);
       work = GCSWEEPMAX;
       break;
     }
@@ -1596,14 +1613,15 @@ static l_obj singlestep (lua_State *L) {
 
 
 /*
-** advances the garbage collector until it reaches a state allowed
-** by 'statemask'
+** Advances the garbage collector until it reaches the given state.
+** (The option 'fast' is only for testing; in normal code, 'fast'
+** here is always true.)
 */
-void luaC_runtilstate (lua_State *L, int statesmask) {
+void luaC_runtilstate (lua_State *L, int state, int fast) {
   global_State *g = G(L);
   lua_assert(g->gckind == KGC_INC);
-  while (!testbit(statesmask, g->gcstate))
-    singlestep(L);
+  while (state != g->gcstate)
+    singlestep(L, fast);
 }
 
 
@@ -1618,8 +1636,13 @@ void luaC_runtilstate (lua_State *L, int statesmask) {
 static void incstep (lua_State *L, global_State *g) {
   l_obj stepsize = cast(l_obj, 1) << g->gcstepsize;
   l_obj work2do = applygcparam(g, gcstepmul, stepsize);
-  do {  /* repeat until pause or enough "credit" (negative debt) */
-    l_obj work = singlestep(L);  /* perform one single step */
+  int fast = 0;
+  if (work2do == 0) {  /* special case: do a full collection */
+    work2do = MAX_LOBJ;  /* do unlimited work */
+    fast = 1;
+  }
+  do {  /* repeat until pause or enough work */
+    l_obj work = singlestep(L, fast);  /* perform one single step */
     if (g->gckind == KGC_GENMINOR)  /* returned to minor collections? */
       return;  /* nothing else to be done here */
     work2do -= work;
@@ -1665,13 +1688,11 @@ static void fullinc (lua_State *L, global_State *g) {
   if (keepinvariant(g))  /* black objects? */
     entersweep(L); /* sweep everything to turn them back to white */
   /* finish any pending sweep phase to start a new cycle */
-  luaC_runtilstate(L, bitmask(GCSpause));
-  luaC_runtilstate(L, bitmask(GCSpropagate));  /* start new cycle */
-  g->gcstate = GCSenteratomic;  /* go straight to atomic phase ??? */
-  luaC_runtilstate(L, bitmask(GCScallfin));  /* run up to finalizers */
+  luaC_runtilstate(L, GCSpause, 1);
+  luaC_runtilstate(L, GCScallfin, 1);  /* run up to finalizers */
   /* 'marked' must be correct after a full GC cycle */
   lua_assert(g->marked == gettotalobjs(g));
-  luaC_runtilstate(L, bitmask(GCSpause));  /* finish collection */
+  luaC_runtilstate(L, GCSpause, 1);  /* finish collection */
   setpause(g);
 }
 

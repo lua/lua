@@ -162,9 +162,16 @@ end
 assert(collectgarbage'isrunning')
 
 
+do  print"testing stop-the-world collection"
+  collectgarbage("incremental", nil, 0)
 
--- just to make sure
-assert(collectgarbage'isrunning')
+  -- each step does a complete cycle
+  assert(collectgarbage("step"))
+  assert(collectgarbage("step"))
+
+  -- back to default value
+  collectgarbage("incremental", nil, 200)
+end
 
 collectgarbage(oldmode)
 
