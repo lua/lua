@@ -1033,15 +1033,34 @@ static int table_query (lua_State *L) {
 }
 
 
-static int query_inc (lua_State *L) {
+static int query_GCparams (lua_State *L) {
   global_State *g = G(L);
   lua_pushinteger(L, gettotalobjs(g));
   lua_pushinteger(L, g->GCdebt);
-  lua_pushinteger(L, applygcparam(g, gcpause, 100));
-  lua_pushinteger(L, applygcparam(g, gcstepmul, 100));
-  lua_pushinteger(L, cast(l_obj, 1) << g->gcstepsize);
-  return 5;
+  lua_pushinteger(L, luaO_applyparam(g->gcpgenminormul, 100));
+  lua_pushinteger(L, luaO_applyparam(g->gcpmajorminor, 100));
+  lua_pushinteger(L, luaO_applyparam(g->gcpminormajor, 100));
+  lua_pushinteger(L, luaO_applyparam(g->gcppause, 100));
+  lua_pushinteger(L, luaO_applyparam(g->gcpstepmul, 100));
+  lua_pushinteger(L, luaO_applyparam(g->gcpstepsize, 100));
+  return 8;
 }
+
+
+static int test_codeparam (lua_State *L) {
+  lua_Integer p = luaL_checkinteger(L, 1);
+  lua_pushinteger(L, luaO_codeparam(p));
+  return 1;
+}
+
+
+static int test_applyparam (lua_State *L) {
+  lua_Integer p = luaL_checkinteger(L, 1);
+  lua_Integer x = luaL_checkinteger(L, 2);
+  lua_pushinteger(L, luaO_applyparam(p, x));
+  return 1;
+}
+
 
 static int string_query (lua_State *L) {
   stringtable *tb = &G(L)->strt;
@@ -1974,7 +1993,9 @@ static const struct luaL_Reg tests_funcs[] = {
   {"pushuserdata", pushuserdata},
   {"querystr", string_query},
   {"querytab", table_query},
-  {"queryinc", query_inc},
+  {"queryGCparams", query_GCparams},
+  {"codeparam", test_codeparam},
+  {"applyparam", test_applyparam},
   {"ref", tref},
   {"resume", coresume},
   {"s2d", s2d},

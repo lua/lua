@@ -1190,12 +1190,9 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       int minormajor = va_arg(argp, int);
       int majorminor = va_arg(argp, int);
       res = (g->gckind == KGC_INC) ? LUA_GCINC : LUA_GCGEN;
-      if (minormul >= 0)
-        setgcparam(g, genminormul, minormul);
-      if (minormajor >= 0)
-        setgcparam(g, minormajor, minormajor);
-      if (majorminor >= 0)
-        setgcparam(g, majorminor, majorminor);
+      setgcparam(g, gcpgenminormul, minormul);
+      setgcparam(g, gcpminormajor, minormajor);
+      setgcparam(g, gcpmajorminor, majorminor);
       luaC_changemode(L, KGC_GENMINOR);
       break;
     }
@@ -1204,13 +1201,9 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       int stepmul = va_arg(argp, int);
       int stepsize = va_arg(argp, int);
       res = (g->gckind == KGC_INC) ? LUA_GCINC : LUA_GCGEN;
-      if (pause >= 0)
-        setgcparam(g, gcpause, pause);
-      if (stepmul >= 0)
-        setgcparam(g, gcstepmul, stepmul);
-      if (stepsize >= 0)
-        g->gcstepsize = (stepsize <= log2maxs(l_obj)) ? stepsize
-                                                      : log2maxs(l_obj);
+      setgcparam(g, gcppause, pause);
+      setgcparam(g, gcpstepmul, stepmul);
+      setgcparam(g, gcpstepsize, stepsize);
       luaC_changemode(L, KGC_INC);
       break;
     }

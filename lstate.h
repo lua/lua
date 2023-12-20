@@ -264,18 +264,18 @@ typedef struct global_State {
   TValue l_registry;
   TValue nilvalue;  /* a nil value */
   unsigned int seed;  /* randomized seed for hashes */
-  unsigned short gcpgenminormul;  /* control minor generational collections */
-  unsigned short gcpmajorminor;  /* control shift major->minor */
-  unsigned short gcpminormajor;  /* control shift minor->major */
-  unsigned short gcpgcpause;  /* size of pause between successive GCs */
-  unsigned short gcpgcstepmul;  /* GC "speed" */
+  lu_byte gcpgenminormul;  /* control minor generational collections */
+  lu_byte gcpmajorminor;  /* control shift major->minor */
+  lu_byte gcpminormajor;  /* control shift minor->major */
+  lu_byte gcppause;  /* size of pause between successive GCs */
+  lu_byte gcpstepmul;  /* GC "speed" */
+  lu_byte gcpstepsize;  /* GC granularity */
   lu_byte currentwhite;
   lu_byte gcstate;  /* state of garbage collector */
   lu_byte gckind;  /* kind of GC running */
   lu_byte gcstopem;  /* stops emergency collections */
   lu_byte gcstp;  /* control whether GC is running */
   lu_byte gcemergency;  /* true if this is an emergency collection */
-  lu_byte gcstepsize;  /* (log2 of) GC granularity */
   GCObject *allgc;  /* list of all collectable objects */
   GCObject **sweepgc;  /* current position of sweep in list */
   GCObject *finobj;  /* list of collectable objects with finalizers */

@@ -33,7 +33,7 @@
 ** Computes ceil(log2(x))
 */
 int luaO_ceillog2 (unsigned int x) {
-  static const lu_byte log_2[256] = {  /* log_2[i] = ceil(log2(i - 1)) */
+  static const lu_byte log_2[256] = {  /* log_2[i - 1] = ceil(log2(i)) */
     0,1,2,2,3,3,3,3,4,4,4,4,4,4,4,4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
     6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
     7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
@@ -47,6 +47,57 @@ int luaO_ceillog2 (unsigned int x) {
   x--;
   while (x >= 256) { l += 8; x >>= 8; }
   return l + log_2[x];
+}
+
+/*
+** Encodes 'p'% as a floating-point byte, represented as (eeeeexxx).
+** The exponent is represented using excess-7. Mimicking IEEE 754, the
+** representation normalizes the number when possible, assuming an extra
+** 1 before the mantissa (xxx) and adding one to the exponent (eeeeexxx)
+** to signal that. So, the real value is (1xxx) * 2^(eeeee - 8) if
+** eeeee != 0, and (xxx) * 2^-7 otherwise.
+*/
+unsigned int luaO_codeparam (unsigned int p) {
+  if (p >= (cast(lu_mem, 0xF) << 0xF) / 128 * 100)  /* overflow? */
+    return 0xFF;  /* return maximum value */
+  else {
+    p = (p * 128u) / 100;
+    if (p <= 0xF)
+      return p;
+    else {
+      int log = luaO_ceillog2(p + 1) - 5;
+      return ((p >> log) - 0x10) | ((log + 1) << 4);
+    }
+  }
+}
+
+
+/*
+** Computes 'p' times 'x', where 'p' is a floating-point byte.
+*/
+l_obj luaO_applyparam (unsigned int p, l_obj x) {
+  unsigned int m = p & 0xF;  /* mantissa */
+  int e = (p >> 4);  /* exponent */
+  if (e > 0) {  /* normalized? */
+    e--;
+    m += 0x10;  /* maximum 'm' is 0x1F */
+  }
+  e -= 7;  /* correct excess-7 */
+  if (e < 0) {
+    e = -e;
+    if (x < MAX_LOBJ / 0x1F)  /* multiplication cannot overflow? */
+      return (x * m) >> e;  /* multiplying first gives more precision */
+    else if ((x >> e) <  MAX_LOBJ / 0x1F)  /* cannot overflow after shift? */
+      return (x >> e) * m;
+    else  /* real overflow */
+      return MAX_LOBJ;
+  }
+  else {
+    if (x < (MAX_LOBJ / 0x1F) >> e)  /* no overflow? */
+      return (x * m) << e;  /* order doesn't matter here */
+    else  /* real overflow */
+      return MAX_LOBJ;
+  }
 }
 
 

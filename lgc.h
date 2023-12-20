@@ -189,9 +189,11 @@
    for each new allocated object.) */
 #define LUAI_GCMUL      200
 
-/* How many objects to allocate before next GC step (log2) */
-#define LUAI_GCSTEPSIZE 8      /* 256 objects */
+/* How many objects to allocate before next GC step */
+#define LUAI_GCSTEPSIZE	250
 
+
+#define setgcparam(g,p,v)	if ((v) >= 0) {g->p = luaO_codeparam(v);}
 
 /*
 ** Control when GC is running:
@@ -200,20 +202,6 @@
 #define GCSTPGC		2  /* bit true when GC stopped by itself */
 #define GCSTPCLS	4  /* bit true when closing Lua state */
 #define gcrunning(g)	((g)->gcstp == 0)
-
-/*
-** Macros to set and apply GC parameters. GC parameters are given in
-** percentage points, but are stored as lu_byte. To avoid repeated
-** divisions by 100, these macros store the original parameter
-** multiplied by 128 and divided by 100.  To apply them, if it first
-** divides the value by 128 it may lose precision; if it first
-** multiplies by the parameter, it may overflow.  So, it first divides
-** by 32, then multiply by the parameter, and then divides the result by
-** 4.
-*/
-
-#define setgcparam(g,p,v)	(g->gcp##p = (cast_uint(v) << 7) / 100u)
-#define applygcparam(g,p,v)	((((v) >> 5) * g->gcp##p) >> 2)
 
 
 /*

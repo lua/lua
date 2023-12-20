@@ -365,12 +365,12 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud, unsigned int seed) {
   g->marked = 0;
   g->GCdebt = 0;
   setivalue(&g->nilvalue, 0);  /* to signal that state is not yet built */
-  setgcparam(g, gcpause, LUAI_GCPAUSE);
-  setgcparam(g, gcstepmul, LUAI_GCMUL);
-  g->gcstepsize = LUAI_GCSTEPSIZE;
-  setgcparam(g, genminormul, LUAI_GENMINORMUL);
-  setgcparam(g, minormajor, LUAI_MINORMAJOR);
-  setgcparam(g, majorminor, LUAI_MAJORMINOR);
+  setgcparam(g, gcppause, LUAI_GCPAUSE);
+  setgcparam(g, gcpstepmul, LUAI_GCMUL);
+  setgcparam(g, gcpstepsize, LUAI_GCSTEPSIZE);
+  setgcparam(g, gcpgenminormul, LUAI_GENMINORMUL);
+  setgcparam(g, gcpminormajor, LUAI_MINORMAJOR);
+  setgcparam(g, gcpmajorminor, LUAI_MAJORMINOR);
   for (i=0; i < LUA_NUMTAGS; i++) g->mt[i] = NULL;
   if (luaD_rawrunprotected(L, f_luaopen, NULL) != LUA_OK) {
     /* memory allocation error: free partial state */

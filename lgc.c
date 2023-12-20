@@ -1049,7 +1049,7 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 ** approximately (marked * pause / 100).
 */
 static void setpause (global_State *g) {
-  l_obj threshold = applygcparam(g, gcpause, g->marked);
+  l_obj threshold = luaO_applyparam(g->gcppause, g->marked);
   l_obj debt = threshold - gettotalobjs(g);
   if (debt < 0) debt = 0;
   luaE_setdebt(g, debt);
@@ -1233,13 +1233,13 @@ static void finishgencycle (lua_State *L, global_State *g) {
 ** in generational mode.
 */
 static void minor2inc (lua_State *L, global_State *g, int kind) {
-  l_obj stepsize = cast(l_obj, 1) << g->gcstepsize;
   g->GCmajorminor = g->marked;  /* number of live objects */
   g->gckind = kind;
   g->reallyold = g->old1 = g->survival = NULL;
   g->finobjrold = g->finobjold1 = g->finobjsur = NULL;
   entersweep(L);  /* continue as an incremental cycle */
-  luaE_setdebt(g, stepsize);
+  /* set a debt equal to the step size */
+  luaE_setdebt(g, luaO_applyparam(g->gcpstepsize, 100));
 }
 
 
@@ -1255,8 +1255,8 @@ static void minor2inc (lua_State *L, global_State *g, int kind) {
 ** major collection. (That percentage is computed in 'limit'.)
 */
 static int checkminormajor (lua_State *L, global_State *g, l_obj addedold1) {
-  l_obj step = applygcparam(g, genminormul, g->GCmajorminor);
-  l_obj limit = applygcparam(g, minormajor, g->GCmajorminor);
+  l_obj step = luaO_applyparam(g->gcpgenminormul, g->GCmajorminor);
+  l_obj limit = luaO_applyparam(g->gcpminormajor, g->GCmajorminor);
 //printf("-> major? %ld %ld %ld %ld (%ld)\n", g->marked, limit, step, addedold1, gettotalobjs(g));
   if (addedold1 >= (step >> 1) || g->marked >= limit) {
     minor2inc(L, g, KGC_GENMAJOR);  /* go to major mode */
@@ -1347,7 +1347,7 @@ static void atomic2gen (lua_State *L, global_State *g) {
 ** total number of objects grows 'genminormul'%.
 */
 static void setminordebt (global_State *g) {
-  luaE_setdebt(g, applygcparam(g, genminormul, g->GCmajorminor));
+  luaE_setdebt(g, luaO_applyparam(g->gcpgenminormul, g->GCmajorminor));
 }
 
 
@@ -1404,7 +1404,7 @@ static int checkmajorminor (lua_State *L, global_State *g) {
   if (g->gckind == KGC_GENMAJOR) {
     l_obj numobjs = gettotalobjs(g);
     l_obj addedobjs = numobjs - g->GCmajorminor;
-    l_obj limit = applygcparam(g, majorminor, addedobjs);
+    l_obj limit = luaO_applyparam(g->gcpmajorminor, addedobjs);
     l_obj tobecollected = numobjs - g->marked;
 //printf("-> minor? %ld %ld %ld\n", tobecollected, limit, numobjs);
     if (tobecollected > limit) {
@@ -1634,8 +1634,8 @@ void luaC_runtilstate (lua_State *L, int state, int fast) {
 ** controls when next step will be performed.
 */
 static void incstep (lua_State *L, global_State *g) {
-  l_obj stepsize = cast(l_obj, 1) << g->gcstepsize;
-  l_obj work2do = applygcparam(g, gcstepmul, stepsize);
+  l_obj stepsize = luaO_applyparam(g->gcpstepsize, 100);
+  l_obj work2do = luaO_applyparam(g->gcpstepmul, stepsize);
   int fast = 0;
   if (work2do == 0) {  /* special case: do a full collection */
     work2do = MAX_LOBJ;  /* do unlimited work */
