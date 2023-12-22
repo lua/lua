@@ -198,9 +198,11 @@ static int pushmode (lua_State *L, int oldmode) {
 
 static int luaB_collectgarbage (lua_State *L) {
   static const char *const opts[] = {"stop", "restart", "collect",
-    "count", "step", "isrunning", "generational", "incremental", NULL};
-  static const int optsnum[] = {LUA_GCSTOP, LUA_GCRESTART, LUA_GCCOLLECT,
-    LUA_GCCOUNT, LUA_GCSTEP, LUA_GCISRUNNING, LUA_GCGEN, LUA_GCINC};
+    "count", "step", "isrunning", "generational", "incremental",
+    "setparam", NULL};
+  static const char optsnum[] = {LUA_GCSTOP, LUA_GCRESTART, LUA_GCCOLLECT,
+    LUA_GCCOUNT, LUA_GCSTEP, LUA_GCISRUNNING, LUA_GCGEN, LUA_GCINC,
+    LUA_GCSETPARAM};
   int o = optsnum[luaL_checkoption(L, 1, "collect", opts)];
   switch (o) {
     case LUA_GCCOUNT: {
@@ -224,16 +226,38 @@ static int luaB_collectgarbage (lua_State *L) {
       return 1;
     }
     case LUA_GCGEN: {
+#if defined(LUA_COMPAT_GCPARAMS)
       int minormul = (int)luaL_optinteger(L, 2, -1);
       int majorminor = (int)luaL_optinteger(L, 3, -1);
-      int minormajor = (int)luaL_optinteger(L, 4, -1);
-      return pushmode(L, lua_gc(L, o, minormul, majorminor, minormajor));
+#else
+      int minormul = 0;
+      int majorminor = 0;
+#endif
+      return pushmode(L, lua_gc(L, o, minormul, majorminor));
     }
     case LUA_GCINC: {
+#if defined(LUA_COMPAT_GCPARAMS)
       int pause = (int)luaL_optinteger(L, 2, -1);
       int stepmul = (int)luaL_optinteger(L, 3, -1);
       int stepsize = (int)luaL_optinteger(L, 4, -1);
+#else
+      int pause = 0;
+      int stepmul = 0;
+      int stepsize = 0;
+#endif
       return pushmode(L, lua_gc(L, o, pause, stepmul, stepsize));
+    }
+    case LUA_GCSETPARAM: {
+      static const char *const params[] = {
+        "minormul", "majorminor", "minormajor",
+        "pause", "stepmul", "stepsize", NULL};
+      static const char pnum[] = {
+        LUA_GCPMINORMUL, LUA_GCPMAJORMINOR, LUA_GCPMINORMAJOR,
+        LUA_GCPPAUSE, LUA_GCPSTEPMUL, LUA_GCPSTEPSIZE};
+      int p = pnum[luaL_checkoption(L, 2, NULL, params)];
+      lua_Integer value = luaL_checkinteger(L, 3);
+      lua_pushinteger(L, lua_gc(L, o, p, value));
+      return 1;
     }
     default: {
       int res = lua_gc(L, o);

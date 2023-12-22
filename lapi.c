@@ -1186,25 +1186,35 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       break;
     }
     case LUA_GCGEN: {
+#if defined(LUA_COMPAT_GCPARAMS)
       int minormul = va_arg(argp, int);
       int minormajor = va_arg(argp, int);
-      int majorminor = va_arg(argp, int);
+      if (minormul > 0) setgcparam(g, MINORMUL, minormul);
+      if (minormajor > 0) setgcparam(g, MINORMAJOR, minormajor);
+#endif
       res = (g->gckind == KGC_INC) ? LUA_GCINC : LUA_GCGEN;
-      setgcparam(g, gcpgenminormul, minormul);
-      setgcparam(g, gcpminormajor, minormajor);
-      setgcparam(g, gcpmajorminor, majorminor);
       luaC_changemode(L, KGC_GENMINOR);
       break;
     }
     case LUA_GCINC: {
+#if defined(LUA_COMPAT_GCPARAMS)
       int pause = va_arg(argp, int);
       int stepmul = va_arg(argp, int);
       int stepsize = va_arg(argp, int);
+      if (pause > 0) setgcparam(g, PAUSE, pause);
+      if (stepmul > 0) setgcparam(g, STEPMUL, stepmul);
+      if (stepsize > 0) setgcparam(g, STEPSIZE, 1u << stepsize);
+#endif
       res = (g->gckind == KGC_INC) ? LUA_GCINC : LUA_GCGEN;
-      setgcparam(g, gcppause, pause);
-      setgcparam(g, gcpstepmul, stepmul);
-      setgcparam(g, gcpstepsize, stepsize);
       luaC_changemode(L, KGC_INC);
+      break;
+    }
+    case LUA_GCSETPARAM: {
+      int param = va_arg(argp, int);
+      int value = va_arg(argp, int);
+      api_check(L, 0 <= param && param < LUA_GCPN, "invalid parameter");
+      res = luaO_applyparam(g->gcparams[param], 100);
+      g->gcparams[param] = luaO_codeparam(value);
       break;
     }
     default: res = -1;  /* invalid option */

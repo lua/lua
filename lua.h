@@ -325,7 +325,7 @@ LUA_API void (lua_warning)  (lua_State *L, const char *msg, int tocont);
 
 
 /*
-** garbage-collection function and options
+** garbage-collection options
 */
 
 #define LUA_GCSTOP		0
@@ -337,6 +337,25 @@ LUA_API void (lua_warning)  (lua_State *L, const char *msg, int tocont);
 #define LUA_GCISRUNNING		6
 #define LUA_GCGEN		7
 #define LUA_GCINC		8
+#define LUA_GCSETPARAM		9
+
+
+/*
+** garbage-collection parameters
+*/
+/* parameters for generational mode */
+#define LUA_GCPMINORMUL		0  /* control minor collections */
+#define LUA_GCPMAJORMINOR	1  /* control shift major->minor */
+#define LUA_GCPMINORMAJOR	2  /* control shift minor->major */
+
+/* parameters for incremental mode */
+#define LUA_GCPPAUSE		3  /* size of pause between successive GCs */
+#define LUA_GCPSTEPMUL		4  /* GC "speed" */
+#define LUA_GCPSTEPSIZE		5  /* GC granularity */
+
+/* number of parameters */
+#define LUA_GCPN		6
+
 
 LUA_API int (lua_gc) (lua_State *L, int what, ...);
 

@@ -193,7 +193,8 @@
 #define LUAI_GCSTEPSIZE	250
 
 
-#define setgcparam(g,p,v)	if ((v) >= 0) {g->p = luaO_codeparam(v);}
+#define setgcparam(g,p,v)  (g->gcparams[LUA_GCP##p] = luaO_codeparam(v))
+#define applygcparam(g,p,x)  luaO_applyparam(g->gcparams[LUA_GCP##p], x)
 
 /*
 ** Control when GC is running:

@@ -681,12 +681,10 @@ effectively producing a non-incremental, stop-the-world collector.
 The garbage-collector step size controls the
 size of each incremental step,
 specifically how many objects the interpreter creates
-before performing a step.
-This parameter is logarithmic:
-A value of @M{n} means the interpreter will create @M{2@sp{n}}
-objects between steps.
-The default value is 8,
-which means steps of approximately @N{256 objects}.
+before performing a step:
+A value of @M{n} means the interpreter will create
+approximately @M{n} objects between steps.
+The default value is 250.
 
 }
 
@@ -728,11 +726,13 @@ The default value is 100.
 The major-minor multiplier controls the shift back to minor collections.
 For a multiplier @M{x},
 the collector will shift back to minor collections
-after a major collection collects at least @M{x%} of the allocated objects.
+after a major collection collects at least @M{x%}
+of the objects allocated during the last cycle.
+
 In particular, for a multiplier of 0,
 the collector will immediately shift back to minor collections
 after doing one cycle of major collections.
-The default value is 20.
+The default value is 80.
 
 }
 
@@ -3336,19 +3336,32 @@ Returns a boolean that tells whether the collector is running
 (i.e., not stopped).
 }
 
-@item{@defid{LUA_GCINC} (int pause, int stepmul, int stepsize)|
-Changes the collector to incremental mode
-with the given parameters @see{incmode}.
+@item{@defid{LUA_GCINC}|
+Changes the collector to incremental mode.
 Returns the previous mode (@id{LUA_GCGEN} or @id{LUA_GCINC}).
 }
 
-@item{@defid{LUA_GCGEN} (int minormul, int minormajor, int majorminor)|
-Changes the collector to generational mode
-with the given parameters @see{genmode}.
+@item{@defid{LUA_GCGEN}|
+Changes the collector to generational mode.
 Returns the previous mode (@id{LUA_GCGEN} or @id{LUA_GCINC}).
 }
 
+@item{@defid{LUA_GCSETPARAM} (int param, int value)|
+Changes the values of a parameter of the collector and returns
+the previous value of that parameter.
+The argument @id{param} must have one of the following values:
+@description{
+@item{@defid{LUA_GCPMINORMUL}| The minor multiplier. }
+@item{@defid{LUA_GCPMAJORMINOR}| The major-minor multiplier. }
+@item{@defid{LUA_GCPMINORMAJOR}| The minor-major multiplier. }
+@item{@defid{LUA_GCPPAUSE}| The garbage-collector pause. }
+@item{@defid{LUA_GCPSTEPMUL}| The step multiplier. }
+@item{@defid{LUA_GCPSTEPSIZE}| The step size. }
 }
+}
+
+}
+
 For more details about these options,
 see @Lid{collectgarbage}.
 
@@ -6347,20 +6360,35 @@ Returns a boolean that tells whether the collector is running
 }
 
 @item{@St{incremental}|
-Change the collector mode to incremental.
-This option can be followed by three numbers:
-the garbage-collector pause,
-the step multiplier,
-and the step size @see{incmode}.
-A -1 or absent value means to not change that value.
+Changes the collector mode to incremental and returns the previous mode.
 }
 
 @item{@St{generational}|
-Change the collector mode to generational.
-This option can be followed by three numbers:
-the garbage-collector minor multiplier,
-the minor-major multiplier, and the major-minor multiplier @see{genmode}.
-A -1 or absent value means to not change that value.
+Changes the collector mode to generational and returns the previous mode.
+}
+
+@item{@St{setparam}|
+Changes the values of a parameter of the collector and returns
+the previous value of that parameter.
+This option must be followed by two extra arguments:
+The name of the parameter being changed (a string)
+and the new value for that parameter (an integer).
+The argument @id{param} must have one of the following values:
+@description{
+@item{@St{minormul}| The minor multiplier. }
+@item{@St{majorminor}| The major-minor multiplier. }
+@item{@St{minormajor}| The minor-major multiplier. }
+@item{@St{pause}| The garbage-collector pause. }
+@item{@St{stepmul}| The step multiplier. }
+@item{@St{stepsize}| The step size. }
+}
+To be able to divide by 100
+(as most parameters are given as percentages)
+without using floating-point arithmetic,
+Lua stores these parameters encoded.
+This encoding approximates the real value;
+so, the value returned as the previous value may not be
+equal to the last value set.
 }
 
 }
@@ -9249,9 +9277,10 @@ declare a local variable with the same name in the loop body.
 @itemize{
 
 @item{
-There were several changes in the parameters
-for the options @St{incremental} and @St{generational}
-of the function @Lid{collectgarbage}.
+Parameters for the garbage collection are not set
+with the options @St{incremental} and @St{generational};
+instead, there is a new option @St{setparam} to that end.
+Moreover, there were some changes in the parameters themselves.
 }
 
 }
@@ -9277,9 +9306,10 @@ to signal the end of the dump.
 }
 
 @item{
-There were several changes in the parameters
-for the options @Lid{LUA_GCINC} and @Lid{LUA_GCGEN}
-of the function @Lid{lua_gc}.
+Parameters for the garbage collection are not set
+with the options @Lid{LUA_GCINC} and @Lid{LUA_GCGEN};
+instead, there is a new option @Lid{LUA_GCSETPARAM} to that end.
+Moreover, there were some changes in the parameters themselves.
 }
 
 }

@@ -1037,12 +1037,12 @@ static int query_GCparams (lua_State *L) {
   global_State *g = G(L);
   lua_pushinteger(L, gettotalobjs(g));
   lua_pushinteger(L, g->GCdebt);
-  lua_pushinteger(L, luaO_applyparam(g->gcpgenminormul, 100));
-  lua_pushinteger(L, luaO_applyparam(g->gcpmajorminor, 100));
-  lua_pushinteger(L, luaO_applyparam(g->gcpminormajor, 100));
-  lua_pushinteger(L, luaO_applyparam(g->gcppause, 100));
-  lua_pushinteger(L, luaO_applyparam(g->gcpstepmul, 100));
-  lua_pushinteger(L, luaO_applyparam(g->gcpstepsize, 100));
+  lua_pushinteger(L, applygcparam(g, MINORMUL, 100));
+  lua_pushinteger(L, applygcparam(g, MAJORMINOR, 100));
+  lua_pushinteger(L, applygcparam(g, MINORMAJOR, 100));
+  lua_pushinteger(L, applygcparam(g, PAUSE, 100));
+  lua_pushinteger(L, applygcparam(g, STEPMUL, 100));
+  lua_pushinteger(L, applygcparam(g, STEPSIZE, 100));
   return 8;
 }
 

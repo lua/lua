@@ -264,12 +264,7 @@ typedef struct global_State {
   TValue l_registry;
   TValue nilvalue;  /* a nil value */
   unsigned int seed;  /* randomized seed for hashes */
-  lu_byte gcpgenminormul;  /* control minor generational collections */
-  lu_byte gcpmajorminor;  /* control shift major->minor */
-  lu_byte gcpminormajor;  /* control shift minor->major */
-  lu_byte gcppause;  /* size of pause between successive GCs */
-  lu_byte gcpstepmul;  /* GC "speed" */
-  lu_byte gcpstepsize;  /* GC granularity */
+  lu_byte gcparams[LUA_GCPN];
   lu_byte currentwhite;
   lu_byte gcstate;  /* state of garbage collector */
   lu_byte gckind;  /* kind of GC running */

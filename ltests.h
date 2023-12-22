@@ -15,6 +15,8 @@
 #define LUA_COMPAT_MATHLIB
 #define LUA_COMPAT_LT_LE
 
+#define LUA_COMPAT_GCPARAMS
+
 
 #define LUA_DEBUG
 
