@@ -504,7 +504,7 @@ end
 do
   collectgarbage()
   collectgarbage"stop"
-  collectgarbage("step", 0)   -- steps should not unblock the collector
+  collectgarbage("step")   -- steps should not unblock the collector
   local x = gcinfo()
   repeat
     for i=1,1000 do _ENV.a = {} end   -- no collection during the loop

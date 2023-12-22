@@ -213,8 +213,7 @@ static int luaB_collectgarbage (lua_State *L) {
       return 1;
     }
     case LUA_GCSTEP: {
-      int step = (int)luaL_optinteger(L, 2, 0);
-      int res = lua_gc(L, o, step);
+      int res = lua_gc(L, o);
       checkvalres(res);
       lua_pushboolean(L, res);
       return 1;
@@ -226,26 +225,10 @@ static int luaB_collectgarbage (lua_State *L) {
       return 1;
     }
     case LUA_GCGEN: {
-#if defined(LUA_COMPAT_GCPARAMS)
-      int minormul = (int)luaL_optinteger(L, 2, -1);
-      int majorminor = (int)luaL_optinteger(L, 3, -1);
-#else
-      int minormul = 0;
-      int majorminor = 0;
-#endif
-      return pushmode(L, lua_gc(L, o, minormul, majorminor));
+      return pushmode(L, lua_gc(L, o));
     }
     case LUA_GCINC: {
-#if defined(LUA_COMPAT_GCPARAMS)
-      int pause = (int)luaL_optinteger(L, 2, -1);
-      int stepmul = (int)luaL_optinteger(L, 3, -1);
-      int stepsize = (int)luaL_optinteger(L, 4, -1);
-#else
-      int pause = 0;
-      int stepmul = 0;
-      int stepsize = 0;
-#endif
-      return pushmode(L, lua_gc(L, o, pause, stepmul, stepsize));
+      return pushmode(L, lua_gc(L, o));
     }
     case LUA_GCSETPARAM: {
       static const char *const params[] = {

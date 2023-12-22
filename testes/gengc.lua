@@ -24,12 +24,12 @@ do
   assert(not T or (T.gcage(U) == "touched1" and T.gcage(U[1]) == "new"))
 
   -- both U and the table survive one more collection
-  collectgarbage("step", 0)
+  collectgarbage("step")
   assert(not T or (T.gcage(U) == "touched2" and T.gcage(U[1]) == "survival"))
 
   -- both U and the table survive yet another collection
   -- now everything is old
-  collectgarbage("step", 0)
+  collectgarbage("step")
   assert(not T or (T.gcage(U) == "old" and T.gcage(U[1]) == "old1"))
 
   -- data was not corrupted
@@ -46,10 +46,10 @@ do
   assert(not T or T.gcage(old) == "old")
   setmetatable(old, {})    -- new table becomes OLD0 (barrier)
   assert(not T or T.gcage(getmetatable(old)) == "old0")
-  collectgarbage("step", 0)   -- new table becomes OLD1 and firstold1
+  collectgarbage("step")   -- new table becomes OLD1 and firstold1
   assert(not T or T.gcage(getmetatable(old)) == "old1")
   setmetatable(getmetatable(old), {__gc = foo})  -- get it out of allgc list
-  collectgarbage("step", 0)   -- should not seg. fault
+  collectgarbage("step")   -- should not seg. fault
 end
 
 
@@ -65,18 +65,18 @@ do   -- bug in 5.4.0
     A[1] = obj     -- anchor object
     assert(not T or T.gcage(obj) == "old1")
     obj = nil      -- remove it from the stack
-    collectgarbage("step", 0)   -- do a young collection
+    collectgarbage("step")   -- do a young collection
     print(getmetatable(A[1]).x)   -- metatable was collected
   end
 
   collectgarbage()   -- make A old
   local obj = {}     -- create a new object
-  collectgarbage("step", 0)   -- make it a survival
+  collectgarbage("step")   -- make it a survival
   assert(not T or T.gcage(obj) == "survival")
   setmetatable(obj, {__gc = gcf, x = "+"})   -- create its metatable
   assert(not T or T.gcage(getmetatable(obj)) == "new")
   obj = nil   -- clear object
-  collectgarbage("step", 0)   -- will call obj's finalizer
+  collectgarbage("step")   -- will call obj's finalizer
 end
 
 
@@ -94,13 +94,13 @@ do   -- another bug in 5.4.0
     end
   )
   local _, f = coroutine.resume(co)   -- create closure over 'x' in coroutine
-  collectgarbage("step", 0)   -- make upvalue a survival
+  collectgarbage("step")   -- make upvalue a survival
   old[1] = {"hello"}    -- 'old' go to grayagain as 'touched1'
   coroutine.resume(co, {123})     -- its value will be new
   co = nil
-  collectgarbage("step", 0)   -- hit the barrier
+  collectgarbage("step")   -- hit the barrier
   assert(f() == 123 and old[1][1] == "hello")
-  collectgarbage("step", 0)   -- run the collector once more
+  collectgarbage("step")   -- run the collector once more
   -- make sure old[1] was not collected
   assert(f() == 123 and old[1][1] == "hello")
 end
@@ -112,12 +112,12 @@ do   -- bug introduced in commit 9cf3299fa
   assert(not T or T.gcage(t) == "old")
   t[1] = {10}
   assert(not T or (T.gcage(t) == "touched1" and T.gccolor(t) == "gray"))
-  collectgarbage("step", 0)   -- minor collection
+  collectgarbage("step")   -- minor collection
   assert(not T or (T.gcage(t) == "touched2" and T.gccolor(t) == "black"))
-  collectgarbage("step", 0)   -- minor collection
+  collectgarbage("step")   -- minor collection
   assert(not T or T.gcage(t) == "old")   -- t should be black, but it was gray
   t[1] = {10}      -- no barrier here, so t was still old
-  collectgarbage("step", 0)   -- minor collection
+  collectgarbage("step")   -- minor collection
   -- t, being old, is ignored by the collection, so it is not cleared
   assert(t[1] == nil)   -- fails with the bug
 end
@@ -144,13 +144,13 @@ do
          T.gcage(debug.getuservalue(U)) == "new")
 
   -- both U and the table survive one more collection
-  collectgarbage("step", 0)
+  collectgarbage("step")
   assert(T.gcage(U) == "touched2" and
          T.gcage(debug.getuservalue(U)) == "survival")
 
   -- both U and the table survive yet another collection
   -- now everything is old
-  collectgarbage("step", 0)
+  collectgarbage("step")
   assert(T.gcage(U) == "old" and
          T.gcage(debug.getuservalue(U)) == "old1")
 
