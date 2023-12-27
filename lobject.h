@@ -427,8 +427,8 @@ typedef struct TString {
 ** Get string and length */
 #define getlstr(ts, len)  \
 	(strisshr(ts) \
-	? (cast_void(len = (ts)->shrlen), rawgetshrstr(ts)) \
-	: (cast_void(len = (ts)->u.lnglen), (ts)->contents))
+	? (cast_void((len) = (ts)->shrlen), rawgetshrstr(ts)) \
+	: (cast_void((len) = (ts)->u.lnglen), (ts)->contents))
 
 /* }================================================================== */
 

@@ -416,10 +416,11 @@ LUA_API const char *lua_tolstring (lua_State *L, int idx, size_t *len) {
     luaC_checkGC(L);
     o = index2value(L, idx);  /* previous call may reallocate the stack */
   }
-  if (len != NULL)
-    *len = tsslen(tsvalue(o));
   lua_unlock(L);
-  return getstr(tsvalue(o));
+  if (len != NULL)
+    return getlstr(tsvalue(o), *len);
+  else
+    return getstr(tsvalue(o));
 }
 
 
@@ -1174,11 +1175,16 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
     }
     case LUA_GCSTEP: {
       lu_byte oldstp = g->gcstp;
+      l_obj n = va_arg(argp, int);
+      int work = 0;  /* true if GC did some work */
       g->gcstp = 0;  /* allow GC to run (other bits must be zero here) */
-      luaC_step(L);  /* run one basic step */
-      g->gcstp = oldstp;  /* restore previous state */
-      if (g->gcstate == GCSpause)  /* end of cycle? */
+      if (n <= 0)
+        n = g->GCdebt;  /* force to run one basic step */
+      luaE_setdebt(g, g->GCdebt - n);
+      luaC_condGC(L, (void)0, work = 1);
+      if (work && g->gcstate == GCSpause)  /* end of cycle? */
         res = 1;  /* signal it */
+      g->gcstp = oldstp;  /* restore previous state */
       break;
     }
     case LUA_GCISRUNNING: {

@@ -213,7 +213,8 @@ static int luaB_collectgarbage (lua_State *L) {
       return 1;
     }
     case LUA_GCSTEP: {
-      int res = lua_gc(L, o);
+      lua_Integer n = luaL_optinteger(L, 2, 0);
+      int res = lua_gc(L, o, (int)n);
       checkvalres(res);
       lua_pushboolean(L, res);
       return 1;
@@ -239,7 +240,7 @@ static int luaB_collectgarbage (lua_State *L) {
         LUA_GCPPAUSE, LUA_GCPSTEPMUL, LUA_GCPSTEPSIZE};
       int p = pnum[luaL_checkoption(L, 2, NULL, params)];
       lua_Integer value = luaL_checkinteger(L, 3);
-      lua_pushinteger(L, lua_gc(L, o, p, value));
+      lua_pushinteger(L, lua_gc(L, o, p, (int)value));
       return 1;
     }
     default: {
@@ -337,10 +338,7 @@ static int load_aux (lua_State *L, int status, int envidx) {
 
 static const char *getmode (lua_State *L, int idx) {
   const char *mode = luaL_optstring(L, idx, "bt");
-  int i = 0;
-  if (mode[i] == 'b') i++;
-  if (mode[i] == 't') i++;
-  if (mode[i] != '\0')
+  if (strchr(mode, 'B') != NULL)  /* Lua code cannot use fixed buffers */
     luaL_argerror(L, idx, "invalid mode");
   return mode;
 }

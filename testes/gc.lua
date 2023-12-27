@@ -35,13 +35,40 @@ do
     collectgarbage("setparam", "pause", t[i])
     for j = 1, #t do
       collectgarbage("setparam", "stepmul", t[j])
-      collectgarbage("step")
+      collectgarbage("step", t[j])
     end
   end
   -- restore original parameters
   collectgarbage("setparam", "pause", opause)
   collectgarbage("setparam", "stepmul", ostepmul)
   collectgarbage()
+end
+
+
+--
+-- test the "size" of basic GC steps (whatever they mean...)
+--
+do  print("steps")
+
+  local function dosteps (siz)
+    collectgarbage()
+    local a = {}
+    for i=1,100 do a[i] = {{}}; local b = {} end
+    local x = gcinfo()
+    local i = 0
+    repeat   -- do steps until it completes a collection cycle
+      i = i+1
+    until collectgarbage("step", siz)
+    assert(gcinfo() < x)
+    return i    -- number of steps
+  end
+
+  collectgarbage"stop"
+
+  if not _port then
+    assert(dosteps(10) < dosteps(2))
+  end
+
 end
 
 

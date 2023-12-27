@@ -74,6 +74,8 @@ io.input(io.stdin); io.output(io.stdout);
 
 os.remove(file)
 assert(not loadfile(file))
+-- Lua code cannot use chunks with fixed buffers
+checkerr("invalid mode", load, "", "", "B")
 checkerr("", dofile, file)
 assert(not io.open(file))
 io.output(file)

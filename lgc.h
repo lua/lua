@@ -171,13 +171,13 @@
 ** Major collections will shift to minor ones after a collection
 ** collects at least LUAI_MAJORMINOR% of the new objects.
 */
-#define LUAI_MAJORMINOR         80
+#define LUAI_MAJORMINOR         50
 
 /*
 ** A young (minor) collection will run after creating LUAI_GENMINORMUL%
 ** new objects.
 */
-#define LUAI_GENMINORMUL         20
+#define LUAI_GENMINORMUL         25
 
 
 /* incremental */

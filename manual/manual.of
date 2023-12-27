@@ -666,18 +666,6 @@ A value of 200 means that the collector waits for
 the total number of objects to double before starting a new cycle.
 The default value is 300; the maximum value is 1000.
 
-The garbage-collector step multiplier
-controls the speed of the collector relative to
-object creation,
-that is,
-how many objects it marks or sweeps for each object created.
-Larger values make the collector more aggressive.
-Beware that values too small can
-make the collector too slow to ever finish a cycle.
-The default value is 200;  the maximum value is 1000.
-As a special case, a zero value means unlimited work,
-effectively producing a non-incremental, stop-the-world collector.
-
 The garbage-collector step size controls the
 size of each incremental step,
 specifically how many objects the interpreter creates
@@ -685,6 +673,17 @@ before performing a step:
 A value of @M{n} means the interpreter will create
 approximately @M{n} objects between steps.
 The default value is 250.
+
+The garbage-collector step multiplier
+controls the size of each GC step.
+A value of @M{n} means the interpreter will mark or sweep,
+in each step, @M{n%} objects for each created object.
+Larger values make the collector more aggressive.
+Beware that values too small can
+make the collector too slow to ever finish a cycle.
+The default value is 200; the maximum value is 1000.
+As a special case, a zero value means unlimited work,
+effectively producing a non-incremental, stop-the-world collector.
 
 }
 
@@ -707,11 +706,12 @@ and the @def{major-minor multiplier}.
 The minor multiplier controls the frequency of minor collections.
 For a minor multiplier @M{x},
 a new minor collection will be done when the number of objects
-grows @M{x%} larger than the number in use just after the last collection.
+grows @M{x%} larger than the number in use just
+after the last major collection.
 For instance, for a multiplier of 20,
 the collector will do a minor collection when the number of objects
 gets 20% larger than the total after the last major collection.
-The default value is 20.
+The default value is 25.
 
 The minor-major multiplier controls the shift to major collections.
 For a multiplier @M{x},
@@ -728,11 +728,10 @@ For a multiplier @M{x},
 the collector will shift back to minor collections
 after a major collection collects at least @M{x%}
 of the objects allocated during the last cycle.
-
 In particular, for a multiplier of 0,
 the collector will immediately shift back to minor collections
 after doing one cycle of major collections.
-The default value is 80.
+The default value is 50.
 
 }
 
@@ -3327,7 +3326,7 @@ Returns the remainder of dividing the current amount of bytes of
 memory in use by Lua by 1024.
 }
 
-@item{@defid{LUA_GCSTEP}|
+@item{@defid{LUA_GCSTEP} (int n)|
 Performs a step of garbage collection.
 }
 
@@ -3686,9 +3685,12 @@ Moreover, for a fixed buffer,
 the reader function should return the entire chunk in the first read.
 (As an example, @Lid{luaL_loadbufferx} does that.)
 
-@id{lua_load} uses the stack internally,
-so the reader function must always leave the stack
-unmodified when returning.
+The function @Lid{lua_load} fully preserves the Lua stack
+through the calls to the reader function,
+except that it may push some values for internal use
+before the first call,
+and it restores the stack size to its original size plus one
+(for the pushed result) after the last call.
 
 @id{lua_load} can return
 @Lid{LUA_OK}, @Lid{LUA_ERRSYNTAX}, or @Lid{LUA_ERRMEM}.
@@ -6344,13 +6346,24 @@ gives the exact number of bytes in use by Lua.
 
 @item{@St{step}|
 Performs a garbage-collection step.
+This option may be followed by an extra argument,
+an integer with the step size.
+The default for this argument is zero.
+
+If the size is a positive @id{n},
+the collector acts as if @id{n} new objects have been created.
+If the size is zero,
+the collector performs a basic step.
 In incremental mode,
-that step corresponds to the current step size;
+a basic step corresponds to the current step size.
+In generational mode,
+a basic step performs a full minor collection or
+a major collection,
+if the collector has scheduled one.
+
+In incremental mode,
 the function returns @true if the step finished a collection cycle.
 In generational mode,
-the step performs a full minor collection or
-a major collection,
-if the collector has scheduled one;
 the function returns @true if the step performed a major collection.
 }
 
@@ -6382,13 +6395,9 @@ The argument @id{param} must have one of the following values:
 @item{@St{stepmul}| The step multiplier. }
 @item{@St{stepsize}| The step size. }
 }
-To be able to divide by 100
-(as most parameters are given as percentages)
-without using floating-point arithmetic,
-Lua stores these parameters encoded.
-This encoding approximates the real value;
+Lua rounds these values before storing them;
 so, the value returned as the previous value may not be
-equal to the last value set.
+exactly the last value set.
 }
 
 }

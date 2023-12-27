@@ -50,22 +50,22 @@ int luaO_ceillog2 (unsigned int x) {
 }
 
 /*
-** Encodes 'p'% as a floating-point byte, represented as (eeeeexxx).
+** Encodes 'p'% as a floating-point byte, represented as (eeeexxxx).
 ** The exponent is represented using excess-7. Mimicking IEEE 754, the
 ** representation normalizes the number when possible, assuming an extra
-** 1 before the mantissa (xxx) and adding one to the exponent (eeeeexxx)
-** to signal that. So, the real value is (1xxx) * 2^(eeeee - 8) if
-** eeeee != 0, and (xxx) * 2^-7 otherwise.
+** 1 before the mantissa (xxxx) and adding one to the exponent (eeee)
+** to signal that. So, the real value is (1xxxx) * 2^(eeee - 7 - 1) if
+** eeee != 0, and (xxxx) * 2^-7 otherwise (subnormal numbers).
 */
 unsigned int luaO_codeparam (unsigned int p) {
-  if (p >= (cast(lu_mem, 0xF) << 0xF) / 128 * 100)  /* overflow? */
+  if (p >= (cast(lu_mem, 0x1F) << (0xF - 7 - 1)) * 100u)  /* overflow? */
     return 0xFF;  /* return maximum value */
   else {
-    p = (p * 128u) / 100;
-    if (p <= 0xF)
-      return p;
+    p = (cast(l_uint32, p) * 128 + 99) / 100;  /* round up the division */
+    if (p < 0x10)  /* subnormal number? */
+      return p;  /* exponent bits are already zero; nothing else to do */
     else {
-      int log = luaO_ceillog2(p + 1) - 5;
+      int log = luaO_ceillog2(p + 1) - 5;  /* preserve 5 bits */
       return ((p >> log) - 0x10) | ((log + 1) << 4);
     }
   }
