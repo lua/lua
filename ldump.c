@@ -212,9 +212,10 @@ static void dumpDebug (DumpState *D, const Proto *f) {
     dumpVector(D, f->lineinfo, n);
   n = (D->strip) ? 0 : f->sizeabslineinfo;
   dumpInt(D, n);
-  for (i = 0; i < n; i++) {
-    dumpInt(D, f->abslineinfo[i].pc);
-    dumpInt(D, f->abslineinfo[i].line);
+  if (n > 0) {
+    /* 'abslineinfo' is an array of structures of int's */
+    dumpAlign(D, sizeof(int));
+    dumpVector(D, f->abslineinfo, n);
   }
   n = (D->strip) ? 0 : f->sizelocvars;
   dumpInt(D, n);

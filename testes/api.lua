@@ -551,6 +551,20 @@ do
   assert(m2 > m1 and m2 - m1 < 350)
   X = 0; code(); assert(X == N and Y == string.rep("a", N))
   X = nil; Y = nil
+
+  -- testing debug info in fixed buffers
+  source = {"X = 0"}
+  for i = 2, 300 do source[i] = "X = X + 1" end
+  source[#source + 1] = "X = X + {}"   -- error in last line
+  source = table.concat(source, "\n")
+  source = load(source, "name1")
+  source = string.dump(source)
+  -- load dump using fixed buffer
+  local code = T.testC([[
+    loadstring 2 name B;
+    return 1
+  ]], source)
+  checkerr(":301:", code)    -- correct line information
 end
 
 

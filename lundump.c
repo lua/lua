@@ -36,7 +36,7 @@ typedef struct {
   ZIO *Z;
   const char *name;
   Table *h;  /* list for string reuse */
-  lu_mem offset;  /* current position relative to beginning of dump */
+  size_t offset;  /* current position relative to beginning of dump */
   lua_Integer nstr;  /* number of strings in the list */
   lu_byte fixed;  /* dump is fixed in memory */
 } LoadState;
@@ -73,8 +73,10 @@ static void loadAlign (LoadState *S, int align) {
 
 #define getaddr(S,n,t)	cast(t *, getaddr_(S,n,sizeof(t)))
 
-static const void *getaddr_ (LoadState *S, int n, int sz) {
-  const void *block = luaZ_getaddr(S->Z, n * sz);
+static const void *getaddr_ (LoadState *S, int n, size_t sz) {
+  size_t size = n * sz;
+  const void *block = luaZ_getaddr(S->Z, size);
+  S->offset += size;
   if (block == NULL)
     error(S, "truncated fixed buffer");
   return block;
@@ -143,7 +145,7 @@ static void loadString (LoadState *S, Proto *p, TString **sl) {
   TValue sv;
   size_t size = loadSize(S);
   if (size == 0) {  /* no string? */
-    *sl = NULL;
+    lua_assert(*sl == NULL);  /* must be prefilled */
     return;
   }
   else if (size == 1) {  /* previously saved string? */
@@ -287,11 +289,17 @@ static void loadDebug (LoadState *S, Proto *f) {
     loadVector(S, f->lineinfo, n);
   }
   n = loadInt(S);
-  f->abslineinfo = luaM_newvectorchecked(S->L, n, AbsLineInfo);
-  f->sizeabslineinfo = n;
-  for (i = 0; i < n; i++) {
-    f->abslineinfo[i].pc = loadInt(S);
-    f->abslineinfo[i].line = loadInt(S);
+  if (n > 0) {
+    loadAlign(S, sizeof(int));
+    if (S->fixed) {
+      f->abslineinfo = getaddr(S, n, AbsLineInfo);
+      f->sizeabslineinfo = n;
+    }
+    else {
+      f->abslineinfo = luaM_newvectorchecked(S->L, n, AbsLineInfo);
+      f->sizeabslineinfo = n;
+      loadVector(S, f->abslineinfo, n);
+    }
   }
   n = loadInt(S);
   f->locvars = luaM_newvectorchecked(S->L, n, LocVar);
