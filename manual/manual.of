@@ -664,7 +664,7 @@ Values equal to or less than 100 mean the collector will not wait to
 start a new cycle.
 A value of 200 means that the collector waits for
 the total number of objects to double before starting a new cycle.
-The default value is 300; the maximum value is 1000.
+The default value is 200.
 
 The garbage-collector step size controls the
 size of each incremental step,
@@ -681,7 +681,7 @@ in each step, @M{n%} objects for each created object.
 Larger values make the collector more aggressive.
 Beware that values too small can
 make the collector too slow to ever finish a cycle.
-The default value is 200; the maximum value is 1000.
+The default value is 200.
 As a special case, a zero value means unlimited work,
 effectively producing a non-incremental, stop-the-world collector.
 

@@ -183,7 +183,7 @@
 /* incremental */
 
 /* Number of objects must be LUAI_GCPAUSE% before starting new cycle */
-#define LUAI_GCPAUSE    300
+#define LUAI_GCPAUSE    200
 
 /* Step multiplier. (Roughly, the collector handles LUAI_GCMUL% objects
    for each new allocated object.) */

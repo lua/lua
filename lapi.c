@@ -53,6 +53,16 @@ const char lua_ident[] =
 #define isupvalue(i)		((i) < LUA_REGISTRYINDEX)
 
 
+/* Advance the garbage collector when creating large objects */
+static void advancegc (lua_State *L, size_t delta) {
+  delta >>= 5;  /* one object for each 32 bytes (empirical) */
+  if (delta > 0) {
+    global_State *g = G(L);
+    luaE_setdebt(g, g->GCdebt - delta);
+  }
+}
+
+
 /*
 ** Convert an acceptable index to a pointer to its respective value.
 ** Non-valid indices return the special nil value 'G(L)->nilvalue'.
@@ -530,6 +540,7 @@ LUA_API const char *lua_pushlstring (lua_State *L, const char *s, size_t len) {
   ts = (len == 0) ? luaS_new(L, "") : luaS_newlstr(L, s, len);
   setsvalue2s(L, L->top.p, ts);
   api_incr_top(L);
+  advancegc(L, len);
   luaC_checkGC(L);
   lua_unlock(L);
   return getstr(ts);
@@ -544,6 +555,8 @@ LUA_API const char *lua_pushextlstring (lua_State *L,
   ts = luaS_newextlstr (L, s, len, falloc, ud);
   setsvalue2s(L, L->top.p, ts);
   api_incr_top(L);
+  if (falloc != NULL)  /* non-static string? */
+    advancegc(L, len);  /* count its memory */
   luaC_checkGC(L);
   lua_unlock(L);
   return getstr(ts);
@@ -1336,6 +1349,7 @@ LUA_API void *lua_newuserdatauv (lua_State *L, size_t size, int nuvalue) {
   u = luaS_newudata(L, size, nuvalue);
   setuvalue(L, s2v(L->top.p), u);
   api_incr_top(L);
+  advancegc(L, size);
   luaC_checkGC(L);
   lua_unlock(L);
   return getudatamem(u);

@@ -1052,6 +1052,7 @@ static void setpause (global_State *g) {
   l_obj threshold = applygcparam(g, PAUSE, g->marked);
   l_obj debt = threshold - gettotalobjs(g);
   if (debt < 0) debt = 0;
+//printf("pause: %ld  %ld\n", debt, g->marked);
   luaE_setdebt(g, debt);
 }
 
@@ -1246,7 +1247,7 @@ static void minor2inc (lua_State *L, global_State *g, int kind) {
 /*
 ** Decide whether to shift to major mode. It tests two conditions:
 ** 1) Whether the number of added old objects in this collection is more
-** than half the number of new objects. ("step" is the number of objects
+** than half the number of new objects. ('step' is the number of objects
 ** created between minor collections. Except for forward barriers, it
 ** is the maximum number of objects that can become old in each minor
 ** collection.)
@@ -1254,15 +1255,11 @@ static void minor2inc (lua_State *L, global_State *g, int kind) {
 ** than 'minormajor'% of the number of lived objects after the last
 ** major collection. (That percentage is computed in 'limit'.)
 */
-static int checkminormajor (lua_State *L, global_State *g, l_obj addedold1) {
+static int checkminormajor (global_State *g, l_obj addedold1) {
   l_obj step = applygcparam(g, MINORMUL, g->GCmajorminor);
   l_obj limit = applygcparam(g, MINORMAJOR, g->GCmajorminor);
-//printf("-> major? %ld %ld %ld %ld (%ld)\n", g->marked, limit, step, addedold1, gettotalobjs(g));
-  if (addedold1 >= (step >> 1) || g->marked >= limit) {
-    minor2inc(L, g, KGC_GENMAJOR);  /* go to major mode */
-    return 1;
-  }
-  return 0;  /* stay in minor mode */
+//printf("-> (%ld) major? marked: %ld  limit: %ld  step: %ld  addedold1: %ld)\n", gettotalobjs(g), g->marked, limit, step, addedold1);
+  return (addedold1 >= (step >> 1) || g->marked >= limit);
 }
 
 /*
@@ -1309,7 +1306,11 @@ static void youngcollection (lua_State *L, global_State *g) {
   g->marked = marked + addedold1;
 
   /* decide whether to shift to major mode */
-  if (!checkminormajor(L, g, addedold1))
+  if (checkminormajor(g, addedold1)) {
+    minor2inc(L, g, KGC_GENMAJOR);  /* go to major mode */
+    g->marked = 0;  /* avoid pause in first major cycle */
+  }
+  else
     finishgencycle(L, g);  /* still in minor mode; finish it */
 }
 
@@ -1401,12 +1402,12 @@ static void fullgen (lua_State *L, global_State *g) {
 ** since the last collection ('addedobjs').
 */
 static int checkmajorminor (lua_State *L, global_State *g) {
-  if (g->gckind == KGC_GENMAJOR) {
+  if (g->gckind == KGC_GENMAJOR) {  /* generational mode? */
     l_obj numobjs = gettotalobjs(g);
     l_obj addedobjs = numobjs - g->GCmajorminor;
     l_obj limit = applygcparam(g, MAJORMINOR, addedobjs);
     l_obj tobecollected = numobjs - g->marked;
-//printf("-> minor? %ld %ld %ld\n", tobecollected, limit, numobjs);
+//printf("(%ld) -> minor? tobecollected: %ld  limit: %ld\n", numobjs, tobecollected, limit);
     if (tobecollected > limit) {
       atomic2gen(L, g);  /* return to generational mode */
       setminordebt(g);
