@@ -925,12 +925,12 @@ int luaG_traceexec (lua_State *L, const Instruction *pc) {
   }
   pc++;  /* reference is always next instruction */
   ci->u.l.savedpc = pc;  /* save 'pc' */
-  counthook = (--L->hookcount == 0 && (mask & LUA_MASKCOUNT));
+  counthook = (mask & LUA_MASKCOUNT) && (--L->hookcount == 0);
   if (counthook)
     resethookcount(L);  /* reset count */
   else if (!(mask & LUA_MASKLINE))
     return 1;  /* no line hook and count != 0; nothing to be done now */
-  if (ci->callstatus & CIST_HOOKYIELD) {  /* called hook last time? */
+  if (ci->callstatus & CIST_HOOKYIELD) {  /* hook yielded last time? */
     ci->callstatus &= ~CIST_HOOKYIELD;  /* erase mark */
     return 1;  /* do not call hook again (VM yielded, so it did not move) */
   }
@@ -952,7 +952,6 @@ int luaG_traceexec (lua_State *L, const Instruction *pc) {
   if (L->status == LUA_YIELD) {  /* did hook yield? */
     if (counthook)
       L->hookcount = 1;  /* undo decrement to zero */
-    ci->u.l.savedpc--;  /* undo increment (resume will increment it again) */
     ci->callstatus |= CIST_HOOKYIELD;  /* mark that it yielded */
     luaD_throw(L, LUA_YIELD);
   }

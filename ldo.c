@@ -792,6 +792,10 @@ static void resume (lua_State *L, void *ud) {
     lua_assert(L->status == LUA_YIELD);
     L->status = LUA_OK;  /* mark that it is running (again) */
     if (isLua(ci)) {  /* yielded inside a hook? */
+      /* undo increment made by 'luaG_traceexec': instruction was not
+         executed yet */
+      lua_assert(ci->callstatus & CIST_HOOKYIELD);
+      ci->u.l.savedpc--;
       L->top.p = firstArg;  /* discard arguments */
       luaV_execute(L, ci);  /* just continue running Lua code */
     }
