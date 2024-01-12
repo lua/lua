@@ -45,6 +45,25 @@
 #define nodefromval(v)	cast(Node *, (v))
 
 
+
+#define luaH_fastgeti(t,k,res,hres) \
+  { Table *h = t; lua_Unsigned u = l_castS2U(k); \
+    if ((u - 1u < h->alimit)) { \
+      int tag = *getArrTag(h,(u)-1u); \
+      if (tagisempty(tag)) hres = HNOTFOUND; \
+      else { farr2val(h, u, tag, res); hres = HOK; }} \
+    else { hres = luaH_getint(h, u, res); }}
+
+
+#define luaH_fastseti(t,k,val,hres) \
+  { Table *h = t; lua_Unsigned u = l_castS2U(k); \
+    if ((u - 1u < h->alimit)) { \
+      lu_byte *tag = getArrTag(h,(u)-1u); \
+      if (tagisempty(*tag)) hres = ~cast_int(u); \
+      else { fval2arr(h, u, tag, val); hres = HOK; }} \
+    else { hres = luaH_psetint(h, u, val); }}
+
+
 /* results from get/pset */
 #define HOK		0
 #define HNOTFOUND	1

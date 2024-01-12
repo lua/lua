@@ -408,21 +408,22 @@ static void freehash (lua_State *L, Table *t) {
 ** not the real size of the array, the key still can be in the array
 ** part.  In this case, do the "Xmilia trick" to check whether 'key-1'
 ** is smaller than the real size.
-** The trick works as follow: let 'p' be an integer such that
-** '2^(p+1) >= alimit > 2^p', or  '2^(p+1) > alimit-1 >= 2^p'.
-** That is, 2^(p+1) is the real size of the array, and 'p' is the highest
-** bit on in 'alimit-1'. What we have to check becomes 'key-1 < 2^(p+1)'.
-** We compute '(key-1) & ~(alimit-1)', which we call 'res'; it will
-** have the 'p' bit cleared. If the key is outside the array, that is,
-** 'key-1 >= 2^(p+1)', then 'res' will have some 1-bit higher than 'p',
-** therefore it will be larger or equal to 'alimit', and the check
+** The trick works as follow: let 'p' be the integer such that
+** '2^(p+1) >= alimit > 2^p', or '2^(p+1) > alimit-1 >= 2^p'.  That is,
+** 'p' is the highest 1-bit in 'alimit-1', and 2^(p+1) is the real size
+** of the array. What we have to check becomes 'key-1 < 2^(p+1)'.  We
+** compute '(key-1) & ~(alimit-1)', which we call 'res'; it will have
+** the 'p' bit cleared. (It may also clear other bits smaller than 'p',
+** but no bit higher than 'p'.) If the key is outside the array, that
+** is, 'key-1 >= 2^(p+1)', then 'res' will have some 1-bit higher than
+** 'p', therefore it will be larger or equal to 'alimit', and the check
 ** will fail. If 'key-1 < 2^(p+1)', then 'res' has no 1-bit higher than
 ** 'p', and as the bit 'p' itself was cleared, 'res' will be smaller
 ** than 2^p, therefore smaller than 'alimit', and the check succeeds.
 ** As special cases, when 'alimit' is 0 the condition is trivially false,
 ** and when 'alimit' is 1 the condition simplifies to 'key-1 < alimit'.
 ** If key is 0 or negative, 'res' will have its higher bit on, so that
-** if cannot be smaller than alimit.
+** it cannot be smaller than 'alimit'.
 */
 static int keyinarray (Table *t, lua_Integer key) {
   lua_Unsigned alimit = t->alimit;
@@ -788,11 +789,11 @@ static Node *getfreepos (Table *t) {
 
 
 /*
-** inserts a new key into a hash table; first, check whether key's main
+** Inserts a new key into a hash table; first, check whether key's main
 ** position is free. If not, check whether colliding node is in its main
-** position or not: if it is not, move colliding node to an empty place and
-** put new key in its main position; otherwise (colliding node is in its main
-** position), new key goes to an empty position.
+** position or not: if it is not, move colliding node to an empty place
+** and put new key in its main position; otherwise (colliding node is in
+** its main position), new key goes to an empty position.
 */
 static void luaH_newkey (lua_State *L, Table *t, const TValue *key,
                                                  TValue *value) {
@@ -987,6 +988,16 @@ static int finishnodeset (Table *t, const TValue *slot, TValue *val) {
 }
 
 
+static int rawfinishnodeset (const TValue *slot, TValue *val) {
+  if (isabstkey(slot))
+    return 0;  /* no slot with that key */
+  else {
+    setobj(((lua_State*)NULL), cast(TValue*, slot), val);
+    return 1;  /* success */
+  }
+}
+
+
 int luaH_psetint (Table *t, lua_Integer key, TValue *val) {
   if (keyinarray(t, key)) {
     lu_byte *tag = getArrTag(t, key - 1);
@@ -1063,12 +1074,20 @@ void luaH_set (lua_State *L, Table *t, const TValue *key, TValue *value) {
 }
 
 
+/*
+** Ditto for a GC barrier. (No need to invalidate the TM cache, as
+** integers cannot be keys to metamethods.)
+*/
 void luaH_setint (lua_State *L, Table *t, lua_Integer key, TValue *value) {
-  int hres = luaH_psetint(t, key, value);
-  if (hres != HOK) {
-    TValue k;
-    setivalue(&k, key);
-    luaH_finishset(L, t, &k, value, hres);
+  if (keyinarray(t, key))
+    obj2arr(t, key, value);
+  else {
+    int ok = rawfinishnodeset(getintfromhash(t, key), value);
+    if (!ok) {
+      TValue k;
+      setivalue(&k, key);
+      luaH_newkey(L, t, &k, value);
+    }
   }
 }
 

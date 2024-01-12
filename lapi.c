@@ -102,7 +102,7 @@ static TValue *index2value (lua_State *L, int idx) {
 /*
 ** Convert a valid actual index (not a pseudo-index) to its address.
 */
-l_sinline StkId index2stack (lua_State *L, int idx) {
+static StkId index2stack (lua_State *L, int idx) {
   CallInfo *ci = L->ci;
   if (idx > 0) {
     StkId o = ci->func.p + idx;
@@ -234,7 +234,7 @@ LUA_API void lua_closeslot (lua_State *L, int idx) {
 ** Note that we move(copy) only the value inside the stack.
 ** (We do not move additional fields that may exist.)
 */
-l_sinline void reverse (lua_State *L, StkId from, StkId to) {
+static void reverse (lua_State *L, StkId from, StkId to) {
   for (; from < to; from++, to--) {
     TValue temp;
     setobj(L, &temp, s2v(from));
@@ -664,7 +664,7 @@ LUA_API int lua_pushthread (lua_State *L) {
 */
 
 
-l_sinline int auxgetstr (lua_State *L, const TValue *t, const char *k) {
+static int auxgetstr (lua_State *L, const TValue *t, const char *k) {
   int hres;
   TString *str = luaS_new(L, k);
   luaV_fastget(t, str, s2v(L->top.p), luaH_getstr, hres);
@@ -683,7 +683,9 @@ l_sinline int auxgetstr (lua_State *L, const TValue *t, const char *k) {
 
 static void getGlobalTable (lua_State *L, TValue *gt) {
   Table *registry = hvalue(&G(L)->l_registry);
-  luaH_getint(registry, LUA_RIDX_GLOBALS, gt);
+  int hres = luaH_getint(registry, LUA_RIDX_GLOBALS, gt);
+  (void)hres;  /* avoid warnings (not used) when checks are off */
+  api_check(L, hres == HOK, "global table must exist");
 }
 
 
@@ -740,7 +742,7 @@ l_sinline int finishrawget (lua_State *L, int hres) {
 }
 
 
-static Table *gettable (lua_State *L, int idx) {
+l_sinline Table *gettable (lua_State *L, int idx) {
   TValue *t = index2value(L, idx);
   api_check(L, ttistable(t), "table expected");
   return hvalue(t);
@@ -761,9 +763,11 @@ LUA_API int lua_rawget (lua_State *L, int idx) {
 
 LUA_API int lua_rawgeti (lua_State *L, int idx, lua_Integer n) {
   Table *t;
+  int hres;
   lua_lock(L);
   t = gettable(L, idx);
-  return finishrawget(L, luaH_getint(t, n, s2v(L->top.p)));
+  luaH_fastgeti(t, n, s2v(L->top.p), hres);
+  return finishrawget(L, hres);
 }
 
 
@@ -901,9 +905,8 @@ LUA_API void lua_seti (lua_State *L, int idx, lua_Integer n) {
   api_checknelems(L, 1);
   t = index2value(L, idx);
   luaV_fastseti(t, n, s2v(L->top.p - 1), hres);
-  if (hres == HOK) {
+  if (hres == HOK)
     luaV_finishfastset(L, t, s2v(L->top.p - 1));
-  }
   else {
     TValue temp;
     setivalue(&temp, n);

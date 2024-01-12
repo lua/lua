@@ -78,35 +78,25 @@ typedef enum {
 /*
 ** fast track for 'gettable'
 */
-#define luaV_fastget(t,k,res,f, aux) \
-  (aux = (!ttistable(t) ? HNOTATABLE : f(hvalue(t), k, res)))
+#define luaV_fastget(t,k,res,f, hres) \
+  (hres = (!ttistable(t) ? HNOTATABLE : f(hvalue(t), k, res)))
 
 
 /*
 ** Special case of 'luaV_fastget' for integers, inlining the fast case
 ** of 'luaH_getint'.
 */
-#define luaV_fastgeti(t,k,res,aux) \
-  if (!ttistable(t)) aux = HNOTATABLE; \
-  else { Table *h = hvalue(t); lua_Unsigned u = l_castS2U(k); \
-    if ((u - 1u < h->alimit)) { \
-      int tag = *getArrTag(h,(u)-1u); \
-      if (tagisempty(tag)) aux = HNOTFOUND; \
-      else { farr2val(h, u, tag, res); aux = HOK; }} \
-    else { aux = luaH_getint(h, u, res); }}
+#define luaV_fastgeti(t,k,res,hres) \
+  if (!ttistable(t)) hres = HNOTATABLE; \
+  else { luaH_fastgeti(hvalue(t), k, res, hres); }
 
 
-#define luaV_fastset(t,k,val,aux,f) \
-  (aux = (!ttistable(t) ? HNOTATABLE : f(hvalue(t), k, val)))
+#define luaV_fastset(t,k,val,hres,f) \
+  (hres = (!ttistable(t) ? HNOTATABLE : f(hvalue(t), k, val)))
 
-#define luaV_fastseti(t,k,val,aux) \
-  if (!ttistable(t)) aux = HNOTATABLE; \
-  else { Table *h = hvalue(t); lua_Unsigned u = l_castS2U(k); \
-    if ((u - 1u < h->alimit)) { \
-      lu_byte *tag = getArrTag(h,(u)-1u); \
-      if (tagisempty(*tag)) aux = ~cast_int(u); \
-      else { fval2arr(h, u, tag, val); aux = HOK; }} \
-    else { aux = luaH_psetint(h, u, val); }}
+#define luaV_fastseti(t,k,val,hres) \
+  if (!ttistable(t)) hres = HNOTATABLE; \
+  else { luaH_fastseti(hvalue(t), k, val, hres); }
 
 
 /*
