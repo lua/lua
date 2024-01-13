@@ -216,7 +216,7 @@ void *debug_realloc (void *ud, void *b, size_t oldsize, size_t size) {
     mc->memlimit = limit ? strtoul(limit, NULL, 10) : ULONG_MAX;
   }
   if (block == NULL) {
-    type = (oldsize < LUA_NUMTAGS) ? oldsize : 0;
+    type = (oldsize < LUA_NUMTYPES) ? oldsize : 0;
     oldsize = 0;
   }
   else {
@@ -856,7 +856,7 @@ static int mem_query (lua_State *L) {
   else {
     const char *t = luaL_checkstring(L, 1);
     int i;
-    for (i = LUA_NUMTAGS - 1; i >= 0; i--) {
+    for (i = LUA_NUMTYPES - 1; i >= 0; i--) {
       if (strcmp(t, ttypename(i)) == 0) {
         lua_pushinteger(L, l_memcontrol.objcount[i]);
         return 1;

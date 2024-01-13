@@ -371,7 +371,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud, unsigned int seed) {
   setgcparam(g, MINORMUL, LUAI_GENMINORMUL);
   setgcparam(g, MINORMAJOR, LUAI_MINORMAJOR);
   setgcparam(g, MAJORMINOR, LUAI_MAJORMINOR);
-  for (i=0; i < LUA_NUMTAGS; i++) g->mt[i] = NULL;
+  for (i=0; i < LUA_NUMTYPES; i++) g->mt[i] = NULL;
   if (luaD_rawrunprotected(L, f_luaopen, NULL) != LUA_OK) {
     /* memory allocation error: free partial state */
     close_state(L);
