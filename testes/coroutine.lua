@@ -681,7 +681,7 @@ else
          c == "ERRRUN" and d == 4)
 
   a, b, c, d = T.testC([[
-    rawgeti R 1    # get main thread
+    rawgeti R !M    # get main thread
     pushnum 10;
     pushnum 20;
     resume -3 2;
@@ -699,7 +699,7 @@ else
   assert(T.testC(state, "newthread; isyieldable -1; remove 1; return 1"))
 
   -- main thread is not yieldable
-  assert(not T.testC(state, "rawgeti R 1; isyieldable -1; remove 1; return 1"))
+  assert(not T.testC(state, "rawgeti R !M; isyieldable -1; remove 1; return 1"))
 
   T.testC(state, "settop 0")
 
@@ -711,7 +711,7 @@ else
     return 'ok']]))
 
   local t = table.pack(T.testC(state, [[
-    rawgeti R 1     # get main thread
+    rawgeti R !M     # get main thread
     pushstring 'XX'
     getglobal X    # get function for body
     pushstring AA      # arg
@@ -720,7 +720,7 @@ else
     setglobal T    # top
     setglobal B    # second yielded value
     setglobal A    # fist yielded value
-    rawgeti R 1     # get main thread
+    rawgeti R !M     # get main thread
     pushnum 5       # arg (noise)
     resume 1 1      # after coroutine ends, previous stack is back
     pushstatus

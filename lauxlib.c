@@ -672,13 +672,10 @@ LUALIB_API char *luaL_buffinitsize (lua_State *L, luaL_Buffer *B, size_t sz) {
 ** =======================================================
 */
 
-/* index of free-list header (after the predefined values) */
-#define freelist	(LUA_RIDX_LAST + 1)
-
 /*
-** The previously freed references form a linked list:
-** t[freelist] is the index of a first free index, or zero if list is
-** empty; t[t[freelist]] is the index of the second element; etc.
+** The previously freed references form a linked list: t[1] is the index
+** of a first free index, t[t[1]] is the index of the second element,
+** etc. A zero signals the end of the list.
 */
 LUALIB_API int luaL_ref (lua_State *L, int t) {
   int ref;
@@ -687,19 +684,18 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
     return LUA_REFNIL;  /* 'nil' has a unique fixed reference */
   }
   t = lua_absindex(L, t);
-  if (lua_rawgeti(L, t, freelist) == LUA_TNIL) {  /* first access? */
+  if (lua_rawgeti(L, t, 1) == LUA_TNUMBER)  /* already initialized? */
+    ref = (int)lua_tointeger(L, -1);  /* ref = t[1] */
+  else {  /* first access */
+    lua_assert(!lua_toboolean(L, -1));  /* must be nil or false */
     ref = 0;  /* list is empty */
     lua_pushinteger(L, 0);  /* initialize as an empty list */
-    lua_rawseti(L, t, freelist);  /* ref = t[freelist] = 0 */
-  }
-  else {  /* already initialized */
-    lua_assert(lua_isinteger(L, -1));
-    ref = (int)lua_tointeger(L, -1);  /* ref = t[freelist] */
+    lua_rawseti(L, t, 1);  /* ref = t[1] = 0 */
   }
   lua_pop(L, 1);  /* remove element from stack */
   if (ref != 0) {  /* any free element? */
     lua_rawgeti(L, t, ref);  /* remove it from list */
-    lua_rawseti(L, t, freelist);  /* (t[freelist] = t[ref]) */
+    lua_rawseti(L, t, 1);  /* (t[1] = t[ref]) */
   }
   else  /* no free elements */
     ref = (int)lua_rawlen(L, t) + 1;  /* get a new reference */
@@ -711,11 +707,11 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
 LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
   if (ref >= 0) {
     t = lua_absindex(L, t);
-    lua_rawgeti(L, t, freelist);
+    lua_rawgeti(L, t, 1);
     lua_assert(lua_isinteger(L, -1));
-    lua_rawseti(L, t, ref);  /* t[ref] = t[freelist] */
+    lua_rawseti(L, t, ref);  /* t[ref] = t[1] */
     lua_pushinteger(L, ref);
-    lua_rawseti(L, t, freelist);  /* t[freelist] = ref */
+    lua_rawseti(L, t, 1);  /* t[1] = ref */
   }
 }
 

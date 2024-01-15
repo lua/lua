@@ -467,7 +467,7 @@ for i = 1,lim do
   prog[#prog + 1] = "pushnum " .. i * 10
 end
 
-prog[#prog + 1] = "rawgeti R 2"   -- get global table in registry
+prog[#prog + 1] = "rawgeti R !G"  -- get global table in registry
 prog[#prog + 1] = "insert " .. -(2*lim + 2)
 
 for i = 1,lim do
@@ -930,28 +930,30 @@ checkerr("FILE%* expected, got userdata", io.input, x)
 
 assert(debug.getmetatable(x) == nil and debug.getmetatable(y) == nil)
 
-local d = T.ref(a);
-local e = T.ref(b);
-local f = T.ref(c);
-t = {T.getref(d), T.getref(e), T.getref(f)}
+-- Test references in an arbitrary table
+local reftable = {}
+local d = T.ref(a, reftable);
+local e = T.ref(b, reftable);
+local f = T.ref(c, reftable);
+t = {T.getref(d, reftable), T.getref(e, reftable), T.getref(f, reftable)}
 assert(t[1] == a and t[2] == b and t[3] == c)
 
 t=nil; a=nil; c=nil;
-T.unref(e); T.unref(f)
+T.unref(e, reftable); T.unref(f, reftable)
 
 collectgarbage()
 
 -- check that unref objects have been collected
 assert(#cl == 1 and cl[1] == nc)
 
-x = T.getref(d)
+x = T.getref(d, reftable)
 assert(type(x) == 'userdata' and debug.getmetatable(x) == tt)
 x =nil
 tt.b = b  -- create cycle
 tt=nil    -- frees tt for GC
 A = nil
 b = nil
-T.unref(d);
+T.unref(d, reftable);
 local n5 = T.newuserdata(0)
 debug.setmetatable(n5, {__gc=F})
 n5 = T.udataval(n5)
@@ -959,6 +961,21 @@ collectgarbage()
 assert(#cl == 4)
 -- check order of collection
 assert(cl[2] == n5 and cl[3] == nb and cl[4] == na)
+
+-- reuse a reference in 'reftable'
+T.unref(T.ref(23, reftable), reftable)
+
+do  -- check reftable
+  local count = 0
+  local i = 1
+  while reftable[i] ~= 0 do
+    i = reftable[i]  -- traverse linked list of free references
+    count = count + 1
+  end
+  -- maximum number of simultaneously locked objects was 3
+  assert(count == 3 and #reftable  == 3 + 1)  -- +1 for reserved [1]
+end
+
 
 collectgarbage"restart"
 
@@ -1363,8 +1380,8 @@ end)
 
 -- testing threads
 
--- get main thread from registry (at index LUA_RIDX_MAINTHREAD == 1)
-local mt = T.testC("rawgeti R 1; return 1")
+-- get main thread from registry
+local mt = T.testC("rawgeti R !M; return 1")
 assert(type(mt) == "thread" and coroutine.running() == mt)
 
 

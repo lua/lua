@@ -1084,27 +1084,39 @@ static int string_query (lua_State *L) {
 }
 
 
+static int getreftable (lua_State *L) {
+  if (lua_istable(L, 2))  /* is there a table as second argument? */
+    return 2;  /* use it as the table */
+  else
+    return LUA_REGISTRYINDEX;  /* default is to use the register */
+}
+
+
 static int tref (lua_State *L) {
+  int t = getreftable(L);
   int level = lua_gettop(L);
   luaL_checkany(L, 1);
   lua_pushvalue(L, 1);
-  lua_pushinteger(L, luaL_ref(L, LUA_REGISTRYINDEX));
+  lua_pushinteger(L, luaL_ref(L, t));
   cast_void(level);  /* to avoid warnings */
   lua_assert(lua_gettop(L) == level+1);  /* +1 for result */
   return 1;
 }
 
+
 static int getref (lua_State *L) {
+  int t = getreftable(L);
   int level = lua_gettop(L);
-  lua_rawgeti(L, LUA_REGISTRYINDEX, luaL_checkinteger(L, 1));
+  lua_rawgeti(L, t, luaL_checkinteger(L, 1));
   cast_void(level);  /* to avoid warnings */
   lua_assert(lua_gettop(L) == level+1);
   return 1;
 }
 
 static int unref (lua_State *L) {
+  int t = getreftable(L);
   int level = lua_gettop(L);
-  luaL_unref(L, LUA_REGISTRYINDEX, cast_int(luaL_checkinteger(L, 1)));
+  luaL_unref(L, t, cast_int(luaL_checkinteger(L, 1)));
   cast_void(level);  /* to avoid warnings */
   lua_assert(lua_gettop(L) == level);
   return 0;
@@ -1370,6 +1382,16 @@ static int getnum_aux (lua_State *L, lua_State *L1, const char **pc) {
   }
   else if (**pc == '*') {
     res = lua_gettop(L1);
+    (*pc)++;
+    return res;
+  }
+  else if (**pc == '!') {
+    (*pc)++;
+    if (**pc == 'G')
+      res = LUA_RIDX_GLOBALS;
+    else if (**pc == 'M')
+      res = LUA_RIDX_MAINTHREAD;
+    else lua_assert(0);
     (*pc)++;
     return res;
   }

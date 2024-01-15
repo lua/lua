@@ -2645,8 +2645,8 @@ string keys starting with an underscore followed by
 uppercase letters are reserved for Lua.
 
 The integer keys in the registry are used
-by the reference mechanism @seeC{luaL_ref}
-and by some predefined values.
+by the reference mechanism @seeC{luaL_ref},
+with some predefined values.
 Therefore, integer keys in the registry
 must not be used for other purposes.
 
@@ -6018,11 +6018,21 @@ Creates and returns a @def{reference},
 in the table at index @id{t},
 for the object on the top of the stack (and pops the object).
 
-A reference is a unique integer key.
-As long as you do not manually add integer keys into the table @id{t},
-@Lid{luaL_ref} ensures the uniqueness of the key it returns.
+The reference system uses the integer keys of the table.
+A reference is a unique integer key;
+@Lid{luaL_ref} ensures the uniqueness of the keys it returns.
+The entry 1 is reserved for internal use.
+Before the first use of @Lid{luaL_ref},
+the integer keys of the table
+should form a proper sequence (no holes),
+and the value at entry 1 should be false:
+@nil if the sequence is empty,
+@false otherwise.
+You should not manually set integer keys in the table
+after the first use of @Lid{luaL_ref}.
+
 You can retrieve an object referred by the reference @id{r}
-by calling @T{lua_rawgeti(L, t, r)}.
+by calling @T{lua_rawgeti(L, t, r)} or @T{lua_geti(L, t, r)}.
 The function @Lid{luaL_unref} frees a reference.
 
 If the object on the top of the stack is @nil,
@@ -6188,8 +6198,8 @@ Returns the name of the type of the value at the given index.
 Releases the reference @id{ref} from the table at index @id{t}
 @seeC{luaL_ref}.
 The entry is removed from the table,
-so that the referred object can be collected.
-The reference @id{ref} is also freed to be used again.
+so that the referred object can be collected and
+the reference @id{ref} can be used again by @Lid{luaL_ref}.
 
 If @id{ref} is @Lid{LUA_NOREF} or @Lid{LUA_REFNIL},
 @Lid{luaL_unref} does nothing.
