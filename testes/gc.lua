@@ -28,19 +28,21 @@ end
 -- test weird parameters to 'collectgarbage'
 do
   collectgarbage("incremental")
-  local opause = collectgarbage("setparam", "pause", 100)
-  local ostepmul = collectgarbage("setparam", "stepmul", 100)
+  local opause = collectgarbage("param", "pause", 100)
+  local ostepmul = collectgarbage("param", "stepmul", 100)
+  assert(collectgarbage("param", "pause") == 100)
+  assert(collectgarbage("param", "stepmul") == 100)
   local t = {0, 2, 10, 90, 500, 5000, 30000, 0x7ffffffe}
   for i = 1, #t do
-    collectgarbage("setparam", "pause", t[i])
+    collectgarbage("param", "pause", t[i])
     for j = 1, #t do
-      collectgarbage("setparam", "stepmul", t[j])
+      collectgarbage("param", "stepmul", t[j])
       collectgarbage("step", t[j])
     end
   end
   -- restore original parameters
-  collectgarbage("setparam", "pause", opause)
-  collectgarbage("setparam", "stepmul", ostepmul)
+  collectgarbage("param", "pause", opause)
+  collectgarbage("param", "stepmul", ostepmul)
   collectgarbage()
 end
 

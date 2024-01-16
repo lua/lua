@@ -1217,12 +1217,13 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       luaC_changemode(L, KGC_INC);
       break;
     }
-    case LUA_GCSETPARAM: {
+    case LUA_GCPARAM: {
       int param = va_arg(argp, int);
       int value = va_arg(argp, int);
       api_check(L, 0 <= param && param < LUA_GCPN, "invalid parameter");
       res = luaO_applyparam(g->gcparams[param], 100);
-      g->gcparams[param] = luaO_codeparam(value);
+      if (value >= 0)
+        g->gcparams[param] = luaO_codeparam(value);
       break;
     }
     default: res = -1;  /* invalid option */

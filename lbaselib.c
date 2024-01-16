@@ -199,10 +199,10 @@ static int pushmode (lua_State *L, int oldmode) {
 static int luaB_collectgarbage (lua_State *L) {
   static const char *const opts[] = {"stop", "restart", "collect",
     "count", "step", "isrunning", "generational", "incremental",
-    "setparam", NULL};
+    "param", NULL};
   static const char optsnum[] = {LUA_GCSTOP, LUA_GCRESTART, LUA_GCCOLLECT,
     LUA_GCCOUNT, LUA_GCSTEP, LUA_GCISRUNNING, LUA_GCGEN, LUA_GCINC,
-    LUA_GCSETPARAM};
+    LUA_GCPARAM};
   int o = optsnum[luaL_checkoption(L, 1, "collect", opts)];
   switch (o) {
     case LUA_GCCOUNT: {
@@ -231,7 +231,7 @@ static int luaB_collectgarbage (lua_State *L) {
     case LUA_GCINC: {
       return pushmode(L, lua_gc(L, o));
     }
-    case LUA_GCSETPARAM: {
+    case LUA_GCPARAM: {
       static const char *const params[] = {
         "minormul", "majorminor", "minormajor",
         "pause", "stepmul", "stepsize", NULL};
@@ -239,7 +239,7 @@ static int luaB_collectgarbage (lua_State *L) {
         LUA_GCPMINORMUL, LUA_GCPMAJORMINOR, LUA_GCPMINORMAJOR,
         LUA_GCPPAUSE, LUA_GCPSTEPMUL, LUA_GCPSTEPSIZE};
       int p = pnum[luaL_checkoption(L, 2, NULL, params)];
-      lua_Integer value = luaL_checkinteger(L, 3);
+      lua_Integer value = luaL_optinteger(L, 3, -1);
       lua_pushinteger(L, lua_gc(L, o, p, (int)value));
       return 1;
     }

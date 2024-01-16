@@ -338,7 +338,7 @@ LUA_API void (lua_warning)  (lua_State *L, const char *msg, int tocont);
 #define LUA_GCISRUNNING		6
 #define LUA_GCGEN		7
 #define LUA_GCINC		8
-#define LUA_GCSETPARAM		9
+#define LUA_GCPARAM		9
 
 
 /*

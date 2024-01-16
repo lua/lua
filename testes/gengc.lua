@@ -163,15 +163,17 @@ assert(collectgarbage'isrunning')
 
 
 do  print"testing stop-the-world collection"
-  local step = collectgarbage("setparam", "stepsize", 0);
+  local step = collectgarbage("param", "stepsize", 0);
   collectgarbage("incremental")
+  assert(collectgarbage("param", "stepsize") == 0)
 
   -- each step does a complete cycle
   assert(collectgarbage("step"))
   assert(collectgarbage("step"))
 
   -- back to default value
-  collectgarbage("setparam", "stepsize", step);
+  collectgarbage("param", "stepsize", step);
+  assert(collectgarbage("param", "stepsize") == step)
 end
 
 collectgarbage(oldmode)

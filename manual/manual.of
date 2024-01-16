@@ -3345,9 +3345,9 @@ Changes the collector to generational mode.
 Returns the previous mode (@id{LUA_GCGEN} or @id{LUA_GCINC}).
 }
 
-@item{@defid{LUA_GCSETPARAM} (int param, int value)|
-Changes the values of a parameter of the collector and returns
-the previous value of that parameter.
+@item{@defid{LUA_GCPARAM} (int param, int val)|
+Changes and/or returns the value of a parameter of the collector.
+If @id{val} is negative, the call only returns the current value.
 The argument @id{param} must have one of the following values:
 @description{
 @item{@defid{LUA_GCPMINORMUL}| The minor multiplier. }
@@ -6390,13 +6390,12 @@ Changes the collector mode to incremental and returns the previous mode.
 Changes the collector mode to generational and returns the previous mode.
 }
 
-@item{@St{setparam}|
-Changes the values of a parameter of the collector and returns
-the previous value of that parameter.
-This option must be followed by two extra arguments:
-The name of the parameter being changed (a string)
-and the new value for that parameter (an integer).
-The argument @id{param} must have one of the following values:
+@item{@St{param}|
+Changes and/or retrieves the values of a parameter of the collector.
+This option must be followed by one or two extra arguments:
+The name of the parameter being changed or retrieved (a string)
+and an optional new value for that parameter (an integer).
+The first argument must have one of the following values:
 @description{
 @item{@St{minormul}| The minor multiplier. }
 @item{@St{majorminor}| The major-minor multiplier. }
@@ -6405,6 +6404,10 @@ The argument @id{param} must have one of the following values:
 @item{@St{stepmul}| The step multiplier. }
 @item{@St{stepsize}| The step size. }
 }
+The call always returns the previous value of the parameter.
+If the call does not give a new value,
+the value is left unchanged.
+
 Lua rounds these values before storing them;
 so, the value returned as the previous value may not be
 exactly the last value set.
@@ -9298,7 +9301,7 @@ declare a local variable with the same name in the loop body.
 @item{
 Parameters for the garbage collection are not set
 with the options @St{incremental} and @St{generational};
-instead, there is a new option @St{setparam} to that end.
+instead, there is a new option @St{param} to that end.
 Moreover, there were some changes in the parameters themselves.
 }
 
@@ -9327,7 +9330,7 @@ to signal the end of the dump.
 @item{
 Parameters for the garbage collection are not set
 with the options @Lid{LUA_GCINC} and @Lid{LUA_GCGEN};
-instead, there is a new option @Lid{LUA_GCSETPARAM} to that end.
+instead, there is a new option @Lid{LUA_GCPARAM} to that end.
 Moreover, there were some changes in the parameters themselves.
 }
 
