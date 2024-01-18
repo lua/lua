@@ -3234,11 +3234,11 @@ Values at other positions are not affected.
 
 }
 
-@APIEntry{void lua_createtable (lua_State *L, int narr, int nrec);|
+@APIEntry{void lua_createtable (lua_State *L, int nseq, int nrec);|
 @apii{0,1,m}
 
 Creates a new empty table and pushes it onto the stack.
-Parameter @id{narr} is a hint for how many elements the table
+Parameter @id{nseq} is a hint for how many elements the table
 will have as a sequence;
 parameter @id{nrec} is a hint for how many other elements
 the table will have.
@@ -7966,6 +7966,19 @@ The default value for @id{sep} is the empty string,
 the default for @id{i} is 1,
 and the default for @id{j} is @T{#list}.
 If @id{i} is greater than @id{j}, returns the empty string.
+
+}
+
+@LibEntry{table.create (nseq [, nrec])|
+
+Creates a new empty table, preallocating memory.
+This preallocation may help performance and save memory
+when you know in advance how many elements the table will have.
+
+Parameter @id{nseq} is a hint for how many elements the table
+will have as a sequence.
+Optional parameter @id{nrec} is a hint for how many other elements
+the table will have; its default is zero.
 
 }
 

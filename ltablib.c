@@ -58,6 +58,14 @@ static void checktab (lua_State *L, int arg, int what) {
 }
 
 
+static int tcreate (lua_State *L) {
+  int sizeseq = (int)luaL_checkinteger(L, 1);
+  int sizerest = (int)luaL_optinteger(L, 2, 0);
+  lua_createtable(L, sizeseq, sizerest);
+  return 1;
+}
+
+
 static int tinsert (lua_State *L) {
   lua_Integer pos;  /* where to insert new element */
   lua_Integer e = aux_getn(L, 1, TAB_RW);
@@ -390,6 +398,7 @@ static int sort (lua_State *L) {
 
 static const luaL_Reg tab_funcs[] = {
   {"concat", tconcat},
+  {"create", tcreate},
   {"insert", tinsert},
   {"pack", tpack},
   {"unpack", tunpack},

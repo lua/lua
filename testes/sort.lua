@@ -3,6 +3,27 @@
 
 print "testing (parts of) table library"
 
+do print "testing 'table.create'"
+  collectgarbage()
+  local m = collectgarbage("count") * 1024
+  local t = table.create(10000)
+  local memdiff = collectgarbage("count") * 1024 - m
+  assert(memdiff > 10000 * 4)
+  for i = 1, 20 do
+    assert(#t == i - 1)
+    t[i] = 0
+  end
+  assert(not T or T.querytab(t) == 10000)
+  t = nil
+  collectgarbage()
+  m = collectgarbage("count") * 1024
+  t = table.create(0, 1024)
+  memdiff = collectgarbage("count") * 1024 - m
+  assert(memdiff > 1024 * 12)
+  assert(not T or select(2, T.querytab(t)) == 1024)
+end
+
+
 print "testing unpack"
 
 local unpack = table.unpack
