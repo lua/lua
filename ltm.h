@@ -60,11 +60,12 @@ typedef enum {
 */
 #define notm(tm)	ttisnil(tm)
 
+#define checknoTM(mt,e)	((mt) == NULL || (mt)->flags & (1u<<(e)))
 
-#define gfasttm(g,et,e) ((et) == NULL ? NULL : \
-  ((et)->flags & (1u<<(e))) ? NULL : luaT_gettm(et, e, (g)->tmname[e]))
+#define gfasttm(g,mt,e)  \
+  (checknoTM(mt, e) ? NULL : luaT_gettm(mt, e, (g)->tmname[e]))
 
-#define fasttm(l,et,e)	gfasttm(G(l), et, e)
+#define fasttm(l,mt,e)	gfasttm(G(l), mt, e)
 
 #define ttypename(x)	luaT_typenames_[(x) + 1]
 

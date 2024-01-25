@@ -1001,7 +1001,7 @@ static int rawfinishnodeset (const TValue *slot, TValue *val) {
 int luaH_psetint (Table *t, lua_Integer key, TValue *val) {
   if (keyinarray(t, key)) {
     lu_byte *tag = getArrTag(t, key - 1);
-    if (!tagisempty(*tag)) {
+    if (!tagisempty(*tag) || checknoTM(t->metatable, TM_NEWINDEX)) {
       fval2arr(t, key, tag, val);
       return HOK;  /* success */
     }
