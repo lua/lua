@@ -4552,6 +4552,10 @@ The pointer returned by @id{lua_tolstring}
 may be invalidated by the garbage collector if the
 corresponding Lua value is removed from the stack @see{constchar}.
 
+This function can raise memory errors only
+when converting a number to a string
+(as then it may have to create a new string).
+
 }
 
 @APIEntry{lua_Number lua_tonumber (lua_State *L, int index);|
