@@ -73,28 +73,34 @@ unsigned int luaO_codeparam (unsigned int p) {
 
 
 /*
-** Computes 'p' times 'x', where 'p' is a floating-point byte.
+** Computes 'p' times 'x', where 'p' is a floating-point byte. Roughly,
+** we have to multiply 'x' by the mantissa and then shift accordingly to
+** the exponent.  If the exponent is positive, both the multiplication
+** and the shift increase 'x', so we have to care only about overflows.
+** For negative exponents, however, multiplying before the shift keeps
+** more significant bits, as long as the multiplication does not
+** overflow, so we check which order is best.
 */
 l_obj luaO_applyparam (unsigned int p, l_obj x) {
   unsigned int m = p & 0xF;  /* mantissa */
   int e = (p >> 4);  /* exponent */
   if (e > 0) {  /* normalized? */
-    e--;
-    m += 0x10;  /* maximum 'm' is 0x1F */
+    e--;  /* correct exponent */
+    m += 0x10;  /* correct mantissa; maximum value is 0x1F */
   }
   e -= 7;  /* correct excess-7 */
-  if (e < 0) {
+  if (e >= 0) {
+    if (x < (MAX_LOBJ / 0x1F) >> e)  /* no overflow? */
+      return (x * m) << e;  /* order doesn't matter here */
+    else  /* real overflow */
+      return MAX_LOBJ;
+  }
+  else {  /* negative exponent */
     e = -e;
     if (x < MAX_LOBJ / 0x1F)  /* multiplication cannot overflow? */
       return (x * m) >> e;  /* multiplying first gives more precision */
     else if ((x >> e) <  MAX_LOBJ / 0x1F)  /* cannot overflow after shift? */
       return (x >> e) * m;
-    else  /* real overflow */
-      return MAX_LOBJ;
-  }
-  else {
-    if (x < (MAX_LOBJ / 0x1F) >> e)  /* no overflow? */
-      return (x * m) << e;  /* order doesn't matter here */
     else  /* real overflow */
       return MAX_LOBJ;
   }

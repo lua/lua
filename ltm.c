@@ -92,10 +92,9 @@ const char *luaT_objtypename (lua_State *L, const TValue *o) {
   Table *mt;
   if ((ttistable(o) && (mt = hvalue(o)->metatable) != NULL) ||
       (ttisfulluserdata(o) && (mt = uvalue(o)->metatable) != NULL)) {
-    TValue name;
-    int hres = luaH_getshortstr(mt, luaS_new(L, "__name"), &name);
-    if (hres == HOK && ttisstring(&name))  /* is '__name' a string? */
-      return getstr(tsvalue(&name));  /* use it as type name */
+    const TValue *name = luaH_Hgetshortstr(mt, luaS_new(L, "__name"));
+    if (ttisstring(name))  /* is '__name' a string? */
+      return getstr(tsvalue(name));  /* use it as type name */
   }
   return ttypename(ttype(o));  /* else use standard type name */
 }

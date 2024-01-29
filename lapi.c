@@ -1262,9 +1262,8 @@ LUA_API int lua_next (lua_State *L, int idx) {
   api_checknelems(L, 1);
   t = gettable(L, idx);
   more = luaH_next(L, t, L->top.p - 1);
-  if (more) {
+  if (more)
     api_incr_top(L);
-  }
   else  /* no more elements */
     L->top.p -= 1;  /* remove key */
   lua_unlock(L);

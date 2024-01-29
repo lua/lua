@@ -6473,7 +6473,7 @@ Otherwise, returns the metatable of the given object.
 
 @LibEntry{ipairs (t)|
 
-Returns three values (an iterator function, the table @id{t}, and 0)
+Returns three values (an iterator function, the value @id{t}, and 0)
 so that the construction
 @verbatim{
 for i,v in ipairs(t) do @rep{body} end

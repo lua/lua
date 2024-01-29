@@ -13,6 +13,8 @@ do print "testing 'table.create'"
     assert(#t == i - 1)
     t[i] = 0
   end
+  for i = 1, 20 do  t[#t + 1] = i * 10  end
+  assert(#t == 40 and t[39] == 190)
   assert(not T or T.querytab(t) == 10000)
   t = nil
   collectgarbage()
