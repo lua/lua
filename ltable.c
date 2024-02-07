@@ -40,24 +40,26 @@
 
 
 /*
-** Only tables with hash parts larget than LIMFORLAST has a 'lastfree'
-** field that optimizes finding a free slot. Smaller tables do a
+** Only tables with hash parts larger than 2^LIMFORLAST has a 'lastfree'
+** field that optimizes finding a free slot. That field is stored just
+** before the array of nodes, in the same block. Smaller tables do a
 ** complete search when looking for a free slot.
 */
-#define LLIMFORLAST    2  /* log2 of LIMTFORLAST */
-#define LIMFORLAST     twoto(LLIMFORLAST)
+#define LIMFORLAST    2  /* log2 of real limit */
 
 /*
-** Union to store an int field ensuring that what follows it in
-** memory is properly aligned to store a TValue.
+** The union 'Limbox' stores 'lastfree' and ensures that what follows it
+** is properly aligned to store a Node.
 */
+typedef struct { Node *dummy; Node follows_pNode; } Limbox_aux;
+
 typedef union {
-  int lastfree;
-  char padding[offsetof(struct { int i; TValue v; }, v)];
+  Node *lastfree;
+  char padding[offsetof(Limbox_aux, follows_pNode)];
 } Limbox;
 
-#define haslastfree(t)     ((t)->lsizenode > LLIMFORLAST)
-#define getlastfree(t)     (&((cast(Limbox *, (t)->node) - 1)->lastfree))
+#define haslastfree(t)     ((t)->lsizenode > LIMFORLAST)
+#define getlastfree(t)     ((cast(Limbox *, (t)->node) - 1)->lastfree)
 
 
 /*
@@ -593,13 +595,13 @@ static void setnodevector (lua_State *L, Table *t, unsigned int size) {
     if (lsize > MAXHBITS || (1u << lsize) > MAXHSIZE)
       luaG_runerror(L, "table overflow");
     size = twoto(lsize);
-    if (lsize <= LLIMFORLAST)  /* no 'lastfree' field? */
+    if (lsize <= LIMFORLAST)  /* no 'lastfree' field? */
       t->node = luaM_newvector(L, size, Node);
     else {
       size_t bsize = size * sizeof(Node) + sizeof(Limbox);
       char *node = luaM_newblock(L, bsize);
       t->node = cast(Node *, node + sizeof(Limbox));
-      *getlastfree(t) = size;  /* all positions are free */
+      getlastfree(t) = gnode(t, size);  /* all positions are free */
     }
     t->lsizenode = cast_byte(lsize);
     setnodummy(t);
@@ -776,8 +778,8 @@ void luaH_free (lua_State *L, Table *t) {
 static Node *getfreepos (Table *t) {
   if (haslastfree(t)) {  /* does it have 'lastfree' information? */
     /* look for a spot before 'lastfree', updating 'lastfree' */
-    while (*getlastfree(t) > 0) {
-      Node *free = gnode(t, --(*getlastfree(t)));
+    while (getlastfree(t) > t->node) {
+      Node *free = --getlastfree(t);
       if (keyisnil(free))
         return free;
     }
