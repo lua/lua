@@ -352,7 +352,7 @@ static lua_Number I2d (Rand64 x) {
   SRand64 sx = (SRand64)(trim64(x) >> shift64_FIG);
   lua_Number res = (lua_Number)(sx) * scaleFIG;
   if (sx < 0)
-    res += 1.0;  /* correct the two's complement if negative */
+    res += l_mathop(1.0);  /* correct the two's complement if negative */
   lua_assert(0 <= res && res < 1);
   return res;
 }
