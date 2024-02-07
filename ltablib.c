@@ -59,8 +59,10 @@ static void checktab (lua_State *L, int arg, int what) {
 
 
 static int tcreate (lua_State *L) {
-  int sizeseq = (int)luaL_checkinteger(L, 1);
-  int sizerest = (int)luaL_optinteger(L, 2, 0);
+  lua_Unsigned sizeseq = (lua_Unsigned)luaL_checkinteger(L, 1);
+  lua_Unsigned sizerest = (lua_Unsigned)luaL_optinteger(L, 2, 0);
+  luaL_argcheck(L, sizeseq <= UINT_MAX, 1, "out of range");
+  luaL_argcheck(L, sizerest <= UINT_MAX, 2, "out of range");
   lua_createtable(L, sizeseq, sizerest);
   return 1;
 }

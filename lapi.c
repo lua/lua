@@ -781,7 +781,7 @@ LUA_API int lua_rawgetp (lua_State *L, int idx, const void *p) {
 }
 
 
-LUA_API void lua_createtable (lua_State *L, int narray, int nrec) {
+LUA_API void lua_createtable (lua_State *L, unsigned narray, unsigned nrec) {
   Table *t;
   lua_lock(L);
   t = luaH_new(L);

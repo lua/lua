@@ -61,18 +61,25 @@ typedef union {
 
 
 /*
-** MAXABITS is the largest integer such that MAXASIZE fits in an
+** MAXABITS is the largest integer such that 2^MAXABITS fits in an
 ** unsigned int.
 */
 #define MAXABITS	cast_int(sizeof(int) * CHAR_BIT - 1)
 
 
 /*
-** MAXASIZE is the maximum size of the array part. It is the minimum
-** between 2^MAXABITS and the maximum size that, measured in bytes,
-** fits in a 'size_t'.
+** MAXASIZEB is the maximum number of elements in the array part such
+** that the size of the array fits in 'size_t'.
 */
-#define MAXASIZE	luaM_limitN(1u << MAXABITS, TValue)
+#define MAXASIZEB	((MAX_SIZET/sizeof(ArrayCell)) * NM)
+
+
+/*
+** MAXASIZE is the maximum size of the array part. It is the minimum
+** between 2^MAXABITS and MAXASIZEB.
+*/
+#define MAXASIZE  \
+    (((1u << MAXABITS) < MAXASIZEB) ? (1u << MAXABITS) : cast_uint(MAXASIZEB))
 
 /*
 ** MAXHBITS is the largest integer such that 2^MAXHBITS fits in a
@@ -663,6 +670,8 @@ void luaH_resize (lua_State *L, Table *t, unsigned int newasize,
   Table newt;  /* to keep the new hash part */
   unsigned int oldasize = setlimittosize(t);
   ArrayCell *newarray;
+  if (newasize > MAXASIZE)
+    luaG_runerror(L, "table overflow");
   /* create new hash part with appropriate size into 'newt' */
   newt.flags = 0;
   setnodevector(L, &newt, nhsize);

@@ -3234,7 +3234,7 @@ Values at other positions are not affected.
 
 }
 
-@APIEntry{void lua_createtable (lua_State *L, int nseq, int nrec);|
+@APIEntry{void lua_createtable (lua_State *L, unsigned nseq, unsigned nrec);|
 @apii{0,1,m}
 
 Creates a new empty table and pushes it onto the stack.
