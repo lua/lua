@@ -30,7 +30,7 @@ typedef struct {
   int strip;
   int status;
   Table *h;  /* table to track saved strings */
-  lua_Integer nstr;  /* counter to number saved strings */
+  lua_Unsigned nstr;  /* counter to number saved strings */
 } DumpState;
 
 
@@ -83,26 +83,27 @@ static void dumpByte (DumpState *D, int y) {
 
 
 /*
-** 'dumpSize' buffer size: each byte can store up to 7 bits. (The "+6"
-** rounds up the division.)
+** size for 'dumpVarint' buffer: each byte can store up to 7 bits.
+** (The "+6" rounds up the division.)
 */
-#define DIBS    ((sizeof(size_t) * CHAR_BIT + 6) / 7)
+#define DIBS    ((sizeof(varint_t) * CHAR_BIT + 6) / 7)
 
-static void dumpSize (DumpState *D, size_t x) {
+/*
+** Dumps an unsigned integer using the MSB Varint encoding
+*/
+static void dumpVarint (DumpState *D, varint_t x) {
   lu_byte buff[DIBS];
-  int n = 0;
-  do {
-    buff[DIBS - (++n)] = x & 0x7f;  /* fill buffer in reverse order */
-    x >>= 7;
-  } while (x != 0);
-  buff[DIBS - 1] |= 0x80;  /* mark last byte */
+  int n = 1;
+  buff[DIBS - 1] = x & 0x7f;  /* fill least-significant byte */
+  while ((x >>= 7) != 0)  /* fill other bytes in reverse order */
+    buff[DIBS - (++n)] = (x & 0x7f) | 0x80;
   dumpVector(D, buff + DIBS - n, n);
 }
 
 
 static void dumpInt (DumpState *D, int x) {
   lua_assert(x >= 0);
-  dumpSize(D, x);
+  dumpVarint(D, x);
 }
 
 
@@ -125,22 +126,22 @@ static void dumpInteger (DumpState *D, lua_Integer x) {
 */
 static void dumpString (DumpState *D, TString *ts) {
   if (ts == NULL)
-    dumpSize(D, 0);
+    dumpVarint(D, 0);
   else {
     TValue idx;
     if (luaH_getstr(D->h, ts, &idx) == HOK) {  /* string already saved? */
-      dumpSize(D, 1);  /* reuse a saved string */
-      dumpInt(D, ivalue(&idx));  /* index of saved string */
+      dumpVarint(D, 1);  /* reuse a saved string */
+      dumpVarint(D, l_castS2U(ivalue(&idx)));  /* index of saved string */
     }
     else {  /* must write and save the string */
       TValue key, value;  /* to save the string in the hash */
       size_t size;
       const char *s = getlstr(ts, size);
-      dumpSize(D, size + 2);
+      dumpVarint(D, size + 2);
       dumpVector(D, s, size + 1);  /* include ending '\0' */
       D->nstr++;  /* one more saved string */
       setsvalue(D->L, &key, ts);  /* the string is the key */
-      setivalue(&value, D->nstr);  /* its index is the value */
+      setivalue(&value, l_castU2S(D->nstr));  /* its index is the value */
       luaH_set(D->L, D->h, &key, &value);  /* h[ts] = nstr */
       /* integer value does not need barrier */
     }

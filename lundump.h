@@ -7,6 +7,8 @@
 #ifndef lundump_h
 #define lundump_h
 
+#include <limits.h>
+
 #include "llimits.h"
 #include "lobject.h"
 #include "lzio.h"
@@ -24,6 +26,19 @@
 #define LUAC_VERSION	(LUA_VERSION_MAJOR_N*16+LUA_VERSION_MINOR_N)
 
 #define LUAC_FORMAT	0	/* this is the official format */
+
+
+/*
+** Type to handle MSB Varint encoding: Try to get the largest unsigned
+** integer available. (It was enough to be the largest between size_t and
+** lua_Integer, but the C89 preprocessor knows nothing about size_t.)
+*/
+#if !defined(LUA_USE_C89) && defined(LLONG_MAX)
+typedef unsigned long long varint_t;
+#else
+typedef unsigned long varint_t;
+#endif
+
 
 /* load one chunk; from lundump.c */
 LUAI_FUNC LClosure* luaU_undump (lua_State* L, ZIO* Z, const char* name,
