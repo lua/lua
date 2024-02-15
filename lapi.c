@@ -1221,7 +1221,7 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       int param = va_arg(argp, int);
       int value = va_arg(argp, int);
       api_check(L, 0 <= param && param < LUA_GCPN, "invalid parameter");
-      res = luaO_applyparam(g->gcparams[param], 100);
+      res = cast_int(luaO_applyparam(g->gcparams[param], 100));
       if (value >= 0)
         g->gcparams[param] = luaO_codeparam(value);
       break;
