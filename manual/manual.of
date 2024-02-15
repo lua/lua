@@ -664,7 +664,6 @@ Values equal to or less than 100 mean the collector will not wait to
 start a new cycle.
 A value of 200 means that the collector waits for
 the total number of objects to double before starting a new cycle.
-The default value is 200.
 
 The garbage-collector step size controls the
 size of each incremental step,
@@ -672,7 +671,6 @@ specifically how many objects the interpreter creates
 before performing a step:
 A value of @M{n} means the interpreter will create
 approximately @M{n} objects between steps.
-The default value is 250.
 
 The garbage-collector step multiplier
 controls the size of each GC step.
@@ -681,7 +679,6 @@ in each step, @M{n%} objects for each created object.
 Larger values make the collector more aggressive.
 Beware that values too small can
 make the collector too slow to ever finish a cycle.
-The default value is 200.
 As a special case, a zero value means unlimited work,
 effectively producing a non-incremental, stop-the-world collector.
 
@@ -711,7 +708,6 @@ after the last major collection.
 For instance, for a multiplier of 20,
 the collector will do a minor collection when the number of objects
 gets 20% larger than the total after the last major collection.
-The default value is 25.
 
 The minor-major multiplier controls the shift to major collections.
 For a multiplier @M{x},
@@ -721,7 +717,6 @@ than the total after the previous major collection.
 For instance, for a multiplier of 100,
 the collector will do a major collection when the number of old objects
 gets larger than twice the total after the previous major collection.
-The default value is 100.
 
 The major-minor multiplier controls the shift back to minor collections.
 For a multiplier @M{x},
@@ -731,7 +726,6 @@ of the objects allocated during the last cycle.
 In particular, for a multiplier of 0,
 the collector will immediately shift back to minor collections
 after doing one cycle of major collections.
-The default value is 50.
 
 }
 
@@ -5885,13 +5879,6 @@ or @id{NULL} if there is a @x{memory allocation error}.
 
 }
 
-@APIEntry{void luaL_openlibs (lua_State *L);|
-@apii{0,0,e}
-
-Opens all standard Lua libraries into the given state.
-
-}
-
 @APIEntry{
 T luaL_opt (L, func, arg, dflt);|
 @apii{0,0,-}
@@ -6073,7 +6060,7 @@ and sets the call result to @T{package.loaded[modname]},
 as if that function has been called through @Lid{require}.
 
 If @id{glb} is true,
-also stores the module into the global @id{modname}.
+also stores the module into the global variable @id{modname}.
 
 Leaves a copy of the module on the stack.
 
@@ -6290,23 +6277,61 @@ Except for the basic and the package libraries,
 each library provides all its functions as fields of a global table
 or as methods of its objects.
 
-To have access to these libraries,
-the @N{C host} program should call the @Lid{luaL_openlibs} function,
-which opens all standard libraries.
+}
+
+
+@sect2{lualib-h| @title{Loading the Libraries in C code}
+
+A @N{C host} program must explicitly load
+the standard libraries into a state,
+if it wants its scripts to use them.
+For that,
+the host program can call the function @Lid{luaL_openlibs}.
 Alternatively,
-the host program can open them individually by using
-@Lid{luaL_requiref} to call
-@defid{luaopen_base} (for the basic library),
-@defid{luaopen_package} (for the package library),
-@defid{luaopen_coroutine} (for the coroutine library),
-@defid{luaopen_string} (for the string library),
-@defid{luaopen_utf8} (for the UTF-8 library),
-@defid{luaopen_table} (for the table library),
-@defid{luaopen_math} (for the mathematical library),
-@defid{luaopen_io} (for the I/O library),
-@defid{luaopen_os} (for the operating system library),
-and @defid{luaopen_debug} (for the debug library).
-These functions are declared in @defid{lualib.h}.
+the host can select which libraries to open,
+by using @Lid{luaL_openselectedlibs}.
+Both functions are defined in the header file @id{lualib.h}.
+@index{lualib.h}
+
+The stand-alone interpreter @id{lua} @see{lua-sa}
+already opens all standard libraries.
+
+@APIEntry{void luaL_openlibs (lua_State *L);|
+@apii{0,0,e}
+
+Opens all standard Lua libraries into the given state.
+
+}
+
+@APIEntry{void luaL_openselectedlibs (lua_State *L, int load, int preload);|
+@apii{0,0,e}
+
+Opens (loads) and preloads selected libraries into the state @id{L}.
+(To @emph{preload} means to add
+the library loader into the table @Lid{package.preload},
+so that the library can be required later by the program.
+Keep in mind that @Lid{require} itself is provided
+by the @emph{package} library.
+If a program does not load that library,
+it will be unable to require anything.)
+
+The integer @id{load} selects which libraries to load;
+the integer @id{preload} selects which to preload, among those not loaded.
+Both are masks formed by a bitwise OR of the following constants:
+@description{
+@item{@defid{LUA_GLIBK} | the basic library.}
+@item{@defid{LUA_LOADLIBK} | the package library.}
+@item{@defid{LUA_COLIBK} | the coroutine library.}
+@item{@defid{LUA_STRLIBK} | the string library.}
+@item{@defid{LUA_UTF8LIBK} | the UTF-8 library.}
+@item{@defid{LUA_TABLIBK} | the table library.}
+@item{@defid{LUA_MATHLIBK} | the mathematical library.}
+@item{@defid{LUA_IOLIBK} | the I/O library.}
+@item{@defid{LUA_OSLIBK} | the operating system library.}
+@item{@defid{LUA_DBLIBK} | the debug library.}
+}
+
+}
 
 }
 

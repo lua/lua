@@ -1223,8 +1223,9 @@ static lua_State *getstate (lua_State *L) {
 
 static int loadlib (lua_State *L) {
   lua_State *L1 = getstate(L);
-  int what = luaL_checkinteger(L, 2);
-  luaL_openselectedlibs(L1, what);
+  int load = luaL_checkinteger(L, 2);
+  int preload = luaL_checkinteger(L, 3);
+  luaL_openselectedlibs(L1, load, preload);
   luaL_requiref(L1, "T", luaB_opentests, 0);
   lua_assert(lua_type(L1, -1) == LUA_TTABLE);
   /* 'requiref' should not reload module already loaded... */

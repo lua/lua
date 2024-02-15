@@ -358,7 +358,7 @@ item = function (s)
          local t, p = string.match(s, "^([^\n|]+)|()")
          if t then
            s = string.sub(s, p)
-           s = Tag.b(t..": ") .. s
+           s = Tag.b(t) ..": " .. s
          end
          return Tag.li(fixpara(s))
        end,
