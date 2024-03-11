@@ -29,8 +29,18 @@
 
 /* Ensure the stack has at least 'n' elements */
 #define api_checknelems(L,n) \
-	api_check(L, (n) < (L->top.p - L->ci->func.p), \
-			  "not enough elements in the stack")
+       api_check(L, (n) < (L->top.p - L->ci->func.p), \
+                         "not enough elements in the stack")
+
+
+/* Ensure the stack has at least 'n' elements to be popped. (Some
+** functions only update a slot after checking it for popping, but that
+** is only an optimization for a pop followed by a push.)
+*/
+#define api_checkpop(L,n) \
+	api_check(L, (n) < L->top.p - L->ci->func.p &&  \
+                     L->tbclist.p < L->top.p - (n), \
+			  "not enough free elements in the stack")
 
 
 /*

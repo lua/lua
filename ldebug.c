@@ -245,6 +245,7 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
   lua_lock(L);
   name = luaG_findlocal(L, ar->i_ci, n, &pos);
   if (name) {
+    api_checkpop(L, 1);
     setobjs2s(L, pos, L->top.p - 1);
     L->top.p--;  /* pop value */
   }

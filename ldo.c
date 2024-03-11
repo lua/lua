@@ -767,6 +767,7 @@ static CallInfo *findpcall (lua_State *L) {
 ** coroutine error handler and should not kill the coroutine.)
 */
 static int resume_error (lua_State *L, const char *msg, int narg) {
+  api_checkpop(L, narg);
   L->top.p -= narg;  /* remove args from the stack */
   setsvalue2s(L, L->top.p, luaS_new(L, msg));  /* push error message */
   api_incr_top(L);
@@ -849,7 +850,7 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
     return resume_error(L, "C stack overflow", nargs);
   L->nCcalls++;
   luai_userstateresume(L, nargs);
-  api_checknelems(L, (L->status == LUA_OK) ? nargs + 1 : nargs);
+  api_checkpop(L, (L->status == LUA_OK) ? nargs + 1 : nargs);
   status = luaD_rawrunprotected(L, resume, &nargs);
    /* continue running after recoverable errors */
   status = precover(L, status);
@@ -878,7 +879,7 @@ LUA_API int lua_yieldk (lua_State *L, int nresults, lua_KContext ctx,
   luai_userstateyield(L, nresults);
   lua_lock(L);
   ci = L->ci;
-  api_checknelems(L, nresults);
+  api_checkpop(L, nresults);
   if (l_unlikely(!yieldable(L))) {
     if (L != G(L)->mainthread)
       luaG_runerror(L, "attempt to yield across a C-call boundary");

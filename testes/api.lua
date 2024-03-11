@@ -1193,7 +1193,8 @@ do
   local a, b = pcall(T.makeCfunc[[
     call 0 1   # create resource
     toclose -1 # mark it to be closed
-    error       # resource is the error object
+    pushvalue -1  # replicate it as error object
+    error       # resource right after error object
   ]], newresource)
   assert(a == false and b[1] == 11)
   assert(#openresource == 0)    -- was closed
