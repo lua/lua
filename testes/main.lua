@@ -312,7 +312,7 @@ setmetatable({}, {__gc = function ()
   -- this finalizer should not be called, as object will be
   -- created after 'lua_close' has been called
   setmetatable({}, {__gc = function () print(3) end})
-  print(collectgarbage())    -- cannot call collector here
+  print(collectgarbage() or false)    -- cannot call collector here
   os.exit(0, true)
 end})
 ]]
@@ -322,7 +322,7 @@ creating 1
 creating 2
 2
 creating 3
-nil
+false
 1
 ]]
 

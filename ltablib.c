@@ -63,7 +63,7 @@ static int tcreate (lua_State *L) {
   lua_Unsigned sizerest = (lua_Unsigned)luaL_optinteger(L, 2, 0);
   luaL_argcheck(L, sizeseq <= UINT_MAX, 1, "out of range");
   luaL_argcheck(L, sizerest <= UINT_MAX, 2, "out of range");
-  lua_createtable(L, sizeseq, sizerest);
+  lua_createtable(L, (unsigned)sizeseq, (unsigned)sizerest);
   return 1;
 }
 
