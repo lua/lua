@@ -36,8 +36,8 @@ typedef struct {
   ZIO *Z;
   const char *name;
   Table *h;  /* list for string reuse */
-  size_t offset;  /* current position relative to beginning of dump */
-  lua_Unsigned nstr;  /* number of strings in the list */
+  lu_mem offset;  /* current position relative to beginning of dump */
+  lua_Integer nstr;  /* number of strings in the list */
   lu_byte fixed;  /* dump is fixed in memory */
 } LoadState;
 
@@ -94,13 +94,13 @@ static lu_byte loadByte (LoadState *S) {
 }
 
 
-static varint_t loadVarint (LoadState *S, varint_t limit) {
-  varint_t x = 0;
+static size_t loadVarint (LoadState *S, size_t limit) {
+  size_t x = 0;
   int b;
   limit >>= 7;
   do {
     b = loadByte(S);
-    if (x >= limit)
+    if (x > limit)
       error(S, "integer overflow");
     x = (x << 7) | (b & 0x7f);
   } while ((b & 0x80) != 0);
@@ -109,12 +109,12 @@ static varint_t loadVarint (LoadState *S, varint_t limit) {
 
 
 static size_t loadSize (LoadState *S) {
-  return cast_sizet(loadVarint(S, MAX_SIZET));
+  return loadVarint(S, MAX_SIZET);
 }
 
 
 static int loadInt (LoadState *S) {
-  return cast_int(loadVarint(S, INT_MAX));
+  return cast_int(loadVarint(S, cast_sizet(INT_MAX)));
 }
 
 
@@ -148,10 +148,9 @@ static void loadString (LoadState *S, Proto *p, TString **sl) {
     return;
   }
   else if (size == 1) {  /* previously saved string? */
-    /* get its index */
-    lua_Unsigned idx = cast(lua_Unsigned, loadVarint(S, LUA_MAXUNSIGNED));
+    lua_Integer idx = cast(lua_Integer, loadSize(S));  /* get its index */
     TValue stv;
-    luaH_getint(S->h, l_castU2S(idx), &stv);  /* get its value */
+    luaH_getint(S->h, idx, &stv);  /* get its value */
     *sl = ts = tsvalue(&stv);
     luaC_objbarrier(L, p, ts);
     return;  /* do not save it again */
@@ -175,7 +174,7 @@ static void loadString (LoadState *S, Proto *p, TString **sl) {
   /* add string to list of saved strings */
   S->nstr++;
   setsvalue(L, &sv, ts);
-  luaH_setint(L, S->h, l_castU2S(S->nstr), &sv);
+  luaH_setint(L, S->h, S->nstr, &sv);
   luaC_objbarrierback(L, obj2gco(S->h), ts);
 }
 
