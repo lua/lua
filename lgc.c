@@ -465,45 +465,23 @@ static void traverseweakvalue (global_State *g, Table *h) {
 }
 
 
-#define BK2(x)	cast(lua_Unsigned, ((x) << 8) | BIT_ISCOLLECTABLE)
 /*
-** Check whether some value in the cell starting at index 'i'
-** is collectable
-*/
-static int checkBulkCollectable (Table *h, unsigned i) {
-  const lua_Unsigned bitscoll = BK2(BK2(BK2(BK2(BK2(BK2(BK2(BK2(~0u))))))));
-  int j;
-  i /= NM;
-  for (j = 0; j < BKSZ; j++) {
-    if (h->array[i].u.bulk[j] & bitscoll)
-      return 1;
-  }
-  return 0;
-}
-
-
-/*
-** Traverse the array part of a table. The traversal is made by cells,
-** only traversing a cell if it has some collectable tag among its tags.
+** Traverse the array part of a table.
 */
 static int traversearray (global_State *g, Table *h) {
   unsigned asize = luaH_realasize(h);
   int marked = 0;  /* true if some object is marked in this traversal */
   unsigned i;
-  for (i = 0; i < asize; i += NM) {  /* traverse array in cells */
-    if (checkBulkCollectable(h, i)) {  /* something to mark in this cell? */
-      unsigned j;
-      for (j = 0; j < NM && i + j < asize; j++) {
-        GCObject *o = gcvalarr(h, i + j);
-        if (o != NULL && iswhite(o)) {
-          marked = 1;
-          reallymarkobject(g, o);
-        }
-      }
+  for (i = 0; i < asize; i++) {
+    GCObject *o = gcvalarr(h, i);
+    if (o != NULL && iswhite(o)) {
+      marked = 1;
+      reallymarkobject(g, o);
     }
   }
   return marked;
 }
+
 
 /*
 ** Traverse an ephemeron table and link it to proper list. Returns true

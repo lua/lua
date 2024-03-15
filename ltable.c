@@ -665,7 +665,7 @@ static void reinsertOldSlice (lua_State *L, Table *t, unsigned oldasize,
     int tag = *getArrTag(t, i);
     if (!tagisempty(tag)) {  /* a non-empty entry? */
       TValue aux;
-      farr2val(t, i + 1, tag, &aux);
+      farr2val(t, i + 1, tag, &aux);  /* copy entry into 'aux' */
       luaH_setint(L, t, i + 1, &aux);  /* re-insert it into the table */
     }
   }
@@ -673,21 +673,12 @@ static void reinsertOldSlice (lua_State *L, Table *t, unsigned oldasize,
 }
 
 
-#define BK1(x)	cast(lua_Unsigned, ((x) << 8) | LUA_VEMPTY)
-
 /*
-** Clear new slice of the array, in bulk.
+** Clear new slice of the array.
 */
 static void clearNewSlice (Table *t, unsigned oldasize, unsigned newasize) {
-  int i, j;
-  int firstcell = (oldasize + NM - 1) / NM;
-  int lastcell = cast_int((newasize + NM - 1) / NM) - 1;
-  for (i = firstcell; i <= lastcell; i++) {
-    /* empty tag repeated for all tags in a word */
-    const lua_Unsigned empty = BK1(BK1(BK1(BK1(BK1(BK1(BK1(BK1(0))))))));
-    for (j = 0; j < BKSZ; j++)
-      t->array[i].u.bulk[j] = empty;
-  }
+  for (; oldasize < newasize; oldasize++)
+    *getArrTag(t, oldasize) = LUA_VEMPTY;
 }
 
 
