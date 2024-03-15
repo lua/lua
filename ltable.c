@@ -654,6 +654,44 @@ static void exchangehashpart (Table *t1, Table *t2) {
 
 
 /*
+** Re-insert into the new hash part of a table the elements from the
+** vanishing slice of the array part.
+*/
+static void reinsertOldSlice (lua_State *L, Table *t, unsigned oldasize,
+                                            unsigned newasize) {
+  unsigned i;
+  t->alimit = newasize;  /* pretend array has new size... */
+  for (i = newasize; i < oldasize; i++) {  /* traverse vanishing slice */
+    int tag = *getArrTag(t, i);
+    if (!tagisempty(tag)) {  /* a non-empty entry? */
+      TValue aux;
+      farr2val(t, i + 1, tag, &aux);
+      luaH_setint(L, t, i + 1, &aux);  /* re-insert it into the table */
+    }
+  }
+  t->alimit = oldasize;  /* restore current size... */
+}
+
+
+#define BK1(x)	cast(lua_Unsigned, ((x) << 8) | LUA_VEMPTY)
+
+/*
+** Clear new slice of the array, in bulk.
+*/
+static void clearNewSlice (Table *t, unsigned oldasize, unsigned newasize) {
+  int i, j;
+  int firstcell = (oldasize + NM - 1) / NM;
+  int lastcell = cast_int((newasize + NM - 1) / NM) - 1;
+  for (i = firstcell; i <= lastcell; i++) {
+    /* empty tag repeated for all tags in a word */
+    const lua_Unsigned empty = BK1(BK1(BK1(BK1(BK1(BK1(BK1(BK1(0))))))));
+    for (j = 0; j < BKSZ; j++)
+      t->array[i].u.bulk[j] = empty;
+  }
+}
+
+
+/*
 ** Resize table 't' for the new given sizes. Both allocations (for
 ** the hash part and for the array part) can fail, which creates some
 ** subtleties. If the first allocation, for the hash part, fails, an
@@ -668,7 +706,6 @@ static void exchangehashpart (Table *t1, Table *t2) {
 */
 void luaH_resize (lua_State *L, Table *t, unsigned int newasize,
                                           unsigned int nhsize) {
-  unsigned int i;
   Table newt;  /* to keep the new hash part */
   unsigned int oldasize = setlimittosize(t);
   ArrayCell *newarray;
@@ -678,19 +715,10 @@ void luaH_resize (lua_State *L, Table *t, unsigned int newasize,
   newt.flags = 0;
   setnodevector(L, &newt, nhsize);
   if (newasize < oldasize) {  /* will array shrink? */
-    t->alimit = newasize;  /* pretend array has new size... */
-    exchangehashpart(t, &newt);  /* and new hash */
     /* re-insert into the new hash the elements from vanishing slice */
-    for (i = newasize; i < oldasize; i++) {
-      int tag = *getArrTag(t, i);
-      if (!tagisempty(tag)) {  /* a non-empty entry? */
-        TValue aux;
-        farr2val(t, i + 1, tag, &aux);
-        luaH_setint(L, t, i + 1, &aux);
-      }
-    }
-    t->alimit = oldasize;  /* restore current size... */
-    exchangehashpart(t, &newt);  /* and hash (in case of errors) */
+    exchangehashpart(t, &newt);  /* pretend table has new hash */
+    reinsertOldSlice(L, t, oldasize, newasize);
+    exchangehashpart(t, &newt);  /* restore old hash (in case of errors) */
   }
   /* allocate new array */
   newarray = resizearray(L, t, oldasize, newasize);
@@ -702,8 +730,7 @@ void luaH_resize (lua_State *L, Table *t, unsigned int newasize,
   exchangehashpart(t, &newt);  /* 't' has the new hash ('newt' has the old) */
   t->array = newarray;  /* set new array part */
   t->alimit = newasize;
-  for (i = oldasize; i < newasize; i++)  /* clear new slice of the array */
-    *getArrTag(t, i) = LUA_VEMPTY;
+  clearNewSlice(t, oldasize, newasize);
   /* re-insert elements from old hash part into new parts */
   reinsert(L, &newt, t);  /* 'newt' now has the old hash */
   freehash(L, &newt);  /* free old hash part */

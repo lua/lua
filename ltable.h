@@ -87,20 +87,32 @@
 
 
 /*
-** The array part of a table is represented by an array of cells.
+** The array part of a table is represented by an array of *cells*.
 ** Each cell is composed of NM tags followed by NM values, so that
 ** no space is wasted in padding.
 */
 #define NM      cast_uint(sizeof(Value))
 
+
+/*
+** A few operations on arrays can be performed "in bulk", treating all
+** tags of a cell as a simple (or a few) word(s). The next constant is
+** the number of words to cover the tags of a cell. (In conventional
+** architectures that will be 1 or 2.)
+*/
+#define BKSZ	cast_int((NM - 1) / sizeof(lua_Unsigned) + 1)
+
 struct ArrayCell {
-  lu_byte tag[NM];
+  union {
+    lua_Unsigned bulk[BKSZ];  /* for "bulk" operations */
+    lu_byte tag[NM];
+  } u;
   Value value[NM];
 };
 
 
 /* Computes the address of the tag for the abstract index 'k' */
-#define getArrTag(t,k)	(&(t)->array[(k)/NM].tag[(k)%NM])
+#define getArrTag(t,k)	(&(t)->array[(k)/NM].u.tag[(k)%NM])
 
 /* Computes the address of the value for the abstract index 'k' */
 #define getArrVal(t,k)	(&(t)->array[(k)/NM].value[(k)%NM])

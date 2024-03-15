@@ -465,6 +465,46 @@ static void traverseweakvalue (global_State *g, Table *h) {
 }
 
 
+#define BK2(x)	cast(lua_Unsigned, ((x) << 8) | BIT_ISCOLLECTABLE)
+/*
+** Check whether some value in the cell starting at index 'i'
+** is collectable
+*/
+static int checkBulkCollectable (Table *h, unsigned i) {
+  const lua_Unsigned bitscoll = BK2(BK2(BK2(BK2(BK2(BK2(BK2(BK2(~0u))))))));
+  int j;
+  i /= NM;
+  for (j = 0; j < BKSZ; j++) {
+    if (h->array[i].u.bulk[j] & bitscoll)
+      return 1;
+  }
+  return 0;
+}
+
+
+/*
+** Traverse the array part of a table. The traversal is made by cells,
+** only traversing a cell if it has some collectable tag among its tags.
+*/
+static int traversearray (global_State *g, Table *h) {
+  unsigned asize = luaH_realasize(h);
+  int marked = 0;  /* true if some object is marked in this traversal */
+  unsigned i;
+  for (i = 0; i < asize; i += NM) {  /* traverse array in cells */
+    if (checkBulkCollectable(h, i)) {  /* something to mark in this cell? */
+      unsigned j;
+      for (j = 0; j < NM && i + j < asize; j++) {
+        GCObject *o = gcvalarr(h, i + j);
+        if (o != NULL && iswhite(o)) {
+          marked = 1;
+          reallymarkobject(g, o);
+        }
+      }
+    }
+  }
+  return marked;
+}
+
 /*
 ** Traverse an ephemeron table and link it to proper list. Returns true
 ** iff any object was marked during this traversal (which implies that
@@ -478,20 +518,11 @@ static void traverseweakvalue (global_State *g, Table *h) {
 ** by 'genlink'.
 */
 static int traverseephemeron (global_State *g, Table *h, int inv) {
-  int marked = 0;  /* true if an object is marked in this traversal */
   int hasclears = 0;  /* true if table has white keys */
   int hasww = 0;  /* true if table has entry "white-key -> white-value" */
   unsigned int i;
-  unsigned int asize = luaH_realasize(h);
   unsigned int nsize = sizenode(h);
-  /* traverse array part */
-  for (i = 0; i < asize; i++) {
-    GCObject *o = gcvalarr(h, i);
-    if (o != NULL && iswhite(o)) {
-      marked = 1;
-      reallymarkobject(g, o);
-    }
-  }
+  int marked = traversearray(g, h);  /* traverse array part */
   /* traverse hash part; if 'inv', traverse descending
      (see 'convergeephemerons') */
   for (i = 0; i < nsize; i++) {
@@ -523,13 +554,7 @@ static int traverseephemeron (global_State *g, Table *h, int inv) {
 
 static void traversestrongtable (global_State *g, Table *h) {
   Node *n, *limit = gnodelast(h);
-  unsigned int i;
-  unsigned int asize = luaH_realasize(h);
-  for (i = 0; i < asize; i++) {  /* traverse array part */
-    GCObject *o = gcvalarr(h, i);
-    if (o != NULL && iswhite(o))
-      reallymarkobject(g, o);
-  }
+  traversearray(g, h);
   for (n = gnode(h, 0); n < limit; n++) {  /* traverse hash part */
     if (isempty(gval(n)))  /* entry is empty? */
       clearkey(n);  /* clear its key */
