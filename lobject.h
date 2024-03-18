@@ -75,6 +75,7 @@ typedef struct TValue {
 
 /* raw type tag of a TValue */
 #define rawtt(o)	((o)->tt_)
+#define rawttV(o)	((o).tt_)
 
 /* tag with no variants (bits 0-3) */
 #define novariant(t)	((t) & 0x0F)
@@ -82,14 +83,18 @@ typedef struct TValue {
 /* type tag of a TValue (bits 0-3 for tags + variant bits 4-5) */
 #define withvariant(t)	((t) & 0x3F)
 #define ttypetag(o)	withvariant(rawtt(o))
+#define ttypetagV(o)	withvariant(rawttV(o))
 
 /* type of a TValue */
 #define ttype(o)	(novariant(rawtt(o)))
+#define ttypeV(o)	(novariant(rawttV(o)))
 
 
 /* Macros to test type */
 #define checktag(o,t)		(rawtt(o) == (t))
+#define checktagV(o,t)		(rawttV(o) == (t))
 #define checktype(o,t)		(ttype(o) == (t))
+#define checktypeV(o,t)		(ttypeV(o) == (t))
 
 
 /* Macros for internal tests */
@@ -112,12 +117,18 @@ typedef struct TValue {
 
 /* set a value's tag */
 #define settt_(o,t)	((o)->tt_=(t))
+#define setttV_(o,t)	((o).tt_=(t))
 
 
 /* main macro to copy values (from 'obj2' to 'obj1') */
 #define setobj(L,obj1,obj2) \
 	{ TValue *io1=(obj1); const TValue *io2=(obj2); \
           io1->value_ = io2->value_; settt_(io1, io2->tt_); \
+	  checkliveness(L,io1); lua_assert(!isnonstrictnil(io1)); }
+
+#define setobjV(L,obj1,obj2) \
+	{ TValue *io1=(obj1); const TValue io2=(obj2); \
+          io1->value_ = io2.value_; settt_(io1, io2.tt_); \
 	  checkliveness(L,io1); lua_assert(!isnonstrictnil(io1)); }
 
 /*
@@ -188,9 +199,15 @@ typedef union {
 /* Value returned for a key not found in a table (absent key) */
 #define LUA_VABSTKEY	makevariant(LUA_TNIL, 2)
 
+/* Special "value" to signal that a fast get is accessing a non-table */
+#define LUA_VNOTABLE	makevariant(LUA_TNIL, 3)
+
+#define setnotableV(obj)	setttV_(obj, LUA_VNOTABLE)
+
 
 /* macro to test for (any kind of) nil */
 #define ttisnil(v)		checktype((v), LUA_TNIL)
+#define ttisnilV(v)		checktypeV((v), LUA_TNIL)
 
 #define tagisempty(tag)		(novariant(tag) == LUA_TNIL)
 
@@ -217,6 +234,7 @@ typedef union {
 ** be accepted as empty.)
 */
 #define isempty(v)		ttisnil(v)
+#define isemptyV(v)		checktypeV((v), LUA_TNIL)
 
 
 /* macro defining a value corresponding to an absent key */
@@ -328,6 +346,7 @@ typedef struct GCObject {
 #define ttisnumber(o)		checktype((o), LUA_TNUMBER)
 #define ttisfloat(o)		checktag((o), LUA_VNUMFLT)
 #define ttisinteger(o)		checktag((o), LUA_VNUMINT)
+#define ttisintegerV(o)		checktagV((o), LUA_VNUMINT)
 
 #define nvalue(o)	check_exp(ttisnumber(o), \
 	(ttisinteger(o) ? cast_num(ivalue(o)) : fltvalue(o)))

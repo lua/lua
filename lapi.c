@@ -666,47 +666,45 @@ LUA_API int lua_pushthread (lua_State *L) {
 
 
 static int auxgetstr (lua_State *L, const TValue *t, const char *k) {
-  int hres;
+  TValue aux;
   TString *str = luaS_new(L, k);
-  luaV_fastget(t, str, s2v(L->top.p), luaH_getstr, hres);
-  if (hres == HOK) {
+  luaV_fastget(t, str, s2v(L->top.p), luaH_getstr, aux);
+  if (!isemptyV(aux)) {
     api_incr_top(L);
   }
   else {
     setsvalue2s(L, L->top.p, str);
     api_incr_top(L);
-    luaV_finishget(L, t, s2v(L->top.p - 1), L->top.p - 1, hres);
+    luaV_finishget(L, t, s2v(L->top.p - 1), L->top.p - 1, aux);
   }
   lua_unlock(L);
   return ttype(s2v(L->top.p - 1));
 }
 
 
-static void getGlobalTable (lua_State *L, TValue *gt) {
+static TValue getGlobalTable (lua_State *L) {
   Table *registry = hvalue(&G(L)->l_registry);
-  int hres = luaH_getint(registry, LUA_RIDX_GLOBALS, gt);
-  (void)hres;  /* avoid warnings (not used) when checks are off */
-  api_check(L, hres == HOK, "global table must exist");
+  return luaH_getint(registry, LUA_RIDX_GLOBALS);
 }
 
 
 LUA_API int lua_getglobal (lua_State *L, const char *name) {
   TValue gt;
   lua_lock(L);
-  getGlobalTable(L, &gt);
+  gt = getGlobalTable(L);
   return auxgetstr(L, &gt, name);
 }
 
 
 LUA_API int lua_gettable (lua_State *L, int idx) {
-  int hres;
+  TValue aux;
   TValue *t;
   lua_lock(L);
   api_checkpop(L, 1);
   t = index2value(L, idx);
-  luaV_fastget(t, s2v(L->top.p - 1), s2v(L->top.p - 1), luaH_get, hres);
-  if (hres != HOK)
-    luaV_finishget(L, t, s2v(L->top.p - 1), L->top.p - 1, hres);
+  luaV_fastget(t, s2v(L->top.p - 1), s2v(L->top.p - 1), luaH_get, aux);
+  if (isemptyV(aux))
+    luaV_finishget(L, t, s2v(L->top.p - 1), L->top.p - 1, aux);
   lua_unlock(L);
   return ttype(s2v(L->top.p - 1));
 }
@@ -720,14 +718,14 @@ LUA_API int lua_getfield (lua_State *L, int idx, const char *k) {
 
 LUA_API int lua_geti (lua_State *L, int idx, lua_Integer n) {
   TValue *t;
-  int hres;
+  TValue aux;
   lua_lock(L);
   t = index2value(L, idx);
-  luaV_fastgeti(t, n, s2v(L->top.p), hres);
-  if (hres != HOK) {
+  luaV_fastgeti(t, n, s2v(L->top.p), aux);
+  if (isemptyV(aux)) {
     TValue key;
     setivalue(&key, n);
-    luaV_finishget(L, t, &key, L->top.p, hres);
+    luaV_finishget(L, t, &key, L->top.p, aux);
   }
   api_incr_top(L);
   lua_unlock(L);
@@ -735,12 +733,14 @@ LUA_API int lua_geti (lua_State *L, int idx, lua_Integer n) {
 }
 
 
-l_sinline int finishrawget (lua_State *L, int hres) {
-  if (hres != HOK)  /* avoid copying empty items to the stack */
+l_sinline int finishrawget (lua_State *L, TValue res) {
+  if (isemptyV(res))  /* avoid copying empty items to the stack */
     setnilvalue(s2v(L->top.p));
+  else
+    setobjV(L, s2v(L->top.p), res);
   api_incr_top(L);
   lua_unlock(L);
-  return ttype(s2v(L->top.p - 1));
+  return ttypeV(res);
 }
 
 
@@ -753,23 +753,23 @@ l_sinline Table *gettable (lua_State *L, int idx) {
 
 LUA_API int lua_rawget (lua_State *L, int idx) {
   Table *t;
+  TValue res;
   lua_lock(L);
   api_checkpop(L, 1);
   t = gettable(L, idx);
-  if (luaH_get(t, s2v(L->top.p - 1), s2v(L->top.p - 1)) != HOK)
-    setnilvalue(s2v(L->top.p - 1));
-  lua_unlock(L);
-  return ttype(s2v(L->top.p - 1));
+  res = luaH_get(t, s2v(L->top.p - 1));
+  L->top.p--;  /* pop key */
+  return finishrawget(L, res);
 }
 
 
 LUA_API int lua_rawgeti (lua_State *L, int idx, lua_Integer n) {
   Table *t;
-  int hres;
+  TValue aux;
   lua_lock(L);
   t = gettable(L, idx);
-  luaH_fastgeti(t, n, s2v(L->top.p), hres);
-  return finishrawget(L, hres);
+  luaH_fastgeti(t, n, s2v(L->top.p), aux);
+  return finishrawget(L, aux);
 }
 
 
@@ -779,7 +779,7 @@ LUA_API int lua_rawgetp (lua_State *L, int idx, const void *p) {
   lua_lock(L);
   t = gettable(L, idx);
   setpvalue(&k, cast_voidp(p));
-  return finishrawget(L, luaH_get(t, &k, s2v(L->top.p)));
+  return finishrawget(L, luaH_get(t, &k));
 }
 
 
@@ -872,7 +872,7 @@ static void auxsetstr (lua_State *L, const TValue *t, const char *k) {
 LUA_API void lua_setglobal (lua_State *L, const char *name) {
   TValue gt;
   lua_lock(L);  /* unlock done in 'auxsetstr' */
-  getGlobalTable(L, &gt);
+  gt = getGlobalTable(L);
   auxsetstr(L, &gt, name);
 }
 
@@ -1122,8 +1122,7 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
     LClosure *f = clLvalue(s2v(L->top.p - 1));  /* get new function */
     if (f->nupvalues >= 1) {  /* does it have an upvalue? */
       /* get global table from registry */
-      TValue gt;
-      getGlobalTable(L, &gt);
+      TValue gt = getGlobalTable(L);
       /* set global table as 1st upvalue of 'f' (may be LUA_ENV) */
       setobj(L, f->upvals[0]->v.p, &gt);
       luaC_barrier(L, f->upvals[0], &gt);

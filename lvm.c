@@ -287,12 +287,13 @@ static int floatforloop (StkId ra) {
 /*
 ** Finish the table access 'val = t[key]'.
 */
-void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
-                      int hres) {
+void luaV_finishget_ (lua_State *L, const TValue *t, TValue *key, StkId val,
+                       int tag) {
   int loop;  /* counter to avoid infinite loops */
   const TValue *tm;  /* metamethod */
+  TValue aux;
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
-    if (hres == HNOTATABLE) {  /* 't' is not a table? */
+    if (tag == LUA_VNOTABLE) {  /* 't' is not a table? */
       lua_assert(!ttistable(t));
       tm = luaT_gettmbyobj(L, t, TM_INDEX);
       if (l_unlikely(notm(tm)))
@@ -312,10 +313,11 @@ void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
       return;
     }
     t = tm;  /* else try to access 'tm[key]' */
-    luaV_fastget(t, key, s2v(val), luaH_get, hres);
-    if (hres == HOK)
+    luaV_fastget(t, key, s2v(val), luaH_get, aux);
+    if (!isemptyV(aux))
       return;  /* done */
     /* else repeat (tail call 'luaV_finishget') */
+    tag = ttypetagV(aux);
   }
   luaG_runerror(L, "'__index' chain too long; possible loop");
 }
@@ -1245,36 +1247,36 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         TValue *upval = cl->upvals[GETARG_B(i)]->v.p;
         TValue *rc = KC(i);
         TString *key = tsvalue(rc);  /* key must be a short string */
-        int hres;
-        luaV_fastget(upval, key, s2v(ra), luaH_getshortstr, hres);
-        if (hres != HOK)
-          Protect(luaV_finishget(L, upval, rc, ra, hres));
+        TValue aux;
+        luaV_fastget(upval, key, s2v(ra), luaH_getshortstr, aux);
+        if (isemptyV(aux))
+          Protect(luaV_finishget(L, upval, rc, ra, aux));
         vmbreak;
       }
       vmcase(OP_GETTABLE) {
         StkId ra = RA(i);
         TValue *rb = vRB(i);
         TValue *rc = vRC(i);
-        int hres;
+        TValue aux;
         if (ttisinteger(rc)) {  /* fast track for integers? */
-          luaV_fastgeti(rb, ivalue(rc), s2v(ra), hres);
+          luaV_fastgeti(rb, ivalue(rc), s2v(ra), aux);
         }
         else
-          luaV_fastget(rb, rc, s2v(ra), luaH_get, hres);
-        if (hres != HOK)  /* fast track for integers? */
-          Protect(luaV_finishget(L, rb, rc, ra, hres));
+          luaV_fastget(rb, rc, s2v(ra), luaH_get, aux);
+        if (isemptyV(aux))  /* fast track for integers? */
+          Protect(luaV_finishget(L, rb, rc, ra, aux));
         vmbreak;
       }
       vmcase(OP_GETI) {
         StkId ra = RA(i);
         TValue *rb = vRB(i);
         int c = GETARG_C(i);
-        int hres;
-        luaV_fastgeti(rb, c, s2v(ra), hres);
-        if (hres != HOK) {
+        TValue aux;
+        luaV_fastgeti(rb, c, s2v(ra), aux);
+        if (isemptyV(aux)) {
           TValue key;
           setivalue(&key, c);
-          Protect(luaV_finishget(L, rb, &key, ra, hres));
+          Protect(luaV_finishget(L, rb, &key, ra, aux));
         }
         vmbreak;
       }
@@ -1283,10 +1285,10 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         TValue *rb = vRB(i);
         TValue *rc = KC(i);
         TString *key = tsvalue(rc);  /* key must be a short string */
-        int hres;
-        luaV_fastget(rb, key, s2v(ra), luaH_getshortstr, hres);
-        if (hres != HOK)
-          Protect(luaV_finishget(L, rb, rc, ra, hres));
+        TValue aux;
+        luaV_fastget(rb, key, s2v(ra), luaH_getshortstr, aux);
+        if (isemptyV(aux))
+          Protect(luaV_finishget(L, rb, rc, ra, aux));
         vmbreak;
       }
       vmcase(OP_SETTABUP) {
@@ -1368,14 +1370,14 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_SELF) {
         StkId ra = RA(i);
-        int hres;
+        TValue aux;
         TValue *rb = vRB(i);
         TValue *rc = RKC(i);
         TString *key = tsvalue(rc);  /* key must be a string */
         setobj2s(L, ra + 1, rb);
-        luaV_fastget(rb, key, s2v(ra), luaH_getstr, hres);
-        if (hres != HOK)
-          Protect(luaV_finishget(L, rb, rc, ra, hres));
+        luaV_fastget(rb, key, s2v(ra), luaH_getstr, aux);
+        if (isemptyV(aux))
+          Protect(luaV_finishget(L, rb, rc, ra, aux));
         vmbreak;
       }
       vmcase(OP_ADDI) {
