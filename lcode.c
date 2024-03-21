@@ -541,11 +541,12 @@ static void freeexps (FuncState *fs, expdesc *e1, expdesc *e2) {
 ** a function can make some indices wrong.
 */
 static int addk (FuncState *fs, TValue *key, TValue *v) {
+  TValue val;
   lua_State *L = fs->ls->L;
   Proto *f = fs->f;
-  TValue val = luaH_get(fs->ls->h, key);  /* query scanner table */
+  int tag = luaH_get(fs->ls->h, key, &val);  /* query scanner table */
   int k, oldsize;
-  if (ttisintegerV(val)) {  /* is there an index there? */
+  if (tag == LUA_VNUMINT) {  /* is there an index there? */
     k = cast_int(ivalue(&val));
     /* correct value? (warning: must distinguish floats from integers!) */
     if (k < fs->nk && ttypetag(&f->k[k]) == ttypetag(v) &&

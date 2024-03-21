@@ -46,11 +46,12 @@
 
 
 
-#define luaH_fastgeti(t,k,res,aux) \
+#define luaH_fastgeti(t,k,res,tag) \
   { Table *h = t; lua_Unsigned u = l_castS2U(k); \
-    if ((u - 1u < h->alimit)) arr2objV(h,u,aux); \
-    else aux = luaH_getint(h, u); \
-    if (!isemptyV(aux)) setobjV(cast(lua_State*, NULL), res, aux); }
+    if ((u - 1u < h->alimit)) { \
+      tag = *getArrTag(h,(u)-1u); \
+      if (!tagisempty(tag)) { farr2val(h, u, tag, res); }} \
+    else { tag = luaH_getint(h, u, res); }}
 
 
 #define luaH_fastseti(t,k,val,hres) \
@@ -69,6 +70,8 @@
 #define HFIRSTNODE	3
 
 /*
+** 'luaH_get*' operations set 'res', unless the value is absent, and
+** return the tag of the result,
 ** The 'luaH_pset*' (pre-set) operations set the given value and return
 ** HOK, unless the original value is absent. In that case, if the key
 ** is really absent, they return HNOTFOUND. Otherwise, if there is a
@@ -85,7 +88,8 @@
 /*
 ** The array part of a table is represented by an array of cells.
 ** Each cell is composed of NM tags followed by NM values, so that
-** no space is wasted in padding.
+** no space is wasted in padding. The last cell may be incomplete,
+** that is, it may have fewer than NM values.
 */
 #define NM      cast_uint(sizeof(Value))
 
@@ -105,10 +109,8 @@ struct ArrayCell {
 /*
 ** Move TValues to/from arrays, using Lua indices
 */
-#define arr2objV(h,k,val)  \
-  ((val).tt_ = *getArrTag(h,(k)-1u), (val).value_ = *getArrVal(h,(k)-1u))
-
-#define arr2obj(h,k,val)	arr2objV(h,k,*(val))
+#define arr2obj(h,k,val)  \
+  ((val)->tt_ = *getArrTag(h,(k)-1u), (val)->value_ = *getArrVal(h,(k)-1u))
 
 #define obj2arr(h,k,val)  \
   (*getArrTag(h,(k)-1u) = (val)->tt_, *getArrVal(h,(k)-1u) = (val)->value_)
@@ -126,11 +128,12 @@ struct ArrayCell {
   (*tag = (val)->tt_, *getArrVal(h,(k)-1u) = (val)->value_)
 
 
-LUAI_FUNC TValue luaH_get (Table *t, const TValue *key);
-LUAI_FUNC TValue luaH_getshortstr (Table *t, TString *key);
-LUAI_FUNC TValue luaH_getstr (Table *t, TString *key);
-LUAI_FUNC TValue luaH_getint (Table *t, lua_Integer key);
+LUAI_FUNC int luaH_get (Table *t, const TValue *key, TValue *res);
+LUAI_FUNC int luaH_getshortstr (Table *t, TString *key, TValue *res);
+LUAI_FUNC int luaH_getstr (Table *t, TString *key, TValue *res);
+LUAI_FUNC int luaH_getint (Table *t, lua_Integer key, TValue *res);
 
+/* Special get for metamethods */
 LUAI_FUNC const TValue *luaH_Hgetshortstr (Table *t, TString *key);
 
 LUAI_FUNC TString *luaH_getstrkey (Table *t, TString *key);

@@ -78,19 +78,17 @@ typedef enum {
 /*
 ** fast track for 'gettable'
 */
-#define luaV_fastget(t,k,res,f, aux) \
-  {if (!ttistable(t)) setnotableV(aux);  \
-   else { aux = f(hvalue(t), k);  \
-      if (!isemptyV(aux)) { setobjV(cast(lua_State*, NULL), res, aux); } } }
+#define luaV_fastget(t,k,res,f, tag) \
+  (tag = (!ttistable(t) ? LUA_VNOTABLE : f(hvalue(t), k, res)))
 
 
 /*
 ** Special case of 'luaV_fastget' for integers, inlining the fast case
 ** of 'luaH_getint'.
 */
-#define luaV_fastgeti(t,k,res,aux) \
-  { if (!ttistable(t)) setnotableV(aux); \
-  else { luaH_fastgeti(hvalue(t), k, res, aux); } }
+#define luaV_fastgeti(t,k,res,tag) \
+  if (!ttistable(t)) tag = LUA_VNOTABLE; \
+  else { luaH_fastgeti(hvalue(t), k, res, tag); }
 
 
 #define luaV_fastset(t,k,val,hres,f) \
@@ -122,10 +120,8 @@ LUAI_FUNC int luaV_tointeger (const TValue *obj, lua_Integer *p, F2Imod mode);
 LUAI_FUNC int luaV_tointegerns (const TValue *obj, lua_Integer *p,
                                 F2Imod mode);
 LUAI_FUNC int luaV_flttointeger (lua_Number n, lua_Integer *p, F2Imod mode);
-#define luaV_finishget(L,t,key,val,aux)  \
-	luaV_finishget_(L,t,key,val,ttypetagV(aux))
-LUAI_FUNC void luaV_finishget_ (lua_State *L, const TValue *t, TValue *key,
-                                              StkId val, int tag);
+LUAI_FUNC int luaV_finishget (lua_State *L, const TValue *t, TValue *key,
+                                            StkId val, int tag);
 LUAI_FUNC void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
                                              TValue *val, int aux);
 LUAI_FUNC void luaV_finishOp (lua_State *L);

@@ -149,7 +149,8 @@ static void loadString (LoadState *S, Proto *p, TString **sl) {
   }
   else if (size == 1) {  /* previously saved string? */
     lua_Integer idx = cast(lua_Integer, loadSize(S));  /* get its index */
-    TValue stv = luaH_getint(S->h, idx);  /* get its value */
+    TValue stv;
+    luaH_getint(S->h, idx, &stv);  /* get its value */
     *sl = ts = tsvalue(&stv);
     luaC_objbarrier(L, p, ts);
     return;  /* do not save it again */

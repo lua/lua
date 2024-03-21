@@ -132,8 +132,9 @@ static void dumpString (DumpState *D, TString *ts) {
   if (ts == NULL)
     dumpSize(D, 0);
   else {
-    TValue idx = luaH_getstr(D->h, ts);
-    if (!isemptyV(idx)) {  /* string already saved? */
+    TValue idx;
+    int tag = luaH_getstr(D->h, ts, &idx);
+    if (!tagisempty(tag)) {  /* string already saved? */
       dumpSize(D, 1);  /* reuse a saved string */
       dumpSize(D, cast_sizet(ivalue(&idx)));  /* index of saved string */
     }

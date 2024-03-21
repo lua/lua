@@ -1538,7 +1538,8 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     }
     else if EQ("getfield") {
       int t = getindex;
-      lua_getfield(L1, t, getstring);
+      int tp = lua_getfield(L1, t, getstring);
+      lua_assert(tp == lua_type(L1, -1));
     }
     else if EQ("getglobal") {
       lua_getglobal(L1, getstring);
@@ -1548,7 +1549,8 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
         lua_pushnil(L1);
     }
     else if EQ("gettable") {
-      lua_gettable(L1, getindex);
+      int tp = lua_gettable(L1, getindex);
+      lua_assert(tp == lua_type(L1, -1));
     }
     else if EQ("gettop") {
       lua_pushinteger(L1, lua_gettop(L1));

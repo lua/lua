@@ -904,14 +904,23 @@ static int hashkeyisempty (Table *t, lua_Integer key) {
 }
 
 
-TValue luaH_getint (Table *t, lua_Integer key) {
-  if (keyinarray(t, key)) {
-    TValue res;
-    arr2objV(t, key, res);
-    return res;
+static int finishnodeget (const TValue *val, TValue *res) {
+  if (!ttisnil(val)) {
+    setobj(((lua_State*)NULL), res, val);
   }
-  else 
-    return *getintfromhash(t, key);
+  return ttypetag(val);
+}
+
+
+int luaH_getint (Table *t, lua_Integer key, TValue *res) {
+  if (keyinarray(t, key)) {
+    int tag = *getArrTag(t, key - 1);
+    if (!tagisempty(tag))
+      farr2val(t, key, tag, res);
+    return tag;
+  }
+  else
+    return finishnodeget(getintfromhash(t, key), res);
 }
 
 
@@ -934,8 +943,8 @@ const TValue *luaH_Hgetshortstr (Table *t, TString *key) {
 }
 
 
-TValue luaH_getshortstr (Table *t, TString *key) {
-  return *luaH_Hgetshortstr(t, key);
+int luaH_getshortstr (Table *t, TString *key, TValue *res) {
+  return finishnodeget(luaH_Hgetshortstr(t, key), res);
 }
 
 
@@ -950,8 +959,8 @@ static const TValue *Hgetstr (Table *t, TString *key) {
 }
 
 
-TValue luaH_getstr (Table *t, TString *key) {
-  return *Hgetstr(t, key);
+int luaH_getstr (Table *t, TString *key, TValue *res) {
+  return finishnodeget(Hgetstr(t, key), res);
 }
 
 
@@ -967,31 +976,34 @@ TString *luaH_getstrkey (Table *t, TString *key) {
 /*
 ** main search function
 */
-TValue luaH_get (Table *t, const TValue *key) {
+int luaH_get (Table *t, const TValue *key, TValue *res) {
+  const TValue *slot;
   switch (ttypetag(key)) {
     case LUA_VSHRSTR:
-      return *luaH_Hgetshortstr(t, tsvalue(key));
+      slot = luaH_Hgetshortstr(t, tsvalue(key));
       break;
     case LUA_VNUMINT:
-      return luaH_getint(t, ivalue(key));
+      return luaH_getint(t, ivalue(key), res);
     case LUA_VNIL:
-      return absentkey;
+      slot = &absentkey;
       break;
     case LUA_VNUMFLT: {
       lua_Integer k;
       if (luaV_flttointeger(fltvalue(key), &k, F2Ieq)) /* integral index? */
-        return luaH_getint(t, k);  /* use specialized version */
+        return luaH_getint(t, k, res);  /* use specialized version */
       /* else... */
     }  /* FALLTHROUGH */
     default:
-      return *getgeneric(t, key, 0);
+      slot = getgeneric(t, key, 0);
+      break;
   }
+  return finishnodeget(slot, res);
 }
 
 
 static int finishnodeset (Table *t, const TValue *slot, TValue *val) {
   if (!ttisnil(slot)) {
-    setobj(cast(lua_State*, NULL), cast(TValue*, slot), val);
+    setobj(((lua_State*)NULL), cast(TValue*, slot), val);
     return HOK;  /* success */
   }
   else if (isabstkey(slot))
@@ -1005,7 +1017,7 @@ static int rawfinishnodeset (const TValue *slot, TValue *val) {
   if (isabstkey(slot))
     return 0;  /* no slot with that key */
   else {
-    setobj(cast(lua_State*, NULL), cast(TValue*, slot), val);
+    setobj(((lua_State*)NULL), cast(TValue*, slot), val);
     return 1;  /* success */
   }
 }
