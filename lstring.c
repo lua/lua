@@ -40,7 +40,7 @@ int luaS_eqlngstr (TString *a, TString *b) {
 }
 
 
-unsigned int luaS_hash (const char *str, size_t l, unsigned int seed) {
+unsigned luaS_hash (const char *str, size_t l, unsigned seed) {
   unsigned int h = seed ^ cast_uint(l);
   for (; l > 0; l--)
     h ^= ((h<<5) + (h>>2) + cast_byte(str[l - 1]));
@@ -48,7 +48,7 @@ unsigned int luaS_hash (const char *str, size_t l, unsigned int seed) {
 }
 
 
-unsigned int luaS_hashlongstr (TString *ts) {
+unsigned luaS_hashlongstr (TString *ts) {
   lua_assert(ts->tt == LUA_VLNGSTR);
   if (ts->extra == 0) {  /* no hash? */
     size_t len = ts->u.lnglen;
@@ -155,7 +155,7 @@ size_t luaS_sizelngstr (size_t len, int kind) {
 ** creates a new string object
 */
 static TString *createstrobj (lua_State *L, size_t totalsize, int tag,
-                              unsigned int h) {
+                              unsigned h) {
   TString *ts;
   GCObject *o;
   o = luaC_newobj(L, tag, totalsize);

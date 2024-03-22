@@ -91,7 +91,7 @@ typedef signed char ls_byte;
 #define L_P2I	size_t
 #endif
 
-#define point2uint(p)	((unsigned int)((L_P2I)(p) & UINT_MAX))
+#define point2uint(p)	cast_uint((L_P2I)(p) & UINT_MAX)
 
 
 

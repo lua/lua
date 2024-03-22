@@ -1008,7 +1008,7 @@ static int table_query (lua_State *L) {
     lua_pushinteger(L, t->alimit);
     return 3;
   }
-  else if ((unsigned int)i < asize) {
+  else if (cast_uint(i) < asize) {
     lua_pushinteger(L, i);
     arr2obj(t, i + 1, s2v(L->top.p));
     api_incr_top(L);

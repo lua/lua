@@ -43,8 +43,8 @@
 #define eqshrstr(a,b)	check_exp((a)->tt == LUA_VSHRSTR, (a) == (b))
 
 
-LUAI_FUNC unsigned int luaS_hash (const char *str, size_t l, unsigned int seed);
-LUAI_FUNC unsigned int luaS_hashlongstr (TString *ts);
+LUAI_FUNC unsigned luaS_hash (const char *str, size_t l, unsigned seed);
+LUAI_FUNC unsigned luaS_hashlongstr (TString *ts);
 LUAI_FUNC int luaS_eqlngstr (TString *a, TString *b);
 LUAI_FUNC void luaS_resize (lua_State *L, int newsize);
 LUAI_FUNC void luaS_clearcache (global_State *g);
