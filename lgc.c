@@ -1055,7 +1055,6 @@ static void setpause (global_State *g) {
   l_obj threshold = applygcparam(g, PAUSE, g->marked);
   l_obj debt = threshold - gettotalobjs(g);
   if (debt < 0) debt = 0;
-//printf("pause: %ld  %ld\n", debt, g->marked);
   luaE_setdebt(g, debt);
 }
 
@@ -1261,7 +1260,6 @@ static void minor2inc (lua_State *L, global_State *g, int kind) {
 static int checkminormajor (global_State *g, l_obj addedold1) {
   l_obj step = applygcparam(g, MINORMUL, g->GCmajorminor);
   l_obj limit = applygcparam(g, MINORMAJOR, g->GCmajorminor);
-//printf("-> (%ld) major? marked: %ld  limit: %ld  step: %ld  addedold1: %ld)\n", gettotalobjs(g), g->marked, limit, step, addedold1);
   return (addedold1 >= (step >> 1) || g->marked >= limit);
 }
 
@@ -1410,7 +1408,6 @@ static int checkmajorminor (lua_State *L, global_State *g) {
     l_obj addedobjs = numobjs - g->GCmajorminor;
     l_obj limit = applygcparam(g, MAJORMINOR, addedobjs);
     l_obj tobecollected = numobjs - g->marked;
-//printf("(%ld) -> minor? tobecollected: %ld  limit: %ld\n", numobjs, tobecollected, limit);
     if (tobecollected > limit) {
       atomic2gen(L, g);  /* return to generational mode */
       setminordebt(g);

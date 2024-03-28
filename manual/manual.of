@@ -3672,12 +3672,13 @@ will contain the chunk until everything created by the chunk has
 been collected;
 therefore, Lua can avoid copying to internal structures
 some parts of the chunk.
-(In general, a fixed buffer would keep the chunk
-as its contents until the end of the program,
+(In general, a fixed buffer would keep its contents
+until the end of the program,
 for instance with the chunk in ROM.)
 Moreover, for a fixed buffer,
 the reader function should return the entire chunk in the first read.
-(As an example, @Lid{luaL_loadbufferx} does that.)
+(As an example, @Lid{luaL_loadbufferx} does that,
+which means that you can use it to load fixed buffers.)
 
 The function @Lid{lua_load} fully preserves the Lua stack
 through the calls to the reader function,
@@ -3936,7 +3937,7 @@ This function is equivalent to @Lid{lua_pushcclosure} with no upvalues.
 
 Creates an @emphx{external string},
 that is, a string that uses memory not managed by Lua.
-The pointer @id{s} points to the exernal buffer
+The pointer @id{s} points to the external buffer
 holding the string content,
 and @id{len} is the length of the string.
 The string should have a zero at its end,
@@ -9359,6 +9360,11 @@ Moreover, there were some changes in the parameters themselves.
 The function @id{lua_resetthread} is deprecated;
 it is equivalent to @Lid{lua_closethread} with
 @id{from} being @id{NULL}.
+}
+
+@item{
+The function @id{lua_setcstacklimit} is deprecated.
+Calls to it can simply be removed.
 }
 
 @item{
