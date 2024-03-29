@@ -248,6 +248,15 @@ end
 test(Op(1), Op(2), Op(3))
 
 
+do  -- test nil as false
+  local x = setmetatable({12}, {__eq= function (a,b)
+    return a[1] == b[1] or nil
+  end})
+  assert(not (x == {20}))
+  assert(x == {12})
+end
+
+
 -- test `partial order'
 
 local function rawSet(x)

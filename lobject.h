@@ -256,6 +256,8 @@ typedef union {
 
 
 #define l_isfalse(o)	(ttisfalse(o) || ttisnil(o))
+#define tagisfalse(t)	((t) == LUA_VFALSE || novariant(t) == LUA_TNIL)
+
 
 
 #define setbfvalue(obj)		settt_(obj, LUA_VFALSE)

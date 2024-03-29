@@ -116,8 +116,8 @@ void luaT_callTM (lua_State *L, const TValue *f, const TValue *p1,
 }
 
 
-void luaT_callTMres (lua_State *L, const TValue *f, const TValue *p1,
-                     const TValue *p2, StkId res) {
+int luaT_callTMres (lua_State *L, const TValue *f, const TValue *p1,
+                    const TValue *p2, StkId res) {
   ptrdiff_t result = savestack(L, res);
   StkId func = L->top.p;
   setobj2s(L, func, f);  /* push function (assume EXTRA_STACK) */
@@ -131,6 +131,7 @@ void luaT_callTMres (lua_State *L, const TValue *f, const TValue *p1,
     luaD_callnoyield(L, func, 1);
   res = restorestack(L, result);
   setobjs2s(L, res, --L->top.p);  /* move result to its place */
+  return ttypetag(s2v(res));  /* return tag of the result */
 }
 
 
@@ -139,15 +140,16 @@ static int callbinTM (lua_State *L, const TValue *p1, const TValue *p2,
   const TValue *tm = luaT_gettmbyobj(L, p1, event);  /* try first operand */
   if (notm(tm))
     tm = luaT_gettmbyobj(L, p2, event);  /* try second operand */
-  if (notm(tm)) return 0;
-  luaT_callTMres(L, tm, p1, p2, res);
-  return 1;
+  if (notm(tm))
+    return -1;  /* tag method not found */
+  else  /* call tag method and return the tag of the result */
+    return luaT_callTMres(L, tm, p1, p2, res);
 }
 
 
 void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
                     StkId res, TMS event) {
-  if (l_unlikely(!callbinTM(L, p1, p2, res, event))) {
+  if (l_unlikely(callbinTM(L, p1, p2, res, event) < 0)) {
     switch (event) {
       case TM_BAND: case TM_BOR: case TM_BXOR:
       case TM_SHL: case TM_SHR: case TM_BNOT: {
@@ -164,11 +166,14 @@ void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
 }
 
 
+/*
+** The use of 'p1' after 'callbinTM' is safe because, when a tag
+** method is not found, 'callbinTM' cannot change the stack.
+*/
 void luaT_tryconcatTM (lua_State *L) {
-  StkId top = L->top.p;
-  if (l_unlikely(!callbinTM(L, s2v(top - 2), s2v(top - 1), top - 2,
-                               TM_CONCAT)))
-    luaG_concaterror(L, s2v(top - 2), s2v(top - 1));
+  StkId p1 = L->top.p - 2;  /* first argument */
+  if (l_unlikely(callbinTM(L, s2v(p1), s2v(p1 + 1), p1, TM_CONCAT) < 0))
+    luaG_concaterror(L, s2v(p1), s2v(p1 + 1));
 }
 
 
@@ -200,17 +205,17 @@ void luaT_trybiniTM (lua_State *L, const TValue *p1, lua_Integer i2,
 */
 int luaT_callorderTM (lua_State *L, const TValue *p1, const TValue *p2,
                       TMS event) {
-  if (callbinTM(L, p1, p2, L->top.p, event))  /* try original event */
-    return !l_isfalse(s2v(L->top.p));
+  int tag = callbinTM(L, p1, p2, L->top.p, event);  /* try original event */
+  if (tag >= 0)  /* found tag method? */
+    return !tagisfalse(tag);
 #if defined(LUA_COMPAT_LT_LE)
   else if (event == TM_LE) {
-      /* try '!(p2 < p1)' for '(p1 <= p2)' */
-      L->ci->callstatus |= CIST_LEQ;  /* mark it is doing 'lt' for 'le' */
-      if (callbinTM(L, p2, p1, L->top.p, TM_LT)) {
-        L->ci->callstatus ^= CIST_LEQ;  /* clear mark */
-        return l_isfalse(s2v(L->top.p));
-      }
-      /* else error will remove this 'ci'; no need to clear mark */
+    /* try '!(p2 < p1)' for '(p1 <= p2)' */
+    L->ci->callstatus |= CIST_LEQ;  /* mark it is doing 'lt' for 'le' */
+    tag = callbinTM(L, p2, p1, L->top.p, TM_LT);
+    L->ci->callstatus ^= CIST_LEQ;  /* clear mark */
+    if (tag >= 0)  /* found tag method? */
+      return tagisfalse(tag);
   }
 #endif
   luaG_ordererror(L, p1, p2);  /* no metamethod found */
