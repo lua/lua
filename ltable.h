@@ -71,7 +71,7 @@
 
 /*
 ** 'luaH_get*' operations set 'res', unless the value is absent, and
-** return the tag of the result,
+** return the tag of the result.
 ** The 'luaH_pset*' (pre-set) operations set the given value and return
 ** HOK, unless the original value is absent. In that case, if the key
 ** is really absent, they return HNOTFOUND. Otherwise, if there is a
@@ -86,24 +86,27 @@
 
 
 /*
-** The array part of a table is represented by an array of cells.
-** Each cell is composed of NM tags followed by NM values, so that
-** no space is wasted in padding. The last cell may be incomplete,
-** that is, it may have fewer than NM values.
+** The array part of a table is represented by an inverted array of
+** values followed by an array of tags, to avoid wasting space with
+** padding.  The 'array' pointer points to the junction of the two
+** arrays, so that values are indexed with negative indices and tags
+** with non-negative indices.
+
+                     Values                      Tags
+        --------------------------------------------------------
+         ...  |   Value 1     |   Value 0     |0|1|...
+        --------------------------------------------------------
+                                               ^ t->array
+
+** All accesses to 't->array' should be through the macros 'getArrTag'
+** and 'getArrVal'.
 */
-#define NM      cast_uint(sizeof(Value))
-
-struct ArrayCell {
-  lu_byte tag[NM];
-  Value value[NM];
-};
-
 
 /* Computes the address of the tag for the abstract index 'k' */
-#define getArrTag(t,k)	(&(t)->array[(k)/NM].tag[(k)%NM])
+#define getArrTag(t,k)	(cast(lu_byte*, (t)->array) + (k))
 
 /* Computes the address of the value for the abstract index 'k' */
-#define getArrVal(t,k)	(&(t)->array[(k)/NM].value[(k)%NM])
+#define getArrVal(t,k)	((t)->array - 1 - (k))
 
 
 /*
@@ -117,9 +120,9 @@ struct ArrayCell {
 
 
 /*
-** Often, we need to check the tag of a value before moving it. These
-** macros also move TValues to/from arrays, but receive the precomputed
-** tag value or address as an extra argument.
+** Often, we need to check the tag of a value before moving it. The
+** following macros also move TValues to/from arrays, but receive the
+** precomputed tag value or address as an extra argument.
 */
 #define farr2val(h,k,tag,res)  \
   ((res)->tt_ = tag, (res)->value_ = *getArrVal(h,(k)-1u))

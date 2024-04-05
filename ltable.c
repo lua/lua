@@ -25,6 +25,7 @@
 
 #include <math.h>
 #include <limits.h>
+#include <string.h>
 
 #include "lua.h"
 
@@ -73,7 +74,7 @@ typedef union {
 ** MAXASIZEB is the maximum number of elements in the array part such
 ** that the size of the array fits in 'size_t'.
 */
-#define MAXASIZEB	((MAX_SIZET/sizeof(ArrayCell)) * NM)
+#define MAXASIZEB	(MAX_SIZET/(sizeof(Value) + 1))
 
 
 /*
@@ -553,26 +554,52 @@ static int numusehash (const Table *t, unsigned *nums, unsigned *pna) {
 /*
 ** Convert an "abstract size" (number of slots in an array) to
 ** "concrete size" (number of bytes in the array).
-** If the abstract size is not a multiple of NM, the last cell is
-** incomplete, so we don't need to allocate memory for the whole cell.
-** 'extra' computes how many values are not needed in that last cell.
-** It will be zero when 'size' is a multiple of NM, and from there it
-** increases as 'size' decreases, up to (NM - 1).
 */
 static size_t concretesize (unsigned int size) {
-  unsigned int numcells = (size + NM - 1) / NM;   /* (size / NM) rounded up */
-  unsigned int extra = NM - 1 - ((size + NM - 1) % NM);
-  return numcells * sizeof(ArrayCell) - extra * sizeof(Value);
+  return size * sizeof(Value) + size;  /* space for the two arrays */
 }
 
 
-static ArrayCell *resizearray (lua_State *L , Table *t,
+/*
+** Resize the array part of a table. If new size is equal to the old,
+** do nothing. Else, if new size is zero, free the old array. (It must
+** be present, as the sizes are different.) Otherwise, allocate a new
+** array, move the common elements to new proper position, and then
+** frees old array.
+** When array grows, we could reallocate it, but we still would need
+** to move the elements to their new position, so the copy implicit
+** in realloc is a waste.  When array shrinks, it always erases some
+** elements that should still be in the array, so we must reallocate in
+** two steps anyway. It is simpler to always reallocate in two steps.
+*/
+static Value *resizearray (lua_State *L , Table *t,
                                unsigned oldasize,
                                unsigned newasize) {
-  size_t oldasizeb = concretesize(oldasize);
-  size_t newasizeb = concretesize(newasize);
-  void *a = luaM_reallocvector(L, t->array, oldasizeb, newasizeb, lu_byte);
-  return cast(ArrayCell*, a);
+  if (oldasize == newasize)
+    return t->array;  /* nothing to be done */
+  else if (newasize == 0) {  /* erasing array? */
+    Value *op = t->array - oldasize;  /* original array's real address */
+    luaM_freemem(L, op, concretesize(oldasize));  /* free it */
+    return NULL;
+  }
+  else {
+    size_t newasizeb = concretesize(newasize);
+    Value *np = cast(Value *,
+                  luaM_reallocvector(L, NULL, 0, newasizeb, lu_byte));
+    if (np == NULL)  /* allocation error? */
+      return NULL;
+    if (oldasize > 0) {
+      Value *op = t->array - oldasize;  /* real original array */
+      unsigned tomove = (oldasize < newasize) ? oldasize : newasize;
+      lua_assert(tomove > 0);
+      /* move common elements to new position */
+      memcpy(np + newasize - tomove,
+             op + oldasize - tomove,
+             concretesize(tomove));
+      luaM_freemem(L, op, concretesize(oldasize));
+    }
+    return np + newasize;  /* shift pointer to the end of value segment */
+  }
 }
 
 
@@ -699,7 +726,7 @@ void luaH_resize (lua_State *L, Table *t, unsigned newasize,
                                           unsigned nhsize) {
   Table newt;  /* to keep the new hash part */
   unsigned int oldasize = setlimittosize(t);
-  ArrayCell *newarray;
+  Value *newarray;
   if (newasize > MAXASIZE)
     luaG_runerror(L, "table overflow");
   /* create new hash part with appropriate size into 'newt' */
@@ -777,18 +804,12 @@ Table *luaH_new (lua_State *L) {
 
 
 /*
-** Frees a table. The assert ensures the correctness of 'concretesize',
-** checking its result against the address of the last element in the
-** array part of the table, computed abstractly.
+** Frees a table.
 */
 void luaH_free (lua_State *L, Table *t) {
   unsigned int realsize = luaH_realasize(t);
-  size_t sizeb = concretesize(realsize);
-  lua_assert((sizeb == 0 && realsize == 0) ||
-             cast_charp(t->array) + sizeb - sizeof(Value) ==
-             cast_charp(getArrVal(t, realsize - 1)));
   freehash(L, t);
-  luaM_freemem(L, t->array, sizeb);
+  resizearray(L, t, realsize, 0);
   luaM_free(L, t);
 }
 
