@@ -92,7 +92,7 @@ static int l_strton (const TValue *obj, TValue *result) {
   if (!cvt2num(obj))  /* is object not a string? */
     return 0;
   else {
-  TString *st = tsvalue(obj);
+    TString *st = tsvalue(obj);
     return (luaO_str2num(getstr(st), result) == tsslen(st) + 1);
   }
 }

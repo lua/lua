@@ -1713,7 +1713,7 @@ static void fullinc (lua_State *L, global_State *g) {
   /* finish any pending sweep phase to start a new cycle */
   luaC_runtilstate(L, bitmask(GCSpause));
   luaC_runtilstate(L, bitmask(GCSpropagate));  /* start new cycle */
-  g->gcstate = GCSenteratomic;  /* go straight to atomic phase ??? */
+  g->gcstate = GCSenteratomic;  /* go straight to atomic phase */
   luaC_runtilstate(L, bitmask(GCScallfin));  /* run up to finalizers */
   /* estimate must be correct after a full GC cycle */
   lua_assert(g->GCestimate == gettotalbytes(g));
