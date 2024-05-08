@@ -1044,7 +1044,7 @@ static void *l_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
 
 
 /*
-** Standard panic funcion just prints an error message. The test
+** Standard panic function just prints an error message. The test
 ** with 'lua_type' avoids possible memory errors in 'lua_tostring'.
 */
 static int panic (lua_State *L) {

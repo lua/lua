@@ -135,7 +135,7 @@
 **
 ** To keep its invariants, the generational mode uses the same barriers
 ** also used by the incremental mode. If a young object is caught in a
-** foward barrier, it cannot become old immediately, because it can
+** forward barrier, it cannot become old immediately, because it can
 ** still point to other young objects. Instead, it becomes 'old0',
 ** which in the next cycle becomes 'old1'. So, 'old0' objects is
 ** old but can point to new and survival objects; 'old1' is old

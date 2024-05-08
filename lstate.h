@@ -259,7 +259,7 @@ typedef struct global_State {
   l_obj totalobjs;  /* total number of objects allocated + GCdebt */
   l_obj GCdebt;  /* objects counted but not yet allocated */
   l_obj marked;  /* number of objects marked in a GC cycle */
-  l_obj GCmajorminor;  /* auxiliar counter to control major-minor shifts */
+  l_obj GCmajorminor;  /* auxiliary counter to control major-minor shifts */
   stringtable strt;  /* hash table for strings */
   TValue l_registry;
   TValue nilvalue;  /* a nil value */

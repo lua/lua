@@ -289,7 +289,7 @@ Whenever there is an error,
 an @def{error object}
 is propagated with information about the error.
 Lua itself only generates errors whose error object is a string,
-but programs may generate errors with
+but programs can generate errors with
 any value as the error object.
 It is up to the Lua program or its host to handle such error objects.
 For historical reasons,
@@ -298,7 +298,7 @@ even though it does not have to be a string.
 
 
 When you use @Lid{xpcall} (or @Lid{lua_pcall}, in C)
-you may give a @def{message handler}
+you can give a @def{message handler}
 to be called in case of errors.
 This function is called with the original error object
 and returns a new error object.
@@ -343,7 +343,7 @@ which is then called a @def{metamethod}.
 In the previous example, the key is the string @St{__add}
 and the metamethod is the function that performs the addition.
 Unless stated otherwise,
-a metamethod may in fact be any @x{callable value},
+a metamethod can in fact be any @x{callable value},
 which is either a function or a value with a @idx{__call} metamethod.
 
 You can query the metatable of any value
@@ -1421,7 +1421,7 @@ labels in Lua are considered statements too:
 
 A label is visible in the entire block where it is defined,
 except inside nested functions.
-A goto may jump to any visible label as long as it does not
+A goto can jump to any visible label as long as it does not
 enter into the scope of a local variable.
 A label should not be declared
 where a label with the same name is visible,
@@ -4549,7 +4549,7 @@ corresponding Lua value is removed from the stack @see{constchar}.
 
 This function can raise memory errors only
 when converting a number to a string
-(as then it may have to create a new string).
+(as then it may create a new string).
 
 }
 
@@ -6113,8 +6113,8 @@ The metatable is created by the I/O library
 
 This userdata must start with the structure @id{luaL_Stream};
 it can contain other data after this initial structure.
-The field @id{f} points to the corresponding C stream
-(or it can be @id{NULL} to indicate an incompletely created handle).
+The field @id{f} points to the corresponding C stream,
+or it is @id{NULL} to indicate an incompletely created handle.
 The field @id{closef} points to a Lua function
 that will be called to close the stream
 when the handle is closed or collected;
@@ -9239,10 +9239,24 @@ Lua repeatedly prompts and waits for a line.
 After reading a line,
 Lua first try to interpret the line as an expression.
 If it succeeds, it prints its value.
-Otherwise, it interprets the line as a statement.
-If you write an incomplete statement,
+Otherwise, it interprets the line as a chunk.
+If you write an incomplete chunk,
 the interpreter waits for its completion
 by issuing a different prompt.
+
+Note that, as each complete line is read as a new chunk,
+local variables do not outlive lines:
+@verbatim{
+> x = 20
+> local x = 10; print(x)   --> 10
+> print(x)                 --> 20    -- global 'x'
+> do       -- incomplete line
+>> local x = 10; print(x)    -- '>>' prompts for line completion
+>> print(x)
+>> end     -- line completed; Lua will run it as a single chunk
+   --> 10
+   --> 10
+}
 
 If the global variable @defid{_PROMPT} contains a string,
 then its value is used as the prompt.

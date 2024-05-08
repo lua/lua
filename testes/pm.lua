@@ -56,7 +56,8 @@ assert(f("  \n\r*&\n\r   xuxu  \n\n", "%g%g%g+") == "xuxu")
 
 -- Adapt a pattern to UTF-8
 local function PU (p)
-  -- break '?' into each individual byte of a character
+  -- distribute '?' into each individual byte of a character.
+  -- (For instance, "á?" becomes "\195?\161?".)
   p = string.gsub(p, "(" .. utf8.charpattern .. ")%?", function (c)
     return string.gsub(c, ".", "%0?")
   end)

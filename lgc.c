@@ -1541,7 +1541,7 @@ static void sweepstep (lua_State *L, global_State *g,
 ** object.) When 'fast' is true, 'singlestep' tries to finish a state
 ** "as fast as possible". In particular, it skips the propagation
 ** phase and leaves all objects to be traversed by the atomic phase:
-** That avoids traversing twice some objects, such as theads and
+** That avoids traversing twice some objects, such as threads and
 ** weak tables.
 */
 static l_obj singlestep (lua_State *L, int fast) {
