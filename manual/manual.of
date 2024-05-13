@@ -8773,13 +8773,13 @@ The returned table can contain all the fields returned by @Lid{lua_getinfo},
 with the string @id{what} describing which fields to fill in.
 The default for @id{what} is to get all information available,
 except the table of valid lines.
-If present,
-the option @Char{f}
+The option @Char{f}
 adds a field named @id{func} with the function itself.
-If present,
-the option @Char{L}
-adds a field named @id{activelines} with the table of
-valid lines.
+The option @Char{L} adds a field named @id{activelines}
+with the table of valid lines,
+provided the function is a Lua function.
+If the function has no debug information,
+the table is empty.
 
 For instance, the expression @T{debug.getinfo(1,"n").name} returns
 a name for the current function,
