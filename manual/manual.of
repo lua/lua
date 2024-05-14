@@ -4416,7 +4416,7 @@ otherwise, returns @id{NULL}.
 }
 
 @APIEntry{void lua_toclose (lua_State *L, int index);|
-@apii{0,0,m}
+@apii{0,0,v}
 
 Marks the given index in the stack as a
 to-be-closed slot @see{to-be-closed}.
@@ -4432,6 +4432,9 @@ or there is a call to @Lid{lua_closeslot}.
 A slot marked as to-be-closed should not be removed from the stack
 by any other function in the API except @Lid{lua_settop} or @Lid{lua_pop},
 unless previously deactivated by @Lid{lua_closeslot}.
+
+This function raises an error if the value at the given slot
+neither has a @idx{__close} metamethod nor is a false value.
 
 This function should not be called for an index
 that is equal to or below an active to-be-closed slot.
