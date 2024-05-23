@@ -951,7 +951,7 @@ LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len) {
 LUALIB_API void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup) {
   luaL_checkstack(L, nup, "too many upvalues");
   for (; l->name != NULL; l++) {  /* fill the table with given functions */
-    if (l->func == NULL)  /* place holder? */
+    if (l->func == NULL)  /* placeholder? */
       lua_pushboolean(L, 0);
     else {
       int i;
