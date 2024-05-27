@@ -7958,21 +7958,27 @@ returns @fail plus the position of the first invalid byte.
 
 @LibEntry{utf8.offset (s, n [, i])|
 
-Returns the position (in bytes) where the encoding of the
-@id{n}-th character of @id{s}
-(counting from position @id{i}) starts.
+Returns the the position of the @id{n}-th character of @id{s}
+(counting from byte position @id{i}) as two integers:
+The index (in bytes) where its encoding starts and the
+index (in bytes) where it ends.
+
+If the specified character is right after the end of @id{s},
+the function behaves as if there was a @Char{\0} there.
+If the specified character is neither in the subject
+nor right after its end,
+the function returns @fail.
+
 A negative @id{n} gets characters before position @id{i}.
 The default for @id{i} is 1 when @id{n} is non-negative
 and @T{#s + 1} otherwise,
 so that @T{utf8.offset(s, -n)} gets the offset of the
 @id{n}-th character from the end of the string.
-If the specified character is neither in the subject
-nor right after its end,
-the function returns @fail.
 
 As a special case,
-when @id{n} is 0 the function returns the start of the encoding
-of the character that contains the @id{i}-th byte of @id{s}.
+when @id{n} is 0 the function returns the start and end
+of the encoding of the character that contains the
+@id{i}-th byte of @id{s}.
 
 This function assumes that @id{s} is a valid UTF-8 string.
 

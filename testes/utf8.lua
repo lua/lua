@@ -52,24 +52,34 @@ local function check (s, t, nonstrict)
   for i = 1, #t do assert(t[i] == t1[i]) end   -- 't' is equal to 't1'
 
   for i = 1, l do   -- for all codepoints
-    local pi = utf8.offset(s, i)        -- position of i-th char
+    local pi, pie = utf8.offset(s, i)        -- position of i-th char
     local pi1 = utf8.offset(s, 2, pi)   -- position of next char
+    assert(pi1 == pie + 1)
     assert(string.find(string.sub(s, pi, pi1 - 1), justone))
     assert(utf8.offset(s, -1, pi1) == pi)
     assert(utf8.offset(s, i - l - 1) == pi)
     assert(pi1 - pi == #utf8.char(utf8.codepoint(s, pi, pi, nonstrict)))
     for j = pi, pi1 - 1 do
-      assert(utf8.offset(s, 0, j) == pi)
+      local off1, off2 = utf8.offset(s, 0, j)
+      assert(off1 == pi and off2 == pi1 - 1)
     end
     for j = pi + 1, pi1 - 1 do
       assert(not utf8.len(s, j))
     end
-   assert(utf8.len(s, pi, pi, nonstrict) == 1)
-   assert(utf8.len(s, pi, pi1 - 1, nonstrict) == 1)
-   assert(utf8.len(s, pi, -1, nonstrict) == l - i + 1)
-   assert(utf8.len(s, pi1, -1, nonstrict) == l - i)
-   assert(utf8.len(s, 1, pi, nonstrict) == i)
+    assert(utf8.len(s, pi, pi, nonstrict) == 1)
+    assert(utf8.len(s, pi, pi1 - 1, nonstrict) == 1)
+    assert(utf8.len(s, pi, -1, nonstrict) == l - i + 1)
+    assert(utf8.len(s, pi1, -1, nonstrict) == l - i)
+    assert(utf8.len(s, 1, pi, nonstrict) == i)
   end
+
+  local expected = 1    -- expected position of "current" character
+  for i = 1, l + 1 do
+    local p, e = utf8.offset(s, i)
+    assert(p == expected)
+    expected = e + 1
+  end
+  assert(expected - 1 == #s + 1)
 
   local i = 0
   for p, c in utf8.codes(s, nonstrict) do
@@ -94,20 +104,20 @@ end
 
 
 do    -- error indication in utf8.len
-  local function check (s, p)
+  local function checklen (s, p)
     local a, b = utf8.len(s)
     assert(not a and b == p)
   end
-  check("abc\xE3def", 4)
-  check("\xF4\x9F\xBF", 1)
-  check("\xF4\x9F\xBF\xBF", 1)
+  checklen("abc\xE3def", 4)
+  checklen("\xF4\x9F\xBF", 1)
+  checklen("\xF4\x9F\xBF\xBF", 1)
   -- spurious continuation bytes
-  check("汉字\x80", #("汉字") + 1)
-  check("\x80hello", 1)
-  check("hel\x80lo", 4)
-  check("汉字\xBF", #("汉字") + 1)
-  check("\xBFhello", 1)
-  check("hel\xBFlo", 4)
+  checklen("汉字\x80", #("汉字") + 1)
+  checklen("\x80hello", 1)
+  checklen("hel\x80lo", 4)
+  checklen("汉字\xBF", #("汉字") + 1)
+  checklen("\xBFhello", 1)
+  checklen("hel\xBFlo", 4)
 end
 
 -- errors in utf8.codes

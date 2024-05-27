@@ -181,8 +181,8 @@ static int utfchar (lua_State *L) {
 
 
 /*
-** offset(s, n, [i])  -> index where n-th character counting from
-**   position 'i' starts; 0 means character at 'i'.
+** offset(s, n, [i])  -> indices where n-th character counting from
+**   position 'i' starts and ends; 0 means character at 'i'.
 */
 static int byteoffset (lua_State *L) {
   size_t len;
@@ -217,11 +217,19 @@ static int byteoffset (lua_State *L) {
        }
      }
   }
-  if (n == 0)  /* did it find given character? */
-    lua_pushinteger(L, posi + 1);
-  else  /* no such character */
+  if (n != 0) {  /* did not find given character? */
     luaL_pushfail(L);
-  return 1;
+    return 1;
+  }
+  lua_pushinteger(L, posi + 1);  /* initial position */
+  if ((s[posi] & 0x80) != 0) {  /* multi-byte character? */
+    do {
+      posi++;
+    } while (iscontp(s + posi + 1));  /* skip to final byte */
+  }
+  /* else one-byte character: final position is the initial one */
+  lua_pushinteger(L, posi + 1);  /* 'posi' now is the final position */
+  return 2;
 }
 
 
