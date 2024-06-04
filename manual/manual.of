@@ -7308,9 +7308,12 @@ Returns a formatted version of its variable number of arguments
 following the description given in its first argument,
 which must be a string.
 The format string follows the same rules as the @ANSI{sprintf}.
-The only differences are that the conversion specifiers and modifiers
-@id{F}, @id{n}, @T{*}, @id{h}, @id{L}, and @id{l} are not supported
-and that there is an extra specifier, @id{q}.
+The accepted conversion specifiers are
+@id{A}, @id{a}, @id{c}, @id{d}, @id{E}, @id{e}, @id{f}, @id{G}, @id{g},
+@id{i}, @id{o}, @id{p}, @id{s}, @id{u}, @id{X}, and @id{x},
+plus a non-C specifier @id{q}.
+The accepted flags are @Char{-}, @Char{+}, @Char{#},
+@Char{0}, and @Char{ } (space).
 Both width and precision, when present,
 are limited to two digits.
 
