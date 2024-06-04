@@ -31,7 +31,7 @@
 
 
 
-#define noLuaClosure(f)		((f) == NULL || (f)->c.tt == LUA_VCCL)
+#define LuaClosure(f)		((f) != NULL && (f)->c.tt == LUA_VLCL)
 
 
 static const char *funcnamefromcall (lua_State *L, CallInfo *ci,
@@ -255,7 +255,7 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
 
 
 static void funcinfo (lua_Debug *ar, Closure *cl) {
-  if (noLuaClosure(cl)) {
+  if (!LuaClosure(cl)) {
     ar->source = "=[C]";
     ar->srclen = LL("=[C]");
     ar->linedefined = -1;
@@ -288,29 +288,31 @@ static int nextline (const Proto *p, int currentline, int pc) {
 
 
 static void collectvalidlines (lua_State *L, Closure *f) {
-  if (noLuaClosure(f)) {
+  if (!LuaClosure(f)) {
     setnilvalue(s2v(L->top.p));
     api_incr_top(L);
   }
   else {
-    int i;
-    TValue v;
     const Proto *p = f->l.p;
     int currentline = p->linedefined;
     Table *t = luaH_new(L);  /* new table to store active lines */
     sethvalue2s(L, L->top.p, t);  /* push it on stack */
     api_incr_top(L);
-    setbtvalue(&v);  /* boolean 'true' to be the value of all indices */
-    if (!(p->flag & PF_ISVARARG))  /* regular function? */
-      i = 0;  /* consider all instructions */
-    else {  /* vararg function */
-      lua_assert(GET_OPCODE(p->code[0]) == OP_VARARGPREP);
-      currentline = nextline(p, currentline, 0);
-      i = 1;  /* skip first instruction (OP_VARARGPREP) */
-    }
-    for (; i < p->sizelineinfo; i++) {  /* for each instruction */
-      currentline = nextline(p, currentline, i);  /* get its line */
-      luaH_setint(L, t, currentline, &v);  /* table[line] = true */
+    if (p->lineinfo != NULL) {  /* proto with debug information? */
+      int i;
+      TValue v;
+      setbtvalue(&v);  /* boolean 'true' to be the value of all indices */
+      if (!(p->flag & PF_ISVARARG))  /* regular function? */
+        i = 0;  /* consider all instructions */
+      else {  /* vararg function */
+        lua_assert(GET_OPCODE(p->code[0]) == OP_VARARGPREP);
+        currentline = nextline(p, currentline, 0);
+        i = 1;  /* skip first instruction (OP_VARARGPREP) */
+      }
+      for (; i < p->sizelineinfo; i++) {  /* for each instruction */
+        currentline = nextline(p, currentline, i);  /* get its line */
+        luaH_setint(L, t, currentline, &v);  /* table[line] = true */
+      }
     }
   }
 }
@@ -339,7 +341,7 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
       }
       case 'u': {
         ar->nups = (f == NULL) ? 0 : f->c.nupvalues;
-        if (noLuaClosure(f)) {
+        if (!LuaClosure(f)) {
           ar->isvararg = 1;
           ar->nparams = 0;
         }
