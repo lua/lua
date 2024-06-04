@@ -1650,6 +1650,11 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       int nres;
       status = lua_resume(lua_tothread(L1, i), L, getnum, &nres);
     }
+    else if EQ("traceback") {
+      const char *msg = getstring;
+      int level = getnum;
+      luaL_traceback(L1, L1, msg, level);
+    }
     else if EQ("return") {
       int n = getnum;
       if (L1 != L) {
