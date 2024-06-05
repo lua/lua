@@ -570,6 +570,7 @@ static int g_read (lua_State *L, FILE *f, int first) {
   int nargs = lua_gettop(L) - 1;
   int n, success;
   clearerr(f);
+  errno = 0;
   if (nargs == 0) {  /* no arguments? */
     success = read_line(L, f, 1);
     n = first + 1;  /* to return 1 result */
@@ -606,10 +607,8 @@ static int g_read (lua_State *L, FILE *f, int first) {
       }
     }
   }
-  if (ferror(f)) {
-    errno = 0;  /* no relevant errno here */
+  if (ferror(f))
     return luaL_fileresult(L, 0, NULL);
-  }
   if (!success) {
     lua_pop(L, 1);  /* remove last result */
     luaL_pushfail(L);  /* push nil instead */
@@ -665,6 +664,7 @@ static int io_readline (lua_State *L) {
 static int g_write (lua_State *L, FILE *f, int arg) {
   int nargs = lua_gettop(L) - arg;
   int status = 1;
+  errno = 0;
   for (; nargs--; arg++) {
     if (lua_type(L, arg) == LUA_TNUMBER) {
       /* optimization: could be done exactly as for strings */
@@ -683,10 +683,8 @@ static int g_write (lua_State *L, FILE *f, int arg) {
   }
   if (l_likely(status))
     return 1;  /* file handle already on stack top */
-  else {
-    errno = 0;  /* no relevant errno here */
+  else
     return luaL_fileresult(L, status, NULL);
-  }
 }
 
 
