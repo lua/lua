@@ -47,20 +47,20 @@
 
 
 #define luaH_fastgeti(t,k,res,tag) \
-  { Table *h = t; lua_Unsigned u = l_castS2U(k); \
-    if ((u - 1u < h->alimit)) { \
-      tag = *getArrTag(h,(u)-1u); \
+  { Table *h = t; lua_Unsigned u = l_castS2U(k) - 1u; \
+    if ((u < h->alimit)) { \
+      tag = *getArrTag(h, u); \
       if (!tagisempty(tag)) { farr2val(h, u, tag, res); }} \
-    else { tag = luaH_getint(h, u, res); }}
+    else { tag = luaH_getint(h, (k), res); }}
 
 
 #define luaH_fastseti(t,k,val,hres) \
-  { Table *h = t; lua_Unsigned u = l_castS2U(k); \
-    if ((u - 1u < h->alimit)) { \
-      lu_byte *tag = getArrTag(h,(u)-1u); \
+  { Table *h = t; lua_Unsigned u = l_castS2U(k) - 1u; \
+    if ((u < h->alimit)) { \
+      lu_byte *tag = getArrTag(h, u); \
       if (tagisempty(*tag)) hres = ~cast_int(u); \
       else { fval2arr(h, u, tag, val); hres = HOK; }} \
-    else { hres = luaH_psetint(h, u, val); }}
+    else { hres = luaH_psetint(h, k, val); }}
 
 
 /* results from pset */
@@ -82,6 +82,12 @@
 ** in the array part, the encoding is (~array index), a negative value.
 ** The value HNOTATABLE is used by the fast macros to signal that the
 ** value being indexed is not a table.
+** (The size for the array part is limited by the maximum power of two
+** that fits in an unsigned integer; that is INT_MAX+1. So, the C-index
+** ranges from 0, which encodes to -1, to INT_MAX, which encodes to
+** INT_MIN. The size of the hash part is limited by the maximum power of
+** two that fits in a signed integer; that is (INT_MAX+1)/2. So, it is
+** safe to add HFIRSTNODE to any index there.)
 */
 
 
@@ -102,21 +108,21 @@
 ** and 'getArrVal'.
 */
 
-/* Computes the address of the tag for the abstract index 'k' */
+/* Computes the address of the tag for the abstract C-index 'k' */
 #define getArrTag(t,k)	(cast(lu_byte*, (t)->array) + (k))
 
-/* Computes the address of the value for the abstract index 'k' */
+/* Computes the address of the value for the abstract C-index 'k' */
 #define getArrVal(t,k)	((t)->array - 1 - (k))
 
 
 /*
-** Move TValues to/from arrays, using Lua indices
+** Move TValues to/from arrays, using C indices
 */
 #define arr2obj(h,k,val)  \
-  ((val)->tt_ = *getArrTag(h,(k)-1u), (val)->value_ = *getArrVal(h,(k)-1u))
+  ((val)->tt_ = *getArrTag(h,(k)), (val)->value_ = *getArrVal(h,(k)))
 
 #define obj2arr(h,k,val)  \
-  (*getArrTag(h,(k)-1u) = (val)->tt_, *getArrVal(h,(k)-1u) = (val)->value_)
+  (*getArrTag(h,(k)) = (val)->tt_, *getArrVal(h,(k)) = (val)->value_)
 
 
 /*
@@ -125,10 +131,10 @@
 ** precomputed tag value or address as an extra argument.
 */
 #define farr2val(h,k,tag,res)  \
-  ((res)->tt_ = tag, (res)->value_ = *getArrVal(h,(k)-1u))
+  ((res)->tt_ = tag, (res)->value_ = *getArrVal(h,(k)))
 
 #define fval2arr(h,k,tag,val)  \
-  (*tag = (val)->tt_, *getArrVal(h,(k)-1u) = (val)->value_)
+  (*tag = (val)->tt_, *getArrVal(h,(k)) = (val)->value_)
 
 
 LUAI_FUNC int luaH_get (Table *t, const TValue *key, TValue *res);

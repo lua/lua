@@ -384,7 +384,7 @@ int luaH_next (lua_State *L, Table *t, StkId key) {
     int tag = *getArrTag(t, i);
     if (!tagisempty(tag)) {  /* a non-empty entry? */
       setivalue(s2v(key), i + 1);
-      farr2val(t, i + 1, tag, s2v(key + 1));
+      farr2val(t, i, tag, s2v(key + 1));
       return 1;
     }
   }
@@ -692,7 +692,7 @@ static void reinsertOldSlice (lua_State *L, Table *t, unsigned oldasize,
     int tag = *getArrTag(t, i);
     if (!tagisempty(tag)) {  /* a non-empty entry? */
       TValue aux;
-      farr2val(t, i + 1, tag, &aux);  /* copy entry into 'aux' */
+      farr2val(t, i, tag, &aux);  /* copy entry into 'aux' */
       luaH_setint(L, t, i + 1, &aux);  /* re-insert it into the table */
     }
   }
@@ -937,7 +937,7 @@ int luaH_getint (Table *t, lua_Integer key, TValue *res) {
   if (keyinarray(t, key)) {
     int tag = *getArrTag(t, key - 1);
     if (!tagisempty(tag))
-      farr2val(t, key, tag, res);
+      farr2val(t, key - 1, tag, res);
     return tag;
   }
   else
@@ -1048,11 +1048,11 @@ int luaH_psetint (Table *t, lua_Integer key, TValue *val) {
   if (keyinarray(t, key)) {
     lu_byte *tag = getArrTag(t, key - 1);
     if (!tagisempty(*tag) || checknoTM(t->metatable, TM_NEWINDEX)) {
-      fval2arr(t, key, tag, val);
+      fval2arr(t, key - 1, tag, val);
       return HOK;  /* success */
     }
     else
-      return ~cast_int(key);  /* empty slot in the array part */
+      return ~cast_int(key - 1);  /* empty slot in the array part */
   }
   else
     return finishnodeset(t, getintfromhash(t, key), val);
@@ -1126,7 +1126,7 @@ void luaH_set (lua_State *L, Table *t, const TValue *key, TValue *value) {
 */
 void luaH_setint (lua_State *L, Table *t, lua_Integer key, TValue *value) {
   if (keyinarray(t, key))
-    obj2arr(t, key, value);
+    obj2arr(t, key - 1, value);
   else {
     int ok = rawfinishnodeset(getintfromhash(t, key), value);
     if (!ok) {
