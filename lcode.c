@@ -776,7 +776,8 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
       break;
     }
     case VLOCAL: {  /* already in a register */
-      e->u.info = e->u.var.ridx;
+      int temp = e->u.var.ridx;
+      e->u.info = temp;  /* (can't do a direct assignment; values overlap) */
       e->k = VNONRELOC;  /* becomes a non-relocatable value */
       break;
     }
@@ -1283,8 +1284,9 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
   if (t->k == VUPVAL && !isKstr(fs, k))  /* upvalue indexed by non 'Kstr'? */
     luaK_exp2anyreg(fs, t);  /* put it in a register */
   if (t->k == VUPVAL) {
+    int temp = t->u.info;  /* upvalue index */
     lua_assert(isKstr(fs, k));
-    t->u.ind.t = t->u.info;  /* upvalue index */
+    t->u.ind.t = temp;  /* (can't do a direct assignment; values overlap) */
     t->u.ind.idx = k->u.info;  /* literal short string */
     t->k = VINDEXUP;
   }
