@@ -65,10 +65,11 @@ do  print("steps")
     return i    -- number of steps
   end
 
-  collectgarbage"stop"
 
   if not _port then
+    collectgarbage"stop"
     assert(dosteps(10) < dosteps(2))
+    collectgarbage"restart"
   end
 
 end
