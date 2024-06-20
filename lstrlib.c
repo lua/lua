@@ -24,6 +24,7 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
+#include "llimits.h"
 
 
 /*
@@ -34,10 +35,6 @@
 #if !defined(LUA_MAXCAPTURES)
 #define LUA_MAXCAPTURES		32
 #endif
-
-
-/* macro to 'unsign' a character */
-#define uchar(c)	((unsigned char)(c))
 
 
 /*
@@ -128,7 +125,7 @@ static int str_lower (lua_State *L) {
   const char *s = luaL_checklstring(L, 1, &l);
   char *p = luaL_buffinitsize(L, &b, l);
   for (i=0; i<l; i++)
-    p[i] = tolower(uchar(s[i]));
+    p[i] = tolower(cast_uchar(s[i]));
   luaL_pushresultsize(&b, l);
   return 1;
 }
@@ -141,7 +138,7 @@ static int str_upper (lua_State *L) {
   const char *s = luaL_checklstring(L, 1, &l);
   char *p = luaL_buffinitsize(L, &b, l);
   for (i=0; i<l; i++)
-    p[i] = toupper(uchar(s[i]));
+    p[i] = toupper(cast_uchar(s[i]));
   luaL_pushresultsize(&b, l);
   return 1;
 }
@@ -187,7 +184,7 @@ static int str_byte (lua_State *L) {
   n = (int)(pose -  posi) + 1;
   luaL_checkstack(L, n, "string slice too long");
   for (i=0; i<n; i++)
-    lua_pushinteger(L, uchar(s[posi+i-1]));
+    lua_pushinteger(L, cast_uchar(s[posi+i-1]));
   return n;
 }
 
@@ -200,7 +197,7 @@ static int str_char (lua_State *L) {
   for (i=1; i<=n; i++) {
     lua_Unsigned c = (lua_Unsigned)luaL_checkinteger(L, i);
     luaL_argcheck(L, c <= (lua_Unsigned)UCHAR_MAX, i, "value out of range");
-    p[i - 1] = uchar(c);
+    p[i - 1] = cast_uchar(c);
   }
   luaL_pushresultsize(&b, n);
   return 1;
@@ -459,15 +456,15 @@ static int matchbracketclass (int c, const char *p, const char *ec) {
   while (++p < ec) {
     if (*p == L_ESC) {
       p++;
-      if (match_class(c, uchar(*p)))
+      if (match_class(c, cast_uchar(*p)))
         return sig;
     }
     else if ((*(p+1) == '-') && (p+2 < ec)) {
       p+=2;
-      if (uchar(*(p-2)) <= c && c <= uchar(*p))
+      if (cast_uchar(*(p-2)) <= c && c <= cast_uchar(*p))
         return sig;
     }
-    else if (uchar(*p) == c) return sig;
+    else if (cast_uchar(*p) == c) return sig;
   }
   return !sig;
 }
@@ -478,12 +475,12 @@ static int singlematch (MatchState *ms, const char *s, const char *p,
   if (s >= ms->src_end)
     return 0;
   else {
-    int c = uchar(*s);
+    int c = cast_uchar(*s);
     switch (*p) {
       case '.': return 1;  /* matches any char */
-      case L_ESC: return match_class(c, uchar(*(p+1)));
+      case L_ESC: return match_class(c, cast_uchar(*(p+1)));
       case '[': return matchbracketclass(c, p, ep-1);
-      default:  return (uchar(*p) == c);
+      default:  return (cast_uchar(*p) == c);
     }
   }
 }
@@ -612,8 +609,8 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
               luaL_error(ms->L, "missing '[' after '%%f' in pattern");
             ep = classend(ms, p);  /* points to what is next */
             previous = (s == ms->src_init) ? '\0' : *(s - 1);
-            if (!matchbracketclass(uchar(previous), p, ep - 1) &&
-               matchbracketclass(uchar(*s), p, ep - 1)) {
+            if (!matchbracketclass(cast_uchar(previous), p, ep - 1) &&
+               matchbracketclass(cast_uchar(*s), p, ep - 1)) {
               p = ep; goto init;  /* return match(ms, s, ep); */
             }
             s = NULL;  /* match failed */
@@ -622,7 +619,7 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
           case '0': case '1': case '2': case '3':
           case '4': case '5': case '6': case '7':
           case '8': case '9': {  /* capture results (%0-%9)? */
-            s = match_capture(ms, s, uchar(*(p + 1)));
+            s = match_capture(ms, s, cast_uchar(*(p + 1)));
             if (s != NULL) {
               p += 2; goto init;  /* return match(ms, s, p + 2) */
             }
@@ -887,7 +884,7 @@ static void add_s (MatchState *ms, luaL_Buffer *b, const char *s,
       luaL_addchar(b, *p);
     else if (*p == '0')  /* '%0' */
         luaL_addlstring(b, s, e - s);
-    else if (isdigit(uchar(*p))) {  /* '%n' */
+    else if (isdigit(cast_uchar(*p))) {  /* '%n' */
       const char *cap;
       ptrdiff_t resl = get_onecapture(ms, *p - '1', s, e, &cap);
       if (resl == CAP_POSITION)
@@ -1065,7 +1062,7 @@ static int lua_number2strx (lua_State *L, char *buff, int sz,
   if (fmt[SIZELENMOD] == 'A') {
     int i;
     for (i = 0; i < n; i++)
-      buff[i] = toupper(uchar(buff[i]));
+      buff[i] = toupper(cast_uchar(buff[i]));
   }
   else if (l_unlikely(fmt[SIZELENMOD] != 'a'))
     return luaL_error(L, "modifiers for format '%%a'/'%%A' not implemented");
@@ -1132,12 +1129,12 @@ static void addquoted (luaL_Buffer *b, const char *s, size_t len) {
       luaL_addchar(b, '\\');
       luaL_addchar(b, *s);
     }
-    else if (iscntrl(uchar(*s))) {
+    else if (iscntrl(cast_uchar(*s))) {
       char buff[10];
-      if (!isdigit(uchar(*(s+1))))
-        l_sprintf(buff, sizeof(buff), "\\%d", (int)uchar(*s));
+      if (!isdigit(cast_uchar(*(s+1))))
+        l_sprintf(buff, sizeof(buff), "\\%d", (int)cast_uchar(*s));
       else
-        l_sprintf(buff, sizeof(buff), "\\%03d", (int)uchar(*s));
+        l_sprintf(buff, sizeof(buff), "\\%03d", (int)cast_uchar(*s));
       luaL_addstring(b, buff);
     }
     else
@@ -1214,9 +1211,9 @@ static void addliteral (lua_State *L, luaL_Buffer *b, int arg) {
 
 
 static const char *get2digits (const char *s) {
-  if (isdigit(uchar(*s))) {
+  if (isdigit(cast_uchar(*s))) {
     s++;
-    if (isdigit(uchar(*s))) s++;  /* (2 digits at most) */
+    if (isdigit(cast_uchar(*s))) s++;  /* (2 digits at most) */
   }
   return s;
 }
@@ -1239,7 +1236,7 @@ static void checkformat (lua_State *L, const char *form, const char *flags,
       spec = get2digits(spec);  /* skip precision */
     }
   }
-  if (!isalpha(uchar(*spec)))  /* did not go to the end? */
+  if (!isalpha(cast_uchar(*spec)))  /* did not go to the end? */
     luaL_error(L, "invalid conversion specification: '%s'", form);
 }
 

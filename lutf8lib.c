@@ -19,6 +19,7 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
+#include "llimits.h"
 
 
 #define MAXUNICODE	0x10FFFFu
@@ -27,15 +28,6 @@
 
 
 #define MSGInvalid	"invalid UTF-8 code"
-
-/*
-** Integer type for decoded UTF-8 values; MAXUTF needs 31 bits.
-*/
-#if (UINT_MAX >> 30) >= 1
-typedef unsigned int utfint;
-#else
-typedef unsigned long utfint;
-#endif
 
 
 #define iscont(c)	(((c) & 0xC0) == 0x80)
@@ -58,11 +50,11 @@ static lua_Integer u_posrelat (lua_Integer pos, size_t len) {
 ** entry forces an error for non-ascii bytes with no continuation
 ** bytes (count == 0).
 */
-static const char *utf8_decode (const char *s, utfint *val, int strict) {
-  static const utfint limits[] =
-        {~(utfint)0, 0x80, 0x800, 0x10000u, 0x200000u, 0x4000000u};
+static const char *utf8_decode (const char *s, l_uint32 *val, int strict) {
+  static const l_uint32 limits[] =
+        {~(l_uint32)0, 0x80, 0x800, 0x10000u, 0x200000u, 0x4000000u};
   unsigned int c = (unsigned char)s[0];
-  utfint res = 0;  /* final result */
+  l_uint32 res = 0;  /* final result */
   if (c < 0x80)  /* ascii? */
     res = c;
   else {
@@ -73,7 +65,7 @@ static const char *utf8_decode (const char *s, utfint *val, int strict) {
         return NULL;  /* invalid byte sequence */
       res = (res << 6) | (cc & 0x3F);  /* add lower 6 bits from cont. byte */
     }
-    res |= ((utfint)(c & 0x7F) << (count * 5));  /* add first byte */
+    res |= ((l_uint32)(c & 0x7F) << (count * 5));  /* add first byte */
     if (count > 5 || res > MAXUTF || res < limits[count])
       return NULL;  /* invalid byte sequence */
     s += count;  /* skip continuation bytes read */
@@ -141,7 +133,7 @@ static int codepoint (lua_State *L) {
   n = 0;  /* count the number of returns */
   se = s + pose;  /* string end */
   for (s += posi - 1; s < se;) {
-    utfint code;
+    l_uint32 code;
     s = utf8_decode(s, &code, !lax);
     if (s == NULL)
       return luaL_error(L, MSGInvalid);
@@ -243,7 +235,7 @@ static int iter_aux (lua_State *L, int strict) {
   if (n >= len)  /* (also handles original 'n' being negative) */
     return 0;  /* no more codepoints */
   else {
-    utfint code;
+    l_uint32 code;
     const char *next = utf8_decode(s + n, &code, strict);
     if (next == NULL || iscontp(next))
       return luaL_error(L, MSGInvalid);

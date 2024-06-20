@@ -18,6 +18,7 @@
 
 #include "lualib.h"
 #include "lauxlib.h"
+#include "llimits.h"
 
 
 /*

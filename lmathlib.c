@@ -20,6 +20,7 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
+#include "llimits.h"
 
 
 #undef PI
@@ -366,25 +367,17 @@ static lua_Number I2d (Rand64 x) {
 
 #else	/* no 'Rand64'   }{ */
 
-/* get an integer with at least 32 bits */
-#if LUAI_IS32INT
-typedef unsigned int lu_int32;
-#else
-typedef unsigned long lu_int32;
-#endif
-
-
 /*
 ** Use two 32-bit integers to represent a 64-bit quantity.
 */
 typedef struct Rand64 {
-  lu_int32 h;  /* higher half */
-  lu_int32 l;  /* lower half */
+  l_uint32 h;  /* higher half */
+  l_uint32 l;  /* lower half */
 } Rand64;
 
 
 /*
-** If 'lu_int32' has more than 32 bits, the extra bits do not interfere
+** If 'l_uint32' has more than 32 bits, the extra bits do not interfere
 ** with the 32 initial bits, except in a right shift and comparisons.
 ** Moreover, the final result has to discard the extra bits.
 */
@@ -398,7 +391,7 @@ typedef struct Rand64 {
 */
 
 /* build a new Rand64 value */
-static Rand64 packI (lu_int32 h, lu_int32 l) {
+static Rand64 packI (l_uint32 h, l_uint32 l) {
   Rand64 result;
   result.h = h;
   result.l = l;
@@ -471,7 +464,7 @@ static Rand64 nextrand (Rand64 *state) {
 */
 
 /* an unsigned 1 with proper type */
-#define UONE		((lu_int32)1)
+#define UONE		((l_uint32)1)
 
 
 #if FIGS <= 32
@@ -522,7 +515,7 @@ static lua_Unsigned I2UInt (Rand64 x) {
 
 /* convert a 'lua_Unsigned' to a 'Rand64' */
 static Rand64 Int2I (lua_Unsigned n) {
-  return packI((lu_int32)((n >> 31) >> 1), (lu_int32)n);
+  return packI((l_uint32)((n >> 31) >> 1), (l_uint32)n);
 }
 
 #endif  /* } */
