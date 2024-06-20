@@ -71,7 +71,7 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 #if L_INTHASBITS(SIZE_Bx)
 #define MAXARG_Bx	((1<<SIZE_Bx)-1)
 #else
-#define MAXARG_Bx	MAX_INT
+#define MAXARG_Bx	INT_MAX
 #endif
 
 #define OFFSET_sBx	(MAXARG_Bx>>1)         /* 'sBx' is signed */
@@ -80,13 +80,13 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 #if L_INTHASBITS(SIZE_Ax)
 #define MAXARG_Ax	((1<<SIZE_Ax)-1)
 #else
-#define MAXARG_Ax	MAX_INT
+#define MAXARG_Ax	INT_MAX
 #endif
 
 #if L_INTHASBITS(SIZE_sJ)
 #define MAXARG_sJ	((1 << SIZE_sJ) - 1)
 #else
-#define MAXARG_sJ	MAX_INT
+#define MAXARG_sJ	INT_MAX
 #endif
 
 #define OFFSET_sJ	(MAXARG_sJ >> 1)

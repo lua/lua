@@ -20,6 +20,17 @@
 
 
 /*
+** Maximum length for short strings, that is, strings that are
+** internalized. (Cannot be smaller than reserved words or tags for
+** metamethods, as these strings must be internalized;
+** #("function") = 8, #("__newindex") = 10.)
+*/
+#if !defined(LUAI_MAXSHORTLEN)
+#define LUAI_MAXSHORTLEN	40
+#endif
+
+
+/*
 ** Size of a short TString: Size of the header plus space for the string
 ** itself (including final '\0').
 */

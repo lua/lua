@@ -25,7 +25,17 @@
 /*
 ** Maximum size for string table.
 */
-#define MAXSTRTB	cast_int(luaM_limitN(MAX_INT, TString*))
+#define MAXSTRTB	cast_int(luaM_limitN(INT_MAX, TString*))
+
+/*
+** Initial size for the string table (must be power of 2).
+** The Lua core alone registers ~50 strings (reserved words +
+** metaevent keys + a few others). Libraries would typically add
+** a few dozens more.
+*/
+#if !defined(MINSTRTABSIZE)
+#define MINSTRTABSIZE   128
+#endif
 
 
 /*
@@ -188,9 +198,9 @@ void luaS_remove (lua_State *L, TString *ts) {
 
 
 static void growstrtab (lua_State *L, stringtable *tb) {
-  if (l_unlikely(tb->nuse == MAX_INT)) {  /* too many strings? */
+  if (l_unlikely(tb->nuse == INT_MAX)) {  /* too many strings? */
     luaC_fullgc(L, 1);  /* try to free some... */
-    if (tb->nuse == MAX_INT)  /* still too many? */
+    if (tb->nuse == INT_MAX)  /* still too many? */
       luaM_error(L);  /* cannot even create a message... */
   }
   if (tb->size <= MAXSTRTB / 2)  /* can grow string table? */

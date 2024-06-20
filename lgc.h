@@ -211,6 +211,14 @@
 ** 'condchangemem' is used only for heavy tests (forcing a full
 ** GC cycle on every opportunity)
 */
+
+#if !defined(HARDMEMTESTS)
+#define condchangemem(L,pre,pos)	((void)0)
+#else
+#define condchangemem(L,pre,pos)  \
+	{ if (gcrunning(G(L))) { pre; luaC_fullgc(L, 0); pos; } }
+#endif
+
 #define luaC_condGC(L,pre,pos) \
 	{ if (G(L)->GCdebt <= 0) { pre; luaC_step(L); pos;}; \
 	  condchangemem(L,pre,pos); }

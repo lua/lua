@@ -14,6 +14,7 @@
 
 #include "lua.h"
 
+#include "lapi.h"
 #include "llimits.h"
 #include "lmem.h"
 #include "lstate.h"

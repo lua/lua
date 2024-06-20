@@ -46,15 +46,11 @@ typedef signed char ls_byte;
 #define MAX_SIZET	((size_t)(~(size_t)0))
 
 /*
-** Maximum size for strings and userdata visible for Lua (should be
-** representable in a lua_Integer)
+** Maximum size for strings and userdata visible for Lua; should be
+** representable as a lua_Integer and as a size_t.
 */
 #define MAX_SIZE	(sizeof(size_t) < sizeof(lua_Integer) ? MAX_SIZET \
-                          : (size_t)(LUA_MAXINTEGER))
-
-
-#define MAX_INT		INT_MAX  /* maximum value of an int */
-
+			  : cast_sizet(LUA_MAXINTEGER))
 
 /*
 ** floor of the log2 of the maximum signed value for integral type 't'.
@@ -118,15 +114,6 @@ typedef LUAI_UACINT l_uacInt;
 #define check_exp(c,e)		(e)
 #define lua_longassert(c)	((void)0)
 #endif
-
-/*
-** assertion for checking API calls
-*/
-#if !defined(luai_apicheck)
-#define luai_apicheck(l,e)	((void)l, lua_assert(e))
-#endif
-
-#define api_check(l,e,msg)	luai_apicheck(l,(e) && msg)
 
 
 /* macro to avoid warnings about unused variables */
@@ -196,115 +183,13 @@ typedef LUAI_UACINT l_uacInt;
 
 
 /*
-** type for virtual-machine instructions;
-** must be an unsigned with (at least) 4 bytes (see details in lopcodes.h)
+** An unsigned with (at least) 4 bytes
 */
 #if LUAI_IS32INT
 typedef unsigned int l_uint32;
 #else
 typedef unsigned long l_uint32;
 #endif
-
-typedef l_uint32 Instruction;
-
-
-
-/*
-** Maximum length for short strings, that is, strings that are
-** internalized. (Cannot be smaller than reserved words or tags for
-** metamethods, as these strings must be internalized;
-** #("function") = 8, #("__newindex") = 10.)
-*/
-#if !defined(LUAI_MAXSHORTLEN)
-#define LUAI_MAXSHORTLEN	40
-#endif
-
-
-/*
-** Initial size for the string table (must be power of 2).
-** The Lua core alone registers ~50 strings (reserved words +
-** metaevent keys + a few others). Libraries would typically add
-** a few dozens more.
-*/
-#if !defined(MINSTRTABSIZE)
-#define MINSTRTABSIZE	128
-#endif
-
-
-/*
-** Size of cache for strings in the API. 'N' is the number of
-** sets (better be a prime) and "M" is the size of each set (M == 1
-** makes a direct cache.)
-*/
-#if !defined(STRCACHE_N)
-#define STRCACHE_N		53
-#define STRCACHE_M		2
-#endif
-
-
-/* minimum size for string buffer */
-#if !defined(LUA_MINBUFFER)
-#define LUA_MINBUFFER	32
-#endif
-
-
-/*
-** Maximum depth for nested C calls, syntactical nested non-terminals,
-** and other features implemented through recursion in C. (Value must
-** fit in a 16-bit unsigned integer. It must also be compatible with
-** the size of the C stack.)
-*/
-#if !defined(LUAI_MAXCCALLS)
-#define LUAI_MAXCCALLS		200
-#endif
-
-
-/*
-** macros that are executed whenever program enters the Lua core
-** ('lua_lock') and leaves the core ('lua_unlock')
-*/
-#if !defined(lua_lock)
-#define lua_lock(L)	((void) 0)
-#define lua_unlock(L)	((void) 0)
-#endif
-
-/*
-** macro executed during Lua functions at points where the
-** function can yield.
-*/
-#if !defined(luai_threadyield)
-#define luai_threadyield(L)	{lua_unlock(L); lua_lock(L);}
-#endif
-
-
-/*
-** these macros allow user-specific actions when a thread is
-** created/deleted/resumed/yielded.
-*/
-#if !defined(luai_userstateopen)
-#define luai_userstateopen(L)		((void)L)
-#endif
-
-#if !defined(luai_userstateclose)
-#define luai_userstateclose(L)		((void)L)
-#endif
-
-#if !defined(luai_userstatethread)
-#define luai_userstatethread(L,L1)	((void)L)
-#endif
-
-#if !defined(luai_userstatefree)
-#define luai_userstatefree(L,L1)	((void)L)
-#endif
-
-#if !defined(luai_userstateresume)
-#define luai_userstateresume(L,n)	((void)L)
-#endif
-
-#if !defined(luai_userstateyield)
-#define luai_userstateyield(L,n)	((void)L)
-#endif
-
 
 
 /*
@@ -358,26 +243,5 @@ typedef l_uint32 Instruction;
 #define luai_numisnan(a)        (!luai_numeq((a), (a)))
 #endif
 
-
-
-
-
-/*
-** macro to control inclusion of some hard tests on stack reallocation
-*/
-#if !defined(HARDSTACKTESTS)
-#define condmovestack(L,pre,pos)	((void)0)
-#else
-/* realloc stack keeping its size */
-#define condmovestack(L,pre,pos)  \
-  { int sz_ = stacksize(L); pre; luaD_reallocstack((L), sz_, 0); pos; }
-#endif
-
-#if !defined(HARDMEMTESTS)
-#define condchangemem(L,pre,pos)	((void)0)
-#else
-#define condchangemem(L,pre,pos)  \
-	{ if (gcrunning(G(L))) { pre; luaC_fullgc(L, 0); pos; } }
-#endif
 
 #endif

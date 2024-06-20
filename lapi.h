@@ -12,9 +12,29 @@
 #include "lstate.h"
 
 
+#if defined(LUA_USE_APICHECK)
+#include <assert.h>
+#define api_check(l,e,msg)	assert(e)
+#else	/* for testing */
+#define api_check(l,e,msg)	((void)(l), lua_assert((e) && msg))
+#endif
+
+
+
 /* Increments 'L->top.p', checking for stack overflows */
 #define api_incr_top(L)  \
     (L->top.p++, api_check(L, L->top.p <= L->ci->top.p, "stack overflow"))
+
+
+/*
+** macros that are executed whenever program enters the Lua core
+** ('lua_lock') and leaves the core ('lua_unlock')
+*/
+#if !defined(lua_lock)
+#define lua_lock(L)	((void) 0)
+#define lua_unlock(L)	((void) 0)
+#endif
+
 
 
 /*

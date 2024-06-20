@@ -52,6 +52,27 @@ typedef struct LG {
 
 
 /*
+** these macros allow user-specific actions when a thread is
+** created/deleted
+*/
+#if !defined(luai_userstateopen)
+#define luai_userstateopen(L)		((void)L)
+#endif
+
+#if !defined(luai_userstateclose)
+#define luai_userstateclose(L)		((void)L)
+#endif
+
+#if !defined(luai_userstatethread)
+#define luai_userstatethread(L,L1)	((void)L)
+#endif
+
+#if !defined(luai_userstatefree)
+#define luai_userstatefree(L,L1)	((void)L)
+#endif
+
+
+/*
 ** set GCdebt to a new value keeping the real number of allocated
 ** objects (totalobjs - GCdebt) invariant and avoiding overflows in
 ** 'totalobjs'.

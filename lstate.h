@@ -142,6 +142,17 @@ struct lua_longjmp;  /* defined in ldo.c */
 #define EXTRA_STACK   5
 
 
+/*
+** Size of cache for strings in the API. 'N' is the number of
+** sets (better be a prime) and "M" is the size of each set.
+** (M == 1 makes a direct cache.)
+*/
+#if !defined(STRCACHE_N)
+#define STRCACHE_N              53
+#define STRCACHE_M              2
+#endif
+
+
 #define BASIC_STACK_SIZE        (2*LUA_MINSTACK)
 
 #define stacksize(th)	cast_int((th)->stack_last.p - (th)->stack.p)

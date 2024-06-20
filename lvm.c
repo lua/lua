@@ -18,6 +18,7 @@
 
 #include "lua.h"
 
+#include "lapi.h"
 #include "ldebug.h"
 #include "ldo.h"
 #include "lfunc.h"
@@ -1121,6 +1122,14 @@ void luaV_finishOp (lua_State *L) {
 ** the stack or hooks.)
 */
 #define halfProtect(exp)  (savestate(L,ci), (exp))
+
+/*
+** macro executed during Lua functions at points where the
+** function can yield.
+*/
+#if !defined(luai_threadyield)
+#define luai_threadyield(L)	{lua_unlock(L); lua_lock(L);}
+#endif
 
 /* 'c' is the limit of live values in the stack */
 #define checkGC(L,c)  \

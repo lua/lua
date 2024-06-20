@@ -39,6 +39,19 @@
 
 
 /*
+** these macros allow user-specific actions when a thread is
+** resumed/yielded.
+*/
+#if !defined(luai_userstateresume)
+#define luai_userstateresume(L,n)	((void)L)
+#endif
+
+#if !defined(luai_userstateyield)
+#define luai_userstateyield(L,n)	((void)L)
+#endif
+
+
+/*
 ** {======================================================
 ** Error-recovery functions
 ** =======================================================

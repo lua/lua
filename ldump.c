@@ -15,6 +15,7 @@
 
 #include "lua.h"
 
+#include "lapi.h"
 #include "lgc.h"
 #include "lobject.h"
 #include "lstate.h"

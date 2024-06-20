@@ -32,6 +32,11 @@
 #define next(ls)	(ls->current = zgetc(ls->z))
 
 
+/* minimum size for string buffer */
+#if !defined(LUA_MINBUFFER)
+#define LUA_MINBUFFER   32
+#endif
+
 
 #define currIsNewline(ls)	(ls->current == '\n' || ls->current == '\r')
 
@@ -159,7 +164,7 @@ static void inclinenumber (LexState *ls) {
   next(ls);  /* skip '\n' or '\r' */
   if (currIsNewline(ls) && ls->current != old)
     next(ls);  /* skip '\n\r' or '\r\n' */
-  if (++ls->linenumber >= MAX_INT)
+  if (++ls->linenumber >= INT_MAX)
     lexerror(ls, "chunk has too many lines", 0);
 }
 
