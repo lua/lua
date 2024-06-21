@@ -135,14 +135,14 @@ checkerror("variable%-length format", packsize, "z")
 -- overflow in option size  (error will be in digit after limit)
 checkerror("invalid format", packsize, "c1" .. string.rep("0", 40))
 
-if packsize("i") == 4 then
-  -- result would be 2^31  (2^3 repetitions of 2^28 strings)
-  local s = string.rep("c268435456", 2^3)
-  checkerror("too large", packsize, s)
-  -- one less is OK
-  s = string.rep("c268435456", 2^3 - 1) .. "c268435455"
-  assert(packsize(s) == 0x7fffffff)
+do
+  local maxsize = (packsize("j") <= packsize("T")) and
+                      math.maxinteger or (1 << (packsize("T") * 8))
+  assert (packsize(string.format("c%d", maxsize - 9)) == maxsize - 9)
+  checkerror("too large", packsize, string.format("c%dc10", maxsize - 9))
+  checkerror("too long", pack, string.format("xxxxxxxxxx c%d", maxsize - 9))
 end
+
 
 -- overflow in packing
 for i = 1, sizeLI - 1 do
@@ -229,8 +229,9 @@ do
   assert(pack("c3", "123") == "123")
   assert(pack("c0", "") == "")
   assert(pack("c8", "123456") == "123456\0\0")
-  assert(pack("c88", "") == string.rep("\0", 88))
-  assert(pack("c188", "ab") == "ab" .. string.rep("\0", 188 - 2))
+  assert(pack("c88 c1", "", "X") == string.rep("\0", 88) .. "X")
+  assert(pack("c188 c2", "ab", "X\1") ==
+         "ab" .. string.rep("\0", 188 - 2) .. "X\1")
   local a, b, c = unpack("!4 z c3", "abcdefghi\0xyz")
   assert(a == "abcdefghi" and b == "xyz" and c == 14)
   checkerror("longer than", pack, "c3", "1234")
