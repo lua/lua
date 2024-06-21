@@ -3713,8 +3713,8 @@ Lua will do all memory allocation for this state
 through this function @seeF{lua_Alloc}.
 The second argument, @id{ud}, is an opaque pointer that Lua
 passes to the allocator in every call.
-The third argument, @id{seed}, is a seed for the hashing of
-strings when they are used as table keys.
+The third argument, @id{seed},
+is a seed for the hashing of strings.
 
 }
 
@@ -7310,7 +7310,7 @@ which must be a string.
 The format string follows the same rules as the @ANSI{sprintf}.
 The accepted conversion specifiers are
 @id{A}, @id{a}, @id{c}, @id{d}, @id{E}, @id{e}, @id{f}, @id{G}, @id{g},
-@id{i}, @id{o}, @id{p}, @id{s}, @id{u}, @id{X}, and @id{x},
+@id{i}, @id{o}, @id{p}, @id{s}, @id{u}, @id{X}, @id{x}, and @Char{%},
 plus a non-C specifier @id{q}.
 The accepted flags are @Char{-}, @Char{+}, @Char{#},
 @Char{0}, and @Char{ } (space).
@@ -8819,7 +8819,7 @@ because of its reliance on @CId{setlocale}.
 
 @LibEntry{os.time ([table])|
 
-Returns the current time when called without arguments,
+Returns the current local time when called without arguments,
 or a time representing the local date and time specified by the given table.
 This table must have fields @id{year}, @id{month}, and @id{day},
 and may have fields
@@ -9381,6 +9381,11 @@ Moreover, there were some changes in the parameters themselves.
 @sect2{@title{Incompatibilities in the API}
 
 @itemize{
+
+@item{
+@Lid{lua_newstate} has a third parameter,
+a seed for the hashing of strings.
+}
 
 @item{
 The function @id{lua_resetthread} is deprecated;
