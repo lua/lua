@@ -37,16 +37,6 @@
 #endif
 
 
-/*
-** Some sizes are better limited to fit in 'int', but must also fit in
-** 'size_t'. (We assume that 'lua_Integer' cannot be smaller than 'int'.)
-*/
-#define MAXSIZE  \
-	(sizeof(size_t) < sizeof(int) ? MAX_SIZET : (size_t)(INT_MAX))
-
-
-
-
 static int str_len (lua_State *L) {
   size_t l;
   luaL_checklstring(L, 1, &l);
@@ -149,10 +139,10 @@ static int str_rep (lua_State *L) {
   const char *sep = luaL_optlstring(L, 3, "", &lsep);
   if (n <= 0)
     lua_pushliteral(L, "");
-  else if (l_unlikely(l + lsep < l || l + lsep > MAXSIZE / n))
+  else if (l_unlikely(l + lsep < l || l + lsep > MAX_SIZE / n))
     return luaL_error(L, "resulting string too large");
   else {
-    size_t totallen = (size_t)n * l + (size_t)(n - 1) * lsep;
+    size_t totallen = ((size_t)n * (l + lsep)) - lsep;
     luaL_Buffer b;
     char *p = luaL_buffinitsize(L, &b, totallen);
     while (n-- > 1) {  /* first n-1 copies (followed by separator) */

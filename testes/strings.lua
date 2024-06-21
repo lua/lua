@@ -109,10 +109,9 @@ assert(string.rep('teste', 0) == '')
 assert(string.rep('tés\00tê', 2) == 'tés\0têtés\000tê')
 assert(string.rep('', 10) == '')
 
-if string.packsize("i") == 4 then
-  -- result length would be 2^31 (int overflow)
-  checkerror("too large", string.rep, 'aa', (1 << 30))
-  checkerror("too large", string.rep, 'a', (1 << 30), ',')
+do
+  checkerror("too large", string.rep, 'aa', math.maxinteger);
+  checkerror("too large", string.rep, 'a', math.maxinteger/2, ',')
 end
 
 -- repetitions with separator
