@@ -41,8 +41,6 @@
 ** Some sizes are better limited to fit in 'int', but must also fit in
 ** 'size_t'. (We assume that 'lua_Integer' cannot be smaller than 'int'.)
 */
-#define MAX_SIZET	((size_t)(~(size_t)0))
-
 #define MAXSIZE  \
 	(sizeof(size_t) < sizeof(int) ? MAX_SIZET : (size_t)(INT_MAX))
 

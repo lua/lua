@@ -28,12 +28,6 @@
 #include "llimits.h"
 
 
-#if !defined(MAX_SIZET)
-/* maximum value for size_t */
-#define MAX_SIZET	((size_t)(~(size_t)0))
-#endif
-
-
 /*
 ** {======================================================
 ** Traceback
