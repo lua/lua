@@ -538,10 +538,12 @@ static void newbox (lua_State *L) {
 */
 static size_t newbuffsize (luaL_Buffer *B, size_t sz) {
   size_t newsize = (B->size / 2) * 3;  /* buffer size * 1.5 */
-  if (l_unlikely(MAX_SIZET - sz - 1 < B->n))  /* overflow in (B->n + sz + 1)? */
-    return luaL_error(B->L, "buffer too large");
-  if (newsize < B->n + sz + 1)  /* not big enough? */
+  if (l_unlikely(sz > MAX_SIZE - B->n - 1))
+    return luaL_error(B->L, "resulting string too large");
+  if (newsize < B->n + sz + 1 || newsize > MAX_SIZE) {
+    /* newsize was not big enough or too big */
     newsize = B->n + sz + 1;
+  }
   return newsize;
 }
 

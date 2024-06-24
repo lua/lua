@@ -109,7 +109,7 @@ static size_t loadVarint (LoadState *S, size_t limit) {
 
 
 static size_t loadSize (LoadState *S) {
-  return loadVarint(S, MAX_SIZET);
+  return loadVarint(S, MAX_SIZE);
 }
 
 

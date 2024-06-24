@@ -3942,6 +3942,8 @@ holding the string content,
 and @id{len} is the length of the string.
 The string should have a zero at its end,
 that is, the condition @T{s[len] == '\0'} should hold.
+As with any string in Lua,
+the length must fit in a Lua integer.
 
 If @id{falloc} is different from @id{NULL},
 that function will be called by Lua

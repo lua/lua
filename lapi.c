@@ -551,6 +551,7 @@ LUA_API const char *lua_pushextlstring (lua_State *L,
 	        const char *s, size_t len, lua_Alloc falloc, void *ud) {
   TString *ts;
   lua_lock(L);
+  api_check(L, len <= MAX_SIZE, "string too large");
   api_check(L, s[len] == '\0', "string not ending with zero");
   ts = luaS_newextlstr (L, s, len, falloc, ud);
   setsvalue2s(L, L->top.p, ts);
