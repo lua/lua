@@ -23,9 +23,9 @@ iAsBx              sBx (signed)(17)      |     A(8)      |   Op(7)     |
 iAx                           Ax(25)                     |   Op(7)     |
 isJ                           sJ (signed)(25)            |   Op(7)     |
 
-  A signed argument is represented in excess K: the represented value is
-  the written unsigned value minus K, where K is half the maximum for the
-  corresponding unsigned argument.
+  A signed argument is represented in excess K: The represented value is
+  the written unsigned value minus K, where K is half (rounded down) the
+  maximum value for the corresponding unsigned argument.
 ===========================================================================*/
 
 
@@ -177,9 +177,16 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 
 
 /*
-** invalid register that fits in 8 bits
+** Maximum size for the stack of a Lua function. It must fit in 8 bits.
+** The highest valid register is one less than this value.
 */
-#define NO_REG		MAXARG_A
+#define MAX_FSTACK	MAXARG_A
+
+/*
+** Invalid register (one more than last valid register).
+*/
+#define NO_REG		MAX_FSTACK
+
 
 
 /*
