@@ -835,7 +835,6 @@ static int get_limits (lua_State *L) {
   setnameval(L, "MAXARG_Ax", MAXARG_Ax);
   setnameval(L, "MAXARG_Bx", MAXARG_Bx);
   setnameval(L, "OFFSET_sBx", OFFSET_sBx);
-  setnameval(L, "LFPF", LFIELDS_PER_FLUSH);
   setnameval(L, "NUM_OPCODES", NUM_OPCODES);
   return 1;
 }

@@ -1804,7 +1804,7 @@ void luaK_settablesize (FuncState *fs, int pc, int ra, int asize, int hsize) {
 ** table (or LUA_MULTRET to add up to stack top).
 */
 void luaK_setlist (FuncState *fs, int base, int nelems, int tostore) {
-  lua_assert(tostore != 0 && tostore <= LFIELDS_PER_FLUSH);
+  lua_assert(tostore != 0);
   if (tostore == LUA_MULTRET)
     tostore = 0;
   if (nelems <= MAXARG_C)

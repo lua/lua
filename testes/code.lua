@@ -460,5 +460,16 @@ do   -- check number of available registers
   assert(string.find(msg, "too many registers"))
 end
 
+
+do   -- basic check for SETLIST
+  -- create a list constructor with 50 elements
+  local source = "local a; return {" .. string.rep("a, ", 50) .. "}"
+  local func = assert(load(source))
+  local code = table.concat(T.listcode(func), "\n")
+  local _, count = string.gsub(code, "SETLIST", "")
+  -- code uses only 1 SETLIST for the constructor
+  assert(count == 1)
+end
+
 print 'OK'
 

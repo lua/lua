@@ -843,13 +843,13 @@ static void yindex (LexState *ls, expdesc *v) {
 ** =======================================================================
 */
 
-
 typedef struct ConsControl {
   expdesc v;  /* last list item read */
   expdesc *t;  /* table descriptor */
   int nh;  /* total number of 'record' elements */
   int na;  /* number of array elements already stored */
   int tostore;  /* number of array elements pending to be stored */
+  int maxtostore;  /* maximum number of pending elements */
 } ConsControl;
 
 
@@ -878,7 +878,7 @@ static void closelistfield (FuncState *fs, ConsControl *cc) {
   if (cc->v.k == VVOID) return;  /* there is no list item */
   luaK_exp2nextreg(fs, &cc->v);
   cc->v.k = VVOID;
-  if (cc->tostore == LFIELDS_PER_FLUSH) {
+  if (cc->tostore >= cc->maxtostore) {
     luaK_setlist(fs, cc->t->u.info, cc->na, cc->tostore);  /* flush */
     cc->na += cc->tostore;
     cc->tostore = 0;  /* no more items pending */
@@ -931,6 +931,22 @@ static void field (LexState *ls, ConsControl *cc) {
 }
 
 
+/*
+** Compute a limit for how many registers a constructor can use before
+** emitting a 'SETLIST' instruction, based on how many registers are
+** available.
+*/
+static int maxtostore (FuncState *fs) {
+  int numfreeregs = MAX_FSTACK - fs->freereg;
+  if (numfreeregs >= 160)  /* "lots" of registers? */
+    return numfreeregs / 5u;  /* use up to 1/5 of them */
+  else if (numfreeregs >= 80)  /* still "enough" registers? */
+    return 10;  /* one 'SETLIST' instruction for each 10 values */
+  else  /* save registers for potential more nesting */
+    return 1;
+}
+
+
 static void constructor (LexState *ls, expdesc *t) {
   /* constructor -> '{' [ field { sep field } [sep] ] '}'
      sep -> ',' | ';' */
@@ -945,6 +961,7 @@ static void constructor (LexState *ls, expdesc *t) {
   luaK_reserveregs(fs, 1);
   init_exp(&cc.v, VVOID, 0);  /* no value (yet) */
   checknext(ls, '{');
+  cc.maxtostore = maxtostore(fs);
   do {
     lua_assert(cc.v.k == VVOID || cc.tostore > 0);
     if (ls->t.token == '}') break;
