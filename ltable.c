@@ -278,7 +278,7 @@ static int equalkey (const TValue *k1, const Node *n2, int deadok) {
 /*
 ** Returns the real size of the 'array' array
 */
-LUAI_FUNC unsigned int luaH_realasize (const Table *t) {
+unsigned int luaH_realasize (const Table *t) {
   if (limitequalsasize(t))
     return t->alimit;  /* this is the size */
   else {

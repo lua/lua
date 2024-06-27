@@ -939,7 +939,7 @@ int luaG_traceexec (lua_State *L, const Instruction *pc) {
     ci->callstatus &= ~CIST_HOOKYIELD;  /* erase mark */
     return 1;  /* do not call hook again (VM yielded, so it did not move) */
   }
-  if (!isIT(*(ci->u.l.savedpc - 1)))  /* top not being used? */
+  if (!luaP_isIT(*(ci->u.l.savedpc - 1)))  /* top not being used? */
     L->top.p = ci->top.p;  /* correct top */
   if (counthook)
     luaD_hook(L, LUA_HOOKCOUNT, -1, 0, 0);  /* call count hook */

@@ -1844,7 +1844,9 @@ void luaK_finish (FuncState *fs) {
   Proto *p = fs->f;
   for (i = 0; i < fs->pc; i++) {
     Instruction *pc = &p->code[i];
-    lua_assert(i == 0 || isOT(*(pc - 1)) == isIT(*pc));
+    /* avoid "not used" warnings when assert is off (for 'onelua.c') */
+    (void)luaP_isOT; (void)luaP_isIT;
+    lua_assert(i == 0 || luaP_isOT(*(pc - 1)) == luaP_isIT(*pc));
     switch (GET_OPCODE(*pc)) {
       case OP_RETURN0: case OP_RETURN1: {
         if (!(fs->needclose || (p->flag & PF_ISVARARG)))

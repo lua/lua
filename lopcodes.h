@@ -8,6 +8,7 @@
 #define lopcodes_h
 
 #include "llimits.h"
+#include "lobject.h"
 
 
 /*===========================================================================
@@ -394,16 +395,9 @@ LUAI_DDEC(const lu_byte luaP_opmodes[NUM_OPCODES];)
 #define testOTMode(m)	(luaP_opmodes[m] & (1 << 6))
 #define testMMMode(m)	(luaP_opmodes[m] & (1 << 7))
 
-/* "out top" (set top for next instruction) */
-#define isOT(i)  \
-	((testOTMode(GET_OPCODE(i)) && GETARG_C(i) == 0) || \
-          GET_OPCODE(i) == OP_TAILCALL)
 
-/* "in top" (uses top from previous instruction) */
-#define isIT(i)		(testITMode(GET_OPCODE(i)) && GETARG_B(i) == 0)
-
-#define opmode(mm,ot,it,t,a,m)  \
-    (((mm) << 7) | ((ot) << 6) | ((it) << 5) | ((t) << 4) | ((a) << 3) | (m))
+LUAI_FUNC int luaP_isOT (Instruction i);
+LUAI_FUNC int luaP_isIT (Instruction i);
 
 
 #endif

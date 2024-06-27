@@ -1180,8 +1180,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
     #endif
     lua_assert(base == ci->func.p + 1);
     lua_assert(base <= L->top.p && L->top.p <= L->stack_last.p);
-    /* invalidate top for instructions not expecting it */
-    lua_assert(isIT(i) || (cast_void(L->top.p = base), 1));
+    /* for tests, invalidate top for instructions not expecting it */
+    lua_assert(luaP_isIT(i) || (cast_void(L->top.p = base), 1));
     vmdispatch (GET_OPCODE(i)) {
       vmcase(OP_MOVE) {
         StkId ra = RA(i);
