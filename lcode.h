@@ -61,8 +61,10 @@ typedef enum UnOpr { OPR_MINUS, OPR_BNOT, OPR_NOT, OPR_LEN, OPR_NOUNOPR } UnOpr;
 
 LUAI_FUNC int luaK_code (FuncState *fs, Instruction i);
 LUAI_FUNC int luaK_codeABx (FuncState *fs, OpCode o, int A, unsigned Bx);
-LUAI_FUNC int luaK_codeABCk (FuncState *fs, OpCode o, int A,
-                                            int B, int C, int k);
+LUAI_FUNC int luaK_codeABCk (FuncState *fs, OpCode o, int A, int B, int C,
+                                            int k);
+LUAI_FUNC int luaK_codevABCk (FuncState *fs, OpCode o, int A, int B, int C,
+                                             int k);
 LUAI_FUNC int luaK_exp2const (FuncState *fs, const expdesc *e, TValue *v);
 LUAI_FUNC void luaK_fixline (FuncState *fs, int line);
 LUAI_FUNC void luaK_nil (FuncState *fs, int from, int n);

@@ -697,6 +697,11 @@ static char *buildop (Proto *p, int pc, char *buff) {
               GETARG_A(i), GETARG_B(i), GETARG_C(i),
               GETARG_k(i) ? " (k)" : "");
       break;
+    case ivABC:
+      sprintf(buff, "%-12s%4d %4d %4d%s", name,
+              GETARG_A(i), GETARG_vB(i), GETARG_vC(i),
+              GETARG_k(i) ? " (k)" : "");
+      break;
     case iABx:
       sprintf(buff, "%-12s%4d %4d", name, GETARG_A(i), GETARG_Bx(i));
       break;

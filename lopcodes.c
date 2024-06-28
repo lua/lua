@@ -40,7 +40,7 @@ LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 0, 0, 0, 0, iABC)		/* OP_SETTABLE */
  ,opmode(0, 0, 0, 0, 0, iABC)		/* OP_SETI */
  ,opmode(0, 0, 0, 0, 0, iABC)		/* OP_SETFIELD */
- ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_NEWTABLE */
+ ,opmode(0, 0, 0, 0, 1, ivABC)		/* OP_NEWTABLE */
  ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_SELF */
  ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_ADDI */
  ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_ADDK */
@@ -99,7 +99,7 @@ LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 0, 0, 0, 0, iABx)		/* OP_TFORPREP */
  ,opmode(0, 0, 0, 0, 0, iABC)		/* OP_TFORCALL */
  ,opmode(0, 0, 0, 0, 1, iABx)		/* OP_TFORLOOP */
- ,opmode(0, 0, 1, 0, 0, iABC)		/* OP_SETLIST */
+ ,opmode(0, 0, 1, 0, 0, ivABC)		/* OP_SETLIST */
  ,opmode(0, 0, 0, 0, 1, iABx)		/* OP_CLOSURE */
  ,opmode(0, 1, 0, 0, 1, iABC)		/* OP_VARARG */
  ,opmode(0, 0, 1, 0, 1, iABC)		/* OP_VARARGPREP */
@@ -127,6 +127,12 @@ int luaP_isOT (Instruction i) {
 ** it accepts multiple results.
 */
 int luaP_isIT (Instruction i) {
-  return testITMode(GET_OPCODE(i)) && GETARG_B(i) == 0;
+  OpCode op = GET_OPCODE(i);
+  switch (op) {
+    case OP_SETLIST:
+      return testITMode(GET_OPCODE(i)) && GETARG_vB(i) == 0;
+    default:
+      return testITMode(GET_OPCODE(i)) && GETARG_B(i) == 0;
+  }
 }
 

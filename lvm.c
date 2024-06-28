@@ -1359,14 +1359,15 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
       vmcase(OP_NEWTABLE) {
         StkId ra = RA(i);
-        int b = GETARG_B(i);  /* log2(hash size) + 1 */
-        int c = GETARG_C(i);  /* array size */
+        int b = GETARG_vB(i);  /* log2(hash size) + 1 */
+        int c = GETARG_vC(i);  /* array size */
         Table *t;
         if (b > 0)
-          b = 1 << (b - 1);  /* size is 2^(b - 1) */
-        lua_assert((!TESTARG_k(i)) == (GETARG_Ax(*pc) == 0));
-        if (TESTARG_k(i))  /* non-zero extra argument? */
-          c += GETARG_Ax(*pc) * (MAXARG_C + 1);  /* add it to size */
+          b = 1 << (b - 1);  /* hash size is 2^(b - 1) */
+        if (TESTARG_k(i)) {  /* non-zero extra argument? */
+          lua_assert(GETARG_Ax(*pc) != 0);
+          c += GETARG_Ax(*pc) * (MAXARG_vC + 1);  /* add it to array size */
+        }
         pc++;  /* skip extra argument */
         L->top.p = ra + 1;  /* correct top in case of emergency GC */
         t = luaH_new(L);  /* memory allocation */
@@ -1850,8 +1851,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }}
       vmcase(OP_SETLIST) {
         StkId ra = RA(i);
-        int n = GETARG_B(i);
-        unsigned int last = GETARG_C(i);
+        int n = GETARG_vB(i);
+        unsigned int last = GETARG_vC(i);
         Table *h = hvalue(s2v(ra));
         if (n == 0)
           n = cast_int(L->top.p - ra) - 1;  /* get up to the top */
@@ -1859,11 +1860,15 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           L->top.p = ci->top.p;  /* correct top in case of emergency GC */
         last += n;
         if (TESTARG_k(i)) {
-          last += GETARG_Ax(*pc) * (MAXARG_C + 1);
+          last += GETARG_Ax(*pc) * (MAXARG_vC + 1);
           pc++;
         }
-        if (last > luaH_realasize(h))  /* needs more space? */
+        /* when 'n' is known, table should have proper size */
+        if (last > luaH_realasize(h)) {  /* needs more space? */
+          /* fixed-size sets should have space preallocated */
+          lua_assert(GETARG_vB(i) == 0);
           luaH_resizearray(L, h, last);  /* preallocate it at once */
+        }
         for (; n > 0; n--) {
           TValue *val = s2v(ra + n);
           obj2arr(h, last - 1, val);

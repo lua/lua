@@ -390,32 +390,40 @@ int luaK_code (FuncState *fs, Instruction i) {
 ** Format and emit an 'iABC' instruction. (Assertions check consistency
 ** of parameters versus opcode.)
 */
-int luaK_codeABCk (FuncState *fs, OpCode o, int a, int b, int c, int k) {
+int luaK_codeABCk (FuncState *fs, OpCode o, int A, int B, int C, int k) {
   lua_assert(getOpMode(o) == iABC);
-  lua_assert(a <= MAXARG_A && b <= MAXARG_B &&
-             c <= MAXARG_C && (k & ~1) == 0);
-  return luaK_code(fs, CREATE_ABCk(o, a, b, c, k));
+  lua_assert(A <= MAXARG_A && B <= MAXARG_B &&
+             C <= MAXARG_C && (k & ~1) == 0);
+  return luaK_code(fs, CREATE_ABCk(o, A, B, C, k));
+}
+
+
+int luaK_codevABCk (FuncState *fs, OpCode o, int A, int B, int C, int k) {
+  lua_assert(getOpMode(o) == ivABC);
+  lua_assert(A <= MAXARG_A && B <= MAXARG_vB &&
+             C <= MAXARG_vC && (k & ~1) == 0);
+  return luaK_code(fs, CREATE_vABCk(o, A, B, C, k));
 }
 
 
 /*
 ** Format and emit an 'iABx' instruction.
 */
-int luaK_codeABx (FuncState *fs, OpCode o, int a, unsigned int bc) {
+int luaK_codeABx (FuncState *fs, OpCode o, int A, unsigned int Bc) {
   lua_assert(getOpMode(o) == iABx);
-  lua_assert(a <= MAXARG_A && bc <= MAXARG_Bx);
-  return luaK_code(fs, CREATE_ABx(o, a, bc));
+  lua_assert(A <= MAXARG_A && Bc <= MAXARG_Bx);
+  return luaK_code(fs, CREATE_ABx(o, A, Bc));
 }
 
 
 /*
 ** Format and emit an 'iAsBx' instruction.
 */
-static int codeAsBx (FuncState *fs, OpCode o, int a, int bc) {
-  unsigned int b = bc + OFFSET_sBx;
+static int codeAsBx (FuncState *fs, OpCode o, int A, int Bc) {
+  unsigned int b = cast_uint(Bc) + OFFSET_sBx;
   lua_assert(getOpMode(o) == iAsBx);
-  lua_assert(a <= MAXARG_A && b <= MAXARG_Bx);
-  return luaK_code(fs, CREATE_ABx(o, a, b));
+  lua_assert(A <= MAXARG_A && b <= MAXARG_Bx);
+  return luaK_code(fs, CREATE_ABx(o, A, b));
 }
 
 
@@ -423,7 +431,7 @@ static int codeAsBx (FuncState *fs, OpCode o, int a, int bc) {
 ** Format and emit an 'isJ' instruction.
 */
 static int codesJ (FuncState *fs, OpCode o, int sj, int k) {
-  unsigned int j = sj + OFFSET_sJ;
+  unsigned int j = cast_uint(sj) + OFFSET_sJ;
   lua_assert(getOpMode(o) == isJ);
   lua_assert(j <= MAXARG_sJ && (k & ~1) == 0);
   return luaK_code(fs, CREATE_sJ(o, j, k));
@@ -433,9 +441,9 @@ static int codesJ (FuncState *fs, OpCode o, int sj, int k) {
 /*
 ** Emit an "extra argument" instruction (format 'iAx')
 */
-static int codeextraarg (FuncState *fs, int a) {
-  lua_assert(a <= MAXARG_Ax);
-  return luaK_code(fs, CREATE_Ax(OP_EXTRAARG, a));
+static int codeextraarg (FuncState *fs, int A) {
+  lua_assert(A <= MAXARG_Ax);
+  return luaK_code(fs, CREATE_Ax(OP_EXTRAARG, A));
 }
 
 
@@ -1032,10 +1040,10 @@ static int exp2RK (FuncState *fs, expdesc *e) {
 }
 
 
-static void codeABRK (FuncState *fs, OpCode o, int a, int b,
+static void codeABRK (FuncState *fs, OpCode o, int A, int B,
                       expdesc *ec) {
   int k = exp2RK(fs, ec);
-  luaK_codeABCk(fs, o, a, b, ec->u.info, k);
+  luaK_codeABCk(fs, o, A, B, ec->u.info, k);
 }
 
 
@@ -1788,10 +1796,10 @@ void luaK_fixline (FuncState *fs, int line) {
 void luaK_settablesize (FuncState *fs, int pc, int ra, int asize, int hsize) {
   Instruction *inst = &fs->f->code[pc];
   int rb = (hsize != 0) ? luaO_ceillog2(hsize) + 1 : 0;  /* hash size */
-  int extra = asize / (MAXARG_C + 1);  /* higher bits of array size */
-  int rc = asize % (MAXARG_C + 1);  /* lower bits of array size */
+  int extra = asize / (MAXARG_vC + 1);  /* higher bits of array size */
+  int rc = asize % (MAXARG_vC + 1);  /* lower bits of array size */
   int k = (extra > 0);  /* true iff needs extra argument */
-  *inst = CREATE_ABCk(OP_NEWTABLE, ra, rb, rc, k);
+  *inst = CREATE_vABCk(OP_NEWTABLE, ra, rb, rc, k);
   *(inst + 1) = CREATE_Ax(OP_EXTRAARG, extra);
 }
 
@@ -1807,12 +1815,12 @@ void luaK_setlist (FuncState *fs, int base, int nelems, int tostore) {
   lua_assert(tostore != 0);
   if (tostore == LUA_MULTRET)
     tostore = 0;
-  if (nelems <= MAXARG_C)
-    luaK_codeABC(fs, OP_SETLIST, base, tostore, nelems);
+  if (nelems <= MAXARG_vC)
+    luaK_codevABCk(fs, OP_SETLIST, base, tostore, nelems, 0);
   else {
-    int extra = nelems / (MAXARG_C + 1);
-    nelems %= (MAXARG_C + 1);
-    luaK_codeABCk(fs, OP_SETLIST, base, tostore, nelems, 1);
+    int extra = nelems / (MAXARG_vC + 1);
+    nelems %= (MAXARG_vC + 1);
+    luaK_codevABCk(fs, OP_SETLIST, base, tostore, nelems, 1);
     codeextraarg(fs, extra);
   }
   fs->freereg = base + 1;  /* free registers with list values */
@@ -1839,6 +1847,7 @@ static int finaltarget (Instruction *code, int i) {
 ** Do a final pass over the code of a function, doing small peephole
 ** optimizations and adjustments.
 */
+#include "lopnames.h"
 void luaK_finish (FuncState *fs) {
   int i;
   Proto *p = fs->f;

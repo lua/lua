@@ -952,7 +952,7 @@ static void constructor (LexState *ls, expdesc *t) {
      sep -> ',' | ';' */
   FuncState *fs = ls->fs;
   int line = ls->linenumber;
-  int pc = luaK_codeABC(fs, OP_NEWTABLE, 0, 0, 0);
+  int pc = luaK_codevABCk(fs, OP_NEWTABLE, 0, 0, 0, 0);
   ConsControl cc;
   luaK_code(fs, 0);  /* space for extra arg. */
   cc.na = cc.nh = cc.tostore = 0;

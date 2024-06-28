@@ -19,25 +19,30 @@
         3 3 2 2 2 2 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0
         1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
 iABC          C(8)     |      B(8)     |k|     A(8)      |   Op(7)     |
+ivABC         vC(10)     |     vB(6)   |k|     A(8)      |   Op(7)     |
 iABx                Bx(17)               |     A(8)      |   Op(7)     |
 iAsBx              sBx (signed)(17)      |     A(8)      |   Op(7)     |
 iAx                           Ax(25)                     |   Op(7)     |
 isJ                           sJ (signed)(25)            |   Op(7)     |
 
+  ('v' stands for "variant", 's' for "signed", 'x' for "extended".)
   A signed argument is represented in excess K: The represented value is
   the written unsigned value minus K, where K is half (rounded down) the
   maximum value for the corresponding unsigned argument.
 ===========================================================================*/
 
 
-enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
+/* basic instruction formats */
+enum OpMode {iABC, ivABC, iABx, iAsBx, iAx, isJ};
 
 
 /*
 ** size and position of opcode arguments.
 */
 #define SIZE_C		8
+#define SIZE_vC		10
 #define SIZE_B		8
+#define SIZE_vB		6
 #define SIZE_Bx		(SIZE_C + SIZE_B + 1)
 #define SIZE_A		8
 #define SIZE_Ax		(SIZE_Bx + SIZE_A)
@@ -50,7 +55,9 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 #define POS_A		(POS_OP + SIZE_OP)
 #define POS_k		(POS_A + SIZE_A)
 #define POS_B		(POS_k + 1)
+#define POS_vB		(POS_k + 1)
 #define POS_C		(POS_B + SIZE_B)
+#define POS_vC		(POS_vB + SIZE_vB)
 
 #define POS_Bx		POS_k
 
@@ -95,7 +102,9 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 
 #define MAXARG_A	((1<<SIZE_A)-1)
 #define MAXARG_B	((1<<SIZE_B)-1)
+#define MAXARG_vB	((1<<SIZE_vB)-1)
 #define MAXARG_C	((1<<SIZE_C)-1)
+#define MAXARG_vC	((1<<SIZE_vC)-1)
 #define OFFSET_sC	(MAXARG_C >> 1)
 
 #define int2sC(i)	((i) + OFFSET_sC)
@@ -126,16 +135,24 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 #define GETARG_A(i)	getarg(i, POS_A, SIZE_A)
 #define SETARG_A(i,v)	setarg(i, v, POS_A, SIZE_A)
 
-#define GETARG_B(i)	check_exp(checkopm(i, iABC), getarg(i, POS_B, SIZE_B))
+#define GETARG_B(i)  \
+	check_exp(checkopm(i, iABC), getarg(i, POS_B, SIZE_B))
+#define GETARG_vB(i)  \
+	check_exp(checkopm(i, ivABC), getarg(i, POS_vB, SIZE_vB))
 #define GETARG_sB(i)	sC2int(GETARG_B(i))
 #define SETARG_B(i,v)	setarg(i, v, POS_B, SIZE_B)
+#define SETARG_vB(i,v)	setarg(i, v, POS_vB, SIZE_vB)
 
-#define GETARG_C(i)	check_exp(checkopm(i, iABC), getarg(i, POS_C, SIZE_C))
+#define GETARG_C(i)  \
+	check_exp(checkopm(i, iABC), getarg(i, POS_C, SIZE_C))
+#define GETARG_vC(i)  \
+	check_exp(checkopm(i, ivABC), getarg(i, POS_vC, SIZE_vC))
 #define GETARG_sC(i)	sC2int(GETARG_C(i))
 #define SETARG_C(i,v)	setarg(i, v, POS_C, SIZE_C)
+#define SETARG_vC(i,v)	setarg(i, v, POS_vC, SIZE_vC)
 
-#define TESTARG_k(i)	check_exp(checkopm(i, iABC), (cast_int(((i) & (1u << POS_k)))))
-#define GETARG_k(i)	check_exp(checkopm(i, iABC), getarg(i, POS_k, 1))
+#define TESTARG_k(i)	(cast_int(((i) & (1u << POS_k))))
+#define GETARG_k(i)	getarg(i, POS_k, 1)
 #define SETARG_k(i,v)	setarg(i, v, POS_k, 1)
 
 #define GETARG_Bx(i)	check_exp(checkopm(i, iABx), getarg(i, POS_Bx, SIZE_Bx))
@@ -158,6 +175,12 @@ enum OpMode {iABC, iABx, iAsBx, iAx, isJ};  /* basic instruction formats */
 			| (cast(Instruction, a)<<POS_A) \
 			| (cast(Instruction, b)<<POS_B) \
 			| (cast(Instruction, c)<<POS_C) \
+			| (cast(Instruction, k)<<POS_k))
+
+#define CREATE_vABCk(o,a,b,c,k)	((cast(Instruction, o)<<POS_OP) \
+			| (cast(Instruction, a)<<POS_A) \
+			| (cast(Instruction, b)<<POS_vB) \
+			| (cast(Instruction, c)<<POS_vC) \
 			| (cast(Instruction, k)<<POS_k))
 
 #define CREATE_ABx(o,a,bc)	((cast(Instruction, o)<<POS_OP) \
@@ -306,7 +329,7 @@ OP_TFORPREP,/*	A Bx	create upvalue for R[A + 3]; pc+=Bx		*/
 OP_TFORCALL,/*	A C	R[A+4], ... ,R[A+3+C] := R[A](R[A+1], R[A+2]);	*/
 OP_TFORLOOP,/*	A Bx	if R[A+2] ~= nil then { R[A]=R[A+2]; pc -= Bx }	*/
 
-OP_SETLIST,/*	A B C k	R[A][C+i] := R[A+i], 1 <= i <= B		*/
+OP_SETLIST,/*	A vB vC k	R[A][vC+i] := R[A+i], 1 <= i <= vB	*/
 
 OP_CLOSURE,/*	A Bx	R[A] := closure(KPROTO[Bx])			*/
 
