@@ -59,11 +59,8 @@ static const char *const CLIBS = "_CLIBS";
 #define setprogdir(L)           ((void)0)
 
 
-/*
-** Special type equivalent to '(void*)' for functions in gcc
-** (to suppress warnings when converting function pointers)
-*/
-typedef void (*voidf)(void);
+/* cast void* to a Lua function */
+#define cast_Lfunc(p)	cast(lua_CFunction, cast_func(p))
 
 
 /*
@@ -96,25 +93,12 @@ static lua_CFunction lsys_sym (lua_State *L, void *lib, const char *sym);
 #if defined(LUA_USE_DLOPEN)	/* { */
 /*
 ** {========================================================================
-** This is an implementation of loadlib based on the dlfcn interface.
-** The dlfcn interface is available in Linux, SunOS, Solaris, IRIX, FreeBSD,
-** NetBSD, AIX 4.2, HPUX 11, and  probably most other Unix flavors, at least
-** as an emulation layer on top of native functions.
+** This is an implementation of loadlib based on the dlfcn interface,
+** which is available in all POSIX systems.
 ** =========================================================================
 */
 
 #include <dlfcn.h>
-
-/*
-** Macro to convert pointer-to-void* to pointer-to-function. This cast
-** is undefined according to ISO C, but POSIX assumes that it works.
-** (The '__extension__' in gnu compilers is only to avoid warnings.)
-*/
-#if defined(__GNUC__)
-#define cast_func(p) (__extension__ (lua_CFunction)(p))
-#else
-#define cast_func(p) ((lua_CFunction)(p))
-#endif
 
 
 static void lsys_unloadlib (void *lib) {
@@ -131,7 +115,7 @@ static void *lsys_load (lua_State *L, const char *path, int seeglb) {
 
 
 static lua_CFunction lsys_sym (lua_State *L, void *lib, const char *sym) {
-  lua_CFunction f = cast_func(dlsym(lib, sym));
+  lua_CFunction f = cast_Lfunc(dlsym(lib, sym));
   if (l_unlikely(f == NULL))
     lua_pushstring(L, dlerror());
   return f;
@@ -207,7 +191,7 @@ static void *lsys_load (lua_State *L, const char *path, int seeglb) {
 
 
 static lua_CFunction lsys_sym (lua_State *L, void *lib, const char *sym) {
-  lua_CFunction f = (lua_CFunction)(voidf)GetProcAddress((HMODULE)lib, sym);
+  lua_CFunction f = cast_Lfunc(GetProcAddress((HMODULE)lib, sym));
   if (f == NULL) pusherror(L);
   return f;
 }

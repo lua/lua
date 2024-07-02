@@ -153,6 +153,26 @@ typedef LUAI_UACINT l_uacInt;
 
 
 /*
+** Special type equivalent to '(void*)' for functions (to suppress some
+** warnings when converting function pointers)
+*/
+typedef void (*voidf)(void);
+
+
+/*
+** Macro to convert pointer-to-void* to pointer-to-function. This cast
+** is undefined according to ISO C, but POSIX assumes that it works.
+** (The '__extension__' in gnu compilers is only to avoid warnings.)
+*/
+#if defined(__GNUC__)
+#define cast_func(p) (__extension__ (voidf)(p))
+#else
+#define cast_func(p) ((voidf)(p))
+#endif
+
+
+
+/*
 ** non-return type
 */
 #if !defined(l_noret)
