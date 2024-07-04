@@ -437,27 +437,80 @@ static int handle_luainit (lua_State *L) {
 ** lua_saveline defines how to "save" a read line in a "history".
 ** lua_freeline defines how to free a line read by lua_readline.
 */
-#if !defined(lua_readline)	/* { */
 
-#if defined(LUA_USE_READLINE)	/* { */
+#if defined(LUA_USE_READLINE)
 
 #include <readline/readline.h>
 #include <readline/history.h>
 #define lua_initreadline(L)	((void)L, rl_readline_name="lua")
-#define lua_readline(L,b,p)	((void)L, ((b)=readline(p)) != NULL)
-#define lua_saveline(L,line)	((void)L, add_history(line))
-#define lua_freeline(L,b)	((void)L, free(b))
+#define lua_readline(b,p)	((void)b, readline(p))
+#define lua_saveline(line)	add_history(line)
+#define lua_freeline(b)		free(b)
 
-#else				/* }{ */
+#endif
+
+
+#if !defined(lua_readline)	/* { */
+
+/* pointer to dynamically loaded 'readline' function (if any) */
+typedef char *(*l_readline_t) (const char *prompt);
+static l_readline_t l_readline = NULL;
+
+static char *lua_readline (char *buff, const char *prompt) {
+  if (l_readline != NULL)  /* is there a dynamic 'readline'? */
+    return (*l_readline)(prompt);  /* use it */
+  else {  /* emulate 'readline' over 'buff' */
+    fputs(prompt, stdout);
+    fflush(stdout);  /* show prompt */
+    return fgets(buff, LUA_MAXINPUT, stdin);  /* read line */
+  }
+}
+
+
+/* pointer to dynamically loaded 'add_history' function (if any) */
+typedef void (*l_addhist_t) (const char *string);
+static l_addhist_t l_addhist = NULL;
+
+static void lua_saveline (const char *line) {
+  if (l_addhist != NULL)  /* is there a dynamic 'add_history'? */
+    (*l_addhist)(line);  /* use it */
+  /* else nothing to be done */
+}
+
+
+static void lua_freeline (char *line) {
+  if (l_readline != NULL)  /* is there a dynamic 'readline'? */
+    free(line);  /* free line created by it */
+  /* else 'lua_readline' used an automatic buffer; nothing to free */
+}
+
+
+#if !defined(LUA_USE_DLOPEN) || !defined(LUA_READLINELIB)
 
 #define lua_initreadline(L)  ((void)L)
-#define lua_readline(L,b,p) \
-        ((void)L, fputs(p, stdout), fflush(stdout),  /* show prompt */ \
-        fgets(b, LUA_MAXINPUT, stdin) != NULL)  /* get line */
-#define lua_saveline(L,line)	{ (void)L; (void)line; }
-#define lua_freeline(L,b)	{ (void)L; (void)b; }
 
-#endif				/* } */
+#else /* { */
+
+#include <dlfcn.h>
+
+
+static void lua_initreadline (lua_State *L) {
+  void *lib = dlopen(LUA_READLINELIB, RTLD_NOW | RTLD_LOCAL);
+  if (lib == NULL)
+    lua_warning(L, "library '" LUA_READLINELIB "'not found", 0);
+  else {
+    const char **name = cast(const char**, dlsym(lib, "rl_readline_name"));
+    if (name != NULL)
+      *name = "Lua";
+    l_readline = cast(l_readline_t, cast_func(dlsym(lib, "readline")));
+    if (l_readline == NULL)
+      lua_warning(L, "unable to load 'readline'", 0);
+    else
+      l_addhist = cast(l_addhist_t, cast_func(dlsym(lib, "add_history")));
+  }
+}
+
+#endif	/* } */
 
 #endif				/* } */
 
@@ -505,11 +558,10 @@ static int incomplete (lua_State *L, int status) {
 */
 static int pushline (lua_State *L, int firstline) {
   char buffer[LUA_MAXINPUT];
-  char *b = buffer;
   size_t l;
   const char *prmt = get_prompt(L, firstline);
-  int readstatus = lua_readline(L, b, prmt);
-  if (readstatus == 0)
+  char *b = lua_readline(buffer, prmt);
+  if (b == NULL)
     return 0;  /* no input (prompt will be popped by caller) */
   lua_pop(L, 1);  /* remove prompt */
   l = strlen(b);
@@ -519,7 +571,7 @@ static int pushline (lua_State *L, int firstline) {
     lua_pushfstring(L, "return %s", b + 1);  /* change '=' to 'return' */
   else
     lua_pushlstring(L, b, l);
-  lua_freeline(L, b);
+  lua_freeline(b);
   return 1;
 }
 
@@ -535,7 +587,7 @@ static int addreturn (lua_State *L) {
   if (status == LUA_OK) {
     lua_remove(L, -2);  /* remove modified line */
     if (line[0] != '\0')  /* non empty? */
-      lua_saveline(L, line);  /* keep history */
+      lua_saveline(line);  /* keep history */
   }
   else
     lua_pop(L, 2);  /* pop result from 'luaL_loadbuffer' and modified line */
@@ -552,7 +604,7 @@ static int multiline (lua_State *L) {
     const char *line = lua_tolstring(L, 1, &len);  /* get what it has */
     int status = luaL_loadbuffer(L, line, len, "=stdin");  /* try it */
     if (!incomplete(L, status) || !pushline(L, 0)) {
-      lua_saveline(L, line);  /* keep history */
+      lua_saveline(line);  /* keep history */
       return status;  /* cannot or should not try to add continuation line */
     }
     lua_pushliteral(L, "\n");  /* add newline... */

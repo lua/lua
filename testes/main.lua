@@ -368,20 +368,18 @@ assert(string.find(t, prompt .. ".*" .. prompt .. ".*" .. prompt))
 
 
 -- non-string prompt
-prompt =
-  "local C = 0;\z
-   _PROMPT=setmetatable({},{__tostring = function () \z
-     C = C + 1; return C end})"
+prompt = [[
+  local C = 'X';
+   _PROMPT=setmetatable({},{__tostring = function ()
+     C = C .. 'X'; return C end})
+]]
 prepfile[[ --
 a = 2
 ]]
 RUN([[lua -e "%s" -i < %s > %s]], prompt, prog, out)
 local t = getoutput()
-assert(string.find(t, [[
-1 --
-2a = 2
-3
-]], 1, true))
+-- skip version line and then check the presence of the three prompts
+assert(string.find(t, "^.-\nXX[^\nX]*\n?XXX[^\nX]*\n?XXXX\n?$"))
 
 
 -- test for error objects

@@ -58,15 +58,26 @@
 #endif
 
 
+/*
+** When Posix DLL ('LUA_USE_DLOPEN') is enabled, the Lua stand-alone
+** application will try to dynamically link a 'readline' facility
+** for its REPL.  In that case, LUA_READLINELIB is the name of the
+** library it will look for those facilities.  If lua.c cannot open
+** the specified library, it will generate a warning and then run
+** without 'readline'.  If that macro is not defined, lua.c will not
+** use 'readline'.
+*/
 #if defined(LUA_USE_LINUX)
 #define LUA_USE_POSIX
 #define LUA_USE_DLOPEN		/* needs an extra library: -ldl */
+#define LUA_READLINELIB		"libreadline.so"
 #endif
 
 
 #if defined(LUA_USE_MACOSX)
 #define LUA_USE_POSIX
 #define LUA_USE_DLOPEN		/* MacOS does not need -ldl */
+#define LUA_READLINELIB		"libedit.dylib"
 #endif
 
 
