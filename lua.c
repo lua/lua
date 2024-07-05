@@ -565,10 +565,7 @@ static int pushline (lua_State *L, int firstline) {
   l = strlen(b);
   if (l > 0 && b[l-1] == '\n')  /* line ends with newline? */
     b[--l] = '\0';  /* remove it */
-  if (firstline && b[0] == '=')  /* for compatibility with 5.2, ... */
-    lua_pushfstring(L, "return %s", b + 1);  /* change '=' to 'return' */
-  else
-    lua_pushlstring(L, b, l);
+  lua_pushlstring(L, b, l);
   lua_freeline(b);
   return 1;
 }
