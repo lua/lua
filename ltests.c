@@ -822,7 +822,7 @@ static int listlocals (lua_State *L) {
 
 
 
-static void printstack (lua_State *L) {
+void lua_printstack (lua_State *L) {
   int i;
   int n = lua_gettop(L);
   printf("stack: >>\n");
@@ -1652,7 +1652,7 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
         printf("%s\n", luaL_tolstring(L1, n, NULL));
         lua_pop(L1, 1);
       }
-      else printstack(L1);
+      else lua_printstack(L1);
     }
     else if EQ("print") {
       const char *msg = getstring;

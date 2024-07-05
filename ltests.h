@@ -64,7 +64,6 @@ LUA_API Memcontrol l_memcontrol;
 extern void *l_Trick;
 
 
-
 /*
 ** Function to traverse and check all memory used by Lua
 */
@@ -75,6 +74,11 @@ LUAI_FUNC int lua_checkmemory (lua_State *L);
 */
 struct GCObject;
 LUAI_FUNC void lua_printobj (lua_State *L, struct GCObject *o);
+
+/*
+** Function to print the stack
+*/
+LUAI_FUNC void lua_printstack (lua_State *L);
 
 
 /* test for lock/unlock */
