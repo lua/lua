@@ -349,6 +349,11 @@ prepfile("a = [[b\nc\nd\ne]]\n=a")
 RUN([[lua -e"_PROMPT='' _PROMPT2=''" -i < %s > %s]], prog, out)
 checkprogout("b\nc\nd\ne\n\n")
 
+-- input interrupted in continuation line
+prepfile("a.\n")
+RUN([[lua -i < %s > /dev/null 2> %s]], prog, out)
+checkprogout("near <eof>\n")
+
 local prompt = "alo"
 prepfile[[ --
 a = 2
