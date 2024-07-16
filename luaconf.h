@@ -750,13 +750,13 @@
 @@ LUAI_MAXSTACK limits the size of the Lua stack.
 ** CHANGE it if you need a different limit. This limit is arbitrary;
 ** its only purpose is to stop Lua from consuming unlimited stack
-** space (and to reserve some numbers for pseudo-indices).
-** (It must fit into max(size_t)/32 and max(int)/2.)
+** space and to reserve some numbers for pseudo-indices.
+** (It must fit into max(int)/2.)
 */
-#if LUAI_IS32INT
+#if 1000000 < (INT_MAX / 2)
 #define LUAI_MAXSTACK		1000000
 #else
-#define LUAI_MAXSTACK		15000
+#define LUAI_MAXSTACK		(INT_MAX / 2u)
 #endif
 
 

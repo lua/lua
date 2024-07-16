@@ -503,8 +503,8 @@ struct lua_Debug {
   unsigned char nparams;/* (u) number of parameters */
   char isvararg;        /* (u) */
   char istailcall;	/* (t) */
-  unsigned short ftransfer;   /* (r) index of first value transferred */
-  unsigned short ntransfer;   /* (r) number of transferred values */
+  int ftransfer;   /* (r) index of first value transferred */
+  int ntransfer;   /* (r) number of transferred values */
   char short_src[LUA_IDSIZE]; /* (S) */
   /* private part */
   struct CallInfo *i_ci;  /* active function */

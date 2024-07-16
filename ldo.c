@@ -171,6 +171,24 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 ** ===================================================================
 */
 
+/* some stack space for error handling */
+#define STACKERRSPACE	200
+
+
+/* maximum stack size that respects size_t */
+#define MAXSTACK_BYSIZET  ((MAX_SIZET / sizeof(StackValue)) - STACKERRSPACE)
+
+/*
+** Minimum between LUAI_MAXSTACK and MAXSTACK_BYSIZET
+** (Maximum size for the stack must respect size_t.)
+*/
+#define MAXSTACK	cast_int(LUAI_MAXSTACK < MAXSTACK_BYSIZET  \
+			        ? LUAI_MAXSTACK : MAXSTACK_BYSIZET)
+
+
+/* stack size with extra space for error handling */
+#define ERRORSTACKSIZE	(MAXSTACK + STACKERRSPACE)
+
 
 /*
 ** Change all pointers to the stack into offsets.
@@ -208,9 +226,6 @@ static void correctstack (lua_State *L) {
 }
 
 
-/* some space for error handling */
-#define ERRORSTACKSIZE	(LUAI_MAXSTACK + 200)
-
 /*
 ** Reallocate the stack to a new size, correcting all pointers into it.
 ** In ISO C, any pointer use after the pointer has been deallocated is
@@ -227,7 +242,7 @@ int luaD_reallocstack (lua_State *L, int newsize, int raiseerror) {
   int i;
   StkId newstack;
   int oldgcstop = G(L)->gcstopem;
-  lua_assert(newsize <= LUAI_MAXSTACK || newsize == ERRORSTACKSIZE);
+  lua_assert(newsize <= MAXSTACK || newsize == ERRORSTACKSIZE);
   relstack(L);  /* change pointers to offsets */
   G(L)->gcstopem = 1;  /* stop emergency collection */
   newstack = luaM_reallocvector(L, L->stack.p, oldsize + EXTRA_STACK,
@@ -254,7 +269,7 @@ int luaD_reallocstack (lua_State *L, int newsize, int raiseerror) {
 */
 int luaD_growstack (lua_State *L, int n, int raiseerror) {
   int size = stacksize(L);
-  if (l_unlikely(size > LUAI_MAXSTACK)) {
+  if (l_unlikely(size > MAXSTACK)) {
     /* if stack is larger than maximum, thread is already using the
        extra space reserved for errors, that is, thread is handling
        a stack error; cannot grow further than that. */
@@ -263,14 +278,14 @@ int luaD_growstack (lua_State *L, int n, int raiseerror) {
       luaD_throw(L, LUA_ERRERR);  /* error inside message handler */
     return 0;  /* if not 'raiseerror', just signal it */
   }
-  else if (n < LUAI_MAXSTACK) {  /* avoids arithmetic overflows */
+  else if (n < MAXSTACK) {  /* avoids arithmetic overflows */
     int newsize = 2 * size;  /* tentative new size */
     int needed = cast_int(L->top.p - L->stack.p) + n;
-    if (newsize > LUAI_MAXSTACK)  /* cannot cross the limit */
-      newsize = LUAI_MAXSTACK;
+    if (newsize > MAXSTACK)  /* cannot cross the limit */
+      newsize = MAXSTACK;
     if (newsize < needed)  /* but must respect what was asked for */
       newsize = needed;
-    if (l_likely(newsize <= LUAI_MAXSTACK))
+    if (l_likely(newsize <= MAXSTACK))
       return luaD_reallocstack(L, newsize, raiseerror);
   }
   /* else stack overflow */
@@ -306,17 +321,17 @@ static int stackinuse (lua_State *L) {
 ** to twice the current use. (So, the final stack size is at most 2/3 the
 ** previous size, and half of its entries are empty.)
 ** As a particular case, if stack was handling a stack overflow and now
-** it is not, 'max' (limited by LUAI_MAXSTACK) will be smaller than
+** it is not, 'max' (limited by MAXSTACK) will be smaller than
 ** stacksize (equal to ERRORSTACKSIZE in this case), and so the stack
 ** will be reduced to a "regular" size.
 */
 void luaD_shrinkstack (lua_State *L) {
   int inuse = stackinuse(L);
-  int max = (inuse > LUAI_MAXSTACK / 3) ? LUAI_MAXSTACK : inuse * 3;
+  int max = (inuse > MAXSTACK / 3) ? MAXSTACK : inuse * 3;
   /* if thread is currently not handling a stack overflow and its
      size is larger than maximum "reasonable" size, shrink it */
-  if (inuse <= LUAI_MAXSTACK && stacksize(L) > max) {
-    int nsize = (inuse > LUAI_MAXSTACK / 2) ? LUAI_MAXSTACK : inuse * 2;
+  if (inuse <= MAXSTACK && stacksize(L) > max) {
+    int nsize = (inuse > MAXSTACK / 2) ? MAXSTACK : inuse * 2;
     luaD_reallocstack(L, nsize, 0);  /* ok if that fails */
   }
   else  /* don't change stack */
@@ -408,7 +423,7 @@ static void rethook (lua_State *L, CallInfo *ci, int nres) {
         delta = ci->u.l.nextraargs + p->numparams + 1;
     }
     ci->func.p += delta;  /* if vararg, back to virtual 'func' */
-    ftransfer = cast(unsigned short, firstres - ci->func.p);
+    ftransfer = cast_int(firstres - ci->func.p);
     luaD_hook(L, LUA_HOOKRET, -1, ftransfer, nres);  /* call it */
     ci->func.p -= delta;
   }

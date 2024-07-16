@@ -207,8 +207,8 @@ struct CallInfo {
     int nyield;  /* number of values yielded */
     int nres;  /* number of values returned */
     struct {  /* info about transferred values (for call/return hooks) */
-      unsigned short ftransfer;  /* offset of first value transferred */
-      unsigned short ntransfer;  /* number of values transferred */
+      int ftransfer;  /* offset of first value transferred */
+      int ntransfer;  /* number of values transferred */
     } transferinfo;
   } u2;
   short nresults;  /* expected number of results from this function */
