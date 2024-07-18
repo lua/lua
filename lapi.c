@@ -1022,10 +1022,15 @@ LUA_API int lua_setiuservalue (lua_State *L, int idx, int n) {
 */
 
 
+#define MAXRESULTS	250
+
+
 #define checkresults(L,na,nr) \
-     api_check(L, (nr) == LUA_MULTRET \
+     (api_check(L, (nr) == LUA_MULTRET \
                || (L->ci->top.p - L->top.p >= (nr) - (na)), \
-	"results from function overflow current stack size")
+	"results from function overflow current stack size"), \
+      api_check(L, LUA_MULTRET <= (nr) && (nr) <= MAXRESULTS,  \
+                   "invalid number of results"))
 
 
 LUA_API void lua_callk (lua_State *L, int nargs, int nresults,

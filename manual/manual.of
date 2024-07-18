@@ -3028,13 +3028,19 @@ When the function returns,
 all arguments and the function value are popped
 and the call results are pushed onto the stack.
 The number of results is adjusted to @id{nresults},
-unless @id{nresults} is @defid{LUA_MULTRET}.
-In this case, all results from the function are pushed;
+unless @id{nresults} is @defid{LUA_MULTRET},
+which makes all results from the function to be pushed.
+In the first case, an explicit number of results,
+the caller must ensure that the stack has space for the
+returned values.
+In the second case, all results,
 Lua takes care that the returned values fit into the stack space,
 but it does not ensure any extra space in the stack.
 The function results are pushed onto the stack in direct order
 (the first result is pushed first),
 so that after the call the last result is on the top of the stack.
+
+The maximum value for @id{nresults} is 250.
 
 Any error while calling and running the function is propagated upwards
 (with a @id{longjmp}).

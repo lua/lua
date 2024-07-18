@@ -724,6 +724,8 @@ static void const2exp (TValue *v, expdesc *e) {
 */
 void luaK_setreturns (FuncState *fs, expdesc *e, int nresults) {
   Instruction *pc = &getinstruction(fs, e);
+  if (nresults + 1 > MAXARG_C)
+    luaX_syntaxerror(fs->ls, "too many multiple results");
   if (e->k == VCALL)  /* expression is an open function call? */
     SETARG_C(*pc, nresults + 1);
   else {
