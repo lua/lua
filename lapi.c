@@ -207,7 +207,7 @@ LUA_API void lua_settop (lua_State *L, int idx) {
   }
   newtop = L->top.p + diff;
   if (diff < 0 && L->tbclist.p >= newtop) {
-    lua_assert(hastocloseCfunc(ci->nresults));
+    lua_assert(ci->callstatus & CIST_CLSRET);
     newtop = luaF_close(L, newtop, CLOSEKTOP, 0);
   }
   L->top.p = newtop;  /* correct top only after closing any upvalue */
@@ -219,7 +219,7 @@ LUA_API void lua_closeslot (lua_State *L, int idx) {
   StkId level;
   lua_lock(L);
   level = index2stack(L, idx);
-  api_check(L, hastocloseCfunc(L->ci->nresults) && L->tbclist.p == level,
+  api_check(L, (L->ci->callstatus & CIST_CLSRET) && L->tbclist.p == level,
      "no variable to close at given level");
   level = luaF_close(L, level, CLOSEKTOP, 0);
   setnilvalue(s2v(level));
@@ -1287,9 +1287,7 @@ LUA_API void lua_toclose (lua_State *L, int idx) {
   nresults = L->ci->nresults;
   api_check(L, L->tbclist.p < o, "given index below or equal a marked one");
   luaF_newtbcupval(L, o);  /* create new to-be-closed upvalue */
-  if (!hastocloseCfunc(nresults))  /* function not marked yet? */
-    L->ci->nresults = codeNresults(nresults);  /* mark it */
-  lua_assert(hastocloseCfunc(L->ci->nresults));
+  L->ci->callstatus |= CIST_CLSRET;  /* mark that function has TBC slots */
   lua_unlock(L);
 }
 

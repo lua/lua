@@ -165,6 +165,23 @@ do  -- test returning more results than fit in the caller stack
 end
 
 
+do  -- testing multipe returns
+  local function foo (n)
+    if n > 0 then return n, foo(n - 1) end
+  end
+
+  local t = {T.testC("call 1 10; return 10", foo, 20)}
+  assert(t[1] == 20 and t[10] == 11 and t[11] == nil)
+
+  local t = table.pack(T.testC("call 1 10; return 10", foo, 2))
+  assert(t[1] == 2 and t[2] == 1 and t[3] == nil and t.n == 10)
+
+  local t = {T.testC([[
+    checkstack 300 "error"; call 1 250; return 250]], foo, 250)}
+  assert(t[1] == 250 and t[250] == 1 and t[251] == nil)
+end
+
+
 -- testing globals
 _G.AA = 14; _G.BB = "a31"
 local a = {T.testC[[

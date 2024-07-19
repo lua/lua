@@ -462,22 +462,23 @@ l_sinline void moveresults (lua_State *L, StkId res, int nres, int wanted) {
   StkId firstresult;
   int i;
   switch (wanted) {  /* handle typical cases separately */
-    case 0:  /* no values needed */
+    case 0 + 1:  /* no values needed */
       L->top.p = res;
       return;
-    case 1:  /* one value needed */
+    case 1 + 1:  /* one value needed */
       if (nres == 0)   /* no results? */
         setnilvalue(s2v(res));  /* adjust with nil */
       else  /* at least one result */
         setobjs2s(L, res, L->top.p - nres);  /* move it to proper place */
       L->top.p = res + 1;
       return;
-    case LUA_MULTRET:
+    case LUA_MULTRET + 1:
       wanted = nres;  /* we want all results */
       break;
     default:  /* two/more results and/or to-be-closed variables */
-      if (hastocloseCfunc(wanted)) {  /* to-be-closed variables? */
-        L->ci->callstatus |= CIST_CLSRET;  /* in case of yields */
+      if (!(wanted & CIST_CLSRET))
+        wanted--;
+      else {  /* to-be-closed variables? */
         L->ci->u2.nres = nres;
         res = luaF_close(L, res, CLOSEKTOP, 1);
         L->ci->callstatus &= ~CIST_CLSRET;
@@ -486,7 +487,7 @@ l_sinline void moveresults (lua_State *L, StkId res, int nres, int wanted) {
           rethook(L, L->ci, nres);
           res = restorestack(L, savedres);  /* hook can move stack */
         }
-        wanted = decodeNresults(wanted);
+        wanted = (wanted & ~CIST_CLSRET) - 1;
         if (wanted == LUA_MULTRET)
           wanted = nres;  /* we want all results */
       }
@@ -511,8 +512,10 @@ l_sinline void moveresults (lua_State *L, StkId res, int nres, int wanted) {
 ** that.
 */
 void luaD_poscall (lua_State *L, CallInfo *ci, int nres) {
-  int wanted = ci->nresults;
-  if (l_unlikely(L->hookmask && !hastocloseCfunc(wanted)))
+  int wanted = ci->nresults + 1;
+  if (ci->callstatus & CIST_CLSRET)
+    wanted |= CIST_CLSRET;  /* don't check hook in this case */
+  else if (l_unlikely(L->hookmask))
     rethook(L, ci, nres);
   /* move results to proper place */
   moveresults(L, ci->func.p, nres, wanted);
@@ -736,7 +739,6 @@ static int finishpcallk (lua_State *L,  CallInfo *ci) {
 static void finishCcall (lua_State *L, CallInfo *ci) {
   int n;  /* actual number of results from C function */
   if (ci->callstatus & CIST_CLSRET) {  /* was returning? */
-    lua_assert(hastocloseCfunc(ci->nresults));
     n = ci->u2.nres;  /* just redo 'luaD_poscall' */
     /* don't need to reset CIST_CLSRET, as it will be set again anyway */
   }
