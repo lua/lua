@@ -1103,7 +1103,7 @@ LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
     ci->u2.funcidx = cast_int(savestack(L, c.func));
     ci->u.c.old_errfunc = L->errfunc;
     L->errfunc = func;
-    setoah(ci->callstatus, L->allowhook);  /* save value of 'allowhook' */
+    setoah(ci, L->allowhook);  /* save value of 'allowhook' */
     ci->callstatus |= CIST_YPCALL;  /* function can do error recovery */
     luaD_call(L, c.func, nresults);  /* do the call */
     ci->callstatus &= ~CIST_YPCALL;
@@ -1280,11 +1280,9 @@ LUA_API int lua_next (lua_State *L, int idx) {
 
 
 LUA_API void lua_toclose (lua_State *L, int idx) {
-  int nresults;
   StkId o;
   lua_lock(L);
   o = index2stack(L, idx);
-  nresults = L->ci->nresults;
   api_check(L, L->tbclist.p < o, "given index below or equal a marked one");
   luaF_newtbcupval(L, o);  /* create new to-be-closed upvalue */
   L->ci->callstatus |= CIST_CLSRET;  /* mark that function has TBC slots */

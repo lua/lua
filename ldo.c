@@ -452,49 +452,11 @@ static StkId tryfuncTM (lua_State *L, StkId func) {
 }
 
 
-/*
-** Given 'nres' results at 'firstResult', move 'wanted' of them to 'res'.
-** Handle most typical cases (zero results for commands, one result for
-** expressions, multiple results for tail calls/single parameters)
-** separated.
-*/
-l_sinline void moveresults (lua_State *L, StkId res, int nres, int wanted) {
-  StkId firstresult;
+/* Generic case for 'moveresult */
+l_sinline void genmoveresults (lua_State *L, StkId res, int nres,
+                                             int wanted) {
+  StkId firstresult = L->top.p - nres;  /* index of first result */
   int i;
-  switch (wanted) {  /* handle typical cases separately */
-    case 0 + 1:  /* no values needed */
-      L->top.p = res;
-      return;
-    case 1 + 1:  /* one value needed */
-      if (nres == 0)   /* no results? */
-        setnilvalue(s2v(res));  /* adjust with nil */
-      else  /* at least one result */
-        setobjs2s(L, res, L->top.p - nres);  /* move it to proper place */
-      L->top.p = res + 1;
-      return;
-    case LUA_MULTRET + 1:
-      wanted = nres;  /* we want all results */
-      break;
-    default:  /* two/more results and/or to-be-closed variables */
-      if (!(wanted & CIST_CLSRET))
-        wanted--;
-      else {  /* to-be-closed variables? */
-        L->ci->u2.nres = nres;
-        res = luaF_close(L, res, CLOSEKTOP, 1);
-        L->ci->callstatus &= ~CIST_CLSRET;
-        if (L->hookmask) {  /* if needed, call hook after '__close's */
-          ptrdiff_t savedres = savestack(L, res);
-          rethook(L, L->ci, nres);
-          res = restorestack(L, savedres);  /* hook can move stack */
-        }
-        wanted = (wanted & ~CIST_CLSRET) - 1;
-        if (wanted == LUA_MULTRET)
-          wanted = nres;  /* we want all results */
-      }
-      break;
-  }
-  /* generic case */
-  firstresult = L->top.p - nres;  /* index of first result */
   if (nres > wanted)  /* extra results? */
     nres = wanted;  /* don't need them */
   for (i = 0; i < nres; i++)  /* move all results to correct place */
@@ -506,19 +468,61 @@ l_sinline void moveresults (lua_State *L, StkId res, int nres, int wanted) {
 
 
 /*
+** Given 'nres' results at 'firstResult', move 'fwanted-1' of them
+** to 'res'.  Handle most typical cases (zero results for commands,
+** one result for expressions, multiple results for tail calls/single
+** parameters) separated. The flag CIST_CLSRET in 'fwanted', if set,
+** forces the swicth to go to the default case.
+*/
+l_sinline void moveresults (lua_State *L, StkId res, int nres,
+                                          l_uint32 fwanted) {
+  switch (fwanted) {  /* handle typical cases separately */
+    case 0 + 1:  /* no values needed */
+      L->top.p = res;
+      return;
+    case 1 + 1:  /* one value needed */
+      if (nres == 0)   /* no results? */
+        setnilvalue(s2v(res));  /* adjust with nil */
+      else  /* at least one result */
+        setobjs2s(L, res, L->top.p - nres);  /* move it to proper place */
+      L->top.p = res + 1;
+      return;
+    case LUA_MULTRET + 1:
+      genmoveresults(L, res, nres, nres);  /* we want all results */
+      break;
+    default: {  /* two/more results and/or to-be-closed variables */
+      int wanted = get_nresults(fwanted);
+      if (fwanted & CIST_CLSRET) {  /* to-be-closed variables? */
+        L->ci->u2.nres = nres;
+        res = luaF_close(L, res, CLOSEKTOP, 1);
+        L->ci->callstatus &= ~CIST_CLSRET;
+        if (L->hookmask) {  /* if needed, call hook after '__close's */
+          ptrdiff_t savedres = savestack(L, res);
+          rethook(L, L->ci, nres);
+          res = restorestack(L, savedres);  /* hook can move stack */
+        }
+        if (wanted == LUA_MULTRET)
+          wanted = nres;  /* we want all results */
+      }
+      genmoveresults(L, res, nres, wanted);
+      break;
+    }
+  }
+}
+
+
+/*
 ** Finishes a function call: calls hook if necessary, moves current
 ** number of results to proper place, and returns to previous call
 ** info. If function has to close variables, hook must be called after
 ** that.
 */
 void luaD_poscall (lua_State *L, CallInfo *ci, int nres) {
-  int wanted = ci->nresults + 1;
-  if (ci->callstatus & CIST_CLSRET)
-    wanted |= CIST_CLSRET;  /* don't check hook in this case */
-  else if (l_unlikely(L->hookmask))
+  l_uint32 fwanted = ci->callstatus & (CIST_CLSRET | CIST_NRESULTS);
+  if (l_unlikely(L->hookmask) && !(fwanted & CIST_CLSRET))
     rethook(L, ci, nres);
   /* move results to proper place */
-  moveresults(L, ci->func.p, nres, wanted);
+  moveresults(L, ci->func.p, nres, fwanted);
   /* function cannot be in any of these cases when returning */
   lua_assert(!(ci->callstatus &
         (CIST_HOOKED | CIST_YPCALL | CIST_FIN | CIST_TRAN | CIST_CLSRET)));
@@ -530,12 +534,12 @@ void luaD_poscall (lua_State *L, CallInfo *ci, int nres) {
 #define next_ci(L)  (L->ci->next ? L->ci->next : luaE_extendCI(L))
 
 
-l_sinline CallInfo *prepCallInfo (lua_State *L, StkId func, int nret,
-                                                int mask, StkId top) {
+l_sinline CallInfo *prepCallInfo (lua_State *L, StkId func, int nresults,
+                                                l_uint32 mask, StkId top) {
   CallInfo *ci = L->ci = next_ci(L);  /* new frame */
   ci->func.p = func;
-  ci->nresults = nret;
-  ci->callstatus = mask;
+  lua_assert(((nresults + 1) & ~CIST_NRESULTS) == 0);
+  ci->callstatus = mask | cast(l_uint32, nresults + 1);
   ci->top.p = top;
   return ci;
 }
@@ -664,7 +668,7 @@ l_sinline void ccall (lua_State *L, StkId func, int nResults, l_uint32 inc) {
     luaE_checkcstack(L);
   }
   if ((ci = luaD_precall(L, func, nResults)) != NULL) {  /* Lua function? */
-    ci->callstatus = CIST_FRESH;  /* mark that it is a "fresh" execute */
+    ci->callstatus |= CIST_FRESH;  /* mark that it is a "fresh" execute */
     luaV_execute(L, ci);  /* call it */
   }
   L->nCcalls -= inc;
@@ -709,7 +713,7 @@ static int finishpcallk (lua_State *L,  CallInfo *ci) {
     status = LUA_YIELD;  /* was interrupted by an yield */
   else {  /* error */
     StkId func = restorestack(L, ci->u2.funcidx);
-    L->allowhook = getoah(ci->callstatus);  /* restore 'allowhook' */
+    L->allowhook = getoah(ci);  /* restore 'allowhook' */
     func = luaF_close(L, func, status, 1);  /* can yield or raise an error */
     luaD_seterrorobj(L, status, func);
     luaD_shrinkstack(L);   /* restore stack size in case of overflow */

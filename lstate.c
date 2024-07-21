@@ -177,7 +177,6 @@ static void stack_init (lua_State *L1, lua_State *L) {
   ci->callstatus = CIST_C;
   ci->func.p = L1->top.p;
   ci->u.c.k = NULL;
-  ci->nresults = 0;
   setnilvalue(s2v(L1->top.p));  /* 'function' entry for this 'ci' */
   L1->top.p++;
   ci->top.p = L1->top.p + LUA_MINSTACK;

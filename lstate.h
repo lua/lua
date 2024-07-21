@@ -211,30 +211,44 @@ struct CallInfo {
       int ntransfer;  /* number of values transferred */
     } transferinfo;
   } u2;
-  short nresults;  /* expected number of results from this function */
-  unsigned short callstatus;
+  l_uint32 callstatus;
 };
 
 
 /*
 ** Bits in CallInfo status
 */
-#define CIST_OAH	(1<<0)	/* original value of 'allowhook' */
-#define CIST_C		(1<<1)	/* call is running a C function */
-#define CIST_FRESH	(1<<2)	/* call is on a fresh "luaV_execute" frame */
-#define CIST_HOOKED	(1<<3)	/* call is running a debug hook */
-#define CIST_YPCALL	(1<<4)	/* doing a yieldable protected call */
-#define CIST_TAIL	(1<<5)	/* call was tail called */
-#define CIST_HOOKYIELD	(1<<6)	/* last hook called yielded */
-#define CIST_FIN	(1<<7)	/* function "called" a finalizer */
-#define CIST_TRAN	(1<<8)	/* 'ci' has transfer information */
-#define CIST_CLSRET	(1<<9)  /* function is closing tbc variables */
-/* Bits 10-12 are used for CIST_RECST (see below) */
-#define CIST_RECST	10
+/* bits 0-7 are the expected number of results from this function + 1 */
+#define CIST_NRESULTS	0xff
+/* original value of 'allowhook' */
+#define CIST_OAH	(cast(l_uint32, 1) << 8)
+/* call is running a C function */
+#define CIST_C		(cast(l_uint32, 1) << 9)
+/* call is on a fresh "luaV_execute" frame */
+#define CIST_FRESH	(cast(l_uint32, 1) << 10)
+/* call is running a debug hook */
+#define CIST_HOOKED	(cast(l_uint32, 1) << 11)
+/* doing a yieldable protected call */
+#define CIST_YPCALL	(cast(l_uint32, 1) << 12)
+/* call was tail called */
+#define CIST_TAIL	(cast(l_uint32, 1) << 13)
+/* last hook called yielded */
+#define CIST_HOOKYIELD	(cast(l_uint32, 1) << 14)
+/* function "called" a finalizer */
+#define CIST_FIN	(cast(l_uint32, 1) << 15)
+/* 'ci' has transfer information */
+#define CIST_TRAN	(cast(l_uint32, 1) << 16)
+ /* function is closing tbc variables */
+#define CIST_CLSRET	(cast(l_uint32, 1) << 17)
+/* Bits 18-20 are used for CIST_RECST (see below) */
+#define CIST_RECST	18  /* the offset, not the mask */
 #if defined(LUA_COMPAT_LT_LE)
-#define CIST_LEQ	(1<<13)  /* using __lt for __le */
+/* using __lt for __le */
+#define CIST_LEQ	(cast(l_uint32, 1) << 21)
 #endif
 
+
+#define get_nresults(cs)  (cast_int((cs) & CIST_NRESULTS) - 1)
 
 /*
 ** Field CIST_RECST stores the "recover status", used to keep the error
@@ -246,7 +260,7 @@ struct CallInfo {
 #define setcistrecst(ci,st)  \
   check_exp(((st) & 7) == (st),   /* status must fit in three bits */  \
             ((ci)->callstatus = ((ci)->callstatus & ~(7 << CIST_RECST))  \
-                                                  | ((st) << CIST_RECST)))
+                                | (cast(l_uint32, st) << CIST_RECST)))
 
 
 /* active function is a Lua function */
@@ -255,9 +269,11 @@ struct CallInfo {
 /* call is running Lua code (not a hook) */
 #define isLuacode(ci)	(!((ci)->callstatus & (CIST_C | CIST_HOOKED)))
 
-/* assume that CIST_OAH has offset 0 and that 'v' is strictly 0/1 */
-#define setoah(st,v)	((st) = ((st) & ~CIST_OAH) | (v))
-#define getoah(st)	((st) & CIST_OAH)
+
+#define setoah(ci,v)  \
+  ((ci)->callstatus = ((v) ? (ci)->callstatus | CIST_OAH  \
+                           : (ci)->callstatus & ~CIST_OAH))
+#define getoah(ci)  (((ci)->callstatus & CIST_OAH) ? 1 : 0)
 
 
 /*

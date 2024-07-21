@@ -346,13 +346,13 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
           ar->nparams = 0;
         }
         else {
-          ar->isvararg = f->l.p->flag & PF_ISVARARG;
+          ar->isvararg = (f->l.p->flag & PF_ISVARARG) ? 1 : 0;
           ar->nparams = f->l.p->numparams;
         }
         break;
       }
       case 't': {
-        ar->istailcall = (ci) ? ci->callstatus & CIST_TAIL : 0;
+        ar->istailcall = (ci != NULL && (ci->callstatus & CIST_TAIL));
         break;
       }
       case 'n': {
