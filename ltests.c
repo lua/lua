@@ -1040,14 +1040,14 @@ static int table_query (lua_State *L) {
 
 static int query_GCparams (lua_State *L) {
   global_State *g = G(L);
-  lua_pushinteger(L, gettotalobjs(g));
-  lua_pushinteger(L, g->GCdebt);
-  lua_pushinteger(L, applygcparam(g, MINORMUL, 100));
-  lua_pushinteger(L, applygcparam(g, MAJORMINOR, 100));
-  lua_pushinteger(L, applygcparam(g, MINORMAJOR, 100));
-  lua_pushinteger(L, applygcparam(g, PAUSE, 100));
-  lua_pushinteger(L, applygcparam(g, STEPMUL, 100));
-  lua_pushinteger(L, applygcparam(g, STEPSIZE, 100));
+  lua_pushinteger(L, cast(lua_Integer, gettotalobjs(g)));
+  lua_pushinteger(L, cast(lua_Integer, g->GCdebt));
+  lua_pushinteger(L, cast(lua_Integer, applygcparam(g, MINORMUL, 100)));
+  lua_pushinteger(L, cast(lua_Integer, applygcparam(g, MAJORMINOR, 100)));
+  lua_pushinteger(L, cast(lua_Integer, applygcparam(g, MINORMAJOR, 100)));
+  lua_pushinteger(L, cast(lua_Integer, applygcparam(g, PAUSE, 100)));
+  lua_pushinteger(L, cast(lua_Integer, applygcparam(g, STEPMUL, 100)));
+  lua_pushinteger(L, cast(lua_Integer, applygcparam(g, STEPSIZE, 100)));
   return 8;
 }
 
@@ -1062,7 +1062,7 @@ static int test_codeparam (lua_State *L) {
 static int test_applyparam (lua_State *L) {
   lua_Integer p = luaL_checkinteger(L, 1);
   lua_Integer x = luaL_checkinteger(L, 2);
-  lua_pushinteger(L, luaO_applyparam(cast_byte(p), x));
+  lua_pushinteger(L, cast(lua_Integer, luaO_applyparam(cast_byte(p), x)));
   return 1;
 }
 
@@ -1162,7 +1162,7 @@ static int pushuserdata (lua_State *L) {
 
 
 static int udataval (lua_State *L) {
-  lua_pushinteger(L, cast(long, lua_touserdata(L, 1)));
+  lua_pushinteger(L, cast(lua_Integer, cast(size_t, lua_touserdata(L, 1))));
   return 1;
 }
 
@@ -1199,7 +1199,7 @@ static int num2int (lua_State *L) {
 
 
 static int makeseed (lua_State *L) {
-  lua_pushinteger(L, luaL_makeseed(L));
+  lua_pushinteger(L, cast(lua_Integer, luaL_makeseed(L)));
   return 1;
 }
 
@@ -1486,7 +1486,7 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     const char *inst = getstring;
     if EQ("") return 0;
     else if EQ("absindex") {
-      lua_pushnumber(L1, lua_absindex(L1, getindex));
+      lua_pushinteger(L1, lua_absindex(L1, getindex));
     }
     else if EQ("append") {
       int t = getindex;
@@ -1538,7 +1538,7 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     }
     else if EQ("func2num") {
       lua_CFunction func = lua_tocfunction(L1, getindex);
-      lua_pushinteger(L1, cast(lua_Integer, func));
+      lua_pushinteger(L1, cast(lua_Integer, cast(size_t, func)));
     }
     else if EQ("getfield") {
       int t = getindex;
@@ -1901,7 +1901,7 @@ static int Cfunc (lua_State *L) {
 static int Cfunck (lua_State *L, int status, lua_KContext ctx) {
   lua_pushstring(L, statcodes[status]);
   lua_setglobal(L, "status");
-  lua_pushinteger(L, ctx);
+  lua_pushinteger(L, cast(lua_Integer, ctx));
   lua_setglobal(L, "ctx");
   return runC(L, L, lua_tostring(L, cast_int(ctx)));
 }

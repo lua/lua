@@ -163,12 +163,14 @@ typedef LUAI_UACINT l_uacInt;
 */
 #define ct_diff2sz(df)	((size_t)(df))
 
+/* ptrdiff_t to lua_Integer */
+#define ct_diff2S(df)	cast_st2S(ct_diff2sz(df))
+
 /*
 ** Special type equivalent to '(void*)' for functions (to suppress some
 ** warnings when converting function pointers)
 */
 typedef void (*voidf)(void);
-
 
 /*
 ** Macro to convert pointer-to-void* to pointer-to-function. This cast

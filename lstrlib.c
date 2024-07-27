@@ -704,7 +704,8 @@ static ptrdiff_t get_onecapture (MatchState *ms, int i, const char *s,
     if (l_unlikely(capl == CAP_UNFINISHED))
       luaL_error(ms->L, "unfinished capture");
     else if (capl == CAP_POSITION)
-      lua_pushinteger(ms->L, (ms->capture[i].init - ms->src_init) + 1);
+      lua_pushinteger(ms->L,
+          ct_diff2S(ms->capture[i].init - ms->src_init) + 1);
     return capl;
   }
 }
@@ -775,7 +776,7 @@ static int str_find_aux (lua_State *L, int find) {
     /* do a plain search */
     const char *s2 = lmemfind(s + init, ls - init, p, lp);
     if (s2) {
-      lua_pushinteger(L, (s2 - s) + 1);
+      lua_pushinteger(L, ct_diff2S(s2 - s) + 1);
       lua_pushinteger(L, cast_st2S(ct_diff2sz(s2 - s) + lp));
       return 2;
     }
@@ -793,8 +794,8 @@ static int str_find_aux (lua_State *L, int find) {
       reprepstate(&ms);
       if ((res=match(&ms, s1, p)) != NULL) {
         if (find) {
-          lua_pushinteger(L, (s1 - s) + 1);  /* start */
-          lua_pushinteger(L, res - s);   /* end */
+          lua_pushinteger(L, ct_diff2S(s1 - s) + 1);  /* start */
+          lua_pushinteger(L, ct_diff2S(res - s));   /* end */
           return push_captures(&ms, NULL, 0) + 2;
         }
         else

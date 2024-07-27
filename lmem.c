@@ -126,10 +126,10 @@ void *luaM_growaux_ (lua_State *L, void *block, int nelems, int *psize,
 ** error.
 */
 void *luaM_shrinkvector_ (lua_State *L, void *block, int *size,
-                          int final_n, int size_elem) {
+                          int final_n, unsigned size_elem) {
   void *newblock;
-  size_t oldsize = cast_sizet((*size) * size_elem);
-  size_t newsize = cast_sizet(final_n * size_elem);
+  size_t oldsize = cast_sizet(*size) * size_elem;
+  size_t newsize = cast_sizet(final_n) * size_elem;
   lua_assert(newsize <= oldsize);
   newblock = luaM_saferealloc_(L, block, oldsize, newsize);
   *size = final_n;

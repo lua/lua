@@ -111,7 +111,7 @@ assert(string.rep('', 10) == '')
 
 do
   checkerror("too large", string.rep, 'aa', math.maxinteger);
-  checkerror("too large", string.rep, 'a', math.maxinteger/2, ',')
+  checkerror("too large", string.rep, 'a', math.maxinteger, ',')
 end
 
 -- repetitions with separator

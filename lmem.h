@@ -88,7 +88,7 @@ LUAI_FUNC void *luaM_growaux_ (lua_State *L, void *block, int nelems,
                                int *size, unsigned size_elem, int limit,
                                const char *what);
 LUAI_FUNC void *luaM_shrinkvector_ (lua_State *L, void *block, int *nelem,
-                                    int final_n, int size_elem);
+                                    int final_n, unsigned size_elem);
 LUAI_FUNC void *luaM_malloc_ (lua_State *L, size_t size, int tag);
 
 #endif
