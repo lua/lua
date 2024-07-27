@@ -20,7 +20,7 @@
 ** may have any of these metamethods. (First access that fails after the
 ** clearing will set the bit again.)
 */
-#define invalidateTMcache(t)	((t)->flags &= ~maskflags)
+#define invalidateTMcache(t)	((t)->flags &= cast_byte(~maskflags))
 
 
 /*
@@ -137,10 +137,10 @@
   (*tag = (val)->tt_, *getArrVal(h,(k)) = (val)->value_)
 
 
-LUAI_FUNC int luaH_get (Table *t, const TValue *key, TValue *res);
-LUAI_FUNC int luaH_getshortstr (Table *t, TString *key, TValue *res);
-LUAI_FUNC int luaH_getstr (Table *t, TString *key, TValue *res);
-LUAI_FUNC int luaH_getint (Table *t, lua_Integer key, TValue *res);
+LUAI_FUNC lu_byte luaH_get (Table *t, const TValue *key, TValue *res);
+LUAI_FUNC lu_byte luaH_getshortstr (Table *t, TString *key, TValue *res);
+LUAI_FUNC lu_byte luaH_getstr (Table *t, TString *key, TValue *res);
+LUAI_FUNC lu_byte luaH_getint (Table *t, lua_Integer key, TValue *res);
 
 /* Special get for metamethods */
 LUAI_FUNC const TValue *luaH_Hgetshortstr (Table *t, TString *key);

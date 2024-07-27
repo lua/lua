@@ -180,7 +180,7 @@ static int byteoffset (lua_State *L) {
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
   lua_Integer n  = luaL_checkinteger(L, 2);
-  lua_Integer posi = (n >= 0) ? 1 : len + 1;
+  lua_Integer posi = (n >= 0) ? 1 : cast_st2S(len) + 1;
   posi = u_posrelat(luaL_optinteger(L, 3, posi), len);
   luaL_argcheck(L, 1 <= posi && --posi <= (lua_Integer)len, 3,
                    "position out of bounds");
@@ -239,7 +239,7 @@ static int iter_aux (lua_State *L, int strict) {
     const char *next = utf8_decode(s + n, &code, strict);
     if (next == NULL || iscontp(next))
       return luaL_error(L, MSGInvalid);
-    lua_pushinteger(L, n + 1);
+    lua_pushinteger(L, l_castU2S(n + 1));
     lua_pushinteger(L, code);
     return 2;
   }

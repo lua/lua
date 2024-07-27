@@ -259,7 +259,7 @@ struct CallInfo {
 #define getcistrecst(ci)     (((ci)->callstatus >> CIST_RECST) & 7)
 #define setcistrecst(ci,st)  \
   check_exp(((st) & 7) == (st),   /* status must fit in three bits */  \
-            ((ci)->callstatus = ((ci)->callstatus & ~(7 << CIST_RECST))  \
+            ((ci)->callstatus = ((ci)->callstatus & ~(7u << CIST_RECST))  \
                                 | (cast(l_uint32, st) << CIST_RECST)))
 
 

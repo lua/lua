@@ -27,7 +27,7 @@ typedef struct {
   lua_State *L;
   lua_Writer writer;
   void *data;
-  lu_mem offset;  /* current position relative to beginning of dump */
+  size_t offset;  /* current position relative to beginning of dump */
   int strip;
   int status;
   Table *h;  /* table to track saved strings */
@@ -63,11 +63,11 @@ static void dumpBlock (DumpState *D, const void *b, size_t size) {
 ** Dump enough zeros to ensure that current position is a multiple of
 ** 'align'.
 */
-static void dumpAlign (DumpState *D, int align) {
-  int padding = align - (D->offset % align);
+static void dumpAlign (DumpState *D, unsigned align) {
+  unsigned padding = align - cast_uint(D->offset % align);
   if (padding < align) {  /* padding == align means no padding */
     static lua_Integer paddingContent = 0;
-    lua_assert(cast_uint(align) <= sizeof(lua_Integer));
+    lua_assert(align <= sizeof(lua_Integer));
     dumpBlock(D, &paddingContent, padding);
   }
   lua_assert(D->offset % align == 0);
@@ -94,10 +94,10 @@ static void dumpByte (DumpState *D, int y) {
 */
 static void dumpVarint (DumpState *D, size_t x) {
   lu_byte buff[DIBS];
-  int n = 1;
+  unsigned n = 1;
   buff[DIBS - 1] = x & 0x7f;  /* fill least-significant byte */
   while ((x >>= 7) != 0)  /* fill other bytes in reverse order */
-    buff[DIBS - (++n)] = (x & 0x7f) | 0x80;
+    buff[DIBS - (++n)] = cast_byte((x & 0x7f) | 0x80);
   dumpVector(D, buff + DIBS - n, n);
 }
 
@@ -159,7 +159,7 @@ static void dumpCode (DumpState *D, const Proto *f) {
   dumpInt(D, f->sizecode);
   dumpAlign(D, sizeof(f->code[0]));
   lua_assert(f->code != NULL);
-  dumpVector(D, f->code, f->sizecode);
+  dumpVector(D, f->code, cast_uint(f->sizecode));
 }
 
 
@@ -216,13 +216,13 @@ static void dumpDebug (DumpState *D, const Proto *f) {
   n = (D->strip) ? 0 : f->sizelineinfo;
   dumpInt(D, n);
   if (f->lineinfo != NULL)
-    dumpVector(D, f->lineinfo, n);
+    dumpVector(D, f->lineinfo, cast_uint(n));
   n = (D->strip) ? 0 : f->sizeabslineinfo;
   dumpInt(D, n);
   if (n > 0) {
     /* 'abslineinfo' is an array of structures of int's */
     dumpAlign(D, sizeof(int));
-    dumpVector(D, f->abslineinfo, n);
+    dumpVector(D, f->abslineinfo, cast_uint(n));
   }
   n = (D->strip) ? 0 : f->sizelocvars;
   dumpInt(D, n);

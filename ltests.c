@@ -217,7 +217,7 @@ void *debug_realloc (void *ud, void *b, size_t oldsize, size_t size) {
     mc->memlimit = limit ? strtoul(limit, NULL, 10) : ULONG_MAX;
   }
   if (block == NULL) {
-    type = (oldsize < LUA_NUMTYPES) ? oldsize : 0;
+    type = (oldsize < LUA_NUMTYPES) ? cast_int(oldsize) : 0;
     oldsize = 0;
   }
   else {
@@ -567,7 +567,7 @@ static l_obj checkgraylist (global_State *g, GCObject *o) {
 ** Check objects in gray lists.
 */
 static l_obj checkgrays (global_State *g) {
-  int total = 0;  /* count number of elements in all lists */
+  l_obj total = 0;  /* count number of elements in all lists */
   if (!keepinvariant(g)) return total;
   total += checkgraylist(g, g->gray);
   total += checkgraylist(g, g->grayagain);
@@ -778,7 +778,7 @@ static int listk (lua_State *L) {
   luaL_argcheck(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
                  1, "Lua function expected");
   p = getproto(obj_at(L, 1));
-  lua_createtable(L, p->sizek, 0);
+  lua_createtable(L, cast_uint(p->sizek), 0);
   for (i=0; i<p->sizek; i++) {
     pushobject(L, p->k+i);
     lua_rawseti(L, -2, i+1);
@@ -794,7 +794,7 @@ static int listabslineinfo (lua_State *L) {
                  1, "Lua function expected");
   p = getproto(obj_at(L, 1));
   luaL_argcheck(L, p->abslineinfo != NULL, 1, "function has no debug info");
-  lua_createtable(L, 2 * p->sizeabslineinfo, 0);
+  lua_createtable(L, 2u * cast_uint(p->sizeabslineinfo), 0);
   for (i=0; i < p->sizeabslineinfo; i++) {
     lua_pushinteger(L, p->abslineinfo[i].pc);
     lua_rawseti(L, -2, 2 * i + 1);
@@ -847,9 +847,9 @@ static int get_limits (lua_State *L) {
 
 static int mem_query (lua_State *L) {
   if (lua_isnone(L, 1)) {
-    lua_pushinteger(L, l_memcontrol.total);
-    lua_pushinteger(L, l_memcontrol.numblocks);
-    lua_pushinteger(L, l_memcontrol.maxmem);
+    lua_pushinteger(L, cast(lua_Integer, l_memcontrol.total));
+    lua_pushinteger(L, cast(lua_Integer, l_memcontrol.numblocks));
+    lua_pushinteger(L, cast(lua_Integer, l_memcontrol.maxmem));
     return 3;
   }
   else if (lua_isnumber(L, 1)) {
@@ -863,7 +863,7 @@ static int mem_query (lua_State *L) {
     int i;
     for (i = LUA_NUMTYPES - 1; i >= 0; i--) {
       if (strcmp(t, ttypename(i)) == 0) {
-        lua_pushinteger(L, l_memcontrol.objcount[i]);
+        lua_pushinteger(L, cast(lua_Integer, l_memcontrol.objcount[i]));
         return 1;
       }
     }
@@ -874,9 +874,9 @@ static int mem_query (lua_State *L) {
 
 static int alloc_count (lua_State *L) {
   if (lua_isnone(L, 1))
-    l_memcontrol.countlimit = ~0L;
+    l_memcontrol.countlimit = cast(unsigned long, ~0L);
   else
-    l_memcontrol.countlimit = luaL_checkinteger(L, 1);
+    l_memcontrol.countlimit = cast(unsigned long, luaL_checkinteger(L, 1));
   return 0;
 }
 
@@ -975,26 +975,26 @@ static int gc_state (lua_State *L) {
 static int hash_query (lua_State *L) {
   if (lua_isnone(L, 2)) {
     luaL_argcheck(L, lua_type(L, 1) == LUA_TSTRING, 1, "string expected");
-    lua_pushinteger(L, tsvalue(obj_at(L, 1))->hash);
+    lua_pushinteger(L, cast_int(tsvalue(obj_at(L, 1))->hash));
   }
   else {
     TValue *o = obj_at(L, 1);
     Table *t;
     luaL_checktype(L, 2, LUA_TTABLE);
     t = hvalue(obj_at(L, 2));
-    lua_pushinteger(L, luaH_mainposition(t, o) - t->node);
+    lua_pushinteger(L, cast(lua_Integer, luaH_mainposition(t, o) - t->node));
   }
   return 1;
 }
 
 
 static int stacklevel (lua_State *L) {
-  unsigned long a = 0;
-  lua_pushinteger(L, (L->top.p - L->stack.p));
+  int a = 0;
+  lua_pushinteger(L, cast(lua_Integer, L->top.p - L->stack.p));
   lua_pushinteger(L, stacksize(L));
-  lua_pushinteger(L, L->nCcalls);
+  lua_pushinteger(L, cast(lua_Integer, L->nCcalls));
   lua_pushinteger(L, L->nci);
-  lua_pushinteger(L, (unsigned long)&a);
+  lua_pushinteger(L, (lua_Integer)(size_t)&a);
   return 5;
 }
 
@@ -1007,9 +1007,9 @@ static int table_query (lua_State *L) {
   t = hvalue(obj_at(L, 1));
   asize = luaH_realasize(t);
   if (i == -1) {
-    lua_pushinteger(L, asize);
-    lua_pushinteger(L, allocsizenode(t));
-    lua_pushinteger(L, t->alimit);
+    lua_pushinteger(L, cast(lua_Integer, asize));
+    lua_pushinteger(L, cast(lua_Integer, allocsizenode(t)));
+    lua_pushinteger(L, cast(lua_Integer, t->alimit));
     return 3;
   }
   else if (cast_uint(i) < asize) {
@@ -1018,7 +1018,7 @@ static int table_query (lua_State *L) {
     api_incr_top(L);
     lua_pushnil(L);
   }
-  else if ((i -= asize) < sizenode(t)) {
+  else if (cast_uint(i -= cast_int(asize)) < sizenode(t)) {
     TValue k;
     getnodekey(L, &k, gnode(t, i));
     if (!isempty(gval(gnode(t, i))) ||
@@ -1054,7 +1054,7 @@ static int query_GCparams (lua_State *L) {
 
 static int test_codeparam (lua_State *L) {
   lua_Integer p = luaL_checkinteger(L, 1);
-  lua_pushinteger(L, luaO_codeparam(p));
+  lua_pushinteger(L, luaO_codeparam(cast_uint(p)));
   return 1;
 }
 
@@ -1062,7 +1062,7 @@ static int test_codeparam (lua_State *L) {
 static int test_applyparam (lua_State *L) {
   lua_Integer p = luaL_checkinteger(L, 1);
   lua_Integer x = luaL_checkinteger(L, 2);
-  lua_pushinteger(L, luaO_applyparam(p, x));
+  lua_pushinteger(L, luaO_applyparam(cast_byte(p), x));
   return 1;
 }
 
@@ -1147,7 +1147,7 @@ static int upvalue (lua_State *L) {
 
 static int newuserdata (lua_State *L) {
   size_t size = cast_sizet(luaL_optinteger(L, 1, 0));
-  int nuv = luaL_optinteger(L, 2, 0);
+  int nuv = cast_int(luaL_optinteger(L, 2, 0));
   char *p = cast_charp(lua_newuserdatauv(L, size, nuv));
   while (size--) *p++ = '\0';
   return 1;
@@ -1227,8 +1227,8 @@ static lua_State *getstate (lua_State *L) {
 
 static int loadlib (lua_State *L) {
   lua_State *L1 = getstate(L);
-  int load = luaL_checkinteger(L, 2);
-  int preload = luaL_checkinteger(L, 3);
+  int load = cast_int(luaL_checkinteger(L, 2));
+  int preload = cast_int(luaL_checkinteger(L, 3));
   luaL_openselectedlibs(L1, load, preload);
   luaL_requiref(L1, "T", luaB_opentests, 0);
   lua_assert(lua_type(L1, -1) == LUA_TTABLE);
@@ -1490,13 +1490,13 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     }
     else if EQ("append") {
       int t = getindex;
-      int i = lua_rawlen(L1, t);
+      int i = cast_int(lua_rawlen(L1, t));
       lua_rawseti(L1, t, i + 1);
     }
     else if EQ("arith") {
       int op;
       skip(&pc);
-      op = strchr(ops, *pc++) - ops;
+      op = cast_int(strchr(ops, *pc++) - ops);
       lua_arith(L1, op);
     }
     else if EQ("call") {
@@ -1538,7 +1538,7 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     }
     else if EQ("func2num") {
       lua_CFunction func = lua_tocfunction(L1, getindex);
-      lua_pushnumber(L1, cast_sizet(func));
+      lua_pushinteger(L1, cast(lua_Integer, func));
     }
     else if EQ("getfield") {
       int t = getindex;
@@ -1624,13 +1624,13 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       lua_pushinteger(L1, lua_resetthread(L1));  /* deprecated */
     }
     else if EQ("newuserdata") {
-      lua_newuserdata(L1, getnum);
+      lua_newuserdata(L1, cast_sizet(getnum));
     }
     else if EQ("next") {
       lua_next(L1, -2);
     }
     else if EQ("objsize") {
-      lua_pushinteger(L1, lua_rawlen(L1, getindex));
+      lua_pushinteger(L1, l_castU2S(lua_rawlen(L1, getindex)));
     }
     else if EQ("pcall") {
       int narg = getnum;
@@ -1903,7 +1903,7 @@ static int Cfunck (lua_State *L, int status, lua_KContext ctx) {
   lua_setglobal(L, "status");
   lua_pushinteger(L, ctx);
   lua_setglobal(L, "ctx");
-  return runC(L, L, lua_tostring(L, ctx));
+  return runC(L, L, lua_tostring(L, cast_int(ctx)));
 }
 
 

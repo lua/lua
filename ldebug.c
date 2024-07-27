@@ -63,7 +63,7 @@ static int getbaseline (const Proto *f, int pc, int *basepc) {
     return f->linedefined;
   }
   else {
-    int i = cast_uint(pc) / MAXIWTHABS - 1;  /* get an estimate */
+    int i = pc / MAXIWTHABS - 1;  /* get an estimate */
     /* estimate must be a lower bound of the correct base */
     lua_assert(i < 0 ||
               (i < f->sizeabslineinfo && f->abslineinfo[i].pc <= pc));
@@ -921,7 +921,7 @@ int luaG_tracecall (lua_State *L) {
 */
 int luaG_traceexec (lua_State *L, const Instruction *pc) {
   CallInfo *ci = L->ci;
-  lu_byte mask = L->hookmask;
+  lu_byte mask = cast_byte(L->hookmask);
   const Proto *p = ci_func(ci)->p;
   int counthook;
   if (!(mask & (LUA_MASKLINE | LUA_MASKCOUNT))) {  /* no hooks? */

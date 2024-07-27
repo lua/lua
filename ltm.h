@@ -51,7 +51,7 @@ typedef enum {
 ** corresponding metamethod field. (Bit 6 of the flag indicates that
 ** the table is using the dummy node; bit 7 is used for 'isrealasize'.)
 */
-#define maskflags	(~(~0u << (TM_EQ + 1)))
+#define maskflags	cast_byte(~(~0u << (TM_EQ + 1)))
 
 
 /*
@@ -81,8 +81,8 @@ LUAI_FUNC void luaT_init (lua_State *L);
 
 LUAI_FUNC void luaT_callTM (lua_State *L, const TValue *f, const TValue *p1,
                             const TValue *p2, const TValue *p3);
-LUAI_FUNC int luaT_callTMres (lua_State *L, const TValue *f,
-                              const TValue *p1, const TValue *p2, StkId p3);
+LUAI_FUNC lu_byte luaT_callTMres (lua_State *L, const TValue *f,
+                               const TValue *p1, const TValue *p2, StkId p3);
 LUAI_FUNC void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
                               StkId res, TMS event);
 LUAI_FUNC void luaT_tryconcatTM (lua_State *L);

@@ -109,7 +109,7 @@ typedef union {
 ** for other types, it is better to avoid modulo by power of 2, as
 ** they can have many 2 factors.
 */
-#define hashmod(t,n)	(gnode(t, ((n) % ((sizenode(t)-1)|1))))
+#define hashmod(t,n)	(gnode(t, ((n) % ((sizenode(t)-1u)|1u))))
 
 
 #define hashstr(t,str)		hashpow2(t, (str)->hash)
@@ -139,7 +139,7 @@ static const TValue absentkey = {ABSTKEYCONSTANT};
 static Node *hashint (const Table *t, lua_Integer i) {
   lua_Unsigned ui = l_castS2U(i);
   if (ui <= cast_uint(INT_MAX))
-    return hashmod(t, cast_int(ui));
+    return gnode(t, cast_int(ui) % cast_int((sizenode(t)-1) | 1));
   else
     return hashmod(t, ui);
 }
@@ -159,7 +159,7 @@ static Node *hashint (const Table *t, lua_Integer i) {
 ** INT_MIN.
 */
 #if !defined(l_hashfloat)
-static int l_hashfloat (lua_Number n) {
+static unsigned l_hashfloat (lua_Number n) {
   int i;
   lua_Integer ni;
   n = l_mathop(frexp)(n, &i) * -cast_num(INT_MIN);
@@ -169,7 +169,7 @@ static int l_hashfloat (lua_Number n) {
   }
   else {  /* normal case */
     unsigned int u = cast_uint(i) + cast_uint(ni);
-    return cast_int(u <= cast_uint(INT_MAX) ? u : ~u);
+    return (u <= cast_uint(INT_MAX) ? u : ~u);
   }
 }
 #endif
@@ -370,7 +370,7 @@ static unsigned findindex (lua_State *L, Table *t, TValue *key,
     const TValue *n = getgeneric(t, key, 1);
     if (l_unlikely(isabstkey(n)))
       luaG_runerror(L, "invalid key to 'next'");  /* key not found */
-    i = cast_int(nodefromval(n) - gnode(t, 0));  /* key index in hash table */
+    i = cast_uint(nodefromval(n) - gnode(t, 0));  /* key index in hash table */
     /* hash elements are numbered after array ones */
     return (i + 1) + asize;
   }
@@ -381,14 +381,14 @@ int luaH_next (lua_State *L, Table *t, StkId key) {
   unsigned int asize = luaH_realasize(t);
   unsigned int i = findindex(L, t, s2v(key), asize);  /* find original key */
   for (; i < asize; i++) {  /* try first array part */
-    int tag = *getArrTag(t, i);
+    lu_byte tag = *getArrTag(t, i);
     if (!tagisempty(tag)) {  /* a non-empty entry? */
-      setivalue(s2v(key), i + 1);
+      setivalue(s2v(key), cast_int(i) + 1);
       farr2val(t, i, tag, s2v(key + 1));
       return 1;
     }
   }
-  for (i -= asize; cast_int(i) < sizenode(t); i++) {  /* hash part */
+  for (i -= asize; i < sizenode(t); i++) {  /* hash part */
     if (!isempty(gval(gnode(t, i)))) {  /* a non-empty entry? */
       Node *n = gnode(t, i);
       getnodekey(L, s2v(key), n);
@@ -485,7 +485,7 @@ static unsigned computesizes (unsigned nums[], unsigned *pna) {
 }
 
 
-static int countint (lua_Integer key, unsigned int *nums) {
+static unsigned countint (lua_Integer key, unsigned int *nums) {
   unsigned int k = arrayindex(key);
   if (k != 0) {  /* is 'key' an appropriate array index? */
     nums[luaO_ceillog2(k)]++;  /* count as such */
@@ -496,7 +496,7 @@ static int countint (lua_Integer key, unsigned int *nums) {
 }
 
 
-l_sinline int arraykeyisempty (const Table *t, lua_Integer key) {
+l_sinline int arraykeyisempty (const Table *t, lua_Unsigned key) {
   int tag = *getArrTag(t, key - 1);
   return tagisempty(tag);
 }
@@ -534,10 +534,10 @@ static unsigned numusearray (const Table *t, unsigned *nums) {
 }
 
 
-static int numusehash (const Table *t, unsigned *nums, unsigned *pna) {
-  int totaluse = 0;  /* total number of elements */
-  int ause = 0;  /* elements added to 'nums' (can go to array part) */
-  int i = sizenode(t);
+static unsigned numusehash (const Table *t, unsigned *nums, unsigned *pna) {
+  unsigned totaluse = 0;  /* total number of elements */
+  unsigned ause = 0;  /* elements added to 'nums' (can go to array part) */
+  unsigned i = sizenode(t);
   while (i--) {
     Node *n = &t->node[i];
     if (!isempty(gval(n))) {
@@ -646,8 +646,8 @@ static void setnodevector (lua_State *L, Table *t, unsigned size) {
 ** (Re)insert all elements from the hash part of 'ot' into table 't'.
 */
 static void reinsert (lua_State *L, Table *ot, Table *t) {
-  int j;
-  int size = sizenode(ot);
+  unsigned j;
+  unsigned size = sizenode(ot);
   for (j = 0; j < size; j++) {
     Node *old = gnode(ot, j);
     if (!isempty(gval(old))) {
@@ -673,10 +673,10 @@ static void exchangehashpart (Table *t1, Table *t2) {
   int bitdummy1 = t1->flags & BITDUMMY;
   t1->lsizenode = t2->lsizenode;
   t1->node = t2->node;
-  t1->flags = (t1->flags & NOTBITDUMMY) | (t2->flags & BITDUMMY);
+  t1->flags = cast_byte((t1->flags & NOTBITDUMMY) | (t2->flags & BITDUMMY));
   t2->lsizenode = lsizenode;
   t2->node = node;
-  t2->flags = (t2->flags & NOTBITDUMMY) | bitdummy1;
+  t2->flags = cast_byte((t2->flags & NOTBITDUMMY) | bitdummy1);
 }
 
 
@@ -689,11 +689,12 @@ static void reinsertOldSlice (lua_State *L, Table *t, unsigned oldasize,
   unsigned i;
   t->alimit = newasize;  /* pretend array has new size... */
   for (i = newasize; i < oldasize; i++) {  /* traverse vanishing slice */
-    int tag = *getArrTag(t, i);
+    lu_byte tag = *getArrTag(t, i);
     if (!tagisempty(tag)) {  /* a non-empty entry? */
       TValue aux;
       farr2val(t, i, tag, &aux);  /* copy entry into 'aux' */
-      luaH_setint(L, t, i + 1, &aux);  /* re-insert it into the table */
+      /* re-insert it into the table */
+      luaH_setint(L, t, cast_int(i) + 1, &aux);
     }
   }
   t->alimit = oldasize;  /* restore current size... */
@@ -756,7 +757,7 @@ void luaH_resize (lua_State *L, Table *t, unsigned newasize,
 
 
 void luaH_resizearray (lua_State *L, Table *t, unsigned int nasize) {
-  int nsize = allocsizenode(t);
+  unsigned nsize = allocsizenode(t);
   luaH_resize(L, t, nasize, nsize);
 }
 
@@ -768,7 +769,7 @@ static void rehash (lua_State *L, Table *t, const TValue *ek) {
   unsigned int na;  /* number of keys in the array part */
   unsigned int nums[MAXABITS + 1];
   int i;
-  int totaluse;
+  unsigned totaluse;
   for (i = 0; i <= MAXABITS; i++) nums[i] = 0;  /* reset counts */
   setlimittosize(t);
   na = numusearray(t, nums);  /* count keys in array part */
@@ -795,7 +796,7 @@ Table *luaH_new (lua_State *L) {
   GCObject *o = luaC_newobj(L, LUA_VTABLE, sizeof(Table));
   Table *t = gco2t(o);
   t->metatable = NULL;
-  t->flags = cast_byte(maskflags);  /* table has no metamethod fields */
+  t->flags = maskflags;  /* table has no metamethod fields */
   t->array = NULL;
   t->alimit = 0;
   setnodevector(L, t, 0);
@@ -825,7 +826,7 @@ static Node *getfreepos (Table *t) {
   }
   else {  /* no 'lastfree' information */
     if (!isdummy(t)) {
-      int i = sizenode(t);
+      unsigned i = sizenode(t);
       while (i--) {  /* do a linear search */
         Node *free = gnode(t, i);
         if (keyisnil(free))
@@ -919,13 +920,13 @@ static const TValue *getintfromhash (Table *t, lua_Integer key) {
 }
 
 
-static int hashkeyisempty (Table *t, lua_Integer key) {
-  const TValue *val = getintfromhash(t, key);
+static int hashkeyisempty (Table *t, lua_Unsigned key) {
+  const TValue *val = getintfromhash(t, l_castU2S(key));
   return isempty(val);
 }
 
 
-static int finishnodeget (const TValue *val, TValue *res) {
+static lu_byte finishnodeget (const TValue *val, TValue *res) {
   if (!ttisnil(val)) {
     setobj(((lua_State*)NULL), res, val);
   }
@@ -933,9 +934,9 @@ static int finishnodeget (const TValue *val, TValue *res) {
 }
 
 
-int luaH_getint (Table *t, lua_Integer key, TValue *res) {
+lu_byte luaH_getint (Table *t, lua_Integer key, TValue *res) {
   if (keyinarray(t, key)) {
-    int tag = *getArrTag(t, key - 1);
+    lu_byte tag = *getArrTag(t, key - 1);
     if (!tagisempty(tag))
       farr2val(t, key - 1, tag, res);
     return tag;
@@ -964,7 +965,7 @@ const TValue *luaH_Hgetshortstr (Table *t, TString *key) {
 }
 
 
-int luaH_getshortstr (Table *t, TString *key, TValue *res) {
+lu_byte luaH_getshortstr (Table *t, TString *key, TValue *res) {
   return finishnodeget(luaH_Hgetshortstr(t, key), res);
 }
 
@@ -980,7 +981,7 @@ static const TValue *Hgetstr (Table *t, TString *key) {
 }
 
 
-int luaH_getstr (Table *t, TString *key, TValue *res) {
+lu_byte luaH_getstr (Table *t, TString *key, TValue *res) {
   return finishnodeget(Hgetstr(t, key), res);
 }
 
@@ -997,7 +998,7 @@ TString *luaH_getstrkey (Table *t, TString *key) {
 /*
 ** main search function
 */
-int luaH_get (Table *t, const TValue *key, TValue *res) {
+lu_byte luaH_get (Table *t, const TValue *key, TValue *res) {
   const TValue *slot;
   switch (ttypetag(key)) {
     case LUA_VSHRSTR:
@@ -1259,7 +1260,7 @@ lua_Unsigned luaH_getn (Table *t) {
   /* (3) 'limit' is the last element and either is zero or present in table */
   lua_assert(limit == luaH_realasize(t) &&
              (limit == 0 || !arraykeyisempty(t, limit)));
-  if (isdummy(t) || hashkeyisempty(t, cast(lua_Integer, limit + 1)))
+  if (isdummy(t) || hashkeyisempty(t, limit + 1))
     return limit;  /* 'limit + 1' is absent */
   else  /* 'limit + 1' is also present */
     return hash_search(t, limit);

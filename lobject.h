@@ -432,13 +432,13 @@ typedef struct TString {
 
 /* get string length from 'TString *ts' */
 #define tsslen(ts)  \
-	(strisshr(ts) ? cast_uint((ts)->shrlen) : (ts)->u.lnglen)
+	(strisshr(ts) ? cast_sizet((ts)->shrlen) : (ts)->u.lnglen)
 
 /*
 ** Get string and length */
 #define getlstr(ts, len)  \
 	(strisshr(ts) \
-	? (cast_void((len) = (ts)->shrlen), rawgetshrstr(ts)) \
+	? (cast_void((len) = cast_sizet((ts)->shrlen)), rawgetshrstr(ts)) \
 	: (cast_void((len) = (ts)->u.lnglen), (ts)->contents))
 
 /* }================================================================== */
@@ -517,8 +517,8 @@ typedef struct Udata0 {
 
 /* compute the offset of the memory area of a userdata */
 #define udatamemoffset(nuv) \
-	((nuv) == 0 ? offsetof(Udata0, bindata)  \
-                    : offsetof(Udata, uv) + (sizeof(UValue) * (nuv)))
+       ((nuv) == 0 ? offsetof(Udata0, bindata)  \
+		   : offsetof(Udata, uv) + (sizeof(UValue) * (nuv)))
 
 /* get the address of the memory block inside 'Udata' */
 #define getudatamem(u)	(cast_charp(u) + udatamemoffset((u)->nuvalue))
@@ -825,10 +825,10 @@ typedef struct Table {
 ** 'module' operation for hashing (size is always a power of 2)
 */
 #define lmod(s,size) \
-	(check_exp((size&(size-1))==0, (cast_int((s) & ((size)-1)))))
+	(check_exp((size&(size-1))==0, (cast_uint(s) & cast_uint((size)-1))))
 
 
-#define twoto(x)	(1<<(x))
+#define twoto(x)	(1u<<(x))
 #define sizenode(t)	(twoto((t)->lsizenode))
 
 
@@ -836,16 +836,16 @@ typedef struct Table {
 #define UTF8BUFFSZ	8
 
 LUAI_FUNC int luaO_utf8esc (char *buff, unsigned long x);
-LUAI_FUNC int luaO_ceillog2 (unsigned int x);
-LUAI_FUNC unsigned int luaO_codeparam (unsigned int p);
-LUAI_FUNC l_obj luaO_applyparam (unsigned int p, l_obj x);
+LUAI_FUNC lu_byte luaO_ceillog2 (unsigned int x);
+LUAI_FUNC lu_byte luaO_codeparam (unsigned int p);
+LUAI_FUNC l_obj luaO_applyparam (lu_byte p, l_obj x);
 
 LUAI_FUNC int luaO_rawarith (lua_State *L, int op, const TValue *p1,
                              const TValue *p2, TValue *res);
 LUAI_FUNC void luaO_arith (lua_State *L, int op, const TValue *p1,
                            const TValue *p2, StkId res);
 LUAI_FUNC size_t luaO_str2num (const char *s, TValue *o);
-LUAI_FUNC int luaO_hexavalue (int c);
+LUAI_FUNC lu_byte luaO_hexavalue (int c);
 LUAI_FUNC void luaO_tostring (lua_State *L, TValue *obj);
 LUAI_FUNC const char *luaO_pushvfstring (lua_State *L, const char *fmt,
                                                        va_list argp);

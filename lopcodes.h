@@ -72,8 +72,11 @@ enum OpMode {iABC, ivABC, iABx, iAsBx, iAx, isJ};
 ** so they must fit in ints.
 */
 
-/* Check whether type 'int' has at least 'b' bits ('b' < 32) */
-#define L_INTHASBITS(b)		((UINT_MAX >> ((b) - 1)) >= 1)
+/*
+** Check whether type 'int' has at least 'b' + 1 bits.
+** 'b' < 32; +1 for the sign bit.
+*/
+#define L_INTHASBITS(b)		((UINT_MAX >> (b)) >= 1)
 
 
 #if L_INTHASBITS(SIZE_Bx)

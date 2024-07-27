@@ -116,8 +116,8 @@ void luaT_callTM (lua_State *L, const TValue *f, const TValue *p1,
 }
 
 
-int luaT_callTMres (lua_State *L, const TValue *f, const TValue *p1,
-                    const TValue *p2, StkId res) {
+lu_byte luaT_callTMres (lua_State *L, const TValue *f, const TValue *p1,
+                        const TValue *p2, StkId res) {
   ptrdiff_t result = savestack(L, res);
   StkId func = L->top.p;
   setobj2s(L, func, f);  /* push function (assume EXTRA_STACK) */

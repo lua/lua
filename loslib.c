@@ -275,7 +275,7 @@ static int getfield (lua_State *L, const char *key, int d, int delta) {
 static const char *checkoption (lua_State *L, const char *conv,
                                 ptrdiff_t convlen, char *buff) {
   const char *option = LUA_STRFTIMEOPTIONS;
-  int oplen = 1;  /* length of options being checked */
+  unsigned oplen = 1;  /* length of options being checked */
   for (; *option != '\0' && oplen <= convlen; option += oplen) {
     if (*option == '|')  /* next block? */
       oplen++;  /* will check options with next length (+1) */

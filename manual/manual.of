@@ -3995,7 +3995,7 @@ The conversion specifiers can only be
 @Char{%p} (inserts a pointer),
 @Char{%d} (inserts an @T{int}),
 @Char{%c} (inserts an @T{int} as a one-byte character), and
-@Char{%U} (inserts a @T{long int} as a @x{UTF-8} byte sequence).
+@Char{%U} (inserts an @T{unsigned long} as a @x{UTF-8} byte sequence).
 
 This function may raise errors due to memory overflow
 or an invalid conversion specifier.

@@ -443,7 +443,7 @@ static int nextc (RN *rn) {
     return 0;  /* fail */
   }
   else {
-    rn->buff[rn->n++] = rn->c;  /* save current char */
+    rn->buff[rn->n++] = cast_char(rn->c);  /* save current char */
     rn->c = l_getc(rn->f);  /* read next one */
     return 1;
   }
@@ -524,15 +524,15 @@ static int read_line (lua_State *L, FILE *f, int chop) {
   luaL_buffinit(L, &b);
   do {  /* may need to read several chunks to get whole line */
     char *buff = luaL_prepbuffer(&b);  /* preallocate buffer space */
-    int i = 0;
+    unsigned i = 0;
     l_lockfile(f);  /* no memory errors can happen inside the lock */
     while (i < LUAL_BUFFERSIZE && (c = l_getc(f)) != EOF && c != '\n')
-      buff[i++] = c;  /* read up to end of line or buffer limit */
+      buff[i++] = cast_char(c);  /* read up to end of line or buffer limit */
     l_unlockfile(f);
     luaL_addsize(&b, i);
   } while (c != EOF && c != '\n');  /* repeat until end of line */
   if (!chop && c == '\n')  /* want a newline and have one? */
-    luaL_addchar(&b, c);  /* add ending newline to result */
+    luaL_addchar(&b, '\n');  /* add ending newline to result */
   luaL_pushresult(&b);  /* close buffer */
   /* return ok if read something (either a newline or something else) */
   return (c == '\n' || lua_rawlen(L, -1) > 0);

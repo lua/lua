@@ -58,21 +58,22 @@ static int luaB_warn (lua_State *L) {
 
 #define SPACECHARS	" \f\n\r\t\v"
 
-static const char *b_str2int (const char *s, int base, lua_Integer *pn) {
+static const char *b_str2int (const char *s, unsigned base, lua_Integer *pn) {
   lua_Unsigned n = 0;
   int neg = 0;
   s += strspn(s, SPACECHARS);  /* skip initial spaces */
   if (*s == '-') { s++; neg = 1; }  /* handle sign */
   else if (*s == '+') s++;
-  if (!isalnum((unsigned char)*s))  /* no digit? */
+  if (!isalnum(cast_uchar(*s)))  /* no digit? */
     return NULL;
   do {
-    int digit = (isdigit((unsigned char)*s)) ? *s - '0'
-                   : (toupper((unsigned char)*s) - 'A') + 10;
+    unsigned digit = cast_uint(isdigit(cast_uchar(*s))
+                               ? *s - '0'
+                               : (toupper(cast_uchar(*s)) - 'A') + 10);
     if (digit >= base) return NULL;  /* invalid numeral */
     n = n * base + digit;
     s++;
-  } while (isalnum((unsigned char)*s));
+  } while (isalnum(cast_uchar(*s)));
   s += strspn(s, SPACECHARS);  /* skip trailing spaces */
   *pn = (lua_Integer)((neg) ? (0u - n) : n);
   return s;
@@ -102,7 +103,7 @@ static int luaB_tonumber (lua_State *L) {
     luaL_checktype(L, 1, LUA_TSTRING);  /* no numbers as strings */
     s = lua_tolstring(L, 1, &l);
     luaL_argcheck(L, 2 <= base && base <= 36, 2, "base out of range");
-    if (b_str2int(s, (int)base, &n) == s + l) {
+    if (b_str2int(s, cast_uint(base), &n) == s + l) {
       lua_pushinteger(L, n);
       return 1;
     }  /* else not a number */
@@ -159,7 +160,7 @@ static int luaB_rawlen (lua_State *L) {
   int t = lua_type(L, 1);
   luaL_argexpected(L, t == LUA_TTABLE || t == LUA_TSTRING, 1,
                       "table or string");
-  lua_pushinteger(L, lua_rawlen(L, 1));
+  lua_pushinteger(L, l_castU2S(lua_rawlen(L, 1)));
   return 1;
 }
 

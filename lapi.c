@@ -58,7 +58,7 @@ static void advancegc (lua_State *L, size_t delta) {
   delta >>= 5;  /* one object for each 32 bytes (empirical) */
   if (delta > 0) {
     global_State *g = G(L);
-    luaE_setdebt(g, g->GCdebt - delta);
+    luaE_setdebt(g, g->GCdebt - cast(l_obj, delta));
   }
 }
 
@@ -437,9 +437,9 @@ LUA_API const char *lua_tolstring (lua_State *L, int idx, size_t *len) {
 LUA_API lua_Unsigned lua_rawlen (lua_State *L, int idx) {
   const TValue *o = index2value(L, idx);
   switch (ttypetag(o)) {
-    case LUA_VSHRSTR: return tsvalue(o)->shrlen;
-    case LUA_VLNGSTR: return tsvalue(o)->u.lnglen;
-    case LUA_VUSERDATA: return uvalue(o)->len;
+    case LUA_VSHRSTR: return cast(lua_Unsigned, tsvalue(o)->shrlen);
+    case LUA_VLNGSTR: return cast(lua_Unsigned, tsvalue(o)->u.lnglen);
+    case LUA_VUSERDATA: return cast(lua_Unsigned, uvalue(o)->len);
     case LUA_VTABLE: return luaH_getn(hvalue(o));
     default: return 0;
   }
@@ -667,7 +667,7 @@ LUA_API int lua_pushthread (lua_State *L) {
 
 
 static int auxgetstr (lua_State *L, const TValue *t, const char *k) {
-  int tag;
+  lu_byte tag;
   TString *str = luaS_new(L, k);
   luaV_fastget(t, str, s2v(L->top.p), luaH_getstr, tag);
   if (!tagisempty(tag)) {
@@ -685,7 +685,7 @@ static int auxgetstr (lua_State *L, const TValue *t, const char *k) {
 
 static void getGlobalTable (lua_State *L, TValue *gt) {
   Table *registry = hvalue(&G(L)->l_registry);
-  int tag = luaH_getint(registry, LUA_RIDX_GLOBALS, gt);
+  lu_byte tag = luaH_getint(registry, LUA_RIDX_GLOBALS, gt);
   (void)tag;  /* avoid not-used warnings when checks are off */
   api_check(L, novariant(tag) == LUA_TTABLE, "global table must exist");
 }
@@ -700,7 +700,7 @@ LUA_API int lua_getglobal (lua_State *L, const char *name) {
 
 
 LUA_API int lua_gettable (lua_State *L, int idx) {
-  int tag;
+  lu_byte tag;
   TValue *t;
   lua_lock(L);
   api_checkpop(L, 1);
@@ -721,7 +721,7 @@ LUA_API int lua_getfield (lua_State *L, int idx, const char *k) {
 
 LUA_API int lua_geti (lua_State *L, int idx, lua_Integer n) {
   TValue *t;
-  int tag;
+  lu_byte tag;
   lua_lock(L);
   t = index2value(L, idx);
   luaV_fastgeti(t, n, s2v(L->top.p), tag);
@@ -736,7 +736,7 @@ LUA_API int lua_geti (lua_State *L, int idx, lua_Integer n) {
 }
 
 
-static int finishrawget (lua_State *L, int tag) {
+static int finishrawget (lua_State *L, lu_byte tag) {
   if (tagisempty(tag))  /* avoid copying empty items to the stack */
     setnilvalue(s2v(L->top.p));
   api_incr_top(L);
@@ -754,7 +754,7 @@ l_sinline Table *gettable (lua_State *L, int idx) {
 
 LUA_API int lua_rawget (lua_State *L, int idx) {
   Table *t;
-  int tag;
+  lu_byte tag;
   lua_lock(L);
   api_checkpop(L, 1);
   t = gettable(L, idx);
@@ -766,7 +766,7 @@ LUA_API int lua_rawget (lua_State *L, int idx) {
 
 LUA_API int lua_rawgeti (lua_State *L, int idx, lua_Integer n) {
   Table *t;
-  int tag;
+  lu_byte tag;
   lua_lock(L);
   t = gettable(L, idx);
   luaH_fastgeti(t, n, s2v(L->top.p), tag);
@@ -1231,7 +1231,7 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       api_check(L, 0 <= param && param < LUA_GCPN, "invalid parameter");
       res = cast_int(luaO_applyparam(g->gcparams[param], 100));
       if (value >= 0)
-        g->gcparams[param] = luaO_codeparam(value);
+        g->gcparams[param] = luaO_codeparam(cast_uint(value));
       break;
     }
     default: res = -1;  /* invalid option */
@@ -1353,7 +1353,7 @@ LUA_API void *lua_newuserdatauv (lua_State *L, size_t size, int nuvalue) {
   Udata *u;
   lua_lock(L);
   api_check(L, 0 <= nuvalue && nuvalue < USHRT_MAX, "invalid value");
-  u = luaS_newudata(L, size, nuvalue);
+  u = luaS_newudata(L, size, cast(unsigned short, nuvalue));
   setuvalue(L, s2v(L->top.p), u);
   api_incr_top(L);
   advancegc(L, size);

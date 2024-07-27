@@ -120,8 +120,8 @@ LUAI_FUNC int luaV_tointeger (const TValue *obj, lua_Integer *p, F2Imod mode);
 LUAI_FUNC int luaV_tointegerns (const TValue *obj, lua_Integer *p,
                                 F2Imod mode);
 LUAI_FUNC int luaV_flttointeger (lua_Number n, lua_Integer *p, F2Imod mode);
-LUAI_FUNC int luaV_finishget (lua_State *L, const TValue *t, TValue *key,
-                                            StkId val, int tag);
+LUAI_FUNC lu_byte luaV_finishget (lua_State *L, const TValue *t, TValue *key,
+                                                StkId val, lu_byte tag);
 LUAI_FUNC void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
                                              TValue *val, int aux);
 LUAI_FUNC void luaV_finishOp (lua_State *L);

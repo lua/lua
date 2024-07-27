@@ -241,7 +241,7 @@ int luaD_reallocstack (lua_State *L, int newsize, int raiseerror) {
   int oldsize = stacksize(L);
   int i;
   StkId newstack;
-  int oldgcstop = G(L)->gcstopem;
+  lu_byte oldgcstop = G(L)->gcstopem;
   lua_assert(newsize <= MAXSTACK || newsize == ERRORSTACKSIZE);
   relstack(L);  /* change pointers to offsets */
   G(L)->gcstopem = 1;  /* stop emergency collection */
@@ -357,7 +357,7 @@ void luaD_hook (lua_State *L, int event, int line,
                               int ftransfer, int ntransfer) {
   lua_Hook hook = L->hook;
   if (hook && L->allowhook) {  /* make sure there is a hook */
-    int mask = CIST_HOOKED;
+    unsigned mask = CIST_HOOKED;
     CallInfo *ci = L->ci;
     ptrdiff_t top = savestack(L, L->top.p);  /* preserve original 'top' */
     ptrdiff_t ci_top = savestack(L, ci->top.p);  /* idem for 'ci->top' */
@@ -1058,9 +1058,9 @@ int luaD_protectedparser (lua_State *L, ZIO *z, const char *name,
   luaZ_initbuffer(L, &p.buff);
   status = luaD_pcall(L, f_parser, &p, savestack(L, L->top.p), L->errfunc);
   luaZ_freebuffer(L, &p.buff);
-  luaM_freearray(L, p.dyd.actvar.arr, p.dyd.actvar.size);
-  luaM_freearray(L, p.dyd.gt.arr, p.dyd.gt.size);
-  luaM_freearray(L, p.dyd.label.arr, p.dyd.label.size);
+  luaM_freearray(L, p.dyd.actvar.arr, cast_sizet(p.dyd.actvar.size));
+  luaM_freearray(L, p.dyd.gt.arr, cast_sizet(p.dyd.gt.size));
+  luaM_freearray(L, p.dyd.label.arr, cast_sizet(p.dyd.label.size));
   decnny(L);
   return status;
 }

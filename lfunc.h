@@ -11,11 +11,11 @@
 #include "lobject.h"
 
 
-#define sizeCclosure(n)	(cast_int(offsetof(CClosure, upvalue)) + \
-                         cast_int(sizeof(TValue)) * (n))
+#define sizeCclosure(n)  \
+	(offsetof(CClosure, upvalue) + sizeof(TValue) * cast_uint(n))
 
-#define sizeLclosure(n)	(cast_int(offsetof(LClosure, upvals)) + \
-                         cast_int(sizeof(TValue *)) * (n))
+#define sizeLclosure(n)  \
+	(offsetof(LClosure, upvals) + sizeof(TValue *) * cast_uint(n))
 
 
 /* test whether thread is in 'twups' list */

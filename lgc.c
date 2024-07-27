@@ -246,7 +246,7 @@ void luaC_fix (lua_State *L, GCObject *o) {
 ** create a new collectable object (with given type, size, and offset)
 ** and link it to 'allgc' list.
 */
-GCObject *luaC_newobjdt (lua_State *L, int tt, size_t sz, size_t offset) {
+GCObject *luaC_newobjdt (lua_State *L, lu_byte tt, size_t sz, size_t offset) {
   global_State *g = G(L);
   char *p = cast_charp(luaM_newobject(L, novariant(tt), sz));
   GCObject *o = cast(GCObject *, p + offset);
@@ -262,7 +262,7 @@ GCObject *luaC_newobjdt (lua_State *L, int tt, size_t sz, size_t offset) {
 /*
 ** create a new collectable object with no offset.
 */
-GCObject *luaC_newobj (lua_State *L, int tt, size_t sz) {
+GCObject *luaC_newobj (lua_State *L, lu_byte tt, size_t sz) {
   return luaC_newobjdt(L, tt, sz, 0);
 }
 
@@ -813,7 +813,7 @@ static void freeobj (lua_State *L, GCObject *o) {
     case LUA_VSHRSTR: {
       TString *ts = gco2ts(o);
       luaS_remove(L, ts);  /* remove it from hash table */
-      luaM_freemem(L, ts, sizestrshr(ts->shrlen));
+      luaM_freemem(L, ts, sizestrshr(cast_uint(ts->shrlen)));
       break;
     }
     case LUA_VLNGSTR: {
@@ -922,7 +922,7 @@ static void GCTM (lua_State *L) {
   if (!notm(tm)) {  /* is there a finalizer? */
     int status;
     lu_byte oldah = L->allowhook;
-    int oldgcstp  = g->gcstp;
+    lu_byte oldgcstp  = g->gcstp;
     g->gcstp |= GCSTPGC;  /* avoid GC steps */
     L->allowhook = 0;  /* stop debug hooks during GC metamethod */
     setobj2s(L, L->top.p++, tm);  /* push finalizer... */
@@ -1235,7 +1235,7 @@ static void finishgencycle (lua_State *L, global_State *g) {
 ** the "sweep all" state to clear all objects, which are mostly black
 ** in generational mode.
 */
-static void minor2inc (lua_State *L, global_State *g, int kind) {
+static void minor2inc (lua_State *L, global_State *g, lu_byte kind) {
   g->GCmajorminor = g->marked;  /* number of live objects */
   g->gckind = kind;
   g->reallyold = g->old1 = g->survival = NULL;
@@ -1522,7 +1522,7 @@ static l_obj atomic (lua_State *L) {
 ** elements. The fast case sweeps the whole list.
 */
 static void sweepstep (lua_State *L, global_State *g,
-                       int nextstate, GCObject **nextlist, int fast) {
+                       lu_byte nextstate, GCObject **nextlist, int fast) {
   if (g->sweepgc)
     g->sweepgc = sweeplist(L, g->sweepgc, fast ? MAX_LOBJ : GCSWEEPMAX);
   else {  /* enter next state */
@@ -1706,7 +1706,7 @@ static void fullinc (lua_State *L, global_State *g) {
 void luaC_fullgc (lua_State *L, int isemergency) {
   global_State *g = G(L);
   lua_assert(!g->gcemergency);
-  g->gcemergency = isemergency;  /* set flag */
+  g->gcemergency = cast_byte(isemergency);  /* set flag */
   switch (g->gckind) {
     case KGC_GENMINOR: fullgen(L, g); break;
     case KGC_INC: fullinc(L, g); break;

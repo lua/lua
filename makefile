@@ -14,11 +14,11 @@ CWARNSCPP= \
 	-Wdisabled-optimization \
 	-Wdouble-promotion \
 	-Wmissing-declarations \
+	-Wconversion \
         # the next warnings might be useful sometimes,
 	# but usually they generate too much noise
 	# -Werror \
 	# -pedantic   # warns if we use jump tables \
-	# -Wconversion  \
 	# -Wsign-conversion \
 	# -Wstrict-overflow=2 \
 	# -Wformat=2 \

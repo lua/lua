@@ -36,7 +36,7 @@ typedef struct {
   ZIO *Z;
   const char *name;
   Table *h;  /* list for string reuse */
-  lu_mem offset;  /* current position relative to beginning of dump */
+  size_t offset;  /* current position relative to beginning of dump */
   lua_Integer nstr;  /* number of strings in the list */
   lu_byte fixed;  /* dump is fixed in memory */
 } LoadState;
@@ -61,8 +61,8 @@ static void loadBlock (LoadState *S, void *b, size_t size) {
 }
 
 
-static void loadAlign (LoadState *S, int align) {
-  int padding = align - (S->offset % align);
+static void loadAlign (LoadState *S, unsigned align) {
+  unsigned padding = align - cast_uint(S->offset % align);
   if (padding < align) {  /* apd == align means no padding */
     lua_Integer paddingContent;
     loadBlock(S, &paddingContent, padding);
@@ -113,9 +113,17 @@ static size_t loadSize (LoadState *S) {
 }
 
 
+/*
+** Read an non-negative int */
+static unsigned loadUint (LoadState *S) {
+  return cast_uint(loadVarint(S, cast_sizet(INT_MAX)));
+}
+
+
 static int loadInt (LoadState *S) {
   return cast_int(loadVarint(S, cast_sizet(INT_MAX)));
 }
+
 
 
 static lua_Number loadNumber (LoadState *S) {
@@ -180,15 +188,15 @@ static void loadString (LoadState *S, Proto *p, TString **sl) {
 
 
 static void loadCode (LoadState *S, Proto *f) {
-  int n = loadInt(S);
+  unsigned n = loadUint(S);
   loadAlign(S, sizeof(f->code[0]));
   if (S->fixed) {
     f->code = getaddr(S, n, Instruction);
-    f->sizecode = n;
+    f->sizecode = cast_int(n);
   }
   else {
     f->code = luaM_newvectorchecked(S->L, n, Instruction);
-    f->sizecode = n;
+    f->sizecode = cast_int(n);
     loadVector(S, f->code, n);
   }
 }
@@ -198,10 +206,10 @@ static void loadFunction(LoadState *S, Proto *f);
 
 
 static void loadConstants (LoadState *S, Proto *f) {
-  int i;
-  int n = loadInt(S);
+  unsigned i;
+  unsigned n = loadUint(S);
   f->k = luaM_newvectorchecked(S->L, n, TValue);
-  f->sizek = n;
+  f->sizek = cast_int(n);
   for (i = 0; i < n; i++)
     setnilvalue(&f->k[i]);
   for (i = 0; i < n; i++) {
@@ -240,10 +248,10 @@ static void loadConstants (LoadState *S, Proto *f) {
 
 
 static void loadProtos (LoadState *S, Proto *f) {
-  int i;
-  int n = loadInt(S);
+  unsigned i;
+  unsigned n = loadUint(S);
   f->p = luaM_newvectorchecked(S->L, n, Proto *);
-  f->sizep = n;
+  f->sizep = cast_int(n);
   for (i = 0; i < n; i++)
     f->p[i] = NULL;
   for (i = 0; i < n; i++) {
@@ -261,10 +269,10 @@ static void loadProtos (LoadState *S, Proto *f) {
 ** in that case all prototypes must be consistent for the GC.
 */
 static void loadUpvalues (LoadState *S, Proto *f) {
-  int i, n;
-  n = loadInt(S);
+  unsigned i;
+  unsigned n = loadUint(S);
   f->upvalues = luaM_newvectorchecked(S->L, n, Upvaldesc);
-  f->sizeupvalues = n;
+  f->sizeupvalues = cast_int(n);
   for (i = 0; i < n; i++)  /* make array valid for GC */
     f->upvalues[i].name = NULL;
   for (i = 0; i < n; i++) {  /* following calls can raise errors */
@@ -276,33 +284,33 @@ static void loadUpvalues (LoadState *S, Proto *f) {
 
 
 static void loadDebug (LoadState *S, Proto *f) {
-  int i, n;
-  n = loadInt(S);
+  unsigned i;
+  unsigned n = loadUint(S);
   if (S->fixed) {
     f->lineinfo = getaddr(S, n, ls_byte);
-    f->sizelineinfo = n;
+    f->sizelineinfo = cast_int(n);
   }
   else {
     f->lineinfo = luaM_newvectorchecked(S->L, n, ls_byte);
-    f->sizelineinfo = n;
+    f->sizelineinfo = cast_int(n);
     loadVector(S, f->lineinfo, n);
   }
-  n = loadInt(S);
+  n = loadUint(S);
   if (n > 0) {
     loadAlign(S, sizeof(int));
     if (S->fixed) {
       f->abslineinfo = getaddr(S, n, AbsLineInfo);
-      f->sizeabslineinfo = n;
+      f->sizeabslineinfo = cast_int(n);
     }
     else {
       f->abslineinfo = luaM_newvectorchecked(S->L, n, AbsLineInfo);
-      f->sizeabslineinfo = n;
+      f->sizeabslineinfo = cast_int(n);
       loadVector(S, f->abslineinfo, n);
     }
   }
-  n = loadInt(S);
+  n = loadUint(S);
   f->locvars = luaM_newvectorchecked(S->L, n, LocVar);
-  f->sizelocvars = n;
+  f->sizelocvars = cast_int(n);
   for (i = 0; i < n; i++)
     f->locvars[i].varname = NULL;
   for (i = 0; i < n; i++) {
@@ -310,9 +318,9 @@ static void loadDebug (LoadState *S, Proto *f) {
     f->locvars[i].startpc = loadInt(S);
     f->locvars[i].endpc = loadInt(S);
   }
-  n = loadInt(S);
+  n = loadUint(S);
   if (n != 0)  /* does it have debug information? */
-    n = f->sizeupvalues;  /* must be this many */
+    n = cast_uint(f->sizeupvalues);  /* must be this many */
   for (i = 0; i < n; i++)
     loadString(S, f, &f->upvalues[i].name);
 }
@@ -384,7 +392,7 @@ LClosure *luaU_undump (lua_State *L, ZIO *Z, const char *name, int fixed) {
     S.name = name;
   S.L = L;
   S.Z = Z;
-  S.fixed = fixed;
+  S.fixed = cast_byte(fixed);
   S.offset = 1;  /* fist byte was already read */
   checkHeader(&S);
   cl = luaF_newLclosure(L, loadByte(&S));
