@@ -364,11 +364,11 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
         break;
       }
       case 'r': {
-        if (ci == NULL || !(ci->callstatus & CIST_TRAN))
+        if (ci == NULL || !(ci->callstatus & CIST_HOOKED))
           ar->ftransfer = ar->ntransfer = 0;
         else {
-          ar->ftransfer = ci->u2.transferinfo.ftransfer;
-          ar->ntransfer = ci->u2.transferinfo.ntransfer;
+          ar->ftransfer = L->transferinfo.ftransfer;
+          ar->ntransfer = L->transferinfo.ntransfer;
         }
         break;
       }

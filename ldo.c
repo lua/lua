@@ -357,7 +357,6 @@ void luaD_hook (lua_State *L, int event, int line,
                               int ftransfer, int ntransfer) {
   lua_Hook hook = L->hook;
   if (hook && L->allowhook) {  /* make sure there is a hook */
-    unsigned mask = CIST_HOOKED;
     CallInfo *ci = L->ci;
     ptrdiff_t top = savestack(L, L->top.p);  /* preserve original 'top' */
     ptrdiff_t ci_top = savestack(L, ci->top.p);  /* idem for 'ci->top' */
@@ -365,18 +364,15 @@ void luaD_hook (lua_State *L, int event, int line,
     ar.event = event;
     ar.currentline = line;
     ar.i_ci = ci;
-    if (ntransfer != 0) {
-      mask |= CIST_TRAN;  /* 'ci' has transfer information */
-      ci->u2.transferinfo.ftransfer = ftransfer;
-      ci->u2.transferinfo.ntransfer = ntransfer;
-    }
+    L->transferinfo.ftransfer = ftransfer;
+    L->transferinfo.ntransfer = ntransfer;
     if (isLua(ci) && L->top.p < ci->top.p)
       L->top.p = ci->top.p;  /* protect entire activation register */
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
     if (ci->top.p < L->top.p + LUA_MINSTACK)
       ci->top.p = L->top.p + LUA_MINSTACK;
     L->allowhook = 0;  /* cannot call hooks inside a hook */
-    ci->callstatus |= mask;
+    ci->callstatus |= CIST_HOOKED;
     lua_unlock(L);
     (*hook)(L, &ar);
     lua_lock(L);
@@ -384,7 +380,7 @@ void luaD_hook (lua_State *L, int event, int line,
     L->allowhook = 1;
     ci->top.p = restorestack(L, ci_top);
     L->top.p = restorestack(L, top);
-    ci->callstatus &= ~mask;
+    ci->callstatus &= ~CIST_HOOKED;
   }
 }
 
@@ -525,7 +521,7 @@ void luaD_poscall (lua_State *L, CallInfo *ci, int nres) {
   moveresults(L, ci->func.p, nres, fwanted);
   /* function cannot be in any of these cases when returning */
   lua_assert(!(ci->callstatus &
-        (CIST_HOOKED | CIST_YPCALL | CIST_FIN | CIST_TRAN | CIST_CLSRET)));
+        (CIST_HOOKED | CIST_YPCALL | CIST_FIN | CIST_CLSRET)));
   L->ci = ci->previous;  /* back to caller (after closing variables) */
 }
 

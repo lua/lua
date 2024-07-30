@@ -183,8 +183,6 @@ typedef struct stringtable {
 ** yield (from the yield until the next resume);
 ** - field 'nres' is used only while closing tbc variables when
 ** returning from a function;
-** - field 'transferinfo' is used only during call/returnhooks,
-** before the function starts or after it ends.
 */
 struct CallInfo {
   StkIdRel func;  /* function index in the stack */
@@ -206,10 +204,6 @@ struct CallInfo {
     int funcidx;  /* called-function index */
     int nyield;  /* number of values yielded */
     int nres;  /* number of values returned */
-    struct {  /* info about transferred values (for call/return hooks) */
-      int ftransfer;  /* offset of first value transferred */
-      int ntransfer;  /* number of values transferred */
-    } transferinfo;
   } u2;
   l_uint32 callstatus;
 };
@@ -236,15 +230,13 @@ struct CallInfo {
 #define CIST_HOOKYIELD	(cast(l_uint32, 1) << 14)
 /* function "called" a finalizer */
 #define CIST_FIN	(cast(l_uint32, 1) << 15)
-/* 'ci' has transfer information */
-#define CIST_TRAN	(cast(l_uint32, 1) << 16)
  /* function is closing tbc variables */
-#define CIST_CLSRET	(cast(l_uint32, 1) << 17)
-/* Bits 18-20 are used for CIST_RECST (see below) */
-#define CIST_RECST	18  /* the offset, not the mask */
+#define CIST_CLSRET	(cast(l_uint32, 1) << 16)
+/* Bits 17-19 are used for CIST_RECST (see below) */
+#define CIST_RECST	17  /* the offset, not the mask */
 #if defined(LUA_COMPAT_LT_LE)
 /* using __lt for __le */
-#define CIST_LEQ	(cast(l_uint32, 1) << 21)
+#define CIST_LEQ	(cast(l_uint32, 1) << 20)
 #endif
 
 
@@ -354,6 +346,10 @@ struct lua_State {
   int basehookcount;
   int hookcount;
   volatile l_signalT hookmask;
+  struct {  /* info about transferred values (for call/return hooks) */
+    int ftransfer;  /* offset of first value transferred */
+    int ntransfer;  /* number of values transferred */
+  } transferinfo;
 };
 
 
