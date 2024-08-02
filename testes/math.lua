@@ -22,6 +22,18 @@ do
   end
 end
 
+
+-- maximum exponent for a floating-point number
+local maxexp = 0
+do
+  local p = 2.0
+  while p < math.huge do
+    maxexp = maxexp + 1
+    p = p + p
+  end
+end
+
+
 local function isNaN (x)
   return (x ~= x)
 end
@@ -34,8 +46,8 @@ do
   local x = 2.0^floatbits
   assert(x > x - 1.0 and x == x + 1.0)
 
-  print(string.format("%d-bit integers, %d-bit (mantissa) floats",
-                       intbits, floatbits))
+  local msg = "  %d-bit integers, %d-bit*2^%d floats"
+  print(string.format(msg, intbits, floatbits, maxexp))
 end
 
 assert(math.type(0) == "integer" and math.type(0.0) == "float"
@@ -803,7 +815,11 @@ do
 end
 
 
-print("testing 'math.random'")
+--
+-- [[==================================================================
+      print("testing 'math.random'")
+-- -===================================================================
+--
 
 local random, max, min = math.random, math.max, math.min
 
@@ -1019,6 +1035,90 @@ assert(not pcall(random, minint + 1, minint))
 assert(not pcall(random, maxint, maxint - 1))
 assert(not pcall(random, maxint, minint))
 
+-- ]]==================================================================
+
+
+--
+-- [[==================================================================
+    print("testing precision of 'tostring'")
+-- -===================================================================
+--
+
+-- number of decimal digits supported by float precision
+local decdig = math.floor(floatbits * math.log(2, 10))
+print(string.format("  %d-digit float numbers with full precision",
+                    decdig))
+-- number of decimal digits supported by integer precision
+local Idecdig = math.floor(math.log(maxint, 10))
+print(string.format("  %d-digit integer numbers with full precision",
+                    Idecdig))
+
+do
+  -- Any number should print so that reading it back gives itself:
+  -- tonumber(tostring(x)) == x
+
+  -- Mersenne fractions
+  local p = 1.0
+  for i = 1, maxexp do
+    p = p + p
+    local x = 1 / (p - 1)
+    assert(x == tonumber(tostring(x)))
+  end
+
+  -- some random numbers in [0,1)
+  for i = 1, 100 do
+    local x = math.random()
+    assert(x == tonumber(tostring(x)))
+  end
+
+  -- different numbers shold print differently.
+  -- check pairs of floats with minimum detectable difference
+  local p = floatbits - 1
+  for i = 1, maxexp - 1 do
+    for _, i in ipairs{-i, i} do
+      local x = 2^i
+      local diff = 2^(i - p)   -- least significant bit for 'x'
+      local y = x + diff
+      local fy = tostring(y)
+      assert(x ~= y and tostring(x) ~= fy)
+      assert(tonumber(fy) == y)
+    end
+  end
+
+
+  -- "reasonable" numerals should be printed like themselves
+
+  -- create random float numerals with 5 digits, with a decimal point
+  -- inserted in all places. (With more than 5, things like "0.00001"
+  -- reformats like "1e-5".)
+  for i = 1, 1000 do
+    -- random numeral with 5 digits
+    local x = string.format("%.5d", math.random(0, 99999))
+    for i = 2, #x do
+      -- insert decimal point at position 'i'
+      local y = string.sub(x, 1, i - 1) .. "." .. string.sub(x, i, -1)
+      y = string.gsub(y, "^0*(%d.-%d)0*$", "%1")   -- trim extra zeros
+      assert(y == tostring(tonumber(y)))
+    end
+  end
+
+  -- all-random floats
+  local Fsz = string.packsize("n")   -- size of floats in bytes
+
+  for i = 1, 400 do
+    local s = string.pack("j", math.random(0))   -- a random string of bits
+    while #s < Fsz do   -- make 's' long enough
+      s = s .. string.pack("j", math.random(0))
+    end
+    local n = string.unpack("n", s)   -- read 's' as a float
+    s = tostring(n)
+    if string.find(s, "^%-?%d") then   -- avoid NaN, inf, -inf
+      assert(tonumber(s) == n)
+    end
+  end
+
+end
+-- ]]==================================================================
 
 
 print('OK')

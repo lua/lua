@@ -10,6 +10,7 @@
 #include "lprefix.h"
 
 
+#include <float.h>
 #include <locale.h>
 #include <math.h>
 #include <stdarg.h>
@@ -401,29 +402,54 @@ int luaO_utf8esc (char *buff, unsigned long x) {
 /*
 ** Maximum length of the conversion of a number to a string. Must be
 ** enough to accommodate both LUA_INTEGER_FMT and LUA_NUMBER_FMT.
-** (For a long long int, this is 19 digits plus a sign and a final '\0',
-** adding to 21. For a long double, it can go to a sign, 33 digits,
-** the dot, an exponent letter, an exponent sign, 5 exponent digits,
-** and a final '\0', adding to 43.)
+** For a long long int, this is 19 digits plus a sign and a final '\0',
+** adding to 21. For a long double, it can go to a sign, the dot, an
+** exponent letter, an exponent sign, 4 exponent digits, the final
+** '\0', plus the significant digits, which are approximately the *_DIG
+** attribute.
 */
-#define MAXNUMBER2STR	44
+#define MAXNUMBER2STR	(20 + l_floatatt(DIG))
 
 
 /*
-** Convert a number object to a string, adding it to a buffer
+** Convert a float to a string, adding it to a buffer. First try with
+** a not too large number of digits, to avoid noise (for instance,
+** 1.1 going to "1.1000000000000001"). If that lose precision, so
+** that reading the result back gives a different number, then do the
+** conversion again with extra precision. Moreover, if the numeral looks
+** like an integer (without a decimal point or an exponent), add ".0" to
+** its end.
+*/
+static int tostringbuffFloat (lua_Number n, char *buff) {
+  /* first conversion */
+  int len = l_sprintf(buff, MAXNUMBER2STR, LUA_NUMBER_FMT,
+                            (LUAI_UACNUMBER)n);
+  lua_Number check = lua_str2number(buff, NULL);  /* read it back */
+  if (check != n) {  /* not enough precision? */
+    /* convert again with more precision */
+    len = l_sprintf(buff, MAXNUMBER2STR, LUA_NUMBER_FMT_N,
+                          (LUAI_UACNUMBER)n);
+  }
+  /* looks like an integer? */
+  if (buff[strspn(buff, "-0123456789")] == '\0') {
+    buff[len++] = lua_getlocaledecpoint();
+    buff[len++] = '0';  /* adds '.0' to result */
+  }
+  return len;
+}
+
+
+/*
+** Convert a number object to a string, adding it to a buffer.
 */
 static unsigned tostringbuff (TValue *obj, char *buff) {
   int len;
   lua_assert(ttisnumber(obj));
   if (ttisinteger(obj))
     len = lua_integer2str(buff, MAXNUMBER2STR, ivalue(obj));
-  else {
-    len = lua_number2str(buff, MAXNUMBER2STR, fltvalue(obj));
-    if (buff[strspn(buff, "-0123456789")] == '\0') {  /* looks like an int? */
-      buff[len++] = lua_getlocaledecpoint();
-      buff[len++] = '0';  /* adds '.0' to result */
-    }
-  }
+  else
+    len = tostringbuffFloat(fltvalue(obj), buff);
+  lua_assert(len < MAXNUMBER2STR);
   return cast_uint(len);
 }
 
