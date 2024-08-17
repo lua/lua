@@ -3,6 +3,14 @@
 
 print "testing closures"
 
+do  -- bug in 5.4.7
+  _ENV[true] = 10
+  local function aux () return _ENV[1 < 2] end
+  assert(aux() == 10)
+  _ENV[true] = nil
+end
+
+
 local A,B = 0,{g=10}
 local function f(x)
   local a = {}
