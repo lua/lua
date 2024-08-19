@@ -518,5 +518,16 @@ do   -- check reuse of strings in dumps
   end
 end
 
+
+do   -- test limit of multiple returns (254 values)
+  local code = "return 10" .. string.rep(",10", 253)
+  local res = {assert(load(code))()}
+  assert(#res == 254 and res[254] == 10)
+
+  code = code .. ",10"
+  local status, msg = load(code)
+  assert(not status and string.find(msg, "too many returns"))
+end
+
 print('OK')
 return deep

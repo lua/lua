@@ -208,6 +208,8 @@ void luaK_ret (FuncState *fs, int first, int nret) {
     case 1: op = OP_RETURN1; break;
     default: op = OP_RETURN; break;
   }
+  if (nret + 1 > MAXARG_B)
+    luaX_syntaxerror(fs->ls, "too many returns");
   luaK_codeABC(fs, op, first, nret + 1, 0);
 }
 
