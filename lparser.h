@@ -164,6 +164,8 @@ typedef struct FuncState {
 
 
 LUAI_FUNC lu_byte luaY_nvarstack (FuncState *fs);
+LUAI_FUNC void luaY_checklimit (FuncState *fs, int v, int l,
+                                const char *what);
 LUAI_FUNC LClosure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
                                  Dyndata *dyd, const char *name, int firstchar);
 

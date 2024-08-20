@@ -84,8 +84,8 @@ static l_noret errorlimit (FuncState *fs, int limit, const char *what) {
 }
 
 
-static void checklimit (FuncState *fs, int v, int l, const char *what) {
-  if (v > l) errorlimit(fs, l, what);
+void luaY_checklimit (FuncState *fs, int v, int l, const char *what) {
+  if (l_unlikely(v > l)) errorlimit(fs, l, what);
 }
 
 
@@ -196,7 +196,7 @@ static int new_localvarkind (LexState *ls, TString *name, lu_byte kind) {
   FuncState *fs = ls->fs;
   Dyndata *dyd = ls->dyd;
   Vardesc *var;
-  checklimit(fs, dyd->actvar.n + 1 - fs->firstlocal,
+  luaY_checklimit(fs, dyd->actvar.n + 1 - fs->firstlocal,
                  MAXVARS, "local variables");
   luaM_growvector(L, dyd->actvar.arr, dyd->actvar.n + 1,
                   dyd->actvar.size, Vardesc, USHRT_MAX, "local variables");
@@ -361,7 +361,7 @@ static int searchupvalue (FuncState *fs, TString *name) {
 static Upvaldesc *allocupvalue (FuncState *fs) {
   Proto *f = fs->f;
   int oldsize = f->sizeupvalues;
-  checklimit(fs, fs->nups + 1, MAXUPVAL, "upvalues");
+  luaY_checklimit(fs, fs->nups + 1, MAXUPVAL, "upvalues");
   luaM_growvector(fs->ls->L, f->upvalues, fs->nups, f->sizeupvalues,
                   Upvaldesc, MAXUPVAL, "upvalues");
   while (oldsize < f->sizeupvalues)
@@ -860,7 +860,7 @@ static void recfield (LexState *ls, ConsControl *cc) {
   lu_byte reg = ls->fs->freereg;
   expdesc tab, key, val;
   if (ls->t.token == TK_NAME) {
-    checklimit(fs, cc->nh, INT_MAX, "items in a constructor");
+    luaY_checklimit(fs, cc->nh, INT_MAX / 2, "items in a constructor");
     codename(ls, &key);
   }
   else  /* ls->t.token == '[' */

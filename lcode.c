@@ -208,8 +208,7 @@ void luaK_ret (FuncState *fs, int first, int nret) {
     case 1: op = OP_RETURN1; break;
     default: op = OP_RETURN; break;
   }
-  if (nret + 1 > MAXARG_B)
-    luaX_syntaxerror(fs->ls, "too many returns");
+  luaY_checklimit(fs, nret + 1, MAXARG_B, "returns");
   luaK_codeABC(fs, op, first, nret + 1, 0);
 }
 
@@ -473,9 +472,7 @@ static int luaK_codek (FuncState *fs, int reg, int k) {
 void luaK_checkstack (FuncState *fs, int n) {
   int newstack = fs->freereg + n;
   if (newstack > fs->f->maxstacksize) {
-    if (newstack > MAX_FSTACK)
-      luaX_syntaxerror(fs->ls,
-        "function or expression needs too many registers");
+    luaY_checklimit(fs, newstack, MAX_FSTACK, "registers");
     fs->f->maxstacksize = cast_byte(newstack);
   }
 }
@@ -727,8 +724,7 @@ static void const2exp (TValue *v, expdesc *e) {
 */
 void luaK_setreturns (FuncState *fs, expdesc *e, int nresults) {
   Instruction *pc = &getinstruction(fs, e);
-  if (nresults + 1 > MAXARG_C)
-    luaX_syntaxerror(fs->ls, "too many multiple results");
+  luaY_checklimit(fs, nresults + 1, MAXARG_C, "multiple results");
   if (e->k == VCALL)  /* expression is an open function call? */
     SETARG_C(*pc, nresults + 1);
   else {
