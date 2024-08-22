@@ -191,6 +191,16 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 
 
 /*
+** In ISO C, any pointer use after the pointer has been deallocated is
+** undefined behavior. So, before a stack reallocation, all pointers are
+** changed to offsets, and after the reallocation they are changed back
+** to pointers. As during the reallocation the pointers are invalid, the
+** reallocation cannot run emergency collections.
+**
+*/
+
+#if 1
+/*
 ** Change all pointers to the stack into offsets.
 */
 static void relstack (lua_State *L) {
@@ -210,9 +220,10 @@ static void relstack (lua_State *L) {
 /*
 ** Change back all offsets into pointers.
 */
-static void correctstack (lua_State *L) {
+static void correctstack (lua_State *L, StkId oldstack) {
   CallInfo *ci;
   UpVal *up;
+  UNUSED(oldstack);
   L->top.p = restorestack(L, L->top.offset);
   L->tbclist.p = restorestack(L, L->tbclist.offset);
   for (up = L->openupval; up != NULL; up = up->u.open.next)
@@ -225,15 +236,37 @@ static void correctstack (lua_State *L) {
   }
 }
 
+#else
+/*
+** Alternatively, we can use the old address after the dealocation.
+** That is not strict ISO C, but seems to work fine everywhere.
+*/
+
+static void relstack (lua_State *L) { UNUSED(L); }
+
+static void correctstack (lua_State *L, StkId oldstack) {
+  CallInfo *ci;
+  UpVal *up;
+  StkId newstack = L->stack.p;
+  if (oldstack == newstack)
+    return;
+  L->top.p = L->top.p - oldstack + newstack;
+  L->tbclist.p = L->tbclist.p - oldstack + newstack;
+  for (up = L->openupval; up != NULL; up = up->u.open.next)
+    up->v.p = s2v(uplevel(up) - oldstack + newstack);
+  for (ci = L->ci; ci != NULL; ci = ci->previous) {
+    ci->top.p = ci->top.p - oldstack + newstack;
+    ci->func.p = ci->func.p - oldstack + newstack;
+    if (isLua(ci))
+      ci->u.l.trap = 1;  /* signal to update 'trap' in 'luaV_execute' */
+  }
+}
+
+#endif
+
 
 /*
 ** Reallocate the stack to a new size, correcting all pointers into it.
-** In ISO C, any pointer use after the pointer has been deallocated is
-** undefined behavior. So, before the reallocation, all pointers are
-** changed to offsets, and after the reallocation they are changed back
-** to pointers. As during the reallocation the pointers are invalid, the
-** reallocation cannot run emergency collections.
-**
 ** In case of allocation error, raise an error or return false according
 ** to 'raiseerror'.
 */
@@ -241,21 +274,22 @@ int luaD_reallocstack (lua_State *L, int newsize, int raiseerror) {
   int oldsize = stacksize(L);
   int i;
   StkId newstack;
+  StkId oldstack = L->stack.p;
   lu_byte oldgcstop = G(L)->gcstopem;
   lua_assert(newsize <= MAXSTACK || newsize == ERRORSTACKSIZE);
   relstack(L);  /* change pointers to offsets */
   G(L)->gcstopem = 1;  /* stop emergency collection */
-  newstack = luaM_reallocvector(L, L->stack.p, oldsize + EXTRA_STACK,
+  newstack = luaM_reallocvector(L, oldstack, oldsize + EXTRA_STACK,
                                    newsize + EXTRA_STACK, StackValue);
   G(L)->gcstopem = oldgcstop;  /* restore emergency collection */
   if (l_unlikely(newstack == NULL)) {  /* reallocation failed? */
-    correctstack(L);  /* change offsets back to pointers */
+    correctstack(L, oldstack);  /* change offsets back to pointers */
     if (raiseerror)
       luaM_error(L);
     else return 0;  /* do not raise an error */
   }
   L->stack.p = newstack;
-  correctstack(L);  /* change offsets back to pointers */
+  correctstack(L, oldstack);  /* change offsets back to pointers */
   L->stack_last.p = L->stack.p + newsize;
   for (i = oldsize + EXTRA_STACK; i < newsize + EXTRA_STACK; i++)
     setnilvalue(s2v(newstack + i)); /* erase new segment */
