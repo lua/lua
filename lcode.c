@@ -1837,8 +1837,8 @@ static int finaltarget (Instruction *code, int i) {
     Instruction pc = code[i];
     if (GET_OPCODE(pc) != OP_JMP)
       break;
-     else
-       i += GETARG_sJ(pc) + 1;
+    else
+      i += GETARG_sJ(pc) + 1;
   }
   return i;
 }
