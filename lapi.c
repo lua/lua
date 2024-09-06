@@ -1190,11 +1190,11 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
     }
     case LUA_GCCOUNT: {
       /* GC values are expressed in Kbytes: #bytes/2^10 */
-      res = cast_int(g->totalbytes >> 10);
+      res = cast_int(g->GCtotalbytes >> 10);
       break;
     }
     case LUA_GCCOUNTB: {
-      res = cast_int(g->totalbytes & 0x3ff);
+      res = cast_int(g->GCtotalbytes & 0x3ff);
       break;
     }
     case LUA_GCSTEP: {

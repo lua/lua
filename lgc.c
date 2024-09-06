@@ -290,7 +290,7 @@ GCObject *luaC_newobj (lua_State *L, lu_byte tt, size_t sz) {
 ** (only closures can), and a userdata's metatable must be a table.
 */
 static void reallymarkobject (global_State *g, GCObject *o) {
-  g->marked++;
+  g->GCmarked++;
   switch (o->tt) {
     case LUA_VSHRSTR:
     case LUA_VLNGSTR: {
@@ -401,7 +401,7 @@ static void cleargraylists (global_State *g) {
 */
 static void restartcollection (global_State *g) {
   cleargraylists(g);
-  g->marked = NFIXED;
+  g->GCmarked = NFIXED;
   markobject(g, g->mainthread);
   markvalue(g, &g->l_registry);
   markmt(g);
@@ -781,7 +781,7 @@ static void freeupval (lua_State *L, UpVal *uv) {
 
 
 static void freeobj (lua_State *L, GCObject *o) {
-  G(L)->totalobjs--;
+  G(L)->GCtotalobjs--;
   switch (o->tt) {
     case LUA_VPROTO:
       luaF_freeproto(L, gco2p(o));
@@ -1052,7 +1052,7 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 ** approximately (marked * pause / 100).
 */
 static void setpause (global_State *g) {
-  l_obj threshold = applygcparam(g, PAUSE, g->marked);
+  l_obj threshold = applygcparam(g, PAUSE, g->GCmarked);
   l_obj debt = threshold - gettotalobjs(g);
   if (debt < 0) debt = 0;
   luaE_setdebt(g, debt);
@@ -1236,7 +1236,7 @@ static void finishgencycle (lua_State *L, global_State *g) {
 ** in generational mode.
 */
 static void minor2inc (lua_State *L, global_State *g, lu_byte kind) {
-  g->GCmajorminor = g->marked;  /* number of live objects */
+  g->GCmajorminor = g->GCmarked;  /* number of live objects */
   g->gckind = kind;
   g->reallyold = g->old1 = g->survival = NULL;
   g->finobjrold = g->finobjold1 = g->finobjsur = NULL;
@@ -1260,7 +1260,7 @@ static void minor2inc (lua_State *L, global_State *g, lu_byte kind) {
 static int checkminormajor (global_State *g, l_obj addedold1) {
   l_obj step = applygcparam(g, MINORMUL, g->GCmajorminor);
   l_obj limit = applygcparam(g, MINORMAJOR, g->GCmajorminor);
-  return (addedold1 >= (step >> 1) || g->marked >= limit);
+  return (addedold1 >= (step >> 1) || g->GCmarked >= limit);
 }
 
 /*
@@ -1270,7 +1270,7 @@ static int checkminormajor (global_State *g, l_obj addedold1) {
 */
 static void youngcollection (lua_State *L, global_State *g) {
   l_obj addedold1 = 0;
-  l_obj marked = g->marked;  /* preserve 'g->marked' */
+  l_obj marked = g->GCmarked;  /* preserve 'g->GCmarked' */
   GCObject **psurvival;  /* to point to first non-dead survival object */
   GCObject *dummy;  /* dummy out parameter to 'sweepgen' */
   lua_assert(g->gcstate == GCSpropagate);
@@ -1304,12 +1304,12 @@ static void youngcollection (lua_State *L, global_State *g) {
   sweepgen(L, g, &g->tobefnz, NULL, &dummy, &addedold1);
 
   /* keep total number of added old1 objects */
-  g->marked = marked + addedold1;
+  g->GCmarked = marked + addedold1;
 
   /* decide whether to shift to major mode */
   if (checkminormajor(g, addedold1)) {
     minor2inc(L, g, KGC_GENMAJOR);  /* go to major mode */
-    g->marked = 0;  /* avoid pause in first major cycle */
+    g->GCmarked = 0;  /* avoid pause in first major cycle */
   }
   else
     finishgencycle(L, g);  /* still in minor mode; finish it */
@@ -1338,8 +1338,8 @@ static void atomic2gen (lua_State *L, global_State *g) {
   sweep2old(L, &g->tobefnz);
 
   g->gckind = KGC_GENMINOR;
-  g->GCmajorminor = g->marked;  /* "base" for number of objects */
-  g->marked = 0;  /* to count the number of added old1 objects */
+  g->GCmajorminor = g->GCmarked;  /* "base" for number of objects */
+  g->GCmarked = 0;  /* to count the number of added old1 objects */
   finishgencycle(L, g);
 }
 
@@ -1407,14 +1407,14 @@ static int checkmajorminor (lua_State *L, global_State *g) {
     l_obj numobjs = gettotalobjs(g);
     l_obj addedobjs = numobjs - g->GCmajorminor;
     l_obj limit = applygcparam(g, MAJORMINOR, addedobjs);
-    l_obj tobecollected = numobjs - g->marked;
+    l_obj tobecollected = numobjs - g->GCmarked;
     if (tobecollected > limit) {
       atomic2gen(L, g);  /* return to generational mode */
       setminordebt(g);
       return 0;  /* exit incremental collection */
     }
   }
-  g->GCmajorminor = g->marked;  /* prepare for next collection */
+  g->GCmajorminor = g->GCmarked;  /* prepare for next collection */
   return 1;  /* stay doing incremental collections */
 }
 
@@ -1692,7 +1692,7 @@ static void fullinc (lua_State *L, global_State *g) {
   luaC_runtilstate(L, GCSpause, 1);
   luaC_runtilstate(L, GCScallfin, 1);  /* run up to finalizers */
   /* 'marked' must be correct after a full GC cycle */
-  lua_assert(g->marked == gettotalobjs(g));
+  lua_assert(g->GCmarked == gettotalobjs(g));
   luaC_runtilstate(L, GCSpause, 1);  /* finish collection */
   setpause(g);
 }
