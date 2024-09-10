@@ -3326,7 +3326,7 @@ Returns the remainder of dividing the current amount of bytes of
 memory in use by Lua by 1024.
 }
 
-@item{@defid{LUA_GCSTEP} (int n)|
+@item{@defid{LUA_GCSTEP} (size_t n)|
 Performs a step of garbage collection.
 }
 

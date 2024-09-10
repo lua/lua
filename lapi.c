@@ -1199,7 +1199,7 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
     }
     case LUA_GCSTEP: {
       lu_byte oldstp = g->gcstp;
-      l_obj n = va_arg(argp, int);
+      l_obj n = cast(l_obj, va_arg(argp, size_t));
       int work = 0;  /* true if GC did some work */
       g->gcstp = 0;  /* allow GC to run (other bits must be zero here) */
       if (n <= 0)

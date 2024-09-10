@@ -216,7 +216,7 @@ static int luaB_collectgarbage (lua_State *L) {
     }
     case LUA_GCSTEP: {
       lua_Integer n = luaL_optinteger(L, 2, 0);
-      int res = lua_gc(L, o, (int)n);
+      int res = lua_gc(L, o, cast_sizet(n));
       checkvalres(res);
       lua_pushboolean(L, res);
       return 1;
