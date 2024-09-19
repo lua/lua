@@ -402,7 +402,8 @@ int luaH_next (lua_State *L, Table *t, StkId key) {
 
 static void freehash (lua_State *L, Table *t) {
   if (!isdummy(t)) {
-    size_t bsize = sizenode(t) * sizeof(Node);  /* 'node' size in bytes */
+    /* 'node' size in bytes */
+    size_t bsize = cast_sizet(sizenode(t)) * sizeof(Node);
     char *arr = cast_charp(t->node);
     if (haslastfree(t)) {
       bsize += sizeof(Limbox);
