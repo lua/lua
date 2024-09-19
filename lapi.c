@@ -53,16 +53,6 @@ const char lua_ident[] =
 #define isupvalue(i)		((i) < LUA_REGISTRYINDEX)
 
 
-/* Advance the garbage collector when creating large objects */
-static void advancegc (lua_State *L, size_t delta) {
-  delta >>= 5;  /* one object for each 32 bytes (empirical) */
-  if (delta > 0) {
-    global_State *g = G(L);
-    luaE_setdebt(g, g->GCdebt - cast(l_obj, delta));
-  }
-}
-
-
 /*
 ** Convert an acceptable index to a pointer to its respective value.
 ** Non-valid indices return the special nil value 'G(L)->nilvalue'.
@@ -540,7 +530,6 @@ LUA_API const char *lua_pushlstring (lua_State *L, const char *s, size_t len) {
   ts = (len == 0) ? luaS_new(L, "") : luaS_newlstr(L, s, len);
   setsvalue2s(L, L->top.p, ts);
   api_incr_top(L);
-  advancegc(L, len);
   luaC_checkGC(L);
   lua_unlock(L);
   return getstr(ts);
@@ -557,7 +546,6 @@ LUA_API const char *lua_pushextlstring (lua_State *L,
   setsvalue2s(L, L->top.p, ts);
   api_incr_top(L);
   if (falloc != NULL)  /* non-static string? */
-    advancegc(L, len);  /* count its memory */
   luaC_checkGC(L);
   lua_unlock(L);
   return getstr(ts);
@@ -1190,16 +1178,16 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
     }
     case LUA_GCCOUNT: {
       /* GC values are expressed in Kbytes: #bytes/2^10 */
-      res = cast_int(g->GCtotalbytes >> 10);
+      res = cast_int(gettotalbytes(g) >> 10);
       break;
     }
     case LUA_GCCOUNTB: {
-      res = cast_int(g->GCtotalbytes & 0x3ff);
+      res = cast_int(gettotalbytes(g) & 0x3ff);
       break;
     }
     case LUA_GCSTEP: {
       lu_byte oldstp = g->gcstp;
-      l_obj n = cast(l_obj, va_arg(argp, size_t));
+      l_mem n = cast(l_mem, va_arg(argp, size_t));
       int work = 0;  /* true if GC did some work */
       g->gcstp = 0;  /* allow GC to run (other bits must be zero here) */
       if (n <= 0)
@@ -1356,7 +1344,6 @@ LUA_API void *lua_newuserdatauv (lua_State *L, size_t size, int nuvalue) {
   u = luaS_newudata(L, size, cast(unsigned short, nuvalue));
   setuvalue(L, s2v(L->top.p), u);
   api_incr_top(L);
-  advancegc(L, size);
   luaC_checkGC(L);
   lua_unlock(L);
   return getudatamem(u);

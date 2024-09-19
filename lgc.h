@@ -23,8 +23,9 @@
 ** never point to a white one. Moreover, any gray object must be in a
 ** "gray list" (gray, grayagain, weak, allweak, ephemeron) so that it
 ** can be visited again before finishing the collection cycle. (Open
-** upvalues are an exception to this rule.)  These lists have no meaning
-** when the invariant is not being enforced (e.g., sweep phase).
+** upvalues are an exception to this rule, as they are attached to
+** a corresponding thread.)  These lists have no meaning when the
+** invariant is not being enforced (e.g., sweep phase).
 */
 
 
@@ -48,10 +49,10 @@
 
 /*
 ** macro to tell when main invariant (white objects cannot point to black
-** ones) must be kept. During a collection, the sweep
-** phase may break the invariant, as objects turned white may point to
-** still-black objects. The invariant is restored when sweep ends and
-** all objects are white again.
+** ones) must be kept. During a collection, the sweep phase may break
+** the invariant, as objects turned white may point to still-black
+** objects. The invariant is restored when sweep ends and all objects
+** are white again.
 */
 
 #define keepinvariant(g)	((g)->gcstate <= GCSatomic)
@@ -163,34 +164,37 @@
 
 /*
 ** Minor collections will shift to major ones after LUAI_MINORMAJOR%
-** objects become old.
+** bytes become old.
 */
 #define LUAI_MINORMAJOR         100
 
 /*
 ** Major collections will shift to minor ones after a collection
-** collects at least LUAI_MAJORMINOR% of the new objects.
+** collects at least LUAI_MAJORMINOR% of the new bytes.
 */
 #define LUAI_MAJORMINOR         50
 
 /*
 ** A young (minor) collection will run after creating LUAI_GENMINORMUL%
-** new objects.
+** new bytes.
 */
 #define LUAI_GENMINORMUL         25
 
 
 /* incremental */
 
-/* Number of objects must be LUAI_GCPAUSE% before starting new cycle */
+/* Number of bytes must be LUAI_GCPAUSE% before starting new cycle */
 #define LUAI_GCPAUSE    200
 
-/* Step multiplier. (Roughly, the collector handles LUAI_GCMUL% objects
-   for each new allocated object.) */
-#define LUAI_GCMUL      200
+/*
+** Step multiplier: The collector handles LUAI_GCMUL% work units for
+** each new allocated byte. (Each "work unit" corresponds roughly to
+** sweeping or marking one object.)
+*/
+#define LUAI_GCMUL      20  /* ??? */
 
-/* How many objects to allocate before next GC step */
-#define LUAI_GCSTEPSIZE	250
+/* How many bytes to allocate before next GC step */
+#define LUAI_GCSTEPSIZE	(250 * sizeof(void*))
 
 
 #define setgcparam(g,p,v)  (g->gcparams[LUA_GCP##p] = luaO_codeparam(v))

@@ -274,11 +274,10 @@ struct CallInfo {
 typedef struct global_State {
   lua_Alloc frealloc;  /* function to reallocate memory */
   void *ud;         /* auxiliary data to 'frealloc' */
-  lu_mem GCtotalbytes;  /* number of bytes currently allocated */
-  l_obj GCtotalobjs;  /* total number of objects allocated + GCdebt */
-  l_obj GCdebt;  /* objects counted but not yet allocated */
-  l_obj GCmarked;  /* number of objects marked in a GC cycle */
-  l_obj GCmajorminor;  /* auxiliary counter to control major-minor shifts */
+  l_mem GCtotalbytes;  /* number of bytes currently allocated + debt */
+  l_mem GCdebt;  /* bytes counted but not yet allocated */
+  l_mem GCmarked;  /* number of objects marked in a GC cycle */
+  l_mem GCmajorminor;  /* auxiliary counter to control major-minor shifts */
   stringtable strt;  /* hash table for strings */
   TValue l_registry;
   TValue nilvalue;  /* a nil value */
@@ -411,11 +410,11 @@ union GCUnion {
 #define obj2gco(v)	check_exp((v)->tt >= LUA_TSTRING, &(cast_u(v)->gc))
 
 
-/* actual number of total objects allocated */
-#define gettotalobjs(g)	((g)->GCtotalobjs - (g)->GCdebt)
+/* actual number of total memory allocated */
+#define gettotalbytes(g)	((g)->GCtotalbytes - (g)->GCdebt)
 
 
-LUAI_FUNC void luaE_setdebt (global_State *g, l_obj debt);
+LUAI_FUNC void luaE_setdebt (global_State *g, l_mem debt);
 LUAI_FUNC void luaE_freethread (lua_State *L, lua_State *L1);
 LUAI_FUNC CallInfo *luaE_extendCI (lua_State *L);
 LUAI_FUNC void luaE_shrinkCI (lua_State *L);

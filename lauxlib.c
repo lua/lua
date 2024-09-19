@@ -618,6 +618,7 @@ LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
     box->bsize = 0;  box->box = NULL;
     lua_pushextlstring(L, s, len, allocf, ud);
     lua_closeslot(L, -2);  /* close the box */
+    lua_gc(L, LUA_GCSTEP, len);
   }
   lua_remove(L, -2);  /* remove box or placeholder from the stack */
 }

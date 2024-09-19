@@ -838,7 +838,7 @@ typedef struct Table {
 LUAI_FUNC int luaO_utf8esc (char *buff, unsigned long x);
 LUAI_FUNC lu_byte luaO_ceillog2 (unsigned int x);
 LUAI_FUNC lu_byte luaO_codeparam (unsigned int p);
-LUAI_FUNC l_obj luaO_applyparam (lu_byte p, l_obj x);
+LUAI_FUNC l_mem luaO_applyparam (lu_byte p, l_mem x);
 
 LUAI_FUNC int luaO_rawarith (lua_State *L, int op, const TValue *p1,
                              const TValue *p2, TValue *res);
