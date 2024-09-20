@@ -475,74 +475,94 @@ void luaO_tostring (lua_State *L, TValue *obj) {
 /*
 ** Size for buffer space used by 'luaO_pushvfstring'. It should be
 ** (LUA_IDSIZE + MAXNUMBER2STR) + a minimal space for basic messages,
-** so that 'luaG_addinfo' can work directly on the buffer.
+** so that 'luaG_addinfo' can work directly on the static buffer.
 */
 #define BUFVFS		cast_uint(LUA_IDSIZE + MAXNUMBER2STR + 95)
 
-/* buffer used by 'luaO_pushvfstring' */
+/*
+** Buffer used by 'luaO_pushvfstring'. 'err' signals any error while
+** building result (memory error [1] or buffer overflow [2]).
+*/
 typedef struct BuffFS {
   lua_State *L;
-  int pushed;  /* true if there is a part of the result on the stack */
-  unsigned blen;  /* length of partial string in 'space' */
-  char space[BUFVFS];  /* holds last part of the result */
+  char *b;
+  size_t buffsize;
+  size_t blen;  /* length of string in 'buff' */
+  int err;
+  char space[BUFVFS];  /* initial buffer */
 } BuffFS;
 
 
+static void initbuff (lua_State *L, BuffFS *buff) {
+  buff->L = L;
+  buff->b = buff->space;
+  buff->buffsize = sizeof(buff->space);
+  buff->blen = 0;
+  buff->err = 0;
+}
+
+
 /*
-** Push given string to the stack, as part of the result, and
-** join it to previous partial result if there is one.
-** It may call 'luaV_concat' while using one slot from EXTRA_STACK.
-** This call cannot invoke metamethods, as both operands must be
-** strings. It can, however, raise an error if the result is too
-** long. In that case, 'luaV_concat' frees the extra slot before
-** raising the error.
+** Push final result from 'luaO_pushvfstring'. This function may raise
+** errors explicitly or through memory errors, so it must run protected.
 */
-static void pushstr (BuffFS *buff, const char *str, size_t lstr) {
+static void pushbuff (lua_State *L, void *ud) {
+  BuffFS *buff = cast(BuffFS*, ud);
+  switch (buff->err) {
+    case 1:
+      luaD_throw(L, LUA_ERRMEM);
+      break;
+    case 2:
+      luaG_runerror(L, "buffer overflow");
+      break;
+    default: {  /* no errors */
+      TString *ts = luaS_newlstr(L, buff->b, buff->blen);
+      setsvalue2s(L, L->top.p, ts);
+      L->top.p++;
+    }
+  }
+}
+
+
+static const char *clearbuff (BuffFS *buff) {
   lua_State *L = buff->L;
-  setsvalue2s(L, L->top.p, luaS_newlstr(L, str, lstr));
-  L->top.p++;  /* may use one slot from EXTRA_STACK */
-  if (!buff->pushed)  /* no previous string on the stack? */
-    buff->pushed = 1;  /* now there is one */
-  else  /* join previous string with new one */
-    luaV_concat(L, 2);
+  const char *res;
+  pushbuff(L, buff);
+  res = getstr(tsvalue(s2v(L->top.p - 1)));
+  if (buff->b != buff->space)  /* using dynamic buffer? */
+    luaM_freearray(L, buff->b, buff->buffsize);  /* free it */
+  return res;
 }
 
 
-/*
-** empty the buffer space into the stack
-*/
-static void clearbuff (BuffFS *buff) {
-  pushstr(buff, buff->space, buff->blen);  /* push buffer contents */
-  buff->blen = 0;  /* space now is empty */
-}
-
-
-/*
-** Get a space of size 'sz' in the buffer. If buffer has not enough
-** space, empty it. 'sz' must fit in an empty buffer.
-*/
-static char *getbuff (BuffFS *buff, unsigned sz) {
-  lua_assert(buff->blen <= BUFVFS); lua_assert(sz <= BUFVFS);
-  if (sz > BUFVFS - buff->blen)  /* not enough space? */
-    clearbuff(buff);
-  return buff->space + buff->blen;
-}
-
-
-/*
-** Add 'str' to the buffer. If string is larger than the buffer space,
-** push the string directly to the stack.
-*/
 static void addstr2buff (BuffFS *buff, const char *str, size_t slen) {
-  if (slen <= BUFVFS) {  /* does string fit into buffer? */
-    char *bf = getbuff(buff, cast_uint(slen));
-    memcpy(bf, str, slen);  /* add string to buffer */
-    buff->blen += cast_uint(slen);
+  if (buff->err)  /* do nothing else after an error */
+    return;
+  if (slen > buff->buffsize - buff->blen) {
+    /* new string doesn't fit into current buffer */
+    if (slen > ((MAX_SIZE/2) - buff->blen)) {  /* overflow? */
+      buff->err = 2;
+      return;
+    }
+    else {
+      size_t newsize = buff->buffsize + slen;  /* limited to MAX_SIZE/2 */
+      char *newb =
+        (buff->b == buff->space)  /* still using static space? */
+        ? luaM_reallocvector(buff->L, NULL, 0, newsize, char)
+        : luaM_reallocvector(buff->L, buff->b, buff->buffsize, newsize,
+                                                               char);
+      if (newb == NULL) {  /* allocation error? */
+        buff->err = 1;
+        return;
+      }
+      if (buff->b == buff->space)
+        memcpy(newb, buff->b, buff->blen);  /* copy previous content */
+      buff->b = newb;
+      buff->buffsize = newsize;
+    }
   }
-  else {  /* string larger than buffer */
-    clearbuff(buff);  /* string comes after buffer's content */
-    pushstr(buff, str, slen);  /* push string */
-  }
+  memcpy(buff->b + buff->blen, str, slen);  /* copy new content */
+  buff->blen += slen;
 }
 
 
@@ -563,8 +583,7 @@ static void addnum2buff (BuffFS *buff, TValue *num) {
 const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
   BuffFS buff;  /* holds last part of the result */
   const char *e;  /* points to next '%' */
-  buff.pushed = 0;  buff.blen = 0;
-  buff.L = L;
+  initbuff(L, &buff);
   while ((e = strchr(fmt, '%')) != NULL) {
     addstr2buff(&buff, fmt, ct_diff2sz(e - fmt));  /* add 'fmt' up to '%' */
     switch (*(e + 1)) {  /* conversion specifier */
@@ -622,9 +641,7 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
     fmt = e + 2;  /* skip '%' and the specifier */
   }
   addstr2buff(&buff, fmt, strlen(fmt));  /* rest of 'fmt' */
-  clearbuff(&buff);  /* empty buffer into the stack */
-  lua_assert(buff.pushed == 1);
-  return getstr(tsvalue(s2v(L->top.p - 1)));
+  return clearbuff(&buff);  /* empty buffer into a new string */
 }
 
 
