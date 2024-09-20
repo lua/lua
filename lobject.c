@@ -529,9 +529,6 @@ static char *getbuff (BuffFS *buff, unsigned sz) {
 }
 
 
-#define addsize(b,sz)	((b)->blen += (sz))
-
-
 /*
 ** Add 'str' to the buffer. If string is larger than the buffer space,
 ** push the string directly to the stack.
@@ -540,7 +537,7 @@ static void addstr2buff (BuffFS *buff, const char *str, size_t slen) {
   if (slen <= BUFVFS) {  /* does string fit into buffer? */
     char *bf = getbuff(buff, cast_uint(slen));
     memcpy(bf, str, slen);  /* add string to buffer */
-    addsize(buff, cast_uint(slen));
+    buff->blen += cast_uint(slen);
   }
   else {  /* string larger than buffer */
     clearbuff(buff);  /* string comes after buffer's content */
@@ -553,9 +550,9 @@ static void addstr2buff (BuffFS *buff, const char *str, size_t slen) {
 ** Add a numeral to the buffer.
 */
 static void addnum2buff (BuffFS *buff, TValue *num) {
-  char *numbuff = getbuff(buff, MAXNUMBER2STR);
+  char numbuff[MAXNUMBER2STR];
   unsigned len = tostringbuff(num, numbuff);  /* format number into 'numbuff' */
-  addsize(buff, len);
+  addstr2buff(buff, numbuff, len);
 }
 
 
@@ -601,11 +598,10 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
         break;
       }
       case 'p': {  /* a pointer */
-        const unsigned sz = 3 * sizeof(void*) + 8; /* enough space for '%p' */
-        char *bf = getbuff(&buff, sz);
+        char bf[MAXNUMBER2STR];  /* enough space for '%p' */
         void *p = va_arg(argp, void *);
-        int len = lua_pointer2str(bf, sz, p);
-        addsize(&buff, cast_uint(len));
+        int len = lua_pointer2str(bf, MAXNUMBER2STR, p);
+        addstr2buff(&buff, bf, cast_uint(len));
         break;
       }
       case 'U': {  /* an 'unsigned long' as a UTF-8 sequence */
@@ -619,8 +615,8 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
         break;
       }
       default: {
-        luaG_runerror(L, "invalid option '%%%c' to 'lua_pushfstring'",
-                         *(e + 1));
+        addstr2buff(&buff, e, 2);  /* keep unknown format in the result */
+        break;
       }
     }
     fmt = e + 2;  /* skip '%' and the specifier */
