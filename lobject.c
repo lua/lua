@@ -480,7 +480,7 @@ void luaO_tostring (lua_State *L, TValue *obj) {
 #define BUFVFS		cast_uint(LUA_IDSIZE + MAXNUMBER2STR + 95)
 
 /*
-** Buffer used by 'luaO_pushvfstring'. 'err' signals any error while
+** Buffer used by 'luaO_pushvfstring'. 'err' signals an error while
 ** building result (memory error [1] or buffer overflow [2]).
 */
 typedef struct BuffFS {
@@ -512,9 +512,14 @@ static void pushbuff (lua_State *L, void *ud) {
     case 1:
       luaD_throw(L, LUA_ERRMEM);
       break;
-    case 2:
-      luaG_runerror(L, "buffer overflow");
-      break;
+    case 2:  /* length overflow: Add "..." at the end of result */
+      if (buff->buffsize - buff->blen < 3)
+        strcpy(buff->b + buff->blen - 3, "..."); /* 'blen' must be > 3 */
+      else {  /* there is enough space left for the "..." */
+        strcpy(buff->b + buff->blen, "...");
+        buff->blen += 3;
+      }
+      /* FALLTHROUGH */
     default: {  /* no errors */
       TString *ts = luaS_newlstr(L, buff->b, buff->blen);
       setsvalue2s(L, L->top.p, ts);
@@ -527,8 +532,10 @@ static void pushbuff (lua_State *L, void *ud) {
 static const char *clearbuff (BuffFS *buff) {
   lua_State *L = buff->L;
   const char *res;
-  pushbuff(L, buff);
-  res = getstr(tsvalue(s2v(L->top.p - 1)));
+  if (luaD_rawrunprotected(L, pushbuff, buff) != LUA_OK)  /* errors? */
+    res = NULL;  /* error message is on the top of the stack */
+  else
+    res = getstr(tsvalue(s2v(L->top.p - 1)));
   if (buff->b != buff->space)  /* using dynamic buffer? */
     luaM_freearray(L, buff->b, buff->buffsize);  /* free it */
   return res;
@@ -536,12 +543,14 @@ static const char *clearbuff (BuffFS *buff) {
 
 
 static void addstr2buff (BuffFS *buff, const char *str, size_t slen) {
+  size_t left = buff->buffsize - buff->blen;  /* space left in the buffer */
   if (buff->err)  /* do nothing else after an error */
     return;
-  if (slen > buff->buffsize - buff->blen) {
-    /* new string doesn't fit into current buffer */
+  if (slen > left) {  /* new string doesn't fit into current buffer? */
     if (slen > ((MAX_SIZE/2) - buff->blen)) {  /* overflow? */
-      buff->err = 2;
+      memcpy(buff->b + buff->blen, str, left);  /* copy what it can */
+      buff->blen = buff->buffsize;
+      buff->err = 2;  /* doesn't add anything else */
       return;
     }
     else {
@@ -552,13 +561,13 @@ static void addstr2buff (BuffFS *buff, const char *str, size_t slen) {
         : luaM_reallocvector(buff->L, buff->b, buff->buffsize, newsize,
                                                                char);
       if (newb == NULL) {  /* allocation error? */
-        buff->err = 1;
+        buff->err = 1;  /* signal a memory error */
         return;
       }
-      if (buff->b == buff->space)
+      if (buff->b == buff->space)  /* new buffer (not reallocated)? */
         memcpy(newb, buff->b, buff->blen);  /* copy previous content */
-      buff->b = newb;
-      buff->buffsize = newsize;
+      buff->b = newb;  /* set new (larger) buffer... */
+      buff->buffsize = newsize;  /* ...and its new size */
     }
   }
   memcpy(buff->b + buff->blen, str, slen);  /* copy new content */
@@ -651,6 +660,8 @@ const char *luaO_pushfstring (lua_State *L, const char *fmt, ...) {
   va_start(argp, fmt);
   msg = luaO_pushvfstring(L, fmt, argp);
   va_end(argp);
+  if (msg == NULL)  /* error? */
+    luaD_throw(L, LUA_ERRMEM);
   return msg;
 }
 

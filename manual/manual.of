@@ -3974,7 +3974,7 @@ Lua will call @id{falloc} before raising the error.
 
 
 @APIEntry{const char *lua_pushfstring (lua_State *L, const char *fmt, ...);|
-@apii{0,1,v}
+@apii{0,1,m}
 
 Pushes onto the stack a formatted string
 and returns a pointer to this string @see{constchar}.
@@ -3996,9 +3996,6 @@ The conversion specifiers can only be
 @Char{%d} (inserts an @T{int}),
 @Char{%c} (inserts an @T{int} as a one-byte character), and
 @Char{%U} (inserts an @T{unsigned long} as a @x{UTF-8} byte sequence).
-
-This function may raise errors due to memory overflow
-or an invalid conversion specifier.
 
 }
 
@@ -4104,10 +4101,14 @@ onto the stack.
 const char *lua_pushvfstring (lua_State *L,
                               const char *fmt,
                               va_list argp);|
-@apii{0,1,v}
+@apii{0,1,-}
 
-Equivalent to @Lid{lua_pushfstring}, except that it receives a @id{va_list}
-instead of a variable number of arguments.
+Equivalent to @Lid{lua_pushfstring},
+except that it receives a @id{va_list}
+instead of a variable number of arguments,
+and it does not raise errors.
+Instead, in case of errors it pushes the error message
+and returns @id{NULL}.
 
 }
 
@@ -5636,6 +5637,7 @@ It is defined as the following macro:
 }
 It @N{returns 0} (@Lid{LUA_OK}) if there are no errors,
 or 1 in case of errors.
+(Except for out-of-memory errors, which are raised.)
 
 }
 
@@ -5800,7 +5802,7 @@ The first line in the file is ignored if it starts with a @T{#}.
 
 The string @id{mode} works as in the function @Lid{lua_load}.
 
-This function returns the same results as @Lid{lua_load}
+This function returns the same results as @Lid{lua_load},
 or @Lid{LUA_ERRFILE} for file-related errors.
 
 As @Lid{lua_load}, this function only loads the chunk;
@@ -9260,7 +9262,7 @@ the script is compiled as a variadic function.
 In interactive mode,
 Lua repeatedly prompts and waits for a line.
 After reading a line,
-Lua first try to interpret the line as an expression.
+Lua first tries to interpret the line as an expression.
 If it succeeds, it prints its value.
 Otherwise, it interprets the line as a chunk.
 If you write an incomplete chunk,
@@ -9422,6 +9424,11 @@ Parameters for the garbage collection are not set
 with the options @Lid{LUA_GCINC} and @Lid{LUA_GCGEN};
 instead, there is a new option @Lid{LUA_GCPARAM} to that end.
 Moreover, there were some changes in the parameters themselves.
+}
+
+@item{
+The function @Lid{lua_pushvfstring} now reports errors,
+instead of raising them.
 }
 
 }

@@ -587,6 +587,8 @@ LUA_API const char *lua_pushfstring (lua_State *L, const char *fmt, ...) {
   ret = luaO_pushvfstring(L, fmt, argp);
   va_end(argp);
   luaC_checkGC(L);
+  if (ret == NULL)  /* error? */
+    luaD_throw(L, LUA_ERRMEM);
   lua_unlock(L);
   return ret;
 }
