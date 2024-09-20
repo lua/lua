@@ -545,7 +545,6 @@ LUA_API const char *lua_pushextlstring (lua_State *L,
   ts = luaS_newextlstr (L, s, len, falloc, ud);
   setsvalue2s(L, L->top.p, ts);
   api_incr_top(L);
-  if (falloc != NULL)  /* non-static string? */
   luaC_checkGC(L);
   lua_unlock(L);
   return getstr(ts);
