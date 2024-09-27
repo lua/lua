@@ -263,6 +263,15 @@ assert(string.find(getoutput(), "error calling 'print'"))
 RUN('echo "io.stderr:write(1000)\ncont" | lua -e "require\'debug\'.debug()" 2> %s', out)
 checkout("lua_debug> 1000lua_debug> ")
 
+do  -- test warning for locals
+  RUN('echo "  		local x" | lua -i > %s 2>&1', out)
+  assert(string.find(getoutput(), "warning: "))
+
+  RUN('echo "local1 = 10\nlocal1 + 3" | lua -i > %s 2>&1', out)
+  local t = getoutput()
+  assert(not string.find(t, "warning"))
+  assert(string.find(t, "13"))
+end
 
 print("testing warnings")
 
