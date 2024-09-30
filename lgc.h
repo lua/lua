@@ -160,7 +160,11 @@
 */
 
 
-/* Default Values for GC parameters */
+/*
+** {======================================================
+** Default Values for GC parameters
+** =======================================================
+*/
 
 /*
 ** Minor collections will shift to major ones after LUAI_MINORMAJOR%
@@ -189,16 +193,19 @@
 /*
 ** Step multiplier: The collector handles LUAI_GCMUL% work units for
 ** each new allocated byte. (Each "work unit" corresponds roughly to
-** sweeping or marking one object.)
+** sweeping one object or traversing one slot.)
 */
-#define LUAI_GCMUL      20  /* ??? */
+#define LUAI_GCMUL      40
 
 /* How many bytes to allocate before next GC step */
-#define LUAI_GCSTEPSIZE	(250 * sizeof(void*))
+#define LUAI_GCSTEPSIZE	(200 * sizeof(Table))
 
 
 #define setgcparam(g,p,v)  (g->gcparams[LUA_GCP##p] = luaO_codeparam(v))
 #define applygcparam(g,p,x)  luaO_applyparam(g->gcparams[LUA_GCP##p], x)
+
+/* }====================================================== */
+
 
 /*
 ** Control when GC is running:

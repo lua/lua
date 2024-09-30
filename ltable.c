@@ -805,6 +805,18 @@ Table *luaH_new (lua_State *L) {
 }
 
 
+size_t luaH_size (Table *t) {
+  size_t sz = sizeof(Table)
+            + luaH_realasize(t) * (sizeof(Value) + 1);
+  if (!isdummy(t)) {
+    sz += sizenode(t) * sizeof(Node);
+    if (haslastfree(t))
+      sz += sizeof(Limbox);
+  }
+  return sz;
+}
+
+
 /*
 ** Frees a table.
 */

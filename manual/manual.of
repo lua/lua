@@ -608,8 +608,8 @@ An object is considered @def{dead}
 as soon as the collector can be sure the object
 will not be accessed again in the normal execution of the program.
 (@Q{Normal execution} here excludes finalizers,
-which can resurrect dead objects @see{finalizers},
-and excludes also operations using the debug library.)
+which resurrect dead objects @see{finalizers},
+and it excludes also some operations using the debug library.)
 Note that the time when the collector can be sure that an object
 is dead may not coincide with the programmer's expectations.
 The only guarantees are that Lua will not collect an object
@@ -657,25 +657,27 @@ and the @def{garbage-collector step size}.
 
 The garbage-collector pause
 controls how long the collector waits before starting a new cycle.
-The collector starts a new cycle when the number of objects
+The collector starts a new cycle when the number of bytes
 hits @M{n%} of the total after the previous collection.
 Larger values make the collector less aggressive.
 Values equal to or less than 100 mean the collector will not wait to
 start a new cycle.
 A value of 200 means that the collector waits for
-the total number of objects to double before starting a new cycle.
+the total number of bytes to double before starting a new cycle.
 
 The garbage-collector step size controls the
 size of each incremental step,
-specifically how many objects the interpreter creates
+specifically how many bytes the interpreter allocates
 before performing a step:
-A value of @M{n} means the interpreter will create
-approximately @M{n} objects between steps.
+A value of @M{n} means the interpreter will allocate
+approximately @M{n} bytes between steps.
 
 The garbage-collector step multiplier
-controls the size of each GC step.
-A value of @M{n} means the interpreter will mark or sweep,
-in each step, @M{n%} objects for each created object.
+controls how much work each incremental step does.
+A value of @M{n} means the interpreter will execute
+@M{n%} @emphx{units of work} for each byte allocated.
+A unit of work corresponds roughly to traversing one slot
+or sweeping one object.
 Larger values make the collector more aggressive.
 Beware that values too small can
 make the collector too slow to ever finish a cycle.
@@ -689,7 +691,7 @@ effectively producing a non-incremental, stop-the-world collector.
 In generational mode,
 the collector does frequent @emph{minor} collections,
 which traverses only objects recently created.
-If after a minor collection the number of objects is above a limit,
+If after a minor collection the number of bytes is above a limit,
 the collector shifts to a @emph{major} collection,
 which traverses all objects.
 The collector will then stay doing major collections until
@@ -702,30 +704,30 @@ and the @def{major-minor multiplier}.
 
 The minor multiplier controls the frequency of minor collections.
 For a minor multiplier @M{x},
-a new minor collection will be done when the number of objects
+a new minor collection will be done when the number of bytes
 grows @M{x%} larger than the number in use just
 after the last major collection.
 For instance, for a multiplier of 20,
-the collector will do a minor collection when the number of objects
+the collector will do a minor collection when the number of bytes
 gets 20% larger than the total after the last major collection.
 
 The minor-major multiplier controls the shift to major collections.
 For a multiplier @M{x},
 the collector will shift to a major collection
-when the number of old objects grows @M{x%} larger
+when the number of bytes from old objects grows @M{x%} larger
 than the total after the previous major collection.
 For instance, for a multiplier of 100,
-the collector will do a major collection when the number of old objects
+the collector will do a major collection when the number of old bytes
 gets larger than twice the total after the previous major collection.
 
 The major-minor multiplier controls the shift back to minor collections.
 For a multiplier @M{x},
 the collector will shift back to minor collections
 after a major collection collects at least @M{x%}
-of the objects allocated during the last cycle.
+of the bytes allocated during the last cycle.
 In particular, for a multiplier of 0,
 the collector will immediately shift back to minor collections
-after doing one cycle of major collections.
+after doing one major collection.
 
 }
 
@@ -6404,23 +6406,22 @@ gives the exact number of bytes in use by Lua.
 Performs a garbage-collection step.
 This option may be followed by an extra argument,
 an integer with the step size.
-The default for this argument is zero.
 
 If the size is a positive @id{n},
-the collector acts as if @id{n} new objects have been created.
+the collector acts as if @id{n} new bytes have been allocated.
 If the size is zero,
 the collector performs a basic step.
 In incremental mode,
 a basic step corresponds to the current step size.
 In generational mode,
 a basic step performs a full minor collection or
-a major collection,
+an incremental step,
 if the collector has scheduled one.
 
 In incremental mode,
 the function returns @true if the step finished a collection cycle.
 In generational mode,
-the function returns @true if the step performed a major collection.
+the function returns @true if the step finished a major collection.
 }
 
 @item{@St{isrunning}|

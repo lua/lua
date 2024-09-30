@@ -264,6 +264,21 @@ Proto *luaF_newproto (lua_State *L) {
 }
 
 
+size_t luaF_protosize (Proto *p) {
+  size_t sz = sizeof(Proto)
+            + cast_uint(p->sizep) * sizeof(Proto*)
+            + cast_uint(p->sizek) * sizeof(TValue)
+            + cast_uint(p->sizelocvars) * sizeof(LocVar)
+            + cast_uint(p->sizeupvalues) * sizeof(Upvaldesc);
+  if (!(p->flag & PF_FIXED)) {
+    sz +=  cast_uint(p->sizecode) * sizeof(Instruction)
+        +  cast_uint(p->sizelineinfo) * sizeof(lu_byte)
+        + cast_uint(p->sizeabslineinfo) * sizeof(AbsLineInfo);
+  }
+  return sz;
+}
+
+
 void luaF_freeproto (lua_State *L, Proto *f) {
   if (!(f->flag & PF_FIXED)) {
     luaM_freearray(L, f->code, cast_sizet(f->sizecode));

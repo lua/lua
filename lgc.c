@@ -113,13 +113,7 @@ static void entersweep (lua_State *L);
 static size_t objsize (GCObject *o) {
   switch (o->tt) {
     case LUA_VTABLE: {
-      /* Fow now, table size does not consider 'haslastfree' */
-      Table *t = gco2t(o);
-      size_t sz = sizeof(Table)
-                + luaH_realasize(t) * (sizeof(Value) + 1);
-      if (!isdummy(t))
-        sz += sizenode(t) * sizeof(Node);
-      return sz;
+      return luaH_size(gco2t(o));
     }
     case LUA_VLCL: {
       LClosure *cl = gco2lcl(o);
@@ -135,26 +129,10 @@ static size_t objsize (GCObject *o) {
       return sizeudata(u->nuvalue, u->len);
     }
     case LUA_VPROTO: {
-      Proto *p = gco2p(o);
-      size_t sz = sizeof(Proto)
-                + cast_uint(p->sizep) * sizeof(Proto*)
-                + cast_uint(p->sizek) * sizeof(TValue)
-                + cast_uint(p->sizelocvars) * sizeof(LocVar)
-                + cast_uint(p->sizeupvalues) * sizeof(Upvaldesc);
-      if (!(p->flag & PF_FIXED)) {
-        sz +=  cast_uint(p->sizecode) * sizeof(Instruction)
-            +  cast_uint(p->sizelineinfo) * sizeof(lu_byte)
-            + cast_uint(p->sizeabslineinfo) * sizeof(AbsLineInfo);
-      }
-      return sz;
+      return luaF_protosize(gco2p(o));
     }
     case LUA_VTHREAD: {
-      lua_State *L1 = gco2th(o);
-      size_t sz = sizeof(lua_State) + LUA_EXTRASPACE
-                + cast_uint(L1->nci) * sizeof(CallInfo);
-      if (L1->stack.p != NULL)
-        sz += cast_uint(stacksize(L1) + EXTRA_STACK) * sizeof(StackValue);
-      return sz;
+      return luaE_statesize(gco2th(o));
     }
     case LUA_VSHRSTR: {
       TString *ts = gco2ts(o);
@@ -164,7 +142,9 @@ static size_t objsize (GCObject *o) {
       TString *ts = gco2ts(o);
       return luaS_sizelngstr(ts->u.lnglen, ts->shrlen);
     }
-    case LUA_VUPVAL: return sizeof(UpVal);
+    case LUA_VUPVAL: {
+      return sizeof(UpVal);
+    }
     default: lua_assert(0); return 0;
   }
 }
@@ -615,7 +595,7 @@ static l_mem traversetable (global_State *g, Table *h) {
   }
   else  /* not weak */
     traversestrongtable(g, h);
-  return 1 + sizenode(h) + h->alimit;
+  return 1 + 2*sizenode(h) + h->alimit;
 }
 
 
@@ -1291,10 +1271,11 @@ static void minor2inc (lua_State *L, global_State *g, lu_byte kind) {
 /*
 ** Decide whether to shift to major mode. It tests two conditions:
 ** 1) Whether the number of added old objects in this collection is more
-** than half the number of new objects. ('step' is the number of objects
-** created between minor collections. Except for forward barriers, it
-** is the maximum number of objects that can become old in each minor
-** collection.)
+** than half the number of new objects. ('step' is equal to the debt set
+** to trigger the next minor collection; that is equal to the number
+** of objects created since the previous minor collection.  Except for
+** forward barriers, it is the maximum number of objects that can become
+** old in each minor collection.)
 ** 2) Whether the accumulated number of added old objects is larger
 ** than 'minormajor'% of the number of lived objects after the last
 ** major collection. (That percentage is computed in 'limit'.)
@@ -1678,7 +1659,7 @@ void luaC_runtilstate (lua_State *L, int state, int fast) {
 
 
 /*
-** Performs a basic incremental step. The debt and step size are
+** Performs a basic incremental step. The step size is
 ** converted from bytes to "units of work"; then the function loops
 ** running single steps until adding that many units of work or
 ** finishing a cycle (pause state). Finally, it sets the debt that
@@ -1689,7 +1670,9 @@ static void incstep (lua_State *L, global_State *g) {
   l_mem work2do = applygcparam(g, STEPMUL, stepsize);
   l_mem stres;
   int fast = (work2do == 0);  /* special case: do a full collection */
+//printf("\n** %ld %ld %d\n", work2do, stepsize, g->gcstate);
   do {  /* repeat until enough work */
+//printf("%d-", g->gcstate);
     stres = singlestep(L, fast);  /* perform one single step */
     if (stres == step2minor)  /* returned to minor collections? */
       return;  /* nothing else to be done here */
@@ -1716,21 +1699,20 @@ void luaC_step (lua_State *L) {
   if (!gcrunning(g))  /* not running? */
     luaE_setdebt(g, 20000);
   else {
-// printf("mem: %ld  kind: %s  ", gettotalbytes(g),
-//   g->gckind == KGC_INC ? "inc" : g->gckind == KGC_GENMAJOR ? "genmajor" :
-//     "genminor");
+//printf("mem: %ld  kind: %s  ", gettotalbytes(g),
+//  g->gckind == KGC_INC ? "inc" : g->gckind == KGC_GENMAJOR ? "genmajor" :
+//    "genminor");
     switch (g->gckind) {
       case KGC_INC: case KGC_GENMAJOR:
-// printf("(%d -> ", g->gcstate);
         incstep(L, g);
-// printf("%d) ", g->gcstate);
+//printf("%d) ", g->gcstate);
         break;
       case KGC_GENMINOR:
         youngcollection(L, g);
         setminordebt(g);
         break;
     }
-// printf("-> mem: %ld  debt: %ld\n", gettotalbytes(g), g->GCdebt);
+//printf("-> mem: %ld  debt: %ld\n", gettotalbytes(g), g->GCdebt);
   }
 }
 

@@ -257,6 +257,14 @@ static void preinit_thread (lua_State *L, global_State *g) {
 }
 
 
+size_t luaE_statesize (lua_State *L) {
+  size_t sz = sizeof(LG) + cast_uint(L->nci) * sizeof(CallInfo);
+  if (L->stack.p != NULL)
+    sz += cast_uint(stacksize(L) + EXTRA_STACK) * sizeof(StackValue);
+  return sz;
+}
+
+
 static void close_state (lua_State *L) {
   global_State *g = G(L);
   if (!completestate(g))  /* closing a partially built state? */
