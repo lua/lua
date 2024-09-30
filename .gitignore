@@ -3,6 +3,8 @@
 *.so
 *.o
 *.a
+*.o.wasm
+*.a.wasm
 
 manual/manual.html
 
