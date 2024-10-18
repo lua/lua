@@ -719,6 +719,8 @@ than the total after the previous major collection.
 For instance, for a multiplier of 100,
 the collector will do a major collection when the number of old bytes
 gets larger than twice the total after the previous major collection.
+As a special case,
+a value of 0 stops the collector from doing major collections.
 
 The major-minor multiplier controls the shift back to minor collections.
 For a multiplier @M{x},
@@ -6441,7 +6443,8 @@ Changes the collector mode to generational and returns the previous mode.
 Changes and/or retrieves the values of a parameter of the collector.
 This option must be followed by one or two extra arguments:
 The name of the parameter being changed or retrieved (a string)
-and an optional new value for that parameter (an integer).
+and an optional new value for that parameter,
+an integer in the range @M{[0,100000]}.
 The first argument must have one of the following values:
 @description{
 @item{@St{minormul}| The minor multiplier. }

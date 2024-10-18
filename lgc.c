@@ -424,10 +424,8 @@ static void cleargraylists (global_State *g) {
 
 /*
 ** mark root set and reset all gray lists, to start a new collection.
-** 'marked' is initialized with the number of fixed objects in the state,
-** to count the total number of live objects during a cycle. (That is
-** the metafield names, plus the reserved words, plus "_ENV" plus the
-** memory-error message.)
+** 'GCmarked' is initialized to count the total number of live bytes
+** during a cycle.
 */
 static void restartcollection (global_State *g) {
   cleargraylists(g);
@@ -1067,10 +1065,25 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 ** =======================================================
 */
 
+/*
+** Fields 'GCmarked' and 'GCmajorminor' are used to control the pace and
+** the mode of the collector. They play several roles, depending on the
+** mode of the collector:
+** * KGC_INC:
+**     GCmarked: number of marked bytes during a cycle.
+**     GCmajorminor: not used.
+** * KGC_GENMINOR
+**     GCmarked: number of bytes that became old since last major collection.
+**     GCmajorminor: number of bytes marked in last major collection.
+** * KGC_GENMAJOR
+**     GCmarked: number of bytes that became old sinse last major collection.
+**     GCmajorminor: number of bytes marked in last major collection.
+*/
+
 
 /*
 ** Set the "time" to wait before starting a new incremental cycle;
-** cycle will start when number of objects in use hits the threshold of
+** cycle will start when number of bytes in use hits the threshold of
 ** approximately (marked * pause / 100).
 */
 static void setpause (global_State *g) {
@@ -1258,7 +1271,7 @@ static void finishgencycle (lua_State *L, global_State *g) {
 ** in generational mode.
 */
 static void minor2inc (lua_State *L, global_State *g, lu_byte kind) {
-  g->GCmajorminor = g->GCmarked;  /* number of live objects */
+  g->GCmajorminor = g->GCmarked;  /* number of live bytes */
   g->gckind = kind;
   g->reallyold = g->old1 = g->survival = NULL;
   g->finobjrold = g->finobjold1 = g->finobjsur = NULL;
@@ -1269,21 +1282,16 @@ static void minor2inc (lua_State *L, global_State *g, lu_byte kind) {
 
 
 /*
-** Decide whether to shift to major mode. It tests two conditions:
-** 1) Whether the number of added old objects in this collection is more
-** than half the number of new objects. ('step' is equal to the debt set
-** to trigger the next minor collection; that is equal to the number
-** of objects created since the previous minor collection.  Except for
-** forward barriers, it is the maximum number of objects that can become
-** old in each minor collection.)
-** 2) Whether the accumulated number of added old objects is larger
-** than 'minormajor'% of the number of lived objects after the last
-** major collection. (That percentage is computed in 'limit'.)
+** Decide whether to shift to major mode. It shifts if the accumulated
+** number of added old bytes (counted in 'GCmarked') is larger than
+** 'minormajor'% of the number of lived bytes after the last major
+** collection. (This number is kept in 'GCmajorminor'.)
 */
-static int checkminormajor (global_State *g, l_mem addedold1) {
-  l_mem step = applygcparam(g, MINORMUL, g->GCmajorminor);
+static int checkminormajor (global_State *g) {
   l_mem limit = applygcparam(g, MINORMAJOR, g->GCmajorminor);
-  return (addedold1 >= (step >> 1) || g->GCmarked >= limit);
+  if (limit == 0)
+    return 0;  /* special case: 'minormajor' 0 stops major collections */
+  return (g->GCmarked >= limit);
 }
 
 /*
@@ -1326,13 +1334,13 @@ static void youngcollection (lua_State *L, global_State *g) {
 
   sweepgen(L, g, &g->tobefnz, NULL, &dummy, &addedold1);
 
-  /* keep total number of added old1 objects */
+  /* keep total number of added old1 bytes */
   g->GCmarked = marked + addedold1;
 
   /* decide whether to shift to major mode */
-  if (checkminormajor(g, addedold1)) {
+  if (checkminormajor(g)) {
     minor2inc(L, g, KGC_GENMAJOR);  /* go to major mode */
-    g->GCmarked = 0;  /* avoid pause in first major cycle */
+    g->GCmarked = 0;  /* avoid pause in first major cycle (see 'setpause') */
   }
   else
     finishgencycle(L, g);  /* still in minor mode; finish it */
@@ -1361,8 +1369,8 @@ static void atomic2gen (lua_State *L, global_State *g) {
   sweep2old(L, &g->tobefnz);
 
   g->gckind = KGC_GENMINOR;
-  g->GCmajorminor = g->GCmarked;  /* "base" for number of objects */
-  g->GCmarked = 0;  /* to count the number of added old1 objects */
+  g->GCmajorminor = g->GCmarked;  /* "base" for number of bytes */
+  g->GCmarked = 0;  /* to count the number of added old1 bytes */
   finishgencycle(L, g);
 }
 
@@ -1423,15 +1431,15 @@ static void fullgen (lua_State *L, global_State *g) {
 /*
 ** After an atomic incremental step from a major collection,
 ** check whether collector could return to minor collections.
-** It checks whether the number of objects 'tobecollected'
-** is greater than 'majorminor'% of the number of objects added
-** since the last collection ('addedobjs').
+** It checks whether the number of bytes 'tobecollected'
+** is greater than 'majorminor'% of the number of bytes added
+** since the last collection ('addedbytes').
 */
 static int checkmajorminor (lua_State *L, global_State *g) {
   if (g->gckind == KGC_GENMAJOR) {  /* generational mode? */
     l_mem numbytes = gettotalbytes(g);
-    l_mem addedobjs = numbytes - g->GCmajorminor;
-    l_mem limit = applygcparam(g, MAJORMINOR, addedobjs);
+    l_mem addedbytes = numbytes - g->GCmajorminor;
+    l_mem limit = applygcparam(g, MAJORMINOR, addedbytes);
     l_mem tobecollected = numbytes - g->GCmarked;
     if (tobecollected > limit) {
       atomic2gen(L, g);  /* return to generational mode */
@@ -1670,9 +1678,7 @@ static void incstep (lua_State *L, global_State *g) {
   l_mem work2do = applygcparam(g, STEPMUL, stepsize);
   l_mem stres;
   int fast = (work2do == 0);  /* special case: do a full collection */
-//printf("\n** %ld %ld %d\n", work2do, stepsize, g->gcstate);
   do {  /* repeat until enough work */
-//printf("%d-", g->gcstate);
     stres = singlestep(L, fast);  /* perform one single step */
     if (stres == step2minor)  /* returned to minor collections? */
       return;  /* nothing else to be done here */
@@ -1688,6 +1694,10 @@ static void incstep (lua_State *L, global_State *g) {
 }
 
 
+#if !defined(luai_tracegc)
+#define luai_tracegc(L)		((void)0)
+#endif
+
 /*
 ** Performs a basic GC step if collector is running. (If collector is
 ** not running, set a reasonable debt to avoid it being called at
@@ -1699,20 +1709,16 @@ void luaC_step (lua_State *L) {
   if (!gcrunning(g))  /* not running? */
     luaE_setdebt(g, 20000);
   else {
-//printf("mem: %ld  kind: %s  ", gettotalbytes(g),
-//  g->gckind == KGC_INC ? "inc" : g->gckind == KGC_GENMAJOR ? "genmajor" :
-//    "genminor");
+    luai_tracegc(L);  /* for internal debugging */
     switch (g->gckind) {
       case KGC_INC: case KGC_GENMAJOR:
         incstep(L, g);
-//printf("%d) ", g->gcstate);
         break;
       case KGC_GENMINOR:
         youngcollection(L, g);
         setminordebt(g);
         break;
     }
-//printf("-> mem: %ld  debt: %ld\n", gettotalbytes(g), g->GCdebt);
   }
 }
 
