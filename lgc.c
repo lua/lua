@@ -1695,21 +1695,23 @@ static void incstep (lua_State *L, global_State *g) {
 
 
 #if !defined(luai_tracegc)
-#define luai_tracegc(L)		((void)0)
+#define luai_tracegc(L,f)		((void)0)
 #endif
 
 /*
-** Performs a basic GC step if collector is running. (If collector is
-** not running, set a reasonable debt to avoid it being called at
-** every single check.)
+** Performs a basic GC step if collector is running. (If collector was
+** stopped by the user, set a reasonable debt to avoid it being called
+** at every single check.)
 */
 void luaC_step (lua_State *L) {
   global_State *g = G(L);
   lua_assert(!g->gcemergency);
-  if (!gcrunning(g))  /* not running? */
-    luaE_setdebt(g, 20000);
+  if (!gcrunning(g)) {  /* not running? */
+    if (g->gcstp & GCSTPUSR)  /* stopped by the user? */
+      luaE_setdebt(g, 20000);
+  }
   else {
-    luai_tracegc(L);  /* for internal debugging */
+    luai_tracegc(L, 1);  /* for internal debugging */
     switch (g->gckind) {
       case KGC_INC: case KGC_GENMAJOR:
         incstep(L, g);
@@ -1719,6 +1721,7 @@ void luaC_step (lua_State *L) {
         setminordebt(g);
         break;
     }
+    luai_tracegc(L, 0);  /* for internal debugging */
   }
 }
 

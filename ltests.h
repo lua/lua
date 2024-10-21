@@ -58,6 +58,10 @@ typedef struct Memcontrol {
 LUA_API Memcontrol l_memcontrol;
 
 
+#define luai_tracegc(L,f)		luai_tracegctest(L, f)
+LUAI_FUNC void luai_tracegctest (lua_State *L, int first);
+
+
 /*
 ** generic variable for debug tricks
 */

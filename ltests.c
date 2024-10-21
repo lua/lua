@@ -944,31 +944,60 @@ static int gc_printobj (lua_State *L) {
 }
 
 
+static const char *statenames[] = {
+  "propagate", "enteratomic", "atomic", "sweepallgc", "sweepfinobj",
+  "sweeptobefnz", "sweepend", "callfin", "pause", ""};
+
 static int gc_state (lua_State *L) {
-  static const char *statenames[] = {
-    "propagate", "atomic", "sweepallgc", "sweepfinobj",
-    "sweeptobefnz", "sweepend", "callfin", "pause", ""};
   static const int states[] = {
-    GCSpropagate, GCSenteratomic, GCSswpallgc, GCSswpfinobj,
+    GCSpropagate, GCSenteratomic, GCSatomic, GCSswpallgc, GCSswpfinobj,
     GCSswptobefnz, GCSswpend, GCScallfin, GCSpause, -1};
   int option = states[luaL_checkoption(L, 1, "", statenames)];
+  global_State *g = G(L);
   if (option == -1) {
-    lua_pushstring(L, statenames[G(L)->gcstate]);
+    lua_pushstring(L, statenames[g->gcstate]);
     return 1;
   }
   else {
-    global_State *g = G(L);
-    if (G(L)->gckind != KGC_INC)
+    if (g->gckind != KGC_INC)
       luaL_error(L, "cannot change states in generational mode");
     lua_lock(L);
     if (option < g->gcstate) {  /* must cross 'pause'? */
       luaC_runtilstate(L, GCSpause, 1);  /* run until pause */
     }
     luaC_runtilstate(L, option, 0);  /* do not skip propagation state */
-    lua_assert(G(L)->gcstate == option);
+    lua_assert(g->gcstate == option);
     lua_unlock(L);
     return 0;
   }
+}
+
+
+static int tracinggc = 0;
+void luai_tracegctest (lua_State *L, int first) {
+  if (!tracinggc) return;
+  else {
+    global_State *g = G(L);
+    lua_unlock(L);
+    g->gcstp = GCSTPGC;
+    lua_checkstack(L, 10);
+    lua_getfield(L, LUA_REGISTRYINDEX, "tracegc");
+    lua_pushboolean(L, first);
+    lua_call(L, 1, 0);
+    g->gcstp = 0;
+    lua_lock(L);
+  }
+}
+
+
+static int tracegc (lua_State *L) {
+  if (lua_isnil(L, 1))
+    tracinggc = 0;
+  else {
+    tracinggc = 1;
+    lua_setfield(L, LUA_REGISTRYINDEX, "tracegc");
+  }
+  return 0;
 }
 
 
@@ -1038,17 +1067,17 @@ static int table_query (lua_State *L) {
 }
 
 
-static int query_GCparams (lua_State *L) {
+static int gc_query (lua_State *L) {
   global_State *g = G(L);
-  lua_pushinteger(L, cast(lua_Integer, gettotalbytes(g)));
-  lua_pushinteger(L, cast(lua_Integer, g->GCdebt));
-  lua_pushinteger(L, cast(lua_Integer, applygcparam(g, MINORMUL, 100)));
-  lua_pushinteger(L, cast(lua_Integer, applygcparam(g, MAJORMINOR, 100)));
-  lua_pushinteger(L, cast(lua_Integer, applygcparam(g, MINORMAJOR, 100)));
-  lua_pushinteger(L, cast(lua_Integer, applygcparam(g, PAUSE, 100)));
-  lua_pushinteger(L, cast(lua_Integer, applygcparam(g, STEPMUL, 100)));
-  lua_pushinteger(L, cast(lua_Integer, applygcparam(g, STEPSIZE, 100)));
-  return 8;
+  lua_pushstring(L, g->gckind == KGC_INC ? "inc"
+                  : g->gckind == KGC_GENMAJOR ? "genmajor"
+                  : "genminor");
+  lua_pushstring(L, statenames[g->gcstate]);
+  lua_pushinteger(L, cast_st2S(gettotalbytes(g)));
+  lua_pushinteger(L, cast_st2S(g->GCdebt));
+  lua_pushinteger(L, cast_st2S(g->GCmarked));
+  lua_pushinteger(L, cast_st2S(g->GCmajorminor));
+  return 6;
 }
 
 
@@ -2009,6 +2038,7 @@ static const struct luaL_Reg tests_funcs[] = {
   {"gccolor", gc_color},
   {"gcage", gc_age},
   {"gcstate", gc_state},
+  {"tracegc", tracegc},
   {"pobj", gc_printobj},
   {"getref", getref},
   {"hash", hash_query},
@@ -2026,9 +2056,9 @@ static const struct luaL_Reg tests_funcs[] = {
   {"num2int", num2int},
   {"makeseed", makeseed},
   {"pushuserdata", pushuserdata},
+  {"gcquery", gc_query},
   {"querystr", string_query},
   {"querytab", table_query},
-  {"queryGCparams", query_GCparams},
   {"codeparam", test_codeparam},
   {"applyparam", test_applyparam},
   {"ref", tref},

@@ -560,8 +560,8 @@ if T then   -- tests for weird cases collecting upvalues
   -- create coroutine in a weak table, so it will never be marked
   t.co = coroutine.wrap(foo)
   local f = t.co()   -- create function to access local 'a'
-  T.gcstate("atomic")   -- ensure all objects are traversed
-  assert(T.gcstate() == "atomic")
+  T.gcstate("enteratomic")   -- ensure all objects are traversed
+  assert(T.gcstate() == "enteratomic")
   assert(t.co() == 100)   -- resume coroutine, creating new table for 'a'
   assert(T.gccolor(t.co) == "white")  -- thread was not traversed
   T.gcstate("pause")   -- collect thread, but should mark 'a' before that
@@ -574,7 +574,7 @@ if T then   -- tests for weird cases collecting upvalues
   collectgarbage()
   collectgarbage"stop"
   local a = {}     -- avoid 'u' as first element in 'allgc'
-  T.gcstate"atomic"
+  T.gcstate"enteratomic"
   T.gcstate"sweepallgc"
   local x = {}
   assert(T.gccolor(u) == "black")   -- userdata is "old" (black)

@@ -799,7 +799,7 @@ assert(debug.getuservalue(b) == 134)
 -- test barrier for uservalues
 do
   local oldmode = collectgarbage("incremental")
-  T.gcstate("atomic")
+  T.gcstate("enteratomic")
   assert(T.gccolor(b) == "black")
   debug.setuservalue(b, {x = 100})
   T.gcstate("pause")  -- complete collection
