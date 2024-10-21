@@ -132,7 +132,7 @@ static size_t objsize (GCObject *o) {
       return luaF_protosize(gco2p(o));
     }
     case LUA_VTHREAD: {
-      return luaE_statesize(gco2th(o));
+      return luaE_threadsize(gco2th(o));
     }
     case LUA_VSHRSTR: {
       TString *ts = gco2ts(o);
