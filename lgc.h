@@ -170,7 +170,7 @@
 ** Minor collections will shift to major ones after LUAI_MINORMAJOR%
 ** bytes become old.
 */
-#define LUAI_MINORMAJOR         100
+#define LUAI_MINORMAJOR         70
 
 /*
 ** Major collections will shift to minor ones after a collection
@@ -182,20 +182,20 @@
 ** A young (minor) collection will run after creating LUAI_GENMINORMUL%
 ** new bytes.
 */
-#define LUAI_GENMINORMUL         25
+#define LUAI_GENMINORMUL         20
 
 
 /* incremental */
 
 /* Number of bytes must be LUAI_GCPAUSE% before starting new cycle */
-#define LUAI_GCPAUSE    200
+#define LUAI_GCPAUSE    250
 
 /*
 ** Step multiplier: The collector handles LUAI_GCMUL% work units for
-** each new allocated byte. (Each "work unit" corresponds roughly to
+** each new allocated word. (Each "work unit" corresponds roughly to
 ** sweeping one object or traversing one slot.)
 */
-#define LUAI_GCMUL      40
+#define LUAI_GCMUL      200
 
 /* How many bytes to allocate before next GC step */
 #define LUAI_GCSTEPSIZE	(200 * sizeof(Table))

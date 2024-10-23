@@ -1675,7 +1675,7 @@ void luaC_runtilstate (lua_State *L, int state, int fast) {
 */
 static void incstep (lua_State *L, global_State *g) {
   l_mem stepsize = applygcparam(g, STEPSIZE, 100);
-  l_mem work2do = applygcparam(g, STEPMUL, stepsize);
+  l_mem work2do = applygcparam(g, STEPMUL, stepsize / cast_int(sizeof(void*)));
   l_mem stres;
   int fast = (work2do == 0);  /* special case: do a full collection */
   do {  /* repeat until enough work */
@@ -1739,8 +1739,6 @@ static void fullinc (lua_State *L, global_State *g) {
   /* finish any pending sweep phase to start a new cycle */
   luaC_runtilstate(L, GCSpause, 1);
   luaC_runtilstate(L, GCScallfin, 1);  /* run up to finalizers */
-  /* 'marked' must be correct after a full GC cycle */
-  /* lua_assert(g->GCmarked == gettotalobjs(g)); ??? */
   luaC_runtilstate(L, GCSpause, 1);  /* finish collection */
   setpause(g);
 }
