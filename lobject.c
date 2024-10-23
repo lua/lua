@@ -400,15 +400,17 @@ int luaO_utf8esc (char *buff, unsigned long x) {
 
 
 /*
-** Maximum length of the conversion of a number to a string. Must be
-** enough to accommodate both LUA_INTEGER_FMT and LUA_NUMBER_FMT.
-** For a long long int, this is 19 digits plus a sign and a final '\0',
-** adding to 21. For a long double, it can go to a sign, the dot, an
-** exponent letter, an exponent sign, 4 exponent digits, the final
-** '\0', plus the significant digits, which are approximately the *_DIG
-** attribute.
+** The size of the buffer for the conversion of a number to a string
+** 'LUA_N2SBUFFSZ' must be enough to accommodate both LUA_INTEGER_FMT
+** and LUA_NUMBER_FMT.  For a long long int, this is 19 digits plus a
+** sign and a final '\0', adding to 21. For a long double, it can go to
+** a sign, the dot, an exponent letter, an exponent sign, 4 exponent
+** digits, the final '\0', plus the significant digits, which are
+** approximately the *_DIG attribute.
 */
-#define MAXNUMBER2STR	(20 + l_floatatt(DIG))
+#if LUA_N2SBUFFSZ < (20 + l_floatatt(DIG))
+#error "invalid value for LUA_N2SBUFFSZ"
+#endif
 
 
 /*
@@ -422,12 +424,12 @@ int luaO_utf8esc (char *buff, unsigned long x) {
 */
 static int tostringbuffFloat (lua_Number n, char *buff) {
   /* first conversion */
-  int len = l_sprintf(buff, MAXNUMBER2STR, LUA_NUMBER_FMT,
+  int len = l_sprintf(buff, LUA_N2SBUFFSZ, LUA_NUMBER_FMT,
                             (LUAI_UACNUMBER)n);
   lua_Number check = lua_str2number(buff, NULL);  /* read it back */
   if (check != n) {  /* not enough precision? */
     /* convert again with more precision */
-    len = l_sprintf(buff, MAXNUMBER2STR, LUA_NUMBER_FMT_N,
+    len = l_sprintf(buff, LUA_N2SBUFFSZ, LUA_NUMBER_FMT_N,
                           (LUAI_UACNUMBER)n);
   }
   /* looks like an integer? */
@@ -442,14 +444,14 @@ static int tostringbuffFloat (lua_Number n, char *buff) {
 /*
 ** Convert a number object to a string, adding it to a buffer.
 */
-static unsigned tostringbuff (TValue *obj, char *buff) {
+unsigned luaO_tostringbuff (const TValue *obj, char *buff) {
   int len;
   lua_assert(ttisnumber(obj));
   if (ttisinteger(obj))
-    len = lua_integer2str(buff, MAXNUMBER2STR, ivalue(obj));
+    len = lua_integer2str(buff, LUA_N2SBUFFSZ, ivalue(obj));
   else
     len = tostringbuffFloat(fltvalue(obj), buff);
-  lua_assert(len < MAXNUMBER2STR);
+  lua_assert(len < LUA_N2SBUFFSZ);
   return cast_uint(len);
 }
 
@@ -458,8 +460,8 @@ static unsigned tostringbuff (TValue *obj, char *buff) {
 ** Convert a number object to a Lua string, replacing the value at 'obj'
 */
 void luaO_tostring (lua_State *L, TValue *obj) {
-  char buff[MAXNUMBER2STR];
-  unsigned len = tostringbuff(obj, buff);
+  char buff[LUA_N2SBUFFSZ];
+  unsigned len = luaO_tostringbuff(obj, buff);
   setsvalue(L, obj, luaS_newlstr(L, buff, len));
 }
 
@@ -474,10 +476,10 @@ void luaO_tostring (lua_State *L, TValue *obj) {
 
 /*
 ** Size for buffer space used by 'luaO_pushvfstring'. It should be
-** (LUA_IDSIZE + MAXNUMBER2STR) + a minimal space for basic messages,
+** (LUA_IDSIZE + LUA_N2SBUFFSZ) + a minimal space for basic messages,
 ** so that 'luaG_addinfo' can work directly on the static buffer.
 */
-#define BUFVFS		cast_uint(LUA_IDSIZE + MAXNUMBER2STR + 95)
+#define BUFVFS		cast_uint(LUA_IDSIZE + LUA_N2SBUFFSZ + 95)
 
 /*
 ** Buffer used by 'luaO_pushvfstring'. 'err' signals an error while
@@ -579,8 +581,8 @@ static void addstr2buff (BuffFS *buff, const char *str, size_t slen) {
 ** Add a numeral to the buffer.
 */
 static void addnum2buff (BuffFS *buff, TValue *num) {
-  char numbuff[MAXNUMBER2STR];
-  unsigned len = tostringbuff(num, numbuff);  /* format number into 'numbuff' */
+  char numbuff[LUA_N2SBUFFSZ];
+  unsigned len = luaO_tostringbuff(num, numbuff);
   addstr2buff(buff, numbuff, len);
 }
 
@@ -626,9 +628,9 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
         break;
       }
       case 'p': {  /* a pointer */
-        char bf[MAXNUMBER2STR];  /* enough space for '%p' */
+        char bf[LUA_N2SBUFFSZ];  /* enough space for '%p' */
         void *p = va_arg(argp, void *);
-        int len = lua_pointer2str(bf, MAXNUMBER2STR, p);
+        int len = lua_pointer2str(bf, LUA_N2SBUFFSZ, p);
         addstr2buff(&buff, bf, cast_uint(len));
         break;
       }

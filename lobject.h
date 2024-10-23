@@ -845,6 +845,7 @@ LUAI_FUNC int luaO_rawarith (lua_State *L, int op, const TValue *p1,
 LUAI_FUNC void luaO_arith (lua_State *L, int op, const TValue *p1,
                            const TValue *p2, StkId res);
 LUAI_FUNC size_t luaO_str2num (const char *s, TValue *o);
+LUAI_FUNC unsigned luaO_tostringbuff (const TValue *obj, char *buff);
 LUAI_FUNC lu_byte luaO_hexavalue (int c);
 LUAI_FUNC void luaO_tostring (lua_State *L, TValue *obj);
 LUAI_FUNC const char *luaO_pushvfstring (lua_State *L, const char *fmt,

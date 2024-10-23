@@ -920,10 +920,9 @@ LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len) {
   else {
     switch (lua_type(L, idx)) {
       case LUA_TNUMBER: {
-        if (lua_isinteger(L, idx))
-          lua_pushfstring(L, "%I", (LUAI_UACINT)lua_tointeger(L, idx));
-        else
-          lua_pushfstring(L, "%f", (LUAI_UACNUMBER)lua_tonumber(L, idx));
+        char buff[LUA_N2SBUFFSZ];
+        lua_numbertostrbuff(L, idx, buff);
+        lua_pushstring(L, buff);
         break;
       }
       case LUA_TSTRING:

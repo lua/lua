@@ -675,7 +675,7 @@ approximately @M{n} bytes between steps.
 The garbage-collector step multiplier
 controls how much work each incremental step does.
 A value of @M{n} means the interpreter will execute
-@M{n%} @emphx{units of work} for each byte allocated.
+@M{n%} @emphx{units of work} for each word allocated.
 A unit of work corresponds roughly to traversing one slot
 or sweeping one object.
 Larger values make the collector more aggressive.
@@ -3829,10 +3829,25 @@ This macro may evaluate its arguments more than once.
 
 }
 
+@APIEntry{unsigned (lua_numbertostrbuff) (lua_State *L, int idx,
+                                          char *buff);|
+@apii{0,0,-}
+
+Converts the number at acceptable index @id{idx} to a string
+and puts the result in @id{buff}.
+The buffer must have a size of at least @Lid{LUA_N2SBUFFSZ} bytes.
+The conversion follows a non-specified format @see{coercion}.
+The function returns the number of bytes written to the buffer
+(including the final zero),
+or zero if the value at @id{idx} is not a number.
+
+}
+
 @APIEntry{int lua_pcall (lua_State *L, int nargs, int nresults, int msgh);|
 @apii{nargs + 1,nresults|1,-}
 
 Calls a function (or a callable object) in protected mode.
+
 
 Both @id{nargs} and @id{nresults} have the same meaning as
 in @Lid{lua_call}.
