@@ -1043,7 +1043,7 @@ static int table_query (lua_State *L) {
   }
   else if (cast_uint(i) < asize) {
     lua_pushinteger(L, i);
-    arr2obj(t, i, s2v(L->top.p));
+    arr2obj(t, cast_uint(i), s2v(L->top.p));
     api_incr_top(L);
     lua_pushnil(L);
   }

@@ -951,7 +951,7 @@ lu_byte luaH_getint (Table *t, lua_Integer key, TValue *res) {
   if (keyinarray(t, key)) {
     lu_byte tag = *getArrTag(t, key - 1);
     if (!tagisempty(tag))
-      farr2val(t, key - 1, tag, res);
+      farr2val(t, cast_uint(key) - 1, tag, res);
     return tag;
   }
   else
@@ -1062,7 +1062,7 @@ int luaH_psetint (Table *t, lua_Integer key, TValue *val) {
   if (keyinarray(t, key)) {
     lu_byte *tag = getArrTag(t, key - 1);
     if (!tagisempty(*tag) || checknoTM(t->metatable, TM_NEWINDEX)) {
-      fval2arr(t, key - 1, tag, val);
+      fval2arr(t, cast_uint(key) - 1, tag, val);
       return HOK;  /* success */
     }
     else
@@ -1118,7 +1118,7 @@ void luaH_finishset (lua_State *L, Table *t, const TValue *key,
   }
   else {  /* array entry */
     hres = ~hres;  /* real index */
-    obj2arr(t, hres, value);
+    obj2arr(t, cast_uint(hres), value);
   }
 }
 
@@ -1140,7 +1140,7 @@ void luaH_set (lua_State *L, Table *t, const TValue *key, TValue *value) {
 */
 void luaH_setint (lua_State *L, Table *t, lua_Integer key, TValue *value) {
   if (keyinarray(t, key))
-    obj2arr(t, key - 1, value);
+    obj2arr(t, cast_uint(key) - 1, value);
   else {
     int ok = rawfinishnodeset(getintfromhash(t, key), value);
     if (!ok) {
