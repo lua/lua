@@ -39,13 +39,32 @@ do   -- rehash moving elements from array to hash
   for i = 5, 95 do a[i] = nil end
   check(a, 128, 0)
 
-  a.x = 1     -- force a re-hash
-  check(a, 4, 8)
+  a[129] = 1     -- force a re-hash
+  check(a, 4, 8)   -- keys larger than 4 go to the hash part
 
   for i = 1, 4 do assert(a[i] == i) end
   for i = 5, 95 do assert(a[i] == nil) end
   for i = 96, 100 do assert(a[i] == i) end
-  assert(a.x == 1)
+  assert(a[129] == 1)
+end
+
+
+do    -- growing hash part keeping array part
+  local a = table.create(1000)
+  check(a, 1000, 0)
+  a.x = 10
+  check(a, 1000, 1)   -- array part keeps its elements
+end
+
+
+do   -- "growing" length of a prebuilt table
+  local N = 100
+  local a = table.create(N)
+  for i = 1, N do
+    a[#a + 1] = true
+    assert(#a == i)
+  end
+  check(a, N, 0)
 end
 
 

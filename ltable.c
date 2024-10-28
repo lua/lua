@@ -512,7 +512,7 @@ static unsigned numusearray (const Table *t, unsigned *nums) {
   int lg;
   unsigned int ttlg;  /* 2^lg */
   unsigned int ause = 0;  /* summation of 'nums' */
-  unsigned int i = 1;  /* count to traverse all array keys */
+  unsigned int i = 1;  /* index to traverse all array keys */
   unsigned int asize = limitasasize(t);  /* real array size */
   /* traverse each slice */
   for (lg = 0, ttlg = 1; lg <= MAXABITS; lg++, ttlg *= 2) {
@@ -766,22 +766,27 @@ void luaH_resizearray (lua_State *L, Table *t, unsigned int nasize) {
 ** nums[i] = number of keys 'k' where 2^(i - 1) < k <= 2^i
 */
 static void rehash (lua_State *L, Table *t, const TValue *ek) {
-  unsigned int asize;  /* optimal size for array part */
-  unsigned int na;  /* number of keys in the array part */
-  unsigned int nums[MAXABITS + 1];
-  int i;
-  unsigned totaluse;
+  unsigned asize;  /* optimal size for array part */
+  unsigned na = 0;  /* number of keys candidate for the array part */
+  unsigned nums[MAXABITS + 1];
+  unsigned i;
+  unsigned totaluse;  /* total number of keys */
   for (i = 0; i <= MAXABITS; i++) nums[i] = 0;  /* reset counts */
   setlimittosize(t);
-  na = numusearray(t, nums);  /* count keys in array part */
-  totaluse = na;  /* all those keys are integer keys */
-  totaluse += numusehash(t, nums, &na);  /* count keys in hash part */
-  /* count extra key */
+  totaluse = 1;  /* count extra key */
   if (ttisinteger(ek))
-    na += countint(ivalue(ek), nums);
-  totaluse++;
-  /* compute new size for array part */
-  asize = computesizes(nums, &na);
+    na += countint(ivalue(ek), nums);  /* extra key may go to array */
+  totaluse += numusehash(t, nums, &na);  /* count keys in hash part */
+  if (na == 0) {
+    /* no new keys to enter array part; keep it with the same size */
+    asize = luaH_realasize(t);
+  }
+  else {  /* compute best size for array part */
+    unsigned n = numusearray(t, nums);  /* count keys in array part */
+    totaluse += n;  /* all keys in array part are keys */
+    na += n;  /* all keys in array part are candidates for new array part */
+    asize = computesizes(nums, &na);  /* compute new size for array part */
+  }
   /* resize the table to new computed sizes */
   luaH_resize(L, t, asize, totaluse - na);
 }
