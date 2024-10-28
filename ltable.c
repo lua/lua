@@ -456,15 +456,29 @@ static int keyinarray (Table *t, lua_Integer key) {
 ** ==============================================================
 */
 
+
 /*
-** Compute the optimal size for the array part of table 't'. 'nums' is a
-** "count array" where 'nums[i]' is the number of integers in the table
-** between 2^(i - 1) + 1 and 2^i. 'pna' enters with the total number of
-** integer keys in the table and leaves with the number of keys that
-** will go to the array part; return the optimal size.  (The condition
-** 'twotoi > 0' in the for loop stops the loop if 'twotoi' overflows.)
+** Structure to count the keys in a table.
+** 'total' is the total number of keys in the table.
+** 'na' is the number of *array indices* in the table (see 'arrayindex').
+** 'nums' is a "count array" where 'nums[i]' is the number of integer
+** keys between 2^(i - 1) + 1 and 2^i. Note that 'na' is the summation
+** of 'nums'.
 */
-static unsigned computesizes (unsigned nums[], unsigned *pna) {
+typedef struct {
+  unsigned total;
+  unsigned na;
+  unsigned nums[MAXABITS + 1];
+} Counters;
+
+/*
+** Compute the optimal size for the array part of table 't'.
+** 'ct->na' enters with the total number of array indices in the table
+** and leaves with the number of keys that will go to the array part;
+** return the optimal size.  (The condition 'twotoi > 0' in the for loop
+** stops the loop if 'twotoi' overflows.)
+*/
+static unsigned computesizes (Counters *ct) {
   int i;
   unsigned int twotoi;  /* 2^i (candidate for optimal size) */
   unsigned int a = 0;  /* number of elements smaller than 2^i */
@@ -472,28 +486,26 @@ static unsigned computesizes (unsigned nums[], unsigned *pna) {
   unsigned int optimal = 0;  /* optimal size for array part */
   /* loop while keys can fill more than half of total size */
   for (i = 0, twotoi = 1;
-       twotoi > 0 && *pna > twotoi / 2;
+       twotoi > 0 && ct->na > twotoi / 2;
        i++, twotoi *= 2) {
-    a += nums[i];
+    a += ct->nums[i];
     if (a > twotoi/2) {  /* more than half elements present? */
       optimal = twotoi;  /* optimal size (till now) */
       na = a;  /* all elements up to 'optimal' will go to array part */
     }
   }
   lua_assert((optimal == 0 || optimal / 2 < na) && na <= optimal);
-  *pna = na;
+  ct->na = na;
   return optimal;
 }
 
 
-static unsigned countint (lua_Integer key, unsigned int *nums) {
+static void countint (lua_Integer key, Counters *ct) {
   unsigned int k = arrayindex(key);
-  if (k != 0) {  /* is 'key' an appropriate array index? */
-    nums[luaO_ceillog2(k)]++;  /* count as such */
-    return 1;
+  if (k != 0) {  /* is 'key' an array index? */
+    ct->nums[luaO_ceillog2(k)]++;  /* count as such */
+    ct->na++;
   }
-  else
-    return 0;
 }
 
 
@@ -504,11 +516,9 @@ l_sinline int arraykeyisempty (const Table *t, lua_Unsigned key) {
 
 
 /*
-** Count keys in array part of table 't': Fill 'nums[i]' with
-** number of keys that will go into corresponding slice and return
-** total number of non-nil keys.
+** Count keys in array part of table 't'.
 */
-static unsigned numusearray (const Table *t, unsigned *nums) {
+static void numusearray (const Table *t, Counters *ct) {
   int lg;
   unsigned int ttlg;  /* 2^lg */
   unsigned int ause = 0;  /* summation of 'nums' */
@@ -528,27 +538,29 @@ static unsigned numusearray (const Table *t, unsigned *nums) {
       if (!arraykeyisempty(t, i))
         lc++;
     }
-    nums[lg] += lc;
+    ct->nums[lg] += lc;
     ause += lc;
   }
-  return ause;
+  ct->total += ause;
+  ct->na += ause;
 }
 
 
-static unsigned numusehash (const Table *t, unsigned *nums, unsigned *pna) {
-  unsigned totaluse = 0;  /* total number of elements */
-  unsigned ause = 0;  /* elements added to 'nums' (can go to array part) */
+/*
+** Count keys in hash part of table 't'.
+*/
+static void numusehash (const Table *t, Counters *ct) {
   unsigned i = sizenode(t);
+  unsigned total = 0;
   while (i--) {
     Node *n = &t->node[i];
     if (!isempty(gval(n))) {
+      total++;
       if (keyisinteger(n))
-        ause += countint(keyival(n), nums);
-      totaluse++;
+        countint(keyival(n), ct);
     }
   }
-  *pna += ause;
-  return totaluse;
+  ct->total += total;
 }
 
 
@@ -566,12 +578,11 @@ static size_t concretesize (unsigned int size) {
 ** do nothing. Else, if new size is zero, free the old array. (It must
 ** be present, as the sizes are different.) Otherwise, allocate a new
 ** array, move the common elements to new proper position, and then
-** frees old array.
-** When array grows, we could reallocate it, but we still would need
-** to move the elements to their new position, so the copy implicit
-** in realloc is a waste.  When array shrinks, it always erases some
-** elements that should still be in the array, so we must reallocate in
-** two steps anyway. It is simpler to always reallocate in two steps.
+** frees the old array.
+** We could reallocate the array, but we still would need to move the
+** elements to their new position, so the copy implicit in realloc is a
+** waste. Moreover, most allocators will move the array anyway when the
+** new size is double the old one (the most common case).
 */
 static Value *resizearray (lua_State *L , Table *t,
                                unsigned oldasize,
@@ -590,10 +601,10 @@ static Value *resizearray (lua_State *L , Table *t,
     if (np == NULL)  /* allocation error? */
       return NULL;
     if (oldasize > 0) {
+      /* move common elements to new position */
       Value *op = t->array - oldasize;  /* real original array */
       unsigned tomove = (oldasize < newasize) ? oldasize : newasize;
       lua_assert(tomove > 0);
-      /* move common elements to new position */
       memcpy(np + newasize - tomove,
              op + oldasize - tomove,
              concretesize(tomove));
@@ -723,6 +734,9 @@ static void clearNewSlice (Table *t, unsigned oldasize, unsigned newasize) {
 ** into the table, initializes the new part of the array (if any) with
 ** nils and reinserts the elements of the old hash back into the new
 ** parts of the table.
+** Note that if the new size for the arry part ('newasize') is equal to
+** the old one ('oldasize'), this function will do nothing with that
+** part.
 */
 void luaH_resize (lua_State *L, Table *t, unsigned newasize,
                                           unsigned nhsize) {
@@ -762,33 +776,34 @@ void luaH_resizearray (lua_State *L, Table *t, unsigned int nasize) {
   luaH_resize(L, t, nasize, nsize);
 }
 
+
 /*
-** nums[i] = number of keys 'k' where 2^(i - 1) < k <= 2^i
+** Rehash a table. First, count its keys. If there are array indices
+** outside the array part, compute the new best size for that part.
+** Then, resize the table.
 */
 static void rehash (lua_State *L, Table *t, const TValue *ek) {
   unsigned asize;  /* optimal size for array part */
-  unsigned na = 0;  /* number of keys candidate for the array part */
-  unsigned nums[MAXABITS + 1];
+  Counters ct;
   unsigned i;
-  unsigned totaluse;  /* total number of keys */
-  for (i = 0; i <= MAXABITS; i++) nums[i] = 0;  /* reset counts */
   setlimittosize(t);
-  totaluse = 1;  /* count extra key */
+  /* reset counts */
+  for (i = 0; i <= MAXABITS; i++) ct.nums[i] = 0;
+  ct.na = 0;
+  ct.total = 1;  /* count extra key */
   if (ttisinteger(ek))
-    na += countint(ivalue(ek), nums);  /* extra key may go to array */
-  totaluse += numusehash(t, nums, &na);  /* count keys in hash part */
-  if (na == 0) {
+    countint(ivalue(ek), &ct);  /* extra key may go to array */
+  numusehash(t, &ct);  /* count keys in hash part */
+  if (ct.na == 0) {
     /* no new keys to enter array part; keep it with the same size */
     asize = luaH_realasize(t);
   }
   else {  /* compute best size for array part */
-    unsigned n = numusearray(t, nums);  /* count keys in array part */
-    totaluse += n;  /* all keys in array part are keys */
-    na += n;  /* all keys in array part are candidates for new array part */
-    asize = computesizes(nums, &na);  /* compute new size for array part */
+    numusearray(t, &ct);  /* count keys in array part */
+    asize = computesizes(&ct);  /* compute new size for array part */
   }
   /* resize the table to new computed sizes */
-  luaH_resize(L, t, asize, totaluse - na);
+  luaH_resize(L, t, asize, ct.total - ct.na);
 }
 
 
