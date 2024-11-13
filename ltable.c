@@ -471,12 +471,23 @@ typedef struct {
   unsigned nums[MAXABITS + 1];
 } Counters;
 
+
+/*
+** Check whether it is worth to use 'na' array entries instead of 'nh'
+** hash nodes. (A hash node uses ~3 times more memory than an array
+** entry: Two values plus 'next' versus one value.) Evaluate with size_t
+** to avoid overflows.
+*/
+#define arrayXhash(na,nh)	(cast_sizet(na) <= cast_sizet(nh) * 3)
+
 /*
 ** Compute the optimal size for the array part of table 't'.
+** This size maximizes the number of elements going to the array part
+** while satisfying the condition 'arrayXhash' with the use of memory if
+** all those elements went to the hash part.
 ** 'ct->na' enters with the total number of array indices in the table
 ** and leaves with the number of keys that will go to the array part;
-** return the optimal size.  (The condition 'twotoi > 0' in the for loop
-** stops the loop if 'twotoi' overflows.)
+** return the optimal size for the array part.
 */
 static unsigned computesizes (Counters *ct) {
   int i;
@@ -484,17 +495,19 @@ static unsigned computesizes (Counters *ct) {
   unsigned int a = 0;  /* number of elements smaller than 2^i */
   unsigned int na = 0;  /* number of elements to go to array part */
   unsigned int optimal = 0;  /* optimal size for array part */
-  /* loop while keys can fill more than half of total size */
+  /* traverse slices while 'twotoi' does not overflow and total of array
+     indices still can satisfy 'arrayXhash' against the array size */
   for (i = 0, twotoi = 1;
-       twotoi > 0 && ct->na > twotoi / 2;
+       twotoi > 0 && arrayXhash(twotoi, ct->na);
        i++, twotoi *= 2) {
-    a += ct->nums[i];
-    if (a > twotoi/2) {  /* more than half elements present? */
+    unsigned nums = ct->nums[i];
+    a += nums;
+    if (nums > 0 &&  /* grows array only if it gets more elements... */
+        arrayXhash(twotoi, a)) {  /* ...while using "less memory" */
       optimal = twotoi;  /* optimal size (till now) */
       na = a;  /* all elements up to 'optimal' will go to array part */
     }
   }
-  lua_assert((optimal == 0 || optimal / 2 < na) && na <= optimal);
   ct->na = na;
   return optimal;
 }

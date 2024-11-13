@@ -1043,7 +1043,10 @@ static int table_query (lua_State *L) {
   }
   else if (cast_uint(i) < asize) {
     lua_pushinteger(L, i);
-    arr2obj(t, cast_uint(i), s2v(L->top.p));
+    if (!tagisempty(*getArrTag(t, i)))
+      arr2obj(t, cast_uint(i), s2v(L->top.p));
+    else
+      setnilvalue(s2v(L->top.p));
     api_incr_top(L);
     lua_pushnil(L);
   }
@@ -1057,11 +1060,11 @@ static int table_query (lua_State *L) {
     }
     else
       lua_pushliteral(L, "<undef>");
-    pushobject(L, gval(gnode(t, i)));
-    if (gnext(&t->node[i]) != 0)
-      lua_pushinteger(L, gnext(&t->node[i]));
+    if (!isempty(gval(gnode(t, i))))
+      pushobject(L, gval(gnode(t, i)));
     else
       lua_pushnil(L);
+    lua_pushinteger(L, gnext(&t->node[i]));
   }
   return 3;
 }
