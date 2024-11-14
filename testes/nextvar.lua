@@ -23,6 +23,12 @@ local function printTable (t)
   end
 end
 ----------------------------------------------------------------
+local function countentries (t)
+  local e = 0
+  for _ in pairs(t) do e = e + 1 end
+  return e
+end
+----------------------------------------------------------------
 
 
 local function check (t, na, nh)
@@ -115,6 +121,24 @@ do   -- overflow (must wrap-around)
   assert(k == nil)
 end
 
+
+do
+  -- alternate insertions and deletions in an almost full hash.
+  -- In versions pre-5.5, that causes constant rehashings and
+  -- takes a long time to complete.
+  local a = {}
+  for i = 1, 2^11 - 1 do
+    a[i .. ""] = true
+  end
+
+  for i = 1, 1e5 do
+    local key = i .. "."
+    a[key] = true
+    a[key] = nil
+  end
+  assert(countentries(a) == 2^11 - 1)
+end
+
 if not T then
   (Message or print)
     ('\n >>> testC not active: skipping tests for table sizes <<<\n')
@@ -202,6 +226,23 @@ for i = 1,lim do
   check(a, 0, mp2(i))
 end
 
+
+-- insert and delete elements until a rehash occurr. Caller must ensure
+-- that a rehash will change the shape of the table. Must repeat because
+-- the insertion may collide with the deleted element, and then there is
+-- no rehash.
+local function forcerehash (t)
+  local na, nh = T.querytab(t)
+  local i = 10000
+  repeat
+    i = i + 1
+    t[i] = true
+    t[i] = undef
+    local nna, nnh = T.querytab(t)
+  until nna ~= na or nnh ~= nh
+end
+
+
 do
   local a = {}
   for i=1,16 do a[i] = i end
@@ -212,7 +253,7 @@ do
   a[30] = undef
   check(a, 0, 8)   -- 5 elements in the hash part: [12]-[16]
   a[10] = 1
-  for i=30,50 do a[i] = true; a[i] = undef end   -- force a rehash
+  forcerehash(a)
   check(a, 16, 1)
   for i=1,14 do a[i] = true; a[i] = undef end
   check(a, 16, 1)   -- no rehash...
@@ -239,6 +280,25 @@ do     -- "almost sparse" arrays
       check(a, mp2(i), 0)
     end
   end
+end
+
+
+do
+  -- alternate insertions and deletions should give some extra
+  -- space for the hash part. Otherwise, a mix of insertions/deletions
+  -- could cause too many rehashes. (See the other test for "alternate
+  -- insertions and deletions" in this file.)
+  local a = {}
+  for i = 1, 256 do
+    a[i .. ""] = true
+  end
+  check(a, 0, 256)    -- hash part is full
+  a["256"] = nil    -- delete a key
+  forcerehash(a)
+  -- table has only 255 elements, but it got some extra space;
+  -- otherwise, almost each delete-insert would rehash the table again.
+  assert(countentries(a) == 255)
+  check(a, 0, 512)
 end
 
 

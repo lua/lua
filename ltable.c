@@ -461,6 +461,7 @@ static int keyinarray (Table *t, lua_Integer key) {
 ** Structure to count the keys in a table.
 ** 'total' is the total number of keys in the table.
 ** 'na' is the number of *array indices* in the table (see 'arrayindex').
+** 'deleted' is true if there are deleted nodes in the hash part.
 ** 'nums' is a "count array" where 'nums[i]' is the number of integer
 ** keys between 2^(i - 1) + 1 and 2^i. Note that 'na' is the summation
 ** of 'nums'.
@@ -468,6 +469,7 @@ static int keyinarray (Table *t, lua_Integer key) {
 typedef struct {
   unsigned total;
   unsigned na;
+  int deleted;
   unsigned nums[MAXABITS + 1];
 } Counters;
 
@@ -560,14 +562,21 @@ static void numusearray (const Table *t, Counters *ct) {
 
 
 /*
-** Count keys in hash part of table 't'.
+** Count keys in hash part of table 't'. As this only happens during
+** a rehash, all nodes have been used. A node can have a nil value only
+** if it was deleted after being created.
 */
 static void numusehash (const Table *t, Counters *ct) {
   unsigned i = sizenode(t);
   unsigned total = 0;
   while (i--) {
     Node *n = &t->node[i];
-    if (!isempty(gval(n))) {
+    if (isempty(gval(n))) {
+      /* entry was deleted; key cannot be nil */
+      lua_assert(isdummy(t) || !keyisnil(n));
+      ct->deleted = 1;
+    }
+    else {
       total++;
       if (keyisinteger(n))
         countint(keyival(n), ct);
@@ -799,10 +808,12 @@ static void rehash (lua_State *L, Table *t, const TValue *ek) {
   unsigned asize;  /* optimal size for array part */
   Counters ct;
   unsigned i;
+  unsigned nsize;  /* size for the hash part */
   setlimittosize(t);
   /* reset counts */
   for (i = 0; i <= MAXABITS; i++) ct.nums[i] = 0;
   ct.na = 0;
+  ct.deleted = 0;
   ct.total = 1;  /* count extra key */
   if (ttisinteger(ek))
     countint(ivalue(ek), &ct);  /* extra key may go to array */
@@ -815,11 +826,16 @@ static void rehash (lua_State *L, Table *t, const TValue *ek) {
     numusearray(t, &ct);  /* count keys in array part */
     asize = computesizes(&ct);  /* compute new size for array part */
   }
+  /* all keys not in the array part go to the hash part */
+  nsize = ct.total - ct.na;
+  if (ct.deleted) {  /* table has deleted entries? */
+    /* insertion-deletion-insertion: give hash some extra size to
+       avoid constant resizings */
+    nsize += nsize >> 2;
+  }
   /* resize the table to new computed sizes */
-  luaH_resize(L, t, asize, ct.total - ct.na);
+  luaH_resize(L, t, asize, nsize);
 }
-
-
 
 /*
 ** }=============================================================
