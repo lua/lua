@@ -110,43 +110,54 @@ static void entersweep (lua_State *L);
 #define gnodelast(h)	gnode(h, cast_sizet(sizenode(h)))
 
 
-static size_t objsize (GCObject *o) {
+static l_mem objsize (GCObject *o) {
+  lu_mem res;
   switch (o->tt) {
     case LUA_VTABLE: {
-      return luaH_size(gco2t(o));
+      res = luaH_size(gco2t(o));
+      break;
     }
     case LUA_VLCL: {
       LClosure *cl = gco2lcl(o);
-      return sizeLclosure(cl->nupvalues);
+      res = sizeLclosure(cl->nupvalues);
+      break;
     }
     case LUA_VCCL: {
       CClosure *cl = gco2ccl(o);
-      return sizeCclosure(cl->nupvalues);
+      res = sizeCclosure(cl->nupvalues);
+      break;
       break;
     }
     case LUA_VUSERDATA: {
       Udata *u = gco2u(o);
-      return sizeudata(u->nuvalue, u->len);
+      res = sizeudata(u->nuvalue, u->len);
+      break;
     }
     case LUA_VPROTO: {
-      return luaF_protosize(gco2p(o));
+      res = luaF_protosize(gco2p(o));
+      break;
     }
     case LUA_VTHREAD: {
-      return luaE_threadsize(gco2th(o));
+      res = luaE_threadsize(gco2th(o));
+      break;
     }
     case LUA_VSHRSTR: {
       TString *ts = gco2ts(o);
-      return sizestrshr(cast_uint(ts->shrlen));
+      res = sizestrshr(cast_uint(ts->shrlen));
+      break;
     }
     case LUA_VLNGSTR: {
       TString *ts = gco2ts(o);
-      return luaS_sizelngstr(ts->u.lnglen, ts->shrlen);
+      res = luaS_sizelngstr(ts->u.lnglen, ts->shrlen);
+      break;
     }
     case LUA_VUPVAL: {
-      return sizeof(UpVal);
+      res = sizeof(UpVal);
+      break;
     }
-    default: lua_assert(0); return 0;
+    default: res = 0; lua_assert(0);
   }
+  return cast(l_mem, res);
 }
 
 
@@ -327,7 +338,7 @@ GCObject *luaC_newobj (lua_State *L, lu_byte tt, size_t sz) {
 ** (only closures can), and a userdata's metatable must be a table.
 */
 static void reallymarkobject (global_State *g, GCObject *o) {
-  g->GCmarked += cast(l_mem, objsize(o));
+  g->GCmarked += objsize(o);
   switch (o->tt) {
     case LUA_VSHRSTR:
     case LUA_VLNGSTR: {
@@ -803,6 +814,7 @@ static void freeupval (lua_State *L, UpVal *uv) {
 
 
 static void freeobj (lua_State *L, GCObject *o) {
+  assert_code(l_mem newmem = gettotalbytes(G(L)) - objsize(o));
   switch (o->tt) {
     case LUA_VPROTO:
       luaF_freeproto(L, gco2p(o));
@@ -846,6 +858,7 @@ static void freeobj (lua_State *L, GCObject *o) {
     }
     default: lua_assert(0);
   }
+  lua_assert(gettotalbytes(G(L)) == newmem);
 }
 
 
@@ -1167,7 +1180,7 @@ static GCObject **sweepgen (lua_State *L, global_State *g, GCObject **p,
         lua_assert(age != G_OLD1);  /* advanced in 'markold' */
         setage(curr, nextage[age]);
         if (getage(curr) == G_OLD1) {
-          addedold += cast(l_mem, objsize(curr));  /* bytes becoming old */
+          addedold += objsize(curr);  /* bytes becoming old */
           if (*pfirstold1 == NULL)
             *pfirstold1 = curr;  /* first OLD1 object in the list */
         }

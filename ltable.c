@@ -863,8 +863,9 @@ Table *luaH_new (lua_State *L) {
 }
 
 
-size_t luaH_size (Table *t) {
-  size_t sz = sizeof(Table) + luaH_realasize(t) * (sizeof(Value) + 1);
+lu_mem luaH_size (Table *t) {
+  lu_mem sz = cast(lu_mem, sizeof(Table))
+            + luaH_realasize(t) * (sizeof(Value) + 1);
   if (!isdummy(t))
     sz += sizehash(t);
   return sz;

@@ -257,8 +257,9 @@ static void preinit_thread (lua_State *L, global_State *g) {
 }
 
 
-size_t luaE_threadsize (lua_State *L) {
-  size_t sz = sizeof(LX) + cast_uint(L->nci) * sizeof(CallInfo);
+lu_mem luaE_threadsize (lua_State *L) {
+  lu_mem sz = cast(lu_mem, sizeof(LX))
+            + cast_uint(L->nci) * sizeof(CallInfo);
   if (L->stack.p != NULL)
     sz += cast_uint(stacksize(L) + EXTRA_STACK) * sizeof(StackValue);
   return sz;
