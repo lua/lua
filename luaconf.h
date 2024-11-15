@@ -87,6 +87,11 @@
 #endif
 
 
+#if defined(LUA_USE_C89) && defined(LUA_USE_POSIX)
+#error "Posix is not compatible with C89"
+#endif
+
+
 /*
 @@ LUAI_IS32INT is true iff 'int' has (at least) 32 bits.
 */
