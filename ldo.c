@@ -564,12 +564,12 @@ void luaD_poscall (lua_State *L, CallInfo *ci, int nres) {
 #define next_ci(L)  (L->ci->next ? L->ci->next : luaE_extendCI(L))
 
 
-l_sinline CallInfo *prepCallInfo (lua_State *L, StkId func, int nresults,
-                                                l_uint32 mask, StkId top) {
+l_sinline CallInfo *prepCallInfo (lua_State *L, StkId func, unsigned status,
+                                                StkId top) {
   CallInfo *ci = L->ci = next_ci(L);  /* new frame */
   ci->func.p = func;
-  lua_assert(((nresults + 1) & ~CIST_NRESULTS) == 0);
-  ci->callstatus = mask | cast(l_uint32, nresults + 1);
+  lua_assert((status & ~(CIST_NRESULTS | CIST_C)) == 0);
+  ci->callstatus = status;
   ci->top.p = top;
   return ci;
 }
@@ -578,12 +578,12 @@ l_sinline CallInfo *prepCallInfo (lua_State *L, StkId func, int nresults,
 /*
 ** precall for C functions
 */
-l_sinline int precallC (lua_State *L, StkId func, int nresults,
+l_sinline int precallC (lua_State *L, StkId func, unsigned status,
                                             lua_CFunction f) {
   int n;  /* number of returns */
   CallInfo *ci;
   checkstackp(L, LUA_MINSTACK, func);  /* ensure minimum stack size */
-  L->ci = ci = prepCallInfo(L, func, nresults, CIST_C,
+  L->ci = ci = prepCallInfo(L, func, status | CIST_C,
                                L->top.p + LUA_MINSTACK);
   lua_assert(ci->top.p <= L->stack_last.p);
   if (l_unlikely(L->hookmask & LUA_MASKCALL)) {
@@ -610,9 +610,9 @@ int luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func,
  retry:
   switch (ttypetag(s2v(func))) {
     case LUA_VCCL:  /* C closure */
-      return precallC(L, func, LUA_MULTRET, clCvalue(s2v(func))->f);
+      return precallC(L, func, LUA_MULTRET + 1, clCvalue(s2v(func))->f);
     case LUA_VLCF:  /* light C function */
-      return precallC(L, func, LUA_MULTRET, fvalue(s2v(func)));
+      return precallC(L, func, LUA_MULTRET + 1, fvalue(s2v(func)));
     case LUA_VLCL: {  /* Lua function */
       Proto *p = clLvalue(s2v(func))->p;
       int fsize = p->maxstacksize;  /* frame size */
@@ -651,13 +651,15 @@ int luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func,
 ** original function position.
 */
 CallInfo *luaD_precall (lua_State *L, StkId func, int nresults) {
+  unsigned status = cast_uint(nresults + 1);
+  lua_assert(status <= MAXRESULTS + 1);
  retry:
   switch (ttypetag(s2v(func))) {
     case LUA_VCCL:  /* C closure */
-      precallC(L, func, nresults, clCvalue(s2v(func))->f);
+      precallC(L, func, status, clCvalue(s2v(func))->f);
       return NULL;
     case LUA_VLCF:  /* light C function */
-      precallC(L, func, nresults, fvalue(s2v(func)));
+      precallC(L, func, status, fvalue(s2v(func)));
       return NULL;
     case LUA_VLCL: {  /* Lua function */
       CallInfo *ci;
@@ -666,7 +668,7 @@ CallInfo *luaD_precall (lua_State *L, StkId func, int nresults) {
       int nfixparams = p->numparams;
       int fsize = p->maxstacksize;  /* frame size */
       checkstackp(L, fsize, func);
-      L->ci = ci = prepCallInfo(L, func, nresults, 0, func + 1 + fsize);
+      L->ci = ci = prepCallInfo(L, func, status, func + 1 + fsize);
       ci->u.l.savedpc = p->code;  /* starting point */
       for (; narg < nfixparams; narg++)
         setnilvalue(s2v(L->top.p++));  /* complete missing arguments */
@@ -675,7 +677,6 @@ CallInfo *luaD_precall (lua_State *L, StkId func, int nresults) {
     }
     default: {  /* not a function */
       func = tryfuncTM(L, func);  /* try to get '__call' metamethod */
-      /* return luaD_precall(L, func, nresults); */
       goto retry;  /* try again with metamethod */
     }
   }
