@@ -102,17 +102,18 @@ typedef LUAI_UACINT l_uacInt;
 #undef NDEBUG
 #include <assert.h>
 #define lua_assert(c)           assert(c)
+#define assert_code(c)		c
 #endif
 
 #if defined(lua_assert)
-#define check_exp(c,e)		(lua_assert(c), (e))
-/* to avoid problems with conditions too long */
-#define lua_longassert(c)	((c) ? (void)0 : lua_assert(0))
 #else
 #define lua_assert(c)		((void)0)
-#define check_exp(c,e)		(e)
-#define lua_longassert(c)	((void)0)
+#define assert_code(c)		((void)0)
 #endif
+
+#define check_exp(c,e)		(lua_assert(c), (e))
+/* to avoid problems with conditions too long */
+#define lua_longassert(c)	assert_code((c) ? (void)0 : lua_assert(0))
 
 
 /* macro to avoid warnings about unused variables */
