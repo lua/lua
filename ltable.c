@@ -121,9 +121,15 @@ typedef union {
 
 #define dummynode		(&dummynode_)
 
+/*
+** Common hash part for tables with empty hash parts. That allows all
+** tables to have a hash part, avoding an extra check ("is there a hash
+** part?") when indexing. Its sole node has an empty value and a key
+** (DEADKEY, NULL) that is different from any valid TValue.
+*/
 static const Node dummynode_ = {
   {{NULL}, LUA_VEMPTY,  /* value's value and type */
-   LUA_VNIL, 0, {NULL}}  /* key type, next, and key value */
+   LUA_TDEADKEY, 0, {NULL}}  /* key type, next, and key value */
 };
 
 
@@ -400,16 +406,20 @@ int luaH_next (lua_State *L, Table *t, StkId key) {
 }
 
 
+/* Extra space in Node array if it has a lastfree entry */
+#define extraLastfree(t)	(haslastfree(t) ? sizeof(Limbox) : 0)
+
+/* 'node' size in bytes */
+static size_t sizehash (Table *t) {
+  return cast_sizet(sizenode(t)) * sizeof(Node) + extraLastfree(t);
+}
+
+
 static void freehash (lua_State *L, Table *t) {
   if (!isdummy(t)) {
-    /* 'node' size in bytes */
-    size_t bsize = cast_sizet(sizenode(t)) * sizeof(Node);
-    char *arr = cast_charp(t->node);
-    if (haslastfree(t)) {
-      bsize += sizeof(Limbox);
-      arr -= sizeof(Limbox);
-    }
-    luaM_freearray(L, arr, bsize);
+    /* get pointer to the beginning of Node array */
+    char *arr = cast_charp(t->node) - extraLastfree(t);
+    luaM_freearray(L, arr, sizehash(t));
   }
 }
 
@@ -572,8 +582,7 @@ static void numusehash (const Table *t, Counters *ct) {
   while (i--) {
     Node *n = &t->node[i];
     if (isempty(gval(n))) {
-      /* entry was deleted; key cannot be nil */
-      lua_assert(isdummy(t) || !keyisnil(n));
+      lua_assert(!keyisnil(n));  /* entry was deleted; key cannot be nil */
       ct->deleted = 1;
     }
     else {
@@ -855,13 +864,9 @@ Table *luaH_new (lua_State *L) {
 
 
 size_t luaH_size (Table *t) {
-  size_t sz = sizeof(Table)
-            + luaH_realasize(t) * (sizeof(Value) + 1);
-  if (!isdummy(t)) {
-    sz += sizenode(t) * sizeof(Node);
-    if (haslastfree(t))
-      sz += sizeof(Limbox);
-  }
+  size_t sz = sizeof(Table) + luaH_realasize(t) * (sizeof(Value) + 1);
+  if (!isdummy(t))
+    sz += sizehash(t);
   return sz;
 }
 
@@ -887,13 +892,11 @@ static Node *getfreepos (Table *t) {
     }
   }
   else {  /* no 'lastfree' information */
-    if (!isdummy(t)) {
-      unsigned i = sizenode(t);
-      while (i--) {  /* do a linear search */
-        Node *free = gnode(t, i);
-        if (keyisnil(free))
-          return free;
-      }
+    unsigned i = sizenode(t);
+    while (i--) {  /* do a linear search */
+      Node *free = gnode(t, i);
+      if (keyisnil(free))
+        return free;
     }
   }
   return NULL;  /* could not find a free place */
