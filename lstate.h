@@ -221,16 +221,24 @@ struct CallInfo {
 */
 /* bits 0-7 are the expected number of results from this function + 1 */
 #define CIST_NRESULTS	0xffu
-/* Bits 8-10 are used for CIST_RECST (see below) */
-#define CIST_RECST	8  /* the offset, not the mask */
-/* original value of 'allowhook' */
-#define CIST_OAH	(cast(l_uint32, 1) << 11)
-/* call is running a C function */
-#define CIST_C		(CIST_OAH << 1)
+
+/* bits 8-11 count call metamethods (and their extra arguments) */
+#define CIST_CCMT	8  /* the offset, not the mask */
+#define MAX_CCMT	(0xfu << CIST_CCMT)
+
+/* Bits 12-14 are used for CIST_RECST (see below) */
+#define CIST_RECST	12  /* the offset, not the mask */
+
+/* call is running a C function (still in first 16 bits) */
+#define CIST_C		(1u << (CIST_RECST + 3))
 /* call is on a fresh "luaV_execute" frame */
-#define CIST_FRESH	(CIST_C << 1)
+#define CIST_FRESH	cast(l_uint32, CIST_C << 1)
+/* function is closing tbc variables */
+#define CIST_CLSRET	(CIST_FRESH << 1)
+/* original value of 'allowhook' */
+#define CIST_OAH	(CIST_CLSRET << 1)
 /* call is running a debug hook */
-#define CIST_HOOKED	(CIST_FRESH << 1)
+#define CIST_HOOKED	(CIST_OAH << 1)
 /* doing a yieldable protected call */
 #define CIST_YPCALL	(CIST_HOOKED << 1)
 /* call was tail called */
@@ -239,11 +247,9 @@ struct CallInfo {
 #define CIST_HOOKYIELD	(CIST_TAIL << 1)
 /* function "called" a finalizer */
 #define CIST_FIN	(CIST_HOOKYIELD << 1)
- /* function is closing tbc variables */
-#define CIST_CLSRET	(CIST_FIN << 1)
 #if defined(LUA_COMPAT_LT_LE)
 /* using __lt for __le */
-#define CIST_LEQ	(CIST_CLSRET << 1)
+#define CIST_LEQ	(CIST_FIN << 1)
 #endif
 
 

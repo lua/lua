@@ -178,7 +178,7 @@ do   -- tail calls x chain of __call
   end
 
   -- build a chain of __call metamethods ending in function 'foo'
-  for i = 1, 100 do
+  for i = 1, 15 do
     foo = setmetatable({}, {__call = foo})
   end
 
@@ -190,8 +190,8 @@ end
 print('+')
 
 
-do  -- testing chains of '__call'
-  local N = 20
+do   print"testing chains of '__call'"
+  local N = 15
   local u = table.pack
   for i = 1, N do
     u = setmetatable({i}, {__call = u})
@@ -206,6 +206,23 @@ do  -- testing chains of '__call'
   assert(Res[N + 1] == "a" and Res[N + 2] == "b" and Res[N + 3] == "c")
 end
 
+
+do    -- testing chains too long
+  local a = {}
+  for i = 1, 16 do    -- one too many
+    a = setmetatable({}, {__call = a})
+  end
+  local status, msg = pcall(a)
+  assert(not status and string.find(msg, "too long"))
+
+  setmetatable(a, {__call = a})   -- infinite chain
+  local status, msg = pcall(a)
+  assert(not status and string.find(msg, "too long"))
+
+  -- again, with a tail call
+  local status, msg = pcall(function () return a() end)
+  assert(not status and string.find(msg, "too long"))
+end
 
 a = nil
 (function (x) a=x end)(23)

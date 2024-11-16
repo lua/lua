@@ -9392,6 +9392,10 @@ If you need to change it,
 declare a local variable with the same name in the loop body.
 }
 
+@item{
+A chain of @id{__call} metamethods can have at most 15 objects.
+}
+
 }
 
 }
