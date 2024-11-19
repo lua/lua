@@ -504,6 +504,7 @@ struct lua_Debug {
   unsigned char nups;	/* (u) number of upvalues */
   unsigned char nparams;/* (u) number of parameters */
   char isvararg;        /* (u) */
+  unsigned char extraargs;  /* (t) number of extra arguments */
   char istailcall;	/* (t) */
   int ftransfer;   /* (r) index of first value transferred */
   int ntransfer;   /* (r) number of transferred values */

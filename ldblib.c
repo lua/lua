@@ -191,8 +191,10 @@ static int db_getinfo (lua_State *L) {
     settabsi(L, "ftransfer", ar.ftransfer);
     settabsi(L, "ntransfer", ar.ntransfer);
   }
-  if (strchr(options, 't'))
+  if (strchr(options, 't')) {
     settabsb(L, "istailcall", ar.istailcall);
+    settabsi(L, "extraargs", ar.extraargs);
+  }
   if (strchr(options, 'L'))
     treatstackoption(L, L1, "activelines");
   if (strchr(options, 'f'))

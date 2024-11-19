@@ -624,6 +624,9 @@ local function f (x)
     end
 end
 
+assert(debug.getinfo(print, 't').istailcall == false)
+assert(debug.getinfo(print, 't').extraargs == 0)
+
 function g(x) return f(x) end
 
 function g1(x) g(x) end

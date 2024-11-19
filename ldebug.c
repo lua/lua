@@ -352,7 +352,15 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
         break;
       }
       case 't': {
-        ar->istailcall = (ci != NULL && (ci->callstatus & CIST_TAIL));
+        if (ci != NULL) {
+          ar->istailcall = !!(ci->callstatus & CIST_TAIL);
+          ar->extraargs =
+                   cast_uchar((ci->callstatus & MAX_CCMT) >> CIST_CCMT);
+        }
+        else {
+          ar->istailcall = 0;
+          ar->extraargs = 0;
+        }
         break;
       }
       case 'n': {

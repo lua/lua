@@ -204,6 +204,17 @@ do   print"testing chains of '__call'"
     assert(Res[i][1] == i)
   end
   assert(Res[N + 1] == "a" and Res[N + 2] == "b" and Res[N + 3] == "c")
+
+  local function u (...)
+    local n = debug.getinfo(1, 't').extraargs
+    assert(select("#", ...) == n)
+    return n
+  end
+
+  for i = 0, N do
+    assert(u() == i)
+    u = setmetatable({}, {__call = u})
+  end
 end
 
 

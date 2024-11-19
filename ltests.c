@@ -1900,6 +1900,10 @@ static struct X { int x; } x;
     else if EQ("closeslot") {
       lua_closeslot(L1, getnum);
     }
+    else if EQ("argerror") {
+      int arg = getnum;
+      luaL_argerror(L1, arg, getstring);
+    }
     else luaL_error(L, "unknown instruction %s", buff);
   }
   return 0;

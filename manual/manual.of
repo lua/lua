@@ -4850,6 +4850,7 @@ typedef struct lua_Debug {
   unsigned char nups;         /* (u) number of upvalues */
   unsigned char nparams;      /* (u) number of parameters */
   char isvararg;              /* (u) */
+  unsigned char extraargs;    /* (t) number of extra arguments */
   char istailcall;            /* (t) */
   int ftransfer;              /* (r) index of first value transferred */
   int ntransfer;              /* (r) number of transferred values */
@@ -4936,6 +4937,14 @@ according to how the function was called.
 @item{@id{istailcall}|
 true if this function invocation was called by a tail call.
 In this case, the caller of this level is not in the stack.
+}
+
+@item{@id{extraargs}|
+The number of extra arguments added by the call
+to functions called through @idx{__call} metamethods.
+(Each @idx{__call} metavalue adds a single extra argument,
+the object being called,
+but there may be a chain of @idx{__call} metavalues.)
 }
 
 @item{@id{nups}|
@@ -5045,7 +5054,7 @@ fills in the fields @id{source}, @id{short_src},
 @id{linedefined}, @id{lastlinedefined}, and @id{what};
 }
 
-@item{@Char{t}| fills in the field @id{istailcall};
+@item{@Char{t}| fills in the fields @id{istailcall} and @id{extraargs};
 }
 
 @item{@Char{u}| fills in the fields
@@ -7993,7 +8002,7 @@ returns @fail plus the position of the first invalid byte.
 
 @LibEntry{utf8.offset (s, n [, i])|
 
-Returns the the position of the @id{n}-th character of @id{s}
+Returns the position of the @id{n}-th character of @id{s}
 (counting from byte position @id{i}) as two integers:
 The index (in bytes) where its encoding starts and the
 index (in bytes) where it ends.
