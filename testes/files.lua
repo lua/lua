@@ -766,6 +766,7 @@ if not _port then
       assert((v[3] == nil and z > 0) or v[3] == z)
     end
   end
+  print("(done)")
 end
 
 
