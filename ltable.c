@@ -632,14 +632,14 @@ static Value *resizearray (lua_State *L , Table *t,
     if (np == NULL)  /* allocation error? */
       return NULL;
     if (oldasize > 0) {
+      size_t oldasizeb = concretesize(oldasize);
       /* move common elements to new position */
       Value *op = t->array - oldasize;  /* real original array */
       unsigned tomove = (oldasize < newasize) ? oldasize : newasize;
-      lua_assert(tomove > 0);
-      memcpy(np + newasize - tomove,
-             op + oldasize - tomove,
-             concretesize(tomove));
-      luaM_freemem(L, op, concretesize(oldasize));
+      size_t tomoveb = (oldasize < newasize) ? oldasizeb : newasizeb;
+      lua_assert(tomoveb > 0);
+      memcpy(np + newasize - tomove, op + oldasize - tomove, tomoveb);
+      luaM_freemem(L, op, oldasizeb);
     }
     return np + newasize;  /* shift pointer to the end of value segment */
   }
