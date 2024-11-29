@@ -1865,7 +1865,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           pc++;
         }
         /* when 'n' is known, table should have proper size */
-        if (last > luaH_realasize(h)) {  /* needs more space? */
+        if (last > h->asize) {  /* needs more space? */
           /* fixed-size sets should have space preallocated */
           lua_assert(GETARG_vB(i) == 0);
           luaH_resizearray(L, h, last);  /* preallocate it at once */

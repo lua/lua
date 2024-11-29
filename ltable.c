@@ -41,12 +41,12 @@
 
 
 /*
-** Only tables with hash parts larger than 2^LIMFORLAST has a 'lastfree'
-** field that optimizes finding a free slot. That field is stored just
-** before the array of nodes, in the same block. Smaller tables do a
-** complete search when looking for a free slot.
+** Only hash parts with at least 2^LIMFORLAST have a 'lastfree' field
+** that optimizes finding a free slot. That field is stored just before
+** the array of nodes, in the same block. Smaller tables do a complete
+** search when looking for a free slot.
 */
-#define LIMFORLAST    2  /* log2 of real limit */
+#define LIMFORLAST    3  /* log2 of real limit (8) */
 
 /*
 ** The union 'Limbox' stores 'lastfree' and ensures that what follows it
@@ -59,7 +59,7 @@ typedef union {
   char padding[offsetof(Limbox_aux, follows_pNode)];
 } Limbox;
 
-#define haslastfree(t)     ((t)->lsizenode > LIMFORLAST)
+#define haslastfree(t)     ((t)->lsizenode >= LIMFORLAST)
 #define getlastfree(t)     ((cast(Limbox *, (t)->node) - 1)->lastfree)
 
 
@@ -274,61 +274,6 @@ static int equalkey (const TValue *k1, const Node *n2, int deadok) {
 
 
 /*
-** True if value of 'alimit' is equal to the real size of the array
-** part of table 't'. (Otherwise, the array part must be larger than
-** 'alimit'.)
-*/
-#define limitequalsasize(t)	(isrealasize(t) || ispow2((t)->alimit))
-
-
-/*
-** Returns the real size of the 'array' array
-*/
-unsigned int luaH_realasize (const Table *t) {
-  if (limitequalsasize(t))
-    return t->alimit;  /* this is the size */
-  else {
-    unsigned int size = t->alimit;
-    /* compute the smallest power of 2 not smaller than 'size' */
-    size |= (size >> 1);
-    size |= (size >> 2);
-    size |= (size >> 4);
-    size |= (size >> 8);
-#if (UINT_MAX >> 14) > 3  /* unsigned int has more than 16 bits */
-    size |= (size >> 16);
-#if (UINT_MAX >> 30) > 3
-    size |= (size >> 32);  /* unsigned int has more than 32 bits */
-#endif
-#endif
-    size++;
-    lua_assert(ispow2(size) && size/2 < t->alimit && t->alimit < size);
-    return size;
-  }
-}
-
-
-/*
-** Check whether real size of the array is a power of 2.
-** (If it is not, 'alimit' cannot be changed to any other value
-** without changing the real size.)
-*/
-static int ispow2realasize (const Table *t) {
-  return (!isrealasize(t) || ispow2(t->alimit));
-}
-
-
-static unsigned int setlimittosize (Table *t) {
-  t->alimit = luaH_realasize(t);
-  setrealasize(t);
-  return t->alimit;
-}
-
-
-#define limitasasize(t)	check_exp(isrealasize(t), t->alimit)
-
-
-
-/*
 ** "Generic" get version. (Not that generic: not valid for integers,
 ** which may be in array part, nor for floats with integral values.)
 ** See explanation about 'deadok' in function 'equalkey'.
@@ -384,7 +329,7 @@ static unsigned findindex (lua_State *L, Table *t, TValue *key,
 
 
 int luaH_next (lua_State *L, Table *t, StkId key) {
-  unsigned int asize = luaH_realasize(t);
+  unsigned int asize = t->asize;
   unsigned int i = findindex(L, t, s2v(key), asize);  /* find original key */
   for (; i < asize; i++) {  /* try first array part */
     lu_byte tag = *getArrTag(t, i);
@@ -425,38 +370,10 @@ static void freehash (lua_State *L, Table *t) {
 
 
 /*
-** Check whether an integer key is in the array part. If 'alimit' is
-** not the real size of the array, the key still can be in the array
-** part.  In this case, do the "Xmilia trick" to check whether 'key-1'
-** is smaller than the real size.
-** The trick works as follow: let 'p' be the integer such that
-** '2^(p+1) >= alimit > 2^p', or '2^(p+1) > alimit-1 >= 2^p'.  That is,
-** 'p' is the highest 1-bit in 'alimit-1', and 2^(p+1) is the real size
-** of the array. What we have to check becomes 'key-1 < 2^(p+1)'.  We
-** compute '(key-1) & ~(alimit-1)', which we call 'res'; it will have
-** the 'p' bit cleared. (It may also clear other bits smaller than 'p',
-** but no bit higher than 'p'.) If the key is outside the array, that
-** is, 'key-1 >= 2^(p+1)', then 'res' will have some 1-bit higher than
-** 'p', therefore it will be larger or equal to 'alimit', and the check
-** will fail. If 'key-1 < 2^(p+1)', then 'res' has no 1-bit higher than
-** 'p', and as the bit 'p' itself was cleared, 'res' will be smaller
-** than 2^p, therefore smaller than 'alimit', and the check succeeds.
-** As special cases, when 'alimit' is 0 the condition is trivially false,
-** and when 'alimit' is 1 the condition simplifies to 'key-1 < alimit'.
-** If key is 0 or negative, 'res' will have its higher bit on, so that
-** it cannot be smaller than 'alimit'.
+** Check whether an integer key is in the array part of a table.
 */
-static int keyinarray (Table *t, lua_Integer key) {
-  lua_Unsigned alimit = t->alimit;
-  if (l_castS2U(key) - 1u < alimit)  /* 'key' in [1, t->alimit]? */
-    return 1;
-  else if (!isrealasize(t) &&  /* key still may be in the array part? */
-           (((l_castS2U(key) - 1u) & ~(alimit - 1u)) < alimit)) {
-    t->alimit = cast_uint(key);  /* probably '#t' is here now */
-    return 1;
-  }
-  else
-    return 0;
+l_sinline int keyinarray (Table *t, lua_Integer key) {
+  return (l_castS2U(key) - 1u < t->asize);  /* 'key' in [1, t->asize]? */
 }
 
 
@@ -465,7 +382,6 @@ static int keyinarray (Table *t, lua_Integer key) {
 ** Rehash
 ** ==============================================================
 */
-
 
 /*
 ** Structure to count the keys in a table.
@@ -534,7 +450,7 @@ static void countint (lua_Integer key, Counters *ct) {
 }
 
 
-l_sinline int arraykeyisempty (const Table *t, lua_Unsigned key) {
+l_sinline int arraykeyisempty (const Table *t, unsigned key) {
   int tag = *getArrTag(t, key - 1);
   return tagisempty(tag);
 }
@@ -548,7 +464,7 @@ static void numusearray (const Table *t, Counters *ct) {
   unsigned int ttlg;  /* 2^lg */
   unsigned int ause = 0;  /* summation of 'nums' */
   unsigned int i = 1;  /* index to traverse all array keys */
-  unsigned int asize = limitasasize(t);  /* real array size */
+  unsigned int asize = t->asize;
   /* traverse each slice */
   for (lg = 0, ttlg = 1; lg <= MAXABITS; lg++, ttlg *= 2) {
     unsigned int lc = 0;  /* counter */
@@ -600,7 +516,10 @@ static void numusehash (const Table *t, Counters *ct) {
 ** "concrete size" (number of bytes in the array).
 */
 static size_t concretesize (unsigned int size) {
-  return size * sizeof(Value) + size;  /* space for the two arrays */
+  if (size == 0)
+    return 0;
+  else  /* space for the two arrays plus an unsigned in between */
+    return size * (sizeof(Value) + 1) + sizeof(unsigned);
 }
 
 
@@ -631,17 +550,18 @@ static Value *resizearray (lua_State *L , Table *t,
                   luaM_reallocvector(L, NULL, 0, newasizeb, lu_byte));
     if (np == NULL)  /* allocation error? */
       return NULL;
+    np += newasize;  /* shift pointer to the end of value segment */
     if (oldasize > 0) {
-      size_t oldasizeb = concretesize(oldasize);
       /* move common elements to new position */
-      Value *op = t->array - oldasize;  /* real original array */
+      size_t oldasizeb = concretesize(oldasize);
+      Value *op = t->array;  /* original array */
       unsigned tomove = (oldasize < newasize) ? oldasize : newasize;
       size_t tomoveb = (oldasize < newasize) ? oldasizeb : newasizeb;
       lua_assert(tomoveb > 0);
-      memcpy(np + newasize - tomove, op + oldasize - tomove, tomoveb);
-      luaM_freemem(L, op, oldasizeb);
+      memcpy(np - tomove, op - tomove, tomoveb);
+      luaM_freemem(L, op - oldasize, oldasizeb);  /* free old block */
     }
-    return np + newasize;  /* shift pointer to the end of value segment */
+    return np;
   }
 }
 
@@ -665,7 +585,7 @@ static void setnodevector (lua_State *L, Table *t, unsigned size) {
     if (lsize > MAXHBITS || (1u << lsize) > MAXHSIZE)
       luaG_runerror(L, "table overflow");
     size = twoto(lsize);
-    if (lsize <= LIMFORLAST)  /* no 'lastfree' field? */
+    if (lsize < LIMFORLAST)  /* no 'lastfree' field? */
       t->node = luaM_newvector(L, size, Node);
     else {
       size_t bsize = size * sizeof(Node) + sizeof(Limbox);
@@ -730,7 +650,7 @@ static void exchangehashpart (Table *t1, Table *t2) {
 static void reinsertOldSlice (lua_State *L, Table *t, unsigned oldasize,
                                             unsigned newasize) {
   unsigned i;
-  t->alimit = newasize;  /* pretend array has new size... */
+  t->asize = newasize;  /* pretend array has new size... */
   for (i = newasize; i < oldasize; i++) {  /* traverse vanishing slice */
     lu_byte tag = *getArrTag(t, i);
     if (!tagisempty(tag)) {  /* a non-empty entry? */
@@ -740,7 +660,7 @@ static void reinsertOldSlice (lua_State *L, Table *t, unsigned oldasize,
       luaH_setint(L, t, cast_int(i) + 1, &aux);
     }
   }
-  t->alimit = oldasize;  /* restore current size... */
+  t->asize = oldasize;  /* restore current size... */
 }
 
 
@@ -772,7 +692,7 @@ static void clearNewSlice (Table *t, unsigned oldasize, unsigned newasize) {
 void luaH_resize (lua_State *L, Table *t, unsigned newasize,
                                           unsigned nhsize) {
   Table newt;  /* to keep the new hash part */
-  unsigned int oldasize = setlimittosize(t);
+  unsigned oldasize = t->asize;
   Value *newarray;
   if (newasize > MAXASIZE)
     luaG_runerror(L, "table overflow");
@@ -794,7 +714,9 @@ void luaH_resize (lua_State *L, Table *t, unsigned newasize,
   /* allocation ok; initialize new part of the array */
   exchangehashpart(t, &newt);  /* 't' has the new hash ('newt' has the old) */
   t->array = newarray;  /* set new array part */
-  t->alimit = newasize;
+  t->asize = newasize;
+  if (newarray != NULL)
+    *lenhint(t) = newasize / 2u;  /* set an initial hint */
   clearNewSlice(t, oldasize, newasize);
   /* re-insert elements from old hash part into new parts */
   reinsert(L, &newt, t);  /* 'newt' now has the old hash */
@@ -818,7 +740,6 @@ static void rehash (lua_State *L, Table *t, const TValue *ek) {
   Counters ct;
   unsigned i;
   unsigned nsize;  /* size for the hash part */
-  setlimittosize(t);
   /* reset counts */
   for (i = 0; i <= MAXABITS; i++) ct.nums[i] = 0;
   ct.na = 0;
@@ -829,7 +750,7 @@ static void rehash (lua_State *L, Table *t, const TValue *ek) {
   numusehash(t, &ct);  /* count keys in hash part */
   if (ct.na == 0) {
     /* no new keys to enter array part; keep it with the same size */
-    asize = luaH_realasize(t);
+    asize = t->asize;
   }
   else {  /* compute best size for array part */
     numusearray(t, &ct);  /* count keys in array part */
@@ -857,15 +778,14 @@ Table *luaH_new (lua_State *L) {
   t->metatable = NULL;
   t->flags = maskflags;  /* table has no metamethod fields */
   t->array = NULL;
-  t->alimit = 0;
+  t->asize = 0;
   setnodevector(L, t, 0);
   return t;
 }
 
 
 lu_mem luaH_size (Table *t) {
-  lu_mem sz = cast(lu_mem, sizeof(Table))
-            + luaH_realasize(t) * (sizeof(Value) + 1);
+  lu_mem sz = cast(lu_mem, sizeof(Table)) + concretesize(t->asize);
   if (!isdummy(t))
     sz += sizehash(t);
   return sz;
@@ -876,9 +796,8 @@ lu_mem luaH_size (Table *t) {
 ** Frees a table.
 */
 void luaH_free (lua_State *L, Table *t) {
-  unsigned int realsize = luaH_realasize(t);
   freehash(L, t);
-  resizearray(L, t, realsize, 0);
+  resizearray(L, t, t->asize, 0);
   luaM_free(L, t);
 }
 
@@ -972,7 +891,7 @@ static void luaH_newkey (lua_State *L, Table *t, const TValue *key,
 
 static const TValue *getintfromhash (Table *t, lua_Integer key) {
   Node *n = hashint(t, key);
-  lua_assert(l_castS2U(key) - 1u >= luaH_realasize(t));
+  lua_assert(!keyinarray(t, key));
   for (;;) {  /* check whether 'key' is somewhere in the chain */
     if (keyisinteger(n) && keyival(n) == key)
       return gval(n);  /* that's it */
@@ -1112,17 +1031,15 @@ static int rawfinishnodeset (const TValue *slot, TValue *val) {
 
 
 int luaH_psetint (Table *t, lua_Integer key, TValue *val) {
-  if (keyinarray(t, key)) {
-    lu_byte *tag = getArrTag(t, key - 1);
-    if (!tagisempty(*tag) || checknoTM(t->metatable, TM_NEWINDEX)) {
-      fval2arr(t, cast_uint(key) - 1, tag, val);
-      return HOK;  /* success */
-    }
-    else
-      return ~cast_int(key - 1);  /* empty slot in the array part */
-  }
-  else
-    return finishnodeset(t, getintfromhash(t, key), val);
+  lua_assert(!keyinarray(t, key));
+  return finishnodeset(t, getintfromhash(t, key), val);
+}
+
+
+static int psetint (Table *t, lua_Integer key, TValue *val) {
+  int hres;
+  luaH_fastseti(t, key, val, hres);
+  return hres;
 }
 
 
@@ -1139,12 +1056,12 @@ int luaH_psetstr (Table *t, TString *key, TValue *val) {
 int luaH_pset (Table *t, const TValue *key, TValue *val) {
   switch (ttypetag(key)) {
     case LUA_VSHRSTR: return luaH_psetshortstr(t, tsvalue(key), val);
-    case LUA_VNUMINT: return luaH_psetint(t, ivalue(key), val);
+    case LUA_VNUMINT: return psetint(t, ivalue(key), val);
     case LUA_VNIL: return HNOTFOUND;
     case LUA_VNUMFLT: {
       lua_Integer k;
       if (luaV_flttointeger(fltvalue(key), &k, F2Ieq)) /* integral index? */
-        return luaH_psetint(t, k, val);  /* use specialized version */
+        return psetint(t, k, val);  /* use specialized version */
       /* else... */
     }  /* FALLTHROUGH */
     default:
@@ -1244,6 +1161,7 @@ static lua_Unsigned hash_search (Table *t, lua_Unsigned j) {
 
 
 static unsigned int binsearch (Table *array, unsigned int i, unsigned int j) {
+  lua_assert(i <= j);
   while (j - i > 1u) {  /* binary search */
     unsigned int m = (i + j) / 2;
     if (arraykeyisempty(array, m)) j = m;
@@ -1253,90 +1171,74 @@ static unsigned int binsearch (Table *array, unsigned int i, unsigned int j) {
 }
 
 
+/* return a border, saving it as a hint for next call */
+static lua_Unsigned newhint (Table *t, unsigned hint) {
+  lua_assert(hint <= t->asize);
+  *lenhint(t) = hint;
+  return hint;
+}
+
+
 /*
-** Try to find a boundary in table 't'. (A 'boundary' is an integer index
-** such that t[i] is present and t[i+1] is absent, or 0 if t[1] is absent
-** and 'maxinteger' if t[maxinteger] is present.)
-** (In the next explanation, we use Lua indices, that is, with base 1.
-** The code itself uses base 0 when indexing the array part of the table.)
-** The code starts with 'limit = t->alimit', a position in the array
-** part that may be a boundary.
-**
-** (1) If 't[limit]' is empty, there must be a boundary before it.
-** As a common case (e.g., after 't[#t]=nil'), check whether 'limit-1'
-** is present. If so, it is a boundary. Otherwise, do a binary search
-** between 0 and limit to find a boundary. In both cases, try to
-** use this boundary as the new 'alimit', as a hint for the next call.
-**
-** (2) If 't[limit]' is not empty and the array has more elements
-** after 'limit', try to find a boundary there. Again, try first
-** the special case (which should be quite frequent) where 'limit+1'
-** is empty, so that 'limit' is a boundary. Otherwise, check the
-** last element of the array part. If it is empty, there must be a
-** boundary between the old limit (present) and the last element
-** (absent), which is found with a binary search. (This boundary always
-** can be a new limit.)
-**
-** (3) The last case is when there are no elements in the array part
-** (limit == 0) or its last element (the new limit) is present.
-** In this case, must check the hash part. If there is no hash part
-** or 'limit+1' is absent, 'limit' is a boundary.  Otherwise, call
-** 'hash_search' to find a boundary in the hash part of the table.
-** (In those cases, the boundary is not inside the array part, and
-** therefore cannot be used as a new limit.)
+** Try to find a border in table 't'. (A 'border' is an integer index
+** such that t[i] is present and t[i+1] is absent, or 0 if t[1] is absent,
+** or 'maxinteger' if t[maxinteger] is present.)
+** If there is an array part, try to find a border there. First try
+** to find it in the vicinity of the previous result (hint), to handle
+** cases like 't[#t + 1] = val' or 't[#t] = nil', that move the border
+** by one entry. Otherwise, do a binary search to find the border.
+** If there is no array part, or its last element is non empty, the
+** border may be in the hash part.
 */
 lua_Unsigned luaH_getn (Table *t) {
-  unsigned int limit = t->alimit;
-  if (limit > 0 && arraykeyisempty(t, limit)) {  /* (1)? */
-    /* there must be a boundary before 'limit' */
-    if (limit >= 2 && !arraykeyisempty(t, limit - 1)) {
-      /* 'limit - 1' is a boundary; can it be a new limit? */
-      if (ispow2realasize(t) && !ispow2(limit - 1)) {
-        t->alimit = limit - 1;
-        setnorealasize(t);  /* now 'alimit' is not the real size */
+  unsigned asize = t->asize;
+  if (asize > 0) {  /* is there an array part? */
+    const unsigned maxvicinity = 4;
+    unsigned limit = *lenhint(t);  /* start with the hint */
+    if (limit == 0)
+      limit = 1;  /* make limit a valid index in the array */
+    if (arraykeyisempty(t, limit)) {  /* t[limit] empty? */
+      /* there must be a border before 'limit' */
+      unsigned i;
+      /* look for a border in the vicinity of the hint */
+      for (i = 0; i < maxvicinity && limit > 1; i++) {
+        limit--;
+        if (!arraykeyisempty(t, limit))
+          return newhint(t, limit);  /* 'limit' is a border */
       }
-      return limit - 1;
+      /* t[limit] still empty; search for a border in [0, limit) */
+      return newhint(t, binsearch(t, 0, limit));
     }
-    else {  /* must search for a boundary in [0, limit] */
-      unsigned int boundary = binsearch(t, 0, limit);
-      /* can this boundary represent the real size of the array? */
-      if (ispow2realasize(t) && boundary > luaH_realasize(t) / 2) {
-        t->alimit = boundary;  /* use it as the new limit */
-        setnorealasize(t);
+    else {  /* 'limit' is present in table; look for a border after it */
+      unsigned i;
+      /* look for a border in the vicinity of the hint */
+      for (i = 0; i < maxvicinity && limit < asize; i++) {
+        limit++;
+        if (arraykeyisempty(t, limit))
+          return newhint(t, limit - 1);  /* 'limit - 1' is a border */
       }
-      return boundary;
+      if (arraykeyisempty(t, asize)) {  /* last element empty? */
+        /* t[limit] not empty; search for a border in [limit, asize) */
+        return newhint(t, binsearch(t, limit, asize));
+      }
     }
+    /* last element non empty; set a hint to speed up findind that again */
+    /* (keys in the hash part cannot be hints) */
+    *lenhint(t) = asize;
   }
-  /* 'limit' is zero or present in table */
-  if (!limitequalsasize(t)) {  /* (2)? */
-    /* 'limit' > 0 and array has more elements after 'limit' */
-    if (arraykeyisempty(t, limit + 1))  /* 'limit + 1' is empty? */
-      return limit;  /* this is the boundary */
-    /* else, try last element in the array */
-    limit = luaH_realasize(t);
-    if (arraykeyisempty(t, limit)) {  /* empty? */
-      /* there must be a boundary in the array after old limit,
-         and it must be a valid new limit */
-      unsigned int boundary = binsearch(t, t->alimit, limit);
-      t->alimit = boundary;
-      return boundary;
-    }
-    /* else, new limit is present in the table; check the hash part */
-  }
-  /* (3) 'limit' is the last element and either is zero or present in table */
-  lua_assert(limit == luaH_realasize(t) &&
-             (limit == 0 || !arraykeyisempty(t, limit)));
-  if (isdummy(t) || hashkeyisempty(t, limit + 1))
-    return limit;  /* 'limit + 1' is absent */
-  else  /* 'limit + 1' is also present */
-    return hash_search(t, limit);
+  /* no array part or t[asize] is not empty; check the hash part */
+  lua_assert(asize == 0 || !arraykeyisempty(t, asize));
+  if (isdummy(t) || hashkeyisempty(t, asize + 1))
+    return asize;  /* 'asize + 1' is empty */
+  else  /* 'asize + 1' is also non empty */
+    return hash_search(t, asize);
 }
 
 
 
 #if defined(LUA_DEBUG)
 
-/* export these functions for the test library */
+/* export this function for the test library */
 
 Node *luaH_mainposition (const Table *t, const TValue *key) {
   return mainpositionTV(t, key);

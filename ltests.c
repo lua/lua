@@ -359,7 +359,7 @@ static void checkvalref (global_State *g, GCObject *f, const TValue *t) {
 
 static void checktable (global_State *g, Table *h) {
   unsigned int i;
-  unsigned int asize = luaH_realasize(h);
+  unsigned int asize = h->asize;
   Node *n, *limit = gnode(h, sizenode(h));
   GCObject *hgc = obj2gco(h);
   checkobjrefN(g, hgc, h->metatable);
@@ -1034,11 +1034,11 @@ static int table_query (lua_State *L) {
   unsigned int asize;
   luaL_checktype(L, 1, LUA_TTABLE);
   t = hvalue(obj_at(L, 1));
-  asize = luaH_realasize(t);
+  asize = t->asize;
   if (i == -1) {
     lua_pushinteger(L, cast(lua_Integer, asize));
     lua_pushinteger(L, cast(lua_Integer, allocsizenode(t)));
-    lua_pushinteger(L, cast(lua_Integer, t->alimit));
+    lua_pushinteger(L, cast(lua_Integer, asize > 0 ? *lenhint(t) : 0));
     return 3;
   }
   else if (cast_uint(i) < asize) {
