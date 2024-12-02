@@ -325,6 +325,37 @@ void lua_printobj (lua_State *L, struct GCObject *o) {
   printobj(G(L), o);
 }
 
+
+void lua_printvalue (TValue *v) {
+  switch (ttype(v)) {
+    case LUA_TNUMBER: {
+      char buff[LUA_N2SBUFFSZ];
+      unsigned len = luaO_tostringbuff(v, buff);
+      buff[len] = '\0';
+      printf("%s", buff);
+      break;
+    }
+    case LUA_TSTRING: {
+      printf("'%s'", getstr(tsvalue(v)));
+      break;
+    }
+    case LUA_TBOOLEAN: {
+      printf("%s", (!l_isfalse(v) ? "true" : "false"));
+      break;
+    }
+    case LUA_TNIL: {
+      printf("nil");
+      break;
+    }
+    default: {
+      void *p = iscollectable(v) ? gcvalue(v) : NULL;
+      printf("%s: %p", ttypename(ttype(v)), p);
+      break;
+    }
+  }
+}
+
+
 static int testobjref (global_State *g, GCObject *f, GCObject *t) {
   int r1 = testobjref1(g, f, t);
   if (!r1) {
@@ -827,8 +858,9 @@ void lua_printstack (lua_State *L) {
   int n = lua_gettop(L);
   printf("stack: >>\n");
   for (i = 1; i <= n; i++) {
-    printf("%3d: %s\n", i, luaL_tolstring(L, i, NULL));
-    lua_pop(L, 1);
+    printf("%3d: ", i);
+    lua_printvalue(s2v(L->ci->func.p + i));
+    printf("\n");
   }
   printf("<<\n");
 }
@@ -1681,8 +1713,8 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("printstack") {
       int n = getnum;
       if (n != 0) {
-        printf("%s\n", luaL_tolstring(L1, n, NULL));
-        lua_pop(L1, 1);
+        lua_printvalue(s2v(L->ci->func.p + n));
+        printf("\n");
       }
       else lua_printstack(L1);
     }

@@ -79,6 +79,13 @@ LUAI_FUNC int lua_checkmemory (lua_State *L);
 struct GCObject;
 LUAI_FUNC void lua_printobj (lua_State *L, struct GCObject *o);
 
+
+/*
+** Function to print a value
+*/
+struct TValue;
+LUAI_FUNC void lua_printvalue (struct TValue *v);
+
 /*
 ** Function to print the stack
 */
