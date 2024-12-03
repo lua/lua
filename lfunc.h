@@ -15,7 +15,7 @@
 	(offsetof(CClosure, upvalue) + sizeof(TValue) * cast_uint(n))
 
 #define sizeLclosure(n)  \
-	(offsetof(LClosure, upvals) + sizeof(TValue *) * cast_uint(n))
+	(offsetof(LClosure, upvals) + sizeof(UpVal *) * cast_uint(n))
 
 
 /* test whether thread is in 'twups' list */
