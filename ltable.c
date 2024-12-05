@@ -395,6 +395,10 @@ static void freehash (lua_State *L, Table *t) {
 ** ==============================================================
 */
 
+static int insertkey (Table *t, const TValue *key, TValue *value);
+static void newcheckedkey (Table *t, const TValue *key, TValue *value);
+
+
 /*
 ** Structure to count the keys in a table.
 ** 'total' is the total number of keys in the table.
@@ -620,7 +624,7 @@ static void setnodevector (lua_State *L, Table *t, unsigned size) {
 /*
 ** (Re)insert all elements from the hash part of 'ot' into table 't'.
 */
-static void reinsert (lua_State *L, Table *ot, Table *t) {
+static void reinserthash (lua_State *L, Table *ot, Table *t) {
   unsigned j;
   unsigned size = sizenode(ot);
   for (j = 0; j < size; j++) {
@@ -630,7 +634,7 @@ static void reinsert (lua_State *L, Table *ot, Table *t) {
          already present in the table */
       TValue k;
       getnodekey(L, &k, old);
-      luaH_set(L, t, &k, gval(old));
+      newcheckedkey(t, &k, gval(old));
     }
   }
 }
@@ -659,20 +663,18 @@ static void exchangehashpart (Table *t1, Table *t2) {
 ** Re-insert into the new hash part of a table the elements from the
 ** vanishing slice of the array part.
 */
-static void reinsertOldSlice (lua_State *L, Table *t, unsigned oldasize,
-                                            unsigned newasize) {
+static void reinsertOldSlice (Table *t, unsigned oldasize,
+                                        unsigned newasize) {
   unsigned i;
-  t->asize = newasize;  /* pretend array has new size... */
   for (i = newasize; i < oldasize; i++) {  /* traverse vanishing slice */
     lu_byte tag = *getArrTag(t, i);
     if (!tagisempty(tag)) {  /* a non-empty entry? */
-      TValue aux;
-      farr2val(t, i, tag, &aux);  /* copy entry into 'aux' */
-      /* re-insert it into the table */
-      luaH_setint(L, t, cast_int(i) + 1, &aux);
+      TValue key, aux;
+      setivalue(&key, l_castU2S(i) + 1);  /* make the key */
+      farr2val(t, i, tag, &aux);  /* copy value into 'aux' */
+      insertkey(t, &key, &aux);  /* insert entry into the hash part */
     }
   }
-  t->asize = oldasize;  /* restore current size... */
 }
 
 
@@ -714,7 +716,7 @@ void luaH_resize (lua_State *L, Table *t, unsigned newasize,
   if (newasize < oldasize) {  /* will array shrink? */
     /* re-insert into the new hash the elements from vanishing slice */
     exchangehashpart(t, &newt);  /* pretend table has new hash */
-    reinsertOldSlice(L, t, oldasize, newasize);
+    reinsertOldSlice(t, oldasize, newasize);
     exchangehashpart(t, &newt);  /* restore old hash (in case of errors) */
   }
   /* allocate new array */
@@ -731,7 +733,7 @@ void luaH_resize (lua_State *L, Table *t, unsigned newasize,
     *lenhint(t) = newasize / 2u;  /* set an initial hint */
   clearNewSlice(t, oldasize, newasize);
   /* re-insert elements from old hash part into new parts */
-  reinsert(L, &newt, t);  /* 'newt' now has the old hash */
+  reinserthash(L, &newt, t);  /* 'newt' now has the old hash */
   freehash(L, &newt);  /* free old hash part */
 }
 
@@ -883,17 +885,31 @@ static int insertkey (Table *t, const TValue *key, TValue *value) {
 }
 
 
+/*
+** Insert a key in a table where there is space for that key, the
+** key is valid, and the value is not nil.
+*/
+static void newcheckedkey (Table *t, const TValue *key, TValue *value) {
+  unsigned i = keyinarray(t, key);
+  if (i > 0)  /* is key in the array part? */
+    obj2arr(t, i - 1, value);  /* set value in the array */
+  else {
+    int done = insertkey(t, key, value);  /* insert key in the hash part */
+    lua_assert(done);  /* it cannot fail */
+    cast(void, done);  /* to avoid warnings */
+  }
+}
+
+
 static void luaH_newkey (lua_State *L, Table *t, const TValue *key,
                                                  TValue *value) {
   if (!ttisnil(value)) {  /* do not insert nil values */
     int done = insertkey(t, key, value);
-    if (done)
-      luaC_barrierback(L, obj2gco(t), key);
-    else { /* could not find a free place? */
+    if (!done) {  /* could not find a free place? */
       rehash(L, t, key);  /* grow table */
-      /* whatever called 'newkey' takes care of TM cache */
-      luaH_set(L, t, key, value);  /* insert key into grown table */
+      newcheckedkey(t, key, value);  /* insert key in grown table */
     }
+    luaC_barrierback(L, obj2gco(t), key);
   }
 }
 
