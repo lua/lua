@@ -294,14 +294,34 @@ static const TValue *getgeneric (Table *t, const TValue *key, int deadok) {
 
 
 /*
-** returns the index for 'k' if 'k' is an appropriate key to live in
-** the array part of a table, 0 otherwise.
+** Return the index 'k' (converted to an unsigned) if it is inside
+** the range [1, limit].
 */
-static unsigned int arrayindex (lua_Integer k) {
-  if (l_castS2U(k) - 1u < MAXASIZE)  /* 'k' in [1, MAXASIZE]? */
-    return cast_uint(k);  /* 'key' is an appropriate array index */
-  else
-    return 0;
+static unsigned checkrange (lua_Integer k, unsigned limit) {
+  return (l_castS2U(k) - 1u < limit) ? cast_uint(k) : 0;
+}
+
+
+/*
+** Return the index 'k' if 'k' is an appropriate key to live in the
+** array part of a table, 0 otherwise.
+*/
+#define arrayindex(k)	checkrange(k, MAXASIZE)
+
+
+/*
+** Check whether an integer key is in the array part of a table and
+** return its index there, or zero.
+*/
+#define ikeyinarray(t,k)	checkrange(k, t->asize)
+
+
+/*
+** Check whether a key is in the array part of a table and return its
+** index there, or zero.
+*/
+static unsigned keyinarray (Table *t, const TValue *key) {
+  return (ttisinteger(key)) ? ikeyinarray(t, ivalue(key)) : 0;
 }
 
 
@@ -314,8 +334,8 @@ static unsigned findindex (lua_State *L, Table *t, TValue *key,
                                unsigned asize) {
   unsigned int i;
   if (ttisnil(key)) return 0;  /* first iteration */
-  i = ttisinteger(key) ? arrayindex(ivalue(key)) : 0;
-  if (i - 1u < asize)  /* is 'key' inside array part? */
+  i = keyinarray(t, key);
+  if (i != 0)  /* is 'key' inside array part? */
     return i;  /* yes; that's the index */
   else {
     const TValue *n = getgeneric(t, key, 1);
@@ -366,14 +386,6 @@ static void freehash (lua_State *L, Table *t) {
     char *arr = cast_charp(t->node) - extraLastfree(t);
     luaM_freearray(L, arr, sizehash(t));
   }
-}
-
-
-/*
-** Check whether an integer key is in the array part of a table.
-*/
-l_sinline int keyinarray (Table *t, lua_Integer key) {
-  return (l_castS2U(key) - 1u < t->asize);  /* 'key' in [1, t->asize]? */
 }
 
 
@@ -829,36 +841,18 @@ static Node *getfreepos (Table *t) {
 ** position is free. If not, check whether colliding node is in its main
 ** position or not: if it is not, move colliding node to an empty place
 ** and put new key in its main position; otherwise (colliding node is in
-** its main position), new key goes to an empty position.
+** its main position), new key goes to an empty position. Return 0 if
+** could not insert key (could not find a free space).
 */
-static void luaH_newkey (lua_State *L, Table *t, const TValue *key,
-                                                 TValue *value) {
-  Node *mp;
-  TValue aux;
-  if (l_unlikely(ttisnil(key)))
-    luaG_runerror(L, "table index is nil");
-  else if (ttisfloat(key)) {
-    lua_Number f = fltvalue(key);
-    lua_Integer k;
-    if (luaV_flttointeger(f, &k, F2Ieq)) {  /* does key fit in an integer? */
-      setivalue(&aux, k);
-      key = &aux;  /* insert it as an integer */
-    }
-    else if (l_unlikely(luai_numisnan(f)))
-      luaG_runerror(L, "table index is NaN");
-  }
-  if (ttisnil(value))
-    return;  /* do not insert nil values */
-  mp = mainpositionTV(t, key);
+static int insertkey (Table *t, const TValue *key, TValue *value) {
+  Node *mp = mainpositionTV(t, key);
+  /* table cannot already contain the key */
+  lua_assert(isabstkey(getgeneric(t, key, 0)));
   if (!isempty(gval(mp)) || isdummy(t)) {  /* main position is taken? */
     Node *othern;
     Node *f = getfreepos(t);  /* get a free place */
-    if (f == NULL) {  /* cannot find a free place? */
-      rehash(L, t, key);  /* grow table */
-      /* whatever called 'newkey' takes care of TM cache */
-      luaH_set(L, t, key, value);  /* insert key into grown table */
-      return;
-    }
+    if (f == NULL)  /* cannot find a free place? */
+      return 0;
     lua_assert(!isdummy(t));
     othern = mainpositionfromnode(t, mp);
     if (othern != mp) {  /* is colliding node out of its main position? */
@@ -882,16 +876,31 @@ static void luaH_newkey (lua_State *L, Table *t, const TValue *key,
       mp = f;
     }
   }
-  setnodekey(L, mp, key);
-  luaC_barrierback(L, obj2gco(t), key);
+  setnodekey(mp, key);
   lua_assert(isempty(gval(mp)));
-  setobj2t(L, gval(mp), value);
+  setobj2t(cast(lua_State *, 0), gval(mp), value);
+  return 1;
+}
+
+
+static void luaH_newkey (lua_State *L, Table *t, const TValue *key,
+                                                 TValue *value) {
+  if (!ttisnil(value)) {  /* do not insert nil values */
+    int done = insertkey(t, key, value);
+    if (done)
+      luaC_barrierback(L, obj2gco(t), key);
+    else { /* could not find a free place? */
+      rehash(L, t, key);  /* grow table */
+      /* whatever called 'newkey' takes care of TM cache */
+      luaH_set(L, t, key, value);  /* insert key into grown table */
+    }
+  }
 }
 
 
 static const TValue *getintfromhash (Table *t, lua_Integer key) {
   Node *n = hashint(t, key);
-  lua_assert(!keyinarray(t, key));
+  lua_assert(!ikeyinarray(t, key));
   for (;;) {  /* check whether 'key' is somewhere in the chain */
     if (keyisinteger(n) && keyival(n) == key)
       return gval(n);  /* that's it */
@@ -920,10 +929,11 @@ static lu_byte finishnodeget (const TValue *val, TValue *res) {
 
 
 lu_byte luaH_getint (Table *t, lua_Integer key, TValue *res) {
-  if (keyinarray(t, key)) {
-    lu_byte tag = *getArrTag(t, key - 1);
+  unsigned k = ikeyinarray(t, key);
+  if (k > 0) {
+    lu_byte tag = *getArrTag(t, k - 1);
     if (!tagisempty(tag))
-      farr2val(t, cast_uint(key) - 1, tag, res);
+      farr2val(t, k - 1, tag, res);
     return tag;
   }
   else
@@ -1031,7 +1041,7 @@ static int rawfinishnodeset (const TValue *slot, TValue *val) {
 
 
 int luaH_psetint (Table *t, lua_Integer key, TValue *val) {
-  lua_assert(!keyinarray(t, key));
+  lua_assert(!ikeyinarray(t, key));
   return finishnodeset(t, getintfromhash(t, key), val);
 }
 
@@ -1081,6 +1091,19 @@ void luaH_finishset (lua_State *L, Table *t, const TValue *key,
                                     TValue *value, int hres) {
   lua_assert(hres != HOK);
   if (hres == HNOTFOUND) {
+    TValue aux;
+    if (l_unlikely(ttisnil(key)))
+      luaG_runerror(L, "table index is nil");
+    else if (ttisfloat(key)) {
+      lua_Number f = fltvalue(key);
+      lua_Integer k;
+      if (luaV_flttointeger(f, &k, F2Ieq)) {
+        setivalue(&aux, k);  /* key is equal to an integer */
+        key = &aux;  /* insert it as an integer */
+      }
+      else if (l_unlikely(luai_numisnan(f)))
+        luaG_runerror(L, "table index is NaN");
+    }
     luaH_newkey(L, t, key, value);
   }
   else if (hres > 0) {  /* regular Node? */
@@ -1109,8 +1132,9 @@ void luaH_set (lua_State *L, Table *t, const TValue *key, TValue *value) {
 ** integers cannot be keys to metamethods.)
 */
 void luaH_setint (lua_State *L, Table *t, lua_Integer key, TValue *value) {
-  if (keyinarray(t, key))
-    obj2arr(t, cast_uint(key) - 1, value);
+  unsigned ik = ikeyinarray(t, key);
+  if (ik > 0)
+    obj2arr(t, ik - 1, value);
   else {
     int ok = rawfinishnodeset(getintfromhash(t, key), value);
     if (!ok) {
