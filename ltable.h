@@ -58,7 +58,7 @@
   { Table *h = t; lua_Unsigned u = l_castS2U(k) - 1u; \
     if ((u < h->asize)) { \
       lu_byte *tag = getArrTag(h, u); \
-      if (h->metatable == NULL || !tagisempty(*tag)) \
+      if (checknoTM(h->metatable, TM_NEWINDEX) || !tagisempty(*tag)) \
         { fval2arr(h, u, tag, val); hres = HOK; } \
       else hres = ~cast_int(u); } \
     else { hres = luaH_psetint(h, k, val); }}
