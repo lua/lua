@@ -542,18 +542,6 @@ static void rname (const Proto *p, int pc, int c, const char **name) {
 
 
 /*
-** Find a "name" for a 'C' value in an RK instruction.
-*/
-static void rkname (const Proto *p, int pc, Instruction i, const char **name) {
-  int c = GETARG_C(i);  /* key index */
-  if (GETARG_k(i))  /* is 'c' a constant? */
-    kname(p, c, name);
-  else  /* 'c' is a register */
-    rname(p, pc, c, name);
-}
-
-
-/*
 ** Check whether table being indexed by instruction 'i' is the
 ** environment '_ENV'
 */
@@ -600,7 +588,8 @@ static const char *getobjname (const Proto *p, int lastpc, int reg,
         return isEnv(p, lastpc, i, 0);
       }
       case OP_SELF: {
-        rkname(p, lastpc, i, name);
+        int k = GETARG_C(i);  /* key index */
+        kname(p, k, name);
         return "method";
       }
       default: break;  /* go through to return NULL */

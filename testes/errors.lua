@@ -321,7 +321,8 @@ t = nil
 checkmessage(s.."; aaa = bbb + 1", "global 'bbb'")
 checkmessage("local _ENV=_ENV;"..s.."; aaa = bbb + 1", "global 'bbb'")
 checkmessage(s.."; local t = {}; aaa = t.bbb + 1", "field 'bbb'")
-checkmessage(s.."; local t = {}; t:bbb()", "method 'bbb'")
+-- cannot use 'self' opcode
+checkmessage(s.."; local t = {}; t:bbb()", "field 'bbb'")
 
 checkmessage([[aaa=9
 repeat until 3==3

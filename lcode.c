@@ -1086,22 +1086,6 @@ void luaK_storevar (FuncState *fs, expdesc *var, expdesc *ex) {
 
 
 /*
-** Emit SELF instruction (convert expression 'e' into 'e:key(e,').
-*/
-void luaK_self (FuncState *fs, expdesc *e, expdesc *key) {
-  int ereg;
-  luaK_exp2anyreg(fs, e);
-  ereg = e->u.info;  /* register where 'e' was placed */
-  freeexp(fs, e);
-  e->u.info = fs->freereg;  /* base register for op_self */
-  e->k = VNONRELOC;  /* self expression has a fixed register */
-  luaK_reserveregs(fs, 2);  /* function and 'self' produced by op_self */
-  codeABRK(fs, OP_SELF, e->u.info, ereg, key);
-  freeexp(fs, key);
-}
-
-
-/*
 ** Negate condition 'e' (where 'e' is a comparison).
 */
 static void negatecondition (FuncState *fs, expdesc *e) {
@@ -1272,6 +1256,33 @@ static int isSCnumber (expdesc *e, int *pi, int *isfloat) {
   }
   else
     return 0;
+}
+
+
+/*
+** Emit SELF instruction or equivalent: the code will convert
+** expression 'e' into 'e.key(e,'.
+*/
+void luaK_self (FuncState *fs, expdesc *e, expdesc *key) {
+  int ereg, base;
+  luaK_exp2anyreg(fs, e);
+  ereg = e->u.info;  /* register where 'e' (the receiver) was placed */
+  freeexp(fs, e);
+  base = e->u.info = fs->freereg;  /* base register for op_self */
+  e->k = VNONRELOC;  /* self expression has a fixed register */
+  luaK_reserveregs(fs, 2);  /* method and 'self' produced by op_self */
+  lua_assert(key->k == VKSTR);
+  /* is method name a short string in a valid K index? */
+  if (strisshr(key->u.strval) && luaK_exp2K(fs, key)) {
+    /* can use 'self' opcode */
+    luaK_codeABCk(fs, OP_SELF, base, ereg, key->u.info, 0);
+  }
+  else {  /* cannot use 'self' opcode; use move+gettable */
+    luaK_exp2anyreg(fs, key);  /* put method name in a register */
+    luaK_codeABC(fs, OP_MOVE, base + 1, ereg, 0);  /* copy self to base+1 */
+    luaK_codeABC(fs, OP_GETTABLE, base, ereg, key->u.info);  /* get method */
+  }
+  freeexp(fs, key);
 }
 
 

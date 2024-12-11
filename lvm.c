@@ -1382,10 +1382,10 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         StkId ra = RA(i);
         lu_byte tag;
         TValue *rb = vRB(i);
-        TValue *rc = RKC(i);
-        TString *key = tsvalue(rc);  /* key must be a string */
+        TValue *rc = KC(i);
+        TString *key = tsvalue(rc);  /* key must be a short string */
         setobj2s(L, ra + 1, rb);
-        luaV_fastget(rb, key, s2v(ra), luaH_getstr, tag);
+        luaV_fastget(rb, key, s2v(ra), luaH_getshortstr, tag);
         if (tagisempty(tag))
           Protect(luaV_finishget(L, rb, rc, ra, tag));
         vmbreak;
