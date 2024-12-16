@@ -537,6 +537,22 @@ static void freeexps (FuncState *fs, expdesc *e1, expdesc *e2) {
 
 /*
 ** Add constant 'v' to prototype's list of constants (field 'k').
+*/
+static int addk (FuncState *fs, Proto *f, TValue *v) {
+  lua_State *L = fs->ls->L;
+  int oldsize = f->sizek;
+  int k = fs->nk;
+  luaM_growvector(L, f->k, k, f->sizek, TValue, MAXARG_Ax, "constants");
+  while (oldsize < f->sizek)
+    setnilvalue(&f->k[oldsize++]);
+  setobj(L, &f->k[k], v);
+  fs->nk++;
+  luaC_barrier(L, f, v);
+  return k;
+}
+
+
+/*
 ** Use scanner's table to cache position of constants in constant list
 ** and try to reuse constants. Because some values should not be used
 ** as keys (nil cannot be a key, integer keys can collapse with float
@@ -544,12 +560,11 @@ static void freeexps (FuncState *fs, expdesc *e1, expdesc *e2) {
 ** Note that all functions share the same table, so entering or exiting
 ** a function can make some indices wrong.
 */
-static int addk (FuncState *fs, TValue *key, TValue *v) {
+static int k2proto (FuncState *fs, TValue *key, TValue *v) {
   TValue val;
-  lua_State *L = fs->ls->L;
   Proto *f = fs->f;
   int tag = luaH_get(fs->ls->h, key, &val);  /* query scanner table */
-  int k, oldsize;
+  int k;
   if (tag == LUA_VNUMINT) {  /* is there an index there? */
     k = cast_int(ivalue(&val));
     /* correct value? (warning: must distinguish floats from integers!) */
@@ -558,17 +573,11 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
       return k;  /* reuse index */
   }
   /* constant not found; create a new entry */
-  oldsize = f->sizek;
-  k = fs->nk;
-  /* numerical value does not need GC barrier;
+  k = addk(fs, f, v);
+  /* cache for reuse; numerical value does not need GC barrier;
      table has no metatable, so it does not need to invalidate cache */
   setivalue(&val, k);
-  luaH_set(L, fs->ls->h, key, &val);
-  luaM_growvector(L, f->k, k, f->sizek, TValue, MAXARG_Ax, "constants");
-  while (oldsize < f->sizek) setnilvalue(&f->k[oldsize++]);
-  setobj(L, &f->k[k], v);
-  fs->nk++;
-  luaC_barrier(L, f, v);
+  luaH_set(fs->ls->L, fs->ls->h, key, &val);
   return k;
 }
 
@@ -579,7 +588,7 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
 static int stringK (FuncState *fs, TString *s) {
   TValue o;
   setsvalue(fs->ls->L, &o, s);
-  return addk(fs, &o, &o);  /* use string itself as key */
+  return k2proto(fs, &o, &o);  /* use string itself as key */
 }
 
 
@@ -589,7 +598,7 @@ static int stringK (FuncState *fs, TString *s) {
 static int luaK_intK (FuncState *fs, lua_Integer n) {
   TValue o;
   setivalue(&o, n);
-  return addk(fs, &o, &o);  /* use integer itself as key */
+  return k2proto(fs, &o, &o);  /* use integer itself as key */
 }
 
 /*
@@ -608,7 +617,7 @@ static int luaK_numberK (FuncState *fs, lua_Number r) {
   lua_Integer ik;
   setfltvalue(&o, r);
   if (!luaV_flttointeger(r, &ik, F2Ieq))  /* not an integral value? */
-    return addk(fs, &o, &o);  /* use number itself as key */
+    return k2proto(fs, &o, &o);  /* use number itself as key */
   else {  /* must build an alternative key */
     const int nbm = l_floatatt(MANT_DIG);
     const lua_Number q = l_mathop(ldexp)(l_mathop(1.0), -nbm + 1);
@@ -618,7 +627,7 @@ static int luaK_numberK (FuncState *fs, lua_Number r) {
     /* result is not an integral value, unless value is too large */
     lua_assert(!luaV_flttointeger(k, &ik, F2Ieq) ||
                 l_mathop(fabs)(r) >= l_mathop(1e6));
-    return addk(fs, &kv, &o);
+    return k2proto(fs, &kv, &o);
   }
 }
 
@@ -629,7 +638,7 @@ static int luaK_numberK (FuncState *fs, lua_Number r) {
 static int boolF (FuncState *fs) {
   TValue o;
   setbfvalue(&o);
-  return addk(fs, &o, &o);  /* use boolean itself as key */
+  return k2proto(fs, &o, &o);  /* use boolean itself as key */
 }
 
 
@@ -639,7 +648,7 @@ static int boolF (FuncState *fs) {
 static int boolT (FuncState *fs) {
   TValue o;
   setbtvalue(&o);
-  return addk(fs, &o, &o);  /* use boolean itself as key */
+  return k2proto(fs, &o, &o);  /* use boolean itself as key */
 }
 
 
@@ -651,7 +660,7 @@ static int nilK (FuncState *fs) {
   setnilvalue(&v);
   /* cannot use nil as key; instead use table itself to represent nil */
   sethvalue(fs->ls->L, &k, fs->ls->h);
-  return addk(fs, &k, &v);
+  return k2proto(fs, &k, &v);
 }
 
 
