@@ -962,7 +962,7 @@ lu_byte luaH_getint (Table *t, lua_Integer key, TValue *res) {
 */
 const TValue *luaH_Hgetshortstr (Table *t, TString *key) {
   Node *n = hashstr(t, key);
-  lua_assert(key->tt == LUA_VSHRSTR);
+  lua_assert(strisshr(key));
   for (;;) {  /* check whether 'key' is somewhere in the chain */
     if (keyisshrstr(n) && eqshrstr(keystrval(n), key))
       return gval(n);  /* that's it */
@@ -994,15 +994,6 @@ static const TValue *Hgetstr (Table *t, TString *key) {
 
 lu_byte luaH_getstr (Table *t, TString *key, TValue *res) {
   return finishnodeget(Hgetstr(t, key), res);
-}
-
-
-TString *luaH_getstrkey (Table *t, TString *key) {
-  const TValue *o = Hgetstr(t, key);
-  if (!isabstkey(o))  /* string already present? */
-    return keystrval(nodefromval(o));  /* get saved copy */
-  else
-    return NULL;
 }
 
 

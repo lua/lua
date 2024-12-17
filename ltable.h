@@ -154,8 +154,6 @@ LUAI_FUNC lu_byte luaH_getint (Table *t, lua_Integer key, TValue *res);
 /* Special get for metamethods */
 LUAI_FUNC const TValue *luaH_Hgetshortstr (Table *t, TString *key);
 
-LUAI_FUNC TString *luaH_getstrkey (Table *t, TString *key);
-
 LUAI_FUNC int luaH_psetint (Table *t, lua_Integer key, TValue *val);
 LUAI_FUNC int luaH_psetshortstr (Table *t, TString *key, TValue *val);
 LUAI_FUNC int luaH_psetstr (Table *t, TString *key, TValue *val);

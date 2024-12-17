@@ -563,13 +563,13 @@ static int addk (FuncState *fs, Proto *f, TValue *v) {
 static int k2proto (FuncState *fs, TValue *key, TValue *v) {
   TValue val;
   Proto *f = fs->f;
-  int tag = luaH_get(fs->ls->h, key, &val);  /* query scanner table */
+  int tag = luaH_get(fs->kcache, key, &val);  /* query scanner table */
   int k;
-  if (tag == LUA_VNUMINT) {  /* is there an index there? */
+  if (!tagisempty(tag)) {  /* is there an index there? */
     k = cast_int(ivalue(&val));
+    lua_assert(k < fs->nk);
     /* correct value? (warning: must distinguish floats from integers!) */
-    if (k < fs->nk && ttypetag(&f->k[k]) == ttypetag(v) &&
-                      luaV_rawequalobj(&f->k[k], v))
+    if (ttypetag(&f->k[k]) == ttypetag(v) && luaV_rawequalobj(&f->k[k], v))
       return k;  /* reuse index */
   }
   /* constant not found; create a new entry */
@@ -577,7 +577,7 @@ static int k2proto (FuncState *fs, TValue *key, TValue *v) {
   /* cache for reuse; numerical value does not need GC barrier;
      table has no metatable, so it does not need to invalidate cache */
   setivalue(&val, k);
-  luaH_set(fs->ls->L, fs->ls->h, key, &val);
+  luaH_set(fs->ls->L, fs->kcache, key, &val);
   return k;
 }
 
@@ -659,7 +659,7 @@ static int nilK (FuncState *fs) {
   TValue k, v;
   setnilvalue(&v);
   /* cannot use nil as key; instead use table itself to represent nil */
-  sethvalue(fs->ls->L, &k, fs->ls->h);
+  sethvalue(fs->ls->L, &k, fs->kcache);
   return k2proto(fs, &k, &v);
 }
 

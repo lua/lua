@@ -130,18 +130,15 @@ l_noret luaX_syntaxerror (LexState *ls, const char *msg) {
 ** Creates a new string and anchors it in scanner's table so that it
 ** will not be collected until the end of the compilation; by that time
 ** it should be anchored somewhere. It also internalizes long strings,
-** ensuring there is only one copy of each unique string.  The table
-** here is used as a set: the string enters as the key, while its value
-** is irrelevant. We use the string itself as the value only because it
-** is a TValue readily available. Later, the code generation can change
-** this value.
+** ensuring there is only one copy of each unique string.
 */
 TString *luaX_newstring (LexState *ls, const char *str, size_t l) {
   lua_State *L = ls->L;
   TString *ts = luaS_newlstr(L, str, l);  /* create new string */
-  TString *oldts = luaH_getstrkey(ls->h, ts);
-  if (oldts != NULL)  /* string already present? */
-    return oldts;  /* use it */
+  TValue oldts;
+  int tag = luaH_getstr(ls->h, ts, &oldts);
+  if (!tagisempty(tag))  /* string already present? */
+    return tsvalue(&oldts);  /* use stored value */
   else {  /* create a new entry */
     TValue *stv = s2v(L->top.p++);  /* reserve stack space for string */
     setsvalue(L, stv, ts);  /* temporarily anchor the string */
@@ -149,8 +146,8 @@ TString *luaX_newstring (LexState *ls, const char *str, size_t l) {
     /* table is not a metatable, so it does not need to invalidate cache */
     luaC_checkGC(L);
     L->top.p--;  /* remove string from stack */
+    return ts;
   }
-  return ts;
 }
 
 
