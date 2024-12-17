@@ -373,8 +373,8 @@ void luaD_shrinkstack (lua_State *L) {
 
 
 void luaD_inctop (lua_State *L) {
-  luaD_checkstack(L, 1);
   L->top.p++;
+  luaD_checkstack(L, 1);
 }
 
 /* }================================================================== */
