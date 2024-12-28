@@ -981,14 +981,19 @@ lu_byte luaH_getshortstr (Table *t, TString *key, TValue *res) {
 }
 
 
+static const TValue *Hgetlongstr (Table *t, TString *key) {
+  TValue ko;
+  lua_assert(!strisshr(key));
+  setsvalue(cast(lua_State *, NULL), &ko, key);
+  return getgeneric(t, &ko, 0);  /* for long strings, use generic case */
+}
+
+
 static const TValue *Hgetstr (Table *t, TString *key) {
-  if (key->tt == LUA_VSHRSTR)
+  if (strisshr(key))
     return luaH_Hgetshortstr(t, key);
-  else {  /* for long strings, use generic case */
-    TValue ko;
-    setsvalue(cast(lua_State *, NULL), &ko, key);
-    return getgeneric(t, &ko, 0);
-  }
+  else
+    return Hgetlongstr(t, key);
 }
 
 
@@ -1025,15 +1030,25 @@ lu_byte luaH_get (Table *t, const TValue *key, TValue *res) {
 }
 
 
+/*
+** When a 'pset' cannot be completed, this function returns an encoding
+** of its result, to be used by 'luaH_finishset'.
+*/
+static int retpsetcode (Table *t, const TValue *slot) {
+  if (isabstkey(slot))
+    return HNOTFOUND;  /* no slot with that key */
+  else  /* return node encoded */
+    return cast_int((cast(Node*, slot) - t->node)) + HFIRSTNODE;
+}
+
+
 static int finishnodeset (Table *t, const TValue *slot, TValue *val) {
   if (!ttisnil(slot)) {
     setobj(((lua_State*)NULL), cast(TValue*, slot), val);
     return HOK;  /* success */
   }
-  else if (isabstkey(slot))
-    return HNOTFOUND;  /* no slot with that key */
-  else  /* return node encoded */
-    return cast_int((cast(Node*, slot) - t->node)) + HFIRSTNODE;
+  else
+    return retpsetcode(t, slot);
 }
 
 
@@ -1060,13 +1075,45 @@ static int psetint (Table *t, lua_Integer key, TValue *val) {
 }
 
 
+/*
+** This function could be just this:
+**    return finishnodeset(t, luaH_Hgetshortstr(t, key), val);
+** However, it optimizes the common case created by constructors (e.g.,
+** {x=1, y=2}), which creates a key in a table that has no metatable,
+** it is not old/black, and it already has space for the key.
+*/
+
 int luaH_psetshortstr (Table *t, TString *key, TValue *val) {
-  return finishnodeset(t, luaH_Hgetshortstr(t, key), val);
+  const TValue *slot = luaH_Hgetshortstr(t, key);
+  if (!ttisnil(slot)) {  /* key already has a value? (all too common) */
+    setobj(((lua_State*)NULL), cast(TValue*, slot), val);  /* update it */
+    return HOK;  /* done */
+  }
+  else if (checknoTM(t->metatable, TM_NEWINDEX)) {  /* no metamethod? */
+    if (ttisnil(val))  /* new value is nil? */
+      return HOK;  /* done (value is already nil/absent) */
+    if (isabstkey(slot) &&  /* key is absent? */
+       !(isblack(t) && iswhite(key))) {  /* and don't need barrier? */
+      TValue tk;  /* key as a TValue */
+      setsvalue(cast(lua_State *, NULL), &tk, key);
+      if (insertkey(t, &tk, val)) {  /* insert key, if there is space */
+        invalidateTMcache(t);
+        return HOK;
+      }
+    }
+  }
+  /* Else, either table has new-index metamethod, or it needs barrier,
+     or it needs to rehash for the new key. In any of these cases, the
+     operation cannot be completed here. Return a code for the caller. */
+  return retpsetcode(t, slot);
 }
 
 
 int luaH_psetstr (Table *t, TString *key, TValue *val) {
-  return finishnodeset(t, Hgetstr(t, key), val);
+  if (strisshr(key))
+    return luaH_psetshortstr(t, key, val);
+  else
+    return finishnodeset(t, Hgetlongstr(t, key), val);
 }
 
 
@@ -1087,13 +1134,11 @@ int luaH_pset (Table *t, const TValue *key, TValue *val) {
 }
 
 /*
-** Finish a raw "set table" operation, where 'slot' is where the value
-** should have been (the result of a previous "get table").
-** Beware: when using this function you probably need to check a GC
-** barrier and invalidate the TM cache.
+** Finish a raw "set table" operation, where 'hres' encodes where the
+** value should have been (the result of a previous 'pset' operation).
+** Beware: when using this function the caller probably need to check a
+** GC barrier and invalidate the TM cache.
 */
-
-
 void luaH_finishset (lua_State *L, Table *t, const TValue *key,
                                     TValue *value, int hres) {
   lua_assert(hres != HOK);
