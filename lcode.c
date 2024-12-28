@@ -557,8 +557,6 @@ static int addk (FuncState *fs, Proto *f, TValue *v) {
 ** and try to reuse constants. Because some values should not be used
 ** as keys (nil cannot be a key, integer keys can collapse with float
 ** keys), the caller must provide a useful 'key' for indexing the cache.
-** Note that all functions share the same table, so entering or exiting
-** a function can make some indices wrong.
 */
 static int k2proto (FuncState *fs, TValue *key, TValue *v) {
   TValue val;
@@ -567,15 +565,14 @@ static int k2proto (FuncState *fs, TValue *key, TValue *v) {
   int k;
   if (!tagisempty(tag)) {  /* is there an index there? */
     k = cast_int(ivalue(&val));
-    lua_assert(k < fs->nk);
-    /* correct value? (warning: must distinguish floats from integers!) */
-    if (ttypetag(&f->k[k]) == ttypetag(v) && luaV_rawequalobj(&f->k[k], v))
-      return k;  /* reuse index */
+    /* collisions can happen only for float keys */
+    lua_assert(ttisfloat(key) || luaV_rawequalobj(&f->k[k], v));
+    return k;  /* reuse index */
   }
   /* constant not found; create a new entry */
   k = addk(fs, f, v);
-  /* cache for reuse; numerical value does not need GC barrier;
-     table has no metatable, so it does not need to invalidate cache */
+  /* cache it for reuse; numerical value does not need GC barrier;
+     table is not a metatable, so it does not need to invalidate cache */
   setivalue(&val, k);
   luaH_set(fs->ls->L, fs->kcache, key, &val);
   return k;
@@ -607,27 +604,32 @@ static int luaK_intK (FuncState *fs, lua_Integer n) {
 ** with actual integers. To that, we add to the number its smaller
 ** power-of-two fraction that is still significant in its scale.
 ** For doubles, that would be 1/2^52.
-** (This method is not bulletproof: there may be another float
-** with that value, and for floats larger than 2^53 the result is
-** still an integer. At worst, this only wastes an entry with
-** a duplicate.)
+** This method is not bulletproof: different numbers may generate the
+** same key (e.g., very large numbers will overflow to 'inf') and for
+** floats larger than 2^53 the result is still an integer. At worst,
+** this only wastes an entry with a duplicate.
 */
 static int luaK_numberK (FuncState *fs, lua_Number r) {
-  TValue o;
-  lua_Integer ik;
-  setfltvalue(&o, r);
-  if (!luaV_flttointeger(r, &ik, F2Ieq))  /* not an integral value? */
-    return k2proto(fs, &o, &o);  /* use number itself as key */
-  else {  /* must build an alternative key */
+  TValue o, kv;
+  setfltvalue(&o, r);  /* value as a TValue */
+  if (r == 0) {  /* handle zero as a special case */
+    setpvalue(&kv, fs);  /* use FuncState as index */
+    return k2proto(fs, &kv, &o);  /* cannot collide */
+  }
+  else {
     const int nbm = l_floatatt(MANT_DIG);
     const lua_Number q = l_mathop(ldexp)(l_mathop(1.0), -nbm + 1);
-    const lua_Number k = (ik == 0) ? q : r + r*q;  /* new key */
-    TValue kv;
-    setfltvalue(&kv, k);
-    /* result is not an integral value, unless value is too large */
-    lua_assert(!luaV_flttointeger(k, &ik, F2Ieq) ||
-                l_mathop(fabs)(r) >= l_mathop(1e6));
-    return k2proto(fs, &kv, &o);
+    const lua_Number k =  r * (1 + q);  /* key */
+    lua_Integer ik;
+    setfltvalue(&kv, k);  /* key as a TValue */
+    if (!luaV_flttointeger(k, &ik, F2Ieq)) {  /* not an integral value? */
+      int n = k2proto(fs, &kv, &o);  /* use key */
+      if (luaV_rawequalobj(&fs->f->k[n], &o))  /* correct value? */
+        return n;
+    }
+    /* else, either key is still an integer or there was a collision;
+       anyway, do not try to reuse constant; instead, create a new one */
+    return addk(fs, fs->f, &o);
   }
 }
 
@@ -658,7 +660,7 @@ static int boolT (FuncState *fs) {
 static int nilK (FuncState *fs) {
   TValue k, v;
   setnilvalue(&v);
-  /* cannot use nil as key; instead use table itself to represent nil */
+  /* cannot use nil as key; instead use table itself */
   sethvalue(fs->ls->L, &k, fs->kcache);
   return k2proto(fs, &k, &v);
 }
