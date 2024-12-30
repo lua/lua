@@ -45,7 +45,7 @@
 /*
 ** test whether a string is a reserved word
 */
-#define isreserved(s)	((s)->tt == LUA_VSHRSTR && (s)->extra > 0)
+#define isreserved(s)	(strisshr(s) && (s)->extra > 0)
 
 
 /*
