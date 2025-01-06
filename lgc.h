@@ -224,15 +224,15 @@
 */
 
 #if !defined(HARDMEMTESTS)
-#define condchangemem(L,pre,pos)	((void)0)
+#define condchangemem(L,pre,pos,emg)	((void)0)
 #else
-#define condchangemem(L,pre,pos)  \
-	{ if (gcrunning(G(L))) { pre; luaC_fullgc(L, 0); pos; } }
+#define condchangemem(L,pre,pos,emg)  \
+	{ if (gcrunning(G(L))) { pre; luaC_fullgc(L, emg); pos; } }
 #endif
 
 #define luaC_condGC(L,pre,pos) \
 	{ if (G(L)->GCdebt <= 0) { pre; luaC_step(L); pos;}; \
-	  condchangemem(L,pre,pos); }
+	  condchangemem(L,pre,pos,0); }
 
 /* more often than not, 'pre'/'pos' are empty */
 #define luaC_checkGC(L)		luaC_condGC(L,(void)0,(void)0)
