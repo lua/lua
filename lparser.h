@@ -112,7 +112,7 @@ typedef struct Labeldesc {
   int pc;  /* position in code */
   int line;  /* line where it appeared */
   lu_byte nactvar;  /* number of active variables in that position */
-  lu_byte close;  /* goto that escapes upvalues */
+  lu_byte close;  /* true for goto that escapes upvalues */
 } Labeldesc;
 
 

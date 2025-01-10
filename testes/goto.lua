@@ -250,21 +250,36 @@ assert(testG(3) == "3")
 assert(testG(4) == 5)
 assert(testG(5) == 10)
 
-do
-  -- if x back goto out of scope of upvalue
-  local X
-  goto L1
+do   -- test goto's around to-be-closed variable
 
-  ::L2:: goto L3
-
-  ::L1:: do
-    local a <close> = setmetatable({}, {__close = function () X = true end})
-    assert(X == nil)
-    if a then goto L2 end   -- jumping back out of scope of 'a'
+  -- set 'var' and return an object that will reset 'var' when
+  -- it goes out of scope
+  local function newobj (var)
+    _ENV[var] = true
+    return setmetatable({}, {__close = function ()
+      _ENV[var] = nil
+    end})
   end
 
-  ::L3:: assert(X == true)   -- checks that 'a' was correctly closed
+  goto L1
+
+  ::L4:: assert(not X); goto L5   -- varX dead here
+
+  ::L1::
+  local varX <close> = newobj("X")
+  assert(X); goto L2   -- varX alive here
+
+  ::L3::
+  assert(X); goto L4   -- varX alive here
+
+  ::L2:: assert(X); goto L3  -- varX alive here
+
+  ::L5::   -- return
 end
+
+
+
+foo()
 --------------------------------------------------------------------------------
 
 

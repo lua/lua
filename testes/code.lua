@@ -412,13 +412,22 @@ checkequal(function (l) local a; return 0 <= a and a <= l end,
            function (l) local a; return not (not(a >= 0) or not(a <= l)) end)
 
 
--- if-break optimizations
 check(function (a, b)
         while a do
           if b then break else a = a + 1 end
         end
       end,
-'TEST', 'JMP', 'TEST', 'JMP', 'ADDI', 'MMBINI', 'JMP', 'RETURN0')
+'TEST', 'JMP', 'TEST', 'JMP', 'JMP', 'CLOSE', 'JMP', 'ADDI', 'MMBINI', 'JMP', 'RETURN0')
+
+check(function ()
+        do
+          goto exit   -- don't need to close
+          local x <close> = nil
+          goto exit   -- must close
+        end
+        ::exit::
+      end, 'JMP', 'CLOSE', 'LOADNIL', 'TBC',
+           'CLOSE', 'JMP', 'CLOSE', 'RETURN')
 
 checkequal(function () return 6 or true or nil end,
            function () return k6 or kTrue or kNil end)
