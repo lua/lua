@@ -186,7 +186,7 @@ typedef struct stringtable {
 */
 struct CallInfo {
   StkIdRel func;  /* function index in the stack */
-  StkIdRel	top;  /* top for this function */
+  StkIdRel top;  /* top for this function */
   struct CallInfo *previous, *next;  /* dynamic call link */
   union {
     struct {  /* only for Lua functions */

@@ -1428,7 +1428,7 @@ except inside nested functions.
 A goto can jump to any visible label as long as it does not
 enter into the scope of a local variable.
 A label should not be declared
-where a label with the same name is visible,
+where a previous label with the same name is visible,
 even if this other label has been declared in an enclosing block.
 
 The @Rw{break} statement terminates the execution of a
@@ -3835,7 +3835,7 @@ This macro may evaluate its arguments more than once.
 
 Converts the number at acceptable index @id{idx} to a string
 and puts the result in @id{buff}.
-The buffer must have a size of at least @Lid{LUA_N2SBUFFSZ} bytes.
+The buffer must have a size of at least @defid{LUA_N2SBUFFSZ} bytes.
 The conversion follows a non-specified format @see{coercion}.
 The function returns the number of bytes written to the buffer
 (including the final zero),
@@ -3997,24 +3997,21 @@ Lua will call @id{falloc} before raising the error.
 
 Pushes onto the stack a formatted string
 and returns a pointer to this string @see{constchar}.
-It is similar to the @ANSI{sprintf},
-but has two important differences.
-First,
-you do not have to allocate space for the result;
-the result is a Lua string and Lua takes care of memory allocation
-(and deallocation, through garbage collection).
-Second,
-the conversion specifiers are quite restricted.
-There are no flags, widths, or precisions.
-The conversion specifiers can only be
+The result is a copy of @id{fmt} with
+each @emph{conversion specifier} replaced by its respective
+extra argument.
+A conversion specifier can be
 @Char{%%} (inserts the character @Char{%}),
 @Char{%s} (inserts a zero-terminated string, with no size restrictions),
 @Char{%f} (inserts a @Lid{lua_Number}),
 @Char{%I} (inserts a @Lid{lua_Integer}),
-@Char{%p} (inserts a pointer),
+@Char{%p} (inserts a void pointer),
 @Char{%d} (inserts an @T{int}),
 @Char{%c} (inserts an @T{int} as a one-byte character), and
 @Char{%U} (inserts an @T{unsigned long} as a @x{UTF-8} byte sequence).
+
+Every occurrence of @Char{%} in the string @id{fmt}
+must form a valid conversion specifier.
 
 }
 
@@ -4413,7 +4410,7 @@ for the @Q{newindex} event @see{metatable}.
 @APIEntry{void lua_settop (lua_State *L, int index);|
 @apii{?,?,e}
 
-Accepts any index, @N{or 0},
+Receives any acceptable stack index, @N{or 0},
 and sets the stack top to this index.
 If the new top is greater than the old one,
 then the new elements are filled with @nil.
@@ -9426,6 +9423,15 @@ Moreover, there were some changes in the parameters themselves.
 @sect2{@title{Incompatibilities in the API}
 
 @itemize{
+
+@item{
+In @Lid{lua_call} and related functions,
+the maximum value for the number of required results
+(@id{nresults}) is 250.
+If you really need a larger value,
+use @Lid{LUA_MULTRET} and then adjust the stack size.
+Previously, this limit was unspecified.
+}
 
 @item{
 @Lid{lua_newstate} has a third parameter,

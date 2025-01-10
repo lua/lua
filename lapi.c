@@ -671,9 +671,8 @@ static int auxgetstr (lua_State *L, const TValue *t, const char *k) {
   lu_byte tag;
   TString *str = luaS_new(L, k);
   luaV_fastget(t, str, s2v(L->top.p), luaH_getstr, tag);
-  if (!tagisempty(tag)) {
+  if (!tagisempty(tag))
     api_incr_top(L);
-  }
   else {
     setsvalue2s(L, L->top.p, str);
     api_incr_top(L);
