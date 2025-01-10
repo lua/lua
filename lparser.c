@@ -797,10 +797,11 @@ static void close_func (LexState *ls) {
 }
 
 
-
-/*============================================================*/
-/* GRAMMAR RULES */
-/*============================================================*/
+/*
+** {======================================================================
+** GRAMMAR RULES
+** =======================================================================
+*/
 
 
 /*
@@ -974,15 +975,15 @@ static void constructor (LexState *ls, expdesc *t) {
   init_exp(t, VNONRELOC, fs->freereg);  /* table will be at stack top */
   luaK_reserveregs(fs, 1);
   init_exp(&cc.v, VVOID, 0);  /* no value (yet) */
-  checknext(ls, '{');
+  checknext(ls, '{' /*}*/);
   cc.maxtostore = maxtostore(fs);
   do {
     lua_assert(cc.v.k == VVOID || cc.tostore > 0);
-    if (ls->t.token == '}') break;
+    if (ls->t.token == /*{*/ '}') break;
     closelistfield(fs, &cc);
     field(ls, &cc);
   } while (testnext(ls, ',') || testnext(ls, ';'));
-  check_match(ls, '}', '{', line);
+  check_match(ls, /*{*/ '}', '{' /*}*/, line);
   lastlistfield(fs, &cc);
   luaK_settablesize(fs, pc, t->u.info, cc.na, cc.nh);
 }
@@ -1080,7 +1081,7 @@ static void funcargs (LexState *ls, expdesc *f) {
       check_match(ls, ')', '(', line);
       break;
     }
-    case '{': {  /* funcargs -> constructor */
+    case '{' /*}*/: {  /* funcargs -> constructor */
       constructor(ls, &args);
       break;
     }
@@ -1167,7 +1168,7 @@ static void suffixedexp (LexState *ls, expdesc *v) {
         funcargs(ls, v);
         break;
       }
-      case '(': case TK_STRING: case '{': {  /* funcargs */
+      case '(': case TK_STRING: case '{' /*}*/: {  /* funcargs */
         luaK_exp2nextreg(fs, v);
         funcargs(ls, v);
         break;
@@ -1215,7 +1216,7 @@ static void simpleexp (LexState *ls, expdesc *v) {
       init_exp(v, VVARARG, luaK_codeABC(fs, OP_VARARG, 0, 0, 1));
       break;
     }
-    case '{': {  /* constructor */
+    case '{' /*}*/: {  /* constructor */
       constructor(ls, v);
       return;
     }
@@ -1919,6 +1920,8 @@ static void statement (LexState *ls) {
   ls->fs->freereg = luaY_nvarstack(ls->fs);  /* free registers */
   leavelevel(ls);
 }
+
+/* }====================================================================== */
 
 /* }====================================================================== */
 
