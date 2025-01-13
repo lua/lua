@@ -52,7 +52,7 @@ typedef struct BlockCnt {
   int firstgoto;  /* index of first pending goto in this block */
   lu_byte nactvar;  /* # active locals outside the block */
   lu_byte upval;  /* true if some variable in the block is an upvalue */
-  lu_byte isloop;  /* true if 'block' is a loop */
+  lu_byte isloop;  /* 1 if 'block' is a loop; 2 if it has pending breaks */
   lu_byte insidetbc;  /* true if inside the scope of a to-be-closed var. */
 } BlockCnt;
 
@@ -677,15 +677,10 @@ static void enterblock (FuncState *fs, BlockCnt *bl, lu_byte isloop) {
 ** generates an error for an undefined 'goto'.
 */
 static l_noret undefgoto (LexState *ls, Labeldesc *gt) {
-  const char *msg;
-  if (eqstr(gt->name, luaS_newliteral(ls->L, "break"))) {
-    msg = "break outside loop at line %d";
-    msg = luaO_pushfstring(ls->L, msg, gt->line);
-  }
-  else {
-    msg = "no visible label '%s' for <goto> at line %d";
-    msg = luaO_pushfstring(ls->L, msg, getstr(gt->name), gt->line);
-  }
+  const char *msg = "no visible label '%s' for <goto> at line %d";
+  msg = luaO_pushfstring(ls->L, msg, getstr(gt->name), gt->line);
+  /* breaks are checked when created, cannot be undefined */
+  lua_assert(!eqstr(gt->name, luaS_newliteral(ls->L, "break")));
   luaK_semerror(ls, msg);
 }
 
@@ -699,7 +694,7 @@ static void leaveblock (FuncState *fs) {
   fs->freereg = stklevel;  /* free registers */
   removevars(fs, bl->nactvar);  /* remove block locals */
   lua_assert(bl->nactvar == fs->nactvar);  /* back to level on entry */
-  if (bl->isloop)  /* has to fix pending breaks? */
+  if (bl->isloop == 2)  /* has to fix pending breaks? */
     createlabel(ls, luaS_newliteral(ls->L, "break"), 0, 0);
   solvegotos(fs, bl);
   if (bl->previous == NULL) {  /* was it the last block? */
@@ -1465,6 +1460,14 @@ static void gotostat (LexState *ls, int line) {
 ** Break statement. Semantically equivalent to "goto break".
 */
 static void breakstat (LexState *ls, int line) {
+  BlockCnt *bl;  /* to look for an enclosing loop */
+  for (bl = ls->fs->bl; bl != NULL; bl = bl->previous) {
+    if (bl->isloop)  /* found one? */
+      goto ok;
+  }
+  luaX_syntaxerror(ls, "break outside loop");
+ ok:
+  bl->isloop = 2;  /* signal that block has pending breaks */
   luaX_next(ls);  /* skip break */
   newgotoentry(ls, luaS_newliteral(ls->L, "break"), line);
 }
