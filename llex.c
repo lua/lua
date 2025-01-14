@@ -349,9 +349,14 @@ static int readhexaesc (LexState *ls) {
 }
 
 
+/*
+** When reading a UTF-8 escape sequence, save everything to the buffer
+** for error reporting in case of errors; 'i' counts the number of
+** saved characters, so that they can be removed if case of success.
+*/
 static unsigned long readutf8esc (LexState *ls) {
   unsigned long r;
-  int i = 4;  /* chars to be removed: '\', 'u', '{', and first digit */
+  int i = 4;  /* number of chars to be removed: start with #"\u{X" */
   save_and_next(ls);  /* skip 'u' */
   esccheck(ls, ls->current == '{', "missing '{'");
   r = cast_ulong(gethexa(ls));  /* must have at least one digit */

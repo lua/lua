@@ -194,6 +194,7 @@ void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
 
 
 lu_byte luaO_hexavalue (int c) {
+  lua_assert(lisxdigit(c));
   if (lisdigit(c)) return cast_byte(c - '0');
   else return cast_byte((ltolower(c) - 'a') + 10);
 }

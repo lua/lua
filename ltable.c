@@ -96,7 +96,7 @@ typedef union {
 ** between 2^MAXHBITS and the maximum size such that, measured in bytes,
 ** it fits in a 'size_t'.
 */
-#define MAXHSIZE	luaM_limitN(1u << MAXHBITS, Node)
+#define MAXHSIZE	luaM_limitN(1 << MAXHBITS, Node)
 
 
 /*
@@ -598,7 +598,7 @@ static void setnodevector (lua_State *L, Table *t, unsigned size) {
   else {
     int i;
     int lsize = luaO_ceillog2(size);
-    if (lsize > MAXHBITS || (1u << lsize) > MAXHSIZE)
+    if (lsize > MAXHBITS || (1 << lsize) > MAXHSIZE)
       luaG_runerror(L, "table overflow");
     size = twoto(lsize);
     if (lsize < LIMFORLAST)  /* no 'lastfree' field? */

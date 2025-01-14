@@ -1439,7 +1439,7 @@ static void finishbinexpval (FuncState *fs, expdesc *e1, expdesc *e2,
   e1->u.info = pc;
   e1->k = VRELOC;  /* all those operations are relocatable */
   luaK_fixline(fs, line);
-  luaK_codeABCk(fs, mmop, v1, v2, event, flip);  /* to call metamethod */
+  luaK_codeABCk(fs, mmop, v1, v2, cast_int(event), flip);  /* metamethod */
   luaK_fixline(fs, line);
 }
 

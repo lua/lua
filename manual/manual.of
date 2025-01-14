@@ -3848,7 +3848,6 @@ or zero if the value at @id{idx} is not a number.
 
 Calls a function (or a callable object) in protected mode.
 
-
 Both @id{nargs} and @id{nresults} have the same meaning as
 in @Lid{lua_call}.
 If there are no errors during the call,
@@ -3998,9 +3997,9 @@ Lua will call @id{falloc} before raising the error.
 Pushes onto the stack a formatted string
 and returns a pointer to this string @see{constchar}.
 The result is a copy of @id{fmt} with
-each @emph{conversion specifier} replaced by its respective
-extra argument.
-A conversion specifier can be
+each @emph{conversion specifier} replaced by a string representation
+of its respective extra argument.
+A conversion specifier (and its corresponding extra argument) can be
 @Char{%%} (inserts the character @Char{%}),
 @Char{%s} (inserts a zero-terminated string, with no size restrictions),
 @Char{%f} (inserts a @Lid{lua_Number}),

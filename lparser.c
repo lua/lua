@@ -405,7 +405,7 @@ static int searchvar (FuncState *fs, TString *n, expdesc *var) {
         init_exp(var, VCONST, fs->firstlocal + i);
       else  /* real variable */
         init_var(fs, var, i);
-      return var->k;
+      return cast_int(var->k);
     }
   }
   return -1;  /* not found */
