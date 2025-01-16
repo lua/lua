@@ -1655,6 +1655,9 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       int level = getnum;
       luaL_traceback(L1, L1, msg, level);
     }
+    else if EQ("threadstatus") {
+      lua_pushstring(L1, statcodes[lua_status(L1)]);
+    }
     else if EQ("return") {
       int n = getnum;
       if (L1 != L) {

@@ -399,6 +399,10 @@ do
   -- trivial error
   assert(T.checkpanic("pushstring hi; error") == "hi")
 
+ -- thread status inside panic (bug in 5.4.4)
+  assert(T.checkpanic("pushstring hi; error", "threadstatus; return 2") ==
+         "ERRRUN")
+
   -- using the stack inside panic
   assert(T.checkpanic("pushstring hi; error;",
     [[checkstack 5 XX
