@@ -32,7 +32,7 @@ typedef enum {
   VKFLT,  /* floating constant; nval = numerical float value */
   VKINT,  /* integer constant; ival = numerical integer value */
   VKSTR,  /* string constant; strval = TString address;
-             (string is fixed by the lexer) */
+             (string is fixed by the scanner) */
   VNONRELOC,  /* expression has its value in a fixed register;
                  info = result register */
   VLOCAL,  /* local variable; var.ridx = register index;

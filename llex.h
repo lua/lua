@@ -59,7 +59,7 @@ typedef struct Token {
 } Token;
 
 
-/* state of the lexer plus state of the parser when shared by all
+/* state of the scanner plus state of the parser when shared by all
    functions */
 typedef struct LexState {
   int current;  /* current character (charint) */

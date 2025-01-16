@@ -28,10 +28,9 @@ _nomsg = rawget(_G, "_nomsg") or false
 local usertests = rawget(_G, "_U")
 
 if usertests then
-  -- tests for sissies ;)  Avoid problems
-  _soft = true
-  _port = true
-  _nomsg = true
+  _soft = true   -- avoid tests that take too long
+  _port = true   -- avoid non-portable tests
+  _nomsg = true  -- avoid messages about tests not performed
 end
 
 -- tests should require debug when needed

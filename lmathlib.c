@@ -106,7 +106,7 @@ static int math_floor (lua_State *L) {
 
 static int math_ceil (lua_State *L) {
   if (lua_isinteger(L, 1))
-    lua_settop(L, 1);  /* integer is its own ceil */
+    lua_settop(L, 1);  /* integer is its own ceiling */
   else {
     lua_Number d = l_mathop(ceil)(luaL_checknumber(L, 1));
     pushnumint(L, d);

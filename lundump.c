@@ -63,7 +63,7 @@ static void loadBlock (LoadState *S, void *b, size_t size) {
 
 static void loadAlign (LoadState *S, unsigned align) {
   unsigned padding = align - cast_uint(S->offset % align);
-  if (padding < align) {  /* apd == align means no padding */
+  if (padding < align) {  /* (padding == align) means no padding */
     lua_Integer paddingContent;
     loadBlock(S, &paddingContent, padding);
     lua_assert(S->offset % align == 0);

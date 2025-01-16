@@ -898,7 +898,7 @@ int luaG_tracecall (lua_State *L) {
   if (ci->u.l.savedpc == p->code) {  /* first instruction (not resuming)? */
     if (p->flag & PF_ISVARARG)
       return 0;  /* hooks will start at VARARGPREP instruction */
-    else if (!(ci->callstatus & CIST_HOOKYIELD))  /* not yieded? */
+    else if (!(ci->callstatus & CIST_HOOKYIELD))  /* not yielded? */
       luaD_hookcall(L, ci);  /* check 'call' hook */
   }
   return 1;  /* keep 'trap' on */

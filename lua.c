@@ -497,7 +497,7 @@ static void lua_freeline (char *line) {
 static void lua_initreadline (lua_State *L) {
   void *lib = dlopen(LUA_READLINELIB, RTLD_NOW | RTLD_LOCAL);
   if (lib == NULL)
-    lua_warning(L, "library '" LUA_READLINELIB "'not found", 0);
+    lua_warning(L, "library '" LUA_READLINELIB "' not found", 0);
   else {
     const char **name = cast(const char**, dlsym(lib, "rl_readline_name"));
     if (name != NULL)

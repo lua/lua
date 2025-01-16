@@ -123,7 +123,7 @@ typedef union {
 
 /*
 ** Common hash part for tables with empty hash parts. That allows all
-** tables to have a hash part, avoding an extra check ("is there a hash
+** tables to have a hash part, avoiding an extra check ("is there a hash
 ** part?") when indexing. Its sole node has an empty value and a key
 ** (DEADKEY, NULL) that is different from any valid TValue.
 */
@@ -699,7 +699,7 @@ static void clearNewSlice (Table *t, unsigned oldasize, unsigned newasize) {
 ** into the table, initializes the new part of the array (if any) with
 ** nils and reinserts the elements of the old hash back into the new
 ** parts of the table.
-** Note that if the new size for the arry part ('newasize') is equal to
+** Note that if the new size for the array part ('newasize') is equal to
 ** the old one ('oldasize'), this function will do nothing with that
 ** part.
 */
@@ -774,7 +774,7 @@ static void rehash (lua_State *L, Table *t, const TValue *ek) {
   nsize = ct.total - ct.na;
   if (ct.deleted) {  /* table has deleted entries? */
     /* insertion-deletion-insertion: give hash some extra size to
-       avoid constant resizings */
+       avoid repeated resizings */
     nsize += nsize >> 2;
   }
   /* resize the table to new computed sizes */
@@ -1300,7 +1300,7 @@ lua_Unsigned luaH_getn (Table *t) {
         return newhint(t, binsearch(t, limit, asize));
       }
     }
-    /* last element non empty; set a hint to speed up findind that again */
+    /* last element non empty; set a hint to speed up finding that again */
     /* (keys in the hash part cannot be hints) */
     *lenhint(t) = asize;
   }

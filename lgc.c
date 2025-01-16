@@ -242,7 +242,7 @@ static int iscleared (global_State *g, const GCObject *o) {
 ** incremental sweep phase, it clears the black object to white (sweep
 ** it) to avoid other barrier calls for this same object. (That cannot
 ** be done is generational mode, as its sweep does not distinguish
-** whites from deads.)
+** white from dead.)
 */
 void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v) {
   global_State *g = G(L);
@@ -1089,7 +1089,7 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 **     GCmarked: number of bytes that became old since last major collection.
 **     GCmajorminor: number of bytes marked in last major collection.
 ** * KGC_GENMAJOR
-**     GCmarked: number of bytes that became old sinse last major collection.
+**     GCmarked: number of bytes that became old since last major collection.
 **     GCmajorminor: number of bytes marked in last major collection.
 */
 

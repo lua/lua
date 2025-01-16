@@ -43,7 +43,7 @@
 typedef enum {
   F2Ieq,     /* no rounding; accepts only integral values */
   F2Ifloor,  /* takes the floor of the number */
-  F2Iceil    /* takes the ceil of the number */
+  F2Iceil    /* takes the ceiling of the number */
 } F2Imod;
 
 

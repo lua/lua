@@ -159,7 +159,7 @@ typedef LUAI_UACINT l_uacInt;
 #define cast_st2S(sz)	((lua_Integer)(sz))
 
 /* Cast a ptrdiff_t to size_t, when it is known that the minuend
-** comes from the subtraend (the base)
+** comes from the subtrahend (the base)
 */
 #define ct_diff2sz(df)	((size_t)(df))
 
