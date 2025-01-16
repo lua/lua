@@ -416,6 +416,10 @@ do
   -- trivial error
   assert(T.checkpanic("pushstring hi; error") == "hi")
 
+ -- thread status inside panic (bug in 5.4.4)
+  assert(T.checkpanic("pushstring hi; error", "threadstatus; return 2") ==
+         "ERRRUN")
+
   -- using the stack inside panic
   assert(T.checkpanic("pushstring hi; error;",
     [[checkstack 5 XX
@@ -432,6 +436,21 @@ do
   T.totalmem(T.totalmem()+10000)   -- set low memory limit (+10k)
   assert(T.checkpanic("newuserdata 20000") == MEMERRMSG)
   T.totalmem(0)          -- restore high limit
+
+  -- memory error + thread status
+  local x = T.checkpanic(
+    [[ alloccount 0    # force a memory error in next line
+       newtable
+    ]],
+    [[
+       alloccount -1   # allow free allocations again
+       pushstring XX
+       threadstatus
+       concat 2     # to make sure message came from here
+       return 1
+    ]])
+  T.alloccount()
+  assert(x == "XX" .. "not enough memory")
 
   -- stack error
   if not _soft then

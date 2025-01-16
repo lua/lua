@@ -1367,7 +1367,7 @@ static int checkpanic (lua_State *L) {
   b.L = L;
   L1 = lua_newstate(f, ud, 0);  /* create new state */
   if (L1 == NULL) {  /* error? */
-    lua_pushnil(L);
+    lua_pushstring(L, MEMERRMSG);
     return 1;
   }
   lua_atpanic(L1, panicback);  /* set its panic function */
@@ -1507,7 +1507,7 @@ static int getindex_aux (lua_State *L, lua_State *L1, const char **pc) {
 
 
 static const char *const statcodes[] = {"OK", "YIELD", "ERRRUN",
-    "ERRSYNTAX", MEMERRMSG, "ERRGCMM", "ERRERR"};
+    "ERRSYNTAX", MEMERRMSG, "ERRERR"};
 
 /*
 ** Avoid these stat codes from being collected, to avoid possible
@@ -1805,6 +1805,12 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       const char *msg = getstring;
       int level = getnum;
       luaL_traceback(L1, L1, msg, level);
+    }
+    else if EQ("threadstatus") {
+      lua_pushstring(L1, statcodes[lua_status(L1)]);
+    }
+    else if EQ("alloccount") {
+      l_memcontrol.countlimit = cast_uint(getnum);
     }
     else if EQ("return") {
       int n = getnum;
