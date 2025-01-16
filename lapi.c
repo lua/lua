@@ -40,10 +40,8 @@ const char lua_ident[] =
 
 /*
 ** Test for a valid index (one that is not the 'nilvalue').
-** '!ttisnil(o)' implies 'o != &G(L)->nilvalue', so it is not needed.
-** However, it covers the most common cases in a faster way.
 */
-#define isvalid(L, o)	(!ttisnil(o) || o != &G(L)->nilvalue)
+#define isvalid(L, o)	((o) != &G(L)->nilvalue)
 
 
 /* test for pseudo index */
