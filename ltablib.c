@@ -62,9 +62,9 @@ static void checktab (lua_State *L, int arg, int what) {
 static int tcreate (lua_State *L) {
   lua_Unsigned sizeseq = (lua_Unsigned)luaL_checkinteger(L, 1);
   lua_Unsigned sizerest = (lua_Unsigned)luaL_optinteger(L, 2, 0);
-  luaL_argcheck(L, sizeseq <= UINT_MAX, 1, "out of range");
-  luaL_argcheck(L, sizerest <= UINT_MAX, 2, "out of range");
-  lua_createtable(L, (unsigned)sizeseq, (unsigned)sizerest);
+  luaL_argcheck(L, sizeseq <= cast_uint(INT_MAX), 1, "out of range");
+  luaL_argcheck(L, sizerest <= cast_uint(INT_MAX), 2, "out of range");
+  lua_createtable(L, cast_int(sizeseq), cast_int(sizerest));
   return 1;
 }
 
@@ -192,7 +192,7 @@ static int tconcat (lua_State *L) {
 static int tpack (lua_State *L) {
   int i;
   int n = lua_gettop(L);  /* number of elements to pack */
-  lua_createtable(L, cast_uint(n), 1);  /* create result table */
+  lua_createtable(L, n, 1);  /* create result table */
   lua_insert(L, 1);  /* put it at index 1 */
   for (i = n; i >= 1; i--)  /* assign elements */
     lua_seti(L, 1, i);

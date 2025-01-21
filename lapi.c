@@ -782,14 +782,14 @@ LUA_API int lua_rawgetp (lua_State *L, int idx, const void *p) {
 }
 
 
-LUA_API void lua_createtable (lua_State *L, unsigned narray, unsigned nrec) {
+LUA_API void lua_createtable (lua_State *L, int narray, int nrec) {
   Table *t;
   lua_lock(L);
   t = luaH_new(L);
   sethvalue2s(L, L->top.p, t);
   api_incr_top(L);
   if (narray > 0 || nrec > 0)
-    luaH_resize(L, t, narray, nrec);
+    luaH_resize(L, t, cast_uint(narray), cast_uint(nrec));
   luaC_checkGC(L);
   lua_unlock(L);
 }

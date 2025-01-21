@@ -3238,7 +3238,7 @@ Values at other positions are not affected.
 
 }
 
-@APIEntry{void lua_createtable (lua_State *L, unsigned nseq, unsigned nrec);|
+@APIEntry{void lua_createtable (lua_State *L, int nseq, int nrec);|
 @apii{0,1,m}
 
 Creates a new empty table and pushes it onto the stack.
@@ -3249,7 +3249,7 @@ the table will have.
 Lua may use these hints to preallocate memory for the new table.
 This preallocation may help performance when you know in advance
 how many elements the table will have.
-Otherwise you can use the function @Lid{lua_newtable}.
+Otherwise you should use the function @Lid{lua_newtable}.
 
 }
 
@@ -3351,7 +3351,7 @@ Returns the previous mode (@id{LUA_GCGEN} or @id{LUA_GCINC}).
 
 @item{@defid{LUA_GCPARAM} (int param, int val)|
 Changes and/or returns the value of a parameter of the collector.
-If @id{val} is negative, the call only returns the current value.
+If @id{val} is -1, the call only returns the current value.
 The argument @id{param} must have one of the following values:
 @description{
 @item{@defid{LUA_GCPMINORMUL}| The minor multiplier. }

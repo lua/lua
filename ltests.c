@@ -809,7 +809,7 @@ static int listk (lua_State *L) {
   luaL_argcheck(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
                  1, "Lua function expected");
   p = getproto(obj_at(L, 1));
-  lua_createtable(L, cast_uint(p->sizek), 0);
+  lua_createtable(L, p->sizek, 0);
   for (i=0; i<p->sizek; i++) {
     pushobject(L, p->k+i);
     lua_rawseti(L, -2, i+1);
@@ -825,7 +825,7 @@ static int listabslineinfo (lua_State *L) {
                  1, "Lua function expected");
   p = getproto(obj_at(L, 1));
   luaL_argcheck(L, p->abslineinfo != NULL, 1, "function has no debug info");
-  lua_createtable(L, 2u * cast_uint(p->sizeabslineinfo), 0);
+  lua_createtable(L, 2 * p->sizeabslineinfo, 0);
   for (i=0; i < p->sizeabslineinfo; i++) {
     lua_pushinteger(L, p->abslineinfo[i].pc);
     lua_rawseti(L, -2, 2 * i + 1);
@@ -867,7 +867,7 @@ void lua_printstack (lua_State *L) {
 
 
 static int get_limits (lua_State *L) {
-  lua_createtable(L, 0, 6);
+  lua_createtable(L, 0, 5);
   setnameval(L, "IS32INT", LUAI_IS32INT);
   setnameval(L, "MAXARG_Ax", MAXARG_Ax);
   setnameval(L, "MAXARG_Bx", MAXARG_Bx);

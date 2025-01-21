@@ -35,8 +35,10 @@ do print "testing 'table.create'"
   assert(memdiff > 1024 * 12)
   assert(not T or select(2, T.querytab(t)) == 1024)
 
-  checkerror("table overflow", table.create, (1<<31) + 1)
-  checkerror("table overflow", table.create, 0, (1<<31) + 1)
+  local maxint1 = 1 << (string.packsize("i") * 8 - 1)
+  checkerror("out of range", table.create, maxint1)
+  checkerror("out of range", table.create, 0, maxint1)
+  checkerror("table overflow", table.create, 0, maxint1 - 1)
 end
 
 
