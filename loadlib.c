@@ -280,7 +280,7 @@ static void setpath (lua_State *L, const char *fieldname,
   if (path == NULL)  /* no versioned environment variable? */
     path = getenv(envname);  /* try unversioned name */
   if (path == NULL || noenv(L))  /* no environment variable? */
-    lua_pushextlstring(L, dft, strlen(dft), NULL, NULL);  /* use default */
+    lua_pushexternalstring(L, dft, strlen(dft), NULL, NULL);  /* use default */
   else if ((dftmark = strstr(path, LUA_PATH_SEP LUA_PATH_SEP)) == NULL)
     lua_pushstring(L, path);  /* nothing to change */
   else {  /* path contains a ";;": insert default path in its place */

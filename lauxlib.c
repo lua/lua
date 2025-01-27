@@ -622,9 +622,9 @@ LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
     resizebox(L, -1, len + 1);  /* adjust box size to content size */
     s = (char*)box->box;  /* final buffer address */
     s[len] = '\0';  /* add ending zero */
-    /* clear box, as 'lua_pushextlstring' will take control over buffer */
+    /* clear box, as Lua will take control of the buffer */
     box->bsize = 0;  box->box = NULL;
-    lua_pushextlstring(L, s, len, allocf, ud);
+    lua_pushexternalstring(L, s, len, allocf, ud);
     lua_closeslot(L, -2);  /* close the box */
     lua_gc(L, LUA_GCSTEP, len);
   }
@@ -929,7 +929,7 @@ LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len) {
     switch (lua_type(L, idx)) {
       case LUA_TNUMBER: {
         char buff[LUA_N2SBUFFSZ];
-        lua_numbertostrbuff(L, idx, buff);
+        lua_numbertocstring(L, idx, buff);
         lua_pushstring(L, buff);
         break;
       }

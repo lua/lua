@@ -3829,7 +3829,7 @@ This macro may evaluate its arguments more than once.
 
 }
 
-@APIEntry{unsigned (lua_numbertostrbuff) (lua_State *L, int idx,
+@APIEntry{unsigned (lua_numbertocstring) (lua_State *L, int idx,
                                           char *buff);|
 @apii{0,0,-}
 
@@ -3955,7 +3955,7 @@ This function is equivalent to @Lid{lua_pushcclosure} with no upvalues.
 
 }
 
-@APIEntry{const char *(lua_pushextlstring) (lua_State *L,
+@APIEntry{const char *(lua_pushexternalstring) (lua_State *L,
                 const char *s, size_t len, lua_Alloc falloc, void *ud);|
 @apii{0,1,m}
 

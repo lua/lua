@@ -366,7 +366,7 @@ LUA_API int lua_compare (lua_State *L, int index1, int index2, int op) {
 }
 
 
-LUA_API unsigned (lua_numbertostrbuff) (lua_State *L, int idx, char *buff) {
+LUA_API unsigned (lua_numbertocstring) (lua_State *L, int idx, char *buff) {
   const TValue *o = index2value(L, idx);
   if (ttisnumber(o)) {
     unsigned len = luaO_tostringbuff(o, buff);
@@ -546,7 +546,7 @@ LUA_API const char *lua_pushlstring (lua_State *L, const char *s, size_t len) {
 }
 
 
-LUA_API const char *lua_pushextlstring (lua_State *L,
+LUA_API const char *lua_pushexternalstring (lua_State *L,
 	        const char *s, size_t len, lua_Alloc falloc, void *ud) {
   TString *ts;
   lua_lock(L);

@@ -667,7 +667,7 @@ static int g_write (lua_State *L, FILE *f, int arg) {
   for (; nargs--; arg++) {
     char buff[LUA_N2SBUFFSZ];
     const char *s;
-    size_t len = lua_numbertostrbuff(L, arg, buff);  /* try as a number */
+    size_t len = lua_numbertocstring(L, arg, buff);  /* try as a number */
     if (len > 0) {  /* did conversion work (value was a number)? */
       s = buff;
       len--;

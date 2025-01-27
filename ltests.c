@@ -1389,7 +1389,7 @@ static int checkpanic (lua_State *L) {
 static int externKstr (lua_State *L) {
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
-  lua_pushextlstring(L, s, len, NULL, NULL);
+  lua_pushexternalstring(L, s, len, NULL, NULL);
   return 1;
 }
 
@@ -1413,7 +1413,7 @@ static int externstr (lua_State *L) {
   /* copy string content to buffer, including ending 0 */
   memcpy(buff, s, (len + 1) * sizeof(char));
   /* create external string */
-  lua_pushextlstring(L, buff, len, allocf, ud);
+  lua_pushexternalstring(L, buff, len, allocf, ud);
   return 1;
 }
 

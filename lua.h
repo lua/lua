@@ -244,7 +244,7 @@ LUA_API void        (lua_pushnil) (lua_State *L);
 LUA_API void        (lua_pushnumber) (lua_State *L, lua_Number n);
 LUA_API void        (lua_pushinteger) (lua_State *L, lua_Integer n);
 LUA_API const char *(lua_pushlstring) (lua_State *L, const char *s, size_t len);
-LUA_API const char *(lua_pushextlstring) (lua_State *L,
+LUA_API const char *(lua_pushexternalstring) (lua_State *L,
 		const char *s, size_t len, lua_Alloc falloc, void *ud);
 LUA_API const char *(lua_pushstring) (lua_State *L, const char *s);
 LUA_API const char *(lua_pushvfstring) (lua_State *L, const char *fmt,
@@ -372,7 +372,7 @@ LUA_API void  (lua_concat) (lua_State *L, int n);
 LUA_API void  (lua_len)    (lua_State *L, int idx);
 
 #define LUA_N2SBUFFSZ	64
-LUA_API unsigned  (lua_numbertostrbuff) (lua_State *L, int idx, char *buff);
+LUA_API unsigned  (lua_numbertocstring) (lua_State *L, int idx, char *buff);
 LUA_API size_t  (lua_stringtonumber) (lua_State *L, const char *s);
 
 LUA_API lua_Alloc (lua_getallocf) (lua_State *L, void **ud);
