@@ -505,7 +505,7 @@ l_sinline void genmoveresults (lua_State *L, StkId res, int nres,
 ** Given 'nres' results at 'firstResult', move 'fwanted-1' of them
 ** to 'res'.  Handle most typical cases (zero results for commands,
 ** one result for expressions, multiple results for tail calls/single
-** parameters) separated. The flag CIST_CLSRET in 'fwanted', if set,
+** parameters) separated. The flag CIST_TBC in 'fwanted', if set,
 ** forces the swicth to go to the default case.
 */
 l_sinline void moveresults (lua_State *L, StkId res, int nres,
@@ -526,8 +526,9 @@ l_sinline void moveresults (lua_State *L, StkId res, int nres,
       break;
     default: {  /* two/more results and/or to-be-closed variables */
       int wanted = get_nresults(fwanted);
-      if (fwanted & CIST_CLSRET) {  /* to-be-closed variables? */
+      if (fwanted & CIST_TBC) {  /* to-be-closed variables? */
         L->ci->u2.nres = nres;
+        L->ci->callstatus |= CIST_CLSRET;  /* in case of yields */
         res = luaF_close(L, res, CLOSEKTOP, 1);
         L->ci->callstatus &= ~CIST_CLSRET;
         if (L->hookmask) {  /* if needed, call hook after '__close's */
@@ -552,8 +553,8 @@ l_sinline void moveresults (lua_State *L, StkId res, int nres,
 ** that.
 */
 void luaD_poscall (lua_State *L, CallInfo *ci, int nres) {
-  l_uint32 fwanted = ci->callstatus & (CIST_CLSRET | CIST_NRESULTS);
-  if (l_unlikely(L->hookmask) && !(fwanted & CIST_CLSRET))
+  l_uint32 fwanted = ci->callstatus & (CIST_TBC | CIST_NRESULTS);
+  if (l_unlikely(L->hookmask) && !(fwanted & CIST_TBC))
     rethook(L, ci, nres);
   /* move results to proper place */
   moveresults(L, ci->func.p, nres, fwanted);
@@ -785,7 +786,8 @@ static int finishpcallk (lua_State *L,  CallInfo *ci) {
 */
 static void finishCcall (lua_State *L, CallInfo *ci) {
   int n;  /* actual number of results from C function */
-  if (ci->callstatus & CIST_CLSRET) {  /* was returning? */
+  if (ci->callstatus & CIST_CLSRET) {  /* was closing TBC variable? */
+    lua_assert(ci->callstatus & CIST_TBC);
     n = ci->u2.nres;  /* just redo 'luaD_poscall' */
     /* don't need to reset CIST_CLSRET, as it will be set again anyway */
   }
