@@ -343,13 +343,19 @@ void lua_printvalue (TValue *v) {
       printf("%s", (!l_isfalse(v) ? "true" : "false"));
       break;
     }
+    case LUA_TLIGHTUSERDATA: {
+      printf("light udata: %p", pvalue(v));
+      break;
+    }
     case LUA_TNIL: {
       printf("nil");
       break;
     }
     default: {
-      void *p = iscollectable(v) ? gcvalue(v) : NULL;
-      printf("%s: %p", ttypename(ttype(v)), p);
+      if (ttislcf(v))
+        printf("light C function: %p", fvalue(v));
+      else  /* must be collectable */
+        printf("%s: %p", ttypename(ttype(v)), gcvalue(v));
       break;
     }
   }
@@ -1499,9 +1505,14 @@ static int getindex_aux (lua_State *L, lua_State *L1, const char **pc) {
   skip(pc);
   switch (*(*pc)++) {
     case 'R': return LUA_REGISTRYINDEX;
-    case 'G': return luaL_error(L, "deprecated index 'G'");
     case 'U': return lua_upvalueindex(getnum_aux(L, L1, pc));
-    default: (*pc)--; return getnum_aux(L, L1, pc);
+    default: {
+      int n;
+      (*pc)--;  /* to read again */
+      n = getnum_aux(L, L1, pc);
+      if (n == 0) return 0;
+      else return lua_absindex(L1, n);
+    }
   }
 }
 
@@ -1550,7 +1561,7 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     const char *inst = getstring;
     if EQ("") return 0;
     else if EQ("absindex") {
-      lua_pushinteger(L1, lua_absindex(L1, getindex));
+      lua_pushinteger(L1, getindex);
     }
     else if EQ("append") {
       int t = getindex;
