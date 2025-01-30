@@ -97,11 +97,11 @@
 struct lua_longjmp {
   struct lua_longjmp *previous;
   luai_jmpbuf b;
-  volatile int status;  /* error code */
+  volatile TStatus status;  /* error code */
 };
 
 
-void luaD_seterrorobj (lua_State *L, int errcode, StkId oldtop) {
+void luaD_seterrorobj (lua_State *L, TStatus errcode, StkId oldtop) {
   switch (errcode) {
     case LUA_ERRMEM: {  /* memory error? */
       setsvalue2s(L, oldtop, G(L)->memerrmsg); /* reuse preregistered msg. */
@@ -125,7 +125,7 @@ void luaD_seterrorobj (lua_State *L, int errcode, StkId oldtop) {
 }
 
 
-l_noret luaD_throw (lua_State *L, int errcode) {
+l_noret luaD_throw (lua_State *L, TStatus errcode) {
   if (L->errorJmp) {  /* thread has an error handler? */
     L->errorJmp->status = errcode;  /* set status */
     LUAI_THROW(L, L->errorJmp);  /* jump to it */
@@ -133,7 +133,7 @@ l_noret luaD_throw (lua_State *L, int errcode) {
   else {  /* thread has no error handler */
     global_State *g = G(L);
     errcode = luaE_resetthread(L, errcode);  /* close all upvalues */
-    L->status = cast_byte(errcode);
+    L->status = errcode;
     if (g->mainthread->errorJmp) {  /* main thread has a handler? */
       setobjs2s(L, g->mainthread->top.p++, L->top.p - 1);  /* copy error obj. */
       luaD_throw(g->mainthread, errcode);  /* re-throw in main thread */
@@ -149,7 +149,7 @@ l_noret luaD_throw (lua_State *L, int errcode) {
 }
 
 
-int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
+TStatus luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
   l_uint32 oldnCcalls = L->nCcalls;
   struct lua_longjmp lj;
   lj.status = LUA_OK;
@@ -751,8 +751,8 @@ void luaD_callnoyield (lua_State *L, StkId func, int nResults) {
 ** particular, field CIST_RECST preserves the error status across these
 ** multiple runs, changing only if there is a new error.
 */
-static int finishpcallk (lua_State *L,  CallInfo *ci) {
-  int status = getcistrecst(ci);  /* get original status */
+static TStatus finishpcallk (lua_State *L,  CallInfo *ci) {
+  TStatus status = getcistrecst(ci);  /* get original status */
   if (l_likely(status == LUA_OK))  /* no error? */
     status = LUA_YIELD;  /* was interrupted by an yield */
   else {  /* error */
@@ -792,14 +792,15 @@ static void finishCcall (lua_State *L, CallInfo *ci) {
     /* don't need to reset CIST_CLSRET, as it will be set again anyway */
   }
   else {
-    int status = LUA_YIELD;  /* default if there were no errors */
+    TStatus status = LUA_YIELD;  /* default if there were no errors */
+    lua_KFunction kf = ci->u.c.k;  /* continuation function */
     /* must have a continuation and must be able to call it */
-    lua_assert(ci->u.c.k != NULL && yieldable(L));
+    lua_assert(kf != NULL && yieldable(L));
     if (ci->callstatus & CIST_YPCALL)   /* was inside a 'lua_pcallk'? */
       status = finishpcallk(L, ci);  /* finish it */
     adjustresults(L, LUA_MULTRET);  /* finish 'lua_callk' */
     lua_unlock(L);
-    n = (*ci->u.c.k)(L, status, ci->u.c.ctx);  /* call continuation */
+    n = (*kf)(L, APIstatus(status), ci->u.c.ctx);  /* call continuation */
     lua_lock(L);
     api_checknelems(L, n);
   }
@@ -901,7 +902,7 @@ static void resume (lua_State *L, void *ud) {
 ** (status == LUA_YIELD), or an unprotected error ('findpcall' doesn't
 ** find a recover point).
 */
-static int precover (lua_State *L, int status) {
+static TStatus precover (lua_State *L, TStatus status) {
   CallInfo *ci;
   while (errorstatus(status) && (ci = findpcall(L)) != NULL) {
     L->ci = ci;  /* go down to recovery functions */
@@ -914,7 +915,7 @@ static int precover (lua_State *L, int status) {
 
 LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
                                       int *nresults) {
-  int status;
+  TStatus status;
   lua_lock(L);
   if (L->status == LUA_OK) {  /* may be starting a coroutine */
     if (L->ci != &L->base_ci)  /* not in base level? */
@@ -936,14 +937,14 @@ LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs,
   if (l_likely(!errorstatus(status)))
     lua_assert(status == L->status);  /* normal end or yield */
   else {  /* unrecoverable error */
-    L->status = cast_byte(status);  /* mark thread as 'dead' */
+    L->status = status;  /* mark thread as 'dead' */
     luaD_seterrorobj(L, status, L->top.p);  /* push error message */
     L->ci->top.p = L->top.p;
   }
   *nresults = (status == LUA_YIELD) ? L->ci->u2.nyield
                                     : cast_int(L->top.p - (L->ci->func.p + 1));
   lua_unlock(L);
-  return status;
+  return APIstatus(status);
 }
 
 
@@ -988,7 +989,7 @@ LUA_API int lua_yieldk (lua_State *L, int nresults, lua_KContext ctx,
 */
 struct CloseP {
   StkId level;
-  int status;
+  TStatus status;
 };
 
 
@@ -1005,7 +1006,7 @@ static void closepaux (lua_State *L, void *ud) {
 ** Calls 'luaF_close' in protected mode. Return the original status
 ** or, in case of errors, the new status.
 */
-int luaD_closeprotected (lua_State *L, ptrdiff_t level, int status) {
+TStatus luaD_closeprotected (lua_State *L, ptrdiff_t level, TStatus status) {
   CallInfo *old_ci = L->ci;
   lu_byte old_allowhooks = L->allowhook;
   for (;;) {  /* keep closing upvalues until no more errors */
@@ -1027,9 +1028,9 @@ int luaD_closeprotected (lua_State *L, ptrdiff_t level, int status) {
 ** thread information ('allowhook', etc.) and in particular
 ** its stack level in case of errors.
 */
-int luaD_pcall (lua_State *L, Pfunc func, void *u,
-                ptrdiff_t old_top, ptrdiff_t ef) {
-  int status;
+TStatus luaD_pcall (lua_State *L, Pfunc func, void *u, ptrdiff_t old_top,
+                                  ptrdiff_t ef) {
+  TStatus status;
   CallInfo *old_ci = L->ci;
   lu_byte old_allowhooks = L->allowhook;
   ptrdiff_t old_errfunc = L->errfunc;
@@ -1091,10 +1092,10 @@ static void f_parser (lua_State *L, void *ud) {
 }
 
 
-int luaD_protectedparser (lua_State *L, ZIO *z, const char *name,
-                                        const char *mode) {
+TStatus luaD_protectedparser (lua_State *L, ZIO *z, const char *name,
+                                            const char *mode) {
   struct SParser p;
-  int status;
+  TStatus status;
   incnny(L);  /* cannot yield during parsing */
   p.z = z; p.name = name; p.mode = mode;
   p.dyd.actvar.arr = NULL; p.dyd.actvar.size = 0;

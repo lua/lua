@@ -41,6 +41,12 @@ typedef unsigned char lu_byte;
 typedef signed char ls_byte;
 
 
+/* Type for thread status/error codes */
+typedef lu_byte TStatus;
+
+/* The C API still uses 'int' for status/error codes */
+#define APIstatus(st)	cast_int(st)
+
 /* maximum value for size_t */
 #define MAX_SIZET	((size_t)(~(size_t)0))
 

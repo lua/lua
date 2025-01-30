@@ -329,7 +329,7 @@ TString *luaS_newextlstr (lua_State *L,
     if (!falloc)
       f_pintern(L, &ne);  /* just internalize string */
     else {
-      int status = luaD_rawrunprotected(L, f_pintern, &ne);
+      TStatus status = luaD_rawrunprotected(L, f_pintern, &ne);
       (*falloc)(ud, cast_voidp(s), len + 1, 0);  /* free external string */
       if (status != LUA_OK)  /* memory error? */
         luaM_error(L);  /* re-raise memory error */

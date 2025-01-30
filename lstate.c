@@ -320,7 +320,7 @@ void luaE_freethread (lua_State *L, lua_State *L1) {
 }
 
 
-int luaE_resetthread (lua_State *L, int status) {
+TStatus luaE_resetthread (lua_State *L, TStatus status) {
   CallInfo *ci = L->ci = &L->base_ci;  /* unwind CallInfo list */
   setnilvalue(s2v(L->stack.p));  /* 'function' entry for basic 'ci' */
   ci->func.p = L->stack.p;
@@ -340,12 +340,12 @@ int luaE_resetthread (lua_State *L, int status) {
 
 
 LUA_API int lua_closethread (lua_State *L, lua_State *from) {
-  int status;
+  TStatus status;
   lua_lock(L);
   L->nCcalls = (from) ? getCcalls(from) : 0;
   status = luaE_resetthread(L, L->status);
   lua_unlock(L);
-  return status;
+  return APIstatus(status);
 }
 
 
