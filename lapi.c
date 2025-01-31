@@ -655,7 +655,7 @@ LUA_API int lua_pushthread (lua_State *L) {
   setthvalue(L, s2v(L->top.p), L);
   api_incr_top(L);
   lua_unlock(L);
-  return (G(L)->mainthread == L);
+  return (mainthread(G(L)) == L);
 }
 
 

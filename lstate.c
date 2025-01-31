@@ -29,25 +29,6 @@
 
 
 
-/*
-** thread state + extra space
-*/
-typedef struct LX {
-  lu_byte extra_[LUA_EXTRASPACE];
-  lua_State l;
-} LX;
-
-
-/*
-** Main thread combines a thread state and the global state
-*/
-typedef struct LG {
-  LX l;
-  global_State g;
-} LG;
-
-
-
 #define fromstate(L)	(cast(LX *, cast(lu_byte *, (L)) - offsetof(LX, l)))
 
 
@@ -278,8 +259,8 @@ static void close_state (lua_State *L) {
   }
   luaM_freearray(L, G(L)->strt.hash, cast_sizet(G(L)->strt.size));
   freestack(L);
-  lua_assert(gettotalbytes(g) == sizeof(LG));
-  (*g->frealloc)(g->ud, fromstate(L), sizeof(LG), 0);  /* free main block */
+  lua_assert(gettotalbytes(g) == sizeof(global_State));
+  (*g->frealloc)(g->ud, g, sizeof(global_State), 0);  /* free main block */
 }
 
 
@@ -301,7 +282,7 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   L1->hook = L->hook;
   resethookcount(L1);
   /* initialize L1 extra space */
-  memcpy(lua_getextraspace(L1), lua_getextraspace(g->mainthread),
+  memcpy(lua_getextraspace(L1), lua_getextraspace(mainthread(g)),
          LUA_EXTRASPACE);
   luai_userstatethread(L, L1);
   stack_init(L1, L);  /* init stack */
@@ -352,11 +333,10 @@ LUA_API int lua_closethread (lua_State *L, lua_State *from) {
 LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud, unsigned seed) {
   int i;
   lua_State *L;
-  global_State *g;
-  LG *l = cast(LG *, (*f)(ud, NULL, LUA_TTHREAD, sizeof(LG)));
-  if (l == NULL) return NULL;
-  L = &l->l.l;
-  g = &l->g;
+  global_State *g = cast(global_State*,
+                       (*f)(ud, NULL, LUA_TTHREAD, sizeof(global_State)));
+  if (g == NULL) return NULL;
+  L = &g->mainth.l;
   L->tt = LUA_VTHREAD;
   g->currentwhite = bitmask(WHITE0BIT);
   L->marked = luaC_white(g);
@@ -368,7 +348,6 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud, unsigned seed) {
   g->ud = ud;
   g->warnf = NULL;
   g->ud_warn = NULL;
-  g->mainthread = L;
   g->seed = seed;
   g->gcstp = GCSTPGC;  /* no GC while building state */
   g->strt.size = g->strt.nuse = 0;
@@ -386,7 +365,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud, unsigned seed) {
   g->gray = g->grayagain = NULL;
   g->weak = g->ephemeron = g->allweak = NULL;
   g->twups = NULL;
-  g->GCtotalbytes = sizeof(LG);
+  g->GCtotalbytes = sizeof(global_State);
   g->GCmarked = 0;
   g->GCdebt = 0;
   setivalue(&g->nilvalue, 0);  /* to signal that state is not yet built */
@@ -408,7 +387,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud, unsigned seed) {
 
 LUA_API void lua_close (lua_State *L) {
   lua_lock(L);
-  L = G(L)->mainthread;  /* only the main thread can be closed */
+  L = mainthread(G(L));  /* only the main thread can be closed */
   close_state(L);
 }
 

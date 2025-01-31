@@ -78,7 +78,7 @@
 	((*getArrTag(t,i) & BIT_ISCOLLECTABLE) ? getArrVal(t,i)->gc : NULL)
 
 
-#define markvalue(g,o) { checkliveness(g->mainthread,o); \
+#define markvalue(g,o) { checkliveness(mainthread(g),o); \
   if (valiswhite(o)) reallymarkobject(g,gcvalue(o)); }
 
 #define markkey(g, n)	{ if keyiswhite(n) reallymarkobject(g,gckey(n)); }
@@ -441,7 +441,7 @@ static void cleargraylists (global_State *g) {
 static void restartcollection (global_State *g) {
   cleargraylists(g);
   g->GCmarked = 0;
-  markobject(g, g->mainthread);
+  markobject(g, mainthread(g));
   markvalue(g, &g->l_registry);
   markmt(g);
   markbeingfnz(g);  /* mark any finalizing object left from previous cycle */
@@ -1513,7 +1513,7 @@ void luaC_freeallobjects (lua_State *L) {
   separatetobefnz(g, 1);  /* separate all objects with finalizers */
   lua_assert(g->finobj == NULL);
   callallpendingfinalizers(L);
-  deletelist(L, g->allgc, obj2gco(g->mainthread));
+  deletelist(L, g->allgc, obj2gco(mainthread(g)));
   lua_assert(g->finobj == NULL);  /* no new finalizers */
   deletelist(L, g->fixedgc, NULL);  /* collect fixed objects */
   lua_assert(g->strt.nuse == 0);
@@ -1526,7 +1526,7 @@ static void atomic (lua_State *L) {
   GCObject *grayagain = g->grayagain;  /* save original list */
   g->grayagain = NULL;
   lua_assert(g->ephemeron == NULL && g->weak == NULL);
-  lua_assert(!iswhite(g->mainthread));
+  lua_assert(!iswhite(mainthread(g)));
   g->gcstate = GCSatomic;
   markobject(g, L);  /* mark running thread */
   /* registry and global metatables may be changed by API */

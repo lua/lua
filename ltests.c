@@ -408,7 +408,7 @@ static void checktable (global_State *g, Table *h) {
   for (n = gnode(h, 0); n < limit; n++) {
     if (!isempty(gval(n))) {
       TValue k;
-      getnodekey(g->mainthread, &k, n);
+      getnodekey(mainthread(g), &k, n);
       assert(!keyisnil(n));
       checkvalref(g, hgc, &k);
       checkvalref(g, hgc, gval(n));
@@ -672,7 +672,7 @@ int lua_checkmemory (lua_State *L) {
   l_mem totalin;  /* total of objects that are in gray lists */
   l_mem totalshould;  /* total of objects that should be in gray lists */
   if (keepinvariant(g)) {
-    assert(!iswhite(g->mainthread));
+    assert(!iswhite(mainthread(g)));
     assert(!iswhite(gcvalue(&g->l_registry)));
   }
   assert(!isdead(g, gcvalue(&g->l_registry)));

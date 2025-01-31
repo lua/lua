@@ -132,11 +132,12 @@ l_noret luaD_throw (lua_State *L, TStatus errcode) {
   }
   else {  /* thread has no error handler */
     global_State *g = G(L);
+    lua_State *mainth = mainthread(g);
     errcode = luaE_resetthread(L, errcode);  /* close all upvalues */
     L->status = errcode;
-    if (g->mainthread->errorJmp) {  /* main thread has a handler? */
-      setobjs2s(L, g->mainthread->top.p++, L->top.p - 1);  /* copy error obj. */
-      luaD_throw(g->mainthread, errcode);  /* re-throw in main thread */
+    if (mainth->errorJmp) {  /* main thread has a handler? */
+      setobjs2s(L, mainth->top.p++, L->top.p - 1);  /* copy error obj. */
+      luaD_throw(mainth, errcode);  /* re-throw in main thread */
     }
     else {  /* no handler at all; abort */
       if (g->panic) {  /* panic function? */
@@ -961,7 +962,7 @@ LUA_API int lua_yieldk (lua_State *L, int nresults, lua_KContext ctx,
   ci = L->ci;
   api_checkpop(L, nresults);
   if (l_unlikely(!yieldable(L))) {
-    if (L != G(L)->mainthread)
+    if (L != mainthread(G(L)))
       luaG_runerror(L, "attempt to yield across a C-call boundary");
     else
       luaG_runerror(L, "attempt to yield from outside a coroutine");
