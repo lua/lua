@@ -192,14 +192,19 @@ TStatus luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 
 /*
 ** In ISO C, any pointer use after the pointer has been deallocated is
-** undefined behavior. So, before a stack reallocation, all pointers are
-** changed to offsets, and after the reallocation they are changed back
-** to pointers. As during the reallocation the pointers are invalid, the
-** reallocation cannot run emergency collections.
-**
+** undefined behavior. So, before a stack reallocation, all pointers
+** should be changed to offsets, and after the reallocation they should
+** be changed back to pointers. As during the reallocation the pointers
+** are invalid, the reallocation cannot run emergency collections.
+** Alternatively, we can use the old address after the deallocation.
+** That is not strict ISO C, but seems to work fine everywhere.
+** The following macro chooses how strict is the code.
 */
+#if !defined(LUAI_STRICT_ADDRESS)
+#define LUAI_STRICT_ADDRESS	0
+#endif
 
-#if 1
+#if LUAI_STRICT_ADDRESS
 /*
 ** Change all pointers to the stack into offsets.
 */
@@ -238,12 +243,16 @@ static void correctstack (lua_State *L, StkId oldstack) {
 
 #else
 /*
-** Alternatively, we can use the old address after the deallocation.
-** That is not strict ISO C, but seems to work fine everywhere.
+** Assume that it is fine to use an address after its deallocation,
+** as long as we do not dereference it.
 */
 
-static void relstack (lua_State *L) { UNUSED(L); }
+static void relstack (lua_State *L) { UNUSED(L); }  /* do nothing */
 
+
+/*
+** Correct pointers into 'oldstack' to point into 'L->stack'.
+*/
 static void correctstack (lua_State *L, StkId oldstack) {
   CallInfo *ci;
   UpVal *up;
@@ -261,7 +270,6 @@ static void correctstack (lua_State *L, StkId oldstack) {
       ci->u.l.trap = 1;  /* signal to update 'trap' in 'luaV_execute' */
   }
 }
-
 #endif
 
 
