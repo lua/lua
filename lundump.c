@@ -52,7 +52,7 @@ static l_noret error (LoadState *S, const char *why) {
 ** All high-level loads go through loadVector; you can change it to
 ** adapt to the endianness of the input
 */
-#define loadVector(S,b,n)	loadBlock(S,b,(n)*sizeof((b)[0]))
+#define loadVector(S,b,n)	loadBlock(S,b,cast_sizet(n)*sizeof((b)[0]))
 
 static void loadBlock (LoadState *S, void *b, size_t size) {
   if (luaZ_read(S->Z, b, size) != 0)
@@ -71,7 +71,7 @@ static void loadAlign (LoadState *S, unsigned align) {
 }
 
 
-#define getaddr(S,n,t)	cast(t *, getaddr_(S,(n) * sizeof(t)))
+#define getaddr(S,n,t)	cast(t *, getaddr_(S,cast_sizet(n) * sizeof(t)))
 
 static const void *getaddr_ (LoadState *S, size_t size) {
   const void *block = luaZ_getaddr(S->Z, size);
@@ -110,13 +110,6 @@ static size_t loadVarint (LoadState *S, size_t limit) {
 
 static size_t loadSize (LoadState *S) {
   return loadVarint(S, MAX_SIZE);
-}
-
-
-/*
-** Read an non-negative int */
-static unsigned loadUint (LoadState *S) {
-  return cast_uint(loadVarint(S, cast_sizet(INT_MAX)));
 }
 
 
@@ -188,15 +181,15 @@ static void loadString (LoadState *S, Proto *p, TString **sl) {
 
 
 static void loadCode (LoadState *S, Proto *f) {
-  unsigned n = loadUint(S);
+  int n = loadInt(S);
   loadAlign(S, sizeof(f->code[0]));
   if (S->fixed) {
     f->code = getaddr(S, n, Instruction);
-    f->sizecode = cast_int(n);
+    f->sizecode = n;
   }
   else {
     f->code = luaM_newvectorchecked(S->L, n, Instruction);
-    f->sizecode = cast_int(n);
+    f->sizecode = n;
     loadVector(S, f->code, n);
   }
 }
@@ -206,10 +199,10 @@ static void loadFunction(LoadState *S, Proto *f);
 
 
 static void loadConstants (LoadState *S, Proto *f) {
-  unsigned i;
-  unsigned n = loadUint(S);
+  int i;
+  int n = loadInt(S);
   f->k = luaM_newvectorchecked(S->L, n, TValue);
-  f->sizek = cast_int(n);
+  f->sizek = n;
   for (i = 0; i < n; i++)
     setnilvalue(&f->k[i]);
   for (i = 0; i < n; i++) {
@@ -248,10 +241,10 @@ static void loadConstants (LoadState *S, Proto *f) {
 
 
 static void loadProtos (LoadState *S, Proto *f) {
-  unsigned i;
-  unsigned n = loadUint(S);
+  int i;
+  int n = loadInt(S);
   f->p = luaM_newvectorchecked(S->L, n, Proto *);
-  f->sizep = cast_int(n);
+  f->sizep = n;
   for (i = 0; i < n; i++)
     f->p[i] = NULL;
   for (i = 0; i < n; i++) {
@@ -269,10 +262,10 @@ static void loadProtos (LoadState *S, Proto *f) {
 ** in that case all prototypes must be consistent for the GC.
 */
 static void loadUpvalues (LoadState *S, Proto *f) {
-  unsigned i;
-  unsigned n = loadUint(S);
+  int i;
+  int n = loadInt(S);
   f->upvalues = luaM_newvectorchecked(S->L, n, Upvaldesc);
-  f->sizeupvalues = cast_int(n);
+  f->sizeupvalues = n;
   for (i = 0; i < n; i++)  /* make array valid for GC */
     f->upvalues[i].name = NULL;
   for (i = 0; i < n; i++) {  /* following calls can raise errors */
@@ -284,33 +277,33 @@ static void loadUpvalues (LoadState *S, Proto *f) {
 
 
 static void loadDebug (LoadState *S, Proto *f) {
-  unsigned i;
-  unsigned n = loadUint(S);
+  int i;
+  int n = loadInt(S);
   if (S->fixed) {
     f->lineinfo = getaddr(S, n, ls_byte);
-    f->sizelineinfo = cast_int(n);
+    f->sizelineinfo = n;
   }
   else {
     f->lineinfo = luaM_newvectorchecked(S->L, n, ls_byte);
-    f->sizelineinfo = cast_int(n);
+    f->sizelineinfo = n;
     loadVector(S, f->lineinfo, n);
   }
-  n = loadUint(S);
+  n = loadInt(S);
   if (n > 0) {
     loadAlign(S, sizeof(int));
     if (S->fixed) {
       f->abslineinfo = getaddr(S, n, AbsLineInfo);
-      f->sizeabslineinfo = cast_int(n);
+      f->sizeabslineinfo = n;
     }
     else {
       f->abslineinfo = luaM_newvectorchecked(S->L, n, AbsLineInfo);
-      f->sizeabslineinfo = cast_int(n);
+      f->sizeabslineinfo = n;
       loadVector(S, f->abslineinfo, n);
     }
   }
-  n = loadUint(S);
+  n = loadInt(S);
   f->locvars = luaM_newvectorchecked(S->L, n, LocVar);
-  f->sizelocvars = cast_int(n);
+  f->sizelocvars = n;
   for (i = 0; i < n; i++)
     f->locvars[i].varname = NULL;
   for (i = 0; i < n; i++) {
@@ -318,9 +311,9 @@ static void loadDebug (LoadState *S, Proto *f) {
     f->locvars[i].startpc = loadInt(S);
     f->locvars[i].endpc = loadInt(S);
   }
-  n = loadUint(S);
+  n = loadInt(S);
   if (n != 0)  /* does it have debug information? */
-    n = cast_uint(f->sizeupvalues);  /* must be this many */
+    n = f->sizeupvalues;  /* must be this many */
   for (i = 0; i < n; i++)
     loadString(S, f, &f->upvalues[i].name);
 }
