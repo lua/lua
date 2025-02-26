@@ -127,6 +127,18 @@ assert(#a == 22 and a[#a] == 79)
 x, a = nil
 
 
+do   -- "bug" in 5.4.2
+  local function foo () foo () end    -- just create a stack overflow
+  local co = coroutine.create(foo)
+  -- running this coroutine would overflow the unsigned short 'nci', the
+  -- counter of CallInfo structures available to the thread.
+  -- (The issue only manifests in an 'assert'.)
+  local st, msg = coroutine.resume(co)
+  assert(string.find(msg, "stack overflow"))
+  assert(coroutine.status(co) == "dead")
+end
+
+
 print("to-be-closed variables in coroutines")
 
 local function func2close (f)

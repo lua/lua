@@ -290,7 +290,6 @@ struct lua_State {
   CommonHeader;
   lu_byte allowhook;
   TStatus status;
-  unsigned short nci;  /* number of items in 'ci' list */
   StkIdRel top;  /* first free slot in the stack */
   struct global_State *l_G;
   CallInfo *ci;  /* call info for current function */
@@ -306,6 +305,7 @@ struct lua_State {
   ptrdiff_t errfunc;  /* current error handling function (stack index) */
   l_uint32 nCcalls;  /* number of nested non-yieldable or C calls */
   int oldpc;  /* last pc traced */
+  int nci;  /* number of items in 'ci' list */
   int basehookcount;
   int hookcount;
   volatile l_signalT hookmask;
