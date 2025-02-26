@@ -310,8 +310,11 @@ checkprogout("ZYX)\nXYZ)\n")
 -- bug since 5.2: finalizer called when closing a state could
 -- subvert finalization order
 prepfile[[
--- should be called last
+-- ensure tables will be collected only at the end of the program
+collectgarbage"stop"
+
 print("creating 1")
+-- this finalizer should be called last
 setmetatable({}, {__gc = function () print(1) end})
 
 print("creating 2")

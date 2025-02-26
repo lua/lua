@@ -247,7 +247,7 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
         nosigdig++;
       else if (++sigdig <= MAXSIGDIG)  /* can read it without overflow? */
           r = (r * l_mathop(16.0)) + luaO_hexavalue(*s);
-      else e++; /* too many digits; ignore, but still count for exponent */
+      else e++;  /* too many digits; ignore, but still count for exponent */
       if (hasdot) e--;  /* decimal digit? correct exponent */
     }
     else break;  /* neither a dot nor a digit */
@@ -512,18 +512,18 @@ static void initbuff (lua_State *L, BuffFS *buff) {
 static void pushbuff (lua_State *L, void *ud) {
   BuffFS *buff = cast(BuffFS*, ud);
   switch (buff->err) {
-    case 1:
+    case 1:  /* memory error */
       luaD_throw(L, LUA_ERRMEM);
       break;
     case 2:  /* length overflow: Add "..." at the end of result */
       if (buff->buffsize - buff->blen < 3)
-        strcpy(buff->b + buff->blen - 3, "..."); /* 'blen' must be > 3 */
+        strcpy(buff->b + buff->blen - 3, "...");  /* 'blen' must be > 3 */
       else {  /* there is enough space left for the "..." */
         strcpy(buff->b + buff->blen, "...");
         buff->blen += 3;
       }
       /* FALLTHROUGH */
-    default: {  /* no errors */
+    default: {  /* no errors, but it can raise one creating the new string */
       TString *ts = luaS_newlstr(L, buff->b, buff->blen);
       setsvalue2s(L, L->top.p, ts);
       L->top.p++;

@@ -45,7 +45,7 @@ end
 -- test error message with no extra info
 assert(doit("error('hi', 0)") == 'hi')
 
--- test error message with no info
+-- test nil error message
 assert(doit("error()") == nil)
 
 
@@ -555,7 +555,7 @@ if not _soft then
 
   -- error in error handling
   local res, msg = xpcall(error, error)
-  assert(not res and type(msg) == 'string')
+  assert(not res and msg == 'error in error handling')
   print('+')
 
   local function f (x)
@@ -583,6 +583,27 @@ if not _soft then
   end
   checkerr("too many results", f)
 
+end
+
+
+do  -- errors in error handle that not necessarily go forever
+  local function err (n)   -- function to be used as message handler
+    -- generate an error unless n is zero, so that there is a limited
+    -- loop of errors
+    if type(n) ~= "number" then   -- some other error?
+      return n   -- report it
+    elseif n == 0 then
+      return "END"   -- that will be the final message
+    else error(n - 1)   -- does the loop
+    end
+  end
+
+  local res, msg = xpcall(error, err, 170)
+  assert(not res and msg == "END")
+
+  -- too many levels
+  local res, msg = xpcall(error, err, 300)
+  assert(not res and msg == "C stack overflow")
 end
 
 

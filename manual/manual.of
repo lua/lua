@@ -6347,7 +6347,7 @@ Opens all standard Lua libraries into the given state.
 @APIEntry{void luaL_openselectedlibs (lua_State *L, int load, int preload);|
 @apii{0,0,e}
 
-Opens (loads) and preloads selected libraries into the state @id{L}.
+Opens (loads) and preloads selected standard libraries into the state @id{L}.
 (To @emph{preload} means to add
 the library loader into the table @Lid{package.preload},
 so that the library can be required later by the program.

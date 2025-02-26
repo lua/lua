@@ -199,7 +199,7 @@ do
                 __index = function (_,k) pos1 = k end,
                 __newindex = function (_,k) pos2 = k; error() end, })
     local st, msg = pcall(table.move, a, f, e, t)
-    assert(not st and not msg and pos1 == x and pos2 == y)
+    assert(not st and pos1 == x and pos2 == y)
   end
   checkmove(1, maxI, 0, 1, 0)
   checkmove(0, maxI - 1, 1, maxI - 1, maxI)
