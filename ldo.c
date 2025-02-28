@@ -111,10 +111,6 @@ void luaD_seterrorobj (lua_State *L, TStatus errcode, StkId oldtop) {
       setsvalue2s(L, oldtop, luaS_newliteral(L, "error in error handling"));
       break;
     }
-    case LUA_OK: {  /* special case only for closing upvalues */
-      setnilvalue(s2v(oldtop));  /* no error message */
-      break;
-    }
     default: {
       lua_assert(errorstatus(errcode));  /* real error */
       setobjs2s(L, oldtop, L->top.p - 1);  /* error message on current top */

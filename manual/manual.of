@@ -1612,10 +1612,11 @@ or exiting by an error.
 Here, to @emph{close} a value means
 to call its @idx{__close} metamethod.
 When calling the metamethod,
-the value itself is passed as the first argument
-and the error object that caused the exit (if any)
+the value itself is passed as the first argument.
+If there was an error,
+the error object that caused the exit
 is passed as a second argument;
-if there was no error, the second argument is @nil.
+otherwise, there is no second argument.
 
 The value assigned to a to-be-closed variable
 must have a @idx{__close} metamethod

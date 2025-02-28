@@ -280,6 +280,32 @@ do
 end
 
 
+do  -- testing presence of second argument
+  local function foo (howtoclose, obj, n)
+    local ca   -- copy of 'a' visible inside its close metamethod
+    do
+      local a <close> = func2close(function (...)
+        local t = table.pack(...)
+        assert(select("#", ...) == n)
+        assert(t.n == n and t[1] == ca and (t.n < 2 or t[2] == obj))
+        ca = 15   -- final value to be returned if howtoclose=="scope"
+      end)
+      ca = a
+      if howtoclose == "ret" then return obj  -- 'a' closed by return
+      elseif howtoclose == "err" then error(obj)  -- 'a' closed by error
+      end
+    end   -- 'a' closed by end of scope
+    return ca   -- ca now should be 15
+  end
+  -- with no errors, closing methods receive no extra argument
+  assert(foo("scope", nil, 1) == 15)  -- close by end of scope
+  assert(foo("ret", 32, 1) == 32)     -- close by return
+  -- with errors, they do
+  local st, msg = pcall(foo, "err", 23, 2)   -- close by error
+  assert(not st and msg == 23)
+end
+
+
 -- testing to-be-closed x compile-time constants
 -- (there were some bugs here in Lua 5.4-rc3, due to a confusion
 -- between compile levels and stack levels of variables)
@@ -865,8 +891,10 @@ do
     if extra then
       extrares = co()    -- runs until first (extra) yield
     end
-    local res = table.pack(co())   -- runs until yield inside '__close'
-    assert(res.n == 2 and res[2] == nil)
+    local res = table.pack(co())   -- runs until "regular" yield
+    -- regular yield will yield all values passed to the close function;
+    -- without errors, that is only the object being closed.
+    assert(res.n == 1 and type(res[1]) == "table")
     local res2 = table.pack(co())   -- runs until end of function
     assert(res2.n == t.n)
     for i = 1, #t do
@@ -879,10 +907,10 @@ do
   end
 
   local function foo ()
-    local x <close> = func2close(coroutine.yield)
+    local x <close> = func2close(coroutine.yield)   -- "regular" yield
     local extra <close> = func2close(function (self)
       assert(self == extrares)
-      coroutine.yield(100)
+      coroutine.yield(100)    -- first (extra) yield
     end)
     extrares = extra
     return table.unpack{10, x, 30}
@@ -891,21 +919,21 @@ do
   assert(extrares == 100)
 
   local function foo ()
-    local x <close> = func2close(coroutine.yield)
+    local x <close> = func2close(coroutine.yield)   -- "regular" yield
     return
   end
   check(foo, false)
 
   local function foo ()
-    local x <close> = func2close(coroutine.yield)
+    local x <close> = func2close(coroutine.yield)   -- "regular" yield
     local y, z = 20, 30
     return x
   end
   check(foo, false, "x")
 
   local function foo ()
-    local x <close> = func2close(coroutine.yield)
-    local extra <close> = func2close(coroutine.yield)
+    local x <close> = func2close(coroutine.yield)   -- "regular" yield
+    local extra <close> = func2close(coroutine.yield)  -- extra yield
     return table.unpack({}, 1, 100)   -- 100 nils
   end
   check(foo, true, table.unpack({}, 1, 100))

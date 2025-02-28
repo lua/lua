@@ -100,21 +100,23 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
 
 
 /*
-** Call closing method for object 'obj' with error message 'err'. The
+** Call closing method for object 'obj' with error object 'err'. The
 ** boolean 'yy' controls whether the call is yieldable.
 ** (This function assumes EXTRA_STACK.)
 */
 static void callclosemethod (lua_State *L, TValue *obj, TValue *err, int yy) {
   StkId top = L->top.p;
+  StkId func = top;
   const TValue *tm = luaT_gettmbyobj(L, obj, TM_CLOSE);
-  setobj2s(L, top, tm);  /* will call metamethod... */
-  setobj2s(L, top + 1, obj);  /* with 'self' as the 1st argument */
-  setobj2s(L, top + 2, err);  /* and error msg. as 2nd argument */
-  L->top.p = top + 3;  /* add function and arguments */
+  setobj2s(L, top++, tm);  /* will call metamethod... */
+  setobj2s(L, top++, obj);  /* with 'self' as the 1st argument */
+  if (err != NULL)  /* if there was an error... */
+    setobj2s(L, top++, err);  /* then error object will be 2nd argument */
+  L->top.p = top;  /* add function and arguments */
   if (yy)
-    luaD_call(L, top, 0);
+    luaD_call(L, func, 0);
   else
-    luaD_callnoyield(L, top, 0);
+    luaD_callnoyield(L, func, 0);
 }
 
 
@@ -144,11 +146,17 @@ static void prepcallclosemth (lua_State *L, StkId level, TStatus status,
                                             int yy) {
   TValue *uv = s2v(level);  /* value being closed */
   TValue *errobj;
-  if (status == CLOSEKTOP)
-    errobj = &G(L)->nilvalue;  /* error object is nil */
-  else {  /* 'luaD_seterrorobj' will set top to level + 2 */
-    errobj = s2v(level + 1);  /* error object goes after 'uv' */
-    luaD_seterrorobj(L, status, level + 1);  /* set error object */
+  switch (status) {
+    case LUA_OK:
+      L->top.p = level + 1;  /* call will be at this level */
+      /* FALLTHROUGH */
+    case CLOSEKTOP:  /* don't need to change top */
+      errobj = NULL;  /* no error object */
+      break;
+    default:  /* 'luaD_seterrorobj' will set top to level + 2 */
+      errobj = s2v(level + 1);  /* error object goes after 'uv' */
+      luaD_seterrorobj(L, status, level + 1);  /* set error object */
+      break;
   }
   callclosemethod(L, uv, errobj, yy);
 }
