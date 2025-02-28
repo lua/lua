@@ -290,7 +290,9 @@ an @def{error object}
 is propagated with information about the error.
 Lua itself only generates errors whose error object is a string,
 but programs can generate errors with
-any value as the error object.
+any value as the error object,
+except @nil.
+(Lua will change a @nil as error object to a string message.)
 It is up to the Lua program or its host to handle such error objects.
 For historical reasons,
 an error object is often called an @def{error message},
@@ -8082,6 +8084,8 @@ multiple assignment:
 The default for @id{a2} is @id{a1}.
 The destination range can overlap with the source range.
 The number of elements to be moved must fit in a Lua integer.
+If @id{f} is larger than @id{e},
+nothing is moved.
 
 Returns the destination table @id{a2}.
 
@@ -9400,6 +9404,11 @@ declare a local variable with the same name in the loop body.
 
 @item{
 A chain of @id{__call} metamethods can have at most 15 objects.
+}
+
+@item{
+In an error, a @nil as the error object is replaced by a
+string message.
 }
 
 }

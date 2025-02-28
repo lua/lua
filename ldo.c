@@ -112,12 +112,16 @@ void luaD_seterrorobj (lua_State *L, TStatus errcode, StkId oldtop) {
       break;
     }
     default: {
-      lua_assert(errorstatus(errcode));  /* real error */
-      setobjs2s(L, oldtop, L->top.p - 1);  /* error message on current top */
+      lua_assert(errorstatus(errcode));  /* must be a real error */
+      if (!ttisnil(s2v(L->top.p - 1))) {  /* error object is not nil? */
+        setobjs2s(L, oldtop, L->top.p - 1);  /* move it to 'oldtop' */
+      }
+      else  /* change it to a proper message */
+        setsvalue2s(L, oldtop, luaS_newliteral(L, "<error object is nil>"));
       break;
     }
   }
-  L->top.p = oldtop + 1;
+  L->top.p = oldtop + 1;  /* top goes back to old top plus error object */
 }
 
 
