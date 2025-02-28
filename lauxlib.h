@@ -165,7 +165,11 @@ LUALIB_API void (luaL_requiref) (lua_State *L, const char *modname,
 
 
 /* push the value used to represent failure/error */
+#if defined(LUA_FAILISFALSE)
+#define luaL_pushfail(L)	lua_pushboolean(L, 0)
+#else
 #define luaL_pushfail(L)	lua_pushnil(L)
+#endif
 
 
 
