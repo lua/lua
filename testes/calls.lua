@@ -480,15 +480,22 @@ assert((function (a) return a end)() == nil)
 
 print("testing binary chunks")
 do
-  local header = string.pack("c4BBc6BBB",
-    "\27Lua",                                  -- signature
-    0x55,                                      -- version 5.5 (0x55)
-    0,                                         -- format
-    "\x19\x93\r\n\x1a\n",                      -- data
-    4,                                         -- size of instruction
-    string.packsize("j"),                      -- sizeof(lua integer)
-    string.packsize("n")                       -- sizeof(lua number)
-  )
+  local headformat = "c4BBc6BiBI4BjBn"
+  local header = {  -- header components
+    "\27Lua",               -- signature
+    0x55,                   -- version 5.5 (0x55)
+    0,                      -- format
+    "\x19\x93\r\n\x1a\n",   -- a binary string
+    string.packsize("i"),   -- size of an int
+    -0x5678,                -- an int
+    4,                      -- size of an instruction
+    0x12345678,             -- an instruction (4 bytes)
+    string.packsize("j"),   -- size of a Lua integer
+    -0x5678,                -- a Lua integer
+    string.packsize("n"),   -- size of a Lua float
+    -370.5,                 -- a Lua float
+  }
+
   local c = string.dump(function ()
     local a = 1; local b = 3;
     local f = function () return a + b + _ENV.c; end    -- upvalues
@@ -500,17 +507,23 @@ do
   assert(assert(load(c))() == 10)
 
   -- check header
-  assert(string.sub(c, 1, #header) == header)
-  -- check LUAC_INT and LUAC_NUM
-  local ci, cn = string.unpack("jn", c, #header + 1)
-  assert(ci == 0x5678 and cn == 370.5)
-
-  -- corrupted header
+  local t = {string.unpack(headformat, c)}
   for i = 1, #header do
+    assert(t[i] == header[i])
+  end
+
+  -- Testing corrupted header.
+  -- A single wrong byte in the head invalidates the chunk,
+  -- except for the Lua float check. (If numbers are long double,
+  -- the representation may need padding, and changing that padding
+  -- will not invalidate the chunk.)
+  local headlen = string.packsize(headformat)
+  headlen = headlen - string.packsize("n")     -- remove float check
+  for i = 1, headlen do
     local s = string.sub(c, 1, i - 1) ..
-              string.char(string.byte(string.sub(c, i, i)) + 1) ..
+              string.char((string.byte(string.sub(c, i, i)) + 1) & 0xFF) ..
               string.sub(c, i + 1, -1)
-    assert(#s == #c)
+    assert(#s == #c and s ~= c)
     assert(not load(s))
   end
 

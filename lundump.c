@@ -345,13 +345,29 @@ static void checkliteral (LoadState *S, const char *s, const char *msg) {
 }
 
 
-static void fchecksize (LoadState *S, size_t size, const char *tname) {
-  if (loadByte(S) != size)
-    error(S, luaO_pushfstring(S->L, "%s size mismatch", tname));
+static l_noret numerror (LoadState *S, const char *what, const char *tname) {
+  const char *msg = luaO_pushfstring(S->L, "%s %s mismatch", tname, what);
+  error(S, msg);
 }
 
 
-#define checksize(S,t)	fchecksize(S,sizeof(t),#t)
+static void checknumsize (LoadState *S, int size, const char *tname) {
+  if (size != loadByte(S))
+    numerror(S, "size", tname);
+}
+
+
+static void checknumformat (LoadState *S, int eq, const char *tname) {
+  if (!eq)
+    numerror(S, "format", tname);
+}
+
+
+#define checknum(S,tvar,value,tname)  \
+  { tvar i; checknumsize(S, sizeof(i), tname); \
+    loadVar(S, i); \
+    checknumformat(S, i == value, tname); }
+
 
 static void checkHeader (LoadState *S) {
   /* skip 1st char (already read and checked) */
@@ -361,13 +377,10 @@ static void checkHeader (LoadState *S) {
   if (loadByte(S) != LUAC_FORMAT)
     error(S, "format mismatch");
   checkliteral(S, LUAC_DATA, "corrupted chunk");
-  checksize(S, Instruction);
-  checksize(S, lua_Integer);
-  checksize(S, lua_Number);
-  if (loadInteger(S) != LUAC_INT)
-    error(S, "integer format mismatch");
-  if (loadNumber(S) != LUAC_NUM)
-    error(S, "float format mismatch");
+  checknum(S, int, LUAC_INT, "int");
+  checknum(S, Instruction, LUAC_INST, "instruction");
+  checknum(S, lua_Integer, LUAC_INT, "Lua integer");
+  checknum(S, lua_Number, LUAC_NUM, "Lua number");
 }
 
 
@@ -398,7 +411,8 @@ LClosure *luaU_undump (lua_State *L, ZIO *Z, const char *name, int fixed) {
   cl->p = luaF_newproto(L);
   luaC_objbarrier(L, cl, cl->p);
   loadFunction(&S, cl->p);
-  lua_assert(cl->nupvalues == cl->p->sizeupvalues);
+  if (cl->nupvalues != cl->p->sizeupvalues)
+    error(&S, "corrupted chunk");
   luai_verifycode(L, cl->p);
   L->top.p--;  /* pop table */
   return cl;
