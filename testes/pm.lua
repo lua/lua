@@ -1,5 +1,5 @@
 -- $Id: testes/pm.lua $
--- See Copyright Notice in file all.lua
+-- See Copyright Notice in file lua.h
 
 -- UTF-8 file
 

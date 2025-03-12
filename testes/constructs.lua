@@ -1,5 +1,5 @@
 -- $Id: testes/constructs.lua $
--- See Copyright Notice in file all.lua
+-- See Copyright Notice in file lua.h
 
 ;;print "testing syntax";;
 

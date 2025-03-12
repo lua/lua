@@ -1,5 +1,5 @@
 -- $Id: testes/tpack.lua $
--- See Copyright Notice in file all.lua
+-- See Copyright Notice in file lua.h
 
 local pack = string.pack
 local packsize = string.packsize

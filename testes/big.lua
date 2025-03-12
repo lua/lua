@@ -1,5 +1,5 @@
 -- $Id: testes/big.lua $
--- See Copyright Notice in file all.lua
+-- See Copyright Notice in file lua.h
 
 if _soft then
   return 'a'

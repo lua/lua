@@ -1,6 +1,6 @@
 # testing special comment on first line
 -- $Id: testes/main.lua $
--- See Copyright Notice in file all.lua
+-- See Copyright Notice in file lua.h
 
 -- most (all?) tests here assume a reasonable "Unix-like" shell
 if _port then return end

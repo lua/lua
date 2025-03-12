@@ -1,5 +1,5 @@
--- $Id: heavy.lua,v 1.7 2017/12/29 15:42:15 roberto Exp $
--- See Copyright Notice in file all.lua
+-- $Id: testes/heavy.lua,v $
+-- See Copyright Notice in file lua.h
 
 local function teststring ()
   print("creating a string too long")

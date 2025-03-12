@@ -1,5 +1,5 @@
 -- $Id: testes/coroutine.lua $
--- See Copyright Notice in file all.lua
+-- See Copyright Notice in file lua.h
 
 print "testing coroutines"
 
