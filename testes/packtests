@@ -28,6 +28,7 @@ $NAME/literals.lua  \
 $NAME/locals.lua  \
 $NAME/main.lua  \
 $NAME/math.lua  \
+$NAME/memerr.lua  \
 $NAME/nextvar.lua  \
 $NAME/pm.lua  \
 $NAME/sort.lua  \
