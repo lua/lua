@@ -832,6 +832,10 @@ l_noret luaG_errormsg (lua_State *L) {
     L->top.p++;  /* assume EXTRA_STACK */
     luaD_callnoyield(L, L->top.p - 2, 1);  /* call it */
   }
+  if (ttisnil(s2v(L->top.p - 1))) {  /* error object is nil? */
+    /* change it to a proper message */
+    setsvalue2s(L, L->top.p - 1, luaS_newliteral(L, "<no error object>"));
+  }
   luaD_throw(L, LUA_ERRRUN);
 }
 

@@ -102,24 +102,13 @@ struct lua_longjmp {
 
 
 void luaD_seterrorobj (lua_State *L, TStatus errcode, StkId oldtop) {
-  switch (errcode) {
-    case LUA_ERRMEM: {  /* memory error? */
-      setsvalue2s(L, oldtop, G(L)->memerrmsg); /* reuse preregistered msg. */
-      break;
-    }
-    case LUA_ERRERR: {
-      setsvalue2s(L, oldtop, luaS_newliteral(L, "error in error handling"));
-      break;
-    }
-    default: {
-      lua_assert(errorstatus(errcode));  /* must be a real error */
-      if (!ttisnil(s2v(L->top.p - 1))) {  /* error object is not nil? */
-        setobjs2s(L, oldtop, L->top.p - 1);  /* move it to 'oldtop' */
-      }
-      else  /* change it to a proper message */
-        setsvalue2s(L, oldtop, luaS_newliteral(L, "<error object is nil>"));
-      break;
-    }
+  if (errcode == LUA_ERRMEM) {  /* memory error? */
+    setsvalue2s(L, oldtop, G(L)->memerrmsg); /* reuse preregistered msg. */
+  }
+  else {
+    lua_assert(errorstatus(errcode));  /* must be a real error */
+    lua_assert(!ttisnil(s2v(L->top.p - 1)));  /* with a non-nil object */
+    setobjs2s(L, oldtop, L->top.p - 1);  /* move it to 'oldtop' */
   }
   L->top.p = oldtop + 1;  /* top goes back to old top plus error object */
 }
@@ -188,6 +177,15 @@ TStatus luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 
 /* stack size with extra space for error handling */
 #define ERRORSTACKSIZE	(MAXSTACK + STACKERRSPACE)
+
+
+/* raise an error while running the message handler */
+l_noret luaD_errerr (lua_State *L) {
+  TString *msg = luaS_newliteral(L, "error in error handling");
+  setsvalue2s(L, L->top.p, msg);
+  L->top.p++;  /* assume EXTRA_STACK */
+  luaD_throw(L, LUA_ERRERR);
+}
 
 
 /*
@@ -317,7 +315,7 @@ int luaD_growstack (lua_State *L, int n, int raiseerror) {
        a stack error; cannot grow further than that. */
     lua_assert(stacksize(L) == ERRORSTACKSIZE);
     if (raiseerror)
-      luaD_throw(L, LUA_ERRERR);  /* error inside message handler */
+      luaD_errerr(L);  /* error inside message handler */
     return 0;  /* if not 'raiseerror', just signal it */
   }
   else if (n < MAXSTACK) {  /* avoids arithmetic overflows */

@@ -46,7 +46,7 @@ end
 assert(doit("error('hi', 0)") == 'hi')
 
 -- test nil error message
-assert(doit("error()") == "<error object is nil>")
+assert(doit("error()") == "<no error object>")
 
 
 -- test common errors/errors that crashed in the past
@@ -614,7 +614,7 @@ do
   assert(not res and msg == t)
 
   res, msg = pcall(function () error(nil) end)
-  assert(not res and msg == "<error object is nil>")
+  assert(not res and msg == "<no error object>")
 
   local function f() error{msg='x'} end
   res, msg = xpcall(f, function (r) return {msg=r.msg..'y'} end)
