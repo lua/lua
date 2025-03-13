@@ -370,6 +370,19 @@ x = 0 .."a".."b"..c..d.."e".."f".."g"
 assert(x.val == "0abcdefg")
 
 
+do
+  -- bug since 5.4.1
+  local mt = setmetatable({__newindex={}}, {__mode='v'})
+  local t = setmetatable({}, mt)
+
+  if T then T.allocfailnext() end
+
+  -- seg. fault
+  for i=1, 10 do t[i] = 1 end
+end
+
+
+
 -- concat metamethod x numbers (bug in 5.1.1)
 c = {}
 local x
