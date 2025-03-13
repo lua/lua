@@ -379,6 +379,17 @@ x = 0 .."a".."b"..c..d.."e".."f".."g"
 assert(x.val == "0abcdefg")
 
 
+do
+  -- bug since 5.4.1 (test needs T)
+  local mt = setmetatable({__newindex={}}, {__mode='v'})
+  local t = setmetatable({}, mt)
+
+  if T then T.allocfailnext() end
+
+  -- seg. fault
+  for i=1, 10 do t[i] = 1 end
+end
+
 -- concat metamethod x numbers (bug in 5.1.1)
 c = {}
 local x
@@ -481,7 +492,7 @@ assert(not pcall(function (a,b) return a[b] end, a, 10))
 assert(not pcall(function (a,b,c) a[b] = c end, a, 10, true))
 
 -- bug in 5.1
-T, K, V = nil
+local T, K, V = nil
 grandparent = {}
 grandparent.__newindex = function(t,k,v) T=t; K=k; V=v end
 

@@ -325,6 +325,11 @@ lu_byte luaV_finishget (lua_State *L, const TValue *t, TValue *key,
 
 /*
 ** Finish a table assignment 't[key] = val'.
+** About anchoring the table before the call to 'luaH_finishset':
+** This call may trigger an emergency collection. When loop>0,
+** the table being acessed is a field in some metatable. If this
+** metatable is weak and the table is not anchored, this collection
+** could collect that table while it is being updated.
 */
 void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
                       TValue *val, int hres) {
@@ -335,7 +340,10 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
       Table *h = hvalue(t);  /* save 't' table */
       tm = fasttm(L, h->metatable, TM_NEWINDEX);  /* get metamethod */
       if (tm == NULL) {  /* no metamethod? */
+        sethvalue2s(L, L->top.p, h);  /* anchor 't' */
+        L->top.p++;  /* assume EXTRA_STACK */
         luaH_finishset(L, h, key, val, hres);  /* set new value */
+        L->top.p--;
         invalidateTMcache(h);
         luaC_barrierback(L, obj2gco(h), val);
         return;

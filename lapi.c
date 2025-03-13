@@ -681,6 +681,11 @@ static int auxgetstr (lua_State *L, const TValue *t, const char *k) {
 }
 
 
+/*
+** The following function assumes that the registry cannot be a weak
+** table, so that en mergency collection while using the global table
+** cannot collect it.
+*/
 static void getGlobalTable (lua_State *L, TValue *gt) {
   Table *registry = hvalue(&G(L)->l_registry);
   lu_byte tag = luaH_getint(registry, LUA_RIDX_GLOBALS, gt);
