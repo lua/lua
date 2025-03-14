@@ -162,6 +162,9 @@ checkmessage("aaa=(1)..{}", "a table value")
 -- bug in 5.4.6
 checkmessage("a = {_ENV = {}}; print(a._ENV.x + 1)", "field 'x'")
 
+-- a similar bug, since 5.4.0
+checkmessage("print(('_ENV').x + 1)", "field 'x'")
+
 _G.aaa, _G.bbbb = nil
 
 -- calls

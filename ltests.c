@@ -982,7 +982,7 @@ static int gc_printobj (lua_State *L) {
 }
 
 
-static const char *statenames[] = {
+static const char *const statenames[] = {
   "propagate", "enteratomic", "atomic", "sweepallgc", "sweepfinobj",
   "sweeptobefnz", "sweepend", "callfin", "pause", ""};
 
