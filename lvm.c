@@ -362,8 +362,10 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
     }
     t = tm;  /* else repeat assignment over 'tm' */
     luaV_fastset(t, key, val, hres, luaH_pset);
-    if (hres == HOK)
+    if (hres == HOK) {
+      luaV_finishfastset(L, t, val);
       return;  /* done */
+    }
     /* else 'return luaV_finishset(L, t, key, val, slot)' (loop) */
   }
   luaG_runerror(L, "'__newindex' chain too long; possible loop");
