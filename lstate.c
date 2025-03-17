@@ -272,7 +272,9 @@ static void close_state (lua_State *L) {
     luaC_freeallobjects(L);  /* just collect its objects */
   else {  /* closing a fully built state */
     L->ci = &L->base_ci;  /* unwind CallInfo list */
+    L->errfunc = 0;   /* stack unwind can "throw away" the error function */
     luaD_closeprotected(L, 1, LUA_OK);  /* close all upvalues */
+    L->top.p = L->stack.p + 1;  /* empty the stack to run finalizers */
     luaC_freeallobjects(L);  /* collect all objects */
     luai_userstateclose(L);
   }
@@ -328,6 +330,7 @@ int luaE_resetthread (lua_State *L, int status) {
   if (status == LUA_YIELD)
     status = LUA_OK;
   L->status = LUA_OK;  /* so it can run __close metamethods */
+  L->errfunc = 0;   /* stack unwind can "throw away" the error function */
   status = luaD_closeprotected(L, 1, status);
   if (status != LUA_OK)  /* errors? */
     luaD_seterrorobj(L, status, L->stack.p + 1);
