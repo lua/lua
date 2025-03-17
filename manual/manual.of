@@ -6230,14 +6230,16 @@ Returns the name of the type of the value at the given index.
 @APIEntry{void luaL_unref (lua_State *L, int t, int ref);|
 @apii{0,0,-}
 
-Releases the reference @id{ref} from the table at index @id{t}
-@seeC{luaL_ref}.
-The entry is removed from the table,
+Releases a reference @see{luaL_ref}.
+The integer @id{ref} must be either
+@Lid{LUA_NOREF}, @Lid{LUA_REFNIL},
+or a reference previously returned by @Lid{luaL_ref}
+and not already released.
+If @id{ref} is either @Lid{LUA_NOREF} or @Lid{LUA_REFNIL}
+this function does nothing.
+Otherwise, the entry is removed from the table,
 so that the referred object can be collected and
 the reference @id{ref} can be used again by @Lid{luaL_ref}.
-
-If @id{ref} is @Lid{LUA_NOREF} or @Lid{LUA_REFNIL},
-@Lid{luaL_unref} does nothing.
 
 }
 
