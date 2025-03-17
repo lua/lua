@@ -872,6 +872,28 @@ void lua_printstack (lua_State *L) {
 }
 
 
+int lua_printallstack (lua_State *L) {
+  StkId p;
+  int i = 1;
+  CallInfo *ci = &L->base_ci;
+  printf("stack: >>\n");
+  for (p = L->stack.p; p < L->top.p; p++) {
+    if (ci != NULL && p == ci->func.p) {
+      printf("  ---\n");
+      if (ci == L->ci)
+        ci = NULL;  /* printed last frame */
+      else
+        ci = ci->next;
+    }
+    printf("%3d: ", i++);
+    lua_printvalue(s2v(p));
+    printf("\n");
+  }
+  printf("<<\n");
+  return 0;
+}
+
+
 static int get_limits (lua_State *L) {
   lua_createtable(L, 0, 5);
   setnameval(L, "IS32INT", LUAI_IS32INT);
@@ -2102,6 +2124,7 @@ static const struct luaL_Reg tests_funcs[] = {
   {"limits", get_limits},
   {"listcode", listcode},
   {"printcode", printcode},
+  {"printallstack", lua_printallstack},
   {"listk", listk},
   {"listabslineinfo", listabslineinfo},
   {"listlocals", listlocals},

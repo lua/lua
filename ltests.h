@@ -94,6 +94,7 @@ LUAI_FUNC void lua_printvalue (struct TValue *v);
 ** Function to print the stack
 */
 LUAI_FUNC void lua_printstack (lua_State *L);
+LUAI_FUNC int lua_printallstack (lua_State *L);
 
 
 /* test for lock/unlock */
