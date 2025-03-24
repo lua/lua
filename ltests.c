@@ -327,37 +327,40 @@ void lua_printobj (lua_State *L, struct GCObject *o) {
 
 
 void lua_printvalue (TValue *v) {
-  switch (ttype(v)) {
-    case LUA_TNUMBER: {
+  switch (ttypetag(v)) {
+    case LUA_VNUMINT: case LUA_VNUMFLT: {
       char buff[LUA_N2SBUFFSZ];
       unsigned len = luaO_tostringbuff(v, buff);
       buff[len] = '\0';
       printf("%s", buff);
       break;
     }
-    case LUA_TSTRING: {
-      printf("'%s'", getstr(tsvalue(v)));
-      break;
-    }
-    case LUA_TBOOLEAN: {
-      printf("%s", (!l_isfalse(v) ? "true" : "false"));
-      break;
-    }
-    case LUA_TLIGHTUSERDATA: {
-      printf("light udata: %p", pvalue(v));
-      break;
-    }
-    case LUA_TNIL: {
-      printf("nil");
-      break;
-    }
-    default: {
-      if (ttislcf(v))
-        printf("light C function: %p", fvalue(v));
-      else  /* must be collectable */
-        printf("%s: %p", ttypename(ttype(v)), gcvalue(v));
-      break;
-    }
+    case LUA_VSHRSTR:
+      printf("'%s'", getstr(tsvalue(v))); break;
+    case LUA_VLNGSTR:
+      printf("'%.30s...'", getstr(tsvalue(v))); break;
+    case LUA_VFALSE:
+      printf("%s", "false"); break;
+    case LUA_VTRUE:
+      printf("%s", "true"); break;
+    case LUA_VLIGHTUSERDATA:
+      printf("light udata: %p", pvalue(v)); break;
+    case LUA_VUSERDATA:
+      printf("full udata: %p", uvalue(v)); break;
+    case LUA_VNIL:
+      printf("nil"); break;
+    case LUA_VLCF:
+      printf("light C function: %p", fvalue(v)); break;
+    case LUA_VCCL:
+      printf("C closure: %p", clCvalue(v)); break;
+    case LUA_VLCL:
+      printf("Lua function: %p", clLvalue(v)); break;
+    case LUA_VTHREAD:
+      printf("thread: %p", thvalue(v)); break;
+    case LUA_VTABLE:
+      printf("table: %p", hvalue(v)); break;
+    default:
+      lua_assert(0);
   }
 }
 
