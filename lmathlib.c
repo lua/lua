@@ -593,8 +593,8 @@ static int math_random (lua_State *L) {
   /* random integer in the interval [low, up] */
   luaL_argcheck(L, low <= up, 1, "interval is empty");
   /* project random integer into the interval [0, up - low] */
-  p = project(I2UInt(rv), (lua_Unsigned)up - (lua_Unsigned)low, state);
-  lua_pushinteger(L, l_castU2S(p) + low);
+  p = project(I2UInt(rv), l_castS2U(up) - l_castS2U(low), state);
+  lua_pushinteger(L, l_castU2S(p + l_castS2U(low)));
   return 1;
 }
 
