@@ -142,9 +142,6 @@ LUA_API void *debug_realloc (void *ud, void *block,
 #define STRCACHE_N	23
 #define STRCACHE_M	5
 
-#undef LUAI_USER_ALIGNMENT_T
-#define LUAI_USER_ALIGNMENT_T   union { char b[sizeof(void*) * 8]; }
-
 
 /*
 ** This one is not compatible with tests for opcode optimizations,

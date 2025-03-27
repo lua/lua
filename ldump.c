@@ -87,7 +87,7 @@ static void dumpByte (DumpState *D, int y) {
 ** size for 'dumpVarint' buffer: each byte can store up to 7 bits.
 ** (The "+6" rounds up the division.)
 */
-#define DIBS    ((sizeof(size_t) * CHAR_BIT + 6) / 7)
+#define DIBS    ((l_numbits(size_t) + 6) / 7)
 
 /*
 ** Dumps an unsigned integer using the MSB Varint encoding

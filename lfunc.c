@@ -162,13 +162,8 @@ static void prepcallclosemth (lua_State *L, StkId level, TStatus status,
 }
 
 
-/*
-** Maximum value for deltas in 'tbclist', dependent on the type
-** of delta. (This macro assumes that an 'L' is in scope where it
-** is used.)
-*/
-#define MAXDELTA  \
-	((256ul << ((sizeof(L->stack.p->tbclist.delta) - 1) * 8)) - 1)
+/* Maximum value for deltas in 'tbclist' */
+#define MAXDELTA       USHRT_MAX
 
 
 /*

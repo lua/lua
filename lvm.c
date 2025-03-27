@@ -774,7 +774,7 @@ lua_Number luaV_modf (lua_State *L, lua_Number m, lua_Number n) {
 
 
 /* number of bits in an integer */
-#define NBITS	cast_int(sizeof(lua_Integer) * CHAR_BIT)
+#define NBITS	l_numbits(lua_Integer)
 
 
 /*

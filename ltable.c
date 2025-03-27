@@ -67,7 +67,7 @@ typedef union {
 ** MAXABITS is the largest integer such that 2^MAXABITS fits in an
 ** unsigned int.
 */
-#define MAXABITS	cast_int(sizeof(int) * CHAR_BIT - 1)
+#define MAXABITS	(l_numbits(int) - 1)
 
 
 /*
