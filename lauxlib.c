@@ -541,17 +541,17 @@ static void newbox (lua_State *L) {
 
 /*
 ** Compute new size for buffer 'B', enough to accommodate extra 'sz'
-** bytes plus one for a terminating zero. (The test for "not big enough"
-** also gets the case when the computation of 'newsize' overflows.)
+** bytes plus one for a terminating zero.
 */
 static size_t newbuffsize (luaL_Buffer *B, size_t sz) {
-  size_t newsize = (B->size / 2) * 3;  /* buffer size * 1.5 */
-  if (l_unlikely(sz > MAX_SIZE - B->n - 1))
+  size_t newsize = B->size;
+  if (l_unlikely(sz >= MAX_SIZE - B->n))
     return cast_sizet(luaL_error(B->L, "resulting string too large"));
-  if (newsize < B->n + sz + 1 || newsize > MAX_SIZE) {
-    /* newsize was not big enough or too big */
+  /* else  B->n + sz + 1 <= MAX_SIZE */
+  if (newsize <= MAX_SIZE/3 * 2)  /* no overflow? */
+    newsize += (newsize >> 1);  /* new size *= 1.5 */
+  if (newsize < B->n + sz + 1)  /* not big enough? */
     newsize = B->n + sz + 1;
-  }
   return newsize;
 }
 
