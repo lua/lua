@@ -199,7 +199,7 @@ l_noret luaD_errerr (lua_State *L) {
 ** The following macro chooses how strict is the code.
 */
 #if !defined(LUAI_STRICT_ADDRESS)
-#define LUAI_STRICT_ADDRESS	0
+#define LUAI_STRICT_ADDRESS	1
 #endif
 
 #if LUAI_STRICT_ADDRESS

@@ -44,8 +44,8 @@
 #define LUA_RAND32
 
 
-/* test stack reallocation with strict address use */
-#define LUAI_STRICT_ADDRESS	1
+/* test stack reallocation without strict address use */
+#define LUAI_STRICT_ADDRESS	0
 
 
 /* memory-allocator control variables */
