@@ -732,18 +732,19 @@ static int f_setvbuf (lua_State *L) {
 }
 
 
-
-static int io_flush (lua_State *L) {
-  FILE *f = getiofile(L, IO_OUTPUT);
+static int aux_flush (lua_State *L, FILE *f) {
   errno = 0;
   return luaL_fileresult(L, fflush(f) == 0, NULL);
 }
 
 
 static int f_flush (lua_State *L) {
-  FILE *f = tofile(L);
-  errno = 0;
-  return luaL_fileresult(L, fflush(f) == 0, NULL);
+  return aux_flush(L, tofile(L));
+}
+
+
+static int io_flush (lua_State *L) {
+  return aux_flush(L, getiofile(L, IO_OUTPUT));
 }
 
 

@@ -347,7 +347,7 @@ collectgarbage()
 
 assert(io.write(' ' .. t .. ' '))
 assert(io.write(';', 'end of file\n'))
-f:flush(); io.flush()
+assert(f:flush()); assert(io.flush())
 f:close()
 print('+')
 
@@ -458,6 +458,23 @@ do   -- testing closing file in line iteration
   local st, msg = pcall(foo, file)
   assert(st == false and io.type(msg) == "closed file")
 
+end
+
+
+do print("testing flush")
+  local f = io.output("/dev/null")
+  assert(f:write("abcd"))   -- write to buffer
+  assert(f:flush())         -- write to device
+  assert(f:write("abcd"))   -- write to buffer
+  assert(io.flush())        -- write to device
+  assert(f:close())
+
+  local f = io.output("/dev/full")
+  assert(f:write("abcd"))   -- write to buffer
+  assert(not f:flush())     -- cannot write to device
+  assert(f:write("abcd"))   -- write to buffer
+  assert(not io.flush())    -- cannot write to device
+  assert(f:close())
 end
 
 
