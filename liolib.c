@@ -662,11 +662,12 @@ static int io_readline (lua_State *L) {
 
 static int g_write (lua_State *L, FILE *f, int arg) {
   int nargs = lua_gettop(L) - arg;
-  int status = 1;
+  size_t totalbytes = 0;  /* total number of bytes written */
   errno = 0;
-  for (; nargs--; arg++) {
+  for (; nargs--; arg++) {  /* for each argument */
     char buff[LUA_N2SBUFFSZ];
     const char *s;
+    size_t numbytes;  /* bytes written in one call to 'fwrite' */
     size_t len = lua_numbertocstring(L, arg, buff);  /* try as a number */
     if (len > 0) {  /* did conversion work (value was a number)? */
       s = buff;
@@ -674,12 +675,15 @@ static int g_write (lua_State *L, FILE *f, int arg) {
     }
     else  /* must be a string */
       s = luaL_checklstring(L, arg, &len);
-    status = status && (fwrite(s, sizeof(char), len, f) == len);
+    numbytes = fwrite(s, sizeof(char), len, f);
+    totalbytes += numbytes;
+    if (numbytes < len) {  /* write error? */
+      int n = luaL_fileresult(L, 0, NULL);
+      lua_pushinteger(L, cast_st2S(totalbytes));
+      return n + 1;  /* return fail, error msg., error code, and counter */
+    }
   }
-  if (l_likely(status))
-    return 1;  /* file handle already on stack top */
-  else
-    return luaL_fileresult(L, status, NULL);
+  return 1;  /* no errors; file handle already on stack top */
 }
 
 

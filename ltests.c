@@ -2106,6 +2106,25 @@ static int coresume (lua_State *L) {
   }
 }
 
+#if !defined(LUA_USE_POSIX)
+
+#define nonblock	NULL
+
+#else
+
+#include <unistd.h>
+#include <fcntl.h>
+
+static int nonblock (lua_State *L) {
+  FILE *f = cast(luaL_Stream*, luaL_checkudata(L, 1, LUA_FILEHANDLE))->f;
+  int fd = fileno(f);
+  int flags = fcntl(fd, F_GETFL, 0);
+  flags |= O_NONBLOCK;
+  fcntl(fd, F_SETFL, flags);
+  return 0;
+}
+#endif
+
 /* }====================================================== */
 
 
@@ -2159,6 +2178,7 @@ static const struct luaL_Reg tests_funcs[] = {
   {"upvalue", upvalue},
   {"externKstr", externKstr},
   {"externstr", externstr},
+  {"nonblock", nonblock},
   {NULL, NULL}
 };
 
