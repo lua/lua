@@ -1544,8 +1544,10 @@ static KOption getdetails (Header *h, size_t totalsize, const char **fmt,
   else {
     if (align > h->maxalign)  /* enforce maximum alignment */
       align = h->maxalign;
-    if (l_unlikely(!ispow2(align)))  /* not a power of 2? */
+    if (l_unlikely(!ispow2(align))) {  /* not a power of 2? */
+      *ntoalign = 0;  /* to avoid warnings */
       luaL_argerror(h->L, 1, "format asks for alignment not power of 2");
+    }
     else {
       /* 'szmoda' = totalsize % align */
       unsigned szmoda = cast_uint(totalsize & (align - 1));

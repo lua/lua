@@ -465,6 +465,8 @@ static void restartcollection (global_State *g) {
 ** TOUCHED1 objects need to be in the list. TOUCHED2 doesn't need to go
 ** back to a gray list, but then it must become OLD. (That is what
 ** 'correctgraylist' does when it finds a TOUCHED2 object.)
+** This function is a no-op in incremental mode, as objects cannot be
+** marked as touched in that mode.
 */
 static void genlink (global_State *g, GCObject *o) {
   lua_assert(isblack(o));
@@ -480,7 +482,8 @@ static void genlink (global_State *g, GCObject *o) {
 ** Traverse a table with weak values and link it to proper list. During
 ** propagate phase, keep it in 'grayagain' list, to be revisited in the
 ** atomic phase. In the atomic phase, if table has any white value,
-** put it in 'weak' list, to be cleared.
+** put it in 'weak' list, to be cleared; otherwise, call 'genlink'
+** to check table age in generational mode.
 */
 static void traverseweakvalue (global_State *g, Table *h) {
   Node *n, *limit = gnodelast(h);
@@ -501,6 +504,8 @@ static void traverseweakvalue (global_State *g, Table *h) {
     linkgclist(h, g->grayagain);  /* must retraverse it in atomic phase */
   else if (hasclears)
       linkgclist(h, g->weak);  /* has to be cleared later */
+  else
+    genlink(g, obj2gco(h));
 }
 
 
