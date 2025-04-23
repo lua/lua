@@ -822,6 +822,15 @@ typedef struct Table {
 /* size of buffer for 'luaO_utf8esc' function */
 #define UTF8BUFFSZ	8
 
+
+/* macro to call 'luaO_pushvfstring' correctly */
+#define pushvfstring(L, argp, fmt, msg)	\
+  { va_start(argp, fmt); \
+  msg = luaO_pushvfstring(L, fmt, argp); \
+  va_end(argp); \
+  if (msg == NULL) luaD_throw(L, LUA_ERRMEM);  /* only after 'va_end' */ }
+
+
 LUAI_FUNC int luaO_utf8esc (char *buff, unsigned long x);
 LUAI_FUNC lu_byte luaO_ceillog2 (unsigned int x);
 LUAI_FUNC lu_byte luaO_codeparam (unsigned int p);
