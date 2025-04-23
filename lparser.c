@@ -563,7 +563,7 @@ static void closegoto (LexState *ls, int g, Labeldesc *label, int bup) {
 
 /*
 ** Search for an active label with the given name, starting at
-** index 'ilb' (so that it can searh for all labels in current block
+** index 'ilb' (so that it can search for all labels in current block
 ** or all labels in current function).
 */
 static Labeldesc *findlabel (LexState *ls, TString *name, int ilb) {

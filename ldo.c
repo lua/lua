@@ -513,7 +513,7 @@ l_sinline void genmoveresults (lua_State *L, StkId res, int nres,
 ** to 'res'.  Handle most typical cases (zero results for commands,
 ** one result for expressions, multiple results for tail calls/single
 ** parameters) separated. The flag CIST_TBC in 'fwanted', if set,
-** forces the swicth to go to the default case.
+** forces the switch to go to the default case.
 */
 l_sinline void moveresults (lua_State *L, StkId res, int nres,
                                           l_uint32 fwanted) {

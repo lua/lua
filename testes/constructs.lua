@@ -60,7 +60,7 @@ assert((x>y) and x or y == 2);
 
 assert(1234567890 == tonumber('1234567890') and 1234567890+1 == 1234567891)
 
-do   -- testing operators with diffent kinds of constants
+do   -- testing operators with different kinds of constants
   -- operands to consider:
   --  * fit in register
   --  * constant doesn't fit in register

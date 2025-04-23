@@ -1071,7 +1071,7 @@ do
     assert(x == tonumber(tostring(x)))
   end
 
-  -- different numbers shold print differently.
+  -- different numbers should print differently.
   -- check pairs of floats with minimum detectable difference
   local p = floatbits - 1
   for i = 1, maxexp - 1 do

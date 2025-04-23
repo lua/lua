@@ -446,8 +446,8 @@ do   -- tests for string keys in weak tables
   local m = collectgarbage("count")         -- current memory
   local a = setmetatable({}, {__mode = "kv"})
   a[string.rep("a", 2^22)] = 25   -- long string key -> number value
-  a[string.rep("b", 2^22)] = {}   -- long string key -> colectable value
-  a[{}] = 14                     -- colectable key
+  a[string.rep("b", 2^22)] = {}   -- long string key -> collectable value
+  a[{}] = 14                     -- collectable key
   collectgarbage()
   local k, v = next(a)   -- string key with number value preserved
   assert(k == string.rep("a", 2^22) and v == 25)
@@ -459,7 +459,7 @@ do   -- tests for string keys in weak tables
   assert(next(a) == nil)
   -- make sure will not try to compare with dead key
   assert(a[string.rep("b", 100)] == undef)
-  assert(collectgarbage("count") <= m + 1)   -- eveything collected
+  assert(collectgarbage("count") <= m + 1)   -- everything collected
 end
 
 
@@ -524,7 +524,7 @@ do
     local co = coroutine.create(f)
     assert(coroutine.resume(co, co))
   end
-  -- Now, thread and closure are not reacheable any more.
+  -- Now, thread and closure are not reachable any more.
   collectgarbage()
   assert(collected)
   collectgarbage("restart")
@@ -644,7 +644,7 @@ do
     assert(getmetatable(o) == tt)
     -- create new objects during GC
     local a = 'xuxu'..(10+3)..'joao', {}
-    ___Glob = o  -- ressurrect object!
+    ___Glob = o  -- resurrect object!
     setmetatable({}, tt)  -- creates a new one with same metatable
     print(">>> closing state " .. "<<<\n")
   end

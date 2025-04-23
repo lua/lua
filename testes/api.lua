@@ -114,7 +114,7 @@ end
 
 -- testing warnings
 T.testC([[
-  warningC "#This shold be a"
+  warningC "#This should be a"
   warningC " single "
   warning "warning"
   warningC "#This should be "
@@ -162,7 +162,7 @@ do  -- test returning more results than fit in the caller stack
 end
 
 
-do  -- testing multipe returns
+do  -- testing multiple returns
   local function foo (n)
     if n > 0 then return n, foo(n - 1) end
   end
@@ -902,7 +902,7 @@ F = function (x)
     assert(T.udataval(A) == B)
     debug.getmetatable(A)    -- just access it
   end
-  A = x   -- ressurect userdata
+  A = x   -- resurrect userdata
   B = udval
   return 1,2,3
 end

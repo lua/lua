@@ -134,7 +134,7 @@ do
   errorcodes("\xbfinvalid")
   errorcodes("αλφ\xBFα")
 
-  -- calling interation function with invalid arguments
+  -- calling interaction function with invalid arguments
   local f = utf8.codes("")
   assert(f("", 2) == nil)
   assert(f("", -1) == nil)
