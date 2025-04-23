@@ -478,7 +478,7 @@ do print("testing flush")
 end
 
 
--- test for multipe arguments in 'lines'
+-- test for multiple arguments in 'lines'
 io.output(file); io.write"0123456789\n":close()
 for a,b in io.lines(file, 1, 1) do
   if a == "\n" then assert(not b)

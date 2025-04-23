@@ -431,7 +431,7 @@ do
   assert(a == nil and not b)
 end
 
--- testing iteraction between multiple values x hooks
+-- testing interaction between multiple values x hooks
 do
   local function f(...) return 3, ... end
   local count = 0
@@ -587,7 +587,7 @@ t = getupvalues(foo2)
 assert(t.a == 1 and t.b == 2 and t.c == 3)
 assert(debug.setupvalue(foo1, 1, "xuxu") == "b")
 assert(({debug.getupvalue(foo2, 3)})[2] == "xuxu")
--- upvalues of C functions are allways "called" "" (the empty string)
+-- upvalues of C functions are always named "" (the empty string)
 assert(debug.getupvalue(string.gmatch("x", "x"), 1) == "")  
 
 
@@ -839,7 +839,7 @@ t[1] = "'error'"
 checktraceback(co, t)
 
 
--- test acessing line numbers of a coroutine from a resume inside
+-- test accessing line numbers of a coroutine from a resume inside
 -- a C function (this is a known bug in Lua 5.0)
 
 local function g(x)
@@ -966,9 +966,9 @@ local debug = require'debug'
 local a = 12  -- a local variable
 
 local n, v = debug.getlocal(1, 1)
-assert(n == "(temporary)" and v == debug)   -- unkown name but known value
+assert(n == "(temporary)" and v == debug)   -- unknown name but known value
 n, v = debug.getlocal(1, 2)
-assert(n == "(temporary)" and v == 12)   -- unkown name but known value
+assert(n == "(temporary)" and v == 12)   -- unknown name but known value
 
 -- a function with an upvalue
 local f = function () local x; return a end
@@ -1018,7 +1018,7 @@ do   -- bug in 5.4.0: line hooks in stripped code
     line = l
   end, "l")
   assert(s() == 2); debug.sethook(nil)
-  assert(line == nil)  -- hook called withoug debug info for 1st instruction
+  assert(line == nil)  -- hook called without debug info for 1st instruction
 end
 
 do   -- tests for 'source' in binary dumps

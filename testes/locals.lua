@@ -1162,7 +1162,7 @@ do
   local function open (x)
     numopen = numopen + 1
     return
-      function ()   -- iteraction function
+      function ()   -- iteration function
         x = x - 1
         if x > 0 then return x end
       end,

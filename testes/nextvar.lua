@@ -227,7 +227,7 @@ for i = 1,lim do
 end
 
 
--- insert and delete elements until a rehash occurr. Caller must ensure
+-- insert and delete elements until a rehash occur. Caller must ensure
 -- that a rehash will change the shape of the table. Must repeat because
 -- the insertion may collide with the deleted element, and then there is
 -- no rehash.
@@ -349,7 +349,7 @@ a,b,c = 1,2,3
 a,b,c = nil
 
 
--- next uses always the same iteraction function
+-- next uses always the same iteration function
 assert(next{} == next{})
 
 local function find (name)

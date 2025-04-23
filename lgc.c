@@ -126,7 +126,6 @@ static l_mem objsize (GCObject *o) {
       CClosure *cl = gco2ccl(o);
       res = sizeCclosure(cl->nupvalues);
       break;
-      break;
     }
     case LUA_VUSERDATA: {
       Udata *u = gco2u(o);

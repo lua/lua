@@ -23,9 +23,9 @@ a,b = string.find('alo', '')
 assert(a == 1 and b == 0)
 a,b = string.find('a\0o a\0o a\0o', 'a', 1)   -- first position
 assert(a == 1 and b == 1)
-a,b = string.find('a\0o a\0o a\0o', 'a\0o', 2)   -- starts in the midle
+a,b = string.find('a\0o a\0o a\0o', 'a\0o', 2)   -- starts in the middle
 assert(a == 5 and b == 7)
-a,b = string.find('a\0o a\0o a\0o', 'a\0o', 9)   -- starts in the midle
+a,b = string.find('a\0o a\0o a\0o', 'a\0o', 9)   -- starts in the middle
 assert(a == 9 and b == 11)
 a,b = string.find('a\0a\0a\0a\0\0ab', '\0ab', 2);  -- finds at the end
 assert(a == 9 and b == 11);
