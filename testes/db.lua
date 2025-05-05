@@ -349,6 +349,7 @@ end, "crl")
 
 
 function f(a,b)
+  global collectgarbage, assert, g, string
   collectgarbage()
   local _, x = debug.getlocal(1, 1)
   local _, y = debug.getlocal(1, 2)

@@ -40,11 +40,16 @@
 
 #define currIsNewline(ls)	(ls->current == '\n' || ls->current == '\r')
 
+#if defined(LUA_COMPAT_GLOBAL)
+#define GLOBALLEX	".g"	/* not recognizable by the scanner */
+#else
+#define GLOBALLEX	"global"
+#endif
 
 /* ORDER RESERVED */
 static const char *const luaX_tokens [] = {
     "and", "break", "do", "else", "elseif",
-    "end", "false", "for", "function", "goto", "if",
+    "end", "false", "for", "function", GLOBALLEX, "goto", "if",
     "in", "local", "nil", "not", "or", "repeat",
     "return", "then", "true", "until", "while",
     "//", "..", "...", "==", ">=", "<=", "~=",

@@ -1,6 +1,8 @@
 -- $Id: testes/goto.lua $
 -- See Copyright Notice in file lua.h
 
+print("testing goto and global declarations")
+
 collectgarbage()
 
 local function errmsg (code, m)
@@ -280,7 +282,47 @@ end
 
 
 foo()
---------------------------------------------------------------------------------
+--------------------------------------------------------------------------
 
+do
+  global print, load, T<const>; global assert<const>
+  global string
+
+  local function checkerr (code, err)
+    local st, msg = load(code)
+    assert(not st and string.find(msg, err))
+  end
+
+  -- globals must be declared after a global declaration
+  checkerr("global none; X = 1", "variable 'X'")
+
+  -- global variables cannot be to-be-closed
+  checkerr("global X<close>", "cannot be")
+
+  do
+    local X = 10
+    do global X; X = 20 end
+    assert(X == 10)   -- local X
+  end
+  assert(_ENV.X == 20)  -- global X
+
+  -- '_ENV' cannot be global
+  checkerr("global _ENV, a; a = 10", "variable 'a'")
+
+  -- global declarations inside functions
+  checkerr([[
+    global none
+    local function foo () XXX = 1 end   --< ERROR]], "variable 'XXX'")
+
+  if not T then  -- when not in "test mode", "global" isn't reserved
+    assert(load("global = 1; return global")() == 1)
+    print "  ('global' is not a reserved word)"
+  else
+    -- "global" reserved, cannot be used as a variable
+    assert(not load("global = 1; return global"))
+  end
+  
+end
 
 print'OK'
+

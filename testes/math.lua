@@ -3,6 +3,14 @@
 
 print("testing numbers and math lib")
 
+local math = require "math"
+local string = require "string"
+
+global none
+
+global print, assert, pcall, type, pairs, load
+global tonumber, tostring, select
+
 local minint <const> = math.mininteger
 local maxint <const> = math.maxinteger
 
@@ -184,7 +192,7 @@ do
   for i = -3, 3 do    -- variables avoid constant folding
       for j = -3, 3 do
         -- domain errors (0^(-n)) are not portable
-        if not _port or i ~= 0 or j > 0 then
+        if not _ENV._port or i ~= 0 or j > 0 then
           assert(eq(i^j, 1 / i^(-j)))
        end
     end
@@ -430,7 +438,7 @@ for i = 2,36 do
   assert(tonumber('\t10000000000\t', i) == i10)
 end
 
-if not _soft then
+if not _ENV._soft then
   -- tests with very long numerals
   assert(tonumber("0x"..string.rep("f", 13)..".0") == 2.0^(4*13) - 1)
   assert(tonumber("0x"..string.rep("f", 150)..".0") == 2.0^(4*150) - 1)
@@ -632,7 +640,7 @@ assert(maxint % -2 == -1)
 
 -- non-portable tests because Windows C library cannot compute 
 -- fmod(1, huge) correctly
-if not _port then
+if not _ENV._port then
   local function anan (x) assert(isNaN(x)) end   -- assert Not a Number
   anan(0.0 % 0)
   anan(1.3 % 0)
@@ -779,6 +787,7 @@ assert(a == '10' and b == '20')
 
 do
   print("testing -0 and NaN")
+  global rawset, undef
   local mz <const> = -0.0
   local z <const> = 0.0
   assert(mz == z)
@@ -1074,6 +1083,7 @@ do
   -- different numbers should print differently.
   -- check pairs of floats with minimum detectable difference
   local p = floatbits - 1
+  global ipairs
   for i = 1, maxexp - 1 do
     for _, i in ipairs{-i, i} do
       local x = 2^i
