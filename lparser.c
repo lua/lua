@@ -200,7 +200,7 @@ static int new_varkind (LexState *ls, TString *name, lu_byte kind) {
   luaY_checklimit(fs, dyd->actvar.n + 1 - fs->firstlocal,
                  MAXVARS, "local variables");
   luaM_growvector(L, dyd->actvar.arr, dyd->actvar.n + 1,
-                  dyd->actvar.size, Vardesc, SHRT_MAX, "local variables");
+             dyd->actvar.size, Vardesc, SHRT_MAX, "variable declarationss");
   var = &dyd->actvar.arr[dyd->actvar.n++];
   var->vd.kind = kind;  /* default */
   var->vd.name = name;
@@ -276,7 +276,7 @@ static LocVar *localdebuginfo (FuncState *fs, int vidx) {
 static void init_var (FuncState *fs, expdesc *e, int vidx) {
   e->f = e->t = NO_JUMP;
   e->k = VLOCAL;
-  e->u.var.vidx = cast(unsigned short, vidx);
+  e->u.var.vidx = cast(short, vidx);
   e->u.var.ridx = getlocalvardesc(fs, vidx)->vd.ridx;
 }
 
@@ -304,8 +304,16 @@ static void check_readonly (LexState *ls, expdesc *e) {
         varname = up->name;
       break;
     }
+    case VINDEXUP: case VINDEXSTR: case VINDEXED: {
+      int vidx = e->u.ind.vidx;
+      /* is it a read-only declared global? */
+      if (vidx != -1 && ls->dyd->actvar.arr[vidx].vd.kind == GDKCONST)
+        varname = ls->dyd->actvar.arr[vidx].vd.name;
+      break;
+    }
     default:
-      return;  /* other cases cannot be read-only */
+      lua_assert(e->k == VINDEXI);  /* this one doesn't need any check */
+      return;  /* integer index cannot be read-only */
   }
   if (varname)
     luaK_semerror(ls, "attempt to assign to const variable '%s'",
@@ -391,7 +399,7 @@ static int newupvalue (FuncState *fs, TString *name, expdesc *v) {
 
 
 /*
-** Look for an active local variable with the name 'n' in the
+** Look for an active variable with the name 'n' in the
 ** function 'fs'. If found, initialize 'var' with it and return
 ** its expression kind; otherwise return -1.
 */
@@ -403,7 +411,7 @@ static int searchvar (FuncState *fs, TString *n, expdesc *var) {
       if (vd->vd.kind == RDKCTC)  /* compile-time constant? */
         init_exp(var, VCONST, fs->firstlocal + i);
       else if (vd->vd.kind == GDKREG || vd->vd.kind == GDKCONST)
-        init_exp(var, VGLOBAL, i);
+        init_exp(var, VGLOBAL, fs->firstlocal + i);
       else  /* local variable */
         init_var(fs, var, i);
       return cast_int(var->k);
@@ -475,8 +483,11 @@ static void singlevar (LexState *ls, expdesc *var) {
   singlevaraux(fs, varname, var, 1);
   if (var->k == VGLOBAL) {  /* global name? */
     expdesc key;
+    int info = var->u.info;
+    lua_assert(info == -1 ||
+               eqstr(ls->dyd->actvar.arr[info].vd.name, varname));
     /* global by default in the scope of a global declaration? */
-    if (var->u.info == -1 && fs->bl->globdec)
+    if (info == -1 && fs->bl->globdec)
       luaK_semerror(ls, "variable '%s' not declared", getstr(varname));
     singlevaraux(fs, ls->envn, var, 1);  /* get environment variable */
     if (var->k == VGLOBAL)
@@ -485,6 +496,7 @@ static void singlevar (LexState *ls, expdesc *var) {
     luaK_exp2anyregup(fs, var);  /* but could be a constant */
     codestring(&key, varname);  /* key is variable name */
     luaK_indexed(fs, var, &key);  /* env[varname] */
+    var->u.ind.vidx = cast(short, info);  /* mark it as a declared global */
   }
 }
 

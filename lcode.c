@@ -1315,8 +1315,8 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
     luaK_exp2anyreg(fs, t);  /* put it in a register */
   if (t->k == VUPVAL) {
     lu_byte temp = cast_byte(t->u.info);  /* upvalue index */
-    lua_assert(isKstr(fs, k));
     t->u.ind.t = temp;  /* (can't do a direct assignment; values overlap) */
+    lua_assert(isKstr(fs, k));
     t->u.ind.idx = cast(short, k->u.info);  /* literal short string */
     t->k = VINDEXUP;
   }
@@ -1336,6 +1336,7 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
       t->k = VINDEXED;
     }
   }
+  t->u.ind.vidx = -1;  /* by default, not a declared global */
 }
 
 

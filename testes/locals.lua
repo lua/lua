@@ -178,6 +178,8 @@ A = nil
 
 
 do   -- constants
+  global assert<const>, load, string, X
+  X = 1   -- not a constant
   local a<const>, b, c<const> = 10, 20, 30
   b = a + c + b    -- 'b' is not constant
   assert(a == 10 and b == 60 and c == 30)
@@ -191,6 +193,9 @@ do   -- constants
   checkro("z", "local x <const>, y, z <const> = 10, 20, 30; y = 10; z = 11")
   checkro("foo", "local foo <const> = 10; function foo() end")
   checkro("foo", "local foo <const> = {}; function foo() end")
+  checkro("foo", "global foo <const>; function foo() end")
+  checkro("XX", "global XX <const>; XX = 10")
+  checkro("XX", "local _ENV; global XX <const>; XX = 10")
 
   checkro("z", [[
     local a, z <const>, b = 10;
@@ -200,6 +205,11 @@ do   -- constants
   checkro("var1", [[
     local a, var1 <const> = 10;
     function foo() a = 20; z = function () var1 = 12; end  end
+  ]])
+
+  checkro("var1", [[
+    global a, var1 <const>, z;
+    local function foo() a = 20; z = function () var1 = 12; end  end
   ]])
 end
 
