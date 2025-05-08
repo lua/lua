@@ -108,7 +108,7 @@ static void dumpSize (DumpState *D, size_t sz) {
 
 static void dumpInt (DumpState *D, int x) {
   lua_assert(x >= 0);
-  dumpVarint(D, cast(size_t, x));
+  dumpVarint(D, cast_sizet(x));
 }
 
 

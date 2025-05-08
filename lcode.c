@@ -1317,22 +1317,22 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
     lu_byte temp = cast_byte(t->u.info);  /* upvalue index */
     t->u.ind.t = temp;  /* (can't do a direct assignment; values overlap) */
     lua_assert(isKstr(fs, k));
-    t->u.ind.idx = cast(short, k->u.info);  /* literal short string */
+    t->u.ind.idx = cast_short(k->u.info);  /* literal short string */
     t->k = VINDEXUP;
   }
   else {
     /* register index of the table */
     t->u.ind.t = cast_byte((t->k == VLOCAL) ? t->u.var.ridx: t->u.info);
     if (isKstr(fs, k)) {
-      t->u.ind.idx = cast(short, k->u.info);  /* literal short string */
+      t->u.ind.idx = cast_short(k->u.info);  /* literal short string */
       t->k = VINDEXSTR;
     }
     else if (isCint(k)) {  /* int. constant in proper range? */
-      t->u.ind.idx = cast(short, k->u.ival);
+      t->u.ind.idx = cast_short(k->u.ival);
       t->k = VINDEXI;
     }
     else {
-      t->u.ind.idx = cast(short, luaK_exp2anyreg(fs, k));  /* register */
+      t->u.ind.idx = cast_short(luaK_exp2anyreg(fs, k));  /* register */
       t->k = VINDEXED;
     }
   }

@@ -126,14 +126,14 @@ enum OpMode {iABC, ivABC, iABx, iAsBx, iAx, isJ};
 
 #define GET_OPCODE(i)	(cast(OpCode, ((i)>>POS_OP) & MASK1(SIZE_OP,0)))
 #define SET_OPCODE(i,o)	((i) = (((i)&MASK0(SIZE_OP,POS_OP)) | \
-		((cast(Instruction, o)<<POS_OP)&MASK1(SIZE_OP,POS_OP))))
+		((cast_Inst(o)<<POS_OP)&MASK1(SIZE_OP,POS_OP))))
 
 #define checkopm(i,m)	(getOpMode(GET_OPCODE(i)) == m)
 
 
 #define getarg(i,pos,size)	(cast_int(((i)>>(pos)) & MASK1(size,0)))
 #define setarg(i,v,pos,size)	((i) = (((i)&MASK0(size,pos)) | \
-                ((cast(Instruction, v)<<pos)&MASK1(size,pos))))
+                ((cast_Inst(v)<<pos)&MASK1(size,pos))))
 
 #define GETARG_A(i)	getarg(i, POS_A, SIZE_A)
 #define SETARG_A(i,v)	setarg(i, v, POS_A, SIZE_A)
@@ -174,28 +174,28 @@ enum OpMode {iABC, ivABC, iABx, iAsBx, iAx, isJ};
 	setarg(i, cast_uint((j)+OFFSET_sJ), POS_sJ, SIZE_sJ)
 
 
-#define CREATE_ABCk(o,a,b,c,k)	((cast(Instruction, o)<<POS_OP) \
-			| (cast(Instruction, a)<<POS_A) \
-			| (cast(Instruction, b)<<POS_B) \
-			| (cast(Instruction, c)<<POS_C) \
-			| (cast(Instruction, k)<<POS_k))
+#define CREATE_ABCk(o,a,b,c,k)	((cast_Inst(o)<<POS_OP) \
+			| (cast_Inst(a)<<POS_A) \
+			| (cast_Inst(b)<<POS_B) \
+			| (cast_Inst(c)<<POS_C) \
+			| (cast_Inst(k)<<POS_k))
 
-#define CREATE_vABCk(o,a,b,c,k)	((cast(Instruction, o)<<POS_OP) \
-			| (cast(Instruction, a)<<POS_A) \
-			| (cast(Instruction, b)<<POS_vB) \
-			| (cast(Instruction, c)<<POS_vC) \
-			| (cast(Instruction, k)<<POS_k))
+#define CREATE_vABCk(o,a,b,c,k)	((cast_Inst(o)<<POS_OP) \
+			| (cast_Inst(a)<<POS_A) \
+			| (cast_Inst(b)<<POS_vB) \
+			| (cast_Inst(c)<<POS_vC) \
+			| (cast_Inst(k)<<POS_k))
 
-#define CREATE_ABx(o,a,bc)	((cast(Instruction, o)<<POS_OP) \
-			| (cast(Instruction, a)<<POS_A) \
-			| (cast(Instruction, bc)<<POS_Bx))
+#define CREATE_ABx(o,a,bc)	((cast_Inst(o)<<POS_OP) \
+			| (cast_Inst(a)<<POS_A) \
+			| (cast_Inst(bc)<<POS_Bx))
 
-#define CREATE_Ax(o,a)		((cast(Instruction, o)<<POS_OP) \
-			| (cast(Instruction, a)<<POS_Ax))
+#define CREATE_Ax(o,a)		((cast_Inst(o)<<POS_OP) \
+			| (cast_Inst(a)<<POS_Ax))
 
-#define CREATE_sJ(o,j,k)	((cast(Instruction, o) << POS_OP) \
-			| (cast(Instruction, j) << POS_sJ) \
-			| (cast(Instruction, k) << POS_k))
+#define CREATE_sJ(o,j,k)	((cast_Inst(o) << POS_OP) \
+			| (cast_Inst(j) << POS_sJ) \
+			| (cast_Inst(k) << POS_k))
 
 
 #if !defined(MAXINDEXRK)  /* (for debugging only) */

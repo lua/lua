@@ -276,7 +276,7 @@ static LocVar *localdebuginfo (FuncState *fs, int vidx) {
 static void init_var (FuncState *fs, expdesc *e, int vidx) {
   e->f = e->t = NO_JUMP;
   e->k = VLOCAL;
-  e->u.var.vidx = cast(short, vidx);
+  e->u.var.vidx = cast_short(vidx);
   e->u.var.ridx = getlocalvardesc(fs, vidx)->vd.ridx;
 }
 
@@ -495,7 +495,7 @@ static void buildvar (LexState *ls, TString *varname, expdesc *var) {
     luaK_exp2anyregup(fs, var);  /* but could be a constant */
     codestring(&key, varname);  /* key is variable name */
     luaK_indexed(fs, var, &key);  /* env[varname] */
-    var->u.ind.vidx = cast(short, info);  /* mark it as a declared global */
+    var->u.ind.vidx = cast_short(info);  /* mark it as a declared global */
   }
 }
 

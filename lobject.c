@@ -618,7 +618,7 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
       }
       case 'I': {  /* a 'lua_Integer' */
         TValue num;
-        setivalue(&num, cast(lua_Integer, va_arg(argp, l_uacInt)));
+        setivalue(&num, cast_Integer(va_arg(argp, l_uacInt)));
         addnum2buff(&buff, &num);
         break;
       }
