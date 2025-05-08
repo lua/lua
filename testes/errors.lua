@@ -489,6 +489,14 @@ if not b then
   end
 end]], 5)
 
+lineerror([[
+_ENV = 1
+global function foo ()
+  local a = 10
+  return a
+end
+]], 2)
+
 
 -- bug in 5.4.0
 lineerror([[

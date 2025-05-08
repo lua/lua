@@ -2229,6 +2229,7 @@ The following syntactic sugar simplifies function definitions:
 @Produc{
 @producname{stat}@producbody{@Rw{function} funcname funcbody}
 @producname{stat}@producbody{@Rw{local} @Rw{function} @bnfNter{Name} funcbody}
+@producname{stat}@producbody{@Rw{global} @Rw{function} @bnfNter{Name} funcbody}
 @producname{funcname}@producbody{@bnfNter{Name} @bnfrep{@bnfter{.} @bnfNter{Name}} @bnfopt{@bnfter{:} @bnfNter{Name}}}
 }
 The statement
@@ -2247,6 +2248,7 @@ translates to
 @verbatim{
 t.a.b.c.f = function () @rep{body} end
 }
+
 The statement
 @verbatim{
 local function f () @rep{body} end
@@ -2260,7 +2262,15 @@ not to
 local f = function () @rep{body} end
 }
 (This only makes a difference when the body of the function
-contains references to @id{f}.)
+contains recursive references to @id{f}.)
+Similarly, the statement
+@verbatim{
+global function f () @rep{body} end
+}
+translates to
+@verbatim{
+global f; f = function () @rep{body} end
+}
 
 A function definition is an executable expression,
 whose value has type @emph{function}.
@@ -2323,7 +2333,7 @@ then the function returns with no results.
 @index{multiple return}
 There is a system-dependent limit on the number of values
 that a function may return.
-This limit is guaranteed to be greater than 1000.
+This limit is guaranteed to be at least 1000.
 
 The @emphx{colon} syntax
 is used to emulate @def{methods},
@@ -9569,6 +9579,7 @@ and @bnfNter{LiteralString}, see @See{lexical}.)
 @OrNL   @Rw{for} namelist @Rw{in} explist @Rw{do} block @Rw{end}
 @OrNL	@Rw{function} funcname funcbody
 @OrNL	@Rw{local} @Rw{function} @bnfNter{Name} funcbody
+@OrNL	@Rw{global} @Rw{function} @bnfNter{Name} funcbody
 @OrNL	@Rw{local} attnamelist @bnfopt{@bnfter{=} explist}
 @OrNL	@Rw{global} attnamelist
 }

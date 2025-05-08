@@ -477,8 +477,7 @@ static void singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
 ** Find a variable with the given name 'n', handling global variables
 ** too.
 */
-static void singlevar (LexState *ls, expdesc *var) {
-  TString *varname = str_checkname(ls);
+static void buildvar (LexState *ls, TString *varname, expdesc *var) {
   FuncState *fs = ls->fs;
   singlevaraux(fs, varname, var, 1);
   if (var->k == VGLOBAL) {  /* global name? */
@@ -498,6 +497,11 @@ static void singlevar (LexState *ls, expdesc *var) {
     luaK_indexed(fs, var, &key);  /* env[varname] */
     var->u.ind.vidx = cast(short, info);  /* mark it as a declared global */
   }
+}
+
+
+static void singlevar (LexState *ls, expdesc *var) {
+  buildvar(ls, str_checkname(ls), var);
 }
 
 
@@ -1727,7 +1731,7 @@ static void localfunc (LexState *ls) {
 
 
 static lu_byte getvarattribute (LexState *ls) {
-  /* ATTRIB -> ['<' Name '>'] */
+  /* attrib -> ['<' NAME '>'] */
   if (testnext(ls, '<')) {
     TString *ts = str_checkname(ls);
     const char *attr = getstr(ts);
@@ -1752,7 +1756,7 @@ static void checktoclose (FuncState *fs, int level) {
 
 
 static void localstat (LexState *ls) {
-  /* stat -> LOCAL NAME ATTRIB { ',' NAME ATTRIB } ['=' explist] */
+  /* stat -> LOCAL NAME attrib { ',' NAME attrib } ['=' explist] */
   FuncState *fs = ls->fs;
   int toclose = -1;  /* index of to-be-closed variable (if any) */
   Vardesc *var;  /* last variable */
@@ -1794,8 +1798,8 @@ static void localstat (LexState *ls) {
 
 
 static void globalstat (LexState *ls) {
+  /* globalstat -> (GLOBAL) NAME attrib {',' NAME attrib} */
   FuncState *fs = ls->fs;
-  luaX_next(ls);  /* skip 'global' */
   do {
     TString *vname = str_checkname(ls);
     lu_byte kind = getvarattribute(ls);
@@ -1807,7 +1811,31 @@ static void globalstat (LexState *ls) {
     new_varkind(ls, vname, kind);
     fs->nactvar++;  /* activate declaration */
   } while (testnext(ls, ','));
-  fs->bl->globdec = 1;  /* code is in the scope of a global declaration */
+}
+
+
+static void globalfunc (LexState *ls, int line) {
+  /* globalfunc -> (GLOBAL FUNCTION) NAME body */
+  expdesc var, b;
+  FuncState *fs = ls->fs;
+  TString *fname = str_checkname(ls);
+  new_varkind(ls, fname, GDKREG);  /* declare global variable */
+  fs->nactvar++;  /* enter its scope */
+  buildvar(ls, fname, &var);
+  body(ls, &b, 0, ls->linenumber);  /* compile and return closure in 'b' */
+  luaK_storevar(fs, &var, &b);
+  luaK_fixline(fs, line);  /* definition "happens" in the first line */
+}
+
+
+static void globalstatfunc (LexState *ls, int line) {
+  /* stat -> GLOBAL globalfunc | GLOBAL globalstat */
+  luaX_next(ls);  /* skip 'global' */
+  ls->fs->bl->globdec = 1;  /* in the scope of a global declaration */
+  if (testnext(ls, TK_FUNCTION))
+    globalfunc(ls, line);
+  else
+    globalstat(ls);
 }
 
 
@@ -1930,8 +1958,8 @@ static void statement (LexState *ls) {
         localstat(ls);
       break;
     }
-    case TK_GLOBAL: {  /* stat -> globalstat */
-      globalstat(ls);
+    case TK_GLOBAL: {  /* stat -> globalstatfunc */
+      globalstatfunc(ls, line);
       break;
     }
     case TK_DBCOLON: {  /* stat -> label */
@@ -1958,8 +1986,9 @@ static void statement (LexState *ls) {
          is not reserved */
       if (eqstr(ls->t.seminfo.ts, luaS_newliteral(ls->L, "global"))) {
         int lk = luaX_lookahead(ls);
-        if (lk == TK_NAME) {  /* 'global name'? */
-          globalstat(ls);
+        if (lk == TK_NAME || lk == TK_FUNCTION) {
+          /* 'global <name>' or 'global function' */
+          globalstatfunc(ls, line);
           break;
         }
       }  /* else... */

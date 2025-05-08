@@ -293,8 +293,9 @@ do
     assert(not st and string.find(msg, err))
   end
 
-  -- globals must be declared after a global declaration
+  -- globals must be declared, after a global declaration
   checkerr("global none; X = 1", "variable 'X'")
+  checkerr("global none; function XX() end", "variable 'XX'")
 
   -- global variables cannot be to-be-closed
   checkerr("global X<close>", "cannot be")
@@ -321,6 +322,26 @@ do
     -- "global" reserved, cannot be used as a variable
     assert(not load("global = 1; return global"))
   end
+
+  local foo = 20
+  do
+    global function foo (x)
+      if x == 0 then return 1 else return 2 * foo(x - 1) end
+    end
+    assert(foo == _ENV.foo and foo(4) == 16)
+  end
+  assert(_ENV.foo(4) == 16)
+  assert(foo == 20)   -- local one is in context here
+
+  do
+    global foo;
+    function foo (x) return end   -- Ok after declaration
+  end
+
+  checkerr([[
+    global foo <const>;
+    function foo (x) return end   -- ERROR: foo is read-only
+  ]], "assign to const variable 'foo'")
   
 end
 
