@@ -753,10 +753,11 @@ void luaK_setreturns (FuncState *fs, expdesc *e, int nresults) {
 /*
 ** Convert a VKSTR to a VK
 */
-static void str2K (FuncState *fs, expdesc *e) {
+static int str2K (FuncState *fs, expdesc *e) {
   lua_assert(e->k == VKSTR);
   e->u.info = stringK(fs, e->u.strval);
   e->k = VK;
+  return e->u.info;
 }
 
 
@@ -1307,8 +1308,9 @@ void luaK_self (FuncState *fs, expdesc *e, expdesc *key) {
 ** values in registers.
 */
 void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
+  int keystr = -1;
   if (k->k == VKSTR)
-    str2K(fs, k);
+    keystr = str2K(fs, k);
   lua_assert(!hasjumps(t) &&
              (t->k == VLOCAL || t->k == VNONRELOC || t->k == VUPVAL));
   if (t->k == VUPVAL && !isKstr(fs, k))  /* upvalue indexed by non 'Kstr'? */
@@ -1336,7 +1338,8 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
       t->k = VINDEXED;
     }
   }
-  t->u.ind.vidx = -1;  /* by default, not a declared global */
+  t->u.ind.keystr = keystr;  /* string index in 'k' */
+  t->u.ind.ro = 0;  /* by default, not read-only */
 }
 
 

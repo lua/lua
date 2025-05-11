@@ -45,16 +45,19 @@ typedef enum {
               info = absolute index in 'actvar.arr'  */
   VINDEXED,  /* indexed variable;
                 ind.t = table register;
-                ind.idx = key's R index */
+                ind.idx = key's R index;
+                ind.ro = true if it represents a read-only global;
+                ind.keystr = if key is a string, index in 'k' of that string;
+                             -1 if key is not a string */
   VINDEXUP,  /* indexed upvalue;
-                ind.t = table upvalue;
-                ind.idx = key's K index */
+                ind.idx = key's K index;
+                ind.* as in VINDEXED */
   VINDEXI, /* indexed variable with constant integer;
                 ind.t = table register;
                 ind.idx = key's value */
   VINDEXSTR, /* indexed variable with literal string;
-                ind.t = table register;
-                ind.idx = key's K index */
+                ind.idx = key's K index;
+                ind.* as in VINDEXED */
   VJMP,  /* expression is a test/comparison;
             info = pc of corresponding jump instruction */
   VRELOC,  /* expression can put result in any register;
@@ -77,8 +80,9 @@ typedef struct expdesc {
     int info;  /* for generic use */
     struct {  /* for indexed variables */
       short idx;  /* index (R or "long" K) */
-      short vidx;  /* index in 'actvar.arr' or -1 if not a declared global */
       lu_byte t;  /* table (register or upvalue) */
+      lu_byte ro;  /* true if variable is read-only */
+      int keystr;  /* index in 'k' of string key, or -1 if not a string */
     } ind;
     struct {  /* for local variables */
       lu_byte ridx;  /* register holding the variable */
