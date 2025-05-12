@@ -342,6 +342,13 @@ do
     global foo <const>;
     function foo (x) return end   -- ERROR: foo is read-only
   ]], "assign to const variable 'foo'")
+
+  checkerr([[
+    global foo <const>;
+    function foo (x)    -- ERROR: foo is read-only
+      return
+    end
+  ]], "%:2%:")   -- correct line in error message
   
 end
 
