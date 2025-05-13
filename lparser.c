@@ -1997,6 +1997,7 @@ static void statement (LexState *ls) {
       gotostat(ls, line);
       break;
     }
+#if defined(LUA_COMPAT_GLOBAL)
     case TK_NAME: {
       /* compatibility code to parse global keyword when "global"
          is not reserved */
@@ -2008,7 +2009,9 @@ static void statement (LexState *ls) {
           break;
         }
       }  /* else... */
-    }  /* FALLTHROUGH */
+    }
+#endif
+    /* FALLTHROUGH */
     default: {  /* stat -> func | assignment */
       exprstat(ls);
       break;
