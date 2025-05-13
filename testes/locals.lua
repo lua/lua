@@ -1,6 +1,8 @@
 -- $Id: testes/locals.lua $
 -- See Copyright Notice in file lua.h
 
+global * <const>
+
 print('testing local variables and environments')
 
 local debug = require"debug"
@@ -39,9 +41,11 @@ f = nil
 local f
 local x = 1
 
-a = nil
-load('local a = {}')()
-assert(a == nil)
+do
+  global a; a = nil
+  load('local a = {}')()
+  assert(a == nil)
+end
 
 function f (a)
   local _1, _2, _3, _4, _5
@@ -154,7 +158,7 @@ local _ENV = (function (...) return ... end)(_G, dummy)   -- {
 do local _ENV = {assert=assert}; assert(true) end
 local mt = {_G = _G}
 local foo,x
-A = false    -- "declare" A
+global A; A = false    -- "declare" A
 do local _ENV = mt
   function foo (x)
     A = x

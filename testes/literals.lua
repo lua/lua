@@ -3,6 +3,8 @@
 
 print('testing scanner')
 
+global * <const>
+
 local debug = require "debug"
 
 

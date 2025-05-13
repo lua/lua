@@ -1,6 +1,8 @@
 -- $Id: testes/closure.lua $
 -- See Copyright Notice in file lua.h
 
+global * <const>
+
 print "testing closures"
 
 do  -- bug in 5.4.7

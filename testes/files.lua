@@ -1,6 +1,8 @@
 -- $Id: testes/files.lua $
 -- See Copyright Notice in file lua.h
 
+global * <const>
+
 local debug = require "debug"
 
 local maxint = math.maxinteger
@@ -838,13 +840,13 @@ assert(os.date("!\0\0") == "\0\0")
 local x = string.rep("a", 10000)
 assert(os.date(x) == x)
 local t = os.time()
-D = os.date("*t", t)
+global D; D = os.date("*t", t)
 assert(os.date(string.rep("%d", 1000), t) ==
        string.rep(os.date("%d", t), 1000))
 assert(os.date(string.rep("%", 200)) == string.rep("%", 100))
 
 local function checkDateTable (t)
-  _G.D = os.date("*t", t)
+  D = os.date("*t", t)
   assert(os.time(D) == t)
   load(os.date([[assert(D.year==%Y and D.month==%m and D.day==%d and
     D.hour==%H and D.min==%M and D.sec==%S and

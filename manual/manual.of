@@ -223,14 +223,15 @@ a function's formal parameter is equivalent to a local variable.)
 
 All chunks start with an implicit declaration @T{global *},
 which declares all free names as global variables;
-this implicit declaration becomes void inside the scope of any other
-@Rw{global} declaration, regardless of the names being declared.
+this preambular declaration becomes void inside the scope of any other
+@Rw{global} declaration,
+as the following example illustrates:
 @verbatim{
 X = 1       -- Ok, global by default
 do
   global Y  -- voids implicit initial declaration
-  X = 1     -- ERROR, X not declared
   Y = 1     -- Ok, Y declared as global
+  X = 1     -- ERROR, X not declared
 end
 X = 2       -- Ok, global by default again
 }
@@ -1110,9 +1111,9 @@ and cannot be used as names:
 @index{reserved words}
 @verbatim{
 and       break     do        else      elseif    end
-false     for       function  goto      if        in
-local     nil       not       or        repeat    return
-then      true      until     while
+false     for       function  global    goto      if
+in        local     nil       not       or        repeat
+return    then      true      until     while
 }
 
 Lua is a case-sensitive language:
@@ -1653,7 +1654,8 @@ The declaration for locals can include an initialization:
 @producname{stat}@producbody{@Rw{local} attnamelist @bnfopt{@bnfter{=} explist}}
 @producname{stat}@producbody{@Rw{global} attnamelist}
 @producname{attnamelist}@producbody{
-  @bnfNter{Name} attrib @bnfrep{@bnfter{,} @bnfNter{Name} attrib}}
+  @bnfNter{Name} @bnfopt{attrib}
+     @bnfrep{@bnfter{,} @bnfNter{Name} @bnfopt{attrib}}}
 }
 If present, an initial assignment has the same semantics
 of a multiple assignment @see{assignment}.
@@ -1662,24 +1664,55 @@ Otherwise, all local variables are initialized with @nil.
 Each variable name may be postfixed by an attribute
 (a name between angle brackets):
 @Produc{
-@producname{attrib}@producbody{@bnfopt{@bnfter{<} @bnfNter{Name} @bnfter{>}}}
+@producname{attrib}@producbody{@bnfter{<} @bnfNter{Name} @bnfter{>}}
 }
 There are two possible attributes:
 @id{const}, which declares a @emph{constant} or @emph{read-only} variable,
 @index{constant variable}
-that is, a variable that cannot be assigned to
-after its initialization;
+that is, a variable that cannot be used as the left-hand side of an
+assignment,
 and @id{close}, which declares a to-be-closed variable @see{to-be-closed}.
 A list of variables can contain at most one to-be-closed variable.
 Only local variables can have the @id{close} attribute.
 
-Note that, for global variables,
-the @emph{read-only} atribute is only a syntactical restriction:
+Lua offers also a collective declaration for global variables:
+@Produc{
+@producname{stat}@producbody{@Rw{global} @bnfter{*} @bnfopt{attrib}}
+}
+This special form implicitly declares
+as globals all names not explicitly declared previously.
+In particular,
+@T{global * <const>} implicitly declares
+as read-only globals all names not explicitly declared previously;
+see the following example:
 @verbatim{
-global X <const>
-X = 1         -- ERROR
-_ENV.X = 1    -- Ok
-foo()         -- 'foo' can freely change the global X
+global X
+global * <const>
+print(math.pi)   -- Ok, 'print' and 'math' are read-only
+X = 1            -- Ok, declared as read-write
+Y = 1            -- Error, Y is read-only
+}
+
+As noted in @See{globalenv},
+all chunks start with an implicit declaration @T{global *},
+but this preambular declaration becomes void inside
+the scope of any other @Rw{global} declaration.
+Therefore, a program that does not use global declarations
+or start with @T{global *}
+has free read-write access to any global;
+a program that starts with @T{global * <const>}
+has free read-only access to any global;
+and a program that starts with any other global declaration
+(e.g., @T{global none}) can only refer to declared variables.
+
+Note that, for global variables,
+the effect of any declaration is only syntactical:
+@verbatim{
+global X <const>, _G
+X = 1           -- ERROR
+_ENV.X = 1      -- Ok
+_G.print(X)     -- Ok
+foo()         -- 'foo' can freely change any global
 }
 
 A chunk is also a block @see{chunks},
@@ -9453,7 +9486,12 @@ change between versions.
 @itemize{
 
 @item{
-The control variable in @Rw{for} loops are read only.
+The word @Rw{global} is a reserved word.
+Do not use it as a regular name.
+}
+
+@item{
+The control variable in @Rw{for} loops is read only.
 If you need to change it,
 declare a local variable with the same name in the loop body.
 }
@@ -9582,12 +9620,14 @@ and @bnfNter{LiteralString}, see @See{lexical}.)
 @OrNL	@Rw{global} @Rw{function} @bnfNter{Name} funcbody
 @OrNL	@Rw{local} attnamelist @bnfopt{@bnfter{=} explist}
 @OrNL	@Rw{global} attnamelist
+@OrNL	@Rw{global} @bnfter{*} @bnfopt{attrib}
 }
 
 @producname{attnamelist}@producbody{
-  @bnfNter{Name} attrib @bnfrep{@bnfter{,} @bnfNter{Name} attrib}}
+  @bnfNter{Name} @bnfopt{attrib}
+        @bnfrep{@bnfter{,} @bnfNter{Name} @bnfopt{attrib}}}
 
-@producname{attrib}@producbody{@bnfopt{@bnfter{<} @bnfNter{Name} @bnfter{>}}}
+@producname{attrib}@producbody{@bnfter{<} @bnfNter{Name} @bnfter{>}}
 
 @producname{retstat}@producbody{@Rw{return}
                                    @bnfopt{explist} @bnfopt{@bnfter{;}}}

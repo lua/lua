@@ -3,6 +3,8 @@
 
 -- UTF-8 file
 
+global * <const>
+
 print "testing UTF-8 library"
 
 local utf8 = require'utf8'

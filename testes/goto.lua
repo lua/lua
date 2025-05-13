@@ -1,6 +1,10 @@
 -- $Id: testes/goto.lua $
 -- See Copyright Notice in file lua.h
 
+global require
+global print, load, assert, string, setmetatable
+global collectgarbage, error
+
 print("testing goto and global declarations")
 
 collectgarbage()
@@ -254,6 +258,8 @@ assert(testG(5) == 10)
 
 do   -- test goto's around to-be-closed variable
 
+  global *
+
   -- set 'var' and return an object that will reset 'var' when
   -- it goes out of scope
   local function newobj (var)
@@ -265,16 +271,16 @@ do   -- test goto's around to-be-closed variable
 
   goto L1
 
-  ::L4:: assert(not X); goto L5   -- varX dead here
+  ::L4:: assert(not varX); goto L5   -- varX dead here
 
   ::L1::
   local varX <close> = newobj("X")
-  assert(X); goto L2   -- varX alive here
+  assert(varX); goto L2   -- varX alive here
 
   ::L3::
-  assert(X); goto L4   -- varX alive here
+  assert(varX); goto L4   -- varX alive here
 
-  ::L2:: assert(X); goto L3  -- varX alive here
+  ::L2:: assert(varX); goto L3  -- varX alive here
 
   ::L5::   -- return
 end
@@ -285,8 +291,7 @@ foo()
 --------------------------------------------------------------------------
 
 do
-  global print, load, T<const>; global assert<const>
-  global string
+  global T<const>
 
   local function checkerr (code, err)
     local st, msg = load(code)
@@ -299,6 +304,7 @@ do
 
   -- global variables cannot be to-be-closed
   checkerr("global X<close>", "cannot be")
+  checkerr("global * <close>", "cannot be")
 
   do
     local X = 10
@@ -349,6 +355,12 @@ do
       return
     end
   ]], "%:2%:")   -- correct line in error message
+
+  checkerr([[
+    global * <const>;
+    print(X)    -- Ok to use
+    Y = 1   -- ERROR
+  ]], "assign to const variable 'Y'")
   
 end
 

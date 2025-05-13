@@ -405,7 +405,12 @@ static int searchvar (FuncState *fs, TString *n, expdesc *var) {
   int i;
   for (i = cast_int(fs->nactvar) - 1; i >= 0; i--) {
     Vardesc *vd = getlocalvardesc(fs, i);
-    if (eqstr(n, vd->vd.name)) {  /* found? */
+    if (vd->vd.name == NULL) {  /* 'global *'? */
+      if (var->u.info == -1) {  /* no previous collective declaration? */
+        var->u.info = fs->firstlocal + i;  /* will use this one as default */
+      }
+    }
+    else if (eqstr(n, vd->vd.name)) {  /* found? */
       if (vd->vd.kind == RDKCTC)  /* compile-time constant? */
         init_exp(var, VCONST, fs->firstlocal + i);
       else if (vd->vd.kind == GDKREG || vd->vd.kind == GDKCONST)
@@ -449,18 +454,16 @@ static void marktobeclosed (FuncState *fs) {
 ** 'var' as 'void' as a flag.
 */
 static void singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
-  int v = searchvar(fs, n, var);  /* look up locals at current level */
+  int v = searchvar(fs, n, var);  /* look up variables at current level */
   if (v >= 0) {  /* found? */
     if (v == VLOCAL && !base)
       markupval(fs, var->u.var.vidx);  /* local will be used as an upval */
   }
-  else {  /* not found as local at current level; try upvalues */
+  else {  /* not found at current level; try upvalues */
     int idx = searchupvalue(fs, n);  /* try existing upvalues */
     if (idx < 0) {  /* not found? */
       if (fs->prev != NULL)  /* more levels? */
         singlevaraux(fs->prev, n, var, 0);  /* try upper levels */
-      else  /* no more levels */
-        init_exp(var, VGLOBAL, -1);  /* global by default */
       if (var->k == VLOCAL || var->k == VUPVAL)  /* local or upvalue? */
         idx  = newupvalue(fs, n, var);  /* will be a new upvalue */
       else  /* it is a global or a constant */
@@ -477,6 +480,7 @@ static void singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
 */
 static void buildvar (LexState *ls, TString *varname, expdesc *var) {
   FuncState *fs = ls->fs;
+  init_exp(var, VGLOBAL, -1);  /* global by default */
   singlevaraux(fs, varname, var, 1);
   if (var->k == VGLOBAL) {  /* global name? */
     expdesc key;
@@ -1796,20 +1800,33 @@ static void localstat (LexState *ls) {
 }
 
 
+static lu_byte getglobalattribute (LexState *ls) {
+  lu_byte kind = getvarattribute(ls);
+  if (kind == RDKTOCLOSE)
+    luaK_semerror(ls, "global variables cannot be to-be-closed");
+  /* adjust kind for global variable */
+  return (kind == VDKREG) ? GDKREG : GDKCONST;
+}
+
+
 static void globalstat (LexState *ls) {
-  /* globalstat -> (GLOBAL) NAME attrib {',' NAME attrib} */
+  /* globalstat -> (GLOBAL) '*' attrib
+     globalstat -> (GLOBAL) NAME attrib {',' NAME attrib} */
   FuncState *fs = ls->fs;
-  do {
-    TString *vname = str_checkname(ls);
-    lu_byte kind = getvarattribute(ls);
-    if (kind == RDKTOCLOSE)
-      luaK_semerror(ls, "global variable ('%s') cannot be to-be-closed",
-                        getstr(vname));
-    /* adjust kind for global variable */
-    kind = (kind == VDKREG) ? GDKREG : GDKCONST;
-    new_varkind(ls, vname, kind);
+  if (testnext(ls, '*')) {
+    lu_byte kind = getglobalattribute(ls);
+    /* use NULL as name to represent '*' entries */
+    new_varkind(ls, NULL, kind);
     fs->nactvar++;  /* activate declaration */
-  } while (testnext(ls, ','));
+  }
+  else {
+    do {
+      TString *vname = str_checkname(ls);
+      lu_byte kind = getglobalattribute(ls);
+      new_varkind(ls, vname, kind);
+      fs->nactvar++;  /* activate declaration */
+    } while (testnext(ls, ','));
+  }
 }
 
 
@@ -1983,10 +2000,10 @@ static void statement (LexState *ls) {
     case TK_NAME: {
       /* compatibility code to parse global keyword when "global"
          is not reserved */
-      if (eqstr(ls->t.seminfo.ts, luaS_newliteral(ls->L, "global"))) {
+      if (strcmp(getstr(ls->t.seminfo.ts), "global") == 0) {
         int lk = luaX_lookahead(ls);
-        if (lk == TK_NAME || lk == TK_FUNCTION) {
-          /* 'global <name>' or 'global function' */
+        if (lk == TK_NAME || lk == '*' || lk == TK_FUNCTION) {
+          /* 'global <name>' or 'global *' or 'global function' */
           globalstatfunc(ls, line);
           break;
         }

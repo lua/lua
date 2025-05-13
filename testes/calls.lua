@@ -1,6 +1,8 @@
 -- $Id: testes/calls.lua $
 -- See Copyright Notice in file lua.h
 
+global * <const>
+
 print("testing functions and calls")
 
 local debug = require "debug"
@@ -22,7 +24,7 @@ assert(not pcall(type))
 
 
 -- testing local-function recursion
-fact = false
+global fact; fact = false
 do
   local res = 1
   local function fact (n)
@@ -63,7 +65,7 @@ a.b.c:f2('k', 12); assert(a.b.c.k == 12)
 
 print('+')
 
-t = nil   -- 'declare' t
+global t; t = nil   -- 'declare' t
 function f(a,b,c) local d = 'a'; t={a,b,c,d} end
 
 f(      -- this line change must be valid
@@ -75,7 +77,7 @@ assert(t[1] == 1 and t[2] == 2 and t[3] == 3 and t[4] == 'a')
 
 t = nil   -- delete 't'
 
-function fat(x)
+global function fat(x)
   if x <= 1 then return 1
   else return x*load("return fat(" .. x-1 .. ")", "")()
   end
@@ -107,7 +109,7 @@ end
 
 _G.deep = nil   -- "declaration"  (used by 'all.lua')
 
-function deep (n)
+global function deep (n)
   if n>0 then deep(n-1) end
 end
 deep(10)
@@ -352,7 +354,7 @@ assert(not load(function () return true end))
 
 -- small bug
 local t = {nil, "return ", "3"}
-f, msg = load(function () return table.remove(t, 1) end)
+local f, msg = load(function () return table.remove(t, 1) end)
 assert(f() == nil)   -- should read the empty chunk
 
 -- another small bug (in 5.2.1)
@@ -388,7 +390,8 @@ assert(load("return _ENV", nil, nil, 123)() == 123)
 
 
 -- load when _ENV is not first upvalue
-local x; XX = 123
+global XX; local x
+XX = 123
 local function h ()
   local y=x   -- use 'x', so that it becomes 1st upvalue
   return XX   -- global name

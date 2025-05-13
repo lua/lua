@@ -1,6 +1,8 @@
 -- $Id: testes/nextvar.lua $
 -- See Copyright Notice in file lua.h
 
+global * <const>
+
 print('testing tables, next, and for')
 
 local function checkerror (msg, f, ...)
@@ -345,9 +347,6 @@ end
 
 local nofind = {}
 
-a,b,c = 1,2,3
-a,b,c = nil
-
 
 -- next uses always the same iteration function
 assert(next{} == next{})
@@ -396,7 +395,7 @@ for i=0,10000 do
   end
 end
 
-n = {n=0}
+local n = {n=0}
 for i,v in pairs(a) do
   n.n = n.n+1
   assert(i and v and a[i] == v)

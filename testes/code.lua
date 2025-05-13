@@ -1,6 +1,8 @@
 -- $Id: testes/code.lua $
 -- See Copyright Notice in file lua.h
 
+global * <const>
+
 if T==nil then
   (Message or print)('\n >>> testC not active: skipping opcode tests <<<\n')
   return
@@ -405,8 +407,8 @@ do   -- tests for table access in upvalues
 end
 
 -- de morgan
-checkequal(function () local a; if not (a or b) then b=a end end,
-           function () local a; if (not a and not b) then b=a end end)
+checkequal(function () local a, b; if not (a or b) then b=a end end,
+           function () local a, b; if (not a and not b) then b=a end end)
 
 checkequal(function (l) local a; return 0 <= a and a <= l end,
            function (l) local a; return not (not(a >= 0) or not(a <= l)) end)

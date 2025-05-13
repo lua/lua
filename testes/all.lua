@@ -2,6 +2,10 @@
 -- $Id: testes/all.lua $
 -- See Copyright Notice in file lua.h
 
+global * <const>
+
+global _soft, _port, _nomsg
+global T
 
 local version = "Lua 5.5"
 if _VERSION ~= version then
@@ -34,7 +38,7 @@ if usertests then
 end
 
 -- tests should require debug when needed
-debug = nil
+global debug; debug = nil
 
 
 if usertests then
@@ -71,7 +75,7 @@ do   -- (
 
 -- track messages for tests not performed
 local msgs = {}
-function Message (m)
+global function Message (m)
   if not _nomsg then
     print(m)
     msgs[#msgs+1] = string.sub(m, 3, -3)
