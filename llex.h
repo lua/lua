@@ -75,6 +75,7 @@ typedef struct LexState {
   struct Dyndata *dyd;  /* dynamic structures used by the parser */
   TString *source;  /* current source name */
   TString *envn;  /* environment variable name */
+  TString *brkn;  /* "break" name (used as a label) */
 } LexState;
 
 

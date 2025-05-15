@@ -707,7 +707,7 @@ static void enterblock (FuncState *fs, BlockCnt *bl, lu_byte isloop) {
 */
 static l_noret undefgoto (LexState *ls, Labeldesc *gt) {
   /* breaks are checked when created, cannot be undefined */
-  lua_assert(!eqstr(gt->name, luaS_newliteral(ls->L, "break")));
+  lua_assert(!eqstr(gt->name, ls->brkn));
   luaK_semerror(ls, "no visible label '%s' for <goto> at line %d",
                     getstr(gt->name), gt->line);
 }
@@ -723,7 +723,7 @@ static void leaveblock (FuncState *fs) {
   removevars(fs, bl->nactvar);  /* remove block locals */
   lua_assert(bl->nactvar == fs->nactvar);  /* back to level on entry */
   if (bl->isloop == 2)  /* has to fix pending breaks? */
-    createlabel(ls, luaS_newliteral(ls->L, "break"), 0, 0);
+    createlabel(ls, ls->brkn, 0, 0);
   solvegotos(fs, bl);
   if (bl->previous == NULL) {  /* was it the last block? */
     if (bl->firstgoto < ls->dyd->gt.n)  /* still pending gotos? */
@@ -1497,7 +1497,7 @@ static void breakstat (LexState *ls, int line) {
  ok:
   bl->isloop = 2;  /* signal that block has pending breaks */
   luaX_next(ls);  /* skip break */
-  newgotoentry(ls, luaS_newliteral(ls->L, "break"), line);
+  newgotoentry(ls, ls->brkn, line);
 }
 
 
