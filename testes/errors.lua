@@ -303,14 +303,14 @@ do
   local f = function (a) return a + 1 end
   f = assert(load(string.dump(f, true)))
   assert(f(3) == 4)
-  checkerr("^%?:%-1:", f, {})
+  checkerr("^%?:%?:", f, {})
 
   -- code with a move to a local var ('OP_MOV A B' with A<B)
   f = function () local a; a = {}; return a + 2 end
   -- no debug info (so that 'a' is unknown)
   f = assert(load(string.dump(f, true)))
   -- symbolic execution should not get lost
-  checkerr("^%?:%-1:.*table value", f)
+  checkerr("^%?:%?:.*table value", f)
 end
 
 
