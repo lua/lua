@@ -2001,10 +2001,10 @@ static void statement (LexState *ls) {
     case TK_NAME: {
       /* compatibility code to parse global keyword when "global"
          is not reserved */
-      if (strcmp(getstr(ls->t.seminfo.ts), "global") == 0) {
+      if (ls->t.seminfo.ts == ls->glbn) {  /* current = "global"? */
         int lk = luaX_lookahead(ls);
         if (lk == TK_NAME || lk == '*' || lk == TK_FUNCTION) {
-          /* 'global <name>' or 'global *' or 'global function' */
+          /* 'global name' or 'global *' or 'global function' */
           globalstatfunc(ls, line);
           break;
         }

@@ -40,16 +40,11 @@
 
 #define currIsNewline(ls)	(ls->current == '\n' || ls->current == '\r')
 
-#if defined(LUA_COMPAT_GLOBAL)
-#define GLOBALLEX	".g"	/* anything not recognizable as a name */
-#else
-#define GLOBALLEX	"global"
-#endif
 
 /* ORDER RESERVED */
 static const char *const luaX_tokens [] = {
     "and", "break", "do", "else", "elseif",
-    "end", "false", "for", "function", GLOBALLEX, "goto", "if",
+    "end", "false", "for", "function", "global", "goto", "if",
     "in", "local", "nil", "not", "or", "repeat",
     "return", "then", "true", "until", "while",
     "//", "..", "...", "==", ">=", "<=", "~=",
@@ -189,10 +184,15 @@ void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source,
   ls->linenumber = 1;
   ls->lastline = 1;
   ls->source = source;
-  ls->envn = luaS_newliteral(L, LUA_ENV);  /* get env name */
-  ls->brkn = luaS_newliteral(L, "break");  /* get "break" name */
-  /* "break" cannot be collected, as it is a reserved word" */
-  lua_assert(isreserved(ls->brkn));
+  /* all three strings here ("_ENV", "break", "global") were fixed,
+     so they cannot be collected */
+  ls->envn = luaS_newliteral(L, LUA_ENV);  /* get env string */
+  ls->brkn = luaS_newliteral(L, "break");  /* get "break" string */
+#if defined(LUA_COMPAT_GLOBAL)
+  /* compatibility mode: "global" is not a reserved word */
+  ls->glbn = luaS_newliteral(L, "global");  /* get "global" string */
+  ls->glbn->extra = 0;  /* mark it as not reserved */
+#endif
   luaZ_resizebuffer(ls->L, ls->buff, LUA_MINBUFFER);  /* initialize buffer */
 }
 
