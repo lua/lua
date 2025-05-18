@@ -1,7 +1,7 @@
 -- $Id: testes/locals.lua $
 -- See Copyright Notice in file lua.h
 
-global * <const>
+global <const> *
 
 print('testing local variables and environments')
 
@@ -181,23 +181,25 @@ assert(x==20)
 A = nil
 
 
-do   -- constants
+do   print("testing local constants")
   global assert<const>, load, string, X
   X = 1   -- not a constant
   local a<const>, b, c<const> = 10, 20, 30
   b = a + c + b    -- 'b' is not constant
   assert(a == 10 and b == 60 and c == 30)
+
   local function checkro (name, code)
     local st, msg = load(code)
     local gab = string.format("attempt to assign to const variable '%s'", name)
     assert(not st and string.find(msg, gab))
   end
+
   checkro("y", "local x, y <const>, z = 10, 20, 30; x = 11; y = 12")
   checkro("x", "local x <const>, y, z <const> = 10, 20, 30; x = 11")
   checkro("z", "local x <const>, y, z <const> = 10, 20, 30; y = 10; z = 11")
-  checkro("foo", "local foo <const> = 10; function foo() end")
-  checkro("foo", "local foo <const> = {}; function foo() end")
-  checkro("foo", "global foo <const>; function foo() end")
+  checkro("foo", "local<const> foo = 10; function foo() end")
+  checkro("foo", "local<const> foo <const> = {}; function foo() end")
+  checkro("foo", "global<const> foo <const>; function foo() end")
   checkro("XX", "global XX <const>; XX = 10")
   checkro("XX", "local _ENV; global XX <const>; XX = 10")
 
@@ -218,7 +220,17 @@ do   -- constants
 end
 
 
+
 print"testing to-be-closed variables"
+
+
+do
+  local st, msg = load("local <close> a, b")
+  assert(not st and string.find(msg, "multiple"))
+
+  local st, msg = load("local a<close>, b<close>")
+  assert(not st and string.find(msg, "multiple"))
+end
 
 local function stack(n) n = ((n == 0) or stack(n - 1)) end
 

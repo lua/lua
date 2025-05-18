@@ -6,7 +6,7 @@
 
 print('testing pattern matching')
 
-global * <const>
+global <const> *
 
 local function checkerror (msg, f, ...)
   local s, err = pcall(f, ...)

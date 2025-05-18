@@ -3,7 +3,7 @@
 
 -- UTF-8 file
 
-global * <const>
+global <const> *
 
 print "testing UTF-8 library"
 

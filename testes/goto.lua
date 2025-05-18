@@ -1,9 +1,9 @@
 -- $Id: testes/goto.lua $
 -- See Copyright Notice in file lua.h
 
-global require
-global print, load, assert, string, setmetatable
-global collectgarbage, error
+global<const> require
+global<const> print, load, assert, string, setmetatable
+global<const> collectgarbage, error
 
 print("testing goto and global declarations")
 
@@ -304,7 +304,7 @@ do
 
   -- global variables cannot be to-be-closed
   checkerr("global X<close>", "cannot be")
-  checkerr("global * <close>", "cannot be")
+  checkerr("global <close> *", "cannot be")
 
   do
     local X = 10
@@ -345,7 +345,7 @@ do
   end
 
   checkerr([[
-    global foo <const>;
+    global<const> foo;
     function foo (x) return end   -- ERROR: foo is read-only
   ]], "assign to const variable 'foo'")
 
@@ -357,7 +357,7 @@ do
   ]], "%:2%:")   -- correct line in error message
 
   checkerr([[
-    global * <const>;
+    global<const> *;
     print(X)    -- Ok to use
     Y = 1   -- ERROR
   ]], "assign to const variable 'Y'")

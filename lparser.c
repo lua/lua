@@ -1733,7 +1733,7 @@ static void localfunc (LexState *ls) {
 }
 
 
-static lu_byte getvarattribute (LexState *ls) {
+static lu_byte getvarattribute (LexState *ls, lu_byte df) {
   /* attrib -> ['<' NAME '>'] */
   if (testnext(ls, '<')) {
     TString *ts = str_checkname(ls);
@@ -1746,7 +1746,7 @@ static lu_byte getvarattribute (LexState *ls) {
     else
       luaK_semerror(ls, "unknown attribute '%s'", attr);
   }
-  return VDKREG;  /* regular variable */
+  return df;  /* return default value */
 }
 
 
@@ -1767,10 +1767,12 @@ static void localstat (LexState *ls) {
   int nvars = 0;
   int nexps;
   expdesc e;
-  do {
-    TString *vname = str_checkname(ls);
-    lu_byte kind = getvarattribute(ls);
-    vidx = new_varkind(ls, vname, kind);
+  /* get prefixed attribute (if any); default is regular local variable */
+  lu_byte defkind = getvarattribute(ls, VDKREG);
+  do {  /* for each variable */
+    TString *vname = str_checkname(ls);  /* get its name */
+    lu_byte kind = getvarattribute(ls, defkind);  /* postfixed attribute */
+    vidx = new_varkind(ls, vname, kind);  /* predeclare it */
     if (kind == RDKTOCLOSE) {  /* to-be-closed? */
       if (toclose != -1)  /* one already present? */
         luaK_semerror(ls, "multiple to-be-closed variables in local list");
@@ -1778,13 +1780,13 @@ static void localstat (LexState *ls) {
     }
     nvars++;
   } while (testnext(ls, ','));
-  if (testnext(ls, '='))
+  if (testnext(ls, '='))  /* initialization? */
     nexps = explist(ls, &e);
   else {
     e.k = VVOID;
     nexps = 0;
   }
-  var = getlocalvardesc(fs, vidx);  /* get last variable */
+  var = getlocalvardesc(fs, vidx);  /* retrieve last variable */
   if (nvars == nexps &&  /* no adjustments? */
       var->vd.kind == RDKCONST &&  /* last variable is const? */
       luaK_exp2const(fs, &e, &var->k)) {  /* compile-time constant? */
@@ -1800,29 +1802,35 @@ static void localstat (LexState *ls) {
 }
 
 
-static lu_byte getglobalattribute (LexState *ls) {
-  lu_byte kind = getvarattribute(ls);
-  if (kind == RDKTOCLOSE)
-    luaK_semerror(ls, "global variables cannot be to-be-closed");
-  /* adjust kind for global variable */
-  return (kind == VDKREG) ? GDKREG : GDKCONST;
+static lu_byte getglobalattribute (LexState *ls, lu_byte df) {
+  lu_byte kind = getvarattribute(ls, df);
+  switch (kind) {
+    case RDKTOCLOSE:
+      luaK_semerror(ls, "global variables cannot be to-be-closed");
+      break;  /* to avoid warnings */
+    case RDKCONST:
+      return GDKCONST;  /* adjust kind for global variable */
+    default:
+      return kind;
+  }
 }
 
 
 static void globalstat (LexState *ls) {
-  /* globalstat -> (GLOBAL) '*' attrib
-     globalstat -> (GLOBAL) NAME attrib {',' NAME attrib} */
+  /* globalstat -> (GLOBAL) attrib '*'
+     globalstat -> (GLOBAL) attrib NAME attrib {',' NAME attrib} */
   FuncState *fs = ls->fs;
+  /* get prefixed attribute (if any); default is regular global variable */
+  lu_byte defkind = getglobalattribute(ls, GDKREG);
   if (testnext(ls, '*')) {
-    lu_byte kind = getglobalattribute(ls);
     /* use NULL as name to represent '*' entries */
-    new_varkind(ls, NULL, kind);
+    new_varkind(ls, NULL, defkind);
     fs->nactvar++;  /* activate declaration */
   }
   else {
-    do {
+    do {  /* list of names */
       TString *vname = str_checkname(ls);
-      lu_byte kind = getglobalattribute(ls);
+      lu_byte kind = getglobalattribute(ls, defkind);
       new_varkind(ls, vname, kind);
       fs->nactvar++;  /* activate declaration */
     } while (testnext(ls, ','));
@@ -2003,8 +2011,9 @@ static void statement (LexState *ls) {
          is not reserved */
       if (ls->t.seminfo.ts == ls->glbn) {  /* current = "global"? */
         int lk = luaX_lookahead(ls);
-        if (lk == TK_NAME || lk == '*' || lk == TK_FUNCTION) {
-          /* 'global name' or 'global *' or 'global function' */
+        if (lk == '<' || lk == TK_NAME || lk == '*' || lk == TK_FUNCTION) {
+          /* 'global <attrib>' or 'global name' or 'global *' or
+             'global function' */
           globalstatfunc(ls, line);
           break;
         }

@@ -1,7 +1,7 @@
 -- $Id: testes/nextvar.lua $
 -- See Copyright Notice in file lua.h
 
-global * <const>
+global <const> *
 
 print('testing tables, next, and for')
 

@@ -2,7 +2,7 @@
 -- $Id: testes/all.lua $
 -- See Copyright Notice in file lua.h
 
-global * <const>
+global <const> *
 
 global _soft, _port, _nomsg
 global T

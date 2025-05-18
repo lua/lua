@@ -1,7 +1,7 @@
 -- $Id: testes/calls.lua $
 -- See Copyright Notice in file lua.h
 
-global * <const>
+global <const> *
 
 print("testing functions and calls")
 

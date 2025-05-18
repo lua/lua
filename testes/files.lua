@@ -1,7 +1,7 @@
 -- $Id: testes/files.lua $
 -- See Copyright Notice in file lua.h
 
-global * <const>
+global <const> *
 
 local debug = require "debug"
 

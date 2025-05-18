@@ -8,11 +8,10 @@ local string = require "string"
 
 global none
 
-global print, assert, pcall, type, pairs, load
-global tonumber, tostring, select
+global<const> print, assert, pcall, type, pairs, load
+global<const> tonumber, tostring, select
 
-local minint <const> = math.mininteger
-local maxint <const> = math.maxinteger
+local<const> minint, maxint = math.mininteger, math.maxinteger
 
 local intbits <const> = math.floor(math.log(maxint, 2) + 0.5) + 1
 assert((1 << intbits) == 0)

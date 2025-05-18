@@ -1651,43 +1651,47 @@ Function calls are explained in @See{functioncall}.
 Local and global variables can be declared anywhere inside a block.
 The declaration for locals can include an initialization:
 @Produc{
-@producname{stat}@producbody{@Rw{local} attnamelist @bnfopt{@bnfter{=} explist}}
+@producname{stat}@producbody{@Rw{local}
+  attnamelist @bnfopt{@bnfter{=} explist}}
 @producname{stat}@producbody{@Rw{global} attnamelist}
-@producname{attnamelist}@producbody{
-  @bnfNter{Name} @bnfopt{attrib}
-     @bnfrep{@bnfter{,} @bnfNter{Name} @bnfopt{attrib}}}
 }
 If present, an initial assignment has the same semantics
 of a multiple assignment @see{assignment}.
 Otherwise, all local variables are initialized with @nil.
 
-Each variable name may be postfixed by an attribute
-(a name between angle brackets):
+The list of names may be prefixed by an attribute
+(a name between angle brackets)
+and each variable name may be postfixed by an attribute:
 @Produc{
+@producname{attnamelist}@producbody{
+  @bnfopt{attrib} @bnfNter{Name} @bnfopt{attrib}
+     @bnfrep{@bnfter{,} @bnfNter{Name} @bnfopt{attrib}}}
 @producname{attrib}@producbody{@bnfter{<} @bnfNter{Name} @bnfter{>}}
 }
+A prefixed attribute applies to all names in the list;
+a postfixed attribute applies to its particular name.
 There are two possible attributes:
 @id{const}, which declares a @emph{constant} or @emph{read-only} variable,
 @index{constant variable}
 that is, a variable that cannot be used as the left-hand side of an
 assignment,
 and @id{close}, which declares a to-be-closed variable @see{to-be-closed}.
-A list of variables can contain at most one to-be-closed variable.
 Only local variables can have the @id{close} attribute.
+A list of variables can contain at most one to-be-closed variable.
 
 Lua offers also a collective declaration for global variables:
 @Produc{
-@producname{stat}@producbody{@Rw{global} @bnfter{*} @bnfopt{attrib}}
+@producname{stat}@producbody{@Rw{global} @bnfopt{attrib} @bnfter{*}}
 }
 This special form implicitly declares
 as globals all names not explicitly declared previously.
 In particular,
-@T{global * <const>} implicitly declares
+@T{global<const> *} implicitly declares
 as read-only globals all names not explicitly declared previously;
 see the following example:
 @verbatim{
 global X
-global * <const>
+global<const> *
 print(math.pi)   -- Ok, 'print' and 'math' are read-only
 X = 1            -- Ok, declared as read-write
 Y = 1            -- Error, Y is read-only
@@ -1700,7 +1704,7 @@ the scope of any other @Rw{global} declaration.
 Therefore, a program that does not use global declarations
 or start with @T{global *}
 has free read-write access to any global;
-a program that starts with @T{global * <const>}
+a program that starts with @T{global<const> *}
 has free read-only access to any global;
 and a program that starts with any other global declaration
 (e.g., @T{global none}) can only refer to declared variables.
@@ -9620,11 +9624,11 @@ and @bnfNter{LiteralString}, see @See{lexical}.)
 @OrNL	@Rw{global} @Rw{function} @bnfNter{Name} funcbody
 @OrNL	@Rw{local} attnamelist @bnfopt{@bnfter{=} explist}
 @OrNL	@Rw{global} attnamelist
-@OrNL	@Rw{global} @bnfter{*} @bnfopt{attrib}
+@OrNL	@Rw{global} @bnfopt{attrib} @bnfter{*}
 }
 
 @producname{attnamelist}@producbody{
-  @bnfNter{Name} @bnfopt{attrib}
+  @bnfopt{attrib} @bnfNter{Name} @bnfopt{attrib}
         @bnfrep{@bnfter{,} @bnfNter{Name} @bnfopt{attrib}}}
 
 @producname{attrib}@producbody{@bnfter{<} @bnfNter{Name} @bnfter{>}}

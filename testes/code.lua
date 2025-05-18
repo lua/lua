@@ -1,7 +1,7 @@
 -- $Id: testes/code.lua $
 -- See Copyright Notice in file lua.h
 
-global * <const>
+global <const> *
 
 if T==nil then
   (Message or print)('\n >>> testC not active: skipping opcode tests <<<\n')

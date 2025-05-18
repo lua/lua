@@ -3,7 +3,7 @@
 
 -- ISO Latin encoding
 
-global * <const>
+global <const> *
 
 print('testing strings and string library')
 
