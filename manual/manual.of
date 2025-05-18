@@ -1504,7 +1504,7 @@ labels in Lua are considered statements too:
 A label is visible in the entire block where it is defined,
 except inside nested functions.
 A goto can jump to any visible label as long as it does not
-enter into the scope of a local variable.
+enter into the scope of a variable declaration.
 A label should not be declared
 where a previous label with the same name is visible,
 even if this other label has been declared in an enclosing block.

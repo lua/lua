@@ -542,13 +542,13 @@ static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
 
 /*
 ** Generates an error that a goto jumps into the scope of some
-** local variable.
+** variable declaration.
 */
 static l_noret jumpscopeerror (LexState *ls, Labeldesc *gt) {
   TString *tsname = getlocalvardesc(ls->fs, gt->nactvar)->vd.name;
-  const char *varname = getstr(tsname);
+  const char *varname = (tsname != NULL) ? getstr(tsname) : "*";
   luaK_semerror(ls,
-     "<goto %s> at line %d jumps into the scope of local '%s'",
+     "<goto %s> at line %d jumps into the scope of '%s'",
       getstr(gt->name), gt->line, varname);  /* raise the error */
 }
 
