@@ -849,12 +849,11 @@ static void recfield (LexState *ls, ConsControl *cc) {
   FuncState *fs = ls->fs;
   int reg = ls->fs->freereg;
   expdesc tab, key, val;
-  if (ls->t.token == TK_NAME) {
-    checklimit(fs, cc->nh, MAX_INT, "items in a constructor");
+  if (ls->t.token == TK_NAME)
     codename(ls, &key);
-  }
   else  /* ls->t.token == '[' */
     yindex(ls, &key);
+  checklimit(fs, cc->nh, MAX_INT, "items in a constructor");
   cc->nh++;
   checknext(ls, '=');
   tab = *cc->t;
