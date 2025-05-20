@@ -364,7 +364,23 @@ do
     print(X)    -- Ok to use
     Y = 1   -- ERROR
   ]], "assign to const variable 'Y'")
-  
+
+  checkerr([[
+    global *;
+    Y = X    -- Ok to use
+    global<const> *;
+    Y = 1   -- ERROR
+  ]], "assign to const variable 'Y'")
+
+  global *
+  Y = 10
+  assert(_ENV.Y == 10)
+  global<const> *
+  local x = Y
+  global *
+  Y = x + Y
+  assert(_ENV.Y == 20)
+
 end
 
 print'OK'

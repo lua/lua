@@ -105,6 +105,9 @@ typedef struct expdesc {
 /* variables that live in registers */
 #define varinreg(v)	((v)->vd.kind <= RDKTOCLOSE)
 
+/* test for global variables */
+#define varglobal(v)	((v)->vd.kind >= GDKREG)
+
 
 /* description of an active variable */
 typedef union Vardesc {

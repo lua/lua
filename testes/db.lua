@@ -349,9 +349,11 @@ end, "crl")
 
 
 function f(a,b)
-  global collectgarbage, assert, g, string
+ -- declare some globals to check that they don't interfere with 'getlocal'
+  global collectgarbage
   collectgarbage()
   local _, x = debug.getlocal(1, 1)
+  global assert, g, string
   local _, y = debug.getlocal(1, 2)
   assert(x == a and y == b)
   assert(debug.setlocal(2, 3, "pera") == "AA".."AA")
@@ -387,7 +389,9 @@ function g (...)
   f(AAAA,B)
   assert(AAAA == "pera" and B == "manga")
   do
+     global *
      local B = 13
+     global<const> assert
      local x,y = debug.getlocal(1,5)
      assert(x == 'B' and y == 13)
   end
