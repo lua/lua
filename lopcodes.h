@@ -254,7 +254,7 @@ OP_SETTABLE,/*	A B C	R[A][R[B]] := RK(C)				*/
 OP_SETI,/*	A B C	R[A][B] := RK(C)				*/
 OP_SETFIELD,/*	A B C	R[A][K[B]:shortstring] := RK(C)			*/
 
-OP_NEWTABLE,/*	A B C k	R[A] := {}					*/
+OP_NEWTABLE,/*	A vB vC k	R[A] := {}				*/
 
 OP_SELF,/*	A B C	R[A+1] := R[B]; R[A] := R[B][K[C]:shortstring]	*/
 
@@ -378,9 +378,9 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
   real C = EXTRAARG _ C (the bits of EXTRAARG concatenated with the
   bits of C).
 
-  (*) In OP_NEWTABLE, B is log2 of the hash size (which is always a
+  (*) In OP_NEWTABLE, vB is log2 of the hash size (which is always a
   power of 2) plus 1, or zero for size zero. If not k, the array size
-  is C. Otherwise, the array size is EXTRAARG _ C.
+  is vC. Otherwise, the array size is EXTRAARG _ vC.
 
   (*) For comparisons, k specifies what condition the test should accept
   (true or false).
