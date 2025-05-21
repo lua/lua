@@ -287,7 +287,7 @@ print("final OK !!!")
 
 --[[
 *****************************************************************************
-* Copyright (C) 1994-2016 Lua.org, PUC-Rio.
+* Copyright (C) 1994-2025 Lua.org, PUC-Rio.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
