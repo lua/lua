@@ -44,9 +44,10 @@
 /* ORDER RESERVED */
 static const char *const luaX_tokens [] = {
     "and", "break", "do", "else", "elseif",
-    "end", "false", "for", "function", "global", "goto", "if",
+    "end", "false", "for", "fn", "global", "goto", "if", /* "function" replaced by "fn" */
     "in", "local", "nil", "not", "or", "repeat",
     "return", "then", "true", "until", "while",
+    "num", "str", "bool", "void", "->", /* new keywords "void", "->" added */
     "//", "..", "...", "==", ">=", "<=", "~=",
     "<<", ">>", "::", "<eof>",
     "<number>", "<integer>", "<name>", "<string>"
@@ -476,9 +477,10 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         next(ls);
         break;
       }
-      case '-': {  /* '-' or '--' (comment) */
+      case '-': {  /* '-', '->', or '--' (comment) */
         next(ls);
-        if (ls->current != '-') return '-';
+        if (check_next1(ls, '>')) return TK_ARROW;  /* '->' */
+        else if (ls->current != '-') return '-';
         /* else is a comment */
         next(ls);
         if (ls->current == '[') {  /* long comment? */

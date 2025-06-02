@@ -117,6 +117,7 @@ typedef union Vardesc {
     lu_byte ridx;  /* register holding the variable */
     short pidx;  /* index of the variable in the Proto's 'locvars' array */
     TString *name;  /* variable name */
+    lu_byte declaredtype; /* Will store values from enum DeclaredType */
   } vd;
   TValue k;  /* constant value (if any) */
 } Vardesc;

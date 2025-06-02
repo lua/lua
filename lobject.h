@@ -23,6 +23,16 @@
 #define LUA_TPROTO	(LUA_NUMTYPES+1)  /* function prototypes */
 #define LUA_TDEADKEY	(LUA_NUMTYPES+2)  /* removed keys in tables */
 
+/* In lobject.h, typically before struct definitions */
+enum DeclaredType {
+  DEC_UNTYPED = 0,
+  DEC_NUM,
+  DEC_STR,
+  DEC_BOOL,
+  DEC_NIL,  /* Type of the 'nil' value */
+  DEC_VOID /* For future function return types */
+};
+
 
 
 /*
@@ -560,6 +570,7 @@ typedef struct LocVar {
   TString *varname;
   int startpc;  /* first point where variable is active */
   int endpc;    /* first point where variable is dead */
+  lu_byte declaredtype; /* Will store values from enum DeclaredType */
 } LocVar;
 
 
@@ -593,6 +604,7 @@ typedef struct Proto {
   CommonHeader;
   lu_byte numparams;  /* number of fixed (named) parameters */
   lu_byte flag;
+  lu_byte returntype; /* Will store values from enum DeclaredType */
   lu_byte maxstacksize;  /* number of registers needed by this function */
   int sizeupvalues;  /* size of 'upvalues' */
   int sizek;  /* size of 'k' */
