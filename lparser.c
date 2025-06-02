@@ -27,6 +27,8 @@
 #include "lstate.h"
 #include "lstring.h"
 #include "ltable.h"
+#include "ltypes.h"
+#include "lopcodes.h" // For GET_OPCODE, GETARG_Bx
 
 
 
@@ -63,6 +65,37 @@ typedef struct BlockCnt {
 */
 static void statement (LexState *ls);
 static void expr (LexState *ls, expdesc *v);
+static void funcargs (LexState *ls, expdesc *f); // Forward declaration for funcargs
+
+
+// Definition of parse_type_token before its first use (e.g. before localfn_stmt)
+static lu_byte parse_type_token(LexState *ls) {
+  switch (ls->t.token) {
+    case TK_NUM:
+      luaX_next(ls);
+      return DEC_NUM;
+    case TK_STR:
+      luaX_next(ls);
+      return DEC_STR;
+    case TK_BOOL:
+      luaX_next(ls);
+      return DEC_BOOL;
+    case TK_NIL: // Allow 'nil' as a type specifier for parameters
+      luaX_next(ls);
+      return DEC_NIL;
+    case TK_VOID: // Allow 'void' as a type specifier (likely for return types)
+      luaX_next(ls);
+      return DEC_VOID;
+    default:
+      // This function is called when a type token is strictly expected.
+      luaX_syntaxerror(ls, "type (num, str, bool, nil, void) expected");
+      return DEC_UNTYPED; // Should not be reached due to syntax error
+  }
+}
+
+
+/* Removed infer_exp_literal_type as it's no longer used. */
+/* Removed check_assignment_type function as it's no longer used. */
 
 
 static l_noret error_expected (LexState *ls, int token) {
@@ -173,7 +206,7 @@ static void codename (LexState *ls, expdesc *e) {
 ** information).
 */
 static short registerlocalvar (LexState *ls, FuncState *fs,
-                               TString *varname) {
+                               TString *varname, lu_byte declared_type) {
   Proto *f = fs->f;
   int oldsize = f->sizelocvars;
   luaM_growvector(ls->L, f->locvars, fs->ndebugvars, f->sizelocvars,
@@ -182,6 +215,7 @@ static short registerlocalvar (LexState *ls, FuncState *fs,
     f->locvars[oldsize++].varname = NULL;
   f->locvars[fs->ndebugvars].varname = varname;
   f->locvars[fs->ndebugvars].startpc = fs->pc;
+  f->locvars[fs->ndebugvars].declaredtype = declared_type;
   luaC_objbarrier(ls->L, f, varname);
   return fs->ndebugvars++;
 }
@@ -191,7 +225,7 @@ static short registerlocalvar (LexState *ls, FuncState *fs,
 ** Create a new variable with the given 'name' and given 'kind'.
 ** Return its index in the function.
 */
-static int new_varkind (LexState *ls, TString *name, lu_byte kind) {
+static int new_varkind (LexState *ls, TString *name, lu_byte kind, lu_byte declared_type) {
   lua_State *L = ls->L;
   FuncState *fs = ls->fs;
   Dyndata *dyd = ls->dyd;
@@ -203,6 +237,7 @@ static int new_varkind (LexState *ls, TString *name, lu_byte kind) {
   var = &dyd->actvar.arr[dyd->actvar.n++];
   var->vd.kind = kind;  /* default */
   var->vd.name = name;
+  var->vd.declaredtype = declared_type;
   return dyd->actvar.n - 1 - fs->firstlocal;
 }
 
@@ -210,13 +245,13 @@ static int new_varkind (LexState *ls, TString *name, lu_byte kind) {
 /*
 ** Create a new local variable with the given 'name' and regular kind.
 */
-static int new_localvar (LexState *ls, TString *name) {
-  return new_varkind(ls, name, VDKREG);
+static int new_localvar (LexState *ls, TString *name, lu_byte declared_type) {
+  return new_varkind(ls, name, VDKREG, declared_type);
 }
 
-#define new_localvarliteral(ls,v) \
+#define new_localvarliteral(ls,v,dt) \
     new_localvar(ls,  \
-      luaX_newstring(ls, "" v, (sizeof(v)/sizeof(char)) - 1));
+      luaX_newstring(ls, "" v, (sizeof(v)/sizeof(char)) - 1), dt);
 
 
 
@@ -329,7 +364,7 @@ static void adjustlocalvars (LexState *ls, int nvars) {
     int vidx = fs->nactvar++;
     Vardesc *var = getlocalvardesc(fs, vidx);
     var->vd.ridx = cast_byte(reglevel++);
-    var->vd.pidx = registerlocalvar(ls, fs, var->vd.name);
+    var->vd.pidx = registerlocalvar(ls, fs, var->vd.name, var->vd.declaredtype);
   }
 }
 
@@ -1028,58 +1063,98 @@ static void setvararg (FuncState *fs, int nparams) {
 
 
 static void parlist (LexState *ls) {
-  /* parlist -> [ {NAME ','} (NAME | '...') ] */
+  /* parlist -> [ param {',' param} ] */
+  /* param -> type NAME | NAME | '...' */
   FuncState *fs = ls->fs;
-  Proto *f = fs->f;
+  Proto *f = fs->f; // Current function's prototype being built
   int nparams = 0;
   int isvararg = 0;
+
   if (ls->t.token != ')') {  /* is 'parlist' not empty? */
     do {
-      switch (ls->t.token) {
-        case TK_NAME: {
-          new_localvar(ls, str_checkname(ls));
-          nparams++;
-          break;
+      lu_byte current_param_type = DEC_UNTYPED;
+      // Try to parse a type token
+      if (ls->t.token == TK_NUM || ls->t.token == TK_STR || ls->t.token == TK_BOOL || ls->t.token == TK_NIL) {
+        current_param_type = parse_type_token(ls); // Consumes the type token
+        if (ls->t.token != TK_NAME) { // After a type, a name must follow
+          luaX_syntaxerror(ls, "<name> expected after type in parameter list");
         }
-        case TK_DOTS: {
-          luaX_next(ls);
-          isvararg = 1;
-          break;
-        }
-        default: luaX_syntaxerror(ls, "<name> or '...' expected");
+      } else if (ls->t.token == TK_DOTS) { // Check for varargs '...'
+        luaX_next(ls);
+        isvararg = 1;
+      } else if (ls->t.token == TK_NAME) { // Parameter is untyped if it starts directly with a name
+        current_param_type = DEC_UNTYPED; 
+      } else if (ls->t.token == ')') { // Empty parameter list or end of list
+        break; // Exit loop, handled by outer condition or next check
       }
-    } while (!isvararg && testnext(ls, ','));
+      else { // Unexpected token
+        luaX_syntaxerror(ls, "type keyword (num, str, bool, nil), <name>, '...' or ')' expected in parameter list");
+      }
+
+      if (isvararg) { // If '...' was parsed
+        if (ls->t.token != ')') { // '...' must be the last construct before ')'
+             luaX_syntaxerror(ls, "')' expected after '...' in parameter list");
+        }
+        break; // Exit loop after '...'
+      }
+      
+      // If we are here, we expect a name, unless the list is ending or just ended
+      if (ls->t.token == TK_NAME) { 
+        // new_localvar creates the variable, stores its name and declaredtype in Vardesc.
+        // adjustlocalvars will later use this Vardesc to create LocVar for debug info.
+        new_localvar(ls, str_checkname(ls), current_param_type); // Consumes TK_NAME
+        nparams++;
+      } else if (ls->t.token != ')') { 
+        // If not a name and not ending parenthesis, it's an error.
+        // This handles cases like 'local fn -> num f(num, )'
+        luaX_syntaxerror(ls, "<name> expected for parameter or ')' to end list");
+      }
+      // If ls->t.token is ')', the loop condition 'testnext(ls, ',')' will fail, and loop terminates.
+
+    } while (testnext(ls, ',')); // Continue if comma is found
   }
+  
+  // adjustlocalvars makes the parameters active and sets up their debug info (LocVar)
+  // including their declaredtype.
   adjustlocalvars(ls, nparams);
-  f->numparams = cast_byte(fs->nactvar);
-  if (isvararg)
-    setvararg(fs, f->numparams);  /* declared vararg */
-  luaK_reserveregs(fs, fs->nactvar);  /* reserve registers for parameters */
+  f->numparams = cast_byte(nparams); // Set the number of fixed parameters for this Proto.
+                                     // fs->nactvar is used by adjustlocalvars for register allocation
+                                     // and includes these nparams.
+
+  if (isvararg) {
+    setvararg(fs, f->numparams);  /* Marks function as vararg and does OP_VARARGPREP */
+  }
+  
+  // Reserve registers for all active variables at this point, which includes parameters.
+  luaK_reserveregs(fs, fs->nactvar); 
 }
 
 
-static void body (LexState *ls, expdesc *e, int ismethod, int line) {
+static void body (LexState *ls, expdesc *e, int ismethod, int line, lu_byte func_return_type) {
   /* body ->  '(' parlist ')' block END */
-  FuncState new_fs;
+  FuncState new_fs; // FuncState for the function being defined
   BlockCnt bl;
-  new_fs.f = addprototype(ls);
+  new_fs.f = addprototype(ls); // Create the Proto for this new function
   new_fs.f->linedefined = line;
-  open_func(ls, &new_fs, &bl);
+  new_fs.f->returntype = func_return_type; // Set the parsed return type on the Proto
+
+  open_func(ls, &new_fs, &bl); // Open the scope for the new function
   checknext(ls, '(');
   if (ismethod) {
-    new_localvarliteral(ls, "self");  /* create 'self' parameter */
+    new_localvarliteral(ls, "self", DEC_UNTYPED);  /* create 'self' parameter */
     adjustlocalvars(ls, 1);
   }
   parlist(ls);
   checknext(ls, ')');
+  checknext(ls, ':'); /* Expect and consume colon */
   statlist(ls);
   new_fs.f->lastlinedefined = ls->linenumber;
-  check_match(ls, TK_END, TK_FUNCTION, line);
-  codeclosure(ls, e);
-  close_func(ls);
+  check_match(ls, TK_END, TK_FN, line); 
+  codeclosure(ls, e); // Create the closure for the function just defined
+  close_func(ls);   // Close the scope of the new function
 }
 
-
+// For general expression lists (assignments, return statements, etc.)
 static int explist (LexState *ls, expdesc *v) {
   /* explist -> expr { ',' expr } */
   int n = 1;  /* at least one expression */
@@ -1092,19 +1167,91 @@ static int explist (LexState *ls, expdesc *v) {
   return n;
 }
 
+// For function call arguments, with type checking against callee_proto
+// This is the one that should be called by the funcargs I intend to keep.
+static int explist_for_call (LexState *ls, expdesc *v, Proto *callee_proto) {
+  /* explist -> expr { ',' expr } */
+  int n = 1;  /* at least one expression */
+  int line = ls->linenumber; // Line of first argument expression
 
+  expr(ls, v); // Parse first argument
+
+  if (callee_proto && callee_proto->numparams > 0) {
+    // Check first argument type
+    if (0 < callee_proto->sizelocvars) { // Ensure locvars[0] is valid
+        enum DeclaredType expected_type = (enum DeclaredType)callee_proto->locvars[0].declaredtype;
+        if (expected_type != DEC_UNTYPED) {
+          enum DeclaredType actual_type = infer_exp_type(ls->fs, v);
+          if (actual_type != DEC_UNTYPED && actual_type != expected_type && actual_type != DEC_NIL) {
+            report_type_error(ls, getstr(callee_proto->locvars[0].varname), expected_type, actual_type, line);
+          }
+        }
+    } else if (callee_proto->numparams > 0) { // numparams > 0 but no locvars for it (should not happen for named params)
+        // This case might indicate an issue or a vararg-only function being called with args.
+        // For safety, or if we want to be strict:
+        // report_type_error(ls, "function call - parameter information missing", DEC_UNTYPED, infer_exp_type(ls->fs, v), line);
+    }
+  }
+
+  while (testnext(ls, ',')) {
+    luaK_exp2nextreg(ls->fs, v); // Current expression (argument) moves to next register
+    line = ls->linenumber; // Line of current argument expression
+    expr(ls, v); // Parse next argument into v
+    n++;
+    if (callee_proto && n <= callee_proto->numparams) {
+      if ((n-1) < callee_proto->sizelocvars) { // Check bounds for locvars array
+          TString* param_name = callee_proto->locvars[n-1].varname;
+          enum DeclaredType expected_type = (enum DeclaredType)callee_proto->locvars[n-1].declaredtype;
+          if (expected_type != DEC_UNTYPED) {
+            enum DeclaredType actual_type = infer_exp_type(ls->fs, v);
+            if (actual_type != DEC_UNTYPED && actual_type != expected_type && actual_type != DEC_NIL) {
+               report_type_error(ls, getstr(param_name), expected_type, actual_type, line);
+            }
+          }
+      }
+    }
+    // If n > callee_proto->numparams, it's a vararg or too many args.
+    // Vararg type checking is not handled here. If not vararg, Lua handles "too many arguments" at runtime.
+  }
+  return n;
+}
+
+
+/* This is the end of the (new) funcargs that calls explist_for_call */
+/* The orphaned brace was here. It's now removed. */
+
+// Restoring the definition of funcargs that calls explist_for_call
 static void funcargs (LexState *ls, expdesc *f) {
   FuncState *fs = ls->fs;
   expdesc args;
   int base, nparams;
-  int line = ls->linenumber;
+  int line = ls->linenumber; // Line of the '('
+  Proto *callee_proto = NULL;
+
+  // Attempt to get Proto if 'f' is a direct closure definition
+  if (f->k == VRELOC) { // VRELOC indicates an expression that needs to be allocated to a register
+    Instruction *instr = &fs->f->code[f->u.info]; // f->u.info is the instruction pc
+    if (GET_OPCODE(*instr) == OP_CLOSURE) {
+      callee_proto = fs->f->p[GETARG_Bx(*instr)];
+    }
+  }
+  // TODO: Add more cases to find callee_proto if 'f' is VLOCAL, VUPVAL, etc.
+  // This would involve looking up the variable and trying to determine if it holds a function Proto.
+
+  luaK_exp2nextreg(fs, f); // Resolve function to a register; f->k becomes VNONRELOC, f->u.info is 'base'
+
   switch (ls->t.token) {
     case '(': {  /* funcargs -> '(' [ explist ] ')' */
       luaX_next(ls);
-      if (ls->t.token == ')')  /* arg list is empty? */
+      if (ls->t.token == ')') { /* arg list is empty? */
         args.k = VVOID;
-      else {
-        explist(ls, &args);
+        if (callee_proto && callee_proto->numparams > 0) { 
+            // Check if params were expected but none given
+            report_type_error(ls, "function call - not enough arguments", 
+                              (enum DeclaredType)callee_proto->locvars[0].declaredtype, DEC_VOID, line);
+        }
+      } else {
+        explist_for_call(ls, &args, callee_proto); // Use the new explist_for_call
         if (hasmultret(args.k))
           luaK_setmultret(fs, &args);
       }
@@ -1112,19 +1259,34 @@ static void funcargs (LexState *ls, expdesc *f) {
       break;
     }
     case '{' /*}*/: {  /* funcargs -> constructor */
-      constructor(ls, &args);
+      constructor(ls, &args); 
+      if (callee_proto && callee_proto->numparams > 0) { // Check first argument if it's a table
+        enum DeclaredType expected_type = (enum DeclaredType)callee_proto->locvars[0].declaredtype;
+        enum DeclaredType actual_type = infer_exp_type(fs, &args); 
+        if (expected_type != DEC_UNTYPED && actual_type != DEC_UNTYPED && 
+            expected_type != actual_type && actual_type != DEC_NIL) {
+          report_type_error(ls, getstr(callee_proto->locvars[0].varname), expected_type, actual_type, line);
+        }
+      }
       break;
     }
     case TK_STRING: {  /* funcargs -> STRING */
       codestring(&args, ls->t.seminfo.ts);
-      luaX_next(ls);  /* must use 'seminfo' before 'next' */
+      luaX_next(ls); 
+      if (callee_proto && callee_proto->numparams > 0) { // Check first argument if it's a string
+        enum DeclaredType expected_type = (enum DeclaredType)callee_proto->locvars[0].declaredtype;
+        enum DeclaredType actual_type = infer_exp_type(fs, &args); 
+        if (expected_type != DEC_UNTYPED && actual_type != DEC_UNTYPED && 
+            expected_type != actual_type && actual_type != DEC_NIL) {
+          report_type_error(ls, getstr(callee_proto->locvars[0].varname), expected_type, actual_type, line);
+        }
+      }
       break;
     }
     default: {
       luaX_syntaxerror(ls, "function arguments expected");
     }
   }
-  lua_assert(f->k == VNONRELOC);
   base = f->u.info;  /* base register for call */
   if (hasmultret(args.k))
     nparams = LUA_MULTRET;  /* open call */
@@ -1139,9 +1301,6 @@ static void funcargs (LexState *ls, expdesc *f) {
      changed later) */
   fs->freereg = cast_byte(base + 1);
 }
-
-
-
 
 /*
 ** {======================================================================
@@ -1250,9 +1409,11 @@ static void simpleexp (LexState *ls, expdesc *v) {
       constructor(ls, v);
       return;
     }
-    case TK_FUNCTION: {
+    case TK_FN: { 
       luaX_next(ls);
-      body(ls, v, 0, ls->linenumber);
+      // Anonymous functions like 'fn()...end' don't have explicit return type syntax.
+      // Pass DEC_UNTYPED as their return type.
+      body(ls, v, 0, ls->linenumber, DEC_UNTYPED); 
       return;
     }
     default: {
@@ -1461,7 +1622,22 @@ static void restassign (LexState *ls, struct LHS_assign *lh, int nvars) {
   else {  /* restassign -> '=' explist */
     int nexps;
     checknext(ls, '=');
-    nexps = explist(ls, &e);
+    nexps = explist(ls, &e); // e is the RHS expression
+
+    // Type checking for assignment
+    if (lh->v.k == VLOCAL && nvars == 1 && nexps == 1) { // Only check simple 'local_var = expr'
+      FuncState *fs = ls->fs;
+      Vardesc *vd = getlocalvardesc(fs, lh->v.u.var.vidx); // Access Vardesc for LHS local
+      enum DeclaredType expected_type = (enum DeclaredType)vd->vd.declaredtype;
+      
+      if (expected_type != DEC_UNTYPED) { // Only if LHS is typed
+        enum DeclaredType actual_type = infer_exp_type(fs, &e);
+        if (actual_type != DEC_UNTYPED && actual_type != expected_type && actual_type != DEC_NIL) {
+          report_type_error(ls, getstr(vd->vd.name), expected_type, actual_type, ls->linenumber);
+        }
+      }
+    }
+
     if (nexps != nvars)
       adjust_assign(ls, nvars, nexps, &e);
     else {
@@ -1636,9 +1812,9 @@ static void fornum (LexState *ls, TString *varname, int line) {
   /* fornum -> NAME = exp,exp[,exp] forbody */
   FuncState *fs = ls->fs;
   int base = fs->freereg;
-  new_localvarliteral(ls, "(for state)");
-  new_localvarliteral(ls, "(for state)");
-  new_varkind(ls, varname, RDKCONST);  /* control variable */
+  new_localvarliteral(ls, "(for state)", DEC_UNTYPED);
+  new_localvarliteral(ls, "(for state)", DEC_UNTYPED);
+  new_varkind(ls, varname, RDKCONST, DEC_UNTYPED);  /* control variable */
   checknext(ls, '=');
   exp1(ls);  /* initial value */
   checknext(ls, ',');
@@ -1662,13 +1838,13 @@ static void forlist (LexState *ls, TString *indexname) {
   int line;
   int base = fs->freereg;
   /* create internal variables */
-  new_localvarliteral(ls, "(for state)");  /* iterator function */
-  new_localvarliteral(ls, "(for state)");  /* state */
-  new_localvarliteral(ls, "(for state)");  /* closing var. (after swap) */
-  new_varkind(ls, indexname, RDKCONST);  /* control variable */
+  new_localvarliteral(ls, "(for state)", DEC_UNTYPED);  /* iterator function */
+  new_localvarliteral(ls, "(for state)", DEC_UNTYPED);  /* state */
+  new_localvarliteral(ls, "(for state)", DEC_UNTYPED);  /* closing var. (after swap) */
+  new_varkind(ls, indexname, RDKCONST, DEC_UNTYPED);  /* control variable */
   /* other declared variables */
   while (testnext(ls, ',')) {
-    new_localvar(ls, str_checkname(ls));
+    new_localvar(ls, str_checkname(ls), DEC_UNTYPED);
     nvars++;
   }
   checknext(ls, TK_IN);
@@ -1728,15 +1904,42 @@ static void ifstat (LexState *ls, int line) {
 }
 
 
-static void localfunc (LexState *ls) {
-  expdesc b;
-  FuncState *fs = ls->fs;
-  int fvar = fs->nactvar;  /* function's variable index */
-  new_localvar(ls, str_checkname(ls));  /* new local variable */
-  adjustlocalvars(ls, 1);  /* enter its scope */
-  body(ls, &b, 0, ls->linenumber);  /* function created in next register */
-  /* debug information will only see the variable after this point! */
-  localdebuginfo(fs, fvar)->startpc = fs->pc;
+// Parses 'local fn -> rettype funcname (params) : body end'
+// Renamed from localfunc and modified.
+static void localfn_stmt (LexState *ls) {
+  expdesc b; // For the function body expression
+  FuncState *fs = ls->fs; // fs is the FuncState of the *enclosing* function
+  int fvar = fs->nactvar;  /* function's variable index in the enclosing function, for debug info */
+  TString *funcname;
+  lu_byte parsed_return_type; 
+
+  // We have already consumed 'local' and 'fn'. Next token should be '->'.
+  checknext(ls, TK_ARROW); /* Expect and consume '->', or error */
+  
+  // Parse return type: num, str, bool, or void are mandatory after '->'
+  if (ls->t.token == TK_NUM || ls->t.token == TK_STR || ls->t.token == TK_BOOL || ls->t.token == TK_VOID) {
+    parsed_return_type = parse_type_token(ls); // Consumes the type token
+  } else {
+    luaX_syntaxerror(ls, "return type (num, str, bool, void) expected after '->'");
+    return; // Should not be reached
+  }
+  
+  funcname = str_checkname(ls); // Parse function name, consumes TK_NAME
+
+  // Declare the function name as a local variable in the enclosing function.
+  new_localvar(ls, funcname, DEC_UNTYPED); // The variable 'funcname' itself is untyped (it holds a function).
+                                          // The function's signature (return type) is separate.
+  adjustlocalvars(ls, 1);  /* Enter its scope in the enclosing function. */
+  
+  // ls->lastline refers to the line of the 'fn' or 'local' token.
+  // Pass the parsed_return_type to body, so it can set it on the new Proto.
+  body(ls, &b, 0, ls->lastline, parsed_return_type);  /* function created in next register */
+  
+  // Update debug info for the 'funcname' variable in the enclosing function.
+  // Its startpc is after the body (and its closure creation) is processed.
+  if (fs->ndebugvars > fvar && localdebuginfo(fs, fvar) != NULL) {
+    localdebuginfo(fs, fvar)->startpc = fs->pc;
+  }
 }
 
 
@@ -1767,45 +1970,109 @@ static void checktoclose (FuncState *fs, int level) {
 
 static void localstat (LexState *ls) {
   /* stat -> LOCAL NAME attrib { ',' NAME attrib } ['=' explist] */
-  FuncState *fs = ls->fs;
+  /* stat -> LOCAL type NAME ['=' exp] */
+  // FuncState *fs = ls->fs; // Removed top-level fs, will be declared in else block
+  lu_byte current_declared_type = DEC_UNTYPED;
+  TString *var_name;
+  lu_byte kind;
+  expdesc val_rhs; 
+  int nexps;
+  // For typed block
+  enum DeclaredType actual_rhs_type_typed; // Renamed to avoid conflict if used in untyped block
+
+  // For untyped block
   int toclose = -1;  /* index of to-be-closed variable (if any) */
   Vardesc *var;  /* last variable */
   int vidx;  /* index of last variable */
   int nvars = 0;
-  int nexps;
   expdesc e;
-  /* get prefixed attribute (if any); default is regular local variable */
-  lu_byte defkind = getvarattribute(ls, VDKREG);
-  do {  /* for each variable */
-    TString *vname = str_checkname(ls);  /* get its name */
-    lu_byte kind = getvarattribute(ls, defkind);  /* postfixed attribute */
-    vidx = new_varkind(ls, vname, kind);  /* predeclare it */
-    if (kind == RDKTOCLOSE) {  /* to-be-closed? */
-      if (toclose != -1)  /* one already present? */
-        luaK_semerror(ls, "multiple to-be-closed variables in local list");
-      toclose = fs->nactvar + nvars;
+  lu_byte defkind;
+
+
+  if (ls->t.token == TK_NUM || ls->t.token == TK_STR || ls->t.token == TK_BOOL) {
+    /* Typed local variable declaration */
+    switch (ls->t.token) {
+      case TK_NUM: current_declared_type = DEC_NUM; break;
+      case TK_STR: current_declared_type = DEC_STR; break;
+      case TK_BOOL: current_declared_type = DEC_BOOL; break;
+      default: lua_assert(0); /* Should not happen */
     }
-    nvars++;
-  } while (testnext(ls, ','));
-  if (testnext(ls, '='))  /* initialization? */
-    nexps = explist(ls, &e);
-  else {
-    e.k = VVOID;
-    nexps = 0;
+    luaX_next(ls); /* consume type keyword */
+
+    var_name = str_checkname(ls);
+    kind = getvarattribute(ls, VDKREG);
+    if (kind == RDKTOCLOSE) {
+        // This attribute might require special handling or be disallowed for typed variables
+        // For now, let's keep it simple and potentially revisit.
+        luaK_semerror(ls, "to-be-closed attribute not fully supported with typed locals in this version");
+    }
+
+    // Pre-declare the variable with its name, kind, and determined type.
+    new_varkind(ls, var_name, kind, current_declared_type); // varidx was unused
+
+    if (testnext(ls, '=')) {
+        explist(ls, &val_rhs); // Assumes explist can handle one exp for typed
+        nexps = 1; // Assuming typed local only takes one expression on RHS
+        
+        // Type checking for initialization
+        actual_rhs_type_typed = infer_exp_type(ls->fs, &val_rhs);
+        if (actual_rhs_type_typed != DEC_UNTYPED && 
+            current_declared_type != DEC_UNTYPED && 
+            actual_rhs_type_typed != current_declared_type &&
+            actual_rhs_type_typed != DEC_NIL) { // Allow assigning nil to any typed variable
+            report_type_error(ls, getstr(var_name), (enum DeclaredType)current_declared_type, actual_rhs_type_typed, ls->linenumber);
+        }
+        // Original literal check (can be removed if infer_exp_type is comprehensive enough for literals)
+        // check_assignment_type(ls, (enum DeclaredType)current_declared_type, var_name, &val_rhs);
+    } else { // No assignment
+        val_rhs.k = VVOID; // Variable will be initialized to nil
+        nexps = 0;
+    }
+    // These lines should be inside the 'if (typed)' block
+    adjust_assign(ls, 1, nexps, &val_rhs); 
+    adjustlocalvars(ls, 1); 
+
+    if (testnext(ls, ',')) {
+      luaX_syntaxerror(ls, "comma-separated typed local declarations not supported");
+    }
+    // checktoclose is not called here as RDKTOCLOSE is restricted for typed vars for now
+  } else {
+    /* Untyped local variable declaration or 'local function' */
+    FuncState *fs = ls->fs; // Make fs available for this block
+    defkind = getvarattribute(ls, VDKREG);
+    do {  /* for each variable */
+      TString *vname = str_checkname(ls);  /* get its name */
+      lu_byte vkind = getvarattribute(ls, defkind);  /* postfixed attribute */
+      vidx = new_varkind(ls, vname, vkind, DEC_UNTYPED);  /* predeclare it, always DEC_UNTYPED */
+      if (vkind == RDKTOCLOSE) {  /* to-be-closed? */
+        if (toclose != -1)  /* one already present? */
+          luaK_semerror(ls, "multiple to-be-closed variables in local list");
+        toclose = fs->nactvar + nvars;
+      }
+      nvars++;
+    } while (testnext(ls, ','));
+
+    if (testnext(ls, '='))  /* initialization? */
+      nexps = explist(ls, &e);
+    else {
+      e.k = VVOID;
+      nexps = 0;
+    }
+
+    var = getlocalvardesc(fs, vidx);  /* retrieve last variable */
+    if (nvars == nexps &&  /* no adjustments? */
+        var->vd.kind == RDKCONST &&  /* last variable is const? */
+        luaK_exp2const(fs, &e, &var->k)) {  /* compile-time constant? */
+      var->vd.kind = RDKCTC;  /* variable is a compile-time constant */
+      adjustlocalvars(ls, nvars - 1);  /* exclude last variable */
+      fs->nactvar++;  /* but count it */
+    }
+    else {
+      adjust_assign(ls, nvars, nexps, &e);
+      adjustlocalvars(ls, nvars);
+    }
+    checktoclose(fs, toclose);
   }
-  var = getlocalvardesc(fs, vidx);  /* retrieve last variable */
-  if (nvars == nexps &&  /* no adjustments? */
-      var->vd.kind == RDKCONST &&  /* last variable is const? */
-      luaK_exp2const(fs, &e, &var->k)) {  /* compile-time constant? */
-    var->vd.kind = RDKCTC;  /* variable is a compile-time constant */
-    adjustlocalvars(ls, nvars - 1);  /* exclude last variable */
-    fs->nactvar++;  /* but count it */
-  }
-  else {
-    adjust_assign(ls, nvars, nexps, &e);
-    adjustlocalvars(ls, nvars);
-  }
-  checktoclose(fs, toclose);
 }
 
 
@@ -1831,14 +2098,14 @@ static void globalstat (LexState *ls) {
   lu_byte defkind = getglobalattribute(ls, GDKREG);
   if (testnext(ls, '*')) {
     /* use NULL as name to represent '*' entries */
-    new_varkind(ls, NULL, defkind);
+    new_varkind(ls, NULL, defkind, DEC_UNTYPED); // Added DEC_UNTYPED
     fs->nactvar++;  /* activate declaration */
   }
   else {
     do {  /* list of names */
       TString *vname = str_checkname(ls);
       lu_byte kind = getglobalattribute(ls, defkind);
-      new_varkind(ls, vname, kind);
+      new_varkind(ls, vname, kind, DEC_UNTYPED); // Added DEC_UNTYPED
       fs->nactvar++;  /* activate declaration */
     } while (testnext(ls, ','));
   }
@@ -1850,10 +2117,10 @@ static void globalfunc (LexState *ls, int line) {
   expdesc var, b;
   FuncState *fs = ls->fs;
   TString *fname = str_checkname(ls);
-  new_varkind(ls, fname, GDKREG);  /* declare global variable */
+  new_varkind(ls, fname, GDKREG, DEC_UNTYPED);  /* declare global variable, Added DEC_UNTYPED */
   fs->nactvar++;  /* enter its scope */
   buildvar(ls, fname, &var);
-  body(ls, &b, 0, ls->linenumber);  /* compile and return closure in 'b' */
+  body(ls, &b, 0, ls->linenumber, DEC_UNTYPED);  /* compile and return closure in 'b', Added DEC_UNTYPED */
   luaK_storevar(fs, &var, &b);
   luaK_fixline(fs, line);  /* definition "happens" in the first line */
 }
@@ -1862,7 +2129,7 @@ static void globalfunc (LexState *ls, int line) {
 static void globalstatfunc (LexState *ls, int line) {
   /* stat -> GLOBAL globalfunc | GLOBAL globalstat */
   luaX_next(ls);  /* skip 'global' */
-  if (testnext(ls, TK_FUNCTION))
+  if (testnext(ls, TK_FN))
     globalfunc(ls, line);
   else
     globalstat(ls);
@@ -1884,13 +2151,15 @@ static int funcname (LexState *ls, expdesc *v) {
 
 
 static void funcstat (LexState *ls, int line) {
-  /* funcstat -> FUNCTION funcname body */
+  /* funcstat -> FN funcname body */
   int ismethod;
   expdesc v, b;
-  luaX_next(ls);  /* skip FUNCTION */
+  luaX_next(ls);  /* skip FN */
   ismethod = funcname(ls, &v);
   check_readonly(ls, &v);
-  body(ls, &b, ismethod, line);
+  // Global functions like 'fn name()...end' also don't have explicit return type syntax.
+  // Pass DEC_UNTYPED as their return type.
+  body(ls, &b, ismethod, line, DEC_UNTYPED); 
   luaK_storevar(ls->fs, &v, &b);
   luaK_fixline(ls->fs, line);  /* definition "happens" in the first line */
 }
@@ -1918,12 +2187,50 @@ static void retstat (LexState *ls) {
   /* stat -> RETURN [explist] [';'] */
   FuncState *fs = ls->fs;
   expdesc e;
-  int nret;  /* number of values being returned */
-  int first = luaY_nvarstack(fs);  /* first slot to be returned */
-  if (block_follow(ls, 1) || ls->t.token == ';')
-    nret = 0;  /* return no values */
-  else {
+  int nret = 0;  /* number of values being returned, initialized to 0 */
+  int first;
+  enum DeclaredType expected_return_type;
+  enum DeclaredType actual_type;
+
+  first = luaY_nvarstack(fs);  /* first slot to be returned */
+  expected_return_type = (enum DeclaredType)fs->f->returntype;
+
+  if (expected_return_type == DEC_UNTYPED) {
+    // No type checking needed for return if function's return is untyped
+  } else if (block_follow(ls, 1) || ls->t.token == ';') { // No expressions returned
+    nret = 0;
+    if (expected_return_type != DEC_VOID && expected_return_type != DEC_NIL) { // DEC_NIL check might be too strict here.
+                                                                            // Typically, void means no return, or an explicit nil.
+                                                                            // If declared num, must return something.
+      report_type_error(ls, "return value", expected_return_type, DEC_VOID, ls->linenumber);
+    }
+  } else { // Expressions are returned
     nret = explist(ls, &e);  /* optional return values */
+    if (expected_return_type == DEC_VOID) {
+      if (nret > 0) {
+        // Check if it's 'return nil' which could be allowed for void
+        if (nret == 1 && e.k == VNIL) {
+          // allow 'return nil' for void function for now
+        } else {
+          report_type_error(ls, "return value", expected_return_type, infer_exp_type(fs, &e), ls->linenumber);
+        }
+      }
+    } else if (nret > 0) { // Check type of the first returned expression
+      // For simplicity, only checking the first expression if multiple are returned without varargs/call
+      // A more complex check might iterate if nret > 1 and e.k is not VCALL/VVARARG
+      actual_type = infer_exp_type(fs, &e);
+      if (actual_type != DEC_UNTYPED &&
+          actual_type != expected_return_type &&
+          actual_type != DEC_NIL) { // Allow returning nil from typed function
+        report_type_error(ls, "return value", expected_return_type, actual_type, ls->linenumber);
+      }
+    } else { // nret == 0, but expected_return_type is not UNTYPED and not VOID
+         if (expected_return_type != DEC_NIL) { // if it must be num/str/bool, error
+            report_type_error(ls, "return value", expected_return_type, DEC_VOID, ls->linenumber);
+         }
+    }
+
+    // Original logic for multi-return / tail call (after type check)
     if (hasmultret(e.k)) {
       luaK_setmultret(fs, &e);
       if (e.k == VCALL && nret == 1 && !fs->bl->insidetbc) {  /* tail call? */
@@ -1976,16 +2283,18 @@ static void statement (LexState *ls) {
       repeatstat(ls, line);
       break;
     }
-    case TK_FUNCTION: {  /* stat -> funcstat */
+    case TK_FN: {  /* stat -> funcstat */
       funcstat(ls, line);
       break;
     }
-    case TK_LOCAL: {  /* stat -> localstat */
+    case TK_LOCAL: {  /* stat -> localstat or local fn ... */
       luaX_next(ls);  /* skip LOCAL */
-      if (testnext(ls, TK_FUNCTION))  /* local function? */
-        localfunc(ls);
-      else
-        localstat(ls);
+      if (ls->t.token == TK_FN) { 
+        luaX_next(ls); /* consume TK_FN */
+        localfn_stmt(ls); // Changed from localfunc(ls)
+      } else {
+        localstat(ls); // For 'local x = 1' or 'local num x = 1'
+      }
       break;
     }
     case TK_GLOBAL: {  /* stat -> globalstatfunc */
@@ -2017,7 +2326,7 @@ static void statement (LexState *ls) {
          is not reserved */
       if (ls->t.seminfo.ts == ls->glbn) {  /* current = "global"? */
         int lk = luaX_lookahead(ls);
-        if (lk == '<' || lk == TK_NAME || lk == '*' || lk == TK_FUNCTION) {
+        if (lk == '<' || lk == TK_NAME || lk == '*' || lk == TK_FN) {
           /* 'global <attrib>' or 'global name' or 'global *' or
              'global function' */
           globalstatfunc(ls, line);
