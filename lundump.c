@@ -234,7 +234,7 @@ static void loadConstants (LoadState *S, Proto *f) {
         f->source = NULL;
         break;
       }
-      default: lua_assert(0);
+      default: error(S, "invalid constant");
     }
   }
 }

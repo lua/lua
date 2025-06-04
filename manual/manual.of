@@ -1402,6 +1402,9 @@ Chunks can also be precompiled into binary form;
 see the program @idx{luac} and the function @Lid{string.dump} for details.
 Programs in source and compiled forms are interchangeable;
 Lua automatically detects the file type and acts accordingly @seeF{load}.
+Be aware that, unlike source code,
+the execution of maliciously crafted
+bytecode can crash the interpreter.
 
 }
 
