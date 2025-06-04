@@ -908,7 +908,6 @@ static void recfield (LexState *ls, ConsControl *cc) {
     codename(ls, &key);
   else  /* ls->t.token == '[' */
     yindex(ls, &key);
-  luaY_checklimit(fs, cc->nh, INT_MAX / 2, "items in a constructor");
   cc->nh++;
   checknext(ls, '=');
   tab = *cc->t;
