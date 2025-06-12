@@ -139,6 +139,16 @@ l_noret luaD_throw (lua_State *L, TStatus errcode) {
 }
 
 
+l_noret luaD_throwbaselevel (lua_State *L, TStatus errcode) {
+  if (L->errorJmp) {
+    /* unroll error entries up to the first level */
+    while (L->errorJmp->previous != NULL)
+      L->errorJmp = L->errorJmp->previous;
+  }
+  luaD_throw(L, errcode);
+}
+
+
 TStatus luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
   l_uint32 oldnCcalls = L->nCcalls;
   struct lua_longjmp lj;

@@ -154,8 +154,13 @@ static int luaB_costatus (lua_State *L) {
 }
 
 
+static lua_State *getoptco (lua_State *L) {
+  return (lua_isnone(L, 1) ? L : getco(L));
+}
+
+
 static int luaB_yieldable (lua_State *L) {
-  lua_State *co = lua_isnone(L, 1) ? L : getco(L);
+  lua_State *co = getoptco(L);
   lua_pushboolean(L, lua_isyieldable(co));
   return 1;
 }
@@ -169,7 +174,7 @@ static int luaB_corunning (lua_State *L) {
 
 
 static int luaB_close (lua_State *L) {
-  lua_State *co = getco(L);
+  lua_State *co = getoptco(L);
   int status = auxstatus(L, co);
   switch (status) {
     case COS_DEAD: case COS_YIELD: {
@@ -184,6 +189,10 @@ static int luaB_close (lua_State *L) {
         return 2;
       }
     }
+    case COS_RUN:  /* running coroutine? */
+      lua_closethread(co, L);  /* close itself */
+      lua_assert(0);  /* previous call does not return */
+      return 0;
     default:  /* normal or running coroutine */
       return luaL_error(L, "cannot close a %s coroutine", statname[status]);
   }

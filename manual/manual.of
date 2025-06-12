@@ -3267,17 +3267,25 @@ when called through this function.
 
 Resets a thread, cleaning its call stack and closing all pending
 to-be-closed variables.
-Returns a status code:
+The parameter @id{from} represents the coroutine that is resetting @id{L}.
+If there is no such coroutine,
+this parameter can be @id{NULL}.
+
+Unless @id{L} is equal to @id{from},
+the call returns a status code:
 @Lid{LUA_OK} for no errors in the thread
 (either the original error that stopped the thread or
 errors in closing methods),
 or an error status otherwise.
 In case of error,
-leaves the error object on the top of the stack.
+the error object is put on the top of the stack.
 
-The parameter @id{from} represents the coroutine that is resetting @id{L}.
-If there is no such coroutine,
-this parameter can be @id{NULL}.
+If @id{L} is equal to @id{from},
+it corresponds to a thread closing itself.
+In that case,
+the call does not return;
+instead, the resume or the protected call
+that (re)started the thread returns.
 
 }
 
@@ -6939,18 +6947,26 @@ which come inside the table @defid{coroutine}.
 See @See{coroutine} for a general description of coroutines.
 
 
-@LibEntry{coroutine.close (co)|
+@LibEntry{coroutine.close ([co])|
 
 Closes coroutine @id{co},
 that is,
 closes all its pending to-be-closed variables
 and puts the coroutine in a dead state.
-The given coroutine must be dead or suspended.
-In case of error
+The default for @id{co} is the running coroutine.
+
+The given coroutine must be dead, suspended,
+or be the running coroutine.
+For the running coroutine,
+this function does not return.
+Instead, the resume that (re)started the coroutine returns.
+
+For other coroutines,
+in case of error
 (either the original error that stopped the coroutine or
 errors in closing methods),
-returns @false plus the error object;
-otherwise returns @true.
+this function returns @false plus the error object;
+otherwise ir returns @true.
 
 }
 

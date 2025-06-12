@@ -156,11 +156,6 @@ do
   st, msg = coroutine.close(co)
   assert(st and msg == nil)
 
-
-  -- cannot close the running coroutine
-  local st, msg = pcall(coroutine.close, coroutine.running())
-  assert(not st and string.find(msg, "running"))
-
   local main = coroutine.running()
 
   -- cannot close a "normal" coroutine
@@ -169,20 +164,19 @@ do
     assert(not st and string.find(msg, "normal"))
   end))()
 
-  -- cannot close a coroutine while closing it
-  do
+  do   -- close a coroutine while closing it
     local co
     co = coroutine.create(
       function()
         local x <close> = func2close(function()
-            coroutine.close(co)   -- try to close it again
+            coroutine.close(co)   -- close it again
          end)
         coroutine.yield(20)
       end)
     local st, msg = coroutine.resume(co)
     assert(st and msg == 20)
     st, msg = coroutine.close(co)
-    assert(not st and string.find(msg, "running coroutine"))
+    assert(st and msg == nil)
   end
 
   -- to-be-closed variables in coroutines
@@ -286,6 +280,56 @@ do
   assert(st and not res1 and res2 == 20)   -- last error (20)
   assert(track[1] == false and track[2] == 2 and track[3] == 10 and
          track[4] == 10)
+end
+
+
+do print("coroutines closing itself")
+  global <const> coroutine, string, os
+  global <const> assert, error, pcall
+
+  local X = nil
+
+  local function new ()
+    return coroutine.create(function (what)
+
+      local <close>var = func2close(function (t, err)
+        if what == "yield" then
+          coroutine.yield()
+        elseif what == "error" then
+          error(200)
+        else
+          X = "Ok"
+          return X
+        end
+      end)
+
+      -- do an unprotected call so that coroutine becomes non-yieldable
+      string.gsub("a", "a", function ()
+        assert(not coroutine.isyieldable())
+        -- do protected calls while non-yieldable, to add recovery
+        -- entries (setjmp) to the stack
+        assert(pcall(pcall, function ()
+          -- 'close' works even while non-yieldable
+          coroutine.close()   -- close itself
+          os.exit(false)   -- not reacheable
+        end))
+      end)
+    end)
+  end
+
+  local co = new()
+  local st, msg = coroutine.resume(co, "ret")
+  assert(st and msg == nil)
+  assert(X == "Ok")
+
+  local co = new()
+  local st, msg = coroutine.resume(co, "error")
+  assert(not st and msg == 200)
+
+  local co = new()
+  local st, msg = coroutine.resume(co, "yield")
+  assert(not st and string.find(msg, "attempt to yield"))
+
 end
 
 
