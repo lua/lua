@@ -190,6 +190,9 @@ static int luaB_close (lua_State *L) {
       }
     }
     case COS_RUN:  /* running coroutine? */
+      lua_geti(L, LUA_REGISTRYINDEX, LUA_RIDX_MAINTHREAD);  /* get main */
+      if (lua_tothread(L, -1) == co)
+        return luaL_error(L, "cannot close main thread");
       lua_closethread(co, L);  /* close itself */
       lua_assert(0);  /* previous call does not return */
       return 0;

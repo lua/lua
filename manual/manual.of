@@ -3284,8 +3284,8 @@ If @id{L} is equal to @id{from},
 it corresponds to a thread closing itself.
 In that case,
 the call does not return;
-instead, the resume or the protected call
-that (re)started the thread returns.
+instead, the resume that (re)started the thread returns.
+The thread must be running inside a resume.
 
 }
 
