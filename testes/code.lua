@@ -482,5 +482,23 @@ do   -- basic check for SETLIST
   assert(count == 1)
 end
 
+
+do   print("testing code for integer limits")
+  local function checkints (n)
+    local source = string.format(
+      "local a = {[true] = 0X%x}; return a[true]", n)
+    local f = assert(load(source))
+    checkKlist(f, {n})
+    assert(f() == n)
+    f = load(string.dump(f))
+    assert(f() == n)
+  end
+
+  checkints(math.maxinteger)
+  checkints(math.mininteger)
+  checkints(-1)
+
+end
+
 print 'OK'
 

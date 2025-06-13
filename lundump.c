@@ -37,7 +37,7 @@ typedef struct {
   const char *name;
   Table *h;  /* list for string reuse */
   size_t offset;  /* current position relative to beginning of dump */
-  lua_Integer nstr;  /* number of strings in the list */
+  lua_Unsigned nstr;  /* number of strings in the list */
   lu_byte fixed;  /* dump is fixed in memory */
 } LoadState;
 
@@ -94,8 +94,8 @@ static lu_byte loadByte (LoadState *S) {
 }
 
 
-static size_t loadVarint (LoadState *S, size_t limit) {
-  size_t x = 0;
+static lua_Unsigned loadVarint (LoadState *S, lua_Unsigned limit) {
+  lua_Unsigned x = 0;
   int b;
   limit >>= 7;
   do {
@@ -127,9 +127,12 @@ static lua_Number loadNumber (LoadState *S) {
 
 
 static lua_Integer loadInteger (LoadState *S) {
-  lua_Integer x;
-  loadVar(S, x);
-  return x;
+  lua_Unsigned cx = loadVarint(S, LUA_MAXUNSIGNED);
+  /* decode unsigned to signed */
+  if ((cx & 1) != 0)
+    return l_castU2S(~(cx >> 1));
+  else
+    return l_castU2S(cx >> 1);
 }
 
 
@@ -149,9 +152,9 @@ static void loadString (LoadState *S, Proto *p, TString **sl) {
     return;
   }
   else if (size == 1) {  /* previously saved string? */
-    lua_Integer idx = cast_st2S(loadSize(S));  /* get its index */
+    lua_Unsigned idx = loadVarint(S, LUA_MAXUNSIGNED);  /* get its index */
     TValue stv;
-    luaH_getint(S->h, idx, &stv);  /* get its value */
+    luaH_getint(S->h, l_castU2S(idx), &stv);  /* get its value */
     *sl = ts = tsvalue(&stv);
     luaC_objbarrier(L, p, ts);
     return;  /* do not save it again */
@@ -175,7 +178,7 @@ static void loadString (LoadState *S, Proto *p, TString **sl) {
   /* add string to list of saved strings */
   S->nstr++;
   setsvalue(L, &sv, ts);
-  luaH_setint(L, S->h, S->nstr, &sv);
+  luaH_setint(L, S->h, l_castU2S(S->nstr), &sv);
   luaC_objbarrierback(L, obj2gco(S->h), ts);
 }
 

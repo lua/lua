@@ -31,7 +31,7 @@ typedef struct {
   int strip;
   int status;
   Table *h;  /* table to track saved strings */
-  lua_Integer nstr;  /* counter for counting saved strings */
+  lua_Unsigned nstr;  /* counter for counting saved strings */
 } DumpState;
 
 
@@ -87,12 +87,12 @@ static void dumpByte (DumpState *D, int y) {
 ** size for 'dumpVarint' buffer: each byte can store up to 7 bits.
 ** (The "+6" rounds up the division.)
 */
-#define DIBS    ((l_numbits(size_t) + 6) / 7)
+#define DIBS    ((l_numbits(lua_Unsigned) + 6) / 7)
 
 /*
 ** Dumps an unsigned integer using the MSB Varint encoding
 */
-static void dumpVarint (DumpState *D, size_t x) {
+static void dumpVarint (DumpState *D, lua_Unsigned x) {
   lu_byte buff[DIBS];
   unsigned n = 1;
   buff[DIBS - 1] = x & 0x7f;  /* fill least-significant byte */
@@ -103,12 +103,13 @@ static void dumpVarint (DumpState *D, size_t x) {
 
 
 static void dumpSize (DumpState *D, size_t sz) {
-  dumpVarint(D, sz);
+  dumpVarint(D, cast(lua_Unsigned, sz));
 }
+
 
 static void dumpInt (DumpState *D, int x) {
   lua_assert(x >= 0);
-  dumpVarint(D, cast_sizet(x));
+  dumpVarint(D, cast_uint(x));
 }
 
 
@@ -117,8 +118,16 @@ static void dumpNumber (DumpState *D, lua_Number x) {
 }
 
 
+/*
+** Signed integers are coded to keep small values small. (Coding -1 as
+** 0xfff...fff would use too many bytes to save a quite common value.)
+** A non-negative x is coded as 2x; a negative x is coded as -2x - 1.
+** (0 => 0; -1 => 1; 1 => 2; -2 => 3; 2 => 4; ...)
+*/
 static void dumpInteger (DumpState *D, lua_Integer x) {
-  dumpVar(D, x);
+  lua_Unsigned cx = (x >= 0) ? 2u * l_castS2U(x)
+                             : (2u * ~l_castS2U(x)) + 1;
+  dumpVarint(D, cx);
 }
 
 
@@ -136,8 +145,8 @@ static void dumpString (DumpState *D, TString *ts) {
     TValue idx;
     int tag = luaH_getstr(D->h, ts, &idx);
     if (!tagisempty(tag)) {  /* string already saved? */
-      dumpSize(D, 1);  /* reuse a saved string */
-      dumpSize(D, cast_sizet(ivalue(&idx)));  /* index of saved string */
+      dumpVarint(D, 1);  /* reuse a saved string */
+      dumpVarint(D, l_castS2U(ivalue(&idx)));  /* index of saved string */
     }
     else {  /* must write and save the string */
       TValue key, value;  /* to save the string in the hash */
@@ -147,7 +156,7 @@ static void dumpString (DumpState *D, TString *ts) {
       dumpVector(D, s, size + 1);  /* include ending '\0' */
       D->nstr++;  /* one more saved string */
       setsvalue(D->L, &key, ts);  /* the string is the key */
-      setivalue(&value, D->nstr);  /* its index is the value */
+      setivalue(&value, l_castU2S(D->nstr));  /* its index is the value */
       luaH_set(D->L, D->h, &key, &value);  /* h[ts] = nstr */
       /* integer value does not need barrier */
     }
