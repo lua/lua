@@ -301,6 +301,16 @@ collectgarbage()
 assert(next(a) == string.rep('$', 11))
 
 
+if T then   -- bug since 5.3: all-weak tables are not being revisited
+  T.gcstate("propagate")
+  local t = setmetatable({}, {__mode = "kv"})
+  T.gcstate("atomic")   -- 't' was visited
+  setmetatable(t, {__mode = "kv"})
+  T.gcstate("pause")  -- its new metatable is not being visited
+  assert(getmetatable(t).__mode == "kv")
+end
+
+
 -- 'bug' in 5.1
 a = {}
 local t = {x = 10}
