@@ -288,6 +288,11 @@ x,y,z=nil
 collectgarbage()
 assert(next(a) == string.rep('$', 11))
 
+do   -- invalid mode
+  local a = setmetatable({}, {__mode = 34})
+  collectgarbage()
+end
+
 
 -- 'bug' in 5.1
 a = {}

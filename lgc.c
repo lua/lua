@@ -589,25 +589,38 @@ static void traversestrongtable (global_State *g, Table *h) {
 }
 
 
-static l_mem traversetable (global_State *g, Table *h) {
-  const char *weakkey, *weakvalue;
+/*
+** (result & 1) iff weak values; (result & 2) iff weak keys.
+*/
+static int getmode (global_State *g, Table *h) {
   const TValue *mode = gfasttm(g, h->metatable, TM_MODE);
-  TString *smode;
-  markobjectN(g, h->metatable);
-  if (mode && ttisshrstring(mode) &&  /* is there a weak mode? */
-      (cast_void(smode = tsvalue(mode)),
-       cast_void(weakkey = strchr(getshrstr(smode), 'k')),
-       cast_void(weakvalue = strchr(getshrstr(smode), 'v')),
-       (weakkey || weakvalue))) {  /* is really weak? */
-    if (!weakkey)  /* strong keys? */
-      traverseweakvalue(g, h);
-    else if (!weakvalue)  /* strong values? */
-      traverseephemeron(g, h, 0);
-    else  /* all weak */
-      linkgclist(h, g->allweak);  /* nothing to traverse now */
+  if (mode == NULL || !ttisshrstring(mode))
+    return 0;  /* ignore non-(short)string modes */
+  else {
+    const char *smode = getshrstr(tsvalue(mode));
+    const char *weakkey = strchr(smode, 'k');
+    const char *weakvalue = strchr(smode, 'v');
+    return ((weakkey != NULL) << 1) | (weakvalue != NULL);
   }
-  else  /* not weak */
-    traversestrongtable(g, h);
+}
+
+
+static l_mem traversetable (global_State *g, Table *h) {
+  markobjectN(g, h->metatable);
+  switch (getmode(g, h)) {
+    case 0:  /* not weak */
+      traversestrongtable(g, h);
+      break;
+    case 1:  /* weak values */
+      traverseweakvalue(g, h);
+      break;
+    case 2:  /* weak keys */
+      traverseephemeron(g, h, 0);
+      break;
+    case 3:  /* all weak */
+      linkgclist(h, g->allweak);  /* nothing to traverse now */
+      break;
+  }
   return 1 + 2*sizenode(h) + h->asize;
 }
 
