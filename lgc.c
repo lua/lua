@@ -617,8 +617,11 @@ static l_mem traversetable (global_State *g, Table *h) {
     case 2:  /* weak keys */
       traverseephemeron(g, h, 0);
       break;
-    case 3:  /* all weak */
-      linkgclist(h, g->allweak);  /* nothing to traverse now */
+    case 3:  /* all weak; nothing to traverse */
+      if (g->gcstate == GCSpropagate)
+        linkgclist(h, g->grayagain);  /* must visit again its metatable */
+      else
+        linkgclist(h, g->allweak);  /* must clear collected entries */
       break;
   }
   return 1 + 2*sizenode(h) + h->asize;
