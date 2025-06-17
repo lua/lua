@@ -1403,8 +1403,7 @@ see the program @idx{luac} and the function @Lid{string.dump} for details.
 Programs in source and compiled forms are interchangeable;
 Lua automatically detects the file type and acts accordingly @seeF{load}.
 Be aware that, unlike source code,
-the execution of maliciously crafted
-bytecode can crash the interpreter.
+maliciously crafted binary chunks can crash the interpreter.
 
 }
 
@@ -6694,11 +6693,10 @@ It may be the string @St{b} (only @x{binary chunk}s),
 or @St{bt} (both binary and text).
 The default is @St{bt}.
 
-It is safe to load malformed binary chunks;
-@id{load} signals an appropriate error.
-However,
-Lua does not check the consistency of the code inside binary chunks;
-running maliciously crafted bytecode can crash the interpreter.
+Lua does not check the consistency of binary chunks.
+Maliciously crafted binary chunks can crash
+the interpreter.
+You can use the @id{mode} parameter to prevent loading binary chunks.
 
 }
 

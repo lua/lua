@@ -154,8 +154,9 @@ static void loadString (LoadState *S, Proto *p, TString **sl) {
   else if (size == 1) {  /* previously saved string? */
     lua_Unsigned idx = loadVarint(S, LUA_MAXUNSIGNED);  /* get its index */
     TValue stv;
-    luaH_getint(S->h, l_castU2S(idx), &stv);  /* get its value */
-    *sl = ts = tsvalue(&stv);
+    if (novariant(luaH_getint(S->h, l_castU2S(idx), &stv)) != LUA_TSTRING)
+      error(S, "invalid string index");
+    *sl = ts = tsvalue(&stv);  /* get its value */
     luaC_objbarrier(L, p, ts);
     return;  /* do not save it again */
   }
@@ -394,11 +395,10 @@ LClosure *luaU_undump (lua_State *L, ZIO *Z, const char *name, int fixed) {
   LoadState S;
   LClosure *cl;
   if (*name == '@' || *name == '=')
-    S.name = name + 1;
+    name = name + 1;
   else if (*name == LUA_SIGNATURE[0])
-    S.name = "binary string";
-  else
-    S.name = name;
+    name = "binary string";
+  S.name = name;
   S.L = L;
   S.Z = Z;
   S.fixed = cast_byte(fixed);
