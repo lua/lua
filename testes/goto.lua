@@ -293,13 +293,13 @@ end
 foo()
 --------------------------------------------------------------------------
 
+local function checkerr (code, err)
+  local st, msg = load(code)
+  assert(not st and string.find(msg, err))
+end
+
 do
   global T<const>
-
-  local function checkerr (code, err)
-    local st, msg = load(code)
-    assert(not st and string.find(msg, err))
-  end
 
   -- globals must be declared, after a global declaration
   checkerr("global none; X = 1", "variable 'X'")
@@ -381,6 +381,34 @@ do
   Y = x + Y
   assert(_ENV.Y == 20)
 
+end
+
+
+do   -- Ok to declare hundreds of globals
+  global table
+  local code = {}
+  for i = 1, 1000 do
+    code[#code + 1] = ";global x" .. i
+  end
+  code[#code + 1] = "; return x990"
+  code = table.concat(code)
+  _ENV.x990 = 11
+  assert(load(code)() == 11)
+  _ENV.x990 = nil
+end
+
+do   -- mixing lots of global/local declarations
+  global table
+  local code = {}
+  for i = 1, 200 do
+    code[#code + 1] = ";global x" .. i
+    code[#code + 1] = ";local y" .. i .. "=" .. (2*i)
+  end
+  code[#code + 1] = "; return x200 + y200"
+  code = table.concat(code)
+  _ENV.x200 = 11
+  assert(assert(load(code))() == 2*200 + 11)
+  _ENV.x200 = nil
 end
 
 print'OK'

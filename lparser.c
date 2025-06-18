@@ -50,7 +50,7 @@ typedef struct BlockCnt {
   struct BlockCnt *previous;  /* chain */
   int firstlabel;  /* index of first label in this block */
   int firstgoto;  /* index of first pending goto in this block */
-  lu_byte nactvar;  /* # active locals outside the block */
+  short nactvar;  /* number of active declarations at block entry */
   lu_byte upval;  /* true if some variable in the block is an upvalue */
   lu_byte isloop;  /* 1 if 'block' is a loop; 2 if it has pending breaks */
   lu_byte insidetbc;  /* true if inside the scope of a to-be-closed var. */
@@ -196,8 +196,6 @@ static int new_varkind (LexState *ls, TString *name, lu_byte kind) {
   FuncState *fs = ls->fs;
   Dyndata *dyd = ls->dyd;
   Vardesc *var;
-  luaY_checklimit(fs, dyd->actvar.n + 1 - fs->firstlocal,
-                 MAXVARS, "local variables");
   luaM_growvector(L, dyd->actvar.arr, dyd->actvar.n + 1,
              dyd->actvar.size, Vardesc, SHRT_MAX, "variable declarationss");
   var = &dyd->actvar.arr[dyd->actvar.n++];
@@ -330,6 +328,7 @@ static void adjustlocalvars (LexState *ls, int nvars) {
     Vardesc *var = getlocalvardesc(fs, vidx);
     var->vd.ridx = cast_byte(reglevel++);
     var->vd.pidx = registerlocalvar(ls, fs, var->vd.name);
+    luaY_checklimit(fs, reglevel, MAXVARS, "local variables");
   }
 }
 
