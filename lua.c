@@ -504,7 +504,7 @@ static void lua_initreadline (lua_State *L) {
   else {
     const char **name = cast(const char**, dlsym(lib, "rl_readline_name"));
     if (name != NULL)
-      *name = "Lua";
+      *name = "lua";
     l_readline = cast(l_readlineT, cast_func(dlsym(lib, "readline")));
     l_addhist = cast(l_addhistT, cast_func(dlsym(lib, "add_history")));
   }
