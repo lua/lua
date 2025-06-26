@@ -488,8 +488,8 @@ static void lua_freeline (char *line) {
 static void lua_initreadline(lua_State *L) {
   UNUSED(L);
   rl_readline_name = "lua";
-  l_readline = readline;
-  l_addhist = add_history;
+  l_readline = cast(l_readlineT, readline);
+  l_addhist = cast(l_addhistT, add_history);
 }
 
 #elif defined(LUA_USE_DLOPEN) && defined(LUA_READLINELIB)	/* }{ */
