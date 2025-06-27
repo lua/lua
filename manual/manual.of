@@ -6908,7 +6908,7 @@ and @St{userdata}.
 
 A global variable (not a function) that
 holds a string containing the running Lua version.
-The current value of this variable is @St{Lua 5.4}.
+The current value of this variable is @St{Lua 5.5}.
 
 }
 
@@ -7154,7 +7154,7 @@ to search for a @N{C loader}.
 
 Lua initializes the @N{C path} @Lid{package.cpath} in the same way
 it initializes the Lua path @Lid{package.path},
-using the environment variable @defid{LUA_CPATH_5_4},
+using the environment variable @defid{LUA_CPATH_5_5},
 or the environment variable @defid{LUA_CPATH},
 or a default path defined in @id{luaconf.h}.
 
@@ -7223,7 +7223,7 @@ A string with the path used by @Lid{require}
 to search for a Lua loader.
 
 At start-up, Lua initializes this variable with
-the value of the environment variable @defid{LUA_PATH_5_4} or
+the value of the environment variable @defid{LUA_PATH_5_5} or
 the environment variable @defid{LUA_PATH} or
 with a default path defined in @id{luaconf.h},
 if those environment variables are not defined.
@@ -7594,9 +7594,9 @@ x = string.gsub("4+5 = $return 4+5$", "%$(.-)%$", function (s)
     end)
 -- x="4+5 = 9"
 
-local t = {name="lua", version="5.4"}
+local t = {name="lua", version="5.5"}
 x = string.gsub("$name-$version.tar.gz", "%$(%w+)", t)
--- x="lua-5.4.tar.gz"
+-- x="lua-5.5.tar.gz"
 }
 
 }
@@ -9332,7 +9332,7 @@ when the standard input (@id{stdin}) is a terminal,
 and as @T{lua -} otherwise.
 
 When called without the option @T{-E},
-the interpreter checks for an environment variable @defid{LUA_INIT_5_4}
+the interpreter checks for an environment variable @defid{LUA_INIT_5_5}
 (or @defid{LUA_INIT} if the versioned name is not defined)
 before running any argument.
 If the variable content has the format @T{@At@rep{filename}},

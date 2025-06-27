@@ -8,11 +8,11 @@
 
 ---------------------------------------------------------------
 header = [[
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!DOCTYPE html>
 <html>
 
 <head>
-<title>Lua 5.4 Reference Manual</title>
+<title>Lua 5.5 Reference Manual</title>
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
 <link rel="stylesheet" href="lua.css">
 <link rel="stylesheet" href="manual.css">
@@ -23,7 +23,7 @@ header = [[
 <hr>
 <h1>
 <a href="http://www.lua.org/home.html"><img src="logo.gif" alt="[Lua logo]" border="0"></a>
-Lua 5.4 Reference Manual
+Lua 5.5 Reference Manual
 </h1>
 
 by Roberto Ierusalimschy, Luiz Henrique de Figueiredo, Waldemar Celes
