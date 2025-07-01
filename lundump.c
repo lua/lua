@@ -109,7 +109,7 @@ static lua_Unsigned loadVarint (LoadState *S, lua_Unsigned limit) {
 
 
 static size_t loadSize (LoadState *S) {
-  return loadVarint(S, MAX_SIZE);
+  return cast_sizet(loadVarint(S, MAX_SIZE));
 }
 
 

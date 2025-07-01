@@ -1811,8 +1811,8 @@ static int str_unpack (lua_State *L) {
         lua_Unsigned len = (lua_Unsigned)unpackint(L, data + pos,
                                           h.islittle, cast_int(size), 0);
         luaL_argcheck(L, len <= ld - pos - size, 2, "data string too short");
-        lua_pushlstring(L, data + pos + size, len);
-        pos += len;  /* skip string */
+        lua_pushlstring(L, data + pos + size, cast_sizet(len));
+        pos += cast_sizet(len);  /* skip string */
         break;
       }
       case Kzstr: {
