@@ -764,20 +764,6 @@
 */
 
 /*
-@@ LUAI_MAXSTACK limits the size of the Lua stack.
-** CHANGE it if you need a different limit. This limit is arbitrary;
-** its only purpose is to stop Lua from consuming unlimited stack
-** space and to reserve some numbers for pseudo-indices.
-** (It must fit into max(int)/2.)
-*/
-#if 1000000 < (INT_MAX / 2)
-#define LUAI_MAXSTACK		1000000
-#else
-#define LUAI_MAXSTACK		(INT_MAX / 2u)
-#endif
-
-
-/*
 @@ LUA_EXTRASPACE defines the size of a raw memory area associated with
 ** a Lua state with very fast access.
 ** CHANGE it if you need a different size.

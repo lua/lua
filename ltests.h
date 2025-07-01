@@ -155,7 +155,6 @@ LUA_API void *debug_realloc (void *ud, void *block,
 ** Reduce maximum stack size to make stack-overflow tests run faster.
 ** (But value is still large enough to overflow smaller integers.)
 */
-#undef LUAI_MAXSTACK
 #define LUAI_MAXSTACK   68000
 
 

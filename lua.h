@@ -37,10 +37,10 @@
 
 /*
 ** Pseudo-indices
-** (-LUAI_MAXSTACK is the minimum valid index; we keep some free empty
-** space after that to help overflow detection)
+** (The stack size is limited to INT_MAX/2; we keep some free empty
+** space after that to help overflow detection.)
 */
-#define LUA_REGISTRYINDEX	(-LUAI_MAXSTACK - 1000)
+#define LUA_REGISTRYINDEX	(-(INT_MAX/2 + 1000))
 #define lua_upvalueindex(i)	(LUA_REGISTRYINDEX - (i))
 
 

@@ -174,6 +174,20 @@ TStatus luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 #define STACKERRSPACE	200
 
 
+/*
+** LUAI_MAXSTACK limits the size of the Lua stack.
+** It must fit into INT_MAX/2.
+*/
+
+#if !defined(LUAI_MAXSTACK)
+#if 1000000 < (INT_MAX / 2)
+#define LUAI_MAXSTACK           1000000
+#else
+#define LUAI_MAXSTACK           (INT_MAX / 2u)
+#endif
+#endif
+
+
 /* maximum stack size that respects size_t */
 #define MAXSTACK_BYSIZET  ((MAX_SIZET / sizeof(StackValue)) - STACKERRSPACE)
 
