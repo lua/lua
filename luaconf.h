@@ -59,7 +59,7 @@
 
 
 /*
-** When Posix DLL ('LUA_USE_DLOPEN') is enabled, the Lua stand-alone
+** When POSIX DLL ('LUA_USE_DLOPEN') is enabled, the Lua stand-alone
 ** application will try to dynamically link a 'readline' facility
 ** for its REPL.  In that case, LUA_READLINELIB is the name of the
 ** library it will look for those facilities.  If lua.c cannot open
@@ -76,7 +76,7 @@
 
 #if defined(LUA_USE_MACOSX)
 #define LUA_USE_POSIX
-#define LUA_USE_DLOPEN		/* MacOS does not need -ldl */
+#define LUA_USE_DLOPEN		/* macOS does not need -ldl */
 #define LUA_READLINELIB		"libedit.dylib"
 #endif
 
@@ -88,7 +88,7 @@
 
 
 #if defined(LUA_USE_C89) && defined(LUA_USE_POSIX)
-#error "Posix is not compatible with C89"
+#error "POSIX is not compatible with C89"
 #endif
 
 

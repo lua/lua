@@ -679,7 +679,7 @@ static int auxgetstr (lua_State *L, const TValue *t, const char *k) {
 
 /*
 ** The following function assumes that the registry cannot be a weak
-** table, so that en mergency collection while using the global table
+** table; so, an emergency collection while using the global table
 ** cannot collect it.
 */
 static void getGlobalTable (lua_State *L, TValue *gt) {

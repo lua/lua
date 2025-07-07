@@ -47,7 +47,7 @@ static lua_Integer u_posrelat (lua_Integer pos, size_t len) {
 ** Decode one UTF-8 sequence, returning NULL if byte sequence is
 ** invalid.  The array 'limits' stores the minimum value for each
 ** sequence length, to check for overlong representations. Its first
-** entry forces an error for non-ascii bytes with no continuation
+** entry forces an error for non-ASCII bytes with no continuation
 ** bytes (count == 0).
 */
 static const char *utf8_decode (const char *s, l_uint32 *val, int strict) {
@@ -55,7 +55,7 @@ static const char *utf8_decode (const char *s, l_uint32 *val, int strict) {
         {~(l_uint32)0, 0x80, 0x800, 0x10000u, 0x200000u, 0x4000000u};
   unsigned int c = (unsigned char)s[0];
   l_uint32 res = 0;  /* final result */
-  if (c < 0x80)  /* ascii? */
+  if (c < 0x80)  /* ASCII? */
     res = c;
   else {
     int count = 0;  /* to count number of continuation bytes */
