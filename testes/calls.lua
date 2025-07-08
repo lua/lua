@@ -24,7 +24,7 @@ assert(not pcall(type))
 
 
 -- testing local-function recursion
-global fact; fact = false
+global fact = false
 do
   local res = 1
   local function fact (n)
@@ -65,7 +65,7 @@ a.b.c:f2('k', 12); assert(a.b.c.k == 12)
 
 print('+')
 
-global t; t = nil   -- 'declare' t
+global t = nil   -- 'declare' t
 function f(a,b,c) local d = 'a'; t={a,b,c,d} end
 
 f(      -- this line change must be valid

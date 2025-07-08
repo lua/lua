@@ -229,7 +229,7 @@ as the following example illustrates:
 @verbatim{
 X = 1       -- Ok, global by default
 do
-  global Y  -- voids implicit initial declaration
+  global Y  -- voids the implicit initial declaration
   Y = 1     -- Ok, Y declared as global
   X = 1     -- ERROR, X not declared
 end
@@ -269,7 +269,7 @@ print(x)              --> 10  (the global one)
 
 Notice that, in a declaration like @T{local x = x},
 the new @id{x} being declared is not in scope yet,
-and so the @id{x} in the left-hand side refers to the outside variable.
+and so the @id{x} in the right-hand side refers to the outside variable.
 
 Because of the @x{lexical scoping} rules,
 local variables can be freely accessed by functions
@@ -1651,11 +1651,12 @@ Function calls are explained in @See{functioncall}.
 
 @sect3{localvar| @title{Variable Declarations}
 Local and global variables can be declared anywhere inside a block.
-The declaration for locals can include an initialization:
+The declaration can include an initialization:
 @Produc{
 @producname{stat}@producbody{@Rw{local}
   attnamelist @bnfopt{@bnfter{=} explist}}
-@producname{stat}@producbody{@Rw{global} attnamelist}
+@producname{stat}@producbody{@Rw{global}
+  attnamelist @bnfopt{@bnfter{=} explist}}
 }
 If present, an initial assignment has the same semantics
 of a multiple assignment @see{assignment}.
@@ -1712,7 +1713,8 @@ and a program that starts with any other global declaration
 (e.g., @T{global none}) can only refer to declared variables.
 
 Note that, for global variables,
-the effect of any declaration is only syntactical:
+the effect of any declaration is only syntactical
+(except for the optional assignment):
 @verbatim{
 global X <const>, _G
 X = 1           -- ERROR
@@ -3924,8 +3926,8 @@ This macro may evaluate its arguments more than once.
 
 }
 
-@APIEntry{unsigned (lua_numbertocstring) (lua_State *L, int idx,
-                                          char *buff);|
+@APIEntry{unsigned lua_numbertocstring (lua_State *L, int idx,
+                                        char *buff);|
 @apii{0,0,-}
 
 Converts the number at acceptable index @id{idx} to a string
@@ -4050,7 +4052,7 @@ This function is equivalent to @Lid{lua_pushcclosure} with no upvalues.
 
 }
 
-@APIEntry{const char *(lua_pushexternalstring) (lua_State *L,
+@APIEntry{const char *lua_pushexternalstring (lua_State *L,
                 const char *s, size_t len, lua_Alloc falloc, void *ud);|
 @apii{0,1,m}
 

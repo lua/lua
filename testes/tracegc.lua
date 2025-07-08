@@ -6,7 +6,7 @@ local M = {}
 local setmetatable, stderr, collectgarbage =
          setmetatable, io.stderr, collectgarbage
 
-_ENV = nil
+global none
 
 local active = false
 

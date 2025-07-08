@@ -4,7 +4,7 @@ local strsub = string.sub
 
 local print = print
 
-_ENV = nil
+global none
 
 -- Try to convert a value to an integer, without assuming any coercion.
 local function toint (x)

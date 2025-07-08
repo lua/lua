@@ -380,7 +380,7 @@ do
   global *
   Y = x + Y
   assert(_ENV.Y == 20)
-
+  Y = nil
 end
 
 
@@ -409,6 +409,27 @@ do   -- mixing lots of global/local declarations
   _ENV.x200 = 11
   assert(assert(load(code))() == 2*200 + 11)
   _ENV.x200 = nil
+end
+
+do  print "testing initialization in global declarations"
+  global<const> a, b, c = 10, 20, 30
+  assert(_ENV.a == 10 and b == 20 and c == 30)
+
+  global<const> a, b, c = 10
+  assert(_ENV.a == 10 and b == nil and c == nil)
+
+  global table
+  global a, b, c, d = table.unpack{1, 2, 3, 6, 5}
+  assert(_ENV.a == 1 and b == 2 and c == 3 and d == 6)
+
+  local a, b = 100, 200
+  do
+    global a, b = a, b
+  end
+  assert(_ENV.a == 100 and _ENV.b == 200)
+
+
+  _ENV.a, _ENV.b, _ENV.c, _ENV.d = nil   -- erase these globals
 end
 
 print'OK'

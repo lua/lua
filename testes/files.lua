@@ -715,7 +715,7 @@ do
 end
 
 
-if T and T.nonblock then
+if T and T.nonblock and not _port then
   print("testing failed write")
 
   -- unable to write anything to /dev/full
@@ -840,7 +840,7 @@ assert(os.date("!\0\0") == "\0\0")
 local x = string.rep("a", 10000)
 assert(os.date(x) == x)
 local t = os.time()
-global D; D = os.date("*t", t)
+global D = os.date("*t", t)
 assert(os.date(string.rep("%d", 1000), t) ==
        string.rep(os.date("%d", t), 1000))
 assert(os.date(string.rep("%", 200)) == string.rep("%", 100))
