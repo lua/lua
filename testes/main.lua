@@ -90,7 +90,7 @@ prepfile[[
 1, a
 )
 ]]
-RUN('lua - < %s > %s', prog, out)
+RUN('lua - -- < %s > %s', prog, out)
 checkout("1\tnil\n")
 
 RUN('echo "print(10)\nprint(2)\n" | lua > %s', out)
@@ -133,7 +133,7 @@ checkout("-h\n")
 prepfile("print(package.path)")
 
 -- test LUA_PATH
-RUN('env LUA_INIT= LUA_PATH=x lua %s > %s', prog, out)
+RUN('env LUA_INIT= LUA_PATH=x lua -- %s > %s', prog, out)
 checkout("x\n")
 
 -- test LUA_PATH_version
@@ -358,7 +358,7 @@ RUN([[lua -e"_PROMPT='' _PROMPT2=''" -i < %s > %s]], prog, out)
 checkprogout("6\n10\n10\n\n")
 
 prepfile("a = [[b\nc\nd\ne]]\na")
-RUN([[lua -e"_PROMPT='' _PROMPT2=''" -i < %s > %s]], prog, out)
+RUN([[lua -e"_PROMPT='' _PROMPT2=''" -i -- < %s > %s]], prog, out)
 checkprogout("b\nc\nd\ne\n\n")
 
 -- input interrupted in continuation line
@@ -488,12 +488,13 @@ assert(not os.remove(out))
 -- invalid options
 NoRun("unrecognized option '-h'", "lua -h")
 NoRun("unrecognized option '---'", "lua ---")
-NoRun("unrecognized option '-Ex'", "lua -Ex")
+NoRun("unrecognized option '-Ex'", "lua -Ex --")
 NoRun("unrecognized option '-vv'", "lua -vv")
 NoRun("unrecognized option '-iv'", "lua -iv")
 NoRun("'-e' needs argument", "lua -e")
 NoRun("syntax error", "lua -e a")
 NoRun("'-l' needs argument", "lua -l")
+NoRun("-i", "lua -- -i")   -- handles -i as a script name
 
 
 if T then   -- test library?
