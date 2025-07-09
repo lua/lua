@@ -300,6 +300,12 @@ else
   assert(_ENV.x == "lib2-v2" and _ENV.y == DC"lib2-v2")
   assert(lib2.id("x") == true)   -- a different "id" implementation
 
+  for _, len in ipairs{0, 10, 39, 40, 41, 1000} do
+    local str = string.rep("a", len)
+    local str1 = lib2.newstr(str)
+    assert(str == str1)
+  end
+
   -- test C submodules
   local fs, ext = require"lib1.sub"
   assert(_ENV.x == "lib1.sub" and _ENV.y == DC"lib1")
@@ -447,7 +453,7 @@ do
 end
 
 
--- test of large float/integer indices 
+-- test of large float/integer indices
 
 -- compute maximum integer where all bits fit in a float
 local maxint = math.maxinteger
