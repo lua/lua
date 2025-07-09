@@ -438,13 +438,24 @@ static int handle_luainit (lua_State *L) {
 **   the standard input.
 ** * lua_saveline defines how to "save" a read line in a "history".
 ** * lua_freeline defines how to free a line read by lua_readline.
-**
-** If lua_readline is defined, all of them should be defined.
 */
 
 #if !defined(lua_readline)	/* { */
+/* Otherwise, all previously listed functions should be defined. */
 
-/* Code to use the readline library, either statically or dynamically linked */
+#if defined(LUA_USE_READLINE)	/* { */
+/* Lua will be linked with '-lreadline' */
+
+#include <readline/readline.h>
+#include <readline/history.h>
+
+#define lua_initreadline(L)	((void)L, rl_readline_name="lua")
+#define lua_readline(buff,prompt)	((void)buff, readline(prompt))
+#define lua_saveline(line)	add_history(line)
+#define lua_freeline(line)	free(line)
+
+#else		/* }{ */
+/* use dynamically loaded readline (or nothing) */
 
 /* pointer to 'readline' function (if any) */
 typedef char *(*l_readlineT) (const char *prompt);
@@ -480,22 +491,9 @@ static void lua_freeline (char *line) {
 }
 
 
-#if defined(LUA_USE_READLINE)	/* { */
-
-/* assume Lua will be linked with '-lreadline' */
-#include <readline/readline.h>
-#include <readline/history.h>
-
-static void lua_initreadline(lua_State *L) {
-  UNUSED(L);
-  rl_readline_name = "lua";
-  l_readline = cast(l_readlineT, readline);
-  l_addhist = cast(l_addhistT, add_history);
-}
-
-#elif defined(LUA_USE_DLOPEN) && defined(LUA_READLINELIB)	/* }{ */
-
+#if defined(LUA_USE_DLOPEN) && defined(LUA_READLINELIB)		/* { */
 /* try to load 'readline' dynamically */
+
 #include <dlfcn.h>
 
 static void lua_initreadline (lua_State *L) {
@@ -508,15 +506,20 @@ static void lua_initreadline (lua_State *L) {
       *name = "lua";
     l_readline = cast(l_readlineT, cast_func(dlsym(lib, "readline")));
     l_addhist = cast(l_addhistT, cast_func(dlsym(lib, "add_history")));
+    if (l_readline == NULL)
+      lua_warning(L, "unable to load 'readline'", 0);
   }
 }
 
-#else	/* }{ */
+#else		/* }{ */
+/* no dlopen or LUA_READLINELIB undefined */
 
-/* no readline; leave function pointers as NULL */
-#define lua_initreadline(L)	cast(void, L)
+/* Leave pointers with NULL */
+#define lua_initreadline(L)	((void)L)
 
-#endif	/* } */
+#endif		/* } */
+
+#endif				/* } */
 
 #endif				/* } */
 
