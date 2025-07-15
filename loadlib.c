@@ -345,8 +345,8 @@ static void *freelib (void *ud, void *ptr, size_t osize, size_t nsize) {
 ** Create a library string that, when deallocated, will unload 'plib'
 */
 static void createlibstr (lua_State *L, void *plib) {
-  static const char dummy[] =  /* common long body for all library strings */
-    "01234567890123456789012345678901234567890123456789";
+  /* common content for all library strings */
+  static const char dummy[] = "01234567890";
   lua_pushexternalstring(L, dummy, sizeof(dummy) - 1, freelib, plib);
 }
 

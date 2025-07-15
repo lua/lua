@@ -1066,8 +1066,12 @@ static int tracegc (lua_State *L) {
 
 static int hash_query (lua_State *L) {
   if (lua_isnone(L, 2)) {
+    TString *ts;
     luaL_argcheck(L, lua_type(L, 1) == LUA_TSTRING, 1, "string expected");
-    lua_pushinteger(L, cast_int(tsvalue(obj_at(L, 1))->hash));
+    ts = tsvalue(obj_at(L, 1));
+    if (ts->tt == LUA_VLNGSTR)
+      luaS_hashlongstr(ts);  /* make sure long string has a hash */
+    lua_pushinteger(L, cast_int(ts->hash));
   }
   else {
     TValue *o = obj_at(L, 1);

@@ -2419,8 +2419,8 @@ for instance @T{foo(e1, e2, e3)} @see{functioncall}.}
 @item{A multiple assignment,
 for instance @T{a , b, c = e1, e2, e3} @see{assignment}.}
 
-@item{A local declaration,
-for instance @T{local a , b, c = e1, e2, e3} @see{localvar}.}
+@item{A local or global declaration,
+which is a special case of multiple assignment.}
 
 @item{The initial values in a generic @rw{for} loop,
 for instance @T{for k in e1, e2, e3 do ... end} @see{for}.}
@@ -2431,8 +2431,7 @@ the list of values from the list of expressions
 must be @emph{adjusted} to a specific length:
 the number of parameters in a call to a non-variadic function
 @see{func-def},
-the number of variables in a multiple assignment or
-a local declaration,
+the number of variables in a multiple assignment or a declaration,
 and exactly four values for a generic @rw{for} loop.
 The @def{adjustment} follows these rules:
 If there are more values than needed,
@@ -4074,11 +4073,6 @@ The function will be called with the given @id{ud},
 the string @id{s} as the block,
 the length plus one (to account for the ending zero) as the old size,
 and 0 as the new size.
-
-Lua always @x{internalizes} strings with lengths up to 40 characters.
-So, for strings in that range,
-this function will immediately internalize the string
-and call @id{falloc} to free the buffer.
 
 Even when using an external buffer,
 Lua still has to allocate a header for the string.

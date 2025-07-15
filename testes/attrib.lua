@@ -300,12 +300,6 @@ else
   assert(_ENV.x == "lib2-v2" and _ENV.y == DC"lib2-v2")
   assert(lib2.id("x") == true)   -- a different "id" implementation
 
-  for _, len in ipairs{0, 10, 39, 40, 41, 1000} do
-    local str = string.rep("a", len)
-    local str1 = lib2.newstr(str)
-    assert(str == str1)
-  end
-
   -- test C submodules
   local fs, ext = require"lib1.sub"
   assert(_ENV.x == "lib1.sub" and _ENV.y == DC"lib1")
@@ -314,11 +308,11 @@ else
   _ENV.x, _ENV.y = nil
 end
 
+
 _ENV = _G
 
 
 -- testing preload
-
 do
   local p = package
   package = {}
@@ -335,6 +329,26 @@ do
 
   package = p
   assert(type(package.path) == "string")
+end
+
+
+do  print("testing external strings")
+  package.cpath = DC"?"
+  local lib2 = require"lib2-v2"
+  local t = {}
+  for _, len in ipairs{0, 10, 39, 40, 41, 1000} do
+    local str = string.rep("a", len)
+    local str1 = lib2.newstr(str)
+    assert(str == str1)
+    assert(not T or T.hash(str) == T.hash(str1))
+    t[str1] = 20; assert(t[str] == 20 and t[str1] == 20)
+    t[str] = 10; assert(t[str1] == 10)
+    local tt = {[str1] = str1}
+    assert(next(tt) == str1 and next(tt, str1) == nil)
+    assert(tt[str] == str)
+    local str2 = lib2.newstr(str1)
+    assert(str == str2 and t[str2] == 10 and tt[str2] == str)
+  end
 end
 
 print('+')

@@ -234,41 +234,51 @@ l_sinline Node *mainpositionfromnode (const Table *t, Node *nd) {
 ** Check whether key 'k1' is equal to the key in node 'n2'. This
 ** equality is raw, so there are no metamethods. Floats with integer
 ** values have been normalized, so integers cannot be equal to
-** floats. It is assumed that 'eqshrstr' is simply pointer equality, so
-** that short strings are handled in the default case.
-** A true 'deadok' means to accept dead keys as equal to their original
-** values. All dead keys are compared in the default case, by pointer
-** identity. (Only collectable objects can produce dead keys.) Note that
-** dead long strings are also compared by identity.
-** Once a key is dead, its corresponding value may be collected, and
-** then another value can be created with the same address. If this
-** other value is given to 'next', 'equalkey' will signal a false
-** positive. In a regular traversal, this situation should never happen,
-** as all keys given to 'next' came from the table itself, and therefore
-** could not have been collected. Outside a regular traversal, we
-** have garbage in, garbage out. What is relevant is that this false
-** positive does not break anything.  (In particular, 'next' will return
-** some other valid item on the table or nil.)
+** floats. It is assumed that 'eqshrstr' is simply pointer equality,
+** so that short strings are handled in the default case.  The flag
+** 'deadok' means to accept dead keys as equal to their original values.
+** (Only collectable objects can produce dead keys.) Note that dead
+** long strings are also compared by identity.  Once a key is dead,
+** its corresponding value may be collected, and then another value
+** can be created with the same address. If this other value is given
+** to 'next', 'equalkey' will signal a false positive. In a regular
+** traversal, this situation should never happen, as all keys given to
+** 'next' came from the table itself, and therefore could not have been
+** collected. Outside a regular traversal, we have garbage in, garbage
+** out. What is relevant is that this false positive does not break
+** anything.  (In particular, 'next' will return some other valid item
+** on the table or nil.)
 */
 static int equalkey (const TValue *k1, const Node *n2, int deadok) {
-  if ((rawtt(k1) != keytt(n2)) &&  /* not the same variants? */
-       !(deadok && keyisdead(n2) && iscollectable(k1)))
-   return 0;  /* cannot be same key */
-  switch (keytt(n2)) {
-    case LUA_VNIL: case LUA_VFALSE: case LUA_VTRUE:
-      return 1;
-    case LUA_VNUMINT:
-      return (ivalue(k1) == keyival(n2));
-    case LUA_VNUMFLT:
-      return luai_numeq(fltvalue(k1), fltvalueraw(keyval(n2)));
-    case LUA_VLIGHTUSERDATA:
-      return pvalue(k1) == pvalueraw(keyval(n2));
-    case LUA_VLCF:
-      return fvalue(k1) == fvalueraw(keyval(n2));
-    case ctb(LUA_VLNGSTR):
-      return luaS_eqlngstr(tsvalue(k1), keystrval(n2));
-    default:
+  if (rawtt(k1) != keytt(n2)) {  /* not the same variants? */
+    if (keyisshrstr(n2) && ttislngstring(k1)) {
+      /* an external string can be equal to a short-string key */
+      return luaS_eqstr(tsvalue(k1), keystrval(n2));
+    }
+    else if (deadok && keyisdead(n2) && iscollectable(k1)) {
+      /* a collectable value can be equal to a dead key */
       return gcvalue(k1) == gcvalueraw(keyval(n2));
+   }
+   else
+     return 0;  /* otherwise, different variants cannot be equal */
+  }
+  else {  /* equal variants */
+    switch (keytt(n2)) {
+      case LUA_VNIL: case LUA_VFALSE: case LUA_VTRUE:
+        return 1;
+      case LUA_VNUMINT:
+        return (ivalue(k1) == keyival(n2));
+      case LUA_VNUMFLT:
+        return luai_numeq(fltvalue(k1), fltvalueraw(keyval(n2)));
+      case LUA_VLIGHTUSERDATA:
+        return pvalue(k1) == pvalueraw(keyval(n2));
+      case LUA_VLCF:
+        return fvalue(k1) == fvalueraw(keyval(n2));
+      case ctb(LUA_VLNGSTR):
+        return luaS_eqstr(tsvalue(k1), keystrval(n2));
+      default:
+        return gcvalue(k1) == gcvalueraw(keyval(n2));
+    }
   }
 }
 
@@ -1157,6 +1167,14 @@ void luaH_finishset (lua_State *L, Table *t, const TValue *key,
       }
       else if (l_unlikely(luai_numisnan(f)))
         luaG_runerror(L, "table index is NaN");
+    }
+    else if (isextstr(key)) {  /* external string? */
+      /* If string is short, must internalize it to be used as table key */
+      TString *ts = luaS_normstr(L, tsvalue(key));
+      setsvalue2s(L, L->top.p++, ts);  /* anchor 'ts' (EXTRA_STACK) */
+      luaH_newkey(L, t, s2v(L->top.p - 1), value);
+      L->top.p--;
+      return;
     }
     luaH_newkey(L, t, key, value);
   }
