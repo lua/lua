@@ -1220,24 +1220,36 @@ void luaH_setint (lua_State *L, Table *t, lua_Integer key, TValue *value) {
 
 /*
 ** Try to find a boundary in the hash part of table 't'. From the
-** caller, we know that 'j' is zero or present and that 'j + 1' is
-** present. We want to find a larger key that is absent from the
-** table, so that we can do a binary search between the two keys to
-** find a boundary. We keep doubling 'j' until we get an absent index.
-** If the doubling would overflow, we try LUA_MAXINTEGER. If it is
-** absent, we are ready for the binary search. ('j', being max integer,
-** is larger or equal to 'i', but it cannot be equal because it is
-** absent while 'i' is present; so 'j > i'.) Otherwise, 'j' is a
-** boundary. ('j + 1' cannot be a present integer key because it is
-** not a valid integer in Lua.)
+** caller, we know that 'asize + 1' is present. We want to find a larger
+** key that is absent from the table, so that we can do a binary search
+** between the two keys to find a boundary. We keep doubling 'j' until
+** we get an absent index.  If the doubling would overflow, we try
+** LUA_MAXINTEGER. If it is absent, we are ready for the binary search.
+** ('j', being max integer, is larger or equal to 'i', but it cannot be
+** equal because it is absent while 'i' is present.) Otherwise, 'j' is a
+** boundary. ('j + 1' cannot be a present integer key because it is not
+** a valid integer in Lua.)
+** About 'rnd': If we used a fixed algorithm, a bad actor could fill
+** a table with only the keys that would be probed, in such a way that
+** a small table could result in a huge length. To avoid that, we use
+** the state's seed as a source of randomness. For the first probe,
+** we "randomly double" 'i' by adding to it a random number roughly its
+** width.
 */
-static lua_Unsigned hash_search (Table *t, lua_Unsigned j) {
-  lua_Unsigned i;
-  if (j == 0) j++;  /* the caller ensures 'j + 1' is present */
-  do {
+static lua_Unsigned hash_search (lua_State *L, Table *t, unsigned asize) {
+  lua_Unsigned i = asize + 1;  /* caller ensures t[i] is present */
+  unsigned rnd = G(L)->seed;
+  int n = (asize > 0) ? luaO_ceillog2(asize) : 0;  /* width of 'asize' */
+  unsigned mask = (1u << n) - 1;  /* 11...111 with the width of 'asize' */
+  unsigned incr = (rnd & mask) + 1;  /* first increment (at least 1) */
+  lua_Unsigned j = (incr <= l_castS2U(LUA_MAXINTEGER) - i) ? i + incr : i + 1;
+  rnd >>= n;  /* used 'n' bits from 'rnd' */
+  while (!hashkeyisempty(t, j)) {  /* repeat until an absent t[j] */
     i = j;  /* 'i' is a present index */
-    if (j <= l_castS2U(LUA_MAXINTEGER) / 2)
-      j *= 2;
+    if (j <= l_castS2U(LUA_MAXINTEGER)/2 - 1) {
+      j = j*2 + (rnd & 1);  /* try again with 2j or 2j+1 */
+      rnd >>= 1;
+    }
     else {
       j = LUA_MAXINTEGER;
       if (hashkeyisempty(t, j))  /* t[j] not present? */
@@ -1245,7 +1257,7 @@ static lua_Unsigned hash_search (Table *t, lua_Unsigned j) {
       else  /* weird case */
         return j;  /* well, max integer is a boundary... */
     }
-  } while (!hashkeyisempty(t, j));  /* repeat until an absent t[j] */
+  }
   /* i < j  &&  t[i] present  &&  t[j] absent */
   while (j - i > 1u) {  /* do a binary search between them */
     lua_Unsigned m = (i + j) / 2;
@@ -1286,7 +1298,7 @@ static lua_Unsigned newhint (Table *t, unsigned hint) {
 ** If there is no array part, or its last element is non empty, the
 ** border may be in the hash part.
 */
-lua_Unsigned luaH_getn (Table *t) {
+lua_Unsigned luaH_getn (lua_State *L, Table *t) {
   unsigned asize = t->asize;
   if (asize > 0) {  /* is there an array part? */
     const unsigned maxvicinity = 4;
@@ -1327,7 +1339,7 @@ lua_Unsigned luaH_getn (Table *t) {
   if (isdummy(t) || hashkeyisempty(t, asize + 1))
     return asize;  /* 'asize + 1' is empty */
   else  /* 'asize + 1' is also non empty */
-    return hash_search(t, asize);
+    return hash_search(L, t, asize);
 }
 
 

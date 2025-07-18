@@ -31,7 +31,8 @@
 
 
 /*
-** Computes ceil(log2(x))
+** Computes ceil(log2(x)), which is the smallest integer n such that
+** x <= (1 << n).
 */
 lu_byte luaO_ceillog2 (unsigned int x) {
   static const lu_byte log_2[256] = {  /* log_2[i - 1] = ceil(log2(i)) */

@@ -440,7 +440,7 @@ LUA_API lua_Unsigned lua_rawlen (lua_State *L, int idx) {
     case LUA_VSHRSTR: return cast(lua_Unsigned, tsvalue(o)->shrlen);
     case LUA_VLNGSTR: return cast(lua_Unsigned, tsvalue(o)->u.lnglen);
     case LUA_VUSERDATA: return cast(lua_Unsigned, uvalue(o)->len);
-    case LUA_VTABLE: return luaH_getn(hvalue(o));
+    case LUA_VTABLE: return luaH_getn(L, hvalue(o));
     default: return 0;
   }
 }

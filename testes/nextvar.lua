@@ -345,6 +345,18 @@ do
   end
 end
 
+
+do  print("testing attack on table length")
+  local t = {}
+  local lim = math.floor(math.log(math.maxinteger, 2)) - 1
+  for i = lim, 0, -1 do
+    t[2^i] = true
+  end
+  assert(t[1 << lim])
+  -- next loop should not take forever
+  for i = 1, #t do end
+end
+
 local nofind = {}
 
 
