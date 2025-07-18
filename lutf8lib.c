@@ -215,9 +215,10 @@ static int byteoffset (lua_State *L) {
   }
   lua_pushinteger(L, posi + 1);  /* initial position */
   if ((s[posi] & 0x80) != 0) {  /* multi-byte character? */
-    do {
-      posi++;
-    } while (iscontp(s + posi + 1));  /* skip to final byte */
+    if (iscont(s[posi]))
+      return luaL_error(L, "initial position is a continuation byte");
+    while (iscontp(s + posi + 1))
+      posi++;  /* skip to last continuation byte */
   }
   /* else one-byte character: final position is the initial one */
   lua_pushinteger(L, posi + 1);  /* 'posi' now is the final position */

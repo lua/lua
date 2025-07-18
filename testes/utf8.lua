@@ -152,10 +152,19 @@ checkerror("position out of bounds", utf8.offset, "", 1, -1)
 checkerror("continuation byte", utf8.offset, "𦧺", 1, 2)
 checkerror("continuation byte", utf8.offset, "𦧺", 1, 2)
 checkerror("continuation byte", utf8.offset, "\x80", 1)
+checkerror("continuation byte", utf8.offset, "\x9c", -1)
 
 -- error in indices for len
 checkerror("out of bounds", utf8.len, "abc", 0, 2)
 checkerror("out of bounds", utf8.len, "abc", 1, 4)
+
+do  -- missing continuation bytes
+  -- get what is available
+  local p, e = utf8.offset("\xE0", 1)
+  assert(p == 1 and e == 1)
+  local p, e = utf8.offset("\xE0\x9e", -1)
+  assert(p == 1 and e == 2)
+end
 
 
 local s = "hello World"
