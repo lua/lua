@@ -164,13 +164,13 @@ static void warnf (void *ud, const char *msg, int tocont) {
 
 #define MARK		0x55  /* 01010101 (a nice pattern) */
 
-typedef union Header {
+typedef union memHeader {
   LUAI_MAXALIGN;
   struct {
     size_t size;
     int type;
   } d;
-} Header;
+} memHeader;
 
 
 #if !defined(EXTERNMEMCHECK)
@@ -193,14 +193,14 @@ Memcontrol l_memcontrol =
    {0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL}};
 
 
-static void freeblock (Memcontrol *mc, Header *block) {
+static void freeblock (Memcontrol *mc, memHeader *block) {
   if (block) {
     size_t size = block->d.size;
     int i;
     for (i = 0; i < MARKSIZE; i++)  /* check marks after block */
       lua_assert(*(cast_charp(block + 1) + size + i) == MARK);
     mc->objcount[block->d.type]--;
-    fillmem(block, sizeof(Header) + size + MARKSIZE);  /* erase block */
+    fillmem(block, sizeof(memHeader) + size + MARKSIZE);  /* erase block */
     free(block);  /* actually free block */
     mc->numblocks--;  /* update counts */
     mc->total -= size;
@@ -210,7 +210,7 @@ static void freeblock (Memcontrol *mc, Header *block) {
 
 void *debug_realloc (void *ud, void *b, size_t oldsize, size_t size) {
   Memcontrol *mc = cast(Memcontrol *, ud);
-  Header *block = cast(Header *, b);
+  memHeader *block = cast(memHeader *, b);
   int type;
   if (mc->memlimit == 0) {  /* first time? */
     char *limit = getenv("MEMLIMIT");  /* initialize memory limit */
@@ -241,12 +241,12 @@ void *debug_realloc (void *ud, void *b, size_t oldsize, size_t size) {
   if (size > oldsize && mc->total+size-oldsize > mc->memlimit)
     return NULL;  /* fake a memory allocation error */
   else {
-    Header *newblock;
+    memHeader *newblock;
     int i;
     size_t commonsize = (oldsize < size) ? oldsize : size;
-    size_t realsize = sizeof(Header) + size + MARKSIZE;
+    size_t realsize = sizeof(memHeader) + size + MARKSIZE;
     if (realsize < size) return NULL;  /* arithmetic overflow! */
-    newblock = cast(Header *, malloc(realsize));  /* alloc a new block */
+    newblock = cast(memHeader *, malloc(realsize));  /* alloc a new block */
     if (newblock == NULL)
       return NULL;  /* really out of memory? */
     if (block) {
@@ -480,7 +480,7 @@ static int lua_checkpc (CallInfo *ci) {
 }
 
 
-static void checkstack (global_State *g, lua_State *L1) {
+static void check_stack (global_State *g, lua_State *L1) {
   StkId o;
   CallInfo *ci;
   UpVal *uv;
@@ -517,7 +517,7 @@ static void checkrefs (global_State *g, GCObject *o) {
       break;
     }
     case LUA_VTHREAD: {
-      checkstack(g, gco2th(o));
+      check_stack(g, gco2th(o));
       break;
     }
     case LUA_VLCL: {
@@ -904,6 +904,17 @@ static int get_limits (lua_State *L) {
   setnameval(L, "MAXARG_Bx", MAXARG_Bx);
   setnameval(L, "OFFSET_sBx", OFFSET_sBx);
   setnameval(L, "NUM_OPCODES", NUM_OPCODES);
+  return 1;
+}
+
+
+static int get_sizes (lua_State *L) {
+  lua_newtable(L);
+  setnameval(L, "Lua state", sizeof(lua_State));
+  setnameval(L, "global state", sizeof(global_State));
+  setnameval(L, "TValue", sizeof(TValue));
+  setnameval(L, "Node", sizeof(Node));
+  setnameval(L, "stack Value", sizeof(StackValue));
   return 1;
 }
 
@@ -2171,6 +2182,7 @@ static const struct luaL_Reg tests_funcs[] = {
   {"s2d", s2d},
   {"sethook", sethook},
   {"stacklevel", stacklevel},
+  {"sizes", get_sizes},
   {"testC", testC},
   {"makeCfunc", makeCfunc},
   {"totalmem", mem_query},

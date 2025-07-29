@@ -110,6 +110,11 @@
 #include "linit.c"
 #endif
 
+/* test library -- used only for internal development */
+#if defined(LUA_DEBUG)
+#include "ltests.c"
+#endif
+
 /* lua */
 #ifdef MAKE_LUA
 #include "lua.c"

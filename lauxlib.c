@@ -1177,7 +1177,11 @@ LUALIB_API unsigned int luaL_makeseed (lua_State *L) {
 }
 
 
-LUALIB_API lua_State *luaL_newstate (void) {
+/*
+** Use the name with parentheses so that headers can redefine it
+** as a macro.
+*/
+LUALIB_API lua_State *(luaL_newstate) (void) {
   lua_State *L = lua_newstate(l_alloc, NULL, luai_makeseed());
   if (l_likely(L)) {
     lua_atpanic(L, &panic);
