@@ -20,8 +20,8 @@
 /*
 ** 'l_mem' is a signed integer big enough to count the total memory
 ** used by Lua.  (It is signed due to the use of debt in several
-** computations.)  Usually, 'ptrdiff_t' should work, but we use 'long'
-** for 16-bit machines.
+** computations.) 'lu_mem' is a corresponding unsigned type.  Usually,
+** 'ptrdiff_t' should work, but we use 'long' for 16-bit machines.
 */
 #if defined(LUAI_MEM)		/* { external definitions? */
 typedef LUAI_MEM l_mem;

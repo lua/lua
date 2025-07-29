@@ -624,7 +624,7 @@ static l_mem traversetable (global_State *g, Table *h) {
         linkgclist(h, g->allweak);  /* must clear collected entries */
       break;
   }
-  return 1 + 2*sizenode(h) + h->asize;
+  return cast(l_mem, 1 + 2*sizenode(h) + h->asize);
 }
 
 
