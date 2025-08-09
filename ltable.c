@@ -156,7 +156,7 @@ static Node *hashint (const Table *t, lua_Integer i) {
 ** The main computation should be just
 **     n = frexp(n, &i); return (n * INT_MAX) + i
 ** but there are some numerical subtleties.
-** In a two-complement representation, INT_MAX does not has an exact
+** In a two-complement representation, INT_MAX may not have an exact
 ** representation as a float, but INT_MIN does; because the absolute
 ** value of 'frexp' is smaller than 1 (unless 'n' is inf/NaN), the
 ** absolute value of the product 'frexp * -INT_MIN' is smaller or equal

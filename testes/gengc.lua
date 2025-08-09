@@ -176,6 +176,20 @@ do  print"testing stop-the-world collection"
   assert(collectgarbage("param", "stepsize") == step)
 end
 
+
+if T then   -- test GC parameter codification
+  for _, percentage in ipairs{5, 10, 12, 20, 50, 100, 200, 500} do
+    local param = T.codeparam(percentage)   -- codify percentage
+    for _, value in ipairs{1, 2, 10, 100, 257, 1023, 6500, 100000} do
+      local exact = value*percentage // 100
+      local aprox = T.applyparam(param, value)   -- apply percentage
+      -- difference is at most 10% (+1 compensates difference due to
+      -- rounding to integers)
+      assert(math.abs(aprox - exact) <= exact/10 + 1)
+    end
+  end
+end
+
 collectgarbage(oldmode)
 
 print('OK')

@@ -1827,7 +1827,7 @@ static lu_byte getglobalattribute (LexState *ls, lu_byte df) {
   switch (kind) {
     case RDKTOCLOSE:
       luaK_semerror(ls, "global variables cannot be to-be-closed");
-      break;  /* to avoid warnings */
+      return kind;  /* to avoid warnings */
     case RDKCONST:
       return GDKCONST;  /* adjust kind for global variable */
     default:

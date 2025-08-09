@@ -565,20 +565,20 @@ static int k2proto (FuncState *fs, TValue *key, TValue *v) {
   TValue val;
   Proto *f = fs->f;
   int tag = luaH_get(fs->kcache, key, &val);  /* query scanner table */
-  int k;
   if (!tagisempty(tag)) {  /* is there an index there? */
-    k = cast_int(ivalue(&val));
+    int k = cast_int(ivalue(&val));
     /* collisions can happen only for float keys */
     lua_assert(ttisfloat(key) || luaV_rawequalobj(&f->k[k], v));
     return k;  /* reuse index */
   }
-  /* constant not found; create a new entry */
-  k = addk(fs, f, v);
-  /* cache it for reuse; numerical value does not need GC barrier;
-     table is not a metatable, so it does not need to invalidate cache */
-  setivalue(&val, k);
-  luaH_set(fs->ls->L, fs->kcache, key, &val);
-  return k;
+  else {  /* constant not found; create a new entry */
+    int k = addk(fs, f, v);
+    /* cache it for reuse; numerical value does not need GC barrier;
+       table is not a metatable, so it does not need to invalidate cache */
+    setivalue(&val, k);
+    luaH_set(fs->ls->L, fs->kcache, key, &val);
+    return k;
+  }
 }
 
 
@@ -604,13 +604,14 @@ static int luaK_intK (FuncState *fs, lua_Integer n) {
 /*
 ** Add a float to list of constants and return its index. Floats
 ** with integral values need a different key, to avoid collision
-** with actual integers. To that, we add to the number its smaller
+** with actual integers. To that end, we add to the number its smaller
 ** power-of-two fraction that is still significant in its scale.
-** For doubles, that would be 1/2^52.
+** (For doubles, the fraction would be 2^-52).
 ** This method is not bulletproof: different numbers may generate the
 ** same key (e.g., very large numbers will overflow to 'inf') and for
-** floats larger than 2^53 the result is still an integer. At worst,
-** this only wastes an entry with a duplicate.
+** floats larger than 2^53 the result is still an integer. For those
+** cases, just generate a new entry. At worst, this only wastes an entry
+** with a duplicate.
 */
 static int luaK_numberK (FuncState *fs, lua_Number r) {
   TValue o, kv;
@@ -625,7 +626,7 @@ static int luaK_numberK (FuncState *fs, lua_Number r) {
     const lua_Number k =  r * (1 + q);  /* key */
     lua_Integer ik;
     setfltvalue(&kv, k);  /* key as a TValue */
-    if (!luaV_flttointeger(k, &ik, F2Ieq)) {  /* not an integral value? */
+    if (!luaV_flttointeger(k, &ik, F2Ieq)) {  /* not an integer value? */
       int n = k2proto(fs, &kv, &o);  /* use key */
       if (luaV_rawequalobj(&fs->f->k[n], &o))  /* correct value? */
         return n;
