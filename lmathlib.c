@@ -203,6 +203,20 @@ static int math_rad (lua_State *L) {
   return 1;
 }
 
+static int math_frexp (lua_State *L) {
+  int e;
+  lua_pushnumber(L, l_mathop(frexp)(luaL_checknumber(L, 1), &e));
+  lua_pushinteger(L, e);
+  return 2;
+}
+
+static int math_ldexp (lua_State *L) {
+  lua_Number x = luaL_checknumber(L, 1);
+  int ep = (int)luaL_checkinteger(L, 2);
+  lua_pushnumber(L, l_mathop(ldexp)(x, ep));
+  return 1;
+}
+
 
 static int math_min (lua_State *L) {
   int n = lua_gettop(L);  /* number of arguments */
@@ -666,20 +680,6 @@ static int math_pow (lua_State *L) {
   return 1;
 }
 
-static int math_frexp (lua_State *L) {
-  int e;
-  lua_pushnumber(L, l_mathop(frexp)(luaL_checknumber(L, 1), &e));
-  lua_pushinteger(L, e);
-  return 2;
-}
-
-static int math_ldexp (lua_State *L) {
-  lua_Number x = luaL_checknumber(L, 1);
-  int ep = (int)luaL_checkinteger(L, 2);
-  lua_pushnumber(L, l_mathop(ldexp)(x, ep));
-  return 1;
-}
-
 static int math_log10 (lua_State *L) {
   lua_pushnumber(L, l_mathop(log10)(luaL_checknumber(L, 1)));
   return 1;
@@ -702,7 +702,9 @@ static const luaL_Reg mathlib[] = {
   {"tointeger", math_toint},
   {"floor", math_floor},
   {"fmod",   math_fmod},
+  {"frexp", math_frexp},
   {"ult",   math_ult},
+  {"ldexp", math_ldexp},
   {"log",   math_log},
   {"max",   math_max},
   {"min",   math_min},
@@ -718,8 +720,6 @@ static const luaL_Reg mathlib[] = {
   {"sinh",   math_sinh},
   {"tanh",   math_tanh},
   {"pow",   math_pow},
-  {"frexp", math_frexp},
-  {"ldexp", math_ldexp},
   {"log10", math_log10},
 #endif
   /* placeholders */

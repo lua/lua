@@ -8341,10 +8341,27 @@ that rounds the quotient towards zero. (integer/float)
 
 }
 
+@LibEntry{math.frexp (x)|
+
+Returns two numbers @id{m} and @id{e} such that @M{x = m2@sp{e}},
+where @id{e} is an integer.
+When @id{x} is zero, NaN, +inf, or -inf,
+@id{m} is equal to @id{x};
+otherwise, the absolute value of @id{m}
+is in the range @C{(} @M{[0.5, 1)} @C{]}.
+
+}
+
 @LibEntry{math.huge|
 
 The float value @idx{HUGE_VAL},
 a value greater than any other numeric value.
+
+}
+
+@LibEntry{math.ldexp(m, e)|
+
+Returns @M{m2@sp{e}}, where @id{e} is an integer.
 
 }
 
@@ -8403,7 +8420,7 @@ Converts the angle @id{x} from degrees to radians.
 
 When called without arguments,
 returns a pseudo-random float with uniform distribution
-in the range @C{(} @M{[0,1)}.  @C{]}
+in the range @C{(} @M{[0, 1)}.  @C{]}
 When called with two integers @id{m} and @id{n},
 @id{math.random} returns a pseudo-random integer
 with uniform distribution in the range @M{[m, n]}.

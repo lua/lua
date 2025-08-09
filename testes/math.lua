@@ -685,6 +685,18 @@ assert(eq(math.exp(0), 1))
 assert(eq(math.sin(10), math.sin(10%(2*math.pi))))
 
 
+do  print("testing ldexp/frexp")
+  global ipairs
+  for _, x in ipairs{0, 10, 32, -math.pi, 1e10, 1e-10, math.huge, -math.huge} do
+    local m, p = math.frexp(x)
+    assert(math.ldexp(m, p) == x)
+    local am = math.abs(m)
+    assert(m == x or (0.5 <= am and am < 1))
+  end
+
+end
+
+
 assert(tonumber(' 1.3e-2 ') == 1.3e-2)
 assert(tonumber(' -1.00000000000001 ') == -1.00000000000001)
 
