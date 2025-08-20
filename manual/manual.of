@@ -270,7 +270,7 @@ print(x)              --> 10  (the global one)
 
 Notice that, in a declaration like @T{local x = x},
 the new @id{x} being declared is not in scope yet,
-and so the @id{x} in the right-hand side refers to the outside variable.
+and so the @id{x} on the right-hand side refers to the outside variable.
 
 Because of the @x{lexical scoping} rules,
 local variables can be freely accessed by functions
@@ -2826,7 +2826,16 @@ status codes to indicate different kinds of errors or other conditions:
 For such errors, Lua does not call the @x{message handler}.
 }
 
-@item{@defid{LUA_ERRERR}| error while running the @x{message handler}.}
+@item{@defid{LUA_ERRERR}|
+stack overflow while running the @x{message handler}
+due to another stack overflow.
+More often than not,
+this error is the result of some other error while running
+a message handler.
+An error in a message handler will call the handler again,
+which will generate the error again, and so on,
+until this loop exhausts the stack and cause this error.
+}
 
 @item{@defid{LUA_ERRSYNTAX}| syntax error during precompilation
 or format error in a binary chunk.}
