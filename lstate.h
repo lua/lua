@@ -430,9 +430,9 @@ union GCUnion {
 
 /*
 ** macro to convert a Lua object into a GCObject
-** (The access to 'tt' tries to ensure that 'v' is actually a Lua object.)
 */
-#define obj2gco(v)	check_exp((v)->tt >= LUA_TSTRING, &(cast_u(v)->gc))
+#define obj2gco(v)  \
+	check_exp(novariant((v)->tt) >= LUA_TSTRING, &(cast_u(v)->gc))
 
 
 /* actual number of total memory allocated */
