@@ -38,30 +38,36 @@ static int math_abs (lua_State *L) {
   return 1;
 }
 
+
 static int math_sin (lua_State *L) {
   lua_pushnumber(L, l_mathop(sin)(luaL_checknumber(L, 1)));
   return 1;
 }
+
 
 static int math_cos (lua_State *L) {
   lua_pushnumber(L, l_mathop(cos)(luaL_checknumber(L, 1)));
   return 1;
 }
 
+
 static int math_tan (lua_State *L) {
   lua_pushnumber(L, l_mathop(tan)(luaL_checknumber(L, 1)));
   return 1;
 }
+
 
 static int math_asin (lua_State *L) {
   lua_pushnumber(L, l_mathop(asin)(luaL_checknumber(L, 1)));
   return 1;
 }
 
+
 static int math_acos (lua_State *L) {
   lua_pushnumber(L, l_mathop(acos)(luaL_checknumber(L, 1)));
   return 1;
 }
+
 
 static int math_atan (lua_State *L) {
   lua_Number y = luaL_checknumber(L, 1);
@@ -167,6 +173,7 @@ static int math_ult (lua_State *L) {
   return 1;
 }
 
+
 static int math_log (lua_State *L) {
   lua_Number x = luaL_checknumber(L, 1);
   lua_Number res;
@@ -188,27 +195,33 @@ static int math_log (lua_State *L) {
   return 1;
 }
 
+
 static int math_exp (lua_State *L) {
   lua_pushnumber(L, l_mathop(exp)(luaL_checknumber(L, 1)));
   return 1;
 }
+
 
 static int math_deg (lua_State *L) {
   lua_pushnumber(L, luaL_checknumber(L, 1) * (l_mathop(180.0) / PI));
   return 1;
 }
 
+
 static int math_rad (lua_State *L) {
   lua_pushnumber(L, luaL_checknumber(L, 1) * (PI / l_mathop(180.0)));
   return 1;
 }
 
+
 static int math_frexp (lua_State *L) {
-  int e;
-  lua_pushnumber(L, l_mathop(frexp)(luaL_checknumber(L, 1), &e));
-  lua_pushinteger(L, e);
+  lua_Number x = luaL_checknumber(L, 1);
+  int ep;
+  lua_pushnumber(L, l_mathop(frexp)(x, &ep));
+  lua_pushinteger(L, ep);
   return 2;
 }
+
 
 static int math_ldexp (lua_State *L) {
   lua_Number x = luaL_checknumber(L, 1);

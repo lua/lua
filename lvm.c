@@ -910,6 +910,10 @@ void luaV_finishOp (lua_State *L) {
 /*
 ** {==================================================================
 ** Macros for arithmetic/bitwise/comparison opcodes in 'luaV_execute'
+**
+** All these macros are to be used exclusively inside the main
+** iterpreter loop (function luaV_execute) and may access directly
+** the local variables of that function (L, i, pc, ci, etc.).
 ** ===================================================================
 */
 
@@ -931,17 +935,17 @@ void luaV_finishOp (lua_State *L) {
 ** operation, 'fop' is the float operation.
 */
 #define op_arithI(L,iop,fop) {  \
-  StkId ra = RA(i); \
+  TValue *ra = vRA(i); \
   TValue *v1 = vRB(i);  \
   int imm = GETARG_sC(i);  \
   if (ttisinteger(v1)) {  \
     lua_Integer iv1 = ivalue(v1);  \
-    pc++; setivalue(s2v(ra), iop(L, iv1, imm));  \
+    pc++; setivalue(ra, iop(L, iv1, imm));  \
   }  \
   else if (ttisfloat(v1)) {  \
     lua_Number nb = fltvalue(v1);  \
     lua_Number fimm = cast_num(imm);  \
-    pc++; setfltvalue(s2v(ra), fop(L, nb, fimm)); \
+    pc++; setfltvalue(ra, fop(L, nb, fimm)); \
   }}
 
 
@@ -952,6 +956,7 @@ void luaV_finishOp (lua_State *L) {
 #define op_arithf_aux(L,v1,v2,fop) {  \
   lua_Number n1; lua_Number n2;  \
   if (tonumberns(v1, n1) && tonumberns(v2, n2)) {  \
+    StkId ra = RA(i);  \
     pc++; setfltvalue(s2v(ra), fop(L, n1, n2));  \
   }}
 
@@ -960,7 +965,6 @@ void luaV_finishOp (lua_State *L) {
 ** Arithmetic operations over floats and others with register operands.
 */
 #define op_arithf(L,fop) {  \
-  StkId ra = RA(i); \
   TValue *v1 = vRB(i);  \
   TValue *v2 = vRC(i);  \
   op_arithf_aux(L, v1, v2, fop); }
@@ -970,7 +974,6 @@ void luaV_finishOp (lua_State *L) {
 ** Arithmetic operations with K operands for floats.
 */
 #define op_arithfK(L,fop) {  \
-  StkId ra = RA(i); \
   TValue *v1 = vRB(i);  \
   TValue *v2 = KC(i); lua_assert(ttisnumber(v2));  \
   op_arithf_aux(L, v1, v2, fop); }
@@ -980,8 +983,8 @@ void luaV_finishOp (lua_State *L) {
 ** Arithmetic operations over integers and floats.
 */
 #define op_arith_aux(L,v1,v2,iop,fop) {  \
-  StkId ra = RA(i); \
   if (ttisinteger(v1) && ttisinteger(v2)) {  \
+    StkId ra = RA(i); \
     lua_Integer i1 = ivalue(v1); lua_Integer i2 = ivalue(v2);  \
     pc++; setivalue(s2v(ra), iop(L, i1, i2));  \
   }  \
@@ -1010,12 +1013,12 @@ void luaV_finishOp (lua_State *L) {
 ** Bitwise operations with constant operand.
 */
 #define op_bitwiseK(L,op) {  \
-  StkId ra = RA(i); \
   TValue *v1 = vRB(i);  \
   TValue *v2 = KC(i);  \
   lua_Integer i1;  \
   lua_Integer i2 = ivalue(v2);  \
   if (tointegerns(v1, &i1)) {  \
+    StkId ra = RA(i); \
     pc++; setivalue(s2v(ra), op(i1, i2));  \
   }}
 
@@ -1024,11 +1027,11 @@ void luaV_finishOp (lua_State *L) {
 ** Bitwise operations with register operands.
 */
 #define op_bitwise(L,op) {  \
-  StkId ra = RA(i); \
   TValue *v1 = vRB(i);  \
   TValue *v2 = vRC(i);  \
   lua_Integer i1; lua_Integer i2;  \
   if (tointegerns(v1, &i1) && tointegerns(v2, &i2)) {  \
+    StkId ra = RA(i); \
     pc++; setivalue(s2v(ra), op(i1, i2));  \
   }}
 
@@ -1039,18 +1042,18 @@ void luaV_finishOp (lua_State *L) {
 ** integers.
 */
 #define op_order(L,opi,opn,other) {  \
-  StkId ra = RA(i); \
+  TValue *ra = vRA(i); \
   int cond;  \
   TValue *rb = vRB(i);  \
-  if (ttisinteger(s2v(ra)) && ttisinteger(rb)) {  \
-    lua_Integer ia = ivalue(s2v(ra));  \
+  if (ttisinteger(ra) && ttisinteger(rb)) {  \
+    lua_Integer ia = ivalue(ra);  \
     lua_Integer ib = ivalue(rb);  \
     cond = opi(ia, ib);  \
   }  \
-  else if (ttisnumber(s2v(ra)) && ttisnumber(rb))  \
-    cond = opn(s2v(ra), rb);  \
+  else if (ttisnumber(ra) && ttisnumber(rb))  \
+    cond = opn(ra, rb);  \
   else  \
-    Protect(cond = other(L, s2v(ra), rb));  \
+    Protect(cond = other(L, ra, rb));  \
   docondjump(); }
 
 
@@ -1059,19 +1062,19 @@ void luaV_finishOp (lua_State *L) {
 ** always small enough to have an exact representation as a float.)
 */
 #define op_orderI(L,opi,opf,inv,tm) {  \
-  StkId ra = RA(i); \
+  TValue *ra = vRA(i); \
   int cond;  \
   int im = GETARG_sB(i);  \
-  if (ttisinteger(s2v(ra)))  \
-    cond = opi(ivalue(s2v(ra)), im);  \
-  else if (ttisfloat(s2v(ra))) {  \
-    lua_Number fa = fltvalue(s2v(ra));  \
+  if (ttisinteger(ra))  \
+    cond = opi(ivalue(ra), im);  \
+  else if (ttisfloat(ra)) {  \
+    lua_Number fa = fltvalue(ra);  \
     lua_Number fim = cast_num(im);  \
     cond = opf(fa, fim);  \
   }  \
   else {  \
     int isf = GETARG_C(i);  \
-    Protect(cond = luaT_callorderiTM(L, s2v(ra), im, inv, isf, tm));  \
+    Protect(cond = luaT_callorderiTM(L, ra, im, inv, isf, tm));  \
   }  \
   docondjump(); }
 
@@ -1090,6 +1093,7 @@ void luaV_finishOp (lua_State *L) {
 
 
 #define RA(i)	(base+GETARG_A(i))
+#define vRA(i)	s2v(RA(i))
 #define RB(i)	(base+GETARG_B(i))
 #define vRB(i)	s2v(RB(i))
 #define KB(i)	(k+GETARG_B(i))
@@ -1130,14 +1134,14 @@ void luaV_finishOp (lua_State *L) {
 /*
 ** Correct global 'pc'.
 */
-#define savepc(L)	(ci->u.l.savedpc = pc)
+#define savepc(ci)	(ci->u.l.savedpc = pc)
 
 
 /*
 ** Whenever code can raise errors, the global 'pc' and the global
 ** 'top' must be correct to report occasional errors.
 */
-#define savestate(L,ci)		(savepc(L), L->top.p = ci->top.p)
+#define savestate(L,ci)		(savepc(ci), L->top.p = ci->top.p)
 
 
 /*
@@ -1147,7 +1151,7 @@ void luaV_finishOp (lua_State *L) {
 #define Protect(exp)  (savestate(L,ci), (exp), updatetrap(ci))
 
 /* special version that does not change the top */
-#define ProtectNT(exp)  (savepc(L), (exp), updatetrap(ci))
+#define ProtectNT(exp)  (savepc(ci), (exp), updatetrap(ci))
 
 /*
 ** Protect code that can only raise errors. (That is, it cannot change
@@ -1165,7 +1169,7 @@ void luaV_finishOp (lua_State *L) {
 
 /* 'c' is the limit of live values in the stack */
 #define checkGC(L,c)  \
-	{ luaC_condGC(L, (savepc(L), L->top.p = (c)), \
+	{ luaC_condGC(L, (savepc(ci), L->top.p = (c)), \
                          updatetrap(ci)); \
            luai_threadyield(L); }
 
@@ -1714,7 +1718,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         if (b != 0)  /* fixed number of arguments? */
           L->top.p = ra + b;  /* top signals number of arguments */
         /* else previous instruction set top */
-        savepc(L);  /* in case of errors */
+        savepc(ci);  /* in case of errors */
         if ((newci = luaD_precall(L, ra, nresults)) == NULL)
           updatetrap(ci);  /* C call; nothing else to be done */
         else {  /* Lua call: run function in this same C frame */
