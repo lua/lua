@@ -246,7 +246,8 @@ assert(not T.testC("compare LT 1 4, return 1"))
 assert(not T.testC("compare LE 9 1, return 1"))
 assert(not T.testC("compare EQ 9 9, return 1"))
 
-local b = {__lt = function (a,b) return a[1] < b[1] end}
+local b = {__lt = function (a,b) return a[1] < b[1] end,
+           __le = function (a,b) return a[1] <= b[1] end}
 local a1,a3,a4 = setmetatable({1}, b),
                  setmetatable({3}, b),
                  setmetatable({4}, b)

@@ -432,13 +432,6 @@ LUA_API void (lua_closeslot) (lua_State *L, int idx);
 ** compatibility macros
 ** ===============================================================
 */
-#if defined(LUA_COMPAT_APIINTCASTS)
-
-#define lua_pushunsigned(L,n)	lua_pushinteger(L, (lua_Integer)(n))
-#define lua_tounsignedx(L,i,is)	((lua_Unsigned)lua_tointegerx(L,i,is))
-#define lua_tounsigned(L,i)	lua_tounsignedx(L,(i),NULL)
-
-#endif
 
 #define lua_newuserdata(L,s)	lua_newuserdatauv(L,s,1)
 #define lua_getuservalue(L,idx)	lua_getiuservalue(L,idx,1)

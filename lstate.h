@@ -249,10 +249,6 @@ struct CallInfo {
 #define CIST_HOOKYIELD	(CIST_TAIL << 1)
 /* function "called" a finalizer */
 #define CIST_FIN	(CIST_HOOKYIELD << 1)
-#if defined(LUA_COMPAT_LT_LE)
-/* using __lt for __le */
-#define CIST_LEQ	(CIST_FIN << 1)
-#endif
 
 
 #define get_nresults(cs)  (cast_int((cs) & CIST_NRESULTS) - 1)

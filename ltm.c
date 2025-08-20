@@ -196,28 +196,12 @@ void luaT_trybiniTM (lua_State *L, const TValue *p1, lua_Integer i2,
 
 /*
 ** Calls an order tag method.
-** For lessequal, LUA_COMPAT_LT_LE keeps compatibility with old
-** behavior: if there is no '__le', try '__lt', based on l <= r iff
-** !(r < l) (assuming a total order). If the metamethod yields during
-** this substitution, the continuation has to know about it (to negate
-** the result of r<l); bit CIST_LEQ in the call status keeps that
-** information.
 */
 int luaT_callorderTM (lua_State *L, const TValue *p1, const TValue *p2,
                       TMS event) {
   int tag = callbinTM(L, p1, p2, L->top.p, event);  /* try original event */
   if (tag >= 0)  /* found tag method? */
     return !tagisfalse(tag);
-#if defined(LUA_COMPAT_LT_LE)
-  else if (event == TM_LE) {
-    /* try '!(p2 < p1)' for '(p1 <= p2)' */
-    L->ci->callstatus |= CIST_LEQ;  /* mark it is doing 'lt' for 'le' */
-    tag = callbinTM(L, p2, p1, L->top.p, TM_LT);
-    L->ci->callstatus ^= CIST_LEQ;  /* clear mark */
-    if (tag >= 0)  /* found tag method? */
-      return tagisfalse(tag);
-  }
-#endif
   luaG_ordererror(L, p1, p2);  /* no metamethod found */
   return 0;  /* to avoid warnings */
 }

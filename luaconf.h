@@ -362,35 +362,12 @@
 
 
 /*
-@@ LUA_COMPAT_5_3 controls other macros for compatibility with Lua 5.3.
-** You can define it to get all options, or change specific options
-** to fit your specific needs.
-*/
-#if defined(LUA_COMPAT_5_3)	/* { */
-
-/*
 @@ LUA_COMPAT_MATHLIB controls the presence of several deprecated
 ** functions in the mathematical library.
 ** (These functions were already officially removed in 5.3;
 ** nevertheless they are still available here.)
 */
-#define LUA_COMPAT_MATHLIB
-
-/*
-@@ LUA_COMPAT_APIINTCASTS controls the presence of macros for
-** manipulating other integer types (lua_pushunsigned, lua_tounsigned,
-** luaL_checkint, luaL_checklong, etc.)
-** (These macros were also officially removed in 5.3, but they are still
-** available here.)
-*/
-#define LUA_COMPAT_APIINTCASTS
-
-
-/*
-@@ LUA_COMPAT_LT_LE controls the emulation of the '__le' metamethod
-** using '__lt'.
-*/
-#define LUA_COMPAT_LT_LE
+/* #define LUA_COMPAT_MATHLIB */
 
 
 /*
@@ -406,8 +383,6 @@
 
 #define lua_equal(L,idx1,idx2)		lua_compare(L,(idx1),(idx2),LUA_OPEQ)
 #define lua_lessthan(L,idx1,idx2)	lua_compare(L,(idx1),(idx2),LUA_OPLT)
-
-#endif				/* } */
 
 /* }================================================================== */
 
