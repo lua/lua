@@ -1476,16 +1476,6 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         op_bitwiseK(L, l_bxor);
         vmbreak;
       }
-      vmcase(OP_SHRI) {
-        StkId ra = RA(i);
-        TValue *rb = vRB(i);
-        int ic = GETARG_sC(i);
-        lua_Integer ib;
-        if (tointegerns(rb, &ib)) {
-          pc++; setivalue(s2v(ra), luaV_shiftl(ib, -ic));
-        }
-        vmbreak;
-      }
       vmcase(OP_SHLI) {
         StkId ra = RA(i);
         TValue *rb = vRB(i);
@@ -1493,6 +1483,16 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         lua_Integer ib;
         if (tointegerns(rb, &ib)) {
           pc++; setivalue(s2v(ra), luaV_shiftl(ic, ib));
+        }
+        vmbreak;
+      }
+      vmcase(OP_SHRI) {
+        StkId ra = RA(i);
+        TValue *rb = vRB(i);
+        int ic = GETARG_sC(i);
+        lua_Integer ib;
+        if (tointegerns(rb, &ib)) {
+          pc++; setivalue(s2v(ra), luaV_shiftl(ib, -ic));
         }
         vmbreak;
       }
@@ -1538,12 +1538,12 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         op_bitwise(L, l_bxor);
         vmbreak;
       }
-      vmcase(OP_SHR) {
-        op_bitwise(L, luaV_shiftr);
-        vmbreak;
-      }
       vmcase(OP_SHL) {
         op_bitwise(L, luaV_shiftl);
+        vmbreak;
+      }
+      vmcase(OP_SHR) {
+        op_bitwise(L, luaV_shiftr);
         vmbreak;
       }
       vmcase(OP_MMBIN) {

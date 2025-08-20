@@ -53,8 +53,8 @@ LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_BANDK */
  ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_BORK */
  ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_BXORK */
- ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_SHRI */
  ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_SHLI */
+ ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_SHRI */
  ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_ADD */
  ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_SUB */
  ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_MUL */
