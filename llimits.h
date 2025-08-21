@@ -287,6 +287,55 @@ typedef unsigned long l_uint32;
 #endif
 
 
+
+/*
+** lua_numbertointeger converts a float number with an integral value
+** to an integer, or returns 0 if the float is not within the range of
+** a lua_Integer.  (The range comparisons are tricky because of
+** rounding. The tests here assume a two-complement representation,
+** where MININTEGER always has an exact representation as a float;
+** MAXINTEGER may not have one, and therefore its conversion to float
+** may have an ill-defined value.)
+*/
+#define lua_numbertointeger(n,p) \
+  ((n) >= (LUA_NUMBER)(LUA_MININTEGER) && \
+   (n) < -(LUA_NUMBER)(LUA_MININTEGER) && \
+      (*(p) = (LUA_INTEGER)(n), 1))
+
+
+
+/*
+** LUAI_FUNC is a mark for all extern functions that are not to be
+** exported to outside modules.
+** LUAI_DDEF and LUAI_DDEC are marks for all extern (const) variables,
+** none of which to be exported to outside modules (LUAI_DDEF for
+** definitions and LUAI_DDEC for declarations).
+** Elf/gcc (versions 3.2 and later) mark them as "hidden" to optimize
+** access when Lua is compiled as a shared library. Not all elf targets
+** support this attribute. Unfortunately, gcc does not offer a way to
+** check whether the target offers that support, and those without
+** support give a warning about it. To avoid these warnings, change to
+** the default definition.
+*/
+#if !defined(LUAI_FUNC)
+
+#if defined(__GNUC__) && ((__GNUC__*100 + __GNUC_MINOR__) >= 302) && \
+    defined(__ELF__)		/* { */
+#define LUAI_FUNC	__attribute__((visibility("internal"))) extern
+#else				/* }{ */
+#define LUAI_FUNC	extern
+#endif				/* } */
+
+#define LUAI_DDEC(dec)	LUAI_FUNC dec
+#define LUAI_DDEF	/* empty */
+
+#endif
+
+
+/* Give these macros simpler names for internal use */
+#define l_likely(x)	luai_likely(x)
+#define l_unlikely(x)	luai_unlikely(x)
+
 /*
 ** {==================================================================
 ** "Abstraction Layer" for basic report of messages and errors

@@ -321,31 +321,6 @@
 #define LUALIB_API	LUA_API
 #define LUAMOD_API	LUA_API
 
-
-/*
-@@ LUAI_FUNC is a mark for all extern functions that are not to be
-** exported to outside modules.
-@@ LUAI_DDEF and LUAI_DDEC are marks for all extern (const) variables,
-** none of which to be exported to outside modules (LUAI_DDEF for
-** definitions and LUAI_DDEC for declarations).
-** CHANGE them if you need to mark them in some special way. Elf/gcc
-** (versions 3.2 and later) mark them as "hidden" to optimize access
-** when Lua is compiled as a shared library. Not all elf targets support
-** this attribute. Unfortunately, gcc does not offer a way to check
-** whether the target offers that support, and those without support
-** give a warning about it. To avoid these warnings, change to the
-** default definition.
-*/
-#if defined(__GNUC__) && ((__GNUC__*100 + __GNUC_MINOR__) >= 302) && \
-    defined(__ELF__)		/* { */
-#define LUAI_FUNC	__attribute__((visibility("internal"))) extern
-#else				/* }{ */
-#define LUAI_FUNC	extern
-#endif				/* } */
-
-#define LUAI_DDEC(dec)	LUAI_FUNC dec
-#define LUAI_DDEF	/* empty */
-
 /* }================================================================== */
 
 
@@ -415,24 +390,9 @@
 */
 
 
-/* The following definitions are good for most cases here */
+/* The following definition is good for most cases here */
 
 #define l_floor(x)		(l_mathop(floor)(x))
-
-
-/*
-@@ lua_numbertointeger converts a float number with an integral value
-** to an integer, or returns 0 if float is not within the range of
-** a lua_Integer.  (The range comparisons are tricky because of
-** rounding. The tests here assume a two-complement representation,
-** where MININTEGER always has an exact representation as a float;
-** MAXINTEGER may not have one, and therefore its conversion to float
-** may have an ill-defined value.)
-*/
-#define lua_numbertointeger(n,p) \
-  ((n) >= (LUA_NUMBER)(LUA_MININTEGER) && \
-   (n) < -(LUA_NUMBER)(LUA_MININTEGER) && \
-      (*(p) = (LUA_INTEGER)(n), 1))
 
 
 /* now the variable definitions */
@@ -694,13 +654,6 @@
 #endif
 
 
-#if defined(LUA_CORE) || defined(LUA_LIB)
-/* shorter names for Lua's own use */
-#define l_likely(x)	luai_likely(x)
-#define l_unlikely(x)	luai_unlikely(x)
-#endif
-
-
 
 /* }================================================================== */
 
@@ -779,8 +732,6 @@
 ** Local configuration. You can use this space to add your redefinitions
 ** without modifying the main part of the file.
 */
-
-
 
 
 
