@@ -63,7 +63,7 @@ LUA_API Memcontrol l_memcontrol;
 
 
 #define luai_tracegc(L,f)		luai_tracegctest(L, f)
-LUAI_FUNC void luai_tracegctest (lua_State *L, int first);
+extern void luai_tracegctest (lua_State *L, int first);
 
 
 /*
@@ -75,26 +75,26 @@ extern void *l_Trick;
 /*
 ** Function to traverse and check all memory used by Lua
 */
-LUAI_FUNC int lua_checkmemory (lua_State *L);
+extern int lua_checkmemory (lua_State *L);
 
 /*
 ** Function to print an object GC-friendly
 */
 struct GCObject;
-LUAI_FUNC void lua_printobj (lua_State *L, struct GCObject *o);
+extern void lua_printobj (lua_State *L, struct GCObject *o);
 
 
 /*
 ** Function to print a value
 */
 struct TValue;
-LUAI_FUNC void lua_printvalue (struct TValue *v);
+extern void lua_printvalue (struct TValue *v);
 
 /*
 ** Function to print the stack
 */
-LUAI_FUNC void lua_printstack (lua_State *L);
-LUAI_FUNC int lua_printallstack (lua_State *L);
+extern void lua_printstack (lua_State *L);
+extern int lua_printallstack (lua_State *L);
 
 
 /* test for lock/unlock */
