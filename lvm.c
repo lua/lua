@@ -1888,7 +1888,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       vmcase(OP_SETLIST) {
         StkId ra = RA(i);
         unsigned n = cast_uint(GETARG_vB(i));
-        unsigned int last = cast_uint(GETARG_vC(i));
+        unsigned last = cast_uint(GETARG_vC(i));
         Table *h = hvalue(s2v(ra));
         if (n == 0)
           n = cast_uint(L->top.p - ra) - 1;  /* get up to the top */
