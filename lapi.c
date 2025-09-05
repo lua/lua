@@ -484,7 +484,7 @@ LUA_API lua_State *lua_tothread (lua_State *L, int idx) {
 
 /*
 ** Returns a pointer to the internal representation of an object.
-** Note that ANSI C does not allow the conversion of a pointer to
+** Note that ISO C does not allow the conversion of a pointer to
 ** function to a 'void*', so the conversion here goes through
 ** a 'size_t'. (As the returned pointer is only informative, this
 ** conversion should not be a problem.)

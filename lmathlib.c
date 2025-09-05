@@ -278,7 +278,7 @@ static int math_type (lua_State *L) {
 */
 
 /*
-** This code uses lots of shifts. ANSI C does not allow shifts greater
+** This code uses lots of shifts. ISO C does not allow shifts greater
 ** than or equal to the width of the type being shifted, so some shifts
 ** are written in convoluted ways to match that restriction. For
 ** preprocessor tests, it assumes a width of 32 bits, so the maximum
