@@ -1,0 +1,220 @@
+-- Carrega Rayfield
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+-- Cria a janela
+local Window = Rayfield:CreateWindow({
+    Name = "Nice Hub",
+    LoadingTitle = "Super League Soccer",
+    LoadingSubtitle = "BY F3R 77 DEV",
+    Theme = "Default",
+    KeySystem = true,
+    KeySettings = {
+        Title = "Example Key",
+        Subtitle = "Key System",
+        Note = "Aperte em Key System para pegar a Key",
+        FileName = "Key",
+        SaveKey = false,
+        GrabKeyFromSite = false,
+        Key = {"FREESLSScript2892890Krtt98js"}
+    }
+})
+
+-- Tabs
+local MainTab = Window:CreateTab("Main", 4483362458)
+local PlayerTab = Window:CreateTab("Player", 4483362458) -- Nova Tab Player
+
+-- Vars
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local mt = getrawmetatable(game)
+local oldNamecall = mt.__namecall
+setreadonly(mt,false)
+
+-- Player Vars
+local speedEnabled, expandEnabled, antKickEnabled, fovEnabled = false, false, false, false
+local speedValue, expandSize, expandTransparency, fovValue = 16, 15, 0.5, Camera.FieldOfView
+
+-- Funções
+local function applySpeed()
+    while speedEnabled do
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum.WalkSpeed = speedValue end
+        task.wait(0.1)
+    end
+end
+
+local function clearExpandedParts()
+    local char = LocalPlayer.Character
+    if not char then return end
+    for _, part in pairs(char:GetChildren()) do
+        if part:IsA("BasePart") and part.Name:match("_Expanded") then
+            part:Destroy()
+        end
+    end
+end
+
+local function createAndStabilizePart(part, size, name, transparency)
+    local existingClone = part.Parent:FindFirstChild(name)
+    if existingClone then existingClone:Destroy() end
+    local clone = Instance.new("Part")
+    clone.Size = size
+    clone.CanCollide = false
+    clone.Transparency = transparency
+    clone.Name = name
+    clone.Position = part.Position
+    clone.Anchored = false
+    clone.Parent = part.Parent
+
+    local originalAttachment = Instance.new("Attachment")
+    originalAttachment.Parent = part
+    local cloneAttachment = Instance.new("Attachment")
+    cloneAttachment.Parent = clone
+
+    local alignPosition = Instance.new("AlignPosition")
+    alignPosition.Attachment0 = cloneAttachment
+    alignPosition.Attachment1 = originalAttachment
+    alignPosition.RigidityEnabled = true
+    alignPosition.Parent = clone
+
+    local alignOrientation = Instance.new("AlignOrientation")
+    alignOrientation.Attachment0 = cloneAttachment
+    alignOrientation.Attachment1 = originalAttachment
+    alignOrientation.RigidityEnabled = true
+    alignOrientation.Parent = clone
+end
+
+local function expandParts()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local parts = {"LowerTorso","UpperTorso","HumanoidRootPart","Left Arm","Right Arm","Left Leg","Right Leg","LeftHand","RightHand","LeftFoot","RightFoot"}
+    for _, partName in pairs(parts) do
+        local part = char:FindFirstChild(partName)
+        if part then
+            createAndStabilizePart(part, Vector3.new(expandSize, expandSize, expandSize), part.Name.."_Expanded", expandTransparency)
+        end
+    end
+end
+
+-- =========================
+-- Main Tab
+-- =========================
+MainTab:CreateSlider({
+    Name = "FOV",
+    Range = {70, 120},
+    Increment = 1,
+    Suffix = "",
+    CurrentValue = fovValue,
+    Flag = "FOVSlider",
+    Callback = function(val)
+        fovValue = val
+        if fovEnabled then
+            Camera.FieldOfView = fovValue
+        end
+    end
+})
+
+MainTab:CreateToggle({
+    Name = "Enable FOV",
+    CurrentValue = false,
+    Flag = "FOVSwitch",
+    Callback = function(val)
+        fovEnabled = val
+        if fovEnabled then
+            Camera.FieldOfView = fovValue
+        else
+            Camera.FieldOfView = 70 -- volta ao default
+        end
+    end
+})
+
+-- =========================
+-- Player Tab
+-- =========================
+-- WalkSpeed
+PlayerTab:CreateSlider({
+    Name = "WalkSpeed",
+    Range = {16, 70},
+    Increment = 1,
+    Suffix = "Speed",
+    CurrentValue = speedValue,
+    Flag = "WalkSpeedSlider",
+    Callback = function(val)
+        speedValue = val
+    end
+})
+
+PlayerTab:CreateToggle({
+    Name = "Enable WalkSpeed",
+    CurrentValue = false,
+    Flag = "WalkSpeedSwitch",
+    Callback = function(val)
+        speedEnabled = val
+        if speedEnabled then
+            task.spawn(applySpeed)
+        end
+    end
+})
+
+-- Expand Parts
+PlayerTab:CreateSlider({
+    Name = "Expand Size",
+    Range = {5, 50},
+    Increment = 1,
+    Suffix = "Size",
+    CurrentValue = expandSize,
+    Flag = "ExpandSizeSlider",
+    Callback = function(val)
+        expandSize = val
+    end
+})
+
+PlayerTab:CreateSlider({
+    Name = "Expand Transparency",
+    Range = {0, 1},
+    Increment = 0.05,
+    Suffix = "",
+    CurrentValue = expandTransparency,
+    Flag = "ExpandTranspSlider",
+    Callback = function(val)
+        expandTransparency = val
+    end
+})
+
+PlayerTab:CreateToggle({
+    Name = "Enable Expand Parts",
+    CurrentValue = false,
+    Flag = "ExpandSwitch",
+    Callback = function(val)
+        expandEnabled = val
+        if expandEnabled then
+            task.spawn(function()
+                while expandEnabled do
+                    expandParts()
+                    task.wait(1)
+                end
+            end)
+        else
+            clearExpandedParts()
+        end
+    end
+})
+
+-- Anti Kick
+PlayerTab:CreateToggle({
+    Name = "Anti Kick",
+    CurrentValue = false,
+    Flag = "AntiKickSwitch",
+    Callback = function(val)
+        antKickEnabled = val
+        if antKickEnabled then
+            mt.__namecall = newcclosure(function(self,...)
+                local method = getnamecallmethod()
+                if antKickEnabled and method=="Kick" and self==LocalPlayer then return nil end
+                return oldNamecall(self,...)
+            end)
+        else
+            mt.__namecall = oldNamecall
+        end
+    end
+})
