@@ -327,7 +327,8 @@ static void loadFunction (LoadState *S, Proto *f) {
   f->linedefined = loadInt(S);
   f->lastlinedefined = loadInt(S);
   f->numparams = loadByte(S);
-  f->flag = loadByte(S) & PF_ISVARARG;  /* get only the meaningful flags */
+  /* get only the meaningful flags */
+  f->flag = cast_byte(loadByte(S) & ~PF_FIXED);
   if (S->fixed)
     f->flag |= PF_FIXED;  /* signal that code is fixed */
   f->maxstacksize = loadByte(S);

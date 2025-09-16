@@ -97,10 +97,11 @@ typedef struct expdesc {
 /* kinds of variables */
 #define VDKREG		0   /* regular local */
 #define RDKCONST	1   /* local constant */
-#define RDKTOCLOSE	2   /* to-be-closed */
-#define RDKCTC		3   /* local compile-time constant */
-#define GDKREG		4   /* regular global */
-#define GDKCONST	5   /* global constant */
+#define RDKVATAB	2   /* vararg table */
+#define RDKTOCLOSE	3   /* to-be-closed */
+#define RDKCTC		4   /* local compile-time constant */
+#define GDKREG		5   /* regular global */
+#define GDKCONST	6   /* global constant */
 
 /* variables that live in registers */
 #define varinreg(v)	((v)->vd.kind <= RDKTOCLOSE)

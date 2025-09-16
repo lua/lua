@@ -1041,9 +1041,10 @@ static void constructor (LexState *ls, expdesc *t) {
 /* }====================================================================== */
 
 
-static void setvararg (FuncState *fs, int nparams) {
-  fs->f->flag |= PF_ISVARARG;
-  luaK_codeABC(fs, OP_VARARGPREP, nparams, 0, 0);
+static void setvararg (FuncState *fs, int kind) {
+  lua_assert(kind & PF_ISVARARG);
+  fs->f->flag |= cast_byte(kind);
+  luaK_codeABC(fs, OP_VARARGPREP, 0, 0, 0);
 }
 
 
@@ -1052,7 +1053,7 @@ static void parlist (LexState *ls) {
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
   int nparams = 0;
-  int isvararg = 0;
+  int varargk = 0;
   if (ls->t.token != ')') {  /* is 'parlist' not empty? */
     do {
       switch (ls->t.token) {
@@ -1062,19 +1063,27 @@ static void parlist (LexState *ls) {
           break;
         }
         case TK_DOTS: {
+          varargk |= PF_ISVARARG;
           luaX_next(ls);
-          isvararg = 1;
+          if (testnext(ls, '=')) {
+            new_varkind(ls, str_checkname(ls), RDKVATAB);
+            varargk |= PF_VATAB;
+          }
           break;
         }
         default: luaX_syntaxerror(ls, "<name> or '...' expected");
       }
-    } while (!isvararg && testnext(ls, ','));
+    } while (!varargk && testnext(ls, ','));
   }
   adjustlocalvars(ls, nparams);
   f->numparams = cast_byte(fs->nactvar);
-  if (isvararg)
-    setvararg(fs, f->numparams);  /* declared vararg */
-  luaK_reserveregs(fs, fs->nactvar);  /* reserve registers for parameters */
+  if (varargk != 0) {
+    setvararg(fs, varargk);  /* declared vararg */
+    if (varargk & PF_VATAB)
+      adjustlocalvars(ls, 1);  /* vararg table */
+  }
+  /* reserve registers for parameters (and vararg variable, if present) */
+  luaK_reserveregs(fs, fs->nactvar);
 }
 
 
@@ -2099,7 +2108,7 @@ static void mainfunc (LexState *ls, FuncState *fs) {
   BlockCnt bl;
   Upvaldesc *env;
   open_func(ls, fs, &bl);
-  setvararg(fs, 0);  /* main function is always declared vararg */
+  setvararg(fs, PF_ISVARARG);  /* main function is always vararg */
   env = allocupvalue(fs);  /* ...set environment upvalue */
   env->instack = 1;
   env->idx = 0;

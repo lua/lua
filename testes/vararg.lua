@@ -3,9 +3,12 @@
 
 print('testing vararg')
 
-local function f (a, ...)
+local function f (a, ...=t)
   local x = {n = select('#', ...), ...}
-  for i = 1, x.n do assert(a[i] == x[i]) end
+  assert(x.n == t.n)
+  for i = 1, x.n do
+    assert(a[i] == x[i] and x[i] == t[i])
+  end
   return x.n
 end
 
@@ -17,7 +20,7 @@ local function c12 (...)
   return res, 2
 end
 
-local function vararg (...) return {n = select('#', ...), ...} end
+local function vararg (...=t) return t end
 
 local call = function (f, args) return f(table.unpack(args, 1, args.n)) end
 
@@ -99,7 +102,7 @@ assert(a==nil and b==nil and c==nil and d==nil and e==nil)
 
 
 -- varargs for main chunks
-local f = load[[ return {...} ]]
+local f = assert(load[[ return {...} ]])
 local x = f(2,3)
 assert(x[1] == 2 and x[2] == 3 and x[3] == undef)
 

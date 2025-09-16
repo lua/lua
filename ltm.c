@@ -224,11 +224,38 @@ int luaT_callorderiTM (lua_State *L, const TValue *p1, int v2,
 }
 
 
-void luaT_adjustvarargs (lua_State *L, int nfixparams, CallInfo *ci,
-                         const Proto *p) {
+/*
+** Create a vararg table at the top of the stack, with 'n' elements
+** starting at 'f'.
+*/
+static void createvarargtab (lua_State *L, StkId f, int n) {
   int i;
-  int actual = cast_int(L->top.p - ci->func.p) - 1;  /* number of arguments */
-  int nextra = actual - nfixparams;  /* number of extra arguments */
+  TValue key, value;
+  Table *t = luaH_new(L);
+  sethvalue(L, s2v(L->top.p), t);
+  L->top.p++;
+  luaH_resize(L, t, cast_uint(n), 1);
+  setsvalue(L, &key, luaS_new(L, "n"));  /* key is "n" */
+  setivalue(&value, n);  /* value is n */
+  /* No need to anchor the key: Due to the resize, the next operation
+     cannot trigger a garbage collection */
+  luaH_set(L, t, &key, &value);  /* t.n = n */
+  for (i = 0; i < n; i++)
+    luaH_setint(L, t, i + 1, s2v(f + i));
+}
+
+
+/*
+** initial stack:  func arg1 ... argn extra1 ...
+**                 ^ ci->func                    ^ L->top
+** final stack: func nil ... nil extra1 ... func arg1 ... argn
+**                                          ^ ci->func         ^ L->top
+*/
+void luaT_adjustvarargs (lua_State *L, CallInfo *ci, const Proto *p) {
+  int i;
+  int totalargs = cast_int(L->top.p - ci->func.p) - 1;
+  int nfixparams = p->numparams;
+  int nextra = totalargs - nfixparams;  /* number of extra arguments */
   ci->u.l.nextraargs = nextra;
   luaD_checkstack(L, p->maxstacksize + 1);
   /* copy function to the top of the stack */
@@ -238,8 +265,14 @@ void luaT_adjustvarargs (lua_State *L, int nfixparams, CallInfo *ci,
     setobjs2s(L, L->top.p++, ci->func.p + i);
     setnilvalue(s2v(ci->func.p + i));  /* erase original parameter (for GC) */
   }
-  ci->func.p += actual + 1;
-  ci->top.p += actual + 1;
+  if (p->flag & (PF_VAPTAB | PF_VATAB)) {  /* is there a vararg table? */
+    if (p->flag & PF_VAPTAB)  /* is vararg table fake? */
+      setnilvalue(s2v(L->top.p));  /* initialize it */
+    else
+      createvarargtab(L, ci->func.p + nfixparams + 1, nextra);
+  }
+  ci->func.p += totalargs + 1;
+  ci->top.p += totalargs + 1;
   lua_assert(L->top.p <= ci->top.p && ci->top.p <= L->stack_last.p);
 }
 

@@ -1927,7 +1927,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_VARARGPREP) {
-        ProtectNT(luaT_adjustvarargs(L, GETARG_A(i), ci, cl->p));
+        ProtectNT(luaT_adjustvarargs(L, ci, cl->p));
         if (l_unlikely(trap)) {  /* previous "Protect" updated trap */
           luaD_hookcall(L, ci);
           L->oldpc = 1;  /* next opcode will be seen as a "new" line */

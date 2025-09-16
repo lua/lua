@@ -338,7 +338,7 @@ OP_CLOSURE,/*	A Bx	R[A] := closure(KPROTO[Bx])			*/
 
 OP_VARARG,/*	A C	R[A], R[A+1], ..., R[A+C-2] = vararg		*/
 
-OP_VARARGPREP,/*A	(adjust vararg parameters)			*/
+OP_VARARGPREP,/* 	(adjust vararg parameters)			*/
 
 OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
 } OpCode;
