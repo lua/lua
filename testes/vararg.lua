@@ -150,5 +150,31 @@ do
   local a, b = g()
   assert(a == nil and b == 2)
 end
+
+
+do  -- vararg parameter used in nested functions
+  local function foo (... = tab1)
+    return function (... = tab2)
+      return {tab1, tab2}
+    end
+  end
+  local f = foo(10, 20, 30)
+  local t = f("a", "b")
+  assert(t[1].n == 3 and t[1][1] == 10)
+  assert(t[2].n == 2 and t[2][1] == "a")
+end
+
+do  -- vararg parameter is read-only
+  local st, msg = load("return function (... = t) t = 10 end")
+  assert(string.find(msg, "const variable 't'"))
+
+  local st, msg = load[[
+    local function foo (... = extra)
+      return function (...) extra = nil end
+    end
+  ]]
+  assert(string.find(msg, "const variable 'extra'"))
+end
+
 print('OK')
 

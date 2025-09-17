@@ -265,11 +265,11 @@ void luaT_adjustvarargs (lua_State *L, CallInfo *ci, const Proto *p) {
     setobjs2s(L, L->top.p++, ci->func.p + i);
     setnilvalue(s2v(ci->func.p + i));  /* erase original parameter (for GC) */
   }
-  if (p->flag & (PF_VAPTAB | PF_VATAB)) {  /* is there a vararg table? */
-    if (p->flag & PF_VAPTAB)  /* is vararg table fake? */
-      setnilvalue(s2v(L->top.p));  /* initialize it */
-    else
+  if (p->flag & PF_VAVAR) {  /* is there a vararg parameter? */
+    if (p->flag & PF_VATAB)  /* does it need a vararg table? */
       createvarargtab(L, ci->func.p + nfixparams + 1, nextra);
+    else  /* no table; set parameter to nil */
+      setnilvalue(s2v(L->top.p));
   }
   ci->func.p += totalargs + 1;
   ci->top.p += totalargs + 1;

@@ -37,6 +37,8 @@ typedef enum {
                  info = result register */
   VLOCAL,  /* local variable; var.ridx = register index;
               var.vidx = relative index in 'actvar.arr'  */
+  VVARGVAR,  /* vararg parameter; var.ridx = register index;
+              var.vidx = relative index in 'actvar.arr'  */
   VGLOBAL,  /* global variable;
                info = relative index in 'actvar.arr' (or -1 for
                       implicit declaration) */
@@ -97,7 +99,7 @@ typedef struct expdesc {
 /* kinds of variables */
 #define VDKREG		0   /* regular local */
 #define RDKCONST	1   /* local constant */
-#define RDKVATAB	2   /* vararg table */
+#define RDKVAVAR	2   /* vararg parameter */
 #define RDKTOCLOSE	3   /* to-be-closed */
 #define RDKCTC		4   /* local compile-time constant */
 #define GDKREG		5   /* regular global */
