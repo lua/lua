@@ -15,9 +15,9 @@ CWARNSCPP= \
 	-Wdouble-promotion \
 	-Wmissing-declarations \
 	-Wconversion \
-	-Wstrict-overflow=2 \
         # the next warnings might be useful sometimes,
 	# but usually they generate too much noise
+	# -Wstrict-overflow=2 \
 	# -Werror \
 	# -pedantic   # warns if we use jump tables \
 	# -Wformat=2 \
@@ -166,8 +166,7 @@ ldump.o: ldump.c lprefix.h lua.h luaconf.h lapi.h llimits.h lstate.h \
 lfunc.o: lfunc.c lprefix.h lua.h luaconf.h ldebug.h lstate.h lobject.h \
  llimits.h ltm.h lzio.h lmem.h ldo.h lfunc.h lgc.h
 lgc.o: lgc.c lprefix.h lua.h luaconf.h ldebug.h lstate.h lobject.h \
- llimits.h ltm.h lzio.h lmem.h ldo.h lfunc.h lgc.h llex.h lstring.h \
- ltable.h
+ llimits.h ltm.h lzio.h lmem.h ldo.h lfunc.h lgc.h lstring.h ltable.h
 linit.o: linit.c lprefix.h lua.h luaconf.h lualib.h lauxlib.h llimits.h
 liolib.o: liolib.c lprefix.h lua.h luaconf.h lauxlib.h lualib.h llimits.h
 llex.o: llex.c lprefix.h lua.h luaconf.h lctype.h llimits.h ldebug.h \
