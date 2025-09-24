@@ -279,7 +279,9 @@ static void init_var (FuncState *fs, expdesc *e, int vidx) {
 
 
 /*
-** Raises an error if variable described by 'e' is read only
+** Raises an error if variable described by 'e' is read only; moreover,
+** if 'e' is t[exp] where t is the vararg parameter, change it to index
+** a real table. (Virtual vararg tables cannot be changed.)
 */
 static void check_readonly (LexState *ls, expdesc *e) {
   FuncState *fs = ls->fs;
@@ -301,6 +303,10 @@ static void check_readonly (LexState *ls, expdesc *e) {
         varname = up->name;
       break;
     }
+    case VVARGIND: {
+      fs->f->flag |= PF_VATAB;  /* function will need a vararg table */
+      e->k = VINDEXED;
+    }  /* FALLTHROUGH */
     case VINDEXUP: case VINDEXSTR: case VINDEXED: {  /* global variable */
       if (e->u.ind.ro)  /* read-only? */
         varname = tsvalue(&fs->f->k[e->u.ind.keystr]);
@@ -1073,7 +1079,7 @@ static void parlist (LexState *ls) {
         case TK_DOTS: {
           varargk |= PF_ISVARARG;
           luaX_next(ls);
-          if (testnext(ls, '=')) {
+          if (testnext(ls, '|')) {
             new_varkind(ls, str_checkname(ls), RDKVAVAR);
             varargk |= PF_VAVAR;
           }

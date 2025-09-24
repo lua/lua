@@ -2262,7 +2262,7 @@ return x or f(x)     -- results adjusted to 1
 
 @sect3{func-def| @title{Function Definitions}
 
-The syntax for function definition is
+The syntax for a function definition is
 @Produc{
 @producname{functiondef}@producbody{@Rw{function} funcbody}
 @producname{funcbody}@producbody{@bnfter{(} @bnfopt{parlist} @bnfter{)} block @Rw{end}}
@@ -2315,6 +2315,18 @@ translates to
 global f; f = function () @rep{body} end
 }
 
+The @emphx{colon} syntax
+is used to emulate @def{methods},
+adding an implicit extra parameter @idx{self} to the function.
+Thus, the statement
+@verbatim{
+function t.a.b.c:f (@rep{params}) @rep{body} end
+}
+is syntactic sugar for
+@verbatim{
+t.a.b.c.f = function (self, @rep{params}) @rep{body} end
+}
+
 A function definition is an executable expression,
 whose value has type @emph{function}.
 When Lua precompiles a chunk,
@@ -2325,11 +2337,25 @@ the function is @emph{instantiated} (or @emph{closed}).
 This function instance, or @emphx{closure},
 is the final value of the expression.
 
+Results are returned using the @Rw{return} statement @see{control}.
+If control reaches the end of a function
+without encountering a @Rw{return} statement,
+then the function returns with no results.
+
+@index{multiple return}
+There is a system-dependent limit on the number of values
+that a function may return.
+This limit is guaranteed to be at least 1000.
+
+@sect4{@title{Parameters}
+
 Parameters act as local variables that are
 initialized with the argument values:
 @Produc{
-@producname{parlist}@producbody{namelist @bnfopt{@bnfter{,} @bnfter{...}} @Or
-  @bnfter{...}}
+@producname{parlist}@producbody{namelist @bnfopt{@bnfter{,} varargparam} @Or
+  varargparam}
+@producname{varargparam}@producbody{@bnfter{...}
+      @bnfopt{@bnfter{|} @bnfNter{Name}}}
 }
 When a Lua function is called,
 it adjusts its list of @x{arguments} to
@@ -2339,11 +2365,12 @@ which is indicated by three dots (@Char{...})
 at the end of its parameter list.
 A variadic function does not adjust its argument list;
 instead, it collects all extra arguments and supplies them
-to the function through a @def{vararg expression},
-which is also written as three dots.
-The value of this expression is a list of all actual extra arguments,
-similar to a function with multiple results @see{multires}.
+to the function through a @def{vararg expression} and,
+if present, a @def{vararg table}.
 
+A vararg expression is also written as three dots,
+and its value is a list of all actual extra arguments,
+similar to a function with multiple results @see{multires}.
 
 As an example, consider the following definitions:
 @verbatim{
@@ -2368,26 +2395,27 @@ g(3, 4, 5, 8)    a=3, b=4,   ... ->  5  8
 g(5, r())        a=5, b=1,   ... ->  2  3
 }
 
-Results are returned using the @Rw{return} statement @see{control}.
-If control reaches the end of a function
-without encountering a @Rw{return} statement,
-then the function returns with no results.
-
-@index{multiple return}
-There is a system-dependent limit on the number of values
-that a function may return.
-This limit is guaranteed to be at least 1000.
-
-The @emphx{colon} syntax
-is used to emulate @def{methods},
-adding an implicit extra parameter @idx{self} to the function.
-Thus, the statement
+The presence of a varag table in a variadic function is indicated
+by the @T{|name} syntax after the three dots.
+When present,
+a vararg table behaves like a read-only local variable
+with the given name that is initialized with a table.
+In that table,
+the values at indices 1, 2, etc. are the extra arguments,
+and the value at index @St{n} is the number of extra arguments.
+In other words, the code behaves as if the function started with
+the following statement,
+assuming the standard behavior of @Lid{table.pack}:
 @verbatim{
-function t.a.b.c:f (@rep{params}) @rep{body} end
+local <const> name = table.pack(...)
 }
-is syntactic sugar for
-@verbatim{
-t.a.b.c.f = function (self, @rep{params}) @rep{body} end
+
+As an optimization,
+if the vararg table is used only as a base in indexing expressions
+(the @T{t} in @T{t[exp]} or @T{t.id}) and it is not an upvalue,
+the code does not create an actual table and instead translates
+the indexing expressions into accesses to the internal vararg data.
+
 }
 
 }
@@ -2422,7 +2450,7 @@ for instance @T{foo(e1, e2, e3)} @see{functioncall}.}
 for instance @T{a , b, c = e1, e2, e3} @see{assignment}.}
 
 @item{A local or global declaration,
-which is a special case of multiple assignment.}
+which is similar to a multiple assignment.}
 
 @item{The initial values in a generic @rw{for} loop,
 for instance @T{for k in e1, e2, e3 do ... end} @see{for}.}
@@ -3016,7 +3044,7 @@ typedef void * (*lua_Alloc) (void *ud,
                              size_t osize,
                              size_t nsize);|
 
-The type of the @x{memory-allocation function} used by Lua states.
+The type of the @x{memory-allocator function} used by Lua states.
 The allocator function must provide a
 functionality similar to @id{realloc},
 but not exactly the same.
@@ -3482,7 +3510,7 @@ This function should not be called by a finalizer.
 @APIEntry{lua_Alloc lua_getallocf (lua_State *L, void **ud);|
 @apii{0,0,-}
 
-Returns the @x{memory-allocation function} of a given state.
+Returns the @x{memory-allocator function} of a given state.
 If @id{ud} is not @id{NULL}, Lua stores in @T{*ud} the
 opaque pointer given when the memory-allocator function was set.
 
@@ -9732,8 +9760,11 @@ and @bnfNter{LiteralString}, see @See{lexical}.)
 
 @producname{funcbody}@producbody{@bnfter{(} @bnfopt{parlist} @bnfter{)} block @Rw{end}}
 
-@producname{parlist}@producbody{namelist @bnfopt{@bnfter{,} @bnfter{...}}
-  @Or @bnfter{...}}
+@producname{parlist}@producbody{namelist @bnfopt{@bnfter{,} varargparam} @Or
+  varargparam}
+
+@producname{varargparam}@producbody{@bnfter{...}
+      @bnfopt{@bnfter{|} @bnfNter{Name}}}
 
 @producname{tableconstructor}@producbody{@bnfter{@Open} @bnfopt{fieldlist} @bnfter{@Close}}
 

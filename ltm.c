@@ -277,6 +277,28 @@ void luaT_adjustvarargs (lua_State *L, CallInfo *ci, const Proto *p) {
 }
 
 
+void luaT_getvararg (CallInfo *ci, StkId ra, TValue *rc) {
+  int nextra = ci->u.l.nextraargs;
+  lua_Integer n;
+  if (tointegerns(rc, &n)) {  /* integral value? */
+    if (l_castS2U(n) - 1 < cast_uint(nextra)) {
+      StkId slot = ci->func.p - nextra + cast_int(n) - 1;
+      setobjs2s(((lua_State*)NULL), ra, slot);
+      return;
+    }
+  }
+  else if (ttisshrstring(rc)) {  /* short-string value? */
+    size_t len;
+    const char *s = getlstr(tsvalue(rc), len);
+    if (len == 1 && s[0] == 'n') {  /* key is "n"? */
+      setivalue(s2v(ra), nextra);
+      return;
+    }
+  }
+  setnilvalue(s2v(ra));  /* else produce nil */
+}
+
+
 void luaT_getvarargs (lua_State *L, CallInfo *ci, StkId where, int wanted) {
   int i;
   int nextra = ci->u.l.nextraargs;

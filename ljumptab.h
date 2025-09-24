@@ -21,7 +21,7 @@ static const void *const disptab[NUM_OPCODES] = {
 #if 0
 ** you can update the following list with this command:
 **
-**  sed -n '/^OP_/\!d; s/OP_/\&\&L_OP_/ ; s/,.*/,/ ; s/\/.*// ; p'  lopcodes.h
+**  sed -n '/^OP_/!d; s/OP_/\&\&L_OP_/ ; s/,.*/,/ ; s/\/.*// ; p'  lopcodes.h
 **
 #endif
 
@@ -106,6 +106,7 @@ static const void *const disptab[NUM_OPCODES] = {
 &&L_OP_SETLIST,
 &&L_OP_CLOSURE,
 &&L_OP_VARARG,
+&&L_OP_GETVARG,
 &&L_OP_VARARGPREP,
 &&L_OP_EXTRAARG
 

@@ -51,6 +51,8 @@ typedef enum {
                 ind.ro = true if it represents a read-only global;
                 ind.keystr = if key is a string, index in 'k' of that string;
                              -1 if key is not a string */
+  VVARGIND,  /* indexed vararg parameter;
+                ind.* as in VINDEXED */
   VINDEXUP,  /* indexed upvalue;
                 ind.idx = key's K index;
                 ind.* as in VINDEXED */
