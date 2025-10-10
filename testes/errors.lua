@@ -689,21 +689,26 @@ end
 -- testing syntax limits
 
 local function testrep (init, rep, close, repc, finalresult)
-  local s = init .. string.rep(rep, 100) .. close .. string.rep(repc, 100)
-  local res, msg = load(s)
-  assert(res)   -- 100 levels is OK
+  local function gencode (n)
+    return init .. string.rep(rep, n) .. close .. string.rep(repc, n)
+  end
+  local res, msg = load(gencode(100))   -- 100 levels is OK
+  assert(res)
   if (finalresult) then
     assert(res() == finalresult)
   end
-  s = init .. string.rep(rep, 500)
-  local res, msg = load(s)   -- 500 levels not ok
+  local res, msg = load(gencode(500))   -- 500 levels not ok
   assert(not res and (string.find(msg, "too many") or
                       string.find(msg, "overflow")))
 end
 
+testrep("local a", ",a", ";", "")    -- local variables
+testrep("local a", ",a", "= 1", ",1")    -- local variables initialized
+testrep("local a", ",a", "= f()", "")    -- local variables initialized
 testrep("local a; a", ",a", "= 1", ",1")    -- multiple assignment
-testrep("local a; a=", "{", "0", "}")
-testrep("return ", "(", "2", ")", 2)
+testrep("local a; a=", "{", "0", "}")   -- constructors
+testrep("return ", "(", "2", ")", 2)  -- parentheses
+-- nested calls  (a(a(a(a(...)))))
 testrep("local function a (x) return x end; return ", "a(", "2.2", ")", 2.2)
 testrep("", "do ", "", " end")
 testrep("", "while a do ", "", " end")

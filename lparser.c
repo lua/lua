@@ -547,6 +547,7 @@ static void singlevar (LexState *ls, expdesc *var) {
 static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
   FuncState *fs = ls->fs;
   int needed = nvars - nexps;  /* extra values needed */
+  luaK_checkstack(fs, needed);
   if (hasmultret(e->k)) {  /* last expression has multiple returns? */
     int extra = needed + 1;  /* discount last expression itself */
     if (extra < 0)
