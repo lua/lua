@@ -42,8 +42,12 @@ checkerr(MEMERRMSG, f)
 T.alloccount()          -- remove limit
 
 
+-- preallocate stack space
+local function deep (n) if n > 0 then deep(n - 1) end end
+
+
 -- test memory errors; increase limit for maximum memory by steps,
--- o that we get memory errors in all allocations of a given
+-- so that we get memory errors in all allocations of a given
 -- task, until there is enough memory to complete the task without
 -- errors.
 local function testbytes (s, f)
@@ -53,6 +57,7 @@ local function testbytes (s, f)
   local a,b = nil
   while true do
     collectgarbage(); collectgarbage()
+    deep(4)
     T.totalmem(M)
     a, b = T.testC("pcall 0 1 0; pushstatus; return 2", f)
     T.totalmem(0)  -- remove limit
@@ -77,6 +82,7 @@ local function testalloc (s, f)
   local a,b = nil
   while true do
     collectgarbage(); collectgarbage()
+    deep(4)
     T.alloccount(M)
     a, b = T.testC("pcall 0 1 0; pushstatus; return 2", f)
     T.alloccount()  -- remove limit
@@ -87,21 +93,19 @@ local function testalloc (s, f)
     M = M + 1   -- increase allocation limit
   end
   print(string.format("minimum allocations for %s: %d allocations", s, M))
-  return a
+  return M
 end
 
 
 local function testamem (s, f)
-  testalloc(s, f)
-  return testbytes(s, f)
+  local aloc = testalloc(s, f)
+  local res = testbytes(s, f)
+  return {aloc = aloc, res = res}
 end
 
 
--- doing nothing
-b = testamem("doing nothing", function () return 10 end)
-assert(b == 10)
-
--- testing memory errors when creating a new state
+local b = testamem("function call", function () return 10 end)
+assert(b.res == 10 and b.aloc == 0)
 
 testamem("state creation", function ()
   local st = T.newstate()
@@ -121,6 +125,18 @@ testamem("coroutine creation", function()
            return coroutine.create(print)
 end)
 
+do  -- vararg tables
+  local function pack (... | t) return t end
+  local b = testamem("vararg table", function ()
+    return pack(10, 20, 30, 40, "hello")
+  end)
+  assert(b.aloc == 3)   -- new table uses three memory blocks
+  -- table optimized away
+  local function sel (n, ...|arg) return arg[n] + arg.n end
+  local b = testamem("optimized vararg table",
+        function () return sel(2.0, 20, 30) end)
+  assert(b.res == 32 and b.aloc == 0)   -- no memory needed for this case
+end
 
 -- testing to-be-closed variables
 testamem("to-be-closed variables", function()
@@ -158,6 +174,14 @@ G = nil
 testamem("running code on new thread", function ()
   return T.doonnewstack("local x=1") == 0  -- try to create thread
 end)
+
+
+do   -- external strings
+  local str = string.rep("a", 100)
+  testamem("creating external strings", function ()
+    return T.externstr(str)
+  end)
+end
 
 
 -- testing memory x compiler
