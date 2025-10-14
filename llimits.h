@@ -60,13 +60,6 @@ typedef lu_byte TStatus;
 			  : cast_sizet(LUA_MAXINTEGER))
 
 /*
-** floor of the log2 of the maximum signed value for integral type 't'.
-** (That is, maximum 'n' such that '2^n' fits in the given signed type.)
-*/
-#define log2maxs(t)	(l_numbits(t) - 2)
-
-
-/*
 ** test whether an unsigned value is a power of 2 (or zero)
 */
 #define ispow2(x)	(((x) & ((x) - 1)) == 0)

@@ -50,7 +50,7 @@ int luaS_eqstr (TString *a, TString *b) {
 }
 
 
-unsigned luaS_hash (const char *str, size_t l, unsigned seed) {
+static unsigned luaS_hash (const char *str, size_t l, unsigned seed) {
   unsigned int h = seed ^ cast_uint(l);
   for (; l > 0; l--)
     h ^= ((h<<5) + (h>>2) + cast_byte(str[l - 1]));
