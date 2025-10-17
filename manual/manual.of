@@ -3079,11 +3079,12 @@ the allocator must behave like @id{realloc}.
 In particular, the allocator returns @id{NULL}
 if and only if it cannot fulfill the request.
 
-Here is a simple implementation for the @x{allocator function}.
-It is used in the auxiliary library by @Lid{luaL_newstate}.
+Here is a simple implementation for the @x{allocator function},
+corresponding to the function @Lid{luaL_alloc} from the
+auxiliary library.
 @verbatim{
-static void *l_alloc (void *ud, void *ptr, size_t osize,
-                                           size_t nsize) {
+void *luaL_alloc (void *ud, void *ptr, size_t osize,
+                                       size_t nsize) {
   (void)ud;  (void)osize;  /* not used */
   if (nsize == 0) {
     free(ptr);
@@ -5988,9 +5989,8 @@ it does not run it.
 @apii{0,0,-}
 
 Returns a value with a weak attempt for randomness.
-(It produces that value based on the current date and time
-and the address of an internal variable,
-in case the machine has Address Space Layout Randomization.)
+The parameter @id{L} can be @id{NULL}
+if there is no Lua state available.
 
 }
 
@@ -6046,8 +6046,9 @@ with @id{tname} in the registry.
 @apii{0,0,-}
 
 Creates a new Lua state.
-It calls @Lid{lua_newstate} with an
-allocator based on the @N{ISO C} allocation functions
+It calls @Lid{lua_newstate} with @Lid{luaL_alloc} as
+the allocator function and the result of @T{luaL_makeseed(NULL)}
+as the seed,
 and then sets a warning function and a panic function @see{C-error}
 that print messages to the standard error output.
 
@@ -6270,6 +6271,15 @@ as the metatable associated with name @id{tname}
 in the registry @seeC{luaL_newmetatable}.
 
 }
+
+@APIEntry{
+void *luaL_alloc (void *ud, void *ptr, size_t osize, size_t nsize);|
+
+A standard allocator function for Lua @seeF{lua_Alloc},
+built on top of the C functions @id{realloc} and @id{free}.
+
+}
+
 
 @APIEntry{
 typedef struct luaL_Stream {
