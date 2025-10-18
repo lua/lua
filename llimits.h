@@ -303,21 +303,21 @@ typedef unsigned long l_uint32;
 ** LUAI_DDEF and LUAI_DDEC are marks for all extern (const) variables,
 ** none of which to be exported to outside modules (LUAI_DDEF for
 ** definitions and LUAI_DDEC for declarations).
-** Elf/gcc (versions 3.2 and later) mark them as "hidden" to optimize
-** access when Lua is compiled as a shared library. Not all elf targets
-** support this attribute. Unfortunately, gcc does not offer a way to
-** check whether the target offers that support, and those without
-** support give a warning about it. To avoid these warnings, change to
-** the default definition.
+** Elf and MACH/gcc (versions 3.2 and later) mark them as "hidden" to
+** optimize access when Lua is compiled as a shared library. Not all elf
+** targets support this attribute. Unfortunately, gcc does not offer
+** a way to check whether the target offers that support, and those
+** without support give a warning about it. To avoid these warnings,
+** change to the default definition.
 */
 #if !defined(LUAI_FUNC)
 
 #if defined(__GNUC__) && ((__GNUC__*100 + __GNUC_MINOR__) >= 302) && \
-    defined(__ELF__)		/* { */
+    (defined(__ELF__) || defined(__MACH__))
 #define LUAI_FUNC	__attribute__((visibility("internal"))) extern
-#else				/* }{ */
+#else
 #define LUAI_FUNC	extern
-#endif				/* } */
+#endif
 
 #define LUAI_DDEC(dec)	LUAI_FUNC dec
 #define LUAI_DDEF	/* empty */
