@@ -432,5 +432,27 @@ do  print "testing initialization in global declarations"
   _ENV.a, _ENV.b, _ENV.c, _ENV.d = nil   -- erase these globals
 end
 
+do
+  global table, string
+  -- global initialization when names don't fit in K
+
+  -- to fill constant table
+  local code = {}
+  for i = 1, 300 do code[i] = "'" .. i .. "'" end
+  code = table.concat(code, ",")
+  code = string.format([[
+    return function (_ENV)
+      local dummy = {%s}  -- fill initial positions in constant table,
+      -- so that initialization must use registers for global names
+      global a, b, c = 10, 20, 30
+    end]], code)
+
+  local fun = assert(load(code))()
+
+  local env = {}
+  fun(env)
+  assert(env.a == 10 and env.b == 20 and env.c == 30)
+end
+
 print'OK'
 

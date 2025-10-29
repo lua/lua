@@ -1875,6 +1875,33 @@ static lu_byte getglobalattribute (LexState *ls, lu_byte df) {
 }
 
 
+/*
+** Recursively traverse list of globals to be initalized. When
+** going, generate table description for the global. In the end,
+** after all indices have been generated, read list of initializing
+** expressions. When returning, generate the assignment of the value on
+** the stack to the corresponding table description. 'n' is the variable
+** being handled, range [0, nvars - 1].
+*/
+static void initglobal (LexState *ls, int nvars, int firstidx, int n) {
+  if (n == nvars) {  /* traversed all variables? */
+    expdesc e;
+    int nexps = explist(ls, &e);  /* read list of expressions */
+    adjust_assign(ls, nvars, nexps, &e);
+  }
+  else {  /* handle variable 'n' */
+    FuncState *fs = ls->fs;
+    expdesc var;
+    TString *varname = getlocalvardesc(fs, firstidx + n)->vd.name;
+    buildglobal(ls, varname, &var);  /* create global variable in 'var' */
+    enterlevel(ls);  /* control recursion depth */
+    initglobal(ls, nvars, firstidx, n + 1);
+    leavelevel(ls);
+    storevartop(fs, &var);
+  }
+}
+
+
 static void globalnames (LexState *ls, lu_byte defkind) {
   FuncState *fs = ls->fs;
   int nvars = 0;
@@ -1885,18 +1912,8 @@ static void globalnames (LexState *ls, lu_byte defkind) {
     lastidx = new_varkind(ls, vname, kind);
     nvars++;
   } while (testnext(ls, ','));
-  if (testnext(ls, '=')) {  /* initialization? */
-    expdesc e;
-    int i;
-    int nexps = explist(ls, &e);  /* read list of expressions */
-    adjust_assign(ls, nvars, nexps, &e);
-    for (i = 0; i < nvars; i++) {  /* for each variable */
-      expdesc var;
-      TString *varname = getlocalvardesc(fs, lastidx - i)->vd.name;
-      buildglobal(ls, varname, &var);  /* create global variable in 'var' */
-      storevartop(fs, &var);
-    }
-  }
+  if (testnext(ls, '='))  /* initialization? */
+    initglobal(ls, nvars, lastidx - nvars + 1, 0);
   fs->nactvar = cast_short(fs->nactvar + nvars);  /* activate declaration */
 }
 

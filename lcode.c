@@ -1242,7 +1242,7 @@ static void codenot (FuncState *fs, expdesc *e) {
 ** Check whether expression 'e' is a short literal string
 */
 static int isKstr (FuncState *fs, expdesc *e) {
-  return (e->k == VK && !hasjumps(e) && e->u.info <= MAXARG_B &&
+  return (e->k == VK && !hasjumps(e) && e->u.info <= MAXINDEXRK &&
           ttisshrstring(&fs->f->k[e->u.info]));
 }
 
