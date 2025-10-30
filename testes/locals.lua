@@ -310,7 +310,7 @@ do  -- testing presence of second argument
   local function foo (howtoclose, obj, n)
     local ca   -- copy of 'a' visible inside its close metamethod
     do
-      local a <close> = func2close(function (... | t)
+      local a <close> = func2close(function (...t)
         assert(select("#", ...) == n)
         assert(t.n == n and t[1] == ca and (t.n < 2 or t[2] == obj))
         ca = 15   -- final value to be returned if howtoclose=="scope"
@@ -910,7 +910,7 @@ do
 
   local extrares    -- result from extra yield (if any)
 
-  local function check (body, extra, ...|t)
+  local function check (body, extra, ...t)
     local co = coroutine.wrap(body)
     if extra then
       extrares = co()    -- runs until first (extra) yield

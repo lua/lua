@@ -2354,8 +2354,7 @@ initialized with the argument values:
 @Produc{
 @producname{parlist}@producbody{namelist @bnfopt{@bnfter{,} varargparam} @Or
   varargparam}
-@producname{varargparam}@producbody{@bnfter{...}
-      @bnfopt{@bnfter{|} @bnfNter{Name}}}
+@producname{varargparam}@producbody{@bnfter{...} @bnfopt{@bnfNter{Name}}}
 }
 When a Lua function is called,
 it adjusts its list of @x{arguments} to
@@ -2396,7 +2395,7 @@ g(5, r())        a=5, b=1,   ... ->  2  3
 }
 
 The presence of a varag table in a variadic function is indicated
-by the @T{|name} syntax after the three dots.
+by a name after the three dots.
 When present,
 a vararg table behaves like a read-only local variable
 with the given name that is initialized with a table.
@@ -9773,8 +9772,7 @@ and @bnfNter{LiteralString}, see @See{lexical}.)
 @producname{parlist}@producbody{namelist @bnfopt{@bnfter{,} varargparam} @Or
   varargparam}
 
-@producname{varargparam}@producbody{@bnfter{...}
-      @bnfopt{@bnfter{|} @bnfNter{Name}}}
+@producname{varargparam}@producbody{@bnfter{...} @bnfopt{@bnfNter{Name}}}
 
 @producname{tableconstructor}@producbody{@bnfter{@Open} @bnfopt{fieldlist} @bnfter{@Close}}
 

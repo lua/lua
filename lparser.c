@@ -1079,8 +1079,8 @@ static void parlist (LexState *ls) {
         }
         case TK_DOTS: {
           varargk |= PF_ISVARARG;
-          luaX_next(ls);
-          if (testnext(ls, '|')) {
+          luaX_next(ls);  /* skip '...' */
+          if (ls->t.token == TK_NAME) {
             new_varkind(ls, str_checkname(ls), RDKVAVAR);
             varargk |= PF_VAVAR;
           }

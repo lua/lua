@@ -3,7 +3,7 @@
 
 print('testing vararg')
 
-local function f (a, ...|t)
+local function f (a, ...t)
   local x = {n = select('#', ...), ...}
   assert(x.n == t.n)
   for i = 1, x.n do
@@ -20,7 +20,7 @@ local function c12 (...)
   return res, 2
 end
 
-local function vararg (... | t) return t end
+local function vararg (... t) return t end
 
 local call = function (f, args) return f(table.unpack(args, 1, args.n)) end
 
@@ -153,8 +153,8 @@ end
 
 
 do  -- vararg parameter used in nested functions
-  local function foo (... | tab1)
-    return function (... | tab2)
+  local function foo (...tab1)
+    return function (...tab2)
       return {tab1, tab2}
     end
   end
@@ -165,11 +165,11 @@ do  -- vararg parameter used in nested functions
 end
 
 do  -- vararg parameter is read-only
-  local st, msg = load("return function (... | t) t = 10 end")
+  local st, msg = load("return function (... t) t = 10 end")
   assert(string.find(msg, "const variable 't'"))
 
   local st, msg = load[[
-    local function foo (... | extra)
+    local function foo (...extra)
       return function (...) extra = nil end
     end
   ]]
@@ -179,19 +179,19 @@ end
 
 do  -- _ENV as vararg parameter
   local st, msg = load[[
-    local function aux (... | _ENV)
+    local function aux (... _ENV)
       global <const> a
       a = 10
     end ]]
   assert(string.find(msg, "const variable 'a'"))
 
-  local function aux (... | _ENV)
+  local function aux (..._ENV)
     global a; a = 10
     return a
   end
   assert(aux() == 10)
 
-  local function aux (... | _ENV)
+  local function aux (... _ENV)
     global a = 10
     return a
   end
@@ -200,7 +200,7 @@ end
 
 
 do   -- access to vararg parameter
-  local function notab (keys, t, ... | v)
+  local function notab (keys, t, ...v)
     for _, k in pairs(keys) do
       assert(t[k] == v[k])
     end
@@ -216,7 +216,7 @@ do   -- access to vararg parameter
   assert(m == collectgarbage"count")
 
   -- writing to the vararg table
-  local function foo (... | t)
+  local function foo (...t)
     t[1] = t[1] + 10
     return t[1]
   end
