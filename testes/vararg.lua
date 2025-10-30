@@ -184,6 +184,18 @@ do  -- _ENV as vararg parameter
       a = 10
     end ]]
   assert(string.find(msg, "const variable 'a'"))
+
+  local function aux (... | _ENV)
+    global a; a = 10
+    return a
+  end
+  assert(aux() == 10)
+
+  local function aux (... | _ENV)
+    global a = 10
+    return a
+  end
+  assert(aux() == 10)
 end
 
 

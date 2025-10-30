@@ -1109,6 +1109,10 @@ void luaK_storevar (FuncState *fs, expdesc *var, expdesc *ex) {
       codeABRK(fs, OP_SETFIELD, var->u.ind.t, var->u.ind.idx, ex);
       break;
     }
+    case VVARGIND: {
+      fs->f->flag |= PF_VATAB;  /* function will need a vararg table */
+      /* now, assignment is to a regular table */
+    }  /* FALLTHROUGH */
     case VINDEXED: {
       codeABRK(fs, OP_SETTABLE, var->u.ind.t, var->u.ind.idx, ex);
       break;
