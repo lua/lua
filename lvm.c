@@ -373,6 +373,14 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
 
 
 /*
+** Function to be used for 0-terminated string order comparison
+*/
+#if !defined(l_strcoll)
+#define l_strcoll	strcoll
+#endif
+
+
+/*
 ** Compare two strings 'ts1' x 'ts2', returning an integer less-equal-
 ** -greater than zero if 'ts1' is less-equal-greater than 'ts2'.
 ** The code is a little tricky because it allows '\0' in the strings
@@ -386,7 +394,7 @@ static int l_strcmp (const TString *ts1, const TString *ts2) {
   size_t rl2;
   const char *s2 = getlstr(ts2, rl2);
   for (;;) {  /* for each segment */
-    int temp = strcoll(s1, s2);
+    int temp = l_strcoll(s1, s2);
     if (temp != 0)  /* not equal? */
       return temp;  /* done */
     else {  /* strings are equal up to a '\0' */

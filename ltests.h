@@ -142,12 +142,7 @@ LUA_API void *debug_realloc (void *ud, void *block,
 #define STRCACHE_N	23
 #define STRCACHE_M	5
 
-
-/*
-** This one is not compatible with tests for opcode optimizations,
-** as it blocks some optimizations
-#define MAXINDEXRK	0
-*/
+#define MAXINDEXRK	1
 
 
 /*
