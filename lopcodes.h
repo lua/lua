@@ -340,6 +340,8 @@ OP_VARARG,/*	A C	R[A], R[A+1], ..., R[A+C-2] = vararg		*/
 
 OP_GETVARG, /* A B C	R[A] := R[B][R[C]], R[B] is vararg parameter    */
 
+OP_ERRNNIL,/*	A Bx	raise error if R[A] ~= nil (K[Bx] is global name)*/
+
 OP_VARARGPREP,/* 	(adjust vararg parameters)			*/
 
 OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/

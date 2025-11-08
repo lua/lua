@@ -95,6 +95,7 @@ static const char *const opnames[] = {
   "CLOSURE",
   "VARARG",
   "GETVARG",
+  "ERRNNIL",
   "VARARGPREP",
   "EXTRAARG",
   NULL

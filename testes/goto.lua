@@ -293,6 +293,7 @@ end
 foo()
 --------------------------------------------------------------------------
 
+-- check for compilation errors
 local function checkerr (code, err)
   local st, msg = load(code)
   assert(not st and string.find(msg, err))
@@ -414,22 +415,26 @@ end
 do  print "testing initialization in global declarations"
   global<const> a, b, c = 10, 20, 30
   assert(_ENV.a == 10 and b == 20 and c == 30)
+  _ENV.a = nil; _ENV.b = nil; _ENV.c = nil;
 
   global<const> a, b, c = 10
   assert(_ENV.a == 10 and b == nil and c == nil)
+  _ENV.a = nil; _ENV.b = nil; _ENV.c = nil;
 
   global table
   global a, b, c, d = table.unpack{1, 2, 3, 6, 5}
   assert(_ENV.a == 1 and b == 2 and c == 3 and d == 6)
+  a = nil; b = nil; c = nil; d = nil
 
   local a, b = 100, 200
   do
     global a, b = a, b
   end
   assert(_ENV.a == 100 and _ENV.b == 200)
+  _ENV.a = nil; _ENV.b = nil
 
 
-  _ENV.a, _ENV.b, _ENV.c, _ENV.d = nil   -- erase these globals
+  assert(_ENV.a == nil and _ENV.b == nil and _ENV.c == nil and _ENV.d == nil)
 end
 
 do
@@ -452,6 +457,20 @@ do
   local env = {}
   fun(env)
   assert(env.a == 10 and env.b == 20 and env.c == 30)
+end
+
+
+do  -- testing global redefinitions
+  -- cannot use 'checkerr' as errors are not compile time
+  global pcall
+  local f = assert(load("global print = 10"))
+  local st, msg = pcall(f)
+  assert(string.find(msg, "global 'print' already defined"))
+
+  local f = assert(load("local _ENV = {AA = false}; global AA = 10"))
+  local st, msg = pcall(f)
+  assert(string.find(msg, "global 'AA' already defined"))
+
 end
 
 print'OK'

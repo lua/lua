@@ -1660,9 +1660,15 @@ The declaration can include an initialization:
 @producname{stat}@producbody{@Rw{global}
   attnamelist @bnfopt{@bnfter{=} explist}}
 }
-If present, an initial assignment has the same semantics
+If there is no initialization,
+local variables are initialized with @nil;
+global variables are left unchanged.
+Otherwise, the initialization gets the same adjustment
 of a multiple assignment @see{assignment}.
-Otherwise, all local variables are initialized with @nil.
+Moreover, for global variables,
+the initialization will raise a runtime error
+if the variable is already defined,
+that is, it has a non-nil value.
 
 The list of names may be prefixed by an attribute
 (a name between angle brackets)
@@ -2312,8 +2318,10 @@ global function f () @rep{body} end
 }
 translates to
 @verbatim{
-global f; f = function () @rep{body} end
+global f; global f = function () @rep{body} end
 }
+The second @Rw{global} makes the assignment an initialization,
+which will raise an error if that global is already defined.
 
 The @emphx{colon} syntax
 is used to emulate @def{methods},

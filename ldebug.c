@@ -814,6 +814,14 @@ l_noret luaG_ordererror (lua_State *L, const TValue *p1, const TValue *p2) {
 }
 
 
+l_noret luaG_errnnil (lua_State *L, LClosure *cl, int k) {
+  const char *globalname = "?";  /* default name if k == 0 */
+  if (k > 0)
+    kname(cl->p, k - 1, &globalname);
+  luaG_runerror(L, "global '%s' already defined", globalname);
+}
+
+
 /* add src:line information to 'msg' */
 const char *luaG_addinfo (lua_State *L, const char *msg, TString *src,
                                         int line) {

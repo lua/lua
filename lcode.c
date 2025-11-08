@@ -706,6 +706,22 @@ static void luaK_float (FuncState *fs, int reg, lua_Number f) {
 
 
 /*
+** Get the value of 'var' in a register and generate an opcode to check
+** whether that register is nil. 'k' is the index of the variable name
+** in the list of constants. If its value cannot be encoded in Bx, a 0
+** will use '?' for the name.
+*/
+void luaK_codecheckglobal (FuncState *fs, expdesc *var, int k, int line) {
+  luaK_exp2anyreg(fs, var);
+  luaK_fixline(fs, line);
+  k = (k >= MAXARG_Bx) ? 0 : k + 1;
+  luaK_codeABx(fs, OP_ERRNNIL, var->u.info, k);
+  luaK_fixline(fs, line);
+  freeexp(fs, var);
+}
+
+
+/*
 ** Convert a constant in 'v' into an expression description 'e'
 */
 static void const2exp (TValue *v, expdesc *e) {

@@ -1940,6 +1940,12 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         luaT_getvararg(ci, ra, rc);
         vmbreak;
       }
+      vmcase(OP_ERRNNIL) {
+        TValue *ra = vRA(i);
+        if (!ttisnil(ra))
+          halfProtect(luaG_errnnil(L, cl, GETARG_Bx(i)));
+        vmbreak;
+      }
       vmcase(OP_VARARGPREP) {
         ProtectNT(luaT_adjustvarargs(L, ci, cl->p));
         if (l_unlikely(trap)) {  /* previous "Protect" updated trap */

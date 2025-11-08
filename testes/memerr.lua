@@ -166,9 +166,9 @@ local function expand (n,s)
                               e, s, expand(n-1,s), e)
 end
 
-G=0; collectgarbage(); a =collectgarbage("count")
+G=0; collectgarbage()
 load(expand(20,"G=G+1"))()
-assert(G==20); collectgarbage();  -- assert(gcinfo() <= a+1)
+assert(G==20); collectgarbage()
 G = nil
 
 testamem("running code on new thread", function ()
