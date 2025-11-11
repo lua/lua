@@ -6799,11 +6799,11 @@ In particular, you may set existing fields to nil.
 @LibEntry{pairs (t)|
 
 If @id{t} has a metamethod @idx{__pairs},
-calls it with @id{t} as argument and returns the first three
+calls it with @id{t} as argument and returns the first four
 results from the call.
 
 Otherwise,
-returns three values: the @Lid{next} function, the table @id{t}, and @nil,
+returns the @Lid{next} function, the table @id{t}, plus two @nil values,
 so that the construction
 @verbatim{
 for k,v in pairs(t) do @rep{body} end

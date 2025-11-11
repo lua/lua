@@ -905,13 +905,18 @@ local function foo1 (e,i)
   if i <= e.n then return i,a[i] end
 end
 
-setmetatable(a, {__pairs = function (x) return foo, x, 0 end})
+local closed = false
+setmetatable(a, {__pairs = function (x)
+  local tbc = setmetatable({}, {__close = function () closed = true end})
+  return foo, x, 0, tbc
+ end})
 
 local i = 0
 for k,v in pairs(a) do
   i = i + 1
   assert(k == i and v == k+1)
 end
+assert(closed)   -- 'tbc' has been closed
 
 a.n = 5
 a[3] = 30
