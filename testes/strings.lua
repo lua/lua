@@ -540,6 +540,23 @@ else
   assert(y == x)
   local z = T.externstr(x)   -- external allocated long string
   assert(z == y)
+
+  local e = T.externstr("")   -- empty external string
+  assert(e .. "x" == "x" and "x" .. e == "x")
+  assert(e .. e == "" and #e == 0)
+
+  -- external string as the "n" key in vararg table
+  local n = T.externstr("n")
+  local n0 = T.externstr("n\0")
+  local function aux (...t) assert(t[n0] == nil); return t[n] end
+  assert(aux(10, 20, 30) == 3)
+
+  -- external string as mode in weak table
+  local t = setmetatable({}, {__mode = T.externstr("kv")})
+  t[{}] = {}
+  assert(next(t))
+  collectgarbage()
+  assert(next(t) == nil)
 end
 
 print('OK')

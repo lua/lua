@@ -287,7 +287,7 @@ void luaT_getvararg (CallInfo *ci, StkId ra, TValue *rc) {
       return;
     }
   }
-  else if (ttisshrstring(rc)) {  /* short-string value? */
+  else if (ttisstring(rc)) {  /* string value? */
     size_t len;
     const char *s = getlstr(tsvalue(rc), len);
     if (len == 1 && s[0] == 'n') {  /* key is "n"? */

@@ -594,10 +594,10 @@ static void traversestrongtable (global_State *g, Table *h) {
 */
 static int getmode (global_State *g, Table *h) {
   const TValue *mode = gfasttm(g, h->metatable, TM_MODE);
-  if (mode == NULL || !ttisshrstring(mode))
-    return 0;  /* ignore non-(short)string modes */
+  if (mode == NULL || !ttisstring(mode))
+    return 0;  /* ignore non-string modes */
   else {
-    const char *smode = getshrstr(tsvalue(mode));
+    const char *smode = getstr(tsvalue(mode));
     const char *weakkey = strchr(smode, 'k');
     const char *weakvalue = strchr(smode, 'v');
     return ((weakkey != NULL) << 1) | (weakvalue != NULL);

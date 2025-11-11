@@ -657,6 +657,11 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
 #define tostring(L,o)  \
 	(ttisstring(o) || (cvt2str(o) && (luaO_tostring(L, o), 1)))
 
+/*
+** Check whether object is a short empty string to optimize concatenation.
+** (External strings can be empty too; they will be concatenated like
+** non-empty ones.)
+*/
 #define isemptystr(o)	(ttisshrstring(o) && tsvalue(o)->shrlen == 0)
 
 /* copy strings in stack from top - n up to top - 1 to buffer */
@@ -691,8 +696,8 @@ void luaV_concat (lua_State *L, int total) {
       setobjs2s(L, top - 2, top - 1);  /* result is second op. */
     }
     else {
-      /* at least two non-empty string values; get as many as possible */
-      size_t tl = tsslen(tsvalue(s2v(top - 1)));
+      /* at least two string values; get as many as possible */
+      size_t tl = tsslen(tsvalue(s2v(top - 1)));  /* total length */
       TString *ts;
       /* collect total length and number of strings */
       for (n = 1; n < total && tostring(L, s2v(top - n - 1)); n++) {
