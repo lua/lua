@@ -418,28 +418,28 @@ end
 
 -- testing line error
 
-local function lineerror (s, l)
+local function lineerror (s, l, w)
   local err,msg = pcall(load(s))
   local line = tonumber(string.match(msg, ":(%d+):"))
-  assert(line == l or (not line and not l))
+  assert((line == l or (not line and not l)) and string.find(msg, w))
 end
 
-lineerror("local a\n for i=1,'a' do \n print(i) \n end", 2)
-lineerror("\n local a \n for k,v in 3 \n do \n print(k) \n end", 3)
-lineerror("\n\n for k,v in \n 3 \n do \n print(k) \n end", 4)
-lineerror("function a.x.y ()\na=a+1\nend", 1)
+lineerror("local a\n for i=1,'a' do \n print(i) \n end", 2, "limit")
+lineerror("\n local a \n for k,v in 3 \n do \n print(k) \n end", 3, "to call")
+lineerror("\n\n for k,v in \n 3 \n do \n print(k) \n end", 4, "to call")
+lineerror("function a.x.y ()\na=a+1\nend", 1, "index")
 
-lineerror("a = \na\n+\n{}", 3)
-lineerror("a = \n3\n+\n(\n4\n/\nprint)", 6)
-lineerror("a = \nprint\n+\n(\n4\n/\n7)", 3)
+lineerror("a = \na\n+\n{}", 3, "arithmetic")
+lineerror("a = \n3\n+\n(\n4\n/\nprint)", 6, "arithmetic")
+lineerror("a = \nprint\n+\n(\n4\n/\n7)", 3, "arithmetic")
 
-lineerror("a\n=\n-\n\nprint\n;", 3)
+lineerror("a\n=\n-\n\nprint\n;", 3, "arithmetic")
 
 lineerror([[
 a
 (     -- <<
 23)
-]], 2)
+]], 2, "call")
 
 lineerror([[
 local a = {x = 13}
@@ -449,7 +449,7 @@ x
 (     -- <<
 23
 )
-]], 5)
+]], 5, "call")
 
 lineerror([[
 local a = {x = 13}
@@ -459,17 +459,17 @@ x
 (
 23 + a
 )
-]], 6)
+]], 6, "arithmetic")
 
 local p = [[
   function g() f() end
   function f(x) error('a', XX) end
 g()
 ]]
-XX=3;lineerror((p), 3)
-XX=0;lineerror((p), false)
-XX=1;lineerror((p), 2)
-XX=2;lineerror((p), 1)
+XX=3;lineerror((p), 3, "a")
+XX=0;lineerror((p), false, "a")
+XX=1;lineerror((p), 2, "a")
+XX=2;lineerror((p), 1, "a")
 _G.XX, _G.g, _G.f = nil
 
 
@@ -477,7 +477,7 @@ lineerror([[
 local b = false
 if not b then
   error 'test'
-end]], 3)
+end]], 3, "test")
 
 lineerror([[
 local b = false
@@ -487,7 +487,7 @@ if not b then
       error 'test'
     end
   end
-end]], 5)
+end]], 5, "test")
 
 lineerror([[
 _ENV = 1
@@ -495,7 +495,7 @@ global function foo ()
   local a = 10
   return a
 end
-]], 2)
+]], 2, "index")
 
 
 -- bug in 5.4.0
@@ -503,16 +503,36 @@ lineerror([[
   local a = 0
   local b = 1
   local c = b % a
-]], 3)
+]], 3, "perform")
 
 do
   -- Force a negative estimate for base line. Error in instruction 2
   -- (after VARARGPREP, GETGLOBAL), with first absolute line information
   -- (forced by too many lines) in instruction 0.
   local s = string.format("%s return __A.x", string.rep("\n", 300))
-  lineerror(s, 301)
+  lineerror(s, 301, "index")
 end
 
+
+local function stxlineerror (s, l, w)
+  local err,msg = load(s)
+  local line = tonumber(string.match(msg, ":(%d+):"))
+  assert((line == l or (not line and not l)) and string.find(msg, w, 1, true))
+end
+
+stxlineerror([[
+::L1::
+::L1::
+]], 2, "already defined")
+
+stxlineerror([[
+global none
+local x = b
+]], 2, "not declared")
+
+stxlineerror([[
+local <close> a, b
+]], 1, "multiple")
 
 if not _soft then
   -- several tests that exhaust the Lua stack

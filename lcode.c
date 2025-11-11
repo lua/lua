@@ -45,6 +45,7 @@ l_noret luaK_semerror (LexState *ls, const char *fmt, ...) {
   va_list argp;
   pushvfstring(ls->L, argp, fmt, msg);
   ls->t.token = 0;  /* remove "near <token>" from final message */
+  ls->linenumber = ls->lastline;  /* back to line of last used token */
   luaX_syntaxerror(ls, msg);
 }
 
