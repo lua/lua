@@ -1,6 +1,8 @@
 -- $Id: testes/heavy.lua,v $
 -- See Copyright Notice in file lua.h
 
+global <const> *
+
 local function teststring ()
   print("creating a string too long")
   do
@@ -47,9 +49,9 @@ local function loadrep (x, what)
 end
 
 
-function controlstruct ()
+local function controlstruct ()
   print("control structure too long")
-  local lim = ((1 << 24) - 2) // 3
+  local lim = ((1 << 24) - 2) // 4
   local s = string.rep("a = a + 1\n", lim)
   s = "while true do " .. s .. "end"
   assert(load(s))
@@ -63,7 +65,7 @@ function controlstruct ()
 end
 
 
-function manylines ()
+local function manylines ()
   print("loading chunk with too many lines")
   local st, msg = loadrep("\n", "lines")
   assert(not st and string.find(msg, "too many lines"))
@@ -71,7 +73,7 @@ function manylines ()
 end
 
 
-function hugeid ()
+local function hugeid ()
   print("loading chunk with huge identifier")
   local st, msg = loadrep("a", "chars")
   assert(not st and 
@@ -80,7 +82,7 @@ function hugeid ()
   print('+')
 end
 
-function toomanyinst ()
+local function toomanyinst ()
   print("loading chunk with too many instructions")
   local st, msg = loadrep("a = 10; ", "instructions")
   print('+')
@@ -107,7 +109,7 @@ local function loadrepfunc (prefix, f)
 end
 
 
-function toomanyconst ()
+local function toomanyconst ()
   print("loading function with too many constants")
   loadrepfunc("function foo () return {0,",
       function (n)
@@ -126,7 +128,7 @@ function toomanyconst ()
 end
 
 
-function toomanystr ()
+local function toomanystr ()
   local a = {}
   local st, msg = pcall(function ()
     for i = 1, math.huge do
@@ -144,7 +146,7 @@ function toomanystr ()
 end
 
 
-function toomanyidx ()
+local function toomanyidx ()
   local a = {}
   local st, msg = pcall(function ()
     for i = 1, math.huge do

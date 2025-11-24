@@ -2402,7 +2402,7 @@ g(3, 4, 5, 8)    a=3, b=4,   ... ->  5  8
 g(5, r())        a=5, b=1,   ... ->  2  3
 }
 
-The presence of a varag table in a variadic function is indicated
+The presence of a vararg table in a variadic function is indicated
 by a name after the three dots.
 When present,
 a vararg table behaves like a read-only local variable
@@ -2418,8 +2418,9 @@ local <const> name = table.pack(...)
 }
 
 As an optimization,
-if the vararg table is used only as a base in indexing expressions
-(the @T{t} in @T{t[exp]} or @T{t.id}) and it is not an upvalue,
+if the vararg table is used only as the base table
+in the syntactic constructions @T{t[exp]} or @T{t.id})
+and it is not an upvalue,
 the code does not create an actual table and instead translates
 the indexing expressions into accesses to the internal vararg data.
 
@@ -2427,8 +2428,7 @@ the indexing expressions into accesses to the internal vararg data.
 
 }
 
-@sect3{multires| @title{Lists of expressions, multiple results,
-and adjustment}
+@sect3{multires| @title{Lists of Expressions, Multiple Results, and Adjustment}
 
 Both function calls and vararg expressions can result in multiple values.
 These expressions are called @def{multires expressions}.
@@ -2686,7 +2686,7 @@ which behaves like a nil value.
 
 }
 
-@sect3{constchar|@title{Pointers to strings}
+@sect3{constchar|@title{Pointers to Strings}
 
 Several functions in the API return pointers (@T{const char*})
 to Lua strings in the stack.
@@ -4125,6 +4125,8 @@ Even when using an external buffer,
 Lua still has to allocate a header for the string.
 In case of a memory-allocation error,
 Lua will call @id{falloc} before raising the error.
+
+The function returns a pointer to the string (that is, @id{s}).
 
 }
 
@@ -8413,7 +8415,7 @@ a value greater than any other numeric value.
 
 }
 
-@LibEntry{math.ldexp(m, e)|
+@LibEntry{math.ldexp (m, e)|
 
 Returns @M{m2@sp{e}}, where @id{e} is an integer.
 

@@ -340,7 +340,7 @@ OP_VARARG,/*	A C	R[A], R[A+1], ..., R[A+C-2] = vararg		*/
 
 OP_GETVARG, /* A B C	R[A] := R[B][R[C]], R[B] is vararg parameter    */
 
-OP_ERRNNIL,/*	A Bx	raise error if R[A] ~= nil (K[Bx] is global name)*/
+OP_ERRNNIL,/*	A Bx	raise error if R[A] ~= nil (K[Bx - 1] is global name)*/
 
 OP_VARARGPREP,/* 	(adjust vararg parameters)			*/
 
@@ -385,6 +385,9 @@ OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
   (*) In OP_NEWTABLE, vB is log2 of the hash size (which is always a
   power of 2) plus 1, or zero for size zero. If not k, the array size
   is vC. Otherwise, the array size is EXTRAARG _ vC.
+
+  (*) In OP_ERRNNIL, (Bx == 0) means index of global name doesn't
+  fit in Bx. (So, that name is not available for the instruction.)
 
   (*) For comparisons, k specifies what condition the test should accept
   (true or false).
