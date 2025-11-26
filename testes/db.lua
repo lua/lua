@@ -356,8 +356,8 @@ function f(a,b)
   global assert, g, string
   local _, y = debug.getlocal(1, 2)
   assert(x == a and y == b)
-  assert(debug.setlocal(2, 3, "pera") == "AA".."AA")
-  assert(debug.setlocal(2, 4, "manga") == "B")
+  assert(debug.setlocal(2, 4, "pera") == "AA".."AA")
+  assert(debug.setlocal(2, 5, "manga") == "B")
   x = debug.getinfo(2)
   assert(x.func == g and x.what == "Lua" and x.name == 'g' and
          x.nups == 2 and string.find(x.source, "^@.*db%.lua$"))
@@ -392,7 +392,7 @@ function g (...)
      global *
      local B = 13
      global<const> assert
-     local x,y = debug.getlocal(1,5)
+     local x,y = debug.getlocal(1,6)
      assert(x == 'B' and y == 13)
   end
 end
@@ -458,7 +458,8 @@ local function collectlocals (level)
   local tab = {}
   for i = 1, math.huge do
     local n, v = debug.getlocal(level + 1, i)
-    if not (n and string.find(n, "^[a-zA-Z0-9_]+$")) then
+    if not (n and string.find(n, "^[a-zA-Z0-9_]+$") or
+            n == "(vararg table)") then
        break   -- consider only real variables
     end
     tab[n] = v

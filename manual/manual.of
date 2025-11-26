@@ -2221,7 +2221,7 @@ The form
 }
 can be used to emulate methods.
 A call @T{v:name(@rep{args})}
-is syntactic sugar for @T{v.name(v,@rep{args})},
+is syntactic sugar for @T{v.name(v, @rep{args})},
 except that @id{v} is evaluated only once.
 
 Arguments have the following syntax:
@@ -2372,12 +2372,10 @@ which is indicated by three dots (@Char{...})
 at the end of its parameter list.
 A variadic function does not adjust its argument list;
 instead, it collects all extra arguments and supplies them
-to the function through a @def{vararg expression} and,
-if present, a @def{vararg table}.
-
-A vararg expression is also written as three dots,
-and its value is a list of all actual extra arguments,
-similar to a function with multiple results @see{multires}.
+to the function through a @def{vararg table}.
+In that table,
+the values at indices 1, 2, etc. are the extra arguments,
+and the value at index @St{n} is the number of extra arguments.
 
 As an example, consider the following definitions:
 @verbatim{
@@ -2386,7 +2384,7 @@ function g(a, b, ...) end
 function r() return 1,2,3 end
 }
 Then, we have the following mapping from arguments to parameters and
-to the vararg expression:
+to the vararg table:
 @verbatim{
 CALL             PARAMETERS
 
@@ -2396,33 +2394,39 @@ f(3, 4, 5)       a=3, b=4
 f(r(), 10)       a=1, b=10
 f(r())           a=1, b=2
 
-g(3)             a=3, b=nil, ... ->  (nothing)
-g(3, 4)          a=3, b=4,   ... ->  (nothing)
-g(3, 4, 5, 8)    a=3, b=4,   ... ->  5  8
-g(5, r())        a=5, b=1,   ... ->  2  3
+g(3)             a=3, b=nil, va. table ->  {n = 0}
+g(3, 4)          a=3, b=4,   va. table ->  {n = 0}
+g(3, 4, 5, 8)    a=3, b=4,   va. table ->  {5, 8, n = 2}
+g(5, r())        a=5, b=1,   va. table ->  {2, 3, n = 2}
 }
 
-The presence of a vararg table in a variadic function is indicated
-by a name after the three dots.
+A vararg table in a variadic function can have an optional name,
+given after the three dots.
 When present,
-a vararg table behaves like a read-only local variable
-with the given name that is initialized with a table.
-In that table,
-the values at indices 1, 2, etc. are the extra arguments,
-and the value at index @St{n} is the number of extra arguments.
-In other words, the code behaves as if the function started with
-the following statement,
-assuming the standard behavior of @Lid{table.pack}:
-@verbatim{
-local <const> name = table.pack(...)
-}
+that name denotes a read-only local variable that
+refers to the vararg table.
+If the vararg table does not have a name,
+it can only be accessed through a vararg expression.
+
+A vararg expression is also written as three dots,
+and its value is a list of the values in the vararg table,
+from 1 to the integer value at index @St{n}.
+(Therefore, if the code does not modify the vararg table,
+this list corresponds to the extra arguments in the function call.)
+This list behaves like the results from a
+function with multiple results @see{multires}.
 
 As an optimization,
-if the vararg table is used only as the base table
-in the syntactic constructions @T{t[exp]} or @T{t.id})
-and it is not an upvalue,
+if the vararg table satisfies some conditions,
 the code does not create an actual table and instead translates
-the indexing expressions into accesses to the internal vararg data.
+the indexing expressions and the vararg expressions
+into accesses to the internal vararg data.
+The conditions are as follows:
+If the vararg table has a name,
+that name is not an upvalue in a nested function
+and it is used only as the base table
+in the syntactic constructions @T{t[exp]} or @T{t.id}).
+Note that an anonymous vararg table always satisfy these conditions.
 
 }
 
@@ -3103,7 +3107,7 @@ void *luaL_alloc (void *ud, void *ptr, size_t osize,
 }
 Note that @N{ISO C} ensures
 that @T{free(NULL)} has no effect and that
-@T{realloc(NULL,size)} is equivalent to @T{malloc(size)}.
+@T{realloc(NULL, size)} is equivalent to @T{malloc(size)}.
 
 }
 
@@ -9197,6 +9201,10 @@ Compile-time constants may not appear in this listing,
 if they were optimized away by the compiler.
 Negative indices refer to vararg arguments;
 @num{-1} is the first vararg argument.
+These negative indices are only available when the vararg table
+has been optimized away;
+otherwise, the vararg arguments are available in the vararg table.
+
 The function returns @fail
 if there is no variable with the given index,
 and raises an error when called with a level out of range.

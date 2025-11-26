@@ -1951,6 +1951,11 @@ void luaK_finish (FuncState *fs) {
           SET_OPCODE(*pc, OP_GETTABLE);  /* must get vararg there */
         break;
       }
+      case OP_VARARG: {
+        if (p->flag & PF_VATAB)  /* function has a vararg table? */
+          SETARG_k(*pc, 1);  /* must get vararg there */
+        break;
+      }
       case OP_JMP: {  /* to optimize jumps to jumps */
         int target = finaltarget(p->code, i);
         fixjump(fs, i, target);  /* jump directly to final target */

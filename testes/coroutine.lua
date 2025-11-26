@@ -702,7 +702,9 @@ else
     assert(t.currentline == t.linedefined + 2)
     assert(not debug.getinfo(c, 1))      -- no other level
     assert(coroutine.resume(c))          -- run next line
-    local n,v = debug.getlocal(c, 0, 2)    -- check next local
+    local n,v = debug.getlocal(c, 0, 2)    -- check vararg table
+    assert(n == "(vararg table)" and v == nil)
+    local n,v = debug.getlocal(c, 0, 3)    -- check next local
     assert(n == "b" and v == 10)
     v = {coroutine.resume(c)}         -- finish coroutine
     assert(v[1] == true and v[2] == 2 and v[3] == 3 and v[4] == undef)

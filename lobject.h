@@ -584,9 +584,8 @@ typedef struct AbsLineInfo {
 ** Flags in Prototypes
 */
 #define PF_ISVARARG	1  /* function is vararg */
-#define PF_VAVAR	2  /* function has vararg parameter */
-#define PF_VATAB	4  /* function has vararg table */
-#define PF_FIXED	8  /* prototype has parts in fixed memory */
+#define PF_VATAB	2  /* function has vararg table */
+#define PF_FIXED	4  /* prototype has parts in fixed memory */
 
 
 /*

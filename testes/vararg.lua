@@ -101,6 +101,38 @@ a,b,c,d,e = f(4)
 assert(a==nil and b==nil and c==nil and d==nil and e==nil)
 
 
+do  -- vararg expressions using unpack
+  local function aux (a, v, ...t)
+    for k, val in pairs(v) do t[k] = val end
+    return ...
+  end
+
+  local t = table.pack(aux(10, {11, [5] = 24}, 1, 2, 3, nil, 4))
+  assert(t.n == 5 and t[1] == 11 and t[2] == 2 and t[3] == 3
+                  and t[4] == nil and t[5] == 24)
+
+  local t = table.pack(aux(nil, {1, [20] = "a", [30] = "b", n = 30}))
+  assert(t.n == 30 and t[1] == 1 and t[20] == "a" and t[30] == "b")
+  -- table has only those four elements
+  assert(next(t, next(t, next(t, next(t, next(t, nil))))) == nil)
+
+  local a, b, c, d = aux(nil, {}, 10, 20, 30)
+  assert(a == 10 and b == 20 and c == 30 and d == nil)
+
+  local function aux (a, b, n, ...t) t.n = n; return b, ... end
+  local t = table.pack(aux(10, 1, 10000))
+  assert(t.n == 10001 and t[1] == 1 and #t == 1)
+
+  local function checkerr (emsg, f, ...)
+    local st, msg = pcall(f, ...)
+    assert(not st and string.find(msg, emsg))
+  end
+  checkerr("no proper 'n'", aux, 1, 1, -1)
+  checkerr("no proper 'n'", aux, 1, 1, math.maxinteger)
+  checkerr("no proper 'n'", aux, 1, 1, math.mininteger)
+  checkerr("no proper 'n'", aux, 1, 1, 1.0)
+end
+
 -- varargs for main chunks
 local f = assert(load[[ return {...} ]])
 local x = f(2,3)
@@ -205,6 +237,7 @@ do   -- access to vararg parameter
       assert(t[k] == v[k])
     end
     assert(t.n == v.n)
+    return ...
   end
 
   local t = table.pack(10, 20, 30)

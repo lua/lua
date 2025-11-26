@@ -336,7 +336,7 @@ OP_SETLIST,/*	A vB vC k	R[A][vC+i] := R[A+i], 1 <= i <= vB	*/
 
 OP_CLOSURE,/*	A Bx	R[A] := closure(KPROTO[Bx])			*/
 
-OP_VARARG,/*	A C	R[A], R[A+1], ..., R[A+C-2] = vararg		*/
+OP_VARARG,/*	A C	R[A], ..., R[A+C-2] = vararg, R[B] is vararg param. */
 
 OP_GETVARG, /* A B C	R[A] := R[B][R[C]], R[B] is vararg parameter    */
 
