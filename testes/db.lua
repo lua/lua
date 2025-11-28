@@ -726,6 +726,9 @@ assert(t.isvararg == false and t.nparams == 3 and t.nups == 0)
 t = debug.getinfo(function (a,b,...) return t[a] end, "u")
 assert(t.isvararg == true and t.nparams == 2 and t.nups == 1)
 
+t = debug.getinfo(function (a,b,...t) t.n = 2; return t[a] end, "u")
+assert(t.isvararg == true and t.nparams == 2 and t.nups == 0)
+
 t = debug.getinfo(1)   -- main
 assert(t.isvararg == true and t.nparams == 0 and t.nups == 1 and
        debug.getupvalue(t.func, 1) == "_ENV")

@@ -583,10 +583,18 @@ typedef struct AbsLineInfo {
 /*
 ** Flags in Prototypes
 */
-#define PF_ISVARARG	1  /* function is vararg */
+#define PF_VAHID	1  /* function has hidden vararg arguments */
 #define PF_VATAB	2  /* function has vararg table */
 #define PF_FIXED	4  /* prototype has parts in fixed memory */
 
+/* a vararg function either has hidden args. or a vararg table */
+#define isvararg(p)	((p)->flag & (PF_VAHID | PF_VATAB))
+
+/*
+** mark that a function needs a vararg table. (The flag PF_VAHID will
+** be cleared later.)
+*/
+#define needvatab(p)	((p)->flag |= PF_VATAB)
 
 /*
 ** Function Prototypes

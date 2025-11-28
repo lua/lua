@@ -806,7 +806,7 @@ void luaK_setoneret (FuncState *fs, expdesc *e) {
 ** Change a vararg parameter into a regular local variable
 */
 void luaK_vapar2local (FuncState *fs, expdesc *var) {
-  fs->f->flag |= PF_VATAB;  /* function will need a vararg table */
+  needvatab(fs->f);  /* function will need a vararg table */
   /* now a vararg parameter is equivalent to a regular local variable */
   var->k = VLOCAL;
 }
@@ -1127,7 +1127,7 @@ void luaK_storevar (FuncState *fs, expdesc *var, expdesc *ex) {
       break;
     }
     case VVARGIND: {
-      fs->f->flag |= PF_VATAB;  /* function will need a vararg table */
+      needvatab(fs->f);  /* function will need a vararg table */
       /* now, assignment is to a regular table */
     }  /* FALLTHROUGH */
     case VINDEXED: {
@@ -1927,6 +1927,8 @@ static int finaltarget (Instruction *code, int i) {
 void luaK_finish (FuncState *fs) {
   int i;
   Proto *p = fs->f;
+  if (p->flag & PF_VATAB)  /* will it use a vararg table? */
+    p->flag &= cast_byte(~PF_VAHID);  /* then it will not use hidden args. */
   for (i = 0; i < fs->pc; i++) {
     Instruction *pc = &p->code[i];
     /* avoid "not used" warnings when assert is off (for 'onelua.c') */
@@ -1934,7 +1936,7 @@ void luaK_finish (FuncState *fs) {
     lua_assert(i == 0 || luaP_isOT(*(pc - 1)) == luaP_isIT(*pc));
     switch (GET_OPCODE(*pc)) {
       case OP_RETURN0: case OP_RETURN1: {
-        if (!(fs->needclose || (p->flag & PF_ISVARARG)))
+        if (!(fs->needclose || (p->flag & PF_VAHID)))
           break;  /* no extra work */
         /* else use OP_RETURN to do the extra work */
         SET_OPCODE(*pc, OP_RETURN);
@@ -1942,8 +1944,8 @@ void luaK_finish (FuncState *fs) {
       case OP_RETURN: case OP_TAILCALL: {
         if (fs->needclose)
           SETARG_k(*pc, 1);  /* signal that it needs to close */
-        if (p->flag & PF_ISVARARG)
-          SETARG_C(*pc, p->numparams + 1);  /* signal that it is vararg */
+        if (p->flag & PF_VAHID)  /* does it use hidden arguments? */
+          SETARG_C(*pc, p->numparams + 1);  /* signal that */
         break;
       }
       case OP_GETVARG: {

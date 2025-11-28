@@ -487,7 +487,7 @@ static void rethook (lua_State *L, CallInfo *ci, int nres) {
     int ftransfer;
     if (isLua(ci)) {
       Proto *p = ci_func(ci)->p;
-      if (p->flag & PF_ISVARARG)
+      if (p->flag & PF_VAHID)
         delta = ci->u.l.nextraargs + p->numparams + 1;
     }
     ci->func.p += delta;  /* if vararg, back to virtual 'func' */

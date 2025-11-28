@@ -2425,7 +2425,7 @@ The conditions are as follows:
 If the vararg table has a name,
 that name is not an upvalue in a nested function
 and it is used only as the base table
-in the syntactic constructions @T{t[exp]} or @T{t.id}).
+in the syntactic constructions @T{t[exp]} or @T{t.id}.
 Note that an anonymous vararg table always satisfy these conditions.
 
 }

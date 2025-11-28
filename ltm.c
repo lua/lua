@@ -250,31 +250,42 @@ static void createvarargtab (lua_State *L, StkId f, int n) {
 ** initial stack:  func arg1 ... argn extra1 ...
 **                 ^ ci->func                    ^ L->top
 ** final stack: func nil ... nil extra1 ... func arg1 ... argn
-**                                          ^ ci->func         ^ L->top
+**                                          ^ ci->func
 */
-void luaT_adjustvarargs (lua_State *L, CallInfo *ci, const Proto *p) {
+static void buildhiddenargs (lua_State *L, CallInfo *ci, const Proto *p,
+                             int totalargs, int nfixparams, int nextra) {
   int i;
-  int totalargs = cast_int(L->top.p - ci->func.p) - 1;
-  int nfixparams = p->numparams;
-  int nextra = totalargs - nfixparams;  /* number of extra arguments */
   ci->u.l.nextraargs = nextra;
   luaD_checkstack(L, p->maxstacksize + 1);
-  /* copy function to the top of the stack */
+  /* copy function to the top of the stack, after extra arguments */
   setobjs2s(L, L->top.p++, ci->func.p);
-  /* move fixed parameters to the top of the stack */
+  /* move fixed parameters to after the copied function */
   for (i = 1; i <= nfixparams; i++) {
     setobjs2s(L, L->top.p++, ci->func.p + i);
     setnilvalue(s2v(ci->func.p + i));  /* erase original parameter (for GC) */
   }
-  if (p->flag & PF_VATAB)  /* does it need a vararg table? */
-    createvarargtab(L, ci->func.p + nfixparams + 1, nextra);
-  else {  /* no table; set parameter to nil */
-    setnilvalue(s2v(L->top.p));
-    L->top.p++;
-  }
-  ci->func.p += totalargs + 1;
+  ci->func.p += totalargs + 1;  /* 'func' now lives after hidden arguments */
   ci->top.p += totalargs + 1;
-  lua_assert(L->top.p <= ci->top.p && ci->top.p <= L->stack_last.p);
+}
+
+
+void luaT_adjustvarargs (lua_State *L, CallInfo *ci, const Proto *p) {
+  int totalargs = cast_int(L->top.p - ci->func.p) - 1;
+  int nfixparams = p->numparams;
+  int nextra = totalargs - nfixparams;  /* number of extra arguments */
+  if (p->flag & PF_VATAB) {  /* does it need a vararg table? */
+    lua_assert(!(p->flag & PF_VAHID));
+    createvarargtab(L, ci->func.p + nfixparams + 1, nextra);
+    /* move table to proper place (last parameter) */
+    setobjs2s(L, ci->func.p + nfixparams + 1, L->top.p - 1);
+  }
+  else {  /* no table */
+    lua_assert(p->flag & PF_VAHID);
+    buildhiddenargs(L, ci, p, totalargs, nfixparams, nextra);
+    /* set vararg parameter to nil */
+    setnilvalue(s2v(ci->func.p + nfixparams + 1));
+    lua_assert(L->top.p <= ci->top.p && ci->top.p <= L->stack_last.p);
+  }
 }
 
 

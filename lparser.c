@@ -304,7 +304,7 @@ static void check_readonly (LexState *ls, expdesc *e) {
       break;
     }
     case VVARGIND: {
-      fs->f->flag |= PF_VATAB;  /* function will need a vararg table */
+      needvatab(fs->f);  /* function will need a vararg table */
       e->k = VINDEXED;
     }  /* FALLTHROUGH */
     case VINDEXUP: case VINDEXSTR: case VINDEXED: {  /* global variable */
@@ -1057,7 +1057,7 @@ static void constructor (LexState *ls, expdesc *t) {
 
 
 static void setvararg (FuncState *fs) {
-  fs->f->flag |= PF_ISVARARG;
+  fs->f->flag |= PF_VAHID;  /* by default, use hidden vararg arguments */
   luaK_codeABC(fs, OP_VARARGPREP, 0, 0, 0);
 }
 
@@ -1283,7 +1283,7 @@ static void simpleexp (LexState *ls, expdesc *v) {
     }
     case TK_DOTS: {  /* vararg */
       FuncState *fs = ls->fs;
-      check_condition(ls, fs->f->flag & PF_ISVARARG,
+      check_condition(ls, isvararg(fs->f),
                       "cannot use '...' outside a vararg function");
       init_exp(v, VVARARG, luaK_codeABC(fs, OP_VARARG, 0, fs->f->numparams, 1));
       break;
