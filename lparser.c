@@ -505,8 +505,8 @@ static void buildglobal (LexState *ls, TString *varname, expdesc *var) {
   init_exp(var, VGLOBAL, -1);  /* global by default */
   singlevaraux(fs, ls->envn, var, 1);  /* get environment variable */
   if (var->k == VGLOBAL)
-    luaK_semerror(ls, "_ENV is global when accessing variable '%s'",
-                      getstr(varname));
+    luaK_semerror(ls, "%s is global when accessing variable '%s'",
+                      LUA_ENV, getstr(varname));
   luaK_exp2anyregup(fs, var);  /* _ENV could be a constant */
   codestring(&key, varname);  /* key is variable name */
   luaK_indexed(fs, var, &key);  /* 'var' represents _ENV[varname] */

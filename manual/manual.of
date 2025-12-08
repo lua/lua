@@ -107,7 +107,7 @@ for small machines and embedded systems.
 
 Unless stated otherwise,
 any overflow when manipulating integer values @def{wrap around},
-according to the usual rules of two-complement arithmetic.
+according to the usual rules of two's complement arithmetic.
 (In other words,
 the actual result is the unique representable integer
 that is equal modulo @M{2@sp{n}} to the mathematical result,
@@ -2458,7 +2458,7 @@ for instance @T{{e1, e2, e3}} @see{tableconstructor}.}
 for instance @T{foo(e1, e2, e3)} @see{functioncall}.}
 
 @item{A multiple assignment,
-for instance @T{a , b, c = e1, e2, e3} @see{assignment}.}
+for instance @T{a, b, c = e1, e2, e3} @see{assignment}.}
 
 @item{A local or global declaration,
 which is similar to a multiple assignment.}
@@ -3640,9 +3640,9 @@ because a pseudo-index is not an actual stack position.
 The type of integers in Lua.
 
 By default this type is @id{long long},
-(usually a 64-bit two-complement integer),
+(usually a 64-bit two's complement integer),
 but that can be changed to @id{long} or @id{int}
-(usually a 32-bit two-complement integer).
+(usually a 32-bit two's complement integer).
 (See @id{LUA_INT_TYPE} in @id{luaconf.h}.)
 
 Lua also defines the constants
@@ -5439,7 +5439,7 @@ the auxiliary library provides higher-level functions for some
 common tasks.
 
 All functions and types from the auxiliary library
-are defined in header file @id{lauxlib.h} and
+are defined in the header file @id{lauxlib.h} and
 have a prefix @id{luaL_}.
 
 All functions in the auxiliary library are built on
@@ -6492,7 +6492,7 @@ the host program can call the function @Lid{luaL_openlibs}.
 Alternatively,
 the host can select which libraries to open,
 by using @Lid{luaL_openselectedlibs}.
-Both functions are defined in the header file @id{lualib.h}.
+Both functions are declared in the header file @id{lualib.h}.
 @index{lualib.h}
 
 The stand-alone interpreter @id{lua} @see{lua-sa}
