@@ -1370,9 +1370,11 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
     fillidxk(t, k->u.info, VINDEXUP);  /* literal short string */
   }
   else if (t->k == VVARGVAR) {  /* indexing the vararg parameter? */
-    lua_assert(t->u.ind.t == fs->f->numparams);
-    t->u.ind.t = cast_byte(t->u.var.ridx);
-    fillidxk(t, luaK_exp2anyreg(fs, k), VVARGIND);  /* register */
+    int kreg = luaK_exp2anyreg(fs, k);  /* put key in some register */
+    lu_byte vreg = cast_byte(t->u.var.ridx);  /* register with vararg param. */
+    lua_assert(vreg == fs->f->numparams);
+    t->u.ind.t = vreg;  /* (avoid a direct assignment; values may overlap) */
+    fillidxk(t, kreg, VVARGIND);  /* 't' represents 'vararg[k]' */
   }
   else {
     /* register index of the table */
