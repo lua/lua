@@ -2091,12 +2091,12 @@ Note that keys that are not positive integers
 do not interfere with borders.
 
 A table with exactly one border is called a @def{sequence}.
-For instance, the table @T{{10, 20, 30, 40, 50}} is a sequence,
+For instance, the table @T{{10,20,30,40,50}} is a sequence,
 as it has only one border (5).
-The table @T{{10, 20, 30, nil, 50}} has two borders (3 and 5),
+The table @T{{10,20,30,nil,50}} has two borders (3 and 5),
 and therefore it is not a sequence.
 (The @nil at index 4 is called a @emphx{hole}.)
-The table @T{{nil, 20, 30, nil, nil, 60, nil}}
+The table @T{{nil,20,30,nil,nil,60,nil}}
 has three borders (0, 3, and 6),
 so it is not a sequence, too.
 The table @T{{}} is a sequence with border 0.
@@ -2449,22 +2449,22 @@ These are the places where Lua expects a list of expressions:
 @description{
 
 @item{A @rw{return} statement,
-for instance @T{return e1, e2, e3} @see{control}.}
+for instance @T{return e1,e2,e3} @see{control}.}
 
 @item{A table constructor,
-for instance @T{{e1, e2, e3}} @see{tableconstructor}.}
+for instance @T{{e1,e2,e3}} @see{tableconstructor}.}
 
 @item{The arguments of a function call,
-for instance @T{foo(e1, e2, e3)} @see{functioncall}.}
+for instance @T{foo(e1,e2,e3)} @see{functioncall}.}
 
 @item{A multiple assignment,
-for instance @T{a, b, c = e1, e2, e3} @see{assignment}.}
+for instance @T{a,b,c = e1,e2,e3} @see{assignment}.}
 
 @item{A local or global declaration,
 which is similar to a multiple assignment.}
 
 @item{The initial values in a generic @rw{for} loop,
-for instance @T{for k in e1, e2, e3 do ... end} @see{for}.}
+for instance @T{for k in e1,e2,e3 do ... end} @see{for}.}
 
 }
 In the last four cases,
@@ -2501,7 +2501,7 @@ we recommend assigning the vararg expression
 to a single variable and using that variable
 in its place.
 
-Here are some examples of uses of mutlres expressions.
+Here are some examples of uses of multires expressions.
 In all cases, when the construction needs
 @Q{the n-th result} and there is no such result,
 it uses a @nil.
@@ -3107,7 +3107,7 @@ void *luaL_alloc (void *ud, void *ptr, size_t osize,
 }
 Note that @N{ISO C} ensures
 that @T{free(NULL)} has no effect and that
-@T{realloc(NULL, size)} is equivalent to @T{malloc(size)}.
+@T{realloc(NULL,size)} is equivalent to @T{malloc(size)}.
 
 }
 
@@ -3879,7 +3879,7 @@ is a seed for the hashing of strings.
 @apii{0,1,m}
 
 Creates a new empty table and pushes it onto the stack.
-It is equivalent to @T{lua_createtable(L, 0, 0)}.
+It is equivalent to @T{lua_createtable(L,0,0)}.
 
 }
 
@@ -5583,7 +5583,7 @@ Its pattern of use is as follows:
 
 @item{First declare a variable @id{b} of type @Lid{luaL_Buffer}.}
 
-@item{Then initialize it with a call @T{luaL_buffinit(L, &b)}.}
+@item{Then initialize it with a call @T{luaL_buffinit(L,&b)}.}
 
 @item{
 Then add string pieces to the buffer calling any of
@@ -5604,12 +5604,12 @@ you can use the buffer like this:
 @item{First declare a variable @id{b} of type @Lid{luaL_Buffer}.}
 
 @item{Then initialize it and preallocate a space of
-size @id{sz} with a call @T{luaL_buffinitsize(L, &b, sz)}.}
+size @id{sz} with a call @T{luaL_buffinitsize(L,&b,sz)}.}
 
 @item{Then produce the string into that space.}
 
 @item{
-Finish by calling @T{luaL_pushresultsize(&b, sz)},
+Finish by calling @T{luaL_pushresultsize(&b,sz)},
 where @id{sz} is the total size of the resulting string
 copied into that space (which may be less than or
 equal to the preallocated size).
@@ -6214,7 +6214,7 @@ You should not manually set integer keys in the table
 after the first use of @Lid{luaL_ref}.
 
 You can retrieve an object referred by the reference @id{r}
-by calling @T{lua_rawgeti(L, t, r)} or @T{lua_geti(L, t, r)}.
+by calling @T{lua_rawgeti(L,t,r)} or @T{lua_geti(L,t,r)}.
 The function @Lid{luaL_unref} frees a reference.
 
 If the object on the top of the stack is @nil,
@@ -7744,7 +7744,7 @@ If @id{j} is absent, then it is assumed to be equal to @num{-1}
 In particular,
 the call @T{string.sub(s,1,j)} returns a prefix of @id{s}
 with length @id{j},
-and @T{string.sub(s, -i)} (for a positive @id{i})
+and @T{string.sub(s,-i)} (for a positive @id{i})
 returns a suffix of @id{s}
 with length @id{i}.
 
@@ -8180,7 +8180,7 @@ the function returns @fail.
 A negative @id{n} gets characters before position @id{i}.
 The default for @id{i} is 1 when @id{n} is non-negative
 and @T{#s + 1} otherwise,
-so that @T{utf8.offset(s, -n)} gets the offset of the
+so that @T{utf8.offset(s,-n)} gets the offset of the
 @id{n}-th character from the end of the string.
 
 As a special case,
@@ -8233,7 +8233,7 @@ the table will have; its default is zero.
 
 Inserts element @id{value} at position @id{pos} in @id{list},
 shifting up the elements
-@T{list[pos], list[pos+1], @Cdots, list[#list]}.
+@T{list[pos],list[pos+1],@Cdots,list[#list]}.
 The default value for @id{pos} is @T{#list+1},
 so that a call @T{table.insert(t,x)} inserts @id{x} at the end
 of the list @id{t}.
@@ -8271,7 +8271,7 @@ Removes from @id{list} the element at position @id{pos},
 returning the value of the removed element.
 When @id{pos} is an integer between 1 and @T{#list},
 it shifts down the elements
-@T{list[pos+1], list[pos+2], @Cdots, list[#list]}
+@T{list[pos+1],list[pos+2],@Cdots,list[#list]}
 and erases element @T{list[#list]};
 The index @id{pos} can also be 0 when @T{#list} is 0,
 or @T{#list + 1}.
