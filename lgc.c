@@ -1293,7 +1293,7 @@ static void finishgencycle (lua_State *L, global_State *g) {
   correctgraylists(g);
   checkSizes(L, g);
   g->gcstate = GCSpropagate;  /* skip restart */
-  if (!g->gcemergency)
+  if (!g->gcemergency && luaD_checkminstack(L))
     callallpendingfinalizers(L);
 }
 
@@ -1667,12 +1667,13 @@ static l_mem singlestep (lua_State *L, int fast) {
       break;
     }
     case GCScallfin: {  /* call finalizers */
-      if (g->tobefnz && !g->gcemergency) {
+      if (g->tobefnz && !g->gcemergency && luaD_checkminstack(L)) {
         g->gcstopem = 0;  /* ok collections during finalizers */
         GCTM(L);  /* call one finalizer */
         stepresult = CWUFIN;
       }
-      else {  /* emergency mode or no more finalizers */
+      else {  /* no more finalizers or emergency mode or no enough stack
+                 to run finalizers */
         g->gcstate = GCSpause;  /* finish collection */
         stepresult = step2pause;
       }

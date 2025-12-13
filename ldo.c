@@ -221,6 +221,17 @@ l_noret luaD_errerr (lua_State *L) {
 
 
 /*
+** Check whether stack has enough space to run a simple function (such
+** as a finalizer): At least BASIC_STACK_SIZE in the Lua stack and
+** 2 slots in the C stack.
+*/
+int luaD_checkminstack (lua_State *L) {
+  return ((stacksize(L) < MAXSTACK - BASIC_STACK_SIZE) &&
+          (getCcalls(L) < LUAI_MAXCCALLS - 2));
+}
+
+
+/*
 ** In ISO C, any pointer use after the pointer has been deallocated is
 ** undefined behavior. So, before a stack reallocation, all pointers
 ** should be changed to offsets, and after the reallocation they should
