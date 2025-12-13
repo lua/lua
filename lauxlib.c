@@ -1185,7 +1185,7 @@ LUALIB_API lua_State *(luaL_newstate) (void) {
   lua_State *L = lua_newstate(luaL_alloc, NULL, luaL_makeseed(NULL));
   if (l_likely(L)) {
     lua_atpanic(L, &panic);
-    lua_setwarnf(L, warnfoff, L);  /* default is warnings off */
+    lua_setwarnf(L, warnfon, L);
   }
   return L;
 }

@@ -349,6 +349,7 @@ static int collectargs (char **argv, int *first) {
 */
 static int runargs (lua_State *L, char **argv, int n) {
   int i;
+  lua_warning(L, "@off", 0);  /* by default, Lua stand-alone has warnings off */
   for (i = 1; i < n; i++) {
     int option = argv[i][1];
     lua_assert(argv[i][0] == '-');  /* already checked */
@@ -725,7 +726,7 @@ static int pmain (lua_State *L) {
     if (handle_luainit(L) != LUA_OK)  /* run LUA_INIT */
       return 0;  /* error running LUA_INIT */
   }
-  if (!runargs(L, argv, optlim))  /* execute arguments -e and -l */
+  if (!runargs(L, argv, optlim))  /* execute arguments -e, -l, and -W */
     return 0;  /* something failed */
   if (script > 0) {  /* execute main script (if there is one) */
     if (handle_script(L, argv + script) != LUA_OK)
