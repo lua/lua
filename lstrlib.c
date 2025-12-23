@@ -968,7 +968,7 @@ static int str_gsub (lua_State *L) {
     reprepstate(&ms);  /* (re)prepare state for new match */
     if ((e = match(&ms, src, p)) != NULL && e != lastmatch) {  /* match? */
       n++;
-      changed = add_value(&ms, &b, src, e, tr) | changed;
+      changed = add_value(&ms, &b, src, e, tr) || changed;
       src = lastmatch = e;
     }
     else if (src < ms.src_end)  /* otherwise, skip one character */
