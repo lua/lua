@@ -651,10 +651,9 @@ static void reinserthash (lua_State *L, Table *ot, Table *t) {
 
 
 /*
-** Exchange the hash part of 't1' and 't2'. (In 'flags', only the
-** dummy bit must be exchanged: The 'isrealasize' is not related
-** to the hash part, and the metamethod bits do not change during
-** a resize, so the "real" table can keep their values.)
+** Exchange the hash part of 't1' and 't2'. (In 'flags', only the dummy
+** bit must be exchanged:  The metamethod bits do not change during a
+** resize, so the "real" table can keep their values.)
 */
 static void exchangehashpart (Table *t1, Table *t2) {
   lu_byte lsizenode = t1->lsizenode;
