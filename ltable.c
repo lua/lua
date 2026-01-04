@@ -1155,14 +1155,15 @@ void luaH_finishset (lua_State *L, Table *t, const TValue *key,
   lua_assert(hres != HOK);
   if (hres == HNOTFOUND) {
     TValue aux;
+    const TValue *actk = key;  /* actual key to insert */
     if (l_unlikely(ttisnil(key)))
       luaG_runerror(L, "table index is nil");
     else if (ttisfloat(key)) {
       lua_Number f = fltvalue(key);
       lua_Integer k;
-      if (luaV_flttointeger(f, &k, F2Ieq)) {
-        setivalue(&aux, k);  /* key is equal to an integer */
-        key = &aux;  /* insert it as an integer */
+      if (luaV_flttointeger(f, &k, F2Ieq)) {  /* is key equal to an integer? */
+        setivalue(&aux, k);
+        actk = &aux;  /* use the integer as the key */
       }
       else if (l_unlikely(luai_numisnan(f)))
         luaG_runerror(L, "table index is NaN");
@@ -1175,7 +1176,7 @@ void luaH_finishset (lua_State *L, Table *t, const TValue *key,
       L->top.p--;
       return;
     }
-    luaH_newkey(L, t, key, value);
+    luaH_newkey(L, t, actk, value);
   }
   else if (hres > 0) {  /* regular Node? */
     setobj2t(L, gval(gnode(t, hres - HFIRSTNODE)), value);
