@@ -1726,7 +1726,7 @@ static int str_packsize (lua_State *L) {
     luaL_argcheck(L, opt != Kstring && opt != Kzstr, 1,
                      "variable-length format");
     size += ntoalign;  /* total space used by option */
-    luaL_argcheck(L, totalsize <= LUA_MAXINTEGER - size,
+    luaL_argcheck(L, totalsize <= MAX_SIZE - size,
                      1, "format result too large");
     totalsize += size;
   }
