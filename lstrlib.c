@@ -141,8 +141,8 @@ static int str_rep (lua_State *L) {
   const char *s = luaL_checklstring(L, 1, &len);
   lua_Integer n = luaL_checkinteger(L, 2);
   const char *sep = luaL_optlstring(L, 3, "", &lsep);
-  if (n <= 0)
-    lua_pushliteral(L, "");
+  if (n <= 0 || (len | lsep) == 0)
+    lua_pushliteral(L, "");  /* no repetitions or both strings empty */
   else if (l_unlikely(len > MAX_SIZE - lsep ||
                cast_st2S(len + lsep) > cast_st2S(MAX_SIZE) / n))
     return luaL_error(L, "resulting string too large");
