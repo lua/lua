@@ -197,5 +197,8 @@
     <ClInclude Include="..\lzio.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\lua.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
