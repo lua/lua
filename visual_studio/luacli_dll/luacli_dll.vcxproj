@@ -37,9 +37,6 @@
   <ItemGroup>
     <ClCompile Include="..\..\lua.c" />
   </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\lua.h" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
