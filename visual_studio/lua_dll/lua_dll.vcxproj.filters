@@ -15,189 +15,189 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\lapi.c">
+    <ClCompile Include="..\..\lapi.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\lauxlib.c">
+    <ClCompile Include="..\..\lauxlib.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\lbaselib.c">
+    <ClCompile Include="..\..\lbaselib.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\lcode.c">
+    <ClCompile Include="..\..\lcode.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\lcorolib.c">
+    <ClCompile Include="..\..\lcorolib.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\lctype.c">
+    <ClCompile Include="..\..\lctype.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\ldblib.c">
+    <ClCompile Include="..\..\ldblib.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\ldebug.c">
+    <ClCompile Include="..\..\ldebug.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\ldo.c">
+    <ClCompile Include="..\..\ldo.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\ldump.c">
+    <ClCompile Include="..\..\ldump.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\lfunc.c">
+    <ClCompile Include="..\..\lfunc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\lgc.c">
+    <ClCompile Include="..\..\lgc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\linit.c">
+    <ClCompile Include="..\..\linit.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\liolib.c">
+    <ClCompile Include="..\..\liolib.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\llex.c">
+    <ClCompile Include="..\..\llex.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\lmathlib.c">
+    <ClCompile Include="..\..\lmathlib.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\lmem.c">
+    <ClCompile Include="..\..\lmem.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\loadlib.c">
+    <ClCompile Include="..\..\loadlib.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\lobject.c">
+    <ClCompile Include="..\..\lobject.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\lopcodes.c">
+    <ClCompile Include="..\..\lopcodes.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\loslib.c">
+    <ClCompile Include="..\..\loslib.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\lparser.c">
+    <ClCompile Include="..\..\lparser.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\lstate.c">
+    <ClCompile Include="..\..\lstate.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\lstring.c">
+    <ClCompile Include="..\..\lstring.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\lstrlib.c">
+    <ClCompile Include="..\..\lstrlib.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\ltable.c">
+    <ClCompile Include="..\..\ltable.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\ltablib.c">
+    <ClCompile Include="..\..\ltablib.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\ltests.c">
+    <ClCompile Include="..\..\ltests.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\ltm.c">
+    <ClCompile Include="..\..\ltm.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\lundump.c">
+    <ClCompile Include="..\..\lundump.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\lutf8lib.c">
+    <ClCompile Include="..\..\lutf8lib.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\lvm.c">
+    <ClCompile Include="..\..\lvm.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\lzio.c">
+    <ClCompile Include="..\..\lzio.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\lapi.h">
+    <ClInclude Include="..\..\lapi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lauxlib.h">
+    <ClInclude Include="..\..\lauxlib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lcode.h">
+    <ClInclude Include="..\..\lcode.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lctype.h">
+    <ClInclude Include="..\..\lctype.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\ldebug.h">
+    <ClInclude Include="..\..\ldebug.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\ldo.h">
+    <ClInclude Include="..\..\ldo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lfunc.h">
+    <ClInclude Include="..\..\lfunc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lgc.h">
+    <ClInclude Include="..\..\lgc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\ljumptab.h">
+    <ClInclude Include="..\..\ljumptab.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\llex.h">
+    <ClInclude Include="..\..\llex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\llimits.h">
+    <ClInclude Include="..\..\llimits.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lmem.h">
+    <ClInclude Include="..\..\lmem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lobject.h">
+    <ClInclude Include="..\..\lobject.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lopcodes.h">
+    <ClInclude Include="..\..\lopcodes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lopnames.h">
+    <ClInclude Include="..\..\lopnames.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lparser.h">
+    <ClInclude Include="..\..\lparser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lprefix.h">
+    <ClInclude Include="..\..\lprefix.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lstate.h">
+    <ClInclude Include="..\..\lstate.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lstring.h">
+    <ClInclude Include="..\..\lstring.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\ltable.h">
+    <ClInclude Include="..\..\ltable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\ltests.h">
+    <ClInclude Include="..\..\ltests.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\ltm.h">
+    <ClInclude Include="..\..\ltm.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\luaconf.h">
+    <ClInclude Include="..\..\luaconf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lualib.h">
+    <ClInclude Include="..\..\lualib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lundump.h">
+    <ClInclude Include="..\..\lundump.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lvm.h">
+    <ClInclude Include="..\..\lvm.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lzio.h">
+    <ClInclude Include="..\..\lzio.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lua.h">
+    <ClInclude Include="..\..\lua.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

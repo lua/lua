@@ -15,12 +15,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\lua.c">
+    <ClCompile Include="..\..\lua.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\lua.h">
+    <ClInclude Include="..\..\lua.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
