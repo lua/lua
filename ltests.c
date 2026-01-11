@@ -1106,6 +1106,27 @@ static int stacklevel (lua_State *L) {
 }
 
 
+static int resetCI (lua_State *L) {
+  CallInfo *ci = L->ci;
+  while (ci->next != NULL) {
+    CallInfo *tofree = ci->next;
+    ci->next = ci->next->next;
+    luaM_free(L, tofree);
+    L->nci--;
+  }
+  return 0;
+}
+
+
+static int reallocstack (lua_State *L) {
+  int n = cast_int(luaL_checkinteger(L, 1));
+  lua_lock(L);
+  luaD_reallocstack(L, cast_int(L->top.p - L->stack.p) + n, 1);
+  lua_unlock(L);
+  return 0;
+}
+
+
 static int table_query (lua_State *L) {
   const Table *t;
   int i = cast_int(luaL_optinteger(L, 2, -1));
@@ -2182,6 +2203,8 @@ static const struct luaL_Reg tests_funcs[] = {
   {"s2d", s2d},
   {"sethook", sethook},
   {"stacklevel", stacklevel},
+  {"resetCI", resetCI},
+  {"reallocstack", reallocstack},
   {"sizes", get_sizes},
   {"testC", testC},
   {"makeCfunc", makeCfunc},

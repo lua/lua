@@ -707,4 +707,46 @@ end
 
 collectgarbage(oldmode)
 
+
+if T then
+  print("testing stack issues when calling finalizers")
+
+  local X
+  local obj
+
+  local function initobj ()
+    X = false
+    obj = setmetatable({}, {__gc = function ()  X = true end})
+  end
+
+  local function loop (n)
+    if n > 0 then loop(n - 1) end
+  end
+
+  -- should not try to call finalizer without a CallInfo available
+  initobj()
+  loop(20)   -- ensure stack space
+  T.resetCI()   -- remove extra CallInfos
+  T.alloccount(0)   -- cannot allocate more CallInfos
+  obj = nil
+  collectgarbage()   -- will not call finalizer
+  T.alloccount()
+  assert(X == false)
+  collectgarbage()   -- now will call finalizer (it was still pending)
+  assert(X == true)
+
+  -- should not try to call finalizer without stack space available
+  initobj()
+  loop(5)     -- ensure enough CallInfos
+  T.reallocstack(0)   -- remove extra stack slots
+  T.alloccount(0)   -- cannot reallocate stack
+  obj = nil
+  collectgarbage()   -- will not call finalizer
+  T.alloccount()
+  assert(X == false)
+  collectgarbage()   -- now will call finalizer (it was still pending)
+  assert(X == true)
+end
+
+
 print('OK')
