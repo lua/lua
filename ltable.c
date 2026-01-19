@@ -680,8 +680,8 @@ static void luaH_newkey (lua_State *L, Table *t, const TValue *key,
   }
   if (ttisnil(value))
     return;  /* do not insert nil values */
-  mp = mainpositionTV(t, key);
-  if (!isempty(gval(mp)) || isdummy(t)) {  /* main position is taken? */
+  mp = mainpositionTV(t, key);  // 这个是key hash后直接对应到的node 可能是个空的node
+  if (!isempty(gval(mp)) || isdummy(t)) {  /* main position is taken? */  // 自己所在的这个slot已经被占用了
     Node *othern;
     Node *f = getfreepos(t);  /* get a free place */
     if (f == NULL) {  /* cannot find a free place? */
@@ -691,8 +691,8 @@ static void luaH_newkey (lua_State *L, Table *t, const TValue *key,
       return;
     }
     lua_assert(!isdummy(t));
-    othern = mainpositionfromnode(t, mp);
-    if (othern != mp) {  /* is colliding node out of its main position? */
+    othern = mainpositionfromnode(t, mp);  // 占用自己这个slot的node 本该在的position  (占着的这个node可能也是hash冲突后放到这里的)
+    if (othern != mp) {  /* is colliding node out of its main position? */  // 如果是hash冲突过来的 那就让位给自己
       /* yes; move colliding node into free position */
       while (othern + gnext(othern) != mp)  /* find previous */
         othern += gnext(othern);
@@ -704,7 +704,7 @@ static void luaH_newkey (lua_State *L, Table *t, const TValue *key,
       }
       setempty(gval(mp));
     }
-    else {  /* colliding node is in its own main position */
+    else {  /* colliding node is in its own main position */  // 否则自己去新位置
       /* new node will go into free position */
       if (gnext(mp) != 0)
         gnext(f) = cast_int((mp + gnext(mp)) - f);  /* chain new position */
