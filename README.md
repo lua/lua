@@ -1,8 +1,18 @@
 <div dir="rtl">
 
+        
 # 💎 لغة ياقوت (Yaqout Language)
 ### أول لغة برمجة عربية احترافية مبنية على Lua 5.5
 
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d03fa7"/><stop offset="1" stop-color="#7d44cf"/></linearGradient>
+  </defs>
+  <path d="M140 60 L372 60 L460 180 L256 460 L52 180 Z" fill="url(#g)" stroke="#fff" stroke-width="10"/>
+  <path d="M140 60 L372 60 L320 180 L192 180 Z" fill="#fff" fill-opacity="0.2"/>
+  <path d="M192 180 L320 180 L256 460 Z" fill="#fff" fill-opacity="0.1"/>
+</svg>
+        
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20|%20Linux%20|%20macOS-blue)]()
 [![Language](https://img.shields.io/badge/Language-Arabic%20%2B%20English-green)]()
