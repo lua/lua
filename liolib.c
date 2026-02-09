@@ -752,17 +752,17 @@ static int io_flush (lua_State *L) {
 ** functions for 'io' library
 */
 static const luaL_Reg iolib[] = {
-  {"close", io_close},
-  {"flush", io_flush},
-  {"input", io_input},
-  {"lines", io_lines},
-  {"open", io_open},
-  {"output", io_output},
-  {"popen", io_popen},
-  {"read", io_read},
-  {"tmpfile", io_tmpfile},
-  {"type", io_type},
-  {"write", io_write},
+  {"إغلاق", io_close},
+  {"تفريغ", io_flush},
+  {"مدخل", io_input},
+  {"أسطر", io_lines},
+  {"فتح", io_open},
+  {"مخرج", io_output},
+  {"فتح_أنبوب", io_popen},
+  {"قراءة", io_read},
+  {"ملف_مؤقت", io_tmpfile},
+  {"نوع", io_type},
+  {"كتابة", io_write},
   {NULL, NULL}
 };
 
@@ -771,13 +771,13 @@ static const luaL_Reg iolib[] = {
 ** methods for file handles
 */
 static const luaL_Reg meth[] = {
-  {"read", f_read},
-  {"write", f_write},
-  {"lines", f_lines},
-  {"flush", f_flush},
-  {"seek", f_seek},
-  {"close", f_close},
-  {"setvbuf", f_setvbuf},
+  {"قراءة", f_read},
+  {"كتابة", f_write},
+  {"أسطر", f_lines},
+  {"تفريغ", f_flush},
+  {"بحث", f_seek},
+  {"إغلاق", f_close},
+  {"تعيين_الذاكرة_الوسيطة", f_setvbuf},
   {NULL, NULL}
 };
 

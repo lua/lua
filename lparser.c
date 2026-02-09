@@ -67,7 +67,7 @@ static void expr (LexState *ls, expdesc *v);
 
 static l_noret error_expected (LexState *ls, int token) {
   luaX_syntaxerror(ls,
-      luaO_pushfstring(ls->L, "%s expected", luaX_token2str(ls, token)));
+      luaO_pushfstring(ls->L, "%s متوقع", luaX_token2str(ls, token)));
 }
 
 
@@ -76,9 +76,9 @@ static l_noret errorlimit (FuncState *fs, int limit, const char *what) {
   const char *msg;
   int line = fs->f->linedefined;
   const char *where = (line == 0)
-                      ? "main function"
-                      : luaO_pushfstring(L, "function at line %d", line);
-  msg = luaO_pushfstring(L, "too many %s (limit is %d) in %s",
+                      ? "الدالة الرئيسية"
+                      : luaO_pushfstring(L, "دالة في السطر %d", line);
+  msg = luaO_pushfstring(L, "عدد كبير جداً من %s (الحد هو %d) في %s",
                              what, limit, where);
   luaX_syntaxerror(fs->ls, msg);
 }
@@ -133,7 +133,7 @@ static void check_match (LexState *ls, int what, int who, int where) {
       error_expected(ls, what);  /* do not need a complex message */
     else {
       luaX_syntaxerror(ls, luaO_pushfstring(ls->L,
-             "%s expected (to close %s at line %d)",
+             "%s متوقع (لإغلاق %s في السطر %d)",
               luaX_token2str(ls, what), luaX_token2str(ls, who), where));
     }
   }
@@ -177,7 +177,7 @@ static short registerlocalvar (LexState *ls, FuncState *fs,
   Proto *f = fs->f;
   int oldsize = f->sizelocvars;
   luaM_growvector(ls->L, f->locvars, fs->ndebugvars, f->sizelocvars,
-                  LocVar, SHRT_MAX, "local variables");
+                  LocVar, SHRT_MAX, "متغيرات محلية");
   while (oldsize < f->sizelocvars)
     f->locvars[oldsize++].varname = NULL;
   f->locvars[fs->ndebugvars].varname = varname;
@@ -197,7 +197,7 @@ static int new_varkind (LexState *ls, TString *name, lu_byte kind) {
   Dyndata *dyd = ls->dyd;
   Vardesc *var;
   luaM_growvector(L, dyd->actvar.arr, dyd->actvar.n + 1,
-             dyd->actvar.size, Vardesc, SHRT_MAX, "variable declarations");
+             dyd->actvar.size, Vardesc, SHRT_MAX, "تعريفات المتغيرات");
   var = &dyd->actvar.arr[dyd->actvar.n++];
   var->vd.kind = kind;  /* default */
   var->vd.name = name;
@@ -317,7 +317,7 @@ static void check_readonly (LexState *ls, expdesc *e) {
       return;  /* integer index cannot be read-only */
   }
   if (varname)
-    luaK_semerror(ls, "attempt to assign to const variable '%s'",
+    luaK_semerror(ls, "محاولة التعيين لمتغير ثابت (const) باسم '%s'",
                       getstr(varname));
 }
 
@@ -370,9 +370,9 @@ static int searchupvalue (FuncState *fs, TString *name) {
 static Upvaldesc *allocupvalue (FuncState *fs) {
   Proto *f = fs->f;
   int oldsize = f->sizeupvalues;
-  luaY_checklimit(fs, fs->nups + 1, MAXUPVAL, "upvalues");
+  luaY_checklimit(fs, fs->nups + 1, MAXUPVAL, "القيم الخارجية (upvalues)");
   luaM_growvector(fs->ls->L, f->upvalues, fs->nups, f->sizeupvalues,
-                  Upvaldesc, MAXUPVAL, "upvalues");
+                  Upvaldesc, MAXUPVAL, "القيم الخارجية (upvalues)");
   while (oldsize < f->sizeupvalues)
     f->upvalues[oldsize++].name = NULL;
   return &f->upvalues[fs->nups++];
@@ -505,8 +505,8 @@ static void buildglobal (LexState *ls, TString *varname, expdesc *var) {
   init_exp(var, VGLOBAL, -1);  /* global by default */
   singlevaraux(fs, ls->envn, var, 1);  /* get environment variable */
   if (var->k == VGLOBAL)
-    luaK_semerror(ls, "%s is global when accessing variable '%s'",
-                      LUA_ENV, getstr(varname));
+    luaK_semerror(ls, "%s هو متغير عام عند محاولة الوصول للمتغير '%s'",
+                       LUA_ENV, getstr(varname));
   luaK_exp2anyregup(fs, var);  /* _ENV could be a constant */
   codestring(&key, varname);  /* key is variable name */
   luaK_indexed(fs, var, &key);  /* 'var' represents _ENV[varname] */
@@ -737,7 +737,7 @@ static void enterblock (FuncState *fs, BlockCnt *bl, lu_byte isloop) {
 static l_noret undefgoto (LexState *ls, Labeldesc *gt) {
   /* breaks are checked when created, cannot be undefined */
   lua_assert(!eqstr(gt->name, ls->brkn));
-  luaK_semerror(ls, "no visible label '%s' for <goto> at line %d",
+  luaK_semerror(ls, "لا يوجد ملصق (label) مرئي باسم '%s' لـ <goto> في السطر %d",
                     getstr(gt->name), gt->line);
 }
 
@@ -772,7 +772,7 @@ static Proto *addprototype (LexState *ls) {
   Proto *f = fs->f;  /* prototype of current function */
   if (fs->np >= f->sizep) {
     int oldsize = f->sizep;
-    luaM_growvector(L, f->p, fs->np, f->sizep, Proto *, MAXARG_Bx, "functions");
+    luaM_growvector(L, f->p, fs->np, f->sizep, Proto *, MAXARG_Bx, "الدوال");
     while (oldsize < f->sizep)
       f->p[oldsize++] = NULL;
   }
@@ -1046,7 +1046,7 @@ static void constructor (LexState *ls, expdesc *t) {
       closelistfield(fs, &cc);  /* close it */
     field(ls, &cc);
     luaY_checklimit(fs, cc.tostore + cc.na + cc.nh, MAX_CNST,
-                    "items in a constructor");
+                    "عناصر في المنشئ");
   } while (testnext(ls, ',') || testnext(ls, ';'));
   check_match(ls, /*{*/ '}', '{' /*}*/, line);
   lastlistfield(fs, &cc);
@@ -1085,7 +1085,7 @@ static void parlist (LexState *ls) {
             new_localvarliteral(ls, "(vararg table)");
           break;
         }
-        default: luaX_syntaxerror(ls, "<name> or '...' expected");
+        default: luaX_syntaxerror(ls, "متوقع <اسم> أو '...'");
       }
     } while (!varargk && testnext(ls, ','));
   }
@@ -1163,7 +1163,7 @@ static void funcargs (LexState *ls, expdesc *f) {
       break;
     }
     default: {
-      luaX_syntaxerror(ls, "function arguments expected");
+      luaX_syntaxerror(ls, "متوقع وسائط للدالة");
     }
   }
   lua_assert(f->k == VNONRELOC);
@@ -1208,7 +1208,7 @@ static void primaryexp (LexState *ls, expdesc *v) {
       return;
     }
     default: {
-      luaX_syntaxerror(ls, "unexpected symbol");
+      luaX_syntaxerror(ls, "رمز غير متوقع");
     }
   }
 }
@@ -1284,7 +1284,7 @@ static void simpleexp (LexState *ls, expdesc *v) {
     case TK_DOTS: {  /* vararg */
       FuncState *fs = ls->fs;
       check_condition(ls, isvararg(fs->f),
-                      "cannot use '...' outside a vararg function");
+                      "لا يمكن استخدام '...' خارج دالة ذات وسائط متغيرة");
       init_exp(v, VVARARG, luaK_codeABC(fs, OP_VARARG, 0, fs->f->numparams, 1));
       break;
     }
@@ -1497,7 +1497,7 @@ static void storevartop (FuncState *fs, expdesc *var) {
 */
 static void restassign (LexState *ls, struct LHS_assign *lh, int nvars) {
   expdesc e;
-  check_condition(ls, vkisvar(lh->v.k), "syntax error");
+  check_condition(ls, vkisvar(lh->v.k), "خطأ في بناء الجملة");
   check_readonly(ls, &lh->v);
   if (testnext(ls, ',')) {  /* restassign -> ',' suffixedexp restassign */
     struct LHS_assign nv;
@@ -1550,7 +1550,7 @@ static void breakstat (LexState *ls, int line) {
     if (bl->isloop)  /* found one? */
       goto ok;
   }
-  luaX_syntaxerror(ls, "break outside loop");
+  luaX_syntaxerror(ls, "كسر (break) خارج حلقة تكرارية");
  ok:
   bl->isloop = 2;  /* signal that block has pending breaks */
   luaX_next(ls);  /* skip break */
@@ -1565,7 +1565,7 @@ static void breakstat (LexState *ls, int line) {
 static void checkrepeated (LexState *ls, TString *name) {
   Labeldesc *lb = findlabel(ls, name, ls->fs->firstlabel);
   if (l_unlikely(lb != NULL))  /* already defined? */
-    luaK_semerror(ls, "label '%s' already defined on line %d",
+    luaK_semerror(ls, "الملصق '%s' معرف بالفعل في السطر %d",
                       getstr(name), lb->line);  /* error */
 }
 
@@ -1648,7 +1648,7 @@ static void fixforjump (FuncState *fs, int pc, int dest, int back) {
   if (back)
     offset = -offset;
   if (l_unlikely(offset > MAXARG_Bx))
-    luaX_syntaxerror(fs->ls, "control structure too long");
+    luaX_syntaxerror(fs->ls, "هيكل التحكم طويل جداً");
   SETARG_Bx(*jmp, offset);
 }
 
@@ -1742,7 +1742,7 @@ static void forstat (LexState *ls, int line) {
   switch (ls->t.token) {
     case '=': fornum(ls, varname, line); break;
     case ',': case TK_IN: forlist(ls, varname); break;
-    default: luaX_syntaxerror(ls, "'=' or 'in' expected");
+    default: luaX_syntaxerror(ls, "متوقع '=' أو 'في'");
   }
   check_match(ls, TK_END, TK_FOR, line);
   leaveblock(fs);  /* loop scope ('break' jumps to this point) */
@@ -1801,7 +1801,7 @@ static lu_byte getvarattribute (LexState *ls, lu_byte df) {
     else if (strcmp(attr, "close") == 0)
       return RDKTOCLOSE;  /* to-be-closed variable */
     else
-      luaK_semerror(ls, "unknown attribute '%s'", attr);
+      luaK_semerror(ls, "سمة غير معروفة '%s'", attr);
   }
   return df;  /* return default value */
 }
@@ -1832,7 +1832,7 @@ static void localstat (LexState *ls) {
     vidx = new_varkind(ls, vname, kind);  /* predeclare it */
     if (kind == RDKTOCLOSE) {  /* to-be-closed? */
       if (toclose != -1)  /* one already present? */
-        luaK_semerror(ls, "multiple to-be-closed variables in local list");
+        luaK_semerror(ls, "تعدد متغيرات to-be-closed في القائمة المحلية");
       toclose = fs->nactvar + nvars;
     }
     nvars++;
@@ -1863,7 +1863,7 @@ static lu_byte getglobalattribute (LexState *ls, lu_byte df) {
   lu_byte kind = getvarattribute(ls, df);
   switch (kind) {
     case RDKTOCLOSE:
-      luaK_semerror(ls, "global variables cannot be to-be-closed");
+      luaK_semerror(ls, "المتغيرات العامة لا يمكن أن تكون to-be-closed");
       return kind;  /* to avoid warnings */
     case RDKCONST:
       return GDKCONST;  /* adjust kind for global variable */
@@ -2007,7 +2007,7 @@ static void exprstat (LexState *ls) {
   }
   else {  /* stat -> func */
     Instruction *inst;
-    check_condition(ls, v.v.k == VCALL, "syntax error");
+    check_condition(ls, v.v.k == VCALL, "خطأ في بناء الجملة");
     inst = &getinstruction(fs, &v.v);
     SETARG_C(*inst, 1);  /* call statement uses no results */
   }

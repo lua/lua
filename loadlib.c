@@ -682,20 +682,20 @@ static int ll_require (lua_State *L) {
 
 
 static const luaL_Reg pk_funcs[] = {
-  {"loadlib", ll_loadlib},
-  {"searchpath", ll_searchpath},
+  {"تحميل_مكتبة", ll_loadlib},
+  {"مسار_البحث", ll_searchpath},
   /* placeholders */
-  {"preload", NULL},
-  {"cpath", NULL},
-  {"path", NULL},
-  {"searchers", NULL},
-  {"loaded", NULL},
+  {"تحميل_مسبق", NULL},
+  {"مسار_سي", NULL},
+  {"مسار", NULL},
+  {"باحثون", NULL},
+  {"محملة", NULL},
   {NULL, NULL}
 };
 
 
 static const luaL_Reg ll_funcs[] = {
-  {"require", ll_require},
+  {"استدعاء", ll_require},
   {NULL, NULL}
 };
 

@@ -68,12 +68,10 @@ CWARNS= $(CWARNSCPP) $(CWARNSC) $(CWARNGCC)
 LOCAL = $(TESTS) $(CWARNS)
 
 
-# To enable Linux goodies, -DLUA_USE_LINUX
-# For C89, "-std=c89 -DLUA_USE_C89"
-# Note that Linux/Posix options are not compatible with C89
-MYCFLAGS= $(LOCAL) -std=c99 -DLUA_USE_LINUX
-MYLDFLAGS= -Wl,-E
-MYLIBS= -ldl
+# To enable Windows goodies, -DLUA_USE_WINDOWS
+MYCFLAGS= $(LOCAL) -std=c99 -DLUA_USE_WINDOWS
+MYLDFLAGS=
+MYLIBS=
 
 
 CC= gcc
@@ -97,7 +95,7 @@ AUX_O=	lauxlib.o
 LIB_O=	lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o lstrlib.o \
 	lutf8lib.o loadlib.o lcorolib.o linit.o
 
-LUA_T=	lua
+LUA_T=	yaqout
 LUA_O=	lua.o
 
 

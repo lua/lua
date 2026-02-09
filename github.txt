@@ -1,0 +1,5 @@
+Description:
+
+
+Tags:
+arabic-programming-language, lua-arabic, yaqout-lang, arabic-coding, programming-in-arabic, language-localization, islam-al-nashar, al-nashar-studio, scripting-language, compilers

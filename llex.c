@@ -43,13 +43,13 @@
 
 /* ORDER RESERVED */
 static const char *const luaX_tokens [] = {
-    "and", "break", "do", "else", "elseif",
-    "end", "false", "for", "function", "global", "goto", "if",
-    "in", "local", "nil", "not", "or", "repeat",
-    "return", "then", "true", "until", "while",
+    "و", "اكسر", "افعل", "وإلا", "وإلا_إذا",
+    "نهاية", "خطأ", "لكل", "دالة", "عام", "اذهب_إلى", "إذا",
+    "في", "محلي", "لاشيء", "ليس", "أو", "كرر",
+    "رجع", "إذن", "صح", "حتى", "طالما",
     "//", "..", "...", "==", ">=", "<=", "~=",
-    "<<", ">>", "::", "<eof>",
-    "<number>", "<integer>", "<name>", "<string>"
+    "<<", ">>", "::", "<نهاية_الملف>",
+    "<رقم>", "<رقم_صحيح>", "<اسم>", "<نص>"
 };
 
 
@@ -64,7 +64,7 @@ static void save (LexState *ls, int c) {
   if (luaZ_bufflen(b) + 1 > luaZ_sizebuffer(b)) {
     size_t newsize = luaZ_sizebuffer(b);  /* get old size */;
     if (newsize >= (MAX_SIZE/3 * 2))  /* larger than MAX_SIZE/1.5 ? */
-      lexerror(ls, "lexical element too long", 0);
+      lexerror(ls, "العنصر اللغوي طويل جداً", 0);
     newsize += (newsize >> 1);  /* new size is 1.5 times the old one */
     luaZ_resizebuffer(ls->L, b, newsize);
   }
@@ -116,7 +116,7 @@ static const char *txtToken (LexState *ls, int token) {
 static l_noret lexerror (LexState *ls, const char *msg, int token) {
   msg = luaG_addinfo(ls->L, msg, ls->source, ls->linenumber);
   if (token)
-    luaO_pushfstring(ls->L, "%s near %s", msg, txtToken(ls, token));
+    luaO_pushfstring(ls->L, "%s بالقرب من %s", msg, txtToken(ls, token));
   luaD_throw(ls->L, LUA_ERRSYNTAX);
 }
 
@@ -169,7 +169,7 @@ static void inclinenumber (LexState *ls) {
   if (currIsNewline(ls) && ls->current != old)
     next(ls);  /* skip '\n\r' or '\r\n' */
   if (++ls->linenumber >= INT_MAX)
-    lexerror(ls, "chunk has too many lines", 0);
+    lexerror(ls, "الملف يحتوي على أسطر كثيرة جداً", 0);
 }
 
 
@@ -260,7 +260,7 @@ static int read_numeral (LexState *ls, SemInfo *seminfo) {
     save_and_next(ls);  /* force an error */
   save(ls, '\0');
   if (luaO_str2num(luaZ_buffer(ls->buff), &obj) == 0)  /* format error? */
-    lexerror(ls, "malformed number", TK_FLT);
+    lexerror(ls, "تنسيق الرقم غير صحيح", TK_FLT);
   if (ttisinteger(&obj)) {
     seminfo->i = ivalue(&obj);
     return TK_INT;
@@ -302,9 +302,9 @@ static void read_long_string (LexState *ls, SemInfo *seminfo, size_t sep) {
   for (;;) {
     switch (ls->current) {
       case EOZ: {  /* error */
-        const char *what = (seminfo ? "string" : "comment");
+        const char *what = (seminfo ? "نص" : "تعليق");
         const char *msg = luaO_pushfstring(ls->L,
-                     "unfinished long %s (starting at line %d)", what, line);
+                     "%s طويل غير منتهٍ (بدءاً من السطر %d)", what, line);
         lexerror(ls, msg, TK_EOS);
         break;  /* to avoid warnings */
       }
@@ -344,7 +344,7 @@ static void esccheck (LexState *ls, int c, const char *msg) {
 
 static int gethexa (LexState *ls) {
   save_and_next(ls);
-  esccheck (ls, lisxdigit(ls->current), "hexadecimal digit expected");
+  esccheck (ls, lisxdigit(ls->current), "متوقع رقم سداسي عشر");
   return luaO_hexavalue(ls->current);
 }
 
@@ -366,14 +366,14 @@ static l_uint32 readutf8esc (LexState *ls) {
   l_uint32 r;
   int i = 4;  /* number of chars to be removed: start with #"\u{X" */
   save_and_next(ls);  /* skip 'u' */
-  esccheck(ls, ls->current == '{', "missing '{'");
+  esccheck(ls, ls->current == '{', "مفتقد '{'");
   r = cast_uint(gethexa(ls));  /* must have at least one digit */
   while (cast_void(save_and_next(ls)), lisxdigit(ls->current)) {
     i++;
-    esccheck(ls, r <= (0x7FFFFFFFu >> 4), "UTF-8 value too large");
+    esccheck(ls, r <= (0x7FFFFFFFu >> 4), "قيمة UTF-8 كبيرة جداً");
     r = (r << 4) + luaO_hexavalue(ls->current);
   }
-  esccheck(ls, ls->current == '}', "missing '}'");
+  esccheck(ls, ls->current == '}', "مفتقد '}'");
   next(ls);  /* skip '}' */
   luaZ_buffremove(ls->buff, i);  /* remove saved chars from buffer */
   return r;
@@ -395,7 +395,7 @@ static int readdecesc (LexState *ls) {
     r = 10*r + ls->current - '0';
     save_and_next(ls);
   }
-  esccheck(ls, r <= UCHAR_MAX, "decimal escape too large");
+  esccheck(ls, r <= UCHAR_MAX, "الهروب العشري كبير جداً");
   luaZ_buffremove(ls->buff, i);  /* remove read digits from buffer */
   return r;
 }
@@ -406,11 +406,11 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
   while (ls->current != del) {
     switch (ls->current) {
       case EOZ:
-        lexerror(ls, "unfinished string", TK_EOS);
+        lexerror(ls, "نص غير منتهٍ", TK_EOS);
         break;  /* to avoid warnings */
       case '\n':
       case '\r':
-        lexerror(ls, "unfinished string", TK_STRING);
+        lexerror(ls, "نص غير منتهٍ", TK_STRING);
         break;  /* to avoid warnings */
       case '\\': {  /* escape sequences */
         int c;  /* final character to be saved */
@@ -440,7 +440,7 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
             goto no_save;
           }
           default: {
-            esccheck(ls, lisdigit(ls->current), "invalid escape sequence");
+            esccheck(ls, lisdigit(ls->current), "تتابع هروب غير صالح");
             c = readdecesc(ls);  /* digital escape '\ddd' */
             goto only_save;
           }
@@ -502,7 +502,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
           return TK_STRING;
         }
         else if (sep == 0)  /* '[=...' missing second bracket? */
-          lexerror(ls, "invalid long string delimiter", TK_STRING);
+          lexerror(ls, "محدد نص طويل غير صالح", TK_STRING);
         return '[';
       }
       case '=': {

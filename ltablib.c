@@ -407,14 +407,14 @@ static int sort (lua_State *L) {
 
 
 static const luaL_Reg tab_funcs[] = {
-  {"concat", tconcat},
-  {"create", tcreate},
-  {"insert", tinsert},
-  {"pack", tpack},
-  {"unpack", tunpack},
-  {"remove", tremove},
-  {"move", tmove},
-  {"sort", sort},
+  {"دمج", tconcat},
+  {"إنشاء", tcreate},
+  {"إدراج", tinsert},
+  {"حزم", tpack},
+  {"فك_الحزم", tunpack},
+  {"حذف", tremove},
+  {"نقل", tmove},
+  {"ترتيب", sort},
   {NULL, NULL}
 };
 

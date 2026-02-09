@@ -271,13 +271,13 @@ static int iter_codes (lua_State *L) {
 
 
 static const luaL_Reg funcs[] = {
-  {"offset", byteoffset},
-  {"codepoint", codepoint},
-  {"char", utfchar},
-  {"len", utflen},
-  {"codes", iter_codes},
+  {"إزاحة_البايت", byteoffset},
+  {"نقطة_الكود", codepoint},
+  {"حرف", utfchar},
+  {"طول", utflen},
+  {"أكواد", iter_codes},
   /* placeholders */
-  {"charpattern", NULL},
+  {"نمط_الحرف", NULL},
   {NULL, NULL}
 };
 

@@ -646,7 +646,9 @@ static int math_randomseed (lua_State *L) {
 
 static const luaL_Reg randfuncs[] = {
   {"random", math_random},
+  {"عشوائي", math_random},
   {"randomseed", math_randomseed},
+  {"بذرة_عشوائية", math_randomseed},
   {NULL, NULL}
 };
 
@@ -704,29 +706,29 @@ static int math_log10 (lua_State *L) {
 
 
 static const luaL_Reg mathlib[] = {
-  {"abs",   math_abs},
-  {"acos",  math_acos},
-  {"asin",  math_asin},
-  {"atan",  math_atan},
-  {"ceil",  math_ceil},
-  {"cos",   math_cos},
-  {"deg",   math_deg},
-  {"exp",   math_exp},
-  {"tointeger", math_toint},
-  {"floor", math_floor},
-  {"fmod",   math_fmod},
+  {"قيمة_مطلقة",   math_abs},
+  {"جتا_عكسي",  math_acos},
+  {"جيب_عكسي",  math_asin},
+  {"ظل_عكسي",  math_atan},
+  {"سقف",  math_ceil},
+  {"جتا",   math_cos},
+  {"درجات",   math_deg},
+  {"أس",   math_exp},
+  {"تحويل_لعدد_صحيح", math_toint},
+  {"أرض", math_floor},
+  {"باقي_القسمة",   math_fmod},
   {"frexp", math_frexp},
   {"ult",   math_ult},
   {"ldexp", math_ldexp},
-  {"log",   math_log},
-  {"max",   math_max},
-  {"min",   math_min},
+  {"لوغاريتم",   math_log},
+  {"أقصى",   math_max},
+  {"أدنى",   math_min},
   {"modf",   math_modf},
-  {"rad",   math_rad},
-  {"sin",   math_sin},
-  {"sqrt",  math_sqrt},
-  {"tan",   math_tan},
-  {"type", math_type},
+  {"زاوية_نصف_قطرية",   math_rad},
+  {"جيب",   math_sin},
+  {"جذر",  math_sqrt},
+  {"ظل",   math_tan},
+  {"نوع", math_type},
 #if defined(LUA_COMPAT_MATHLIB)
   {"atan2", math_atan},
   {"cosh",   math_cosh},
@@ -736,12 +738,12 @@ static const luaL_Reg mathlib[] = {
   {"log10", math_log10},
 #endif
   /* placeholders */
-  {"random", NULL},
-  {"randomseed", NULL},
-  {"pi", NULL},
-  {"huge", NULL},
-  {"maxinteger", NULL},
-  {"mininteger", NULL},
+  {"عشوائي", NULL},
+  {"بذرة_عشوائية", NULL},
+  {"ط", NULL},
+  {"ضخم", NULL},
+  {"أقصى_عدد_صحيح", NULL},
+  {"أدنى_عدد_صحيح", NULL},
   {NULL, NULL}
 };
 
@@ -752,13 +754,13 @@ static const luaL_Reg mathlib[] = {
 LUAMOD_API int luaopen_math (lua_State *L) {
   luaL_newlib(L, mathlib);
   lua_pushnumber(L, PI);
-  lua_setfield(L, -2, "pi");
+  lua_setfield(L, -2, "ط");
   lua_pushnumber(L, (lua_Number)HUGE_VAL);
-  lua_setfield(L, -2, "huge");
+  lua_setfield(L, -2, "ضخم");
   lua_pushinteger(L, LUA_MAXINTEGER);
-  lua_setfield(L, -2, "maxinteger");
+  lua_setfield(L, -2, "أقصى_عدد_صحيح");
   lua_pushinteger(L, LUA_MININTEGER);
-  lua_setfield(L, -2, "mininteger");
+  lua_setfield(L, -2, "أدنى_عدد_صحيح");
   setrandfunc(L);
   return 1;
 }

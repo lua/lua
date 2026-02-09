@@ -33,8 +33,8 @@
 
 #define LuaClosure(f)		((f) != NULL && (f)->c.tt == LUA_VLCL)
 
-static const char strlocal[] = "local";
-static const char strupval[] = "upvalue";
+static const char strlocal[] = "محلي";
+static const char strupval[] = "قيمة خارجية";
 
 static const char *funcnamefromcall (lua_State *L, CallInfo *ci,
                                                    const char **name);
@@ -188,7 +188,7 @@ static const char *findvararg (CallInfo *ci, int n, StkId *pos) {
     int nextra = ci->u.l.nextraargs;
     if (n >= -nextra) {  /* 'n' is negative */
       *pos = ci->func.p - nextra - (n + 1);
-      return "(vararg)";  /* generic name for any vararg */
+      return "(وسائط متغيرة)";  /* generic name for any vararg */
     }
   }
   return NULL;  /* no such vararg */
@@ -208,7 +208,7 @@ const char *luaG_findlocal (lua_State *L, CallInfo *ci, int n, StkId *pos) {
     StkId limit = (ci == L->ci) ? L->top.p : ci->next->func.p;
     if (limit - base >= n && n > 0) {  /* is 'n' inside 'ci' stack? */
       /* generic name for any valid slot */
-      name = isLua(ci) ? "(temporary)" : "(C temporary)";
+      name = isLua(ci) ? "(مؤقت)" : "(مؤقت C)";
     }
     else
       return NULL;  /* no name */
@@ -275,7 +275,7 @@ static void funcinfo (lua_Debug *ar, Closure *cl) {
     }
     ar->linedefined = p->linedefined;
     ar->lastlinedefined = p->lastlinedefined;
-    ar->what = (ar->linedefined == 0) ? "main" : "Lua";
+    ar->what = (ar->linedefined == 0) ? "رئيسية" : "ياقوت";
   }
   luaO_chunkid(ar->short_src, ar->source, ar->srclen);
 }
@@ -493,7 +493,7 @@ static const char *kname (const Proto *p, int index, const char **name) {
   TValue *kvalue = &p->k[index];
   if (ttisstring(kvalue)) {
     *name = getstr(tsvalue(kvalue));
-    return "constant";
+    return "ثابت";
   }
   else {
     *name = "?";
@@ -559,7 +559,7 @@ static const char *isEnv (const Proto *p, int pc, Instruction i, int isup) {
     if (what != strlocal && what != strupval)
       name = NULL;  /* cannot be the variable _ENV */
   }
-  return (name && strcmp(name, LUA_ENV) == 0) ? "global" : "field";
+  return (name && strcmp(name, LUA_ENV) == 0) ? "عامة" : "حقل";
 }
 
 
@@ -586,8 +586,8 @@ static const char *getobjname (const Proto *p, int lastpc, int reg,
         return isEnv(p, lastpc, i, 0);
       }
       case OP_GETI: {
-        *name = "integer index";
-        return "field";
+        *name = "فهرس رقمي";
+        return "حقل";
       }
       case OP_GETFIELD: {
         int k = GETARG_C(i);  /* key index */
@@ -597,7 +597,7 @@ static const char *getobjname (const Proto *p, int lastpc, int reg,
       case OP_SELF: {
         int k = GETARG_C(i);  /* key index */
         kname(p, k, name);
-        return "method";
+        return "دالة (method)";
       }
       default: break;  /* go through to return NULL */
     }
@@ -621,8 +621,8 @@ static const char *funcnamefromcode (lua_State *L, const Proto *p,
     case OP_TAILCALL:
       return getobjname(p, pc, GETARG_A(i), name);  /* get function name */
     case OP_TFORCALL: {  /* for iterator */
-      *name = "for iterator";
-       return "for iterator";
+      *name = "للمكرر";
+       return "للمكرر";
     }
     /* other instructions can do calls through metamethods */
     case OP_SELF: case OP_GETTABUP: case OP_GETTABLE:
@@ -649,7 +649,7 @@ static const char *funcnamefromcode (lua_State *L, const Proto *p,
       return NULL;  /* cannot find a reasonable name */
   }
   *name = getshrstr(G(L)->tmname[tm]) + 2;
-  return "metamethod";
+  return "دالة وصفية";
 }
 
 
@@ -660,11 +660,11 @@ static const char *funcnamefromcall (lua_State *L, CallInfo *ci,
                                                    const char **name) {
   if (ci->callstatus & CIST_HOOKED) {  /* was it called inside a hook? */
     *name = "?";
-    return "hook";
+    return "خطاف (hook)";
   }
   else if (ci->callstatus & CIST_FIN) {  /* was it called as a finalizer? */
     *name = "__gc";
-    return "metamethod";  /* report it as such */
+    return "دالة وصفية";  /* report it as such */
   }
   else if (isLua(ci))
     return funcnamefromcode(L, ci_func(ci)->p, currentpc(ci), name);
@@ -746,7 +746,7 @@ static const char *varinfo (lua_State *L, const TValue *o) {
 static l_noret typeerror (lua_State *L, const TValue *o, const char *op,
                           const char *extra) {
   const char *t = luaT_objtypename(L, o);
-  luaG_runerror(L, "attempt to %s a %s value%s", op, t, extra);
+  luaG_runerror(L, "محاولة %s لقيمة %s %s", op, t, extra);
 }
 
 
@@ -774,7 +774,7 @@ l_noret luaG_callerror (lua_State *L, const TValue *o) {
 
 
 l_noret luaG_forerror (lua_State *L, const TValue *o, const char *what) {
-  luaG_runerror(L, "bad 'for' %s (number expected, got %s)",
+  luaG_runerror(L, "قيمة 'for' %s غير صالحة (متوقع رقم، تم الحصول على %s)",
                    what, luaT_objtypename(L, o));
 }
 

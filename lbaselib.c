@@ -139,9 +139,9 @@ static int luaB_getmetatable (lua_State *L) {
 static int luaB_setmetatable (lua_State *L) {
   int t = lua_type(L, 2);
   luaL_checktype(L, 1, LUA_TTABLE);
-  luaL_argexpected(L, t == LUA_TNIL || t == LUA_TTABLE, 2, "nil or table");
+  luaL_argexpected(L, t == LUA_TNIL || t == LUA_TTABLE, 2, "عدم (nil) أو جدول");
   if (l_unlikely(luaL_getmetafield(L, 1, "__metatable") != LUA_TNIL))
-    return luaL_error(L, "cannot change a protected metatable");
+    return luaL_error(L, "لا يمكن تغيير جدول وصفي محمي");
   lua_settop(L, 2);
   lua_setmetatable(L, 1);
   return 1;
@@ -159,7 +159,7 @@ static int luaB_rawequal (lua_State *L) {
 static int luaB_rawlen (lua_State *L) {
   int t = lua_type(L, 1);
   luaL_argexpected(L, t == LUA_TTABLE || t == LUA_TSTRING, 1,
-                      "table or string");
+                      "جدول أو نص");
   lua_pushinteger(L, l_castU2S(lua_rawlen(L, 1)));
   return 1;
 }
@@ -187,8 +187,8 @@ static int pushmode (lua_State *L, int oldmode) {
   if (oldmode == -1)
     luaL_pushfail(L);  /* invalid call to 'lua_gc' */
   else
-    lua_pushstring(L, (oldmode == LUA_GCINC) ? "incremental"
-                                             : "generational");
+    lua_pushstring(L, (oldmode == LUA_GCINC) ? "تراكمي"
+                                             : "جيلي");
   return 1;
 }
 
@@ -342,7 +342,7 @@ static int load_aux (lua_State *L, int status, int envidx) {
 static const char *getMode (lua_State *L, int idx) {
   const char *mode = luaL_optstring(L, idx, "bt");
   if (strchr(mode, 'B') != NULL)  /* Lua code cannot use fixed buffers */
-    luaL_argerror(L, idx, "invalid mode");
+    luaL_argerror(L, idx, "وضع غير صالح");
   return mode;
 }
 
@@ -388,7 +388,7 @@ static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
     return NULL;
   }
   else if (l_unlikely(!lua_isstring(L, -1)))
-    luaL_error(L, "reader function must return a string");
+    luaL_error(L, "دالة القارئ يجب أن تعيد نصاً");
   lua_replace(L, RESERVEDSLOT);  /* save string in reserved slot */
   return lua_tolstring(L, RESERVEDSLOT, size);
 }
@@ -438,7 +438,7 @@ static int luaB_assert (lua_State *L) {
   else {  /* error */
     luaL_checkany(L, 1);  /* there must be a condition */
     lua_remove(L, 1);  /* remove it */
-    lua_pushliteral(L, "assertion failed!");  /* default message */
+    lua_pushliteral(L, "فشل التأكيد (assertion failed)!");  /* default message */
     lua_settop(L, 1);  /* leave only message (default if no other one) */
     return luaB_error(L);  /* call 'error' */
   }
@@ -455,7 +455,7 @@ static int luaB_select (lua_State *L) {
     lua_Integer i = luaL_checkinteger(L, 1);
     if (i < 0) i = n + i;
     else if (i > n) i = n;
-    luaL_argcheck(L, 1 <= i, 1, "index out of range");
+    luaL_argcheck(L, 1 <= i, 1, "الفهرس خارج النطاق");
     return n - (int)i;
   }
 }
@@ -497,7 +497,7 @@ static int luaB_pcall (lua_State *L) {
 static int luaB_xpcall (lua_State *L) {
   int status;
   int n = lua_gettop(L);
-  luaL_checktype(L, 2, LUA_TFUNCTION);  /* check error function */
+  luaL_checktype(L, 2, LUA_TFUNCTION);  /* check error function (دالة الخطأ) */
   lua_pushboolean(L, 1);  /* first result */
   lua_pushvalue(L, 1);  /* function */
   lua_rotate(L, 3, 2);  /* move them below function's arguments */
@@ -514,32 +514,30 @@ static int luaB_tostring (lua_State *L) {
 
 
 static const luaL_Reg base_funcs[] = {
-  {"assert", luaB_assert},
-  {"collectgarbage", luaB_collectgarbage},
-  {"dofile", luaB_dofile},
-  {"error", luaB_error},
-  {"getmetatable", luaB_getmetatable},
-  {"ipairs", luaB_ipairs},
-  {"loadfile", luaB_loadfile},
-  {"load", luaB_load},
-  {"next", luaB_next},
-  {"pairs", luaB_pairs},
-  {"pcall", luaB_pcall},
-  {"print", luaB_print},
-  {"warn", luaB_warn},
-  {"rawequal", luaB_rawequal},
-  {"rawlen", luaB_rawlen},
-  {"rawget", luaB_rawget},
-  {"rawset", luaB_rawset},
-  {"select", luaB_select},
-  {"setmetatable", luaB_setmetatable},
-  {"tonumber", luaB_tonumber},
-  {"tostring", luaB_tostring},
-  {"type", luaB_type},
-  {"xpcall", luaB_xpcall},
+  {"تأكيد", luaB_assert},
+  {"جمع_المخلفات", luaB_collectgarbage},
+  {"تنفيذ_ملف", luaB_dofile},
+  {"خطأ_برمجي", luaB_error},
+  {"جلب_الجدول_الوصفي", luaB_getmetatable},
+  {"أزواج_رقمية", luaB_ipairs},
+  {"تحميل_ملف", luaB_loadfile},
+  {"تحميل", luaB_load},
+  {"التالي", luaB_next},
+  {"أزواج", luaB_pairs},
+  {"استدعاء_محمي", luaB_pcall},
+  {"اطبع", luaB_print},
+  {"تحذير", luaB_warn},
+  {"تساوي_خام", luaB_rawequal},
+  {"طول_خام", luaB_rawlen},
+  {"جلب_خام", luaB_rawget},
+  {"تعيين_خام", luaB_rawset},
+  {"اختر", luaB_select},
+  {"تعيين_الجدول_الوصفي", luaB_setmetatable},
+  {"تحويل_لرقم", luaB_tonumber},
+  {"تحويل_لنص", luaB_tostring},
+  {"نوع", luaB_type},
+  {"استدعاء_محمي_موسع", luaB_xpcall},
   /* placeholders */
-  {LUA_GNAME, NULL},
-  {"_VERSION", NULL},
   {NULL, NULL}
 };
 
@@ -550,10 +548,10 @@ LUAMOD_API int luaopen_base (lua_State *L) {
   luaL_setfuncs(L, base_funcs, 0);
   /* set global _G */
   lua_pushvalue(L, -1);
-  lua_setfield(L, -2, LUA_GNAME);
+  lua_setfield(L, -2, "_عام");
   /* set global _VERSION */
   lua_pushliteral(L, LUA_VERSION);
-  lua_setfield(L, -2, "_VERSION");
+  lua_setfield(L, -2, "_إصدار");
   return 1;
 }
 

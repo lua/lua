@@ -244,13 +244,13 @@ static int forprep (lua_State *L, StkId ra) {
   else {  /* try making all values floats */
     lua_Number init; lua_Number limit; lua_Number step;
     if (l_unlikely(!tonumber(plimit, &limit)))
-      luaG_forerror(L, plimit, "limit");
+      luaG_forerror(L, plimit, "الحد (limit)");
     if (l_unlikely(!tonumber(pstep, &step)))
-      luaG_forerror(L, pstep, "step");
+      luaG_forerror(L, pstep, "الخطوة (step)");
     if (l_unlikely(!tonumber(pinit, &init)))
-      luaG_forerror(L, pinit, "initial value");
+      luaG_forerror(L, pinit, "القيمة الابتدائية (initial value)");
     if (step == 0)
-      luaG_runerror(L, "'for' step is zero");
+      luaG_runerror(L, "خطوة حلقة 'for' هي صفر");
     if (luai_numlt(0, step) ? luai_numlt(limit, init)
                             : luai_numlt(init, limit))
       return 1;  /* skip the loop */
@@ -318,7 +318,7 @@ lu_byte luaV_finishget (lua_State *L, const TValue *t, TValue *key,
       return tag;  /* done */
     /* else repeat (tail call 'luaV_finishget') */
   }
-  luaG_runerror(L, "'__index' chain too long; possible loop");
+  luaG_runerror(L, "سلسلة '__index' طويلة جداً؛ احتمال وجود حلقة مفرغة");
   return 0;  /* to avoid warnings */
 }
 
@@ -368,7 +368,7 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
     }
     /* else 'return luaV_finishset(L, t, key, val, slot)' (loop) */
   }
-  luaG_runerror(L, "'__newindex' chain too long; possible loop");
+  luaG_runerror(L, "سلسلة '__newindex' طويلة جداً؛ احتمال وجود حلقة مفرغة");
 }
 
 
@@ -704,7 +704,7 @@ void luaV_concat (lua_State *L, int total) {
         size_t l = tsslen(tsvalue(s2v(top - n - 1)));
         if (l_unlikely(l >= MAX_SIZE - sizeof(TString) - tl)) {
           L->top.p = top - total;  /* pop strings to avoid wasting stack */
-          luaG_runerror(L, "string length overflow");
+          luaG_runerror(L, "تجاوز طول النص");
         }
         tl += l;
       }
@@ -766,7 +766,7 @@ void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
 lua_Integer luaV_idiv (lua_State *L, lua_Integer m, lua_Integer n) {
   if (l_unlikely(l_castS2U(n) + 1u <= 1u)) {  /* special cases: -1 or 0 */
     if (n == 0)
-      luaG_runerror(L, "attempt to divide by zero");
+      luaG_runerror(L, "محاولة القسمة على صفر");
     return intop(-, 0, m);   /* n==-1; avoid overflow with 0x80000...//-1 */
   }
   else {
@@ -786,7 +786,7 @@ lua_Integer luaV_idiv (lua_State *L, lua_Integer m, lua_Integer n) {
 lua_Integer luaV_mod (lua_State *L, lua_Integer m, lua_Integer n) {
   if (l_unlikely(l_castS2U(n) + 1u <= 1u)) {  /* special cases: -1 or 0 */
     if (n == 0)
-      luaG_runerror(L, "attempt to perform 'n%%0'");
+      luaG_runerror(L, "محاولة إجراء عملية 'n%%0' (باقي القسمة على صفر)");
     return 0;   /* m % -1 == 0; avoid overflow with 0x80000...%-1 */
   }
   else {

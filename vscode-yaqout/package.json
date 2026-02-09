@@ -1,0 +1,40 @@
+{
+    "name": "yaqout-language",
+    "displayName": "Yaqout Programming Language",
+    "description": "Syntax highlighting and language support for Yaqout (Arabic Lua)",
+    "version": "1.0.0",
+    "publisher": "Al-Nashar Studio",
+    "engines": {
+        "vscode": "^1.60.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [
+            {
+                "id": "yaqout",
+                "aliases": [
+                    "Yaqout",
+                    "ياقوت"
+                ],
+                "extensions": [
+                    ".yq",
+                    ".yaqout"
+                ],
+                "configuration": "./language-configuration.json",
+                "icon": {
+                    "light": "./icons/logo.png",
+                    "dark": "./icons/logo.png"
+                }
+            }
+        ],
+        "grammars": [
+            {
+                "language": "yaqout",
+                "scopeName": "source.yaqout",
+                "path": "./syntaxes/yaqout.tmLanguage.json"
+            }
+        ]
+    }
+}

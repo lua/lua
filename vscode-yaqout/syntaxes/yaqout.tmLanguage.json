@@ -1,0 +1,110 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "Yaqout",
+    "scopeName": "source.yaqout",
+    "patterns": [
+        {
+            "include": "#comments"
+        },
+        {
+            "include": "#strings"
+        },
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#numbers"
+        },
+        {
+            "include": "#operators"
+        },
+        {
+            "include": "#functions"
+        }
+    ],
+    "repository": {
+        "comments": {
+            "patterns": [
+                {
+                    "name": "comment.block.yaqout",
+                    "begin": "--\\[\\[",
+                    "end": "\\]\\]"
+                },
+                {
+                    "name": "comment.line.double-dash.yaqout",
+                    "match": "--.*$"
+                }
+            ]
+        },
+        "strings": {
+            "patterns": [
+                {
+                    "name": "string.quoted.double.yaqout",
+                    "begin": "\"",
+                    "end": "\"",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.yaqout",
+                            "match": "\\\\."
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.single.yaqout",
+                    "begin": "'",
+                    "end": "'",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.yaqout",
+                            "match": "\\\\."
+                        }
+                    ]
+                }
+            ]
+        },
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control.yaqout",
+                    "match": "\\b(و|اكسر|افعل|وإلا|وإلا_إذا|نهاية|لكل|عام|اذهب_إلى|إذا|في|كرر|رجع|إذن|حتى|طالما)\\b"
+                },
+                {
+                    "name": "storage.modifier.yaqout",
+                    "match": "\\b(محلي|دالة)\\b"
+                },
+                {
+                    "name": "constant.language.yaqout",
+                    "match": "\\b(خطأ|لاشيء|صح|عدم)\\b"
+                }
+            ]
+        },
+        "numbers": {
+            "patterns": [
+                {
+                    "name": "constant.numeric.yaqout",
+                    "match": "\\b\\d+(\\.\\d+)?([eE][+-]?\\d+)?\\b"
+                }
+            ]
+        },
+        "operators": {
+            "patterns": [
+                {
+                    "name": "keyword.operator.yaqout",
+                    "match": "(\\+|\\-|\\*|\\/|%|\\^|#|==|~=|<=|>=|<|>|=|\\.\\.|\\.\\.\\.)"
+                }
+            ]
+        },
+        "functions": {
+            "patterns": [
+                {
+                    "name": "support.function.yaqout",
+                    "match": "\\b(اطبع|إدراج|حذف|ترتيب|عكس|طول|تكبير|تنسيق|جذر|جيب|جتا|أرض|سقف|وقت|تاريخ|خرج|تعيين_الجدول_الوصفي)\\b"
+                },
+                {
+                    "name": "variable.other.member.yaqout",
+                    "match": "(?<=|\\.)(نصوص|رياضيات|جدول|نظام)\\b"
+                }
+            ]
+        }
+    }
+}

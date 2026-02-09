@@ -205,14 +205,14 @@ static int luaB_close (lua_State *L) {
 
 
 static const luaL_Reg co_funcs[] = {
-  {"create", luaB_cocreate},
-  {"resume", luaB_coresume},
-  {"running", luaB_corunning},
-  {"status", luaB_costatus},
-  {"wrap", luaB_cowrap},
-  {"yield", luaB_yield},
-  {"isyieldable", luaB_yieldable},
-  {"close", luaB_close},
+  {"إنشاء", luaB_cocreate},
+  {"استئناف", luaB_coresume},
+  {"يعمل", luaB_corunning},
+  {"حالة", luaB_costatus},
+  {"تغليف", luaB_cowrap},
+  {"تنازل", luaB_yield},
+  {"قابل_للتنازل", luaB_yieldable},
+  {"إغلاق", luaB_close},
   {NULL, NULL}
 };
 

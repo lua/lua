@@ -13,6 +13,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include <signal.h>
 
 #include "lua.h"
@@ -23,7 +27,7 @@
 
 
 #if !defined(LUA_PROGNAME)
-#define LUA_PROGNAME		"lua"
+#define LUA_PROGNAME		"yaqout"
 #endif
 
 #if !defined(LUA_INIT_VAR)
@@ -396,8 +400,8 @@ static int handle_luainit (lua_State *L) {
 */
 
 #if !defined(LUA_PROMPT)
-#define LUA_PROMPT		"> "
-#define LUA_PROMPT2		">> "
+#define LUA_PROMPT		"ياقوت> "
+#define LUA_PROMPT2		"ياقوت>> "
 #endif
 
 #if !defined(LUA_MAXINPUT)
@@ -541,7 +545,7 @@ static const char *get_prompt (lua_State *L, int firstline) {
 }
 
 /* mark in error messages for incomplete statements */
-#define EOFMARK		"<eof>"
+#define EOFMARK		"<نهاية_الملف>"
 #define marklen		(sizeof(EOFMARK)/sizeof(char) - 1)
 
 
@@ -748,6 +752,10 @@ static int pmain (lua_State *L) {
 
 int main (int argc, char **argv) {
   int status, result;
+#ifdef _WIN32
+  SetConsoleOutputCP(CP_UTF8);
+  SetConsoleCP(CP_UTF8);
+#endif
   lua_State *L = luaL_newstate();  /* create state */
   if (L == NULL) {
     l_message(argv[0], "cannot create state: not enough memory");

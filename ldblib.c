@@ -450,22 +450,22 @@ static int db_traceback (lua_State *L) {
 
 
 static const luaL_Reg dblib[] = {
-  {"debug", db_debug},
-  {"getuservalue", db_getuservalue},
-  {"gethook", db_gethook},
-  {"getinfo", db_getinfo},
-  {"getlocal", db_getlocal},
-  {"getregistry", db_getregistry},
-  {"getmetatable", db_getmetatable},
-  {"getupvalue", db_getupvalue},
-  {"upvaluejoin", db_upvaluejoin},
-  {"upvalueid", db_upvalueid},
-  {"setuservalue", db_setuservalue},
-  {"sethook", db_sethook},
-  {"setlocal", db_setlocal},
-  {"setmetatable", db_setmetatable},
-  {"setupvalue", db_setupvalue},
-  {"traceback", db_traceback},
+  {"تفاعل", db_debug},
+  {"جلب_قيمة_المستخدم", db_getuservalue},
+  {"جلب_الخطاف", db_gethook},
+  {"جلب_المعلومات", db_getinfo},
+  {"جلب_المحلي", db_getlocal},
+  {"جلب_السجل", db_getregistry},
+  {"جلب_الجدول_الوصفي", db_getmetatable},
+  {"جلب_القيمة_العليا", db_getupvalue},
+  {"ربط_القيمة_العليا", db_upvaluejoin},
+  {"معرف_القيمة_العليا", db_upvalueid},
+  {"تعيين_قيمة_المستخدم", db_setuservalue},
+  {"تعيين_الخطاف", db_sethook},
+  {"تعيين_المحلي", db_setlocal},
+  {"تعيين_الجدول_الوصفي", db_setmetatable},
+  {"تعيين_القيمة_العليا", db_setupvalue},
+  {"تتبع_المسار", db_traceback},
   {NULL, NULL}
 };
 
