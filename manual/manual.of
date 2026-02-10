@@ -9743,7 +9743,7 @@ and @bnfNter{LiteralString}, see @See{lexical}.)
 @OrNL	@Rw{local} @Rw{function} @bnfNter{Name} funcbody
 @OrNL	@Rw{global} @Rw{function} @bnfNter{Name} funcbody
 @OrNL	@Rw{local} attnamelist @bnfopt{@bnfter{=} explist}
-@OrNL	@Rw{global} attnamelist
+@OrNL	@Rw{global} attnamelist @bnfopt{@bnfter{=} explist}
 @OrNL	@Rw{global} @bnfopt{attrib} @bnfter{*}
 }
 
