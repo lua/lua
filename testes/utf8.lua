@@ -238,10 +238,18 @@ s = "\0 \x7F\z
 s = string.gsub(s, " ", "")
 check(s, {0,0x7F, 0x80,0x7FF, 0x800,0xFFFF, 0x10000,0x10FFFF})
 
+
+-- again, without strictness
+s = "\xF0\x90\x80\x80 \xF7\xBF\xBF\xBF\z
+     \xF8\x88\x80\x80\x80 \xFB\xBF\xBF\xBF\xBF\z
+     \xFC\x84\x80\x80\x80\x80 \xFD\xBF\xBF\xBF\xBF\xBF"
+s = string.gsub(s, " ", "")
+check(s, {0x10000,0x1FFFFF, 0x200000,0x3FFFFFF, 0x4000000,0x7FFFFFFF}, true)
+
 do
   -- original UTF-8 values
   local s = "\u{4000000}\u{7FFFFFFF}"
-  assert(#s == 12)
+  assert(s == "\xFC\x84\x80\x80\x80\x80\xFD\xBF\xBF\xBF\xBF\xBF")
   check(s, {0x4000000, 0x7FFFFFFF}, true)
 
   s = "\u{200000}\u{3FFFFFF}"
@@ -255,6 +263,10 @@ end
 
 local x = "日本語a-4\0éó"
 check(x, {26085, 26412, 35486, 97, 45, 52, 0, 233, 243})
+
+
+-- more than 5 continuation bytes
+assert(not utf8.len("\xff\x8f\x8f\x8f\x8f\x8f\x8f\x8f"))
 
 
 -- Supplementary Characters
