@@ -3915,8 +3915,12 @@ like any Lua object.
 This function creates and pushes on the stack a new full userdata,
 with @id{nuvalue} associated Lua values, called @id{user values},
 plus an associated block of raw memory with @id{size} bytes.
-(The user values can be set and read with the functions
-@Lid{lua_setiuservalue} and @Lid{lua_getiuservalue}.)
+
+The user values can be set and read with the functions
+@Lid{lua_setiuservalue} and @Lid{lua_getiuservalue}.
+The block of memory is suitably aligned for any @N{ISO C} object.
+(See macro @id{LUAI_MAXALIGN} in file @id{luaconf.h} for other
+alignment requirements.)
 
 The function returns the address of the block of memory.
 Lua ensures that this address is valid as long as
