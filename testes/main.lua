@@ -78,6 +78,9 @@ end
 
 RUN('lua -v')
 
+RUN('lua -v > %s', out)
+local release = string.match(getoutput(), "Lua (%d+%.%d+%.%d+)")
+
 print(string.format("(temporary program file used in these tests: %s)", prog))
 
 -- running stdin as a file
@@ -167,7 +170,9 @@ checkout("10\n11\n")
 -- test errors in LUA_INIT
 NoRun('LUA_INIT:1: msg', 'env LUA_INIT="error(\'msg\')" lua')
 
--- test option '-E'
+
+print("testing option '-E'")
+
 local defaultpath, defaultCpath
 
 do
@@ -190,6 +195,22 @@ assert(not string.find(defaultpath, "xxx") and
        string.find(defaultpath, "lua") and
        not string.find(defaultCpath, "xxx") and
        string.find(defaultCpath, "lua"))
+
+
+-- (LUA_READLINELIB was introduced in 5.5.1)
+if release >= "5.5.1" then
+  print"testing readline library name"
+  -- should generate a warning when trying to load inexistent library "xuxu"
+  local env = [[LUA_READLINELIB=xuxu LUA_INIT="warn('@allow')"]]
+  local code = 'echo " " | env %s lua %s -W -i >%s 2>&1'
+  RUN(code, env, "", out)   -- run code with no extra options
+  assert(string.find(getoutput(),
+            "warning: unable to load readline library 'xuxu'"))
+
+  RUN(code, env, "-E", out)   -- run again with option -E
+  -- no warning when LUA_READLINELIB is to be ignored
+  assert(not string.find(getoutput(), "warning"))
+end
 
 
 -- test replacement of ';;' to default path

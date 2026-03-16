@@ -2692,7 +2692,19 @@ which behaves like a nil value.
 
 @sect3{constchar|@title{Pointers to Strings}
 
-Several functions in the API return pointers (@T{const char*})
+Several functions in the API accept pointers (@T{const char*})
+to C strings.
+Some of there parameters have an associated length (@T{size_t}).
+Unless stated otherwise,
+when there is an associated length,
+the string can contain embedded zeros;
+moreover, the pointer can be @id{NULL} if the length is zero.
+When there is no associated length,
+the pointer must point to a zero-terminated string.
+In any case, the string contents should remain unchanged
+until the function returns.
+
+Several functions in the API also return pointers (@T{const char*})
 to Lua strings in the stack.
 (See @Lid{lua_pushfstring}, @Lid{lua_pushlstring},
 @Lid{lua_pushstring}, and @Lid{lua_tolstring}.
@@ -3903,8 +3915,12 @@ like any Lua object.
 This function creates and pushes on the stack a new full userdata,
 with @id{nuvalue} associated Lua values, called @id{user values},
 plus an associated block of raw memory with @id{size} bytes.
-(The user values can be set and read with the functions
-@Lid{lua_setiuservalue} and @Lid{lua_getiuservalue}.)
+
+The user values can be set and read with the functions
+@Lid{lua_setiuservalue} and @Lid{lua_getiuservalue}.
+The block of memory is suitably aligned for any @N{ISO C} object.
+(See macro @id{LUAI_MAXALIGN} in file @id{luaconf.h} for other
+alignment requirements.)
 
 The function returns the address of the block of memory.
 Lua ensures that this address is valid as long as
@@ -9594,12 +9610,18 @@ change between versions.
 @item{
 The word @Rw{global} is a reserved word.
 Do not use it as a regular name.
+
+The compilation option @id{LUA_COMPAT_GLOBAL} (see @id{luaconf.h})
+makes @id{global} a regular word.
 }
 
 @item{
 The control variable in @Rw{for} loops is read only.
 If you need to change it,
 declare a local variable with the same name in the loop body.
+
+The compilation option @id{LUA_COMPAT_LOOPVAR} (see @id{luaconf.h})
+makes these variables regular (writable).
 }
 
 @item{
@@ -9725,7 +9747,7 @@ and @bnfNter{LiteralString}, see @See{lexical}.)
 @OrNL	@Rw{local} @Rw{function} @bnfNter{Name} funcbody
 @OrNL	@Rw{global} @Rw{function} @bnfNter{Name} funcbody
 @OrNL	@Rw{local} attnamelist @bnfopt{@bnfter{=} explist}
-@OrNL	@Rw{global} attnamelist
+@OrNL	@Rw{global} attnamelist @bnfopt{@bnfter{=} explist}
 @OrNL	@Rw{global} @bnfopt{attrib} @bnfter{*}
 }
 

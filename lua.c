@@ -30,6 +30,12 @@
 #define LUA_INIT_VAR		"LUA_INIT"
 #endif
 
+/* Name of the environment variable with the name of the readline library */
+#if !defined(LUA_RLLIB_VAR)
+#define LUA_RLLIB_VAR		"LUA_READLINELIB"
+#endif
+
+
 #define LUA_INITVARVERSION	LUA_INIT_VAR LUA_VERSUFFIX
 
 
@@ -374,12 +380,21 @@ static int runargs (lua_State *L, char **argv, int n) {
 }
 
 
+static char *(*l_getenv)(const char *name);
+
+/* Function to ignore environment variables, used by option -E */
+static char *no_getenv (const char *name) {
+  UNUSED(name);
+  return NULL;
+}
+
+
 static int handle_luainit (lua_State *L) {
   const char *name = "=" LUA_INITVARVERSION;
-  const char *init = getenv(name + 1);
+  const char *init = l_getenv(name + 1);
   if (init == NULL) {
     name = "=" LUA_INIT_VAR;
-    init = getenv(name + 1);  /* try alternative name */
+    init = l_getenv(name + 1);  /* try alternative name */
   }
   if (init == NULL) return LUA_OK;
   else if (init[0] == '@')
@@ -498,18 +513,24 @@ static void lua_freeline (char *line) {
 #include <dlfcn.h>
 
 static void lua_initreadline (lua_State *L) {
-  void *lib = dlopen(LUA_READLINELIB, RTLD_NOW | RTLD_LOCAL);
-  if (lib == NULL)
-    lua_warning(L, "library '" LUA_READLINELIB "' not found", 0);
-  else {
+  const char *rllib = l_getenv(LUA_RLLIB_VAR);  /* name of readline library */
+  void *lib;  /* library handle */
+  if (rllib == NULL)  /* no environment variable? */
+    rllib = LUA_READLINELIB;  /* use default name */
+  lib = dlopen(rllib, RTLD_NOW | RTLD_LOCAL);
+  if (lib != NULL) {
     const char **name = cast(const char**, dlsym(lib, "rl_readline_name"));
     if (name != NULL)
       *name = "lua";
     l_readline = cast(l_readlineT, cast_func(dlsym(lib, "readline")));
     l_addhist = cast(l_addhistT, cast_func(dlsym(lib, "add_history")));
-    if (l_readline == NULL)
-      lua_warning(L, "unable to load 'readline'", 0);
+    if (l_readline != NULL)  /* could load readline function? */
+      return;  /* everything ok */
+    /* else emit a warning */
   }
+  lua_warning(L, "unable to load readline library '", 1);
+  lua_warning(L, rllib, 1);
+  lua_warning(L, "'", 0);
 }
 
 #else		/* }{ */
@@ -715,17 +736,18 @@ static int pmain (lua_State *L) {
   if (args & has_v)  /* option '-v'? */
     print_version();
   if (args & has_E) {  /* option '-E'? */
+    l_getenv = &no_getenv;  /* program will ignore environment variables */
     lua_pushboolean(L, 1);  /* signal for libraries to ignore env. vars. */
     lua_setfield(L, LUA_REGISTRYINDEX, "LUA_NOENV");
   }
+  else
+    l_getenv = &getenv;
   luai_openlibs(L);  /* open standard libraries */
   createargtable(L, argv, argc, script);  /* create table 'arg' */
   lua_gc(L, LUA_GCRESTART);  /* start GC... */
   lua_gc(L, LUA_GCGEN);  /* ...in generational mode */
-  if (!(args & has_E)) {  /* no option '-E'? */
-    if (handle_luainit(L) != LUA_OK)  /* run LUA_INIT */
-      return 0;  /* error running LUA_INIT */
-  }
+  if (handle_luainit(L) != LUA_OK)  /* run LUA_INIT */
+    return 0;  /* error running LUA_INIT */
   if (!runargs(L, argv, optlim))  /* execute arguments -e, -l, and -W */
     return 0;  /* something failed */
   if (script > 0) {  /* execute main script (if there is one) */

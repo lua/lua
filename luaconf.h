@@ -70,14 +70,18 @@
 #if defined(LUA_USE_LINUX)
 #define LUA_USE_POSIX
 #define LUA_USE_DLOPEN		/* needs an extra library: -ldl */
+#if !defined(LUA_READLINELIB)
 #define LUA_READLINELIB		"libreadline.so"
+#endif
 #endif
 
 
 #if defined(LUA_USE_MACOSX)
 #define LUA_USE_POSIX
 #define LUA_USE_DLOPEN		/* macOS does not need -ldl */
+#if !defined(LUA_READLINELIB)
 #define LUA_READLINELIB		"libedit.dylib"
+#endif
 #endif
 
 
@@ -224,17 +228,17 @@
 
 #if !defined(LUA_PATH_DEFAULT)
 #define LUA_PATH_DEFAULT  \
-		LUA_LDIR"?.lua;"  LUA_LDIR"?\\init.lua;" \
-		LUA_CDIR"?.lua;"  LUA_CDIR"?\\init.lua;" \
-		LUA_SHRDIR"?.lua;" LUA_SHRDIR"?\\init.lua;" \
+		LUA_LDIR "?.lua;"  LUA_LDIR "?\\init.lua;" \
+		LUA_CDIR "?.lua;"  LUA_CDIR "?\\init.lua;" \
+		LUA_SHRDIR "?.lua;"  LUA_SHRDIR "?\\init.lua;" \
 		".\\?.lua;" ".\\?\\init.lua"
 #endif
 
 #if !defined(LUA_CPATH_DEFAULT)
 #define LUA_CPATH_DEFAULT \
-		LUA_CDIR"?.dll;" \
-		LUA_CDIR"..\\lib\\lua\\" LUA_VDIR "\\?.dll;" \
-		LUA_CDIR"loadall.dll;" ".\\?.dll"
+		LUA_CDIR "?.dll;" \
+		LUA_CDIR "..\\lib\\lua\\"  LUA_VDIR "\\?.dll;" \
+		LUA_CDIR "loadall.dll;" ".\\?.dll"
 #endif
 
 #else			/* }{ */
@@ -245,14 +249,14 @@
 
 #if !defined(LUA_PATH_DEFAULT)
 #define LUA_PATH_DEFAULT  \
-		LUA_LDIR"?.lua;"  LUA_LDIR"?/init.lua;" \
-		LUA_CDIR"?.lua;"  LUA_CDIR"?/init.lua;" \
+		LUA_LDIR "?.lua;"  LUA_LDIR "?/init.lua;" \
+		LUA_CDIR "?.lua;"  LUA_CDIR "?/init.lua;" \
 		"./?.lua;" "./?/init.lua"
 #endif
 
 #if !defined(LUA_CPATH_DEFAULT)
 #define LUA_CPATH_DEFAULT \
-		LUA_CDIR"?.so;" LUA_CDIR"loadall.so;" "./?.so"
+		LUA_CDIR "?.so;" LUA_CDIR "loadall.so;" "./?.so"
 #endif
 
 #endif			/* } */
@@ -339,7 +343,18 @@
 /*
 @@ LUA_COMPAT_GLOBAL avoids 'global' being a reserved word
 */
-#define LUA_COMPAT_GLOBAL
+#if !defined(LUA_COMPAT_GLOBAL)
+#define LUA_COMPAT_GLOBAL	1
+#endif
+
+
+/*
+@@ LUA_COMPAT_LOOPVAR makes for-loop control variables not read-only,
+** as they were in previous versions.
+*/
+#if !defined(LUA_COMPAT_LOOPVAR)
+#define LUA_COMPAT_LOOPVAR	0
+#endif
 
 
 /*
@@ -721,10 +736,17 @@
 
 
 /*
-@@ LUAI_MAXALIGN defines fields that, when used in a union, ensure
-** maximum alignment for the other items in that union.
+@@ LUAI_MAXALIGN defines fields that ensure proper alignment for
+** memory areas offered by Lua (e.g., userdata memory).
+** Add fields to it if you need alignment for non-ISO objects.
 */
+#if defined(LLONG_MAX)
+/* use ISO C99 stuff */
+#define LUAI_MAXALIGN long double u; void *s; long long l
+#else
+/* use only C89 stuff */
 #define LUAI_MAXALIGN  lua_Number n; double u; void *s; lua_Integer i; long l
+#endif
 
 /* }================================================================== */
 

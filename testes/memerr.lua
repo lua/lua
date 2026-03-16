@@ -282,6 +282,25 @@ testamem("growing stack", function ()
   return foo(100)
 end)
 
+
+collectgarbage()
+collectgarbage()
+global io, T, setmetatable, collectgarbage, print
+
+local Count = 0
+testamem("finalizers", function ()
+  local X = false
+  local obj = setmetatable({}, {__gc = function ()  X = true end})
+  obj = nil
+  T.resetCI()   -- remove extra CallInfos
+  T.reallocstack(18)   -- remove extra stack slots
+  Count = Count + 1
+  io.stderr:write(Count, "\n")
+  T.trick(io)
+  collectgarbage()
+  return X
+end)
+
 -- }==================================================================
 
 

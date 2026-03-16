@@ -60,7 +60,7 @@ CWARNS= $(CWARNSCPP) $(CWARNSC) $(CWARNGCC)
 # create problems; some are only available in newer gcc versions. To
 # use some of them, we also have to define an environment variable
 # ASAN_OPTIONS="detect_invalid_pointer_pairs=2".
-# -fsanitize=undefined
+# -fsanitize=undefined  (you may need to add "-lubsan" to libs)
 # -fsanitize=pointer-subtract -fsanitize=address -fsanitize=pointer-compare
 # TESTS= -DLUA_USER_H='"ltests.h"' -Og -g
 

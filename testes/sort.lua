@@ -72,6 +72,19 @@ assert(a==1 and x==nil)
 a,x = unpack({1,2}, 1, 1)
 assert(a==1 and x==nil)
 
+
+do  -- unpack with non-tables
+  local debug = require"debug"
+  local oldmt = debug.getmetatable(0)
+  local str = "hello"
+  debug.setmetatable(0,
+               { __len = function () return #str end,
+                 __index = function (_, i) return string.sub(str, i, i) end})
+  assert(table.concat({table.unpack(0)}) == str)
+  debug.setmetatable(0, oldmt)   -- restore original metatable for numbers
+end
+
+
 do
   local maxi = (1 << 31) - 1          -- maximum value for an int (usually)
   local mini = -(1 << 31)             -- minimum value for an int (usually)
