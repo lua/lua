@@ -1302,7 +1302,7 @@ static int doonnewstack (lua_State *L) {
   lua_State *L1 = lua_newthread(L);
   size_t l;
   const char *s = luaL_checklstring(L, 1, &l);
-  int status = luaL_loadbuffer(L1, s, l, s);
+  int status = luaL_loadbufferx(L1, s, l, s, "t");
   if (status == LUA_OK)
     status = lua_pcall(L1, 0, 0, 0);
   lua_pushinteger(L, status);
@@ -1382,7 +1382,7 @@ static int doremote (lua_State *L) {
   const char *code = luaL_checklstring(L, 2, &lcode);
   int status;
   lua_settop(L1, 0);
-  status = luaL_loadbuffer(L1, code, lcode, code);
+  status = luaL_loadbufferx(L1, code, lcode, code, "t");
   if (status == LUA_OK)
     status = lua_pcall(L1, 0, LUA_MULTRET, 0);
   if (status != LUA_OK) {
@@ -1738,7 +1738,7 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       lua_pushinteger(L1, luaL_len(L1, getindex));
     }
     else if EQ("loadfile") {
-      luaL_loadfile(L1, luaL_checkstring(L1, getnum));
+      luaL_loadfilex(L1, luaL_checkstring(L1, getnum), "t");
     }
     else if EQ("loadstring") {
       size_t slen;

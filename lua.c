@@ -207,12 +207,12 @@ static int dochunk (lua_State *L, int status) {
 
 
 static int dofile (lua_State *L, const char *name) {
-  return dochunk(L, luaL_loadfile(L, name));
+  return dochunk(L, luaL_loadfilex(L, name, "bt"));
 }
 
 
 static int dostring (lua_State *L, const char *s, const char *name) {
-  return dochunk(L, luaL_loadbuffer(L, s, strlen(s), name));
+  return dochunk(L, luaL_loadbufferx(L, s, strlen(s), name, "t"));
 }
 
 
@@ -266,7 +266,7 @@ static int handle_script (lua_State *L, char **argv) {
   const char *fname = argv[0];
   if (strcmp(fname, "-") == 0 && strcmp(argv[-1], "--") != 0)
     fname = NULL;  /* stdin */
-  status = luaL_loadfile(L, fname);
+  status = luaL_loadfilex(L, fname, "bt");
   if (status == LUA_OK) {
     int n = pushargs(L);  /* push arguments to script */
     status = docall(L, n, LUA_MULTRET);
@@ -609,11 +609,11 @@ static int pushline (lua_State *L, int firstline) {
 static int addreturn (lua_State *L) {
   const char *line = lua_tostring(L, -1);  /* original line */
   const char *retline = lua_pushfstring(L, "return %s;", line);
-  int status = luaL_loadbuffer(L, retline, strlen(retline), "=stdin");
+  int status = luaL_loadbufferx(L, retline, strlen(retline), "=stdin", "t");
   if (status == LUA_OK)
     lua_remove(L, -2);  /* remove modified line */
   else
-    lua_pop(L, 2);  /* pop result from 'luaL_loadbuffer' and modified line */
+    lua_pop(L, 2);  /* pop result from 'luaL_loadbufferx' and modified line */
   return status;
 }
 
@@ -640,7 +640,7 @@ static int multiline (lua_State *L) {
   const char *line = lua_tolstring(L, 1, &len);  /* get first line */
   checklocal(line);
   for (;;) {  /* repeat until gets a complete statement */
-    int status = luaL_loadbuffer(L, line, len, "=stdin");  /* try it */
+    int status = luaL_loadbufferx(L, line, len, "=stdin", "t");  /* try it */
     if (!incomplete(L, status) || !pushline(L, 0))
       return status;  /* should not or cannot try to add continuation line */
     lua_remove(L, -2);  /* remove error message (from incomplete line) */

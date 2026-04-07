@@ -340,9 +340,11 @@ static int load_aux (lua_State *L, int status, int envidx) {
 
 
 static const char *getMode (lua_State *L, int idx) {
-  const char *mode = luaL_optstring(L, idx, "bt");
-  if (strchr(mode, 'B') != NULL)  /* Lua code cannot use fixed buffers */
+  const char *mode = luaL_optstring(L, idx, NULL);
+  if (mode != NULL && strchr(mode, 'B') != NULL) {
+    /* Lua code cannot use fixed buffers */
     luaL_argerror(L, idx, "invalid mode");
+  }
   return mode;
 }
 
@@ -425,7 +427,7 @@ static int dofilecont (lua_State *L, int d1, lua_KContext d2) {
 static int luaB_dofile (lua_State *L) {
   const char *fname = luaL_optstring(L, 1, NULL);
   lua_settop(L, 1);
-  if (l_unlikely(luaL_loadfile(L, fname) != LUA_OK))
+  if (l_unlikely(luaL_loadfilex(L, fname, "bt") != LUA_OK))
     return lua_error(L);
   lua_callk(L, 0, LUA_MULTRET, 0, dofilecont);
   return dofilecont(L, 0, 0);
