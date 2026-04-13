@@ -580,7 +580,7 @@ static const char *getobjname (const Proto *p, int lastpc, int reg,
         kname(p, k, name);
         return isEnv(p, lastpc, i, 1);
       }
-      case OP_GETTABLE: {
+      case OP_GETTABLE: case OP_GETVARG: {
         int k = GETARG_C(i);  /* key index */
         rname(p, lastpc, k, name);
         return isEnv(p, lastpc, i, 0);

@@ -159,6 +159,9 @@ assert(not string.find(doit"aaa={13}; local bbbb=1; aaa[bbbb](3)", "'bbbb'"))
 checkmessage("aaa={13}; local bbbb=1; aaa[bbbb](3)", "number")
 checkmessage("aaa=(1)..{}", "a table value")
 
+checkmessage("local function foo (...t) return t.xx + 1 end; foo()",
+             "field 'xx'")
+
 -- bug in 5.4.6
 checkmessage("a = {_ENV = {}}; print(a._ENV.x + 1)", "field 'x'")
 
