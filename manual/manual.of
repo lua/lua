@@ -3962,8 +3962,8 @@ this confuses the next call to @Lid{lua_next}.
 
 This function may raise an error if the given key
 is neither @nil nor present in the table.
-See function @Lid{next} for the caveats of modifying
-the table during its traversal.
+
+See function @Lid{next} for more details about the traversal.
 
 }
 
@@ -4448,7 +4448,7 @@ Starts and resumes a coroutine in the given thread @id{L}.
 To start a coroutine,
 you push the main function plus any arguments
 onto the empty stack of the thread.
-then you call @Lid{lua_resume},
+Then you call @Lid{lua_resume},
 with @id{nargs} being the number of arguments.
 The function returns when the coroutine suspends,
 finishes its execution, or raises an unprotected error.
@@ -4628,7 +4628,7 @@ You can resume threads with status @Lid{LUA_OK}
 }
 
 @APIEntry{size_t lua_stringtonumber (lua_State *L, const char *s);|
-@apii{0,1,-}
+@apii{0,0|1,-}
 
 Converts the zero-terminated string @id{s} to a number,
 pushes that number into the stack,
@@ -4958,7 +4958,7 @@ Lua calls the given @x{continuation function} @id{k} to continue
 the execution of the @N{C function} that yielded @see{continuations}.
 This continuation function receives the same stack
 from the previous function,
-with the @id{n} results removed and
+with all the results (@id{nresults}) removed and
 replaced by the arguments passed to @Lid{lua_resume}.
 Moreover,
 the continuation function receives the value @id{ctx}
@@ -5048,7 +5048,7 @@ the function was defined in a string where
 }
 
 @item{@id{srclen}|
-The length of the string @id{source}.
+the length of the string @id{source}.
 }
 
 @item{@id{short_src}|
@@ -5212,7 +5212,7 @@ running at the given level;
 }
 
 @item{@Char{S}|
-fills in the fields @id{source}, @id{short_src},
+fills in the fields @id{source}, @id{srclen}, @id{short_src},
 @id{linedefined}, @id{lastlinedefined}, and @id{what};
 }
 
@@ -5388,7 +5388,9 @@ Returns @id{NULL} (and pops nothing)
 when the index is greater than
 the number of active local variables.
 
-Parameters @id{ar} and @id{n} are as in the function @Lid{lua_getlocal}.
+Parameters @id{ar} and @id{n} are as in the function @Lid{lua_getlocal},
+except that @id{ar} cannot be @id{NULL},
+as @id{lua_setlocal} only operates on activation records.
 
 }
 
@@ -6832,8 +6834,7 @@ for k,v in pairs(t) do @rep{body} end
 }
 will iterate over all key@En{}value pairs of table @id{t}.
 
-See function @Lid{next} for the caveats of modifying
-the table during its traversal.
+See function @Lid{next} for more details about the traversal.
 
 }
 
@@ -9123,6 +9124,7 @@ which automatically removes the file when the program ends.
 
 This library provides
 the functionality of the @link{debugI|debug interface} to Lua programs.
+
 You should exert care when using this library.
 Several of its functions
 violate basic assumptions about Lua code
@@ -9132,6 +9134,8 @@ that userdata metatables cannot be changed by Lua code;
 that Lua programs do not crash)
 and therefore can compromise otherwise secure code.
 Moreover, some functions in this library may be slow.
+It is good practice to always require this library explicitly
+before using it.
 
 All functions in this library are provided
 inside the @defid{debug} table.
