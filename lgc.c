@@ -709,7 +709,7 @@ static l_mem traversethread (global_State *g, lua_State *th) {
     if (!g->gcemergency)
       luaD_shrinkstack(th); /* do not change stack in emergency cycle */
     for (o = th->top.p; o < th->stack_last.p + EXTRA_STACK; o++)
-      setnilvalue(s2v(o));  /* clear dead stack slice */
+      setnilvalue2s(o);  /* clear dead stack slice */
     /* 'remarkupvals' may have removed thread from 'twups' list */
     if (!isintwups(th) && th->openupval != NULL) {
       th->twups = g->twups;  /* link it back to the list */

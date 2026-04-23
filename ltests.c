@@ -1145,7 +1145,7 @@ static int table_query (lua_State *L) {
     if (!tagisempty(*getArrTag(t, i)))
       arr2obj(t, cast_uint(i), s2v(L->top.p));
     else
-      setnilvalue(s2v(L->top.p));
+      setnilvalue2s(L->top.p);
     api_incr_top(L);
     lua_pushnil(L);
   }

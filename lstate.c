@@ -151,7 +151,7 @@ LUAI_FUNC void luaE_incCstack (lua_State *L) {
 static void resetCI (lua_State *L) {
   CallInfo *ci = L->ci = &L->base_ci;
   ci->func.p = L->stack.p;
-  setnilvalue(s2v(ci->func.p));  /* 'function' entry for basic 'ci' */
+  setnilvalue2s(ci->func.p);  /* 'function' entry for basic 'ci' */
   ci->top.p = ci->func.p + 1 + LUA_MINSTACK;  /* +1 for 'function' entry */
   ci->u.c.k = NULL;
   ci->callstatus = CIST_C;
@@ -166,7 +166,7 @@ static void stack_init (lua_State *L1, lua_State *L) {
   L1->stack.p = luaM_newvector(L, BASIC_STACK_SIZE + EXTRA_STACK, StackValue);
   L1->tbclist.p = L1->stack.p;
   for (i = 0; i < BASIC_STACK_SIZE + EXTRA_STACK; i++)
-    setnilvalue(s2v(L1->stack.p + i));  /* erase new stack */
+    setnilvalue2s(L1->stack.p + i);  /* erase new stack */
   L1->stack_last.p = L1->stack.p + BASIC_STACK_SIZE;
   /* initialize first ci */
   resetCI(L1);

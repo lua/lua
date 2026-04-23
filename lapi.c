@@ -187,7 +187,7 @@ LUA_API void lua_settop (lua_State *L, int idx) {
     api_check(L, idx <= ci->top.p - (func + 1), "new top too large");
     diff = ((func + 1) + idx) - L->top.p;
     for (; diff > 0; diff--)
-      setnilvalue(s2v(L->top.p++));  /* clear new slots */
+      setnilvalue2s(L->top.p++);  /* clear new slots */
   }
   else {
     api_check(L, -(idx+1) <= (L->top.p - (func + 1)), "invalid new top");
@@ -210,7 +210,7 @@ LUA_API void lua_closeslot (lua_State *L, int idx) {
   api_check(L, (L->ci->callstatus & CIST_TBC) && (L->tbclist.p == level),
      "no variable to close at given level");
   level = luaF_close(L, level, CLOSEKTOP, 0);
-  setnilvalue(s2v(level));
+  setnilvalue2s(level);
   lua_unlock(L);
 }
 
@@ -513,7 +513,7 @@ LUA_API const void *lua_topointer (lua_State *L, int idx) {
 
 LUA_API void lua_pushnil (lua_State *L) {
   lua_lock(L);
-  setnilvalue(s2v(L->top.p));
+  setnilvalue2s(L->top.p);
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -570,7 +570,7 @@ LUA_API const char *lua_pushexternalstring (lua_State *L,
 LUA_API const char *lua_pushstring (lua_State *L, const char *s) {
   lua_lock(L);
   if (s == NULL)
-    setnilvalue(s2v(L->top.p));
+    setnilvalue2s(L->top.p);
   else {
     TString *ts;
     ts = luaS_new(L, s);
@@ -743,7 +743,7 @@ LUA_API int lua_geti (lua_State *L, int idx, lua_Integer n) {
 
 static int finishrawget (lua_State *L, lu_byte tag) {
   if (tagisempty(tag))  /* avoid copying empty items to the stack */
-    setnilvalue(s2v(L->top.p));
+    setnilvalue2s(L->top.p);
   api_incr_top(L);
   lua_unlock(L);
   return novariant(tag);
@@ -836,7 +836,7 @@ LUA_API int lua_getiuservalue (lua_State *L, int idx, int n) {
   o = index2value(L, idx);
   api_check(L, ttisfulluserdata(o), "full userdata expected");
   if (n <= 0 || n > uvalue(o)->nuvalue) {
-    setnilvalue(s2v(L->top.p));
+    setnilvalue2s(L->top.p);
     t = LUA_TNONE;
   }
   else {

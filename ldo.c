@@ -349,7 +349,7 @@ int luaD_reallocstack (lua_State *L, int newsize, int raiseerror) {
   correctstack(L, oldstack);  /* change offsets back to pointers */
   L->stack_last.p = L->stack.p + newsize;
   for (i = oldsize + EXTRA_STACK; i < newsize + EXTRA_STACK; i++)
-    setnilvalue(s2v(newstack + i)); /* erase new segment */
+    setnilvalue2s(newstack + i); /* erase new segment */
   return 1;
 }
 
@@ -554,7 +554,7 @@ l_sinline void genmoveresults (lua_State *L, StkId res, int nres,
   for (i = 0; i < nres; i++)  /* move all results to correct place */
     setobjs2s(L, res + i, firstresult + i);
   for (; i < wanted; i++)  /* complete wanted number of results */
-    setnilvalue(s2v(res + i));
+    setnilvalue2s(res + i);
   L->top.p = res + wanted;  /* top points after the last result */
 }
 
@@ -574,7 +574,7 @@ l_sinline void moveresults (lua_State *L, StkId res, int nres,
       return;
     case 1 + 1:  /* one value needed */
       if (nres == 0)   /* no results? */
-        setnilvalue(s2v(res));  /* adjust with nil */
+        setnilvalue2s(res);  /* adjust with nil */
       else  /* at least one result */
         setobjs2s(L, res, L->top.p - nres);  /* move it to proper place */
       L->top.p = res + 1;
@@ -694,7 +694,7 @@ int luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func,
         setobjs2s(L, ci->func.p + i, func + i);
       func = ci->func.p;  /* moved-down function */
       for (; narg1 <= nfixparams; narg1++)
-        setnilvalue(s2v(func + narg1));  /* complete missing arguments */
+        setnilvalue2s(func + narg1);  /* complete missing arguments */
       ci->top.p = func + 1 + fsize;  /* top for new function */
       lua_assert(ci->top.p <= L->stack_last.p);
       ci->u.l.savedpc = p->code;  /* starting point */
@@ -741,7 +741,7 @@ CallInfo *luaD_precall (lua_State *L, StkId func, int nresults) {
       L->ci = ci = prepCallInfo(L, func, status, func + 1 + fsize);
       ci->u.l.savedpc = p->code;  /* starting point */
       for (; narg < nfixparams; narg++)
-        setnilvalue(s2v(L->top.p++));  /* complete missing arguments */
+        setnilvalue2s(L->top.p++);  /* complete missing arguments */
       lua_assert(ci->top.p <= L->stack_last.p);
       return ci;
     }

@@ -303,7 +303,7 @@ lu_byte luaV_finishget (lua_State *L, const TValue *t, TValue *key,
     else {  /* 't' is a table */
       tm = fasttm(L, hvalue(t)->metatable, TM_INDEX);  /* table's metamethod */
       if (tm == NULL) {  /* no metamethod? */
-        setnilvalue(s2v(val));  /* result is nil */
+        setnilvalue2s(val);  /* result is nil */
         return LUA_VNIL;
       }
       /* else will try the metamethod */
