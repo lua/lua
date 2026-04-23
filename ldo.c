@@ -1128,25 +1128,51 @@ static void checkmode (lua_State *L, const char *mode, const char *x) {
 }
 
 
+/*
+** Before the first call to the reader function, Lua reserves a slot
+** with a table for anchoring stuff.
+*/
 static void f_parser (lua_State *L, void *ud) {
   LClosure *cl;
   struct SParser *p = cast(struct SParser *, ud);
   const char *mode = p->mode ? p->mode : "bt";
-  int c = zgetc(p->z);  /* read first character */
+  int c;
+  Table *anchor;
+  ptrdiff_t otop = savestack(L, L->top.p);  /* original top */
+  luaD_checkstack(L, 2);
+  anchor = luaH_new(L);  /* create the anchor table */
+  sethvalue2s(L, L->top.p++, anchor);  /* anchor the anchor table */
+  c = zgetc(p->z);  /* read first character */
   if (c == LUA_SIGNATURE[0]) {
     int fixed = 0;
     if (strchr(mode, 'B') != NULL)
       fixed = 1;
     else
       checkmode(L, mode, "binary");
-    cl = luaU_undump(L, p->z, p->name, fixed);
+    cl = luaU_undump(L, p->z, anchor, p->name, fixed);
   }
   else {
     checkmode(L, mode, "text");
-    cl = luaY_parser(L, p->z, &p->buff, &p->dyd, p->name, c);
+    cl = luaY_parser(L, p->z, anchor, &p->buff, &p->dyd, p->name, c);
   }
+  L->top.p = restorestack(L, otop);  /* restore stack */
+  setclLvalue2s(L, L->top.p++, cl);  /* push closure */
   lua_assert(cl->nupvalues == cl->p->sizeupvalues);
   luaF_initupvals(L, cl);
+}
+
+
+/*
+** Anchor an object in a table in the stack.  First, anchor the object
+** temporarily in the stack, as luaH_set may call an emergency GC.
+** Then, add it in the table with itself as its key.
+*/
+void luaD_anchorobj (lua_State *L, Table *anchor, GCObject *obj) {
+  setgcovalue(L, s2v(L->top.p++), obj);  /* temporary anchor in the stack */
+  luaH_set(L, anchor, s2v(L->top.p - 1), s2v(L->top.p - 1));
+  /* Because this is a new key, luaH_set will call the GC barrier, so
+     we don't need to call the barrier again here */
+  L->top.p--;
 }
 
 

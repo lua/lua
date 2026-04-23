@@ -372,6 +372,32 @@ do   -- another bug (in 5.4.0)
 end
 
 
+if T then
+  -- check stack level when calling reader function
+  local function get (str)
+    local pos = 0
+    local level = nil
+    return function ()
+      pos = pos + 1
+      local c = string.sub(str, pos, pos)
+      local newlevel = T.stacklevel()
+      if not level then
+        level = newlevel
+      else
+        assert(level == newlevel)
+      end
+      return #c > 0 and c or nil
+    end
+  end
+
+  local str = "local function foo () end; return 121"
+  assert(assert(load(get(str)))() == 121)
+
+  str = string.dump(load(str))
+  assert(assert(load(get(str)))() == 121)
+end
+
+
 x = string.dump(load("x = 1; return x"))
 a = assert(load(read1(x), nil, "b"))
 assert(a() == 1 and _G.x == 1)
