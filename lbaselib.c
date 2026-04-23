@@ -366,33 +366,24 @@ static int luaB_loadfile (lua_State *L) {
 
 
 /*
-** reserved slot, above all arguments, to hold a copy of the returned
-** string to avoid it being collected while parsed. 'load' has four
-** optional arguments (chunk, source name, mode, and environment).
-*/
-#define RESERVEDSLOT	5
-
-
-/*
-** Reader for generic 'load' function: 'lua_load' uses the
-** stack for internal stuff, so the reader cannot change the
-** stack top. Instead, it keeps its resulting string in a
-** reserved slot inside the stack.
+** Reader for generic 'load' function.
 */
 static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
-  (void)(ud);  /* not used */
+  int *firstcall = cast(int *, ud);
   luaL_checkstack(L, 2, "too many nested functions");
+  if (*firstcall)
+    *firstcall = 0;
+  else
+    lua_pop(L, 1);  /* remove previous result */
   lua_pushvalue(L, 1);  /* get function */
   lua_call(L, 0, 1);  /* call it */
   if (lua_isnil(L, -1)) {
-    lua_pop(L, 1);  /* pop result */
     *size = 0;
     return NULL;
   }
   else if (l_unlikely(!lua_isstring(L, -1)))
     luaL_error(L, "reader function must return a string");
-  lua_replace(L, RESERVEDSLOT);  /* save string in reserved slot */
-  return lua_tolstring(L, RESERVEDSLOT, size);
+  return lua_tolstring(L, -1, size);
 }
 
 
@@ -407,10 +398,10 @@ static int luaB_load (lua_State *L) {
     status = luaL_loadbufferx(L, s, l, chunkname, mode);
   }
   else {  /* loading from a reader function */
+    int firstcall = 1;  /* userdata for generic_reader */
     const char *chunkname = luaL_optstring(L, 2, "=(load)");
     luaL_checktype(L, 1, LUA_TFUNCTION);
-    lua_settop(L, RESERVEDSLOT);  /* create reserved slot */
-    status = lua_load(L, generic_reader, NULL, chunkname, mode);
+    status = lua_load(L, generic_reader, &firstcall, chunkname, mode);
   }
   return load_aux(L, status, env);
 }
