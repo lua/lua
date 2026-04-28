@@ -663,11 +663,11 @@ static int boolT (FuncState *fs) {
 ** Add nil to list of constants and return its index.
 */
 static int nilK (FuncState *fs) {
-  TValue k, v;
-  setnilvalue(&v);
+  lua_State *L = fs->ls->L;
+  TValue k;
   /* cannot use nil as key; instead use table itself */
-  sethvalue(fs->ls->L, &k, fs->kcache);
-  return k2proto(fs, &k, &v);
+  sethvalue(L, &k, fs->kcache);
+  return k2proto(fs, &k, &G(L)->nilvalue);
 }
 
 

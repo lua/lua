@@ -62,8 +62,11 @@ CWARNS= $(CWARNSCPP) $(CWARNSC) $(CWARNGCC)
 # ASAN_OPTIONS="detect_invalid_pointer_pairs=2".
 # -fsanitize=undefined  (you may need to add "-lubsan" to libs)
 # -fsanitize=pointer-subtract -fsanitize=address -fsanitize=pointer-compare
-# TESTS= -DLUA_USER_H='"ltests.h"' -Og -g
 
+# Test mode: Add test library, turn on asserts, redefine several
+# constants ("to give some bugs a chance"), track memory use, and add
+# debug information.
+# TESTS= -DLUA_USER_H='"ltests.h"' -Og -g
 
 LOCAL = $(TESTS) $(CWARNS)
 
@@ -71,13 +74,15 @@ LOCAL = $(TESTS) $(CWARNS)
 # To enable Linux goodies, -DLUA_USE_LINUX
 # For C89, "-std=c89 -DLUA_USE_C89"
 # Note that Linux/Posix options are not compatible with C89
+# (For 32-bit, add option "-m32" to MYCFLAGS and MYLDFLAGS.)
 MYCFLAGS= $(LOCAL) -std=c99 -DLUA_USE_LINUX
 MYLDFLAGS= -Wl,-E
 MYLIBS= -ldl
 
 
 CC= gcc
-CFLAGS= -Wall -O2 $(MYCFLAGS) -fno-stack-protector -fno-common -march=native
+# (Optionally we can use -march=native -mno-avx512f.)
+CFLAGS= -Wall -O2 $(MYCFLAGS) -fno-stack-protector -fno-common
 AR= ar rc
 RANLIB= ranlib
 RM= rm -f
