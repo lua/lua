@@ -1166,6 +1166,7 @@ static void funcargs (LexState *ls, expdesc *f) {
     }
     default: {
       luaX_syntaxerror(ls, "function arguments expected");
+      return;  /* to avoid warnings */
     }
   }
   lua_assert(f->k == VNONRELOC);
