@@ -107,7 +107,7 @@ for small machines and embedded systems.
 
 Unless stated otherwise,
 any overflow when manipulating integer values @def{wrap around},
-according to the usual rules of two-complement arithmetic.
+according to the usual rules of two's complement arithmetic.
 (In other words,
 the actual result is the unique representable integer
 that is equal modulo @M{2@sp{n}} to the mathematical result,
@@ -609,7 +609,7 @@ as soon as the collector can be sure the object
 will not be accessed again in the normal execution of the program.
 (@Q{Normal execution} here excludes finalizers,
 which can resurrect dead objects @see{finalizers},
-and excludes also operations using the debug library.)
+and it excludes also operations using the debug library.)
 Note that the time when the collector can be sure that an object
 is dead may not coincide with the programmer's expectations.
 The only guarantees are that Lua will not collect an object
@@ -1950,12 +1950,12 @@ Note that keys that are not positive integers
 do not interfere with borders.
 
 A table with exactly one border is called a @def{sequence}.
-For instance, the table @T{{10, 20, 30, 40, 50}} is a sequence,
+For instance, the table @T{{10,20,30,40,50}} is a sequence,
 as it has only one border (5).
-The table @T{{10, 20, 30, nil, 50}} has two borders (3 and 5),
+The table @T{{10,20,30,nil,50}} has two borders (3 and 5),
 and therefore it is not a sequence.
 (The @nil at index 4 is called a @emphx{hole}.)
-The table @T{{nil, 20, 30, nil, nil, 60, nil}}
+The table @T{{nil,20,30,nil,nil,60,nil}}
 has three borders (0, 3, and 6),
 so it is not a sequence, too.
 The table @T{{}} is a sequence with border 0.
@@ -2318,7 +2318,7 @@ we recommend assigning the vararg expression
 to a single variable and using that variable
 in its place.
 
-Here are some examples of uses of mutlres expressions.
+Here are some examples of uses of multires expressions.
 In all cases, when the construction needs
 @Q{the n-th result} and there is no such result,
 it uses a @nil.
@@ -3471,9 +3471,9 @@ because a pseudo-index is not an actual stack position.
 The type of integers in Lua.
 
 By default this type is @id{long long},
-(usually a 64-bit two-complement integer),
+(usually a 64-bit two's complement integer),
 but that can be changed to @id{long} or @id{int}
-(usually a 32-bit two-complement integer).
+(usually a 32-bit two's complement integer).
 (See @id{LUA_INT_TYPE} in @id{luaconf.h}.)
 
 Lua also defines the constants
@@ -3689,7 +3689,7 @@ passes to the allocator in every call.
 @apii{0,1,m}
 
 Creates a new empty table and pushes it onto the stack.
-It is equivalent to @T{lua_createtable(L, 0, 0)}.
+It is equivalent to @T{lua_createtable(L,0,0)}.
 
 }
 
