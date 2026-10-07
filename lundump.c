@@ -96,20 +96,16 @@ static lu_byte loadByte (LoadState *S) {
 
 static lua_Unsigned loadVarint (LoadState *S, lua_Unsigned limit) {
   lua_Unsigned x = 0;
+  lua_Unsigned limit_high = limit >> 7;
+  int limit_low = limit & 0x7f;
   int b;
-  limit >>= 7;
   do {
     b = loadByte(S);
-    if (x > limit)
+    if (x >= limit_high && (x > limit_high || (b & 0x7f) > limit_low))
       error(S, "integer overflow");
     x = (x << 7) | (b & 0x7f);
   } while ((b & 0x80) != 0);
   return x;
-}
-
-
-static size_t loadSize (LoadState *S) {
-  return cast_sizet(loadVarint(S, MAX_SIZE));
 }
 
 
@@ -137,16 +133,17 @@ static lua_Integer loadInteger (LoadState *S) {
 
 
 /*
-** Load a nullable string into slot 'sl' from prototype 'p'. The
-** assignment to the slot and the barrier must be performed before any
-** possible GC activity, to anchor the string. (Both 'loadVector' and
-** 'luaH_setint' can call the GC.)
+** Load a nullable string into slot 'sl' from prototype 'p'. 'size' is
+** either the string length + 1 or zero for a previously saved string.
+** The assignment to the slot and the barrier must be performed before
+** any possible GC activity, to anchor the string. (Both 'loadVector'
+** and 'luaH_setint' can call the GC.)
 */
 static void loadString (LoadState *S, Proto *p, TString **sl) {
   lua_State *L = S->L;
   TString *ts;
   TValue sv;
-  size_t size = loadSize(S);
+  size_t size = cast_sizet(loadVarint(S, MAX_SIZE - sizeof(TString) + 1));
   if (size == 0) {  /* previously saved string? */
     lua_Unsigned idx = loadVarint(S, LUA_MAXUNSIGNED);  /* get its index */
     TValue stv;
@@ -160,7 +157,7 @@ static void loadString (LoadState *S, Proto *p, TString **sl) {
     luaC_objbarrier(L, p, ts);
     return;  /* do not save it again */
   }
-  else if ((size -= 1) <= LUAI_MAXSHORTLEN) {  /* short string? */
+  else if (--size <= LUAI_MAXSHORTLEN) {  /* short string? */
     char buff[LUAI_MAXSHORTLEN + 1];  /* extra space for '\0' */
     loadVector(S, buff, size + 1);  /* load string into buffer */
     *sl = ts = luaS_newlstr(L, buff, size);  /* create string */

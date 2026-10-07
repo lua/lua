@@ -385,6 +385,12 @@ do
   assert(minint == load("return " .. minint)())
   assert(eqT(maxint, load("return " .. maxint)()))
 
+  -- limit for integer encoding in binary chunks
+  -- (~(-1 >> 1) is optimized by the compiler as minint, which is
+  -- then encoded in a binary chunk as max unsigned)
+  local f = string.dump(function () return  ~(-1 >> 1) end)
+  assert(load(f)() == minint)
+
   assert(eqT(10000000000000000000000.0, 10000000000000000000000))
   assert(eqT(-10000000000000000000000.0, -10000000000000000000000))
 end

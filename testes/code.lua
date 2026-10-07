@@ -303,6 +303,7 @@ checkI(function () return 0xF0.0 | 0xCC.0 ~ 0xAA & 0xFD end, 0xF4)
 checkI(function () return ~(~kFF0 | kFF0) end, 0)
 checkI(function () return ~~-1024.0 end, -1024)
 checkI(function () return ((100 << k6) << -4) >> 2 end, 100)
+checkK(function () return ~(-1 >> 1) end, math.mininteger)
 
 -- borders around MAXARG_sBx ((((1 << 17) - 1) >> 1) == 65535)
 local a = 17; local sbx = ((1 << a) - 1) >> 1   -- avoid folding
