@@ -838,6 +838,11 @@ do
   local a1, a2, a3, a4, a5 = 0, 0, "\0\0\0\0\0\0\0\0", 0, "\0\0\0\0\0\0\0\0"
   assert(a1 == a2 and a2 == a4 and a1 ~= a3)
   assert(a3 == a5)
+
+  -- Bug since 5.4: Results differ for constant 0 versus variable 0;
+  -- (mz - 0) should be -0.0, but it resulted in +0.0
+  local zi = 0
+  assert(1/(mz - 0) == 1/(mz - zi))
 end
 
 

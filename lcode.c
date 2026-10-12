@@ -1542,15 +1542,19 @@ static void codebinK (FuncState *fs, BinOpr opr,
 
 /* Try to code a binary operator negating its second operand.
 ** For the metamethod, 2nd operand must keep its original value.
+** As a special case, avoid the optimization for (exp - 0), because
+** (-0.0 - 0) is -0.0, while (-0.0 + 0) is +0.0.
 */
 static int finishbinexpneg (FuncState *fs, expdesc *e1, expdesc *e2,
-                             OpCode op, int line, TMS event) {
+                            OpCode op, int line, TMS event) {
   if (!isKint(e2))
     return 0;  /* not an integer constant */
   else {
     lua_Integer i2 = e2->u.ival;
     if (!(fitsC(i2) && fitsC(-i2)))
       return 0;  /* not in the proper range */
+    if (event == TM_SUB && i2 == 0)
+      return 0;  /* do not optimize (exp - 0) */
     else {  /* operating a small integer constant */
       int v2 = cast_int(i2);
       finishbinexpval(fs, e1, e2, op, int2sC(-v2), 0, line, OP_MMBINI, event);
