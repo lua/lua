@@ -734,6 +734,22 @@ do
   a = 0; for i=1.0, 0.99999, -1 do a=a+1 end; assert(a==1)
 end
 
+do  print("testing NaN in numeric for")
+  local NaN = 0/0
+
+  for i = 1, NaN, 1 do error("should not run the loop") end
+  for i = 1, NaN, -1 do error("should not run the loop") end
+  for i = 1.0, NaN do error("should not run the loop") end
+  for i = 1.0, NaN, -1 do error("should not run the loop") end
+  for i = NaN, 1 do error("should not run the loop") end
+  for i = NaN, 1, -1 do error("should not run the loop") end
+
+  -- NaN is not negative, so the loop must be ascending
+  -- (that's somewhat arbitrary)
+  for i = 2, 1, NaN do error("should not run the loop") end
+  local s = 0; for i = 1, 5, NaN do s = s + 1 end; assert(s == 1)
+end
+
 do   -- attempt to change the control variable
   local st, msg = load "for i = 1, 10 do i = 10 end"
   assert(not st and string.find(msg, "assign to const variable 'i'"))

@@ -190,10 +190,11 @@ static int forlimit (lua_State *L, lua_Integer init, const TValue *lim,
       if (step < 0) return 1;  /* initial value must be less than it */
       *p = LUA_MAXINTEGER;  /* truncate */
     }
-    else {  /* it is less than min integer */
+    else if (luai_numgt(0, flim)) {  /* if it is negative, it is too small */
       if (step > 0) return 1;  /* initial value must be greater than it */
       *p = LUA_MININTEGER;  /* truncate */
     }
+    else return 1;  /* limit is NaN (neither 0 nor positive nor negative) */
   }
   return (step > 0 ? init > *p : init < *p);  /* not to run? */
 }
@@ -251,8 +252,8 @@ static int forprep (lua_State *L, StkId ra) {
       luaG_forerror(L, pinit, "initial value");
     if (step == 0)
       luaG_runerror(L, "'for' step is zero");
-    if (luai_numlt(0, step) ? luai_numlt(limit, init)
-                            : luai_numlt(init, limit))
+    if (!(luai_numge(0, step) ? luai_numge(init, limit)
+                              : luai_numge(limit, init)))
       return 1;  /* skip the loop */
     else {
       /* make sure all values are floats */
