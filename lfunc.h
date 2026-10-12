@@ -58,8 +58,8 @@ LUAI_FUNC StkId luaF_close (lua_State *L, StkId level, TStatus status, int yy);
 LUAI_FUNC void luaF_unlinkupval (UpVal *uv);
 LUAI_FUNC lu_mem luaF_protosize (Proto *p);
 LUAI_FUNC void luaF_freeproto (lua_State *L, Proto *f);
-LUAI_FUNC const char *luaF_getlocalname (const Proto *func, int local_number,
-                                         int pc);
+LUAI_FUNC const char *luaF_getlocalname (const Proto *func,
+                                         unsigned local_number, int pc);
 
 
 #endif

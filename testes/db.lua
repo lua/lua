@@ -258,6 +258,7 @@ print'+'
 -- invalid levels in [gs]etlocal
 assert(not pcall(debug.getlocal, 20, 1))
 assert(not pcall(debug.setlocal, -1, 1, 10))
+assert(not debug.getlocal(test, -2147483648))
 
 
 -- parameter names
