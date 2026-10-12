@@ -37,11 +37,11 @@ The host program can invoke functions to execute a piece of Lua code,
 can write and read Lua variables,
 and can register @N{C functions} to be called by Lua code.
 Through the use of @N{C functions}, Lua can be augmented to cope with
-a wide range of different domains,
+a wide range of domains,
 thus creating customized programming languages sharing a syntactical framework.
 
-Lua is free software,
-and is provided as usual with no guarantees,
+Lua is free software
+and is provided with no guarantees,
 as stated in its license.
 The implementation described in this manual is available
 at Lua's official web site, @id{www.lua.org}.
@@ -92,7 +92,7 @@ Despite its name,
 @false is frequently used as an alternative to @nil,
 with the key difference that @false behaves
 like a regular value in a table,
-while a @nil in a table represents an absent key.
+while @nil in a table represents an absent key.
 
 The type @emph{number} represents both
 integer numbers and real (floating-point) numbers,
@@ -373,7 +373,7 @@ Lua itself only generates errors whose error object is a string,
 but programs can generate errors with
 any value as the error object,
 except @nil.
-(Lua will change a @nil as error object to a string message.)
+(Lua will change a @nil value as error object to a string message.)
 It is up to the Lua program or its host to handle such error objects.
 For historical reasons,
 an error object is often called an @def{error message},
@@ -441,7 +441,7 @@ except by using the @link{debuglib|debug library}.
 Tables and full userdata have individual metatables,
 although multiple tables and userdata can share their metatables.
 Values of all other types share one single metatable per type;
-that is, there is one single metatable for all numbers,
+that is, there is a single metatable for all numbers,
 one for all strings, etc.
 By default, a value has no metatable,
 but the string library sets a metatable for the string type @see{strlib}.
@@ -665,11 +665,11 @@ Some functions in the standard library
 (e.g., @Lid{tostring})
 use other fields in metatables for their own purposes.
 
-It is a good practice to add all needed metamethods to a table
+It is good practice to add all needed metamethods to a table
 before setting it as a metatable of some object.
 In particular, the @idx{__gc} metamethod works only when this order
 is followed @see{finalizers}.
-It is also a good practice to set the metatable of an object
+It is also good practice to set the metatable of an object
 right after its creation.
 
 }
@@ -712,7 +712,7 @@ The garbage collector (GC) in Lua can work in two modes:
 incremental and generational.
 
 The default GC mode with the default parameters
-are adequate for most uses.
+is adequate for most uses.
 However, programs that waste a large proportion of their time
 allocating and freeing memory can benefit from other settings.
 Keep in mind that the GC behavior is non-portable
@@ -773,7 +773,7 @@ effectively producing a non-incremental, stop-the-world collector.
 
 In generational mode,
 the collector does frequent @emph{minor} collections,
-which traverses only objects recently created.
+which traverse only objects recently created.
 If after a minor collection the number of bytes is above a limit,
 the collector shifts to a @emph{major} collection,
 which traverses all objects.
@@ -1355,8 +1355,8 @@ in the first way,
 interpreting the open parenthesis
 as the start of the arguments to a call.
 To avoid this ambiguity,
-it is a good practice to always precede with a semicolon
-statements that start with a parenthesis:
+it is good practice to precede
+these statements with a semicolon:
 @verbatim{
 ;(print or io.write)('done')
 }
@@ -1937,7 +1937,7 @@ the library calls the metamethod of the other operand
 (if present) or it raises an error.
 Note that bitwise operators do not do this coercion.
 
-It is always a good practice not to rely on the
+It is always good practice not to rely on the
 implicit coercions from strings to numbers,
 as they are not always applied;
 in particular, @T{"1"==1} is false and @T{"1"<1} raises an error
@@ -2190,9 +2190,8 @@ The order of the assignments in a constructor is undefined.
 (This order would be relevant only when there are repeated keys.)
 
 If the last field in the list has the form @id{exp}
-and the expression is a multires expression,
-then all values returned by this expression enter the list consecutively
-@see{multires}.
+and the expression is a \emph{multires} expression @see{multires},
+then all values returned by this expression enter the list consecutively.
 
 The field list can have an optional trailing separator,
 as a convenience for machine-generated code.
@@ -2435,7 +2434,8 @@ Note that an anonymous vararg table always satisfy these conditions.
 @sect3{multires| @title{Lists of Expressions, Multiple Results, and Adjustment}
 
 Both function calls and vararg expressions can result in multiple values.
-These expressions are called @def{multires expressions}.
+These expressions are called @def{multires expressions}
+(\emph{multiple-return} expressions).
 
 When a multires expression is used as the last element
 of a list of expressions,
@@ -2504,7 +2504,7 @@ in its place.
 Here are some examples of uses of multires expressions.
 In all cases, when the construction needs
 @Q{the n-th result} and there is no such result,
-it uses a @nil.
+it uses @nil.
 @verbatim{
 print(x, f())      -- prints x and all results from f().
 print(x, (f()))    -- prints x and the first result from f().
@@ -3030,9 +3030,9 @@ Each function has an indicator like this:
 @apii{o,p,x}
 
 The first field, @T{o},
-is how many elements the function pops from the stack.
+specifies how many elements the function pops from the stack.
 The second field, @T{p},
-is how many elements the function pushes onto the stack.
+specifies how many elements the function pushes onto the stack.
 (Any function always pushes its results after popping its arguments.)
 A field in the form @T{x|y} means the function can push (or pop)
 @T{x} or @T{y} elements,
@@ -3201,7 +3201,7 @@ Any error while calling and running the function is propagated upwards
 (with a @id{longjmp}).
 
 The following example shows how the host program can do the
-equivalent to this Lua code:
+equivalent of this Lua code:
 @verbatim{
 a = f("how", t.x, 14)
 }
@@ -4505,7 +4505,7 @@ with user data @id{ud}.
 @APIEntry{void lua_setfield (lua_State *L, int index, const char *k);|
 @apii{1,0,e}
 
-Does the equivalent to @T{t[k] = v},
+Does the equivalent of @T{t[k] = v},
 where @id{t} is the value at the given index
 and @id{v} is the value on the top of the stack.
 
@@ -6019,7 +6019,7 @@ it does not run it.
 @APIEntry{unsigned int luaL_makeseed (lua_State *L);|
 @apii{0,0,-}
 
-Returns a value with a weak attempt for randomness.
+Returns a value with weak randomness.
 The parameter @id{L} can be @id{NULL}
 if there is no Lua state available.
 
@@ -6464,7 +6464,7 @@ deserve an implementation in C (e.g., @Lid{table.sort}).
 All libraries are implemented through the official @N{C API}
 and are provided as separate @N{C modules}.
 Unless otherwise noted,
-these library functions do not adjust its number of arguments
+a library function does not adjust its number of arguments
 to its expected parameters.
 For instance, a function documented as @T{foo(arg)}
 should not be called without an argument.
@@ -6781,7 +6781,9 @@ The string @id{mode} controls whether the chunk can be text or binary
 It may be the string @St{b} (only @x{binary chunk}s),
 @St{t} (only text chunks),
 or @St{bt} (both binary and text).
-The default is @St{bt}.
+The default is @St{bt},
+but it is good practice to use an explicit mode
+when accepting binary chunks.
 
 Lua does not check the consistency of binary chunks.
 Maliciously crafted binary chunks can crash
@@ -6802,7 +6804,7 @@ if no file name is given.
 @LibEntry{next (table [, index])|
 
 Allows a program to traverse all fields of a table.
-Its first argument is a table and its second argument
+The first argument is a table and the second argument
 is an index in this table.
 A call to @id{next} returns the next index of the table
 and its associated value.
@@ -7283,7 +7285,7 @@ This is a low-level function.
 It completely bypasses the package and module system.
 Unlike @Lid{require},
 it does not perform any path searching and
-does not automatically adds extensions.
+does not automatically add extensions.
 @id{libname} must be the complete file name of the @N{C library},
 including if necessary a path and an extension.
 @id{funcname} must be the exact name exported by the @N{C library}
@@ -8537,8 +8539,7 @@ equal seeds produce equal sequences of numbers.
 The default for @id{y} is zero.
 
 When called with no arguments,
-Lua generates a seed with
-a weak attempt for randomness.
+Lua generates a seed with weak randomness.
 
 This function returns the two seed components
 that were effectively used,
@@ -8628,7 +8629,7 @@ and some non-false value on success.
 On non-POSIX systems,
 the computation of the error message and error code
 in case of errors
-may be not @x{thread safe},
+may be not @x{thread-safe},
 because they rely on the global C variable @id{errno}.
 
 @LibEntry{io.close ([file])|
@@ -8708,7 +8709,7 @@ which is needed in some systems to open the file in binary mode.
 
 @LibEntry{io.output ([file])|
 
-Similar to @Lid{io.input}, but operates over the default output file.
+Similar to @Lid{io.input}, but operates on the default output file.
 
 }
 
@@ -8717,7 +8718,7 @@ Similar to @Lid{io.input}, but operates over the default output file.
 This function is system dependent and is not available
 on all platforms.
 
-Starts the program @id{prog} in a separated process and returns
+Starts the program @id{prog} in a separate process and returns
 a file handle that you can use to read data from this program
 (if @id{mode} is @T{"r"}, the default)
 or to write data to this program
@@ -8892,8 +8893,8 @@ For the last two cases,
 @id{size} is a hint for the size of the buffer, in bytes.
 The default is an appropriate size.
 
-The specific behavior of each mode is non portable;
-check the underlying @ANSI{setvbuf} in your platform for
+The specific behavior of each mode is non-portable;
+check the underlying @ANSI{setvbuf} on your platform for
 more details.
 
 }
@@ -8958,7 +8959,7 @@ which gives a human-readable date and time representation
 using the current locale.
 
 On non-POSIX systems,
-this function may be not @x{thread safe}
+this function may be not @x{thread-safe}
 because of its reliance on @CId{gmtime} and @CId{localtime}.
 
 }
@@ -9064,7 +9065,7 @@ When called with @nil as the first argument,
 this function only returns the name of the current locale
 for the given category.
 
-This function may be not @x{thread safe}
+This function may be not @x{thread-safe}
 because of its reliance on @CId{setlocale}.
 
 }
@@ -9628,7 +9629,7 @@ makes @id{global} a regular word.
 }
 
 @item{
-The control variable in @Rw{for} loops is read only.
+The control variable in @Rw{for} loops is read-only.
 If you need to change it,
 declare a local variable with the same name in the loop body.
 }
@@ -9638,7 +9639,7 @@ A chain of @id{__call} metamethods can have at most 15 objects.
 }
 
 @item{
-In an error, a @nil as the error object is replaced by a
+In an error, @nil as the error object is replaced by a
 string message.
 }
 
