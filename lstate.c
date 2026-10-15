@@ -319,10 +319,26 @@ TStatus luaE_resetthread (lua_State *L, TStatus status) {
   status = luaD_closeprotected(L, 1, status);
   if (status != LUA_OK)  /* errors? */
     luaD_seterrorobj(L, status, L->stack.p + 1);
-  else
+  else  /* keep in the stack only the fake function-entry for basic ci */
     L->top.p = L->stack.p + 1;
   luaD_reallocstack(L, cast_int(L->ci->top.p - L->stack.p), 0);
   return status;
+}
+
+
+/*
+** Auxiliary function to call luaE_resetthread in protected mode.
+** That function closes all tbc variables in protected mode, so the
+** only possible "error" is when a tbc variable closes the thread being
+** closed and therefore calls 'luaD_throwbaselevel'; in that case,
+** control goes directly back to the first call to lua_closethread (not
+** to the second), to properly return it.
+*/
+static void resetthread_aux (lua_State *L, void *ud) {
+  TStatus status = *cast(TStatus*, ud);
+  status = luaE_resetthread(L, status);
+  if (status != LUA_OK)
+    luaD_throw(L, status);
 }
 
 
@@ -330,7 +346,9 @@ LUA_API int lua_closethread (lua_State *L, lua_State *from) {
   TStatus status;
   lua_lock(L);
   L->nCcalls = (from) ? getCcalls(from) : 0;
-  status = luaE_resetthread(L, L->status);
+  status = luaD_rawrunprotected(L, resetthread_aux, &L->status);
+  /* stack has error message iff there was an error */
+  lua_assert(L->top.p == L->stack.p + (status == LUA_OK ? 1 : 2));
   if (L == from)  /* closing itself? */
     luaD_throwbaselevel(L, status);
   lua_unlock(L);

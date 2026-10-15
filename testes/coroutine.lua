@@ -156,8 +156,6 @@ do
   st, msg = coroutine.close(co)
   assert(st and msg == nil)
 
-  local main = coroutine.running()
-
   -- cannot close 'main'
   local st, msg = pcall(coroutine.close, main);
   assert(not st and string.find(msg, "main"))
@@ -183,6 +181,24 @@ do
     st, msg = coroutine.close(co)
     assert(st and msg == nil)
   end
+
+
+  do
+    -- again close a coroutine while closing it, but with the
+    -- coroutine in error mode.
+
+    -- after the error, the function created by 'wrap' will close the
+    -- coroutine. The close inside 'a' overrides the original close
+    -- and finishes the coroutine with no errors.
+    local co = coroutine.wrap(function()
+        local a <close> = func2close(function()
+            coroutine.close()
+        end)
+        error("y")
+      end)
+    co()  -- no errors
+  end
+
 
   -- to-be-closed variables in coroutines
   local X

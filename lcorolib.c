@@ -78,7 +78,8 @@ static int luaB_auxwrap (lua_State *L) {
     int stat = lua_status(co);
     if (stat != LUA_OK && stat != LUA_YIELD) {  /* error in the coroutine? */
       stat = lua_closethread(co, L);  /* close its tbc variables */
-      lua_assert(stat != LUA_OK);
+      if (stat == LUA_OK)
+        return 0;  /* nothing to return */
       lua_xmove(co, L, 1);  /* move error message to the caller */
     }
     if (stat != LUA_ERRMEM &&  /* not a memory error and ... */

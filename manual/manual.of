@@ -7048,7 +7048,8 @@ The given coroutine must be dead, suspended,
 or be the running coroutine.
 For the running coroutine,
 this function does not return.
-Instead, the resume that (re)started the coroutine returns.
+Instead, the resume that (re)started the coroutine returns
+with no error and no results.
 
 For other coroutines,
 in case of error
