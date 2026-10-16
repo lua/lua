@@ -199,14 +199,16 @@ assert(not string.find(defaultpath, "xxx") and
 
 -- (LUA_READLINELIB was introduced in 5.5.1)
 if release >= "5.5.1" then
+  -- OBS: this test is not valid when Lua is compiled with LUA_USE_READLINE
   print"testing readline library name"
   -- should generate a warning when trying to load inexistent library "xuxu"
   local env = [[LUA_READLINELIB=xuxu LUA_INIT="warn('@allow')"]]
   local code = 'echo " " | env %s lua %s -W -i >%s 2>&1'
   RUN(code, env, "", out)   -- run code with no extra options
-  assert(string.find(getoutput(),
-            "warning: unable to load readline library 'xuxu'"))
-
+  if(not string.find(getoutput(),
+            "warning: unable to load readline library 'xuxu'")) then
+    error("Is Lua compiled with option LUA_USE_READLINE?")
+  end
   RUN(code, env, "-E", out)   -- run again with option -E
   -- no warning when LUA_READLINELIB is to be ignored
   assert(not string.find(getoutput(), "warning"))
