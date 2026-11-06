@@ -158,11 +158,14 @@ end
 
 -- testing C library sizes
 do
-  local s = 0
-  for _ in pairs(math) do s = s + 1 end
-  check(math, 0, mp2(s))
+  local debug = require "debug"
+  local libs = {coroutine, debug, io, math, os, package, string, table, utf8}
+  for _, t in ipairs(libs) do
+    local n = 0
+    for _ in pairs(t) do n = n + 1 end   -- count number of entries
+    check(t, 0, mp2(n))
+  end
 end
-
 
 -- testing constructor sizes
 local sizes = {0, 1, 2, 3, 4, 5, 7, 8, 9, 15, 16, 17,

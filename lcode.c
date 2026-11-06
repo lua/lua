@@ -1930,7 +1930,6 @@ static int finaltarget (Instruction *code, int i) {
 ** Do a final pass over the code of a function, doing small peephole
 ** optimizations and adjustments.
 */
-#include "lopnames.h"
 void luaK_finish (FuncState *fs) {
   int i;
   Proto *p = fs->f;
