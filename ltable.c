@@ -550,89 +550,96 @@ static size_t concretesize (unsigned int size) {
 
 
 /*
-** Resize the array part of a table. If new size is equal to the old,
-** do nothing. Else, if new size is zero, free the old array. (It must
-** be present, as the sizes are different.) Otherwise, allocate a new
-** array, move the common elements to new proper position, and then
-** frees the old array.
-** We could reallocate the array, but we still would need to move the
-** elements to their new position, so the copy implicit in realloc is a
-** waste. Moreover, most allocators will move the array anyway when the
-** new size is double the old one (the most common case).
+** Allocate a new array part with the given size, or reuse the
+** original array if the size fits. Raises an error if there is
+** a memory allocation error. ('luaM_newblock' does that.)
 */
-static Value *resizearray (lua_State *L , Table *t,
-                               unsigned oldasize,
-                               unsigned newasize) {
-  if (oldasize == newasize)
-    return t->array;  /* nothing to be done */
-  else if (newasize == 0) {  /* erasing array? */
-    Value *op = t->array - oldasize;  /* original array's real address */
-    luaM_freemem(L, op, concretesize(oldasize));  /* free it */
-    return NULL;
+static Value *allocarray (lua_State *L , Table *t, unsigned newasize) {
+  if (t->asize == newasize)  /* not changing size? */
+    return t->array - t->asize;  /* keep original array */
+  else
+    return cast(Value *, luaM_newblock(L, concretesize(newasize)));
+}
+
+
+static void freearray (lua_State *L , Table *t) {
+  if (t->array != NULL)
+    luaM_freemem(L, t->array - t->asize, concretesize(t->asize));
+}
+
+
+/*
+** Copy the values from the array part of 'oldt' to the array part of
+** 'newt'. (The number of elements to move is the smallest between
+** how many elements there are in 'oldt' and how many elements fit in
+** 'newt'.)
+*/
+static void copyarray (Table *oldt, Table *newt) {
+  unsigned oldasize = oldt->asize;
+  if (oldasize > 0) {  /* is there an old array? */
+    unsigned newasize = newt->asize;
+    unsigned tomove = (oldasize < newasize) ? oldasize : newasize;
+    size_t tomoveb = concretesize(tomove);  /* size in bytes */
+    memcpy(newt->array - tomove, oldt->array - tomove, tomoveb);
   }
-  else {
-    size_t newasizeb = concretesize(newasize);
-    Value *np = cast(Value *,
-                  luaM_reallocvector(L, NULL, 0, newasizeb, lu_byte));
-    if (np == NULL)  /* allocation error? */
-      return NULL;
-    np += newasize;  /* shift pointer to the end of value segment */
-    if (oldasize > 0) {
-      /* move common elements to new position */
-      size_t oldasizeb = concretesize(oldasize);
-      Value *op = t->array;  /* original array */
-      unsigned tomove = (oldasize < newasize) ? oldasize : newasize;
-      size_t tomoveb = (oldasize < newasize) ? oldasizeb : newasizeb;
-      lua_assert(tomoveb > 0);
-      memcpy(np - tomove, op - tomove, tomoveb);
-      luaM_freemem(L, op - oldasize, oldasizeb);  /* free old block */
-    }
-    return np;
+}
+
+
+static void setdummynode (Table *t) {
+  t->node = cast(Node *, dummynode);  /* use common 'dummynode' */
+  t->lsizenode = 0;
+  setdummy(t);  /* signal that it is using dummy node */
+}
+
+
+static void inithashempty (Table *t, unsigned size) {
+  unsigned i;
+  for (i = 0; i < size; i++) {  /* mark all entries as empty */
+    Node *n = gnode(t, i);
+    gnext(n) = 0;
+    setnilkey(n);
+    setempty(gval(n));
   }
 }
 
 
 /*
-** Creates an array for the hash part of a table with the given
-** size, or reuses the dummy node if size is zero.
-** The computation for size overflow is in two steps: the first
-** comparison ensures that the shift in the second one does not
-** overflow.
+** Creates an array for the hash part of a table with the given size, or
+** reuses the dummy node if size is zero. Returns a boolean, true iff
+** there were no (allocation) errors. When this function is called, the
+** new array part has been already allocated; so, if it allocates the
+** new hash array successfully, no more errors are possible and the code
+** is free to modify the table.
 */
-static void setnodevector (lua_State *L, Table *t, unsigned size) {
-  if (size == 0) {  /* no elements to hash part? */
-    t->node = cast(Node *, dummynode);  /* use common 'dummynode' */
-    t->lsizenode = 0;
-    setdummy(t);  /* signal that it is using dummy node */
-  }
+static int allochash (lua_State *L, Table *t, int lsize) {
+  if (lsize < 0)  /* no elements to hash part? */
+    setdummynode(t);
   else {
-    int i;
-    int lsize = luaO_ceillog2(size);
-    if (lsize > MAXHBITS || (1 << lsize) > MAXHSIZE)
-      luaG_runerror(L, "table overflow");
-    size = twoto(lsize);
-    if (lsize < LIMFORLAST)  /* no 'lastfree' field? */
-      t->node = luaM_newvector(L, size, Node);
-    else {
+    unsigned size = twoto(lsize);  /* number of entries in the new array */
+    if (lsize < LIMFORLAST) {  /* no 'lastfree' field? */
+      Node *newhash = luaM_reallocvector(L, NULL, 0, size, Node);
+      if (newhash == NULL)
+        return 0;  /* allocation error */
+      t->node = newhash;
+    }
+    else {  /* must add space for lastfree and initialize it */
       size_t bsize = size * sizeof(Node) + sizeof(Limbox);
-      char *node = luaM_newblock(L, bsize);
-      t->node = cast(Node *, node + sizeof(Limbox));
+      char *newhash = luaM_reallocvector(L, NULL, 0, bsize, char);
+      if (newhash == NULL)
+        return 0;  /* allocation error */
+      t->node = cast(Node *, newhash + sizeof(Limbox));
       getlastfree(t) = gnode(t, size);  /* all positions are free */
     }
     t->lsizenode = cast_byte(lsize);
-    setnodummy(t);
-    for (i = 0; i < cast_int(size); i++) {
-      Node *n = gnode(t, i);
-      gnext(n) = 0;
-      setnilkey(n);
-      setempty(gval(n));
-    }
+    setnodummy(t);  /* signal that it is not using dummy node */
+    inithashempty(t, size);  /* mark all entries as empty */
   }
+  return 1;  /* no errors */
 }
 
 
 /*
-** (Re)insert all elements from the hash part of 'ot' into table 't'.
+** Insert all elements from the hash part of 'ot' into table 't'.
 */
 static void reinserthash (lua_State *L, Table *ot, Table *t) {
   unsigned j;
@@ -651,37 +658,20 @@ static void reinserthash (lua_State *L, Table *ot, Table *t) {
 
 
 /*
-** Exchange the hash part of 't1' and 't2'. (In 'flags', only the dummy
-** bit must be exchanged:  The metamethod bits do not change during a
-** resize, so the "real" table can keep their values.)
+** Insert into the hash part of table 'newt' the elements from the
+** vanishing slice of the array part in 'oldt'.
 */
-static void exchangehashpart (Table *t1, Table *t2) {
-  lu_byte lsizenode = t1->lsizenode;
-  Node *node = t1->node;
-  int bitdummy1 = t1->flags & BITDUMMY;
-  t1->lsizenode = t2->lsizenode;
-  t1->node = t2->node;
-  t1->flags = cast_byte((t1->flags & NOTBITDUMMY) | (t2->flags & BITDUMMY));
-  t2->lsizenode = lsizenode;
-  t2->node = node;
-  t2->flags = cast_byte((t2->flags & NOTBITDUMMY) | bitdummy1);
-}
-
-
-/*
-** Re-insert into the new hash part of a table the elements from the
-** vanishing slice of the array part.
-*/
-static void reinsertOldSlice (Table *t, unsigned oldasize,
-                                        unsigned newasize) {
+static void reinsertOldSlice (Table *oldt, Table *newt) {
   unsigned i;
+  unsigned oldasize = oldt->asize;
+  unsigned newasize = newt->asize;
   for (i = newasize; i < oldasize; i++) {  /* traverse vanishing slice */
-    lu_byte tag = *getArrTag(t, i);
+    lu_byte tag = *getArrTag(oldt, i);
     if (!tagisempty(tag)) {  /* a non-empty entry? */
       TValue key, aux;
       setivalue(&key, l_castU2S(i) + 1);  /* make the key */
-      farr2val(t, i, tag, &aux);  /* copy value into 'aux' */
-      insertkey(t, &key, &aux);  /* insert entry into the hash part */
+      farr2val(oldt, i, tag, &aux);  /* copy value into 'aux' */
+      insertkey(newt, &key, &aux);  /* insert entry into the hash part */
     }
   }
 }
@@ -697,53 +687,57 @@ static void clearNewSlice (Table *t, unsigned oldasize, unsigned newasize) {
 
 
 /*
-** Resize table 't' for the new given sizes. Both allocations (for
-** the hash part and for the array part) can fail, which creates some
-** subtleties. If the first allocation, for the hash part, fails, an
-** error is raised and that is it. Otherwise, it copies the elements from
-** the shrinking part of the array (if it is shrinking) into the new
-** hash. Then it reallocates the array part.  If that fails, the table
-** is in its original state; the function frees the new hash part and then
-** raises the allocation error. Otherwise, it sets the new hash part
-** into the table, initializes the new part of the array (if any) with
-** nils and reinserts the elements of the old hash back into the new
-** parts of the table.
+** Resize table 't' for the new given sizes. Both allocations (for the
+** array part and for the hash part) can fail, so the function first
+** allocates both parts, before changing anything in the table.  If the
+** first allocation, for the array part, fails, the allocation raised an
+** error and that is it.  (We could reallocate the array part, but we
+** still would need to move the elements to their new position, so the
+** copy implicit in realloc would be a waste. Moreover, most allocators
+** would allocate a new array anyway when the new size is double the old
+** one, the most common case.)  Then it allocates a new hash part. Then,
+** it handles the values of the vanishing array part, first copying
+** them into the new array part (those values that fit there) and then
+** inserting them into the new hash part; then it frees the old array
+** part. Finally, it reinserts the elements from the old hash part into
+** the table and frees the old hash part.
+**
 ** Note that if the new size for the array part ('newasize') is equal to
-** the old one ('oldasize'), this function will do nothing with that
-** part.
+** the old size, this function will do nothing with that part.
 */
 void luaH_resize (lua_State *L, Table *t, unsigned newasize,
                                           unsigned nhsize) {
-  Table newt;  /* to keep the new hash part */
-  unsigned oldasize = t->asize;
-  Value *newarray;
-  if (newasize > MAXASIZE)
+  Value *otherarray;
+  int lhsize = nhsize == 0 ? -1 : luaO_ceillog2(nhsize);
+  Table origt;  /* to keep the original table's parts */
+  if (newasize > MAXASIZE || lhsize > MAXHBITS || (1 << lhsize) > MAXHSIZE)
     luaG_runerror(L, "table overflow");
-  /* create new hash part with appropriate size into 'newt' */
-  newt.flags = 0;
-  setnodevector(L, &newt, nhsize);
-  if (newasize < oldasize) {  /* will array shrink? */
-    /* re-insert into the new hash the elements from vanishing slice */
-    exchangehashpart(t, &newt);  /* pretend table has new hash */
-    reinsertOldSlice(t, oldasize, newasize);
-    exchangehashpart(t, &newt);  /* restore old hash (in case of errors) */
+  origt.flags = t->flags; origt.lsizenode = t->lsizenode;
+  origt.asize = t->asize; origt.array = t->array; origt.node = t->node;
+  otherarray = allocarray(L, t, newasize);  /* doesn't return if error */
+  if (!allochash(L, t, lhsize)) {  /* hash allocation failed? */
+    if (newasize != t->asize)  /* created a new array? */
+      luaM_freemem(L, otherarray, concretesize(newasize));  /* free it */
+    luaM_error(L);  /* raise memory error */
   }
-  /* allocate new array */
-  newarray = resizearray(L, t, oldasize, newasize);
-  if (l_unlikely(newarray == NULL && newasize > 0)) {  /* allocation failed? */
-    freehash(L, &newt);  /* release new hash part */
-    luaM_error(L);  /* raise error (with array unchanged) */
+  /* both new parts allocated; no errors after this point */
+  if (newasize != t->asize) {  /* not reusing original array? */
+    if (newasize == 0) {
+      t->array = NULL;
+      t->asize = 0;
+    }
+    else {
+      t->array = otherarray + newasize; /* points to the end of value segment */
+      t->asize = newasize;  /* now 't' is using the new arrays */
+      clearNewSlice(t, origt.asize, newasize);
+      copyarray(&origt, t);
+      *lenhint(t) = newasize / 2u;  /* set a valid initial hint */
+    }
+    reinsertOldSlice(&origt, t);
+    freearray(L, &origt);  /* free original array part */
   }
-  /* allocation ok; initialize new part of the array */
-  exchangehashpart(t, &newt);  /* 't' has the new hash ('newt' has the old) */
-  t->array = newarray;  /* set new array part */
-  t->asize = newasize;
-  if (newarray != NULL)
-    *lenhint(t) = newasize / 2u;  /* set an initial hint */
-  clearNewSlice(t, oldasize, newasize);
-  /* re-insert elements from old hash part into new parts */
-  reinserthash(L, &newt, t);  /* 'newt' now has the old hash */
-  freehash(L, &newt);  /* free old hash part */
+  reinserthash(L, &origt, t);
+  freehash(L, &origt);  /* free original hash part */
 }
 
 
@@ -802,7 +796,7 @@ Table *luaH_new (lua_State *L) {
   t->flags = maskflags;  /* table has no metamethod fields */
   t->array = NULL;
   t->asize = 0;
-  setnodevector(L, t, 0);
+  setdummynode(t);
   return t;
 }
 
@@ -820,7 +814,7 @@ lu_mem luaH_size (Table *t) {
 */
 void luaH_free (lua_State *L, Table *t) {
   freehash(L, t);
-  resizearray(L, t, t->asize, 0);
+  freearray(L, t);
   luaM_free(L, t);
 }
 

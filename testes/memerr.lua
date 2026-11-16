@@ -29,6 +29,25 @@ assert(T.checkpanic("newuserdata 20000") == MEMERRMSG)
 T.totalmem(0)          -- restore high limit
 
 
+do  print("testing emergency collection when resizing weak table")
+  collectgarbage('stop')
+
+  local t = setmetatable(table.create(128), {__mode = 'v'})
+  t[1], t[2], t[128] = true, true, {}
+
+  -- Allow allocation of the new hash, but force the subsequent
+  -- replacement-array allocation to fail and trigger emergency GC.
+  local hashbytes = 2 * T.sizes().Node   -- size for the new hash
+  T.totalmem(T.totalmem() + hashbytes)
+  t[129] = true   -- rehash
+  T.totalmem(0)
+
+  assert(rawget(t, 128) == nil)    -- table at t[128] properly collected
+
+  collectgarbage('restart')
+  print('+')
+end
+
 
 -- {==================================================================
 -- Testing memory limits
@@ -287,16 +306,12 @@ collectgarbage()
 collectgarbage()
 global io, T, setmetatable, collectgarbage, print
 
-local Count = 0
 testamem("finalizers", function ()
   local X = false
   local obj = setmetatable({}, {__gc = function ()  X = true end})
   obj = nil
   T.resetCI()   -- remove extra CallInfos
   T.reallocstack(18)   -- remove extra stack slots
-  Count = Count + 1
-  io.stderr:write(Count, "\n")
-  T.trick(io)
   collectgarbage()
   return X
 end)
