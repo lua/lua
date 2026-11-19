@@ -163,7 +163,7 @@ static void prepcallclosemth (lua_State *L, StkId level, TStatus status,
 
 
 /* Maximum value for deltas in 'tbclist' */
-#define MAXDELTA       USHRT_MAX
+#define MAXDELTA       SHRT_MAX
 
 
 /*
