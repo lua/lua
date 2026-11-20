@@ -380,8 +380,10 @@ LUA_API unsigned lua_numbertocstring (lua_State *L, int idx, char *buff) {
 
 LUA_API size_t lua_stringtonumber (lua_State *L, const char *s) {
   size_t sz = luaO_str2num(s, s2v(L->top.p));
+  lua_lock(L);
   if (sz != 0)
     api_incr_top(L);
+  lua_unlock(L);
   return sz;
 }
 
@@ -1324,10 +1326,8 @@ LUA_API void lua_len (lua_State *L, int idx) {
 
 LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud) {
   lua_Alloc f;
-  lua_lock(L);
   if (ud) *ud = G(L)->ud;
   f = G(L)->frealloc;
-  lua_unlock(L);
   return f;
 }
 

@@ -57,8 +57,10 @@ static void setnameval (lua_State *L, const char *name, int val) {
 
 
 static void pushobject (lua_State *L, const TValue *o) {
+  lua_lock(L);
   setobj2s(L, L->top.p, o);
   api_incr_top(L);
+  lua_unlock(L);
 }
 
 
