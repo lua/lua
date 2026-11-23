@@ -578,6 +578,18 @@ do   -- errors due to non-closable values
 end
 
 
+do    -- assertion fail in 5.5.1
+  local function foo ()
+    local x<close> = setmetatable({}, {__close = 0})
+    setmetatable(x, {})
+    -- when closing, 'callclosemethod' was using the special nil value
+    -- LUA_VEMPTY straight from the empty table
+  end
+  local stat, msg = pcall(foo)
+  assert(not stat and string.find(msg, "attempt to call a nil value"))
+end
+
+
 do   -- tbc inside close methods
   local track = {}
   local function foo ()

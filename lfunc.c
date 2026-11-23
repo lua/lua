@@ -108,7 +108,9 @@ static void callclosemethod (lua_State *L, TValue *obj, TValue *err, int yy) {
   StkId top = L->top.p;
   StkId func = top;
   const TValue *tm = luaT_gettmbyobj(L, obj, TM_CLOSE);
-  setobj2s(L, top++, tm);  /* will call metamethod... */
+  if (notm(tm))
+    tm = &G(L)->nilvalue;  /* (will raise a call error later) */
+  setobj2s(L, top++, tm);  /* prepare to call metamethod... */
   setobj2s(L, top++, obj);  /* with 'self' as the 1st argument */
   if (err != NULL)  /* if there was an error... */
     setobj2s(L, top++, err);  /* then error object will be 2nd argument */
@@ -126,7 +128,7 @@ static void callclosemethod (lua_State *L, TValue *obj, TValue *err, int yy) {
 */
 static void checkclosemth (lua_State *L, StkId level) {
   const TValue *tm = luaT_gettmbyobj(L, s2v(level), TM_CLOSE);
-  if (ttisnil(tm)) {  /* no metamethod? */
+  if (l_unlikely(notm(tm))) {  /* no metamethod? */
     int idx = cast_int(level - L->ci->func.p);  /* variable index */
     const char *vname = luaG_findlocal(L, L->ci, idx, NULL);
     if (vname == NULL) vname = "?";
