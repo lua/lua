@@ -469,6 +469,20 @@ LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int arg,
 ** =======================================================
 */
 
+
+/*
+** Reallocate a block using Lua's allocation function. 'ls' is a
+** lua_State, with type 'void*' to give the signature 'lua_Alloc' to the
+** function.
+*/
+static void *l_alloc (void *ls, void *ptr, size_t osize, size_t nsize) {
+  lua_State *L = cast(lua_State *, ls);
+  void *ud;
+  lua_Alloc allocf = lua_getallocf(L, &ud);
+  return allocf(ud, ptr, osize, nsize);
+}
+
+
 /* userdata to box arbitrary data */
 typedef struct UBox {
   void *box;
@@ -486,9 +500,7 @@ static void *resizebox (lua_State *L, int idx, size_t newsize) {
   if (box->bsize == newsize)  /* not changing size? */
     return box->box;  /* keep the buffer */
   else {
-    void *ud;
-    lua_Alloc allocf = lua_getallocf(L, &ud);
-    void *temp = allocf(ud, box->box, box->bsize, newsize);
+    void *temp = l_alloc(L, box->box, box->bsize, newsize);
     if (l_unlikely(temp == NULL && newsize > 0)) {  /* allocation error? */
       lua_pushliteral(L, "not enough memory");
       lua_error(L);  /* raise a memory error */
@@ -621,6 +633,20 @@ LUALIB_API void luaL_addstring (luaL_Buffer *B, const char *s) {
 }
 
 
+/*
+** Get the main thread associated with a thread. (To be used as the
+** userdata of 'l_alloc': By the time something is deallocated,
+** the thread that created that something may no longer exist.)
+*/
+static lua_State *getmain (lua_State *L) {
+  lua_State *LM;
+  lua_geti(L, LUA_REGISTRYINDEX, LUA_RIDX_MAINTHREAD);  /* get main */
+  LM = lua_tothread(L, -1);
+  lua_pop(L, 1);
+  return LM;
+}
+
+
 LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
   lua_State *L = B->L;
   checkbufferlevel(B, -1);
@@ -628,8 +654,6 @@ LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
     lua_pushlstring(L, B->b, B->n);  /* save result as regular string */
   else {  /* reuse buffer already allocated */
     UBox *box = (UBox *)lua_touserdata(L, -1);
-    void *ud;
-    lua_Alloc allocf = lua_getallocf(L, &ud);  /* function to free buffer */
     size_t len = B->n;  /* final string length */
     char *s;
     resizebox(L, -1, len + 1);  /* adjust box size to content size */
@@ -637,7 +661,7 @@ LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
     s[len] = '\0';  /* add ending zero */
     /* clear box, as Lua will take control of the buffer */
     box->bsize = 0;  box->box = NULL;
-    lua_pushexternalstring(L, s, len, allocf, ud);
+    lua_pushexternalstring(L, s, len, l_alloc, getmain(L));
     lua_closeslot(L, -2);  /* close the box */
     lua_gc(L, LUA_GCSTEP, len);
   }
