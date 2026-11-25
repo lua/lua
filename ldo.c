@@ -692,7 +692,9 @@ int luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func,
       ci->top.p = func + 1 + fsize;  /* top for new function */
       lua_assert(ci->top.p <= L->stack_last.p);
       ci->u.l.savedpc = p->code;  /* starting point */
-      ci->callstatus |= CIST_TAIL;
+      /* set CIST_CCMT field and tail-call bit in callstatus */
+      ci->callstatus =
+        (ci->callstatus & ~MAX_CCMT) | (status & MAX_CCMT) | CIST_TAIL;
       L->top.p = func + narg1;  /* set top */
       return -1;
     }

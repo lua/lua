@@ -220,6 +220,21 @@ do   print"testing chains of '__call'"
 end
 
 
+do   -- extraargs in tail calls (bug in 5.5.1)
+  local function f1 ()
+    return debug.getinfo(1, "t").extraargs
+  end
+
+  -- tail-call f1, with no extra args
+  local f2 = setmetatable({}, {__call = function () return f1() end})
+  assert(f2() == 0)
+
+  local f3 = setmetatable({}, {__call = f1})
+  local f4 = setmetatable({}, {__call = f3})
+  local function f5() return f4() end
+  assert(f5() == 2)
+end
+
 do    -- testing chains too long
   local a = {}
   for i = 1, 16 do    -- one too many
