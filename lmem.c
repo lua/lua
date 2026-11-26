@@ -52,8 +52,7 @@
 ** collection, except when it cannot run a collection.  The GC should
 ** not be called while the state is not fully built, as the collector
 ** is not yet fully initialized. Also, it should not be called when
-** 'gcstopem' is true, because then the interpreter is in the middle of
-** a collection step.
+** 'gcstopem' is true.
 */
 #define cantryagain(g)	(completestate(g) && !g->gcstopem)
 

@@ -191,7 +191,7 @@ typedef union memHeader {
 
 
 Memcontrol l_memcontrol =
-  {0, 0UL, 0UL, 0UL, 0UL, (~0UL),
+  {0, 0UL, 0UL, 0UL, 0UL, (~0UL), NULL,
    {0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL}};
 
 
@@ -234,6 +234,13 @@ void *debug_realloc (void *ud, void *b, size_t oldsize, size_t size) {
   if (mc->failnext) {
     mc->failnext = 0;
     return NULL;  /* fake a single memory allocation error */
+  }
+  if (mc->failhist) {
+    char c = *(mc->failhist++);
+    if (c == 'f')
+      return NULL;  /* fake a single memory allocation error */
+    else if (c == '\0')  /* end of history? */
+      mc->failhist = NULL;
   }
   if (mc->countlimit != ~0UL && size != oldsize) {  /* count limit in use? */
     if (mc->countlimit == 0)
@@ -960,6 +967,13 @@ static int alloc_count (lua_State *L) {
 static int alloc_failnext (lua_State *L) {
   UNUSED(L);
   l_memcontrol.failnext = 1;
+  return 0;
+}
+
+
+static int alloc_failhist (lua_State *L) {
+  const char *hist = luaL_checkstring(L, 1);
+  l_memcontrol.failhist = hist;
   return 0;
 }
 
@@ -2213,6 +2227,7 @@ static const struct luaL_Reg tests_funcs[] = {
   {"totalmem", mem_query},
   {"alloccount", alloc_count},
   {"allocfailnext", alloc_failnext},
+  {"allocfailhist", alloc_failhist},
   {"trick", settrick},
   {"udataval", udataval},
   {"unref", unref},

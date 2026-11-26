@@ -57,6 +57,7 @@ typedef struct Memcontrol {
   unsigned long maxmem;
   unsigned long memlimit;
   unsigned long countlimit;
+  const char *failhist;
   unsigned long objcount[LUA_NUMTYPES];
 } Memcontrol;
 
